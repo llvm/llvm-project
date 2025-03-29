@@ -8,11 +8,11 @@
 
 #include "NVPTXTargetTransformInfo.h"
 #include "NVPTXUtilities.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
-#include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -21,6 +21,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <optional>
 using namespace llvm;
@@ -416,33 +417,38 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
   llvm_unreachable("All SpecialCase enumerators should be handled in switch.");
 }
 
+// Returns true/false when we know the answer, nullopt otherwise.
+static std::optional<bool> evaluateIsSpace(Intrinsic::ID IID, unsigned AS) {
+  if (AS == NVPTXAS::ADDRESS_SPACE_GENERIC ||
+      AS == NVPTXAS::ADDRESS_SPACE_PARAM)
+    return std::nullopt; // Got to check at run-time.
+  switch (IID) {
+  case Intrinsic::nvvm_isspacep_global:
+    return AS == NVPTXAS::ADDRESS_SPACE_GLOBAL;
+  case Intrinsic::nvvm_isspacep_local:
+    return AS == NVPTXAS::ADDRESS_SPACE_LOCAL;
+  case Intrinsic::nvvm_isspacep_shared:
+    return AS == NVPTXAS::ADDRESS_SPACE_SHARED;
+  case Intrinsic::nvvm_isspacep_shared_cluster:
+    // We can't tell shared from shared_cluster at compile time from AS alone,
+    // but it can't be either is AS is not shared.
+    return AS == NVPTXAS::ADDRESS_SPACE_SHARED ? std::nullopt
+                                               : std::optional{false};
+  case Intrinsic::nvvm_isspacep_const:
+    return AS == NVPTXAS::ADDRESS_SPACE_CONST;
+  default:
+    llvm_unreachable("Unexpected intrinsic");
+  }
+}
+
 // Returns an instruction pointer (may be nullptr if we do not know the answer).
 // Returns nullopt if `II` is not one of the `isspacep` intrinsics.
+//
+// TODO: If InferAddressSpaces were run early enough in the pipeline this could
+// be removed in favor of the constant folding that occurs there through
+// rewriteIntrinsicWithAddressSpace
 static std::optional<Instruction *>
 handleSpaceCheckIntrinsics(InstCombiner &IC, IntrinsicInst &II) {
-  // Returns true/false when we know the answer, nullopt otherwise.
-  auto CheckASMatch = [](unsigned IID, unsigned AS) -> std::optional<bool> {
-    if (AS == NVPTXAS::ADDRESS_SPACE_GENERIC ||
-        AS == NVPTXAS::ADDRESS_SPACE_PARAM)
-      return std::nullopt; // Got to check at run-time.
-    switch (IID) {
-    case Intrinsic::nvvm_isspacep_global:
-      return AS == NVPTXAS::ADDRESS_SPACE_GLOBAL;
-    case Intrinsic::nvvm_isspacep_local:
-      return AS == NVPTXAS::ADDRESS_SPACE_LOCAL;
-    case Intrinsic::nvvm_isspacep_shared:
-      return AS == NVPTXAS::ADDRESS_SPACE_SHARED;
-    case Intrinsic::nvvm_isspacep_shared_cluster:
-      // We can't tell shared from shared_cluster at compile time from AS alone,
-      // but it can't be either is AS is not shared.
-      return AS == NVPTXAS::ADDRESS_SPACE_SHARED ? std::nullopt
-                                                 : std::optional{false};
-    case Intrinsic::nvvm_isspacep_const:
-      return AS == NVPTXAS::ADDRESS_SPACE_CONST;
-    default:
-      llvm_unreachable("Unexpected intrinsic");
-    }
-  };
 
   switch (auto IID = II.getIntrinsicID()) {
   case Intrinsic::nvvm_isspacep_global:
@@ -458,7 +464,7 @@ handleSpaceCheckIntrinsics(InstCombiner &IC, IntrinsicInst &II) {
       if (auto *ASCO = dyn_cast<AddrSpaceCastOperator>(Op0))
         AS = ASCO->getOperand(0)->getType()->getPointerAddressSpace();
 
-    if (std::optional<bool> Answer = CheckASMatch(IID, AS))
+    if (std::optional<bool> Answer = evaluateIsSpace(IID, AS))
       return IC.replaceInstUsesWith(II,
                                     ConstantInt::get(II.getType(), *Answer));
     return nullptr; // Don't know the answer, got to check at run time.
@@ -476,6 +482,35 @@ NVPTXTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     return I;
 
   return std::nullopt;
+}
+
+InstructionCost
+NVPTXTTIImpl::getInstructionCost(const User *U,
+                                 ArrayRef<const Value *> Operands,
+                                 TTI::TargetCostKind CostKind) {
+  if (const auto *CI = dyn_cast<CallInst>(U))
+    if (const auto *IA = dyn_cast<InlineAsm>(CI->getCalledOperand())) {
+      // Without this implementation getCallCost() would return the number
+      // of arguments+1 as the cost. Because the cost-model assumes it is a call
+      // since it is classified as a call in the IR. A better cost model would
+      // be to return the number of asm instructions embedded in the asm
+      // string.
+      auto &AsmStr = IA->getAsmString();
+      const unsigned InstCount =
+          count_if(split(AsmStr, ';'), [](StringRef AsmInst) {
+            // Trim off scopes denoted by '{' and '}' as these can be ignored
+            AsmInst = AsmInst.trim().ltrim("{} \t\n\v\f\r");
+            // This is pretty coarse but does a reasonably good job of
+            // identifying things that look like instructions, possibly with a
+            // predicate ("@").
+            return !AsmInst.empty() &&
+                   (AsmInst[0] == '@' || isAlpha(AsmInst[0]) ||
+                    AsmInst.find(".pragma") != StringRef::npos);
+          });
+      return InstCount * TargetTransformInfo::TCC_Basic;
+    }
+
+  return BaseT::getInstructionCost(U, Operands, CostKind);
 }
 
 InstructionCost NVPTXTTIImpl::getArithmeticInstrCost(
@@ -524,4 +559,60 @@ void NVPTXTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
 void NVPTXTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                                          TTI::PeelingPreferences &PP) {
   BaseT::getPeelingPreferences(L, SE, PP);
+}
+
+bool NVPTXTTIImpl::collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
+                                              Intrinsic::ID IID) const {
+  switch (IID) {
+  case Intrinsic::nvvm_isspacep_const:
+  case Intrinsic::nvvm_isspacep_global:
+  case Intrinsic::nvvm_isspacep_local:
+  case Intrinsic::nvvm_isspacep_shared:
+  case Intrinsic::nvvm_isspacep_shared_cluster: {
+    OpIndexes.push_back(0);
+    return true;
+  }
+  }
+  return false;
+}
+
+Value *NVPTXTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
+                                                      Value *OldV,
+                                                      Value *NewV) const {
+  const Intrinsic::ID IID = II->getIntrinsicID();
+  switch (IID) {
+  case Intrinsic::nvvm_isspacep_const:
+  case Intrinsic::nvvm_isspacep_global:
+  case Intrinsic::nvvm_isspacep_local:
+  case Intrinsic::nvvm_isspacep_shared:
+  case Intrinsic::nvvm_isspacep_shared_cluster: {
+    const unsigned NewAS = NewV->getType()->getPointerAddressSpace();
+    if (const auto R = evaluateIsSpace(IID, NewAS))
+      return ConstantInt::get(II->getType(), *R);
+    return nullptr;
+  }
+  }
+  return nullptr;
+}
+
+unsigned NVPTXTTIImpl::getAssumedAddrSpace(const Value *V) const {
+  if (isa<AllocaInst>(V))
+    return ADDRESS_SPACE_LOCAL;
+
+  return -1;
+}
+
+void NVPTXTTIImpl::collectKernelLaunchBounds(
+    const Function &F,
+    SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {
+  if (const auto Val = getMaxClusterRank(F))
+    LB.push_back({"maxclusterrank", *Val});
+
+  const auto MaxNTID = getMaxNTID(F);
+  if (MaxNTID.size() > 0)
+    LB.push_back({"maxntidx", MaxNTID[0]});
+  if (MaxNTID.size() > 1)
+    LB.push_back({"maxntidy", MaxNTID[1]});
+  if (MaxNTID.size() > 2)
+    LB.push_back({"maxntidz", MaxNTID[2]});
 }

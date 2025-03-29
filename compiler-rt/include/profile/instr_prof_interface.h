@@ -73,15 +73,11 @@ void __llvm_profile_reset_counters(void);
  */
 int __llvm_profile_dump(void);
 
-// Interface to dump the current process' order file to disk.
-int __llvm_orderfile_dump(void);
-
 #else
 
 #define __llvm_profile_set_filename(Name)
 #define __llvm_profile_reset_counters()
 #define __llvm_profile_dump() (0)
-#define __llvm_orderfile_dump() (0)
 
 #endif
 

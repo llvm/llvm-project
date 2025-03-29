@@ -8,6 +8,10 @@ tbx z0.b, z1.b, z2.b
 aesd z23.b, z23.b, z13.b
 // CHECK: aesd z23.b, z23.b, z13.b
 
+.cpu generic+sve2+sve-aes
+aesd z23.b, z23.b, z13.b
+// CHECK: aesd z23.b, z23.b, z13.b
+
 .cpu generic+sve2-sm4
 sm4e z0.s, z0.s, z0.s
 // CHECK: sm4e z0.s, z0.s, z0.s
@@ -16,7 +20,11 @@ sm4e z0.s, z0.s, z0.s
 rax1 z0.d, z0.d, z0.d
 // CHECK: rax1 z0.d, z0.d, z0.d
 
-.cpu generic+sve2-bitperm
+.cpu generic+sve2+sve-bitperm
+bgrp z21.s, z10.s, z21.s
+// CHECK: bgrp z21.s, z10.s, z21.s
+
+.cpu generic+ssve-bitperm
 bgrp z21.s, z10.s, z21.s
 // CHECK: bgrp z21.s, z10.s, z21.s
 

@@ -432,11 +432,11 @@ mlir::convertFuncOpToLLVMFuncOp(FunctionOpInterface funcOp,
 
   rewriter.inlineRegionBefore(funcOp.getFunctionBody(), newFuncOp.getBody(),
                               newFuncOp.end());
-  if (failed(rewriter.convertRegionTypes(&newFuncOp.getBody(), converter,
-                                         &result))) {
-    return rewriter.notifyMatchFailure(funcOp,
-                                       "region types conversion failed");
-  }
+  // Convert just the entry block. The remaining unstructured control flow is
+  // converted by ControlFlowToLLVM.
+  if (!newFuncOp.getBody().empty())
+    rewriter.applySignatureConversion(&newFuncOp.getBody().front(), result,
+                                      &converter);
 
   // Fix the type mismatch between the materialized `llvm.ptr` and the expected
   // pointee type in the function body when converting `llvm.byval`/`llvm.byref`
@@ -660,7 +660,7 @@ struct UnrealizedConversionCastOpLowering
 // `ReturnOp` interacts with the function signature and must have as many
 // operands as the function has return values.  Because in LLVM IR, functions
 // can only return 0 or 1 value, we pack multiple values into a structure type.
-// Emit `UndefOp` followed by `InsertValueOp`s to create such structure if
+// Emit `PoisonOp` followed by `InsertValueOp`s to create such structure if
 // necessary before returning it
 struct ReturnOpLowering : public ConvertOpToLLVMPattern<func::ReturnOp> {
   using ConvertOpToLLVMPattern<func::ReturnOp>::ConvertOpToLLVMPattern;
@@ -714,7 +714,7 @@ struct ReturnOpLowering : public ConvertOpToLLVMPattern<func::ReturnOp> {
       return rewriter.notifyMatchFailure(op, "could not convert result types");
     }
 
-    Value packed = rewriter.create<LLVM::UndefOp>(loc, packedType);
+    Value packed = rewriter.create<LLVM::PoisonOp>(loc, packedType);
     for (auto [idx, operand] : llvm::enumerate(updatedOperands)) {
       packed = rewriter.create<LLVM::InsertValueOp>(loc, packed, operand, idx);
     }
@@ -784,11 +784,6 @@ struct ConvertFuncToLLVMPass
 
     RewritePatternSet patterns(&getContext());
     populateFuncToLLVMConversionPatterns(typeConverter, patterns, symbolTable);
-
-    // TODO(https://github.com/llvm/llvm-project/issues/70982): Remove these in
-    // favor of their dedicated conversion passes.
-    arith::populateArithToLLVMConversionPatterns(typeConverter, patterns);
-    cf::populateControlFlowToLLVMConversionPatterns(typeConverter, patterns);
 
     LLVMConversionTarget target(getContext());
     if (failed(applyPartialConversion(m, target, std::move(patterns))))

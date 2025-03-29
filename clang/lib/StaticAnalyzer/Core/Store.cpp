@@ -29,6 +29,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/StoreRef.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -43,18 +44,21 @@ StoreManager::StoreManager(ProgramStateManager &stateMgr)
     : svalBuilder(stateMgr.getSValBuilder()), StateMgr(stateMgr),
       MRMgr(svalBuilder.getRegionManager()), Ctx(stateMgr.getContext()) {}
 
-StoreRef StoreManager::enterStackFrame(Store OldStore,
-                                       const CallEvent &Call,
-                                       const StackFrameContext *LCtx) {
-  StoreRef Store = StoreRef(OldStore, *this);
+BindResult StoreManager::enterStackFrame(Store OldStore, const CallEvent &Call,
+                                         const StackFrameContext *LCtx) {
+  BindResult Result{StoreRef(OldStore, *this), {}};
 
   SmallVector<CallEvent::FrameBindingTy, 16> InitialBindings;
   Call.getInitialStackFrameContents(LCtx, InitialBindings);
 
-  for (const auto &I : InitialBindings)
-    Store = Bind(Store.getStore(), I.first.castAs<Loc>(), I.second);
+  for (const auto &[Location, Val] : InitialBindings) {
+    Store S = Result.ResultingStore.getStore();
+    BindResult Curr = Bind(S, Location.castAs<Loc>(), Val);
+    Result.ResultingStore = Curr.ResultingStore;
+    llvm::append_range(Result.FailedToBindValues, Curr.FailedToBindValues);
+  }
 
-  return Store;
+  return Result;
 }
 
 const ElementRegion *StoreManager::MakeElementRegion(const SubRegion *Base,

@@ -19,6 +19,7 @@
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
@@ -57,8 +58,7 @@ AArch64ELFObjectWriter::AArch64ELFObjectWriter(uint8_t OSABI, bool IsILP32)
 
 // assumes IsILP32 is true
 static bool isNonILP32reloc(const MCFixup &Fixup,
-                            AArch64MCExpr::VariantKind RefKind,
-                            MCContext &Ctx) {
+                            AArch64MCExpr::Specifier RefKind, MCContext &Ctx) {
   if (Fixup.getTargetKind() != AArch64::fixup_aarch64_movw)
     return false;
   switch (RefKind) {
@@ -111,9 +111,9 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
   unsigned Kind = Fixup.getTargetKind();
   if (Kind >= FirstLiteralRelocationKind)
     return Kind - FirstLiteralRelocationKind;
-  AArch64MCExpr::VariantKind RefKind =
-      static_cast<AArch64MCExpr::VariantKind>(Target.getRefKind());
-  AArch64MCExpr::VariantKind SymLoc = AArch64MCExpr::getSymbolLoc(RefKind);
+  AArch64MCExpr::Specifier RefKind =
+      static_cast<AArch64MCExpr::Specifier>(Target.getRefKind());
+  AArch64MCExpr::Specifier SymLoc = AArch64MCExpr::getSymbolLoc(RefKind);
   bool IsNC = AArch64MCExpr::isNotChecked(RefKind);
 
   assert((!Target.getSymA() ||
@@ -125,6 +125,19 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
   assert((!Target.getSymB() ||
           Target.getSymB()->getKind() == MCSymbolRefExpr::VK_None) &&
          "Should only be expression-level modifiers here");
+
+  switch (SymLoc) {
+  case AArch64MCExpr::VK_DTPREL:
+  case AArch64MCExpr::VK_GOTTPREL:
+  case AArch64MCExpr::VK_TPREL:
+  case AArch64MCExpr::VK_TLSDESC:
+  case AArch64MCExpr::VK_TLSDESC_AUTH:
+    if (auto *S = Target.getSymA())
+      cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
+    break;
+  default:
+    break;
+  }
 
   if (IsPCRel) {
     switch (Kind) {
@@ -147,6 +160,15 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
       }
       return ELF::R_AARCH64_PREL64;
     case AArch64::fixup_aarch64_pcrel_adr_imm21:
+      if (SymLoc == AArch64MCExpr::VK_GOT_AUTH) {
+        if (IsILP32) {
+          Ctx.reportError(Fixup.getLoc(),
+                          "ILP32 ADR AUTH relocation not supported "
+                          "(LP64 eqv: AUTH_GOT_ADR_PREL_LO21)");
+          return ELF::R_AARCH64_NONE;
+        }
+        return ELF::R_AARCH64_AUTH_GOT_ADR_PREL_LO21;
+      }
       if (SymLoc != AArch64MCExpr::VK_ABS)
         Ctx.reportError(Fixup.getLoc(),
                         "invalid symbol kind for ADR relocation");
@@ -178,6 +200,15 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
         return R_CLS(TLSIE_ADR_GOTTPREL_PAGE21);
       if (SymLoc == AArch64MCExpr::VK_TLSDESC && !IsNC)
         return R_CLS(TLSDESC_ADR_PAGE21);
+      if (SymLoc == AArch64MCExpr::VK_TLSDESC_AUTH && !IsNC) {
+        if (IsILP32) {
+          Ctx.reportError(Fixup.getLoc(),
+                          "ILP32 ADRP AUTH relocation not supported "
+                          "(LP64 eqv: AUTH_TLSDESC_ADR_PAGE21)");
+          return ELF::R_AARCH64_NONE;
+        }
+        return ELF::R_AARCH64_AUTH_TLSDESC_ADR_PAGE21;
+      }
       Ctx.reportError(Fixup.getLoc(),
                       "invalid symbol kind for ADRP relocation");
       return ELF::R_AARCH64_NONE;
@@ -190,6 +221,15 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
         return R_CLS(TLSIE_LD_GOTTPREL_PREL19);
       if (SymLoc == AArch64MCExpr::VK_GOT)
         return R_CLS(GOT_LD_PREL19);
+      if (SymLoc == AArch64MCExpr::VK_GOT_AUTH) {
+        if (IsILP32) {
+          Ctx.reportError(Fixup.getLoc(),
+                          "ILP32 LDR AUTH relocation not supported "
+                          "(LP64 eqv: AUTH_GOT_LD_PREL19)");
+          return ELF::R_AARCH64_NONE;
+        }
+        return ELF::R_AARCH64_AUTH_GOT_LD_PREL19;
+      }
       return R_CLS(LD_PREL_LO19);
     case AArch64::fixup_aarch64_pcrel_branch14:
       return R_CLS(TSTBR14);
@@ -249,6 +289,15 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
         return R_CLS(TLSLE_ADD_TPREL_LO12);
       if (RefKind == AArch64MCExpr::VK_TLSDESC_LO12)
         return R_CLS(TLSDESC_ADD_LO12);
+      if (RefKind == AArch64MCExpr::VK_TLSDESC_AUTH_LO12) {
+        if (IsILP32) {
+          Ctx.reportError(Fixup.getLoc(),
+                          "ILP32 ADD AUTH relocation not supported "
+                          "(LP64 eqv: AUTH_TLSDESC_ADD_LO12)");
+          return ELF::R_AARCH64_NONE;
+        }
+        return ELF::R_AARCH64_AUTH_TLSDESC_ADD_LO12;
+      }
       if (RefKind == AArch64MCExpr::VK_GOT_AUTH_LO12 && IsNC) {
         if (IsILP32) {
           Ctx.reportError(Fixup.getLoc(),
@@ -353,7 +402,7 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
       if ((SymLoc == AArch64MCExpr::VK_GOT ||
            SymLoc == AArch64MCExpr::VK_GOT_AUTH) &&
           IsNC) {
-        AArch64MCExpr::VariantKind AddressLoc =
+        AArch64MCExpr::Specifier AddressLoc =
             AArch64MCExpr::getAddressFrag(RefKind);
         bool IsAuth = (SymLoc == AArch64MCExpr::VK_GOT_AUTH);
         if (!IsILP32) {
@@ -391,6 +440,14 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
         Ctx.reportError(Fixup.getLoc(), "ILP32 64-bit load/store "
                                         "relocation not supported (LP64 eqv: "
                                         "TLSDESC_LD64_LO12)");
+        return ELF::R_AARCH64_NONE;
+      }
+      if (SymLoc == AArch64MCExpr::VK_TLSDESC_AUTH) {
+        if (!IsILP32)
+          return ELF::R_AARCH64_AUTH_TLSDESC_LD64_LO12;
+        Ctx.reportError(Fixup.getLoc(), "ILP32 64-bit load/store AUTH "
+                                        "relocation not supported (LP64 eqv: "
+                                        "AUTH_TLSDESC_LD64_LO12)");
         return ELF::R_AARCH64_NONE;
       }
       Ctx.reportError(Fixup.getLoc(),
@@ -486,7 +543,19 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
 bool AArch64ELFObjectWriter::needsRelocateWithSymbol(const MCValue &Val,
                                                      const MCSymbol &,
                                                      unsigned) const {
-  return (Val.getRefKind() & AArch64MCExpr::VK_GOT) == AArch64MCExpr::VK_GOT;
+  // For memory-tagged symbols, ensure that the relocation uses the symbol. For
+  // tagged symbols, we emit an empty relocation (R_AARCH64_NONE) in a special
+  // section (SHT_AARCH64_MEMTAG_GLOBALS_STATIC) to indicate to the linker that
+  // this global needs to be tagged. In addition, the linker needs to know
+  // whether to emit a special addend when relocating `end` symbols, and this
+  // can only be determined by the attributes of the symbol itself.
+  if (Val.getAddSym() && cast<MCSymbolELF>(Val.getAddSym())->isMemtag())
+    return true;
+
+  if ((Val.getRefKind() & AArch64MCExpr::VK_GOT) == AArch64MCExpr::VK_GOT)
+    return true;
+  return is_contained({MCSymbolRefExpr::VK_GOTPCREL, MCSymbolRefExpr::VK_PLT},
+                      Val.getAccessVariant());
 }
 
 std::unique_ptr<MCObjectTargetWriter>

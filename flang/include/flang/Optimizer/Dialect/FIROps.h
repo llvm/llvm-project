@@ -50,9 +50,95 @@ struct DebuggingResource
   mlir::StringRef getName() final { return "DebuggingResource"; }
 };
 
+class CoordinateIndicesAdaptor;
+using IntOrValue = llvm::PointerUnion<mlir::IntegerAttr, mlir::Value>;
+
 } // namespace fir
 
 #define GET_OP_CLASSES
 #include "flang/Optimizer/Dialect/FIROps.h.inc"
+
+namespace fir {
+class CoordinateIndicesAdaptor {
+public:
+  using value_type = IntOrValue;
+
+  CoordinateIndicesAdaptor(mlir::DenseI32ArrayAttr fieldIndices,
+                           mlir::ValueRange values)
+      : fieldIndices(fieldIndices), values(values) {}
+
+  value_type operator[](size_t index) const {
+    assert(index < size() && "index out of bounds");
+    return *std::next(begin(), index);
+  }
+
+  size_t size() const {
+    return fieldIndices ? fieldIndices.size() : values.size();
+  }
+
+  bool empty() const {
+    return values.empty() && (!fieldIndices || fieldIndices.empty());
+  }
+
+  class iterator
+      : public llvm::iterator_facade_base<iterator, std::forward_iterator_tag,
+                                          value_type, std::ptrdiff_t,
+                                          value_type *, value_type> {
+  public:
+    iterator(const CoordinateIndicesAdaptor *base,
+             std::optional<llvm::ArrayRef<int32_t>::iterator> fieldIter,
+             llvm::detail::IterOfRange<const mlir::ValueRange> valuesIter)
+        : base(base), fieldIter(fieldIter), valuesIter(valuesIter) {}
+
+    value_type operator*() const {
+      if (fieldIter && **fieldIter != fir::CoordinateOp::kDynamicIndex) {
+        return mlir::IntegerAttr::get(base->fieldIndices.getElementType(),
+                                      **fieldIter);
+      }
+      return *valuesIter;
+    }
+
+    iterator &operator++() {
+      if (fieldIter) {
+        if (**fieldIter == fir::CoordinateOp::kDynamicIndex)
+          valuesIter++;
+        (*fieldIter)++;
+      } else {
+        valuesIter++;
+      }
+      return *this;
+    }
+
+    bool operator==(const iterator &rhs) const {
+      return base == rhs.base && fieldIter == rhs.fieldIter &&
+             valuesIter == rhs.valuesIter;
+    }
+
+  private:
+    const CoordinateIndicesAdaptor *base;
+    std::optional<llvm::ArrayRef<int32_t>::const_iterator> fieldIter;
+    llvm::detail::IterOfRange<const mlir::ValueRange> valuesIter;
+  };
+
+  iterator begin() const {
+    std::optional<llvm::ArrayRef<int32_t>::const_iterator> fieldIter;
+    if (fieldIndices)
+      fieldIter = fieldIndices.asArrayRef().begin();
+    return iterator(this, fieldIter, values.begin());
+  }
+
+  iterator end() const {
+    std::optional<llvm::ArrayRef<int32_t>::const_iterator> fieldIter;
+    if (fieldIndices)
+      fieldIter = fieldIndices.asArrayRef().end();
+    return iterator(this, fieldIter, values.end());
+  }
+
+private:
+  mlir::DenseI32ArrayAttr fieldIndices;
+  mlir::ValueRange values;
+};
+
+} // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_DIALECT_FIROPS_H

@@ -115,46 +115,46 @@ uint16_t test_dot_ushort3(uint16_t3 p0, uint16_t3 p1) { return dot(p0, p1); }
 uint16_t test_dot_ushort4(uint16_t4 p0, uint16_t4 p1) { return dot(p0, p1); }
 #endif
 
-// NATIVE_HALF: %hlsl.dot = fmul half
+// NATIVE_HALF: %hlsl.dot = fmul reassoc nnan ninf nsz arcp afn half
 // NATIVE_HALF: ret half %hlsl.dot
-// NO_HALF: %hlsl.dot = fmul float
+// NO_HALF: %hlsl.dot = fmul reassoc nnan ninf nsz arcp afn float
 // NO_HALF: ret float %hlsl.dot
 half test_dot_half(half p0, half p1) { return dot(p0, p1); }
 
-// NATIVE_HALF: %hlsl.dot = call half @llvm.[[ICF]].fdot.v2f16(<2 x half>
+// NATIVE_HALF: %hlsl.dot = call reassoc nnan ninf nsz arcp afn half @llvm.[[ICF]].fdot.v2f16(<2 x half>
 // NATIVE_HALF: ret half %hlsl.dot
-// NO_HALF: %hlsl.dot = call float @llvm.[[ICF]].fdot.v2f32(<2 x float>
+// NO_HALF: %hlsl.dot = call reassoc nnan ninf nsz arcp afn float @llvm.[[ICF]].fdot.v2f32(<2 x float>
 // NO_HALF: ret float %hlsl.dot
 half test_dot_half2(half2 p0, half2 p1) { return dot(p0, p1); }
 
-// NATIVE_HALF: %hlsl.dot = call half @llvm.[[ICF]].fdot.v3f16(<3 x half>
+// NATIVE_HALF: %hlsl.dot = call reassoc nnan ninf nsz arcp afn half @llvm.[[ICF]].fdot.v3f16(<3 x half>
 // NATIVE_HALF: ret half %hlsl.dot
-// NO_HALF: %hlsl.dot = call float @llvm.[[ICF]].fdot.v3f32(<3 x float>
+// NO_HALF: %hlsl.dot = call reassoc nnan ninf nsz arcp afn float @llvm.[[ICF]].fdot.v3f32(<3 x float>
 // NO_HALF: ret float %hlsl.dot
 half test_dot_half3(half3 p0, half3 p1) { return dot(p0, p1); }
 
-// NATIVE_HALF: %hlsl.dot = call half @llvm.[[ICF]].fdot.v4f16(<4 x half>
+// NATIVE_HALF: %hlsl.dot = call reassoc nnan ninf nsz arcp afn half @llvm.[[ICF]].fdot.v4f16(<4 x half>
 // NATIVE_HALF: ret half %hlsl.dot
-// NO_HALF: %hlsl.dot = call float @llvm.[[ICF]].fdot.v4f32(<4 x float>
+// NO_HALF: %hlsl.dot = call reassoc nnan ninf nsz arcp afn float @llvm.[[ICF]].fdot.v4f32(<4 x float>
 // NO_HALF: ret float %hlsl.dot
 half test_dot_half4(half4 p0, half4 p1) { return dot(p0, p1); }
 
-// CHECK: %hlsl.dot = fmul float
+// CHECK: %hlsl.dot = fmul reassoc nnan ninf nsz arcp afn float
 // CHECK: ret float %hlsl.dot
 float test_dot_float(float p0, float p1) { return dot(p0, p1); }
 
-// CHECK: %hlsl.dot = call float @llvm.[[ICF]].fdot.v2f32(<2 x float>
+// CHECK: %hlsl.dot = call reassoc nnan ninf nsz arcp afn float @llvm.[[ICF]].fdot.v2f32(<2 x float>
 // CHECK: ret float %hlsl.dot
 float test_dot_float2(float2 p0, float2 p1) { return dot(p0, p1); }
 
-// CHECK: %hlsl.dot = call float @llvm.[[ICF]].fdot.v3f32(<3 x float>
+// CHECK: %hlsl.dot = call reassoc nnan ninf nsz arcp afn float @llvm.[[ICF]].fdot.v3f32(<3 x float>
 // CHECK: ret float %hlsl.dot
 float test_dot_float3(float3 p0, float3 p1) { return dot(p0, p1); }
 
-// CHECK: %hlsl.dot = call float @llvm.[[ICF]].fdot.v4f32(<4 x float>
+// CHECK: %hlsl.dot = call reassoc nnan ninf nsz arcp afn float @llvm.[[ICF]].fdot.v4f32(<4 x float>
 // CHECK: ret float %hlsl.dot
 float test_dot_float4(float4 p0, float4 p1) { return dot(p0, p1); }
 
-// CHECK: %hlsl.dot = fmul double
+// CHECK: %hlsl.dot = fmul reassoc nnan ninf nsz arcp afn double
 // CHECK: ret double %hlsl.dot
 double test_dot_double(double p0, double p1) { return dot(p0, p1); }

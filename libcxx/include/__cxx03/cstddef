@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CSTDDEF
-#define _LIBCPP_CSTDDEF
+#ifndef _LIBCPP___CXX03_CSTDDEF
+#define _LIBCPP___CXX03_CSTDDEF
 
 /*
     cstddef synopsis
@@ -41,7 +41,7 @@ Types:
 
 #include <__cxx03/stddef.h>
 
-#ifndef _LIBCPP_STDDEF_H
+#ifndef _LIBCPP___CXX03_STDDEF_H
 #   error <cstddef> tried including <stddef.h> but didn't find libc++'s <stddef.h> header. \
           This usually means that your header search paths are not configured properly. \
           The header search paths should contain the C++ Standard Library headers before \
@@ -130,4 +130,4 @@ template <class _Integer, __enable_if_t<is_integral<_Integer>::value, int> = 0>
 
 #endif
 
-#endif // _LIBCPP_CSTDDEF
+#endif // _LIBCPP___CXX03_CSTDDEF

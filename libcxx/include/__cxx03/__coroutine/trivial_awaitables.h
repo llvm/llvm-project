@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LIBCPP___COROUTINE_TRIVIAL_AWAITABLES_H
-#define __LIBCPP___COROUTINE_TRIVIAL_AWAITABLES_H
+#ifndef __LIBCPP___CXX03___COROUTINE_TRIVIAL_AWAITABLES_H
+#define __LIBCPP___CXX03___COROUTINE_TRIVIAL_AWAITABLES_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__coroutine/coroutine_handle.h>
@@ -37,4 +37,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // __LIBCPP_STD_VER >= 20
 
-#endif // __LIBCPP___COROUTINE_TRIVIAL_AWAITABLES_H
+#endif // __LIBCPP___CXX03___COROUTINE_TRIVIAL_AWAITABLES_H

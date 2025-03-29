@@ -483,3 +483,13 @@ PackingMetadata mlir::computePackingMetadata(int64_t packedRank,
   }
   return res;
 }
+
+OpFoldResult mlir::reshapeConstantSource(DenseElementsAttr source,
+                                         TensorType result,
+                                         std::optional<Attribute> cst) {
+  if (source && source.isSplat() && result.hasStaticShape() &&
+      (!cst.has_value() || source.getSplatValue<Attribute>() == cst.value()))
+    return source.resizeSplat(result);
+
+  return {};
+}

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -21,7 +22,6 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 
 #include "../lib/CodeGen/LiveDebugValues/InstrRefBasedImpl.h"
@@ -81,20 +81,20 @@ public:
       GTEST_SKIP();
 
     TargetOptions Options;
-    Machine = std::unique_ptr<TargetMachine>(T->createTargetMachine(
-        Triple::normalize("x86_64--"), "", "", Options, std::nullopt,
-        std::nullopt, CodeGenOptLevel::Aggressive));
+    Machine = std::unique_ptr<TargetMachine>(
+        T->createTargetMachine(TargetTriple, "", "", Options, std::nullopt,
+                               std::nullopt, CodeGenOptLevel::Aggressive));
 
     auto Type = FunctionType::get(Type::getVoidTy(Ctx), false);
     auto F =
         Function::Create(Type, GlobalValue::ExternalLinkage, "Test", &*Mod);
 
     unsigned FunctionNum = 42;
-    MMI = std::make_unique<MachineModuleInfo>((LLVMTargetMachine *)&*Machine);
+    MMI = std::make_unique<MachineModuleInfo>(Machine.get());
     const TargetSubtargetInfo &STI = *Machine->getSubtargetImpl(*F);
 
-    MF = std::make_unique<MachineFunction>(*F, (LLVMTargetMachine &)*Machine,
-                                           STI, MMI->getContext(), FunctionNum);
+    MF = std::make_unique<MachineFunction>(*F, *Machine, STI, MMI->getContext(),
+                                           FunctionNum);
 
     // Create metadata: CU, subprogram, some blocks and an inline function
     // scope.

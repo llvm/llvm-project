@@ -53,14 +53,14 @@ __m256 test_mm256_and_ps(__m256 A, __m256 B) {
 
 __m256d test_mm256_andnot_pd(__m256d A, __m256d B) {
   // CHECK-LABEL: test_mm256_andnot_pd
-  // CHECK: xor <4 x i64> %{{.*}}, <i64 -1, i64 -1, i64 -1, i64 -1>
+  // CHECK: xor <4 x i64> %{{.*}}, splat (i64 -1)
   // CHECK: and <4 x i64>
   return _mm256_andnot_pd(A, B);
 }
 
 __m256 test_mm256_andnot_ps(__m256 A, __m256 B) {
   // CHECK-LABEL: test_mm256_andnot_ps
-  // CHECK: xor <8 x i32> %{{.*}}, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
+  // CHECK: xor <8 x i32> %{{.*}}, splat (i32 -1)
   // CHECK: and <8 x i32>
   return _mm256_andnot_ps(A, B);
 }
@@ -938,6 +938,24 @@ __m256d test_mm256_cvtps_pd(__m128 A) {
   return _mm256_cvtps_pd(A);
 }
 
+double test_mm256_cvtsd_f64(__m256d __a) {
+  // CHECK-LABEL: test_mm256_cvtsd_f64
+  // CHECK: extractelement <4 x double> %{{.*}}, i32 0
+  return _mm256_cvtsd_f64(__a);
+}
+
+int test_mm256_cvtsi256_si32(__m256i __a) {
+  // CHECK-LABEL: test_mm256_cvtsi256_si32
+  // CHECK: extractelement <8 x i32> %{{.*}}, i32 0
+  return _mm256_cvtsi256_si32(__a);
+}
+
+float test_mm256_cvtss_f32(__m256 __a) {
+  // CHECK-LABEL: test_mm256_cvtss_f32
+  // CHECK: extractelement <8 x float> %{{.*}}, i32 0
+  return _mm256_cvtss_f32(__a);
+}
+
 __m128i test_mm256_cvttpd_epi32(__m256d A) {
   // CHECK-LABEL: test_mm256_cvttpd_epi32
   // CHECK: call <4 x i32> @llvm.x86.avx.cvtt.pd2dq.256(<4 x double> %{{.*}})
@@ -1496,6 +1514,7 @@ __m256d test_mm256_set_pd(double A0, double A1, double A2, double A3) {
   // CHECK: insertelement <4 x double> %{{.*}}, double %{{.*}}, i32 3
   return _mm256_set_pd(A0, A1, A2, A3);
 }
+TEST_CONSTEXPR(match_m256d(_mm256_set_pd(-100.0, +90.0, -50.0, +1.0), +1.0, -50.0, +90.0, -100.0));
 
 __m256 test_mm256_set_ps(float A0, float A1, float A2, float A3, float A4, float A5, float A6, float A7) {
   // CHECK-LABEL: test_mm256_set_ps
@@ -1509,6 +1528,7 @@ __m256 test_mm256_set_ps(float A0, float A1, float A2, float A3, float A4, float
   // CHECK: insertelement <8 x float> %{{.*}}, float %{{.*}}, i32 7
   return _mm256_set_ps(A0, A1, A2, A3, A4, A5, A6, A7);
 }
+TEST_CONSTEXPR(match_m256(_mm256_set_ps(-1.0f, +2.0f, -3.0f, +4.0f, -5.0f, +6.0f, -7.0f, +8.0f), +8.0f, -7.0f, +6.0f, -5.0f, +4.0f, -3.0f, +2.0f, -1.0f));
 
 __m256i test_mm256_set1_epi8(char A) {
   // CHECK-LABEL: test_mm256_set1_epi8
@@ -1598,6 +1618,7 @@ __m256d test_mm256_set1_pd(double A) {
   // CHECK: insertelement <4 x double> %{{.*}}, double %{{.*}}, i32 3
   return _mm256_set1_pd(A);
 }
+TEST_CONSTEXPR(match_m256d(_mm256_set1_pd(+42.0), +42.0, +42.0, +42.0, +42.0));
 
 __m256 test_mm256_set1_ps(float A) {
   // CHECK-LABEL: test_mm256_set1_ps
@@ -1611,6 +1632,7 @@ __m256 test_mm256_set1_ps(float A) {
   // CHECK: insertelement <8 x float> %{{.*}}, float %{{.*}}, i32 7
   return _mm256_set1_ps(A);
 }
+TEST_CONSTEXPR(match_m256(_mm256_set1_ps(-101.0f), -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f));
 
 __m256i test_mm256_setr_epi8(char A0, char A1, char A2, char A3, char A4, char A5, char A6, char A7,
                              char A8, char A9, char A10, char A11, char A12, char A13, char A14, char A15,
@@ -1722,6 +1744,7 @@ __m256d test_mm256_setr_pd(double A0, double A1, double A2, double A3) {
   // CHECK: insertelement <4 x double> %{{.*}}, double %{{.*}}, i32 3
   return _mm256_setr_pd(A0, A1, A2, A3);
 }
+TEST_CONSTEXPR(match_m256d(_mm256_setr_pd(-100.0, +90.0, -50.0, +1.0), -100.0, +90.0, -50.0, +1.0));
 
 __m256 test_mm256_setr_ps(float A0, float A1, float A2, float A3, float A4, float A5, float A6, float A7) {
   // CHECK-LABEL: test_mm256_setr_ps
@@ -1735,6 +1758,7 @@ __m256 test_mm256_setr_ps(float A0, float A1, float A2, float A3, float A4, floa
   // CHECK: insertelement <8 x float> %{{.*}}, float %{{.*}}, i32 7
   return _mm256_setr_ps(A0, A1, A2, A3, A4, A5, A6, A7);
 }
+TEST_CONSTEXPR(match_m256(_mm256_setr_ps(-1.0f, +2.0f, -3.0f, +4.0f, -5.0f, +6.0f, -7.0f, +8.0f), -1.0f, +2.0f, -3.0f, +4.0f, -5.0f, +6.0f, -7.0f, +8.0f));
 
 __m256d test_mm256_setzero_pd(void) {
   // CHECK-LABEL: test_mm256_setzero_pd
@@ -2079,25 +2103,4 @@ __m256i test_mm256_zextsi128_si256(__m128i A) {
   // CHECK: store <2 x i64> zeroinitializer
   // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   return _mm256_zextsi128_si256(A);
-}
-
-double test_mm256_cvtsd_f64(__m256d __a)
-{
-  // CHECK-LABEL: test_mm256_cvtsd_f64
-  // CHECK: extractelement <4 x double> %{{.*}}, i32 0
-  return _mm256_cvtsd_f64(__a);
-}
-
-int test_mm256_cvtsi256_si32(__m256i __a)
-{
-  // CHECK-LABEL: test_mm256_cvtsi256_si32
-  // CHECK: extractelement <8 x i32> %{{.*}}, i32 0
-  return _mm256_cvtsi256_si32(__a);
-}
-
-float test_mm256_cvtss_f32(__m256 __a)
-{
-  // CHECK-LABEL: test_mm256_cvtss_f32
-  // CHECK: extractelement <8 x float> %{{.*}}, i32 0
-  return _mm256_cvtss_f32(__a);
 }

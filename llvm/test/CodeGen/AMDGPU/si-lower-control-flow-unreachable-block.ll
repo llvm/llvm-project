@@ -19,7 +19,7 @@ bb:
   br i1 %tmp63, label %unreachable, label %ret
 
 unreachable:
-  store volatile i32 0, ptr addrspace(3) undef, align 4
+  store volatile i32 0, ptr addrspace(3) poison, align 4
   unreachable
 
 ret:
@@ -47,7 +47,7 @@ ret:
   ret void
 
 unreachable:
-  store volatile i32 0, ptr addrspace(3) undef, align 4
+  store volatile i32 0, ptr addrspace(3) poison, align 4
   unreachable
 }
 
@@ -66,7 +66,7 @@ bb:
   br i1 %tmp63, label %unreachable, label %ret
 
 unreachable:
-  store volatile i32 0, ptr addrspace(3) undef, align 4
+  store volatile i32 0, ptr addrspace(3) poison, align 4
   unreachable
 
 ret:

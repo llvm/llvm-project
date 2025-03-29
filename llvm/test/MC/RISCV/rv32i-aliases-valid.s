@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -triple=riscv32 -riscv-no-aliases \
+# RUN: llvm-mc %s -triple=riscv32 -M no-aliases \
 # RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-INST,CHECK-ASM-NOALIAS %s
 # RUN: llvm-mc %s -triple=riscv32 \
 # RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-ALIAS,CHECK-ASM %s
@@ -254,7 +254,7 @@ sext.b x10, x11
 sext.h x10, x11
 
 # CHECK-INST: andi a0, a1, 255
-# CHECK-ALIAS: andi a0, a1, 255
+# CHECK-ALIAS: zext.b a0, a1
 zext.b x10, x11
 
 # CHECK-EXPAND: slli a0, a1, 16

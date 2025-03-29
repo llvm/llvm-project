@@ -6,7 +6,5 @@ dc CIVAPS, x3
 // NO-POPS: error: DC CIGDVAPS requires: pops
 // NO-POPS: error: DC CIVAPS requires: pops
 
-# HAS-POPS:      	.text
-
 # HAS-POPS:      	dc	cigdvaps, x3                    // encoding: [0xa3,0x7f,0x08,0xd5]
 # HAS-POPS-NEXT: 	dc	civaps, x3                      // encoding: [0x23,0x7f,0x08,0xd5]

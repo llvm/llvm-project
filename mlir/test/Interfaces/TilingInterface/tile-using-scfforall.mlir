@@ -205,7 +205,7 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// CHECK: #[[$MAP_ADD:.+]] = affine_map<(d0, d1) -> (d0 + d1)>
+// CHECK: #[[$MAP_ADD:.+]] = affine_map<(d0)[s0] -> (d0 + s0)>
 
 func.func @indexed_semantics(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> tensor<?x?xf32> {
   // Check that we correctly amend "linalg.index" results.
@@ -241,9 +241,9 @@ module attributes {transform.with_named_sequence} {
 // CHECK-LABEL: @indexed_semantics
 //       CHECK: scf.forall (%[[I0:.+]], %[[I1:.+]]) =
 //       CHECK:   %[[INDEX0:.+]] = linalg.index 0
-//       CHECK:   %[[INDEX0_AMENDED:.+]] = affine.apply #[[$MAP_ADD]](%[[INDEX0]], %[[I0]])
+//       CHECK:   %[[INDEX0_AMENDED:.+]] = affine.apply #[[$MAP_ADD]](%[[I0]])[%[[INDEX0]]]
 //       CHECK:   %[[INDEX1:.+]] = linalg.index 1
-//       CHECK:   %[[INDEX1_AMENDED:.+]] = affine.apply #[[$MAP_ADD]](%[[INDEX1]], %[[I1]])
+//       CHECK:   %[[INDEX1_AMENDED:.+]] = affine.apply #[[$MAP_ADD]](%[[I1]])[%[[INDEX1]]]
 //       CHECK:   arith.addi %[[INDEX0_AMENDED]], %[[INDEX1_AMENDED]]
 
 // -----

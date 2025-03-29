@@ -516,6 +516,54 @@ declare cc96 void @f.cc96()
 ; CHECK: declare amdgpu_es void @f.cc96()
 declare amdgpu_es void @f.amdgpu_es()
 ; CHECK: declare amdgpu_es void @f.amdgpu_es()
+declare cc112 void @f.cc112()
+; CHECK: declare riscv_vls_cc(32) void @f.cc112()
+declare cc113 void @f.cc113()
+; CHECK: declare riscv_vls_cc(64) void @f.cc113()
+declare cc114 void @f.cc114()
+; CHECK: declare riscv_vls_cc(128) void @f.cc114()
+declare cc115 void @f.cc115()
+; CHECK: declare riscv_vls_cc(256) void @f.cc115()
+declare cc116 void @f.cc116()
+; CHECK: declare riscv_vls_cc(512) void @f.cc116()
+declare cc117 void @f.cc117()
+; CHECK: declare riscv_vls_cc(1024) void @f.cc117()
+declare cc118 void @f.cc118()
+; CHECK: declare riscv_vls_cc(2048) void @f.cc118()
+declare cc119 void @f.cc119()
+; CHECK: declare riscv_vls_cc(4096) void @f.cc119()
+declare cc120 void @f.cc120()
+; CHECK: declare riscv_vls_cc(8192) void @f.cc120()
+declare cc121 void @f.cc121()
+; CHECK: declare riscv_vls_cc(16384) void @f.cc121()
+declare cc122 void @f.cc122()
+; CHECK: declare riscv_vls_cc(32768) void @f.cc122()
+declare cc123 void @f.cc123()
+; CHECK: declare riscv_vls_cc(65536) void @f.cc123()
+declare riscv_vls_cc(32) void @riscv_vls_cc_32()
+; CHECK: declare riscv_vls_cc(32) void @riscv_vls_cc_32()
+declare riscv_vls_cc(64) void @riscv_vls_cc_64()
+; CHECK: declare riscv_vls_cc(64) void @riscv_vls_cc_64()
+declare riscv_vls_cc(128) void @riscv_vls_cc_128()
+; CHECK: declare riscv_vls_cc(128) void @riscv_vls_cc_128()
+declare riscv_vls_cc(256) void @riscv_vls_cc_256()
+; CHECK: declare riscv_vls_cc(256) void @riscv_vls_cc_256()
+declare riscv_vls_cc(512) void @riscv_vls_cc_512()
+; CHECK: declare riscv_vls_cc(512) void @riscv_vls_cc_512()
+declare riscv_vls_cc(1024) void @riscv_vls_cc_1024()
+; CHECK: declare riscv_vls_cc(1024) void @riscv_vls_cc_1024()
+declare riscv_vls_cc(2048) void @riscv_vls_cc_2048()
+; CHECK: declare riscv_vls_cc(2048) void @riscv_vls_cc_2048()
+declare riscv_vls_cc(4096) void @riscv_vls_cc_4096()
+; CHECK: declare riscv_vls_cc(4096) void @riscv_vls_cc_4096()
+declare riscv_vls_cc(8192) void @riscv_vls_cc_8192()
+; CHECK: declare riscv_vls_cc(8192) void @riscv_vls_cc_8192()
+declare riscv_vls_cc(16384) void @riscv_vls_cc_16384()
+; CHECK: declare riscv_vls_cc(16384) void @riscv_vls_cc_16384()
+declare riscv_vls_cc(32768) void @riscv_vls_cc_32768()
+; CHECK: declare riscv_vls_cc(32768) void @riscv_vls_cc_32768()
+declare riscv_vls_cc(65536) void @riscv_vls_cc_65536()
+; CHECK: declare riscv_vls_cc(65536) void @riscv_vls_cc_65536()
 declare cc1023 void @f.cc1023()
 ; CHECK: declare cc1023 void @f.cc1023()
 
@@ -559,7 +607,7 @@ declare void @f.param.sret(ptr sret(i8))
 declare void @f.param.noalias(ptr noalias)
 ; CHECK: declare void @f.param.noalias(ptr noalias)
 declare void @f.param.nocapture(ptr nocapture)
-; CHECK: declare void @f.param.nocapture(ptr nocapture)
+; CHECK: declare void @f.param.nocapture(ptr captures(none))
 declare void @f.param.nest(ptr nest)
 ; CHECK: declare void @f.param.nest(ptr nest)
 declare ptr @f.param.returned(ptr returned)
@@ -1139,6 +1187,48 @@ define void @fastMathFlagsForStructCalls() {
   %call.nnan.ninf = tail call nnan ninf fastcc { <4 x double> } @fmf_struct_v4f64()
   ; CHECK: %call.nnan.ninf = tail call nnan ninf fastcc { <4 x double> } @fmf_struct_v4f64()
 
+  ret void
+}
+
+; CHECK-LABEL: fastmathflags_fpext(
+define void @fastmathflags_fpext(float %op1) {
+  %f.nnan = fpext nnan float %op1 to double
+  ; CHECK: %f.nnan = fpext nnan float %op1 to double
+  %f.ninf = fpext ninf float %op1 to double
+  ; CHECK: %f.ninf = fpext ninf float %op1 to double
+  %f.nsz = fpext nsz float %op1 to double
+  ; CHECK: %f.nsz = fpext nsz float %op1 to double
+  %f.arcp = fpext arcp float %op1 to double
+  ; CHECK: %f.arcp = fpext arcp float %op1 to double
+  %f.contract = fpext contract float %op1 to double
+  ; CHECK: %f.contract = fpext contract float %op1 to double
+  %f.afn = fpext afn float %op1 to double
+  ; CHECK: %f.afn = fpext afn float %op1 to double
+  %f.reassoc = fpext reassoc float %op1 to double
+  ; CHECK: %f.reassoc = fpext reassoc float %op1 to double
+  %f.fast = fpext fast float %op1 to double
+  ; CHECK: %f.fast = fpext fast float %op1 to double
+  ret void
+}
+
+; CHECK-LABEL: fastmathflags_fptrunc(
+define void @fastmathflags_fptrunc(float %op1) {
+  %f.nnan = fptrunc nnan float %op1 to half
+  ; CHECK: %f.nnan = fptrunc nnan float %op1 to half
+  %f.ninf = fptrunc ninf float %op1 to half
+  ; CHECK: %f.ninf = fptrunc ninf float %op1 to half
+  %f.nsz = fptrunc nsz float %op1 to half
+  ; CHECK: %f.nsz = fptrunc nsz float %op1 to half
+  %f.arcp = fptrunc arcp float %op1 to half
+  ; CHECK: %f.arcp = fptrunc arcp float %op1 to half
+  %f.contract = fptrunc contract float %op1 to half
+  ; CHECK: %f.contract = fptrunc contract float %op1 to half
+  %f.afn = fptrunc afn float %op1 to half
+  ; CHECK: %f.afn = fptrunc afn float %op1 to half
+  %f.reassoc = fptrunc reassoc float %op1 to half
+  ; CHECK: %f.reassoc = fptrunc reassoc float %op1 to half
+  %f.fast = fptrunc fast float %op1 to half
+  ; CHECK: %f.fast = fptrunc fast float %op1 to half
   ret void
 }
 

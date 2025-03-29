@@ -55,6 +55,7 @@ namespace {
 struct ShapeInferencePass
     : public mlir::PassWrapper<ShapeInferencePass, OperationPass<toy::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ShapeInferencePass)
+  StringRef getArgument() const override { return "toy-shape-inference"; }
 
   void runOnOperation() override {
     auto f = getOperation();

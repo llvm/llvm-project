@@ -68,7 +68,7 @@ void MmapWriteExecChecker::checkPreCall(const CallEvent &Call,
     auto ProtLoc = ProtVal.getAs<nonloc::ConcreteInt>();
     if (!ProtLoc)
       return;
-    int64_t Prot = ProtLoc->getValue().getSExtValue();
+    int64_t Prot = ProtLoc->getValue()->getSExtValue();
 
     if ((Prot & ProtWrite) && (Prot & ProtExec)) {
       ExplodedNode *N = C.generateNonFatalErrorNode();

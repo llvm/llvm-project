@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_FUNCTIONAL
-#define _LIBCPP_FUNCTIONAL
+#ifndef _LIBCPP___CXX03_FUNCTIONAL
+#define _LIBCPP___CXX03_FUNCTIONAL
 
 /*
     functional synopsis
@@ -595,4 +595,4 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 #  include <__cxx03/utility>
 #endif
 
-#endif // _LIBCPP_FUNCTIONAL
+#endif // _LIBCPP___CXX03_FUNCTIONAL

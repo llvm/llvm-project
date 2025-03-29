@@ -1,0 +1,62 @@
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: llvm-mc -triple=x86_64 --disassemble --hex a.s | FileCheck %s
+# RUN: llvm-mc -triple=x86_64 --disassemble --hex decode1.s 2>&1 | FileCheck %s --check-prefix=DECODE1 --implicit-check-not=warning:
+# RUN: not llvm-mc -triple=x86_64 --disassemble --hex decode2.s 2>&1 | FileCheck %s --check-prefix=DECODE2 --implicit-check-not=warning:
+# RUN: not llvm-mc -triple=x86_64 --disassemble --hex err1.s 2>&1 | FileCheck %s --check-prefix=ERR1 --implicit-check-not=error:
+# RUN: not llvm-mc -triple=x86_64 --disassemble --hex err2.s 2>&1 | FileCheck %s --check-prefix=ERR2 --implicit-check-not=error:
+
+#--- a.s
+4883ec08 31  # comment
+# comment
+	ed4829 c390
+[c3c3][4829c3]
+[90]
+
+# CHECK:      subq $8, %rsp
+# CHECK-NEXT: xorl %ebp, %ebp
+# CHECK-NEXT: subq %rax, %rbx
+# CHECK-NEXT: nop
+# CHECK-NEXT: retq
+# CHECK-NEXT: retq
+# CHECK-NEXT: subq %rax, %rbx
+# CHECK-NEXT: nop
+# CHECK-EMPTY:
+
+#--- decode1.s
+4889
+
+# DECODE1: 1:1: warning: invalid instruction encoding
+
+#--- decode2.s
+[4889][4889] [4889]4889c3
+	[4889]
+
+# DECODE2: 1:2: warning: invalid instruction encoding
+# DECODE2: 1:8: warning: invalid instruction encoding
+# DECODE2: 1:15: warning: invalid instruction encoding
+# DECODE2: 2:3: warning: invalid instruction encoding
+
+#--- err1.s
+0x31ed
+0xcc
+g0
+
+# ERR1:      1:1: error: invalid input token
+# ERR1:      2:1: error: invalid input token
+# ERR1:      3:1: error: invalid input token
+# ERR1:      xorl %ebp, %ebp
+# ERR1-NEXT: int3
+# ERR1-EMPTY:
+
+#--- err2.s
+g
+90c
+cc
+c
+
+# ERR2:      1:1: error: expected two hex digits
+# ERR2:      2:3: error: expected two hex digits
+# ERR2:      4:1: error: expected two hex digits
+# ERR2:      nop
+# ERR2-NEXT: int3
+# ERR2-EMPTY:

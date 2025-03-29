@@ -615,40 +615,40 @@ def ICmpPredicate : LLVM_EnumAttr<
 //===----------------------------------------------------------------------===//
 
 // Linkage attribute is used on functions and globals. The order follows that of
-// https://llvm.org/docs/LangRef.html#linkage-types. The names are equivalent to
-// visible names in the IR rather than to enum values names in llvm::GlobalValue
-// since the latter is easier to change.
-def LinkagePrivate
-    : LLVM_EnumAttrCase<"Private", "private", "PrivateLinkage", 0>;
-def LinkageInternal
-    : LLVM_EnumAttrCase<"Internal", "internal", "InternalLinkage", 1>;
+// llvm::GlobalValue::LinkageTypes from llvm/IR/GlobalValue.h. The names are
+// equivalent to visible names in the IR rather than to enum values names in
+// llvm::GlobalValue since the latter is easier to change.
+def LinkageExternal
+    : LLVM_EnumAttrCase<"External", "external", "ExternalLinkage", 0>;
 def LinkageAvailableExternally
     : LLVM_EnumAttrCase<"AvailableExternally", "available_externally",
-                        "AvailableExternallyLinkage", 2>;
+                        "AvailableExternallyLinkage", 1>;
 def LinkageLinkonce
-    : LLVM_EnumAttrCase<"Linkonce", "linkonce", "LinkOnceAnyLinkage", 3>;
+    : LLVM_EnumAttrCase<"Linkonce", "linkonce", "LinkOnceAnyLinkage", 2>;
+def LinkageLinkonceODR
+    : LLVM_EnumAttrCase<"LinkonceODR", "linkonce_odr", "LinkOnceODRLinkage", 3>;
 def LinkageWeak
     : LLVM_EnumAttrCase<"Weak", "weak", "WeakAnyLinkage", 4>;
-def LinkageCommon
-    : LLVM_EnumAttrCase<"Common", "common", "CommonLinkage", 5>;
+def LinkageWeakODR
+    : LLVM_EnumAttrCase<"WeakODR", "weak_odr", "WeakODRLinkage", 5>;
 def LinkageAppending
     : LLVM_EnumAttrCase<"Appending", "appending", "AppendingLinkage", 6>;
+def LinkageInternal
+    : LLVM_EnumAttrCase<"Internal", "internal", "InternalLinkage", 7>;
+def LinkagePrivate
+    : LLVM_EnumAttrCase<"Private", "private", "PrivateLinkage", 8>;
 def LinkageExternWeak
-   : LLVM_EnumAttrCase<"ExternWeak", "extern_weak", "ExternalWeakLinkage", 7>;
-def LinkageLinkonceODR
-    : LLVM_EnumAttrCase<"LinkonceODR", "linkonce_odr", "LinkOnceODRLinkage", 8>;
-def LinkageWeakODR
-    : LLVM_EnumAttrCase<"WeakODR", "weak_odr", "WeakODRLinkage", 9>;
-def LinkageExternal
-    : LLVM_EnumAttrCase<"External", "external", "ExternalLinkage", 10>;
+   : LLVM_EnumAttrCase<"ExternWeak", "extern_weak", "ExternalWeakLinkage", 9>;
+def LinkageCommon
+    : LLVM_EnumAttrCase<"Common", "common", "CommonLinkage", 10>;
 
 def LinkageEnum : LLVM_EnumAttr<
     "Linkage",
     "::llvm::GlobalValue::LinkageTypes",
     "LLVM linkage types",
-    [LinkagePrivate, LinkageInternal, LinkageAvailableExternally,
-     LinkageLinkonce, LinkageWeak, LinkageCommon, LinkageAppending,
-     LinkageExternWeak, LinkageLinkonceODR, LinkageWeakODR, LinkageExternal]> {
+    [LinkageExternal, LinkageAvailableExternally, LinkageLinkonce,
+      LinkageLinkonceODR, LinkageWeak, LinkageWeakODR, LinkageAppending,
+      LinkageInternal, LinkagePrivate, LinkageExternWeak, LinkageCommon]> {
   let cppNamespace = "::mlir::LLVM::linkage";
 }
 
@@ -815,6 +815,39 @@ def FPExceptionBehaviorAttr : LLVM_EnumAttr<
     "LLVM Exception Behavior",
     [FPExceptionBehaviorIgnore, FPExceptionBehaviorMayTrap,
      FPExceptionBehaviorStrict]> {
+  let cppNamespace = "::mlir::LLVM";
+}
+
+//===----------------------------------------------------------------------===//
+// Module Flag Behavior
+//===----------------------------------------------------------------------===//
+
+// These values must match llvm::Module::ModFlagBehavior ones.
+// See llvm/include/llvm/IR/Module.h.
+def ModFlagBehaviorError
+    : LLVM_EnumAttrCase<"Error", "error", "Error", 1>;
+def ModFlagBehaviorWarning
+    : LLVM_EnumAttrCase<"Warning", "warning", "Warning", 2>;
+def ModFlagBehaviorRequire
+    : LLVM_EnumAttrCase<"Require", "require", "Require", 3>;
+def ModFlagBehaviorOverride
+    : LLVM_EnumAttrCase<"Override", "override", "Override", 4>;
+def ModFlagBehaviorAppend
+    : LLVM_EnumAttrCase<"Append", "append", "Append", 5>;
+def ModFlagBehaviorAppendUnique
+    : LLVM_EnumAttrCase<"AppendUnique", "append_unique", "AppendUnique", 6>;
+def ModFlagBehaviorMax
+    : LLVM_EnumAttrCase<"Max", "max", "Max", 7>;
+def ModFlagBehaviorMin
+    : LLVM_EnumAttrCase<"Min", "min", "Min", 8>;
+
+def ModFlagBehaviorAttr : LLVM_EnumAttr<
+    "ModFlagBehavior",
+    "::llvm::Module::ModFlagBehavior",
+    "LLVM Module Flag Behavior",
+    [ModFlagBehaviorError, ModFlagBehaviorWarning, ModFlagBehaviorRequire,
+     ModFlagBehaviorOverride, ModFlagBehaviorAppend,
+     ModFlagBehaviorAppendUnique, ModFlagBehaviorMax, ModFlagBehaviorMin]> {
   let cppNamespace = "::mlir::LLVM";
 }
 

@@ -221,9 +221,9 @@ public:
   // CHECK-FIXES: const char *test_suite_name() const;
 };
 
-const char *FooTestInfo::test_case_name() const {}
+const char *FooTestInfo::test_case_name() const { return nullptr; }
 // CHECK-MESSAGES: [[@LINE-1]]:26: warning: Google Test APIs named with 'case'
-// CHECK-FIXES: const char *FooTestInfo::test_suite_name() const {}
+// CHECK-FIXES: const char *FooTestInfo::test_suite_name() const { return nullptr; }
 
 class BarTestInfo : public testing::TestInfo {
 public:
@@ -491,26 +491,26 @@ public:
   // CHECK-FIXES: const testing::TestSuite *GetTestSuite(int) const;
 };
 
-testing::TestCase *FooUnitTest::current_test_case() const {}
+testing::TestCase *FooUnitTest::current_test_case() const { return nullptr; }
 // CHECK-MESSAGES: [[@LINE-1]]:10: warning: Google Test APIs named with 'case'
 // CHECK-MESSAGES: [[@LINE-2]]:33: warning: Google Test APIs named with 'case'
-// CHECK-FIXES: testing::TestSuite *FooUnitTest::current_test_suite() const {}
-int FooUnitTest::successful_test_case_count() const {}
+// CHECK-FIXES: testing::TestSuite *FooUnitTest::current_test_suite() const { return nullptr; }
+int FooUnitTest::successful_test_case_count() const { return 0; }
 // CHECK-MESSAGES: [[@LINE-1]]:18: warning: Google Test APIs named with 'case'
-// CHECK-FIXES: int FooUnitTest::successful_test_suite_count() const {}
-int FooUnitTest::failed_test_case_count() const {}
+// CHECK-FIXES: int FooUnitTest::successful_test_suite_count() const { return 0; }
+int FooUnitTest::failed_test_case_count() const { return 0; }
 // CHECK-MESSAGES: [[@LINE-1]]:18: warning: Google Test APIs named with 'case'
-// CHECK-FIXES: int FooUnitTest::failed_test_suite_count() const {}
-int FooUnitTest::total_test_case_count() const {}
+// CHECK-FIXES: int FooUnitTest::failed_test_suite_count() const { return 0; }
+int FooUnitTest::total_test_case_count() const { return 0; }
 // CHECK-MESSAGES: [[@LINE-1]]:18: warning: Google Test APIs named with 'case'
-// CHECK-FIXES: int FooUnitTest::total_test_suite_count() const {}
-int FooUnitTest::test_case_to_run_count() const {}
+// CHECK-FIXES: int FooUnitTest::total_test_suite_count() const { return 0; }
+int FooUnitTest::test_case_to_run_count() const { return 0; }
 // CHECK-MESSAGES: [[@LINE-1]]:18: warning: Google Test APIs named with 'case'
-// CHECK-FIXES: int FooUnitTest::test_suite_to_run_count() const {}
-const testing::TestCase *FooUnitTest::GetTestCase(int) const {}
+// CHECK-FIXES: int FooUnitTest::test_suite_to_run_count() const { return 0; }
+const testing::TestCase *FooUnitTest::GetTestCase(int) const { return 0; }
 // CHECK-MESSAGES: [[@LINE-1]]:16: warning: Google Test APIs named with 'case'
 // CHECK-MESSAGES: [[@LINE-2]]:39: warning: Google Test APIs named with 'case'
-// CHECK-FIXES: const testing::TestSuite *FooUnitTest::GetTestSuite(int) const {}
+// CHECK-FIXES: const testing::TestSuite *FooUnitTest::GetTestSuite(int) const { return 0; }
 
 // Type derived from testing::TestCase
 class BarUnitTest : public testing::UnitTest {

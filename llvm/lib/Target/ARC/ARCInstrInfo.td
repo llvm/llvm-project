@@ -55,8 +55,7 @@ def ARCcmp : SDNode<"ARCISD::CMP", SDT_ARCcmptst, [SDNPOutGlue]>;
 def ARCcmov : SDNode<"ARCISD::CMOV", SDT_ARCcmov, [SDNPInGlue]>;
 
 // Conditional Branch
-def ARCbrcc : SDNode<"ARCISD::BRcc", SDT_ARCbrcc,
-                       [SDNPHasChain, SDNPInGlue, SDNPOutGlue]>;
+def ARCbrcc : SDNode<"ARCISD::BRcc", SDT_ARCbrcc, [SDNPHasChain]>;
 
 // Direct Call
 def ARCBranchLink     : SDNode<"ARCISD::BL",SDT_ARCBranchLink,

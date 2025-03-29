@@ -3,9 +3,9 @@
 ; already visited blocks count as taken (i.e. the flow continues through them).
 ;
 ; RUN: split-file %s %t
-; RUN: llvm-ctxprof-util fromJSON --input=%t/profile_ok.json --output=%t/profile_ok.ctxprofdata
-; RUN: llvm-ctxprof-util fromJSON --input=%t/profile_pump.json --output=%t/profile_pump.ctxprofdata
-; RUN: llvm-ctxprof-util fromJSON --input=%t/profile_unreachable.json --output=%t/profile_unreachable.ctxprofdata
+; RUN: llvm-ctxprof-util fromYAML --input=%t/profile_ok.yaml --output=%t/profile_ok.ctxprofdata
+; RUN: llvm-ctxprof-util fromYAML --input=%t/profile_pump.yaml --output=%t/profile_pump.ctxprofdata
+; RUN: llvm-ctxprof-util fromYAML --input=%t/profile_unreachable.yaml --output=%t/profile_unreachable.ctxprofdata
 ;
 ; RUN: opt -passes=ctx-prof-flatten %t/example_ok.ll -use-ctx-profile=%t/profile_ok.ctxprofdata -S -o - | FileCheck %s
 ; RUN: not --crash opt -passes=ctx-prof-flatten %t/message_pump.ll -use-ctx-profile=%t/profile_pump.ctxprofdata -S 2>&1 | FileCheck %s --check-prefix=ASSERTION
@@ -38,8 +38,11 @@ exit:
 }
 !0 = !{i64 1234}
 
-;--- profile_ok.json
-[{"Guid":1234, "Counters":[2, 2, 1, 2]}]
+;--- profile_ok.yaml
+Contexts:
+  - Guid: 1234 
+    TotalRootEntryCount: 2
+    Counters: [2, 2, 1, 2]
 
 ;--- message_pump.ll
 ; This is a message pump: the loop never exits. This should result in an
@@ -59,8 +62,11 @@ exit:
 }
 !0 = !{i64 1234}
 
-;--- profile_pump.json
-[{"Guid":1234, "Counters":[2, 10, 0]}]
+;--- profile_pump.yaml
+Contexts:
+  - Guid: 1234
+    TotalRootEntryCount: 2
+    Counters: [2, 10, 0]
 
 ;--- unreachable.ll
 ; An unreachable block is reached, that's an error
@@ -81,5 +87,8 @@ exit:
 }
 !0 = !{i64 1234}
 
-;--- profile_unreachable.json
-[{"Guid":1234, "Counters":[2, 1, 1, 2]}]
+;--- profile_unreachable.yaml
+Contexts:
+  - Guid: 1234
+    TotalRootEntryCount: 2
+    Counters: [2, 1, 1, 2]

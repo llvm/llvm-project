@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_TRIVIALLY_ASSIGNABLE_H
-#define _LIBCPP___TYPE_TRAITS_IS_TRIVIALLY_ASSIGNABLE_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_IS_TRIVIALLY_ASSIGNABLE_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_IS_TRIVIALLY_ASSIGNABLE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/add_const.h>
@@ -53,4 +53,4 @@ inline constexpr bool is_trivially_move_assignable_v = is_trivially_move_assigna
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_TRIVIALLY_ASSIGNABLE_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_IS_TRIVIALLY_ASSIGNABLE_H

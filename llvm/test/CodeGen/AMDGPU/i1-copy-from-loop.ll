@@ -74,7 +74,7 @@ for.end:
   br i1 %cc, label %if, label %end
 
 if:
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float undef, float undef, float undef, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float poison, float poison, float poison, float poison, i1 true, i1 true)
   br label %end
 
 end:

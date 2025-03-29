@@ -8,8 +8,8 @@ static int static_int = 42;
 
 int non_static_int = 43;
 
-int a_function(int var) {
-  return var; // breakpoint 3
+int a_function(int list) {
+  return list; // breakpoint 3
 }
 
 struct my_struct {

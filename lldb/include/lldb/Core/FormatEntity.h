@@ -67,6 +67,7 @@ struct Entry {
     ScriptThread,
     ThreadInfo,
     TargetArch,
+    TargetFile,
     ScriptTarget,
     ModuleFile,
     File,
@@ -99,7 +100,9 @@ struct Entry {
     LineEntryColumn,
     LineEntryStartAddress,
     LineEntryEndAddress,
-    CurrentPCArrow
+    CurrentPCArrow,
+    ProgressCount,
+    ProgressMessage,
   };
 
   struct Definition {

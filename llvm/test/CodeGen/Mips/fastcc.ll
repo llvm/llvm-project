@@ -1,8 +1,8 @@
-; RUN: llc < %s -march=mipsel -relocation-model=pic | FileCheck %s
+; RUN: llc < %s -mtriple=mipsel -relocation-model=pic | FileCheck %s
 ; RUN: llc < %s -mtriple=mipsel-none-nacl-gnu -relocation-model=pic -mips-tail-calls=1\
 ; RUN:  | FileCheck %s -check-prefix=CHECK-NACL
-; RUN: llc < %s -march=mipsel -mcpu=mips32 -mattr=+nooddspreg -relocation-model=pic -mips-tail-calls=1| FileCheck %s -check-prefix=NOODDSPREG
-; RUN: llc < %s -march=mipsel -mcpu=mips32r2 -mattr=+fp64,+nooddspreg -relocation-model=pic -mips-tail-calls=1 | FileCheck %s -check-prefix=FP64-NOODDSPREG
+; RUN: llc < %s -mtriple=mipsel -mcpu=mips32 -mattr=+nooddspreg -relocation-model=pic -mips-tail-calls=1| FileCheck %s -check-prefix=NOODDSPREG
+; RUN: llc < %s -mtriple=mipsel -mcpu=mips32r2 -mattr=+fp64,+nooddspreg -relocation-model=pic -mips-tail-calls=1 | FileCheck %s -check-prefix=FP64-NOODDSPREG
 
 
 @gi0 = external global i32

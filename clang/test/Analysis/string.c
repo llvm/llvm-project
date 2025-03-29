@@ -38,7 +38,7 @@
 // RUN:   -analyzer-checker=unix.cstring \
 // RUN:   -analyzer-checker=unix.Malloc \
 // RUN:   -analyzer-checker=alpha.unix.cstring.BufferOverlap \
-// RUN:   -analyzer-checker=alpha.unix.cstring.NotNullTerminated \
+// RUN:   -analyzer-checker=unix.cstring.NotNullTerminated \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false
 

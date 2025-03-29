@@ -13,7 +13,6 @@
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64FixupKinds.h"
 #include "MCTargetDesc/AArch64MCExpr.h"
-#include "Utils/AArch64BaseInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -25,10 +24,8 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
 
@@ -312,7 +309,7 @@ AArch64MCCodeEmitter::getAddSubImmOpValue(const MCInst &MI, unsigned OpIdx,
   // Set the shift bit of the add instruction for relocation types
   // R_AARCH64_TLSLE_ADD_TPREL_HI12 and R_AARCH64_TLSLD_ADD_DTPREL_HI12.
   if (const AArch64MCExpr *A64E = dyn_cast<AArch64MCExpr>(Expr)) {
-    AArch64MCExpr::VariantKind RefKind = A64E->getKind();
+    AArch64MCExpr::Specifier RefKind = A64E->getSpecifier();
     if (RefKind == AArch64MCExpr::VK_TPREL_HI12 ||
         RefKind == AArch64MCExpr::VK_DTPREL_HI12 ||
         RefKind == AArch64MCExpr::VK_SECREL_HI12)
@@ -722,7 +719,7 @@ unsigned AArch64MCCodeEmitter::fixMOVZ(const MCInst &MI, unsigned EncodedValue,
 
   const MCExpr *E = UImm16MO.getExpr();
   if (const AArch64MCExpr *A64E = dyn_cast<AArch64MCExpr>(E)) {
-    switch (A64E->getKind()) {
+    switch (A64E->getSpecifier()) {
     case AArch64MCExpr::VK_DTPREL_G2:
     case AArch64MCExpr::VK_DTPREL_G1:
     case AArch64MCExpr::VK_DTPREL_G0:

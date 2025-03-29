@@ -51,9 +51,13 @@ public:
     K_Temp = 2,
     K_Decl = 3,
     K_Elem = 5,
+    K_RVO = 6,
+    K_InitList = 7
   };
 
   static InitLink This() { return InitLink{K_This}; }
+  static InitLink InitList() { return InitLink{K_InitList}; }
+  static InitLink RVO() { return InitLink{K_RVO}; }
   static InitLink Field(unsigned Offset) {
     InitLink IL{K_Field};
     IL.Offset = Offset;
@@ -205,10 +209,11 @@ public:
   bool VisitCXXNewExpr(const CXXNewExpr *E);
   bool VisitCXXDeleteExpr(const CXXDeleteExpr *E);
   bool VisitBlockExpr(const BlockExpr *E);
+  bool VisitCXXTypeidExpr(const CXXTypeidExpr *E);
 
   // Statements.
   bool visitCompoundStmt(const CompoundStmt *S);
-  bool visitDeclStmt(const DeclStmt *DS);
+  bool visitDeclStmt(const DeclStmt *DS, bool EvaluateConditionDecl = false);
   bool visitReturnStmt(const ReturnStmt *RS);
   bool visitIfStmt(const IfStmt *IS);
   bool visitWhileStmt(const WhileStmt *S);
@@ -269,7 +274,7 @@ protected:
   /// Evaluates an expression and places the result on the stack. If the
   /// expression is of composite type, a local variable will be created
   /// and a pointer to said variable will be placed on the stack.
-  bool visit(const Expr *E);
+  bool visit(const Expr *E) override;
   /// Compiles an initializer. This is like visit() but it will never
   /// create a variable and instead rely on a variable already having
   /// been created. visitInitializer() then relies on a pointer to this
@@ -285,7 +290,7 @@ protected:
   VarCreationState visitDecl(const VarDecl *VD);
   /// Visit an APValue.
   bool visitAPValue(const APValue &Val, PrimType ValType, const Expr *E);
-  bool visitAPValueInitializer(const APValue &Val, const Expr *E);
+  bool visitAPValueInitializer(const APValue &Val, const Expr *E, QualType T);
   /// Visit the given decl as if we have a reference to it.
   bool visitDeclRef(const ValueDecl *D, const Expr *E);
 
@@ -298,13 +303,13 @@ protected:
 
   /// Creates a local primitive value.
   unsigned allocateLocalPrimitive(DeclTy &&Decl, PrimType Ty, bool IsConst,
-                                  bool IsExtended = false);
+                                  const ValueDecl *ExtendingDecl = nullptr);
 
   /// Allocates a space storing a local given its type.
   std::optional<unsigned>
   allocateLocal(DeclTy &&Decl, QualType Ty = QualType(),
                 const ValueDecl *ExtendingDecl = nullptr);
-  unsigned allocateTemporary(const Expr *E);
+  std::optional<unsigned> allocateTemporary(const Expr *E);
 
 private:
   friend class VariableScope<Emitter>;
@@ -325,6 +330,7 @@ private:
   /// Emits a zero initializer.
   bool visitZeroInitializer(PrimType T, QualType QT, const Expr *E);
   bool visitZeroRecordInitializer(const Record *R, const Expr *E);
+  bool visitZeroArrayInitializer(QualType T, const Expr *E);
 
   /// Emits an APSInt constant.
   bool emitConst(const llvm::APSInt &Value, PrimType Ty, const Expr *E);
@@ -336,6 +342,9 @@ private:
   /// Emits an integer constant.
   template <typename T> bool emitConst(T Value, PrimType Ty, const Expr *E);
   template <typename T> bool emitConst(T Value, const Expr *E);
+  bool emitBool(bool V, const Expr *E) override {
+    return this->emitConst(V, E);
+  }
 
   llvm::RoundingMode getRoundingMode(const Expr *E) const {
     FPOptions FPO = E->getFPFeaturesInEffect(Ctx.getLangOpts());
@@ -377,8 +386,10 @@ private:
   bool emitBuiltinBitCast(const CastExpr *E);
   bool compileConstructor(const CXXConstructorDecl *Ctor);
   bool compileDestructor(const CXXDestructorDecl *Dtor);
+  bool compileUnionAssignmentOperator(const CXXMethodDecl *MD);
 
   bool checkLiteralType(const Expr *E);
+  bool maybeEmitDeferredVarInit(const VarDecl *VD);
 
 protected:
   /// Variable to storage mapping.

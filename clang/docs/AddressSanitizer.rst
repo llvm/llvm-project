@@ -326,15 +326,13 @@ Supported Platforms
 
 AddressSanitizer is supported on:
 
-* Linux i386/x86\_64 (tested on Ubuntu 12.04)
-* macOS 10.7 - 10.11 (i386/x86\_64)
+* Linux
+* macOS
 * iOS Simulator
-* Android ARM
-* NetBSD i386/x86\_64
-* FreeBSD i386/x86\_64 (tested on FreeBSD 11-current)
-* Windows 8.1+ (i386/x86\_64)
-
-Ports to various other platforms are in progress.
+* Android
+* NetBSD
+* FreeBSD
+* Windows 8.1+
 
 Current Status
 ==============

@@ -42,7 +42,7 @@ export module Hello;
 // CHECK: "-emit-module-interface" {{.*}}"-main-file-name" "Hello.cppm" {{.*}}"-o" "{{.*}}/output/Hello.pcm" "-x" "c++" "{{.*}}/Hello.cppm"
 // CHECK: "-emit-obj" {{.*}}"-main-file-name" "Hello.cppm" {{.*}}"-o" "{{.*}}/output/Hello.o" "-x" "pcm" "{{.*}}/output/Hello.pcm"
 
-// MULTIPLE-ARCH: option '-fmodule-output' can't be used with multiple arch options
+// MULTIPLE-ARCH: option '-fmodule-output' cannot be used with multiple arch options
 
 // CHECK-SPECIFIED: "-emit-module-interface" {{.*}}"-main-file-name" "Hello.cppm" {{.*}}"-o" "{{.*}}/pcm/Hello.pcm" "-x" "c++" "{{.*}}/Hello.cppm"
 // CHECK-SPECIFIED: "-emit-obj" {{.*}}"-main-file-name" "Hello.cppm" {{.*}}"-o" "{{.*}}/Hello.o" "-x" "pcm" "{{.*}}/pcm/Hello.pcm"

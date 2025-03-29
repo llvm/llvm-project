@@ -21,7 +21,6 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/AtomicExpandUtils.h"
-#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -34,7 +33,6 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/MDBuilder.h"
@@ -326,8 +324,10 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
       // failure path. As a result, fence insertion is directly done by
       // expandAtomicCmpXchg in that case.
       FenceOrdering = CASI->getMergedOrdering();
-      CASI->setSuccessOrdering(AtomicOrdering::Monotonic);
-      CASI->setFailureOrdering(AtomicOrdering::Monotonic);
+      auto CASOrdering = TLI->atomicOperationOrderAfterFenceSplit(CASI);
+
+      CASI->setSuccessOrdering(CASOrdering);
+      CASI->setFailureOrdering(CASOrdering);
     }
 
     if (FenceOrdering != AtomicOrdering::Monotonic) {
@@ -498,6 +498,7 @@ AtomicExpandImpl::convertAtomicXchgToIntegerType(AtomicRMWInst *RMWI) {
                                           RMWI->getAlign(), RMWI->getOrdering(),
                                           RMWI->getSyncScopeID());
   NewRMWI->setVolatile(RMWI->isVolatile());
+  copyMetadataForAtomic(*NewRMWI, *RMWI);
   LLVM_DEBUG(dbgs() << "Replaced " << *RMWI << " with " << *NewRMWI << "\n");
 
   Value *NewRVal = RMWI->getType()->isPointerTy()
@@ -1674,6 +1675,10 @@ bool AtomicExpandImpl::tryExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
     return true;
   case TargetLoweringBase::AtomicExpansionKind::NotAtomic:
     return lowerAtomicCmpXchgInst(CI);
+  case TargetLoweringBase::AtomicExpansionKind::Expand: {
+    TLI->emitExpandAtomicCmpXchg(CI);
+    return true;
+  }
   }
 }
 

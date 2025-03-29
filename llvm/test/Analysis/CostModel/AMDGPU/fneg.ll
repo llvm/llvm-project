@@ -139,24 +139,24 @@ define void @fneg_f64() {
 define i32 @fneg_idiom(i32 %arg) {
 ; CHECK-LABEL: 'fneg_idiom'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = fsub float -0.000000e+00, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4F32 = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8F32 = fsub <8 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16F32 = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4F32 = fsub <4 x float> splat (float -0.000000e+00), undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8F32 = fsub <8 x float> splat (float -0.000000e+00), undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16F32 = fsub <16 x float> splat (float -0.000000e+00), undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %F64 = fsub double -0.000000e+00, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2F64 = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4F64 = fsub <4 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V8F64 = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2F64 = fsub <2 x double> splat (double -0.000000e+00), undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4F64 = fsub <4 x double> splat (double -0.000000e+00), undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V8F64 = fsub <8 x double> splat (double -0.000000e+00), undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 undef
 ;
 ; SIZE-LABEL: 'fneg_idiom'
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = fsub float -0.000000e+00, undef
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4F32 = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, undef
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8F32 = fsub <8 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, undef
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16F32 = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, undef
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4F32 = fsub <4 x float> splat (float -0.000000e+00), undef
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8F32 = fsub <8 x float> splat (float -0.000000e+00), undef
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16F32 = fsub <16 x float> splat (float -0.000000e+00), undef
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F64 = fsub double -0.000000e+00, undef
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2F64 = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, undef
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4F64 = fsub <4 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, undef
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V8F64 = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, undef
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2F64 = fsub <2 x double> splat (double -0.000000e+00), undef
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4F64 = fsub <4 x double> splat (double -0.000000e+00), undef
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V8F64 = fsub <8 x double> splat (double -0.000000e+00), undef
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
   %F32 = fsub float -0.0, undef

@@ -27,7 +27,6 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/FileManager.h"
-#include "clang/Basic/FileSystemStatCache.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
@@ -55,10 +54,8 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Capacity.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -80,7 +77,7 @@ LLVM_INSTANTIATE_REGISTRY(PragmaHandlerRegistry)
 
 ExternalPreprocessorSource::~ExternalPreprocessorSource() = default;
 
-Preprocessor::Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
+Preprocessor::Preprocessor(std::shared_ptr<const PreprocessorOptions> PPOpts,
                            DiagnosticsEngine &diags, const LangOptions &opts,
                            SourceManager &SM, HeaderSearch &Headers,
                            ModuleLoader &TheModuleLoader,
@@ -1334,9 +1331,10 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
   return true;
 }
 
-void Preprocessor::makeModuleVisible(Module *M, SourceLocation Loc) {
+void Preprocessor::makeModuleVisible(Module *M, SourceLocation Loc,
+                                     bool IncludeExports) {
   CurSubmoduleState->VisibleModules.setVisible(
-      M, Loc, [](Module *) {},
+      M, Loc, IncludeExports, [](Module *) {},
       [&](ArrayRef<Module *> Path, Module *Conflict, StringRef Message) {
         // FIXME: Include the path in the diagnostic.
         // FIXME: Include the import location for the conflicting module.

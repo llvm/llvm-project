@@ -20,7 +20,6 @@
 #include "X86.h"
 #include "X86InstrBuilder.h"
 #include "X86MachineFunctionInfo.h"
-#include "X86RegisterInfo.h"
 #include "X86Subtarget.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -104,7 +103,7 @@ static void collectVirtRegShapes(MachineRegisterInfo *MRI, VirtRegMap &VRM,
     unsigned Index = PhysReg - X86::TMM0;
     if (!Phys2Shapes[Index].isValid()) {
       ShapeT Shape = VRM.getShape(VirtReg);
-      Phys2Shapes[Index] = Shape;
+      Phys2Shapes[Index] = std::move(Shape);
       return;
     }
   }
@@ -119,12 +118,12 @@ static void collectVirtRegShapes(MachineRegisterInfo *MRI, VirtRegMap &VRM,
 
     if (!Phys2Shapes[Index0].isValid()) {
       ShapeT Shape0(Shape.getRow(0), Shape.getCol(0), MRI);
-      Phys2Shapes[Index0] = Shape0;
+      Phys2Shapes[Index0] = std::move(Shape0);
     }
 
     if (!Phys2Shapes[Index1].isValid()) {
       ShapeT Shape1(Shape.getRow(1), Shape.getCol(1), MRI);
-      Phys2Shapes[Index1] = Shape1;
+      Phys2Shapes[Index1] = std::move(Shape1);
     }
   }
 }

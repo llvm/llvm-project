@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s
 
 ; The purpose of this test is to make sure that the packetizer is ignoring
 ; CFI instructions while forming packet for allocframe. Refer to 7d7d99622

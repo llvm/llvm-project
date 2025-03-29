@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_BIND_FRONT_H
-#define _LIBCPP___FUNCTIONAL_BIND_FRONT_H
+#ifndef _LIBCPP___CXX03___FUNCTIONAL_BIND_FRONT_H
+#define _LIBCPP___CXX03___FUNCTIONAL_BIND_FRONT_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__functional/invoke.h>
@@ -51,4 +51,4 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto bind_front(_Fn&& __f, _Args&&... __args) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_BIND_FRONT_H
+#endif // _LIBCPP___CXX03___FUNCTIONAL_BIND_FRONT_H

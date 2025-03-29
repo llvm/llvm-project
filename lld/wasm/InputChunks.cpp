@@ -14,6 +14,7 @@
 #include "lld/Common/LLVM.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/xxhash.h"
+#include <algorithm>
 
 #define DEBUG_TYPE "lld"
 
@@ -67,7 +68,7 @@ uint32_t InputChunk::getSize() const {
     return ms->builder.getSize();
 
   if (const auto *f = dyn_cast<InputFunction>(this)) {
-    if (config->compressRelocations && f->file) {
+    if (ctx.arg.compressRelocations && f->file) {
       return f->getCompressedSize();
     }
   }
@@ -84,7 +85,7 @@ uint32_t InputChunk::getInputSize() const {
 // Copy this input chunk to an mmap'ed output file and apply relocations.
 void InputChunk::writeTo(uint8_t *buf) const {
   if (const auto *f = dyn_cast<InputFunction>(this)) {
-    if (file && config->compressRelocations)
+    if (file && ctx.arg.compressRelocations)
       return f->writeCompressed(buf);
   } else if (const auto *ms = dyn_cast<SyntheticMergedChunk>(this)) {
     ms->builder.write(buf + outSecOff);
@@ -167,6 +168,17 @@ void InputChunk::relocate(uint8_t *buf) const {
   }
 }
 
+static bool relocIsLive(const WasmRelocation &rel, ObjFile *file) {
+  return rel.Type == R_WASM_TYPE_INDEX_LEB ||
+         file->getSymbol(rel.Index)->isLive();
+}
+
+size_t InputChunk::getNumLiveRelocations() const {
+  return std::count_if(
+      relocations.begin(), relocations.end(),
+      [this](const WasmRelocation &rel) { return relocIsLive(rel, file); });
+}
+
 // Copy relocation entries to a given output stream.
 // This function is used only when a user passes "-r". For a regular link,
 // we consume relocations instead of copying them to an output file.
@@ -179,6 +191,8 @@ void InputChunk::writeRelocations(raw_ostream &os) const {
                     << " offset=" << Twine(off) << "\n");
 
   for (const WasmRelocation &rel : relocations) {
+    if (!relocIsLive(rel, file))
+      continue;
     writeUleb128(os, rel.Type, "reloc type");
     writeUleb128(os, rel.Offset + off, "reloc offset");
     writeUleb128(os, file->calcNewIndex(rel), "reloc index");
@@ -269,7 +283,7 @@ static unsigned getRelocWidth(const WasmRelocation &rel, uint64_t value) {
 // This function only computes the final output size.  It must be called
 // before getSize() is used to calculate of layout of the code section.
 void InputFunction::calculateSize() {
-  if (!file || !config->compressRelocations)
+  if (!file || !ctx.arg.compressRelocations)
     return;
 
   LLVM_DEBUG(dbgs() << "calculateSize: " << name << "\n");
@@ -365,7 +379,7 @@ bool InputChunk::generateRelocationCode(raw_ostream &os) const {
   LLVM_DEBUG(dbgs() << "generating runtime relocations: " << name
                     << " count=" << relocations.size() << "\n");
 
-  bool is64 = config->is64.value_or(false);
+  bool is64 = ctx.arg.is64.value_or(false);
   bool generated = false;
   unsigned opcode_ptr_const = is64 ? WASM_OPCODE_I64_CONST
                                    : WASM_OPCODE_I32_CONST;

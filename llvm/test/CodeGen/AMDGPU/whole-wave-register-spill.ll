@@ -53,6 +53,7 @@ define void @test() #0 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    v_readlane_b32 s30, v40, 0
+; GCN-NEXT:    s_mov_b32 s32, s33
 ; GCN-NEXT:    v_readlane_b32 s4, v40, 4
 ; GCN-NEXT:    v_readlane_b32 s28, v40, 2
 ; GCN-NEXT:    v_readlane_b32 s29, v40, 3
@@ -61,7 +62,6 @@ define void @test() #0 {
 ; GCN-NEXT:    s_mov_b64 exec, -1
 ; GCN-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[6:7]
-; GCN-NEXT:    s_addk_i32 s32, 0xfc00
 ; GCN-NEXT:    s_mov_b32 s33, s4
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
@@ -113,6 +113,7 @@ define void @test() #0 {
 ; GCN-O0-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-O0-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-O0-NEXT:    v_readlane_b32 s30, v40, 0
+; GCN-O0-NEXT:    s_mov_b32 s32, s33
 ; GCN-O0-NEXT:    v_readlane_b32 s4, v40, 4
 ; GCN-O0-NEXT:    v_readlane_b32 s28, v40, 2
 ; GCN-O0-NEXT:    v_readlane_b32 s29, v40, 3
@@ -121,13 +122,12 @@ define void @test() #0 {
 ; GCN-O0-NEXT:    s_mov_b64 exec, -1
 ; GCN-O0-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; GCN-O0-NEXT:    s_mov_b64 exec, s[6:7]
-; GCN-O0-NEXT:    s_add_i32 s32, s32, 0xfffffc00
 ; GCN-O0-NEXT:    s_mov_b32 s33, s4
 ; GCN-O0-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-O0-NEXT:    s_setpc_b64 s[30:31]
   %sgpr = call i32 asm sideeffect "; def $0", "=s" () #0
   call void @ext_func()
-  store volatile i32 %sgpr, ptr addrspace(1) undef
+  store volatile i32 %sgpr, ptr addrspace(1) poison
   ret void
 }
 

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANGES_COUNTED_H
-#define _LIBCPP___RANGES_COUNTED_H
+#ifndef _LIBCPP___CXX03___RANGES_COUNTED_H
+#define _LIBCPP___CXX03___RANGES_COUNTED_H
 
 #include <__cxx03/__concepts/convertible_to.h>
 #include <__cxx03/__config>
@@ -86,4 +86,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANGES_COUNTED_H
+#endif // _LIBCPP___CXX03___RANGES_COUNTED_H

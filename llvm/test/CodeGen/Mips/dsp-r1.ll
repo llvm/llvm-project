@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel -mcpu=mips32 -mattr=+dsp -verify-machineinstrs < %s | \
+; RUN: llc -mtriple=mipsel-elf -mcpu=mips32 -mattr=+dsp -verify-machineinstrs < %s | \
 ; RUN:     FileCheck %s
 
 define i32 @test__builtin_mips_extr_w1(i32 %i0, i32, i64 %a0) nounwind {

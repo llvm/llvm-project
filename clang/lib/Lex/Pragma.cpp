@@ -14,7 +14,6 @@
 #include "clang/Lex/Pragma.h"
 #include "clang/Basic/CLWarnings.h"
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
@@ -36,8 +35,6 @@
 #include "clang/Lex/TokenLexer.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
@@ -47,7 +44,6 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <limits>
 #include <optional>
 #include <string>
 #include <utility>
@@ -1123,9 +1119,25 @@ struct PragmaDebugHandler : public PragmaHandler {
         M = MM.lookupModuleQualified(IIAndLoc.first->getName(), M);
         if (!M) {
           PP.Diag(IIAndLoc.second, diag::warn_pragma_debug_unknown_module)
-              << IIAndLoc.first;
+              << IIAndLoc.first->getName();
           return;
         }
+      }
+      M->dump();
+    } else if (II->isStr("module_lookup")) {
+      Token MName;
+      PP.LexUnexpandedToken(MName);
+      auto *MNameII = MName.getIdentifierInfo();
+      if (!MNameII) {
+        PP.Diag(MName, diag::warn_pragma_debug_missing_argument)
+            << II->getName();
+        return;
+      }
+      Module *M = PP.getHeaderSearchInfo().lookupModule(MNameII->getName());
+      if (!M) {
+        PP.Diag(MName, diag::warn_pragma_debug_unable_to_find_module)
+            << MNameII->getName();
+        return;
       }
       M->dump();
     } else if (II->isStr("overflow_stack")) {

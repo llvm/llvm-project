@@ -92,6 +92,9 @@ public:
     return LHS.S < RHS.S;
   }
 
+  friend raw_ostream &operator<<(raw_ostream &OS,
+                                 const SymbolStringPtrBase &Sym);
+
 #ifndef NDEBUG
   // Returns true if the pool entry's ref count is above zero (or if the entry
   // is an empty or tombstone value). Useful for debugging and testing -- this

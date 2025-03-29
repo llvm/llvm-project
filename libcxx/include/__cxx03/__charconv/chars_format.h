@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CHARCONV_CHARS_FORMAT_H
-#define _LIBCPP___CHARCONV_CHARS_FORMAT_H
+#ifndef _LIBCPP___CXX03___CHARCONV_CHARS_FORMAT_H
+#define _LIBCPP___CXX03___CHARCONV_CHARS_FORMAT_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__utility/to_underlying.h>
@@ -58,4 +58,4 @@ inline _LIBCPP_HIDE_FROM_ABI constexpr chars_format& operator^=(chars_format& __
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CHARCONV_CHARS_FORMAT_H
+#endif // _LIBCPP___CXX03___CHARCONV_CHARS_FORMAT_H

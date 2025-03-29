@@ -305,7 +305,9 @@ endfunction()
 # EXCLUDE_FROM_LIBMLIR
 #   Don't include this library in libMLIR.so.  This option should be used
 #   for test libraries, executable-specific libraries, or rarely used libraries
-#   with large dependencies.
+#   with large dependencies.  When using it, please link libraries included
+#   in libMLIR via mlir_target_link_libraries(), to ensure that the library
+#   does not pull in static dependencies when MLIR_LINK_MLIR_DYLIB=ON is used.
 # OBJECT
 #   The library's object library is referenced using "obj.${name}". For this to
 #   work reliably, this flag ensures that the OBJECT library exists.
@@ -584,7 +586,7 @@ function(add_mlir_aggregate name)
   # TODO: Should be transitive.
   set_target_properties(${name} PROPERTIES
     MLIR_AGGREGATE_EXCLUDE_LIBS "${_embed_libs}")
-  if(MSVC)
+  if(WIN32)
     set_property(TARGET ${name} PROPERTY WINDOWS_EXPORT_ALL_SYMBOLS ON)
   endif()
 
@@ -717,3 +719,23 @@ function(mlir_check_all_link_libraries name)
     endforeach()
   endif()
 endfunction(mlir_check_all_link_libraries)
+
+# Link target against a list of MLIR libraries. If MLIR_LINK_MLIR_DYLIB is
+# enabled, this will link against the MLIR dylib instead of the static
+# libraries.
+#
+# This function should be used instead of target_link_libraries() when linking
+# MLIR libraries that are part of the MLIR dylib. For libraries that are not
+# part of the dylib (like test libraries), target_link_libraries() should be
+# used.
+function(mlir_target_link_libraries target type)
+  if (TARGET obj.${target})
+    target_link_libraries(obj.${target} ${ARGN})
+  endif()
+
+  if (MLIR_LINK_MLIR_DYLIB)
+    target_link_libraries(${target} ${type} MLIR)
+  else()
+    target_link_libraries(${target} ${type} ${ARGN})
+  endif()
+endfunction()

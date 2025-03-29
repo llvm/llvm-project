@@ -142,8 +142,7 @@ bool InitUndef::handleSubReg(MachineFunction &MF, MachineInstr &MI,
     Register Reg = UseMO.getReg();
     if (NewRegs.count(Reg))
       continue;
-    DeadLaneDetector::VRegInfo Info =
-        DLD.getVRegInfo(Register::virtReg2Index(Reg));
+    DeadLaneDetector::VRegInfo Info = DLD.getVRegInfo(Reg.virtRegIndex());
 
     if (Info.UsedLanes == Info.DefinedLanes)
       continue;
@@ -161,8 +160,16 @@ bool InitUndef::handleSubReg(MachineFunction &MF, MachineInstr &MI,
     });
 
     SmallVector<unsigned> SubRegIndexNeedInsert;
-    TRI->getCoveringSubRegIndexes(*MRI, TargetRegClass, NeedDef,
+    TRI->getCoveringSubRegIndexes(TargetRegClass, NeedDef,
                                   SubRegIndexNeedInsert);
+
+    // It's not possible to create the INIT_UNDEF when there is no register
+    // class associated for the subreg. This may happen for artificial subregs
+    // that are not directly addressable.
+    if (any_of(SubRegIndexNeedInsert, [&](unsigned Ind) -> bool {
+          return !TRI->getSubRegisterClass(TargetRegClass, Ind);
+        }))
+      continue;
 
     Register LatestReg = Reg;
     for (auto ind : SubRegIndexNeedInsert) {

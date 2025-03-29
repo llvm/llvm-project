@@ -453,8 +453,7 @@ CodeGenFunction::EmitCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
 
   const auto *MPT = MemFnExpr->getType()->castAs<MemberPointerType>();
   const auto *FPT = MPT->getPointeeType()->castAs<FunctionProtoType>();
-  const auto *RD =
-      cast<CXXRecordDecl>(MPT->getClass()->castAs<RecordType>()->getDecl());
+  const auto *RD = MPT->getMostRecentCXXRecordDecl();
 
   // Emit the 'this' pointer.
   Address This = Address::invalid();
@@ -463,8 +462,9 @@ CodeGenFunction::EmitCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
   else
     This = EmitLValue(BaseExpr, KnownNonNull).getAddress();
 
-  EmitTypeCheck(TCK_MemberCall, E->getExprLoc(), This.emitRawPointer(*this),
-                QualType(MPT->getClass(), 0));
+  EmitTypeCheck(
+      TCK_MemberCall, E->getExprLoc(), This.emitRawPointer(*this),
+      QualType(MPT->getMostRecentCXXRecordDecl()->getTypeForDecl(), 0));
 
   // Get the member function pointer.
   llvm::Value *MemFnPtr = EmitScalarExpr(MemFnExpr);
@@ -732,8 +732,8 @@ static llvm::Value *EmitCXXNewAllocSize(CodeGenFunction &CGF,
   // Emit the array size expression.
   // We multiply the size of all dimensions for NumElements.
   // e.g for 'int[2][3]', ElemType is 'int' and NumElements is 6.
-  numElements =
-    ConstantEmitter(CGF).tryEmitAbstract(*e->getArraySize(), e->getType());
+  numElements = ConstantEmitter(CGF).tryEmitAbstract(
+      *e->getArraySize(), (*e->getArraySize())->getType());
   if (!numElements)
     numElements = CGF.EmitScalarExpr(*e->getArraySize());
   assert(isa<llvm::IntegerType>(numElements->getType()));

@@ -47,9 +47,9 @@ Error SnippetGenerator::generateConfigurations(
   // using the scratch register and its aliasing registers.
   if (Variant.getInstr().hasMemoryOperands()) {
     const auto &ET = State.getExegesisTarget();
-    unsigned ScratchSpacePointerInReg =
+    MCRegister ScratchSpacePointerInReg =
         ET.getScratchMemoryRegister(State.getTargetMachine().getTargetTriple());
-    if (ScratchSpacePointerInReg == 0)
+    if (!ScratchSpacePointerInReg.isValid())
       return make_error<Failure>(
           "Infeasible : target does not support memory instructions");
     const auto &ScratchRegAliases =
@@ -58,7 +58,7 @@ Error SnippetGenerator::generateConfigurations(
     // FIXME: We could make a copy of the scratch register.
     for (const auto &Op : Variant.getInstr().Operands) {
       if (Op.isDef() && Op.isImplicitReg() &&
-          ScratchRegAliases.test(Op.getImplicitReg()))
+          ScratchRegAliases.test(Op.getImplicitReg().id()))
         return make_error<Failure>(
             "Infeasible : memory instruction uses scratch memory register");
     }
@@ -73,6 +73,9 @@ Error SnippetGenerator::generateConfigurations(
     for (CodeTemplate &CT : Templates) {
       // TODO: Generate as many BenchmarkCode as needed.
       {
+        CT.ScratchSpacePointerInReg =
+            State.getExegesisTarget().getScratchMemoryRegister(
+                State.getTargetMachine().getTargetTriple());
         BenchmarkCode BC;
         BC.Info = CT.Info;
         BC.Key.Instructions.reserve(CT.Instructions.size());
@@ -108,35 +111,41 @@ std::vector<RegisterValue> SnippetGenerator::computeRegisterInitialValues(
   // Loop invariant: DefinedRegs[i] is true iif it has been set at least once
   // before the current instruction.
   BitVector DefinedRegs = State.getRATC().emptyRegisters();
+  // If target always expects a scratch memory register as live input,
+  // mark it as defined.
+  const ExegesisTarget &Target = State.getExegesisTarget();
+  MCRegister ScratchMemoryReg = Target.getScratchMemoryRegister(
+      State.getTargetMachine().getTargetTriple());
+  DefinedRegs.set(ScratchMemoryReg.id());
   std::vector<RegisterValue> RIV;
   for (const InstructionTemplate &IT : Instructions) {
     // Returns the register that this Operand sets or uses, or 0 if this is not
     // a register.
-    const auto GetOpReg = [&IT](const Operand &Op) -> unsigned {
+    const auto GetOpReg = [&IT](const Operand &Op) -> MCRegister {
       if (Op.isMemory())
-        return 0;
+        return MCRegister();
       if (Op.isImplicitReg())
         return Op.getImplicitReg();
       if (Op.isExplicit() && IT.getValueFor(Op).isReg())
         return IT.getValueFor(Op).getReg();
-      return 0;
+      return MCRegister();
     };
     // Collect used registers that have never been def'ed.
     for (const Operand &Op : IT.getInstr().Operands) {
       if (Op.isUse()) {
-        const unsigned Reg = GetOpReg(Op);
-        if (Reg > 0 && !DefinedRegs.test(Reg)) {
+        const MCRegister Reg = GetOpReg(Op);
+        if (Reg && !DefinedRegs.test(Reg.id())) {
           RIV.push_back(RegisterValue::zero(Reg));
-          DefinedRegs.set(Reg);
+          DefinedRegs.set(Reg.id());
         }
       }
     }
     // Mark defs as having been def'ed.
     for (const Operand &Op : IT.getInstr().Operands) {
       if (Op.isDef()) {
-        const unsigned Reg = GetOpReg(Op);
-        if (Reg > 0)
-          DefinedRegs.set(Reg);
+        const MCRegister Reg = GetOpReg(Op);
+        if (Reg)
+          DefinedRegs.set(Reg.id());
       }
     }
   }
@@ -200,7 +209,8 @@ static void setRegisterOperandValue(const RegisterOperandAssignment &ROV,
   if (ROV.Op->isExplicit()) {
     auto &AssignedValue = IB.getValueFor(*ROV.Op);
     if (AssignedValue.isValid()) {
-      assert(AssignedValue.isReg() && AssignedValue.getReg() == ROV.Reg);
+      // TODO don't re-assign register operands which are already "locked"
+      //  by Target in corresponding InstructionTemplate
       return;
     }
     AssignedValue = MCOperand::createReg(ROV.Reg);

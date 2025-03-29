@@ -945,6 +945,18 @@ bool StoreExpression::equals(const Expression &Other) const {
   return true;
 }
 
+bool CallExpression::equals(const Expression &Other) const {
+  if (!MemoryExpression::equals(Other))
+    return false;
+
+  if (auto *RHS = dyn_cast<CallExpression>(&Other))
+    return Call->getAttributes()
+        .intersectWith(Call->getContext(), RHS->Call->getAttributes())
+        .has_value();
+
+  return false;
+}
+
 // Determine if the edge From->To is a backedge
 bool NewGVN::isBackedge(BasicBlock *From, BasicBlock *To) const {
   return From == To ||
@@ -1952,18 +1964,10 @@ NewGVN::ExprResult NewGVN::performSymbolicCmpEvaluation(Instruction *I) const {
         if (PBranch->TrueEdge) {
           // If we know the previous predicate is true and we are in the true
           // edge then we may be implied true or false.
-          if (CmpInst::isImpliedTrueByMatchingCmp(BranchPredicate,
-                                                  OurPredicate)) {
-            return ExprResult::some(
-                createConstantExpression(ConstantInt::getTrue(CI->getType())),
-                PI);
-          }
-
-          if (CmpInst::isImpliedFalseByMatchingCmp(BranchPredicate,
-                                                   OurPredicate)) {
-            return ExprResult::some(
-                createConstantExpression(ConstantInt::getFalse(CI->getType())),
-                PI);
+          if (auto R = ICmpInst::isImpliedByMatchingCmp(BranchPredicate,
+                                                        OurPredicate)) {
+            auto *C = ConstantInt::getBool(CI->getType(), *R);
+            return ExprResult::some(createConstantExpression(C), PI);
           }
         } else {
           // Just handle the ne and eq cases, where if we have the same
@@ -2796,7 +2800,7 @@ NewGVN::makePossiblePHIOfOps(Instruction *I,
       Instruction *ValueOp = I->clone();
       // Emit the temporal instruction in the predecessor basic block where the
       // corresponding value is defined.
-      ValueOp->insertBefore(PredBB->getTerminator());
+      ValueOp->insertBefore(PredBB->getTerminator()->getIterator());
       if (MemAccess)
         TempToMemory.insert({ValueOp, MemAccess});
       bool SafeForPHIOfOps = true;
@@ -2836,7 +2840,7 @@ NewGVN::makePossiblePHIOfOps(Instruction *I,
 
         return nullptr;
       }
-      Deps.insert(CurrentDeps.begin(), CurrentDeps.end());
+      Deps.insert_range(CurrentDeps);
     } else {
       LLVM_DEBUG(dbgs() << "Skipping phi of ops operand for incoming block "
                         << getBlockName(PredBB)
@@ -3052,13 +3056,8 @@ std::pair<unsigned, unsigned> NewGVN::assignDFSNumbers(BasicBlock *B,
 
 void NewGVN::updateProcessedCount(const Value *V) {
 #ifndef NDEBUG
-  if (ProcessedCount.count(V) == 0) {
-    ProcessedCount.insert({V, 1});
-  } else {
-    ++ProcessedCount[V];
-    assert(ProcessedCount[V] < 100 &&
-           "Seem to have processed the same Value a lot");
-  }
+  assert(++ProcessedCount[V] < 100 &&
+         "Seem to have processed the same Value a lot");
 #endif
 }
 
@@ -3854,16 +3853,6 @@ Value *NewGVN::findPHIOfOpsLeader(const Expression *E,
   return nullptr;
 }
 
-// Return true iff V1 can be replaced with V2.
-static bool canBeReplacedBy(Value *V1, Value *V2) {
-  if (auto *CB1 = dyn_cast<CallBase>(V1))
-    if (auto *CB2 = dyn_cast<CallBase>(V2))
-      return CB1->getAttributes()
-          .intersectWith(CB2->getContext(), CB2->getAttributes())
-          .has_value();
-  return true;
-}
-
 bool NewGVN::eliminateInstructions(Function &F) {
   // This is a non-standard eliminator. The normal way to eliminate is
   // to walk the dominator tree in order, keeping track of available
@@ -3973,8 +3962,6 @@ bool NewGVN::eliminateInstructions(Function &F) {
           MembersLeft.insert(Member);
           continue;
         }
-        if (!canBeReplacedBy(Member, Leader))
-          continue;
 
         LLVM_DEBUG(dbgs() << "Found replacement " << *(Leader) << " for "
                           << *Member << "\n");
@@ -4020,7 +4007,7 @@ bool NewGVN::eliminateInstructions(Function &F) {
             LLVM_DEBUG(dbgs() << "Inserting fully real phi of ops" << *Def
                               << " into block "
                               << getBlockName(getBlockForValue(Def)) << "\n");
-            PN->insertBefore(&DefBlock->front());
+            PN->insertBefore(DefBlock->begin());
             Def = PN;
             NumGVNPHIOfOpsEliminations++;
           }
@@ -4082,11 +4069,8 @@ bool NewGVN::eliminateInstructions(Function &F) {
               if (DominatingLeader != Def) {
                 // Even if the instruction is removed, we still need to update
                 // flags/metadata due to downstreams users of the leader.
-                if (!match(DefI, m_Intrinsic<Intrinsic::ssa_copy>())) {
-                  if (!canBeReplacedBy(DefI, DominatingLeader))
-                    continue;
+                if (!match(DefI, m_Intrinsic<Intrinsic::ssa_copy>()))
                   patchReplacementInstruction(DefI, DominatingLeader);
-                }
 
                 markInstructionForDeletion(DefI);
               }
@@ -4134,11 +4118,8 @@ bool NewGVN::eliminateInstructions(Function &F) {
           // original operand, as we already know we can just drop it.
           auto *ReplacedInst = cast<Instruction>(U->get());
           auto *PI = PredInfo->getPredicateInfoFor(ReplacedInst);
-          if (!PI || DominatingLeader != PI->OriginalOp) {
-            if (!canBeReplacedBy(ReplacedInst, DominatingLeader))
-              continue;
+          if (!PI || DominatingLeader != PI->OriginalOp)
             patchReplacementInstruction(ReplacedInst, DominatingLeader);
-          }
 
           LLVM_DEBUG(dbgs()
                      << "Found replacement " << *DominatingLeader << " for "

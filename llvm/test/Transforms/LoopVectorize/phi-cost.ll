@@ -102,11 +102,11 @@ define void @phi_three_incoming_values(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i32>, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sgt <2 x i32> [[WIDE_LOAD]], [[WIDE_LOAD2]]
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt <2 x i32> [[WIDE_LOAD]], <i32 20, i32 20>
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp slt <2 x i32> [[WIDE_LOAD2]], <i32 4, i32 4>
-; CHECK-NEXT:    [[TMP8:%.*]] = select <2 x i1> [[TMP7]], <2 x i32> <i32 4, i32 4>, <2 x i32> <i32 5, i32 5>
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP6]], <2 x i32> [[TMP8]], <2 x i32> <i32 3, i32 3>
-; CHECK-NEXT:    [[PREDPHI3:%.*]] = select <2 x i1> [[TMP5]], <2 x i32> [[PREDPHI]], <2 x i32> <i32 9, i32 9>
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt <2 x i32> [[WIDE_LOAD]], splat (i32 20)
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp slt <2 x i32> [[WIDE_LOAD2]], splat (i32 4)
+; CHECK-NEXT:    [[TMP8:%.*]] = select <2 x i1> [[TMP7]], <2 x i32> splat (i32 4), <2 x i32> splat (i32 5)
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP6]], <2 x i32> [[TMP8]], <2 x i32> splat (i32 3)
+; CHECK-NEXT:    [[PREDPHI3:%.*]] = select <2 x i1> [[TMP5]], <2 x i32> [[PREDPHI]], <2 x i32> splat (i32 9)
 ; CHECK-NEXT:    store <2 x i32> [[PREDPHI3]], ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

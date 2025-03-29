@@ -28,6 +28,7 @@ public:
   llvm::Error addModule(PartialTranslationUnit &PTU) override;
   llvm::Error removeModule(PartialTranslationUnit &PTU) override;
   llvm::Error runCtors() const override;
+  llvm::Error cleanUp() override;
 
   ~WasmIncrementalExecutor() override;
 };

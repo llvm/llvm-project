@@ -19,10 +19,8 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Initialization.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/SmallString.h"
 
 using namespace clang;
 
@@ -2077,10 +2075,9 @@ void SemaObjC::DiagnoseUnimplementedProperties(Scope *S, ObjCImplDecl *IMPDecl,
   for (const auto *I : IMPDecl->property_impls())
     PropImplMap.insert(I->getPropertyDecl());
 
-  llvm::SmallPtrSet<const ObjCMethodDecl *, 8> InsMap;
   // Collect property accessors implemented in current implementation.
-  for (const auto *I : IMPDecl->methods())
-    InsMap.insert(I);
+  llvm::SmallPtrSet<const ObjCMethodDecl *, 8> InsMap(llvm::from_range,
+                                                      IMPDecl->methods());
 
   ObjCCategoryDecl *C = dyn_cast<ObjCCategoryDecl>(CDecl);
   ObjCInterfaceDecl *PrimaryClass = nullptr;
@@ -2091,8 +2088,7 @@ void SemaObjC::DiagnoseUnimplementedProperties(Scope *S, ObjCImplDecl *IMPDecl,
         // When reporting on missing setter/getters, do not report when
         // setter/getter is implemented in category's primary class
         // implementation.
-        for (const auto *I : IMP->methods())
-          InsMap.insert(I);
+        InsMap.insert_range(IMP->methods());
       }
 
   for (ObjCContainerDecl::PropertyMap::iterator

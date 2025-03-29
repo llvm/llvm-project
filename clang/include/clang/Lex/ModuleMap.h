@@ -43,7 +43,7 @@ class FileManager;
 class HeaderSearch;
 class SourceManager;
 
-/// A mechanism to observe the actions of the module map parser as it
+/// A mechanism to observe the actions of the module map loader as it
 /// reads module map files.
 class ModuleMapCallbacks {
   virtual void anchor();
@@ -83,11 +83,6 @@ class ModuleMap {
   /// The directory used for Clang-supplied, builtin include headers,
   /// such as "stdint.h".
   OptionalDirectoryEntryRef BuiltinIncludeDir;
-
-  /// Language options used to parse the module map itself.
-  ///
-  /// These are always simple C language options.
-  LangOptions MMapLangOpts;
 
   /// The module that the main source file is associated with (the module
   /// named LangOpts::CurrentModule, if we've loaded it).
@@ -200,7 +195,7 @@ public:
   using AdditionalModMapsSet = llvm::DenseSet<FileEntryRef>;
 
 private:
-  friend class ModuleMapParser;
+  friend class ModuleMapLoader;
 
   using HeadersMap = llvm::DenseMap<FileEntryRef, SmallVector<KnownHeader, 1>>;
 
@@ -232,29 +227,7 @@ private:
 
   llvm::DenseMap<Module *, unsigned> ModuleScopeIDs;
 
-  /// The set of attributes that can be attached to a module.
-  struct Attributes {
-    /// Whether this is a system module.
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned IsSystem : 1;
-
-    /// Whether this is an extern "C" module.
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned IsExternC : 1;
-
-    /// Whether this is an exhaustive set of configuration macros.
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned IsExhaustive : 1;
-
-    /// Whether files in this module can only include non-modular headers
-    /// and headers from used modules.
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned NoUndeclaredIncludes : 1;
-
-    Attributes()
-        : IsSystem(false), IsExternC(false), IsExhaustive(false),
-          NoUndeclaredIncludes(false) {}
-  };
+  using Attributes = ModuleAttributes;
 
   /// A directory for which framework modules can be inferred.
   struct InferredDirectory {
@@ -286,9 +259,9 @@ private:
 
   llvm::DenseMap<const Module *, AdditionalModMapsSet> AdditionalModMaps;
 
-  /// Describes whether we haved parsed a particular file as a module
+  /// Describes whether we haved loaded a particular file as a module
   /// map.
-  llvm::DenseMap<const FileEntry *, bool> ParsedModuleMap;
+  llvm::DenseMap<const FileEntry *, bool> LoadedModuleMap;
 
   /// Resolve the given export declaration into an actual export
   /// declaration.
@@ -720,10 +693,10 @@ public:
   void addHeader(Module *Mod, Module::Header Header,
                  ModuleHeaderRole Role, bool Imported = false);
 
-  /// Parse the given module map file, and record any modules we
+  /// Load the given module map file, and record any modules we
   /// encounter.
   ///
-  /// \param File The file to be parsed.
+  /// \param File The file to be loaded.
   ///
   /// \param IsSystem Whether this module map file is in a system header
   /// directory, and therefore should be considered a system module.
@@ -740,10 +713,10 @@ public:
   ///        that caused us to load this module map file, if any.
   ///
   /// \returns true if an error occurred, false otherwise.
-  bool parseModuleMapFile(FileEntryRef File, bool IsSystem,
-                          DirectoryEntryRef HomeDir, FileID ID = FileID(),
-                          unsigned *Offset = nullptr,
-                          SourceLocation ExternModuleLoc = SourceLocation());
+  bool loadModuleMapFile(FileEntryRef File, bool IsSystem,
+                         DirectoryEntryRef HomeDir, FileID ID = FileID(),
+                         unsigned *Offset = nullptr,
+                         SourceLocation ExternModuleLoc = SourceLocation());
 
   /// Dump the contents of the module map, for debugging purposes.
   void dump();

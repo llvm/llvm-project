@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_REVERSE_COPY_H
-#define _LIBCPP___ALGORITHM_REVERSE_COPY_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_REVERSE_COPY_H
+#define _LIBCPP___CXX03___ALGORITHM_REVERSE_COPY_H
 
 #include <__cxx03/__config>
 
@@ -27,4 +27,4 @@ reverse_copy(_BidirectionalIterator __first, _BidirectionalIterator __last, _Out
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_REVERSE_COPY_H
+#endif // _LIBCPP___CXX03___ALGORITHM_REVERSE_COPY_H

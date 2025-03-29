@@ -15,21 +15,20 @@
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    std::queue<int> q;
-    q.push(1);
-    assert(q.size() == 1);
-    assert(q.front() == 1);
-    assert(q.back() == 1);
-    q.push(2);
-    assert(q.size() == 2);
-    assert(q.front() == 1);
-    assert(q.back() == 2);
-    q.push(3);
-    assert(q.size() == 3);
-    assert(q.front() == 1);
-    assert(q.back() == 3);
+int main(int, char**) {
+  std::queue<int> q;
+  q.push(1);
+  assert(q.size() == 1);
+  assert(q.front() == 1);
+  assert(q.back() == 1);
+  q.push(2);
+  assert(q.size() == 2);
+  assert(q.front() == 1);
+  assert(q.back() == 2);
+  q.push(3);
+  assert(q.size() == 3);
+  assert(q.front() == 1);
+  assert(q.back() == 3);
 
   return 0;
 }

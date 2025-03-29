@@ -9,9 +9,6 @@
 # RUN: yaml2obj %S/Inputs/use-feature-foo.yaml -o %t.used.o
 # RUN: wasm-ld --no-entry -o - %t1.o %t.used.o | obj2yaml | FileCheck %s --check-prefix USED
 
-# RUN: yaml2obj %S/Inputs/require-feature-foo.yaml -o %t.required.o
-# RUN: wasm-ld --no-entry -o - %t1.o %t.required.o | obj2yaml | FileCheck %s --check-prefix REQUIRED
-
 # RUN: yaml2obj %S/Inputs/disallow-feature-foo.yaml -o %t.disallowed.o
 # RUN: not wasm-ld --no-entry -o /dev/null %t1.o %t.disallowed.o 2>&1 | FileCheck %s --check-prefix DISALLOWED
 
@@ -24,7 +21,6 @@
 # give the expected results:
 #
 #     USED x USED => USED
-#     USED x REQUIRED => USED
 #     USED x DISALLOWED => Error
 #     USED x NONE => USED
 
@@ -72,13 +68,6 @@ Sections:
 # USED-NEXT:       - Prefix:          USED
 # USED-NEXT:         Name:            foo
 # USED-NEXT: ...
-
-# REQUIRED:        - Type:            CUSTOM
-# REQUIRED:          Name:            target_features
-# REQUIRED-NEXT:     Features:
-# REQUIRED-NEXT:       - Prefix:          USED
-# REQUIRED-NEXT:         Name:            foo
-# REQUIRED-NEXT: ...
 
 # DISALLOWED: Target feature 'foo' used in {{.*}}target-feature-used.yaml.tmp1.o is disallowed by {{.*}}target-feature-used.yaml.tmp.disallowed.o. Use --no-check-features to suppress.{{$}}
 

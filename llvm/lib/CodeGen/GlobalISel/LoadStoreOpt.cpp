@@ -36,7 +36,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
 #include <algorithm>
 
 #define DEBUG_TYPE "loadstore-opt"
@@ -318,7 +317,6 @@ bool LoadStoreOpt::mergeStores(SmallVectorImpl<GStore *> &StoresToMerge) {
     assert(MRI->getType(StoreMI->getValueReg()) == OrigTy);
 #endif
 
-  const auto &DL = MF->getFunction().getDataLayout();
   bool AnyMerged = false;
   do {
     unsigned NumPow2 = llvm::bit_floor(StoresToMerge.size());
@@ -328,7 +326,7 @@ bool LoadStoreOpt::mergeStores(SmallVectorImpl<GStore *> &StoresToMerge) {
     for (MergeSizeBits = MaxSizeBits; MergeSizeBits > 1; MergeSizeBits /= 2) {
       LLT StoreTy = LLT::scalar(MergeSizeBits);
       EVT StoreEVT =
-          getApproximateEVTForLLT(StoreTy, DL, MF->getFunction().getContext());
+          getApproximateEVTForLLT(StoreTy, MF->getFunction().getContext());
       if (LegalSizes.size() > MergeSizeBits && LegalSizes[MergeSizeBits] &&
           TLI->canMergeStoresTo(AS, StoreEVT, *MF) &&
           (TLI->isTypeLegal(StoreEVT)))
@@ -433,8 +431,7 @@ bool LoadStoreOpt::doSingleStoreMerge(SmallVectorImpl<GStore *> &Stores) {
     return R;
   });
 
-  for (auto *MI : Stores)
-    InstsToErase.insert(MI);
+  InstsToErase.insert_range(Stores);
   return true;
 }
 
@@ -932,7 +929,7 @@ bool LoadStoreOpt::mergeFunctionStores(MachineFunction &MF) {
   // Erase all dead instructions left over by the merging.
   if (Changed) {
     for (auto &BB : MF) {
-      for (auto &I : make_early_inc_range(make_range(BB.rbegin(), BB.rend()))) {
+      for (auto &I : make_early_inc_range(reverse(BB))) {
         if (isTriviallyDead(I, *MRI))
           I.eraseFromParent();
       }

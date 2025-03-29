@@ -31,7 +31,6 @@ class NVPTXInst<dag outs, dag ins, string asmstr, list<dag> pattern>
 
   // TSFlagFields
   bits<4> VecInstType = VecNOP.Value;
-  bit IsSimpleMove = false;
   bit IsLoad = false;
   bit IsStore = false;
 
@@ -46,13 +45,12 @@ class NVPTXInst<dag outs, dag ins, string asmstr, list<dag> pattern>
   // 2**(2-1) = 2.
   bits<2> IsSuld = 0;
 
-  let TSFlags{3...0}   = VecInstType;
-  let TSFlags{4...4}   = IsSimpleMove;
-  let TSFlags{5...5}   = IsLoad;
-  let TSFlags{6...6}   = IsStore;
-  let TSFlags{7}       = IsTex;
-  let TSFlags{9...8}   = IsSuld;
-  let TSFlags{10}      = IsSust;
-  let TSFlags{11}      = IsSurfTexQuery;
-  let TSFlags{12}      = IsTexModeUnified;
+  let TSFlags{3...0}  = VecInstType;
+  let TSFlags{4}      = IsLoad;
+  let TSFlags{5}      = IsStore;
+  let TSFlags{6}      = IsTex;
+  let TSFlags{8...7}  = IsSuld;
+  let TSFlags{9}      = IsSust;
+  let TSFlags{10}     = IsSurfTexQuery;
+  let TSFlags{11}     = IsTexModeUnified;
 }

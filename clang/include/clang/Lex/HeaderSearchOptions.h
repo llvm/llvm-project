@@ -235,6 +235,7 @@ public:
 
   /// Whether to entirely skip writing diagnostic options.
   /// Primarily used to speed up deserialization during dependency scanning.
+  /// FIXME: Consider moving these into separate `SerializationOptions` class.
   LLVM_PREFERRED_TYPE(bool)
   unsigned ModulesSkipDiagnosticOptions : 1;
 
@@ -254,6 +255,10 @@ public:
 
   LLVM_PREFERRED_TYPE(bool)
   unsigned ModulesHashContent : 1;
+
+  /// Whether AST files should only contain the preprocessor information.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ModulesSerializeOnlyPreprocessor : 1;
 
   /// Whether we should include all things that could impact the module in the
   /// hash.
@@ -288,6 +293,7 @@ public:
         ModulesSkipHeaderSearchPaths(false),
         ModulesSkipPragmaDiagnosticMappings(false),
         ModulesPruneNonAffectingModuleMaps(true), ModulesHashContent(false),
+        ModulesSerializeOnlyPreprocessor(false),
         ModulesStrictContextHash(false), ModulesIncludeVFSUsage(false),
         AllowModuleMapSubdirectorySearch(true) {}
 

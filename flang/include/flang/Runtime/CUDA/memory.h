@@ -9,7 +9,7 @@
 #ifndef FORTRAN_RUNTIME_CUDA_MEMORY_H_
 #define FORTRAN_RUNTIME_CUDA_MEMORY_H_
 
-#include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/descriptor-consts.h"
 #include "flang/Runtime/entry-names.h"
 #include <cstddef>
 
@@ -35,11 +35,6 @@ void RTDECL(CUFMemsetDescriptor)(Descriptor *desc, void *value,
 void RTDECL(CUFDataTransferPtrPtr)(void *dst, void *src, std::size_t bytes,
     unsigned mode, const char *sourceFile = nullptr, int sourceLine = 0);
 
-/// Data transfer from a pointer to a descriptor.
-void RTDECL(CUFDataTransferDescPtr)(Descriptor *dst, void *src,
-    std::size_t bytes, unsigned mode, const char *sourceFile = nullptr,
-    int sourceLine = 0);
-
 /// Data transfer from a descriptor to a pointer.
 void RTDECL(CUFDataTransferPtrDesc)(void *dst, Descriptor *src,
     std::size_t bytes, unsigned mode, const char *sourceFile = nullptr,
@@ -47,6 +42,18 @@ void RTDECL(CUFDataTransferPtrDesc)(void *dst, Descriptor *src,
 
 /// Data transfer from a descriptor to a descriptor.
 void RTDECL(CUFDataTransferDescDesc)(Descriptor *dst, Descriptor *src,
+    unsigned mode, const char *sourceFile = nullptr, int sourceLine = 0);
+
+/// Data transfer from a scalar descriptor to a descriptor.
+void RTDECL(CUFDataTransferCstDesc)(Descriptor *dst, Descriptor *src,
+    unsigned mode, const char *sourceFile = nullptr, int sourceLine = 0);
+
+/// Data transfer from a descriptor to a descriptor.
+void RTDECL(CUFDataTransferDescDescNoRealloc)(Descriptor *dst, Descriptor *src,
+    unsigned mode, const char *sourceFile = nullptr, int sourceLine = 0);
+
+/// Data transfer from a descriptor to a global descriptor.
+void RTDECL(CUFDataTransferGlobalDescDesc)(Descriptor *dst, Descriptor *src,
     unsigned mode, const char *sourceFile = nullptr, int sourceLine = 0);
 
 } // extern "C"

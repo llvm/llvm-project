@@ -10,7 +10,7 @@ from lldbsuite.test import lldbutil
 # rdar://problem/8532131
 # lldb not able to digest the clang-generated debug info correctly with respect to function name
 #
-# This class currently fails for clang as well as llvm-gcc.
+# This class currently fails for clang.
 
 
 class ConditionalBreakTestCase(TestBase):

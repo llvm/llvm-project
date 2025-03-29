@@ -6,18 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "AArch64.h"
-#include "AArch64MachineFunctionInfo.h"
 #include "AArch64InstrInfo.h"
+#include "AArch64MachineFunctionInfo.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineTraceMetrics.h"
 #include "llvm/CodeGen/Passes.h"
@@ -34,9 +31,8 @@ using namespace llvm;
 
 enum UncheckedLdStMode { UncheckedNever, UncheckedSafe, UncheckedAlways };
 
-cl::opt<UncheckedLdStMode> ClUncheckedLdSt(
-    "stack-tagging-unchecked-ld-st", cl::Hidden,
-    cl::init(UncheckedSafe),
+static cl::opt<UncheckedLdStMode> ClUncheckedLdSt(
+    "stack-tagging-unchecked-ld-st", cl::Hidden, cl::init(UncheckedSafe),
     cl::desc(
         "Unconditionally apply unchecked-ld-st optimization (even for large "
         "stack frames, or in the presence of variable sized allocas)."),
@@ -287,9 +283,8 @@ std::optional<int> AArch64StackTaggingPreRA::findFirstSlotCandidate() {
             WorkList.push_back(DstReg);
           continue;
         }
-        LLVM_DEBUG(dbgs() << "[" << ST.FI << ":" << ST.Tag << "] use of %"
-                          << Register::virtReg2Index(UseReg) << " in " << UseI
-                          << "\n");
+        LLVM_DEBUG(dbgs() << "[" << ST.FI << ":" << ST.Tag << "] use of "
+                          << printReg(UseReg) << " in " << UseI << "\n");
         Score++;
       }
     }

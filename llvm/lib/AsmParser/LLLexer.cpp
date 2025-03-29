@@ -200,7 +200,6 @@ lltok::Kind LLLexer::LexToken() {
       // Handle letters: [a-zA-Z_]
       if (isalpha(static_cast<unsigned char>(CurChar)) || CurChar == '_')
         return LexIdentifier();
-
       return lltok::Error;
     case EOF: return lltok::Eof;
     case 0:
@@ -251,6 +250,12 @@ lltok::Kind LLLexer::LexToken() {
     case ',': return lltok::comma;
     case '*': return lltok::star;
     case '|': return lltok::bar;
+    case '/':
+      if (getNextChar() != '*')
+        return lltok::Error;
+      if (SkipCComment())
+        return lltok::Error;
+      continue;
     }
   }
 }
@@ -259,6 +264,28 @@ void LLLexer::SkipLineComment() {
   while (true) {
     if (CurPtr[0] == '\n' || CurPtr[0] == '\r' || getNextChar() == EOF)
       return;
+  }
+}
+
+/// This skips C-style /**/ comments. Returns true if there
+/// was an error.
+bool LLLexer::SkipCComment() {
+  while (true) {
+    int CurChar = getNextChar();
+    switch (CurChar) {
+    case EOF:
+      LexError("unterminated comment");
+      return true;
+    case '*':
+      // End of the comment?
+      CurChar = getNextChar();
+      if (CurChar == '/')
+        return false;
+      if (CurChar == EOF) {
+        LexError("unterminated comment");
+        return true;
+      }
+    }
   }
 }
 
@@ -656,6 +683,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(m68k_rtdcc);
   KEYWORD(graalcc);
   KEYWORD(riscv_vector_cc);
+  KEYWORD(riscv_vls_cc);
 
   KEYWORD(cc);
   KEYWORD(c);
@@ -674,9 +702,15 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(readwrite);
   KEYWORD(argmem);
   KEYWORD(inaccessiblemem);
+  KEYWORD(errnomem);
   KEYWORD(argmemonly);
   KEYWORD(inaccessiblememonly);
   KEYWORD(inaccessiblemem_or_argmemonly);
+  KEYWORD(nocapture);
+  KEYWORD(address_is_null);
+  KEYWORD(address);
+  KEYWORD(provenance);
+  KEYWORD(read_provenance);
 
   // nofpclass attribute
   KEYWORD(all);
@@ -944,6 +978,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   DWKEYWORD(CC, DwarfCC);
   DWKEYWORD(OP, DwarfOp);
   DWKEYWORD(MACINFO, DwarfMacinfo);
+  DWKEYWORD(APPLE_ENUM_KIND, DwarfEnumKind);
 
 #undef DWKEYWORD
 

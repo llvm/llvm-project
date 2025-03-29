@@ -42,7 +42,6 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
@@ -76,10 +75,10 @@ public:
   bool select(MachineInstr &I) override;
   static const char *getName() { return DEBUG_TYPE; }
 
-  void setupMF(MachineFunction &MF, GISelKnownBits *KB,
+  void setupMF(MachineFunction &MF, GISelValueTracking *VT,
                CodeGenCoverage *CoverageInfo, ProfileSummaryInfo *PSI,
                BlockFrequencyInfo *BFI) override {
-    InstructionSelector::setupMF(MF, KB, CoverageInfo, PSI, BFI);
+    InstructionSelector::setupMF(MF, VT, CoverageInfo, PSI, BFI);
     MIB.setMF(MF);
 
     // hasFnAttribute() is expensive to call on every BRCOND selection, so
@@ -995,9 +994,9 @@ static bool selectDebugInstr(MachineInstr &I, MachineRegisterInfo &MRI,
     LLT Ty = MRI.getType(Reg);
     const RegClassOrRegBank &RegClassOrBank = MRI.getRegClassOrRegBank(Reg);
     const TargetRegisterClass *RC =
-        RegClassOrBank.dyn_cast<const TargetRegisterClass *>();
+        dyn_cast<const TargetRegisterClass *>(RegClassOrBank);
     if (!RC) {
-      const RegisterBank &RB = *RegClassOrBank.get<const RegisterBank *>();
+      const RegisterBank &RB = *cast<const RegisterBank *>(RegClassOrBank);
       RC = getRegClassForTypeOnBank(Ty, RB);
       if (!RC) {
         LLVM_DEBUG(
@@ -2590,14 +2589,14 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       const RegClassOrRegBank &RegClassOrBank =
         MRI.getRegClassOrRegBank(DefReg);
 
-      const TargetRegisterClass *DefRC
-        = RegClassOrBank.dyn_cast<const TargetRegisterClass *>();
+      const TargetRegisterClass *DefRC =
+          dyn_cast<const TargetRegisterClass *>(RegClassOrBank);
       if (!DefRC) {
         if (!DefTy.isValid()) {
           LLVM_DEBUG(dbgs() << "PHI operand has no type, not a gvreg?\n");
           return false;
         }
-        const RegisterBank &RB = *RegClassOrBank.get<const RegisterBank *>();
+        const RegisterBank &RB = *cast<const RegisterBank *>(RegClassOrBank);
         DefRC = getRegClassForTypeOnBank(DefTy, RB);
         if (!DefRC) {
           LLVM_DEBUG(dbgs() << "PHI operand has unexpected size/bank\n");
@@ -2961,8 +2960,12 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       assert(OpFlags == AArch64II::MO_GOT);
     } else {
       GV = I.getOperand(1).getGlobal();
-      if (GV->isThreadLocal())
+      if (GV->isThreadLocal()) {
+        // We don't support instructions with emulated TLS variables yet
+        if (TM.useEmulatedTLS())
+          return false;
         return selectTLSGlobalValue(I, MRI);
+      }
       OpFlags = STI.ClassifyGlobalReference(GV, TM);
     }
 
@@ -3000,9 +3003,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     bool IsZExtLoad = I.getOpcode() == TargetOpcode::G_ZEXTLOAD;
     LLT PtrTy = MRI.getType(LdSt.getPointerReg());
 
+    // Can only handle AddressSpace 0, 64-bit pointers.
     if (PtrTy != LLT::pointer(0, 64)) {
-      LLVM_DEBUG(dbgs() << "Load/Store pointer has type: " << PtrTy
-                        << ", expected: " << LLT::pointer(0, 64) << '\n');
       return false;
     }
 
@@ -3056,8 +3058,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
 #endif
 
     const Register ValReg = LdSt.getReg(0);
-    const LLT ValTy = MRI.getType(ValReg);
     const RegisterBank &RB = *RBI.getRegBank(ValReg, MRI, TRI);
+    LLT ValTy = MRI.getType(ValReg);
 
     // The code below doesn't support truncating stores, so we need to split it
     // again.
@@ -3097,6 +3099,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
         auto SubRegRC = getRegClassForTypeOnBank(MRI.getType(OldDst), RB);
         RBI.constrainGenericRegister(OldDst, *SubRegRC, MRI);
         MIB.setInstr(LdSt);
+        ValTy = MemTy; // This is no longer an extending load.
       }
     }
 
@@ -4677,7 +4680,7 @@ AArch64InstructionSelector::emitCSINC(Register Dst, Register Src1,
   // If we used a register class, then this won't necessarily have an LLT.
   // Compute the size based off whether or not we have a class or bank.
   unsigned Size;
-  if (const auto *RC = RegClassOrBank.dyn_cast<const TargetRegisterClass *>())
+  if (const auto *RC = dyn_cast<const TargetRegisterClass *>(RegClassOrBank))
     Size = TRI.getRegSizeInBits(*RC);
   else
     Size = MRI.getType(Dst).getSizeInBits();
@@ -5316,7 +5319,9 @@ bool AArch64InstructionSelector::selectUSMovFromExtend(
     return false;
   Register Src0 = Extract->getOperand(1).getReg();
 
-  const LLT &VecTy = MRI.getType(Src0);
+  const LLT VecTy = MRI.getType(Src0);
+  if (VecTy.isScalableVector())
+    return false;
 
   if (VecTy.getSizeInBits() != 128) {
     const MachineInstr *ScalarToVector = emitScalarToVector(
@@ -7612,7 +7617,12 @@ AArch64InstructionSelector::selectAddrModeIndexed(MachineOperand &Root,
 
   CodeModel::Model CM = MF.getTarget().getCodeModel();
   // Check if we can fold in the ADD of small code model ADRP + ADD address.
-  if (CM == CodeModel::Small) {
+  // HACK: ld64 on Darwin doesn't support relocations on PRFM, so we can't fold
+  // globals into the offset.
+  MachineInstr *RootParent = Root.getParent();
+  if (CM == CodeModel::Small &&
+      !(RootParent->getOpcode() == AArch64::G_AARCH64_PREFETCH &&
+        STI.isTargetDarwin())) {
     auto OpFns = tryFoldAddLowIntoImm(*RootDef, Size, MRI);
     if (OpFns)
       return OpFns;

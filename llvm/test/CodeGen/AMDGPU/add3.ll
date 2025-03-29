@@ -181,7 +181,7 @@ define amdgpu_ps <2 x float> @add3_multiuse_outer(i32 %a, i32 %b, i32 %c, i32 %x
   %inner = add i32 %a, %b
   %outer = add i32 %inner, %c
   %x1 = mul i32 %outer, %x
-  %r1 = insertelement <2 x i32> undef, i32 %outer, i32 0
+  %r1 = insertelement <2 x i32> poison, i32 %outer, i32 0
   %r0 = insertelement <2 x i32> %r1, i32 %x1, i32 1
   %bc = bitcast <2 x i32> %r0 to <2 x float>
   ret <2 x float> %bc
@@ -207,7 +207,7 @@ define amdgpu_ps <2 x float> @add3_multiuse_inner(i32 %a, i32 %b, i32 %c) {
 ; GFX10-NEXT:    ; return to shader part epilog
   %inner = add i32 %a, %b
   %outer = add i32 %inner, %c
-  %r1 = insertelement <2 x i32> undef, i32 %inner, i32 0
+  %r1 = insertelement <2 x i32> poison, i32 %inner, i32 0
   %r0 = insertelement <2 x i32> %r1, i32 %outer, i32 1
   %bc = bitcast <2 x i32> %r0 to <2 x float>
   ret <2 x float> %bc

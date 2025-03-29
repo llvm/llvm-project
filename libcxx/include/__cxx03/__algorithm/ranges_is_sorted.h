@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP__ALGORITHM_RANGES_IS_SORTED_H
-#define _LIBCPP__ALGORITHM_RANGES_IS_SORTED_H
+#ifndef _LIBCPP___CXX03__ALGORITHM_RANGES_IS_SORTED_H
+#define _LIBCPP___CXX03__ALGORITHM_RANGES_IS_SORTED_H
 
 #include <__cxx03/__algorithm/ranges_is_sorted_until.h>
 #include <__cxx03/__config>
@@ -64,4 +64,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP__ALGORITHM_RANGES_IS_SORTED_H
+#endif // _LIBCPP___CXX03__ALGORITHM_RANGES_IS_SORTED_H

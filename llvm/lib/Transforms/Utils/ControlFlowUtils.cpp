@@ -270,7 +270,7 @@ static void reconnectPhis(BasicBlock *Out, BasicBlock *GuardBlock,
   }
 }
 
-BasicBlock *ControlFlowHub::finalize(
+std::pair<BasicBlock *, bool> ControlFlowHub::finalize(
     DomTreeUpdater *DTU, SmallVectorImpl<BasicBlock *> &GuardBlocks,
     const StringRef Prefix, std::optional<unsigned> MaxControlFlowBooleans) {
 #ifndef NDEBUG
@@ -289,7 +289,7 @@ BasicBlock *ControlFlowHub::finalize(
   }
 
   if (Outgoing.size() < 2)
-    return Outgoing.front();
+    return {Outgoing.front(), false};
 
   SmallVector<DominatorTree::UpdateType, 16> Updates;
   if (DTU) {
@@ -338,5 +338,5 @@ BasicBlock *ControlFlowHub::finalize(
         Inst->eraseFromParent();
   }
 
-  return FirstGuardBlock;
+  return {FirstGuardBlock, true};
 }

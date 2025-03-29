@@ -71,6 +71,15 @@ namespace llvm {
   /// using profile information.
   MachineFunctionPass *createMachineFunctionSplitterPass();
 
+  /// createStaticDataSplitterPass - This is a machine-function pass that
+  /// categorizes static data hotness using profile information.
+  MachineFunctionPass *createStaticDataSplitterPass();
+
+  /// createStaticDataAnnotatorPASS - This is a module pass that reads from
+  /// StaticDataProfileInfoWrapperPass and annotates the section prefix of
+  /// global variables.
+  ModulePass *createStaticDataAnnotatorPass();
+
   /// MachineFunctionPrinter pass - This pass prints out the machine function to
   /// the given stream as a debugging tool.
   MachineFunctionPass *
@@ -118,7 +127,7 @@ namespace llvm {
   extern char &MachineRegionInfoPassID;
 
   /// EdgeBundles analysis - Bundle machine CFG edges.
-  extern char &EdgeBundlesID;
+  extern char &EdgeBundlesWrapperLegacyID;
 
   /// LiveVariables pass - This pass computes the set of blocks in which each
   /// variable is life and sets machine operand kill flags.
@@ -167,7 +176,7 @@ namespace llvm {
   extern char &LiveRangeShrinkID;
 
   /// Greedy register allocator.
-  extern char &RAGreedyID;
+  extern char &RAGreedyLegacyID;
 
   /// Basic register allocator.
   extern char &RABasicID;
@@ -349,7 +358,7 @@ namespace llvm {
   extern char &EarlyMachineLICMID;
 
   /// MachineSinking - This pass performs sinking on machine instructions.
-  extern char &MachineSinkingID;
+  extern char &MachineSinkingLegacyID;
 
   /// MachineCopyPropagation - This pass performs copy propagation on
   /// machine instructions.
@@ -363,7 +372,7 @@ namespace llvm {
 
   /// PeepholeOptimizer - This pass performs peephole optimizations -
   /// like extension and comparison eliminations.
-  extern char &PeepholeOptimizerID;
+  extern char &PeepholeOptimizerLegacyID;
 
   /// OptimizePHIs - This pass optimizes machine instruction PHIs
   /// to take advantage of opportunities created during DAG legalization.
@@ -507,6 +516,9 @@ namespace llvm {
   /// This pass frees the memory occupied by the MachineFunction.
   FunctionPass *createFreeMachineFunctionPass();
 
+  /// This pass performs merging similar functions globally.
+  ModulePass *createGlobalMergeFuncPass();
+
   /// This pass performs outlining on machine instructions directly before
   /// printing assembly.
   ModulePass *createMachineOutlinerPass(bool RunOnAllFunctions = true);
@@ -522,7 +534,7 @@ namespace llvm {
   FunctionPass *createExpandLargeDivRemPass();
 
   // Expands large div/rem instructions.
-  FunctionPass *createExpandLargeFpConvertPass();
+  FunctionPass *createExpandFpPass();
 
   // This pass expands memcmp() to load/stores.
   FunctionPass *createExpandMemCmpLegacyPass();
@@ -543,9 +555,9 @@ namespace llvm {
   /// \see CFGuardLongjmp.cpp
   FunctionPass *createCFGuardLongjmpPass();
 
-  /// Creates EHContGuard catchret target identification pass.
-  /// \see EHContGuardCatchret.cpp
-  FunctionPass *createEHContGuardCatchretPass();
+  /// Creates Windows EH Continuation Guard target identification pass.
+  /// \see EHContGuardTargets.cpp
+  FunctionPass *createEHContGuardTargetsPass();
 
   /// Create Hardware Loop pass. \see HardwareLoops.cpp
   FunctionPass *createHardwareLoopsLegacyPass();

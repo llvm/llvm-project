@@ -505,7 +505,7 @@ define <2 x i8> @simplfy_srem_of_mul(<2 x i8> %x) {
 define <2 x i8> @simplfy_srem_of_mul_fail_bad_mod(<2 x i8> %x) {
 ; CHECK-LABEL: @simplfy_srem_of_mul_fail_bad_mod(
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw <2 x i8> [[X:%.*]], <i8 20, i8 11>
-; CHECK-NEXT:    [[R:%.*]] = srem <2 x i8> [[MUL]], <i8 5, i8 5>
+; CHECK-NEXT:    [[R:%.*]] = srem <2 x i8> [[MUL]], splat (i8 5)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %mul = mul nsw <2 x i8> %x, <i8 20, i8 11>

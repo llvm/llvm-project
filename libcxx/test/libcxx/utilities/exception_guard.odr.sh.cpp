@@ -9,6 +9,8 @@
 // This test relies on `typeid` and thus requires `-frtti`.
 // UNSUPPORTED: no-rtti
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 // Make sure that we don't get ODR violations with __exception_guard when
 // linking together TUs compiled with different values of -f[no-]exceptions.
 

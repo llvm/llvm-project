@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_SSTREAM
-#define _LIBCPP_SSTREAM
+#ifndef _LIBCPP___CXX03_SSTREAM
+#define _LIBCPP___CXX03_SSTREAM
 
 // clang-format off
 
@@ -1273,4 +1273,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/type_traits>
 #endif
 
-#endif // _LIBCPP_SSTREAM
+#endif // _LIBCPP___CXX03_SSTREAM

@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass early-if-predicator %s -o - -verify-machineinstrs | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass early-if-predicator %s -o - -verify-machineinstrs | FileCheck %s
 
 # Check that the store gets predicated
 # CHECK: S4_storeirit_io %2, %0, 0, 1

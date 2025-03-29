@@ -121,6 +121,7 @@ enum CPUKind {
   CK_GraniterapidsD,
   CK_Emeraldrapids,
   CK_Clearwaterforest,
+  CK_Diamondrapids,
   CK_KNL,
   CK_KNM,
   CK_Lakemont,

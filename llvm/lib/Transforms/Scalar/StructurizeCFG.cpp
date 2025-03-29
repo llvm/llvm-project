@@ -47,7 +47,6 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
-#include <algorithm>
 #include <cassert>
 #include <utility>
 
@@ -121,9 +120,12 @@ public:
   }
 };
 
-using ValueWeightPair = std::pair<Value *, MaybeCondBranchWeights>;
+struct PredInfo {
+  Value *Pred;
+  MaybeCondBranchWeights Weights;
+};
 
-using BBPredicates = DenseMap<BasicBlock *, ValueWeightPair>;
+using BBPredicates = DenseMap<BasicBlock *, PredInfo>;
 using PredMap = DenseMap<BasicBlock *, BBPredicates>;
 using BB2BBMap = DenseMap<BasicBlock *, BasicBlock *>;
 
@@ -309,7 +311,7 @@ class StructurizeCFG {
 
   void analyzeLoops(RegionNode *N);
 
-  ValueWeightPair buildCondition(BranchInst *Term, unsigned Idx, bool Invert);
+  PredInfo buildCondition(BranchInst *Term, unsigned Idx, bool Invert);
 
   void gatherPredicates(RegionNode *N);
 
@@ -358,6 +360,8 @@ class StructurizeCFG {
   void createFlow();
 
   void rebuildSSA();
+
+  void setDebugLoc(BranchInst *Br, BasicBlock *BB);
 
 public:
   void init(Region *R);
@@ -491,8 +495,8 @@ void StructurizeCFG::analyzeLoops(RegionNode *N) {
 }
 
 /// Build the condition for one edge
-ValueWeightPair StructurizeCFG::buildCondition(BranchInst *Term, unsigned Idx,
-                                               bool Invert) {
+PredInfo StructurizeCFG::buildCondition(BranchInst *Term, unsigned Idx,
+                                        bool Invert) {
   Value *Cond = Invert ? BoolFalse : BoolTrue;
   MaybeCondBranchWeights Weights;
 
@@ -593,14 +597,6 @@ void StructurizeCFG::collectInfos() {
     // Find the last back edges
     analyzeLoops(RN);
   }
-
-  // Reset the collected term debug locations
-  TermDL.clear();
-
-  for (BasicBlock &BB : *Func) {
-    if (const DebugLoc &DL = BB.getTerminator()->getDebugLoc())
-      TermDL[&BB] = DL;
-  }
 }
 
 /// Insert the missing branch conditions
@@ -616,34 +612,25 @@ void StructurizeCFG::insertConditions(bool Loops) {
     BasicBlock *SuccTrue = Term->getSuccessor(0);
     BasicBlock *SuccFalse = Term->getSuccessor(1);
 
-    PhiInserter.Initialize(Boolean, "");
-    PhiInserter.AddAvailableValue(&Func->getEntryBlock(), Default);
-    PhiInserter.AddAvailableValue(Loops ? SuccFalse : Parent, Default);
-
     BBPredicates &Preds = Loops ? LoopPreds[SuccFalse] : Predicates[SuccTrue];
 
-    NearestCommonDominator Dominator(DT);
-    Dominator.addBlock(Parent);
-
-    Value *ParentValue = nullptr;
-    MaybeCondBranchWeights ParentWeights = std::nullopt;
-    for (std::pair<BasicBlock *, ValueWeightPair> BBAndPred : Preds) {
-      BasicBlock *BB = BBAndPred.first;
-      auto [Pred, Weight] = BBAndPred.second;
-
-      if (BB == Parent) {
-        ParentValue = Pred;
-        ParentWeights = Weight;
-        break;
-      }
-      PhiInserter.AddAvailableValue(BB, Pred);
-      Dominator.addAndRememberBlock(BB);
-    }
-
-    if (ParentValue) {
-      Term->setCondition(ParentValue);
-      CondBranchWeights::setMetadata(*Term, ParentWeights);
+    if (Preds.size() == 1 && Preds.begin()->first == Parent) {
+      auto &PI = Preds.begin()->second;
+      Term->setCondition(PI.Pred);
+      CondBranchWeights::setMetadata(*Term, PI.Weights);
     } else {
+      PhiInserter.Initialize(Boolean, "");
+      PhiInserter.AddAvailableValue(Loops ? SuccFalse : Parent, Default);
+
+      NearestCommonDominator Dominator(DT);
+      Dominator.addBlock(Parent);
+
+      for (auto [BB, PI] : Preds) {
+        assert(BB != Parent);
+        PhiInserter.AddAvailableValue(BB, PI.Pred);
+        Dominator.addAndRememberBlock(BB);
+      }
+
       if (!Dominator.resultIsRememberedBlock())
         PhiInserter.AddAvailableValue(Dominator.result(), Default);
 
@@ -657,15 +644,14 @@ void StructurizeCFG::simplifyConditions() {
   SmallVector<Instruction *> InstToErase;
   for (auto &I : concat<PredMap::value_type>(Predicates, LoopPreds)) {
     auto &Preds = I.second;
-    for (auto &J : Preds) {
-      Value *Cond = J.second.first;
+    for (auto [BB, PI] : Preds) {
       Instruction *Inverted;
-      if (match(Cond, m_Not(m_OneUse(m_Instruction(Inverted)))) &&
-          !Cond->use_empty()) {
+      if (match(PI.Pred, m_Not(m_OneUse(m_Instruction(Inverted)))) &&
+          !PI.Pred->use_empty()) {
         if (auto *InvertedCmp = dyn_cast<CmpInst>(Inverted)) {
           InvertedCmp->setPredicate(InvertedCmp->getInversePredicate());
-          Cond->replaceAllUsesWith(InvertedCmp);
-          InstToErase.push_back(cast<Instruction>(Cond));
+          PI.Pred->replaceAllUsesWith(InvertedCmp);
+          InstToErase.push_back(cast<Instruction>(PI.Pred));
         }
       }
     }
@@ -694,8 +680,8 @@ void StructurizeCFG::delPhiValues(BasicBlock *From, BasicBlock *To) {
 /// Add a dummy PHI value as soon as we knew the new predecessor
 void StructurizeCFG::addPhiValues(BasicBlock *From, BasicBlock *To) {
   for (PHINode &Phi : To->phis()) {
-    Value *Undef = UndefValue::get(Phi.getType());
-    Phi.addIncoming(Undef, From);
+    Value *Poison = PoisonValue::get(Phi.getType());
+    Phi.addIncoming(Poison, From);
   }
   AddedPhis[To].push_back(From);
 }
@@ -833,8 +819,7 @@ void StructurizeCFG::setPhiValues() {
 
     // Get the undefined blocks shared by all the phi nodes.
     if (!BlkPhis.empty()) {
-      for (const auto &VI : BlkPhis.front().second)
-        Incomings.insert(VI.first);
+      Incomings.insert_range(llvm::make_first_range(BlkPhis.front().second));
       findUndefBlocks(To, Incomings, UndefBlks);
     }
 
@@ -860,16 +845,17 @@ void StructurizeCFG::setPhiValues() {
     BasicBlock *To = AddedPhi.first;
     const BBVector &From = AddedPhi.second;
 
-    if (!DeletedPhis.count(To))
+    auto It = DeletedPhis.find(To);
+    if (It == DeletedPhis.end())
       continue;
 
-    PhiMap &Map = DeletedPhis[To];
+    PhiMap &Map = It->second;
     SmallVector<BasicBlock *> &UndefBlks = UndefBlksMap[To];
     for (const auto &[Phi, Incoming] : Map) {
-      Value *Undef = UndefValue::get(Phi->getType());
+      Value *Poison = PoisonValue::get(Phi->getType());
       Updater.Initialize(Phi->getType(), "");
-      Updater.AddAvailableValue(&Func->getEntryBlock(), Undef);
-      Updater.AddAvailableValue(To, Undef);
+      Updater.AddAvailableValue(&Func->getEntryBlock(), Poison);
+      Updater.AddAvailableValue(To, Poison);
 
       // Use leader phi's incoming if there is.
       auto LeaderIt = PhiClasses.findLeader(Phi);
@@ -898,7 +884,7 @@ void StructurizeCFG::setPhiValues() {
         if (Updater.HasValueForBlock(UB))
           continue;
 
-        Updater.AddAvailableValue(UB, Undef);
+        Updater.AddAvailableValue(UB, Poison);
       }
 
       for (BasicBlock *FI : From)
@@ -931,11 +917,23 @@ void StructurizeCFG::simplifyAffectedPhis() {
   } while (Changed);
 }
 
+void StructurizeCFG::setDebugLoc(BranchInst *Br, BasicBlock *BB) {
+  auto I = TermDL.find(BB);
+  if (I == TermDL.end())
+    return;
+
+  Br->setDebugLoc(I->second);
+  TermDL.erase(I);
+}
+
 /// Remove phi values from all successors and then remove the terminator.
 void StructurizeCFG::killTerminator(BasicBlock *BB) {
   Instruction *Term = BB->getTerminator();
   if (!Term)
     return;
+
+  if (const DebugLoc &DL = Term->getDebugLoc())
+    TermDL[BB] = DL;
 
   for (BasicBlock *Succ : successors(BB))
     delPhiValues(BB, Succ);
@@ -981,7 +979,7 @@ void StructurizeCFG::changeExit(RegionNode *Node, BasicBlock *NewExit,
     BasicBlock *BB = Node->getNodeAs<BasicBlock>();
     killTerminator(BB);
     BranchInst *Br = BranchInst::Create(NewExit, BB);
-    Br->setDebugLoc(TermDL[BB]);
+    setDebugLoc(Br, BB);
     addPhiValues(BB, NewExit);
     if (IncludeDominator)
       DT->changeImmediateDominator(NewExit, BB);
@@ -997,10 +995,14 @@ BasicBlock *StructurizeCFG::getNextFlow(BasicBlock *Dominator) {
                                         Func, Insert);
   FlowSet.insert(Flow);
 
-  // use a temporary variable to avoid a use-after-free if the map's storage is
-  // reallocated
-  DebugLoc DL = TermDL[Dominator];
-  TermDL[Flow] = std::move(DL);
+  if (auto *Term = Dominator->getTerminator()) {
+    if (const DebugLoc &DL = Term->getDebugLoc())
+      TermDL[Flow] = DL;
+  } else if (DebugLoc DLTemp = TermDL.lookup(Dominator)) {
+    // Use a temporary copy to avoid a use-after-free if the map's storage
+    // is reallocated.
+    TermDL[Flow] = DLTemp;
+  }
 
   DT->addNewBlock(Flow, Dominator);
   ParentRegion->getRegionInfo()->setRegionFor(Flow, ParentRegion);
@@ -1047,10 +1049,9 @@ void StructurizeCFG::setPrevNode(BasicBlock *BB) {
 /// Does BB dominate all the predicates of Node?
 bool StructurizeCFG::dominatesPredicates(BasicBlock *BB, RegionNode *Node) {
   BBPredicates &Preds = Predicates[Node->getEntry()];
-  return llvm::all_of(Preds,
-                      [&](std::pair<BasicBlock *, ValueWeightPair> Pred) {
-                        return DT->dominates(BB, Pred.first);
-                      });
+  return llvm::all_of(Preds, [&](std::pair<BasicBlock *, PredInfo> Pred) {
+    return DT->dominates(BB, Pred.first);
+  });
 }
 
 /// Can we predict that this node will always be called?
@@ -1062,11 +1063,8 @@ bool StructurizeCFG::isPredictableTrue(RegionNode *Node) {
   if (!PrevNode)
     return true;
 
-  for (std::pair<BasicBlock *, ValueWeightPair> Pred : Preds) {
-    BasicBlock *BB = Pred.first;
-    Value *V = Pred.second.first;
-
-    if (V != BoolTrue)
+  for (auto [BB, PI] : Preds) {
+    if (PI.Pred != BoolTrue)
       return false;
 
     if (!Dominated && DT->dominates(BB, PrevNode->getEntry()))
@@ -1099,7 +1097,7 @@ void StructurizeCFG::wireFlow(bool ExitUseAllowed,
 
     // let it point to entry and next block
     BranchInst *Br = BranchInst::Create(Entry, Next, BoolPoison, Flow);
-    Br->setDebugLoc(TermDL[Flow]);
+    setDebugLoc(Br, Flow);
     Conditions.push_back(Br);
     addPhiValues(Flow, Entry);
     DT->changeImmediateDominator(Entry, Flow);
@@ -1140,7 +1138,7 @@ void StructurizeCFG::handleLoops(bool ExitUseAllowed,
   LoopEnd = needPrefix(false);
   BasicBlock *Next = needPostfix(LoopEnd, ExitUseAllowed);
   BranchInst *Br = BranchInst::Create(Next, LoopStart, BoolPoison, LoopEnd);
-  Br->setDebugLoc(TermDL[LoopEnd]);
+  setDebugLoc(Br, LoopEnd);
   LoopConds.push_back(Br);
   addPhiValues(LoopEnd, LoopStart);
   setPrevNode(Next);
@@ -1193,9 +1191,9 @@ void StructurizeCFG::rebuildSSA() {
           continue;
 
         if (!Initialized) {
-          Value *Undef = UndefValue::get(I.getType());
+          Value *Poison = PoisonValue::get(I.getType());
           Updater.Initialize(I.getType(), "");
-          Updater.AddAvailableValue(&Func->getEntryBlock(), Undef);
+          Updater.AddAvailableValue(&Func->getEntryBlock(), Poison);
           Updater.AddAvailableValue(BB, &I);
           Initialized = true;
         }

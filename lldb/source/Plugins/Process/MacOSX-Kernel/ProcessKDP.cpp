@@ -321,20 +321,10 @@ Status ProcessKDP::DoConnectRemote(llvm::StringRef remote_url) {
           SetID(1);
           GetThreadList();
           SetPrivateState(eStateStopped);
-          StreamSP async_strm_sp(target.GetDebugger().GetAsyncOutputStream());
-          if (async_strm_sp) {
-            const char *cstr;
-            if ((cstr = m_comm.GetKernelVersion()) != NULL) {
-              async_strm_sp->Printf("Version: %s\n", cstr);
-              async_strm_sp->Flush();
-            }
-            //                      if ((cstr = m_comm.GetImagePath ()) != NULL)
-            //                      {
-            //                          async_strm_sp->Printf ("Image Path:
-            //                          %s\n", cstr);
-            //                          async_strm_sp->Flush();
-            //                      }
-          }
+          const char *cstr;
+          if ((cstr = m_comm.GetKernelVersion()) != NULL)
+            target.GetDebugger().GetAsyncOutputStream()->Printf("Version: %s\n",
+                                                                cstr);
         } else {
           return Status::FromErrorString("KDP_REATTACH failed");
         }
@@ -402,9 +392,15 @@ lldb_private::DynamicLoader *ProcessKDP::GetDynamicLoader() {
 
 Status ProcessKDP::WillResume() { return Status(); }
 
-Status ProcessKDP::DoResume() {
+Status ProcessKDP::DoResume(RunDirection direction) {
   Status error;
   Log *log = GetLog(KDPLog::Process);
+
+  if (direction == RunDirection::eRunReverse)
+    return Status::FromErrorStringWithFormatv(
+        "error: {0} does not support reverse execution of processes",
+        GetPluginName());
+
   // Only start the async thread if we try to do any process control
   if (!m_async_thread.IsJoinable())
     StartAsyncThread();

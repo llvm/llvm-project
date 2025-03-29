@@ -31,6 +31,8 @@
 #include "llvm/Support/FormatVariadic.h"
 
 namespace llvm {
+class ModuleSlotTracker;
+
 template <class GraphType> struct GraphTraits;
 class CFGViewerPass : public PassInfoMixin<CFGViewerPass> {
 public:
@@ -61,6 +63,7 @@ private:
   const Function *F;
   const BlockFrequencyInfo *BFI;
   const BranchProbabilityInfo *BPI;
+  std::unique_ptr<ModuleSlotTracker> MSTStorage;
   uint64_t MaxFreq;
   bool ShowHeat;
   bool EdgeWeights;
@@ -68,20 +71,18 @@ private:
 
 public:
   DOTFuncInfo(const Function *F) : DOTFuncInfo(F, nullptr, nullptr, 0) {}
+  ~DOTFuncInfo();
 
   DOTFuncInfo(const Function *F, const BlockFrequencyInfo *BFI,
-              const BranchProbabilityInfo *BPI, uint64_t MaxFreq)
-      : F(F), BFI(BFI), BPI(BPI), MaxFreq(MaxFreq) {
-    ShowHeat = false;
-    EdgeWeights = !!BPI; // Print EdgeWeights when BPI is available.
-    RawWeights = !!BFI;  // Print RawWeights when BFI is available.
-  }
+              const BranchProbabilityInfo *BPI, uint64_t MaxFreq);
 
   const BlockFrequencyInfo *getBFI() const { return BFI; }
 
   const BranchProbabilityInfo *getBPI() const { return BPI; }
 
   const Function *getFunction() const { return this->F; }
+
+  ModuleSlotTracker *getModuleSlotTracker();
 
   uint64_t getMaxFreq() const { return MaxFreq; }
 
@@ -203,22 +204,12 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
     return SimpleNodeLabelString(Node);
   }
 
-  static void printBasicBlock(raw_string_ostream &OS, const BasicBlock &Node) {
-    // Prepend label name
-    Node.printAsOperand(OS, false);
-    OS << ":\n";
-    for (const Instruction &Inst : Node)
-      OS << Inst << "\n";
-  }
-
   static std::string getCompleteNodeLabel(
       const BasicBlock *Node, DOTFuncInfo *,
       function_ref<void(raw_string_ostream &, const BasicBlock &)>
-          HandleBasicBlock = printBasicBlock,
-      function_ref<void(std::string &, unsigned &, unsigned)>
-          HandleComment = eraseComment) {
-    return CompleteNodeLabelString(Node, HandleBasicBlock, HandleComment);
-  }
+          HandleBasicBlock = {},
+      function_ref<void(std::string &, unsigned &, unsigned)> HandleComment =
+          eraseComment);
 
   std::string getNodeLabel(const BasicBlock *Node, DOTFuncInfo *CFGInfo) {
 
@@ -337,6 +328,6 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
   bool isNodeHidden(const BasicBlock *Node, const DOTFuncInfo *CFGInfo);
   void computeDeoptOrUnreachablePaths(const Function *F);
 };
-} // End llvm namespace
+} // namespace llvm
 
 #endif

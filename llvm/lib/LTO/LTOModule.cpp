@@ -200,14 +200,13 @@ LTOModule::makeLTOModule(MemoryBufferRef Buffer, const TargetOptions &options,
     return EC;
   std::unique_ptr<Module> &M = *MOrErr;
 
-  std::string TripleStr = M->getTargetTriple();
-  if (TripleStr.empty())
-    TripleStr = sys::getDefaultTargetTriple();
-  llvm::Triple Triple(TripleStr);
+  llvm::Triple Triple = M->getTargetTriple();
+  if (Triple.empty())
+    Triple = llvm::Triple(sys::getDefaultTargetTriple());
 
   // find machine architecture for this module
   std::string errMsg;
-  const Target *march = TargetRegistry::lookupTarget(TripleStr, errMsg);
+  const Target *march = TargetRegistry::lookupTarget(Triple, errMsg);
   if (!march)
     return make_error_code(object::object_error::arch_not_found);
 
@@ -229,7 +228,7 @@ LTOModule::makeLTOModule(MemoryBufferRef Buffer, const TargetOptions &options,
       CPU = "cyclone";
   }
 
-  TargetMachine *target = march->createTargetMachine(TripleStr, CPU, FeatureStr,
+  TargetMachine *target = march->createTargetMachine(Triple, CPU, FeatureStr,
                                                      options, std::nullopt);
 
   std::unique_ptr<LTOModule> Ret(new LTOModule(std::move(M), Buffer, target));
@@ -691,11 +690,11 @@ const char *LTOModule::getDependentLibrary(lto::InputFile *input, size_t index,
 }
 
 Expected<uint32_t> LTOModule::getMachOCPUType() const {
-  return MachO::getCPUType(Triple(Mod->getTargetTriple()));
+  return MachO::getCPUType(Mod->getTargetTriple());
 }
 
 Expected<uint32_t> LTOModule::getMachOCPUSubType() const {
-  return MachO::getCPUSubType(Triple(Mod->getTargetTriple()));
+  return MachO::getCPUSubType(Mod->getTargetTriple());
 }
 
 bool LTOModule::hasCtorDtor() const {

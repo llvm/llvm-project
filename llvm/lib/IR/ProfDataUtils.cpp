@@ -12,7 +12,6 @@
 
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
@@ -20,8 +19,6 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/ProfDataUtils.h"
-#include "llvm/Support/BranchProbability.h"
-#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 

@@ -19,13 +19,11 @@
 #include "PPCTargetMachine.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -36,7 +34,6 @@
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/IR/Module.h"
-#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
@@ -646,8 +643,8 @@ bool PPCInstrInfo::shouldReduceRegisterPressure(
   };
 
   // For now we only care about float and double type fma.
-  unsigned VSSRCLimit = TRI->getRegPressureSetLimit(
-      *MBB->getParent(), PPC::RegisterPressureSets::VSSRC);
+  unsigned VSSRCLimit =
+      RegClassInfo->getRegPressureSetLimit(PPC::RegisterPressureSets::VSSRC);
 
   // Only reduce register pressure when pressure is high.
   return GetMBBPressure(MBB)[PPC::RegisterPressureSets::VSSRC] >
@@ -770,7 +767,7 @@ void PPCInstrInfo::genAlternativeCodeSequence(
     MachineInstr &Root, unsigned Pattern,
     SmallVectorImpl<MachineInstr *> &InsInstrs,
     SmallVectorImpl<MachineInstr *> &DelInstrs,
-    DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const {
+    DenseMap<Register, unsigned> &InstrIdxForVirtReg) const {
   switch (Pattern) {
   case PPCMachineCombinerPattern::REASSOC_XY_AMM_BMM:
   case PPCMachineCombinerPattern::REASSOC_XMM_AMM_BMM:
@@ -790,7 +787,7 @@ void PPCInstrInfo::reassociateFMA(
     MachineInstr &Root, unsigned Pattern,
     SmallVectorImpl<MachineInstr *> &InsInstrs,
     SmallVectorImpl<MachineInstr *> &DelInstrs,
-    DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const {
+    DenseMap<Register, unsigned> &InstrIdxForVirtReg) const {
   MachineFunction *MF = Root.getMF();
   MachineRegisterInfo &MRI = MF->getRegInfo();
   const TargetRegisterInfo *TRI = &getRegisterInfo();
@@ -1678,8 +1675,8 @@ static unsigned getCRBitValue(unsigned CRBit) {
 
 void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator I,
-                               const DebugLoc &DL, MCRegister DestReg,
-                               MCRegister SrcReg, bool KillSrc,
+                               const DebugLoc &DL, Register DestReg,
+                               Register SrcReg, bool KillSrc,
                                bool RenamableDest, bool RenamableSrc) const {
   // We can end up with self copies and similar things as a result of VSX copy
   // legalization. Promote them here.
@@ -1970,7 +1967,8 @@ void PPCInstrInfo::storeRegToStackSlotNoUpd(
 void PPCInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
     bool isKill, int FrameIdx, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg) const {
+    const TargetRegisterInfo *TRI, Register VReg,
+    MachineInstr::MIFlag Flags) const {
   // We need to avoid a situation in which the value from a VRRC register is
   // spilled using an Altivec instruction and reloaded into a VSRC register
   // using a VSX instruction. The issue with this is that the VSX
@@ -2014,12 +2012,10 @@ void PPCInstrInfo::loadRegFromStackSlotNoUpd(
   NewMIs.back()->addMemOperand(MF, MMO);
 }
 
-void PPCInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
-                                        MachineBasicBlock::iterator MI,
-                                        Register DestReg, int FrameIdx,
-                                        const TargetRegisterClass *RC,
-                                        const TargetRegisterInfo *TRI,
-                                        Register VReg) const {
+void PPCInstrInfo::loadRegFromStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
+    int FrameIdx, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
+    Register VReg, MachineInstr::MIFlag Flags) const {
   // We need to avoid a situation in which the value from a VRRC register is
   // spilled using an Altivec instruction and reloaded into a VSRC register
   // using a VSX instruction. The issue with this is that the VSX
@@ -5431,8 +5427,8 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
   --Iter;
   MachineInstrBuilder MIBuilder(*Iter->getMF(), Iter);
   for (unsigned i = 1; i < MI->getNumOperands(); i++) {
-    if (PromoteRegs.find(i) != PromoteRegs.end())
-      MIBuilder.addReg(PromoteRegs[i], RegState::Kill);
+    if (auto It = PromoteRegs.find(i); It != PromoteRegs.end())
+      MIBuilder.addReg(It->second, RegState::Kill);
     else
       Iter->addOperand(MI->getOperand(i));
   }
@@ -5456,7 +5452,6 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
   BuildMI(*MBB, ++Iter, DL, TII->get(PPC::COPY), SrcReg)
       .addReg(NewDefinedReg, RegState::Kill, PPC::sub_32);
   LV->recomputeForSingleDefVirtReg(NewDefinedReg);
-  return;
 }
 
 // The isSignOrZeroExtended function is recursive. The parameter BinOpDepth
@@ -5698,7 +5693,11 @@ public:
     // so we don't need to generate any thing here.
   }
 
-  void disposed() override {
+  void disposed(LiveIntervals *LIS) override {
+    if (LIS) {
+      LIS->RemoveMachineInstrFromMaps(*Loop);
+      LIS->RemoveMachineInstrFromMaps(*LoopCount);
+    }
     Loop->eraseFromParent();
     // Ensure the loop setup instruction is deleted too.
     LoopCount->eraseFromParent();

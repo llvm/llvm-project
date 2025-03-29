@@ -108,8 +108,8 @@ TEST(StableFunctionMap, Finalize2) {
 
 TEST(StableFunctionMap, Finalize3) {
   StableFunctionMap Map;
-  StableFunction Func1{1, "Func1", "Mod1", 2, {{{0, 1}, 3}, {{1, 1}, 1}}};
-  StableFunction Func2{1, "Func2", "Mod2", 2, {{{0, 1}, 2}, {{1, 1}, 1}}};
+  StableFunction Func1{1, "Func1", "Mod1", 12, {{{0, 1}, 3}, {{1, 1}, 1}}};
+  StableFunction Func2{1, "Func2", "Mod2", 12, {{{0, 1}, 2}, {{1, 1}, 1}}};
   Map.insert(Func1);
   Map.insert(Func2);
 

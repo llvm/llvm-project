@@ -567,6 +567,13 @@ TEST_F(FormatTestObjC, FormatObjCMethodDeclarations) {
                "                error:(NSError **)theError {\n"
                "}");
   verifyFormat("+ (instancetype)new;");
+
+  verifyFormat("/*\n"
+               " */\n"
+               "- (void)foo;",
+               "/*\n"
+               " */- (void)foo;");
+
   Style.ColumnLimit = 60;
   verifyFormat("- (instancetype)initXxxxxx:(id<x>)x\n"
                "                         y:(id<yyyyyyyyyyyyyyyyyyyy>)y\n"

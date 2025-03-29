@@ -55,7 +55,6 @@ static_library("DWARF") {
     "DWARFDebugInfo.cpp",
     "DWARFDebugInfoEntry.cpp",
     "DWARFDebugMacro.cpp",
-    "DWARFDebugRanges.cpp",
     "DWARFDeclContext.cpp",
     "DWARFDefines.cpp",
     "DWARFFormValue.cpp",

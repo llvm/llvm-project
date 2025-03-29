@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_HASH_H
-#define _LIBCPP___FUNCTIONAL_HASH_H
+#ifndef _LIBCPP___CXX03___FUNCTIONAL_HASH_H
+#define _LIBCPP___CXX03___FUNCTIONAL_HASH_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__functional/unary_function.h>
@@ -539,4 +539,4 @@ using __enable_hash_helper _LIBCPP_NODEBUG = _Type;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_HASH_H
+#endif // _LIBCPP___CXX03___FUNCTIONAL_HASH_H

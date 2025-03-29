@@ -932,10 +932,9 @@ protected:
           expr_options.SetUnwindOnError(true);
           expr_options.SetIgnoreBreakpoints(true);
           ValueObjectSP result_value_sp;
-          Status error;
           result_code = UserExpression::Evaluate(
               exe_ctx, expr_options, wp_sp->GetConditionText(),
-              llvm::StringRef(), result_value_sp, error);
+              llvm::StringRef(), result_value_sp);
 
           if (result_code == eExpressionCompleted) {
             if (result_value_sp) {
@@ -959,7 +958,10 @@ protected:
               }
             }
           } else {
-            const char *err_str = error.AsCString("<unknown error>");
+            const char *err_str = "<unknown error>";
+            if (result_value_sp)
+              err_str = result_value_sp->GetError().AsCString();
+
             LLDB_LOGF(log, "Error evaluating condition: \"%s\"\n", err_str);
 
             StreamString strm;
@@ -1014,11 +1016,9 @@ protected:
           wp_sp->CaptureWatchedValue(exe_ctx);
 
           Debugger &debugger = exe_ctx.GetTargetRef().GetDebugger();
-          StreamSP output_sp = debugger.GetAsyncOutputStream();
-          if (wp_sp->DumpSnapshots(output_sp.get())) {
-            output_sp->EOL();
-            output_sp->Flush();
-          }
+          StreamUP output_up = debugger.GetAsyncOutputStream();
+          if (wp_sp->DumpSnapshots(output_up.get()))
+            output_up->EOL();
         }
 
       } else {
@@ -1267,6 +1267,29 @@ public:
   }
 };
 
+// StopInfoHistoryBoundary
+
+class StopInfoHistoryBoundary : public StopInfo {
+public:
+  StopInfoHistoryBoundary(Thread &thread, const char *description)
+      : StopInfo(thread, LLDB_INVALID_UID) {
+    if (description)
+      SetDescription(description);
+  }
+
+  ~StopInfoHistoryBoundary() override = default;
+
+  StopReason GetStopReason() const override {
+    return eStopReasonHistoryBoundary;
+  }
+
+  const char *GetDescription() override {
+    if (m_description.empty())
+      return "history boundary";
+    return m_description.c_str();
+  }
+};
+
 // StopInfoThreadPlan
 
 class StopInfoThreadPlan : public StopInfo {
@@ -1443,6 +1466,8 @@ protected:
 
 StopInfoSP StopInfo::CreateStopReasonWithBreakpointSiteID(Thread &thread,
                                                           break_id_t break_id) {
+  thread.SetThreadHitBreakpointSite();
+
   return StopInfoSP(new StopInfoBreakpoint(thread, break_id));
 }
 
@@ -1492,6 +1517,11 @@ StopInfoSP StopInfo::CreateStopReasonWithException(Thread &thread,
 StopInfoSP StopInfo::CreateStopReasonProcessorTrace(Thread &thread,
                                                     const char *description) {
   return StopInfoSP(new StopInfoProcessorTrace(thread, description));
+}
+
+StopInfoSP StopInfo::CreateStopReasonHistoryBoundary(Thread &thread,
+                                                     const char *description) {
+  return StopInfoSP(new StopInfoHistoryBoundary(thread, description));
 }
 
 StopInfoSP StopInfo::CreateStopReasonWithExec(Thread &thread) {

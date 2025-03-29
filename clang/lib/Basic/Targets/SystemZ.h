@@ -42,6 +42,7 @@ static const unsigned ZOSAddressMap[] = {
     1, // ptr32_uptr
     0, // ptr64
     0, // hlsl_groupshared
+    0, // hlsl_constant
     0  // wasm_funcref
 };
 
@@ -99,7 +100,7 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   ArrayRef<const char *> getGCCRegNames() const override;
 
@@ -186,6 +187,10 @@ public:
       Features["vector-enhancements-2"] = true;
     if (ISARevision >= 14)
       Features["nnp-assist"] = true;
+    if (ISARevision >= 15) {
+      Features["miscellaneous-extensions-4"] = true;
+      Features["vector-enhancements-3"] = true;
+    }
     return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
   }
 
@@ -246,6 +251,8 @@ public:
   int getEHDataRegisterNumber(unsigned RegNo) const override {
     return RegNo < 4 ? 6 + RegNo : -1;
   }
+
+  bool hasSjLjLowering() const override { return true; }
 
   std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
     return std::make_pair(256, 256);

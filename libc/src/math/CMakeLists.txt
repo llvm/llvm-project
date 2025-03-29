@@ -42,13 +42,19 @@ endfunction()
 
 add_math_entrypoint_object(acos)
 add_math_entrypoint_object(acosf)
+add_math_entrypoint_object(acosf16)
+
 add_math_entrypoint_object(acosh)
 add_math_entrypoint_object(acoshf)
+add_math_entrypoint_object(acoshf16)
 
 add_math_entrypoint_object(asin)
 add_math_entrypoint_object(asinf)
+add_math_entrypoint_object(asinf16)
+
 add_math_entrypoint_object(asinh)
 add_math_entrypoint_object(asinhf)
+add_math_entrypoint_object(asinhf16)
 
 add_math_entrypoint_object(atan)
 add_math_entrypoint_object(atanf)
@@ -89,6 +95,7 @@ add_math_entrypoint_object(copysignf128)
 
 add_math_entrypoint_object(cos)
 add_math_entrypoint_object(cosf)
+add_math_entrypoint_object(cosf16)
 
 add_math_entrypoint_object(cosh)
 add_math_entrypoint_object(coshf)
@@ -131,6 +138,7 @@ add_math_entrypoint_object(exp10)
 add_math_entrypoint_object(exp10f)
 add_math_entrypoint_object(exp10f16)
 
+add_math_entrypoint_object(exp10m1f)
 add_math_entrypoint_object(exp10m1f16)
 
 add_math_entrypoint_object(expm1)
@@ -203,6 +211,7 @@ add_math_entrypoint_object(floorf128)
 
 add_math_entrypoint_object(fma)
 add_math_entrypoint_object(fmaf)
+add_math_entrypoint_object(fmaf16)
 
 add_math_entrypoint_object(fmax)
 add_math_entrypoint_object(fmaxf)
@@ -483,6 +492,7 @@ add_math_entrypoint_object(sincosf)
 
 add_math_entrypoint_object(sin)
 add_math_entrypoint_object(sinf)
+add_math_entrypoint_object(sinf16)
 add_math_entrypoint_object(sinpif)
 add_math_entrypoint_object(sinpif16)
 
@@ -498,10 +508,12 @@ add_math_entrypoint_object(sqrtf128)
 
 add_math_entrypoint_object(tan)
 add_math_entrypoint_object(tanf)
+add_math_entrypoint_object(tanf16)
 
 add_math_entrypoint_object(tanh)
 add_math_entrypoint_object(tanhf)
 add_math_entrypoint_object(tanhf16)
+add_math_entrypoint_object(tanpif16)
 
 add_math_entrypoint_object(tgamma)
 add_math_entrypoint_object(tgammaf)

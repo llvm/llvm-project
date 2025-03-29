@@ -90,7 +90,7 @@ subroutine assoc()
     type(t2) :: t2x
     type(t2), target :: t2xtarget
     integer, target :: targetIntArr(2)
-    integer, target :: targetIntCoarray[*]
+    integer, target, save :: targetIntCoarray[*]
     integer, pointer :: intPointerArr(:)
     procedure(objPtrFunc), pointer :: objPtrFuncPointer
 
@@ -119,7 +119,8 @@ subroutine assoc()
     lvar = associated(intPointerVar1, (targetIntVar1))
     !ERROR: MOLD= argument to NULL() must be a pointer or allocatable
     lVar = associated(null(intVar))
-    lVar = associated(null(intAllocVar)) !OK
+    !ERROR: A NULL() allocatable is not allowed for 'pointer=' intrinsic argument
+    lVar = associated(null(intAllocVar))
     lVar = associated(null()) !OK
     lVar = associated(null(intPointerVar1)) !OK
     !PORTABILITY: POINTER= argument of ASSOCIATED() is required by some other compilers to be a valid left-hand side of a pointer assignment statement

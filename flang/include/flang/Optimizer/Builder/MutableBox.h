@@ -14,7 +14,7 @@
 #define FORTRAN_OPTIMIZER_BUILDER_MUTABLEBOX_H
 
 #include "flang/Optimizer/Builder/BoxValue.h"
-#include "flang/Runtime/allocator-registry.h"
+#include "flang/Runtime/allocator-registry-consts.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace mlir {
