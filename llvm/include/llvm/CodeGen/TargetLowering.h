@@ -3450,6 +3450,10 @@ public:
     return isOperationLegalOrCustom(Op, VT);
   }
 
+  /// Return true if invariant loads should be aggressively hoisted out of loops
+  /// even if the loop body might not execute.
+  virtual bool aggressivelyHoistInvariantLoads() const { return false; }
+
   /// Should we expand [US]CMP nodes using two selects and two compares, or by
   /// doing arithmetic on boolean types
   virtual bool shouldExpandCmpUsingSelects(EVT VT) const { return false; }
