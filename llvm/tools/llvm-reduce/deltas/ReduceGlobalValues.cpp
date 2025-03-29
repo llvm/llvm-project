@@ -41,7 +41,7 @@ static bool shouldReduceLinkage(GlobalValue &GV) {
   return !GV.hasExternalLinkage() && !GV.hasAppendingLinkage();
 }
 
-static void reduceGVs(Oracle &O, ReducerWorkItem &Program) {
+void llvm::reduceGlobalValuesDeltaPass(Oracle &O, ReducerWorkItem &Program) {
   for (auto &GV : Program.getModule().global_values()) {
     if (shouldReduceDSOLocal(GV) && !O.shouldKeep())
       GV.setDSOLocal(false);
@@ -65,8 +65,4 @@ static void reduceGVs(Oracle &O, ReducerWorkItem &Program) {
         GV.setDSOLocal(false);
     }
   }
-}
-
-void llvm::reduceGlobalValuesDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, reduceGVs, "Reducing GlobalValues");
 }

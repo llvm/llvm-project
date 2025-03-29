@@ -17,6 +17,7 @@
 
 #include "ReducerWorkItem.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include <functional>
 #include <utility>
@@ -24,6 +25,7 @@
 namespace llvm {
 
 class TestRunner;
+struct DeltaPass;
 
 struct Chunk {
   int Begin;
@@ -134,8 +136,7 @@ using ReductionFunc = function_ref<void(Oracle &, ReducerWorkItem &)>;
 ///
 /// Other implementations of the Delta Debugging algorithm can also be found in
 /// the CReduce, Delta, and Lithium projects.
-void runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
-                  StringRef Message);
+void runDeltaPass(TestRunner &Test, const DeltaPass &Pass);
 } // namespace llvm
 
 #endif
