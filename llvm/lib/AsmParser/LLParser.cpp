@@ -65,8 +65,6 @@ static cl::opt<bool> AllowIncompleteIR(
 
 extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
 extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
-extern bool WriteNewDbgInfoFormatToBitcode;
-extern cl::opt<bool> WriteNewDbgInfoFormat;
 
 static std::string getTypeString(Type *T) {
   std::string Result;
@@ -213,8 +211,6 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
          "Mixed debug intrinsics/records seen without a parsing error?");
   if (PreserveInputDbgFormat == cl::boolOrDefault::BOU_TRUE) {
     UseNewDbgInfoFormat = SeenNewDbgInfoFormat;
-    WriteNewDbgInfoFormatToBitcode = SeenNewDbgInfoFormat;
-    WriteNewDbgInfoFormat = SeenNewDbgInfoFormat;
     M->setNewDbgInfoFormatFlag(SeenNewDbgInfoFormat);
   }
 
