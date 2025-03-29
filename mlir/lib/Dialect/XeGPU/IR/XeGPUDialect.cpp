@@ -8,7 +8,9 @@
 
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 namespace mlir {
@@ -111,6 +113,15 @@ LayoutAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
   }
 
   return success();
+}
+
+LayoutAttr LayoutAttr::get(mlir::MLIRContext *context, ArrayRef<int> laneLayout,
+                           ArrayRef<int> laneData) {
+  return Base::get(context, ScopeAttr::get(context, Scope::Lane),
+                   DenseI32ArrayAttr(), DenseI32ArrayAttr(),
+                   DenseI32ArrayAttr(),
+                   DenseI32ArrayAttr::get(context, laneLayout),
+                   DenseI32ArrayAttr::get(context, laneData));
 }
 
 //===----------------------------------------------------------------------===//

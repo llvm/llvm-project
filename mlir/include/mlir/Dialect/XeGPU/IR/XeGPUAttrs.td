@@ -254,6 +254,13 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
     }
   }];
 
+  let builders = [
+    AttrBuilder<(ins
+      "ArrayRef<int>": $lane_layout,
+      "ArrayRef<int>": $lane_data
+    )>
+  ];
+
   let assemblyFormat = "`<` struct(params) `>`";
   let genVerifyDecl = 1;
 }

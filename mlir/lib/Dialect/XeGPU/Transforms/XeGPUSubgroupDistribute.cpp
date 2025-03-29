@@ -659,7 +659,7 @@ void RunSGMapPropagation::printAnalysisResult(llvm::raw_ostream &os) {
   }
 }
 
-void attachLayoutAttributeToUsers(Value v, xegpu::SGMapAttr layout) {
+void attachLayoutAttributeToUsers(Value v, xegpu::LayoutAttr layout) {
   for (OpOperand &user : v.getUses()) {
     Operation *owner = user.getOwner();
     unsigned operandNumber = user.getOperandNumber();
@@ -667,11 +667,11 @@ void attachLayoutAttributeToUsers(Value v, xegpu::SGMapAttr layout) {
     /// attribute.
     if (auto dpasOp = dyn_cast<xegpu::DpasOp>(owner)) {
       if (operandNumber == 0)
-        dpasOp.setSgMapAAttr(layout);
+        dpasOp.setALayoutAttr(layout);
       else if (operandNumber == 1)
-        dpasOp.setSgMapBAttr(layout);
+        dpasOp.setBLayoutAttr(layout);
       else if (operandNumber == 2)
-        dpasOp.setSgMapCAttr(layout);
+        dpasOp.setCLayoutAttr(layout);
       continue;
     }
     /// For every other user, use a generic attribute name.
@@ -684,17 +684,17 @@ static LogicalResult
 attachLayoutAttributes(Operation *top,
                        llvm::function_ref<SGMap(Value)> getPropagatedLayout) {
   /// Helper to convert SGMap to xegpu::SGMapAttr.
-  auto getSGMapForResult = [&](Value r) -> xegpu::SGMapAttr {
+  auto getSGMapForResult = [&](Value r) -> xegpu::LayoutAttr {
     auto layout = getPropagatedLayout(r);
     if (!layout.isAssigned())
       return {};
-    SmallVector<uint32_t, 2> wiLayout, wiData;
+    SmallVector<int, 2> wiLayout, wiData;
     for (auto [layout, data] : llvm::zip_equal(layout.getLayoutAsArrayRef(),
                                                layout.getDataAsArrayRef())) {
-      wiLayout.push_back(static_cast<uint32_t>(layout));
-      wiData.push_back(static_cast<uint32_t>(data));
+      wiLayout.push_back(static_cast<int>(layout));
+      wiData.push_back(static_cast<int>(data));
     }
-    return xegpu::SGMapAttr::get(top->getContext(), wiLayout, wiData);
+    return xegpu::LayoutAttr::get(r.getContext(), wiLayout, wiData);
   };
   /// Attach the layout attributes to the results of the operations.
   auto walkResult = top->walk([&](Operation *op) {
@@ -769,13 +769,13 @@ namespace {
 /// | 32x16                 | [2, 8]    | 16x2                     |
 /// | 2x32x16               | [1, 16]   | 2x32x1                   |
 FailureOr<VectorType>
-getDistributedVecTypeBasedOnWiLayout(xegpu::SGMapAttr sgMap,
+getDistributedVecTypeBasedOnWiLayout(xegpu::LayoutAttr layout,
                                      VectorType originalType) {
   llvm::SmallVector<int64_t, 2> distributedShape;
-  if (!sgMap)
+  if (!layout)
     return failure();
 
-  auto wiLayout = sgMap.getWiLayout();
+  auto wiLayout = layout.getLaneLayout();
   assert((originalType.getRank() == 2 || originalType.getRank() == 3) &&
          "expecting 2D or 3D shape for the original vector type");
   assert(wiLayout.size() == 2 && "expecting 2D shape for the wi layout");
@@ -797,14 +797,14 @@ getDistributedVecTypeBasedOnWiLayout(xegpu::SGMapAttr sgMap,
   return newVectorType;
 }
 
-static VectorType getDistributedVectorType(xegpu::SGMapAttr sgMap,
+static VectorType getDistributedVectorType(xegpu::LayoutAttr layout,
                                            VectorType originalType) {
   auto shape = originalType.getShape();
   auto distVecTyOrFailure =
       xegpu::TensorDescType::get(shape, originalType.getElementType(),
                                  /*array_length=*/1, /*boundary_check=*/true,
                                  /*memory_space=*/xegpu::MemorySpace::Global,
-                                 sgMap)
+                                 layout)
           .getDistributedVectorType();
   assert(llvm::succeeded(distVecTyOrFailure) &&
          "Failed to compute distributed vector type for the given vector type");
@@ -944,8 +944,8 @@ struct SubgroupOpTensorDescOp final : public gpu::WarpDistributionPattern {
 
     auto descOffsets = descOp.getMixedOffsets();
 
-    xegpu::SGMapAttr sgMap = descOp.getType().getSGMapAttr();
-    if (!sgMap)
+    xegpu::LayoutAttr layout = descOp.getType().getLayoutAttr();
+    if (!layout)
       return rewriter.notifyMatchFailure(
           descOp, "the tensor descriptor lacks sg_map attribute");
 
@@ -1013,8 +1013,8 @@ struct SubgroupOpStoreNd final : public gpu::WarpDistributionPattern {
       return failure();
 
     auto tensorDescTy = storeOp.getTensorDescType();
-    xegpu::SGMapAttr sgMap = tensorDescTy.getSGMapAttr();
-    if (!sgMap)
+    xegpu::LayoutAttr layout = tensorDescTy.getLayoutAttr();
+    if (!layout)
       return rewriter.notifyMatchFailure(
           storeOp, "the source tensor descriptor lacks sg_map attribute");
 
@@ -1022,7 +1022,7 @@ struct SubgroupOpStoreNd final : public gpu::WarpDistributionPattern {
       return rewriter.notifyMatchFailure(storeOp, "unsupported shape");
 
     auto distriburtedTypeByWarpOp =
-        getDistributedVecTypeBasedOnWiLayout(sgMap, storeOp.getValueType());
+        getDistributedVecTypeBasedOnWiLayout(layout, storeOp.getValueType());
     if (failed(distriburtedTypeByWarpOp))
       return rewriter.notifyMatchFailure(storeOp,
                                          "Failed to distribute the type");
@@ -1103,8 +1103,8 @@ struct SubgroupOpLoadNd final : public gpu::WarpDistributionPattern {
 
     auto loadOp = operand->get().getDefiningOp<xegpu::LoadNdOp>();
     xegpu::TensorDescType tensorDescTy = loadOp.getTensorDescType();
-    xegpu::SGMapAttr sgMap = tensorDescTy.getSGMapAttr();
-    if (!sgMap)
+    xegpu::LayoutAttr layout = tensorDescTy.getLayoutAttr();
+    if (!layout)
       return rewriter.notifyMatchFailure(
           loadOp, "the source tensor descriptor lacks sg_map attribute");
 
@@ -1151,20 +1151,21 @@ struct SubgroupOpDpas final : public gpu::WarpDistributionPattern {
 
     auto dpasOp = operand->get().getDefiningOp<xegpu::DpasOp>();
     unsigned operandIdx = operand->getOperandNumber();
-    xegpu::SGMapAttr sgMapA = dpasOp.getSgMapAAttr();
-    xegpu::SGMapAttr sgMapB = dpasOp.getSgMapBAttr();
-    xegpu::SGMapAttr sgMapOut = dpasOp->getAttrOfType<xegpu::SGMapAttr>("r0");
-    if (!sgMapA || !sgMapB || !sgMapOut)
+    xegpu::LayoutAttr layoutA = dpasOp.getALayoutAttr();
+    xegpu::LayoutAttr layoutB = dpasOp.getBLayoutAttr();
+    xegpu::LayoutAttr layoutOut =
+        dpasOp->getAttrOfType<xegpu::LayoutAttr>("r0");
+    if (!layoutA || !layoutB || !layoutOut)
       return rewriter.notifyMatchFailure(
           dpasOp,
           "the xegpu::Dpas op lacks sg_map attribute for A, B or output");
 
     auto distLhsTypeByWarpOpOrFailure =
-        getDistributedVecTypeBasedOnWiLayout(sgMapA, dpasOp.getLhsType());
+        getDistributedVecTypeBasedOnWiLayout(layoutA, dpasOp.getLhsType());
     auto distRhsTypeByWarpOpOrFailure =
-        getDistributedVecTypeBasedOnWiLayout(sgMapB, dpasOp.getRhsType());
+        getDistributedVecTypeBasedOnWiLayout(layoutB, dpasOp.getRhsType());
     auto distResultTypeByWarpOpOrFailure =
-        getDistributedVecTypeBasedOnWiLayout(sgMapOut, dpasOp.getResultType());
+        getDistributedVecTypeBasedOnWiLayout(layoutOut, dpasOp.getResultType());
     if (failed(distLhsTypeByWarpOpOrFailure) ||
         failed(distRhsTypeByWarpOpOrFailure) ||
         failed(distResultTypeByWarpOpOrFailure))
@@ -1193,12 +1194,12 @@ struct SubgroupOpDpas final : public gpu::WarpDistributionPattern {
     SmallVector<VectorType> newDpasOperandExpectedTypes;
     /// Reconcile the distributed types with the original types.
     newDpasOperandExpectedTypes.push_back(
-        getDistributedVectorType(sgMapA, dpasOp.getLhsType()));
+        getDistributedVectorType(layoutA, dpasOp.getLhsType()));
     newDpasOperandExpectedTypes.push_back(
-        getDistributedVectorType(sgMapB, dpasOp.getRhsType()));
+        getDistributedVectorType(layoutB, dpasOp.getRhsType()));
     if (dpasOp.getAcc()) {
       newDpasOperandExpectedTypes.push_back(
-          getDistributedVectorType(sgMapOut, dpasOp.getResultType()));
+          getDistributedVectorType(layoutOut, dpasOp.getResultType()));
     }
 
     for (auto i : newRetIndices) {
@@ -1213,7 +1214,7 @@ struct SubgroupOpDpas final : public gpu::WarpDistributionPattern {
     /// Reconile the output type.
     disributedVal = reconcileDistribtedVecType(
         disributedVal,
-        getDistributedVectorType(sgMapOut, dpasOp.getResultType()), rewriter);
+        getDistributedVectorType(layoutOut, dpasOp.getResultType()), rewriter);
     rewriter.replaceAllUsesWith(disributedVal, newDpasOp);
     return success();
   }
