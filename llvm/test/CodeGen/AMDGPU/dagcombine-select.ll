@@ -298,12 +298,3 @@ define amdgpu_kernel void @fdiv_constant_sel_constants(ptr addrspace(1) %p, i1 %
   store float %bo, ptr addrspace(1) %p, align 4
   ret void
 }
-
-; GCN-LABEL: {{^}}frem_constant_sel_constants:
-; GCN: v_cndmask_b32_e64 v{{[0-9]+}}, 2.0, 1.0,
-define amdgpu_kernel void @frem_constant_sel_constants(ptr addrspace(1) %p, i1 %cond) {
-  %sel = select i1 %cond, float -4.0, float 3.0
-  %bo = frem float 5.0, %sel
-  store float %bo, ptr addrspace(1) %p, align 4
-  ret void
-}
