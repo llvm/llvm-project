@@ -14,8 +14,9 @@ void bar(SomeObj *) {}
 } // namespace raw_ptr
 
 namespace pointer {
+SomeObj *provide();
 void foo_ref() {
-  SomeObj *bar = [[SomeObj alloc] init];
+  SomeObj *bar = provide();
   // expected-warning@-1{{Local variable 'bar' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
   [bar doWork];
 }
@@ -387,6 +388,7 @@ unsigned ccf(CFTypeRef obj) {
 } // ptr_conversion
 
 bool doMoreWorkOpaque(OtherObj*);
+SomeObj* provide();
 
 @implementation OtherObj
 - (instancetype)init {
@@ -396,5 +398,14 @@ bool doMoreWorkOpaque(OtherObj*);
 
 - (void)doMoreWork:(OtherObj *)other {
   doMoreWorkOpaque(other);
+}
+
+- (SomeObj*)getSomeObj {
+  return RetainPtr<SomeObj *>(provide()).autorelease();
+}
+
+- (void)storeSomeObj {
+  auto *obj = [self getSomeObj];
+  [obj doWork];
 }
 @end

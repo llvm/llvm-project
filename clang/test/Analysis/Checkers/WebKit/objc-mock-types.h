@@ -71,6 +71,7 @@ __attribute__((objc_root_class))
 + (Class) superclass;
 - (instancetype) init;
 - (instancetype)retain;
+- (instancetype)autorelease;
 - (void)release;
 - (BOOL)isKindOfClass:(Class)aClass;
 @end
@@ -220,6 +221,10 @@ template <typename T> struct RetainPtr {
   }
   operator PtrType() const { return t; }
   operator bool() const { return t; }
+
+#if !__has_feature(objc_arc)
+  PtrType autorelease() { [[clang::suppress]] return [t autorelease]; }
+#endif
 
 private:
   CFTypeRef toCFTypeRef(id ptr) { return (__bridge CFTypeRef)ptr; }
