@@ -40,7 +40,7 @@ The `Seed Collection Pass` itself contains its own Region pass pipeline, which i
 ```
 ┌────────────────────────────────── Sandbox Vectorizer LLVM Function Pass ─────────────────────────────┐
 │                                                                                                      │
-│ ┌───────┐ ┌────────────────────────── sanboxir::Function Pass Manager ─────────────────────────────┐ │
+│ ┌───────┐ ┌────────────────────────── sandboxir::Function Pass Manager ────────────────────────────┐ │
 │ │       │ │                                                                                        │ │
 │ │       │ │ ┌────────────────────────────── Seed Collection Pass ──────────────────────────────┐   │ │
 │ │       │ │ │                                                                                  │   │ │
@@ -89,7 +89,8 @@ There are two types of passes: [Transformation Passes](#transformation-passes) t
 | `tr-accept`               | TransactionAlwaysAccept.h   | Region   | Unconditionally accepts the IR state                    |
 | `tr-revert`               | TransactionAlwaysRevert.h   | Region   | Unconditionally rejects the IR state                    |
 | `tr-accept-or-revert`     | TransactionAcceptOrRevert.h | Region   | Checks cost model and either accepts or reverts the IR  |
-| `null`                    | NullPass.h                  | Region   | A test pass that prints the region instructions         |
+| `null`                    | NullPass.h                  | Region   | A dummy test pass that just returns                     |
+| `print-region`            | PrintRegion.h               | Region   | A test pass that prints the region's IR                 |
 | `print-instruction-count` | PrintInstructionCount.h     | Region   | A test pass that counts instructions                    |
 | `regions-from-metadata`   | RegionsFromMetadata.h       | Function | Builds regions from IR metadata and runs a pipeline of region passes for each one of them. Used in lit tests for testing region passes in isolation |
 | `regions-from-bbs`        | RegionsFromBBs.h            | Function | Builds a region for each BB, adding all BB instructions into each region. Used in lit tests for stress-testing region passes in isolation |
@@ -185,7 +186,7 @@ The auxiliary vector is currently used by the Seed Collection pass to communicat
 
 One of the great things about the Sandbox Vectorizer is that it allows you to test each internal pass in isolation with lit-tests.
 
-Testing Function passes are straightforward, just run `FUNCTION_PASS` in isolation with `-sbvec-passes`, like so:
+Testing Function passes is straightforward, just run `FUNCTION_PASS` in isolation with `-sbvec-passes`, like so:
 ```shell
 $ opt -p=sandbox-vectorizer -sbvec-passes='FUNCTION_PASS'
 ```
