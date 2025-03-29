@@ -745,8 +745,9 @@ class Sema;
     }
 
     bool isPerfect(const ASTContext &C) const {
-      return (isStandard() && Standard.isIdentityConversion() &&
-              C.hasSameType(Standard.getFromType(), Standard.getToType(2))) ||
+      return (isStandard() && Standard.isIdentityConversion()
+              && !Standard.DirectBinding
+              ) ||
              getKind() == StaticObjectArgumentConversion;
     }
 
@@ -989,7 +990,7 @@ class Sema;
     bool isPerfectMatch(const ASTContext &Ctx) const {
       if (!Viable)
         return false;
-      for (auto &C : Conversions) {
+      for (const auto &C : Conversions) {
         if (!C.isInitialized())
           return false;
         if (!C.isPerfect(Ctx))
