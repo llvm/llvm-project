@@ -9,7 +9,10 @@
 #ifndef _LIBCPP___ALGORITHM_RANGES_FOR_EACH_H
 #define _LIBCPP___ALGORITHM_RANGES_FOR_EACH_H
 
+#include <__algorithm/for_each.h>
+#include <__algorithm/for_each_n.h>
 #include <__algorithm/in_fun_result.h>
+#include <__concepts/assignable.h>
 #include <__config>
 #include <__functional/identity.h>
 #include <__functional/invoke.h>
@@ -41,9 +44,20 @@ private:
   template <class _Iter, class _Sent, class _Proj, class _Func>
   _LIBCPP_HIDE_FROM_ABI constexpr static for_each_result<_Iter, _Func>
   __for_each_impl(_Iter __first, _Sent __last, _Func& __func, _Proj& __proj) {
-    for (; __first != __last; ++__first)
-      std::invoke(__func, std::invoke(__proj, *__first));
-    return {std::move(__first), std::move(__func)};
+    if constexpr (std::assignable_from<_Iter&, _Sent>) {
+      _Iter __end = std::move(__last);
+      std::for_each(__first, __end, [&](auto&& __val) { std::invoke(__func, std::invoke(__proj, __val)); });
+      return {std::move(__end), std::move(__func)};
+    } else if constexpr (sized_sentinel_for<_Sent, _Iter>) {
+      auto __end = std::for_each_n(__first, __last - __first, [&](auto&& __val) {
+        std::invoke(__func, std::invoke(__proj, __val));
+      });
+      return {std::move(__end), std::move(__func)};
+    } else {
+      for (; __first != __last; ++__first)
+        std::invoke(__func, std::invoke(__proj, *__first));
+      return {std::move(__first), std::move(__func)};
+    }
   }
 
 public:
