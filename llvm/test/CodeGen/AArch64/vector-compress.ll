@@ -109,7 +109,7 @@ define <16 x i8> @test_compress_v16i8(<16 x i8> %vec, <16 x i1> %mask) {
 ; CHECK-NEXT:    shl.16b v1, v1, #7
 ; CHECK-NEXT:    mov x12, sp
 ; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    st1.b { v0 }[0], [x8]
+; CHECK-NEXT:    str b0, [sp]
 ; CHECK-NEXT:    mov x13, sp
 ; CHECK-NEXT:    cmlt.16b v1, v1, #0
 ; CHECK-NEXT:    umov.b w9, v1[0]
