@@ -30,6 +30,7 @@ LLVM and API reference documentation.
    GwpAsan
    HowToSetUpLLVMStyleRTTI
    HowToUseAttributes
+   IncidentResponseGuide
    InAlloca
    LangRef
    LibFuzzer
