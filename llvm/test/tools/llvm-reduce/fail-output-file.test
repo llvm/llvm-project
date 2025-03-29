@@ -1,0 +1,7 @@
+# Python on an empty file will always succeed as interesting
+# RUN: touch %t
+
+# Fail on attempt to write to output directory
+# RUN: not llvm-reduce --delta-passes=instructions -o %s/CannotOpenFile --test %python --test-arg %t %p/Inputs/test-output-format.ll 2>&1 | FileCheck %s
+
+# CHECK: error: opening output file: Not a directory
