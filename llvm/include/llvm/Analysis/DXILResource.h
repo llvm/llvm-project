@@ -18,6 +18,9 @@
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/DXILABI.h"
 
+#include <algorithm>
+#include <cstdint>
+
 namespace llvm {
 class CallInst;
 class DataLayout;
@@ -471,7 +474,8 @@ public:
   /// ambiguous so multiple creation instructions may be returned. The resulting
   /// ResourceBindingInfo can be used to depuplicate unique handles that
   /// reference the same resource
-  SmallVector<dxil::ResourceBindingInfo> findByUse(const Value *Key) const;
+  SmallVector<const dxil::ResourceBindingInfo *>
+  findByUse(const Value *Key) const;
 
   const_iterator find(const CallInst *Key) const {
     auto Pos = CallMap.find(Key);
@@ -573,6 +577,65 @@ public:
 };
 
 ModulePass *createDXILResourceBindingWrapperPassPass();
+
+enum class ResourceCounterDirection {
+  Increment,
+  Decrement,
+  Unknown,
+  Invalid,
+};
+
+class DXILResourceCounterDirectionMap {
+  std::vector<
+      std::pair<const dxil::ResourceBindingInfo *, ResourceCounterDirection>>
+      CounterDirections;
+
+public:
+  void populate(Module &M, DXILBindingMap &DBM);
+
+  ResourceCounterDirection
+  operator[](const dxil::ResourceBindingInfo &Info) const;
+};
+
+class DXILResourceCounterDirectionAnalysis
+    : public AnalysisInfoMixin<DXILResourceCounterDirectionAnalysis> {
+  friend AnalysisInfoMixin<DXILResourceCounterDirectionAnalysis>;
+
+  static AnalysisKey Key;
+
+public:
+  using Result = DXILResourceCounterDirectionMap;
+
+  DXILResourceCounterDirectionMap run(Module &M, ModuleAnalysisManager &AM) {
+    DXILResourceCounterDirectionMap DRCDM{};
+    DXILBindingMap &DBM = AM.getResult<DXILResourceBindingAnalysis>(M);
+    DRCDM.populate(M, DBM);
+    return DRCDM;
+  }
+};
+
+class DXILResourceCounterDirectionWrapperPass : public ModulePass {
+  std::unique_ptr<DXILResourceCounterDirectionMap> Map;
+
+public:
+  static char ID;
+  DXILResourceCounterDirectionWrapperPass();
+  ~DXILResourceCounterDirectionWrapperPass() override = default;
+
+  DXILResourceCounterDirectionMap &getResourceCounterDirectionMap() {
+    return *Map;
+  }
+  const DXILResourceCounterDirectionMap &
+  getResourceCounterDirectionMap() const {
+    return *Map;
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  bool runOnModule(Module &M) override;
+  void releaseMemory() override;
+};
+
+ModulePass *createDXILResourceCounterDirectionWrapperPassPass();
 
 } // namespace llvm
 
