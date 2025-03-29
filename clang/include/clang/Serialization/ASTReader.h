@@ -423,6 +423,9 @@ public:
     /// configuration.
     ConfigurationMismatch,
 
+    /// The AST file contains a different module than expected.
+    ModuleMismatch,
+
     /// The AST file has errors.
     HadErrors
   };
@@ -1512,11 +1515,13 @@ private:
                             SourceLocation ImportLoc, ModuleFile *ImportedBy,
                             SmallVectorImpl<ImportedModule> &Loaded,
                             off_t ExpectedSize, time_t ExpectedModTime,
+                            StringRef ExpectedModuleName,
                             ASTFileSignature ExpectedSignature,
                             unsigned ClientLoadCapabilities);
   ASTReadResult ReadControlBlock(ModuleFile &F,
                                  SmallVectorImpl<ImportedModule> &Loaded,
                                  const ModuleFile *ImportedBy,
+                                 StringRef ExpectedModuleName,
                                  unsigned ClientLoadCapabilities);
   static ASTReadResult
   ReadOptionsBlock(llvm::BitstreamCursor &Stream, StringRef Filename,
@@ -1817,6 +1822,18 @@ public:
   ASTReadResult ReadAST(StringRef FileName, ModuleKind Type,
                         SourceLocation ImportLoc,
                         unsigned ClientLoadCapabilities,
+                        ModuleFile **NewLoadedModuleFile = nullptr);
+
+  /// \overload
+  ///
+  /// Calls the above function and checks if the AST file contains the expected
+  /// module. Returns ASTReadResult::Failure on mismatch.
+  ///
+  /// \param ExpectedModuleName The expected name of the new loaded module.
+  ASTReadResult ReadAST(StringRef FileName, ModuleKind Type,
+                        SourceLocation ImportLoc,
+                        unsigned ClientLoadCapabilities,
+                        StringRef ExpectedModuleName,
                         ModuleFile **NewLoadedModuleFile = nullptr);
 
   /// Make the entities in the given module and any of its (non-explicit)
