@@ -13,7 +13,9 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticParse.h"
+#include "clang/Basic/DiagnosticSema.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
@@ -21,6 +23,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaDiagnostic.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/TimeProfiler.h"
 using namespace clang;
 
@@ -1474,6 +1477,17 @@ ParsedTemplateArgument Parser::ParseTemplateTemplateArgument() {
         Result = ParsedTemplateArgument(SS, Template, Name.StartLocation);
       }
     }
+  }
+
+  // We do not allow to reference builtin templates that produce multiple
+  // values, they would not have a well-defined semantics outside template
+  // arguments.
+  if (auto *T = !Result.isInvalid()
+                    ? Result.getAsTemplate().get().getAsTemplateDecl()
+                    : nullptr;
+      T && isMultivaluedBuiltinTemplate(T)) {
+    Actions.diagnoseMissingTemplateArguments(Result.getAsTemplate().get(),
+                                             Result.getLocation());
   }
 
   // If this is a pack expansion, build it as such.
