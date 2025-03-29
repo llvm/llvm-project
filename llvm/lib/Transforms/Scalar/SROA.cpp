@@ -2445,10 +2445,11 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL,
       Ty = LI->getType();
     else if (auto *SI = dyn_cast<StoreInst>(S.getUse()->getUser()))
       Ty = SI->getValueOperand()->getType();
-    else if (auto *II = dyn_cast<MemSetInst>(S.getUse()->getUser()))
+    else if (auto *II = dyn_cast<MemSetInst>(S.getUse()->getUser())) {
       Ty = getVectorTypeFor(*II, DL);
-
-    if (!Ty)
+      if (!Ty)
+        continue;
+    } else
       continue;
 
     auto CandTy = Ty->getScalarType();
