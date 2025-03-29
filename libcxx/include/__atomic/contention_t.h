@@ -19,7 +19,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if defined(__linux__) || (defined(_AIX) && !defined(__64BIT__))
+#if defined(__linux__) || defined(__Fuchsia__) || (defined(_AIX) && !defined(__64BIT__))
 using __cxx_contention_t _LIBCPP_NODEBUG = int32_t;
 #else
 using __cxx_contention_t _LIBCPP_NODEBUG = int64_t;
