@@ -19,8 +19,24 @@
 #include "asan_mapping.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_platform.h"
+#include "sanitizer_common/sanitizer_ring_buffer.h"
 
 namespace __asan {
+
+struct PoisonRecord {
+  unsigned int stack_id;
+  unsigned int thread_id;
+  uptr begin;
+  uptr end;
+};
+
+using PoisonRecordRingBuffer = RingBuffer<struct PoisonRecord>;
+
+// Set up data structures for track_poison.
+void InitializePoisonTracking();
+
+PoisonRecordRingBuffer* AcquirePoisonRecords();
+void ReleasePoisonRecords();
 
 // Enable/disable memory poisoning.
 void SetCanPoisonMemory(bool value);

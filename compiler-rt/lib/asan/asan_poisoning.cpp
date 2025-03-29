@@ -20,10 +20,32 @@
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_interface_internal.h"
 #include "sanitizer_common/sanitizer_libc.h"
+#include "sanitizer_common/sanitizer_stackdepot.h"
 
 namespace __asan {
 
 static atomic_uint8_t can_poison_memory;
+
+static Mutex PoisonRecordsMutex;
+static PoisonRecordRingBuffer *PoisonRecords = nullptr;
+
+void InitializePoisonTracking() {
+  if (flags()->track_poison <= 0)
+    return;
+
+  PoisonRecords = PoisonRecordRingBuffer::New(flags()->track_poison);
+}
+
+PoisonRecordRingBuffer *SANITIZER_ACQUIRE(PoisonRecordsMutex)
+    AcquirePoisonRecords() {
+  PoisonRecordsMutex.Lock();
+
+  return PoisonRecords;
+}
+
+void SANITIZER_RELEASE(PoisonRecordsMutex) ReleasePoisonRecords() {
+  PoisonRecordsMutex.Unlock();
+}
 
 void SetCanPoisonMemory(bool value) {
   atomic_store(&can_poison_memory, value, memory_order_release);
@@ -107,6 +129,23 @@ void __asan_poison_memory_region(void const volatile *addr, uptr size) {
   uptr end_addr = beg_addr + size;
   VPrintf(3, "Trying to poison memory region [%p, %p)\n", (void *)beg_addr,
           (void *)end_addr);
+
+  if (flags()->track_poison > 0) {
+    GET_STACK_TRACE(/*max_size=*/16, /*fast=*/false);
+    u32 current_tid = GetCurrentTidOrInvalid();
+
+    // TODO: garbage collect stacks once they fall off the ring buffer?
+    // StackDepot doesn't currently have a way to delete stacks.
+    u32 stack_id = StackDepotPut(stack);
+
+    PoisonRecord record{.stack_id = stack_id,
+                        .thread_id = current_tid,
+                        .begin = beg_addr,
+                        .end = end_addr};
+    AcquirePoisonRecords()->push(record);
+    ReleasePoisonRecords();
+  }
+
   ShadowSegmentEndpoint beg(beg_addr);
   ShadowSegmentEndpoint end(end_addr);
   if (beg.chunk == end.chunk) {
@@ -147,6 +186,11 @@ void __asan_unpoison_memory_region(void const volatile *addr, uptr size) {
   uptr end_addr = beg_addr + size;
   VPrintf(3, "Trying to unpoison memory region [%p, %p)\n", (void *)beg_addr,
           (void *)end_addr);
+
+  // Note: we don't need to update the poison tracking here. Since the shadow
+  // memory will be unpoisoned, the poison tracking ring buffer entries will be
+  // ignored.
+
   ShadowSegmentEndpoint beg(beg_addr);
   ShadowSegmentEndpoint end(end_addr);
   if (beg.chunk == end.chunk) {

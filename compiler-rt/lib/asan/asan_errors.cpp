@@ -12,8 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "asan_errors.h"
+
 #include "asan_descriptions.h"
 #include "asan_mapping.h"
+#include "asan_poisoning.h"
 #include "asan_report.h"
 #include "asan_stack.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
@@ -600,6 +602,43 @@ static void PrintShadowMemoryForAddress(uptr addr) {
   Printf("%s", str.data());
 }
 
+static void CheckPoisonRecords(uptr addr) {
+  if (!AddrIsInMem(addr))
+    return;
+  uptr shadow_addr = MemToShadow(addr);
+  unsigned char poison_magic = *(reinterpret_cast<u8 *>(shadow_addr));
+
+  if (poison_magic != kAsanUserPoisonedMemoryMagic)
+    return;
+
+  PoisonRecordRingBuffer *PoisonRecord = AcquirePoisonRecords();
+  if (PoisonRecord) {
+    bool FoundMatch = false;
+
+    for (unsigned int i = 0; i < PoisonRecord->size(); i++) {
+      struct PoisonRecord Record = (*PoisonRecord)[i];
+      if (Record.begin <= addr && addr <= Record.end) {
+        FoundMatch = true;
+
+        StackTrace poison_stack = StackDepotGet(Record.stack_id);
+
+        Printf("\n");
+        Printf("Memory was manually poisoned by thread T%u:\n",
+               Record.thread_id);
+        poison_stack.Print();
+
+        break;
+      }
+    }
+
+    if (!FoundMatch) {
+      Printf("ERROR: no matching poison tracking record found.\n");
+      Printf("Try setting a larger track_poison value.\n");
+    }
+  }
+  ReleasePoisonRecords();
+}
+
 void ErrorGeneric::Print() {
   Decorator d;
   Printf("%s", d.Error());
@@ -623,6 +662,10 @@ void ErrorGeneric::Print() {
     PrintContainerOverflowHint();
   ReportErrorSummary(bug_descr, &stack);
   PrintShadowMemoryForAddress(addr);
+
+  // This is an experimental flag, hence we don't make a special handler.
+  if (flags()->track_poison > 0)
+    CheckPoisonRecords(addr);
 }
 
 }  // namespace __asan
