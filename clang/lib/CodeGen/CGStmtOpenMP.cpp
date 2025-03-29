@@ -5649,11 +5649,11 @@ void CodeGenFunction::EmitOMPBarrierDirective(const OMPBarrierDirective &S) {
 
 void CodeGenFunction::EmitOMPDispatchToTaskwaitDirective(
     const OMPDispatchDirective &S) {
-        OMPTaskDataTy Data;
-	// Build list of dependences
-	buildDependences(S, Data);
-	Data.HasNowaitClause = S.hasClausesOfKind<OMPNowaitClause>();
-	CGM.getOpenMPRuntime().emitTaskwaitCall(*this, S.getBeginLoc(), Data);
+  OMPTaskDataTy Data;
+  // Build list of dependences
+  buildDependences(S, Data);
+  Data.HasNowaitClause = S.hasClausesOfKind<OMPNowaitClause>();
+  CGM.getOpenMPRuntime().emitTaskwaitCall(*this, S.getBeginLoc(), Data);
 }
 
 void CodeGenFunction::EmitOMPTaskwaitDirective(const OMPTaskwaitDirective &S) {
