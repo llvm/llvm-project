@@ -10,8 +10,8 @@
 
 // <flat_set>
 
-// template<class K> pair<iterator, bool> insert(P&& x);
-// template<class K> iterator insert(const_iterator hint, P&& x);
+// template<class K> pair<iterator, bool> insert(K&& x);
+// template<class K> iterator insert(const_iterator hint, K&& x);
 
 #include <algorithm>
 #include <compare>
@@ -27,113 +27,89 @@
 #include "test_iterators.h"
 #include "min_allocator.h"
 
-// Constraints: is_constructible_v<value_type, K> is true.
+// Constraints: The qualified-id Compare::is_transparent is valid and denotes a type. is_constructible_v<value_type, K> is true.
 template <class M, class... Args>
 concept CanInsert = requires(M m, Args&&... args) { m.insert(std::forward<Args>(args)...); };
 
-using Set  = std::flat_set<int>;
-using Iter = Set::const_iterator;
+using TransparentSet     = std::flat_set<int, TransparentComparator>;
+using TransparentSetIter = typename TransparentSet::iterator;
+static_assert(CanInsert<TransparentSet, ExplicitlyConvertibleTransparent<int>>);
+static_assert(CanInsert<TransparentSet, TransparentSetIter, ExplicitlyConvertibleTransparent<int>>);
+static_assert(!CanInsert<TransparentSet, NonConvertibleTransparent<int>>);
+static_assert(!CanInsert<TransparentSet, TransparentSetIter, NonConvertibleTransparent<int>>);
 
-static_assert(CanInsert<Set, short&&>);
-static_assert(CanInsert<Set, Iter, short&&>);
-static_assert(!CanInsert<Set, std::string>);
-static_assert(!CanInsert<Set, Iter, std::string>);
-
-static int expensive_comparisons = 0;
-static int cheap_comparisons     = 0;
-
-struct CompareCounter {
-  int i_ = 0;
-  CompareCounter(int i) : i_(i) {}
-  friend auto operator<=>(const CompareCounter& x, const CompareCounter& y) {
-    expensive_comparisons += 1;
-    return x.i_ <=> y.i_;
-  }
-  bool operator==(const CompareCounter&) const = default;
-  friend auto operator<=>(const CompareCounter& x, int y) {
-    cheap_comparisons += 1;
-    return x.i_ <=> y;
-  }
-};
+using NonTransparentSet     = std::flat_set<int>;
+using NonTransparentSetIter = typename NonTransparentSet::iterator;
+static_assert(!CanInsert<NonTransparentSet, ExplicitlyConvertibleTransparent<int>>);
+static_assert(!CanInsert<NonTransparentSet, NonTransparentSetIter, ExplicitlyConvertibleTransparent<int>>);
+static_assert(!CanInsert<NonTransparentSet, NonConvertibleTransparent<int>>);
+static_assert(!CanInsert<NonTransparentSet, NonTransparentSetIter, NonConvertibleTransparent<int>>);
 
 template <class KeyContainer>
 void test_one() {
   using Key = typename KeyContainer::value_type;
-  using M   = std::flat_set<Key, std::less<Key>, KeyContainer>;
+  using M   = std::flat_set<Key, TransparentComparator, KeyContainer>;
 
-  const int expected[] = {1, 2, 3, 4, 5};
   {
-    // insert(P&&)
-    //   Unlike flat_set, here we can't use key_compare to compare value_type versus P,
-    //   so we must eagerly convert to value_type.
-    M m                                                        = {1, 2, 4, 5};
-    expensive_comparisons                                      = 0;
-    cheap_comparisons                                          = 0;
-    std::same_as<std::pair<typename M::iterator, bool>> auto p = m.insert(3); // conversion happens first
-    assert(expensive_comparisons >= 2);
-    assert(cheap_comparisons == 0);
-    assert(p == std::make_pair(m.begin() + 2, true));
-    assert(std::ranges::equal(m, expected));
+    const int expected[] = {1, 2, 3, 4, 5};
+
+    {
+      // insert(K&&)
+      bool transparent_used = false;
+      M m{{1, 2, 4, 5}, TransparentComparator{transparent_used}};
+      assert(!transparent_used);
+      std::same_as<std::pair<typename M::iterator, bool>> decltype(auto) r =
+          m.insert(ExplicitlyConvertibleTransparent<Key>{3});
+      assert(transparent_used);
+      assert(r.first == m.begin() + 2);
+      assert(r.second);
+      assert(std::ranges::equal(m, expected));
+    }
+    {
+      // insert(const_iterator, K&&)
+      bool transparent_used = false;
+      M m{{1, 2, 4, 5}, TransparentComparator{transparent_used}};
+      assert(!transparent_used);
+      std::same_as<typename M::iterator> auto it = m.insert(m.begin(), ExplicitlyConvertibleTransparent<Key>{3});
+      assert(transparent_used);
+      assert(it == m.begin() + 2);
+      assert(std::ranges::equal(m, expected));
+    }
   }
-  {
-    // insert(const_iterator, P&&)
-    M m                                        = {1, 2, 4, 5};
-    expensive_comparisons                      = 0;
-    cheap_comparisons                          = 0;
-    std::same_as<typename M::iterator> auto it = m.insert(m.begin(), 3);
-    assert(expensive_comparisons >= 2);
-    assert(cheap_comparisons == 0);
-    assert(it == m.begin() + 2);
-    assert(std::ranges::equal(m, expected));
-  }
-  {
-    // insert(value_type&&)
-    M m                                                        = {1, 2, 4, 5};
-    expensive_comparisons                                      = 0;
-    cheap_comparisons                                          = 0;
-    std::same_as<std::pair<typename M::iterator, bool>> auto p = m.insert(3); // conversion happens last
-    assert(expensive_comparisons >= 2);
-    assert(cheap_comparisons == 0);
-    assert(p == std::make_pair(m.begin() + 2, true));
-    assert(std::ranges::equal(m, expected));
-  }
-  {
-    // insert(const_iterator, value_type&&)
-    M m                                        = {1, 2, 4, 5};
-    expensive_comparisons                      = 0;
-    cheap_comparisons                          = 0;
-    std::same_as<typename M::iterator> auto it = m.insert(m.begin(), 3);
-    assert(expensive_comparisons >= 2);
-    assert(cheap_comparisons == 0);
-    assert(it == m.begin() + 2);
-    assert(std::ranges::equal(m, expected));
-  }
-  {
-    // emplace(Args&&...)
-    M m                                                        = {1, 2, 4, 5};
-    expensive_comparisons                                      = 0;
-    cheap_comparisons                                          = 0;
-    std::same_as<std::pair<typename M::iterator, bool>> auto p = m.emplace(3); // conversion happens first
-    assert(expensive_comparisons >= 2);
-    assert(cheap_comparisons == 0);
-    assert(p == std::make_pair(m.begin() + 2, true));
-    assert(std::ranges::equal(m, expected));
-  }
+
   {
     // was empty
-    M m;
-    std::same_as<std::pair<typename M::iterator, bool>> auto p = m.insert(3);
-    assert(p == std::make_pair(m.begin(), true));
-    M expected2 = {3};
-    assert(std::ranges::equal(m, expected2));
+    const int expected[] = {3};
+    {
+      // insert(K&&)
+      bool transparent_used = false;
+      M m{{}, TransparentComparator{transparent_used}};
+      assert(!transparent_used);
+      std::same_as<std::pair<typename M::iterator, bool>> decltype(auto) r =
+          m.insert(ExplicitlyConvertibleTransparent<Key>{3});
+      assert(!transparent_used); // no elements to compare against
+      assert(r.first == m.begin());
+      assert(r.second);
+      assert(std::ranges::equal(m, expected));
+    }
+    {
+      // insert(const_iterator, K&&)
+      bool transparent_used = false;
+      M m{{}, TransparentComparator{transparent_used}};
+      assert(!transparent_used);
+      std::same_as<typename M::iterator> auto it = m.insert(m.begin(), ExplicitlyConvertibleTransparent<Key>{3});
+      assert(!transparent_used); // no elements to compare against
+      assert(it == m.begin());
+      assert(std::ranges::equal(m, expected));
+    }
   }
 }
 
 void test() {
-  test_one<std::vector<CompareCounter>>();
-  test_one<std::deque<CompareCounter>>();
-  test_one<MinSequenceContainer<CompareCounter>>();
-  test_one<std::vector<CompareCounter, min_allocator<CompareCounter>>>();
+  test_one<std::vector<int>>();
+  test_one<std::deque<int>>();
+  test_one<MinSequenceContainer<int>>();
+  test_one<std::vector<int, min_allocator<int>>>();
 
   {
     // no ambiguity between insert(pos, P&&) and insert(first, last)
@@ -153,26 +129,14 @@ void test_exception() {
   {
     auto insert_func = [](auto& m, auto key_arg) {
       using FlatSet = std::decay_t<decltype(m)>;
-      struct T {
-        typename FlatSet::key_type key_;
-        T(typename FlatSet::key_type key) : key_(key) {}
-        operator typename FlatSet::value_type() const { return key_; }
-      };
-      T t(key_arg);
-      m.insert(t);
+      m.insert(ExplicitlyConvertibleTransparent<typename FlatSet::key_type>{key_arg});
     };
     test_emplace_exception_guarantee(insert_func);
   }
   {
     auto insert_func_iter = [](auto& m, auto key_arg) {
       using FlatSet = std::decay_t<decltype(m)>;
-      struct T {
-        typename FlatSet::key_type key_;
-        T(typename FlatSet::key_type key) : key_(key) {}
-        operator typename FlatSet::value_type() const { return key_; }
-      };
-      T t(key_arg);
-      m.insert(m.begin(), t);
+      m.insert(m.begin(), ExplicitlyConvertibleTransparent<typename FlatSet::key_type>{key_arg});
     };
     test_emplace_exception_guarantee(insert_func_iter);
   }
