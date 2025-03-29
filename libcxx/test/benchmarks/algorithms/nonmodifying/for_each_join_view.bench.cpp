@@ -19,22 +19,33 @@
 #include <benchmark/benchmark.h>
 
 int main(int argc, char** argv) {
+  auto std_for_each   = [](auto first, auto last, auto f) { return std::for_each(first, last, f); };
   auto std_for_each_n = [](auto first, auto n, auto f) { return std::for_each_n(first, n, f); };
 
-  // {std,ranges}::for_each_n
+  // {std,ranges}::for_each
   {
-    auto bm = []<class Container>(std::string name, auto for_each_n) {
-      using ElemType = typename Container::value_type;
+    auto bm = []<class Container>(std::string name, auto for_each) {
+      using C1       = typename Container::value_type;
+      using ElemType = typename C1::value_type;
+
       benchmark::RegisterBenchmark(
           name,
-          [for_each_n](auto& st) {
-            std::size_t const n = st.range(0);
-            Container c(n, 1);
-            auto first = c.begin();
+          [for_each](auto& st) {
+            std::size_t const size     = st.range(0);
+            std::size_t const seg_size = 256;
+            std::size_t const segments = (size + seg_size - 1) / seg_size;
+            Container c(segments);
+            for (std::size_t i = 0, n = size; i < segments; ++i, n -= seg_size) {
+              c[i].resize(std::min(seg_size, n), ElemType(1));
+            }
+
+            auto view  = c | std::views::join;
+            auto first = view.begin();
+            auto last  = view.end();
 
             for ([[maybe_unused]] auto _ : st) {
               benchmark::DoNotOptimize(c);
-              auto result = for_each_n(first, n, [](ElemType& x) { x = std::clamp<ElemType>(x, 10, 100); });
+              auto result = for_each(first, last, [](ElemType& x) { x = std::clamp<ElemType>(x, 10, 100); });
               benchmark::DoNotOptimize(result);
             }
           })
@@ -48,26 +59,17 @@ int main(int argc, char** argv) {
           ->Arg(1 << 16)
           ->Arg(1 << 18);
     };
-    bm.operator()<std::vector<char>>("std::for_each_n(vector<char>)", std_for_each_n);
-    bm.operator()<std::deque<char>>("std::for_each_n(deque<char>)", std_for_each_n);
-    bm.operator()<std::list<char>>("std::for_each_n(list<char>)", std_for_each_n);
-    bm.operator()<std::vector<char>>("rng::for_each_n(vector<char>)", std::ranges::for_each_n);
-    bm.operator()<std::deque<char>>("rng::for_each_n(deque<char>)", std::ranges::for_each_n);
-    bm.operator()<std::list<char>>("rng::for_each_n(list<char>)", std::ranges::for_each_n);
-
-    bm.operator()<std::vector<short>>("std::for_each_n(vector<short>)", std_for_each_n);
-    bm.operator()<std::deque<short>>("std::for_each_n(deque<short>)", std_for_each_n);
-    bm.operator()<std::list<short>>("std::for_each_n(list<short>)", std_for_each_n);
-    bm.operator()<std::vector<short>>("rng::for_each_n(vector<short>)", std::ranges::for_each_n);
-    bm.operator()<std::deque<short>>("rng::for_each_n(deque<short>)", std::ranges::for_each_n);
-    bm.operator()<std::list<short>>("rng::for_each_n(list<short>)", std::ranges::for_each_n);
-
-    bm.operator()<std::vector<int>>("std::for_each_n(vector<int>)", std_for_each_n);
-    bm.operator()<std::deque<int>>("std::for_each_n(deque<int>)", std_for_each_n);
-    bm.operator()<std::list<int>>("std::for_each_n(list<int>)", std_for_each_n);
+    bm.operator()<std::vector<std::vector<char>>>("std::for_each(join_view(vector<vector<char>>))", std_for_each);
+    bm.operator()<std::vector<std::vector<short>>>("std::for_each(join_view(vector<vector<short>>))", std_for_each);
+    bm.operator()<std::vector<std::vector<int>>>("std::for_each(join_view(vector<vector<int>>))", std_for_each);
+    bm.operator()<std::vector<std::vector<char>>>(
+        "rng::for_each(join_view(vector<vector<char>>)", std::ranges::for_each);
+    bm.operator()<std::vector<std::vector<short>>>(
+        "rng::for_each(join_view(vector<vector<short>>)", std::ranges::for_each);
+    bm.operator()<std::vector<std::vector<int>>>("rng::for_each(join_view(vector<vector<int>>)", std::ranges::for_each);
   }
 
-  // std::for_each_n for join_view
+  // {std,ranges}::for_each_n
   {
     auto bm = []<class Container>(std::string name, auto for_each_n) {
       using C1       = typename Container::value_type;
@@ -102,7 +104,15 @@ int main(int argc, char** argv) {
           ->Arg(1 << 16)
           ->Arg(1 << 18);
     };
+    bm.operator()<std::vector<std::vector<char>>>("std::for_each_n(join_view(vector<vector<char>>))", std_for_each_n);
+    bm.operator()<std::vector<std::vector<short>>>("std::for_each_n(join_view(vector<vector<short>>))", std_for_each_n);
     bm.operator()<std::vector<std::vector<int>>>("std::for_each_n(join_view(vector<vector<int>>))", std_for_each_n);
+    bm.operator()<std::vector<std::vector<char>>>(
+        "rng::for_each_n(join_view(vector<vector<char>>)", std::ranges::for_each_n);
+    bm.operator()<std::vector<std::vector<short>>>(
+        "rng::for_each_n(join_view(vector<vector<short>>)", std::ranges::for_each_n);
+    bm.operator()<std::vector<std::vector<int>>>(
+        "rng::for_each_n(join_view(vector<vector<int>>)", std::ranges::for_each_n);
   }
 
   benchmark::Initialize(&argc, argv);
