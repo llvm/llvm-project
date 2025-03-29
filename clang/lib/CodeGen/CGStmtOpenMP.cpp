@@ -4528,6 +4528,102 @@ void CodeGenFunction::EmitOMPMasterDirective(const OMPMasterDirective &S) {
   emitMaster(*this, S);
 }
 
+static Expr *getInitialExprFromCapturedExpr(Expr *Cond) {
+
+  Expr *SubExpr = Cond->IgnoreParenImpCasts();
+
+  if (auto *DeclRef = dyn_cast<DeclRefExpr>(SubExpr)) {
+    if (auto *CapturedExprDecl =
+            dyn_cast<OMPCapturedExprDecl>(DeclRef->getDecl())) {
+
+      // Retrieve the initial expression from the captured expression
+      return CapturedExprDecl->getInit();
+    }
+  }
+  return Cond;
+}
+
+static Expr *replaceWithNewTraitsOrDirectCall(Stmt *AssocExpr,
+                                              CallExpr *ReplacementFunction) {
+  Expr *FinalCall = ReplacementFunction;
+
+  if (BinaryOperator *BinaryCopyOpr = dyn_cast<BinaryOperator>(AssocExpr)) {
+    BinaryCopyOpr->setRHS(FinalCall);
+    return BinaryCopyOpr;
+  }
+
+  return FinalCall;
+}
+
+static void transformCallInStmt(Stmt *StmtP) {
+  if (auto *AssocStmt = dyn_cast<CapturedStmt>(StmtP)) {
+    CapturedDecl *CDecl = AssocStmt->getCapturedDecl();
+
+    // Access AnnotateAttr
+    CallExpr *NewCallExpr = nullptr;
+    for (const auto *attr : CDecl->attrs()) {
+      if (const auto *annotateAttr = llvm::dyn_cast<clang::AnnotateAttr>(attr);
+          annotateAttr &&
+          annotateAttr->getAnnotation() == "NoContextInvariant") {
+        NewCallExpr = llvm::dyn_cast<CallExpr>(*annotateAttr->args_begin());
+      }
+    }
+
+    Stmt *CallExprStmt = CDecl->getBody();
+    Stmt *NewCallExprStmt =
+        replaceWithNewTraitsOrDirectCall(CallExprStmt, NewCallExpr);
+    CDecl->setBody(NewCallExprStmt);
+  }
+}
+
+static void EmitIfElse(CodeGenFunction *CGF, Expr *Condition,
+                       Stmt *AssociatedStmt) {
+  llvm::Value *CondValue = CGF->EvaluateExprAsBool(Condition);
+  llvm::BasicBlock *ThenBlock = CGF->createBasicBlock("if.then");
+  llvm::BasicBlock *ElseBlock = CGF->createBasicBlock("if.else");
+  llvm::BasicBlock *MergeBlock = CGF->createBasicBlock("if.end");
+
+  CGF->Builder.CreateCondBr(CondValue, ThenBlock, ElseBlock);
+
+  // Emit the else block.
+  Stmt *ElseStmt = AssociatedStmt;
+  CGF->EmitBlock(ElseBlock);
+  CGF->EmitStmt(ElseStmt);
+  CGF->Builder.CreateBr(MergeBlock);
+
+  // Emit the then block.
+  Stmt *ThenStmt = AssociatedStmt;
+  transformCallInStmt(ThenStmt);
+  CGF->EmitBlock(ThenBlock);
+  CGF->EmitStmt(ThenStmt);
+  CGF->Builder.CreateBr(MergeBlock);
+  CGF->EmitBlock(MergeBlock);
+}
+
+void CodeGenFunction::EmitOMPDispatchDirective(const OMPDispatchDirective &S) {
+  ArrayRef<OMPClause *> Clauses = S.clauses();
+  if (!Clauses.empty()) {
+    if (S.hasClausesOfKind<OMPNovariantsClause>() ||
+        S.hasClausesOfKind<OMPNocontextClause>()) {
+      Expr *Condition = nullptr;
+      if (const OMPNovariantsClause *NoVariantsC =
+              OMPExecutableDirective::getSingleClause<OMPNovariantsClause>(
+                  Clauses)) {
+        Condition = getInitialExprFromCapturedExpr(NoVariantsC->getCondition());
+      } else {
+        const OMPNocontextClause *NoContextC =
+            OMPExecutableDirective::getSingleClause<OMPNocontextClause>(
+                Clauses);
+        Condition = getInitialExprFromCapturedExpr(NoContextC->getCondition());
+      }
+      /* OMPC_novariants or OMPC_nocontext present */
+      Stmt *AssociatedStmt = const_cast<Stmt *>(S.getAssociatedStmt());
+      EmitIfElse(this, Condition, AssociatedStmt);
+    }
+  } else
+    EmitStmt(S.getAssociatedStmt());
+}
+
 static void emitMasked(CodeGenFunction &CGF, const OMPExecutableDirective &S) {
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
     Action.Enter(CGF);
