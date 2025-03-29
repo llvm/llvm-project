@@ -11120,7 +11120,10 @@ OverloadCandidateSet::BestViableFunction(Sema &S, SourceLocation Loc,
       return OR_Success;
     }
   }
-  InjectNonDeducedTemplateCandidates(S);
+
+  if(!NonDeducedCandidates.empty())
+    InjectNonDeducedTemplateCandidates(S);
+
   return BestViableFunctionImpl(S, Loc, Best);
 }
 
