@@ -60,6 +60,10 @@ Improvements and New Features
 
 - Updated formatting library to Unicode 16.0.0.
 
+- When using GCC, the ``std`` namespace is now annotated with ``[[gnu::visibility("default")]]``. This may cause changes
+  in the symbols exported from shared libraries when building with ``-fvisibility=hidden``. This also fixes RTTI
+  comparison between shared libraries, since all RTTI has the correct visibility now.
+
 Deprecations and Removals
 -------------------------
 
