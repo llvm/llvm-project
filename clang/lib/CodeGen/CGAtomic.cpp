@@ -607,10 +607,10 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
     llvm::APInt BooleanEnd = llvm::APInt(CGF.getContext().getTypeSize(Ty), 2);
 
     if (llvm::MDNode *RangeInfo =
-        MDHelper.createRange(BooleanMin, BooleanEnd)) {
+            MDHelper.createRange(BooleanMin, BooleanEnd)) {
       Load->setMetadata(llvm::LLVMContext::MD_range, RangeInfo);
       Load->setMetadata(llvm::LLVMContext::MD_noundef,
-          llvm::MDNode::get(CGF.getLLVMContext(), {}));
+                        llvm::MDNode::get(CGF.getLLVMContext(), {}));
     }
 
     CGF.Builder.CreateStore(Load, Dest);
