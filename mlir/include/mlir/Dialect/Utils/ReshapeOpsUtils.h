@@ -573,7 +573,7 @@ PackingMetadata computePackingMetadata(int64_t packedRank,
 /// Removes the op and replaces the constant with a new constant of the result
 /// shape. When an optional cst attribute is passed, it is reshaped only if the
 /// splat value matches the value in the attribute.
-OpFoldResult reshapeConstantSource(DenseElementsAttr source, ShapedType result,
+OpFoldResult reshapeConstantSource(DenseElementsAttr source, TensorType result,
                                    std::optional<Attribute> cst = std::nullopt);
 } // namespace mlir
 

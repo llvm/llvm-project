@@ -708,17 +708,15 @@ func.func @conv2d_channel_first_q_promote(%img: tensor<100x3x224x224xi8>, %filt:
 // CHECK:         linalg.conv_2d_nchw_fchw_q {dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>} ins(%[[arg0]], %[[arg1]], %[[arg2]], %[[arg3]] : tensor<100x3x224x224xi8>, tensor<64x3x5x5xi8>, i8, i8) outs(%{{.*}} : tensor<100x64x220x220xi32>) -> tensor<100x64x220x220xi32>
 
 // -----
-// Test that we can lower all the way to LLVM without crashing, don't check results here.
-func.func @pack_memref(%source: memref<128x256xf32>, %dest: memref<8x16x8x32xf32>) -> memref<8x16x8x32xf32> {
+func.func @pack_memref(%source: memref<128x256xf32>, %dest: memref<8x16x8x32xf32>) {
   linalg.pack %source outer_dims_perm = [1, 0] inner_dims_pos = [0, 1] inner_tiles = [8, 32]
       into %dest : memref<128x256xf32> -> memref<8x16x8x32xf32>
-  return %dest : memref<8x16x8x32xf32>
+  return
 }
 
 // -----
-// Test that we can lower all the way to LLVM without crashing, don't check results here.
-func.func @unpack_memref(%source: memref<16x8x8x32xf32>, %dest: memref<128x256xf32>) -> memref<128x256xf32> {
+func.func @unpack_memref(%source: memref<16x8x8x32xf32>, %dest: memref<128x256xf32>) {
   linalg.unpack %source inner_dims_pos = [0, 1] inner_tiles = [8, 32]
       into %dest : memref<16x8x8x32xf32> -> memref<128x256xf32>
-  return %dest : memref<128x256xf32>
+  return
 }

@@ -808,7 +808,7 @@ bubbleUpPackOpThroughExpandShape(tensor::ExpandShapeOp expandOp,
   // If reassociation is not possible, then reordering cannot happen.
   // This can be caused by pack padding affecting previously expanded
   // dimensions or packing extending dimensions.
-  RankedTensorType newPackType = linalg::PackOp::inferPackedType(
+  RankedTensorType newPackType = linalg::PackOp::inferPackedTensorType(
       expandOp.getSrcType(), packOp.getStaticInnerTiles(),
       projectedInnerDimsPos, /*outerDimsPerm=*/SmallVector<int64_t>{});
   auto reassocExpand =
@@ -943,7 +943,7 @@ static LogicalResult pushDownUnPackOpThroughExpandShape(
     nextPos += 1;
   }
 
-  RankedTensorType newExpandType = linalg::PackOp::inferPackedType(
+  RankedTensorType newExpandType = linalg::PackOp::inferPackedTensorType(
       expandTy, innerTileSizes, projectedInnerDimsPos, newOuterDimsPerm);
   auto newExpandOp = rewriter.create<tensor::ExpandShapeOp>(
       expandOp.getLoc(), newExpandType, unPackOp.getSource(),
