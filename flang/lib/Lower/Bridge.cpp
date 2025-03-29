@@ -948,13 +948,20 @@ public:
       std::function<void(const Fortran::semantics::Symbol &, bool)>
           insertSymbols = [&](const Fortran::semantics::Symbol &oriSymbol,
                               bool collectSymbol) {
-            if (collectSymbol && oriSymbol.test(flag))
+            if (collectSymbol && oriSymbol.test(flag)) {
               symbolSet.insert(&oriSymbol);
-            else if (checkHostAssociatedSymbols)
+            } else if (const auto *commonDetails =
+                           oriSymbol.detailsIf<
+                               Fortran::semantics::CommonBlockDetails>()) {
+              for (const auto &mem : commonDetails->objects())
+                if (collectSymbol && mem->test(flag))
+                  symbolSet.insert(&(*mem).GetUltimate());
+            } else if (checkHostAssociatedSymbols) {
               if (const auto *details{
                       oriSymbol
                           .detailsIf<Fortran::semantics::HostAssocDetails>()})
                 insertSymbols(details->symbol(), true);
+            }
           };
       insertSymbols(sym, collectSymbols);
     };
