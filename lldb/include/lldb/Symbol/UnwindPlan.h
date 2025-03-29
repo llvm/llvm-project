@@ -467,11 +467,12 @@ public:
   void InsertRow(Row row, bool replace_existing = false);
 
   // Returns a pointer to the best row for the given offset into the function's
-  // instructions. If offset is -1 it indicates that the function start is
-  // unknown - the final row in the UnwindPlan is returned. In practice, the
-  // UnwindPlan for a function with no known start address will be the
-  // architectural default UnwindPlan which will only have one row.
-  const UnwindPlan::Row *GetRowForFunctionOffset(int offset) const;
+  // instructions. If offset is std::nullopt it indicates that the function
+  // start is unknown - the final row in the UnwindPlan is returned. In
+  // practice, the UnwindPlan for a function with no known start address will be
+  // the architectural default UnwindPlan which will only have one row.
+  const UnwindPlan::Row *
+  GetRowForFunctionOffset(std::optional<int> offset) const;
 
   lldb::RegisterKind GetRegisterKind() const { return m_register_kind; }
 
