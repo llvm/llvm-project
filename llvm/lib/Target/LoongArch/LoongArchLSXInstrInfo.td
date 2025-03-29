@@ -58,6 +58,12 @@ def loongarch_vreplgr2vr: SDNode<"LoongArchISD::VREPLGR2VR", SDT_LoongArchVreplg
 def loongarch_vfrecipe: SDNode<"LoongArchISD::FRECIPE", SDT_LoongArchVFRECIPE>;
 def loongarch_vfrsqrte: SDNode<"LoongArchISD::FRSQRTE", SDT_LoongArchVFRSQRTE>;
 
+def loongarch_vslli : SDNode<"LoongArchISD::VSLLI", SDT_LoongArchV1RUimm>;
+def loongarch_vsrli : SDNode<"LoongArchISD::VSRLI", SDT_LoongArchV1RUimm>;
+
+def loongarch_vbsll : SDNode<"LoongArchISD::VBSLL", SDT_LoongArchV1RUimm>;
+def loongarch_vbsrl : SDNode<"LoongArchISD::VBSRL", SDT_LoongArchV1RUimm>;
+
 def immZExt1 : ImmLeaf<i64, [{return isUInt<1>(Imm);}]>;
 def immZExt2 : ImmLeaf<i64, [{return isUInt<2>(Imm);}]>;
 def immZExt3 : ImmLeaf<i64, [{return isUInt<3>(Imm);}]>;
@@ -1494,15 +1500,59 @@ def : Pat<(or (v16i8 LSX128:$vj), (v16i8 (SplatPat_uimm8 uimm8:$imm))),
 def : Pat<(xor (v16i8 LSX128:$vj), (v16i8 (SplatPat_uimm8 uimm8:$imm))),
           (VXORI_B LSX128:$vj, uimm8:$imm)>;
 
+// VBSLL_V
+def : Pat<(loongarch_vbsll v16i8:$vj, uimm5:$imm), (VBSLL_V v16i8:$vj,
+                                                       uimm5:$imm)>;
+def : Pat<(loongarch_vbsll v8i16:$vj, uimm5:$imm), (VBSLL_V v8i16:$vj,
+                                                       uimm5:$imm)>;
+def : Pat<(loongarch_vbsll v4i32:$vj, uimm5:$imm), (VBSLL_V v4i32:$vj,
+                                                       uimm5:$imm)>;
+def : Pat<(loongarch_vbsll v2i64:$vj, uimm5:$imm), (VBSLL_V v2i64:$vj,
+                                                       uimm5:$imm)>;
+def : Pat<(loongarch_vbsll v4f32:$vj, uimm5:$imm), (VBSLL_V v4f32:$vj,
+                                                       uimm5:$imm)>;
+def : Pat<(loongarch_vbsll v2f64:$vj, uimm5:$imm), (VBSLL_V v2f64:$vj,
+                                                       uimm5:$imm)>;
+
+// VBSRL_V
+def : Pat<(loongarch_vbsrl v16i8:$vj, uimm5:$imm), (VBSRL_V v16i8:$vj,
+                                                       uimm5:$imm)>;
+def : Pat<(loongarch_vbsrl v8i16:$vj, uimm5:$imm), (VBSRL_V v8i16:$vj,
+                                                       uimm5:$imm)>;
+def : Pat<(loongarch_vbsrl v4i32:$vj, uimm5:$imm), (VBSRL_V v4i32:$vj,
+                                                       uimm5:$imm)>;
+def : Pat<(loongarch_vbsrl v2i64:$vj, uimm5:$imm), (VBSRL_V v2i64:$vj,
+                                                       uimm5:$imm)>;
+def : Pat<(loongarch_vbsrl v4f32:$vj, uimm5:$imm), (VBSRL_V v4f32:$vj,
+                                                       uimm5:$imm)>;
+def : Pat<(loongarch_vbsrl v2f64:$vj, uimm5:$imm), (VBSRL_V v2f64:$vj,
+                                                       uimm5:$imm)>;
+
 // VSLL[I]_{B/H/W/D}
 defm : PatVrVr<shl, "VSLL">;
 defm : PatShiftVrVr<shl, "VSLL">;
 defm : PatShiftVrUimm<shl, "VSLLI">;
+def : Pat<(loongarch_vslli v16i8:$vj, uimm3:$imm), (VSLLI_B v16i8:$vj,
+                                                       uimm3:$imm)>;
+def : Pat<(loongarch_vslli v8i16:$vj, uimm4:$imm), (VSLLI_H v8i16:$vj,
+                                                       uimm4:$imm)>;
+def : Pat<(loongarch_vslli v4i32:$vj, uimm5:$imm), (VSLLI_W v4i32:$vj,
+                                                       uimm5:$imm)>;
+def : Pat<(loongarch_vslli v2i64:$vj, uimm6:$imm), (VSLLI_D v2i64:$vj,
+                                                       uimm6:$imm)>;
 
 // VSRL[I]_{B/H/W/D}
 defm : PatVrVr<srl, "VSRL">;
 defm : PatShiftVrVr<srl, "VSRL">;
 defm : PatShiftVrUimm<srl, "VSRLI">;
+def : Pat<(loongarch_vsrli v16i8:$vj, uimm3:$imm), (VSRLI_B v16i8:$vj,
+                                                       uimm3:$imm)>;
+def : Pat<(loongarch_vsrli v8i16:$vj, uimm4:$imm), (VSRLI_H v8i16:$vj,
+                                                       uimm4:$imm)>;
+def : Pat<(loongarch_vsrli v4i32:$vj, uimm5:$imm), (VSRLI_W v4i32:$vj,
+                                                       uimm5:$imm)>;
+def : Pat<(loongarch_vsrli v2i64:$vj, uimm6:$imm), (VSRLI_D v2i64:$vj,
+                                                       uimm6:$imm)>;
 
 // VSRA[I]_{B/H/W/D}
 defm : PatVrVr<sra, "VSRA">;
