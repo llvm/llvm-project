@@ -1819,7 +1819,10 @@ bool SIFoldOperandsImpl::tryFoldClamp(MachineInstr &MI) {
   if (!ClampSrc || !MRI->hasOneNonDBGUser(ClampSrc->getReg()))
     return false;
 
-  MachineInstr *Def = MRI->getVRegDef(ClampSrc->getReg());
+  // Look through COPY. COPY only observed with True16.
+  Register DefSrcReg = TRI->lookThruCopyLike(ClampSrc->getReg(), MRI);
+  MachineInstr *Def =
+      MRI->getVRegDef(DefSrcReg.isVirtual() ? DefSrcReg : ClampSrc->getReg());
 
   // The type of clamp must be compatible.
   if (TII->getClampMask(*Def) != TII->getClampMask(MI))
