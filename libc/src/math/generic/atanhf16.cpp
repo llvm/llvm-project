@@ -14,12 +14,22 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/cast.h"
+#include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 
 namespace LIBC_NAMESPACE_DECL {
+
+static constexpr size_t N_EXCEPTS = 2;
+static constexpr fputil::ExceptValues<float16, N_EXCEPTS> ATANHF16_EXCEPTS{{
+    // (input, RZ output, RU offset, RD offset, RN offset)
+    // x = 0x1.a5cp-4, atanhf16(x) = 0x1.a74p-4 (RZ)
+    {0x2E97, 0x2E9D, 1, 0, 0},
+    // x = -0x1.a5cp-4, atanhf16(x) = -0x1.a74p-4 (RZ)
+    {0xAE97, 0xAE9D, 0, 1, 0},
+}};
 
 LLVM_LIBC_FUNCTION(float16, atanhf16, (float16 x)) {
   using FPBits = fputil::FPBits<float16>;
@@ -44,6 +54,10 @@ LLVM_LIBC_FUNCTION(float16, atanhf16, (float16 x)) {
     fputil::raise_except_if_required(FE_INVALID);
     return FPBits::quiet_nan().get_val();
   }
+
+  if (auto r = ATANHF16_EXCEPTS.lookup(xbits.uintval());
+      LIBC_UNLIKELY(r.has_value()))
+    return r.value();
 
   // For |x| less than approximately 0.10
   if (LIBC_UNLIKELY(x_abs <= 0x2e66U)) {
