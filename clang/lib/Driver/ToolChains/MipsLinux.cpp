@@ -118,8 +118,8 @@ void MipsLLVMToolChain::AddCXXStdlibLibArgs(const ArgList &Args,
 }
 
 std::string MipsLLVMToolChain::getCompilerRT(const ArgList &Args,
-                                             StringRef Component,
-                                             FileType Type) const {
+                                             StringRef Component, FileType Type,
+                                             bool IsFortran) const {
   SmallString<128> Path(getDriver().ResourceDir);
   llvm::sys::path::append(Path, SelectedMultilibs.back().osSuffix(), "lib" + LibSuffix,
                           getOS());
