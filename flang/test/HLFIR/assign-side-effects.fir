@@ -1,5 +1,5 @@
 // Test side effects of hlfir.assign op.
-// RUN: fir-opt %s --test-side-effects --verify-diagnostics
+// RUN: fir-test-opt %s --test-side-effects --verify-diagnostics
 
 func.func @test1(%x: !fir.ref<i32>, %i: i32) {
   // expected-remark @below {{found an instance of 'write' on a op operand, on resource '<Default>'}}
