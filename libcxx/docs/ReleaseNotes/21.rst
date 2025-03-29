@@ -72,7 +72,7 @@ Improvements and New Features
   in C++23 and later.
 =======
 - The ``std::ranges::for_each`` and ``std::ranges::for_each_n`` algorithms have been optimized for segmented iterators,
-  resulting in performance improvements of up to 21.2x for ``std::deque::iterator`` segmented inputs and 17.9x for
+  resulting in performance improvements of up to 21.3x for ``std::deque::iterator`` segmented inputs and 24.9x for
   ``join_view`` of ``vector<vector<T>>``.
 >>>>>>> 50ac206d4a13 (Apply optimization for join_view segmented iterators)
 
