@@ -163,7 +163,11 @@ Options
     Semicolon-separated list of containers without their template parameters
     and some ``emplace``-like method of the container. Example:
     ``vector::emplace_back``. Those methods will be checked for improper use and
-    the check will report when a temporary is unnecessarily created.
+    the check will report when a temporary is unnecessarily created. Default
+    containers with their ``emplace``-like methods are ``vector``, ``deque``,
+    ``forward_list``, ``list``, ``set``, ``map``, ``multiset``, ``multimap``,
+    ``unordered_set``, ``unordered_map``, ``unordered_multiset``,
+    ``unordered_multimap``, ``stack``, ``queue``, ``priority_queue``.
 
 Example
 ^^^^^^^
