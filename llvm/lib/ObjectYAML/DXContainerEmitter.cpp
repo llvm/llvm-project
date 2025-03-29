@@ -281,9 +281,6 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
           NewParam.Constants.Space = Param.Constants.Space;
           NewParam.Constants.Register = Param.Constants.Register;
           break;
-        case dxbc::RootParameterType::Empty:
-          llvm_unreachable("Invalid parameter type");
-          break;
         }
 
         RS.Parameters.push_back(NewParam);

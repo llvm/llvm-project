@@ -41,9 +41,6 @@ struct RootSignatureDesc {
       case dxbc::RootParameterType::Constants32Bit:
         size += sizeof(dxbc::RootConstants);
         break;
-      case dxbc::RootParameterType::Empty:
-        llvm_unreachable("Parameter shouldn't be Empty here");
-        break;
       }
     }
     return size;

@@ -18,25 +18,23 @@ namespace llvm {
 
 namespace dxbc {
 
-struct RootSignatureValidations {
+struct RootSignatureVerifier {
 
-  static bool isValidRootFlag(uint32_t Flags) { return (Flags & ~0xfff) == 0; }
+  static bool verifyRootFlag(uint32_t Flags) { return (Flags & ~0xfff) == 0; }
 
-  static bool isValidVersion(uint32_t Version) {
+  static bool verifyVersion(uint32_t Version) {
     return (Version == 1 || Version == 2);
   }
 
-  static bool isValidParameterType(dxbc::RootParameterType Type) {
+  static bool verifyParameterType(dxbc::RootParameterType Type) {
     switch (Type) {
     case dxbc::RootParameterType::Constants32Bit:
       return true;
-    case RootParameterType::Empty:
-      return false;
     }
     return false;
   }
 
-  static bool isValidShaderVisibility(dxbc::ShaderVisibility Visibility) {
+  static bool verifyShaderVisibility(dxbc::ShaderVisibility Visibility) {
     switch (Visibility) {
 
     case ShaderVisibility::All:
@@ -48,8 +46,6 @@ struct RootSignatureValidations {
     case ShaderVisibility::Amplification:
     case ShaderVisibility::Mesh:
       return true;
-    case ShaderVisibility::Empty:
-      return false;
     }
     return false;
   };

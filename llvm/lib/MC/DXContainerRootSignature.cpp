@@ -34,7 +34,7 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
   raw_svector_ostream BOS(Storage);
   BOS.reserveExtraSpace(getSize());
   const uint32_t NumParameters = Parameters.size();
-  const uint32_t Zero = 0;
+  const uint32_t Zero = 0u;
 
   support::endian::write(BOS, Header.Version, llvm::endianness::little);
   support::endian::write(BOS, NumParameters, llvm::endianness::little);
@@ -63,15 +63,13 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
     const auto &P = Parameters[I];
 
     switch (P.Header.ParameterType) {
-    case dxbc::RootParameterType::Constants32Bit: {
+    case dxbc::RootParameterType::Constants32Bit:
       support::endian::write(BOS, P.Constants.Register,
                              llvm::endianness::little);
       support::endian::write(BOS, P.Constants.Space, llvm::endianness::little);
       support::endian::write(BOS, P.Constants.NumOfConstants,
                              llvm::endianness::little);
-    } break;
-    case dxbc::RootParameterType::Empty:
-      llvm_unreachable("Invalid RootParameterType");
+      break;
     }
   }
 

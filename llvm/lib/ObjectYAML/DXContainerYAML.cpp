@@ -51,9 +51,6 @@ DXContainerYAML::RootSignatureYamlDesc::RootSignatureYamlDesc(
       NewP.Constants.Register = P->Constants.Register;
       NewP.Constants.Space = P->Constants.Space;
       break;
-    case dxbc::RootParameterType::Empty:
-      llvm_unreachable("Invalid RootParameterType");
-      break;
     }
     Parameters.push_back(NewP);
   }
@@ -255,8 +252,6 @@ void MappingTraits<llvm::DXContainerYAML::RootParameterYamlDesc>::mapping(
   case dxbc::RootParameterType::Constants32Bit:
     IO.mapRequired("Constants", P.Constants);
     break;
-  case dxbc::RootParameterType::Empty:
-    llvm_unreachable("Invalid value for ParameterType");
   }
 }
 

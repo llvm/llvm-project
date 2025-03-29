@@ -178,8 +178,6 @@ struct ViewRootParameter {
                 Parameter.Constants))
           return Err;
         break;
-      case dxbc::RootParameterType::Empty:
-        break;
       }
 
       return Parameter;

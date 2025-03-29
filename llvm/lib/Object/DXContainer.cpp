@@ -8,7 +8,7 @@
 
 #include "llvm/Object/DXContainer.h"
 #include "llvm/BinaryFormat/DXContainer.h"
-#include "llvm/BinaryFormat/RootSignatureValidation.h"
+#include "llvm/BinaryFormat/RootSignatureVerifier.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Endian.h"
@@ -25,18 +25,6 @@ static Error parseFailed(const Twine &Msg) {
 
 static Error validationFailed(const Twine &Msg) {
   return make_error<StringError>(Msg.str(), inconvertibleErrorCode());
-}
-
-template <typename E> static Error safeConvertEnum(uint32_t Value, E &Result) {
-  static_assert(std::is_enum_v<E>, "Template must be an enum type");
-
-  if (Value >= 0 && Value < static_cast<int>(E::Empty)) {
-    Result = static_cast<E>(Value);
-    return Error::success();
-  }
-
-  // Throw an exception if the value is out of range
-  return parseFailed("Value is not within range for enum");
 }
 
 template <typename T>
@@ -274,7 +262,7 @@ Error DirectX::RootSignature::parse(StringRef Data) {
       support::endian::read<uint32_t, llvm::endianness::little>(Current);
   Current += sizeof(uint32_t);
 
-  if (!dxbc::RootSignatureValidations::isValidVersion(VValue))
+  if (!dxbc::RootSignatureVerifier::verifyVersion(VValue))
     return validationFailed("unsupported root signature version read: " +
                             llvm::Twine(VValue));
   Version = VValue;
@@ -299,7 +287,7 @@ Error DirectX::RootSignature::parse(StringRef Data) {
       support::endian::read<uint32_t, llvm::endianness::little>(Current);
   Current += sizeof(uint32_t);
 
-  if (!dxbc::RootSignatureValidations::isValidRootFlag(FValue))
+  if (!dxbc::RootSignatureVerifier::verifyRootFlag(FValue))
     return validationFailed("unsupported root signature flag value read: " +
                             llvm::Twine(FValue));
   Flags = FValue;
@@ -314,12 +302,12 @@ Error DirectX::RootSignature::parse(StringRef Data) {
     if (!P)
       return P.takeError();
 
-    if (!dxbc::RootSignatureValidations::isValidParameterType(
+    if (!dxbc::RootSignatureVerifier::verifyParameterType(
             P->Header.ParameterType))
       return validationFailed("unsupported parameter type value read: " +
                               llvm::Twine((uint32_t)P->Header.ParameterType));
 
-    if (!dxbc::RootSignatureValidations::isValidShaderVisibility(
+    if (!dxbc::RootSignatureVerifier::verifyShaderVisibility(
             P->Header.ShaderVisibility))
       return validationFailed(
           "unsupported shader visility flag value read: " +
