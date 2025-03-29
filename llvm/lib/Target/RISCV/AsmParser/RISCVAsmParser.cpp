@@ -196,6 +196,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
   ParseStatus parseCSRSystemRegister(OperandVector &Operands);
   ParseStatus parseFPImm(OperandVector &Operands);
   ParseStatus parseImmediate(OperandVector &Operands);
+  ParseStatus parseBranchOffsetImmediate(OperandVector &Operands);
   ParseStatus parseRegister(OperandVector &Operands, bool AllowParens = false);
   ParseStatus parseMemOpBaseReg(OperandVector &Operands);
   ParseStatus parseZeroOffsetMemOp(OperandVector &Operands);
@@ -554,6 +555,10 @@ public:
     else
       IsValid = isShiftedInt<N - 1, 1>(fixImmediateForRV32(Imm, isRV64Imm()));
     return IsValid && VK == RISCVMCExpr::VK_None;
+  }
+
+  bool isBranchOffset() const {
+    return isImm();
   }
 
   // Predicate methods for AsmOperands defined in RISCVInstrInfo.td
@@ -2009,6 +2014,49 @@ ParseStatus RISCVAsmParser::parseImmediate(OperandVector &Operands) {
   return ParseStatus::Success;
 }
 
+ParseStatus RISCVAsmParser::parseBranchOffsetImmediate(OperandVector &Operands) {
+  SMLoc S = getLoc();
+  SMLoc E;
+  const MCExpr *Res;
+
+  switch (getLexer().getKind()) {
+  default:
+    return ParseStatus::NoMatch;
+  case AsmToken::LParen:
+  case AsmToken::Dot:
+  case AsmToken::Minus:
+  case AsmToken::Plus:
+  case AsmToken::Exclaim:
+  case AsmToken::Tilde:
+  case AsmToken::Integer:
+  case AsmToken::String:
+  case AsmToken::Identifier: {
+    if (getParser().parseExpression(Res, E))
+      return ParseStatus::Failure;
+
+    // If we're already a symbol-based expression, just return.
+    // This ends up covering expressions like `. + <offset>`
+    if (Res->getKind() != MCExpr::Constant)
+      break;
+
+    // HAX: Create an absolute symbol with value zero, and add the constant.
+    const MCExpr *Zero = MCConstantExpr::create(0, getContext());
+    MCSymbol *AbsSym = getContext().createTempSymbol();
+    // AbsSym->setVariableValue(Zero);
+    getStreamer().emitAssignment(AbsSym, Zero);
+
+    Res = MCBinaryExpr::createAdd(MCSymbolRefExpr::create(AbsSym, getContext()), Res, getContext());
+    break;
+  }
+  case AsmToken::Percent: {
+    return parseOperandWithSpecifier(Operands);
+  }
+  }
+
+  Operands.push_back(RISCVOperand::createImm(Res, S, E, isRV64()));
+  return ParseStatus::Success;
+}
+
 ParseStatus RISCVAsmParser::parseOperandWithSpecifier(OperandVector &Operands) {
   SMLoc S = getLoc();
   SMLoc E;
@@ -2132,20 +2180,20 @@ ParseStatus RISCVAsmParser::parsePseudoJumpSymbol(OperandVector &Operands) {
 }
 
 ParseStatus RISCVAsmParser::parseJALOffset(OperandVector &Operands) {
-  // Parsing jal operands is fiddly due to the `jal foo` and `jal ra, foo`
-  // both being acceptable forms. When parsing `jal ra, foo` this function
-  // will be called for the `ra` register operand in an attempt to match the
-  // single-operand alias. parseJALOffset must fail for this case. It would
-  // seem logical to try parse the operand using parseImmediate and return
+  // Parsing jal operands is fiddly due to the `jal foo` and `jal ra, foo` both
+  // being acceptable forms. When parsing `jal ra, foo` this function will be
+  // called for the `ra` register operand in an attempt to match the
+  // single-operand alias. parseJALOffset must fail for this case. It would seem
+  // logical to try parse the operand using parseBranchImmediate and return
   // NoMatch if the next token is a comma (meaning we must be parsing a jal in
-  // the second form rather than the first). We can't do this as there's no
-  // way of rewinding the lexer state. Instead, return NoMatch if this operand
-  // is an identifier and is followed by a comma.
+  // the second form rather than the first). We can't do this as there's no way
+  // of rewinding the lexer state. Instead, return NoMatch if this operand is an
+  // identifier and is followed by a comma.
   if (getLexer().is(AsmToken::Identifier) &&
       getLexer().peekTok().is(AsmToken::Comma))
     return ParseStatus::NoMatch;
 
-  return parseImmediate(Operands);
+  return parseBranchOffsetImmediate(Operands);
 }
 
 bool RISCVAsmParser::parseVTypeToken(const AsmToken &Tok, VTypeState &State,

@@ -19,6 +19,7 @@
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 using namespace llvm;
@@ -102,17 +103,32 @@ void RISCVInstPrinter::printBranchOperand(const MCInst *MI, uint64_t Address,
                                           const MCSubtargetInfo &STI,
                                           raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNo);
+
+  if (MO.isExpr()) {
+    // Don't mind me, just need to rifle through some of these expressions to
+    // find out if it is absolute symbol reference to an opaque zero
+    if (const auto *BE = dyn_cast<MCBinaryExpr>(MO.getExpr())) {
+      if (const auto *SRE = dyn_cast<MCSymbolRefExpr>(BE->getLHS())) {
+        if (const auto *SymVal = dyn_cast<MCConstantExpr>(SRE->getSymbol().getVariableValue(/*false*/))) {
+          if (BE->getOpcode() == MCBinaryExpr::Add && SymVal->getValue() == 0) {
+            BE->getRHS()->print(O, &MAI);
+            return;
+          }
+        }
+      }
+    }
+
+    MO.getExpr()->print(O, &MAI);
+  }
+
+
   if (!MO.isImm())
     return printOperand(MI, OpNo, STI, O);
 
-  if (PrintBranchImmAsAddress) {
-    uint64_t Target = Address + MO.getImm();
-    if (!STI.hasFeature(RISCV::Feature64Bit))
-      Target &= 0xffffffff;
-    markup(O, Markup::Target) << formatHex(Target);
-  } else {
-    markup(O, Markup::Target) << formatImm(MO.getImm());
-  }
+  uint64_t Target = Address + MO.getImm();
+  if (!STI.hasFeature(RISCV::Feature64Bit))
+    Target &= 0xffffffff;
+  markup(O, Markup::Target) << formatHex(Target);
 }
 
 void RISCVInstPrinter::printCSRSystemRegister(const MCInst *MI, unsigned OpNo,

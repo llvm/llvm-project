@@ -275,6 +275,29 @@ def simm12 : RISCVSImmLeafOp<12> {
 def simm12_no6 : ImmLeaf<XLenVT, [{
   return isInt<12>(Imm) && !isInt<6>(Imm) && isInt<12>(-Imm);}]>;
 
+
+def BranchOffsetAsmOperand : AsmOperandClass {
+  let Name = "BranchOffset";
+  let RenderMethod = "addImmOperands";
+  let ParserMethod = "parseBranchOffsetImmediate";
+  let DiagnosticType = !strconcat("Invalid", Name);
+  let DiagnosticString = "operand must be an absolute address or an expression";
+}
+
+def branch_offset : Operand<OtherVT> {
+  let ParserMatchClass = BranchOffsetAsmOperand;
+  let PrintMethod = "printBranchOperand";
+  let EncoderMethod = "getImmOpValueAsr1";
+  let DecoderMethod = "decodeSImmOperandAndLsl1<13>";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isShiftedInt<12, 1>(Imm);
+    return MCOp.isBareSymbolRef();
+  }];
+  let OperandType = "OPERAND_PCREL";
+}
+
 // A 13-bit signed immediate where the least significant bit is zero.
 def bare_simm13_lsb0 : Operand<OtherVT> {
   let ParserMatchClass = BareSImmNLsb0AsmOperand<13>;
@@ -532,7 +555,7 @@ include "RISCVInstrFormatsV.td"
 
 class BranchCC_rri<bits<3> funct3, string opcodestr>
     : RVInstB<funct3, OPC_BRANCH, (outs),
-              (ins GPR:$rs1, GPR:$rs2, bare_simm13_lsb0:$imm12),
+              (ins GPR:$rs1, GPR:$rs2, branch_offset:$imm12),
               opcodestr, "$rs1, $rs2, $imm12">,
       Sched<[WriteJmp, ReadJmp, ReadJmp]> {
   let isBranch = 1;
