@@ -292,6 +292,13 @@ def create_parser():
         metavar="platform-working-dir",
         help="The directory to use on the remote platform.",
     )
+    group.add_argument(
+        "--platform-available-ports",
+        dest="lldb_platform_available_ports",
+        nargs="*",
+        metavar="platform-available-ports",
+        help="Ports available for connection to a lldb server on the remote platform",
+    )
 
     # Test-suite behaviour
     group = parser.add_argument_group("Runtime behaviour options")
