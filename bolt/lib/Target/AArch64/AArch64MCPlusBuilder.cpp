@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AArch64InstrInfo.h"
 #include "AArch64MCSymbolizer.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64FixupKinds.h"
@@ -635,7 +636,7 @@ public:
   }
 
   bool isIndirectCall(const MCInst &Inst) const override {
-    return Inst.getOpcode() == AArch64::BLR;
+    return isIndirectCallOpcode(Inst.getOpcode());
   }
 
   MCPhysReg getSpRegister(int Size) const {
