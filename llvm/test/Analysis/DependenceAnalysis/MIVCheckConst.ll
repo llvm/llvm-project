@@ -41,7 +41,7 @@ define void @test(ptr %A, ptr %B, i1 %arg, i32 %n, i32 %m) #0 align 2 {
 ; CHECK-NEXT:  Src: %v27 = load <32 x i32>, ptr %v25, align 256 --> Dst: %v27 = load <32 x i32>, ptr %v25, align 256
 ; CHECK-NEXT:    da analyze - consistent input [0 S S]!
 ; CHECK-NEXT:  Src: %v27 = load <32 x i32>, ptr %v25, align 256 --> Dst: %v32 = load <32 x i32>, ptr %v30, align 128
-; CHECK-NEXT:    da analyze - input [* S S|<]!
+; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %v32 = load <32 x i32>, ptr %v30, align 128 --> Dst: %v32 = load <32 x i32>, ptr %v30, align 128
 ; CHECK-NEXT:    da analyze - consistent input [0 S S]!
 ;
