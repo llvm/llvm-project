@@ -285,16 +285,16 @@ define amdgpu_kernel void @s_log2_v2f32(ptr addrspace(1) %out, <2 x float> %in) 
 ; VI-SDAG-NEXT:    s_and_b64 s[4:5], vcc, exec
 ; VI-SDAG-NEXT:    v_ldexp_f32 v3, s3, v3
 ; VI-SDAG-NEXT:    s_cselect_b32 s3, 32, 0
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
-; VI-SDAG-NEXT:    v_mov_b32_e32 v1, s3
+; VI-SDAG-NEXT:    v_mov_b32_e32 v0, s3
+; VI-SDAG-NEXT:    v_ldexp_f32 v0, s2, v0
 ; VI-SDAG-NEXT:    v_log_f32_e32 v3, v3
-; VI-SDAG-NEXT:    v_ldexp_f32 v1, s2, v1
-; VI-SDAG-NEXT:    v_log_f32_e32 v4, v1
-; VI-SDAG-NEXT:    v_sub_f32_e32 v1, v3, v2
-; VI-SDAG-NEXT:    v_mov_b32_e32 v3, s1
-; VI-SDAG-NEXT:    v_sub_f32_e32 v0, v4, v0
-; VI-SDAG-NEXT:    v_mov_b32_e32 v2, s0
-; VI-SDAG-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
+; VI-SDAG-NEXT:    v_log_f32_e32 v5, v0
+; VI-SDAG-NEXT:    v_cndmask_b32_e32 v4, 0, v1, vcc
+; VI-SDAG-NEXT:    v_mov_b32_e32 v0, s0
+; VI-SDAG-NEXT:    v_mov_b32_e32 v1, s1
+; VI-SDAG-NEXT:    v_sub_f32_e32 v3, v3, v2
+; VI-SDAG-NEXT:    v_sub_f32_e32 v2, v5, v4
+; VI-SDAG-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; VI-SDAG-NEXT:    s_endpgm
 ;
 ; VI-GISEL-LABEL: s_log2_v2f32:
