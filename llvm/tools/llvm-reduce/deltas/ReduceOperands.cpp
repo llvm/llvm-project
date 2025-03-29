@@ -140,8 +140,6 @@ void llvm::reduceOperandsZeroDeltaPass(TestRunner &Test) {
         return nullptr;
       if (TET->hasProperty(TargetExtType::HasZeroInit))
         return ConstantTargetNone::get(TET);
-
-      // TODO: Poison reduction for this case
       return nullptr;
     }
 
@@ -182,4 +180,24 @@ void llvm::reduceOperandsNaNDeltaPass(TestRunner &Test) {
         extractOperandsFromModule(O, Program, ReduceValue);
       },
       "Reducing Operands to NaN");
+}
+
+void llvm::reduceOperandsPoisonDeltaPass(TestRunner &Test) {
+  auto ReduceValue = [](Use &Op) -> Value * {
+    Type *Ty = Op->getType();
+    if (auto *TET = dyn_cast<TargetExtType>(Ty)) {
+      if (isa<ConstantTargetNone, PoisonValue>(Op))
+        return nullptr;
+      return PoisonValue::get(TET);
+    }
+
+    return nullptr;
+  };
+
+  runDeltaPass(
+      Test,
+      [ReduceValue](Oracle &O, ReducerWorkItem &Program) {
+        extractOperandsFromModule(O, Program, ReduceValue);
+      },
+      "Reducing Operands to poison");
 }
