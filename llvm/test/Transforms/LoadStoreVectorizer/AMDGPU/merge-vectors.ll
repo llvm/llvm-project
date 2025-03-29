@@ -151,3 +151,32 @@ entry:
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
+
+; CHECK-LABEL: @merge_i32_2i16_float_4i8(
+; CHECK: load i32
+; CHECK: load <2 x i16>
+; CHECK: load float
+; CHECK: load <4 x i8>
+; CHECK: store i32
+; CHECK: store <2 x i16>
+; CHECK: store float
+; CHECK: store <4 x i8>
+define void @merge_i32_2i16_float_4i8(ptr addrspace(1) %ptr1, ptr addrspace(2) %ptr2) {
+  %gep1 = getelementptr inbounds i32, ptr addrspace(1) %ptr1, i64 0
+  %load1 = load i32, ptr addrspace(1) %gep1, align 4
+  %gep2 = getelementptr inbounds <2 x i16>, ptr addrspace(1) %ptr1, i64 1
+  %load2 = load <2 x i16>, ptr addrspace(1) %gep2, align 4
+  %gep3 = getelementptr inbounds float, ptr addrspace(1) %ptr1, i64 2
+  %load3 = load float, ptr addrspace(1) %gep3, align 4
+  %gep4 = getelementptr inbounds <4 x i8>, ptr addrspace(1) %ptr1, i64 3
+  %load4 = load <4 x i8>, ptr addrspace(1) %gep4, align 4
+  %store.gep1 = getelementptr inbounds i32, ptr addrspace(2) %ptr2, i64 0
+  store i32 %load1, ptr addrspace(2) %store.gep1, align 4
+  %store.gep2 = getelementptr inbounds <2 x i16>, ptr addrspace(2) %ptr2, i64 1
+  store <2 x i16> %load2, ptr addrspace(2) %store.gep2, align 4
+  %store.gep3 = getelementptr inbounds float, ptr addrspace(2) %ptr2, i64 2
+  store float %load3, ptr addrspace(2) %store.gep3, align 4
+  %store.gep4 = getelementptr inbounds <4 x i8>, ptr addrspace(2) %ptr2, i64 3
+  store <4 x i8> %load4, ptr addrspace(2) %store.gep4, align 4
+  ret void
+}
