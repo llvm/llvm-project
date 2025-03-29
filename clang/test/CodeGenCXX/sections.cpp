@@ -102,6 +102,10 @@ __declspec(allocate("short_section")) short short_var = 42;
 struct t2 { t2(); };
 extern const t2 non_trivial_ctor;
 __declspec(allocate("non_trivial_ctor_section")) const t2 non_trivial_ctor_var;
+#pragma section("mysec", shared)
+  int j = 0;
+__declspec(allocate("mysec")) int k = 0;
+extern __declspec(allocate("mysec")) int var = 10;
 }
 
 
@@ -130,6 +134,9 @@ __declspec(allocate("non_trivial_ctor_section")) const t2 non_trivial_ctor_var;
 //CHECK: @long_var = dso_local global i32 42, section "long_section"
 //CHECK: @short_var = dso_local global i16 42, section "short_section"
 //CHECK: @non_trivial_ctor_var = internal global %struct.t2 zeroinitializer, section "non_trivial_ctor_section"
+//CHECK: @j = dso_local global i32 0, section ".data", align 4
+//CHECK: @k = dso_local constant i32 0, section "mysec", align 4
+//CHECK: @var = dso_local constant i32 10, section "mysec", align 4
 //CHECK: define dso_local void @g()
 //CHECK: define dso_local void @h() {{.*}} section ".my_code"
 //CHECK: define dso_local void @h2() {{.*}} section ".my_code"
