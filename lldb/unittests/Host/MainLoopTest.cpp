@@ -273,7 +273,7 @@ TEST_F(MainLoopTest, TimedCallbackShortensSleep) {
   EXPECT_FALSE(long_callback_called);
 }
 
-#ifdef LLVM_ON_UNIX
+#if defined(LLVM_ON_UNIX) && !defined(_AIX)
 TEST_F(MainLoopTest, DetectsEOF) {
 
   PseudoTerminal term;
