@@ -4603,6 +4603,9 @@ static void EmitIfElse(CodeGenFunction *CGF, Expr *Condition,
 void CodeGenFunction::EmitOMPDispatchDirective(const OMPDispatchDirective &S) {
   ArrayRef<OMPClause *> Clauses = S.clauses();
   if (!Clauses.empty()) {
+    if (S.hasClausesOfKind<OMPDependClause>())
+      EmitOMPDispatchToTaskwaitDirective(S);
+
     if (S.hasClausesOfKind<OMPNovariantsClause>() ||
         S.hasClausesOfKind<OMPNocontextClause>()) {
       Expr *Condition = nullptr;
@@ -5642,6 +5645,15 @@ void CodeGenFunction::EmitOMPErrorDirective(const OMPErrorDirective &S) {
 
 void CodeGenFunction::EmitOMPBarrierDirective(const OMPBarrierDirective &S) {
   CGM.getOpenMPRuntime().emitBarrierCall(*this, S.getBeginLoc(), OMPD_barrier);
+}
+
+void CodeGenFunction::EmitOMPDispatchToTaskwaitDirective(
+    const OMPDispatchDirective &S) {
+        OMPTaskDataTy Data;
+	// Build list of dependences
+	buildDependences(S, Data);
+	Data.HasNowaitClause = S.hasClausesOfKind<OMPNowaitClause>();
+	CGM.getOpenMPRuntime().emitTaskwaitCall(*this, S.getBeginLoc(), Data);
 }
 
 void CodeGenFunction::EmitOMPTaskwaitDirective(const OMPTaskwaitDirective &S) {

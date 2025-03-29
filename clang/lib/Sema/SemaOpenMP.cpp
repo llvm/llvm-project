@@ -6062,7 +6062,6 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
   OpenMPBindClauseKind BindKind = OMPC_BIND_unknown;
   llvm::SmallVector<OMPClause *, 8> ClausesWithImplicit;
 
-  StmtResult DispatchDepend2taskwait;
   if (const OMPBindClause *BC =
           OMPExecutableDirective::getSingleClause<OMPBindClause>(Clauses))
     BindKind = BC->getBindKind();
@@ -6075,22 +6074,6 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
               C->getClauseKind());
         })) {
 
-      /* Handle OMPC_depend clauses */
-      if (llvm::any_of(Clauses, [](const OMPClause *C) {
-            return isa<OMPDependClause>(C);
-          })) {
-
-        llvm::SmallVector<OMPClause *, 8> DependClauseVector;
-        llvm::for_each(
-            OMPExecutableDirective::getClausesOfKind<OMPDependClause>(Clauses),
-            [&](const OMPDependClause *Clause) {
-              DependClauseVector.push_back(
-                  const_cast<OMPDependClause *>(Clause));
-            });
-        DispatchDepend2taskwait = ActOnOpenMPExecutableDirective(
-            OMPD_taskwait, DirName, CancelRegion, DependClauseVector, NULL,
-            StartLoc, EndLoc);
-      }
       if (OMPExecutableDirective::getSingleClause<OMPNovariantsClause>(
               Clauses) ||
           OMPExecutableDirective::getSingleClause<OMPNocontextClause>(Clauses))
@@ -6584,14 +6567,6 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
   case OMPD_dispatch:
     Res = ActOnOpenMPDispatchDirective(ClausesWithImplicit, AStmt, StartLoc,
                                        EndLoc);
-    if (DispatchDepend2taskwait.get()) {
-      llvm::SmallVector<Stmt *, 2> CombStmtVector = {
-          DispatchDepend2taskwait.get(), Res.get()};
-      auto *CompoundStmt = CompoundStmt::Create(
-          getASTContext(), CombStmtVector, FPOptionsOverride(),
-          SourceLocation(), SourceLocation());
-      Res = CompoundStmt;
-    }
     break;
   case OMPD_loop:
     Res = ActOnOpenMPGenericLoopDirective(ClausesWithImplicit, AStmt, StartLoc,
