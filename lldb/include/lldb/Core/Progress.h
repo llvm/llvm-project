@@ -115,6 +115,10 @@ public:
   /// Used to indicate a non-deterministic progress report
   static constexpr uint64_t kNonDeterministicTotal = UINT64_MAX;
 
+  /// The default rate limit for high frequency progress reports.
+  static constexpr std::chrono::milliseconds kDefaultRateLimit =
+      std::chrono::milliseconds(20);
+
 private:
   void ReportProgress();
   static std::atomic<uint64_t> g_id;
