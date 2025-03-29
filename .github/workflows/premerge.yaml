@@ -61,8 +61,6 @@ jobs:
           echo "Building runtimes: ${runtimes_to_build}"
           echo "Running runtimes checks targets: ${runtimes_check_targets}"
 
-          echo "testing" >> $GITHUB_STEP_SUMMARY
-
           export CC=/opt/llvm/bin/clang
           export CXX=/opt/llvm/bin/clang++
 

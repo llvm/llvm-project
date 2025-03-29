@@ -16,7 +16,7 @@ if __name__ == "__main__":
     parser.add_argument("junit_files", help="Paths to JUnit report files.", nargs="*")
     args = parser.parse_args()
 
-    report, style = generate_test_report_lib.generate_report_from_files(
+    report, _ = generate_test_report_lib.generate_report_from_files(
         args.title, args.return_code, args.junit_files, None
     )
 
