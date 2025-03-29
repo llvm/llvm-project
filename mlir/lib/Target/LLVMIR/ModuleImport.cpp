@@ -571,7 +571,7 @@ LogicalResult ModuleImport::convertDependentLibrariesMetadata() {
     for (const llvm::MDNode *node : named.operands()) {
       if (node->getNumOperands() == 1)
         if (auto *mdString =
-                llvm::dyn_cast<llvm::MDString>(node->getOperand(0)))
+                dyn_cast<llvm::MDString>(node->getOperand(0)))
           libraries.push_back(mdString->getString());
     }
     if (!libraries.empty())
