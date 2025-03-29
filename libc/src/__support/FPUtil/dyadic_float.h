@@ -104,7 +104,7 @@ template <size_t Bits> struct DyadicFloat {
     normalize();
   }
 
-  LIBC_INLINE constexpr DyadicFloat(Sign s, int e, MantissaType m)
+  LIBC_INLINE constexpr DyadicFloat(Sign s, int e, const MantissaType &m)
       : sign(s), exponent(e), mantissa(m) {
     normalize();
   }
