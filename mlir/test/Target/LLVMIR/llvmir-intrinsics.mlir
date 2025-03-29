@@ -58,6 +58,15 @@ llvm.func @ldexp_test(%arg0: f32, %arg1: vector<8xf32>, %arg2: i32) {
   llvm.return
 }
 
+// CHECK-LABEL: @frexp_test
+llvm.func @frexp_test(%arg0: f32, %arg1: vector<8xf32>) {
+  // CHECK: call { float, i32 } @llvm.frexp.f32.i32(float %{{.*}})
+  llvm.intr.frexp(%arg0) : (f32) -> !llvm.struct<(f32, i32)>
+  // CHECK: call { <8 x float>, i32 } @llvm.frexp.v8f32.i32(<8 x float> %{{.*}})
+  llvm.intr.frexp(%arg1) : (vector<8xf32>) -> !llvm.struct<(vector<8xf32>, i32)>
+  llvm.return
+}
+
 // CHECK-LABEL: @log_test
 llvm.func @log_test(%arg0: f32, %arg1: vector<8xf32>) {
   // CHECK: call float @llvm.log.f32
@@ -1195,6 +1204,14 @@ llvm.func @experimental_constrained_fpext(%s: f32, %v: vector<4xf32>) {
 // CHECK-DAG: declare i1 @llvm.is.fpclass.f32(float, i32 immarg)
 // CHECK-DAG: declare float @llvm.exp.f32(float)
 // CHECK-DAG: declare <8 x float> @llvm.exp.v8f32(<8 x float>) #0
+// CHECK-DAG: declare float @llvm.exp2.f32(float)
+// CHECK-DAG: declare <8 x float> @llvm.exp2.v8f32(<8 x float>)
+// CHECK-DAG: declare float @llvm.exp10.f32(float)
+// CHECK-DAG: declare <8 x float> @llvm.exp10.v8f32(<8 x float>)
+// CHECK-DAG: declare float @llvm.ldexp.f32.i32(float, i32)
+// CHECK-DAG: declare <8 x float> @llvm.ldexp.v8f32.i32(<8 x float>, i32)
+// CHECK-DAG: declare { float, i32 } @llvm.frexp.f32.i32(float)
+// CHECK-DAG: declare { <8 x float>, i32 } @llvm.frexp.v8f32.i32(<8 x float>)
 // CHECK-DAG: declare float @llvm.log.f32(float)
 // CHECK-DAG: declare <8 x float> @llvm.log.v8f32(<8 x float>) #0
 // CHECK-DAG: declare float @llvm.log10.f32(float)
