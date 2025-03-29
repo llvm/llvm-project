@@ -67,6 +67,30 @@ public:
     return create<cir::ConstantOp>(loc, attr.getType(), attr);
   }
 
+  mlir::TypedAttr getConstNullPtrAttr(mlir::Type t) {
+    assert(mlir::isa<cir::PointerType>(t) && "expected cir.ptr");
+    return getConstPtrAttr(t, 0);
+  }
+
+  mlir::TypedAttr getZeroAttr(mlir::Type t) {
+    return cir::ZeroAttr::get(getContext(), t);
+  }
+
+  mlir::TypedAttr getZeroInitAttr(mlir::Type ty) {
+    if (mlir::isa<cir::IntType>(ty))
+      return cir::IntAttr::get(ty, 0);
+    if (cir::isAnyFloatingPointType(ty))
+      return cir::FPAttr::getZero(ty);
+    if (auto arrTy = mlir::dyn_cast<cir::ArrayType>(ty))
+      return getZeroAttr(arrTy);
+    if (auto ptrTy = mlir::dyn_cast<cir::PointerType>(ty))
+      return getConstNullPtrAttr(ptrTy);
+    if (mlir::isa<cir::BoolType>(ty)) {
+      return getCIRBoolAttr(false);
+    }
+    llvm_unreachable("Zero initializer for given type is NYI");
+  }
+
   cir::ConstantOp getBool(bool state, mlir::Location loc) {
     return create<cir::ConstantOp>(loc, getBoolTy(), getCIRBoolAttr(state));
   }
