@@ -570,8 +570,7 @@ LogicalResult ModuleImport::convertDependentLibrariesMetadata() {
     SmallVector<StringRef> libraries;
     for (const llvm::MDNode *node : named.operands()) {
       if (node->getNumOperands() == 1)
-        if (auto *mdString =
-                dyn_cast<llvm::MDString>(node->getOperand(0)))
+        if (auto *mdString = dyn_cast<llvm::MDString>(node->getOperand(0)))
           libraries.push_back(mdString->getString());
     }
     if (!libraries.empty())
