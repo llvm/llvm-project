@@ -2782,6 +2782,40 @@ bool RISCVTTIImpl::canSplatOperand(Instruction *I, int Operand) const {
   }
 }
 
+bool RISCVTTIImpl::tryToSinkVPSplat(VPIntrinsic *VPI,
+                                    SmallVectorImpl<Use *> &Ops) const {
+  Value *EVL = VPI->getVectorLengthParam();
+  if (!EVL)
+    return false;
+
+  for (auto &Op : VPI->operands()) {
+    auto *I = dyn_cast<Instruction>(Op.get());
+    if (!I || I->getParent() == VPI->getParent() ||
+        llvm::is_contained(Ops, &Op))
+      continue;
+
+    // We are looking for a vp.splat that can be sunk.
+    if (!match(I, m_Intrinsic<Intrinsic::experimental_vp_splat>(
+                      m_Value(), m_AllOnes(), m_Specific(EVL))))
+      continue;
+
+    // Don't sink i1 splats.
+    if (I->getType()->getScalarType()->isIntegerTy(1))
+      continue;
+
+    // All uses of the vp.splat should be sunk to avoid duplicating it across
+    // gpr and vector registers
+    if (all_of(I->uses(), [&](Use &U) {
+          auto *VPI = dyn_cast<VPIntrinsic>(U.getUser());
+          return VPI && VPI->getVectorLengthParam() == EVL &&
+                 canSplatOperand(VPI, U.getOperandNo());
+        }))
+      Ops.push_back(&Op);
+  }
+
+  return !Ops.empty();
+}
+
 /// Check if sinking \p I's operands to I's basic block is profitable, because
 /// the operands can be folded into a target instruction, e.g.
 /// splats of scalars can fold into vector instructions.
@@ -2832,6 +2866,9 @@ bool RISCVTTIImpl::isProfitableToSinkOperands(
   // pressure and prevent a vector spill.
   if (!ST->sinkSplatOperands())
     return false;
+
+  if (isa<VPIntrinsic>(I) && tryToSinkVPSplat(cast<VPIntrinsic>(I), Ops))
+    return true;
 
   for (auto OpIdx : enumerate(I->operands())) {
     if (!canSplatOperand(I, OpIdx.index()))
