@@ -14,8 +14,6 @@
 //     size_t operator()(T val) const;
 // };
 
-// Not very portable
-
 #include <vector>
 #include <cassert>
 #include <iterator>
@@ -37,7 +35,9 @@ TEST_CONSTEXPR_CXX20 bool tests() {
     bool ba[] = {true, false, true, true, false};
     T vb(std::begin(ba), std::end(ba));
     H h;
-    assert(h(vb) != 0);
+    if (!TEST_IS_CONSTANT_EVALUATED) {
+      assert(h(vb) == h(vb));
+    }
   }
 #if TEST_STD_VER >= 11
   {
@@ -51,7 +51,9 @@ TEST_CONSTEXPR_CXX20 bool tests() {
     bool ba[] = {true, false, true, true, false};
     T vb(std::begin(ba), std::end(ba));
     H h;
-    assert(h(vb) != 0);
+    if (!TEST_IS_CONSTANT_EVALUATED) {
+      assert(h(vb) == h(vb));
+    }
   }
 #endif
 
