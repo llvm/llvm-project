@@ -1716,6 +1716,9 @@ bool FoldExpandedConstraint::AreCompatibleForSubsumption(
   Sema::collectUnexpandedParameterPacks(const_cast<Expr *>(B.Pattern), BPacks);
 
   for (const UnexpandedParameterPack &APack : APacks) {
+    assert(!(isa<const SubstTemplateTypeParmPackType *,
+                 const SubstNonTypeTemplateParmPackExpr *>(APack.first)) &&
+           "The pattern of CXXFoldExpr contains a Subst* node?");
     std::pair<unsigned, unsigned> DepthAndIndex = getDepthAndIndex(APack);
     auto it = llvm::find_if(BPacks, [&](const UnexpandedParameterPack &BPack) {
       return getDepthAndIndex(BPack) == DepthAndIndex;
