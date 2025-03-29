@@ -141,7 +141,7 @@ void transform::ApplyLowerOuterProductPatternsOp::populatePatterns(
 
 void transform::ApplyLowerGatherPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  vector::populateVectorGatherLoweringPatterns(patterns);
+  vector::populateVectorGatherScatterLoweringPatterns(patterns);
 }
 
 void transform::ApplyLowerScanPatternsOp::populatePatterns(

@@ -244,8 +244,12 @@ void populateVectorStepLoweringPatterns(RewritePatternSet &patterns,
 /// [UnrollGather]
 /// Unrolls 2 or more dimensional `vector.gather` ops by unrolling the
 /// outermost dimension.
-void populateVectorGatherLoweringPatterns(RewritePatternSet &patterns,
-                                          PatternBenefit benefit = 1);
+///
+/// [UnrollScatter]
+/// Unrolls 2 or more dimensional `vector.scatter` ops by unrolling the
+/// outermost dimension.
+void populateVectorGatherScatterLoweringPatterns(RewritePatternSet &patterns,
+                                                 PatternBenefit benefit = 1);
 
 /// Populate the pattern set with the following patterns:
 ///
