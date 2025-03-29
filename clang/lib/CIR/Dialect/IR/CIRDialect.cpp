@@ -539,8 +539,28 @@ Block *cir::BrCondOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
-// ForOp
+// LoopOpInterface Methods
 //===----------------------------------------------------------------------===//
+
+void cir::DoWhileOp::getSuccessorRegions(
+    mlir::RegionBranchPoint point,
+    llvm::SmallVectorImpl<mlir::RegionSuccessor> &regions) {
+  LoopOpInterface::getLoopOpSuccessorRegions(*this, point, regions);
+}
+
+llvm::SmallVector<Region *> cir::DoWhileOp::getLoopRegions() {
+  return {&getBody()};
+}
+
+void cir::WhileOp::getSuccessorRegions(
+    mlir::RegionBranchPoint point,
+    llvm::SmallVectorImpl<mlir::RegionSuccessor> &regions) {
+  LoopOpInterface::getLoopOpSuccessorRegions(*this, point, regions);
+}
+
+llvm::SmallVector<Region *> cir::WhileOp::getLoopRegions() {
+  return {&getBody()};
+}
 
 void cir::ForOp::getSuccessorRegions(
     mlir::RegionBranchPoint point,
