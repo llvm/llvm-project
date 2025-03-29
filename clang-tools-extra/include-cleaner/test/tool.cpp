@@ -6,11 +6,11 @@ int x = foo();
 //      CHANGE: - "foobar.h"
 // CHANGE-NEXT: + "foo.h"
 
-//         RUN: clang-include-cleaner -remove=0 -print=changes %s -- -I%S/Inputs/ | FileCheck --check-prefix=INSERT %s
+//         RUN: clang-include-cleaner -disable-remove -print=changes %s -- -I%S/Inputs/ | FileCheck --check-prefix=INSERT %s
 //  INSERT-NOT: - "foobar.h"
 //      INSERT: + "foo.h"
 
-//         RUN: clang-include-cleaner -insert=0 -print=changes %s -- -I%S/Inputs/ | FileCheck --check-prefix=REMOVE %s
+//         RUN: clang-include-cleaner -disable-insert -print=changes %s -- -I%S/Inputs/ | FileCheck --check-prefix=REMOVE %s
 //      REMOVE: - "foobar.h"
 //  REMOVE-NOT: + "foo.h"
 
