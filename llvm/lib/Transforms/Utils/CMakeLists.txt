@@ -30,6 +30,7 @@ add_llvm_component_library(LLVMTransformUtils
   FunctionComparator.cpp
   FunctionImportUtils.cpp
   GlobalStatus.cpp
+  GuardedLoadHardening.cpp
   GuardUtils.cpp
   HelloWorld.cpp
   InlineFunction.cpp
