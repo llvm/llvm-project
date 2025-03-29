@@ -34,15 +34,14 @@ add_llvm_target(RISCVCodeGen
   RISCVCodeGenPrepare.cpp
   RISCVConstantPoolValue.cpp
   RISCVDeadRegisterDefinitions.cpp
-  RISCVMakeCompressible.cpp
   RISCVExpandAtomicPseudoInsts.cpp
   RISCVExpandPseudoInsts.cpp
   RISCVFoldMemOffset.cpp
   RISCVFrameLowering.cpp
   RISCVGatherScatterLowering.cpp
   RISCVIndirectBranchTracking.cpp
-  RISCVInsertVSETVLI.cpp
   RISCVInsertReadWriteCSR.cpp
+  RISCVInsertVSETVLI.cpp
   RISCVInsertWriteVXRM.cpp
   RISCVInstrInfo.cpp
   RISCVISelDAGToDAG.cpp
@@ -50,12 +49,13 @@ add_llvm_target(RISCVCodeGen
   RISCVLandingPadSetup.cpp
   RISCVLoadStoreOptimizer.cpp
   RISCVMachineFunctionInfo.cpp
+  RISCVMakeCompressible.cpp
   RISCVMergeBaseOffset.cpp
+  RISCVMoveMerger.cpp
   RISCVOptWInstrs.cpp
   RISCVPostRAExpandPseudoInsts.cpp
-  RISCVRedundantCopyElimination.cpp
-  RISCVMoveMerger.cpp
   RISCVPushPopOptimizer.cpp
+  RISCVRedundantCopyElimination.cpp
   RISCVRegisterInfo.cpp
   RISCVSelectionDAGInfo.cpp
   RISCVSubtarget.cpp
