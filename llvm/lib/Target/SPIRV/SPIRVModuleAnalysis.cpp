@@ -893,6 +893,11 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
   } else if (Dec == SPIRV::Decoration::FPMaxErrorDecorationINTEL) {
     Reqs.addRequirements(SPIRV::Capability::FPMaxErrorINTEL);
     Reqs.addExtension(SPIRV::Extension::SPV_INTEL_fp_max_error);
+  } else if (Dec == SPIRV::Decoration::BurstCoalesceINTEL ||
+             Dec == SPIRV::Decoration::CacheSizeINTEL ||
+             Dec == SPIRV::Decoration::DontStaticallyCoalesceINTEL ||
+             Dec == SPIRV::Decoration::PrefetchINTEL) {
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_fpga_memory_accesses);
   }
 }
 
