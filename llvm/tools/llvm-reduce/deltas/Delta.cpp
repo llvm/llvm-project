@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Delta.h"
+#include "DeltaPass.h"
 #include "ReducerWorkItem.h"
 #include "TestRunner.h"
 #include "Utils.h"
@@ -31,7 +32,6 @@
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/WithColor.h"
 #include <fstream>
-#include "DeltaPass.h"
 
 using namespace llvm;
 
@@ -184,7 +184,7 @@ using SharedTaskQueue = std::deque<std::shared_future<SmallString<0>>>;
 void llvm::runDeltaPass(TestRunner &Test, const DeltaPass &Pass) {
   assert(!Test.getProgram().verify(&errs()) &&
          "input module is broken before making changes");
-  errs() << "*** " << Pass.Desc << " ("  << Pass.Name << ')' << "...\n";
+  errs() << "*** " << Pass.Desc << " (" << Pass.Name << ')' << "...\n";
 
   int Targets;
   {
@@ -281,9 +281,8 @@ void llvm::runDeltaPass(TestRunner &Test, const DeltaPass &Pass) {
           Chunk ChunkToCheck = *(I + J);
           TaskQueue.emplace_back(ChunkThreadPool.async(
               ProcessChunkFromSerializedBitcode, ChunkToCheck, std::ref(Test),
-              Pass.Func, UninterestingChunks,
-              ChunksStillConsideredInteresting, OriginalBC,
-              std::ref(AnyReduced)));
+              Pass.Func, UninterestingChunks, ChunksStillConsideredInteresting,
+              OriginalBC, std::ref(AnyReduced)));
         }
 
         // Start processing results of the queued tasks. We wait for the first
@@ -330,10 +329,9 @@ void llvm::runDeltaPass(TestRunner &Test, const DeltaPass &Pass) {
         // Forward I to the last chunk processed in parallel.
         I += NumChunksProcessed - 1;
       } else {
-        Result =
-            CheckChunk(*I, Test.getProgram().clone(Test.getTargetMachine()),
-                       Test, Pass.Func, UninterestingChunks,
-                       ChunksStillConsideredInteresting);
+        Result = CheckChunk(
+            *I, Test.getProgram().clone(Test.getTargetMachine()), Test,
+            Pass.Func, UninterestingChunks, ChunksStillConsideredInteresting);
       }
 
       if (!Result)
