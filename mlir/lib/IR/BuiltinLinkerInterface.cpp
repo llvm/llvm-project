@@ -75,8 +75,8 @@ public:
     return success();
   }
 
-  LogicalResult link(ModuleOp dst) const override {
-    return symbolLinkers.link(dst);
+  LogicalResult link(LinkState &state) const override {
+    return symbolLinkers.link(state);
   }
 
   OwningOpRef<ModuleOp> createCompositeModule(ModuleOp src) override {

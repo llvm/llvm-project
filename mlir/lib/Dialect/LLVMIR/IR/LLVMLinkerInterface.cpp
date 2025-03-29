@@ -11,8 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-
-#include "mlir/Linker/IRMover.h"
 #include "mlir/Linker/LinkerInterface.h"
 
 using namespace mlir;
@@ -167,13 +165,6 @@ public:
 
   StringRef getSymbol(Operation *op) const override { return symbol(op); }
 
-  ConflictPair join(ConflictPair existing, Operation *src) const {
-    assert(!existing.hasConflict() && "expected non-conflicting pair");
-    if (isLocalLinkage(getLinkage(existing.src)))
-      return ConflictPair::noConflict(existing.src);
-    return {existing.src, src};
-  }
-
   ConflictPair findConflict(Operation *src) const override {
     assert(canBeLinked(src) && "expected linkable operation");
 
@@ -181,7 +172,7 @@ public:
       return ConflictPair::noConflict(src);
 
     if (auto it = summary.find(getSymbol(src)); it != summary.end()) {
-      return join(it->second, src);
+      return {it->second, src};
     }
 
     return ConflictPair::noConflict(src);
@@ -325,13 +316,13 @@ public:
       valuesToClone.insert(*linkFromSrc ? pair.dst : pair.src);
 
     if (*linkFromSrc)
-      summary[getSymbol(pair.src)] = pair;
+      summary[getSymbol(pair.src)] = pair.src;
     return success();
   }
 
   void registerForLink(Operation *op) override {
     assert(canBeLinked(op) && "expected linkable operation");
-    summary[getSymbol(op)] = ConflictPair::noConflict(op);
+    summary[getSymbol(op)] = op;
   }
 
   LogicalResult initialize(ModuleOp src) override {
@@ -339,56 +330,18 @@ public:
     return success();
   }
 
-  LogicalResult link(ModuleOp dst) const override {
-    // TODO: Implement
-    // for (Operation *gv : state.getValuesToClone()) {
-    //   llvm_unreachable("unimplemented");
-    // }
-
-    // TODO: Implement
-    // for (unsigned i = 0, i < state.getNumValuesToLink(); ++i) {
-    //   llvm_unreachable("unimplemented");
-    // }
-
-    IRMover mover(dst);
-    return mover.move(summary);
-  }
-
-  Operation *prototype(ConflictPair pair) const {
-    if (pair.dst)
-      return pair.dst;
-    return pair.src->cloneWithoutRegions();
-  }
-
-  Operation *unique(Operation *op, ModuleOp dst) const {
-    SymbolTable table(dst);
-    if (table.lookup(table.getSymbolName(op)))
-      if (failed(table.renameToUnique(op, {})))
-        return nullptr;
-    return op;
-  }
-
-  Operation *materialize(ConflictPair pair, ModuleOp dst) const override {
-    // Make definition if destination does not have one or has only declaration
-    bool forDefinition = !pair.dst || isDeclaration(pair.dst);
-    if (!forDefinition || isDeclaration(pair.src))
-      return prototype(pair);
-
-    // Definition already exists
-    if (pair.dst && !isDeclaration(pair.dst))
-      return pair.dst;
-
-    assert(!isDeclaration(pair.src) && "expected source with body");
-    if (!pair.dst)
-      return unique(pair.src->clone(), dst);
-
-    // TODO might need more things to clone here
-    for (auto [srcRegion, dstRegion] :
-         llvm::zip(pair.src->getRegions(), pair.dst->getRegions())) {
-      dstRegion.takeBody(srcRegion);
+  LogicalResult link(LinkState &state) const override {
+    for (const auto &[symbol, op] : summary) {
+      if (!materialize(op, state)) {
+        return failure();
+      }
     }
 
-    return pair.dst;
+    return success();
+  }
+
+  Operation *materialize(Operation *src, LinkState &state) const override {
+    return state.clone(src);
   }
 
   SmallVector<Operation *> dependencies(Operation *op) const override {
@@ -412,7 +365,7 @@ private:
 
   SetVector<Operation *> valuesToClone;
 
-  llvm::StringMap<ConflictPair> summary;
+  llvm::StringMap<Operation *> summary;
 };
 
 //===----------------------------------------------------------------------===//

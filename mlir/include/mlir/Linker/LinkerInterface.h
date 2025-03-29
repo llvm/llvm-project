@@ -14,11 +14,11 @@
 #ifndef MLIR_LINKER_LINKERINTERFACE_H
 #define MLIR_LINKER_LINKERINTERFACE_H
 
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/DialectInterface.h"
+#include "mlir/IR/IRMapping.h"
 #include "llvm/ADT/DenseMap.h"
-
-#include "mlir/Linker/IRMover.h"
 
 namespace mlir::link {
 
@@ -32,6 +32,27 @@ enum LinkerFlags {
   LinkOnlyNeeded = (1 << 1),
 };
 
+class LinkState {
+public:
+  LinkState(ModuleOp dst) : builder(dst.getBodyRegion()) {}
+
+  Operation *clone(Operation *src);
+  Operation *cloneWithoutRegions(Operation *src);
+
+private:
+  IRMapping mapping;
+  OpBuilder builder;
+};
+
+struct ConflictPair {
+  Operation *dst;
+  Operation *src;
+
+  bool hasConflict() const { return dst; }
+
+  static ConflictPair noConflict(Operation *src) { return {nullptr, src}; }
+};
+
 template <typename ConcreteType>
 class LinkerInterface : public DialectInterface::Base<ConcreteType> {
 public:
@@ -42,7 +63,7 @@ public:
   virtual LogicalResult initialize(ModuleOp src) = 0;
 
   /// TODO comment
-  virtual LogicalResult link(ModuleOp dst) const = 0;
+  virtual LogicalResult link(LinkState &state) const = 0;
 };
 
 //===----------------------------------------------------------------------===//
@@ -86,8 +107,8 @@ public:
   /// Records a non-conflicting operation for linking.
   virtual void registerForLink(Operation *op) = 0;
 
-  /// Link the operations in the source module into the destination module.
-  virtual Operation *materialize(ConflictPair pair, ModuleOp dst) const = 0;
+  /// Materialize new operation for the given conflict pair.
+  virtual Operation *materialize(Operation *src, LinkState &state) const = 0;
 
   /// Dependencies of the given operation required to be linked.
   virtual SmallVector<Operation *> dependencies(Operation *op) const = 0;
@@ -147,9 +168,9 @@ public:
     return success();
   }
 
-  LogicalResult link(ModuleOp dst) const {
+  LogicalResult link(LinkState &state) const {
     for (SymbolLinkerInterface *linker : interfaces) {
-      if (failed(linker->link(dst)))
+      if (failed(linker->link(state)))
         return failure();
     }
     return success();

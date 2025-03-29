@@ -71,7 +71,9 @@ LogicalResult Linker::summarize(ModuleOp src, unsigned flags) {
 
 OwningOpRef<ModuleOp> Linker::link(bool sortSymbols) {
   ModuleOp mod = composite.get();
-  if (failed(getModuleLinkerInterface(mod)->link(mod)))
+  LinkState state(mod);
+
+  if (failed(getModuleLinkerInterface(mod)->link(state)))
     return nullptr;
 
   if (sortSymbols) {
