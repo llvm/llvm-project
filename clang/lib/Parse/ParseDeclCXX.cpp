@@ -3035,10 +3035,13 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
   }
 
   ParsedAttributes DeclSpecAttrs(AttrFactory);
-  MaybeParseMicrosoftAttributes(DeclSpecAttrs);
-
   // Hold late-parsed attributes so we can attach a Decl to them later.
   LateParsedAttrList CommonLateParsedAttrs;
+  while (MaybeParseCXX11Attributes(DeclAttrs) ||
+         MaybeParseGNUAttributes(DeclSpecAttrs, &CommonLateParsedAttrs)) {
+  }
+
+  MaybeParseMicrosoftAttributes(DeclSpecAttrs);
 
   // decl-specifier-seq:
   // Parse the common declaration-specifiers piece.
