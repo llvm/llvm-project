@@ -115,10 +115,6 @@ static void GetObjCImageInfo(Module &M, unsigned &Version, unsigned &Flags,
 //                                  ELF
 //===----------------------------------------------------------------------===//
 
-TargetLoweringObjectFileELF::TargetLoweringObjectFileELF() {
-  SupportDSOLocalEquivalentLowering = true;
-}
-
 void TargetLoweringObjectFileELF::Initialize(MCContext &Ctx,
                                              const TargetMachine &TgtM) {
   TargetLoweringObjectFile::Initialize(Ctx, TgtM);
@@ -1174,9 +1170,37 @@ MCSection *TargetLoweringObjectFileELF::getStaticDtorSection(
                                   KeySym);
 }
 
+const MCExpr *TargetLoweringObjectFileELF::lowerSymbolDifference(
+    const MCSymbol *LHS, const MCSymbol *RHS, int64_t Addend,
+    std::optional<int64_t> PCRelativeOffset) const {
+  auto &Ctx = getContext();
+  const MCExpr *Res;
+  // Return a relocatable expression with the PLT specifier, %plt(GV) or
+  // %plt(GV-RHS).
+  if (PCRelativeOffset && PLTPCRelativeSpecifier) {
+    Res = MCSymbolRefExpr::create(LHS, Ctx);
+    // The current location is RHS plus *PCRelativeOffset. Compensate for it.
+    Addend += *PCRelativeOffset;
+    if (Addend)
+      Res = MCBinaryExpr::createAdd(Res, MCConstantExpr::create(Addend, Ctx),
+                                    Ctx);
+    return createTargetMCExpr(Res, PLTPCRelativeSpecifier);
+  }
+
+  if (!PLTRelativeSpecifier)
+    return nullptr;
+  Res = MCBinaryExpr::createSub(
+      MCSymbolRefExpr::create(LHS, PLTRelativeSpecifier, Ctx),
+      MCSymbolRefExpr::create(RHS, Ctx), Ctx);
+  if (Addend)
+    Res =
+        MCBinaryExpr::createAdd(Res, MCConstantExpr::create(Addend, Ctx), Ctx);
+  return Res;
+}
+
 const MCExpr *TargetLoweringObjectFileELF::lowerRelativeReference(
-    const GlobalValue *LHS, const GlobalValue *RHS,
-    const TargetMachine &TM) const {
+    const GlobalValue *LHS, const GlobalValue *RHS, int64_t Addend,
+    std::optional<int64_t> PCRelativeOffset, const TargetMachine &TM) const {
   // We may only use a PLT-relative relocation to refer to unnamed_addr
   // functions.
   if (!LHS->hasGlobalUnnamedAddr() || !LHS->getValueType()->isFunctionTy())
@@ -1188,24 +1212,22 @@ const MCExpr *TargetLoweringObjectFileELF::lowerRelativeReference(
       RHS->isThreadLocal())
     return nullptr;
 
-  return MCBinaryExpr::createSub(
-      MCSymbolRefExpr::create(TM.getSymbol(LHS), PLTRelativeSpecifier,
-                              getContext()),
-      MCSymbolRefExpr::create(TM.getSymbol(RHS), getContext()), getContext());
+  return lowerSymbolDifference(TM.getSymbol(LHS), TM.getSymbol(RHS), Addend,
+                               PCRelativeOffset);
 }
 
+// Reference the PLT entry of a function, optionally with a subtrahend (`RHS`).
 const MCExpr *TargetLoweringObjectFileELF::lowerDSOLocalEquivalent(
-    const DSOLocalEquivalent *Equiv, const TargetMachine &TM) const {
-  assert(supportDSOLocalEquivalentLowering());
+    const MCSymbol *LHS, const MCSymbol *RHS, int64_t Addend,
+    std::optional<int64_t> PCRelativeOffset, const TargetMachine &TM) const {
+  if (RHS)
+    return lowerSymbolDifference(LHS, RHS, Addend, PCRelativeOffset);
 
-  const auto *GV = Equiv->getGlobalValue();
-
-  // A PLT entry is not needed for dso_local globals.
-  if (GV->isDSOLocal() || GV->isImplicitDSOLocal())
-    return MCSymbolRefExpr::create(TM.getSymbol(GV), getContext());
-
-  return MCSymbolRefExpr::create(TM.getSymbol(GV), PLTRelativeSpecifier,
-                                 getContext());
+  // Only the legacy MCSymbolRefExpr::VariantKind approach is implemented.
+  // Reference LHS@plt or LHS@plt - RHS.
+  if (PLTRelativeSpecifier)
+    return MCSymbolRefExpr::create(LHS, PLTRelativeSpecifier, getContext());
+  return nullptr;
 }
 
 MCSection *TargetLoweringObjectFileELF::getSectionForCommandLines() const {
@@ -2044,8 +2066,8 @@ MCSection *TargetLoweringObjectFileCOFF::getStaticDtorSection(
 }
 
 const MCExpr *TargetLoweringObjectFileCOFF::lowerRelativeReference(
-    const GlobalValue *LHS, const GlobalValue *RHS,
-    const TargetMachine &TM) const {
+    const GlobalValue *LHS, const GlobalValue *RHS, int64_t Addend,
+    std::optional<int64_t> PCRelativeOffset, const TargetMachine &TM) const {
   const Triple &T = TM.getTargetTriple();
   if (T.isOSCygMing())
     return nullptr;
@@ -2069,9 +2091,12 @@ const MCExpr *TargetLoweringObjectFileCOFF::lowerRelativeReference(
       cast<GlobalVariable>(RHS)->hasInitializer() || RHS->hasSection())
     return nullptr;
 
-  return MCSymbolRefExpr::create(TM.getSymbol(LHS),
-                                 MCSymbolRefExpr::VK_COFF_IMGREL32,
-                                 getContext());
+  const MCExpr *Res = MCSymbolRefExpr::create(
+      TM.getSymbol(LHS), MCSymbolRefExpr::VK_COFF_IMGREL32, getContext());
+  if (Addend != 0)
+    Res = MCBinaryExpr::createAdd(
+        Res, MCConstantExpr::create(Addend, getContext()), getContext());
+  return Res;
 }
 
 static std::string APIntToHexString(const APInt &AI) {
