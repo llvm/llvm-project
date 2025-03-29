@@ -11,6 +11,7 @@
 #define _LIBCPP___ALGORITHM_FOR_EACH_N_H
 
 #include <__algorithm/for_each.h>
+#include <__algorithm/for_each_n_segment.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/next.h>
@@ -44,19 +45,15 @@ for_each_n(_InputIterator __first, _Size __orig_n, _Function __f) {
   return __first;
 }
 
-template <class _InputIterator,
+template <class _SegmentedIterator,
           class _Size,
           class _Function,
-          __enable_if_t<__is_segmented_iterator<_InputIterator>::value &&
-                            __has_forward_iterator_category<_InputIterator>::value,
+          __enable_if_t<__is_segmented_iterator<_SegmentedIterator>::value &&
+                            __has_forward_iterator_category<_SegmentedIterator>::value,
                         int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIterator
-for_each_n(_InputIterator __first, _Size __orig_n, _Function __f) {
-  typedef decltype(std::__convert_to_integral(__orig_n)) _IntegralSize;
-  _IntegralSize __n     = __orig_n;
-  _InputIterator __last = std::next(__first, __n);
-  std::__for_each(__first, __last, __f);
-  return __last;
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _SegmentedIterator
+for_each_n(_SegmentedIterator __first, _Size __orig_n, _Function __f) {
+  return std::__for_each_n_segment(__first, __orig_n, std::__do_segment<_SegmentedIterator, _Function>(__f));
 }
 
 #endif
