@@ -94,13 +94,11 @@ func.func @async_depth_2_predicated(%global: memref<?xf32>, %alloc_size: index) 
   %c0f = arith.constant 0.0 : f32
   // CHECK: %[[TOKEN0:.+]] = nvgpu.device_async_copy
   // CHECK: %[[TOKEN1:.+]] = nvgpu.device_async_copy
-  // CHECK: scf.for %[[I:.+]] = {{.*}} iter_args
-  // CHECK-SAME: %[[ITER_ARG0:.+]] = %[[TOKEN0]]
-  // CHECK-SAME: %[[ITER_ARG1:.+]] = %[[TOKEN1]]
+  // CHECK: scf.for %[[I:.+]] = {{.*}}
   scf.for %i = %c0 to %c98 step %c4 {
     // Condition for the predication "select" below.
     // CHECK:   %[[CMP0:.+]] = arith.cmpi slt, %[[I]], %[[C90]]
-    // CHECK:   nvgpu.device_async_wait %[[ITER_ARG0]] {numGroups = 1
+    // CHECK:   nvgpu.device_async_wait <{numGroups = 1 : i32}>
     // Original "select" with updated induction variable.
     // CHECK:   %[[I_PLUS_8:.+]] = arith.addi %[[I]], %[[C8]]
     // CHECK:   %[[CMP1:.+]] = arith.cmpi slt, %[[I_PLUS_8]], %[[C96]]
@@ -122,9 +120,7 @@ func.func @async_depth_2_predicated(%global: memref<?xf32>, %alloc_size: index) 
     %token = nvgpu.device_async_copy %global[%i], %shared[%i], 4, %read_size
       : memref<?xf32> to memref<?xf32, #gpu.address_space<workgroup>>
 
-    nvgpu.device_async_wait %token
-
-    // CHECK: scf.yield %[[ITER_ARG1]], %[[ASYNC_TOKEN]]
+    nvgpu.device_async_wait
   }
   // There is no need to wait for the last copies as it it was fully predicated
   // out and doesn't load the original data.
@@ -156,12 +152,11 @@ func.func @async_depth_2_peeled(%global: memref<?xf32>) {
   // CHECK: nvgpu.device_async_copy
   // CHECK: nvgpu.device_async_copy
   // CHECK: scf.for
-  // CHECK:   nvgpu.device_async_wait %{{.*}} {numGroups = 1
+  // CHECK:   nvgpu.device_async_wait <{numGroups = 1 : i32}>
   // CHECK:   arith.select
   // CHECK:   nvgpu.device_async_copy
-  // CHECK:   scf.yield
-  // CHECK: nvgpu.device_async_wait %{{.*}} {numGroups = 1
-  // CHECK: nvgpu.device_async_wait %{{.*}} {numGroups = 0
+  // CHECK: nvgpu.device_async_wait <{numGroups = 1 : i32}>
+  // CHECK: nvgpu.device_async_wait <{numGroups = 0 : i32}>
   scf.for %i = %c0 to %c98 step %c4 {
     %c96 = arith.constant 96 : index
     %cond = arith.cmpi slt, %i, %c96 : index
@@ -169,7 +164,7 @@ func.func @async_depth_2_peeled(%global: memref<?xf32>) {
     %read_size = arith.select %cond, %c4, %c2 : index
     %token = nvgpu.device_async_copy %global[%i], %shared[%i], 4, %read_size
       : memref<?xf32> to memref<?xf32, #gpu.address_space<workgroup>>
-    nvgpu.device_async_wait %token
+    nvgpu.device_async_wait
   }
   return
 }
