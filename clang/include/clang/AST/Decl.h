@@ -2541,13 +2541,19 @@ public:
   /// This adds support for potentially templated type aware global allocation
   /// functions of the form:
   ///    void *operator new(type-identity, std::size_t, std::align_val_t)
-  ///    void *operator new(type-identity, std::size_t, std::align_val_t, const std::nothrow_t &) noexcept;
+  ///    void *operator new(type-identity, std::size_t, std::align_val_t,
+  ///                       const std::nothrow_t &) noexcept;
   ///    void *operator new[](type-identity, std::size_t, std::align_val_t)
-  ///    void *operator new[](type-identity, std::size_t, std::align_val_t, const std::nothrow_t &) noexcept;
-  ///    void operator delete(type-identity, void*, std::size_t, std::align_val_t) noexcept;
-  ///    void operator delete(type-identity, void*, std::size_t, std::align_val_t, const std::nothrow_t &) noexcept;
-  ///    void operator delete[](type-identity, void*, std::size_t, std::align_val_t) noexcept;
-  ///    void operator delete[](type-identity, void*, std::size_t, std::align_val_t, const std::nothrow_t &) noexcept;
+  ///    void *operator new[](type-identity, std::size_t, std::align_val_t,
+  ///                         const std::nothrow_t &) noexcept;
+  ///    void operator delete(type-identity, void*, std::size_t,
+  ///                         std::align_val_t) noexcept;
+  ///    void operator delete(type-identity, void*, std::size_t,
+  ///                         std::align_val_t, const std::nothrow_t&) noexcept;
+  ///    void operator delete[](type-identity, void*, std::size_t,
+  ///                         std::align_val_t) noexcept;
+  ///    void operator delete[](type-identity, void*, std::size_t,
+  ///                         std::align_val_t, const std::nothrow_t&) noexcept;
   /// Where `type-identity` is a specialization of std::type_identity. If the
   /// declaration is a templated function, it may not include a parameter pack
   /// in the argument list, the type-identity parameter is required to be
@@ -2560,12 +2566,8 @@ public:
   bool isInlineBuiltinDeclaration() const;
 
   /// Determine whether this is a destroying operator delete.
-  bool isDestroyingOperatorDelete() const {
-    return FunctionDeclBits.IsDestroyingOperatorDelete;
-  }
-  void setIsDestroyingOperatorDelete(bool IsDestroyingDelete) {
-    FunctionDeclBits.IsDestroyingOperatorDelete = IsDestroyingDelete;
-  }
+  bool isDestroyingOperatorDelete() const;
+  void setIsDestroyingOperatorDelete(bool IsDestroyingDelete);
 
   /// Count of mandatory parameters for type aware operator new
   static constexpr unsigned RequiredTypeAwareNewParameterCount =
@@ -2577,12 +2579,8 @@ public:
       /* alignment */ 1;
 
   /// Determine whether this is a type aware operator new or delete.
-  bool isTypeAwareOperatorNewOrDelete() const {
-    return FunctionDeclBits.IsTypeAwareOperatorNewOrDelete;
-  }
-  void setIsTypeAwareOperatorNewOrDelete(bool IsTypeAwareOperator = true) {
-    FunctionDeclBits.IsTypeAwareOperatorNewOrDelete = IsTypeAwareOperator;
-  }
+  bool isTypeAwareOperatorNewOrDelete() const;
+  void setIsTypeAwareOperatorNewOrDelete(bool IsTypeAwareOperator = true);
 
   /// Compute the language linkage.
   LanguageLinkage getLanguageLinkage() const;

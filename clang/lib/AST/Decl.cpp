@@ -3083,8 +3083,6 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
       static_cast<unsigned char>(DeductionCandidate::Normal);
   FunctionDeclBits.HasODRHash = false;
   FunctionDeclBits.FriendConstraintRefersToEnclosingTemplate = false;
-  FunctionDeclBits.IsDestroyingOperatorDelete = false;
-  FunctionDeclBits.IsTypeAwareOperatorNewOrDelete = false;
 
   if (TrailingRequiresClause)
     setTrailingRequiresClause(TrailingRequiresClause);
@@ -3511,6 +3509,22 @@ bool FunctionDecl::isInlineBuiltinDeclaration() const {
     return true;
   }
   llvm_unreachable("Unknown GVALinkage");
+}
+
+bool FunctionDecl::isDestroyingOperatorDelete() const {
+  return getASTContext().isDestroyingOperatorDelete(this);
+}
+
+void FunctionDecl::setIsDestroyingOperatorDelete(bool IsDestroyingDelete) {
+  getASTContext().setIsDestroyingOperatorDelete(this, IsDestroyingDelete);
+}
+
+bool FunctionDecl::isTypeAwareOperatorNewOrDelete() const {
+  return getASTContext().isTypeAwareOperatorNewOrDelete(this);
+}
+
+void FunctionDecl::setIsTypeAwareOperatorNewOrDelete(bool IsTypeAware) {
+  getASTContext().setIsTypeAwareOperatorNewOrDelete(this, IsTypeAware);
 }
 
 LanguageLinkage FunctionDecl::getLanguageLinkage() const {

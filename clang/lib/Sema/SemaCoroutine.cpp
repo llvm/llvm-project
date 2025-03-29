@@ -1143,7 +1143,7 @@ static bool findDeleteForPromise(Sema &S, SourceLocation Loc, QualType PromiseTy
   ImplicitDeallocationParameters IDP = {
       alignedAllocationModeFromBool(Overaligned), SizedDeallocationMode::Yes};
   if (S.FindDeallocationFunction(Loc, PointeeRD, DeleteName, OperatorDelete,
-                                 IDP, /*Diagnose*/ true))
+                                 IDP, /*Diagnose=*/true))
     return false;
 
   // [dcl.fct.def.coroutine]p12
@@ -1476,11 +1476,11 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
 
     FunctionDecl *UnusedResult = nullptr;
     S.FindAllocationFunctions(Loc, SourceRange(), NewScope,
-                              /*DeleteScope*/ Sema::AFS_Both, PromiseType,
-                              /*isArray*/ false, IAP,
+                              /*DeleteScope=*/Sema::AFS_Both, PromiseType,
+                              /*isArray=*/false, IAP,
                               WithoutPlacementArgs ? MultiExprArg{}
                                                    : PlacementArgs,
-                              OperatorNew, UnusedResult, /*Diagnose*/ false);
+                              OperatorNew, UnusedResult, /*Diagnose=*/false);
     assert(!OperatorNew || !OperatorNew->isTypeAwareOperatorNewOrDelete());
   };
 

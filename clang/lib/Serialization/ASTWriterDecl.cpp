@@ -736,7 +736,7 @@ void ASTDeclWriter::VisitDeclaratorDecl(DeclaratorDecl *D) {
 }
 
 void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
-  static_assert(DeclContext::NumFunctionDeclBits == 47,
+  static_assert(DeclContext::NumFunctionDeclBits == 45,
                 "You need to update the serializer after you change the "
                 "FunctionDeclBits");
 
@@ -844,18 +844,7 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   FunctionDeclBits.addBit(D->isLateTemplateParsed());
   FunctionDeclBits.addBit(D->isInstantiatedFromMemberTemplate());
   FunctionDeclBits.addBit(D->FriendConstraintRefersToEnclosingTemplate());
-  FunctionDeclBits.addBit(D->isDestroyingOperatorDelete());
-  FunctionDeclBits.addBit(D->isTypeAwareOperatorNewOrDelete());
-
   FunctionDeclBits.addBit(D->usesSEHTry());
-
-  const unsigned ExpectedBitCount =
-      DeclContext::NumFunctionDeclBits - DeclContext::NumDeclContextBits -
-      /* hasODRHash */ 1 -
-      /* DeductionCandidateKind */ 2 - /* UsesFPIntrin */ 1 -
-      /* WillHaveBody */ 1;
-  assert(FunctionDeclBits.currentBitCount() == ExpectedBitCount);
-
   Record.push_back(FunctionDeclBits);
 
   Record.AddSourceLocation(D->getEndLoc());

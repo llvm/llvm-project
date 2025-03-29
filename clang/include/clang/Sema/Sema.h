@@ -4882,6 +4882,7 @@ public:
   CXXRecordDecl *getStdBadAlloc() const;
   EnumDecl *getStdAlignValT() const;
 
+  TypeAwareAllocationMode ShouldUseTypeAwareOperatorNewOrDelete() const;
   bool isTypeAwareOperatorNewOrDelete(const NamedDecl *FnDecl) const;
   FunctionDecl *BuildTypeAwareUsualDelete(FunctionTemplateDecl *FnDecl,
                                           QualType AllocType, SourceLocation);
@@ -4913,7 +4914,13 @@ public:
   /// it is and Element is not NULL, assigns the element type to Element.
   bool isStdInitializerList(QualType Ty, QualType *Element);
 
-  bool isStdTypeIdentity(QualType Ty, QualType *TypeArgument);
+  /// Tests whether Ty is an instance of std::type_identity and, if
+  /// it is and TypeArgument is not NULL, assigns the element type to Element.
+  /// If MalformedDecl is not null, and type_identity was ruled out due to being
+  /// incorrectly structured despite having the correct name, the faulty Decl
+  /// will be assigned to MalformedDecl.
+  bool isStdTypeIdentity(QualType Ty, QualType *TypeArgument,
+                         const Decl **MalformedDecl = nullptr);
 
   /// Looks for the std::initializer_list template and instantiates it
   /// with Element, or emits an error if it's not found.

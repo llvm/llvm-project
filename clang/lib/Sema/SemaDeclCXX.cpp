@@ -9949,11 +9949,11 @@ bool Sema::ShouldDeleteSpecialMember(CXXMethodDecl *MD,
     DeclarationName Name =
       Context.DeclarationNames.getCXXOperatorName(OO_Delete);
     ImplicitDeallocationParameters IDP = {
-        DeallocType, TypeAwareAllocationMode::Yes, AlignedAllocationMode::No,
-        SizedDeallocationMode::No};
+        DeallocType, ShouldUseTypeAwareOperatorNewOrDelete(),
+        AlignedAllocationMode::No, SizedDeallocationMode::No};
     if (FindDeallocationFunction(MD->getLocation(), MD->getParent(), Name,
                                  OperatorDelete, IDP,
-                                 /*Diagnose*/ false)) {
+                                 /*Diagnose=*/false)) {
       if (Diagnose)
         Diag(RD->getLocation(), diag::note_deleted_dtor_no_operator_delete);
       return true;
@@ -12145,9 +12145,10 @@ NamespaceDecl *Sema::getOrCreateStdNamespace() {
   return getStdNamespace();
 }
 
-static bool isStdClassTemplate(Sema &S, QualType Ty, QualType *TypeArg,
+static bool isStdClassTemplate(Sema &S, QualType SugaredType, QualType *TypeArg,
                                const char *ClassName,
-                               ClassTemplateDecl **CachedDecl) {
+                               ClassTemplateDecl **CachedDecl,
+                               const Decl **MalformedDecl) {
   // We're looking for implicit instantiations of
   // template <typename U> class std::{ClassName}.
 
@@ -12155,15 +12156,29 @@ static bool isStdClassTemplate(Sema &S, QualType Ty, QualType *TypeArg,
                        // it.
     return false;
 
+  auto ReportMatchingNameAsMalformed = [&](NamedDecl *D) {
+    if (!MalformedDecl)
+      return;
+    if (!D)
+      D = SugaredType->getAsTagDecl();
+    if (!D || !D->isInStdNamespace())
+      return;
+    IdentifierInfo *II = D->getDeclName().getAsIdentifierInfo();
+    if (II && II == &S.PP.getIdentifierTable().get(ClassName))
+      *MalformedDecl = D;
+  };
+
   ClassTemplateDecl *Template = nullptr;
   const TemplateArgument *Arguments = nullptr;
 
-  Ty = S.Context.getCanonicalType(Ty);
+  QualType Ty = S.Context.getCanonicalType(SugaredType);
   if (const RecordType *RT = Ty->getAs<RecordType>()) {
     ClassTemplateSpecializationDecl *Specialization =
         dyn_cast<ClassTemplateSpecializationDecl>(RT->getDecl());
-    if (!Specialization)
+    if (!Specialization) {
+      ReportMatchingNameAsMalformed(RT->getDecl());
       return false;
+    }
 
     Template = Specialization->getSpecializedTemplate();
     Arguments = Specialization->getTemplateArgs().data();
@@ -12179,8 +12194,10 @@ static bool isStdClassTemplate(Sema &S, QualType Ty, QualType *TypeArg,
       Arguments = TST->template_arguments().begin();
     }
   }
-  if (!Template)
+  if (!Template) {
+    ReportMatchingNameAsMalformed(Ty->getAsTagDecl());
     return false;
+  }
 
   if (!*CachedDecl) {
     // Haven't recognized std::{ClassName} yet, maybe this is it.
@@ -12198,8 +12215,11 @@ static bool isStdClassTemplate(Sema &S, QualType Ty, QualType *TypeArg,
     // template?
     TemplateParameterList *Params = Template->getTemplateParameters();
     if (Params->getMinRequiredArguments() != 1 ||
-        !isa<TemplateTypeParmDecl>(Params->getParam(0)))
+        !isa<TemplateTypeParmDecl>(Params->getParam(0))) {
+      if (MalformedDecl)
+        *MalformedDecl = TemplateClass;
       return false;
+    }
 
     // It's the right template.
     *CachedDecl = Template;
@@ -12223,10 +12243,11 @@ bool Sema::isStdInitializerList(QualType Ty, QualType *Element) {
   // template <typename E> class std::initializer_list.
 
   return isStdClassTemplate(*this, Ty, Element, "initializer_list",
-                            &StdInitializerList);
+                            &StdInitializerList, /*MalformedDecl=*/nullptr);
 }
 
-bool Sema::isStdTypeIdentity(QualType Ty, QualType *Element) {
+bool Sema::isStdTypeIdentity(QualType Ty, QualType *Element,
+                             const Decl **MalformedDecl) {
   assert(getLangOpts().CPlusPlus &&
          "Looking for std::type_identity outside of C++.");
 
@@ -12234,7 +12255,7 @@ bool Sema::isStdTypeIdentity(QualType Ty, QualType *Element) {
   // template <typename T> struct std::type_identity.
 
   return isStdClassTemplate(*this, Ty, Element, "type_identity",
-                            &StdTypeIdentity);
+                            &StdTypeIdentity, MalformedDecl);
 }
 
 static ClassTemplateDecl *LookupStdClassTemplate(Sema &S, SourceLocation Loc,
@@ -12305,7 +12326,7 @@ QualType Sema::BuildStdInitializerList(QualType Element, SourceLocation Loc) {
 QualType Sema::tryBuildStdTypeIdentity(QualType Type, SourceLocation Loc) {
   if (!StdTypeIdentity) {
     StdTypeIdentity = LookupStdClassTemplate(*this, Loc, "type_identity",
-                                             /* WasMalformed */ nullptr);
+                                             /*WasMalformed=*/nullptr);
     if (!StdTypeIdentity)
       return QualType();
   }
@@ -16422,6 +16443,11 @@ bool Sema::CompleteConstructorCall(CXXConstructorDecl *Constructor,
   return Invalid;
 }
 
+TypeAwareAllocationMode Sema::ShouldUseTypeAwareOperatorNewOrDelete() const {
+  bool SeenTypedOperators = Context.hasSeenTypeAwareOperatorNewOrDelete();
+  return typeAwareAllocationModeFromBool(SeenTypedOperators);
+}
+
 bool Sema::isTypeAwareOperatorNewOrDelete(const NamedDecl *ND) const {
   const FunctionDecl *FnDecl = nullptr;
   if (auto *FTD = dyn_cast<FunctionTemplateDecl>(ND))
@@ -16518,10 +16544,23 @@ static CanQualType RemoveAddressSpaceFromPtr(Sema &SemaRef,
 enum class AllocationOperatorKind { New, Delete };
 
 static bool IsPotentiallyTypeAwareOperatorNewOrDelete(Sema &SemaRef,
-                                                      const FunctionDecl *FD) {
-  return FD->getNumParams() > 0 &&
-         SemaRef.isStdTypeIdentity(FD->getParamDecl(0)->getType(),
-                                   /* TypeArgument= */ nullptr);
+                                                      const FunctionDecl *FD,
+                                                      bool *WasMalformed) {
+  const Decl *MalformedDecl = nullptr;
+  if (FD->getNumParams() > 0 &&
+      SemaRef.isStdTypeIdentity(FD->getParamDecl(0)->getType(),
+                                /*TypeArgument=*/nullptr, &MalformedDecl))
+    return true;
+
+  if (!MalformedDecl)
+    return false;
+
+  if (WasMalformed)
+    *WasMalformed = true;
+
+  // SemaRef.Diag(MalformedDecl->getLocation(),
+  // diag::err_malformed_std_class_template) << "type_identity";
+  return true;
 }
 
 static bool IsPotentiallyDestroyingOperatorDelete(Sema &SemaRef,
@@ -16530,8 +16569,8 @@ static bool IsPotentiallyDestroyingOperatorDelete(Sema &SemaRef,
   //   Within a class C, a single object deallocation function with signature
   //     (T, std::destroying_delete_t, <more params>)
   //   is a destroying operator delete.
-  bool IsPotentiallyTypeAware =
-      IsPotentiallyTypeAwareOperatorNewOrDelete(SemaRef, FD);
+  bool IsPotentiallyTypeAware = IsPotentiallyTypeAwareOperatorNewOrDelete(
+      SemaRef, FD, /*WasMalformed=*/nullptr);
   unsigned DestroyingDeleteIdx = IsPotentiallyTypeAware + /* address */ 1;
   return isa<CXXMethodDecl>(FD) && FD->getOverloadedOperator() == OO_Delete &&
          FD->getNumParams() > DestroyingDeleteIdx &&
@@ -16556,8 +16595,9 @@ static inline bool CheckOperatorNewDeleteTypes(
 
   const unsigned NumParams = FnDecl->getNumParams();
   unsigned FirstNonTypeParam = 0;
-  bool IsPotentiallyTypeAware =
-      IsPotentiallyTypeAwareOperatorNewOrDelete(SemaRef, FnDecl);
+  bool MalformedTypeIdentity = false;
+  bool IsPotentiallyTypeAware = IsPotentiallyTypeAwareOperatorNewOrDelete(
+      SemaRef, FnDecl, &MalformedTypeIdentity);
   unsigned MinimumMandatoryArgumentCount = 1;
   unsigned SizeParameterIndex = 0;
   if (IsPotentiallyTypeAware) {
@@ -16668,7 +16708,7 @@ static inline bool CheckOperatorNewDeleteTypes(
     return true;
 
   FnDecl->setIsTypeAwareOperatorNewOrDelete();
-  return false;
+  return MalformedTypeIdentity;
 }
 
 static bool CheckOperatorNewDeclaration(Sema &SemaRef, FunctionDecl *FnDecl) {
@@ -16713,7 +16753,8 @@ CheckOperatorDeleteDeclaration(Sema &SemaRef, FunctionDecl *FnDecl) {
   // any parameter of type destroying_delete_t as an erroneous attempt
   // to declare a type aware destroying delete, rather than emitting a
   // pile of incorrect parameter type errors.
-  if (MD && IsPotentiallyTypeAwareOperatorNewOrDelete(SemaRef, MD)) {
+  if (MD && IsPotentiallyTypeAwareOperatorNewOrDelete(
+                SemaRef, MD, /*WasMalformed=*/nullptr)) {
     QualType AddressParamType =
         SemaRef.Context.getCanonicalType(MD->getParamDecl(1)->getType());
     if (AddressParamType != SemaRef.Context.VoidPtrTy &&

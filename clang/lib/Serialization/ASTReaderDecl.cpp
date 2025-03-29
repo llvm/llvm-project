@@ -1070,8 +1070,6 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
   FD->setInstantiatedFromMemberTemplate(FunctionDeclBits.getNextBit());
   FD->setFriendConstraintRefersToEnclosingTemplate(
       FunctionDeclBits.getNextBit());
-  FD->setIsDestroyingOperatorDelete(FunctionDeclBits.getNextBit());
-  FD->setIsTypeAwareOperatorNewOrDelete(FunctionDeclBits.getNextBit());
   FD->setUsesSEHTry(FunctionDeclBits.getNextBit());
 
   FD->EndRangeLoc = readSourceLocation();
