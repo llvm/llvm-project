@@ -95,10 +95,10 @@ entry:
   ret void
 }
 
-; Ideally this would be merged
 ; CHECK-LABEL: @merge_load_i32_v2i16(
-; CHECK: load i32,
-; CHECK: load <2 x i16>
+; CHECK: load <2 x i32>
+; CHECK: extractelement <2 x i32> %0, i32 0
+; CHECK: extractelement <2 x i32> %0, i32 1
 define amdgpu_kernel void @merge_load_i32_v2i16(ptr addrspace(1) nocapture %a) #0 {
 entry:
   %a.1 = getelementptr inbounds i32, ptr addrspace(1) %a, i32 1
@@ -113,14 +113,9 @@ attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 
 ; CHECK-LABEL: @merge_i32_2i16_float_4i8(
-; CHECK: load i32
-; CHECK: load <2 x i16>
-; CHECK: load float
-; CHECK: load <4 x i8>
-; CHECK: store i32
-; CHECK: store <2 x i16>
-; CHECK: store float
-; CHECK: store <4 x i8>
+; CHECK: load <4 x i32>
+; CHECK: store <2 x i32>
+; CHECK: store <2 x i32>
 define void @merge_i32_2i16_float_4i8(ptr addrspace(1) %ptr1, ptr addrspace(2) %ptr2) {
   %gep1 = getelementptr inbounds i32, ptr addrspace(1) %ptr1, i64 0
   %load1 = load i32, ptr addrspace(1) %gep1, align 4
