@@ -4143,6 +4143,7 @@ Sema::IsStringLiteralToNonConstPointerConversion(Expr *From, QualType ToType) {
             // We don't allow UTF literals to be implicitly converted
             break;
           case StringLiteralKind::Ordinary:
+          case StringLiteralKind::Binary:
             return (ToPointeeType->getKind() == BuiltinType::Char_U ||
                     ToPointeeType->getKind() == BuiltinType::Char_S);
           case StringLiteralKind::Wide:
