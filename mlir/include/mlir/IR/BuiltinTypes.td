@@ -40,6 +40,11 @@ def ValueSemantics : NativeTypeTrait<"ValueSemantics"> {
   let cppNamespace = "::mlir";
 }
 
+/// Type trait indicating that the type is a pointer-like type.
+def PointerLike : NativeTypeTrait<"PointerLike"> {
+  let cppNamespace = "::mlir";
+}
+
 //===----------------------------------------------------------------------===//
 // ComplexType
 //===----------------------------------------------------------------------===//
@@ -1249,7 +1254,12 @@ def Builtin_UnrankedTensor : Builtin_Type<"UnrankedTensor", "unranked_tensor", [
 // VectorType
 //===----------------------------------------------------------------------===//
 
-def Builtin_VectorTypeElementType : AnyTypeOf<[AnyInteger, Index, AnyFloat]> {
+// Note: VectorType supports pointer-like types as element types. Examples for
+// pointer-like types are !llvm.ptr and !ptr.ptr. This makes the MLIR vector
+// type design symmetric to the LLVM vector type. That's desirable because the
+// MLIR vector type is used in the LLVM dialect.
+def Builtin_VectorTypeElementType
+    : AnyTypeOf<[AnyInteger, Index, AnyFloat, AnyPointerLike]> {
   let cppFunctionName = "isValidVectorTypeElementType";
 }
 

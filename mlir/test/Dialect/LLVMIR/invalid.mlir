@@ -1337,16 +1337,16 @@ func.func @invalid_bitcast_i64_to_ptr() {
 
 // -----
 
-func.func @invalid_bitcast_vec_to_ptr(%arg : !llvm.vec<4 x ptr>) {
+func.func @invalid_bitcast_vec_to_ptr(%arg : vector<4x!llvm.ptr>) {
   // expected-error@+1 {{cannot cast vector of pointers to pointer}}
-  %0 = llvm.bitcast %arg : !llvm.vec<4 x ptr> to !llvm.ptr
+  %0 = llvm.bitcast %arg : vector<4x!llvm.ptr> to !llvm.ptr
 }
 
 // -----
 
 func.func @invalid_bitcast_ptr_to_vec(%arg : !llvm.ptr) {
   // expected-error@+1 {{cannot cast pointer to vector of pointers}}
-  %0 = llvm.bitcast %arg : !llvm.ptr to !llvm.vec<4 x ptr>
+  %0 = llvm.bitcast %arg : !llvm.ptr to vector<4x!llvm.ptr>
 }
 
 // -----
@@ -1358,9 +1358,9 @@ func.func @invalid_bitcast_addr_cast(%arg : !llvm.ptr<1>) {
 
 // -----
 
-func.func @invalid_bitcast_addr_cast_vec(%arg : !llvm.vec<4 x ptr<1>>) {
+func.func @invalid_bitcast_addr_cast_vec(%arg : vector<4x!llvm.ptr<1>>) {
   // expected-error@+1 {{cannot cast pointers of different address spaces, use 'llvm.addrspacecast' instead}}
-  %0 = llvm.bitcast %arg : !llvm.vec<4 x ptr<1>> to !llvm.vec<4 x ptr>
+  %0 = llvm.bitcast %arg : vector<4x!llvm.ptr<1>> to vector<4x!llvm.ptr>
 }
 
 // -----
