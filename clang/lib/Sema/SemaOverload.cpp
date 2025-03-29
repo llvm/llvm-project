@@ -8514,13 +8514,6 @@ void Sema::AddNonMemberOperatorCandidates(
     NamedDecl *D = F.getDecl()->getUnderlyingDecl();
     ArrayRef<Expr *> FunctionArgs = Args;
 
-    auto ReversedArgs = [&, Arr = ArrayRef<Expr *>{}]() mutable {
-      if (Arr.empty())
-        Arr = CandidateSet.getPersistentArgsArray(FunctionArgs[1],
-                                                  FunctionArgs[0]);
-      return Arr;
-    };
-
     FunctionTemplateDecl *FunTmpl = dyn_cast<FunctionTemplateDecl>(D);
     FunctionDecl *FD =
         FunTmpl ? FunTmpl->getTemplatedDecl() : cast<FunctionDecl>(D);
@@ -8536,8 +8529,10 @@ void Sema::AddNonMemberOperatorCandidates(
       AddTemplateOverloadCandidate(FunTmpl, F.getPair(), ExplicitTemplateArgs,
                                    FunctionArgs, CandidateSet);
       if (CandidateSet.getRewriteInfo().shouldAddReversed(*this, Args, FD)) {
+        ArrayRef<Expr *> Reversed = CandidateSet.getPersistentArgsArray(FunctionArgs[1],
+                                                                        FunctionArgs[0]);
         AddTemplateOverloadCandidate(FunTmpl, F.getPair(), ExplicitTemplateArgs,
-                                     ReversedArgs(), CandidateSet, false, false,
+                                     Reversed, CandidateSet, false, false,
                                      true, ADLCallKind::NotADL,
                                      OverloadCandidateParamOrder::Reversed);
       }
@@ -8546,7 +8541,8 @@ void Sema::AddNonMemberOperatorCandidates(
         continue;
       AddOverloadCandidate(FD, F.getPair(), FunctionArgs, CandidateSet);
       if (CandidateSet.getRewriteInfo().shouldAddReversed(*this, Args, FD))
-        AddOverloadCandidate(FD, F.getPair(), ReversedArgs(), CandidateSet,
+        AddOverloadCandidate(FD, F.getPair(), {FunctionArgs[1],
+                                               FunctionArgs[0]}, CandidateSet,
                              false, false, true, false, ADLCallKind::NotADL, {},
                              OverloadCandidateParamOrder::Reversed);
     }
