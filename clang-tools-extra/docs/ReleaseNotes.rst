@@ -159,7 +159,9 @@ Changes in existing checks
 
 - Improved :doc:`misc-use-internal-linkage
   <clang-tidy/checks/misc/use-internal-linkage>` check by fix false positives
-  for function or variable in header file which contains macro expansion.
+  for function or variable in header file which contains macro expansion and
+  excluding variables with ``thread_local`` storage class specifier from being
+  matched.
 
 - Improved :doc:`modernize-use-default-member-init
   <clang-tidy/checks/modernize/use-default-member-init>` check by matching
