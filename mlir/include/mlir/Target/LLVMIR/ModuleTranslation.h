@@ -363,6 +363,9 @@ private:
   /// Process the llvm.commandline LLVM Metadata, if it exists.
   LogicalResult createCommandlineMetadata();
 
+  /// Process the llvm.dependent_libraries LLVM Metadata, if it exists.
+  LogicalResult createDependentLibrariesMetadata();
+
   /// Translates dialect attributes attached to the given operation.
   LogicalResult
   convertDialectAttributes(Operation *op,
