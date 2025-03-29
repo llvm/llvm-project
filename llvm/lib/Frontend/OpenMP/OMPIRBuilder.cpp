@@ -4864,7 +4864,7 @@ static void redirectAllPredecessorsTo(BasicBlock *OldTarget,
 /// Determine which blocks in \p BBs are reachable from outside and remove the
 /// ones that are not reachable from the function.
 static void removeUnusedBlocksFromParent(ArrayRef<BasicBlock *> BBs) {
-  SmallPtrSet<BasicBlock *, 6> BBsToErase{BBs.begin(), BBs.end()};
+  SmallPtrSet<BasicBlock *, 6> BBsToErase(llvm::from_range, BBs);
   auto HasRemainingUses = [&BBsToErase](BasicBlock *BB) {
     for (Use &U : BB->uses()) {
       auto *UseInst = dyn_cast<Instruction>(U.getUser());

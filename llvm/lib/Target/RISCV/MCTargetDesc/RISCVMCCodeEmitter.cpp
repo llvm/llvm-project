@@ -103,6 +103,10 @@ public:
   unsigned getRlistOpValue(const MCInst &MI, unsigned OpNo,
                            SmallVectorImpl<MCFixup> &Fixups,
                            const MCSubtargetInfo &STI) const;
+
+  unsigned getRlistS0OpValue(const MCInst &MI, unsigned OpNo,
+                             SmallVectorImpl<MCFixup> &Fixups,
+                             const MCSubtargetInfo &STI) const;
 };
 } // end anonymous namespace
 
@@ -614,6 +618,17 @@ unsigned RISCVMCCodeEmitter::getRlistOpValue(const MCInst &MI, unsigned OpNo,
   assert(MO.isImm() && "Rlist operand must be immediate");
   auto Imm = MO.getImm();
   assert(Imm >= 4 && "EABI is currently not implemented");
+  return Imm;
+}
+unsigned
+RISCVMCCodeEmitter::getRlistS0OpValue(const MCInst &MI, unsigned OpNo,
+                                      SmallVectorImpl<MCFixup> &Fixups,
+                                      const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  assert(MO.isImm() && "Rlist operand must be immediate");
+  auto Imm = MO.getImm();
+  assert(Imm >= 4 && "EABI is currently not implemented");
+  assert(Imm != RISCVZC::RA && "Rlist operand must include s0");
   return Imm;
 }
 

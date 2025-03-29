@@ -141,6 +141,13 @@ C2y Feature Support
   paper also introduced octal and hexadecimal delimited escape sequences (e.g.,
   ``"\x{12}\o{12}"``) which are also supported as an extension in older C
   language modes.
+- Implemented `WG14 N3369 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3369.pdf>`_
+  which introduces the ``_Lengthof`` operator, and `WG14 N3469 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3469.htm>`_
+  which renamed ``_Lengthof`` to ``_Countof``. This feature is implemented as
+  a conforming extension in earlier C language modes, but not in C++ language
+  modes (``std::extent`` and ``std::size`` already provide the same
+  functionality but with more granularity). The feature can be tested via
+  ``__has_feature(c_countof)`` or ``__has_extension(c_countof)``.
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -316,6 +323,7 @@ Bug Fixes in This Version
 - Fixed a modules crash where exception specifications were not propagated properly (#GH121245, relanded in #GH129982)
 - Fixed a problematic case with recursive deserialization within ``FinishedDeserializing()`` where
   ``PassInterestingDeclsToConsumer()`` was called before the declarations were safe to be passed. (#GH129982)
+- Fixed a modules crash where an explicit Constructor was deserialized. (#GH132794)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -359,10 +367,12 @@ Bug Fixes to C++ Support
 - Fixed C++20 aggregate initialization rules being incorrectly applied in certain contexts. (#GH131320)
 - Clang was previously coalescing volatile writes to members of volatile base class subobjects.
   The issue has been addressed by propagating qualifiers during derived-to-base conversions in the AST. (#GH127824)
+- Correctly propagates the instantiated array type to the ``DeclRefExpr`` that refers to it. (#GH79750), (#GH113936), (#GH133047)
 - Fixed a Clang regression in C++20 mode where unresolved dependent call expressions were created inside non-dependent contexts (#GH122892)
 - Clang now emits the ``-Wunused-variable`` warning when some structured bindings are unused
   and the ``[[maybe_unused]]`` attribute is not applied. (#GH125810)
-- Clang now issues an error when placement new is used to modify a const-qualified variable 
+- Clang no longer crashes when establishing subsumption between some constraint expressions. (#GH122581)
+- Clang now issues an error when placement new is used to modify a const-qualified variable
   in a ``constexpr`` function. (#GH131432)
 
 Bug Fixes to AST Handling
@@ -378,6 +388,8 @@ Miscellaneous Bug Fixes
 
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fixed crash when ``-print-stats`` is enabled in compiling IR files. (#GH131608)
 
 OpenACC Specific Changes
 ------------------------

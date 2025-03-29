@@ -14,8 +14,7 @@ l:
 # CHECK-NEXT: }
 .data
 .word %pltpcrel(l)
-.word %pltpcrel(extern + 4)
-.word %pltpcrel(g + 8)
+.word %pltpcrel(extern + 4), %pltpcrel(g + 8)
 
 # CHECK:      Section ({{.*}}) .rela.data1 {
 # CHECK-NEXT:   0x0 R_RISCV_GOT32_PCREL data1 0x0
@@ -26,8 +25,7 @@ l:
 .section .data1,"aw"
 data1:
 .word %gotpcrel(data1)
-.word %gotpcrel(extern+4)
-.word %gotpcrel(extern-5)
+.word %gotpcrel(extern+4), %gotpcrel(extern-5)
 
 .ifdef ERR
 # ERR: [[#@LINE+1]]:7: error: %pltpcrel can only be used in a .word directive
