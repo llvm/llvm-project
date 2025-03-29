@@ -111,6 +111,8 @@ static void replaceFunctionCalls(Function *OldF, Function *NewF) {
     if (auto *FPOp = dyn_cast<FPMathOperator>(NewCI))
       NewCI->setFastMathFlags(CI->getFastMathFlags());
 
+    NewCI->copyMetadata(*CI);
+
     // Do the replacement for this use.
     if (!CI->use_empty())
       CI->replaceAllUsesWith(NewCI);
