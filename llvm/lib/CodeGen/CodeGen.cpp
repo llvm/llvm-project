@@ -101,7 +101,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeMachineVerifierLegacyPassPass(Registry);
   initializeObjCARCContractLegacyPassPass(Registry);
   initializeOptimizePHIsLegacyPass(Registry);
-  initializePEIPass(Registry);
+  initializePEILegacyPass(Registry);
   initializePHIEliminationPass(Registry);
   initializePatchableFunctionLegacyPass(Registry);
   initializePeepholeOptimizerLegacyPass(Registry);
