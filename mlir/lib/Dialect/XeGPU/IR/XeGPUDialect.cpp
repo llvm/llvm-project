@@ -396,6 +396,13 @@ FailureOr<VectorType> TensorDescType::getDistributedVectorType() {
                          getElementType());
 }
 
+TensorDescType TensorDescType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
+                                         Type elementType) const {
+  return TensorDescType::get(shape.value_or(this->getShape()), elementType,
+                             this->getArrayLength(), this->getBoundaryCheck(),
+                             this->getMemorySpace(), this->getSgMap());
+}
+
 } // namespace xegpu
 } // namespace mlir
 

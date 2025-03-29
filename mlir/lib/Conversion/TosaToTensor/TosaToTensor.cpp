@@ -41,7 +41,7 @@ TensorType inferReshapeInputType(TypedValue<TensorType> input,
   // 0D tensor. While such construct is not incorrect on its own, bufferization
   // cannot properly handle it at the moment, so we avoid it.
   SmallVector<int64_t> shape(input.getType().getRank(), 1);
-  return input.getType().clone(shape);
+  return mlir::cast<TensorType>(input.getType().clone(shape));
 }
 
 // Infer the result type of 'tensor.expand_shape' in the collapse-expand
@@ -51,7 +51,7 @@ TensorType inferReshapeExpandedType(TensorType inputType,
   // Special case for 0D output tensor. Note: Watch out when using Type::clone()
   // with just '{}', as it will invoke the incorrect overload.
   if (newShape.empty())
-    return inputType.clone(ArrayRef<int64_t>{});
+    return mlir::cast<TensorType>(inputType.clone(ArrayRef<int64_t>{}));
 
   // Check if the input is static, and if so, get its total size
   bool inputIsStatic = inputType.hasStaticShape();
@@ -98,7 +98,7 @@ TensorType inferReshapeExpandedType(TensorType inputType,
   assert(!inputIsStatic || resultIsStatic);
 
   // Create result type
-  return inputType.clone(resultShape);
+  return mlir::cast<TensorType>(inputType.clone(resultShape));
 }
 
 // Infer the result type of 'tensor.collapse_shape' in the collapse-expand
@@ -108,11 +108,11 @@ TensorType inferReshapeCollapsedType(TensorType lhsType, TensorType rhsType) {
   auto rhsShape = rhsType.getShape();
 
   if (lhsShape.empty() || rhsShape.empty())
-    return lhsType.clone(ArrayRef<int64_t>{});
+    return mlir::cast<TensorType>(lhsType.clone(ArrayRef<int64_t>{}));
 
   if (ShapedType::isDynamicShape(lhsShape) ||
       ShapedType::isDynamicShape(rhsShape))
-    return lhsType.clone({ShapedType::kDynamic});
+    return mlir::cast<TensorType>(lhsType.clone({ShapedType::kDynamic}));
 
   SmallVector<int64_t> intermediateShape;
   unsigned currLhsDim = 0, currRhsDim = 0;
@@ -149,7 +149,7 @@ TensorType inferReshapeCollapsedType(TensorType lhsType, TensorType rhsType) {
     assert(rhsShape[currRhsDim] == 1);
   }
 
-  return lhsType.clone(intermediateShape);
+  return mlir::cast<TensorType>(lhsType.clone(intermediateShape));
 }
 
 SmallVector<ReassociationExprs>
