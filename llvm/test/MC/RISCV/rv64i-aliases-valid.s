@@ -484,7 +484,7 @@ sext.b x10, x11
 sext.h x10, x11
 
 # CHECK-INST: andi a0, a1, 255
-# CHECK-ALIAS: andi a0, a1, 255
+# CHECK-ALIAS: zext.b a0, a1
 zext.b x10, x11
 
 # CHECK-EXPAND: slli a0, a1, 48

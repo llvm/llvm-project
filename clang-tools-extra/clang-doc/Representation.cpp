@@ -367,10 +367,10 @@ void Index::sort() {
 ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
                                  StringRef ProjectName, bool PublicOnly,
                                  StringRef OutDirectory, StringRef SourceRoot,
-                                 StringRef RepositoryUrl,
+                                 StringRef RepositoryUrl, StringRef Base,
                                  std::vector<std::string> UserStylesheets)
     : ECtx(ECtx), ProjectName(ProjectName), PublicOnly(PublicOnly),
-      OutDirectory(OutDirectory), UserStylesheets(UserStylesheets) {
+      OutDirectory(OutDirectory), UserStylesheets(UserStylesheets), Base(Base) {
   llvm::SmallString<128> SourceRootDir(SourceRoot);
   if (SourceRoot.empty())
     // If no SourceRoot was provided the current path is used as the default
