@@ -2472,7 +2472,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
                                              unsigned VectorRegWidth) {
   using namespace llvm::VPlanPatternMatch;
   VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
-  if (VF.isScalable() || !VectorLoop || Plan.getUF() != 1)
+  if (VF.isScalable() || !VectorLoop)
     return;
 
   VPCanonicalIVPHIRecipe *CanonicalIV = Plan.getCanonicalIV();
@@ -2599,5 +2599,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
   auto *Inc = cast<VPInstruction>(CanIV->getBackedgeValue());
   Inc->setOperand(1, Plan.getOrAddLiveIn(ConstantInt::get(
                          CanIV->getScalarType(), 1 * Plan.getUF())));
+  Plan.getVF().replaceAllUsesWith(
+      Plan.getOrAddLiveIn(ConstantInt::get(CanIV->getScalarType(), 1)));
   removeDeadRecipes(Plan);
 }
