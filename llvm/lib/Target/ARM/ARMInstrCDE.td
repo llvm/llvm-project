@@ -52,7 +52,7 @@ def imm_13b : BitWidthImm<13>;
 class CDE_Instr<bit acc, dag oops, dag iops, string asm, string cstr>
   : Thumb2XI<oops, !con((ins p_imm:$coproc), iops),
              AddrModeNone, /*sz=*/4, NoItinerary,
-             asm, cstr, /*pattern=*/[]>,
+             asm, cstr, pattern = []>,
     Sched<[]> {
   bits<3> coproc;
 

@@ -767,7 +767,7 @@ def VOP_SWAP_I16 : VOPProfile_True16<VOP_I16_I16> {
 }
 
 let SubtargetPredicate = isGFX11Plus in {
-  def V_SWAP_B16 : VOP1_Pseudo<"v_swap_b16", VOP_SWAP_I16, [], /* VOP1Only= */true> {
+  def V_SWAP_B16 : VOP1_Pseudo<"v_swap_b16", VOP_SWAP_I16, [], VOP1Only = true> {
     let Constraints = "$vdst = $src1, $vdst1 = $src0";
     let DisableEncoding = "$vdst1, $src1";
     let SchedRW = [Write64Bit, Write64Bit];
@@ -775,7 +775,7 @@ let SubtargetPredicate = isGFX11Plus in {
   }
   // Restrict src0 to be VGPR
   def V_PERMLANE64_B32 : VOP1_Pseudo<"v_permlane64_b32", VOP_MOVRELS,
-                                      [], /*VOP1Only=*/ 1>;
+                                      [], VOP1Only = 1>;
   defm V_MOV_B16        : VOP1Inst_t16<"v_mov_b16", VOP_I16_I16>;
   defm V_NOT_B16        : VOP1Inst_t16<"v_not_b16", VOP_I16_I16>;
   defm V_CVT_I32_I16    : VOP1Inst_t16<"v_cvt_i32_i16", VOP_I32_I16>;

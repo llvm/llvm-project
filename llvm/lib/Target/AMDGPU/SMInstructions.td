@@ -932,7 +932,7 @@ multiclass SMRD_Pattern <string Instr, ValueType vt, bit immci = true> {
   // XNACK is enabled and the load wasn't naturally aligned. The constrained sload variant.
   if !gt(vt.Size, 32) then {
     let OtherPredicates = [HasXNACKEnabled], AddedComplexity = 101 in
-      defm: SMRD_Patterns <Instr, vt, smrd_load, /*immci=*/false, /*suffix=*/"_ec">;
+      defm: SMRD_Patterns <Instr, vt, smrd_load, immci = false, suffix = "_ec">;
   }
 
   // XNACK is disabled.

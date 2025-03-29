@@ -890,7 +890,7 @@ class MAIInst<string OpName, VOPProfile P, SDPatternOperator node, bit Scaled = 
 //
 // FIXME: Usual syntax for op_sel is quite hostile here.
 class ScaledMAIInst<string OpName, MAIInst BaseInst, SDPatternOperator node> :
-  MAIInst<OpName, BaseInst.Pfl, node, /*Scaled=*/true> {
+  MAIInst<OpName, BaseInst.Pfl, node, Scaled = true> {
   // Append operands from V_MFMA_LD_SCALE_B32, but we need to rename them.
   let InOperandList = !con(BaseInst.InOperandList,
     (ins VSrc_b32:$scale_src0,
@@ -2046,11 +2046,11 @@ multiclass VOP3PX_Real_ScaledMFMA<bits<7> op> {
       DecoderNamespace = "GFX940",
       AsmString = Name # PS_ACD.AsmOperands, Constraints = "" in {
    def _gfx940_acd : VOP3P_Real<PS_ACD, SIEncodingFamily.GFX940>,
-                     VOP3PXe <op, PS_ACD.Pfl, /*acc_cd=*/1>,
+                     VOP3PXe <op, PS_ACD.Pfl, acc_cd = 1>,
                      MFMA_F8F6F4_WithSizeTable_Helper<PS_ACD, F8F8Name#"_gfx940_acd">;
 
    def _gfx940_vcd : VOP3P_Real<PS_VCD, SIEncodingFamily.GFX940>,
-                     VOP3PXe <op, PS_VCD.Pfl, /*acc_cd=*/0>,
+                     VOP3PXe <op, PS_VCD.Pfl, acc_cd = 0>,
                      MFMA_F8F6F4_WithSizeTable_Helper<PS_VCD, F8F8Name#"_gfx940_vcd">;
   }
 }

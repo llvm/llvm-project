@@ -869,8 +869,8 @@ multiclass sme_mem_ld_v_ss<string mnemonic, bit is_col> {
 }
 
 multiclass sme_mem_ld_ss<string mnemonic> {
-  defm _H : sme_mem_ld_v_ss<mnemonic, /*is_col=*/0b0>;
-  defm _V : sme_mem_ld_v_ss<mnemonic, /*is_col=*/0b1>;
+  defm _H : sme_mem_ld_v_ss<mnemonic, is_col = 0b0>;
+  defm _V : sme_mem_ld_v_ss<mnemonic, is_col = 0b1>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -999,8 +999,8 @@ multiclass sme_mem_st_v_ss<string mnemonic, bit is_col> {
 }
 
 multiclass sme_mem_st_ss<string mnemonic> {
-  defm _H : sme_mem_st_v_ss<mnemonic, /*is_col=*/0b0>;
-  defm _V : sme_mem_st_v_ss<mnemonic, /*is_col=*/0b1>;
+  defm _H : sme_mem_st_v_ss<mnemonic, is_col = 0b0>;
+  defm _V : sme_mem_st_v_ss<mnemonic, is_col = 0b1>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1256,8 +1256,8 @@ multiclass sme_vector_v_to_tile<string mnemonic, bit is_col> {
 }
 
 multiclass sme_vector_to_tile<string mnemonic> {
-  defm _H : sme_vector_v_to_tile<mnemonic, /*is_col=*/0b0>;
-  defm _V : sme_vector_v_to_tile<mnemonic, /*is_col=*/0b1>;
+  defm _H : sme_vector_v_to_tile<mnemonic, is_col = 0b0>;
+  defm _V : sme_vector_v_to_tile<mnemonic, is_col = 0b1>;
 }
 
 class sme_tile_to_vector_base<bit Q, bit V, bits<2> sz, dag outs, dag ins,
@@ -1423,8 +1423,8 @@ multiclass sme_tile_to_vector_v<string mnemonic, bit is_col> {
 }
 
 multiclass sme_tile_to_vector<string mnemonic> {
-  defm _H : sme_tile_to_vector_v<mnemonic, /*is_col=*/0b0>;
-  defm _V : sme_tile_to_vector_v<mnemonic, /*is_col=*/0b1>;
+  defm _H : sme_tile_to_vector_v<mnemonic, is_col = 0b0>;
+  defm _V : sme_tile_to_vector_v<mnemonic, is_col = 0b1>;
 }
 
 //===----------------------------------------------------------------------===//
