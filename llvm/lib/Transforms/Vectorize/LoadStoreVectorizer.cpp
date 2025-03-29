@@ -60,6 +60,7 @@
 #include "llvm/Transforms/Vectorize/LoadStoreVectorizer.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Bitset.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
@@ -323,6 +324,10 @@ private:
   bool isSafeToMove(
       Instruction *ChainElem, Instruction *ChainBegin,
       const DenseMap<Instruction *, APInt /*OffsetFromLeader*/> &ChainOffsets);
+
+  /// Merge equivalence classes if casts could be inserted in one to match
+  /// the total bitwidth of the instructions.
+  void insertCastsToMergeClasses(EquivalenceClassMap &EQClasses);
 
   /// Merges the equivalence classes if they have underlying objects that differ
   /// by one level of indirection (i.e., one is a getelementptr and the other is
@@ -1308,6 +1313,135 @@ std::optional<APInt> Vectorizer::getConstantOffsetSelects(
   return std::nullopt;
 }
 
+void Vectorizer::insertCastsToMergeClasses(EquivalenceClassMap &EQClasses) {
+  if (EQClasses.size() < 2)
+    return;
+
+  auto CopyMetaDataFromTo = [&](Instruction *Src, Instruction *Dst) {
+    SmallVector<std::pair<unsigned, MDNode *>, 4> MD;
+    Src->getAllMetadata(MD);
+    for (const auto [ID, Node] : MD) {
+      Dst->setMetadata(ID, Node);
+    }
+  };
+
+  // For each class, determine if all instructions are of type int, FP or ptr.
+  // This information will help us determine the type instructions should be
+  // casted into.
+  MapVector<EqClassKey, Bitset<3>> ClassAllTy;
+  for (const auto &C : EQClasses) {
+    auto CommonTypeKind = [](Instruction *I) {
+      if (I->getType()->isIntOrIntVectorTy())
+        return 0;
+      if (I->getType()->isFPOrFPVectorTy())
+        return 1;
+      if (I->getType()->isPtrOrPtrVectorTy())
+        return 2;
+      return -1; // Invalid type kind
+    };
+
+    int FirstTypeKind = CommonTypeKind(EQClasses[C.first][0]);
+    if (FirstTypeKind != -1 && all_of(EQClasses[C.first], [&](Instruction *I) {
+          return CommonTypeKind(I) == FirstTypeKind;
+        })) {
+      ClassAllTy[C.first].set(FirstTypeKind);
+    }
+  }
+
+  // Loop over all equivalence classes and try to merge them. Keep track of
+  // classes that are merged into others.
+  DenseSet<EqClassKey> ClassesToErase;
+  for (auto EC1 : EQClasses) {
+    for (auto EC2 : EQClasses) {
+      // Skip if EC2 was already merged before, EC1 follows EC2 in the
+      // collection or EC1 is the same as EC2.
+      if (ClassesToErase.contains(EC2.first) || EC1 <= EC2 ||
+          EC1.first == EC2.first)
+        continue;
+
+      auto [Ptr1, AS1, TySize1, IsLoad1] = EC1.first;
+      auto [Ptr2, AS2, TySize2, IsLoad2] = EC2.first;
+
+      // Attempt to merge EC2 into EC1. Skip if the pointers, address spaces or
+      // whether the leader instruction is a load/store are different. Also skip
+      // if the scalar bitwidth of the first equivalence class is smaller than
+      // the second one to avoid reconsidering the same equivalence class pair.
+      if (Ptr1 != Ptr2 || AS1 != AS2 || IsLoad1 != IsLoad2 || TySize1 < TySize2)
+        continue;
+
+      // An All-FP class should only be merged into another All-FP class.
+      if ((ClassAllTy[EC1.first].test(1) && !ClassAllTy[EC2.first].test(1)) ||
+          (!ClassAllTy[EC1.first].test(2) && ClassAllTy[EC2.first].test(2)))
+        continue;
+
+      // Ensure all instructions in EC2 can be bitcasted into NewTy.
+      /// TODO: NewTyBits is needed as stuctured binded variables cannot be
+      /// captured by a lambda until C++20.
+      auto NewTyBits = std::get<2>(EC1.first);
+      if (any_of(EC2.second, [&](Instruction *I) {
+            return DL.getTypeSizeInBits(getLoadStoreType(I)) != NewTyBits;
+          }))
+        continue;
+
+      // Create a new type for the equivalence class.
+      auto &Ctx = EC2.second[0]->getContext();
+      Type *NewTy = Type::getIntNTy(EC2.second[0]->getContext(), NewTyBits);
+      if (ClassAllTy[EC1.first].test(1) && ClassAllTy[EC2.first].test(1)) {
+        if (NewTyBits == 16)
+          NewTy = Type::getHalfTy(Ctx);
+        else if (NewTyBits == 32)
+          NewTy = Type::getFloatTy(Ctx);
+        else if (NewTyBits == 64)
+          NewTy = Type::getDoubleTy(Ctx);
+      } else if (ClassAllTy[EC1.first].test(2) &&
+                 ClassAllTy[EC2.first].test(2)) {
+        NewTy = PointerType::get(Ctx, AS2);
+      }
+
+      for (auto *Inst : EC2.second) {
+        Value *Ptr = getLoadStorePointerOperand(Inst);
+        Type *OrigTy = Inst->getType();
+        if (OrigTy == NewTy)
+          continue;
+        if (auto *LI = dyn_cast<LoadInst>(Inst)) {
+          Builder.SetInsertPoint(LI->getIterator());
+          auto *NewLoad = Builder.CreateLoad(NewTy, Ptr);
+          auto *Cast = Builder.CreateBitOrPointerCast(
+              NewLoad, OrigTy, NewLoad->getName() + ".cast");
+          LI->replaceAllUsesWith(Cast);
+          CopyMetaDataFromTo(LI, NewLoad);
+          LI->eraseFromParent();
+          EQClasses[EC1.first].emplace_back(NewLoad);
+        } else {
+          auto *SI = cast<StoreInst>(Inst);
+          Builder.SetInsertPoint(SI->getIterator());
+          auto *Cast = Builder.CreateBitOrPointerCast(
+              SI->getValueOperand(), NewTy,
+              SI->getValueOperand()->getName() + ".cast");
+          auto *NewStore = Builder.CreateStore(
+              Cast, getLoadStorePointerOperand(SI), SI->isVolatile());
+          CopyMetaDataFromTo(SI, NewStore);
+          SI->eraseFromParent();
+          EQClasses[EC1.first].emplace_back(NewStore);
+        }
+      }
+
+      // Sort the instructions in the equivalence class by their order in the
+      // basic block. This is important to ensure that the instructions are
+      // vectorized in the correct order.
+      std::sort(EQClasses[EC1.first].begin(), EQClasses[EC1.first].end(),
+                [](const Instruction *A, const Instruction *B) {
+                  return A && B && A->comesBefore(B);
+                });
+      ClassesToErase.insert(EC2.first);
+    }
+  }
+
+  // Erase the equivalence classes that were merged into others.
+  for (auto Key : ClassesToErase)
+    EQClasses.erase(Key);
+}
+
 void Vectorizer::mergeEquivalenceClasses(EquivalenceClassMap &EQClasses) const {
   if (EQClasses.size() < 2) // There is nothing to merge.
     return;
@@ -1493,7 +1627,7 @@ Vectorizer::collectEquivalenceClasses(BasicBlock::iterator Begin,
          /*IsLoad=*/LI != nullptr}]
         .emplace_back(&I);
   }
-
+  insertCastsToMergeClasses(Ret);
   mergeEquivalenceClasses(Ret);
   return Ret;
 }

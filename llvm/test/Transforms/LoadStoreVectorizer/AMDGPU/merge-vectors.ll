@@ -2,6 +2,8 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -passes=load-store-vectorizer -mattr=+relaxed-buffer-oob-mode -S -o - %s | FileCheck --check-prefixes=CHECK,CHECK-OOB-RELAXED %s
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -passes=load-store-vectorizer -S -o - %s | FileCheck --check-prefixes=CHECK,CHECK-OOB-STRICT %s
 
+target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-ni:7"
+
 define amdgpu_kernel void @merge_v2i32_v2i32(ptr addrspace(1) nocapture %a, ptr addrspace(1) nocapture readonly %b) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @merge_v2i32_v2i32(
 ; CHECK-SAME: ptr addrspace(1) captures(none) [[A:%.*]], ptr addrspace(1) readonly captures(none) [[B:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -130,7 +132,6 @@ entry:
   ret void
 }
 
-; Ideally this would be merged
 define amdgpu_kernel void @merge_load_i32_v2i16(ptr addrspace(1) nocapture %a) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @merge_load_i32_v2i16(
 ; CHECK-SAME: ptr addrspace(1) captures(none) [[A:%.*]]) #[[ATTR0]] {
@@ -141,10 +142,9 @@ define amdgpu_kernel void @merge_load_i32_v2i16(ptr addrspace(1) nocapture %a) #
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %a.1 = getelementptr inbounds i32, ptr addrspace(1) %a, i32 1
 
-  %ld.0 = load i32, ptr addrspace(1) %a
-  %ld.1 = load <2 x i16>, ptr addrspace(1) %a.1
+  %ld.0 = load i32, ptr addrspace(1) %a, align 4, !nontemporal !0, !invariant.load !1
+  %ld.1 = load <2 x i16>, ptr addrspace(1) %a.1, align 4, !nontemporal !0, !invariant.load !1
 
   ret void
 }
@@ -152,16 +152,59 @@ entry:
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 
-; CHECK-LABEL: @merge_i32_2i16_float_4i8(
-; CHECK: load i32
-; CHECK: load <2 x i16>
-; CHECK: load float
-; CHECK: load <4 x i8>
-; CHECK: store i32
-; CHECK: store <2 x i16>
-; CHECK: store float
-; CHECK: store <4 x i8>
+!0 = !{!"nontemporal"}
+!1 = !{!"invariant.load"}
+
+
 define void @merge_i32_2i16_float_4i8(ptr addrspace(1) %ptr1, ptr addrspace(2) %ptr2) {
+; CHECK-OOB-RELAXED-LABEL: define void @merge_i32_2i16_float_4i8(
+; CHECK-OOB-RELAXED-SAME: ptr addrspace(1) [[PTR1:%.*]], ptr addrspace(2) [[PTR2:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-OOB-RELAXED-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[PTR1]], i64 0
+; CHECK-OOB-RELAXED-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr addrspace(1) [[GEP1]], align 4
+; CHECK-OOB-RELAXED-NEXT:    [[LOAD12:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
+; CHECK-OOB-RELAXED-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
+; CHECK-OOB-RELAXED-NEXT:    [[LOAD33:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
+; CHECK-OOB-RELAXED-NEXT:    [[TMP3:%.*]] = bitcast i32 [[LOAD33]] to float
+; CHECK-OOB-RELAXED-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
+; CHECK-OOB-RELAXED-NEXT:    [[DOTCAST:%.*]] = bitcast i32 [[TMP2]] to <2 x i16>
+; CHECK-OOB-RELAXED-NEXT:    [[DOTCAST1:%.*]] = bitcast i32 [[TMP4]] to <4 x i8>
+; CHECK-OOB-RELAXED-NEXT:    [[STORE_GEP1:%.*]] = getelementptr inbounds i32, ptr addrspace(2) [[PTR2]], i64 0
+; CHECK-OOB-RELAXED-NEXT:    [[DOTCAST_CAST:%.*]] = bitcast <2 x i16> [[DOTCAST]] to i32
+; CHECK-OOB-RELAXED-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> poison, i32 [[LOAD12]], i32 0
+; CHECK-OOB-RELAXED-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP5]], i32 [[DOTCAST_CAST]], i32 1
+; CHECK-OOB-RELAXED-NEXT:    store <2 x i32> [[TMP6]], ptr addrspace(2) [[STORE_GEP1]], align 4
+; CHECK-OOB-RELAXED-NEXT:    [[STORE_GEP3:%.*]] = getelementptr inbounds float, ptr addrspace(2) [[PTR2]], i64 2
+; CHECK-OOB-RELAXED-NEXT:    [[DOTCAST1_CAST:%.*]] = bitcast <4 x i8> [[DOTCAST1]] to i32
+; CHECK-OOB-RELAXED-NEXT:    [[TMP7:%.*]] = bitcast float [[TMP3]] to i32
+; CHECK-OOB-RELAXED-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> poison, i32 [[TMP7]], i32 0
+; CHECK-OOB-RELAXED-NEXT:    [[TMP9:%.*]] = insertelement <2 x i32> [[TMP8]], i32 [[DOTCAST1_CAST]], i32 1
+; CHECK-OOB-RELAXED-NEXT:    store <2 x i32> [[TMP9]], ptr addrspace(2) [[STORE_GEP3]], align 4
+; CHECK-OOB-RELAXED-NEXT:    ret void
+;
+; CHECK-OOB-STRICT-LABEL: define void @merge_i32_2i16_float_4i8(
+; CHECK-OOB-STRICT-SAME: ptr addrspace(1) [[PTR1:%.*]], ptr addrspace(2) [[PTR2:%.*]]) {
+; CHECK-OOB-STRICT-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[PTR1]], i64 0
+; CHECK-OOB-STRICT-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr addrspace(1) [[GEP1]], align 4
+; CHECK-OOB-STRICT-NEXT:    [[LOAD12:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
+; CHECK-OOB-STRICT-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
+; CHECK-OOB-STRICT-NEXT:    [[LOAD33:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
+; CHECK-OOB-STRICT-NEXT:    [[TMP3:%.*]] = bitcast i32 [[LOAD33]] to float
+; CHECK-OOB-STRICT-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
+; CHECK-OOB-STRICT-NEXT:    [[DOTCAST:%.*]] = bitcast i32 [[TMP2]] to <2 x i16>
+; CHECK-OOB-STRICT-NEXT:    [[DOTCAST1:%.*]] = bitcast i32 [[TMP4]] to <4 x i8>
+; CHECK-OOB-STRICT-NEXT:    [[STORE_GEP1:%.*]] = getelementptr inbounds i32, ptr addrspace(2) [[PTR2]], i64 0
+; CHECK-OOB-STRICT-NEXT:    [[DOTCAST_CAST:%.*]] = bitcast <2 x i16> [[DOTCAST]] to i32
+; CHECK-OOB-STRICT-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> poison, i32 [[LOAD12]], i32 0
+; CHECK-OOB-STRICT-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP5]], i32 [[DOTCAST_CAST]], i32 1
+; CHECK-OOB-STRICT-NEXT:    store <2 x i32> [[TMP6]], ptr addrspace(2) [[STORE_GEP1]], align 4
+; CHECK-OOB-STRICT-NEXT:    [[STORE_GEP3:%.*]] = getelementptr inbounds float, ptr addrspace(2) [[PTR2]], i64 2
+; CHECK-OOB-STRICT-NEXT:    [[DOTCAST1_CAST:%.*]] = bitcast <4 x i8> [[DOTCAST1]] to i32
+; CHECK-OOB-STRICT-NEXT:    [[TMP7:%.*]] = bitcast float [[TMP3]] to i32
+; CHECK-OOB-STRICT-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> poison, i32 [[TMP7]], i32 0
+; CHECK-OOB-STRICT-NEXT:    [[TMP9:%.*]] = insertelement <2 x i32> [[TMP8]], i32 [[DOTCAST1_CAST]], i32 1
+; CHECK-OOB-STRICT-NEXT:    store <2 x i32> [[TMP9]], ptr addrspace(2) [[STORE_GEP3]], align 4
+; CHECK-OOB-STRICT-NEXT:    ret void
+;
   %gep1 = getelementptr inbounds i32, ptr addrspace(1) %ptr1, i64 0
   %load1 = load i32, ptr addrspace(1) %gep1, align 4
   %gep2 = getelementptr inbounds <2 x i16>, ptr addrspace(1) %ptr1, i64 1
@@ -180,3 +223,124 @@ define void @merge_i32_2i16_float_4i8(ptr addrspace(1) %ptr1, ptr addrspace(2) %
   store <4 x i8> %load4, ptr addrspace(2) %store.gep4, align 4
   ret void
 }
+
+define void @merge_fp_v2half_type(ptr addrspace(1) %ptr1, ptr addrspace(2) %ptr2) {
+; CHECK-OOB-RELAXED-LABEL: define void @merge_fp_v2half_type(
+; CHECK-OOB-RELAXED-SAME: ptr addrspace(1) [[PTR1:%.*]], ptr addrspace(2) [[PTR2:%.*]]) #[[ATTR1]] {
+; CHECK-OOB-RELAXED-NEXT:    [[GEP1:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[PTR1]], i64 0
+; CHECK-OOB-RELAXED-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr addrspace(1) [[GEP1]], align 4
+; CHECK-OOB-RELAXED-NEXT:    [[LOAD11:%.*]] = extractelement <2 x float> [[TMP1]], i32 0
+; CHECK-OOB-RELAXED-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[TMP1]], i32 1
+; CHECK-OOB-RELAXED-NEXT:    [[DOTCAST:%.*]] = bitcast float [[TMP2]] to <2 x half>
+; CHECK-OOB-RELAXED-NEXT:    [[STORE_GEP1:%.*]] = getelementptr inbounds i32, ptr addrspace(2) [[PTR2]], i64 0
+; CHECK-OOB-RELAXED-NEXT:    [[DOTCAST_CAST:%.*]] = bitcast <2 x half> [[DOTCAST]] to i32
+; CHECK-OOB-RELAXED-NEXT:    [[TMP3:%.*]] = bitcast float [[LOAD11]] to i32
+; CHECK-OOB-RELAXED-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> poison, i32 [[TMP3]], i32 0
+; CHECK-OOB-RELAXED-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> [[TMP4]], i32 [[DOTCAST_CAST]], i32 1
+; CHECK-OOB-RELAXED-NEXT:    store <2 x i32> [[TMP5]], ptr addrspace(2) [[STORE_GEP1]], align 4
+; CHECK-OOB-RELAXED-NEXT:    ret void
+;
+; CHECK-OOB-STRICT-LABEL: define void @merge_fp_v2half_type(
+; CHECK-OOB-STRICT-SAME: ptr addrspace(1) [[PTR1:%.*]], ptr addrspace(2) [[PTR2:%.*]]) {
+; CHECK-OOB-STRICT-NEXT:    [[GEP1:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[PTR1]], i64 0
+; CHECK-OOB-STRICT-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr addrspace(1) [[GEP1]], align 4
+; CHECK-OOB-STRICT-NEXT:    [[LOAD11:%.*]] = extractelement <2 x float> [[TMP1]], i32 0
+; CHECK-OOB-STRICT-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[TMP1]], i32 1
+; CHECK-OOB-STRICT-NEXT:    [[DOTCAST:%.*]] = bitcast float [[TMP2]] to <2 x half>
+; CHECK-OOB-STRICT-NEXT:    [[STORE_GEP1:%.*]] = getelementptr inbounds i32, ptr addrspace(2) [[PTR2]], i64 0
+; CHECK-OOB-STRICT-NEXT:    [[DOTCAST_CAST:%.*]] = bitcast <2 x half> [[DOTCAST]] to i32
+; CHECK-OOB-STRICT-NEXT:    [[TMP3:%.*]] = bitcast float [[LOAD11]] to i32
+; CHECK-OOB-STRICT-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> poison, i32 [[TMP3]], i32 0
+; CHECK-OOB-STRICT-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> [[TMP4]], i32 [[DOTCAST_CAST]], i32 1
+; CHECK-OOB-STRICT-NEXT:    store <2 x i32> [[TMP5]], ptr addrspace(2) [[STORE_GEP1]], align 4
+; CHECK-OOB-STRICT-NEXT:    ret void
+;
+  %gep1 = getelementptr inbounds float, ptr addrspace(1) %ptr1, i64 0
+  %load1 = load float, ptr addrspace(1) %gep1, align 4
+  %gep2 = getelementptr inbounds <2 x half>, ptr addrspace(1) %ptr1, i64 1
+  %load2 = load <2 x half>, ptr addrspace(1) %gep2, align 4
+  %store.gep1 = getelementptr inbounds i32, ptr addrspace(2) %ptr2, i64 0
+  store float %load1, ptr addrspace(2) %store.gep1, align 4
+  %store.gep2 = getelementptr inbounds <2 x half>, ptr addrspace(2) %ptr2, i64 1
+  store <2 x half> %load2, ptr addrspace(2) %store.gep2, align 4
+  ret void
+}
+
+define void @merge_v2half_bfloat_type(ptr addrspace(1) %ptr1, ptr addrspace(2) %ptr2) {
+; CHECK-OOB-RELAXED-LABEL: define void @merge_v2half_bfloat_type(
+; CHECK-OOB-RELAXED-SAME: ptr addrspace(1) [[PTR1:%.*]], ptr addrspace(2) [[PTR2:%.*]]) #[[ATTR1]] {
+; CHECK-OOB-RELAXED-NEXT:    [[GEP1:%.*]] = getelementptr inbounds bfloat, ptr addrspace(1) [[PTR1]], i64 0
+; CHECK-OOB-RELAXED-NEXT:    [[LOAD1:%.*]] = load bfloat, ptr addrspace(1) [[GEP1]], align 4
+; CHECK-OOB-RELAXED-NEXT:    [[GEP2:%.*]] = getelementptr inbounds <2 x half>, ptr addrspace(1) [[PTR1]], i64 1
+; CHECK-OOB-RELAXED-NEXT:    [[LOAD2:%.*]] = load <2 x half>, ptr addrspace(1) [[GEP2]], align 4
+; CHECK-OOB-RELAXED-NEXT:    [[STORE_GEP1:%.*]] = getelementptr inbounds i32, ptr addrspace(2) [[PTR2]], i64 0
+; CHECK-OOB-RELAXED-NEXT:    store bfloat [[LOAD1]], ptr addrspace(2) [[STORE_GEP1]], align 4
+; CHECK-OOB-RELAXED-NEXT:    [[STORE_GEP2:%.*]] = getelementptr inbounds <2 x half>, ptr addrspace(2) [[PTR2]], i64 1
+; CHECK-OOB-RELAXED-NEXT:    store <2 x half> [[LOAD2]], ptr addrspace(2) [[STORE_GEP2]], align 4
+; CHECK-OOB-RELAXED-NEXT:    ret void
+;
+; CHECK-OOB-STRICT-LABEL: define void @merge_v2half_bfloat_type(
+; CHECK-OOB-STRICT-SAME: ptr addrspace(1) [[PTR1:%.*]], ptr addrspace(2) [[PTR2:%.*]]) {
+; CHECK-OOB-STRICT-NEXT:    [[GEP1:%.*]] = getelementptr inbounds bfloat, ptr addrspace(1) [[PTR1]], i64 0
+; CHECK-OOB-STRICT-NEXT:    [[LOAD1:%.*]] = load bfloat, ptr addrspace(1) [[GEP1]], align 4
+; CHECK-OOB-STRICT-NEXT:    [[GEP2:%.*]] = getelementptr inbounds <2 x half>, ptr addrspace(1) [[PTR1]], i64 1
+; CHECK-OOB-STRICT-NEXT:    [[LOAD2:%.*]] = load <2 x half>, ptr addrspace(1) [[GEP2]], align 4
+; CHECK-OOB-STRICT-NEXT:    [[STORE_GEP1:%.*]] = getelementptr inbounds i32, ptr addrspace(2) [[PTR2]], i64 0
+; CHECK-OOB-STRICT-NEXT:    store bfloat [[LOAD1]], ptr addrspace(2) [[STORE_GEP1]], align 4
+; CHECK-OOB-STRICT-NEXT:    [[STORE_GEP2:%.*]] = getelementptr inbounds <2 x half>, ptr addrspace(2) [[PTR2]], i64 1
+; CHECK-OOB-STRICT-NEXT:    store <2 x half> [[LOAD2]], ptr addrspace(2) [[STORE_GEP2]], align 4
+; CHECK-OOB-STRICT-NEXT:    ret void
+;
+  %gep1 = getelementptr inbounds bfloat, ptr addrspace(1) %ptr1, i64 0
+  %load1 = load bfloat, ptr addrspace(1) %gep1, align 4
+  %gep2 = getelementptr inbounds <2 x half>, ptr addrspace(1) %ptr1, i64 1
+  %load2 = load <2 x half>, ptr addrspace(1) %gep2, align 4
+  %store.gep1 = getelementptr inbounds i32, ptr addrspace(2) %ptr2, i64 0
+  store bfloat %load1, ptr addrspace(2) %store.gep1, align 4
+  %store.gep2 = getelementptr inbounds <2 x half>, ptr addrspace(2) %ptr2, i64 1
+  store <2 x half> %load2, ptr addrspace(2) %store.gep2, align 4
+  ret void
+}
+
+define void @no_merge_mixed_ptr_addrspaces(ptr addrspace(1) %ptr1, ptr addrspace(2) %ptr2) {
+; CHECK-OOB-RELAXED-LABEL: define void @no_merge_mixed_ptr_addrspaces(
+; CHECK-OOB-RELAXED-SAME: ptr addrspace(1) [[PTR1:%.*]], ptr addrspace(2) [[PTR2:%.*]]) #[[ATTR1]] {
+; CHECK-OOB-RELAXED-NEXT:    [[GEP1:%.*]] = getelementptr inbounds ptr addrspace(1), ptr addrspace(1) [[PTR1]], i64 0
+; CHECK-OOB-RELAXED-NEXT:    [[LOAD1:%.*]] = load ptr addrspace(1), ptr addrspace(1) [[GEP1]], align 4
+; CHECK-OOB-RELAXED-NEXT:    [[GEP2:%.*]] = getelementptr inbounds ptr addrspace(2), ptr addrspace(1) [[PTR1]], i64 1
+; CHECK-OOB-RELAXED-NEXT:    [[LOAD2:%.*]] = load ptr addrspace(2), ptr addrspace(1) [[GEP2]], align 4
+; CHECK-OOB-RELAXED-NEXT:    [[STORE_GEP1:%.*]] = getelementptr inbounds i32, ptr addrspace(2) [[PTR2]], i64 0
+; CHECK-OOB-RELAXED-NEXT:    store ptr addrspace(1) [[LOAD1]], ptr addrspace(2) [[STORE_GEP1]], align 4
+; CHECK-OOB-RELAXED-NEXT:    [[STORE_GEP2:%.*]] = getelementptr inbounds ptr addrspace(2), ptr addrspace(2) [[PTR2]], i64 1
+; CHECK-OOB-RELAXED-NEXT:    store ptr addrspace(2) [[LOAD2]], ptr addrspace(2) [[STORE_GEP2]], align 4
+; CHECK-OOB-RELAXED-NEXT:    ret void
+;
+; CHECK-OOB-STRICT-LABEL: define void @no_merge_mixed_ptr_addrspaces(
+; CHECK-OOB-STRICT-SAME: ptr addrspace(1) [[PTR1:%.*]], ptr addrspace(2) [[PTR2:%.*]]) {
+; CHECK-OOB-STRICT-NEXT:    [[GEP1:%.*]] = getelementptr inbounds ptr addrspace(1), ptr addrspace(1) [[PTR1]], i64 0
+; CHECK-OOB-STRICT-NEXT:    [[LOAD1:%.*]] = load ptr addrspace(1), ptr addrspace(1) [[GEP1]], align 4
+; CHECK-OOB-STRICT-NEXT:    [[GEP2:%.*]] = getelementptr inbounds ptr addrspace(2), ptr addrspace(1) [[PTR1]], i64 1
+; CHECK-OOB-STRICT-NEXT:    [[LOAD2:%.*]] = load ptr addrspace(2), ptr addrspace(1) [[GEP2]], align 4
+; CHECK-OOB-STRICT-NEXT:    [[STORE_GEP1:%.*]] = getelementptr inbounds i32, ptr addrspace(2) [[PTR2]], i64 0
+; CHECK-OOB-STRICT-NEXT:    store ptr addrspace(1) [[LOAD1]], ptr addrspace(2) [[STORE_GEP1]], align 4
+; CHECK-OOB-STRICT-NEXT:    [[STORE_GEP2:%.*]] = getelementptr inbounds ptr addrspace(2), ptr addrspace(2) [[PTR2]], i64 1
+; CHECK-OOB-STRICT-NEXT:    store ptr addrspace(2) [[LOAD2]], ptr addrspace(2) [[STORE_GEP2]], align 4
+; CHECK-OOB-STRICT-NEXT:    ret void
+;
+  %gep1 = getelementptr inbounds ptr addrspace(1), ptr addrspace(1) %ptr1, i64 0
+  %load1 = load ptr addrspace(1), ptr addrspace(1) %gep1, align 4
+  %gep2 = getelementptr inbounds ptr addrspace(2), ptr addrspace(1) %ptr1, i64 1
+  %load2 = load ptr addrspace(2), ptr addrspace(1) %gep2, align 4
+  %store.gep1 = getelementptr inbounds i32, ptr addrspace(2) %ptr2, i64 0
+  store ptr addrspace(1) %load1, ptr addrspace(2) %store.gep1, align 4
+  %store.gep2 = getelementptr inbounds ptr addrspace(2), ptr addrspace(2) %ptr2, i64 1
+  store ptr addrspace(2) %load2, ptr addrspace(2) %store.gep2, align 4
+  ret void
+}
+;.
+; CHECK-OOB-RELAXED: [[META0]] = !{!"invariant.load"}
+; CHECK-OOB-RELAXED: [[META1]] = !{!"nontemporal"}
+;.
+; CHECK-OOB-STRICT: [[META0]] = !{!"invariant.load"}
+; CHECK-OOB-STRICT: [[META1]] = !{!"nontemporal"}
+;.

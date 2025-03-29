@@ -2071,8 +2071,8 @@ define amdgpu_kernel void @fadd_fadd_fsub(<2 x float> %arg, <2 x float> %arg1, p
 ; GFX900-LABEL: fadd_fadd_fsub:
 ; GFX900:       ; %bb.0: ; %bb
 ; GFX900-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX900-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
 ; GFX900-NEXT:    v_mov_b32_e32 v2, 0
+; GFX900-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x34
 ; GFX900-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX900-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX900-NEXT:    v_add_f32_e32 v0, s1, v0
@@ -2080,14 +2080,14 @@ define amdgpu_kernel void @fadd_fadd_fsub(<2 x float> %arg, <2 x float> %arg1, p
 ; GFX900-NEXT:    v_add_f32_e32 v3, s2, v0
 ; GFX900-NEXT:    v_sub_f32_e32 v0, s0, v1
 ; GFX900-NEXT:    v_subrev_f32_e32 v1, s3, v3
-; GFX900-NEXT:    global_store_dwordx2 v2, v[0:1], s[6:7]
+; GFX900-NEXT:    global_store_dwordx2 v2, v[0:1], s[4:5]
 ; GFX900-NEXT:    s_endpgm
 ;
 ; PACKED-SDAG-LABEL: fadd_fadd_fsub:
 ; PACKED-SDAG:       ; %bb.0: ; %bb
 ; PACKED-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; PACKED-SDAG-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
 ; PACKED-SDAG-NEXT:    v_mov_b32_e32 v4, 0
+; PACKED-SDAG-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x34
 ; PACKED-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; PACKED-SDAG-NEXT:    v_mov_b32_e32 v0, s3
 ; PACKED-SDAG-NEXT:    v_add_f32_e32 v0, s1, v0
@@ -2095,7 +2095,7 @@ define amdgpu_kernel void @fadd_fadd_fsub(<2 x float> %arg, <2 x float> %arg1, p
 ; PACKED-SDAG-NEXT:    v_mov_b32_e32 v2, s0
 ; PACKED-SDAG-NEXT:    v_mov_b32_e32 v3, v0
 ; PACKED-SDAG-NEXT:    v_pk_add_f32 v[0:1], v[2:3], s[2:3] neg_lo:[0,1] neg_hi:[0,1]
-; PACKED-SDAG-NEXT:    global_store_dwordx2 v4, v[0:1], s[6:7]
+; PACKED-SDAG-NEXT:    global_store_dwordx2 v4, v[0:1], s[4:5]
 ; PACKED-SDAG-NEXT:    s_endpgm
 bb:
   %i12 = fadd <2 x float> %arg, %arg1
