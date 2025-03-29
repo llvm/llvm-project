@@ -461,8 +461,11 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                            SPIRV::Extension::SPV_KHR_linkonce_odr)
                    ? SPIRV::LinkageType::LinkOnceODR
                    : SPIRV::LinkageType::Export);
-    buildOpDecorate(FuncVReg, MIRBuilder, SPIRV::Decoration::LinkageAttributes,
-                    {static_cast<uint32_t>(LnkTy)}, F.getGlobalIdentifier());
+    buildOpDecorate(
+        FuncVReg, MIRBuilder, SPIRV::Decoration::LinkageAttributes,
+        {static_cast<uint32_t>(LnkTy)},
+        Function::getGlobalIdentifier(F.getName(), F.getLinkage(),
+                                      F.getParent()->getSourceFileName()));
   }
 
   // Handle function pointers decoration
