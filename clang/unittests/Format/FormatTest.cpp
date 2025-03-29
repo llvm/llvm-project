@@ -15120,6 +15120,85 @@ TEST_F(FormatTest, PullInlineFunctionDefinitionsIntoSingleLine) {
                MergeInlineOnly);
 }
 
+TEST_F(FormatTest, PullStaticInlineFunctionDefinitionsIntoSingleLine) {
+  FormatStyle MergeStaticInlineOnly = getLLVMStyle();
+  MergeStaticInlineOnly.AllowShortFunctionsOnASingleLine =
+      FormatStyle::SFS_StaticInlineOnly;
+  verifyFormat("static inline int f() { return 42; }",
+               "static inline int f() {\n"
+               "  return 42; \n"
+               "}",
+               MergeStaticInlineOnly);
+  verifyFormat("inline static int f() { return 42; }",
+               "inline static int f() \n"
+               "{\n"
+               "  return 42; \n"
+               "}",
+               MergeStaticInlineOnly);
+  verifyNoChange("int f() {\n"
+                 "  return 42;\n"
+                 "}",
+                 MergeStaticInlineOnly);
+
+  verifyFormat("void f1(void) {\n"
+               "}",
+               "void f1(void)\n"
+               "{\n"
+               "}",
+               MergeStaticInlineOnly);
+
+  verifyNoChange("int f2(int a, int b) {\n"
+                 "  return a + b;\n"
+                 "}",
+                 MergeStaticInlineOnly);
+
+  verifyNoChange("static void f3(void) {\n"
+                 "}\n",
+                 MergeStaticInlineOnly);
+
+  verifyFormat("static int f4(int a, int b) {\n"
+               "  return a + b;\n"
+               "}\n",
+               MergeStaticInlineOnly);
+
+  verifyNoChange("static inline void f5(void) {}", MergeStaticInlineOnly);
+
+  verifyFormat("static inline int f6(int a, int b) { return a + b; }",
+               "static inline int f6(int a, int b) \n"
+               "{ return a + b; }",
+               MergeStaticInlineOnly);
+
+  verifyFormat("int f(int a, int b) {\n"
+               "  return a + b;\n"
+               "}",
+               "int f(int a, int b) { return a + b; }", MergeStaticInlineOnly);
+
+  FormatStyle MergeStaticInline = getLLVMStyle();
+  MergeStaticInline.AllowShortFunctionsOnASingleLine =
+      FormatStyle::SFS_StaticInline;
+  verifyFormat("static inline int f() { return 42; }",
+               "static inline int f() {\n"
+               "  return 42; \n"
+               "}",
+               MergeStaticInline);
+  verifyFormat("inline static int f() { return 42; }",
+               "inline static int f() \n"
+               "{\n"
+               "  return 42; \n"
+               "}",
+               MergeStaticInline);
+  verifyNoChange("int f() {\n"
+                 "  return 42;\n"
+                 "}",
+                 MergeStaticInline);
+
+  verifyFormat("void f1(void) {}",
+               "void f1(void)\n"
+               "{\n"
+               "}",
+               MergeStaticInline);
+}
+
 TEST_F(FormatTest, PullInlineOnlyFunctionDefinitionsIntoSingleLine) {
   FormatStyle MergeInlineOnly = getLLVMStyle();
   MergeInlineOnly.AllowShortFunctionsOnASingleLine =

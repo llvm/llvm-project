@@ -844,6 +844,13 @@ struct FormatStyle {
     ///   }
     /// \endcode
     SFS_InlineOnly,
+    /// Only merge functions defined as static inline.
+    /// \code
+    ///   void f5(void) {
+    ///   }
+    ///   static inline int f6(int a, int b) { return a + b; }
+    /// \endcode
+    SFS_StaticInlineOnly,
     /// Only merge empty functions.
     /// \code
     ///   void f() {}
@@ -863,6 +870,12 @@ struct FormatStyle {
     ///   void f() {}
     /// \endcode
     SFS_Inline,
+    /// Only merge functions defined as static inline. Implies ``empty``.
+    /// \code
+    ///   void f5(void) {}
+    ///   static inline int f6(int a, int b) { return a + b; }
+    /// \endcode
+    SFS_StaticInline,
     /// Merge all functions fitting on a single line.
     /// \code
     ///   class Foo {

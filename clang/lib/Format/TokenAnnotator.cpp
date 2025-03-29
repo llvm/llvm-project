@@ -5690,8 +5690,10 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       return Style.AllowShortFunctionsOnASingleLine == FormatStyle::SFS_None ||
              Style.AllowShortFunctionsOnASingleLine == FormatStyle::SFS_Empty ||
              (Left.NestingLevel == 0 && Line.Level == 0 &&
-              Style.AllowShortFunctionsOnASingleLine &
-                  FormatStyle::SFS_InlineOnly);
+              (Style.AllowShortFunctionsOnASingleLine ==
+                   FormatStyle::SFS_InlineOnly ||
+               Style.AllowShortFunctionsOnASingleLine ==
+                   FormatStyle::SFS_Inline));
     }
   } else if (Style.Language == FormatStyle::LK_Java) {
     if (Right.is(tok::plus) && Left.is(tok::string_literal) && AfterRight &&
