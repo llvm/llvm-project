@@ -2042,7 +2042,7 @@ LogicalResult ModuleTranslation::createDependentLibrariesMetadata() {
     auto *nmd =
         llvmModule->getOrInsertNamedMetadata("llvm.dependent-libraries");
     llvm::LLVMContext &ctx = llvmModule->getContext();
-    for (auto lib : cast<ArrayAttr>(dependentLibrariesAttr)) {
+    for (auto libAttr : dependentLibrariesAttr.getAsRange<StringAttr>()) {
       auto *md = llvm::MDNode::get(
           ctx,
           llvm::MDString::get(ctx, mlir::cast<StringAttr>(lib).getValue()));
