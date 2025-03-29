@@ -557,9 +557,7 @@ public:
     return IsValid && VK == RISCVMCExpr::VK_None;
   }
 
-  bool isBranchOffset() const {
-    return isImm();
-  }
+  bool isBranchOffset() const { return isImm(); }
 
   // Predicate methods for AsmOperands defined in RISCVInstrInfo.td
 
@@ -2014,7 +2012,8 @@ ParseStatus RISCVAsmParser::parseImmediate(OperandVector &Operands) {
   return ParseStatus::Success;
 }
 
-ParseStatus RISCVAsmParser::parseBranchOffsetImmediate(OperandVector &Operands) {
+ParseStatus
+RISCVAsmParser::parseBranchOffsetImmediate(OperandVector &Operands) {
   SMLoc S = getLoc();
   SMLoc E;
   const MCExpr *Res;
@@ -2045,7 +2044,8 @@ ParseStatus RISCVAsmParser::parseBranchOffsetImmediate(OperandVector &Operands) 
     // AbsSym->setVariableValue(Zero);
     getStreamer().emitAssignment(AbsSym, Zero);
 
-    Res = MCBinaryExpr::createAdd(MCSymbolRefExpr::create(AbsSym, getContext()), Res, getContext());
+    Res = MCBinaryExpr::createAdd(MCSymbolRefExpr::create(AbsSym, getContext()),
+                                  Res, getContext());
     break;
   }
   case AsmToken::Percent: {

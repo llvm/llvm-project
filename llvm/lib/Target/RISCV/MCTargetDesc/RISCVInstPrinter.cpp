@@ -109,7 +109,8 @@ void RISCVInstPrinter::printBranchOperand(const MCInst *MI, uint64_t Address,
     // find out if it is absolute symbol reference to an opaque zero
     if (const auto *BE = dyn_cast<MCBinaryExpr>(MO.getExpr())) {
       if (const auto *SRE = dyn_cast<MCSymbolRefExpr>(BE->getLHS())) {
-        if (const auto *SymVal = dyn_cast<MCConstantExpr>(SRE->getSymbol().getVariableValue(/*false*/))) {
+        if (const auto *SymVal = dyn_cast<MCConstantExpr>(
+                SRE->getSymbol().getVariableValue(/*false*/))) {
           if (BE->getOpcode() == MCBinaryExpr::Add && SymVal->getValue() == 0) {
             BE->getRHS()->print(O, &MAI);
             return;
@@ -120,7 +121,6 @@ void RISCVInstPrinter::printBranchOperand(const MCInst *MI, uint64_t Address,
 
     MO.getExpr()->print(O, &MAI);
   }
-
 
   if (!MO.isImm())
     return printOperand(MI, OpNo, STI, O);
