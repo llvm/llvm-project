@@ -362,6 +362,15 @@ struct ScalarEnumerationTraits<
 };
 
 template <>
+struct ScalarEnumerationTraits<FormatStyle::EnumTrailingCommaStyle> {
+  static void enumeration(IO &IO, FormatStyle::EnumTrailingCommaStyle &Value) {
+    IO.enumCase(Value, "Leave", FormatStyle::ETC_Leave);
+    IO.enumCase(Value, "Insert", FormatStyle::ETC_Insert);
+    IO.enumCase(Value, "Remove", FormatStyle::ETC_Remove);
+  }
+};
+
+template <>
 struct ScalarEnumerationTraits<FormatStyle::IndentExternBlockStyle> {
   static void enumeration(IO &IO, FormatStyle::IndentExternBlockStyle &Value) {
     IO.enumCase(Value, "AfterExternBlock", FormatStyle::IEBS_AfterExternBlock);
@@ -1042,6 +1051,7 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.EmptyLineAfterAccessModifier);
     IO.mapOptional("EmptyLineBeforeAccessModifier",
                    Style.EmptyLineBeforeAccessModifier);
+    IO.mapOptional("EnumTrailingComma", Style.EnumTrailingComma);
     IO.mapOptional("ExperimentalAutoDetectBinPacking",
                    Style.ExperimentalAutoDetectBinPacking);
     IO.mapOptional("FixNamespaceComments", Style.FixNamespaceComments);
@@ -1558,6 +1568,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.DisableFormat = false;
   LLVMStyle.EmptyLineAfterAccessModifier = FormatStyle::ELAAMS_Never;
   LLVMStyle.EmptyLineBeforeAccessModifier = FormatStyle::ELBAMS_LogicalBlock;
+  LLVMStyle.EnumTrailingComma = FormatStyle::ETC_Leave;
   LLVMStyle.ExperimentalAutoDetectBinPacking = false;
   LLVMStyle.FixNamespaceComments = true;
   LLVMStyle.ForEachMacros.push_back("foreach");
@@ -2410,6 +2421,64 @@ private:
         const auto &Range =
             CharSourceRange::getCharRange(Start, Token->Tok.getEndLoc());
         cantFail(Result.add(tooling::Replacement(SourceMgr, Range, "")));
+      }
+    }
+  }
+};
+
+class EnumTrailingCommaEditor : public TokenAnalyzer {
+public:
+  EnumTrailingCommaEditor(const Environment &Env, const FormatStyle &Style)
+      : TokenAnalyzer(Env, Style) {}
+
+  std::pair<tooling::Replacements, unsigned>
+  analyze(TokenAnnotator &Annotator,
+          SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
+          FormatTokenLexer &Tokens) override {
+    AffectedRangeMgr.computeAffectedLines(AnnotatedLines);
+    tooling::Replacements Result;
+    editEnumTrailingComma(AnnotatedLines, Result);
+    return {Result, 0};
+  }
+
+private:
+  void editEnumTrailingComma(SmallVectorImpl<AnnotatedLine *> &Lines,
+                             tooling::Replacements &Result) {
+    const auto &SourceMgr = Env.getSourceManager();
+    for (auto *Line : Lines) {
+      if (!Line->Children.empty())
+        editEnumTrailingComma(Line->Children, Result);
+      if (!Line->Affected)
+        continue;
+      for (const auto *Token = Line->First; Token && !Token->Finalized;
+           Token = Token->Next) {
+        if (Token->isNot(TT_EnumRBrace))
+          continue;
+        const auto *BeforeRBrace = Token->getPreviousNonComment();
+        assert(BeforeRBrace);
+        if (BeforeRBrace->is(TT_EnumLBrace)) // Empty braces.
+          continue;
+        if (Style.EnumTrailingComma == FormatStyle::ETC_Insert) {
+          if (BeforeRBrace->isNot(tok::comma)) {
+            cantFail(Result.add(tooling::Replacement(
+                SourceMgr, BeforeRBrace->Tok.getEndLoc(), 0, ",")));
+          }
+        } else {
+          assert(Style.EnumTrailingComma == FormatStyle::ETC_Remove);
+          if (BeforeRBrace->isNot(tok::comma))
+            continue;
+          auto *Next = BeforeRBrace->Next;
+          SourceLocation Start;
+          if (Next->NewlinesBefore == 0) {
+            Start = BeforeRBrace->Tok.getLocation();
+            Next->WhitespaceRange = BeforeRBrace->WhitespaceRange;
+          } else {
+            Start = BeforeRBrace->WhitespaceRange.getBegin();
+          }
+          const auto &Range = CharSourceRange::getCharRange(
+              Start, BeforeRBrace->Tok.getEndLoc());
+          cantFail(Result.add(tooling::Replacement(SourceMgr, Range, " ")));
+        }
       }
     }
   }
@@ -3809,6 +3878,13 @@ reformat(const FormatStyle &Style, StringRef Code,
       S.RemoveSemicolon = true;
       Passes.emplace_back([&, S = std::move(S)](const Environment &Env) {
         return SemiRemover(Env, S).process();
+      });
+    }
+
+    if (Style.EnumTrailingComma != FormatStyle::ETC_Leave) {
+      Passes.emplace_back([&](const Environment &Env) {
+        return EnumTrailingCommaEditor(Env, Expanded)
+            .process(/*SkipAnnotation=*/true);
       });
     }
 
