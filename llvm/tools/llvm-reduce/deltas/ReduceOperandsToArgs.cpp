@@ -160,6 +160,8 @@ static void substituteOperandWithArgument(Function *OldF,
     VMap[&OldArg] = &NewArg;          // Add mapping to VMap
   }
 
+  LLVMContext &Ctx = OldF->getContext();
+
   // Adjust the new parameters.
   ValueToValueMapTy OldValMap;
   for (auto Z : zip_first(UniqueValues, drop_begin(NewF->args(), ArgOffset))) {
@@ -176,8 +178,15 @@ static void substituteOperandWithArgument(Function *OldF,
 
   // Replace the actual operands.
   for (Use *Op : OpsToReplace) {
-    Value *NewArg = OldValMap.lookup(Op->get());
+    Argument *NewArg = cast<Argument>(OldValMap.lookup(Op->get()));
     auto *NewUser = cast<Instruction>(VMap.lookup(Op->getUser()));
+
+    // Try to preserve any information contained metadata annotations as the
+    // equivalent parameter attributes if possible.
+    if (auto *MDSrcInst = dyn_cast<Instruction>(Op)) {
+      AttrBuilder AB(Ctx);
+      NewArg->addAttrs(AB.addFromEquivalentMetadata(*MDSrcInst));
+    }
 
     if (PHINode *NewPhi = dyn_cast<PHINode>(NewUser)) {
       PHINode *OldPhi = cast<PHINode>(Op->getUser());
