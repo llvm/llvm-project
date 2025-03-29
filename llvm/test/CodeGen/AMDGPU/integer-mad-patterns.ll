@@ -9659,13 +9659,13 @@ define <4 x i16> @multi_use_mul_mad_v2i16_var(<2 x i16> %x, <2 x i16> %y, <2 x i
 ; GFX8-GISEL-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
 ; GFX8-GISEL-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
 ; GFX8-GISEL-NEXT:    v_lshrrev_b32_e32 v6, 16, v2
+; GFX8-GISEL-NEXT:    v_lshrrev_b32_e32 v7, 16, v3
 ; GFX8-GISEL-NEXT:    v_mad_u16 v6, v4, v5, v6
 ; GFX8-GISEL-NEXT:    v_mad_u16 v2, v0, v1, v2
 ; GFX8-GISEL-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v2, v2, v6
-; GFX8-GISEL-NEXT:    v_lshrrev_b32_e32 v6, 16, v3
 ; GFX8-GISEL-NEXT:    v_mad_u16 v0, v0, v1, v3
-; GFX8-GISEL-NEXT:    v_mad_u16 v1, v4, v5, v6
+; GFX8-GISEL-NEXT:    v_mad_u16 v1, v4, v5, v7
+; GFX8-GISEL-NEXT:    v_or_b32_e32 v2, v2, v6
 ; GFX8-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX8-GISEL-NEXT:    v_or_b32_e32 v1, v0, v1
 ; GFX8-GISEL-NEXT:    v_mov_b32_e32 v0, v2
