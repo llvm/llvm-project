@@ -157,25 +157,13 @@ private:
   }
 
   void consumeNumberLiteral(TokenInfo *result) {
-    unsigned length = 1;
-    if (code.size() > 1) {
-      // Consume the 'x' or 'b' radix modifier, if present.
-      switch (tolower(code[1])) {
-      case 'x':
-      case 'b':
-        length = 2;
-      }
-    }
-    while (length < code.size() && isdigit(code[length]))
-      ++length;
-
-    result->text = code.take_front(length);
-    code = code.drop_front(length);
-
-    unsigned value;
-    if (!result->text.getAsInteger(0, value)) {
+    StringRef original = code;
+    unsigned value = 0;
+    if (!code.consumeInteger(0, value)) {
+      size_t numConsumed = original.size() - code.size();
+      result->text = original.take_front(numConsumed);
       result->kind = TokenKind::Literal;
-      result->value = static_cast<unsigned>(value);
+      result->value = static_cast<int64_t>(value);
       return;
     }
   }

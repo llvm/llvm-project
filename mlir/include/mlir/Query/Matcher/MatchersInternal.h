@@ -21,15 +21,13 @@
 #ifndef MLIR_TOOLS_MLIRQUERY_MATCHER_MATCHERSINTERNAL_H
 #define MLIR_TOOLS_MLIRQUERY_MATCHER_MATCHERSINTERNAL_H
 
+#include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/IR/Operation.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 
-namespace mlir {
-namespace query {
+namespace mlir::query {
 struct QueryOptions;
 }
-} // namespace mlir
-
 namespace mlir::query::matcher {
 
 // Defaults to false if T has no match() method with the signature:

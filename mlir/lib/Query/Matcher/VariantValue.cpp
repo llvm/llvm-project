@@ -99,13 +99,10 @@ void VariantValue::reset() {
   type = ValueType::Nothing;
 }
 
-// Unsinged
+// Signed
 bool VariantValue::isSigned() const { return type == ValueType::Signed; }
 
-int64_t VariantValue::getSigned() const {
-  assert(isSigned());
-  return value.Signed;
-}
+int64_t VariantValue::getSigned() const { return value.Signed; }
 
 void VariantValue::setSigned(int64_t newValue) {
   reset();

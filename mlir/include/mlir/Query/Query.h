@@ -10,6 +10,7 @@
 #define MLIR_TOOLS_MLIRQUERY_QUERY_H
 
 #include "Matcher/VariantValue.h"
+#include "mlir/Analysis/SliceAnalysis.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/LineEditor/LineEditor.h"
@@ -17,22 +18,9 @@
 
 namespace mlir::query {
 
-///
-/// Options for configuring which parts of the IR are to be
-/// traversed by the matcher
-///
-struct QueryOptions {
-  /// When omitBlockArguments is true, the matcher omits traversing
-  /// any block arguments
-  bool omitBlockArguments = false;
-  /// When omitUsesFromAbove is true, the matcher omits
-  /// traversing values that are captured from above.
-  bool omitUsesFromAbove = true;
-  /// When inclusive is true, the matcher will include the include the
-  /// top level op in the slice. When inclusive is false, the matcher will
-  /// not include thee top level op in the slice
-  bool inclusive = true;
-};
+/// QueryOptions is a class derived from BackwardSliceOptions
+/// Addtional options can be added for further customization
+struct QueryOptions : public BackwardSliceOptions {};
 
 enum class QueryKind {
   Invalid,
