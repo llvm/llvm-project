@@ -1,4 +1,5 @@
 # RUN: llvm-mc -triple=aarch64 -filetype=obj %s | llvm-readobj -r - | FileCheck %s
+# RUN: not llvm-mc -triple=aarch64 -filetype=obj %s --defsym PARSEERR=1 -o /dev/null 2>&1 | FileCheck %s --check-prefix=PARSEERR --implicit-check-not=error:
 # RUN: not llvm-mc -triple=aarch64 -filetype=obj %s --defsym ERR=1 -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR --implicit-check-not=error:
 
 .globl g
@@ -31,6 +32,13 @@ data1:
 .word extern@gotpcrel+4
 .word extern@GOTPCREL-5
 
+## Test parse-time errors
+.ifdef PARSEERR
+# PARSEERR: [[#@LINE+1]]:14: error: invalid variant 'pageoff'
+.word extern@pageoff
+.endif
+
+## Test assemble-time errors
 .ifdef ERR
 # ERR: [[#@LINE+1]]:7: error: symbol 'und' can not be undefined in a subtraction expression
 .word extern@plt - und
