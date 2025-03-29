@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SUPPORT_flat_multiset_HELPERS_H
-#define SUPPORT_flat_multiset_HELPERS_H
+#ifndef SUPPORT_FLAT_MULTISET_HELPERS_H
+#define SUPPORT_FLAT_MULTISET_HELPERS_H
 
 #include <algorithm>
 #include <cassert>
@@ -298,4 +298,4 @@ public:
   bool moved() const { return int_ == -1; }
 };
 
-#endif // SUPPORT_flat_multiset_HELPERS_H
+#endif // SUPPORT_FLAT_MULTISET_HELPERS_H

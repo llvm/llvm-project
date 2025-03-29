@@ -12,6 +12,7 @@
 
 // flat_multiset(const flat_multiset&, const allocator_type&);
 
+#include <algorithm>
 #include <cassert>
 #include <deque>
 #include <flat_set>

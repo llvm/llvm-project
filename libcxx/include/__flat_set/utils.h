@@ -49,8 +49,6 @@ struct __flat_set_utils {
     return typename decay_t<_Set>::iterator(std::move(__key_it));
   }
 
-  // TODO: We could optimize this, see
-  // https://github.com/llvm/llvm-project/issues/108624
   template <class _Set, class _InputIterator>
   _LIBCPP_HIDE_FROM_ABI static void __append(_Set& __set, _InputIterator __first, _InputIterator __last) {
     __set.__keys_.insert(__set.__keys_.end(), std::move(__first), std::move(__last));
