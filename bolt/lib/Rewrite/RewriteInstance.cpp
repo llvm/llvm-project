@@ -247,12 +247,14 @@ static cl::opt<bool> WriteBoltInfoSection(
     "bolt-info", cl::desc("write bolt info section in the output binary"),
     cl::init(true), cl::Hidden, cl::cat(BoltOutputCategory));
 
-cl::list<GadgetScannerKind>
-    GadgetScannersToRun("scanners", cl::desc("which gadget scanners to run"),
-                        cl::values(clEnumValN(GS_PACRET, "pacret", "pac-ret"),
-                                   clEnumValN(GS_ALL, "all", "all")),
-                        cl::ZeroOrMore, cl::CommaSeparated,
-                        cl::cat(BinaryAnalysisCategory));
+cl::bits<GadgetScannerKind> GadgetScannersToRun(
+    "scanners", cl::desc("which gadget scanners to run"),
+    cl::values(
+        clEnumValN(GS_PACRET, "pacret",
+                   "pac-ret: return address protection (subset of \"pauth\")"),
+        clEnumValN(GS_PAUTH, "pauth", "All Pointer Authentication scanners"),
+        clEnumValN(GS_ALL, "all", "All implemented scanners")),
+    cl::ZeroOrMore, cl::CommaSeparated, cl::cat(BinaryAnalysisCategory));
 
 } // namespace opts
 
@@ -3539,12 +3541,18 @@ void RewriteInstance::runBinaryAnalyses() {
   // FIXME: add a pass that warns about which functions do not have CFG,
   // and therefore, analysis is most likely to be less accurate.
   using GSK = opts::GadgetScannerKind;
-  // if no command line option was given, act as if "all" was specified.
-  if (opts::GadgetScannersToRun.empty())
-    opts::GadgetScannersToRun.addValue(GSK::GS_ALL);
-  for (GSK ScannerToRun : opts::GadgetScannersToRun) {
-    if (ScannerToRun == GSK::GS_PACRET || ScannerToRun == GSK::GS_ALL)
-      Manager.registerPass(std::make_unique<PAuthGadgetScanner::Analysis>());
+  using PAuthScanner = PAuthGadgetScanner::Analysis;
+
+  // If no command line option was given, act as if "all" was specified.
+  bool RunAll = !opts::GadgetScannersToRun.getBits() ||
+                opts::GadgetScannersToRun.isSet(GSK::GS_ALL);
+
+  if (RunAll || opts::GadgetScannersToRun.isSet(GSK::GS_PAUTH)) {
+    Manager.registerPass(
+        std::make_unique<PAuthScanner>(/*OnlyPacRetChecks=*/false));
+  } else if (RunAll || opts::GadgetScannersToRun.isSet(GSK::GS_PACRET)) {
+    Manager.registerPass(
+        std::make_unique<PAuthScanner>(/*OnlyPacRetChecks=*/true));
   }
 
   BC->logBOLTErrorsAndQuitOnFatal(Manager.runPasses());
