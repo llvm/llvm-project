@@ -33,7 +33,7 @@ set(LIBCXX_TEST_PARAMS "optimization=none;long_tests=False;executor=amdhsa-loade
 
 # Necessary compile flags for AMDGPU.
 set(LIBCXX_ADDITIONAL_COMPILE_FLAGS
-    "-nogpulib;-flto;-fconvergent-functions;" CACHE STRING "")
+    "-nogpulib;-flto;-fconvergent-functions;SHELL:-Xclang -mcode-object-version=none" CACHE STRING "")
 set(LIBCXXABI_ADDITIONAL_COMPILE_FLAGS
-    "-nogpulib;-flto;-fconvergent-functions;" CACHE STRING "")
+    "-nogpulib;-flto;-fconvergent-functions;SHELL:-Xclang -mcode-object-version=none" CACHE STRING "")
 set(CMAKE_REQUIRED_FLAGS "-nogpulib" CACHE STRING "")

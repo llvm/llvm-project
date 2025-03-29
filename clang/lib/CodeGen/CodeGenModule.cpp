@@ -847,7 +847,7 @@ static void setVisibilityFromDLLStorageClass(const clang::LangOptions &LO,
 static bool isStackProtectorOn(const LangOptions &LangOpts,
                                const llvm::Triple &Triple,
                                clang::LangOptions::StackProtectorMode Mode) {
-  if (Triple.isAMDGPU() || Triple.isNVPTX())
+  if (Triple.isGPU())
     return false;
   return LangOpts.getStackProtector() == Mode;
 }
@@ -1438,6 +1438,8 @@ void CodeGenModule::Release() {
   if (getContext().getTargetInfo().getMaxTLSAlign())
     getModule().addModuleFlag(llvm::Module::Error, "MaxTLSAlign",
                               getContext().getTargetInfo().getMaxTLSAlign());
+
+  getTargetCodeGenInfo().emitTargetGlobals(*this);
 
   getTargetCodeGenInfo().emitTargetMetadata(*this, MangledDeclNames);
 
