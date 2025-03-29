@@ -8749,6 +8749,7 @@ Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
       Res.second = emitRMWOpAsInstruction(Res.first, Expr, RMWOp);
   } else if (RMWOp == llvm::AtomicRMWInst::BinOp::BAD_BINOP &&
              XElemTy->isStructTy()) {
+    auto *StackSave = Builder.CreateStackSave();
     LoadInst *OldVal =
         Builder.CreateLoad(XElemTy, X, X->getName() + ".atomic.load");
     OldVal->setAtomic(AO);
@@ -8785,6 +8786,7 @@ Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
     auto Result = atomicInfo.EmitAtomicCompareExchangeLibcall(
         AtomicLoadRes.second, NewAtomicAddr, AO, Failure);
     LoadInst *PHILoad = Builder.CreateLoad(XElemTy, Result.first);
+    Builder.CreateStackRestore(StackSave);
     PHI->addIncoming(PHILoad, Builder.GetInsertBlock());
     Builder.CreateCondBr(Result.second, ExitBB, ContBB);
     OldVal->eraseFromParent();

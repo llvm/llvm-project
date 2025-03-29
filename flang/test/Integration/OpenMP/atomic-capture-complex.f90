@@ -16,6 +16,7 @@
 !CHECK: br label %entry
 
 !CHECK: entry:
+!CHECK: %[[STACK_SAVE_PTR:.*]] = call ptr @llvm.stacksave.p0()
 !CHECK: %[[ATOMIC_TEMP_LOAD:.*]] = alloca { float, float }, align 8
 !CHECK: call void @__atomic_load(i64 8, ptr %[[ORIG_VAL]], ptr %[[ATOMIC_TEMP_LOAD]], i32 0)
 !CHECK: %[[PHI_NODE_ENTRY_1:.*]] = load { float, float }, ptr %[[ATOMIC_TEMP_LOAD]], align 8
@@ -33,6 +34,7 @@
 !CHECK: %[[VAL_11:.*]] = call i1 @__atomic_compare_exchange(i64 8, ptr %[[ORIG_VAL]], ptr %[[ATOMIC_TEMP_LOAD]], ptr %[[X_NEW_VAL]],
 !i32 2, i32 2)
 !CHECK: %[[VAL_12:.*]] = load { float, float }, ptr %[[ATOMIC_TEMP_LOAD]], align 4
+!CHECK: call void @llvm.stackrestore.p0(ptr %[[STACK_SAVE_PTR]])
 !CHECK: br i1 %[[VAL_11]], label %.atomic.exit, label %.atomic.cont
 
 !CHECK:   .atomic.exit
