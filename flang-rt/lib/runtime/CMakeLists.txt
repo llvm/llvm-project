@@ -12,7 +12,6 @@ find_package(Backtrace)
 set(HAVE_BACKTRACE ${Backtrace_FOUND})
 set(BACKTRACE_HEADER ${Backtrace_HEADER})
 
-
 # List of files that are buildable for all devices.
 set(supported_sources
   ${FLANG_SOURCE_DIR}/lib/Decimal/binary-to-decimal.cpp
@@ -88,6 +87,54 @@ set(host_sources
   unit-map.cpp
 )
 
+# Sources that can be compiled directly for the GPU.
+set(gpu_sources
+  ${FLANG_SOURCE_DIR}/lib/Decimal/binary-to-decimal.cpp
+  ${FLANG_SOURCE_DIR}/lib/Decimal/decimal-to-binary.cpp
+  ISO_Fortran_binding.cpp
+  allocator-registry.cpp
+  allocatable.cpp
+  array-constructor.cpp
+  assign.cpp
+  buffer.cpp
+  character.cpp
+  connection.cpp
+  copy.cpp
+  derived-api.cpp
+  derived.cpp
+  dot-product.cpp
+  edit-output.cpp
+  extrema.cpp
+  findloc.cpp
+  format.cpp
+  inquiry.cpp
+  internal-unit.cpp
+  io-error.cpp
+  iostat.cpp
+  matmul-transpose.cpp
+  matmul.cpp
+  memory.cpp
+  misc-intrinsic.cpp
+  non-tbp-dio.cpp
+  numeric.cpp
+  pointer.cpp
+  product.cpp
+  ragged.cpp
+  stat.cpp
+  sum.cpp
+  support.cpp
+  terminator.cpp
+  tools.cpp
+  transformational.cpp
+  type-code.cpp
+  type-info.cpp
+  utf.cpp
+  complex-powi.cpp
+  reduce.cpp
+  reduction.cpp
+  temporary-stack.cpp
+)
+
 file(GLOB_RECURSE public_headers
   "${FLANG_RT_SOURCE_DIR}/include/flang_rt/*.h"
   "${FLANG_SOURCE_DIR}/include/flang/Common/*.h"
@@ -124,7 +171,11 @@ else ()
   set(f128_sources "")
 endif ()
 
-set(sources ${supported_sources} ${host_sources} ${f128_sources})
+if ("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn|^nvptx")
+  set(sources ${gpu_sources})
+else ()
+  set(sources ${supported_sources} ${host_sources} ${f128_sources})
+endif ()
 
 
 if (NOT WIN32)

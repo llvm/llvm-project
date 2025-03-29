@@ -720,6 +720,10 @@ IntPointer IntPointer::atOffset(const ASTContext &ASTCtx,
 
 IntPointer IntPointer::baseCast(const ASTContext &ASTCtx,
                                 unsigned BaseOffset) const {
+  if (!Desc) {
+    assert(Value == 0);
+    return *this;
+  }
   const Record *R = Desc->ElemRecord;
   const Descriptor *BaseDesc = nullptr;
 

@@ -134,6 +134,30 @@ void TargetCharacteristics::set_hasSubnormalFlushingControl(
   hasSubnormalFlushingControl_[kind] = yes;
 }
 
+// Check if a given real kind has (nonstandard) ieee_denorm exception control.
+bool TargetCharacteristics::hasSubnormalExceptionSupport(int kind) const {
+  CHECK(kind > 0 && kind <= maxKind);
+  CHECK(CanSupportType(TypeCategory::Real, kind));
+  return hasSubnormalExceptionSupport_[kind];
+}
+
+// Check if all real kinds have support for the ieee_denorm exception.
+bool TargetCharacteristics::hasSubnormalExceptionSupport() const {
+  for (int kind{1}; kind <= maxKind; ++kind) {
+    if (CanSupportType(TypeCategory::Real, kind) &&
+        !hasSubnormalExceptionSupport_[kind]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+void TargetCharacteristics::set_hasSubnormalExceptionSupport(
+    int kind, bool yes) {
+  CHECK(kind > 0 && kind <= maxKind);
+  hasSubnormalExceptionSupport_[kind] = yes;
+}
+
 void TargetCharacteristics::set_roundingMode(Rounding rounding) {
   roundingMode_ = rounding;
 }

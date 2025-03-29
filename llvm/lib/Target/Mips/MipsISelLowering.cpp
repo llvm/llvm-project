@@ -4474,6 +4474,14 @@ bool MipsTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   return Imm.isZero();
 }
 
+bool MipsTargetLowering::isLegalICmpImmediate(int64_t Imm) const {
+  return isInt<16>(Imm);
+}
+
+bool MipsTargetLowering::isLegalAddImmediate(int64_t Imm) const {
+  return isInt<16>(Imm);
+}
+
 unsigned MipsTargetLowering::getJumpTableEncoding() const {
   if (!isPositionIndependent())
     return MachineJumpTableInfo::EK_BlockAddress;

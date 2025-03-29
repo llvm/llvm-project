@@ -1071,8 +1071,7 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
 
   // We added a ref edge earlier for new call edges, promote those to call edges
   // alongside PromotedRefTargets.
-  for (Node *E : NewCallEdges)
-    PromotedRefTargets.insert(E);
+  PromotedRefTargets.insert_range(NewCallEdges);
 
   // Now promote ref edges into call edges.
   for (Node *CallTarget : PromotedRefTargets) {
