@@ -17,6 +17,92 @@
 using namespace __ctx_profile;
 template <typename T> using Set = DenseMap<T, bool>;
 
+<<<<<<< HEAD
+=======
+namespace __sanitizer {
+void BufferedStackTrace::UnwindImpl(uptr pc, uptr bp, void *context,
+                                    bool request_fast, u32 max_depth) {
+  // We can't implement the fast variant. The fast variant ends up invoking an
+  // external allocator, because of pthread_attr_getstack. If this happens
+  // during an allocation of the program being instrumented, a non-reentrant
+  // lock may be taken (this was observed). The allocator called by
+  // pthread_attr_getstack will also try to take that lock.
+  UnwindSlow(pc, max_depth);
+}
+} // namespace __sanitizer
+
+RootAutoDetector::PerThreadSamples::PerThreadSamples(RootAutoDetector &Parent) {
+  GenericScopedLock<SpinMutex> L(&Parent.AllSamplesMutex);
+  Parent.AllSamples.PushBack(this);
+}
+
+void RootAutoDetector::start() {
+  atomic_store_relaxed(&Self, reinterpret_cast<uintptr_t>(this));
+  pthread_create(
+      &WorkerThread, nullptr,
+      +[](void *Ctx) -> void * {
+        RootAutoDetector *RAD = reinterpret_cast<RootAutoDetector *>(Ctx);
+        SleepForSeconds(RAD->WaitSeconds);
+        Vector<PerThreadSamples*> Copy;
+        {
+          GenericScopedLock<SpinMutex> M(&RAD->AllSamplesMutex);
+          Copy.Resize(RAD->AllSamples.Size());
+          for (uptr I = 0; I < RAD->AllSamples.Size(); ++I)
+            Copy[I] = RAD->AllSamples[I];
+        }
+        DenseMap<uptr, uint64_t> AllRoots;
+        for (uptr I = 0; I < Copy.Size(); ++I) {
+          GenericScopedLock<SpinMutex>(&Copy[I]->M);
+          Copy[I]->TrieRoot.determineRoots().forEach([&](auto &KVP) {
+            auto [FAddr, Count] = KVP;
+            AllRoots[FAddr] += Count;
+            return true;
+          });
+        }
+        for (auto *FD = reinterpret_cast<FunctionData *>(
+                 atomic_load_relaxed(&RAD->FunctionDataListHead));
+             FD; FD = FD->Next) {
+          if (AllRoots.contains(reinterpret_cast<uptr>(FD->EntryAddress))) {
+            FD->getOrAllocateContextRoot();
+          }
+        }
+        atomic_store_relaxed(&RAD->Self, 0);
+        return nullptr;
+      },
+      this);
+}
+
+void RootAutoDetector::join() {
+  pthread_join(WorkerThread, nullptr);
+}
+
+void RootAutoDetector::sample() {
+  static thread_local bool Entered = false;
+  static thread_local uint64_t Entries = 0;
+  if (Entered || (++Entries % SampleRate))
+    return;
+  Entered = true;
+  collectStack();
+  Entered = false;
+}
+
+void RootAutoDetector::collectStack() {
+  GET_CALLER_PC_BP;
+  BufferedStackTrace CurrentStack;
+  CurrentStack.Unwind(pc, bp, nullptr, false);
+  if (CurrentStack.size <= 2)  return;
+  static thread_local PerThreadSamples *ThisThreadSamples =
+      new (__sanitizer::InternalAlloc(sizeof(PerThreadSamples)))
+          PerThreadSamples(*this);
+
+  if (!ThisThreadSamples->M.TryLock())
+    return;
+
+  ThisThreadSamples->TrieRoot.insertStack(CurrentStack);
+  ThisThreadSamples->M.Unlock();
+}
+
+>>>>>>> b78258c5b562 (RootAutodetect)
 uptr PerThreadCallsiteTrie::getFctStartAddr(uptr CallsiteAddress) const {
   // this requires --linkopt=-Wl,--export-dynamic
   Dl_info Info;
