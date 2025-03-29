@@ -21,6 +21,7 @@
 #include "llvm/Analysis/CtxProfAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InlineAdvisor.h"
+#include "llvm/Analysis/MitigationAnalysis.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
@@ -299,6 +300,18 @@ static cl::opt<std::string> InstrumentColdFuncOnlyPath(
     cl::desc("File path for cold function only instrumentation(requires use "
              "with --pgo-instrument-cold-function-only)"),
     cl::Hidden);
+
+static cl::opt<MitigationAnalysisSummary> EnableMitigationSummary(
+    "mitigation-summary", cl::Hidden, cl::init(MitigationAnalysisSummary::NONE),
+    cl::desc("Enable the MitigationAnalysis Pass"),
+    cl::values(
+        clEnumValN(MitigationAnalysisSummary::NONE, "none",
+                   "Disable generating mitigation analysis information"),
+        clEnumValN(
+            MitigationAnalysisSummary::SHORT, "short",
+            "Generate summary of mitigation coverage for the current module"),
+        clEnumValN(MitigationAnalysisSummary::FUNCTION, "function",
+                   "Generate per-function mitigation coverage information")));
 
 extern cl::opt<std::string> UseCtxProfile;
 extern cl::opt<bool> PGOInstrumentColdFunctionOnly;
@@ -1840,6 +1853,9 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // Create a function that performs CFI checks for cross-DSO calls with targets
   // in the current module.
   MPM.addPass(CrossDSOCFIPass());
+
+  if (EnableMitigationSummary != llvm::MitigationAnalysisSummary::NONE)
+    MPM.addPass(MitigationAnalysis(EnableMitigationSummary));
 
   if (Level == OptimizationLevel::O0) {
     // The WPD and LowerTypeTest passes need to run at -O0 to lower type
