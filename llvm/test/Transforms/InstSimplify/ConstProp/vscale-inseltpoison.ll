@@ -208,7 +208,7 @@ define <vscale x 4 x i32> @shufflevector() {
 
 define <vscale x 4 x float> @bitcast() {
 ; CHECK-LABEL: @bitcast(
-; CHECK-NEXT:    ret <vscale x 4 x float> bitcast (<vscale x 4 x i32> splat (i32 1) to <vscale x 4 x float>)
+; CHECK-NEXT:    ret <vscale x 4 x float> splat (float 0x36A0000000000000)
 ;
   %i1 = insertelement <vscale x 4 x i32> poison, i32 1, i32 0
   %i2 = shufflevector <vscale x 4 x i32> %i1, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
