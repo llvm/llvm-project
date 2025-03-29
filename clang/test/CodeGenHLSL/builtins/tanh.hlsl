@@ -57,27 +57,3 @@ float3 test_tanh_float3 ( float3 p0 ) {
 float4 test_tanh_float4 ( float4 p0 ) {
   return tanh ( p0 );
 }
-
-// CHECK-LABEL: test_tanh_double
-// CHECK: call reassoc nnan ninf nsz arcp afn float @llvm.tanh.f32
-float test_tanh_double ( double p0 ) {
-  return tanh ( p0 );
-}
-
-// CHECK-LABEL: test_tanh_double2
-// CHECK: call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.tanh.v2f32
-float2 test_tanh_double2 ( double2 p0 ) {
-  return tanh ( p0 );
-}
-
-// CHECK-LABEL: test_tanh_double3
-// CHECK: call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.tanh.v3f32
-float3 test_tanh_double3 ( double3 p0 ) {
-  return tanh ( p0 );
-}
-
-// CHECK-LABEL: test_tanh_double4
-// CHECK: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.tanh.v4f32
-float4 test_tanh_double4 ( double4 p0 ) {
-  return tanh ( p0 );
-}

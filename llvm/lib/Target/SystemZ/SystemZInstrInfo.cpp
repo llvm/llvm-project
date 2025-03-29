@@ -670,31 +670,6 @@ void SystemZInstrInfo::insertSelect(MachineBasicBlock &MBB,
     .addImm(CCValid).addImm(CCMask);
 }
 
-MachineInstr *SystemZInstrInfo::optimizeLoadInstr(MachineInstr &MI,
-                                                  const MachineRegisterInfo *MRI,
-                                                  Register &FoldAsLoadDefReg,
-                                                  MachineInstr *&DefMI) const {
-  // Check whether we can move the DefMI load, and that it only has one use.
-  DefMI = MRI->getVRegDef(FoldAsLoadDefReg);
-  assert(DefMI);
-  bool SawStore = false;
-  if (!DefMI->isSafeToMove(SawStore) || !MRI->hasOneNonDBGUse(FoldAsLoadDefReg))
-    return nullptr;
-
-  int UseOpIdx =
-      MI.findRegisterUseOperandIdx(FoldAsLoadDefReg, /*TRI=*/nullptr);
-  assert(UseOpIdx != -1 && "Expected FoldAsLoadDefReg to be used by MI.");
-
-  // Check whether we can fold the load.
-  if (MachineInstr *FoldMI =
-          foldMemoryOperand(MI, {((unsigned)UseOpIdx)}, *DefMI)) {
-    FoldAsLoadDefReg = 0;
-    return FoldMI;
-  }
-
-  return nullptr;
-}
-
 bool SystemZInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
                                      Register Reg,
                                      MachineRegisterInfo *MRI) const {
