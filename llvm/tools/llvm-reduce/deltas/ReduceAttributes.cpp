@@ -166,6 +166,6 @@ public:
 
 /// Removes out-of-chunk attributes from module.
 void llvm::reduceAttributesDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
-  AttributeRemapper R(O, WorkItem.getContext());
+  AttributeRemapper R(O, WorkItem.getModule());
   R.visit(WorkItem.getModule());
 }

@@ -13,9 +13,7 @@
 
 #include "DeltaManager.h"
 #include "DeltaPass.h"
-#include "ReducerWorkItem.h"
 #include "TestRunner.h"
-#include "deltas/Delta.h"
 #include "deltas/ReduceAliases.h"
 #include "deltas/ReduceArguments.h"
 #include "deltas/ReduceAttributes.h"
