@@ -146,5 +146,9 @@ struct SymbolAndTypeMappings;
 void MapSubprogramToNewSymbols(const Symbol &oldSymbol, Symbol &newSymbol,
     Scope &newScope, SymbolAndTypeMappings * = nullptr);
 
+parser::CharBlock MakeNameFromOperator(
+    const parser::DefinedOperator::IntrinsicOperator &op);
+parser::CharBlock MangleSpecialFunctions(const parser::CharBlock name);
+
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_RESOLVE_NAMES_H_
