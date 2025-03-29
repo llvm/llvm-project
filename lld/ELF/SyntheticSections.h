@@ -111,8 +111,7 @@ public:
   void writeTo(uint8_t *buf) override;
 
   void addConstant(const Relocation &r);
-  void addEntry(const Symbol &sym);
-  void addAuthEntry(const Symbol &sym);
+  void addEntry(const Symbol &sym, bool authEntry = false);
   bool addTlsDescEntry(const Symbol &sym);
   void addTlsDescAuthEntry();
   bool addDynTlsEntry(const Symbol &sym);
@@ -138,6 +137,14 @@ protected:
     bool isSymbolFunc;
   };
   SmallVector<AuthEntryInfo, 0> authEntries;
+
+  // Map of GOT entries keyed by section, offset, and type. The purpose is to
+  // reuse GOT entries when multiple same-type, foldable symbols refer to the
+  // image location. In general, this is a GOT-size optimization, but it is
+  // also required for some cases involving multi-instruction GOT access
+  // patterns and ICF.
+  llvm::DenseMap<std::tuple<SectionBase *, uint64_t, unsigned char>, uint32_t>
+      gotEntries;
 };
 
 // .note.GNU-stack section.

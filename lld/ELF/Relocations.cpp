@@ -915,8 +915,7 @@ void elf::addGotEntry(Ctx &ctx, Symbol &sym) {
 }
 
 static void addGotAuthEntry(Ctx &ctx, Symbol &sym) {
-  ctx.in.got->addEntry(sym);
-  ctx.in.got->addAuthEntry(sym);
+  ctx.in.got->addEntry(sym, /*authEntry = */ true);
   uint64_t off = sym.getGotOffset(ctx);
 
   // If preemptible, emit a GLOB_DAT relocation.

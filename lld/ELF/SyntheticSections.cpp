@@ -665,13 +665,31 @@ GotSection::GotSection(Ctx &ctx)
 }
 
 void GotSection::addConstant(const Relocation &r) { relocations.push_back(r); }
-void GotSection::addEntry(const Symbol &sym) {
+void GotSection::addEntry(const Symbol &sym, bool authEntry) {
   assert(sym.auxIdx == ctx.symAux.size() - 1);
-  ctx.symAux.back().gotIdx = numEntries++;
-}
+  auto *d = dyn_cast<Defined>(&sym);
+  std::optional<uint32_t> finalGotIdx;
+  if (d && d->isFoldable()) {
+    // Generate one GOT entry for all foldable symbols. This could be due to
+    // ICF where containing sections have now been folded into one, or aliases
+    // that all point to the same symbol.
+    auto [it, inserted] = gotEntries.insert(std::make_pair(
+        std::make_tuple(d->section, d->value, sym.type), numEntries));
+    if (!inserted) {
+      finalGotIdx = it->getSecond();
+    }
+  }
 
-void GotSection::addAuthEntry(const Symbol &sym) {
-  authEntries.push_back({(numEntries - 1) * ctx.arg.wordsize, sym.isFunc()});
+  if (!finalGotIdx.has_value()) {
+    finalGotIdx = numEntries++;
+  }
+
+  if (authEntry) {
+    authEntries.push_back(
+        {finalGotIdx.value() * ctx.arg.wordsize, sym.isFunc()});
+  }
+
+  ctx.symAux.back().gotIdx = finalGotIdx.value();
 }
 
 bool GotSection::addTlsDescEntry(const Symbol &sym) {
