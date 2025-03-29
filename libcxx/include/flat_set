@@ -31,7 +31,7 @@ namespace std {
   template<class Key, class Compare, class KeyContainer, class Predicate>
     typename flat_set<Key, Compare, KeyContainer>::size_type
       erase_if(flat_set<Key, Compare, KeyContainer>& c, Predicate pred);
-  
+
    // [flat.multiset], class template flat_multiset
   template<class Key, class Compare = less<Key>, class KeyContainer = vector<Key>>
     class flat_multiset;
