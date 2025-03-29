@@ -43,10 +43,8 @@ static void runPasses(Oracle &O, ReducerWorkItem &WorkItem) {
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
   ModulePassManager MPM;
-  if (auto Err = PB.parsePassPipeline(MPM, PassPipeline)) {
-    errs() << toString(std::move(Err)) << "\n";
-    report_fatal_error("Error constructing pass pipeline");
-  }
+  if (auto Err = PB.parsePassPipeline(MPM, PassPipeline))
+    report_fatal_error(std::move(Err), false);
   MPM.run(Program, MAM);
 }
 

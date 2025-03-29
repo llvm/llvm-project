@@ -22,6 +22,8 @@
 
 #include "Protocol/ProtocolBase.h"
 #include "Protocol/ProtocolTypes.h"
+#include "lldb/lldb-enumerations.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/JSON.h"
 #include <cstdint>
 #include <optional>
@@ -55,26 +57,26 @@ bool fromJSON(const llvm::json::Value &, DisconnectArguments &,
 using DisconnectResponse = VoidResponse;
 
 /// Features supported by DAP clients.
-enum ClientFeature {
-  eClientFeatureVariableType,
-  eClientFeatureVariablePaging,
-  eClientFeatureRunInTerminalRequest,
-  eClientFeatureMemoryReferences,
-  eClientFeatureProgressReporting,
-  eClientFeatureInvalidatedEvent,
-  eClientFeatureMemoryEvent,
-  /// Client supports the `argsCanBeInterpretedByShell` attribute on the
-  /// `runInTerminal` request.
-  eClientFeatureArgsCanBeInterpretedByShell,
-  eClientFeatureStartDebuggingRequest,
-  /// The client will interpret ANSI escape sequences in the display of
-  /// `OutputEvent.output` and `Variable.value` fields when
-  /// `Capabilities.supportsANSIStyling` is also enabled.
-  eClientFeatureANSIStyling,
+FLAGS_ENUM(ClientFeature){
+    eClientFeatureVariableType,
+    eClientFeatureVariablePaging,
+    eClientFeatureRunInTerminalRequest,
+    eClientFeatureMemoryReferences,
+    eClientFeatureProgressReporting,
+    eClientFeatureInvalidatedEvent,
+    eClientFeatureMemoryEvent,
+    /// Client supports the `argsCanBeInterpretedByShell` attribute on the
+    /// `runInTerminal` request.
+    eClientFeatureArgsCanBeInterpretedByShell,
+    eClientFeatureStartDebuggingRequest,
+    /// The client will interpret ANSI escape sequences in the display of
+    /// `OutputEvent.output` and `Variable.value` fields when
+    /// `Capabilities.supportsANSIStyling` is also enabled.
+    eClientFeatureANSIStyling,
 };
 
 /// Format of paths reported by the debug adapter.
-enum PathFormat { ePatFormatPath, ePathFormatURI };
+FLAGS_ENUM(PathFormat){ePatFormatPath, ePathFormatURI};
 
 /// Arguments for `initialize` request.
 struct InitializeRequestArguments {
