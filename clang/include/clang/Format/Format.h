@@ -2728,6 +2728,12 @@ struct FormatStyle {
 
   /// Insert a comma (if missing) or remove the comma at the end of an ``enum``
   /// enumerator list.
+  /// \warning
+  ///  Setting this option to any value other than ``Leave`` could lead to
+  ///  incorrect code formatting due to clang-format's lack of complete semantic
+  ///  information. As such, extra care should be taken to review code changes
+  ///  made by this option.
+  /// \endwarning
   /// \version 21
   EnumTrailingCommaStyle EnumTrailingComma;
 

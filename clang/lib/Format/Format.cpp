@@ -2214,6 +2214,21 @@ FormatStyle::GetLanguageStyle(FormatStyle::LanguageKind Language) const {
 
 namespace {
 
+void replaceToken(const FormatToken &Token, FormatToken *Next,
+                  const SourceManager &SourceMgr, tooling::Replacements &Result,
+                  const char *Text = "") {
+  const auto &Tok = Token.Tok;
+  SourceLocation Start;
+  if (Next && Next->NewlinesBefore == 0 && Next->isNot(tok::eof)) {
+    Start = Tok.getLocation();
+    Next->WhitespaceRange = Token.WhitespaceRange;
+  } else {
+    Start = Token.WhitespaceRange.getBegin();
+  }
+  const auto &Range = CharSourceRange::getCharRange(Start, Tok.getEndLoc());
+  cantFail(Result.add(tooling::Replacement(SourceMgr, Range, Text)));
+}
+
 class ParensRemover : public TokenAnalyzer {
 public:
   ParensRemover(const Environment &Env, const FormatStyle &Style)
@@ -2240,20 +2255,8 @@ private:
         continue;
       for (const auto *Token = Line->First; Token && !Token->Finalized;
            Token = Token->Next) {
-        if (!Token->Optional || !Token->isOneOf(tok::l_paren, tok::r_paren))
-          continue;
-        auto *Next = Token->Next;
-        assert(Next && Next->isNot(tok::eof));
-        SourceLocation Start;
-        if (Next->NewlinesBefore == 0) {
-          Start = Token->Tok.getLocation();
-          Next->WhitespaceRange = Token->WhitespaceRange;
-        } else {
-          Start = Token->WhitespaceRange.getBegin();
-        }
-        const auto &Range =
-            CharSourceRange::getCharRange(Start, Token->Tok.getEndLoc());
-        cantFail(Result.add(tooling::Replacement(SourceMgr, Range, " ")));
+        if (Token->Optional && Token->isOneOf(tok::l_paren, tok::r_paren))
+          replaceToken(*Token, Token->Next, SourceMgr, Result, " ");
       }
     }
   }
@@ -2342,24 +2345,13 @@ private:
       const auto *NextLine = I + 1 == End ? nullptr : I[1];
       for (const auto *Token = Line->First; Token && !Token->Finalized;
            Token = Token->Next) {
-        if (!Token->Optional)
-          continue;
-        if (!Token->isOneOf(tok::l_brace, tok::r_brace))
+        if (!Token->Optional || !Token->isOneOf(tok::l_brace, tok::r_brace))
           continue;
         auto *Next = Token->Next;
         assert(Next || Token == Line->Last);
         if (!Next && NextLine)
           Next = NextLine->First;
-        SourceLocation Start;
-        if (Next && Next->NewlinesBefore == 0 && Next->isNot(tok::eof)) {
-          Start = Token->Tok.getLocation();
-          Next->WhitespaceRange = Token->WhitespaceRange;
-        } else {
-          Start = Token->WhitespaceRange.getBegin();
-        }
-        const auto &Range =
-            CharSourceRange::getCharRange(Start, Token->Tok.getEndLoc());
-        cantFail(Result.add(tooling::Replacement(SourceMgr, Range, "")));
+        replaceToken(*Token, Next, SourceMgr, Result);
       }
     }
   }
@@ -2411,16 +2403,7 @@ private:
         assert(Next || Token == Line->Last);
         if (!Next && NextLine)
           Next = NextLine->First;
-        SourceLocation Start;
-        if (Next && Next->NewlinesBefore == 0 && Next->isNot(tok::eof)) {
-          Start = Token->Tok.getLocation();
-          Next->WhitespaceRange = Token->WhitespaceRange;
-        } else {
-          Start = Token->WhitespaceRange.getBegin();
-        }
-        const auto &Range =
-            CharSourceRange::getCharRange(Start, Token->Tok.getEndLoc());
-        cantFail(Result.add(tooling::Replacement(SourceMgr, Range, "")));
+        replaceToken(*Token, Next, SourceMgr, Result);
       }
     }
   }
@@ -2458,26 +2441,12 @@ private:
         assert(BeforeRBrace);
         if (BeforeRBrace->is(TT_EnumLBrace)) // Empty braces.
           continue;
-        if (Style.EnumTrailingComma == FormatStyle::ETC_Insert) {
-          if (BeforeRBrace->isNot(tok::comma)) {
-            cantFail(Result.add(tooling::Replacement(
-                SourceMgr, BeforeRBrace->Tok.getEndLoc(), 0, ",")));
-          }
-        } else {
-          assert(Style.EnumTrailingComma == FormatStyle::ETC_Remove);
-          if (BeforeRBrace->isNot(tok::comma))
-            continue;
-          auto *Next = BeforeRBrace->Next;
-          SourceLocation Start;
-          if (Next->NewlinesBefore == 0) {
-            Start = BeforeRBrace->Tok.getLocation();
-            Next->WhitespaceRange = BeforeRBrace->WhitespaceRange;
-          } else {
-            Start = BeforeRBrace->WhitespaceRange.getBegin();
-          }
-          const auto &Range = CharSourceRange::getCharRange(
-              Start, BeforeRBrace->Tok.getEndLoc());
-          cantFail(Result.add(tooling::Replacement(SourceMgr, Range, " ")));
+        if (BeforeRBrace->is(tok::comma)) {
+          if (Style.EnumTrailingComma == FormatStyle::ETC_Remove)
+            replaceToken(*BeforeRBrace, BeforeRBrace->Next, SourceMgr, Result);
+        } else if (Style.EnumTrailingComma == FormatStyle::ETC_Insert) {
+          cantFail(Result.add(tooling::Replacement(
+              SourceMgr, BeforeRBrace->Tok.getEndLoc(), 0, ",")));
         }
       }
     }
