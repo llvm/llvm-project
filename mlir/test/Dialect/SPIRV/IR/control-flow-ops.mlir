@@ -431,29 +431,36 @@ func.func @only_entry_and_continue_branch_to_header() -> () {
 //===----------------------------------------------------------------------===//
 
 func.func @merge() -> () {
-  // expected-error @+1 {{expected parent op to be 'spirv.mlir.selection' or 'spirv.mlir.loop'}}
+  // expected-error @+1 {{expects parent op to be one of 'spirv.mlir.selection, spirv.mlir.loop'}}
   spirv.mlir.merge
 }
 
 // -----
 
 func.func @only_allowed_in_last_block(%cond : i1) -> () {
-  %zero = spirv.Constant 0: i32
-  %one = spirv.Constant 1: i32
-  %var = spirv.Variable init(%zero) : !spirv.ptr<i32, Function>
-
+  // expected-error @+1 {{'spirv.mlir.selection' op should not have 'spirv.mlir.merge' op outside the merge block}}
   spirv.mlir.selection {
     spirv.BranchConditional %cond, ^then, ^merge
-
   ^then:
-    spirv.Store "Function" %var, %one : i32
-    // expected-error @+1 {{can only be used in the last block of 'spirv.mlir.selection' or 'spirv.mlir.loop'}}
     spirv.mlir.merge
-
   ^merge:
     spirv.mlir.merge
   }
+  spirv.Return
+}
 
+// -----
+
+// Ensure this case not crash
+
+func.func @last_block_no_terminator(%cond : i1) -> () {
+  // expected-error @+1 {{empty block: expect at least a terminator}}
+  spirv.mlir.selection {
+    spirv.BranchConditional %cond, ^then, ^merge
+  ^then:
+    spirv.mlir.merge
+  ^merge:
+  }
   spirv.Return
 }
 
@@ -461,12 +468,12 @@ func.func @only_allowed_in_last_block(%cond : i1) -> () {
 
 func.func @only_allowed_in_last_block() -> () {
   %true = spirv.Constant true
+  // expected-error @+1 {{'spirv.mlir.loop' op should not have 'spirv.mlir.merge' op outside the merge block}}
   spirv.mlir.loop {
     spirv.Branch ^header
   ^header:
     spirv.BranchConditional %true, ^body, ^merge
   ^body:
-    // expected-error @+1 {{can only be used in the last block of 'spirv.mlir.selection' or 'spirv.mlir.loop'}}
     spirv.mlir.merge
   ^continue:
     spirv.Branch ^header
