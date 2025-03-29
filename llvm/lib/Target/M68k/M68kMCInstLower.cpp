@@ -65,8 +65,12 @@ M68kMCInstLower::GetSymbolFromOperand(const MachineOperand &MO) const {
   }
 
   Name += Suffix;
-  if (!Sym)
-    Sym = Ctx.getOrCreateSymbol(Name);
+  if (!Sym) {
+    if (MO.isSymbol())
+      Sym = AsmPrinter.OutContext.getOrCreateSymbol(Name);
+    else
+      Sym = Ctx.getOrCreateSymbol(Name);
+  }
 
   return Sym;
 }
