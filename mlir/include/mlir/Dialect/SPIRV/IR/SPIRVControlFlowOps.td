@@ -372,6 +372,8 @@ def SPIRV_MergeOp : SPIRV_Op<"mlir.merge", [
   let hasOpcode = 0;
 
   let autogenSerialization = 0;
+
+  let hasVerifier = 0;
 }
 
 // -----
