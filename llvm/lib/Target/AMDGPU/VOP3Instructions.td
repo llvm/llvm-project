@@ -556,27 +556,16 @@ def shl_0_to_4 : PatFrag<
 }
 
 def VOP3_CVT_PK_F8_F32_Profile : VOP3_Profile<VOP_I32_F32_F32, VOP3_OPSEL> {
-  let InsVOP3OpSel = (ins FP32InputMods:$src0_modifiers, Src0RC64:$src0,
-                          FP32InputMods:$src1_modifiers, Src1RC64:$src1,
-                          VGPR_32:$vdst_in, op_sel0:$op_sel);
-  let InsVOP3DPP = (ins VGPR_32:$old,
-                        FP32InputMods:$src0_modifiers, Src0VOP3DPP:$src0,
-                        FP32InputMods:$src1_modifiers, Src1VOP3DPP:$src1,
-                        VGPR_32:$vdst_in, op_sel0:$op_sel,
-                        dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask,
-                        DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl);
-
-  let InsVOP3DPP16 = (ins VGPR_32:$old,
-                          FP32InputMods:$src0_modifiers, Src0VOP3DPP:$src0,
-                          FP32InputMods:$src1_modifiers, Src1VOP3DPP:$src1,
-                          VGPR_32:$vdst_in, op_sel0:$op_sel,
-                          dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask,
-                          DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl, Dpp16FI:$fi);
-  let InsVOP3DPP8 = (ins VGPR_32:$old,
-                         FP32InputMods:$src0_modifiers, Src0VOP3DPP:$src0,
-                         FP32InputMods:$src1_modifiers, Src1VOP3DPP:$src1,
-                         VGPR_32:$vdst_in, op_sel0:$op_sel, dpp8:$dpp8, Dpp8FI:$fi);
-
+  defvar Tail = (ins VGPR_32:$vdst_in, op_sel0:$op_sel);
+  let InsVOP3OpSel = !con(getIns64<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
+                                   0, HasModifiers, HasSrc2Mods,
+                                   HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret,
+                          Tail);
+  let InsVOP3Base = !con(getInsVOP3Base<Src0VOP3DPP, Src1VOP3DPP,
+                                        Src2VOP3DPP, NumSrcArgs, 0, HasModifiers,
+                                        HasSrc2Mods, HasOMod, Src0ModVOP3DPP, Src1ModVOP3DPP,
+                                        Src2ModVOP3DPP, false>.ret,
+                         Tail);
   let HasClamp = 0;
   let HasExtVOP3DPP = 1;
 }
