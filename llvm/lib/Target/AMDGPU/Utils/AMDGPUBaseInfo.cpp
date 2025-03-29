@@ -1839,15 +1839,17 @@ struct ExpTgt {
   unsigned MaxIndex;
 };
 
+// clang-format off
 static constexpr ExpTgt ExpTgtInfo[] = {
-    {{"null"}, ET_NULL, ET_NULL_MAX_IDX},
-    {{"mrtz"}, ET_MRTZ, ET_MRTZ_MAX_IDX},
-    {{"prim"}, ET_PRIM, ET_PRIM_MAX_IDX},
-    {{"mrt"}, ET_MRT0, ET_MRT_MAX_IDX},
-    {{"pos"}, ET_POS0, ET_POS_MAX_IDX},
-    {{"dual_src_blend"}, ET_DUAL_SRC_BLEND0, ET_DUAL_SRC_BLEND_MAX_IDX},
-    {{"param"}, ET_PARAM0, ET_PARAM_MAX_IDX},
+    {{"null"},          ET_NULL,            ET_NULL_MAX_IDX},
+    {{"mrtz"},          ET_MRTZ,            ET_MRTZ_MAX_IDX},
+    {{"prim"},          ET_PRIM,            ET_PRIM_MAX_IDX},
+    {{"mrt"},           ET_MRT0,            ET_MRT_MAX_IDX},
+    {{"pos"},           ET_POS0,            ET_POS_MAX_IDX},
+    {{"dual_src_blend"},ET_DUAL_SRC_BLEND0, ET_DUAL_SRC_BLEND_MAX_IDX},
+    {{"param"},         ET_PARAM0,          ET_PARAM_MAX_IDX},
 };
+// clang-format on
 
 bool getTgtName(unsigned Id, StringRef &Name, int &Index) {
   for (const ExpTgt &Val : ExpTgtInfo) {
