@@ -15,6 +15,7 @@
 #include <cassert>
 #include <deque>
 #include <flat_set>
+#include <functional>
 #include <string>
 #include <utility>
 
@@ -72,6 +73,13 @@ void test() {
     auto n = m.count(Transparent<int>{3});
     assert(n == 4);
     assert(transparent_used);
+  }
+  {
+    // std::string and C string literal
+    using M = std::flat_multiset<std::string, std::less<>>;
+    M m     = {"alpha", "beta", "beta", "epsilon", "eta", "gamma"};
+    auto n  = m.count("beta");
+    assert(n == 2);
   }
 }
 
