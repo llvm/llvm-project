@@ -41,6 +41,7 @@
 #include <__iterator/concepts.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
+#include <__iterator/prev.h>
 #include <__iterator/ranges_iterator_traits.h>
 #include <__iterator/reverse_iterator.h>
 #include <__memory/allocator_traits.h>
@@ -442,7 +443,7 @@ public:
     return iterator(__key_iter);
   }
 
-  // iterator and const_iterator are the same type
+  // The following overload is the same as the iterator overload
   // iterator erase(const_iterator __position);
 
   _LIBCPP_HIDE_FROM_ABI size_type erase(const key_type& __x) {
@@ -473,7 +474,7 @@ public:
     // warning: The spec has unconditional noexcept, which means that
     // if any of the following functions throw an exception,
     // std::terminate will be called
-    // This is discussed in P2767, which hasn't been voted on yet.
+    // This is discussed in P3567, which hasn't been voted on yet.
     ranges::swap(__compare_, __y.__compare_);
     ranges::swap(__keys_, __y.__keys_);
   }
@@ -597,15 +598,13 @@ private:
     auto __on_failure    = std::__make_exception_guard([&]() noexcept { clear() /* noexcept */; });
     size_type __old_size = size();
     __flat_set_utils::__append(*this, std::forward<_Args>(__args)...);
-    if (size() != __old_size) {
-      if constexpr (!_WasSorted) {
-        ranges::sort(__keys_.begin() + __old_size, __keys_.end(), __compare_);
-      } else {
-        _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(
-            ranges::is_sorted(__keys_ | ranges::views::drop(__old_size)), "Key container is not sorted");
-      }
-      ranges::inplace_merge(__keys_.begin(), __keys_.begin() + __old_size, __keys_.end(), __compare_);
+    if constexpr (!_WasSorted) {
+      ranges::sort(__keys_.begin() + __old_size, __keys_.end(), __compare_);
+    } else {
+      _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(
+          ranges::is_sorted(__keys_ | ranges::views::drop(__old_size)), "Key container is not sorted");
     }
+    ranges::inplace_merge(__keys_.begin(), __keys_.begin() + __old_size, __keys_.end(), __compare_);
     __on_failure.__complete();
   }
 
@@ -621,7 +620,7 @@ private:
     auto __next_smaller = __hint != cend() && __compare_(*__hint, __key);
 
     if (!__prev_larger && !__next_smaller) [[likely]] {
-      // hint correct, just use exact hint iterators
+      // hint correct, just use exact hint iterator
     } else if (__prev_larger && !__next_smaller) {
       // the hint position is more to the right than the key should have been.
       // we want to emplace the element to a position as right as possible
