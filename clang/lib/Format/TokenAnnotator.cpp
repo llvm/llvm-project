@@ -116,6 +116,16 @@ static bool isCppAttribute(bool IsCpp, const FormatToken &Tok) {
   return AttrTok && AttrTok->startsSequence(tok::r_square, tok::r_square);
 }
 
+static bool isParametersKeyword(
+    const FormatToken &Tok,
+    const FormatStyle::KeywordedFunctionLikeMacro *declaration) {
+  if (!declaration)
+    return false;
+
+  return std::find(declaration->Keywords.begin(), declaration->Keywords.end(),
+                   Tok.TokenText) != declaration->Keywords.end();
+}
+
 /// A parser that gathers additional information about tokens.
 ///
 /// The \c TokenAnnotator tries to match parenthesis and square brakets and
@@ -146,6 +156,32 @@ private:
     default:
       return ST_Other;
     }
+  }
+
+  const FormatStyle::KeywordedFunctionLikeMacro *
+  findKeywordedFunctionLikeMacro() const {
+    const FormatToken *TokBeforeFirstLParent = nullptr;
+    for (const FormatToken *T = Line.First; T != Line.Last; T = T->Next) {
+      if (T->Tok.is(tok::l_paren)) {
+        TokBeforeFirstLParent = T->getPreviousNonComment();
+        break;
+      }
+    }
+
+    // Unknown if line ends with ';', FunctionLikeOrFreestandingMacro otherwise.
+    if (!TokBeforeFirstLParent ||
+        !TokBeforeFirstLParent->isOneOf(TT_FunctionLikeOrFreestandingMacro,
+                                        TT_Unknown)) {
+      return nullptr;
+    }
+    auto I = std::find_if(
+        Style.KeywordedFunctionLikeMacros.begin(),
+        Style.KeywordedFunctionLikeMacros.end(),
+        [TokBeforeFirstLParent](
+            const FormatStyle::KeywordedFunctionLikeMacro &Declaration) {
+          return TokBeforeFirstLParent->TokenText == Declaration.Name;
+        });
+    return I != Style.KeywordedFunctionLikeMacros.end() ? &*I : nullptr;
   }
 
   bool parseAngle() {
@@ -2415,8 +2451,12 @@ private:
       Current.setType(TT_BinaryOperator);
     } else if (isStartOfName(Current) &&
                (!Line.MightBeFunctionDecl || Current.NestingLevel != 0)) {
-      Contexts.back().FirstStartOfName = &Current;
-      Current.setType(TT_StartOfName);
+      if (isParametersKeyword(Current, findKeywordedFunctionLikeMacro())) {
+        Current.setType(TT_FunctionParameterKeyword);
+      } else {
+        Contexts.back().FirstStartOfName = &Current;
+        Current.setType(TT_StartOfName);
+      }
     } else if (Current.is(tok::semi)) {
       // Reset FirstStartOfName after finding a semicolon so that a for loop
       // with multiple increment statements is not confused with a for loop
@@ -3783,10 +3823,20 @@ void TokenAnnotator::annotate(AnnotatedLine &Line) {
 static bool isFunctionDeclarationName(const LangOptions &LangOpts,
                                       const FormatToken &Current,
                                       const AnnotatedLine &Line,
+                                      const FormatStyle &Style,
                                       FormatToken *&ClosingParen) {
   if (Current.is(TT_FunctionDeclarationName))
     return true;
 
+  if (Current.is(TT_FunctionLikeOrFreestandingMacro) &&
+      std::find_if(
+          Style.KeywordedFunctionLikeMacros.begin(),
+          Style.KeywordedFunctionLikeMacros.end(),
+          [&Current](const FormatStyle::KeywordedFunctionLikeMacro &Decl) {
+            return Current.TokenText == Decl.Name;
+          }) != Style.KeywordedFunctionLikeMacros.end()) {
+    return true;
+  }
   if (!Current.Tok.getIdentifierInfo())
     return false;
 
@@ -3993,7 +4043,7 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
       AfterLastAttribute = Tok;
     if (const bool IsCtorOrDtor = Tok->is(TT_CtorDtorDeclName);
         IsCtorOrDtor ||
-        isFunctionDeclarationName(LangOpts, *Tok, Line, ClosingParen)) {
+        isFunctionDeclarationName(LangOpts, *Tok, Line, Style, ClosingParen)) {
       if (!IsCtorOrDtor)
         Tok->setFinalizedType(TT_FunctionDeclarationName);
       LineIsFunctionDeclaration = true;
@@ -6231,7 +6281,8 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
               Right.Next->isOneOf(TT_FunctionDeclarationName, tok::kw_const)));
   }
   if (Right.isOneOf(TT_StartOfName, TT_FunctionDeclarationName,
-                    TT_ClassHeadName, tok::kw_operator)) {
+                    TT_FunctionParameterKeyword, TT_ClassHeadName,
+                    tok::kw_operator)) {
     return true;
   }
   if (Right.isAttribute())
