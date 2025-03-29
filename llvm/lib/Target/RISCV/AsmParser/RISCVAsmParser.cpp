@@ -818,9 +818,9 @@ public:
 
   bool isUImm8Lsb000() const { return isUImmShifted<5, 3>(); }
 
-  bool isSImm9Lsb0() const { return isBareSimmNLsb0<9>(); }
-
   bool isUImm9Lsb000() const { return isUImmShifted<6, 3>(); }
+
+  bool isUImm14Lsb00() const { return isUImmShifted<12, 2>(); }
 
   bool isUImm10Lsb00NonZero() const {
     return isUImmPred(
@@ -853,13 +853,9 @@ public:
             VK == RISCVMCExpr::VK_TLSDESC_ADD_LO);
   }
 
-  bool isSImm12Lsb0() const { return isBareSimmNLsb0<12>(); }
-
   bool isSImm12Lsb00000() const {
     return isSImmPred([](int64_t Imm) { return isShiftedInt<7, 5>(Imm); });
   }
-
-  bool isSImm13Lsb0() const { return isBareSimmNLsb0<13>(); }
 
   bool isSImm10Lsb0000NonZero() const {
     return isSImmPred(
@@ -901,8 +897,6 @@ public:
             VK == RISCVMCExpr::VK_TLS_GD_HI ||
             VK == RISCVMCExpr::VK_TLSDESC_HI);
   }
-
-  bool isSImm21Lsb0JAL() const { return isBareSimmNLsb0<21>(); }
 
   bool isImmZero() const {
     return isUImmPred([](int64_t Imm) { return 0 == Imm; });
@@ -1465,7 +1459,7 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, 0, (1 << 8) - 8,
         "immediate must be a multiple of 8 bytes in the range");
-  case Match_InvalidSImm9Lsb0:
+  case Match_InvalidBareSImm9Lsb0:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, -(1 << 8), (1 << 8) - 2,
         "immediate must be a multiple of 2 bytes in the range");
@@ -1488,6 +1482,10 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 10) - 1);
   case Match_InvalidUImm11:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 11) - 1);
+  case Match_InvalidUImm14Lsb00:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, 0, (1 << 14) - 4,
+        "immediate must be a multiple of 4 bytes in the range");
   case Match_InvalidUImm16NonZero:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 1, (1 << 16) - 1);
   case Match_InvalidSImm12:
@@ -1495,7 +1493,7 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
         Operands, ErrorInfo, -(1 << 11), (1 << 11) - 1,
         "operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an "
         "integer in the range");
-  case Match_InvalidSImm12Lsb0:
+  case Match_InvalidBareSImm12Lsb0:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, -(1 << 11), (1 << 11) - 2,
         "immediate must be a multiple of 2 bytes in the range");
@@ -1503,7 +1501,7 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, -(1 << 11), (1 << 11) - 32,
         "immediate must be a multiple of 32 bytes in the range");
-  case Match_InvalidSImm13Lsb0:
+  case Match_InvalidBareSImm13Lsb0:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, -(1 << 12), (1 << 12) - 2,
         "immediate must be a multiple of 2 bytes in the range");
@@ -1526,7 +1524,7 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
         "%pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi specifier "
         "or "
         "an integer in the range");
-  case Match_InvalidSImm21Lsb0JAL:
+  case Match_InvalidBareSImm21Lsb0:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, -(1 << 20), (1 << 20) - 2,
         "immediate must be a multiple of 2 bytes in the range");

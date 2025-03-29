@@ -1074,10 +1074,14 @@ void FrontendAction::EndSourceFile() {
 
   if (CI.getFrontendOpts().ShowStats) {
     llvm::errs() << "\nSTATISTICS FOR '" << getCurrentFileOrBufferName() << "':\n";
-    CI.getPreprocessor().PrintStats();
-    CI.getPreprocessor().getIdentifierTable().PrintStats();
-    CI.getPreprocessor().getHeaderSearchInfo().PrintStats();
-    CI.getSourceManager().PrintStats();
+    if (CI.hasPreprocessor()) {
+      CI.getPreprocessor().PrintStats();
+      CI.getPreprocessor().getIdentifierTable().PrintStats();
+      CI.getPreprocessor().getHeaderSearchInfo().PrintStats();
+    }
+    if (CI.hasSourceManager()) {
+      CI.getSourceManager().PrintStats();
+    }
     llvm::errs() << "\n";
   }
 
