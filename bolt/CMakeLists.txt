@@ -202,3 +202,11 @@ endif()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/bolt/RuntimeLibs/RuntimeLibraryVariables.inc.in
                ${CMAKE_CURRENT_BINARY_DIR}/include/bolt/RuntimeLibs/RuntimeLibraryVariables.inc @ONLY)
+
+set(BOLT_ENUM_TARGETS "")
+foreach(t ${BOLT_TARGETS_TO_BUILD})
+  set(BOLT_ENUM_TARGETS "${BOLT_ENUM_TARGETS}BOLT_TARGET(${t})\n")
+endforeach(t)
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/bolt/Core/TargetConfig.def.in
+               ${CMAKE_CURRENT_BINARY_DIR}/include/bolt/Core/TargetConfig.def @ONLY)

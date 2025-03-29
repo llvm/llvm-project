@@ -760,7 +760,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
       OutContext.reportError(SMLoc(),
                              "tagged symbols (-fsanitize=memtag-globals) are "
                              "only supported on AArch64 Android");
-    OutStreamer->emitSymbolAttribute(EmittedSym, MAI->getMemtagAttr());
+    OutStreamer->emitSymbolAttribute(EmittedSym, MCSA_Memtag);
   }
 
   if (!GV->hasInitializer())   // External globals require no extra code.
@@ -1084,11 +1084,9 @@ void AsmPrinter::emitFunctionEntryLabel() {
   if (TM.getTargetTriple().isOSBinFormatELF()) {
     MCSymbol *Sym = getSymbolPreferLocal(MF->getFunction());
     if (Sym != CurrentFnSym) {
-      cast<MCSymbolELF>(Sym)->setType(ELF::STT_FUNC);
       CurrentFnBeginLocal = Sym;
       OutStreamer->emitLabel(Sym);
-      if (MAI->hasDotTypeDotSizeDirective())
-        OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
+      OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
     }
   }
 }
@@ -3031,6 +3029,9 @@ void AsmPrinter::emitJumpTableEntry(const MachineJumpTableInfo &MJTI,
   switch (MJTI.getEntryKind()) {
   case MachineJumpTableInfo::EK_Inline:
     llvm_unreachable("Cannot emit EK_Inline jump table entry");
+  case MachineJumpTableInfo::EK_GPRel32BlockAddress:
+  case MachineJumpTableInfo::EK_GPRel64BlockAddress:
+    llvm_unreachable("MIPS specific");
   case MachineJumpTableInfo::EK_Custom32:
     Value = MF->getSubtarget().getTargetLowering()->LowerCustomJumpTableEntry(
         &MJTI, MBB, UID, OutContext);
@@ -3040,23 +3041,6 @@ void AsmPrinter::emitJumpTableEntry(const MachineJumpTableInfo &MJTI,
     //     .word LBB123
     Value = MCSymbolRefExpr::create(MBB->getSymbol(), OutContext);
     break;
-  case MachineJumpTableInfo::EK_GPRel32BlockAddress: {
-    // EK_GPRel32BlockAddress - Each entry is an address of block, encoded
-    // with a relocation as gp-relative, e.g.:
-    //     .gprel32 LBB123
-    MCSymbol *MBBSym = MBB->getSymbol();
-    OutStreamer->emitGPRel32Value(MCSymbolRefExpr::create(MBBSym, OutContext));
-    return;
-  }
-
-  case MachineJumpTableInfo::EK_GPRel64BlockAddress: {
-    // EK_GPRel64BlockAddress - Each entry is an address of block, encoded
-    // with a relocation as gp-relative, e.g.:
-    //     .gpdword LBB123
-    MCSymbol *MBBSym = MBB->getSymbol();
-    OutStreamer->emitGPRel64Value(MCSymbolRefExpr::create(MBBSym, OutContext));
-    return;
-  }
 
   case MachineJumpTableInfo::EK_LabelDifference32:
   case MachineJumpTableInfo::EK_LabelDifference64: {
@@ -3628,9 +3612,9 @@ static void emitGlobalConstantDataSequential(
     return AP.OutStreamer->emitBytes(CDS->getAsString());
 
   // Otherwise, emit the values in successive locations.
-  unsigned ElementByteSize = CDS->getElementByteSize();
+  uint64_t ElementByteSize = CDS->getElementByteSize();
   if (isa<IntegerType>(CDS->getElementType())) {
-    for (unsigned I = 0, E = CDS->getNumElements(); I != E; ++I) {
+    for (uint64_t I = 0, E = CDS->getNumElements(); I != E; ++I) {
       emitGlobalAliasInline(AP, ElementByteSize * I, AliasList);
       if (AP.isVerbose())
         AP.OutStreamer->getCommentOS()
@@ -3640,7 +3624,7 @@ static void emitGlobalConstantDataSequential(
     }
   } else {
     Type *ET = CDS->getElementType();
-    for (unsigned I = 0, E = CDS->getNumElements(); I != E; ++I) {
+    for (uint64_t I = 0, E = CDS->getNumElements(); I != E; ++I) {
       emitGlobalAliasInline(AP, ElementByteSize * I, AliasList);
       emitGlobalConstantFP(CDS->getElementAsAPFloat(I), ET, AP);
     }
@@ -3878,7 +3862,7 @@ static void handleIndirectSymViaGOTPCRel(AsmPrinter &AP, const MCExpr **ME,
   //  cstexpr := <gotequiv> - <foo> + gotpcrelcst, where
   //    gotpcrelcst := <offset from @foo base> + <cst>
   MCValue MV;
-  if (!(*ME)->evaluateAsRelocatable(MV, nullptr, nullptr) || MV.isAbsolute())
+  if (!(*ME)->evaluateAsRelocatable(MV, nullptr) || MV.isAbsolute())
     return;
   const MCSymbolRefExpr *SymA = MV.getSymA();
   if (!SymA)
@@ -3895,9 +3879,9 @@ static void handleIndirectSymViaGOTPCRel(AsmPrinter &AP, const MCExpr **ME,
 
   // Check for a valid base symbol
   const MCSymbol *BaseSym = AP.getSymbol(BaseGV);
-  const MCSymbolRefExpr *SymB = MV.getSymB();
+  const MCSymbol *SymB = MV.getSubSym();
 
-  if (!SymB || BaseSym != &SymB->getSymbol())
+  if (!SymB || BaseSym != SymB)
     return;
 
   // Make sure to match:
@@ -4158,7 +4142,7 @@ MCSymbol *AsmPrinter::getSymbolWithGlobalValueBase(const GlobalValue *GV,
 }
 
 /// Return the MCSymbol for the specified ExternalSymbol.
-MCSymbol *AsmPrinter::GetExternalSymbolSymbol(Twine Sym) const {
+MCSymbol *AsmPrinter::GetExternalSymbolSymbol(const Twine &Sym) const {
   SmallString<60> NameStr;
   Mangler::getNameWithPrefix(NameStr, Sym, getDataLayout());
   return OutContext.getOrCreateSymbol(NameStr);
@@ -4304,9 +4288,9 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
     }
   }
 
-  if (MBB.isEHCatchretTarget() &&
+  if (MBB.isEHContTarget() &&
       MAI->getExceptionHandlingType() == ExceptionHandling::WinEH) {
-    OutStreamer->emitLabel(MBB.getEHCatchretSymbol());
+    OutStreamer->emitLabel(MBB.getEHContSymbol());
   }
 
   // With BB sections, each basic block must handle CFI information on its own

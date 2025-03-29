@@ -145,9 +145,8 @@ void Prescanner::Statement() {
     if (inFixedForm_) {
       CHECK(IsFixedFormCommentChar(*at_));
     } else {
-      while (int n{IsSpaceOrTab(at_)}) {
-        at_ += n, ++column_;
-      }
+      at_ += line.payloadOffset;
+      column_ += line.payloadOffset;
       CHECK(*at_ == '!');
     }
     std::optional<int> condOffset;
@@ -597,6 +596,30 @@ const char *Prescanner::SkipWhiteSpace(const char *p) {
   return p;
 }
 
+const char *Prescanner::SkipWhiteSpaceIncludingEmptyMacros(
+    const char *p) const {
+  while (true) {
+    if (int n{IsSpaceOrTab(p)}) {
+      p += n;
+    } else if (preprocessor_.AnyDefinitions() && IsLegalIdentifierStart(*p)) {
+      // Skip keyword macros with empty definitions
+      const char *q{p + 1};
+      while (IsLegalInIdentifier(*q)) {
+        ++q;
+      }
+      if (preprocessor_.IsNameDefinedEmpty(
+              CharBlock{p, static_cast<std::size_t>(q - p)})) {
+        p = q;
+      } else {
+        break;
+      }
+    } else {
+      break;
+    }
+  }
+  return p;
+}
+
 const char *Prescanner::SkipWhiteSpaceAndCComments(const char *p) const {
   while (true) {
     if (int n{IsSpaceOrTab(p)}) {
@@ -697,8 +720,8 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
     } else if (*at_ == '.') {
       while (IsDecimalDigit(EmitCharAndAdvance(tokens, *at_))) {
       }
-      ExponentAndKind(tokens);
-    } else if (ExponentAndKind(tokens)) {
+      HandleExponentAndOrKindSuffix(tokens);
+    } else if (HandleExponentAndOrKindSuffix(tokens)) {
     } else if (digits == 1 && n == 0 && (*at_ == 'x' || *at_ == 'X') &&
         inPreprocessorDirective_) {
       do {
@@ -720,7 +743,7 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
     if (!inPreprocessorDirective_ && IsDecimalDigit(nch)) {
       while (IsDecimalDigit(EmitCharAndAdvance(tokens, *at_))) {
       }
-      ExponentAndKind(tokens);
+      HandleExponentAndOrKindSuffix(tokens);
     } else if (nch == '.' && EmitCharAndAdvance(tokens, '.') == '.') {
       EmitCharAndAdvance(tokens, '.'); // variadic macro definition ellipsis
     }
@@ -816,37 +839,50 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
   return true;
 }
 
-bool Prescanner::ExponentAndKind(TokenSequence &tokens) {
-  char ed{ToLowerCaseLetter(*at_)};
-  if (ed != 'e' && ed != 'd') {
-    return false;
-  }
-  // Do some look-ahead to ensure that this 'e'/'d' is an exponent,
-  // not the start of an identifier that could be a macro.
-  const char *p{at_};
-  if (int n{IsSpace(++p)}) {
-    p += n;
-  }
-  if (*p == '+' || *p == '-') {
-    if (int n{IsSpace(++p)}) {
-      p += n;
+bool Prescanner::HandleExponent(TokenSequence &tokens) {
+  if (char ed{ToLowerCaseLetter(*at_)}; ed == 'e' || ed == 'd') {
+    // Do some look-ahead to ensure that this 'e'/'d' is an exponent,
+    // not the start of an identifier that could be a macro.
+    const char *p{SkipWhiteSpace(at_ + 1)};
+    if (*p == '+' || *p == '-') {
+      p = SkipWhiteSpace(p + 1);
     }
-  }
-  if (IsDecimalDigit(*p)) { // it's an exponent
-    EmitCharAndAdvance(tokens, ed);
-    if (*at_ == '+' || *at_ == '-') {
-      EmitCharAndAdvance(tokens, *at_);
-    }
-    while (IsDecimalDigit(*at_)) {
-      EmitCharAndAdvance(tokens, *at_);
-    }
-    if (*at_ == '_') {
-      while (IsLegalInIdentifier(EmitCharAndAdvance(tokens, *at_))) {
+    if (IsDecimalDigit(*p)) { // it's an exponent
+      EmitCharAndAdvance(tokens, ed);
+      if (*at_ == '+' || *at_ == '-') {
+        EmitCharAndAdvance(tokens, *at_);
       }
+      while (IsDecimalDigit(*at_)) {
+        EmitCharAndAdvance(tokens, *at_);
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
+bool Prescanner::HandleKindSuffix(TokenSequence &tokens) {
+  if (*at_ == '_' && IsLegalInIdentifier(*SkipWhiteSpace(at_ + 1))) {
+    EmitCharAndAdvance(tokens, *at_);
+    if (IsLegalIdentifierStart(*at_)) {
+      // The kind specifier might be a macro, so put it into its own token.
+      tokens.CloseToken();
+    }
+    while (IsLegalInIdentifier(*at_)) {
+      EmitCharAndAdvance(tokens, *at_);
     }
     return true;
   } else {
     return false;
+  }
+}
+
+bool Prescanner::HandleExponentAndOrKindSuffix(TokenSequence &tokens) {
+  bool hadExponent{HandleExponent(tokens)};
+  if (HandleKindSuffix(tokens)) {
+    return true;
+  } else {
+    return hadExponent;
   }
 }
 
@@ -1432,6 +1468,21 @@ Prescanner::IsFixedFormCompilerDirectiveLine(const char *start) const {
     }
     *sp++ = ToLowerCaseLetter(*p);
   }
+  // A fixed form OpenMP conditional compilation sentinel must satisfy the
+  // following criteria, for initial lines:
+  // - Columns 3 through 5 must have only white space or numbers.
+  // - Column 6 must be space or zero.
+  if (column == 3 && sentinel[0] == '$') {
+    const char *q{p};
+    for (int col{3}; col < 6; ++col, ++q) {
+      if (!IsSpaceOrTab(q) && !IsDecimalDigit(*q)) {
+        return std::nullopt;
+      }
+    }
+    if (*q != ' ' && *q != '0') {
+      return std::nullopt;
+    }
+  }
   if (column == 6) {
     if (*p == '0') {
       ++p;
@@ -1448,18 +1499,18 @@ Prescanner::IsFixedFormCompilerDirectiveLine(const char *start) const {
   *sp = '\0';
   if (const char *ss{IsCompilerDirectiveSentinel(
           sentinel, static_cast<std::size_t>(sp - sentinel))}) {
-    std::size_t payloadOffset = p - start;
-    return {LineClassification{
-        LineClassification::Kind::CompilerDirective, payloadOffset, ss}};
+    return {
+        LineClassification{LineClassification::Kind::CompilerDirective, 0, ss}};
   }
   return std::nullopt;
 }
 
 std::optional<Prescanner::LineClassification>
 Prescanner::IsFreeFormCompilerDirectiveLine(const char *start) const {
-  if (const char *p{SkipWhiteSpace(start)}; p && *p++ == '!') {
+  if (const char *p{SkipWhiteSpaceIncludingEmptyMacros(start)};
+      p && *p++ == '!') {
     if (auto maybePair{IsCompilerDirectiveSentinel(p)}) {
-      auto offset{static_cast<std::size_t>(maybePair->second - start)};
+      auto offset{static_cast<std::size_t>(p - start - 1)};
       return {LineClassification{LineClassification::Kind::CompilerDirective,
           offset, maybePair->first}};
     }
@@ -1514,7 +1565,7 @@ Prescanner::IsCompilerDirectiveSentinel(const char *p) const {
     if (int n{*p == '&' ? 1 : IsSpaceOrTab(p)}) {
       if (j > 0) {
         sentinel[j] = '\0';
-        p = SkipWhiteSpace(p + n);
+        p = SkipWhiteSpaceIncludingEmptyMacros(p + n);
         if (*p != '!') {
           if (const char *sp{IsCompilerDirectiveSentinel(sentinel, j)}) {
             return std::make_pair(sp, p);

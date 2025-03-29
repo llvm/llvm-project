@@ -10,11 +10,7 @@ subroutine first_and_lastprivate
   !$omp end parallel do
 end subroutine
 
-! CHECK:  omp.private {type = firstprivate} @{{.*}}Evar_firstprivate_ref_i32 : {{.*}} alloc {
-! CHECK:    %[[ALLOC:.*]] = fir.alloca i32 {{.*}}
-! CHECK:    %[[ALLOC_DECL:.*]]:2 = hlfir.declare %[[ALLOC]]
-! CHECK:    omp.yield(%[[ALLOC_DECL]]#0 : !fir.ref<i32>)
-! CHECK:  } copy {
+! CHECK:  omp.private {type = firstprivate} @{{.*}}Evar_firstprivate_i32 : {{.*}} copy {
 ! CHECK: ^{{.*}}(%[[ORIG_REF:.*]]: {{.*}}, %[[PRIV_REF:.*]]: {{.*}}):
 ! CHECK:    %[[ORIG_VAL:.*]] = fir.load %[[ORIG_REF]]
 ! CHECK:    hlfir.assign %[[ORIG_VAL]] to %[[PRIV_REF]]
@@ -25,7 +21,7 @@ end subroutine
 ! CHECK:    %[[ORIG_VAR_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "{{.*}}Evar"}
 ! CHECK:    omp.parallel {
 ! CHECK:      omp.barrier
-! CHECK:      omp.wsloop private(@{{.*}}var_firstprivate_ref_i32 {{.*}}) {
+! CHECK:      omp.wsloop private(@{{.*}}var_firstprivate_i32 {{.*}}) {
 ! CHECK:        omp.loop_nest {{.*}} {
 ! CHECK:          %[[PRIV_VAR_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "{{.*}}Evar"}
 ! CHECK:          fir.if %{{.*}} {

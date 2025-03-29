@@ -1244,12 +1244,16 @@ ASTNodeImporter::VisitMemberPointerType(const MemberPointerType *T) {
   if (!ToPointeeTypeOrErr)
     return ToPointeeTypeOrErr.takeError();
 
-  ExpectedTypePtr ClassTypeOrErr = import(T->getClass());
-  if (!ClassTypeOrErr)
-    return ClassTypeOrErr.takeError();
+  auto QualifierOrErr = import(T->getQualifier());
+  if (!QualifierOrErr)
+    return QualifierOrErr.takeError();
 
-  return Importer.getToContext().getMemberPointerType(*ToPointeeTypeOrErr,
-                                                      *ClassTypeOrErr);
+  auto ClsOrErr = import(T->getMostRecentCXXRecordDecl());
+  if (!ClsOrErr)
+    return ClsOrErr.takeError();
+
+  return Importer.getToContext().getMemberPointerType(
+      *ToPointeeTypeOrErr, *QualifierOrErr, *ClsOrErr);
 }
 
 ExpectedType
@@ -5465,15 +5469,11 @@ ExpectedDecl ASTNodeImporter::VisitUnresolvedUsingTypenameDecl(
 ExpectedDecl ASTNodeImporter::VisitBuiltinTemplateDecl(BuiltinTemplateDecl *D) {
   Decl* ToD = nullptr;
   switch (D->getBuiltinTemplateKind()) {
-  case BuiltinTemplateKind::BTK__make_integer_seq:
-    ToD = Importer.getToContext().getMakeIntegerSeqDecl();
+#define BuiltinTemplate(BTName)                                                \
+  case BuiltinTemplateKind::BTK##BTName:                                       \
+    ToD = Importer.getToContext().get##BTName##Decl();                         \
     break;
-  case BuiltinTemplateKind::BTK__type_pack_element:
-    ToD = Importer.getToContext().getTypePackElementDecl();
-    break;
-  case BuiltinTemplateKind::BTK__builtin_common_type:
-    ToD = Importer.getToContext().getBuiltinCommonTypeDecl();
-    break;
+#include "clang/Basic/BuiltinTemplates.inc"
   }
   assert(ToD && "BuiltinTemplateDecl of unsupported kind!");
   Importer.MapImported(D, ToD);
@@ -6320,10 +6320,10 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
 
     updateLookupTableForTemplateParameters(*ToTPList);
   } else { // Not a partial specialization.
-    if (GetImportedOrCreateDecl(
-            D2, D, Importer.getToContext(), D->getTagKind(), DC,
-            *BeginLocOrErr, *IdLocOrErr, ClassTemplate, TemplateArgs,
-            PrevDecl))
+    if (GetImportedOrCreateDecl(D2, D, Importer.getToContext(), D->getTagKind(),
+                                DC, *BeginLocOrErr, *IdLocOrErr, ClassTemplate,
+                                TemplateArgs, D->hasStrictPackMatch(),
+                                PrevDecl))
       return D2;
 
     // Update InsertPos, because preceding import calls may have invalidated
@@ -6825,25 +6825,25 @@ ExpectedStmt ASTNodeImporter::VisitGCCAsmStmt(GCCAsmStmt *S) {
     Names.push_back(ToII);
   }
 
-  SmallVector<StringLiteral *, 4> Clobbers;
+  SmallVector<Expr *, 4> Clobbers;
   for (unsigned I = 0, E = S->getNumClobbers(); I != E; I++) {
-    if (auto ClobberOrErr = import(S->getClobberStringLiteral(I)))
+    if (auto ClobberOrErr = import(S->getClobberExpr(I)))
       Clobbers.push_back(*ClobberOrErr);
     else
       return ClobberOrErr.takeError();
 
   }
 
-  SmallVector<StringLiteral *, 4> Constraints;
+  SmallVector<Expr *, 4> Constraints;
   for (unsigned I = 0, E = S->getNumOutputs(); I != E; I++) {
-    if (auto OutputOrErr = import(S->getOutputConstraintLiteral(I)))
+    if (auto OutputOrErr = import(S->getOutputConstraintExpr(I)))
       Constraints.push_back(*OutputOrErr);
     else
       return OutputOrErr.takeError();
   }
 
   for (unsigned I = 0, E = S->getNumInputs(); I != E; I++) {
-    if (auto InputOrErr = import(S->getInputConstraintLiteral(I)))
+    if (auto InputOrErr = import(S->getInputConstraintExpr(I)))
       Constraints.push_back(*InputOrErr);
     else
       return InputOrErr.takeError();
@@ -6865,7 +6865,7 @@ ExpectedStmt ASTNodeImporter::VisitGCCAsmStmt(GCCAsmStmt *S) {
   ExpectedSLoc AsmLocOrErr = import(S->getAsmLoc());
   if (!AsmLocOrErr)
     return AsmLocOrErr.takeError();
-  auto AsmStrOrErr = import(S->getAsmString());
+  auto AsmStrOrErr = import(S->getAsmStringExpr());
   if (!AsmStrOrErr)
     return AsmStrOrErr.takeError();
   ExpectedSLoc RParenLocOrErr = import(S->getRParenLoc());
@@ -7386,9 +7386,10 @@ ExpectedStmt ASTNodeImporter::VisitConvertVectorExpr(ConvertVectorExpr *E) {
   if (Err)
     return std::move(Err);
 
-  return new (Importer.getToContext())
-      ConvertVectorExpr(ToSrcExpr, ToTSI, ToType, E->getValueKind(),
-                        E->getObjectKind(), ToBuiltinLoc, ToRParenLoc);
+  return ConvertVectorExpr::Create(
+      Importer.getToContext(), ToSrcExpr, ToTSI, ToType, E->getValueKind(),
+      E->getObjectKind(), ToBuiltinLoc, ToRParenLoc,
+      E->getStoredFPFeaturesOrDefault());
 }
 
 ExpectedStmt ASTNodeImporter::VisitShuffleVectorExpr(ShuffleVectorExpr *E) {
@@ -8958,13 +8959,16 @@ ExpectedStmt ASTNodeImporter::VisitTypeTraitExpr(TypeTraitExpr *E) {
   if (Error Err = ImportContainerChecked(E->getArgs(), ToArgs))
     return std::move(Err);
 
-  // According to Sema::BuildTypeTrait(), if E is value-dependent,
-  // Value is always false.
-  bool ToValue = (E->isValueDependent() ? false : E->getValue());
-
-  return TypeTraitExpr::Create(
-      Importer.getToContext(), ToType, ToBeginLoc, E->getTrait(), ToArgs,
-      ToEndLoc, ToValue);
+  if (E->isStoredAsBoolean()) {
+    // According to Sema::BuildTypeTrait(), if E is value-dependent,
+    // Value is always false.
+    bool ToValue = (E->isValueDependent() ? false : E->getBoolValue());
+    return TypeTraitExpr::Create(Importer.getToContext(), ToType, ToBeginLoc,
+                                 E->getTrait(), ToArgs, ToEndLoc, ToValue);
+  }
+  return TypeTraitExpr::Create(Importer.getToContext(), ToType, ToBeginLoc,
+                               E->getTrait(), ToArgs, ToEndLoc,
+                               E->getAPValue());
 }
 
 ExpectedStmt ASTNodeImporter::VisitCXXTypeidExpr(CXXTypeidExpr *E) {
@@ -10530,12 +10534,11 @@ void ASTImporter::CompleteDecl (Decl *D) {
 }
 
 Decl *ASTImporter::MapImported(Decl *From, Decl *To) {
-  llvm::DenseMap<Decl *, Decl *>::iterator Pos = ImportedDecls.find(From);
-  assert((Pos == ImportedDecls.end() || Pos->second == To) &&
-      "Try to import an already imported Decl");
-  if (Pos != ImportedDecls.end())
+  auto [Pos, Inserted] = ImportedDecls.try_emplace(From, To);
+  assert((Inserted || Pos->second == To) &&
+         "Try to import an already imported Decl");
+  if (!Inserted)
     return Pos->second;
-  ImportedDecls[From] = To;
   // This mapping should be maintained only in this function. Therefore do not
   // check for additional consistency.
   ImportedFromDecls[To] = From;

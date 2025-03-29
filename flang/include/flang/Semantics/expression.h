@@ -10,7 +10,6 @@
 #define FORTRAN_SEMANTICS_EXPRESSION_H_
 
 #include "semantics.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/indirection.h"
 #include "flang/Common/restorer.h"
 #include "flang/Common/visit.h"
@@ -24,6 +23,7 @@
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
+#include "flang/Support/Fortran.h"
 #include <map>
 #include <optional>
 #include <type_traits>
@@ -257,17 +257,18 @@ public:
 
   // Builds a typed Designator from an untyped DataRef
   MaybeExpr Designate(DataRef &&);
+  void CheckForWholeAssumedSizeArray(parser::CharBlock, const Symbol *);
+
+  // Allows a whole assumed-size array to appear for the lifetime of
+  // the returned value.
+  common::Restorer<bool> AllowWholeAssumedSizeArray(bool yes = true) {
+    return common::ScopedSet(isWholeAssumedSizeArrayOk_, yes);
+  }
 
 protected:
   int IntegerTypeSpecKind(const parser::IntegerTypeSpec &);
 
 private:
-  // Allows a whole assumed-size array to appear for the lifetime of
-  // the returned value.
-  common::Restorer<bool> AllowWholeAssumedSizeArray() {
-    return common::ScopedSet(isWholeAssumedSizeArrayOk_, true);
-  }
-
   // Allows an Expr to be a null pointer.
   common::Restorer<bool> AllowNullPointer() {
     return common::ScopedSet(isNullPointerOk_, true);
@@ -342,13 +343,13 @@ private:
       const semantics::Scope &, bool C919bAlreadyEnforced = false);
   MaybeExpr CompleteSubscripts(ArrayRef &&);
   MaybeExpr ApplySubscripts(DataRef &&, std::vector<Subscript> &&);
-  void CheckSubscripts(ArrayRef &);
   bool CheckRanks(const DataRef &); // Return false if error exists.
   bool CheckPolymorphic(const DataRef &); // ditto
   bool CheckDataRef(const DataRef &); // ditto
   std::optional<Expr<SubscriptInteger>> GetSubstringBound(
       const std::optional<parser::ScalarIntExpr> &);
-  MaybeExpr AnalyzeDefinedOp(const parser::Name &, ActualArguments &&);
+  MaybeExpr AnalyzeDefinedOp(
+      const parser::Name &, ActualArguments &&, const Symbol *&);
   MaybeExpr FixMisparsedSubstring(const parser::Designator &);
 
   struct CalleeAndArguments {

@@ -103,39 +103,15 @@ define i64 @test_3() #0 {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[VAL:%.*]] = phi i32 [ 3, [[BB1]] ], [ 3, [[BB2:%.*]] ]
-; CHECK-NEXT:    [[VAL4:%.*]] = phi i32 [ 3, [[BB1]] ], [ 3, [[BB2]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x i32> [ splat (i32 3), [[BB1]] ], [ poison, [[BB2:%.*]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <28 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1>
+; CHECK-NEXT:    [[VAL4:%.*]] = extractelement <28 x i32> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <32 x i32> poison, i32 [[VAL4]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <32 x i32> [[TMP0]], <32 x i32> poison, <32 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.mul.v32i32(<32 x i32> [[TMP1]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = mul i32 [[TMP2]], [[VAL4]]
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = mul i32 [[VAL4]], [[VAL4]]
-; CHECK-NEXT:    [[OP_RDX2:%.*]] = mul i32 [[VAL4]], [[VAL4]]
-; CHECK-NEXT:    [[OP_RDX3:%.*]] = mul i32 [[VAL4]], [[VAL4]]
-; CHECK-NEXT:    [[OP_RDX4:%.*]] = mul i32 [[VAL4]], [[VAL4]]
-; CHECK-NEXT:    [[OP_RDX5:%.*]] = mul i32 [[VAL4]], [[VAL4]]
-; CHECK-NEXT:    [[OP_RDX6:%.*]] = mul i32 [[VAL4]], [[VAL4]]
-; CHECK-NEXT:    [[OP_RDX7:%.*]] = mul i32 [[VAL4]], [[VAL4]]
-; CHECK-NEXT:    [[OP_RDX8:%.*]] = mul i32 [[VAL4]], [[VAL4]]
-; CHECK-NEXT:    [[OP_RDX9:%.*]] = mul i32 [[VAL4]], [[VAL4]]
-; CHECK-NEXT:    [[OP_RDX10:%.*]] = mul i32 [[VAL4]], [[VAL4]]
-; CHECK-NEXT:    [[OP_RDX11:%.*]] = mul i32 [[VAL4]], [[VAL4]]
-; CHECK-NEXT:    [[OP_RDX12:%.*]] = mul i32 [[VAL4]], [[VAL4]]
-; CHECK-NEXT:    [[OP_RDX13:%.*]] = mul i32 [[VAL4]], [[VAL4]]
-; CHECK-NEXT:    [[OP_RDX14:%.*]] = mul i32 [[OP_RDX]], [[OP_RDX1]]
-; CHECK-NEXT:    [[OP_RDX15:%.*]] = mul i32 [[OP_RDX2]], [[OP_RDX3]]
-; CHECK-NEXT:    [[OP_RDX16:%.*]] = mul i32 [[OP_RDX4]], [[OP_RDX5]]
-; CHECK-NEXT:    [[OP_RDX17:%.*]] = mul i32 [[OP_RDX6]], [[OP_RDX7]]
-; CHECK-NEXT:    [[OP_RDX18:%.*]] = mul i32 [[OP_RDX8]], [[OP_RDX9]]
-; CHECK-NEXT:    [[OP_RDX19:%.*]] = mul i32 [[OP_RDX10]], [[OP_RDX11]]
-; CHECK-NEXT:    [[OP_RDX20:%.*]] = mul i32 [[OP_RDX12]], [[OP_RDX13]]
-; CHECK-NEXT:    [[OP_RDX21:%.*]] = mul i32 [[OP_RDX14]], [[OP_RDX15]]
-; CHECK-NEXT:    [[OP_RDX22:%.*]] = mul i32 [[OP_RDX16]], [[OP_RDX17]]
-; CHECK-NEXT:    [[OP_RDX23:%.*]] = mul i32 [[OP_RDX18]], [[OP_RDX19]]
-; CHECK-NEXT:    [[OP_RDX24:%.*]] = mul i32 [[OP_RDX20]], [[VAL]]
-; CHECK-NEXT:    [[OP_RDX25:%.*]] = mul i32 [[OP_RDX21]], [[OP_RDX22]]
-; CHECK-NEXT:    [[OP_RDX26:%.*]] = mul i32 [[OP_RDX23]], [[OP_RDX24]]
-; CHECK-NEXT:    [[OP_RDX27:%.*]] = mul i32 [[OP_RDX25]], [[OP_RDX26]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call <28 x i32> @llvm.vector.extract.v28i32.v32i32(<32 x i32> [[TMP1]], i64 0)
+; CHECK-NEXT:    [[RDX_OP:%.*]] = mul <28 x i32> [[TMP5]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call <32 x i32> @llvm.vector.insert.v32i32.v28i32(<32 x i32> [[TMP1]], <28 x i32> [[RDX_OP]], i64 0)
+; CHECK-NEXT:    [[OP_RDX27:%.*]] = call i32 @llvm.vector.reduce.mul.v32i32(<32 x i32> [[TMP6]])
 ; CHECK-NEXT:    [[VAL64:%.*]] = add i32 3, [[OP_RDX27]]
 ; CHECK-NEXT:    [[VAL65:%.*]] = sext i32 [[VAL64]] to i64
 ; CHECK-NEXT:    ret i64 [[VAL65]]

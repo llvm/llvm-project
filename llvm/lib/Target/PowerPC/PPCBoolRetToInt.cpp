@@ -241,9 +241,11 @@ class PPCBoolRetToInt : public FunctionPass {
       ++NumBoolCallPromotion;
     ++NumBoolToIntPromotion;
 
-    for (Value *V : Defs)
-      if (!BoolToIntMap.count(V))
-        BoolToIntMap[V] = translate(V);
+    for (Value *V : Defs) {
+      auto [It, Inserted] = BoolToIntMap.try_emplace(V);
+      if (Inserted)
+        It->second = translate(V);
+    }
 
     // Replace the operands of the translated instructions. They were set to
     // zero in the translate function.

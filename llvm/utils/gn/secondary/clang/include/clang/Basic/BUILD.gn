@@ -137,6 +137,10 @@ clang_tablegen("BuiltinsX86_64") {
   args = [ "-gen-clang-builtins" ]
 }
 
+clang_tablegen("BuiltinTemplates") {
+  args = [ "-gen-clang-builtin-templates" ]
+}
+
 # ARM CDE, MVE, and NEON.
 
 clang_tablegen("arm_neon") {

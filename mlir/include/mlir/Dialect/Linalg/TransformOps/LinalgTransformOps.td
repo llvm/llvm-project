@@ -45,7 +45,7 @@ def ApplyDecomposeTensorPackUnpackPatternsOp
     : Op<Transform_Dialect, "apply_patterns.linalg.decompose_pack_unpack",
          [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
-    Collect patterns to decompose tensor.pack and tensor.unpack into e.g.
+    Collect patterns to decompose linalg.pack and linalg.unpack into e.g.
     tensor::PadOp, linalg::transposeOp Ops. Requires all outer dims to be unit.
   }];
 
@@ -123,6 +123,28 @@ def ApplyPadVectorizationPatternsOp : Op<Transform_Dialect,
     matched tensor.pad Op to find opportunities for vectorization.
   }];
 
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyFoldIntoPackAndUnpackPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.tensor.fold_into_pack_and_unpack",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that operations like tensor.pad and tensor.extract_slice should
+    be folded into linalg.pack and linalg.unpack operations, respectively.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyFoldPackUnpackIntoEmptyPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.linalg.fold_pack_unpack_into_empty",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    // TODO:
+  }];
+
+  let arguments = (ins DefaultValuedAttr<BoolAttr, "false">:$fold_single_use_only);
   let assemblyFormat = "attr-dict";
 }
 
@@ -547,19 +569,18 @@ def LowerPackOp : Op<Transform_Dialect, "structured.lower_pack", [
                          TransformOpInterface,
                          ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
-    Rewrite a tensor.pack into tensor.pad + tensor.expand_shape + linalg.transpose.
+    Rewrite a linalg.pack into tensor.pad + tensor.expand_shape + linalg.transpose.
 
     #### Return modes
 
-    This operation ignores non-pack ops and drops them in the return.
-    This operation produces a silenceable failure if the rewrite fails for any
-    reason.
-    If all the operations referred to by the `target` are rewritten, the
-    transform succeeds.
-    Return handles to the newly produced pad, expand_shape and transpose ops.
+    This operation ignores non-pack ops and drops them in the return. This
+    operation produces a silenceable failure if the rewrite fails for any
+    reason. If all the operations referred to by the `target` are rewritten,
+    the transform succeeds. Return handles to the newly produced pad,
+    expand_shape and transpose ops.
   }];
 
-  let arguments = (ins Transform_ConcreteOpType<"tensor.pack">:$target,
+  let arguments = (ins Transform_ConcreteOpType<"linalg.pack">:$target,
                        DefaultValuedAttr<BoolAttr, "true">:$lowerPadLikeWithInsertSlice);
   let results = (outs Transform_ConcreteOpType<"tensor.pad">:$pad_op,
                       Transform_ConcreteOpType<"tensor.expand_shape">:$expand_shape_op,
@@ -571,7 +592,7 @@ def LowerPackOp : Op<Transform_Dialect, "structured.lower_pack", [
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::transform::TransformRewriter &rewriter,
-        ::mlir::tensor::PackOp target,
+        ::mlir::linalg::PackOp target,
         ::mlir::transform::ApplyToEachResultList &transformResults,
         ::mlir::transform::TransformState &state);
   }];
@@ -587,20 +608,19 @@ def LowerUnPackOp : Op<Transform_Dialect, "structured.lower_unpack", [
                          TransformOpInterface,
                          ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
-    Lower a tensor.unpack into empty + linalg.transpose + tensor.collapse_shape +
+    Lower a linalg.unpack into empty + linalg.transpose + tensor.collapse_shape +
     tensor.extract_slice.
 
     #### Return modes
 
-    This operation ignores non-unpack ops and drops them in the return.
-    This operation produces a silenceable failure if the rewrite fails for any
-    reason.
-    If all the operations referred to by the `target` are rewritten, the
-    transform succeeds.
-    Return handles to the newly produced empty, transpose, collapse_shape and extract_slice ops.
+    This operation ignores non-unpack ops and drops them in the return. This
+    operation produces a silenceable failure if the rewrite fails for any
+    reason. If all the operations referred to by the `target` are rewritten,
+    the transform succeeds. Return handles to the newly produced empty,
+    transpose, collapse_shape and extract_slice ops.
   }];
 
-  let arguments = (ins Transform_ConcreteOpType<"tensor.unpack">:$target,
+  let arguments = (ins Transform_ConcreteOpType<"linalg.unpack">:$target,
                        DefaultValuedAttr<BoolAttr, "true">:$lowerUnpadLikeWithExtractSlice);
   let results = (outs Transform_ConcreteOpType<"tensor.empty">:$empty_op,
                       Transform_ConcreteOpType<"linalg.transpose">:$transpose_op,
@@ -613,7 +633,7 @@ def LowerUnPackOp : Op<Transform_Dialect, "structured.lower_unpack", [
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::transform::TransformRewriter &rewriter,
-        ::mlir::tensor::UnPackOp target,
+        ::mlir::linalg::UnPackOp target,
         ::mlir::transform::ApplyToEachResultList &transformResults,
         ::mlir::transform::TransformState &state);
   }];
@@ -791,7 +811,7 @@ def PackOp : Op<Transform_Dialect, "structured.pack", [
     Specifying a packed size of 0 for an iterator removes it from consideration
     for packing.
 
-    `tensor.pack` (resp. `tensor.unpack`) operations are inserted for the operands
+    `linalg.pack` (resp. `linalg.unpack`) operations are inserted for the operands
     (resp. results) that need to be packed (resp. unpacked) according to the
     `packed_sizes` specification.
 
@@ -980,7 +1000,7 @@ def PackTransposeOp : Op<Transform_Dialect, "structured.pack_transpose", [
                          DeclareOpInterfaceMethods<TransformOpInterface>,
                          ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
-    Apply a transposition to a single `tensor.pack` (resp. `tensor.unpack`) and
+    Apply a transposition to a single `linalg.pack` (resp. `linalg.unpack`) and
     update the `linalg.generic` op that consumes (resp. produces) the operation.
 
     This transform allows composing a simple `structured.pack` with additional
@@ -989,19 +1009,19 @@ def PackTransposeOp : Op<Transform_Dialect, "structured.pack_transpose", [
 
     The transpose spec must specify at least one of `outer_perm` or `inner_perm`
     attributes, which will act upon the `outer_dims_perm` or `inner_dims_pos` of
-    the specified `tensor.pack` or `tensor.unpack` op.
+    the specified `linalg.pack` or `linalg.unpack` op.
 
-    If the `target` of this op is a `tensor.pack` then a new `tensor.empty` will
-    be created along with transposed versions of the `tensor.pack` and the
+    If the `target` of this op is a `linalg.pack` then a new `tensor.empty` will
+    be created along with transposed versions of the `linalg.pack` and the
     consuming `linalg.generic`, which is expected to be the sole consumer.
 
-    If the `target` of this op is a `tensor.unpack` then the whole pack / compute
-    / unpack chain will be transposed and transposed clones of `tensor.pack`,
-    the consuming `linalg.generic` and the tail `tensor.pack` will be created.
+    If the `target` of this op is a `linalg.unpack` then the whole pack / compute
+    / unpack chain will be transposed and transposed clones of `linalg.pack`,
+    the consuming `linalg.generic` and the tail `linalg.pack` will be created.
 
     #### Return modes
 
-    This operation targets a single `tensor.pack` / `tensor.unpack` op and a
+    This operation targets a single `linalg.pack` / `linalg.unpack` op and a
     single matching `linalg.generic` that consumes / produces the op. Otherwise,
     it produces a silenceableFailure.
 
@@ -1011,9 +1031,9 @@ def PackTransposeOp : Op<Transform_Dialect, "structured.pack_transpose", [
     reason.
 
     This operation returns 3 handles, one to the transformed LinalgOp, one to
-    the transformed `tensor.pack` and one to the transformed `tensor.unpack`.
-    The last handle for `tensor.unpack` is empty if `target_pack_or_unpack_op`
-    was not itself a `tensor.unpack`.
+    the transformed `linalg.pack` and one to the transformed `linalg.unpack`.
+    The last handle for `linalg.unpack` is empty if `target_pack_or_unpack_op`
+    was not itself a `linalg.unpack`.
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target_pack_or_un_pack_op,
@@ -1143,7 +1163,7 @@ def HoistPadBuildPackingLoopNestOp :
     creates the packing loop nest required by the hoist_pad operation and makes
     that functionality available independently.
 
-    TODO: In the future, we should consider rewriting as a tensor.pack after
+    TODO: In the future, we should consider rewriting as a linalg.pack after
     hoisting since this abstraction is now available.
 
     #### Return modes
@@ -1182,7 +1202,7 @@ def HoistPadOp : Op<Transform_Dialect, "structured.hoist_pad",
     Hoist the tensor.pad target operation by at most the given number of loops.
     Optionally apply the transpose attribute to the inner dimensions.
 
-    TODO: In the future, we should consider rewriting as a tensor.pack after
+    TODO: In the future, we should consider rewriting as a linalg.pack after
     hoisting since this abstraction is now available.
     TODO: Maybe also return the linalg.generic transpose created at some point.
 

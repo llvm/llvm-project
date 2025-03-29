@@ -14,35 +14,39 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @test() {
 ; SSE2-LABEL: 'test'
 ; SSE2:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load i32, ptr %in0, align 4
-; SSE2:  Cost of 8 for VF 2: INTERLEAVE-GROUP with factor 3 at %v0
-; SSE2:  Cost of 17 for VF 4: INTERLEAVE-GROUP with factor 3 at %v0
-; SSE2:  Cost of 34 for VF 8: INTERLEAVE-GROUP with factor 3 at %v0
-; SSE2:  Cost of 68 for VF 16: INTERLEAVE-GROUP with factor 3 at %v0
+; SSE2:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load i32, ptr %in0, align 4
+; SSE2:  LV: Found an estimated cost of 8 for VF 2 For instruction: %v0 = load i32, ptr %in0, align 4
+; SSE2:  LV: Found an estimated cost of 17 for VF 4 For instruction: %v0 = load i32, ptr %in0, align 4
+; SSE2:  LV: Found an estimated cost of 34 for VF 8 For instruction: %v0 = load i32, ptr %in0, align 4
+; SSE2:  LV: Found an estimated cost of 68 for VF 16 For instruction: %v0 = load i32, ptr %in0, align 4
 ;
 ; AVX1-LABEL: 'test'
 ; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load i32, ptr %in0, align 4
-; AVX1:  Cost of 7 for VF 2: INTERLEAVE-GROUP with factor 3 at %v0
-; AVX1:  Cost of 11 for VF 4: INTERLEAVE-GROUP with factor 3 at %v0
-; AVX1:  Cost of 23 for VF 8: INTERLEAVE-GROUP with factor 3 at %v0
-; AVX1:  Cost of 46 for VF 16: INTERLEAVE-GROUP with factor 3 at %v0
-; AVX1:  Cost of 92 for VF 32: INTERLEAVE-GROUP with factor 3 at %v0
+; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load i32, ptr %in0, align 4
+; AVX1:  LV: Found an estimated cost of 7 for VF 2 For instruction: %v0 = load i32, ptr %in0, align 4
+; AVX1:  LV: Found an estimated cost of 11 for VF 4 For instruction: %v0 = load i32, ptr %in0, align 4
+; AVX1:  LV: Found an estimated cost of 23 for VF 8 For instruction: %v0 = load i32, ptr %in0, align 4
+; AVX1:  LV: Found an estimated cost of 46 for VF 16 For instruction: %v0 = load i32, ptr %in0, align 4
+; AVX1:  LV: Found an estimated cost of 92 for VF 32 For instruction: %v0 = load i32, ptr %in0, align 4
 ;
 ; AVX2-LABEL: 'test'
 ; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load i32, ptr %in0, align 4
-; AVX2:  Cost of 4 for VF 2: {{.*}}ir<%v0> = load
-; AVX2:  Cost of 3 for VF 4: INTERLEAVE-GROUP with factor 3 at %v0
-; AVX2:  Cost of 6 for VF 8: INTERLEAVE-GROUP with factor 3 at %v0
-; AVX2:  Cost of 11 for VF 16: INTERLEAVE-GROUP with factor 3 at %v0
-; AVX2:  Cost of 23 for VF 32: INTERLEAVE-GROUP with factor 3 at %v0
+; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load i32, ptr %in0, align 4
+; AVX2:  LV: Found an estimated cost of 4 for VF 2 For instruction: %v0 = load i32, ptr %in0, align 4
+; AVX2:  LV: Found an estimated cost of 3 for VF 4 For instruction: %v0 = load i32, ptr %in0, align 4
+; AVX2:  LV: Found an estimated cost of 6 for VF 8 For instruction: %v0 = load i32, ptr %in0, align 4
+; AVX2:  LV: Found an estimated cost of 11 for VF 16 For instruction: %v0 = load i32, ptr %in0, align 4
+; AVX2:  LV: Found an estimated cost of 23 for VF 32 For instruction: %v0 = load i32, ptr %in0, align 4
 ;
 ; AVX512-LABEL: 'test'
 ; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load i32, ptr %in0, align 4
-; AVX512:  Cost of 1 for VF 2: INTERLEAVE-GROUP with factor 3 at %v0
-; AVX512:  Cost of 1 for VF 4: INTERLEAVE-GROUP with factor 3 at %v0
-; AVX512:  Cost of 2 for VF 8: INTERLEAVE-GROUP with factor 3 at %v0
-; AVX512:  Cost of 3 for VF 16: INTERLEAVE-GROUP with factor 3 at %v0
-; AVX512:  Cost of 21 for VF 32: INTERLEAVE-GROUP with factor 3 at %v0
-; AVX512:  Cost of 78 for VF 64: INTERLEAVE-GROUP with factor 3 at %v0
+; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load i32, ptr %in0, align 4
+; AVX512:  LV: Found an estimated cost of 1 for VF 2 For instruction: %v0 = load i32, ptr %in0, align 4
+; AVX512:  LV: Found an estimated cost of 1 for VF 4 For instruction: %v0 = load i32, ptr %in0, align 4
+; AVX512:  LV: Found an estimated cost of 2 for VF 8 For instruction: %v0 = load i32, ptr %in0, align 4
+; AVX512:  LV: Found an estimated cost of 3 for VF 16 For instruction: %v0 = load i32, ptr %in0, align 4
+; AVX512:  LV: Found an estimated cost of 21 for VF 32 For instruction: %v0 = load i32, ptr %in0, align 4
+; AVX512:  LV: Found an estimated cost of 78 for VF 64 For instruction: %v0 = load i32, ptr %in0, align 4
 ;
 entry:
   br label %for.body

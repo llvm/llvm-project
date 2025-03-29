@@ -203,49 +203,61 @@ func.func @powf() {
   call @func_powff64(%a, %a_p) : (f64, f64) -> ()
 
   // CHECK-NEXT: 2.343
-  %c   = arith.constant 2.343 : f64
-  %c_p = arith.constant 1.000 : f64
-  call @func_powff64(%c, %c_p) : (f64, f64) -> ()
+  %b   = arith.constant 2.343 : f64
+  %b_p = arith.constant 1.000 : f64
+  call @func_powff64(%b, %b_p) : (f64, f64) -> ()
 
   // CHECK-NEXT: 0.176171
-  %d   = arith.constant 4.25 : f64
-  %d_p = arith.constant -1.2  : f64
+  %c   = arith.constant 4.25 : f64
+  %c_p = arith.constant -1.2  : f64
+  call @func_powff64(%c, %c_p) : (f64, f64) -> ()
+
+  // CHECK-NEXT: 1
+  %d   = arith.constant 4.385 : f64
+  %d_p = arith.constant 0.00 : f64
   call @func_powff64(%d, %d_p) : (f64, f64) -> ()
 
-  // CHECK-NEXT: 1
-  %e   = arith.constant 4.385 : f64
-  %e_p = arith.constant 0.00 : f64
+  // CHECK-NEXT: 6.62637
+  %e    = arith.constant 4.835 : f64
+  %e_p  = arith.constant 1.2 : f64
   call @func_powff64(%e, %e_p) : (f64, f64) -> ()
 
-  // CHECK-NEXT: 6.62637
-  %f    = arith.constant 4.835 : f64
-  %f_p  = arith.constant 1.2 : f64
+  // CHECK-NEXT: nan
+  %f = arith.constant 1.0 : f64
+  %f_p = arith.constant 0x7fffffffffffffff : f64
   call @func_powff64(%f, %f_p) : (f64, f64) -> ()
 
-  // CHECK-NEXT: nan
-  %i = arith.constant 1.0 : f64
-  %h = arith.constant 0x7fffffffffffffff : f64
-  call @func_powff64(%i, %h) : (f64, f64) -> ()
-
   // CHECK-NEXT: inf
-  %j   = arith.constant 29385.0 : f64
-  %j_p = arith.constant 23598.0 : f64
-  call @func_powff64(%j, %j_p) : (f64, f64) -> ()
+  %g   = arith.constant 29385.0 : f64
+  %g_p = arith.constant 23598.0 : f64
+  call @func_powff64(%g, %g_p) : (f64, f64) -> ()
 
   // CHECK-NEXT: -nan
-  %k = arith.constant 1.0 : f64
-  %k_p = arith.constant 0xfff0000001000000 : f64
-  call @func_powff64(%k, %k_p) : (f64, f64) -> ()
+  %h = arith.constant 1.0 : f64
+  %h_p = arith.constant 0xfff0000001000000 : f64
+  call @func_powff64(%h, %h_p) : (f64, f64) -> ()
 
   // CHECK-NEXT: -nan
-  %l = arith.constant 1.0 : f32
-  %l_p = arith.constant 0xffffffff : f32
-  call @func_powff32(%l, %l_p) : (f32, f32) -> ()
+  %i = arith.constant 1.0 : f32
+  %i_p = arith.constant 0xffffffff : f32
+  call @func_powff32(%i, %i_p) : (f32, f32) -> ()
 
   // CHECK-NEXT: 1
-  %zero = arith.constant 0.0 : f32
-  call @func_powff32(%zero, %zero) : (f32, f32) -> ()
+  %j = arith.constant 0.000 : f32
+  %j_r = math.powf %j, %j : f32
+  vector.print %j_r : f32
 
+  // CHECK-NEXT: 4
+  %k = arith.constant -2.0 : f32
+  %k_p = arith.constant 2.0 : f32
+  %k_r = math.powf %k, %k_p : f32
+  vector.print %k_r : f32
+
+  // CHECK-NEXT: 0.25
+  %l = arith.constant -2.0 : f32
+  %l_p = arith.constant -2.0 : f32
+  %l_r = math.powf %k, %l_p : f32
+  vector.print %l_r : f32
   return
 }
 

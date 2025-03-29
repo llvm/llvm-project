@@ -56,6 +56,7 @@ public:
       const llvm::opt::ArgList &DriverArgs,
       llvm::opt::ArgStringList &CC1Args) const override;
 
+  SanitizerMask getSupportedSanitizers() const override;
   unsigned GetDefaultDwarfVersion() const override { return 4; }
 
   bool GetDefaultStandaloneDebug() const override { return true; }

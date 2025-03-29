@@ -248,13 +248,7 @@ public:
 
   /// Parses a quoted string token if present.
   ParseResult parseOptionalString(std::string *string) override {
-    if (!parser.getToken().is(Token::string))
-      return failure();
-
-    if (string)
-      *string = parser.getToken().getStringValue();
-    parser.consumeToken();
-    return success();
+    return parser.parseOptionalString(string);
   }
 
   /// Parses a Base64 encoded string of bytes.
@@ -355,13 +349,7 @@ public:
 
   /// Parse a keyword, if present, into 'keyword'.
   ParseResult parseOptionalKeyword(StringRef *keyword) override {
-    // Check that the current token is a keyword.
-    if (!parser.isCurrentTokenAKeyword())
-      return failure();
-
-    *keyword = parser.getTokenSpelling();
-    parser.consumeToken();
-    return success();
+    return parser.parseOptionalKeyword(keyword);
   }
 
   /// Parse a keyword if it is one of the 'allowedKeywords'.
@@ -387,13 +375,7 @@ public:
 
   /// Parse an optional keyword or string and set instance into 'result'.`
   ParseResult parseOptionalKeywordOrString(std::string *result) override {
-    StringRef keyword;
-    if (succeeded(parseOptionalKeyword(&keyword))) {
-      *result = keyword.str();
-      return success();
-    }
-
-    return parseOptionalString(result);
+    return parser.parseOptionalKeywordOrString(result);
   }
 
   //===--------------------------------------------------------------------===//
@@ -514,7 +496,7 @@ public:
       return parser.emitError() << "dialect '" << dialect->getNamespace()
                                 << "' does not expect resource handles";
     }
-    StringRef resourceName;
+    std::string resourceName;
     return parser.parseResourceHandle(interface, resourceName);
   }
 

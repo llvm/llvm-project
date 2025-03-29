@@ -22,7 +22,7 @@ void ExceptionAnalyzer::ExceptionInfo::registerExceptions(
   if (Exceptions.empty())
     return;
   Behaviour = State::Throwing;
-  ThrownExceptions.insert(Exceptions.begin(), Exceptions.end());
+  ThrownExceptions.insert_range(Exceptions);
 }
 
 ExceptionAnalyzer::ExceptionInfo &ExceptionAnalyzer::ExceptionInfo::merge(
@@ -39,8 +39,7 @@ ExceptionAnalyzer::ExceptionInfo &ExceptionAnalyzer::ExceptionInfo::merge(
     Behaviour = State::Unknown;
 
   ContainsUnknown = ContainsUnknown || Other.ContainsUnknown;
-  ThrownExceptions.insert(Other.ThrownExceptions.begin(),
-                          Other.ThrownExceptions.end());
+  ThrownExceptions.insert_range(Other.ThrownExceptions);
   return *this;
 }
 
@@ -178,7 +177,9 @@ bool isFunctionPointerConvertible(QualType From, QualType To) {
 
     // Note: converting Derived::* to Base::* is a different kind of conversion,
     // called Pointer-to-member conversion.
-    return FromMember->getClass() == ToMember->getClass() &&
+    return FromMember->getQualifier() == ToMember->getQualifier() &&
+           FromMember->getMostRecentCXXRecordDecl() ==
+               ToMember->getMostRecentCXXRecordDecl() &&
            FromMember->getPointeeType() == ToMember->getPointeeType();
   }
 
@@ -219,8 +220,8 @@ bool isQualificationConvertiblePointer(QualType From, QualType To,
 
     if (P1->isMemberPointerType())
       return P2->isMemberPointerType() &&
-             P1->getAs<MemberPointerType>()->getClass() ==
-                 P2->getAs<MemberPointerType>()->getClass();
+             P1->getAs<MemberPointerType>()->getMostRecentCXXRecordDecl() ==
+                 P2->getAs<MemberPointerType>()->getMostRecentCXXRecordDecl();
 
     if (P1->isConstantArrayType())
       return P2->isConstantArrayType() &&

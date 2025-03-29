@@ -483,7 +483,7 @@ define amdgpu_ps void @dyn_extract_v8i64_const_s_s(i32 inreg %sel) {
 ; GFX11-NEXT:    s_endpgm
 entry:
   %ext = extractelement <8 x i64> <i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8>, i32 %sel
-  store i64 %ext, ptr addrspace(1) undef
+  store i64 %ext, ptr addrspace(1) poison
   ret void
 }
 
@@ -628,7 +628,7 @@ define amdgpu_ps void @dyn_extract_v8i64_s_v(<8 x i64> inreg %vec, i32 %sel) {
 ; GFX11-NEXT:    s_endpgm
 entry:
   %ext = extractelement <8 x i64> %vec, i32 %sel
-  store i64 %ext, ptr addrspace(1) undef
+  store i64 %ext, ptr addrspace(1) poison
   ret void
 }
 
@@ -744,7 +744,7 @@ define amdgpu_ps void @dyn_extract_v8i64_v_s(<8 x i64> %vec, i32 inreg %sel) {
 ; GFX11-NEXT:    s_endpgm
 entry:
   %ext = extractelement <8 x i64> %vec, i32 %sel
-  store i64 %ext, ptr addrspace(1) undef
+  store i64 %ext, ptr addrspace(1) poison
   ret void
 }
 
@@ -849,7 +849,7 @@ define amdgpu_ps void @dyn_extract_v8i64_s_s(<8 x i64> inreg %vec, i32 inreg %se
 ; GFX11-NEXT:    s_endpgm
 entry:
   %ext = extractelement <8 x i64> %vec, i32 %sel
-  store i64 %ext, ptr addrspace(1) undef
+  store i64 %ext, ptr addrspace(1) poison
   ret void
 }
 
@@ -1619,7 +1619,7 @@ define amdgpu_ps void @dyn_extract_v8p3_s_s(<8 x ptr addrspace(3)> inreg %vec, i
 ; GFX11-NEXT:    s_endpgm
 entry:
   %ext = extractelement <8 x ptr addrspace(3)> %vec, i32 %idx
-  store ptr addrspace(3) %ext, ptr addrspace(3) undef
+  store ptr addrspace(3) %ext, ptr addrspace(3) poison
   ret void
 }
 
@@ -1800,7 +1800,7 @@ define amdgpu_ps void @dyn_extract_v8p1_s_s(<8 x ptr addrspace(1)> inreg %vec, i
 ; GFX11-NEXT:    s_endpgm
 entry:
   %ext = extractelement <8 x ptr addrspace(1)> %vec, i32 %idx
-  store ptr addrspace(1) %ext, ptr addrspace(1) undef
+  store ptr addrspace(1) %ext, ptr addrspace(1) poison
   ret void
 }
 
@@ -2872,8 +2872,8 @@ define double @dyn_extract_v7f64_v_v(<7 x double> %vec, i32 %sel) {
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v12, vcc
 ; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v13, vcc
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 7, v14
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v14, vcc
-; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v15, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v0, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v1, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: dyn_extract_v7f64_v_v:
@@ -2898,8 +2898,8 @@ define double @dyn_extract_v7f64_v_v(<7 x double> %vec, i32 %sel) {
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, v0, v12, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, v1, v13, vcc_lo
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 7, v14
-; GFX10-NEXT:    v_cndmask_b32_e32 v0, v0, v14, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e32 v1, v1, v15, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, v0, v0, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, v1, v1, vcc_lo
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: dyn_extract_v7f64_v_v:
@@ -2918,7 +2918,7 @@ define double @dyn_extract_v7f64_v_v(<7 x double> %vec, i32 %sel) {
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 6, v14
 ; GFX11-NEXT:    v_dual_cndmask_b32 v0, v0, v12 :: v_dual_cndmask_b32 v1, v1, v13
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 7, v14
-; GFX11-NEXT:    v_dual_cndmask_b32 v0, v0, v14 :: v_dual_cndmask_b32 v1, v1, v15
+; GFX11-NEXT:    v_dual_cndmask_b32 v0, v0, v0 :: v_dual_cndmask_b32 v1, v1, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %ext = extractelement <7 x double> %vec, i32 %sel

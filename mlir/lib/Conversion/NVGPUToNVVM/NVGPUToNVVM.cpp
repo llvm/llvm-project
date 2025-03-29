@@ -143,7 +143,7 @@ static Value convertIntrinsicResult(Location loc, Type intrinsicResultType,
 
       for (unsigned i = 0, e = structType.getBody().size() / 2; i < e; i++) {
         Value vec =
-            rewriter.create<LLVM::UndefOp>(loc, arrayType.getElementType());
+            rewriter.create<LLVM::PoisonOp>(loc, arrayType.getElementType());
         Value x1 =
             rewriter.create<LLVM::ExtractValueOp>(loc, intrinsicResult, i * 2);
         Value x2 = rewriter.create<LLVM::ExtractValueOp>(loc, intrinsicResult,
@@ -157,7 +157,7 @@ static Value convertIntrinsicResult(Location loc, Type intrinsicResultType,
     }
 
     // Create the final vectorized result.
-    Value result = rewriter.create<LLVM::UndefOp>(loc, arrayType);
+    Value result = rewriter.create<LLVM::PoisonOp>(loc, arrayType);
     for (const auto &el : llvm::enumerate(elements)) {
       result = rewriter.create<LLVM::InsertValueOp>(loc, result, el.value(),
                                                     el.index());
@@ -296,7 +296,7 @@ struct MmaLdMatrixOpToNVVM : public ConvertOpToLLVMPattern<nvgpu::LdMatrixOp> {
     // actual vector type (still of width 32b) and repack them into a result
     // struct.
     Type finalResultType = typeConverter->convertType(vectorResultType);
-    Value result = b.create<LLVM::UndefOp>(finalResultType);
+    Value result = b.create<LLVM::PoisonOp>(finalResultType);
     for (int64_t i = 0, e = vectorResultType.getDimSize(0); i < e; i++) {
       Value i32Register =
           num32BitRegs > 1 ? b.create<LLVM::ExtractValueOp>(ldMatrixResult, i)
@@ -816,6 +816,24 @@ public:
         nvgpu::getMBarrierMemrefType(rewriter.getContext(), mbarType);
     return ConvertToLLVMPattern::getStridedElementPtr(
         b.getLoc(), mbarrierMemrefType, memrefDesc, {mbarId}, rewriter);
+  }
+};
+
+struct NVGPUMBarrierGetLowering
+    : public MBarrierBasePattern<nvgpu::MBarrierGetOp> {
+  using MBarrierBasePattern<nvgpu::MBarrierGetOp>::MBarrierBasePattern;
+
+  LogicalResult
+  matchAndRewrite(nvgpu::MBarrierGetOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    ImplicitLocOpBuilder b(op->getLoc(), rewriter);
+    nvgpu::MBarrierGroupType mbarrierType = op.getBarriers().getType();
+    rewriter.setInsertionPoint(op);
+    Value barrier = getMbarrierPtr(b, mbarrierType, adaptor.getBarriers(),
+                                   adaptor.getMbarId(), rewriter);
+    Type resType = op.getMbarrierPointer().getType();
+    rewriter.replaceOpWithNewOp<LLVM::PtrToIntOp>(op, resType, barrier);
+    return success();
   }
 };
 
@@ -1421,7 +1439,7 @@ struct NVGPUWarpgroupMmaOpLowering
     /// Generates multiple wgmma instructions to complete the given GEMM shape
     Value generateWgmmaGroup() {
       Value wgmmaResult =
-          b.create<LLVM::UndefOp>(adaptor.getMatrixC().getType());
+          b.create<LLVM::PoisonOp>(adaptor.getMatrixC().getType());
 
       // Perform GEMM
       SmallVector<Value> wgmmaResults;
@@ -1631,7 +1649,7 @@ struct NVGPUWarpgroupMmaInitAccumulatorOpLowering
                         .getBody()
                         .front();
     Value zero = b.create<LLVM::ConstantOp>(elemType, b.getZeroAttr(elemType));
-    Value packStruct = b.create<LLVM::UndefOp>(packStructType);
+    Value packStruct = b.create<LLVM::PoisonOp>(packStructType);
     SmallVector<Value> innerStructs;
     // Unpack the structs and set all values to zero
     for (auto [idx, s] : llvm::enumerate(packStructType.getBody())) {
@@ -1649,6 +1667,28 @@ struct NVGPUWarpgroupMmaInitAccumulatorOpLowering
                                                  packStruct, matrix, idx);
     }
     rewriter.replaceOp(op, packStruct);
+    return success();
+  }
+};
+
+struct NVGPUTmaFenceOpLowering
+    : public ConvertOpToLLVMPattern<nvgpu::TmaFenceOp> {
+  using ConvertOpToLLVMPattern<nvgpu::TmaFenceOp>::ConvertOpToLLVMPattern;
+  LogicalResult
+  matchAndRewrite(nvgpu::TmaFenceOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    MLIRContext *ctx = op.getContext();
+    ImplicitLocOpBuilder b(op->getLoc(), rewriter);
+    auto i32Ty = b.getI32Type();
+    Value tensormapSize =
+        b.create<LLVM::ConstantOp>(i32Ty, rewriter.getI32IntegerAttr(128));
+
+    auto memscope =
+        NVVM::MemScopeKindAttr::get(ctx, ::mlir::NVVM::MemScopeKind::SYS);
+
+    rewriter.replaceOpWithNewOp<NVVM::FenceProxyAcquireOp>(
+        op, memscope, adaptor.getTensorMapDescriptor(), tensormapSize);
+
     return success();
   }
 };
@@ -1676,7 +1716,7 @@ struct NVGPURcpOpLowering : public ConvertOpToLLVMPattern<nvgpu::RcpOp> {
     VectorType inTy = op.getIn().getType();
     // apply rcp.approx.ftz.f on each element in vector.
     auto convert1DVec = [&](Type llvm1DVectorTy, Value inVec) {
-      Value ret1DVec = b.create<LLVM::UndefOp>(llvm1DVectorTy);
+      Value ret1DVec = b.create<LLVM::PoisonOp>(llvm1DVectorTy);
       int numElems = llvm::cast<VectorType>(llvm1DVectorTy).getNumElements();
       for (int i = 0; i < numElems; i++) {
         Value idx = b.create<LLVM::ConstantOp>(i64Ty, b.getI64IntegerAttr(i));
@@ -1706,6 +1746,7 @@ void mlir::populateNVGPUToNVVMConversionPatterns(
   patterns.add<
       NVGPUMBarrierCreateLowering,           // nvgpu.mbarrier.create
       NVGPUMBarrierInitLowering,             // nvgpu.mbarrier.init
+      NVGPUMBarrierGetLowering,              // nvgpu.mbarrier.get
       NVGPUMBarrierArriveLowering,           // nvgpu.mbarrier.arrive
       NVGPUMBarrierArriveNoCompleteLowering, // nvgpu.mbarrier.arrive.no_complete
       NVGPUMBarrierTestWaitLowering,         // nvgpu.mbarrier.test_wait_parity
@@ -1714,6 +1755,7 @@ void mlir::populateNVGPUToNVVMConversionPatterns(
       NVGPUTmaAsyncStoreOpLowering,          // nvgpu.tma.async.store
       NVGPUTmaCreateDescriptorOpLowering,    // nvgpu.tma.create.descriptor
       NVGPUTmaPrefetchOpLowering,            // nvgpu.tma.prefetch.descriptor
+      NVGPUTmaFenceOpLowering,               // nvgpu.tma.fence.descriptor
       NVGPUMBarrierArriveExpectTxLowering,   // nvgpu.mbarrier.arrive.expect_tx
       NVGPUGenerateWarpgroupDescriptorLowering, // nvgpu.warpgroup.generate.descriptor
       NVGPUWarpgroupMmaOpLowering,              // nvgpu.warpgroup.mma

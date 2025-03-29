@@ -38,17 +38,32 @@ What's New in Libc++ 21.0.0?
 Implemented Papers
 ------------------
 
-- TODO
-
+- N4258: Cleaning-up noexcept in the Library (`Github <https://github.com/llvm/llvm-project/issues/99937>`__)
+- P0767R1: Deprecate POD (`Github <https://github.com/llvm/llvm-project/issues/104013>`__)
+- P1361R2: Integration of chrono with text formatting (`Github <https://github.com/llvm/llvm-project/issues/100014>`__)
+- P2255R2: A type trait to detect reference binding to temporary (implemented the type traits only) (`Github <https://github.com/llvm/llvm-project/issues/105180>`__)
+- P2562R1: ``constexpr`` Stable Sorting (`Github <https://github.com/llvm/llvm-project/issues/105360>`__)
+- P1222R4: A Standard ``flat_set`` is partially implemented and ``flat_set`` is provided (`Github <https://github.com/llvm/llvm-project/issues/105193>`__)
+- P0472R3: Put std::monostate in <utility> (`Github <https://github.com/llvm/llvm-project/issues/127874>`__)
 
 Improvements and New Features
 -----------------------------
 
-- TODO
+- The ``std::ranges::{copy, copy_n, copy_backward, move, move_backward, rotate}`` algorithms have been optimized for
+  ``std::vector<bool>::iterator``, resulting in a performance improvement of up to 2000x.
 
+- The ``std::ranges::equal`` algorithm has been optimized for ``std::vector<bool>::iterator``, resulting in a performance
+  improvement of up to 188x.
+
+- The ``std::ranges::swap_ranges`` algorithm has been optimized for ``std::vector<bool>::iterator``, resulting in a
+  performance improvement of up to 611x.
+
+- Updated formatting library to Unicode 16.0.0.
 
 Deprecations and Removals
 -------------------------
+
+- ``std::is_pod`` and ``std::is_pod_v`` are deprecated in C++20 and later.
 
 Upcoming Deprecations and Removals
 ----------------------------------

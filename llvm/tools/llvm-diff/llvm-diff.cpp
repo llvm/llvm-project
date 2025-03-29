@@ -56,7 +56,7 @@ static void diffGlobal(DifferenceEngine &Engine, Module &L, Module &R,
     errs() << "No function named @" << Name << " in right module\n";
 }
 
-cl::OptionCategory DiffCategory("Diff Options");
+static cl::OptionCategory DiffCategory("Diff Options");
 
 static cl::opt<std::string> LeftFilename(cl::Positional,
                                          cl::desc("<first file>"), cl::Required,

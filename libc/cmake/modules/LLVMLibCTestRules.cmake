@@ -36,11 +36,11 @@ function(_get_common_test_compile_options output_var c_test flags)
     if(NOT LIBC_WNO_ERROR)
       # list(APPEND compile_options "-Werror")
     endif()
-    # list(APPEND compile_options "-Wconversion")
-    # list(APPEND compile_options "-Wno-sign-conversion")
-    # list(APPEND compile_options "-Wimplicit-fallthrough")
-    # list(APPEND compile_options "-Wwrite-strings")
-    list(APPEND compile_options "-Wextra-semi")
+    list(APPEND compile_options "-Wconversion")
+    # FIXME: convert to -Wsign-conversion
+    list(APPEND compile_options "-Wno-sign-conversion")
+    list(APPEND compile_options "-Wimplicit-fallthrough")
+    list(APPEND compile_options "-Wwrite-strings")
     # Silence this warning because _Complex is a part of C99.
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
       if(NOT c_test)
@@ -51,13 +51,14 @@ function(_get_common_test_compile_options output_var c_test flags)
       list(APPEND compile_options "-Wno-gnu-imaginary-constant")
     endif()
     list(APPEND compile_options "-Wno-pedantic")
-    # if(NOT CMAKE_COMPILER_IS_GNUCXX)
-    #   list(APPEND compile_options "-Wnewline-eof")
-    #   list(APPEND compile_options "-Wnonportable-system-include-path")
-    #   list(APPEND compile_options "-Wstrict-prototypes")
-    #   list(APPEND compile_options "-Wthread-safety")
-    #   list(APPEND compile_options "-Wglobal-constructors")
-    # endif()
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+      list(APPEND compile_options "-Wstrict-prototypes")
+      list(APPEND compile_options "-Wextra-semi")
+      list(APPEND compile_options "-Wnewline-eof")
+      list(APPEND compile_options "-Wnonportable-system-include-path")
+      list(APPEND compile_options "-Wthread-safety")
+      # list(APPEND compile_options "-Wglobal-constructors")
+    endif()
   endif()
   set(${output_var} ${compile_options} PARENT_SCOPE)
 endfunction()
@@ -223,6 +224,8 @@ function(create_libc_unittest fq_target_name)
 
   _get_common_test_compile_options(compile_options "${LIBC_UNITTEST_C_TEST}"
                                    "${LIBC_UNITTEST_FLAGS}")
+  # TODO: Ideally we would have a separate function for link options.
+  set(link_options ${compile_options})
   list(APPEND compile_options ${LIBC_UNITTEST_COMPILE_OPTIONS})
 
   if(SHOW_INTERMEDIATE_OBJECTS)
@@ -277,7 +280,7 @@ function(create_libc_unittest fq_target_name)
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
   target_compile_options(${fq_build_target_name} PRIVATE ${compile_options})
-  target_link_options(${fq_build_target_name} PRIVATE ${compile_options})
+  target_link_options(${fq_build_target_name} PRIVATE ${link_options})
 
   if(NOT LIBC_UNITTEST_CXX_STANDARD)
     set(LIBC_UNITTEST_CXX_STANDARD ${CMAKE_CXX_STANDARD})
@@ -558,14 +561,12 @@ function(add_integration_test test_name)
   if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
     target_link_options(${fq_build_target_name} PRIVATE
       ${LIBC_COMPILE_OPTIONS_DEFAULT} ${INTEGRATION_TEST_COMPILE_OPTIONS}
-      -Wno-multi-gpu -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto
-      "-Wl,-mllvm,-amdgpu-lower-global-ctor-dtor=0" -nostdlib -static
+      -Wno-multi-gpu -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto -nostdlib -static
       "-Wl,-mllvm,-amdhsa-code-object-version=${LIBC_GPU_CODE_OBJECT_VERSION}")
   elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
     target_link_options(${fq_build_target_name} PRIVATE
       ${LIBC_COMPILE_OPTIONS_DEFAULT} ${INTEGRATION_TEST_COMPILE_OPTIONS}
       "-Wl,--suppress-stack-size-warning" -Wno-multi-gpu
-      "-Wl,-mllvm,-nvptx-lower-global-ctor-dtor=1"
       "-Wl,-mllvm,-nvptx-emit-init-fini-kernel"
       -march=${LIBC_GPU_TARGET_ARCHITECTURE} -nostdlib -static
       "--cuda-path=${LIBC_CUDA_ROOT}")
@@ -642,7 +643,7 @@ function(add_libc_hermetic test_name)
   cmake_parse_arguments(
     "HERMETIC_TEST"
     "IS_GPU_BENCHMARK" # Optional arguments
-    "SUITE" # Single value arguments
+    "SUITE;CXX_STANDARD" # Single value arguments
     "SRCS;HDRS;DEPENDS;ARGS;ENV;COMPILE_OPTIONS;LINK_LIBRARIES;LOADER_ARGS" # Multi-value arguments
     ${ARGN}
   )
@@ -719,10 +720,14 @@ function(add_libc_hermetic test_name)
     ${HERMETIC_TEST_SRCS}
     ${HERMETIC_TEST_HDRS}
   )
+
+  if(NOT HERMETIC_TEST_CXX_STANDARD)
+    set(HERMETIC_TEST_CXX_STANDARD ${CMAKE_CXX_STANDARD})
+  endif()
   set_target_properties(${fq_build_target_name}
     PROPERTIES
       RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-      #OUTPUT_NAME ${fq_target_name}
+      CXX_STANDARD ${HERMETIC_TEST_CXX_STANDARD}
   )
 
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
@@ -751,7 +756,6 @@ function(add_libc_hermetic test_name)
     target_link_options(${fq_build_target_name} PRIVATE
       ${LIBC_COMPILE_OPTIONS_DEFAULT} -Wno-multi-gpu
       "-Wl,--suppress-stack-size-warning"
-      "-Wl,-mllvm,-nvptx-lower-global-ctor-dtor=1"
       "-Wl,-mllvm,-nvptx-emit-init-fini-kernel"
       -march=${LIBC_GPU_TARGET_ARCHITECTURE} -nostdlib -static
       "--cuda-path=${LIBC_CUDA_ROOT}")

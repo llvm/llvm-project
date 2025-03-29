@@ -15,3 +15,11 @@ functions:
       - type: int
       - type: const struct iovec *
       - type: int
+  - name: readv
+    standards:
+      - POSIX
+    return_type: ssize_t
+    arguments:
+      - type: int
+      - type: const struct iovec *
+      - type: int

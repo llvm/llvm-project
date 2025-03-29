@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/ProfileData/MemProf.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/Threading.h"
@@ -587,20 +588,6 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // comes from specs (starting with link_command). Consult gcc for
   // more information.
   ArgStringList CmdArgs;
-
-  /// Hack(tm) to ignore linking errors when we are doing ARC migration.
-  if (Args.hasArg(options::OPT_ccc_arcmt_check,
-                  options::OPT_ccc_arcmt_migrate)) {
-    for (const auto &Arg : Args)
-      Arg->claim();
-    const char *Exec =
-        Args.MakeArgString(getToolChain().GetProgramPath("touch"));
-    CmdArgs.push_back(Output.getFilename());
-    C.addCommand(std::make_unique<Command>(JA, *this,
-                                           ResponseFileSupport::None(), Exec,
-                                           CmdArgs, std::nullopt, Output));
-    return;
-  }
 
   VersionTuple Version = getMachOToolChain().getLinkerVersion(Args);
 
@@ -1214,6 +1201,13 @@ void DarwinClang::addClangWarningOptions(ArgStringList &CC1Args) const {
   }
 }
 
+void DarwinClang::addClangTargetOptions(
+    const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
+    Action::OffloadKind DeviceOffloadKind) const {
+
+  Darwin::addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadKind);
+}
+
 /// Take a path that speculatively points into Xcode and return the
 /// `XCODE/Contents/Developer` path if it is an Xcode path, or an empty path
 /// otherwise.
@@ -1626,6 +1620,12 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
       AddLinkSanitizerLibArgs(Args, CmdArgs, "stats");
     }
   }
+
+  if (Sanitize.needsMemProfRt())
+    if (hasExportSymbolDirective(Args))
+      addExportedSymbol(
+          CmdArgs,
+          llvm::memprof::getMemprofOptionsSymbolDarwinLinkageName().data());
 
   const XRayArgs &XRay = getXRayArgs();
   if (XRay.needsXRayRt()) {
@@ -2791,30 +2791,6 @@ DerivedArgList *MachO::TranslateArgs(const DerivedArgList &Args,
   // and try to push it down into tool specific logic.
 
   for (Arg *A : Args) {
-    if (A->getOption().matches(options::OPT_Xarch__)) {
-      // Skip this argument unless the architecture matches either the toolchain
-      // triple arch, or the arch being bound.
-      StringRef XarchArch = A->getValue(0);
-      if (!(XarchArch == getArchName() ||
-            (!BoundArch.empty() && XarchArch == BoundArch)))
-        continue;
-
-      Arg *OriginalArg = A;
-      TranslateXarchArgs(Args, A, DAL);
-
-      // Linker input arguments require custom handling. The problem is that we
-      // have already constructed the phase actions, so we can not treat them as
-      // "input arguments".
-      if (A->getOption().hasFlag(options::LinkerInput)) {
-        // Convert the argument into individual Zlinker_input_args.
-        for (const char *Value : A->getValues()) {
-          DAL->AddSeparateArg(
-              OriginalArg, Opts.getOption(options::OPT_Zlinker_input), Value);
-        }
-        continue;
-      }
-    }
-
     // Sob. These is strictly gcc compatible for the time being. Apple
     // gcc translates options twice, which means that self-expanding
     // options add duplicates.
@@ -3087,9 +3063,43 @@ bool Darwin::isSizedDeallocationUnavailable() const {
   return TargetVersion < sizedDeallocMinVersion(OS);
 }
 
+void MachO::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                                  llvm::opt::ArgStringList &CC1Args,
+                                  Action::OffloadKind DeviceOffloadKind) const {
+
+  ToolChain::addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadKind);
+
+  // On arm64e, enable pointer authentication (for the return address and
+  // indirect calls), as well as usage of the intrinsics.
+  if (getArchName() == "arm64e") {
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_returns,
+                           options::OPT_fno_ptrauth_returns))
+      CC1Args.push_back("-fptrauth-returns");
+
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_intrinsics,
+                           options::OPT_fno_ptrauth_intrinsics))
+      CC1Args.push_back("-fptrauth-intrinsics");
+
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_calls,
+                           options::OPT_fno_ptrauth_calls))
+      CC1Args.push_back("-fptrauth-calls");
+
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_indirect_gotos,
+                           options::OPT_fno_ptrauth_indirect_gotos))
+      CC1Args.push_back("-fptrauth-indirect-gotos");
+
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_auth_traps,
+                           options::OPT_fno_ptrauth_auth_traps))
+      CC1Args.push_back("-fptrauth-auth-traps");
+  }
+}
+
 void Darwin::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
     Action::OffloadKind DeviceOffloadKind) const {
+
+  MachO::addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadKind);
+
   // Pass "-faligned-alloc-unavailable" only when the user hasn't manually
   // enabled or disabled aligned allocations.
   if (!DriverArgs.hasArgNoClaim(options::OPT_faligned_allocation,

@@ -10,6 +10,7 @@
 #define LLVM_FRONTEND_OFFLOADING_UTILITY_H
 
 #include <cstdint>
+#include <memory>
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -82,8 +83,8 @@ StructType *getEntryTy(Module &M);
 /// \param AuxAddr An extra pointer if needed.
 void emitOffloadingEntry(Module &M, object::OffloadKind Kind, Constant *Addr,
                          StringRef Name, uint64_t Size, uint32_t Flags,
-                         uint64_t Data, StringRef SectionName,
-                         Constant *AuxAddr = nullptr);
+                         uint64_t Data, Constant *AuxAddr = nullptr,
+                         StringRef SectionName = "llvm_offload_entries");
 
 /// Create a constant struct initializer used to register this global at
 /// runtime.
@@ -96,7 +97,7 @@ getOffloadingEntryInitializer(Module &M, object::OffloadKind Kind,
 /// Creates a pair of globals used to iterate the array of offloading entries by
 /// accessing the section variables provided by the linker.
 std::pair<GlobalVariable *, GlobalVariable *>
-getOffloadEntryArray(Module &M, StringRef SectionName);
+getOffloadEntryArray(Module &M, StringRef SectionName = "llvm_offload_entries");
 
 namespace amdgpu {
 /// Check if an image is compatible with current system's environment. The
@@ -152,6 +153,12 @@ Error getAMDGPUMetaDataFromImage(MemoryBufferRef MemBuffer,
                                  StringMap<AMDGPUKernelMetaData> &KernelInfoMap,
                                  uint16_t &ELFABIVersion);
 } // namespace amdgpu
+
+namespace intel {
+/// Containerizes an offloading binary into the ELF binary format expected by
+/// the Intel runtime offload plugin.
+Error containerizeOpenMPSPIRVImage(std::unique_ptr<MemoryBuffer> &Binary);
+} // namespace intel
 } // namespace offloading
 } // namespace llvm
 

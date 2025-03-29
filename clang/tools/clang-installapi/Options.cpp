@@ -263,11 +263,12 @@ bool Options::processInstallAPIXOptions(InputArgList &Args) {
     }
     const StringRef ASpelling = NextA->getSpelling();
     const auto &AValues = NextA->getValues();
+    auto &UniqueArgs = FEOpts.UniqueArgs[Label];
     if (AValues.empty())
-      FEOpts.UniqueArgs[Label].emplace_back(ASpelling.str());
+      UniqueArgs.emplace_back(ASpelling.str());
     else
       for (const StringRef Val : AValues)
-        FEOpts.UniqueArgs[Label].emplace_back((ASpelling + Val).str());
+        UniqueArgs.emplace_back((ASpelling + Val).str());
 
     A->claim();
     NextA->claim();
@@ -608,32 +609,37 @@ Options::processAndFilterOutInstallAPIOptions(ArrayRef<const char *> Args) {
       ParsedArgs.hasArg(OPT_not_for_dyld_shared_cache);
 
   for (const Arg *A : ParsedArgs.filtered(OPT_allowable_client)) {
+    auto It = ArgToArchMap.find(A);
     LinkerOpts.AllowableClients[A->getValue()] =
-        ArgToArchMap.count(A) ? ArgToArchMap[A] : ArchitectureSet();
+        It != ArgToArchMap.end() ? It->second : ArchitectureSet();
     A->claim();
   }
 
   for (const Arg *A : ParsedArgs.filtered(OPT_reexport_l)) {
+    auto It = ArgToArchMap.find(A);
     LinkerOpts.ReexportedLibraries[A->getValue()] =
-        ArgToArchMap.count(A) ? ArgToArchMap[A] : ArchitectureSet();
+        It != ArgToArchMap.end() ? It->second : ArchitectureSet();
     A->claim();
   }
 
   for (const Arg *A : ParsedArgs.filtered(OPT_reexport_library)) {
+    auto It = ArgToArchMap.find(A);
     LinkerOpts.ReexportedLibraryPaths[A->getValue()] =
-        ArgToArchMap.count(A) ? ArgToArchMap[A] : ArchitectureSet();
+        It != ArgToArchMap.end() ? It->second : ArchitectureSet();
     A->claim();
   }
 
   for (const Arg *A : ParsedArgs.filtered(OPT_reexport_framework)) {
+    auto It = ArgToArchMap.find(A);
     LinkerOpts.ReexportedFrameworks[A->getValue()] =
-        ArgToArchMap.count(A) ? ArgToArchMap[A] : ArchitectureSet();
+        It != ArgToArchMap.end() ? It->second : ArchitectureSet();
     A->claim();
   }
 
   for (const Arg *A : ParsedArgs.filtered(OPT_rpath)) {
+    auto It = ArgToArchMap.find(A);
     LinkerOpts.RPaths[A->getValue()] =
-        ArgToArchMap.count(A) ? ArgToArchMap[A] : ArchitectureSet();
+        It != ArgToArchMap.end() ? It->second : ArchitectureSet();
     A->claim();
   }
 

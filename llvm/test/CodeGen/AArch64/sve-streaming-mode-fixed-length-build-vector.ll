@@ -239,10 +239,10 @@ define void @build_vector_non_const_v4i1(i1 %a, i1 %b, i1 %c, i1 %d, ptr %out) {
 ; NONEON-NOSVE-NEXT:    orr w8, w8, w3, lsl #3
 ; NONEON-NOSVE-NEXT:    strb w8, [x4]
 ; NONEON-NOSVE-NEXT:    ret
-  %1 = insertelement <4 x i1> undef, i1 %a, i64 0
-  %2 = insertelement <4 x i1>    %1, i1 %b, i64 1
-  %3 = insertelement <4 x i1>    %2, i1 %c, i64 2
-  %4 = insertelement <4 x i1>    %3, i1 %d, i64 3
+  %1 = insertelement <4 x i1> poison, i1 %a, i64 0
+  %2 = insertelement <4 x i1> %1, i1 %b, i64 1
+  %3 = insertelement <4 x i1> %2, i1 %c, i64 2
+  %4 = insertelement <4 x i1> %3, i1 %d, i64 3
   store <4 x i1> %4, ptr %out
   ret void
 }
@@ -264,8 +264,8 @@ define void @build_vector_non_const_v2f64(double %a, double %b, ptr %out) {
 ; NONEON-NOSVE-NEXT:    str q0, [x0]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
-  %1 = insertelement <2 x double> undef, double %a, i64 0
-  %2 = insertelement <2 x double>    %1, double %b, i64 1
+  %1 = insertelement <2 x double> poison, double %a, i64 0
+  %2 = insertelement <2 x double> %1, double %b, i64 1
   store <2 x double> %2, ptr %out
   ret void
 }
@@ -288,8 +288,8 @@ define void @build_vector_non_const_v2f32(float %a, float %b, ptr %out) {
 ; NONEON-NOSVE-NEXT:    str d0, [x0]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
-  %1 = insertelement <2 x float> undef, float %a, i64 0
-  %2 = insertelement <2 x float>    %1, float %b, i64 1
+  %1 = insertelement <2 x float> poison, float %a, i64 0
+  %2 = insertelement <2 x float> %1, float %b, i64 1
   store <2 x float> %2, ptr %out
   ret void
 }
@@ -317,10 +317,10 @@ define void @build_vector_non_const_v4f32(float %a, float %b, float %c, float %d
 ; NONEON-NOSVE-NEXT:    str q0, [x0]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
-  %1 = insertelement <4 x float> undef, float %a, i64 0
-  %2 = insertelement <4 x float>    %1, float %b, i64 1
-  %3 = insertelement <4 x float>    %2, float %c, i64 2
-  %4 = insertelement <4 x float>    %3, float %d, i64 3
+  %1 = insertelement <4 x float> poison, float %a, i64 0
+  %2 = insertelement <4 x float> %1, float %b, i64 1
+  %3 = insertelement <4 x float> %2, float %c, i64 2
+  %4 = insertelement <4 x float> %3, float %d, i64 3
   store <4 x float> %4, ptr %out
   ret void
 }
@@ -346,10 +346,10 @@ define void @build_vector_non_const_v4f64(double %a, double %b, double %c, doubl
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [x0]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #32
 ; NONEON-NOSVE-NEXT:    ret
-  %1 = insertelement <4 x double> undef, double %a, i64 0
-  %2 = insertelement <4 x double>    %1, double %b, i64 1
-  %3 = insertelement <4 x double>    %2, double %c, i64 2
-  %4 = insertelement <4 x double>    %3, double %d, i64 3
+  %1 = insertelement <4 x double> poison, double %a, i64 0
+  %2 = insertelement <4 x double> %1, double %b, i64 1
+  %3 = insertelement <4 x double> %2, double %c, i64 2
+  %4 = insertelement <4 x double> %3, double %d, i64 3
   store <4 x double> %4, ptr %out
   ret void
 }
@@ -391,14 +391,14 @@ define void @build_vector_non_const_v8f16(half %a, half %b, half %c, half %d, ha
 ; NONEON-NOSVE-NEXT:    str q0, [x0]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
-  %1 = insertelement <8 x half> undef, half %a, i64 0
-  %2 = insertelement <8 x half>    %1, half %b, i64 1
-  %3 = insertelement <8 x half>    %2, half %c, i64 2
-  %4 = insertelement <8 x half>    %3, half %d, i64 3
-  %5 = insertelement <8 x half>    %4, half %e, i64 4
-  %6 = insertelement <8 x half>    %5, half %f, i64 5
-  %7 = insertelement <8 x half>    %6, half %g, i64 6
-  %8 = insertelement <8 x half>    %7, half %h, i64 7
+  %1 = insertelement <8 x half> poison, half %a, i64 0
+  %2 = insertelement <8 x half> %1, half %b, i64 1
+  %3 = insertelement <8 x half> %2, half %c, i64 2
+  %4 = insertelement <8 x half> %3, half %d, i64 3
+  %5 = insertelement <8 x half> %4, half %e, i64 4
+  %6 = insertelement <8 x half> %5, half %f, i64 5
+  %7 = insertelement <8 x half> %6, half %g, i64 6
+  %8 = insertelement <8 x half> %7, half %h, i64 7
   store <8 x half> %8, ptr %out
   ret void
 }
@@ -421,8 +421,8 @@ define void @build_vector_non_const_v2i32(i32 %a, i32 %b, ptr %out) {
 ; NONEON-NOSVE-NEXT:    str d0, [x2]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
-  %1 = insertelement <2 x i32> undef, i32 %a, i64 0
-  %2 = insertelement <2 x i32>    %1, i32 %b, i64 1
+  %1 = insertelement <2 x i32> poison, i32 %a, i64 0
+  %2 = insertelement <2 x i32> %1, i32 %b, i64 1
   store <2 x i32> %2, ptr %out
   ret void
 }
@@ -463,14 +463,14 @@ define void @build_vector_non_const_v8i8(i8 %a, i8 %b, i8 %c, i8 %d, i8 %e, i8 %
 ; NONEON-NOSVE-NEXT:    str d0, [x8]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
-  %1 = insertelement <8 x i8> undef, i8 %a, i64 0
-  %2 = insertelement <8 x i8>    %1, i8 %b, i64 1
-  %3 = insertelement <8 x i8>    %2, i8 %c, i64 2
-  %4 = insertelement <8 x i8>    %3, i8 %d, i64 3
-  %5 = insertelement <8 x i8>    %4, i8 %e, i64 4
-  %6 = insertelement <8 x i8>    %5, i8 %f, i64 5
-  %7 = insertelement <8 x i8>    %6, i8 %g, i64 6
-  %8 = insertelement <8 x i8>    %7, i8 %h, i64 7
+  %1 = insertelement <8 x i8> poison, i8 %a, i64 0
+  %2 = insertelement <8 x i8> %1, i8 %b, i64 1
+  %3 = insertelement <8 x i8> %2, i8 %c, i64 2
+  %4 = insertelement <8 x i8> %3, i8 %d, i64 3
+  %5 = insertelement <8 x i8> %4, i8 %e, i64 4
+  %6 = insertelement <8 x i8> %5, i8 %f, i64 5
+  %7 = insertelement <8 x i8> %6, i8 %g, i64 6
+  %8 = insertelement <8 x i8> %7, i8 %h, i64 7
   store <8 x i8> %8, ptr %out
   ret void
 }

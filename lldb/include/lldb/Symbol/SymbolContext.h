@@ -165,8 +165,8 @@ public:
   ///     eSymbolContextSymbol is set in \a scope
   ///
   /// \param[in] scope
-  ///     A mask of symbol context bits telling this function which
-  ///     address ranges it can use when trying to extract one from
+  ///     A mask bits from the \b SymbolContextItem enum telling this function
+  ///     which address ranges it can use when trying to extract one from
   ///     the valid (non-nullptr) symbol context classes.
   ///
   /// \param[in] range_idx
@@ -191,6 +191,13 @@ public:
   ///     an address range, \b false otherwise.
   bool GetAddressRange(uint32_t scope, uint32_t range_idx,
                        bool use_inline_block_range, AddressRange &range) const;
+
+  /// Get the address of the function or symbol represented by this symbol
+  /// context.
+  ///
+  /// If both fields are present, the address of the function is returned. If
+  /// both are empty, the result is an invalid address.
+  Address GetFunctionOrSymbolAddress() const;
 
   llvm::Error GetAddressRangeFromHereToEndLine(uint32_t end_line,
                                                AddressRange &range);
@@ -460,7 +467,7 @@ public:
   const_iterator begin() const { return m_symbol_contexts.begin(); }
   const_iterator end() const { return m_symbol_contexts.end(); }
 
-  typedef AdaptedIterable<collection, SymbolContext, vector_adapter>
+  typedef llvm::iterator_range<collection::const_iterator>
       SymbolContextIterable;
   SymbolContextIterable SymbolContexts() {
     return SymbolContextIterable(m_symbol_contexts);

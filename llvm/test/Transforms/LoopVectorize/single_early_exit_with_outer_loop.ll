@@ -6,7 +6,7 @@ declare void @init_mem(ptr, i64);
 ; uncountable early exits is correctly adding to the outer loop at depth 1.
 define void @early_exit_in_outer_loop1() {
 ; CHECK-LABEL: Loop info for function 'early_exit_in_outer_loop1':
-; CHECK: Loop at depth 1 containing: {{.*}}%middle.block,%scalar.ph,%vector.ph,%vector.body,%middle.split
+; CHECK: Loop at depth 1 containing: {{.*}}%scalar.ph,%vector.ph,%vector.body,%middle.split,%middle.block
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -45,8 +45,8 @@ loop.inner.end:
 ; loops at depths 1 and 2, respectively.
 define void @early_exit_in_outer_loop2() {
 ; CHECK-LABEL: Loop info for function 'early_exit_in_outer_loop2':
-; CHECK: Loop at depth 1 containing: {{.*}}%middle.block,%scalar.ph,%vector.ph,%vector.body,%middle.split
-; CHECK:    Loop at depth 2 containing: {{.*}}%middle.block,%scalar.ph,%vector.ph,%vector.body,%middle.split<exiting>
+; CHECK: Loop at depth 1 containing: {{.*}}%scalar.ph,%vector.ph,%vector.body,%middle.split,%middle.block
+; CHECK:    Loop at depth 2 containing: {{.*}}%scalar.ph,%vector.ph,%vector.body,%middle.split<exiting>,%middle.block
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]

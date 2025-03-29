@@ -345,10 +345,7 @@ void CodeGenFunction::registerGlobalDtorWithLLVM(const VarDecl &VD,
 
 void CodeGenFunction::registerGlobalDtorWithAtExit(llvm::Constant *dtorStub) {
   // extern "C" int atexit(void (*f)(void));
-  assert(dtorStub->getType() ==
-             llvm::PointerType::get(
-                 llvm::FunctionType::get(CGM.VoidTy, false),
-                 dtorStub->getType()->getPointerAddressSpace()) &&
+  assert(dtorStub->getType()->isPointerTy() &&
          "Argument to atexit has a wrong type.");
 
   llvm::FunctionType *atexitTy =
@@ -372,10 +369,7 @@ CodeGenFunction::unregisterGlobalDtorWithUnAtExit(llvm::Constant *dtorStub) {
   // value is returned.
   //
   // extern "C" int unatexit(void (*f)(void));
-  assert(dtorStub->getType() ==
-             llvm::PointerType::get(
-                 llvm::FunctionType::get(CGM.VoidTy, false),
-                 dtorStub->getType()->getPointerAddressSpace()) &&
+  assert(dtorStub->getType()->isPointerTy() &&
          "Argument to unatexit has a wrong type.");
 
   llvm::FunctionType *unatexitTy =
@@ -709,8 +703,7 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
   for (auto I : Primary->Exports)
     AllImports.insert(I.getPointer());
   // Ones that we only import.
-  for (Module *M : Primary->Imports)
-    AllImports.insert(M);
+  AllImports.insert_range(Primary->Imports);
   // Ones that we import in the global module fragment or the private module
   // fragment.
   for (Module *SubM : Primary->submodules()) {
@@ -720,8 +713,7 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
     assert(SubM->Exports.empty() &&
            "The global mdoule fragments and the private module fragments are "
            "not allowed to export import modules.");
-    for (Module *M : SubM->Imports)
-      AllImports.insert(M);
+    AllImports.insert_range(SubM->Imports);
   }
 
   SmallVector<llvm::Function *, 8> ModuleInits;
@@ -1076,9 +1068,6 @@ void CodeGenFunction::GenerateCXXGlobalVarDeclInitFunc(llvm::Function *Fn,
   } else {
     EmitCXXGlobalVarDeclInit(*D, Addr, PerformInit);
   }
-
-  if (getLangOpts().HLSL)
-    CGM.getHLSLRuntime().annotateHLSLResource(D, Addr);
 
   FinishFunction();
 }

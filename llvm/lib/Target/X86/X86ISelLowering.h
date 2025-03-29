@@ -81,6 +81,15 @@ namespace llvm {
     // marker instruction.
     CALL_RVMARKER,
 
+    /// The same as ISD::CopyFromReg except that this node makes it explicit
+    /// that it may lower to an x87 FPU stack pop. Optimizations should be more
+    /// cautious when handling this node than a normal CopyFromReg to avoid
+    /// removing a required FPU stack pop. A key requirement is optimizations
+    /// should not optimize any users of a chain that contains a
+    /// POP_FROM_X87_REG to use a chain from a point earlier than the
+    /// POP_FROM_X87_REG (which may remove a required FPU stack pop).
+    POP_FROM_X87_REG,
+
     /// X86 compare and logical compare instructions.
     CMP,
     FCMP,

@@ -12,6 +12,7 @@
 
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
+#include "lldb/Target/Thread.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;
@@ -161,6 +162,8 @@ BreakpointLocationSP BreakpointSite::GetConstituentAtIndex(size_t index) {
 
 bool BreakpointSite::ValidForThisThread(Thread &thread) {
   std::lock_guard<std::recursive_mutex> guard(m_constituents_mutex);
+  if (ThreadSP backed_thread = thread.GetBackedThread())
+    return m_constituents.ValidForThisThread(*backed_thread);
   return m_constituents.ValidForThisThread(thread);
 }
 

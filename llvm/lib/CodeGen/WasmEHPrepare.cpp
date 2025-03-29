@@ -201,10 +201,8 @@ bool WasmEHPrepareImpl::prepareThrows(Function &F) {
   // delete all following instructions within the BB, and delete all the dead
   // children of the BB as well.
   for (User *U : ThrowF->users()) {
-    // A call to @llvm.wasm.throw() is only generated from __cxa_throw()
-    // builtin call within libcxxabi, and cannot be an InvokeInst.
-    auto *ThrowI = cast<CallInst>(U);
-    if (ThrowI->getFunction() != &F)
+    auto *ThrowI = dyn_cast<CallInst>(U);
+    if (!ThrowI || ThrowI->getFunction() != &F)
       continue;
     Changed = true;
     auto *BB = ThrowI->getParent();

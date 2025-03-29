@@ -77,6 +77,22 @@ unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
     // clang-format off
   case CC_RISCVVectorCall: return llvm::CallingConv::RISCV_VectorCall;
     // clang-format on
+#define CC_VLS_CASE(ABI_VLEN)                                                  \
+  case CC_RISCVVLSCall_##ABI_VLEN:                                             \
+    return llvm::CallingConv::RISCV_VLSCall_##ABI_VLEN;
+    CC_VLS_CASE(32)
+    CC_VLS_CASE(64)
+    CC_VLS_CASE(128)
+    CC_VLS_CASE(256)
+    CC_VLS_CASE(512)
+    CC_VLS_CASE(1024)
+    CC_VLS_CASE(2048)
+    CC_VLS_CASE(4096)
+    CC_VLS_CASE(8192)
+    CC_VLS_CASE(16384)
+    CC_VLS_CASE(32768)
+    CC_VLS_CASE(65536)
+#undef CC_VLS_CASE
   }
 }
 
@@ -265,6 +281,29 @@ static CallingConv getCallingConventionForDecl(const ObjCMethodDecl *D,
 
   if (D->hasAttr<RISCVVectorCCAttr>())
     return CC_RISCVVectorCall;
+
+  if (RISCVVLSCCAttr *PCS = D->getAttr<RISCVVLSCCAttr>()) {
+    switch (PCS->getVectorWidth()) {
+    default:
+      llvm_unreachable("Invalid RISC-V VLS ABI VLEN");
+#define CC_VLS_CASE(ABI_VLEN)                                                  \
+  case ABI_VLEN:                                                               \
+    return CC_RISCVVLSCall_##ABI_VLEN;
+      CC_VLS_CASE(32)
+      CC_VLS_CASE(64)
+      CC_VLS_CASE(128)
+      CC_VLS_CASE(256)
+      CC_VLS_CASE(512)
+      CC_VLS_CASE(1024)
+      CC_VLS_CASE(2048)
+      CC_VLS_CASE(4096)
+      CC_VLS_CASE(8192)
+      CC_VLS_CASE(16384)
+      CC_VLS_CASE(32768)
+      CC_VLS_CASE(65536)
+#undef CC_VLS_CASE
+    }
+  }
 
   return CC_C;
 }
@@ -1671,10 +1710,8 @@ CodeGenTypes::GetFunctionType(const CGFunctionInfo &FI) {
 
   // Add type for sret argument.
   if (IRFunctionArgs.hasSRetArg()) {
-    QualType Ret = FI.getReturnType();
-    unsigned AddressSpace = CGM.getTypes().getTargetAddressSpace(Ret);
-    ArgTypes[IRFunctionArgs.getSRetArgNo()] =
-        llvm::PointerType::get(getLLVMContext(), AddressSpace);
+    ArgTypes[IRFunctionArgs.getSRetArgNo()] = llvm::PointerType::get(
+        getLLVMContext(), FI.getReturnInfo().getIndirectAddrSpace());
   }
 
   // Add type for inalloca argument.
@@ -2436,7 +2473,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       FuncAttrs.addMemoryAttr(llvm::MemoryEffects::inaccessibleOrArgMemOnly());
       FuncAttrs.addAttribute(llvm::Attribute::NoUnwind);
     }
-    if (TargetDecl->hasAttr<RestrictAttr>())
+    if (const auto *RA = TargetDecl->getAttr<RestrictAttr>();
+        RA && RA->getDeallocator() == nullptr)
       RetAttrs.addAttribute(llvm::Attribute::NoAlias);
     if (TargetDecl->hasAttr<ReturnsNonNullAttr>() &&
         !CodeGenOpts.NullPointerIsValid)
@@ -2667,7 +2705,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         llvm::AttributeSet::get(getLLVMContext(), Attrs);
   }
 
-  // Apply `nonnull`, `dereferencable(N)` and `align N` to the `this` argument,
+  // Apply `nonnull`, `dereferenceable(N)` and `align N` to the `this` argument,
   // unless this is a thunk function.
   // FIXME: fix this properly, https://reviews.llvm.org/D100388
   if (FI.isInstanceMethod() && !IRFunctionArgs.hasInallocaArg() &&
@@ -3235,6 +3273,17 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
         }
       }
 
+      // Struct of fixed-length vectors and struct of array of fixed-length
+      // vector in VLS calling convention are coerced to vector tuple
+      // type(represented as TargetExtType) and scalable vector type
+      // respectively, they're no longer handled as struct.
+      if (ArgI.isDirect() && isa<llvm::StructType>(ConvertType(Ty)) &&
+          (isa<llvm::TargetExtType>(ArgI.getCoerceToType()) ||
+           isa<llvm::ScalableVectorType>(ArgI.getCoerceToType()))) {
+        ArgVals.push_back(ParamValue::forDirect(AI));
+        break;
+      }
+
       llvm::StructType *STy =
           dyn_cast<llvm::StructType>(ArgI.getCoerceToType());
       Address Alloca = CreateMemTemp(Ty, getContext().getDeclAlign(Arg),
@@ -3584,7 +3633,7 @@ static llvm::StoreInst *findDominatingStoreToReturnValue(CodeGenFunction &CGF) {
     // Look at directly preceding instruction, skipping bitcasts, lifetime
     // markers, and fake uses and their operands.
     const llvm::Instruction *LoadIntoFakeUse = nullptr;
-    for (llvm::Instruction &I : make_range(IP->rbegin(), IP->rend())) {
+    for (llvm::Instruction &I : llvm::reverse(*IP)) {
       // Ignore instructions that are just loads for fake uses; the load should
       // immediately precede the fake use, so we only need to remember the
       // operand for the last fake use seen.
@@ -5144,7 +5193,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // If the call returns a temporary with struct return, create a temporary
   // alloca to hold the result, unless one is given to us.
   Address SRetPtr = Address::invalid();
-  RawAddress SRetAlloca = RawAddress::invalid();
   llvm::Value *UnusedReturnSizePtr = nullptr;
   if (RetAI.isIndirect() || RetAI.isInAlloca() || RetAI.isCoerceAndExpand()) {
     // For virtual function pointer thunks and musttail calls, we must always
@@ -5158,14 +5206,29 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     } else if (!ReturnValue.isNull()) {
       SRetPtr = ReturnValue.getAddress();
     } else {
-      SRetPtr = CreateMemTemp(RetTy, "tmp", &SRetAlloca);
+      SRetPtr = CreateMemTempWithoutCast(RetTy, "tmp");
       if (HaveInsertPoint() && ReturnValue.isUnused()) {
         llvm::TypeSize size =
             CGM.getDataLayout().getTypeAllocSize(ConvertTypeForMem(RetTy));
-        UnusedReturnSizePtr = EmitLifetimeStart(size, SRetAlloca.getPointer());
+        UnusedReturnSizePtr = EmitLifetimeStart(size, SRetPtr.getBasePointer());
       }
     }
     if (IRFunctionArgs.hasSRetArg()) {
+      // A mismatch between the allocated return value's AS and the target's
+      // chosen IndirectAS can happen e.g. when passing the this pointer through
+      // a chain involving stores to / loads from the DefaultAS; we address this
+      // here, symmetrically with the handling we have for normal pointer args.
+      if (SRetPtr.getAddressSpace() != RetAI.getIndirectAddrSpace()) {
+        llvm::Value *V = SRetPtr.getBasePointer();
+        LangAS SAS = getLangASFromTargetAS(SRetPtr.getAddressSpace());
+        LangAS DAS = getLangASFromTargetAS(RetAI.getIndirectAddrSpace());
+        llvm::Type *Ty = llvm::PointerType::get(getLLVMContext(),
+                                                RetAI.getIndirectAddrSpace());
+
+        SRetPtr = SRetPtr.withPointer(
+            getTargetHooks().performAddrSpaceCast(*this, V, SAS, DAS, Ty, true),
+            SRetPtr.isKnownNonNull());
+      }
       IRCallArgs[IRFunctionArgs.getSRetArgNo()] =
           getAsNaturalPointerTo(SRetPtr, RetTy);
     } else if (RetAI.isInAlloca()) {
@@ -5397,11 +5460,20 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
             V->getType()->isIntegerTy())
           V = Builder.CreateZExt(V, ArgInfo.getCoerceToType());
 
-        // If the argument doesn't match, perform a bitcast to coerce it.  This
-        // can happen due to trivial type mismatches.
+        // The only plausible mismatch here would be for pointer address spaces.
+        // We assume that the target has a reasonable mapping for the DefaultAS
+        // (it can be casted to from incoming specific ASes), and insert an AS
+        // cast to address the mismatch.
         if (FirstIRArg < IRFuncTy->getNumParams() &&
-            V->getType() != IRFuncTy->getParamType(FirstIRArg))
-          V = Builder.CreateBitCast(V, IRFuncTy->getParamType(FirstIRArg));
+            V->getType() != IRFuncTy->getParamType(FirstIRArg)) {
+          assert(V->getType()->isPointerTy() && "Only pointers can mismatch!");
+          auto FormalAS = CallInfo.arguments()[ArgNo]
+                              .type.getQualifiers()
+                              .getAddressSpace();
+          auto ActualAS = I->Ty.getAddressSpace();
+          V = getTargetHooks().performAddrSpaceCast(
+              *this, V, ActualAS, FormalAS, IRFuncTy->getParamType(FirstIRArg));
+        }
 
         if (ArgHasMaybeUndefAttr)
           V = Builder.CreateFreeze(V);
@@ -5625,22 +5697,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   if (!CallArgs.getCleanupsToDeactivate().empty())
     deactivateArgCleanupsBeforeCall(*this, CallArgs);
 
-  // Assert that the arguments we computed match up.  The IR verifier
-  // will catch this, but this is a common enough source of problems
-  // during IRGen changes that it's way better for debugging to catch
-  // it ourselves here.
-#ifndef NDEBUG
-  assert(IRCallArgs.size() == IRFuncTy->getNumParams() || IRFuncTy->isVarArg());
-  for (unsigned i = 0; i < IRCallArgs.size(); ++i) {
-    // Inalloca argument can have different type.
-    if (IRFunctionArgs.hasInallocaArg() &&
-        i == IRFunctionArgs.getInallocaArgNo())
-      continue;
-    if (i < IRFuncTy->getNumParams())
-      assert(IRCallArgs[i]->getType() == IRFuncTy->getParamType(i));
-  }
-#endif
-
   // Update the largest vector width if any arguments have vector types.
   for (unsigned i = 0; i < IRCallArgs.size(); ++i)
     LargestVectorWidth = std::max(LargestVectorWidth,
@@ -5737,7 +5793,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // pop this cleanup later on. Being eager about this is OK, since this
   // temporary is 'invisible' outside of the callee.
   if (UnusedReturnSizePtr)
-    pushFullExprCleanup<CallLifetimeEnd>(NormalEHLifetimeMarker, SRetAlloca,
+    pushFullExprCleanup<CallLifetimeEnd>(NormalEHLifetimeMarker, SRetPtr,
                                          UnusedReturnSizePtr);
 
   llvm::BasicBlock *InvokeDest = CannotThrow ? nullptr : getInvokeDest();

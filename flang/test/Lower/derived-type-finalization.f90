@@ -97,7 +97,9 @@ contains
 
 ! CHECK-LABEL: func.func @_QMderived_type_finalizationPtest_target_finalization() {
 ! CHECK: %[[P:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>> {bindc_name = "p", uniq_name = "_QMderived_type_finalizationFtest_target_finalizationEp"}
-! CHECK: fir.call @_FortranAInitialize
+! CHECK: %[[ADDR:.*]] = fir.alloca !fir.ptr<!fir.type<_QMderived_type_finalizationTt1{a:i32}>> {uniq_name = "_QMderived_type_finalizationFtest_target_finalizationEp.addr"}
+! CHECK: %[[zero:.*]] = fir.zero_bits !fir.ptr<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>
+! CHECK: fir.store %[[zero]] to %[[ADDR]] : !fir.ref<!fir.ptr<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>>
 ! CHECK: fir.call @_FortranAPointerAllocateSource
 ! CHECK: %[[P_BOX_NONE:.*]] = fir.convert %[[P]] : (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %{{.*}} = fir.call @_FortranAPointerDeallocate(%[[P_BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
@@ -132,8 +134,7 @@ contains
 ! CHECK:   cf.br ^bb3
 ! CHECK: ^bb2:
 ! CHECK:   %[[C10:.*]] = arith.constant 10 : i32
-! CHECK:   %[[FIELD_A:.*]] = fir.field_index a, !fir.type<_QMderived_type_finalizationTt1{a:i32}>
-! CHECK:   %[[COORD_A:.*]] = fir.coordinate_of %[[T]], %[[FIELD_A]] : (!fir.ref<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>, !fir.field) -> !fir.ref<i32>
+! CHECK:   %[[COORD_A:.*]] = fir.coordinate_of %[[T]], a : (!fir.ref<!fir.type<_QMderived_type_finalizationTt1{a:i32}>>) -> !fir.ref<i32>
 ! CHECK:   fir.store %[[C10]] to %[[COORD_A]] : !fir.ref<i32>
 ! CHECK:   cf.br ^bb3
 ! CHECK: ^bb3:
@@ -200,7 +201,9 @@ contains
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMderived_type_finalizationPtest_avoid_double_finalization(
-! CHECK: fir.call @_FortranAInitialize(
+! CHECK: %[[b:.*]] = fir.alloca !fir.type<_QMderived_type_finalizationTt3{t:!fir.type<_QMderived_type_finalizationTt2{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>}> {bindc_name = "b", uniq_name = "_QMderived_type_finalizationFtest_avoid_double_finalizationEb"}
+! CHECK: %[[ADDR:.*]] = fir.address_of(@_QQ_QMderived_type_finalizationTt3.DerivedInit) : !fir.ref<!fir.type<_QMderived_type_finalizationTt3{t:!fir.type<_QMderived_type_finalizationTt2{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>}>>
+! CHECK: fir.copy %[[ADDR]] to %[[b]] no_overlap : !fir.ref<!fir.type<_QMderived_type_finalizationTt3{t:!fir.type<_QMderived_type_finalizationTt2{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>}>>
 ! CHECK-NOT: fir.call @_FortranADestroy
 ! CHECK: fir.call @_FortranAAssign(
 ! CHECK: fir.call @_FortranADestroy(

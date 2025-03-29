@@ -109,6 +109,20 @@ func.func @invalid_tensor_literal() {
 
 // -----
 
+func.func @invalid_sparse_indices() {
+  // expected-error @+1 {{expected integer elements, but parsed floating-point}}
+  "foo"(){bar = sparse<0.5, 1> : tensor<1xi16>} : () -> ()
+}
+
+// -----
+
+func.func @invalid_sparse_values() {
+  // expected-error @+1 {{expected integer elements, but parsed floating-point}}
+  "foo"(){bar = sparse<0, 1.1> : tensor<1xi16>} : () -> ()
+}
+
+// -----
+
 func.func @hexadecimal_float_leading_minus() {
   // expected-error @+1 {{hexadecimal float literal should not have a leading minus}}
   "foo"() {value = -0x7fff : f16} : () -> ()
@@ -591,3 +605,48 @@ func.func @duplicate_dictionary_attr_key() {
 #attr1 = distinct[0]<43 : i32>
 
 // -----
+
+// Make sure the error is not printed on the return.
+func.func @print_error_on_correct_line() {
+  %0 = arith.constant
+    // expected-error@below {{elements literal must be a shaped type}} 
+    dense<[3]> : i32
+  return
+}
+
+// -----
+
+// Make sure the error is not printed on the return.
+func.func @print_error_on_correct_line() {
+  %0 = arith.constant 
+    // expected-error@below {{elements literal must be a shaped type}}
+    sparse<
+     [
+       [0, 1, 2, 3],
+       [1, 1, 2, 3],
+       [1, 2, 2, 3],
+       [1, 2, 3, 4]
+     ],
+     [1, 1, 1, 1] > : i32
+  return
+}
+
+// -----
+
+// Make sure the error is not printed on the return.
+func.func @print_error_on_correct_line() {
+  %0 = arith.constant 
+    // expected-error@below {{elements literal must be a shaped type}}
+    sparse <> : i32
+  return
+}
+
+// -----
+
+// Prevent assertions when parsing a dense attribute expected to be a string 
+// but encountering a different type. 
+func.func @expect_to_parse_literal() {
+  // expected-error@below {{expected string token, got 23}}
+  %0 = arith.constant dense<[23]> : tensor<1x!unknown<>>
+  return
+}

@@ -103,7 +103,7 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
       CArg<"xegpu::MemorySpace", "xegpu::MemorySpace::Global">:$memory_space,
       CArg<"mlir::Attribute", "mlir::Attribute()">:$sg_map)>
   ];
-  
+
   let extraClassDeclaration = [{
     using TensorType::clone;
     using mlir::ShapedType::Trait<TensorDescType>::getElementTypeBitWidth;
@@ -172,14 +172,19 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
       auto attr = getEncoding();
       auto scatter_attr = mlir::dyn_cast_if_present<ScatterTensorDescAttr>(attr);
       assert((!attr || scatter_attr) && "invalid on non ScatterTensorDescAttr.");
-      if (scatter_attr && scatter_attr.getChunkSize())
+      if (scatter_attr)
         return scatter_attr.getChunkSize().getInt();
       return 1;
     }
+
+    // This returns a vector type that represents the fragment of data owned by
+    // a work item in SIMT mode if this tensor descriptor is used in a XeGPU
+    // load/store operation.
+    FailureOr<VectorType> getDistributedVectorType();
   }];
 
   let hasCustomAssemblyFormat = true;
-
+  let genVerifyDecl = 1;
 }
 
 

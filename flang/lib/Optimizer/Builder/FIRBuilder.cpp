@@ -16,6 +16,7 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
+#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/DataLayout.h"
@@ -44,6 +45,17 @@ fir::FirOpBuilder::createFunction(mlir::Location loc, mlir::ModuleOp module,
                                   llvm::StringRef name, mlir::FunctionType ty,
                                   mlir::SymbolTable *symbolTable) {
   return fir::createFuncOp(loc, module, name, ty, /*attrs*/ {}, symbolTable);
+}
+
+mlir::func::FuncOp
+fir::FirOpBuilder::createRuntimeFunction(mlir::Location loc,
+                                         llvm::StringRef name,
+                                         mlir::FunctionType ty, bool isIO) {
+  mlir::func::FuncOp func = createFunction(loc, name, ty);
+  func->setAttr(fir::FIROpsDialect::getFirRuntimeAttrName(), getUnitAttr());
+  if (isIO)
+    func->setAttr("fir.io", getUnitAttr());
+  return func;
 }
 
 mlir::func::FuncOp
@@ -263,6 +275,9 @@ mlir::Block *fir::FirOpBuilder::getAllocaBlock() {
           getRegion().getParentOfType<mlir::accomp::RecipeInterface>()) {
     return recipeIface.getAllocaBlock(getRegion());
   }
+
+  if (auto cufKernelOp = getRegion().getParentOfType<cuf::KernelOp>())
+    return &cufKernelOp.getRegion().front();
 
   return getEntryBlock();
 }
@@ -1594,9 +1609,8 @@ fir::factory::getExtentFromTriplet(mlir::Value lb, mlir::Value ub,
 }
 
 mlir::Value fir::factory::genMaxWithZero(fir::FirOpBuilder &builder,
-                                         mlir::Location loc,
-                                         mlir::Value value) {
-  mlir::Value zero = builder.createIntegerConstant(loc, value.getType(), 0);
+                                         mlir::Location loc, mlir::Value value,
+                                         mlir::Value zero) {
   if (mlir::Operation *definingOp = value.getDefiningOp())
     if (auto cst = mlir::dyn_cast<mlir::arith::ConstantOp>(definingOp))
       if (auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(cst.getValue()))
@@ -1605,6 +1619,32 @@ mlir::Value fir::factory::genMaxWithZero(fir::FirOpBuilder &builder,
       loc, mlir::arith::CmpIPredicate::sgt, value, zero);
   return builder.create<mlir::arith::SelectOp>(loc, valueIsGreater, value,
                                                zero);
+}
+
+mlir::Value fir::factory::genMaxWithZero(fir::FirOpBuilder &builder,
+                                         mlir::Location loc,
+                                         mlir::Value value) {
+  mlir::Value zero = builder.createIntegerConstant(loc, value.getType(), 0);
+  return genMaxWithZero(builder, loc, value, zero);
+}
+
+mlir::Value fir::factory::computeExtent(fir::FirOpBuilder &builder,
+                                        mlir::Location loc, mlir::Value lb,
+                                        mlir::Value ub, mlir::Value zero,
+                                        mlir::Value one) {
+  mlir::Type type = lb.getType();
+  // Let the folder deal with the common `ub - <const> + 1` case.
+  auto diff = builder.create<mlir::arith::SubIOp>(loc, type, ub, lb);
+  auto rawExtent = builder.create<mlir::arith::AddIOp>(loc, type, diff, one);
+  return fir::factory::genMaxWithZero(builder, loc, rawExtent, zero);
+}
+mlir::Value fir::factory::computeExtent(fir::FirOpBuilder &builder,
+                                        mlir::Location loc, mlir::Value lb,
+                                        mlir::Value ub) {
+  mlir::Type type = lb.getType();
+  mlir::Value one = builder.createIntegerConstant(loc, type, 1);
+  mlir::Value zero = builder.createIntegerConstant(loc, type, 0);
+  return computeExtent(builder, loc, lb, ub, zero, one);
 }
 
 static std::pair<mlir::Value, mlir::Type>
@@ -1778,7 +1818,7 @@ llvm::SmallVector<mlir::Value> fir::factory::updateRuntimeExtentsForEmptyArrays(
     isEmpty = builder.create<mlir::arith::OrIOp>(loc, isEmpty, isZero);
   }
 
-  llvm::SmallVector<mlir::Value, Fortran::common::maxRank> newExtents;
+  llvm::SmallVector<mlir::Value> newExtents;
   for (auto [zero, extent] : llvm::zip_equal(zeroes, extents)) {
     newExtents.push_back(
         builder.create<mlir::arith::SelectOp>(loc, isEmpty, zero, extent));

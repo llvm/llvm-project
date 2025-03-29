@@ -78,6 +78,7 @@ protected:
   bool BackOffBarrier = false;
   bool UnalignedScratchAccess = false;
   bool UnalignedAccessMode = false;
+  bool RelaxedBufferOOBMode = false;
   bool HasApertureRegs = false;
   bool SupportsXNACK = false;
   bool KernargPreload = false;
@@ -190,6 +191,8 @@ protected:
   /// indicates a lack of S_CLAUSE support.
   unsigned MaxHardClauseLength = 0;
   bool SupportsSRAMECC = false;
+  bool DynamicVGPR = false;
+  bool DynamicVGPRBlockSize32 = false;
 
   // This should not be used directly. 'TargetID' tracks the dynamic settings
   // for SRAMECC.
@@ -226,12 +229,14 @@ protected:
   bool HasRestrictedSOffset = false;
   bool HasBitOp3Insts = false;
   bool HasPrngInst = false;
+  bool HasBVHDualAndBVH8Insts = false;
   bool HasPermlane16Swap = false;
   bool HasPermlane32Swap = false;
   bool HasVcmpxPermlaneHazard = false;
   bool HasVMEMtoScalarWriteHazard = false;
   bool HasSMEMtoVectorWriteHazard = false;
   bool HasInstFwdPrefetchBug = false;
+  bool HasSafeSmemPrefetch = false;
   bool HasVcmpxExecWARHazard = false;
   bool HasLdsBranchVmemWARHazard = false;
   bool HasNSAtoVMEMBug = false;
@@ -246,7 +251,6 @@ protected:
   bool HasMADIntraFwdBug = false;
   bool HasVOPDInsts = false;
   bool HasVALUTransUseHazard = false;
-  bool HasForceStoreSC0SC1 = false;
   bool HasRequiredExportPriority = false;
   bool HasVmemWriteVgprInOrder = false;
   bool HasAshrPkInsts = false;
@@ -608,6 +612,8 @@ public:
     return UnalignedAccessMode;
   }
 
+  bool hasRelaxedBufferOOBMode() const { return RelaxedBufferOOBMode; }
+
   bool hasApertureRegs() const {
     return HasApertureRegs;
   }
@@ -961,6 +967,8 @@ public:
 
   bool hasPrefetch() const { return GFX12Insts; }
 
+  bool hasSafeSmemPrefetch() const { return HasSafeSmemPrefetch; }
+
   // Has s_cmpk_* instructions.
   bool hasSCmpK() const { return getGeneration() < GFX12; }
 
@@ -1264,8 +1272,6 @@ public:
 
   bool hasCvtScaleForwardingHazard() const { return GFX950Insts; }
 
-  bool hasForceStoreSC0SC1() const { return HasForceStoreSC0SC1; }
-
   bool requiresCodeObjectV6() const { return RequiresCOV6; }
 
   bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
@@ -1297,11 +1303,11 @@ public:
 
   bool hasPackedTID() const { return HasPackedTID; }
 
-  // GFX940 is a derivation to GFX90A. hasGFX940Insts() being true implies that
+  // GFX94* is a derivation to GFX90A. hasGFX940Insts() being true implies that
   // hasGFX90AInsts is also true.
   bool hasGFX940Insts() const { return GFX940Insts; }
 
-  // GFX950 is a derivation to GFX940. hasGFX950Insts() implies that
+  // GFX950 is a derivation to GFX94*. hasGFX950Insts() implies that
   // hasGFX940Insts and hasGFX90AInsts are also true.
   bool hasGFX950Insts() const { return GFX950Insts; }
 
@@ -1359,6 +1365,8 @@ public:
   unsigned maxHardClauseLength() const { return MaxHardClauseLength; }
 
   bool hasPrngInst() const { return HasPrngInst; }
+
+  bool hasBVHDualAndBVH8Insts() const { return HasBVHDualAndBVH8Insts; }
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs
@@ -1649,6 +1657,8 @@ public:
     // the nop.
     return true;
   }
+
+  bool isDynamicVGPREnabled() const { return DynamicVGPR; }
 
   bool requiresDisjointEarlyClobberAndUndef() const override {
     // AMDGPU doesn't care if early-clobber and undef operands are allocated

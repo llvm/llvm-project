@@ -23,7 +23,7 @@ void Foo::f() {
 
 struct ImplicitDefaultCtor2 {};
 template <typename T> class TFoo { void f(); };
-// expected-error@+1 {{nested name specifier 'decltype(TFoo<T>())::'}}
+// expected-error@+1 {{nested name specifier 'decltype(TFoo<T>())'}}
 template <typename T> void decltype(TFoo<T>())::f() {
   switch (0) { case 0: ImplicitDefaultCtor1 o; }
 }
@@ -37,7 +37,7 @@ template <class T1> class A {
 };
 template <class Y>
 template <>
-// expected-error@+1 {{nested name specifier 'A<Y>::B<double>::'}}
+// expected-error@+1 {{nested name specifier 'A<Y>::B<double>'}}
 void A<Y>::B<double>::mf2() {
   switch (0) { case 0: ImplicitDefaultCtor3 o; }
 }

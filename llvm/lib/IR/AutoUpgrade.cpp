@@ -13,10 +13,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/AutoUpgrade.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/AttributeMask.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
@@ -45,6 +48,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/TargetParser/Triple.h"
+#include <cstdint>
 #include <cstring>
 #include <numeric>
 
@@ -1288,7 +1292,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       if (Name.consume_front("abs."))
         // nvvm.abs.{i,ii}
         Expand = Name == "i" || Name == "ll";
-      else if (Name == "clz.ll" || Name == "popc.ll" || Name == "h2f")
+      else if (Name == "clz.ll" || Name == "popc.ll" || Name == "h2f" ||
+               Name == "swap.lo.hi.b64")
         Expand = true;
       else if (Name.consume_front("max.") || Name.consume_front("min."))
         // nvvm.{min,max}.{i,ii,ui,ull}
@@ -2366,6 +2371,11 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     Value *ZExtShiftAmt = Builder.CreateZExt(CI->getOperand(1), Int64Ty);
     Rep = Builder.CreateIntrinsic(Int64Ty, Intrinsic::fshr,
                                   {Arg, Arg, ZExtShiftAmt});
+  } else if (Name == "swap.lo.hi.b64") {
+    Type *Int64Ty = Builder.getInt64Ty();
+    Value *Arg = CI->getOperand(0);
+    Rep = Builder.CreateIntrinsic(Int64Ty, Intrinsic::fshl,
+                                  {Arg, Arg, Builder.getInt64(32)});
   } else if ((Name.consume_front("ptr.gen.to.") &&
               (Name.starts_with("local") || Name.starts_with("shared") ||
                Name.starts_with("global") || Name.starts_with("constant"))) ||
@@ -3751,7 +3761,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
         IID = Intrinsic::x86_avx512_vfmadd_f32;
       Rep = Builder.CreateIntrinsic(IID, {}, Ops);
     } else {
-      Rep = Builder.CreateIntrinsic(Intrinsic::fma, A->getType(), {A, B, C});
+      Rep = Builder.CreateFMA(A, B, C);
     }
 
     Value *PassThru = IsMaskZ   ? Constant::getNullValue(Rep->getType())
@@ -3804,7 +3814,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
 
       Rep = Builder.CreateIntrinsic(IID, {}, {A, B, C, CI->getArgOperand(4)});
     } else {
-      Rep = Builder.CreateIntrinsic(Intrinsic::fma, A->getType(), {A, B, C});
+      Rep = Builder.CreateFMA(A, B, C);
     }
 
     Value *PassThru = IsMaskZ   ? llvm::Constant::getNullValue(CI->getType())
@@ -5020,6 +5030,43 @@ bool llvm::UpgradeDebugInfo(Module &M) {
   return Modified;
 }
 
+static void upgradeNVVMFnVectorAttr(const StringRef Attr, const char DimC,
+                                    GlobalValue *GV, const Metadata *V) {
+  Function *F = cast<Function>(GV);
+
+  constexpr StringLiteral DefaultValue = "1";
+  StringRef Vect3[3] = {DefaultValue, DefaultValue, DefaultValue};
+  unsigned Length = 0;
+
+  if (F->hasFnAttribute(Attr)) {
+    // We expect the existing attribute to have the form "x[,y[,z]]". Here we
+    // parse these elements placing them into Vect3
+    StringRef S = F->getFnAttribute(Attr).getValueAsString();
+    for (; Length < 3 && !S.empty(); Length++) {
+      auto [Part, Rest] = S.split(',');
+      Vect3[Length] = Part.trim();
+      S = Rest;
+    }
+  }
+
+  const unsigned Dim = DimC - 'x';
+  assert(Dim < 3 && "Unexpected dim char");
+
+  const uint64_t VInt = mdconst::extract<ConstantInt>(V)->getZExtValue();
+
+  // local variable required for StringRef in Vect3 to point to.
+  const std::string VStr = llvm::utostr(VInt);
+  Vect3[Dim] = VStr;
+  Length = std::max(Length, Dim + 1);
+
+  const std::string NewAttr = llvm::join(ArrayRef(Vect3, Length), ",");
+  F->addFnAttr(Attr, NewAttr);
+}
+
+static inline bool isXYZ(StringRef S) {
+  return S == "x" || S == "y" || S == "z";
+}
+
 bool static upgradeSingleNVVMAnnotation(GlobalValue *GV, StringRef K,
                                         const Metadata *V) {
   if (K == "kernel") {
@@ -5036,11 +5083,35 @@ bool static upgradeSingleNVVMAnnotation(GlobalValue *GV, StringRef K,
         mdconst::extract<ConstantInt>(V)->getZExtValue();
     const unsigned Idx = (AlignIdxValuePair >> 16);
     const Align StackAlign = Align(AlignIdxValuePair & 0xFFFF);
-    // TODO: Skip adding the stackalign attribute for returns, for now.
-    if (!Idx)
-      return false;
     cast<Function>(GV)->addAttributeAtIndex(
         Idx, Attribute::getWithStackAlignment(GV->getContext(), StackAlign));
+    return true;
+  }
+  if (K == "maxclusterrank" || K == "cluster_max_blocks") {
+    const auto CV = mdconst::extract<ConstantInt>(V)->getZExtValue();
+    cast<Function>(GV)->addFnAttr("nvvm.maxclusterrank", llvm::utostr(CV));
+    return true;
+  }
+  if (K == "minctasm") {
+    const auto CV = mdconst::extract<ConstantInt>(V)->getZExtValue();
+    cast<Function>(GV)->addFnAttr("nvvm.minctasm", llvm::utostr(CV));
+    return true;
+  }
+  if (K == "maxnreg") {
+    const auto CV = mdconst::extract<ConstantInt>(V)->getZExtValue();
+    cast<Function>(GV)->addFnAttr("nvvm.maxnreg", llvm::utostr(CV));
+    return true;
+  }
+  if (K.consume_front("maxntid") && isXYZ(K)) {
+    upgradeNVVMFnVectorAttr("nvvm.maxntid", K[0], GV, V);
+    return true;
+  }
+  if (K.consume_front("reqntid") && isXYZ(K)) {
+    upgradeNVVMFnVectorAttr("nvvm.reqntid", K[0], GV, V);
+    return true;
+  }
+  if (K.consume_front("cluster_dim_") && isXYZ(K)) {
+    upgradeNVVMFnVectorAttr("nvvm.cluster_dim", K[0], GV, V);
     return true;
   }
 

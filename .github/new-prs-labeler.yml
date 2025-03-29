@@ -499,6 +499,7 @@ clang:static analyzer:
   - clang/tools/scan-build/**
   - clang/utils/analyzer/**
   - clang/docs/analyzer/**
+  - clang/test/Analysis/**
 
 pgo:
   - llvm/lib/Transforms/Instrumentation/CGProfile.cpp
@@ -636,6 +637,7 @@ hlsl:
   - clang/lib/Sema/HLSLExternalSemaSource.cpp
   - clang/lib/Sema/SemaHLSL.cpp
   - clang/lib/CodeGen/CGHLSLRuntime.*
+  - clang/lib/CodeGen/CGHLSLBuiltins.cpp
   - llvm/include/llvm/Frontend/HLSL/**
   - llvm/lib/Frontend/HLSL/**
 
@@ -729,6 +731,9 @@ llvm:regalloc:
 
 lldb:
   - lldb/**
+
+lldb-dap:
+  - lldb/tools/lldb-dap/**
 
 backend:AMDGPU:
   - '**/*amdgpu*'

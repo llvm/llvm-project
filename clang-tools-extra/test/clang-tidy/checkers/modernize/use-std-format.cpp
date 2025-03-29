@@ -100,7 +100,7 @@ std::string StrFormat_field_width_and_precision() {
   return s1 + s2 + s3 + s4 + s5 + s6;
 }
 
-std::string StrFormat_macros() {
+void StrFormat_macros() {
   // The function call is replaced even though it comes from a macro.
 #define FORMAT absl::StrFormat
   auto s1 = FORMAT("Hello %d", 42);

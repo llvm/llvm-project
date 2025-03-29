@@ -163,6 +163,21 @@ DataLayoutImporter::tryToEmplaceEndiannessEntry(StringRef endianness,
   return success();
 }
 
+LogicalResult DataLayoutImporter::tryToEmplaceManglingModeEntry(
+    StringRef token, llvm::StringLiteral manglingKey) {
+  auto key = StringAttr::get(context, manglingKey);
+  if (keyEntries.count(key))
+    return success();
+
+  token.consume_front(":");
+  if (token.empty())
+    return failure();
+
+  keyEntries.try_emplace(
+      key, DataLayoutEntryAttr::get(key, StringAttr::get(context, token)));
+  return success();
+}
+
 LogicalResult
 DataLayoutImporter::tryToEmplaceAddrSpaceEntry(StringRef token,
                                                llvm::StringLiteral spaceKey) {
@@ -251,6 +266,13 @@ void DataLayoutImporter::translateDataLayout(
     if (*prefix == "P") {
       if (failed(tryToEmplaceAddrSpaceEntry(
               token, DLTIDialect::kDataLayoutProgramMemorySpaceKey)))
+        return;
+      continue;
+    }
+    // Parse the mangling mode.
+    if (*prefix == "m") {
+      if (failed(tryToEmplaceManglingModeEntry(
+              token, DLTIDialect::kDataLayoutManglingModeKey)))
         return;
       continue;
     }

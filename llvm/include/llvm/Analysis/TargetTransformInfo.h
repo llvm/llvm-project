@@ -126,12 +126,13 @@ class IntrinsicCostAttributes {
   // If ScalarizationCost is UINT_MAX, the cost of scalarizing the
   // arguments and the return value will be computed based on types.
   InstructionCost ScalarizationCost = InstructionCost::getInvalid();
+  TargetLibraryInfo const *LibInfo = nullptr;
 
 public:
   IntrinsicCostAttributes(
       Intrinsic::ID Id, const CallBase &CI,
       InstructionCost ScalarCost = InstructionCost::getInvalid(),
-      bool TypeBasedOnly = false);
+      bool TypeBasedOnly = false, TargetLibraryInfo const *LibInfo = nullptr);
 
   IntrinsicCostAttributes(
       Intrinsic::ID Id, Type *RTy, ArrayRef<Type *> Tys,
@@ -145,7 +146,8 @@ public:
       Intrinsic::ID Id, Type *RTy, ArrayRef<const Value *> Args,
       ArrayRef<Type *> Tys, FastMathFlags Flags = FastMathFlags(),
       const IntrinsicInst *I = nullptr,
-      InstructionCost ScalarCost = InstructionCost::getInvalid());
+      InstructionCost ScalarCost = InstructionCost::getInvalid(),
+      TargetLibraryInfo const *LibInfo = nullptr);
 
   Intrinsic::ID getID() const { return IID; }
   const IntrinsicInst *getInst() const { return II; }
@@ -154,6 +156,7 @@ public:
   InstructionCost getScalarizationCost() const { return ScalarizationCost; }
   const SmallVectorImpl<const Value *> &getArgs() const { return Arguments; }
   const SmallVectorImpl<Type *> &getArgTypes() const { return ParamTys; }
+  const TargetLibraryInfo *getLibInfo() const { return LibInfo; }
 
   bool isTypeBasedOnly() const {
     return Arguments.empty();
@@ -1159,7 +1162,7 @@ public:
 
   /// \return true if the target supports load/store that enables fault
   /// suppression of memory operands when the source condition is false.
-  bool hasConditionalLoadStoreForType(Type *Ty = nullptr) const;
+  bool hasConditionalLoadStoreForType(Type *Ty, bool IsStore) const;
 
   /// \return the target-provided register class ID for the provided type,
   /// accounting for type promotion and other type-legalization techniques that
@@ -1473,6 +1476,12 @@ public:
                                      TTI::TargetCostKind CostKind,
                                      unsigned Index = -1) const;
 
+  /// \return The expected cost of aggregate inserts and extracts. This is
+  /// used when the instruction is not available; a typical use case is to
+  /// provision the cost of vectorization/scalarization in vectorizer passes.
+  InstructionCost getInsertExtractValueCost(unsigned Opcode,
+                                            TTI::TargetCostKind CostKind) const;
+
   /// \return The cost of replication shuffle of \p VF elements typed \p EltTy
   /// \p ReplicationFactor times.
   ///
@@ -1515,6 +1524,19 @@ public:
   InstructionCost getGatherScatterOpCost(
       unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
       Align Alignment, TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+      const Instruction *I = nullptr) const;
+
+  /// \return The cost of Expand Load or Compress Store operation
+  /// \p Opcode - is a type of memory access Load or Store
+  /// \p Src - a vector type of the data to be loaded or stored
+  /// \p VariableMask - true when the memory access is predicated with a mask
+  ///                   that is not a compile-time constant
+  /// \p Alignment - alignment of single element
+  /// \p I - the optional original context instruction, if one exists, e.g. the
+  ///        load/store to transform or the call to the gather/scatter intrinsic
+  InstructionCost getExpandCompressMemoryOpCost(
+      unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       const Instruction *I = nullptr) const;
 
   /// \return The cost of strided memory operations.
@@ -1600,7 +1622,7 @@ public:
   /// ResTy vecreduce.opcode(ext(Ty A)).
   InstructionCost getExtendedReductionCost(
       unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *Ty,
-      FastMathFlags FMF,
+      std::optional<FastMathFlags> FMF,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
 
   /// \returns The cost of Intrinsic instructions. Analyses the real arguments.
@@ -1744,24 +1766,17 @@ public:
                                 unsigned ChainSizeInBytes,
                                 VectorType *VecTy) const;
 
-  /// Flags describing the kind of vector reduction.
-  struct ReductionFlags {
-    ReductionFlags() = default;
-    bool IsMaxOp =
-        false; ///< If the op a min/max kind, true if it's a max operation.
-    bool IsSigned = false; ///< Whether the operation is a signed int reduction.
-    bool NoNaN =
-        false; ///< If op is an fp min/max, whether NaNs may be present.
-  };
-
   /// \returns True if the targets prefers fixed width vectorization if the
   /// loop vectorizer's cost-model assigns an equal cost to the fixed and
   /// scalable version of the vectorized loop.
   bool preferFixedOverScalableIfEqualCost() const;
 
+  /// \returns True if target prefers SLP vectorizer with altermate opcode
+  /// vectorization, false - otherwise.
+  bool preferAlternateOpcodeVectorization() const;
+
   /// \returns True if the target prefers reductions in loop.
-  bool preferInLoopReduction(unsigned Opcode, Type *Ty,
-                             ReductionFlags Flags) const;
+  bool preferInLoopReduction(unsigned Opcode, Type *Ty) const;
 
   /// \returns True if the target prefers reductions select kept in the loop
   /// when tail folding. i.e.
@@ -1774,8 +1789,7 @@ public:
   /// As opposed to the normal scheme of p = phi (0, a) which allows the select
   /// to be pulled out of the loop. If the select(.., add, ..) can be predicated
   /// by the target, this can lead to cleaner code generation.
-  bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty,
-                                       ReductionFlags Flags) const;
+  bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty) const;
 
   /// Return true if the loop vectorizer should consider vectorizing an
   /// otherwise scalar epilogue loop.
@@ -2036,8 +2050,8 @@ public:
   virtual bool isTruncateFree(Type *Ty1, Type *Ty2) = 0;
   virtual bool isProfitableToHoist(Instruction *I) = 0;
   virtual bool useAA() = 0;
-  virtual bool isTypeLegal(Type *Ty) = 0;
-  virtual unsigned getRegUsageForType(Type *Ty) = 0;
+  virtual bool isTypeLegal(Type *Ty) const = 0;
+  virtual unsigned getRegUsageForType(Type *Ty) const = 0;
   virtual bool shouldBuildLookupTables() = 0;
   virtual bool shouldBuildLookupTablesForConstant(Constant *C) = 0;
   virtual bool shouldBuildRelLookupTables() = 0;
@@ -2093,7 +2107,7 @@ public:
   virtual bool preferToKeepConstantsAttached(const Instruction &Inst,
                                              const Function &Fn) const = 0;
   virtual unsigned getNumberOfRegisters(unsigned ClassID) const = 0;
-  virtual bool hasConditionalLoadStoreForType(Type *Ty = nullptr) const = 0;
+  virtual bool hasConditionalLoadStoreForType(Type *Ty, bool IsStore) const = 0;
   virtual unsigned getRegisterClassForType(bool Vector,
                                            Type *Ty = nullptr) const = 0;
   virtual const char *getRegisterClassName(unsigned ClassID) const = 0;
@@ -2211,6 +2225,9 @@ public:
                             TTI::TargetCostKind CostKind) = 0;
 
   virtual InstructionCost
+  getInsertExtractValueCost(unsigned Opcode, TTI::TargetCostKind CostKind) = 0;
+
+  virtual InstructionCost
   getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                   unsigned AddressSpace, TTI::TargetCostKind CostKind,
                   OperandValueInfo OpInfo, const Instruction *I) = 0;
@@ -2228,6 +2245,9 @@ public:
                          bool VariableMask, Align Alignment,
                          TTI::TargetCostKind CostKind,
                          const Instruction *I = nullptr) = 0;
+  virtual InstructionCost getExpandCompressMemoryOpCost(
+      unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
+      TTI::TargetCostKind CostKind, const Instruction *I = nullptr) = 0;
   virtual InstructionCost
   getStridedMemoryOpCost(unsigned Opcode, Type *DataTy, const Value *Ptr,
                          bool VariableMask, Align Alignment,
@@ -2247,7 +2267,7 @@ public:
                          TTI::TargetCostKind CostKind) = 0;
   virtual InstructionCost getExtendedReductionCost(
       unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *Ty,
-      FastMathFlags FMF,
+      std::optional<FastMathFlags> FMF,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) = 0;
   virtual InstructionCost getMulAccReductionCost(
       bool IsUnsigned, Type *ResTy, VectorType *Ty,
@@ -2306,10 +2326,10 @@ public:
                                         unsigned ChainSizeInBytes,
                                         VectorType *VecTy) const = 0;
   virtual bool preferFixedOverScalableIfEqualCost() const = 0;
-  virtual bool preferInLoopReduction(unsigned Opcode, Type *Ty,
-                                     ReductionFlags) const = 0;
-  virtual bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty,
-                                               ReductionFlags) const = 0;
+  virtual bool preferInLoopReduction(unsigned Opcode, Type *Ty) const = 0;
+  virtual bool preferPredicatedReductionSelect(unsigned Opcode,
+                                               Type *Ty) const = 0;
+  virtual bool preferAlternateOpcodeVectorization() const = 0;
   virtual bool preferEpilogueVectorization() const = 0;
 
   virtual bool shouldExpandReduction(const IntrinsicInst *II) const = 0;
@@ -2620,8 +2640,8 @@ public:
     return Impl.isProfitableToHoist(I);
   }
   bool useAA() override { return Impl.useAA(); }
-  bool isTypeLegal(Type *Ty) override { return Impl.isTypeLegal(Ty); }
-  unsigned getRegUsageForType(Type *Ty) override {
+  bool isTypeLegal(Type *Ty) const override { return Impl.isTypeLegal(Ty); }
+  unsigned getRegUsageForType(Type *Ty) const override {
     return Impl.getRegUsageForType(Ty);
   }
   bool shouldBuildLookupTables() override {
@@ -2750,8 +2770,8 @@ public:
   unsigned getNumberOfRegisters(unsigned ClassID) const override {
     return Impl.getNumberOfRegisters(ClassID);
   }
-  bool hasConditionalLoadStoreForType(Type *Ty = nullptr) const override {
-    return Impl.hasConditionalLoadStoreForType(Ty);
+  bool hasConditionalLoadStoreForType(Type *Ty, bool IsStore) const override {
+    return Impl.hasConditionalLoadStoreForType(Ty, IsStore);
   }
   unsigned getRegisterClassForType(bool Vector,
                                    Type *Ty = nullptr) const override {
@@ -2934,6 +2954,11 @@ public:
     return Impl.getReplicationShuffleCost(EltTy, ReplicationFactor, VF,
                                           DemandedDstElts, CostKind);
   }
+  InstructionCost
+  getInsertExtractValueCost(unsigned Opcode,
+                            TTI::TargetCostKind CostKind) override {
+    return Impl.getInsertExtractValueCost(Opcode, CostKind);
+  }
   InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                                   unsigned AddressSpace,
                                   TTI::TargetCostKind CostKind,
@@ -2962,6 +2987,12 @@ public:
                          const Instruction *I = nullptr) override {
     return Impl.getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
                                        Alignment, CostKind, I);
+  }
+  InstructionCost getExpandCompressMemoryOpCost(
+      unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
+      TTI::TargetCostKind CostKind, const Instruction *I = nullptr) override {
+    return Impl.getExpandCompressMemoryOpCost(Opcode, DataTy, VariableMask,
+                                              Alignment, CostKind, I);
   }
   InstructionCost
   getStridedMemoryOpCost(unsigned Opcode, Type *DataTy, const Value *Ptr,
@@ -2992,7 +3023,7 @@ public:
   }
   InstructionCost
   getExtendedReductionCost(unsigned Opcode, bool IsUnsigned, Type *ResTy,
-                           VectorType *Ty, FastMathFlags FMF,
+                           VectorType *Ty, std::optional<FastMathFlags> FMF,
                            TTI::TargetCostKind CostKind) override {
     return Impl.getExtendedReductionCost(Opcode, IsUnsigned, ResTy, Ty, FMF,
                                          CostKind);
@@ -3106,13 +3137,15 @@ public:
   bool preferFixedOverScalableIfEqualCost() const override {
     return Impl.preferFixedOverScalableIfEqualCost();
   }
-  bool preferInLoopReduction(unsigned Opcode, Type *Ty,
-                             ReductionFlags Flags) const override {
-    return Impl.preferInLoopReduction(Opcode, Ty, Flags);
+  bool preferInLoopReduction(unsigned Opcode, Type *Ty) const override {
+    return Impl.preferInLoopReduction(Opcode, Ty);
   }
-  bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty,
-                                       ReductionFlags Flags) const override {
-    return Impl.preferPredicatedReductionSelect(Opcode, Ty, Flags);
+  bool preferAlternateOpcodeVectorization() const override {
+    return Impl.preferAlternateOpcodeVectorization();
+  }
+  bool preferPredicatedReductionSelect(unsigned Opcode,
+                                       Type *Ty) const override {
+    return Impl.preferPredicatedReductionSelect(Opcode, Ty);
   }
   bool preferEpilogueVectorization() const override {
     return Impl.preferEpilogueVectorization();

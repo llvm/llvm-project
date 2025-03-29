@@ -18,6 +18,7 @@ add_flang_library(FIRBuilder
   Runtime/Assign.cpp
   Runtime/Character.cpp
   Runtime/Command.cpp
+  Runtime/CUDA/Descriptor.cpp
   Runtime/Derived.cpp
   Runtime/EnvironmentDefaults.cpp
   Runtime/Exceptions.cpp
@@ -40,8 +41,6 @@ add_flang_library(FIRBuilder
   CUFDialect
   FIRDialect
   HLFIRDialect
-  ${dialect_libs}
-  ${extension_libs}
 
   LINK_LIBS
   CUFAttrs
@@ -51,6 +50,10 @@ add_flang_library(FIRBuilder
   FIRSupport
   FortranEvaluate
   HLFIRDialect
+
+  MLIR_DEPS
+  ${dialect_libs}
+  ${extension_libs}
 
   MLIR_LIBS
   ${dialect_libs}

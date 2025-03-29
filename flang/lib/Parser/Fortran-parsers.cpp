@@ -1308,11 +1308,14 @@ constexpr auto vectorAlways{
     "VECTOR ALWAYS" >> construct<CompilerDirective::VectorAlways>()};
 constexpr auto unroll{
     "UNROLL" >> construct<CompilerDirective::Unroll>(maybe(digitString64))};
+constexpr auto unrollAndJam{"UNROLL_AND_JAM" >>
+    construct<CompilerDirective::UnrollAndJam>(maybe(digitString64))};
 TYPE_PARSER(beginDirective >> "DIR$ "_tok >>
     sourced((construct<CompilerDirective>(ignore_tkr) ||
                 construct<CompilerDirective>(loopCount) ||
                 construct<CompilerDirective>(assumeAligned) ||
                 construct<CompilerDirective>(vectorAlways) ||
+                construct<CompilerDirective>(unrollAndJam) ||
                 construct<CompilerDirective>(unroll) ||
                 construct<CompilerDirective>(
                     many(construct<CompilerDirective::NameValue>(

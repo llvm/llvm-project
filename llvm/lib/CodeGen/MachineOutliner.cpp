@@ -1375,6 +1375,9 @@ void MachineOutliner::emitOutlinedHashTree(Module &M) {
 }
 
 bool MachineOutliner::runOnModule(Module &M) {
+  if (skipModule(M))
+    return false;
+
   // Check if there's anything in the module. If it's empty, then there's
   // nothing to outline.
   if (M.empty())

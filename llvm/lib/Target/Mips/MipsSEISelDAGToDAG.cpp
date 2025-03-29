@@ -70,7 +70,7 @@ void MipsSEDAGToDAGISel::addDSPCtrlRegOperands(bool IsDef, MachineInstr &MI,
     MIB.addReg(Mips::DSPEFI, Flag);
 }
 
-unsigned MipsSEDAGToDAGISel::getMSACtrlReg(const SDValue RegIdx) const {
+MCRegister MipsSEDAGToDAGISel::getMSACtrlReg(const SDValue RegIdx) const {
   uint64_t RegNum = RegIdx->getAsZExtVal();
   return Mips::MSACtrlRegClass.getRegister(RegNum);
 }

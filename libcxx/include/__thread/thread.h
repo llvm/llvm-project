@@ -16,6 +16,7 @@
 #include <__exception/terminate.h>
 #include <__functional/hash.h>
 #include <__functional/unary_function.h>
+#include <__memory/addressof.h>
 #include <__memory/unique_ptr.h>
 #include <__mutex/mutex.h>
 #include <__system_error/throw_system_error.h>
@@ -100,7 +101,7 @@ template <class _Tp>
 __thread_specific_ptr<_Tp>::__thread_specific_ptr() {
   int __ec = __libcpp_tls_create(&__key_, &__thread_specific_ptr::__at_thread_exit);
   if (__ec)
-    __throw_system_error(__ec, "__thread_specific_ptr construction failed");
+    std::__throw_system_error(__ec, "__thread_specific_ptr construction failed");
 }
 
 template <class _Tp>
@@ -215,11 +216,11 @@ thread::thread(_Fp&& __f, _Args&&... __args) {
   _TSPtr __tsp(new __thread_struct);
   typedef tuple<_TSPtr, __decay_t<_Fp>, __decay_t<_Args>...> _Gp;
   unique_ptr<_Gp> __p(new _Gp(std::move(__tsp), std::forward<_Fp>(__f), std::forward<_Args>(__args)...));
-  int __ec = std::__libcpp_thread_create(&__t_, &__thread_proxy<_Gp>, __p.get());
+  int __ec = std::__libcpp_thread_create(&__t_, std::addressof(__thread_proxy<_Gp>), __p.get());
   if (__ec == 0)
     __p.release();
   else
-    __throw_system_error(__ec, "thread constructor failed");
+    std::__throw_system_error(__ec, "thread constructor failed");
 }
 
 #  else // _LIBCPP_CXX03_LANG
@@ -251,7 +252,7 @@ thread::thread(_Fp __f) {
   if (__ec == 0)
     __pp.release();
   else
-    __throw_system_error(__ec, "thread constructor failed");
+    std::__throw_system_error(__ec, "thread constructor failed");
 }
 
 #  endif // _LIBCPP_CXX03_LANG

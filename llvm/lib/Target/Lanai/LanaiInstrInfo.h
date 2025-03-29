@@ -48,8 +48,8 @@ public:
                               int &FrameIndex) const override;
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator Position,
-                   const DebugLoc &DL, MCRegister DestinationRegister,
-                   MCRegister SourceRegister, bool KillSource,
+                   const DebugLoc &DL, Register DestinationRegister,
+                   Register SourceRegister, bool KillSource,
                    bool RenamableDest = false,
                    bool RenamableSrc = false) const override;
 

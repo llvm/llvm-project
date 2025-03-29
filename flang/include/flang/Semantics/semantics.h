@@ -13,12 +13,12 @@
 #include "program-tree.h"
 #include "scope.h"
 #include "symbol.h"
-#include "flang/Common/Fortran-features.h"
-#include "flang/Common/LangOptions.h"
 #include "flang/Evaluate/common.h"
 #include "flang/Evaluate/intrinsics.h"
 #include "flang/Evaluate/target.h"
 #include "flang/Parser/message.h"
+#include "flang/Support/Fortran-features.h"
+#include "flang/Support/LangOptions.h"
 #include <iosfwd>
 #include <set>
 #include <string>

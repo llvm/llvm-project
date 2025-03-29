@@ -95,6 +95,13 @@ template <typename AllocatorConfig> struct SecondaryConfig {
 #define SECONDARY_REQUIRED_TEMPLATE_TYPE(NAME)                                 \
   template <typename T>                                                        \
   using NAME = typename AllocatorConfig::Secondary::template NAME<T>;
+
+#define SECONDARY_OPTIONAL(TYPE, NAME, DEFAULT)                                \
+  OPTIONAL_TEMPLATE(TYPE, NAME, DEFAULT, NAME)                                 \
+  static constexpr removeConst<TYPE>::type get##NAME() {                       \
+    return NAME##State<typename AllocatorConfig::Secondary>::getValue();       \
+  }
+
 #include "allocator_config.def"
 
   struct CacheConfig {

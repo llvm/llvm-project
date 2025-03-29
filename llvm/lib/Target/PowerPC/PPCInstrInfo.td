@@ -3474,6 +3474,13 @@ class PPCAsmPseudo<string asm, dag iops>
   let TSFlags{10} = MemriOp;
 }
 
+// Mask immediates for MMA instructions (2, 4 and 8 bits).
+def Msk2Imm : ImmLeaf<i32, [{ return isUInt<2>(Imm); }]>;
+def Msk4Imm : ImmLeaf<i32, [{ return isUInt<4>(Imm); }]>;
+def Msk8Imm : ImmLeaf<i32, [{ return isUInt<8>(Imm); }]>;
+
+def MMA : Predicate<"Subtarget->hasMMA()">;
+
 // Prefixed instructions may require access to the above defs at a later
 // time so we include this after the def.
 include "PPCInstrP10.td"

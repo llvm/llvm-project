@@ -45,9 +45,11 @@ enum RuntimeLibcallSignature {
   i64_func_i64,
   f32_func_f32_f32,
   f32_func_f32_i32,
+  f32_func_f32_iPTR,
   f32_func_i64_i64,
   f64_func_f64_f64,
   f64_func_f64_i32,
+  f64_func_f64_iPTR,
   f64_func_i64_i64,
   i16_func_f32,
   i16_func_f64,
@@ -69,6 +71,7 @@ enum RuntimeLibcallSignature {
   i16_i16_func_i16_i16,
   i32_i32_func_i32_i32,
   i64_i64_func_i64_i64,
+  i64_i64_func_i64_i64_iPTR,
   i64_i64_func_i64_i64_i64_i64,
   i64_i64_func_i64_i64_i64_i64_iPTR,
   i64_i64_i64_i64_func_i64_i64_i64_i64,
@@ -278,6 +281,9 @@ struct RuntimeLibcallSignatureTable {
     Table[RTLIB::FREXP_F32] = f32_func_f32_i32;
     Table[RTLIB::FREXP_F64] = f64_func_f64_i32;
     Table[RTLIB::FREXP_F128] = i64_i64_func_i64_i64_i32;
+    Table[RTLIB::MODF_F32] = f32_func_f32_iPTR;
+    Table[RTLIB::MODF_F64] = f64_func_f64_iPTR;
+    Table[RTLIB::MODF_F128] = i64_i64_func_i64_i64_iPTR;
 
     // Conversion
     // All F80 and PPCF128 routines are unsupported.
@@ -537,10 +543,6 @@ struct StaticLibcallNameMap {
         Map[NameLibcall.first] = NameLibcall.second;
       }
     }
-    // Override the __gnu_f2h_ieee/__gnu_h2f_ieee names so that the f32 name is
-    // consistent with the f64 and f128 names.
-    Map["__extendhfsf2"] = RTLIB::FPEXT_F16_F32;
-    Map["__truncsfhf2"] = RTLIB::FPROUND_F32_F16;
 
     Map["emscripten_return_address"] = RTLIB::RETURN_ADDRESS;
   }
@@ -632,6 +634,11 @@ void WebAssembly::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
     Params.push_back(wasm::ValType::F32);
     Params.push_back(wasm::ValType::I32);
     break;
+  case f32_func_f32_iPTR:
+    Rets.push_back(wasm::ValType::F32);
+    Params.push_back(wasm::ValType::F32);
+    Params.push_back(PtrTy);
+    break;
   case f32_func_i64_i64:
     Rets.push_back(wasm::ValType::F32);
     Params.push_back(wasm::ValType::I64);
@@ -651,6 +658,11 @@ void WebAssembly::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
     Rets.push_back(wasm::ValType::F64);
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
+    break;
+  case f64_func_f64_iPTR:
+    Rets.push_back(wasm::ValType::F64);
+    Params.push_back(wasm::ValType::F64);
+    Params.push_back(PtrTy);
     break;
   case i16_func_f32:
     Rets.push_back(wasm::ValType::I32);
@@ -764,6 +776,17 @@ void WebAssembly::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
     }
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
+    break;
+  case i64_i64_func_i64_i64_iPTR:
+    if (WebAssembly::canLowerMultivalueReturn(&Subtarget)) {
+      Rets.push_back(wasm::ValType::I64);
+      Rets.push_back(wasm::ValType::I64);
+    } else {
+      Params.push_back(PtrTy);
+    }
+    Params.push_back(wasm::ValType::I64);
+    Params.push_back(wasm::ValType::I64);
+    Params.push_back(PtrTy);
     break;
   case i64_i64_func_i64_i64_i64_i64:
     if (WebAssembly::canLowerMultivalueReturn(&Subtarget)) {

@@ -6,7 +6,12 @@
 
 define <2 x double> @buildvector_powi_2f64_6(<2 x double> %a) {
 ; CHECK-LABEL: @buildvector_powi_2f64_6(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x double> @llvm.powi.v2f64.i32(<2 x double> [[A:%.*]], i32 6)
+; CHECK-NEXT:    [[A0:%.*]] = extractelement <2 x double> [[A:%.*]], i32 0
+; CHECK-NEXT:    [[A1:%.*]] = extractelement <2 x double> [[A]], i32 1
+; CHECK-NEXT:    [[C0:%.*]] = call double @llvm.powi.f64.i32(double [[A0]], i32 6)
+; CHECK-NEXT:    [[C1:%.*]] = call double @llvm.powi.f64.i32(double [[A1]], i32 6)
+; CHECK-NEXT:    [[R0:%.*]] = insertelement <2 x double> poison, double [[C0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[R0]], double [[C1]], i32 1
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %a0 = extractelement <2 x double> %a, i32 0
@@ -39,7 +44,18 @@ define <2 x double> @buildvector_powi_2f64_var(<2 x double> %a, i32 %b) {
 
 define <4 x float> @buildvector_powi_4f32_3(<4 x float> %a) {
 ; CHECK-LABEL: @buildvector_powi_4f32_3(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> [[A:%.*]], i32 3)
+; CHECK-NEXT:    [[A0:%.*]] = extractelement <4 x float> [[A:%.*]], i32 0
+; CHECK-NEXT:    [[A1:%.*]] = extractelement <4 x float> [[A]], i32 1
+; CHECK-NEXT:    [[A2:%.*]] = extractelement <4 x float> [[A]], i32 2
+; CHECK-NEXT:    [[A3:%.*]] = extractelement <4 x float> [[A]], i32 3
+; CHECK-NEXT:    [[C0:%.*]] = call float @llvm.powi.f32.i32(float [[A0]], i32 3)
+; CHECK-NEXT:    [[C1:%.*]] = call float @llvm.powi.f32.i32(float [[A1]], i32 3)
+; CHECK-NEXT:    [[C2:%.*]] = call float @llvm.powi.f32.i32(float [[A2]], i32 3)
+; CHECK-NEXT:    [[C3:%.*]] = call float @llvm.powi.f32.i32(float [[A3]], i32 3)
+; CHECK-NEXT:    [[R0:%.*]] = insertelement <4 x float> poison, float [[C0]], i32 0
+; CHECK-NEXT:    [[R1:%.*]] = insertelement <4 x float> [[R0]], float [[C1]], i32 1
+; CHECK-NEXT:    [[R2:%.*]] = insertelement <4 x float> [[R1]], float [[C2]], i32 2
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[R2]], float [[C3]], i32 3
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %a0 = extractelement <4 x float> %a, i32 0
@@ -63,7 +79,18 @@ define <4 x float> @buildvector_powi_4f32_3(<4 x float> %a) {
 
 define <4 x double> @buildvector_powi_4f64_16(<4 x double> %a) {
 ; CHECK-LABEL: @buildvector_powi_4f64_16(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x double> @llvm.powi.v4f64.i32(<4 x double> [[A:%.*]], i32 16)
+; CHECK-NEXT:    [[A0:%.*]] = extractelement <4 x double> [[A:%.*]], i32 0
+; CHECK-NEXT:    [[A1:%.*]] = extractelement <4 x double> [[A]], i32 1
+; CHECK-NEXT:    [[A2:%.*]] = extractelement <4 x double> [[A]], i32 2
+; CHECK-NEXT:    [[A3:%.*]] = extractelement <4 x double> [[A]], i32 3
+; CHECK-NEXT:    [[C0:%.*]] = call double @llvm.powi.f64.i32(double [[A0]], i32 16)
+; CHECK-NEXT:    [[C1:%.*]] = call double @llvm.powi.f64.i32(double [[A1]], i32 16)
+; CHECK-NEXT:    [[C2:%.*]] = call double @llvm.powi.f64.i32(double [[A2]], i32 16)
+; CHECK-NEXT:    [[C3:%.*]] = call double @llvm.powi.f64.i32(double [[A3]], i32 16)
+; CHECK-NEXT:    [[R0:%.*]] = insertelement <4 x double> poison, double [[C0]], i32 0
+; CHECK-NEXT:    [[R1:%.*]] = insertelement <4 x double> [[R0]], double [[C1]], i32 1
+; CHECK-NEXT:    [[R2:%.*]] = insertelement <4 x double> [[R1]], double [[C2]], i32 2
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> [[R2]], double [[C3]], i32 3
 ; CHECK-NEXT:    ret <4 x double> [[TMP1]]
 ;
   %a0 = extractelement <4 x double> %a, i32 0
@@ -83,7 +110,30 @@ define <4 x double> @buildvector_powi_4f64_16(<4 x double> %a) {
 
 define <8 x float> @buildvector_powi_8f32_4(<8 x float> %a) {
 ; CHECK-LABEL: @buildvector_powi_8f32_4(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x float> @llvm.powi.v8f32.i32(<8 x float> [[A:%.*]], i32 4)
+; CHECK-NEXT:    [[A0:%.*]] = extractelement <8 x float> [[A:%.*]], i32 0
+; CHECK-NEXT:    [[A1:%.*]] = extractelement <8 x float> [[A]], i32 1
+; CHECK-NEXT:    [[A2:%.*]] = extractelement <8 x float> [[A]], i32 2
+; CHECK-NEXT:    [[A3:%.*]] = extractelement <8 x float> [[A]], i32 3
+; CHECK-NEXT:    [[A4:%.*]] = extractelement <8 x float> [[A]], i32 4
+; CHECK-NEXT:    [[A5:%.*]] = extractelement <8 x float> [[A]], i32 5
+; CHECK-NEXT:    [[A6:%.*]] = extractelement <8 x float> [[A]], i32 6
+; CHECK-NEXT:    [[A7:%.*]] = extractelement <8 x float> [[A]], i32 7
+; CHECK-NEXT:    [[C0:%.*]] = call float @llvm.powi.f32.i32(float [[A0]], i32 4)
+; CHECK-NEXT:    [[C1:%.*]] = call float @llvm.powi.f32.i32(float [[A1]], i32 4)
+; CHECK-NEXT:    [[C2:%.*]] = call float @llvm.powi.f32.i32(float [[A2]], i32 4)
+; CHECK-NEXT:    [[C3:%.*]] = call float @llvm.powi.f32.i32(float [[A3]], i32 4)
+; CHECK-NEXT:    [[C4:%.*]] = call float @llvm.powi.f32.i32(float [[A4]], i32 4)
+; CHECK-NEXT:    [[C5:%.*]] = call float @llvm.powi.f32.i32(float [[A5]], i32 4)
+; CHECK-NEXT:    [[C6:%.*]] = call float @llvm.powi.f32.i32(float [[A6]], i32 4)
+; CHECK-NEXT:    [[C7:%.*]] = call float @llvm.powi.f32.i32(float [[A7]], i32 4)
+; CHECK-NEXT:    [[R0:%.*]] = insertelement <8 x float> poison, float [[C0]], i32 0
+; CHECK-NEXT:    [[R1:%.*]] = insertelement <8 x float> [[R0]], float [[C1]], i32 1
+; CHECK-NEXT:    [[R2:%.*]] = insertelement <8 x float> [[R1]], float [[C2]], i32 2
+; CHECK-NEXT:    [[R3:%.*]] = insertelement <8 x float> [[R2]], float [[C3]], i32 3
+; CHECK-NEXT:    [[R4:%.*]] = insertelement <8 x float> [[R3]], float [[C4]], i32 4
+; CHECK-NEXT:    [[R5:%.*]] = insertelement <8 x float> [[R4]], float [[C5]], i32 5
+; CHECK-NEXT:    [[R6:%.*]] = insertelement <8 x float> [[R5]], float [[C6]], i32 6
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x float> [[R6]], float [[C7]], i32 7
 ; CHECK-NEXT:    ret <8 x float> [[TMP1]]
 ;
   %a0 = extractelement <8 x float> %a, i32 0
@@ -119,7 +169,30 @@ define <8 x float> @buildvector_powi_8f32_4(<8 x float> %a) {
 
 define <8 x double> @buildvector_powi_8f64_5(<8 x double> %a) {
 ; CHECK-LABEL: @buildvector_powi_8f64_5(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x double> @llvm.powi.v8f64.i32(<8 x double> [[A:%.*]], i32 5)
+; CHECK-NEXT:    [[A0:%.*]] = extractelement <8 x double> [[A:%.*]], i32 0
+; CHECK-NEXT:    [[A1:%.*]] = extractelement <8 x double> [[A]], i32 1
+; CHECK-NEXT:    [[A2:%.*]] = extractelement <8 x double> [[A]], i32 2
+; CHECK-NEXT:    [[A3:%.*]] = extractelement <8 x double> [[A]], i32 3
+; CHECK-NEXT:    [[A4:%.*]] = extractelement <8 x double> [[A]], i32 4
+; CHECK-NEXT:    [[A5:%.*]] = extractelement <8 x double> [[A]], i32 5
+; CHECK-NEXT:    [[A6:%.*]] = extractelement <8 x double> [[A]], i32 6
+; CHECK-NEXT:    [[A7:%.*]] = extractelement <8 x double> [[A]], i32 7
+; CHECK-NEXT:    [[C0:%.*]] = call double @llvm.powi.f64.i32(double [[A0]], i32 5)
+; CHECK-NEXT:    [[C1:%.*]] = call double @llvm.powi.f64.i32(double [[A1]], i32 5)
+; CHECK-NEXT:    [[C2:%.*]] = call double @llvm.powi.f64.i32(double [[A2]], i32 5)
+; CHECK-NEXT:    [[C3:%.*]] = call double @llvm.powi.f64.i32(double [[A3]], i32 5)
+; CHECK-NEXT:    [[C4:%.*]] = call double @llvm.powi.f64.i32(double [[A4]], i32 5)
+; CHECK-NEXT:    [[C5:%.*]] = call double @llvm.powi.f64.i32(double [[A5]], i32 5)
+; CHECK-NEXT:    [[C6:%.*]] = call double @llvm.powi.f64.i32(double [[A6]], i32 5)
+; CHECK-NEXT:    [[C7:%.*]] = call double @llvm.powi.f64.i32(double [[A7]], i32 5)
+; CHECK-NEXT:    [[R0:%.*]] = insertelement <8 x double> poison, double [[C0]], i32 0
+; CHECK-NEXT:    [[R1:%.*]] = insertelement <8 x double> [[R0]], double [[C1]], i32 1
+; CHECK-NEXT:    [[R2:%.*]] = insertelement <8 x double> [[R1]], double [[C2]], i32 2
+; CHECK-NEXT:    [[R3:%.*]] = insertelement <8 x double> [[R2]], double [[C3]], i32 3
+; CHECK-NEXT:    [[R4:%.*]] = insertelement <8 x double> [[R3]], double [[C4]], i32 4
+; CHECK-NEXT:    [[R5:%.*]] = insertelement <8 x double> [[R4]], double [[C5]], i32 5
+; CHECK-NEXT:    [[R6:%.*]] = insertelement <8 x double> [[R5]], double [[C6]], i32 6
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x double> [[R6]], double [[C7]], i32 7
 ; CHECK-NEXT:    ret <8 x double> [[TMP1]]
 ;
   %a0 = extractelement <8 x double> %a, i32 0
@@ -206,7 +279,54 @@ define <8 x double> @buildvector_powi_8f64_mismatch(<8 x double> %a) {
 
 define <16 x float> @buildvector_powi_16f32_n13(<16 x float> %a) {
 ; CHECK-LABEL: @buildvector_powi_16f32_n13(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x float> @llvm.powi.v16f32.i32(<16 x float> [[A:%.*]], i32 -13)
+; CHECK-NEXT:    [[A0:%.*]] = extractelement <16 x float> [[A:%.*]], i32 0
+; CHECK-NEXT:    [[A1:%.*]] = extractelement <16 x float> [[A]], i32 1
+; CHECK-NEXT:    [[A2:%.*]] = extractelement <16 x float> [[A]], i32 2
+; CHECK-NEXT:    [[A3:%.*]] = extractelement <16 x float> [[A]], i32 3
+; CHECK-NEXT:    [[A4:%.*]] = extractelement <16 x float> [[A]], i32 4
+; CHECK-NEXT:    [[A5:%.*]] = extractelement <16 x float> [[A]], i32 5
+; CHECK-NEXT:    [[A6:%.*]] = extractelement <16 x float> [[A]], i32 6
+; CHECK-NEXT:    [[A7:%.*]] = extractelement <16 x float> [[A]], i32 7
+; CHECK-NEXT:    [[A8:%.*]] = extractelement <16 x float> [[A]], i32 8
+; CHECK-NEXT:    [[A9:%.*]] = extractelement <16 x float> [[A]], i32 9
+; CHECK-NEXT:    [[A10:%.*]] = extractelement <16 x float> [[A]], i32 10
+; CHECK-NEXT:    [[A11:%.*]] = extractelement <16 x float> [[A]], i32 11
+; CHECK-NEXT:    [[A12:%.*]] = extractelement <16 x float> [[A]], i32 12
+; CHECK-NEXT:    [[A13:%.*]] = extractelement <16 x float> [[A]], i32 13
+; CHECK-NEXT:    [[A14:%.*]] = extractelement <16 x float> [[A]], i32 14
+; CHECK-NEXT:    [[A15:%.*]] = extractelement <16 x float> [[A]], i32 15
+; CHECK-NEXT:    [[C0:%.*]] = call float @llvm.powi.f32.i32(float [[A0]], i32 -13)
+; CHECK-NEXT:    [[C1:%.*]] = call float @llvm.powi.f32.i32(float [[A1]], i32 -13)
+; CHECK-NEXT:    [[C2:%.*]] = call float @llvm.powi.f32.i32(float [[A2]], i32 -13)
+; CHECK-NEXT:    [[C3:%.*]] = call float @llvm.powi.f32.i32(float [[A3]], i32 -13)
+; CHECK-NEXT:    [[C4:%.*]] = call float @llvm.powi.f32.i32(float [[A4]], i32 -13)
+; CHECK-NEXT:    [[C5:%.*]] = call float @llvm.powi.f32.i32(float [[A5]], i32 -13)
+; CHECK-NEXT:    [[C6:%.*]] = call float @llvm.powi.f32.i32(float [[A6]], i32 -13)
+; CHECK-NEXT:    [[C7:%.*]] = call float @llvm.powi.f32.i32(float [[A7]], i32 -13)
+; CHECK-NEXT:    [[C8:%.*]] = call float @llvm.powi.f32.i32(float [[A8]], i32 -13)
+; CHECK-NEXT:    [[C9:%.*]] = call float @llvm.powi.f32.i32(float [[A9]], i32 -13)
+; CHECK-NEXT:    [[C10:%.*]] = call float @llvm.powi.f32.i32(float [[A10]], i32 -13)
+; CHECK-NEXT:    [[C11:%.*]] = call float @llvm.powi.f32.i32(float [[A11]], i32 -13)
+; CHECK-NEXT:    [[C12:%.*]] = call float @llvm.powi.f32.i32(float [[A12]], i32 -13)
+; CHECK-NEXT:    [[C13:%.*]] = call float @llvm.powi.f32.i32(float [[A13]], i32 -13)
+; CHECK-NEXT:    [[C14:%.*]] = call float @llvm.powi.f32.i32(float [[A14]], i32 -13)
+; CHECK-NEXT:    [[C15:%.*]] = call float @llvm.powi.f32.i32(float [[A15]], i32 -13)
+; CHECK-NEXT:    [[R0:%.*]] = insertelement <16 x float> poison, float [[C0]], i32 0
+; CHECK-NEXT:    [[R1:%.*]] = insertelement <16 x float> [[R0]], float [[C1]], i32 1
+; CHECK-NEXT:    [[R2:%.*]] = insertelement <16 x float> [[R1]], float [[C2]], i32 2
+; CHECK-NEXT:    [[R3:%.*]] = insertelement <16 x float> [[R2]], float [[C3]], i32 3
+; CHECK-NEXT:    [[R4:%.*]] = insertelement <16 x float> [[R3]], float [[C4]], i32 4
+; CHECK-NEXT:    [[R5:%.*]] = insertelement <16 x float> [[R4]], float [[C5]], i32 5
+; CHECK-NEXT:    [[R6:%.*]] = insertelement <16 x float> [[R5]], float [[C6]], i32 6
+; CHECK-NEXT:    [[R7:%.*]] = insertelement <16 x float> [[R6]], float [[C7]], i32 7
+; CHECK-NEXT:    [[R8:%.*]] = insertelement <16 x float> [[R7]], float [[C8]], i32 8
+; CHECK-NEXT:    [[R9:%.*]] = insertelement <16 x float> [[R8]], float [[C9]], i32 9
+; CHECK-NEXT:    [[R10:%.*]] = insertelement <16 x float> [[R9]], float [[C10]], i32 10
+; CHECK-NEXT:    [[R11:%.*]] = insertelement <16 x float> [[R10]], float [[C11]], i32 11
+; CHECK-NEXT:    [[R12:%.*]] = insertelement <16 x float> [[R11]], float [[C12]], i32 12
+; CHECK-NEXT:    [[R13:%.*]] = insertelement <16 x float> [[R12]], float [[C13]], i32 13
+; CHECK-NEXT:    [[R14:%.*]] = insertelement <16 x float> [[R13]], float [[C14]], i32 14
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x float> [[R14]], float [[C15]], i32 15
 ; CHECK-NEXT:    ret <16 x float> [[TMP1]]
 ;
   %a0  = extractelement <16 x float> %a, i32 0

@@ -1159,3 +1159,39 @@ define i1 @two_types_of_bittest(i8 %x, i8 %c) {
   %ret = and i1 %icmp1, %icmp2
   ret i1 %ret
 }
+
+define i1 @trunc_bittest_and_icmp_bittest(i8 %x, i8 %c) {
+; CHECK-LABEL: @trunc_bittest_and_icmp_bittest(
+; CHECK-NEXT:    [[T0:%.*]] = shl nuw i8 1, [[C:%.*]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], [[T0]]
+; CHECK-NEXT:    [[ICMP2:%.*]] = icmp ne i8 [[AND]], 0
+; CHECK-NEXT:    [[RET:%.*]] = and i1 [[ICMP2]], [[TRUNC]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %t0 = shl i8 1, %c
+  %trunc = trunc i8 %x to i1
+  %and = and i8 %x, %t0
+  %icmp2 = icmp ne i8 %and, 0
+  %ret = and i1 %trunc, %icmp2
+  ret i1 %ret
+}
+
+define i1 @trunc_bittest_or_icmp_bittest(i8 %x, i8 %c) {
+; CHECK-LABEL: @trunc_bittest_or_icmp_bittest(
+; CHECK-NEXT:    [[T0:%.*]] = shl nuw i8 1, [[C:%.*]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], [[T0]]
+; CHECK-NEXT:    [[ICMP2:%.*]] = icmp eq i8 [[AND]], 0
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[TRUNC]], true
+; CHECK-NEXT:    [[RET:%.*]] = or i1 [[ICMP2]], [[NOT]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %t0 = shl i8 1, %c
+  %trunc = trunc i8 %x to i1
+  %and = and i8 %x, %t0
+  %icmp2 = icmp eq i8 %and, 0
+  %not = xor i1 %trunc, true
+  %ret = or i1 %not, %icmp2
+  ret i1 %ret
+}

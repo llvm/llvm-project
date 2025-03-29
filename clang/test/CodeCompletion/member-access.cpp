@@ -417,3 +417,21 @@ void f() {
   // CHECK-DEPENDENT-NESTEDCLASS: [#int#]field
 }
 }
+
+namespace template_alias {
+struct A {
+  int b;
+};
+template <typename T>
+struct S {
+  A a;
+};
+template <typename T>
+using Alias = S<T>;
+template <typename T>
+void f(Alias<T> s) {
+  s.a.b;
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:433:7 %s -o - | FileCheck -check-prefix=CHECK-TEMPLATE-ALIAS %s
+  // CHECK-TEMPLATE-ALIAS: [#int#]b
+}
+}

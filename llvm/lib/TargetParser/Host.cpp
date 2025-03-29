@@ -288,6 +288,8 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
   if (Implementer == "0x4e") { // NVIDIA Corporation
     return StringSwitch<const char *>(Part)
         .Case("0x004", "carmel")
+        .Case("0x10", "olympus")
+        .Case("0x010", "olympus")
         .Default("generic");
   }
 
@@ -493,6 +495,7 @@ StringRef sys::detail::getHostCPUNameForRISCV(StringRef ProcCpuinfoContent) {
   }
 
   return StringSwitch<const char *>(UArch)
+      .Case("eswin,eic770x", "sifive-p550")
       .Case("sifive,u74-mc", "sifive-u74")
       .Case("sifive,bullet0", "sifive-u74")
       .Default("");

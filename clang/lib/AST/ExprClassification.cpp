@@ -451,13 +451,6 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
   case Expr::PackExpansionExprClass:
     return ClassifyInternal(Ctx, cast<PackExpansionExpr>(E)->getPattern());
 
-  case Expr::ResolvedUnexpandedPackExprClass: {
-    if (cast<ResolvedUnexpandedPackExpr>(E)->getNumExprs() > 0)
-      return ClassifyInternal(
-          Ctx, cast<ResolvedUnexpandedPackExpr>(E)->getExpansion(0));
-    return Cl::CL_LValue;
-  }
-
   case Expr::MaterializeTemporaryExprClass:
     return cast<MaterializeTemporaryExpr>(E)->isBoundToLvalueReference()
               ? Cl::CL_LValue

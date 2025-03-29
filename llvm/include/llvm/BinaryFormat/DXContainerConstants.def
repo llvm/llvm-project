@@ -4,6 +4,7 @@ CONTAINER_PART(DXIL)
 CONTAINER_PART(SFI0)
 CONTAINER_PART(HASH)
 CONTAINER_PART(PSV0)
+CONTAINER_PART(RTS0)
 CONTAINER_PART(ISG1)
 CONTAINER_PART(OSG1)
 CONTAINER_PART(PSG1)
@@ -51,6 +52,26 @@ SHADER_FEATURE_FLAG(31, 36, NextUnusedBit, "Next reserved shader flag bit (not a
 
 #undef SHADER_FEATURE_FLAG
 #endif // SHADER_FEATURE_FLAG
+
+
+// ROOT_ELEMENT_FLAG(bit offset for the flag, name).
+#ifdef ROOT_ELEMENT_FLAG
+
+ROOT_ELEMENT_FLAG(0, AllowInputAssemblerInputLayout)
+ROOT_ELEMENT_FLAG(1, DenyVertexShaderRootAccess)
+ROOT_ELEMENT_FLAG(2, DenyHullShaderRootAccess)
+ROOT_ELEMENT_FLAG(3, DenyDomainShaderRootAccess)
+ROOT_ELEMENT_FLAG(4, DenyGeometryShaderRootAccess)
+ROOT_ELEMENT_FLAG(5, DenyPixelShaderRootAccess)
+ROOT_ELEMENT_FLAG(6, AllowStreamOutput)
+ROOT_ELEMENT_FLAG(7, LocalRootSignature)
+ROOT_ELEMENT_FLAG(8, DenyAmplificationShaderRootAccess)
+ROOT_ELEMENT_FLAG(9, DenyMeshShaderRootAccess)
+ROOT_ELEMENT_FLAG(10, CBVSRVUAVHeapDirectlyIndexed)
+ROOT_ELEMENT_FLAG(11, SamplerHeapDirectlyIndexed)
+#undef ROOT_ELEMENT_FLAG
+#endif // ROOT_ELEMENT_FLAG
+
 
 #ifdef DXIL_MODULE_FLAG
 

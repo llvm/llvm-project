@@ -131,6 +131,39 @@ struct DotBF16OpConversion : public ConvertOpToLLVMPattern<DotBF16Op> {
   }
 };
 
+struct CvtPackedF32ToBF16Conversion
+    : public ConvertOpToLLVMPattern<CvtPackedF32ToBF16Op> {
+  using ConvertOpToLLVMPattern<CvtPackedF32ToBF16Op>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(CvtPackedF32ToBF16Op op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto typeA = dyn_cast<VectorType>(op.getA().getType());
+    unsigned elemBitWidth = typeA.getElementTypeBitWidth();
+    unsigned opBitWidth = typeA.getShape()[0] * elemBitWidth;
+
+    auto opType = op.getDst().getType();
+    auto opA = op.getA();
+
+    switch (opBitWidth) {
+    case 256: {
+      rewriter.replaceOpWithNewOp<CvtNeF32ToBF16Ps256IntrOp>(op, opType, opA);
+      break;
+    }
+    case 512: {
+      rewriter.replaceOpWithNewOp<CvtNeF32ToBF16Ps512IntrOp>(op, opType, opA);
+      break;
+    }
+    default: {
+      return rewriter.notifyMatchFailure(
+          op, "unsupported AVX512-BF16 packed f32 to bf16 variant");
+    }
+    }
+
+    return success();
+  }
+};
+
 struct RsqrtOpConversion : public ConvertOpToLLVMPattern<RsqrtOp> {
   using ConvertOpToLLVMPattern<RsqrtOp>::ConvertOpToLLVMPattern;
 
@@ -202,8 +235,10 @@ using Registry = RegistryImpl<
 void mlir::populateX86VectorLegalizeForLLVMExportPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   Registry::registerPatterns(converter, patterns);
-  patterns.add<MaskCompressOpConversion, DotBF16OpConversion, RsqrtOpConversion,
-               DotOpConversion>(converter);
+  patterns
+      .add<MaskCompressOpConversion, DotBF16OpConversion,
+           CvtPackedF32ToBF16Conversion, RsqrtOpConversion, DotOpConversion>(
+          converter);
 }
 
 void mlir::configureX86VectorLegalizeForExportTarget(
@@ -215,6 +250,9 @@ void mlir::configureX86VectorLegalizeForExportTarget(
   target.addLegalOp<DotBF16Ps256IntrOp>();
   target.addLegalOp<DotBF16Ps512IntrOp>();
   target.addIllegalOp<DotBF16Op>();
+  target.addLegalOp<CvtNeF32ToBF16Ps256IntrOp>();
+  target.addLegalOp<CvtNeF32ToBF16Ps512IntrOp>();
+  target.addIllegalOp<CvtPackedF32ToBF16Op>();
   target.addLegalOp<RsqrtIntrOp>();
   target.addIllegalOp<RsqrtOp>();
   target.addLegalOp<DotIntrOp>();

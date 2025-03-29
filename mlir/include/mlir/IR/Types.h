@@ -132,6 +132,9 @@ public:
   bool isF64() const;
   bool isF80() const;
   bool isF128() const;
+  /// Return true if this is an float type (with the specified width).
+  bool isFloat() const;
+  bool isFloat(unsigned width) const;
 
   /// Return true if this is an integer type (with the specified width).
   bool isInteger() const;

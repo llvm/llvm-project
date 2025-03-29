@@ -417,10 +417,13 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
     case OpenACCClauseKind::Device:
     case OpenACCClauseKind::DeviceNum:
     case OpenACCClauseKind::DefaultAsync:
+    case OpenACCClauseKind::DeviceResident:
     case OpenACCClauseKind::DevicePtr:
     case OpenACCClauseKind::Finalize:
     case OpenACCClauseKind::FirstPrivate:
+    case OpenACCClauseKind::Link:
     case OpenACCClauseKind::NoCreate:
+    case OpenACCClauseKind::NoHost:
     case OpenACCClauseKind::NumGangs:
     case OpenACCClauseKind::NumWorkers:
     case OpenACCClauseKind::Present:
@@ -432,6 +435,7 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
     case OpenACCClauseKind::UseDevice:
     case OpenACCClauseKind::Vector:
     case OpenACCClauseKind::VectorLength:
+    case OpenACCClauseKind::Invalid:
       // The condition expression will be printed as a part of the 'children',
       // but print 'clause' here so it is clear what is happening from the dump.
       OS << " clause";
@@ -498,9 +502,15 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
       OS << " clause Operator: "
          << cast<OpenACCReductionClause>(C)->getReductionOp();
       break;
-    default:
-      // Nothing to do here.
-      break;
+    case OpenACCClauseKind::Bind:
+      OS << " clause";
+      if (cast<OpenACCBindClause>(C)->isIdentifierArgument())
+        OS << " identifier '"
+           << cast<OpenACCBindClause>(C)->getIdentifierArgument()->getName()
+           << "'";
+      else
+        AddChild(
+            [=] { Visit(cast<OpenACCBindClause>(C)->getStringArgument()); });
     }
   }
   dumpPointer(C);
@@ -958,9 +968,9 @@ void TextNodeDumper::dumpAccessSpecifier(AccessSpecifier AS) {
 
 void TextNodeDumper::dumpCleanupObject(
     const ExprWithCleanups::CleanupObject &C) {
-  if (auto *BD = C.dyn_cast<BlockDecl *>())
+  if (auto *BD = dyn_cast<BlockDecl *>(C))
     dumpDeclRef(BD, "cleanup");
-  else if (auto *CLE = C.dyn_cast<CompoundLiteralExpr *>())
+  else if (auto *CLE = dyn_cast<CompoundLiteralExpr *>(C))
     AddChild([=] {
       OS << "cleanup ";
       {
@@ -1223,6 +1233,12 @@ void TextNodeDumper::VisitNullPtrTemplateArgument(const TemplateArgument &TA) {
 
 void TextNodeDumper::VisitIntegralTemplateArgument(const TemplateArgument &TA) {
   OS << " integral";
+  dumpTemplateArgument(TA);
+}
+
+void TextNodeDumper::VisitStructuralValueTemplateArgument(
+    const TemplateArgument &TA) {
+  OS << " structural value";
   dumpTemplateArgument(TA);
 }
 
@@ -2183,6 +2199,11 @@ void TextNodeDumper::VisitEnumDecl(const EnumDecl *D) {
     OS << " __module_private__";
   if (D->isFixed())
     dumpType(D->getIntegerType());
+
+  if (const auto *Instance = D->getInstantiatedFromMemberEnum()) {
+    OS << " instantiated_from";
+    dumpPointer(Instance);
+  }
 }
 
 void TextNodeDumper::VisitRecordDecl(const RecordDecl *D) {
@@ -2525,8 +2546,11 @@ void TextNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
     OS << " instantiated_from";
     dumpPointer(Instance);
   }
-  if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D))
+  if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
     dumpTemplateSpecializationKind(CTSD->getSpecializationKind());
+    if (CTSD->hasStrictPackMatch())
+      OS << " strict-pack-match";
+  }
 
   dumpNestedNameSpecifier(D->getQualifier());
 
@@ -3026,6 +3050,12 @@ void TextNodeDumper::VisitOpenACCHostDataConstruct(
 void TextNodeDumper::VisitOpenACCWaitConstruct(const OpenACCWaitConstruct *S) {
   VisitOpenACCConstructStmt(S);
 }
+void TextNodeDumper::VisitOpenACCCacheConstruct(
+    const OpenACCCacheConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+  if (S->hasReadOnly())
+    OS <<" readonly";
+}
 void TextNodeDumper::VisitOpenACCInitConstruct(const OpenACCInitConstruct *S) {
   VisitOpenACCConstructStmt(S);
 }
@@ -3041,6 +3071,47 @@ void TextNodeDumper::VisitOpenACCUpdateConstruct(
   VisitOpenACCConstructStmt(S);
 }
 
+void TextNodeDumper::VisitOpenACCAtomicConstruct(
+    const OpenACCAtomicConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+  OS << ' ' << S->getAtomicKind();
+}
+
+void TextNodeDumper::VisitOpenACCDeclareDecl(const OpenACCDeclareDecl *D) {
+  OS << " " << D->getDirectiveKind();
+
+  for (const OpenACCClause *C : D->clauses())
+    AddChild([=] {
+      Visit(C);
+      for (const Stmt *S : C->children())
+        AddChild([=] { Visit(S); });
+    });
+}
+void TextNodeDumper::VisitOpenACCRoutineDecl(const OpenACCRoutineDecl *D) {
+  OS << " " << D->getDirectiveKind();
+
+  dumpSourceRange(SourceRange{D->getLParenLoc(), D->getRParenLoc()});
+
+  AddChild([=] { Visit(D->getFunctionReference()); });
+
+  for (const OpenACCClause *C : D->clauses())
+    AddChild([=] {
+      Visit(C);
+      for (const Stmt *S : C->children())
+        AddChild([=] { Visit(S); });
+    });
+}
+
+void TextNodeDumper::VisitOpenACCRoutineDeclAttr(
+    const OpenACCRoutineDeclAttr *A) {
+  for (const OpenACCClause *C : A->Clauses)
+    AddChild([=] {
+      Visit(C);
+      for (const Stmt *S : C->children())
+        AddChild([=] { Visit(S); });
+    });
+}
+
 void TextNodeDumper::VisitEmbedExpr(const EmbedExpr *S) {
   AddChild("begin", [=] { OS << S->getStartingElementPos(); });
   AddChild("number of elements", [=] { OS << S->getDataElementCount(); });
@@ -3048,4 +3119,10 @@ void TextNodeDumper::VisitEmbedExpr(const EmbedExpr *S) {
 
 void TextNodeDumper::VisitAtomicExpr(const AtomicExpr *AE) {
   OS << ' ' << AE->getOpAsString();
+}
+
+void TextNodeDumper::VisitConvertVectorExpr(const ConvertVectorExpr *S) {
+  VisitStmt(S);
+  if (S->hasStoredFPFeatures())
+    printFPOptions(S->getStoredFPFeatures());
 }

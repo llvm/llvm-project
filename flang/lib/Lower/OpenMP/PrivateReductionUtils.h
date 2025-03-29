@@ -20,6 +20,12 @@ namespace mlir {
 class Region;
 } // namespace mlir
 
+namespace Fortran {
+namespace semantics {
+class Symbol;
+} // namespace semantics
+} // namespace Fortran
+
 namespace fir {
 class FirOpBuilder;
 class ShapeShiftOp;
@@ -27,22 +33,41 @@ class ShapeShiftOp;
 
 namespace Fortran {
 namespace lower {
+class AbstractConverter;
+
 namespace omp {
+
+enum class DeclOperationKind { Private, FirstPrivate, Reduction };
+inline bool isPrivatization(DeclOperationKind kind) {
+  return (kind == DeclOperationKind::FirstPrivate) ||
+         (kind == DeclOperationKind::Private);
+}
+inline bool isReduction(DeclOperationKind kind) {
+  return kind == DeclOperationKind::Reduction;
+}
 
 /// Generate init and cleanup regions suitable for reduction or privatizer
 /// declarations. `scalarInitValue` may be nullptr if there is no default
-/// initialization (for privatization).
-void populateByRefInitAndCleanupRegions(fir::FirOpBuilder &builder,
-                                        mlir::Location loc, mlir::Type argType,
-                                        mlir::Value scalarInitValue,
-                                        mlir::Block *initBlock,
-                                        mlir::Value allocatedPrivVarArg,
-                                        mlir::Value moldArg,
-                                        mlir::Region &cleanupRegion);
+/// initialization (for privatization). `kind` should be set to indicate
+/// what kind of operation definition this initialization belongs to.
+void populateByRefInitAndCleanupRegions(
+    AbstractConverter &converter, mlir::Location loc, mlir::Type argType,
+    mlir::Value scalarInitValue, mlir::Block *initBlock,
+    mlir::Value allocatedPrivVarArg, mlir::Value moldArg,
+    mlir::Region &cleanupRegion, DeclOperationKind kind,
+    const Fortran::semantics::Symbol *sym = nullptr,
+    bool cannotHaveNonDefaultLowerBounds = false);
 
 /// Generate a fir::ShapeShift op describing the provided boxed array.
+/// `cannotHaveNonDefaultLowerBounds` should be set if `box` is known to have
+/// default lower bounds. This can improve code generation.
+/// `useDefaultLowerBounds` can be set to force the returned fir::ShapeShiftOp
+/// to have default lower bounds, which is useful to iterate through array
+/// elements without having to adjust each index.
 fir::ShapeShiftOp getShapeShift(fir::FirOpBuilder &builder, mlir::Location loc,
-                                mlir::Value box);
+                                mlir::Value box,
+                                bool cannotHaveNonDefaultLowerBounds = false,
+                                bool useDefaultLowerBounds = false);
 
 } // namespace omp
 } // namespace lower

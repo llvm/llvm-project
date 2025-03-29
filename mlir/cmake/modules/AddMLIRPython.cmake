@@ -709,7 +709,7 @@ function(add_mlir_python_extension libname extname)
       # NanobindAdaptors.h uses PyClassMethod_New to build `pure_subclass`es but nanobind
       # doesn't declare this API as undefined in its linker flags. So we need to declare it as such
       # for downstream users that do not do something like `-undefined dynamic_lookup`.
-      set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -Wl,-U -Wl,_PyClassMethod_New")
+      target_link_options(${libname} PUBLIC "LINKER:-U,_PyClassMethod_New")
     endif()
   endif()
 

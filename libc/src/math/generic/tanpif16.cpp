@@ -19,6 +19,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 constexpr size_t N_EXCEPTS = 21;
 
 constexpr fputil::ExceptValues<float16, N_EXCEPTS> TANPIF16_EXCEPTS{{
@@ -35,6 +36,7 @@ constexpr fputil::ExceptValues<float16, N_EXCEPTS> TANPIF16_EXCEPTS{{
     {0x4135, 0xc1ee, 0, 1, 0}, {0x42cb, 0x41ee, 1, 0, 0},
     {0x4335, 0xc1ee, 0, 1, 0},
 }};
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 LLVM_LIBC_FUNCTION(float16, tanpif16, (float16 x)) {
   using FPBits = typename fputil::FPBits<float16>;
@@ -48,10 +50,13 @@ LLVM_LIBC_FUNCTION(float16, tanpif16, (float16 x)) {
     if (LIBC_UNLIKELY(x_abs == 0U))
       return x;
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
     bool x_sign = x_u >> 15;
+
     if (auto r = TANPIF16_EXCEPTS.lookup_odd(x_abs, x_sign);
         LIBC_UNLIKELY(r.has_value()))
       return r.value();
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   }
 
   // Numbers greater or equal to 2^10 are integers, or infinity, or NaN

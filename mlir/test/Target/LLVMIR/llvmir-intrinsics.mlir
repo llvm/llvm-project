@@ -40,6 +40,33 @@ llvm.func @exp2_test(%arg0: f32, %arg1: vector<8xf32>) {
   llvm.return
 }
 
+// CHECK-LABEL: @exp10_test
+llvm.func @exp10_test(%arg0: f32, %arg1: vector<8xf32>) {
+  // CHECK: call float @llvm.exp10.f32
+  "llvm.intr.exp10"(%arg0) : (f32) -> f32
+  // CHECK: call <8 x float> @llvm.exp10.v8f32
+  "llvm.intr.exp10"(%arg1) : (vector<8xf32>) -> vector<8xf32>
+  llvm.return
+}
+
+// CHECK-LABEL: @ldexp_test
+llvm.func @ldexp_test(%arg0: f32, %arg1: vector<8xf32>, %arg2: i32) {
+  // CHECK: call float @llvm.ldexp.f32.i32(float %{{.*}}, i32 %{{.*}})
+  "llvm.intr.ldexp"(%arg0, %arg2) : (f32, i32) -> f32
+  // CHECK: call <8 x float> @llvm.ldexp.v8f32.i32(<8 x float> %{{.*}}, i32 %{{.*}})
+  "llvm.intr.ldexp"(%arg1, %arg2) : (vector<8xf32>, i32) -> vector<8xf32>
+  llvm.return
+}
+
+// CHECK-LABEL: @frexp_test
+llvm.func @frexp_test(%arg0: f32, %arg1: vector<8xf32>) {
+  // CHECK: call { float, i32 } @llvm.frexp.f32.i32(float %{{.*}})
+  llvm.intr.frexp(%arg0) : (f32) -> !llvm.struct<(f32, i32)>
+  // CHECK: call { <8 x float>, i32 } @llvm.frexp.v8f32.i32(<8 x float> %{{.*}})
+  llvm.intr.frexp(%arg1) : (vector<8xf32>) -> !llvm.struct<(vector<8xf32>, i32)>
+  llvm.return
+}
+
 // CHECK-LABEL: @log_test
 llvm.func @log_test(%arg0: f32, %arg1: vector<8xf32>) {
   // CHECK: call float @llvm.log.f32
@@ -103,12 +130,51 @@ llvm.func @floor_test(%arg0: f32, %arg1: vector<8xf32>) {
   llvm.return
 }
 
-// CHECK-LABEL: @cos_test
-llvm.func @cos_test(%arg0: f32, %arg1: vector<8xf32>) {
+// CHECK-LABEL: @trig_test
+llvm.func @trig_test(%arg0: f32, %arg1: vector<8xf32>) {
+  // CHECK: call float @llvm.sin.f32
+  llvm.intr.sin(%arg0) : (f32) -> f32
+  // CHECK: call <8 x float> @llvm.sin.v8f32
+  llvm.intr.sin(%arg1) : (vector<8xf32>) -> vector<8xf32>
+
   // CHECK: call float @llvm.cos.f32
-  "llvm.intr.cos"(%arg0) : (f32) -> f32
+  llvm.intr.cos(%arg0) : (f32) -> f32
   // CHECK: call <8 x float> @llvm.cos.v8f32
-  "llvm.intr.cos"(%arg1) : (vector<8xf32>) -> vector<8xf32>
+  llvm.intr.cos(%arg1) : (vector<8xf32>) -> vector<8xf32>
+
+  // CHECK: call float @llvm.tan.f32
+  llvm.intr.tan(%arg0) : (f32) -> f32
+  // CHECK: call <8 x float> @llvm.tan.v8f32
+  llvm.intr.tan(%arg1) : (vector<8xf32>) -> vector<8xf32>
+  llvm.return
+}
+
+// CHECK-LABEL: @inv_trig_test
+llvm.func @inv_trig_test(%arg0: f32, %arg1: vector<8xf32>) {
+  // CHECK: call float @llvm.asin.f32
+  llvm.intr.asin(%arg0) : (f32) -> f32
+  // CHECK: call <8 x float> @llvm.asin.v8f32
+  llvm.intr.asin(%arg1) : (vector<8xf32>) -> vector<8xf32>
+
+  // CHECK: call float @llvm.acos.f32
+  llvm.intr.acos(%arg0) : (f32) -> f32
+  // CHECK: call <8 x float> @llvm.acos.v8f32
+  llvm.intr.acos(%arg1) : (vector<8xf32>) -> vector<8xf32>
+
+  // CHECK: call float @llvm.atan.f32
+  llvm.intr.atan(%arg0) : (f32) -> f32
+  // CHECK: call <8 x float> @llvm.atan.v8f32
+  llvm.intr.atan(%arg1) : (vector<8xf32>) -> vector<8xf32>
+
+  llvm.return
+}
+
+// CHECK-LABEL: @atan2_test
+llvm.func @atan2_test(%arg0: f32, %arg1: f32, %arg2: vector<8xf32>, %arg3: vector<8xf32>) {
+  // CHECK: call float @llvm.atan2.f32
+  "llvm.intr.atan2"(%arg0, %arg1) : (f32, f32) -> f32
+  // CHECK: call <8 x float> @llvm.atan2.v8f32
+  "llvm.intr.atan2"(%arg2, %arg3) : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
   llvm.return
 }
 
@@ -1040,6 +1106,78 @@ llvm.func @ssa_copy(%arg: f32) -> f32 {
   llvm.return %0 : f32
 }
 
+// CHECK-LABEL: @ptrmask
+llvm.func @ptrmask(%p: !llvm.ptr, %mask: i64) -> !llvm.ptr {
+  // CHECK: call ptr @llvm.ptrmask.p0.i64
+  %0 = llvm.intr.ptrmask %p, %mask : (!llvm.ptr, i64) -> !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// CHECK-LABEL: @vector_ptrmask
+llvm.func @vector_ptrmask(%p: !llvm.vec<8 x ptr>, %mask: vector<8 x i64>) -> !llvm.vec<8 x ptr> {
+  // CHECK: call <8 x ptr> @llvm.ptrmask.v8p0.v8i64
+  %0 = llvm.intr.ptrmask %p, %mask : (!llvm.vec<8 x ptr>, vector<8 x i64>) -> !llvm.vec<8 x ptr>
+  llvm.return %0 : !llvm.vec<8 x ptr>
+}
+
+// CHECK-LABEL: @experimental_constrained_uitofp
+llvm.func @experimental_constrained_uitofp(%s: i32, %v: vector<4 x i32>) {
+  // CHECK: call float @llvm.experimental.constrained.uitofp.f32.i32(
+  // CHECK: metadata !"round.towardzero"
+  // CHECK: metadata !"fpexcept.ignore"
+  %0 = llvm.intr.experimental.constrained.uitofp %s towardzero ignore : i32 to f32
+  // CHECK: call float @llvm.experimental.constrained.uitofp.f32.i32(
+  // CHECK: metadata !"round.tonearest"
+  // CHECK: metadata !"fpexcept.maytrap"
+  %1 = llvm.intr.experimental.constrained.uitofp %s tonearest maytrap : i32 to f32
+  // CHECK: call float @llvm.experimental.constrained.uitofp.f32.i32(
+  // CHECK: metadata !"round.upward"
+  // CHECK: metadata !"fpexcept.strict"
+  %2 = llvm.intr.experimental.constrained.uitofp %s upward strict : i32 to f32
+  // CHECK: call float @llvm.experimental.constrained.uitofp.f32.i32(
+  // CHECK: metadata !"round.downward"
+  // CHECK: metadata !"fpexcept.ignore"
+  %3 = llvm.intr.experimental.constrained.uitofp %s downward ignore : i32 to f32
+  // CHECK: call float @llvm.experimental.constrained.uitofp.f32.i32(
+  // CHECK: metadata !"round.tonearestaway"
+  // CHECK: metadata !"fpexcept.ignore"
+  %4 = llvm.intr.experimental.constrained.uitofp %s tonearestaway ignore : i32 to f32
+  // CHECK: call <4 x float> @llvm.experimental.constrained.uitofp.v4f32.v4i32(
+  // CHECK: metadata !"round.upward"
+  // CHECK: metadata !"fpexcept.strict"
+  %5 = llvm.intr.experimental.constrained.uitofp %v upward strict : vector<4 x i32> to vector<4 x f32>
+  llvm.return
+}
+
+// CHECK-LABEL: @experimental_constrained_sitofp
+llvm.func @experimental_constrained_sitofp(%s: i32, %v: vector<4 x i32>) {
+  // CHECK: call float @llvm.experimental.constrained.sitofp.f32.i32(
+  // CHECK: metadata !"round.towardzero"
+  // CHECK: metadata !"fpexcept.ignore"
+  %0 = llvm.intr.experimental.constrained.sitofp %s towardzero ignore : i32 to f32
+  // CHECK: call float @llvm.experimental.constrained.sitofp.f32.i32(
+  // CHECK: metadata !"round.tonearest"
+  // CHECK: metadata !"fpexcept.maytrap"
+  %1 = llvm.intr.experimental.constrained.sitofp %s tonearest maytrap : i32 to f32
+  // CHECK: call float @llvm.experimental.constrained.sitofp.f32.i32(
+  // CHECK: metadata !"round.upward"
+  // CHECK: metadata !"fpexcept.strict"
+  %2 = llvm.intr.experimental.constrained.sitofp %s upward strict : i32 to f32
+  // CHECK: call float @llvm.experimental.constrained.sitofp.f32.i32(
+  // CHECK: metadata !"round.downward"
+  // CHECK: metadata !"fpexcept.ignore"
+  %3 = llvm.intr.experimental.constrained.sitofp %s downward ignore : i32 to f32
+  // CHECK: call float @llvm.experimental.constrained.sitofp.f32.i32(
+  // CHECK: metadata !"round.tonearestaway"
+  // CHECK: metadata !"fpexcept.ignore"
+  %4 = llvm.intr.experimental.constrained.sitofp %s tonearestaway ignore : i32 to f32
+  // CHECK: call <4 x float> @llvm.experimental.constrained.sitofp.v4f32.v4i32(
+  // CHECK: metadata !"round.upward"
+  // CHECK: metadata !"fpexcept.strict"
+  %5 = llvm.intr.experimental.constrained.sitofp %v upward strict : vector<4 x i32> to vector<4 x f32>
+  llvm.return
+}
+
 // CHECK-LABEL: @experimental_constrained_fptrunc
 llvm.func @experimental_constrained_fptrunc(%s: f64, %v: vector<4xf32>) {
   // CHECK: call float @llvm.experimental.constrained.fptrunc.f32.f64(
@@ -1069,6 +1207,23 @@ llvm.func @experimental_constrained_fptrunc(%s: f64, %v: vector<4xf32>) {
   llvm.return
 }
 
+// CHECK-LABEL: @experimental_constrained_fpext
+llvm.func @experimental_constrained_fpext(%s: f32, %v: vector<4xf32>) {
+  // CHECK: call double @llvm.experimental.constrained.fpext.f64.f32(
+  // CHECK: metadata !"fpexcept.ignore"
+  %0 = llvm.intr.experimental.constrained.fpext %s ignore : f32 to f64
+  // CHECK: call double @llvm.experimental.constrained.fpext.f64.f32(
+  // CHECK: metadata !"fpexcept.maytrap"
+  %1 = llvm.intr.experimental.constrained.fpext %s maytrap : f32 to f64
+  // CHECK: call double @llvm.experimental.constrained.fpext.f64.f32(
+  // CHECK: metadata !"fpexcept.strict"
+  %2 = llvm.intr.experimental.constrained.fpext %s strict : f32 to f64
+  // CHECK: call <4 x double> @llvm.experimental.constrained.fpext.v4f64.v4f32(
+  // CHECK: metadata !"fpexcept.strict"
+  %5 = llvm.intr.experimental.constrained.fpext %v strict : vector<4xf32> to vector<4xf64>
+  llvm.return
+}
+
 // Check that intrinsics are declared with appropriate types.
 // CHECK-DAG: declare float @llvm.fma.f32(float, float, float)
 // CHECK-DAG: declare <8 x float> @llvm.fma.v8f32(<8 x float>, <8 x float>, <8 x float>) #0
@@ -1078,6 +1233,14 @@ llvm.func @experimental_constrained_fptrunc(%s: f64, %v: vector<4xf32>) {
 // CHECK-DAG: declare i1 @llvm.is.fpclass.f32(float, i32 immarg)
 // CHECK-DAG: declare float @llvm.exp.f32(float)
 // CHECK-DAG: declare <8 x float> @llvm.exp.v8f32(<8 x float>) #0
+// CHECK-DAG: declare float @llvm.exp2.f32(float)
+// CHECK-DAG: declare <8 x float> @llvm.exp2.v8f32(<8 x float>)
+// CHECK-DAG: declare float @llvm.exp10.f32(float)
+// CHECK-DAG: declare <8 x float> @llvm.exp10.v8f32(<8 x float>)
+// CHECK-DAG: declare float @llvm.ldexp.f32.i32(float, i32)
+// CHECK-DAG: declare <8 x float> @llvm.ldexp.v8f32.i32(<8 x float>, i32)
+// CHECK-DAG: declare { float, i32 } @llvm.frexp.f32.i32(float)
+// CHECK-DAG: declare { <8 x float>, i32 } @llvm.frexp.v8f32.i32(<8 x float>)
 // CHECK-DAG: declare float @llvm.log.f32(float)
 // CHECK-DAG: declare <8 x float> @llvm.log.v8f32(<8 x float>) #0
 // CHECK-DAG: declare float @llvm.log10.f32(float)
@@ -1233,9 +1396,17 @@ llvm.func @experimental_constrained_fptrunc(%s: f64, %v: vector<4xf32>) {
 // CHECK-DAG: declare void @llvm.invariant.end.p0(ptr, i64 immarg, ptr captures(none))
 
 // CHECK-DAG: declare float @llvm.ssa.copy.f32(float returned)
+// CHECK-DAG: declare ptr @llvm.ptrmask.p0.i64(ptr, i64)
+// CHECK-DAG: declare <8 x ptr> @llvm.ptrmask.v8p0.v8i64(<8 x ptr>, <8 x i64>)
 // CHECK-DAG: declare ptr @llvm.stacksave.p0()
 // CHECK-DAG: declare ptr addrspace(1) @llvm.stacksave.p1()
 // CHECK-DAG: declare void @llvm.stackrestore.p0(ptr)
 // CHECK-DAG: declare void @llvm.stackrestore.p1(ptr addrspace(1))
+// CHECK-DAG: declare float @llvm.experimental.constrained.uitofp.f32.i32(i32, metadata, metadata)
+// CHECK-DAG: declare <4 x float> @llvm.experimental.constrained.uitofp.v4f32.v4i32(<4 x i32>, metadata, metadata)
+// CHECK-DAG: declare float @llvm.experimental.constrained.sitofp.f32.i32(i32, metadata, metadata)
+// CHECK-DAG: declare <4 x float> @llvm.experimental.constrained.sitofp.v4f32.v4i32(<4 x i32>, metadata, metadata)
 // CHECK-DAG: declare float @llvm.experimental.constrained.fptrunc.f32.f64(double, metadata, metadata)
 // CHECK-DAG: declare <4 x half> @llvm.experimental.constrained.fptrunc.v4f16.v4f32(<4 x float>, metadata, metadata)
+// CHECK-DAG: declare double @llvm.experimental.constrained.fpext.f64.f32(float, metadata)
+// CHECK-DAG: declare <4 x double> @llvm.experimental.constrained.fpext.v4f64.v4f32(<4 x float>, metadata)

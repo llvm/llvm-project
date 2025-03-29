@@ -21,6 +21,8 @@ namespace llvm::omp {
 //===----------------------------------------------------------------------===//
 // - top<Directive>Set: The directive appears alone or as the first in a
 //   compound construct.
+// - bottom<Directive>Set: The directive appears alone or as the last in a
+//   compound construct.
 // - all<Directive>Set: All standalone or compound uses of the directive.
 
 static const OmpDirectiveSet topDistributeSet{
@@ -170,6 +172,11 @@ static const OmpDirectiveSet topTeamsSet{
     Directive::OMPD_teams_distribute_parallel_do_simd,
     Directive::OMPD_teams_distribute_simd,
     Directive::OMPD_teams_loop,
+};
+
+static const OmpDirectiveSet bottomTeamsSet{
+    Directive::OMPD_target_teams,
+    Directive::OMPD_teams,
 };
 
 static const OmpDirectiveSet allTeamsSet{

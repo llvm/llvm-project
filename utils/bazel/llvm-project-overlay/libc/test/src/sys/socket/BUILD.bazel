@@ -17,6 +17,9 @@ libc_test(
         "//libc:socket",
         "//libc:close",
     ],
+    deps = [
+        "//libc/test/UnitTest:errno_test_helpers",
+    ],
 )
 
 libc_test(
@@ -25,6 +28,9 @@ libc_test(
     libc_function_deps = [
         "//libc:socketpair",
         "//libc:close",
+    ],
+    deps = [
+        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -37,6 +43,9 @@ libc_test(
         "//libc:recv",
         "//libc:close",
     ],
+    deps = [
+        "//libc/test/UnitTest:errno_test_helpers",
+    ],
 )
 
 libc_test(
@@ -48,6 +57,9 @@ libc_test(
         "//libc:recvfrom",
         "//libc:close",
     ],
+    deps = [
+        "//libc/test/UnitTest:errno_test_helpers",
+    ],
 )
 
 libc_test(
@@ -58,5 +70,8 @@ libc_test(
         "//libc:sendmsg",
         "//libc:recvmsg",
         "//libc:close",
+    ],
+    deps = [
+        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )

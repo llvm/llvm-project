@@ -108,6 +108,14 @@ GetFlattenedSpellings(const Record &Attr) {
       Ret.emplace_back("CXX11", Name, "clang", false, *Spelling);
       if (Spelling->getValueAsBit("AllowInC"))
         Ret.emplace_back("C23", Name, "clang", false, *Spelling);
+    } else if (Variety == "ClangGCC") {
+      Ret.emplace_back("GNU", Name, "", false, *Spelling);
+      Ret.emplace_back("CXX11", Name, "clang", false, *Spelling);
+      Ret.emplace_back("CXX11", Name, "gnu", false, *Spelling);
+      if (Spelling->getValueAsBit("AllowInC")) {
+        Ret.emplace_back("C23", Name, "clang", false, *Spelling);
+        Ret.emplace_back("C23", Name, "gnu", false, *Spelling);
+      }
     } else {
       Ret.push_back(FlattenedSpelling(*Spelling));
     }
@@ -3525,6 +3533,11 @@ void EmitClangAttrPCHRead(const RecordKeeper &Records, raw_ostream &OS) {
       DelayedArgs->writePCHReadArgs(OS);
       OS << ");\n";
     }
+
+    if (Attr->getValueAsBit("HasCustomSerialization"))
+      OS << "    read" << R.getName() << "Attr(cast<" << R.getName()
+         << "Attr>(New));\n";
+
     OS << "    break;\n";
     OS << "  }\n";
   }
@@ -3555,6 +3568,10 @@ void EmitClangAttrPCHWrite(const RecordKeeper &Records, raw_ostream &OS) {
 
     for (const auto *Arg : Args)
       createArgument(*Arg, R.getName())->writePCHWrite(OS);
+
+    if (Attr->getValueAsBit("HasCustomSerialization"))
+      OS << "    Record.Add" << R.getName() << "Attr(SA);\n";
+
     OS << "    break;\n";
     OS << "  }\n";
   }
@@ -4924,6 +4941,9 @@ void EmitClangAttrParsedAttrKinds(const RecordKeeper &Records,
           Matches = &Pragma;
         } else if (Variety == "HLSLAnnotation") {
           Matches = &HLSLAnnotation;
+          if (RawSpelling.compare(RawSpelling.lower()) != 0)
+            PrintError(S.getSpellingRecord().getLoc(),
+                       "HLSLAnnotation Attribute must be lower case.");
         }
 
         assert(Matches && "Unsupported spelling variety found");

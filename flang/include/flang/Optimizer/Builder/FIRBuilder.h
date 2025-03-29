@@ -16,12 +16,12 @@
 #ifndef FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H
 #define FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H
 
-#include "flang/Common/MathOptionsBase.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
+#include "flang/Support/MathOptionsBase.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/DenseMap.h"
@@ -57,7 +57,13 @@ public:
   explicit FirOpBuilder(mlir::Operation *op, fir::KindMapping kindMap,
                         mlir::SymbolTable *symbolTable = nullptr)
       : OpBuilder{op, /*listener=*/this}, kindMap{std::move(kindMap)},
-        symbolTable{symbolTable} {}
+        symbolTable{symbolTable} {
+    auto fmi = mlir::dyn_cast<mlir::arith::ArithFastMathInterface>(*op);
+    if (fmi) {
+      // Set the builder with FastMathFlags attached to the operation.
+      setFastMathFlags(fmi.getFastMathFlagsAttr().getValue());
+    }
+  }
   explicit FirOpBuilder(mlir::OpBuilder &builder, fir::KindMapping kindMap,
                         mlir::SymbolTable *symbolTable = nullptr)
       : OpBuilder(builder), OpBuilder::Listener(), kindMap{std::move(kindMap)},
@@ -378,6 +384,15 @@ public:
                                            llvm::StringRef name,
                                            mlir::FunctionType ty,
                                            mlir::SymbolTable *);
+
+  /// Returns a named function for a Fortran runtime API, creating
+  /// it, if it does not exist in the module yet.
+  /// If \p isIO is set to true, then the function corresponds
+  /// to one of Fortran runtime IO APIs.
+  mlir::func::FuncOp createRuntimeFunction(mlir::Location loc,
+                                           llvm::StringRef name,
+                                           mlir::FunctionType ty,
+                                           bool isIO = false);
 
   /// Cast the input value to IndexType.
   mlir::Value convertToIndexType(mlir::Location loc, mlir::Value val) {
@@ -759,9 +774,19 @@ mlir::Value createZeroValue(fir::FirOpBuilder &builder, mlir::Location loc,
 std::optional<std::int64_t> getExtentFromTriplet(mlir::Value lb, mlir::Value ub,
                                                  mlir::Value stride);
 
+/// Compute the extent value given the lower bound \lb and upper bound \ub.
+/// All inputs must have the same SSA integer type.
+mlir::Value computeExtent(fir::FirOpBuilder &builder, mlir::Location loc,
+                          mlir::Value lb, mlir::Value ub);
+mlir::Value computeExtent(fir::FirOpBuilder &builder, mlir::Location loc,
+                          mlir::Value lb, mlir::Value ub, mlir::Value zero,
+                          mlir::Value one);
+
 /// Generate max(\p value, 0) where \p value is a scalar integer.
 mlir::Value genMaxWithZero(fir::FirOpBuilder &builder, mlir::Location loc,
                            mlir::Value value);
+mlir::Value genMaxWithZero(fir::FirOpBuilder &builder, mlir::Location loc,
+                           mlir::Value value, mlir::Value zero);
 
 /// The type(C_PTR/C_FUNPTR) is defined as the derived type with only one
 /// component of integer 64, and the component is the C address. Get the C

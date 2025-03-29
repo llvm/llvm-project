@@ -7,9 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
+#include "DAPLog.h"
+#include "Handler/RequestHandler.h"
+#include "Handler/ResponseHandler.h"
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
 #include "OutputRedirector.h"
+#include "Protocol/ProtocolBase.h"
+#include "Protocol/ProtocolTypes.h"
+#include "Transport.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBCommandReturnObject.h"
@@ -17,12 +23,15 @@
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
-#include "lldb/Host/FileSystem.h"
+#include "lldb/Utility/IOObject.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -34,7 +43,9 @@
 #include <cstdarg>
 #include <cstdio>
 #include <fstream>
+#include <memory>
 #include <mutex>
+#include <string>
 #include <utility>
 
 #if defined(_WIN32)
@@ -58,12 +69,12 @@ const char DEV_NULL[] = "/dev/null";
 
 namespace lldb_dap {
 
-DAP::DAP(llvm::StringRef path, std::ofstream *log, ReplMode repl_mode,
-         StreamDescriptor input, StreamDescriptor output)
-    : debug_adaptor_path(path), log(log), input(std::move(input)),
-      output(std::move(output)), broadcaster("lldb-dap"),
-      exception_breakpoints(), focus_tid(LLDB_INVALID_THREAD_ID),
-      stop_at_entry(false), is_attach(false),
+DAP::DAP(llvm::StringRef path, Log *log, const ReplMode default_repl_mode,
+         std::vector<std::string> pre_init_commands, Transport &transport)
+    : debug_adapter_path(path), log(log), transport(transport),
+      broadcaster("lldb-dap"), exception_breakpoints(),
+      pre_init_commands(std::move(pre_init_commands)),
+      focus_tid(LLDB_INVALID_THREAD_ID), stop_at_entry(false), is_attach(false),
       enable_auto_variable_summaries(false),
       enable_synthetic_child_debugging(false),
       display_extended_backtrace(false),
@@ -71,7 +82,7 @@ DAP::DAP(llvm::StringRef path, std::ofstream *log, ReplMode repl_mode,
       configuration_done_sent(false), waiting_for_run_in_terminal(false),
       progress_event_reporter(
           [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }),
-      reverse_request_seq(0), repl_mode(repl_mode) {}
+      reverse_request_seq(0), repl_mode(default_repl_mode) {}
 
 DAP::~DAP() = default;
 
@@ -190,99 +201,49 @@ ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const lldb::break_id_t bp_id) {
 llvm::Error DAP::ConfigureIO(std::FILE *overrideOut, std::FILE *overrideErr) {
   in = lldb::SBFile(std::fopen(DEV_NULL, "r"), /*transfer_ownership=*/true);
 
-  if (auto Error = out.RedirectTo([this](llvm::StringRef output) {
+  if (auto Error = out.RedirectTo(overrideOut, [this](llvm::StringRef output) {
         SendOutput(OutputType::Stdout, output);
       }))
     return Error;
 
-  if (overrideOut) {
-    auto fd = out.GetWriteFileDescriptor();
-    if (auto Error = fd.takeError())
-      return Error;
-
-    if (dup2(*fd, fileno(overrideOut)) == -1)
-      return llvm::errorCodeToError(llvm::errnoAsErrorCode());
-  }
-
-  if (auto Error = err.RedirectTo([this](llvm::StringRef output) {
+  if (auto Error = err.RedirectTo(overrideErr, [this](llvm::StringRef output) {
         SendOutput(OutputType::Stderr, output);
       }))
     return Error;
 
-  if (overrideErr) {
-    auto fd = err.GetWriteFileDescriptor();
-    if (auto Error = fd.takeError())
-      return Error;
-
-    if (dup2(*fd, fileno(overrideErr)) == -1)
-      return llvm::errorCodeToError(llvm::errnoAsErrorCode());
-  }
-
   return llvm::Error::success();
 }
 
-void DAP::StopIO() {
-  out.Stop();
-  err.Stop();
-}
-
-// Send the JSON in "json_str" to the "out" stream. Correctly send the
-// "Content-Length:" field followed by the length, followed by the raw
-// JSON bytes.
-void DAP::SendJSON(const std::string &json_str) {
-  output.write_full("Content-Length: ");
-  output.write_full(llvm::utostr(json_str.size()));
-  output.write_full("\r\n\r\n");
-  output.write_full(json_str);
+void DAP::StopEventHandlers() {
+  if (event_thread.joinable()) {
+    broadcaster.BroadcastEventByType(eBroadcastBitStopEventThread);
+    event_thread.join();
+  }
+  if (progress_event_thread.joinable()) {
+    broadcaster.BroadcastEventByType(eBroadcastBitStopProgressThread);
+    progress_event_thread.join();
+  }
 }
 
 // Serialize the JSON value into a string and send the JSON packet to
 // the "out" stream.
 void DAP::SendJSON(const llvm::json::Value &json) {
-  std::string json_str;
-  llvm::raw_string_ostream strm(json_str);
-  strm << json;
-  static std::mutex mutex;
-  std::lock_guard<std::mutex> locker(mutex);
-  SendJSON(json_str);
-
-  if (log) {
-    auto now = std::chrono::duration<double>(
-        std::chrono::system_clock::now().time_since_epoch());
-    *log << llvm::formatv("{0:f9} <-- ", now.count()).str() << std::endl
-         << "Content-Length: " << json_str.size() << "\r\n\r\n"
-         << llvm::formatv("{0:2}", json).str() << std::endl;
+  // FIXME: Instead of parsing the output message from JSON, pass the `Message`
+  // as parameter to `SendJSON`.
+  protocol::Message message;
+  llvm::json::Path::Root root;
+  if (!fromJSON(json, message, root)) {
+    DAP_LOG_ERROR(log, root.getError(), "({1}) encoding failed: {0}",
+                  transport.GetClientName());
+    return;
   }
+  Send(message);
 }
 
-// Read a JSON packet from the "in" stream.
-std::string DAP::ReadJSON() {
-  std::string length_str;
-  std::string json_str;
-  int length;
-
-  if (!input.read_expected(log, "Content-Length: "))
-    return json_str;
-
-  if (!input.read_line(log, length_str))
-    return json_str;
-
-  if (!llvm::to_integer(length_str, length))
-    return json_str;
-
-  if (!input.read_expected(log, "\r\n"))
-    return json_str;
-
-  if (!input.read_full(log, length, json_str))
-    return json_str;
-
-  if (log) {
-    auto now = std::chrono::duration<double>(
-        std::chrono::system_clock::now().time_since_epoch());
-    *log << llvm::formatv("{0:f9} --> ", now.count()).str() << std::endl
-         << "Content-Length: " << length << "\r\n\r\n";
-  }
-  return json_str;
+void DAP::Send(const protocol::Message &message) {
+  if (llvm::Error err = transport.Write(message))
+    DAP_LOG_ERROR(log, std::move(err), "({1}) write failed: {0}",
+                  transport.GetClientName());
 }
 
 // "OutputEvent": {
@@ -513,12 +474,14 @@ ExceptionBreakpoint *DAP::GetExceptionBPFromStopReason(lldb::SBThread &thread) {
 }
 
 lldb::SBThread DAP::GetLLDBThread(const llvm::json::Object &arguments) {
-  auto tid = GetSigned(arguments, "threadId", LLDB_INVALID_THREAD_ID);
+  auto tid = GetInteger<int64_t>(arguments, "threadId")
+                 .value_or(LLDB_INVALID_THREAD_ID);
   return target.GetProcess().GetThreadByID(tid);
 }
 
 lldb::SBFrame DAP::GetLLDBFrame(const llvm::json::Object &arguments) {
-  const uint64_t frame_id = GetUnsigned(arguments, "frameId", UINT64_MAX);
+  const uint64_t frame_id =
+      GetInteger<uint64_t>(arguments, "frameId").value_or(UINT64_MAX);
   lldb::SBProcess process = target.GetProcess();
   // Upper 32 bits is the thread index ID
   lldb::SBThread thread =
@@ -675,9 +638,11 @@ DAP::CreateTargetFromArguments(const llvm::json::Object &arguments,
   // enough information to determine correct arch and platform (or ELF can be
   // omitted at all), so it is good to leave the user an apportunity to specify
   // those. Any of those three can be left empty.
-  llvm::StringRef target_triple = GetString(arguments, "targetTriple");
-  llvm::StringRef platform_name = GetString(arguments, "platformName");
-  llvm::StringRef program = GetString(arguments, "program");
+  const llvm::StringRef target_triple =
+      GetString(arguments, "targetTriple").value_or("");
+  const llvm::StringRef platform_name =
+      GetString(arguments, "platformName").value_or("");
+  const llvm::StringRef program = GetString(arguments, "program").value_or("");
   auto target = this->debugger.CreateTarget(
       program.data(), target_triple.data(), platform_name.data(),
       true, // Add dependent modules.
@@ -707,136 +672,134 @@ void DAP::SetTarget(const lldb::SBTarget target) {
   }
 }
 
-PacketStatus DAP::GetNextObject(llvm::json::Object &object) {
-  std::string json = ReadJSON();
-  if (json.empty())
-    return PacketStatus::EndOfFile;
-
-  llvm::StringRef json_sref(json);
-  llvm::Expected<llvm::json::Value> json_value = llvm::json::parse(json_sref);
-  if (!json_value) {
-    auto error = json_value.takeError();
-    if (log) {
-      std::string error_str;
-      llvm::raw_string_ostream strm(error_str);
-      strm << error;
-      *log << "error: failed to parse JSON: " << error_str << std::endl
-           << json << std::endl;
-    }
-    return PacketStatus::JSONMalformed;
-  }
-
-  if (log) {
-    *log << llvm::formatv("{0:2}", *json_value).str() << std::endl;
-  }
-
-  llvm::json::Object *object_ptr = json_value->getAsObject();
-  if (!object_ptr) {
-    if (log)
-      *log << "error: json packet isn't a object" << std::endl;
-    return PacketStatus::JSONNotObject;
-  }
-  object = *object_ptr;
-  return PacketStatus::Success;
-}
-
-bool DAP::HandleObject(const llvm::json::Object &object) {
-  const auto packet_type = GetString(object, "type");
-  if (packet_type == "request") {
-    const auto command = GetString(object, "command");
-    auto handler_pos = request_handlers.find(command);
-    if (handler_pos == request_handlers.end()) {
-      if (log)
-        *log << "error: unhandled command \"" << command.data() << "\""
-             << std::endl;
-      return false; // Fail
+bool DAP::HandleObject(const protocol::Message &M) {
+  if (const auto *req = std::get_if<protocol::Request>(&M)) {
+    auto handler_pos = request_handlers.find(req->command);
+    if (handler_pos != request_handlers.end()) {
+      (*handler_pos->second)(*req);
+      return true; // Success
     }
 
-    handler_pos->second(*this, object);
-    return true; // Success
+    DAP_LOG(log, "({0}) error: unhandled command '{1}'",
+            transport.GetClientName(), req->command);
+    return false; // Fail
   }
 
-  if (packet_type == "response") {
-    auto id = GetSigned(object, "request_seq", 0);
-    ResponseCallback response_handler = [](llvm::Expected<llvm::json::Value>) {
-      llvm::errs() << "Unhandled response\n";
-    };
-
+  if (const auto *resp = std::get_if<protocol::Response>(&M)) {
+    std::unique_ptr<ResponseHandler> response_handler;
     {
       std::lock_guard<std::mutex> locker(call_mutex);
-      auto inflight = inflight_reverse_requests.find(id);
+      auto inflight = inflight_reverse_requests.find(resp->request_seq);
       if (inflight != inflight_reverse_requests.end()) {
         response_handler = std::move(inflight->second);
         inflight_reverse_requests.erase(inflight);
       }
     }
 
+    if (!response_handler)
+      response_handler =
+          std::make_unique<UnknownResponseHandler>("", resp->request_seq);
+
     // Result should be given, use null if not.
-    if (GetBoolean(object, "success", false)) {
-      llvm::json::Value Result = nullptr;
-      if (auto *B = object.get("body")) {
-        Result = std::move(*B);
-      }
-      response_handler(Result);
+    if (resp->success) {
+      (*response_handler)(resp->body);
     } else {
-      llvm::StringRef message = GetString(object, "message");
-      if (message.empty()) {
-        message = "Unknown error, response failed";
+      llvm::StringRef message = "Unknown error, response failed";
+      if (resp->message) {
+        message =
+            std::visit(llvm::makeVisitor(
+                           [](const std::string &message) -> llvm::StringRef {
+                             return message;
+                           },
+                           [](const protocol::ResponseMessage &message)
+                               -> llvm::StringRef {
+                             switch (message) {
+                             case protocol::eResponseMessageCancelled:
+                               return "cancelled";
+                             case protocol::eResponseMessageNotStopped:
+                               return "notStopped";
+                             }
+                           }),
+                       *resp->message);
       }
-      response_handler(llvm::createStringError(
+
+      (*response_handler)(llvm::createStringError(
           std::error_code(-1, std::generic_category()), message));
     }
 
     return true;
   }
 
+  DAP_LOG(log, "Unsupported protocol message");
+
   return false;
 }
 
+void DAP::SendTerminatedEvent() {
+  // Prevent races if the process exits while we're being asked to disconnect.
+  llvm::call_once(terminated_event_flag, [&] {
+    RunTerminateCommands();
+    // Send a "terminated" event
+    llvm::json::Object event(CreateTerminatedEventObject(target));
+    SendJSON(llvm::json::Value(std::move(event)));
+  });
+}
+
+llvm::Error DAP::Disconnect() { return Disconnect(is_attach); }
+
+llvm::Error DAP::Disconnect(bool terminateDebuggee) {
+  lldb::SBError error;
+  lldb::SBProcess process = target.GetProcess();
+  auto state = process.GetState();
+  switch (state) {
+  case lldb::eStateInvalid:
+  case lldb::eStateUnloaded:
+  case lldb::eStateDetached:
+  case lldb::eStateExited:
+    break;
+  case lldb::eStateConnected:
+  case lldb::eStateAttaching:
+  case lldb::eStateLaunching:
+  case lldb::eStateStepping:
+  case lldb::eStateCrashed:
+  case lldb::eStateSuspended:
+  case lldb::eStateStopped:
+  case lldb::eStateRunning:
+    debugger.SetAsync(false);
+    error = terminateDebuggee ? process.Kill() : process.Detach();
+    debugger.SetAsync(true);
+    break;
+  }
+
+  SendTerminatedEvent();
+
+  disconnecting = true;
+
+  return ToError(error);
+}
+
 llvm::Error DAP::Loop() {
+  auto cleanup = llvm::make_scope_exit([this]() {
+    out.Stop();
+    err.Stop();
+    StopEventHandlers();
+  });
   while (!disconnecting) {
-    llvm::json::Object object;
-    lldb_dap::PacketStatus status = GetNextObject(object);
+    llvm::Expected<std::optional<protocol::Message>> next = transport.Read();
+    if (!next)
+      return next.takeError();
 
-    if (status == lldb_dap::PacketStatus::EndOfFile) {
+    // nullopt on EOF
+    if (!*next)
       break;
-    }
 
-    if (status != lldb_dap::PacketStatus::Success) {
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "failed to send packet");
-    }
-
-    if (!HandleObject(object)) {
+    if (!HandleObject(**next)) {
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "unhandled packet");
     }
   }
 
   return llvm::Error::success();
-}
-
-void DAP::SendReverseRequest(llvm::StringRef command,
-                             llvm::json::Value arguments,
-                             ResponseCallback callback) {
-  int64_t id;
-  {
-    std::lock_guard<std::mutex> locker(call_mutex);
-    id = ++reverse_request_seq;
-    inflight_reverse_requests.emplace(id, std::move(callback));
-  }
-
-  SendJSON(llvm::json::Object{
-      {"type", "request"},
-      {"seq", id},
-      {"command", command},
-      {"arguments", std::move(arguments)},
-  });
-}
-
-void DAP::RegisterRequestCallback(std::string request,
-                                  RequestCallback callback) {
-  request_handlers[request] = callback;
 }
 
 lldb::SBError DAP::WaitForProcessToStop(uint32_t seconds) {
@@ -953,17 +916,10 @@ bool StartDebuggingRequestHandler::DoExecute(
     return false;
   }
 
-  dap.SendReverseRequest(
+  dap.SendReverseRequest<LogFailureResponseHandler>(
       "startDebugging",
       llvm::json::Object{{"request", request},
-                         {"configuration", std::move(*configuration)}},
-      [](llvm::Expected<llvm::json::Value> value) {
-        if (!value) {
-          llvm::Error err = value.takeError();
-          llvm::errs() << "reverse start debugging request failed: "
-                       << llvm::toString(std::move(err)) << "\n";
-        }
-      });
+                         {"configuration", std::move(*configuration)}});
 
   result.SetStatus(lldb::eReturnStatusSuccessFinishNoResult);
 
@@ -1133,6 +1089,98 @@ DAP::GetInstructionBPFromStopReason(lldb::SBThread &thread) {
       return nullptr;
   }
   return inst_bp;
+}
+
+lldb::SBValueList *Variables::GetTopLevelScope(int64_t variablesReference) {
+  switch (variablesReference) {
+  case VARREF_LOCALS:
+    return &locals;
+  case VARREF_GLOBALS:
+    return &globals;
+  case VARREF_REGS:
+    return &registers;
+  default:
+    return nullptr;
+  }
+}
+
+lldb::SBValue Variables::FindVariable(uint64_t variablesReference,
+                                      llvm::StringRef name) {
+  lldb::SBValue variable;
+  if (lldb::SBValueList *top_scope = GetTopLevelScope(variablesReference)) {
+    bool is_duplicated_variable_name = name.contains(" @");
+    // variablesReference is one of our scopes, not an actual variable it is
+    // asking for a variable in locals or globals or registers
+    int64_t end_idx = top_scope->GetSize();
+    // Searching backward so that we choose the variable in closest scope
+    // among variables of the same name.
+    for (int64_t i = end_idx - 1; i >= 0; --i) {
+      lldb::SBValue curr_variable = top_scope->GetValueAtIndex(i);
+      std::string variable_name = CreateUniqueVariableNameForDisplay(
+          curr_variable, is_duplicated_variable_name);
+      if (variable_name == name) {
+        variable = curr_variable;
+        break;
+      }
+    }
+  } else {
+    // This is not under the globals or locals scope, so there are no duplicated
+    // names.
+
+    // We have a named item within an actual variable so we need to find it
+    // withing the container variable by name.
+    lldb::SBValue container = GetVariable(variablesReference);
+    variable = container.GetChildMemberWithName(name.data());
+    if (!variable.IsValid()) {
+      if (name.starts_with("[")) {
+        llvm::StringRef index_str(name.drop_front(1));
+        uint64_t index = 0;
+        if (!index_str.consumeInteger(0, index)) {
+          if (index_str == "]")
+            variable = container.GetChildAtIndex(index);
+        }
+      }
+    }
+  }
+  return variable;
+}
+
+protocol::Capabilities DAP::GetCapabilities() {
+  protocol::Capabilities capabilities;
+
+  // Supported capabilities that are not specific to a single request.
+  capabilities.supportedFeatures = {
+      protocol::eAdapterFeatureLogPoints,
+      protocol::eAdapterFeatureSteppingGranularity,
+      protocol::eAdapterFeatureValueFormattingOptions,
+  };
+
+  // Capabilities associated with specific requests.
+  for (auto &kv : request_handlers) {
+    llvm::SmallDenseSet<AdapterFeature, 1> features =
+        kv.second->GetSupportedFeatures();
+    capabilities.supportedFeatures.insert(features.begin(), features.end());
+  }
+
+  // Available filters or options for the setExceptionBreakpoints request.
+  std::vector<protocol::ExceptionBreakpointsFilter> filters;
+  for (const auto &exc_bp : *exception_breakpoints)
+    filters.emplace_back(CreateExceptionBreakpointFilter(exc_bp));
+  capabilities.exceptionBreakpointFilters = std::move(filters);
+
+  // FIXME: This should be registered based on the supported languages?
+  std::vector<std::string> completion_characters;
+  completion_characters.emplace_back(".");
+  // FIXME: I wonder if we should remove this key... its very aggressive
+  // triggering and accepting completions.
+  completion_characters.emplace_back(" ");
+  completion_characters.emplace_back("\t");
+  capabilities.completionTriggerCharacters = std::move(completion_characters);
+
+  // Put in non-DAP specification lldb specific information.
+  capabilities.lldbExtVersion = debugger.GetVersionString();
+
+  return capabilities;
 }
 
 } // namespace lldb_dap

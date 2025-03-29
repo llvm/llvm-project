@@ -308,7 +308,7 @@ public:
   RecurrenceSet &getFixedOrderRecurrences() { return FixedOrderRecurrences; }
 
   /// Returns the widest induction type.
-  Type *getWidestInductionType() { return WidestIndTy; }
+  IntegerType *getWidestInductionType() { return WidestIndTy; }
 
   /// Returns True if given store is a final invariant store of one of the
   /// reductions found in the loop.
@@ -415,10 +415,6 @@ public:
   /// Returns true if there is at least one function call in the loop which
   /// has a vectorized variant available.
   bool hasVectorCallVariants() const { return VecCallVariantsFound; }
-
-  /// Returns true if there is at least one function call in the loop which
-  /// returns a struct type and needs to be vectorized.
-  bool hasStructVectorCall() const { return StructVecCallFound; }
 
   unsigned getNumStores() const { return LAI->getNumStores(); }
   unsigned getNumLoads() const { return LAI->getNumLoads(); }
@@ -599,7 +595,7 @@ private:
   RecurrenceSet FixedOrderRecurrences;
 
   /// Holds the widest induction type encountered.
-  Type *WidestIndTy = nullptr;
+  IntegerType *WidestIndTy = nullptr;
 
   /// Allowed outside users. This holds the variables that can be accessed from
   /// outside the loop.
@@ -638,12 +634,6 @@ private:
   /// (potentially) make a better decision on the maximum VF and enable
   /// the use of those function variants.
   bool VecCallVariantsFound = false;
-
-  /// If we find a call (to be vectorized) that returns a struct type, record
-  /// that so we can bail out until this is supported.
-  /// TODO: Remove this flag once vectorizing calls with struct returns is
-  /// supported.
-  bool StructVecCallFound = false;
 
   /// Keep track of all the countable and uncountable exiting blocks if
   /// the exact backedge taken count is not computable.

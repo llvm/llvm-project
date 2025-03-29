@@ -303,7 +303,7 @@ define amdgpu_kernel void @mulu24_shl64(ptr addrspace(1) nocapture %arg) {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v5, s1 :: v_dual_mov_b32 v4, s0
 ; GFX11-NEXT:    v_add_co_u32 v2, vcc_lo, v4, v2
-; GFX11-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, v5, v3, vcc_lo
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v3, null, v5, v3, vcc_lo
 ; GFX11-NEXT:    global_store_b32 v[2:3], v1, off
 ; GFX11-NEXT:    s_endpgm
 bb:
@@ -548,32 +548,16 @@ define <2 x i64> @v_shl_v2i64_sext_v2i32(<2 x i32> %x) {
 }
 
 define amdgpu_ps i32 @s_shl_i32_zext_i16(i16 inreg %x) {
-; GFX7-LABEL: s_shl_i32_zext_i16:
-; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_and_b32 s0, s0, 0x3fff
-; GFX7-NEXT:    s_lshl_b32 s0, s0, 2
-; GFX7-NEXT:    s_and_b32 s0, s0, 0xffff
-; GFX7-NEXT:    ; return to shader part epilog
-;
-; GFX8-LABEL: s_shl_i32_zext_i16:
-; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_and_b32 s0, s0, 0x3fff
-; GFX8-NEXT:    s_lshl_b32 s0, s0, 2
-; GFX8-NEXT:    s_and_b32 s0, 0xffff, s0
-; GFX8-NEXT:    ; return to shader part epilog
-;
-; GFX9-LABEL: s_shl_i32_zext_i16:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_and_b32 s0, s0, 0x3fff
-; GFX9-NEXT:    s_lshl_b32 s0, s0, 2
-; GFX9-NEXT:    s_and_b32 s0, 0xffff, s0
-; GFX9-NEXT:    ; return to shader part epilog
+; GCN-LABEL: s_shl_i32_zext_i16:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_and_b32 s0, s0, 0x3fff
+; GCN-NEXT:    s_lshl_b32 s0, s0, 2
+; GCN-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: s_shl_i32_zext_i16:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_and_b32 s0, s0, 0x3fff
 ; GFX10PLUS-NEXT:    s_lshl_b32 s0, s0, 2
-; GFX10PLUS-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
   %and = and i16 %x, 16383
   %ext = zext i16 %and to i32

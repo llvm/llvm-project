@@ -17,25 +17,25 @@ void func_cpp_inc() {}
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: function 'func_cpp_inc'
 // CHECK-FIXES: static void func_cpp_inc() {}
 
-int* func_cpp_inc_return_ptr() {}
+int* func_cpp_inc_return_ptr() { return nullptr; }
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: function 'func_cpp_inc_return_ptr'
-// CHECK-FIXES: static int* func_cpp_inc_return_ptr() {}
+// CHECK-FIXES: static int* func_cpp_inc_return_ptr() { return nullptr; }
 
-const int* func_cpp_inc_return_const_ptr() {}
+const int* func_cpp_inc_return_const_ptr() { return nullptr; }
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: function 'func_cpp_inc_return_const_ptr'
-// CHECK-FIXES: static const int* func_cpp_inc_return_const_ptr() {}
+// CHECK-FIXES: static const int* func_cpp_inc_return_const_ptr() { return nullptr; }
 
-int const* func_cpp_inc_return_ptr_const() {}
+int const* func_cpp_inc_return_ptr_const() { return nullptr; }
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: function 'func_cpp_inc_return_ptr_const'
-// CHECK-FIXES: static int const* func_cpp_inc_return_ptr_const() {}
+// CHECK-FIXES: static int const* func_cpp_inc_return_ptr_const() { return nullptr; }
 
-int * const func_cpp_inc_return_const() {}
+int * const func_cpp_inc_return_const() { return nullptr; }
 // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: function 'func_cpp_inc_return_const'
-// CHECK-FIXES: static int * const func_cpp_inc_return_const() {}
+// CHECK-FIXES: static int * const func_cpp_inc_return_const() { return nullptr; }
 
-volatile const int* func_cpp_inc_return_volatile_const_ptr() {}
+volatile const int* func_cpp_inc_return_volatile_const_ptr() { return nullptr; }
 // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: function 'func_cpp_inc_return_volatile_const_ptr'
-// CHECK-FIXES: static volatile const int* func_cpp_inc_return_volatile_const_ptr() {}
+// CHECK-FIXES: static volatile const int* func_cpp_inc_return_volatile_const_ptr() { return nullptr; }
 
 [[nodiscard]] void func_nodiscard() {}
 // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: function 'func_nodiscard'

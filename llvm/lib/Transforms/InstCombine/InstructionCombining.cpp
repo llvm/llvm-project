@@ -33,6 +33,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstCombineInternal.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -93,6 +94,7 @@
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -3586,10 +3588,25 @@ Instruction *InstCombinerImpl::visitFree(CallInst &FI, Value *Op) {
 
 Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
   Value *RetVal = RI.getReturnValue();
-  if (!RetVal || !AttributeFuncs::isNoFPClassCompatibleType(RetVal->getType()))
+  if (!RetVal)
     return nullptr;
 
   Function *F = RI.getFunction();
+  Type *RetTy = RetVal->getType();
+  if (RetTy->isPointerTy()) {
+    bool HasDereferenceable =
+        F->getAttributes().getRetDereferenceableBytes() > 0;
+    if (F->hasRetAttribute(Attribute::NonNull) ||
+        (HasDereferenceable &&
+         !NullPointerIsDefined(F, RetTy->getPointerAddressSpace()))) {
+      if (Value *V = simplifyNonNullOperand(RetVal, HasDereferenceable))
+        return replaceOperand(RI, 0, V);
+    }
+  }
+
+  if (!AttributeFuncs::isNoFPClassCompatibleType(RetTy))
+    return nullptr;
+
   FPClassTest ReturnClass = F->getAttributes().getRetNoFPClass();
   if (ReturnClass == fcNone)
     return nullptr;
@@ -3640,20 +3657,15 @@ Instruction *InstCombinerImpl::visitUnconditionalBranchInst(BranchInst &BI) {
   assert(BI.isUnconditional() && "Only for unconditional branches.");
 
   // If this store is the second-to-last instruction in the basic block
-  // (excluding debug info and bitcasts of pointers) and if the block ends with
+  // (excluding debug info) and if the block ends with
   // an unconditional branch, try to move the store to the successor block.
 
   auto GetLastSinkableStore = [](BasicBlock::iterator BBI) {
-    auto IsNoopInstrForStoreMerging = [](BasicBlock::iterator BBI) {
-      return BBI->isDebugOrPseudoInst() ||
-             (isa<BitCastInst>(BBI) && BBI->getType()->isPointerTy());
-    };
-
     BasicBlock::iterator FirstInstr = BBI->getParent()->begin();
     do {
       if (BBI != FirstInstr)
         --BBI;
-    } while (BBI != FirstInstr && IsNoopInstrForStoreMerging(BBI));
+    } while (BBI != FirstInstr && BBI->isDebugOrPseudoInst());
 
     return dyn_cast<StoreInst>(BBI);
   };
@@ -4069,6 +4081,49 @@ InstCombinerImpl::foldExtractOfOverflowIntrinsic(ExtractValueInst &EV) {
   return nullptr;
 }
 
+static Value *foldFrexpOfSelect(ExtractValueInst &EV, IntrinsicInst *FrexpCall,
+                                SelectInst *SelectInst,
+                                InstCombiner::BuilderTy &Builder) {
+  // Helper to fold frexp of select to select of frexp.
+
+  if (!SelectInst->hasOneUse() || !FrexpCall->hasOneUse())
+    return nullptr;
+  Value *Cond = SelectInst->getCondition();
+  Value *TrueVal = SelectInst->getTrueValue();
+  Value *FalseVal = SelectInst->getFalseValue();
+
+  const APFloat *ConstVal = nullptr;
+  Value *VarOp = nullptr;
+  bool ConstIsTrue = false;
+
+  if (match(TrueVal, m_APFloat(ConstVal))) {
+    VarOp = FalseVal;
+    ConstIsTrue = true;
+  } else if (match(FalseVal, m_APFloat(ConstVal))) {
+    VarOp = TrueVal;
+    ConstIsTrue = false;
+  } else {
+    return nullptr;
+  }
+
+  Builder.SetInsertPoint(&EV);
+
+  CallInst *NewFrexp =
+      Builder.CreateCall(FrexpCall->getCalledFunction(), {VarOp}, "frexp");
+  NewFrexp->copyIRFlags(FrexpCall);
+
+  Value *NewEV = Builder.CreateExtractValue(NewFrexp, 0, "mantissa");
+
+  int Exp;
+  APFloat Mantissa = frexp(*ConstVal, Exp, APFloat::rmNearestTiesToEven);
+
+  Constant *ConstantMantissa = ConstantFP::get(TrueVal->getType(), Mantissa);
+
+  Value *NewSel = Builder.CreateSelectFMF(
+      Cond, ConstIsTrue ? ConstantMantissa : NewEV,
+      ConstIsTrue ? NewEV : ConstantMantissa, SelectInst, "select.frexp");
+  return NewSel;
+}
 Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
   Value *Agg = EV.getAggregateOperand();
 
@@ -4079,6 +4134,15 @@ Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
                                           SQ.getWithInstruction(&EV)))
     return replaceInstUsesWith(EV, V);
 
+  Value *Cond, *TrueVal, *FalseVal;
+  if (match(&EV, m_ExtractValue<0>(m_Intrinsic<Intrinsic::frexp>(m_Select(
+                     m_Value(Cond), m_Value(TrueVal), m_Value(FalseVal)))))) {
+    auto *SelInst =
+        cast<SelectInst>(cast<IntrinsicInst>(Agg)->getArgOperand(0));
+    if (Value *Result =
+            foldFrexpOfSelect(EV, cast<IntrinsicInst>(Agg), SelInst, Builder))
+      return replaceInstUsesWith(EV, Result);
+  }
   if (InsertValueInst *IV = dyn_cast<InsertValueInst>(Agg)) {
     // We're extracting from an insertvalue instruction, compare the indices
     const unsigned *exti, *exte, *insi, *inse;
@@ -4749,19 +4813,23 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
   //
   // TODO: This could use getBinopAbsorber() / getBinopIdentity() to avoid
   //       duplicating logic for binops at least.
-  auto getUndefReplacement = [&I](Type *Ty) {
-    Constant *BestValue = nullptr;
-    Constant *NullValue = Constant::getNullValue(Ty);
+  auto getUndefReplacement = [&](Type *Ty) {
+    Value *BestValue = nullptr;
+    Value *NullValue = Constant::getNullValue(Ty);
     for (const auto *U : I.users()) {
-      Constant *C = NullValue;
+      Value *V = NullValue;
       if (match(U, m_Or(m_Value(), m_Value())))
-        C = ConstantInt::getAllOnesValue(Ty);
+        V = ConstantInt::getAllOnesValue(Ty);
       else if (match(U, m_Select(m_Specific(&I), m_Constant(), m_Value())))
-        C = ConstantInt::getTrue(Ty);
+        V = ConstantInt::getTrue(Ty);
+      else if (match(U, m_c_Select(m_Specific(&I), m_Value(V)))) {
+        if (!isGuaranteedNotToBeUndefOrPoison(V, &AC, &I, &DT))
+          V = NullValue;
+      }
 
       if (!BestValue)
-        BestValue = C;
-      else if (BestValue != C)
+        BestValue = V;
+      else if (BestValue != V)
         BestValue = NullValue;
     }
     assert(BestValue && "Must have at least one use");
@@ -4777,10 +4845,28 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
     return replaceInstUsesWith(I, getUndefReplacement(I.getType()));
   }
 
+  auto getFreezeVectorReplacement = [](Constant *C) -> Constant * {
+    Type *Ty = C->getType();
+    auto *VTy = dyn_cast<FixedVectorType>(Ty);
+    if (!VTy)
+      return nullptr;
+    unsigned NumElts = VTy->getNumElements();
+    Constant *BestValue = Constant::getNullValue(VTy->getScalarType());
+    for (unsigned i = 0; i != NumElts; ++i) {
+      Constant *EltC = C->getAggregateElement(i);
+      if (EltC && !match(EltC, m_Undef())) {
+        BestValue = EltC;
+        break;
+      }
+    }
+    return Constant::replaceUndefsWith(C, BestValue);
+  };
+
   Constant *C;
-  if (match(Op0, m_Constant(C)) && C->containsUndefOrPoisonElement()) {
-    Constant *ReplaceC = getUndefReplacement(I.getType()->getScalarType());
-    return replaceInstUsesWith(I, Constant::replaceUndefsWith(C, ReplaceC));
+  if (match(Op0, m_Constant(C)) && C->containsUndefOrPoisonElement() &&
+      !C->containsConstantExpression()) {
+    if (Constant *Repl = getFreezeVectorReplacement(C))
+      return replaceInstUsesWith(I, Repl);
   }
 
   // Replace uses of Op with freeze(Op).

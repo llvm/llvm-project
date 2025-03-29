@@ -106,10 +106,6 @@ void addTo(StringMap<ExecutorAddr> &M) {
       ExecutorAddr::fromPtr(&writeBuffersWrapper);
   M[rt::MemoryWritePointersWrapperName] =
       ExecutorAddr::fromPtr(&writePointersWrapper);
-  M[rt::RegisterEHFrameSectionWrapperName] =
-      ExecutorAddr::fromPtr(&llvm_orc_registerEHFrameSectionWrapper);
-  M[rt::DeregisterEHFrameSectionWrapperName] =
-      ExecutorAddr::fromPtr(&llvm_orc_deregisterEHFrameSectionWrapper);
   M[rt::RunAsMainWrapperName] = ExecutorAddr::fromPtr(&runAsMainWrapper);
   M[rt::RunAsVoidFunctionWrapperName] =
       ExecutorAddr::fromPtr(&runAsVoidFunctionWrapper);

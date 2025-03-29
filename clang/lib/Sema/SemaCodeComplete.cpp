@@ -5796,24 +5796,11 @@ QualType getApproximateType(const Expr *E, HeuristicResolver &Resolver) {
         return QualType(Common, 0);
     }
   }
-  // A dependent member: approximate-resolve the base, then lookup.
+  // A dependent member: resolve using HeuristicResolver.
   if (const auto *CDSME = llvm::dyn_cast<CXXDependentScopeMemberExpr>(E)) {
-    QualType Base = CDSME->isImplicitAccess()
-                        ? CDSME->getBaseType()
-                        : getApproximateType(CDSME->getBase(), Resolver);
-    if (CDSME->isArrow() && !Base.isNull())
-      Base = Base->getPointeeType(); // could handle unique_ptr etc here?
-    auto *RD =
-        Base.isNull()
-            ? nullptr
-            : llvm::dyn_cast_or_null<CXXRecordDecl>(getAsRecordDecl(Base));
-    if (RD && RD->isCompleteDefinition()) {
-      // Look up member heuristically, including in bases.
-      for (const auto *Member : RD->lookupDependentName(
-               CDSME->getMember(), [](const NamedDecl *Member) {
-                 return llvm::isa<ValueDecl>(Member);
-               })) {
-        return llvm::cast<ValueDecl>(Member)->getType().getNonReferenceType();
+    for (const auto *Member : Resolver.resolveMemberExpr(CDSME)) {
+      if (const auto *VD = dyn_cast<ValueDecl>(Member)) {
+        return VD->getType().getNonReferenceType();
       }
     }
   }
@@ -6242,8 +6229,8 @@ static void mergeCandidatesWithResults(
   // Sort the overload candidate set by placing the best overloads first.
   llvm::stable_sort(CandidateSet, [&](const OverloadCandidate &X,
                                       const OverloadCandidate &Y) {
-    return isBetterOverloadCandidate(SemaRef, X, Y, Loc,
-                                     CandidateSet.getKind());
+    return isBetterOverloadCandidate(SemaRef, X, Y, Loc, CandidateSet.getKind(),
+                                     /*PartialOverloading=*/true);
   });
 
   // Add the remaining viable overload candidates as code-completion results.
@@ -6760,6 +6747,52 @@ void SemaCodeCompletion::CodeCompleteInitializer(Scope *S, Decl *D) {
   Data.IgnoreDecls.push_back(VD);
 
   CodeCompleteExpression(S, Data);
+}
+
+void SemaCodeCompletion::CodeCompleteKeywordAfterIf(bool AfterExclaim) const {
+  ResultBuilder Results(SemaRef, CodeCompleter->getAllocator(),
+                        CodeCompleter->getCodeCompletionTUInfo(),
+                        CodeCompletionContext::CCC_Other);
+  CodeCompletionBuilder Builder(Results.getAllocator(),
+                                Results.getCodeCompletionTUInfo());
+  if (getLangOpts().CPlusPlus17) {
+    if (!AfterExclaim) {
+      if (Results.includeCodePatterns()) {
+        Builder.AddTypedTextChunk("constexpr");
+        Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+        Builder.AddChunk(CodeCompletionString::CK_LeftParen);
+        Builder.AddPlaceholderChunk("condition");
+        Builder.AddChunk(CodeCompletionString::CK_RightParen);
+        Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+        Builder.AddChunk(CodeCompletionString::CK_LeftBrace);
+        Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+        Builder.AddPlaceholderChunk("statements");
+        Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+        Builder.AddChunk(CodeCompletionString::CK_RightBrace);
+        Results.AddResult({Builder.TakeString()});
+      } else {
+        Results.AddResult({"constexpr"});
+      }
+    }
+  }
+  if (getLangOpts().CPlusPlus23) {
+    if (Results.includeCodePatterns()) {
+      Builder.AddTypedTextChunk("consteval");
+      Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+      Builder.AddChunk(CodeCompletionString::CK_LeftBrace);
+      Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+      Builder.AddPlaceholderChunk("statements");
+      Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+      Builder.AddChunk(CodeCompletionString::CK_RightBrace);
+      Results.AddResult({Builder.TakeString()});
+    } else {
+      Results.AddResult({"consteval"});
+    }
+  }
+
+  HandleCodeCompleteResults(&SemaRef, CodeCompleter,
+                            Results.getCompletionContext(), Results.data(),
+                            Results.size());
 }
 
 void SemaCodeCompletion::CodeCompleteAfterIf(Scope *S, bool IsBracedThen) {

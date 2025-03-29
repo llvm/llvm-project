@@ -86,7 +86,7 @@ class LLVM_TernarySameArgsIntrOpF<string func, list<Trait> traits = []> :
 
 class LLVM_CountZerosIntrOp<string func, list<Trait> traits = []> :
     LLVM_OneResultIntrOp<func, [], [0],
-           !listconcat([Pure], traits),
+           !listconcat([Pure, SameOperandsAndResultType], traits),
             /*requiresFastmath=*/0,
             /*immArgPositions=*/[1], /*immArgAttrNames=*/["is_zero_poison"]> {
   let arguments = (ins LLVM_ScalarOrVectorOf<AnySignlessInteger>:$in,
@@ -106,10 +106,30 @@ def LLVM_IsFPClass : LLVM_OneResultIntrOp<"is.fpclass", [], [0], [Pure],
   let arguments = (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$in, I32Attr:$bit);
 }
 
+class LLVM_PowFI<string func> :
+    LLVM_OneResultIntrOp<func, [], [0,1],
+        [Pure], /*requiresFastmath=*/1> {
+    let arguments =
+        (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$val,
+            AnySignlessInteger:$power,
+            DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
+    let assemblyFormat = "`(` operands `)` attr-dict `:` "
+            "functional-type(operands, results)";
+}
+
 def LLVM_CopySignOp : LLVM_BinarySameArgsIntrOpF<"copysign">;
-def LLVM_CosOp : LLVM_UnaryIntrOpF<"cos">;
 def LLVM_ExpOp : LLVM_UnaryIntrOpF<"exp">;
 def LLVM_Exp2Op : LLVM_UnaryIntrOpF<"exp2">;
+def LLVM_Exp10Op : LLVM_UnaryIntrOpF<"exp10">;
+def LLVM_LoadExpOp : LLVM_PowFI<"ldexp">;
+def LLVM_FractionExpOp : LLVM_TwoResultIntrOp<"frexp", [0, 1], [],
+    [Pure], /*requiresFastmath=*/1> {
+    let arguments =
+        (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$val,
+        DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
+    let assemblyFormat = "`(` operands `)` attr-dict `:` "
+        "functional-type(operands, results)";
+}
 def LLVM_FAbsOp : LLVM_UnaryIntrOpF<"fabs">;
 def LLVM_FCeilOp : LLVM_UnaryIntrOpF<"ceil">;
 def LLVM_FFloorOp : LLVM_UnaryIntrOpF<"floor">;
@@ -125,21 +145,12 @@ def LLVM_Prefetch : LLVM_ZeroResultIntrOp<"prefetch", [0],
 > {
   let arguments = (ins LLVM_AnyPointer:$addr, I32Attr:$rw, I32Attr:$hint, I32Attr:$cache);
 }
-def LLVM_SinOp : LLVM_UnaryIntrOpF<"sin">;
 def LLVM_RoundEvenOp : LLVM_UnaryIntrOpF<"roundeven">;
 def LLVM_RoundOp : LLVM_UnaryIntrOpF<"round">;
 def LLVM_FTruncOp : LLVM_UnaryIntrOpF<"trunc">;
 def LLVM_SqrtOp : LLVM_UnaryIntrOpF<"sqrt">;
 def LLVM_PowOp : LLVM_BinarySameArgsIntrOpF<"pow">;
-def LLVM_PowIOp : LLVM_OneResultIntrOp<"powi", [], [0,1],
-                                       [Pure], /*requiresFastmath=*/1> {
-  let arguments =
-      (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$val,
-           AnySignlessInteger:$power,
-           DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
-  let assemblyFormat = "`(` operands `)` attr-dict `:` "
-      "functional-type(operands, results)";
-}
+def LLVM_PowIOp : LLVM_PowFI<"powi">;
 def LLVM_RintOp : LLVM_UnaryIntrOpF<"rint">;
 def LLVM_NearbyintOp : LLVM_UnaryIntrOpF<"nearbyint">;
 class LLVM_IntRoundIntrOpBase<string func> :
@@ -167,6 +178,16 @@ def LLVM_SMaxOp : LLVM_BinarySameArgsIntrOpI<"smax">;
 def LLVM_SMinOp : LLVM_BinarySameArgsIntrOpI<"smin">;
 def LLVM_UMaxOp : LLVM_BinarySameArgsIntrOpI<"umax">;
 def LLVM_UMinOp : LLVM_BinarySameArgsIntrOpI<"umin">;
+
+def LLVM_SinOp : LLVM_UnaryIntrOpF<"sin">;
+def LLVM_CosOp : LLVM_UnaryIntrOpF<"cos">;
+def LLVM_TanOp : LLVM_UnaryIntrOpF<"tan">;
+
+def LLVM_ASinOp : LLVM_UnaryIntrOpF<"asin">;
+def LLVM_ACosOp : LLVM_UnaryIntrOpF<"acos">;
+def LLVM_ATanOp : LLVM_UnaryIntrOpF<"atan">;
+def LLVM_ATan2Op : LLVM_BinarySameArgsIntrOpF<"atan2">;
+
 def LLVM_SinhOp : LLVM_UnaryIntrOpF<"sinh">;
 def LLVM_CoshOp : LLVM_UnaryIntrOpF<"cosh">;
 def LLVM_TanhOp : LLVM_UnaryIntrOpF<"tanh">;
@@ -307,6 +328,16 @@ def LLVM_NoAliasScopeDeclOp
   let assemblyFormat = "$scope attr-dict";
 }
 
+def LLVM_PtrMaskOp
+  : LLVM_OneResultIntrOp<"ptrmask", [], [0, 1],
+                          [Pure, AllTypesMatch<["ptr", "res"]>]> {
+  let arguments = (ins LLVM_ScalarOrVectorOf<LLVM_AnyPointer>:$ptr,
+                   LLVM_ScalarOrVectorOf<AnyInteger>:$mask);
+  let results = (outs LLVM_ScalarOrVectorOf<LLVM_AnyPointer>:$res);
+
+  let assemblyFormat = "$ptr `,` $mask attr-dict `:` functional-type(operands, results)";
+}
+
 //
 // Memory marker intrinsics.
 //
@@ -440,12 +471,39 @@ class LLVM_ConstrainedIntr<string mnem, int numArgs,
   }];
 }
 
+def LLVM_ConstrainedUIToFP
+    : LLVM_ConstrainedIntr<"uitofp", /*numArgs=*/1,
+        /*overloadedResult=*/1, /*overloadedOperands=*/[0],
+        /*hasRoundingMode=*/1> {
+    let assemblyFormat = [{
+        $arg_0 $roundingmode $fpExceptionBehavior attr-dict `:` type($arg_0) `to` type(results)
+    }];
+}
+
+def LLVM_ConstrainedSIToFP
+    : LLVM_ConstrainedIntr<"sitofp", /*numArgs=*/1,
+        /*overloadedResult=*/1, /*overloadedOperands=*/[0],
+        /*hasRoundingMode=*/1> {
+    let assemblyFormat = [{
+        $arg_0 $roundingmode $fpExceptionBehavior attr-dict `:` type($arg_0) `to` type(results)
+    }];
+}
+
 def LLVM_ConstrainedFPTruncIntr
     : LLVM_ConstrainedIntr<"fptrunc", /*numArgs=*/1,
         /*overloadedResult=*/1, /*overloadedOperands=*/[0],
         /*hasRoundingMode=*/1> {
   let assemblyFormat = [{
     $arg_0 $roundingmode $fpExceptionBehavior attr-dict `:` type($arg_0) `to` type(results)
+  }];
+}
+
+def LLVM_ConstrainedFPExtIntr
+    : LLVM_ConstrainedIntr<"fpext", /*numArgs=*/1,
+        /*overloadedResult=*/1, /*overloadedOperands=*/[0],
+        /*hasRoundingMode=*/0> {
+  let assemblyFormat = [{
+    $arg_0 $fpExceptionBehavior attr-dict `:` type($arg_0) `to` type(results)
   }];
 }
 

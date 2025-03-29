@@ -18,6 +18,7 @@
 #include "clang/Basic/OpenACCKinds.h"
 
 #include <utility>
+#include <variant>
 
 namespace clang {
 /// This is the base type for all OpenACC Clauses.
@@ -162,6 +163,26 @@ public:
     return const_child_range(const_child_iterator(), const_child_iterator());
   }
 };
+// Represents the 'nohost' clause.
+class OpenACCNoHostClause : public OpenACCClause {
+protected:
+  OpenACCNoHostClause(SourceLocation BeginLoc, SourceLocation EndLoc)
+      : OpenACCClause(OpenACCClauseKind::NoHost, BeginLoc, EndLoc) {}
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::NoHost;
+  }
+  static OpenACCNoHostClause *
+  Create(const ASTContext &Ctx, SourceLocation BeginLoc, SourceLocation EndLoc);
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+};
 
 /// Represents a clause that has a list of parameters.
 class OpenACCClauseWithParams : public OpenACCClause {
@@ -185,6 +206,56 @@ public:
     return const_child_range(const_child_iterator(), const_child_iterator());
   }
 };
+
+class OpenACCBindClause final : public OpenACCClauseWithParams {
+  std::variant<const StringLiteral *, const IdentifierInfo *> Argument;
+
+  OpenACCBindClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                    const clang::StringLiteral *SL, SourceLocation EndLoc)
+      : OpenACCClauseWithParams(OpenACCClauseKind::Bind, BeginLoc, LParenLoc,
+                                EndLoc),
+        Argument(SL) {}
+  OpenACCBindClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                    const IdentifierInfo *ID, SourceLocation EndLoc)
+      : OpenACCClauseWithParams(OpenACCClauseKind::Bind, BeginLoc, LParenLoc,
+                                EndLoc),
+        Argument(ID) {}
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Bind;
+  }
+  static OpenACCBindClause *Create(const ASTContext &C, SourceLocation BeginLoc,
+                                   SourceLocation LParenLoc,
+                                   const IdentifierInfo *ID,
+                                   SourceLocation EndLoc);
+  static OpenACCBindClause *Create(const ASTContext &C, SourceLocation BeginLoc,
+                                   SourceLocation LParenLoc,
+                                   const StringLiteral *SL,
+                                   SourceLocation EndLoc);
+
+  bool isStringArgument() const {
+    return std::holds_alternative<const StringLiteral *>(Argument);
+  }
+
+  const StringLiteral *getStringArgument() const {
+    return std::get<const StringLiteral *>(Argument);
+  }
+
+  bool isIdentifierArgument() const {
+    return std::holds_alternative<const IdentifierInfo *>(Argument);
+  }
+
+  const IdentifierInfo *getIdentifierArgument() const {
+    return std::get<const IdentifierInfo *>(Argument);
+  }
+};
+
+bool operator==(const OpenACCBindClause &LHS, const OpenACCBindClause &RHS);
+inline bool operator!=(const OpenACCBindClause &LHS,
+                       const OpenACCBindClause &RHS) {
+  return !(LHS == RHS);
+}
 
 using DeviceTypeArgument = std::pair<IdentifierInfo *, SourceLocation>;
 /// A 'device_type' or 'dtype' clause, takes a list of either an 'asterisk' or
@@ -1169,6 +1240,55 @@ public:
          SourceLocation EndLoc);
 
   OpenACCReductionOperator getReductionOp() const { return Op; }
+};
+
+class OpenACCLinkClause final
+    : public OpenACCClauseWithVarList,
+      private llvm::TrailingObjects<OpenACCLinkClause, Expr *> {
+  friend TrailingObjects;
+
+  OpenACCLinkClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                    ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+      : OpenACCClauseWithVarList(OpenACCClauseKind::Link, BeginLoc, LParenLoc,
+                                 EndLoc) {
+    std::uninitialized_copy(VarList.begin(), VarList.end(),
+                            getTrailingObjects<Expr *>());
+    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+  }
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Link;
+  }
+
+  static OpenACCLinkClause *Create(const ASTContext &C, SourceLocation BeginLoc,
+                                   SourceLocation LParenLoc,
+                                   ArrayRef<Expr *> VarList,
+                                   SourceLocation EndLoc);
+};
+
+class OpenACCDeviceResidentClause final
+    : public OpenACCClauseWithVarList,
+      private llvm::TrailingObjects<OpenACCDeviceResidentClause, Expr *> {
+  friend TrailingObjects;
+
+  OpenACCDeviceResidentClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                              ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+      : OpenACCClauseWithVarList(OpenACCClauseKind::DeviceResident, BeginLoc,
+                                 LParenLoc, EndLoc) {
+    std::uninitialized_copy(VarList.begin(), VarList.end(),
+                            getTrailingObjects<Expr *>());
+    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+  }
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::DeviceResident;
+  }
+
+  static OpenACCDeviceResidentClause *
+  Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
+         ArrayRef<Expr *> VarList, SourceLocation EndLoc);
 };
 
 template <class Impl> class OpenACCClauseVisitor {

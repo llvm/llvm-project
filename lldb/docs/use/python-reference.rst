@@ -411,7 +411,7 @@ will use your resolver, but will only recurse into or accept new locations in
 the module a.out.
 
 Another option for creating scripted breakpoints is to use the
-SBTarget.CreateBreakpointFromScript API. This one has the advantage that you
+SBTarget.BreakpointCreateFromScript API. This one has the advantage that you
 can pass in an arbitrary SBStructuredData object, so you can create more
 complex parametrizations. SBStructuredData has a handy SetFromJSON method which
 you can use for this purpose. Your __init__ function gets passed this
