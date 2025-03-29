@@ -142,6 +142,8 @@ Changes to the RISC-V Backend
   extension.
 * Adds experimental assembler support for the Qualcomm uC 'Xqcisync` (Sync Delay)
   extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqciio` (External Input Output)
+  extension.
 * Adds assembler support for the 'Zilsd` (Load/Store Pair Instructions)
   extension.
 * Adds assembler support for the 'Zclsd` (Compressed Load/Store Pair Instructions)
@@ -152,6 +154,9 @@ Changes to the RISC-V Backend
   handlers.
 * When the experimental extension `Xqcili` is enabled, `qc.e.li` and `qc.li` may
   now be used to materialize immediates.
+* Adds assembler support for ``.option exact``, which disables automatic compression,
+  and branch and linker relaxation. This can be disabled with ``.option noexact``,
+  which is also the default.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -211,6 +216,10 @@ Changes to LLDB
   Windows 11 on the Microsoft SQ2 and Snapdragon Elite X platforms.
 * LLDB now steps through C++ thunks. This fixes an issue where previously, it
   wouldn't step into multiple inheritance virtual functions.
+* A statusline was added to command-line LLDB to show progress events and
+  information about the current state of the debugger at the bottom of the
+  terminal. This is on by default and can be configured using the
+  `show-statusline` and `statusline-format` settings.
 
 ### Changes to lldb-dap
 
