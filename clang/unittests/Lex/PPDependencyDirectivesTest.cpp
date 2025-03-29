@@ -116,8 +116,8 @@ TEST_F(PPDependencyDirectivesTest, MacroGuard) {
     return llvm::ArrayRef(DepDirectivesObjects.back()->Directives);
   };
 
-  auto PPOpts = std::make_shared<PreprocessorOptions>();
-  PPOpts->DependencyDirectivesForFile = [&](FileEntryRef File)
+  PreprocessorOptions PPOpts;
+  PPOpts.DependencyDirectivesForFile = [&](FileEntryRef File)
       -> std::optional<ArrayRef<dependency_directives_scan::Directive>> {
     return getDependencyDirectives(File);
   };
