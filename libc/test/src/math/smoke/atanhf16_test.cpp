@@ -22,9 +22,7 @@ TEST_F(LlvmLibcAtanhf16Test, SpecialNumbers) {
   EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::atanhf16(zero));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(
-      -0.0f,
-      LIBC_NAMESPACE::atanhf16(LIBC_NAMESPACE::fputil::cast<float16>(-0.0f)));
+  EXPECT_FP_EQ_ALL_ROUNDING(neg_zero, LIBC_NAMESPACE::atanhf16(neg_zero));
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ_WITH_EXCEPTION(
