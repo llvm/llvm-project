@@ -70,8 +70,7 @@ Error EHFrameEdgeFixer::operator()(LinkGraph &G) {
   // Sort eh-frame blocks into address order to ensure we visit CIEs before
   // their child FDEs.
   std::vector<Block *> EHFrameBlocks;
-  for (auto *B : EHFrame->blocks())
-    EHFrameBlocks.push_back(B);
+  llvm::append_range(EHFrameBlocks, EHFrame->blocks());
   llvm::sort(EHFrameBlocks, [](const Block *LHS, const Block *RHS) {
     return LHS->getAddress() < RHS->getAddress();
   });

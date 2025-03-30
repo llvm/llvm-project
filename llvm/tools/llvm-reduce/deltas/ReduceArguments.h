@@ -20,7 +20,7 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 
 namespace llvm {
-void reduceArgumentsDeltaPass(TestRunner &Test);
+void reduceArgumentsDeltaPass(Oracle &O, ReducerWorkItem &WorkItem);
 } // namespace llvm
 
 #endif
