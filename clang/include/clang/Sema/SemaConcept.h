@@ -31,10 +31,10 @@ enum { ConstraintAlignment = 8 };
 
 struct alignas(ConstraintAlignment) AtomicConstraint {
   const Expr *ConstraintExpr;
-  NamedDecl *ConstraintDecl;
+  const NamedDecl *ConstraintDecl;
   std::optional<ArrayRef<TemplateArgumentLoc>> ParameterMapping;
 
-  AtomicConstraint(const Expr *ConstraintExpr, NamedDecl *ConstraintDecl)
+  AtomicConstraint(const Expr *ConstraintExpr, const NamedDecl *ConstraintDecl)
       : ConstraintExpr(ConstraintExpr), ConstraintDecl(ConstraintDecl) {};
 
   bool hasMatchingParameterMapping(ASTContext &C,
@@ -114,9 +114,9 @@ struct NormalizedConstraint {
 
 private:
   static std::optional<NormalizedConstraint>
-  fromConstraintExprs(Sema &S, NamedDecl *D, ArrayRef<const Expr *> E);
+  fromConstraintExprs(Sema &S, const NamedDecl *D, ArrayRef<const Expr *> E);
   static std::optional<NormalizedConstraint>
-  fromConstraintExpr(Sema &S, NamedDecl *D, const Expr *E);
+  fromConstraintExpr(Sema &S, const NamedDecl *D, const Expr *E);
 };
 
 struct alignas(ConstraintAlignment) NormalizedConstraintPair {
@@ -137,7 +137,7 @@ struct alignas(ConstraintAlignment) FoldExpandedConstraint {
 };
 
 const NormalizedConstraint *getNormalizedAssociatedConstraints(
-    Sema &S, NamedDecl *ConstrainedDecl,
+    Sema &S, const NamedDecl *ConstrainedDecl,
     ArrayRef<const Expr *> AssociatedConstraints);
 
 /// \brief SubsumptionChecker establishes subsumption
@@ -149,8 +149,8 @@ public:
 
   SubsumptionChecker(Sema &SemaRef, SubsumptionCallable Callable = {});
 
-  std::optional<bool> Subsumes(NamedDecl *DP, ArrayRef<const Expr *> P,
-                               NamedDecl *DQ, ArrayRef<const Expr *> Q);
+  std::optional<bool> Subsumes(const NamedDecl *DP, ArrayRef<const Expr *> P,
+                               const NamedDecl *DQ, ArrayRef<const Expr *> Q);
 
   bool Subsumes(const NormalizedConstraint *P, const NormalizedConstraint *Q);
 
