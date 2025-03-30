@@ -786,14 +786,11 @@ std::enable_if_t<std::is_signed_v<T>, bool> MulOverflow(T X, T Y, T &Result) {
   U AbsResult = AbsX * AbsY;
   Result = IsNegative ? static_cast<T>(0-AbsResult) : static_cast<T>(AbsResult);
   
-  
-  
   // Handle INT_MIN * -1 overflow case explicitly
   if ((X == std::numeric_limits<T>::min() && Y == -1) ||
       (Y == std::numeric_limits<T>::min() && X == -1)) {
     return true;  // overflow
   }
-
 
   U Limit = IsNegative ? MaxNegative : MaxPositive;
 
