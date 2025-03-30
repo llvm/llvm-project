@@ -35,12 +35,13 @@ AST_MATCHER(Type, isChar) {
 
 UnintendedCharOstreamOutputCheck::UnintendedCharOstreamOutputCheck(
     StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context), CastTypeName(Options.get("CastTypeName")) {
-}
+    : ClangTidyCheck(Name, Context), CastTypeName(Options.get("CastTypeName")),
+      WarnOnExplicitCast(Options.get("WarnOnExplicitCast", true)) {}
 void UnintendedCharOstreamOutputCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   if (CastTypeName.has_value())
     Options.store(Opts, "CastTypeName", CastTypeName.value());
+  Options.store(Opts, "WarnOnExplicitCast", WarnOnExplicitCast);
 }
 
 void UnintendedCharOstreamOutputCheck::registerMatchers(MatchFinder *Finder) {
@@ -50,13 +51,17 @@ void UnintendedCharOstreamOutputCheck::registerMatchers(MatchFinder *Finder) {
                     // with char / unsigned char / signed char
                     classTemplateSpecializationDecl(
                         hasTemplateArgument(0, refersToType(isChar()))));
+  auto IsNumbericCharType =
+      hasType(hasUnqualifiedDesugaredType(isNumericChar()));
   Finder->addMatcher(
       cxxOperatorCallExpr(
           hasOverloadedOperatorName("<<"),
           hasLHS(hasType(hasUnqualifiedDesugaredType(
               recordType(hasDeclaration(cxxRecordDecl(
                   anyOf(BasicOstream, isDerivedFrom(BasicOstream)))))))),
-          hasRHS(hasType(hasUnqualifiedDesugaredType(isNumericChar()))))
+          hasRHS(WarnOnExplicitCast
+                     ? expr(IsNumbericCharType)
+                     : expr(IsNumbericCharType, unless(explicitCastExpr()))))
           .bind("x"),
       this);
 }
