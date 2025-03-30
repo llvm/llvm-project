@@ -209,6 +209,7 @@ public:
   }
 
   POPCNTDKind hasPOPCNTD() const { return HasPOPCNTD; }
+  bool useCRBits() const;
 
   const Triple &getTargetTriple() const { return TargetTriple; }
 

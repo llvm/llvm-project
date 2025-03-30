@@ -26,6 +26,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/PPCTargetParser.h"
@@ -147,6 +148,14 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
     report_fatal_error("The aix-shared-lib-tls-model-opt attribute "
                        "is only supported on AIX in 64-bit mode.\n",
                        false);
+}
+
+bool PPCSubtarget::useCRBits() const {
+  if (!hasCRBits())
+    return false;
+  if (CPUDirective >= PPC::DIR_PWR8 && CPUDirective <= PPC::DIR_PWR_FUTURE)
+    return true;
+  return TM.getOptLevel() >= CodeGenOptLevel::Default;
 }
 
 bool PPCSubtarget::enableMachineScheduler() const { return true; }
