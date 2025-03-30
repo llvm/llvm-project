@@ -671,15 +671,15 @@ static constexpr FeatureBitset XRivosFeatureGroup = {
 };
 
 static constexpr FeatureBitset XqciFeatureGroup = {
-    RISCV::FeatureVendorXqcia,    RISCV::FeatureVendorXqciac,
-    RISCV::FeatureVendorXqcibi,   RISCV::FeatureVendorXqcibm,
-    RISCV::FeatureVendorXqcicli,  RISCV::FeatureVendorXqcicm,
-    RISCV::FeatureVendorXqcics,   RISCV::FeatureVendorXqcicsr,
-    RISCV::FeatureVendorXqciint,  RISCV::FeatureVendorXqcilb,
-    RISCV::FeatureVendorXqcili,   RISCV::FeatureVendorXqcilia,
-    RISCV::FeatureVendorXqcilo,   RISCV::FeatureVendorXqcilsm,
-    RISCV::FeatureVendorXqcisim,  RISCV::FeatureVendorXqcisls,
-    RISCV::FeatureVendorXqcisync,
+    RISCV::FeatureVendorXqcia,   RISCV::FeatureVendorXqciac,
+    RISCV::FeatureVendorXqcibi,  RISCV::FeatureVendorXqcibm,
+    RISCV::FeatureVendorXqcicli, RISCV::FeatureVendorXqcicm,
+    RISCV::FeatureVendorXqcics,  RISCV::FeatureVendorXqcicsr,
+    RISCV::FeatureVendorXqciint, RISCV::FeatureVendorXqciio,
+    RISCV::FeatureVendorXqcilb,  RISCV::FeatureVendorXqcili,
+    RISCV::FeatureVendorXqcilia, RISCV::FeatureVendorXqcilo,
+    RISCV::FeatureVendorXqcilsm, RISCV::FeatureVendorXqcisim,
+    RISCV::FeatureVendorXqcisls, RISCV::FeatureVendorXqcisync,
 };
 
 static constexpr FeatureBitset XSfVectorGroup = {

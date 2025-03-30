@@ -152,7 +152,7 @@ void initializeLazyValueInfoWrapperPassPass(PassRegistry &);
 void initializeLegacyLICMPassPass(PassRegistry &);
 void initializeLegalizerPass(PassRegistry &);
 void initializeGISelCSEAnalysisWrapperPassPass(PassRegistry &);
-void initializeGISelKnownBitsAnalysisPass(PassRegistry &);
+void initializeGISelValueTrackingAnalysisPass(PassRegistry &);
 void initializeLiveDebugValuesLegacyPass(PassRegistry &);
 void initializeLiveDebugVariablesWrapperLegacyPass(PassRegistry &);
 void initializeLiveIntervalsWrapperPassPass(PassRegistry &);
