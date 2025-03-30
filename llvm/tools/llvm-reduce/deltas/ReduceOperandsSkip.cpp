@@ -194,7 +194,7 @@ opportunities(Function &F,
   }
 }
 
-static void extractOperandsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
+void llvm::reduceOperandsSkipDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
   Module &Program = WorkItem.getModule();
 
   for (Function &F : Program.functions()) {
@@ -228,9 +228,4 @@ static void extractOperandsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
         P.first->set(P.second);
     }
   }
-}
-
-void llvm::reduceOperandsSkipDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, extractOperandsFromModule,
-               "Reducing operands by skipping over instructions");
 }
