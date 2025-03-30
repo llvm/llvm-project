@@ -38,7 +38,7 @@ public:
     VK_CALL_PLT,
     VK_32_PCREL,
     VK_GOTPCREL,
-    VK_PLT,
+    VK_PLTPCREL,
     VK_TLSDESC_HI,
     VK_TLSDESC_LOAD_LO,
     VK_TLSDESC_ADD_LO,

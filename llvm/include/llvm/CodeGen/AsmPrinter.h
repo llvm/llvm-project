@@ -497,7 +497,10 @@ public:
                      unsigned MaxBytesToEmit = 0) const;
 
   /// Lower the specified LLVM Constant to an MCExpr.
-  virtual const MCExpr *lowerConstant(const Constant *CV);
+  /// When BaseCV is present, we are lowering the element at BaseCV plus Offset.
+  virtual const MCExpr *lowerConstant(const Constant *CV,
+                                      const Constant *BaseCV = nullptr,
+                                      uint64_t Offset = 0);
 
   /// Print a general LLVM constant to the .s file.
   /// On AIX, when an alias refers to a sub-element of a global variable, the
