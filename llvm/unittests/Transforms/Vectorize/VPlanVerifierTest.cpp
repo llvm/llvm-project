@@ -8,6 +8,7 @@
 
 #include "../lib/Transforms/Vectorize/VPlanVerifier.h"
 #include "../lib/Transforms/Vectorize/VPlan.h"
+#include "../lib/Transforms/Vectorize/VPlanCFG.h"
 #include "VPlanTestBase.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"

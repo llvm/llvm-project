@@ -296,7 +296,10 @@ enum OperandType : unsigned {
   OPERAND_UIMM5,
   OPERAND_UIMM5_NONZERO,
   OPERAND_UIMM5_GT3,
+  OPERAND_UIMM5_PLUS1,
+  OPERAND_UIMM5_GE6_PLUS1,
   OPERAND_UIMM5_LSB0,
+  OPERAND_UIMM5_SLIST,
   OPERAND_UIMM6,
   OPERAND_UIMM6_LSB0,
   OPERAND_UIMM7,
@@ -312,6 +315,7 @@ enum OperandType : unsigned {
   OPERAND_UIMM11,
   OPERAND_UIMM12,
   OPERAND_UIMM16,
+  OPERAND_UIMM16_NONZERO,
   OPERAND_UIMM20,
   OPERAND_UIMMLOG2XLEN,
   OPERAND_UIMMLOG2XLEN_NONZERO,
@@ -320,12 +324,16 @@ enum OperandType : unsigned {
   OPERAND_UIMM64,
   OPERAND_ZERO,
   OPERAND_SIMM5,
+  OPERAND_SIMM5_NONZERO,
   OPERAND_SIMM5_PLUS1,
   OPERAND_SIMM6,
   OPERAND_SIMM6_NONZERO,
   OPERAND_SIMM10_LSB0000_NONZERO,
+  OPERAND_SIMM11,
   OPERAND_SIMM12,
   OPERAND_SIMM12_LSB00000,
+  OPERAND_SIMM16_NONZERO,
+  OPERAND_SIMM20,
   OPERAND_SIMM26,
   OPERAND_SIMM32,
   OPERAND_CLUI_IMM,
@@ -335,6 +343,8 @@ enum OperandType : unsigned {
   OPERAND_RVKRNUM_0_7,
   OPERAND_RVKRNUM_1_10,
   OPERAND_RVKRNUM_2_14,
+  OPERAND_RLIST,
+  OPERAND_RLIST_S0,
   OPERAND_SPIMM,
   // Operand is a 3-bit rounding mode, '111' indicates FRM register.
   // Represents 'frm' argument passing to floating-point operations.
@@ -617,8 +627,6 @@ inline unsigned encodeRlist(MCRegister EndReg, bool IsRV32E = false) {
     return RLISTENCODE::RA_S0_S8;
   case RISCV::X25:
     return RLISTENCODE::RA_S0_S9;
-  case RISCV::X26:
-    return RLISTENCODE::INVALID_RLIST;
   case RISCV::X27:
     return RLISTENCODE::RA_S0_S11;
   default:
@@ -626,52 +634,25 @@ inline unsigned encodeRlist(MCRegister EndReg, bool IsRV32E = false) {
   }
 }
 
+inline static unsigned encodeRlistNumRegs(unsigned NumRegs) {
+  assert(NumRegs > 0 && NumRegs < 14 && NumRegs != 12 &&
+         "Unexpected number of registers");
+  if (NumRegs == 13)
+    return RLISTENCODE::RA_S0_S11;
+
+  return RLISTENCODE::RA + (NumRegs - 1);
+}
+
 inline static unsigned getStackAdjBase(unsigned RlistVal, bool IsRV64) {
   assert(RlistVal != RLISTENCODE::INVALID_RLIST &&
          "{ra, s0-s10} is not supported, s11 must be included.");
-  if (!IsRV64) {
-    switch (RlistVal) {
-    case RLISTENCODE::RA:
-    case RLISTENCODE::RA_S0:
-    case RLISTENCODE::RA_S0_S1:
-    case RLISTENCODE::RA_S0_S2:
-      return 16;
-    case RLISTENCODE::RA_S0_S3:
-    case RLISTENCODE::RA_S0_S4:
-    case RLISTENCODE::RA_S0_S5:
-    case RLISTENCODE::RA_S0_S6:
-      return 32;
-    case RLISTENCODE::RA_S0_S7:
-    case RLISTENCODE::RA_S0_S8:
-    case RLISTENCODE::RA_S0_S9:
-      return 48;
-    case RLISTENCODE::RA_S0_S11:
-      return 64;
-    }
-  } else {
-    switch (RlistVal) {
-    case RLISTENCODE::RA:
-    case RLISTENCODE::RA_S0:
-      return 16;
-    case RLISTENCODE::RA_S0_S1:
-    case RLISTENCODE::RA_S0_S2:
-      return 32;
-    case RLISTENCODE::RA_S0_S3:
-    case RLISTENCODE::RA_S0_S4:
-      return 48;
-    case RLISTENCODE::RA_S0_S5:
-    case RLISTENCODE::RA_S0_S6:
-      return 64;
-    case RLISTENCODE::RA_S0_S7:
-    case RLISTENCODE::RA_S0_S8:
-      return 80;
-    case RLISTENCODE::RA_S0_S9:
-      return 96;
-    case RLISTENCODE::RA_S0_S11:
-      return 112;
-    }
-  }
-  llvm_unreachable("Unexpected RlistVal");
+  unsigned NumRegs = (RlistVal - RLISTENCODE::RA) + 1;
+  // s10 and s11 are saved together.
+  if (RlistVal == RLISTENCODE::RA_S0_S11)
+    ++NumRegs;
+
+  unsigned RegSize = IsRV64 ? 8 : 4;
+  return alignTo(NumRegs * RegSize, 16);
 }
 
 void printRlist(unsigned SlistEncode, raw_ostream &OS);

@@ -27,7 +27,7 @@ target triple = "x86_64-grtev4-linux-gnu"
 
 ;; For function @cold_func
 ; CHECK:       .section	.rodata.cst8.hot,"aM",@progbits,8
-; CHECK-NEXT:      .p2align 
+; CHECK-NEXT:      .p2align
 ; CHECK-NEXT:    .LCPI0_0:
 ; CHECK-NEXT:	     .quad	0x3fe5c28f5c28f5c3              # double 0.68000000000000005
 ; CHECK-NEXT:  .section	.rodata.cst8.unlikely,"aM",@progbits,8
@@ -41,7 +41,7 @@ target triple = "x86_64-grtev4-linux-gnu"
 
 ;; For function @unprofiled_func_double
 ; CHECK:       .section        .rodata.cst8,"aM",@progbits,8
-; CHECK-NEXT:      .p2align       
+; CHECK-NEXT:      .p2align
 ; CHECK-NEXT:    .LCPI1_0:
 ; CHECK-NEXT:     .quad   0x3fc0000000000000              # double 0.125
 

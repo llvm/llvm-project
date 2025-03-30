@@ -274,7 +274,7 @@ void CustomSection::writeTo(uint8_t *buf) {
 uint32_t CustomSection::getNumRelocations() const {
   uint32_t count = 0;
   for (const InputChunk *inputSect : inputSections)
-    count += inputSect->getNumRelocations();
+    count += inputSect->getNumLiveRelocations();
   return count;
 }
 

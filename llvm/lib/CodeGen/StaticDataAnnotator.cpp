@@ -11,7 +11,10 @@
 // StaticDataSplitter pass.
 //
 // The StaticDataSplitter pass is a machine function pass. It analyzes data
-// hotness based on code and adds counters in the StaticDataProfileInfo.
+// hotness based on code and adds counters in StaticDataProfileInfo via its
+// wrapper pass StaticDataProfileInfoWrapper.
+// The StaticDataProfileInfoWrapper sits in the middle between the
+// StaticDataSplitter and StaticDataAnnotator passes.
 // The StaticDataAnnotator pass is a module pass. It iterates global variables
 // in the module, looks up counters from StaticDataProfileInfo and sets the
 // section prefix based on profiles.
@@ -38,6 +41,8 @@
 
 using namespace llvm;
 
+/// A module pass which iterates global variables in the module and annotates
+/// their section prefixes based on profile-driven analysis.
 class StaticDataAnnotator : public ModulePass {
 public:
   static char ID;
@@ -61,14 +66,6 @@ public:
   bool runOnModule(Module &M) override;
 };
 
-// Returns true if the global variable already has a section prefix that is the
-// same as `Prefix`.
-static bool alreadyHasSectionPrefix(const GlobalVariable &GV,
-                                    StringRef Prefix) {
-  std::optional<StringRef> SectionPrefix = GV.getSectionPrefix();
-  return SectionPrefix && (*SectionPrefix == Prefix);
-}
-
 bool StaticDataAnnotator::runOnModule(Module &M) {
   SDPI = &getAnalysis<StaticDataProfileInfoWrapperPass>()
               .getStaticDataProfileInfo();
@@ -82,28 +79,21 @@ bool StaticDataAnnotator::runOnModule(Module &M) {
     if (GV.isDeclarationForLinker())
       continue;
 
-    // Skip global variables without profile counts. The module may not be
-    // profiled or instrumented.
-    auto Count = SDPI->getConstantProfileCount(&GV);
-    if (!Count)
+    // The implementation below assumes prior passes don't set section prefixes,
+    // and specifically do 'assign' rather than 'update'. So report error if a
+    // section prefix is already set.
+    if (auto maybeSectionPrefix = GV.getSectionPrefix();
+        maybeSectionPrefix && !maybeSectionPrefix->empty())
+      llvm::report_fatal_error("Global variable " + GV.getName() +
+                               " already has a section prefix " +
+                               *maybeSectionPrefix);
+
+    StringRef SectionPrefix = SDPI->getConstantSectionPrefix(&GV, PSI);
+    if (SectionPrefix.empty())
       continue;
 
-    if (PSI->isHotCount(*Count) && !alreadyHasSectionPrefix(GV, "hot")) {
-      // The variable counter is hot, set 'hot' section prefix if the section
-      // prefix isn't hot already.
-      GV.setSectionPrefix("hot");
-      Changed = true;
-    } else if (PSI->isColdCount(*Count) && !SDPI->hasUnknownCount(&GV) &&
-               !alreadyHasSectionPrefix(GV, "unlikely")) {
-      // The variable counter is cold, set 'unlikely' section prefix when
-      // 1) the section prefix isn't unlikely already, and
-      // 2) the variable is not seen without profile counts. The reason is that
-      // a variable without profile counts doesn't have all its uses profiled,
-      // for example when a function is not instrumented, or not sampled (new
-      // code paths).
-      GV.setSectionPrefix("unlikely");
-      Changed = true;
-    }
+    GV.setSectionPrefix(SectionPrefix);
+    Changed = true;
   }
 
   return Changed;

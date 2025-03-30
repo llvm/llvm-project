@@ -98,7 +98,7 @@ class MPICHImplTraits : public MPIImplTraits {
 public:
   using MPIImplTraits::MPIImplTraits;
 
-  virtual ~MPICHImplTraits() = default;
+  ~MPICHImplTraits() override = default;
 
   Value getCommWorld(const Location loc,
                      ConversionPatternRewriter &rewriter) override {
@@ -156,7 +156,7 @@ class OMPIImplTraits : public MPIImplTraits {
 public:
   using MPIImplTraits::MPIImplTraits;
 
-  virtual ~OMPIImplTraits() = default;
+  ~OMPIImplTraits() override = default;
 
   Value getCommWorld(const Location loc,
                      ConversionPatternRewriter &rewriter) override {

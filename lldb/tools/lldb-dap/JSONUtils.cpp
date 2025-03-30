@@ -70,64 +70,46 @@ llvm::StringRef GetAsString(const llvm::json::Value &value) {
 }
 
 // Gets a string from a JSON object using the key, or returns an empty string.
-llvm::StringRef GetString(const llvm::json::Object &obj, llvm::StringRef key,
-                          llvm::StringRef defaultValue) {
-  if (std::optional<llvm::StringRef> value = obj.getString(key))
-    return *value;
-  return defaultValue;
+std::optional<llvm::StringRef> GetString(const llvm::json::Object &obj,
+                                         llvm::StringRef key) {
+  return obj.getString(key);
 }
 
-llvm::StringRef GetString(const llvm::json::Object *obj, llvm::StringRef key,
-                          llvm::StringRef defaultValue) {
+std::optional<llvm::StringRef> GetString(const llvm::json::Object *obj,
+                                         llvm::StringRef key) {
   if (obj == nullptr)
-    return defaultValue;
-  return GetString(*obj, key, defaultValue);
+    return std::nullopt;
+
+  return GetString(*obj, key);
 }
 
-// Gets an unsigned integer from a JSON object using the key, or returns the
-// specified fail value.
-uint64_t GetUnsigned(const llvm::json::Object &obj, llvm::StringRef key,
-                     uint64_t fail_value) {
-  if (auto value = obj.getInteger(key))
-    return (uint64_t)*value;
-  return fail_value;
-}
-
-uint64_t GetUnsigned(const llvm::json::Object *obj, llvm::StringRef key,
-                     uint64_t fail_value) {
-  if (obj == nullptr)
-    return fail_value;
-  return GetUnsigned(*obj, key, fail_value);
-}
-
-bool GetBoolean(const llvm::json::Object &obj, llvm::StringRef key,
-                bool fail_value) {
+std::optional<bool> GetBoolean(const llvm::json::Object &obj,
+                               llvm::StringRef key) {
   if (auto value = obj.getBoolean(key))
     return *value;
   if (auto value = obj.getInteger(key))
     return *value != 0;
-  return fail_value;
+  return std::nullopt;
 }
 
-bool GetBoolean(const llvm::json::Object *obj, llvm::StringRef key,
-                bool fail_value) {
+std::optional<bool> GetBoolean(const llvm::json::Object *obj,
+                               llvm::StringRef key) {
+  if (obj != nullptr)
+    return GetBoolean(*obj, key);
+  return std::nullopt;
+}
+
+std::optional<int64_t> GetSigned(const llvm::json::Object &obj,
+                                 llvm::StringRef key) {
+  return obj.getInteger(key);
+}
+
+std::optional<int64_t> GetSigned(const llvm::json::Object *obj,
+                                 llvm::StringRef key) {
   if (obj == nullptr)
-    return fail_value;
-  return GetBoolean(*obj, key, fail_value);
-}
+    return std::nullopt;
 
-int64_t GetSigned(const llvm::json::Object &obj, llvm::StringRef key,
-                  int64_t fail_value) {
-  if (auto value = obj.getInteger(key))
-    return *value;
-  return fail_value;
-}
-
-int64_t GetSigned(const llvm::json::Object *obj, llvm::StringRef key,
-                  int64_t fail_value) {
-  if (obj == nullptr)
-    return fail_value;
-  return GetSigned(*obj, key, fail_value);
+  return GetSigned(*obj, key);
 }
 
 bool ObjectContainsKey(const llvm::json::Object &obj, llvm::StringRef key) {
@@ -279,8 +261,9 @@ void FillResponse(const llvm::json::Object &request,
   // to true by default.
   response.try_emplace("type", "response");
   response.try_emplace("seq", (int64_t)0);
-  EmplaceSafeString(response, "command", GetString(request, "command"));
-  const int64_t seq = GetSigned(request, "seq", 0);
+  EmplaceSafeString(response, "command",
+                    GetString(request, "command").value_or(""));
+  const int64_t seq = GetSigned(request, "seq").value_or(0);
   response.try_emplace("request_seq", seq);
   response.try_emplace("success", true);
 }
@@ -574,35 +557,13 @@ llvm::json::Object CreateEventObject(const llvm::StringRef event_name) {
   return event;
 }
 
-// "ExceptionBreakpointsFilter": {
-//   "type": "object",
-//   "description": "An ExceptionBreakpointsFilter is shown in the UI as an
-//                   option for configuring how exceptions are dealt with.",
-//   "properties": {
-//     "filter": {
-//       "type": "string",
-//       "description": "The internal ID of the filter. This value is passed
-//                       to the setExceptionBreakpoints request."
-//     },
-//     "label": {
-//       "type": "string",
-//       "description": "The name of the filter. This will be shown in the UI."
-//     },
-//     "default": {
-//       "type": "boolean",
-//       "description": "Initial value of the filter. If not specified a value
-//                       'false' is assumed."
-//     }
-//   },
-//   "required": [ "filter", "label" ]
-// }
-llvm::json::Value
+protocol::ExceptionBreakpointsFilter
 CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp) {
-  llvm::json::Object object;
-  EmplaceSafeString(object, "filter", bp.filter);
-  EmplaceSafeString(object, "label", bp.label);
-  object.try_emplace("default", bp.default_value);
-  return llvm::json::Value(std::move(object));
+  protocol::ExceptionBreakpointsFilter filter;
+  filter.filter = bp.filter;
+  filter.label = bp.label;
+  filter.defaultState = bp.default_value;
+  return filter;
 }
 
 // "Source": {
@@ -1003,6 +964,9 @@ llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
     break;
   case lldb::eStopReasonProcessorTrace:
     body.try_emplace("reason", "processor trace");
+    break;
+  case lldb::eStopReasonHistoryBoundary:
+    body.try_emplace("reason", "history boundary");
     break;
   case lldb::eStopReasonSignal:
   case lldb::eStopReasonException:
@@ -1453,13 +1417,14 @@ CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
     args.push_back(std::to_string(debugger_pid));
   }
   args.push_back("--launch-target");
-  args.push_back(GetString(launch_request_arguments, "program").str());
+  args.push_back(
+      GetString(launch_request_arguments, "program").value_or("").str());
   std::vector<std::string> target_args =
       GetStrings(launch_request_arguments, "args");
   args.insert(args.end(), target_args.begin(), target_args.end());
   run_in_terminal_args.try_emplace("args", args);
 
-  const auto cwd = GetString(launch_request_arguments, "cwd");
+  const auto cwd = GetString(launch_request_arguments, "cwd").value_or("");
   if (!cwd.empty())
     run_in_terminal_args.try_emplace("cwd", cwd);
 
@@ -1540,7 +1505,8 @@ static void addStatistic(lldb::SBTarget &target, llvm::json::Object &event) {
     const char *key = keys.GetStringAtIndex(i);
     FilterAndGetValueForKey(statistics, key, stats_body);
   }
-  event.try_emplace("statistics", std::move(stats_body));
+  llvm::json::Object body{{"$__lldb_statistics", std::move(stats_body)}};
+  event.try_emplace("body", std::move(body));
 }
 
 llvm::json::Object CreateTerminatedEventObject(lldb::SBTarget &target) {

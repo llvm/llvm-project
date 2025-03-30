@@ -522,7 +522,7 @@ bool LLParser::parseTargetDefinitions(DataLayoutCallbackTy DataLayoutCallback) {
   // Run the override callback to potentially change the data layout string, and
   // parse the data layout string.
   if (auto LayoutOverride =
-          DataLayoutCallback(M->getTargetTriple(), TentativeDLStr)) {
+          DataLayoutCallback(M->getTargetTriple().str(), TentativeDLStr)) {
     TentativeDLStr = *LayoutOverride;
     DLStrLoc = {};
   }
@@ -646,7 +646,7 @@ bool LLParser::parseTargetDefinition(std::string &TentativeDLStr,
     if (parseToken(lltok::equal, "expected '=' after target triple") ||
         parseStringConstant(Str))
       return true;
-    M->setTargetTriple(Str);
+    M->setTargetTriple(Triple(Str));
     return false;
   case lltok::kw_datalayout:
     Lex.Lex();
@@ -942,7 +942,8 @@ bool LLParser::parseMDNodeID(MDNode *&Result) {
     return true;
 
   // If not a forward reference, just return it now.
-  if (auto It = NumberedMetadata.find(MID); It != NumberedMetadata.end()) {
+  auto [It, Inserted] = NumberedMetadata.try_emplace(MID);
+  if (!Inserted) {
     Result = It->second;
     return false;
   }
@@ -952,7 +953,7 @@ bool LLParser::parseMDNodeID(MDNode *&Result) {
   FwdRef = std::make_pair(MDTuple::getTemporary(Context, {}), IDLoc);
 
   Result = FwdRef.first.get();
-  NumberedMetadata[MID].reset(Result);
+  It->second.reset(Result);
   return false;
 }
 
@@ -2215,6 +2216,7 @@ void LLParser::parseOptionalDLLStorageClass(unsigned &Res) {
 ///   ::= 'm68k_rtdcc'
 ///   ::= 'graalcc'
 ///   ::= 'riscv_vector_cc'
+///   ::= 'riscv_vls_cc'
 ///   ::= 'cc' UINT
 ///
 bool LLParser::parseOptionalCallingConv(unsigned &CC) {
@@ -2291,6 +2293,37 @@ bool LLParser::parseOptionalCallingConv(unsigned &CC) {
   case lltok::kw_riscv_vector_cc:
     CC = CallingConv::RISCV_VectorCall;
     break;
+  case lltok::kw_riscv_vls_cc:
+    // Default ABI_VLEN
+    CC = CallingConv::RISCV_VLSCall_128;
+    Lex.Lex();
+    if (!EatIfPresent(lltok::lparen))
+      break;
+    uint32_t ABIVlen;
+    if (parseUInt32(ABIVlen) || !EatIfPresent(lltok::rparen))
+      return true;
+    switch (ABIVlen) {
+    default:
+      return tokError("unknown RISC-V ABI VLEN");
+#define CC_VLS_CASE(ABIVlen)                                                   \
+  case ABIVlen:                                                                \
+    CC = CallingConv::RISCV_VLSCall_##ABIVlen;                                 \
+    break;
+      CC_VLS_CASE(32)
+      CC_VLS_CASE(64)
+      CC_VLS_CASE(128)
+      CC_VLS_CASE(256)
+      CC_VLS_CASE(512)
+      CC_VLS_CASE(1024)
+      CC_VLS_CASE(2048)
+      CC_VLS_CASE(4096)
+      CC_VLS_CASE(8192)
+      CC_VLS_CASE(16384)
+      CC_VLS_CASE(32768)
+      CC_VLS_CASE(65536)
+#undef CC_VLS_CASE
+    }
+    return false;
   case lltok::kw_cc: {
       Lex.Lex();
       return parseUInt32(CC);
@@ -5580,7 +5613,8 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(rank, MDSignedOrMDField, );                                         \
   OPTIONAL(annotations, MDField, );                                            \
   OPTIONAL(num_extra_inhabitants, MDUnsignedField, (0, UINT32_MAX));           \
-  OPTIONAL(specification, MDField, );
+  OPTIONAL(specification, MDField, );                                          \
+  OPTIONAL(bitStride, MDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -5603,7 +5637,8 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
             specification.Val, num_extra_inhabitants.Val, flags.Val,
             elements.Val, runtimeLang.Val, EnumKind, vtableHolder.Val,
             templateParams.Val, discriminator.Val, dataLocation.Val,
-            associated.Val, allocated.Val, Rank, annotations.Val)) {
+            associated.Val, allocated.Val, Rank, annotations.Val,
+            bitStride.Val)) {
       Result = CT;
       return false;
     }
@@ -5617,7 +5652,7 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
        runtimeLang.Val, EnumKind, vtableHolder.Val, templateParams.Val,
        identifier.Val, discriminator.Val, dataLocation.Val, associated.Val,
        allocated.Val, Rank, annotations.Val, specification.Val,
-       num_extra_inhabitants.Val));
+       num_extra_inhabitants.Val, bitStride.Val));
   return false;
 }
 

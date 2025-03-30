@@ -31,9 +31,8 @@ using namespace llvm;
 
 enum UncheckedLdStMode { UncheckedNever, UncheckedSafe, UncheckedAlways };
 
-cl::opt<UncheckedLdStMode> ClUncheckedLdSt(
-    "stack-tagging-unchecked-ld-st", cl::Hidden,
-    cl::init(UncheckedSafe),
+static cl::opt<UncheckedLdStMode> ClUncheckedLdSt(
+    "stack-tagging-unchecked-ld-st", cl::Hidden, cl::init(UncheckedSafe),
     cl::desc(
         "Unconditionally apply unchecked-ld-st optimization (even for large "
         "stack frames, or in the presence of variable sized allocas)."),

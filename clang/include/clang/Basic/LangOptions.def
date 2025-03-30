@@ -515,7 +515,7 @@ VALUE_LANGOPT(FuchsiaAPILevel, 32, 0, "Fuchsia API level")
 // on large _BitInts.
 BENIGN_VALUE_LANGOPT(MaxBitIntWidth, 32, 128, "Maximum width of a _BitInt")
 
-COMPATIBLE_LANGOPT(IncrementalExtensions, 1, 0, " True if we want to process statements"
+COMPATIBLE_LANGOPT(IncrementalExtensions, 1, 0, "True if we want to process statements "
         "on the global scope, ignore EOF token and continue later on (thus "
         "avoid tearing the Lexer and etc. down). Controlled by "
         "-fincremental-extensions.")

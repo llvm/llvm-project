@@ -33,14 +33,12 @@ define void @issue92561(ptr addrspace(1) %arg) {
 ; SDAG-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; SDAG-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
 ; SDAG-NEXT:    v_cmp_eq_u64_e64 s1, s[8:9], v[4:5]
-; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
+; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; SDAG-NEXT:    v_cmp_eq_u64_e64 s2, s[10:11], v[6:7]
 ; SDAG-NEXT:    s_and_b32 s0, vcc_lo, s0
-; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
 ; SDAG-NEXT:    s_and_b32 s0, s0, s1
-; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; SDAG-NEXT:    s_and_b32 s0, s0, s2
-; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    s_and_saveexec_b32 s0, s0
 ; SDAG-NEXT:    image_sample_c_lz v9, [v8, v8, v8, v8], s[4:11], s[12:15] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
 ; SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
@@ -108,14 +106,12 @@ define void @issue92561(ptr addrspace(1) %arg) {
 ; GISEL-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[12:13], v[4:5]
 ; GISEL-NEXT:    v_cmp_eq_u64_e64 s0, s[14:15], v[6:7]
 ; GISEL-NEXT:    v_cmp_eq_u64_e64 s1, s[16:17], v[0:1]
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GISEL-NEXT:    v_cmp_eq_u64_e64 s2, s[18:19], v[2:3]
 ; GISEL-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_and_b32 s0, s0, s1
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_and_b32 s0, s0, s2
-; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_and_saveexec_b32 s0, s0
 ; GISEL-NEXT:    image_sample_c_lz v9, [v8, v8, v8, v8], s[12:19], s[20:23] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
 ; GISEL-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7

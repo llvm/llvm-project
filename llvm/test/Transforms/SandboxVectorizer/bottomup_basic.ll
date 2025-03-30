@@ -416,3 +416,43 @@ define void @instrsInMultipleBundles(ptr noalias %ptr) {
   store i8 %add1, ptr %gep1
   ret void
 }
+
+define void @vectorize_constants(ptr %ptr) {
+; CHECK-LABEL: define void @vectorize_constants(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr i8, ptr [[PTR]], i32 0
+; CHECK-NEXT:    [[VECL:%.*]] = load <2 x i8>, ptr [[PTR0]], align 1
+; CHECK-NEXT:    [[VEC:%.*]] = add <2 x i8> [[VECL]], <i8 0, i8 1>
+; CHECK-NEXT:    store <2 x i8> [[VEC]], ptr [[PTR0]], align 1
+; CHECK-NEXT:    ret void
+;
+  %ptr0 = getelementptr i8, ptr %ptr, i32 0
+  %ptr1 = getelementptr i8, ptr %ptr, i32 1
+  %ld0 = load i8, ptr %ptr0
+  %ld1 = load i8, ptr %ptr1
+  %add0 = add i8 %ld0, 0
+  %add1 = add i8 %ld1, 1
+  store i8 %add0, ptr %ptr0
+  store i8 %add1, ptr %ptr1
+  ret void
+}
+
+define void @vectorize_constant_vectors(ptr %ptr) {
+; CHECK-LABEL: define void @vectorize_constant_vectors(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr <2 x i8>, ptr [[PTR]], i32 0
+; CHECK-NEXT:    [[VECL:%.*]] = load <4 x i8>, ptr [[PTR0]], align 2
+; CHECK-NEXT:    [[VEC:%.*]] = sub <4 x i8> [[VECL]], <i8 0, i8 0, i8 1, i8 1>
+; CHECK-NEXT:    store <4 x i8> [[VEC]], ptr [[PTR0]], align 2
+; CHECK-NEXT:    ret void
+;
+  %ptr0 = getelementptr <2 x i8>, ptr %ptr, i32 0
+  %ptr1 = getelementptr <2 x i8>, ptr %ptr, i32 1
+  %ld0 = load <2 x i8>, ptr %ptr0
+  %ld1 = load <2 x i8>, ptr %ptr1
+  %sub0 = sub <2 x i8> %ld0, splat(i8 0)
+  %sub1 = sub <2 x i8> %ld1, splat(i8 1)
+  store <2 x i8> %sub0, ptr %ptr0
+  store <2 x i8> %sub1, ptr %ptr1
+  ret void
+}

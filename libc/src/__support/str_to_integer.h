@@ -96,7 +96,7 @@ strtointeger(const char *__restrict src, int base,
   if (base < 0 || base == 1 || base > 36)
     return {0, 0, EINVAL};
 
-  src_cur = first_non_whitespace(src, src_len) - src;
+  src_cur = static_cast<size_t>(first_non_whitespace(src, src_len) - src);
 
   char result_sign = '+';
   if (src[src_cur] == '+' || src[src_cur] == '-') {
@@ -119,7 +119,7 @@ strtointeger(const char *__restrict src, int base,
   ResultType const abs_max =
       (is_positive ? cpp::numeric_limits<T>::max() : NEGATIVE_MAX);
   ResultType const abs_max_div_by_base =
-      static_cast<ResultType>(abs_max / base);
+      abs_max / static_cast<ResultType>(base);
 
   while (src_cur < src_len && isalnum(src[src_cur])) {
     int cur_digit = b36_char_to_int(src[src_cur]);
@@ -141,17 +141,17 @@ strtointeger(const char *__restrict src, int base,
       result = abs_max;
       error_val = ERANGE;
     } else {
-      result = static_cast<ResultType>(result * base);
+      result = result * static_cast<ResultType>(base);
     }
-    if (result > abs_max - cur_digit) {
+    if (result > abs_max - static_cast<ResultType>(cur_digit)) {
       result = abs_max;
       error_val = ERANGE;
     } else {
-      result = static_cast<ResultType>(result + cur_digit);
+      result = result + static_cast<ResultType>(cur_digit);
     }
   }
 
-  ptrdiff_t str_len = is_number ? (src_cur) : 0;
+  ptrdiff_t str_len = is_number ? static_cast<ptrdiff_t>(src_cur) : 0;
 
   if (error_val == ERANGE) {
     if (is_positive || IS_UNSIGNED)

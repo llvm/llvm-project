@@ -254,3 +254,69 @@ TEST(ToAPValue, MemberPointers) {
     ASSERT_EQ(A.getKind(), APValue::MemberPointer);
   }
 }
+
+/// Compare outputs between the two interpreters.
+TEST(ToAPValue, Comparison) {
+  constexpr char Code[] =
+      "constexpr int GI = 12;\n"
+      "constexpr const int *PI = &GI;\n"
+      "struct S{int a; };\n"
+      "constexpr S GS[] = {{}, {}};\n"
+      "constexpr const S* OS = GS + 1;\n"
+      "constexpr S DS = *OS;\n"
+      "constexpr int IA[2][2][2] = {{{1, 2}, {3, 4}}, {{5, 6}, {7, 8}}};\n"
+      "constexpr const int *PIA = IA[1][1];\n";
+
+  for (const char *Arg : {"", "-fexperimental-new-constant-interpreter"}) {
+    auto AST = tooling::buildASTFromCodeWithArgs(Code, {Arg});
+
+    auto getDecl = [&](const char *Name) -> const VarDecl * {
+      auto Nodes =
+          match(valueDecl(hasName(Name)).bind("var"), AST->getASTContext());
+      assert(Nodes.size() == 1);
+      const auto *D = Nodes[0].getNodeAs<ValueDecl>("var");
+      assert(D);
+      return cast<VarDecl>(D);
+    };
+
+    {
+      const VarDecl *GIDecl = getDecl("GI");
+      const APValue *V = GIDecl->evaluateValue();
+      ASSERT_TRUE(V->isInt());
+    }
+
+    {
+      const VarDecl *GIDecl = getDecl("GI");
+      const VarDecl *PIDecl = getDecl("PI");
+      const APValue *V = PIDecl->evaluateValue();
+      ASSERT_TRUE(V->isLValue());
+      ASSERT_TRUE(V->hasLValuePath());
+      ASSERT_EQ(V->getLValueBase().get<const ValueDecl *>(), GIDecl);
+      ASSERT_EQ(V->getLValuePath().size(), 0u);
+    }
+
+    {
+      const APValue *V = getDecl("OS")->evaluateValue();
+      ASSERT_TRUE(V->isLValue());
+      ASSERT_EQ(V->getLValueOffset().getQuantity(), (unsigned)sizeof(int));
+      ASSERT_TRUE(V->hasLValuePath());
+      ASSERT_EQ(V->getLValuePath().size(), 1u);
+      ASSERT_EQ(V->getLValuePath()[0].getAsArrayIndex(), 1u);
+    }
+
+    {
+      const APValue *V = getDecl("DS")->evaluateValue();
+      ASSERT_TRUE(V->isStruct());
+    }
+    {
+      const APValue *V = getDecl("PIA")->evaluateValue();
+      ASSERT_TRUE(V->isLValue());
+      ASSERT_TRUE(V->hasLValuePath());
+      ASSERT_EQ(V->getLValuePath().size(), 3u);
+      ASSERT_EQ(V->getLValuePath()[0].getAsArrayIndex(), 1u);
+      ASSERT_EQ(V->getLValuePath()[1].getAsArrayIndex(), 1u);
+      ASSERT_EQ(V->getLValuePath()[2].getAsArrayIndex(), 0u);
+      ASSERT_EQ(V->getLValueOffset().getQuantity(), (unsigned)sizeof(int) * 6);
+    }
+  }
+}

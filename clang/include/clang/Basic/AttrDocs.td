@@ -1113,6 +1113,41 @@ template instantiation, so the value for ``T::number`` is known.
   }];
 }
 
+def ExtVectorTypeDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``ext_vector_type(N)`` attribute specifies that a type is a vector with N
+elements, directly mapping to an LLVM vector type. Originally from OpenCL, it
+allows element access the array subscript operator ``[]``, ``sN`` where N is
+a hexadecimal value, or ``x, y, z, w`` for graphics-style indexing.
+This attribute enables efficient SIMD operations and is usable in
+general-purpose code.
+
+.. code-block:: c++
+
+  template <typename T, uint32_t N>
+  constexpr T simd_reduce(T [[clang::ext_vector_type(N)]] v) {
+    static_assert((N & (N - 1)) == 0, "N must be a power of two");
+    if constexpr (N == 1)
+      return v[0];
+    else
+      return simd_reduce<T, N / 2>(v.hi + v.lo);
+  }
+
+The vector type also supports swizzling up to sixteen elements. This can be done
+using the object accessors. The OpenCL documentation lists all of the accepted
+values.
+
+.. code-block:: c++
+
+  using f16_x16 = _Float16 __attribute__((ext_vector_type(16)));
+
+  f16_x16 reverse(f16_x16 v) { return v.sfedcba9876543210; }
+
+See the OpenCL documentation for some more complete examples.
+  }];
+}
+
 def DiagnoseIfDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -1668,17 +1703,16 @@ Sample usage:
 def NoConvergentDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
-This attribute prevents a function from being treated as convergent, which
-means that optimizations can only move calls to that function to
-control-equivalent blocks. If a statement is marked as ``noconvergent`` and
-contains calls, it also prevents those calls from being treated as convergent.
-In other words, those calls are not restricted to only being moved to
-control-equivalent blocks.
+This attribute prevents a function from being treated as convergent; when a
+function is marked ``noconvergent``, calls to that function are not
+automatically assumed to be convergent, unless such calls are explicitly marked
+as ``convergent``. If a statement is marked as ``noconvergent``, any calls to
+inline ``asm`` in that statement are no longer treated as convergent.
 
 In languages following SPMD/SIMT programming model, e.g., CUDA/HIP, function
-declarations and calls are treated as convergent by default for correctness.
-This ``noconvergent`` attribute is helpful for developers to prevent them from
-being treated as convergent when it's safe.
+declarations and inline asm calls are treated as convergent by default for
+correctness. This ``noconvergent`` attribute is helpful for developers to
+prevent them from being treated as convergent when it's safe.
 
 .. code-block:: c
 
@@ -1687,7 +1721,8 @@ being treated as convergent when it's safe.
 
   __device__ int example(void) {
     float x;
-    [[clang::noconvergent]] x = bar(x);
+    [[clang::noconvergent]] x = bar(x); // no effect on convergence
+    [[clang::noconvergent]] { asm volatile ("nop"); } // the asm call is non-convergent
   }
 
   }];
@@ -2828,8 +2863,17 @@ targets. This attribute may be attached to a function definition and instructs
 the backend to generate appropriate function entry/exit code so that it can be
 used directly as an interrupt service routine.
 
-Permissible values for this parameter are ``user``, ``supervisor``,
-and ``machine``. If there is no parameter, then it defaults to machine.
+Permissible values for this parameter are ``supervisor``, ``machine``,
+``qci-nest`` and ``qci-nonest``. If there is no parameter, then it defaults to
+``machine``.
+
+The ``qci-nest`` and ``qci-nonest`` values require Qualcomm's Xqciint extension
+and are used for Machine-mode Interrupts and Machine-mode Non-maskable
+interrupts. These use the following instructions from Xqciint to save and
+restore interrupt state to the stack -- the ``qci-nest`` value will use
+``qc.c.mienter.nest`` and the ``qci-nonest`` value will use ``qc.c.mienter`` to
+begin the interrupt handler. Both of these will use ``qc.c.mileaveret`` to
+restore the state and return to the previous context.
 
 Repeated interrupt attribute on the same declaration will cause a warning
 to be emitted. In case of repeated declarations, the last one prevails.
@@ -2839,6 +2883,7 @@ https://gcc.gnu.org/onlinedocs/gcc/RISC-V-Function-Attributes.html
 https://riscv.org/specifications/privileged-isa/
 The RISC-V Instruction Set Manual Volume II: Privileged Architecture
 Version 1.10.
+https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.7
   }];
 }
 
@@ -6212,6 +6257,17 @@ registers namely, v1-v7 and v24-v31 as callee-saved. Callers thus don't need
 to save these registers before function calls, and callees only need to save
 them if they use them.
  }];
+}
+
+def RISCVVLSCCDocs : Documentation {
+ let Category = DocCatCallingConvs;
+ let Heading = "riscv::vls_cc, riscv_vls_cc, clang::riscv_vls_cc";
+ let Content = [{
+The ``riscv_vls_cc`` attribute can be applied to a function. Functions
+declared with this attribute will utilize the standard fixed-length vector
+calling convention variant instead of the default calling convention defined by
+the ABI. This variant aims to pass fixed-length vectors via vector registers,
+if possible, rather than through general-purpose registers.}];
 }
 
 def PreferredNameDocs : Documentation {

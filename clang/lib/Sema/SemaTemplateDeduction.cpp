@@ -2127,9 +2127,29 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
               /*DeducedFromArrayBound=*/false, HasDeducedAnyParam);
           Result != TemplateDeductionResult::Success)
         return Result;
+
+      QualType TP;
+      if (MPP->isSugared()) {
+        TP = S.Context.getTypeDeclType(MPP->getMostRecentCXXRecordDecl());
+      } else {
+        NestedNameSpecifier *QP = MPP->getQualifier();
+        if (QP->getKind() == NestedNameSpecifier::Identifier)
+          // Skip translation if it's a non-deduced context anyway.
+          return TemplateDeductionResult::Success;
+        TP = QualType(QP->translateToType(S.Context), 0);
+      }
+      assert(!TP.isNull() && "member pointer with non-type class");
+
+      QualType TA;
+      if (MPA->isSugared()) {
+        TA = S.Context.getTypeDeclType(MPA->getMostRecentCXXRecordDecl());
+      } else {
+        NestedNameSpecifier *QA = MPA->getQualifier();
+        TA = QualType(QA->translateToType(S.Context), 0);
+      }
+      assert(!TA.isNull() && "member pointer with non-type class");
       return DeduceTemplateArgumentsByTypeMatch(
-          S, TemplateParams, QualType(MPP->getClass(), 0),
-          QualType(MPA->getClass(), 0), Info, Deduced, SubTDF,
+          S, TemplateParams, TP, TA, Info, Deduced, SubTDF,
           degradeCallPartialOrderingKind(POK),
           /*DeducedFromArrayBound=*/false, HasDeducedAnyParam);
     }
@@ -3427,9 +3447,9 @@ static TemplateDeductionResult FinishTemplateArgumentDeduction(
       if (!P.isPackExpansion() && !A.isPackExpansion()) {
         Info.Param =
             makeTemplateParameter(Template->getTemplateParameters()->getParam(
-                (PsStack.empty() ? TemplateArgs.end()
-                                 : PsStack.front().begin()) -
-                TemplateArgs.begin()));
+                (AsStack.empty() ? CTAI.CanonicalConverted.end()
+                                 : AsStack.front().begin()) -
+                1 - CTAI.CanonicalConverted.begin()));
         Info.FirstArg = P;
         Info.SecondArg = A;
         return TemplateDeductionResult::NonDeducedMismatch;
@@ -4211,8 +4231,8 @@ static QualType GetTypeOfFunction(Sema &S, const OverloadExpr::FindResult &R,
       if (!R.HasFormOfMemberPointer)
         return {};
 
-      return S.Context.getMemberPointerType(Fn->getType(),
-               S.Context.getTypeDeclType(Method->getParent()).getTypePtr());
+      return S.Context.getMemberPointerType(
+          Fn->getType(), /*Qualifier=*/nullptr, Method->getParent());
     }
 
   if (!R.IsAddressOfOperand) return Fn->getType();
@@ -5862,10 +5882,42 @@ static bool isAtLeastAsSpecializedAs(
   return true;
 }
 
+enum class MoreSpecializedTrailingPackTieBreakerResult { Equal, Less, More };
+
+// This a speculative fix for CWG1432 (Similar to the fix for CWG1395) that
+// there is no wording or even resolution for this issue.
+static MoreSpecializedTrailingPackTieBreakerResult
+getMoreSpecializedTrailingPackTieBreaker(
+    const TemplateSpecializationType *TST1,
+    const TemplateSpecializationType *TST2) {
+  ArrayRef<TemplateArgument> As1 = TST1->template_arguments(),
+                             As2 = TST2->template_arguments();
+  const TemplateArgument &TA1 = As1.back(), &TA2 = As2.back();
+  bool IsPack = TA1.getKind() == TemplateArgument::Pack;
+  assert(IsPack == (TA2.getKind() == TemplateArgument::Pack));
+  if (!IsPack)
+    return MoreSpecializedTrailingPackTieBreakerResult::Equal;
+  assert(As1.size() == As2.size());
+
+  unsigned PackSize1 = TA1.pack_size(), PackSize2 = TA2.pack_size();
+  bool IsPackExpansion1 =
+      PackSize1 && TA1.pack_elements().back().isPackExpansion();
+  bool IsPackExpansion2 =
+      PackSize2 && TA2.pack_elements().back().isPackExpansion();
+  if (PackSize1 == PackSize2 && IsPackExpansion1 == IsPackExpansion2)
+    return MoreSpecializedTrailingPackTieBreakerResult::Equal;
+  if (PackSize1 > PackSize2 && IsPackExpansion1)
+    return MoreSpecializedTrailingPackTieBreakerResult::More;
+  if (PackSize1 < PackSize2 && IsPackExpansion2)
+    return MoreSpecializedTrailingPackTieBreakerResult::Less;
+  return MoreSpecializedTrailingPackTieBreakerResult::Equal;
+}
+
 FunctionTemplateDecl *Sema::getMoreSpecializedTemplate(
     FunctionTemplateDecl *FT1, FunctionTemplateDecl *FT2, SourceLocation Loc,
     TemplatePartialOrderingContext TPOC, unsigned NumCallArguments1,
-    QualType RawObj1Ty, QualType RawObj2Ty, bool Reversed) {
+    QualType RawObj1Ty, QualType RawObj2Ty, bool Reversed,
+    bool PartialOverloading) {
   SmallVector<QualType> Args1;
   SmallVector<QualType> Args2;
   const FunctionDecl *FD1 = FT1->getTemplatedDecl();
@@ -6001,34 +6053,27 @@ FunctionTemplateDecl *Sema::getMoreSpecializedTemplate(
       return FT1;
   }
 
-  // This a speculative fix for CWG1432 (Similar to the fix for CWG1395) that
-  // there is no wording or even resolution for this issue.
-  for (int i = 0, e = std::min(NumParams1, NumParams2); i < e; ++i) {
+  // Skip this tie breaker if we are performing overload resolution with partial
+  // arguments, as this breaks some assumptions about how closely related the
+  // candidates are.
+  for (int i = 0, e = std::min(NumParams1, NumParams2);
+       !PartialOverloading && i < e; ++i) {
     QualType T1 = Param1[i].getCanonicalType();
     QualType T2 = Param2[i].getCanonicalType();
     auto *TST1 = dyn_cast<TemplateSpecializationType>(T1);
     auto *TST2 = dyn_cast<TemplateSpecializationType>(T2);
     if (!TST1 || !TST2)
       continue;
-    const TemplateArgument &TA1 = TST1->template_arguments().back();
-    if (TA1.getKind() == TemplateArgument::Pack) {
-      assert(TST1->template_arguments().size() ==
-             TST2->template_arguments().size());
-      const TemplateArgument &TA2 = TST2->template_arguments().back();
-      assert(TA2.getKind() == TemplateArgument::Pack);
-      unsigned PackSize1 = TA1.pack_size();
-      unsigned PackSize2 = TA2.pack_size();
-      bool IsPackExpansion1 =
-          PackSize1 && TA1.pack_elements().back().isPackExpansion();
-      bool IsPackExpansion2 =
-          PackSize2 && TA2.pack_elements().back().isPackExpansion();
-      if (PackSize1 != PackSize2 && IsPackExpansion1 != IsPackExpansion2) {
-        if (PackSize1 > PackSize2 && IsPackExpansion1)
-          return FT2;
-        if (PackSize1 < PackSize2 && IsPackExpansion2)
-          return FT1;
-      }
+    switch (getMoreSpecializedTrailingPackTieBreaker(TST1, TST2)) {
+    case MoreSpecializedTrailingPackTieBreakerResult::Less:
+      return FT1;
+    case MoreSpecializedTrailingPackTieBreakerResult::More:
+      return FT2;
+    case MoreSpecializedTrailingPackTieBreakerResult::Equal:
+      continue;
     }
+    llvm_unreachable(
+        "unknown MoreSpecializedTrailingPackTieBreakerResult value");
   }
 
   if (!Context.getLangOpts().CPlusPlus20)
@@ -6375,28 +6420,15 @@ getMoreSpecialized(Sema &S, QualType T1, QualType T2, TemplateLikeDecl *P1,
   if (!Better1 && !Better2)
     return nullptr;
 
-  // This a speculative fix for CWG1432 (Similar to the fix for CWG1395) that
-  // there is no wording or even resolution for this issue.
-  auto *TST1 = cast<TemplateSpecializationType>(T1);
-  auto *TST2 = cast<TemplateSpecializationType>(T2);
-  const TemplateArgument &TA1 = TST1->template_arguments().back();
-  if (TA1.getKind() == TemplateArgument::Pack) {
-    assert(TST1->template_arguments().size() ==
-           TST2->template_arguments().size());
-    const TemplateArgument &TA2 = TST2->template_arguments().back();
-    assert(TA2.getKind() == TemplateArgument::Pack);
-    unsigned PackSize1 = TA1.pack_size();
-    unsigned PackSize2 = TA2.pack_size();
-    bool IsPackExpansion1 =
-        PackSize1 && TA1.pack_elements().back().isPackExpansion();
-    bool IsPackExpansion2 =
-        PackSize2 && TA2.pack_elements().back().isPackExpansion();
-    if (PackSize1 != PackSize2 && IsPackExpansion1 != IsPackExpansion2) {
-      if (PackSize1 > PackSize2 && IsPackExpansion1)
-        return GetP2()(P1, P2);
-      if (PackSize1 < PackSize2 && IsPackExpansion2)
-        return P1;
-    }
+  switch (getMoreSpecializedTrailingPackTieBreaker(
+      cast<TemplateSpecializationType>(T1),
+      cast<TemplateSpecializationType>(T2))) {
+  case MoreSpecializedTrailingPackTieBreakerResult::Less:
+    return P1;
+  case MoreSpecializedTrailingPackTieBreakerResult::More:
+    return GetP2()(P1, P2);
+  case MoreSpecializedTrailingPackTieBreakerResult::Equal:
+    break;
   }
 
   if (!S.Context.getLangOpts().CPlusPlus20)
@@ -6630,17 +6662,19 @@ bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
 
   TemplateDeductionResult TDK;
   runWithSufficientStackSpace(Info.getLocation(), [&] {
-    TDK = ::FinishTemplateArgumentDeduction(
-        *this, AArg, /*IsPartialOrdering=*/true, PArgs, Deduced, Info);
+    TDK = ::FinishTemplateArgumentDeduction(*this, AArg, PartialOrdering, PArgs,
+                                            Deduced, Info);
   });
   switch (TDK) {
   case TemplateDeductionResult::Success:
     return true;
 
   // It doesn't seem possible to get a non-deduced mismatch when partial
-  // ordering TTPs.
+  // ordering TTPs, except with an invalid template parameter list which has
+  // a parameter after a pack.
   case TemplateDeductionResult::NonDeducedMismatch:
-    llvm_unreachable("Unexpected NonDeducedMismatch");
+    assert(PArg->isInvalidDecl() && "Unexpected NonDeducedMismatch");
+    return false;
 
   // Substitution failures should have already been diagnosed.
   case TemplateDeductionResult::AlreadyDiagnosed:
@@ -6819,7 +6853,8 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
     const MemberPointerType *MemPtr = cast<MemberPointerType>(T.getTypePtr());
     MarkUsedTemplateParameters(Ctx, MemPtr->getPointeeType(), OnlyDeduced,
                                Depth, Used);
-    MarkUsedTemplateParameters(Ctx, QualType(MemPtr->getClass(), 0),
+    MarkUsedTemplateParameters(Ctx,
+                               QualType(MemPtr->getQualifier()->getAsType(), 0),
                                OnlyDeduced, Depth, Used);
     break;
   }
@@ -7151,6 +7186,14 @@ Sema::MarkUsedTemplateParameters(const TemplateArgumentList &TemplateArgs,
   for (unsigned I = 0, N = TemplateArgs.size(); I != N; ++I)
     ::MarkUsedTemplateParameters(Context, TemplateArgs[I], OnlyDeduced,
                                  Depth, Used);
+}
+
+void Sema::MarkUsedTemplateParameters(ArrayRef<TemplateArgument> TemplateArgs,
+                                      unsigned Depth,
+                                      llvm::SmallBitVector &Used) {
+  for (unsigned I = 0, N = TemplateArgs.size(); I != N; ++I)
+    ::MarkUsedTemplateParameters(Context, TemplateArgs[I],
+                                 /*OnlyDeduced=*/false, Depth, Used);
 }
 
 void Sema::MarkDeducedTemplateParameters(

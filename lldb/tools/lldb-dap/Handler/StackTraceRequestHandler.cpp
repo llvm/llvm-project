@@ -179,8 +179,9 @@ void StackTraceRequestHandler::operator()(
   llvm::json::Object body;
 
   if (thread.IsValid()) {
-    const auto start_frame = GetUnsigned(arguments, "startFrame", 0);
-    const auto levels = GetUnsigned(arguments, "levels", 0);
+    const auto start_frame =
+        GetInteger<uint64_t>(arguments, "startFrame").value_or(0);
+    const auto levels = GetInteger<uint64_t>(arguments, "levels").value_or(0);
     int64_t offset = 0;
     bool reached_end_of_stack =
         FillStackFrames(dap, thread, stack_frames, offset, start_frame,

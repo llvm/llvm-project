@@ -47,6 +47,7 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/LLVMIR/Transforms/AddComdats.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -835,10 +836,20 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
         return mlir::success();
       }
       if (mlir::isa<mlir::IntegerType>(toTy)) {
-        if (toTy.isUnsignedInteger())
-          rewriter.replaceOpWithNewOp<mlir::LLVM::FPToUIOp>(convert, toTy, op0);
-        else
-          rewriter.replaceOpWithNewOp<mlir::LLVM::FPToSIOp>(convert, toTy, op0);
+        // NOTE: We are checking the fir type here because toTy is an LLVM type
+        // which is signless, and we need to use the intrinsic that matches the
+        // sign of the output in fir.
+        if (toFirTy.isUnsignedInteger()) {
+          auto intrinsicName =
+              mlir::StringAttr::get(convert.getContext(), "llvm.fptoui.sat");
+          rewriter.replaceOpWithNewOp<mlir::LLVM::CallIntrinsicOp>(
+              convert, toTy, intrinsicName, op0);
+        } else {
+          auto intrinsicName =
+              mlir::StringAttr::get(convert.getContext(), "llvm.fptosi.sat");
+          rewriter.replaceOpWithNewOp<mlir::LLVM::CallIntrinsicOp>(
+              convert, toTy, intrinsicName, op0);
+        }
         return mlir::success();
       }
     } else if (mlir::isa<mlir::IntegerType>(fromTy)) {
@@ -982,7 +993,8 @@ struct EmboxCharOpConversion : public fir::FIROpConversion<fir::EmboxCharOp> {
 template <typename ModuleOp>
 static mlir::SymbolRefAttr
 getMallocInModule(ModuleOp mod, fir::AllocMemOp op,
-                  mlir::ConversionPatternRewriter &rewriter) {
+                  mlir::ConversionPatternRewriter &rewriter,
+                  mlir::Type indexType) {
   static constexpr char mallocName[] = "malloc";
   if (auto mallocFunc =
           mod.template lookupSymbol<mlir::LLVM::LLVMFuncOp>(mallocName))
@@ -992,7 +1004,6 @@ getMallocInModule(ModuleOp mod, fir::AllocMemOp op,
     return mlir::SymbolRefAttr::get(userMalloc);
 
   mlir::OpBuilder moduleBuilder(mod.getBodyRegion());
-  auto indexType = mlir::IntegerType::get(op.getContext(), 64);
   auto mallocDecl = moduleBuilder.create<mlir::LLVM::LLVMFuncOp>(
       op.getLoc(), mallocName,
       mlir::LLVM::LLVMFunctionType::get(getLlvmPtrType(op.getContext()),
@@ -1002,12 +1013,13 @@ getMallocInModule(ModuleOp mod, fir::AllocMemOp op,
 }
 
 /// Return the LLVMFuncOp corresponding to the standard malloc call.
-static mlir::SymbolRefAttr
-getMalloc(fir::AllocMemOp op, mlir::ConversionPatternRewriter &rewriter) {
+static mlir::SymbolRefAttr getMalloc(fir::AllocMemOp op,
+                                     mlir::ConversionPatternRewriter &rewriter,
+                                     mlir::Type indexType) {
   if (auto mod = op->getParentOfType<mlir::gpu::GPUModuleOp>())
-    return getMallocInModule(mod, op, rewriter);
+    return getMallocInModule(mod, op, rewriter, indexType);
   auto mod = op->getParentOfType<mlir::ModuleOp>();
-  return getMallocInModule(mod, op, rewriter);
+  return getMallocInModule(mod, op, rewriter, indexType);
 }
 
 /// Helper function for generating the LLVM IR that computes the distance
@@ -1067,7 +1079,12 @@ struct AllocMemOpConversion : public fir::FIROpConversion<fir::AllocMemOp> {
     for (mlir::Value opnd : adaptor.getOperands())
       size = rewriter.create<mlir::LLVM::MulOp>(
           loc, ity, size, integerCast(loc, rewriter, ity, opnd));
-    heap->setAttr("callee", getMalloc(heap, rewriter));
+    auto mallocTyWidth = lowerTy().getIndexTypeBitwidth();
+    auto mallocTy =
+        mlir::IntegerType::get(rewriter.getContext(), mallocTyWidth);
+    if (mallocTyWidth != ity.getIntOrFloatBitWidth())
+      size = integerCast(loc, rewriter, mallocTy, size);
+    heap->setAttr("callee", getMalloc(heap, rewriter, mallocTy));
     rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
         heap, ::getLlvmPtrType(heap.getContext()), size,
         addLLVMOpBundleAttrs(rewriter, heap->getAttrs(), 1));
@@ -2116,7 +2133,7 @@ private:
       unsigned dim = iter.index();
       mlir::Value lb = one;
       if (!lbounds.empty()) {
-        lb = lbounds[dim];
+        lb = integerCast(loc, rewriter, lowerTy().indexType(), lbounds[dim]);
         auto extentIsEmpty = rewriter.create<mlir::LLVM::ICmpOp>(
             loc, mlir::LLVM::ICmpPredicate::eq, extent, zero);
         lb = rewriter.create<mlir::LLVM::SelectOp>(loc, extentIsEmpty, one, lb);
@@ -3129,6 +3146,11 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
         }
       }
     }
+
+    if (global.getDataAttr() &&
+        *global.getDataAttr() == cuf::DataAttribute::Shared)
+      g.setAddrSpace(mlir::NVVM::NVVMMemorySpace::kSharedMemorySpace);
+
     rewriter.eraseOp(global);
     return mlir::success();
   }
@@ -3535,6 +3557,36 @@ struct StoreOpConversion : public fir::FIROpConversion<fir::StoreOp> {
     else
       attachTBAATag(newOp, storeTy, storeTy, nullptr);
     rewriter.eraseOp(store);
+    return mlir::success();
+  }
+};
+
+/// `fir.copy` --> `llvm.memcpy` or `llvm.memmove`
+struct CopyOpConversion : public fir::FIROpConversion<fir::CopyOp> {
+  using FIROpConversion::FIROpConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(fir::CopyOp copy, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Location loc = copy.getLoc();
+    mlir::Value llvmSource = adaptor.getSource();
+    mlir::Value llvmDestination = adaptor.getDestination();
+    mlir::Type i64Ty = mlir::IntegerType::get(rewriter.getContext(), 64);
+    mlir::Type copyTy = fir::unwrapRefType(copy.getSource().getType());
+    mlir::Value copySize =
+        genTypeStrideInBytes(loc, i64Ty, rewriter, convertType(copyTy));
+
+    mlir::LLVM::AliasAnalysisOpInterface newOp;
+    if (copy.getNoOverlap())
+      newOp = rewriter.create<mlir::LLVM::MemcpyOp>(
+          loc, llvmDestination, llvmSource, copySize, /*isVolatile=*/false);
+    else
+      newOp = rewriter.create<mlir::LLVM::MemmoveOp>(
+          loc, llvmDestination, llvmSource, copySize, /*isVolatile=*/false);
+
+    // TODO: propagate TBAA once FirAliasTagOpInterface added to CopyOp.
+    attachTBAATag(newOp, copyTy, copyTy, nullptr);
+    rewriter.eraseOp(copy);
     return mlir::success();
   }
 };
@@ -4142,11 +4194,11 @@ void fir::populateFIRToLLVMConversionPatterns(
       BoxOffsetOpConversion, BoxProcHostOpConversion, BoxRankOpConversion,
       BoxTypeCodeOpConversion, BoxTypeDescOpConversion, CallOpConversion,
       CmpcOpConversion, ConvertOpConversion, CoordinateOpConversion,
-      DTEntryOpConversion, DeclareOpConversion, DivcOpConversion,
-      EmboxOpConversion, EmboxCharOpConversion, EmboxProcOpConversion,
-      ExtractValueOpConversion, FieldIndexOpConversion, FirEndOpConversion,
-      FreeMemOpConversion, GlobalLenOpConversion, GlobalOpConversion,
-      InsertOnRangeOpConversion, IsPresentOpConversion,
+      CopyOpConversion, DTEntryOpConversion, DeclareOpConversion,
+      DivcOpConversion, EmboxOpConversion, EmboxCharOpConversion,
+      EmboxProcOpConversion, ExtractValueOpConversion, FieldIndexOpConversion,
+      FirEndOpConversion, FreeMemOpConversion, GlobalLenOpConversion,
+      GlobalOpConversion, InsertOnRangeOpConversion, IsPresentOpConversion,
       LenParamIndexOpConversion, LoadOpConversion, MulcOpConversion,
       NegcOpConversion, NoReassocOpConversion, SelectCaseOpConversion,
       SelectOpConversion, SelectRankOpConversion, SelectTypeOpConversion,

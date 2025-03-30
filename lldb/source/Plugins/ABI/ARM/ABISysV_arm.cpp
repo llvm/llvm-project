@@ -1452,7 +1452,8 @@ bool ABISysV_arm::GetArgumentValues(Thread &thread, ValueList &values) const {
       size_t bit_width = 0;
       if (compiler_type.IsIntegerOrEnumerationType(is_signed) ||
           compiler_type.IsPointerOrReferenceType()) {
-        if (std::optional<uint64_t> size = compiler_type.GetBitSize(&thread))
+        if (std::optional<uint64_t> size =
+                llvm::expectedToOptional(compiler_type.GetBitSize(&thread)))
           bit_width = *size;
       } else {
         // We only handle integer, pointer and reference types currently...
@@ -1559,8 +1560,10 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
 
   const RegisterInfo *r0_reg_info =
       reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1);
-  std::optional<uint64_t> bit_width = compiler_type.GetBitSize(&thread);
-  std::optional<uint64_t> byte_size = compiler_type.GetByteSize(&thread);
+  std::optional<uint64_t> bit_width =
+      llvm::expectedToOptional(compiler_type.GetBitSize(&thread));
+  std::optional<uint64_t> byte_size =
+      llvm::expectedToOptional(compiler_type.GetByteSize(&thread));
   if (!bit_width || !byte_size)
     return return_valobj_sp;
 
@@ -1696,7 +1699,8 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
           compiler_type.IsHomogeneousAggregate(&base_type);
 
       if (homogeneous_count > 0 && homogeneous_count <= 4) {
-        std::optional<uint64_t> base_byte_size = base_type.GetByteSize(&thread);
+        std::optional<uint64_t> base_byte_size =
+            llvm::expectedToOptional(base_type.GetByteSize(&thread));
         if (base_type.IsVectorType()) {
           if (base_byte_size &&
               (*base_byte_size == 8 || *base_byte_size == 16)) {
@@ -1725,7 +1729,7 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
 
             if (base_type.IsFloatingPointType(float_count, is_complex)) {
               std::optional<uint64_t> base_byte_size =
-                  base_type.GetByteSize(&thread);
+                  llvm::expectedToOptional(base_type.GetByteSize(&thread));
               if (float_count == 2 && is_complex) {
                 if (index != 0 && base_byte_size &&
                     vfp_byte_size != *base_byte_size)
@@ -1901,15 +1905,15 @@ UnwindPlanSP ABISysV_arm::CreateFunctionEntryUnwindPlan() {
   uint32_t sp_reg_num = dwarf_sp;
   uint32_t pc_reg_num = dwarf_pc;
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
   // Our Call Frame Address is the stack pointer value
-  row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
+  row.GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
 
   // The previous PC is in the LR, all other registers are the same.
-  row->SetRegisterLocationToRegister(pc_reg_num, lr_reg_num, true);
+  row.SetRegisterLocationToRegister(pc_reg_num, lr_reg_num, true);
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(row);
+  plan_sp->AppendRow(std::move(row));
   plan_sp->SetSourceName("arm at-func-entry default");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
   return plan_sp;
@@ -1920,18 +1924,17 @@ UnwindPlanSP ABISysV_arm::CreateDefaultUnwindPlan() {
   uint32_t fp_reg_num = dwarf_r11;
   uint32_t pc_reg_num = dwarf_pc;
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
   const int32_t ptr_size = 4;
 
-  row->GetCFAValue().SetIsRegisterPlusOffset(fp_reg_num, 2 * ptr_size);
-  row->SetOffset(0);
-  row->SetUnspecifiedRegistersAreUndefined(true);
+  row.GetCFAValue().SetIsRegisterPlusOffset(fp_reg_num, 2 * ptr_size);
+  row.SetUnspecifiedRegistersAreUndefined(true);
 
-  row->SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, ptr_size * -2, true);
-  row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * -1, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, ptr_size * -2, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * -1, true);
 
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(row);
+  plan_sp->AppendRow(std::move(row));
   plan_sp->SetSourceName("arm default unwind plan");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
   plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);

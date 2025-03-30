@@ -795,8 +795,8 @@ bb:
   br i1 %cmp, label %bb11, label %bb7
 
 bb11:
-  %tmp14 = shufflevector <2 x i32> %arg1, <2 x i32> undef, <2 x i32> zeroinitializer
-  %tmp16 = shufflevector <2 x i32> %arg2, <2 x i32> undef, <2 x i32> zeroinitializer
+  %tmp14 = shufflevector <2 x i32> %arg1, <2 x i32> poison, <2 x i32> zeroinitializer
+  %tmp16 = shufflevector <2 x i32> %arg2, <2 x i32> poison, <2 x i32> zeroinitializer
   %tmp17 = shl <2 x i32> %tmp14, <i32 8, i32 8>
   %tmp18 = ashr <2 x i32> %tmp17, <i32 8, i32 8>
   %tmp19 = shl <2 x i32> %tmp16, <i32 8, i32 8>

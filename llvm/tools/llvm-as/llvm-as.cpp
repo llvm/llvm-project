@@ -30,7 +30,7 @@
 #include <optional>
 using namespace llvm;
 
-cl::OptionCategory AsCat("llvm-as Options");
+static cl::OptionCategory AsCat("llvm-as Options");
 
 static cl::opt<std::string>
     InputFilename(cl::Positional, cl::desc("<input .ll file>"), cl::init("-"));

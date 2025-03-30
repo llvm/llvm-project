@@ -102,7 +102,7 @@ Error DwarfEmitterImpl::init(Triple TheTriple,
                              TripleName.c_str());
 
   // Finally create the AsmPrinter we'll use to emit the DIEs.
-  TM.reset(TheTarget->createTargetMachine(TripleName, "", "", TargetOptions(),
+  TM.reset(TheTarget->createTargetMachine(TheTriple, "", "", TargetOptions(),
                                           std::nullopt));
   if (!TM)
     return createStringError(std::errc::invalid_argument,

@@ -198,6 +198,8 @@ public:
 
   explicit GlobalMerge() : FunctionPass(ID) {
     Opt.MaxOffset = GlobalMergeMaxOffset;
+    Opt.MergeConstantGlobals = EnableGlobalMergeOnConst;
+    Opt.MergeConstAggressive = GlobalMergeAllConst;
     initializeGlobalMergePass(*PassRegistry::getPassRegistry());
   }
 
@@ -672,7 +674,7 @@ bool GlobalMergeImpl::run(Module &M) {
   if (!EnableGlobalMerge)
     return false;
 
-  IsMachO = Triple(M.getTargetTriple()).isOSBinFormatMachO();
+  IsMachO = M.getTargetTriple().isOSBinFormatMachO();
 
   auto &DL = M.getDataLayout();
   MapVector<std::pair<unsigned, StringRef>, SmallVector<GlobalVariable *, 0>>

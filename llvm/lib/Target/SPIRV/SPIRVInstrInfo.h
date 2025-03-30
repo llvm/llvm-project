@@ -34,6 +34,7 @@ public:
   bool isInlineAsmDefInstr(const MachineInstr &MI) const;
   bool isTypeDeclInstr(const MachineInstr &MI) const;
   bool isDecorationInstr(const MachineInstr &MI) const;
+  bool isAliasingInstr(const MachineInstr &MI) const;
   bool canUseFastMathFlags(const MachineInstr &MI) const;
   bool canUseNSW(const MachineInstr &MI) const;
   bool canUseNUW(const MachineInstr &MI) const;
@@ -54,7 +55,6 @@ public:
                    const DebugLoc &DL, Register DestReg, Register SrcReg,
                    bool KillSrc, bool RenamableDest = false,
                    bool RenamableSrc = false) const override;
-  bool expandPostRAPseudo(MachineInstr &MI) const override;
 };
 
 namespace SPIRV {

@@ -56,11 +56,12 @@ class StaticDataSplitter : public MachineFunctionPass {
 
   // Returns true if the global variable is in one of {.rodata, .bss, .data,
   // .data.rel.ro} sections.
-  bool inStaticDataSection(const GlobalVariable *GV, const TargetMachine &TM);
+  bool inStaticDataSection(const GlobalVariable &GV, const TargetMachine &TM);
 
   // Returns the constant if the operand refers to a global variable or constant
   // that gets lowered to static data sections. Otherwise, return nullptr.
-  const Constant *getConstant(const MachineOperand &Op, const TargetMachine &TM,
+  const Constant *getConstant(const MachineOperand &Op,
+                              const TargetMachine &TM,
                               const MachineConstantPool *MCP);
 
   // Use profiles to partition static data.
@@ -136,7 +137,7 @@ StaticDataSplitter::getConstant(const MachineOperand &Op,
     // often handled specially, and skip those not in static data
     // sections.
     if (!GV || GV->getName().starts_with("llvm.") ||
-        !inStaticDataSection(GV, TM))
+        !inStaticDataSection(*GV, TM))
       return nullptr;
     return GV;
   }
@@ -173,8 +174,8 @@ bool StaticDataSplitter::partitionStaticDataWithProfiles(MachineFunction &MF) {
   // Similarly, `MachineOperand::isCPI()` is used to identify constant pool
   // usages in the same loop.
   for (const auto &MBB : MF) {
+    std::optional<uint64_t> Count = MBFI->getBlockProfileCount(&MBB);
     for (const MachineInstr &I : MBB) {
-      std::optional<uint64_t> Count = MBFI->getBlockProfileCount(&MBB);
       for (const MachineOperand &Op : I.operands()) {
         if (!Op.isJTI() && !Op.isGlobal() && !Op.isCPI())
           continue;
@@ -214,11 +215,10 @@ StaticDataSplitter::getLocalLinkageGlobalVariable(const GlobalValue *GV) {
   return (GV && GV->hasLocalLinkage()) ? dyn_cast<GlobalVariable>(GV) : nullptr;
 }
 
-bool StaticDataSplitter::inStaticDataSection(const GlobalVariable *GV,
+bool StaticDataSplitter::inStaticDataSection(const GlobalVariable &GV,
                                              const TargetMachine &TM) {
-  assert(GV && "Caller guaranteed");
 
-  SectionKind Kind = TargetLoweringObjectFile::getKindForGlobal(GV, TM);
+  SectionKind Kind = TargetLoweringObjectFile::getKindForGlobal(&GV, TM);
   return Kind.isData() || Kind.isReadOnly() || Kind.isReadOnlyWithRel() ||
          Kind.isBSS();
 }

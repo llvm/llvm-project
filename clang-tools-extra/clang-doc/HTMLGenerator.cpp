@@ -498,7 +498,7 @@ writeFileDefinition(const Location &L,
     return std::make_unique<TagNode>(
         HTMLTag::TAG_P, "Defined at line " + std::to_string(L.LineNumber) +
                             " of file " + L.Filename);
-  SmallString<128> FileURL(*RepositoryUrl);
+  SmallString<128> FileURL(RepositoryUrl.value_or(""));
   llvm::sys::path::append(
       FileURL, llvm::sys::path::Style::posix,
       // If we're on Windows, the file name will be in the wrong format, and
@@ -1077,6 +1077,11 @@ static llvm::Error serializeIndex(ClangDocContext &CDCtx) {
   std::string RootPathEscaped = RootPath.str().str();
   std::replace(RootPathEscaped.begin(), RootPathEscaped.end(), '\\', '/');
   OS << "var RootPath = \"" << RootPathEscaped << "\";\n";
+
+  llvm::SmallString<128> Base(CDCtx.Base);
+  std::string BaseEscaped = Base.str().str();
+  std::replace(BaseEscaped.begin(), BaseEscaped.end(), '\\', '/');
+  OS << "var Base = \"" << BaseEscaped << "\";\n";
 
   CDCtx.Idx.sort();
   llvm::json::OStream J(OS, 2);

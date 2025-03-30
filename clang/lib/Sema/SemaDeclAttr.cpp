@@ -1191,7 +1191,8 @@ static void handleTestTypestateAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 static void handleExtVectorTypeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // Remember this typedef decl, we will need it later for diagnostics.
-  S.ExtVectorDecls.push_back(cast<TypedefNameDecl>(D));
+  if (isa<TypedefNameDecl>(D))
+    S.ExtVectorDecls.push_back(cast<TypedefNameDecl>(D));
 }
 
 static void handlePackedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -2138,6 +2139,8 @@ static void handleConstructorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (AL.getNumArgs() &&
       !S.checkUInt32Argument(AL, AL.getArgAsExpr(0), priority))
     return;
+  S.Diag(D->getLocation(), diag::warn_global_constructor)
+      << D->getSourceRange();
 
   D->addAttr(::new (S.Context) ConstructorAttr(S.Context, AL, priority));
 }
@@ -2147,6 +2150,7 @@ static void handleDestructorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (AL.getNumArgs() &&
       !S.checkUInt32Argument(AL, AL.getArgAsExpr(0), priority))
     return;
+  S.Diag(D->getLocation(), diag::warn_global_destructor) << D->getSourceRange();
 
   D->addAttr(::new (S.Context) DestructorAttr(S.Context, AL, priority));
 }
@@ -2910,26 +2914,93 @@ static void handleWeakImportAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) WeakImportAttr(S.Context, AL));
 }
 
+// Checks whether an argument of launch_bounds-like attribute is
+// acceptable, performs implicit conversion to Rvalue, and returns
+// non-nullptr Expr result on success. Otherwise, it returns nullptr
+// and may output an error.
+template <class Attribute>
+static Expr *makeAttributeArgExpr(Sema &S, Expr *E, const Attribute &Attr,
+                                  const unsigned Idx) {
+  if (S.DiagnoseUnexpandedParameterPack(E))
+    return nullptr;
+
+  // Accept template arguments for now as they depend on something else.
+  // We'll get to check them when they eventually get instantiated.
+  if (E->isValueDependent())
+    return E;
+
+  std::optional<llvm::APSInt> I = llvm::APSInt(64);
+  if (!(I = E->getIntegerConstantExpr(S.Context))) {
+    S.Diag(E->getExprLoc(), diag::err_attribute_argument_n_type)
+        << &Attr << Idx << AANT_ArgumentIntegerConstant << E->getSourceRange();
+    return nullptr;
+  }
+  // Make sure we can fit it in 32 bits.
+  if (!I->isIntN(32)) {
+    S.Diag(E->getExprLoc(), diag::err_ice_too_large)
+        << toString(*I, 10, false) << 32 << /* Unsigned */ 1;
+    return nullptr;
+  }
+  if (*I < 0)
+    S.Diag(E->getExprLoc(), diag::err_attribute_requires_positive_integer)
+        << &Attr << /*non-negative*/ 1 << E->getSourceRange();
+
+  // We may need to perform implicit conversion of the argument.
+  InitializedEntity Entity = InitializedEntity::InitializeParameter(
+      S.Context, S.Context.getConstType(S.Context.IntTy), /*consume*/ false);
+  ExprResult ValArg = S.PerformCopyInitialization(Entity, SourceLocation(), E);
+  assert(!ValArg.isInvalid() &&
+         "Unexpected PerformCopyInitialization() failure.");
+
+  return ValArg.getAs<Expr>();
+}
+
 // Handles reqd_work_group_size and work_group_size_hint.
 template <typename WorkGroupAttr>
 static void handleWorkGroupSize(Sema &S, Decl *D, const ParsedAttr &AL) {
-  uint32_t WGSize[3];
+  Expr *WGSize[3];
   for (unsigned i = 0; i < 3; ++i) {
-    const Expr *E = AL.getArgAsExpr(i);
-    if (!S.checkUInt32Argument(AL, E, WGSize[i], i,
-                               /*StrictlyUnsigned=*/true))
+    if (Expr *E = makeAttributeArgExpr(S, AL.getArgAsExpr(i), AL, i))
+      WGSize[i] = E;
+    else
       return;
-    if (WGSize[i] == 0) {
-      S.Diag(AL.getLoc(), diag::err_attribute_argument_is_zero)
-          << AL << E->getSourceRange();
-      return;
+  }
+
+  auto IsZero = [&](Expr *E) {
+    if (E->isValueDependent())
+      return false;
+    std::optional<llvm::APSInt> I = E->getIntegerConstantExpr(S.Context);
+    assert(I && "Non-integer constant expr");
+    return I->isZero();
+  };
+
+  if (!llvm::all_of(WGSize, IsZero)) {
+    for (unsigned i = 0; i < 3; ++i) {
+      const Expr *E = AL.getArgAsExpr(i);
+      if (IsZero(WGSize[i])) {
+        S.Diag(AL.getLoc(), diag::err_attribute_argument_is_zero)
+            << AL << E->getSourceRange();
+        return;
+      }
     }
   }
 
+  auto Equal = [&](Expr *LHS, Expr *RHS) {
+    if (LHS->isValueDependent() || RHS->isValueDependent())
+      return true;
+    std::optional<llvm::APSInt> L = LHS->getIntegerConstantExpr(S.Context);
+    assert(L && "Non-integer constant expr");
+    std::optional<llvm::APSInt> R = RHS->getIntegerConstantExpr(S.Context);
+    assert(L && "Non-integer constant expr");
+    return L == R;
+  };
+
   WorkGroupAttr *Existing = D->getAttr<WorkGroupAttr>();
-  if (Existing && !(Existing->getXDim() == WGSize[0] &&
-                    Existing->getYDim() == WGSize[1] &&
-                    Existing->getZDim() == WGSize[2]))
+  if (Existing &&
+      !llvm::equal(std::initializer_list<Expr *>{Existing->getXDim(),
+                                                 Existing->getYDim(),
+                                                 Existing->getZDim()},
+                   WGSize, Equal))
     S.Diag(AL.getLoc(), diag::warn_duplicate_attribute) << AL;
 
   D->addAttr(::new (S.Context)
@@ -3720,16 +3791,18 @@ static void handleInitPriorityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  // Only perform the priority check if the attribute is outside of a system
-  // header. Values <= 100 are reserved for the implementation, and libc++
-  // benefits from being able to specify values in that range.
-  if ((prioritynum < 101 || prioritynum > 65535) &&
-      !S.getSourceManager().isInSystemHeader(AL.getLoc())) {
+  if (prioritynum > 65535) {
     S.Diag(AL.getLoc(), diag::err_attribute_argument_out_of_range)
-        << E->getSourceRange() << AL << 101 << 65535;
+        << E->getSourceRange() << AL << 0 << 65535;
     AL.setInvalid();
     return;
   }
+
+  // Values <= 100 are reserved for the implementation, and libc++
+  // benefits from being able to specify values in that range.
+  if (prioritynum < 101)
+    S.Diag(AL.getLoc(), diag::warn_init_priority_reserved)
+        << E->getSourceRange() << prioritynum;
   D->addAttr(::new (S.Context) InitPriorityAttr(S.Context, AL, prioritynum));
 }
 
@@ -4841,7 +4914,8 @@ void Sema::AddModeAttr(Decl *D, const AttributeCommonInfo &CI,
 
   if (NewElemTy.isNull()) {
     // Only emit diagnostic on host for 128-bit mode attribute
-    if (!(DestWidth == 128 && getLangOpts().CUDAIsDevice))
+    if (!(DestWidth == 128 &&
+          (getLangOpts().CUDAIsDevice || getLangOpts().SYCLIsDevice)))
       Diag(AttrLoc, diag::err_machine_mode) << 1 /*Unsupported*/ << Name;
     return;
   }
@@ -5206,6 +5280,25 @@ static void handleCallConvAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   case ParsedAttr::AT_RISCVVectorCC:
     D->addAttr(::new (S.Context) RISCVVectorCCAttr(S.Context, AL));
     return;
+  case ParsedAttr::AT_RISCVVLSCC: {
+    // If the riscv_abi_vlen doesn't have any argument, default ABI_VLEN is 128.
+    unsigned VectorLength = 128;
+    if (AL.getNumArgs() &&
+        !S.checkUInt32Argument(AL, AL.getArgAsExpr(0), VectorLength))
+      return;
+    if (VectorLength < 32 || VectorLength > 65536) {
+      S.Diag(AL.getLoc(), diag::err_argument_invalid_range)
+          << VectorLength << 32 << 65536;
+      return;
+    }
+    if (!llvm::isPowerOf2_64(VectorLength)) {
+      S.Diag(AL.getLoc(), diag::err_argument_not_power_of_2);
+      return;
+    }
+
+    D->addAttr(::new (S.Context) RISCVVLSCCAttr(S.Context, AL, VectorLength));
+    return;
+  }
   default:
     llvm_unreachable("unexpected attribute kind");
   }
@@ -5325,10 +5418,19 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
     return false;
   }
 
-  unsigned ReqArgs = Attrs.getKind() == ParsedAttr::AT_Pcs ? 1 : 0;
-  if (!Attrs.checkExactlyNumArgs(*this, ReqArgs)) {
-    Attrs.setInvalid();
-    return true;
+  if (Attrs.getKind() == ParsedAttr::AT_RISCVVLSCC) {
+    // riscv_vls_cc only accepts 0 or 1 argument.
+    if (!Attrs.checkAtLeastNumArgs(*this, 0) ||
+        !Attrs.checkAtMostNumArgs(*this, 1)) {
+      Attrs.setInvalid();
+      return true;
+    }
+  } else {
+    unsigned ReqArgs = Attrs.getKind() == ParsedAttr::AT_Pcs ? 1 : 0;
+    if (!Attrs.checkExactlyNumArgs(*this, ReqArgs)) {
+      Attrs.setInvalid();
+      return true;
+    }
   }
 
   // TODO: diagnose uses of these conventions on the wrong target.
@@ -5413,6 +5515,30 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
   case ParsedAttr::AT_RISCVVectorCC:
     CC = CC_RISCVVectorCall;
     break;
+  case ParsedAttr::AT_RISCVVLSCC: {
+    // If the riscv_abi_vlen doesn't have any argument, we set set it to default
+    // value 128.
+    unsigned ABIVLen = 128;
+    if (Attrs.getNumArgs() &&
+        !checkUInt32Argument(Attrs, Attrs.getArgAsExpr(0), ABIVLen)) {
+      Attrs.setInvalid();
+      return true;
+    }
+    if (Attrs.getNumArgs() && (ABIVLen < 32 || ABIVLen > 65536)) {
+      Attrs.setInvalid();
+      Diag(Attrs.getLoc(), diag::err_argument_invalid_range)
+          << ABIVLen << 32 << 65536;
+      return true;
+    }
+    if (!llvm::isPowerOf2_64(ABIVLen)) {
+      Attrs.setInvalid();
+      Diag(Attrs.getLoc(), diag::err_argument_not_power_of_2);
+      return true;
+    }
+    CC = static_cast<CallingConv>(CallingConv::CC_RISCVVLSCall_32 +
+                                  llvm::Log2_64(ABIVLen) - 5);
+    break;
+  }
   default: llvm_unreachable("unexpected attribute kind");
   }
 
@@ -7271,6 +7397,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_M68kRTD:
   case ParsedAttr::AT_PreserveNone:
   case ParsedAttr::AT_RISCVVectorCC:
+  case ParsedAttr::AT_RISCVVLSCC:
     handleCallConvAttr(S, D, AL);
     break;
   case ParsedAttr::AT_Suppress:

@@ -27,6 +27,7 @@ namespace LIBC_NAMESPACE_DECL {
 static constexpr float PI_OVER_2 = 0x1.921fb6p0f;
 static constexpr float PI = 0x1.921fb6p1f;
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 static constexpr size_t N_EXCEPTS = 2;
 
 static constexpr fputil::ExceptValues<float16, N_EXCEPTS> ACOSF16_EXCEPTS{{
@@ -34,6 +35,7 @@ static constexpr fputil::ExceptValues<float16, N_EXCEPTS> ACOSF16_EXCEPTS{{
     {0xacaf, 0x3e93, 1, 0, 0},
     {0xb874, 0x4052, 1, 0, 1},
 }};
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 LLVM_LIBC_FUNCTION(float16, acosf16, (float16 x)) {
   using FPBits = fputil::FPBits<float16>;
@@ -64,9 +66,11 @@ LLVM_LIBC_FUNCTION(float16, acosf16, (float16 x)) {
 
   float xf = x;
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   // Handle exceptional values
   if (auto r = ACOSF16_EXCEPTS.lookup(x_u); LIBC_UNLIKELY(r.has_value()))
     return r.value();
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   // |x| == 0x1p0, x is 1 or -1
   // if x is (-)1, return pi, else

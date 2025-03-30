@@ -165,7 +165,8 @@ bool ABIMacOSX_i386::GetArgumentValues(Thread &thread,
     // We currently only support extracting values with Clang QualTypes. Do we
     // care about others?
     CompilerType compiler_type(value->GetCompilerType());
-    std::optional<uint64_t> bit_size = compiler_type.GetBitSize(&thread);
+    std::optional<uint64_t> bit_size =
+        llvm::expectedToOptional(compiler_type.GetBitSize(&thread));
     if (bit_size) {
       bool is_signed;
       if (compiler_type.IsIntegerOrEnumerationType(is_signed))
@@ -275,7 +276,8 @@ ABIMacOSX_i386::GetReturnValueObjectImpl(Thread &thread,
   bool is_signed;
 
   if (compiler_type.IsIntegerOrEnumerationType(is_signed)) {
-    std::optional<uint64_t> bit_width = compiler_type.GetBitSize(&thread);
+    std::optional<uint64_t> bit_width =
+        llvm::expectedToOptional(compiler_type.GetBitSize(&thread));
     if (!bit_width)
       return return_valobj_sp;
     unsigned eax_id =
@@ -360,13 +362,13 @@ UnwindPlanSP ABIMacOSX_i386::CreateFunctionEntryUnwindPlan() {
   uint32_t sp_reg_num = dwarf_esp;
   uint32_t pc_reg_num = dwarf_eip;
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
-  row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 4);
-  row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, -4, false);
-  row->SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
+  UnwindPlan::Row row;
+  row.GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 4);
+  row.SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, -4, false);
+  row.SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
 
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(row);
+  plan_sp->AppendRow(std::move(row));
   plan_sp->SetSourceName("i386 at-func-entry default");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
   return plan_sp;
@@ -382,19 +384,18 @@ UnwindPlanSP ABIMacOSX_i386::CreateDefaultUnwindPlan() {
   uint32_t sp_reg_num = dwarf_esp;
   uint32_t pc_reg_num = dwarf_eip;
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
   const int32_t ptr_size = 4;
 
-  row->GetCFAValue().SetIsRegisterPlusOffset(fp_reg_num, 2 * ptr_size);
-  row->SetOffset(0);
-  row->SetUnspecifiedRegistersAreUndefined(true);
+  row.GetCFAValue().SetIsRegisterPlusOffset(fp_reg_num, 2 * ptr_size);
+  row.SetUnspecifiedRegistersAreUndefined(true);
 
-  row->SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, ptr_size * -2, true);
-  row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * -1, true);
-  row->SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, ptr_size * -2, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * -1, true);
+  row.SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
 
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(row);
+  plan_sp->AppendRow(std::move(row));
   plan_sp->SetSourceName("i386 default unwind plan");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
   plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);

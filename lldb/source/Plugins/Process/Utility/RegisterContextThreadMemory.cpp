@@ -114,11 +114,27 @@ bool RegisterContextThreadMemory::ReadAllRegisterValues(
   return false;
 }
 
+bool RegisterContextThreadMemory::ReadAllRegisterValues(
+    lldb_private::RegisterCheckpoint &reg_checkpoint) {
+  UpdateRegisterContext();
+  if (m_reg_ctx_sp)
+    return m_reg_ctx_sp->ReadAllRegisterValues(reg_checkpoint);
+  return false;
+}
+
 bool RegisterContextThreadMemory::WriteAllRegisterValues(
     const lldb::DataBufferSP &data_sp) {
   UpdateRegisterContext();
   if (m_reg_ctx_sp)
     return m_reg_ctx_sp->WriteAllRegisterValues(data_sp);
+  return false;
+}
+
+bool RegisterContextThreadMemory::WriteAllRegisterValues(
+    const lldb_private::RegisterCheckpoint &reg_checkpoint) {
+  UpdateRegisterContext();
+  if (m_reg_ctx_sp)
+    return m_reg_ctx_sp->WriteAllRegisterValues(reg_checkpoint);
   return false;
 }
 

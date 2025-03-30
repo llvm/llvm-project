@@ -448,13 +448,25 @@ public:
   /// be checked.
   bool isAssociativeAndCommutative(const MachineInstr &Inst,
                                    bool Invert) const override;
-  /// When getMachineCombinerPatterns() finds patterns, this function generates
-  /// the instructions that could replace the original code sequence
+
+  /// Returns true if \P Opcode is an instruction which performs accumulation
+  /// into a destination register.
+  bool isAccumulationOpcode(unsigned Opcode) const override;
+
+  /// Returns an opcode which defines the accumulator used by \P Opcode.
+  unsigned getAccumulationStartOpcode(unsigned Opcode) const override;
+
+  unsigned
+  getReduceOpcodeForAccumulator(unsigned int AccumulatorOpCode) const override;
+
+  /// When getMachineCombinerPatterns() finds patterns, this function
+  /// generates the instructions that could replace the original code
+  /// sequence
   void genAlternativeCodeSequence(
       MachineInstr &Root, unsigned Pattern,
       SmallVectorImpl<MachineInstr *> &InsInstrs,
       SmallVectorImpl<MachineInstr *> &DelInstrs,
-      DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const override;
+      DenseMap<Register, unsigned> &InstrIdxForVirtReg) const override;
   /// AArch64 supports MachineCombiner.
   bool useMachineCombiner() const override;
 

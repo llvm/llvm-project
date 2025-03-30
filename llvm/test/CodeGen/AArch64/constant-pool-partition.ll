@@ -53,13 +53,13 @@
 ; CHECK-NEXT:     .byte   255                             // 0xff
 ; CHECK-NEXT:     .byte   255                             // 0xff
 ; CHECK-NEXT:     .byte   255                             // 0xff
-; CHECK-NEXT: .section .rodata.cst16,"aM",@progbits,16 
-; CHECK-NEXT:     .p2align 
-; CHECK-NEXT:   .LCPI1_1: 
-; CHECK-NEXT:     .word 2                                 // 0x2 
-; CHECK-NEXT:     .word 3                                 // 0x3 
-; CHECK-NEXT:     .word 5                                 // 0x5 
-; CHECK-NEXT:     .word 7                                 // 0x7 
+; CHECK-NEXT: .section .rodata.cst16,"aM",@progbits,16
+; CHECK-NEXT:     .p2align
+; CHECK-NEXT:   .LCPI1_1:
+; CHECK-NEXT:     .word 2                                 // 0x2
+; CHECK-NEXT:     .word 3                                 // 0x3
+; CHECK-NEXT:     .word 5                                 // 0x5
+; CHECK-NEXT:     .word 7                                 // 0x7
 ; CHECK-NEXT: .section        .rodata.cst16.hot,"aM",@progbits,16
 ; CHECK-NEXT:     .p2align
 ; CHECK-NEXT:   .LCPI1_2:

@@ -1022,8 +1022,8 @@ SymbolFile *Module::GetSymbolFile(bool can_create, Stream *feedback_strm) {
   return m_symfile_up ? m_symfile_up->GetSymbolFile() : nullptr;
 }
 
-Symtab *Module::GetSymtab() {
-  if (SymbolFile *symbols = GetSymbolFile())
+Symtab *Module::GetSymtab(bool can_create) {
+  if (SymbolFile *symbols = GetSymbolFile(can_create))
     return symbols->GetSymtab();
   return nullptr;
 }

@@ -42,6 +42,7 @@ public:
   ASTContext &getASTContext() const;
   DiagnosticsEngine &getDiagnostics() const;
   const LangOptions &getLangOpts() const;
+  DeclContext *getCurContext() const;
 
   /// Helper class that creates diagnostics with optional
   /// template instantiation stacks.

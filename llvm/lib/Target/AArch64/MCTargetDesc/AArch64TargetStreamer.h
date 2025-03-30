@@ -97,8 +97,8 @@ public:
   /// Build attributes implementation
   virtual void
   emitAtributesSubsection(StringRef VendorName,
-                          AArch64BuildAttrs::SubsectionOptional IsOptional,
-                          AArch64BuildAttrs::SubsectionType ParameterType);
+                          AArch64BuildAttributes::SubsectionOptional IsOptional,
+                          AArch64BuildAttributes::SubsectionType ParameterType);
   virtual void emitAttribute(StringRef VendorName, unsigned Tag, unsigned Value,
                              std::string String);
   void activateAtributesSubsection(StringRef VendorName);
@@ -124,8 +124,9 @@ private:
 
   /// Build attributes implementation
   void emitAtributesSubsection(
-      StringRef VendorName, AArch64BuildAttrs::SubsectionOptional IsOptional,
-      AArch64BuildAttrs::SubsectionType ParameterType) override;
+      StringRef VendorName,
+      AArch64BuildAttributes::SubsectionOptional IsOptional,
+      AArch64BuildAttributes::SubsectionType ParameterType) override;
   void emitAttribute(StringRef VendorName, unsigned Tag, unsigned Value,
                      std::string String) override;
   void emitInst(uint32_t Inst) override;

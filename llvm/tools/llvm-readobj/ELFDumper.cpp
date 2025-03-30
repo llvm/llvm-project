@@ -39,6 +39,7 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/RelocationResolver.h"
 #include "llvm/Object/StackMapParser.h"
+#include "llvm/Support/AArch64AttributeParser.h"
 #include "llvm/Support/AMDGPUMetadata.h"
 #include "llvm/Support/ARMAttributeParser.h"
 #include "llvm/Support/ARMBuildAttributes.h"
@@ -2877,6 +2878,12 @@ template <class ELFT> void ELFDumper<ELFT>::printArchSpecificInfo() {
     printAttributes(
         ELF::SHT_ARM_ATTRIBUTES, std::make_unique<ARMAttributeParser>(&W),
         Obj.isLE() ? llvm::endianness::little : llvm::endianness::big);
+    break;
+  case EM_AARCH64:
+    printAttributes(ELF::SHT_AARCH64_ATTRIBUTES,
+                    std::make_unique<AArch64AttributeParser>(&W),
+                    Obj.isLE() ? llvm::endianness::little
+                               : llvm::endianness::big);
     break;
   case EM_RISCV:
     if (Obj.isLE())

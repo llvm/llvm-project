@@ -3885,7 +3885,7 @@ void MallocChecker::printState(raw_ostream &Out, ProgramStateRef State,
       Out << " : ";
       Data.dump(Out);
       if (CheckKind)
-        Out << " (" << CheckNames[*CheckKind].getName() << ")";
+        Out << " (" << CheckNames[*CheckKind] << ")";
       Out << NL;
     }
   }

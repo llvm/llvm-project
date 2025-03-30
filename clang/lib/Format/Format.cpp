@@ -1713,6 +1713,10 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
       FormatStyle::SIS_WithoutElse;
   GoogleStyle.AllowShortLoopsOnASingleLine = true;
   GoogleStyle.AlwaysBreakBeforeMultilineStrings = true;
+  // Abseil aliases to clang's `_Nonnull`, `_Nullable` and `_Null_unspecified`.
+  GoogleStyle.AttributeMacros.push_back("absl_nonnull");
+  GoogleStyle.AttributeMacros.push_back("absl_nullable");
+  GoogleStyle.AttributeMacros.push_back("absl_nullability_unknown");
   GoogleStyle.BreakTemplateDeclarations = FormatStyle::BTDS_Yes;
   GoogleStyle.DerivePointerAlignment = true;
   GoogleStyle.IncludeStyle.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
@@ -2119,10 +2123,14 @@ std::error_code parseConfiguration(llvm::MemoryBufferRef Config,
   FormatStyle::FormatStyleSet StyleSet;
   bool LanguageFound = false;
   for (const FormatStyle &Style : llvm::reverse(Styles)) {
-    if (Style.Language != FormatStyle::LK_None)
+    const auto Lang = Style.Language;
+    if (Lang != FormatStyle::LK_None)
       StyleSet.Add(Style);
-    if (Style.Language == Language)
+    if (Lang == Language ||
+        // For backward compatibility.
+        (Lang == FormatStyle::LK_Cpp && Language == FormatStyle::LK_C)) {
       LanguageFound = true;
+    }
   }
   if (!LanguageFound) {
     if (Styles.empty() || Styles[0].Language != FormatStyle::LK_None)
@@ -2162,8 +2170,14 @@ FormatStyle::FormatStyleSet::Get(FormatStyle::LanguageKind Language) const {
   if (!Styles)
     return std::nullopt;
   auto It = Styles->find(Language);
-  if (It == Styles->end())
-    return std::nullopt;
+  if (It == Styles->end()) {
+    if (Language != FormatStyle::LK_C)
+      return std::nullopt;
+    // For backward compatibility.
+    It = Styles->find(FormatStyle::LK_Cpp);
+    if (It == Styles->end())
+      return std::nullopt;
+  }
   FormatStyle Style = It->second;
   Style.StyleSet = *this;
   return Style;
@@ -3547,7 +3561,8 @@ tooling::Replacements sortIncludes(const FormatStyle &Style, StringRef Code,
     return sortJavaScriptImports(Style, Code, Ranges, FileName);
   if (Style.Language == FormatStyle::LanguageKind::LK_Java)
     return sortJavaImports(Style, Code, Ranges, FileName, Replaces);
-  sortCppIncludes(Style, Code, Ranges, FileName, Replaces, Cursor);
+  if (Style.isCpp())
+    sortCppIncludes(Style, Code, Ranges, FileName, Replaces, Cursor);
   return Replaces;
 }
 
@@ -3941,34 +3956,42 @@ tooling::Replacements sortUsingDeclarations(const FormatStyle &Style,
 LangOptions getFormattingLangOpts(const FormatStyle &Style) {
   LangOptions LangOpts;
 
-  FormatStyle::LanguageStandard LexingStd = Style.Standard;
-  if (LexingStd == FormatStyle::LS_Auto)
-    LexingStd = FormatStyle::LS_Latest;
-  if (LexingStd == FormatStyle::LS_Latest)
+  auto LexingStd = Style.Standard;
+  if (LexingStd == FormatStyle::LS_Auto || LexingStd == FormatStyle::LS_Latest)
     LexingStd = FormatStyle::LS_Cpp20;
-  LangOpts.CPlusPlus = 1;
-  LangOpts.CPlusPlus11 = LexingStd >= FormatStyle::LS_Cpp11;
-  LangOpts.CPlusPlus14 = LexingStd >= FormatStyle::LS_Cpp14;
-  LangOpts.CPlusPlus17 = LexingStd >= FormatStyle::LS_Cpp17;
-  LangOpts.CPlusPlus20 = LexingStd >= FormatStyle::LS_Cpp20;
-  LangOpts.Char8 = LexingStd >= FormatStyle::LS_Cpp20;
+
+  const bool SinceCpp11 = LexingStd >= FormatStyle::LS_Cpp11;
+  const bool SinceCpp20 = LexingStd >= FormatStyle::LS_Cpp20;
+
+  switch (Style.Language) {
+  case FormatStyle::LK_C:
+    LangOpts.C17 = 1;
+    break;
+  case FormatStyle::LK_Cpp:
+  case FormatStyle::LK_ObjC:
+    LangOpts.CXXOperatorNames = 1;
+    LangOpts.CPlusPlus11 = SinceCpp11;
+    LangOpts.CPlusPlus14 = LexingStd >= FormatStyle::LS_Cpp14;
+    LangOpts.CPlusPlus17 = LexingStd >= FormatStyle::LS_Cpp17;
+    LangOpts.CPlusPlus20 = SinceCpp20;
+    [[fallthrough]];
+  default:
+    LangOpts.CPlusPlus = 1;
+  }
+
+  LangOpts.Char8 = SinceCpp20;
   // Turning on digraphs in standards before C++0x is error-prone, because e.g.
   // the sequence "<::" will be unconditionally treated as "[:".
   // Cf. Lexer::LexTokenInternal.
-  LangOpts.Digraphs = LexingStd >= FormatStyle::LS_Cpp11;
+  LangOpts.Digraphs = SinceCpp11;
 
   LangOpts.LineComment = 1;
-
-  const auto Language = Style.Language;
-  LangOpts.C17 = Language == FormatStyle::LK_C;
-  LangOpts.CXXOperatorNames =
-      Language == FormatStyle::LK_Cpp || Language == FormatStyle::LK_ObjC;
-
   LangOpts.Bool = 1;
   LangOpts.ObjC = 1;
   LangOpts.MicrosoftExt = 1;    // To get kw___try, kw___finally.
   LangOpts.DeclSpecKeyword = 1; // To get __declspec.
   LangOpts.C99 = 1; // To get kw_restrict for non-underscore-prefixed restrict.
+
   return LangOpts;
 }
 

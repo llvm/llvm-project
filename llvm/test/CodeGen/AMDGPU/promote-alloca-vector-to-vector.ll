@@ -43,12 +43,13 @@ entry:
 ; GCN:     v_mov_b32_e32 v{{[0-9]+}}, [[ONE]]
 ; GCN:     store_dwordx4 v{{.+}},
 
-; OPT: %0 = insertelement <4 x float> undef, float 1.000000e+00, i32 %sel2
+; OPT: %0 = insertelement <4 x float> poison, float 1.000000e+00, i32 %sel2
 ; OPT: store <4 x float> %0, ptr addrspace(1) %out, align 4
 
 define amdgpu_kernel void @float4_alloca_load4(ptr addrspace(1) %out, ptr addrspace(3) %dummy_lds) {
 entry:
   %alloca = alloca <4 x float>, align 16, addrspace(5)
+  store <4 x float> poison, ptr addrspace(5) %alloca
   %x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %y = tail call i32 @llvm.amdgcn.workitem.id.y()
   %c1 = icmp uge i32 %x, 3
@@ -95,7 +96,8 @@ entry:
 ; GCN-NOT: buffer_
 ; GCN:     s_mov_b64 s[{{[0-9:]+}}], 0xffff
 
-; OPT: %0 = insertelement <4 x half> undef, half 0xH3C00, i32 %sel2
+; OPT: %alloca = freeze <4 x half> poison
+; OPT: %0 = insertelement <4 x half> %alloca, half 0xH3C00, i32 %sel2
 ; OPT: store <4 x half> %0, ptr addrspace(1) %out, align 2
 
 define amdgpu_kernel void @half4_alloca_load4(ptr addrspace(1) %out, ptr addrspace(3) %dummy_lds) {
@@ -147,7 +149,8 @@ entry:
 ; GCN-NOT: buffer_
 ; GCN:     s_mov_b64 s[{{[0-9:]+}}], 0xffff
 
-; OPT: %0 = insertelement <4 x i16> undef, i16 1, i32 %sel2
+; OPT: %alloca = freeze <4 x i16> poison
+; OPT: %0 = insertelement <4 x i16> %alloca, i16 1, i32 %sel2
 ; OPT: store <4 x i16> %0, ptr addrspace(1) %out, align 2
 
 define amdgpu_kernel void @short4_alloca_load4(ptr addrspace(1) %out, ptr addrspace(3) %dummy_lds) {
@@ -170,7 +173,9 @@ entry:
 ; OPT-LABEL: define i64 @ptr_alloca_bitcast
 
 ; GCN-NOT: buffer_
-; GCN: v_mov_b32_e32 v1, 0
+; GCN: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT: s_setpc_b64
+
 
 ; OPT: ret i64 undef
 

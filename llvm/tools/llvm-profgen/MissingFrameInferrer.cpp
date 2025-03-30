@@ -165,14 +165,14 @@ uint64_t MissingFrameInferrer::computeUniqueTailCallPath(
   if (CurSearchingDepth == MaximumSearchDepth)
     return 0;
 
-
-  if (!FuncToTailCallMap.count(From))
+  auto It = FuncToTailCallMap.find(From);
+  if (It == FuncToTailCallMap.end())
     return 0;
 
   CurSearchingDepth++;
   Visiting.insert(From);
   uint64_t NumPaths = 0;
-  for (auto TailCall : FuncToTailCallMap[From]) {
+  for (auto TailCall : It->second) {
     NumPaths += computeUniqueTailCallPath(TailCall, To, Path);
     // Stop analyzing the remaining if we are already seeing more than one
     // reachable paths.

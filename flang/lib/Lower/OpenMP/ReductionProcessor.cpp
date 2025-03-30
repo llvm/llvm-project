@@ -337,7 +337,12 @@ static void genBoxCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
     return;
   }
 
-  fir::ShapeShiftOp shapeShift = getShapeShift(builder, loc, lhs);
+  // Get ShapeShift with default lower bounds. This makes it possible to use
+  // unmodified LoopNest's indices with ArrayCoorOp.
+  fir::ShapeShiftOp shapeShift =
+      getShapeShift(builder, loc, lhs,
+                    /*cannotHaveNonDefaultLowerBounds=*/false,
+                    /*useDefaultLowerBounds=*/true);
 
   // Iterate over array elements, applying the equivalent scalar reduction:
 
@@ -617,10 +622,13 @@ void ReductionProcessor::processReductionArguments(
     // this isn't the same as the by-val and by-ref passing later in the
     // pipeline. Both styles assume that the variable is a reference at
     // this point
-    assert(mlir::isa<fir::ReferenceType>(symVal.getType()) &&
-           "reduction input var is a reference");
+    assert(fir::isa_ref_type(symVal.getType()) &&
+           "reduction input var is passed by reference");
+    mlir::Type elementType = fir::dyn_cast_ptrEleTy(symVal.getType());
+    mlir::Type refTy = fir::ReferenceType::get(elementType);
 
-    reductionVars.push_back(symVal);
+    reductionVars.push_back(
+        builder.createConvert(currentLocation, refTy, symVal));
     reduceVarByRef.push_back(doReductionByRef(symVal));
   }
 

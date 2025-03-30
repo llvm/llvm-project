@@ -128,6 +128,15 @@ static void swap_chars() {
                :
                : "r"('0'), "r"('1'), "r"(&g_c1), "r"(&g_c2)
                : "memory");
+#elif defined(__riscv)
+  asm volatile("sb %1, (%2)\n\t"
+               "sb %0, (%3)\n\t"
+               "sb %0, (%2)\n\t"
+               "sb %1, (%3)\n\t"
+               :
+               : "r"('0'), "r"('1'), "r"(&g_c1), "r"(&g_c2)
+               : "memory");
+
 #else
 #warning This may generate unpredictible assembly and cause the single-stepping test to fail.
 #warning Please add appropriate assembly for your target.

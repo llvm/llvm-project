@@ -1583,19 +1583,20 @@ Restrict Visibility
 ^^^^^^^^^^^^^^^^^^^
 
 Functions and variables should have the most restricted visibility possible.
-For class members, that means using appropriate `private`, `protected`, or `public`
-keyword to restrict their access. For non-member functions, variables, and classes,
-that means restricting visibility to a single `.cpp` file if it's not referenced
-outside that file.
+For class members, that means using appropriate ``private``, ``protected``, or
+``public`` keyword to restrict their access. For non-member functions, variables,
+and classes, that means restricting visibility to a single ``.cpp`` file if it's
+not referenced outside that file.
 
 Visibility of file-scope non-member variables and functions can be restricted to
-the current translation unit by using either the `static` keyword or an anonymous namespace.
-Anonymous namespaces are a great language feature that tells the C++ compiler that
-the contents of the namespace are only visible within the current translation unit,
-allowing more aggressive optimization and eliminating the possibility of symbol
-name collisions.  Anonymous namespaces are to C++ as `static` is to C functions and
-global variables.  While `static` is available in C++, anonymous namespaces are more
-general: they can make entire classes private to a file.
+the current translation unit by using either the ``static`` keyword or an anonymous
+namespace. Anonymous namespaces are a great language feature that tells the C++
+compiler that the contents of the namespace are only visible within the current
+translation unit, allowing more aggressive optimization and eliminating the
+possibility of symbol name collisions.  Anonymous namespaces are to C++ as
+``static`` is to C functions and global variables.  While ``static`` is available
+in C++, anonymous namespaces are more general: they can make entire classes
+private to a file.
 
 The problem with anonymous namespaces is that they naturally want to encourage
 indentation of their body, and they reduce locality of reference: if you see a
