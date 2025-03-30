@@ -164,8 +164,7 @@ private:
       unfold(&DTU, LI, SIToUnfold, &NewSIsToUnfold, &NewBBs);
 
       // Put newly discovered select instructions into the work list.
-      for (const SelectInstToUnfold &NewSIToUnfold : NewSIsToUnfold)
-        Stack.push_back(NewSIToUnfold);
+      llvm::append_range(Stack, NewSIsToUnfold);
     }
   }
 

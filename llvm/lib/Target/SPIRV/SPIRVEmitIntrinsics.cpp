@@ -1241,8 +1241,7 @@ void SPIRVEmitIntrinsics::preprocessCompositeConstants(IRBuilder<> &B) {
           for (unsigned i = 0; i < COp->getNumElements(); ++i)
             Args.push_back(COp->getElementAsConstant(i));
         else
-          for (auto &COp : AggrConst->operands())
-            Args.push_back(COp);
+          llvm::append_range(Args, AggrConst->operands());
         if (!BPrepared) {
           IsPhi ? B.SetInsertPointPastAllocas(I->getParent()->getParent())
                 : B.SetInsertPoint(I);
@@ -1387,8 +1386,7 @@ Instruction *SPIRVEmitIntrinsics::visitGetElementPtrInst(GetElementPtrInst &I) {
   SmallVector<Type *, 2> Types = {I.getType(), I.getOperand(0)->getType()};
   SmallVector<Value *, 4> Args;
   Args.push_back(B.getInt1(I.isInBounds()));
-  for (auto &Op : I.operands())
-    Args.push_back(Op);
+  llvm::append_range(Args, I.operands());
   auto *NewI = B.CreateIntrinsic(Intrinsic::spv_gep, {Types}, {Args});
   replaceAllUsesWithAndErase(B, &I, NewI);
   return NewI;
@@ -1716,9 +1714,7 @@ Instruction *SPIRVEmitIntrinsics::visitExtractValueInst(ExtractValueInst &I) {
     return &I;
   IRBuilder<> B(I.getParent());
   B.SetInsertPoint(&I);
-  SmallVector<Value *> Args;
-  for (auto &Op : I.operands())
-    Args.push_back(Op);
+  SmallVector<Value *> Args(I.operands());
   for (auto &Op : I.indices())
     Args.push_back(B.getInt32(Op));
   auto *NewI =
@@ -1794,9 +1790,7 @@ Instruction *SPIRVEmitIntrinsics::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
   assert(I.getType()->isAggregateType() && "Aggregate result is expected");
   IRBuilder<> B(I.getParent());
   B.SetInsertPoint(&I);
-  SmallVector<Value *> Args;
-  for (auto &Op : I.operands())
-    Args.push_back(Op);
+  SmallVector<Value *> Args(I.operands());
   Args.push_back(B.getInt32(
       static_cast<uint32_t>(getMemScope(I.getContext(), I.getSyncScopeID()))));
   Args.push_back(B.getInt32(
