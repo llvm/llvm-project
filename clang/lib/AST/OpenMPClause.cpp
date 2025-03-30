@@ -305,8 +305,14 @@ OMPClause::child_range OMPIfClause::used_children() {
   return child_range(&Condition, &Condition + 1);
 }
 
-OMPClause::child_range OMPNowaitClause::used_children() {
+/*OMPClause::child_range OMPNowaitClause::used_children() {
   return child_range(&Condition, &Condition + 1);
+}*/
+OMPClause::child_range OMPNowaitClause::used_children() {
+  if (Condition)
+    return child_range(&Condition, &Condition + 1);
+  Stmt *Null = nullptr;
+  return child_range(&Null, &Null);
 }
 
 OMPClause::child_range OMPGrainsizeClause::used_children() {
