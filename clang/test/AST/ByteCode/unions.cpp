@@ -570,4 +570,33 @@ namespace ActiveDestroy {
   static_assert(foo2());
 }
 
+namespace MoveOrAssignOp {
+  struct min_pointer {
+    int *ptr_;
+    constexpr min_pointer(int *p) : ptr_(p) {}
+    min_pointer() = default;
+  };
+
+  class F {
+    struct __long {
+      min_pointer __data_;
+    };
+    union __rep {
+      int __s;
+      __long __l;
+    } __rep_;
+
+  public:
+    constexpr F() {
+      __rep_ = __rep();
+      __rep_.__l.__data_ = nullptr;
+    }
+  };
+
+  constexpr bool foo() {
+    F f{};
+    return true;
+  }
+  static_assert(foo());
+}
 #endif

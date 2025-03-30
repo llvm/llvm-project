@@ -175,7 +175,7 @@ unsigned X86TTIImpl::getNumberOfRegisters(unsigned ClassID) const {
   return 8;
 }
 
-bool X86TTIImpl::hasConditionalLoadStoreForType(Type *Ty) const {
+bool X86TTIImpl::hasConditionalLoadStoreForType(Type *Ty, bool IsStore) const {
   if (!ST->hasCF())
     return false;
   if (!Ty)
@@ -6229,13 +6229,7 @@ bool X86TTIImpl::canMacroFuseCmp() {
   return ST->hasMacroFusion() || ST->hasBranchFusion();
 }
 
-bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment) {
-  Type *ScalarTy = DataTy->getScalarType();
-
-  // The backend can't handle a single element vector w/o CFCMOV.
-  if (isa<VectorType>(DataTy) && cast<FixedVectorType>(DataTy)->getNumElements() == 1)
-    return ST->hasCF() && hasConditionalLoadStoreForType(ScalarTy);
-
+static bool isLegalMaskedLoadStore(Type *ScalarTy, const X86Subtarget *ST) {
   if (!ST->hasAVX())
     return false;
 
@@ -6259,8 +6253,28 @@ bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment) {
          ((IntWidth == 8 || IntWidth == 16) && ST->hasBWI());
 }
 
-bool X86TTIImpl::isLegalMaskedStore(Type *DataType, Align Alignment) {
-  return isLegalMaskedLoad(DataType, Alignment);
+bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment) {
+  Type *ScalarTy = DataTy->getScalarType();
+
+  // The backend can't handle a single element vector w/o CFCMOV.
+  if (isa<VectorType>(DataTy) &&
+      cast<FixedVectorType>(DataTy)->getNumElements() == 1)
+    return ST->hasCF() &&
+           hasConditionalLoadStoreForType(ScalarTy, /*IsStore=*/false);
+
+  return isLegalMaskedLoadStore(ScalarTy, ST);
+}
+
+bool X86TTIImpl::isLegalMaskedStore(Type *DataTy, Align Alignment) {
+  Type *ScalarTy = DataTy->getScalarType();
+
+  // The backend can't handle a single element vector w/o CFCMOV.
+  if (isa<VectorType>(DataTy) &&
+      cast<FixedVectorType>(DataTy)->getNumElements() == 1)
+    return ST->hasCF() &&
+           hasConditionalLoadStoreForType(ScalarTy, /*IsStore=*/true);
+
+  return isLegalMaskedLoadStore(ScalarTy, ST);
 }
 
 bool X86TTIImpl::isLegalNTLoad(Type *DataType, Align Alignment) {

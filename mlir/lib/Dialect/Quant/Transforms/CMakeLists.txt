@@ -1,5 +1,6 @@
 add_mlir_dialect_library(MLIRQuantTransforms
   LowerQuantOps.cpp
+  NormalizeQuantTypes.cpp
   StripFuncQuantTypes.cpp
 
   ADDITIONAL_HEADER_DIRS

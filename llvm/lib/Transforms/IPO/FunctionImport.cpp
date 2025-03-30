@@ -1219,14 +1219,11 @@ void llvm::ComputeCrossModuleImport(
         // we convert such variables initializers to "zeroinitializer".
         // See processGlobalForThinLTO.
         if (!Index.isWriteOnly(GVS))
-          for (const auto &VI : GVS->refs())
-            NewExports.insert(VI);
+          NewExports.insert_range(GVS->refs());
       } else {
         auto *FS = cast<FunctionSummary>(S);
-        for (const auto &Edge : FS->calls())
-          NewExports.insert(Edge.first);
-        for (const auto &Ref : FS->refs())
-          NewExports.insert(Ref);
+        NewExports.insert_range(llvm::make_first_range(FS->calls()));
+        NewExports.insert_range(FS->refs());
       }
     }
     // Prune list computed above to only include values defined in the
@@ -1239,7 +1236,7 @@ void llvm::ComputeCrossModuleImport(
       else
         ++EI;
     }
-    ELI.second.insert(NewExports.begin(), NewExports.end());
+    ELI.second.insert_range(NewExports);
   }
 
   assert(checkVariableImport(Index, ImportLists, ExportLists));

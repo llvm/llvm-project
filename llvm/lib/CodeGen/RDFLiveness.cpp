@@ -759,11 +759,11 @@ void Liveness::computeLiveIns() {
     auto F1 = MDF.find(&B);
     if (F1 == MDF.end())
       continue;
-    SetVector<MachineBasicBlock *> IDFB(F1->second.begin(), F1->second.end());
+    SetVector<MachineBasicBlock *> IDFB(llvm::from_range, F1->second);
     for (unsigned i = 0; i < IDFB.size(); ++i) {
       auto F2 = MDF.find(IDFB[i]);
       if (F2 != MDF.end())
-        IDFB.insert(F2->second.begin(), F2->second.end());
+        IDFB.insert_range(F2->second);
     }
     // Add B to the IDF(B). This will put B in the IIDF(B).
     IDFB.insert(&B);

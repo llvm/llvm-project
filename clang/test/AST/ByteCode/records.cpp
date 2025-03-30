@@ -1771,3 +1771,19 @@ namespace RedeclaredCtor {
   constexpr __sp_mut::__sp_mut(void *p) noexcept : __lx_(p) {}
   constexpr __sp_mut muts = &mut_back[0];
 }
+
+namespace IntegralBaseCast {
+  class A {};
+  class B : public A {};
+  struct S {
+    B *a;
+  };
+
+  constexpr int f() {
+    S s{};
+    A *a = s.a;
+    return 0;
+  }
+
+  static_assert(f() == 0, "");
+}

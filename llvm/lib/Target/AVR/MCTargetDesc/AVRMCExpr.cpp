@@ -19,7 +19,7 @@ namespace {
 
 const struct ModifierEntry {
   const char *const Spelling;
-  AVRMCExpr::VariantKind VariantKind;
+  AVRMCExpr::Specifier specifier;
 } ModifierNames[] = {
     {"lo8", AVRMCExpr::VK_LO8},       {"hi8", AVRMCExpr::VK_HI8},
     {"hh8", AVRMCExpr::VK_HH8}, // synonym with hlo8
@@ -34,13 +34,13 @@ const struct ModifierEntry {
 
 } // end of anonymous namespace
 
-const AVRMCExpr *AVRMCExpr::create(VariantKind Kind, const MCExpr *Expr,
+const AVRMCExpr *AVRMCExpr::create(Specifier Kind, const MCExpr *Expr,
                                    bool Negated, MCContext &Ctx) {
   return new (Ctx) AVRMCExpr(Kind, Expr, Negated);
 }
 
 void AVRMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
-  assert(Kind != VK_AVR_NONE);
+  assert(specifier != VK_AVR_NONE);
   OS << getName() << '(';
   if (isNegated())
     OS << '-' << '(';
@@ -85,7 +85,7 @@ bool AVRMCExpr::evaluateAsRelocatableImpl(MCValue &Result,
     MCSymbolRefExpr::VariantKind Modifier = Sym->getKind();
     if (Modifier != MCSymbolRefExpr::VK_None)
       return false;
-    if (Kind == VK_PM) {
+    if (specifier == VK_PM) {
       Modifier = MCSymbolRefExpr::VariantKind(AVRMCExpr::VK_PM);
     }
 
@@ -100,7 +100,7 @@ int64_t AVRMCExpr::evaluateAsInt64(int64_t Value) const {
   if (Negated)
     Value *= -1;
 
-  switch (Kind) {
+  switch (specifier) {
   case AVRMCExpr::VK_LO8:
     Value &= 0xff;
     break;
@@ -147,7 +147,7 @@ int64_t AVRMCExpr::evaluateAsInt64(int64_t Value) const {
 AVR::Fixups AVRMCExpr::getFixupKind() const {
   AVR::Fixups Kind = AVR::Fixups::LastTargetFixupKind;
 
-  switch (getKind()) {
+  switch (specifier) {
   case VK_LO8:
     Kind = isNegated() ? AVR::fixup_lo8_ldi_neg : AVR::fixup_lo8_ldi;
     break;
@@ -195,7 +195,7 @@ void AVRMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
 const char *AVRMCExpr::getName() const {
   const auto &Modifier =
       llvm::find_if(ModifierNames, [this](ModifierEntry const &Mod) {
-        return Mod.VariantKind == Kind;
+        return Mod.specifier == specifier;
       });
 
   if (Modifier != std::end(ModifierNames)) {
@@ -204,14 +204,14 @@ const char *AVRMCExpr::getName() const {
   return nullptr;
 }
 
-AVRMCExpr::VariantKind AVRMCExpr::getKindByName(StringRef Name) {
+AVRMCExpr::Specifier AVRMCExpr::parseSpecifier(StringRef Name) {
   const auto &Modifier =
       llvm::find_if(ModifierNames, [&Name](ModifierEntry const &Mod) {
         return Mod.Spelling == Name;
       });
 
   if (Modifier != std::end(ModifierNames)) {
-    return Modifier->VariantKind;
+    return Modifier->specifier;
   }
   return VK_AVR_NONE;
 }

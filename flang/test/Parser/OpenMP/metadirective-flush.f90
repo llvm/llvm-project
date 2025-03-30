@@ -23,7 +23,7 @@ end
 !PARSE-TREE: | | | | | | | bool = 'true'
 !PARSE-TREE: | | OmpDirectiveSpecification
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = flush
-!PARSE-TREE: | | | OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'x'
+!PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | | OmpClauseList -> OmpClause -> SeqCst
 !PARSE-TREE: | | | Flags = DeprecatedSyntax
 
@@ -49,6 +49,6 @@ end
 !PARSE-TREE: | | | | | | | bool = 'true'
 !PARSE-TREE: | | OmpDirectiveSpecification
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = flush
-!PARSE-TREE: | | | OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'x'
+!PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | | OmpClauseList -> OmpClause -> SeqCst
 !PARSE-TREE: | | | Flags = None

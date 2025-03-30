@@ -1993,8 +1993,7 @@ static void computeLiveOuts(MachineFunction &MF, RegPressureTracker &RPTracker,
       if (Reg.isVirtual())
         Uses.insert(Reg);
       else if (MRI.isAllocatable(Reg))
-        for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
-          Uses.insert(Unit);
+        Uses.insert_range(TRI->regunits(Reg.asMCReg()));
     }
   }
   for (SUnit *SU : NS)
@@ -2132,7 +2131,7 @@ void SwingSchedulerDAG::groupRemainingNodes(NodeSetType &NodeSets) {
       if (!Path.empty())
         I.insert(Path.begin(), Path.end());
     }
-    NodesAdded.insert(I.begin(), I.end());
+    NodesAdded.insert_range(I);
   }
 
   // Create a new node set with the connected nodes of any successor of a node
@@ -2246,12 +2245,12 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
     OrderKind Order;
     SmallSetVector<SUnit *, 8> N;
     if (pred_L(NodeOrder, N, DDG.get()) && llvm::set_is_subset(N, Nodes)) {
-      R.insert(N.begin(), N.end());
+      R.insert_range(N);
       Order = BottomUp;
       LLVM_DEBUG(dbgs() << "  Bottom up (preds) ");
     } else if (succ_L(NodeOrder, N, DDG.get()) &&
                llvm::set_is_subset(N, Nodes)) {
-      R.insert(N.begin(), N.end());
+      R.insert_range(N);
       Order = TopDown;
       LLVM_DEBUG(dbgs() << "  Top down (succs) ");
     } else if (isIntersect(N, Nodes, R)) {
@@ -2330,7 +2329,7 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
         LLVM_DEBUG(dbgs() << "\n   Switching order to bottom up ");
         SmallSetVector<SUnit *, 8> N;
         if (pred_L(NodeOrder, N, DDG.get(), &Nodes))
-          R.insert(N.begin(), N.end());
+          R.insert_range(N);
       } else {
         // Choose the node with the maximum depth.  If more than one, choose
         // the node with the maximum ZeroLatencyDepth. If still more than one,
@@ -2385,7 +2384,7 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
         LLVM_DEBUG(dbgs() << "\n   Switching order to top down ");
         SmallSetVector<SUnit *, 8> N;
         if (succ_L(NodeOrder, N, DDG.get(), &Nodes))
-          R.insert(N.begin(), N.end());
+          R.insert_range(N);
       }
     }
     LLVM_DEBUG(dbgs() << "\nDone with Nodeset\n");
@@ -3297,6 +3296,32 @@ bool SMSchedule::normalizeNonPipelinedInstructions(
                         << ") is not pipelined; moving from cycle " << OldCycle
                         << " to " << NewCycle << " Instr:" << *SU.getInstr());
     }
+
+    // We traverse the SUs in the order of the original basic block. Computing
+    // NewCycle in this order normally works fine because all dependencies
+    // (except for loop-carried dependencies) don't violate the original order.
+    // However, an artificial dependency (e.g., added by CopyToPhiMutation) can
+    // break it. That is, there may be exist an artificial dependency from
+    // bottom to top. In such a case, NewCycle may become too large to be
+    // scheduled in Stage 0. For example, assume that Inst0 is in DNP in the
+    // following case:
+    //
+    //             |  Inst0  <-+
+    //   SU order  |           | artificial dep
+    //             |  Inst1  --+
+    //             v
+    //
+    // If Inst1 is scheduled at cycle N and is not at Stage 0, then NewCycle of
+    // Inst0 must be greater than or equal to N so that Inst0 is not be
+    // scheduled at Stage 0. In such cases, we reject this schedule at this
+    // time.
+    // FIXME: The reason for this is the existence of artificial dependencies
+    // that are contradict to the original SU order. If ignoring artificial
+    // dependencies does not affect correctness, then it is better to ignore
+    // them.
+    if (FirstCycle + InitiationInterval <= NewCycle)
+      return false;
+
     NewLastCycle = std::max(NewLastCycle, NewCycle);
   }
   LastCycle = NewLastCycle;

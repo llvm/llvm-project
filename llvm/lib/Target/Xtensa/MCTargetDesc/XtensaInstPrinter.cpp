@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "XtensaInstPrinter.h"
+#include "MCTargetDesc/XtensaMCExpr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -34,10 +35,9 @@ static void printExpr(const MCExpr *Expr, raw_ostream &OS) {
   if (!(SRE = cast<MCSymbolRefExpr>(Expr)))
     assert(false && "Unexpected MCExpr type.");
 
-  MCSymbolRefExpr::VariantKind Kind = SRE->getKind();
-
-  switch (Kind) {
-  case MCSymbolRefExpr::VK_None:
+  auto Spec = XtensaMCExpr::Specifier(SRE->getKind());
+  switch (Spec) {
+  case XtensaMCExpr::VK_None:
     break;
   // TODO
   default:
@@ -52,7 +52,7 @@ static void printExpr(const MCExpr *Expr, raw_ostream &OS) {
     OS << Offset;
   }
 
-  if (Kind != MCSymbolRefExpr::VK_None)
+  if (Spec != XtensaMCExpr::VK_None)
     OS << ')';
 }
 

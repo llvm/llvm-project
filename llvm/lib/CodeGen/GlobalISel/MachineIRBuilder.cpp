@@ -880,9 +880,9 @@ MachineIRBuilder::buildIntrinsic(Intrinsic::ID ID,
 MachineInstrBuilder
 MachineIRBuilder::buildIntrinsic(Intrinsic::ID ID,
                                  ArrayRef<Register> ResultRegs) {
-  auto Attrs = Intrinsic::getAttributes(getContext(), ID);
+  AttributeSet Attrs = Intrinsic::getFnAttributes(getContext(), ID);
   bool HasSideEffects = !Attrs.getMemoryEffects().doesNotAccessMemory();
-  bool isConvergent = Attrs.hasFnAttr(Attribute::Convergent);
+  bool isConvergent = Attrs.hasAttribute(Attribute::Convergent);
   return buildIntrinsic(ID, ResultRegs, HasSideEffects, isConvergent);
 }
 
@@ -899,9 +899,9 @@ MachineInstrBuilder MachineIRBuilder::buildIntrinsic(Intrinsic::ID ID,
 
 MachineInstrBuilder MachineIRBuilder::buildIntrinsic(Intrinsic::ID ID,
                                                      ArrayRef<DstOp> Results) {
-  auto Attrs = Intrinsic::getAttributes(getContext(), ID);
+  AttributeSet Attrs = Intrinsic::getFnAttributes(getContext(), ID);
   bool HasSideEffects = !Attrs.getMemoryEffects().doesNotAccessMemory();
-  bool isConvergent = Attrs.hasFnAttr(Attribute::Convergent);
+  bool isConvergent = Attrs.hasAttribute(Attribute::Convergent);
   return buildIntrinsic(ID, Results, HasSideEffects, isConvergent);
 }
 

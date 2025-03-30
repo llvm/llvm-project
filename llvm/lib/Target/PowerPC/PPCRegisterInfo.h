@@ -176,6 +176,10 @@ public:
   bool isNonallocatableRegisterCalleeSave(MCRegister Reg) const override {
     return Reg == PPC::LR || Reg == PPC::LR8;
   }
+
+  bool isVirtualFrameRegister(MCRegister Reg) const override {
+    return Reg == PPC::FP || Reg == PPC::FP8;
+  }
 };
 
 } // end namespace llvm

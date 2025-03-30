@@ -1,7 +1,19 @@
 // RUN: rm -rf %t && mkdir -p %t/docs %t/build
 // RUN: sed 's|$test_dir|%/S|g' %S/Inputs/basic-project/database_template.json > %t/build/compile_commands.json
+
 // RUN: clang-doc --format=html --output=%t/docs --executor=all-TUs %t/build/compile_commands.json
 // RUN: FileCheck %s -input-file=%t/docs/index_json.js -check-prefix=JSON-INDEX
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Shape.html -check-prefix=HTML-SHAPE
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Calculator.html -check-prefix=HTML-CALC
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Rectangle.html -check-prefix=HTML-RECTANGLE
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Circle.html -check-prefix=HTML-CIRCLE
+
+// RUN: clang-doc --format=html --output=%t/docs-with-prefix --executor=all-TUs %t/build/compile_commands.json --repository=https://repository.com --repository-line-prefix=L
+// RUN: FileCheck %s -input-file=%t/docs-with-prefix/GlobalNamespace/Shape.html -check-prefixes=HTML-SHAPE,SHAPE-LINE-PREFIX
+// RUN: FileCheck %s -input-file=%t/docs-with-prefix/GlobalNamespace/Calculator.html -check-prefixes=HTML-CALC,CALC-LINE-PREFIX
+// RUN: FileCheck %s -input-file=%t/docs-with-prefix/GlobalNamespace/Rectangle.html -check-prefixes=HTML-RECTANGLE,RECTANGLE-LINE-PREFIX
+// RUN: FileCheck %s -input-file=%t/docs-with-prefix/GlobalNamespace/Circle.html -check-prefixes=HTML-CIRCLE,CIRCLE-LINE-PREFIX
+
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Shape.html -check-prefixes=HTML-SHAPE,SHAPE-NO-REPOSITORY
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Calculator.html -check-prefixes=HTML-CALC,CALC-NO-REPOSITORY
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Rectangle.html -check-prefixes=HTML-RECTANGLE,RECTANGLE-NO-REPOSITORY
@@ -14,6 +26,13 @@
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Rectangle.html -check-prefixes=HTML-RECTANGLE,RECTANGLE-REPOSITORY
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Circle.html -check-prefixes=HTML-CIRCLE,CIRCLE-REPOSITORY
 
+// RUN: clang-doc --format=md --output=%t/docs --executor=all-TUs %t/build/compile_commands.json
+// RUN: FileCheck %s -input-file=%t/docs/all_files.md -check-prefixes=MD-ALL-FILES
+// RUN: FileCheck %s -input-file=%t/docs/index.md -check-prefixes=MD-INDEX
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Shape.md -check-prefixes=MD-SHAPE
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Calculator.md -check-prefixes=MD-CALC
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Rectangle.md -check-prefixes=MD-RECTANGLE
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Circle.md -check-prefixes=MD-CIRCLE
 
 // JSON-INDEX: async function LoadIndex() {
 // JSON-INDEX-NEXT: return{
@@ -67,6 +86,7 @@
 //      SHAPE-REPOSITORY: <p>
 // SHAPE-REPOSITORY-NEXT: Defined at line
 // SHAPE-REPOSITORY-NEXT: <a href="https://repository.com/./include/Shape.h#8">8</a>
+//     SHAPE-LINE-PREFIX: <a href="https://repository.com/./include/Shape.h#L8">8</a>
 // SHAPE-REPOSITORY-NEXT: of file
 // SHAPE-REPOSITORY-NEXT: <a href="https://repository.com/./include/Shape.h">Shape.h</a>
 // SHAPE-REPOSITORY-NEXT: </p>
@@ -90,6 +110,7 @@
 //   SHAPE-NO-REPOSITORY: Defined at line 13 of file .{{.}}include{{.}}Shape.h
 //      SHAPE-REPOSITORY: Defined at line 
 // SHAPE-REPOSITORY-NEXT: <a href="https://repository.com/./include/Shape.h#13">13</a>
+//     SHAPE-LINE-PREFIX: <a href="https://repository.com/./include/Shape.h#L13">13</a>
 // SHAPE-REPOSITORY-NEXT: of file 
 // SHAPE-REPOSITORY-NEXT: <a href="https://repository.com/./include/Shape.h">Shape.h</a>
 
@@ -101,6 +122,7 @@
 //      CALC-REPOSITORY: <p>
 // CALC-REPOSITORY-NEXT: Defined at line 
 // CALC-REPOSITORY-NEXT: <a href="https://repository.com/./include/Calculator.h#8">8</a>
+//     CALC-LINE-PREFIX: <a href="https://repository.com/./include/Calculator.h#L8">8</a>
 // CALC-REPOSITORY-NEXT: of file 
 // CALC-REPOSITORY-NEXT: <a href="https://repository.com/./include/Calculator.h">Calculator.h</a>
 // CALC-REPOSITORY-NEXT: </p>
@@ -113,6 +135,7 @@
 //   CALC-NO-REPOSITORY: Defined at line 3 of file .{{.}}src{{.}}Calculator.cpp
 //      CALC-REPOSITORY: Defined at line 
 // CALC-REPOSITORY-NEXT: <a href="https://repository.com/./src/Calculator.cpp#3">3</a>
+//     CALC-LINE-PREFIX: <a href="https://repository.com/./src/Calculator.cpp#L3">3</a>
 // CALC-REPOSITORY-NEXT: of file 
 // CALC-REPOSITORY-NEXT: <a href="https://repository.com/./src/Calculator.cpp">Calculator.cpp</a>
 
@@ -125,6 +148,7 @@
 //   CALC-NO-REPOSITORY: Defined at line 7 of file .{{.}}src{{.}}Calculator.cpp
 //      CALC-REPOSITORY: Defined at line 
 // CALC-REPOSITORY-NEXT: <a href="https://repository.com/./src/Calculator.cpp#7">7</a>
+//     CALC-LINE-PREFIX: <a href="https://repository.com/./src/Calculator.cpp#L7">7</a>
 // CALC-REPOSITORY-NEXT: of file 
 // CALC-REPOSITORY-NEXT: <a href="https://repository.com/./src/Calculator.cpp">Calculator.cpp</a>
 
@@ -137,6 +161,7 @@
 //   CALC-NO-REPOSITORY: Defined at line 11 of file .{{.}}src{{.}}Calculator.cpp
 //      CALC-REPOSITORY: Defined at line 
 // CALC-REPOSITORY-NEXT: <a href="https://repository.com/./src/Calculator.cpp#11">11</a>
+//     CALC-LINE-PREFIX: <a href="https://repository.com/./src/Calculator.cpp#L11">11</a>
 // CALC-REPOSITORY-NEXT: of file 
 // CALC-REPOSITORY-NEXT: <a href="https://repository.com/./src/Calculator.cpp">Calculator.cpp</a>
 
@@ -149,6 +174,7 @@
 //   CALC-NO-REPOSITORY: Defined at line 15 of file .{{.}}src{{.}}Calculator.cpp
 //      CALC-REPOSITORY: Defined at line 
 // CALC-REPOSITORY-NEXT: <a href="https://repository.com/./src/Calculator.cpp#15">15</a>
+//     CALC-LINE-PREFIX: <a href="https://repository.com/./src/Calculator.cpp#L15">15</a>
 // CALC-REPOSITORY-NEXT: of file 
 // CALC-REPOSITORY-NEXT: <a href="https://repository.com/./src/Calculator.cpp">Calculator.cpp</a>
 
@@ -164,6 +190,7 @@
 //      RECTANGLE-REPOSITORY: <p>
 // RECTANGLE-REPOSITORY-NEXT: Defined at line
 // RECTANGLE-REPOSITORY-NEXT: <a href="https://repository.com/./include/Rectangle.h#10">10</a>
+//     RECTANGLE-LINE-PREFIX: <a href="https://repository.com/./include/Rectangle.h#L10">10</a>
 // RECTANGLE-REPOSITORY-NEXT: of file 
 // RECTANGLE-REPOSITORY-NEXT: <a href="https://repository.com/./include/Rectangle.h">Rectangle.h</a>
 // RECTANGLE-REPOSITORY-NEXT: </p>
@@ -184,6 +211,7 @@
 //   RECTANGLE-NO-REPOSITORY: Defined at line 3 of file .{{.}}src{{.}}Rectangle.cpp
 //      RECTANGLE-REPOSITORY: Defined at line
 // RECTANGLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Rectangle.cpp#3">3</a>
+//     RECTANGLE-LINE-PREFIX: <a href="https://repository.com/./src/Rectangle.cpp#L3">3</a>
 // RECTANGLE-REPOSITORY-NEXT: of file 
 // RECTANGLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Rectangle.cpp">Rectangle.cpp</a>
 
@@ -194,6 +222,7 @@
 //   RECTANGLE-NO-REPOSITORY: Defined at line 6 of file .{{.}}src{{.}}Rectangle.cpp
 //      RECTANGLE-REPOSITORY: Defined at line
 // RECTANGLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Rectangle.cpp#6">6</a>
+//     RECTANGLE-LINE-PREFIX: <a href="https://repository.com/./src/Rectangle.cpp#L6">6</a>
 // RECTANGLE-REPOSITORY-NEXT: of file 
 // RECTANGLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Rectangle.cpp">Rectangle.cpp</a>
 
@@ -206,6 +235,7 @@
 //   RECTANGLE-NO-REPOSITORY: Defined at line 10 of file .{{.}}src{{.}}Rectangle.cpp
 //      RECTANGLE-REPOSITORY: Defined at line
 // RECTANGLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Rectangle.cpp#10">10</a>
+// RECTANGLE-LINE-PREFIX: <a href="https://repository.com/./src/Rectangle.cpp#L10">10</a>
 // RECTANGLE-REPOSITORY-NEXT: of file 
 // RECTANGLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Rectangle.cpp">Rectangle.cpp</a>
 //      HTML-RECTANGLE: <div>brief</div>
@@ -218,6 +248,7 @@
 //      CIRCLE-REPOSITORY: <p>
 // CIRCLE-REPOSITORY-NEXT: Defined at line 
 // CIRCLE-REPOSITORY-NEXT: <a href="https://repository.com/./include/Circle.h#10">10</a>
+//     CIRCLE-LINE-PREFIX: <a href="https://repository.com/./include/Circle.h#L10">10</a>
 // CIRCLE-REPOSITORY-NEXT: of file 
 // CIRCLE-REPOSITORY-NEXT: <a href="https://repository.com/./include/Circle.h">Circle.h</a>
 // CIRCLE-REPOSITORY-NEXT: </p>
@@ -238,6 +269,7 @@
 //   CIRCLE-NO-REPOSITORY: Defined at line 3 of file .{{.}}src{{.}}Circle.cpp
 //      CIRCLE-REPOSITORY: Defined at line 
 // CIRCLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Circle.cpp#3">3</a>
+//     CIRCLE-LINE-PREFIX: <a href="https://repository.com/./src/Circle.cpp#L3">3</a>
 // CIRCLE-REPOSITORY-NEXT:  of file 
 // CIRCLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Circle.cpp">Circle.cpp</a>
 
@@ -248,6 +280,7 @@
 //   CIRCLE-NO-REPOSITORY: Defined at line 5 of file .{{.}}src{{.}}Circle.cpp
 //      CIRCLE-REPOSITORY: Defined at line 
 // CIRCLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Circle.cpp#5">5</a>
+//     CIRCLE-LINE-PREFIX: <a href="https://repository.com/./src/Circle.cpp#L5">5</a>
 // CIRCLE-REPOSITORY-NEXT:  of file 
 // CIRCLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Circle.cpp">Circle.cpp</a>
 
@@ -260,6 +293,7 @@
 //   CIRCLE-NO-REPOSITORY: Defined at line  9 of file .{{.}}src{{.}}Circle.cpp
 //      CIRCLE-REPOSITORY: Defined at line 
 // CIRCLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Circle.cpp#9">9</a>
+//     CIRCLE-LINE-PREFIX: <a href="https://repository.com/./src/Circle.cpp#L9">9</a>
 // CIRCLE-REPOSITORY-NEXT:  of file 
 // CIRCLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Circle.cpp">Circle.cpp</a>
 
@@ -358,10 +392,6 @@
 // MD-SHAPE: **brief** Abstract base class for shapes.
 // MD-SHAPE:  Provides a common interface for different types of shapes.
 // MD-SHAPE: ## Functions
-// MD-SHAPE: ### ~Shape
-// MD-SHAPE: *public void ~Shape()*
-// MD-SHAPE: *Defined at .{{[\/]}}include{{[\/]}}Shape.h#13*
-// MD-SHAPE: **brief** Virtual destructor.
 // MD-SHAPE: ### area
 // MD-SHAPE: *public double area()*
 // MD-SHAPE: **brief** Calculates the area of the shape.
@@ -370,9 +400,14 @@
 // MD-SHAPE: *public double perimeter()*
 // MD-SHAPE: **brief** Calculates the perimeter of the shape.
 // MD-SHAPE: **return** double The perimeter of the shape.
+// MD-SHAPE: ### ~Shape
+// MD-SHAPE: *public void ~Shape()*
+// MD-SHAPE: *Defined at .{{[\/]}}include{{[\/]}}Shape.h#13*
+// MD-SHAPE: **brief** Virtual destructor.
 
 // MD-ALL-FILES: # All Files
 // MD-ALL-FILES: ## [GlobalNamespace](GlobalNamespace{{[\/]}}index.md)
 
 // MD-INDEX: #  C/C++ Reference
 // MD-INDEX: * Namespace: [GlobalNamespace](GlobalNamespace)
+

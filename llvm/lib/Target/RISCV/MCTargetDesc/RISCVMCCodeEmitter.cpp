@@ -84,6 +84,10 @@ public:
                                SmallVectorImpl<MCFixup> &Fixups,
                                const MCSubtargetInfo &STI) const;
 
+  uint64_t getImmOpValueSlist(const MCInst &MI, unsigned OpNo,
+                              SmallVectorImpl<MCFixup> &Fixups,
+                              const MCSubtargetInfo &STI) const;
+
   uint64_t getImmOpValueAsr1(const MCInst &MI, unsigned OpNo,
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
@@ -100,9 +104,9 @@ public:
                            SmallVectorImpl<MCFixup> &Fixups,
                            const MCSubtargetInfo &STI) const;
 
-  unsigned getRegReg(const MCInst &MI, unsigned OpNo,
-                     SmallVectorImpl<MCFixup> &Fixups,
-                     const MCSubtargetInfo &STI) const;
+  unsigned getRlistS0OpValue(const MCInst &MI, unsigned OpNo,
+                             SmallVectorImpl<MCFixup> &Fixups,
+                             const MCSubtargetInfo &STI) const;
 };
 } // end anonymous namespace
 
@@ -197,7 +201,7 @@ void RISCVMCCodeEmitter::expandAddTPRel(const MCInst &MI,
          "Expected expression as third input to TP-relative add");
 
   const RISCVMCExpr *Expr = dyn_cast<RISCVMCExpr>(SrcSymbol.getExpr());
-  assert(Expr && Expr->getKind() == RISCVMCExpr::VK_TPREL_ADD &&
+  assert(Expr && Expr->getSpecifier() == RISCVMCExpr::VK_TPREL_ADD &&
          "Expected tprel_add relocation on TP-relative symbol");
 
   // Emit the correct tprel_add relocation for the symbol.
@@ -405,6 +409,36 @@ RISCVMCCodeEmitter::getImmOpValueMinus1(const MCInst &MI, unsigned OpNo,
 }
 
 uint64_t
+RISCVMCCodeEmitter::getImmOpValueSlist(const MCInst &MI, unsigned OpNo,
+                                       SmallVectorImpl<MCFixup> &Fixups,
+                                       const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  assert(MO.isImm() && "Slist operand must be immediate");
+
+  uint64_t Res = MO.getImm();
+  switch (Res) {
+  case 0:
+    return 0;
+  case 1:
+    return 1;
+  case 2:
+    return 2;
+  case 4:
+    return 3;
+  case 8:
+    return 4;
+  case 16:
+    return 5;
+  case 15:
+    return 6;
+  case 31:
+    return 7;
+  default:
+    llvm_unreachable("Unhandled Slist value!");
+  }
+}
+
+uint64_t
 RISCVMCCodeEmitter::getImmOpValueAsr1(const MCInst &MI, unsigned OpNo,
                                       SmallVectorImpl<MCFixup> &Fixups,
                                       const MCSubtargetInfo &STI) const {
@@ -441,11 +475,12 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
   if (Kind == MCExpr::Target) {
     const RISCVMCExpr *RVExpr = cast<RISCVMCExpr>(Expr);
 
-    switch (RVExpr->getKind()) {
+    switch (RVExpr->getSpecifier()) {
     case RISCVMCExpr::VK_None:
-    case RISCVMCExpr::VK_Invalid:
     case RISCVMCExpr::VK_32_PCREL:
-      llvm_unreachable("Unhandled fixup kind!");
+    case RISCVMCExpr::VK_GOTPCREL:
+    case RISCVMCExpr::VK_PLTPCREL:
+      llvm_unreachable("unhandled specifier");
     case RISCVMCExpr::VK_TPREL_ADD:
       // tprel_add is only used to indicate that a relocation should be emitted
       // for an add instruction used in TP-relative addressing. It should not be
@@ -523,8 +558,8 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
       break;
     }
   } else if ((Kind == MCExpr::SymbolRef &&
-                 cast<MCSymbolRefExpr>(Expr)->getKind() ==
-                     MCSymbolRefExpr::VK_None) ||
+              getSpecifier(cast<MCSymbolRefExpr>(Expr)) ==
+                  RISCVMCExpr::VK_None) ||
              Kind == MCExpr::Binary) {
     // FIXME: Sub kind binary exprs have chance of underflow.
     if (MIFrm == RISCVII::InstFormatJ) {
@@ -585,18 +620,16 @@ unsigned RISCVMCCodeEmitter::getRlistOpValue(const MCInst &MI, unsigned OpNo,
   assert(Imm >= 4 && "EABI is currently not implemented");
   return Imm;
 }
-
-unsigned RISCVMCCodeEmitter::getRegReg(const MCInst &MI, unsigned OpNo,
-                                       SmallVectorImpl<MCFixup> &Fixups,
-                                       const MCSubtargetInfo &STI) const {
+unsigned
+RISCVMCCodeEmitter::getRlistS0OpValue(const MCInst &MI, unsigned OpNo,
+                                      SmallVectorImpl<MCFixup> &Fixups,
+                                      const MCSubtargetInfo &STI) const {
   const MCOperand &MO = MI.getOperand(OpNo);
-  const MCOperand &MO1 = MI.getOperand(OpNo + 1);
-  assert(MO.isReg() && MO1.isReg() && "Expected registers.");
-
-  unsigned Op = Ctx.getRegisterInfo()->getEncodingValue(MO.getReg());
-  unsigned Op1 = Ctx.getRegisterInfo()->getEncodingValue(MO1.getReg());
-
-  return Op | Op1 << 5;
+  assert(MO.isImm() && "Rlist operand must be immediate");
+  auto Imm = MO.getImm();
+  assert(Imm >= 4 && "EABI is currently not implemented");
+  assert(Imm != RISCVZC::RA && "Rlist operand must include s0");
+  return Imm;
 }
 
 #include "RISCVGenMCCodeEmitter.inc"

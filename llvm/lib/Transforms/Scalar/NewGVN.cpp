@@ -2840,7 +2840,7 @@ NewGVN::makePossiblePHIOfOps(Instruction *I,
 
         return nullptr;
       }
-      Deps.insert(CurrentDeps.begin(), CurrentDeps.end());
+      Deps.insert_range(CurrentDeps);
     } else {
       LLVM_DEBUG(dbgs() << "Skipping phi of ops operand for incoming block "
                         << getBlockName(PredBB)

@@ -292,6 +292,10 @@ HIPAMDToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
     checkTargetID(*DAL);
   }
 
+  if (!Args.hasArg(options::OPT_flto_partitions_EQ))
+    DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_flto_partitions_EQ),
+                      "8");
+
   return DAL;
 }
 
