@@ -3210,8 +3210,8 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
     //        X.
     case Type::MemberPointer: {
       const MemberPointerType *MemberPtr = cast<MemberPointerType>(T);
-      addAssociatedClassesAndNamespaces(
-          Result, MemberPtr->getMostRecentCXXRecordDecl());
+      if (CXXRecordDecl *Class = MemberPtr->getMostRecentCXXRecordDecl())
+        addAssociatedClassesAndNamespaces(Result, Class);
       T = MemberPtr->getPointeeType().getTypePtr();
       continue;
     }

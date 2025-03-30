@@ -326,8 +326,7 @@ static int run(int argc, char **argv) {
 
   Conf.OptLevel = OptLevel - '0';
   Conf.Freestanding = EnableFreestanding;
-  for (auto &PluginFN : PassPlugins)
-    Conf.PassPlugins.push_back(PluginFN);
+  llvm::append_range(Conf.PassPlugins, PassPlugins);
   if (auto Level = CodeGenOpt::parseLevel(CGOptLevel)) {
     Conf.CGOptLevel = *Level;
   } else {

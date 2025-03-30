@@ -42,6 +42,9 @@ class TargetLibraryInfo;
 class VPRecipeBuilder;
 struct VFRange;
 
+extern cl::opt<bool> EnableVPlanNativePath;
+extern cl::opt<unsigned> ForceTargetInstructionCost;
+
 /// VPlan-based builder utility analogous to IRBuilder.
 class VPBuilder {
   VPBasicBlock *BB = nullptr;
@@ -259,9 +262,10 @@ public:
 
   VPScalarIVStepsRecipe *
   createScalarIVSteps(Instruction::BinaryOps InductionOpcode,
-                      FPMathOperator *FPBinOp, VPValue *IV, VPValue *Step) {
+                      FPMathOperator *FPBinOp, VPValue *IV, VPValue *Step,
+                      VPValue *VF) {
     return tryInsertInstruction(new VPScalarIVStepsRecipe(
-        IV, Step, InductionOpcode,
+        IV, Step, VF, InductionOpcode,
         FPBinOp ? FPBinOp->getFastMathFlags() : FastMathFlags()));
   }
 

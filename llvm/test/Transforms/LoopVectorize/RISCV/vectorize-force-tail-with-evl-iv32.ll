@@ -32,11 +32,10 @@ define void @iv32(ptr noalias %a, ptr noalias %b, i32 %N) {
 ; IF-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_EVL_NEXT:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[TMP11:%.*]] = sub i32 [[N]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[TMP12:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[TMP11]], i32 4, i1 true)
-; IF-EVL-NEXT:    [[TMP13:%.*]] = add i32 [[EVL_BASED_IV]], 0
-; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i32 [[TMP13]]
+; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i32 [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[TMP14]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP15]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
-; IF-EVL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[TMP13]]
+; IF-EVL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[TMP16]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[VP_OP_LOAD]], ptr align 4 [[TMP17]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i32 [[TMP12]], [[EVL_BASED_IV]]
@@ -76,11 +75,10 @@ define void @iv32(ptr noalias %a, ptr noalias %b, i32 %N) {
 ; NO-VP-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; NO-VP:       vector.body:
 ; NO-VP-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; NO-VP-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 0
-; NO-VP-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i32 [[TMP3]]
+; NO-VP-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i32 [[INDEX]]
 ; NO-VP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i32 0
 ; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP5]], align 4
-; NO-VP-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[TMP3]]
+; NO-VP-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[INDEX]]
 ; NO-VP-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[TMP6]], i32 0
 ; NO-VP-NEXT:    store <vscale x 4 x i32> [[WIDE_LOAD]], ptr [[TMP7]], align 4
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP12]]

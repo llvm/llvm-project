@@ -21,7 +21,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "flang/Runtime/io-api-consts.h"
+#include "flang/Runtime/io-api.h"
 #include "flang/Runtime/reduce.h"
 #include "flang/Support/Fortran.h"
 #include "mlir/IR/BuiltinTypes.h"

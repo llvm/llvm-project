@@ -21,7 +21,7 @@ struct HypotfChecker : public virtual LIBC_NAMESPACE::testing::Test {
   using StorageType = typename FPBits::StorageType;
 
   uint64_t check(uint32_t start, uint32_t stop, mpfr::RoundingMode rounding) {
-    // Range of the second input: [2^37, 2^48).
+    // Range of the second input: [2^37, 2^48].
     constexpr uint32_t Y_START = (37U + 127U) << 23;
     constexpr uint32_t Y_STOP = (48U + 127U) << 23;
 
@@ -51,9 +51,9 @@ struct HypotfChecker : public virtual LIBC_NAMESPACE::testing::Test {
 
 using LlvmLibcHypotfExhaustiveTest = LlvmLibcExhaustiveMathTest<HypotfChecker>;
 
-// Range of the first input: [2^23, 2^24);
+// Range of the first input: [2^23, 2^24];
 static constexpr uint32_t START = (23U + 127U) << 23;
-static constexpr uint32_t STOP = ((23U + 127U) << 23) + 1;
+static constexpr uint32_t STOP = (24U + 127U) << 23;
 
 TEST_F(LlvmLibcHypotfExhaustiveTest, PositiveRange) {
   test_full_range_all_roundings(START, STOP);

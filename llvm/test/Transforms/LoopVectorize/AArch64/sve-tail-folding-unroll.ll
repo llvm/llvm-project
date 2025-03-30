@@ -45,8 +45,7 @@ define void @simple_memset(i32 %val, ptr %ptr, i64 %n) #0 {
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK7:%.*]] = phi <vscale x 4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY3]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT11:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK8:%.*]] = phi <vscale x 4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY4]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT12:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK9:%.*]] = phi <vscale x 4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY5]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT13:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP31:%.*]] = add i64 [[INDEX6]], 0
-; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[TMP31]]
+; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[INDEX6]]
 ; CHECK-NEXT:    [[TMP51:%.*]] = getelementptr i32, ptr [[TMP47]], i32 0
 ; CHECK-NEXT:    [[TMP52:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP53:%.*]] = mul i64 [[TMP52]], 4
@@ -149,8 +148,7 @@ define void @cond_memset(i32 %val, ptr noalias readonly %cond_ptr, ptr noalias %
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK7:%.*]] = phi <vscale x 4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY3]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT14:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK8:%.*]] = phi <vscale x 4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY4]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT15:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK9:%.*]] = phi <vscale x 4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY5]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT16:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP31:%.*]] = add i64 [[INDEX6]], 0
-; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr i32, ptr [[COND_PTR:%.*]], i64 [[TMP31]]
+; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr i32, ptr [[COND_PTR:%.*]], i64 [[INDEX6]]
 ; CHECK-NEXT:    [[TMP51:%.*]] = getelementptr i32, ptr [[TMP47]], i32 0
 ; CHECK-NEXT:    [[TMP52:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP53:%.*]] = mul i64 [[TMP52]], 4
@@ -173,7 +171,7 @@ define void @cond_memset(i32 %val, ptr noalias readonly %cond_ptr, ptr noalias %
 ; CHECK-NEXT:    [[TMP70:%.*]] = select <vscale x 4 x i1> [[ACTIVE_LANE_MASK7]], <vscale x 4 x i1> [[TMP62]], <vscale x 4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP71:%.*]] = select <vscale x 4 x i1> [[ACTIVE_LANE_MASK8]], <vscale x 4 x i1> [[TMP63]], <vscale x 4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP72:%.*]] = select <vscale x 4 x i1> [[ACTIVE_LANE_MASK9]], <vscale x 4 x i1> [[TMP64]], <vscale x 4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP65:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[TMP31]]
+; CHECK-NEXT:    [[TMP65:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[INDEX6]]
 ; CHECK-NEXT:    [[TMP73:%.*]] = getelementptr i32, ptr [[TMP65]], i32 0
 ; CHECK-NEXT:    [[TMP74:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP75:%.*]] = mul i64 [[TMP74]], 4

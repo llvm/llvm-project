@@ -1990,6 +1990,7 @@ void ModuleBitcodeWriter::writeDICompositeType(
   Record.push_back(VE.getMetadataOrNullID(N->getRawSpecification()));
   Record.push_back(
       N->getEnumKind().value_or(dwarf::DW_APPLE_ENUM_KIND_invalid));
+  Record.push_back(VE.getMetadataOrNullID(N->getRawBitStride()));
 
   Stream.EmitRecord(bitc::METADATA_COMPOSITE_TYPE, Record, Abbrev);
   Record.clear();

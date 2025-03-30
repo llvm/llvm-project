@@ -1394,7 +1394,7 @@ struct tuple_size<complex<_Tp>> : integral_constant<size_t, 2> {};
 template <size_t _Ip, class _Tp>
 struct tuple_element<_Ip, complex<_Tp>> {
   static_assert(_Ip < 2, "Index value is out of range.");
-  using type = _Tp;
+  using type _LIBCPP_NODEBUG = _Tp;
 };
 
 template <size_t _Ip, class _Xp>

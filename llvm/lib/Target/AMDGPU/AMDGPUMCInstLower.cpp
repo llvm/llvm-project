@@ -223,20 +223,23 @@ bool AMDGPUAsmPrinter::lowerOperand(const MachineOperand &MO,
   return MCInstLowering.lowerOperand(MO, MCOp);
 }
 
-const MCExpr *AMDGPUAsmPrinter::lowerConstant(const Constant *CV) {
+const MCExpr *AMDGPUAsmPrinter::lowerConstant(const Constant *CV,
+                                              const Constant *BaseCV,
+                                              uint64_t Offset) {
 
   // Intercept LDS variables with known addresses
   if (const GlobalVariable *GV = dyn_cast<const GlobalVariable>(CV)) {
     if (std::optional<uint32_t> Address =
             AMDGPUMachineFunction::getLDSAbsoluteAddress(*GV)) {
       auto *IntTy = Type::getInt32Ty(CV->getContext());
-      return AsmPrinter::lowerConstant(ConstantInt::get(IntTy, *Address));
+      return AsmPrinter::lowerConstant(ConstantInt::get(IntTy, *Address),
+                                       BaseCV, Offset);
     }
   }
 
   if (const MCExpr *E = lowerAddrSpaceCast(TM, CV, OutContext))
     return E;
-  return AsmPrinter::lowerConstant(CV);
+  return AsmPrinter::lowerConstant(CV, BaseCV, Offset);
 }
 
 void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {

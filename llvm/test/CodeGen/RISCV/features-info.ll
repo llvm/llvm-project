@@ -14,11 +14,10 @@
 ; CHECK-NEXT:   disable-latency-sched-heuristic  - Disable latency scheduling heuristic.
 ; CHECK-NEXT:   dlen-factor-2                    - Vector unit DLEN(data path width) is half of VLEN.
 ; CHECK-NEXT:   e                                - 'E' (Embedded Instruction Set with 16 GPRs).
+; CHECK-NEXT:   exact-asm                        - Enable Exact Assembly (Disables Compression and Relaxation).
 ; CHECK-NEXT:   experimental                     - Experimental intrinsics.
 ; CHECK-NEXT:   experimental-p                   - 'P' ('Base P' (Packed SIMD)).
 ; CHECK-NEXT:   experimental-rvm23u32            - RISC-V experimental-rvm23u32 profile.
-; CHECK-NEXT:   experimental-sdext               - 'Sdext' (External debugger).
-; CHECK-NEXT:   experimental-sdtrig              - 'Sdtrig' (Debugger triggers).
 ; CHECK-NEXT:   experimental-smctr               - 'Smctr' (Control Transfer Records Machine Level).
 ; CHECK-NEXT:   experimental-ssctr               - 'Ssctr' (Control Transfer Records Supervisor Level).
 ; CHECK-NEXT:   experimental-svukte              - 'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses).
@@ -32,6 +31,7 @@
 ; CHECK-NEXT:   experimental-xqcics              - 'Xqcics' (Qualcomm uC Conditional Select Extension).
 ; CHECK-NEXT:   experimental-xqcicsr             - 'Xqcicsr' (Qualcomm uC CSR Extension).
 ; CHECK-NEXT:   experimental-xqciint             - 'Xqciint' (Qualcomm uC Interrupts Extension).
+; CHECK-NEXT:   experimental-xqciio              - 'Xqciio' (Qualcomm uC External Input Output Extension).
 ; CHECK-NEXT:   experimental-xqcilb              - 'Xqcilb' (Qualcomm uC Long Branch Extension).
 ; CHECK-NEXT:   experimental-xqcili              - 'Xqcili' (Qualcomm uC Load Large Immediate Extension).
 ; CHECK-NEXT:   experimental-xqcilia             - 'Xqcilia' (Qualcomm uC Large Immediate Arithmetic Extension).
@@ -115,6 +115,8 @@
 ; CHECK-NEXT:   rvi20u32                         - RISC-V rvi20u32 profile.
 ; CHECK-NEXT:   rvi20u64                         - RISC-V rvi20u64 profile.
 ; CHECK-NEXT:   save-restore                     - Enable save/restore..
+; CHECK-NEXT:   sdext                            - 'Sdext' (External debugger).
+; CHECK-NEXT:   sdtrig                           - 'Sdtrig' (Debugger triggers).
 ; CHECK-NEXT:   sha                              - 'Sha' (Augmented Hypervisor).
 ; CHECK-NEXT:   shcounterenw                     - 'Shcounterenw' (Support writeable hcounteren enable bit for any hpmcounter that is not read-only zero).
 ; CHECK-NEXT:   shgatpa                          - 'Shgatpa' (SvNNx4 mode supported for all modes supported by satp, as well as Bare).

@@ -140,16 +140,14 @@ bool MipsMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
     if (!SubExpr->evaluateAsRelocatable(Res, Asm))
       return false;
 
-    Res = MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(),
-                       MEK_Special);
+    Res.setSpecifier(MEK_Special);
     return true;
   }
 
   if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
-  Res = MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(),
-                     getSpecifier());
-  return !Res.getSymB();
+  Res.setSpecifier(specifier);
+  return !Res.getSubSym();
 }
 
 void MipsMCExpr::visitUsedExpr(MCStreamer &Streamer) const {

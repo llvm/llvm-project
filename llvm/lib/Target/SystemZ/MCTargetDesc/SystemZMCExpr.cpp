@@ -40,9 +40,6 @@ bool SystemZMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
                                               const MCAssembler *Asm) const {
   if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
-
-  Res = MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(),
-                     getSpecifier());
-
+  Res.setSpecifier(specifier);
   return true;
 }
