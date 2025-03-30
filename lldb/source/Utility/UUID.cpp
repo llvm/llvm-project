@@ -11,8 +11,10 @@
 #include "lldb/Utility/Stream.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/RandomNumberGenerator.h"
 
 #include <cctype>
+#include <cstdint>
 #include <cstdio>
 #include <cstring>
 
@@ -109,4 +111,11 @@ bool UUID::SetFromStringRef(llvm::StringRef str) {
 
   *this = UUID(bytes);
   return true;
+}
+
+llvm::Expected<UUID> UUID::Generate(uint32_t num_bytes) {
+  llvm::SmallVector<uint8_t, 20> bytes(num_bytes);
+  if (auto ec = llvm::getRandomBytes(bytes.data(), bytes.size()))
+    return llvm::errorCodeToError(ec);
+  return UUID(bytes);
 }
