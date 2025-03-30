@@ -16973,6 +16973,13 @@ OMPClause *SemaOpenMP::ActOnOpenMPNowaitClause(SourceLocation StartLoc,
       ExprResult Val = SemaRef.CheckBooleanCondition(StartLoc, Condition);
       if (Val.isInvalid())
         return nullptr;
+
+      QualType T = ValExpr->getType();
+      if (T->isFloatingType()) {
+        SemaRef.Diag(ValExpr->getExprLoc(), diag::err_omp_clause_floating_type_arg)
+            << getOpenMPClauseName(OMPC_nowait);
+      }
+
       ValExpr = Val.get();
     }
   } else {
