@@ -181,6 +181,10 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-std-numbers>` check to support math
   functions of different precisions.
 
+- Improved :doc:`modernize-raw-string-literal
+  <clang-tidy/checks/modernize/raw-string-literal>` check to detect string
+  literals passed into macros.
+
 - Improved :doc:`performance-move-const-arg
   <clang-tidy/checks/performance/move-const-arg>` check by fixing false
   negatives on ternary operators calling ``std::move``.

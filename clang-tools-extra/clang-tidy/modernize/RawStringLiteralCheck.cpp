@@ -58,7 +58,7 @@ bool containsEscapedCharacters(const MatchFinder::MatchResult &Result,
       *Result.SourceManager, Result.Context->getLangOpts());
   StringRef Text = Lexer::getSourceText(CharRange, *Result.SourceManager,
                                         Result.Context->getLangOpts());
-  if (Text.empty() || isRawStringLiteral(Text))
+  if (Text.empty() || !Text.contains('"') || isRawStringLiteral(Text))
     return false;
 
   return containsEscapes(Text, R"('\"?x01)");
@@ -156,14 +156,14 @@ static bool compareStringLength(StringRef Replacement,
                                 const SourceManager &SM,
                                 const LangOptions &LangOpts) {
   return Replacement.size() <=
-         Lexer::MeasureTokenLength(Literal->getBeginLoc(), SM, LangOpts);
+         Lexer::MeasureTokenLength(SM.getSpellingLoc(Literal->getBeginLoc()), SM, LangOpts);
 }
 
 void RawStringLiteralCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Literal = Result.Nodes.getNodeAs<StringLiteral>("lit");
-  if (Literal->getBeginLoc().isMacroID())
-    return;
   const SourceManager &SM = *Result.SourceManager;
+  if (SM.getSpellingLoc(Literal->getBeginLoc()).isMacroID())
+    return;
   const LangOptions &LangOpts = getLangOpts();
   if (containsEscapedCharacters(Result, Literal, DisallowedChars)) {
     const std::string Replacement =
@@ -172,7 +172,8 @@ void RawStringLiteralCheck::check(const MatchFinder::MatchResult &Result) {
         compareStringLength(Replacement, Literal, SM, LangOpts)) {
       diag(Literal->getBeginLoc(),
            "escaped string literal can be written as a raw string literal")
-          << FixItHint::CreateReplacement(Literal->getSourceRange(),
+          << FixItHint::CreateReplacement(SourceRange(SM.getSpellingLoc(Literal->getBeginLoc()),
+                                                      SM.getSpellingLoc(Literal->getEndLoc())),
                                           Replacement);
     }
   }

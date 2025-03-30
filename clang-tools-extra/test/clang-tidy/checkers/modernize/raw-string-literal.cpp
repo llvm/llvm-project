@@ -105,7 +105,8 @@ char const *const StringizedMacroArgument = HAT(foo\\bar);
 
 #define SUBST(lit_) lit_
 char const *const MacroArgument = SUBST("foo\\bar");
-// FIXME: We should be able to replace this string literal macro argument
+// CHECK-MESSAGES: :[[@LINE-1]]:41: warning: {{.*}} can be written as a raw string literal
+// CHECK-FIXES: {{^}}char const *const MacroArgument = SUBST(R"(foo\bar)");{{$}}
 
 template <typename T>
 void fn(char const *const Arg) {
