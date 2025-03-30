@@ -1786,8 +1786,8 @@ llvm::DIType *CGDebugInfo::createFieldType(
 }
 
 llvm::DISubprogram *
-CGDebugInfo::createInlinedTrapSubprogram(StringRef FuncName,
-                                         llvm::DIFile *FileScope) {
+CGDebugInfo::createInlinedSubprogram(StringRef FuncName,
+                                     llvm::DIFile *FileScope) {
   // We are caching the subprogram because we don't want to duplicate
   // subprograms with the same message. Note that `SPFlagDefinition` prevents
   // subprograms from being uniqued.
@@ -3614,6 +3614,14 @@ llvm::DIMacroFile *CGDebugInfo::CreateTempMacroFile(llvm::DIMacroFile *Parent,
   return DBuilder.createTempMacroFile(Parent, Line, FName);
 }
 
+llvm::DILocation *CGDebugInfo::CreateSyntheticInlineAt(llvm::DebugLoc Location,
+                                                       StringRef FuncName) {
+  llvm::DISubprogram *SP =
+      createInlinedSubprogram(FuncName, Location->getFile());
+  return llvm::DILocation::get(CGM.getLLVMContext(), /*Line=*/0, /*Column=*/0,
+                               /*Scope=*/SP, /*InlinedAt=*/Location);
+}
+
 llvm::DILocation *CGDebugInfo::CreateTrapFailureMessageFor(
     llvm::DebugLoc TrapLocation, StringRef Category, StringRef FailureMsg) {
   // Create a debug location from `TrapLocation` that adds an artificial inline
@@ -3625,10 +3633,7 @@ llvm::DILocation *CGDebugInfo::CreateTrapFailureMessageFor(
   FuncName += "$";
   FuncName += FailureMsg;
 
-  llvm::DISubprogram *TrapSP =
-      createInlinedTrapSubprogram(FuncName, TrapLocation->getFile());
-  return llvm::DILocation::get(CGM.getLLVMContext(), /*Line=*/0, /*Column=*/0,
-                               /*Scope=*/TrapSP, /*InlinedAt=*/TrapLocation);
+  return CreateSyntheticInlineAt(TrapLocation, FuncName);
 }
 
 static QualType UnwrapTypeForDebugInfo(QualType T, const ASTContext &C) {

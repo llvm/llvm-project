@@ -1225,7 +1225,7 @@ VPIRBasicBlock *VPlan::createVPIRBasicBlock(BasicBlock *IRBB) {
   auto *VPIRBB = createEmptyVPIRBasicBlock(IRBB);
   for (Instruction &I :
        make_range(IRBB->begin(), IRBB->getTerminator()->getIterator()))
-    VPIRBB->appendRecipe(new VPIRInstruction(I));
+    VPIRBB->appendRecipe(VPIRInstruction::create(I));
   return VPIRBB;
 }
 

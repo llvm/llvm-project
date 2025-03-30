@@ -1,7 +1,7 @@
 ; REQUIRES: x86-registered-target
 
 ; RUN: opt %s -S | FileCheck --check-prefix=CHECK-FILE %s
-; RUN: llvm-reduce --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
+; RUN: llvm-reduce -abort-on-invalid-reduction --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: FileCheck --check-prefix=CHECK-FINAL %s < %t
 
 ; CHECK-INTERESTINGNESS: declare

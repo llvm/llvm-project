@@ -102,7 +102,9 @@ _CLC_DEF _CLC_OVERLOAD float __clc_rootn(float x, int ny) {
             __clc_as_float(0x3f000000 | (ixn & MANTBITS_SP32));
 
   indx = indx >> 16;
-  float2 tv = USE_TABLE(log_inv_tbl_ep, indx);
+  float2 tv;
+  tv.s0 = USE_TABLE(log_inv_tbl_ep_head, indx);
+  tv.s1 = USE_TABLE(log_inv_tbl_ep_tail, indx);
   float rh = f * tv.s0;
   float rt = f * tv.s1;
   r = rh + rt;
@@ -163,7 +165,8 @@ _CLC_DEF _CLC_OVERLOAD float __clc_rootn(float x, int ny) {
                              0x1.000000p-1f),
                    r * r, r);
 
-  tv = USE_TABLE(exp_tbl_ep, j);
+  tv.s0 = USE_TABLE(exp_tbl_ep_head, j);
+  tv.s1 = USE_TABLE(exp_tbl_ep_tail, j);
 
   float expylogx =
       __clc_mad(tv.s0, poly, __clc_mad(tv.s1, poly, tv.s1)) + tv.s0;
@@ -254,9 +257,8 @@ _CLC_DEF _CLC_OVERLOAD double __clc_rootn(double x, int ny) {
     double F = __clc_as_double(rax | 0x3FE0000000000000L);
     double Y = __clc_as_double(mantissa | 0x3FE0000000000000L);
     double f = F - Y;
-    double2 tv = USE_TABLE(log_f_inv_tbl, index);
-    double log_h = tv.s0;
-    double log_t = tv.s1;
+    double log_h = USE_TABLE(log_f_inv_tbl_head, index);
+    double log_t = USE_TABLE(log_f_inv_tbl_tail, index);
     double f_inv = (log_h + log_t) * f;
     double r1 = __clc_as_double(__clc_as_long(f_inv) & 0xfffffffff8000000L);
     double r2 = __clc_fma(-F, r1, f) * (log_h + log_t);
@@ -275,9 +277,8 @@ _CLC_DEF _CLC_OVERLOAD double __clc_rootn(double x, int ny) {
     double poly0t = r1 - poly0h + hr1r1;
     poly = __clc_fma(r1, r2, __clc_fma(0.5 * r2, r2, poly)) + r2 + poly0t;
 
-    tv = USE_TABLE(powlog_tbl, index);
-    log_h = tv.s0;
-    log_t = tv.s1;
+    log_h = USE_TABLE(powlog_tbl_head, index);
+    log_t = USE_TABLE(powlog_tbl_tail, index);
 
     double resT_t = __clc_fma(xexp, real_log2_tail, +log_t) - poly;
     double resT = resT_t - poly0h;
@@ -317,9 +318,8 @@ _CLC_DEF _CLC_OVERLOAD double __clc_rootn(double x, int ny) {
     int j = n & 0x0000003f;
     int m = n >> 6;
 
-    double2 tv = USE_TABLE(two_to_jby64_ep_tbl, j);
-    double f1 = tv.s0;
-    double f2 = tv.s1;
+    double f1 = USE_TABLE(two_to_jby64_ep_tbl_head, j);
+    double f2 = USE_TABLE(two_to_jby64_ep_tbl_tail, j);
     double f = f1 + f2;
 
     double r1 = __clc_fma(dn, -lnof2_by_64_head, v);

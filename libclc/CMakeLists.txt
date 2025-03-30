@@ -262,6 +262,28 @@ if ( clspv-- IN_LIST LIBCLC_TARGETS_TO_BUILD OR clspv64-- IN_LIST LIBCLC_TARGETS
   set_target_properties( generate-clspv-convert.cl PROPERTIES FOLDER "libclc/Sourcegenning" )
 endif()
 
+set_source_files_properties(
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_cos.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_divide.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_exp.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_exp10.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_exp2.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_log.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_log10.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_log2.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_powr.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_recip.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_rsqrt.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_sin.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_sqrt.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_tan.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/amdgpu/lib/math/native_exp.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/amdgpu/lib/math/native_log.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/amdgpu/lib/math/native_log10.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/r600/lib/math/native_rsqrt.cl
+  PROPERTIES COMPILE_OPTIONS -fapprox-func
+)
+
 enable_testing()
 
 foreach( t ${LIBCLC_TARGETS_TO_BUILD} )

@@ -131,7 +131,7 @@ template <class G> void AbstractDependenceGraphBuilder<G>::createPiBlocks() {
 
     // Build a set to speed up the lookup for edges whose targets
     // are inside the SCC.
-    SmallPtrSet<NodeType *, 4> NodesInSCC(NL.begin(), NL.end());
+    SmallPtrSet<NodeType *, 4> NodesInSCC(llvm::from_range, NL);
 
     // We have the set of nodes in the SCC. We go through the set of nodes
     // that are outside of the SCC and look for edges that cross the two sets.
