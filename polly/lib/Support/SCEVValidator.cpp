@@ -83,7 +83,7 @@ public:
 
   /// Add the parameters of Source to this result.
   void addParamsFrom(const ValidatorResult &Source) {
-    Parameters.insert(Source.Parameters.begin(), Source.Parameters.end());
+    Parameters.insert_range(Source.Parameters);
   }
 
   /// Merge a result.
@@ -633,7 +633,7 @@ static bool isAffineExpr(Value *V, const Region *R, Loop *Scope,
     return false;
 
   auto ResultParams = Result.getParameters();
-  Params.insert(ResultParams.begin(), ResultParams.end());
+  Params.insert_range(ResultParams);
 
   return true;
 }
