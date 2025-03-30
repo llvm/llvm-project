@@ -256,6 +256,9 @@ Improvements to Clang's diagnostics
 
 - Improve the diagnostics for shadows template parameter to report correct location (#GH129060).
 
+- Improved the ``-Wtautological-overlap-compare`` diagnostics to warn about overlapping and non-overlapping ranges involving character literals and floating-point literals. 
+  The warning message for non-overlapping cases has also been improved (#GH13473).
+
 Improvements to Clang's time-trace
 ----------------------------------
 

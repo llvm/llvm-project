@@ -70,13 +70,11 @@ static SourceLocation GetEndLoc(Decl *D) {
   return D->getLocation();
 }
 
-/// Returns true on constant values based around a single IntegerLiteral.
-/// Allow for use of parentheses, integer casts, and negative signs.
-/// FIXME: it would be good to unify this function with
-/// getIntegerLiteralSubexpressionValue at some point given the similarity
-/// between the functions.
+/// Returns true on constant values based around a single IntegerLiteral,
+/// CharacterLiteral, or FloatingLiteral. Allow for use of parentheses, integer
+/// casts, and negative signs.
 
-static bool IsIntegerLiteralConstantExpr(const Expr *E) {
+static bool IsLiteralConstantExpr(const Expr *E) {
   // Allow parentheses
   E = E->IgnoreParens();
 
@@ -93,16 +91,16 @@ static bool IsIntegerLiteralConstantExpr(const Expr *E) {
       return false;
     E = UO->getSubExpr();
   }
-
-  return isa<IntegerLiteral>(E);
+  return isa<IntegerLiteral>(E) || isa<CharacterLiteral>(E) ||
+         isa<FloatingLiteral>(E);
 }
 
 /// Helper for tryNormalizeBinaryOperator. Attempts to extract an IntegerLiteral
 /// constant expression or EnumConstantDecl from the given Expr. If it fails,
 /// returns nullptr.
-static const Expr *tryTransformToIntOrEnumConstant(const Expr *E) {
+static const Expr *tryTransformToLiteralConstants(const Expr *E) {
   E = E->IgnoreParens();
-  if (IsIntegerLiteralConstantExpr(E))
+  if (IsLiteralConstantExpr(E))
     return E;
   if (auto *DR = dyn_cast<DeclRefExpr>(E->IgnoreParenImpCasts()))
     return isa<EnumConstantDecl>(DR->getDecl()) ? DR : nullptr;
@@ -119,7 +117,7 @@ tryNormalizeBinaryOperator(const BinaryOperator *B) {
   BinaryOperatorKind Op = B->getOpcode();
 
   const Expr *MaybeDecl = B->getLHS();
-  const Expr *Constant = tryTransformToIntOrEnumConstant(B->getRHS());
+  const Expr *Constant = tryTransformToLiteralConstants(B->getRHS());
   // Expr looked like `0 == Foo` instead of `Foo == 0`
   if (Constant == nullptr) {
     // Flip the operator
@@ -133,7 +131,7 @@ tryNormalizeBinaryOperator(const BinaryOperator *B) {
       Op = BO_GE;
 
     MaybeDecl = B->getRHS();
-    Constant = tryTransformToIntOrEnumConstant(B->getLHS());
+    Constant = tryTransformToLiteralConstants(B->getLHS());
   }
 
   return std::make_tuple(MaybeDecl, Op, Constant);
@@ -1104,6 +1102,27 @@ private:
     }
   }
 
+  TryResult analyzeLogicOperatorCondition(BinaryOperatorKind Relation,
+                                          const llvm::APFloat &Value1,
+                                          const llvm::APFloat &Value2) {
+    switch (Relation) {
+    default:
+      return TryResult();
+    case BO_EQ:
+      return TryResult(Value1.compare(Value2) == llvm::APFloat::cmpEqual);
+    case BO_NE:
+      return TryResult(Value1.compare(Value2) != llvm::APFloat::cmpEqual);
+    case BO_LT:
+      return TryResult(Value1.compare(Value2) == llvm::APFloat::cmpLessThan);
+    case BO_LE:
+      return TryResult(Value1.compare(Value2) != llvm::APFloat::cmpGreaterThan);
+    case BO_GT:
+      return TryResult(Value1.compare(Value2) == llvm::APFloat::cmpGreaterThan);
+    case BO_GE:
+      return TryResult(Value1.compare(Value2) != llvm::APFloat::cmpLessThan);
+    }
+  }
+
   /// There are two checks handled by this function:
   /// 1. Find a law-of-excluded-middle or law-of-noncontradiction expression
   /// e.g. if (x || !x), if (x && !x)
@@ -1171,81 +1190,135 @@ private:
       return {};
 
     Expr::EvalResult L1Result, L2Result;
-    if (!NumExpr1->EvaluateAsInt(L1Result, *Context) ||
-        !NumExpr2->EvaluateAsInt(L2Result, *Context))
+    llvm::APFloat L1ResultFloat(llvm::APFloat::IEEEdouble()),
+        L2ResultFloat(llvm::APFloat::IEEEdouble());
+    bool IsInt1 = NumExpr1->EvaluateAsInt(L1Result, *Context);
+    bool IsInt2 = NumExpr2->EvaluateAsInt(L2Result, *Context);
+    bool IsFloat1 = NumExpr1->EvaluateAsFloat(L1ResultFloat, *Context);
+    bool IsFloat2 = NumExpr2->EvaluateAsFloat(L2ResultFloat, *Context);
+
+    if ((!IsInt1 || !IsInt2) && (!IsFloat1 || !IsFloat2))
       return {};
 
-    llvm::APSInt L1 = L1Result.Val.getInt();
-    llvm::APSInt L2 = L2Result.Val.getInt();
+    // Handle integer comparison
+    if (IsInt1 && IsInt2) {
+      llvm::APSInt L1 = L1Result.Val.getInt();
+      llvm::APSInt L2 = L2Result.Val.getInt();
 
-    // Can't compare signed with unsigned or with different bit width.
-    if (L1.isSigned() != L2.isSigned() || L1.getBitWidth() != L2.getBitWidth())
-      return {};
-
-    // Values that will be used to determine if result of logical
-    // operator is always true/false
-    const llvm::APSInt Values[] = {
-      // Value less than both Value1 and Value2
-      llvm::APSInt::getMinValue(L1.getBitWidth(), L1.isUnsigned()),
-      // L1
-      L1,
-      // Value between Value1 and Value2
-      ((L1 < L2) ? L1 : L2) + llvm::APSInt(llvm::APInt(L1.getBitWidth(), 1),
-                              L1.isUnsigned()),
-      // L2
-      L2,
-      // Value greater than both Value1 and Value2
-      llvm::APSInt::getMaxValue(L1.getBitWidth(), L1.isUnsigned()),
-    };
-
-    // Check whether expression is always true/false by evaluating the following
-    // * variable x is less than the smallest literal.
-    // * variable x is equal to the smallest literal.
-    // * Variable x is between smallest and largest literal.
-    // * Variable x is equal to the largest literal.
-    // * Variable x is greater than largest literal.
-    bool AlwaysTrue = true, AlwaysFalse = true;
-    // Track value of both subexpressions.  If either side is always
-    // true/false, another warning should have already been emitted.
-    bool LHSAlwaysTrue = true, LHSAlwaysFalse = true;
-    bool RHSAlwaysTrue = true, RHSAlwaysFalse = true;
-    for (const llvm::APSInt &Value : Values) {
-      TryResult Res1, Res2;
-      Res1 = analyzeLogicOperatorCondition(BO1, Value, L1);
-      Res2 = analyzeLogicOperatorCondition(BO2, Value, L2);
-
-      if (!Res1.isKnown() || !Res2.isKnown())
+      // Can't compare signed with unsigned or with different bit width.
+      if (L1.isSigned() != L2.isSigned() ||
+          L1.getBitWidth() != L2.getBitWidth())
         return {};
 
-      if (B->getOpcode() == BO_LAnd) {
-        AlwaysTrue &= (Res1.isTrue() && Res2.isTrue());
-        AlwaysFalse &= !(Res1.isTrue() && Res2.isTrue());
-      } else {
-        AlwaysTrue &= (Res1.isTrue() || Res2.isTrue());
-        AlwaysFalse &= !(Res1.isTrue() || Res2.isTrue());
+      // Values that will be used to determine if result of logical
+      // operator is always true/false
+      const llvm::APSInt Values[] = {
+          // Value less than both Value1 and Value2
+          llvm::APSInt::getMinValue(L1.getBitWidth(), L1.isUnsigned()),
+          // L1
+          L1,
+          // Value between Value1 and Value2
+          ((L1 < L2) ? L1 : L2) +
+              llvm::APSInt(llvm::APInt(L1.getBitWidth(), 1), L1.isUnsigned()),
+          // L2
+          L2,
+          // Value greater than both Value1 and Value2
+          llvm::APSInt::getMaxValue(L1.getBitWidth(), L1.isUnsigned()),
+      };
+
+      // Check whether expression is always true/false by evaluating the
+      // following
+      // * variable x is less than the smallest literal.
+      // * variable x is equal to the smallest literal.
+      // * Variable x is between smallest and largest literal.
+      // * Variable x is equal to the largest literal.
+      // * Variable x is greater than largest literal.
+      bool AlwaysTrue = true, AlwaysFalse = true;
+      // Track value of both subexpressions.  If either side is always
+      // true/false, another warning should have already been emitted.
+      bool LHSAlwaysTrue = true, LHSAlwaysFalse = true;
+      bool RHSAlwaysTrue = true, RHSAlwaysFalse = true;
+      for (const llvm::APSInt &Value : Values) {
+        TryResult Res1, Res2;
+        Res1 = analyzeLogicOperatorCondition(BO1, Value, L1);
+        Res2 = analyzeLogicOperatorCondition(BO2, Value, L2);
+
+        if (!Res1.isKnown() || !Res2.isKnown())
+          return {};
+
+        if (B->getOpcode() == BO_LAnd) {
+          AlwaysTrue &= (Res1.isTrue() && Res2.isTrue());
+          AlwaysFalse &= !(Res1.isTrue() && Res2.isTrue());
+        } else {
+          AlwaysTrue &= (Res1.isTrue() || Res2.isTrue());
+          AlwaysFalse &= !(Res1.isTrue() || Res2.isTrue());
+        }
+
+        LHSAlwaysTrue &= Res1.isTrue();
+        LHSAlwaysFalse &= Res1.isFalse();
+        RHSAlwaysTrue &= Res2.isTrue();
+        RHSAlwaysFalse &= Res2.isFalse();
       }
 
-      LHSAlwaysTrue &= Res1.isTrue();
-      LHSAlwaysFalse &= Res1.isFalse();
-      RHSAlwaysTrue &= Res2.isTrue();
-      RHSAlwaysFalse &= Res2.isFalse();
+      if (AlwaysTrue || AlwaysFalse) {
+        if (!LHSAlwaysTrue && !LHSAlwaysFalse && !RHSAlwaysTrue &&
+            !RHSAlwaysFalse && BuildOpts.Observer)
+          BuildOpts.Observer->compareAlwaysTrue(B, AlwaysTrue);
+        return TryResult(AlwaysTrue);
+      }
+      return {};
     }
 
-    if (AlwaysTrue || AlwaysFalse) {
-      if (!LHSAlwaysTrue && !LHSAlwaysFalse && !RHSAlwaysTrue &&
-          !RHSAlwaysFalse && BuildOpts.Observer)
-        BuildOpts.Observer->compareAlwaysTrue(B, AlwaysTrue);
-      return TryResult(AlwaysTrue);
+    // Handle float comparison, the logic is similar to integer comparison
+    if (IsFloat1 && IsFloat2) {
+      llvm::APFloat MidValue = L1ResultFloat;
+      MidValue.add(L2ResultFloat, llvm::APFloat::rmNearestTiesToEven);
+      MidValue.divide(llvm::APFloat(2.0), llvm::APFloat::rmNearestTiesToEven);
+
+      const llvm::APFloat Values[] = {
+          llvm::APFloat::getSmallest(L1ResultFloat.getSemantics(), true),
+          L1ResultFloat,
+          MidValue,
+          L2ResultFloat,
+          llvm::APFloat::getLargest(L1ResultFloat.getSemantics(), false),
+      };
+
+      bool AlwaysTrue = true, AlwaysFalse = true;
+
+      for (const llvm::APFloat &Value : Values) {
+        TryResult Res1, Res2;
+        Res1 = analyzeLogicOperatorCondition(BO1, Value, L1ResultFloat);
+        Res2 = analyzeLogicOperatorCondition(BO2, Value, L2ResultFloat);
+
+        if (!Res1.isKnown() || !Res2.isKnown())
+          return {};
+
+        if (B->getOpcode() == BO_LAnd) {
+          AlwaysTrue &= (Res1.isTrue() && Res2.isTrue());
+          AlwaysFalse &= !(Res1.isTrue() && Res2.isTrue());
+        } else {
+          AlwaysTrue &= (Res1.isTrue() || Res2.isTrue());
+          AlwaysFalse &= !(Res1.isTrue() || Res2.isTrue());
+        }
+      }
+
+      if (AlwaysTrue || AlwaysFalse) {
+        if (BuildOpts.Observer)
+          BuildOpts.Observer->compareAlwaysTrue(B, AlwaysTrue);
+        return TryResult(AlwaysTrue);
+      }
+      return {};
     }
+
     return {};
   }
 
   /// A bitwise-or with a non-zero constant always evaluates to true.
   TryResult checkIncorrectBitwiseOrOperator(const BinaryOperator *B) {
     const Expr *LHSConstant =
-        tryTransformToIntOrEnumConstant(B->getLHS()->IgnoreParenImpCasts());
+        tryTransformToLiteralConstants(B->getLHS()->IgnoreParenImpCasts());
     const Expr *RHSConstant =
-        tryTransformToIntOrEnumConstant(B->getRHS()->IgnoreParenImpCasts());
+        tryTransformToLiteralConstants(B->getRHS()->IgnoreParenImpCasts());
 
     if ((LHSConstant && RHSConstant) || (!LHSConstant && !RHSConstant))
       return {};
