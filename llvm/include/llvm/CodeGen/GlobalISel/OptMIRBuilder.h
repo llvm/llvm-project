@@ -26,9 +26,9 @@ struct LegalityQuery;
 /// Based on G_IMPLICIT_DEF, the constants and their values, it folds
 /// instructions into constants, G_IMPLICIT_DEF, or other
 /// instructions. For optmizations and constant folding it relies on
-/// GIConstant.  It can fold G_MUL into G_ADD and G_SUB. Before
-/// folding it always queries the legalizer. When it fails to fold, it
-/// delegates the building to the CSEMIRBuilder. It is the users
+/// GIConstant. It can fold G_MUL into G_ADD and G_SUB. Before folding
+/// it always queries the legalizer. When it fails to fold, it
+/// delegates the building to the CSEMIRBuilder. It is the user's
 /// responsibility to only attempt to build legal instructions pass
 /// the legalizer. OptMIRBuilder can safely be used in optimization
 /// passes pass the legalizer.
