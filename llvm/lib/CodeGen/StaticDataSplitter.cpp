@@ -10,7 +10,7 @@
 // for the following types of static data:
 // - Jump tables
 // - Module-internal global variables
-// - Constant pools (TODO)
+// - Constant pools
 //
 // For the original RFC of this pass please see
 // https://discourse.llvm.org/t/rfc-profile-guided-static-data-partitioning/83744
@@ -60,8 +60,8 @@ class StaticDataSplitter : public MachineFunctionPass {
 
   // Returns the constant if the operand refers to a global variable or constant
   // that gets lowered to static data sections. Otherwise, return nullptr.
-  const Constant *getConstant(const MachineOperand &Op,
-                              const TargetMachine &TM);
+  const Constant *getConstant(const MachineOperand &Op, const TargetMachine &TM,
+                              const MachineConstantPool *MCP);
 
   // Use profiles to partition static data.
   bool partitionStaticDataWithProfiles(MachineFunction &MF);
@@ -89,8 +89,11 @@ public:
     AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
     AU.addRequired<StaticDataProfileInfoWrapperPass>();
-    // This pass does not modify the CFG.
-    AU.setPreservesCFG();
+    // This pass does not modify any required analysis results except
+    // StaticDataProfileInfoWrapperPass, but StaticDataProfileInfoWrapperPass
+    // is made an immutable pass that it won't be re-scheduled by pass manager
+    // anyway. So mark setPreservesAll() here for faster compile time.
+    AU.setPreservesAll();
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -119,39 +122,62 @@ bool StaticDataSplitter::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
-const Constant *StaticDataSplitter::getConstant(const MachineOperand &Op,
-                                                const TargetMachine &TM) {
-  if (!Op.isGlobal())
+const Constant *
+StaticDataSplitter::getConstant(const MachineOperand &Op,
+                                const TargetMachine &TM,
+                                const MachineConstantPool *MCP) {
+  if (!Op.isGlobal() && !Op.isCPI())
     return nullptr;
 
-  // Find global variables with local linkage.
-  const GlobalVariable *GV = getLocalLinkageGlobalVariable(Op.getGlobal());
-  // Skip 'llvm.'-prefixed global variables conservatively because they are
-  // often handled specially, and skip those not in static data sections.
-  if (!GV || GV->getName().starts_with("llvm.") ||
-      !inStaticDataSection(*GV, TM))
+  if (Op.isGlobal()) {
+    // Find global variables with local linkage.
+    const GlobalVariable *GV = getLocalLinkageGlobalVariable(Op.getGlobal());
+    // Skip 'llvm.'-prefixed global variables conservatively because they are
+    // often handled specially, and skip those not in static data
+    // sections.
+    if (!GV || GV->getName().starts_with("llvm.") ||
+        !inStaticDataSection(*GV, TM))
+      return nullptr;
+    return GV;
+  }
+  assert(Op.isCPI() && "Op must be constant pool index in this branch");
+  int CPI = Op.getIndex();
+  if (CPI == -1)
     return nullptr;
-  return GV;
+
+  assert(MCP != nullptr && "Constant pool info is not available.");
+  const MachineConstantPoolEntry &CPE = MCP->getConstants()[CPI];
+
+  if (CPE.isMachineConstantPoolEntry())
+    return nullptr;
+
+  return CPE.Val.ConstVal;
 }
 
 bool StaticDataSplitter::partitionStaticDataWithProfiles(MachineFunction &MF) {
-  int NumChangedJumpTables = 0;
+  // If any of the static data (jump tables, global variables, constant pools)
+  // are captured by the analysis, set `Changed` to true. Note this pass won't
+  // invalidate any analysis pass (see `getAnalysisUsage` above), so the main
+  // purpose of tracking and conveying the change (to pass manager) is
+  // informative as opposed to invalidating any analysis results. As an example
+  // of where this information is useful, `PMDataManager::dumpPassInfo` will
+  // only dump pass info if a local change happens, otherwise a pass appears as
+  // "skipped".
+  bool Changed = false;
 
-  const TargetMachine &TM = MF.getTarget();
   MachineJumpTableInfo *MJTI = MF.getJumpTableInfo();
 
   // Jump table could be used by either terminating instructions or
   // non-terminating ones, so we walk all instructions and use
   // `MachineOperand::isJTI()` to identify jump table operands.
-  // Similarly, `MachineOperand::isCPI()` can identify constant pool usages
-  // in the same loop.
+  // Similarly, `MachineOperand::isCPI()` is used to identify constant pool
+  // usages in the same loop.
   for (const auto &MBB : MF) {
+    std::optional<uint64_t> Count = MBFI->getBlockProfileCount(&MBB);
     for (const MachineInstr &I : MBB) {
       for (const MachineOperand &Op : I.operands()) {
-        if (!Op.isJTI() && !Op.isGlobal())
+        if (!Op.isJTI() && !Op.isGlobal() && !Op.isCPI())
           continue;
-
-        std::optional<uint64_t> Count = MBFI->getBlockProfileCount(&MBB);
 
         if (Op.isJTI()) {
           assert(MJTI != nullptr && "Jump table info is not available.");
@@ -168,15 +194,16 @@ bool StaticDataSplitter::partitionStaticDataWithProfiles(MachineFunction &MF) {
           if (Count && PSI->isColdCount(*Count))
             Hotness = MachineFunctionDataHotness::Cold;
 
-          if (MJTI->updateJumpTableEntryHotness(JTI, Hotness))
-            ++NumChangedJumpTables;
-        } else if (const Constant *C = getConstant(Op, TM)) {
+          Changed |= MJTI->updateJumpTableEntryHotness(JTI, Hotness);
+        } else if (const Constant *C =
+                       getConstant(Op, MF.getTarget(), MF.getConstantPool())) {
           SDPI->addConstantProfileCount(C, Count);
+          Changed = true;
         }
       }
     }
   }
-  return NumChangedJumpTables > 0;
+  return Changed;
 }
 
 const GlobalVariable *
@@ -218,7 +245,8 @@ void StaticDataSplitter::annotateStaticDataWithoutProfiles(
   for (const auto &MBB : MF)
     for (const MachineInstr &I : MBB)
       for (const MachineOperand &Op : I.operands())
-        if (const Constant *C = getConstant(Op, MF.getTarget()))
+        if (const Constant *C =
+                getConstant(Op, MF.getTarget(), MF.getConstantPool()))
           SDPI->addConstantProfileCount(C, std::nullopt);
 }
 
