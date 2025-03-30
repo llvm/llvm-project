@@ -303,6 +303,7 @@ public:
       insert(*I);
   }
 
+  /// Inserts range of 'std::pair<KeyT, ValueT>' values into the map.
   template <typename Range> void insert_range(Range &&R) {
     insert(adl_begin(R), adl_end(R));
   }

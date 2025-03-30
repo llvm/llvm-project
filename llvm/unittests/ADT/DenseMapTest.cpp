@@ -385,7 +385,7 @@ TEST(DenseMapCustomTest, InsertRange) {
   std::pair<int, int> InputVals[3] = {{0, 0}, {0, 1}, {1, 2}};
   M.insert_range(InputVals);
 
-  EXPECT_EQ(2u, M.size());
+  EXPECT_EQ(M.size(), 2u);
   EXPECT_THAT(M, testing::UnorderedElementsAre(testing::Pair(0, 0),
                                                testing::Pair(1, 2)));
 }
