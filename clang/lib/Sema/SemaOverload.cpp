@@ -745,6 +745,7 @@ clang::MakeDeductionFailureInfo(ASTContext &Context,
   case TemplateDeductionResult::TooFewArguments:
   case TemplateDeductionResult::MiscellaneousDeductionFailure:
   case TemplateDeductionResult::CUDATargetMismatch:
+  case TemplateDeductionResult::NullExplicitObject:
     Result.Data = nullptr;
     break;
 
@@ -824,6 +825,7 @@ void DeductionFailureInfo::Destroy() {
   case TemplateDeductionResult::TooFewArguments:
   case TemplateDeductionResult::CUDATargetMismatch:
   case TemplateDeductionResult::NonDependentConversionFailure:
+  case TemplateDeductionResult::NullExplicitObject:
     break;
 
   case TemplateDeductionResult::IncompletePack:
@@ -882,6 +884,7 @@ TemplateParameter DeductionFailureInfo::getTemplateParameter() {
   case TemplateDeductionResult::CUDATargetMismatch:
   case TemplateDeductionResult::NonDependentConversionFailure:
   case TemplateDeductionResult::ConstraintsNotSatisfied:
+  case TemplateDeductionResult::NullExplicitObject:
     return TemplateParameter();
 
   case TemplateDeductionResult::Incomplete:
@@ -917,6 +920,7 @@ TemplateArgumentList *DeductionFailureInfo::getTemplateArgumentList() {
   case TemplateDeductionResult::NonDeducedMismatch:
   case TemplateDeductionResult::CUDATargetMismatch:
   case TemplateDeductionResult::NonDependentConversionFailure:
+  case TemplateDeductionResult::NullExplicitObject:
     return nullptr;
 
   case TemplateDeductionResult::DeducedMismatch:
@@ -950,6 +954,7 @@ const TemplateArgument *DeductionFailureInfo::getFirstArg() {
   case TemplateDeductionResult::CUDATargetMismatch:
   case TemplateDeductionResult::NonDependentConversionFailure:
   case TemplateDeductionResult::ConstraintsNotSatisfied:
+  case TemplateDeductionResult::NullExplicitObject:
     return nullptr;
 
   case TemplateDeductionResult::IncompletePack:
@@ -983,6 +988,7 @@ const TemplateArgument *DeductionFailureInfo::getSecondArg() {
   case TemplateDeductionResult::CUDATargetMismatch:
   case TemplateDeductionResult::NonDependentConversionFailure:
   case TemplateDeductionResult::ConstraintsNotSatisfied:
+  case TemplateDeductionResult::NullExplicitObject:
     return nullptr;
 
   case TemplateDeductionResult::Inconsistent:
@@ -11714,6 +11720,15 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
     return;
   }
 
+  case TemplateDeductionResult::NullExplicitObject: {
+    assert(ParamD && "no parameter found for null explicit object deduction");
+    S.Diag(Templated->getLocation(),
+           diag::note_ovl_candidate_explicit_arg_mismatch)
+        << 0 << ParamD->getDeclName();
+    MaybeEmitInheritedConstructorNote(S, Found);
+    return;
+  }
+
   case TemplateDeductionResult::InvalidExplicitArguments: {
     assert(ParamD && "no parameter found for invalid explicit arguments");
     TemplateArgument FirstArg = *DeductionFailure.getFirstArg();
@@ -12342,6 +12357,7 @@ static unsigned RankDeductionFailure(const DeductionFailureInfo &DFI) {
   case TemplateDeductionResult::InstantiationDepth:
     return 4;
 
+  case TemplateDeductionResult::NullExplicitObject:
   case TemplateDeductionResult::InvalidExplicitArguments:
     return 5;
 

@@ -416,7 +416,9 @@ enum class TemplateDeductionResult {
   /// CUDA Target attributes do not match.
   CUDATargetMismatch,
   /// Some error which was already diagnosed.
-  AlreadyDiagnosed
+  AlreadyDiagnosed,
+  /// Null explicit object argument deduction
+  NullExplicitObject,
 };
 
 /// Kinds of C++ special members.
