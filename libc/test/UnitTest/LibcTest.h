@@ -334,7 +334,7 @@ CString libc_make_test_file_path_func(const char *file_name);
     return "[ParamType = " #TYPE "]";                                          \
   }
 
-#define LIBC_TEST_GLOBAL_CTOR_DO_PRAGMA(x) _Pragma(#x);
+#define LIBC_TEST_GLOBAL_CTOR_DO_PRAGMA(x) _Pragma(#x)
 
 #define LIBC_TEST_GLOBAL_CTOR_DO_PRAGMA_BEGIN                                  \
   LIBC_TEST_GLOBAL_CTOR_DO_PRAGMA(GCC diagnostic push)
