@@ -2216,7 +2216,7 @@ namespace {
 
 void replaceToken(const FormatToken &Token, FormatToken *Next,
                   const SourceManager &SourceMgr, tooling::Replacements &Result,
-                  const char *Text = "") {
+                  StringRef Text = "") {
   const auto &Tok = Token.Tok;
   SourceLocation Start;
   if (Next && Next->NewlinesBefore == 0 && Next->isNot(tok::eof)) {
