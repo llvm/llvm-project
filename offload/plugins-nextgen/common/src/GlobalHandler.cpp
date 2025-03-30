@@ -16,6 +16,7 @@
 
 #include "Shared/Utils.h"
 
+#include "llvm/ProfileData/InstrProfData.inc"
 #include "llvm/Support/Error.h"
 
 #include <cstring>
@@ -214,6 +215,13 @@ GenericGlobalHandlerTy::readProfilingGlobals(GenericDeviceTy &Device,
       if (auto Err = readGlobalFromDevice(Device, Image, DataGlobal))
         return Err;
       DeviceProfileData.Data.push_back(std::move(Data));
+    } else if (*NameOrErr == INSTR_PROF_QUOTE(INSTR_PROF_RAW_VERSION_VAR)) {
+      uint64_t RawVersionData;
+      GlobalTy RawVersionGlobal(NameOrErr->str(), Sym.getSize(),
+                                &RawVersionData);
+      if (auto Err = readGlobalFromDevice(Device, Image, RawVersionGlobal))
+        return Err;
+      DeviceProfileData.Version = RawVersionData;
     }
   }
   return DeviceProfileData;
@@ -295,9 +303,9 @@ Error GPUProfGlobals::write() const {
   memcpy(NamesBegin, NamesData.data(), NamesData.size());
 
   // Invoke compiler-rt entrypoint
-  int result = __llvm_write_custom_profile(TargetTriple.str().c_str(),
-                                           DataBegin, DataEnd, CountersBegin,
-                                           CountersEnd, NamesBegin, NamesEnd);
+  int result = __llvm_write_custom_profile(
+      TargetTriple.str().c_str(), DataBegin, DataEnd, CountersBegin,
+      CountersEnd, NamesBegin, NamesEnd, &Version);
   if (result != 0)
     return Plugin::error("Error writing GPU PGO data to file");
 

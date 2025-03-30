@@ -307,6 +307,8 @@ public:
   /// Writes out a list of OpenACC clauses.
   void writeOpenACCClauseList(ArrayRef<const OpenACCClause *> Clauses);
 
+  void AddOpenACCRoutineDeclAttr(const OpenACCRoutineDeclAttr *A);
+
   /// Emit a string.
   void AddString(StringRef Str) {
     return Writer->AddString(Str, *Record);

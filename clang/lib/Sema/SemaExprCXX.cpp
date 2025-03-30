@@ -60,30 +60,10 @@ ParsedType Sema::getInheritingConstructorName(CXXScopeSpec &SS,
                                               SourceLocation NameLoc,
                                               const IdentifierInfo &Name) {
   NestedNameSpecifier *NNS = SS.getScopeRep();
+  if ([[maybe_unused]] const IdentifierInfo *II = NNS->getAsIdentifier())
+    assert(II == &Name && "not a constructor name");
 
-  // Convert the nested-name-specifier into a type.
-  QualType Type;
-  switch (NNS->getKind()) {
-  case NestedNameSpecifier::TypeSpec:
-  case NestedNameSpecifier::TypeSpecWithTemplate:
-    Type = QualType(NNS->getAsType(), 0);
-    break;
-
-  case NestedNameSpecifier::Identifier:
-    // Strip off the last layer of the nested-name-specifier and build a
-    // typename type for it.
-    assert(NNS->getAsIdentifier() == &Name && "not a constructor name");
-    Type = Context.getDependentNameType(
-        ElaboratedTypeKeyword::None, NNS->getPrefix(), NNS->getAsIdentifier());
-    break;
-
-  case NestedNameSpecifier::Global:
-  case NestedNameSpecifier::Super:
-  case NestedNameSpecifier::Namespace:
-  case NestedNameSpecifier::NamespaceAlias:
-    llvm_unreachable("Nested name specifier is not a type for inheriting ctor");
-  }
-
+  QualType Type(NNS->translateToType(Context), 0);
   // This reference to the type is located entirely at the location of the
   // final identifier in the qualified-id.
   return CreateParsedType(Type,
@@ -4143,6 +4123,7 @@ Sema::IsStringLiteralToNonConstPointerConversion(Expr *From, QualType ToType) {
             // We don't allow UTF literals to be implicitly converted
             break;
           case StringLiteralKind::Ordinary:
+          case StringLiteralKind::Binary:
             return (ToPointeeType->getKind() == BuiltinType::Char_U ||
                     ToPointeeType->getKind() == BuiltinType::Char_S);
           case StringLiteralKind::Wide:
@@ -4666,17 +4647,28 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_Pointer_Member: {
     CastKind Kind;
     CXXCastPath BasePath;
-    if (CheckMemberPointerConversion(From, ToType, Kind, BasePath, CStyle))
+    switch (CheckMemberPointerConversion(
+        From->getType(), ToType->castAs<MemberPointerType>(), Kind, BasePath,
+        From->getExprLoc(), From->getSourceRange(), CStyle,
+        MemberPointerConversionDirection::Downcast)) {
+    case MemberPointerConversionResult::Success:
+      assert(Kind != CK_NullToMemberPointer ||
+             From->isNullPointerConstant(Context,
+                                         Expr::NPC_ValueDependentIsNull) &&
+                 "Expr must be null pointer constant!");
+      break;
+    case MemberPointerConversionResult::Inaccessible:
+      break;
+    case MemberPointerConversionResult::DifferentPointee:
+      llvm_unreachable("unexpected result");
+    case MemberPointerConversionResult::NotDerived:
+      llvm_unreachable("Should not have been called if derivation isn't OK.");
+    case MemberPointerConversionResult::Ambiguous:
+    case MemberPointerConversionResult::Virtual:
       return ExprError();
+    }
     if (CheckExceptionSpecCompatibility(From, ToType))
       return ExprError();
-
-    // We may not have been able to figure out what this member pointer resolved
-    // to up until this exact point.  Attempt to lock-in it's inheritance model.
-    if (Context.getTargetInfo().getCXXABI().isMicrosoft()) {
-      (void)isCompleteType(From->getExprLoc(), From->getType());
-      (void)isCompleteType(From->getExprLoc(), ToType);
-    }
 
     From =
         ImpCastExprToType(From, ToType, Kind, VK_PRValue, &BasePath, CCK).get();
@@ -6517,7 +6509,7 @@ QualType Sema::CheckPointerToMemberOperands(ExprResult &LHS, ExprResult &RHS,
     return QualType();
   }
 
-  QualType Class(MemPtr->getClass(), 0);
+  CXXRecordDecl *RHSClass = MemPtr->getMostRecentCXXRecordDecl();
 
   // Note: C++ [expr.mptr.oper]p2-3 says that the class type into which the
   // member pointer points must be completely-defined. However, there is no
@@ -6540,15 +6532,16 @@ QualType Sema::CheckPointerToMemberOperands(ExprResult &LHS, ExprResult &RHS,
       return QualType();
     }
   }
+  CXXRecordDecl *LHSClass = LHSType->getAsCXXRecordDecl();
 
-  if (!Context.hasSameUnqualifiedType(Class, LHSType)) {
+  if (!declaresSameEntity(LHSClass, RHSClass)) {
     // If we want to check the hierarchy, we need a complete type.
     if (RequireCompleteType(Loc, LHSType, diag::err_bad_memptr_lhs,
                             OpSpelling, (int)isIndirect)) {
       return QualType();
     }
 
-    if (!IsDerivedFrom(Loc, LHSType, Class)) {
+    if (!IsDerivedFrom(Loc, LHSClass, RHSClass)) {
       Diag(Loc, diag::err_bad_memptr_lhs) << OpSpelling
         << (int)isIndirect << LHS.get()->getType();
       return QualType();
@@ -6556,13 +6549,14 @@ QualType Sema::CheckPointerToMemberOperands(ExprResult &LHS, ExprResult &RHS,
 
     CXXCastPath BasePath;
     if (CheckDerivedToBaseConversion(
-            LHSType, Class, Loc,
+            LHSType, QualType(RHSClass->getTypeForDecl(), 0), Loc,
             SourceRange(LHS.get()->getBeginLoc(), RHS.get()->getEndLoc()),
             &BasePath))
       return QualType();
 
     // Cast LHS to type of use.
-    QualType UseType = Context.getQualifiedType(Class, LHSType.getQualifiers());
+    QualType UseType = Context.getQualifiedType(RHSClass->getTypeForDecl(),
+                                                LHSType.getQualifiers());
     if (isIndirect)
       UseType = Context.getPointerType(UseType);
     ExprValueKind VK = isIndirect ? VK_PRValue : LHS.get()->getValueKind();
@@ -7355,6 +7349,7 @@ QualType Sema::FindCompositePointerType(SourceLocation Loc,
     Qualifiers Quals;
     /// The class for a pointer-to-member; a constant array type with a bound
     /// (if any) for an array.
+    /// FIXME: Store Qualifier for pointer-to-member.
     const Type *ClassOrBound;
 
     Step(Kind K, const Type *ClassOrBound = nullptr)
@@ -7365,7 +7360,8 @@ QualType Sema::FindCompositePointerType(SourceLocation Loc,
       case Pointer:
         return Ctx.getPointerType(T);
       case MemberPointer:
-        return Ctx.getMemberPointerType(T, ClassOrBound);
+        return Ctx.getMemberPointerType(T, /*Qualifier=*/nullptr,
+                                        ClassOrBound->getAsCXXRecordDecl());
       case ObjCPointer:
         return Ctx.getObjCObjectPointerType(T);
       case Array:
@@ -7519,18 +7515,20 @@ QualType Sema::FindCompositePointerType(SourceLocation Loc,
       // (Note that the only kinds of reference-relatedness in scope here are
       // "same type or derived from".) At any other level, the class must
       // exactly match.
-      const Type *Class = nullptr;
-      QualType Cls1(MemPtr1->getClass(), 0);
-      QualType Cls2(MemPtr2->getClass(), 0);
-      if (Context.hasSameType(Cls1, Cls2))
-        Class = MemPtr1->getClass();
+      CXXRecordDecl *Cls = nullptr,
+                    *Cls1 = MemPtr1->getMostRecentCXXRecordDecl(),
+                    *Cls2 = MemPtr2->getMostRecentCXXRecordDecl();
+      if (declaresSameEntity(Cls1, Cls2))
+        Cls = Cls1;
       else if (Steps.empty())
-        Class = IsDerivedFrom(Loc, Cls1, Cls2) ? MemPtr1->getClass() :
-                IsDerivedFrom(Loc, Cls2, Cls1) ? MemPtr2->getClass() : nullptr;
-      if (!Class)
+        Cls = IsDerivedFrom(Loc, Cls1, Cls2)   ? Cls1
+              : IsDerivedFrom(Loc, Cls2, Cls1) ? Cls2
+                                               : nullptr;
+      if (!Cls)
         return QualType();
 
-      Steps.emplace_back(Step::MemberPointer, Class);
+      Steps.emplace_back(Step::MemberPointer,
+                         Context.getTypeDeclType(Cls).getTypePtr());
       continue;
     }
 

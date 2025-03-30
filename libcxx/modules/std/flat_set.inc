@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
-#if 0
+#if _LIBCPP_STD_VER >= 23
   // [flat.set], class template flat_­set
   using std::flat_set;
 
@@ -19,7 +19,9 @@ export namespace std {
 
   // [flat.set.erasure], erasure for flat_­set
   using std::erase_if;
+#endif // _LIBCPP_STD_VER >= 23
 
+#if 0
   // [flat.multiset], class template flat_­multiset
   using std::flat_multiset;
 

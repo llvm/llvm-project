@@ -4191,8 +4191,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   Opts.Blocks = Args.hasArg(OPT_fblocks) || (Opts.OpenCL
     && Opts.OpenCLVersion == 200);
 
-  bool HasConvergentOperations = Opts.OpenMPIsTargetDevice || Opts.OpenCL ||
-                                 Opts.CUDAIsDevice || Opts.SYCLIsDevice ||
+  bool HasConvergentOperations = Opts.isTargetDevice() || Opts.OpenCL ||
                                  Opts.HLSL || T.isAMDGPU() || T.isNVPTX();
   Opts.ConvergentFunctions =
       Args.hasFlag(OPT_fconvergent_functions, OPT_fno_convergent_functions,
@@ -4971,6 +4970,14 @@ bool CompilerInvocation::CreateFromArgsImpl(
   llvm::Triple T(Res.getTargetOpts().Triple);
   ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args, Diags,
                         Res.getFileSystemOpts().WorkingDir);
+  if (Res.getFrontendOpts().GenReducedBMI ||
+      Res.getFrontendOpts().ProgramAction ==
+          frontend::GenerateReducedModuleInterface ||
+      Res.getFrontendOpts().ProgramAction ==
+          frontend::GenerateModuleInterface) {
+    Res.getHeaderSearchOpts().ModulesSkipDiagnosticOptions = true;
+    Res.getHeaderSearchOpts().ModulesSkipHeaderSearchPaths = true;
+  }
   ParseAPINotesArgs(Res.getAPINotesOpts(), Args, Diags);
 
   ParsePointerAuthArgs(LangOpts, Args, Diags);

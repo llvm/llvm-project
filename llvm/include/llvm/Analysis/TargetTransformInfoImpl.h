@@ -504,11 +504,13 @@ public:
   }
 
   unsigned getNumberOfRegisters(unsigned ClassID) const { return 8; }
-  bool hasConditionalLoadStoreForType(Type *Ty) const { return false; }
+  bool hasConditionalLoadStoreForType(Type *Ty, bool IsStore) const {
+    return false;
+  }
 
   unsigned getRegisterClassForType(bool Vector, Type *Ty = nullptr) const {
     return Vector ? 1 : 0;
-  };
+  }
 
   const char *getRegisterClassName(unsigned ClassID) const {
     switch (ClassID) {

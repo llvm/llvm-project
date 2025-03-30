@@ -45,6 +45,7 @@
 //   * llvm.nvvm.ldg.global.i        --> load addrspace(1) !load.invariant
 //   * llvm.nvvm.ldg.global.f        --> ibid.
 //   * llvm.nvvm.ldg.global.p        --> ibid.
+//   * llvm.nvvm.swap.lo.hi.b64      --> llvm.fshl(x, x, 32)
 
 def llvm_global_ptr_ty  : LLVMQualPointerType<1>;  // (global)ptr
 def llvm_shared_ptr_ty  : LLVMQualPointerType<3>;  // (shared)ptr
@@ -4634,12 +4635,6 @@ def int_nvvm_sust_p_3d_v4i32_trap
                    llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [],
               "llvm.nvvm.sust.p.3d.v4i32.trap">,
     ClangBuiltin<"__nvvm_sust_p_3d_v4i32_trap">;
-
-def int_nvvm_swap_lo_hi_b64
-  : DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty],
-              [IntrNoMem, IntrSpeculatable], "llvm.nvvm.swap.lo.hi.b64">,
-              ClangBuiltin<"__nvvm_swap_lo_hi_b64">;
-
 
 // Accessing special registers.
 

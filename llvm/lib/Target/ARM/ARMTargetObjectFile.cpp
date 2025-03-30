@@ -9,6 +9,7 @@
 #include "ARMTargetObjectFile.h"
 #include "ARMSubtarget.h"
 #include "ARMTargetMachine.h"
+#include "MCTargetDesc/ARMMCExpr.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -27,6 +28,11 @@ using namespace dwarf;
 //===----------------------------------------------------------------------===//
 //                               ELF Target
 //===----------------------------------------------------------------------===//
+
+ARMElfTargetObjectFile::ARMElfTargetObjectFile() {
+  PLTRelativeSpecifier = ARMMCExpr::VK_PREL31;
+  SupportIndirectSymViaGOTPCRel = true;
+}
 
 void ARMElfTargetObjectFile::Initialize(MCContext &Ctx,
                                         const TargetMachine &TM) {
@@ -61,16 +67,15 @@ const MCExpr *ARMElfTargetObjectFile::getIndirectSymViaGOTPCRel(
     const GlobalValue *GV, const MCSymbol *Sym, const MCValue &MV,
     int64_t Offset, MachineModuleInfo *MMI, MCStreamer &Streamer) const {
   int64_t FinalOffset = Offset + MV.getConstant();
-  const MCExpr *Res = MCSymbolRefExpr::create(
-      Sym, MCSymbolRefExpr::VK_ARM_GOT_PREL, getContext());
+  const MCExpr *Res =
+      MCSymbolRefExpr::create(Sym, ARMMCExpr::VK_GOT_PREL, getContext());
   const MCExpr *Off = MCConstantExpr::create(FinalOffset, getContext());
   return MCBinaryExpr::createAdd(Res, Off, getContext());
 }
 
 const MCExpr *ARMElfTargetObjectFile::
 getIndirectSymViaRWPI(const MCSymbol *Sym) const {
-  return MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_ARM_SBREL,
-                                 getContext());
+  return MCSymbolRefExpr::create(Sym, ARMMCExpr::VK_SBREL, getContext());
 }
 
 const MCExpr *ARMElfTargetObjectFile::getTTypeGlobalReference(
@@ -82,14 +87,13 @@ const MCExpr *ARMElfTargetObjectFile::getTTypeGlobalReference(
 
   assert(Encoding == DW_EH_PE_absptr && "Can handle absptr encoding only");
 
-  return MCSymbolRefExpr::create(TM.getSymbol(GV),
-                                 MCSymbolRefExpr::VK_ARM_TARGET2, getContext());
+  return MCSymbolRefExpr::create(TM.getSymbol(GV), ARMMCExpr::VK_TARGET2,
+                                 getContext());
 }
 
 const MCExpr *ARMElfTargetObjectFile::
 getDebugThreadLocalSymbol(const MCSymbol *Sym) const {
-  return MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_ARM_TLSLDO,
-                                 getContext());
+  return MCSymbolRefExpr::create(Sym, ARMMCExpr::VK_TLSLDO, getContext());
 }
 
 static bool isExecuteOnlyFunction(const GlobalObject *GO, SectionKind SK,

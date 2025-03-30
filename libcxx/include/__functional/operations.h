@@ -13,6 +13,7 @@
 #include <__config>
 #include <__functional/binary_function.h>
 #include <__functional/unary_function.h>
+#include <__fwd/functional.h>
 #include <__type_traits/desugars_to.h>
 #include <__type_traits/is_integral.h>
 #include <__utility/forward.h>
@@ -349,11 +350,7 @@ struct _LIBCPP_TEMPLATE_VIS not_equal_to<void> {
 };
 #endif
 
-#if _LIBCPP_STD_VER >= 14
-template <class _Tp = void>
-#else
 template <class _Tp>
-#endif
 struct _LIBCPP_TEMPLATE_VIS less : __binary_function<_Tp, _Tp, bool> {
   typedef bool __result_type; // used by valarray
   _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI bool operator()(const _Tp& __x, const _Tp& __y) const {

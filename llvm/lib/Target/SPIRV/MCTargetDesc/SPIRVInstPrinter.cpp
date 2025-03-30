@@ -114,6 +114,8 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     recordOpExtInstImport(MI);
   } else if (OpCode == SPIRV::OpExtInst) {
     printOpExtInst(MI, OS);
+  } else if (OpCode == SPIRV::UNKNOWN_type) {
+    printUnknownType(MI, OS);
   } else {
     // Print any extra operands for variadic instructions.
     const MCInstrDesc &MCDesc = MII.get(OpCode);
@@ -310,6 +312,31 @@ void SPIRVInstPrinter::printOpDecorate(const MCInst *MI, raw_ostream &O) {
       break;
     }
   }
+}
+
+void SPIRVInstPrinter::printUnknownType(const MCInst *MI, raw_ostream &O) {
+  const auto EnumOperand = MI->getOperand(1);
+  assert(EnumOperand.isImm() &&
+         "second operand of UNKNOWN_type must be opcode!");
+
+  const auto Enumerant = EnumOperand.getImm();
+  const auto NumOps = MI->getNumOperands();
+
+  // Print the opcode using the spirv-as unknown opcode syntax
+  O << "OpUnknown(" << Enumerant << ", " << NumOps << ") ";
+
+  // The result ID must be printed after the opcode when using this syntax
+  printOperand(MI, 0, O);
+
+  O << " ";
+
+  const MCInstrDesc &MCDesc = MII.get(MI->getOpcode());
+  unsigned NumFixedOps = MCDesc.getNumOperands();
+  if (NumOps == NumFixedOps)
+    return;
+
+  // Print the rest of the operands
+  printRemainingVariableOps(MI, NumFixedOps, O, true);
 }
 
 static void printExpr(const MCExpr *Expr, raw_ostream &O) {

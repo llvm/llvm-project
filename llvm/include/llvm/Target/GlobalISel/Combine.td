@@ -271,7 +271,7 @@ def sext_inreg_to_zext_inreg : GICombineRule<
     (G_SEXT_INREG $dst, $src, $imm):$root,
       [{
         unsigned BitWidth = MRI.getType(${src}.getReg()).getScalarSizeInBits();
-        return Helper.getKnownBits()->maskedValueIsZero(${src}.getReg(),
+        return Helper.getValueTracking()->maskedValueIsZero(${src}.getReg(),
                  APInt::getOneBitSet(BitWidth, ${imm}.getImm() - 1)); }]),
     (apply [{
       Helper.getBuilder().setInstrAndDebugLoc(*${root});
@@ -1522,7 +1522,7 @@ def extract_vector_element_build_vector_trunc8 : GICombineRule<
 
 def sext_trunc : GICombineRule<
    (defs root:$root, build_fn_matchinfo:$matchinfo),
-   (match (G_TRUNC $src, $x, (MIFlags NoSWrap)),
+   (match (G_TRUNC $src, $x),
           (G_SEXT $root, $src),
    [{ return Helper.matchSextOfTrunc(${root}, ${matchinfo}); }]),
    (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;

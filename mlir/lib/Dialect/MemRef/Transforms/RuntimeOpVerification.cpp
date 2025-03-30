@@ -35,6 +35,28 @@ Value generateInBoundsCheck(OpBuilder &builder, Location loc, Value value,
   return inBounds;
 }
 
+struct AssumeAlignmentOpInterface
+    : public RuntimeVerifiableOpInterface::ExternalModel<
+          AssumeAlignmentOpInterface, AssumeAlignmentOp> {
+  void generateRuntimeVerification(Operation *op, OpBuilder &builder,
+                                   Location loc) const {
+    auto assumeOp = cast<AssumeAlignmentOp>(op);
+    Value ptr = builder.create<ExtractAlignedPointerAsIndexOp>(
+        loc, assumeOp.getMemref());
+    Value rest = builder.create<arith::RemUIOp>(
+        loc, ptr,
+        builder.create<arith::ConstantIndexOp>(loc, assumeOp.getAlignment()));
+    Value isAligned = builder.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::eq, rest,
+        builder.create<arith::ConstantIndexOp>(loc, 0));
+    builder.create<cf::AssertOp>(
+        loc, isAligned,
+        RuntimeVerifiableOpInterface::generateErrorMessage(
+            op, "memref is not aligned to " +
+                    std::to_string(assumeOp.getAlignment())));
+  }
+};
+
 struct CastOpInterface
     : public RuntimeVerifiableOpInterface::ExternalModel<CastOpInterface,
                                                          CastOp> {
@@ -398,6 +420,7 @@ struct ExpandShapeOpInterface
 void mlir::memref::registerRuntimeVerifiableOpInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, memref::MemRefDialect *dialect) {
+    AssumeAlignmentOp::attachInterface<AssumeAlignmentOpInterface>(*ctx);
     CastOp::attachInterface<CastOpInterface>(*ctx);
     CopyOp::attachInterface<CopyOpInterface>(*ctx);
     DimOp::attachInterface<DimOpInterface>(*ctx);

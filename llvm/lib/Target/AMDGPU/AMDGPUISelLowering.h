@@ -315,7 +315,7 @@ public:
                                            const SelectionDAG &DAG,
                                            unsigned Depth = 0) const override;
 
-  unsigned computeNumSignBitsForTargetInstr(GISelKnownBits &Analysis,
+  unsigned computeNumSignBitsForTargetInstr(GISelValueTracking &Analysis,
                                             Register R,
                                             const APInt &DemandedElts,
                                             const MachineRegisterInfo &MRI,
@@ -402,6 +402,7 @@ enum NodeType : unsigned {
   TC_RETURN,
   TC_RETURN_GFX,
   TC_RETURN_CHAIN,
+  TC_RETURN_CHAIN_DVGPR,
   TRAP,
 
   // Masked control flow nodes.

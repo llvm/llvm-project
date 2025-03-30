@@ -299,6 +299,7 @@ enum OperandType : unsigned {
   OPERAND_UIMM5_PLUS1,
   OPERAND_UIMM5_GE6_PLUS1,
   OPERAND_UIMM5_LSB0,
+  OPERAND_UIMM5_SLIST,
   OPERAND_UIMM6,
   OPERAND_UIMM6_LSB0,
   OPERAND_UIMM7,
@@ -313,6 +314,7 @@ enum OperandType : unsigned {
   OPERAND_UIMM10_LSB00_NONZERO,
   OPERAND_UIMM11,
   OPERAND_UIMM12,
+  OPERAND_UIMM14_LSB00,
   OPERAND_UIMM16,
   OPERAND_UIMM16_NONZERO,
   OPERAND_UIMM20,
@@ -342,6 +344,8 @@ enum OperandType : unsigned {
   OPERAND_RVKRNUM_0_7,
   OPERAND_RVKRNUM_1_10,
   OPERAND_RVKRNUM_2_14,
+  OPERAND_RLIST,
+  OPERAND_RLIST_S0,
   OPERAND_SPIMM,
   // Operand is a 3-bit rounding mode, '111' indicates FRM register.
   // Represents 'frm' argument passing to floating-point operations.

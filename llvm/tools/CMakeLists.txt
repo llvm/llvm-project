@@ -9,6 +9,10 @@
 # traversing each directory.
 create_llvm_tool_options()
 
+if(NOT LLVM_COMPILER_IS_GCC_COMPATIBLE)
+  set(LLVM_TOOL_LLVM_GPU_LOADER_BUILD OFF)
+endif()
+
 if(NOT LLVM_BUILD_LLVM_DYLIB AND NOT LLVM_BUILD_LLVM_C_DYLIB)
   set(LLVM_TOOL_LLVM_SHLIB_BUILD Off)
 endif()

@@ -403,7 +403,12 @@ enum NodeType : unsigned {
   //  vfirst.m with additional mask and VL operands.
   VFIRST_VL,
 
-  LAST_VL_VECTOR_OP = VFIRST_VL,
+  // XRivosVizip
+  RI_VZIPEVEN_VL,
+  RI_VZIPODD_VL,
+  RI_VZIP2A_VL,
+
+  LAST_VL_VECTOR_OP = RI_VZIP2A_VL,
 
   // Read VLENB CSR
   READ_VLENB,
@@ -535,6 +540,7 @@ public:
   bool isCheapToSpeculateCtlz(Type *Ty) const override;
   bool isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const override;
   bool hasAndNotCompare(SDValue Y) const override;
+  bool hasAndNot(SDValue Y) const override;
   bool hasBitTest(SDValue X, SDValue Y) const override;
   bool shouldProduceAndByConstByHoistingConstFromShiftsLHSOfAnd(
       SDValue X, ConstantSDNode *XC, ConstantSDNode *CC, SDValue Y,
@@ -1068,6 +1074,13 @@ private:
   /// RISC-V doesn't have flags so it's better to perform the and/or in a GPR.
   bool shouldNormalizeToSelectSequence(LLVMContext &, EVT) const override {
     return false;
+  }
+
+  /// Disables storing and loading vectors by default when there are function
+  /// calls between the load and store, since these are more expensive than just
+  /// using scalars
+  bool shouldMergeStoreOfLoadsOverCall(EVT SrcVT, EVT MergedVT) const override {
+    return !MergedVT.isVector() || SrcVT.isVector();
   }
 
   /// For available scheduling models FDIV + two independent FMULs are much

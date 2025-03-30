@@ -295,7 +295,7 @@ group("test") {
     "//llvm/tools/llvm-lto2",
     "//llvm/tools/llvm-mc",
     "//llvm/tools/llvm-mca",
-    "//llvm/tools/llvm-ml",
+    "//llvm/tools/llvm-ml:symlinks",
     "//llvm/tools/llvm-modextract",
     "//llvm/tools/llvm-mt",
     "//llvm/tools/llvm-nm",
