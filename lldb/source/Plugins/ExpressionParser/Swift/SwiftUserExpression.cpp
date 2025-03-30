@@ -336,7 +336,7 @@ static llvm::Error AddVariableInfo(
       should_not_bind_generic_types &&
       (variable_sp->GetType()->GetForwardCompilerType().GetTypeInfo() &
        lldb::eTypeIsPack);
-
+  bool is_meaningless_without_dynamic_resolution = false;
   // If we're not binding the generic types, we need to set the self type as an
   // opaque pointer type. This is necessary because we don't bind the generic
   // parameters, and we can't have a type with unbound generics in a non-generic
@@ -349,8 +349,13 @@ static llvm::Error AddVariableInfo(
     CompilerType var_type = SwiftExpressionParser::ResolveVariable(
         variable_sp, stack_frame_sp, runtime, use_dynamic, bind_generic_types);
 
-    Status error;
-    target_type = ast_context.ImportType(var_type, error);
+    is_meaningless_without_dynamic_resolution =
+        var_type.IsMeaninglessWithoutDynamicResolution();
+
+    // ImportType would only return a TypeRef type anyway, so it's
+    // faster to leave the type in its original context for faster
+    // type alias resolution.
+    target_type = var_type;
   }
 
   // If the import failed, give up.
@@ -376,8 +381,7 @@ static llvm::Error AddVariableInfo(
   // If we couldn't fully realize the type, then we aren't going
   // to get very far making a local out of it, so discard it here.
   Log *log = GetLog(LLDBLog::Types | LLDBLog::Expressions);
-  if (!is_unbound_pack && ts->IsMeaninglessWithoutDynamicResolution(
-                              target_type.GetOpaqueQualType())) {
+  if (is_meaningless_without_dynamic_resolution) {
     if (log)
       log->Printf("Discarding local %s because we couldn't fully realize it, "
                   "our best attempt was: %s.",
