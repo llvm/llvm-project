@@ -1959,7 +1959,7 @@ the configuration (without a prefix: ``Auto``).
       void f() {}
 
   * ``SFS_StaticInline`` (in configuration: ``StaticInline``)
-    Only merge functions defined as static inline. Implies ``empty``.
+    Merge functions defined as static inline, also merge empty functions.
 
     .. code-block:: c++
 
