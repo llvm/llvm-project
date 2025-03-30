@@ -598,6 +598,7 @@ add_entrypoint_object(
   CXX_STANDARD
     20 # For constinit
   DEPENDS
+    libc.src.__support.threads.thread
     .exit_handler
 )
 

@@ -10,6 +10,7 @@
 #include "hdr/types/atexithandler_t.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/threads/thread.h"
 #include "src/stdlib/exit_handler.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -26,6 +27,7 @@ int __cxa_atexit(AtExitCallback *callback, void *payload, void *) {
 
 void __cxa_finalize(void *dso) {
   if (!dso) {
+    internal::call_atexit_callbacks(self.attrib);
     call_exit_callbacks(atexit_callbacks);
     if (teardown_main_tls)
       teardown_main_tls();
