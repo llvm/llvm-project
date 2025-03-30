@@ -7,9 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/threads/thread.h"
+#include "src/stdlib/exit.h"
 #include "test/IntegrationTest/test.h"
-
-bool called = false;
 
 extern "C" {
 [[gnu::weak]]
@@ -17,14 +16,8 @@ void *__dso_handle = nullptr;
 int __cxa_thread_atexit_impl(void (*func)(void *), void *arg, void *dso);
 }
 
-[[gnu::destructor]]
-void destructor() {
-  if (!called)
-    __builtin_trap();
-}
-
 TEST_MAIN() {
-  __cxa_thread_atexit_impl([](void *) { called = true; }, nullptr,
+  __cxa_thread_atexit_impl([](void *) { LIBC_NAMESPACE::exit(0); }, nullptr,
                            __dso_handle);
   return 0;
 }

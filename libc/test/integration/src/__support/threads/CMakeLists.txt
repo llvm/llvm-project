@@ -35,3 +35,14 @@ add_integration_test(
   DEPENDS
     libc.src.__support.threads.thread
 )
+
+add_integration_test(
+  double_exit_test
+  SUITE
+    libc-support-threads-integration-tests
+  SRCS
+    double_exit_test.cpp
+  DEPENDS
+    libc.src.__support.threads.thread
+    libc.src.stdlib.exit
+)
