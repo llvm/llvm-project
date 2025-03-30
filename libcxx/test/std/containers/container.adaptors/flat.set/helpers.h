@@ -30,7 +30,7 @@ void check_invariant(const std::flat_set<Args...>& m) {
 }
 
 template <class F>
-void test_emplace_exception_guarantee(F&& emplace_function) {
+void test_emplace_exception_guarantee([[maybe_unused]] F&& emplace_function) {
 #ifndef TEST_HAS_NO_EXCEPTIONS
   using C = TransparentComparator;
   {
