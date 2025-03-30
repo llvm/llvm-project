@@ -334,12 +334,6 @@ CString libc_make_test_file_path_func(const char *file_name);
     return "[ParamType = " #TYPE "]";                                          \
   }
 
-#define DO_PRAGMA_BEGIN 
-
-#define DO_PRAGMA 
-
-#define DO_PRAGMA_END 
-
 #define TYPED_TEST(SuiteName, TestName, TypeList)                              \
   static_assert(                                                               \
       LIBC_NAMESPACE::testing::internal::valid_prefix(#SuiteName),             \
@@ -356,12 +350,9 @@ CString libc_make_test_file_path_func(const char *file_name);
     }                                                                          \
     void Run() override;                                                       \
     const char *getName() const override { return name; }                      \
+    static TypeList::Tests<SuiteName##_##TestName>::type                       \
+        SuiteName##_##TestName##_Instance;                                     \
   };                                                                           \
-  DO_PRAGMA_BEGIN                                                              \
-  DO_PRAGMA                                                                    \
-  TypeList::Tests<SuiteName##_##TestName>::type                                \
-      SuiteName##_##TestName##_Instance;                                       \
-  DO_PRAGMA_END                                                                \
   template <typename T> void SuiteName##_##TestName<T>::Run()
 
 #define TYPED_TEST_F(SuiteClass, TestName, TypeList)                           \
@@ -379,12 +370,9 @@ CString libc_make_test_file_path_func(const char *file_name);
     }                                                                          \
     void Run() override;                                                       \
     const char *getName() const override { return name; }                      \
+    static TypeList::Tests<SuiteClass##_##TestName>::type                      \
+        SuiteClass##_##TestName##_Instance;                                    \
   };                                                                           \
-  DO_PRAGMA_BEGIN                                                              \
-  DO_PRAGMA                                                                    \
-  TypeList::Tests<SuiteClass##_##TestName>::type                               \
-      SuiteClass##_##TestName##_Instance;                                      \
-  DO_PRAGMA_END                                                                \
   template <typename T> void SuiteClass##_##TestName<T>::Run()
 
 #define TEST(SuiteName, TestName)                                              \
@@ -395,11 +383,8 @@ CString libc_make_test_file_path_func(const char *file_name);
     SuiteName##_##TestName() { addTest(this); }                                \
     void Run() override;                                                       \
     const char *getName() const override { return #SuiteName "." #TestName; }  \
+    static SuiteName##_##TestName SuiteName##_##TestName##_Instance;           \
   };                                                                           \
-  DO_PRAGMA_BEGIN                                                              \
-  DO_PRAGMA                                                                    \
-  SuiteName##_##TestName SuiteName##_##TestName##_Instance;                    \
-  DO_PRAGMA_END                                                                \
   void SuiteName##_##TestName::Run()
 
 #define TEST_F(SuiteClass, TestName)                                           \
@@ -411,11 +396,8 @@ CString libc_make_test_file_path_func(const char *file_name);
     SuiteClass##_##TestName() { addTest(this); }                               \
     void Run() override;                                                       \
     const char *getName() const override { return #SuiteClass "." #TestName; } \
+    static SuiteClass##_##TestName SuiteClass##_##TestName##_Instance;         \
   };                                                                           \
-  DO_PRAGMA_BEGIN                                                              \
-  DO_PRAGMA                                                                    \
-  SuiteClass##_##TestName SuiteClass##_##TestName##_Instance;                  \
-  DO_PRAGMA_END                                                                \
   void SuiteClass##_##TestName::Run()
 
 // Helper to trick the compiler into ignoring lack of braces on the else
