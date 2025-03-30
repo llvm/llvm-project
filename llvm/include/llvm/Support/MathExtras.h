@@ -760,7 +760,7 @@ std::enable_if_t<std::is_signed_v<T>, T> SubOverflow(T X, T Y, T &Result) {
 /// Multiply two signed integers, computing the two's complement truncated
 /// result, returning true if an overflow occurred.
 template <typename T>
-std::enable_if_t<std::is_signed_v<T>, T> MulOverflow(T X, T Y, T &Result) {
+std::enable_if_t<std::is_signed_v<T>, bool> MulOverflow(T X, T Y, T &Result) {
 #if __has_builtin(__builtin_mul_overflow)
   return __builtin_mul_overflow(X, Y, &Result);
 #else
@@ -775,22 +775,25 @@ std::enable_if_t<std::is_signed_v<T>, T> MulOverflow(T X, T Y, T &Result) {
   bool IsNegative = (X < 0) ^ (Y < 0);
 
   // Safely compute absolute values  
-  const U AbsX = X < 0 ? (0 - static_cast<U>(X+1))+1 : static_cast<U>(X);
-  const U AbsY = Y < 0 ? (0 - static_cast<U>(Y+1))+1 : static_cast<U>(Y);
+  const U AbsX = X < 0 ? (0 - static_cast<U>(X)) : static_cast<U>(X);
+  const U AbsY = Y < 0 ? (0 - static_cast<U>(Y)) : static_cast<U>(Y);
 
   // Overflow check before actual multiplication
   constexpr U MaxPositive = static_cast<U>(std::numeric_limits<T>::max());
   constexpr U MaxNegative = static_cast<U>(std::numeric_limits<T>::max()) + 1;
-    
+
   // Safe to multiply
   U AbsResult = AbsX * AbsY;
   Result = IsNegative ? static_cast<T>(0-AbsResult) : static_cast<T>(AbsResult);
+  
+  
   
   // Handle INT_MIN * -1 overflow case explicitly
   if ((X == std::numeric_limits<T>::min() && Y == -1) ||
       (Y == std::numeric_limits<T>::min() && X == -1)) {
     return true;  // overflow
   }
+
 
   U Limit = IsNegative ? MaxNegative : MaxPositive;
 
