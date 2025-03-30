@@ -104,7 +104,6 @@
 #pragma push_macro("__3DV2");
 #pragma push_macro("__3DV4");
 
-
 // Put all functions into anonymous namespace so they have internal linkage.
 // The device-only function here must be internal in order to avoid ODR
 // violations in case they are used from the files compiled with
@@ -250,14 +249,13 @@ struct __texture_op_tag {};
 struct __surface_op_tag {};
 
 // Template specialization to determine operation type based on tag value
-template <class __op>
-struct __op_type_traits {
+template <class __op> struct __op_type_traits {
   using type = __texture_op_tag;
 };
 
 // Specialize for known surface operation tags
-#define __OP_TYPE_SURFACE(__op) \
-    template <> struct __op_type_traits<__op> { using type = __surface_op_tag; };
+#define __OP_TYPE_SURFACE(__op)                                                \
+  template <> struct __op_type_traits<__op> { using type = __surface_op_tag; };
 
 // Classes that implement specific texture ops.
 template <class __op> struct __tex_fetch_v4;
@@ -722,10 +720,11 @@ template <class __DestT, class __SrcT> struct __convert {
   }
 };
 
-// There are a couple of layers here.  First, __op_type_traits is used to dispatch to either surface write calls, or to
-// the texture read calls.
+// There are a couple of layers here.  First, __op_type_traits is used to
+// dispatch to either surface write calls, or to the texture read calls.
 //
-// Then, that dispatches to __tex_fetch_impl below, which dispatches by both tag and datatype to the appropriate
+// Then, that dispatches to __tex_fetch_impl below, which dispatches by both tag
+// and datatype to the appropriate
 // __surf_read_write_v2.
 // TODO(austin): Do the reads too.
 
@@ -745,95 +744,105 @@ __OP_TYPE_SURFACE(__ID("__isurf2DLayeredwrite_v2"));
 __OP_TYPE_SURFACE(__ID("__isurfCubemapwrite_v2"));
 __OP_TYPE_SURFACE(__ID("__isurfCubemapLayeredwrite_v2"));
 
-template <class __op, typename __type>
-struct __surf_read_write_v2;
+template <class __op, typename __type> struct __surf_read_write_v2;
 
-// For the various write calls, we need to be able to generate variations with different IDs, different numbers of
-// arguments, and different numbers of outputs.
+// For the various write calls, we need to be able to generate variations with
+// different IDs, different numbers of arguments, and different numbers of
+// outputs.
 
-#define __SURF_WRITE_V2(__op, __asm_dim, __asmtype, __type, __index_op_args, __index_args, __index_asm_args,          \
-                        __asm_op_args, __asm_args)                                                                    \
-    template <>                                                                                                       \
-    struct __surf_read_write_v2<__op, __type> {                                                                       \
-        static __device__ void __run(__type *__ptr, cudaSurfaceObject_t obj, __L(__index_args),                       \
-                                     cudaSurfaceBoundaryMode mode) {                                                  \
-            switch (mode) {                                                                                           \
-                case cudaBoundaryModeZero:                                                                            \
-                    asm volatile("sust.b." __asm_dim "." __asmtype ".zero [%0, " __index_op_args "], " __asm_op_args  \
-                                 ";"                                                                                  \
-                                 :                                                                                    \
-                                 : "l"(obj), __L(__index_asm_args), __L(__asm_args));                                 \
-                    break;                                                                                            \
-                case cudaBoundaryModeClamp:                                                                           \
-                    asm volatile("sust.b." __asm_dim "." __asmtype ".clamp [%0, " __index_op_args "], " __asm_op_args \
-                                 ";"                                                                                  \
-                                 :                                                                                    \
-                                 : "l"(obj), __L(__index_asm_args), __L(__asm_args));                                 \
-                    break;                                                                                            \
-                case cudaBoundaryModeTrap:                                                                            \
-                    asm volatile("sust.b." __asm_dim "." __asmtype ".trap [%0, " __index_op_args "], " __asm_op_args  \
-                                 ";"                                                                                  \
-                                 :                                                                                    \
-                                 : "l"(obj), __L(__index_asm_args), __L(__asm_args));                                 \
-                    break;                                                                                            \
-            }                                                                                                         \
-        }                                                                                                             \
-    }
+#define __SURF_WRITE_V2(__op, __asm_dim, __asmtype, __type, __index_op_args,   \
+                        __index_args, __index_asm_args, __asm_op_args,         \
+                        __asm_args)                                            \
+  template <> struct __surf_read_write_v2<__op, __type> {                      \
+    static __device__ void __run(__type *__ptr, cudaSurfaceObject_t obj,       \
+                                 __L(__index_args),                            \
+                                 cudaSurfaceBoundaryMode mode) {               \
+      switch (mode) {                                                          \
+      case cudaBoundaryModeZero:                                               \
+        asm volatile("sust.b." __asm_dim "." __asmtype                         \
+                     ".zero [%0, " __index_op_args "], " __asm_op_args ";"     \
+                     :                                                         \
+                     : "l"(obj), __L(__index_asm_args), __L(__asm_args));      \
+        break;                                                                 \
+      case cudaBoundaryModeClamp:                                              \
+        asm volatile("sust.b." __asm_dim "." __asmtype                         \
+                     ".clamp [%0, " __index_op_args "], " __asm_op_args ";"    \
+                     :                                                         \
+                     : "l"(obj), __L(__index_asm_args), __L(__asm_args));      \
+        break;                                                                 \
+      case cudaBoundaryModeTrap:                                               \
+        asm volatile("sust.b." __asm_dim "." __asmtype                         \
+                     ".trap [%0, " __index_op_args "], " __asm_op_args ";"     \
+                     :                                                         \
+                     : "l"(obj), __L(__index_asm_args), __L(__asm_args));      \
+        break;                                                                 \
+      }                                                                        \
+    }                                                                          \
+  }
 
-#define __SURF_READ_V2(__op, __asm_dim, __asmtype, __type, __asm_op_args, __asm_args, __index_args, __index_asm_args) \
-    template <>                                                                                                       \
-    struct __surf_read_write_v2<__op, __type> {                                                                       \
-        static __device__ void __run(__type *__ptr, cudaSurfaceObject_t obj, __L(__index_args),                       \
-                                     cudaSurfaceBoundaryMode mode) {                                                  \
-            switch (mode) {                                                                                           \
-                case cudaBoundaryModeZero:                                                                            \
-                    asm("suld.b." __asm_dim "." __asmtype ".zero " __asm_op_args ";"                                  \
-                        : __L(__asm_args)                                                                             \
-                        : "l"(obj), __L(__index_asm_args));                                                           \
-                    break;                                                                                            \
-                case cudaBoundaryModeClamp:                                                                           \
-                    asm("suld.b." __asm_dim "." __asmtype ".clamp " __asm_op_args ";"                                 \
-                        : __L(__asm_args)                                                                             \
-                        : "l"(obj), __L(__index_asm_args));                                                           \
-                    break;                                                                                            \
-                case cudaBoundaryModeTrap:                                                                            \
-                    asm("suld.b." __asm_dim "." __asmtype ".trap " __asm_op_args ";"                                  \
-                        : __L(__asm_args)                                                                             \
-                        : "l"(obj), __L(__index_asm_args));                                                           \
-                    break;                                                                                            \
-            }                                                                                                         \
-        }                                                                                                             \
-    }
+#define __SURF_READ_V2(__op, __asm_dim, __asmtype, __type, __asm_op_args,      \
+                       __asm_args, __index_args, __index_asm_args)             \
+  template <> struct __surf_read_write_v2<__op, __type> {                      \
+    static __device__ void __run(__type *__ptr, cudaSurfaceObject_t obj,       \
+                                 __L(__index_args),                            \
+                                 cudaSurfaceBoundaryMode mode) {               \
+      switch (mode) {                                                          \
+      case cudaBoundaryModeZero:                                               \
+        asm("suld.b." __asm_dim "." __asmtype ".zero " __asm_op_args ";"       \
+            : __L(__asm_args)                                                  \
+            : "l"(obj), __L(__index_asm_args));                                \
+        break;                                                                 \
+      case cudaBoundaryModeClamp:                                              \
+        asm("suld.b." __asm_dim "." __asmtype ".clamp " __asm_op_args ";"      \
+            : __L(__asm_args)                                                  \
+            : "l"(obj), __L(__index_asm_args));                                \
+        break;                                                                 \
+      case cudaBoundaryModeTrap:                                               \
+        asm("suld.b." __asm_dim "." __asmtype ".trap " __asm_op_args ";"       \
+            : __L(__asm_args)                                                  \
+            : "l"(obj), __L(__index_asm_args));                                \
+        break;                                                                 \
+      }                                                                        \
+    }                                                                          \
+  }
 
-// Amazing, the read side should follow the same flow, I just need to change the generated assembly calls, and the rest
-// should fall in line.
+// Amazing, the read side should follow the same flow, I just need to change the
+// generated assembly calls, and the rest should fall in line.
 
 #define __SW_ASM_ARGS(__type) (__type(*__ptr))
 #define __SW_ASM_ARGS1(__type) (__type(__ptr->x))
 #define __SW_ASM_ARGS2(__type) (__type(__ptr->x), __type(__ptr->y))
-#define __SW_ASM_ARGS4(__type) (__type(__ptr->x), __type(__ptr->y), __type(__ptr->z), __type(__ptr->w))
+#define __SW_ASM_ARGS4(__type)                                                 \
+  (__type(__ptr->x), __type(__ptr->y), __type(__ptr->z), __type(__ptr->w))
 
-#define __SURF_READ1D(__asmtype, __type, __asm_op_args, __asm_args) \
-    __SURF_READ_V2(__ID("__isurf1Dread"), "1d", __asmtype, __type, __asm_op_args, __asm_args, (int x), ("r"(x)))
-#define __SURF_READ2D(__asmtype, __type, __asm_op_args, __asm_args)                                           \
-    __SURF_READ_V2(__ID("__isurf2Dread"), "2d", __asmtype, __type, __asm_op_args, __asm_args, (int x, int y), \
-                   ("r"(x), "r"(y)))
-#define __SURF_READ3D(__asmtype, __type, __asm_op_args, __asm_args)                                                  \
-    __SURF_READ_V2(__ID("__isurf3Dread"), "3d", __asmtype, __type, __asm_op_args, __asm_args, (int x, int y, int z), \
-                   ("r"(x), "r"(y), "r"(z)))
+#define __SURF_READ1D(__asmtype, __type, __asm_op_args, __asm_args)            \
+  __SURF_READ_V2(__ID("__isurf1Dread"), "1d", __asmtype, __type,               \
+                 __asm_op_args, __asm_args, (int x), ("r"(x)))
+#define __SURF_READ2D(__asmtype, __type, __asm_op_args, __asm_args)            \
+  __SURF_READ_V2(__ID("__isurf2Dread"), "2d", __asmtype, __type,               \
+                 __asm_op_args, __asm_args, (int x, int y), ("r"(x), "r"(y)))
+#define __SURF_READ3D(__asmtype, __type, __asm_op_args, __asm_args)            \
+  __SURF_READ_V2(__ID("__isurf3Dread"), "3d", __asmtype, __type,               \
+                 __asm_op_args, __asm_args, (int x, int y, int z),             \
+                 ("r"(x), "r"(y), "r"(z)))
 
-#define __SURF_READ1DLAYERED(__asmtype, __type, __asm_op_args, __asm_args)                            \
-    __SURF_READ_V2(__ID("__isurf1DLayeredread"), "a1d", __asmtype, __type, __asm_op_args, __asm_args, \
-                   (int x, int layer), ("r"(x), "r"(layer)))
-#define __SURF_READ2DLAYERED(__asmtype, __type, __asm_op_args, __asm_args)                            \
-    __SURF_READ_V2(__ID("__isurf2DLayeredread"), "a2d", __asmtype, __type, __asm_op_args, __asm_args, \
-                   (int x, int y, int layer), ("r"(x), "r"(y), "r"(layer)))
-#define __SURF_READCUBEMAP(__asmtype, __type, __asm_op_args, __asm_args)                            \
-    __SURF_READ_V2(__ID("__isurfCubemapread"), "a2d", __asmtype, __type, __asm_op_args, __asm_args, \
-                   (int x, int y, int face), ("r"(x), "r"(y), "r"(face)))
-#define __SURF_READCUBEMAPLAYERED(__asmtype, __type, __asm_op_args, __asm_args)                            \
-    __SURF_READ_V2(__ID("__isurfCubemapLayeredread"), "a2d", __asmtype, __type, __asm_op_args, __asm_args, \
-                   (int x, int y, int layerface), ("r"(x), "r"(y), "r"(layerface)))
+#define __SURF_READ1DLAYERED(__asmtype, __type, __asm_op_args, __asm_args)     \
+  __SURF_READ_V2(__ID("__isurf1DLayeredread"), "a1d", __asmtype, __type,       \
+                 __asm_op_args, __asm_args, (int x, int layer),                \
+                 ("r"(x), "r"(layer)))
+#define __SURF_READ2DLAYERED(__asmtype, __type, __asm_op_args, __asm_args)     \
+  __SURF_READ_V2(__ID("__isurf2DLayeredread"), "a2d", __asmtype, __type,       \
+                 __asm_op_args, __asm_args, (int x, int y, int layer),         \
+                 ("r"(x), "r"(y), "r"(layer)))
+#define __SURF_READCUBEMAP(__asmtype, __type, __asm_op_args, __asm_args)       \
+  __SURF_READ_V2(__ID("__isurfCubemapread"), "a2d", __asmtype, __type,         \
+                 __asm_op_args, __asm_args, (int x, int y, int face),          \
+                 ("r"(x), "r"(y), "r"(face)))
+#define __SURF_READCUBEMAPLAYERED(__asmtype, __type, __asm_op_args,            \
+                                  __asm_args)                                  \
+  __SURF_READ_V2(__ID("__isurfCubemapLayeredread"), "a2d", __asmtype, __type,  \
+                 __asm_op_args, __asm_args, (int x, int y, int layerface),     \
+                 ("r"(x), "r"(y), "r"(layerface)))
 
 #define __1DV1 "{%0}, [%1, {%2}]"
 #define __1DV2 "{%0, %1}, [%2, {%3}]"
@@ -863,44 +872,44 @@ struct __surf_read_write_v2;
 #define __CUBEMAPLAYERV2 "{%0, %1}, [%2, {%5, %3, %4, %4}]"
 #define __CUBEMAPLAYERV4 "{%0, %1, %2, %3}, [%4, {%7, %5, %6, %6}]"
 
-#define __SURF_READXD_ALL(__xdv1, __xdv2, __xdv4, __surf_readxd_v2)           \
-    __surf_readxd_v2("b8", char, __xdv1, __SW_ASM_ARGS("=h"));                \
-    __surf_readxd_v2("b8", signed char, __xdv1, __SW_ASM_ARGS("=h"));         \
-    __surf_readxd_v2("b8", char1, __xdv1, __SW_ASM_ARGS1("=h"));              \
-    __surf_readxd_v2("b8", unsigned char, __xdv1, __SW_ASM_ARGS("=h"));       \
-    __surf_readxd_v2("b8", uchar1, __xdv1, __SW_ASM_ARGS1("=h"));             \
-    __surf_readxd_v2("b16", short, __xdv1, __SW_ASM_ARGS("=h"));              \
-    __surf_readxd_v2("b16", short1, __xdv1, __SW_ASM_ARGS1("=h"));            \
-    __surf_readxd_v2("b16", unsigned short, __xdv1, __SW_ASM_ARGS("=h"));     \
-    __surf_readxd_v2("b16", ushort1, __xdv1, __SW_ASM_ARGS1("=h"));           \
-    __surf_readxd_v2("b32", int, __xdv1, __SW_ASM_ARGS("=r"));                \
-    __surf_readxd_v2("b32", int1, __xdv1, __SW_ASM_ARGS1("=r"));              \
-    __surf_readxd_v2("b32", unsigned int, __xdv1, __SW_ASM_ARGS("=r"));       \
-    __surf_readxd_v2("b32", uint1, __xdv1, __SW_ASM_ARGS1("=r"));             \
-    __surf_readxd_v2("b64", long long, __xdv1, __SW_ASM_ARGS("=l"));          \
-    __surf_readxd_v2("b64", longlong1, __xdv1, __SW_ASM_ARGS1("=l"));         \
-    __surf_readxd_v2("b64", unsigned long long, __xdv1, __SW_ASM_ARGS("=l")); \
-    __surf_readxd_v2("b64", ulonglong1, __xdv1, __SW_ASM_ARGS1("=l"));        \
-    __surf_readxd_v2("b32", float, __xdv1, __SW_ASM_ARGS("=r"));              \
-    __surf_readxd_v2("b32", float1, __xdv1, __SW_ASM_ARGS1("=r"));            \
-                                                                              \
-    __surf_readxd_v2("v2.b8", char2, __xdv2, __SW_ASM_ARGS2("=h"));           \
-    __surf_readxd_v2("v2.b8", uchar2, __xdv2, __SW_ASM_ARGS2("=h"));          \
-    __surf_readxd_v2("v2.b16", short2, __xdv2, __SW_ASM_ARGS2("=h"));         \
-    __surf_readxd_v2("v2.b16", ushort2, __xdv2, __SW_ASM_ARGS2("=h"));        \
-    __surf_readxd_v2("v2.b32", int2, __xdv2, __SW_ASM_ARGS2("=r"));           \
-    __surf_readxd_v2("v2.b32", uint2, __xdv2, __SW_ASM_ARGS2("=r"));          \
-    __surf_readxd_v2("v2.b64", longlong2, __xdv2, __SW_ASM_ARGS2("=l"));      \
-    __surf_readxd_v2("v2.b64", ulonglong2, __xdv2, __SW_ASM_ARGS2("=l"));     \
-    __surf_readxd_v2("v2.b32", float2, __xdv2, __SW_ASM_ARGS2("=r"));         \
-                                                                              \
-    __surf_readxd_v2("v4.b8", char4, __xdv4, __SW_ASM_ARGS4("=h"));           \
-    __surf_readxd_v2("v4.b8", uchar4, __xdv4, __SW_ASM_ARGS4("=h"));          \
-    __surf_readxd_v2("v4.b16", short4, __xdv4, __SW_ASM_ARGS4("=h"));         \
-    __surf_readxd_v2("v4.b16", ushort4, __xdv4, __SW_ASM_ARGS4("=h"));        \
-    __surf_readxd_v2("v4.b32", int4, __xdv4, __SW_ASM_ARGS4("=r"));           \
-    __surf_readxd_v2("v4.b32", uint4, __xdv4, __SW_ASM_ARGS4("=r"));          \
-    __surf_readxd_v2("v4.b32", float4, __xdv4, __SW_ASM_ARGS4("=r"))
+#define __SURF_READXD_ALL(__xdv1, __xdv2, __xdv4, __surf_readxd_v2)            \
+  __surf_readxd_v2("b8", char, __xdv1, __SW_ASM_ARGS("=h"));                   \
+  __surf_readxd_v2("b8", signed char, __xdv1, __SW_ASM_ARGS("=h"));            \
+  __surf_readxd_v2("b8", char1, __xdv1, __SW_ASM_ARGS1("=h"));                 \
+  __surf_readxd_v2("b8", unsigned char, __xdv1, __SW_ASM_ARGS("=h"));          \
+  __surf_readxd_v2("b8", uchar1, __xdv1, __SW_ASM_ARGS1("=h"));                \
+  __surf_readxd_v2("b16", short, __xdv1, __SW_ASM_ARGS("=h"));                 \
+  __surf_readxd_v2("b16", short1, __xdv1, __SW_ASM_ARGS1("=h"));               \
+  __surf_readxd_v2("b16", unsigned short, __xdv1, __SW_ASM_ARGS("=h"));        \
+  __surf_readxd_v2("b16", ushort1, __xdv1, __SW_ASM_ARGS1("=h"));              \
+  __surf_readxd_v2("b32", int, __xdv1, __SW_ASM_ARGS("=r"));                   \
+  __surf_readxd_v2("b32", int1, __xdv1, __SW_ASM_ARGS1("=r"));                 \
+  __surf_readxd_v2("b32", unsigned int, __xdv1, __SW_ASM_ARGS("=r"));          \
+  __surf_readxd_v2("b32", uint1, __xdv1, __SW_ASM_ARGS1("=r"));                \
+  __surf_readxd_v2("b64", long long, __xdv1, __SW_ASM_ARGS("=l"));             \
+  __surf_readxd_v2("b64", longlong1, __xdv1, __SW_ASM_ARGS1("=l"));            \
+  __surf_readxd_v2("b64", unsigned long long, __xdv1, __SW_ASM_ARGS("=l"));    \
+  __surf_readxd_v2("b64", ulonglong1, __xdv1, __SW_ASM_ARGS1("=l"));           \
+  __surf_readxd_v2("b32", float, __xdv1, __SW_ASM_ARGS("=r"));                 \
+  __surf_readxd_v2("b32", float1, __xdv1, __SW_ASM_ARGS1("=r"));               \
+                                                                               \
+  __surf_readxd_v2("v2.b8", char2, __xdv2, __SW_ASM_ARGS2("=h"));              \
+  __surf_readxd_v2("v2.b8", uchar2, __xdv2, __SW_ASM_ARGS2("=h"));             \
+  __surf_readxd_v2("v2.b16", short2, __xdv2, __SW_ASM_ARGS2("=h"));            \
+  __surf_readxd_v2("v2.b16", ushort2, __xdv2, __SW_ASM_ARGS2("=h"));           \
+  __surf_readxd_v2("v2.b32", int2, __xdv2, __SW_ASM_ARGS2("=r"));              \
+  __surf_readxd_v2("v2.b32", uint2, __xdv2, __SW_ASM_ARGS2("=r"));             \
+  __surf_readxd_v2("v2.b64", longlong2, __xdv2, __SW_ASM_ARGS2("=l"));         \
+  __surf_readxd_v2("v2.b64", ulonglong2, __xdv2, __SW_ASM_ARGS2("=l"));        \
+  __surf_readxd_v2("v2.b32", float2, __xdv2, __SW_ASM_ARGS2("=r"));            \
+                                                                               \
+  __surf_readxd_v2("v4.b8", char4, __xdv4, __SW_ASM_ARGS4("=h"));              \
+  __surf_readxd_v2("v4.b8", uchar4, __xdv4, __SW_ASM_ARGS4("=h"));             \
+  __surf_readxd_v2("v4.b16", short4, __xdv4, __SW_ASM_ARGS4("=h"));            \
+  __surf_readxd_v2("v4.b16", ushort4, __xdv4, __SW_ASM_ARGS4("=h"));           \
+  __surf_readxd_v2("v4.b32", int4, __xdv4, __SW_ASM_ARGS4("=r"));              \
+  __surf_readxd_v2("v4.b32", uint4, __xdv4, __SW_ASM_ARGS4("=r"));             \
+  __surf_readxd_v2("v4.b32", float4, __xdv4, __SW_ASM_ARGS4("=r"))
 
 __SURF_READXD_ALL(__1DV1, __1DV2, __1DV4, __SURF_READ1D);
 __SURF_READXD_ALL(__2DV1, __2DV2, __2DV4, __SURF_READ2D);
@@ -908,70 +917,77 @@ __SURF_READXD_ALL(__3DV1, __3DV2, __3DV4, __SURF_READ3D);
 __SURF_READXD_ALL(__1DLAYERV1, __1DLAYERV2, __1DLAYERV4, __SURF_READ1DLAYERED);
 __SURF_READXD_ALL(__2DLAYERV1, __2DLAYERV2, __2DLAYERV4, __SURF_READ2DLAYERED);
 __SURF_READXD_ALL(__CUBEMAPV1, __CUBEMAPV2, __CUBEMAPV4, __SURF_READCUBEMAP);
-__SURF_READXD_ALL(__CUBEMAPLAYERV1, __CUBEMAPLAYERV2, __CUBEMAPLAYERV4, __SURF_READCUBEMAPLAYERED);
+__SURF_READXD_ALL(__CUBEMAPLAYERV1, __CUBEMAPLAYERV2, __CUBEMAPLAYERV4,
+                  __SURF_READCUBEMAPLAYERED);
 
+#define __SURF_WRITE1D_V2(__asmtype, __type, __asm_op_args, __asm_args)        \
+  __SURF_WRITE_V2(__ID("__isurf1Dwrite_v2"), "1d", __asmtype, __type, "{%1}",  \
+                  (int x), ("r"(x)), __asm_op_args, __asm_args)
+#define __SURF_WRITE1DLAYERED_V2(__asmtype, __type, __asm_op_args, __asm_args) \
+  __SURF_WRITE_V2(__ID("__isurf1DLayeredwrite_v2"), "a1d", __asmtype, __type,  \
+                  "{%2, %1}", (int x, int layer), ("r"(x), "r"(layer)),        \
+                  __asm_op_args, __asm_args)
+#define __SURF_WRITE2D_V2(__asmtype, __type, __asm_op_args, __asm_args)        \
+  __SURF_WRITE_V2(__ID("__isurf2Dwrite_v2"), "2d", __asmtype, __type,          \
+                  "{%1, %2}", (int x, int y), ("r"(x), "r"(y)), __asm_op_args, \
+                  __asm_args)
+#define __SURF_WRITE2DLAYERED_V2(__asmtype, __type, __asm_op_args, __asm_args) \
+  __SURF_WRITE_V2(__ID("__isurf2DLayeredwrite_v2"), "a2d", __asmtype, __type,  \
+                  "{%3, %1, %2, %2}", (int x, int y, int layer),               \
+                  ("r"(x), "r"(y), "r"(layer)), __asm_op_args, __asm_args)
+#define __SURF_WRITE3D_V2(__asmtype, __type, __asm_op_args, __asm_args)        \
+  __SURF_WRITE_V2(__ID("__isurf3Dwrite_v2"), "3d", __asmtype, __type,          \
+                  "{%1, %2, %3, %3}", (int x, int y, int z),                   \
+                  ("r"(x), "r"(y), "r"(z)), __asm_op_args, __asm_args)
 
-#define __SURF_WRITE1D_V2(__asmtype, __type, __asm_op_args, __asm_args)                                     \
-    __SURF_WRITE_V2(__ID("__isurf1Dwrite_v2"), "1d", __asmtype, __type, "{%1}", (int x), ("r"(x)), __asm_op_args, \
-                    __asm_args)
-#define __SURF_WRITE1DLAYERED_V2(__asmtype, __type, __asm_op_args, __asm_args)                                  \
-    __SURF_WRITE_V2(__ID("__isurf1DLayeredwrite_v2"), "a1d", __asmtype, __type, "{%2, %1}", (int x, int layer), \
-                    ("r"(x), "r"(layer)), __asm_op_args, __asm_args)
-#define __SURF_WRITE2D_V2(__asmtype, __type, __asm_op_args, __asm_args)                                               \
-    __SURF_WRITE_V2(__ID("__isurf2Dwrite_v2"), "2d", __asmtype, __type, "{%1, %2}", (int x, int y), ("r"(x), "r"(y)), \
-                    __asm_op_args, __asm_args)
-#define __SURF_WRITE2DLAYERED_V2(__asmtype, __type, __asm_op_args, __asm_args)                      \
-    __SURF_WRITE_V2(__ID("__isurf2DLayeredwrite_v2"), "a2d", __asmtype, __type, "{%3, %1, %2, %2}", \
-                    (int x, int y, int layer), ("r"(x), "r"(y), "r"(layer)), __asm_op_args, __asm_args)
-#define __SURF_WRITE3D_V2(__asmtype, __type, __asm_op_args, __asm_args)                                            \
-    __SURF_WRITE_V2(__ID("__isurf3Dwrite_v2"), "3d", __asmtype, __type, "{%1, %2, %3, %3}", (int x, int y, int z), \
-                    ("r"(x), "r"(y), "r"(z)), __asm_op_args, __asm_args)
+#define __SURF_CUBEMAPWRITE_V2(__asmtype, __type, __asm_op_args, __asm_args)   \
+  __SURF_WRITE_V2(__ID("__isurfCubemapwrite_v2"), "a2d", __asmtype, __type,    \
+                  "{%3, %1, %2, %2}", (int x, int y, int face),                \
+                  ("r"(x), "r"(y), "r"(face)), __asm_op_args, __asm_args)
+#define __SURF_CUBEMAPLAYEREDWRITE_V2(__asmtype, __type, __asm_op_args,        \
+                                      __asm_args)                              \
+  __SURF_WRITE_V2(__ID("__isurfCubemapLayeredwrite_v2"), "a2d", __asmtype,     \
+                  __type, "{%3, %1, %2, %2}", (int x, int y, int layerface),   \
+                  ("r"(x), "r"(y), "r"(layerface)), __asm_op_args, __asm_args)
 
-#define __SURF_CUBEMAPWRITE_V2(__asmtype, __type, __asm_op_args, __asm_args)                      \
-    __SURF_WRITE_V2(__ID("__isurfCubemapwrite_v2"), "a2d", __asmtype, __type, "{%3, %1, %2, %2}", \
-                    (int x, int y, int face), ("r"(x), "r"(y), "r"(face)), __asm_op_args, __asm_args)
-#define __SURF_CUBEMAPLAYEREDWRITE_V2(__asmtype, __type, __asm_op_args, __asm_args)                      \
-    __SURF_WRITE_V2(__ID("__isurfCubemapLayeredwrite_v2"), "a2d", __asmtype, __type, "{%3, %1, %2, %2}", \
-                    (int x, int y, int layerface), ("r"(x), "r"(y), "r"(layerface)), __asm_op_args, __asm_args)
-
-#define __SURF_WRITEXD_V2_ALL(__xdv1, __xdv2, __xdv4, __surf_writexd_v2)      \
-    __surf_writexd_v2("b8", char, __xdv1, __SW_ASM_ARGS("h"));                \
-    __surf_writexd_v2("b8", signed char, __xdv1, __SW_ASM_ARGS("h"));         \
-    __surf_writexd_v2("b8", char1, __xdv1, __SW_ASM_ARGS1("h"));              \
-    __surf_writexd_v2("b8", unsigned char, __xdv1, __SW_ASM_ARGS("h"));       \
-    __surf_writexd_v2("b8", uchar1, __xdv1, __SW_ASM_ARGS1("h"));             \
-    __surf_writexd_v2("b16", short, __xdv1, __SW_ASM_ARGS("h"));              \
-    __surf_writexd_v2("b16", short1, __xdv1, __SW_ASM_ARGS1("h"));            \
-    __surf_writexd_v2("b16", unsigned short, __xdv1, __SW_ASM_ARGS("h"));     \
-    __surf_writexd_v2("b16", ushort1, __xdv1, __SW_ASM_ARGS1("h"));           \
-    __surf_writexd_v2("b32", int, __xdv1, __SW_ASM_ARGS("r"));                \
-    __surf_writexd_v2("b32", int1, __xdv1, __SW_ASM_ARGS1("r"));              \
-    __surf_writexd_v2("b32", unsigned int, __xdv1, __SW_ASM_ARGS("r"));       \
-    __surf_writexd_v2("b32", uint1, __xdv1, __SW_ASM_ARGS1("r"));             \
-    __surf_writexd_v2("b64", long long, __xdv1, __SW_ASM_ARGS("l"));          \
-    __surf_writexd_v2("b64", longlong1, __xdv1, __SW_ASM_ARGS1("l"));         \
-    __surf_writexd_v2("b64", unsigned long long, __xdv1, __SW_ASM_ARGS("l")); \
-    __surf_writexd_v2("b64", ulonglong1, __xdv1, __SW_ASM_ARGS1("l"));        \
-    __surf_writexd_v2("b32", float, __xdv1, __SW_ASM_ARGS("r"));              \
-    __surf_writexd_v2("b32", float1, __xdv1, __SW_ASM_ARGS1("r"));            \
-                                                                              \
-    __surf_writexd_v2("v2.b8", char2, __xdv2, __SW_ASM_ARGS2("h"));           \
-    __surf_writexd_v2("v2.b8", uchar2, __xdv2, __SW_ASM_ARGS2("h"));          \
-    __surf_writexd_v2("v2.b16", short2, __xdv2, __SW_ASM_ARGS2("h"));         \
-    __surf_writexd_v2("v2.b16", ushort2, __xdv2, __SW_ASM_ARGS2("h"));        \
-    __surf_writexd_v2("v2.b32", int2, __xdv2, __SW_ASM_ARGS2("r"));           \
-    __surf_writexd_v2("v2.b32", uint2, __xdv2, __SW_ASM_ARGS2("r"));          \
-    __surf_writexd_v2("v2.b64", longlong2, __xdv2, __SW_ASM_ARGS2("l"));      \
-    __surf_writexd_v2("v2.b64", ulonglong2, __xdv2, __SW_ASM_ARGS2("l"));     \
-    __surf_writexd_v2("v2.b32", float2, __xdv2, __SW_ASM_ARGS2("r"));         \
-                                                                              \
-    __surf_writexd_v2("v4.b8", char4, __xdv4, __SW_ASM_ARGS4("h"));           \
-    __surf_writexd_v2("v4.b8", uchar4, __xdv4, __SW_ASM_ARGS4("h"));          \
-    __surf_writexd_v2("v4.b16", short4, __xdv4, __SW_ASM_ARGS4("h"));         \
-    __surf_writexd_v2("v4.b16", ushort4, __xdv4, __SW_ASM_ARGS4("h"));        \
-    __surf_writexd_v2("v4.b32", int4, __xdv4, __SW_ASM_ARGS4("r"));           \
-    __surf_writexd_v2("v4.b32", uint4, __xdv4, __SW_ASM_ARGS4("r"));          \
-    __surf_writexd_v2("v4.b32", float4, __xdv4, __SW_ASM_ARGS4("r"))
+#define __SURF_WRITEXD_V2_ALL(__xdv1, __xdv2, __xdv4, __surf_writexd_v2)       \
+  __surf_writexd_v2("b8", char, __xdv1, __SW_ASM_ARGS("h"));                   \
+  __surf_writexd_v2("b8", signed char, __xdv1, __SW_ASM_ARGS("h"));            \
+  __surf_writexd_v2("b8", char1, __xdv1, __SW_ASM_ARGS1("h"));                 \
+  __surf_writexd_v2("b8", unsigned char, __xdv1, __SW_ASM_ARGS("h"));          \
+  __surf_writexd_v2("b8", uchar1, __xdv1, __SW_ASM_ARGS1("h"));                \
+  __surf_writexd_v2("b16", short, __xdv1, __SW_ASM_ARGS("h"));                 \
+  __surf_writexd_v2("b16", short1, __xdv1, __SW_ASM_ARGS1("h"));               \
+  __surf_writexd_v2("b16", unsigned short, __xdv1, __SW_ASM_ARGS("h"));        \
+  __surf_writexd_v2("b16", ushort1, __xdv1, __SW_ASM_ARGS1("h"));              \
+  __surf_writexd_v2("b32", int, __xdv1, __SW_ASM_ARGS("r"));                   \
+  __surf_writexd_v2("b32", int1, __xdv1, __SW_ASM_ARGS1("r"));                 \
+  __surf_writexd_v2("b32", unsigned int, __xdv1, __SW_ASM_ARGS("r"));          \
+  __surf_writexd_v2("b32", uint1, __xdv1, __SW_ASM_ARGS1("r"));                \
+  __surf_writexd_v2("b64", long long, __xdv1, __SW_ASM_ARGS("l"));             \
+  __surf_writexd_v2("b64", longlong1, __xdv1, __SW_ASM_ARGS1("l"));            \
+  __surf_writexd_v2("b64", unsigned long long, __xdv1, __SW_ASM_ARGS("l"));    \
+  __surf_writexd_v2("b64", ulonglong1, __xdv1, __SW_ASM_ARGS1("l"));           \
+  __surf_writexd_v2("b32", float, __xdv1, __SW_ASM_ARGS("r"));                 \
+  __surf_writexd_v2("b32", float1, __xdv1, __SW_ASM_ARGS1("r"));               \
+                                                                               \
+  __surf_writexd_v2("v2.b8", char2, __xdv2, __SW_ASM_ARGS2("h"));              \
+  __surf_writexd_v2("v2.b8", uchar2, __xdv2, __SW_ASM_ARGS2("h"));             \
+  __surf_writexd_v2("v2.b16", short2, __xdv2, __SW_ASM_ARGS2("h"));            \
+  __surf_writexd_v2("v2.b16", ushort2, __xdv2, __SW_ASM_ARGS2("h"));           \
+  __surf_writexd_v2("v2.b32", int2, __xdv2, __SW_ASM_ARGS2("r"));              \
+  __surf_writexd_v2("v2.b32", uint2, __xdv2, __SW_ASM_ARGS2("r"));             \
+  __surf_writexd_v2("v2.b64", longlong2, __xdv2, __SW_ASM_ARGS2("l"));         \
+  __surf_writexd_v2("v2.b64", ulonglong2, __xdv2, __SW_ASM_ARGS2("l"));        \
+  __surf_writexd_v2("v2.b32", float2, __xdv2, __SW_ASM_ARGS2("r"));            \
+                                                                               \
+  __surf_writexd_v2("v4.b8", char4, __xdv4, __SW_ASM_ARGS4("h"));              \
+  __surf_writexd_v2("v4.b8", uchar4, __xdv4, __SW_ASM_ARGS4("h"));             \
+  __surf_writexd_v2("v4.b16", short4, __xdv4, __SW_ASM_ARGS4("h"));            \
+  __surf_writexd_v2("v4.b16", ushort4, __xdv4, __SW_ASM_ARGS4("h"));           \
+  __surf_writexd_v2("v4.b32", int4, __xdv4, __SW_ASM_ARGS4("r"));              \
+  __surf_writexd_v2("v4.b32", uint4, __xdv4, __SW_ASM_ARGS4("r"));             \
+  __surf_writexd_v2("v4.b32", float4, __xdv4, __SW_ASM_ARGS4("r"))
 
 #define __1DV1 "{%2}"
 #define __1DV2 "{%2, %3}"
@@ -994,9 +1010,10 @@ __SURF_WRITEXD_V2_ALL(__3DV1, __3DV2, __3DV4, __SURF_CUBEMAPWRITE_V2);
 __SURF_WRITEXD_V2_ALL(__3DV1, __3DV2, __3DV4, __SURF_CUBEMAPLAYEREDWRITE_V2);
 
 template <class __op, class __DataT, class... __Args>
-__device__ static void __tex_fetch_impl(__surface_op_tag, __DataT *__ptr, cudaSurfaceObject_t __handle,
+__device__ static void __tex_fetch_impl(__surface_op_tag, __DataT *__ptr,
+                                        cudaSurfaceObject_t __handle,
                                         __Args... __args) {
-    __surf_read_write_v2<__op, __DataT>::__run(__ptr, __handle, __args...);
+  __surf_read_write_v2<__op, __DataT>::__run(__ptr, __handle, __args...);
 }
 
 // These are the top-level function overloads the __nv_tex_surf_handler expands
@@ -1009,7 +1026,8 @@ __device__ static void __tex_fetch_impl(__surface_op_tag, __DataT *__ptr, cudaSu
 // __nv_tex_surf_handler("__tex...", &ret, cudaTextureObject_t handle, args...);
 //   Data type and return type are based on ret.
 template <class __op, class __T, class... __Args>
-__device__ static void __tex_fetch_impl(__texture_op_tag, __T *__ptr, cudaTextureObject_t __handle,
+__device__ static void __tex_fetch_impl(__texture_op_tag, __T *__ptr,
+                                        cudaTextureObject_t __handle,
                                         __Args... __args) {
   using __FetchT = typename __TypeInfoT<__T>::__fetch_t;
   *__ptr = __convert<__T, __FetchT>::__run(
