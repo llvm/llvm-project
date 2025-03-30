@@ -272,25 +272,15 @@ void SwiftLanguageRuntime::PopLocalBuffer() {
 
 class LLDBTypeInfoProvider : public swift::remote::TypeInfoProvider {
   SwiftLanguageRuntime &m_runtime;
-  Status m_error;
-  TypeSystemSwiftTypeRefForExpressionsSP m_ts;
+  TypeSystemSwiftTypeRef &m_ts;
 
 public:
   LLDBTypeInfoProvider(SwiftLanguageRuntime &runtime,
-                       ExecutionContextScope *exe_scope)
-      : m_runtime(runtime),
-        m_ts(TypeSystemSwiftTypeRefForExpressions::GetForTarget(
-            m_runtime.GetProcess().GetTarget())) {}
-  LLDBTypeInfoProvider(SwiftLanguageRuntime &runtime, ExecutionContext *exe_ctx)
-      : m_runtime(runtime),
-        m_ts(TypeSystemSwiftTypeRefForExpressions::GetForTarget(
-            m_runtime.GetProcess().GetTarget())) {}
+                       TypeSystemSwiftTypeRef &ts)
+      : m_runtime(runtime), m_ts(ts) {}
 
   swift::remote::TypeInfoProvider::IdType getId() override {
-    if (m_ts)
-      return (void *)((char *)m_ts.get() + m_ts->GetGeneration() +
-                      m_runtime.GetGeneration());
-    return (void *)0;
+    return (void *)((char *)&m_ts + m_runtime.GetGeneration());
   }
 
   const swift::reflection::TypeInfo *
@@ -300,12 +290,7 @@ public:
              "[LLDBTypeInfoProvider] Looking up debug type info for {0}",
              mangledName);
 
-    if (!m_ts) {
-      LLDB_LOG(GetLog(LLDBLog::Types),
-               "[LLDBTypeInfoProvider] no scratch context");
-      return nullptr;
-    }
-    TypeSystemSwiftTypeRef &typesystem = *m_ts;
+    TypeSystemSwiftTypeRef &typesystem = m_ts;
 
     // Materialize a Clang type from the debug info.
     assert(swift::Demangle::getManglingPrefixLength(mangledName) == 0);
@@ -377,9 +362,7 @@ public:
     ExecutionContext exe_ctx;
     process.CalculateExecutionContext(exe_ctx);
     auto *exe_scope = exe_ctx.GetBestExecutionContextScope();
-    if (!m_ts)
-      return nullptr;
-    TypeSystemSwiftTypeRef &typesystem = *m_ts;
+    TypeSystemSwiftTypeRef &typesystem = m_ts;
     // Build a TypeInfo for the Clang type.
     std::optional<uint64_t> size =
         llvm::expectedToOptional(clang_type.GetByteSize(exe_scope));
@@ -676,24 +659,23 @@ struct ExistentialSyntheticChild {
 /// The closure in get_type will depend on ts and tr.
 /// Roughly corresponds to GetExistentialTypeChild() in SwiftASTContext.cpp
 llvm::SmallVector<ExistentialSyntheticChild, 4>
-GetExistentialSyntheticChildren(std::shared_ptr<TypeSystemSwiftTypeRef> ts,
+GetExistentialSyntheticChildren(TypeSystemSwiftTypeRef &ts,
                                 const swift::reflection::TypeRef *tr,
                                 const swift::reflection::TypeInfo *ti) {
   llvm::SmallVector<ExistentialSyntheticChild, 4> children;
-  if (!ts)
-    return children;
   auto *protocol_composition_tr =
       llvm::dyn_cast<swift::reflection::ProtocolCompositionTypeRef>(tr);
   if (!protocol_composition_tr)
     return children;
   if (ti && (llvm::isa<swift::reflection::ReferenceTypeInfo>(ti) ||
              llvm::isa<swift::reflection::RecordTypeInfo>(ti))) {
+    TypeSystemSwiftTypeRefSP ts_sp = ts.GetTypeSystemSwiftTypeRef();
     children.push_back({"object", [=]() {
                           if (auto *super_class_tr =
                                   protocol_composition_tr->getSuperclass())
-                            return GetTypeFromTypeRef(*ts, super_class_tr);
+                            return GetTypeFromTypeRef(*ts_sp, super_class_tr);
                           else
-                            return ts->GetRawPointerType();
+                            return ts_sp->GetRawPointerType();
     }});
   }
   assert(children.size());
@@ -720,14 +702,15 @@ SwiftLanguageRuntime::GetNumChildren(CompilerType type,
                                      ExecutionContextScope *exe_scope) {
   LLDB_SCOPED_TIMER();
 
-  auto ts = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwiftTypeRef>();
-  if (!ts)
+  auto ts_sp = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwiftTypeRef>();
+  if (!ts_sp)
     return llvm::createStringError("no Swift typesystem");
+  auto &ts = *ts_sp;
   if (!type)
     return llvm::createStringError("invalid type");
 
   // Deal with the LLDB-only SILPackType variant.
-  if (auto pack_type = ts->IsSILPackType(type))
+  if (auto pack_type = ts.IsSILPackType(type))
     if (pack_type->expanded)
       return pack_type->count;
 
@@ -736,7 +719,7 @@ SwiftLanguageRuntime::GetNumChildren(CompilerType type,
     CompilerType clang_type =
         LookupAnonymousClangType(type.GetMangledTypeName().AsCString());
     if (!clang_type)
-      ts->IsImportedType(type.GetOpaqueQualType(), &clang_type);
+      ts.IsImportedType(type.GetOpaqueQualType(), &clang_type);
     if (clang_type) {
       bool is_signed;
       if (clang_type.IsEnumerationType(is_signed))
@@ -805,7 +788,7 @@ SwiftLanguageRuntime::GetNumChildren(CompilerType type,
     case swift::reflection::ReferenceKind::Unmanaged:
       // Weak references are implicitly Optionals, so report the one
       // child of Optional here.
-      if (GetWeakReferent(*ts, type))
+      if (GetWeakReferent(ts, type))
         return 1;
       break;
     default:
@@ -828,9 +811,9 @@ SwiftLanguageRuntime::GetNumChildren(CompilerType type,
     if (!reflection_ctx)
       return llvm::createStringError("no reflection context");
 
-    LLDBTypeInfoProvider tip(*this, exe_scope);
+    LLDBTypeInfoProvider tip(*this, ts);
     auto cti_or_err = reflection_ctx->GetClassInstanceTypeInfo(
-        *tr, &tip, ts->GetDescriptorFinder());
+        *tr, &tip, ts.GetDescriptorFinder());
     if (!cti_or_err)
       return cti_or_err.takeError();
     if (auto *rti = llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(
@@ -840,7 +823,7 @@ SwiftLanguageRuntime::GetNumChildren(CompilerType type,
                type.GetMangledTypeName(), rti->getNumFields());
 
       // The superclass, if any, is an extra child.
-      if (reflection_ctx->LookupSuperclass(*tr, ts->GetDescriptorFinder()))
+      if (reflection_ctx->LookupSuperclass(*tr, ts.GetDescriptorFinder()))
         return rti->getNumFields() + 1;
       return rti->getNumFields();
     }
@@ -872,9 +855,10 @@ SwiftLanguageRuntime::GetNumChildren(CompilerType type,
 std::optional<unsigned>
 SwiftLanguageRuntime::GetNumFields(CompilerType type,
                                    ExecutionContext *exe_ctx) {
-  auto ts = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwiftTypeRef>();
-  if (!ts)
+  auto ts_sp = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwiftTypeRef>();
+  if (!ts_sp)
     return {};
+  auto &ts = *ts_sp;
 
   using namespace swift::reflection;
   // Try the static type metadata.
@@ -923,7 +907,7 @@ SwiftLanguageRuntime::GetNumFields(CompilerType type,
     case ReferenceKind::Weak:
     case ReferenceKind::Unowned:
     case ReferenceKind::Unmanaged:
-      if (auto referent = GetWeakReferent(*ts, type))
+      if (auto referent = GetWeakReferent(ts, type))
         return referent.GetNumFields(exe_ctx);
       return 0;
     case ReferenceKind::Strong:
@@ -933,9 +917,9 @@ SwiftLanguageRuntime::GetNumFields(CompilerType type,
       if (!tr)
         return {};
 
-      LLDBTypeInfoProvider tip(*this, exe_ctx);
+      LLDBTypeInfoProvider tip(*this, ts);
       auto cti_or_err = reflection_ctx->GetClassInstanceTypeInfo(
-          *tr, &tip, ts->GetDescriptorFinder());
+          *tr, &tip, ts.GetDescriptorFinder());
       if (!cti_or_err) {
         LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), cti_or_err.takeError(),
                         "GetNumFields failed: {0}");
@@ -1031,9 +1015,10 @@ SwiftLanguageRuntime::GetIndexOfChildMemberWithName(
     CompilerType type, llvm::StringRef name, ExecutionContext *exe_ctx,
     bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) {
   LLDB_SCOPED_TIMER();
-  auto ts = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwiftTypeRef>();
-  if (!ts)
+  auto ts_sp = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwiftTypeRef>();
+  if (!ts_sp)
     return {SwiftLanguageRuntime::eError, {}};
+  auto &ts = *ts_sp;
   if (!exe_ctx)
     return {SwiftLanguageRuntime::eError, {}};
 
@@ -1089,7 +1074,7 @@ SwiftLanguageRuntime::GetIndexOfChildMemberWithName(
       child_indexes.push_back(0);
       if (name == "some")
         return {SwiftLanguageRuntime::eFound, child_indexes.size()};
-      return GetIndexOfChildMemberWithName(GetWeakReferent(*ts, type), name,
+      return GetIndexOfChildMemberWithName(GetWeakReferent(ts, type), name,
                                            exe_ctx, omit_empty_base_classes,
                                            child_indexes);
     case ReferenceKind::Strong: {
@@ -1129,13 +1114,13 @@ SwiftLanguageRuntime::GetIndexOfChildMemberWithName(
         ++idx;
       }
 
-      LLDBTypeInfoProvider tip(*this, exe_ctx);
+      LLDBTypeInfoProvider tip(*this, ts);
       // `current_tr` iterates the class hierarchy, from the current class, each
       // superclass, and ends on null.
       auto *current_tr = tr;
       while (current_tr) {
         auto cti_or_err = reflection_ctx->GetClassInstanceTypeInfo(
-            *current_tr, &tip, ts->GetDescriptorFinder());
+            *current_tr, &tip, ts.GetDescriptorFinder());
         const TypeInfo *cti = nullptr;
         if (cti_or_err)
           cti = &*cti_or_err;
@@ -1149,7 +1134,7 @@ SwiftLanguageRuntime::GetIndexOfChildMemberWithName(
           return {SwiftLanguageRuntime::eError, {}};
         }
         auto *super_tr = reflection_ctx->LookupSuperclass(
-            *current_tr, ts->GetDescriptorFinder());
+            *current_tr, ts.GetDescriptorFinder());
         uint32_t offset = super_tr ? 1 : 0;
         auto found_size = findFieldWithName(record_ti->getFields(), current_tr,
                                             name, false, child_indexes, offset);
@@ -1167,7 +1152,7 @@ SwiftLanguageRuntime::GetIndexOfChildMemberWithName(
   case TypeInfoKind::Builtin: {
     // Clang enums have an artificial rawValue property.
     CompilerType clang_type;
-    if (ts->IsImportedType(type.GetOpaqueQualType(), &clang_type)) {
+    if (ts.IsImportedType(type.GetOpaqueQualType(), &clang_type)) {
       bool is_signed;
       if (clang_type.IsEnumerationType(is_signed) && name == "rawValue") {
         child_indexes.push_back(0);
@@ -1200,9 +1185,10 @@ llvm::Expected<CompilerType> SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
     uint32_t &child_bitfield_bit_offset, bool &child_is_base_class,
     bool &child_is_deref_of_parent, ValueObject *valobj,
     uint64_t &language_flags) {
-  auto ts = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwiftTypeRef>();
-  if (!ts)
+  auto ts_sp = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwiftTypeRef>();
+  if (!ts_sp)
     return llvm::createStringError("no type system");
+  auto &ts = *ts_sp;
 
   lldb::addr_t pointer = LLDB_INVALID_ADDRESS;
   ExecutionContext exe_ctx;
@@ -1212,7 +1198,7 @@ llvm::Expected<CompilerType> SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
   }
 
   // Deal with the LLDB-only SILPackType variant.
-  if (auto pack_element_type = ts->GetSILPackElementAtIndex(type, idx)) {
+  if (auto pack_element_type = ts.GetSILPackElementAtIndex(type, idx)) {
     llvm::raw_string_ostream os(child_name);
     os << '.' << idx;
     auto size_or_err =
@@ -1221,7 +1207,7 @@ llvm::Expected<CompilerType> SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
       return size_or_err.takeError();
     child_byte_size = *size_or_err;
     int stack_dir = -1;
-    child_byte_offset = ts->GetPointerByteSize() * idx * stack_dir;
+    child_byte_offset = ts.GetPointerByteSize() * idx * stack_dir;
     child_bitfield_bit_size = 0;
     child_bitfield_bit_offset = 0;
     child_is_base_class = false;
@@ -1234,10 +1220,10 @@ llvm::Expected<CompilerType> SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
     if (!reflection_ctx)
       return llvm::createStringError("no reflection context");
     // The indirect enum field should point to a closure context.
-    LLDBTypeInfoProvider tip(*this, &exe_ctx);
+    LLDBTypeInfoProvider tip(*this, ts);
     lldb::addr_t instance = ::MaskMaybeBridgedPointer(GetProcess(), pointer);
     auto ti_or_err = reflection_ctx->GetTypeInfoFromInstance(
-        instance, &tip, ts->GetDescriptorFinder());
+        instance, &tip, ts.GetDescriptorFinder());
     if (!ti_or_err) {
       llvm::consumeError(ti_or_err.takeError());
       return CompilerType();
@@ -1251,13 +1237,13 @@ llvm::Expected<CompilerType> SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
         language_flags |= TypeSystemSwift::LanguageFlags::eIsIndirectEnumCase;
         child_byte_offset = field.Offset;
         child_byte_size = field.TI.getSize();
-        return GetTypeFromTypeRef(*ts, type_ref);
+        return GetTypeFromTypeRef(ts, type_ref);
       }
       case swift::reflection::RecordKind::Tuple: {
         std::vector<TypeSystemSwift::TupleElement> elts;
         for (auto &field : rti->getFields())
-          elts.emplace_back(ConstString(), GetTypeFromTypeRef(*ts, field.TR));
-        return ts->CreateTupleType(elts);
+          elts.emplace_back(ConstString(), GetTypeFromTypeRef(ts, field.TR));
+        return ts.CreateTupleType(elts);
       }
       default:
         return llvm::createStringError(
@@ -1267,7 +1253,7 @@ llvm::Expected<CompilerType> SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
     language_flags |= TypeSystemSwift::LanguageFlags::eIsIndirectEnumCase;
     child_byte_offset = 0;
     child_byte_size = ti->getSize();
-    return ts->GetBuiltinRawPointerType();
+    return ts.GetBuiltinRawPointerType();
   };
 
   // The actual conversion from the FieldInfo record.
@@ -1293,8 +1279,8 @@ llvm::Expected<CompilerType> SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
       language_flags |= TypeSystemSwift::LanguageFlags::eIsIndirectEnumCase;
     // SwiftASTContext hardcodes the members of protocols as raw
     // pointers. Remote Mirrors reports them as UnknownObject instead.
-    if (hide_existentials && ts->IsExistentialType(type.GetOpaqueQualType()))
-      return ts->GetRawPointerType();
+    if (hide_existentials && ts.IsExistentialType(type.GetOpaqueQualType()))
+      return ts.GetRawPointerType();
     CompilerType result;
     if (tuple)
       result = tuple->element_type;
@@ -1305,13 +1291,13 @@ llvm::Expected<CompilerType> SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
         if (!type_or_err || *type_or_err)
           return type_or_err;
       }
-      result = GetTypeFromTypeRef(*ts, field.TR);
+      result = GetTypeFromTypeRef(ts, field.TR);
     }
 
     // Bug-for-bug compatibility. See comment in
     // SwiftASTContext::GetBitSize().
     if (result.IsFunctionType())
-      child_byte_size = ts->GetPointerByteSize();
+      child_byte_size = ts.GetPointerByteSize();
     return result;
   };
 
@@ -1331,21 +1317,21 @@ llvm::Expected<CompilerType> SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
     // Handle tuples.
     std::optional<TypeSystemSwift::TupleElement> tuple;
     if (rti->getRecordKind() == swift::reflection::RecordKind::Tuple)
-      tuple = ts->GetTupleElement(type.GetOpaqueQualType(), idx);
+      tuple = ts.GetTupleElement(type.GetOpaqueQualType(), idx);
     if (rti->getRecordKind() ==
         swift::reflection::RecordKind::OpaqueExistential) {
       // Compatibility with SwiftASTContext.
       if (idx < 3) {
         child_name = "payload_data_";
         child_name += ('0' + idx);
-        child_byte_size = ts->GetPointerByteSize();
-        child_byte_offset = ts->GetPointerByteSize() * idx;
+        child_byte_size = ts.GetPointerByteSize();
+        child_byte_offset = ts.GetPointerByteSize() * idx;
         child_bitfield_bit_size = 0;
         child_bitfield_bit_offset = 0;
         child_is_base_class = false;
         child_is_deref_of_parent = false;
         language_flags = 0;
-        return ts->GetRawPointerType();
+        return ts.GetRawPointerType();
       }
       if (idx - 3 >= fields.size())
         return llvm::createStringError(llvm::Twine("index") + llvm::Twine(idx) +
@@ -1362,8 +1348,8 @@ llvm::Expected<CompilerType> SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
       for (auto &protocol_child : GetExistentialSyntheticChildren(ts, tr, ti))
         if (i++ == idx) {
           child_name = protocol_child.name;
-          child_byte_size = ts->GetPointerByteSize();
-          child_byte_offset = ts->GetPointerByteSize() * idx;
+          child_byte_size = ts.GetPointerByteSize();
+          child_byte_offset = ts.GetPointerByteSize() * idx;
           child_bitfield_bit_size = 0;
           child_bitfield_bit_offset = 0;
           child_is_base_class = false;
@@ -1402,8 +1388,8 @@ llvm::Expected<CompilerType> SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
     for (auto &protocol_child : GetExistentialSyntheticChildren(ts, tr, ti))
       if (i++ == idx) {
         child_name = protocol_child.name;
-        child_byte_size =  ts->GetPointerByteSize();
-        child_byte_offset = ts->GetPointerByteSize() * idx;
+        child_byte_size =  ts.GetPointerByteSize();
+        child_byte_offset = ts.GetPointerByteSize() * idx;
         child_bitfield_bit_size = 0;
         child_bitfield_bit_offset = 0;
         child_is_base_class = false;
@@ -1427,14 +1413,14 @@ llvm::Expected<CompilerType> SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
       if (idx != 0)
         break; // Maybe assert that type is not an Optional?
       child_name = "some";
-      child_byte_size = ts->GetPointerByteSize();
+      child_byte_size = ts.GetPointerByteSize();
       child_byte_offset = 0;
       child_bitfield_bit_size = 0;
       child_bitfield_bit_offset = 0;
       child_is_base_class = false;
       child_is_deref_of_parent = false;
       language_flags = 0;
-      if (CompilerType optional = GetWeakReferent(*ts, type))
+      if (CompilerType optional = GetWeakReferent(ts, type))
         return optional;
       break;
     default:
@@ -1451,7 +1437,7 @@ llvm::Expected<CompilerType> SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
     auto mangled = type.GetMangledTypeName().GetStringRef();
     NodePointer type_node = dem.demangleSymbol(mangled);
     llvm::StringRef type_name = TypeSystemSwiftTypeRef::GetBaseName(
-        ts->CanonicalizeSugar(dem, type_node));
+        ts.CanonicalizeSugar(dem, type_node));
 
     ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
     if (!reflection_ctx)
@@ -1490,17 +1476,17 @@ llvm::Expected<CompilerType> SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
       return supers.size() >= 2;
     };
 
-    LLDBTypeInfoProvider tip(*this, &exe_ctx);
+    LLDBTypeInfoProvider tip(*this, ts);
     // Try out the instance pointer based super class traversal first, as its
     // usually faster.
-    reflection_ctx->ForEachSuperClassType(&tip, ts->GetDescriptorFinder(),
+    reflection_ctx->ForEachSuperClassType(&tip, ts.GetDescriptorFinder(),
                                           pointer, superclass_finder);
 
     if (supers.empty())
       // If the pointer based super class traversal failed (this may happen
       // when metadata is not present in the binary, for example: embedded
       // Swift), try the typeref based one next.
-      reflection_ctx->ForEachSuperClassType(&tip, ts->GetDescriptorFinder(), tr,
+      reflection_ctx->ForEachSuperClassType(&tip, ts.GetDescriptorFinder(), tr,
                                             superclass_finder);
 
     if (supers.empty() && tr) {
@@ -1509,7 +1495,7 @@ llvm::Expected<CompilerType> SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
                type.GetTypeName());
 
       auto cti_or_err = reflection_ctx->GetClassInstanceTypeInfo(
-          *tr, &tip, ts->GetDescriptorFinder());
+          *tr, &tip, ts.GetDescriptorFinder());
       const swift::reflection::TypeInfo *cti = nullptr;
       if (cti_or_err)
         cti = &*cti_or_err;
@@ -1544,7 +1530,7 @@ llvm::Expected<CompilerType> SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
             child_name = "<base class>";
             return CompilerType();
           }
-          CompilerType super_type = GetTypeFromTypeRef(*ts, type_ref);
+          CompilerType super_type = GetTypeFromTypeRef(ts, type_ref);
           child_name = super_type.GetTypeName().GetStringRef().str();
           // FIXME: This should be fixed in GetDisplayTypeName instead!
           if (child_name == "__C.NSObject")
@@ -1552,7 +1538,7 @@ llvm::Expected<CompilerType> SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
           if (auto *rti = supers[1].get_record_type_info())
             child_byte_size = rti->getSize();
           // FIXME: This seems wrong in SwiftASTContext.
-          child_byte_size = ts->GetPointerByteSize();
+          child_byte_size = ts.GetPointerByteSize();
           child_byte_offset = 0;
           child_bitfield_bit_size = 0;
           child_bitfield_bit_offset = 0;
@@ -1609,7 +1595,7 @@ llvm::Expected<CompilerType> SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
                                      type.GetMangledTypeName().GetString());
     auto flavor = SwiftLanguageRuntime::GetManglingFlavor(
         type.GetMangledTypeName().GetStringRef());
-    return ts->RemangleAsType(dem, dem_array_type->getChild(1), flavor);
+    return ts.RemangleAsType(dem, dem_array_type->getChild(1), flavor);
   }
   if (llvm::dyn_cast_or_null<swift::reflection::BuiltinTypeInfo>(ti)) {
     // Clang enums have an artificial rawValue property. We could
@@ -1628,18 +1614,19 @@ bool SwiftLanguageRuntime::ForEachSuperClassType(
   if (!reflection_ctx)
     return false;
   CompilerType instance_type = instance.GetCompilerType();
-  auto ts = instance_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
-  if (!ts)
+  auto ts_sp = instance_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
+  if (!ts_sp)
     return false;
-
-  ExecutionContext exe_ctx(instance.GetExecutionContextRef());
-  LLDBTypeInfoProvider tip(*this, &exe_ctx);
-  lldb::addr_t pointer = instance.GetPointerValue();
-  auto tr_ts = ts->GetTypeSystemSwiftTypeRef();
+  auto tr_ts = ts_sp->GetTypeSystemSwiftTypeRef();
   if (!tr_ts)
     return false;
-  return reflection_ctx->ForEachSuperClassType(
-      &tip, tr_ts->GetDescriptorFinder(), pointer, fn);
+  auto &ts = *tr_ts;
+
+  ExecutionContext exe_ctx(instance.GetExecutionContextRef());
+  LLDBTypeInfoProvider tip(*this, ts);
+  lldb::addr_t pointer = instance.GetPointerValue();
+  return reflection_ctx->ForEachSuperClassType(&tip, ts.GetDescriptorFinder(),
+                                               pointer, fn);
 }
 
 bool SwiftLanguageRuntime::IsSelf(Variable &variable) {
@@ -3366,12 +3353,13 @@ SwiftLanguageRuntime::GetSwiftRuntimeTypeInfo(
              "type info for type: {0}",
              type.GetMangledTypeName());
 
-  auto ts = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
-  if (!ts)
+  auto ts_sp = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
+  if (!ts_sp)
     return llvm::createStringError("not a Swift type");
-  auto tr_ts = ts->GetTypeSystemSwiftTypeRef();
+  auto tr_ts = ts_sp->GetTypeSystemSwiftTypeRef();
   if (!tr_ts)
     return llvm::createStringError("no Swift typesystem");
+  auto &ts = *tr_ts;
 
   // Resolve all type aliases.
   type = type.GetCanonicalType();
@@ -3389,7 +3377,7 @@ SwiftLanguageRuntime::GetSwiftRuntimeTypeInfo(
   // BindGenericTypeParameters imports the type into the scratch
   // context, but we need to resolve (any DWARF links in) the typeref
   // in the original module.
-  auto type_ref_or_err = GetTypeRef(type, tr_ts.get());
+  auto type_ref_or_err = GetTypeRef(type, &ts);
   if (!type_ref_or_err)
     return type_ref_or_err.takeError();
 
@@ -3400,7 +3388,7 @@ SwiftLanguageRuntime::GetSwiftRuntimeTypeInfo(
   if (!reflection_ctx)
     return llvm::createStringError("no reflection context");
 
-  LLDBTypeInfoProvider provider(*this, exe_scope);
+  LLDBTypeInfoProvider provider(*this, ts);
   return reflection_ctx->GetTypeInfo(*type_ref_or_err, &provider,
                                      tr_ts->GetDescriptorFinder());
 }

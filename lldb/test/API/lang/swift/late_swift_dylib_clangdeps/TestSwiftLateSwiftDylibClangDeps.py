@@ -23,6 +23,11 @@ class TestSwiftLateSwiftDylibClangDeps(TestBase):
             lldb.SBFileSpec('dylib.swift'), 5)
         threads = lldbutil.continue_to_breakpoint(process, bkpt)
 
-        self.expect("v x", substrs=['42'])
+        self.expect("v fromClang", substrs=['42'])
         self.expect("frame select 1")
-        self.expect("v fromClang", substrs=['23'])
+        # Note that in earlier versions the lookup was a global one and
+        # thus re-evaluating the variable after adding dylib would
+        # have produced a different result. Currently these lookups
+        # are per-module so this expectedly still fails.
+        self.expect("v fromClang",
+                    substrs=["missing debug info", "FromClang"])
