@@ -31,6 +31,7 @@ public:
 
 private:
   const std::optional<StringRef> CastTypeName;
+  const bool WarnOnExplicitCast;
 };
 
 } // namespace clang::tidy::bugprone

@@ -39,6 +39,17 @@ Or cast to char to explicitly indicate that output should be a character.
 
   std::cout << static_cast<char>(v);
 
+Options
+-------
+
+.. option:: WarnOnExplicitCast
+
+  When `WarnOnExplicitCast` is set to `false`, the check will not warn when
+  output of ostream is explicitly cast to a ``unsigned char`` or ``signed char``.
+  Attention: Explicit casting cannot solve the any problem if the value is not
+  character.
+  Default is `true`.
+
 .. option:: CastTypeName
 
   When `CastTypeName` is specified, the fix-it will use `CastTypeName` as the
