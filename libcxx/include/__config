@@ -1157,8 +1157,8 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_USING_IF_EXISTS
 #  endif
 
-#  if __has_attribute(__no_destroy__)
-#    define _LIBCPP_NO_DESTROY __attribute__((__no_destroy__))
+#  if __has_cpp_attribute(_Clang::__no_destroy__)
+#    define _LIBCPP_NO_DESTROY [[_Clang::__no_destroy__]]
 #  else
 #    define _LIBCPP_NO_DESTROY
 #  endif
@@ -1188,14 +1188,14 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_NO_SPECIALIZATIONS
 #  endif
 
-#  if __has_attribute(__standalone_debug__)
-#    define _LIBCPP_STANDALONE_DEBUG __attribute__((__standalone_debug__))
+#  if __has_cpp_attribute(_Clang::__standalone_debug__)
+#    define _LIBCPP_STANDALONE_DEBUG [[_Clang::__standalone_debug__]]
 #  else
 #    define _LIBCPP_STANDALONE_DEBUG
 #  endif
 
-#  if __has_attribute(__preferred_name__)
-#    define _LIBCPP_PREFERRED_NAME(x) __attribute__((__preferred_name__(x)))
+#  if __has_cpp_attribute(_Clang::__preferred_name__)
+#    define _LIBCPP_PREFERRED_NAME(x) [[_Clang::__preferred_name__(x)]]
 #  else
 #    define _LIBCPP_PREFERRED_NAME(x)
 #  endif
