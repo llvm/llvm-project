@@ -1090,41 +1090,6 @@ void VPlanTransforms::simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy) {
   }
 }
 
-/// Return true if \p Cond is known to be true for given \p BestVF and \p
-/// BestUF.
-static bool isConditionTrueViaVFAndUF(VPValue *Cond, VPlan &Plan,
-                                      ElementCount BestVF, unsigned BestUF,
-                                      ScalarEvolution &SE) {
-  using namespace llvm::VPlanPatternMatch;
-  if (match(Cond, m_Binary<Instruction::Or>(m_VPValue(), m_VPValue())))
-    return any_of(Cond->getDefiningRecipe()->operands(), [&Plan, BestVF, BestUF,
-                                                          &SE](VPValue *C) {
-      return isConditionTrueViaVFAndUF(C, Plan, BestVF, BestUF, SE);
-    });
-
-  auto *CanIV = Plan.getCanonicalIV();
-  if (!match(Cond, m_Binary<Instruction::ICmp>(
-                       m_Specific(CanIV->getBackedgeValue()),
-                       m_Specific(&Plan.getVectorTripCount()))) ||
-      cast<VPRecipeWithIRFlags>(Cond->getDefiningRecipe())->getPredicate() !=
-          CmpInst::ICMP_EQ)
-    return false;
-
-  // The compare checks CanIV + VFxUF == vector trip count. The vector trip
-  // count is not conveniently available as SCEV so far, so we compare directly
-  // against the original trip count. This is stricter than necessary, as we
-  // will only return true if the trip count == vector trip count.
-  // TODO: Use SCEV for vector trip count once available, to cover cases where
-  // vector trip count == UF * VF, but original trip count != UF * VF.
-  const SCEV *TripCount =
-      vputils::getSCEVExprForVPValue(Plan.getTripCount(), SE);
-  assert(!isa<SCEVCouldNotCompute>(TripCount) &&
-         "Trip count SCEV must be computable");
-  ElementCount NumElements = BestVF.multiplyCoefficientBy(BestUF);
-  const SCEV *C = SE.getElementCount(TripCount->getType(), NumElements);
-  return SE.isKnownPredicate(CmpInst::ICMP_EQ, TripCount, C);
-}
-
 /// Optimize the width of vector induction variables in \p Plan based on a known
 /// constant Trip Count, \p BestVF and \p BestUF.
 static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
@@ -1198,6 +1163,41 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
   return MadeChange;
 }
 
+/// Return true if \p Cond is known to be true for given \p BestVF and \p
+/// BestUF.
+static bool isConditionTrueViaVFAndUF(VPValue *Cond, VPlan &Plan,
+                                      ElementCount BestVF, unsigned BestUF,
+                                      ScalarEvolution &SE) {
+  using namespace llvm::VPlanPatternMatch;
+  if (match(Cond, m_Binary<Instruction::Or>(m_VPValue(), m_VPValue())))
+    return any_of(Cond->getDefiningRecipe()->operands(), [&Plan, BestVF, BestUF,
+                                                          &SE](VPValue *C) {
+      return isConditionTrueViaVFAndUF(C, Plan, BestVF, BestUF, SE);
+    });
+
+  auto *CanIV = Plan.getCanonicalIV();
+  if (!match(Cond, m_Binary<Instruction::ICmp>(
+                       m_Specific(CanIV->getBackedgeValue()),
+                       m_Specific(&Plan.getVectorTripCount()))) ||
+      cast<VPRecipeWithIRFlags>(Cond->getDefiningRecipe())->getPredicate() !=
+          CmpInst::ICMP_EQ)
+    return false;
+
+  // The compare checks CanIV + VFxUF == vector trip count. The vector trip
+  // count is not conveniently available as SCEV so far, so we compare directly
+  // against the original trip count. This is stricter than necessary, as we
+  // will only return true if the trip count == vector trip count.
+  // TODO: Use SCEV for vector trip count once available, to cover cases where
+  // vector trip count == UF * VF, but original trip count != UF * VF.
+  const SCEV *TripCount =
+      vputils::getSCEVExprForVPValue(Plan.getTripCount(), SE);
+  assert(!isa<SCEVCouldNotCompute>(TripCount) &&
+         "Trip count SCEV must be computable");
+  ElementCount NumElements = BestVF.multiplyCoefficientBy(BestUF);
+  const SCEV *C = SE.getElementCount(TripCount->getType(), NumElements);
+  return SE.isKnownPredicate(CmpInst::ICMP_EQ, TripCount, C);
+}
+
 /// Try to simplify the branch condition of \p Plan. This may restrict the
 /// resulting plan to \p BestVF and \p BestUF.
 static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
@@ -1223,14 +1223,14 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
     const SCEV *C = SE.getElementCount(TripCount->getType(), NumElements);
     if (TripCount->isZero() ||
         !SE.isKnownPredicate(CmpInst::ICMP_ULE, TripCount, C))
-      return;
+      return false;
   } else if (match(Term, m_BranchOnCond(m_VPValue(Cond)))) {
     // For BranchOnCond, check if we can prove the condition to be true using VF
     // and UF.
     if (!isConditionTrueViaVFAndUF(Cond, Plan, BestVF, BestUF, SE))
-      return;
+      return false;
   } else {
-    return;
+    return false;
   }
 
   // The vector loop region only executes once. If possible, completely remove
