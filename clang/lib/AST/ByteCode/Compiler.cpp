@@ -4787,7 +4787,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
   // Calls to replaceable operator new/operator delete.
   if (FuncDecl &&
       FuncDecl->isUsableAsGlobalAllocationFunctionInConstantEvaluation()) {
-    if (FuncDecl->getDeclName().isOperatorNew()) {
+    if (FuncDecl->getDeclName().isAnyOperatorNew()) {
       return VisitBuiltinCallExpr(E, Builtin::BI__builtin_operator_new);
     } else {
       assert(FuncDecl->getDeclName().getCXXOverloadedOperator() == OO_Delete);

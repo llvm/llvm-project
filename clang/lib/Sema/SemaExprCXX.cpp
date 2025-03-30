@@ -1749,8 +1749,7 @@ static bool isNonPlacementDeallocationFunction(Sema &S, FunctionDecl *FD) {
   if (CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(FD))
     return S.isUsualDeallocationFunction(Method);
 
-  if (FD->getOverloadedOperator() != OO_Delete &&
-      FD->getOverloadedOperator() != OO_Array_Delete)
+  if (!FD->getDeclName().isAnyOperatorDelete())
     return false;
 
   if (FD->isTypeAwareOperatorNewOrDelete())
@@ -2143,8 +2142,7 @@ void Sema::diagnoseUnavailableAlignedAllocation(const FunctionDecl &FD,
         getASTContext().getTargetInfo().getPlatformName());
     VersionTuple OSVersion = alignedAllocMinVersion(T.getOS());
 
-    OverloadedOperatorKind Kind = FD.getDeclName().getCXXOverloadedOperator();
-    bool IsDelete = Kind == OO_Delete || Kind == OO_Array_Delete;
+    bool IsDelete = FD.getDeclName().isAnyOperatorDelete();
     Diag(Loc, diag::err_aligned_allocation_unavailable)
         << IsDelete << FD.getType().getAsString() << OSName
         << OSVersion.getAsString() << OSVersion.empty();
@@ -2704,7 +2702,8 @@ static bool resolveAllocationOverloadInterior(
     // Even member operator new/delete are implicitly treated as
     // static, so don't use AddMemberCandidate.
     NamedDecl *D = (*Alloc)->getUnderlyingDecl();
-    if (S.isTypeAwareOperatorNewOrDelete(D) == (Mode != ResolveMode::Typed))
+    bool IsTypeAware = D->getAsFunction()->isTypeAwareOperatorNewOrDelete();
+    if (IsTypeAware == (Mode != ResolveMode::Typed))
       continue;
 
     if (FunctionTemplateDecl *FnTemplate = dyn_cast<FunctionTemplateDecl>(D)) {
@@ -2860,9 +2859,8 @@ static void LookupGlobalDeallocationFunctions(Sema &S, SourceLocation Loc,
     bool RemoveTypedDecl = Mode == DeallocLookupMode::Untyped;
     LookupResult::Filter Filter = FoundDelete.makeFilter();
     while (Filter.hasNext()) {
-      NamedDecl *Decl = Filter.next()->getUnderlyingDecl();
-      bool DeclIsTypeAware = S.isTypeAwareOperatorNewOrDelete(Decl);
-      if (DeclIsTypeAware == RemoveTypedDecl)
+      FunctionDecl *FD = Filter.next()->getUnderlyingDecl()->getAsFunction();
+      if (FD->isTypeAwareOperatorNewOrDelete() == RemoveTypedDecl)
         Filter.erase();
     }
     Filter.done();
@@ -3460,7 +3458,7 @@ void Sema::DeclareGlobalAllocationFunction(DeclarationName Name,
       /*IsVariadic=*/false, /*IsCXXMethod=*/false, /*IsBuiltin=*/true));
 
   QualType BadAllocType;
-  bool HasBadAllocExceptionSpec = Name.isOperatorNew();
+  bool HasBadAllocExceptionSpec = Name.isAnyOperatorNew();
   if (HasBadAllocExceptionSpec) {
     if (!getLangOpts().CPlusPlus11) {
       BadAllocType = Context.getTypeDeclType(getStdBadAlloc());

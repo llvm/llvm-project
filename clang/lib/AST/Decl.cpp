@@ -3363,7 +3363,7 @@ bool FunctionDecl::isMSVCRTEntryPoint() const {
 }
 
 bool FunctionDecl::isReservedGlobalPlacementOperator() const {
-  if (!getDeclName().isOperatorNewOrDelete())
+  if (!getDeclName().isAnyOperatorNewOrDelete())
     return false;
 
   if (!getDeclContext()->getRedeclContext()->isTranslationUnit())
@@ -3387,7 +3387,7 @@ bool FunctionDecl::isReservedGlobalPlacementOperator() const {
 
 bool FunctionDecl::isUsableAsGlobalAllocationFunctionInConstantEvaluation(
     std::optional<unsigned> *AlignmentParam, bool *IsNothrow) const {
-  if (!getDeclName().isOperatorNewOrDelete())
+  if (!getDeclName().isAnyOperatorNewOrDelete())
     return false;
 
   if (isa<CXXRecordDecl>(getDeclContext()))
@@ -3401,7 +3401,7 @@ bool FunctionDecl::isUsableAsGlobalAllocationFunctionInConstantEvaluation(
     return false;
 
   if (isTypeAwareOperatorNewOrDelete()) {
-    bool IsDelete = getDeclName().isOperatorDelete();
+    bool IsDelete = getDeclName().isAnyOperatorDelete();
     unsigned RequiredParameterCount =
         IsDelete ? FunctionDecl::RequiredTypeAwareDeleteParameterCount
                  : FunctionDecl::RequiredTypeAwareNewParameterCount;
@@ -3441,8 +3441,7 @@ bool FunctionDecl::isUsableAsGlobalAllocationFunctionInConstantEvaluation(
   // In C++14, the next parameter can be a 'std::size_t' for sized delete.
   bool IsSizedDelete = false;
   if (Ctx.getLangOpts().SizedDeallocation &&
-      (getDeclName().getCXXOverloadedOperator() == OO_Delete ||
-       getDeclName().getCXXOverloadedOperator() == OO_Array_Delete) &&
+      getDeclName().isAnyOperatorDelete() &&
       Ctx.hasSameType(Ty, Ctx.getSizeType())) {
     IsSizedDelete = true;
     Consume();

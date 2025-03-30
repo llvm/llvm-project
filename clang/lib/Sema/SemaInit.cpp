@@ -9898,13 +9898,24 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
       Diag(Kind.getLocation(),
            diag::warn_cxx17_compat_ctad_for_alias_templates);
       LookupTemplateDecl = AliasTemplate;
-      auto UnderlyingType =
-          AliasTemplate->getTemplatedDecl()->getUnderlyingType();
+      auto UnderlyingType = AliasTemplate->getTemplatedDecl()
+                                ->getUnderlyingType()
+                                .getCanonicalType();
       // C++ [over.match.class.deduct#3]: ..., the defining-type-id of A must be
       // of the form
       //   [typename] [nested-name-specifier] [template] simple-template-id
-      auto SpecializedTD = UnderlyingType->getSpecializedTemplateDecl();
-      Template = dyn_cast_or_null<ClassTemplateDecl>(SpecializedTD);
+      if (const auto *TST =
+              UnderlyingType->getAs<TemplateSpecializationType>()) {
+        Template = dyn_cast_or_null<ClassTemplateDecl>(
+            TST->getTemplateName().getAsTemplateDecl());
+      } else if (const auto *RT = UnderlyingType->getAs<RecordType>()) {
+        // Cases where template arguments in the RHS of the alias are not
+        // dependent. e.g.
+        //   using AliasFoo = Foo<bool>;
+        if (const auto *CTSD = llvm::dyn_cast<ClassTemplateSpecializationDecl>(
+                RT->getAsCXXRecordDecl()))
+          Template = CTSD->getSpecializedTemplate();
+      }
     }
   }
   if (!Template) {

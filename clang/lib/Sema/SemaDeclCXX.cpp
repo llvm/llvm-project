@@ -16448,16 +16448,6 @@ TypeAwareAllocationMode Sema::ShouldUseTypeAwareOperatorNewOrDelete() const {
   return typeAwareAllocationModeFromBool(SeenTypedOperators);
 }
 
-bool Sema::isTypeAwareOperatorNewOrDelete(const NamedDecl *ND) const {
-  const FunctionDecl *FnDecl = nullptr;
-  if (auto *FTD = dyn_cast<FunctionTemplateDecl>(ND))
-    FnDecl = FTD->getTemplatedDecl();
-  else if (auto *FD = dyn_cast<FunctionDecl>(ND))
-    FnDecl = FD;
-
-  return FnDecl->isTypeAwareOperatorNewOrDelete();
-}
-
 FunctionDecl *
 Sema::BuildTypeAwareUsualDelete(FunctionTemplateDecl *FnTemplateDecl,
                                 QualType DeallocType, SourceLocation Loc) {
@@ -16478,13 +16468,13 @@ Sema::BuildTypeAwareUsualDelete(FunctionTemplateDecl *FnTemplateDecl,
   if (NumParams != RequiredParameterCount)
     return nullptr;
 
-  for (size_t Idx = 1; Idx < NumParams; ++Idx) {
-    // A type aware allocation is only usual if the only dependent parameter is
-    // the first parameter.
-    const ParmVarDecl *ParamDecl = FnDecl->getParamDecl(Idx);
-    if (ParamDecl->getType()->isDependentType())
-      return nullptr;
-  }
+  // A type aware allocation is only usual if the only dependent parameter is
+  // the first parameter.
+  if (llvm::any_of(FnDecl->parameters().drop_front(),
+                   [](const ParmVarDecl *ParamDecl) {
+                     return ParamDecl->getType()->isDependentType();
+                   }))
+    return nullptr;
 
   QualType SpecializedTypeIdentity = tryBuildStdTypeIdentity(DeallocType, Loc);
   if (SpecializedTypeIdentity.isNull())
@@ -16563,6 +16553,12 @@ static bool IsPotentiallyTypeAwareOperatorNewOrDelete(Sema &SemaRef,
   return true;
 }
 
+static bool isDestroyingDeleteT(QualType Type) {
+  auto *RD = Type->getAsCXXRecordDecl();
+  return RD && RD->isInStdNamespace() && RD->getIdentifier() &&
+         RD->getIdentifier()->isStr("destroying_delete_t");
+}
+
 static bool IsPotentiallyDestroyingOperatorDelete(Sema &SemaRef,
                                                   const FunctionDecl *FD) {
   // C++ P0722:
@@ -16574,9 +16570,7 @@ static bool IsPotentiallyDestroyingOperatorDelete(Sema &SemaRef,
   unsigned DestroyingDeleteIdx = IsPotentiallyTypeAware + /* address */ 1;
   return isa<CXXMethodDecl>(FD) && FD->getOverloadedOperator() == OO_Delete &&
          FD->getNumParams() > DestroyingDeleteIdx &&
-         FD->getParamDecl(DestroyingDeleteIdx)
-             ->getType()
-             ->isDestroyingDeleteT();
+         isDestroyingDeleteT(FD->getParamDecl(DestroyingDeleteIdx)->getType());
 }
 
 static inline bool CheckOperatorNewDeleteTypes(
@@ -16767,7 +16761,7 @@ CheckOperatorDeleteDeclaration(Sema &SemaRef, FunctionDecl *FnDecl) {
       // results in a pile mismatched argument type errors that don't explain
       // the core problem.
       for (auto Param : MD->parameters()) {
-        if (Param->getType()->isDestroyingDeleteT()) {
+        if (isDestroyingDeleteT(Param->getType())) {
           SemaRef.Diag(MD->getLocation(),
                        diag::err_type_aware_destroying_operator_delete)
               << Param->getLocation();

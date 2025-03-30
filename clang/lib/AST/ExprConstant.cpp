@@ -8386,7 +8386,7 @@ public:
         } else
           FD = LambdaCallOp;
       } else if (FD->isUsableAsGlobalAllocationFunctionInConstantEvaluation()) {
-        if (FD->getDeclName().isOperatorNew()) {
+        if (FD->getDeclName().isAnyOperatorNew()) {
           LValue Ptr;
           if (!HandleOperatorNewCall(Info, E, Ptr))
             return false;

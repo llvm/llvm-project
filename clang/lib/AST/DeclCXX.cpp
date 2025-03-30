@@ -2529,8 +2529,7 @@ CXXMethodDecl *CXXMethodDecl::getDevirtualizedMethod(const Expr *Base,
 bool CXXMethodDecl::isUsualDeallocationFunction(
     SmallVectorImpl<const FunctionDecl *> &PreventedBy) const {
   assert(PreventedBy.empty() && "PreventedBy is expected to be empty");
-  if (getOverloadedOperator() != OO_Delete &&
-      getOverloadedOperator() != OO_Array_Delete)
+  if (!getDeclName().isAnyOperatorDelete())
     return false;
 
   if (isTypeAwareOperatorNewOrDelete()) {

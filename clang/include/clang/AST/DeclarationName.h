@@ -477,7 +477,7 @@ public:
     return OO_None;
   }
 
-  bool isOperatorNew() const {
+  bool isAnyOperatorNew() const {
     if (getNameKind() != DeclarationName::CXXOperatorName)
       return false;
     switch (getCXXOverloadedOperator()) {
@@ -489,7 +489,7 @@ public:
     }
   }
 
-  bool isOperatorDelete() const {
+  bool isAnyOperatorDelete() const {
     if (getNameKind() != DeclarationName::CXXOperatorName)
       return false;
     switch (getCXXOverloadedOperator()) {
@@ -501,8 +501,8 @@ public:
     }
   }
 
-  bool isOperatorNewOrDelete() const {
-    return isOperatorNew() || isOperatorDelete();
+  bool isAnyOperatorNewOrDelete() const {
+    return isAnyOperatorNew() || isAnyOperatorDelete();
   }
 
   /// If this name is the name of a literal operator,

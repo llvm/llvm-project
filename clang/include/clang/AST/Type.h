@@ -2636,13 +2636,6 @@ public:
                                                 // C++14 decltype(auto)
   bool isTypedefNameType() const;               // typedef or alias template
 
-  bool isDestroyingDeleteT() const; // C++ std::destroying_delete_t
-
-  /// If this type is a template specialization return the TemplateDecl
-  /// that was specialized. It this is not a template specialization,
-  /// returns NULL.
-  TemplateDecl *getSpecializedTemplateDecl() const;
-
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
   bool is##Id##Type() const;
 #include "clang/Basic/OpenCLImageTypes.def"

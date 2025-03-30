@@ -4883,7 +4883,6 @@ public:
   EnumDecl *getStdAlignValT() const;
 
   TypeAwareAllocationMode ShouldUseTypeAwareOperatorNewOrDelete() const;
-  bool isTypeAwareOperatorNewOrDelete(const NamedDecl *FnDecl) const;
   FunctionDecl *BuildTypeAwareUsualDelete(FunctionTemplateDecl *FnDecl,
                                           QualType AllocType, SourceLocation);
 
