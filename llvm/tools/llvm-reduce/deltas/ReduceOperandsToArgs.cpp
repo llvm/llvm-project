@@ -14,6 +14,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
@@ -105,6 +106,12 @@ static void replaceFunctionCalls(Function *OldF, Function *NewF) {
       NewCI = CallInst::Create(NewF, Args, OperandBundles, CI->getName());
     }
     NewCI->setCallingConv(NewF->getCallingConv());
+    NewCI->setAttributes(CI->getAttributes());
+
+    if (isa<FPMathOperator>(NewCI))
+      NewCI->setFastMathFlags(CI->getFastMathFlags());
+
+    NewCI->copyMetadata(*CI);
 
     // Do the replacement for this use.
     if (!CI->use_empty())
@@ -184,11 +191,9 @@ static void substituteOperandWithArgument(Function *OldF,
   // Replace all OldF uses with NewF.
   replaceFunctionCalls(OldF, NewF);
 
-  // Rename NewF to OldF's name.
-  std::string FName = OldF->getName().str();
+  NewF->takeName(OldF);
   OldF->replaceAllUsesWith(NewF);
   OldF->eraseFromParent();
-  NewF->setName(FName);
 }
 
 static void reduceOperandsToArgs(Oracle &O, ReducerWorkItem &WorkItem) {
