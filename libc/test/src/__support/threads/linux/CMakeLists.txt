@@ -1,5 +1,6 @@
 add_libc_test(
   raw_mutex_test
+  HERMETIC_TEST_ONLY
   SUITE
     libc-support-threads-tests
   SRCS
