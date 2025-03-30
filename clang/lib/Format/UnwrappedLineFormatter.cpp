@@ -344,12 +344,13 @@ private:
         const auto *FirstNonCommentToken =
             TheLine ? TheLine->getFirstNonComment() : nullptr;
 
-        // Look for 'static' and 'inline' keywords in any order
+        // Look for 'static' and 'inline' keywords in any order.
         bool HasStatic = false;
         bool HasInline = false;
         const FormatToken *Tok = FirstNonCommentToken;
 
-        while (Tok && !Tok->is(TT_FunctionLBrace)) {
+        while (Tok && !Tok->is(TT_FunctionDeclarationName) &&
+               (!HasStatic || !HasInline)) {
           if (Tok->is(tok::kw_static))
             HasStatic = true;
           if (Tok->is(tok::kw_inline))
@@ -357,7 +358,7 @@ private:
           Tok = Tok->Next;
         }
 
-        // If we found both static and inline, allow merging
+        // If we found both static and inline, allow merging.
         if (HasStatic && HasInline)
           return true;
       }

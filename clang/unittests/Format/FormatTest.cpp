@@ -15197,6 +15197,56 @@ TEST_F(FormatTest, PullStaticInlineFunctionDefinitionsIntoSingleLine) {
                "{\n"
                "}",
                MergeStaticInline);
+
+  // additional attribute tests
+  verifyFormat("inline static __attribute__((unused)) int f() { return 42; }",
+               "inline static __attribute__((unused)) int f() \n"
+               "{\n"
+               "  return 42; \n"
+               "}",
+               MergeStaticInline);
+  verifyFormat("__attribute__((unused)) inline static int f() { return 42; }",
+               "__attribute__((unused)) inline static int f() \n"
+               "{\n"
+               "  return 42; \n"
+               "}",
+               MergeStaticInline);
+  verifyFormat("inline static int f() __attribute__((unused)) { return 42; }",
+               "inline static int f() \n"
+               "__attribute__((unused)) \n"
+               "{\n"
+               "  return 42; \n"
+               "}",
+               MergeStaticInline);
+  verifyFormat("__attribute__((unused)) inline static int f() { return 42; }",
+               "__attribute__((unused)) inline static int f() \n"
+               "{\n"
+               "  return 42; \n"
+               "}",
+               MergeStaticInline);
+
+  verifyFormat("inline static const int f() { return 42; }",
+               "inline static const int f() \n"
+               "{\n"
+               "  return 42; \n"
+               "}",
+               MergeStaticInline);
+
+  verifyFormat("_Noreturn static inline auto f() { return 42; }",
+               "_Noreturn static inline auto f() \n"
+               "{\n"
+               "  return 42; \n"
+               "}",
+               MergeStaticInline);
+
+  verifyFormat("constexpr auto f() {\n"
+               "  return 42;\n"
+               "}",
+               "constexpr auto f() \n"
+               "{\n"
+               "  return 42; \n"
+               "}",
+               MergeStaticInline);
 }
 
 TEST_F(FormatTest, PullInlineOnlyFunctionDefinitionsIntoSingleLine) {

@@ -870,7 +870,7 @@ struct FormatStyle {
     ///   void f() {}
     /// \endcode
     SFS_Inline,
-    /// Only merge functions defined as static inline. Implies ``empty``.
+    /// Merge functions defined as static inline, also merge empty functions.
     /// \code
     ///   void f5(void) {}
     ///   static inline int f6(int a, int b) { return a + b; }
