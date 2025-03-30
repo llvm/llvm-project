@@ -363,25 +363,22 @@ typedef __char32_t char32_t;
 #    endif
 
 #    if defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS) || (defined(__MINGW32__) && !defined(_LIBCPP_BUILDING_LIBRARY))
-#      define _LIBCPP_DLL_VIS
 #      define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS
 #      define _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS
 #      define _LIBCPP_OVERRIDABLE_FUNC_VIS
 #      define _LIBCPP_EXPORTED_FROM_ABI
 #    elif defined(_LIBCPP_BUILDING_LIBRARY)
-#      define _LIBCPP_DLL_VIS __declspec(dllexport)
 #      if defined(__MINGW32__)
-#        define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS _LIBCPP_DLL_VIS
+#        define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __declspec(dllexport)
 #        define _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS
 #      else
 #        define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS
-#        define _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS _LIBCPP_DLL_VIS
+#        define _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __declspec(dllexport)
 #      endif
-#      define _LIBCPP_OVERRIDABLE_FUNC_VIS _LIBCPP_DLL_VIS
+#      define _LIBCPP_OVERRIDABLE_FUNC_VIS __declspec(dllexport)
 #      define _LIBCPP_EXPORTED_FROM_ABI __declspec(dllexport)
 #    else
-#      define _LIBCPP_DLL_VIS __declspec(dllimport)
-#      define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS _LIBCPP_DLL_VIS
+#      define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __declspec(dllimport)
 #      define _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS
 #      define _LIBCPP_OVERRIDABLE_FUNC_VIS
 #      define _LIBCPP_EXPORTED_FROM_ABI __declspec(dllimport)
