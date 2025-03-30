@@ -1083,6 +1083,7 @@ def OMP_TargetData : Directive<"target data"> {
   let allowedOnceClauses = [
     VersionedClause<OMPC_Device>,
     VersionedClause<OMPC_If>,
+    VersionedClause<OMPC_NoWait, 60>,
   ];
   let requiredClauses = [
     VersionedClause<OMPC_Map>,
