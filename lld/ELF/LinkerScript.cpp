@@ -48,6 +48,11 @@ static bool isSectionPrefix(StringRef prefix, StringRef name) {
   return name.consume_front(prefix) && (name.empty() || name[0] == '.');
 }
 
+bool hasUnlikelySuffix(StringRef name) {
+  return name.ends_with(".unlikely") || name.ends_with(".unlikely.") ||
+         name.ends_with("unlikely");
+}
+
 StringRef LinkerScript::getOutputSectionName(const InputSectionBase *s) const {
   // This is for --emit-relocs and -r. If .text.foo is emitted as .text.bar, we
   // want to emit .rela.text.foo as .rela.text.bar for consistency (this is not
@@ -103,6 +108,70 @@ StringRef LinkerScript::getOutputSectionName(const InputSectionBase *s) const {
         if (isSectionPrefix(v.substr(5), s->name.substr(5)))
           return v;
     return ".text";
+  }
+
+  if (isSectionPrefix(".data.rel.ro", s->name)) {
+    // Map input sections' .rodata and rodata.hot into .rodata.hot in the
+    // output. Map input sections' .rodata.unlikely into .rodata in the output.
+    if (ctx.arg.zKeepDataSectionPrefix) {
+      if (isSectionPrefix(".data.rel.ro.unlikely", s->name) ||
+          hasUnlikelySuffix(s->name)) {
+        return ".data.rel.ro.unlikely";
+      }
+
+      return ".data.rel.ro";
+    }
+    return ".data.rel.ro";
+  }
+
+  if (isSectionPrefix(".data", s->name)) {
+    //  Map input sections' .rodata and rodata.hot into .rodata.hot in the
+    //  output. Map input sections' .rodata.unlikely into .rodata in the output.
+    if (ctx.arg.zKeepDataSectionPrefix) {
+      if (isSectionPrefix(".data.unlikely", s->name) ||
+          hasUnlikelySuffix(s->name)) {
+        // errs() << "LinkerScript.cpp:100\t" << s->name << "\n";
+        return ".data.unlikely";
+      }
+
+      return ".data";
+    }
+    return ".data";
+  }
+
+  if (isSectionPrefix(".rodata", s->name)) {
+    // Map input sections' .rodata and rodata.hot into .rodata.hot in the
+    // output. Map input sections' .rodata.unlikely into .rodata in the output.
+    if (ctx.arg.zKeepDataSectionPrefix) {
+      // if (isSectionPrefix(".rodata.cst", s->name)) {
+      // errs() << "LinkerScript.cpp:100\t" << s->name << "\n";
+      //}
+      //  .rodata.cst<N>.unlikely
+      //  .rodata.str4.16.unlikely
+      if (isSectionPrefix(".rodata.unlikely", s->name) ||
+          hasUnlikelySuffix(s->name)) {
+        // return ".rodata.unlikely";
+        return ".rodata.unlikely";
+      }
+      return ".rodata";
+    }
+    return ".rodata";
+  }
+
+  if (isSectionPrefix(".bss.rel.ro", s->name)) {
+    return ".bss.rel.ro";
+  }
+
+  if (isSectionPrefix(".bss", s->name)) {
+    if (ctx.arg.zKeepDataSectionPrefix) {
+      if (isSectionPrefix(".bss.unlikely", s->name)) {
+        // errs() << "LinkerScript.cpp:100\t" << s->name << "\n";
+        return ".bss.unlikely";
+      }
+
+      return ".bss";
+    }
+    return ".bss";
   }
 
   for (StringRef v : {".data.rel.ro", ".data",       ".rodata",
