@@ -36,7 +36,6 @@
 #include "ToolChains/Managarm.h"
 #include "ToolChains/MinGW.h"
 #include "ToolChains/MipsLinux.h"
-#include "ToolChains/NaCl.h"
 #include "ToolChains/NetBSD.h"
 #include "ToolChains/OHOS.h"
 #include "ToolChains/OpenBSD.h"
@@ -6843,9 +6842,6 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
         TC = std::make_unique<toolchains::OHOS>(*this, Target, Args);
       else
         TC = std::make_unique<toolchains::Linux>(*this, Target, Args);
-      break;
-    case llvm::Triple::NaCl:
-      TC = std::make_unique<toolchains::NaClToolChain>(*this, Target, Args);
       break;
     case llvm::Triple::Fuchsia:
       TC = std::make_unique<toolchains::Fuchsia>(*this, Target, Args);

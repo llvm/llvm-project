@@ -2572,8 +2572,7 @@ GetX86_64ByValArgumentPair(llvm::Type *Lo, llvm::Type *Hi,
   if (HiStart != 8) {
     // There are usually two sorts of types the ABI generation code can produce
     // for the low part of a pair that aren't 8 bytes in size: half, float or
-    // i8/i16/i32.  This can also include pointers when they are 32-bit (X32 and
-    // NaCl).
+    // i8/i16/i32.  This can also include pointers when they are 32-bit (X32).
     // Promote these to a larger type.
     if (Lo->isHalfTy() || Lo->isFloatTy())
       Lo = llvm::Type::getDoubleTy(Lo->getContext());
