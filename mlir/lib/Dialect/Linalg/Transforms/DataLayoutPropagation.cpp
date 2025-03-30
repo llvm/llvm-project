@@ -64,8 +64,9 @@ getPackingInfoFromOperand(OpOperand *opOperand, linalg::GenericOp genericOp,
   static_assert(llvm::is_one_of<OpTy, linalg::PackOp, linalg::UnPackOp>::value,
                 "applies to only pack or unpack operations");
   // TODO(issues/129004): Support MemRef PackOp. Temporarily return failure.
-  if (isa<linalg::LinalgOp>(packOrUnPackOp)) {
-    if (!packOrUnPackOp.hasPureTensorSemantics()) {
+  if (auto linalgOp =
+          dyn_cast<linalg::LinalgOp>(packOrUnPackOp.getOperation())) {
+    if (!linalgOp.hasPureTensorSemantics()) {
       return failure();
     }
   }
