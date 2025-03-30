@@ -1377,6 +1377,12 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
   const MCTargetOptions *TO = Ctx.getTargetOptions();
 
   if (auto *RefB = Target.getSubSym()) {
+    // When there is no relocation specifier, a linker relaxation target may
+    // emit ADD/SUB relocations for A-B+C.
+    if (Target.getSymA() && Backend.handleAddSubRelocations(
+                                Asm, *Fragment, Fixup, Target, FixedValue))
+      return;
+
     const auto &SymB = cast<MCSymbolELF>(*RefB);
     if (SymB.isUndefined()) {
       Ctx.reportError(Fixup.getLoc(),
