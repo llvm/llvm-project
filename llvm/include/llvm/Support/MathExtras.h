@@ -764,27 +764,40 @@ std::enable_if_t<std::is_signed_v<T>, T> MulOverflow(T X, T Y, T &Result) {
 #if __has_builtin(__builtin_mul_overflow)
   return __builtin_mul_overflow(X, Y, &Result);
 #else
-  // Perform the unsigned multiplication on absolute values.
   using U = std::make_unsigned_t<T>;
-  const U UX = X < 0 ? (0 - static_cast<U>(X)) : static_cast<U>(X);
-  const U UY = Y < 0 ? (0 - static_cast<U>(Y)) : static_cast<U>(Y);
-  const U UResult = UX * UY;
 
-  // Convert to signed.
-  const bool IsNegative = (X < 0) ^ (Y < 0);
-  Result = IsNegative ? (0 - UResult) : UResult;
-
-  // If any of the args was 0, result is 0 and no overflow occurs.
-  if (UX == 0 || UY == 0)
+  // Handle zero case
+  if (X == 0 || Y == 0) {
+    Result = 0;
     return false;
+  }
 
-  // UX and UY are in [1, 2^n], where n is the number of digits.
-  // Check how the max allowed absolute value (2^n for negative, 2^(n-1) for
-  // positive) divided by an argument compares to the other.
-  if (IsNegative)
-    return UX > (static_cast<U>(std::numeric_limits<T>::max()) + U(1)) / UY;
-  else
-    return UX > (static_cast<U>(std::numeric_limits<T>::max())) / UY;
+  bool IsNegative = (X < 0) ^ (Y < 0);
+
+  // Safely compute absolute values  
+  const U AbsX = X < 0 ? (0 - static_cast<U>(X+1))+1 : static_cast<U>(X);
+  const U AbsY = Y < 0 ? (0 - static_cast<U>(Y+1))+1 : static_cast<U>(Y);
+
+  // Overflow check before actual multiplication
+  constexpr U MaxPositive = static_cast<U>(std::numeric_limits<T>::max());
+  constexpr U MaxNegative = static_cast<U>(std::numeric_limits<T>::max()) + 1;
+    
+  // Safe to multiply
+  U AbsResult = AbsX * AbsY;
+  Result = IsNegative ? static_cast<T>(0-AbsResult) : static_cast<T>(AbsResult);
+  
+  // Handle INT_MIN * -1 overflow case explicitly
+  if ((X == std::numeric_limits<T>::min() && Y == -1) ||
+      (Y == std::numeric_limits<T>::min() && X == -1)) {
+    return true;  // overflow
+  }
+
+  U Limit = IsNegative ? MaxNegative : MaxPositive;
+
+  if (AbsX > Limit / AbsY)
+    return true;
+
+  return false;
 #endif
 }
 
