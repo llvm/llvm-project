@@ -184,7 +184,7 @@ using SharedTaskQueue = std::deque<std::shared_future<SmallString<0>>>;
 void llvm::runDeltaPass(TestRunner &Test, const DeltaPass &Pass) {
   assert(!Test.getProgram().verify(&errs()) &&
          "input module is broken before making changes");
-  errs() << "*** " << Pass.Desc << " (" << Pass.Name << ')' << "...\n";
+  errs() << "*** " << Pass.Desc << " (" << Pass.Name << ")...\n";
 
   int Targets;
   {
