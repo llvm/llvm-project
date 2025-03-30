@@ -39,7 +39,6 @@ namespace llvm {
 struct MCInfo {
   MCInfo(std::unique_ptr<llvm::MachineModuleInfo> &&MachineModuleInfo,
          LLVMModuleAndContext &&ModuleAndContext,
-         llvm::StringMap<const llvm::Function *> &FnNameToFnPtr,
          std::unique_ptr<llvm::TargetMachine> &&TgtMachine,
          std::unique_ptr<llvm::MCContext> &&McContext,
          std::optional<int> SplitIdx);

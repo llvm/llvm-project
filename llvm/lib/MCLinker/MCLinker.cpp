@@ -30,21 +30,22 @@ using namespace llvm;
 //==============================================================================
 
 MCInfo::MCInfo(std::unique_ptr<llvm::MachineModuleInfo> &&MachineModuleInfo,
-               LLVMModuleAndContext &&ModuleAndContext,
-               llvm::StringMap<const llvm::Function *> &FnNameToFnPtr,
+               LLVMModuleAndContext &&MAndContext,
                std::unique_ptr<llvm::TargetMachine> &&TgtMachine,
                std::unique_ptr<llvm::MCContext> &&McContext,
                std::optional<int> SplitIdx)
-    : ModuleAndContext(std::move(ModuleAndContext)),
+    : ModuleAndContext(std::move(MAndContext)),
       McContext(std::move(McContext)),
       MachineModuleInfo(std::move(MachineModuleInfo)),
-      FnNameToFnPtr(std::move(FnNameToFnPtr)),
       TgtMachine(std::move(TgtMachine)), SplitIdx(SplitIdx) {
   std::string BufStr;
   llvm::raw_string_ostream BufOS(BufStr);
   llvm::WriteBitcodeToFile(*ModuleAndContext, BufOS);
   ModuleBuf = WritableMemoryBuffer::getNewUninitMemBuffer(BufStr.size());
   memcpy(ModuleBuf->getBufferStart(), BufStr.c_str(), BufStr.size());
+  for(Function& F: ModuleAndContext->functions()) {
+    FnNameToFnPtr.insert( {F.getName(), &F});
+  }
 }
 
 //==============================================================================
