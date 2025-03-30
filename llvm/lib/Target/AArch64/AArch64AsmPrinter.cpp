@@ -226,6 +226,12 @@ public:
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
+    if (auto *PSIW = getAnalysisIfAvailable<ProfileSummaryInfoWrapperPass>())
+      PSI = &PSIW->getPSI();
+    if (auto *SDPIW =
+            getAnalysisIfAvailable<StaticDataProfileInfoWrapperPass>())
+      SDPI = &SDPIW->getStaticDataProfileInfo();
+
     AArch64FI = MF.getInfo<AArch64FunctionInfo>();
     STI = &MF.getSubtarget<AArch64Subtarget>();
 
