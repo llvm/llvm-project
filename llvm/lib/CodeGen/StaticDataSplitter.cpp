@@ -60,8 +60,7 @@ class StaticDataSplitter : public MachineFunctionPass {
 
   // Returns the constant if the operand refers to a global variable or constant
   // that gets lowered to static data sections. Otherwise, return nullptr.
-  const Constant *getConstant(const MachineOperand &Op,
-                              const TargetMachine &TM,
+  const Constant *getConstant(const MachineOperand &Op, const TargetMachine &TM,
                               const MachineConstantPool *MCP);
 
   // Use profiles to partition static data.
