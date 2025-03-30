@@ -116,8 +116,7 @@ bool CompilerInstance::createTarget() {
   // Check whether AuxTarget exists, if not, then create TargetInfo for the
   // other side of CUDA/OpenMP/SYCL compilation.
   if (!getAuxTarget() &&
-      (getLangOpts().CUDA || getLangOpts().OpenMPIsTargetDevice ||
-       getLangOpts().SYCLIsDevice) &&
+      (getLangOpts().CUDA || getLangOpts().isTargetDevice()) &&
       !getFrontendOpts().AuxTriple.empty()) {
     auto TO = std::make_shared<TargetOptions>();
     TO->Triple = llvm::Triple::normalize(getFrontendOpts().AuxTriple);
@@ -451,7 +450,7 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
 
   // Create the Preprocessor.
   HeaderSearch *HeaderInfo =
-      new HeaderSearch(getHeaderSearchOptsPtr(), getSourceManager(),
+      new HeaderSearch(getHeaderSearchOpts(), getSourceManager(),
                        getDiagnostics(), getLangOpts(), &getTarget());
   PP = std::make_shared<Preprocessor>(Invocation->getPreprocessorOptsPtr(),
                                       getDiagnostics(), getLangOpts(),

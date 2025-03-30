@@ -356,11 +356,11 @@ define void @v2i8_v4i8(ptr %p, ptr %q) {
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
 ; CHECK-NEXT:    mv s0, a1
 ; CHECK-NEXT:    call g
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (s0)
 ; CHECK-NEXT:    csrr a0, vlenb
@@ -407,11 +407,11 @@ define void @v16i8_v32i8(ptr %p, ptr %q) {
 ; CHECK-NEXT:    vsetvli zero, s1, e8, m2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    addi a0, sp, 32
-; CHECK-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    vs2r.v v8, (a0) # vscale x 16-byte Folded Spill
 ; CHECK-NEXT:    mv s0, a1
 ; CHECK-NEXT:    call g
 ; CHECK-NEXT:    addi a0, sp, 32
-; CHECK-NEXT:    vl2r.v v8, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl2r.v v8, (a0) # vscale x 16-byte Folded Reload
 ; CHECK-NEXT:    vsetvli zero, s1, e8, m2, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (s0)
 ; CHECK-NEXT:    csrr a0, vlenb

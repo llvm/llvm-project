@@ -146,3 +146,43 @@ namespace GH67603 {
   }
   template void h<int>();
 } // namespace GH67603
+
+namespace arrays {
+  namespace same_canonical {
+    using ConstB1I = const B1[];
+    using ConstB1C = const B1[1];
+    const ConstB1I a = {0};
+    const ConstB1C b = {0};
+    N ta = a;
+    // expected-error@-1 {{lvalue of type 'const B1[1]' (aka 'const int[1]')}}
+    N tb = b;
+    // expected-error@-1 {{lvalue of type 'const ConstB1C' (aka 'const const int[1]')}}
+    N tc = 0 ? a : b;
+    // expected-error@-1 {{lvalue of type 'const B1[1]' (aka 'const int[1]')}}
+  } // namespace same_canonical
+  namespace same_element {
+    using ConstB1 = const B1;
+    using ConstB1I = ConstB1[];
+    using ConstB1C = ConstB1[1];
+    const ConstB1I a = {0};
+    const ConstB1C b = {0};
+    N ta = a;
+    // expected-error@-1 {{lvalue of type 'const ConstB1[1]' (aka 'const int[1]')}}
+    N tb = b;
+    // expected-error@-1 {{lvalue of type 'const ConstB1C' (aka 'const const int[1]')}}
+    N tc = 0 ? a : b;
+    // expected-error@-1 {{lvalue of type 'ConstB1[1]' (aka 'const int[1]')}}
+  } // namespace same_element
+  namespace balanced_qualifiers {
+    using ConstX1C = const volatile X1[1];
+    using Y1C = volatile Y1[1];
+    extern volatile ConstX1C a;
+    extern const volatile Y1C b;
+    N ta = a;
+    // expected-error@-1 {{lvalue of type 'volatile ConstX1C' (aka 'volatile const volatile int[1]')}}
+    N tb = b;
+    // expected-error@-1 {{lvalue of type 'const volatile Y1C' (aka 'const volatile volatile int[1]')}}
+    N tc = 0 ? a : b;
+    // expected-error@-1 {{lvalue of type 'const volatile volatile B1[1]' (aka 'const volatile volatile int[1]')}}
+  } // namespace balanced_qualifiers
+} // namespace arrays

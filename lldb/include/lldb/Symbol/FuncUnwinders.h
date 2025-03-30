@@ -13,9 +13,9 @@ class UnwindTable;
 class FuncUnwinders {
 public:
   // FuncUnwinders objects are used to track UnwindPlans for a function (named
-  // or not - really just an address range)
+  // or not - really just a set of address ranges)
 
-  // We'll record four different UnwindPlans for each address range:
+  // We'll record four different UnwindPlans for each function:
   //
   //   1. Unwinding from a call site (a valid exception throw location)
   //      This is often sourced from the eh_frame exception handling info
@@ -31,7 +31,8 @@ public:
   // instructions are finished for migrating breakpoints past the stack frame
   // setup instructions when we don't have line table information.
 
-  FuncUnwinders(lldb_private::UnwindTable &unwind_table, AddressRange range);
+  FuncUnwinders(lldb_private::UnwindTable &unwind_table, Address addr,
+                AddressRanges ranges);
 
   ~FuncUnwinders();
 
@@ -54,7 +55,9 @@ public:
   const Address &GetFunctionStartAddress() const;
 
   bool ContainsAddress(const Address &addr) const {
-    return m_range.ContainsFileAddress(addr);
+    return llvm::any_of(m_ranges, [&](const AddressRange range) {
+      return range.ContainsFileAddress(addr);
+    });
   }
 
   // A function may have a Language Specific Data Area specified -- a block of
@@ -113,6 +116,15 @@ private:
       Thread &thread, const lldb::UnwindPlanSP &a, const lldb::UnwindPlanSP &b);
 
   UnwindTable &m_unwind_table;
+
+  /// Start address of the function described by this object.
+  Address m_addr;
+
+  /// The address ranges of the function.
+  AddressRanges m_ranges;
+
+  /// The smallest address range covering the entire function.
+  /// DEPRECATED: Use m_ranges instead.
   AddressRange m_range;
 
   std::recursive_mutex m_mutex;

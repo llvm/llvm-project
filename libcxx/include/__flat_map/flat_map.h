@@ -33,6 +33,7 @@
 #include <__functional/invoke.h>
 #include <__functional/is_transparent.h>
 #include <__functional/operations.h>
+#include <__fwd/memory.h>
 #include <__fwd/vector.h>
 #include <__iterator/concepts.h>
 #include <__iterator/distance.h>

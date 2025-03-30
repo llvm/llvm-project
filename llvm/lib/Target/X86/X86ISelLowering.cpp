@@ -44227,6 +44227,35 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     }
     return false;
   }
+  case X86ISD::BLENDI: {
+    SDValue LHS = Op.getOperand(0);
+    SDValue RHS = Op.getOperand(1);
+    APInt Mask = getBLENDIBlendMask(Op);
+
+    APInt DemandedEltsLHS = OriginalDemandedElts & ~Mask;
+    if (SimplifyDemandedBits(LHS, OriginalDemandedBits, DemandedEltsLHS, Known,
+                             TLO, Depth + 1))
+      return true;
+
+    APInt DemandedEltsRHS = OriginalDemandedElts & Mask;
+    if (SimplifyDemandedBits(RHS, OriginalDemandedBits, DemandedEltsRHS, Known,
+                             TLO, Depth + 1))
+      return true;
+
+    // Attempt to avoid multi-use ops if we don't need anything from them.
+    SDValue NewLHS = SimplifyMultipleUseDemandedBits(
+        LHS, OriginalDemandedBits, DemandedEltsLHS, TLO.DAG, Depth + 1);
+    SDValue NewRHS = SimplifyMultipleUseDemandedBits(
+        RHS, OriginalDemandedBits, DemandedEltsRHS, TLO.DAG, Depth + 1);
+    if (NewLHS || NewRHS) {
+      NewLHS = NewLHS ? NewLHS : LHS;
+      NewRHS = NewRHS ? NewRHS : RHS;
+      return TLO.CombineTo(Op,
+                           TLO.DAG.getNode(Op.getOpcode(), SDLoc(Op), VT,
+                                           NewLHS, NewRHS, Op.getOperand(2)));
+    }
+    break;
+  }
   case X86ISD::BLENDV: {
     SDValue Sel = Op.getOperand(0);
     SDValue LHS = Op.getOperand(1);
@@ -57873,7 +57902,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     return DAG.getUNDEF(VT);
 
   if (llvm::all_of(Ops, [](SDValue Op) {
-        return ISD::isBuildVectorAllZeros(Op.getNode());
+        return Op.isUndef() || ISD::isBuildVectorAllZeros(Op.getNode());
       }))
     return getZeroVector(VT, Subtarget, DAG, DL);
 
@@ -58572,6 +58601,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
               Concat1 ? Concat1 : ConcatSubOperand(SrcVT, Ops, 1));
       }
       break;
+    case X86ISD::VSHLD:
+    case X86ISD::VSHRD:
     case X86ISD::PALIGNR:
       if (!IsSplat &&
           ((VT.is256BitVector() && Subtarget.hasInt256()) ||
@@ -59083,20 +59114,22 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
     return extractSubVector(InVec.getOperand(0), NewIdx, DAG, DL, SizeInBits);
   }
 
-  // If we are extracting from an insert into a larger vector, replace with a
-  // smaller insert if we don't access less than the original subvector. Don't
-  // do this for i1 vectors.
-  // TODO: Relax the matching indices requirement?
-  if (VT.getVectorElementType() != MVT::i1 &&
-      InVec.getOpcode() == ISD::INSERT_SUBVECTOR && InVec.hasOneUse() &&
-      IdxVal == InVec.getConstantOperandVal(2) &&
-      InVec.getOperand(1).getValueSizeInBits() <= SizeInBits) {
-    SDValue NewExt = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT,
-                                 InVec.getOperand(0), N->getOperand(1));
-    unsigned NewIdxVal = InVec.getConstantOperandVal(2) - IdxVal;
-    return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, NewExt,
-                       InVec.getOperand(1),
-                       DAG.getVectorIdxConstant(NewIdxVal, DL));
+  // EXTRACT_SUBVECTOR(INSERT_SUBVECTOR(SRC,SUB,C1),C2)
+  // --> INSERT_SUBVECTOR(EXTRACT_SUBVECTOR(SRC,C2),SUB,C1-C2)
+  // iff SUB is entirely contained in the extraction.
+  if (VT.getVectorElementType() != MVT::i1 && TLI.isTypeLegal(VT) &&
+      InVec.getOpcode() == ISD::INSERT_SUBVECTOR && InVec.hasOneUse()) {
+    SDValue Src = InVec.getOperand(0);
+    SDValue Sub = InVec.getOperand(1);
+    EVT SubVT = Sub.getValueType();
+    uint64_t InsIdx = InVec.getConstantOperandVal(2);
+    if (IdxVal <= InsIdx &&
+        (IdxVal + NumSubElts) >= (InsIdx + SubVT.getVectorNumElements())) {
+      SDValue NewSrc = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Src,
+                                   DAG.getVectorIdxConstant(IdxVal, DL));
+      return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, NewSrc, Sub,
+                         DAG.getVectorIdxConstant(InsIdx - IdxVal, DL));
+    }
   }
 
   // If we're extracting an upper subvector from a broadcast we should just
