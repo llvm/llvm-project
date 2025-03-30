@@ -1803,12 +1803,6 @@ public:
     return &SymExpr->getSymbol();
   }
 
-  // This is the same as the base class, but since we are overriding one of
-  // getTargetSymbol's signatures above, we need to override all of them.
-  const MCSymbol *getTargetSymbol(const MCExpr *Expr) const override {
-    return &cast<const MCSymbolRefExpr>(Expr)->getSymbol();
-  }
-
   bool analyzeBranch(InstructionIterator Begin, InstructionIterator End,
                      const MCSymbol *&TBB, const MCSymbol *&FBB,
                      MCInst *&CondBranch,

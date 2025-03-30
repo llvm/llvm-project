@@ -55,7 +55,6 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: FieldDecl {{.*}} implicit __handle '__hlsl_resource_t
 // CHECK-UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-NEXT: HLSLResourceAttr {{.*}} Implicit TypedBuffer
 
 // CHECK: CXXMethodDecl {{.*}} operator[] 'const element_type &(unsigned int) const'
 // CHECK-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
@@ -110,4 +109,3 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: FieldDecl {{.*}} implicit __handle '__hlsl_resource_t
 // CHECK-UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(float)]]
-// CHECK-NEXT: HLSLResourceAttr {{.*}} Implicit TypedBuffer

@@ -23,6 +23,7 @@ define void @srem() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V16i8 = srem <16 x i8> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %V32i8 = srem <32 x i8> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %V64i8 = srem <64 x i8> undef, undef
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NV2i128 = srem <vscale x 2 x i128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %NV2i64 = srem <vscale x 2 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %NV4i64 = srem <vscale x 4 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %NV8i64 = srem <vscale x 8 x i64> undef, undef
@@ -61,6 +62,7 @@ define void @srem() {
   %V16i8 = srem <16 x i8> undef, undef
   %V32i8 = srem <32 x i8> undef, undef
   %V64i8 = srem <64 x i8> undef, undef
+  %NV2i128 = srem <vscale x 2 x i128> undef, undef
   %NV2i64 = srem <vscale x 2 x i64> undef, undef
   %NV4i64 = srem <vscale x 4 x i64> undef, undef
   %NV8i64 = srem <vscale x 8 x i64> undef, undef
@@ -102,6 +104,7 @@ define void @urem() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V16i8 = urem <16 x i8> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %V32i8 = urem <32 x i8> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %V64i8 = urem <64 x i8> undef, undef
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NV2i128 = urem <vscale x 2 x i128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %NV2i64 = urem <vscale x 2 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %NV4i64 = urem <vscale x 4 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %NV8i64 = urem <vscale x 8 x i64> undef, undef
@@ -140,6 +143,7 @@ define void @urem() {
   %V16i8 = urem <16 x i8> undef, undef
   %V32i8 = urem <32 x i8> undef, undef
   %V64i8 = urem <64 x i8> undef, undef
+  %NV2i128 = urem <vscale x 2 x i128> undef, undef
   %NV2i64 = urem <vscale x 2 x i64> undef, undef
   %NV4i64 = urem <vscale x 4 x i64> undef, undef
   %NV8i64 = urem <vscale x 8 x i64> undef, undef
@@ -181,6 +185,7 @@ define void @srem_uniformconst() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16i8 = srem <16 x i8> undef, splat (i8 7)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V32i8 = srem <32 x i8> undef, splat (i8 7)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V64i8 = srem <64 x i8> undef, splat (i8 7)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NV2i128 = srem <vscale x 2 x i128> undef, splat (i128 7)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %NV2i64 = srem <vscale x 2 x i64> undef, splat (i64 7)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %NV4i64 = srem <vscale x 4 x i64> undef, splat (i64 7)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %NV8i64 = srem <vscale x 8 x i64> undef, splat (i64 7)
@@ -219,6 +224,7 @@ define void @srem_uniformconst() {
   %V16i8 = srem <16 x i8> undef, splat (i8 7)
   %V32i8 = srem <32 x i8> undef, splat (i8 7)
   %V64i8 = srem <64 x i8> undef, splat (i8 7)
+  %NV2i128 = srem <vscale x 2 x i128> undef, splat (i128 7)
   %NV2i64 = srem <vscale x 2 x i64> undef, splat (i64 7)
   %NV4i64 = srem <vscale x 4 x i64> undef, splat (i64 7)
   %NV8i64 = srem <vscale x 8 x i64> undef, splat (i64 7)
@@ -260,6 +266,7 @@ define void @urem_uniformconst() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16i8 = urem <16 x i8> undef, splat (i8 7)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32i8 = urem <32 x i8> undef, splat (i8 7)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V64i8 = urem <64 x i8> undef, splat (i8 7)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NV2i128 = urem <vscale x 2 x i128> undef, splat (i128 7)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %NV2i64 = urem <vscale x 2 x i64> undef, splat (i64 7)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %NV4i64 = urem <vscale x 4 x i64> undef, splat (i64 7)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %NV8i64 = urem <vscale x 8 x i64> undef, splat (i64 7)
@@ -298,6 +305,7 @@ define void @urem_uniformconst() {
   %V16i8 = urem <16 x i8> undef, splat (i8 7)
   %V32i8 = urem <32 x i8> undef, splat (i8 7)
   %V64i8 = urem <64 x i8> undef, splat (i8 7)
+  %NV2i128 = urem <vscale x 2 x i128> undef, splat (i128 7)
   %NV2i64 = urem <vscale x 2 x i64> undef, splat (i64 7)
   %NV4i64 = urem <vscale x 4 x i64> undef, splat (i64 7)
   %NV8i64 = urem <vscale x 8 x i64> undef, splat (i64 7)
@@ -339,6 +347,7 @@ define void @srem_uniformconstpow2() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16i8 = srem <16 x i8> undef, splat (i8 16)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32i8 = srem <32 x i8> undef, splat (i8 16)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V64i8 = srem <64 x i8> undef, splat (i8 16)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NV2i128 = srem <vscale x 2 x i128> undef, splat (i128 16)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %NV2i64 = srem <vscale x 2 x i64> undef, splat (i64 16)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %NV4i64 = srem <vscale x 4 x i64> undef, splat (i64 16)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %NV8i64 = srem <vscale x 8 x i64> undef, splat (i64 16)
@@ -377,6 +386,7 @@ define void @srem_uniformconstpow2() {
   %V16i8 = srem <16 x i8> undef, splat (i8 16)
   %V32i8 = srem <32 x i8> undef, splat (i8 16)
   %V64i8 = srem <64 x i8> undef, splat (i8 16)
+  %NV2i128 = srem <vscale x 2 x i128> undef, splat (i128 16)
   %NV2i64 = srem <vscale x 2 x i64> undef, splat (i64 16)
   %NV4i64 = srem <vscale x 4 x i64> undef, splat (i64 16)
   %NV8i64 = srem <vscale x 8 x i64> undef, splat (i64 16)
@@ -418,6 +428,7 @@ define void @urem_uniformconstpow2() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16i8 = urem <16 x i8> undef, splat (i8 16)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32i8 = urem <32 x i8> undef, splat (i8 16)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64i8 = urem <64 x i8> undef, splat (i8 16)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NV2i128 = urem <vscale x 2 x i128> undef, splat (i128 16)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %NV2i64 = urem <vscale x 2 x i64> undef, splat (i64 16)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %NV4i64 = urem <vscale x 4 x i64> undef, splat (i64 16)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %NV8i64 = urem <vscale x 8 x i64> undef, splat (i64 16)
@@ -456,6 +467,7 @@ define void @urem_uniformconstpow2() {
   %V16i8 = urem <16 x i8> undef, splat (i8 16)
   %V32i8 = urem <32 x i8> undef, splat (i8 16)
   %V64i8 = urem <64 x i8> undef, splat (i8 16)
+  %NV2i128 = urem <vscale x 2 x i128> undef, splat (i128 16)
   %NV2i64 = urem <vscale x 2 x i64> undef, splat (i64 16)
   %NV4i64 = urem <vscale x 4 x i64> undef, splat (i64 16)
   %NV8i64 = urem <vscale x 8 x i64> undef, splat (i64 16)
@@ -497,6 +509,7 @@ define void @srem_uniformconstnegpow2() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16i8 = srem <16 x i8> undef, splat (i8 -16)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V32i8 = srem <32 x i8> undef, splat (i8 -16)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V64i8 = srem <64 x i8> undef, splat (i8 -16)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NV2i128 = srem <vscale x 2 x i128> undef, splat (i128 -16)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %NV2i64 = srem <vscale x 2 x i64> undef, splat (i64 -16)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %NV4i64 = srem <vscale x 4 x i64> undef, splat (i64 -16)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %NV8i64 = srem <vscale x 8 x i64> undef, splat (i64 -16)
@@ -535,6 +548,7 @@ define void @srem_uniformconstnegpow2() {
   %V16i8 = srem <16 x i8> undef, splat (i8 -16)
   %V32i8 = srem <32 x i8> undef, splat (i8 -16)
   %V64i8 = srem <64 x i8> undef, splat (i8 -16)
+  %NV2i128 = srem <vscale x 2 x i128> undef, splat (i128 -16)
   %NV2i64 = srem <vscale x 2 x i64> undef, splat (i64 -16)
   %NV4i64 = srem <vscale x 4 x i64> undef, splat (i64 -16)
   %NV8i64 = srem <vscale x 8 x i64> undef, splat (i64 -16)
@@ -576,6 +590,7 @@ define void @urem_uniformconstnegpow2() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16i8 = urem <16 x i8> undef, splat (i8 -16)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32i8 = urem <32 x i8> undef, splat (i8 -16)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V64i8 = urem <64 x i8> undef, splat (i8 -16)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NV2i128 = urem <vscale x 2 x i128> undef, splat (i128 -16)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %NV2i64 = urem <vscale x 2 x i64> undef, splat (i64 -16)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %NV4i64 = urem <vscale x 4 x i64> undef, splat (i64 -16)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %NV8i64 = urem <vscale x 8 x i64> undef, splat (i64 -16)
@@ -614,6 +629,7 @@ define void @urem_uniformconstnegpow2() {
   %V16i8 = urem <16 x i8> undef, splat (i8 -16)
   %V32i8 = urem <32 x i8> undef, splat (i8 -16)
   %V64i8 = urem <64 x i8> undef, splat (i8 -16)
+  %NV2i128 = urem <vscale x 2 x i128> undef, splat (i128 -16)
   %NV2i64 = urem <vscale x 2 x i64> undef, splat (i64 -16)
   %NV4i64 = urem <vscale x 4 x i64> undef, splat (i64 -16)
   %NV8i64 = urem <vscale x 8 x i64> undef, splat (i64 -16)

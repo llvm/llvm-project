@@ -722,7 +722,7 @@ void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
     InitialStates.insert({BB, PredState});
     FinalStates.insert({BB, PredState});
     for (BasicBlock *SuccBB : successors(BB))
-      Worklist.push_back(SuccBB);
+       Worklist.push_back(SuccBB);
   }
 
   // Try to hoist stores from successors.

@@ -232,8 +232,7 @@ struct CUFSharedMemoryOpConversion
         loc, mlir::LLVM::LLVMPointerType::get(rewriter.getContext()),
         sharedGlobalAddr);
     mlir::Type baseType = castPtr->getResultTypes().front();
-    llvm::SmallVector<mlir::LLVM::GEPArg> gepArgs = {
-        static_cast<int32_t>(*op.getOffset())};
+    llvm::SmallVector<mlir::LLVM::GEPArg> gepArgs = {op.getOffset()};
     mlir::Value shmemPtr = rewriter.create<mlir::LLVM::GEPOp>(
         loc, baseType, rewriter.getI8Type(), castPtr, gepArgs);
     rewriter.replaceOp(op, {shmemPtr});

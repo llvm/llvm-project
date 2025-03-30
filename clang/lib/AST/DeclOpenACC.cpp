@@ -12,6 +12,8 @@
 
 #include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Attr.h"
+#include "clang/AST/OpenACCClause.h"
 
 using namespace clang;
 
@@ -49,4 +51,13 @@ OpenACCRoutineDecl::CreateDeserialized(ASTContext &Ctx, GlobalDeclID ID,
                                        unsigned NumClauses) {
   return new (Ctx, ID, additionalSizeToAlloc<const OpenACCClause *>(NumClauses))
       OpenACCRoutineDecl(NumClauses);
+}
+
+void OpenACCRoutineDeclAttr::printPrettyPragma(
+    llvm::raw_ostream &OS, const clang::PrintingPolicy &P) const {
+  if (Clauses.size() > 0) {
+    OS << ' ';
+    OpenACCClausePrinter Printer{OS, P};
+    Printer.VisitClauseList(Clauses);
+  }
 }

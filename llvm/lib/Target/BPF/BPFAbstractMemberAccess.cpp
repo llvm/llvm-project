@@ -836,8 +836,9 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
   // Put the access chain into a stack with the top as the head of the chain.
   while (Call) {
     CallStack.push(std::make_pair(Call, CInfo));
-    CInfo = AIChain[Call].second;
-    Call = AIChain[Call].first;
+    auto &Chain = AIChain[Call];
+    CInfo = Chain.second;
+    Call = Chain.first;
   }
 
   // The access offset from the base of the head of chain is also

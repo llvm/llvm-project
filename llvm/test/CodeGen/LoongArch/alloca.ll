@@ -39,7 +39,8 @@ define void @simple_alloca(i32 %n) nounwind {
 ; LA64-NEXT:    slli.d $a0, $a0, 4
 ; LA64-NEXT:    sub.d $a0, $sp, $a0
 ; LA64-NEXT:    move $sp, $a0
-; LA64-NEXT:    bl %plt(notdead)
+; LA64-NEXT:    pcaddu18i $ra, %call36(notdead)
+; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    addi.d $sp, $fp, -16
 ; LA64-NEXT:    ld.d $fp, $sp, 0 # 8-byte Folded Reload
 ; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
@@ -89,7 +90,8 @@ define void @scoped_alloca(i32 %n) nounwind {
 ; LA64-NEXT:    slli.d $a0, $a0, 4
 ; LA64-NEXT:    sub.d $a0, $sp, $a0
 ; LA64-NEXT:    move $sp, $a0
-; LA64-NEXT:    bl %plt(notdead)
+; LA64-NEXT:    pcaddu18i $ra, %call36(notdead)
+; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    move $sp, $s0
 ; LA64-NEXT:    addi.d $sp, $fp, -32
 ; LA64-NEXT:    ld.d $s0, $sp, 8 # 8-byte Folded Reload
@@ -171,7 +173,8 @@ define void @alloca_callframe(i32 %n) nounwind {
 ; LA64-NEXT:    ori $a6, $zero, 7
 ; LA64-NEXT:    ori $a7, $zero, 8
 ; LA64-NEXT:    st.d $t0, $sp, 0
-; LA64-NEXT:    bl %plt(func)
+; LA64-NEXT:    pcaddu18i $ra, %call36(func)
+; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    addi.d $sp, $sp, 32
 ; LA64-NEXT:    addi.d $sp, $fp, -16
 ; LA64-NEXT:    ld.d $fp, $sp, 0 # 8-byte Folded Reload

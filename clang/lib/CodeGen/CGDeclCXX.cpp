@@ -703,8 +703,7 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
   for (auto I : Primary->Exports)
     AllImports.insert(I.getPointer());
   // Ones that we only import.
-  for (Module *M : Primary->Imports)
-    AllImports.insert(M);
+  AllImports.insert_range(Primary->Imports);
   // Ones that we import in the global module fragment or the private module
   // fragment.
   for (Module *SubM : Primary->submodules()) {
@@ -714,8 +713,7 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
     assert(SubM->Exports.empty() &&
            "The global mdoule fragments and the private module fragments are "
            "not allowed to export import modules.");
-    for (Module *M : SubM->Imports)
-      AllImports.insert(M);
+    AllImports.insert_range(SubM->Imports);
   }
 
   SmallVector<llvm::Function *, 8> ModuleInits;

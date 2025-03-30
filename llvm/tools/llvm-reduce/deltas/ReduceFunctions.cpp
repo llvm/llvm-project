@@ -13,9 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceFunctions.h"
-#include "Delta.h"
 #include "Utils.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <iterator>
 
@@ -23,7 +23,7 @@ using namespace llvm;
 
 /// Removes all the Defined Functions
 /// that aren't inside any of the desired Chunks.
-static void extractFunctionsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
+void llvm::reduceFunctionsDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
   Module &Program = WorkItem.getModule();
 
   // Record all out-of-chunk functions.
@@ -53,8 +53,4 @@ static void extractFunctionsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
     // And finally, fully drop it.
     cast<Function>(F)->eraseFromParent();
   }
-}
-
-void llvm::reduceFunctionsDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, extractFunctionsFromModule, "Reducing Functions");
 }

@@ -213,9 +213,8 @@ void SetInstructionBreakpointsRequestHandler::operator()(
   // Disable any instruction breakpoints that aren't in this request.
   // There is no call to remove instruction breakpoints other than calling this
   // function with a smaller or empty "breakpoints" list.
-  llvm::DenseSet<lldb::addr_t> seen;
-  for (const auto &addr : dap.instruction_breakpoints)
-    seen.insert(addr.first);
+  llvm::DenseSet<lldb::addr_t> seen(
+      llvm::from_range, llvm::make_first_range(dap.instruction_breakpoints));
 
   for (const auto &bp : *breakpoints) {
     const auto *bp_obj = bp.getAsObject();

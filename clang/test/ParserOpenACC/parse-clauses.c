@@ -1261,7 +1261,6 @@ void Gang() {
 
 }
 
-  // expected-warning@+5{{OpenACC construct 'routine' with implicit function not yet implemented, pragma ignored}}
   // expected-error@+4{{OpenACC clause 'seq' may not appear on the same construct as a 'worker' clause on a 'routine' construct}}
   // expected-note@+3{{previous clause is here}}
   // expected-error@+2{{OpenACC clause 'vector' may not appear on the same construct as a 'worker' clause on a 'routine' construct}}
@@ -1278,15 +1277,14 @@ void bar();
 
 // Bind Clause Parsing.
 
-  // expected-error@+2{{expected '('}}
-  // expected-warning@+1{{OpenACC construct 'routine' with implicit function not yet implemented, pragma ignored}}
+// expected-error@+1{{expected '('}}
 #pragma acc routine seq bind
 void BCP1();
 
   // expected-error@+1{{expected identifier or string literal}}
 #pragma acc routine(BCP1) seq bind()
 
-  // expected-warning@+1{{OpenACC construct 'routine' with implicit function not yet implemented, pragma ignored}}
+// expected-error@+1{{expected function or lambda declaration for 'routine' construct}}
 #pragma acc routine seq bind("ReductionClauseParsing")
 
 #pragma acc routine(BCP1) seq bind(unknown_thing)

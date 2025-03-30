@@ -1866,8 +1866,7 @@ LowerTypeTestsModule::LowerTypeTestsModule(
   if (GlobalAnnotation && GlobalAnnotation->hasInitializer()) {
     const ConstantArray *CA =
         cast<ConstantArray>(GlobalAnnotation->getInitializer());
-    for (Value *Op : CA->operands())
-      FunctionAnnotations.insert(Op);
+    FunctionAnnotations.insert_range(CA->operands());
   }
 }
 

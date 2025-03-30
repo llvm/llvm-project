@@ -2633,8 +2633,7 @@ void ScopBuilder::checkForReductions(ScopStmt &Stmt) {
         if (auto *Ptr = dyn_cast<Instruction>(Load->getPointerOperand())) {
           const auto &It = State.find(Ptr);
           if (It != State.end())
-            for (const auto &FlowInSetElem : It->second)
-              InvalidLoads.insert(FlowInSetElem.first);
+            InvalidLoads.insert_range(llvm::make_first_range(It->second));
         }
 
         // If this load is used outside this stmt, invalidate it.
@@ -2654,8 +2653,7 @@ void ScopBuilder::checkForReductions(ScopStmt &Stmt) {
                 dyn_cast<Instruction>(Store->getPointerOperand())) {
           const auto &It = State.find(Ptr);
           if (It != State.end())
-            for (const auto &FlowInSetElem : It->second)
-              InvalidLoads.insert(FlowInSetElem.first);
+            InvalidLoads.insert_range(llvm::make_first_range(It->second));
         }
 
         // Propagate the uses of the value operand to the store
@@ -2710,8 +2708,7 @@ void ScopBuilder::checkForReductions(ScopStmt &Stmt) {
       // If this operation is used outside the stmt, invalidate all the loads
       // which feed into it.
       if (UsedOutsideStmt)
-        for (const auto &FlowInSetElem : InstInFlowSet)
-          InvalidLoads.insert(FlowInSetElem.first);
+        InvalidLoads.insert_range(llvm::make_first_range(InstInFlowSet));
     }
   }
 

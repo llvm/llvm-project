@@ -1090,9 +1090,7 @@ int main(int argc, char **argv) {
   CodeGen.setTargetOptions(Options);
   CodeGen.setShouldRestoreGlobalsLinkage(RestoreGlobalsLinkage);
 
-  StringSet<MallocAllocator> DSOSymbolsSet;
-  for (unsigned i = 0; i < DSOSymbols.size(); ++i)
-    DSOSymbolsSet.insert(DSOSymbols[i]);
+  StringSet<MallocAllocator> DSOSymbolsSet(llvm::from_range, DSOSymbols);
 
   std::vector<std::string> KeptDSOSyms;
 

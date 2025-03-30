@@ -519,6 +519,9 @@ public:
                                     StringRef Component,
                                     FileType Type = ToolChain::FT_Static) const;
 
+  // Returns Triple without the OSs version.
+  llvm::Triple getTripleWithoutOSVersion() const;
+
   // Returns the target specific runtime path if it exists.
   std::optional<std::string> getRuntimePath() const;
 

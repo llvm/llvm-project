@@ -864,16 +864,16 @@ UnwindPlanSP ABISysV_ppc::CreateFunctionEntryUnwindPlan() {
   uint32_t sp_reg_num = dwarf_r1;
   uint32_t pc_reg_num = dwarf_pc;
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
   // Our Call Frame Address is the stack pointer value
-  row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
+  row.GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
 
   // The previous PC is in the LR, all other registers are the same.
-  row->SetRegisterLocationToRegister(pc_reg_num, lr_reg_num, true);
+  row.SetRegisterLocationToRegister(pc_reg_num, lr_reg_num, true);
 
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(row);
+  plan_sp->AppendRow(std::move(row));
   plan_sp->SetSourceName("ppc at-func-entry default");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
   return plan_sp;
@@ -884,17 +884,17 @@ UnwindPlanSP ABISysV_ppc::CreateDefaultUnwindPlan() {
   uint32_t sp_reg_num = dwarf_r1;
   uint32_t pc_reg_num = dwarf_lr;
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
   const int32_t ptr_size = 4;
-  row->SetUnspecifiedRegistersAreUndefined(true);
-  row->GetCFAValue().SetIsRegisterDereferenced(sp_reg_num);
+  row.SetUnspecifiedRegistersAreUndefined(true);
+  row.GetCFAValue().SetIsRegisterDereferenced(sp_reg_num);
 
-  row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * 1, true);
-  row->SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * 1, true);
+  row.SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
 
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(row);
+  plan_sp->AppendRow(std::move(row));
   plan_sp->SetSourceName("ppc default unwind plan");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
   plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);

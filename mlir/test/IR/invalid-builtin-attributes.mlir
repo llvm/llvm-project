@@ -109,6 +109,20 @@ func.func @invalid_tensor_literal() {
 
 // -----
 
+func.func @invalid_sparse_indices() {
+  // expected-error @+1 {{expected integer elements, but parsed floating-point}}
+  "foo"(){bar = sparse<0.5, 1> : tensor<1xi16>} : () -> ()
+}
+
+// -----
+
+func.func @invalid_sparse_values() {
+  // expected-error @+1 {{expected integer elements, but parsed floating-point}}
+  "foo"(){bar = sparse<0, 1.1> : tensor<1xi16>} : () -> ()
+}
+
+// -----
+
 func.func @hexadecimal_float_leading_minus() {
   // expected-error @+1 {{hexadecimal float literal should not have a leading minus}}
   "foo"() {value = -0x7fff : f16} : () -> ()

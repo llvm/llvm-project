@@ -453,6 +453,7 @@ static ExprResult calculateConstraintSatisfaction(
         Sema::InstantiatingTemplate Inst(
             S, AtomicExpr->getBeginLoc(),
             Sema::InstantiatingTemplate::ConstraintSubstitution{},
+            // FIXME: improve const-correctness of InstantiatingTemplate
             const_cast<NamedDecl *>(Template), Info,
             AtomicExpr->getSourceRange());
         if (Inst.isInvalid())
@@ -1435,9 +1436,9 @@ void Sema::DiagnoseUnsatisfiedConstraint(
   }
 }
 
-const NormalizedConstraint *
-Sema::getNormalizedAssociatedConstraints(
-    NamedDecl *ConstrainedDecl, ArrayRef<const Expr *> AssociatedConstraints) {
+const NormalizedConstraint *Sema::getNormalizedAssociatedConstraints(
+    const NamedDecl *ConstrainedDecl,
+    ArrayRef<const Expr *> AssociatedConstraints) {
   // In case the ConstrainedDecl comes from modules, it is necessary to use
   // the canonical decl to avoid different atomic constraints with the 'same'
   // declarations.
@@ -1461,7 +1462,7 @@ Sema::getNormalizedAssociatedConstraints(
 }
 
 const NormalizedConstraint *clang::getNormalizedAssociatedConstraints(
-    Sema &S, NamedDecl *ConstrainedDecl,
+    Sema &S, const NamedDecl *ConstrainedDecl,
     ArrayRef<const Expr *> AssociatedConstraints) {
   return S.getNormalizedAssociatedConstraints(ConstrainedDecl,
                                               AssociatedConstraints);
@@ -1527,7 +1528,8 @@ substituteParameterMappings(Sema &S, NormalizedConstraint &N,
   Sema::InstantiatingTemplate Inst(
       S, InstLocBegin,
       Sema::InstantiatingTemplate::ParameterMappingSubstitution{},
-      Atomic.ConstraintDecl, {InstLocBegin, InstLocEnd});
+      const_cast<NamedDecl *>(Atomic.ConstraintDecl),
+      {InstLocBegin, InstLocEnd});
   if (Inst.isInvalid())
     return true;
   if (S.SubstTemplateArguments(*Atomic.ParameterMapping, MLTAL, SubstArgs))
@@ -1591,7 +1593,7 @@ NormalizedConstraint &NormalizedConstraint::getRHS() const {
 }
 
 std::optional<NormalizedConstraint>
-NormalizedConstraint::fromConstraintExprs(Sema &S, NamedDecl *D,
+NormalizedConstraint::fromConstraintExprs(Sema &S, const NamedDecl *D,
                                           ArrayRef<const Expr *> E) {
   assert(E.size() != 0);
   auto Conjunction = fromConstraintExpr(S, D, E[0]);
@@ -1608,7 +1610,8 @@ NormalizedConstraint::fromConstraintExprs(Sema &S, NamedDecl *D,
 }
 
 std::optional<NormalizedConstraint>
-NormalizedConstraint::fromConstraintExpr(Sema &S, NamedDecl *D, const Expr *E) {
+NormalizedConstraint::fromConstraintExpr(Sema &S, const NamedDecl *D,
+                                         const Expr *E) {
   assert(E != nullptr);
 
   // C++ [temp.constr.normal]p1.1
@@ -1637,8 +1640,9 @@ NormalizedConstraint::fromConstraintExpr(Sema &S, NamedDecl *D, const Expr *E) {
     {
       Sema::InstantiatingTemplate Inst(
           S, CSE->getExprLoc(),
-          Sema::InstantiatingTemplate::ConstraintNormalization{}, D,
-          CSE->getSourceRange());
+          Sema::InstantiatingTemplate::ConstraintNormalization{},
+          // FIXME: improve const-correctness of InstantiatingTemplate
+          const_cast<NamedDecl *>(D), CSE->getSourceRange());
       if (Inst.isInvalid())
         return std::nullopt;
       // C++ [temp.constr.normal]p1.1
@@ -1726,74 +1730,9 @@ bool FoldExpandedConstraint::AreCompatibleForSubsumption(
   return false;
 }
 
-NormalForm clang::makeCNF(const NormalizedConstraint &Normalized) {
-  if (Normalized.isAtomic())
-    return {{Normalized.getAtomicConstraint()}};
-
-  else if (Normalized.isFoldExpanded())
-    return {{Normalized.getFoldExpandedConstraint()}};
-
-  NormalForm LCNF = makeCNF(Normalized.getLHS());
-  NormalForm RCNF = makeCNF(Normalized.getRHS());
-  if (Normalized.getCompoundKind() == NormalizedConstraint::CCK_Conjunction) {
-    LCNF.reserve(LCNF.size() + RCNF.size());
-    while (!RCNF.empty())
-      LCNF.push_back(RCNF.pop_back_val());
-    return LCNF;
-  }
-
-  // Disjunction
-  NormalForm Res;
-  Res.reserve(LCNF.size() * RCNF.size());
-  for (auto &LDisjunction : LCNF)
-    for (auto &RDisjunction : RCNF) {
-      NormalForm::value_type Combined;
-      Combined.reserve(LDisjunction.size() + RDisjunction.size());
-      std::copy(LDisjunction.begin(), LDisjunction.end(),
-                std::back_inserter(Combined));
-      std::copy(RDisjunction.begin(), RDisjunction.end(),
-                std::back_inserter(Combined));
-      Res.emplace_back(Combined);
-    }
-  return Res;
-}
-
-NormalForm clang::makeDNF(const NormalizedConstraint &Normalized) {
-  if (Normalized.isAtomic())
-    return {{Normalized.getAtomicConstraint()}};
-
-  else if (Normalized.isFoldExpanded())
-    return {{Normalized.getFoldExpandedConstraint()}};
-
-  NormalForm LDNF = makeDNF(Normalized.getLHS());
-  NormalForm RDNF = makeDNF(Normalized.getRHS());
-  if (Normalized.getCompoundKind() == NormalizedConstraint::CCK_Disjunction) {
-    LDNF.reserve(LDNF.size() + RDNF.size());
-    while (!RDNF.empty())
-      LDNF.push_back(RDNF.pop_back_val());
-    return LDNF;
-  }
-
-  // Conjunction
-  NormalForm Res;
-  Res.reserve(LDNF.size() * RDNF.size());
-  for (auto &LConjunction : LDNF) {
-    for (auto &RConjunction : RDNF) {
-      NormalForm::value_type Combined;
-      Combined.reserve(LConjunction.size() + RConjunction.size());
-      std::copy(LConjunction.begin(), LConjunction.end(),
-                std::back_inserter(Combined));
-      std::copy(RConjunction.begin(), RConjunction.end(),
-                std::back_inserter(Combined));
-      Res.emplace_back(Combined);
-    }
-  }
-  return Res;
-}
-
-bool Sema::IsAtLeastAsConstrained(NamedDecl *D1,
+bool Sema::IsAtLeastAsConstrained(const NamedDecl *D1,
                                   MutableArrayRef<const Expr *> AC1,
-                                  NamedDecl *D2,
+                                  const NamedDecl *D2,
                                   MutableArrayRef<const Expr *> AC2,
                                   bool &Result) {
 #ifndef NDEBUG
@@ -1820,7 +1759,7 @@ bool Sema::IsAtLeastAsConstrained(NamedDecl *D1,
     return false;
   }
 
-  std::pair<NamedDecl *, NamedDecl *> Key{D1, D2};
+  std::pair<const NamedDecl *, const NamedDecl *> Key{D1, D2};
   auto CacheEntry = SubsumptionCache.find(Key);
   if (CacheEntry != SubsumptionCache.end()) {
     Result = CacheEntry->second;
@@ -1842,18 +1781,21 @@ bool Sema::IsAtLeastAsConstrained(NamedDecl *D1,
     }
   }
 
-  if (clang::subsumes(
-          *this, D1, AC1, D2, AC2, Result,
-          [this](const AtomicConstraint &A, const AtomicConstraint &B) {
-            return A.subsumes(Context, B);
-          }))
+  SubsumptionChecker SC(*this);
+  std::optional<bool> Subsumes = SC.Subsumes(D1, AC1, D2, AC2);
+  if (!Subsumes) {
+    // Normalization failed
     return true;
-  SubsumptionCache.try_emplace(Key, Result);
+  }
+  Result = *Subsumes;
+  SubsumptionCache.try_emplace(Key, *Subsumes);
   return false;
 }
 
-bool Sema::MaybeEmitAmbiguousAtomicConstraintsDiagnostic(NamedDecl *D1,
-    ArrayRef<const Expr *> AC1, NamedDecl *D2, ArrayRef<const Expr *> AC2) {
+bool Sema::MaybeEmitAmbiguousAtomicConstraintsDiagnostic(
+    const NamedDecl *D1, ArrayRef<const Expr *> AC1, const NamedDecl *D2,
+    ArrayRef<const Expr *> AC2) {
+
   if (isSFINAEContext())
     // No need to work here because our notes would be discarded.
     return false;
@@ -1861,32 +1803,27 @@ bool Sema::MaybeEmitAmbiguousAtomicConstraintsDiagnostic(NamedDecl *D1,
   if (AC1.empty() || AC2.empty())
     return false;
 
-  auto NormalExprEvaluator =
-      [this] (const AtomicConstraint &A, const AtomicConstraint &B) {
-        return A.subsumes(Context, B);
-      };
-
   const Expr *AmbiguousAtomic1 = nullptr, *AmbiguousAtomic2 = nullptr;
-  auto IdenticalExprEvaluator =
-      [&] (const AtomicConstraint &A, const AtomicConstraint &B) {
-        if (!A.hasMatchingParameterMapping(Context, B))
-          return false;
-        const Expr *EA = A.ConstraintExpr, *EB = B.ConstraintExpr;
-        if (EA == EB)
-          return true;
+  auto IdenticalExprEvaluator = [&](const AtomicConstraint &A,
+                                    const AtomicConstraint &B) {
+    if (!A.hasMatchingParameterMapping(Context, B))
+      return false;
+    const Expr *EA = A.ConstraintExpr, *EB = B.ConstraintExpr;
+    if (EA == EB)
+      return true;
 
-        // Not the same source level expression - are the expressions
-        // identical?
-        llvm::FoldingSetNodeID IDA, IDB;
-        EA->Profile(IDA, Context, /*Canonical=*/true);
-        EB->Profile(IDB, Context, /*Canonical=*/true);
-        if (IDA != IDB)
-          return false;
+    // Not the same source level expression - are the expressions
+    // identical?
+    llvm::FoldingSetNodeID IDA, IDB;
+    EA->Profile(IDA, Context, /*Canonical=*/true);
+    EB->Profile(IDB, Context, /*Canonical=*/true);
+    if (IDA != IDB)
+      return false;
 
-        AmbiguousAtomic1 = EA;
-        AmbiguousAtomic2 = EB;
-        return true;
-      };
+    AmbiguousAtomic1 = EA;
+    AmbiguousAtomic2 = EB;
+    return true;
+  };
 
   {
     // The subsumption checks might cause diagnostics
@@ -1894,27 +1831,25 @@ bool Sema::MaybeEmitAmbiguousAtomicConstraintsDiagnostic(NamedDecl *D1,
     auto *Normalized1 = getNormalizedAssociatedConstraints(D1, AC1);
     if (!Normalized1)
       return false;
-    const NormalForm DNF1 = makeDNF(*Normalized1);
-    const NormalForm CNF1 = makeCNF(*Normalized1);
 
     auto *Normalized2 = getNormalizedAssociatedConstraints(D2, AC2);
     if (!Normalized2)
       return false;
-    const NormalForm DNF2 = makeDNF(*Normalized2);
-    const NormalForm CNF2 = makeCNF(*Normalized2);
 
-    bool Is1AtLeastAs2Normally =
-        clang::subsumes(DNF1, CNF2, NormalExprEvaluator);
-    bool Is2AtLeastAs1Normally =
-        clang::subsumes(DNF2, CNF1, NormalExprEvaluator);
-    bool Is1AtLeastAs2 = clang::subsumes(DNF1, CNF2, IdenticalExprEvaluator);
-    bool Is2AtLeastAs1 = clang::subsumes(DNF2, CNF1, IdenticalExprEvaluator);
+    SubsumptionChecker SC(*this);
+
+    bool Is1AtLeastAs2Normally = SC.Subsumes(Normalized1, Normalized2);
+    bool Is2AtLeastAs1Normally = SC.Subsumes(Normalized2, Normalized1);
+
+    SubsumptionChecker SC2(*this, IdenticalExprEvaluator);
+    bool Is1AtLeastAs2 = SC2.Subsumes(Normalized1, Normalized2);
+    bool Is2AtLeastAs1 = SC2.Subsumes(Normalized2, Normalized1);
+
     if (Is1AtLeastAs2 == Is1AtLeastAs2Normally &&
         Is2AtLeastAs1 == Is2AtLeastAs1Normally)
       // Same result - no ambiguity was caused by identical atomic expressions.
       return false;
   }
-
   // A different result! Some ambiguous atomic constraint(s) caused a difference
   assert(AmbiguousAtomic1 && AmbiguousAtomic2);
 
@@ -2000,4 +1935,259 @@ NormalizedConstraint::getFoldExpandedConstraint() const {
   assert(isFoldExpanded() &&
          "getFoldExpandedConstraint called on non-fold-expanded constraint.");
   return cast<FoldExpandedConstraint *>(Constraint);
+}
+
+//
+//
+// ------------------------ Subsumption -----------------------------------
+//
+//
+
+template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeID> {
+
+  static FoldingSetNodeID getEmptyKey() {
+    FoldingSetNodeID ID;
+    ID.AddInteger(std::numeric_limits<unsigned>::max());
+    return ID;
+  }
+
+  static FoldingSetNodeID getTombstoneKey() {
+    FoldingSetNodeID ID;
+    for (unsigned I = 0; I < sizeof(ID) / sizeof(unsigned); ++I) {
+      ID.AddInteger(std::numeric_limits<unsigned>::max());
+    }
+    return ID;
+  }
+
+  static unsigned getHashValue(const FoldingSetNodeID &Val) {
+    return Val.ComputeHash();
+  }
+
+  static bool isEqual(const FoldingSetNodeID &LHS,
+                      const FoldingSetNodeID &RHS) {
+    return LHS == RHS;
+  }
+};
+
+SubsumptionChecker::SubsumptionChecker(Sema &SemaRef,
+                                       SubsumptionCallable Callable)
+    : SemaRef(SemaRef), Callable(Callable), NextID(1) {}
+
+uint16_t SubsumptionChecker::getNewLiteralId() {
+  assert((unsigned(NextID) + 1 < std::numeric_limits<uint16_t>::max()) &&
+         "too many constraints!");
+  return NextID++;
+}
+
+auto SubsumptionChecker::find(AtomicConstraint *Ori) -> Literal {
+  auto &Elems = AtomicMap[Ori->ConstraintExpr];
+  // C++ [temp.constr.order] p2
+  //   - an atomic constraint A subsumes another atomic constraint B
+  //     if and only if the A and B are identical [...]
+  //
+  // C++ [temp.constr.atomic] p2
+  //   Two atomic constraints are identical if they are formed from the
+  //   same expression and the targets of the parameter mappings are
+  //   equivalent according to the rules for expressions [...]
+
+  // Because subsumption of atomic constraints is an identity
+  // relationship that does not require further analysis
+  // We cache the results such that if an atomic constraint literal
+  // subsumes another, their literal will be the same
+
+  llvm::FoldingSetNodeID ID;
+  const auto &Mapping = Ori->ParameterMapping;
+  ID.AddBoolean(Mapping.has_value());
+  if (Mapping) {
+    for (const TemplateArgumentLoc &TAL : *Mapping) {
+      SemaRef.getASTContext()
+          .getCanonicalTemplateArgument(TAL.getArgument())
+          .Profile(ID, SemaRef.getASTContext());
+    }
+  }
+  auto It = Elems.find(ID);
+  if (It == Elems.end()) {
+    It =
+        Elems
+            .insert({ID, MappedAtomicConstraint{Ori, Literal{getNewLiteralId(),
+                                                             Literal::Atomic}}})
+            .first;
+    ReverseMap[It->second.ID.Value] = Ori;
+  }
+  return It->getSecond().ID;
+}
+
+auto SubsumptionChecker::find(FoldExpandedConstraint *Ori) -> Literal {
+  auto &Elems = FoldMap[Ori->Pattern];
+
+  FoldExpendedConstraintKey K;
+  K.Kind = Ori->Kind;
+
+  auto It = llvm::find_if(Elems, [&K](const FoldExpendedConstraintKey &Other) {
+    return K.Kind == Other.Kind;
+  });
+  if (It == Elems.end()) {
+    K.ID = {getNewLiteralId(), Literal::FoldExpanded};
+    It = Elems.insert(Elems.end(), std::move(K));
+    ReverseMap[It->ID.Value] = Ori;
+  }
+  return It->ID;
+}
+
+auto SubsumptionChecker::CNF(const NormalizedConstraint &C) -> CNFFormula {
+  return SubsumptionChecker::Normalize<CNFFormula>(C);
+}
+auto SubsumptionChecker::DNF(const NormalizedConstraint &C) -> DNFFormula {
+  return SubsumptionChecker::Normalize<DNFFormula>(C);
+}
+
+///
+/// \brief SubsumptionChecker::Normalize
+///
+/// Normalize a formula to Conjunctive Normal Form or
+/// Disjunctive normal form.
+///
+/// Each Atomic (and Fold Expanded) constraint gets represented by
+/// a single id to reduce space.
+///
+/// To minimize risks of exponential blow up, if two atomic
+/// constraints subsumes each other (same constraint and mapping),
+/// they are represented by the same literal.
+///
+template <typename FormulaType>
+FormulaType SubsumptionChecker::Normalize(const NormalizedConstraint &NC) {
+  FormulaType Res;
+
+  auto Add = [&, this](Clause C) {
+    // Sort each clause and remove duplicates for faster comparisons.
+    llvm::sort(C);
+    C.erase(llvm::unique(C), C.end());
+    AddUniqueClauseToFormula(Res, std::move(C));
+  };
+
+  if (NC.isAtomic())
+    return {{find(NC.getAtomicConstraint())}};
+
+  if (NC.isFoldExpanded())
+    return {{find(NC.getFoldExpandedConstraint())}};
+
+  FormulaType Left, Right;
+  SemaRef.runWithSufficientStackSpace(SourceLocation(), [&] {
+    Left = Normalize<FormulaType>(NC.getLHS());
+    Right = Normalize<FormulaType>(NC.getRHS());
+  });
+
+  if (NC.getCompoundKind() == FormulaType::Kind) {
+    Res = std::move(Left);
+    Res.reserve(Left.size() + Right.size());
+    std::for_each(std::make_move_iterator(Right.begin()),
+                  std::make_move_iterator(Right.end()), Add);
+    return Res;
+  }
+
+  Res.reserve(Left.size() * Right.size());
+  for (const auto &LTransform : Left) {
+    for (const auto &RTransform : Right) {
+      Clause Combined;
+      Combined.reserve(LTransform.size() + RTransform.size());
+      llvm::copy(LTransform, std::back_inserter(Combined));
+      llvm::copy(RTransform, std::back_inserter(Combined));
+      Add(std::move(Combined));
+    }
+  }
+  return Res;
+}
+
+void SubsumptionChecker::AddUniqueClauseToFormula(Formula &F, Clause C) {
+  for (auto &Other : F) {
+    if (llvm::equal(C, Other))
+      return;
+  }
+  F.push_back(C);
+}
+
+std::optional<bool> SubsumptionChecker::Subsumes(const NamedDecl *DP,
+                                                 ArrayRef<const Expr *> P,
+                                                 const NamedDecl *DQ,
+                                                 ArrayRef<const Expr *> Q) {
+  const NormalizedConstraint *PNormalized =
+      getNormalizedAssociatedConstraints(SemaRef, DP, P);
+  if (!PNormalized)
+    return std::nullopt;
+
+  const NormalizedConstraint *QNormalized =
+      getNormalizedAssociatedConstraints(SemaRef, DQ, Q);
+  if (!QNormalized)
+    return std::nullopt;
+
+  return Subsumes(PNormalized, QNormalized);
+}
+
+bool SubsumptionChecker::Subsumes(const NormalizedConstraint *P,
+                                  const NormalizedConstraint *Q) {
+
+  DNFFormula DNFP = DNF(*P);
+  CNFFormula CNFQ = CNF(*Q);
+  return Subsumes(DNFP, CNFQ);
+}
+
+bool SubsumptionChecker::Subsumes(const DNFFormula &PDNF,
+                                  const CNFFormula &QCNF) {
+  for (const auto &Pi : PDNF) {
+    for (const auto &Qj : QCNF) {
+      // C++ [temp.constr.order] p2
+      //   - [...] a disjunctive clause Pi subsumes a conjunctive clause Qj if
+      //     and only if there exists an atomic constraint Pia in Pi for which
+      //     there exists an atomic constraint, Qjb, in Qj such that Pia
+      //     subsumes Qjb.
+      if (!DNFSubsumes(Pi, Qj))
+        return false;
+    }
+  }
+  return true;
+}
+
+bool SubsumptionChecker::DNFSubsumes(const Clause &P, const Clause &Q) {
+
+  return llvm::any_of(P, [&](Literal LP) {
+    return llvm::any_of(Q, [this, LP](Literal LQ) { return Subsumes(LP, LQ); });
+  });
+}
+
+bool SubsumptionChecker::Subsumes(const FoldExpandedConstraint *A,
+                                  const FoldExpandedConstraint *B) {
+  std::pair<const FoldExpandedConstraint *, const FoldExpandedConstraint *> Key{
+      A, B};
+
+  auto It = FoldSubsumptionCache.find(Key);
+  if (It == FoldSubsumptionCache.end()) {
+    // C++ [temp.constr.order]
+    // a fold expanded constraint A subsumes another fold expanded
+    // constraint B if they are compatible for subsumption, have the same
+    // fold-operator, and the constraint of A subsumes that of B.
+    bool DoesSubsume =
+        A->Kind == B->Kind &&
+        FoldExpandedConstraint::AreCompatibleForSubsumption(*A, *B) &&
+        Subsumes(&A->Constraint, &B->Constraint);
+    It = FoldSubsumptionCache.try_emplace(std::move(Key), DoesSubsume).first;
+  }
+  return It->second;
+}
+
+bool SubsumptionChecker::Subsumes(Literal A, Literal B) {
+  if (A.Kind != B.Kind)
+    return false;
+  switch (A.Kind) {
+  case Literal::Atomic:
+    if (!Callable)
+      return A.Value == B.Value;
+    return Callable(
+        *static_cast<const AtomicConstraint *>(ReverseMap[A.Value]),
+        *static_cast<const AtomicConstraint *>(ReverseMap[B.Value]));
+  case Literal::FoldExpanded:
+    return Subsumes(
+        static_cast<const FoldExpandedConstraint *>(ReverseMap[A.Value]),
+        static_cast<const FoldExpandedConstraint *>(ReverseMap[B.Value]));
+  }
+  llvm_unreachable("unknown literal kind");
 }

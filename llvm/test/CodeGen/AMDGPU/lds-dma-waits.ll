@@ -67,7 +67,6 @@ main_body:
 }
 
 ; There are 8 pseudo registers defined to track LDS DMA dependencies.
-; When exhausted we default to vmcnt(0).
 
 ; GCN-LABEL: {{^}}buffer_load_lds_dword_10_arrays:
 ; GCN-COUNT-10: buffer_load_dword
@@ -86,7 +85,6 @@ main_body:
 ; GCN: s_waitcnt vmcnt(2)
 ; GCN-NOT: s_waitcnt vmcnt
 ; GCN: ds_read_b32
-; GCN: s_waitcnt vmcnt(0)
 ; GCN: ds_read_b32
 define amdgpu_kernel void @buffer_load_lds_dword_10_arrays(<4 x i32> %rsrc, i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, i32 %i6, i32 %i7, i32 %i8, i32 %i9, ptr addrspace(1) %out) {
 main_body:
@@ -148,6 +146,31 @@ main_body:
   store float %val.7, ptr addrspace(1) %out.gep.7
   store float %val.8, ptr addrspace(1) %out.gep.8
   store float %val.9, ptr addrspace(1) %out.gep.9
+  ret void
+}
+
+define amdgpu_kernel void @global_load_lds_no_alias_ds_read(ptr addrspace(1) nocapture %gptr, i32 %i1, i32 %i2, ptr addrspace(1) %out) {
+; GFX9-LABEL: global_load_lds_no_alias_ds_read:
+; GFX9: global_load_dword
+; GFX9: global_load_dword
+; GFX9: s_waitcnt vmcnt(1)
+; GFX9-NOT: s_waitcnt vmcnt(0)
+; GFX9: ds_read_b32
+; GFX9: s_waitcnt vmcnt(0)
+; GFX9: ds_read_b32
+; GFX9: s_endpgm
+body:
+  call void @llvm.amdgcn.global.load.lds(ptr addrspace(1) %gptr, ptr addrspace(3) @lds.0, i32 4, i32 0, i32 0)
+  call void @llvm.amdgcn.global.load.lds(ptr addrspace(1) %gptr, ptr addrspace(3) @lds.1, i32 4, i32 4, i32 0)
+  call void @llvm.amdgcn.s.waitcnt(i32 3953)
+  %gep.0 = getelementptr float, ptr addrspace(3) @lds.2, i32 %i1
+  %val.0 = load float, ptr addrspace(3) %gep.0, align 4
+  call void @llvm.amdgcn.s.waitcnt(i32 3952)
+  %gep.1 = getelementptr float, ptr addrspace(3) @lds.3, i32 %i2
+  %val.1 = load float, ptr addrspace(3) %gep.1, align 4
+  %tmp = insertelement <2 x float> poison, float %val.0, i32 0
+  %res = insertelement <2 x float> %tmp, float %val.1, i32 1
+  store <2 x float> %res, ptr addrspace(1) %out
   ret void
 }
 

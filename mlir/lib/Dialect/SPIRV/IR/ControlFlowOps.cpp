@@ -259,6 +259,13 @@ static bool isMergeBlock(Block &block) {
          isa<spirv::MergeOp>(block.front());
 }
 
+/// Returns true if a `spirv.mlir.merge` op outside the merge block.
+static bool hasOtherMerge(Region &region) {
+  return !region.empty() && llvm::any_of(region.getOps(), [&](Operation &op) {
+    return isa<spirv::MergeOp>(op) && op.getBlock() != &region.back();
+  });
+}
+
 LogicalResult LoopOp::verifyRegions() {
   auto *op = getOperation();
 
@@ -298,6 +305,9 @@ LogicalResult LoopOp::verifyRegions() {
   if (!isMergeBlock(merge))
     return emitOpError("last block must be the merge block with only one "
                        "'spirv.mlir.merge' op");
+  if (hasOtherMerge(region))
+    return emitOpError(
+        "should not have 'spirv.mlir.merge' op outside the merge block");
 
   if (std::next(region.begin()) == region.end())
     return emitOpError(
@@ -375,24 +385,6 @@ void LoopOp::addEntryAndMergeBlock(OpBuilder &builder) {
 
   // Add a spirv.mlir.merge op into the merge block.
   builder.create<spirv::MergeOp>(getLoc());
-}
-
-//===----------------------------------------------------------------------===//
-// spirv.mlir.merge
-//===----------------------------------------------------------------------===//
-
-LogicalResult MergeOp::verify() {
-  auto *parentOp = (*this)->getParentOp();
-  if (!parentOp || !isa<spirv::SelectionOp, spirv::LoopOp>(parentOp))
-    return emitOpError(
-        "expected parent op to be 'spirv.mlir.selection' or 'spirv.mlir.loop'");
-
-  // TODO: This check should be done in `verifyRegions` of parent op.
-  Block &parentLastBlock = (*this)->getParentRegion()->back();
-  if (getOperation() != parentLastBlock.getTerminator())
-    return emitOpError("can only be used in the last block of "
-                       "'spirv.mlir.selection' or 'spirv.mlir.loop'");
-  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -507,6 +499,9 @@ LogicalResult SelectionOp::verifyRegions() {
   if (!isMergeBlock(region.back()))
     return emitOpError("last block must be the merge block with only one "
                        "'spirv.mlir.merge' op");
+  if (hasOtherMerge(region))
+    return emitOpError(
+        "should not have 'spirv.mlir.merge' op outside the merge block");
 
   if (std::next(region.begin()) == region.end())
     return emitOpError("must have a selection header block");

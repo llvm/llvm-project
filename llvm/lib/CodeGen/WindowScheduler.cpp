@@ -283,8 +283,7 @@ void WindowScheduler::restoreMBB() {
     MI.eraseFromParent();
   }
   // Restore MBB to the state before window scheduling.
-  for (auto *MI : OriMIs)
-    MBB->push_back(MI);
+  llvm::append_range(*MBB, OriMIs);
   updateLiveIntervals();
 }
 

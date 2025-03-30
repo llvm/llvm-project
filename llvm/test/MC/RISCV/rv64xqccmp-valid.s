@@ -148,10 +148,6 @@ qc.cm.push {ra, s0-s11}, -112
 # CHECK-ASM: encoding: [0xf6,0xb8]
 qc.cm.push {ra, s0-s11}, -128
 
-# CHECK-ASM-AND-OBJ: qc.cm.pushfp {ra}, -16
-# CHECK-ASM: encoding: [0x42,0xb9]
-qc.cm.pushfp {ra}, -16
-
 # CHECK-ASM-AND-OBJ: qc.cm.pushfp {ra, s0}, -32
 # CHECK-ASM: encoding: [0x56,0xb9]
 qc.cm.pushfp {ra, s0}, -32

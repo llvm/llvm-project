@@ -88,7 +88,6 @@ RESOURCE<float> Buffer;
 // CHECK-UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-SAME{LITERAL}: [[hlsl::raw_buffer]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-NEXT: HLSLResourceAttr {{.*}} Implicit RawBuffer
 
 // CHECK-SUBSCRIPT: CXXMethodDecl {{.*}} operator[] 'const element_type &(unsigned int) const'
 // CHECK-SUBSCRIPT-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
@@ -219,4 +218,3 @@ RESOURCE<float> Buffer;
 // CHECK-ROV-SAME{LITERAL}: [[hlsl::is_rov]]
 // CHECK-SAME{LITERAL}: [[hlsl::raw_buffer]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(float)]]
-// CHECK-NEXT: HLSLResourceAttr {{.*}} Implicit RawBuffer
