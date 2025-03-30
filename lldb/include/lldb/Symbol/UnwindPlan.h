@@ -438,7 +438,7 @@ public:
 
   // Performs a deep copy of the plan, including all the rows (expensive).
   UnwindPlan(const UnwindPlan &rhs)
-      : m_plan_valid_address_range(rhs.m_plan_valid_address_range),
+      : m_plan_valid_ranges(rhs.m_plan_valid_ranges),
         m_register_kind(rhs.m_register_kind),
         m_return_addr_register(rhs.m_return_addr_register),
         m_source_name(rhs.m_source_name),
@@ -462,9 +462,9 @@ public:
 
   void Dump(Stream &s, Thread *thread, lldb::addr_t base_addr) const;
 
-  void AppendRow(const RowSP &row_sp);
+  void AppendRow(Row row);
 
-  void InsertRow(const RowSP &row_sp, bool replace_existing = false);
+  void InsertRow(Row row, bool replace_existing = false);
 
   // Returns a pointer to the best row for the given offset into the function's
   // instructions. If offset is -1 it indicates that the function start is
@@ -492,10 +492,8 @@ public:
   // This UnwindPlan may not be valid at every address of the function span.
   // For instance, a FastUnwindPlan will not be valid at the prologue setup
   // instructions - only in the body of the function.
-  void SetPlanValidAddressRange(const AddressRange &range);
-
-  const AddressRange &GetAddressRange() const {
-    return m_plan_valid_address_range;
+  void SetPlanValidAddressRanges(std::vector<AddressRange> ranges) {
+    m_plan_valid_ranges = std::move(ranges);
   }
 
   bool PlanValidAtAddress(Address addr);
@@ -544,11 +542,11 @@ public:
     m_plan_is_for_signal_trap = is_for_signal_trap;
   }
 
-  int GetRowCount() const;
+  int GetRowCount() const { return m_row_list.size(); }
 
   void Clear() {
     m_row_list.clear();
-    m_plan_valid_address_range.Clear();
+    m_plan_valid_ranges.clear();
     m_register_kind = lldb::eRegisterKindDWARF;
     m_source_name.Clear();
     m_plan_is_sourced_from_compiler = eLazyBoolCalculate;
@@ -571,9 +569,8 @@ public:
   }
 
 private:
-  typedef std::vector<RowSP> collection;
-  collection m_row_list;
-  AddressRange m_plan_valid_address_range;
+  std::vector<RowSP> m_row_list;
+  std::vector<AddressRange> m_plan_valid_ranges;
   lldb::RegisterKind m_register_kind; // The RegisterKind these register numbers
                                       // are in terms of - will need to be
   // translated to lldb native reg nums at unwind time

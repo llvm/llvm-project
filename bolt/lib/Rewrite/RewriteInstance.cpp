@@ -20,7 +20,7 @@
 #include "bolt/Passes/BinaryPasses.h"
 #include "bolt/Passes/CacheMetrics.h"
 #include "bolt/Passes/IdenticalCodeFolding.h"
-#include "bolt/Passes/NonPacProtectedRetAnalysis.h"
+#include "bolt/Passes/PAuthGadgetScanner.h"
 #include "bolt/Passes/ReorderFunctions.h"
 #include "bolt/Profile/BoltAddressTranslation.h"
 #include "bolt/Profile/DataAggregator.h"
@@ -2455,6 +2455,30 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
     if (Symbol)
       SymbolIndex[Symbol] = getRelocationSymbol(InputFile, Rel);
 
+    const uint64_t ReferencedAddress = SymbolAddress + Addend;
+    BinaryFunction *Func =
+        BC->getBinaryFunctionContainingAddress(ReferencedAddress);
+
+    if (Relocation::isRelative(RType) && SymbolAddress == 0) {
+      if (Func) {
+        if (!Func->isInConstantIsland(ReferencedAddress)) {
+          if (const uint64_t ReferenceOffset =
+                  ReferencedAddress - Func->getAddress()) {
+            Func->addEntryPointAtOffset(ReferenceOffset);
+          }
+        } else {
+          BC->errs() << "BOLT-ERROR: referenced address at 0x"
+                     << Twine::utohexstr(ReferencedAddress)
+                     << " is in constant island of function " << *Func << "\n";
+          exit(1);
+        }
+      }
+    } else if (Relocation::isRelative(RType) && SymbolAddress != 0) {
+      BC->errs() << "BOLT-ERROR: symbol address non zero for RELATIVE "
+                    "relocation type\n";
+      exit(1);
+    }
+
     BC->addDynamicRelocation(Rel.getOffset(), Symbol, RType, Addend);
   }
 }
@@ -3520,8 +3544,7 @@ void RewriteInstance::runBinaryAnalyses() {
     opts::GadgetScannersToRun.addValue(GSK::GS_ALL);
   for (GSK ScannerToRun : opts::GadgetScannersToRun) {
     if (ScannerToRun == GSK::GS_PACRET || ScannerToRun == GSK::GS_ALL)
-      Manager.registerPass(
-          std::make_unique<NonPacProtectedRetAnalysis::Analysis>());
+      Manager.registerPass(std::make_unique<PAuthGadgetScanner::Analysis>());
   }
 
   BC->logBOLTErrorsAndQuitOnFatal(Manager.runPasses());
@@ -5055,6 +5078,8 @@ void RewriteInstance::updateELFSymbolTable(
 
   // Add symbols of injected functions
   for (BinaryFunction *Function : BC->getInjectedBinaryFunctions()) {
+    if (Function->isAnonymous())
+      continue;
     ELFSymTy NewSymbol;
     BinarySection *OriginSection = Function->getOriginSection();
     NewSymbol.st_shndx =
@@ -5696,7 +5721,7 @@ uint64_t RewriteInstance::getNewFunctionOrDataAddress(uint64_t OldAddress) {
         for (const BinaryBasicBlock &BB : *BF)
           if (BB.isEntryPoint() &&
               (BF->getAddress() + BB.getOffset()) == OldAddress)
-            return BF->getOutputAddress() + BB.getOffset();
+            return BB.getOutputStartAddress();
       }
       BC->errs() << "BOLT-ERROR: unable to get new address corresponding to "
                     "input address 0x"

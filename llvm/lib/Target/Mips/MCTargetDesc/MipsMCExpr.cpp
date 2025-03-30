@@ -24,20 +24,20 @@ using namespace llvm;
 
 #define DEBUG_TYPE "mipsmcexpr"
 
-const MipsMCExpr *MipsMCExpr::create(MipsMCExpr::MipsExprKind Kind,
+const MipsMCExpr *MipsMCExpr::create(MipsMCExpr::Specifier S,
                                      const MCExpr *Expr, MCContext &Ctx) {
-  return new (Ctx) MipsMCExpr(Kind, Expr);
+  return new (Ctx) MipsMCExpr(S, Expr);
 }
 
-const MipsMCExpr *MipsMCExpr::createGpOff(MipsMCExpr::MipsExprKind Kind,
+const MipsMCExpr *MipsMCExpr::createGpOff(MipsMCExpr::Specifier S,
                                           const MCExpr *Expr, MCContext &Ctx) {
-  return create(Kind, create(MEK_NEG, create(MEK_GPREL, Expr, Ctx), Ctx), Ctx);
+  return create(S, create(MEK_NEG, create(MEK_GPREL, Expr, Ctx), Ctx), Ctx);
 }
 
 void MipsMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   int64_t AbsVal;
 
-  switch (Kind) {
+  switch (specifier) {
   case MEK_None:
   case MEK_Special:
     llvm_unreachable("MEK_None and MEK_Special are invalid");
@@ -129,8 +129,9 @@ void MipsMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   OS << ')';
 }
 
-bool MipsMCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm)
-    const { // Look for the %hi(%neg(%gp_rel(X))) and %lo(%neg(%gp_rel(X)))
+bool MipsMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
+                                           const MCAssembler *Asm) const {
+  // Look for the %hi(%neg(%gp_rel(X))) and %lo(%neg(%gp_rel(X)))
   // special cases.
   if (isGpOff()) {
     const MCExpr *SubExpr =
@@ -139,28 +140,26 @@ bool MipsMCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm)
     if (!SubExpr->evaluateAsRelocatable(Res, Asm))
       return false;
 
-    Res = MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(),
-                       MEK_Special);
+    Res.setSpecifier(MEK_Special);
     return true;
   }
 
   if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
-  Res =
-      MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(), getKind());
-  return !Res.getSymB();
+  Res.setSpecifier(specifier);
+  return !Res.getSubSym();
 }
 
 void MipsMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
   Streamer.visitUsedExpr(*getSubExpr());
 }
 
-bool MipsMCExpr::isGpOff(MipsExprKind &Kind) const {
-  if (getKind() == MEK_HI || getKind() == MEK_LO) {
+bool MipsMCExpr::isGpOff(Specifier &S) const {
+  if (getSpecifier() == MEK_HI || getSpecifier() == MEK_LO) {
     if (const MipsMCExpr *S1 = dyn_cast<const MipsMCExpr>(getSubExpr())) {
       if (const MipsMCExpr *S2 = dyn_cast<const MipsMCExpr>(S1->getSubExpr())) {
-        if (S1->getKind() == MEK_NEG && S2->getKind() == MEK_GPREL) {
-          Kind = getKind();
+        if (S1->getSpecifier() == MEK_NEG && S2->getSpecifier() == MEK_GPREL) {
+          S = getSpecifier();
           return true;
         }
       }

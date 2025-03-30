@@ -551,8 +551,7 @@ void DefGen::emitTraitMethods(const InterfaceTrait &trait) {
   // Get the set of methods that should always be declared.
   auto alwaysDeclaredMethods = trait.getAlwaysDeclaredMethods();
   StringSet<> alwaysDeclared;
-  alwaysDeclared.insert(alwaysDeclaredMethods.begin(),
-                        alwaysDeclaredMethods.end());
+  alwaysDeclared.insert_range(alwaysDeclaredMethods);
 
   Interface iface = trait.getInterface(); // causes strange bugs if elided
   for (auto &method : iface.getMethods()) {

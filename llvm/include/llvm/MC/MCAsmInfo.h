@@ -424,8 +424,8 @@ protected:
   // If true, use Motorola-style integers in Assembly (ex. $0ac).
   bool UseMotorolaIntegers = false;
 
-  llvm::DenseMap<uint32_t, StringRef> VariantKindToName;
-  llvm::StringMap<uint32_t> NameToVariantKind;
+  llvm::DenseMap<uint32_t, StringRef> SpecifierToName;
+  llvm::StringMap<uint32_t> NameToSpecifier;
   void initializeVariantKinds(ArrayRef<VariantKindDesc> Descs);
 
 public:
@@ -708,8 +708,8 @@ public:
 
   bool shouldUseMotorolaIntegers() const { return UseMotorolaIntegers; }
 
-  StringRef getVariantKindName(uint32_t Kind) const;
-  std::optional<uint32_t> getVariantKindForName(StringRef Name) const;
+  StringRef getSpecifierName(uint32_t S) const;
+  std::optional<uint32_t> getSpecifierForName(StringRef Name) const;
 };
 
 } // end namespace llvm

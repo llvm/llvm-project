@@ -38,4 +38,5 @@ MODULE_PASS("print<dxil-root-signature>", dxil::RootSignatureAnalysisPrinter(dbg
 #define FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
 FUNCTION_PASS("dxil-resource-access", DXILResourceAccess())
+FUNCTION_PASS("dxil-legalize", DXILLegalizePass())
 #undef FUNCTION_PASS

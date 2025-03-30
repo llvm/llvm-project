@@ -360,14 +360,14 @@ def cuf_SharedMemoryOp
   let arguments = (ins TypeAttr:$in_type, OptionalAttr<StrAttr>:$uniq_name,
       OptionalAttr<StrAttr>:$bindc_name, Variadic<AnyIntegerType>:$typeparams,
       Variadic<AnyIntegerType>:$shape,
-      OptionalAttr<I32Attr>:$offset // offset in bytes from the shared memory
-                                    // base address.
+      Optional<AnyIntegerType>:$offset // offset in bytes from the shared memory
+                                       // base address.
   );
 
   let results = (outs fir_ReferenceType:$ptr);
 
   let assemblyFormat = [{
-      $in_type (`(` $typeparams^ `:` type($typeparams) `)`)?
+      (`[` $offset^ `:` type($offset) `]`)? $in_type (`(` $typeparams^ `:` type($typeparams) `)`)?
         (`,` $shape^ `:` type($shape) )?  attr-dict `->` qualified(type($ptr))
   }];
 

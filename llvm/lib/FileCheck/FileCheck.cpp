@@ -1010,8 +1010,10 @@ bool Pattern::parsePattern(StringRef PatternStr, StringRef Prefix,
         // Handle substitution of string variables that were defined earlier on
         // the same line by emitting a backreference. Expressions do not
         // support substituting a numeric variable defined on the same line.
-        if (!IsNumBlock && VariableDefs.find(SubstStr) != VariableDefs.end()) {
-          unsigned CaptureParenGroup = VariableDefs[SubstStr];
+        decltype(VariableDefs)::iterator It;
+        if (!IsNumBlock &&
+            (It = VariableDefs.find(SubstStr)) != VariableDefs.end()) {
+          unsigned CaptureParenGroup = It->second;
           if (CaptureParenGroup < 1 || CaptureParenGroup > 9) {
             SM.PrintMessage(SMLoc::getFromPointer(SubstStr.data()),
                             SourceMgr::DK_Error,
@@ -2489,14 +2491,10 @@ static bool ValidatePrefixes(StringRef Kind, StringSet<> &UniquePrefixes,
 bool FileCheck::ValidateCheckPrefixes() {
   StringSet<> UniquePrefixes;
   // Add default prefixes to catch user-supplied duplicates of them below.
-  if (Req.CheckPrefixes.empty()) {
-    for (const char *Prefix : DefaultCheckPrefixes)
-      UniquePrefixes.insert(Prefix);
-  }
-  if (Req.CommentPrefixes.empty()) {
-    for (const char *Prefix : DefaultCommentPrefixes)
-      UniquePrefixes.insert(Prefix);
-  }
+  if (Req.CheckPrefixes.empty())
+    UniquePrefixes.insert_range(DefaultCheckPrefixes);
+  if (Req.CommentPrefixes.empty())
+    UniquePrefixes.insert_range(DefaultCommentPrefixes);
   // Do not validate the default prefixes, or diagnostics about duplicates might
   // incorrectly indicate that they were supplied by the user.
   if (!ValidatePrefixes("check", UniquePrefixes, Req.CheckPrefixes))

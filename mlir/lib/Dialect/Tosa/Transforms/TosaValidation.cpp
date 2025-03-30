@@ -165,6 +165,8 @@ public:
     this->profile = options.profile;
     this->extension = options.extension;
     this->strictOpSpecAlignment = options.strictOpSpecAlignment;
+    this->allowInvalidOpDatatypeCombinations =
+        options.allowInvalidOpDatatypeCombinations;
     this->level = options.level;
   }
   void runOnOperation() final;
@@ -1040,6 +1042,12 @@ void TosaValidation::runOnOperation() {
                           << elementTy << " is not legal";
         return signalPassFailure();
       }
+    }
+
+    if (!allowInvalidOpDatatypeCombinations &&
+        failed(profileComp.checkInvalid(op))) {
+      op->emitOpError("illegal: operand/result data types not supported");
+      return signalPassFailure();
     }
 
     // Some uses of TOSA rely on the constant operands of particular

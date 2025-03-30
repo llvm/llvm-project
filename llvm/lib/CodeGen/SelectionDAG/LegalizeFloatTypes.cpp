@@ -2763,7 +2763,12 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
 #endif
       report_fatal_error("Do not know how to promote this operator's result!");
 
-    case ISD::BITCAST:    R = PromoteFloatRes_BITCAST(N); break;
+    case ISD::BITCAST:
+      R = PromoteFloatRes_BITCAST(N);
+      break;
+    case ISD::FREEZE:
+      R = PromoteFloatRes_FREEZE(N);
+      break;
     case ISD::ConstantFP: R = PromoteFloatRes_ConstantFP(N); break;
     case ISD::EXTRACT_VECTOR_ELT:
                           R = PromoteFloatRes_EXTRACT_VECTOR_ELT(N); break;
@@ -2874,6 +2879,18 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_BITCAST(SDNode *N) {
                               N->getOperand(0).getValueType().getSizeInBits());
   SDValue Cast = DAG.getBitcast(IVT, N->getOperand(0));
   return DAG.getNode(GetPromotionOpcode(VT, NVT), SDLoc(N), NVT, Cast);
+}
+
+SDValue DAGTypeLegalizer::PromoteFloatRes_FREEZE(SDNode *N) {
+  EVT VT = N->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  // Input type isn't guaranteed to be a scalar int so bitcast if not. The
+  // bitcast will be legalized further if necessary.
+  EVT IVT = EVT::getIntegerVT(*DAG.getContext(),
+                              N->getOperand(0).getValueType().getSizeInBits());
+  SDValue Cast = DAG.getBitcast(IVT, N->getOperand(0));
+  return DAG.getNode(GetPromotionOpcode(VT, NVT), SDLoc(N), NVT,
+                     DAG.getFreeze(Cast));
 }
 
 SDValue DAGTypeLegalizer::PromoteFloatRes_ConstantFP(SDNode *N) {

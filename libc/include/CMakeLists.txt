@@ -245,6 +245,7 @@ add_header_macro(
     .llvm-libc-types.ENTRY
     .llvm-libc-types.struct_hsearch_data
     .llvm-libc-types.size_t
+    .llvm-libc-types.VISIT
     .llvm-libc-types.__lsearchcompare_t
 )
 
@@ -431,6 +432,8 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.link_macros
+    .llvm-libc-types.struct_dl_phdr_info
+    .llvm-libc-types.__dl_iterate_phdr_callback_t
 )
 
 add_header_macro(

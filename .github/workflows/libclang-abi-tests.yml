@@ -103,6 +103,7 @@ jobs:
         uses: llvm/actions/install-ninja@main
       - name: Install abi-compliance-checker
         run: |
+          sudo apt-get update
           sudo apt-get install abi-dumper autoconf pkg-config
       - name: Install universal-ctags
         run: |
@@ -154,7 +155,9 @@ jobs:
           path: build-latest
 
       - name: Install abi-compliance-checker
-        run: sudo apt-get install abi-compliance-checker
+        run: |
+          sudo apt-get update
+          sudo apt-get install abi-compliance-checker
       - name: Compare ABI
         run: |
           for lib in ${{ needs.abi-dump-setup.outputs.ABI_LIBS }}; do

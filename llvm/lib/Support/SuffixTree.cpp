@@ -193,7 +193,8 @@ unsigned SuffixTree::extend(unsigned EndIdx, unsigned SuffixesToAdd) {
     unsigned FirstChar = Str[Active.Idx];
 
     // Have we inserted anything starting with FirstChar at the current node?
-    if (Active.Node->Children.count(FirstChar) == 0) {
+    if (auto It = Active.Node->Children.find(FirstChar);
+        It == Active.Node->Children.end()) {
       // If not, then we can just insert a leaf and move to the next step.
       insertLeaf(*Active.Node, EndIdx, FirstChar);
 
@@ -206,7 +207,7 @@ unsigned SuffixTree::extend(unsigned EndIdx, unsigned SuffixesToAdd) {
     } else {
       // There's a match with FirstChar, so look for the point in the tree to
       // insert a new node.
-      SuffixTreeNode *NextNode = Active.Node->Children[FirstChar];
+      SuffixTreeNode *NextNode = It->second;
 
       unsigned SubstringLen = numElementsInSubstring(NextNode);
 

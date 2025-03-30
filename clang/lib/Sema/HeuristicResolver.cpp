@@ -11,6 +11,7 @@
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 
 namespace clang {
@@ -243,6 +244,20 @@ QualType HeuristicResolverImpl::simplifyType(QualType Type, const Expr *E,
           if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
             if (auto *Init = VD->getInit())
               return {resolveExprToType(Init), Init};
+          }
+        }
+      }
+    }
+    if (const auto *TTPT = dyn_cast_if_present<TemplateTypeParmType>(T.Type)) {
+      // We can't do much useful with a template parameter (e.g. we cannot look
+      // up member names inside it). However, if the template parameter has a
+      // default argument, as a heuristic we can replace T with the default
+      // argument type.
+      if (const auto *TTPD = TTPT->getDecl()) {
+        if (TTPD->hasDefaultArgument()) {
+          const auto &DefaultArg = TTPD->getDefaultArgument().getArgument();
+          if (DefaultArg.getKind() == TemplateArgument::Type) {
+            return {DefaultArg.getAsType()};
           }
         }
       }

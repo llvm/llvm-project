@@ -746,6 +746,7 @@
 // RUN:     -fwrapv-pointer \
 // RUN:     -fno-wrapv-pointer \
 // RUN:     --version \
+// RUN:     --warning-suppression-mappings=foo \
 // RUN:     -Werror /Zs -- %s 2>&1
 
 // Accept clang options under the /clang: flag.

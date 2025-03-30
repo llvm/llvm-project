@@ -959,6 +959,7 @@ LogicalResult ExtPackedFp8OpLowering::matchAndRewrite(
 
   Value source = adaptor.getSource();
   auto sourceVecType = dyn_cast<VectorType>(op.getSource().getType());
+  auto resultVecType = dyn_cast<VectorType>(op.getResult().getType());
   Type sourceElemType = getElementTypeOrSelf(op.getSource());
   // Extend to a v4i8
   if (!sourceVecType || sourceVecType.getNumElements() < 4) {
@@ -977,13 +978,24 @@ LogicalResult ExtPackedFp8OpLowering::matchAndRewrite(
     source = longVec;
   }
   Value i32Source = rewriter.create<LLVM::BitcastOp>(loc, i32, source);
-  Value wordSel = createI32Constant(rewriter, loc, op.getIndex());
-  if (typeIsExpectedBf8ForChipset(chipset, sourceElemType)) {
-    rewriter.replaceOpWithNewOp<ROCDL::CvtF32Bf8Op>(op, f32, i32Source,
-                                                    wordSel);
-  } else if (typeIsExpectedFp8ForChipset(chipset, sourceElemType)) {
-    rewriter.replaceOpWithNewOp<ROCDL::CvtF32Fp8Op>(op, f32, i32Source,
-                                                    wordSel);
+  if (resultVecType) {
+    Value wordSel = createI1Constant(rewriter, loc, op.getIndex());
+    if (typeIsExpectedBf8ForChipset(chipset, sourceElemType)) {
+      rewriter.replaceOpWithNewOp<ROCDL::CvtPkF32Bf8Op>(op, f32, i32Source,
+                                                        wordSel);
+    } else if (typeIsExpectedFp8ForChipset(chipset, sourceElemType)) {
+      rewriter.replaceOpWithNewOp<ROCDL::CvtPkF32Fp8Op>(op, f32, i32Source,
+                                                        wordSel);
+    }
+  } else {
+    Value byteSel = createI32Constant(rewriter, loc, op.getIndex());
+    if (typeIsExpectedBf8ForChipset(chipset, sourceElemType)) {
+      rewriter.replaceOpWithNewOp<ROCDL::CvtF32Bf8Op>(op, f32, i32Source,
+                                                      byteSel);
+    } else if (typeIsExpectedFp8ForChipset(chipset, sourceElemType)) {
+      rewriter.replaceOpWithNewOp<ROCDL::CvtF32Fp8Op>(op, f32, i32Source,
+                                                      byteSel);
+    }
   }
   return success();
 }

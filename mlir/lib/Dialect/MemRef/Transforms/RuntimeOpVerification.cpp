@@ -23,6 +23,40 @@ using namespace mlir;
 namespace mlir {
 namespace memref {
 namespace {
+/// Generate a runtime check for lb <= value < ub.
+Value generateInBoundsCheck(OpBuilder &builder, Location loc, Value value,
+                            Value lb, Value ub) {
+  Value inBounds1 = builder.createOrFold<arith::CmpIOp>(
+      loc, arith::CmpIPredicate::sge, value, lb);
+  Value inBounds2 = builder.createOrFold<arith::CmpIOp>(
+      loc, arith::CmpIPredicate::slt, value, ub);
+  Value inBounds =
+      builder.createOrFold<arith::AndIOp>(loc, inBounds1, inBounds2);
+  return inBounds;
+}
+
+struct AssumeAlignmentOpInterface
+    : public RuntimeVerifiableOpInterface::ExternalModel<
+          AssumeAlignmentOpInterface, AssumeAlignmentOp> {
+  void generateRuntimeVerification(Operation *op, OpBuilder &builder,
+                                   Location loc) const {
+    auto assumeOp = cast<AssumeAlignmentOp>(op);
+    Value ptr = builder.create<ExtractAlignedPointerAsIndexOp>(
+        loc, assumeOp.getMemref());
+    Value rest = builder.create<arith::RemUIOp>(
+        loc, ptr,
+        builder.create<arith::ConstantIndexOp>(loc, assumeOp.getAlignment()));
+    Value isAligned = builder.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::eq, rest,
+        builder.create<arith::ConstantIndexOp>(loc, 0));
+    builder.create<cf::AssertOp>(
+        loc, isAligned,
+        RuntimeVerifiableOpInterface::generateErrorMessage(
+            op, "memref is not aligned to " +
+                    std::to_string(assumeOp.getAlignment())));
+  }
+};
+
 struct CastOpInterface
     : public RuntimeVerifiableOpInterface::ExternalModel<CastOpInterface,
                                                          CastOp> {
@@ -172,6 +206,21 @@ struct CopyOpInterface
   }
 };
 
+struct DimOpInterface
+    : public RuntimeVerifiableOpInterface::ExternalModel<DimOpInterface,
+                                                         DimOp> {
+  void generateRuntimeVerification(Operation *op, OpBuilder &builder,
+                                   Location loc) const {
+    auto dimOp = cast<DimOp>(op);
+    Value rank = builder.create<RankOp>(loc, dimOp.getSource());
+    Value zero = builder.create<arith::ConstantIndexOp>(loc, 0);
+    builder.create<cf::AssertOp>(
+        loc, generateInBoundsCheck(builder, loc, dimOp.getIndex(), zero, rank),
+        RuntimeVerifiableOpInterface::generateErrorMessage(
+            op, "index is out of bounds"));
+  }
+};
+
 /// Verifies that the indices on load/store ops are in-bounds of the memref's
 /// index space: 0 <= index#i < dim#i
 template <typename LoadStoreOp>
@@ -192,19 +241,12 @@ struct LoadStoreOpInterface
     auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
     Value assertCond;
     for (auto i : llvm::seq<int64_t>(0, rank)) {
-      auto index = indices[i];
-
-      auto dimOp = builder.createOrFold<memref::DimOp>(loc, memref, i);
-
-      auto geLow = builder.createOrFold<arith::CmpIOp>(
-          loc, arith::CmpIPredicate::sge, index, zero);
-      auto ltHigh = builder.createOrFold<arith::CmpIOp>(
-          loc, arith::CmpIPredicate::slt, index, dimOp);
-      auto andOp = builder.createOrFold<arith::AndIOp>(loc, geLow, ltHigh);
-
+      Value dimOp = builder.createOrFold<memref::DimOp>(loc, memref, i);
+      Value inBounds =
+          generateInBoundsCheck(builder, loc, indices[i], zero, dimOp);
       assertCond =
-          i > 0 ? builder.createOrFold<arith::AndIOp>(loc, assertCond, andOp)
-                : andOp;
+          i > 0 ? builder.createOrFold<arith::AndIOp>(loc, assertCond, inBounds)
+                : inBounds;
     }
     builder.create<cf::AssertOp>(
         loc, assertCond,
@@ -378,8 +420,10 @@ struct ExpandShapeOpInterface
 void mlir::memref::registerRuntimeVerifiableOpInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, memref::MemRefDialect *dialect) {
+    AssumeAlignmentOp::attachInterface<AssumeAlignmentOpInterface>(*ctx);
     CastOp::attachInterface<CastOpInterface>(*ctx);
     CopyOp::attachInterface<CopyOpInterface>(*ctx);
+    DimOp::attachInterface<DimOpInterface>(*ctx);
     ExpandShapeOp::attachInterface<ExpandShapeOpInterface>(*ctx);
     LoadOp::attachInterface<LoadStoreOpInterface<LoadOp>>(*ctx);
     ReinterpretCastOp::attachInterface<ReinterpretCastOpInterface>(*ctx);
