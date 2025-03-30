@@ -760,7 +760,7 @@ std::enable_if_t<std::is_signed_v<T>, T> SubOverflow(T X, T Y, T &Result) {
 /// Multiply two signed integers, computing the two's complement truncated
 /// result, returning true if an overflow occurred.
 template <typename T>
-std::enable_if_t<std::is_signed_v<T>, bool> MulOverflow(T X, T Y, T &Result) {
+std::enable_if_t<std::is_signed_v<T>, T> MulOverflow(T X, T Y, T &Result) {
 #if __has_builtin(__builtin_mul_overflow)
   return __builtin_mul_overflow(X, Y, &Result);
 #else
