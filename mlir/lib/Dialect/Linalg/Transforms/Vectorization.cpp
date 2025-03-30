@@ -2376,13 +2376,6 @@ static void convertAffineApply(RewriterBase &rewriter, LinalgOp linalgOp) {
 }
 
 bool mlir::linalg::hasVectorizationImpl(Operation *op) {
-  // TODO(issues/129004): Support MemRef PackOp. Temporarily return false.
-  // Actually do we need this?
-  if (isa<linalg::PackOp, linalg::UnPackOp>(op)) {
-    if (!cast<LinalgOp>(op).hasPureTensorSemantics()) {
-      return false;
-    }
-  }
   return isa<linalg::LinalgOp, tensor::PadOp, linalg::PackOp, linalg::UnPackOp,
              tensor::InsertSliceOp>(op);
 }
