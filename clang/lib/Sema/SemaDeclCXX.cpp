@@ -6606,7 +6606,10 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
   if (ClassExported && !ClassAttr->isInherited() &&
       TSK == TSK_ExplicitInstantiationDeclaration &&
       !Context.getTargetInfo().getTriple().isWindowsGNUEnvironment()) {
-    Class->dropAttr<DLLExportAttr>();
+    if (auto *DEA = Class->getAttr<DLLExportAttr>()) {
+      Class->addAttr(DLLExportOnDeclAttr::Create(Context, DEA->getLoc()));
+      Class->dropAttr<DLLExportAttr>();
+    }
     return;
   }
 

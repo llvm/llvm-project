@@ -487,6 +487,9 @@ def Dangling : DiagGroup<"dangling", [DanglingAssignment,
                                       ReturnStackAddress]>;
 def DistributedObjectModifiers : DiagGroup<"distributed-object-modifiers">;
 def DllexportExplicitInstantiationDecl : DiagGroup<"dllexport-explicit-instantiation-decl">;
+def DllexportExplicitInstantiation :
+  DiagGroup<"dllexport-explicit-instantiation",
+            [DllexportExplicitInstantiationDecl]>;
 def ExcessInitializers : DiagGroup<"excess-initializers">;
 def ExpansionToDefined : DiagGroup<"expansion-to-defined">;
 def FlagEnum : DiagGroup<"flag-enum">;
@@ -870,7 +873,8 @@ def NSReturnsMismatch : DiagGroup<"nsreturns-mismatch">;
 
 def IndependentClassAttribute : DiagGroup<"IndependentClass-attribute">;
 def UnknownAttributes : DiagGroup<"unknown-attributes">;
-def IgnoredAttributes : DiagGroup<"ignored-attributes">;
+def IgnoredAttributes : DiagGroup<"ignored-attributes",
+                                  [DllexportExplicitInstantiation]>;
 def Attributes : DiagGroup<"attributes", [UnknownAttributes,
                                           IgnoredAttributes]>;
 def UnknownSanitizers : DiagGroup<"unknown-sanitizers">;
