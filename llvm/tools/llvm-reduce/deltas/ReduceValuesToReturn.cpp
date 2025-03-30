@@ -78,7 +78,6 @@ static void rewriteFuncWithReturnType(Function &OldF, Value *NewRetValue) {
   // Now delete the tail of this block, in reverse to delete uses before defs.
   for (Instruction &I : make_early_inc_range(
            make_range(NewRetBlock->rbegin(), NewValIt.getReverse()))) {
-
     Value *Replacement = getDefaultValue(I.getType());
     I.replaceAllUsesWith(Replacement);
     I.eraseFromParent();
