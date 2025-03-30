@@ -255,7 +255,9 @@ template <class __op> struct __op_type_traits {
 
 // Specialize for known surface operation tags
 #define __OP_TYPE_SURFACE(__op)                                                \
-  template <> struct __op_type_traits<__op> { using type = __surface_op_tag; };
+  template <> struct __op_type_traits<__op> {                                  \
+    using type = __surface_op_tag;                                             \
+  }
 
 // Classes that implement specific texture ops.
 template <class __op> struct __tex_fetch_v4;
