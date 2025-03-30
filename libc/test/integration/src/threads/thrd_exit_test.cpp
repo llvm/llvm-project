@@ -29,7 +29,10 @@ public:
   }
 };
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wglobal-constructors"
 thread_local A thread_local_a(123);
+#pragma GCC diagnostic pop
 
 int func(void *) {
   thread_local_a.set(321);
