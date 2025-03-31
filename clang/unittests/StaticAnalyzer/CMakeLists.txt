@@ -19,7 +19,6 @@ add_clang_unittest(StaticAnalysisTests
   ParamRegionTest.cpp
   RangeSetTest.cpp
   RegisterCustomCheckersTest.cpp
-  StoreManagerLValueElement.cpp
   StoreTest.cpp
   SymbolReaperTest.cpp
   SValSimplifyerTest.cpp
