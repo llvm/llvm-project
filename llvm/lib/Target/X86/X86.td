@@ -371,8 +371,7 @@ def FeatureMOVRS   : SubtargetFeature<"movrs", "HasMOVRS", "true",
                            "Enable MOVRS", []>;
 
 // Ivy Bridge and newer processors have enhanced REP MOVSB and STOSB (aka
-// "string operations"). See "REP String Enhancement" in the Intel Software
-// Development Manual. This feature essentially means that REP MOVSB will copy
+// "string operations"). This feature essentially means that REP MOVSB will copy
 // using the largest available size instead of copying bytes one by one, making
 // it at least as fast as REPMOVS{W,D,Q}.
 def FeatureERMSB
