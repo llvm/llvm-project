@@ -512,12 +512,6 @@ operator<<(llvm::raw_ostream &os, const struct ol_mem_alloc_params_t *params) {
 
 inline llvm::raw_ostream &
 operator<<(llvm::raw_ostream &os, const struct ol_mem_free_params_t *params) {
-  os << ".Device = ";
-  printPtr(os, *params->pDevice);
-  os << ", ";
-  os << ".Type = ";
-  os << *params->pType;
-  os << ", ";
   os << ".Address = ";
   printPtr(os, *params->pAddress);
   return os;

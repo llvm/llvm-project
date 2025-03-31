@@ -542,14 +542,9 @@ OL_APIEXPORT ol_result_t OL_APICALL olMemAlloc(
 ///     - ::OL_ERRC_UNINITIALIZED
 ///     - ::OL_ERRC_DEVICE_LOST
 ///     - ::OL_ERRC_INVALID_NULL_HANDLE
-///         + `NULL == Device`
 ///     - ::OL_ERRC_INVALID_NULL_POINTER
 ///         + `NULL == Address`
 OL_APIEXPORT ol_result_t OL_APICALL olMemFree(
-    // [in] handle of the device to allocate on
-    ol_device_handle_t Device,
-    // [in] type of the allocation
-    ol_alloc_type_t Type,
     // [in] address of the allocation to free
     void *Address);
 
@@ -891,8 +886,6 @@ typedef struct ol_mem_alloc_params_t {
 /// @brief Function parameters for olMemFree
 /// @details Each entry is a pointer to the parameter passed to the function;
 typedef struct ol_mem_free_params_t {
-  ol_device_handle_t *pDevice;
-  ol_alloc_type_t *pType;
   void **pAddress;
 } ol_mem_free_params_t;
 
@@ -1084,8 +1077,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olMemAllocWithCodeLoc(
 /// @brief Variant of olMemFree that also sets source code location information
 /// @details See also ::olMemFree
 OL_APIEXPORT ol_result_t OL_APICALL
-olMemFreeWithCodeLoc(ol_device_handle_t Device, ol_alloc_type_t Type,
-                     void *Address, ol_code_location_t *CodeLocation);
+olMemFreeWithCodeLoc(void *Address, ol_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Variant of olCreateQueue that also sets source code location

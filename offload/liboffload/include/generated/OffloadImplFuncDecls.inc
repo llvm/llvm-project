@@ -43,8 +43,7 @@ ol_impl_result_t olMemAlloc_impl(ol_device_handle_t Device,
                                  ol_alloc_type_t Type, size_t Size,
                                  void **AllocationOut);
 
-ol_impl_result_t olMemFree_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
-                                void *Address);
+ol_impl_result_t olMemFree_impl(void *Address);
 
 ol_impl_result_t olCreateQueue_impl(ol_device_handle_t Device,
                                     ol_queue_handle_t *Queue);

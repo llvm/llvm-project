@@ -90,6 +90,17 @@ struct ol_kernel_impl_t {
 namespace llvm {
 namespace offload {
 
+struct AllocInfo {
+  ol_device_handle_t Device;
+  ol_alloc_type_t Type;
+};
+
+using AllocInfoMapT = DenseMap<void *, AllocInfo>;
+AllocInfoMapT &allocInfoMap() {
+  static AllocInfoMapT AllocInfoMap{};
+  return AllocInfoMap;
+}
+
 using PlatformVecT = SmallVector<ol_platform_impl_t, 4>;
 PlatformVecT &Platforms() {
   static PlatformVecT Platforms;
@@ -325,15 +336,24 @@ ol_impl_result_t olMemAlloc_impl(ol_device_handle_t Device,
             formatv("Could not create allocation on device {0}", Device).str()};
 
   *AllocationOut = *Alloc;
+  allocInfoMap().insert_or_assign(*Alloc, AllocInfo{Device, Type});
   return OL_SUCCESS;
 }
 
-ol_impl_result_t olMemFree_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
-                                void *Address) {
+ol_impl_result_t olMemFree_impl(void *Address) {
+  if (!allocInfoMap().contains(Address))
+    return {OL_ERRC_INVALID_ARGUMENT, "Address is not a known allocation"};
+
+  auto AllocInfo = allocInfoMap().at(Address);
+  auto Device = AllocInfo.Device;
+  auto Type = AllocInfo.Type;
+
   auto Res =
       Device->Device->dataDelete(Address, convertOlToPluginAllocTy(Type));
   if (Res)
     return {OL_ERRC_OUT_OF_RESOURCES, "Could not free allocation"};
+
+  allocInfoMap().erase(Address);
 
   return OL_SUCCESS;
 }

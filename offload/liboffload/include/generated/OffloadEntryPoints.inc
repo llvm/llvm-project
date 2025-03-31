@@ -531,31 +531,24 @@ ol_result_t olMemAllocWithCodeLoc(ol_device_handle_t Device,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olMemFree_val(ol_device_handle_t Device, ol_alloc_type_t Type,
-                               void *Address) {
+ol_impl_result_t olMemFree_val(void *Address) {
   if (offloadConfig().ValidationEnabled) {
-    if (NULL == Device) {
-      return OL_ERRC_INVALID_NULL_HANDLE;
-    }
-
     if (NULL == Address) {
       return OL_ERRC_INVALID_NULL_POINTER;
     }
   }
 
-  return llvm::offload::olMemFree_impl(Device, Type, Address);
+  return llvm::offload::olMemFree_impl(Address);
 }
-OL_APIEXPORT ol_result_t OL_APICALL olMemFree(ol_device_handle_t Device,
-                                              ol_alloc_type_t Type,
-                                              void *Address) {
+OL_APIEXPORT ol_result_t OL_APICALL olMemFree(void *Address) {
   if (offloadConfig().TracingEnabled) {
     llvm::errs() << "---> olMemFree";
   }
 
-  ol_result_t Result = olMemFree_val(Device, Type, Address);
+  ol_result_t Result = olMemFree_val(Address);
 
   if (offloadConfig().TracingEnabled) {
-    ol_mem_free_params_t Params = {&Device, &Type, &Address};
+    ol_mem_free_params_t Params = {&Address};
     llvm::errs() << "(" << &Params << ")";
     llvm::errs() << "-> " << Result << "\n";
     if (Result && Result->Details) {
@@ -564,11 +557,10 @@ OL_APIEXPORT ol_result_t OL_APICALL olMemFree(ol_device_handle_t Device,
   }
   return Result;
 }
-ol_result_t olMemFreeWithCodeLoc(ol_device_handle_t Device,
-                                 ol_alloc_type_t Type, void *Address,
+ol_result_t olMemFreeWithCodeLoc(void *Address,
                                  ol_code_location_t *CodeLocation) {
   currentCodeLocation() = CodeLocation;
-  ol_result_t Result = ::olMemFree(Device, Type, Address);
+  ol_result_t Result = ::olMemFree(Address);
 
   currentCodeLocation() = nullptr;
   return Result;

@@ -16,21 +16,21 @@ TEST_F(olMemAllocTest, SuccessAllocShared) {
   void *Alloc = nullptr;
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_SHARED, 1024, &Alloc));
   ASSERT_NE(Alloc, nullptr);
-  olMemFree(Device, OL_ALLOC_TYPE_SHARED, Alloc);
+  olMemFree(Alloc);
 }
 
 TEST_F(olMemAllocTest, SuccessAllocHost) {
   void *Alloc = nullptr;
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_HOST, 1024, &Alloc));
   ASSERT_NE(Alloc, nullptr);
-  olMemFree(Device, OL_ALLOC_TYPE_HOST, Alloc);
+  olMemFree(Alloc);
 }
 
 TEST_F(olMemAllocTest, SuccessAllocDevice) {
   void *Alloc = nullptr;
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, 1024, &Alloc));
   ASSERT_NE(Alloc, nullptr);
-  olMemFree(Device, OL_ALLOC_TYPE_DEVICE, Alloc);
+  olMemFree(Alloc);
 }
 
 TEST_F(olMemAllocTest, InvalidNullDevice) {

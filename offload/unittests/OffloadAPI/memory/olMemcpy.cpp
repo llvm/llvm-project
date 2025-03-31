@@ -22,7 +22,7 @@ TEST_F(olMemcpyTest, SuccessHtoD) {
   ASSERT_SUCCESS(
       olMemcpy(Queue, Alloc, Device, Input.data(), Host, Size, nullptr));
   olWaitQueue(Queue);
-  olMemFree(Device, OL_ALLOC_TYPE_DEVICE, Alloc);
+  olMemFree(Alloc);
 }
 
 TEST_F(olMemcpyTest, SuccessDtoH) {
@@ -42,7 +42,7 @@ TEST_F(olMemcpyTest, SuccessDtoH) {
   for (uint8_t Val : Output) {
     ASSERT_EQ(Val, 42);
   }
-  ASSERT_SUCCESS(olMemFree(Device, OL_ALLOC_TYPE_DEVICE, Alloc));
+  ASSERT_SUCCESS(olMemFree(Alloc));
 }
 
 TEST_F(olMemcpyTest, SuccessDtoD) {
@@ -66,8 +66,8 @@ TEST_F(olMemcpyTest, SuccessDtoD) {
   for (uint8_t Val : Output) {
     ASSERT_EQ(Val, 42);
   }
-  ASSERT_SUCCESS(olMemFree(Device, OL_ALLOC_TYPE_DEVICE, AllocA));
-  ASSERT_SUCCESS(olMemFree(Device, OL_ALLOC_TYPE_DEVICE, AllocB));
+  ASSERT_SUCCESS(olMemFree(AllocA));
+  ASSERT_SUCCESS(olMemFree(AllocB));
 }
 
 TEST_F(olMemcpyTest, SuccessHtoHSync) {
@@ -101,7 +101,7 @@ TEST_F(olMemcpyTest, SuccessDtoHSync) {
   for (uint8_t Val : Output) {
     ASSERT_EQ(Val, 42);
   }
-  ASSERT_SUCCESS(olMemFree(Device, OL_ALLOC_TYPE_DEVICE, Alloc));
+  ASSERT_SUCCESS(olMemFree(Alloc));
 }
 
 TEST_F(olMemcpyTest, SuccessSizeZero) {
