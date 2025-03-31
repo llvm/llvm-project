@@ -11088,11 +11088,6 @@ OverloadCandidateSet::ResultForBestCandidate(const iterator &Best) {
   Best->Best = true;
   if (Best->Function && Best->Function->isDeleted())
     return OR_Deleted;
-  if (auto *M = dyn_cast_or_null<CXXMethodDecl>(Best->Function);
-      Kind == CSK_AddressOfOverloadSet && M &&
-      M->isImplicitObjectMemberFunction()) {
-    return OR_No_Viable_Function;
-  }
   return OR_Success;
 }
 
@@ -14591,10 +14586,12 @@ ExprResult Sema::BuildOverloadedCallExpr(Scope *S, Expr *Fn,
                                          Expr *ExecConfig,
                                          bool AllowTypoCorrection,
                                          bool CalleesAddressIsTaken) {
-  OverloadCandidateSet CandidateSet(
-      Fn->getExprLoc(), CalleesAddressIsTaken
-                            ? OverloadCandidateSet::CSK_AddressOfOverloadSet
-                            : OverloadCandidateSet::CSK_Normal);
+
+  OverloadCandidateSet::CandidateSetKind CSK =
+      CalleesAddressIsTaken ? OverloadCandidateSet::CSK_AddressOfOverloadSet
+                            : OverloadCandidateSet::CSK_Normal;
+
+  OverloadCandidateSet CandidateSet(Fn->getExprLoc(), CSK);
   ExprResult result;
 
   if (buildOverloadedCallSet(S, Fn, ULE, Args, LParenLoc, &CandidateSet,
@@ -14609,6 +14606,17 @@ ExprResult Sema::BuildOverloadedCallExpr(Scope *S, Expr *Fn,
   OverloadCandidateSet::iterator Best;
   OverloadingResult OverloadResult =
       CandidateSet.BestViableFunction(*this, Fn->getBeginLoc(), Best);
+
+  // [C++23][over.call.func]
+  // if overload resolution selects a non-static member function,
+  // the call is ill-formed;
+  if (CSK == OverloadCandidateSet::CSK_AddressOfOverloadSet &&
+      Best != CandidateSet.end()) {
+    if (auto *M = dyn_cast_or_null<CXXMethodDecl>(Best->Function);
+        M && M->isImplicitObjectMemberFunction()) {
+      OverloadResult = OR_No_Viable_Function;
+    }
+  }
 
   // Model the case with a call to a templated function whose definition
   // encloses the call and whose return type contains a placeholder type as if
