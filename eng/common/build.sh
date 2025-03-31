@@ -250,6 +250,7 @@ function Build {
     /p:PerformanceTest=$performance_test \
     /p:Sign=$sign \
     /p:Publish=$publish \
+    /p:RestoreStaticGraphEnableBinaryLogger=$binary_log \
     $properties
 
   ExitWithExitCode 0
