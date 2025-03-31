@@ -10390,25 +10390,9 @@ public:
       OverloadCandidateSet &CandidateSet, bool SuppressUserConversions = false,
       bool PartialOverloading = false, OverloadCandidateParamOrder PO = {});
 
-  void AddMethodTemplateCandidateImmediately(
-      OverloadCandidateSet &CandidateSet, FunctionTemplateDecl *MethodTmpl,
-      DeclAccessPair FoundDecl, CXXRecordDecl *ActingContext,
-      TemplateArgumentListInfo *ExplicitTemplateArgs, QualType ObjectType,
-      Expr::Classification ObjectClassification, ArrayRef<Expr *> Args,
-      bool SuppressUserConversions, bool PartialOverloading,
-      OverloadCandidateParamOrder PO);
-
   /// Add a C++ function template specialization as a candidate
   /// in the candidate set, using template argument deduction to produce
   /// an appropriate function template specialization.
-
-  void AddTemplateOverloadCandidateImmediately(
-      OverloadCandidateSet &CandidateSet,
-      FunctionTemplateDecl *FunctionTemplate, DeclAccessPair FoundDecl,
-      TemplateArgumentListInfo *ExplicitTemplateArgs, ArrayRef<Expr *> Args,
-      bool SuppressUserConversions, bool PartialOverloading, bool AllowExplicit,
-      ADLCallKind IsADLCandidate, OverloadCandidateParamOrder PO,
-      bool AggregateCandidateDeduction);
 
   void AddTemplateOverloadCandidate(
       FunctionTemplateDecl *FunctionTemplate, DeclAccessPair FoundDecl,
@@ -10453,13 +10437,6 @@ public:
       CXXRecordDecl *ActingContext, Expr *From, QualType ToType,
       OverloadCandidateSet &CandidateSet, bool AllowObjCConversionOnExplicit,
       bool AllowExplicit, bool AllowResultConversion = true);
-
-  void AddTemplateConversionCandidateImmediately(
-      OverloadCandidateSet &CandidateSet,
-      FunctionTemplateDecl *FunctionTemplate, DeclAccessPair FoundDecl,
-      CXXRecordDecl *ActingContext, Expr *From, QualType ToType,
-      bool AllowObjCConversionOnExplicit, bool AllowExplicit,
-      bool AllowResultConversion);
 
   /// AddSurrogateCandidate - Adds a "surrogate" candidate function that
   /// converts the given @c Object to a function pointer via the
