@@ -169,30 +169,3 @@ StringRef RISCVMCExpr::getSpecifierName(Specifier S) {
   }
   llvm_unreachable("Invalid ELF symbol kind");
 }
-
-bool RISCVMCExpr::evaluateAsConstant(int64_t &Res) const {
-  MCValue Value;
-  if (specifier != VK_LO && specifier != VK_HI)
-    return false;
-
-  if (!getSubExpr()->evaluateAsRelocatable(Value, nullptr))
-    return false;
-
-  if (!Value.isAbsolute())
-    return false;
-
-  Res = evaluateAsInt64(Value.getConstant());
-  return true;
-}
-
-int64_t RISCVMCExpr::evaluateAsInt64(int64_t Value) const {
-  switch (specifier) {
-  default:
-    llvm_unreachable("Invalid kind");
-  case VK_LO:
-    return SignExtend64<12>(Value);
-  case VK_HI:
-    // Add 1 if bit 11 is 1, to compensate for low 12 bits being negative.
-    return ((Value + 0x800) >> 12) & 0xfffff;
-  }
-}
