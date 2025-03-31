@@ -9,7 +9,6 @@
 ## .text does not cause overlapping error and that
 ## .text's VA is 0x1000 + max(sizeof(.out.big), sizeof(.out.small)).
 
-# RUN: ld.lld a.o -T a.t -o a
 # RUN: llvm-readelf --sections -l a | FileCheck %s
 
 # CHECK:      Name       Type     Address          Off    Size
