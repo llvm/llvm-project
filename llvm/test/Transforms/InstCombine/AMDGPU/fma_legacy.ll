@@ -105,6 +105,30 @@ define float @test_finite_assumed(float %x, float %y, float %z) {
   ret float %call
 }
 
+define float @test_poison_x_y(float %x, float %y) {
+; CHECK-LABEL: @test_poison_x_y(
+; CHECK-NEXT:    ret float poison
+;
+  %call = call float @llvm.amdgcn.fma.legacy(float poison, float %x, float %y)
+  ret float %call
+}
+
+define float @test_x_poison_y(float %x, float %y) {
+; CHECK-LABEL: @test_x_poison_y(
+; CHECK-NEXT:    ret float poison
+;
+  %call = call float @llvm.amdgcn.fma.legacy(float %x, float poison, float %y)
+  ret float %call
+}
+
+define float @test_x_y_poison_y(float %x, float %y) {
+; CHECK-LABEL: @test_x_y_poison_y(
+; CHECK-NEXT:    ret float poison
+;
+  %call = call float @llvm.amdgcn.fma.legacy(float %x, float %y, float poison)
+  ret float %call
+}
+
 declare float @llvm.amdgcn.fma.legacy(float, float, float)
 declare float @llvm.fabs.f32(float)
 declare void @llvm.assume(i1 noundef)

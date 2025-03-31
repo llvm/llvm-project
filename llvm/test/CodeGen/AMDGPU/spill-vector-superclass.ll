@@ -14,13 +14,13 @@ define amdgpu_kernel void @test_spill_av_class(<4 x i32> %arg) #0 {
   ; GCN-NEXT:   [[V_MFMA_I32_4X4X4I8_e64_:%[0-9]+]]:areg_128 = V_MFMA_I32_4X4X4I8_e64 [[V_MOV_B32_e32_]], [[V_MOV_B32_e32_1]], [[COPY]], 0, 0, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 2228234 /* regdef:VGPR_32 */, def undef %13.sub0
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vreg_128 = COPY [[V_MFMA_I32_4X4X4I8_e64_]]
-  ; GCN-NEXT:   GLOBAL_STORE_DWORDX4 undef %23:vreg_64, [[COPY1]], 0, 0, implicit $exec :: (volatile store (s128) into `ptr addrspace(1) undef`, addrspace 1)
+  ; GCN-NEXT:   GLOBAL_STORE_DWORDX4 undef %23:vreg_64, [[COPY1]], 0, 0, implicit $exec :: (volatile store (s128) into `ptr addrspace(1) poison`, addrspace 1)
   ; GCN-NEXT:   INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 3538953 /* reguse:VReg_64 */, %13
   ; GCN-NEXT:   S_ENDPGM 0
   %v0 = call i32 asm sideeffect "; def $0", "=v"()
-  %tmp = insertelement <2 x i32> undef, i32 %v0, i32 0
+  %tmp = insertelement <2 x i32> poison, i32 %v0, i32 0
   %mai = tail call <4 x i32> @llvm.amdgcn.mfma.i32.4x4x4i8(i32 1, i32 2, <4 x i32> %arg, i32 0, i32 0, i32 0)
-  store volatile <4 x i32> %mai, ptr addrspace(1) undef
+  store volatile <4 x i32> %mai, ptr addrspace(1) poison
   call void asm sideeffect "; use $0", "v"(<2 x i32> %tmp);
   ret void
 }

@@ -698,8 +698,10 @@ size_t AsmLexer::peekTokens(MutableArrayRef<AsmToken> Buf,
 
     Buf[ReadCount] = Token;
 
-    if (Token.is(AsmToken::Eof))
+    if (Token.is(AsmToken::Eof)) {
+      ReadCount++;
       break;
+    }
   }
 
   SetError(SavedErrLoc, SavedErr);

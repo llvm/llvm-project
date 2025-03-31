@@ -6781,8 +6781,7 @@ protected:
 class SourceFileWindowDelegate : public WindowDelegate {
 public:
   SourceFileWindowDelegate(Debugger &debugger)
-      : WindowDelegate(), m_debugger(debugger), m_sc(), m_file_sp(),
-        m_disassembly_sp(), m_disassembly_range(), m_title() {}
+      : WindowDelegate(), m_debugger(debugger) {}
 
   ~SourceFileWindowDelegate() override = default;
 
@@ -6939,12 +6938,8 @@ public:
               m_disassembly_scope = m_sc.function;
               m_disassembly_sp = m_sc.function->GetInstructions(
                   exe_ctx, nullptr, !prefer_file_cache);
-              if (m_disassembly_sp) {
+              if (m_disassembly_sp)
                 set_selected_line_to_pc = true;
-                m_disassembly_range = m_sc.function->GetAddressRange();
-              } else {
-                m_disassembly_range.Clear();
-              }
             } else {
               set_selected_line_to_pc = context_changed;
             }
@@ -6953,14 +6948,8 @@ public:
               m_disassembly_scope = m_sc.symbol;
               m_disassembly_sp = m_sc.symbol->GetInstructions(
                   exe_ctx, nullptr, prefer_file_cache);
-              if (m_disassembly_sp) {
+              if (m_disassembly_sp)
                 set_selected_line_to_pc = true;
-                m_disassembly_range.GetBaseAddress() =
-                    m_sc.symbol->GetAddress();
-                m_disassembly_range.SetByteSize(m_sc.symbol->GetByteSize());
-              } else {
-                m_disassembly_range.Clear();
-              }
             } else {
               set_selected_line_to_pc = context_changed;
             }
@@ -7114,13 +7103,7 @@ public:
                  ++bp_loc_idx) {
               BreakpointLocationSP bp_loc_sp =
                   bp_sp->GetLocationAtIndex(bp_loc_idx);
-              LineEntry bp_loc_line_entry;
-              const lldb::addr_t file_addr =
-                  bp_loc_sp->GetAddress().GetFileAddress();
-              if (file_addr != LLDB_INVALID_ADDRESS) {
-                if (m_disassembly_range.ContainsFileAddress(file_addr))
-                  bp_file_addrs.insert(file_addr);
-              }
+              bp_file_addrs.insert(bp_loc_sp->GetAddress().GetFileAddress());
             }
           }
         }
@@ -7552,7 +7535,6 @@ protected:
   SourceManager::FileSP m_file_sp;
   SymbolContextScope *m_disassembly_scope = nullptr;
   lldb::DisassemblerSP m_disassembly_sp;
-  AddressRange m_disassembly_range;
   StreamString m_title;
   lldb::user_id_t m_tid = LLDB_INVALID_THREAD_ID;
   int m_line_width = 4;

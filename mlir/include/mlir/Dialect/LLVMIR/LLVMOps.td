@@ -364,7 +364,8 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
     [DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      DeclareOpInterfaceMethods<PromotableMemOpInterface>,
-     DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>]> {
+     DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>,
+     DeclareOpInterfaceMethods<DereferenceableOpInterface>]> {
   dag args = (ins LLVM_AnyPointer:$addr,
               OptionalAttr<I64Attr>:$alignment,
               UnitAttr:$volatile_,
@@ -373,7 +374,8 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
               UnitAttr:$invariantGroup,
               DefaultValuedAttr<
                 AtomicOrdering, "AtomicOrdering::not_atomic">:$ordering,
-              OptionalAttr<StrAttr>:$syncscope);
+              OptionalAttr<StrAttr>:$syncscope,
+              OptionalAttr<LLVM_DereferenceableAttr>:$dereferenceable);
   // Append the aliasing related attributes defined in LLVM_MemAccessOpBase.
   let arguments = !con(args, aliasAttrs);
   let results = (outs LLVM_LoadableType:$res);
@@ -407,6 +409,7 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
     (`atomic` (`syncscope` `(` $syncscope^ `)`)? $ordering^)?
     (`invariant` $invariant^)?
     (`invariant_group` $invariantGroup^)?
+    (`dereferenceable` `` $dereferenceable^)?
     attr-dict `:` qualified(type($addr)) `->` type($res)
   }];
   string llvmBuilder = [{
@@ -416,6 +419,8 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
       llvm::MDNode *metadata = llvm::MDNode::get(inst->getContext(), std::nullopt);
       inst->setMetadata(llvm::LLVMContext::MD_invariant_load, metadata);
     }
+    if ($dereferenceable)
+      moduleTranslation.setDereferenceableMetadata(op, inst);
   }] # setOrderingCode
      # setSyncScopeCode
      # setAlignmentCode
@@ -571,6 +576,29 @@ class LLVM_CastOpWithOverflowFlag<string mnemonic, string instName, Type type,
   }];
 }
 
+class LLVM_DereferenceableCastOp<string mnemonic, string instName, Type type,
+                  Type resultType, list<Trait> traits = []> :
+    LLVM_Op<mnemonic, !listconcat([Pure], [DeclareOpInterfaceMethods<DereferenceableOpInterface>], traits)> {
+  let arguments = (ins type:$arg, OptionalAttr<LLVM_DereferenceableAttr>:$dereferenceable);
+  let results = (outs resultType:$res);
+  let builders = [LLVM_OneResultOpBuilder];
+  let assemblyFormat = "$arg (`dereferenceable` `` $dereferenceable^)? attr-dict `:` type($arg) `to` type($res)";
+  string llvmInstName = instName;
+  string llvmBuilder = [{
+    auto *val = builder.Create}] # instName # [{($arg, $_resultType);
+    $res = val;
+    if ($dereferenceable) {
+      llvm::Instruction *inst = dyn_cast<llvm::Instruction>(val);
+      moduleTranslation.setDereferenceableMetadata(op, inst);
+    }
+  }];
+  string mlirBuilder = [{
+    auto op = $_builder.create<$_qualCppClassName>(
+      $_location, $_resultType, $arg);
+    $res = op;
+  }];
+}
+
 def LLVM_BitcastOp : LLVM_CastOp<"bitcast", "BitCast", LLVM_AnyNonAggregate,
     LLVM_AnyNonAggregate, [DeclareOpInterfaceMethods<PromotableOpInterface>]> {
   let hasFolder = 1;
@@ -583,7 +611,7 @@ def LLVM_AddrSpaceCastOp : LLVM_CastOp<"addrspacecast", "AddrSpaceCast",
      DeclareOpInterfaceMethods<ViewLikeOpInterface>]> {
   let hasFolder = 1;
 }
-def LLVM_IntToPtrOp : LLVM_CastOp<"inttoptr", "IntToPtr",
+def LLVM_IntToPtrOp : LLVM_DereferenceableCastOp<"inttoptr", "IntToPtr",
                                   LLVM_ScalarOrVectorOf<AnySignlessInteger>,
                                   LLVM_ScalarOrVectorOf<LLVM_AnyPointer>>;
 def LLVM_PtrToIntOp : LLVM_CastOp<"ptrtoint", "PtrToInt",
@@ -1410,32 +1438,37 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
 
 def LLVM_GlobalCtorsOp : LLVM_Op<"mlir.global_ctors", [
                            DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
-  let arguments = (ins FlatSymbolRefArrayAttr
-                   : $ctors, I32ArrayAttr
-                   : $priorities);
+  let arguments = (ins FlatSymbolRefArrayAttr:$ctors,
+                       I32ArrayAttr:$priorities,
+                       ArrayAttr:$data);
   let summary = "LLVM dialect global_ctors.";
   let description = [{
-    Specifies a list of constructor functions and priorities. The functions
-    referenced by this array will be called in ascending order of priority (i.e.
-    lowest first) when the module is loaded. The order of functions with the
-    same priority is not defined. This operation is translated to LLVM's
-    global_ctors global variable. The initializer functions are run at load
-    time. The `data` field present in LLVM's global_ctors variable is not
-    modeled here.
+    Specifies a list of constructor functions, priorities, and associated data.
+    The functions referenced by this array will be called in ascending order
+    of priority (i.e. lowest first) when the module is loaded. The order of
+    functions with the same priority is not defined. This operation is
+    translated to LLVM's global_ctors global variable. The initializer
+    functions are run at load time. However, if the associated data is not
+    `#llvm.zero`, functions only run if the data is not discarded.
 
     Examples:
 
     ```mlir
-    llvm.mlir.global_ctors {@ctor}
-
     llvm.func @ctor() {
       ...
       llvm.return
     }
+    llvm.mlir.global_ctors ctors = [@ctor], priorities = [0],
+                                   data = [#llvm.zero]
     ```
 
   }];
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = [{
+    `ctors` `=` $ctors
+    `,` `priorities` `=` $priorities
+    `,` `data` `=` $data
+    attr-dict
+  }];
   let hasVerifier = 1;
 }
 
@@ -1443,16 +1476,18 @@ def LLVM_GlobalDtorsOp : LLVM_Op<"mlir.global_dtors", [
                            DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let arguments = (ins
     FlatSymbolRefArrayAttr:$dtors,
-    I32ArrayAttr:$priorities
+    I32ArrayAttr:$priorities,
+    ArrayAttr:$data
   );
   let summary = "LLVM dialect global_dtors.";
   let description = [{
     Specifies a list of destructor functions and priorities. The functions
-    referenced by this array will be called in descending order of priority (i.e.
-    highest first) when the module is unloaded. The order of functions with the
-    same priority is not defined. This operation is translated to LLVM's
-    global_dtors global variable. The `data` field present in LLVM's
-    global_dtors variable is not modeled here.
+    referenced by this array will be called in descending order of priority
+    (i.e. highest first) when the module is unloaded. The order of functions
+    with the same priority is not defined. This operation is translated to
+    LLVM's global_dtors global variable. The destruction functions are run at
+    load time. However, if the associated data is not `#llvm.zero`, functions
+    only run if the data is not discarded.
 
     Examples:
 
@@ -1460,11 +1495,16 @@ def LLVM_GlobalDtorsOp : LLVM_Op<"mlir.global_dtors", [
     llvm.func @dtor() {
       llvm.return
     }
-    llvm.mlir.global_dtors {@dtor}
+    llvm.mlir.global_dtors dtors = [@dtor], priorities = [0],
+                                   data = [#llvm.zero]
     ```
-
   }];
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = [{
+    `dtors` `=` $dtors
+    `,` `priorities` `=` $priorities
+    `,` `data` `=` $data
+    attr-dict
+  }];
   let hasVerifier = 1;
 }
 
@@ -1545,6 +1585,44 @@ def LLVM_AliasOp : LLVM_Op<"mlir.alias",
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
   let hasRegionVerifier = 1;
+}
+
+def LLVM_DSOLocalEquivalentOp : LLVM_Op<"dso_local_equivalent",
+    [Pure, ConstantLike, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let arguments = (ins FlatSymbolRefAttr:$function_name);
+  let results = (outs LLVM_AnyPointer:$res);
+
+  let summary = "Creates a LLVM dso_local_equivalent ptr";
+
+  let description = [{
+    Creates an SSA value containing a pointer to a global value (function or
+    alias to function). It represents a function which is functionally
+    equivalent to a given function, but is always defined in the current
+    linkage unit. The target function may not have `extern_weak` linkage.
+
+    Examples:
+
+    ```mlir
+    llvm.mlir.global external constant @const() : i64 {
+      %0 = llvm.mlir.addressof @const : !llvm.ptr
+      %1 = llvm.ptrtoint %0 : !llvm.ptr to i64
+      %2 = llvm.dso_local_equivalent @func : !llvm.ptr
+      %4 = llvm.ptrtoint %2 : !llvm.ptr to i64
+      llvm.return %4 : i64
+    }
+    ```
+  }];
+
+  let extraClassDeclaration = [{
+    /// Return the llvm.func operation that is referenced here.
+    LLVMFuncOp getFunction(SymbolTableCollection &symbolTable);
+    /// Return the llvm.mlir.alias operation that defined the value referenced
+    /// here.
+    AliasOp getAlias(SymbolTableCollection &symbolTable);
+  }];
+
+  let assemblyFormat = "$function_name attr-dict `:` qualified(type($res))";
+  let hasFolder = 1;
 }
 
 def LLVM_ComdatSelectorOp : LLVM_Op<"comdat_selector", [Symbol]> {
@@ -2150,6 +2228,38 @@ def LLVM_LinkerOptionsOp
 
   let llvmBuilder = [{
     convertLinkerOptionsOp($options, builder, moduleTranslation);
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===--------------------------------------------------------------------===//
+// ModuleFlagsOp
+//===--------------------------------------------------------------------===//
+
+def LLVM_ModuleFlagsOp
+    : LLVM_Op<"module_flags"> {
+  let summary = "Information about module properties";
+  let description = [{
+    Represents the equivalent in MLIR for LLVM's `llvm.module.flags` metadata,
+    which requires a list of metadata triplets. Each triplet entry is described
+    by a `ModuleFlagAttr`.
+
+    Example:
+    ```mlir
+    llvm.module.flags [
+      #llvm.mlir.module_flag<error, "wchar_size", 4>,
+      #llvm.mlir.module_flag<max, "PIC Level", 2>
+    ]
+    ```
+  }];
+  let arguments  = (ins ArrayAttr:$flags);
+  let assemblyFormat = [{
+    $flags attr-dict
+  }];
+
+  let llvmBuilder = [{
+    convertModuleFlagsOp($flags, builder, moduleTranslation);
   }];
 
   let hasVerifier = 1;

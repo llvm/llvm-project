@@ -383,10 +383,8 @@ define float @buffer_fat_ptr_agent_atomic_fadd_ret_f32__offset__waterfall__amdgp
 ; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
 ; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
 ; GFX12-NEXT:    s_wait_alu 0xf1ff
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
@@ -444,8 +442,8 @@ define float @buffer_fat_ptr_agent_atomic_fadd_ret_f32__offset__waterfall__amdgp
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX11-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_atomic_add_f32 v5, v4, s[4:7], 0 offen offset:1024 glc
@@ -2371,10 +2369,8 @@ define double @buffer_fat_ptr_agent_atomic_fadd_ret_f64__offset__waterfall__amdg
 ; GFX12-NEXT:    v_readfirstlane_b32 s6, v7
 ; GFX12-NEXT:    v_readfirstlane_b32 s7, v8
 ; GFX12-NEXT:    s_wait_alu 0xf1ff
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[9:10]
 ; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[7:8]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
@@ -2403,10 +2399,8 @@ define double @buffer_fat_ptr_agent_atomic_fadd_ret_f64__offset__waterfall__amdg
 ; GFX12-NEXT:    v_readfirstlane_b32 s6, v7
 ; GFX12-NEXT:    v_readfirstlane_b32 s7, v8
 ; GFX12-NEXT:    s_wait_alu 0xf1ff
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[9:10]
 ; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[7:8]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
@@ -2474,10 +2468,9 @@ define double @buffer_fat_ptr_agent_atomic_fadd_ret_f64__offset__waterfall__amdg
 ; GFX11-NEXT:    v_readfirstlane_b32 s6, v7
 ; GFX11-NEXT:    v_readfirstlane_b32 s7, v8
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[9:10]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[7:8]
 ; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX11-NEXT:    buffer_load_b64 v[13:14], v4, s[4:7], 0 offen offset:2048
 ; GFX11-NEXT:    ; implicit-def: $vgpr4
@@ -2505,8 +2498,8 @@ define double @buffer_fat_ptr_agent_atomic_fadd_ret_f64__offset__waterfall__amdg
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[9:10]
 ; GFX11-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[7:8]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_atomic_cmpswap_b64 v[0:3], v15, s[4:7], 0 offen glc
@@ -4117,10 +4110,8 @@ define half @buffer_fat_ptr_agent_atomic_fadd_ret_f16__offset__waterfall__amdgpu
 ; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
 ; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
 ; GFX12-NEXT:    s_wait_alu 0xf1ff
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
@@ -4153,10 +4144,8 @@ define half @buffer_fat_ptr_agent_atomic_fadd_ret_f16__offset__waterfall__amdgpu
 ; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
 ; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
 ; GFX12-NEXT:    s_wait_alu 0xf1ff
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
@@ -4267,8 +4256,8 @@ define half @buffer_fat_ptr_agent_atomic_fadd_ret_f16__offset__waterfall__amdgpu
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX11-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX11-NEXT:    buffer_load_b32 v7, v10, s[4:7], 0 offen
 ; GFX11-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
@@ -4300,8 +4289,8 @@ define half @buffer_fat_ptr_agent_atomic_fadd_ret_f16__offset__waterfall__amdgpu
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX11-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_atomic_cmpswap_b32 v[8:9], v10, s[4:7], 0 offen glc
@@ -5561,10 +5550,8 @@ define bfloat @buffer_fat_ptr_agent_atomic_fadd_ret_bf16__offset__waterfall__amd
 ; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
 ; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
 ; GFX12-NEXT:    s_wait_alu 0xf1ff
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
@@ -5608,10 +5595,8 @@ define bfloat @buffer_fat_ptr_agent_atomic_fadd_ret_bf16__offset__waterfall__amd
 ; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
 ; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
 ; GFX12-NEXT:    s_wait_alu 0xf1ff
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
@@ -5730,8 +5715,8 @@ define bfloat @buffer_fat_ptr_agent_atomic_fadd_ret_bf16__offset__waterfall__amd
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX11-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX11-NEXT:    buffer_load_b32 v6, v8, s[4:7], 0 offen
 ; GFX11-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
@@ -5774,8 +5759,8 @@ define bfloat @buffer_fat_ptr_agent_atomic_fadd_ret_bf16__offset__waterfall__amd
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX11-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_atomic_cmpswap_b32 v[4:5], v8, s[4:7], 0 offen glc
@@ -6732,10 +6717,8 @@ define <2 x half> @buffer_fat_ptr_agent_atomic_fadd_ret_v2f16__offset__waterfall
 ; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
 ; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
 ; GFX12-NEXT:    s_wait_alu 0xf1ff
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
@@ -6794,8 +6777,8 @@ define <2 x half> @buffer_fat_ptr_agent_atomic_fadd_ret_v2f16__offset__waterfall
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX11-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX11-NEXT:    buffer_load_b32 v8, v4, s[4:7], 0 offen offset:1024
 ; GFX11-NEXT:    ; implicit-def: $vgpr4
@@ -6823,8 +6806,8 @@ define <2 x half> @buffer_fat_ptr_agent_atomic_fadd_ret_v2f16__offset__waterfall
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX11-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_atomic_cmpswap_b32 v[6:7], v9, s[4:7], 0 offen glc
@@ -9041,10 +9024,8 @@ define <2 x bfloat> @buffer_fat_ptr_agent_atomic_fadd_ret_v2bf16__offset__waterf
 ; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
 ; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
 ; GFX12-NEXT:    s_wait_alu 0xf1ff
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
@@ -9153,8 +9134,8 @@ define <2 x bfloat> @buffer_fat_ptr_agent_atomic_fadd_ret_v2bf16__offset__waterf
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX11-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX11-NEXT:    buffer_load_b32 v6, v4, s[4:7], 0 offen offset:1024
 ; GFX11-NEXT:    ; implicit-def: $vgpr4
@@ -9201,8 +9182,8 @@ define <2 x bfloat> @buffer_fat_ptr_agent_atomic_fadd_ret_v2bf16__offset__waterf
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX11-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_atomic_cmpswap_b32 v[4:5], v7, s[4:7], 0 offen glc

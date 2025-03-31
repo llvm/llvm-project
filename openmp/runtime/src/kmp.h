@@ -1354,6 +1354,10 @@ extern kmp_uint64 __kmp_now_nsec();
 /* TODO: tune for KMP_OS_OPENBSD */
 #define KMP_INIT_WAIT 1024U /* initial number of spin-tests   */
 #define KMP_NEXT_WAIT 512U /* susequent number of spin-tests */
+#elif KMP_OS_HAIKU
+/* TODO: tune for KMP_OS_HAIKU */
+#define KMP_INIT_WAIT 1024U /* initial number of spin-tests   */
+#define KMP_NEXT_WAIT 512U /* susequent number of spin-tests */
 #elif KMP_OS_HURD
 /* TODO: tune for KMP_OS_HURD */
 #define KMP_INIT_WAIT 1024U /* initial number of spin-tests   */
@@ -2790,6 +2794,7 @@ struct kmp_taskdata { /* aligned during dynamic allocation       */
 #if OMPX_TASKGRAPH
   bool is_taskgraph = 0; // whether the task is within a TDG
   kmp_tdg_info_t *tdg; // used to associate task with a TDG
+  kmp_int32 td_tdg_task_id; // local task id in its TDG
 #endif
   kmp_target_data_t td_target_data;
 }; // struct kmp_taskdata

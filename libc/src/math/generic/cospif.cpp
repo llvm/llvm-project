@@ -50,11 +50,11 @@ LLVM_LIBC_FUNCTION(float, cospif, (float x)) {
   // The exhautive test passes for smaller values
   if (LIBC_UNLIKELY(x_abs < 0x38A2'F984U)) {
 
-#if defined(LIBC_TARGET_CPU_HAS_FMA)
+#if defined(LIBC_TARGET_CPU_HAS_FMA_FLOAT)
     return fputil::multiply_add(xbits.get_val(), -0x1.0p-25f, 1.0f);
 #else
     return static_cast<float>(fputil::multiply_add(xd, -0x1.0p-25, 1.0));
-#endif // LIBC_TARGET_CPU_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA_FLOAT
   }
 
   // Numbers greater or equal to 2^23 are always integers or NaN

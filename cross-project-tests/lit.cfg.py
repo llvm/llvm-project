@@ -34,10 +34,21 @@ config.test_exec_root = config.cross_project_tests_obj_root
 
 llvm_config.use_default_substitutions()
 
+lldb_python_path = os.path.join(
+    config.llvm_libs_dir,
+    f"python{sys.version_info.major}.{sys.version_info.minor}",
+    "site-packages",
+)
+python_exec_path = sys.executable
 tools = [
     ToolSubst(
         "%test_debuginfo",
-        command=os.path.join(
+        command="PYTHON_EXEC_PATH="
+        + python_exec_path
+        + " LLDB_PYTHON_PATH="
+        + lldb_python_path
+        + " "
+        + os.path.join(
             config.cross_project_tests_src_root,
             "debuginfo-tests",
             "llgdb-tests",

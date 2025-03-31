@@ -5,7 +5,7 @@
 ; CHECK: .amdhsa_kernarg_size 264
 define amdgpu_kernel void @test_unaligned_to_eight(i32 %four)  {
   %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-  store volatile ptr addrspace(4) %implicitarg.ptr, ptr addrspace(1) undef
+  store volatile ptr addrspace(4) %implicitarg.ptr, ptr addrspace(1) poison
   ret void
 }
 
@@ -14,7 +14,7 @@ define amdgpu_kernel void @test_unaligned_to_eight(i32 %four)  {
 ; CHECK: .amdhsa_kernarg_size 264
 define amdgpu_kernel void @test_aligned_to_eight(i64 %eight)  {
   %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-  store volatile ptr addrspace(4) %implicitarg.ptr, ptr addrspace(1) undef
+  store volatile ptr addrspace(4) %implicitarg.ptr, ptr addrspace(1) poison
   ret void
 }
 

@@ -1855,6 +1855,22 @@ FORMAT_INTERCEPTOR_IMPL(__isoc99_snprintf, __isoc99_vsnprintf, str, size,
 #define INIT_ISOC99_PRINTF
 #endif
 
+#if SANITIZER_INTERCEPT_SETPROCTITLE
+INTERCEPTOR(void, setproctitle, const char *fmt, ...) {
+  void *ctx;
+  va_list ap;
+  va_start(ap, fmt);
+  COMMON_INTERCEPTOR_ENTER(ctx, setproctitle, fmt, ap);
+  if (common_flags()->check_printf)
+    printf_common(ctx, fmt, ap);
+  REAL(setproctitle)(fmt, ap);
+  va_end(ap);
+}
+#  define INIT_SETPROCTITLE COMMON_INTERCEPT_FUNCTION(setproctitle);
+#else
+#  define INIT_SETPROCTITLE
+#endif
+
 #if SANITIZER_INTERCEPT_IOCTL
 #include "sanitizer_common_interceptors_ioctl.inc"
 #include "sanitizer_interceptors_ioctl_netbsd.inc"
@@ -10328,6 +10344,7 @@ static void InitializeCommonInterceptors() {
   INIT_PRINTF;
   INIT_PRINTF_L;
   INIT_ISOC99_PRINTF;
+  INIT_SETPROCTITLE;
   INIT_FREXP;
   INIT_FREXPF_FREXPL;
   INIT_GETPWNAM_AND_FRIENDS;

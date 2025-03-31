@@ -193,6 +193,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.ldiv
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
+    libc.src.stdlib.memalignment
     libc.src.stdlib.qsort
     libc.src.stdlib.qsort_r
     libc.src.stdlib.rand
@@ -413,6 +414,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.asinhf
     libc.src.math.atan2
     libc.src.math.atan2f
+    libc.src.math.atan
     libc.src.math.atanf
     libc.src.math.atanhf
     libc.src.math.canonicalize
@@ -651,8 +653,10 @@ endif()
 if(LIBC_TYPES_HAS_FLOAT16)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float16 entrypoints
-    libc.src.math.asinf16
     libc.src.math.acosf16
+    libc.src.math.acoshf16
+    libc.src.math.asinf16
+    libc.src.math.asinhf16
     libc.src.math.canonicalizef16
     libc.src.math.ceilf16
     libc.src.math.copysignf16
@@ -686,6 +690,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.fabsf16
     libc.src.math.fdimf16
     libc.src.math.floorf16
+    libc.src.math.fmaf16
     libc.src.math.fmaxf16
     libc.src.math.fmaximum_mag_numf16
     libc.src.math.fmaximum_magf16
@@ -701,6 +706,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.fromfpf16
     libc.src.math.fromfpxf16
     libc.src.math.getpayloadf16
+    libc.src.math.hypotf16
     libc.src.math.ilogbf16
     libc.src.math.iscanonicalf16
     libc.src.math.issignalingf16
@@ -938,6 +944,10 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.string.strcoll_l
     libc.src.string.strxfrm_l
 
+    # strings.h entrypoints
+    libc.src.strings.strcasecmp_l
+    libc.src.strings.strncasecmp_l
+
     # assert.h entrypoints
     libc.src.assert.__assert_fail
 
@@ -1024,6 +1034,9 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # sched.h entrypoints
     libc.src.sched.__sched_getcpucount
+    libc.src.sched.__sched_setcpuzero
+    libc.src.sched.__sched_setcpuset
+    libc.src.sched.__sched_getcpuisset
 
     # setjmp.h entrypoints
     libc.src.setjmp.longjmp
@@ -1109,6 +1122,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.search.hsearch_r
     libc.src.search.insque
     libc.src.search.lfind
+    libc.src.search.lsearch
     libc.src.search.remque
 
     # threads.h entrypoints

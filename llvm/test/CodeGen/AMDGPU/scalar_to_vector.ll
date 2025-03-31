@@ -67,7 +67,7 @@ define amdgpu_kernel void @scalar_to_vector_v2i32(ptr addrspace(1) %out, ptr add
 ; GFX9-NEXT:    s_endpgm
   %tmp1 = load i32, ptr addrspace(1) %in, align 4
   %bc = bitcast i32 %tmp1 to <2 x i16>
-  %tmp2 = shufflevector <2 x i16> %bc, <2 x i16> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %tmp2 = shufflevector <2 x i16> %bc, <2 x i16> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   store <4 x i16> %tmp2, ptr addrspace(1) %out, align 8
   ret void
 }
@@ -135,7 +135,7 @@ define amdgpu_kernel void @scalar_to_vector_v2f32(ptr addrspace(1) %out, ptr add
 ; GFX9-NEXT:    s_endpgm
   %tmp1 = load float, ptr addrspace(1) %in, align 4
   %bc = bitcast float %tmp1 to <2 x i16>
-  %tmp2 = shufflevector <2 x i16> %bc, <2 x i16> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %tmp2 = shufflevector <2 x i16> %bc, <2 x i16> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   store <4 x i16> %tmp2, ptr addrspace(1) %out, align 8
   ret void
 }
@@ -157,44 +157,24 @@ define amdgpu_kernel void @scalar_to_vector_v4i16() {
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
-; VI-LABEL: scalar_to_vector_v4i16:
-; VI:       ; %bb.0: ; %bb
-; VI-NEXT:    s_mov_b32 s3, 0xf000
-; VI-NEXT:    s_mov_b32 s2, -1
-; VI-NEXT:    buffer_load_ubyte v0, off, s[0:3], 0
-; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_readfirstlane_b32 s0, v0
-; VI-NEXT:    s_lshl_b32 s1, s0, 8
-; VI-NEXT:    s_or_b32 s0, s0, s1
-; VI-NEXT:    s_lshl_b32 s1, s0, 16
-; VI-NEXT:    s_and_b32 s0, s0, 0xffff
-; VI-NEXT:    s_or_b32 s0, s0, s1
-; VI-NEXT:    v_mov_b32_e32 v0, s0
-; VI-NEXT:    v_mov_b32_e32 v1, s0
-; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
-; VI-NEXT:    s_endpgm
-;
-; GFX9-LABEL: scalar_to_vector_v4i16:
-; GFX9:       ; %bb.0: ; %bb
-; GFX9-NEXT:    s_mov_b32 s3, 0xf000
-; GFX9-NEXT:    s_mov_b32 s2, -1
-; GFX9-NEXT:    buffer_load_ubyte v0, off, s[0:3], 0
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX9-NEXT:    s_lshl_b32 s1, s0, 8
-; GFX9-NEXT:    s_or_b32 s0, s0, s1
-; GFX9-NEXT:    s_and_b32 s1, s0, 0xffff
-; GFX9-NEXT:    s_lshl_b32 s0, s0, 16
-; GFX9-NEXT:    s_or_b32 s0, s1, s0
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NEXT:    v_mov_b32_e32 v1, s0
-; GFX9-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
-; GFX9-NEXT:    s_endpgm
+; GFX89-LABEL: scalar_to_vector_v4i16:
+; GFX89:       ; %bb.0: ; %bb
+; GFX89-NEXT:    s_mov_b32 s3, 0xf000
+; GFX89-NEXT:    s_mov_b32 s2, -1
+; GFX89-NEXT:    buffer_load_ubyte v0, off, s[0:3], 0
+; GFX89-NEXT:    s_waitcnt vmcnt(0)
+; GFX89-NEXT:    v_lshlrev_b32_e32 v1, 8, v0
+; GFX89-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX89-NEXT:    v_lshlrev_b32_e32 v1, 16, v0
+; GFX89-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX89-NEXT:    v_mov_b32_e32 v1, v0
+; GFX89-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; GFX89-NEXT:    s_endpgm
 bb:
-  %tmp = load <2 x i8>, ptr addrspace(1) undef, align 1
+  %tmp = load <2 x i8>, ptr addrspace(1) poison, align 1
   %tmp1 = shufflevector <2 x i8> %tmp, <2 x i8> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-  %tmp2 = shufflevector <8 x i8> %tmp1, <8 x i8> undef, <8 x i32> <i32 0, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9>
-  store <8 x i8> %tmp2, ptr addrspace(1) undef, align 8
+  %tmp2 = shufflevector <8 x i8> %tmp1, <8 x i8> poison, <8 x i32> <i32 0, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9>
+  store <8 x i8> %tmp2, ptr addrspace(1) poison, align 8
   ret void
 }
 
@@ -215,55 +195,27 @@ define amdgpu_kernel void @scalar_to_vector_v4f16() {
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
-; VI-LABEL: scalar_to_vector_v4f16:
-; VI:       ; %bb.0: ; %bb
-; VI-NEXT:    s_mov_b32 s3, 0xf000
-; VI-NEXT:    s_mov_b32 s2, -1
-; VI-NEXT:    buffer_load_ubyte v0, off, s[0:3], 0
-; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_readfirstlane_b32 s0, v0
-; VI-NEXT:    s_lshl_b32 s1, s0, 8
-; VI-NEXT:    s_or_b32 s0, s1, s0
-; VI-NEXT:    s_and_b32 s1, s0, 0xff00
-; VI-NEXT:    s_bfe_u32 s4, s0, 0x80008
-; VI-NEXT:    s_or_b32 s1, s4, s1
-; VI-NEXT:    s_and_b32 s0, s0, 0xffff
-; VI-NEXT:    s_lshl_b32 s4, s1, 16
-; VI-NEXT:    s_and_b32 s1, s1, 0xffff
-; VI-NEXT:    s_or_b32 s1, s1, s4
-; VI-NEXT:    s_or_b32 s0, s0, s4
-; VI-NEXT:    v_mov_b32_e32 v0, s0
-; VI-NEXT:    v_mov_b32_e32 v1, s1
-; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
-; VI-NEXT:    s_endpgm
-;
-; GFX9-LABEL: scalar_to_vector_v4f16:
-; GFX9:       ; %bb.0: ; %bb
-; GFX9-NEXT:    s_mov_b32 s3, 0xf000
-; GFX9-NEXT:    s_mov_b32 s2, -1
-; GFX9-NEXT:    buffer_load_ubyte v0, off, s[0:3], 0
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX9-NEXT:    s_lshl_b32 s1, s0, 8
-; GFX9-NEXT:    s_or_b32 s0, s1, s0
-; GFX9-NEXT:    s_and_b32 s1, s0, 0xff00
-; GFX9-NEXT:    s_bfe_u32 s4, s0, 0x80008
-; GFX9-NEXT:    s_or_b32 s1, s4, s1
-; GFX9-NEXT:    s_and_b32 s0, s0, 0xffff
-; GFX9-NEXT:    s_and_b32 s4, s1, 0xffff
-; GFX9-NEXT:    s_lshl_b32 s1, s1, 16
-; GFX9-NEXT:    s_or_b32 s4, s4, s1
-; GFX9-NEXT:    s_or_b32 s0, s0, s1
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NEXT:    v_mov_b32_e32 v1, s4
-; GFX9-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
-; GFX9-NEXT:    s_endpgm
+; GFX89-LABEL: scalar_to_vector_v4f16:
+; GFX89:       ; %bb.0: ; %bb
+; GFX89-NEXT:    s_mov_b32 s3, 0xf000
+; GFX89-NEXT:    s_mov_b32 s2, -1
+; GFX89-NEXT:    buffer_load_ubyte v0, off, s[0:3], 0
+; GFX89-NEXT:    s_waitcnt vmcnt(0)
+; GFX89-NEXT:    v_lshlrev_b32_e32 v1, 8, v0
+; GFX89-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX89-NEXT:    v_and_b32_e32 v1, 0xff00, v0
+; GFX89-NEXT:    v_or_b32_sdwa v1, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
+; GFX89-NEXT:    v_lshlrev_b32_e32 v2, 16, v1
+; GFX89-NEXT:    v_or_b32_sdwa v1, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX89-NEXT:    v_or_b32_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX89-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; GFX89-NEXT:    s_endpgm
 bb:
-  %load = load half, ptr addrspace(1) undef, align 1
+  %load = load half, ptr addrspace(1) poison, align 1
   %tmp = bitcast half %load to <2 x i8>
   %tmp1 = shufflevector <2 x i8> %tmp, <2 x i8> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-  %tmp2 = shufflevector <8 x i8> %tmp1, <8 x i8> undef, <8 x i32> <i32 0, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9>
-  store <8 x i8> %tmp2, ptr addrspace(1) undef, align 8
+  %tmp2 = shufflevector <8 x i8> %tmp1, <8 x i8> poison, <8 x i32> <i32 0, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9>
+  store <8 x i8> %tmp2, ptr addrspace(1) poison, align 8
   ret void
 }
 
@@ -275,14 +227,14 @@ bb:
 ;   %tmp1 = load i32, ptr addrspace(1) %in, align 4
 ;   %bc = bitcast i32 %tmp1 to <4 x i8>
 
-;   %tmp2 = shufflevector <4 x i8> %bc, <4 x i8> undef, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+;   %tmp2 = shufflevector <4 x i8> %bc, <4 x i8> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ;   store <8 x i8> %tmp2, ptr addrspace(1) %out, align 4
 ;   ret void
 ; }
 
 ; define amdgpu_kernel void @scalar_to_vector_test3(ptr addrspace(1) %out) nounwind {
-;   %newvec0 = insertelement <2 x i64> undef, i64 12345, i32 0
-;   %newvec1 = insertelement <2 x i64> %newvec0, i64 undef, i32 1
+;   %newvec0 = insertelement <2 x i64> poison, i64 12345, i32 0
+;   %newvec1 = insertelement <2 x i64> %newvec0, i64 poison, i32 1
 ;   %bc = bitcast <2 x i64> %newvec1 to <4 x i32>
 ;   %add = add <4 x i32> %bc, <i32 1, i32 2, i32 3, i32 4>
 ;   store <4 x i32> %add, ptr addrspace(1) %out, align 16
@@ -290,7 +242,7 @@ bb:
 ; }
 
 ; define amdgpu_kernel void @scalar_to_vector_test4(ptr addrspace(1) %out) nounwind {
-;   %newvec0 = insertelement <4 x i32> undef, i32 12345, i32 0
+;   %newvec0 = insertelement <4 x i32> poison, i32 12345, i32 0
 ;   %bc = bitcast <4 x i32> %newvec0 to <8 x i16>
 ;   %add = add <8 x i16> %bc, <i16 1, i16 2, i16 3, i16 4, i16 1, i16 2, i16 3, i16 4>
 ;   store <8 x i16> %add, ptr addrspace(1) %out, align 16
@@ -298,7 +250,7 @@ bb:
 ; }
 
 ; define amdgpu_kernel void @scalar_to_vector_test5(ptr addrspace(1) %out) nounwind {
-;   %newvec0 = insertelement <2 x i32> undef, i32 12345, i32 0
+;   %newvec0 = insertelement <2 x i32> poison, i32 12345, i32 0
 ;   %bc = bitcast <2 x i32> %newvec0 to <4 x i16>
 ;   %add = add <4 x i16> %bc, <i16 1, i16 2, i16 3, i16 4>
 ;   store <4 x i16> %add, ptr addrspace(1) %out, align 16
@@ -327,7 +279,7 @@ define amdgpu_kernel void @scalar_to_vector_test6(ptr addrspace(1) %out, i8 zero
 ; GFX89-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX89-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX89-NEXT:    s_endpgm
-  %newvec0 = insertelement <4 x i8> undef, i8 %val, i32 0
+  %newvec0 = insertelement <4 x i8> poison, i8 %val, i32 0
   %bc = bitcast <4 x i8> %newvec0 to <2 x half>
   store <2 x half> %bc, ptr addrspace(1) %out
   ret void

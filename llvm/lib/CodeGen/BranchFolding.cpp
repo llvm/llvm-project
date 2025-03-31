@@ -24,6 +24,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/CodeGen/BranchFoldingPass.h"
 #include "llvm/CodeGen/MBFIWrapper.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
@@ -88,38 +89,62 @@ TailMergeSize("tail-merge-size",
 namespace {
 
   /// BranchFolderPass - Wrap branch folder in a machine function pass.
-  class BranchFolderPass : public MachineFunctionPass {
-  public:
-    static char ID;
+class BranchFolderLegacy : public MachineFunctionPass {
+public:
+  static char ID;
 
-    explicit BranchFolderPass(): MachineFunctionPass(ID) {}
+  explicit BranchFolderLegacy() : MachineFunctionPass(ID) {}
 
-    bool runOnMachineFunction(MachineFunction &MF) override;
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
-      AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
-      AU.addRequired<ProfileSummaryInfoWrapperPass>();
-      AU.addRequired<TargetPassConfig>();
-      MachineFunctionPass::getAnalysisUsage(AU);
-    }
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+    AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
+    AU.addRequired<ProfileSummaryInfoWrapperPass>();
+    AU.addRequired<TargetPassConfig>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 
-    MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoPHIs);
-    }
-  };
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::NoPHIs);
+  }
+};
 
 } // end anonymous namespace
 
-char BranchFolderPass::ID = 0;
+char BranchFolderLegacy::ID = 0;
 
-char &llvm::BranchFolderPassID = BranchFolderPass::ID;
+char &llvm::BranchFolderPassID = BranchFolderLegacy::ID;
 
-INITIALIZE_PASS(BranchFolderPass, DEBUG_TYPE,
-                "Control Flow Optimizer", false, false)
+INITIALIZE_PASS(BranchFolderLegacy, DEBUG_TYPE, "Control Flow Optimizer", false,
+                false)
 
-bool BranchFolderPass::runOnMachineFunction(MachineFunction &MF) {
+PreservedAnalyses BranchFolderPass::run(MachineFunction &MF,
+                                        MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+  bool EnableTailMerge =
+      !MF.getTarget().requiresStructuredCFG() && this->EnableTailMerge;
+
+  auto &MBPI = MFAM.getResult<MachineBranchProbabilityAnalysis>(MF);
+  auto *PSI = MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+                  .getCachedResult<ProfileSummaryAnalysis>(
+                      *MF.getFunction().getParent());
+  if (!PSI)
+    report_fatal_error(
+        "ProfileSummaryAnalysis is required for BranchFoldingPass", false);
+
+  auto &MBFI = MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
+  MBFIWrapper MBBFreqInfo(MBFI);
+  BranchFolder Folder(EnableTailMerge, /*CommonHoist=*/true, MBBFreqInfo, MBPI,
+                      PSI);
+  if (!Folder.OptimizeFunction(MF, MF.getSubtarget().getInstrInfo(),
+                               MF.getSubtarget().getRegisterInfo()))
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses();
+}
+
+bool BranchFolderLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 

@@ -3,7 +3,7 @@
 
 %struct.S = type { [32 x i32] }
 
-@shared = addrspace(3) global %struct.S undef, align 4
+@shared = addrspace(3) global %struct.S poison, align 4
 
 define amdgpu_kernel void @memcpy_p0_p0_minsize(ptr %dest, ptr readonly %src) #0 {
 ; CHECK-LABEL: memcpy_p0_p0_minsize:

@@ -300,5 +300,5 @@ void FIROpsDialect::registerAttributes() {
                 FortranProcedureFlagsEnumAttr, FortranVariableFlagsAttr,
                 LowerBoundAttr, PointIntervalAttr, RealAttr, ReduceAttr,
                 SubclassAttr, UpperBoundAttr, LocationKindAttr,
-                LocationKindArrayAttr>();
+                LocationKindArrayAttr, PackArrayHeuristicsAttr>();
 }

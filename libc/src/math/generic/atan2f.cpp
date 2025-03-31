@@ -131,7 +131,7 @@ float atan2f_double_double(double num_d, double den_d, double q_d, int idx,
     num_r = num_d;
     den_r = den_d;
   }
-#ifdef LIBC_TARGET_CPU_HAS_FMA
+#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
   q.lo = fputil::multiply_add(q.hi, -den_r, num_r) / den_r;
 #else
   // Compute `(num_r - q.hi * den_r) / den_r` accurately without FMA
@@ -140,7 +140,7 @@ float atan2f_double_double(double num_d, double den_d, double q_d, int idx,
   double t1 = fputil::multiply_add(q_hi_dd.hi, -den_r, num_r); // Exact
   double t2 = fputil::multiply_add(q_hi_dd.lo, -den_r, t1);
   q.lo = t2 / den_r;
-#endif // LIBC_TARGET_CPU_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
   // Taylor polynomial, evaluating using Horner's scheme:
   //   P = x - x^3/3 + x^5/5 -x^7/7 + x^9/9 - x^11/11 + x^13/13 - x^15/15

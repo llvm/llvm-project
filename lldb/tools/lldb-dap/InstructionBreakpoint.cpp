@@ -22,6 +22,7 @@ InstructionBreakpoint::InstructionBreakpoint(DAP &d,
     : Breakpoint(d, obj), instructionAddressReference(LLDB_INVALID_ADDRESS),
       offset(GetInteger<int64_t>(obj, "offset").value_or(0)) {
   GetString(obj, "instructionReference")
+      .value_or("")
       .getAsInteger(0, instructionAddressReference);
   instructionAddressReference += offset;
 }

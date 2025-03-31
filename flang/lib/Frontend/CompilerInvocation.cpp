@@ -246,6 +246,9 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (args.getLastArg(clang::driver::options::OPT_vectorize_loops))
     opts.VectorizeLoop = 1;
 
+  if (args.getLastArg(clang::driver::options::OPT_vectorize_slp))
+    opts.VectorizeSLP = 1;
+
   if (args.hasFlag(clang::driver::options::OPT_floop_versioning,
                    clang::driver::options::OPT_fno_loop_versioning, false))
     opts.LoopVersioning = 1;
@@ -476,6 +479,10 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
       opts.EnableAIXExtendedAltivecABI = false;
     }
   }
+
+  opts.asmVerbose =
+      args.hasFlag(clang::driver::options::OPT_fverbose_asm,
+                   clang::driver::options::OPT_fno_verbose_asm, false);
 }
 // Tweak the frontend configuration based on the frontend action
 static void setUpFrontendBasedOnAction(FrontendOptions &opts) {
@@ -863,6 +870,12 @@ static void parsePreprocessorArgs(Fortran::frontend::PreprocessorOptions &opts,
         (currentArg->getOption().matches(clang::driver::options::OPT_cpp))
             ? PPMacrosFlag::Include
             : PPMacrosFlag::Exclude;
+  // Enable -cpp based on -x unless explicitly disabled with -nocpp
+  if (opts.macrosFlag != PPMacrosFlag::Exclude)
+    if (const auto *dashX = args.getLastArg(clang::driver::options::OPT_x))
+      opts.macrosFlag = llvm::StringSwitch<PPMacrosFlag>(dashX->getValue())
+                            .Case("f95-cpp-input", PPMacrosFlag::Include)
+                            .Default(opts.macrosFlag);
 
   opts.noReformat = args.hasArg(clang::driver::options::OPT_fno_reformat);
   opts.preprocessIncludeLines =
@@ -1126,22 +1139,16 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     if (args.hasArg(clang::driver::options::OPT_no_offloadlib))
       res.getLangOpts().NoGPULib = 1;
   }
-
-  switch (llvm::Triple(res.getTargetOpts().triple).getArch()) {
-  case llvm::Triple::nvptx:
-  case llvm::Triple::nvptx64:
-  case llvm::Triple::amdgcn:
+  if (llvm::Triple(res.getTargetOpts().triple).isGPU()) {
     if (!res.getLangOpts().OpenMPIsTargetDevice) {
       const unsigned diagID = diags.getCustomDiagID(
           clang::DiagnosticsEngine::Error,
-          "OpenMP AMDGPU/NVPTX is only prepared to deal with device code.");
+          "OpenMP GPU is only prepared to deal with device code.");
       diags.Report(diagID);
     }
     res.getLangOpts().OpenMPIsGPU = 1;
-    break;
-  default:
+  } else {
     res.getLangOpts().OpenMPIsGPU = 0;
-    break;
   }
 
   // Get the OpenMP target triples if any.
@@ -1163,11 +1170,8 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
       if (tt.getArch() == llvm::Triple::UnknownArch ||
           !(tt.getArch() == llvm::Triple::aarch64 || tt.isPPC() ||
             tt.getArch() == llvm::Triple::systemz ||
-            tt.getArch() == llvm::Triple::nvptx ||
-            tt.getArch() == llvm::Triple::nvptx64 ||
-            tt.getArch() == llvm::Triple::amdgcn ||
             tt.getArch() == llvm::Triple::x86 ||
-            tt.getArch() == llvm::Triple::x86_64))
+            tt.getArch() == llvm::Triple::x86_64 || tt.isGPU()))
         diags.Report(clang::diag::err_drv_invalid_omp_target)
             << arg->getValue(i);
       else if (getArchPtrSize(t) != getArchPtrSize(tt))
