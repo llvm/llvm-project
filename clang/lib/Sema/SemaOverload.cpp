@@ -11145,9 +11145,9 @@ void OverloadCandidateSet::CudaExcludeWrongSideCandidates(Sema &S) {
 /// function, \p Best points to the candidate function found.
 ///
 /// \returns The result of overload resolution.
-OverloadingResult
-OverloadCandidateSet::BestViableFunction(Sema &S, SourceLocation Loc,
-                                         iterator &Best) {
+OverloadingResult OverloadCandidateSet::BestViableFunction(Sema &S,
+                                                           SourceLocation Loc,
+                                                           iterator &Best) {
 
   assert(shouldDeferTemplateArgumentDeduction(S.getLangOpts()) ||
          DeferredCandidates.empty() &&
