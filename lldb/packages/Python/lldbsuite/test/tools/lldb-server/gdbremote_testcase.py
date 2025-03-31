@@ -186,7 +186,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
 
     def get_next_port(self):
         if available_ports := self.getPlatformAvailablePorts():
-            return int(random.choice(available_ports))
+            return random.choice(available_ports)
         return 12000 + random.randint(0, 7999)
 
     def reset_test_sequence(self):

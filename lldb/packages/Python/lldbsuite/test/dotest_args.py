@@ -296,6 +296,7 @@ def create_parser():
         "--platform-available-ports",
         dest="lldb_platform_available_ports",
         nargs="*",
+        type=int,
         metavar="platform-available-ports",
         help="Ports available for connection to a lldb server on the remote platform",
     )
