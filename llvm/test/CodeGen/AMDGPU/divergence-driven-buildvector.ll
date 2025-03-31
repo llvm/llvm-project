@@ -50,7 +50,7 @@ define amdgpu_kernel void @uniform_vec_0_i16(ptr addrspace(1) %out, i16 %a) {
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_endpgm
-  %tmp = insertelement <2 x i16> undef, i16 0, i32 0
+  %tmp = insertelement <2 x i16> poison, i16 0, i32 0
   %vec = insertelement <2 x i16> %tmp, i16 %a, i32 1
   %val = bitcast <2 x i16> %vec to i32
   store i32 %val, ptr addrspace(1) %out, align 4
@@ -81,7 +81,7 @@ define i32 @divergent_vec_0_i16(i16 %a) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %tmp = insertelement <2 x i16> undef, i16 0, i32 0
+  %tmp = insertelement <2 x i16> poison, i16 0, i32 0
   %vec = insertelement <2 x i16> %tmp, i16 %a, i32 1
   %val = bitcast <2 x i16> %vec to i32
   ret i32 %val
@@ -133,7 +133,7 @@ define amdgpu_kernel void @uniform_vec_i16_0(ptr addrspace(1) %out, i16 %a) {
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_endpgm
-  %tmp = insertelement <2 x i16> undef, i16 %a, i32 0
+  %tmp = insertelement <2 x i16> poison, i16 %a, i32 0
   %vec = insertelement <2 x i16> %tmp, i16 0, i32 1
   %val = bitcast <2 x i16> %vec to i32
   store i32 %val, ptr addrspace(1) %out, align 4
@@ -164,7 +164,7 @@ define i32 @divergent_vec_i16_0(i16 %a) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %tmp = insertelement <2 x i16> undef, i16 %a, i32 0
+  %tmp = insertelement <2 x i16> poison, i16 %a, i32 0
   %vec = insertelement <2 x i16> %tmp, i16 0, i32 1
   %val = bitcast <2 x i16> %vec to i32
   ret i32 %val
@@ -216,7 +216,7 @@ define amdgpu_kernel void @uniform_vec_f16_0(ptr addrspace(1) %out, half %a) {
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_endpgm
-  %tmp = insertelement <2 x half> undef, half %a, i32 0
+  %tmp = insertelement <2 x half> poison, half %a, i32 0
   %vec = insertelement <2 x half> %tmp, half 0.0, i32 1
   %val = bitcast <2 x half> %vec to float
   store float %val, ptr addrspace(1) %out, align 4
@@ -247,7 +247,7 @@ define float @divergent_vec_f16_0(half %a) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %tmp = insertelement <2 x half> undef, half %a, i32 0
+  %tmp = insertelement <2 x half> poison, half %a, i32 0
   %vec = insertelement <2 x half> %tmp, half 0.0, i32 1
   %val = bitcast <2 x half> %vec to float
   ret float %val
@@ -311,7 +311,7 @@ define amdgpu_kernel void @uniform_vec_i16_LL(ptr addrspace(4) %in0, ptr addrspa
   %val1 = load volatile i32, ptr addrspace(4) %in1
   %lo = trunc i32 %val0 to i16
   %hi = trunc i32 %val1 to i16
-  %vec.0 = insertelement <2 x i16> undef, i16 %lo, i32 0
+  %vec.0 = insertelement <2 x i16> poison, i16 %lo, i32 0
   %vec.1 = insertelement <2 x i16> %vec.0, i16 %hi, i32 1
   %vec.i32 = bitcast <2 x i16> %vec.1 to i32
   call void asm sideeffect "; use $0", "s"(i32 %vec.i32) #0
@@ -346,7 +346,7 @@ define i32 @divergent_vec_i16_LL(i16 %a, i16 %b) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %tmp = insertelement <2 x i16> undef, i16 %a, i32 0
+  %tmp = insertelement <2 x i16> poison, i16 %a, i32 0
   %vec = insertelement <2 x i16> %tmp, i16 %b, i32 1
   %val = bitcast <2 x i16> %vec to i32
   ret i32 %val
@@ -399,7 +399,7 @@ define amdgpu_kernel void @uniform_vec_i16_LH(ptr addrspace(1) %out, i16 %a, i32
 ; GFX11-NEXT:    s_endpgm
   %shift = lshr i32 %b, 16
   %tr = trunc i32 %shift to i16
-  %tmp = insertelement <2 x i16> undef, i16 %a, i32 0
+  %tmp = insertelement <2 x i16> poison, i16 %a, i32 0
   %vec = insertelement <2 x i16> %tmp, i16 %tr, i32 1
   %val = bitcast <2 x i16> %vec to i32
   store i32 %val, ptr addrspace(1) %out, align 4
@@ -435,7 +435,7 @@ define i32 @divergent_vec_i16_LH(i16 %a, i32 %b) {
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %shift = lshr i32 %b, 16
   %tr = trunc i32 %shift to i16
-  %tmp = insertelement <2 x i16> undef, i16 %a, i32 0
+  %tmp = insertelement <2 x i16> poison, i16 %a, i32 0
   %vec = insertelement <2 x i16> %tmp, i16 %tr, i32 1
   %val = bitcast <2 x i16> %vec to i32
   ret i32 %val
@@ -489,7 +489,7 @@ define amdgpu_kernel void @uniform_vec_i16_HH(ptr addrspace(1) %out, i32 %a, i32
   %tr_a = trunc i32 %shift_a to i16
   %shift_b = lshr i32 %b, 16
   %tr_b = trunc i32 %shift_b to i16
-  %tmp = insertelement <2 x i16> undef, i16 %tr_a, i32 0
+  %tmp = insertelement <2 x i16> poison, i16 %tr_a, i32 0
   %vec = insertelement <2 x i16> %tmp, i16 %tr_b, i32 1
   %val = bitcast <2 x i16> %vec to i32
   store i32 %val, ptr addrspace(1) %out, align 4
@@ -527,7 +527,7 @@ define i32 @divergent_vec_i16_HH(i32 %a, i32 %b) {
   %tr_a = trunc i32 %shift_a to i16
   %shift_b = lshr i32 %b, 16
   %tr_b = trunc i32 %shift_b to i16
-  %tmp = insertelement <2 x i16> undef, i16 %tr_a, i32 0
+  %tmp = insertelement <2 x i16> poison, i16 %tr_a, i32 0
   %vec = insertelement <2 x i16> %tmp, i16 %tr_b, i32 1
   %val = bitcast <2 x i16> %vec to i32
   ret i32 %val
@@ -593,7 +593,7 @@ define amdgpu_kernel void @uniform_vec_f16_LL(ptr addrspace(4) %in0, ptr addrspa
   %hi.i = trunc i32 %val1 to i16
   %lo = bitcast i16 %lo.i to half
   %hi = bitcast i16 %hi.i to half
-  %vec.0 = insertelement <2 x half> undef, half %lo, i32 0
+  %vec.0 = insertelement <2 x half> poison, half %lo, i32 0
   %vec.1 = insertelement <2 x half> %vec.0, half %hi, i32 1
   %vec.i32 = bitcast <2 x half> %vec.1 to i32
 
@@ -630,7 +630,7 @@ define float @divergent_vec_f16_LL(half %a, half %b) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %tmp = insertelement <2 x half> undef, half %a, i32 0
+  %tmp = insertelement <2 x half> poison, half %a, i32 0
   %vec = insertelement <2 x half> %tmp, half %b, i32 1
   %val = bitcast <2 x half> %vec to float
   ret float %val
@@ -667,7 +667,7 @@ define <2 x i16> @build_vec_v2i16_undeflo_divergent(ptr addrspace(3) %in) #0 {
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %load = load i16, ptr addrspace(3) %in
-  %build = insertelement <2 x i16> undef, i16 %load, i32 0
+  %build = insertelement <2 x i16> poison, i16 %load, i32 0
   ret <2 x i16> %build
 }
 
@@ -723,7 +723,7 @@ define amdgpu_kernel void @build_vec_v2i16_undeflo_uniform(ptr addrspace(3) %in,
 ; GFX11-NEXT:    s_endpgm
 entry:
   %load = load i16, ptr addrspace(3) %in
-  %build = insertelement <2 x i16> undef, i16 %load, i32 0
+  %build = insertelement <2 x i16> poison, i16 %load, i32 0
   %result = bitcast <2 x i16> %build to i32
   store i32 %result, ptr addrspace(1) %out
   ret void

@@ -65,7 +65,6 @@ define void @test_nest_empty() "interrupt"="qci-nest" {
 ; QCI-FP-NEXT:    .cfi_offset t4, -72
 ; QCI-FP-NEXT:    .cfi_offset t5, -76
 ; QCI-FP-NEXT:    .cfi_offset t6, -80
-; QCI-FP-NEXT:    addi s0, sp, 96
 ; QCI-FP-NEXT:    .cfi_def_cfa s0, 0
 ; QCI-FP-NEXT:    .cfi_def_cfa sp, 96
 ; QCI-FP-NEXT:    qc.c.mileaveret
@@ -140,7 +139,6 @@ define void @test_nonest_empty() "interrupt"="qci-nonest" {
 ; QCI-FP-NEXT:    .cfi_offset t4, -72
 ; QCI-FP-NEXT:    .cfi_offset t5, -76
 ; QCI-FP-NEXT:    .cfi_offset t6, -80
-; QCI-FP-NEXT:    addi s0, sp, 96
 ; QCI-FP-NEXT:    .cfi_def_cfa s0, 0
 ; QCI-FP-NEXT:    .cfi_def_cfa sp, 96
 ; QCI-FP-NEXT:    qc.c.mileaveret
@@ -223,7 +221,6 @@ define void @test_nest_asm() "interrupt"="qci-nest" {
 ; QCI-FP-NEXT:    .cfi_offset t4, -72
 ; QCI-FP-NEXT:    .cfi_offset t5, -76
 ; QCI-FP-NEXT:    .cfi_offset t6, -80
-; QCI-FP-NEXT:    addi s0, sp, 96
 ; QCI-FP-NEXT:    .cfi_def_cfa s0, 0
 ; QCI-FP-NEXT:    li a0, 1
 ; QCI-FP-NEXT:    #APP
@@ -315,7 +312,6 @@ define void @test_nonest_asm() "interrupt"="qci-nonest" {
 ; QCI-FP-NEXT:    .cfi_offset t4, -72
 ; QCI-FP-NEXT:    .cfi_offset t5, -76
 ; QCI-FP-NEXT:    .cfi_offset t6, -80
-; QCI-FP-NEXT:    addi s0, sp, 96
 ; QCI-FP-NEXT:    .cfi_def_cfa s0, 0
 ; QCI-FP-NEXT:    li a0, 1
 ; QCI-FP-NEXT:    #APP
@@ -423,7 +419,6 @@ define void @test_nest_call() "interrupt"="qci-nest" {
 ; QCI-FP-NEXT:    .cfi_offset t6, -80
 ; QCI-FP-NEXT:    addi sp, sp, -16
 ; QCI-FP-NEXT:    .cfi_def_cfa_offset 112
-; QCI-FP-NEXT:    addi s0, sp, 112
 ; QCI-FP-NEXT:    .cfi_def_cfa s0, 0
 ; QCI-FP-NEXT:    li a0, 4
 ; QCI-FP-NEXT:    li a2, 1
@@ -548,7 +543,6 @@ define void @test_nonest_call() "interrupt"="qci-nonest" {
 ; QCI-FP-NEXT:    .cfi_offset t6, -80
 ; QCI-FP-NEXT:    addi sp, sp, -16
 ; QCI-FP-NEXT:    .cfi_def_cfa_offset 112
-; QCI-FP-NEXT:    addi s0, sp, 112
 ; QCI-FP-NEXT:    .cfi_def_cfa s0, 0
 ; QCI-FP-NEXT:    li a0, 4
 ; QCI-FP-NEXT:    li a2, 1
@@ -807,7 +801,6 @@ define void @test_spill_nest() "interrupt"="qci-nest" {
 ; QCI-FP-NEXT:    .cfi_offset s9, -132
 ; QCI-FP-NEXT:    .cfi_offset s10, -136
 ; QCI-FP-NEXT:    .cfi_offset s11, -140
-; QCI-FP-NEXT:    addi s0, sp, 176
 ; QCI-FP-NEXT:    .cfi_def_cfa s0, 0
 ; QCI-FP-NEXT:    lui t1, %hi(var)
 ; QCI-FP-NEXT:    lw a0, %lo(var)(t1)
@@ -1264,7 +1257,6 @@ define void @test_spill_nonest() "interrupt"="qci-nonest" {
 ; QCI-FP-NEXT:    .cfi_offset s9, -132
 ; QCI-FP-NEXT:    .cfi_offset s10, -136
 ; QCI-FP-NEXT:    .cfi_offset s11, -140
-; QCI-FP-NEXT:    addi s0, sp, 176
 ; QCI-FP-NEXT:    .cfi_def_cfa s0, 0
 ; QCI-FP-NEXT:    lui t1, %hi(var)
 ; QCI-FP-NEXT:    lw a0, %lo(var)(t1)
@@ -1765,7 +1757,6 @@ define void @test_spill_call_nest() "interrupt"="qci-nest" {
 ; QCI-FP-NEXT:    .cfi_offset s9, -132
 ; QCI-FP-NEXT:    .cfi_offset s10, -136
 ; QCI-FP-NEXT:    .cfi_offset s11, -140
-; QCI-FP-NEXT:    addi s0, sp, 240
 ; QCI-FP-NEXT:    .cfi_def_cfa s0, 0
 ; QCI-FP-NEXT:    lui s6, %hi(var)
 ; QCI-FP-NEXT:    lw a0, %lo(var)(s6)
@@ -2356,7 +2347,6 @@ define void @test_spill_call_nonest() "interrupt"="qci-nonest" {
 ; QCI-FP-NEXT:    .cfi_offset s9, -132
 ; QCI-FP-NEXT:    .cfi_offset s10, -136
 ; QCI-FP-NEXT:    .cfi_offset s11, -140
-; QCI-FP-NEXT:    addi s0, sp, 240
 ; QCI-FP-NEXT:    .cfi_def_cfa s0, 0
 ; QCI-FP-NEXT:    lui s6, %hi(var)
 ; QCI-FP-NEXT:    lw a0, %lo(var)(s6)
@@ -2768,7 +2758,6 @@ define void @test_nest_explicit_s11() "interrupt"="qci-nest" {
 ; QCI-FP-NEXT:    .cfi_def_cfa_offset 112
 ; QCI-FP-NEXT:    sw s11, 12(sp) # 4-byte Folded Spill
 ; QCI-FP-NEXT:    .cfi_offset s11, -100
-; QCI-FP-NEXT:    addi s0, sp, 112
 ; QCI-FP-NEXT:    .cfi_def_cfa s0, 0
 ; QCI-FP-NEXT:    #APP
 ; QCI-FP-NEXT:    li s4, 0
@@ -2877,7 +2866,6 @@ define void @test_nonest_explicit_s11() "interrupt"="qci-nonest" {
 ; QCI-FP-NEXT:    .cfi_def_cfa_offset 112
 ; QCI-FP-NEXT:    sw s11, 12(sp) # 4-byte Folded Spill
 ; QCI-FP-NEXT:    .cfi_offset s11, -100
-; QCI-FP-NEXT:    addi s0, sp, 112
 ; QCI-FP-NEXT:    .cfi_def_cfa s0, 0
 ; QCI-FP-NEXT:    #APP
 ; QCI-FP-NEXT:    li s11, 0

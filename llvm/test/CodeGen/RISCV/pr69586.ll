@@ -102,7 +102,7 @@ define void @test(ptr %0, ptr %1, i64 %2) {
 ; NOREMAT-NEXT:    sf.vc.vv 3, 0, v8, v10
 ; NOREMAT-NEXT:    vle32.v v8, (a4)
 ; NOREMAT-NEXT:    addi a0, sp, 640
-; NOREMAT-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
+; NOREMAT-NEXT:    vs2r.v v8, (a0) # vscale x 16-byte Folded Spill
 ; NOREMAT-NEXT:    add a4, a7, t4
 ; NOREMAT-NEXT:    vle32.v v10, (a4)
 ; NOREMAT-NEXT:    sf.vc.vv 3, 0, v2, v0
@@ -377,7 +377,7 @@ define void @test(ptr %0, ptr %1, i64 %2) {
 ; NOREMAT-NEXT:    vle32.v v14, (a2)
 ; NOREMAT-NEXT:    vle32.v v30, (a2)
 ; NOREMAT-NEXT:    addi a0, sp, 640
-; NOREMAT-NEXT:    vl2r.v v12, (a0) # Unknown-size Folded Reload
+; NOREMAT-NEXT:    vl2r.v v12, (a0) # vscale x 16-byte Folded Reload
 ; NOREMAT-NEXT:    sf.vc.vv 3, 0, v12, v22
 ; NOREMAT-NEXT:    addiw a2, s0, -512
 ; NOREMAT-NEXT:    sd a2, 336(sp) # 8-byte Folded Spill
@@ -998,7 +998,7 @@ define void @test(ptr %0, ptr %1, i64 %2) {
 ; REMAT-NEXT:    slli a2, a2, 4
 ; REMAT-NEXT:    add a2, sp, a2
 ; REMAT-NEXT:    addi a2, a2, 432
-; REMAT-NEXT:    vs2r.v v6, (a2) # Unknown-size Folded Spill
+; REMAT-NEXT:    vs2r.v v6, (a2) # vscale x 16-byte Folded Spill
 ; REMAT-NEXT:    add a2, a0, t2
 ; REMAT-NEXT:    vle32.v v4, (a0)
 ; REMAT-NEXT:    vle32.v v2, (a2)
@@ -1008,7 +1008,7 @@ define void @test(ptr %0, ptr %1, i64 %2) {
 ; REMAT-NEXT:    mul a2, a2, a5
 ; REMAT-NEXT:    add a2, sp, a2
 ; REMAT-NEXT:    addi a2, a2, 432
-; REMAT-NEXT:    vs2r.v v6, (a2) # Unknown-size Folded Spill
+; REMAT-NEXT:    vs2r.v v6, (a2) # vscale x 16-byte Folded Spill
 ; REMAT-NEXT:    add a2, a0, t3
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v4, v8
 ; REMAT-NEXT:    vle32.v v4, (a2)
@@ -1027,7 +1027,7 @@ define void @test(ptr %0, ptr %1, i64 %2) {
 ; REMAT-NEXT:    mul a2, a2, a5
 ; REMAT-NEXT:    add a2, sp, a2
 ; REMAT-NEXT:    addi a2, a2, 432
-; REMAT-NEXT:    vs2r.v v8, (a2) # Unknown-size Folded Spill
+; REMAT-NEXT:    vs2r.v v8, (a2) # vscale x 16-byte Folded Spill
 ; REMAT-NEXT:    add a2, a0, t6
 ; REMAT-NEXT:    vle32.v v18, (a2)
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v20, v22
@@ -1046,7 +1046,7 @@ define void @test(ptr %0, ptr %1, i64 %2) {
 ; REMAT-NEXT:    slli a5, a5, 4
 ; REMAT-NEXT:    add a5, sp, a5
 ; REMAT-NEXT:    addi a5, a5, 432
-; REMAT-NEXT:    vl2r.v v12, (a5) # Unknown-size Folded Reload
+; REMAT-NEXT:    vl2r.v v12, (a5) # vscale x 16-byte Folded Reload
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v12, v2
 ; REMAT-NEXT:    vle32.v v2, (a2)
 ; REMAT-NEXT:    add a2, a0, s3
@@ -1056,7 +1056,7 @@ define void @test(ptr %0, ptr %1, i64 %2) {
 ; REMAT-NEXT:    mul a5, a5, a6
 ; REMAT-NEXT:    add a5, sp, a5
 ; REMAT-NEXT:    addi a5, a5, 432
-; REMAT-NEXT:    vl2r.v v16, (a5) # Unknown-size Folded Reload
+; REMAT-NEXT:    vl2r.v v16, (a5) # vscale x 16-byte Folded Reload
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v16, v4
 ; REMAT-NEXT:    vle32.v v30, (a2)
 ; REMAT-NEXT:    add a2, a0, s4
@@ -1074,7 +1074,7 @@ define void @test(ptr %0, ptr %1, i64 %2) {
 ; REMAT-NEXT:    mul a5, a5, a6
 ; REMAT-NEXT:    add a5, sp, a5
 ; REMAT-NEXT:    addi a5, a5, 432
-; REMAT-NEXT:    vl2r.v v0, (a5) # Unknown-size Folded Reload
+; REMAT-NEXT:    vl2r.v v0, (a5) # vscale x 16-byte Folded Reload
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v0, v18
 ; REMAT-NEXT:    vle32.v v0, (a2)
 ; REMAT-NEXT:    add a2, a0, s7
@@ -1097,7 +1097,7 @@ define void @test(ptr %0, ptr %1, i64 %2) {
 ; REMAT-NEXT:    slli a2, a2, 3
 ; REMAT-NEXT:    add a2, sp, a2
 ; REMAT-NEXT:    addi a2, a2, 432
-; REMAT-NEXT:    vs2r.v v12, (a2) # Unknown-size Folded Spill
+; REMAT-NEXT:    vs2r.v v12, (a2) # vscale x 16-byte Folded Spill
 ; REMAT-NEXT:    add a2, a0, s11
 ; REMAT-NEXT:    vle32.v v12, (a2)
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v30, v16
@@ -1110,7 +1110,7 @@ define void @test(ptr %0, ptr %1, i64 %2) {
 ; REMAT-NEXT:    slli a2, a2, 1
 ; REMAT-NEXT:    add a2, sp, a2
 ; REMAT-NEXT:    addi a2, a2, 432
-; REMAT-NEXT:    vs2r.v v10, (a2) # Unknown-size Folded Spill
+; REMAT-NEXT:    vs2r.v v10, (a2) # vscale x 16-byte Folded Spill
 ; REMAT-NEXT:    add a2, a0, a4
 ; REMAT-NEXT:    vle32.v v10, (a2)
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v4, v14
@@ -1119,7 +1119,7 @@ define void @test(ptr %0, ptr %1, i64 %2) {
 ; REMAT-NEXT:    slli a2, a2, 2
 ; REMAT-NEXT:    add a2, sp, a2
 ; REMAT-NEXT:    addi a2, a2, 432
-; REMAT-NEXT:    vs2r.v v14, (a2) # Unknown-size Folded Spill
+; REMAT-NEXT:    vs2r.v v14, (a2) # vscale x 16-byte Folded Spill
 ; REMAT-NEXT:    add a2, a0, a3
 ; REMAT-NEXT:    vle32.v v14, (a2)
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v0, v18
@@ -1128,13 +1128,13 @@ define void @test(ptr %0, ptr %1, i64 %2) {
 ; REMAT-NEXT:    slli a2, a2, 4
 ; REMAT-NEXT:    add a2, sp, a2
 ; REMAT-NEXT:    addi a2, a2, 432
-; REMAT-NEXT:    vs2r.v v18, (a2) # Unknown-size Folded Spill
+; REMAT-NEXT:    vs2r.v v18, (a2) # vscale x 16-byte Folded Spill
 ; REMAT-NEXT:    li a5, 7
 ; REMAT-NEXT:    slli a5, a5, 11
 ; REMAT-NEXT:    add a2, a0, a5
 ; REMAT-NEXT:    vle32.v v18, (a2)
 ; REMAT-NEXT:    addi a3, sp, 432
-; REMAT-NEXT:    vs2r.v v18, (a3) # Unknown-size Folded Spill
+; REMAT-NEXT:    vs2r.v v18, (a3) # vscale x 16-byte Folded Spill
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v22, v20
 ; REMAT-NEXT:    vle32.v v18, (a2)
 ; REMAT-NEXT:    csrr a2, vlenb
@@ -1142,7 +1142,7 @@ define void @test(ptr %0, ptr %1, i64 %2) {
 ; REMAT-NEXT:    mul a2, a2, a3
 ; REMAT-NEXT:    add a2, sp, a2
 ; REMAT-NEXT:    addi a2, a2, 432
-; REMAT-NEXT:    vs2r.v v18, (a2) # Unknown-size Folded Spill
+; REMAT-NEXT:    vs2r.v v18, (a2) # vscale x 16-byte Folded Spill
 ; REMAT-NEXT:    li a2, 29
 ; REMAT-NEXT:    slli a2, a2, 9
 ; REMAT-NEXT:    add a2, a0, a2
@@ -1154,7 +1154,7 @@ define void @test(ptr %0, ptr %1, i64 %2) {
 ; REMAT-NEXT:    mul a2, a2, a3
 ; REMAT-NEXT:    add a2, sp, a2
 ; REMAT-NEXT:    addi a2, a2, 432
-; REMAT-NEXT:    vs2r.v v20, (a2) # Unknown-size Folded Spill
+; REMAT-NEXT:    vs2r.v v20, (a2) # vscale x 16-byte Folded Spill
 ; REMAT-NEXT:    li a2, 15
 ; REMAT-NEXT:    slli a2, a2, 10
 ; REMAT-NEXT:    add a2, a0, a2
@@ -1166,7 +1166,7 @@ define void @test(ptr %0, ptr %1, i64 %2) {
 ; REMAT-NEXT:    mul a2, a2, a3
 ; REMAT-NEXT:    add a2, sp, a2
 ; REMAT-NEXT:    addi a2, a2, 432
-; REMAT-NEXT:    vs2r.v v8, (a2) # Unknown-size Folded Spill
+; REMAT-NEXT:    vs2r.v v8, (a2) # vscale x 16-byte Folded Spill
 ; REMAT-NEXT:    li a2, 31
 ; REMAT-NEXT:    slli a2, a2, 9
 ; REMAT-NEXT:    add a2, a0, a2
@@ -1175,14 +1175,14 @@ define void @test(ptr %0, ptr %1, i64 %2) {
 ; REMAT-NEXT:    slli a3, a3, 3
 ; REMAT-NEXT:    add a3, sp, a3
 ; REMAT-NEXT:    addi a3, a3, 432
-; REMAT-NEXT:    vl2r.v v8, (a3) # Unknown-size Folded Reload
+; REMAT-NEXT:    vl2r.v v8, (a3) # vscale x 16-byte Folded Reload
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v8, v12
 ; REMAT-NEXT:    vle32.v v8, (a2)
 ; REMAT-NEXT:    csrr a2, vlenb
 ; REMAT-NEXT:    slli a2, a2, 3
 ; REMAT-NEXT:    add a2, sp, a2
 ; REMAT-NEXT:    addi a2, a2, 432
-; REMAT-NEXT:    vs2r.v v8, (a2) # Unknown-size Folded Spill
+; REMAT-NEXT:    vs2r.v v8, (a2) # vscale x 16-byte Folded Spill
 ; REMAT-NEXT:    lui a2, 4
 ; REMAT-NEXT:    add a2, a0, a2
 ; REMAT-NEXT:    vle32.v v4, (a2)
@@ -1193,7 +1193,7 @@ define void @test(ptr %0, ptr %1, i64 %2) {
 ; REMAT-NEXT:    mul a2, a2, a3
 ; REMAT-NEXT:    add a2, sp, a2
 ; REMAT-NEXT:    addi a2, a2, 432
-; REMAT-NEXT:    vs2r.v v8, (a2) # Unknown-size Folded Spill
+; REMAT-NEXT:    vs2r.v v8, (a2) # vscale x 16-byte Folded Spill
 ; REMAT-NEXT:    lui a2, 4
 ; REMAT-NEXT:    addiw a2, a2, 512
 ; REMAT-NEXT:    add a2, a0, a2
@@ -1202,7 +1202,7 @@ define void @test(ptr %0, ptr %1, i64 %2) {
 ; REMAT-NEXT:    slli a3, a3, 1
 ; REMAT-NEXT:    add a3, sp, a3
 ; REMAT-NEXT:    addi a3, a3, 432
-; REMAT-NEXT:    vl2r.v v8, (a3) # Unknown-size Folded Reload
+; REMAT-NEXT:    vl2r.v v8, (a3) # vscale x 16-byte Folded Reload
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v8, v10
 ; REMAT-NEXT:    vle32.v v20, (a2)
 ; REMAT-NEXT:    li a2, 17
@@ -1213,7 +1213,7 @@ define void @test(ptr %0, ptr %1, i64 %2) {
 ; REMAT-NEXT:    slli a3, a3, 2
 ; REMAT-NEXT:    add a3, sp, a3
 ; REMAT-NEXT:    addi a3, a3, 432
-; REMAT-NEXT:    vl2r.v v8, (a3) # Unknown-size Folded Reload
+; REMAT-NEXT:    vl2r.v v8, (a3) # vscale x 16-byte Folded Reload
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v8, v14
 ; REMAT-NEXT:    vle32.v v22, (a2)
 ; REMAT-NEXT:    lui a2, 4
@@ -1224,9 +1224,9 @@ define void @test(ptr %0, ptr %1, i64 %2) {
 ; REMAT-NEXT:    slli a3, a3, 4
 ; REMAT-NEXT:    add a3, sp, a3
 ; REMAT-NEXT:    addi a3, a3, 432
-; REMAT-NEXT:    vl2r.v v8, (a3) # Unknown-size Folded Reload
+; REMAT-NEXT:    vl2r.v v8, (a3) # vscale x 16-byte Folded Reload
 ; REMAT-NEXT:    addi a3, sp, 432
-; REMAT-NEXT:    vl2r.v v10, (a3) # Unknown-size Folded Reload
+; REMAT-NEXT:    vl2r.v v10, (a3) # vscale x 16-byte Folded Reload
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v8, v10
 ; REMAT-NEXT:    vle32.v v8, (a2)
 ; REMAT-NEXT:    li a2, 9
@@ -1238,7 +1238,7 @@ define void @test(ptr %0, ptr %1, i64 %2) {
 ; REMAT-NEXT:    mul a3, a3, a4
 ; REMAT-NEXT:    add a3, sp, a3
 ; REMAT-NEXT:    addi a3, a3, 432
-; REMAT-NEXT:    vl2r.v v10, (a3) # Unknown-size Folded Reload
+; REMAT-NEXT:    vl2r.v v10, (a3) # vscale x 16-byte Folded Reload
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v10, v18
 ; REMAT-NEXT:    vle32.v v10, (a2)
 ; REMAT-NEXT:    lui a2, 5
@@ -1250,7 +1250,7 @@ define void @test(ptr %0, ptr %1, i64 %2) {
 ; REMAT-NEXT:    mul a3, a3, a4
 ; REMAT-NEXT:    add a3, sp, a3
 ; REMAT-NEXT:    addi a3, a3, 432
-; REMAT-NEXT:    vl2r.v v12, (a3) # Unknown-size Folded Reload
+; REMAT-NEXT:    vl2r.v v12, (a3) # vscale x 16-byte Folded Reload
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v12, v30
 ; REMAT-NEXT:    vle32.v v12, (a2)
 ; REMAT-NEXT:    li a2, 19
@@ -1262,7 +1262,7 @@ define void @test(ptr %0, ptr %1, i64 %2) {
 ; REMAT-NEXT:    mul a3, a3, a4
 ; REMAT-NEXT:    add a3, sp, a3
 ; REMAT-NEXT:    addi a3, a3, 432
-; REMAT-NEXT:    vl2r.v v14, (a3) # Unknown-size Folded Reload
+; REMAT-NEXT:    vl2r.v v14, (a3) # vscale x 16-byte Folded Reload
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v14, v6
 ; REMAT-NEXT:    vle32.v v14, (a2)
 ; REMAT-NEXT:    lui a2, 5
@@ -1273,7 +1273,7 @@ define void @test(ptr %0, ptr %1, i64 %2) {
 ; REMAT-NEXT:    slli a3, a3, 3
 ; REMAT-NEXT:    add a3, sp, a3
 ; REMAT-NEXT:    addi a3, a3, 432
-; REMAT-NEXT:    vl2r.v v16, (a3) # Unknown-size Folded Reload
+; REMAT-NEXT:    vl2r.v v16, (a3) # vscale x 16-byte Folded Reload
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v16, v4
 ; REMAT-NEXT:    vle32.v v16, (a2)
 ; REMAT-NEXT:    lui a2, 5
@@ -1284,7 +1284,7 @@ define void @test(ptr %0, ptr %1, i64 %2) {
 ; REMAT-NEXT:    mul a3, a3, a4
 ; REMAT-NEXT:    add a3, sp, a3
 ; REMAT-NEXT:    addi a3, a3, 432
-; REMAT-NEXT:    vl2r.v v18, (a3) # Unknown-size Folded Reload
+; REMAT-NEXT:    vl2r.v v18, (a3) # vscale x 16-byte Folded Reload
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v18, v2
 ; REMAT-NEXT:    vle32.v v18, (a2)
 ; REMAT-NEXT:    lui a2, 5

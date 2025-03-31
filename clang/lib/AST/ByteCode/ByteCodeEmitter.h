@@ -31,8 +31,7 @@ protected:
 
 public:
   /// Compiles the function into the module.
-  Function *compileFunc(const FunctionDecl *FuncDecl);
-  Function *compileObjCBlock(const BlockExpr *BE);
+  void compileFunc(const FunctionDecl *FuncDecl, Function *Func = nullptr);
 
 protected:
   ByteCodeEmitter(Context &Ctx, Program &P) : Ctx(Ctx), P(P) {}

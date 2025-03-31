@@ -160,6 +160,12 @@ struct BubbleUpExpandThroughParallelCollapse
     auto expandReInds = expandOp.getReassociationIndices();
     auto collapseReInds = collapseOp.getReassociationIndices();
 
+    // Special case where the collapsed tensor to expand is a 0-D tensor,
+    // then the reassociation maps will be empty and not produce valid results.
+    if (expandReInds.size() == 0) {
+      return failure();
+    }
+
     // Reshapes are parallel to each other if none of the reassociation indices
     // have greater than 1 index for both reshapes.
     for (auto [expandReassociation, collapseReassociation] :

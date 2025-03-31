@@ -10,7 +10,6 @@
 #include "lldb/Core/Telemetry.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/UUID.h"
-#include "lldb/Version/Version.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
@@ -76,6 +75,9 @@ void CommandInfo::serialize(Serializer &serializer) const {
     serializer.write("error_data", error_data.value());
 }
 
+std::atomic<uint64_t> CommandInfo::g_command_id_seed = 1;
+uint64_t CommandInfo::GetNextID() { return g_command_id_seed.fetch_add(1); }
+
 void DebuggerInfo::serialize(Serializer &serializer) const {
   LLDBBaseTelemetryInfo::serialize(serializer);
 
@@ -83,8 +85,26 @@ void DebuggerInfo::serialize(Serializer &serializer) const {
   serializer.write("is_exit_entry", is_exit_entry);
 }
 
-std::atomic<uint64_t> CommandInfo::g_command_id_seed = 0;
-uint64_t CommandInfo::GetNextId() { return g_command_id_seed.fetch_add(1); }
+void ExecutableModuleInfo::serialize(Serializer &serializer) const {
+  LLDBBaseTelemetryInfo::serialize(serializer);
+
+  serializer.write("uuid", uuid.GetAsString());
+  serializer.write("pid", pid);
+  serializer.write("triple", triple);
+  serializer.write("is_start_entry", is_start_entry);
+}
+
+void ProcessExitInfo::serialize(Serializer &serializer) const {
+  LLDBBaseTelemetryInfo::serialize(serializer);
+
+  serializer.write("module_uuid", module_uuid.GetAsString());
+  serializer.write("pid", pid);
+  serializer.write("is_start_entry", is_start_entry);
+  if (exit_desc.has_value()) {
+    serializer.write("exit_code", exit_desc->exit_code);
+    serializer.write("exit_desc", exit_desc->description);
+  }
+}
 
 TelemetryManager::TelemetryManager(std::unique_ptr<LLDBConfig> config)
     : m_config(std::move(config)), m_id(MakeUUID()) {}

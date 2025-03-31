@@ -109,25 +109,23 @@ TEST_F(IRBuilderTest, Intrinsics) {
   EXPECT_TRUE(II->hasNoInfs());
   EXPECT_FALSE(II->hasNoNaNs());
 
-  Result = Builder.CreateIntrinsic(Intrinsic::fma, {V->getType()}, {V, V, V});
+  Result = Builder.CreateFMA(V, V, V);
   II = cast<IntrinsicInst>(Result);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::fma);
   EXPECT_FALSE(II->hasNoInfs());
   EXPECT_FALSE(II->hasNoNaNs());
 
-  Result =
-      Builder.CreateIntrinsic(Intrinsic::fma, {V->getType()}, {V, V, V}, I);
+  Result = Builder.CreateFMA(V, V, V, I);
   II = cast<IntrinsicInst>(Result);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::fma);
   EXPECT_TRUE(II->hasNoInfs());
   EXPECT_FALSE(II->hasNoNaNs());
 
-  Result =
-      Builder.CreateIntrinsic(Intrinsic::fma, {V->getType()}, {V, V, V}, I);
+  Result = Builder.CreateFMA(V, V, V, FastMathFlags::getFast());
   II = cast<IntrinsicInst>(Result);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::fma);
   EXPECT_TRUE(II->hasNoInfs());
-  EXPECT_FALSE(II->hasNoNaNs());
+  EXPECT_TRUE(II->hasNoNaNs());
 
   Result = Builder.CreateUnaryIntrinsic(Intrinsic::roundeven, V);
   II = cast<IntrinsicInst>(Result);
@@ -307,6 +305,11 @@ TEST_F(IRBuilderTest, ConstrainedFP) {
   II = cast<IntrinsicInst>(V);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::experimental_constrained_frem);
 
+  V = Builder.CreateFMA(V, V, V);
+  ASSERT_TRUE(isa<IntrinsicInst>(V));
+  II = cast<IntrinsicInst>(V);
+  EXPECT_EQ(II->getIntrinsicID(), Intrinsic::experimental_constrained_fma);
+
   VInt = Builder.CreateFPToUI(VDouble, Builder.getInt32Ty());
   ASSERT_TRUE(isa<IntrinsicInst>(VInt));
   II = cast<IntrinsicInst>(VInt);
@@ -393,6 +396,15 @@ TEST_F(IRBuilderTest, ConstrainedFP) {
   Call = Builder.CreateConstrainedFPBinOp(
         Intrinsic::experimental_constrained_fadd, V, V, nullptr, "", nullptr,
         RoundingMode::TowardNegative, fp::ebMayTrap);
+  CII = cast<ConstrainedFPIntrinsic>(Call);
+  EXPECT_EQ(CII->getIntrinsicID(), Intrinsic::experimental_constrained_fadd);
+  EXPECT_EQ(fp::ebMayTrap, CII->getExceptionBehavior());
+  EXPECT_EQ(RoundingMode::TowardNegative, CII->getRoundingMode());
+
+  // Same as previous test for CreateConstrainedFPIntrinsic
+  Call = Builder.CreateConstrainedFPIntrinsic(
+      Intrinsic::experimental_constrained_fadd, {V->getType()}, {V, V}, nullptr,
+      "", nullptr, RoundingMode::TowardNegative, fp::ebMayTrap);
   CII = cast<ConstrainedFPIntrinsic>(Call);
   EXPECT_EQ(CII->getIntrinsicID(), Intrinsic::experimental_constrained_fadd);
   EXPECT_EQ(fp::ebMayTrap, CII->getExceptionBehavior());

@@ -5,7 +5,9 @@
 #define CF_BRIDGED_TYPE(T) __attribute__((objc_bridge(T)))
 #define CF_BRIDGED_MUTABLE_TYPE(T) __attribute__((objc_bridge_mutable(T)))
 typedef CF_BRIDGED_TYPE(id) void * CFTypeRef;
+typedef unsigned long long CFTypeID;
 typedef signed char BOOL;
+typedef unsigned char Boolean;
 typedef signed long CFIndex;
 typedef unsigned long NSUInteger;
 typedef const struct CF_BRIDGED_TYPE(id) __CFAllocator * CFAllocatorRef;
@@ -13,12 +15,48 @@ typedef const struct CF_BRIDGED_TYPE(NSString) __CFString * CFStringRef;
 typedef const struct CF_BRIDGED_TYPE(NSArray) __CFArray * CFArrayRef;
 typedef struct CF_BRIDGED_MUTABLE_TYPE(NSMutableArray) __CFArray * CFMutableArrayRef;
 typedef struct CF_BRIDGED_MUTABLE_TYPE(CFRunLoopRef) __CFRunLoop * CFRunLoopRef;
+
+#define NS_RETURNS_RETAINED __attribute__((ns_returns_retained))
+#define CF_CONSUMED __attribute__((cf_consumed))
+#define CF_RETURNS_RETAINED __attribute__((cf_returns_retained))
+
 extern const CFAllocatorRef kCFAllocatorDefault;
 typedef struct _NSZone NSZone;
+CFTypeID CFGetTypeID(CFTypeRef cf);
+CFTypeID CFArrayGetTypeID();
 CFMutableArrayRef CFArrayCreateMutable(CFAllocatorRef allocator, CFIndex capacity);
 extern void CFArrayAppendValue(CFMutableArrayRef theArray, const void *value);
 CFArrayRef CFArrayCreate(CFAllocatorRef allocator, const void **values, CFIndex numValues);
 CFIndex CFArrayGetCount(CFArrayRef theArray);
+
+typedef const struct CF_BRIDGED_TYPE(NSDictionary) __CFDictionary * CFDictionaryRef;
+typedef struct CF_BRIDGED_MUTABLE_TYPE(NSMutableDictionary) __CFDictionary * CFMutableDictionaryRef;
+
+CFTypeID CFDictionaryGetTypeID();
+CFDictionaryRef CFDictionaryCreate(CFAllocatorRef allocator, const void **keys, const void **values, CFIndex numValues);
+CFDictionaryRef CFDictionaryCreateCopy(CFAllocatorRef allocator, CFDictionaryRef theDict);
+CFDictionaryRef CFDictionaryCreateMutableCopy(CFAllocatorRef allocator, CFIndex capacity, CFDictionaryRef theDict);
+CFIndex CFDictionaryGetCount(CFDictionaryRef theDict);
+Boolean CFDictionaryContainsKey(CFDictionaryRef theDict, const void *key);
+Boolean CFDictionaryContainsValue(CFDictionaryRef theDict, const void *value);
+const void *CFDictionaryGetValue(CFDictionaryRef theDict, const void *key);
+void CFDictionaryAddValue(CFMutableDictionaryRef theDict, const void *key, const void *value);
+void CFDictionarySetValue(CFMutableDictionaryRef theDict, const void *key, const void *value);
+void CFDictionaryReplaceValue(CFMutableDictionaryRef theDict, const void *key, const void *value);
+void CFDictionaryRemoveValue(CFMutableDictionaryRef theDict, const void *key);
+
+typedef struct CF_BRIDGED_TYPE(id) __SecTask * SecTaskRef;
+SecTaskRef SecTaskCreateFromSelf(CFAllocatorRef allocator);
+
+typedef struct CF_BRIDGED_TYPE(id) CF_BRIDGED_MUTABLE_TYPE(IOSurface) __IOSurface * IOSurfaceRef;
+IOSurfaceRef IOSurfaceCreate(CFDictionaryRef properties);
+
+typedef struct CF_BRIDGED_TYPE(id) __CVBuffer *CVBufferRef;
+typedef CVBufferRef CVImageBufferRef;
+typedef CVImageBufferRef CVPixelBufferRef;
+typedef signed int CVReturn;
+CVReturn CVPixelBufferCreateWithIOSurface(CFAllocatorRef allocator, IOSurfaceRef surface, CFDictionaryRef pixelBufferAttributes, CVPixelBufferRef * pixelBufferOut);
+
 CFRunLoopRef CFRunLoopGetCurrent(void);
 CFRunLoopRef CFRunLoopGetMain(void);
 extern CFTypeRef CFRetain(CFTypeRef cf);
@@ -100,6 +138,8 @@ __attribute__((objc_root_class))
 @end
 
 namespace WTF {
+
+void WTFCrash(void);
 
 template<typename T> class RetainPtr;
 template<typename T> RetainPtr<T> adoptNS(T*);
@@ -239,7 +279,153 @@ inline CFTypeRef bridge_cast(NSObject *object)
     return (__bridge CFTypeRef)object;
 }
 
+inline id bridge_id_cast(CFTypeRef object)
+{
+    return (__bridge id)object;
 }
+
+inline RetainPtr<id> bridge_id_cast(RetainPtr<CFTypeRef>&& object)
+{
+#if __has_feature(objc_arc)
+    return adoptNS((__bridge_transfer id)object.leakRef());
+#else
+    return adoptNS((__bridge id)object.leakRef());
+#endif
+}
+
+template <typename ExpectedType>
+struct ObjCTypeCastTraits {
+public:
+    static bool isType(id object) { return [object isKindOfClass:[ExpectedType class]]; }
+
+    template <typename ArgType>
+    static bool isType(const ArgType *object) { return [object isKindOfClass:[ExpectedType class]]; }
+};
+
+template <typename ExpectedType, typename ArgType>
+inline bool is_objc(ArgType * source)
+{
+    return source && ObjCTypeCastTraits<ExpectedType>::isType(source);
+}
+
+template<typename T> inline T *checked_objc_cast(id object)
+{
+    if (!object)
+        return nullptr;
+
+    if (!is_objc<T>(object))
+      WTFCrash();
+
+    return reinterpret_cast<T*>(object);
+}
+
+template<typename T, typename U> inline T *checked_objc_cast(U *object)
+{
+    if (!object)
+        return nullptr;
+
+    if (!is_objc<T>(object))
+      WTFCrash();
+
+    return static_cast<T*>(object);
+}
+
+template<typename T, typename U> RetainPtr<T> dynamic_objc_cast(RetainPtr<U>&& object)
+{
+    if (!is_objc<T>(object.get()))
+        return nullptr;
+    return adoptNS(static_cast<T*>(object.leakRef()));
+}
+
+template<typename T> RetainPtr<T> dynamic_objc_cast(RetainPtr<id>&& object)
+{
+    if (!is_objc<T>(object.get()))
+        return nullptr;
+    return adoptNS(reinterpret_cast<T*>(object.leakRef()));
+}
+
+template<typename T, typename U> RetainPtr<T> dynamic_objc_cast(const RetainPtr<U>& object)
+{
+    if (!is_objc<T>(object.get()))
+        return nullptr;
+    return static_cast<T*>(object.get());
+}
+
+template<typename T> RetainPtr<T> dynamic_objc_cast(const RetainPtr<id>& object)
+{
+    if (!is_objc<T>(object.get()))
+        return nullptr;
+    return reinterpret_cast<T*>(object.get());
+}
+
+template<typename T> T *dynamic_objc_cast(NSObject *object)
+{
+    if (!is_objc<T>(object))
+        return nullptr;
+    return static_cast<T*>(object);
+}
+
+template<typename T> T *dynamic_objc_cast(id object)
+{
+    if (!is_objc<T>(object))
+        return nullptr;
+    return reinterpret_cast<T*>(object);
+}
+
+template <typename> struct CFTypeTrait;
+
+template<typename T> T dynamic_cf_cast(CFTypeRef object)
+{
+    if (!object)
+        return nullptr;
+
+    if (CFGetTypeID(object) != CFTypeTrait<T>::typeID())
+        return nullptr;
+
+    return static_cast<T>(const_cast<CF_BRIDGED_TYPE(id) void*>(object));
+}
+
+template<typename T> T checked_cf_cast(CFTypeRef object)
+{
+    if (!object)
+        return nullptr;
+
+    if (CFGetTypeID(object) != CFTypeTrait<T>::typeID())
+      WTFCrash();
+
+    return static_cast<T>(const_cast<CF_BRIDGED_TYPE(id) void*>(object));
+}
+
+template<typename T, typename U> RetainPtr<T> dynamic_cf_cast(RetainPtr<U>&& object)
+{
+    if (!object)
+        return nullptr;
+
+    if (CFGetTypeID(object.get()) != CFTypeTrait<T>::typeID())
+        return nullptr;
+
+    return adoptCF(static_cast<T>(const_cast<CF_BRIDGED_TYPE(id) void*>(object.leakRef())));
+}
+
+} // namespace WTF
+
+#define WTF_DECLARE_CF_TYPE_TRAIT(ClassName) \
+template <> \
+struct WTF::CFTypeTrait<ClassName##Ref> { \
+    static inline CFTypeID typeID(void) { return ClassName##GetTypeID(); } \
+};
+
+WTF_DECLARE_CF_TYPE_TRAIT(CFArray);
+WTF_DECLARE_CF_TYPE_TRAIT(CFDictionary);
+
+#define WTF_DECLARE_CF_MUTABLE_TYPE_TRAIT(ClassName, MutableClassName) \
+template <> \
+struct WTF::CFTypeTrait<MutableClassName##Ref> { \
+    static inline CFTypeID typeID(void) { return ClassName##GetTypeID(); } \
+};
+
+WTF_DECLARE_CF_MUTABLE_TYPE_TRAIT(CFArray, CFMutableArray);
+WTF_DECLARE_CF_MUTABLE_TYPE_TRAIT(CFDictionary, CFMutableDictionary);
 
 using WTF::RetainPtr;
 using WTF::adoptNS;
@@ -247,3 +433,9 @@ using WTF::adoptCF;
 using WTF::retainPtr;
 using WTF::downcast;
 using WTF::bridge_cast;
+using WTF::bridge_id_cast;
+using WTF::is_objc;
+using WTF::checked_objc_cast;
+using WTF::dynamic_objc_cast;
+using WTF::checked_cf_cast;
+using WTF::dynamic_cf_cast;

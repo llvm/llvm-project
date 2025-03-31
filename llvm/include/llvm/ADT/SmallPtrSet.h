@@ -15,7 +15,9 @@
 #ifndef LLVM_ADT_SMALLPTRSET_H
 #define LLVM_ADT_SMALLPTRSET_H
 
+#include "llvm/ADT/ADL.h"
 #include "llvm/ADT/EpochTracker.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ReverseIteration.h"
 #include "llvm/Support/type_traits.h"
@@ -469,6 +471,10 @@ public:
     insert(IL.begin(), IL.end());
   }
 
+  template <typename Range> void insert_range(Range &&R) {
+    insert(adl_begin(R), adl_end(R));
+  }
+
   iterator begin() const {
     if (shouldReverseIterate())
       return makeIterator(EndPointer() - 1);
@@ -550,6 +556,10 @@ public:
   SmallPtrSet(It I, It E) : BaseT(SmallStorage, SmallSizePowTwo) {
     this->insert(I, E);
   }
+
+  template <typename Range>
+  SmallPtrSet(llvm::from_range_t, Range &&R)
+      : SmallPtrSet(adl_begin(R), adl_end(R)) {}
 
   SmallPtrSet(std::initializer_list<PtrType> IL)
       : BaseT(SmallStorage, SmallSizePowTwo) {

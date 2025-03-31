@@ -125,7 +125,7 @@ define amdgpu_kernel void @multi_if_break_loop(i32 %arg) #0 {
 ; OPT-NEXT:    [[LSR_IV:%.*]] = phi i32 [ poison, %[[BB]] ], [ [[TMP2:%.*]], %[[FLOW4]] ]
 ; OPT-NEXT:    [[TMP2]] = add i32 [[LSR_IV]], 1
 ; OPT-NEXT:    [[CMP0:%.*]] = icmp slt i32 [[TMP2]], 0
-; OPT-NEXT:    [[LOAD0:%.*]] = load volatile i32, ptr addrspace(1) undef, align 4
+; OPT-NEXT:    [[LOAD0:%.*]] = load volatile i32, ptr addrspace(1) poison, align 4
 ; OPT-NEXT:    br label %[[NODEBLOCK:.*]]
 ; OPT:       [[NODEBLOCK]]:
 ; OPT-NEXT:    [[PIVOT:%.*]] = icmp sge i32 [[LOAD0]], 1
@@ -145,7 +145,7 @@ define amdgpu_kernel void @multi_if_break_loop(i32 %arg) #0 {
 ; OPT-NEXT:    [[TMP5:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP4]])
 ; OPT-NEXT:    br i1 [[TMP5]], label %[[BB9:.*]], label %[[BB1]]
 ; OPT:       [[CASE0]]:
-; OPT-NEXT:    [[LOAD1:%.*]] = load volatile i32, ptr addrspace(1) undef, align 4
+; OPT-NEXT:    [[LOAD1:%.*]] = load volatile i32, ptr addrspace(1) poison, align 4
 ; OPT-NEXT:    [[CMP1:%.*]] = icmp sge i32 [[TMP]], [[LOAD1]]
 ; OPT-NEXT:    br label %[[FLOW5]]
 ; OPT:       [[FLOW]]:
@@ -153,7 +153,7 @@ define amdgpu_kernel void @multi_if_break_loop(i32 %arg) #0 {
 ; OPT-NEXT:    [[TMP8:%.*]] = phi i1 [ false, %[[FLOW3]] ], [ true, %[[NODEBLOCK]] ]
 ; OPT-NEXT:    br i1 [[TMP8]], label %[[LEAFBLOCK]], label %[[FLOW4]]
 ; OPT:       [[CASE1]]:
-; OPT-NEXT:    [[LOAD2:%.*]] = load volatile i32, ptr addrspace(1) undef, align 4
+; OPT-NEXT:    [[LOAD2:%.*]] = load volatile i32, ptr addrspace(1) poison, align 4
 ; OPT-NEXT:    [[CMP2]] = icmp sge i32 [[TMP]], [[LOAD2]]
 ; OPT-NEXT:    br label %[[FLOW3]]
 ; OPT:       [[FLOW5]]:
@@ -182,20 +182,19 @@ define amdgpu_kernel void @multi_if_break_loop(i32 %arg) #0 {
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_readfirstlane_b32 s8, v1
 ; GCN-NEXT:    s_mov_b64 s[4:5], -1
-; GCN-NEXT:    s_cmp_lt_i32 s8, 1
+; GCN-NEXT:    v_cmp_gt_i32_e32 vcc, 1, v1
 ; GCN-NEXT:    s_mov_b64 s[6:7], -1
-; GCN-NEXT:    s_cbranch_scc1 .LBB1_6
+; GCN-NEXT:    s_cbranch_vccnz .LBB1_6
 ; GCN-NEXT:  ; %bb.3: ; %LeafBlock1
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
-; GCN-NEXT:    s_cmp_eq_u32 s8, 1
-; GCN-NEXT:    s_cbranch_scc0 .LBB1_5
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GCN-NEXT:    s_cbranch_vccz .LBB1_5
 ; GCN-NEXT:  ; %bb.4: ; %case1
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
-; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
+; GCN-NEXT:    buffer_load_dword v2, off, s[0:3], 0 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_cmp_ge_i32_e32 vcc, v0, v1
+; GCN-NEXT:    v_cmp_ge_i32_e32 vcc, v0, v2
 ; GCN-NEXT:    s_orn2_b64 s[4:5], vcc, exec
 ; GCN-NEXT:  .LBB1_5: ; %Flow3
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
@@ -206,8 +205,8 @@ define amdgpu_kernel void @multi_if_break_loop(i32 %arg) #0 {
 ; GCN-NEXT:    s_cbranch_vccz .LBB1_1
 ; GCN-NEXT:  ; %bb.7: ; %LeafBlock
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
-; GCN-NEXT:    s_cmp_eq_u32 s8, 0
-; GCN-NEXT:    s_cbranch_scc0 .LBB1_1
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
+; GCN-NEXT:    s_cbranch_vccz .LBB1_1
 ; GCN-NEXT:  ; %bb.8: ; %case0
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
@@ -228,19 +227,19 @@ bb1:
   %lsr.iv = phi i32 [ poison, %bb ], [ %lsr.iv.next, %case0 ], [ %lsr.iv.next, %case1 ]
   %lsr.iv.next = add i32 %lsr.iv, 1
   %cmp0 = icmp slt i32 %lsr.iv.next, 0
-  %load0 = load volatile i32, ptr addrspace(1) undef, align 4
+  %load0 = load volatile i32, ptr addrspace(1) poison, align 4
   switch i32 %load0, label %bb9 [
   i32 0, label %case0
   i32 1, label %case1
   ]
 
 case0:
-  %load1 = load volatile i32, ptr addrspace(1) undef, align 4
+  %load1 = load volatile i32, ptr addrspace(1) poison, align 4
   %cmp1 = icmp slt i32 %tmp, %load1
   br i1 %cmp1, label %bb1, label %bb9
 
 case1:
-  %load2 = load volatile i32, ptr addrspace(1) undef, align 4
+  %load2 = load volatile i32, ptr addrspace(1) poison, align 4
   %cmp2 = icmp slt i32 %tmp, %load2
   br i1 %cmp2, label %bb1, label %bb9
 

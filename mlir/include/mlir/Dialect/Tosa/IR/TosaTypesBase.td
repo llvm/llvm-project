@@ -101,6 +101,10 @@ def AllDimensionsAreSizeOne : And<[
     IsRankedTensorTypePred,
     CPred<"::llvm::all_of(::llvm::cast<::mlir::RankedTensorType>($_self).getShape(), [](auto v) { return v == 1; })">]>;
 
+def AtLeastRankOne : And<[
+  IsRankedTensorTypePred,
+  CPred<"::llvm::cast<::mlir::RankedTensorType>($_self).getRank() >= 1">]>;
+
 class TosaTensorOf<
     list<Type> allowedTypes, string summary = "tosa-conformant tensor">
     : TensorOf<allowedTypes, [Or<[HasNo0Dimensions, IsUnrankedTensorTypePred]>], summary>;
@@ -182,6 +186,9 @@ def Tosa_TensorUpto4D : AnyTypeOf<[
 
 def Tosa_Int32TensorUpto4D : AnyTypeOf<[
   Tosa_UnrankedTensor, TosaTensorRankOf<[Tosa_Int32], [0,1,2,3,4]>]>;
+
+def Tosa_TensorAtLeast1D : AnyTypeOf<[
+  Tosa_UnrankedTensor, TosaRankedTensorOf<[Tosa_AnyNumber], [AtLeastRankOne]>], "tosa-conformant tensor of at least rank 1", "::mlir::TensorType">;
 
 //===----------------------------------------------------------------------===//
 // Generic scalar, vector, or tensor of a particular type.

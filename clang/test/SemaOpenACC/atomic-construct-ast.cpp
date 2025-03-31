@@ -21,6 +21,14 @@ void foo(int v, int x) {
 #pragma acc atomic read
   v = x;
 
+// CHECK-NEXT: OpenACCAtomicConstruct{{.*}} atomic read
+// CHECK-NEXT: BinaryOperator{{.*}} 'int' lvalue '='
+// CHECK-NEXT: DeclRefExpr{{.*}}'v' 'int'
+// CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr{{.*}}'x' 'int'
+_Pragma("acc atomic read")
+  v = x;
+
 // CHECK-NEXT: OpenACCAtomicConstruct{{.*}} atomic write
 // CHECK-NEXT: BinaryOperator{{.*}} 'int' lvalue '='
 // CHECK-NEXT: DeclRefExpr{{.*}}'v' 'int'

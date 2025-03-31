@@ -9,7 +9,7 @@
 # RUN: llvm-readobj -r -x .got a.64.so | FileCheck --check-prefix=GD64-RELA %s
 # RUN: llvm-objdump --no-show-raw-insn -dr -h a.64.so | FileCheck %s --check-prefix=GD64
 
-## FIXME: The transition frome TLSDESC to IE/LE has not yet been implemented.
+## FIXME: The transition from TLSDESC to IE/LE has not yet been implemented.
 ## Keep the dynamic relocations and hand them over to dynamic linker.
 
 # RUN: ld.lld --relax -e 0 -z now a.64.o c.64.o -o a.64.le
@@ -254,7 +254,7 @@ addi.d $t0, $t0, 1
 jirl $ra, $ra, %desc_call(c)
 add.d $a3, $a0, $tp
 
-# PCALAU12I and ADDI.D have R_LARCH_RELAX. We preform relaxation.
+# PCALAU12I and ADDI.D have R_LARCH_RELAX. We perform relaxation.
 pcalau12i $a0, %desc_pc_hi20(d)
 .reloc .-4, R_LARCH_RELAX, 0
 addi.d $a0, $a0, %desc_pc_lo12(d)

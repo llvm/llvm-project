@@ -211,7 +211,7 @@ public:
 
   InstructionCost getExtendedReductionCost(unsigned Opcode, bool IsUnsigned,
                                            Type *ResTy, VectorType *ValTy,
-                                           FastMathFlags FMF,
+                                           std::optional<FastMathFlags> FMF,
                                            TTI::TargetCostKind CostKind);
 
   InstructionCost
@@ -387,6 +387,8 @@ public:
   }
 
   bool enableInterleavedAccessVectorization() { return true; }
+
+  unsigned getMinTripCountTailFoldingThreshold() const;
 
   enum RISCVRegisterClass { GPRRC, FPRRC, VRRC };
   unsigned getNumberOfRegisters(unsigned ClassID) const {

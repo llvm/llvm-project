@@ -1209,8 +1209,7 @@ void ModuleBitcodeWriter::writeTypeTable() {
       TypeVals.push_back(TET->getNumTypeParameters());
       for (Type *InnerTy : TET->type_params())
         TypeVals.push_back(VE.getTypeID(InnerTy));
-      for (unsigned IntParam : TET->int_params())
-        TypeVals.push_back(IntParam);
+      llvm::append_range(TypeVals, TET->int_params());
       break;
     }
     case Type::TypedPointerTyID:
@@ -1990,6 +1989,7 @@ void ModuleBitcodeWriter::writeDICompositeType(
   Record.push_back(VE.getMetadataOrNullID(N->getRawSpecification()));
   Record.push_back(
       N->getEnumKind().value_or(dwarf::DW_APPLE_ENUM_KIND_invalid));
+  Record.push_back(VE.getMetadataOrNullID(N->getRawBitStride()));
 
   Stream.EmitRecord(bitc::METADATA_COMPOSITE_TYPE, Record, Abbrev);
   Record.clear();
@@ -2803,7 +2803,7 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
                cast<ConstantDataSequential>(C)->isString()) {
       const ConstantDataSequential *Str = cast<ConstantDataSequential>(C);
       // Emit constant strings specially.
-      unsigned NumElts = Str->getNumElements();
+      uint64_t NumElts = Str->getNumElements();
       // If this is a null-terminated string, use the denser CSTRING encoding.
       if (Str->isCString()) {
         Code = bitc::CST_CODE_CSTRING;
@@ -2814,7 +2814,7 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
       }
       bool isCStr7 = Code == bitc::CST_CODE_CSTRING;
       bool isCStrChar6 = Code == bitc::CST_CODE_CSTRING;
-      for (unsigned i = 0; i != NumElts; ++i) {
+      for (uint64_t i = 0; i != NumElts; ++i) {
         unsigned char V = Str->getElementAsInteger(i);
         Record.push_back(V);
         isCStr7 &= (V & 128) == 0;
@@ -2831,10 +2831,10 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
       Code = bitc::CST_CODE_DATA;
       Type *EltTy = CDS->getElementType();
       if (isa<IntegerType>(EltTy)) {
-        for (unsigned i = 0, e = CDS->getNumElements(); i != e; ++i)
+        for (uint64_t i = 0, e = CDS->getNumElements(); i != e; ++i)
           Record.push_back(CDS->getElementAsInteger(i));
       } else {
-        for (unsigned i = 0, e = CDS->getNumElements(); i != e; ++i)
+        for (uint64_t i = 0, e = CDS->getNumElements(); i != e; ++i)
           Record.push_back(
               CDS->getElementAsAPFloat(i).bitcastToAPInt().getLimitedValue());
       }
@@ -4302,10 +4302,8 @@ static void writeFunctionHeapProfileRecords(
     }
     for (auto Id : CI.StackIdIndices)
       Record.push_back(GetStackIndex(Id));
-    if (!PerModule) {
-      for (auto V : CI.Clones)
-        Record.push_back(V);
-    }
+    if (!PerModule)
+      llvm::append_range(Record, CI.Clones);
     Stream.EmitRecord(PerModule ? bitc::FS_PERMODULE_CALLSITE_INFO
                                 : bitc::FS_COMBINED_CALLSITE_INFO,
                       Record, CallsiteAbbrev);
@@ -4325,10 +4323,8 @@ static void writeFunctionHeapProfileRecords(
       assert(CallStackCount <= CallStackPos.size());
       Record.push_back(CallStackPos[CallStackCount++]);
     }
-    if (!PerModule) {
-      for (auto V : AI.Versions)
-        Record.push_back(V);
-    }
+    if (!PerModule)
+      llvm::append_range(Record, AI.Versions);
     assert(AI.ContextSizeInfos.empty() ||
            AI.ContextSizeInfos.size() == AI.MIBs.size());
     // Optionally emit the context size information if it exists.
@@ -5064,19 +5060,25 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
       getReferencedTypeIds(FS, ReferencedTypeIds);
   }
 
+  SmallVector<StringRef, 4> Functions;
   auto EmitCfiFunctions = [&](const CfiFunctionIndex &CfiIndex,
                               bitc::GlobalValueSummarySymtabCodes Code) {
-    for (auto &S : CfiIndex) {
-      if (DefOrUseGUIDs.contains(
-              GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(S)))) {
-        NameVals.push_back(StrtabBuilder.add(S));
-        NameVals.push_back(S.size());
-      }
+    if (CfiIndex.empty())
+      return;
+    for (GlobalValue::GUID GUID : DefOrUseGUIDs) {
+      auto Defs = CfiIndex.forGuid(GUID);
+      Functions.insert(Functions.end(), Defs.begin(), Defs.end());
     }
-    if (!NameVals.empty()) {
-      Stream.EmitRecord(Code, NameVals);
-      NameVals.clear();
+    if (Functions.empty())
+      return;
+    llvm::sort(Functions);
+    for (const auto &S : Functions) {
+      NameVals.push_back(StrtabBuilder.add(S));
+      NameVals.push_back(S.size());
     }
+    Stream.EmitRecord(Code, NameVals);
+    NameVals.clear();
+    Functions.clear();
   };
 
   EmitCfiFunctions(Index.cfiFunctionDefs(), bitc::FS_CFI_FUNCTION_DEFS);

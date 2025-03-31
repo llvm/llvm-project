@@ -1620,7 +1620,7 @@ void SplitPtrStructs::killAndReplaceSplitInstructions(
         Dbg->setExpression(*RsrcExpr);
         Dbg->replaceVariableLocationOp(I, Rsrc);
       } else {
-        Dbg->replaceVariableLocationOp(I, UndefValue::get(I->getType()));
+        Dbg->replaceVariableLocationOp(I, PoisonValue::get(I->getType()));
       }
     }
 

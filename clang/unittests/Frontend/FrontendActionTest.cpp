@@ -18,6 +18,7 @@
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Serialization/InMemoryModuleCache.h"
+#include "clang/Serialization/ModuleCache.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -287,10 +288,12 @@ TEST(GeneratePCHFrontendAction, CacheGeneratedPCH) {
     // Check whether the PCH was cached.
     if (ShouldCache)
       EXPECT_EQ(InMemoryModuleCache::Final,
-                Compiler.getModuleCache().getPCMState(PCHFilename));
+                Compiler.getModuleCache().getInMemoryModuleCache().getPCMState(
+                    PCHFilename));
     else
       EXPECT_EQ(InMemoryModuleCache::Unknown,
-                Compiler.getModuleCache().getPCMState(PCHFilename));
+                Compiler.getModuleCache().getInMemoryModuleCache().getPCMState(
+                    PCHFilename));
   }
 }
 

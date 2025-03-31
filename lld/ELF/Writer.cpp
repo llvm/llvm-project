@@ -2181,17 +2181,13 @@ template <class ELFT> void Writer<ELFT>::checkExecuteOnly() {
 // Check which input sections of RX output sections don't have the
 // SHF_AARCH64_PURECODE or SHF_ARM_PURECODE flag set.
 template <class ELFT> void Writer<ELFT>::checkExecuteOnlyReport() {
-  if (ctx.arg.zExecuteOnlyReport == "none")
+  if (ctx.arg.zExecuteOnlyReport == ReportPolicy::None)
     return;
 
   auto reportUnless = [&](bool cond) -> ELFSyncStream {
     if (cond)
       return {ctx, DiagLevel::None};
-    if (ctx.arg.zExecuteOnlyReport == "error")
-      return {ctx, DiagLevel::Err};
-    if (ctx.arg.zExecuteOnlyReport == "warning")
-      return {ctx, DiagLevel::Warn};
-    return {ctx, DiagLevel::None};
+    return {ctx, toDiagLevel(ctx.arg.zExecuteOnlyReport)};
   };
 
   uint64_t purecodeFlag =
