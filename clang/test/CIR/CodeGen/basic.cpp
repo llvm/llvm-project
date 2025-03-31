@@ -6,39 +6,51 @@ int f1() {
 }
 
 // CHECK: module
-// CHECK: cir.func @f1() -> !cir.int<s, 32>
-// CHECK:    %[[I_PTR:.*]] = cir.alloca !cir.int<s, 32>, !cir.ptr<!cir.int<s, 32>>, ["i"] {alignment = 4 : i64}
-// CHECK:    %[[I:.*]] = cir.load %[[I_PTR]] : !cir.ptr<!cir.int<s, 32>>, !cir.int<s, 32>
-// CHECK:    cir.return %[[I]] : !cir.int<s, 32>
+// CHECK: cir.func @f1() -> !s32i
+// CHECK:    %[[RV:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
+// CHECK:    %[[I_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i"] {alignment = 4 : i64}
+// CHECK:    %[[I:.*]] = cir.load %[[I_PTR]] : !cir.ptr<!s32i>, !s32i
+// CHECK:    cir.store %[[I]], %[[RV]] : !s32i, !cir.ptr<!s32i>
+// CHECK:    %[[R:.*]] = cir.load %[[RV]] : !cir.ptr<!s32i>, !s32i
+// CHECK:    cir.return %[[R]] : !s32i
 
 int f2() {
   const int i = 2;
   return i;
 }
 
-// CHECK: cir.func @f2() -> !cir.int<s, 32>
-// CHECK:    %[[I_PTR:.*]] = cir.alloca !cir.int<s, 32>, !cir.ptr<!cir.int<s, 32>>, ["i", init, const] {alignment = 4 : i64}
-// CHECK:    %[[TWO:.*]] = cir.const #cir.int<2> : !cir.int<s, 32>
-// CHECK:    cir.store %[[TWO]], %[[I_PTR]] : !cir.int<s, 32>, !cir.ptr<!cir.int<s, 32>>
-// CHECK:    %[[I:.*]] = cir.load %[[I_PTR]] : !cir.ptr<!cir.int<s, 32>>, !cir.int<s, 32>
-// CHECK:    cir.return %[[I]] : !cir.int<s, 32>
+// CHECK: cir.func @f2() -> !s32i
+// CHECK:    %[[RV:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
+// CHECK:    %[[I_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init, const] {alignment = 4 : i64}
+// CHECK:    %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
+// CHECK:    cir.store %[[TWO]], %[[I_PTR]] : !s32i, !cir.ptr<!s32i>
+// CHECK:    %[[I:.*]] = cir.load %[[I_PTR]] : !cir.ptr<!s32i>, !s32i
+// CHECK:    cir.store %[[I]], %[[RV]] : !s32i, !cir.ptr<!s32i>
+// CHECK:    %[[R:.*]] = cir.load %[[RV]] : !cir.ptr<!s32i>, !s32i
+// CHECK:    cir.return %[[R]] : !s32i
 
 int f3(int i) {
   return i;
 }
 
-// CHECK: cir.func @f3(%[[ARG:.*]]: !cir.int<s, 32> loc({{.*}})) -> !cir.int<s, 32>
-// CHECK:   %[[ARG_ALLOCA:.*]] = cir.alloca !cir.int<s, 32>, !cir.ptr<!cir.int<s, 32>>, ["i", init] {alignment = 4 : i64}
-// CHECK:   cir.store %[[ARG]], %[[ARG_ALLOCA]] : !cir.int<s, 32>, !cir.ptr<!cir.int<s, 32>>
-// CHECK:   %[[ARG_VAL:.*]] = cir.load %[[ARG_ALLOCA]] : !cir.ptr<!cir.int<s, 32>>, !cir.int<s, 32>
-// CHECK:   cir.return %[[ARG_VAL]] : !cir.int<s, 32>
+// CHECK: cir.func @f3(%[[ARG:.*]]: !s32i loc({{.*}})) -> !s32i
+// CHECK:   %[[ARG_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
+// CHECK:   %[[RV:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
+// CHECK:   cir.store %[[ARG]], %[[ARG_ALLOCA]] : !s32i, !cir.ptr<!s32i>
+// CHECK:   %[[ARG_VAL:.*]] = cir.load %[[ARG_ALLOCA]] : !cir.ptr<!s32i>, !s32i
+// CHECK:   cir.store %[[ARG_VAL]], %[[RV]] : !s32i, !cir.ptr<!s32i>
+// CHECK:   %[[R:.*]] = cir.load %[[RV]] : !cir.ptr<!s32i>, !s32i
+// CHECK:   cir.return %[[R]] : !s32i
 
 int f4(const int i) {
   return i;
 }
 
-// CHECK: cir.func @f4(%[[ARG:.*]]: !cir.int<s, 32> loc({{.*}})) -> !cir.int<s, 32>
-// CHECK:   %[[ARG_ALLOCA:.*]] = cir.alloca !cir.int<s, 32>, !cir.ptr<!cir.int<s, 32>>, ["i", init, const] {alignment = 4 : i64}
-// CHECK:   cir.store %[[ARG]], %[[ARG_ALLOCA]] : !cir.int<s, 32>, !cir.ptr<!cir.int<s, 32>>
-// CHECK:   %[[ARG_VAL:.*]] = cir.load %[[ARG_ALLOCA]] : !cir.ptr<!cir.int<s, 32>>, !cir.int<s, 32>
-// CHECK:   cir.return %[[ARG_VAL]] : !cir.int<s, 32>
+// CHECK: cir.func @f4(%[[ARG:.*]]: !s32i loc({{.*}})) -> !s32i
+// CHECK:   %[[ARG_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init, const] {alignment = 4 : i64}
+// CHECK:   %[[RV:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
+// CHECK:   cir.store %[[ARG]], %[[ARG_ALLOCA]] : !s32i, !cir.ptr<!s32i>
+// CHECK:   %[[ARG_VAL:.*]] = cir.load %[[ARG_ALLOCA]] : !cir.ptr<!s32i>, !s32i
+// CHECK:   cir.store %[[ARG_VAL]], %[[RV]] : !s32i, !cir.ptr<!s32i>
+// CHECK:   %[[R:.*]] = cir.load %[[RV]] : !cir.ptr<!s32i>, !s32i
+// CHECK:   cir.return %[[R]] : !s32i

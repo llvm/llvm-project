@@ -149,8 +149,8 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
     Address addr = Address::invalid();
 
     // The variable should generally be present in the local decl map.
-    auto iter = LocalDeclMap.find(vd);
-    if (iter != LocalDeclMap.end()) {
+    auto iter = localDeclMap.find(vd);
+    if (iter != localDeclMap.end()) {
       addr = iter->second;
     } else {
       // Otherwise, it might be static local we haven't emitted yet for some
@@ -163,6 +163,25 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
 
   cgm.errorNYI(e->getSourceRange(), "emitDeclRefLValue: unhandled decl type");
   return LValue();
+}
+
+mlir::Value CIRGenFunction::evaluateExprAsBool(const Expr *e) {
+  QualType boolTy = getContext().BoolTy;
+  SourceLocation loc = e->getExprLoc();
+
+  assert(!cir::MissingFeatures::pgoUse());
+  if (e->getType()->getAs<MemberPointerType>()) {
+    cgm.errorNYI(e->getSourceRange(),
+                 "evaluateExprAsBool: member pointer type");
+    return createDummyValue(getLoc(loc), boolTy);
+  }
+
+  assert(!cir::MissingFeatures::cgFPOptionsRAII());
+  if (!e->getType()->isAnyComplexType())
+    return emitScalarConversion(emitScalarExpr(e), e->getType(), boolTy, loc);
+
+  cgm.errorNYI(e->getSourceRange(), "evaluateExprAsBool: complex type");
+  return createDummyValue(getLoc(loc), boolTy);
 }
 
 LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
@@ -191,7 +210,7 @@ LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
 
     if (e->getType()->isAnyComplexType()) {
       cgm.errorNYI(e->getSourceRange(), "UnaryOp complex inc/dec");
-      return LValue();
+      lv = LValue();
     } else {
       emitScalarPrePostIncDec(e, lv, isInc, /*isPre=*/true);
     }
@@ -211,6 +230,62 @@ LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
     llvm_unreachable("UnaryOperator of non-lvalue kind!");
   }
   llvm_unreachable("Unknown unary operator kind!");
+}
+
+LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
+  // Comma expressions just emit their LHS then their RHS as an l-value.
+  if (e->getOpcode() == BO_Comma) {
+    emitIgnoredExpr(e->getLHS());
+    return emitLValue(e->getRHS());
+  }
+
+  if (e->getOpcode() == BO_PtrMemD || e->getOpcode() == BO_PtrMemI) {
+    cgm.errorNYI(e->getSourceRange(), "member pointers");
+    return {};
+  }
+
+  assert(e->getOpcode() == BO_Assign && "unexpected binary l-value");
+
+  // Note that in all of these cases, __block variables need the RHS
+  // evaluated first just in case the variable gets moved by the RHS.
+
+  switch (CIRGenFunction::getEvaluationKind(e->getType())) {
+  case cir::TEK_Scalar: {
+    assert(!cir::MissingFeatures::objCLifetime());
+    if (e->getLHS()->getType().getObjCLifetime() !=
+        clang::Qualifiers::ObjCLifetime::OCL_None) {
+      cgm.errorNYI(e->getSourceRange(), "objc lifetimes");
+      return {};
+    }
+
+    RValue rv = emitAnyExpr(e->getRHS());
+    LValue lv = emitLValue(e->getLHS());
+
+    SourceLocRAIIObject loc{*this, getLoc(e->getSourceRange())};
+    if (lv.isBitField()) {
+      cgm.errorNYI(e->getSourceRange(), "bitfields");
+      return {};
+    }
+    emitStoreThroughLValue(rv, lv);
+
+    if (getLangOpts().OpenMP) {
+      cgm.errorNYI(e->getSourceRange(), "openmp");
+      return {};
+    }
+
+    return lv;
+  }
+
+  case cir::TEK_Complex: {
+    assert(!cir::MissingFeatures::complexType());
+    cgm.errorNYI(e->getSourceRange(), "complex l-values");
+    return {};
+  }
+  case cir::TEK_Aggregate:
+    cgm.errorNYI(e->getSourceRange(), "aggregate lvalues");
+    return {};
+  }
+  llvm_unreachable("bad evaluation kind");
 }
 
 /// Emit code to compute the specified expression which
@@ -242,10 +317,27 @@ void CIRGenFunction::emitIgnoredExpr(const Expr *e) {
 }
 
 mlir::Value CIRGenFunction::emitAlloca(StringRef name, mlir::Type ty,
-                                       mlir::Location loc,
-                                       CharUnits alignment) {
-  mlir::Block *entryBlock = getCurFunctionEntryBlock();
+                                       mlir::Location loc, CharUnits alignment,
+                                       bool insertIntoFnEntryBlock,
+                                       mlir::Value arraySize) {
+  mlir::Block *entryBlock = insertIntoFnEntryBlock
+                                ? getCurFunctionEntryBlock()
+                                : curLexScope->getEntryBlock();
 
+  // If this is an alloca in the entry basic block of a cir.try and there's
+  // a surrounding cir.scope, make sure the alloca ends up in the surrounding
+  // scope instead. This is necessary in order to guarantee all SSA values are
+  // reachable during cleanups.
+  assert(!cir::MissingFeatures::tryOp());
+
+  return emitAlloca(name, ty, loc, alignment,
+                    builder.getBestAllocaInsertPoint(entryBlock), arraySize);
+}
+
+mlir::Value CIRGenFunction::emitAlloca(StringRef name, mlir::Type ty,
+                                       mlir::Location loc, CharUnits alignment,
+                                       mlir::OpBuilder::InsertPoint ip,
+                                       mlir::Value arraySize) {
   // CIR uses its own alloca address space rather than follow the target data
   // layout like original CodeGen. The data layout awareness should be done in
   // the lowering pass instead.
@@ -256,7 +348,7 @@ mlir::Value CIRGenFunction::emitAlloca(StringRef name, mlir::Type ty,
   mlir::Value addr;
   {
     mlir::OpBuilder::InsertionGuard guard(builder);
-    builder.restoreInsertionPoint(builder.getBestAllocaInsertPoint(entryBlock));
+    builder.restoreInsertionPoint(ip);
     addr = builder.createAlloca(loc, /*addr type*/ localVarPtrTy,
                                 /*var type*/ ty, name, alignIntAttr);
     assert(!cir::MissingFeatures::astVarDeclInterface());
@@ -271,11 +363,13 @@ mlir::Value CIRGenFunction::createDummyValue(mlir::Location loc,
   return builder.createDummyValue(loc, t, alignment);
 }
 
-/// This creates an alloca and inserts it  at the current insertion point of the
-/// builder.
+/// This creates an alloca and inserts it into the entry block if
+/// \p insertIntoFnEntryBlock is true, otherwise it inserts it at the current
+/// insertion point of the builder.
 Address CIRGenFunction::createTempAlloca(mlir::Type ty, CharUnits align,
-                                         mlir::Location loc,
-                                         const Twine &name) {
-  mlir::Value alloca = emitAlloca(name.str(), ty, loc, align);
+                                         mlir::Location loc, const Twine &name,
+                                         bool insertIntoFnEntryBlock) {
+  mlir::Value alloca =
+      emitAlloca(name.str(), ty, loc, align, insertIntoFnEntryBlock);
   return Address(alloca, ty, align);
 }

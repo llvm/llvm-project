@@ -3876,7 +3876,7 @@ private:
       for (Instruction *I : FakeUses) {
         IRB.SetInsertPoint(I);
         for (auto *V : Components)
-          IRB.CreateIntrinsic(Intrinsic::fake_use, {}, {V});
+          IRB.CreateIntrinsic(Intrinsic::fake_use, {V});
         I->eraseFromParent();
       }
     }
@@ -4988,8 +4988,7 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
       // If we have either PHIs or Selects to speculate, add them to those
       // worklists and re-queue the new alloca so that we promote in on the
       // next iteration.
-      for (PHINode *PHIUser : PHIUsers)
-        SpeculatablePHIs.insert(PHIUser);
+      SpeculatablePHIs.insert_range(PHIUsers);
       SelectsToRewrite.reserve(SelectsToRewrite.size() +
                                NewSelectsToRewrite.size());
       for (auto &&KV : llvm::make_range(

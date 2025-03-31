@@ -49,6 +49,7 @@ namespace {
                              QualType T);
 
     void PrintObjCTypeParams(ObjCTypeParamList *Params);
+    void PrintOpenACCRoutineOnLambda(Decl *D);
 
   public:
     DeclPrinter(raw_ostream &Out, const PrintingPolicy &Policy,
@@ -292,9 +293,33 @@ bool DeclPrinter::prettyPrintAttributes(const Decl *D,
   return hasPrinted;
 }
 
+void DeclPrinter::PrintOpenACCRoutineOnLambda(Decl *D) {
+  CXXRecordDecl *CXXRD = nullptr;
+  if (const auto *VD = dyn_cast<VarDecl>(D)) {
+    if (const auto *Init = VD->getInit())
+      CXXRD = Init->getType().isNull() ? nullptr
+                                       : Init->getType()->getAsCXXRecordDecl();
+  } else if (const auto *FD = dyn_cast<FieldDecl>(D)) {
+    CXXRD =
+        FD->getType().isNull() ? nullptr : FD->getType()->getAsCXXRecordDecl();
+  }
+
+  if (!CXXRD || !CXXRD->isLambda())
+    return;
+
+  if (const auto *Call = CXXRD->getLambdaCallOperator()) {
+    for (auto *A : Call->specific_attrs<OpenACCRoutineDeclAttr>()) {
+      A->printPretty(Out, Policy);
+      Indent();
+    }
+  }
+}
+
 void DeclPrinter::prettyPrintPragmas(Decl *D) {
   if (Policy.PolishForDeclaration)
     return;
+
+  PrintOpenACCRoutineOnLambda(D);
 
   if (D->hasAttrs()) {
     AttrVec &Attrs = D->getAttrs();
@@ -894,6 +919,7 @@ void DeclPrinter::VisitFriendDecl(FriendDecl *D) {
 }
 
 void DeclPrinter::VisitFieldDecl(FieldDecl *D) {
+  prettyPrintPragmas(D);
   // FIXME: add printing of pragma attributes if required.
   if (!Policy.SuppressSpecifiers && D->isMutable())
     Out << "mutable ";
@@ -1930,19 +1956,17 @@ void DeclPrinter::VisitOpenACCRoutineDecl(OpenACCRoutineDecl *D) {
   if (!D->isInvalidDecl()) {
     Out << "#pragma acc routine";
 
-    if (D->hasNameSpecified()) {
-      Out << "(";
+    Out << "(";
 
-      // The referenced function was named here, but this makes us tolerant of
-      // errors.
-      if (D->getFunctionReference())
-        D->getFunctionReference()->printPretty(Out, nullptr, Policy,
-                                               Indentation, "\n", &Context);
-      else
-        Out << "<error>";
+    // The referenced function was named here, but this makes us tolerant of
+    // errors.
+    if (D->getFunctionReference())
+      D->getFunctionReference()->printPretty(Out, nullptr, Policy, Indentation,
+                                             "\n", &Context);
+    else
+      Out << "<error>";
 
-      Out << ")";
-    }
+    Out << ")";
 
     if (!D->clauses().empty()) {
       Out << ' ';

@@ -7236,7 +7236,7 @@ static bool PeepholePPC64ZExtGather(SDValue Op32,
       return false;
 
     ToPromote.insert(Op32.getNode());
-    ToPromote.insert(ToPromote1.begin(), ToPromote1.end());
+    ToPromote.insert_range(ToPromote1);
     return true;
   }
 
@@ -7253,7 +7253,7 @@ static bool PeepholePPC64ZExtGather(SDValue Op32,
       return false;
 
     ToPromote.insert(Op32.getNode());
-    ToPromote.insert(ToPromote1.begin(), ToPromote1.end());
+    ToPromote.insert_range(ToPromote1);
     return true;
   }
 
@@ -7269,7 +7269,7 @@ static bool PeepholePPC64ZExtGather(SDValue Op32,
       return false;
 
     ToPromote.insert(Op32.getNode());
-    ToPromote.insert(ToPromote1.begin(), ToPromote1.end());
+    ToPromote.insert_range(ToPromote1);
     return true;
   }
 
@@ -7287,10 +7287,10 @@ static bool PeepholePPC64ZExtGather(SDValue Op32,
     ToPromote.insert(Op32.getNode());
 
     if (Op0OK)
-      ToPromote.insert(ToPromote1.begin(), ToPromote1.end());
+      ToPromote.insert_range(ToPromote1);
 
     if (Op1OK)
-      ToPromote.insert(ToPromote2.begin(), ToPromote2.end());
+      ToPromote.insert_range(ToPromote2);
 
     return true;
   }
@@ -7310,7 +7310,7 @@ static bool PeepholePPC64ZExtGather(SDValue Op32,
     ToPromote.insert(Op32.getNode());
 
     if (Op0OK)
-      ToPromote.insert(ToPromote1.begin(), ToPromote1.end());
+      ToPromote.insert_range(ToPromote1);
 
     return true;
   }

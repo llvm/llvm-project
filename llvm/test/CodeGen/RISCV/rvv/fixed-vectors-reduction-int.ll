@@ -1555,11 +1555,11 @@ define i64 @vwreduce_add_v64i64(ptr %x) {
 ; RV64-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
 ; RV64-NEXT:    vslidedown.vi v24, v8, 16
 ; RV64-NEXT:    addi a0, sp, 16
-; RV64-NEXT:    vs8r.v v24, (a0) # Unknown-size Folded Spill
+; RV64-NEXT:    vs8r.v v24, (a0) # vscale x 64-byte Folded Spill
 ; RV64-NEXT:    vslidedown.vi v0, v16, 16
 ; RV64-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV64-NEXT:    vwadd.vv v24, v8, v16
-; RV64-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
+; RV64-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
 ; RV64-NEXT:    vwadd.vv v8, v16, v0
 ; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; RV64-NEXT:    vadd.vv v8, v24, v8
@@ -1621,11 +1621,11 @@ define i64 @vwreduce_uadd_v64i64(ptr %x) {
 ; RV64-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
 ; RV64-NEXT:    vslidedown.vi v24, v8, 16
 ; RV64-NEXT:    addi a0, sp, 16
-; RV64-NEXT:    vs8r.v v24, (a0) # Unknown-size Folded Spill
+; RV64-NEXT:    vs8r.v v24, (a0) # vscale x 64-byte Folded Spill
 ; RV64-NEXT:    vslidedown.vi v0, v16, 16
 ; RV64-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV64-NEXT:    vwaddu.vv v24, v8, v16
-; RV64-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
+; RV64-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
 ; RV64-NEXT:    vwaddu.vv v8, v16, v0
 ; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; RV64-NEXT:    vadd.vv v8, v24, v8

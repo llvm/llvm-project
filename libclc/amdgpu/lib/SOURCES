@@ -1,4 +1,5 @@
 math/native_exp.cl
+math/native_exp2.cl
 math/native_log.cl
 math/native_log10.cl
 math/half_exp.cl

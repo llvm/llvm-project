@@ -153,7 +153,7 @@ struct ModuleDeps {
 
   /// Get (or compute) the compiler invocation that can be used to build this
   /// module. Does not include argv[0].
-  const std::vector<std::string> &getBuildArguments();
+  const std::vector<std::string> &getBuildArguments() const;
 
 private:
   friend class ModuleDepCollector;
@@ -166,7 +166,8 @@ private:
   /// including transitive dependencies.
   std::vector<std::string> FileDeps;
 
-  std::variant<std::monostate, CowCompilerInvocation, std::vector<std::string>>
+  mutable std::variant<std::monostate, CowCompilerInvocation,
+                       std::vector<std::string>>
       BuildInfo;
 };
 

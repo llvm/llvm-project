@@ -449,9 +449,8 @@ define void @store_i16_stride5_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[0,3,1,3,4,5,6,7]
 ; AVX512-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3,4,5,6,7]
 ; AVX512-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2],xmm3[3],xmm0[4,5,6,7]
-; AVX512-NEXT:    vinserti32x4 $2, %xmm0, %zmm2, %zmm1
 ; AVX512-NEXT:    vmovq %xmm0, 32(%r9)
-; AVX512-NEXT:    vmovdqa %ymm1, (%r9)
+; AVX512-NEXT:    vmovdqa %ymm2, (%r9)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
 ;
@@ -476,9 +475,8 @@ define void @store_i16_stride5_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512-FCP-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[u,u,6,7,14,15,u,u,8,9,10,11,12,13,14,15]
 ; AVX512-FCP-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3,4,5,6,7]
 ; AVX512-FCP-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2],xmm3[3],xmm0[4,5,6,7]
-; AVX512-FCP-NEXT:    vinserti32x4 $2, %xmm0, %zmm2, %zmm1
 ; AVX512-FCP-NEXT:    vmovq %xmm0, 32(%r9)
-; AVX512-FCP-NEXT:    vmovdqa %ymm1, (%r9)
+; AVX512-FCP-NEXT:    vmovdqa %ymm2, (%r9)
 ; AVX512-FCP-NEXT:    vzeroupper
 ; AVX512-FCP-NEXT:    retq
 ;
@@ -504,9 +502,8 @@ define void @store_i16_stride5_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512DQ-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[0,3,1,3,4,5,6,7]
 ; AVX512DQ-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3,4,5,6,7]
 ; AVX512DQ-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2],xmm3[3],xmm0[4,5,6,7]
-; AVX512DQ-NEXT:    vinserti32x4 $2, %xmm0, %zmm2, %zmm1
 ; AVX512DQ-NEXT:    vmovq %xmm0, 32(%r9)
-; AVX512DQ-NEXT:    vmovdqa %ymm1, (%r9)
+; AVX512DQ-NEXT:    vmovdqa %ymm2, (%r9)
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
 ;
@@ -531,9 +528,8 @@ define void @store_i16_stride5_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512DQ-FCP-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[u,u,6,7,14,15,u,u,8,9,10,11,12,13,14,15]
 ; AVX512DQ-FCP-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3,4,5,6,7]
 ; AVX512DQ-FCP-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2],xmm3[3],xmm0[4,5,6,7]
-; AVX512DQ-FCP-NEXT:    vinserti32x4 $2, %xmm0, %zmm2, %zmm1
 ; AVX512DQ-FCP-NEXT:    vmovq %xmm0, 32(%r9)
-; AVX512DQ-FCP-NEXT:    vmovdqa %ymm1, (%r9)
+; AVX512DQ-FCP-NEXT:    vmovdqa %ymm2, (%r9)
 ; AVX512DQ-FCP-NEXT:    vzeroupper
 ; AVX512DQ-FCP-NEXT:    retq
 ;
