@@ -37,26 +37,24 @@ class CollectUnexpandedParameterPacksVisitor
   bool InLambdaOrBlock = false;
   unsigned DepthLimit = (unsigned)-1;
 
-#ifndef NDEBUG
   bool ContainsIntermediatePacks = false;
-#endif
 
-    void addUnexpanded(NamedDecl *ND, SourceLocation Loc = SourceLocation()) {
-      if (auto *VD = dyn_cast<VarDecl>(ND)) {
-        // For now, the only problematic case is a generic lambda's templated
-        // call operator, so we don't need to look for all the other ways we
-        // could have reached a dependent parameter pack.
-        auto *FD = dyn_cast<FunctionDecl>(VD->getDeclContext());
-        auto *FTD = FD ? FD->getDescribedFunctionTemplate() : nullptr;
-        if (FTD && FTD->getTemplateParameters()->getDepth() >= DepthLimit)
-          return;
-      } else if (ND->isTemplateParameterPack() &&
-                 getDepthAndIndex(ND).first >= DepthLimit) {
+  void addUnexpanded(NamedDecl *ND, SourceLocation Loc = SourceLocation()) {
+    if (auto *VD = dyn_cast<VarDecl>(ND)) {
+      // For now, the only problematic case is a generic lambda's templated
+      // call operator, so we don't need to look for all the other ways we
+      // could have reached a dependent parameter pack.
+      auto *FD = dyn_cast<FunctionDecl>(VD->getDeclContext());
+      auto *FTD = FD ? FD->getDescribedFunctionTemplate() : nullptr;
+      if (FTD && FTD->getTemplateParameters()->getDepth() >= DepthLimit)
         return;
-      }
-
-      Unexpanded.push_back({ND, Loc});
+    } else if (ND->isTemplateParameterPack() &&
+               getDepthAndIndex(ND).first >= DepthLimit) {
+      return;
     }
+
+    Unexpanded.push_back({ND, Loc});
+  }
 
     void addUnexpanded(const TemplateTypeParmType *T,
                        SourceLocation Loc = SourceLocation()) {
@@ -100,27 +98,21 @@ class CollectUnexpandedParameterPacksVisitor
     bool VisitSubstTemplateTypeParmPackTypeLoc(
         SubstTemplateTypeParmPackTypeLoc TL) override {
       Unexpanded.push_back({TL.getTypePtr(), TL.getNameLoc()});
-#ifdef NDEBUG
       ContainsIntermediatePacks = true;
-#endif
       return true;
     }
 
     bool VisitSubstTemplateTypeParmPackType(
         SubstTemplateTypeParmPackType *T) override {
       Unexpanded.push_back({T, SourceLocation()});
-#ifdef NDEBUG
       ContainsIntermediatePacks = true;
-#endif
       return true;
     }
 
     bool VisitSubstNonTypeTemplateParmPackExpr(
         SubstNonTypeTemplateParmPackExpr *E) override {
       Unexpanded.push_back({E, E->getParameterPackLocation()});
-#ifdef NDEBUG
       ContainsIntermediatePacks = true;
-#endif
       return true;
     }
 
@@ -141,10 +133,8 @@ class CollectUnexpandedParameterPacksVisitor
           addUnexpanded(TTP);
       }
 
-#ifndef NDEBUG
       ContainsIntermediatePacks |=
           (bool)Template.getAsSubstTemplateTemplateParmPack();
-#endif
 
       return DynamicRecursiveASTVisitor::TraverseTemplateName(Template);
     }
@@ -336,14 +326,12 @@ class CollectUnexpandedParameterPacksVisitor
       return DynamicRecursiveASTVisitor::TraverseLambdaCapture(Lambda, C, Init);
     }
 
-#ifndef NDEBUG
     bool TraverseFunctionParmPackExpr(FunctionParmPackExpr *) override {
       ContainsIntermediatePacks = true;
       return true;
     }
 
     bool containsIntermediatePacks() const { return ContainsIntermediatePacks; }
-#endif
 };
 }
 
@@ -766,8 +754,13 @@ bool Sema::CheckParameterPacksForExpansion(
     bool &RetainExpansion, std::optional<unsigned> &NumExpansions) {
   ShouldExpand = true;
   RetainExpansion = false;
+  // Track the first pack we encounter that has a known length, used for
+  // diagnostics.
   std::pair<const IdentifierInfo *, SourceLocation> FirstPack;
+  // Track the partially expanded packs at the current level, used for
+  // diagnostics.
   std::optional<std::pair<unsigned, SourceLocation>> PartialExpansion;
+  // The pack size and the resolvable pack size at the current level.
   std::optional<unsigned> CurNumExpansions, CurMaximumOfLeastExpansions;
   typedef LocalInstantiationScope::DeclArgumentPack DeclArgumentPack;
 
@@ -821,18 +814,25 @@ bool Sema::CheckParameterPacksForExpansion(
       ND = TTP->getDecl();
       // FIXME: We either should have some fallback for canonical TTP, or
       //        never have canonical TTP here.
-    } else if (const auto *STP =
-                   dyn_cast<const SubstTemplateTypeParmPackType *>(P)) {
-      NewPackSize = STP->getNumArgs();
-      PendingPackExpansionSize = llvm::count_if(
-          STP->getArgumentPack().getPackAsArray(), IsUnexpandedPackExpansion);
-      ND = STP->getReplacedParameter();
     } else {
-      const auto *SEP = cast<const SubstNonTypeTemplateParmPackExpr *>(P);
-      NewPackSize = SEP->getArgumentPack().pack_size();
-      PendingPackExpansionSize = llvm::count_if(
-          SEP->getArgumentPack().getPackAsArray(), IsUnexpandedPackExpansion);
-      ND = SEP->getParameterPack();
+      // The Subst* nodes aren't used for pack expansion, so we don't set Pos.
+      // Instead, their presence indicates that we've encountered a pack that's
+      // been substituted but not yet expanded. In this case, we try to
+      // recover their identifiers to improve our diagnostics by highlighting
+      // which parameters conflict with the current expansion.
+      if (const auto *STP =
+              dyn_cast<const SubstTemplateTypeParmPackType *>(P)) {
+        NewPackSize = STP->getNumArgs();
+        PendingPackExpansionSize = llvm::count_if(
+            STP->getArgumentPack().getPackAsArray(), IsUnexpandedPackExpansion);
+        ND = STP->getReplacedParameter();
+      } else {
+        const auto *SEP = cast<const SubstNonTypeTemplateParmPackExpr *>(P);
+        NewPackSize = SEP->getArgumentPack().pack_size();
+        PendingPackExpansionSize = llvm::count_if(
+            SEP->getArgumentPack().getPackAsArray(), IsUnexpandedPackExpansion);
+        ND = SEP->getParameterPack();
+      }
     }
 
     if (Pos) {
@@ -920,13 +920,13 @@ bool Sema::CheckParameterPacksForExpansion(
 
   // We have tried our best in the for loop to find out which outer pack
   // expansion has a different length than the current one (by checking those
-  // Subst* nodes). However, if we fail to determine that, we'll have to
-  // complain the difference in a vague manner.
+  // Subst* nodes).  Here we display a more generic diagnostic if we could not
+  // find the outer pack.
   if (NumExpansions && CurNumExpansions &&
       *NumExpansions != *CurNumExpansions) {
     // If the current pack expansion contains any unresolved packs, and since
     // they might eventually expand to match the outer expansion, we don't
-    // complain it too early.
+    // diagnose it now.
     if (CurMaximumOfLeastExpansions &&
         *CurMaximumOfLeastExpansions <= *NumExpansions) {
       ShouldExpand = false;
