@@ -81,8 +81,7 @@ public:
   /// \name Utility Methods
   /// @{
 
-  void print(raw_ostream &OS, const MCAsmInfo *MAI,
-             bool InParens = false) const;
+  void print(raw_ostream &OS, const MCAsmInfo *MAI) const;
   void dump() const;
 
   /// Returns whether the given symbol is used anywhere in the expression or
@@ -217,14 +216,6 @@ public:
     VK_WASM_TBREL,     // Table index relative to __table_base
     VK_WASM_GOT_TLS,   // Wasm global index of TLS symbol.
     VK_WASM_FUNCINDEX, // Wasm function index.
-
-    VK_AMDGPU_GOTPCREL32_LO, // symbol@gotpcrel32@lo
-    VK_AMDGPU_GOTPCREL32_HI, // symbol@gotpcrel32@hi
-    VK_AMDGPU_REL32_LO,      // symbol@rel32@lo
-    VK_AMDGPU_REL32_HI,      // symbol@rel32@hi
-    VK_AMDGPU_REL64,         // symbol@rel64
-    VK_AMDGPU_ABS32_LO,      // symbol@abs32@lo
-    VK_AMDGPU_ABS32_HI,      // symbol@abs32@hi
 
     FirstTargetSpecifier,
   };

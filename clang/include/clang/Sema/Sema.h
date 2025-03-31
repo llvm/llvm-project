@@ -14660,7 +14660,8 @@ public:
                                 bool First = true);
 
   const NormalizedConstraint *getNormalizedAssociatedConstraints(
-      NamedDecl *ConstrainedDecl, ArrayRef<const Expr *> AssociatedConstraints);
+      const NamedDecl *ConstrainedDecl,
+      ArrayRef<const Expr *> AssociatedConstraints);
 
   /// \brief Check whether the given declaration's associated constraints are
   /// at least as constrained than another declaration's according to the
@@ -14670,28 +14671,30 @@ public:
   /// at least constrained than D2, and false otherwise.
   ///
   /// \returns true if an error occurred, false otherwise.
-  bool IsAtLeastAsConstrained(NamedDecl *D1, MutableArrayRef<const Expr *> AC1,
-                              NamedDecl *D2, MutableArrayRef<const Expr *> AC2,
-                              bool &Result);
+  bool IsAtLeastAsConstrained(const NamedDecl *D1,
+                              MutableArrayRef<const Expr *> AC1,
+                              const NamedDecl *D2,
+                              MutableArrayRef<const Expr *> AC2, bool &Result);
 
   /// If D1 was not at least as constrained as D2, but would've been if a pair
   /// of atomic constraints involved had been declared in a concept and not
   /// repeated in two separate places in code.
   /// \returns true if such a diagnostic was emitted, false otherwise.
   bool MaybeEmitAmbiguousAtomicConstraintsDiagnostic(
-      NamedDecl *D1, ArrayRef<const Expr *> AC1, NamedDecl *D2,
+      const NamedDecl *D1, ArrayRef<const Expr *> AC1, const NamedDecl *D2,
       ArrayRef<const Expr *> AC2);
 
 private:
   /// Caches pairs of template-like decls whose associated constraints were
   /// checked for subsumption and whether or not the first's constraints did in
   /// fact subsume the second's.
-  llvm::DenseMap<std::pair<NamedDecl *, NamedDecl *>, bool> SubsumptionCache;
+  llvm::DenseMap<std::pair<const NamedDecl *, const NamedDecl *>, bool>
+      SubsumptionCache;
   /// Caches the normalized associated constraints of declarations (concepts or
   /// constrained declarations). If an error occurred while normalizing the
   /// associated constraints of the template or concept, nullptr will be cached
   /// here.
-  llvm::DenseMap<NamedDecl *, NormalizedConstraint *> NormalizationCache;
+  llvm::DenseMap<const NamedDecl *, NormalizedConstraint *> NormalizationCache;
 
   llvm::ContextualFoldingSet<ConstraintSatisfaction, const ASTContext &>
       SatisfactionCache;

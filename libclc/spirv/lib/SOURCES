@@ -58,11 +58,8 @@ math/fma.cl
 ../../generic/lib/math/logb.cl
 ../../generic/lib/math/modf.cl
 ../../generic/lib/math/tables.cl
-../../generic/lib/math/clc_pow.cl
 ../../generic/lib/math/pow.cl
-../../generic/lib/math/clc_pown.cl
 ../../generic/lib/math/pown.cl
-../../generic/lib/math/clc_powr.cl
 ../../generic/lib/math/powr.cl
 ../../generic/lib/math/remainder.cl
 ../../generic/lib/math/remquo.cl
