@@ -695,6 +695,15 @@ void LogUnimplementedTypeKind(const char *function, CompilerType type) {
 #endif
 }
 
+CompilerType GetCanonicalClangType(CompilerType type) {
+  for (unsigned i = 0; i < 32; ++i) {
+    if (!type.IsTypedefType())
+      return type;
+    type = type.GetTypedefedType();
+  }
+  return type;
+}
+
 } // namespace
 
 llvm::Expected<uint32_t>
@@ -721,6 +730,7 @@ SwiftLanguageRuntime::GetNumChildren(CompilerType type,
     if (!clang_type)
       ts.IsImportedType(type.GetOpaqueQualType(), &clang_type);
     if (clang_type) {
+      clang_type = GetCanonicalClangType(clang_type);
       bool is_signed;
       if (clang_type.IsEnumerationType(is_signed))
         return 1;
@@ -1150,11 +1160,12 @@ SwiftLanguageRuntime::GetIndexOfChildMemberWithName(
     }
   }
   case TypeInfoKind::Builtin: {
-    // Clang enums have an artificial rawValue property.
     CompilerType clang_type;
     if (ts.IsImportedType(type.GetOpaqueQualType(), &clang_type)) {
+      clang_type = GetCanonicalClangType(clang_type);
       bool is_signed;
-      if (clang_type.IsEnumerationType(is_signed) && name == "rawValue") {
+      if (clang_type.IsEnumerationType(is_signed)) {
+        // Clang enums have an artificial rawValue property.
         child_indexes.push_back(0);
         return {SwiftLanguageRuntime::eFound, {1}};
       }
