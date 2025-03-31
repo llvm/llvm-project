@@ -28095,7 +28095,7 @@ Value *AArch64TargetLowering::emitLoadLinked(IRBuilderBase &Builder,
         IsAcquire ? Intrinsic::aarch64_ldaxp : Intrinsic::aarch64_ldxp;
 
     Value *LoHi =
-        Builder.CreateIntrinsic(Int, {}, Addr, /*FMFSource=*/nullptr, "lohi");
+        Builder.CreateIntrinsic(Int, Addr, /*FMFSource=*/nullptr, "lohi");
 
     Value *Lo = Builder.CreateExtractValue(LoHi, 0, "lo");
     Value *Hi = Builder.CreateExtractValue(LoHi, 1, "hi");
@@ -28125,7 +28125,7 @@ Value *AArch64TargetLowering::emitLoadLinked(IRBuilderBase &Builder,
 
 void AArch64TargetLowering::emitAtomicCmpXchgNoStoreLLBalance(
     IRBuilderBase &Builder) const {
-  Builder.CreateIntrinsic(Intrinsic::aarch64_clrex, {}, {});
+  Builder.CreateIntrinsic(Intrinsic::aarch64_clrex, {});
 }
 
 Value *AArch64TargetLowering::emitStoreConditional(IRBuilderBase &Builder,
