@@ -9910,13 +9910,9 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       // Update all users outside the vector region.
       for (VPUser *U : to_vector(OrigExitingVPV->users())) {
         auto *R = cast<VPRecipeBase>(U);
-        if (R->getParent() && R->getParent()->getParent())
+        if (R->getParent()->getParent() == VectorLoopRegion )
           continue;
-
-        for (unsigned Idx = 0; Idx != R->getNumOperands(); ++Idx) {
-          if (R->getOperand(Idx) == PhiR->getStartValue())
-            R->setOperand(Idx, Start);
-        }
+        R->replaceUsesOfWith(PhiR->getStartValue(), Start);
       }
     } else {
       Builder.setInsertPoint(MiddleVPBB, IP);

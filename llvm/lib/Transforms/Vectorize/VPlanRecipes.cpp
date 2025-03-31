@@ -476,9 +476,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreateExtractElement(Vec, Idx, Name);
   }
   case Instruction::Freeze: {
-    if (State.hasVectorValue(this))
-      return State.get(this);
-    Value *Op = State.get(getOperand(0), true);
+    Value *Op = State.get(getOperand(0), vputils::onlyFirstLaneUsed(this));
     return Builder.CreateFreeze(Op, Name);
   }
   case Instruction::ICmp: {
@@ -916,6 +914,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
     return false;
   switch (getOpcode()) {
   case Instruction::ExtractElement:
+  case Instruction::Freeze:
   case Instruction::ICmp:
   case Instruction::Select:
   case VPInstruction::AnyOf:
