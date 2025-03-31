@@ -162,7 +162,6 @@ math/powr.cl
 math/remainder.cl
 math/remquo.cl
 math/rint.cl
-math/clc_rootn.cl
 math/rootn.cl
 math/round.cl
 math/rsqrt.cl
