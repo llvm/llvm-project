@@ -702,10 +702,14 @@ def UnaryOp : CIR_Op<"unary", [Pure, SameOperandsAndResultType]> {
   }];
 
   let results = (outs CIR_AnyType:$result);
-  let arguments = (ins Arg<UnaryOpKind, "unary op kind">:$kind, Arg<CIR_AnyType>:$input);
+  let arguments = (ins Arg<UnaryOpKind, "unary op kind">:$kind,
+                   Arg<CIR_AnyType>:$input,
+                   UnitAttr:$no_signed_wrap);
 
   let assemblyFormat = [{
-      `(` $kind `,` $input `)` `:` type($input) `,` type($result) attr-dict
+      `(` $kind `,` $input `)`
+      (`nsw` $no_signed_wrap^)?
+      `:` type($input) `,` type($result) attr-dict 
   }];
 
   let hasVerifier = 1;
