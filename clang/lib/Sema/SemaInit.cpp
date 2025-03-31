@@ -9897,8 +9897,8 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
             TemplateName.getAsTemplateDecl())) {
       Diag(Kind.getLocation(),
            getLangOpts().CPlusPlus20
-               ? diag::warn_cxx17_compat_ctad_for_alias_templates
-               : diag::ext_ctad_for_alias_templates_cxx20);
+               ? diag::compat_cxx20_ctad_for_alias_templates
+               : diag::compat_pre_cxx20_ctad_for_alias_templates);
       LookupTemplateDecl = AliasTemplate;
       auto UnderlyingType = AliasTemplate->getTemplatedDecl()
                                 ->getUnderlyingType()
