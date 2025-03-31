@@ -9898,11 +9898,6 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(
             RdxDesc.getRecurrenceKind())) {
       VPValue *Start = PhiR->getStartValue();
-      if (!isGuaranteedNotToBeUndefOrPoison(
-              PhiR->getStartValue()->getLiveInIRValue())) {
-        Builder.setInsertPoint(cast<VPBasicBlock>(Plan->getEntry()));
-        Start = Builder.createNaryOp(Instruction::Freeze, {Start}, {}, "fr");
-      }
       Builder.setInsertPoint(MiddleVPBB, IP);
       FinalReductionResult =
           Builder.createNaryOp(VPInstruction::ComputeFindLastIVResult,
@@ -10361,7 +10356,34 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
       continue;
     EpiWidenedPhis.insert(
         cast<PHINode>(R.getVPSingleValue()->getUnderlyingValue()));
+
+    if (auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&R)) {
+      if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(
+              PhiR->getRecurrenceDescriptor().getRecurrenceKind())) {
+        if (!isGuaranteedNotToBeUndefOrPoison(
+                PhiR->getStartValue()->getLiveInIRValue())) {
+          VPBuilder Builder(MainPlan.getEntry());
+          PhiR->getStartValue()->replaceAllUsesWith(Builder.createNaryOp(
+              Instruction::Freeze, {PhiR->getStartValue()}, {}, "fr"));
+        }
+      }
+    }
   }
+  for (VPRecipeBase &R :
+       MainPlan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
+    if (auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&R)) {
+      if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(
+              PhiR->getRecurrenceDescriptor().getRecurrenceKind())) {
+        if (!isGuaranteedNotToBeUndefOrPoison(
+                PhiR->getStartValue()->getLiveInIRValue())) {
+          VPBuilder Builder(MainPlan.getEntry());
+          PhiR->getStartValue()->replaceAllUsesWith(Builder.createNaryOp(
+              Instruction::Freeze, {PhiR->getStartValue()}, {}, "fr"));
+        }
+      }
+    }
+  }
+
   for (VPRecipeBase &R : make_early_inc_range(*MainPlan.getScalarHeader())) {
     auto *VPIRInst = dyn_cast<VPIRPhi>(&R);
     if (!VPIRInst)
