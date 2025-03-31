@@ -17,7 +17,7 @@ namespace lldb_dap {
 
 class BreakpointBase {
 public:
-  explicit BreakpointBase(DAP &d) : dap(d) {}
+  explicit BreakpointBase(DAP &d) : m_dap(d) {}
   BreakpointBase(DAP &d, const llvm::json::Object &obj);
   virtual ~BreakpointBase() = default;
 
@@ -44,14 +44,14 @@ public:
 
 protected:
   /// Associated DAP session.
-  DAP &dap;
+  DAP &m_dap;
 
   /// An optional expression for conditional breakpoints.
-  std::string condition;
+  std::string m_condition;
 
   /// An optional expression that controls how many hits of the breakpoint are
   /// ignored. The backend is expected to interpret the expression as needed
-  std::string hitCondition;
+  std::string m_hit_condition;
 };
 
 } // namespace lldb_dap

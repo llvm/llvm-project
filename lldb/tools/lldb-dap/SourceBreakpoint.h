@@ -39,13 +39,13 @@ public:
                                     lldb::SBBreakpointLocation &location);
 
   inline bool operator<(const SourceBreakpoint &rhs) {
-    if (line == rhs.line)
-      return column < rhs.column;
-    return line < rhs.line;
+    if (m_line == rhs.m_line)
+      return m_column < rhs.m_column;
+    return m_line < rhs.m_line;
   }
 
-  uint32_t GetLine() const { return line; }
-  uint32_t GetColumn() const { return column; }
+  uint32_t GetLine() const { return m_line; }
+  uint32_t GetColumn() const { return m_column; }
 
 protected:
   // logMessage part can be either a raw text or an expression.
@@ -58,11 +58,11 @@ protected:
   // If this attribute exists and is non-empty, the backend must not 'break'
   // (stop) but log the message instead. Expressions within {} are
   // interpolated.
-  std::string logMessage;
-  std::vector<LogMessagePart> logMessageParts;
+  std::string m_log_message;
+  std::vector<LogMessagePart> m_log_message_parts;
 
-  uint32_t line;   ///< The source line of the breakpoint or logpoint
-  uint32_t column; ///< An optional source column of the breakpoint
+  uint32_t m_line;   ///< The source line of the breakpoint or logpoint
+  uint32_t m_column; ///< An optional source column of the breakpoint
 };
 
 } // namespace lldb_dap

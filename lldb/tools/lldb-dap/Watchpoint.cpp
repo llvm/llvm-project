@@ -30,11 +30,11 @@ Watchpoint::Watchpoint(DAP &d, const llvm::json::Object &obj)
     m_options.SetWatchpointTypeWrite(lldb::eWatchpointWriteTypeOnModify);
 }
 
-void Watchpoint::SetCondition() { m_wp.SetCondition(condition.c_str()); }
+void Watchpoint::SetCondition() { m_wp.SetCondition(m_condition.c_str()); }
 
 void Watchpoint::SetHitCondition() {
   uint64_t hitCount = 0;
-  if (llvm::to_integer(hitCondition, hitCount))
+  if (llvm::to_integer(m_hit_condition, hitCount))
     m_wp.SetIgnoreCount(hitCount - 1);
 }
 
@@ -49,11 +49,11 @@ void Watchpoint::CreateJsonObject(llvm::json::Object &object) {
 }
 
 void Watchpoint::SetWatchpoint() {
-  m_wp =
-      dap.target.WatchpointCreateByAddress(m_addr, m_size, m_options, m_error);
-  if (!condition.empty())
+  m_wp = m_dap.target.WatchpointCreateByAddress(m_addr, m_size, m_options,
+                                                m_error);
+  if (!m_condition.empty())
     SetCondition();
-  if (!hitCondition.empty())
+  if (!m_hit_condition.empty())
     SetHitCondition();
 }
 } // namespace lldb_dap

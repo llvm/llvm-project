@@ -27,7 +27,8 @@ InstructionBreakpoint::InstructionBreakpoint(DAP &d,
 }
 
 void InstructionBreakpoint::SetBreakpoint() {
-  m_bp = dap.target.BreakpointCreateByAddress(m_instruction_address_reference);
+  m_bp =
+      m_dap.target.BreakpointCreateByAddress(m_instruction_address_reference);
   Breakpoint::SetBreakpoint();
 }
 

@@ -19,7 +19,7 @@ FunctionBreakpoint::FunctionBreakpoint(DAP &d, const llvm::json::Object &obj)
 void FunctionBreakpoint::SetBreakpoint() {
   if (m_function_name.empty())
     return;
-  m_bp = dap.target.BreakpointCreateByName(m_function_name.c_str());
+  m_bp = m_dap.target.BreakpointCreateByName(m_function_name.c_str());
   Breakpoint::SetBreakpoint();
 }
 

@@ -27,7 +27,6 @@ public:
 
   void SetBreakpoint();
   void ClearBreakpoint();
-  void CreateJsonObject(llvm::json::Object &object);
 
   lldb::break_id_t GetID() const { return m_bp.GetID(); }
   llvm::StringRef GetFilter() const { return m_filter; }
