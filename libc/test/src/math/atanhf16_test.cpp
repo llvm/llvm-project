@@ -24,7 +24,7 @@ static constexpr uint16_t NEG_START = 0x8000U;
 static constexpr uint16_t NEG_STOP = 0xFC00U;
 
 TEST_F(LlvmLibcAtanhf16Test, PositiveRange) {
-  for (uint16_t v = POS_START; v < POS_STOP; ++v) {
+  for (uint16_t v = POS_START; v <= POS_STOP; ++v) {
     float16 x = FPBits(v).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Atanh, x,
                                    LIBC_NAMESPACE::atanhf16(x), 0.5);
