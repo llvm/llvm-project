@@ -7518,9 +7518,9 @@ ExprResult Sema::BuildExpressionFromDeclTemplateArgument(
   ValueDecl *VD = Arg.getAsDecl();
 
   CXXScopeSpec SS;
-  if (ParamType->isMemberPointerType()) {
-    // If this is a pointer to member, we need to use a qualified name to
-    // form a suitable pointer-to-member constant.
+  if (VD->isCXXInstanceMember()) {
+    // If this is a non-static member, we need to use a qualified name to
+    // form a suitable pointer or pointer-to-member expression.
     assert(VD->getDeclContext()->isRecord() &&
            (isa<CXXMethodDecl>(VD) || isa<FieldDecl>(VD) ||
             isa<IndirectFieldDecl>(VD)));
@@ -7558,6 +7558,18 @@ ExprResult Sema::BuildExpressionFromDeclTemplateArgument(
   } else {
     assert(ParamType->isReferenceType() &&
            "unexpected type for decl template argument");
+
+    if (auto *Method = dyn_cast<CXXMethodDecl>(VD);
+        Method && Method->isExplicitObjectMemberFunction()) {
+      // If the argument is an explicit object member function,
+      // RefExpr is currently a prvalue. Make it an lvalue.
+      RefExpr = ImplicitCastExpr::Create(
+          Context, RefExpr.get()->getType(), CK_NoOp, RefExpr.get(),
+          /*BasePath=*/nullptr, VK_LValue, /*FPO=*/{});
+      if (RefExpr.isInvalid())
+        return ExprError();
+    }
+
     if (NonTypeTemplateParmDecl *NTTP =
             dyn_cast_if_present<NonTypeTemplateParmDecl>(TemplateParam)) {
       QualType TemplateParamType = NTTP->getType();

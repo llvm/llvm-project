@@ -1805,7 +1805,7 @@ void MicrosoftCXXNameMangler::mangleTemplateArg(const TemplateDecl *TD,
                               TA.getParamTypeForDecl());
     } else if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(ND)) {
       const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD);
-      if (MD && MD->isInstance()) {
+      if (MD && MD->isImplicitObjectMemberFunction()) {
         mangleMemberFunctionPointer(
             MD->getParent()->getMostRecentNonInjectedDecl(), MD,
             cast<NonTypeTemplateParmDecl>(Parm), TA.getParamTypeForDecl());
