@@ -1453,8 +1453,7 @@ class Sema;
         Kind != CSK_InitByConstructor
         // When doing code completion, we want to see all the
         // viable candidates.
-        && Kind != CSK_CodeCompletion &&
-        Opts.CPlusPlus
+        && Kind != CSK_CodeCompletion
         // When -fgpu-exclude-wrong-side-overloads, CUDA needs
         // to exclude templates from the overload sets after they
         // have been instantiated. See CudaExcludeWrongSideCandidates.
