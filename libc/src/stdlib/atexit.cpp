@@ -18,6 +18,10 @@ constinit ExitCallbackList atexit_callbacks;
 Mutex handler_list_mtx(false, false, false, false);
 [[gnu::weak]] extern void teardown_main_tls();
 
+namespace internal {
+[[gnu::weak]] extern void call_atexit_callbacks();
+}
+
 extern "C" {
 
 int __cxa_atexit(AtExitCallback *callback, void *payload, void *) {
