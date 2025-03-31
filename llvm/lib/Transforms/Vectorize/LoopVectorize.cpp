@@ -7704,8 +7704,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPlanTransforms::convertToConcreteRecipes(BestVPlan);
 
   // Perform the actual loop transformation.
-  VPTransformState State(&TTI, BestVF, BestUF, LI, DT, ILV.Builder, &ILV,
-                         &BestVPlan, OrigLoop->getParentLoop(),
+  VPTransformState State(&TTI, BestVF, LI, DT, ILV.Builder, &ILV, &BestVPlan,
+                         OrigLoop->getParentLoop(),
                          Legal->getWidestInductionType());
 
 #ifdef EXPENSIVE_CHECKS
