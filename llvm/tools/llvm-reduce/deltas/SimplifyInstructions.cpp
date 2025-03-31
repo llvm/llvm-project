@@ -19,7 +19,7 @@ using namespace llvm;
 
 /// Calls simplifyInstruction in each instruction in functions, and replaces
 /// their values.
-static void extractInstrFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
+void llvm::simplifyInstructionsDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
   std::vector<Instruction *> InstsToDelete;
 
   Module &Program = WorkItem.getModule();
@@ -43,8 +43,4 @@ static void extractInstrFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
 
   for (Instruction *I : InstToDelete)
     I->eraseFromParent();
-}
-
-void llvm::simplifyInstructionsDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, extractInstrFromModule, "Simplifying Instructions");
 }
