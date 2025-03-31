@@ -71,7 +71,7 @@ def MPI_CommRankOp : MPI_Op<"comm_rank", []> {
     I32 : $rank
   );
 
-  let assemblyFormat = "`(` $comm  `)` attr-dict `:` type(results)";
+  let assemblyFormat = "`(` $comm `)` attr-dict `:` type(results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -93,7 +93,7 @@ def MPI_CommSizeOp : MPI_Op<"comm_size", []> {
     I32 : $size
   );
 
-  let assemblyFormat = "`(` $comm  `)` attr-dict `:` type(results)";
+  let assemblyFormat = "`(` $comm `)` attr-dict `:` type(results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -101,7 +101,7 @@ def MPI_CommSizeOp : MPI_Op<"comm_size", []> {
 //===----------------------------------------------------------------------===//
 
 def MPI_CommSplitOp : MPI_Op<"comm_split", []> {
-  let summary = "Partition the group associated to the given communicator into "
+  let summary = "Partition the group associated with the given communicator into "
                 "disjoint subgroups";
   let description = [{
     This operation splits the communicator into multiple sub-communicators.
@@ -311,7 +311,7 @@ def MPI_Barrier : MPI_Op<"barrier", []> {
   let results = (outs Optional<MPI_Retval>:$retval);
 
   let assemblyFormat = [{
-    `(` $comm  `)` attr-dict
+    `(` $comm `)` attr-dict
     (`->` type($retval)^)?
   }];
 }

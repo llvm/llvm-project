@@ -83,14 +83,14 @@ public:
   ModuleOp &getModuleOp() { return moduleOp; }
 
   /// Gets or creates MPI_COMM_WORLD as a Value.
-  /// Different MPI implementations have different types for communicator.
+  /// Different MPI implementations have different communicator types.
   /// Using i64 as a portable, intermediate type.
   /// Appropriate cast needs to take place before calling MPI functions.
   virtual Value getCommWorld(const Location loc,
                              ConversionPatternRewriter &rewriter) = 0;
 
   /// Type converter provides i64 type for communicator type.
-  /// Converts to native type, which  might be ptr or int or whatever.
+  /// Converts to native type, which might be ptr or int or whatever.
   virtual Value castComm(const Location loc,
                          ConversionPatternRewriter &rewriter, Value comm) = 0;
 
