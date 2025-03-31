@@ -4488,6 +4488,12 @@ llvm::StringRef TargetProperties::GetLaunchWorkingDirectory() const {
       idx, g_target_properties[idx].default_cstr_value);
 }
 
+bool TargetProperties::GetParallelModuleLoad() const {
+  const uint32_t idx = ePropertyParallelModuleLoad;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_target_properties[idx].default_uint_value != 0);
+}
+
 const char *TargetProperties::GetDisassemblyFlavor() const {
   const uint32_t idx = ePropertyDisassemblyFlavor;
   const char *return_value;
