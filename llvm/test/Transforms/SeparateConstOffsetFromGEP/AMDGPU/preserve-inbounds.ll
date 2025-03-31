@@ -394,12 +394,12 @@ define ptr @nuw_inbounds_implies_nuw_inbounds_nested_negative(ptr %p, i64 %i, i6
 ; CHECK-NEXT:    [[V:%.*]] = and i64 [[V1:%.*]], -1152921488500719601
 ; CHECK-NEXT:    [[IDX22:%.*]] = add i64 [[I:%.*]], [[V]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i32, ptr [[P:%.*]], i64 [[IDX22]]
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 4
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 -64
 ; CHECK-NEXT:    ret ptr [[ARRAYIDX3]]
 ;
 entry:
   %v.masked = and i64 %v, u0xf0000003c000000f
-  %idx1 = add nuw i64 %i, 1
+  %idx1 = add nuw i64 %i, -16
   %idx2 = add nuw i64 %idx1, %v.masked
   %arrayidx = getelementptr inbounds nuw i32, ptr %p, i64 %idx2
   ret ptr %arrayidx
@@ -462,12 +462,12 @@ define ptr @nuw_nusw_implies_nuw_nusw_nested_negative(ptr %p, i64 %i, i64 %v) {
 ; CHECK-NEXT:    [[V:%.*]] = and i64 [[V1:%.*]], -1152921488500719601
 ; CHECK-NEXT:    [[IDX22:%.*]] = add i64 [[I:%.*]], [[V]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr nusw nuw i32, ptr [[P:%.*]], i64 [[IDX22]]
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr nusw nuw i8, ptr [[TMP0]], i64 4
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr nusw nuw i8, ptr [[TMP0]], i64 -64
 ; CHECK-NEXT:    ret ptr [[ARRAYIDX3]]
 ;
 entry:
   %v.masked = and i64 %v, u0xf0000003c000000f
-  %idx1 = add nuw i64 %i, 1
+  %idx1 = add nuw i64 %i, -16
   %idx2 = add nuw i64 %idx1, %v.masked
   %arrayidx = getelementptr nusw nuw i32, ptr %p, i64 %idx2
   ret ptr %arrayidx
