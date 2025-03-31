@@ -4317,11 +4317,11 @@ InputSection *ThunkSection::getTargetInputSection() const {
 
 bool ThunkSection::assignOffsets() {
   uint64_t off = 0;
-  bool alignChange = false;
+  bool changed = false;
   for (Thunk *t : thunks) {
     if (t->alignment > addralign) {
       addralign = t->alignment;
-      alignChange = true;
+      changed = true;
     }
     off = alignToPowerOf2(off, t->alignment);
     t->setOffset(off);
@@ -4329,7 +4329,8 @@ bool ThunkSection::assignOffsets() {
     t->getThunkTargetSym()->size = size;
     off += size;
   }
-  bool changed = (off != size) || alignChange;
+  if (off != size)
+    changed = true;
   size = off;
   return changed;
 }
