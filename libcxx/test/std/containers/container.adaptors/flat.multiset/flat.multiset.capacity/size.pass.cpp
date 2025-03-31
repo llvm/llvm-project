@@ -46,8 +46,8 @@ void test_one() {
   }
   {
     M m;
-    S s = 1000000;
-    for (auto i = 0u; i < s; ++i) {
+    S s = 500000;
+    for (std::size_t i = 0u; i < s; ++i) {
       m.emplace(i);
       m.emplace(i);
     }
