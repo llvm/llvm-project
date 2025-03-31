@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios -fsyntax-only -verify -fptrauth-intrinsics %s
-// RUN: %clang_cc1 -triple aarch64-linux-gnu -fsyntax-only -verify -fptrauth-intrinsics %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -std=c23 -fsyntax-only -verify -fptrauth-intrinsics %s
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -std=c23 -fsyntax-only -verify -fptrauth-intrinsics %s
 
 #if __has_feature(ptrauth_qualifier)
 #warning __ptrauth qualifier enabled!
@@ -15,6 +15,7 @@
 #endif
 
 int * __ptrauth(VALID_DATA_KEY) valid0;
+int *ptr0;
 
 typedef int *intp;
 
@@ -45,6 +46,9 @@ int * __ptrauth(VALID_DATA_KEY, (_Bool) 1) valid8;
 int * __ptrauth(VALID_DATA_KEY, 1, 0) valid9;
 int * __ptrauth(VALID_DATA_KEY, 1, 65535) valid10;
 
+int * __ptrauth(VALID_DATA_KEY) array0[10];
+int (* __ptrauth(VALID_DATA_KEY) array1)[10];
+
 extern intp redeclaration0; // expected-note {{previous declaration}}
 extern intp __ptrauth(VALID_DATA_KEY) redeclaration0; // expected-error{{redeclaration of 'redeclaration0' with a different type: '__ptrauth(2,0,0) intp' (aka 'int *__ptrauth(2,0,0)') vs 'intp' (aka 'int *')}}
 
@@ -59,6 +63,14 @@ intp redeclaration3 = 0;                       // expected-error{{redefinition o
 
 void illegal0(intp __ptrauth(VALID_DATA_KEY)); // expected-error {{parameter type may not be qualified with '__ptrauth'; type is '__ptrauth(2,0,0) intp' (aka 'int *__ptrauth(2,0,0)')}}
 intp __ptrauth(VALID_DATA_KEY) illegal1(void); // expected-error {{return type may not be qualified with '__ptrauth'; type is '__ptrauth(2,0,0) intp' (aka 'int *__ptrauth(2,0,0)')}}
+
+static_assert(_Generic(typeof(valid0), int * __ptrauth(VALID_DATA_KEY) : 1, int * : 0, default : 0));
+static_assert(_Generic(typeof(valid0), int * __ptrauth(VALID_CODE_KEY) : 0, default : 1));
+static_assert(_Generic(typeof_unqual(valid0), int * __ptrauth(VALID_DATA_KEY) : 0, int * : 1, default : 0));
+static_assert(_Generic(valid0, int * __ptrauth(VALID_DATA_KEY) : 0, int * : 1, default : 0)); // expected-warning {{association of type 'int *__ptrauth(2,0,0)' will never be selected}}
+
+static_assert(_Generic(array0, int * __ptrauth(VALID_DATA_KEY) * : 1, default : 0));
+static_assert(_Generic(*array1, int * : 1, default : 0));
 
 void test_code(intp p) {
   p = (intp __ptrauth(VALID_DATA_KEY)) 0; // expected-error {{cannot cast to '__ptrauth'-qualified type '__ptrauth(2,0,0) intp' (aka 'int *__ptrauth(2,0,0)')}}
@@ -81,3 +93,11 @@ void test_array(void) {
   intp __ptrauth(VALID_DATA_KEY) *ppSpecial0 = pSpecialArray;
   intp __ptrauth(VALID_DATA_KEY) *ppSpecial1 = &pSpecialArray[0];
 }
+
+__attribute__((overloadable)) int overload_func(int **);
+__attribute__((overloadable)) float overload_func(int * __ptrauth(VALID_DATA_KEY) *);
+
+static_assert(_Generic(typeof(overload_func(&ptr0)), int : 1, default : 0));
+static_assert(_Generic(typeof(overload_func(&valid0)), float : 1, default : 0));
+
+void func(int array[__ptrauth(VALID_DATA_KEY) 10]); // expected-error {{'__ptrauth' qualifier only applies to pointer types; 'int[10]' is invalid}}
