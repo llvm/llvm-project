@@ -10,12 +10,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-void CheckResult(int ret) {
+void CheckResult(const char *file, int line, int ret) {
   if (ret != 0) {
-    fprintf(stderr, "ERROR: %s\n", strerror(ret));
+    fprintf(stderr, "ERROR: %s:%d - %s\n", file, line, strerror(ret));
   }
   assert(ret == 0);
 }
+
+#define CHECK_RESULT(ret) CheckResult(__FILE__, __LINE__, ret)
 
 int main(void) {
   struct servent result_buf;
@@ -24,17 +26,17 @@ int main(void) {
   // If these fail, check /etc/services if "ssh" exists. I picked this because
   // it should exist everywhere, if it doesn't, I am sorry. Disable the test
   // then please.
-  CheckResult(
+  CHECK_RESULT(
       getservbyname_r("ssh", nullptr, &result_buf, buf, sizeof(buf), &result));
   assert(result != nullptr);
-  CheckResult(getservbyport_r(htons(22), nullptr, &result_buf, buf, sizeof(buf),
-                              &result));
+  CHECK_RESULT(getservbyport_r(htons(22), nullptr, &result_buf, buf,
+                               sizeof(buf), &result));
   assert(result != nullptr);
 
-  CheckResult(getservent_r(&result_buf, buf, sizeof(buf), &result));
+  CHECK_RESULT(getservent_r(&result_buf, buf, sizeof(buf), &result));
   assert(result != nullptr);
 
-  CheckResult(getservbyname_r("invalidhadfuiasdhi", nullptr, &result_buf, buf,
-                              sizeof(buf), &result));
+  CHECK_RESULT(getservbyname_r("invalidhadfuiasdhi", nullptr, &result_buf, buf,
+                               sizeof(buf), &result));
   assert(result == nullptr);
 }
