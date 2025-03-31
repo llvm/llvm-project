@@ -77,6 +77,39 @@ GlobalValue::GUID GlobalValue::getGUID(StringRef GlobalIdentifier) {
   return MD5Hash(GlobalIdentifier);
 }
 
+bool GlobalValue::assignGUID() {
+  if (isDeclaration())
+    return false;
+  if (getMetadata(LLVMContext::MD_unique_id) != nullptr)
+    return false;
+
+  const GUID G = GlobalValue::getGUID(getGlobalIdentifier());
+  setMetadata(
+      LLVMContext::MD_unique_id,
+      MDNode::get(getContext(), {ConstantAsMetadata::get(ConstantInt::get(
+                                    Type::getInt64Ty(getContext()), G))}));
+  return true;
+}
+
+GlobalValue::GUID GlobalValue::getGUID() const {
+  // TODO: do we need a special case for GlobalAlias?
+
+  if (isDeclaration()) {
+    // Declarations don't get an assigned GUID. Their definition is in another
+    // module, and it may have been promoted from local to external linkage
+    // during LTO. Because of this, we can only determine their GUID once the
+    // definition is available.
+    return 0;
+  }
+
+  auto *MD = getMetadata(LLVMContext::MD_unique_id);
+  assert(MD != nullptr && "GUID was not assigned before calling GetGUID()");
+  return cast<ConstantInt>(cast<ConstantAsMetadata>(MD->getOperand(0))
+                               ->getValue()
+                               ->stripPointerCasts())
+      ->getZExtValue();
+}
+
 void GlobalValue::removeFromParent() {
   switch (getValueID()) {
 #define HANDLE_GLOBAL_VALUE(NAME)                                              \

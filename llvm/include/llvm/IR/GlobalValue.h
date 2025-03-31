@@ -601,9 +601,11 @@ public:
         getGlobalIdentifier(GlobalName, GlobalValue::ExternalLinkage, ""));
   }
 
+  bool assignGUID();
+
   /// Return a 64-bit global unique ID constructed from global value name
   /// (i.e. returned by getGlobalIdentifier()).
-  GUID getGUID() const { return getGUID(getGlobalIdentifier()); }
+  GUID getGUID() const;
 
   /// @name Materialization
   /// Materialization is used to construct functions only as they're needed.
