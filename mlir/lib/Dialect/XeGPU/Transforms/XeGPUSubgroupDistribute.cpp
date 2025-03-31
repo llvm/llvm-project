@@ -55,7 +55,7 @@ using namespace mlir::dataflow;
 
 /// HW dependent constants.
 /// TODO: These constants should be queried from the target information.
-constexpr unsigned subgroupSize = 16; // How many work items in a subgroup.
+constexpr unsigned subgroupSize = 16; // How many lanes in a subgroup.
 /// If DPAS A or B operands have low precision element types they must be packed
 /// according to the following sizes.
 constexpr unsigned packedSizeInBitsForDefault =
@@ -69,8 +69,8 @@ namespace {
 /// Layout
 ///===----------------------------------------------------------------------===///
 
-/// Helper class to store the ND layout of work items within a subgroup and data
-/// owned by each work item.
+/// Helper class to store the ND layout of lanes within a subgroup and data
+/// owned by each lane.
 struct Layout {
   SmallVector<int64_t, 3> layout;
   Layout() = default;
@@ -91,123 +91,125 @@ int64_t Layout::operator[](size_t idx) const {
   return layout[idx];
 }
 
-/// WiLayout represents the layout of work items within a subgroup when it
-/// accesses some value. WiData represents the layout of data owned by each work
-/// item.
-using WiLayout = Layout;
-using WiData = Layout;
+/// LaneLayout represents the logical layout of lanes within a subgroup when it
+/// accesses some value. LaneData represents the logical layout of data owned by
+/// each work item.
+using LaneLayout = Layout;
+using LaneData = Layout;
 
 ///===----------------------------------------------------------------------===///
-/// SGMap
+/// LayoutInfo
 ///===----------------------------------------------------------------------===///
 
 /// Helper class for tracking the analysis state of a value. For SGPropagation,
-/// the analysis state is simply the wi_layout and wi_data of each value.
+/// the analysis state is simply the lane_layout and lane_data of each value.
 /// Purpose of this analysis to propagate some unique layout for each value in
 /// the program starting from some known values (like DPAS, StoreNd, etc.).
 ///
-/// Given this, SGMap satisifies the following properties:
-///  1) SGMap is a lattice with two states - assigned and not assigned.
-///  2) Two SGMap values are equal if they are both assigned or both not
+/// Given this, LayoutInfo satisifies the following properties:
+///  1) LayoutInfo is a lattice with two states - assigned and not assigned.
+///  2) Two LayoutInfo values are equal if they are both assigned or both not
 ///  assigned. The concrete value of assigned state does not matter.
 ///  3) The meet operator works as follows:
 ///     - If current state is assigned, return the current state. (already
 ///     a unique layout is assigned. don't change it)
 ///     - Otherwise, return the other state.
 
-struct SGMap {
+struct LayoutInfo {
 private:
-  WiLayout wiLayout;
-  WiData wiData;
+  LaneLayout laneLayout;
+  LaneData laneData;
 
 public:
-  SGMap() = default;
-  SGMap(const WiLayout &layout, const WiData &data)
-      : wiLayout(layout), wiData(data) {}
+  LayoutInfo() = default;
+  LayoutInfo(const LaneLayout &layout, const LaneData &data)
+      : laneLayout(layout), laneData(data) {}
 
   /// Two lattice values are equal if they have `some` layout. The actual
   /// content of the layout does not matter.
-  bool operator==(const SGMap &other) const {
+  bool operator==(const LayoutInfo &other) const {
     return this->isAssigned() == other.isAssigned();
   }
 
-  static SGMap meet(const SGMap &lhs, const SGMap &rhs);
+  static LayoutInfo meet(const LayoutInfo &lhs, const LayoutInfo &rhs);
 
-  static SGMap join(const SGMap &lhs, const SGMap &rhs);
+  static LayoutInfo join(const LayoutInfo &lhs, const LayoutInfo &rhs);
 
   void print(raw_ostream &os) const;
 
-  bool isAssigned() const { return wiLayout.size() > 0 && wiData.size() > 0; }
+  bool isAssigned() const {
+    return laneLayout.size() > 0 && laneData.size() > 0;
+  }
 
-  SGMap getTransposedLayout(ArrayRef<int64_t> permutation) const;
+  LayoutInfo getTransposedLayout(ArrayRef<int64_t> permutation) const;
 
-  const WiLayout &getLayout() const { return wiLayout; }
-  const WiData &getData() const { return wiData; }
-  ArrayRef<int64_t> getLayoutAsArrayRef() const { return wiLayout.layout; }
-  ArrayRef<int64_t> getDataAsArrayRef() const { return wiData.layout; }
+  const LaneLayout &getLayout() const { return laneLayout; }
+  const LaneData &getData() const { return laneData; }
+  ArrayRef<int64_t> getLayoutAsArrayRef() const { return laneLayout.layout; }
+  ArrayRef<int64_t> getDataAsArrayRef() const { return laneData.layout; }
 };
 
-void SGMap::print(raw_ostream &os) const {
+void LayoutInfo::print(raw_ostream &os) const {
   if (isAssigned()) {
-    os << "wi_layout: ";
-    wiLayout.print(os);
-    os << ", wi_data: ";
-    wiData.print(os);
+    os << "lane_layout: ";
+    laneLayout.print(os);
+    os << ", lane_data: ";
+    laneData.print(os);
   } else
     os << "Not assigned.";
 }
 
-SGMap SGMap::meet(const SGMap &lhs, const SGMap &rhs) {
+LayoutInfo LayoutInfo::meet(const LayoutInfo &lhs, const LayoutInfo &rhs) {
   if (!lhs.isAssigned())
     return rhs;
   return lhs;
 }
 
 /// Since this is a backward analysis, join method is not used.
-SGMap SGMap::join(const SGMap &lhs, const SGMap &rhs) {
+LayoutInfo LayoutInfo::join(const LayoutInfo &lhs, const LayoutInfo &rhs) {
   llvm_unreachable("Join should not be triggered by SGMapPropagation.");
 }
 
 /// Get the transposed layout according to the given permutation.
-SGMap SGMap::getTransposedLayout(ArrayRef<int64_t> permutation) const {
+LayoutInfo
+LayoutInfo::getTransposedLayout(ArrayRef<int64_t> permutation) const {
   if (!isAssigned())
     return {};
-  WiLayout newLayout;
-  WiData newData;
+  LaneLayout newLayout;
+  LaneData newData;
   for (auto idx : permutation) {
-    newLayout.layout.push_back(wiLayout.layout[idx]);
-    newData.layout.push_back(wiData.layout[idx]);
+    newLayout.layout.push_back(laneLayout.layout[idx]);
+    newData.layout.push_back(laneData.layout[idx]);
   }
-  return SGMap(newLayout, newData);
+  return LayoutInfo(newLayout, newData);
 }
 
 ///===----------------------------------------------------------------------===///
-/// SGMapLattice
+/// LayoutInfoLattice
 ///===----------------------------------------------------------------------===///
 
-/// Lattice holding the SGMap for each value.
-struct SGMapLattice : public Lattice<SGMap> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(SGMapLattice)
+/// Lattice holding the LayoutInfo for each value.
+struct LayoutInfoLattice : public Lattice<LayoutInfo> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(LayoutInfoLattice)
   using Lattice::Lattice;
 };
 
 /// Helper Functions to get default layouts. A `default layout` is a layout that
 /// is assigned to a value when the layout is not fixed by some anchor operation
-/// (like DPAS). This is the natural layout work items are arranged in a
-/// subgroup.
+/// (like DPAS).
 
 /// Helper Function to get the default layout for uniform values like constants.
-/// For 1D vector, wi_layout is [subgroupSize] and wi_data is [1].
-/// For 2D vector, wi_layout is [1, subgroupSize] and wi_data is [1, 1].
-static SGMap getDefaultSgMap(unsigned rank) {
+/// For 1D vector, lane_layout is [subgroupSize] and lane_data is [1].
+/// For 2D vector, lane_layout is [1, subgroupSize] and lane_data is [1, 1].
+static LayoutInfo getDefaultLayoutInfo(unsigned rank) {
   assert((rank == 1 || rank == 2) && "Expected 1D or 2D vector.");
   if (rank == 1)
-    return SGMap(WiLayout({subgroupSize}), WiData({1}));
-  return SGMap(WiLayout({1, subgroupSize}), WiData({1, 1}));
+    return LayoutInfo(LaneLayout({subgroupSize}), LaneData({1}));
+  return LayoutInfo(LaneLayout({1, subgroupSize}), LaneData({1, 1}));
 }
 
 /// Helper to get the default layout for a vector type.
-static SGMap getDefaultSgMap(VectorType vectorTy) {
+static LayoutInfo getDefaultLayoutInfo(VectorType vectorTy) {
   /// Expecting a 1D or 2D vector.
   assert((vectorTy.getRank() == 1 || vectorTy.getRank() == 2) &&
          "Expected 1D or 2D vector.");
@@ -216,112 +218,119 @@ static SGMap getDefaultSgMap(VectorType vectorTy) {
          "Expected int or float element type.");
   /// If the rank is 1, then return default layout for 1D vector.
   if (vectorTy.getRank() == 1)
-    return getDefaultSgMap(1);
+    return getDefaultLayoutInfo(1);
   /// Packing factor is determined by the element type bitwidth.
   int packingFactor = 1;
   auto bitwidth = vectorTy.getElementType().getIntOrFloatBitWidth();
   if (bitwidth < packedSizeInBitsForDefault)
     packingFactor = packedSizeInBitsForDefault / bitwidth;
-  return SGMap(WiLayout({1, subgroupSize}), WiData({1, packingFactor}));
+  return LayoutInfo(LaneLayout({1, subgroupSize}),
+                    LaneData({1, packingFactor}));
 }
 
-/// Helper Function to get the expected layouts for DPAS operands. `wi_data` is
-/// set according to the following criteria:
+/// Helper Function to get the expected layouts for DPAS operands. `lane_data`
+/// is set according to the following criteria:
 /// * For A operand, the data must be packed in minimum
 /// `packedSizeInBitsForDefault`
 /// * For B operand, the data must be packed in minimum
 /// `packedSizeInBitsForDpasB`
-static SGMap getSGMapForDPASOperand(VectorType vectorTy, unsigned operandNum) {
+static LayoutInfo getLayoutInfoForDPASOperand(VectorType vectorTy,
+                                              unsigned operandNum) {
   auto elementTy = vectorTy.getElementType();
   assert(elementTy.isIntOrFloat() &&
          "Expected int or float type in DPAS operands");
-  WiLayout layout({1, subgroupSize});
+  LaneLayout layout({1, subgroupSize});
   /// For B operand, data must be packed in minimum `packedDpasBSizeInBits` and
   /// must have the VNNI format.
   if (operandNum == 1 &&
       elementTy.getIntOrFloatBitWidth() < packedSizeInBitsForDpasB) {
-    WiData data(
+    LaneData data(
         {packedSizeInBitsForDpasB / elementTy.getIntOrFloatBitWidth(), 1});
-    return SGMap(layout, data);
+    return LayoutInfo(layout, data);
   }
   /// Otherwise, return the default layout for the vector type.
-  return getDefaultSgMap(vectorTy);
+  return getDefaultLayoutInfo(vectorTy);
 }
 
 ///===----------------------------------------------------------------------===///
-/// SGMapPropagation
+/// LayoutInfoPropagation
 ///===----------------------------------------------------------------------===///
 
-/// Backward data flow analysis to propagate the wi_layout and wi_data of each
-/// value in the program. Currently, the layouts for operands DPAS, StoreNd, and
-/// StoreScatter are fixed (known before propagation). Purpose of this analysis
-/// is to propagate those known layouts to all their producers and (other)
-/// consumers.
-class SGMapPropagation : public SparseBackwardDataFlowAnalysis<SGMapLattice> {
+/// Backward data flow analysis to propagate the lane_layout and lane_data of
+/// each value in the program. Currently, the layouts for operands DPAS,
+/// StoreNd, and StoreScatter are fixed (known before propagation). Purpose of
+/// this analysis is to propagate those known layouts to all their producers and
+/// (other) consumers.
+class LayoutInfoPropagation
+    : public SparseBackwardDataFlowAnalysis<LayoutInfoLattice> {
 private:
-  void visitDpasOp(xegpu::DpasOp dpas, ArrayRef<SGMapLattice *> operands,
-                   ArrayRef<const SGMapLattice *> results);
+  void visitDpasOp(xegpu::DpasOp dpas, ArrayRef<LayoutInfoLattice *> operands,
+                   ArrayRef<const LayoutInfoLattice *> results);
 
-  void visitStoreNdOp(xegpu::StoreNdOp store, ArrayRef<SGMapLattice *> operands,
-                      ArrayRef<const SGMapLattice *> results);
+  void visitStoreNdOp(xegpu::StoreNdOp store,
+                      ArrayRef<LayoutInfoLattice *> operands,
+                      ArrayRef<const LayoutInfoLattice *> results);
 
   void visitStoreScatterOp(xegpu::StoreScatterOp storeScatter,
-                           ArrayRef<SGMapLattice *> operands,
-                           ArrayRef<const SGMapLattice *> results);
+                           ArrayRef<LayoutInfoLattice *> operands,
+                           ArrayRef<const LayoutInfoLattice *> results);
 
-  void visitLoadNdOp(xegpu::LoadNdOp load, ArrayRef<SGMapLattice *> operands,
-                     ArrayRef<const SGMapLattice *> results);
+  void visitLoadNdOp(xegpu::LoadNdOp load,
+                     ArrayRef<LayoutInfoLattice *> operands,
+                     ArrayRef<const LayoutInfoLattice *> results);
 
   void visitLoadGatherOp(xegpu::LoadGatherOp load,
-                         ArrayRef<SGMapLattice *> operands,
-                         ArrayRef<const SGMapLattice *> results);
+                         ArrayRef<LayoutInfoLattice *> operands,
+                         ArrayRef<const LayoutInfoLattice *> results);
 
   void visitTransposeOp(vector::TransposeOp transpose,
-                        ArrayRef<SGMapLattice *> operands,
-                        ArrayRef<const SGMapLattice *> results);
+                        ArrayRef<LayoutInfoLattice *> operands,
+                        ArrayRef<const LayoutInfoLattice *> results);
 
   void visitVectorBitcastOp(vector::BitCastOp bitcast,
-                            ArrayRef<SGMapLattice *> operands,
-                            ArrayRef<const SGMapLattice *> results);
+                            ArrayRef<LayoutInfoLattice *> operands,
+                            ArrayRef<const LayoutInfoLattice *> results);
 
   void visitCreateDescOp(xegpu::CreateDescOp createDesc,
-                         ArrayRef<SGMapLattice *> operands,
-                         ArrayRef<const SGMapLattice *> results);
+                         ArrayRef<LayoutInfoLattice *> operands,
+                         ArrayRef<const LayoutInfoLattice *> results);
 
   void visitUpdateNdOffsetOp(xegpu::UpdateNdOffsetOp updateNdOffset,
-                             ArrayRef<SGMapLattice *> operands,
-                             ArrayRef<const SGMapLattice *> results);
+                             ArrayRef<LayoutInfoLattice *> operands,
+                             ArrayRef<const LayoutInfoLattice *> results);
 
   void visitVectorMultiReductionOp(vector::MultiDimReductionOp reduction,
-                                   ArrayRef<SGMapLattice *> operands,
-                                   ArrayRef<const SGMapLattice *> results);
+                                   ArrayRef<LayoutInfoLattice *> operands,
+                                   ArrayRef<const LayoutInfoLattice *> results);
 
 public:
-  SGMapPropagation(DataFlowSolver &solver, SymbolTableCollection &symbolTable)
+  LayoutInfoPropagation(DataFlowSolver &solver,
+                        SymbolTableCollection &symbolTable)
       : SparseBackwardDataFlowAnalysis(solver, symbolTable) {}
   using SparseBackwardDataFlowAnalysis::SparseBackwardDataFlowAnalysis;
 
-  LogicalResult visitOperation(Operation *op, ArrayRef<SGMapLattice *> operands,
-                               ArrayRef<const SGMapLattice *> results) override;
+  LogicalResult
+  visitOperation(Operation *op, ArrayRef<LayoutInfoLattice *> operands,
+                 ArrayRef<const LayoutInfoLattice *> results) override;
 
   void visitBranchOperand(OpOperand &operand) override {};
 
   void visitCallOperand(OpOperand &operand) override {};
 
   void visitExternalCall(CallOpInterface call,
-                         ArrayRef<SGMapLattice *> operands,
-                         ArrayRef<const SGMapLattice *> results) override {};
+                         ArrayRef<LayoutInfoLattice *> operands,
+                         ArrayRef<const LayoutInfoLattice *> results) override {
+  };
 
-  void setToExitState(SGMapLattice *lattice) override {
-    (void)lattice->meet(SGMap());
+  void setToExitState(LayoutInfoLattice *lattice) override {
+    (void)lattice->meet(LayoutInfo());
   }
 };
 } // namespace
 
-LogicalResult
-SGMapPropagation::visitOperation(Operation *op,
-                                 ArrayRef<SGMapLattice *> operands,
-                                 ArrayRef<const SGMapLattice *> results) {
+LogicalResult LayoutInfoPropagation::visitOperation(
+    Operation *op, ArrayRef<LayoutInfoLattice *> operands,
+    ArrayRef<const LayoutInfoLattice *> results) {
   TypeSwitch<Operation *>(op)
       .Case<xegpu::DpasOp>(
           [&](auto dpasOp) { visitDpasOp(dpasOp, operands, results); })
@@ -355,8 +364,8 @@ SGMapPropagation::visitOperation(Operation *op,
       })
       /// All other ops.
       .Default([&](Operation *op) {
-        for (const SGMapLattice *r : results) {
-          for (SGMapLattice *operand : operands) {
+        for (const LayoutInfoLattice *r : results) {
+          for (LayoutInfoLattice *operand : operands) {
             /// Propagate the layout of the result to the operand.
             if (r->getValue().isAssigned())
               meet(operand, *r);
@@ -364,15 +373,16 @@ SGMapPropagation::visitOperation(Operation *op,
         }
       });
   /// Add a dependency from each result to program point after the operation.
-  for (const SGMapLattice *r : results) {
-    addDependency(const_cast<SGMapLattice *>(r), getProgramPointAfter(op));
+  for (const LayoutInfoLattice *r : results) {
+    addDependency(const_cast<LayoutInfoLattice *>(r), getProgramPointAfter(op));
   }
   return success();
 }
 
-void SGMapPropagation::visitVectorMultiReductionOp(
-    vector::MultiDimReductionOp reduction, ArrayRef<SGMapLattice *> operands,
-    ArrayRef<const SGMapLattice *> results) {
+void LayoutInfoPropagation::visitVectorMultiReductionOp(
+    vector::MultiDimReductionOp reduction,
+    ArrayRef<LayoutInfoLattice *> operands,
+    ArrayRef<const LayoutInfoLattice *> results) {
   /// The layout of the result must be present.
   auto resultLayout = results[0]->getValue();
   if (!resultLayout.isAssigned())
@@ -382,7 +392,7 @@ void SGMapPropagation::visitVectorMultiReductionOp(
          "Expected 1D layout for reduction result.");
   /// Given that the result is 1D, the layout of the operand should be 2D with
   /// default layout.
-  auto operandLayout = getDefaultSgMap(2);
+  auto operandLayout = getDefaultLayoutInfo(2);
   propagateIfChanged(operands[0], operands[0]->meet(operandLayout));
   /// Accumulator should have the same layout as the result.
   propagateIfChanged(operands[1], operands[1]->meet(resultLayout));
@@ -390,9 +400,10 @@ void SGMapPropagation::visitVectorMultiReductionOp(
 
 /// Propagate the layout of the result tensor to the source tensor descriptor in
 /// UpdateNdOffsetOp.
-void SGMapPropagation::visitUpdateNdOffsetOp(
-    xegpu::UpdateNdOffsetOp updateNdOffset, ArrayRef<SGMapLattice *> operands,
-    ArrayRef<const SGMapLattice *> results) {
+void LayoutInfoPropagation::visitUpdateNdOffsetOp(
+    xegpu::UpdateNdOffsetOp updateNdOffset,
+    ArrayRef<LayoutInfoLattice *> operands,
+    ArrayRef<const LayoutInfoLattice *> results) {
   /// The layout of the result must be present.
   auto resultLayout = results[0]->getValue();
   if (!resultLayout.isAssigned())
@@ -402,48 +413,48 @@ void SGMapPropagation::visitUpdateNdOffsetOp(
 }
 
 /// Set the layouts for DPAS A, B, and C operands.
-void SGMapPropagation::visitDpasOp(xegpu::DpasOp dpas,
-                                   ArrayRef<SGMapLattice *> operands,
-                                   ArrayRef<const SGMapLattice *> results) {
+void LayoutInfoPropagation::visitDpasOp(
+    xegpu::DpasOp dpas, ArrayRef<LayoutInfoLattice *> operands,
+    ArrayRef<const LayoutInfoLattice *> results) {
   auto aTy = dpas.getLhsType();
   auto bTy = dpas.getRhsType();
   propagateIfChanged(operands[0],
-                     operands[0]->meet(getSGMapForDPASOperand(aTy, 0)));
+                     operands[0]->meet(getLayoutInfoForDPASOperand(aTy, 0)));
   propagateIfChanged(operands[1],
-                     operands[1]->meet(getSGMapForDPASOperand(bTy, 1)));
+                     operands[1]->meet(getLayoutInfoForDPASOperand(bTy, 1)));
   if (operands.size() > 2) {
     auto cTy = dpas.getAccType();
     propagateIfChanged(operands[2],
-                       operands[2]->meet(getSGMapForDPASOperand(cTy, 2)));
+                       operands[2]->meet(getLayoutInfoForDPASOperand(cTy, 2)));
   }
 }
 
 /// Set the layout for the value and tensor descriptor operands in StoreNdOp.
-void SGMapPropagation::visitStoreNdOp(xegpu::StoreNdOp store,
-                                      ArrayRef<SGMapLattice *> operands,
-                                      ArrayRef<const SGMapLattice *> results) {
-  auto storeLayout = getDefaultSgMap(store.getValueType());
+void LayoutInfoPropagation::visitStoreNdOp(
+    xegpu::StoreNdOp store, ArrayRef<LayoutInfoLattice *> operands,
+    ArrayRef<const LayoutInfoLattice *> results) {
+  auto storeLayout = getDefaultLayoutInfo(store.getValueType());
   /// Both operands should have the same layout
-  for (SGMapLattice *operand : operands) {
+  for (LayoutInfoLattice *operand : operands) {
     propagateIfChanged(operand, operand->meet(storeLayout));
   }
 }
 
 /// Propagate the layout of the value to the tensor descriptor operand in
 /// LoadNdOp.
-void SGMapPropagation::visitLoadNdOp(xegpu::LoadNdOp load,
-                                     ArrayRef<SGMapLattice *> operands,
-                                     ArrayRef<const SGMapLattice *> results) {
+void LayoutInfoPropagation::visitLoadNdOp(
+    xegpu::LoadNdOp load, ArrayRef<LayoutInfoLattice *> operands,
+    ArrayRef<const LayoutInfoLattice *> results) {
   auto valueLayout = results[0]->getValue();
   /// Need the layout of the value to propagate to the tensor descriptor.
   if (!valueLayout.isAssigned())
     return;
-  SGMap tensorDescLayout = valueLayout;
+  LayoutInfo tensorDescLayout = valueLayout;
   /// LoadNdOp has the transpose effect. However, at the stage of this analysis
   /// this effect is not expected and should be abstracted away. Emit a warning.
   if (auto transpose = load.getTranspose()) {
     load.emitWarning("Transpose effect is not expected for LoadNdOp at "
-                     "SGMapPropagation stage.");
+                     "LayoutInfoPropagation stage.");
     tensorDescLayout = valueLayout.getTransposedLayout(transpose.value());
   }
   /// Propagate the new layout to the tensor descriptor operand.
@@ -452,9 +463,9 @@ void SGMapPropagation::visitLoadNdOp(xegpu::LoadNdOp load,
 
 /// For vector::TransposeOp, the layout of the result is transposed and
 /// propagated to the operand.
-void SGMapPropagation::visitTransposeOp(
-    vector::TransposeOp transpose, ArrayRef<SGMapLattice *> operands,
-    ArrayRef<const SGMapLattice *> results) {
+void LayoutInfoPropagation::visitTransposeOp(
+    vector::TransposeOp transpose, ArrayRef<LayoutInfoLattice *> operands,
+    ArrayRef<const LayoutInfoLattice *> results) {
   /// Need the layout of transpose result to propagate to the operands.
   auto resultLayout = results[0]->getValue();
   if (!resultLayout.isAssigned())
@@ -464,11 +475,11 @@ void SGMapPropagation::visitTransposeOp(
   propagateIfChanged(operands[0], operands[0]->meet(newLayout));
 }
 
-/// For vector::BitCastOp, the wi_data of the source layout is changed based on
-/// the bit width of the source and result types.
-void SGMapPropagation::visitVectorBitcastOp(
-    vector::BitCastOp bitcast, ArrayRef<SGMapLattice *> operands,
-    ArrayRef<const SGMapLattice *> results) {
+/// For vector::BitCastOp, the lane_data of the source layout is changed based
+/// on the bit width of the source and result types.
+void LayoutInfoPropagation::visitVectorBitcastOp(
+    vector::BitCastOp bitcast, ArrayRef<LayoutInfoLattice *> operands,
+    ArrayRef<const LayoutInfoLattice *> results) {
   /// Need the layout of bitcast result to propagate to the operands.
   auto resultLayout = results[0]->getValue();
   if (!resultLayout.isAssigned())
@@ -478,49 +489,49 @@ void SGMapPropagation::visitVectorBitcastOp(
   auto outElemTyBitWidth =
       bitcast.getResultVectorType().getElementType().getIntOrFloatBitWidth();
 
-  /// WiLayout does not change.
-  const WiLayout &newWiLayout = resultLayout.getLayout();
-  const WiData &currData = resultLayout.getData();
-  WiData newWiData;
+  /// LaneLayout does not change.
+  const LaneLayout &newLaneLayout = resultLayout.getLayout();
+  const LaneData &currData = resultLayout.getData();
+  LaneData newLaneData;
   /// It's a widening bitcast
   if (inElemTyBitWidth < outElemTyBitWidth) {
     auto ratio = outElemTyBitWidth / inElemTyBitWidth;
-    newWiData = resultLayout.getData()[0] == 1
-                    ? WiData({1, currData[1] * ratio})
-                    : WiData({currData[0] * ratio, 1});
+    newLaneData = resultLayout.getData()[0] == 1
+                      ? LaneData({1, currData[1] * ratio})
+                      : LaneData({currData[0] * ratio, 1});
   } else {
     /// It's a narrowing bitcast
     auto ratio = inElemTyBitWidth / outElemTyBitWidth;
-    newWiData = resultLayout.getData()[0] == 1
-                    ? WiData({1, currData[1] / ratio})
-                    : WiData({currData[0] / ratio, 1});
+    newLaneData = resultLayout.getData()[0] == 1
+                      ? LaneData({1, currData[1] / ratio})
+                      : LaneData({currData[0] / ratio, 1});
   }
 
   propagateIfChanged(operands[0],
-                     operands[0]->meet(SGMap(newWiLayout, newWiData)));
+                     operands[0]->meet(LayoutInfo(newLaneLayout, newLaneData)));
 }
 
 /// Propagate the layout of the result to the tensor descriptor and mask
 /// operands in LoadGatherOp.
-void SGMapPropagation::visitLoadGatherOp(
-    xegpu::LoadGatherOp load, ArrayRef<SGMapLattice *> operands,
-    ArrayRef<const SGMapLattice *> results) {
+void LayoutInfoPropagation::visitLoadGatherOp(
+    xegpu::LoadGatherOp load, ArrayRef<LayoutInfoLattice *> operands,
+    ArrayRef<const LayoutInfoLattice *> results) {
   auto valueLayout = results[0]->getValue();
   /// Need the layout of the value to propagate to the tensor descriptor.
   if (!valueLayout.isAssigned())
     return;
 
-  SGMap tensorDescLayout = valueLayout;
+  LayoutInfo tensorDescLayout = valueLayout;
   if (load.getTranspose()) {
     /// LoadGatherOp has the transpose effect. However, at the stage of this
     /// analyis this effect is not expected and should be abstracted away. Emit
     /// a warning.
     load.emitWarning("Transpose effect is not expected for LoadGatherOp at "
-                     "SGMapPropagation stage.");
+                     "LayoutInfoPropagation stage.");
     tensorDescLayout = valueLayout.getTransposedLayout({1, 0});
   }
   /// Mask operand should have 1D default layout.
-  auto maskLayout = getDefaultSgMap(1);
+  auto maskLayout = getDefaultLayoutInfo(1);
   /// Propagate the new layout to the tensor descriptor operand.
   propagateIfChanged(operands[0], operands[0]->meet(tensorDescLayout));
   /// Propagate the new layout to the mask operand.
@@ -529,23 +540,23 @@ void SGMapPropagation::visitLoadGatherOp(
 
 /// Propagate the layout of the descriptor to the vector offset operand in
 /// CreateDescOp.
-void SGMapPropagation::visitCreateDescOp(
-    xegpu::CreateDescOp createDesc, ArrayRef<SGMapLattice *> operands,
-    ArrayRef<const SGMapLattice *> results) {
+void LayoutInfoPropagation::visitCreateDescOp(
+    xegpu::CreateDescOp createDesc, ArrayRef<LayoutInfoLattice *> operands,
+    ArrayRef<const LayoutInfoLattice *> results) {
   auto descLayout = results[0]->getValue();
   /// Need the layout of the descriptor to propagate to the operands.
   if (!descLayout.isAssigned())
     return;
   /// For offset operand propagate 1D default layout.
-  SGMap layout = getDefaultSgMap(1);
+  LayoutInfo layout = getDefaultLayoutInfo(1);
   propagateIfChanged(operands[1], operands[1]->meet(layout));
 }
 
 /// Set the layout for the value, tensor descriptor, and mask operands in the
 /// StoreScatterOp.
-void SGMapPropagation::visitStoreScatterOp(
-    xegpu::StoreScatterOp storeScatter, ArrayRef<SGMapLattice *> operands,
-    ArrayRef<const SGMapLattice *> results) {
+void LayoutInfoPropagation::visitStoreScatterOp(
+    xegpu::StoreScatterOp storeScatter, ArrayRef<LayoutInfoLattice *> operands,
+    ArrayRef<const LayoutInfoLattice *> results) {
   /// Currently, for 2D StoreScatterOp we expect that the height dimension of
   /// the tensor descriptor is evenly divisible by the subgroup size.
   /// TODO: Add support for other 2D shapes.
@@ -555,14 +566,14 @@ void SGMapPropagation::visitStoreScatterOp(
                            "be evenly divisible by the subgroup size.");
     return;
   }
-  auto valueLayout = getDefaultSgMap(storeScatter.getValueType());
-  SGMap storeScatterLayout = valueLayout;
+  auto valueLayout = getDefaultLayoutInfo(storeScatter.getValueType());
+  LayoutInfo storeScatterLayout = valueLayout;
   if (storeScatter.getTranspose()) {
     /// StoreScatteOp allows transpose effect. However, at the stage of this
     /// analyis this effect is not expected and should be abstracted away. Emit
     /// a warning.
     storeScatter.emitWarning("Transpose effect is not expected for "
-                             "StoreScatterOp at SGMapPropagation stage.");
+                             "StoreScatterOp at LayoutInfoPropagation stage.");
     storeScatterLayout = valueLayout.getTransposedLayout({1, 0});
   }
   /// Propagate the value layout.
@@ -570,28 +581,28 @@ void SGMapPropagation::visitStoreScatterOp(
   /// Propagate the tensor descriptor layout.
   propagateIfChanged(operands[1], operands[1]->meet(storeScatterLayout));
   /// Use default 1D layout for mask operand.
-  auto maskLayout = getDefaultSgMap(1);
+  auto maskLayout = getDefaultLayoutInfo(1);
   propagateIfChanged(operands[2], operands[2]->meet(maskLayout));
 }
 
 namespace {
 
 ///===----------------------------------------------------------------------===///
-/// RunSGMapPropagation
+/// RunLayoutInfoPropagation
 ///===----------------------------------------------------------------------===///
 
-/// Driver class for running the SGMapPropagation analysis.
-class RunSGMapPropagation {
+/// Driver class for running the LayoutInfoPropagation analysis.
+class RunLayoutInfoPropagation {
 public:
-  RunSGMapPropagation(Operation *op) : target(op) {
+  RunLayoutInfoPropagation(Operation *op) : target(op) {
     SymbolTableCollection symbolTable;
     solver.load<DeadCodeAnalysis>();
     solver.load<SparseConstantPropagation>();
-    solver.load<SGMapPropagation>(symbolTable);
+    solver.load<LayoutInfoPropagation>(symbolTable);
     (void)solver.initializeAndRun(op);
   }
 
-  SGMap getSGMap(Value val);
+  LayoutInfo getLayoutInfo(Value val);
 
   void printAnalysisResult(llvm::raw_ostream &os);
 
@@ -601,21 +612,21 @@ private:
 };
 } // namespace
 
-SGMap RunSGMapPropagation::getSGMap(Value val) {
-  auto *state = solver.lookupState<SGMapLattice>(val);
+LayoutInfo RunLayoutInfoPropagation::getLayoutInfo(Value val) {
+  auto *state = solver.lookupState<LayoutInfoLattice>(val);
   if (!state)
     return {};
   return state->getValue();
 }
 
-void RunSGMapPropagation::printAnalysisResult(llvm::raw_ostream &os) {
+void RunLayoutInfoPropagation::printAnalysisResult(llvm::raw_ostream &os) {
   auto printFunctionResult = [&](FunctionOpInterface funcOp) {
     os << "function: " << funcOp.getName() << ":\n";
     // Function arguments
     for (auto arg : funcOp.getArguments()) {
-      auto layout = getSGMap(arg);
+      auto layout = getLayoutInfo(arg);
       os << "argument: " << arg << "\n";
-      os << "sg_map  : ";
+      os << "layout  : ";
       layout.print(os);
       os << "\n";
     }
@@ -631,10 +642,10 @@ void RunSGMapPropagation::printAnalysisResult(llvm::raw_ostream &os) {
       else
         op->print(os);
       os << "\n";
-      /// Print the sg_map for each result.
+      /// Print the layout for each result.
       for (auto [i, r] : llvm::enumerate(op->getResults())) {
-        auto layout = getSGMap(r);
-        os << "sg_map for result #" << i << ": ";
+        auto layout = getLayoutInfo(r);
+        os << "layout for result #" << i << ": ";
         layout.print(os);
         os << "\n";
       }
@@ -663,8 +674,7 @@ void attachLayoutAttributeToUsers(Value v, xegpu::LayoutAttr layout) {
   for (OpOperand &user : v.getUses()) {
     Operation *owner = user.getOwner();
     unsigned operandNumber = user.getOperandNumber();
-    /// If the user is a DpasOp, set "sg_map_a", "sg_map_b", or "sg_map_c"
-    /// attribute.
+    /// If the user is a DpasOp, set A, B or C layout attributes.
     if (auto dpasOp = dyn_cast<xegpu::DpasOp>(owner)) {
       if (operandNumber == 0)
         dpasOp.setALayoutAttr(layout);
@@ -680,11 +690,10 @@ void attachLayoutAttributeToUsers(Value v, xegpu::LayoutAttr layout) {
   }
 }
 
-static LogicalResult
-attachLayoutAttributes(Operation *top,
-                       llvm::function_ref<SGMap(Value)> getPropagatedLayout) {
-  /// Helper to convert SGMap to xegpu::SGMapAttr.
-  auto getSGMapForResult = [&](Value r) -> xegpu::LayoutAttr {
+static LogicalResult attachLayoutAttributes(
+    Operation *top, llvm::function_ref<LayoutInfo(Value)> getPropagatedLayout) {
+  /// Helper to convert the layout info to the xegpu::LayoutAttr.
+  auto getLayoutInfoForResult = [&](Value r) -> xegpu::LayoutAttr {
     auto layout = getPropagatedLayout(r);
     if (!layout.isAssigned())
       return {};
@@ -701,9 +710,9 @@ attachLayoutAttributes(Operation *top,
     /// For function ops, propagate the argument layout to the users.
     if (auto func = dyn_cast<FunctionOpInterface>(op)) {
       for (auto arg : func.getArguments()) {
-        auto sgMapAttr = getSGMapForResult(arg);
-        if (sgMapAttr) {
-          attachLayoutAttributeToUsers(arg, sgMapAttr);
+        auto layoutInfo = getLayoutInfoForResult(arg);
+        if (layoutInfo) {
+          attachLayoutAttributeToUsers(arg, layoutInfo);
         }
       }
       return WalkResult::advance();
@@ -713,8 +722,8 @@ attachLayoutAttributes(Operation *top,
       return WalkResult::advance();
     if (auto tensorDescTy =
             dyn_cast<xegpu::TensorDescType>(op->getResult(0).getType())) {
-      auto sgMapAttr = getSGMapForResult(op->getResult(0));
-      if (!sgMapAttr) {
+      auto layoutInfo = getLayoutInfoForResult(op->getResult(0));
+      if (!layoutInfo) {
         LLVM_DEBUG(DBGS() << "No layout for result of " << *op << "\n");
         return WalkResult::interrupt();
       }
@@ -725,7 +734,8 @@ attachLayoutAttributes(Operation *top,
       auto *newOp = builder.clone(*op);
       auto newTensorDescTy = xegpu::TensorDescType::get(
           tensorDescTy.getContext(), tensorDescTy.getShape(),
-          tensorDescTy.getElementType(), tensorDescTy.getEncoding(), sgMapAttr);
+          tensorDescTy.getElementType(), tensorDescTy.getEncoding(),
+          layoutInfo);
       newOp->getResult(0).setType(newTensorDescTy);
       op->replaceAllUsesWith(newOp->getResults());
       op->erase();
@@ -733,12 +743,12 @@ attachLayoutAttributes(Operation *top,
     }
     /// Otherwise simply attach the sg_map to the op itself.
     for (auto [i, r] : llvm::enumerate(op->getResults())) {
-      auto sgMapAttr = getSGMapForResult(r);
-      if (sgMapAttr) {
+      auto layoutInfo = getLayoutInfoForResult(r);
+      if (layoutInfo) {
         auto attrName = "r" + std::to_string(i);
-        op->setAttr(attrName, sgMapAttr);
+        op->setAttr(attrName, layoutInfo);
         /// Attach the layout attribute to the users of the result.
-        attachLayoutAttributeToUsers(r, sgMapAttr);
+        attachLayoutAttributeToUsers(r, layoutInfo);
       }
     }
     return WalkResult::advance();
@@ -759,18 +769,18 @@ namespace {
 ///===----------------------------------------------------------------------===///
 
 /// Returns the distributed vector type for a source vector type according to
-/// the wi_layout. We simply divide each dimension of tensor descriptor shape by
-/// corresponding wi_layout dimension. If array_length > 1, that is appended to
-/// the front of the disributed shape.
+/// the lane_layout. We simply divide each dimension of tensor descriptor shape
+/// by corresponding lane_layout dimension. If array_length > 1, that is
+/// appended to the front of the disributed shape.
+///
 /// Examples:
-/// | original vector shape | wi_layout | distributed vector shape |
-/// |-----------------------|-----------|--------------------------|
-/// | 32x16                 | [1, 16]   | 32x1                     |
-/// | 32x16                 | [2, 8]    | 16x2                     |
-/// | 2x32x16               | [1, 16]   | 2x32x1                   |
-FailureOr<VectorType>
-getDistributedVecTypeBasedOnWiLayout(xegpu::LayoutAttr layout,
-                                     VectorType originalType) {
+/// | original vector shape | lane_layout | distributed vector shape |
+/// |-----------------------|-------------|--------------------------|
+/// | 32x16                 | [1, 16]     | 32x1                     |
+/// | 32x16                 | [2, 8]      | 16x2                     |
+/// | 2x32x16               | [1, 16]     | 2x32x1                   |
+FailureOr<VectorType> getDistVecTypeBasedOnLaneLayout(xegpu::LayoutAttr layout,
+                                                      VectorType originalType) {
   llvm::SmallVector<int64_t, 2> distributedShape;
   if (!layout)
     return failure();
@@ -1022,7 +1032,7 @@ struct SubgroupOpStoreNd final : public gpu::WarpDistributionPattern {
       return rewriter.notifyMatchFailure(storeOp, "unsupported shape");
 
     auto distriburtedTypeByWarpOp =
-        getDistributedVecTypeBasedOnWiLayout(layout, storeOp.getValueType());
+        getDistVecTypeBasedOnLaneLayout(layout, storeOp.getValueType());
     if (failed(distriburtedTypeByWarpOp))
       return rewriter.notifyMatchFailure(storeOp,
                                          "Failed to distribute the type");
@@ -1161,11 +1171,11 @@ struct SubgroupOpDpas final : public gpu::WarpDistributionPattern {
           "the xegpu::Dpas op lacks sg_map attribute for A, B or output");
 
     auto distLhsTypeByWarpOpOrFailure =
-        getDistributedVecTypeBasedOnWiLayout(layoutA, dpasOp.getLhsType());
+        getDistVecTypeBasedOnLaneLayout(layoutA, dpasOp.getLhsType());
     auto distRhsTypeByWarpOpOrFailure =
-        getDistributedVecTypeBasedOnWiLayout(layoutB, dpasOp.getRhsType());
+        getDistVecTypeBasedOnLaneLayout(layoutB, dpasOp.getRhsType());
     auto distResultTypeByWarpOpOrFailure =
-        getDistributedVecTypeBasedOnWiLayout(layoutOut, dpasOp.getResultType());
+        getDistVecTypeBasedOnLaneLayout(layoutOut, dpasOp.getResultType());
     if (failed(distLhsTypeByWarpOpOrFailure) ||
         failed(distRhsTypeByWarpOpOrFailure) ||
         failed(distResultTypeByWarpOpOrFailure))
@@ -1242,14 +1252,16 @@ void xegpu::populateXeGPUSubgroupDistributePatterns(
 }
 
 void XeGPUSubgroupDistributePass::runOnOperation() {
-  auto &analyis = getAnalysis<RunSGMapPropagation>();
+  auto &analyis = getAnalysis<RunLayoutInfoPropagation>();
   // Print the analysis result and exit. (for testing purposes)
   if (printOnly) {
     auto &os = llvm::outs();
     analyis.printAnalysisResult(os);
     return;
   }
-  auto getPropagatedLayout = [&](Value val) { return analyis.getSGMap(val); };
+  auto getPropagatedLayout = [&](Value val) {
+    return analyis.getLayoutInfo(val);
+  };
   if (failed(attachLayoutAttributes(getOperation(), getPropagatedLayout)))
     signalPassFailure();
   if (failed(resolveLayoutConflicts(getOperation())))
