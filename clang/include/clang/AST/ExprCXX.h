@@ -51,6 +51,7 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <variant>
 
 namespace clang {
 
@@ -2765,25 +2766,25 @@ public:
 /// \endcode
 class TypeTraitExpr final
     : public Expr,
-      private llvm::TrailingObjects<TypeTraitExpr, TypeSourceInfo *> {
+      private llvm::TrailingObjects<TypeTraitExpr, APValue, TypeSourceInfo *> {
   /// The location of the type trait keyword.
   SourceLocation Loc;
 
   ///  The location of the closing parenthesis.
   SourceLocation RParenLoc;
 
-  // Note: The TypeSourceInfos for the arguments are allocated after the
-  // TypeTraitExpr.
-
   TypeTraitExpr(QualType T, SourceLocation Loc, TypeTrait Kind,
-                ArrayRef<TypeSourceInfo *> Args,
-                SourceLocation RParenLoc,
-                bool Value);
+                ArrayRef<TypeSourceInfo *> Args, SourceLocation RParenLoc,
+                std::variant<bool, APValue> Value);
 
-  TypeTraitExpr(EmptyShell Empty) : Expr(TypeTraitExprClass, Empty) {}
+  TypeTraitExpr(EmptyShell Empty, bool IsStoredAsBool);
 
   size_t numTrailingObjects(OverloadToken<TypeSourceInfo *>) const {
     return getNumArgs();
+  }
+
+  size_t numTrailingObjects(OverloadToken<APValue>) const {
+    return TypeTraitExprBits.IsBooleanTypeTrait ? 0 : 1;
   }
 
 public:
@@ -2798,7 +2799,13 @@ public:
                                SourceLocation RParenLoc,
                                bool Value);
 
+  static TypeTraitExpr *Create(const ASTContext &C, QualType T,
+                               SourceLocation Loc, TypeTrait Kind,
+                               ArrayRef<TypeSourceInfo *> Args,
+                               SourceLocation RParenLoc, APValue Value);
+
   static TypeTraitExpr *CreateDeserialized(const ASTContext &C,
+                                           bool IsStoredAsBool,
                                            unsigned NumArgs);
 
   /// Determine which type trait this expression uses.
@@ -2806,9 +2813,18 @@ public:
     return static_cast<TypeTrait>(TypeTraitExprBits.Kind);
   }
 
-  bool getValue() const {
-    assert(!isValueDependent());
+  bool isStoredAsBoolean() const {
+    return TypeTraitExprBits.IsBooleanTypeTrait;
+  }
+
+  bool getBoolValue() const {
+    assert(!isValueDependent() && TypeTraitExprBits.IsBooleanTypeTrait);
     return TypeTraitExprBits.Value;
+  }
+
+  const APValue &getAPValue() const {
+    assert(!isValueDependent() && !TypeTraitExprBits.IsBooleanTypeTrait);
+    return *getTrailingObjects<APValue>();
   }
 
   /// Determine the number of arguments to this type trait.

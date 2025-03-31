@@ -6,6 +6,7 @@
 define amdgpu_kernel void @memset_all_zero(i64 %val) {
 ; CHECK-LABEL: @memset_all_zero(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[STACK:%.*]] = freeze <6 x i64> poison
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <6 x i64> zeroinitializer, i64 [[VAL:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <6 x i64> [[TMP0]], i64 [[VAL]], i32 1
 ; CHECK-NEXT:    ret void
@@ -23,6 +24,7 @@ entry:
 define amdgpu_kernel void @memset_all_5(i64 %val) {
 ; CHECK-LABEL: @memset_all_5(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[STACK:%.*]] = freeze <4 x i64> poison
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i64> splat (i64 361700864190383365), i64 [[VAL:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> [[TMP0]], i64 [[VAL]], i32 1
 ; CHECK-NEXT:    ret void
@@ -86,6 +88,7 @@ entry:
 
 define amdgpu_kernel void @memset_array_ptr_alloca(ptr %out) {
 ; CHECK-LABEL: @memset_array_ptr_alloca(
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <6 x ptr> poison
 ; CHECK-NEXT:    store i64 0, ptr [[OUT:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -98,6 +101,7 @@ define amdgpu_kernel void @memset_array_ptr_alloca(ptr %out) {
 
 define amdgpu_kernel void @memset_vector_ptr_alloca(ptr %out) {
 ; CHECK-LABEL: @memset_vector_ptr_alloca(
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <6 x ptr> poison
 ; CHECK-NEXT:    store i64 0, ptr [[OUT:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -110,6 +114,7 @@ define amdgpu_kernel void @memset_vector_ptr_alloca(ptr %out) {
 
 define amdgpu_kernel void @memset_array_of_array_ptr_alloca(ptr %out) {
 ; CHECK-LABEL: @memset_array_of_array_ptr_alloca(
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <6 x ptr> poison
 ; CHECK-NEXT:    store i64 0, ptr [[OUT:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -122,6 +127,7 @@ define amdgpu_kernel void @memset_array_of_array_ptr_alloca(ptr %out) {
 
 define amdgpu_kernel void @memset_array_of_vec_ptr_alloca(ptr %out) {
 ; CHECK-LABEL: @memset_array_of_vec_ptr_alloca(
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <8 x ptr> poison
 ; CHECK-NEXT:    store i64 0, ptr [[OUT:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;

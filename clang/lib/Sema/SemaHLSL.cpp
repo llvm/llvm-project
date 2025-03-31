@@ -162,10 +162,7 @@ Decl *SemaHLSL::ActOnStartBuffer(Scope *BufferScope, bool CBuffer,
   // if CBuffer is false, then it's a TBuffer
   auto RC = CBuffer ? llvm::hlsl::ResourceClass::CBuffer
                     : llvm::hlsl::ResourceClass::SRV;
-  auto RK = CBuffer ? llvm::hlsl::ResourceKind::CBuffer
-                    : llvm::hlsl::ResourceKind::TBuffer;
   Result->addAttr(HLSLResourceClassAttr::CreateImplicit(getASTContext(), RC));
-  Result->addAttr(HLSLResourceAttr::CreateImplicit(getASTContext(), RK));
 
   SemaRef.PushOnScopeChains(Result, BufferScope);
   SemaRef.PushDeclContext(BufferScope, Result);
@@ -2052,6 +2049,23 @@ static bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
   return false;
 }
 
+static bool CheckAllArgsHaveSameType(Sema *S, CallExpr *TheCall) {
+  assert(TheCall->getNumArgs() > 1);
+  QualType ArgTy0 = TheCall->getArg(0)->getType();
+
+  for (unsigned I = 1, N = TheCall->getNumArgs(); I < N; ++I) {
+    if (!S->getASTContext().hasSameUnqualifiedType(
+            ArgTy0, TheCall->getArg(I)->getType())) {
+      S->Diag(TheCall->getBeginLoc(), diag::err_vec_builtin_incompatible_vector)
+          << TheCall->getDirectCallee() << /*useAllTerminology*/ true
+          << SourceRange(TheCall->getArg(0)->getBeginLoc(),
+                         TheCall->getArg(N - 1)->getEndLoc());
+      return true;
+    }
+  }
+  return false;
+}
+
 static bool CheckArgTypeMatches(Sema *S, Expr *Arg, QualType ExpectedType) {
   QualType ArgType = Arg->getType();
   if (!S->getASTContext().hasSameUnqualifiedType(ArgType, ExpectedType)) {
@@ -2403,11 +2417,14 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case Builtin::BI__builtin_hlsl_elementwise_clamp: {
     if (SemaRef.checkArgCount(TheCall, 3))
       return true;
-    if (CheckVectorElementCallArgs(&SemaRef, TheCall))
+    if (CheckAnyScalarOrVector(&SemaRef, TheCall, 0) ||
+        CheckAllArgsHaveSameType(&SemaRef, TheCall))
       return true;
     if (SemaRef.BuiltinElementwiseTernaryMath(
-            TheCall, /*CheckForFloatArgs*/
-            TheCall->getArg(0)->getType()->hasFloatingRepresentation()))
+            TheCall, /*ArgTyRestr=*/
+            TheCall->getArg(0)->getType()->hasFloatingRepresentation()
+                ? Sema::EltwiseBuiltinArgTyRestriction::FloatTy
+                : Sema::EltwiseBuiltinArgTyRestriction::None))
       return true;
     break;
   }
@@ -2476,7 +2493,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
     if (!EltTy->isIntegerType()) {
       Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-          << 1 << /* integer ty */ 6 << ArgTy;
+          << 1 << /* scalar or vector of */ 5 << /* integer ty */ 1
+          << /* no fp */ 0 << ArgTy;
       return true;
     }
 
@@ -2540,8 +2558,10 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (CheckVectorElementCallArgs(&SemaRef, TheCall))
       return true;
     if (SemaRef.BuiltinElementwiseTernaryMath(
-            TheCall, /*CheckForFloatArgs*/
-            TheCall->getArg(0)->getType()->hasFloatingRepresentation()))
+            TheCall, /*ArgTyRestr=*/
+            TheCall->getArg(0)->getType()->hasFloatingRepresentation()
+                ? Sema::EltwiseBuiltinArgTyRestriction::FloatTy
+                : Sema::EltwiseBuiltinArgTyRestriction::None))
       return true;
     break;
   }

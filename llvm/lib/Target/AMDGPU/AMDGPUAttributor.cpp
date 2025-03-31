@@ -110,6 +110,8 @@ intrinsicToAttrMask(Intrinsic::ID ID, bool &NonKernelOnly, bool &NeedsImplicit,
     return CodeObjectVersion >= AMDGPU::AMDHSA_COV5 ? IMPLICIT_ARG_PTR
                                                     : QUEUE_PTR;
   case Intrinsic::trap:
+  case Intrinsic::debugtrap:
+  case Intrinsic::ubsantrap:
     if (SupportsGetDoorBellID) // GetDoorbellID support implemented since V4.
       return CodeObjectVersion >= AMDGPU::AMDHSA_COV4 ? NOT_IMPLICIT_INPUT
                                                       : QUEUE_PTR;

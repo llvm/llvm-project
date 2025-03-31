@@ -191,6 +191,10 @@ public:
     return false;
   }
 
+  SmallVector<MCPhysReg> getTrustedLiveInRegs() const override {
+    return {AArch64::LR};
+  }
+
   ErrorOr<MCPhysReg> getAuthenticatedReg(const MCInst &Inst) const override {
     switch (Inst.getOpcode()) {
     case AArch64::AUTIAZ:
@@ -545,6 +549,18 @@ public:
     }
 
     return false;
+  }
+
+  bool isBRA(const MCInst &Inst) const {
+    switch (Inst.getOpcode()) {
+    case AArch64::BRAA:
+    case AArch64::BRAB:
+    case AArch64::BRAAZ:
+    case AArch64::BRABZ:
+      return true;
+    default:
+      return false;
+    }
   }
 
   bool mayLoad(const MCInst &Inst) const override {
@@ -941,6 +957,11 @@ public:
       DenseMap<const MCInst *, SmallVector<MCInst *, 4>> &UDChain,
       const MCExpr *&JumpTable, int64_t &Offset, int64_t &ScaleValue,
       MCInst *&PCRelBase) const {
+    // The only kind of indirect branches we match is jump table, thus ignore
+    // authenticating branch instructions early.
+    if (isBRA(Inst))
+      return false;
+
     // Expect AArch64 BR
     assert(Inst.getOpcode() == AArch64::BR && "Unexpected opcode");
 

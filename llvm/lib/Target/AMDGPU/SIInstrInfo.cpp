@@ -4239,7 +4239,9 @@ bool SIInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
 }
 
 bool SIInstrInfo::isAlwaysGDS(uint16_t Opcode) const {
-  return Opcode == AMDGPU::DS_ORDERED_COUNT || isGWS(Opcode);
+  return Opcode == AMDGPU::DS_ORDERED_COUNT ||
+         Opcode == AMDGPU::DS_ADD_GS_REG_RTN ||
+         Opcode == AMDGPU::DS_SUB_GS_REG_RTN || isGWS(Opcode);
 }
 
 bool SIInstrInfo::modifiesModeRegister(const MachineInstr &MI) {

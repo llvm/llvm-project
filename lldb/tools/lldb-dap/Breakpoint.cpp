@@ -72,9 +72,7 @@ void Breakpoint::CreateJsonObject(llvm::json::Object &object) {
 bool Breakpoint::MatchesName(const char *name) { return bp.MatchesName(name); }
 
 void Breakpoint::SetBreakpoint() {
-  // See comments in BreakpointBase::GetBreakpointLabel() for details of why
-  // we add a label to our breakpoints.
-  bp.AddName(GetBreakpointLabel());
+  bp.AddName(kDAPBreakpointLabel);
   if (!condition.empty())
     SetCondition();
   if (!hitCondition.empty())

@@ -103,8 +103,7 @@ define void @VF1-VPWidenCanonicalIVRecipeExe(ptr %ptr1) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule i64 [[VEC_IV6]], 14
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PTR1]], i64 [[TMP4]]
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PTR1]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[NEXT_GEP]], align 8
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:

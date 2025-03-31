@@ -1354,8 +1354,13 @@ LogicalResult tosa::PadOp::verify() {
     }
   }
 
-  RankedTensorType inputType = getInput1().getType();
-  RankedTensorType outputType = getOutput().getType();
+  RankedTensorType inputType =
+      llvm::dyn_cast<RankedTensorType>(getInput1().getType());
+  RankedTensorType outputType =
+      llvm::dyn_cast<RankedTensorType>(getOutput().getType());
+  if (!inputType || !outputType)
+    return success();
+
   auto paddingRank = cast<tosa::shapeType>(getPadding().getType()).getRank();
 
   if (inputType.getRank() != outputType.getRank())

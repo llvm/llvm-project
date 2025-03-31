@@ -11,6 +11,34 @@
 
 include "mlir/Pass/PassBase.td"
 
+def CIRCanonicalize : Pass<"cir-canonicalize"> {
+  let summary = "Performs CIR canonicalization";
+  let description = [{
+    Perform canonicalizations on CIR and removes some redundant operations.
+
+    This pass performs basic cleanup and canonicalization transformations that
+    are not intended to affect CIR-to-source fidelity and high-level code
+    analysis passes. Example transformations performed in this pass include
+    empty scope cleanup, trivial `try` cleanup, redundant branch cleanup, etc.
+    Those more "heavyweight" transformations and those transformations that
+    could significantly affect CIR-to-source fidelity are performed in the
+    `cir-simplify` pass.
+  }];
+
+  let constructor = "mlir::createCIRCanonicalizePass()";
+  let dependentDialects = ["cir::CIRDialect"];
+}
+
+def HoistAllocas : Pass<"cir-hoist-allocas"> {
+  let summary = "Hoist allocas to the entry of the function";
+  let description = [{
+    This pass hoist all non-dynamic allocas to the entry of the function.
+    This is helpful for later code generation.
+  }];
+  let constructor = "mlir::createHoistAllocasPass()";
+  let dependentDialects = ["cir::CIRDialect"];
+}
+
 def CIRFlattenCFG : Pass<"cir-flatten-cfg"> {
   let summary = "Produces flatten CFG";
   let description = [{

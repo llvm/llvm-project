@@ -765,7 +765,7 @@ bool Sema::DiagnoseUninstantiableTemplate(SourceLocation PointOfInstantiation,
                                           const NamedDecl *Pattern,
                                           const NamedDecl *PatternDef,
                                           TemplateSpecializationKind TSK,
-                                          bool Complain /*= true*/) {
+                                          bool Complain, bool *Unreachable) {
   assert(isa<TagDecl>(Instantiation) || isa<FunctionDecl>(Instantiation) ||
          isa<VarDecl>(Instantiation));
 
@@ -778,6 +778,8 @@ bool Sema::DiagnoseUninstantiableTemplate(SourceLocation PointOfInstantiation,
     if (!hasReachableDefinition(const_cast<NamedDecl *>(PatternDef),
                                 &SuggestedDef,
                                 /*OnlyNeedComplete*/ false)) {
+      if (Unreachable)
+        *Unreachable = true;
       // If we're allowed to diagnose this and recover, do so.
       bool Recover = Complain && !isSFINAEContext();
       if (Complain)
@@ -2233,10 +2235,11 @@ static bool DiagnoseDefaultTemplateArgument(Sema &S,
     //   template-argument, that declaration shall be a definition and shall be
     //   the only declaration of the function template in the translation unit.
     // (C++98/03 doesn't have this wording; see DR226).
-    S.Diag(ParamLoc, S.getLangOpts().CPlusPlus11 ?
-         diag::warn_cxx98_compat_template_parameter_default_in_function_template
-           : diag::ext_template_parameter_default_in_function_template)
-      << DefArgRange;
+    S.Diag(ParamLoc,
+           S.getLangOpts().CPlusPlus11
+               ? diag::compat_cxx11_templ_default_in_function_templ
+               : diag::compat_pre_cxx11_templ_default_in_function_templ)
+        << DefArgRange;
     return false;
 
   case Sema::TPC_ClassTemplateMember:
@@ -5921,8 +5924,12 @@ bool UnnamedLocalNoLinkageFinder::VisitRValueReferenceType(
 }
 
 bool UnnamedLocalNoLinkageFinder::VisitMemberPointerType(
-                                                  const MemberPointerType* T) {
-  return Visit(T->getPointeeType()) || Visit(QualType(T->getClass(), 0));
+    const MemberPointerType *T) {
+  if (Visit(T->getPointeeType()))
+    return true;
+  if (auto *RD = T->getMostRecentCXXRecordDecl())
+    return VisitTagDecl(RD);
+  return VisitNestedNameSpecifier(T->getQualifier());
 }
 
 bool UnnamedLocalNoLinkageFinder::VisitConstantArrayType(
@@ -6426,8 +6433,8 @@ static bool CheckTemplateArgumentAddressOfObjectOrFunction(
       if (!Invalid && !ExtraParens) {
         S.Diag(Arg->getBeginLoc(),
                S.getLangOpts().CPlusPlus11
-                   ? diag::warn_cxx98_compat_template_arg_extra_parens
-                   : diag::ext_template_arg_extra_parens)
+                   ? diag::compat_cxx11_template_arg_extra_parens
+                   : diag::compat_pre_cxx11_template_arg_extra_parens)
             << Arg->getSourceRange();
         ExtraParens = true;
       }
@@ -6649,8 +6656,8 @@ CheckTemplateArgumentPointerToMember(Sema &S, NonTypeTemplateParmDecl *Param,
     if (!Invalid && !ExtraParens) {
       S.Diag(Arg->getBeginLoc(),
              S.getLangOpts().CPlusPlus11
-                 ? diag::warn_cxx98_compat_template_arg_extra_parens
-                 : diag::ext_template_arg_extra_parens)
+                 ? diag::compat_cxx11_template_arg_extra_parens
+                 : diag::compat_pre_cxx11_template_arg_extra_parens)
           << Arg->getSourceRange();
       ExtraParens = true;
     }
@@ -10632,11 +10639,10 @@ TypeResult Sema::ActOnTypenameType(Scope *S, SourceLocation TypenameLoc,
     return true;
 
   if (TypenameLoc.isValid() && S && !S->getTemplateParamParent())
-    Diag(TypenameLoc,
-         getLangOpts().CPlusPlus11 ?
-           diag::warn_cxx98_compat_typename_outside_of_template :
-           diag::ext_typename_outside_of_template)
-      << FixItHint::CreateRemoval(TypenameLoc);
+    Diag(TypenameLoc, getLangOpts().CPlusPlus11
+                          ? diag::compat_cxx11_typename_outside_of_template
+                          : diag::compat_pre_cxx11_typename_outside_of_template)
+        << FixItHint::CreateRemoval(TypenameLoc);
 
   NestedNameSpecifierLoc QualifierLoc = SS.getWithLocInContext(Context);
   TypeSourceInfo *TSI = nullptr;
@@ -10660,11 +10666,10 @@ Sema::ActOnTypenameType(Scope *S, SourceLocation TypenameLoc,
                         ASTTemplateArgsPtr TemplateArgsIn,
                         SourceLocation RAngleLoc) {
   if (TypenameLoc.isValid() && S && !S->getTemplateParamParent())
-    Diag(TypenameLoc,
-         getLangOpts().CPlusPlus11 ?
-           diag::warn_cxx98_compat_typename_outside_of_template :
-           diag::ext_typename_outside_of_template)
-      << FixItHint::CreateRemoval(TypenameLoc);
+    Diag(TypenameLoc, getLangOpts().CPlusPlus11
+                          ? diag::compat_cxx11_typename_outside_of_template
+                          : diag::compat_pre_cxx11_typename_outside_of_template)
+        << FixItHint::CreateRemoval(TypenameLoc);
 
   // Strangely, non-type results are not ignored by this lookup, so the
   // program is ill-formed if it finds an injected-class-name.

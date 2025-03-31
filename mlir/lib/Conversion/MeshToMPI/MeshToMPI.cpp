@@ -419,13 +419,11 @@ struct ConvertShardShapeOp : public OpConversionPattern<ShardShapeOp> {
     SmallVector<Value> dynDims, dynDevice;
     for (auto dim : adaptor.getDimsDynamic()) {
       // type conversion should be 1:1 for ints
-      assert(dim.size() == 1);
-      dynDims.emplace_back(dim[0]);
+      dynDims.emplace_back(llvm::getSingleElement(dim));
     }
     // same for device
     for (auto device : adaptor.getDeviceDynamic()) {
-      assert(device.size() == 1);
-      dynDevice.emplace_back(device[0]);
+      dynDevice.emplace_back(llvm::getSingleElement(device));
     }
 
     // To keep the code simple, convert dims/device to values when they are

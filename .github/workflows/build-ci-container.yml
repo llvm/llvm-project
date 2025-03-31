@@ -27,9 +27,9 @@ jobs:
           # The arch names should match the names used on dockerhub.
           # See https://github.com/docker-library/official-images#architectures-other-than-amd64
           - arch: amd64
-            runs-on: depot-ubuntu-22.04-16
+            runs-on: depot-ubuntu-24.04-16
           - arch: arm64v8
-            runs-on: depot-ubuntu-22.04-arm-16
+            runs-on: depot-ubuntu-24.04-arm-16
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -44,7 +44,7 @@ jobs:
         id: vars
         run: |
           tag=$(git rev-parse --short=12 HEAD)
-          container_name="ghcr.io/$GITHUB_REPOSITORY_OWNER/${{ matrix.arch }}/ci-ubuntu-22.04"
+          container_name="ghcr.io/$GITHUB_REPOSITORY_OWNER/${{ matrix.arch }}/ci-ubuntu-24.04"
           echo "container-name=$container_name" >> $GITHUB_OUTPUT
           echo "container-name-agent=$container_name-agent" >> $GITHUB_OUTPUT
           echo "container-name-tag=$container_name:$tag" >> $GITHUB_OUTPUT
