@@ -401,10 +401,10 @@ bool ELFAsmParser::maybeParseSectionType(StringRef &TypeName) {
   Lex();
   if (L.isNot(AsmToken::At) && L.isNot(AsmToken::Percent) &&
       L.isNot(AsmToken::String)) {
-    if (L.getAllowAtInIdentifier())
-      return TokError("expected '@<type>', '%<type>' or \"<type>\"");
-    else
+    if (getContext().getAsmInfo()->getCommentString().starts_with('@'))
       return TokError("expected '%<type>' or \"<type>\"");
+    else
+      return TokError("expected '@<type>', '%<type>' or \"<type>\"");
   }
   if (!L.is(AsmToken::String))
     Lex();
