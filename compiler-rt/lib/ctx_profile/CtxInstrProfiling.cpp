@@ -277,6 +277,25 @@ ContextRoot *FunctionData::getOrAllocateContextRoot() {
   return Root;
 }
 
+ContextNode *tryStartContextGivenRoot(ContextRoot *Root, GUID Guid,
+                                      uint32_t Counters, uint32_t Callsites)
+    SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
+  IsUnderContext = true;
+  __sanitizer::atomic_fetch_add(&Root->TotalEntries, 1,
+                                __sanitizer::memory_order_relaxed);
+  if (!Root->FirstMemBlock) {
+    setupContext(Root, Guid, Counters, Callsites);
+  }
+  if (Root->Taken.TryLock()) {
+    __llvm_ctx_profile_current_context_root = Root;
+    onContextEnter(*Root->FirstNode);
+    return Root->FirstNode;
+  }
+  // If this thread couldn't take the lock, return scratch context.
+  __llvm_ctx_profile_current_context_root = nullptr;
+  return TheScratchContext;
+}
+
 ContextNode *getUnhandledContext(FunctionData &Data, GUID Guid,
                                  uint32_t NumCounters) {
 
@@ -369,24 +388,8 @@ ContextNode *__llvm_ctx_profile_get_context(FunctionData *Data, void *Callee,
 ContextNode *__llvm_ctx_profile_start_context(
     FunctionData *FData, GUID Guid, uint32_t Counters,
     uint32_t Callsites) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
-  IsUnderContext = true;
-
-  auto *Root = FData->getOrAllocateContextRoot();
-
-  __sanitizer::atomic_fetch_add(&Root->TotalEntries, 1,
-                                __sanitizer::memory_order_relaxed);
-
-  if (!Root->FirstMemBlock) {
-    setupContext(Root, Guid, Counters, Callsites);
-  }
-  if (Root->Taken.TryLock()) {
-    __llvm_ctx_profile_current_context_root = Root;
-    onContextEnter(*Root->FirstNode);
-    return Root->FirstNode;
-  }
-  // If this thread couldn't take the lock, return scratch context.
-  __llvm_ctx_profile_current_context_root = nullptr;
-  return TheScratchContext;
+  return tryStartContextGivenRoot(FData->getOrAllocateContextRoot(), Guid,
+                                  Counters, Callsites);
 }
 
 void __llvm_ctx_profile_release_context(FunctionData *FData)
