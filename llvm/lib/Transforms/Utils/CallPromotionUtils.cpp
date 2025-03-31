@@ -616,11 +616,11 @@ CallBase *llvm::promoteCallWithIfThenElse(CallBase &CB, Function &Callee,
   IndirectBBIns->setIndex(IndirectID);
   IndirectBBIns->insertInto(&IndirectBB, IndirectBB.getFirstInsertionPt());
 
-  const GlobalValue::GUID CalleeGUID = AssignGUIDPass::getGUID(Callee);
+  const GlobalValue::GUID CalleeGUID = Callee.getGUID();
   const uint32_t NewCountersSize = IndirectID + 1;
 
   auto ProfileUpdater = [&](PGOCtxProfContext &Ctx) {
-    assert(Ctx.guid() == AssignGUIDPass::getGUID(Caller));
+    assert(Ctx.guid() == Caller.getGUID());
     assert(NewCountersSize - 2 == Ctx.counters().size());
     // All the ctx-es belonging to a function must have the same size counters.
     Ctx.resizeCounters(NewCountersSize);
@@ -655,7 +655,6 @@ CallBase *llvm::promoteCallWithIfThenElse(CallBase &CB, Function &Callee,
     // times, and the indirect BB, IndirectCount times
     Ctx.counters()[DirectID] = DirectCount;
     Ctx.counters()[IndirectID] = IndirectCount;
-
   };
   CtxProf.update(ProfileUpdater, Caller);
   return &DirectCall;

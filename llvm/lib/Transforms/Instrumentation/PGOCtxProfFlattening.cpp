@@ -126,7 +126,7 @@ void annotateIndirectCalls(Module &M, const CtxProfAnalysis::Result &CtxProf) {
   for (auto &F : M) {
     if (F.isDeclaration())
       continue;
-    auto FlatProfIter = FlatIndCalls.find(AssignGUIDPass::getGUID(F));
+    auto FlatProfIter = FlatIndCalls.find(F.getGUID());
     if (FlatProfIter == FlatIndCalls.end())
       continue;
     const auto &FlatProf = FlatProfIter->second;
@@ -179,7 +179,7 @@ PreservedAnalyses PGOCtxProfFlatteningPass::run(Module &M,
            "Function has unreacheable basic blocks. The expectation was that "
            "DCE was run before.");
 
-    auto It = FlattenedProfile.find(AssignGUIDPass::getGUID(F));
+    auto It = FlattenedProfile.find(F.getGUID());
     // If this function didn't appear in the contextual profile, it's cold.
     if (It == FlattenedProfile.end())
       clearColdFunctionProfile(F);

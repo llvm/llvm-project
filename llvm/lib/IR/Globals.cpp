@@ -78,6 +78,34 @@ GlobalValue::getGUIDAssumingExternalLinkage(StringRef GlobalIdentifier) {
   return MD5Hash(GlobalIdentifier);
 }
 
+void GlobalValue::assignGUID() {
+  if (getMetadata(LLVMContext::MD_unique_id) != nullptr)
+    return;
+
+  const GUID G =
+      GlobalValue::getGUIDAssumingExternalLinkage(getGlobalIdentifier());
+  setMetadata(
+      LLVMContext::MD_unique_id,
+      MDNode::get(getContext(), {ConstantAsMetadata::get(ConstantInt::get(
+                                    Type::getInt64Ty(getContext()), G))}));
+}
+
+GlobalValue::GUID GlobalValue::getGUID() const {
+  if (isDeclaration()) {
+    return GlobalValue::getGUIDAssumingExternalLinkage(getGlobalIdentifier());
+  }
+  if (isa<GlobalAlias>(this)) {
+    return GlobalValue::getGUIDAssumingExternalLinkage(getGlobalIdentifier());
+  }
+
+  auto *MD = getMetadata(LLVMContext::MD_unique_id);
+  assert(MD != nullptr && "GUID was not assigned before calling GetGUID()");
+  return cast<ConstantInt>(cast<ConstantAsMetadata>(MD->getOperand(0))
+                               ->getValue()
+                               ->stripPointerCasts())
+      ->getZExtValue();
+}
+
 void GlobalValue::removeFromParent() {
   switch (getValueID()) {
 #define HANDLE_GLOBAL_VALUE(NAME)                                              \
