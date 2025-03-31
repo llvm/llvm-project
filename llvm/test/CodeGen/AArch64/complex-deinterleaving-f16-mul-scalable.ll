@@ -46,7 +46,7 @@ entry:
 define <vscale x 8 x half> @complex_mul_v8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b) {
 ; CHECK-LABEL: complex_mul_v8f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z2.h, #0 // =0x0
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    fcmla z2.h, p0/m, z1.h, z0.h, #0
 ; CHECK-NEXT:    fcmla z2.h, p0/m, z1.h, z0.h, #90
@@ -72,8 +72,8 @@ entry:
 define <vscale x 16 x half> @complex_mul_v16f16(<vscale x 16 x half> %a, <vscale x 16 x half> %b) {
 ; CHECK-LABEL: complex_mul_v16f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z4.h, #0 // =0x0
-; CHECK-NEXT:    mov z5.h, #0 // =0x0
+; CHECK-NEXT:    movi v4.2d, #0000000000000000
+; CHECK-NEXT:    movi v5.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    fcmla z5.h, p0/m, z2.h, z0.h, #0
 ; CHECK-NEXT:    fcmla z4.h, p0/m, z3.h, z1.h, #0
@@ -103,10 +103,10 @@ entry:
 define <vscale x 32 x half> @complex_mul_v32f16(<vscale x 32 x half> %a, <vscale x 32 x half> %b) {
 ; CHECK-LABEL: complex_mul_v32f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z24.h, #0 // =0x0
-; CHECK-NEXT:    mov z25.h, #0 // =0x0
-; CHECK-NEXT:    mov z26.h, #0 // =0x0
-; CHECK-NEXT:    mov z27.h, #0 // =0x0
+; CHECK-NEXT:    movi v24.2d, #0000000000000000
+; CHECK-NEXT:    movi v25.2d, #0000000000000000
+; CHECK-NEXT:    movi v26.2d, #0000000000000000
+; CHECK-NEXT:    movi v27.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    fcmla z24.h, p0/m, z4.h, z0.h, #0
 ; CHECK-NEXT:    fcmla z25.h, p0/m, z5.h, z1.h, #0

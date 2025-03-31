@@ -180,7 +180,7 @@ define <vscale x 2 x i64> @zero_fill_non_zero_index(<vscale x 2 x i1> %pg, <vsca
 ; CHECK-NEXT:    uminv d3, p0, z0.d
 ; CHECK-NEXT:    mov z2.d, x8
 ; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    mov z0.d, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    cmpeq p0.d, p1/z, z1.d, z2.d
 ; CHECK-NEXT:    fmov x8, d3
 ; CHECK-NEXT:    mov z0.d, p0/m, x8
@@ -196,7 +196,7 @@ define <vscale x 4 x i64> @zero_fill_type_mismatch(<vscale x 2 x i1> %pg, <vscal
 ; CHECK-LABEL: zero_fill_type_mismatch:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uminv d0, p0, z0.d
-; CHECK-NEXT:    mov z1.d, #0 // =0x0
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    ret
   %t1 = call i64 @llvm.aarch64.sve.uminv.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a)
   %t2 = insertelement <vscale x 4 x i64> zeroinitializer, i64 %t1, i64 0
@@ -211,7 +211,7 @@ define <vscale x 2 x i64> @zero_fill_no_zero_upper_lanes(<vscale x 2 x i1> %pg, 
 ; CHECK-LABEL: zero_fill_no_zero_upper_lanes:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umin z0.d, p0/m, z0.d, z0.d
-; CHECK-NEXT:    mov z1.d, #0 // =0x0
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.d, vl1
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    mov z1.d, p0/m, x8

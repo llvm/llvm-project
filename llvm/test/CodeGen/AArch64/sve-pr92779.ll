@@ -4,8 +4,8 @@
 define void @main(ptr %0) {
 ; CHECK-LABEL: main:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z0.d, #0 // =0x0
-; CHECK-NEXT:    mov z1.d, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.d, vl1
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uzp1 v0.2s, v1.2s, v0.2s

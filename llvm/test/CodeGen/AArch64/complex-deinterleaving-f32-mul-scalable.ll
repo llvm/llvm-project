@@ -7,7 +7,7 @@ target triple = "aarch64"
 define <vscale x 4 x float> @complex_mul_v4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: complex_mul_v4f32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z2.s, #0 // =0x0
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    fcmla z2.s, p0/m, z1.s, z0.s, #0
 ; CHECK-NEXT:    fcmla z2.s, p0/m, z1.s, z0.s, #90
@@ -34,8 +34,8 @@ entry:
 define <vscale x 8 x float> @complex_mul_v8f32(<vscale x 8 x float> %a, <vscale x 8 x float> %b) {
 ; CHECK-LABEL: complex_mul_v8f32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z4.s, #0 // =0x0
-; CHECK-NEXT:    mov z5.s, #0 // =0x0
+; CHECK-NEXT:    movi v4.2d, #0000000000000000
+; CHECK-NEXT:    movi v5.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    fcmla z5.s, p0/m, z2.s, z0.s, #0
 ; CHECK-NEXT:    fcmla z4.s, p0/m, z3.s, z1.s, #0
@@ -65,10 +65,10 @@ entry:
 define <vscale x 16 x float> @complex_mul_v16f32(<vscale x 16 x float> %a, <vscale x 16 x float> %b) {
 ; CHECK-LABEL: complex_mul_v16f32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z24.s, #0 // =0x0
-; CHECK-NEXT:    mov z25.s, #0 // =0x0
-; CHECK-NEXT:    mov z26.s, #0 // =0x0
-; CHECK-NEXT:    mov z27.s, #0 // =0x0
+; CHECK-NEXT:    movi v24.2d, #0000000000000000
+; CHECK-NEXT:    movi v25.2d, #0000000000000000
+; CHECK-NEXT:    movi v26.2d, #0000000000000000
+; CHECK-NEXT:    movi v27.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    fcmla z24.s, p0/m, z4.s, z0.s, #0
 ; CHECK-NEXT:    fcmla z25.s, p0/m, z5.s, z1.s, #0

@@ -1250,7 +1250,7 @@ define <vscale x 8 x half> @dup_ld1rh_half_passthruzero_nxv8f16(<vscale x 8 x i1
 ;
 ; CHECK-NO-LD1R-LABEL: dup_ld1rh_half_passthruzero_nxv8f16:
 ; CHECK-NO-LD1R:       // %bb.0:
-; CHECK-NO-LD1R-NEXT:    mov z0.h, #0 // =0x0
+; CHECK-NO-LD1R-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NO-LD1R-NEXT:    ldr h1, [x0]
 ; CHECK-NO-LD1R-NEXT:    mov z0.h, p0/m, h1
 ; CHECK-NO-LD1R-NEXT:    ret
@@ -1266,7 +1266,7 @@ define <vscale x 4 x float> @dup_ld1rs_float_passthruzero_nxv4f32(<vscale x 4 x 
 ;
 ; CHECK-NO-LD1R-LABEL: dup_ld1rs_float_passthruzero_nxv4f32:
 ; CHECK-NO-LD1R:       // %bb.0:
-; CHECK-NO-LD1R-NEXT:    mov z0.s, #0 // =0x0
+; CHECK-NO-LD1R-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NO-LD1R-NEXT:    ldr s1, [x0]
 ; CHECK-NO-LD1R-NEXT:    mov z0.s, p0/m, s1
 ; CHECK-NO-LD1R-NEXT:    ret
@@ -1282,7 +1282,7 @@ define <vscale x 2 x double> @dup_ld1rd_double_passthruzero_nxv2f64(<vscale x 2 
 ;
 ; CHECK-NO-LD1R-LABEL: dup_ld1rd_double_passthruzero_nxv2f64:
 ; CHECK-NO-LD1R:       // %bb.0:
-; CHECK-NO-LD1R-NEXT:    mov z0.d, #0 // =0x0
+; CHECK-NO-LD1R-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NO-LD1R-NEXT:    ldr d1, [x0]
 ; CHECK-NO-LD1R-NEXT:    mov z0.d, p0/m, d1
 ; CHECK-NO-LD1R-NEXT:    ret
@@ -1298,7 +1298,7 @@ define <vscale x 4 x half> @dup_ld1rh_half_passthruzero_nxv4f16(<vscale x 4 x i1
 ;
 ; CHECK-NO-LD1R-LABEL: dup_ld1rh_half_passthruzero_nxv4f16:
 ; CHECK-NO-LD1R:       // %bb.0:
-; CHECK-NO-LD1R-NEXT:    mov z0.h, #0 // =0x0
+; CHECK-NO-LD1R-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NO-LD1R-NEXT:    ldr h1, [x0]
 ; CHECK-NO-LD1R-NEXT:    mov z0.h, p0/m, h1
 ; CHECK-NO-LD1R-NEXT:    ret
@@ -1314,7 +1314,7 @@ define <vscale x 2 x half> @dup_ld1rh_half_passthruzero_nxv2f16(<vscale x 2 x i1
 ;
 ; CHECK-NO-LD1R-LABEL: dup_ld1rh_half_passthruzero_nxv2f16:
 ; CHECK-NO-LD1R:       // %bb.0:
-; CHECK-NO-LD1R-NEXT:    mov z0.h, #0 // =0x0
+; CHECK-NO-LD1R-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NO-LD1R-NEXT:    ldr h1, [x0]
 ; CHECK-NO-LD1R-NEXT:    mov z0.h, p0/m, h1
 ; CHECK-NO-LD1R-NEXT:    ret
@@ -1330,7 +1330,7 @@ define <vscale x 2 x float> @dup_ld1rs_float_passthruzero_nxv2f32(<vscale x 2 x 
 ;
 ; CHECK-NO-LD1R-LABEL: dup_ld1rs_float_passthruzero_nxv2f32:
 ; CHECK-NO-LD1R:       // %bb.0:
-; CHECK-NO-LD1R-NEXT:    mov z0.s, #0 // =0x0
+; CHECK-NO-LD1R-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NO-LD1R-NEXT:    ldr s1, [x0]
 ; CHECK-NO-LD1R-NEXT:    mov z0.s, p0/m, s1
 ; CHECK-NO-LD1R-NEXT:    ret
