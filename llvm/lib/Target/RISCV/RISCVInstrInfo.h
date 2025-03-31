@@ -307,6 +307,15 @@ public:
   static bool isLdStSafeToPair(const MachineInstr &LdSt,
                                const TargetRegisterInfo *TRI);
 
+  /// Return the result of the evaluation of C0 CC C1, where CC is a
+  /// RISCVCC::CondCode.
+  static bool evaluateCondBranch(unsigned CC, int64_t C0, int64_t C1);
+
+  /// Return true if the operand is a load immediate instruction and
+  /// sets Imm to the immediate value.
+  static bool isFromLoadImm(const MachineRegisterInfo &MRI,
+                            const MachineOperand &Op, int64_t &Imm);
+
 protected:
   const RISCVSubtarget &STI;
 
