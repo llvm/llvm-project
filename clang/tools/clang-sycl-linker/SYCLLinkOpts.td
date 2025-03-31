@@ -27,7 +27,7 @@ def device_libs_EQ : CommaJoined<["--", "-"], "device-libs=">,
 def arch_EQ : Joined<["--", "-"], "arch=">,
               Flags<[LinkerOnlyOption]>,
               MetaVarName<"<arch>">,
-              HelpText<"The device subarchitecture">;
+              HelpText<"The device architecture">;
 def triple_EQ : Joined<["--", "-"], "triple=">,
                 Flags<[LinkerOnlyOption]>,
                 MetaVarName<"<triple>">,
