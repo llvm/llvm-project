@@ -12071,6 +12071,37 @@ NamespaceDecl *Sema::getOrCreateStdNamespace() {
   return getStdNamespace();
 }
 
+/// Check that the template-head of this class template is acceptable for
+/// a declaration of 'std::initializer_list', and optionally diagnose if
+/// it is not.
+/// \returns true if any issues were found.
+static bool CheckStdInitializerList(Sema &S, ClassTemplateDecl *Template,
+                                    bool Diagnose) {
+  TemplateParameterList *Params = Template->getTemplateParameters();
+  int ErrorKind = -1;
+
+  if (Params->size() != 1)
+    ErrorKind = 0; // must have exactly one template parameter
+  else if (Template->hasAssociatedConstraints())
+    ErrorKind = 1; // cannot have associated constraints
+  else {
+    auto *Param = dyn_cast<TemplateTypeParmDecl>(Params->getParam(0));
+    if (!Param)
+      ErrorKind = 2; // must have a type template parameter
+    else if (Param->hasDefaultArgument())
+      ErrorKind = 3; // cannot have default template arguments
+    else if (Param->isTemplateParameterPack())
+      ErrorKind = 4; // cannot be a variadic template
+    else
+      return false;
+  }
+
+  if (Diagnose)
+    S.Diag(Template->getLocation(), diag::err_malformed_std_initializer_list)
+        << Params->getSourceRange() << ErrorKind;
+  return true;
+}
+
 bool Sema::isStdInitializerList(QualType Ty, QualType *Element) {
   assert(getLangOpts().CPlusPlus &&
          "Looking for std::initializer_list outside of C++.");
@@ -12118,10 +12149,7 @@ bool Sema::isStdInitializerList(QualType Ty, QualType *Element) {
       return false;
     // This is a template called std::initializer_list, but is it the right
     // template?
-    TemplateParameterList *Params = Template->getTemplateParameters();
-    if (Params->getMinRequiredArguments() != 1)
-      return false;
-    if (!isa<TemplateTypeParmDecl>(Params->getParam(0)))
+    if (CheckStdInitializerList(*this, Template, /*Diagnose=*/false))
       return false;
 
     // It's the right template.
@@ -12137,7 +12165,8 @@ bool Sema::isStdInitializerList(QualType Ty, QualType *Element) {
   return true;
 }
 
-static ClassTemplateDecl *LookupStdInitializerList(Sema &S, SourceLocation Loc){
+static ClassTemplateDecl *LookupStdInitializerList(Sema &S,
+                                                   SourceLocation Loc) {
   NamespaceDecl *Std = S.getStdNamespace();
   if (!Std) {
     S.Diag(Loc, diag::err_implied_std_initializer_list_not_found);
@@ -12155,16 +12184,16 @@ static ClassTemplateDecl *LookupStdInitializerList(Sema &S, SourceLocation Loc){
     Result.suppressDiagnostics();
     // We found something weird. Complain about the first thing we found.
     NamedDecl *Found = *Result.begin();
-    S.Diag(Found->getLocation(), diag::err_malformed_std_initializer_list);
+    S.Diag(Found->getLocation(), diag::err_malformed_std_initializer_list)
+        << 5 /* must be a class template */;
+    S.Diag(Loc, diag::note_used_here);
     return nullptr;
   }
 
   // We found some template called std::initializer_list. Now verify that it's
   // correct.
-  TemplateParameterList *Params = Template->getTemplateParameters();
-  if (Params->getMinRequiredArguments() != 1 ||
-      !isa<TemplateTypeParmDecl>(Params->getParam(0))) {
-    S.Diag(Template->getLocation(), diag::err_malformed_std_initializer_list);
+  if (CheckStdInitializerList(S, Template, /*Diagnose=*/true)) {
+    S.Diag(Loc, diag::note_used_here);
     return nullptr;
   }
 
