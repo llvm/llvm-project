@@ -1,4 +1,4 @@
-//===- llvm/CodeGen/GlobalISel/GISelKnownBits.h ---------------*- C++ -*-===//
+//===- llvm/CodeGen/GlobalISel/GISelValueTracking.h -------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGEN_GLOBALISEL_GISELKNOWNBITS_H
-#define LLVM_CODEGEN_GLOBALISEL_GISELKNOWNBITS_H
+#ifndef LLVM_CODEGEN_GLOBALISEL_GISELVALUETRACKING_H
+#define LLVM_CODEGEN_GLOBALISEL_GISELVALUETRACKING_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
@@ -26,7 +26,7 @@ namespace llvm {
 class TargetLowering;
 class DataLayout;
 
-class GISelKnownBits : public GISelChangeObserver {
+class GISelValueTracking : public GISelChangeObserver {
   MachineFunction &MF;
   MachineRegisterInfo &MRI;
   const TargetLowering &TL;
@@ -36,23 +36,18 @@ class GISelKnownBits : public GISelChangeObserver {
   SmallDenseMap<Register, KnownBits, 16> ComputeKnownBitsCache;
 
   void computeKnownBitsMin(Register Src0, Register Src1, KnownBits &Known,
-                           const APInt &DemandedElts,
-                           unsigned Depth = 0);
+                           const APInt &DemandedElts, unsigned Depth = 0);
 
   unsigned computeNumSignBitsMin(Register Src0, Register Src1,
                                  const APInt &DemandedElts, unsigned Depth = 0);
 
 public:
-  GISelKnownBits(MachineFunction &MF, unsigned MaxDepth = 6);
-  virtual ~GISelKnownBits() = default;
+  GISelValueTracking(MachineFunction &MF, unsigned MaxDepth = 6);
+  virtual ~GISelValueTracking() = default;
 
-  const MachineFunction &getMachineFunction() const {
-    return MF;
-  }
+  const MachineFunction &getMachineFunction() const { return MF; }
 
-  const DataLayout &getDataLayout() const {
-    return DL;
-  }
+  const DataLayout &getDataLayout() const { return DL; }
 
   virtual void computeKnownBitsImpl(Register R, KnownBits &Known,
                                     const APInt &DemandedElts,
@@ -83,8 +78,7 @@ public:
   /// predicate to simplify operations downstream.
   bool signBitIsZero(Register Op);
 
-  static void computeKnownBitsForAlignment(KnownBits &Known,
-                                           Align Alignment) {
+  static void computeKnownBitsForAlignment(KnownBits &Known, Align Alignment) {
     // The low bits are known zero if the pointer is aligned.
     Known.Zero.setLowBits(Log2(Alignment));
   }
@@ -103,26 +97,26 @@ protected:
 };
 
 /// To use KnownBitsInfo analysis in a pass,
-/// KnownBitsInfo &Info = getAnalysis<GISelKnownBitsInfoAnalysis>().get(MF);
+/// KnownBitsInfo &Info = getAnalysis<GISelValueTrackingInfoAnalysis>().get(MF);
 /// Add to observer if the Info is caching.
 /// WrapperObserver.addObserver(Info);
 
 /// Eventually add other features such as caching/ser/deserializing
-/// to MIR etc. Those implementations can derive from GISelKnownBits
+/// to MIR etc. Those implementations can derive from GISelValueTracking
 /// and override computeKnownBitsImpl.
-class GISelKnownBitsAnalysis : public MachineFunctionPass {
-  std::unique_ptr<GISelKnownBits> Info;
+class GISelValueTrackingAnalysis : public MachineFunctionPass {
+  std::unique_ptr<GISelValueTracking> Info;
 
 public:
   static char ID;
-  GISelKnownBitsAnalysis() : MachineFunctionPass(ID) {
-    initializeGISelKnownBitsAnalysisPass(*PassRegistry::getPassRegistry());
+  GISelValueTrackingAnalysis() : MachineFunctionPass(ID) {
+    initializeGISelValueTrackingAnalysisPass(*PassRegistry::getPassRegistry());
   }
-  GISelKnownBits &get(MachineFunction &MF);
+  GISelValueTracking &get(MachineFunction &MF);
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnMachineFunction(MachineFunction &MF) override;
   void releaseMemory() override { Info.reset(); }
 };
 } // namespace llvm
 
-#endif // LLVM_CODEGEN_GLOBALISEL_GISELKNOWNBITS_H
+#endif // LLVM_CODEGEN_GLOBALISEL_GISELVALUETRACKING_H

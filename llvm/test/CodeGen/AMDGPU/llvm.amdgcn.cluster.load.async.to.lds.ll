@@ -20,8 +20,8 @@ define amdgpu_ps void @cluster_load_async_to_lds_b8_vaddr(ptr addrspace(1) %gadd
 ; GFX1250-GISEL:       ; %bb.0: ; %entry
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX1250-GISEL-NEXT:    s_mov_b32 m0, s0
 ; GFX1250-GISEL-NEXT:    cluster_load_async_to_lds_b8 v2, v[0:1], off offset:16 th:TH_LOAD_NT
 ; GFX1250-GISEL-NEXT:    s_endpgm
@@ -42,7 +42,8 @@ define amdgpu_ps void @cluster_load_async_to_lds_b8_vaddr_imm_mask(ptr addrspace
 ; GFX1250-GISEL-LABEL: cluster_load_async_to_lds_b8_vaddr_imm_mask:
 ; GFX1250-GISEL:       ; %bb.0: ; %entry
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX1250-GISEL-NEXT:    s_mov_b32 m0, 15
 ; GFX1250-GISEL-NEXT:    cluster_load_async_to_lds_b8 v2, v[0:1], off offset:16
 ; GFX1250-GISEL-NEXT:    s_endpgm
@@ -78,8 +79,8 @@ define amdgpu_ps void @cluster_load_async_to_lds_b32_vaddr(ptr addrspace(1) %gad
 ; GFX1250-GISEL:       ; %bb.0: ; %entry
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX1250-GISEL-NEXT:    s_mov_b32 m0, s0
 ; GFX1250-GISEL-NEXT:    cluster_load_async_to_lds_b32 v2, v[0:1], off offset:16 th:TH_LOAD_HT scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_endpgm
@@ -100,7 +101,8 @@ define amdgpu_ps void @cluster_load_async_to_lds_b32_vaddr_imm_mask(ptr addrspac
 ; GFX1250-GISEL-LABEL: cluster_load_async_to_lds_b32_vaddr_imm_mask:
 ; GFX1250-GISEL:       ; %bb.0: ; %entry
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX1250-GISEL-NEXT:    s_mov_b32 m0, 15
 ; GFX1250-GISEL-NEXT:    cluster_load_async_to_lds_b32 v2, v[0:1], off offset:16
 ; GFX1250-GISEL-NEXT:    s_endpgm
@@ -136,8 +138,8 @@ define amdgpu_ps void @cluster_load_async_to_lds_b64_vaddr(ptr addrspace(1) %gad
 ; GFX1250-GISEL:       ; %bb.0: ; %entry
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX1250-GISEL-NEXT:    s_mov_b32 m0, s0
 ; GFX1250-GISEL-NEXT:    cluster_load_async_to_lds_b64 v2, v[0:1], off offset:16 th:TH_LOAD_NT_HT scope:SCOPE_DEV
 ; GFX1250-GISEL-NEXT:    s_endpgm
@@ -158,7 +160,8 @@ define amdgpu_ps void @cluster_load_async_to_lds_b64_vaddr_imm_mask( ptr addrspa
 ; GFX1250-GISEL-LABEL: cluster_load_async_to_lds_b64_vaddr_imm_mask:
 ; GFX1250-GISEL:       ; %bb.0: ; %entry
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX1250-GISEL-NEXT:    s_movk_i32 m0, 0x7f
 ; GFX1250-GISEL-NEXT:    cluster_load_async_to_lds_b64 v2, v[0:1], off offset:16
 ; GFX1250-GISEL-NEXT:    s_endpgm
@@ -194,8 +197,8 @@ define amdgpu_ps void @cluster_load_async_to_lds_b128_vaddr(ptr addrspace(1) %ga
 ; GFX1250-GISEL:       ; %bb.0: ; %entry
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX1250-GISEL-NEXT:    s_mov_b32 m0, s0
 ; GFX1250-GISEL-NEXT:    cluster_load_async_to_lds_b128 v2, v[0:1], off offset:16 th:TH_LOAD_BYPASS scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_endpgm
@@ -216,7 +219,8 @@ define amdgpu_ps void @cluster_load_async_to_lds_b128_vaddr_imm_mask(ptr addrspa
 ; GFX1250-GISEL-LABEL: cluster_load_async_to_lds_b128_vaddr_imm_mask:
 ; GFX1250-GISEL:       ; %bb.0: ; %entry
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 32
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX1250-GISEL-NEXT:    s_movk_i32 m0, 0x7f
 ; GFX1250-GISEL-NEXT:    cluster_load_async_to_lds_b128 v2, v[0:1], off offset:16
 ; GFX1250-GISEL-NEXT:    s_endpgm
@@ -284,9 +288,9 @@ define amdgpu_ps void @cluster_load_async_to_lds_b64_saddr_no_scale_offset(ptr a
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
 ; GFX1250-GISEL-NEXT:    v_lshlrev_b64_e32 v[2:3], 2, v[2:3]
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v4, v2
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, v5, v3, vcc_lo
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, v5, v3, vcc_lo
 ; GFX1250-GISEL-NEXT:    cluster_load_async_to_lds_b64 v0, v[2:3], off offset:16 th:TH_LOAD_NT
 ; GFX1250-GISEL-NEXT:    s_endpgm
 entry:

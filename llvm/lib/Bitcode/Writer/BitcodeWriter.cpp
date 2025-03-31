@@ -1209,8 +1209,7 @@ void ModuleBitcodeWriter::writeTypeTable() {
       TypeVals.push_back(TET->getNumTypeParameters());
       for (Type *InnerTy : TET->type_params())
         TypeVals.push_back(VE.getTypeID(InnerTy));
-      for (unsigned IntParam : TET->int_params())
-        TypeVals.push_back(IntParam);
+      llvm::append_range(TypeVals, TET->int_params());
       break;
     }
     case Type::TypedPointerTyID:
@@ -4303,10 +4302,8 @@ static void writeFunctionHeapProfileRecords(
     }
     for (auto Id : CI.StackIdIndices)
       Record.push_back(GetStackIndex(Id));
-    if (!PerModule) {
-      for (auto V : CI.Clones)
-        Record.push_back(V);
-    }
+    if (!PerModule)
+      llvm::append_range(Record, CI.Clones);
     Stream.EmitRecord(PerModule ? bitc::FS_PERMODULE_CALLSITE_INFO
                                 : bitc::FS_COMBINED_CALLSITE_INFO,
                       Record, CallsiteAbbrev);
@@ -4326,10 +4323,8 @@ static void writeFunctionHeapProfileRecords(
       assert(CallStackCount <= CallStackPos.size());
       Record.push_back(CallStackPos[CallStackCount++]);
     }
-    if (!PerModule) {
-      for (auto V : AI.Versions)
-        Record.push_back(V);
-    }
+    if (!PerModule)
+      llvm::append_range(Record, AI.Versions);
     assert(AI.ContextSizeInfos.empty() ||
            AI.ContextSizeInfos.size() == AI.MIBs.size());
     // Optionally emit the context size information if it exists.

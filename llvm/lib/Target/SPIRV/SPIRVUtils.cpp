@@ -689,8 +689,7 @@ bool sortBlocks(Function &F) {
   Order.reserve(F.size());
 
   ReversePostOrderTraversal<Function *> RPOT(&F);
-  for (BasicBlock *BB : RPOT)
-    Order.push_back(BB);
+  llvm::append_range(Order, RPOT);
 
   assert(&*F.begin() == Order[0]);
   BasicBlock *LastBlock = &*F.begin();
@@ -785,8 +784,7 @@ CallInst *buildIntrWithMD(Intrinsic::ID IntrID, ArrayRef<Type *> Types,
   SmallVector<Value *, 4> Args;
   Args.push_back(Arg2);
   Args.push_back(buildMD(Arg));
-  for (auto *Imm : Imms)
-    Args.push_back(Imm);
+  llvm::append_range(Args, Imms);
   return B.CreateIntrinsic(IntrID, {Types}, Args);
 }
 

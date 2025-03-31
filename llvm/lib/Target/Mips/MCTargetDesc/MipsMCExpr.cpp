@@ -45,7 +45,7 @@ void MipsMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   case MEK_DTPREL:
     // MEK_DTPREL is used for marking TLS DIEExpr only
     // and contains a regular sub-expression.
-    getSubExpr()->print(OS, MAI, true);
+    getSubExpr()->print(OS, MAI);
     return;
   case MEK_CALL_HI16:
     OS << "%call_hi";
@@ -125,7 +125,7 @@ void MipsMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   if (Expr->evaluateAsAbsolute(AbsVal))
     OS << AbsVal;
   else
-    Expr->print(OS, MAI, true);
+    Expr->print(OS, MAI);
   OS << ')';
 }
 

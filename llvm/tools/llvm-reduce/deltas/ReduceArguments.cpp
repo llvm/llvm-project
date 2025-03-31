@@ -12,12 +12,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceArguments.h"
-#include "Delta.h"
 #include "Utils.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/FMF.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/Operator.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 #include <set>
 #include <vector>
 
@@ -39,6 +42,8 @@ static bool callingConvRequiresArgument(const Function &F,
 /// Goes over OldF calls and replaces them with a call to NewF
 static void replaceFunctionCalls(Function &OldF, Function &NewF,
                                  const std::set<int> &ArgIndexesToKeep) {
+  LLVMContext &Ctx = OldF.getContext();
+
   const auto &Users = OldF.users();
   for (auto I = Users.begin(), E = Users.end(); I != E; )
     if (auto *CI = dyn_cast<CallInst>(*I++)) {
@@ -47,12 +52,37 @@ static void replaceFunctionCalls(Function &OldF, Function &NewF,
       if (CI->getCalledFunction() != &OldF)
         continue;
       SmallVector<Value *, 8> Args;
-      for (auto ArgI = CI->arg_begin(), E = CI->arg_end(); ArgI != E; ++ArgI)
-        if (ArgIndexesToKeep.count(ArgI - CI->arg_begin()))
-          Args.push_back(*ArgI);
+      SmallVector<AttrBuilder, 8> ArgAttrs;
 
-      CallInst *NewCI = CallInst::Create(&NewF, Args);
-      NewCI->setCallingConv(NewF.getCallingConv());
+      for (auto ArgI = CI->arg_begin(), E = CI->arg_end(); ArgI != E; ++ArgI) {
+        unsigned ArgIdx = ArgI - CI->arg_begin();
+        if (ArgIndexesToKeep.count(ArgIdx)) {
+          Args.push_back(*ArgI);
+          ArgAttrs.emplace_back(Ctx, CI->getParamAttributes(ArgIdx));
+        }
+      }
+
+      SmallVector<OperandBundleDef, 2> OpBundles;
+      CI->getOperandBundlesAsDefs(OpBundles);
+
+      CallInst *NewCI = CallInst::Create(&NewF, Args, OpBundles);
+      NewCI->setCallingConv(CI->getCallingConv());
+
+      AttrBuilder CallSiteAttrs(Ctx, CI->getAttributes().getFnAttrs());
+      NewCI->setAttributes(
+          AttributeList::get(Ctx, AttributeList::FunctionIndex, CallSiteAttrs));
+      NewCI->addRetAttrs(AttrBuilder(Ctx, CI->getRetAttributes()));
+
+      unsigned AttrIdx = 0;
+      for (auto ArgI = NewCI->arg_begin(), E = NewCI->arg_end(); ArgI != E;
+           ++ArgI, ++AttrIdx)
+        NewCI->addParamAttrs(AttrIdx, ArgAttrs[AttrIdx]);
+
+      if (auto *FPOp = dyn_cast<FPMathOperator>(NewCI))
+        cast<Instruction>(FPOp)->setFastMathFlags(CI->getFastMathFlags());
+
+      NewCI->copyMetadata(*CI);
+
       if (!CI->use_empty())
         CI->replaceAllUsesWith(NewCI);
       ReplaceInstWithInst(CI, NewCI);
@@ -67,9 +97,23 @@ static bool shouldRemoveArguments(const Function &F) {
   return !F.arg_empty() && !F.isIntrinsic();
 }
 
+static bool allFuncUsersRewritable(const Function &F) {
+  for (const Use &U : F.uses()) {
+    const CallBase *CB = dyn_cast<CallBase>(U.getUser());
+    if (!CB || !CB->isCallee(&U))
+      continue;
+
+    // TODO: Handle all CallBase cases.
+    if (!isa<CallInst>(CB))
+      return false;
+  }
+
+  return true;
+}
+
 /// Removes out-of-chunk arguments from functions, and modifies their calls
 /// accordingly. It also removes allocations of out-of-chunk arguments.
-static void extractArgumentsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
+void llvm::reduceArgumentsDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
   Module &Program = WorkItem.getModule();
   std::vector<Argument *> InitArgsToKeep;
   std::vector<Function *> Funcs;
@@ -78,7 +122,8 @@ static void extractArgumentsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
   for (auto &F : Program) {
     if (!shouldRemoveArguments(F))
       continue;
-
+    if (!allFuncUsersRewritable(F))
+      continue;
     Funcs.push_back(&F);
     for (auto &A : F.args()) {
       if (callingConvRequiresArgument(F, A) || O.shouldKeep())
@@ -124,18 +169,12 @@ static void extractArgumentsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
 
     auto *ClonedFunc = CloneFunction(F, VMap);
     // In order to preserve function order, we move Clone after old Function
+    ClonedFunc->takeName(F);
     ClonedFunc->removeFromParent();
     Program.getFunctionList().insertAfter(F->getIterator(), ClonedFunc);
 
     replaceFunctionCalls(*F, *ClonedFunc, ArgIndexesToKeep);
-    // Rename Cloned Function to Old's name
-    std::string FName = std::string(F->getName());
     F->replaceAllUsesWith(ClonedFunc);
     F->eraseFromParent();
-    ClonedFunc->setName(FName);
   }
-}
-
-void llvm::reduceArgumentsDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, extractArgumentsFromModule, "Reducing Arguments");
 }
