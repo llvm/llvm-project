@@ -133,3 +133,14 @@ SECTIONS {
 # RUN: not ld.lld a.o -T unclosed.lds 2>&1 | FileCheck %s --check-prefix=UNCLOSED
 # UNCLOSED:     error: unclosed.lds:2: unexpected EOF
 # UNCLOSED-NOT: {{.}}
+
+#--- invalid-before-brace.lds
+SECTIONS {
+  OVERLAY 0x1000 : INVALID {
+  }
+}
+
+# RUN: not ld.lld a.o -T invalid-before-brace.lds 2>&1 | FileCheck %s --check-prefix=INVALID-BEFORE-BRACE --strict-whitespace
+# INVALID-BEFORE-BRACE:{{.*}}error: invalid-before-brace.lds:2: { expected, but got INVALID
+# INVALID-BEFORE-BRACE-NEXT:>>>   OVERLAY 0x1000 : INVALID {
+# INVALID-BEFORE-BRACE-NEXT:>>>                    ^

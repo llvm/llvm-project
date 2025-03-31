@@ -565,8 +565,17 @@ SmallVector<SectionCommand *, 0> ScriptParser::readOverlay() {
     addrExpr = readExpr();
     expect(":");
   }
-  Expr lmaExpr = consume("AT") ? readParenExpr() : Expr{};
-  expect("{");
+
+  Expr lmaExpr;
+  bool noCrossRefs = false;
+  while (auto tok = till("{")) {
+    if (tok == "AT")
+      lmaExpr = readParenExpr();
+    else if (tok == "NOCROSSREFS")
+      noCrossRefs = true;
+    else
+      setError("{ expected, but got " + tok);
+  }
 
   SmallVector<SectionCommand *, 0> v;
   OutputSection *prev = nullptr;
@@ -594,6 +603,12 @@ SmallVector<SectionCommand *, 0> ScriptParser::readOverlay() {
     for (SectionCommand *od : v)
       static_cast<OutputDesc *>(od)->osec.memoryRegionName =
           std::string(regionName);
+  }
+  if (noCrossRefs) {
+    NoCrossRefCommand cmd;
+    for (SectionCommand *od : v)
+      cmd.outputSections.push_back(static_cast<OutputDesc *>(od)->osec.name);
+    ctx.script->noCrossRefs.push_back(std::move(cmd));
   }
 
   // According to the specification, at the end of the overlay, the location
