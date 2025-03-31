@@ -1757,6 +1757,9 @@ public:
   VPValue *getStepValue() { return getOperand(1); }
   const VPValue *getStepValue() const { return getOperand(1); }
 
+  /// Update the step value of the recipe.
+  void setStepValue(VPValue *V) { setOperand(1, V); }
+
   PHINode *getPHINode() const { return cast<PHINode>(getUnderlyingValue()); }
 
   /// Returns the induction descriptor for the recipe.
