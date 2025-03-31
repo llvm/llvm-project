@@ -1011,6 +1011,12 @@ static Value *foldPHINodeOrSelectInst(Instruction &I) {
   return foldSelectInst(cast<SelectInst>(I));
 }
 
+static constexpr size_t getMaxNumFixedVectorElements() {
+  // FIXME: hack. Do we have a named constant for this?
+  // SDAG SDNode can't have more than 65535 operands.
+  return std::numeric_limits<unsigned short>::max();
+}
+
 /// Returns a fixed vector type equivalent to the memory set by II or nullptr if
 /// unable to do so.
 static FixedVectorType *getVectorTypeFor(const MemSetInst &II,
@@ -1019,10 +1025,12 @@ static FixedVectorType *getVectorTypeFor(const MemSetInst &II,
   if (!Length)
     return nullptr;
 
-  APInt Val = Length->getValue();
-  if (Val.ugt(std::numeric_limits<unsigned>::max()))
+  const APInt &Val = Length->getValue();
+  if (Val.ugt(getMaxNumFixedVectorElements()))
     return nullptr;
 
+  // Element type will always be i8. TODO: Support
+  // llvm.experimental.memset.pattern?
   uint64_t MemSetLen = Val.getZExtValue();
   auto *VTy = FixedVectorType::get(II.getValue()->getType(), MemSetLen);
 
@@ -2339,11 +2347,9 @@ checkVectorTypesForPromotion(Partition &P, const DataLayout &DL,
     CandidateTys.resize(1);
   }
 
-  // FIXME: hack. Do we have a named constant for this?
-  // SDAG SDNode can't have more than 65535 operands.
   llvm::erase_if(CandidateTys, [](VectorType *VTy) {
     return cast<FixedVectorType>(VTy)->getNumElements() >
-           std::numeric_limits<unsigned short>::max();
+           getMaxNumFixedVectorElements();
   });
 
   for (VectorType *VTy : CandidateTys)
