@@ -324,8 +324,9 @@ template <class _UIntType,
           _UIntType __c,
           size_t __l,
           _UIntType __f>
-void mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::seed(
-    result_type __sd) _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK { // __w >= 2
+_LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK void
+mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b, __t, __c, __l, __f>::seed(
+    result_type __sd) { // __w >= 2
   __x_[0] = __sd & _Max;
   for (size_t __i = 1; __i < __n; ++__i)
     __x_[__i] = (__f * (__x_[__i - 1] ^ __rshift<__w - 2>(__x_[__i - 1])) + __i) & _Max;

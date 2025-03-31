@@ -349,7 +349,7 @@ class __value_func<_Rp(_ArgTypes...)> {
   typedef __base<_Rp(_ArgTypes...)> __func;
   __func* __f_;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI static __func* __as_base(void* __p) { return reinterpret_cast<__func*>(__p); }
+  _LIBCPP_NO_CFI _LIBCPP_HIDE_FROM_ABI static __func* __as_base(void* __p) { return reinterpret_cast<__func*>(__p); }
 
 public:
   _LIBCPP_HIDE_FROM_ABI __value_func() _NOEXCEPT : __f_(nullptr) {}

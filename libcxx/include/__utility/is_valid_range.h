@@ -20,7 +20,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-_LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") bool
+_LIBCPP_NO_SANITIZE("address") _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI bool
 __is_valid_range(const _Tp* __first, const _Tp* __last) {
   if (__libcpp_is_constant_evaluated()) {
     // If this is not a constant during constant evaluation, that is because __first and __last are not

@@ -45,7 +45,7 @@ struct __temp_value {
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp& get() { return *__addr(); }
 
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI _LIBCPP_CONSTEXPR_SINCE_CXX20 __temp_value(_Alloc& __alloc, _Args&&... __args)
+  _LIBCPP_NO_CFI _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __temp_value(_Alloc& __alloc, _Args&&... __args)
       : __a(__alloc) {
     _Traits::construct(__a, __addr(), std::forward<_Args>(__args)...);
   }

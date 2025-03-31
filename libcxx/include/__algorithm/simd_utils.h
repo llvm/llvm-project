@@ -126,7 +126,7 @@ template <class _Tp, size_t _Np>
   using __mask_vec = __simd_vector<bool, _Np>;
 
   // This has MSan disabled du to https://github.com/llvm/llvm-project/issues/85876
-  auto __impl = [&]<class _MaskT>(_MaskT) _LIBCPP_NO_SANITIZE("memory") noexcept {
+  auto __impl = [&]<class _MaskT> _LIBCPP_NO_SANITIZE("memory") (_MaskT) noexcept {
 #  if defined(_LIBCPP_BIG_ENDIAN)
     return std::min<size_t>(
         _Np, std::__countl_zero(__builtin_bit_cast(_MaskT, __builtin_convertvector(__vec, __mask_vec))));

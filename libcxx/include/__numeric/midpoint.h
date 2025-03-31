@@ -35,8 +35,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 20
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr enable_if_t<is_integral_v<_Tp> && !is_same_v<bool, _Tp> && !is_null_pointer_v<_Tp>, _Tp>
-midpoint(_Tp __a, _Tp __b) noexcept _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK {
+_LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
+    _LIBCPP_HIDE_FROM_ABI constexpr enable_if_t<is_integral_v<_Tp> && !is_same_v<bool, _Tp> && !is_null_pointer_v<_Tp>,
+                                                _Tp> midpoint(_Tp __a, _Tp __b) noexcept {
   using _Up                = make_unsigned_t<_Tp>;
   constexpr _Up __bitshift = numeric_limits<_Up>::digits - 1;
 

@@ -1465,7 +1465,7 @@ template <class _Rp, class... _ArgTypes>
 class __packaged_task_function<_Rp(_ArgTypes...)> {
   typedef __packaged_task_base<_Rp(_ArgTypes...)> __base;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI __base* __get_buf() { return (__base*)&__buf_; }
+  _LIBCPP_NO_CFI _LIBCPP_HIDE_FROM_ABI __base* __get_buf() { return (__base*)&__buf_; }
 
   _LIBCPP_SUPPRESS_DEPRECATED_PUSH
   typename aligned_storage<3 * sizeof(void*)>::type __buf_;

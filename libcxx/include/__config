@@ -303,8 +303,8 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #  else
 
 #    define _LIBCPP_ALIGNOF(_Tp) _Alignof(_Tp)
-#    define _ALIGNAS_TYPE(x) __attribute__((__aligned__(_LIBCPP_ALIGNOF(x))))
-#    define _ALIGNAS(x) __attribute__((__aligned__(x)))
+#    define _ALIGNAS_TYPE(x) [[__gnu__::__aligned__(_LIBCPP_ALIGNOF(x))]]
+#    define _ALIGNAS(x) [[__gnu__::__aligned__(x)]]
 #    define nullptr __nullptr
 #    define _NOEXCEPT throw()
 #    define _NOEXCEPT_(...)
@@ -431,7 +431,7 @@ typedef __char32_t char32_t;
 
 #  endif // defined(_LIBCPP_OBJECT_FORMAT_COFF)
 
-#  if __has_attribute(exclude_from_explicit_instantiation)
+#  if __has_cpp_attribute(_Clang::__exclude_from_explicit_instantiation__)
 #    define _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION __attribute__((__exclude_from_explicit_instantiation__))
 #  else
 // Try to approximate the effect of exclude_from_explicit_instantiation
@@ -817,7 +817,7 @@ typedef __char32_t char32_t;
 #  endif
 
 #  ifndef _LIBCPP_WEAK
-#    define _LIBCPP_WEAK __attribute__((__weak__))
+#    define _LIBCPP_WEAK [[__gnu__::__weak__]]
 #  endif
 
 // Thread API
@@ -969,14 +969,14 @@ typedef __char32_t char32_t;
 #  if _LIBCPP_STD_VER >= 20
 #    define _LIBCPP_CONSTINIT constinit
 #  elif __has_attribute(__require_constant_initialization__)
-#    define _LIBCPP_CONSTINIT __attribute__((__require_constant_initialization__))
+#    define _LIBCPP_CONSTINIT [[_Clang::__require_constant_initialization__]]
 #  else
 #    define _LIBCPP_CONSTINIT
 #  endif
 
 #  if defined(__CUDACC__) || defined(__CUDA_ARCH__) || defined(__CUDA_LIBDEVICE__)
 // The CUDA SDK contains an unfortunate definition for the __noinline__ macro,
-// which breaks the regular __attribute__((__noinline__)) syntax. Therefore,
+// which breaks the regular [[__gnu__::__noinline__]] syntax. Therefore,
 // when compiling for CUDA we use the non-underscored version of the noinline
 // attribute.
 //
@@ -984,9 +984,9 @@ typedef __char32_t char32_t;
 // this issue properly in the SDK headers.
 //
 // See https://github.com/llvm/llvm-project/pull/73838 for more details.
-#    define _LIBCPP_NOINLINE __attribute__((noinline))
+#    define _LIBCPP_NOINLINE [[__gnu__::noinline]]
 #  elif __has_attribute(__noinline__)
-#    define _LIBCPP_NOINLINE __attribute__((__noinline__))
+#    define _LIBCPP_NOINLINE [[__gnu__::__noinline__]]
 #  else
 #    define _LIBCPP_NOINLINE
 #  endif
@@ -1131,19 +1131,19 @@ typedef __char32_t char32_t;
 
 // Optional attributes - these are useful for a better QoI, but not required to be available
 
-#  define _LIBCPP_NOALIAS __attribute__((__malloc__))
+#  define _LIBCPP_NOALIAS [[__gnu__::__malloc__]]
 #  define _LIBCPP_NODEBUG [[__gnu__::__nodebug__]]
 #  define _LIBCPP_NO_SANITIZE(...) __attribute__((__no_sanitize__(__VA_ARGS__)))
-#  define _LIBCPP_INIT_PRIORITY_MAX __attribute__((__init_priority__(100)))
+#  define _LIBCPP_INIT_PRIORITY_MAX [[__gnu__::__init_priority__(100)]]
 #  define _LIBCPP_ATTRIBUTE_FORMAT(archetype, format_string_index, first_format_arg_index)                             \
     __attribute__((__format__(archetype, format_string_index, first_format_arg_index)))
-#  define _LIBCPP_PACKED __attribute__((__packed__))
+#  define _LIBCPP_PACKED [[__gnu__::__packed__]]
 
 // Use a function like macro to imply that it must be followed by a semicolon
 #  define _LIBCPP_FALLTHROUGH() [[fallthrough]]
 
-#  if __has_attribute(__no_sanitize__) && !defined(_LIBCPP_COMPILER_GCC)
-#    define _LIBCPP_NO_CFI __attribute__((__no_sanitize__("cfi")))
+#  if __has_cpp_attribute(_Clang::__no_sanitize__)
+#    define _LIBCPP_NO_CFI [[_Clang::__no_sanitize__("cfi")]]
 #  else
 #    define _LIBCPP_NO_CFI
 #  endif
@@ -1204,8 +1204,8 @@ typedef __char32_t char32_t;
 #  endif
 
 // Allow for build-time disabling of unsigned integer sanitization
-#  if __has_attribute(no_sanitize) && !defined(_LIBCPP_COMPILER_GCC)
-#    define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK __attribute__((__no_sanitize__("unsigned-integer-overflow")))
+#  if __has_cpp_attribute(_Clang::__no_sanitize__)
+#    define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK [[_Clang::__no_sanitize__("unsigned-integer-overflow")]]
 #  else
 #    define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
 #  endif

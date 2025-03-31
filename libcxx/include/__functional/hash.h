@@ -46,7 +46,7 @@ struct __murmur2_or_cityhash;
 
 template <class _Size>
 struct __murmur2_or_cityhash<_Size, 32> {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK _Size
+  _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK _LIBCPP_HIDE_FROM_ABI _Size
   operator()(const void* __key, _Size __len) const {
     // murmur2
     const _Size __m             = 0x5bd1e995;
@@ -82,7 +82,7 @@ struct __murmur2_or_cityhash<_Size, 32> {
 template <class _Size>
 struct __murmur2_or_cityhash<_Size, 64> {
   // cityhash64
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK _Size
+  _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK _LIBCPP_HIDE_FROM_ABI _Size
   operator()(const void* __key, _Size __len) const {
     const char* __s = static_cast<const char*>(__key);
     if (__len <= 32) {
@@ -140,7 +140,7 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI static _Size __shift_mix(_Size __val) { return __val ^ (__val >> 47); }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK static _Size __hash_len_16(_Size __u, _Size __v) {
+  _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK _LIBCPP_HIDE_FROM_ABI static _Size __hash_len_16(_Size __u, _Size __v) {
     const _Size __mul = 0x9ddfea08eb382d69ULL;
     _Size __a         = (__u ^ __v) * __mul;
     __a ^= (__a >> 47);
@@ -150,7 +150,7 @@ private:
     return __b;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK static _Size
+  _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK _LIBCPP_HIDE_FROM_ABI static _Size
   __hash_len_0_to_16(const char* __s, _Size __len) {
     if (__len > 8) {
       const _Size __a = std::__loadword<_Size>(__s);
@@ -177,7 +177,7 @@ private:
     return __k2;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK static _Size
+  _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK _LIBCPP_HIDE_FROM_ABI static _Size
   __hash_len_17_to_32(const char* __s, _Size __len) {
     const _Size __a = std::__loadword<_Size>(__s) * __k1;
     const _Size __b = std::__loadword<_Size>(__s + 8);
@@ -189,7 +189,7 @@ private:
 
   // Return a 16-byte hash for 48 bytes.  Quick and dirty.
   // Callers do best to use "random-looking" values for a and b.
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK static pair<_Size, _Size>
+  _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK _LIBCPP_HIDE_FROM_ABI static pair<_Size, _Size>
   __weak_hash_len_32_with_seeds(_Size __w, _Size __x, _Size __y, _Size __z, _Size __a, _Size __b) {
     __a += __w;
     __b             = __rotate(__b + __a + __z, 21);
@@ -201,7 +201,7 @@ private:
   }
 
   // Return a 16-byte hash for s[0] ... s[31], a, and b.  Quick and dirty.
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK static pair<_Size, _Size>
+  _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK _LIBCPP_HIDE_FROM_ABI static pair<_Size, _Size>
   __weak_hash_len_32_with_seeds(const char* __s, _Size __a, _Size __b) {
     return __weak_hash_len_32_with_seeds(
         std::__loadword<_Size>(__s),
@@ -213,7 +213,7 @@ private:
   }
 
   // Return an 8-byte hash for 33 to 64 bytes.
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK static _Size
+  _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK _LIBCPP_HIDE_FROM_ABI static _Size
   __hash_len_33_to_64(const char* __s, size_t __len) {
     _Size __z = std::__loadword<_Size>(__s + 24);
     _Size __a = std::__loadword<_Size>(__s) + (__len + std::__loadword<_Size>(__s + __len - 16)) * __k0;

@@ -208,7 +208,7 @@ private:
       return std::addressof(reinterpret_cast<_Data*>(__buffer_)->__alloc_);
     }
 
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI __value_type* __get_elem() _NOEXCEPT {
+    _LIBCPP_NO_CFI _LIBCPP_HIDE_FROM_ABI __value_type* __get_elem() _NOEXCEPT {
       return std::addressof(reinterpret_cast<_Data*>(__buffer_)->__elem_);
     }
   };
