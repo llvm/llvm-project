@@ -10,7 +10,7 @@ define void @pr126409() {
 ; CHECK:       [[FOR_BODY_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    br i1 true, label %[[FOR_BODY]], label %[[IF_END_LOOPEXIT:.*]]
+; CHECK-NEXT:    br i1 false, label %[[FOR_BODY]], label %[[IF_END_LOOPEXIT:.*]]
 ; CHECK:       [[IF_END_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[IF_END]]
 ; CHECK:       [[IF_END]]:

@@ -11804,8 +11804,10 @@ bool ScalarEvolution::isImpliedCond(CmpPredicate Pred, const SCEV *LHS,
                                           MaxValue)) {
         const SCEV *TruncFoundLHS = getTruncateExpr(FoundLHS, NarrowType);
         const SCEV *TruncFoundRHS = getTruncateExpr(FoundRHS, NarrowType);
-        if (isImpliedCondBalancedTypes(Pred, LHS, RHS, FoundPred, TruncFoundLHS,
-                                       TruncFoundRHS, CtxI))
+        // We cannot preserve samesign after truncation.
+        if (isImpliedCondBalancedTypes(
+                Pred, LHS, RHS, static_cast<ICmpInst::Predicate>(FoundPred),
+                TruncFoundLHS, TruncFoundRHS, CtxI))
           return true;
       }
     }
