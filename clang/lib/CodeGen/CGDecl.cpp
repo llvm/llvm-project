@@ -2269,7 +2269,7 @@ void CodeGenFunction::pushDestroy(QualType::DestructionKind dtorKind,
               cleanupKind & EHCleanup);
 }
 
- void CodeGenFunction::pushLifetimeExtendedDestroy(
+void CodeGenFunction::pushLifetimeExtendedDestroy(
     QualType::DestructionKind dtorKind, Address addr, QualType type) {
   CleanupKind cleanupKind = getCleanupKind(dtorKind);
   pushLifetimeExtendedDestroy(cleanupKind, addr, type, getDestroyer(dtorKind),
