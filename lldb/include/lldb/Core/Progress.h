@@ -115,8 +115,8 @@ public:
   /// Used to indicate a non-deterministic progress report
   static constexpr uint64_t kNonDeterministicTotal = UINT64_MAX;
 
-  /// The default rate limit for high frequency progress reports.
-  static constexpr std::chrono::milliseconds kDefaultRateLimit =
+  /// The default report time for high frequency progress reports.
+  static constexpr std::chrono::milliseconds kDefaultHighFrequencyReportTime =
       std::chrono::milliseconds(20);
 
 private:
