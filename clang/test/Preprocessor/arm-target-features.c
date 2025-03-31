@@ -1028,7 +1028,7 @@
 // CHECK-R52-NOT: #define __ARM_NEON 1
 // CHECK-R52-NOT: #define __ARM_NEON__
 
-// Check that on AArch32, Neon is correctly activated when the targey supports the feature
+// Check that on AArch32, Neon is correctly activated when the target supports the feature
 // RUN:  %clang -target arm-none-eabi -march=armv8-a -mfloat-abi=hard -x c -E -dM -o - %s | FileCheck -check-prefix=CHECK-SIMD %s
 // RUN:  %clang -target arm-none-eabi -mcpu=cortex-r52 -mfloat-abi=hard -x c -E -dM -o - %s | FileCheck -check-prefix=CHECK-SIMD %s
 // RUN:  %clang -target arm-none-eabi -mcpu=cortex-a57 -mfloat-abi=hard -x c -E -dM -o - %s | FileCheck -check-prefix=CHECK-SIMD %s
