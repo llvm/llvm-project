@@ -98,7 +98,6 @@ int main() {
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT:       instructions:
-// OPT-REM-EMPTY: 
 // OPT-REM-NEXT:   - String:           |
 // OPT-REM-NEXT:       cmp ult (LLVM IR 'icmp')
 // OPT-REM-NEXT:       cmp uge (LLVM IR 'icmp')
@@ -106,7 +105,6 @@ int main() {
 // OPT-REM-NEXT:       cond branch (LLVM IR 'br')
 // OPT-REM-NEXT:       trap (LLVM IR 'call')
 // OPT-REM-NEXT:       other (LLVM IR 'unreachable')
-// OPT-REM-EMPTY: 
 // OPT-REM-NEXT: ...
 
 // OPT-REM-NEXT: --- !Analysis
@@ -153,7 +151,6 @@ int main() {
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT:       instructions:
-// OPT-REM-EMPTY: 
 // OPT-REM-NEXT:   - String:          "trap (LLVM IR 'call')\nother (LLVM IR 'unreachable')"
 // OPT-REM-NEXT: ...
 

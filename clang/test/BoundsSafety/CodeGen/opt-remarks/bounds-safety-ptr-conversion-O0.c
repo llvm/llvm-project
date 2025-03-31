@@ -163,7 +163,6 @@ int main(int argc, char **argv) {
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT:       instructions:
-// OPT-REM-EMPTY: 
 // OPT-REM-NEXT:   - String:           |
 // OPT-REM-NEXT:       other (LLVM IR 'getelementptr')
 // OPT-REM-NEXT:       other (LLVM IR 'getelementptr')
@@ -203,7 +202,6 @@ int main(int argc, char **argv) {
 // OPT-REM-NEXT:       cond branch (LLVM IR 'br')
 // OPT-REM-NEXT:       cmp sle (LLVM IR 'icmp')
 // OPT-REM-NEXT:       cond branch (LLVM IR 'br')
-// OPT-REM-EMPTY: 
 // OPT-REM-NEXT: ...
 
 // OPT-REM-NEXT: --- !Analysis
@@ -224,7 +222,6 @@ int main(int argc, char **argv) {
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT:       instructions:
-// OPT-REM-EMPTY: 
 // OPT-REM-NEXT:   - String:          'other (LLVM IR ''phi'')'
 // OPT-REM-NEXT: ...
 
@@ -246,7 +243,6 @@ int main(int argc, char **argv) {
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT:       instructions:
-// OPT-REM-EMPTY: 
 // OPT-REM-NEXT:   - String:          "trap (LLVM IR 'call')\nother (LLVM IR 'unreachable')"
 // OPT-REM-NEXT: ...
 
@@ -268,7 +264,6 @@ int main(int argc, char **argv) {
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT:       instructions:
-// OPT-REM-EMPTY: 
 // OPT-REM-NEXT:   - String:           |
 // OPT-REM-NEXT:       cmp ne (LLVM IR 'icmp')
 // OPT-REM-NEXT:       cond branch (LLVM IR 'br')
@@ -276,7 +271,6 @@ int main(int argc, char **argv) {
 // OPT-REM-NEXT:       cond branch (LLVM IR 'br')
 // OPT-REM-NEXT:       cmp uge (LLVM IR 'icmp')
 // OPT-REM-NEXT:       cond branch (LLVM IR 'br')
-// OPT-REM-EMPTY: 
 // OPT-REM-NEXT: ...
 
 // OPT-REM-NEXT: --- !Analysis
@@ -297,7 +291,6 @@ int main(int argc, char **argv) {
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT:       instructions:
-// OPT-REM-EMPTY: 
 // OPT-REM-NEXT:   - String:          "trap (LLVM IR 'call')\nother (LLVM IR 'unreachable')"
 // OPT-REM-NEXT: ...
 
@@ -319,7 +312,6 @@ int main(int argc, char **argv) {
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT:       instructions:
-// OPT-REM-EMPTY: 
 // OPT-REM-NEXT:   - String:          "trap (LLVM IR 'call')\nother (LLVM IR 'unreachable')"
 // OPT-REM-NEXT: ...
 

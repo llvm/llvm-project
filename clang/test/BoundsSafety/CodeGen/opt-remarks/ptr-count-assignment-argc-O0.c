@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
 // OPT-REM: --- !Analysis
 // OPT-REM-NEXT: Pass:            annotation-remarks
 // OPT-REM-NEXT: Name:            AnnotationSummary
-// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-count-assignment-argc-O0.c',
+// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-count-assignment-argc-O0.c', 
 // OPT-REM-NEXT:                    Line: 9, Column: 0 }
 // OPT-REM-NEXT: Function:        main
 // OPT-REM-NEXT: Args:
@@ -91,7 +91,7 @@ int main(int argc, char **argv) {
 // OPT-REM-NEXT: --- !Analysis
 // OPT-REM-NEXT: Pass:            annotation-remarks
 // OPT-REM-NEXT: Name:            AnnotationSummary
-// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-count-assignment-argc-O0.c',
+// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-count-assignment-argc-O0.c', 
 // OPT-REM-NEXT:                    Line: 9, Column: 0 }
 // OPT-REM-NEXT: Function:        main
 // OPT-REM-NEXT: Args:
@@ -104,7 +104,7 @@ int main(int argc, char **argv) {
 // OPT-REM-NEXT: --- !Analysis
 // OPT-REM-NEXT: Pass:            annotation-remarks
 // OPT-REM-NEXT: Name:            BoundsSafetyCheck
-// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-count-assignment-argc-O0.c',
+// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-count-assignment-argc-O0.c', 
 // OPT-REM-NEXT:                    Line: 11, Column: 11 }
 // OPT-REM-NEXT: Function:        main
 // OPT-REM-NEXT: Args:
@@ -119,14 +119,13 @@ int main(int argc, char **argv) {
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT:       instructions:
-// OPT-REM-EMPTY:
 // OPT-REM-NEXT:   - String:          'other (LLVM IR ''load'')'
 // OPT-REM-NEXT: ...
 
 // OPT-REM-NEXT: --- !Analysis
 // OPT-REM-NEXT: Pass:            annotation-remarks
 // OPT-REM-NEXT: Name:            BoundsSafetyCheck
-// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-count-assignment-argc-O0.c',
+// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-count-assignment-argc-O0.c', 
 // OPT-REM-NEXT:                    Line: 11, Column: 44 }
 // OPT-REM-NEXT: Function:        main
 // OPT-REM-NEXT: Args:
@@ -141,14 +140,13 @@ int main(int argc, char **argv) {
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT:       instructions:
-// OPT-REM-EMPTY:
 // OPT-REM-NEXT:   - String:          "cmp eq (LLVM IR 'icmp')\ncond branch (LLVM IR 'br')"
 // OPT-REM-NEXT: ...
 
 // OPT-REM-NEXT: --- !Analysis
 // OPT-REM-NEXT: Pass:            annotation-remarks
 // OPT-REM-NEXT: Name:            BoundsSafetyCheck
-// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-count-assignment-argc-O0.c',
+// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-count-assignment-argc-O0.c', 
 // OPT-REM-NEXT:                    Line: 0, Column: 0 }
 // OPT-REM-NEXT: Function:        main
 // OPT-REM-NEXT: Args:
@@ -163,14 +161,13 @@ int main(int argc, char **argv) {
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT:       instructions:
-// OPT-REM-EMPTY:
 // OPT-REM-NEXT:   - String:          "trap (LLVM IR 'call')\nother (LLVM IR 'unreachable')"
 // OPT-REM-NEXT: ...
 
 // OPT-REM-NEXT: --- !Analysis
 // OPT-REM-NEXT: Pass:            annotation-remarks
 // OPT-REM-NEXT: Name:            BoundsSafetyCheck
-// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-count-assignment-argc-O0.c',
+// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-count-assignment-argc-O0.c', 
 // OPT-REM-NEXT:                    Line: 13, Column: 15 }
 // OPT-REM-NEXT: Function:        main
 // OPT-REM-NEXT: Args:
@@ -185,7 +182,6 @@ int main(int argc, char **argv) {
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT:       instructions:
-// OPT-REM-EMPTY:
 // OPT-REM-NEXT:   - String:           |
 // OPT-REM-NEXT:       call (LLVM IR 'call')
 // OPT-REM-NEXT:       other (LLVM IR 'getelementptr')
@@ -211,13 +207,12 @@ int main(int argc, char **argv) {
 // OPT-REM-NEXT:       other (LLVM IR 'load')
 // OPT-REM-NEXT:       other (LLVM IR 'getelementptr')
 // OPT-REM-NEXT:       other (LLVM IR 'load')
-// OPT-REM-EMPTY:
 // OPT-REM-NEXT: ...
 
 // OPT-REM-NEXT: --- !Analysis
 // OPT-REM-NEXT: Pass:            annotation-remarks
 // OPT-REM-NEXT: Name:            BoundsSafetyCheck
-// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-count-assignment-argc-O0.c',
+// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-count-assignment-argc-O0.c', 
 // OPT-REM-NEXT:                    Line: 12, Column: 5 }
 // OPT-REM-NEXT: Function:        main
 // OPT-REM-NEXT: Args:
@@ -232,7 +227,6 @@ int main(int argc, char **argv) {
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT:       instructions:
-// OPT-REM-EMPTY:
 // OPT-REM-NEXT:   - String:           |
 // OPT-REM-NEXT:       other (LLVM IR 'getelementptr')
 // OPT-REM-NEXT:       other (LLVM IR 'load')
@@ -249,13 +243,12 @@ int main(int argc, char **argv) {
 // OPT-REM-NEXT:       cond branch (LLVM IR 'br')
 // OPT-REM-NEXT:       cmp sle (LLVM IR 'icmp')
 // OPT-REM-NEXT:       cond branch (LLVM IR 'br')
-// OPT-REM-EMPTY:
 // OPT-REM-NEXT: ...
 
 // OPT-REM-NEXT: --- !Analysis
 // OPT-REM-NEXT: Pass:            annotation-remarks
 // OPT-REM-NEXT: Name:            BoundsSafetyCheck
-// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-count-assignment-argc-O0.c',
+// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-count-assignment-argc-O0.c', 
 // OPT-REM-NEXT:                    Line: 12, Column: 14 }
 // OPT-REM-NEXT: Function:        main
 // OPT-REM-NEXT: Args:
@@ -270,18 +263,16 @@ int main(int argc, char **argv) {
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT:       instructions:
-// OPT-REM-EMPTY:
 // OPT-REM-NEXT:   - String:           |
 // OPT-REM-NEXT:       cmp ule (LLVM IR 'icmp')
 // OPT-REM-NEXT:       cond branch (LLVM IR 'br')
 // OPT-REM-NEXT:       cmp ule (LLVM IR 'icmp')
-// OPT-REM-EMPTY:
 // OPT-REM-NEXT: ...
 
 // OPT-REM-NEXT: --- !Analysis
 // OPT-REM-NEXT: Pass:            annotation-remarks
 // OPT-REM-NEXT: Name:            BoundsSafetyCheck
-// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-count-assignment-argc-O0.c',
+// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-count-assignment-argc-O0.c', 
 // OPT-REM-NEXT:                    Line: 12, Column: 16 }
 // OPT-REM-NEXT: Function:        main
 // OPT-REM-NEXT: Args:
@@ -296,14 +287,13 @@ int main(int argc, char **argv) {
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT:       instructions:
-// OPT-REM-EMPTY:
 // OPT-REM-NEXT:   - String:          'other (LLVM IR ''sext'')'
 // OPT-REM-NEXT: ...
 
 // OPT-REM-NEXT: --- !Analysis
 // OPT-REM-NEXT: Pass:            annotation-remarks
 // OPT-REM-NEXT: Name:            BoundsSafetyCheck
-// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-count-assignment-argc-O0.c',
+// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-count-assignment-argc-O0.c', 
 // OPT-REM-NEXT:                    Line: 0, Column: 0 }
 // OPT-REM-NEXT: Function:        main
 // OPT-REM-NEXT: Args:
@@ -318,14 +308,13 @@ int main(int argc, char **argv) {
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT:       instructions:
-// OPT-REM-EMPTY:
 // OPT-REM-NEXT:   - String:          'other (LLVM IR ''phi'')'
 // OPT-REM-NEXT: ...
 
 // OPT-REM-NEXT: --- !Analysis
 // OPT-REM-NEXT: Pass:            annotation-remarks
 // OPT-REM-NEXT: Name:            BoundsSafetyCheck
-// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-count-assignment-argc-O0.c',
+// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-count-assignment-argc-O0.c', 
 // OPT-REM-NEXT:                    Line: 0, Column: 0 }
 // OPT-REM-NEXT: Function:        main
 // OPT-REM-NEXT: Args:
@@ -340,7 +329,6 @@ int main(int argc, char **argv) {
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT: {{^[ 	]+$}}
 // OPT-REM-NEXT:       instructions:
-// OPT-REM-EMPTY:
 // OPT-REM-NEXT:   - String:          "trap (LLVM IR 'call')\nother (LLVM IR 'unreachable')"
 // OPT-REM-NEXT: ...
 

@@ -13,7 +13,6 @@
 ; OPT-REM-NEXT:   - String:           |
 ; OPT-REM-NEXT: {{^[ 	]+$}}
 ; OPT-REM-NEXT:       The following instructions have side effects:
-; OPT-REM-EMPTY: 
 ; OPT-REM-NEXT:   - String:          '	'
 ; OPT-REM-NEXT:   - String:          '  store i32 1, ptr %ptr.ind, align 4'
 ; OPT-REM-NEXT:   - String:          "\n"

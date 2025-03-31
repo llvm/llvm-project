@@ -50,17 +50,17 @@ int main(int argc, char **argv) {
 // OPT-REM: --- !Passed
 // OPT-REM-NEXT: Pass:            inline
 // OPT-REM-NEXT: Name:            Inlined
-// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-bounds-argc-O2.c',
+// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-bounds-argc-O2.c', 
 // OPT-REM-NEXT:                    Line: 16, Column: 5 }
 // OPT-REM-NEXT: Function:        main
 // OPT-REM-NEXT: Args:
 // OPT-REM-NEXT:   - String:          ''''
 // OPT-REM-NEXT:   - Callee:          foo
-// OPT-REM-NEXT:     DebugLoc:        { File: '{{.*}}ptr-bounds-argc-O2.c',
+// OPT-REM-NEXT:     DebugLoc:        { File: '{{.*}}ptr-bounds-argc-O2.c', 
 // OPT-REM-NEXT:                        Line: 9, Column: 0 }
 // OPT-REM-NEXT:   - String:          ''' inlined into '''
 // OPT-REM-NEXT:   - Caller:          main
-// OPT-REM-NEXT:     DebugLoc:        { File: '{{.*}}ptr-bounds-argc-O2.c',
+// OPT-REM-NEXT:     DebugLoc:        { File: '{{.*}}ptr-bounds-argc-O2.c', 
 // OPT-REM-NEXT:                        Line: 13, Column: 0 }
 // OPT-REM-NEXT:   - String:          ''''
 // OPT-REM-NEXT:   - String:          ' with '
@@ -81,7 +81,7 @@ int main(int argc, char **argv) {
 // OPT-REM-NEXT: --- !Analysis
 // OPT-REM-NEXT: Pass:            annotation-remarks
 // OPT-REM-NEXT: Name:            AnnotationSummary
-// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-bounds-argc-O2.c',
+// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-bounds-argc-O2.c', 
 // OPT-REM-NEXT:                    Line: 9, Column: 0 }
 // OPT-REM-NEXT: Function:        foo
 // OPT-REM-NEXT: Args:
@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
 // OPT-REM-NEXT: --- !Analysis
 // OPT-REM-NEXT: Pass:            annotation-remarks
 // OPT-REM-NEXT: Name:            AnnotationSummary
-// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-bounds-argc-O2.c',
+// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-bounds-argc-O2.c', 
 // OPT-REM-NEXT:                    Line: 9, Column: 0 }
 // OPT-REM-NEXT: Function:        foo
 // OPT-REM-NEXT: Args:
@@ -120,7 +120,7 @@ int main(int argc, char **argv) {
 // OPT-REM-NEXT: --- !Analysis
 // OPT-REM-NEXT: Pass:            annotation-remarks
 // OPT-REM-NEXT: Name:            BoundsSafetyCheck
-// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-bounds-argc-O2.c',
+// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-bounds-argc-O2.c', 
 // OPT-REM-NEXT:                    Line: 10, Column: 16 }
 // OPT-REM-NEXT: Function:        foo
 // OPT-REM-NEXT: Args:
@@ -132,10 +132,7 @@ int main(int argc, char **argv) {
 // OPT-REM-NEXT:   - String:          "used for:\n"
 // OPT-REM-NEXT:   - String:          bounds-safety-check-ptr-lt-upper-bound, bounds-safety-check-ptr-ge-lower-bound
 // OPT-REM-NEXT:   - String:           |
-// OPT-REM-NEXT: {{^[ 	]+$}}
-// OPT-REM-NEXT: {{^[ 	]+$}}
-// OPT-REM-NEXT:       instructions:
-// OPT-REM-EMPTY:
+// OPT-REM:       instructions:
 // OPT-REM-NEXT:   - String:           |
 // OPT-REM-NEXT:       cmp ult (LLVM IR 'icmp')
 // OPT-REM-NEXT:       cmp uge (LLVM IR 'icmp')
@@ -143,13 +140,12 @@ int main(int argc, char **argv) {
 // OPT-REM-NEXT:       cond branch (LLVM IR 'br')
 // OPT-REM-NEXT:       trap (LLVM IR 'call')
 // OPT-REM-NEXT:       other (LLVM IR 'unreachable')
-// OPT-REM-EMPTY:
 // OPT-REM-NEXT: ...
 
 // OPT-REM-NEXT: --- !Analysis
 // OPT-REM-NEXT: Pass:            annotation-remarks
 // OPT-REM-NEXT: Name:            AnnotationSummary
-// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-bounds-argc-O2.c',
+// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-bounds-argc-O2.c', 
 // OPT-REM-NEXT:                    Line: 13, Column: 0 }
 // OPT-REM-NEXT: Function:        main
 // OPT-REM-NEXT: Args:
@@ -162,7 +158,7 @@ int main(int argc, char **argv) {
 // OPT-REM-NEXT: --- !Analysis
 // OPT-REM-NEXT: Pass:            annotation-remarks
 // OPT-REM-NEXT: Name:            AnnotationSummary
-// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-bounds-argc-O2.c',
+// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-bounds-argc-O2.c', 
 // OPT-REM-NEXT:                    Line: 13, Column: 0 }
 // OPT-REM-NEXT: Function:        main
 // OPT-REM-NEXT: Args:
@@ -188,7 +184,7 @@ int main(int argc, char **argv) {
 // OPT-REM-NEXT: --- !Analysis
 // OPT-REM-NEXT: Pass:            annotation-remarks
 // OPT-REM-NEXT: Name:            BoundsSafetyCheck
-// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-bounds-argc-O2.c',
+// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}ptr-bounds-argc-O2.c', 
 // OPT-REM-NEXT:                    Line: 16, Column: 5 }
 // OPT-REM-NEXT: Function:        main
 // OPT-REM-NEXT: Args:
@@ -200,10 +196,7 @@ int main(int argc, char **argv) {
 // OPT-REM-NEXT:   - String:          "used for:\n"
 // OPT-REM-NEXT:   - String:          bounds-safety-check-ptr-lt-upper-bound, bounds-safety-check-ptr-ge-lower-bound
 // OPT-REM-NEXT:   - String:           |
-// OPT-REM-NEXT: {{^[ 	]+$}}
-// OPT-REM-NEXT: {{^[ 	]+$}}
-// OPT-REM-NEXT:       instructions:
-// OPT-REM-EMPTY:
+// OPT-REM:       instructions:
 // OPT-REM-NEXT:   - String:          'other (LLVM IR ''unreachable'')'
 // OPT-REM-NEXT: ...
 
