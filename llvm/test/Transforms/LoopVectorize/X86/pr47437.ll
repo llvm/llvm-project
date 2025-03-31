@@ -91,9 +91,8 @@ define void @test_muladd(ptr noalias nocapture %d1, ptr noalias nocapture readon
 ; SSE41-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; SSE41:       vector.body:
 ; SSE41-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; SSE41-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; SSE41-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 4
-; SSE41-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP0]], 1
+; SSE41-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[INDEX]], 1
 ; SSE41-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP1]], 1
 ; SSE41-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, ptr [[S1:%.*]], i64 [[TMP2]]
 ; SSE41-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i16, ptr [[S1]], i64 [[TMP3]]
@@ -125,7 +124,7 @@ define void @test_muladd(ptr noalias nocapture %d1, ptr noalias nocapture readon
 ; SSE41-NEXT:    [[TMP23:%.*]] = mul nsw <4 x i32> [[TMP21]], [[TMP19]]
 ; SSE41-NEXT:    [[TMP24:%.*]] = add nsw <4 x i32> [[TMP22]], [[TMP16]]
 ; SSE41-NEXT:    [[TMP25:%.*]] = add nsw <4 x i32> [[TMP23]], [[TMP17]]
-; SSE41-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i32, ptr [[D1:%.*]], i64 [[TMP0]]
+; SSE41-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i32, ptr [[D1:%.*]], i64 [[INDEX]]
 ; SSE41-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i32, ptr [[TMP26]], i32 0
 ; SSE41-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i32, ptr [[TMP26]], i32 4
 ; SSE41-NEXT:    store <4 x i32> [[TMP24]], ptr [[TMP28]], align 4
@@ -185,11 +184,10 @@ define void @test_muladd(ptr noalias nocapture %d1, ptr noalias nocapture readon
 ; AVX1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX1:       vector.body:
 ; AVX1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; AVX1-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; AVX1-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 4
 ; AVX1-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 8
 ; AVX1-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 12
-; AVX1-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[TMP0]], 1
+; AVX1-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[INDEX]], 1
 ; AVX1-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[TMP1]], 1
 ; AVX1-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[TMP2]], 1
 ; AVX1-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP3]], 1
@@ -253,7 +251,7 @@ define void @test_muladd(ptr noalias nocapture %d1, ptr noalias nocapture readon
 ; AVX1-NEXT:    [[TMP49:%.*]] = add nsw <4 x i32> [[TMP45]], [[TMP33]]
 ; AVX1-NEXT:    [[TMP50:%.*]] = add nsw <4 x i32> [[TMP46]], [[TMP34]]
 ; AVX1-NEXT:    [[TMP51:%.*]] = add nsw <4 x i32> [[TMP47]], [[TMP35]]
-; AVX1-NEXT:    [[TMP52:%.*]] = getelementptr inbounds i32, ptr [[D1:%.*]], i64 [[TMP0]]
+; AVX1-NEXT:    [[TMP52:%.*]] = getelementptr inbounds i32, ptr [[D1:%.*]], i64 [[INDEX]]
 ; AVX1-NEXT:    [[TMP56:%.*]] = getelementptr inbounds i32, ptr [[TMP52]], i32 0
 ; AVX1-NEXT:    [[TMP57:%.*]] = getelementptr inbounds i32, ptr [[TMP52]], i32 4
 ; AVX1-NEXT:    [[TMP58:%.*]] = getelementptr inbounds i32, ptr [[TMP52]], i32 8

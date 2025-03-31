@@ -10,6 +10,9 @@
 #
 #===------------------------------------------------------------------------===#
 
+include(CheckCSourceCompiles)
+include(CheckIncludeFile)
+
 # The out of tree builds of the compiler and the Fortran runtime
 # must use the same setting of FLANG_RUNTIME_F128_MATH_LIB
 # to be composable. Failure to synchronize this setting may result
