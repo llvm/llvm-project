@@ -27,7 +27,7 @@
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/ByteProvider.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
-#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -16400,16 +16400,18 @@ void SITargetLowering::computeKnownBitsForFrameIndex(
   Known.Zero.setHighBits(getSubtarget()->getKnownHighZeroBitsForFrameIndex());
 }
 
-static void knownBitsForWorkitemID(const GCNSubtarget &ST, GISelKnownBits &KB,
-                                   KnownBits &Known, unsigned Dim) {
+static void knownBitsForWorkitemID(const GCNSubtarget &ST,
+                                   GISelValueTracking &VT, KnownBits &Known,
+                                   unsigned Dim) {
   unsigned MaxValue =
-      ST.getMaxWorkitemID(KB.getMachineFunction().getFunction(), Dim);
+      ST.getMaxWorkitemID(VT.getMachineFunction().getFunction(), Dim);
   Known.Zero.setHighBits(llvm::countl_zero(MaxValue));
 }
 
 void SITargetLowering::computeKnownBitsForTargetInstr(
-    GISelKnownBits &KB, Register R, KnownBits &Known, const APInt &DemandedElts,
-    const MachineRegisterInfo &MRI, unsigned Depth) const {
+    GISelValueTracking &VT, Register R, KnownBits &Known,
+    const APInt &DemandedElts, const MachineRegisterInfo &MRI,
+    unsigned Depth) const {
   const MachineInstr *MI = MRI.getVRegDef(R);
   switch (MI->getOpcode()) {
   case AMDGPU::G_INTRINSIC:
@@ -16417,13 +16419,13 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
     Intrinsic::ID IID = cast<GIntrinsic>(MI)->getIntrinsicID();
     switch (IID) {
     case Intrinsic::amdgcn_workitem_id_x:
-      knownBitsForWorkitemID(*getSubtarget(), KB, Known, 0);
+      knownBitsForWorkitemID(*getSubtarget(), VT, Known, 0);
       break;
     case Intrinsic::amdgcn_workitem_id_y:
-      knownBitsForWorkitemID(*getSubtarget(), KB, Known, 1);
+      knownBitsForWorkitemID(*getSubtarget(), VT, Known, 1);
       break;
     case Intrinsic::amdgcn_workitem_id_z:
-      knownBitsForWorkitemID(*getSubtarget(), KB, Known, 2);
+      knownBitsForWorkitemID(*getSubtarget(), VT, Known, 2);
       break;
     case Intrinsic::amdgcn_mbcnt_lo:
     case Intrinsic::amdgcn_mbcnt_hi: {
@@ -16433,7 +16435,7 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
                                  ? getSubtarget()->getWavefrontSizeLog2()
                                  : 5);
       KnownBits Known2;
-      KB.computeKnownBitsImpl(MI->getOperand(3).getReg(), Known2, DemandedElts,
+      VT.computeKnownBitsImpl(MI->getOperand(3).getReg(), Known2, DemandedElts,
                               Depth + 1);
       Known = KnownBits::add(Known, Known2);
       break;
@@ -16460,17 +16462,17 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
     auto [Dst, Src0, Src1, Src2] = MI->getFirst4Regs();
 
     KnownBits Known2;
-    KB.computeKnownBitsImpl(Src2, Known2, DemandedElts, Depth + 1);
+    VT.computeKnownBitsImpl(Src2, Known2, DemandedElts, Depth + 1);
     if (Known2.isUnknown())
       break;
 
     KnownBits Known1;
-    KB.computeKnownBitsImpl(Src1, Known1, DemandedElts, Depth + 1);
+    VT.computeKnownBitsImpl(Src1, Known1, DemandedElts, Depth + 1);
     if (Known1.isUnknown())
       break;
 
     KnownBits Known0;
-    KB.computeKnownBitsImpl(Src0, Known0, DemandedElts, Depth + 1);
+    VT.computeKnownBitsImpl(Src0, Known0, DemandedElts, Depth + 1);
     if (Known0.isUnknown())
       break;
 
@@ -16483,14 +16485,14 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
 }
 
 Align SITargetLowering::computeKnownAlignForTargetInstr(
-    GISelKnownBits &KB, Register R, const MachineRegisterInfo &MRI,
+    GISelValueTracking &VT, Register R, const MachineRegisterInfo &MRI,
     unsigned Depth) const {
   const MachineInstr *MI = MRI.getVRegDef(R);
   if (auto *GI = dyn_cast<GIntrinsic>(MI)) {
     // FIXME: Can this move to generic code? What about the case where the call
     // site specifies a lower alignment?
     Intrinsic::ID IID = GI->getIntrinsicID();
-    LLVMContext &Ctx = KB.getMachineFunction().getFunction().getContext();
+    LLVMContext &Ctx = VT.getMachineFunction().getFunction().getContext();
     AttributeList Attrs = Intrinsic::getAttributes(Ctx, IID);
     if (MaybeAlign RetAlign = Attrs.getRetAlignment())
       return *RetAlign;

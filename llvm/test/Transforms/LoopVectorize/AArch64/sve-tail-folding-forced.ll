@@ -10,6 +10,7 @@ target triple = "aarch64-unknown-linux-gnu"
 
 ; VPLANS-LABEL: Checking a loop in 'simple_memset'
 ; VPLANS:      VPlan 'Initial VPlan for VF={vscale x 1,vscale x 2,vscale x 4},UF>=1' {
+; VPLANS-NEXT: Live-in vp<[[VF:%.+]]> = VF
 ; VPLANS-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; VPLANS:      vp<[[TC:%[0-9]+]]> = original trip-count
 ; VPLANS-EMPTY:
@@ -19,15 +20,15 @@ target triple = "aarch64-unknown-linux-gnu"
 ; VPLANS-EMPTY:
 ; VPLANS-NEXT: vector.ph:
 ; VPLANS-NEXT:   EMIT vp<[[NEWTC:%[0-9]+]]> = TC > VF ? TC - VF : 0 vp<[[TC]]>
-; VPLANS-NEXT:   EMIT vp<[[VF:%.+]]> = VF * Part + ir<0>
-; VPLANS-NEXT:   EMIT vp<[[LANEMASK_ENTRY:%.+]]> = active lane mask vp<[[VF]]>, vp<[[TC]]>
+; VPLANS-NEXT:   EMIT vp<[[VF_PER_PART:%.+]]> = VF * Part + ir<0>
+; VPLANS-NEXT:   EMIT vp<[[LANEMASK_ENTRY:%.+]]> = active lane mask vp<[[VF_PER_PART]]>, vp<[[TC]]>
 ; VPLANS-NEXT: Successor(s): vector loop
 ; VPLANS-EMPTY:
 ; VPLANS-NEXT: <x1> vector loop: {
 ; VPLANS-NEXT:   vector.body:
 ; VPLANS-NEXT:     EMIT vp<[[INDV:%[0-9]+]]> = CANONICAL-INDUCTION
 ; VPLANS-NEXT:     ACTIVE-LANE-MASK-PHI vp<[[LANEMASK_PHI:%[0-9]+]]> = phi vp<[[LANEMASK_ENTRY]]>, vp<[[LANEMASK_LOOP:%.+]]>
-; VPLANS-NEXT:     vp<[[STEP:%[0-9]+]]>    = SCALAR-STEPS vp<[[INDV]]>, ir<1>
+; VPLANS-NEXT:     vp<[[STEP:%[0-9]+]]>    = SCALAR-STEPS vp<[[INDV]]>, ir<1>, vp<[[VF]]>
 ; VPLANS-NEXT:     CLONE ir<%gep> = getelementptr ir<%ptr>, vp<[[STEP]]>
 ; VPLANS-NEXT:     vp<[[VEC_PTR:%[0-9]+]]> = vector-pointer ir<%gep>
 ; VPLANS-NEXT:     WIDEN store vp<[[VEC_PTR]]>, ir<%val>, vp<[[LANEMASK_PHI]]>

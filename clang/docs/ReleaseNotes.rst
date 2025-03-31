@@ -389,6 +389,8 @@ Miscellaneous Bug Fixes
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Fixed crash when ``-print-stats`` is enabled in compiling IR files. (#GH131608)
+
 OpenACC Specific Changes
 ------------------------
 
@@ -490,6 +492,8 @@ clang-format
 - Allow specifying the language (C, C++, or Objective-C) for a ``.h`` file by
   adding a special comment (e.g. ``// clang-format Language: ObjC``) near the
   top of the file.
+- Add ``EnumTrailingComma`` option for inserting/removing commas at the end of
+  ``enum`` enumerator lists.
 
 libclang
 --------
