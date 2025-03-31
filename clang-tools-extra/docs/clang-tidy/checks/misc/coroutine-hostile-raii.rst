@@ -79,5 +79,5 @@ Options
       }
 
     Eg: `my::safe::awaitable;other::awaitable`
-    The default value of this option is an empty string.
+    Default is an empty string.
 
