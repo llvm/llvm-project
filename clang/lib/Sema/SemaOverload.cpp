@@ -8535,7 +8535,7 @@ void Sema::AddNonMemberOperatorCandidates(
       if (CandidateSet.getRewriteInfo().shouldAddReversed(*this, Args, FD)) {
 
         // As template candidates are not deduced immediately,
-        // persist the arry in the overload set.
+        // persist the array in the overload set.
         ArrayRef<Expr *> Reversed = CandidateSet.getPersistentArgsArray(
             FunctionArgs[1], FunctionArgs[0]);
         AddTemplateOverloadCandidate(FunTmpl, F.getPair(), ExplicitTemplateArgs,
@@ -10317,7 +10317,7 @@ Sema::AddArgumentDependentLookupCandidates(DeclarationName Name,
               *this, Args, FTD->getTemplatedDecl())) {
 
         // As template candidates are not deduced immediately,
-        // persist the arry in the overload set.
+        // persist the array in the overload set.
         if (ReversedArgs.empty())
           ReversedArgs = CandidateSet.getPersistentArgsArray(Args[1], Args[0]);
 
@@ -11091,7 +11091,8 @@ OverloadCandidateSet::ResultForBestCandidate(const iterator &Best) {
   return OR_Success;
 }
 
-void OverloadCandidateSet::CudaExcludeWrongSideCandidates(Sema &S) {
+void OverloadCandidateSet::CudaExcludeWrongSideCandidates(
+    Sema &S, SmallVectorImpl<OverloadCandidate *> &Candidates) {
   // [CUDA] HD->H or HD->D calls are technically not allowed by CUDA but
   // are accepted by both clang and NVCC. However, during a particular
   // compilation mode only one call variant is viable. We need to
@@ -11108,26 +11109,23 @@ void OverloadCandidateSet::CudaExcludeWrongSideCandidates(Sema &S) {
   const FunctionDecl *Caller = S.getCurFunctionDecl(/*AllowLambda=*/true);
 
   bool ContainsSameSideCandidate =
-      llvm::any_of(Candidates, [&](const OverloadCandidate &Cand) {
+      llvm::any_of(Candidates, [&](const OverloadCandidate *Cand) {
         // Check viable function only.
-        return Cand.Viable && Cand.Function &&
-               S.CUDA().IdentifyPreference(Caller, Cand.Function) ==
+        return Cand->Viable && Cand->Function &&
+               S.CUDA().IdentifyPreference(Caller, Cand->Function) ==
                    SemaCUDA::CFP_SameSide;
       });
+
   if (!ContainsSameSideCandidate)
     return;
 
-  auto IsWrongSideCandidate = [&](const OverloadCandidate &Cand) {
+  auto IsWrongSideCandidate = [&](const OverloadCandidate *Cand) {
     // Check viable function only to avoid unnecessary data copying/moving.
-    return Cand.Viable && Cand.Function &&
-           S.CUDA().IdentifyPreference(Caller, Cand.Function) ==
+    return Cand->Viable && Cand->Function &&
+           S.CUDA().IdentifyPreference(Caller, Cand->Function) ==
                SemaCUDA::CFP_WrongSide;
   };
-
-  for (auto &Cand : Candidates) {
-    if (IsWrongSideCandidate(Cand))
-      Cand.Viable = false;
-  }
+  llvm::erase_if(Candidates, IsWrongSideCandidate);
 }
 
 /// Computes the best viable function (C++ 13.3.3)
@@ -11148,9 +11146,6 @@ OverloadingResult OverloadCandidateSet::BestViableFunction(Sema &S,
          DeferredCandidates.empty() &&
              "Unexpected deferred template candidate");
 
-  if (S.getLangOpts().CUDA)
-    CudaExcludeWrongSideCandidates(S);
-
   bool TwoPhaseResolution = !DeferredCandidates.empty();
 
   if (TwoPhaseResolution) {
@@ -11160,9 +11155,6 @@ OverloadingResult OverloadCandidateSet::BestViableFunction(Sema &S,
       return ResultForBestCandidate(Best);
 
     InjectNonDeducedTemplateCandidates(S);
-
-    if (S.getLangOpts().CUDA)
-      CudaExcludeWrongSideCandidates(S);
   }
 
   return BestViableFunctionImpl(S, Loc, Best);
@@ -11170,6 +11162,7 @@ OverloadingResult OverloadCandidateSet::BestViableFunction(Sema &S,
 
 void OverloadCandidateSet::PerfectViableFunction(
     Sema &S, SourceLocation Loc, OverloadCandidateSet::iterator &Best) {
+
   Best = end();
   for (auto It = begin(); It != end(); ++It) {
     if (It->isPerfectMatch(S.getASTContext())) {
@@ -11201,6 +11194,9 @@ OverloadingResult OverloadCandidateSet::BestViableFunctionImpl(
   Candidates.reserve(this->Candidates.size());
   std::transform(begin(), end(), std::back_inserter(Candidates),
                  [](OverloadCandidate &Cand) { return &Cand; });
+
+  if (S.getLangOpts().CUDA)
+    CudaExcludeWrongSideCandidates(S, Candidates);
 
   Best = end();
   for (auto *Cand : Candidates) {
@@ -14954,7 +14950,7 @@ void Sema::LookupOverloadedBinOp(OverloadCandidateSet &CandidateSet,
   AddNonMemberOperatorCandidates(Fns, Args, CandidateSet);
 
   // As template candidates are not deduced immediately,
-  // persist the arry in the overload set.
+  // persist the array in the overload set.
   ArrayRef<Expr *> ReversedArgs;
   if (CandidateSet.getRewriteInfo().allowsReversed(Op) ||
       CandidateSet.getRewriteInfo().allowsReversed(ExtraOp))

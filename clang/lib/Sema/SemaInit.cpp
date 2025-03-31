@@ -10031,7 +10031,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
     if (TD) {
 
       // As template candidates are not deduced immediately,
-      // persist the arry in the overload set.
+      // persist the array in the overload set.
       MutableArrayRef<Expr *> TmpInits =
           Candidates.getPersistentArgsArray(Inits.size());
 

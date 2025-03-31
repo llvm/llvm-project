@@ -1388,7 +1388,8 @@ class Sema;
 
   private:
     OverloadingResult ResultForBestCandidate(const iterator &Best);
-    void CudaExcludeWrongSideCandidates(Sema &S);
+    void CudaExcludeWrongSideCandidates(
+        Sema &S, SmallVectorImpl<OverloadCandidate *> &Candidates);
     OverloadingResult
     BestViableFunctionImpl(Sema &S, SourceLocation Loc,
                            OverloadCandidateSet::iterator &Best);
@@ -1447,10 +1448,17 @@ class Sema;
     return
         // For user defined conversion we need to check against different
         // combination of CV qualifiers and look at any expicit specifier, so
-        // always deduce template candidate.
+        // always deduce template candidates.
         Kind != CSK_InitByUserDefinedConversion &&
-        Kind != CSK_InitByConstructor && Kind != CSK_CodeCompletion &&
-        Opts.CPlusPlus && (!Opts.CUDA || Opts.GPUExcludeWrongSideOverloads);
+        Kind != CSK_InitByConstructor
+        // When doing code completion, we want to see all the
+        // viable candidates.
+        && Kind != CSK_CodeCompletion &&
+        Opts.CPlusPlus
+        // When -fgpu-exclude-wrong-side-overloads, CUDA needs
+        // to exclude templates from the overload sets after they
+        // have been instantiated. See CudaExcludeWrongSideCandidates.
+        && (!Opts.CUDA || !Opts.GPUExcludeWrongSideOverloads);
   }
 
 } // namespace clang
