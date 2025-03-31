@@ -369,7 +369,7 @@ define float @flat_agent_atomic_fadd_ret_f32__offset12b_pos__amdgpu_no_fine_grai
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %ptr, i64 511
+  %gep = getelementptr inbounds float, ptr %ptr, i64 511
   %result = atomicrmw fadd ptr %gep, float %val syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
   ret float %result
 }
@@ -564,7 +564,7 @@ define float @flat_agent_atomic_fadd_ret_f32__offset12b_neg__amdgpu_no_fine_grai
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %ptr, i64 -512
+  %gep = getelementptr inbounds float, ptr %ptr, i64 -512
   %result = atomicrmw fadd ptr %gep, float %val syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
   ret float %result
 }
@@ -987,7 +987,7 @@ define void @flat_agent_atomic_fadd_noret_f32__offset12b_pos__amdgpu_no_fine_gra
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %ptr, i64 511
+  %gep = getelementptr inbounds float, ptr %ptr, i64 511
   %unused = atomicrmw fadd ptr %gep, float %val syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
   ret void
 }
@@ -1210,7 +1210,7 @@ define void @flat_agent_atomic_fadd_noret_f32__offset12b_neg__amdgpu_no_fine_gra
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %ptr, i64 -512
+  %gep = getelementptr inbounds float, ptr %ptr, i64 -512
   %unused = atomicrmw fadd ptr %gep, float %val syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
   ret void
 }
@@ -1399,7 +1399,7 @@ define float @flat_system_atomic_fadd_ret_f32__offset12b_pos__amdgpu_no_fine_gra
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %ptr, i64 511
+  %gep = getelementptr inbounds float, ptr %ptr, i64 511
   %result = atomicrmw fadd ptr %gep, float %val seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
   ret float %result
 }
@@ -1619,7 +1619,7 @@ define void @flat_system_atomic_fadd_noret_f32__offset12b_pos__amdgpu_no_fine_gr
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %ptr, i64 511
+  %gep = getelementptr inbounds float, ptr %ptr, i64 511
   %unused = atomicrmw fadd ptr %gep, float %val seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
   ret void
 }
@@ -1783,7 +1783,7 @@ define void @flat_agent_atomic_fadd_noret_f32_maybe_remote(ptr %ptr, float %val)
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %ptr, i64 511
+  %gep = getelementptr inbounds float, ptr %ptr, i64 511
   %unused = atomicrmw fadd ptr %gep, float %val syncscope("agent") seq_cst
   ret void
 }
@@ -1934,7 +1934,7 @@ define void @flat_agent_atomic_fadd_noret_f32___amdgpu_no_fine_grained_memory(pt
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %ptr, i64 511
+  %gep = getelementptr inbounds float, ptr %ptr, i64 511
   %unused = atomicrmw fadd ptr %gep, float %val syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -2151,7 +2151,7 @@ define void @flat_agent_atomic_fadd_noret_f32___amdgpu_no_fine_grained_memory__a
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %ptr, i64 511
+  %gep = getelementptr inbounds float, ptr %ptr, i64 511
   %unused = atomicrmw fadd ptr %gep, float %val syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
   ret void
 }
@@ -2315,7 +2315,7 @@ define void @flat_agent_atomic_fadd_noret_f32_amdgpu_ignore_denormal_mode(ptr %p
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %ptr, i64 511
+  %gep = getelementptr inbounds float, ptr %ptr, i64 511
   %unused = atomicrmw fadd ptr %gep, float %val syncscope("agent") seq_cst, !amdgpu.ignore.denormal.mode !0
   ret void
 }
@@ -2681,7 +2681,7 @@ define float @flat_agent_atomic_fadd_ret_f32__offset12b_pos__ftz__amdgpu_no_fine
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %ptr, i64 511
+  %gep = getelementptr inbounds float, ptr %ptr, i64 511
   %result = atomicrmw fadd ptr %gep, float %val syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret float %result
 }
@@ -2876,7 +2876,7 @@ define float @flat_agent_atomic_fadd_ret_f32__offset12b_neg__ftz__amdgpu_no_fine
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %ptr, i64 -512
+  %gep = getelementptr inbounds float, ptr %ptr, i64 -512
   %result = atomicrmw fadd ptr %gep, float %val syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret float %result
 }
@@ -3299,7 +3299,7 @@ define void @flat_agent_atomic_fadd_noret_f32__offset12b_pos__ftz__amdgpu_no_fin
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %ptr, i64 511
+  %gep = getelementptr inbounds float, ptr %ptr, i64 511
   %unused = atomicrmw fadd ptr %gep, float %val syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -3522,7 +3522,7 @@ define void @flat_agent_atomic_fadd_noret_f32__offset12b_neg__ftz__amdgpu_no_fin
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %ptr, i64 -512
+  %gep = getelementptr inbounds float, ptr %ptr, i64 -512
   %unused = atomicrmw fadd ptr %gep, float %val syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -3711,7 +3711,7 @@ define float @flat_system_atomic_fadd_ret_f32__offset12b_pos__ftz__amdgpu_no_fin
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %ptr, i64 511
+  %gep = getelementptr inbounds float, ptr %ptr, i64 511
   %result = atomicrmw fadd ptr %gep, float %val seq_cst, !amdgpu.no.fine.grained.memory !0
   ret float %result
 }
@@ -3931,7 +3931,7 @@ define void @flat_system_atomic_fadd_noret_f32__offset12b_pos__ftz__amdgpu_no_fi
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %ptr, i64 511
+  %gep = getelementptr inbounds float, ptr %ptr, i64 511
   %unused = atomicrmw fadd ptr %gep, float %val seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -4120,7 +4120,7 @@ define float @flat_agent_atomic_fadd_ret_f32__ieee__amdgpu_no_fine_grained_memor
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %ptr, i64 511
+  %gep = getelementptr inbounds float, ptr %ptr, i64 511
   %result = atomicrmw fadd ptr %gep, float %val seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
   ret float %result
 }
@@ -4340,7 +4340,7 @@ define void @flat_agent_atomic_fadd_noret_f32__ieee__amdgpu_no_fine_grained_memo
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr float, ptr %ptr, i64 511
+  %gep = getelementptr inbounds float, ptr %ptr, i64 511
   %unused = atomicrmw fadd ptr %gep, float %val seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
   ret void
 }
@@ -10056,7 +10056,7 @@ define void @flat_agent_atomic_fadd_noret_f16__offset12b__align4_pos__amdgpu_no_
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr half, ptr %ptr, i64 1023
+  %gep = getelementptr inbounds half, ptr %ptr, i64 1023
   %unused = atomicrmw fadd ptr %gep, half %val syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -10278,7 +10278,7 @@ define half @flat_agent_atomic_fadd_ret_f16__offset12b_pos__align4__amdgpu_no_fi
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v3
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr half, ptr %ptr, i64 1023
+  %gep = getelementptr inbounds half, ptr %ptr, i64 1023
   %result = atomicrmw fadd ptr %gep, half %val syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0
   ret half %result
 }
@@ -12896,7 +12896,7 @@ define bfloat @flat_agent_atomic_fadd_ret_bf16__offset12b_pos__align4__amdgpu_no
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 16, v3
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr bfloat, ptr %ptr, i64 1023
+  %gep = getelementptr inbounds bfloat, ptr %ptr, i64 1023
   %result = atomicrmw fadd ptr %gep, bfloat %val syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0
   ret bfloat %result
 }
@@ -13173,7 +13173,7 @@ define void @flat_agent_atomic_fadd_noret_bf16__offset12b__align4_pos__amdgpu_no
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr bfloat, ptr %ptr, i64 1023
+  %gep = getelementptr inbounds bfloat, ptr %ptr, i64 1023
   %unused = atomicrmw fadd ptr %gep, bfloat %val syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -14588,7 +14588,7 @@ define <2 x half> @flat_agent_atomic_fadd_ret_v2f16__offset12b_pos__amdgpu_no_fi
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr <2 x half>, ptr %ptr, i64 511
+  %gep = getelementptr inbounds <2 x half>, ptr %ptr, i64 511
   %result = atomicrmw fadd ptr %gep, <2 x half> %val syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret <2 x half> %result
 }
@@ -14792,7 +14792,7 @@ define <2 x half> @flat_agent_atomic_fadd_ret_v2f16__offset12b_neg__amdgpu_no_fi
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr <2 x half>, ptr %ptr, i64 -512
+  %gep = getelementptr inbounds <2 x half>, ptr %ptr, i64 -512
   %result = atomicrmw fadd ptr %gep, <2 x half> %val syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret <2 x half> %result
 }
@@ -15157,7 +15157,7 @@ define void @flat_agent_atomic_fadd_noret_v2f16__offset12b_pos__amdgpu_no_fine_g
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr <2 x half>, ptr %ptr, i64 511
+  %gep = getelementptr inbounds <2 x half>, ptr %ptr, i64 511
   %unused = atomicrmw fadd ptr %gep, <2 x half> %val syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -15359,7 +15359,7 @@ define void @flat_agent_atomic_fadd_noret_v2f16__offset12b_neg__amdgpu_no_fine_g
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr <2 x half>, ptr %ptr, i64 -512
+  %gep = getelementptr inbounds <2 x half>, ptr %ptr, i64 -512
   %unused = atomicrmw fadd ptr %gep, <2 x half> %val syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -15552,7 +15552,7 @@ define <2 x half> @flat_system_atomic_fadd_ret_v2f16__offset12b_pos__amdgpu_no_f
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr <2 x half>, ptr %ptr, i64 511
+  %gep = getelementptr inbounds <2 x half>, ptr %ptr, i64 511
   %result = atomicrmw fadd ptr %gep, <2 x half> %val seq_cst, !amdgpu.no.fine.grained.memory !0
   ret <2 x half> %result
 }
@@ -15741,7 +15741,7 @@ define void @flat_system_atomic_fadd_noret_v2f16__offset12b_pos__amdgpu_no_fine_
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr <2 x half>, ptr %ptr, i64 511
+  %gep = getelementptr inbounds <2 x half>, ptr %ptr, i64 511
   %unused = atomicrmw fadd ptr %gep, <2 x half> %val seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -17030,7 +17030,7 @@ define <2 x bfloat> @flat_agent_atomic_fadd_ret_v2bf16__offset12b_pos__amdgpu_no
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr <2 x bfloat>, ptr %ptr, i64 511
+  %gep = getelementptr inbounds <2 x bfloat>, ptr %ptr, i64 511
   %result = atomicrmw fadd ptr %gep, <2 x bfloat> %val syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret <2 x bfloat> %result
 }
@@ -17322,7 +17322,7 @@ define <2 x bfloat> @flat_agent_atomic_fadd_ret_v2bf16__offset12b_neg__amdgpu_no
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr <2 x bfloat>, ptr %ptr, i64 -512
+  %gep = getelementptr inbounds <2 x bfloat>, ptr %ptr, i64 -512
   %result = atomicrmw fadd ptr %gep, <2 x bfloat> %val syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret <2 x bfloat> %result
 }
@@ -17863,7 +17863,7 @@ define void @flat_agent_atomic_fadd_noret_v2bf16__offset12b_pos__amdgpu_no_fine_
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr <2 x bfloat>, ptr %ptr, i64 511
+  %gep = getelementptr inbounds <2 x bfloat>, ptr %ptr, i64 511
   %unused = atomicrmw fadd ptr %gep, <2 x bfloat> %val syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -18153,7 +18153,7 @@ define void @flat_agent_atomic_fadd_noret_v2bf16__offset12b_neg__amdgpu_no_fine_
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr <2 x bfloat>, ptr %ptr, i64 -512
+  %gep = getelementptr inbounds <2 x bfloat>, ptr %ptr, i64 -512
   %unused = atomicrmw fadd ptr %gep, <2 x bfloat> %val syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
@@ -18434,7 +18434,7 @@ define <2 x bfloat> @flat_system_atomic_fadd_ret_v2bf16__offset12b_pos__amdgpu_n
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr <2 x bfloat>, ptr %ptr, i64 511
+  %gep = getelementptr inbounds <2 x bfloat>, ptr %ptr, i64 511
   %result = atomicrmw fadd ptr %gep, <2 x bfloat> %val seq_cst, !amdgpu.no.fine.grained.memory !0
   ret <2 x bfloat> %result
 }
@@ -18711,7 +18711,7 @@ define void @flat_system_atomic_fadd_noret_v2bf16__offset12b_pos__amdgpu_no_fine
 ; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr <2 x bfloat>, ptr %ptr, i64 511
+  %gep = getelementptr inbounds <2 x bfloat>, ptr %ptr, i64 511
   %unused = atomicrmw fadd ptr %gep, <2 x bfloat> %val seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
 }
