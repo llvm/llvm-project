@@ -439,7 +439,7 @@ good_direct_call_nocfg:
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
 
-        bl      callee_ext
+        bl      callee
 
         adr     x2, 1f
         br      x2
@@ -799,7 +799,7 @@ good_direct_tailcall_nocfg:
         adr     x2, 1f
         br      x2
 1:
-        b       callee_ext
+        b       callee
         .size good_direct_tailcall_nocfg, .-good_direct_tailcall_nocfg
 
         .globl  good_indirect_tailcall_mem_nocfg
@@ -1050,70 +1050,65 @@ indirect_call_invalidates_safety:
         ret
         .size indirect_call_invalidates_safety, .-indirect_call_invalidates_safety
 
-// FIXME: Clobbering instructions are not detected because direct calls are
-//        disassembled like this:
-//
-//            0000000c:   mov     x2, x0
-//            00000010:   autiza  x2
-//            00000014:   bl      .Ltmp40    <-- callee_ext symbol is not understood,
-//                                               address of the next instruction is used instead
-//        .Ltmp40:                           <-- state is reset because of this label
-//            00000018:   blr     x2
-
         .globl  direct_call_invalidates_safety_nocfg
         .type   direct_call_invalidates_safety_nocfg,@function
 direct_call_invalidates_safety_nocfg:
 // CHECK-LABEL: GS-PAUTH: non-protected call found in function direct_call_invalidates_safety_nocfg, at address
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      blr     x2
-// CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
-// FIXME: Print the destination of BL as callee_ext instead of .LtmpN
+// CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      bl      callee
 // CHECK-LABEL: GS-PAUTH: non-protected call found in function direct_call_invalidates_safety_nocfg, at address
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      blr     x8
-// CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      bl      callee
 // CHECK-LABEL: GS-PAUTH: non-protected call found in function direct_call_invalidates_safety_nocfg, at address
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      blr     x10
-// CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      bl      callee
 // CHECK-LABEL: GS-PAUTH: non-protected call found in function direct_call_invalidates_safety_nocfg, at address
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      blr     x16
-// CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      bl      callee
 // CHECK-LABEL: GS-PAUTH: non-protected call found in function direct_call_invalidates_safety_nocfg, at address
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      blr     x18
-// CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      bl      callee
 // CHECK-LABEL: GS-PAUTH: non-protected call found in function direct_call_invalidates_safety_nocfg, at address
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      blr     x20
-// CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      bl      callee
         paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
 
         mov     x2, x0
         autiza  x2
-        bl      callee_ext
+        bl      callee
         blr     x2
 
         mov     x8, x0
         autiza  x8
-        bl      callee_ext
+        bl      callee
         blr     x8
 
         mov     x10, x0
         autiza  x10
-        bl      callee_ext
+        bl      callee
         blr     x10
 
         mov     x16, x0
         autiza  x16
-        bl      callee_ext
+        bl      callee
         blr     x16
 
         mov     x18, x0
         autiza  x18
-        bl      callee_ext
+        bl      callee
         blr     x18
 
         mov     x20, x0
         autiza  x20
-        bl      callee_ext
+        bl      callee
         blr     x20
 
         adr     x2, 1f
