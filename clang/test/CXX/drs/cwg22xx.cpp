@@ -173,12 +173,17 @@ B b;
 struct X {
   X(float); // #cwg2273-X
   X(void*, int = 0) = delete;
+  X(int, const int*) = delete;
+  X(unsigned, int()) = delete;
 };
 
 struct Y : X {
   using X::X; // #cwg2273-Y1
   Y(double); // #cwg2273-Y2
   Y(void* const, long = 1);
+  using IA = int[42];
+  Y(int, const IA);
+  Y(unsigned, int (*)(void));
 };
 
 Y y = 1;
@@ -187,6 +192,8 @@ Y y = 1;
 //   since-cxx11-note@#cwg2273-Y1 {{constructor from base class 'X' inherited here}}
 //   since-cxx11-note@#cwg2273-Y2 {{candidate constructor}}
 Y z = nullptr;
+Y ya(1, nullptr);
+Y yf(1u, nullptr);
 #endif
 } // namespace cwg2273
 
