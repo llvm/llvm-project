@@ -131,8 +131,8 @@ public:
   bool ReadHeaderSearchPaths(const HeaderSearchOptions &HSOpts,
                              bool Complain) override {
     std::vector<std::string> VFSOverlayFiles = HSOpts.VFSOverlayFiles;
-    PrebuiltModuleVFSMap.insert(
-        {CurrentFile, llvm::StringSet<>(VFSOverlayFiles)});
+    PrebuiltModuleVFSMap.try_emplace(CurrentFile, llvm::from_range,
+                                     VFSOverlayFiles);
     return checkHeaderSearchPaths(
         HSOpts, CI.getHeaderSearchOpts(), Complain ? &Diags : nullptr, CI.getLangOpts());
   }
