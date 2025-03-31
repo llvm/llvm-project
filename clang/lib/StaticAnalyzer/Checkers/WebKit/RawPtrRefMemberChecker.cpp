@@ -245,7 +245,6 @@ public:
                                  BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
     Report->addRange(Member->getSourceRange());
-    Report->setDeclWithIssue(ClassCXXRD);
     BR->emitReport(std::move(Report));
   }
 
