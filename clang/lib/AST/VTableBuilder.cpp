@@ -1735,8 +1735,8 @@ void ItaniumVTableBuilder::LayoutPrimaryAndSecondaryVTables(
       const CXXMethodDecl *MD = I.first;
       const MethodInfo &MI = I.second;
       if (const CXXDestructorDecl *DD = dyn_cast<CXXDestructorDecl>(MD)) {
-        MethodVTableIndices[GlobalDecl(DD, Dtor_Complete)]
-            = MI.VTableIndex - AddressPoint;
+        MethodVTableIndices[GlobalDecl(DD, Dtor_Complete)] =
+            MI.VTableIndex - AddressPoint;
         MethodVTableIndices[GlobalDecl(DD, Dtor_Deleting)]
             = MI.VTableIndex + 1 - AddressPoint;
       } else {
@@ -2657,7 +2657,11 @@ private:
       MethodVFTableLocation Loc(MI.VBTableIndex, WhichVFPtr.getVBaseWithVPtr(),
                                 WhichVFPtr.NonVirtualOffset, MI.VFTableIndex);
       if (const CXXDestructorDecl *DD = dyn_cast<CXXDestructorDecl>(MD)) {
-        MethodVFTableLocations[GlobalDecl(DD, Dtor_Deleting)] = Loc;
+        // In Microsoft ABI vftable always references vector deleting dtor.
+        CXXDtorType DtorTy = Context.getTargetInfo().getCXXABI().isMicrosoft()
+                                 ? Dtor_VectorDeleting
+                                 : Dtor_Deleting;
+        MethodVFTableLocations[GlobalDecl(DD, DtorTy)] = Loc;
       } else {
         MethodVFTableLocations[MD] = Loc;
       }
@@ -3287,7 +3291,10 @@ void VFTableBuilder::dumpLayout(raw_ostream &Out) {
       const CXXDestructorDecl *DD = Component.getDestructorDecl();
 
       DD->printQualifiedName(Out);
-      Out << "() [scalar deleting]";
+      if (Context.getTargetInfo().getCXXABI().isMicrosoft())
+        Out << "() [vector deleting]";
+      else
+        Out << "() [scalar deleting]";
 
       if (DD->isPureVirtual())
         Out << " [pure]";
@@ -3757,7 +3764,7 @@ void MicrosoftVTableContext::dumpMethodLocations(
         PredefinedIdentKind::PrettyFunctionNoVirtual, MD);
 
     if (isa<CXXDestructorDecl>(MD)) {
-      IndicesMap[I.second] = MethodName + " [scalar deleting]";
+      IndicesMap[I.second] = MethodName + " [vector deleting]";
     } else {
       IndicesMap[I.second] = MethodName;
     }
@@ -3873,7 +3880,7 @@ MicrosoftVTableContext::getMethodVFTableLocation(GlobalDecl GD) {
   assert(hasVtableSlot(cast<CXXMethodDecl>(GD.getDecl())) &&
          "Only use this method for virtual methods or dtors");
   if (isa<CXXDestructorDecl>(GD.getDecl()))
-    assert(GD.getDtorType() == Dtor_Deleting);
+    assert(GD.getDtorType() == Dtor_VectorDeleting);
 
   GD = GD.getCanonicalDecl();
 
