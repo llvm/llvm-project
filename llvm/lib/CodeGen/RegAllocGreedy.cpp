@@ -2195,8 +2195,7 @@ MCRegister RAGreedy::tryLastChanceRecoloring(
     if (tryRecoloringCandidates(RecoloringQueue, CurrentNewVRegs,
                                 FixedRegisters, RecolorStack, Depth)) {
       // Push the queued vregs into the main queue.
-      for (Register NewVReg : CurrentNewVRegs)
-        NewVRegs.push_back(NewVReg);
+      llvm::append_range(NewVRegs, CurrentNewVRegs);
       // Do not mess up with the global assignment process.
       // I.e., VirtReg must be unassigned.
       if (VRM->hasPhys(ThisVirtReg)) {

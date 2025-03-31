@@ -1165,10 +1165,10 @@ define <2 x double> @fdiv_pow_shl_cnt_vec(<2 x i64> %cnt) nounwind {
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 20, v0
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v3, 20, v2
 ; GFX11-NEXT:    v_sub_co_u32 v0, vcc_lo, 0, 0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
-; GFX11-NEXT:    v_sub_co_ci_u32_e32 v1, vcc_lo, 0x3ff00000, v1, vcc_lo
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_sub_co_ci_u32_e64 v1, null, 0x3ff00000, v1, vcc_lo
 ; GFX11-NEXT:    v_sub_co_u32 v2, vcc_lo, 0, 0
-; GFX11-NEXT:    v_sub_co_ci_u32_e32 v3, vcc_lo, 0x3ff00000, v3, vcc_lo
+; GFX11-NEXT:    v_sub_co_ci_u32_e64 v3, null, 0x3ff00000, v3, vcc_lo
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %shl = shl nuw <2 x i64> <i64 1, i64 1>, %cnt
   %conv = uitofp <2 x i64> %shl to <2 x double>
@@ -1660,8 +1660,8 @@ define double @fdiv_pow_shl_cnt32_to_dbl_okay(i32 %cnt) nounwind {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 20, v0
 ; GFX11-NEXT:    v_sub_co_u32 v1, vcc_lo, 0, 0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-NEXT:    v_sub_co_ci_u32_e32 v1, vcc_lo, 0x36a00000, v0, vcc_lo
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_sub_co_ci_u32_e64 v1, null, 0x36a00000, v0, vcc_lo
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %shl = shl nuw i32 1, %cnt

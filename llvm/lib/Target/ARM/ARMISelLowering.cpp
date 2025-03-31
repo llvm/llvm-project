@@ -3139,9 +3139,8 @@ bool ARMTargetLowering::IsEligibleForTailCallOptimization(
   // Sometimes, no register matches all of these conditions, so we can't do a
   // tail-call.
   if (!isa<GlobalAddressSDNode>(Callee.getNode()) || isIndirect) {
-    SmallSet<MCPhysReg, 5> AddressRegisters;
-    for (Register R : {ARM::R0, ARM::R1, ARM::R2, ARM::R3})
-      AddressRegisters.insert(R);
+    SmallSet<MCPhysReg, 5> AddressRegisters = {ARM::R0, ARM::R1, ARM::R2,
+                                               ARM::R3};
     if (!(Subtarget->isThumb1Only() ||
           MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress(true)))
       AddressRegisters.insert(ARM::R12);
@@ -19697,7 +19696,7 @@ bool ARMTargetLowering::isLegalAddImmediate(int64_t Imm) const {
   if (Subtarget->isThumb2())
     return ARM_AM::getT2SOImmVal(AbsImm) != -1;
   // Thumb1 only has 8-bit unsigned immediate.
-  return AbsImm >= 0 && AbsImm <= 255;
+  return AbsImm <= 255;
 }
 
 // Return false to prevent folding

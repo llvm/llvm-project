@@ -28,6 +28,7 @@
 #include <__memory/addressof.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/is_pointer.h>
+#include <__type_traits/is_referenceable.h>
 #include <__utility/declval.h>
 #include <variant>
 
@@ -157,7 +158,7 @@ public:
       ++*this;
       return __tmp;
     } else if constexpr (requires(_Iter& __i) {
-                           { *__i++ } -> __can_reference;
+                           { *__i++ } -> __referenceable;
                          } || !__can_use_postfix_proxy<_Iter>) {
       return std::__unchecked_get<_Iter>(__hold_)++;
     } else {

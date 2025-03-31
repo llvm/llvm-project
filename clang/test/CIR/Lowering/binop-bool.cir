@@ -1,0 +1,18 @@
+// RUN: cir-opt %s -cir-to-llvm -o %t.mlir
+// RUN: FileCheck --input-file=%t.mlir %s
+
+module {
+  cir.func @foo() {
+    %0 = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["a", init] {alignment = 4 : i64}
+    %1 = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["b", init] {alignment = 4 : i64}
+    %2 = cir.load %0 : !cir.ptr<!cir.bool>, !cir.bool
+    %3 = cir.load %1 : !cir.ptr<!cir.bool>, !cir.bool
+    %4 = cir.binop(or, %2, %3) : !cir.bool
+    // CHECK: = llvm.or {{.*}}, {{.*}} : i1
+    %5 = cir.binop(xor, %2, %3) : !cir.bool
+    // CHECK: = llvm.xor {{.*}}, {{.*}} : i1
+    %6 = cir.binop(and, %2, %3) : !cir.bool
+    // CHECK: = llvm.and {{.*}}, {{.*}} : i1
+    cir.return
+  }
+}

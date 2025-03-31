@@ -1013,9 +1013,7 @@ int R600MachineCFGStructurizer::mergeLoop(MachineLoop *LoopRep) {
   // We assume a single ExitBlk
   MBBVector ExitBlks;
   LoopRep->getExitBlocks(ExitBlks);
-  SmallPtrSet<MachineBasicBlock *, 2> ExitBlkSet;
-  for (MachineBasicBlock *MBB : ExitBlks)
-    ExitBlkSet.insert(MBB);
+  SmallPtrSet<MachineBasicBlock *, 2> ExitBlkSet(llvm::from_range, ExitBlks);
   assert(ExitBlkSet.size() == 1);
   MachineBasicBlock *ExitBlk = *ExitBlks.begin();
   assert(ExitBlk && "Loop has several exit block");

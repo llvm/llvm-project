@@ -16,6 +16,7 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 
 using namespace llvm;
 
@@ -23,7 +24,7 @@ using namespace llvm;
 
 namespace {
 
-class SILateBranchLowering : public MachineFunctionPass {
+class SILateBranchLowering {
 private:
   const SIRegisterInfo *TRI = nullptr;
   const SIInstrInfo *TII = nullptr;
@@ -34,14 +35,23 @@ private:
   void earlyTerm(MachineInstr &MI, MachineBasicBlock *EarlyExitBlock);
 
 public:
-  static char ID;
+  SILateBranchLowering(MachineDominatorTree *MDT) : MDT(MDT) {}
+
+  bool run(MachineFunction &MF);
 
   unsigned MovOpc;
   Register ExecReg;
+};
 
-  SILateBranchLowering() : MachineFunctionPass(ID) {}
+class SILateBranchLoweringLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+  SILateBranchLoweringLegacy() : MachineFunctionPass(ID) {}
 
-  bool runOnMachineFunction(MachineFunction &MF) override;
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    auto *MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+    return SILateBranchLowering(MDT).run(MF);
+  }
 
   StringRef getPassName() const override {
     return "SI Final Branch Preparation";
@@ -56,15 +66,15 @@ public:
 
 } // end anonymous namespace
 
-char SILateBranchLowering::ID = 0;
+char SILateBranchLoweringLegacy::ID = 0;
 
-INITIALIZE_PASS_BEGIN(SILateBranchLowering, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(SILateBranchLoweringLegacy, DEBUG_TYPE,
                       "SI insert s_cbranch_execz instructions", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_END(SILateBranchLowering, DEBUG_TYPE,
+INITIALIZE_PASS_END(SILateBranchLoweringLegacy, DEBUG_TYPE,
                     "SI insert s_cbranch_execz instructions", false, false)
 
-char &llvm::SILateBranchLoweringPassID = SILateBranchLowering::ID;
+char &llvm::SILateBranchLoweringPassID = SILateBranchLoweringLegacy::ID;
 
 static void generateEndPgm(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator I, DebugLoc DL,
@@ -192,11 +202,21 @@ void SILateBranchLowering::earlyTerm(MachineInstr &MI,
   MDT->insertEdge(&MBB, EarlyExitBlock);
 }
 
-bool SILateBranchLowering::runOnMachineFunction(MachineFunction &MF) {
+PreservedAnalyses
+llvm::SILateBranchLoweringPass::run(MachineFunction &MF,
+                                    MachineFunctionAnalysisManager &MFAM) {
+  auto *MDT = &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  if (!SILateBranchLowering(MDT).run(MF))
+    return PreservedAnalyses::all();
+
+  return getMachineFunctionPassPreservedAnalyses()
+      .preserve<MachineDominatorTreeAnalysis>();
+}
+
+bool SILateBranchLowering::run(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
   TRI = &TII->getRegisterInfo();
-  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
   MovOpc = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
   ExecReg = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
