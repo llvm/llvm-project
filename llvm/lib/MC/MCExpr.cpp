@@ -40,7 +40,7 @@ STATISTIC(MCExprEvaluate, "Number of MCExpr evaluations");
 // VariantKind printing and formatting utilize MAI. operator<< (dump and some
 // target code) specifies MAI as nullptr and should be avoided when MAI is
 // needed.
-void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI, bool InParens) const {
+void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI) const {
   switch (getKind()) {
   case MCExpr::Target:
     return cast<MCTargetExpr>(this)->printImpl(OS, MAI);
@@ -75,17 +75,7 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI, bool InParens) const {
   case MCExpr::SymbolRef: {
     const MCSymbolRefExpr &SRE = cast<MCSymbolRefExpr>(*this);
     const MCSymbol &Sym = SRE.getSymbol();
-    // Parenthesize names that start with $ so that they don't look like
-    // absolute names.
-    bool UseParens = MAI && MAI->useParensForDollarSignNames() && !InParens &&
-                     Sym.getName().starts_with('$');
-
-    if (UseParens) {
-      OS << '(';
-      Sym.print(OS, MAI);
-      OS << ')';
-    } else
-      Sym.print(OS, MAI);
+    Sym.print(OS, MAI);
 
     const MCSymbolRefExpr::VariantKind Kind = SRE.getKind();
     if (Kind != MCSymbolRefExpr::VK_None) {

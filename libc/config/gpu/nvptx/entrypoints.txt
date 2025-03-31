@@ -172,6 +172,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.ldiv
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
+    libc.src.stdlib.memalignment
     libc.src.stdlib.qsort
     libc.src.stdlib.qsort_r
     libc.src.stdlib.rand
@@ -261,6 +262,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.time.nanosleep
     libc.src.time.strftime
     libc.src.time.strftime_l
+    libc.src.time.mktime
 
     # wchar.h entrypoints
     libc.src.wchar.wcslen

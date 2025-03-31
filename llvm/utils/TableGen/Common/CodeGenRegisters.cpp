@@ -2106,9 +2106,7 @@ void CodeGenRegBank::computeRegUnitSets() {
 
   // For each register class, list the UnitSets that are supersets.
   RegClassUnitSets.resize(RegClasses.size());
-  int RCIdx = -1;
   for (auto &RC : RegClasses) {
-    ++RCIdx;
     if (!RC.Allocatable)
       continue;
 
@@ -2130,12 +2128,13 @@ void CodeGenRegBank::computeRegUnitSets() {
          ++USIdx) {
       if (isRegUnitSubSet(RCRegUnits, RegUnitSets[USIdx].Units)) {
         LLVM_DEBUG(dbgs() << " " << USIdx);
-        RegClassUnitSets[RCIdx].push_back(USIdx);
+        RegClassUnitSets[RC.EnumValue].push_back(USIdx);
       }
     }
     LLVM_DEBUG(dbgs() << "\n");
-    assert((!RegClassUnitSets[RCIdx].empty() || !RC.GeneratePressureSet) &&
-           "missing unit set for regclass");
+    assert(
+        (!RegClassUnitSets[RC.EnumValue].empty() || !RC.GeneratePressureSet) &&
+        "missing unit set for regclass");
   }
 
   // For each register unit, ensure that we have the list of UnitSets that

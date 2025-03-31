@@ -1467,8 +1467,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
 
   if (args.hasArg(OPT_save_temps)) {
     // --save-temps implies saving all temps.
-    for (const char *s : saveTempsValues)
-      ctx.arg.saveTempsArgs.insert(s);
+    ctx.arg.saveTempsArgs.insert_range(saveTempsValues);
   } else {
     for (auto *arg : args.filtered(OPT_save_temps_eq)) {
       StringRef s = arg->getValue();
@@ -1575,7 +1574,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.zNodlopen = hasZOption(args, "nodlopen");
   ctx.arg.zNow = getZFlag(args, "now", "lazy", false);
   ctx.arg.zOrigin = hasZOption(args, "origin");
-  ctx.arg.zPacPlt = hasZOption(args, "pac-plt");
+  ctx.arg.zPacPlt = getZFlag(args, "pac-plt", "nopac-plt", false);
   ctx.arg.zRelro = getZFlag(args, "relro", "norelro", true);
   ctx.arg.zRetpolineplt = hasZOption(args, "retpolineplt");
   ctx.arg.zRodynamic = hasZOption(args, "rodynamic");
