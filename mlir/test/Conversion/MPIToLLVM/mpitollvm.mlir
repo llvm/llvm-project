@@ -88,20 +88,20 @@ module attributes {dlti.map = #dlti.map<"MPI:Implementation" = "MPICH">} {
     // CHECK: [[v57:%.*]] = llvm.load [[v55]] : !llvm.ptr -> i32
     %split = mpi.comm_split(%comm, %color, %key) : !mpi.comm
 
-    // CHECK: [[v49:%.*]] = llvm.extractvalue [[v5]][1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
-    // CHECK: [[v50:%.*]] = llvm.extractvalue [[v5]][2] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
-    // CHECK: [[v51:%.*]] = llvm.getelementptr [[v49]][[[v50]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    // CHECK: [[v52:%.*]] = llvm.extractvalue [[v5]][3, 0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
-    // CHECK: [[v53:%.*]] = llvm.trunc [[v52]] : i64 to i32
-    // CHECK: [[v54:%.*]] = llvm.extractvalue [[v5]][1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
-    // CHECK: [[v55:%.*]] = llvm.extractvalue [[v5]][2] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
-    // CHECK: [[v56:%.*]] = llvm.getelementptr [[v54]][[[v55]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    // CHECK: [[v57:%.*]] = llvm.extractvalue [[v5]][3, 0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
-    // CHECK: [[v58:%.*]] = llvm.trunc [[v57]] : i64 to i32
-    // CHECK: [[v59:%.*]] = llvm.mlir.constant(1275069450 : i32) : i32
-    // CHECK: [[v60:%.*]] = llvm.mlir.constant(1476395011 : i32) : i32
-    // CHECK: [[v61:%.*]] = llvm.trunc [[comm]] : i64 to i32
-    // CHECK: [[v62:%.*]] = llvm.call @MPI_Allreduce([[v51]], [[v56]], [[v53]], [[v59]], [[v60]], [[v61]]) : (!llvm.ptr, !llvm.ptr, i32, i32, i32, i32) -> i32
+    // CHECK: [[v59:%.*]] = llvm.extractvalue [[v5]][1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+    // CHECK: [[v60:%.*]] = llvm.extractvalue [[v5]][2] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+    // CHECK: [[v61:%.*]] = llvm.getelementptr [[v59]][[[v60]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    // CHECK: [[v62:%.*]] = llvm.extractvalue [[v5]][3, 0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+    // CHECK: [[v63:%.*]] = llvm.trunc [[v62]] : i64 to i32
+    // CHECK: [[v64:%.*]] = llvm.extractvalue [[v5]][1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+    // CHECK: [[v65:%.*]] = llvm.extractvalue [[v5]][2] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+    // CHECK: [[v66:%.*]] = llvm.getelementptr [[v64]][[[v65]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    // CHECK: [[v67:%.*]] = llvm.extractvalue [[v5]][3, 0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+    // CHECK: [[v68:%.*]] = llvm.trunc [[v67]] : i64 to i32
+    // CHECK: [[v69:%.*]] = llvm.mlir.constant(1275069450 : i32) : i32
+    // CHECK: [[v70:%.*]] = llvm.mlir.constant(1476395011 : i32) : i32
+    // CHECK: [[v71:%.*]] = llvm.trunc [[comm]] : i64 to i32
+    // CHECK: [[v72:%.*]] = llvm.call @MPI_Allreduce([[v61]], [[v66]], [[v63]], [[v69]], [[v70]], [[v71]]) : (!llvm.ptr, !llvm.ptr, i32, i32, i32, i32) -> i32
     mpi.allreduce(%arg0, %arg0, MPI_SUM, %comm) : memref<100xf32>, memref<100xf32>
 
     // CHECK: llvm.call @MPI_Finalize() : () -> i32
@@ -208,18 +208,18 @@ module attributes { dlti.map = #dlti.map<"MPI:Implementation" = "OpenMPI"> } {
     // CHECK: [[v62:%.*]] = llvm.call @MPI_Allreduce([[v51]], [[v56]], [[v53]], [[v59]], [[v60]], [[v61]]) : (!llvm.ptr, !llvm.ptr, i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
     mpi.allreduce(%arg0, %arg0, MPI_SUM, %comm) : memref<100xf32>, memref<100xf32>
 
-    // CHECK: [[v51:%.*]] = llvm.mlir.constant(10 : i32) : i32
+    // CHECK: [[v71:%.*]] = llvm.mlir.constant(10 : i32) : i32
     %color = arith.constant 10 : i32
-    // CHECK: [[v52:%.*]] = llvm.mlir.constant(22 : i32) : i32
+    // CHECK: [[v72:%.*]] = llvm.mlir.constant(22 : i32) : i32
     %key = arith.constant 22 : i32
-    // CHECK: [[v53:%.*]] = llvm.inttoptr [[comm]] : i64 to !llvm.ptr
-    // CHECK: [[v54:%.*]] = llvm.mlir.constant(1 : i32) : i32
-    // CHECK: [[v55:%.*]] = llvm.alloca [[v54]] x !llvm.ptr : (i32) -> !llvm.ptr
-    // CHECK: [[v56:%.*]] = llvm.call @MPI_Comm_split([[v53]], [[v51]], [[v52]], [[v55]]) : (!llvm.ptr, i32, i32, !llvm.ptr) -> i32
-    // CHECK: [[v57:%.*]] = llvm.load [[v55]] : !llvm.ptr -> i32
+    // CHECK: [[v73:%.*]] = llvm.inttoptr [[comm]] : i64 to !llvm.ptr
+    // CHECK: [[v74:%.*]] = llvm.mlir.constant(1 : i32) : i32
+    // CHECK: [[v75:%.*]] = llvm.alloca [[v74]] x !llvm.ptr : (i32) -> !llvm.ptr
+    // CHECK: [[v76:%.*]] = llvm.call @MPI_Comm_split([[v73]], [[v71]], [[v72]], [[v75]]) : (!llvm.ptr, i32, i32, !llvm.ptr) -> i32
+    // CHECK: [[v77:%.*]] = llvm.load [[v75]] : !llvm.ptr -> i32
     %split = mpi.comm_split(%comm, %color, %key) : !mpi.comm
 
-    // CHECK: [[v49:%.*]] = llvm.call @MPI_Finalize() : () -> i32
+    // CHECK: llvm.call @MPI_Finalize() : () -> i32
     %3 = mpi.finalize : !mpi.retval
 
     return
