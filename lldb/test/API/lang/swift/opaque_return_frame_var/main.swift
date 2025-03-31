@@ -1,6 +1,7 @@
 protocol P {}
 
 class C: P {
+    let i = 42
 }
 
 struct S<T> {
