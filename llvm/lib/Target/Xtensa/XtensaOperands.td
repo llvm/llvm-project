@@ -167,6 +167,14 @@ def b4constu: Immediate<i32,
   let EncoderMethod = "getB4constuOpValue";
   let DecoderMethod = "decodeB4constuOperand";
 }
+
+// imm7_22 predicate - Immediate in the range [7,22] for sign extend and clamps
+def Imm7_22_AsmOperand: ImmAsmOperand<"imm7_22">;
+def imm7_22: Immediate<i32, [{ return Imm >= 7 && Imm <= 22; }], "Imm7_22_AsmOperand"> {
+  let EncoderMethod = "getImm7_22OpValue";
+  let DecoderMethod = "decodeImm7_22Operand";
+}
+
 //===----------------------------------------------------------------------===//
 // Memory address operands
 //===----------------------------------------------------------------------===//
@@ -227,6 +235,13 @@ def jumptarget : Operand<OtherVT> {
   let PrintMethod = "printJumpTarget";
   let EncoderMethod = "getJumpTargetEncoding";
   let DecoderMethod = "decodeJumpOperand";
+  let ParserMatchClass = XtensaPCRelTargetAsmOperand;
+}
+
+def ltarget : Operand<OtherVT> {
+  let PrintMethod = "printLoopTarget";
+  let EncoderMethod = "getLoopTargetEncoding";
+  let DecoderMethod = "decodeLoopOperand";
   let ParserMatchClass = XtensaPCRelTargetAsmOperand;
 }
 

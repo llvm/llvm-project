@@ -105,6 +105,21 @@ void XtensaInstPrinter::printBranchTarget(const MCInst *MI, int OpNum,
     llvm_unreachable("Invalid operand");
 }
 
+void XtensaInstPrinter::printLoopTarget(const MCInst *MI, int OpNum,
+                                        raw_ostream &OS) {
+  const MCOperand &MC = MI->getOperand(OpNum);
+  if (MI->getOperand(OpNum).isImm()) {
+    int64_t Val = MC.getImm() + 4;
+    OS << ". ";
+    if (Val > 0)
+      OS << '+';
+    OS << Val;
+  } else if (MC.isExpr())
+    MC.getExpr()->print(OS, &MAI, true);
+  else
+    llvm_unreachable("Invalid operand");
+}
+
 void XtensaInstPrinter::printJumpTarget(const MCInst *MI, int OpNum,
                                         raw_ostream &OS) {
   const MCOperand &MC = MI->getOperand(OpNum);
@@ -400,6 +415,17 @@ void XtensaInstPrinter::printB4constu_AsmOperand(const MCInst *MI, int OpNum,
     default:
       assert((0) && "Invalid B4constu argument");
     }
+    O << Value;
+  } else
+    printOperand(MI, OpNum, O);
+}
+
+void XtensaInstPrinter::printImm7_22_AsmOperand(const MCInst *MI, int OpNum,
+                                                raw_ostream &O) {
+  if (MI->getOperand(OpNum).isImm()) {
+    int64_t Value = MI->getOperand(OpNum).getImm();
+    assert((Value >= 7 && Value <= 22) &&
+           "Invalid argument, value must be in range <7,22>");
     O << Value;
   } else
     printOperand(MI, OpNum, O);

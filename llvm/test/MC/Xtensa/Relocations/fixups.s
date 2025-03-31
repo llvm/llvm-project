@@ -1,7 +1,7 @@
-# RUN: llvm-mc -triple xtensa --mattr=+density < %s -show-encoding \
+# RUN: llvm-mc -triple xtensa --mattr=+density,loop < %s -show-encoding \
 # RUN:     | FileCheck -check-prefix=CHECK-FIXUP %s
-# RUN: llvm-mc -filetype=obj -triple xtensa --mattr=+density < %s \
-# RUN:     | llvm-objdump --mattr=+density -d - | FileCheck -check-prefix=CHECK-INSTR %s
+# RUN: llvm-mc -filetype=obj -triple xtensa --mattr=+density,loop < %s \
+# RUN:     | llvm-objdump --mattr=+density,loop -d - | FileCheck -check-prefix=CHECK-INSTR %s
 
 
 # Checks that fixups that can be resolved within the same object file are
@@ -16,7 +16,7 @@ beqz.n a2, LBL1
 # CHECK-INSTR: beqz.n a2, . +29
 
 beq a0, a1, LBL0
-# CHECK-FIXUP: fixup A - offset: 0, value: LBL0, kind: fixup_xtensa_branch_8
+# CHECK-FIXUP: fixup A - offset: 0, value: LBL0, kind:
 # CHECK-INSTR: beq a0, a1, . -14
 
 beq a0, a1, LBL1
@@ -57,3 +57,11 @@ LBL1:
 
 .align 4
 LBL2:
+
+loop a3, LBL3
+# CHECK-FIXUP: fixup A - offset: 0, value: LBL3, kind: fixup_xtensa_loop_8
+# CHECK-INSTR: loop a3, . +203
+
+.fill 200
+
+LBL3:

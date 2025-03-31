@@ -200,6 +200,16 @@ static DecodeStatus decodeBranchOperand(MCInst &Inst, uint64_t Imm,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeLoopOperand(MCInst &Inst, uint64_t Imm,
+                                      int64_t Address, const void *Decoder) {
+
+  assert(isUInt<8>(Imm) && "Invalid immediate");
+  if (!tryAddingSymbolicOperand(Imm + 4 + Address, true, Address, 0, 3, Inst,
+                                Decoder))
+    Inst.addOperand(MCOperand::createImm(Imm));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus decodeL32ROperand(MCInst &Inst, uint64_t Imm,
                                       int64_t Address, const void *Decoder) {
 
@@ -323,6 +333,13 @@ static DecodeStatus decodeB4constuOperand(MCInst &Inst, uint64_t Imm,
   assert(isUInt<4>(Imm) && "Invalid immediate");
 
   Inst.addOperand(MCOperand::createImm(TableB4constu[Imm]));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeImm7_22Operand(MCInst &Inst, uint64_t Imm,
+                                         int64_t Address, const void *Decoder) {
+  assert(isUInt<4>(Imm) && "Invalid immediate");
+  Inst.addOperand(MCOperand::createImm(Imm + 7));
   return MCDisassembler::Success;
 }
 
