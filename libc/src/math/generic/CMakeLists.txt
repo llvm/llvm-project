@@ -4175,6 +4175,7 @@ add_entrypoint_object(
   DEPENDS
     .atan_utils
     libc.src.__support.integer_literals
+    libc.src.__support.uint128
     libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add

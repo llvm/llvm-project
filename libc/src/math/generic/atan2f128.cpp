@@ -147,7 +147,7 @@ LLVM_LIBC_FUNCTION(float128, atan2f128, (float128 y, float128 x)) {
     if ((x_except != 1) || (y_except != 1)) {
       Float128 r = EXCEPTS[y_except][x_except][x_sign];
       if (y_sign)
-        r.sign = (r.sign == Sign::POS) ? Sign::NEG : Sign::POS;
+        r.sign = r.sign.negate();
       return static_cast<float128>(r);
     }
   }
@@ -159,7 +159,7 @@ LLVM_LIBC_FUNCTION(float128, atan2f128, (float128 y, float128 x)) {
   //   2^(-exp_diff - 1) < n/d < 2^(-exp_diff + 1).
   if (LIBC_UNLIKELY(exp_diff > FPBits::FRACTION_LEN + 2)) {
     if (final_sign)
-      const_term.sign = (const_term.sign == Sign::POS) ? Sign::NEG : Sign::POS;
+      const_term.sign = const_term.sign.negate();
     return static_cast<float128>(const_term);
   }
 
@@ -195,7 +195,7 @@ LLVM_LIBC_FUNCTION(float128, atan2f128, (float128 y, float128 x)) {
   Float128 r =
       fputil::quick_add(const_term, fputil::quick_add(ATAN_I_F128[idx], p));
   if (final_sign)
-    r.sign = (r.sign == Sign::POS) ? Sign::NEG : Sign::POS;
+    r.sign = r.sign.negate();
 
   return static_cast<float128>(r);
 }

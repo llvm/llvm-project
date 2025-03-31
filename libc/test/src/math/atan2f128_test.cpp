@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/FPUtil/FPBits.h"
 #include "src/math/atan2f128.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
