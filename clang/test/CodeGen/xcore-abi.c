@@ -77,8 +77,7 @@ void testva (int n, ...) {
   // CHECK: call void @f(ptr noundef [[V5]])
 
   // an unusual aggregate type
-  int* v6 = va_arg (ap, int[4]);  // expected-warning{{second argument to 'va_arg' is of array type 'int[4]'}} \
-                                     expected-warning{{temporary whose address is used as value of local variable 'v6' will be destroyed at the end of the full-expression}}
+  int* v6 = va_arg (ap, int[4]);  // expected-warning{{second argument to 'va_arg' is of array type 'int[4]'}}
   f(v6);
   // CHECK: [[I:%[a-z0-9]+]] = load ptr, ptr [[AP]]
   // CHECK: [[P:%[a-z0-9]+]] = load ptr, ptr [[I]]

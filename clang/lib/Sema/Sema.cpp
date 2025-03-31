@@ -744,8 +744,7 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
     if (getLangOpts().CPlusPlus && E->isPRValue()) {
       // The temporary is an lvalue in C++98 and an xvalue otherwise.
       ExprResult Materialized = CreateMaterializeTemporaryExpr(
-          E->getType(), E,
-          !getLangOpts().CPlusPlus11);
+          E->getType(), E, !getLangOpts().CPlusPlus11);
       if (Materialized.isInvalid())
         return ExprError();
       E = Materialized.get();
