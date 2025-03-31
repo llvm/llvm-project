@@ -105,6 +105,7 @@ static void replaceFunctionCalls(Function *OldF, Function *NewF) {
       NewCI = CallInst::Create(NewF, Args, OperandBundles, CI->getName());
     }
     NewCI->setCallingConv(NewF->getCallingConv());
+    NewCI->setAttributes(CI->getAttributes());
 
     // Do the replacement for this use.
     if (!CI->use_empty())
