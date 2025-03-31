@@ -10285,9 +10285,9 @@ INTERCEPTOR(SSIZE_T, freadlink, int fd, char *buf, SIZE_T bufsiz) {
 UNUSED static void HandleGetServentReentrantResult(
     void *ctx, int res, struct __sanitizer_servent *result_buf, char *buf,
     SIZE_T buflen, struct __sanitizer_servent **result) {
+  COMMON_INTERCEPTOR_WRITE_RANGE(ctx, (char *)result, sizeof(void *));
   if (res)
     return;
-  COMMON_INTERCEPTOR_WRITE_RANGE(ctx, (char *)result, sizeof(void *));
   if (*result) {
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, (char *)*result,
                                    sizeof(__sanitizer_servent));
