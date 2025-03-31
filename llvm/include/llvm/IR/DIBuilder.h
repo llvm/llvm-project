@@ -752,11 +752,6 @@ namespace llvm {
                                DIGenericSubrange::BoundType UpperBound,
                                DIGenericSubrange::BoundType Stride);
 
-    /// Create fragment, which represents the identity of a location
-    /// description that can be used as the piece of another location
-    /// description.
-    DIFragment *createFragment();
-
     /// Create a new descriptor for the specified variable.
     /// \param Context       Variable scope.
     /// \param Name          Name of the variable.

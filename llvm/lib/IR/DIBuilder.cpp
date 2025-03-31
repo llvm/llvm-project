@@ -765,10 +765,6 @@ DIGenericSubrange *DIBuilder::getOrCreateGenericSubrange(
                                 ConvToMetadata(Stride));
 }
 
-DIFragment *DIBuilder::createFragment() {
-  return DIFragment::getDistinct(VMContext);
-}
-
 DISubrangeType *DIBuilder::createSubrangeType(
     StringRef Name, DIFile *File, unsigned LineNo, DIScope *Scope,
     uint64_t SizeInBits, uint32_t AlignInBits, DINode::DIFlags Flags,

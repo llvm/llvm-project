@@ -1,7 +1,7 @@
-; RUN: not --crash llc -O0 -fast-isel -stop-after=finalize-isel < %s 2>&1 | FileCheck %s
+; RUN: llc -O0 -fast-isel -stop-after=finalize-isel < %s 2>&1 | FileCheck %s
 target triple = "x86_64-unknown-linux-gnu"
 
-; CHECK: LLVM ERROR: unsupported DIExpr-based metadata
+; CHECK: warning: ignoring debug info with an invalid version (4) in <stdin>
 
 define void @undef() {
 entry:

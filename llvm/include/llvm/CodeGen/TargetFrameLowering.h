@@ -15,7 +15,6 @@
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/Support/TypeSize.h"
 #include <vector>
@@ -23,6 +22,7 @@
 namespace llvm {
   class BitVector;
   class CalleeSavedInfo;
+  class DIExpression;
   class MachineFunction;
   class RegScavenger;
 

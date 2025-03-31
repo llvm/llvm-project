@@ -5008,8 +5008,7 @@ bool llvm::UpgradeDebugInfo(Module &M) {
     }
   }
 
-  bool VersionSupported = Version == DEBUG_METADATA_VERSION ||
-                          Version == DEBUG_METADATA_VERSION_HETEROGENEOUS_DWARF;
+  bool VersionSupported = Version == DEBUG_METADATA_VERSION;
   if (VersionSupported) {
     bool BrokenDebugInfo = false;
     if (verifyModule(M, &llvm::errs(), &BrokenDebugInfo))

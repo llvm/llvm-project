@@ -83,7 +83,6 @@ class ProfileSummaryInfo;
 class SDDbgValue;
 class SDDbgOperand;
 class SDDbgLabel;
-class SDDbgKill;
 class SelectionDAG;
 class SelectionDAGTargetInfo;
 class TargetLibraryInfo;

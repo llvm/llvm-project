@@ -1317,12 +1317,6 @@ private:
 
     performOptimizedStructLayout(LayoutFields);
 
-    struct DIExprVarInfo {
-      GlobalVariable *Var;
-      uint64_t Offset;
-    };
-    DenseMap<DIFragment *, DIExprVarInfo> Fragment2VarInfo;
-
     struct DIExpressionVarInfo {
       GlobalVariable *Var;
       Metadata *DIVar;

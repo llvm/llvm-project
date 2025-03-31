@@ -20,7 +20,6 @@ namespace llvm {
 class DILocation;
 class LexicalScopes;
 class DINode;
-class MachineBasicBlock;
 class MachineFunction;
 class TargetRegisterInfo;
 

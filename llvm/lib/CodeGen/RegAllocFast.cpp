@@ -338,7 +338,6 @@ private:
 
   void allocateInstruction(MachineInstr &MI);
   void handleDebugValue(MachineInstr &MI);
-  void killDebugDefWithinBlock(MachineInstr &MI);
   void handleBundle(MachineInstr &MI);
 
   bool usePhysReg(MachineInstr &MI, MCRegister PhysReg);
