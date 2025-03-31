@@ -184,25 +184,6 @@ public:
   /// SelectorPtrTy - LLVM type for selector handles (typeof(SEL))
   llvm::PointerType *SelectorPtrTy;
 
-private:
-  /// ProtocolPtrTy - LLVM type for external protocol handles
-  /// (typeof(Protocol))
-  llvm::Type *ExternalProtocolPtrTy;
-
-public:
-  llvm::Type *getExternalProtocolPtrTy() {
-    if (!ExternalProtocolPtrTy) {
-      // FIXME: It would be nice to unify this with the opaque type, so that the
-      // IR comes out a bit cleaner.
-      CodeGen::CodeGenTypes &Types = CGM.getTypes();
-      ASTContext &Ctx = CGM.getContext();
-      llvm::Type *T = Types.ConvertType(Ctx.getObjCProtoType());
-      ExternalProtocolPtrTy = llvm::PointerType::getUnqual(T);
-    }
-
-    return ExternalProtocolPtrTy;
-  }
-
   // SuperCTy - clang type for struct objc_super.
   QualType SuperCTy;
   // SuperPtrCTy - clang type for struct objc_super *.
@@ -5636,8 +5617,7 @@ CGObjCNonFragileABIMac::CGObjCNonFragileABIMac(CodeGen::CodeGenModule &cgm)
 /* *** */
 
 ObjCCommonTypesHelper::ObjCCommonTypesHelper(CodeGen::CodeGenModule &cgm)
-    : VMContext(cgm.getLLVMContext()), CGM(cgm),
-      ExternalProtocolPtrTy(nullptr) {
+    : VMContext(cgm.getLLVMContext()), CGM(cgm) {
   CodeGen::CodeGenTypes &Types = CGM.getTypes();
   ASTContext &Ctx = CGM.getContext();
   unsigned ProgramAS = CGM.getDataLayout().getProgramAddressSpace();
