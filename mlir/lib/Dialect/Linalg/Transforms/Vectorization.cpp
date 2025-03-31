@@ -2178,11 +2178,14 @@ vectorizePadOpPrecondition(tensor::PadOp padOp,
                                               inputVectorSizes)))
     return failure();
 
-  if (llvm::any_of(padOp.getLow(), [](Value v) {
-        std::optional<int64_t> res = getConstantIntValue(v);
-        return !res.has_value() || res.value() != 0;
+  if (llvm::any_of(llvm::enumerate(padOp.getLow()), [&](const auto &en) {
+        Value padValue = en.value();
+        unsigned pos = en.index();
+        std::optional<int64_t> res = getConstantIntValue(padValue);
+        return (!res.has_value() || res.value() != 0) &&
+               resultTensorShape[pos] != 1;
       })) {
-    LDBG("low pad must all be zero: " << padOp << "\n");
+    LDBG("low pad must all be zero for all non unit dims: " << padOp << "\n");
     return failure();
   }
 
