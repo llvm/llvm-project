@@ -35,6 +35,29 @@ namespace std {
   template<typename T> T declval();
 } // namespace std
 
+namespace cwg2611 { // cwg2611: 21
+#if __cpp_fold_expressions >= 201603
+template<class> class R {};
+template<class... Ts> auto a(Ts... xs) -> R<decltype((xs + ...))>;
+template<class... Ts> auto b(Ts... xs) -> R<decltype((..., xs))>;
+template<class... Ts> auto c(Ts... xs, int i = 0) -> R<decltype((xs * ... * i))>;
+template<class... Ts> auto d(Ts... xs, int i = 0) -> R<decltype((i ^ ... ^ xs))>;
+R<int&> i = a(1);
+R<int&> j = b(1);
+R<int&> k = c();
+R<int&> l = d();
+
+template<int... Is> constexpr int w = 0 * (Is + ...);
+template<int... Is> constexpr int x = 0 * (... + Is);
+template<int... Is> constexpr int y = 0 * (Is + ... + 1);
+template<int... Is> constexpr int z = 0 * (1 + ... + Is);
+static_assert(w<1, 2> == 0);
+static_assert(x<1, 2> == 0);
+static_assert(y<1, 2> == 0);
+static_assert(z<1, 2> == 0);
+#endif
+} // namespace cwg2611
+
 namespace cwg2621 { // cwg2621: sup 2877
 #if __cplusplus >= 202002L
 enum class E { a };
