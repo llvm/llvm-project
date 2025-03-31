@@ -227,7 +227,7 @@ template <typename T> SetVector<T> sortByName(std::vector<T> &&V) {
   sort(V, [](const auto *L, const auto *R) {
     return L->getName() < R->getName();
   });
-  return {SetVector<T>(V.begin(), V.end())};
+  return {SetVector<T>(llvm::from_range, V)};
 }
 
 SetVector<GlobalVariable *> AMDGPUSwLowerLDS::getOrderedNonKernelAllLDSGlobals(
