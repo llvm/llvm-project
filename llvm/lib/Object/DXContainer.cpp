@@ -294,24 +294,27 @@ Error DirectX::RootSignature::parse(StringRef Data) {
 
   assert(Current == Begin + RootParametersOffset);
 
-  Parameters.HeaderView.Data = Data.substr(
+  ParametersHeaders.Data = Data.substr(
       RootParametersOffset, NumParameters * sizeof(dxbc::RootParameterHeader));
-  Parameters.Data = Data;
 
-  for (auto P : params()) {
-    if (!P)
-      return P.takeError();
+  ParameterSpaceOffset =
+      RootParametersOffset + NumParameters * sizeof(dxbc::RootParameterHeader);
+  size_t ParameterSpaceEnd =
+      Data.size() - ((NumStaticSamplers == 0) ? 0 : StaticSamplersOffset);
 
-    if (!dxbc::RootSignatureVerifier::verifyParameterType(
-            P->Header.ParameterType))
+  ParameterSpace = Data.substr(ParameterSpaceOffset,
+                               ParameterSpaceEnd - ParameterSpaceOffset);
+
+  for (auto P : param_header()) {
+
+    if (!dxbc::RootSignatureVerifier::verifyParameterType(P.ParameterType))
       return validationFailed("unsupported parameter type value read: " +
-                              llvm::Twine((uint32_t)P->Header.ParameterType));
+                              llvm::Twine((uint32_t)P.ParameterType));
 
     if (!dxbc::RootSignatureVerifier::verifyShaderVisibility(
-            P->Header.ShaderVisibility))
-      return validationFailed(
-          "unsupported shader visility flag value read: " +
-          llvm::Twine((uint32_t)P->Header.ShaderVisibility));
+            P.ShaderVisibility))
+      return validationFailed("unsupported shader visility flag value read: " +
+                              llvm::Twine((uint32_t)P.ShaderVisibility));
   }
   return Error::success();
 }

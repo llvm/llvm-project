@@ -14,6 +14,9 @@
 #include "llvm/ObjectYAML/DXContainerYAML.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/Object/DXContainer.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 namespace llvm {
@@ -35,22 +38,23 @@ DXContainerYAML::RootSignatureYamlDesc::RootSignatureYamlDesc(
       NumStaticSamplers(Data.getNumStaticSamplers()),
       StaticSamplersOffset(Data.getStaticSamplersOffset()) {
   uint32_t Flags = Data.getFlags();
-  for (auto P : Data.params()) {
-    if (!P)
-      llvm_unreachable("Parameters are validated on read.");
+  for (const auto &PH : Data.param_header()) {
 
     auto NewP = RootParameterYamlDesc();
-    NewP.Offset = P->Header.ParameterOffset;
-    NewP.Type = P->Header.ParameterType;
-    NewP.Visibility = P->Header.ShaderVisibility;
+    NewP.Offset = PH.ParameterOffset;
+    NewP.Type = PH.ParameterType;
+    NewP.Visibility = PH.ShaderVisibility;
 
-    switch (NewP.Type) {
+    auto ParamView = Data.getParameter(PH);
 
-    case dxbc::RootParameterType::Constants32Bit:
-      NewP.Constants.NumOfConstants = P->Constants.NumOfConstants;
-      NewP.Constants.Register = P->Constants.Register;
-      NewP.Constants.Space = P->Constants.Space;
-      break;
+    if (auto *RCV = dyn_cast<object::DirectX::RootConstantView>(&ParamView)) {
+      auto Constants = RCV->read();
+      if (!Constants)
+        llvm::errs() << "Error: " << Constants.takeError() << "\n";
+
+      NewP.Constants.NumOfConstants = Constants->NumOfConstants;
+      NewP.Constants.Register = Constants->Register;
+      NewP.Constants.Space = Constants->Space;
     }
     Parameters.push_back(NewP);
   }

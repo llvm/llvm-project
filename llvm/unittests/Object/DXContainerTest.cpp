@@ -8,9 +8,12 @@
 
 #include "llvm/Object/DXContainer.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/ObjectYAML/DXContainerYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
@@ -919,16 +922,21 @@ TEST(RootSignature, ParseRootConstant) {
     ASSERT_EQ(RS.getStaticSamplersOffset(), 44u);
     ASSERT_EQ(RS.getFlags(), 17u);
 
-    auto RootParam = *RS.params().begin();
-    ASSERT_FALSE(!RootParam);
-    auto X = (unsigned)RootParam->Header.ParameterType;
-    auto Y = (unsigned)RootParam->Header.ShaderVisibility;
+    auto RootParam = *RS.param_header().begin();
+    ASSERT_EQ((unsigned)RootParam.ParameterType, 1u);
+    ASSERT_EQ((unsigned)RootParam.ShaderVisibility, 2u);
+    auto ParamView = RS.getParameter(RootParam);
 
-    ASSERT_EQ(X, 1u);
-    ASSERT_EQ(Y, 2u);
-    ASSERT_EQ(RootParam->Constants.Register, 15u);
-    ASSERT_EQ(RootParam->Constants.Space, 14u);
-    ASSERT_EQ(RootParam->Constants.NumOfConstants, 16u);
+    DirectX::RootConstantView *RootConstantsView =
+        dyn_cast<DirectX::RootConstantView>(&ParamView);
+    ASSERT_TRUE(RootConstantsView != nullptr);
+    auto Constants = RootConstantsView->read();
+
+    ASSERT_THAT_ERROR(Constants.takeError(), Succeeded());
+
+    ASSERT_EQ(Constants->Register, 15u);
+    ASSERT_EQ(Constants->Space, 14u);
+    ASSERT_EQ(Constants->NumOfConstants, 16u);
   }
   {
     // ParameterType has been set to an invalid value
@@ -983,8 +991,19 @@ TEST(RootSignature, ParseRootConstant) {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00};
+    DXContainer C =
+        llvm::cantFail(DXContainer::create(getMemoryBuffer<133>(Buffer)));
+
+    auto MaybeRS = C.getRootSignature();
+    ASSERT_TRUE(MaybeRS.has_value());
+    const auto &RS = MaybeRS.value();
+    auto RootParam = *RS.param_header().begin();
+    auto ParamView = RS.getParameter(RootParam);
+    DirectX::RootConstantView *RootConstantsView =
+        dyn_cast<DirectX::RootConstantView>(&ParamView);
+    ASSERT_TRUE(RootConstantsView != nullptr);
     EXPECT_THAT_EXPECTED(
-        DXContainer::create(getMemoryBuffer<133>(Buffer)),
+        RootConstantsView->read(),
         FailedWithMessage("Reading structure out of file bounds"));
   }
 }

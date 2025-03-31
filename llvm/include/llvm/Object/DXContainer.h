@@ -23,6 +23,9 @@
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/TargetParser/Triple.h"
 #include <array>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
 #include <variant>
 
 namespace llvm {
@@ -127,99 +130,132 @@ struct RootParameter {
   RootParameter() = default;
 };
 
-struct ViewRootParameter {
-  ViewArray<dxbc::RootParameterHeader> HeaderView;
-  StringRef Data;
+// struct ViewRootParameter {
+//   ViewArray<dxbc::RootParameterHeader> HeaderView;
+//   StringRef Data;
 
-  ViewRootParameter() = default;
-  ViewRootParameter(ViewArray<dxbc::RootParameterHeader> HV, StringRef D)
-      : HeaderView(HV), Data(D) {}
+//   ViewRootParameter() = default;
+//   ViewRootParameter(ViewArray<dxbc::RootParameterHeader> HV, StringRef D)
+//       : HeaderView(HV), Data(D) {}
 
-  using value_type = DirectX::RootParameter;
-  struct iterator {
-    const ViewArray<dxbc::RootParameterHeader> HeaderView;
-    ViewArray<dxbc::RootParameterHeader>::iterator Current;
-    StringRef Data;
+//   using value_type = DirectX::RootParameter;
+//   struct iterator {
+//     const ViewArray<dxbc::RootParameterHeader> HeaderView;
+//     ViewArray<dxbc::RootParameterHeader>::iterator Current;
+//     StringRef Data;
 
-    iterator(const ViewRootParameter &VRP,
-             ViewArray<dxbc::RootParameterHeader>::iterator C)
-        : HeaderView(VRP.HeaderView), Current(C), Data(VRP.Data) {}
-    iterator(const iterator &) = default;
+//     iterator(const ViewRootParameter &VRP,
+//              ViewArray<dxbc::RootParameterHeader>::iterator C)
+//         : HeaderView(VRP.HeaderView), Current(C), Data(VRP.Data) {}
+//     iterator(const iterator &) = default;
 
-    template <typename T>
-    static Error readParameter(StringRef Buffer, const char *Src, T &Struct) {
-      // Don't read before the beginning or past the end of the file
-      if (Src < Buffer.begin() || Src + sizeof(T) > Buffer.end())
-        return make_error<GenericBinaryError>(
-            "Reading structure out of file bounds", object_error::parse_failed);
+//     template <typename T>
+//     static Error readParameter(StringRef Buffer, const char *Src, T &Struct)
+//     {
+//       // Don't read before the beginning or past the end of the file
+//       if (Src < Buffer.begin() || Src + sizeof(T) > Buffer.end())
+//         return make_error<GenericBinaryError>(
+//             "Reading structure out of file bounds",
+//             object_error::parse_failed);
 
-      memcpy(&Struct, Src, sizeof(T));
-      // DXContainer is always little endian
-      if (sys::IsBigEndianHost)
-        Struct.swapBytes();
-      return Error::success();
-    }
+//       memcpy(&Struct, Src, sizeof(T));
+//       // DXContainer is always little endian
+//       if (sys::IsBigEndianHost)
+//         Struct.swapBytes();
+//       return Error::success();
+//     }
 
-    static Error validationFailed(const Twine &Msg) {
-      return make_error<StringError>(Msg.str(), inconvertibleErrorCode());
-    }
+//     static Error validationFailed(const Twine &Msg) {
+//       return make_error<StringError>(Msg.str(), inconvertibleErrorCode());
+//     }
 
-    llvm::Expected<value_type> operator*() {
-      value_type Parameter;
-      std::memset(&Parameter.Header, 0, sizeof(dxbc::RootParameterHeader));
-      memcpy(&Parameter.Header, Current.Current,
-             sizeof(dxbc::RootParameterHeader));
+//     llvm::Expected<value_type> operator*() {
+//       value_type Parameter;
+//       std::memset(&Parameter.Header, 0, sizeof(dxbc::RootParameterHeader));
+//       memcpy(&Parameter.Header, Current.Current,
+//              sizeof(dxbc::RootParameterHeader));
 
-      switch (Parameter.Header.ParameterType) {
-      case dxbc::RootParameterType::Constants32Bit:
-        std::memset(&Parameter.Constants, 0, sizeof(dxbc::RootConstants));
-        if (Error Err = readParameter(
-                Data, Data.begin() + Parameter.Header.ParameterOffset,
-                Parameter.Constants))
-          return Err;
-        break;
-      }
+//       switch (Parameter.Header.ParameterType) {
+//       case dxbc::RootParameterType::Constants32Bit:
+//         std::memset(&Parameter.Constants, 0, sizeof(dxbc::RootConstants));
+//         if (Error Err = readParameter(
+//                 Data, Data.begin() + Parameter.Header.ParameterOffset,
+//                 Parameter.Constants))
+//           return Err;
+//         break;
+//       }
 
-      return Parameter;
-    }
+//       return Parameter;
+//     }
 
-    iterator operator++() {
-      if (Current != HeaderView.end())
-        Current++;
-      return *this;
-    }
+//     iterator operator++() {
+//       if (Current != HeaderView.end())
+//         Current++;
+//       return *this;
+//     }
 
-    iterator operator++(int I) {
-      iterator Tmp = *this;
-      for (; I > 0; I--)
-        ++Tmp;
-      return Tmp;
-    }
+//     iterator operator++(int I) {
+//       iterator Tmp = *this;
+//       for (; I > 0; I--)
+//         ++Tmp;
+//       return Tmp;
+//     }
 
-    iterator operator--() {
-      if (Current != HeaderView.begin())
-        Current--;
-      return *this;
-    }
+//     iterator operator--() {
+//       if (Current != HeaderView.begin())
+//         Current--;
+//       return *this;
+//     }
 
-    iterator operator--(int I) {
-      iterator Tmp = *this;
-      for (; I > 0; I--)
-        --Tmp;
-      return Tmp;
-    }
+//     iterator operator--(int I) {
+//       iterator Tmp = *this;
+//       for (; I > 0; I--)
+//         --Tmp;
+//       return Tmp;
+//     }
 
-    bool operator==(iterator I) { return I.Current == Current; }
-    bool operator!=(const iterator I) { return !(*this == I); }
-  };
+//     bool operator==(iterator I) { return I.Current == Current; }
+//     bool operator!=(const iterator I) { return !(*this == I); }
+//   };
 
-  iterator begin() const { return iterator(*this, this->HeaderView.begin()); }
+//   iterator begin() const { return iterator(*this, this->HeaderView.begin());
+//   }
 
-  iterator end() const { return iterator(*this, this->HeaderView.end()); }
+//   iterator end() const { return iterator(*this, this->HeaderView.end()); }
 
-  size_t size() const { return HeaderView.size(); }
+//   size_t size() const { return HeaderView.size(); }
 
-  bool isEmpty() const { return HeaderView.isEmpty(); }
+//   bool isEmpty() const { return HeaderView.isEmpty(); }
+// };
+
+struct RootParameterView {
+  const dxbc::RootParameterHeader &Header;
+  StringRef ParamData;
+  RootParameterView(const dxbc::RootParameterHeader &H, StringRef P)
+      : Header(H), ParamData(P) {}
+
+  template <typename T> Expected<T> readParameter() {
+    T Struct;
+    if (sizeof(T) > ParamData.size())
+      return make_error<GenericBinaryError>(
+          "Reading structure out of file bounds", object_error::parse_failed);
+
+    memcpy(&Struct, ParamData.data(), sizeof(T));
+    // DXContainer is always little endian
+    if (sys::IsBigEndianHost)
+      Struct.swapBytes();
+    return Struct;
+  }
+};
+
+struct RootConstantView : RootParameterView {
+  static bool classof(const RootParameterView *V) {
+    return V->Header.ParameterType == dxbc::RootParameterType::Constants32Bit;
+  }
+
+  llvm::Expected<dxbc::RootConstants> read() {
+    return readParameter<dxbc::RootConstants>();
+  }
 };
 
 class RootSignature {
@@ -231,9 +267,11 @@ private:
   uint32_t StaticSamplersOffset = 0;
   uint32_t Flags = 0;
 
-  ViewRootParameter Parameters;
+  ViewArray<dxbc::RootParameterHeader> ParametersHeaders;
+  size_t ParameterSpaceOffset;
+  StringRef ParameterSpace;
 
-  using param_iterator = ViewRootParameter::iterator;
+  using param_header_iterator = ViewArray<dxbc::RootParameterHeader>::iterator;
 
 public:
   RootSignature() {}
@@ -244,12 +282,34 @@ public:
   uint32_t getRootParametersOffset() const { return RootParametersOffset; }
   uint32_t getNumStaticSamplers() const { return NumStaticSamplers; }
   uint32_t getStaticSamplersOffset() const { return StaticSamplersOffset; }
-  llvm::iterator_range<param_iterator> params() const {
-    return llvm::make_range(Parameters.begin(), Parameters.end());
+  llvm::iterator_range<param_header_iterator> param_header() const {
+    return llvm::make_range(ParametersHeaders.begin(), ParametersHeaders.end());
   }
-  param_iterator param_begin() { return Parameters.begin(); }
-  param_iterator param_end() { return Parameters.end(); }
+  param_header_iterator param_header_begin() {
+    return ParametersHeaders.begin();
+  }
+  param_header_iterator param_header_end() { return ParametersHeaders.end(); }
   uint32_t getFlags() const { return Flags; }
+  RootParameterView
+  getParameter(const dxbc::RootParameterHeader &Header) const {
+    size_t CorrectOffset = Header.ParameterOffset - ParameterSpaceOffset;
+    StringRef Data;
+
+    size_t DataSize = 0;
+
+    switch (Header.ParameterType) {
+    case dxbc::RootParameterType::Constants32Bit:
+      DataSize = sizeof(dxbc::RootConstants);
+      if (CorrectOffset + DataSize > ParameterSpace.size()) {
+        // throw
+      }
+      Data = ParameterSpace.substr(CorrectOffset, DataSize);
+      break;
+    }
+
+    RootParameterView View = RootParameterView(Header, Data);
+    return View;
+  }
 };
 
 class PSVRuntimeInfo {
