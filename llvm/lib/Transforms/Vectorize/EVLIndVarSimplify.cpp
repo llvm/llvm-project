@@ -97,8 +97,12 @@ bool EVLIndVarSimplifyImpl::run(Loop &L) {
   if (!EnableEVLIndVarSimplify)
     return false;
 
-  if (!getBooleanLoopAttribute(&L, "llvm.loop.isvectorized") ||
-      !getBooleanLoopAttribute(&L, "llvm.loop.isvectorized.withevl"))
+  if (!getBooleanLoopAttribute(&L, "llvm.loop.isvectorized"))
+    return false;
+  const MDOperand *EVLMD =
+      findStringMetadataForLoop(&L, "llvm.loop.isvectorized.tailfoldingstyle")
+          .value_or(nullptr);
+  if (!EVLMD || !EVLMD->equalsStr("evl"))
     return false;
 
   BasicBlock *LatchBlock = L.getLoopLatch();
