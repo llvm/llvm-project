@@ -585,7 +585,7 @@ public:
     MCValue Res;
     if (!JalExpr->evaluateAsRelocatable(Res, nullptr))
       return false;
-    if (Res.getSymB() != nullptr)
+    if (Res.getSubSym())
       return false;
     if (Res.getConstant() != 0)
       return ABI.IsN32() || ABI.IsN64();
@@ -2938,7 +2938,7 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
       Error(IDLoc, "expected relocatable expression");
       return true;
     }
-    if (Res.getSymB() != nullptr) {
+    if (Res.getSubSym()) {
       Error(IDLoc, "expected relocatable expression with only one symbol");
       return true;
     }
@@ -3768,7 +3768,7 @@ void MipsAsmParser::expandMem16Inst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
         Error(IDLoc, "expected relocatable expression");
         return;
       }
-      if (Res.getSymB() != nullptr) {
+      if (Res.getSubSym()) {
         Error(IDLoc, "expected relocatable expression with only one symbol");
         return;
       }
