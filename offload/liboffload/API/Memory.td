@@ -40,8 +40,6 @@ def : Function {
   let name = "olMemFree";
   let desc = "Frees a memory allocation previously made by olMemAlloc.";
   let params = [
-    Param<"ol_device_handle_t", "Device", "handle of the device to allocate on", PARAM_IN>,
-    Param<"ol_alloc_type_t", "Type", "type of the allocation", PARAM_IN>,
     Param<"void*", "Address", "address of the allocation to free", PARAM_IN>,
   ];
   let returns = [];

@@ -61,7 +61,7 @@ TEST_F(olLaunchKernelTest, Success) {
     ASSERT_EQ(Data[i], i);
   }
 
-  ASSERT_SUCCESS(olMemFree(Device, OL_ALLOC_TYPE_SHARED, Mem));
+  ASSERT_SUCCESS(olMemFree(Mem));
 }
 
 TEST_F(olLaunchKernelTest, SuccessSynchronous) {
@@ -80,5 +80,5 @@ TEST_F(olLaunchKernelTest, SuccessSynchronous) {
     ASSERT_EQ(Data[i], i);
   }
 
-  ASSERT_SUCCESS(olMemFree(Device, OL_ALLOC_TYPE_SHARED, Mem));
+  ASSERT_SUCCESS(olMemFree(Mem));
 }
