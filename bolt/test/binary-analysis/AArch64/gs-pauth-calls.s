@@ -6,6 +6,12 @@
 
         .text
 
+        .globl  callee
+        .type   callee,@function
+callee:
+        ret
+        .size callee, .-callee
+
         .globl  good_direct_call
         .type   good_direct_call,@function
 good_direct_call:
@@ -14,7 +20,7 @@ good_direct_call:
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
 
-        bl      callee_ext
+        bl      callee
 
         ldp     x29, x30, [sp], #16
         autiasp
@@ -431,7 +437,7 @@ bad_indirect_call_mem_chain_of_auts_multi_bb:
         .type   good_direct_tailcall,@function
 good_direct_tailcall:
 // CHECK-NOT: good_direct_tailcall
-        b       callee_ext
+        b       callee
         .size good_direct_tailcall, .-good_direct_tailcall
 
         .globl  good_indirect_tailcall_mem
@@ -548,60 +554,59 @@ direct_call_invalidates_safety:
 // CHECK-LABEL: GS-PAUTH: non-protected call found in function direct_call_invalidates_safety, basic block {{[^,]+}}, at address
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      blr     x2
 // CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
-// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      bl
-// FIXME: Print the destination of BL as callee_ext instead of .LtmpN
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      bl      callee
 // CHECK-LABEL: GS-PAUTH: non-protected call found in function direct_call_invalidates_safety, basic block {{[^,]+}}, at address
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      blr     x8
 // CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
-// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      bl
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      bl      callee
 // CHECK-LABEL: GS-PAUTH: non-protected call found in function direct_call_invalidates_safety, basic block {{[^,]+}}, at address
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      blr     x10
 // CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
-// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      bl
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      bl      callee
 // CHECK-LABEL: GS-PAUTH: non-protected call found in function direct_call_invalidates_safety, basic block {{[^,]+}}, at address
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      blr     x16
 // CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
-// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      bl
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      bl      callee
 // CHECK-LABEL: GS-PAUTH: non-protected call found in function direct_call_invalidates_safety, basic block {{[^,]+}}, at address
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      blr     x18
 // CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
-// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      bl
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      bl      callee
 // CHECK-LABEL: GS-PAUTH: non-protected call found in function direct_call_invalidates_safety, basic block {{[^,]+}}, at address
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      blr     x20
 // CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
-// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      bl
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      bl      callee
         paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
 
         mov     x2, x0
         autiza  x2
-        bl      callee_ext
+        bl      callee
         blr     x2
 
         mov     x8, x0
         autiza  x8
-        bl      callee_ext
+        bl      callee
         blr     x8
 
         mov     x10, x0
         autiza  x10
-        bl      callee_ext
+        bl      callee
         blr     x10
 
         mov     x16, x0
         autiza  x16
-        bl      callee_ext
+        bl      callee
         blr     x16
 
         mov     x18, x0
         autiza  x18
-        bl      callee_ext
+        bl      callee
         blr     x18
 
         mov     x20, x0
         autiza  x20
-        bl      callee_ext
+        bl      callee
         blr     x20
 
         ldp     x29, x30, [sp], #16
