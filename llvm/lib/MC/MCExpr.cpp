@@ -37,10 +37,22 @@ STATISTIC(MCExprEvaluate, "Number of MCExpr evaluations");
 } // end namespace stats
 } // end anonymous namespace
 
+static int getPrecedence(MCBinaryExpr::Opcode Op) {
+  switch (Op) {
+  case MCBinaryExpr::Add:
+  case MCBinaryExpr::Sub:
+    return 1;
+  default:
+    return 0;
+  }
+}
+
 // VariantKind printing and formatting utilize MAI. operator<< (dump and some
 // target code) specifies MAI as nullptr and should be avoided when MAI is
 // needed.
-void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI, bool InParens) const {
+void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI,
+                   int SurroundingPrec) const {
+  constexpr int MaxPrec = 9;
   switch (getKind()) {
   case MCExpr::Target:
     return cast<MCTargetExpr>(this)->printImpl(OS, MAI);
@@ -75,17 +87,7 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI, bool InParens) const {
   case MCExpr::SymbolRef: {
     const MCSymbolRefExpr &SRE = cast<MCSymbolRefExpr>(*this);
     const MCSymbol &Sym = SRE.getSymbol();
-    // Parenthesize names that start with $ so that they don't look like
-    // absolute names.
-    bool UseParens = MAI && MAI->useParensForDollarSignNames() && !InParens &&
-                     Sym.getName().starts_with('$');
-
-    if (UseParens) {
-      OS << '(';
-      Sym.print(OS, MAI);
-      OS << ')';
-    } else
-      Sym.print(OS, MAI);
+    Sym.print(OS, MAI);
 
     const MCSymbolRefExpr::VariantKind Kind = SRE.getKind();
     if (Kind != MCSymbolRefExpr::VK_None) {
@@ -108,24 +110,26 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI, bool InParens) const {
     case MCUnaryExpr::Not:   OS << '~'; break;
     case MCUnaryExpr::Plus:  OS << '+'; break;
     }
-    bool Binary = UE.getSubExpr()->getKind() == MCExpr::Binary;
-    if (Binary) OS << "(";
-    UE.getSubExpr()->print(OS, MAI);
-    if (Binary) OS << ")";
+    UE.getSubExpr()->print(OS, MAI, MaxPrec);
     return;
   }
 
   case MCExpr::Binary: {
     const MCBinaryExpr &BE = cast<MCBinaryExpr>(*this);
-
-    // Only print parens around the LHS if it is non-trivial.
-    if (isa<MCConstantExpr>(BE.getLHS()) || isa<MCSymbolRefExpr>(BE.getLHS())) {
-      BE.getLHS()->print(OS, MAI);
-    } else {
+    // We want to avoid redundant parentheses for relocatable expressions like
+    // a-b+c.
+    //
+    // Print '(' if the current operator has lower precedence than the
+    // surrounding operator, or if the surrounding operator's precedence is
+    // unknown (set to HighPrecedence).
+    int Prec = getPrecedence(BE.getOpcode());
+    bool Paren = Prec < SurroundingPrec;
+    if (Paren)
       OS << '(';
-      BE.getLHS()->print(OS, MAI);
-      OS << ')';
-    }
+    // Many operators' precedence is different from C. Set the precedence to
+    // HighPrecedence for unknown operators.
+    int SubPrec = Prec ? Prec : MaxPrec;
+    BE.getLHS()->print(OS, MAI, SubPrec);
 
     switch (BE.getOpcode()) {
     case MCBinaryExpr::Add:
@@ -133,6 +137,8 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI, bool InParens) const {
       if (const MCConstantExpr *RHSC = dyn_cast<MCConstantExpr>(BE.getRHS())) {
         if (RHSC->getValue() < 0) {
           OS << RHSC->getValue();
+          if (Paren)
+            OS << ')';
           return;
         }
       }
@@ -160,14 +166,9 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI, bool InParens) const {
     case MCBinaryExpr::Xor:  OS <<  '^'; break;
     }
 
-    // Only print parens around the LHS if it is non-trivial.
-    if (isa<MCConstantExpr>(BE.getRHS()) || isa<MCSymbolRefExpr>(BE.getRHS())) {
-      BE.getRHS()->print(OS, MAI);
-    } else {
-      OS << '(';
-      BE.getRHS()->print(OS, MAI);
+    BE.getRHS()->print(OS, MAI, SubPrec + 1);
+    if (Paren)
       OS << ')';
-    }
     return;
   }
   }
