@@ -4,15 +4,15 @@
 ; RUN: opt --passes=loop-vectorize --mtriple=aarch64 -mattr="+neon" -S < %s | FileCheck %s --check-prefix=ARM64
 ; RUN: opt --passes=loop-vectorize --mtriple=x86_64 -S < %s | FileCheck %s --check-prefix=X64
 
-@af32 = global [4096 x float] zeroinitializer, align 4
-@bf32 = global [4096 x float] zeroinitializer, align 4
-@cf32 = global [4096 x float] zeroinitializer, align 4
-@af64 = global [4096 x double] zeroinitializer, align 8
-@bf64 = global [4096 x double] zeroinitializer, align 8
-@cf64 = global [4096 x double] zeroinitializer, align 8
-@af16 = global [4096 x half] zeroinitializer, align 2
-@bf16 = global [4096 x half] zeroinitializer, align 2
-@cf16 = global [4096 x half] zeroinitializer, align 2
+@input1_f32 = global [4096 x float] zeroinitializer, align 4
+@input2_f32 = global [4096 x float] zeroinitializer, align 4
+@output_f32 = global [4096 x float] zeroinitializer, align 4
+@input1_f64 = global [4096 x double] zeroinitializer, align 8
+@input2_f64 = global [4096 x double] zeroinitializer, align 8
+@output_f64 = global [4096 x double] zeroinitializer, align 8
+@input1_f16 = global [4096 x half] zeroinitializer, align 2
+@input2_f16 = global [4096 x half] zeroinitializer, align 2
+@output_f16 = global [4096 x half] zeroinitializer, align 2
 
 define void @f32min()  {
 ; RV64-LABEL: define void @f32min(
@@ -23,12 +23,12 @@ define void @f32min()  {
 ; RV64-NEXT:    ret void
 ; RV64:       [[FOR_BODY]]:
 ; RV64-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; RV64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @af32, i64 0, i64 [[INDVARS_IV]]
+; RV64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @input1_f32, i64 0, i64 [[INDVARS_IV]]
 ; RV64-NEXT:    [[TMP14:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; RV64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @bf32, i64 0, i64 [[INDVARS_IV]]
+; RV64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @input2_f32, i64 0, i64 [[INDVARS_IV]]
 ; RV64-NEXT:    [[TMP15:%.*]] = load float, ptr [[ARRAYIDX2]], align 4
 ; RV64-NEXT:    [[TMP16:%.*]] = tail call float @llvm.minimumnum.f32(float [[TMP14]], float [[TMP15]])
-; RV64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @cf32, i64 0, i64 [[INDVARS_IV]]
+; RV64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @output_f32, i64 0, i64 [[INDVARS_IV]]
 ; RV64-NEXT:    store float [[TMP16]], ptr [[ARRAYIDX4]], align 4
 ; RV64-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; RV64-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 4096
@@ -42,12 +42,12 @@ define void @f32min()  {
 ; ARM64-NEXT:    ret void
 ; ARM64:       [[FOR_BODY]]:
 ; ARM64-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; ARM64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @af32, i64 0, i64 [[INDVARS_IV]]
+; ARM64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @input1_f32, i64 0, i64 [[INDVARS_IV]]
 ; ARM64-NEXT:    [[TMP12:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; ARM64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @bf32, i64 0, i64 [[INDVARS_IV]]
+; ARM64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @input2_f32, i64 0, i64 [[INDVARS_IV]]
 ; ARM64-NEXT:    [[TMP13:%.*]] = load float, ptr [[ARRAYIDX2]], align 4
 ; ARM64-NEXT:    [[TMP14:%.*]] = tail call float @llvm.minimumnum.f32(float [[TMP12]], float [[TMP13]])
-; ARM64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @cf32, i64 0, i64 [[INDVARS_IV]]
+; ARM64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @output_f32, i64 0, i64 [[INDVARS_IV]]
 ; ARM64-NEXT:    store float [[TMP14]], ptr [[ARRAYIDX4]], align 4
 ; ARM64-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; ARM64-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 4096
@@ -60,12 +60,12 @@ define void @f32min()  {
 ; X64-NEXT:    ret void
 ; X64:       [[FOR_BODY]]:
 ; X64-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; X64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @af32, i64 0, i64 [[INDVARS_IV]]
+; X64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @input1_f32, i64 0, i64 [[INDVARS_IV]]
 ; X64-NEXT:    [[TMP12:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; X64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @bf32, i64 0, i64 [[INDVARS_IV]]
+; X64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @input2_f32, i64 0, i64 [[INDVARS_IV]]
 ; X64-NEXT:    [[TMP13:%.*]] = load float, ptr [[ARRAYIDX2]], align 4
 ; X64-NEXT:    [[TMP14:%.*]] = tail call float @llvm.minimumnum.f32(float [[TMP12]], float [[TMP13]])
-; X64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @cf32, i64 0, i64 [[INDVARS_IV]]
+; X64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @output_f32, i64 0, i64 [[INDVARS_IV]]
 ; X64-NEXT:    store float [[TMP14]], ptr [[ARRAYIDX4]], align 4
 ; X64-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; X64-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 4096
@@ -79,12 +79,12 @@ for.cond.cleanup:                                 ; preds = %for.body
 
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds nuw [4096 x float], ptr @af32, i64 0, i64 %indvars.iv
+  %arrayidx = getelementptr inbounds nuw [4096 x float], ptr @input1_f32, i64 0, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds nuw [4096 x float], ptr @bf32, i64 0, i64 %indvars.iv
+  %arrayidx2 = getelementptr inbounds nuw [4096 x float], ptr @input2_f32, i64 0, i64 %indvars.iv
   %1 = load float, ptr %arrayidx2, align 4
   %2 = tail call float @llvm.minimumnum.f32(float %0, float %1)
-  %arrayidx4 = getelementptr inbounds nuw [4096 x float], ptr @cf32, i64 0, i64 %indvars.iv
+  %arrayidx4 = getelementptr inbounds nuw [4096 x float], ptr @output_f32, i64 0, i64 %indvars.iv
   store float %2, ptr %arrayidx4, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond.not = icmp eq i64 %indvars.iv.next, 4096
@@ -102,12 +102,12 @@ define void @f32max()  {
 ; RV64-NEXT:    ret void
 ; RV64:       [[FOR_BODY]]:
 ; RV64-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; RV64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @af32, i64 0, i64 [[INDVARS_IV]]
+; RV64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @input1_f32, i64 0, i64 [[INDVARS_IV]]
 ; RV64-NEXT:    [[TMP14:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; RV64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @bf32, i64 0, i64 [[INDVARS_IV]]
+; RV64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @input2_f32, i64 0, i64 [[INDVARS_IV]]
 ; RV64-NEXT:    [[TMP15:%.*]] = load float, ptr [[ARRAYIDX2]], align 4
 ; RV64-NEXT:    [[TMP16:%.*]] = tail call float @llvm.maximumnum.f32(float [[TMP14]], float [[TMP15]])
-; RV64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @cf32, i64 0, i64 [[INDVARS_IV]]
+; RV64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @output_f32, i64 0, i64 [[INDVARS_IV]]
 ; RV64-NEXT:    store float [[TMP16]], ptr [[ARRAYIDX4]], align 4
 ; RV64-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; RV64-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 4096
@@ -121,12 +121,12 @@ define void @f32max()  {
 ; ARM64-NEXT:    ret void
 ; ARM64:       [[FOR_BODY]]:
 ; ARM64-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; ARM64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @af32, i64 0, i64 [[INDVARS_IV]]
+; ARM64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @input1_f32, i64 0, i64 [[INDVARS_IV]]
 ; ARM64-NEXT:    [[TMP12:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; ARM64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @bf32, i64 0, i64 [[INDVARS_IV]]
+; ARM64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @input2_f32, i64 0, i64 [[INDVARS_IV]]
 ; ARM64-NEXT:    [[TMP13:%.*]] = load float, ptr [[ARRAYIDX2]], align 4
 ; ARM64-NEXT:    [[TMP14:%.*]] = tail call float @llvm.maximumnum.f32(float [[TMP12]], float [[TMP13]])
-; ARM64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @cf32, i64 0, i64 [[INDVARS_IV]]
+; ARM64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @output_f32, i64 0, i64 [[INDVARS_IV]]
 ; ARM64-NEXT:    store float [[TMP14]], ptr [[ARRAYIDX4]], align 4
 ; ARM64-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; ARM64-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 4096
@@ -139,12 +139,12 @@ define void @f32max()  {
 ; X64-NEXT:    ret void
 ; X64:       [[FOR_BODY]]:
 ; X64-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; X64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @af32, i64 0, i64 [[INDVARS_IV]]
+; X64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @input1_f32, i64 0, i64 [[INDVARS_IV]]
 ; X64-NEXT:    [[TMP12:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; X64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @bf32, i64 0, i64 [[INDVARS_IV]]
+; X64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @input2_f32, i64 0, i64 [[INDVARS_IV]]
 ; X64-NEXT:    [[TMP13:%.*]] = load float, ptr [[ARRAYIDX2]], align 4
 ; X64-NEXT:    [[TMP14:%.*]] = tail call float @llvm.maximumnum.f32(float [[TMP12]], float [[TMP13]])
-; X64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @cf32, i64 0, i64 [[INDVARS_IV]]
+; X64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @output_f32, i64 0, i64 [[INDVARS_IV]]
 ; X64-NEXT:    store float [[TMP14]], ptr [[ARRAYIDX4]], align 4
 ; X64-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; X64-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 4096
@@ -158,12 +158,12 @@ for.cond.cleanup:                                 ; preds = %for.body
 
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds nuw [4096 x float], ptr @af32, i64 0, i64 %indvars.iv
+  %arrayidx = getelementptr inbounds nuw [4096 x float], ptr @input1_f32, i64 0, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds nuw [4096 x float], ptr @bf32, i64 0, i64 %indvars.iv
+  %arrayidx2 = getelementptr inbounds nuw [4096 x float], ptr @input2_f32, i64 0, i64 %indvars.iv
   %1 = load float, ptr %arrayidx2, align 4
   %2 = tail call float @llvm.maximumnum.f32(float %0, float %1)
-  %arrayidx4 = getelementptr inbounds nuw [4096 x float], ptr @cf32, i64 0, i64 %indvars.iv
+  %arrayidx4 = getelementptr inbounds nuw [4096 x float], ptr @output_f32, i64 0, i64 %indvars.iv
   store float %2, ptr %arrayidx4, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond.not = icmp eq i64 %indvars.iv.next, 4096
@@ -181,12 +181,12 @@ define void @f64min()  {
 ; RV64-NEXT:    ret void
 ; RV64:       [[FOR_BODY]]:
 ; RV64-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; RV64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @af64, i64 0, i64 [[INDVARS_IV]]
+; RV64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @input1_f64, i64 0, i64 [[INDVARS_IV]]
 ; RV64-NEXT:    [[TMP14:%.*]] = load double, ptr [[ARRAYIDX]], align 8
-; RV64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @bf64, i64 0, i64 [[INDVARS_IV]]
+; RV64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @input2_f64, i64 0, i64 [[INDVARS_IV]]
 ; RV64-NEXT:    [[TMP15:%.*]] = load double, ptr [[ARRAYIDX2]], align 8
 ; RV64-NEXT:    [[TMP16:%.*]] = tail call double @llvm.minimumnum.f64(double [[TMP14]], double [[TMP15]])
-; RV64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @cf64, i64 0, i64 [[INDVARS_IV]]
+; RV64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @output_f64, i64 0, i64 [[INDVARS_IV]]
 ; RV64-NEXT:    store double [[TMP16]], ptr [[ARRAYIDX4]], align 8
 ; RV64-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; RV64-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 4096
@@ -200,12 +200,12 @@ define void @f64min()  {
 ; ARM64-NEXT:    ret void
 ; ARM64:       [[FOR_BODY]]:
 ; ARM64-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; ARM64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @af64, i64 0, i64 [[INDVARS_IV]]
+; ARM64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @input1_f64, i64 0, i64 [[INDVARS_IV]]
 ; ARM64-NEXT:    [[TMP12:%.*]] = load double, ptr [[ARRAYIDX]], align 8
-; ARM64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @bf64, i64 0, i64 [[INDVARS_IV]]
+; ARM64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @input2_f64, i64 0, i64 [[INDVARS_IV]]
 ; ARM64-NEXT:    [[TMP13:%.*]] = load double, ptr [[ARRAYIDX2]], align 8
 ; ARM64-NEXT:    [[TMP14:%.*]] = tail call double @llvm.minimumnum.f64(double [[TMP12]], double [[TMP13]])
-; ARM64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @cf64, i64 0, i64 [[INDVARS_IV]]
+; ARM64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @output_f64, i64 0, i64 [[INDVARS_IV]]
 ; ARM64-NEXT:    store double [[TMP14]], ptr [[ARRAYIDX4]], align 8
 ; ARM64-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; ARM64-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 4096
@@ -218,12 +218,12 @@ define void @f64min()  {
 ; X64-NEXT:    ret void
 ; X64:       [[FOR_BODY]]:
 ; X64-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; X64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @af64, i64 0, i64 [[INDVARS_IV]]
+; X64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @input1_f64, i64 0, i64 [[INDVARS_IV]]
 ; X64-NEXT:    [[TMP12:%.*]] = load double, ptr [[ARRAYIDX]], align 8
-; X64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @bf64, i64 0, i64 [[INDVARS_IV]]
+; X64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @input2_f64, i64 0, i64 [[INDVARS_IV]]
 ; X64-NEXT:    [[TMP13:%.*]] = load double, ptr [[ARRAYIDX2]], align 8
 ; X64-NEXT:    [[TMP14:%.*]] = tail call double @llvm.minimumnum.f64(double [[TMP12]], double [[TMP13]])
-; X64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @cf64, i64 0, i64 [[INDVARS_IV]]
+; X64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @output_f64, i64 0, i64 [[INDVARS_IV]]
 ; X64-NEXT:    store double [[TMP14]], ptr [[ARRAYIDX4]], align 8
 ; X64-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; X64-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 4096
@@ -237,12 +237,12 @@ for.cond.cleanup:                                 ; preds = %for.body
 
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds nuw [4096 x double], ptr @af64, i64 0, i64 %indvars.iv
+  %arrayidx = getelementptr inbounds nuw [4096 x double], ptr @input1_f64, i64 0, i64 %indvars.iv
   %0 = load double, ptr %arrayidx, align 8
-  %arrayidx2 = getelementptr inbounds nuw [4096 x double], ptr @bf64, i64 0, i64 %indvars.iv
+  %arrayidx2 = getelementptr inbounds nuw [4096 x double], ptr @input2_f64, i64 0, i64 %indvars.iv
   %1 = load double, ptr %arrayidx2, align 8
   %2 = tail call double @llvm.minimumnum.f64(double %0, double %1)
-  %arrayidx4 = getelementptr inbounds nuw [4096 x double], ptr @cf64, i64 0, i64 %indvars.iv
+  %arrayidx4 = getelementptr inbounds nuw [4096 x double], ptr @output_f64, i64 0, i64 %indvars.iv
   store double %2, ptr %arrayidx4, align 8
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond.not = icmp eq i64 %indvars.iv.next, 4096
@@ -260,12 +260,12 @@ define void @f64max()  {
 ; RV64-NEXT:    ret void
 ; RV64:       [[FOR_BODY]]:
 ; RV64-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; RV64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @af64, i64 0, i64 [[INDVARS_IV]]
+; RV64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @input1_f64, i64 0, i64 [[INDVARS_IV]]
 ; RV64-NEXT:    [[TMP14:%.*]] = load double, ptr [[ARRAYIDX]], align 8
-; RV64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @bf64, i64 0, i64 [[INDVARS_IV]]
+; RV64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @input2_f64, i64 0, i64 [[INDVARS_IV]]
 ; RV64-NEXT:    [[TMP15:%.*]] = load double, ptr [[ARRAYIDX2]], align 8
 ; RV64-NEXT:    [[TMP16:%.*]] = tail call double @llvm.maximumnum.f64(double [[TMP14]], double [[TMP15]])
-; RV64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @cf64, i64 0, i64 [[INDVARS_IV]]
+; RV64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @output_f64, i64 0, i64 [[INDVARS_IV]]
 ; RV64-NEXT:    store double [[TMP16]], ptr [[ARRAYIDX4]], align 8
 ; RV64-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; RV64-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 4096
@@ -279,12 +279,12 @@ define void @f64max()  {
 ; ARM64-NEXT:    ret void
 ; ARM64:       [[FOR_BODY]]:
 ; ARM64-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; ARM64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @af64, i64 0, i64 [[INDVARS_IV]]
+; ARM64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @input1_f64, i64 0, i64 [[INDVARS_IV]]
 ; ARM64-NEXT:    [[TMP12:%.*]] = load double, ptr [[ARRAYIDX]], align 8
-; ARM64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @bf64, i64 0, i64 [[INDVARS_IV]]
+; ARM64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @input2_f64, i64 0, i64 [[INDVARS_IV]]
 ; ARM64-NEXT:    [[TMP13:%.*]] = load double, ptr [[ARRAYIDX2]], align 8
 ; ARM64-NEXT:    [[TMP14:%.*]] = tail call double @llvm.maximumnum.f64(double [[TMP12]], double [[TMP13]])
-; ARM64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @cf64, i64 0, i64 [[INDVARS_IV]]
+; ARM64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @output_f64, i64 0, i64 [[INDVARS_IV]]
 ; ARM64-NEXT:    store double [[TMP14]], ptr [[ARRAYIDX4]], align 8
 ; ARM64-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; ARM64-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 4096
@@ -297,12 +297,12 @@ define void @f64max()  {
 ; X64-NEXT:    ret void
 ; X64:       [[FOR_BODY]]:
 ; X64-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; X64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @af64, i64 0, i64 [[INDVARS_IV]]
+; X64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @input1_f64, i64 0, i64 [[INDVARS_IV]]
 ; X64-NEXT:    [[TMP12:%.*]] = load double, ptr [[ARRAYIDX]], align 8
-; X64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @bf64, i64 0, i64 [[INDVARS_IV]]
+; X64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @input2_f64, i64 0, i64 [[INDVARS_IV]]
 ; X64-NEXT:    [[TMP13:%.*]] = load double, ptr [[ARRAYIDX2]], align 8
 ; X64-NEXT:    [[TMP14:%.*]] = tail call double @llvm.maximumnum.f64(double [[TMP12]], double [[TMP13]])
-; X64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @cf64, i64 0, i64 [[INDVARS_IV]]
+; X64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @output_f64, i64 0, i64 [[INDVARS_IV]]
 ; X64-NEXT:    store double [[TMP14]], ptr [[ARRAYIDX4]], align 8
 ; X64-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; X64-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 4096
@@ -316,12 +316,12 @@ for.cond.cleanup:                                 ; preds = %for.body
 
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds nuw [4096 x double], ptr @af64, i64 0, i64 %indvars.iv
+  %arrayidx = getelementptr inbounds nuw [4096 x double], ptr @input1_f64, i64 0, i64 %indvars.iv
   %0 = load double, ptr %arrayidx, align 8
-  %arrayidx2 = getelementptr inbounds nuw [4096 x double], ptr @bf64, i64 0, i64 %indvars.iv
+  %arrayidx2 = getelementptr inbounds nuw [4096 x double], ptr @input2_f64, i64 0, i64 %indvars.iv
   %1 = load double, ptr %arrayidx2, align 8
   %2 = tail call double @llvm.maximumnum.f64(double %0, double %1)
-  %arrayidx4 = getelementptr inbounds nuw [4096 x double], ptr @cf64, i64 0, i64 %indvars.iv
+  %arrayidx4 = getelementptr inbounds nuw [4096 x double], ptr @output_f64, i64 0, i64 %indvars.iv
   store double %2, ptr %arrayidx4, align 8
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond.not = icmp eq i64 %indvars.iv.next, 4096
@@ -339,12 +339,12 @@ define void @f16min()  {
 ; RV64-NEXT:    ret void
 ; RV64:       [[FOR_BODY]]:
 ; RV64-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; RV64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @af16, i64 0, i64 [[INDVARS_IV]]
+; RV64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @input1_f16, i64 0, i64 [[INDVARS_IV]]
 ; RV64-NEXT:    [[TMP14:%.*]] = load half, ptr [[ARRAYIDX]], align 2
-; RV64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @bf16, i64 0, i64 [[INDVARS_IV]]
+; RV64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @input2_f16, i64 0, i64 [[INDVARS_IV]]
 ; RV64-NEXT:    [[TMP15:%.*]] = load half, ptr [[ARRAYIDX2]], align 2
 ; RV64-NEXT:    [[TMP16:%.*]] = tail call half @llvm.minimumnum.f16(half [[TMP14]], half [[TMP15]])
-; RV64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @cf16, i64 0, i64 [[INDVARS_IV]]
+; RV64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @output_f16, i64 0, i64 [[INDVARS_IV]]
 ; RV64-NEXT:    store half [[TMP16]], ptr [[ARRAYIDX4]], align 2
 ; RV64-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; RV64-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 4096
@@ -358,12 +358,12 @@ define void @f16min()  {
 ; ARM64-NEXT:    ret void
 ; ARM64:       [[FOR_BODY]]:
 ; ARM64-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; ARM64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @af16, i64 0, i64 [[INDVARS_IV]]
+; ARM64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @input1_f16, i64 0, i64 [[INDVARS_IV]]
 ; ARM64-NEXT:    [[TMP8:%.*]] = load half, ptr [[ARRAYIDX]], align 2
-; ARM64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @bf16, i64 0, i64 [[INDVARS_IV]]
+; ARM64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @input2_f16, i64 0, i64 [[INDVARS_IV]]
 ; ARM64-NEXT:    [[TMP9:%.*]] = load half, ptr [[ARRAYIDX2]], align 2
 ; ARM64-NEXT:    [[TMP10:%.*]] = tail call half @llvm.minimumnum.f16(half [[TMP8]], half [[TMP9]])
-; ARM64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @cf16, i64 0, i64 [[INDVARS_IV]]
+; ARM64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @output_f16, i64 0, i64 [[INDVARS_IV]]
 ; ARM64-NEXT:    store half [[TMP10]], ptr [[ARRAYIDX4]], align 2
 ; ARM64-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; ARM64-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 4096
@@ -376,12 +376,12 @@ define void @f16min()  {
 ; X64-NEXT:    ret void
 ; X64:       [[FOR_BODY]]:
 ; X64-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; X64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @af16, i64 0, i64 [[INDVARS_IV]]
+; X64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @input1_f16, i64 0, i64 [[INDVARS_IV]]
 ; X64-NEXT:    [[TMP8:%.*]] = load half, ptr [[ARRAYIDX]], align 2
-; X64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @bf16, i64 0, i64 [[INDVARS_IV]]
+; X64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @input2_f16, i64 0, i64 [[INDVARS_IV]]
 ; X64-NEXT:    [[TMP9:%.*]] = load half, ptr [[ARRAYIDX2]], align 2
 ; X64-NEXT:    [[TMP10:%.*]] = tail call half @llvm.minimumnum.f16(half [[TMP8]], half [[TMP9]])
-; X64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @cf16, i64 0, i64 [[INDVARS_IV]]
+; X64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @output_f16, i64 0, i64 [[INDVARS_IV]]
 ; X64-NEXT:    store half [[TMP10]], ptr [[ARRAYIDX4]], align 2
 ; X64-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; X64-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 4096
@@ -395,12 +395,12 @@ for.cond.cleanup:                                 ; preds = %for.body
 
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds nuw [4096 x half], ptr @af16, i64 0, i64 %indvars.iv
+  %arrayidx = getelementptr inbounds nuw [4096 x half], ptr @input1_f16, i64 0, i64 %indvars.iv
   %0 = load half, ptr %arrayidx, align 2
-  %arrayidx2 = getelementptr inbounds nuw [4096 x half], ptr @bf16, i64 0, i64 %indvars.iv
+  %arrayidx2 = getelementptr inbounds nuw [4096 x half], ptr @input2_f16, i64 0, i64 %indvars.iv
   %1 = load half, ptr %arrayidx2, align 2
   %2 = tail call half @llvm.minimumnum.f16(half %0, half %1)
-  %arrayidx4 = getelementptr inbounds nuw [4096 x half], ptr @cf16, i64 0, i64 %indvars.iv
+  %arrayidx4 = getelementptr inbounds nuw [4096 x half], ptr @output_f16, i64 0, i64 %indvars.iv
   store half %2, ptr %arrayidx4, align 2
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond.not = icmp eq i64 %indvars.iv.next, 4096
@@ -418,12 +418,12 @@ define void @f16max()  {
 ; RV64-NEXT:    ret void
 ; RV64:       [[FOR_BODY]]:
 ; RV64-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; RV64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @af16, i64 0, i64 [[INDVARS_IV]]
+; RV64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @input1_f16, i64 0, i64 [[INDVARS_IV]]
 ; RV64-NEXT:    [[TMP14:%.*]] = load half, ptr [[ARRAYIDX]], align 2
-; RV64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @bf16, i64 0, i64 [[INDVARS_IV]]
+; RV64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @input2_f16, i64 0, i64 [[INDVARS_IV]]
 ; RV64-NEXT:    [[TMP15:%.*]] = load half, ptr [[ARRAYIDX2]], align 2
 ; RV64-NEXT:    [[TMP16:%.*]] = tail call half @llvm.maximumnum.f16(half [[TMP14]], half [[TMP15]])
-; RV64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @cf16, i64 0, i64 [[INDVARS_IV]]
+; RV64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @output_f16, i64 0, i64 [[INDVARS_IV]]
 ; RV64-NEXT:    store half [[TMP16]], ptr [[ARRAYIDX4]], align 2
 ; RV64-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; RV64-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 4096
@@ -437,12 +437,12 @@ define void @f16max()  {
 ; ARM64-NEXT:    ret void
 ; ARM64:       [[FOR_BODY]]:
 ; ARM64-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; ARM64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @af16, i64 0, i64 [[INDVARS_IV]]
+; ARM64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @input1_f16, i64 0, i64 [[INDVARS_IV]]
 ; ARM64-NEXT:    [[TMP8:%.*]] = load half, ptr [[ARRAYIDX]], align 2
-; ARM64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @bf16, i64 0, i64 [[INDVARS_IV]]
+; ARM64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @input2_f16, i64 0, i64 [[INDVARS_IV]]
 ; ARM64-NEXT:    [[TMP9:%.*]] = load half, ptr [[ARRAYIDX2]], align 2
 ; ARM64-NEXT:    [[TMP10:%.*]] = tail call half @llvm.maximumnum.f16(half [[TMP8]], half [[TMP9]])
-; ARM64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @cf16, i64 0, i64 [[INDVARS_IV]]
+; ARM64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @output_f16, i64 0, i64 [[INDVARS_IV]]
 ; ARM64-NEXT:    store half [[TMP10]], ptr [[ARRAYIDX4]], align 2
 ; ARM64-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; ARM64-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 4096
@@ -455,12 +455,12 @@ define void @f16max()  {
 ; X64-NEXT:    ret void
 ; X64:       [[FOR_BODY]]:
 ; X64-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; X64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @af16, i64 0, i64 [[INDVARS_IV]]
+; X64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @input1_f16, i64 0, i64 [[INDVARS_IV]]
 ; X64-NEXT:    [[TMP8:%.*]] = load half, ptr [[ARRAYIDX]], align 2
-; X64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @bf16, i64 0, i64 [[INDVARS_IV]]
+; X64-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @input2_f16, i64 0, i64 [[INDVARS_IV]]
 ; X64-NEXT:    [[TMP9:%.*]] = load half, ptr [[ARRAYIDX2]], align 2
 ; X64-NEXT:    [[TMP10:%.*]] = tail call half @llvm.maximumnum.f16(half [[TMP8]], half [[TMP9]])
-; X64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @cf16, i64 0, i64 [[INDVARS_IV]]
+; X64-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @output_f16, i64 0, i64 [[INDVARS_IV]]
 ; X64-NEXT:    store half [[TMP10]], ptr [[ARRAYIDX4]], align 2
 ; X64-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; X64-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 4096
@@ -474,12 +474,12 @@ for.cond.cleanup:                                 ; preds = %for.body
 
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds nuw [4096 x half], ptr @af16, i64 0, i64 %indvars.iv
+  %arrayidx = getelementptr inbounds nuw [4096 x half], ptr @input1_f16, i64 0, i64 %indvars.iv
   %0 = load half, ptr %arrayidx, align 2
-  %arrayidx2 = getelementptr inbounds nuw [4096 x half], ptr @bf16, i64 0, i64 %indvars.iv
+  %arrayidx2 = getelementptr inbounds nuw [4096 x half], ptr @input2_f16, i64 0, i64 %indvars.iv
   %1 = load half, ptr %arrayidx2, align 2
   %2 = tail call half @llvm.maximumnum.f16(half %0, half %1)
-  %arrayidx4 = getelementptr inbounds nuw [4096 x half], ptr @cf16, i64 0, i64 %indvars.iv
+  %arrayidx4 = getelementptr inbounds nuw [4096 x half], ptr @output_f16, i64 0, i64 %indvars.iv
   store half %2, ptr %arrayidx4, align 2
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond.not = icmp eq i64 %indvars.iv.next, 4096
