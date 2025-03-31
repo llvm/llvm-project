@@ -1,19 +1,19 @@
 ;; This test verifies that we assign a deterministic location for merged
-;; instructions when -preserve-merged-debug-info is enabled. We use the
+;; instructions when -pick-merged-source-locations is enabled. We use the
 ;; simplifycfg pass to test this behaviour since it was a common source of
 ;; merged instructions, however we intend this to apply to all users of the
 ;; getMergedLocation API.
 
 ;; Run simplifycfg and check that only 1 call to bar remains and it's debug
 ;; location has a valid line number (lexicographically smallest).
-; RUN: opt %s -passes=simplifycfg -hoist-common-insts -preserve-merged-debug-info -S | FileCheck %s --check-prefix=ENABLED
+; RUN: opt %s -passes=simplifycfg -hoist-common-insts -pick-merged-source-locations -S | FileCheck %s --check-prefix=ENABLED
 ; ENABLED: call i32 @bar{{.*!dbg !}}[[TAG:[0-9]+]]
 ; ENABLED-NOT: call i32 @bar
 ; ENABLED: ![[TAG]] = !DILocation(line: 9, column: 16, scope: !9)
 
 ;; Run simplifycfg without the pass to ensure that we don't spuriously start
 ;; passing the test if simplifycfg behaviour changes.
-; RUN: opt %s -passes=simplifycfg -hoist-common-insts -preserve-merged-debug-info=false -S | FileCheck %s --check-prefix=DISABLED
+; RUN: opt %s -passes=simplifycfg -hoist-common-insts -pick-merged-source-locations=false -S | FileCheck %s --check-prefix=DISABLED
 ; DISABLED: call i32 @bar{{.*!dbg !}}[[TAG:[0-9]+]]
 ; DISABLED-NOT: call i32 @bar
 ; DISABLED: ![[TAG]] = !DILocation(line: 0, scope: !9)
