@@ -2048,10 +2048,10 @@ multiclass F_ATOMIC_3_AS<RegTyInfo t, SDPatternOperator frag, string sem_str, st
 defm INT_PTX_ATOM_ADD_32 : F_ATOMIC_2_AS<I32RT, atomic_load_add_i32, "add.u32">;
 defm INT_PTX_ATOM_ADD_64 : F_ATOMIC_2_AS<I64RT, atomic_load_add_i64, "add.u64">;
 
-defm INT_PTX_ATOM_ADD_F16 : F_ATOMIC_2_AS<F16RT, atomic_load_fadd, "add.noftz.f16", [hasSM<70>, hasPTX<63>]>;
+defm INT_PTX_ATOM_ADD_F16  : F_ATOMIC_2_AS<F16RT, atomic_load_fadd, "add.noftz.f16", [hasSM<70>, hasPTX<63>]>;
 defm INT_PTX_ATOM_ADD_BF16 : F_ATOMIC_2_AS<BF16RT, atomic_load_fadd, "add.noftz.bf16", [hasSM<90>, hasPTX<78>]>;
-defm INT_PTX_ATOM_ADD_F32 : F_ATOMIC_2_AS<F32RT, atomic_load_fadd, "add.f32">;
-defm INT_PTX_ATOM_ADD_F64 : F_ATOMIC_2_AS<F64RT, atomic_load_fadd, "add.f64", [hasAtomAddF64]>;
+defm INT_PTX_ATOM_ADD_F32  : F_ATOMIC_2_AS<F32RT, atomic_load_fadd, "add.f32">;
+defm INT_PTX_ATOM_ADD_F64  : F_ATOMIC_2_AS<F64RT, atomic_load_fadd, "add.f64", [hasAtomAddF64]>;
 
 // atom_swap
 defm INT_PTX_ATOM_SWAP_32 : F_ATOMIC_2_AS<I32RT, atomic_swap_i32, "exch.b32">;
@@ -2118,25 +2118,28 @@ defm INT_PTX_ATOM_CAS_16 : F_ATOMIC_3_AS<I16RT, atomic_cmp_swap_i16, "", "cas.b1
 multiclass ATOM2N_impl<string OpStr, string IntTypeStr, string TypeStr,
                        string ScopeStr, string SpaceStr,
                        RegTyInfo t, list<Predicate> Preds> {
-  defm "" : F_ATOMIC_2<t, !if(!eq(ScopeStr, "gpu"), "", "." # ScopeStr), !if(!eq(SpaceStr, "gen"), "", "." # SpaceStr),
-                            OpStr # "." # TypeStr,
-                     !cast<Intrinsic>(
-                            "int_nvvm_atomic_" # OpStr
-                            # "_" # SpaceStr # "_" # IntTypeStr
-                            # !if(!empty(ScopeStr), "", "_" # ScopeStr)),
-                      Preds>;
+  defm "" : F_ATOMIC_2<t,
+                       as_str = !if(!eq(ScopeStr, "gpu"), "", "." # ScopeStr),
+                       sem_str = !if(!eq(SpaceStr, "gen"), "", "." # SpaceStr),
+                       op_str = OpStr # "." # TypeStr,
+                       op = !cast<Intrinsic>(
+                              "int_nvvm_atomic_" # OpStr
+                              # "_" # SpaceStr # "_" # IntTypeStr
+                              # !if(!empty(ScopeStr), "", "_" # ScopeStr)),
+                       preds = Preds>;
 }
 multiclass ATOM3N_impl<string OpStr, string IntTypeStr, string TypeStr,
                        string ScopeStr, string SpaceStr,
                        RegTyInfo t, list<Predicate> Preds> {
-  defm "" : F_ATOMIC_3<t, !if(!eq(SpaceStr, "gen"), "", "." # SpaceStr),
-                          !if(!eq(ScopeStr, "gpu"), "", "." # ScopeStr),
-                             OpStr # "." # TypeStr,
-                     !cast<Intrinsic>(
-                            "int_nvvm_atomic_" # OpStr
-                            # "_" # SpaceStr # "_" # IntTypeStr
-                            # !if(!empty(ScopeStr), "", "_" # ScopeStr)),
-                     Preds>;
+  defm "" : F_ATOMIC_3<t,
+                       as_str = !if(!eq(SpaceStr, "gen"), "", "." # SpaceStr),
+                       sem_str = !if(!eq(ScopeStr, "gpu"), "", "." # ScopeStr),
+                       op_str = OpStr # "." # TypeStr,
+                       op = !cast<Intrinsic>(
+                              "int_nvvm_atomic_" # OpStr
+                              # "_" # SpaceStr # "_" # IntTypeStr
+                              # !if(!empty(ScopeStr), "", "_" # ScopeStr)),
+                       preds = Preds>;
 }
 
 // Constructs variants for different scopes of atomic op.
@@ -2167,57 +2170,57 @@ multiclass ATOM3S_impl<string OpStr, string IntTypeStr, string TypeStr,
 
 // atom.add
 multiclass ATOM2_add_impl<string OpStr> {
-   defm _s32  : ATOM2S_impl<OpStr, "i", "s32", I32RT, []>;
-   defm _u32  : ATOM2S_impl<OpStr, "i", "u32", I32RT, []>;
-   defm _u64  : ATOM2S_impl<OpStr, "i", "u64", I64RT, []>;
-   defm _bf16  : ATOM2S_impl<OpStr, "f", "bf16", BF16RT, [hasSM<90>, hasPTX<78>]>;
-   defm _f16  : ATOM2S_impl<OpStr, "f", "f16", F16RT, []>;
-   defm _f32  : ATOM2S_impl<OpStr, "f", "f32", F32RT, []>;
-   defm _f64  : ATOM2S_impl<OpStr, "f", "f64", F64RT, []>;
+  defm _s32  : ATOM2S_impl<OpStr, "i", "s32", I32RT, []>;
+  defm _u32  : ATOM2S_impl<OpStr, "i", "u32", I32RT, []>;
+  defm _u64  : ATOM2S_impl<OpStr, "i", "u64", I64RT, []>;
+  defm _bf16 : ATOM2S_impl<OpStr, "f", "bf16", BF16RT, [hasSM<90>, hasPTX<78>]>;
+  defm _f16  : ATOM2S_impl<OpStr, "f", "f16", F16RT, []>;
+  defm _f32  : ATOM2S_impl<OpStr, "f", "f32", F32RT, []>;
+  defm _f64  : ATOM2S_impl<OpStr, "f", "f64", F64RT, []>;
 }
 
 // atom.{and,or,xor}
 multiclass ATOM2_bitwise_impl<string OpStr> {
-   defm _b32  : ATOM2S_impl<OpStr, "i", "b32", I32RT, []>;
-   defm _b64  : ATOM2S_impl<OpStr, "i", "b64", I64RT, [hasAtomBitwise64]>;
+  defm _b32 : ATOM2S_impl<OpStr, "i", "b32", I32RT, []>;
+  defm _b64 : ATOM2S_impl<OpStr, "i", "b64", I64RT, [hasAtomBitwise64]>;
 }
 
 // atom.exch
 multiclass ATOM2_exch_impl<string OpStr> {
-   defm _b32 : ATOM2S_impl<OpStr, "i", "b32", I32RT, []>;
-   defm _b64 : ATOM2S_impl<OpStr, "i", "b64", I64RT, []>;
+  defm _b32 : ATOM2S_impl<OpStr, "i", "b32", I32RT, []>;
+  defm _b64 : ATOM2S_impl<OpStr, "i", "b64", I64RT, []>;
 }
 
 // atom.{min,max}
 multiclass ATOM2_minmax_impl<string OpStr> {
-   defm _s32  : ATOM2S_impl<OpStr, "i", "s32", I32RT, []>;
-   defm _u32  : ATOM2S_impl<OpStr, "i", "u32", I32RT, []>;
-   defm _s64  : ATOM2S_impl<OpStr, "i", "s64", I64RT, [hasAtomMinMax64]>;
-   defm _u64  : ATOM2S_impl<OpStr, "i", "u64", I64RT, [hasAtomMinMax64]>;
+  defm _s32 : ATOM2S_impl<OpStr, "i", "s32", I32RT, []>;
+  defm _u32 : ATOM2S_impl<OpStr, "i", "u32", I32RT, []>;
+  defm _s64 : ATOM2S_impl<OpStr, "i", "s64", I64RT, [hasAtomMinMax64]>;
+  defm _u64 : ATOM2S_impl<OpStr, "i", "u64", I64RT, [hasAtomMinMax64]>;
 }
 
 // atom.{inc,dec}
 multiclass ATOM2_incdec_impl<string OpStr> {
-   defm _u32  : ATOM2S_impl<OpStr, "i", "u32", I32RT, []>;
+  defm _u32 : ATOM2S_impl<OpStr, "i", "u32", I32RT, []>;
 }
 
 // atom.cas
 multiclass ATOM3_cas_impl<string OpStr> {
-   defm _b16  : ATOM3S_impl<OpStr, "i", "b16", I16RT, []>;
-   defm _b32  : ATOM3S_impl<OpStr, "i", "b32", I32RT, []>;
-   defm _b64  : ATOM3S_impl<OpStr, "i", "b64", I64RT, []>;
+  defm _b16 : ATOM3S_impl<OpStr, "i", "b16", I16RT, []>;
+  defm _b32 : ATOM3S_impl<OpStr, "i", "b32", I32RT, []>;
+  defm _b64 : ATOM3S_impl<OpStr, "i", "b64", I64RT, []>;
 }
 
-defm INT_PTX_SATOM_ADD : ATOM2_add_impl<"add">;
-defm INT_PTX_SATOM_AND : ATOM2_bitwise_impl<"and">;
-defm INT_PTX_SATOM_CAS : ATOM3_cas_impl<"cas">;
-defm INT_PTX_SATOM_DEC : ATOM2_incdec_impl<"dec">;
-defm INT_PTX_SATOM_EXCH: ATOM2_exch_impl<"exch">;
-defm INT_PTX_SATOM_INC : ATOM2_incdec_impl<"inc">;
-defm INT_PTX_SATOM_MAX : ATOM2_minmax_impl<"max">;
-defm INT_PTX_SATOM_MIN : ATOM2_minmax_impl<"min">;
-defm INT_PTX_SATOM_OR  : ATOM2_bitwise_impl<"or">;
-defm INT_PTX_SATOM_XOR : ATOM2_bitwise_impl<"xor">;
+defm INT_PTX_SATOM_ADD  : ATOM2_add_impl<"add">;
+defm INT_PTX_SATOM_AND  : ATOM2_bitwise_impl<"and">;
+defm INT_PTX_SATOM_CAS  : ATOM3_cas_impl<"cas">;
+defm INT_PTX_SATOM_DEC  : ATOM2_incdec_impl<"dec">;
+defm INT_PTX_SATOM_EXCH : ATOM2_exch_impl<"exch">;
+defm INT_PTX_SATOM_INC  : ATOM2_incdec_impl<"inc">;
+defm INT_PTX_SATOM_MAX  : ATOM2_minmax_impl<"max">;
+defm INT_PTX_SATOM_MIN  : ATOM2_minmax_impl<"min">;
+defm INT_PTX_SATOM_OR   : ATOM2_bitwise_impl<"or">;
+defm INT_PTX_SATOM_XOR  : ATOM2_bitwise_impl<"xor">;
 
 //-----------------------------------
 // Support for ldu on sm_20 or later
