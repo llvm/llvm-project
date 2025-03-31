@@ -1117,7 +1117,7 @@ static bool DiagnoseTypeAwareAllocators(Sema &S, SourceLocation Loc,
       HaveIssuedWarning = true;
     }
     S.Diag(Decl->getLocation(), diag::note_type_aware_operator_declared)
-        << /* isTypeAware */ 1 << Decl;
+        << /* isTypeAware */ 1 << Decl << Decl->getDeclContext();
   }
   R.suppressDiagnostics();
   return HaveIssuedWarning;

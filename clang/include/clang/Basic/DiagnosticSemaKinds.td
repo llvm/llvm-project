@@ -9777,21 +9777,15 @@ def ext_cxx26_type_aware_allocators : ExtWarn<
 def warn_cxx26_type_aware_allocators : Warning<
   "type aware allocators are incompatible with C++ standards before C++2c">,
   DefaultIgnore, InGroup<CXXPre26Compat>;
-def err_no_type_aware_cleanup_operator_delete : Error<
-  "type aware %0 requires there to be a corresponding cleanup %1 in %2">;
-def err_type_aware_cleanup_deallocator_context_mismatch : Error<
-  "type aware %0 requires there to be a corresponding %1 in %2">;
 def err_type_aware_allocator_missing_matching_operator : Error<
   "declaration of type aware %0 in %1 must have matching type aware %2"
 >;
 def note_unmatched_type_aware_allocator_declared : Note<
   "unmatched type aware %0 declared here">;
-def note_type_aware_operator_found : Note<
-  "type aware %0 found in %1">;
 def err_mismatching_type_aware_cleanup_deallocator : Error<
-  "type aware %0 requires matching type aware %1 for exception cleanup">;
+  "type aware %0 requires a matching type aware %select{|placement }1%2 to be declared in the same scope">;
 def note_type_aware_operator_declared : Note<
-  "%select{non-|}0type aware %1 declared here">;
+  "%select{non-|}0type aware %1 declared here in %2">;
 def note_implicit_delete_this_in_destructor_here : Note<
   "while checking implicit 'delete this' for virtual destructor">;
 def err_builtin_operator_new_delete_not_usual : Error<

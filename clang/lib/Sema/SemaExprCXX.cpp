@@ -3081,14 +3081,18 @@ bool Sema::FindAllocationFunctions(
   bool IsClassScopedTypeAwareNew =
       isTypeAwareAllocation(IAP.PassTypeIdentity) &&
       OperatorNew->getDeclContext()->isRecord();
-  auto DiagnoseMissingTypeAwareCleanupOperator = [&]() {
+  auto DiagnoseMissingTypeAwareCleanupOperator = [&](bool IsPlacementOperator) {
     assert(isTypeAwareAllocation(IAP.PassTypeIdentity));
-    if (Diagnose)
-      Diag(StartLoc, diag::err_no_type_aware_cleanup_operator_delete)
-          << OperatorNew << DeleteName << OperatorNew->getDeclContext();
+    if (Diagnose) {
+      Diag(StartLoc, diag::err_mismatching_type_aware_cleanup_deallocator)
+          << OperatorNew->getDeclName() << IsPlacementOperator << DeleteName;
+      Diag(OperatorNew->getLocation(), diag::note_type_aware_operator_declared)
+          << OperatorNew->isTypeAwareOperatorNewOrDelete()
+          << OperatorNew->getDeclName() << OperatorNew->getDeclContext();
+    }
   };
   if (IsClassScopedTypeAwareNew && FoundDelete.empty()) {
-    DiagnoseMissingTypeAwareCleanupOperator();
+    DiagnoseMissingTypeAwareCleanupOperator(/*isPlacementNew=*/false);
     return true;
   }
   if (FoundDelete.empty()) {
@@ -3192,7 +3196,7 @@ bool Sema::FindAllocationFunctions(
       CUDA().EraseUnwantedMatches(getCurFunctionDecl(/*AllowLambda=*/true),
                                   Matches);
     if (Matches.empty() && isTypeAwareAllocation(IAP.PassTypeIdentity)) {
-      DiagnoseMissingTypeAwareCleanupOperator();
+      DiagnoseMissingTypeAwareCleanupOperator(isPlacementNew);
       return true;
     }
   } else {
@@ -3227,26 +3231,34 @@ bool Sema::FindAllocationFunctions(
   //   deallocation function will be called.
   if (Matches.size() == 1) {
     OperatorDelete = Matches[0].second;
-    if (Diagnose && OperatorDelete->isTypeAwareOperatorNewOrDelete() !=
-                        (isTypeAwareAllocation(IAP.PassTypeIdentity))) {
-      FunctionDecl *Operators[] = {OperatorDelete, OperatorNew};
-      bool TypeAwareOperatorIndex =
+    bool FoundTypeAwareOperator =
+        OperatorDelete->isTypeAwareOperatorNewOrDelete() ||
+        OperatorNew->isTypeAwareOperatorNewOrDelete();
+    if (Diagnose && FoundTypeAwareOperator) {
+      bool MismatchedTypeAwareness =
+          OperatorDelete->isTypeAwareOperatorNewOrDelete() !=
           OperatorNew->isTypeAwareOperatorNewOrDelete();
-      Diag(StartLoc, diag::err_mismatching_type_aware_cleanup_deallocator)
-          << Operators[TypeAwareOperatorIndex]
-          << Operators[!TypeAwareOperatorIndex];
-      Diag(OperatorDelete->getLocation(),
-           diag::note_type_aware_operator_declared)
-          << OperatorDelete->isTypeAwareOperatorNewOrDelete() << OperatorDelete;
-    }
-    if (Diagnose && isTypeAwareAllocation(IAP.PassTypeIdentity) &&
-        OperatorDelete->getDeclContext() != OperatorNew->getDeclContext()) {
-      Diag(StartLoc, diag::err_type_aware_cleanup_deallocator_context_mismatch)
-          << OperatorNew << DeleteName << OperatorNew->getDeclContext();
-      Diag(OperatorNew->getLocation(), diag::note_type_aware_operator_found)
-          << OperatorNew << OperatorNew->getDeclContext();
-      Diag(OperatorDelete->getLocation(), diag::note_type_aware_operator_found)
-          << OperatorDelete << OperatorDelete->getDeclContext();
+      bool MismatchedContext =
+          OperatorDelete->getDeclContext() != OperatorNew->getDeclContext();
+      if (MismatchedTypeAwareness || MismatchedContext) {
+        FunctionDecl *Operators[] = {OperatorDelete, OperatorNew};
+        bool TypeAwareOperatorIndex =
+            OperatorNew->isTypeAwareOperatorNewOrDelete();
+        Diag(StartLoc, diag::err_mismatching_type_aware_cleanup_deallocator)
+            << Operators[TypeAwareOperatorIndex]->getDeclName()
+            << isPlacementNew
+            << Operators[!TypeAwareOperatorIndex]->getDeclName()
+            << Operators[TypeAwareOperatorIndex]->getDeclContext();
+        Diag(OperatorNew->getLocation(),
+             diag::note_type_aware_operator_declared)
+            << OperatorNew->isTypeAwareOperatorNewOrDelete()
+            << OperatorNew->getDeclName() << OperatorNew->getDeclContext();
+        Diag(OperatorDelete->getLocation(),
+             diag::note_type_aware_operator_declared)
+            << OperatorDelete->isTypeAwareOperatorNewOrDelete()
+            << OperatorDelete->getDeclName()
+            << OperatorDelete->getDeclContext();
+      }
     }
 
     // C++1z [expr.new]p23:
