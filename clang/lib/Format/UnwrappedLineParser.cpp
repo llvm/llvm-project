@@ -4853,9 +4853,16 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
     PreviousWasComment = FormatTok->is(tok::comment);
 
     while (!Line->InPPDirective && FormatTok->is(tok::hash) &&
-           (!Style.isVerilog() ||
-            Keywords.isVerilogPPDirective(*Tokens->peekNextToken())) &&
            FirstNonCommentOnLine) {
+      // In Verilog, the backtick is used for macro invocations. In TableGen,
+      // the single hash is used for the paste operator.
+      const FormatToken *Next = Tokens->peekNextToken();
+      assert(Next); // There is an EOF token at the end.
+      if ((Style.isVerilog() && !Keywords.isVerilogPPDirective(*Next)) ||
+          (Style.isTableGen() &&
+           !Next->isOneOf(tok::pp_define, tok::pp_ifdef, tok::pp_ifndef))) {
+        break;
+      }
       distributeComments(Comments, FormatTok);
       Comments.clear();
       // If there is an unfinished unwrapped line, we flush the preprocessor
