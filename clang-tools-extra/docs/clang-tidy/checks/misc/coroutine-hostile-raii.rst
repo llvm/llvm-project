@@ -45,7 +45,7 @@ Options
 
     A semicolon-separated list of qualified types which should not be allowed to
     persist across suspension points.
-    Eg: `my::lockable;a::b;::my::other::lockable;`
+    Eg: `my::lockable;a::b;::my::other::lockable`
     The default value of this option is `std::lock_guard;std::scoped_lock`.
 
 .. option:: AllowedAwaitablesList
