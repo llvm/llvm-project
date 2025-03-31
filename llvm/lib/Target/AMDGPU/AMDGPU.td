@@ -1269,6 +1269,10 @@ def FeatureDynamicVGPRBlockSize32 : SubtargetFeature<"dynamic-vgpr-block-size-32
   "Use a block size of 32 for dynamic VGPR allocation (default is 16)"
 >;
 
+def FeatureLshlAddU64
+    : SubtargetFeature<"lshl-add-u64", "HasLshlAddU64", "true",
+                       "Has v_lshl_add_u64 instruction">;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
@@ -1622,7 +1626,8 @@ def FeatureISAVersion9_4_Common : FeatureSet<
    FeatureAtomicFMinFMaxF64FlatInsts,
    FeatureAgentScopeFineGrainedRemoteMemoryAtomics,
    FeatureMemoryAtomicFAddF32DenormalSupport,
-   FeatureFlatBufferGlobalAtomicFaddF64Inst
+   FeatureFlatBufferGlobalAtomicFaddF64Inst,
+   FeatureLshlAddU64,
    ]>;
 
 def FeatureISAVersion9_5_Common : FeatureSet<
@@ -2553,6 +2558,9 @@ def HasXF32Insts : Predicate<"Subtarget->hasXF32Insts()">,
 
 def HasAshrPkInsts : Predicate<"Subtarget->hasAshrPkInsts()">,
   AssemblerPredicate<(all_of FeatureAshrPkInsts)>;
+
+def HasLshlAddU64 : Predicate<"Subtarget->hasLshlAddU64()">,
+  AssemblerPredicate<(all_of FeatureLshlAddU64)>;
 
 // Include AMDGPU TD files
 include "SISchedule.td"
