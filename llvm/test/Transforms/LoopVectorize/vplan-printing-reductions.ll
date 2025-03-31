@@ -219,10 +219,6 @@ exit:
 define i64 @find_last_iv(ptr %a, i64 %n, i64 %start) {
 ; CHECK-LABEL: Checking a loop in 'find_last_iv'
 ; CHECK:       VPlan 'Initial VPlan for VF={4},UF>=1' {
-; CHECK:      ir-bb<entry>:
-; CHECK-NEXT:   EMIT vp<%fr> = freeze ir<%start>
-; CHECK-NEXT: Successor(s): vector.ph
-
 ; CHECK:        <x1> vector loop: {
 ; CHECK-NEXT:     vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
@@ -241,7 +237,7 @@ define i64 @find_last_iv(ptr %a, i64 %n, i64 %start) {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[RDX_RES:%.+]]> = compute-find-last-iv-result ir<%rdx>, vp<%fr>, ir<%cond>
+; CHECK-NEXT:   EMIT vp<[[RDX_RES:%.+]]> = compute-find-last-iv-result ir<%rdx>, ir<%start>, ir<%cond>
 ; CHECK-NEXT:   EMIT vp<[[EXT:%.+]]> = extract-from-end vp<[[RDX_RES]]>, ir<1>
 ; CHECK-NEXT:   EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<{{.+}}>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<%cmp.n>
@@ -249,7 +245,7 @@ define i64 @find_last_iv(ptr %a, i64 %n, i64 %start) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
 ; CHECK-NEXT:   EMIT vp<%bc.resume.val> = resume-phi vp<{{.+}}>, ir<0>
-; CHECK-NEXT:   EMIT vp<%bc.merge.rdx> = resume-phi vp<[[RDX_RES]]>, vp<%fr>
+; CHECK-NEXT:   EMIT vp<%bc.merge.rdx> = resume-phi vp<[[RDX_RES]]>, ir<%start>
 ;
 ; CHECK:      ir-bb<exit>:
 ; CHECK-NEXT:   IR   %cond.lcssa = phi i64 [ %cond, %loop ] (extra operand: vp<[[EXT]]> from middle.block)
