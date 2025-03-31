@@ -10357,32 +10357,33 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
     EpiWidenedPhis.insert(
         cast<PHINode>(R.getVPSingleValue()->getUnderlyingValue()));
 
-    if (auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&R)) {
-      if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(
-              PhiR->getRecurrenceDescriptor().getRecurrenceKind())) {
-        if (!isGuaranteedNotToBeUndefOrPoison(
-                PhiR->getStartValue()->getLiveInIRValue())) {
-          VPBuilder Builder(MainPlan.getEntry());
-          PhiR->getStartValue()->replaceAllUsesWith(Builder.createNaryOp(
-              Instruction::Freeze, {PhiR->getStartValue()}, {}, "fr"));
-        }
-      }
-    }
   }
-  for (VPRecipeBase &R :
-       MainPlan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
-    if (auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&R)) {
-      if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(
-              PhiR->getRecurrenceDescriptor().getRecurrenceKind())) {
-        if (!isGuaranteedNotToBeUndefOrPoison(
-                PhiR->getStartValue()->getLiveInIRValue())) {
-          VPBuilder Builder(MainPlan.getEntry());
-          PhiR->getStartValue()->replaceAllUsesWith(Builder.createNaryOp(
-              Instruction::Freeze, {PhiR->getStartValue()}, {}, "fr"));
-        }
-      }
-    }
+  for (VPRecipeBase &R  : *MainPlan.getMiddleBlock()) {
+    auto *VPI = dyn_cast<VPInstruction>(&R);
+    if (!VPI || VPI->getOpcode() != VPInstruction::ComputeFindLastIVResult)
+      continue;
+    VPValue *OrigStart = VPI->getOperand(1);
+    if (isGuaranteedNotToBeUndefOrPoison(
+            OrigStart->getLiveInIRValue()))
+      continue;
+    VPBuilder Builder(MainPlan.getEntry());
+    VPInstruction *Freeze = Builder.createNaryOp(
+            Instruction::Freeze, {OrigStart }, {}, "fr");
+    OrigStart->replaceUsesWithIf(Freeze, [Freeze](VPUser &U, unsigned) { return Freeze != &U; });
   }
+
+  for (VPRecipeBase &R  : *EpiPlan.getMiddleBlock()) {
+    auto *VPI = dyn_cast<VPInstruction>(&R);
+    if (!VPI || VPI->getOpcode() != VPInstruction::ComputeFindLastIVResult)
+      continue;
+    if (isGuaranteedNotToBeUndefOrPoison(
+            VPI->getOperand(1)->getLiveInIRValue()))
+      continue;
+    VPBuilder Builder(EpiPlan.getEntry());
+    VPI->setOperand(1, Builder.createNaryOp(
+            Instruction::Freeze, {VPI->getOperand(1) }, {}, "fr"));
+  }
+
 
   for (VPRecipeBase &R : make_early_inc_range(*MainPlan.getScalarHeader())) {
     auto *VPIRInst = dyn_cast<VPIRPhi>(&R);
