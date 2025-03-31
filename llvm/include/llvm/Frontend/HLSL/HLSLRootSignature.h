@@ -37,6 +37,12 @@ struct DescriptorTableClause {
 // Models RootElement : DescriptorTable | DescriptorTableClause
 using RootElement = std::variant<DescriptorTable, DescriptorTableClause>;
 
+// ParamType is used as an 'any' type that will reference to a parameter in
+// RootElement. Each variant of ParamType is expected to have a Parse method
+// defined that will be dispatched on when we are attempting to parse a
+// parameter
+using ParamType = std::variant<std::monostate>;
+
 } // namespace rootsig
 } // namespace hlsl
 } // namespace llvm

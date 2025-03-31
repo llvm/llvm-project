@@ -69,6 +69,38 @@ private:
   bool parseDescriptorTable();
   bool parseDescriptorTableClause();
 
+  /// Each unique ParamType will have a custom parse method defined that we can
+  /// use to invoke the parameters.
+  ///
+  /// This function will switch on the ParamType using std::visit and dispatch
+  /// onto the corresponding parse method
+  bool parseParam(llvm::hlsl::rootsig::ParamType Ref);
+
+  /// Parameter arguments (eg. `bReg`, `space`, ...) can be specified in any
+  /// order, exactly once, and only a subset are mandatory. This function acts
+  /// as the infastructure to do so in a declarative way.
+  ///
+  /// For the example:
+  ///  SmallDenseMap<TokenKind, ParamType> Params = {
+  ///    TokenKind::bReg, &Clause.Register,
+  ///    TokenKind::kw_space, &Clause.Space
+  ///  };
+  ///  SmallDenseSet<TokenKind> Mandatory = {
+  ///    TokenKind::kw_numDescriptors
+  ///  };
+  ///
+  /// We can read it is as:
+  ///
+  /// when 'b0' is encountered, invoke the parse method for the type
+  ///   of &Clause.Register (Register *) and update the parameter
+  /// when 'space' is encountered, invoke a parse method for the type
+  ///   of &Clause.Space (uint32_t *) and update the parameter
+  ///
+  /// and 'bReg' must be specified
+  bool parseParams(
+      llvm::SmallDenseMap<TokenKind, llvm::hlsl::rootsig::ParamType> &Params,
+      llvm::SmallDenseSet<TokenKind> &Mandatory);
+
   /// Invoke the Lexer to consume a token and update CurToken with the result
   void consumeNextToken() { CurToken = Lexer.ConsumeToken(); }
 

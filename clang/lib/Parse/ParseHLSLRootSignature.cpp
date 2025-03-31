@@ -120,6 +120,57 @@ bool RootSignatureParser::parseDescriptorTableClause() {
   return false;
 }
 
+// Helper struct so that we can use the overloaded notation of std::visit
+template <class... Ts> struct ParseMethods : Ts... { using Ts::operator()...; };
+template <class... Ts> ParseMethods(Ts...) -> ParseMethods<Ts...>;
+
+bool RootSignatureParser::parseParam(ParamType Ref) {
+  bool Error = true;
+  std::visit(ParseMethods{}, Ref);
+
+  return Error;
+}
+
+bool RootSignatureParser::parseParams(
+    llvm::SmallDenseMap<TokenKind, ParamType> &Params,
+    llvm::SmallDenseSet<TokenKind> &Mandatory) {
+
+  // Initialize a vector of possible keywords
+  SmallVector<TokenKind> Keywords;
+  for (auto Pair : Params)
+    Keywords.push_back(Pair.first);
+
+  // Keep track of which keywords have been seen to report duplicates
+  llvm::SmallDenseSet<TokenKind> Seen;
+
+  while (tryConsumeExpectedToken(Keywords)) {
+    if (Seen.contains(CurToken.Kind)) {
+      getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+          << CurToken.Kind;
+      return true;
+    }
+    Seen.insert(CurToken.Kind);
+
+    if (parseParam(Params[CurToken.Kind]))
+      return true;
+
+    if (!tryConsumeExpectedToken(TokenKind::pu_comma))
+      break;
+  }
+
+  bool AllMandatoryDefined = true;
+  for (auto Kind : Mandatory) {
+    bool SeenParam = Seen.contains(Kind);
+    if (!SeenParam) {
+      getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_missing_param)
+          << Kind;
+    }
+    AllMandatoryDefined &= SeenParam;
+  }
+
+  return !AllMandatoryDefined;
+}
+
 bool RootSignatureParser::peekExpectedToken(TokenKind Expected) {
   return peekExpectedToken(ArrayRef{Expected});
 }
