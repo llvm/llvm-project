@@ -158,14 +158,14 @@ public:
   /// as an efficient mechanism to determine the expression-wise equivalence of
   /// two values.
   class ValueTable {
-    DenseMap<Value *, uint32_t> valueNumbering;
-    DenseMap<Expression, uint32_t> expressionNumbering;
+    DenseMap<Value *, uint32_t> ValueNumbering;
+    DenseMap<Expression, uint32_t> ExpressionNumbering;
 
     // Expressions is the vector of Expression. ExprIdx is the mapping from
     // value number to the index of Expression in Expressions. We use it
     // instead of a DenseMap because filling such mapping is faster than
     // filling a DenseMap and the compile time is a little better.
-    uint32_t nextExprNumber = 0;
+    uint32_t NextExprNumber = 0;
 
     std::vector<Expression> Expressions;
     std::vector<uint32_t> ExprIdx;
@@ -182,7 +182,7 @@ public:
     MemoryDependenceResults *MD = nullptr;
     DominatorTree *DT = nullptr;
 
-    uint32_t nextValueNumber = 1;
+    uint32_t NextValueNumber = 1;
 
     Expression createExpr(Instruction *I);
     Expression createCmpExpr(unsigned Opcode, CmpInst::Predicate Predicate,
@@ -191,11 +191,11 @@ public:
     Expression createGEPExpr(GetElementPtrInst *GEP);
     uint32_t lookupOrAddCall(CallInst *C);
     uint32_t phiTranslateImpl(const BasicBlock *BB, const BasicBlock *PhiBlock,
-                              uint32_t Num, GVNPass &Gvn);
+                              uint32_t Num, GVNPass &GVN);
     bool areCallValsEqual(uint32_t Num, uint32_t NewNum, const BasicBlock *Pred,
-                          const BasicBlock *PhiBlock, GVNPass &Gvn);
-    std::pair<uint32_t, bool> assignExpNewValueNum(Expression &exp);
-    bool areAllValsInBB(uint32_t num, const BasicBlock *BB, GVNPass &Gvn);
+                          const BasicBlock *PhiBlock, GVNPass &GVN);
+    std::pair<uint32_t, bool> assignExpNewValueNum(Expression &Exp);
+    bool areAllValsInBB(uint32_t Num, const BasicBlock *BB, GVNPass &GVN);
 
   public:
     ValueTable();
@@ -209,17 +209,17 @@ public:
     uint32_t lookupOrAddCmp(unsigned Opcode, CmpInst::Predicate Pred,
                             Value *LHS, Value *RHS);
     uint32_t phiTranslate(const BasicBlock *BB, const BasicBlock *PhiBlock,
-                          uint32_t Num, GVNPass &Gvn);
+                          uint32_t Num, GVNPass &GVN);
     void eraseTranslateCacheEntry(uint32_t Num, const BasicBlock &CurrBlock);
     bool exists(Value *V) const;
-    void add(Value *V, uint32_t num);
+    void add(Value *V, uint32_t Num);
     void clear();
-    void erase(Value *v);
+    void erase(Value *V);
     void setAliasAnalysis(AAResults *A) { AA = A; }
     AAResults *getAliasAnalysis() const { return AA; }
     void setMemDep(MemoryDependenceResults *M) { MD = M; }
     void setDomTree(DominatorTree *D) { DT = D; }
-    uint32_t getNextUnusedValueNumber() { return nextValueNumber; }
+    uint32_t getNextUnusedValueNumber() { return NextValueNumber; }
     void verifyRemoved(const Value *) const;
   };
 
@@ -328,9 +328,9 @@ private:
                OptimizationRemarkEmitter *ORE, MemorySSA *MSSA = nullptr);
 
   // List of critical edges to be split between iterations.
-  SmallVector<std::pair<Instruction *, unsigned>, 4> toSplit;
+  SmallVector<std::pair<Instruction *, unsigned>, 4> ToSplit;
 
-  // Helper functions of redundant load elimination
+  // Helper functions of redundant load elimination.
   bool processLoad(LoadInst *L);
   bool processNonLocalLoad(LoadInst *L);
   bool processAssumeIntrinsic(AssumeInst *II);
@@ -368,16 +368,16 @@ private:
       MapVector<BasicBlock *, Value *> &AvailableLoads,
       MapVector<BasicBlock *, LoadInst *> *CriticalEdgePredAndLoad);
 
-  // Other helper routines
+  // Other helper routines.
   bool processInstruction(Instruction *I);
   bool processBlock(BasicBlock *BB);
-  void dump(DenseMap<uint32_t, Value *> &d) const;
+  void dump(DenseMap<uint32_t, Value *> &Map) const;
   bool iterateOnFunction(Function &F);
   bool performPRE(Function &F);
   bool performScalarPRE(Instruction *I);
   bool performScalarPREInsertion(Instruction *Instr, BasicBlock *Pred,
                                  BasicBlock *Curr, unsigned int ValNo);
-  Value *findLeader(const BasicBlock *BB, uint32_t num);
+  Value *findLeader(const BasicBlock *BB, uint32_t Num);
   void cleanupGlobalSets();
   void removeInstruction(Instruction *I);
   void verifyRemoved(const Instruction *I) const;
@@ -412,39 +412,38 @@ struct GVNSinkPass : PassInfoMixin<GVNSinkPass> {
 } // end namespace llvm
 
 struct llvm::GVNPass::Expression {
-  uint32_t opcode;
-  bool commutative = false;
+  uint32_t Opcode;
+  bool Commutative = false;
   // The type is not necessarily the result type of the expression, it may be
   // any additional type needed to disambiguate the expression.
-  Type *type = nullptr;
-  SmallVector<uint32_t, 4> varargs;
+  Type *Ty = nullptr;
+  SmallVector<uint32_t, 4> VarArgs;
   
-  AttributeList attrs;
+  AttributeList Attrs;
 
-  Expression(uint32_t o = ~2U) : opcode(o) {}
+  Expression(uint32_t Op = ~2U) : Opcode(Op) {}
 
-  bool operator==(const Expression &other) const {
-    if (opcode != other.opcode)
+  bool operator==(const Expression &Other) const {
+    if (Opcode != Other.Opcode)
       return false;
-    if (opcode == ~0U || opcode == ~1U)
+    if (Opcode == ~0U || Opcode == ~1U)
       return true;
-    if (type != other.type)
+    if (Ty != Other.Ty)
       return false;
-    if (varargs != other.varargs)
+    if (VarArgs != Other.VarArgs)
       return false;
-    if ((!attrs.isEmpty() || !other.attrs.isEmpty()) &&
-        !attrs.intersectWith(type->getContext(), other.attrs).has_value())
+    if ((!Attrs.isEmpty() || !Other.Attrs.isEmpty()) &&
+        !Attrs.intersectWith(Ty->getContext(), Other.Attrs).has_value())
       return false;
     return true;
   }
 
   friend hash_code hash_value(const Expression &Value) {
     return hash_combine(
-        Value.opcode, Value.type,
-        hash_combine_range(Value.varargs.begin(), Value.varargs.end()));
+        Value.Opcode, Value.Ty,
+        hash_combine_range(Value.VarArgs.begin(), Value.VarArgs.end()));
   }
 };
-
 
 /// Represents a particular available value that we know how to materialize.
 /// Materialization of an AvailableValue never fails.  An AvailableValue is
@@ -541,8 +540,7 @@ struct llvm::gvn::AvailableValue {
 
   /// Emit code at the specified insertion point to adjust the value defined
   /// here to the specified type. This handles various coercion cases.
-  Value *MaterializeAdjustedValue(LoadInst *Load, Instruction *InsertPt,
-                                  GVNPass &gvn) const;
+  Value *MaterializeAdjustedValue(LoadInst *Load, Instruction *InsertPt) const;
 };
 
 /// Represents an AvailableValue which can be rematerialized at the end of
@@ -551,7 +549,7 @@ struct llvm::gvn::AvailableValueInBlock {
   /// BB - The basic block in question.
   BasicBlock *BB = nullptr;
   
-  /// AV - The actual available value
+  /// AV - The actual available value.
   AvailableValue AV;
 
   static AvailableValueInBlock get(BasicBlock *BB, AvailableValue &&AV) {
@@ -577,8 +575,8 @@ struct llvm::gvn::AvailableValueInBlock {
 
   /// Emit code at the end of this block to adjust the value defined here to
   /// the specified type. This handles various coercion cases.
-  Value *MaterializeAdjustedValue(LoadInst *Load, GVNPass &gvn) const {
-    return AV.MaterializeAdjustedValue(Load, BB->getTerminator(), gvn);
+  Value *MaterializeAdjustedValue(LoadInst *Load) const {
+    return AV.MaterializeAdjustedValue(Load, BB->getTerminator());
   }
 };
 
