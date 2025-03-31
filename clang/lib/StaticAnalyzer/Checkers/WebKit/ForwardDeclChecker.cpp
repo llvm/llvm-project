@@ -127,8 +127,8 @@ public:
     auto Name = R->getName();
     return !R->hasDefinition() && !RTC.isUnretained(QT) &&
            !SystemTypes.contains(CanonicalType) &&
-           !SystemTypes.contains(PointeeType) &&
-           !Name.starts_with("Opaque") && Name != "_NSZone";
+           !SystemTypes.contains(PointeeType) && !Name.starts_with("Opaque") &&
+           Name != "_NSZone";
   }
 
   void visitRecordDecl(const RecordDecl *RD, const Decl *DeclWithIssue) const {
