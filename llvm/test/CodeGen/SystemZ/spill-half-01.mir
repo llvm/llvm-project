@@ -14,20 +14,20 @@ body:             |
 
     ; CHECK-LABEL: fun0:
     ; CHECK:      aghi %r15, -240
-    ; CHECK:      ste %f4, 172(%r15)          # 4-byte Folded Spill
-    ; CHECK-NEXT: ste %f2, 164(%r15)          # 4-byte Folded Spill
-    ; CHECK-NEXT: ste %f0, 168(%r15)          # 4-byte Folded Spill
+    ; CHECK:      ste %f4, 172(%r15)          # 4-byte Spill
+    ; CHECK-NEXT: ste %f2, 164(%r15)          # 4-byte Spill
+    ; CHECK-NEXT: ste %f0, 168(%r15)          # 4-byte Spill
     ; CHECK-NEXT: #APP
     ; CHECK-NEXT: #NO_APP
-    ; CHECK-NEXT: le %f0, 164(%r15)           # 4-byte Folded Reload
-    ; CHECK:      le %f0, 168(%r15)           # 4-byte Folded Reload
-    ; CHECK:      le %f0, 172(%r15)           # 4-byte Folded Reload
+    ; CHECK-NEXT: le %f0, 164(%r15)           # 4-byte Reload
+    ; CHECK:      le %f0, 168(%r15)           # 4-byte Reload
+    ; CHECK:      le %f0, 172(%r15)           # 4-byte Reload
 
     ; VECTOR-LABEL: fun0:
     ; VECTOR:      aghi %r15, -232
-    ; VECTOR:      vsteh %v4, 166(%r15), 0     # 2-byte Folded Spil
-    ; VECTOR-NEXT: vsteh %v2, 162(%r15), 0     # 2-byte Folded Spil
-    ; VECTOR-NEXT: vsteh %v0, 164(%r15), 0     # 2-byte Folded Spil
+    ; VECTOR:      vsteh %v4, 166(%r15), 0     # 2-byte Folded Spill
+    ; VECTOR-NEXT: vsteh %v2, 162(%r15), 0     # 2-byte Folded Spill
+    ; VECTOR-NEXT: vsteh %v0, 164(%r15), 0     # 2-byte Folded Spill
     ; VECTOR-NEXT: #APP
     ; VECTOR-NEXT: #NO_APP
     ; VECTOR-NEXT: vlreph %v0, 162(%r15)       # 2-byte Folded Reload

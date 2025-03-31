@@ -14,14 +14,14 @@ define <8 x half> @fun0(<8 x half> %Op) {
 ; NOVEC-NEXT:    .cfi_offset %r15, -40
 ; NOVEC-NEXT:    aghi %r15, -224
 ; NOVEC-NEXT:    .cfi_def_cfa_offset 384
-; NOVEC-NEXT:    std %f8, 216(%r15) # 8-byte Folded Spill
-; NOVEC-NEXT:    std %f9, 208(%r15) # 8-byte Folded Spill
-; NOVEC-NEXT:    std %f10, 200(%r15) # 8-byte Folded Spill
-; NOVEC-NEXT:    std %f11, 192(%r15) # 8-byte Folded Spill
-; NOVEC-NEXT:    std %f12, 184(%r15) # 8-byte Folded Spill
-; NOVEC-NEXT:    std %f13, 176(%r15) # 8-byte Folded Spill
-; NOVEC-NEXT:    std %f14, 168(%r15) # 8-byte Folded Spill
-; NOVEC-NEXT:    std %f15, 160(%r15) # 8-byte Folded Spill
+; NOVEC-NEXT:    std %f8, 216(%r15) # 8-byte Spill
+; NOVEC-NEXT:    std %f9, 208(%r15) # 8-byte Spill
+; NOVEC-NEXT:    std %f10, 200(%r15) # 8-byte Spill
+; NOVEC-NEXT:    std %f11, 192(%r15) # 8-byte Spill
+; NOVEC-NEXT:    std %f12, 184(%r15) # 8-byte Spill
+; NOVEC-NEXT:    std %f13, 176(%r15) # 8-byte Spill
+; NOVEC-NEXT:    std %f14, 168(%r15) # 8-byte Spill
+; NOVEC-NEXT:    std %f15, 160(%r15) # 8-byte Spill
 ; NOVEC-NEXT:    .cfi_offset %f8, -168
 ; NOVEC-NEXT:    .cfi_offset %f9, -176
 ; NOVEC-NEXT:    .cfi_offset %f10, -184
@@ -123,14 +123,14 @@ define <8 x half> @fun0(<8 x half> %Op) {
 ; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
 ; NOVEC-NEXT:    srl %r0, 16
 ; NOVEC-NEXT:    sth %r0, 8(%r13)
-; NOVEC-NEXT:    ld %f8, 216(%r15) # 8-byte Folded Reload
-; NOVEC-NEXT:    ld %f9, 208(%r15) # 8-byte Folded Reload
-; NOVEC-NEXT:    ld %f10, 200(%r15) # 8-byte Folded Reload
-; NOVEC-NEXT:    ld %f11, 192(%r15) # 8-byte Folded Reload
-; NOVEC-NEXT:    ld %f12, 184(%r15) # 8-byte Folded Reload
-; NOVEC-NEXT:    ld %f13, 176(%r15) # 8-byte Folded Reload
-; NOVEC-NEXT:    ld %f14, 168(%r15) # 8-byte Folded Reload
-; NOVEC-NEXT:    ld %f15, 160(%r15) # 8-byte Folded Reload
+; NOVEC-NEXT:    ld %f8, 216(%r15) # 8-byte Reload
+; NOVEC-NEXT:    ld %f9, 208(%r15) # 8-byte Reload
+; NOVEC-NEXT:    ld %f10, 200(%r15) # 8-byte Reload
+; NOVEC-NEXT:    ld %f11, 192(%r15) # 8-byte Reload
+; NOVEC-NEXT:    ld %f12, 184(%r15) # 8-byte Reload
+; NOVEC-NEXT:    ld %f13, 176(%r15) # 8-byte Reload
+; NOVEC-NEXT:    ld %f14, 168(%r15) # 8-byte Reload
+; NOVEC-NEXT:    ld %f15, 160(%r15) # 8-byte Reload
 ; NOVEC-NEXT:    lmg %r13, %r15, 328(%r15)
 ; NOVEC-NEXT:    br %r14
 ;
@@ -142,14 +142,14 @@ define <8 x half> @fun0(<8 x half> %Op) {
 ; VECTOR-NEXT:    .cfi_offset %r15, -40
 ; VECTOR-NEXT:    aghi %r15, -224
 ; VECTOR-NEXT:    .cfi_def_cfa_offset 384
-; VECTOR-NEXT:    std %f8, 216(%r15) # 8-byte Folded Spill
-; VECTOR-NEXT:    std %f9, 208(%r15) # 8-byte Folded Spill
-; VECTOR-NEXT:    std %f10, 200(%r15) # 8-byte Folded Spill
-; VECTOR-NEXT:    std %f11, 192(%r15) # 8-byte Folded Spill
-; VECTOR-NEXT:    std %f12, 184(%r15) # 8-byte Folded Spill
-; VECTOR-NEXT:    std %f13, 176(%r15) # 8-byte Folded Spill
-; VECTOR-NEXT:    std %f14, 168(%r15) # 8-byte Folded Spill
-; VECTOR-NEXT:    std %f15, 160(%r15) # 8-byte Folded Spill
+; VECTOR-NEXT:    std %f8, 216(%r15) # 8-byte Spill
+; VECTOR-NEXT:    std %f9, 208(%r15) # 8-byte Spill
+; VECTOR-NEXT:    std %f10, 200(%r15) # 8-byte Spill
+; VECTOR-NEXT:    std %f11, 192(%r15) # 8-byte Spill
+; VECTOR-NEXT:    std %f12, 184(%r15) # 8-byte Spill
+; VECTOR-NEXT:    std %f13, 176(%r15) # 8-byte Spill
+; VECTOR-NEXT:    std %f14, 168(%r15) # 8-byte Spill
+; VECTOR-NEXT:    std %f15, 160(%r15) # 8-byte Spill
 ; VECTOR-NEXT:    .cfi_offset %f8, -168
 ; VECTOR-NEXT:    .cfi_offset %f9, -176
 ; VECTOR-NEXT:    .cfi_offset %f10, -184
@@ -212,14 +212,14 @@ define <8 x half> @fun0(<8 x half> %Op) {
 ; VECTOR-NEXT:    vsteh %v9, 4(%r13), 0
 ; VECTOR-NEXT:    vsteh %v10, 2(%r13), 0
 ; VECTOR-NEXT:    vsteh %v15, 0(%r13), 0
-; VECTOR-NEXT:    ld %f8, 216(%r15) # 8-byte Folded Reload
-; VECTOR-NEXT:    ld %f9, 208(%r15) # 8-byte Folded Reload
-; VECTOR-NEXT:    ld %f10, 200(%r15) # 8-byte Folded Reload
-; VECTOR-NEXT:    ld %f11, 192(%r15) # 8-byte Folded Reload
-; VECTOR-NEXT:    ld %f12, 184(%r15) # 8-byte Folded Reload
-; VECTOR-NEXT:    ld %f13, 176(%r15) # 8-byte Folded Reload
-; VECTOR-NEXT:    ld %f14, 168(%r15) # 8-byte Folded Reload
-; VECTOR-NEXT:    ld %f15, 160(%r15) # 8-byte Folded Reload
+; VECTOR-NEXT:    ld %f8, 216(%r15) # 8-byte Reload
+; VECTOR-NEXT:    ld %f9, 208(%r15) # 8-byte Reload
+; VECTOR-NEXT:    ld %f10, 200(%r15) # 8-byte Reload
+; VECTOR-NEXT:    ld %f11, 192(%r15) # 8-byte Reload
+; VECTOR-NEXT:    ld %f12, 184(%r15) # 8-byte Reload
+; VECTOR-NEXT:    ld %f13, 176(%r15) # 8-byte Reload
+; VECTOR-NEXT:    ld %f14, 168(%r15) # 8-byte Reload
+; VECTOR-NEXT:    ld %f15, 160(%r15) # 8-byte Reload
 ; VECTOR-NEXT:    lmg %r13, %r15, 328(%r15)
 ; VECTOR-NEXT:    br %r14
 entry:
@@ -236,10 +236,10 @@ define <4 x half> @fun1(<4 x half> %Op) {
 ; NOVEC-NEXT:    .cfi_offset %r15, -40
 ; NOVEC-NEXT:    aghi %r15, -192
 ; NOVEC-NEXT:    .cfi_def_cfa_offset 352
-; NOVEC-NEXT:    std %f8, 184(%r15) # 8-byte Folded Spill
-; NOVEC-NEXT:    std %f9, 176(%r15) # 8-byte Folded Spill
-; NOVEC-NEXT:    std %f10, 168(%r15) # 8-byte Folded Spill
-; NOVEC-NEXT:    std %f11, 160(%r15) # 8-byte Folded Spill
+; NOVEC-NEXT:    std %f8, 184(%r15) # 8-byte Spill
+; NOVEC-NEXT:    std %f9, 176(%r15) # 8-byte Spill
+; NOVEC-NEXT:    std %f10, 168(%r15) # 8-byte Spill
+; NOVEC-NEXT:    std %f11, 160(%r15) # 8-byte Spill
 ; NOVEC-NEXT:    .cfi_offset %f8, -168
 ; NOVEC-NEXT:    .cfi_offset %f9, -176
 ; NOVEC-NEXT:    .cfi_offset %f10, -184
@@ -269,10 +269,10 @@ define <4 x half> @fun1(<4 x half> %Op) {
 ; NOVEC-NEXT:    ler %f0, %f11
 ; NOVEC-NEXT:    ler %f2, %f10
 ; NOVEC-NEXT:    ler %f4, %f9
-; NOVEC-NEXT:    ld %f8, 184(%r15) # 8-byte Folded Reload
-; NOVEC-NEXT:    ld %f9, 176(%r15) # 8-byte Folded Reload
-; NOVEC-NEXT:    ld %f10, 168(%r15) # 8-byte Folded Reload
-; NOVEC-NEXT:    ld %f11, 160(%r15) # 8-byte Folded Reload
+; NOVEC-NEXT:    ld %f8, 184(%r15) # 8-byte Reload
+; NOVEC-NEXT:    ld %f9, 176(%r15) # 8-byte Reload
+; NOVEC-NEXT:    ld %f10, 168(%r15) # 8-byte Reload
+; NOVEC-NEXT:    ld %f11, 160(%r15) # 8-byte Reload
 ; NOVEC-NEXT:    lmg %r14, %r15, 304(%r15)
 ; NOVEC-NEXT:    br %r14
 ;
@@ -283,10 +283,10 @@ define <4 x half> @fun1(<4 x half> %Op) {
 ; VECTOR-NEXT:    .cfi_offset %r15, -40
 ; VECTOR-NEXT:    aghi %r15, -192
 ; VECTOR-NEXT:    .cfi_def_cfa_offset 352
-; VECTOR-NEXT:    std %f8, 184(%r15) # 8-byte Folded Spill
-; VECTOR-NEXT:    std %f9, 176(%r15) # 8-byte Folded Spill
-; VECTOR-NEXT:    std %f10, 168(%r15) # 8-byte Folded Spill
-; VECTOR-NEXT:    std %f11, 160(%r15) # 8-byte Folded Spill
+; VECTOR-NEXT:    std %f8, 184(%r15) # 8-byte Spill
+; VECTOR-NEXT:    std %f9, 176(%r15) # 8-byte Spill
+; VECTOR-NEXT:    std %f10, 168(%r15) # 8-byte Spill
+; VECTOR-NEXT:    std %f11, 160(%r15) # 8-byte Spill
 ; VECTOR-NEXT:    .cfi_offset %f8, -168
 ; VECTOR-NEXT:    .cfi_offset %f9, -176
 ; VECTOR-NEXT:    .cfi_offset %f10, -184
@@ -316,10 +316,10 @@ define <4 x half> @fun1(<4 x half> %Op) {
 ; VECTOR-NEXT:    ldr %f0, %f11
 ; VECTOR-NEXT:    ldr %f2, %f10
 ; VECTOR-NEXT:    ldr %f4, %f9
-; VECTOR-NEXT:    ld %f8, 184(%r15) # 8-byte Folded Reload
-; VECTOR-NEXT:    ld %f9, 176(%r15) # 8-byte Folded Reload
-; VECTOR-NEXT:    ld %f10, 168(%r15) # 8-byte Folded Reload
-; VECTOR-NEXT:    ld %f11, 160(%r15) # 8-byte Folded Reload
+; VECTOR-NEXT:    ld %f8, 184(%r15) # 8-byte Reload
+; VECTOR-NEXT:    ld %f9, 176(%r15) # 8-byte Reload
+; VECTOR-NEXT:    ld %f10, 168(%r15) # 8-byte Reload
+; VECTOR-NEXT:    ld %f11, 160(%r15) # 8-byte Reload
 ; VECTOR-NEXT:    lmg %r14, %r15, 304(%r15)
 ; VECTOR-NEXT:    br %r14
 entry:
@@ -336,8 +336,8 @@ define <2 x half> @fun2(<2 x half> %Op) {
 ; NOVEC-NEXT:    .cfi_offset %r15, -40
 ; NOVEC-NEXT:    aghi %r15, -176
 ; NOVEC-NEXT:    .cfi_def_cfa_offset 336
-; NOVEC-NEXT:    std %f8, 168(%r15) # 8-byte Folded Spill
-; NOVEC-NEXT:    std %f9, 160(%r15) # 8-byte Folded Spill
+; NOVEC-NEXT:    std %f8, 168(%r15) # 8-byte Spill
+; NOVEC-NEXT:    std %f9, 160(%r15) # 8-byte Spill
 ; NOVEC-NEXT:    .cfi_offset %f8, -168
 ; NOVEC-NEXT:    .cfi_offset %f9, -176
 ; NOVEC-NEXT:    ler %f8, %f2
@@ -355,8 +355,8 @@ define <2 x half> @fun2(<2 x half> %Op) {
 ; NOVEC-NEXT:    brasl %r14, __truncdfhf2@PLT
 ; NOVEC-NEXT:    ler %f2, %f0
 ; NOVEC-NEXT:    ler %f0, %f9
-; NOVEC-NEXT:    ld %f8, 168(%r15) # 8-byte Folded Reload
-; NOVEC-NEXT:    ld %f9, 160(%r15) # 8-byte Folded Reload
+; NOVEC-NEXT:    ld %f8, 168(%r15) # 8-byte Reload
+; NOVEC-NEXT:    ld %f9, 160(%r15) # 8-byte Reload
 ; NOVEC-NEXT:    lmg %r14, %r15, 288(%r15)
 ; NOVEC-NEXT:    br %r14
 ;
@@ -367,7 +367,7 @@ define <2 x half> @fun2(<2 x half> %Op) {
 ; VECTOR-NEXT:    .cfi_offset %r15, -40
 ; VECTOR-NEXT:    aghi %r15, -184
 ; VECTOR-NEXT:    .cfi_def_cfa_offset 344
-; VECTOR-NEXT:    std %f8, 176(%r15) # 8-byte Folded Spill
+; VECTOR-NEXT:    std %f8, 176(%r15) # 8-byte Spill
 ; VECTOR-NEXT:    .cfi_offset %f8, -168
 ; VECTOR-NEXT:    ldr %f8, %f0
 ; VECTOR-NEXT:    ldr %f0, %f2
@@ -390,7 +390,7 @@ define <2 x half> @fun2(<2 x half> %Op) {
 ; VECTOR-NEXT:    brasl %r14, __truncdfhf2@PLT
 ; VECTOR-NEXT:    ldr %f2, %f0
 ; VECTOR-NEXT:    ldr %f0, %f8
-; VECTOR-NEXT:    ld %f8, 176(%r15) # 8-byte Folded Reload
+; VECTOR-NEXT:    ld %f8, 176(%r15) # 8-byte Reload
 ; VECTOR-NEXT:    lmg %r14, %r15, 296(%r15)
 ; VECTOR-NEXT:    br %r14
 entry:
@@ -686,10 +686,10 @@ define void @fun5(<4 x half> %dummy, <8 x half> %Arg5) {
 ; NOVEC-NEXT:    .cfi_offset %r15, -40
 ; NOVEC-NEXT:    aghi %r15, -256
 ; NOVEC-NEXT:    .cfi_def_cfa_offset 416
-; NOVEC-NEXT:    std %f8, 248(%r15) # 8-byte Folded Spill
-; NOVEC-NEXT:    std %f9, 240(%r15) # 8-byte Folded Spill
-; NOVEC-NEXT:    std %f10, 232(%r15) # 8-byte Folded Spill
-; NOVEC-NEXT:    std %f11, 224(%r15) # 8-byte Folded Spill
+; NOVEC-NEXT:    std %f8, 248(%r15) # 8-byte Spill
+; NOVEC-NEXT:    std %f9, 240(%r15) # 8-byte Spill
+; NOVEC-NEXT:    std %f10, 232(%r15) # 8-byte Spill
+; NOVEC-NEXT:    std %f11, 224(%r15) # 8-byte Spill
 ; NOVEC-NEXT:    .cfi_offset %f8, -168
 ; NOVEC-NEXT:    .cfi_offset %f9, -176
 ; NOVEC-NEXT:    .cfi_offset %f10, -184
@@ -759,10 +759,10 @@ define void @fun5(<4 x half> %dummy, <8 x half> %Arg5) {
 ; NOVEC-NEXT:    srl %r0, 16
 ; NOVEC-NEXT:    sth %r0, 166(%r15)
 ; NOVEC-NEXT:    brasl %r14, foo2@PLT
-; NOVEC-NEXT:    ld %f8, 248(%r15) # 8-byte Folded Reload
-; NOVEC-NEXT:    ld %f9, 240(%r15) # 8-byte Folded Reload
-; NOVEC-NEXT:    ld %f10, 232(%r15) # 8-byte Folded Reload
-; NOVEC-NEXT:    ld %f11, 224(%r15) # 8-byte Folded Reload
+; NOVEC-NEXT:    ld %f8, 248(%r15) # 8-byte Reload
+; NOVEC-NEXT:    ld %f9, 240(%r15) # 8-byte Reload
+; NOVEC-NEXT:    ld %f10, 232(%r15) # 8-byte Reload
+; NOVEC-NEXT:    ld %f11, 224(%r15) # 8-byte Reload
 ; NOVEC-NEXT:    lmg %r14, %r15, 368(%r15)
 ; NOVEC-NEXT:    br %r14
 ;

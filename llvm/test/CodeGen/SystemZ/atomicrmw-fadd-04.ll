@@ -14,9 +14,9 @@ define half @f1(ptr %src, half %b) {
 ; CHECK-NEXT:    .cfi_offset %r15, -40
 ; CHECK-NEXT:    aghi %r15, -184
 ; CHECK-NEXT:    .cfi_def_cfa_offset 344
-; CHECK-NEXT:    std %f8, 176(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f9, 168(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f10, 160(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    std %f8, 176(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f9, 168(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f10, 160(%r15) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset %f8, -168
 ; CHECK-NEXT:    .cfi_offset %f9, -176
 ; CHECK-NEXT:    .cfi_offset %f10, -184
@@ -66,9 +66,9 @@ define half @f1(ptr %src, half %b) {
 ; CHECK-NEXT:    j .LBB0_1
 ; CHECK-NEXT:  .LBB0_5: # %atomicrmw.end
 ; CHECK-NEXT:    ler %f0, %f9
-; CHECK-NEXT:    ld %f8, 176(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f9, 168(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f10, 160(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    ld %f8, 176(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f9, 168(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f10, 160(%r15) # 8-byte Reload
 ; CHECK-NEXT:    lmg %r11, %r15, 272(%r15)
 ; CHECK-NEXT:    br %r14
   %res = atomicrmw fadd ptr %src, half %b seq_cst
