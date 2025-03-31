@@ -464,54 +464,19 @@ static LogicalResult verifySupported(irdl::DialectOp dialect) {
   dialect.walk([&](mlir::Operation *op) {
     res =
         llvm::TypeSwitch<Operation *, LogicalResult>(op)
-            .Case<irdl::AttributeOp>([](irdl::AttributeOp op) -> LogicalResult {
-              return op.emitError(
-                  "IRDL C++ translation does not yet support attributes.");
-            })
-            .Case<irdl::AttributesOp>(
-                [](irdl::AttributesOp op) -> LogicalResult {
-                  return op.emitError(
-                      "IRDL C++ translation does not yet support attributes.");
-                })
-            .Case<irdl::AnyOfOp>([](irdl::AnyOfOp op) -> LogicalResult {
-              return op.emitError("IRDL C++ translation only supports irdl.any "
-                                  "constraint for types");
-            })
-            .Case<irdl::AllOfOp>([](irdl::AllOfOp op) -> LogicalResult {
-              return op.emitError("IRDL C++ translation only supports irdl.any "
-                                  "constraint for types");
-            })
-            .Case<irdl::BaseOp>([](irdl::BaseOp op) -> LogicalResult {
-              return op.emitError(
-                  "IRDL C++ translation does not yet support base types.");
-            })
-            .Case<irdl::ParametersOp>([](irdl::ParametersOp op)
-                                          -> LogicalResult {
-              return op.emitError(
-                  "IRDL C++ translation does not yet support type parameters.");
-            })
-            .Case<irdl::ParametricOp>(
-                [](irdl::ParametricOp op) -> LogicalResult {
-                  return op.emitError("IRDL C++ translation does not yet "
-                                      "support parametric operations.");
-                })
-            .Case<irdl::RegionOp>([](irdl::RegionOp op) -> LogicalResult {
-              return op.emitError(
-                  "IRDL C++ translation does not yet support regions.");
-            })
-            .Case<irdl::RegionsOp>([](irdl::RegionsOp op) -> LogicalResult {
-              return op.emitError(
-                  "IRDL C++ translation does not yet support regions.");
-            })
-            .Case<irdl::IsOp>([](irdl::IsOp op) -> LogicalResult {
-              return op.emitError("IRDL C++ translation only supports irdl.any "
-                                  "constraint for types");
-            })
-            .Case<irdl::CPredOp>([](irdl::CPredOp op) -> LogicalResult {
-              return op.emitError("IRDL C++ translation only supports irdl.any "
-                                  "constraint for types");
-            })
-            .Default(success());
+            .Case<irdl::DialectOp>(([](irdl::DialectOp) { return success(); }))
+            .Case<irdl::OperationOp>(
+                ([](irdl::OperationOp) { return success(); }))
+            .Case<irdl::TypeOp>(([](irdl::TypeOp) { return success(); }))
+            .Case<irdl::OperandsOp>(
+                ([](irdl::OperandsOp) { return success(); }))
+            .Case<irdl::ResultsOp>(([](irdl::ResultsOp) { return success(); }))
+            .Case<irdl::AnyOp>(([](irdl::AnyOp) { return success(); }))
+            .Default([](mlir::Operation *op) -> LogicalResult {
+              return op->emitError("IRDL C++ translation does not yet support "
+                                   "translation of ")
+                     << op->getName() << "operation";
+            });
 
     if (failed(res))
       return WalkResult::interrupt();
