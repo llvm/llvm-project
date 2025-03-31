@@ -415,9 +415,7 @@ int main(int argc, const char **argv) {
   LLVMContext Context;
   Module MM("offload.wrapper.module", Context);
 
-  MM.setTargetTriple(Triple(Target));
-
-  // BinaryWrapper BW(AuxTriple.empty() ? Target : AuxTriple, argv[0]);
+  MM.setTargetTriple( AuxTriple.empty() ? Triple(Target) : Triple(AuxTriple));
 
   // Collect offload-archs.
   SmallVector<ArrayRef<char>, 4u> OffloadArchs;
