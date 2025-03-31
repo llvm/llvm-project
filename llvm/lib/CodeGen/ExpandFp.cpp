@@ -123,8 +123,8 @@ private:
   // loop body and the "final iteration".
   Value *buildUpdateAx(Value *Ax, Value *Ay, Value *Ayinv) const {
     // Build:
-    //   float q = BUILTIN_RINT_ComputeFpTy(ax * ayinv);
-    //   ax = fnma(q, ay, ax);
+    //   float q = rint(ax * ayinv);
+    //   ax = fma(-q, ay, ax);
     //   int clt = ax < 0.0f;
     //   float axp = ax + ay;
     //   ax = clt ? axp : ax;
@@ -146,9 +146,8 @@ private:
                                                const Twine &ExName,
                                                const Twine &PowName) const {
     // Build:
-    //   ExName = BUILTIN_FREXP_EXP_ComputeFpTy(Src) - 1;
-    //   PowName = BUILTIN_FLDEXP_ComputeFpTy(
-    //             BUILTIN_FREXP_MANT_ComputeFpTy(ExName), NewExp);
+    //   ExName = frexp_exp(Src) - 1;
+    //   PowName = fldexp(frexp_mant(ExName), NewExp);
     Type *Ty = Src->getType();
     Type *ExTy = B.getInt32Ty();
     Value *Frexp = B.CreateIntrinsic(Intrinsic::frexp, {Ty, ExTy}, Src);
@@ -171,18 +170,16 @@ private:
     B.setFastMathFlags(FMF);
 
     // Build:
-    // ex = BUILTIN_FREXP_EXP_ComputeFpTy(ax) - 1;
-    // ax = BUILTIN_FLDEXP_ComputeFpTy(
-    //      BUILTIN_FREXP_MANT_ComputeFpTy(ax), bits);
-    // ey = BUILTIN_FREXP_EXP_ComputeFpTy(ay) - 1;
-    // ay = BUILTIN_FLDEXP_ComputeFpTy(
-    //      BUILTIN_FREXP_MANT_ComputeFpTy(ay), 1);
+    // ex = frexp_exp(ax) - 1;
+    // ax = fldexp(frexp_mant(ax), bits);
+    // ey = frexp_exp(ay) - 1;
+    // ay = fledxp(frexp_mant(ay), 1);
     auto [Ax, Ex] = buildExpAndPower(AxInitial, Bits, "ex", "ax");
     auto [Ay, Ey] = buildExpAndPower(AyInitial, One, "ey", "ay");
 
     // Build:
     //   int nb = ex - ey;
-    //   float ayinv = MATH_FAST_RCP(ay);
+    //   float ayinv = 1.0/ay;
     Value *Nb = B.CreateSub(Ex, Ey, "nb");
     Value *Ayinv = createRcp(Ay, "ayinv");
 
@@ -196,7 +193,7 @@ private:
 
     // Build loop body:
     //   UPDATE_AX
-    //   ax = BUILTIN_FLDEXP_ComputeFpTy(ax, bits);
+    //   ax = fldexp(ax, bits);
     //   nb -= bits;
     // One iteration of the loop is factored out.  The code shared by
     // the loop and this "iteration" is denoted by UPDATE_AX.
@@ -215,7 +212,7 @@ private:
     B.CreateCondBr(B.CreateICmp(CmpInst::ICMP_SGT, NbIv, Bits), LoopBB, ExitBB);
 
     // Build final iteration
-    //   ax = BUILTIN_FLDEXP_ComputeFpTy(ax, nb - bits + 1);
+    //   ax = fldexp(ax, nb - bits + 1);
     //   UPDATE_AX
     B.SetInsertPoint(ExitBB);
 
@@ -231,7 +228,7 @@ private:
     AxFinal = buildUpdateAx(AxFinal, Ay, Ayinv);
 
     // Build:
-    //    ax = BUILTIN_FLDEXP_ComputeFpTy(ax, ey);
+    //    ax = fldexp(ax, ey);
     //    ret = copysign(ax,x);
     AxFinal = B.CreateLdexp(AxFinal, Ey, {}, "ax");
     if (ComputeFpTy != FremTy)
@@ -247,7 +244,7 @@ private:
   /// incoming edge from the result to \p RetPhi.
   void buildElseBranch(Value *Ax, Value *Ay, Value *X, PHINode *RetPhi) const {
     // Build:
-    // ret = ax == ay ? BUILTIN_COPYSIGN_ComputeFpTy(0.0f, x) : x;
+    // ret = ax == ay ? copysign(0.0f, x) : x;
     Value *ZeroWithXSign =
         B.CreateCopySign(ConstantFP::get(FremTy, 0.0), X);
     Value *Ret = B.CreateSelect(B.CreateFCmpOEQ(Ax, Ay), ZeroWithXSign, X);
@@ -261,8 +258,8 @@ private:
                                 std::optional<SimplifyQuery> &SQ,
                                 bool NoInfs) const {
     // Build:
-    //   ret = (y == 0.0f || isnan(y)) ? QNAN_ComputeFpTy : ret;
-    //   ret = isfinite(x) ? ret : QNAN_ComputeFpTy;
+    //   ret = (y == 0.0f || isnan(y)) ? QNAN : ret;
+    //   ret = isfinite(x) ? ret : QNAN;
     Value *Nan = ConstantFP::getQNaN(FremTy);
     Ret = B.CreateSelect(B.CreateFCmpUEQ(Y, ConstantFP::get(FremTy, 0.0)), Nan,
                          Ret);
