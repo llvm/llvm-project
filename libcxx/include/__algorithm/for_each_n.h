@@ -53,7 +53,7 @@ template <class _SegmentedIterator,
                         int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _SegmentedIterator
 for_each_n(_SegmentedIterator __first, _Size __orig_n, _Function __f) {
-  return std::__for_each_n_segment(__first, __orig_n, std::__do_segment<_SegmentedIterator, _Function>(__f));
+  return std::__for_each_n_segment(__first, __orig_n, std::__segment_processor<_SegmentedIterator, _Function>(__f));
 }
 
 #endif

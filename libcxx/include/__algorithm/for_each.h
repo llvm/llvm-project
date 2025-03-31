@@ -33,14 +33,16 @@ __for_each(_InputIterator __first, _Sent __last, _Function& __f) {
   return std::move(__f);
 }
 
-// __do_segment acts as a functor for processing individual segments within the __for_each_segment{, _n} algorithms.
-template <class _InputIterator, class _Function>
-struct __do_segment {
-  using _Traits _LIBCPP_NODEBUG = __segmented_iterator_traits<_InputIterator>;
+// __segment_processor handles the per-segment processing by applying the user-provided function to each element
+// within the segment. It acts as a functor passed to the segmented iterator algorithm __for_each_segment.
+template <class _SegmentedIterator, class _Function>
+struct __segment_processor {
+  using _Traits _LIBCPP_NODEBUG = __segmented_iterator_traits<_SegmentedIterator>;
 
   _Function& __func_;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __do_segment(_Function& __func) : __func_(__func) {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __segment_processor(_Function& __func)
+      : __func_(__func) {}
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
   operator()(typename _Traits::__local_iterator __lfirst, typename _Traits::__local_iterator __llast) {
@@ -53,7 +55,7 @@ template <class _SegmentedIterator,
           __enable_if_t<__is_segmented_iterator<_SegmentedIterator>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Function
 __for_each(_SegmentedIterator __first, _SegmentedIterator __last, _Function& __func) {
-  std::__for_each_segment(__first, __last, std::__do_segment<_SegmentedIterator, _Function>(__func));
+  std::__for_each_segment(__first, __last, std::__segment_processor<_SegmentedIterator, _Function>(__func));
   return std::move(__func);
 }
 
