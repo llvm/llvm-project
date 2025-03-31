@@ -273,6 +273,7 @@ protected:
   bool HasMinimum3Maximum3F16 = false;
   bool HasMin3Max3PKF16 = false;
   bool HasMinimum3Maximum3PKF16 = false;
+  bool HasLshlAddU64Inst = false;
 
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
@@ -1186,7 +1187,7 @@ public:
 
   bool hasMovB64() const { return GFX940Insts || GFX1250Insts; }
 
-  bool hasLshlAddB64() const { return GFX940Insts || GFX1250Insts; }
+  bool hasLshlAddU64Inst() const { return HasLshlAddU64Inst; }
 
   // Scalar and global loads support scale_offset bit.
   bool hasScaleOffset() const { return GFX1250Insts; }
