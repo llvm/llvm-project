@@ -20,6 +20,7 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_PROTOCOL_H
 #define LLDB_TOOLS_LLDB_DAP_PROTOCOL_H
 
+#include "lldb/lldb-enumerations.h"
 #include "llvm/Support/JSON.h"
 #include <cstdint>
 #include <optional>
@@ -64,15 +65,15 @@ struct Event {
 llvm::json::Value toJSON(const Event &);
 bool fromJSON(const llvm::json::Value &, Event &, llvm::json::Path);
 
+FLAGS_ENUM(ResponseMessage){
+    /// The request was cancelled
+    eResponseMessageCancelled,
+    /// The request may be retried once the adapter is in a 'stopped' state
+    eResponseMessageNotStopped,
+};
+
 /// Response for a request.
 struct Response {
-  enum class Message {
-    /// The request was cancelled
-    cancelled,
-    /// The request may be retried once the adapter is in a 'stopped' state
-    notStopped,
-  };
-
   /// Sequence number of the corresponding request.
   int64_t request_seq;
 
@@ -90,7 +91,7 @@ struct Response {
   /// Contains the raw error in short form if `success` is false. This raw error
   /// might be interpreted by the client and is not shown in the UI. Some
   /// predefined values exist.
-  std::optional<std::variant<Message, std::string>> message;
+  std::optional<std::variant<ResponseMessage, std::string>> message;
 
   /// Contains request result if success is true and error details if success is
   /// false.
