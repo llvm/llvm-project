@@ -337,8 +337,7 @@ void test() {
   InclassNew6 *O10 = new InclassNew6;
   // expected-error@-1 {{attempt to use a deleted function}}
   // expected-note@#36 {{'operator delete' has been explicitly marked deleted here}}
-  // expected-error@-3 {{type aware allocation requires matching type aware operator new and type aware operator delete for exception cleanup}}
-  // expected-note@#34 {{non-type aware 'operator new' declared here}}
+  // expected-error@-3 {{type aware 'operator delete' requires matching type aware 'operator new' for exception cleanup}}
   // expected-note@#36 {{type aware 'operator delete' declared here}}
   delete O10;
   // expected-error@-1 {{attempt to use a deleted function}}
@@ -351,8 +350,7 @@ void test() {
   // expected-note@#39 {{'operator delete' has been explicitly marked deleted here}}
 
   InclassNew8 *O12 = new InclassNew8;
-  // expected-error@-1 {{type aware allocation requires matching type aware operator new and type aware operator delete for exception cleanup}}
-  // expected-note@#40 {{type aware 'operator new' declared here}}
+  // expected-error@-1 {{type aware 'operator new' requires matching type aware 'operator delete' for exception cleanup}}
   // expected-note@#41 {{non-type aware 'operator delete' declared here}}
   delete O12;
 

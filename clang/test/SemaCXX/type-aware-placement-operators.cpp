@@ -30,6 +30,12 @@ struct S3 {
   template<typename T> void operator delete(std::type_identity<T>, void*, size_t, std::align_val_t) = delete; // #4
 };
 
+struct S4 {
+  S4();
+  template<typename T> void *operator new(std::type_identity<T>, size_t, std::align_val_t, Context&);
+  template<typename T> void operator delete(std::type_identity<T>, void*, size_t, std::align_val_t); // #5
+};
+
 void test(Context& Ctx) {
   S1 *s1 = new (Ctx) S1;
   // expected-error@-1 {{attempt to use a deleted function}}
@@ -59,4 +65,8 @@ void test(Context& Ctx) {
   delete s3_2;
   // expected-error@-1 {{attempt to use a deleted function}}
   // expected-note@#4 {{'operator delete<S3>' has been explicitly marked deleted here}}
+
+  S4 *s4_1 = new (Ctx) S4;
+  // expected-error@-1 {{type aware 'operator new<S4>' requires there to be a corresponding cleanup 'operator delete' in 'S4'}}
+  delete s4_1;
 }

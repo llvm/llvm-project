@@ -9789,7 +9789,7 @@ def note_unmatched_type_aware_allocator_declared : Note<
 def note_type_aware_operator_found : Note<
   "type aware %0 found in %1">;
 def err_mismatching_type_aware_cleanup_deallocator : Error<
-  "type aware allocation requires matching type aware operator new and type aware operator delete for exception cleanup">;
+  "type aware %0 requires matching type aware %1 for exception cleanup">;
 def note_type_aware_operator_declared : Note<
   "%select{non-|}0type aware %1 declared here">;
 def note_implicit_delete_this_in_destructor_here : Note<

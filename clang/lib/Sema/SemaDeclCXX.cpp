@@ -16548,8 +16548,6 @@ static bool IsPotentiallyTypeAwareOperatorNewOrDelete(Sema &SemaRef,
   if (WasMalformed)
     *WasMalformed = true;
 
-  // SemaRef.Diag(MalformedDecl->getLocation(),
-  // diag::err_malformed_std_class_template) << "type_identity";
   return true;
 }
 
@@ -16595,6 +16593,8 @@ static inline bool CheckOperatorNewDeleteTypes(
   unsigned MinimumMandatoryArgumentCount = 1;
   unsigned SizeParameterIndex = 0;
   if (IsPotentiallyTypeAware) {
+    // We don't emit this diagnosis for template instantiations as we will
+    // have already emitted it for the original template declaration.
     if (!FnDecl->isTemplateInstantiation()) {
       unsigned DiagID = SemaRef.getLangOpts().CPlusPlus26
                             ? diag::warn_cxx26_type_aware_allocators
@@ -16651,7 +16651,8 @@ static inline bool CheckOperatorNewDeleteTypes(
                CanResultType->isDependentType()
                    ? diag::err_operator_new_delete_dependent_result_type
                    : diag::err_operator_new_delete_invalid_result_type)
-           << FnDecl->getDeclName() << ExpectedResultType;
+           << FnDecl->getDeclName() << ExpectedResultType
+           << FnDecl->getReturnTypeSourceRange();
   }
 
   // A function template must have at least 2 parameters.
@@ -16662,15 +16663,17 @@ static inline bool CheckOperatorNewDeleteTypes(
 
   auto CheckType = [&](unsigned ParamIdx, QualType ExpectedType,
                        auto FallbackType) -> bool {
+    const ParmVarDecl *ParamDecl = FnDecl->getParamDecl(ParamIdx);
     if (ExpectedType.isNull()) {
       return SemaRef.Diag(FnDecl->getLocation(), InvalidParamTypeDiag)
              << IsPotentiallyTypeAware << IsPotentiallyDestroyingDelete
-             << FnDecl->getDeclName() << ParamIdx << FallbackType;
+             << FnDecl->getDeclName() << ParamIdx << FallbackType
+             << ParamDecl->getSourceRange();
     }
     CanQualType CanExpectedTy =
         NormalizeType(SemaRef.Context.getCanonicalType(ExpectedType));
-    auto ActualParamType = NormalizeType(
-        FnDecl->getParamDecl(ParamIdx)->getType().getUnqualifiedType());
+    auto ActualParamType =
+        NormalizeType(ParamDecl->getType().getUnqualifiedType());
     if (ActualParamType == CanExpectedTy)
       return false;
     unsigned Diagnostic = ActualParamType->isDependentType()
@@ -16678,7 +16681,8 @@ static inline bool CheckOperatorNewDeleteTypes(
                               : InvalidParamTypeDiag;
     return SemaRef.Diag(FnDecl->getLocation(), Diagnostic)
            << IsPotentiallyTypeAware << IsPotentiallyDestroyingDelete
-           << FnDecl->getDeclName() << ParamIdx << ExpectedType << FallbackType;
+           << FnDecl->getDeclName() << ParamIdx << ExpectedType << FallbackType
+           << ParamDecl->getSourceRange();
   };
 
   // Check that the first parameter type is what we expect.
@@ -16764,7 +16768,7 @@ CheckOperatorDeleteDeclaration(Sema &SemaRef, FunctionDecl *FnDecl) {
         if (isDestroyingDeleteT(Param->getType())) {
           SemaRef.Diag(MD->getLocation(),
                        diag::err_type_aware_destroying_operator_delete)
-              << Param->getLocation();
+              << Param->getSourceRange();
           return true;
         }
       }
