@@ -2306,7 +2306,7 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
             // the scope of the parallel region, and not in this scope.
             // TODO: check whether this should be caught in IsObjectWithDSA
             !symbol->test(Symbol::Flag::OmpPrivate)) {
-          if (symbol->test(Symbol::Flag::CrayPointee)) {
+          if (symbol->GetUltimate().test(Symbol::Flag::CrayPointee)) {
             std::string crayPtrName{
                 semantics::GetCrayPointer(*symbol).name().ToString()};
             if (!IsObjectWithDSA(*currScope().FindSymbol(crayPtrName)))

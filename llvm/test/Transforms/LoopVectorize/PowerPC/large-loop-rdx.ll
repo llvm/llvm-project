@@ -32,7 +32,6 @@ define void @QLA_F3_r_veq_norm2_V(ptr noalias %r, ptr noalias %a, i32 %n) {
 ; CHECK-NEXT:    [[VEC_PHI6:%.*]] = phi <2 x double> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP134:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI7:%.*]] = phi <2 x double> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP135:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI8:%.*]] = phi <2 x double> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP136:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 6
@@ -40,7 +39,7 @@ define void @QLA_F3_r_veq_norm2_V(ptr noalias %r, ptr noalias %a, i32 %n) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 10
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 12
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 14
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [3 x { float, float }], ptr [[A]], i64 [[TMP1]], i64 0, i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [3 x { float, float }], ptr [[A]], i64 [[INDEX]], i64 0, i32 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [3 x { float, float }], ptr [[A]], i64 [[TMP2]], i64 0, i32 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [3 x { float, float }], ptr [[A]], i64 [[TMP3]], i64 0, i32 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [3 x { float, float }], ptr [[A]], i64 [[TMP4]], i64 0, i32 0
@@ -250,9 +249,8 @@ define void @QLA_F3_r_veq_norm2_V(ptr noalias %r, ptr noalias %a, i32 %n) {
 ; CHECK-NEXT:    [[TMP139:%.*]] = insertelement <2 x double> zeroinitializer, double [[BC_MERGE_RDX]], i32 0
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX71:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT80:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP140:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT80:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI72:%.*]] = phi <2 x double> [ [[TMP139]], %[[VEC_EPILOG_PH]] ], [ [[TMP156:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP140:%.*]] = add i64 [[INDEX71]], 0
 ; CHECK-NEXT:    [[TMP141:%.*]] = getelementptr inbounds [3 x { float, float }], ptr [[A]], i64 [[TMP140]], i64 0, i32 0
 ; CHECK-NEXT:    [[WIDE_VEC73:%.*]] = load <12 x float>, ptr [[TMP141]], align 8
 ; CHECK-NEXT:    [[STRIDED_VEC74:%.*]] = shufflevector <12 x float> [[WIDE_VEC73]], <12 x float> poison, <2 x i32> <i32 0, i32 6>
@@ -276,7 +274,7 @@ define void @QLA_F3_r_veq_norm2_V(ptr noalias %r, ptr noalias %a, i32 %n) {
 ; CHECK-NEXT:    [[TMP154:%.*]] = fadd fast <2 x float> [[TMP153]], [[TMP152]]
 ; CHECK-NEXT:    [[TMP155:%.*]] = fpext <2 x float> [[TMP154]] to <2 x double>
 ; CHECK-NEXT:    [[TMP156]] = fadd fast <2 x double> [[TMP155]], [[TMP151]]
-; CHECK-NEXT:    [[INDEX_NEXT80]] = add nuw i64 [[INDEX71]], 2
+; CHECK-NEXT:    [[INDEX_NEXT80]] = add nuw i64 [[TMP140]], 2
 ; CHECK-NEXT:    [[TMP157:%.*]] = icmp eq i64 [[INDEX_NEXT80]], [[N_VEC70]]
 ; CHECK-NEXT:    br i1 [[TMP157]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:

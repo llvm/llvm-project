@@ -44,7 +44,7 @@ static PPCMCExpr::Specifier getAccessVariant(const MCValue &Target,
 
   if (Expr->getKind() != MCExpr::Target)
     return PPCMCExpr::Specifier(Target.getAccessVariant());
-  return cast<PPCMCExpr>(Expr)->getKind();
+  return cast<PPCMCExpr>(Expr)->getSpecifier();
 }
 
 unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,

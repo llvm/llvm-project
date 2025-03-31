@@ -827,6 +827,69 @@ def ForOp : CIR_Op<"for", [LoopOpInterface, NoRegionArguments]> {
 }
 
 //===----------------------------------------------------------------------===//
+// BinOp
+//===----------------------------------------------------------------------===//
+
+// FIXME: represent Commutative, Idempotent traits for appropriate binops
+def BinOpKind_Mul : I32EnumAttrCase<"Mul", 1, "mul">;
+def BinOpKind_Div : I32EnumAttrCase<"Div", 2, "div">;
+def BinOpKind_Rem : I32EnumAttrCase<"Rem", 3, "rem">;
+def BinOpKind_Add : I32EnumAttrCase<"Add", 4, "add">;
+def BinOpKind_Sub : I32EnumAttrCase<"Sub", 5, "sub">;
+def BinOpKind_And : I32EnumAttrCase<"And", 8, "and">;
+def BinOpKind_Xor : I32EnumAttrCase<"Xor", 9, "xor">;
+def BinOpKind_Or  : I32EnumAttrCase<"Or", 10, "or">;
+// TODO(cir): Do we need a min binop?
+def BinOpKind_Max : I32EnumAttrCase<"Max", 11, "max">;
+
+def BinOpKind : I32EnumAttr<
+    "BinOpKind",
+    "binary operation (arith and logic) kind",
+    [BinOpKind_Mul, BinOpKind_Div, BinOpKind_Rem,
+     BinOpKind_Add, BinOpKind_Sub,
+     BinOpKind_And, BinOpKind_Xor,
+     BinOpKind_Or, BinOpKind_Max]> {
+  let cppNamespace = "::cir";
+}
+
+def BinOp : CIR_Op<"binop", [Pure,
+  SameTypeOperands, SameOperandsAndResultType]> {
+
+  let summary = "Binary operations (arith and logic)";
+  let description = [{
+    cir.binop performs the binary operation according to
+    the specified opcode kind: [mul, div, rem, add, sub,
+    and, xor, or, max].
+
+    It requires two input operands and has one result, all types
+    should be the same.
+
+    ```mlir
+    %7 = cir.binop(add, %1, %2) : !s32i
+    %7 = cir.binop(mul, %1, %2) : !u8i
+    ```
+  }];
+
+  // TODO: get more accurate than CIR_AnyType
+  let results = (outs CIR_AnyType:$result);
+  let arguments = (ins Arg<BinOpKind, "binop kind">:$kind,
+                       CIR_AnyType:$lhs, CIR_AnyType:$rhs,
+                       UnitAttr:$no_unsigned_wrap,
+                       UnitAttr:$no_signed_wrap,
+                       UnitAttr:$saturated);
+
+  let assemblyFormat = [{
+    `(` $kind `,` $lhs `,` $rhs  `)`
+    (`nsw` $no_signed_wrap^)?
+    (`nuw` $no_unsigned_wrap^)?
+    (`sat` $saturated^)?
+    `:` type($lhs) attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // GlobalOp
 //===----------------------------------------------------------------------===//
 
