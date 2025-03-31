@@ -65,7 +65,7 @@ static void replaceFunctionCalls(Function &OldF, Function &NewF,
       CI->getOperandBundlesAsDefs(OpBundles);
 
       CallInst *NewCI = CallInst::Create(&NewF, Args, OpBundles);
-      NewCI->setCallingConv(NewF.getCallingConv());
+      NewCI->setCallingConv(CI->getCallingConv());
 
       AttrBuilder CallSiteAttrs(Ctx, CI->getAttributes().getFnAttrs());
       NewCI->setAttributes(
