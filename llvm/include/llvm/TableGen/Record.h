@@ -316,6 +316,7 @@ protected:
     IK_FoldOpInit,
     IK_IsAOpInit,
     IK_ExistsOpInit,
+    IK_InstancesOpInit,
     IK_AnonymousNameInit,
     IK_StringInit,
     IK_VarInit,
@@ -1192,6 +1193,41 @@ public:
   std::string getAsString() const override;
 };
 
+/// !instances<type>([regex]) - Produces a list of records whose type is `type`.
+/// If `regex` is provided, only records whose name matches the regular
+/// expression `regex` will be included.
+class InstancesOpInit final : public TypedInit, public FoldingSetNode {
+private:
+  const RecTy *Type;
+  const Init *Regex;
+
+  InstancesOpInit(const RecTy *Type, const Init *Regex)
+      : TypedInit(IK_InstancesOpInit, ListRecTy::get(Type)), Type(Type),
+        Regex(Regex) {}
+
+public:
+  InstancesOpInit(const InstancesOpInit &) = delete;
+  InstancesOpInit &operator=(const InstancesOpInit &) = delete;
+
+  static bool classof(const Init *I) {
+    return I->getKind() == IK_InstancesOpInit;
+  }
+
+  static const InstancesOpInit *get(const RecTy *Type, const Init *Regex);
+
+  void Profile(FoldingSetNodeID &ID) const;
+
+  const Init *Fold(const Record *CurRec, bool IsFinal = false) const;
+
+  bool isComplete() const override { return false; }
+
+  const Init *resolveReferences(Resolver &R) const override;
+
+  const Init *getBit(unsigned Bit) const override;
+
+  std::string getAsString() const override;
+};
+
 /// 'Opcode' - Represent a reference to an entire variable object.
 class VarInit final : public TypedInit {
   const Init *VarName;
@@ -1982,6 +2018,9 @@ public:
     bool Ins = Defs.try_emplace(std::string(R->getName()), std::move(R)).second;
     (void)Ins;
     assert(Ins && "Record already exists");
+    // Clear cache
+    if (!Cache.empty())
+      Cache.clear();
   }
 
   void addExtraGlobal(StringRef Name, const Init *I) {
