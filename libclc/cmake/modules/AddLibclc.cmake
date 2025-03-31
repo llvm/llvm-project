@@ -261,11 +261,17 @@ function(add_libclc_builtin_set)
 
     get_filename_component( file_dir ${file} DIRECTORY )
 
+    set( file_specific_compile_options )
+    get_source_file_property( compile_opts ${file} COMPILE_OPTIONS)
+    if( compile_opts )
+      set( file_specific_compile_options "${compile_opts}" )
+    endif()
+
     compile_to_bc(
       TRIPLE ${ARG_TRIPLE}
       INPUT ${input_file}
       OUTPUT ${output_file}
-      EXTRA_OPTS -fno-builtin -nostdlib
+      EXTRA_OPTS -fno-builtin -nostdlib "${file_specific_compile_options}"
         "${ARG_COMPILE_FLAGS}" -I${CMAKE_CURRENT_SOURCE_DIR}/${file_dir}
       DEPENDENCIES ${input_file_dep}
     )

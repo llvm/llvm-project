@@ -94,7 +94,6 @@ math/copysign.cl
 math/cos.cl
 math/cosh.cl
 math/cospi.cl
-math/ep_log.cl
 math/erf.cl
 math/erfc.cl
 math/exp.cl
@@ -109,7 +108,6 @@ math/floor.cl
 math/fma.cl
 math/fmax.cl
 math/fmin.cl
-math/clc_fmod.cl
 math/fmod.cl
 math/fract.cl
 math/frexp.cl
@@ -158,15 +156,10 @@ math/native_sqrt.cl
 math/native_tan.cl
 math/tables.cl
 math/nextafter.cl
-math/clc_pow.cl
 math/pow.cl
-math/clc_pown.cl
 math/pown.cl
-math/clc_powr.cl
 math/powr.cl
-math/clc_remainder.cl
 math/remainder.cl
-math/clc_remquo.cl
 math/remquo.cl
 math/rint.cl
 math/clc_rootn.cl

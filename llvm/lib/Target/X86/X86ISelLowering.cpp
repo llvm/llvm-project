@@ -44227,6 +44227,35 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     }
     return false;
   }
+  case X86ISD::BLENDI: {
+    SDValue LHS = Op.getOperand(0);
+    SDValue RHS = Op.getOperand(1);
+    APInt Mask = getBLENDIBlendMask(Op);
+
+    APInt DemandedEltsLHS = OriginalDemandedElts & ~Mask;
+    if (SimplifyDemandedBits(LHS, OriginalDemandedBits, DemandedEltsLHS, Known,
+                             TLO, Depth + 1))
+      return true;
+
+    APInt DemandedEltsRHS = OriginalDemandedElts & Mask;
+    if (SimplifyDemandedBits(RHS, OriginalDemandedBits, DemandedEltsRHS, Known,
+                             TLO, Depth + 1))
+      return true;
+
+    // Attempt to avoid multi-use ops if we don't need anything from them.
+    SDValue NewLHS = SimplifyMultipleUseDemandedBits(
+        LHS, OriginalDemandedBits, DemandedEltsLHS, TLO.DAG, Depth + 1);
+    SDValue NewRHS = SimplifyMultipleUseDemandedBits(
+        RHS, OriginalDemandedBits, DemandedEltsRHS, TLO.DAG, Depth + 1);
+    if (NewLHS || NewRHS) {
+      NewLHS = NewLHS ? NewLHS : LHS;
+      NewRHS = NewRHS ? NewRHS : RHS;
+      return TLO.CombineTo(Op,
+                           TLO.DAG.getNode(Op.getOpcode(), SDLoc(Op), VT,
+                                           NewLHS, NewRHS, Op.getOperand(2)));
+    }
+    break;
+  }
   case X86ISD::BLENDV: {
     SDValue Sel = Op.getOperand(0);
     SDValue LHS = Op.getOperand(1);
