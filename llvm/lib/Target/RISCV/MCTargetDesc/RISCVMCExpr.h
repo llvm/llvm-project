@@ -38,7 +38,7 @@ public:
     VK_CALL_PLT,
     VK_32_PCREL,
     VK_GOTPCREL,
-    VK_PLT,
+    VK_PLTPCREL,
     VK_TLSDESC_HI,
     VK_TLSDESC_LOAD_LO,
     VK_TLSDESC_ADD_LO,
@@ -48,8 +48,6 @@ public:
 private:
   const MCExpr *Expr;
   const Specifier specifier;
-
-  int64_t evaluateAsInt64(int64_t Value) const;
 
   explicit RISCVMCExpr(const MCExpr *Expr, Specifier S)
       : Expr(Expr), specifier(S) {}
@@ -77,8 +75,6 @@ public:
     return getSubExpr()->findAssociatedFragment();
   }
 
-  bool evaluateAsConstant(int64_t &Res) const;
-
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;
   }
@@ -86,10 +82,6 @@ public:
   static std::optional<Specifier> getSpecifierForName(StringRef name);
   static StringRef getSpecifierName(Specifier Kind);
 };
-
-static inline RISCVMCExpr::Specifier getSpecifier(const MCSymbolRefExpr *SRE) {
-  return RISCVMCExpr::Specifier(SRE->getKind());
-}
 } // end namespace llvm.
 
 #endif

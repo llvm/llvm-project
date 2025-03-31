@@ -4221,8 +4221,7 @@ bool ScalarEvolution::canReuseInstruction(
     if (I->hasPoisonGeneratingAnnotations())
       DropPoisonGeneratingInsts.push_back(I);
 
-    for (Value *Op : I->operands())
-      Worklist.push_back(Op);
+    llvm::append_range(Worklist, I->operands());
   }
   return true;
 }
@@ -7622,8 +7621,7 @@ ScalarEvolution::getOperandsToCreate(Value *V, SmallVectorImpl<Value *> &Ops) {
   case Instruction::GetElementPtr:
     assert(cast<GEPOperator>(U)->getSourceElementType()->isSized() &&
            "GEP source element type must be sized");
-    for (Value *Index : U->operands())
-      Ops.push_back(Index);
+    llvm::append_range(Ops, U->operands());
     return nullptr;
 
   case Instruction::IntToPtr:
@@ -7656,8 +7654,7 @@ ScalarEvolution::getOperandsToCreate(Value *V, SmallVectorImpl<Value *> &Ops) {
     if (CanSimplifyToUnknown())
       return getUnknown(U);
 
-    for (Value *Inc : U->operands())
-      Ops.push_back(Inc);
+    llvm::append_range(Ops, U->operands());
     return nullptr;
     break;
   }
@@ -14217,7 +14214,7 @@ void ScalarEvolution::forgetBackedgeTakenCounts(const Loop *L,
 }
 
 void ScalarEvolution::forgetMemoizedResults(ArrayRef<const SCEV *> SCEVs) {
-  SmallPtrSet<const SCEV *, 8> ToForget(SCEVs.begin(), SCEVs.end());
+  SmallPtrSet<const SCEV *, 8> ToForget(llvm::from_range, SCEVs);
   SmallVector<const SCEV *, 8> Worklist(ToForget.begin(), ToForget.end());
 
   while (!Worklist.empty()) {

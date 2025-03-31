@@ -105,7 +105,7 @@ unsigned getNonFlagSettingVariant(unsigned Opc) {
 
 bool AArch64PostSelectOptimize::doPeepholeOpts(MachineBasicBlock &MBB) {
   bool Changed = false;
-  for (auto &MI : make_early_inc_range(make_range(MBB.begin(), MBB.end()))) {
+  for (auto &MI : make_early_inc_range(MBB)) {
     bool CurrentIterChanged = foldSimpleCrossClassCopies(MI);
     if (!CurrentIterChanged)
       CurrentIterChanged |= foldCopyDup(MI);

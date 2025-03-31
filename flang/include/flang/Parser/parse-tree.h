@@ -3829,6 +3829,33 @@ struct OmpExpectation {
   WRAPPER_CLASS_BOILERPLATE(OmpExpectation, Value);
 };
 
+// REF: [5.1:217-220], [5.2:293-294]
+//
+// OmpInteropRuntimeIdentifier ->                   // since 5.2
+// CharLiteralConstant || ScalarIntConstantExpr
+struct OmpInteropRuntimeIdentifier {
+  UNION_CLASS_BOILERPLATE(OmpInteropRuntimeIdentifier);
+  std::variant<CharLiteralConstant, ScalarIntConstantExpr> u;
+};
+
+// REF: [5.1:217-220], [5.2:293-294]
+//
+// OmpInteropPreference ->                          // since 5.2
+// ([OmpRuntimeIdentifier, ...])
+struct OmpInteropPreference {
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpInteropPreference, std::list<OmpInteropRuntimeIdentifier>);
+};
+
+// REF: [5.1:217-220], [5.2:293-294]
+//
+// InteropType -> target || targetsync              // since 5.2
+// There can be at most only two interop-type.
+struct OmpInteropType {
+  ENUM_CLASS(Value, Target, TargetSync)
+  WRAPPER_CLASS_BOILERPLATE(OmpInteropType, Value);
+};
+
 // Ref: [5.0:47-49], [5.1:49-51], [5.2:67-69]
 //
 // iterator-modifier ->
@@ -4486,6 +4513,25 @@ struct OmpWhenClause {
       t;
 };
 
+// REF: [5.1:217-220], [5.2:293-294]
+//
+// init-clause -> INIT ([interop-modifier,] [interop-type,]
+//                              interop-type: interop-var)
+// interop-modifier: prefer_type(preference-list)
+// interop-type: target, targetsync
+// interop-var: Ompobject
+// There can be at most only two interop-type.
+struct OmpInitClause {
+  TUPLE_CLASS_BOILERPLATE(OmpInitClause);
+  MODIFIER_BOILERPLATE(OmpInteropPreference, OmpInteropType);
+  std::tuple<MODIFIERS(), OmpObject> t;
+};
+
+// REF: [5.1:217-220], [5.2:294]
+//
+// 14.1.3 use-clause -> USE (interop-var)
+WRAPPER_CLASS(OmpUseClause, OmpObject);
+
 // OpenMP Clauses
 struct OmpClause {
   UNION_CLASS_BOILERPLATE(OmpClause);
@@ -4935,6 +4981,14 @@ struct OpenMPFlushConstruct {
   CharBlock source;
 };
 
+// Ref: [5.1:217-220], [5.2:291-292]
+//
+// interop -> INTEROP clause[ [ [,] clause]...]
+struct OpenMPInteropConstruct {
+  WRAPPER_CLASS_BOILERPLATE(OpenMPInteropConstruct, OmpDirectiveSpecification);
+  CharBlock source;
+};
+
 struct OpenMPSimpleStandaloneConstruct {
   WRAPPER_CLASS_BOILERPLATE(
       OpenMPSimpleStandaloneConstruct, OmpDirectiveSpecification);
@@ -4946,7 +5000,7 @@ struct OpenMPStandaloneConstruct {
   CharBlock source;
   std::variant<OpenMPSimpleStandaloneConstruct, OpenMPFlushConstruct,
       OpenMPCancelConstruct, OpenMPCancellationPointConstruct,
-      OpenMPDepobjConstruct, OmpMetadirectiveDirective>
+      OpenMPDepobjConstruct, OmpMetadirectiveDirective, OpenMPInteropConstruct>
       u;
 };
 

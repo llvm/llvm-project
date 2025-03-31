@@ -1,16 +1,16 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o - 2>&1 | FileCheck %s
 
 int a[10];
-// CHECK: cir.global external @a : !cir.array<!s32i x 10>
+// CHECK: cir.global external @a = #cir.zero : !cir.array<!s32i x 10>
 
 int aa[10][5];
-// CHECK: cir.global external @aa : !cir.array<!cir.array<!s32i x 5> x 10>
+// CHECK: cir.global external @aa = #cir.zero : !cir.array<!cir.array<!s32i x 5> x 10>
 
 extern int b[10];
-// CHECK: cir.global external @b : !cir.array<!s32i x 10>
+// CHECK: cir.global external @b = #cir.zero : !cir.array<!s32i x 10>
 
 extern int bb[10][5];
-// CHECK: cir.global external @bb : !cir.array<!cir.array<!s32i x 5> x 10>
+// CHECK: cir.global external @bb = #cir.zero : !cir.array<!cir.array<!s32i x 5> x 10>
 
 int c[10] = {};
 // CHECK: cir.global external @c = #cir.zero : !cir.array<!s32i x 10>

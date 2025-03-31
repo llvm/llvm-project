@@ -1702,6 +1702,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  hypotf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    hypotf16_test.cpp
+  DEPENDS
+    libc.src.math.hypotf16
+)
+
+add_fp_unittest(
   nextafter_test
   SUITE
     libc-math-unittests
@@ -2173,6 +2184,17 @@ add_fp_unittest(
     libc.src.errno.errno
     libc.src.math.asinhf
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  asinhf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    asinhf16_test.cpp
+  DEPENDS
+    libc.src.math.asinhf16
 )
 
 add_fp_unittest(

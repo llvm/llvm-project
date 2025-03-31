@@ -1,7 +1,7 @@
 ; REQUIRES: x86-registered-target && aarch64-registered-target && riscv-registered-target
 ; RUN: llc %s -mtriple=x86_64 -o - | FileCheck %s
 ; RUN: llc %s -mtriple=aarch64 -o - | FileCheck %s
-; RUN: llc %s -mtriple=riscv64 -o - | FileCheck %s
+; RUN: llc %s -mtriple=riscv64 -o - | FileCheck %s --check-prefix=RISCV
 
 @vtable = dso_local unnamed_addr constant i32 trunc (i64 sub (i64 ptrtoint (ptr @rtti.proxy to i64), i64 ptrtoint (ptr @vtable to i64)) to i32), align 4
 @vtable_with_offset = dso_local unnamed_addr constant [2 x i32] [i32 0, i32 trunc (i64 sub (i64 ptrtoint (ptr @rtti.proxy to i64), i64 ptrtoint (ptr @vtable_with_offset to i64)) to i32)], align 4
@@ -28,3 +28,12 @@
 ; CHECK-LABEL: vtable_with_negative_offset:
 ; CHECK-NEXT:    .{{word|long}}   rtti@GOTPCREL-4{{$}}
 ; CHECK-NEXT:    .{{word|long}}   0
+
+; RISCV-LABEL: vtable:
+; RISCV-NEXT:    .word   %gotpcrel(rtti+0)
+; RISCV-LABEL: vtable_with_offset:
+; RISCV-NEXT:    .word   0
+; RISCV-NEXT:    .word   %gotpcrel(rtti+4)
+; RISCV-LABEL: vtable_with_negative_offset:
+; RISCV-NEXT:    .word   %gotpcrel(rtti-4)
+; RISCV-NEXT:    .word   0

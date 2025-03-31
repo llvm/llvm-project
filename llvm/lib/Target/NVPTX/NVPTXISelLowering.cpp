@@ -18,6 +18,7 @@
 #include "NVPTXTargetMachine.h"
 #include "NVPTXTargetObjectFile.h"
 #include "NVPTXUtilities.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -932,6 +933,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setOperationAction(Op, MVT::bf16, Promote);
     AddPromotedToType(Op, MVT::bf16, MVT::f32);
   }
+  setOperationAction(ISD::FREM, {MVT::f32, MVT::f64}, Custom);
 
   setOperationAction(ISD::FABS, {MVT::f32, MVT::f64}, Legal);
   if (STI.getPTXVersion() >= 65) {
@@ -2819,6 +2821,34 @@ static SDValue lowerROT(SDValue Op, SelectionDAG &DAG) {
                      SDLoc(Op), Opcode, DAG);
 }
 
+static SDValue lowerFREM(SDValue Op, SelectionDAG &DAG,
+                         bool AllowUnsafeFPMath) {
+  // Lower (frem x, y) into (sub x, (mul (ftrunc (div x, y)) y)),
+  // i.e. "poor man's fmod()". When y is infinite, x is returned. This matches
+  // the semantics of LLVM's frem.
+  SDLoc DL(Op);
+  SDValue X = Op->getOperand(0);
+  SDValue Y = Op->getOperand(1);
+  EVT Ty = Op.getValueType();
+
+  SDValue Div = DAG.getNode(ISD::FDIV, DL, Ty, X, Y);
+  SDValue Trunc = DAG.getNode(ISD::FTRUNC, DL, Ty, Div);
+  SDValue Mul =
+      DAG.getNode(ISD::FMUL, DL, Ty, Trunc, Y, SDNodeFlags::AllowContract);
+  SDValue Sub =
+      DAG.getNode(ISD::FSUB, DL, Ty, X, Mul, SDNodeFlags::AllowContract);
+
+  if (AllowUnsafeFPMath || Op->getFlags().hasNoInfs())
+    return Sub;
+
+  // If Y is infinite, return X
+  SDValue AbsY = DAG.getNode(ISD::FABS, DL, Ty, Y);
+  SDValue Inf =
+      DAG.getConstantFP(APFloat::getInf(Ty.getFltSemantics()), DL, Ty);
+  SDValue IsInf = DAG.getSetCC(DL, MVT::i1, AbsY, Inf, ISD::SETEQ);
+  return DAG.getSelect(DL, Ty, IsInf, X, Sub);
+}
+
 SDValue
 NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
@@ -2913,6 +2943,8 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::CTPOP:
   case ISD::CTLZ:
     return lowerCTLZCTPOP(Op, DAG);
+  case ISD::FREM:
+    return lowerFREM(Op, DAG, allowUnsafeFPMath(DAG.getMachineFunction()));
 
   default:
     llvm_unreachable("Custom lowering not defined for operation");

@@ -113,13 +113,10 @@ public:
 
 class CIRToLLVMConstantOpLowering
     : public mlir::OpConversionPattern<cir::ConstantOp> {
-  mlir::DataLayout const &dataLayout;
-
 public:
   CIRToLLVMConstantOpLowering(const mlir::TypeConverter &typeConverter,
-                              mlir::MLIRContext *context,
-                              mlir::DataLayout const &dataLayout)
-      : OpConversionPattern(typeConverter, context), dataLayout(dataLayout) {
+                              mlir::MLIRContext *context)
+      : OpConversionPattern(typeConverter, context) {
     setHasBoundedRewriteRecursion();
   }
 
