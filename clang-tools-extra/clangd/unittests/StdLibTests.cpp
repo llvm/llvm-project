@@ -158,6 +158,43 @@ TEST(StdLibTests, EndToEnd) {
       UnorderedElementsAre(StdlibSymbol("list"), StdlibSymbol("vector")));
 }
 
+TEST(StdLibTests, StdLibDocComments) {
+  Config Cfg;
+  Cfg.Index.StandardLibrary = true;
+  WithContextValue Enabled(Config::Key, std::move(Cfg));
+
+  MockFS FS;
+  FS.Files["stdlib/vector"] = R"cpp(
+    namespace std {
+      template <typename T>
+      class vector {
+      public:
+        /**doc comment*/
+        unsigned int size() const;
+      };
+    }
+  )cpp";
+  MockCompilationDatabase CDB;
+  CDB.ExtraClangFlags.push_back("-isystem" + testPath("stdlib"));
+  ClangdServer::Options Opts = ClangdServer::optsForTest();
+  Opts.BuildDynamicSymbolIndex = true; // also used for stdlib index
+  ClangdServer Server(CDB, FS, Opts);
+
+  Annotations A(R"cpp(
+    #include <vector>
+    void foo() {
+      std::vector<int> v;
+      v.si^ze();
+    }
+  )cpp");
+
+  Server.addDocument(testPath("foo.cc"), A.code());
+  ASSERT_TRUE(Server.blockUntilIdleForTest());
+  auto HI = cantFail(runHover(Server, testPath("foo.cc"), A.point()));
+  EXPECT_TRUE(HI.has_value());
+  EXPECT_EQ(HI->Documentation, "doc comment");
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

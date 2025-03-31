@@ -55,6 +55,7 @@ public:
   std::unique_ptr<FrontendAction> create() override {
     SymbolCollector::Options Opts;
     Opts.CountReferences = true;
+    Opts.StoreAllDocumentation = false;
     Opts.FileFilter = [&](const SourceManager &SM, FileID FID) {
       const auto F = SM.getFileEntryRefForID(FID);
       if (!F)

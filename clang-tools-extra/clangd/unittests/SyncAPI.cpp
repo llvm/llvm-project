@@ -68,6 +68,13 @@ template <typename T> CaptureProxy<T> capture(std::optional<T> &Target) {
 }
 } // namespace
 
+llvm::Expected<std::optional<HoverInfo>> runHover(ClangdServer &Server,
+                                                  PathRef File, Position Pos) {
+  std::optional<llvm::Expected<std::optional<HoverInfo>>> HI;
+  Server.findHover(File, Pos, capture(HI));
+  return std::move(*HI);
+}
+
 llvm::Expected<CodeCompleteResult>
 runCodeComplete(ClangdServer &Server, PathRef File, Position Pos,
                 clangd::CodeCompleteOptions Opts) {

@@ -29,6 +29,9 @@ void runAddDocument(ClangdServer &Server, PathRef File, StringRef Contents,
                     WantDiagnostics WantDiags = WantDiagnostics::Auto,
                     bool ForceRebuild = false);
 
+llvm::Expected<std::optional<HoverInfo>> runHover(ClangdServer &Server,
+                                                  PathRef File, Position Pos);
+
 llvm::Expected<CodeCompleteResult>
 runCodeComplete(ClangdServer &Server, PathRef File, Position Pos,
                 clangd::CodeCompleteOptions Opts);
