@@ -579,8 +579,6 @@ private:
   // Map each VGPR CSR to the mask needed to save and restore it using block
   // load/store instructions. Only used if the subtarget feature for VGPR block
   // load/store is enabled.
-  // This is only useful during prolog/epilog insertion, so it doesn't need to
-  // be serialized.
   IndexedMap<uint32_t, VGPRBlock2IndexFunctor> MaskForVGPRBlockOps;
 
 private:

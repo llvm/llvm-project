@@ -256,6 +256,9 @@ static void emitVGPRBlockComment(const MachineInstr *MI, const SIInstrInfo *TII,
   Register FirstRegInBlock = TRI->getSubReg(RegBlock, AMDGPU::sub0);
   uint32_t Mask = MFI->getMaskForVGPRBlockOps(RegBlock);
 
+  if (!Mask)
+    return; // Nothing to report
+
   SmallString<512> TransferredRegs;
   for (unsigned I = 0; I < sizeof(Mask) * 8; ++I) {
     if (Mask & (1 << I)) {
@@ -264,8 +267,7 @@ static void emitVGPRBlockComment(const MachineInstr *MI, const SIInstrInfo *TII,
     }
   }
 
-  if (!TransferredRegs.empty())
-    OS.emitRawComment(" transferring at most " + TransferredRegs);
+  OS.emitRawComment(" transferring at most " + TransferredRegs);
 }
 
 void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {

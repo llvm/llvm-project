@@ -1701,7 +1701,6 @@ static void assignSlotsUsingVGPRBlocks(MachineFunction &MF,
                                        unsigned &MaxCSFrameIndex) {
   SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
 
   assert(std::is_sorted(CSI.begin(), CSI.end(),
@@ -1712,7 +1711,7 @@ static void assignSlotsUsingVGPRBlocks(MachineFunction &MF,
 
   auto CanUseBlockOps = [&](const CalleeSavedInfo &CSI) {
     return !CSI.isSpilledToReg() &&
-           TRI->isVGPR(MF.getRegInfo(), CSI.getReg()) &&
+           TRI->getPhysRegBaseClass(CSI.getReg()) == &AMDGPU::VGPR_32RegClass &&
            !FuncInfo->isWWMReservedRegister(CSI.getReg());
   };
 
@@ -1913,6 +1912,7 @@ bool SIFrameLowering::spillCalleeSavedRegisters(
     // skip it.
     MBB.addLiveIn(Reg);
   }
+  MBB.sortUniqueLiveIns();
 
   return true;
 }
