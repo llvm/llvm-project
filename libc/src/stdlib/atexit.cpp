@@ -30,10 +30,6 @@ int __cxa_atexit(AtExitCallback *callback, void *payload, void *) {
 
 void __cxa_finalize(void *dso) {
   if (!dso) {
-    // cxa callback also need to handle local static destructors.
-    // see
-    // https://refspecs.linuxbase.org/LSB_4.0.0/LSB-Core-generic/LSB-Core-generic/baselib---cxa-finalize.html
-    internal::call_atexit_callbacks();
     call_exit_callbacks(atexit_callbacks);
     if (teardown_main_tls)
       teardown_main_tls();

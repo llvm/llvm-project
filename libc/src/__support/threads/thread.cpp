@@ -166,7 +166,7 @@ void call_atexit_callbacks(ThreadAttributes *attrib) {
   }
 }
 
-void call_atexit_callbacks() { call_atexit_callbacks(self.attrib); }
+extern "C" void __cxa_thread_finalize() { call_atexit_callbacks(self.attrib); }
 
 } // namespace internal
 

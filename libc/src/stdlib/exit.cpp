@@ -14,8 +14,12 @@
 namespace LIBC_NAMESPACE_DECL {
 
 extern "C" void __cxa_finalize(void *);
+extern "C" [[gnu::weak]] void __cxa_thread_finalize();
 
+// TODO: use recursive mutex to protect this routine.
 [[noreturn]] LLVM_LIBC_FUNCTION(void, exit, (int status)) {
+  if (__cxa_thread_finalize)
+    __cxa_thread_finalize();
   __cxa_finalize(nullptr);
   internal::exit(status);
 }
