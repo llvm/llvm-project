@@ -39,22 +39,22 @@ class CollectUnexpandedParameterPacksVisitor
 
   bool ContainsIntermediatePacks = false;
 
-  void addUnexpanded(NamedDecl *ND, SourceLocation Loc = SourceLocation()) {
-    if (auto *VD = dyn_cast<VarDecl>(ND)) {
-      // For now, the only problematic case is a generic lambda's templated
-      // call operator, so we don't need to look for all the other ways we
-      // could have reached a dependent parameter pack.
-      auto *FD = dyn_cast<FunctionDecl>(VD->getDeclContext());
-      auto *FTD = FD ? FD->getDescribedFunctionTemplate() : nullptr;
-      if (FTD && FTD->getTemplateParameters()->getDepth() >= DepthLimit)
+    void addUnexpanded(NamedDecl *ND, SourceLocation Loc = SourceLocation()) {
+      if (auto *VD = dyn_cast<VarDecl>(ND)) {
+        // For now, the only problematic case is a generic lambda's templated
+        // call operator, so we don't need to look for all the other ways we
+        // could have reached a dependent parameter pack.
+        auto *FD = dyn_cast<FunctionDecl>(VD->getDeclContext());
+        auto *FTD = FD ? FD->getDescribedFunctionTemplate() : nullptr;
+        if (FTD && FTD->getTemplateParameters()->getDepth() >= DepthLimit)
+          return;
+      } else if (ND->isTemplateParameterPack() &&
+                getDepthAndIndex(ND).first >= DepthLimit) {
         return;
-    } else if (ND->isTemplateParameterPack() &&
-               getDepthAndIndex(ND).first >= DepthLimit) {
-      return;
-    }
+      }
 
-    Unexpanded.push_back({ND, Loc});
-  }
+      Unexpanded.push_back({ND, Loc});
+    }
 
     void addUnexpanded(const TemplateTypeParmType *T,
                        SourceLocation Loc = SourceLocation()) {
