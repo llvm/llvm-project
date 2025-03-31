@@ -1009,7 +1009,7 @@ LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
   fputil::DoubleDouble v_lo = fputil::exact_mult(m_dd.lo, r);
 
   // Perform exact range reduction
-#ifdef LIBC_TARGET_CPU_HAS_FMA
+#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
   v_hi = fputil::multiply_add(r, m_dd.hi, -1.0); // Exact.
 #else
   // c = 1 + idx * 2^-7.
@@ -1017,7 +1017,7 @@ LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
                       uint64_t(0x3FF0'0000'0000'0000ULL))
                  .get_val();
   v_hi = fputil::multiply_add(r, m_dd.hi - c, RCM1[idx]); // Exact
-#endif // LIBC_TARGET_CPU_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
   // Range reduction output:
   //   -0x1.69000000000edp-8 < v_hi + v_lo < 0x1.7f00000000081p-8

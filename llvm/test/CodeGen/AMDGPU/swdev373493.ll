@@ -54,14 +54,14 @@ define hidden fastcc void @bar(i32 %arg, ptr %arg1, ptr %arg2, ptr %arg3, ptr %a
 ; CHECK-NEXT:  .LBB0_5: ; %bb9
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 bb:
-  switch i32 undef, label %bb9 [
+  switch i32 poison, label %bb9 [
     i32 3, label %bb8
     i32 1, label %bb7
   ]
 
 bb7:                                              ; preds = %bb
-  %tmp = load ptr, ptr undef, align 8
-  tail call fastcc void @eggs(ptr noundef addrspacecast (ptr addrspace(4) getelementptr inbounds ([4096 x i64], ptr addrspace(4) @global, i64 0, i64 243) to ptr), ptr %tmp, ptr undef, ptr noundef nonnull align 8 dereferenceable(24) %arg2, ptr noundef %arg3, ptr noundef %arg4, ptr noundef %arg5)
+  %tmp = load ptr, ptr poison, align 8
+  tail call fastcc void @eggs(ptr noundef addrspacecast (ptr addrspace(4) getelementptr inbounds ([4096 x i64], ptr addrspace(4) @global, i64 0, i64 243) to ptr), ptr %tmp, ptr poison, ptr noundef nonnull align 8 dereferenceable(24) %arg2, ptr noundef %arg3, ptr noundef %arg4, ptr noundef %arg5)
   br label %bb9
 
 bb8:                                              ; preds = %bb

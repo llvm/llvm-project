@@ -113,7 +113,7 @@ namespace test4 {
   };
 
   template <class U> void foo(U &, typename U::type) {}
-  
+
   void test() {
     A<int> a;
     foo(a, 0);
@@ -176,7 +176,7 @@ namespace test8 {
   };
 
   void test(A &a) {
-    if (a) return; // expected-error-re {{'operator void *(test8::A::*)(){{( __attribute__\(\(thiscall\)\))?}} const' is a private member of 'test8::A'}}
+    if (a) return; // expected-error-re {{'operator void *(A::*)(){{( __attribute__\(\(thiscall\)\))?}} const' is a private member of 'test8::A'}}
   }
 }
 

@@ -83,9 +83,6 @@ public:
   /// \name Target Fixup Interfaces
   /// @{
 
-  /// Get the number of target specific fixup kinds.
-  virtual unsigned getNumFixupKinds() const = 0;
-
   /// Map a relocation name used in .reloc to a fixup kind.
   virtual std::optional<MCFixupKind> getFixupKind(StringRef Name) const;
 
@@ -96,7 +93,6 @@ public:
   virtual bool shouldForceRelocation(const MCAssembler &Asm,
                                      const MCFixup &Fixup,
                                      const MCValue &Target,
-                                     const uint64_t Value,
                                      const MCSubtargetInfo *STI) {
     return false;
   }

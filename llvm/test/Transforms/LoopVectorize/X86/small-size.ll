@@ -142,7 +142,7 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT19:%.*]] = insertelement <4 x i64> poison, i64 [[TRIP_COUNT_MINUS_114]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT20:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT19]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY13:%.*]]
-; CHECK:       vector.body13:
+; CHECK:       vector.body15:
 ; CHECK-NEXT:    [[INDEX16:%.*]] = phi i64 [ 0, [[VECTOR_PH8]] ], [ [[INDEX_NEXT29:%.*]], [[PRED_STORE_CONTINUE26:%.*]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[I_0_LCSSA]], [[INDEX16]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT17:%.*]] = insertelement <4 x i64> poison, i64 [[INDEX16]], i64 0

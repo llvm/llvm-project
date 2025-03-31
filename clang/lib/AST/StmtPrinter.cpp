@@ -264,7 +264,8 @@ void StmtPrinter::VisitDeclStmt(DeclStmt *Node) {
   Indent();
   PrintRawDeclStmt(Node);
   // Certain pragma declarations shouldn't have a semi-colon after them.
-  if (!Node->isSingleDecl() || !isa<OpenACCDeclareDecl>(Node->getSingleDecl()))
+  if (!Node->isSingleDecl() ||
+      !isa<OpenACCDeclareDecl, OpenACCRoutineDecl>(Node->getSingleDecl()))
     OS << ";";
   OS << NL;
 }
@@ -506,7 +507,7 @@ void StmtPrinter::VisitGCCAsmStmt(GCCAsmStmt *Node) {
     OS << "goto ";
 
   OS << "(";
-  VisitStringLiteral(Node->getAsmString());
+  Visit(Node->getAsmStringExpr());
 
   // Outputs
   if (Node->getNumOutputs() != 0 || Node->getNumInputs() != 0 ||
@@ -523,7 +524,7 @@ void StmtPrinter::VisitGCCAsmStmt(GCCAsmStmt *Node) {
       OS << "] ";
     }
 
-    VisitStringLiteral(Node->getOutputConstraintLiteral(i));
+    Visit(Node->getOutputConstraintExpr(i));
     OS << " (";
     Visit(Node->getOutputExpr(i));
     OS << ")";
@@ -544,7 +545,7 @@ void StmtPrinter::VisitGCCAsmStmt(GCCAsmStmt *Node) {
       OS << "] ";
     }
 
-    VisitStringLiteral(Node->getInputConstraintLiteral(i));
+    Visit(Node->getInputConstraintExpr(i));
     OS << " (";
     Visit(Node->getInputExpr(i));
     OS << ")";
@@ -558,7 +559,7 @@ void StmtPrinter::VisitGCCAsmStmt(GCCAsmStmt *Node) {
     if (i != 0)
       OS << ", ";
 
-    VisitStringLiteral(Node->getClobberStringLiteral(i));
+    Visit(Node->getClobberExpr(i));
   }
 
   // Labels
@@ -2658,10 +2659,8 @@ void StmtPrinter::VisitCXXFoldExpr(CXXFoldExpr *E) {
 }
 
 void StmtPrinter::VisitCXXParenListInitExpr(CXXParenListInitExpr *Node) {
-  OS << "(";
-  llvm::interleaveComma(Node->getInitExprs(), OS,
+  llvm::interleaveComma(Node->getUserSpecifiedInitExprs(), OS,
                         [&](Expr *E) { PrintExpr(E); });
-  OS << ")";
 }
 
 void StmtPrinter::VisitConceptSpecializationExpr(ConceptSpecializationExpr *E) {

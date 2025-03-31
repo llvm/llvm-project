@@ -522,7 +522,7 @@ bool LLParser::parseTargetDefinitions(DataLayoutCallbackTy DataLayoutCallback) {
   // Run the override callback to potentially change the data layout string, and
   // parse the data layout string.
   if (auto LayoutOverride =
-          DataLayoutCallback(M->getTargetTriple(), TentativeDLStr)) {
+          DataLayoutCallback(M->getTargetTriple().str(), TentativeDLStr)) {
     TentativeDLStr = *LayoutOverride;
     DLStrLoc = {};
   }
@@ -646,7 +646,7 @@ bool LLParser::parseTargetDefinition(std::string &TentativeDLStr,
     if (parseToken(lltok::equal, "expected '=' after target triple") ||
         parseStringConstant(Str))
       return true;
-    M->setTargetTriple(Str);
+    M->setTargetTriple(Triple(Str));
     return false;
   case lltok::kw_datalayout:
     Lex.Lex();
@@ -942,7 +942,8 @@ bool LLParser::parseMDNodeID(MDNode *&Result) {
     return true;
 
   // If not a forward reference, just return it now.
-  if (auto It = NumberedMetadata.find(MID); It != NumberedMetadata.end()) {
+  auto [It, Inserted] = NumberedMetadata.try_emplace(MID);
+  if (!Inserted) {
     Result = It->second;
     return false;
   }
@@ -952,7 +953,7 @@ bool LLParser::parseMDNodeID(MDNode *&Result) {
   FwdRef = std::make_pair(MDTuple::getTemporary(Context, {}), IDLoc);
 
   Result = FwdRef.first.get();
-  NumberedMetadata[MID].reset(Result);
+  It->second.reset(Result);
   return false;
 }
 
@@ -5612,7 +5613,8 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(rank, MDSignedOrMDField, );                                         \
   OPTIONAL(annotations, MDField, );                                            \
   OPTIONAL(num_extra_inhabitants, MDUnsignedField, (0, UINT32_MAX));           \
-  OPTIONAL(specification, MDField, );
+  OPTIONAL(specification, MDField, );                                          \
+  OPTIONAL(bitStride, MDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -5635,7 +5637,8 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
             specification.Val, num_extra_inhabitants.Val, flags.Val,
             elements.Val, runtimeLang.Val, EnumKind, vtableHolder.Val,
             templateParams.Val, discriminator.Val, dataLocation.Val,
-            associated.Val, allocated.Val, Rank, annotations.Val)) {
+            associated.Val, allocated.Val, Rank, annotations.Val,
+            bitStride.Val)) {
       Result = CT;
       return false;
     }
@@ -5649,7 +5652,7 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
        runtimeLang.Val, EnumKind, vtableHolder.Val, templateParams.Val,
        identifier.Val, discriminator.Val, dataLocation.Val, associated.Val,
        allocated.Val, Rank, annotations.Val, specification.Val,
-       num_extra_inhabitants.Val));
+       num_extra_inhabitants.Val, bitStride.Val));
   return false;
 }
 

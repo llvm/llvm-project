@@ -254,31 +254,33 @@ DynamicLoaderDarwinKernel::SearchForKernelWithDebugHints(Process *process) {
 
   uint8_t uval[8];
   if (process->GetAddressByteSize() == 8) {
-  for (size_t i = 0; kernel_addresses_64[i] != LLDB_INVALID_ADDRESS; i++) {
-      if (process->ReadMemoryFromInferior (kernel_addresses_64[i], uval, 8, read_err) == 8)
-      {
-          DataExtractor data (&uval, 8, process->GetByteOrder(), process->GetAddressByteSize());
-          lldb::offset_t offset = 0;
-          uint64_t addr = data.GetU64 (&offset);
-          if (CheckForKernelImageAtAddress(addr, process).IsValid()) {
-              return addr;
-          }
+    for (size_t i = 0; kernel_addresses_64[i] != LLDB_INVALID_ADDRESS; i++) {
+      if (process->ReadMemoryFromInferior(kernel_addresses_64[i], uval, 8,
+                                          read_err) == 8) {
+        DataExtractor data(&uval, 8, process->GetByteOrder(),
+                           process->GetAddressByteSize());
+        lldb::offset_t offset = 0;
+        uint64_t addr = data.GetU64(&offset);
+        if (CheckForKernelImageAtAddress(addr, process).IsValid()) {
+          return addr;
+        }
       }
-  }
+    }
   }
 
   if (process->GetAddressByteSize() == 4) {
-  for (size_t i = 0; kernel_addresses_32[i] != LLDB_INVALID_ADDRESS; i++) {
-      if (process->ReadMemoryFromInferior (kernel_addresses_32[i], uval, 4, read_err) == 4)
-      {
-          DataExtractor data (&uval, 4, process->GetByteOrder(), process->GetAddressByteSize());
-          lldb::offset_t offset = 0;
-          uint32_t addr = data.GetU32 (&offset);
-          if (CheckForKernelImageAtAddress(addr, process).IsValid()) {
-              return addr;
-          }
+    for (size_t i = 0; kernel_addresses_32[i] != LLDB_INVALID_ADDRESS; i++) {
+      if (process->ReadMemoryFromInferior(kernel_addresses_32[i], uval, 4,
+                                          read_err) == 4) {
+        DataExtractor data(&uval, 4, process->GetByteOrder(),
+                           process->GetAddressByteSize());
+        lldb::offset_t offset = 0;
+        uint32_t addr = data.GetU32(&offset);
+        if (CheckForKernelImageAtAddress(addr, process).IsValid()) {
+          return addr;
+        }
       }
-  }
+    }
   }
 
   return LLDB_INVALID_ADDRESS;

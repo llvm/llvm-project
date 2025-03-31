@@ -328,7 +328,9 @@ static std::optional<double> getAdditionalComputeFraction(
 // Creates and returns a private (single-user) memref for fused loop rooted at
 // 'forOp', with (potentially reduced) memref size based on the memref region
 // written to by `storeOps` at depth 'dstLoopDepth'. 'sliceInsertionBlock'
-// specifies the block in which the slice was/will be inserted.
+// specifies the block in which the slice was/will be inserted. The method
+// expects that all stores ops to the memref have the same access function.
+// Returns nullptr if the creation failed.
 static Value createPrivateMemRef(AffineForOp forOp,
                                  ArrayRef<Operation *> storeOps,
                                  unsigned dstLoopDepth,
@@ -336,6 +338,24 @@ static Value createPrivateMemRef(AffineForOp forOp,
                                  Block *sliceInsertionBlock,
                                  uint64_t localBufSizeThreshold) {
   assert(!storeOps.empty() && "no source stores supplied");
+
+  // Check if all stores have the same access function; we only support this
+  // case.
+  // TODO: Use union of memref write regions to compute private memref footprint
+  // for store ops with different access functions.
+  if (storeOps.size() > 1 &&
+      !std::equal(std::next(storeOps.begin()), storeOps.end(), storeOps.begin(),
+                  [](Operation *a, Operation *b) {
+                    MemRefAccess aM(cast<AffineWriteOpInterface>(a));
+                    MemRefAccess bM(cast<AffineWriteOpInterface>(b));
+                    return aM == bM;
+                  })) {
+    LLVM_DEBUG(llvm::dbgs()
+               << "Private memref creation unsupported for multiple producer "
+                  "stores with different access functions.\n");
+    return nullptr;
+  }
+
   Operation *srcStoreOp = storeOps[0];
 
   // Create builder to insert alloc op just before 'forOp'.
@@ -432,6 +452,8 @@ static Value createPrivateMemRef(AffineForOp forOp,
   assert(succeeded(res) &&
          "replaceAllMemrefUsesWith should always succeed here");
   (void)res;
+  LLVM_DEBUG(llvm::dbgs() << "Created private memref of type: " << newMemRefType
+                          << '\n');
   return newMemRef;
 }
 
@@ -1123,13 +1145,12 @@ public:
           // loads and stores. Any reference to the original ones becomes
           // invalid after this point.
           for (auto &memrefToStoresPair : privateMemRefToStores) {
-            // TODO: Use union of memref write regions to compute
-            // private memref footprint.
-            SmallVector<Operation *, 4> &storesForMemref =
-                memrefToStoresPair.second;
+            ArrayRef<Operation *> storesForMemref = memrefToStoresPair.second;
             Value newMemRef = createPrivateMemRef(
                 dstAffineForOp, storesForMemref, bestDstLoopDepth,
                 fastMemorySpace, sliceInsertionBlock, localBufSizeThreshold);
+            if (!newMemRef)
+              continue;
             // Create new node in dependence graph for 'newMemRef' alloc op.
             unsigned newMemRefNodeId = mdg->addNode(newMemRef.getDefiningOp());
             // Add edge from 'newMemRef' node to dstNode.
@@ -1228,8 +1249,7 @@ public:
       SmallVector<Operation *, 2> sibLoadOpInsts;
       sibNode->getLoadOpsForMemref(memref, &sibLoadOpInsts);
       // Currently findSiblingNodeToFuse searches for siblings with one load.
-      assert(sibLoadOpInsts.size() == 1);
-      Operation *sibLoadOpInst = sibLoadOpInsts[0];
+      Operation *sibLoadOpInst = llvm::getSingleElement(sibLoadOpInsts);
 
       // Gather 'dstNode' load ops to 'memref'.
       SmallVector<Operation *, 2> dstLoadOpInsts;

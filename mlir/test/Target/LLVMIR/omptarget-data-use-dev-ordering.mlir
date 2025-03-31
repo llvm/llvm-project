@@ -13,9 +13,9 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
     %3 = omp.map.bounds lower_bound(%0 : i64) upper_bound(%1 : i64) extent(%1 : i64) stride(%2 : i64) start_idx(%0 : i64) {stride_in_bytes = true}
     %4 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(i64)>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
     %5 = omp.map.info var_ptr(%arg1 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
-    %6 = omp.map.info var_ptr(%arg2 : !llvm.ptr, i32) var_ptr_ptr(%arg3 : !llvm.ptr) map_clauses(tofrom) capture(ByRef) bounds(%3) -> !llvm.ptr
+    %6 = omp.map.info var_ptr(%arg2 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%arg3 : !llvm.ptr) bounds(%3) -> !llvm.ptr
     %7 = omp.map.info var_ptr(%arg2 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>) map_clauses(tofrom) capture(ByRef) members(%6 : [0] : !llvm.ptr) -> !llvm.ptr
-    %8 = omp.map.info var_ptr(%arg4 : !llvm.ptr, f32) var_ptr_ptr(%arg5 : !llvm.ptr) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
+    %8 = omp.map.info var_ptr(%arg4 : !llvm.ptr, f32) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%arg5 : !llvm.ptr) -> !llvm.ptr
     %9 = omp.map.info var_ptr(%arg4 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(tofrom) capture(ByRef) members(%8 : [0] : !llvm.ptr) -> !llvm.ptr
     %10 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(i64)>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
     omp.target_data map_entries(%4, %5 : !llvm.ptr, !llvm.ptr) use_device_addr(%7 -> %arg6, %9 -> %arg7, %6 -> %arg8, %8 -> %arg9 : !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) use_device_ptr(%10 -> %arg10 : !llvm.ptr) {
@@ -42,9 +42,9 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
     %3 = omp.map.bounds lower_bound(%0 : i64) upper_bound(%1 : i64) extent(%1 : i64) stride(%2 : i64) start_idx(%0 : i64) {stride_in_bytes = true}
     %4 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(i64)>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
     %5 = omp.map.info var_ptr(%arg1 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
-    %6 = omp.map.info var_ptr(%arg2 : !llvm.ptr, i32) var_ptr_ptr(%arg3 : !llvm.ptr) map_clauses(tofrom) capture(ByRef) bounds(%3) -> !llvm.ptr
+    %6 = omp.map.info var_ptr(%arg2 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%arg3 : !llvm.ptr) bounds(%3) -> !llvm.ptr
     %7 = omp.map.info var_ptr(%arg2 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>) map_clauses(tofrom) capture(ByRef) members(%6 : [0] : !llvm.ptr) -> !llvm.ptr
-    %8 = omp.map.info var_ptr(%arg4 : !llvm.ptr, f32) var_ptr_ptr(%arg5 : !llvm.ptr) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
+    %8 = omp.map.info var_ptr(%arg4 : !llvm.ptr, f32) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%arg5 : !llvm.ptr) -> !llvm.ptr
     %9 = omp.map.info var_ptr(%arg4 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(tofrom) capture(ByRef) members(%8 : [0] : !llvm.ptr) -> !llvm.ptr
     %10 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(i64)>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
     omp.target_data map_entries(%5, %4 : !llvm.ptr, !llvm.ptr) use_device_addr(%8 -> %arg6, %6 -> %arg7, %7 -> %arg8, %9 -> %arg9 : !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) use_device_ptr(%10 -> %arg10 : !llvm.ptr) {

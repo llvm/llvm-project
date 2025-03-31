@@ -843,7 +843,7 @@ static void setVisibilityFromDLLStorageClass(const clang::LangOptions &LO,
 static bool isStackProtectorOn(const LangOptions &LangOpts,
                                const llvm::Triple &Triple,
                                clang::LangOptions::StackProtectorMode Mode) {
-  if (Triple.isAMDGPU() || Triple.isNVPTX())
+  if (Triple.isGPU())
     return false;
   return LangOpts.getStackProtector() == Mode;
 }
@@ -853,8 +853,7 @@ void CodeGenModule::Release() {
   if (CXX20ModuleInits && Primary && !Primary->isHeaderLikeModule())
     EmitModuleInitializers(Primary);
   EmitDeferred();
-  DeferredDecls.insert(EmittedDeferredDecls.begin(),
-                       EmittedDeferredDecls.end());
+  DeferredDecls.insert_range(EmittedDeferredDecls);
   EmittedDeferredDecls.clear();
   EmitVTablesOpportunistically();
   applyGlobalValReplacements();
@@ -2068,9 +2067,10 @@ StringRef CodeGenModule::getMangledName(GlobalDecl GD) {
   // Prior work:
   // https://discourse.llvm.org/t/rfc-clang-diagnostic-for-demangling-failures/82835/8
   // https://github.com/llvm/llvm-project/issues/111345
-  // assert((MangledName.startswith("_Z") || MangledName.startswith("?")) &&
-  //        !GD->hasAttr<AsmLabelAttr>() &&
-  //        llvm::demangle(MangledName) != MangledName &&
+  // assert(!((StringRef(MangledName).starts_with("_Z") ||
+  //           StringRef(MangledName).starts_with("?")) &&
+  //          !GD.getDecl()->hasAttr<AsmLabelAttr>() &&
+  //          llvm::demangle(MangledName) == MangledName) &&
   //        "LLVM demangler must demangle clang-generated names");
 
   auto Result = Manglings.insert(std::make_pair(MangledName, GD));
@@ -2666,7 +2666,7 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
     for (const CXXRecordDecl *Base : getMostBaseClasses(MD->getParent())) {
       llvm::Metadata *Id =
           CreateMetadataIdentifierForType(Context.getMemberPointerType(
-              MD->getType(), Context.getRecordType(Base).getTypePtr()));
+              MD->getType(), /*Qualifier=*/nullptr, Base));
       F->addTypeMetadata(0, Id);
     }
   }
@@ -2934,10 +2934,9 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
                                           bool IsIncompleteFunction,
                                           bool IsThunk) {
 
-  if (llvm::Intrinsic::ID IID = F->getIntrinsicID()) {
-    // If this is an intrinsic function, set the function's attributes
-    // to the intrinsic's attributes.
-    F->setAttributes(llvm::Intrinsic::getAttributes(getLLVMContext(), IID));
+  if (F->getIntrinsicID() != llvm::Intrinsic::not_intrinsic) {
+    // If this is an intrinsic function, the attributes will have been set
+    // when the function was created.
     return;
   }
 
@@ -7300,6 +7299,13 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
     getHLSLRuntime().addBuffer(cast<HLSLBufferDecl>(D));
     break;
 
+  case Decl::OpenACCDeclare:
+    EmitOpenACCDeclare(cast<OpenACCDeclareDecl>(D));
+    break;
+  case Decl::OpenACCRoutine:
+    EmitOpenACCRoutine(cast<OpenACCRoutineDecl>(D));
+    break;
+
   default:
     // Make sure we handled everything we should, every other kind is a
     // non-top-level decl.  FIXME: Would be nice to have an isTopLevelDeclKind
@@ -7969,6 +7975,8 @@ void CodeGenModule::requireVectorDestructorDefinition(const CXXRecordDecl *RD) {
     auto *NewFn = llvm::Function::Create(
         cast<llvm::FunctionType>(VDEntry->getValueType()),
         llvm::Function::ExternalLinkage, VDName, &getModule());
+    SetFunctionAttributes(VectorDtorGD, NewFn, /*IsIncompleteFunction*/ false,
+                          /*IsThunk*/ false);
     NewFn->takeName(VDEntry);
     VDEntry->replaceAllUsesWith(NewFn);
     VDEntry->eraseFromParent();

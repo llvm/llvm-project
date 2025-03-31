@@ -4,8 +4,7 @@
 
 # Tests for LLVM libc string.h functions.
 
-load("//libc:libc_build_rules.bzl", "libc_support_library")
-load("//libc/test:libc_test_rules.bzl", "libc_test")
+load("//libc/test:libc_test_rules.bzl", "libc_test", "libc_test_library")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -43,7 +42,7 @@ libc_test(
     ],
 )
 
-libc_support_library(
+libc_test_library(
     name = "strchr_test_helper",
     hdrs = ["StrchrTest.h"],
     deps = ["//libc/test/UnitTest:LibcUnitTest"],
@@ -115,7 +114,7 @@ libc_test(
     ],
 )
 
-libc_support_library(
+libc_test_library(
     name = "memory_check_utils",
     hdrs = ["memory_utils/memory_check_utils.h"],
     deps = [
@@ -127,7 +126,7 @@ libc_support_library(
     ],
 )
 
-libc_support_library(
+libc_test_library(
     name = "protected_pages",
     hdrs = ["memory_utils/protected_pages.h"],
     deps = [

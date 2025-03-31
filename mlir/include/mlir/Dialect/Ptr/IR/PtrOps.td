@@ -11,6 +11,7 @@
 
 include "mlir/Dialect/Ptr/IR/PtrDialect.td"
 include "mlir/Dialect/Ptr/IR/PtrAttrDefs.td"
+include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
 
 #endif // PTR_OPS

@@ -723,7 +723,7 @@ public:
   // (However they are still accessible via TranslationUnitDecl->decls())
   //
   // Changing the scope clears the parent cache, which is expensive to rebuild.
-  std::vector<Decl *> getTraversalScope() const { return TraversalScope; }
+  ArrayRef<Decl *> getTraversalScope() const { return TraversalScope; }
   void setTraversalScope(const std::vector<Decl *> &);
 
   /// Forwards to get node parents from the ParentMapContext. New callers should
@@ -1558,10 +1558,9 @@ public:
   QualType getRValueReferenceType(QualType T) const;
 
   /// Return the uniqued reference to the type for a member pointer to
-  /// the specified type in the specified class.
-  ///
-  /// The class \p Cls is a \c Type because it could be a dependent name.
-  QualType getMemberPointerType(QualType T, const Type *Cls) const;
+  /// the specified type in the specified nested name.
+  QualType getMemberPointerType(QualType T, NestedNameSpecifier *Qualifier,
+                                const CXXRecordDecl *Cls) const;
 
   /// Return a non-unique reference to the type for a variable array of
   /// the specified element type.

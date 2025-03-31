@@ -180,7 +180,7 @@ private:
 /// dynamic type, bounds, and type parameters as the Nth variable that was
 /// pushed. It is implemented using runtime.
 /// Note that this is not meant to save POINTER or ALLOCATABLE descriptor
-/// addresses, use AnyDescriptorAddressStack instead.
+/// addresses, use AnyAddressStack instead.
 class AnyVariableStack {
 public:
   AnyVariableStack(mlir::Location loc, fir::FirOpBuilder &builder,
@@ -205,19 +205,21 @@ private:
   mlir::Value retValueBox;
 };
 
-/// Data structure to stack descriptor addresses. It stores the descriptor
-/// addresses as int_ptr values under the hood.
-class AnyDescriptorAddressStack : public AnyValueStack {
+/// Data structure to stack simple addresses (C pointers). It can be used to
+/// store data base addresses, descriptor addresses, procedure addresses, and
+/// pointer procedure address. It stores the addresses as int_ptr values under
+/// the hood.
+class AnyAddressStack : public AnyValueStack {
 public:
-  AnyDescriptorAddressStack(mlir::Location loc, fir::FirOpBuilder &builder,
-                            mlir::Type descriptorAddressType);
+  AnyAddressStack(mlir::Location loc, fir::FirOpBuilder &builder,
+                  mlir::Type addressType);
 
   void pushValue(mlir::Location loc, fir::FirOpBuilder &builder,
                  mlir::Value value);
   mlir::Value fetch(mlir::Location loc, fir::FirOpBuilder &builder);
 
 private:
-  mlir::Type descriptorAddressType;
+  mlir::Type addressType;
 };
 
 class TemporaryStorage;
@@ -281,8 +283,7 @@ public:
 
 private:
   std::variant<HomogeneousScalarStack, SimpleCopy, SSARegister, AnyValueStack,
-               AnyVariableStack, AnyVectorSubscriptStack,
-               AnyDescriptorAddressStack>
+               AnyVariableStack, AnyVectorSubscriptStack, AnyAddressStack>
       impl;
 };
 } // namespace fir::factory

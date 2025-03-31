@@ -63,6 +63,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GraphWriter.h"
+#include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Support/raw_ostream.h"
@@ -1679,8 +1680,8 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
     if (auto *PHI = dyn_cast<PHINode>(Usr)) {
       // Note the order here, the Usr access might change the map, CurPtr is
       // already in it though.
-      bool IsFirstPHIUser = !OffsetInfoMap.count(PHI);
-      auto &UsrOI = OffsetInfoMap[PHI];
+      auto [PhiIt, IsFirstPHIUser] = OffsetInfoMap.try_emplace(PHI);
+      auto &UsrOI = PhiIt->second;
       auto &PtrOI = OffsetInfoMap[CurPtr];
 
       // Check if the PHI operand has already an unknown offset as we can't
@@ -3735,7 +3736,7 @@ struct AAIntraFnReachabilityFunction final
       }
     }
 
-    DeadEdges.insert(LocalDeadEdges.begin(), LocalDeadEdges.end());
+    DeadEdges.insert_range(LocalDeadEdges);
     return rememberResult(A, RQITy::Reachable::No, RQI, UsedExclusionSet,
                           IsTemporaryRQI);
   }
@@ -12221,8 +12222,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     } else if (A.isClosedWorldModule()) {
       ArrayRef<Function *> IndirectlyCallableFunctions =
           A.getInfoCache().getIndirectlyCallableFunctions(A);
-      PotentialCallees.insert(IndirectlyCallableFunctions.begin(),
-                              IndirectlyCallableFunctions.end());
+      PotentialCallees.insert_range(IndirectlyCallableFunctions);
     }
 
     if (PotentialCallees.empty())

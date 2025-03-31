@@ -104,7 +104,7 @@ TEST(LlvmLibcStrToDblTest, SimpleDecimalConversionExtraTypes) {
       internal::simple_decimal_conversion<double>("123456789012345678900");
 
   double_output_mantissa = double_result.num.mantissa;
-  output_exp2 = double_result.num.exponent;
+  output_exp2 = static_cast<uint32_t>(double_result.num.exponent);
 
   EXPECT_EQ(double_output_mantissa, uint64_t(0x1AC53A7E04BCDA));
   EXPECT_EQ(output_exp2, uint32_t(1089));

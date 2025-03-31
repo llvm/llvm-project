@@ -108,8 +108,8 @@ define <2 x half> @test_min_max_splat_padded_with_undef(<2 x half> %a) #2 {
 ; GFX12-NEXT:    v_pk_mul_f16 v0, v0, 2.0 op_sel_hi:[1,0] clamp
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %fmul = fmul <2 x half> %a, <half 2.0, half 2.0>
-  %maxnum = call <2 x half> @llvm.maxnum.v2f16(<2 x half> <half 0.0, half undef>, <2 x half> %fmul)
-  %fmed = call <2 x half> @llvm.minnum.v2f16(<2 x half> <half 1.0, half undef>, <2 x half> %maxnum)
+  %maxnum = call <2 x half> @llvm.maxnum.v2f16(<2 x half> <half 0.0, half poison>, <2 x half> %fmul)
+  %fmed = call <2 x half> @llvm.minnum.v2f16(<2 x half> <half 1.0, half poison>, <2 x half> %maxnum)
   ret <2 x half> %fmed
 }
 
@@ -199,8 +199,8 @@ define <2 x half> @test_max_K0min_K1Val_v2f16(<2 x half> %a) #1 {
 ; GFX12-NEXT:    v_pk_mul_f16 v0, v0, 2.0 op_sel_hi:[1,0] clamp
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %fmul = fmul <2 x half> %a, <half 2.0, half 2.0>
-  %minnum = call nnan <2 x half> @llvm.minnum.v2f16(<2 x half> <half 1.0, half undef>, <2 x half> %fmul)
-  %fmed = call nnan <2 x half> @llvm.maxnum.v2f16(<2 x half> <half undef, half 0.0>, <2 x half> %minnum)
+  %minnum = call nnan <2 x half> @llvm.minnum.v2f16(<2 x half> <half 1.0, half poison>, <2 x half> %fmul)
+  %fmed = call nnan <2 x half> @llvm.maxnum.v2f16(<2 x half> <half poison, half 0.0>, <2 x half> %minnum)
   ret <2 x half> %fmed
 }
 

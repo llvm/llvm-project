@@ -27,7 +27,9 @@ namespace lldb_dap {
 
 int OutputRedirector::kInvalidDescriptor = -1;
 
-OutputRedirector::OutputRedirector() : m_fd(kInvalidDescriptor) {}
+OutputRedirector::OutputRedirector()
+    : m_fd(kInvalidDescriptor), m_original_fd(kInvalidDescriptor),
+      m_restore_fd(kInvalidDescriptor) {}
 
 Expected<int> OutputRedirector::GetWriteFileDescriptor() {
   if (m_fd == kInvalidDescriptor)
@@ -36,7 +38,8 @@ Expected<int> OutputRedirector::GetWriteFileDescriptor() {
   return m_fd;
 }
 
-Error OutputRedirector::RedirectTo(std::function<void(StringRef)> callback) {
+Error OutputRedirector::RedirectTo(std::FILE *file_override,
+                                   std::function<void(StringRef)> callback) {
   assert(m_fd == kInvalidDescriptor && "Output readirector already started.");
   int new_fd[2];
 
@@ -52,6 +55,19 @@ Error OutputRedirector::RedirectTo(std::function<void(StringRef)> callback) {
 
   int read_fd = new_fd[0];
   m_fd = new_fd[1];
+
+  if (file_override) {
+    int override_fd = fileno(file_override);
+
+    // Backup the FD to restore once redirection is complete.
+    m_original_fd = override_fd;
+    m_restore_fd = dup(override_fd);
+
+    // Override the existing fd the new write end of the pipe.
+    if (::dup2(m_fd, override_fd) == -1)
+      return llvm::errorCodeToError(llvm::errnoAsErrorCode());
+  }
+
   m_forwarder = std::thread([this, callback, read_fd]() {
     char buffer[OutputBufferSize];
     while (!m_stopped) {
@@ -92,6 +108,17 @@ void OutputRedirector::Stop() {
     (void)::write(fd, kCloseSentinel.data(), kCloseSentinel.size());
     ::close(fd);
     m_forwarder.join();
+
+    // Restore the fd back to its original state since we stopped the
+    // redirection.
+    if (m_restore_fd != kInvalidDescriptor &&
+        m_original_fd != kInvalidDescriptor) {
+      int restore_fd = m_restore_fd;
+      m_restore_fd = kInvalidDescriptor;
+      int original_fd = m_original_fd;
+      m_original_fd = kInvalidDescriptor;
+      ::dup2(restore_fd, original_fd);
+    }
   }
 }
 

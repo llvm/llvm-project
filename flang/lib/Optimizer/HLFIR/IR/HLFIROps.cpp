@@ -1891,18 +1891,33 @@ llvm::LogicalResult hlfir::RegionAssignOp::verify() {
   return mlir::success();
 }
 
+static mlir::Type
+getNonVectorSubscriptedLhsType(hlfir::RegionAssignOp regionAssign) {
+  hlfir::YieldOp yieldOp = mlir::dyn_cast_or_null<hlfir::YieldOp>(
+      getTerminator(regionAssign.getLhsRegion()));
+  return yieldOp ? yieldOp.getEntity().getType() : mlir::Type{};
+}
+
+bool hlfir::RegionAssignOp::isPointerObjectAssignment() {
+  if (!getUserDefinedAssignment().empty())
+    return false;
+  mlir::Type lhsType = getNonVectorSubscriptedLhsType(*this);
+  return lhsType && hlfir::isFortranPointerObjectType(lhsType);
+}
+
+bool hlfir::RegionAssignOp::isProcedurePointerAssignment() {
+  if (!getUserDefinedAssignment().empty())
+    return false;
+  mlir::Type lhsType = getNonVectorSubscriptedLhsType(*this);
+  return lhsType && hlfir::isFortranProcedurePointerType(lhsType);
+}
+
 bool hlfir::RegionAssignOp::isPointerAssignment() {
   if (!getUserDefinedAssignment().empty())
     return false;
-  hlfir::YieldOp yieldOp =
-      mlir::dyn_cast_or_null<hlfir::YieldOp>(getTerminator(getLhsRegion()));
-  if (!yieldOp)
-    return false;
-  mlir::Type lhsType = yieldOp.getEntity().getType();
-  if (!hlfir::isBoxAddressType(lhsType))
-    return false;
-  auto baseBoxType = llvm::cast<fir::BaseBoxType>(fir::unwrapRefType(lhsType));
-  return baseBoxType.isPointer();
+  mlir::Type lhsType = getNonVectorSubscriptedLhsType(*this);
+  return lhsType && (hlfir::isFortranPointerObjectType(lhsType) ||
+                     hlfir::isFortranProcedurePointerType(lhsType));
 }
 
 //===----------------------------------------------------------------------===//

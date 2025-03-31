@@ -14,6 +14,7 @@
 
 #include "../lib/Transforms/Vectorize/VPlan.h"
 #include "../lib/Transforms/Vectorize/VPlanHCFGBuilder.h"
+#include "../lib/Transforms/Vectorize/VPlanTransforms.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -70,10 +71,11 @@ protected:
 
     Loop *L = LI->getLoopFor(LoopHeader);
     PredicatedScalarEvolution PSE(*SE, *L);
-    auto Plan = VPlan::createInitialVPlan(IntegerType::get(*Ctx, 64), PSE, true,
-                                          false, L);
+    auto Plan = std::make_unique<VPlan>(L);
     VPlanHCFGBuilder HCFGBuilder(L, LI.get(), *Plan);
     HCFGBuilder.buildHierarchicalCFG();
+    VPlanTransforms::introduceTopLevelVectorLoopRegion(
+        *Plan, IntegerType::get(*Ctx, 64), PSE, true, false, L);
     return Plan;
   }
 };

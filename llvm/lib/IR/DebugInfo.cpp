@@ -2133,8 +2133,8 @@ void at::trackAssignments(Function::iterator Start, Function::iterator End,
   auto &Ctx = Start->getContext();
   auto &Module = *Start->getModule();
 
-  // Undef type doesn't matter, so long as it isn't void. Let's just use i1.
-  auto *Undef = UndefValue::get(Type::getInt1Ty(Ctx));
+  // Poison type doesn't matter, so long as it isn't void. Let's just use i1.
+  auto *Poison = PoisonValue::get(Type::getInt1Ty(Ctx));
   DIBuilder DIB(Module, /*AllowUnresolved*/ false);
 
   // Scan the instructions looking for stores to local variables' storage.
@@ -2148,9 +2148,9 @@ void at::trackAssignments(Function::iterator Start, Function::iterator End,
       if (auto *AI = dyn_cast<AllocaInst>(&I)) {
         // We want to track the variable's stack home from its alloca's
         // position onwards so we treat it as an assignment (where the stored
-        // value is Undef).
+        // value is poison).
         Info = getAssignmentInfo(DL, AI);
-        ValueComponent = Undef;
+        ValueComponent = Poison;
         DestComponent = AI;
       } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
         Info = getAssignmentInfo(DL, SI);
@@ -2159,7 +2159,7 @@ void at::trackAssignments(Function::iterator Start, Function::iterator End,
       } else if (auto *MI = dyn_cast<MemTransferInst>(&I)) {
         Info = getAssignmentInfo(DL, MI);
         // May not be able to represent this value easily.
-        ValueComponent = Undef;
+        ValueComponent = Poison;
         DestComponent = MI->getOperand(0);
       } else if (auto *MI = dyn_cast<MemSetInst>(&I)) {
         Info = getAssignmentInfo(DL, MI);
@@ -2169,7 +2169,7 @@ void at::trackAssignments(Function::iterator Start, Function::iterator End,
         if (ConstValue && ConstValue->isZero())
           ValueComponent = ConstValue;
         else
-          ValueComponent = Undef;
+          ValueComponent = Poison;
         DestComponent = MI->getOperand(0);
       } else {
         // Not a store-like instruction.

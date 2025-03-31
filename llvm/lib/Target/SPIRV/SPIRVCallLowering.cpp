@@ -398,8 +398,6 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   auto MRI = MIRBuilder.getMRI();
   Register FuncVReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
   MRI->setRegClass(FuncVReg, &SPIRV::iIDRegClass);
-  if (F.isDeclaration())
-    GR->add(&F, &MIRBuilder.getMF(), FuncVReg);
   FunctionType *FTy = getOriginalFunctionType(F);
   Type *FRetTy = FTy->getReturnType();
   if (isUntypedPointerTy(FRetTy)) {
@@ -425,6 +423,8 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                .addUse(GR->getSPIRVTypeID(FuncTy));
   GR->recordFunctionDefinition(&F, &MB.getInstr()->getOperand(0));
   GR->addGlobalObject(&F, &MIRBuilder.getMF(), FuncVReg);
+  if (F.isDeclaration())
+    GR->add(&F, MB);
 
   // Add OpFunctionParameter instructions
   int i = 0;
@@ -433,11 +433,11 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     Register ArgReg = VRegs[i][0];
     MRI->setRegClass(ArgReg, GR->getRegClass(ArgTypeVRegs[i]));
     MRI->setType(ArgReg, GR->getRegType(ArgTypeVRegs[i]));
-    MIRBuilder.buildInstr(SPIRV::OpFunctionParameter)
-        .addDef(ArgReg)
-        .addUse(GR->getSPIRVTypeID(ArgTypeVRegs[i]));
+    auto MIB = MIRBuilder.buildInstr(SPIRV::OpFunctionParameter)
+                   .addDef(ArgReg)
+                   .addUse(GR->getSPIRVTypeID(ArgTypeVRegs[i]));
     if (F.isDeclaration())
-      GR->add(&Arg, &MIRBuilder.getMF(), ArgReg);
+      GR->add(&Arg, MIB);
     GR->addGlobalObject(&Arg, &MIRBuilder.getMF(), ArgReg);
     i++;
   }
@@ -695,6 +695,20 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       return false;
     MIB.addUse(Arg.Regs[0]);
   }
+
+  if (ST->canUseExtension(SPIRV::Extension::SPV_INTEL_memory_access_aliasing)) {
+    // Process aliasing metadata.
+    const CallBase *CI = Info.CB;
+    if (CI && CI->hasMetadata()) {
+      if (MDNode *MD = CI->getMetadata(LLVMContext::MD_alias_scope))
+        GR->buildMemAliasingOpDecorate(ResVReg, MIRBuilder,
+                                       SPIRV::Decoration::AliasScopeINTEL, MD);
+      if (MDNode *MD = CI->getMetadata(LLVMContext::MD_noalias))
+        GR->buildMemAliasingOpDecorate(ResVReg, MIRBuilder,
+                                       SPIRV::Decoration::NoAliasINTEL, MD);
+    }
+  }
+
   return MIB.constrainAllUses(MIRBuilder.getTII(), *ST->getRegisterInfo(),
                               *ST->getRegBankInfo());
 }

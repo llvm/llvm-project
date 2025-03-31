@@ -169,7 +169,8 @@ struct LlvmLibcExhaustiveMathTest
               range_end = stop;
             }
             current_value = range_end;
-            int pc = 100.0 * (range_end - start) / (stop - start);
+            int pc =
+                static_cast<int>(100.0 * (range_end - start) / (stop - start));
             if (current_percent != pc) {
               new_percent = pc;
               current_percent = pc;

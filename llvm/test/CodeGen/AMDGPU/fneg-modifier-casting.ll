@@ -1585,7 +1585,7 @@ define amdgpu_kernel void @fnge_select_f32_multi_use_regression(float %.i2369) {
 
 bb:                                               ; preds = %.entry
   %i2 = call <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32> zeroinitializer, i32 1, i32 0)
-  %i3 = shufflevector <2 x i32> %i2, <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+  %i3 = shufflevector <2 x i32> %i2, <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
   %i4 = bitcast <4 x i32> %i3 to <4 x float>
   %.i0753 = extractelement <4 x float> %i4, i64 0
   br label %bb5

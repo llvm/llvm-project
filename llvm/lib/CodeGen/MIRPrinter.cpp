@@ -208,7 +208,7 @@ void MIRPrinter::print(const MachineFunction &MF) {
 
   YamlMF.CallsEHReturn = MF.callsEHReturn();
   YamlMF.CallsUnwindInit = MF.callsUnwindInit();
-  YamlMF.HasEHCatchret = MF.hasEHCatchret();
+  YamlMF.HasEHContTarget = MF.hasEHContTarget();
   YamlMF.HasEHScopes = MF.hasEHScopes();
   YamlMF.HasEHFunclets = MF.hasEHFunclets();
   YamlMF.HasFakeUses = MF.hasFakeUses();

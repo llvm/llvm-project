@@ -40,8 +40,7 @@ define void @type_info_cache_clobber(ptr %dstv, ptr %src, i64 %wide.trip.count) 
 ; CHECK-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[AVL:%.*]] = sub i64 [[TMP0]], [[EVL_BASED_IV]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 8, i1 true)
-; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[EVL_BASED_IV]], 0
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP12]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[EVL_BASED_IV]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP13]], i32 0
 ; CHECK-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 8 x i8> @llvm.vp.load.nxv8i8.p0(ptr align 1 [[TMP14]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP11]]), !alias.scope [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = zext <vscale x 8 x i8> [[VP_OP_LOAD]] to <vscale x 8 x i32>

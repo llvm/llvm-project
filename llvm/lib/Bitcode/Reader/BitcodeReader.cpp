@@ -3339,10 +3339,8 @@ Error BitcodeReader::parseConstants() {
       if (Record.empty())
         return error("Invalid aggregate record");
 
-      unsigned Size = Record.size();
       SmallVector<unsigned, 16> Elts;
-      for (unsigned i = 0; i != Size; ++i)
-        Elts.push_back(Record[i]);
+      llvm::append_range(Elts, Record);
 
       if (isa<StructType>(CurTy)) {
         V = BitcodeConstant::create(
@@ -4530,12 +4528,12 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
 
     // Auto-upgrade the layout string
     TentativeDataLayoutStr = llvm::UpgradeDataLayoutString(
-        TentativeDataLayoutStr, TheModule->getTargetTriple());
+        TentativeDataLayoutStr, TheModule->getTargetTriple().str());
 
     // Apply override
     if (Callbacks.DataLayout) {
       if (auto LayoutOverride = (*Callbacks.DataLayout)(
-              TheModule->getTargetTriple(), TentativeDataLayoutStr))
+              TheModule->getTargetTriple().str(), TentativeDataLayoutStr))
         TentativeDataLayoutStr = *LayoutOverride;
     }
 
@@ -4719,7 +4717,7 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
       std::string S;
       if (convertToString(Record, 0, S))
         return error("Invalid record");
-      TheModule->setTargetTriple(S);
+      TheModule->setTargetTriple(Triple(S));
       break;
     }
     case bitc::MODULE_CODE_DATALAYOUT: {  // DATALAYOUT: [strchr x N]
@@ -8075,20 +8073,18 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       break;
 
     case bitc::FS_CFI_FUNCTION_DEFS: {
-      std::set<std::string, std::less<>> &CfiFunctionDefs =
-          TheIndex.cfiFunctionDefs();
+      auto &CfiFunctionDefs = TheIndex.cfiFunctionDefs();
       for (unsigned I = 0; I != Record.size(); I += 2)
-        CfiFunctionDefs.insert(
-            {Strtab.data() + Record[I], static_cast<size_t>(Record[I + 1])});
+        CfiFunctionDefs.emplace(Strtab.data() + Record[I],
+                                static_cast<size_t>(Record[I + 1]));
       break;
     }
 
     case bitc::FS_CFI_FUNCTION_DECLS: {
-      std::set<std::string, std::less<>> &CfiFunctionDecls =
-          TheIndex.cfiFunctionDecls();
+      auto &CfiFunctionDecls = TheIndex.cfiFunctionDecls();
       for (unsigned I = 0; I != Record.size(); I += 2)
-        CfiFunctionDecls.insert(
-            {Strtab.data() + Record[I], static_cast<size_t>(Record[I + 1])});
+        CfiFunctionDecls.emplace(Strtab.data() + Record[I],
+                                 static_cast<size_t>(Record[I + 1]));
       break;
     }
 

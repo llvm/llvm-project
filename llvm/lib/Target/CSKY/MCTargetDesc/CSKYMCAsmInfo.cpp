@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CSKYMCAsmInfo.h"
+#include "MCTargetDesc/CSKYMCExpr.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
@@ -18,13 +19,9 @@
 using namespace llvm;
 
 const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
-    {MCSymbolRefExpr::VK_GOT, "GOT"},
-    {MCSymbolRefExpr::VK_GOTOFF, "GOTOFF"},
-    {MCSymbolRefExpr::VK_PLT, "PLT"},
-    {MCSymbolRefExpr::VK_TLSGD, "TLSGD"},
-    {MCSymbolRefExpr::VK_TLSLD, "TLSLD"},
-    {MCSymbolRefExpr::VK_TLSLDM, "TLSLDM"},
-    {MCSymbolRefExpr::VK_TPOFF, "TPOFF"},
+    {CSKYMCExpr::VK_GOT, "GOT"},       {CSKYMCExpr::VK_GOTOFF, "GOTOFF"},
+    {CSKYMCExpr::VK_PLT, "PLT"},       {CSKYMCExpr::VK_TLSGD, "TLSGD"},
+    {CSKYMCExpr::VK_TLSLDM, "TLSLDM"}, {CSKYMCExpr::VK_TPOFF, "TPOFF"},
 };
 
 void CSKYMCAsmInfo::anchor() {}

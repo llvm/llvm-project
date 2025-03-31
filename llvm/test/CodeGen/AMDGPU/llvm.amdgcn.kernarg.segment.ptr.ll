@@ -82,7 +82,7 @@ define amdgpu_kernel void @test_no_kernargs() #4 {
   %kernarg.segment.ptr = call noalias ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
   %gep = getelementptr i32, ptr addrspace(4) %kernarg.segment.ptr, i64 10
   %value = load i32, ptr addrspace(4) %gep
-  store volatile i32 %value, ptr addrspace(1) undef
+  store volatile i32 %value, ptr addrspace(1) poison
   ret void
 }
 

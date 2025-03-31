@@ -1118,6 +1118,31 @@ implicit none
       !dir$ ignore_tkr (d) x
       complex(8), intent(in) :: x
     end function
+    attributes(device) pure function __ldca_i4x4(x) result(y)
+      !dir$ ignore_tkr (d) x
+      integer(4), dimension(4), intent(in) :: x
+      integer(4), dimension(4) :: y
+    end function
+    attributes(device) pure function __ldca_i8x2(x) result(y)
+      !dir$ ignore_tkr (d) x
+      integer(8), dimension(2), intent(in) :: x
+      integer(8), dimension(2) :: y
+    end function
+    attributes(device) pure function __ldca_r2x2(x) result(y)
+      !dir$ ignore_tkr (d) x
+      real(2), dimension(2), intent(in) :: x
+      real(2), dimension(2) :: y
+    end function
+    attributes(device) pure function __ldca_r4x4(x) result(y)
+      !dir$ ignore_tkr (d) x
+      real(4), dimension(4), intent(in) :: x
+      real(4), dimension(4) :: y
+    end function
+    attributes(device) pure function __ldca_r8x2(x) result(y)
+      !dir$ ignore_tkr (d) x
+      real(8), dimension(2), intent(in) :: x
+      real(8), dimension(2) :: y
+    end function
   end interface
 
   ! LDCS
@@ -1157,6 +1182,31 @@ implicit none
         bind(c,name='__ldcs_c8x')
       !dir$ ignore_tkr (d) x
       complex(8), intent(in) :: x
+    end function
+    attributes(device) pure function __ldcs_i4x4(x) result(y)
+      !dir$ ignore_tkr (d) x
+      integer(4), dimension(4), intent(in) :: x
+      integer(4), dimension(4) :: y
+    end function
+    attributes(device) pure function __ldcs_i8x2(x) result(y)
+      !dir$ ignore_tkr (d) x
+      integer(8), dimension(2), intent(in) :: x
+      integer(8), dimension(2) :: y
+    end function
+    attributes(device) pure function __ldcs_r2x2(x) result(y)
+      !dir$ ignore_tkr (d) x
+      real(2), dimension(2), intent(in) :: x
+      real(2), dimension(2) :: y
+    end function
+    attributes(device) pure function __ldcs_r4x4(x) result(y)
+      !dir$ ignore_tkr (d) x
+      real(4), dimension(4), intent(in) :: x
+      real(4), dimension(4) :: y
+    end function
+    attributes(device) pure function __ldcs_r8x2(x) result(y)
+      !dir$ ignore_tkr (d) x
+      real(8), dimension(2), intent(in) :: x
+      real(8), dimension(2) :: y
     end function
   end interface
 
@@ -1198,6 +1248,31 @@ implicit none
       !dir$ ignore_tkr (d) x
       complex(8), intent(in) :: x
     end function
+    attributes(device) pure function __ldlu_i4x4(x) result(y)
+      !dir$ ignore_tkr (d) x
+      integer(4), dimension(4), intent(in) :: x
+      integer(4), dimension(4) :: y
+    end function
+    attributes(device) pure function __ldlu_i8x2(x) result(y)
+      !dir$ ignore_tkr (d) x
+      integer(8), dimension(2), intent(in) :: x
+      integer(8), dimension(2) :: y
+    end function
+    attributes(device) pure function __ldlu_r2x2(x) result(y)
+      !dir$ ignore_tkr (d) x
+      real(2), dimension(2), intent(in) :: x
+      real(2), dimension(2) :: y
+    end function
+    attributes(device) pure function __ldlu_r4x4(x) result(y)
+      !dir$ ignore_tkr (d) x
+      real(4), dimension(4), intent(in) :: x
+      real(4), dimension(4) :: y
+    end function
+    attributes(device) pure function __ldlu_r8x2(x) result(y)
+      !dir$ ignore_tkr (d) x
+      real(8), dimension(2), intent(in) :: x
+      real(8), dimension(2) :: y
+    end function
   end interface
 
   ! LDCV
@@ -1237,6 +1312,31 @@ implicit none
         bind(c,name='__ldcv_c8x')
       !dir$ ignore_tkr (d) x
       complex(8), intent(in) :: x
+    end function
+    attributes(device) pure function __ldcv_i4x4(x) result(y)
+      !dir$ ignore_tkr (d) x
+      integer(4), dimension(4), intent(in) :: x
+      integer(4), dimension(4) :: y
+      end function
+    attributes(device) pure function __ldcv_i8x2(x) result(y)
+      !dir$ ignore_tkr (d) x
+      integer(8), dimension(2), intent(in) :: x
+      integer(8), dimension(2) :: y
+    end function
+    attributes(device) pure function __ldcv_r2x2(x) result(y)
+      !dir$ ignore_tkr (d) x
+      real(2), dimension(2), intent(in) :: x
+      real(2), dimension(2) :: y
+    end function
+    attributes(device) pure function __ldcv_r4x4(x) result(y)
+      !dir$ ignore_tkr (d) x
+      real(4), dimension(4), intent(in) :: x
+      real(4), dimension(4) :: y
+    end function
+    attributes(device) pure function __ldcv_r8x2(x) result(y)
+      !dir$ ignore_tkr (d) x
+      real(8), dimension(2), intent(in) :: x
+      real(8), dimension(2) :: y
     end function
   end interface
 

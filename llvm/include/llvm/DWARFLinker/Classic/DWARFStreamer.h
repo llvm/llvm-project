@@ -149,10 +149,13 @@ public:
   }
 
   /// Emit .debug_line table entry for specified \p LineTable
-  void emitLineTableForUnit(const DWARFDebugLine::LineTable &LineTable,
-                            const CompileUnit &Unit,
-                            OffsetsStringPool &DebugStrPool,
-                            OffsetsStringPool &DebugLineStrPool) override;
+  /// The optional parameter RowOffsets, if provided, will be populated with the
+  /// offsets of each line table row in the output .debug_line section.
+  void
+  emitLineTableForUnit(const DWARFDebugLine::LineTable &LineTable,
+                       const CompileUnit &Unit, OffsetsStringPool &DebugStrPool,
+                       OffsetsStringPool &DebugLineStrPool,
+                       std::vector<uint64_t> *RowOffsets = nullptr) override;
 
   uint64_t getLineSectionSize() const override { return LineSectionSize; }
 
@@ -266,7 +269,8 @@ private:
       const DWARFDebugLine::Prologue &P, OffsetsStringPool &DebugStrPool,
       OffsetsStringPool &DebugLineStrPool);
   void emitLineTableRows(const DWARFDebugLine::LineTable &LineTable,
-                         MCSymbol *LineEndSym, unsigned AddressByteSize);
+                         MCSymbol *LineEndSym, unsigned AddressByteSize,
+                         std::vector<uint64_t> *RowOffsets = nullptr);
   void emitIntOffset(uint64_t Offset, dwarf::DwarfFormat Format,
                      uint64_t &SectionSize);
   void emitLabelDifference(const MCSymbol *Hi, const MCSymbol *Lo,

@@ -1018,3 +1018,242 @@ func.func @bad_is_assumed_size(%arg0: !fir.ref<!fir.array<*:none>>) {
   %1 = fir.is_assumed_size %arg0 : (!fir.ref<!fir.array<*:none>>) -> i1
   return
 }
+
+// -----
+
+!t=!fir.type<sometype{i:i32}>
+!t2=!fir.type<sometype2{j:i32}>
+func.func @bad_copy_1(%arg0: !fir.ref<!t>, %arg1: !fir.ref<!t2>) {
+  // expected-error@+1{{'fir.copy' op source and destination must have the same value type}}
+  fir.copy %arg0 to %arg1 no_overlap : !fir.ref<!t>, !fir.ref<!t2>
+  return
+}
+
+// -----
+
+!t=!fir.type<sometype{i:i32}>
+func.func @bad_copy_2(%arg0: !fir.ref<!t>, %arg1: !t) {
+  // expected-error@+1{{'fir.copy' op operand #0 must be a reference type to a constant size fir.array, fir.char, or fir.type, but got '!fir.type<sometype{i:i32}>'}}
+  fir.copy %arg1 to %arg0 no_overlap : !t, !fir.ref<!t>
+  return
+}
+
+// -----
+
+!t=!fir.array<?xi32>
+func.func @bad_copy_3(%arg0: !fir.ref<!t>, %arg1: !fir.ref<!t>) {
+  // expected-error@+1{{'fir.copy' op operand #0 must be a reference type to a constant size fir.array, fir.char, or fir.type, but got '!fir.ref<!fir.array<?xi32>>'}}
+  fir.copy %arg0 to %arg1 no_overlap : !fir.ref<!t>, !fir.ref<!t>
+  return
+}
+
+// -----
+
+!t=f32
+func.func @bad_copy_4(%arg0: !fir.ref<!t>, %arg1: !fir.ref<!t>) {
+  // expected-error@+1{{'fir.copy' op operand #0 must be a reference type to a constant size fir.array, fir.char, or fir.type, but got '!fir.ref<f32>'}}
+  fir.copy %arg0 to %arg1 no_overlap : !fir.ref<!t>, !fir.ref<!t>
+  return
+}
+
+// -----
+
+func.func @bad_pack_array1(%arg0: !fir.ref<!fir.box<!fir.array<?xi32>>>) {
+  // expected-error@+1{{op operand #0 must be any boxed array, but got '!fir.ref<!fir.box<!fir.array<?xi32>>>'}}
+  %0 = fir.pack_array %arg0 stack whole : (!fir.ref<!fir.box<!fir.array<?xi32>>>) -> !fir.ref<!fir.box<!fir.array<?xi32>>>
+  return
+}
+
+// -----
+
+func.func @bad_pack_array2(%arg0: !fir.box<!fir.array<?xi32>>) {
+  // expected-error@+1{{op failed to verify that all of {array, result} have same type}}
+  %0 = fir.pack_array %arg0 stack whole : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi64>>
+  return
+}
+
+// -----
+
+func.func @bad_pack_array3(%arg0: !fir.box<!fir.array<?x!fir.char<1,?>>>, %arg1: i32) {
+  // expected-error@+1{{op invalid type parameters}}
+  %0 = fir.pack_array %arg0 stack whole typeparams %arg1, %arg1 : (!fir.box<!fir.array<?x!fir.char<1,?>>>, i32, i32) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
+  return
+}
+
+// -----
+
+func.func @bad_pack_array4(%arg0: !fir.box<!fir.array<?xf32>>) {
+  // expected-error@+1{{op attribute 'max_size' failed to satisfy constraint: 64-bit unsigned integer attribute}}
+  %0 = fir.pack_array %arg0 stack whole constraints {max_size = -1 : i64} : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
+  return
+}
+
+// -----
+
+func.func @bad_pack_array5(%arg0: !fir.box<!fir.array<?xf32>>) {
+  // expected-error@+1{{op attribute 'max_element_size' failed to satisfy constraint: 64-bit unsigned integer attribute}}
+  %0 = fir.pack_array %arg0 stack whole constraints {max_element_size = -1 : i64} : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
+  return
+}
+
+// -----
+
+func.func @bad_pack_array6(%arg0: !fir.box<!fir.array<?xf32>>) {
+  // expected-error@+1{{op attribute 'min_stride' failed to satisfy constraint: 64-bit unsigned integer attribute}}
+  %0 = fir.pack_array %arg0 stack whole constraints {min_stride = -1 : i64} : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
+  return
+}
+
+// -----
+
+func.func @bad_pack_array7(%arg0: !fir.box<!fir.array<?xf32>>) {
+  // expected-error@+1{{op 'innermost' is invalid for 1D arrays, use 'whole' instead}}
+  %0 = fir.pack_array %arg0 stack innermost : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
+  return
+}
+
+// -----
+
+func.func @bad_unpack_array1(%arg0: !fir.ref<!fir.box<!fir.array<?xi32>>>, %arg1: !fir.ref<!fir.box<!fir.array<?xi32>>>) {
+  // expected-error@+1{{op operand #0 must be any boxed array, but got '!fir.ref<!fir.box<!fir.array<?xi32>>>'}}
+  fir.unpack_array %arg0 to %arg1 stack : !fir.ref<!fir.box<!fir.array<?xi32>>>
+  return
+}
+
+// -----
+
+func.func @bad_unpack_array2(%arg0: !fir.box<!fir.array<?xf32>>) {
+  %0 = fir.pack_array %arg0 stack whole : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
+  // expected-error@+1{{op the pack operation uses different memory for the temporary (stack vs heap)}}
+  fir.unpack_array %0 to %arg0 heap no_copy : !fir.box<!fir.array<?xf32>>
+  return
+}
+
+// -----
+
+func.func @bad_unpack_array3(%arg0: !fir.box<!fir.array<?xf32>>) {
+  %0 = fir.pack_array %arg0 heap whole no_copy: (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
+  // expected-error@+1{{op the pack operation uses different memory for the temporary (stack vs heap)}}
+  fir.unpack_array %0 to %arg0 stack : !fir.box<!fir.array<?xf32>>
+  return
+}
+
+// -----
+
+func.func @bad_unpack_array4(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array<?xi32>>) {
+  // expected-note@-1 {{prior use here}}
+  // expected-error@+1{{use of value '%arg0' expects different type than prior uses: '!fir.box<!fir.array<?xi32>>' vs '!fir.box<!fir.array<?xf32>>'}}
+  fir.unpack_array %arg0 to %arg1 stack : !fir.box<!fir.array<?xi32>>
+  return
+}
+
+// -----
+
+func.func @bad_is_contiguous_box(%arg0: !fir.ref<!fir.box<!fir.array<?xi32>>>) -> i1 {
+  // expected-error@+1{{op operand #0 must be any box, but got '!fir.ref<!fir.box<!fir.array<?xi32>>>'}}
+  %0 = fir.is_contiguous_box %arg0 whole : (!fir.ref<!fir.box<!fir.array<?xi32>>>) -> i1
+  return %0 : i1
+}
+
+// -----
+
+func.func @bad_box_total_elements(%arg0: !fir.ref<!fir.box<!fir.array<?xi32>>>) -> i32 {
+  // expected-error@+1{{op operand #0 must be any box, but got '!fir.ref<!fir.box<!fir.array<?xi32>>>'}}
+  %0 = fir.box_total_elements %arg0 : (!fir.ref<!fir.box<!fir.array<?xi32>>>) -> i32
+  return %0 : i32
+}
+
+// -----
+
+func.func @empty_dc_wrapper_body() {
+  // expected-error@+1 {{'fir.do_concurrent' op expects a non-empty block}}
+  fir.do_concurrent {
+  }
+  return
+}
+
+// -----
+
+func.func @dc_wrong_terminator() {
+  // expected-error@+1 {{'fir.do_concurrent' op must be terminated by 'fir.do_concurrent.loop'}}
+  fir.do_concurrent {
+    llvm.return
+  }
+  return
+}
+
+// -----
+
+func.func @dc_0d() {
+   // expected-error@+2 {{'fir.do_concurrent.loop' op needs at least one tuple element for lowerBound, upperBound and step}}
+  fir.do_concurrent {
+    fir.do_concurrent.loop () = () to () step () {
+      %tmp = fir.alloca i32
+    }
+  }
+  return
+}
+
+// -----
+
+func.func @dc_invalid_parent(%arg0: index, %arg1: index) {
+  // expected-error@+1 {{'fir.do_concurrent.loop' op expects parent op 'fir.do_concurrent'}}
+  "fir.do_concurrent.loop"(%arg0, %arg1) <{operandSegmentSizes = array<i32: 1, 1, 0, 0>}> ({
+  ^bb0(%arg2: index):
+     %tmp = "fir.alloca"() <{in_type = i32, operandSegmentSizes = array<i32: 0, 0>}> : () -> !fir.ref<i32>
+  }) : (index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @dc_invalid_control(%arg0: index, %arg1: index) {
+  // expected-error@+2 {{'fir.do_concurrent.loop' op different number of tuple elements for lowerBound, upperBound or step}}
+  fir.do_concurrent {
+    "fir.do_concurrent.loop"(%arg0, %arg1) <{operandSegmentSizes = array<i32: 1, 1, 0, 0>}> ({
+    ^bb0(%arg2: index):
+      %tmp = "fir.alloca"() <{in_type = i32, operandSegmentSizes = array<i32: 0, 0>}> : () -> !fir.ref<i32>
+    }) : (index, index) -> ()
+  }
+  return
+}
+
+// -----
+
+func.func @dc_invalid_ind_var(%arg0: index, %arg1: index) {
+  // expected-error@+2 {{'fir.do_concurrent.loop' op expects the same number of induction variables: 2 as bound and step values: 1}}
+  fir.do_concurrent {
+    "fir.do_concurrent.loop"(%arg0, %arg1, %arg0) <{operandSegmentSizes = array<i32: 1, 1, 1, 0>}> ({
+    ^bb0(%arg3: index, %arg4: index):
+      %tmp = "fir.alloca"() <{in_type = i32, operandSegmentSizes = array<i32: 0, 0>}> : () -> !fir.ref<i32>
+    }) : (index, index, index) -> ()
+  }
+  return
+}
+
+// -----
+
+func.func @dc_invalid_ind_var_type(%arg0: index, %arg1: index) {
+  // expected-error@+2 {{'fir.do_concurrent.loop' op expects arguments for the induction variable to be of index type}}
+  fir.do_concurrent {
+    "fir.do_concurrent.loop"(%arg0, %arg1, %arg0) <{operandSegmentSizes = array<i32: 1, 1, 1, 0>}> ({
+    ^bb0(%arg3: i32):
+      %tmp = "fir.alloca"() <{in_type = i32, operandSegmentSizes = array<i32: 0, 0>}> : () -> !fir.ref<i32>
+    }) : (index, index, index) -> ()
+  }
+  return
+}
+
+// -----
+
+func.func @dc_invalid_reduction(%arg0: index, %arg1: index) {
+  %sum = fir.alloca i32
+  // expected-error@+2 {{'fir.do_concurrent.loop' op mismatch in number of reduction variables and reduction attributes}}
+  fir.do_concurrent {
+    "fir.do_concurrent.loop"(%arg0, %arg1, %arg0, %sum) <{operandSegmentSizes = array<i32: 1, 1, 1, 1>}> ({
+    ^bb0(%arg3: index):
+      %tmp = "fir.alloca"() <{in_type = i32, operandSegmentSizes = array<i32: 0, 0>}> : () -> !fir.ref<i32>
+    }) : (index, index, index, !fir.ref<i32>) -> ()
+  }
+  return
+}

@@ -182,6 +182,8 @@ void Value::destroy() {
   }
 }
 
+void Value::print(llvm::raw_ostream &OS) const { OS << *this; }
+
 bool operator==(const Value &L, const Value &R) {
   if (L.kind() != R.kind())
     return false;

@@ -316,8 +316,8 @@ define amdgpu_kernel void @test_isfinite_not_pattern_1(ptr addrspace(1) nocaptur
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_o_f32_e64 s3, s2, s2
 ; GFX11-NEXT:    v_cmp_neq_f32_e64 s2, 0x7f800000, s2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s2, s3, s2
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_endpgm
@@ -368,8 +368,8 @@ define amdgpu_kernel void @test_isfinite_not_pattern_2(ptr addrspace(1) nocaptur
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_o_f32_e64 s2, s2, s2
 ; GFX11-NEXT:    v_cmp_neq_f32_e64 s3, 0x7f800000, |s3|
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s2, s2, s3
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_endpgm
@@ -423,8 +423,8 @@ define amdgpu_kernel void @test_isfinite_not_pattern_3(ptr addrspace(1) nocaptur
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_u_f32_e64 s3, s2, s2
 ; GFX11-NEXT:    v_cmp_neq_f32_e64 s2, 0x7f800000, |s2|
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s2, s3, s2
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_endpgm
@@ -578,8 +578,8 @@ define amdgpu_kernel void @test_not_isfinite_pattern_4_wrong_ord_test(ptr addrsp
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_o_f32_e64 s3, s2, s3
 ; GFX11-NEXT:    v_cmp_class_f32_e64 s2, s2, 0x1f8
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s2, s3, s2
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_endpgm

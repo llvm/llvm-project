@@ -22,7 +22,6 @@ define dso_local i32 @test() #0 personality ptr @__C_specific_handler {
 ; CHECK-NEXT:    bl      "#ext"
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:  .LBB0_1:
-; CHECK-NEXT:  $ehgcr_0_1:
 ; CHECK-NEXT:    stur    w0, [x29, #-4]
 ; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    ldp     x29, x30, [sp, #16]             // 16-byte Folded Reload
@@ -32,6 +31,7 @@ define dso_local i32 @test() #0 personality ptr @__C_specific_handler {
 ; CHECK-NEXT:    .seh_endepilogue
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_2:
+; CHECK-NEXT:  $ehgcr_0_2:
 ; CHECK-NEXT:    mov     w0, wzr
 ; CHECK-NEXT:    b       .LBB0_1
   %1 = alloca i32, align 4

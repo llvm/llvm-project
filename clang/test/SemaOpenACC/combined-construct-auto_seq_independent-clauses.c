@@ -47,7 +47,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop auto vector
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
+  // expected-error@+1{{OpenACC 'nohost' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop auto nohost
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop auto default(none)
@@ -125,7 +125,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop auto collapse(1)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
+  // expected-error@+1{{OpenACC 'bind' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop auto bind(Var)
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop auto vector_length(1)
@@ -164,7 +164,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop vector auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
+  // expected-error@+1{{OpenACC 'nohost' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop nohost auto
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop default(none) auto
@@ -242,7 +242,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop collapse(1) auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
+  // expected-error@+1{{OpenACC 'bind' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop bind(Var) auto
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop vector_length(1) auto
@@ -282,7 +282,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop independent vector
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
+  // expected-error@+1{{OpenACC 'nohost' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop independent nohost
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop independent default(none)
@@ -360,7 +360,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop independent collapse(1)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
+  // expected-error@+1{{OpenACC 'bind' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop independent bind(Var)
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop independent vector_length(1)
@@ -399,7 +399,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop vector independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
+  // expected-error@+1{{OpenACC 'nohost' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop nohost independent
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop default(none) independent
@@ -477,7 +477,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop collapse(1) independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
+  // expected-error@+1{{OpenACC 'bind' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop bind(Var) independent
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop vector_length(1) independent
@@ -525,7 +525,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'if_present' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop seq if_present
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
+  // expected-error@+1{{OpenACC 'nohost' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop seq nohost
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop seq default(none)
@@ -603,7 +603,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop seq collapse(1)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
+  // expected-error@+1{{OpenACC 'bind' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop seq bind(Var)
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop seq vector_length(1)
@@ -648,7 +648,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'if_present' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop if_present seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
+  // expected-error@+1{{OpenACC 'nohost' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop nohost seq
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop default(none) seq
@@ -726,7 +726,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop collapse(1) seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
+  // expected-error@+1{{OpenACC 'bind' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop bind(Var) seq
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop vector_length(1) seq

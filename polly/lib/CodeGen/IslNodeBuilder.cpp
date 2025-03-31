@@ -325,8 +325,7 @@ void IslNodeBuilder::getReferencesInSubtree(const isl::ast_node &For,
   SubtreeReferences References = {
       LI, SE, S, ValueMap, Values, SCEVs, getBlockGenerator(), nullptr};
 
-  for (const auto &I : IDToValue)
-    Values.insert(I.second);
+  Values.insert_range(llvm::make_second_range(IDToValue));
 
   // NOTE: this is populated in IslNodeBuilder::addParameters
   for (const auto &I : OutsideLoopIterations)
@@ -600,8 +599,7 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   // derived class determined by TargetMachine, AssumptionCache can be
   // configured using a TargetTransformInfo object also derived from
   // TargetMachine.
-  TargetLibraryInfoImpl BaselineInfoImpl(
-      Triple(SubFn->getParent()->getTargetTriple()));
+  TargetLibraryInfoImpl BaselineInfoImpl(SubFn->getParent()->getTargetTriple());
   TargetLibraryInfo CalleeTLI(BaselineInfoImpl, SubFn);
   AssumptionCache CalleeAC(*SubFn);
   std::unique_ptr<ScalarEvolution> SubSE = std::make_unique<ScalarEvolution>(
@@ -897,7 +895,7 @@ void IslNodeBuilder::createUser(__isl_take isl_ast_node *User) {
   Id = isl_ast_expr_get_id(StmtExpr);
   isl_ast_expr_free(StmtExpr);
 
-  LTS.insert(OutsideLoopIterations.begin(), OutsideLoopIterations.end());
+  LTS.insert_range(OutsideLoopIterations);
 
   Stmt = (ScopStmt *)isl_id_get_user(Id);
   auto *NewAccesses = createNewAccesses(Stmt, User);

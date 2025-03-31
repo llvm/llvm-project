@@ -470,7 +470,7 @@ private:
   void genSimpleAllocation(const Allocation &alloc,
                            const fir::MutableBoxValue &box) {
     bool isCudaSymbol = Fortran::semantics::HasCUDAAttr(alloc.getSymbol());
-    bool isCudaDeviceContext = Fortran::lower::isCudaDeviceContext(builder);
+    bool isCudaDeviceContext = cuf::isCUDADeviceContext(builder.getRegion());
     bool inlineAllocation = !box.isDerived() && !errorManager.hasStatSpec() &&
                             !alloc.type.IsPolymorphic() &&
                             !alloc.hasCoarraySpec() && !useAllocateRuntime &&
@@ -862,7 +862,7 @@ genDeallocate(fir::FirOpBuilder &builder,
               mlir::Value declaredTypeDesc = {},
               const Fortran::semantics::Symbol *symbol = nullptr) {
   bool isCudaSymbol = symbol && Fortran::semantics::HasCUDAAttr(*symbol);
-  bool isCudaDeviceContext = Fortran::lower::isCudaDeviceContext(builder);
+  bool isCudaDeviceContext = cuf::isCUDADeviceContext(builder.getRegion());
   bool inlineDeallocation =
       !box.isDerived() && !box.isPolymorphic() && !box.hasAssumedRank() &&
       !box.isUnlimitedPolymorphic() && !errorManager.hasStatSpec() &&

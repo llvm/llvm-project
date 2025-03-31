@@ -4,17 +4,17 @@
 
 declare void @llvm.memcpy.p1.p4.i32(ptr addrspace(1) nocapture, ptr addrspace(4) nocapture, i32, i1) #0
 
-@lds.i32 = unnamed_addr addrspace(3) global i32 undef, align 4
-@lds.arr = unnamed_addr addrspace(3) global [256 x i32] undef, align 4
+@lds.i32 = unnamed_addr addrspace(3) global i32 poison, align 4
+@lds.arr = unnamed_addr addrspace(3) global [256 x i32] poison, align 4
 
-@global.i32 = unnamed_addr addrspace(1) global i32 undef, align 4
-@global.arr = unnamed_addr addrspace(1) global [256 x i32] undef, align 4
+@global.i32 = unnamed_addr addrspace(1) global i32 poison, align 4
+@global.arr = unnamed_addr addrspace(1) global [256 x i32] poison, align 4
 
 ;.
-; HSA: @lds.i32 = unnamed_addr addrspace(3) global i32 undef, align 4
-; HSA: @lds.arr = unnamed_addr addrspace(3) global [256 x i32] undef, align 4
-; HSA: @global.i32 = unnamed_addr addrspace(1) global i32 undef, align 4
-; HSA: @global.arr = unnamed_addr addrspace(1) global [256 x i32] undef, align 4
+; HSA: @lds.i32 = unnamed_addr addrspace(3) global i32 poison, align 4
+; HSA: @lds.arr = unnamed_addr addrspace(3) global [256 x i32] poison, align 4
+; HSA: @global.i32 = unnamed_addr addrspace(1) global i32 poison, align 4
+; HSA: @global.arr = unnamed_addr addrspace(1) global [256 x i32] poison, align 4
 ;.
 define amdgpu_kernel void @store_cast_0_flat_to_group_addrspacecast() #1 {
 ; HSA-LABEL: define {{[^@]+}}@store_cast_0_flat_to_group_addrspacecast

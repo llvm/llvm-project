@@ -263,7 +263,8 @@ RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
   if (MayAlias(to, from)) {
     if (mustDeallocateLHS) {
       deferDeallocation = &deferredDeallocStatDesc.descriptor();
-      std::memcpy(deferDeallocation, &to, to.SizeInBytes());
+      std::memcpy(
+          reinterpret_cast<void *>(deferDeallocation), &to, to.SizeInBytes());
       to.set_base_addr(nullptr);
     } else if (!isSimpleMemmove()) {
       // Handle LHS/RHS aliasing by copying RHS into a temp, then
@@ -271,7 +272,7 @@ RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
       auto descBytes{from.SizeInBytes()};
       StaticDescriptor<maxRank, true, 16> staticDesc;
       Descriptor &newFrom{staticDesc.descriptor()};
-      std::memcpy(&newFrom, &from, descBytes);
+      std::memcpy(reinterpret_cast<void *>(&newFrom), &from, descBytes);
       // Pretend the temporary descriptor is for an ALLOCATABLE
       // entity, otherwise, the Deallocate() below will not
       // free the descriptor memory.

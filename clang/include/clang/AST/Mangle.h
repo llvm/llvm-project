@@ -140,7 +140,7 @@ public:
   virtual void mangleCXXRTTIName(QualType T, raw_ostream &,
                                  bool NormalizeIntegers = false) = 0;
   virtual void mangleStringLiteral(const StringLiteral *SL, raw_ostream &) = 0;
-  virtual void mangleMSGuidDecl(const MSGuidDecl *GD, raw_ostream &);
+  virtual void mangleMSGuidDecl(const MSGuidDecl *GD, raw_ostream &) const;
 
   void mangleGlobalBlock(const BlockDecl *BD, const NamedDecl *ID,
                          raw_ostream &Out);
@@ -153,9 +153,9 @@ public:
 
   void mangleObjCMethodName(const ObjCMethodDecl *MD, raw_ostream &OS,
                             bool includePrefixByte = true,
-                            bool includeCategoryNamespace = true);
+                            bool includeCategoryNamespace = true) const;
   void mangleObjCMethodNameAsSourceName(const ObjCMethodDecl *MD,
-                                        raw_ostream &);
+                                        raw_ostream &) const;
 
   virtual void mangleStaticGuardVariable(const VarDecl *D, raw_ostream &) = 0;
 

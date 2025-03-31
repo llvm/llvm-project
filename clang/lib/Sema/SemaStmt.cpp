@@ -413,10 +413,6 @@ void DiagnoseUnused(Sema &S, const Expr *E, std::optional<unsigned> DiagID) {
 }
 } // namespace
 
-void Sema::DiagnoseDiscardedExprMarkedNodiscard(const Expr *E) {
-  DiagnoseUnused(*this, E, std::nullopt);
-}
-
 void Sema::DiagnoseUnusedExprResult(const Stmt *S, unsigned DiagID) {
   if (const LabelStmt *Label = dyn_cast_if_present<LabelStmt>(S))
     S = Label->getSubStmt();
@@ -803,7 +799,8 @@ bool Sema::checkMustTailAttr(const Stmt *St, const Attr &MTA) {
     // Call is: obj->*method_ptr or obj.*method_ptr
     const auto *MPT =
         CalleeBinOp->getRHS()->getType()->castAs<MemberPointerType>();
-    CalleeType.This = QualType(MPT->getClass(), 0);
+    CalleeType.This =
+        Context.getTypeDeclType(MPT->getMostRecentCXXRecordDecl());
     CalleeType.Func = MPT->getPointeeType()->castAs<FunctionProtoType>();
     CalleeType.MemberType = FuncType::ft_pointer_to_member;
   } else if (isa<CXXPseudoDestructorExpr>(CalleeExpr)) {
@@ -4052,9 +4049,9 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
           Diag(ReturnLoc, D) << CurDecl << isa<CXXDestructorDecl>(CurDecl)
                              << RetValExp->getSourceRange();
         }
-        // return (some void expression); is legal in C++.
+        // return (some void expression); is legal in C++ and C2y.
         else if (D != diag::ext_return_has_void_expr ||
-                 !getLangOpts().CPlusPlus) {
+                 (!getLangOpts().CPlusPlus && !getLangOpts().C2y)) {
           NamedDecl *CurDecl = getCurFunctionOrMethodDecl();
 
           int FunctionKind = 0;

@@ -1838,7 +1838,7 @@ define <8 x i16> @PR32160(<8 x i32> %x) {
 ; SSE-LABEL: PR32160:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,4,4,4]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,2,2,2]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: PR32160:
@@ -1852,7 +1852,7 @@ define <8 x i16> @PR32160(<8 x i32> %x) {
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512F-NEXT:    vpmovdw %zmm0, %ymm0
 ; AVX512F-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[2,2,2,2,4,5,6,7]
-; AVX512F-NEXT:    vpbroadcastd %xmm0, %xmm0
+; AVX512F-NEXT:    vpbroadcastq %xmm0, %xmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;

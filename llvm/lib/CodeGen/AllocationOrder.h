@@ -81,7 +81,7 @@ public:
   /// @param VirtReg      Virtual register to allocate for.
   /// @param VRM          Virtual register map for function.
   /// @param RegClassInfo Information about reserved and allocatable registers.
-  static AllocationOrder create(unsigned VirtReg, const VirtRegMap &VRM,
+  static AllocationOrder create(Register VirtReg, const VirtRegMap &VRM,
                                 const RegisterClassInfo &RegClassInfo,
                                 const LiveRegMatrix *Matrix);
 
