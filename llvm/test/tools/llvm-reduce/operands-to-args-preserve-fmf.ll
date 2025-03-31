@@ -12,9 +12,12 @@ define float @callee(float %a) {
 ; INTERESTING: load float
 
 ; REDUCED-LABEL: define float @caller(ptr %ptr, float %val, float %callee.ret1) {
-; REDUCED: %callee.ret12 = call nnan nsz float @callee(float %val, float 0.000000e+00)
+; REDUCED: %callee.ret12 = call nnan nsz float @callee(float %val, float 0.000000e+00), !fpmath !0
 define float @caller(ptr %ptr) {
   %val = load float, ptr %ptr
-  %callee.ret = call nnan nsz float @callee(float %val)
+  %callee.ret = call nnan nsz float @callee(float %val), !fpmath !0
   ret float %callee.ret
 }
+
+; REDUCED: !0 = !{float 2.000000e+00}
+!0 = !{float 2.0}
