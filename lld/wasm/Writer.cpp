@@ -588,7 +588,7 @@ void Writer::populateTargetFeatures() {
 
   if (ctx.arg.extraFeatures.has_value()) {
     auto &extraFeatures = *ctx.arg.extraFeatures;
-    allowed.insert(extraFeatures.begin(), extraFeatures.end());
+    allowed.insert_range(extraFeatures);
   }
 
   // Only infer used features if user did not specify features
@@ -596,7 +596,7 @@ void Writer::populateTargetFeatures() {
 
   if (!inferFeatures) {
     auto &explicitFeatures = *ctx.arg.features;
-    allowed.insert(explicitFeatures.begin(), explicitFeatures.end());
+    allowed.insert_range(explicitFeatures);
     if (!ctx.arg.checkFeatures)
       goto done;
   }

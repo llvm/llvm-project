@@ -522,4 +522,81 @@ namespace MemberCalls {
   static_assert(foo()); // both-error {{not an integral constant expression}} \
                         // both-note {{in call to}}
 }
+
+namespace InactiveDestroy {
+  struct A {
+    constexpr ~A() {}
+  };
+  union U {
+    A a;
+    constexpr ~U() {
+    }
+  };
+
+  constexpr bool foo() { // both-error {{never produces a constant expression}}
+    U u;
+    u.a.~A(); // both-note 2{{destruction of member 'a' of union with no active member}}
+    return true;
+  }
+  static_assert(foo()); // both-error {{not an integral constant expression}} \
+                        // both-note {{in call to}}
+}
+
+namespace InactiveTrivialDestroy {
+  struct A {};
+  union U {
+    A a;
+  };
+
+  constexpr bool foo() { // both-error {{never produces a constant expression}}
+    U u;
+    u.a.~A(); // both-note 2{{destruction of member 'a' of union with no active member}}
+    return true;
+  }
+  static_assert(foo()); // both-error {{not an integral constant expression}} \
+                        // both-note {{in call to}}
+}
+
+namespace ActiveDestroy {
+  struct A {};
+  union U {
+    A a;
+  };
+  constexpr bool foo2() {
+    U u{};
+    u.a.~A();
+    return true;
+  }
+  static_assert(foo2());
+}
+
+namespace MoveOrAssignOp {
+  struct min_pointer {
+    int *ptr_;
+    constexpr min_pointer(int *p) : ptr_(p) {}
+    min_pointer() = default;
+  };
+
+  class F {
+    struct __long {
+      min_pointer __data_;
+    };
+    union __rep {
+      int __s;
+      __long __l;
+    } __rep_;
+
+  public:
+    constexpr F() {
+      __rep_ = __rep();
+      __rep_.__l.__data_ = nullptr;
+    }
+  };
+
+  constexpr bool foo() {
+    F f{};
+    return true;
+  }
+  static_assert(foo());
+}
 #endif

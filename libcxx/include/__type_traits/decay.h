@@ -55,7 +55,7 @@ private:
   using _Up _LIBCPP_NODEBUG = __libcpp_remove_reference_t<_Tp>;
 
 public:
-  using type _LIBCPP_NODEBUG = typename __decay<_Up, __libcpp_is_referenceable<_Up>::value>::type;
+  using type _LIBCPP_NODEBUG = typename __decay<_Up, __is_referenceable_v<_Up> >::type;
 };
 
 template <class _Tp>

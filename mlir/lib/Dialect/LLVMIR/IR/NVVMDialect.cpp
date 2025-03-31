@@ -160,6 +160,12 @@ LogicalResult CvtFloatToTF32Op::verify() {
   return success();
 }
 
+LogicalResult BulkStoreOp::verify() {
+  if (getInitVal() != 0)
+    return emitOpError("only 0 is supported for initVal, got ") << getInitVal();
+  return success();
+}
+
 // Given the element type of an operand and whether or not it is an accumulator,
 // this function returns the PTX type (`NVVM::MMATypes`) that corresponds to the
 // operand's element type.
@@ -1134,6 +1140,22 @@ LogicalResult NVVM::Tcgen05CpOp::verify() {
       return emitError(
           "Shape 32x128b requires multicast warpx4 for tcgen05.cp Op");
     break;
+  }
+  return success();
+}
+
+LogicalResult NVVM::MatchSyncOp::verify() {
+  if (getKind() == NVVM::MatchSyncKind::all) {
+    auto Type = llvm::dyn_cast<LLVM::LLVMStructType>(getType());
+    if (!Type || Type.getBody().size() != 2 ||
+        !Type.getBody()[0].isInteger(32) || !Type.getBody()[1].isInteger(1)) {
+      return emitOpError("match.sync 'all' returns a two element struct with "
+                         "first element as i32 and second element as i1");
+    }
+  } else {
+    if (!getType().isInteger(32)) {
+      return emitOpError("match.sync 'any' returns an i32");
+    }
   }
   return success();
 }

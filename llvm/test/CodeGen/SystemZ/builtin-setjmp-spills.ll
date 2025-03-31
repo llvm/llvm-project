@@ -49,14 +49,14 @@ define signext i32 @func() {
 ; CHECK-NEXT:    .cfi_offset %r15, -40
 ; CHECK-NEXT:    aghi %r15, -384
 ; CHECK-NEXT:    .cfi_def_cfa_offset 544
-; CHECK-NEXT:    std %f8, 376(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f9, 368(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f10, 360(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f11, 352(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f12, 344(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f13, 336(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f14, 328(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f15, 320(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    std %f8, 376(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f9, 368(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f10, 360(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f11, 352(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f12, 344(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f13, 336(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f14, 328(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f15, 320(%r15) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset %f8, -168
 ; CHECK-NEXT:    .cfi_offset %f9, -176
 ; CHECK-NEXT:    .cfi_offset %f10, -184
@@ -67,64 +67,64 @@ define signext i32 @func() {
 ; CHECK-NEXT:    .cfi_offset %f15, -224
 ; CHECK-NEXT:    lgrl %r1, t@GOT
 ; CHECK-NEXT:    lgrl %r2, s@GOT
-; CHECK-NEXT:    stg %r1, 312(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    stg %r1, 312(%r15) # 8-byte Spill
 ; CHECK-NEXT:    mvhi 0(%r1), 1
 ; CHECK-NEXT:    lgrl %r1, r@GOT
 ; CHECK-NEXT:    lgrl %r3, q@GOT
-; CHECK-NEXT:    stg %r2, 304(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    stg %r2, 304(%r15) # 8-byte Spill
 ; CHECK-NEXT:    mvhi 0(%r2), 1
 ; CHECK-NEXT:    lgrl %r2, p@GOT
-; CHECK-NEXT:    stg %r1, 296(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    stg %r1, 296(%r15) # 8-byte Spill
 ; CHECK-NEXT:    mvhi 0(%r1), 1
-; CHECK-NEXT:    stg %r3, 288(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    stg %r3, 288(%r15) # 8-byte Spill
 ; CHECK-NEXT:    mvhi 0(%r3), 1
 ; CHECK-NEXT:    lgrl %r1, o@GOT
-; CHECK-NEXT:    stg %r2, 280(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    stg %r2, 280(%r15) # 8-byte Spill
 ; CHECK-NEXT:    mvhi 0(%r2), 1
 ; CHECK-NEXT:    lgrl %r2, n@GOT
 ; CHECK-NEXT:    lgrl %r3, m@GOT
-; CHECK-NEXT:    stg %r1, 272(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    stg %r1, 272(%r15) # 8-byte Spill
 ; CHECK-NEXT:    mvhi 0(%r1), 1
 ; CHECK-NEXT:    lgrl %r1, l@GOT
-; CHECK-NEXT:    stg %r2, 264(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    stg %r2, 264(%r15) # 8-byte Spill
 ; CHECK-NEXT:    mvhi 0(%r2), 1
-; CHECK-NEXT:    stg %r3, 256(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    stg %r3, 256(%r15) # 8-byte Spill
 ; CHECK-NEXT:    mvhi 0(%r3), 1
 ; CHECK-NEXT:    lgrl %r2, k@GOT
-; CHECK-NEXT:    stg %r1, 248(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    stg %r1, 248(%r15) # 8-byte Spill
 ; CHECK-NEXT:    mvhi 0(%r1), 1
 ; CHECK-NEXT:    lgrl %r1, j@GOT
 ; CHECK-NEXT:    lgrl %r3, i@GOT
-; CHECK-NEXT:    stg %r2, 240(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    stg %r2, 240(%r15) # 8-byte Spill
 ; CHECK-NEXT:    mvhi 0(%r2), 1
 ; CHECK-NEXT:    lgrl %r2, h@GOT
-; CHECK-NEXT:    stg %r1, 232(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    stg %r1, 232(%r15) # 8-byte Spill
 ; CHECK-NEXT:    mvhi 0(%r1), 1
-; CHECK-NEXT:    stg %r3, 224(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    stg %r3, 224(%r15) # 8-byte Spill
 ; CHECK-NEXT:    mvhi 0(%r3), 1
 ; CHECK-NEXT:    lgrl %r1, g@GOT
-; CHECK-NEXT:    stg %r2, 216(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    stg %r2, 216(%r15) # 8-byte Spill
 ; CHECK-NEXT:    mvhi 0(%r2), 1
 ; CHECK-NEXT:    lgrl %r2, f@GOT
 ; CHECK-NEXT:    lgrl %r3, e@GOT
-; CHECK-NEXT:    stg %r1, 208(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    stg %r1, 208(%r15) # 8-byte Spill
 ; CHECK-NEXT:    mvhi 0(%r1), 1
 ; CHECK-NEXT:    lgrl %r1, d@GOT
-; CHECK-NEXT:    stg %r2, 200(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    stg %r2, 200(%r15) # 8-byte Spill
 ; CHECK-NEXT:    mvhi 0(%r2), 1
-; CHECK-NEXT:    stg %r3, 192(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    stg %r3, 192(%r15) # 8-byte Spill
 ; CHECK-NEXT:    mvhi 0(%r3), 1
 ; CHECK-NEXT:    lgrl %r2, c@GOT
-; CHECK-NEXT:    stg %r1, 184(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    stg %r1, 184(%r15) # 8-byte Spill
 ; CHECK-NEXT:    mvhi 0(%r1), 1
 ; CHECK-NEXT:    lgrl %r3, b@GOT
 ; CHECK-NEXT:    lgrl %r4, a@GOT
-; CHECK-NEXT:    stg %r2, 176(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    stg %r2, 176(%r15) # 8-byte Spill
 ; CHECK-NEXT:    mvhi 0(%r2), 1
 ; CHECK-NEXT:    lgrl %r1, buf@GOT
-; CHECK-NEXT:    stg %r3, 168(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    stg %r3, 168(%r15) # 8-byte Spill
 ; CHECK-NEXT:    mvhi 0(%r3), 1
-; CHECK-NEXT:    stg %r4, 160(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    stg %r4, 160(%r15) # 8-byte Spill
 ; CHECK-NEXT:    mvhi 0(%r4), 1
 ; CHECK-NEXT:    larl %r0, .LBB0_2
 ; CHECK-NEXT:    stg %r0, 8(%r1)
@@ -136,55 +136,55 @@ define signext i32 @func() {
 ; CHECK-NEXT:    # %entry
 ; CHECK-NEXT:    lhi %r0, 1
 ; CHECK-NEXT:  .LBB0_3: # %entry
-; CHECK-NEXT:    lg %r1, 160(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    lg %r1, 160(%r15) # 8-byte Reload
 ; CHECK-NEXT:    a %r0, 0(%r1)
-; CHECK-NEXT:    lg %r1, 168(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    lg %r1, 168(%r15) # 8-byte Reload
 ; CHECK-NEXT:    a %r0, 0(%r1)
-; CHECK-NEXT:    lg %r1, 176(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    lg %r1, 176(%r15) # 8-byte Reload
 ; CHECK-NEXT:    a %r0, 0(%r1)
-; CHECK-NEXT:    lg %r1, 184(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    lg %r1, 184(%r15) # 8-byte Reload
 ; CHECK-NEXT:    a %r0, 0(%r1)
-; CHECK-NEXT:    lg %r1, 192(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    lg %r1, 192(%r15) # 8-byte Reload
 ; CHECK-NEXT:    a %r0, 0(%r1)
-; CHECK-NEXT:    lg %r1, 200(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    lg %r1, 200(%r15) # 8-byte Reload
 ; CHECK-NEXT:    a %r0, 0(%r1)
-; CHECK-NEXT:    lg %r1, 208(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    lg %r1, 208(%r15) # 8-byte Reload
 ; CHECK-NEXT:    a %r0, 0(%r1)
-; CHECK-NEXT:    lg %r1, 216(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    lg %r1, 216(%r15) # 8-byte Reload
 ; CHECK-NEXT:    a %r0, 0(%r1)
-; CHECK-NEXT:    lg %r1, 224(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    lg %r1, 224(%r15) # 8-byte Reload
 ; CHECK-NEXT:    a %r0, 0(%r1)
-; CHECK-NEXT:    lg %r1, 232(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    lg %r1, 232(%r15) # 8-byte Reload
 ; CHECK-NEXT:    a %r0, 0(%r1)
-; CHECK-NEXT:    lg %r1, 240(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    lg %r1, 240(%r15) # 8-byte Reload
 ; CHECK-NEXT:    a %r0, 0(%r1)
-; CHECK-NEXT:    lg %r1, 248(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    lg %r1, 248(%r15) # 8-byte Reload
 ; CHECK-NEXT:    a %r0, 0(%r1)
-; CHECK-NEXT:    lg %r1, 256(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    lg %r1, 256(%r15) # 8-byte Reload
 ; CHECK-NEXT:    a %r0, 0(%r1)
-; CHECK-NEXT:    lg %r1, 264(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    lg %r1, 264(%r15) # 8-byte Reload
 ; CHECK-NEXT:    a %r0, 0(%r1)
-; CHECK-NEXT:    lg %r1, 272(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    lg %r1, 272(%r15) # 8-byte Reload
 ; CHECK-NEXT:    a %r0, 0(%r1)
-; CHECK-NEXT:    lg %r1, 280(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    lg %r1, 280(%r15) # 8-byte Reload
 ; CHECK-NEXT:    a %r0, 0(%r1)
-; CHECK-NEXT:    lg %r1, 288(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    lg %r1, 288(%r15) # 8-byte Reload
 ; CHECK-NEXT:    a %r0, 0(%r1)
-; CHECK-NEXT:    lg %r1, 296(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    lg %r1, 296(%r15) # 8-byte Reload
 ; CHECK-NEXT:    a %r0, 0(%r1)
-; CHECK-NEXT:    lg %r1, 304(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    lg %r1, 304(%r15) # 8-byte Reload
 ; CHECK-NEXT:    a %r0, 0(%r1)
-; CHECK-NEXT:    lg %r1, 312(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    lg %r1, 312(%r15) # 8-byte Reload
 ; CHECK-NEXT:    a %r0, 0(%r1)
 ; CHECK-NEXT:    lgfr %r2, %r0
-; CHECK-NEXT:    ld %f8, 376(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f9, 368(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f10, 360(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f11, 352(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f12, 344(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f13, 336(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f14, 328(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f15, 320(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    ld %f8, 376(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f9, 368(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f10, 360(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f11, 352(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f12, 344(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f13, 336(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f14, 328(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f15, 320(%r15) # 8-byte Reload
 ; CHECK-NEXT:    lmg %r6, %r15, 432(%r15)
 ; CHECK-NEXT:    br %r14
 entry:

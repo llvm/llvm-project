@@ -627,10 +627,8 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
       return DiagnosticsEngine::Ignored;
     switch (Info.getID()) {
     case diag::warn_no_newline_eof:
-    case diag::warn_cxx98_compat_no_newline_eof:
-    case diag::ext_no_newline_eof:
       // If the preamble doesn't span the whole file, drop the no newline at
-      // eof warnings.
+      // eof warning.
       return Bounds.Size != ContentsBuffer->getBufferSize()
                  ? DiagnosticsEngine::Level::Ignored
                  : DiagLevel;

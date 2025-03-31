@@ -611,7 +611,10 @@ class SPIRVStructurizer : public FunctionPass {
       auto MergeAddress = BlockAddress::get(Merge->getParent(), Merge);
       auto ContinueAddress = BlockAddress::get(Continue->getParent(), Continue);
       SmallVector<Value *, 2> Args = {MergeAddress, ContinueAddress};
-
+      SmallVector<unsigned, 1> LoopControlImms =
+          getSpirvLoopControlOperandsFromLoopMetadata(L);
+      for (unsigned Imm : LoopControlImms)
+        Args.emplace_back(llvm::ConstantInt::get(Builder.getInt32Ty(), Imm));
       Builder.CreateIntrinsic(Intrinsic::spv_loop_merge, {}, {Args});
       Modified = true;
     }

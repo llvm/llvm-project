@@ -101,6 +101,7 @@ end program
 
 ! ALL-NEXT: PolymorphicOpConversion
 ! ALL-NEXT: AssumedRankOpConversion
+! ALL-NEXT: SimplifyFIROperations
 ! O2-NEXT:  AddAliasTags
 
 ! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']

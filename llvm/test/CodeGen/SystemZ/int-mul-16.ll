@@ -37,22 +37,123 @@ define i128 @f2(i128 %a, i128 %b) {
   ret i128 %res
 }
 
-;; ; Multiply-and-add high signed.
-;; define i128 @f3(i128 %a, i128 %b, i128 %add) {
-;; ; CHECX-LABEL: f3:
-;; ; CHECX:       # %bb.0:
-;; ; CHECX-NEXT:    vl %v0, 0(%r3), 3
-;; ; CHECX-NEXT:    vl %v1, 0(%r4), 3
-;; ; CHECX-NEXT:    vl %v2, 0(%r5), 3
-;; ; CHECX-NEXT:    vmhq %v0, %v0, %v1, %v2
-;; ; CHECX-NEXT:    vst %v0, 0(%r2), 3
-;; ; CHECX-NEXT:    br %r14
-;;   %exta = sext i128 %a to i256
-;;   %extb = sext i128 %b to i256
-;;   %extadd = sext i128 %add to i256
-;;   %extmul = mul i256 %exta, %extb
-;;   %extres = add i256 %extmul, %extadd
-;;   %shiftres = lshr i256 %extres, 128
-;;   %res = trunc i256 %shiftres to i128
-;;   ret i128 %res
-;; }
+; Multiply-and-add high signed.
+define i128 @f3(i128 %a, i128 %b, i128 %add) {
+; CHECK-LABEL: f3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vl %v0, 0(%r5), 3
+; CHECK-NEXT:    vl %v1, 0(%r4), 3
+; CHECK-NEXT:    vl %v2, 0(%r3), 3
+; CHECK-NEXT:    vmahq %v0, %v2, %v1, %v0
+; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    br %r14
+  %exta = sext i128 %a to i256
+  %extb = sext i128 %b to i256
+  %extadd = sext i128 %add to i256
+  %extmul = mul i256 %exta, %extb
+  %extres = add i256 %extmul, %extadd
+  %shiftres = lshr i256 %extres, 128
+  %res = trunc i256 %shiftres to i128
+  ret i128 %res
+}
+
+; Multiply-and-add high unsigned.
+define i128 @f4(i128 %a, i128 %b, i128 %add) {
+; CHECK-LABEL: f4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vl %v0, 0(%r5), 3
+; CHECK-NEXT:    vl %v1, 0(%r4), 3
+; CHECK-NEXT:    vl %v2, 0(%r3), 3
+; CHECK-NEXT:    vmalhq %v0, %v2, %v1, %v0
+; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    br %r14
+  %exta = zext i128 %a to i256
+  %extb = zext i128 %b to i256
+  %extadd = zext i128 %add to i256
+  %extmul = mul i256 %exta, %extb
+  %extres = add i256 %extmul, %extadd
+  %shiftres = lshr i256 %extres, 128
+  %res = trunc i256 %shiftres to i128
+  ret i128 %res
+}
+
+; Multiply-and-add high signed with immediate operand to multiply.
+define i128 @f5(i128 %a, i128 %add) {
+; CHECK-LABEL: f5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    larl %r1, .LCPI4_0
+; CHECK-NEXT:    vl %v0, 0(%r4), 3
+; CHECK-NEXT:    vl %v1, 0(%r3), 3
+; CHECK-NEXT:    vl %v2, 0(%r1), 3
+; CHECK-NEXT:    vmahq %v0, %v1, %v2, %v0
+; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    br %r14
+  %exta = sext i128 %a to i256
+  %extadd = sext i128 %add to i256
+  %extmul = mul i256 %exta, 12345
+  %extres = add i256 %extmul, %extadd
+  %shiftres = lshr i256 %extres, 128
+  %res = trunc i256 %shiftres to i128
+  ret i128 %res
+}
+
+; Multiply-and-add high unsigned with immediate operand to multiply.
+define i128 @f6(i128 %a, i128 %add) {
+; CHECK-LABEL: f6:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    larl %r1, .LCPI5_0
+; CHECK-NEXT:    vl %v0, 0(%r4), 3
+; CHECK-NEXT:    vl %v1, 0(%r3), 3
+; CHECK-NEXT:    vl %v2, 0(%r1), 3
+; CHECK-NEXT:    vmalhq %v0, %v1, %v2, %v0
+; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    br %r14
+  %exta = zext i128 %a to i256
+  %extadd = zext i128 %add to i256
+  %extmul = mul i256 %exta, 12345
+  %extres = add i256 %extmul, %extadd
+  %shiftres = lshr i256 %extres, 128
+  %res = trunc i256 %shiftres to i128
+  ret i128 %res
+}
+
+; Multiply-and-add high signed with immediate operand to addition.
+define i128 @f7(i128 %a, i128 %b) {
+; CHECK-LABEL: f7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    larl %r1, .LCPI6_0
+; CHECK-NEXT:    vl %v0, 0(%r4), 3
+; CHECK-NEXT:    vl %v1, 0(%r3), 3
+; CHECK-NEXT:    vl %v2, 0(%r1), 3
+; CHECK-NEXT:    vmahq %v0, %v1, %v0, %v2
+; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    br %r14
+  %exta = sext i128 %a to i256
+  %extb = sext i128 %b to i256
+  %extmul = mul i256 %exta, %extb
+  %extres = add i256 %extmul, 12345
+  %shiftres = lshr i256 %extres, 128
+  %res = trunc i256 %shiftres to i128
+  ret i128 %res
+}
+
+; Multiply-and-add high unsigned with immediate operand to addition.
+define i128 @f8(i128 %a, i128 %b) {
+; CHECK-LABEL: f8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    larl %r1, .LCPI7_0
+; CHECK-NEXT:    vl %v0, 0(%r4), 3
+; CHECK-NEXT:    vl %v1, 0(%r3), 3
+; CHECK-NEXT:    vl %v2, 0(%r1), 3
+; CHECK-NEXT:    vmalhq %v0, %v1, %v0, %v2
+; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    br %r14
+  %exta = zext i128 %a to i256
+  %extb = zext i128 %b to i256
+  %extmul = mul i256 %exta, %extb
+  %extres = add i256 %extmul, 12345
+  %shiftres = lshr i256 %extres, 128
+  %res = trunc i256 %shiftres to i128
+  ret i128 %res
+}
+

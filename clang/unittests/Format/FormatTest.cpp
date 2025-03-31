@@ -10443,27 +10443,17 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
                "void\n"
                "A::operator->() {}\n"
                "void\n"
-               "A::operator void *() {}\n"
+               "A::operator&() {}\n"
                "void\n"
-               "A::operator void &() {}\n"
-               "void\n"
-               "A::operator void &&() {}\n"
-               "void\n"
-               "A::operator char *() {}\n"
+               "A::operator&&() {}\n"
                "void\n"
                "A::operator[]() {}\n"
                "void\n"
                "A::operator!() {}\n"
                "void\n"
-               "A::operator**() {}\n"
-               "void\n"
                "A::operator<Foo> *() {}\n"
                "void\n"
-               "A::operator<Foo> **() {}\n"
-               "void\n"
-               "A::operator<Foo> &() {}\n"
-               "void\n"
-               "A::operator void **() {}",
+               "A::operator<Foo> &() {}\n",
                Style);
   verifyFormat("constexpr auto\n"
                "operator()() const -> reference {}\n"
@@ -10486,7 +10476,7 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
                "constexpr auto\n"
                "operator void &() const -> reference {}\n"
                "constexpr auto\n"
-               "operator void &&() const -> reference {}\n"
+               "operator&&() const -> reference {}\n"
                "constexpr auto\n"
                "operator char *() const -> reference {}\n"
                "constexpr auto\n"
@@ -12650,6 +12640,12 @@ TEST_F(FormatTest, UnderstandsAttributes) {
                AfterType);
 
   FormatStyle CustomAttrs = getLLVMStyle();
+  CustomAttrs.AttributeMacros.push_back("my_attr_name");
+  verifyFormat("void MyGoodOldFunction(\n"
+               "    void *const long_enough = nullptr,\n"
+               "    void *my_attr_name even_longeeeeeeeeeeeeeeeeer = nullptr);",
+               CustomAttrs);
+
   CustomAttrs.AttributeMacros.push_back("__unused");
   CustomAttrs.AttributeMacros.push_back("__attr1");
   CustomAttrs.AttributeMacros.push_back("__attr2");
@@ -27906,6 +27902,38 @@ TEST_F(FormatTest, RemoveSemicolon) {
   verifyFormat("STRUCT(T, B) { int i; };", Style);
 }
 
+TEST_F(FormatTest, EnumTrailingComma) {
+  constexpr StringRef Code("enum : int { /**/ };\n"
+                           "enum {\n"
+                           "  a,\n"
+                           "  b,\n"
+                           "  c, //\n"
+                           "};\n"
+                           "enum Color { red, green, blue /**/ };");
+  verifyFormat(Code);
+
+  auto Style = getLLVMStyle();
+  Style.EnumTrailingComma = FormatStyle::ETC_Insert;
+  verifyFormat("enum : int { /**/ };\n"
+               "enum {\n"
+               "  a,\n"
+               "  b,\n"
+               "  c, //\n"
+               "};\n"
+               "enum Color { red, green, blue, /**/ };",
+               Code, Style);
+
+  Style.EnumTrailingComma = FormatStyle::ETC_Remove;
+  verifyFormat("enum : int { /**/ };\n"
+               "enum {\n"
+               "  a,\n"
+               "  b,\n"
+               "  c //\n"
+               "};\n"
+               "enum Color { red, green, blue /**/ };",
+               Code, Style);
+}
+
 TEST_F(FormatTest, BreakAfterAttributes) {
   constexpr StringRef Code("[[maybe_unused]] const int i;\n"
                            "[[foo([[]])]] [[maybe_unused]]\n"
@@ -28031,6 +28059,16 @@ TEST_F(FormatTest, BreakAfterAttributes) {
                "while (d > 0)\n"
                "  --d;",
                CtrlStmtCode, Style);
+
+  verifyFormat("[[nodiscard]]\n"
+               "operator bool();\n"
+               "[[nodiscard]]\n"
+               "operator bool() {\n"
+               "  return true;\n"
+               "}",
+               "[[nodiscard]] operator bool();\n"
+               "[[nodiscard]] operator bool() { return true; }",
+               Style);
 
   constexpr StringRef CtorDtorCode("struct Foo {\n"
                                    "  [[deprecated]] Foo();\n"

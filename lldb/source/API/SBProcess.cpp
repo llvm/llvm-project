@@ -583,6 +583,18 @@ SBError SBProcess::Continue() {
   return sb_error;
 }
 
+SBError SBProcess::ContinueInDirection(RunDirection direction) {
+  if (ProcessSP process_sp = GetSP()) {
+    if (direction == RunDirection::eRunReverse &&
+        !process_sp->SupportsReverseDirection())
+      return Status::FromErrorStringWithFormatv(
+          "error: {0} does not support reverse execution of processes",
+          GetPluginName());
+    process_sp->SetBaseDirection(direction);
+  }
+  return Continue();
+}
+
 SBError SBProcess::Destroy() {
   LLDB_INSTRUMENT_VA(this);
 

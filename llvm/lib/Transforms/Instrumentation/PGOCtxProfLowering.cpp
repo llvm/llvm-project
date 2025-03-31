@@ -18,6 +18,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/ProfileData/CtxInstrContextNode.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/CommandLine.h"
 #include <utility>
@@ -53,10 +54,9 @@ class CtxInstrumentationLowerer final {
   Module &M;
   ModuleAnalysisManager &MAM;
   Type *ContextNodeTy = nullptr;
-  Type *ContextRootTy = nullptr;
   Type *FunctionDataTy = nullptr;
 
-  DenseMap<const Function *, Constant *> ContextRootMap;
+  DenseSet<const Function *> ContextRootSet;
   Function *StartCtx = nullptr;
   Function *GetCtx = nullptr;
   Function *ReleaseCtx = nullptr;
@@ -114,20 +114,16 @@ CtxInstrumentationLowerer::CtxInstrumentationLowerer(Module &M,
   auto *I32Ty = Type::getInt32Ty(M.getContext());
   auto *I64Ty = Type::getInt64Ty(M.getContext());
 
-  // The ContextRoot type
-  ContextRootTy =
-      StructType::get(M.getContext(), {
-                                          PointerTy,          /*FirstNode*/
-                                          PointerTy,          /*FirstMemBlock*/
-                                          PointerTy,          /*CurrentMem*/
-                                          SanitizerMutexType, /*Taken*/
-                                      });
-  FunctionDataTy =
-      StructType::get(M.getContext(), {
-                                          PointerTy,          /*Next*/
-                                          PointerTy,          /*FlatCtx*/
-                                          SanitizerMutexType, /*Mutex*/
-                                      });
+#define _PTRDECL(_, __) PointerTy,
+#define _VOLATILE_PTRDECL(_, __) PointerTy,
+#define _MUTEXDECL(_) SanitizerMutexType,
+
+  FunctionDataTy = StructType::get(
+      M.getContext(),
+      {CTXPROF_FUNCTION_DATA(_PTRDECL, _VOLATILE_PTRDECL, _MUTEXDECL)});
+#undef _PTRDECL
+#undef _VOLATILE_PTRDECL
+#undef _MUTEXDECL
 
   // The Context header.
   ContextNodeTy = StructType::get(M.getContext(), {
@@ -143,10 +139,7 @@ CtxInstrumentationLowerer::CtxInstrumentationLowerer(Module &M,
     if (const auto *F = M.getFunction(Fname)) {
       if (F->isDeclaration())
         continue;
-      auto *G = M.getOrInsertGlobal(Fname + "_ctx_root", ContextRootTy);
-      cast<GlobalVariable>(G)->setInitializer(
-          Constant::getNullValue(ContextRootTy));
-      ContextRootMap.insert(std::make_pair(F, G));
+      ContextRootSet.insert(F);
       for (const auto &BB : *F)
         for (const auto &I : BB)
           if (const auto *CB = dyn_cast<CallBase>(&I))
@@ -164,7 +157,7 @@ CtxInstrumentationLowerer::CtxInstrumentationLowerer(Module &M,
       M.getOrInsertFunction(
            CompilerRtAPINames::StartCtx,
            FunctionType::get(PointerTy,
-                             {PointerTy, /*ContextRoot*/
+                             {PointerTy, /*FunctionData*/
                               I64Ty, /*Guid*/ I32Ty,
                               /*NumCounters*/ I32Ty /*NumCallsites*/},
                              false))
@@ -183,7 +176,7 @@ CtxInstrumentationLowerer::CtxInstrumentationLowerer(Module &M,
       M.getOrInsertFunction(CompilerRtAPINames::ReleaseCtx,
                             FunctionType::get(Type::getVoidTy(M.getContext()),
                                               {
-                                                  PointerTy, /*ContextRoot*/
+                                                  PointerTy, /*FunctionData*/
                                               },
                                               false))
           .getCallee());
@@ -223,7 +216,7 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
   Value *RealContext = nullptr;
 
   StructType *ThisContextType = nullptr;
-  Value *TheRootContext = nullptr;
+  Value *TheRootFuctionData = nullptr;
   Value *ExpectedCalleeTLSAddr = nullptr;
   Value *CallsiteInfoTLSAddr = nullptr;
 
@@ -245,23 +238,23 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
            ArrayType::get(Builder.getPtrTy(), NumCallsites)});
       // Figure out which way we obtain the context object for this function -
       // if it's an entrypoint, then we call StartCtx, otherwise GetCtx. In the
-      // former case, we also set TheRootContext since we need to release it
+      // former case, we also set TheRootFuctionData since we need to release it
       // at the end (plus it can be used to know if we have an entrypoint or a
       // regular function)
-      auto Iter = ContextRootMap.find(&F);
-      if (Iter != ContextRootMap.end()) {
-        TheRootContext = Iter->second;
+      // Don't set a name, they end up taking a lot of space and we don't need
+      // them.
+      auto *FData = new GlobalVariable(M, FunctionDataTy, false,
+                                       GlobalVariable::InternalLinkage,
+                                       Constant::getNullValue(FunctionDataTy));
+
+      if (ContextRootSet.contains(&F)) {
         Context = Builder.CreateCall(
-            StartCtx, {TheRootContext, Guid, Builder.getInt32(NumCounters),
+            StartCtx, {FData, Guid, Builder.getInt32(NumCounters),
                        Builder.getInt32(NumCallsites)});
+        TheRootFuctionData = FData;
         ORE.emit(
             [&] { return OptimizationRemark(DEBUG_TYPE, "Entrypoint", &F); });
       } else {
-        // Make up a compact name, these names end up taking up a lot of space
-        // in the binary.
-        auto *FData = new GlobalVariable(
-            M, FunctionDataTy, false, GlobalVariable::InternalLinkage,
-            Constant::getNullValue(FunctionDataTy));
         Context = Builder.CreateCall(GetCtx, {FData, &F, Guid,
                                               Builder.getInt32(NumCounters),
                                               Builder.getInt32(NumCallsites)});
@@ -346,10 +339,10 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
           break;
         }
         I.eraseFromParent();
-      } else if (TheRootContext && isa<ReturnInst>(I)) {
+      } else if (TheRootFuctionData && isa<ReturnInst>(I)) {
         // Remember to release the context if we are an entrypoint.
         IRBuilder<> Builder(&I);
-        Builder.CreateCall(ReleaseCtx, {TheRootContext});
+        Builder.CreateCall(ReleaseCtx, {TheRootFuctionData});
         ContextWasReleased = true;
       }
     }
@@ -358,7 +351,7 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
   // to disallow this, (so this then stays as an error), another is to detect
   // that and then do a wrapper or disallow the tail call. This only affects
   // instrumentation, when we want to detect the call graph.
-  if (TheRootContext && !ContextWasReleased)
+  if (TheRootFuctionData && !ContextWasReleased)
     F.getContext().emitError(
         "[ctx_prof] An entrypoint was instrumented but it has no `ret` "
         "instructions above which to release the context: " +

@@ -99,6 +99,7 @@ func.func @_QQmain() {
 
 // PASSES-NEXT: PolymorphicOpConversion
 // PASSES-NEXT: AssumedRankOpConversion
+// PASSES-NEXT: SimplifyFIROperations
 // PASSES-NEXT: AddAliasTags
 
 // PASSES-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']

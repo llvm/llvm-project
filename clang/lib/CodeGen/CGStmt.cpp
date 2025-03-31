@@ -2276,6 +2276,19 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
   // failure.
   llvm::BasicBlock *DefaultBlock = createBasicBlock("sw.default");
   SwitchInsn = Builder.CreateSwitch(CondV, DefaultBlock);
+  if (HLSLControlFlowAttr != HLSLControlFlowHintAttr::SpellingNotCalculated) {
+    llvm::MDBuilder MDHelper(CGM.getLLVMContext());
+    llvm::ConstantInt *BranchHintConstant =
+        HLSLControlFlowAttr ==
+                HLSLControlFlowHintAttr::Spelling::Microsoft_branch
+            ? llvm::ConstantInt::get(CGM.Int32Ty, 1)
+            : llvm::ConstantInt::get(CGM.Int32Ty, 2);
+    llvm::Metadata *Vals[] = {MDHelper.createString("hlsl.controlflow.hint"),
+                              MDHelper.createConstant(BranchHintConstant)};
+    SwitchInsn->setMetadata("hlsl.controlflow.hint",
+                            llvm::MDNode::get(CGM.getLLVMContext(), Vals));
+  }
+
   if (PGO.haveRegionCounts()) {
     // Walk the SwitchCase list to find how many there are.
     uint64_t DefaultCount = 0;
@@ -2586,11 +2599,14 @@ static void UpdateAsmCallInst(llvm::CallBase &Result, bool HasSideEffect,
 
   // Slap the source location of the inline asm into a !srcloc metadata on the
   // call.
-  if (const auto *gccAsmStmt = dyn_cast<GCCAsmStmt>(&S))
-    Result.setMetadata("srcloc",
-                       getAsmSrcLocInfo(gccAsmStmt->getAsmString(), CGF));
-  else {
-    // At least put the line number on MS inline asm blobs.
+  const StringLiteral *SL;
+  if (const auto *gccAsmStmt = dyn_cast<GCCAsmStmt>(&S);
+      gccAsmStmt &&
+      (SL = dyn_cast<StringLiteral>(gccAsmStmt->getAsmStringExpr()))) {
+    Result.setMetadata("srcloc", getAsmSrcLocInfo(SL, CGF));
+  } else {
+    // At least put the line number on MS inline asm blobs and GCC asm constexpr
+    // strings.
     llvm::Constant *Loc =
         llvm::ConstantInt::get(CGF.Int64Ty, S.getAsmLoc().getRawEncoding());
     Result.setMetadata("srcloc",
@@ -2705,9 +2721,9 @@ static void EmitHipStdParUnsupportedAsm(CodeGenFunction *CGF,
                                         const AsmStmt &S) {
   constexpr auto Name = "__ASM__hipstdpar_unsupported";
 
-  StringRef Asm;
+  std::string Asm;
   if (auto GCCAsm = dyn_cast<GCCAsmStmt>(&S))
-    Asm = GCCAsm->getAsmString()->getString();
+    Asm = GCCAsm->getAsmString();
 
   auto &Ctx = CGF->CGM.getLLVMContext();
 
@@ -3050,7 +3066,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
 
   // Clobbers
   for (unsigned i = 0, e = S.getNumClobbers(); i != e; i++) {
-    StringRef Clobber = S.getClobber(i);
+    std::string Clobber = S.getClobber(i);
 
     if (Clobber == "memory")
       ReadOnly = ReadNone = false;
@@ -3071,7 +3087,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
         if (Constraints.find("=&A") != std::string::npos)
           continue;
         std::string::size_type position1 =
-            Constraints.find("={" + Clobber.str() + "}");
+            Constraints.find("={" + Clobber + "}");
         if (position1 != std::string::npos) {
           Constraints.insert(position1 + 1, "&");
           continue;

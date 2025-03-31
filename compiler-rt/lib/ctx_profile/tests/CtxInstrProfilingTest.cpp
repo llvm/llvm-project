@@ -5,11 +5,11 @@
 using namespace __ctx_profile;
 
 class ContextTest : public ::testing::Test {
-  void SetUp() override { memset(&Root, 0, sizeof(ContextRoot)); }
+  void SetUp() override { Root.getOrAllocateContextRoot(); }
   void TearDown() override { __llvm_ctx_profile_free(); }
 
 public:
-  ContextRoot Root;
+  FunctionData Root;
 };
 
 TEST(ArenaTest, ZeroInit) {
@@ -43,19 +43,20 @@ TEST_F(ContextTest, Basic) {
   __llvm_ctx_profile_start_collection();
   auto *Ctx = __llvm_ctx_profile_start_context(&Root, 1, 10, 4);
   ASSERT_NE(Ctx, nullptr);
-  EXPECT_NE(Root.CurrentMem, nullptr);
-  EXPECT_EQ(Root.FirstMemBlock, Root.CurrentMem);
+  auto &CtxRoot = *Root.CtxRoot;
+  EXPECT_NE(CtxRoot.CurrentMem, nullptr);
+  EXPECT_EQ(CtxRoot.FirstMemBlock, CtxRoot.CurrentMem);
   EXPECT_EQ(Ctx->size(), sizeof(ContextNode) + 10 * sizeof(uint64_t) +
                              4 * sizeof(ContextNode *));
   EXPECT_EQ(Ctx->counters_size(), 10U);
   EXPECT_EQ(Ctx->callsites_size(), 4U);
-  EXPECT_EQ(__llvm_ctx_profile_current_context_root, &Root);
-  Root.Taken.CheckLocked();
-  EXPECT_FALSE(Root.Taken.TryLock());
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, &CtxRoot);
+  CtxRoot.Taken.CheckLocked();
+  EXPECT_FALSE(CtxRoot.Taken.TryLock());
   __llvm_ctx_profile_release_context(&Root);
   EXPECT_EQ(__llvm_ctx_profile_current_context_root, nullptr);
-  EXPECT_TRUE(Root.Taken.TryLock());
-  Root.Taken.Unlock();
+  EXPECT_TRUE(CtxRoot.Taken.TryLock());
+  CtxRoot.Taken.Unlock();
 }
 
 TEST_F(ContextTest, Callsite) {
@@ -172,7 +173,8 @@ TEST_F(ContextTest, NeedMoreMemory) {
   int FakeCalleeAddress = 0;
   const bool IsScratch = isScratch(Ctx);
   EXPECT_FALSE(IsScratch);
-  const auto *CurrentMem = Root.CurrentMem;
+  auto &CtxRoot = *Root.CtxRoot;
+  const auto *CurrentMem = CtxRoot.CurrentMem;
   __llvm_ctx_profile_expected_callee[0] = &FakeCalleeAddress;
   __llvm_ctx_profile_callsite[0] = &Ctx->subContexts()[2];
   FunctionData FData;
@@ -181,8 +183,8 @@ TEST_F(ContextTest, NeedMoreMemory) {
       __llvm_ctx_profile_get_context(&FData, &FakeCalleeAddress, 3, 1 << 20, 1);
   EXPECT_EQ(FData.FlatCtx, nullptr);
   EXPECT_EQ(Ctx->subContexts()[2], Subctx);
-  EXPECT_NE(CurrentMem, Root.CurrentMem);
-  EXPECT_NE(Root.CurrentMem, nullptr);
+  EXPECT_NE(CurrentMem, CtxRoot.CurrentMem);
+  EXPECT_NE(CtxRoot.CurrentMem, nullptr);
 }
 
 TEST_F(ContextTest, ConcurrentRootCollection) {
@@ -238,7 +240,9 @@ TEST_F(ContextTest, Dump) {
     TestProfileWriter(ContextRoot *Root, size_t Entries)
         : Root(Root), Entries(Entries) {}
 
-    void writeContextual(const ContextNode &Node) override {
+    void writeContextual(const ContextNode &Node, const ContextNode *Unhandled,
+                         uint64_t TotalRootEntryCount) override {
+      EXPECT_EQ(TotalRootEntryCount, Entries);
       EXPECT_EQ(EnteredSectionCount, 1);
       EXPECT_EQ(ExitedSectionCount, 0);
       EXPECT_FALSE(Root->Taken.TryLock());
@@ -275,7 +279,7 @@ TEST_F(ContextTest, Dump) {
     void endFlatSection() override { ++ExitedFlatCount; }
   };
 
-  TestProfileWriter W(&Root, 1);
+  TestProfileWriter W(Root.CtxRoot, 1);
   EXPECT_FALSE(W.State);
   __llvm_ctx_profile_fetch(W);
   EXPECT_TRUE(W.State);
@@ -287,7 +291,7 @@ TEST_F(ContextTest, Dump) {
   (void)Flat;
   EXPECT_NE(FData.FlatCtx, nullptr);
   FData.FlatCtx->counters()[0] = 15U;
-  TestProfileWriter W2(&Root, 0);
+  TestProfileWriter W2(Root.CtxRoot, 0);
   EXPECT_FALSE(W2.State);
   __llvm_ctx_profile_fetch(W2);
   EXPECT_TRUE(W2.State);

@@ -45,7 +45,7 @@ define float @caller_md(float %a, float %b) {
   ret float %r
 }
 
-define float @callee_md(%struct.float2 %a) {
+define float @callee_md(%struct.float2 alignstack(8) %a) {
 ; CHECK-LABEL: .visible .func  (.param .b32 func_retval0) callee_md(
 ; CHECK-NEXT:         .param .align 8 .b8 callee_md_param_0[8]
 ; CHECK-NEXT: )
@@ -105,5 +105,10 @@ define float @callee(%struct.float2 alignstack(8) %a ) {
   ret float %2
 }
 
-!nvvm.annotations = !{!0}
-!0 = !{ptr @callee_md, !"align", i32 u0x00010008}
+define alignstack(8) %struct.float2 @aligned_return(%struct.float2 %a ) {
+; CHECK-LABEL: .visible .func  (.param .align 8 .b8 func_retval0[8]) aligned_return(
+; CHECK-NEXT:         .param .align 4 .b8 aligned_return_param_0[8]
+; CHECK-NEXT: )
+; CHECK-NEXT: {
+  ret %struct.float2 %a
+}

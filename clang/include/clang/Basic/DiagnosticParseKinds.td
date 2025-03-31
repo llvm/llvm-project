@@ -171,12 +171,17 @@ def ext_c99_feature : Extension<
   "'%0' is a C99 extension">, InGroup<C99>;
 def ext_c11_feature : Extension<
   "'%0' is a C11 extension">, InGroup<C11>;
+def ext_c2y_feature : Extension<
+  "'%0' is a C2y extension">, InGroup<C2y>;
 def warn_c11_compat_keyword : Warning<
   "'%0' is incompatible with C standards before C11">,
   InGroup<CPre11Compat>, DefaultIgnore;
 def warn_c23_compat_keyword : Warning<
  "'%0' is incompatible with C standards before C23">,
  InGroup<CPre23Compat>, DefaultIgnore;
+def warn_c2y_compat_keyword : Warning<
+  "'%0' is incompatible with C standards before C2y">,
+  InGroup<CPre2yCompat>, DefaultIgnore;
 
 def err_c11_noreturn_misplaced : Error<
   "'_Noreturn' keyword must precede function declarator">;
@@ -336,7 +341,10 @@ def warn_cxx20_compat_label_end_of_compound_statement : Warning<
 def err_address_of_label_outside_fn : Error<
   "use of address-of-label extension outside of a function body">;
 def err_asm_operand_wide_string_literal : Error<
-  "cannot use %select{unicode|wide|an empty}0 string literal in 'asm'">;
+  "cannot use %select{unicode|wide}0 string literal in 'asm'">;
+
+def err_asm_expected_string : Error<
+  "expected string literal %select{or parenthesized constant expression |}0in 'asm'">;
 def err_expected_selector_for_method : Error<
   "expected selector for Objective-C method">;
 def err_expected_property_name : Error<"expected property name">;

@@ -439,8 +439,7 @@ struct FragmentCompiler {
           [Normalized(std::move(Normalized))](const Params &, Config &C) {
             if (C.Diagnostics.SuppressAll)
               return;
-            for (llvm::StringRef N : Normalized)
-              C.Diagnostics.Suppress.insert(N);
+            C.Diagnostics.Suppress.insert_range(Normalized);
           });
 
     if (F.UnusedIncludes) {
@@ -695,6 +694,17 @@ struct FragmentCompiler {
                   .value())
         Out.Apply.push_back([Val](const Params &, Config &C) {
           C.Completion.ArgumentLists = *Val;
+        });
+    }
+    if (F.HeaderInsertion) {
+      if (auto Val =
+              compileEnum<Config::HeaderInsertionPolicy>("HeaderInsertion",
+                                                         *F.HeaderInsertion)
+                  .map("IWYU", Config::HeaderInsertionPolicy::IWYU)
+                  .map("Never", Config::HeaderInsertionPolicy::NeverInsert)
+                  .value())
+        Out.Apply.push_back([Val](const Params &, Config &C) {
+          C.Completion.HeaderInsertion = *Val;
         });
     }
   }

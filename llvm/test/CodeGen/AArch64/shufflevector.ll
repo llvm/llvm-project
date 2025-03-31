@@ -288,10 +288,9 @@ define i32 @shufflevector_v2i16(<2 x i16> %a, <2 x i16> %b){
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    ext v0.8b, v0.8b, v1.8b, #4
-; CHECK-SD-NEXT:    mov w8, v0.s[1]
-; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    strh w9, [sp, #12]
-; CHECK-SD-NEXT:    strh w8, [sp, #14]
+; CHECK-SD-NEXT:    mov s1, v0.s[1]
+; CHECK-SD-NEXT:    str h0, [sp, #12]
+; CHECK-SD-NEXT:    str h1, [sp, #14]
 ; CHECK-SD-NEXT:    ldr w0, [sp, #12]
 ; CHECK-SD-NEXT:    add sp, sp, #16
 ; CHECK-SD-NEXT:    ret
@@ -499,10 +498,9 @@ define i32 @shufflevector_v2i16_zeroes(<2 x i16> %a, <2 x i16> %b){
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    dup v1.2s, v0.s[0]
-; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    strh w9, [sp, #12]
-; CHECK-SD-NEXT:    mov w8, v1.s[1]
-; CHECK-SD-NEXT:    strh w8, [sp, #14]
+; CHECK-SD-NEXT:    str h0, [sp, #12]
+; CHECK-SD-NEXT:    mov s1, v1.s[1]
+; CHECK-SD-NEXT:    str h1, [sp, #14]
 ; CHECK-SD-NEXT:    ldr w0, [sp, #12]
 ; CHECK-SD-NEXT:    add sp, sp, #16
 ; CHECK-SD-NEXT:    ret

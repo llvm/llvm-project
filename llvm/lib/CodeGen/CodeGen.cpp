@@ -43,7 +43,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeExpandFpLegacyPassPass(Registry);
   initializeExpandMemCmpLegacyPassPass(Registry);
   initializeExpandPostRALegacyPass(Registry);
-  initializeFEntryInserterPass(Registry);
+  initializeFEntryInserterLegacyPass(Registry);
   initializeFinalizeISelPass(Registry);
   initializeFinalizeMachineBundlesPass(Registry);
   initializeFixupStatepointCallerSavedLegacyPass(Registry);
@@ -58,7 +58,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeInterleavedLoadCombinePass(Registry);
   initializeInterleavedAccessPass(Registry);
   initializeJMCInstrumenterPass(Registry);
-  initializeLiveDebugValuesPass(Registry);
+  initializeLiveDebugValuesLegacyPass(Registry);
   initializeLiveDebugVariablesWrapperLegacyPass(Registry);
   initializeLiveIntervalsWrapperPassPass(Registry);
   initializeLiveRangeShrinkPass(Registry);
@@ -132,6 +132,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeStackProtectorPass(Registry);
   initializeStackSlotColoringLegacyPass(Registry);
   initializeStaticDataSplitterPass(Registry);
+  initializeStaticDataAnnotatorPass(Registry);
   initializeStripDebugMachineModulePass(Registry);
   initializeTailDuplicateLegacyPass(Registry);
   initializeTargetPassConfigPass(Registry);

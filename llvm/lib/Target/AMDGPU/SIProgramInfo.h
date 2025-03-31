@@ -41,9 +41,10 @@ struct LLVM_EXTERNAL_VISIBILITY SIProgramInfo {
   uint32_t DX10Clamp = 0;
   uint32_t DebugMode = 0;
   uint32_t IEEEMode = 0;
-  uint32_t WgpMode = 0;    // GFX10+
-  uint32_t MemOrdered = 0; // GFX10+
-  uint32_t RrWgMode = 0;   // GFX12+
+  uint32_t WgpMode = 0;     // GFX10+
+  uint32_t MemOrdered = 0;  // GFX10+
+  uint32_t FwdProgress = 0; // GFX10+
+  uint32_t RrWgMode = 0;    // GFX12+
   const MCExpr *ScratchSize = nullptr;
 
   // State used to calculate fields set in PGM_RSRC2 pm4 packet.

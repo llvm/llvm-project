@@ -44,10 +44,7 @@ static cl::list<SPIRV::Capability::Capability>
 // Use sets instead of cl::list to check "if contains" condition
 struct AvoidCapabilitiesSet {
   SmallSet<SPIRV::Capability::Capability, 4> S;
-  AvoidCapabilitiesSet() {
-    for (auto Cap : AvoidCapabilities)
-      S.insert(Cap);
-  }
+  AvoidCapabilitiesSet() { S.insert_range(AvoidCapabilities); }
 };
 
 char llvm::SPIRVModuleAnalysis::ID = 0;
@@ -361,11 +358,16 @@ void SPIRVModuleAnalysis::visitDecl(
   } else if (Opcode == SPIRV::OpFunction ||
              Opcode == SPIRV::OpFunctionParameter) {
     GReg = handleFunctionOrParameter(MF, MI, GlobalToGReg, IsFunDef);
-  } else if (Opcode == SPIRV::OpTypeStruct) {
+  } else if (Opcode == SPIRV::OpTypeStruct ||
+             Opcode == SPIRV::OpConstantComposite) {
     GReg = handleTypeDeclOrConstant(MI, SignatureToGReg);
     const MachineInstr *NextInstr = MI.getNextNode();
     while (NextInstr &&
-           NextInstr->getOpcode() == SPIRV::OpTypeStructContinuedINTEL) {
+           ((Opcode == SPIRV::OpTypeStruct &&
+             NextInstr->getOpcode() == SPIRV::OpTypeStructContinuedINTEL) ||
+            (Opcode == SPIRV::OpConstantComposite &&
+             NextInstr->getOpcode() ==
+                 SPIRV::OpConstantCompositeContinuedINTEL))) {
       MCRegister Tmp = handleTypeDeclOrConstant(*NextInstr, SignatureToGReg);
       MAI.setRegisterAlias(MF, NextInstr->getOperand(0).getReg(), Tmp);
       MAI.setSkipEmission(NextInstr);
