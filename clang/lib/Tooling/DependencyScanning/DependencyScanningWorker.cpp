@@ -427,9 +427,6 @@ public:
     ScanInstance.getHeaderSearchOpts().ModulesSkipPragmaDiagnosticMappings =
         true;
 
-    // Avoid some checks and module map parsing when loading PCM files.
-    ScanInstance.getPreprocessorOpts().ModulesCheckRelocated = false;
-
     std::unique_ptr<FrontendAction> Action;
 
     if (Service.getFormat() == ScanningOutputFormat::P1689)
