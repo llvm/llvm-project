@@ -144,9 +144,8 @@ ConfiguredEvent::readOrError(StringRef /*unused*/) const {
 
   int64_t EventTimeEnabled = EventInfo[1];
   int64_t EventTimeRunning = EventInfo[2];
-  if (EventTimeEnabled != EventTimeRunning) {
+  if (EventTimeEnabled != EventTimeRunning)
     return make_error<PerfCounterNotFullyEnabled>();
-  }
 
   SmallVector<int64_t, 1> Result;
   Result.push_back(EventInfo[0]);
