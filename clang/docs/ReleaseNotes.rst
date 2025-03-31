@@ -301,7 +301,10 @@ Improvements to Clang's diagnostics
 - Fixed an assertion when referencing an out-of-bounds parameter via a function
   attribute whose argument list refers to parameters by index and the function
   is variadic. e.g.,
-    ``__attribute__ ((__format_arg__(2))) void test (int i, ...) { }``
+  .. code-block:: c
+
+    __attribute__ ((__format_arg__(2))) void test (int i, ...) { }
+
   Fixes #GH61635
 
 Improvements to Clang's time-trace
