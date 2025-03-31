@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -emit-llvm-only -disable-llvm-passes -verify -verify-ignore-unexpected
+// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -emit-llvm-only -disable-llvm-passes -verify -verify-ignore-unexpected=note
 
 float2 test_no_second_arg(float2 p0) {
   return __builtin_hlsl_lerp(p0);
@@ -25,16 +25,14 @@ float2 test_lerp_vector_trunc_warn1(float3 p0) {
   // expected-warning@-1 {{implicit conversion truncates vector: 'float3' (aka 'vector<float, 3>') to 'vector<float, 2>' (vector of 2 'float' values)}}
 }
 
-float2 test_lerp_vector_trunc_warn2(float3 p0, float2 p1) {
+float2 test_lerp_vector_size_mismatch1(float3 p0, float2 p1) {
   return lerp(p0, p0, p1);
-  // expected-warning@-1 {{implicit conversion truncates vector: 'float3' (aka 'vector<float, 3>') to 'vector<float, 2>' (vector of 2 'float' values)}}
-  // expected-warning@-2 {{implicit conversion truncates vector: 'float3' (aka 'vector<float, 3>') to 'vector<float, 2>' (vector of 2 'float' values)}}
+  // expected-error@-1 {{all arguments to 'lerp' must have the same type}}
 }
 
-float2 test_lerp_vector_trunc_warn3(float3 p0, float2 p1) {
+float2 test_lerp_vector_size_mismatch2(float3 p0, float2 p1) {
   return lerp(p0, p1, p0);
-  // expected-warning@-1 {{implicit conversion truncates vector: 'float3' (aka 'vector<float, 3>') to 'vector<float, 2>' (vector of 2 'float' values)}}
-  // expected-warning@-2 {{implicit conversion truncates vector: 'float3' (aka 'vector<float, 3>') to 'vector<float, 2>' (vector of 2 'float' values)}}
+  // expected-error@-1 {{all arguments to 'lerp' must have the same type}}
 }
 
 float2 test_lerp_builtin_vector_size_mismatch_Arg1(float3 p0, float2 p1) {
@@ -125,17 +123,4 @@ float builtin_lerp_int_to_float_promotion(float p0, int p1) {
 float4 test_lerp_int4(int4 p0, int4 p1, int4 p2) {
   return __builtin_hlsl_lerp(p0, p1, p2);
   // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'int4' (aka 'vector<int, 4>'))}}
-}
-
-// note: DefaultVariadicArgumentPromotion --> DefaultArgumentPromotion has already promoted to double
-// we don't know anymore that the input was half when __builtin_hlsl_lerp is called so we default to float
-// for expected type
-half builtin_lerp_half_scalar (half p0) {
-  return __builtin_hlsl_lerp ( p0, p0, p0 );
-  // expected-error@-1 {{passing 'double' to parameter of incompatible type 'float'}}
-}
-
-float builtin_lerp_float_scalar ( float p0) {
-  return __builtin_hlsl_lerp ( p0, p0, p0 );
-  // expected-error@-1 {{passing 'double' to parameter of incompatible type 'float'}}
 }
