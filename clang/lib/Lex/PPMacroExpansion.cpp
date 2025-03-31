@@ -1646,6 +1646,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
 
   // Set up the return result.
   Tok.setIdentifierInfo(nullptr);
+  Tok.clearFlag(Token::NeedsCleaning);
   bool IsAtStartOfLine = Tok.isAtStartOfLine();
   bool HasLeadingSpace = Tok.hasLeadingSpace();
 
