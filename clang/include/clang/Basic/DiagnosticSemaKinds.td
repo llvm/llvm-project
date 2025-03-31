@@ -7031,7 +7031,7 @@ def err_offsetof_incomplete_type : Error<
 def err_offsetof_record_type : Error<
   "offsetof requires struct, union, or class type, %0 invalid">;
 def err_offsetof_array_type : Error<"offsetof requires array type, %0 invalid">;
-def ext_offsetof_non_pod_type : ExtWarn<"offsetof on non-POD type %0">,
+def ext_offsetof_non_pod_type : ExtWarn<"'offsetof' on non-POD type %0">,
   InGroup<InvalidOffsetof>;
 def ext_offsetof_non_standardlayout_type : ExtWarn<
   "offsetof on non-standard-layout type %0">, InGroup<InvalidOffsetof>;
