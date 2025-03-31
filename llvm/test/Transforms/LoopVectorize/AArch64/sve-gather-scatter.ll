@@ -299,10 +299,9 @@ define void @gather_nxv4i32_ind64_stride2(ptr noalias nocapture %a, ptr noalias 
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[DOTIDX1:%.*]] = shl i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[B:%.*]], i64 [[DOTIDX1]]
-; CHECK-NEXT:    [[DOTIDX3:%.*]] = shl nuw nsw i64 [[TMP9]], 5
+; CHECK-NEXT:    [[DOTIDX3:%.*]] = shl nuw nsw i64 [[TMP3]], 5
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[B]], i64 [[DOTIDX3]]
 ; CHECK-NEXT:    [[DOTIDX4:%.*]] = shl i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP11]], i64 [[DOTIDX4]]

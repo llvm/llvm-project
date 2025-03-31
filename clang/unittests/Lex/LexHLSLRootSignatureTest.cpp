@@ -120,6 +120,36 @@ TEST_F(LexHLSLRootSignatureTest, ValidLexAllTokensTest) {
   CheckTokens(Lexer, Tokens, Expected);
 }
 
+TEST_F(LexHLSLRootSignatureTest, ValidCaseInsensitiveKeywordsTest) {
+  // This test will check that we can lex keywords in an case-insensitive
+  // manner
+  const llvm::StringLiteral Source = R"cc(
+    DeScRiPtOrTaBlE
+
+    CBV srv UAV sampler
+    SPACE visibility FLAGS
+    numDescriptors OFFSET
+  )cc";
+  auto TokLoc = SourceLocation();
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+
+  SmallVector<hlsl::RootSignatureToken> Tokens;
+  SmallVector<hlsl::TokenKind> Expected = {
+      hlsl::TokenKind::kw_DescriptorTable,
+      hlsl::TokenKind::kw_CBV,
+      hlsl::TokenKind::kw_SRV,
+      hlsl::TokenKind::kw_UAV,
+      hlsl::TokenKind::kw_Sampler,
+      hlsl::TokenKind::kw_space,
+      hlsl::TokenKind::kw_visibility,
+      hlsl::TokenKind::kw_flags,
+      hlsl::TokenKind::kw_numDescriptors,
+      hlsl::TokenKind::kw_offset,
+  };
+
+  CheckTokens(Lexer, Tokens, Expected);
+}
+
 TEST_F(LexHLSLRootSignatureTest, ValidLexPeekTest) {
   // This test will check that we the peek api is correctly used
   const llvm::StringLiteral Source = R"cc(

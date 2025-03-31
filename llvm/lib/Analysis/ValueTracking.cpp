@@ -71,6 +71,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include <algorithm>
@@ -4471,91 +4472,12 @@ static bool inputDenormalIsIEEE(const Function &F, const Type *Ty) {
   return F.getDenormalMode(Ty->getFltSemantics()).Input == DenormalMode::IEEE;
 }
 
-static bool inputDenormalIsIEEEOrPosZero(const Function &F, const Type *Ty) {
-  Ty = Ty->getScalarType();
-  DenormalMode Mode = F.getDenormalMode(Ty->getFltSemantics());
-  return Mode.Input == DenormalMode::IEEE ||
-         Mode.Input == DenormalMode::PositiveZero;
-}
-
 static bool outputDenormalIsIEEEOrPosZero(const Function &F, const Type *Ty) {
   Ty = Ty->getScalarType();
   DenormalMode Mode = F.getDenormalMode(Ty->getFltSemantics());
   return Mode.Output == DenormalMode::IEEE ||
          Mode.Output == DenormalMode::PositiveZero;
 }
-
-bool KnownFPClass::isKnownNeverLogicalZero(const Function &F, Type *Ty) const {
-  return isKnownNeverZero() &&
-         (isKnownNeverSubnormal() || inputDenormalIsIEEE(F, Ty));
-}
-
-bool KnownFPClass::isKnownNeverLogicalNegZero(const Function &F,
-                                              Type *Ty) const {
-  return isKnownNeverNegZero() &&
-         (isKnownNeverNegSubnormal() || inputDenormalIsIEEEOrPosZero(F, Ty));
-}
-
-bool KnownFPClass::isKnownNeverLogicalPosZero(const Function &F,
-                                              Type *Ty) const {
-  if (!isKnownNeverPosZero())
-    return false;
-
-  // If we know there are no denormals, nothing can be flushed to zero.
-  if (isKnownNeverSubnormal())
-    return true;
-
-  DenormalMode Mode = F.getDenormalMode(Ty->getScalarType()->getFltSemantics());
-  switch (Mode.Input) {
-  case DenormalMode::IEEE:
-    return true;
-  case DenormalMode::PreserveSign:
-    // Negative subnormal won't flush to +0
-    return isKnownNeverPosSubnormal();
-  case DenormalMode::PositiveZero:
-  default:
-    // Both positive and negative subnormal could flush to +0
-    return false;
-  }
-
-  llvm_unreachable("covered switch over denormal mode");
-}
-
-void KnownFPClass::propagateDenormal(const KnownFPClass &Src, const Function &F,
-                                     Type *Ty) {
-  KnownFPClasses = Src.KnownFPClasses;
-  // If we aren't assuming the source can't be a zero, we don't have to check if
-  // a denormal input could be flushed.
-  if (!Src.isKnownNeverPosZero() && !Src.isKnownNeverNegZero())
-    return;
-
-  // If we know the input can't be a denormal, it can't be flushed to 0.
-  if (Src.isKnownNeverSubnormal())
-    return;
-
-  DenormalMode Mode = F.getDenormalMode(Ty->getScalarType()->getFltSemantics());
-
-  if (!Src.isKnownNeverPosSubnormal() && Mode != DenormalMode::getIEEE())
-    KnownFPClasses |= fcPosZero;
-
-  if (!Src.isKnownNeverNegSubnormal() && Mode != DenormalMode::getIEEE()) {
-    if (Mode != DenormalMode::getPositiveZero())
-      KnownFPClasses |= fcNegZero;
-
-    if (Mode.Input == DenormalMode::PositiveZero ||
-        Mode.Output == DenormalMode::PositiveZero ||
-        Mode.Input == DenormalMode::Dynamic ||
-        Mode.Output == DenormalMode::Dynamic)
-      KnownFPClasses |= fcPosZero;
-  }
-}
-
-void KnownFPClass::propagateCanonicalizingSrc(const KnownFPClass &Src,
-                                              const Function &F, Type *Ty) {
-  propagateDenormal(Src, F, Ty);
-  propagateNaN(Src, /*PreserveSign=*/true);
-}
-
 /// Given an exploded icmp instruction, return true if the comparison only
 /// checks the sign bit. If it only checks the sign bit, set TrueIfSigned if
 /// the result of the comparison is true when the input value is signed.
@@ -5378,8 +5300,12 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       // If the input denormal mode could be PreserveSign, a negative
       // subnormal input could produce a negative zero output.
       const Function *F = II->getFunction();
+      const fltSemantics &FltSem =
+          II->getType()->getScalarType()->getFltSemantics();
+
       if (Q.IIQ.hasNoSignedZeros(II) ||
-          (F && KnownSrc.isKnownNeverLogicalNegZero(*F, II->getType())))
+          (F &&
+           KnownSrc.isKnownNeverLogicalNegZero(F->getDenormalMode(FltSem))))
         Known.knownNot(fcNegZero);
 
       break;
@@ -5639,7 +5565,15 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         Known.knownNot(fcNan);
 
       const Function *F = II->getFunction();
-      if (F && KnownSrc.isKnownNeverLogicalZero(*F, II->getType()))
+
+      if (!F)
+        break;
+
+      const fltSemantics &FltSem =
+          II->getType()->getScalarType()->getFltSemantics();
+      DenormalMode Mode = F->getDenormalMode(FltSem);
+
+      if (KnownSrc.isKnownNeverLogicalZero(Mode))
         Known.knownNot(fcNegInf);
 
       break;
@@ -5712,9 +5646,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
       const Function *F = II->getFunction();
       const APInt *ConstVal = ExpRange.getSingleElement();
+      const fltSemantics &FltSem =
+          II->getType()->getScalarType()->getFltSemantics();
       if (ConstVal && ConstVal->isZero()) {
         // ldexp(x, 0) -> x, so propagate everything.
-        Known.propagateCanonicalizingSrc(KnownSrc, *F, II->getType());
+        Known.propagateCanonicalizingSrc(KnownSrc, F->getDenormalMode(FltSem));
       } else if (ExpRange.isAllNegative()) {
         // If we know the power is <= 0, can't introduce inf
         if (KnownSrc.isKnownNeverPosInfinity())
@@ -5727,9 +5663,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           Known.knownNot(fcPosSubnormal);
         if (KnownSrc.isKnownNeverNegSubnormal())
           Known.knownNot(fcNegSubnormal);
-        if (F && KnownSrc.isKnownNeverLogicalPosZero(*F, II->getType()))
+        if (F &&
+            KnownSrc.isKnownNeverLogicalPosZero(F->getDenormalMode(FltSem)))
           Known.knownNot(fcPosZero);
-        if (F && KnownSrc.isKnownNeverLogicalNegZero(*F, II->getType()))
+        if (F &&
+            KnownSrc.isKnownNeverLogicalNegZero(F->getDenormalMode(FltSem)))
           Known.knownNot(fcNegZero);
       }
 
@@ -5806,9 +5744,13 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         if (!F)
           break;
 
+        const fltSemantics &FltSem =
+            Op->getType()->getScalarType()->getFltSemantics();
+        DenormalMode Mode = F->getDenormalMode(FltSem);
+
         // (fadd x, 0.0) is guaranteed to return +0.0, not -0.0.
-        if ((KnownLHS.isKnownNeverLogicalNegZero(*F, Op->getType()) ||
-             KnownRHS.isKnownNeverLogicalNegZero(*F, Op->getType())) &&
+        if ((KnownLHS.isKnownNeverLogicalNegZero(Mode) ||
+             KnownRHS.isKnownNeverLogicalNegZero(Mode)) &&
             // Make sure output negative denormal can't flush to -0
             outputDenormalIsIEEEOrPosZero(*F, Op->getType()))
           Known.knownNot(fcNegZero);
@@ -5816,9 +5758,13 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         if (!F)
           break;
 
+        const fltSemantics &FltSem =
+            Op->getType()->getScalarType()->getFltSemantics();
+        DenormalMode Mode = F->getDenormalMode(FltSem);
+
         // Only fsub -0, +0 can return -0
-        if ((KnownLHS.isKnownNeverLogicalNegZero(*F, Op->getType()) ||
-             KnownRHS.isKnownNeverLogicalPosZero(*F, Op->getType())) &&
+        if ((KnownLHS.isKnownNeverLogicalNegZero(Mode) ||
+             KnownRHS.isKnownNeverLogicalPosZero(Mode)) &&
             // Make sure output negative denormal can't flush to -0
             outputDenormalIsIEEEOrPosZero(*F, Op->getType()))
           Known.knownNot(fcNegZero);
@@ -5866,10 +5812,14 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     if (!F)
       break;
 
+    Type *OpTy = Op->getType()->getScalarType();
+    const fltSemantics &FltSem = OpTy->getFltSemantics();
+    DenormalMode Mode = F->getDenormalMode(FltSem);
+
     if ((KnownRHS.isKnownNeverInfinity() ||
-         KnownLHS.isKnownNeverLogicalZero(*F, Op->getType())) &&
+         KnownLHS.isKnownNeverLogicalZero(Mode)) &&
         (KnownLHS.isKnownNeverInfinity() ||
-         KnownRHS.isKnownNeverLogicalZero(*F, Op->getType())))
+         KnownRHS.isKnownNeverLogicalZero(Mode)))
       Known.knownNot(fcNan);
 
     break;
@@ -5916,14 +5866,18 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     }
 
     const Function *F = cast<Instruction>(Op)->getFunction();
+    const fltSemantics &FltSem =
+        Op->getType()->getScalarType()->getFltSemantics();
 
     if (Op->getOpcode() == Instruction::FDiv) {
       // Only 0/0, Inf/Inf produce NaN.
       if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
           (KnownLHS.isKnownNeverInfinity() ||
            KnownRHS.isKnownNeverInfinity()) &&
-          ((F && KnownLHS.isKnownNeverLogicalZero(*F, Op->getType())) ||
-           (F && KnownRHS.isKnownNeverLogicalZero(*F, Op->getType())))) {
+          ((F &&
+            KnownLHS.isKnownNeverLogicalZero(F->getDenormalMode(FltSem))) ||
+           (F &&
+            KnownRHS.isKnownNeverLogicalZero(F->getDenormalMode(FltSem))))) {
         Known.knownNot(fcNan);
       }
 
@@ -5935,7 +5889,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       // Inf REM x and x REM 0 produce NaN.
       if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
           KnownLHS.isKnownNeverInfinity() && F &&
-          KnownRHS.isKnownNeverLogicalZero(*F, Op->getType())) {
+          KnownRHS.isKnownNeverLogicalZero(F->getDenormalMode(FltSem))) {
         Known.knownNot(fcNan);
       }
 
@@ -6113,11 +6067,14 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                               InterestedClasses, KnownSrc, Depth + 1, Q);
 
           const Function *F = cast<Instruction>(Op)->getFunction();
+          const fltSemantics &FltSem =
+              Op->getType()->getScalarType()->getFltSemantics();
 
           if (KnownSrc.isKnownNever(fcNegative))
             Known.knownNot(fcNegative);
           else {
-            if (F && KnownSrc.isKnownNeverLogicalNegZero(*F, Op->getType()))
+            if (F &&
+                KnownSrc.isKnownNeverLogicalNegZero(F->getDenormalMode(FltSem)))
               Known.knownNot(fcNegZero);
             if (KnownSrc.isKnownNever(fcNegInf))
               Known.knownNot(fcNegInf);
@@ -6126,7 +6083,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           if (KnownSrc.isKnownNever(fcPositive))
             Known.knownNot(fcPositive);
           else {
-            if (F && KnownSrc.isKnownNeverLogicalPosZero(*F, Op->getType()))
+            if (F &&
+                KnownSrc.isKnownNeverLogicalPosZero(F->getDenormalMode(FltSem)))
               Known.knownNot(fcPosZero);
             if (KnownSrc.isKnownNever(fcPosInf))
               Known.knownNot(fcPosInf);
@@ -6271,6 +6229,89 @@ KnownFPClass llvm::computeKnownFPClass(const Value *V,
   KnownFPClass Known;
   ::computeKnownFPClass(V, Known, InterestedClasses, Depth, SQ);
   return Known;
+}
+
+KnownFPClass llvm::computeKnownFPClass(
+    const Value *V, const DataLayout &DL, FPClassTest InterestedClasses,
+    unsigned Depth, const TargetLibraryInfo *TLI, AssumptionCache *AC,
+    const Instruction *CxtI, const DominatorTree *DT, bool UseInstrInfo) {
+  return computeKnownFPClass(
+      V, InterestedClasses, Depth,
+      SimplifyQuery(DL, TLI, DT, AC, CxtI, UseInstrInfo));
+}
+
+KnownFPClass
+llvm::computeKnownFPClass(const Value *V, const APInt &DemandedElts,
+                          FastMathFlags FMF, FPClassTest InterestedClasses,
+                          unsigned Depth, const SimplifyQuery &SQ) {
+  if (FMF.noNaNs())
+    InterestedClasses &= ~fcNan;
+  if (FMF.noInfs())
+    InterestedClasses &= ~fcInf;
+
+  KnownFPClass Result =
+      computeKnownFPClass(V, DemandedElts, InterestedClasses, Depth, SQ);
+
+  if (FMF.noNaNs())
+    Result.KnownFPClasses &= ~fcNan;
+  if (FMF.noInfs())
+    Result.KnownFPClasses &= ~fcInf;
+  return Result;
+}
+
+KnownFPClass llvm::computeKnownFPClass(const Value *V, FastMathFlags FMF,
+                                       FPClassTest InterestedClasses,
+                                       unsigned Depth,
+                                       const SimplifyQuery &SQ) {
+  auto *FVTy = dyn_cast<FixedVectorType>(V->getType());
+  APInt DemandedElts =
+      FVTy ? APInt::getAllOnes(FVTy->getNumElements()) : APInt(1, 1);
+  return computeKnownFPClass(V, DemandedElts, FMF, InterestedClasses, Depth,
+                             SQ);
+}
+
+bool llvm::cannotBeNegativeZero(const Value *V, unsigned Depth,
+                                const SimplifyQuery &SQ) {
+  KnownFPClass Known = computeKnownFPClass(V, fcNegZero, Depth, SQ);
+  return Known.isKnownNeverNegZero();
+}
+
+bool llvm::cannotBeOrderedLessThanZero(const Value *V, unsigned Depth,
+                                       const SimplifyQuery &SQ) {
+  KnownFPClass Known =
+      computeKnownFPClass(V, KnownFPClass::OrderedLessThanZeroMask, Depth, SQ);
+  return Known.cannotBeOrderedLessThanZero();
+}
+
+bool llvm::isKnownNeverInfinity(const Value *V, unsigned Depth,
+                                const SimplifyQuery &SQ) {
+  KnownFPClass Known = computeKnownFPClass(V, fcInf, Depth, SQ);
+  return Known.isKnownNeverInfinity();
+}
+
+/// Return true if the floating-point value can never contain a NaN or infinity.
+bool llvm::isKnownNeverInfOrNaN(const Value *V, unsigned Depth,
+                                const SimplifyQuery &SQ) {
+  KnownFPClass Known = computeKnownFPClass(V, fcInf | fcNan, Depth, SQ);
+  return Known.isKnownNeverNaN() && Known.isKnownNeverInfinity();
+}
+
+/// Return true if the floating-point scalar value is not a NaN or if the
+/// floating-point vector value has no NaN elements. Return false if a value
+/// could ever be NaN.
+bool llvm::isKnownNeverNaN(const Value *V, unsigned Depth,
+                           const SimplifyQuery &SQ) {
+  KnownFPClass Known = computeKnownFPClass(V, fcNan, Depth, SQ);
+  return Known.isKnownNeverNaN();
+}
+
+/// Return false if we can prove that the specified FP value's sign bit is 0.
+/// Return true if we can prove that the specified FP value's sign bit is 1.
+/// Otherwise return std::nullopt.
+std::optional<bool> llvm::computeKnownFPSignBit(const Value *V, unsigned Depth,
+                                                const SimplifyQuery &SQ) {
+  KnownFPClass Known = computeKnownFPClass(V, fcAllFlags, Depth, SQ);
+  return Known.SignBit;
 }
 
 Value *llvm::isBytewiseValue(Value *V, const DataLayout &DL) {
