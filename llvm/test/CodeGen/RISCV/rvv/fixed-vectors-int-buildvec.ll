@@ -3023,13 +3023,13 @@ define <8 x i8> @buildvec_v8i8_pack(i8 %e1, i8 %e2, i8 %e3, i8 %e4, i8 %e5, i8 %
 ; RV32VB-LABEL: buildvec_v8i8_pack:
 ; RV32VB:       # %bb.0:
 ; RV32VB-NEXT:    slli a7, a7, 24
-; RV32VB-NEXT:    andi a6, a6, 255
-; RV32VB-NEXT:    andi a4, a4, 255
-; RV32VB-NEXT:    andi a5, a5, 255
+; RV32VB-NEXT:    zext.b a6, a6
+; RV32VB-NEXT:    zext.b a4, a4
+; RV32VB-NEXT:    zext.b a5, a5
 ; RV32VB-NEXT:    slli a3, a3, 24
-; RV32VB-NEXT:    andi a2, a2, 255
-; RV32VB-NEXT:    andi a0, a0, 255
-; RV32VB-NEXT:    andi a1, a1, 255
+; RV32VB-NEXT:    zext.b a2, a2
+; RV32VB-NEXT:    zext.b a0, a0
+; RV32VB-NEXT:    zext.b a1, a1
 ; RV32VB-NEXT:    slli a6, a6, 16
 ; RV32VB-NEXT:    slli a5, a5, 8
 ; RV32VB-NEXT:    slli a2, a2, 16
@@ -3075,14 +3075,14 @@ define <8 x i8> @buildvec_v8i8_pack(i8 %e1, i8 %e2, i8 %e3, i8 %e4, i8 %e5, i8 %
 ;
 ; RVA22U64-LABEL: buildvec_v8i8_pack:
 ; RVA22U64:       # %bb.0:
-; RVA22U64-NEXT:    andi t0, a4, 255
-; RVA22U64-NEXT:    andi a5, a5, 255
+; RVA22U64-NEXT:    zext.b t0, a4
+; RVA22U64-NEXT:    zext.b a5, a5
 ; RVA22U64-NEXT:    slli a7, a7, 56
-; RVA22U64-NEXT:    andi a4, a6, 255
-; RVA22U64-NEXT:    andi a2, a2, 255
-; RVA22U64-NEXT:    andi a3, a3, 255
-; RVA22U64-NEXT:    andi a0, a0, 255
-; RVA22U64-NEXT:    andi a1, a1, 255
+; RVA22U64-NEXT:    zext.b a4, a6
+; RVA22U64-NEXT:    zext.b a2, a2
+; RVA22U64-NEXT:    zext.b a3, a3
+; RVA22U64-NEXT:    zext.b a0, a0
+; RVA22U64-NEXT:    zext.b a1, a1
 ; RVA22U64-NEXT:    slli t0, t0, 32
 ; RVA22U64-NEXT:    slli a5, a5, 40
 ; RVA22U64-NEXT:    slli a4, a4, 48
@@ -3154,11 +3154,11 @@ define <6 x i8> @buildvec_v6i8_pack(i8 %e1, i8 %e2, i8 %e3, i8 %e4, i8 %e5, i8 %
 ; RV32VB-LABEL: buildvec_v6i8_pack:
 ; RV32VB:       # %bb.0:
 ; RV32VB-NEXT:    slli a3, a3, 24
-; RV32VB-NEXT:    andi a2, a2, 255
-; RV32VB-NEXT:    andi a0, a0, 255
-; RV32VB-NEXT:    andi a1, a1, 255
-; RV32VB-NEXT:    andi a4, a4, 255
-; RV32VB-NEXT:    andi a5, a5, 255
+; RV32VB-NEXT:    zext.b a2, a2
+; RV32VB-NEXT:    zext.b a0, a0
+; RV32VB-NEXT:    zext.b a1, a1
+; RV32VB-NEXT:    zext.b a4, a4
+; RV32VB-NEXT:    zext.b a5, a5
 ; RV32VB-NEXT:    slli a2, a2, 16
 ; RV32VB-NEXT:    slli a1, a1, 8
 ; RV32VB-NEXT:    slli a5, a5, 8
@@ -3198,12 +3198,12 @@ define <6 x i8> @buildvec_v6i8_pack(i8 %e1, i8 %e2, i8 %e3, i8 %e4, i8 %e5, i8 %
 ;
 ; RVA22U64-LABEL: buildvec_v6i8_pack:
 ; RVA22U64:       # %bb.0:
-; RVA22U64-NEXT:    andi a2, a2, 255
-; RVA22U64-NEXT:    andi a3, a3, 255
-; RVA22U64-NEXT:    andi a0, a0, 255
-; RVA22U64-NEXT:    andi a1, a1, 255
-; RVA22U64-NEXT:    andi a4, a4, 255
-; RVA22U64-NEXT:    andi a5, a5, 255
+; RVA22U64-NEXT:    zext.b a2, a2
+; RVA22U64-NEXT:    zext.b a3, a3
+; RVA22U64-NEXT:    zext.b a0, a0
+; RVA22U64-NEXT:    zext.b a1, a1
+; RVA22U64-NEXT:    zext.b a4, a4
+; RVA22U64-NEXT:    zext.b a5, a5
 ; RVA22U64-NEXT:    slli a2, a2, 16
 ; RVA22U64-NEXT:    slli a3, a3, 24
 ; RVA22U64-NEXT:    slli a1, a1, 8

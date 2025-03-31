@@ -650,9 +650,6 @@ public:
   bool doDwarfFDESymbolsUseAbsDiff() const { return DwarfFDESymbolsUseAbsDiff; }
   bool useDwarfRegNumForCFI() const { return DwarfRegNumForCFI; }
   bool useParensForSymbolVariant() const { return UseParensForSymbolVariant; }
-  bool useParensForDollarSignNames() const {
-    return UseParensForDollarSignNames;
-  }
   bool supportsExtendedDwarfLocDirective() const {
     return SupportsExtendedDwarfLocDirective;
   }

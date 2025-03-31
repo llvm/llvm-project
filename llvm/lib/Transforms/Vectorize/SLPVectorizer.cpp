@@ -13347,7 +13347,8 @@ InstructionCost BoUpSLP::getSpillCost() {
     for (const TreeEntry *Op : Operands) {
       if (!Op->isGather())
         LiveEntries.push_back(Op);
-      if ((Entry->getOpcode() != Instruction::PHI && Op->isGather()) ||
+      if (Entry->State == TreeEntry::SplitVectorize ||
+          (Entry->getOpcode() != Instruction::PHI && Op->isGather()) ||
           (Op->isGather() && allConstant(Op->Scalars)))
         continue;
       Budget = 0;

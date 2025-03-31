@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceAttributes.h"
-#include "Delta.h"
 #include "TestRunner.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -166,11 +165,7 @@ public:
 } // namespace
 
 /// Removes out-of-chunk attributes from module.
-static void extractAttributesFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
+void llvm::reduceAttributesDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
   AttributeRemapper R(O, WorkItem.getModule());
   R.visit(WorkItem.getModule());
-}
-
-void llvm::reduceAttributesDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, extractAttributesFromModule, "Reducing Attributes");
 }

@@ -194,6 +194,12 @@ def _compute_runtime_check_targets(runtimes_to_test: Set[str]) -> Set[str]:
 def _get_modified_projects(modified_files: list[str]) -> Set[str]:
     modified_projects = set()
     for modified_file in modified_files:
+        path_parts = pathlib.Path(modified_file).parts
+        # Exclude files in the docs directory. They do not impact an test
+        # targets and there is a separate workflow used for ensuring the
+        # documentation builds.
+        if len(path_parts) > 2 and path_parts[1] == "docs":
+            continue
         modified_projects.add(pathlib.Path(modified_file).parts[0])
     return modified_projects
 
