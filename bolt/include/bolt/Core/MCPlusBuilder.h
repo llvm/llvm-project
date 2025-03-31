@@ -551,6 +551,16 @@ public:
     return Analysis->isReturn(Inst);
   }
 
+  /// Returns the registers that are trusted at function entry.
+  ///
+  /// Each register should be treated as if a successfully authenticated
+  /// pointer was written to it before entering the function (i.e. the
+  /// pointer is safe to jump to as well as to be signed).
+  virtual SmallVector<MCPhysReg> getTrustedLiveInRegs() const {
+    llvm_unreachable("not implemented");
+    return {};
+  }
+
   virtual ErrorOr<MCPhysReg> getAuthenticatedReg(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return getNoRegister();
@@ -1254,9 +1264,12 @@ public:
     return nullptr;
   }
 
-  /// Return MCSymbol extracted from a target expression
+  /// Return MCSymbol extracted from the expression.
   virtual const MCSymbol *getTargetSymbol(const MCExpr *Expr) const {
-    return &cast<const MCSymbolRefExpr>(Expr)->getSymbol();
+    if (auto *SymbolRefExpr = dyn_cast<const MCSymbolRefExpr>(Expr))
+      return &SymbolRefExpr->getSymbol();
+
+    return nullptr;
   }
 
   /// Return addend that represents an offset from MCSymbol target

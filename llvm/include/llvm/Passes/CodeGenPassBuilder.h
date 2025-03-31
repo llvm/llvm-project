@@ -45,6 +45,7 @@
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
+#include "llvm/CodeGen/LiveDebugValuesPass.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LocalStackSlotAllocation.h"
 #include "llvm/CodeGen/LowerEmuTLS.h"
@@ -1002,7 +1003,8 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
   addPass(FuncletLayoutPass());
 
   addPass(StackMapLivenessPass());
-  addPass(LiveDebugValuesPass());
+  addPass(LiveDebugValuesPass(
+      getTM<TargetMachine>().Options.ShouldEmitDebugEntryValues()));
   addPass(MachineSanitizerBinaryMetadata());
 
   if (TM.Options.EnableMachineOutliner &&

@@ -3274,22 +3274,33 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
-  /// Handle x86 SSE single-precision to half-precision conversion.
+  /// Handle x86 SSE vector conversion.
   ///
-  /// e.g.,
+  /// e.g., single-precision to half-precision conversion:
   ///      <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float> %a0, i32 0)
   ///      <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> %a0, i32 0)
+  ///
+  ///      floating-point to integer:
+  ///      <4 x i32> @llvm.x86.sse2.cvtps2dq(<4 x float>)
+  ///      <4 x i32> @llvm.x86.sse2.cvtpd2dq(<2 x double>)
+  ///
   /// Note: if the output has more elements, they are zero-initialized (and
   /// therefore the shadow will also be initialized).
   ///
   /// This differs from handleSSEVectorConvertIntrinsic() because it
   /// propagates uninitialized shadow (instead of checking the shadow).
-  void handleSSEVectorConvertIntrinsicByProp(IntrinsicInst &I) {
-    assert(I.arg_size() == 2);
+  void handleSSEVectorConvertIntrinsicByProp(IntrinsicInst &I,
+                                             bool HasRoundingMode) {
+    if (HasRoundingMode) {
+      assert(I.arg_size() == 2);
+      [[maybe_unused]] Value *RoundingMode = I.getArgOperand(1);
+      assert(RoundingMode->getType()->isIntegerTy());
+    } else {
+      assert(I.arg_size() == 1);
+    }
+
     Value *Src = I.getArgOperand(0);
     assert(Src->getType()->isVectorTy());
-    [[maybe_unused]] Value *RoundingMode = I.getArgOperand(1);
-    assert(RoundingMode->getType()->isIntegerTy());
 
     // The return type might have more elements than the input.
     // Temporarily shrink the return type's number of elements.
@@ -3305,7 +3316,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *S0 = getShadow(&I, 0);
 
     /// For scalars:
-    /// Since they are converting from floating-point to integer, the output is
+    /// Since they are converting to and/or from floating-point, the output is:
     /// - fully uninitialized if *any* bit of the input is uninitialized
     /// - fully ininitialized if all bits of the input are ininitialized
     /// We apply the same principle on a per-field basis for vectors.
@@ -4653,6 +4664,31 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       handleSSEVectorConvertIntrinsic(I, 2);
       break;
 
+      // TODO:
+      //   <1 x i64> @llvm.x86.sse.cvtpd2pi(<2 x double>)
+      //   <2 x double> @llvm.x86.sse.cvtpi2pd(<1 x i64>)
+      //   <4 x float> @llvm.x86.sse.cvtpi2ps(<4 x float>, <1 x i64>)
+
+    case Intrinsic::x86_vcvtps2ph_128:
+    case Intrinsic::x86_vcvtps2ph_256: {
+      handleSSEVectorConvertIntrinsicByProp(I, /*HasRoundingMode=*/true);
+      break;
+    }
+
+    case Intrinsic::x86_sse2_cvtpd2ps:
+    case Intrinsic::x86_sse2_cvtps2dq:
+    case Intrinsic::x86_sse2_cvtpd2dq:
+    case Intrinsic::x86_sse2_cvttps2dq:
+    case Intrinsic::x86_sse2_cvttpd2dq:
+    case Intrinsic::x86_avx_cvt_pd2_ps_256:
+    case Intrinsic::x86_avx_cvt_ps2dq_256:
+    case Intrinsic::x86_avx_cvt_pd2dq_256:
+    case Intrinsic::x86_avx_cvtt_ps2dq_256:
+    case Intrinsic::x86_avx_cvtt_pd2dq_256: {
+      handleSSEVectorConvertIntrinsicByProp(I, /*HasRoundingMode=*/false);
+      break;
+    }
+
     case Intrinsic::x86_avx512_psll_w_512:
     case Intrinsic::x86_avx512_psll_d_512:
     case Intrinsic::x86_avx512_psll_q_512:
@@ -4995,12 +5031,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       [[maybe_unused]] bool Success =
           maybeHandleSimpleNomemIntrinsic(I, /*trailingFlags=*/1);
       assert(Success);
-      break;
-    }
-
-    case Intrinsic::x86_vcvtps2ph_128:
-    case Intrinsic::x86_vcvtps2ph_256: {
-      handleSSEVectorConvertIntrinsicByProp(I);
       break;
     }
 
