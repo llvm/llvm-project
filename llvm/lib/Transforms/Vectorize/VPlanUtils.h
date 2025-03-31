@@ -54,8 +54,6 @@ inline bool isUniformAfterVectorization(const VPValue *VPV) {
            ((Instruction::isBinaryOp(VPI->getOpcode()) ||
              VPI->getOpcode() == VPInstruction::PtrAdd) &&
             all_of(VPI->operands(), isUniformAfterVectorization));
-  if (auto *IV = dyn_cast<VPDerivedIVRecipe>(VPV))
-    return all_of(IV->operands(), isUniformAfterVectorization);
 
   // VPExpandSCEVRecipes must be placed in the entry and are alway uniform.
   return isa<VPExpandSCEVRecipe>(VPV);
