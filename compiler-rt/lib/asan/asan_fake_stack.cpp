@@ -107,7 +107,12 @@ FakeFrame *FakeStack::Allocate(uptr stack_size_log, uptr class_id,
     FakeFrame *res = reinterpret_cast<FakeFrame *>(
         GetFrame(stack_size_log, class_id, pos));
     res->real_stack = real_stack;
-    *SavedFlagPtr(reinterpret_cast<uptr>(res), class_id) = &flags[pos];
+    u8 **saved_flag_ptr = SavedFlagPtr(reinterpret_cast<uptr>(res), class_id);
+    *saved_flag_ptr = &flags[pos];
+
+    // Poison the last word of FakeFrame
+    u64 *shadow = reinterpret_cast<u64*>(MemToShadow(reinterpret_cast<uptr>(saved_flag_ptr)));
+    *shadow = kMagic8;
     return res;
   }
   return nullptr; // We are out of fake stack.
