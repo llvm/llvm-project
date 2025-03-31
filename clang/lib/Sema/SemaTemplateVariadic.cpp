@@ -865,10 +865,10 @@ bool Sema::CheckParameterPacksForExpansion(
         }
     }
 
-    unsigned LeastNewPackSize = NewPackSize - PendingPackExpansionSize;
     // This maintains the maximum length of the least pack expansion at the
     // current level, where the least pack expansion contains only resolvable
     // packs at this point.
+    unsigned LeastNewPackSize = NewPackSize - PendingPackExpansionSize;
     if (PendingPackExpansionSize)
       CurMaximumOfLeastExpansions =
           CurMaximumOfLeastExpansions
