@@ -13,8 +13,8 @@
 void CheckResult(int ret) {
   if (ret != 0) {
     fprintf(stderr, "ERROR: %s\n", strerror(ret));
-    abort();
   }
+  assert(ret == 0);
 }
 
 int main(void) {
