@@ -450,6 +450,7 @@ Windows Support
 - Clang now can process the `i128` and `ui128` integeral suffixes when MSVC
   extensions are enabled. This allows for properly processing ``intsafe.h`` in
   the Windows SDK.
+- Clang now supports MSVC vector deleting destructors (GH19772).
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
@@ -508,6 +509,8 @@ clang-format
 - Allow specifying the language (C, C++, or Objective-C) for a ``.h`` file by
   adding a special comment (e.g. ``// clang-format Language: ObjC``) near the
   top of the file.
+- Add ``EnumTrailingComma`` option for inserting/removing commas at the end of
+  ``enum`` enumerator lists.
 
 libclang
 --------

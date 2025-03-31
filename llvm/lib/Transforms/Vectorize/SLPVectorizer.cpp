@@ -3733,16 +3733,8 @@ private:
       Last->ReorderIndices.append(ReorderIndices.begin(), ReorderIndices.end());
     }
     if (EntryState == TreeEntry::SplitVectorize) {
-      auto *MainOp =
-          cast<Instruction>(*find_if(Last->Scalars, IsaPred<Instruction>));
-      auto *AltOp = cast<Instruction>(*find_if(Last->Scalars, [=](Value *V) {
-        auto *I = dyn_cast<Instruction>(V);
-        if (!I)
-          return false;
-        InstructionsState LocalS = getSameOpcode({I, MainOp}, *TLI);
-        return !LocalS || LocalS.isAltShuffle();
-      }));
-      Last->setOperations(InstructionsState(MainOp, AltOp));
+      assert(S && "Split nodes must have operations.");
+      Last->setOperations(S);
       SmallPtrSet<Value *, 4> Processed;
       for (Value *V : VL) {
         auto *I = dyn_cast<Instruction>(V);
