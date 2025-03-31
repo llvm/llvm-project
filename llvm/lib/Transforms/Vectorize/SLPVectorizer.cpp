@@ -9013,8 +9013,11 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         Op1Indices.set(Idx);
         continue;
       }
-      if (!isAlternateInstruction(I, LocalState.getMainOp(),
-                                  LocalState.getAltOp(), *TLI)) {
+      if ((LocalState.getAltOpcode() != LocalState.getOpcode() &&
+           I->getOpcode() == LocalState.getOpcode()) ||
+          (LocalState.getAltOpcode() == LocalState.getOpcode() &&
+           !isAlternateInstruction(I, LocalState.getMainOp(),
+                                   LocalState.getAltOp(), *TLI))) {
         Op1.push_back(V);
         Op1Indices.set(Idx);
         continue;
