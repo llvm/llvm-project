@@ -135,31 +135,50 @@ TEST_P(RISCVInstrInfoTest, IsCopyInstrImpl) {
   EXPECT_EQ(MI4Res->Destination->getReg(), RISCV::F1_D);
   EXPECT_EQ(MI4Res->Source->getReg(), RISCV::F2_D);
 
-  // ADD.
-  MachineInstr *MI5 = BuildMI(*MF, DL, TII->get(RISCV::ADD), RISCV::X1)
-                          .addReg(RISCV::X2)
-                          .addReg(RISCV::X3)
-                          .getInstr();
-  auto MI5Res = TII->isCopyInstrImpl(*MI5);
-  EXPECT_FALSE(MI5Res.has_value());
+  // ADD/OR/XOR.
+  for (unsigned Opc : {RISCV::ADD, RISCV::OR, RISCV::XOR}) {
+    MachineInstr *MI5 = BuildMI(*MF, DL, TII->get(Opc), RISCV::X1)
+                            .addReg(RISCV::X2)
+                            .addReg(RISCV::X3)
+                            .getInstr();
+    auto MI5Res = TII->isCopyInstrImpl(*MI5);
+    EXPECT_FALSE(MI5Res.has_value());
 
-  MachineInstr *MI6 = BuildMI(*MF, DL, TII->get(RISCV::ADD), RISCV::X1)
+    MachineInstr *MI6 = BuildMI(*MF, DL, TII->get(Opc), RISCV::X1)
+                            .addReg(RISCV::X0)
+                            .addReg(RISCV::X2)
+                            .getInstr();
+    auto MI6Res = TII->isCopyInstrImpl(*MI6);
+    ASSERT_TRUE(MI6Res.has_value());
+    EXPECT_EQ(MI6Res->Destination->getReg(), RISCV::X1);
+    EXPECT_EQ(MI6Res->Source->getReg(), RISCV::X2);
+
+    MachineInstr *MI7 = BuildMI(*MF, DL, TII->get(Opc), RISCV::X1)
+                            .addReg(RISCV::X2)
+                            .addReg(RISCV::X0)
+                            .getInstr();
+    auto MI7Res = TII->isCopyInstrImpl(*MI7);
+    ASSERT_TRUE(MI7Res.has_value());
+    EXPECT_EQ(MI7Res->Destination->getReg(), RISCV::X1);
+    EXPECT_EQ(MI7Res->Source->getReg(), RISCV::X2);
+  }
+
+  // SUB.
+  MachineInstr *MI8 = BuildMI(*MF, DL, TII->get(RISCV::SUB), RISCV::X1)
                           .addReg(RISCV::X0)
                           .addReg(RISCV::X2)
                           .getInstr();
-  auto MI6Res = TII->isCopyInstrImpl(*MI6);
-  ASSERT_TRUE(MI6Res.has_value());
-  EXPECT_EQ(MI6Res->Destination->getReg(), RISCV::X1);
-  EXPECT_EQ(MI6Res->Source->getReg(), RISCV::X2);
+  auto MI8Res = TII->isCopyInstrImpl(*MI8);
+  EXPECT_FALSE(MI8Res.has_value());
 
-  MachineInstr *MI7 = BuildMI(*MF, DL, TII->get(RISCV::ADD), RISCV::X1)
+  MachineInstr *MI9 = BuildMI(*MF, DL, TII->get(RISCV::SUB), RISCV::X1)
                           .addReg(RISCV::X2)
                           .addReg(RISCV::X0)
                           .getInstr();
-  auto MI7Res = TII->isCopyInstrImpl(*MI7);
-  ASSERT_TRUE(MI7Res.has_value());
-  EXPECT_EQ(MI7Res->Destination->getReg(), RISCV::X1);
-  EXPECT_EQ(MI7Res->Source->getReg(), RISCV::X2);
+  auto MI9Res = TII->isCopyInstrImpl(*MI9);
+  ASSERT_TRUE(MI9Res.has_value());
+  EXPECT_EQ(MI9Res->Destination->getReg(), RISCV::X1);
+  EXPECT_EQ(MI9Res->Source->getReg(), RISCV::X2);
 }
 
 TEST_P(RISCVInstrInfoTest, GetMemOperandsWithOffsetWidth) {
