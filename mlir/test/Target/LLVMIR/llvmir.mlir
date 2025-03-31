@@ -1851,7 +1851,7 @@ llvm.mlir.global linkonce @take_self_address() : !llvm.struct<(i32, !llvm.ptr)> 
 // -----
 
 // CHECK: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @foo, ptr null }]
-llvm.mlir.global_ctors { ctors = [@foo], priorities = [0 : i32]}
+llvm.mlir.global_ctors ctors = [@foo], priorities = [0 : i32], data = [#llvm.zero]
 
 llvm.func @foo() {
   llvm.return
@@ -1860,15 +1860,15 @@ llvm.func @foo() {
 // -----
 
 // CHECK: @llvm.global_ctors = appending global [0 x { i32, ptr, ptr }] zeroinitializer
-llvm.mlir.global_ctors {ctors = [], priorities = []}
+llvm.mlir.global_ctors ctors = [], priorities = [], data = []
 
 // CHECK: @llvm.global_dtors = appending global [0 x { i32, ptr, ptr }] zeroinitializer
-llvm.mlir.global_dtors {dtors = [], priorities = []}
+llvm.mlir.global_dtors dtors = [], priorities = [], data = []
 
 // -----
 
 // CHECK: @llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @foo, ptr null }]
-llvm.mlir.global_dtors { dtors = [@foo], priorities = [0 : i32]}
+llvm.mlir.global_dtors dtors = [@foo], priorities = [0 : i32], data = [#llvm.zero]
 
 llvm.func @foo() {
   llvm.return
