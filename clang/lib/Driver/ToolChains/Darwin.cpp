@@ -1323,8 +1323,8 @@ void DarwinClang::addClangWarningOptions(ArgStringList &CC1Args) const {
 }
 
 void DarwinClang::addClangTargetOptions(
-  const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-  Action::OffloadKind DeviceOffloadKind) const {
+    const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
+    Action::OffloadKind DeviceOffloadKind) const {
 
   Darwin::addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadKind);
 }
@@ -3184,9 +3184,9 @@ bool Darwin::isSizedDeallocationUnavailable() const {
   return TargetVersion < sizedDeallocMinVersion(OS);
 }
 
-void MachO::addClangTargetOptions(
-    const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    Action::OffloadKind DeviceOffloadKind) const {
+void MachO::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                                  llvm::opt::ArgStringList &CC1Args,
+                                  Action::OffloadKind DeviceOffloadKind) const {
 
   ToolChain::addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadKind);
 
