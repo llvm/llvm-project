@@ -61,7 +61,7 @@ static void replaceFunctionCalls(Function &OldF, Function &NewF,
         }
       }
 
-      // FIXME: Losing bundles and metadata
+      // FIXME: Losing bundles
       CallInst *NewCI = CallInst::Create(&NewF, Args);
       NewCI->setCallingConv(NewF.getCallingConv());
 
@@ -77,6 +77,8 @@ static void replaceFunctionCalls(Function &OldF, Function &NewF,
 
       if (auto *FPOp = dyn_cast<FPMathOperator>(NewCI))
         cast<Instruction>(FPOp)->setFastMathFlags(CI->getFastMathFlags());
+
+      NewCI->copyMetadata(*CI);
 
       if (!CI->use_empty())
         CI->replaceAllUsesWith(NewCI);
