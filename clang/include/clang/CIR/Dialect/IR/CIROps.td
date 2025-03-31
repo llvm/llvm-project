@@ -762,18 +762,35 @@ def BrCondOp : CIR_Op<"brcond",
 }
 
 //===----------------------------------------------------------------------===//
-// While & DoWhileOp
+// Common loop op definitions
 //===----------------------------------------------------------------------===//
 
-class WhileOpBase<string mnemonic> : CIR_Op<mnemonic, [
+class LoopOpBase<string mnemonic> : CIR_Op<mnemonic, [
   LoopOpInterface,
   NoRegionArguments,
 ]> {
+  let extraClassDefinition = [{
+    void $cppClass::getSuccessorRegions(
+        mlir::RegionBranchPoint point,
+        llvm::SmallVectorImpl<mlir::RegionSuccessor> &regions) {
+      LoopOpInterface::getLoopOpSuccessorRegions(*this, point, regions);
+    }
+    llvm::SmallVector<Region *> $cppClass::getLoopRegions() {
+      return {&getBody()};
+    }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// While & DoWhileOp
+//===----------------------------------------------------------------------===//
+
+class WhileOpBase<string mnemonic> : LoopOpBase<mnemonic> {
   defvar isWhile = !eq(mnemonic, "while");
   let summary = "C/C++ " # !if(isWhile, "while", "do-while") # " loop";
   let builders = [
-    OpBuilder<(ins "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$condBuilder,
-                   "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$bodyBuilder), [{
+    OpBuilder<(ins "BuilderCallbackRef":$condBuilder,
+                   "BuilderCallbackRef":$bodyBuilder), [{
         mlir::OpBuilder::InsertionGuard guard($_builder);
         $_builder.createBlock($_state.addRegion());
       }] # !if(isWhile, [{
@@ -843,7 +860,7 @@ def DoWhileOp : WhileOpBase<"do"> {
 // ForOp
 //===----------------------------------------------------------------------===//
 
-def ForOp : CIR_Op<"for", [LoopOpInterface, NoRegionArguments]> {
+def ForOp : LoopOpBase<"for"> {
   let summary = "C/C++ for loop counterpart";
   let description = [{
     Represents a C/C++ for loop. It consists of three regions:
