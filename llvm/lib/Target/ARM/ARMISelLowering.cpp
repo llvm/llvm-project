@@ -19696,7 +19696,7 @@ bool ARMTargetLowering::isLegalAddImmediate(int64_t Imm) const {
   if (Subtarget->isThumb2())
     return ARM_AM::getT2SOImmVal(AbsImm) != -1;
   // Thumb1 only has 8-bit unsigned immediate.
-  return AbsImm >= 0 && AbsImm <= 255;
+  return AbsImm <= 255;
 }
 
 // Return false to prevent folding
