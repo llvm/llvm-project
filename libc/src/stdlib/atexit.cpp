@@ -19,6 +19,7 @@ Mutex handler_list_mtx(false, false, false, false);
 [[gnu::weak]] extern void teardown_main_tls();
 
 extern "C" {
+
 int __cxa_atexit(AtExitCallback *callback, void *payload, void *) {
   return add_atexit_unit(atexit_callbacks, {callback, payload});
 }
