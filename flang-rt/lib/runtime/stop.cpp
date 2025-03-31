@@ -113,10 +113,10 @@ static void CloseAllExternalUnits(const char *why) {
 #if defined(RT_DEVICE_COMPILATION)
   if (!quiet) {
     if (Fortran::runtime::executionEnvironment.noStopMessage && !isErrorStop) {
-      std::printf("%.*s\n", static_cast<int>(length), code);
+      std::printf("%s\n", code);
     } else {
-      std::printf("Fortran %s: %.*s\n", isErrorStop ? "ERROR STOP" : "STOP",
-          static_cast<int>(length), code);
+      std::printf("Fortran %s: %s\n", isErrorStop ? "ERROR STOP" : "STOP",
+          code);
     }
   }
   if (isErrorStop) {
