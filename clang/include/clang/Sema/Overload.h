@@ -408,6 +408,11 @@ class Sema;
              Third == ICK_Identity;
     }
 
+    bool isPerfect(const ASTContext &C) const {
+      return isIdentityConversion() &&
+             (!ReferenceBinding || C.hasSameType(getFromType(), getToType(2)));
+    }
+
     ImplicitConversionRank getRank() const;
     NarrowingKind
     getNarrowingKind(ASTContext &Context, const Expr *Converted,
@@ -745,9 +750,7 @@ class Sema;
     }
 
     bool isPerfect(const ASTContext &C) const {
-      return isStandard() && Standard.isIdentityConversion() &&
-              (!Standard.ReferenceBinding  || C.hasSameType(Standard.getFromType(), Standard.getToType(2)))
-              ;
+      return isStandard() && Standard.isPerfect(C);
     }
 
     // True iff this is a conversion sequence from an initializer list to an
@@ -995,6 +998,8 @@ class Sema;
         if (!C.isPerfect(Ctx))
           return false;
       }
+      if (isa_and_nonnull<CXXConversionDecl>(Function))
+        return FinalConversion.isPerfect(Ctx);
       return true;
     }
 
@@ -1034,7 +1039,7 @@ class Sema;
           RewriteKind(CRK_None) {}
   };
 
-  struct NonDeducedConversionTemplateOverloadCandidate {
+  struct DeferredConversionTemplateOverloadCandidate {
     FunctionTemplateDecl *FunctionTemplate;
     DeclAccessPair FoundDecl;
     CXXRecordDecl *ActingContext;
@@ -1049,7 +1054,7 @@ class Sema;
     unsigned AllowResultConversion : 1;
   };
 
-  struct NonDeducedMethodTemplateOverloadCandidate {
+  struct DeferredMethodTemplateOverloadCandidate {
     FunctionTemplateDecl *FunctionTemplate;
     DeclAccessPair FoundDecl;
     ArrayRef<Expr *> Args;
@@ -1064,7 +1069,7 @@ class Sema;
     unsigned PartialOverloading : 1;
   };
 
-  struct NonDeducedFunctionTemplateOverloadCandidate {
+  struct DeferredFunctionTemplateOverloadCandidate {
     FunctionTemplateDecl *FunctionTemplate;
     DeclAccessPair FoundDecl;
     ArrayRef<Expr *> Args;
@@ -1081,13 +1086,13 @@ class Sema;
     unsigned AggregateCandidateDeduction : 1;
   };
 
-  using NonDeducedTemplateOverloadCandidate =
-      std::variant<NonDeducedConversionTemplateOverloadCandidate,
-                   NonDeducedMethodTemplateOverloadCandidate,
-                   NonDeducedFunctionTemplateOverloadCandidate>;
+  using DeferredTemplateOverloadCandidate =
+      std::variant<DeferredConversionTemplateOverloadCandidate,
+                   DeferredMethodTemplateOverloadCandidate,
+                   DeferredFunctionTemplateOverloadCandidate>;
 
   static_assert(
-      std::is_trivially_destructible_v<NonDeducedTemplateOverloadCandidate>);
+      std::is_trivially_destructible_v<DeferredTemplateOverloadCandidate>);
 
   /// OverloadCandidateSet - A set of overload candidates, used in C++
   /// overload resolution (C++ 13.3).
@@ -1192,7 +1197,7 @@ class Sema;
   private:
     SmallVector<OverloadCandidate, 16> Candidates;
     llvm::SmallPtrSet<uintptr_t, 16> Functions;
-    SmallVector<NonDeducedTemplateOverloadCandidate, 8> NonDeducedCandidates;
+    SmallVector<DeferredTemplateOverloadCandidate, 8> DeferredCandidates;
 
     // Allocator for ConversionSequenceLists. We store the first few of these
     // inline to avoid allocation for small sets.
@@ -1204,6 +1209,7 @@ class Sema;
 
     constexpr static unsigned NumInlineBytes =
         32 * sizeof(ImplicitConversionSequence);
+
     unsigned NumInlineBytesUsed = 0;
     alignas(void *) char InlineSpace[NumInlineBytes];
 
@@ -1214,8 +1220,6 @@ class Sema;
     /// from the slab allocator.
     /// FIXME: It would probably be nice to have a SmallBumpPtrAllocator
     /// instead.
-    /// FIXME: Now that this only allocates ImplicitConversionSequences, do we
-    /// want to un-generalize this?
     template <typename T>
     T *slabAllocate(unsigned N) {
       // It's simpler if this doesn't need to consider alignment.
@@ -1253,6 +1257,9 @@ class Sema;
     /// Whether diagnostics should be deferred.
     bool shouldDeferDiags(Sema &S, ArrayRef<Expr *> Args, SourceLocation OpLoc);
 
+    // Whether the resolution of template candidates should be defered
+    bool shouldDeferTemplateArgumentDeduction(const LangOptions &Opts) const;
+
     /// Determine when this overload candidate will be new to the
     /// overload set.
     bool isNewCandidate(Decl *F, OverloadCandidateParamOrder PO =
@@ -1277,10 +1284,10 @@ class Sema;
     iterator end() { return Candidates.end(); }
 
     size_t size() const {
-      return Candidates.size() + NonDeducedCandidates.size();
+      return Candidates.size() + DeferredCandidates.size();
     }
     bool empty() const {
-      return Candidates.empty() && NonDeducedCandidates.empty();
+      return Candidates.empty() && DeferredCandidates.empty();
     }
 
     /// Allocate storage for conversion sequences for NumConversions
@@ -1325,21 +1332,21 @@ class Sema;
       return C;
     }
 
-    void AddNonDeducedTemplateCandidate(
+    void AddDeferredTemplateCandidate(
         FunctionTemplateDecl *FunctionTemplate, DeclAccessPair FoundDecl,
         ArrayRef<Expr *> Args, bool SuppressUserConversions,
         bool PartialOverloading, bool AllowExplicit,
         CallExpr::ADLCallKind IsADLCandidate, OverloadCandidateParamOrder PO,
         bool AggregateCandidateDeduction);
 
-    void AddNonDeducedMethodTemplateCandidate(
+    void AddDeferredMethodTemplateCandidate(
         FunctionTemplateDecl *MethodTmpl, DeclAccessPair FoundDecl,
         CXXRecordDecl *ActingContext, QualType ObjectType,
         Expr::Classification ObjectClassification, ArrayRef<Expr *> Args,
         bool SuppressUserConversions, bool PartialOverloading,
         OverloadCandidateParamOrder PO);
 
-    void AddNonDeducedConversionTemplateCandidate(
+    void AddDeferredConversionTemplateCandidate(
         FunctionTemplateDecl *FunctionTemplate, DeclAccessPair FoundDecl,
         CXXRecordDecl *ActingContext, Expr *From, QualType ToType,
         bool AllowObjCConversionOnExplicit, bool AllowExplicit,
@@ -1350,10 +1357,6 @@ class Sema;
     /// Find the best viable function on this overload set, if it exists.
     OverloadingResult BestViableFunction(Sema &S, SourceLocation Loc,
                                          OverloadCandidateSet::iterator& Best);
-
-    OverloadingResult
-    BestViableFunctionImpl(Sema &S, SourceLocation Loc,
-                           OverloadCandidateSet::iterator &Best);
 
     SmallVector<OverloadCandidate *, 32> CompleteCandidates(
         Sema &S, OverloadCandidateDisplayKind OCD, ArrayRef<Expr *> Args,
@@ -1383,6 +1386,14 @@ class Sema;
       DestAS = AS;
     }
 
+  private:
+    OverloadingResult ResultForBestCandidate(const iterator &Best);
+    void CudaExcludeWrongSideCandidates(Sema &S);
+    OverloadingResult
+    BestViableFunctionImpl(Sema &S, SourceLocation Loc,
+                           OverloadCandidateSet::iterator &Best);
+    void PerfectViableFunction(Sema &S, SourceLocation Loc,
+                               OverloadCandidateSet::iterator &Best);
   };
 
   bool isBetterOverloadCandidate(Sema &S, const OverloadCandidate &Cand1,
@@ -1430,6 +1441,16 @@ class Sema;
   // good candidate as we can get, despite the fact that it takes one less
   // parameter.
   bool shouldEnforceArgLimit(bool PartialOverloading, FunctionDecl *Function);
+
+  inline bool OverloadCandidateSet::shouldDeferTemplateArgumentDeduction(
+      const LangOptions &Opts) const {
+    return
+        // For user defined conversion we need to check against different
+        // combination of CV qualifiers and look at any expicit specifier, so
+        // always deduce template candidate.
+        Kind != CSK_InitByUserDefinedConversion && Kind != CSK_CodeCompletion &&
+        Opts.CPlusPlus && (!Opts.CUDA || Opts.GPUExcludeWrongSideOverloads);
+  }
 
 } // namespace clang
 
