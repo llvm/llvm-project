@@ -2427,6 +2427,15 @@ InnerLoopVectorizer::getOrCreateVectorTripCount(BasicBlock *InsertBlock) {
   Value *TC = getTripCount();
   IRBuilder<> Builder(InsertBlock->getTerminator());
 
+  // Use original trip count as the vector trip count if use predicated EVL
+  // instructions for tail-folding.
+  if (VF.isVector() && Cost->foldTailWithEVL()) {
+    assert(!Cost->requiresScalarEpilogue(true) &&
+           "Use predicated EVL instructions for tail-folding does not allow "
+           "scalar epilogue");
+    return VectorTripCount = TC;
+  }
+
   Type *Ty = TC->getType();
   // This is where we can make the step a runtime constant.
   Value *Step = createStepForVF(Builder, Ty, VF, UF);
@@ -4473,7 +4482,6 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPDef::VPVectorPointerSC:
       case VPDef::VPVectorEndPointerSC:
       case VPDef::VPExpandSCEVSC:
-      case VPDef::VPEVLBasedIVPHISC:
       case VPDef::VPPredInstPHISC:
       case VPDef::VPBranchOnMaskSC:
         continue;
