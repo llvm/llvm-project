@@ -2772,40 +2772,6 @@ bool RISCVTTIImpl::canSplatOperand(Instruction *I, int Operand) const {
   }
 }
 
-bool RISCVTTIImpl::tryToSinkVPSplat(VPIntrinsic *VPI,
-                                    SmallVectorImpl<Use *> &Ops) const {
-  Value *EVL = VPI->getVectorLengthParam();
-  if (!EVL)
-    return false;
-
-  for (auto &Op : VPI->operands()) {
-    auto *I = dyn_cast<Instruction>(Op.get());
-    if (!I || I->getParent() == VPI->getParent() ||
-        llvm::is_contained(Ops, &Op))
-      continue;
-
-    // We are looking for a vp.splat that can be sunk.
-    if (!match(I, m_Intrinsic<Intrinsic::experimental_vp_splat>(
-                      m_Value(), m_AllOnes(), m_Specific(EVL))))
-      continue;
-
-    // Don't sink i1 splats.
-    if (I->getType()->getScalarType()->isIntegerTy(1))
-      continue;
-
-    // All uses of the vp.splat should be sunk to avoid duplicating it across
-    // gpr and vector registers
-    if (all_of(I->uses(), [&](Use &U) {
-          auto *VPI = dyn_cast<VPIntrinsic>(U.getUser());
-          return VPI && VPI->getVectorLengthParam() == EVL &&
-                 canSplatOperand(VPI, U.getOperandNo());
-        }))
-      Ops.push_back(&Op);
-  }
-
-  return !Ops.empty();
-}
-
 /// Check if sinking \p I's operands to I's basic block is profitable, because
 /// the operands can be folded into a target instruction, e.g.
 /// splats of scalars can fold into vector instructions.
@@ -2857,20 +2823,23 @@ bool RISCVTTIImpl::isProfitableToSinkOperands(
   if (!ST->sinkSplatOperands())
     return false;
 
-  if (isa<VPIntrinsic>(I) && tryToSinkVPSplat(cast<VPIntrinsic>(I), Ops))
-    return true;
+  // Capture EVL value.
+  Value *EVL = nullptr;
+  if (auto *VPI = dyn_cast<VPIntrinsic>(I))
+    EVL = VPI->getVectorLengthParam();
 
-  for (auto OpIdx : enumerate(I->operands())) {
-    if (!canSplatOperand(I, OpIdx.index()))
-      continue;
-
-    Instruction *Op = dyn_cast<Instruction>(OpIdx.value().get());
+  for (auto &U : I->operands()) {
+    auto *Op = dyn_cast<Instruction>(U.get());
     // Make sure we are not already sinking this operand
     if (!Op || any_of(Ops, [&](Use *U) { return U->get() == Op; }))
       continue;
 
-    // We are looking for a splat that can be sunk.
-    if (!match(Op, m_Shuffle(m_InsertElt(m_Undef(), m_Value(), m_ZeroInt()),
+    // We are looking for a splat/vp.splat that can be sunk.
+    bool IsVPSplat =
+        EVL && match(Op, m_Intrinsic<Intrinsic::experimental_vp_splat>(
+                             m_Value(), m_AllOnes(), m_Specific(EVL)));
+    if (!IsVPSplat &&
+        !match(Op, m_Shuffle(m_InsertElt(m_Undef(), m_Value(), m_ZeroInt()),
                              m_Undef(), m_ZeroMask())))
       continue;
 
@@ -2878,23 +2847,31 @@ bool RISCVTTIImpl::isProfitableToSinkOperands(
     if (cast<VectorType>(Op->getType())->getElementType()->isIntegerTy(1))
       continue;
 
-    // All uses of the shuffle should be sunk to avoid duplicating it across gpr
-    // and vector registers
-    for (Use &U : Op->uses()) {
-      Instruction *Insn = cast<Instruction>(U.getUser());
-      if (!canSplatOperand(Insn, U.getOperandNo()))
-        return false;
+    // All uses of the splat/vp.splat should be sunk to avoid duplicating it
+    // across gpr and vector registers
+    if (all_of(Op->uses(), [&](Use &U) {
+          Instruction *Insn = cast<Instruction>(U.getUser());
+          if (!canSplatOperand(Insn, U.getOperandNo()))
+            return false;
+          if (IsVPSplat) {
+            auto *VPI = dyn_cast<VPIntrinsic>(U.getUser());
+            return VPI && VPI->getVectorLengthParam() == EVL;
+          }
+          return true;
+        })) {
+      if (!IsVPSplat) {
+        Use *InsertEltUse = &Op->getOperandUse(0);
+        // Sink any fpexts since they might be used in a widening fp pattern.
+        auto *InsertElt = cast<InsertElementInst>(InsertEltUse);
+        if (isa<FPExtInst>(InsertElt->getOperand(1)))
+          Ops.push_back(&InsertElt->getOperandUse(1));
+        Ops.push_back(InsertEltUse);
+      }
+      Ops.push_back(&U);
     }
-
-    Use *InsertEltUse = &Op->getOperandUse(0);
-    // Sink any fpexts since they might be used in a widening fp pattern.
-    auto *InsertElt = cast<InsertElementInst>(InsertEltUse);
-    if (isa<FPExtInst>(InsertElt->getOperand(1)))
-      Ops.push_back(&InsertElt->getOperandUse(1));
-    Ops.push_back(InsertEltUse);
-    Ops.push_back(&OpIdx.value());
   }
-  return true;
+
+  return !Ops.empty();
 }
 
 RISCVTTIImpl::TTI::MemCmpExpansionOptions

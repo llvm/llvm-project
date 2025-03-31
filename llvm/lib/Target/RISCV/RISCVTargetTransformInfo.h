@@ -454,8 +454,6 @@ public:
   /// able to splat the given operand.
   bool canSplatOperand(unsigned Opcode, int Operand) const;
 
-  bool tryToSinkVPSplat(VPIntrinsic *VPI, SmallVectorImpl<Use *> &Ops) const;
-
   bool isProfitableToSinkOperands(Instruction *I,
                                   SmallVectorImpl<Use *> &Ops) const;
 
