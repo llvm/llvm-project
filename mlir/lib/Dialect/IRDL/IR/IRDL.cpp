@@ -182,10 +182,9 @@ static LogicalResult verifyNames(Operation *op, StringRef kindName,
   DenseMap<StringRef, size_t> nameMap;
   for (auto [i, name] : llvm::enumerate(names)) {
     StringRef nameRef = llvm::cast<StringAttr>(name).getValue();
-    auto verifyNameRef =
-        isSnakeCase(nameRef, op, Twine(kindName) + " #" + Twine(i));
-    if (failed(verifyNameRef))
-      return verifyNameRef;
+
+    if (failed(isSnakeCase(nameRef, op, Twine(kindName) + " #" + Twine(i))))
+      return failure();
 
     if (nameMap.contains(nameRef))
       return op->emitOpError() << "name of " << kindName << " #" << i

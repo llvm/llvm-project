@@ -61,60 +61,14 @@ static std::string joinNameList(llvm::ArrayRef<std::string> names) {
   return nameArray;
 }
 
-static llvm::LogicalResult isSnakeCase(llvm::StringRef in,
-                                       mlir::Operation *loc) {
-  bool allowUnderscore = false;
-  for (auto &elem : in) {
-    if (elem == '_') {
-      if (!allowUnderscore)
-        return loc->emitError(
-            llvm::formatv("Error in symbol name `{}`: No leading or double "
-                          "underscores allowed.",
-                          in));
-    } else {
-      if (!isalnum(elem))
-        return loc->emitError(
-            llvm::formatv("Error in symbol name `{}`: Only numbers and "
-                          "lower-case characters allowed.",
-                          in));
-
-      if (llvm::isUpper(elem))
-        return loc->emitError(llvm::formatv(
-            "Error in symbol name `{}`: Upper-case characters are not allowed.",
-            in));
-    }
-
-    allowUnderscore = elem != '_';
-  }
-
-  return success();
-}
-
-static std::string snakeToCamel(llvm::StringRef in, bool capitalize = false) {
-  std::string output;
-  output.reserve(in.size());
-
-  for (char c : in) {
-    if (c == '_') {
-      capitalize = true;
-    } else {
-      output += capitalize ? toupper(c) : c;
-      capitalize = false;
-    }
-  }
-  return output;
-}
-
-static std::string snakeToPascal(llvm::StringRef in) {
-  return snakeToCamel(in, /*capitalize=*/true);
-}
-
 static std::string typeToCppName(irdl::TypeOp type) {
-  return llvm::formatv("{0}Type", snakeToPascal(type.getSymName()));
+  return llvm::formatv("{0}Type",
+                       convertToCamelFromSnakeCase(type.getSymName(), true));
 }
 
 static std::string opToCppName(irdl::OperationOp op) {
-  return llvm::formatv("{0}Op", snakeToPascal(op.getSymName()));
+  return llvm::formatv("{0}Op",
+                       convertToCamelFromSnakeCase(op.getSymName(), true));
 }
 
 static TypeStrings getStrings(irdl::TypeOp type) {
@@ -229,13 +183,15 @@ static LogicalResult generateOperationInclude(irdl::OperationOp op,
   auto res_getters = std::string{};
 
   for (size_t i = 0; i < opStrings.opOperandNames.size(); ++i) {
-    const auto &op = snakeToPascal(opStrings.opOperandNames[i]);
+    const auto op =
+        llvm::convertToCamelFromSnakeCase(opStrings.opOperandNames[i], true);
     op_getters += llvm::formatv(
         "::mlir::Value get{0}() { return getODSOperands({1}).front(); }\n  ",
         op, i);
   }
   for (size_t i = 0; i < opStrings.opResultNames.size(); ++i) {
-    const auto &op = snakeToPascal(opStrings.opResultNames[i]);
+    const auto op =
+        llvm::convertToCamelFromSnakeCase(opStrings.opResultNames[i], true);
     res_getters += llvm::formatv(
         R"(::mlir::TypedValue<::mlir::Type> get{0}() { return ::llvm::cast<::mlir::TypedValue<::mlir::Type>>(getODSResults({1}).front()); }
   )",
@@ -250,16 +206,18 @@ static LogicalResult generateOperationInclude(irdl::OperationOp op,
   auto resultParams =
       llvm::join(llvm::map_range(opStrings.opResultNames,
                                  [](StringRef name) -> std::string {
-                                   return llvm::formatv("::mlir::Type {0}, ",
-                                                        snakeToCamel(name));
+                                   return llvm::formatv(
+                                       "::mlir::Type {0}, ",
+                                       llvm::convertToCamelFromSnakeCase(name));
                                  }),
                  "");
 
   auto operandParams =
       llvm::join(llvm::map_range(opStrings.opOperandNames,
                                  [](StringRef name) -> std::string {
-                                   return llvm::formatv("::mlir::Value {0}, ",
-                                                        snakeToCamel(name));
+                                   return llvm::formatv(
+                                       "::mlir::Value {0}, ",
+                                       llvm::convertToCamelFromSnakeCase(name));
                                  }),
                  "");
 
@@ -502,9 +460,6 @@ void {0}::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState,
 }
 
 static LogicalResult verifySupported(irdl::DialectOp dialect) {
-  if (failed(isSnakeCase(dialect.getSymName(), dialect)))
-    return failure();
-
   LogicalResult res = success();
   dialect.walk([&](mlir::Operation *op) {
     res =
@@ -580,8 +535,7 @@ irdl::translateIRDLDialectToCpp(llvm::ArrayRef<irdl::DialectOp> dialects,
     StringRef dialectName = dialect.getSymName();
 
     if (failed(verifySupported(dialect))) {
-      result = failure();
-      continue;
+      return failure();
     }
 
     llvm::SmallVector<llvm::SmallString<8>> namespaceAbsolutePath{{"mlir"},
@@ -598,7 +552,8 @@ irdl::translateIRDLDialectToCpp(llvm::ArrayRef<irdl::DialectOp> dialects,
       namespacePathStream << "::" << pathElement;
     }
 
-    std::string cppShortName = snakeToPascal(dialectName);
+    std::string cppShortName =
+        llvm::convertToCamelFromSnakeCase(dialectName, true);
     std::string dialectBaseTypeName = llvm::formatv("{0}Type", cppShortName);
     std::string cppName = llvm::formatv("{0}Dialect", cppShortName);
 
@@ -614,17 +569,13 @@ irdl::translateIRDLDialectToCpp(llvm::ArrayRef<irdl::DialectOp> dialects,
     output << headerTemplateText;
 
     if (failed(generateInclude(dialect, output, dialectStrings))) {
-      dialect->emitError("Error in Dialect " + dialectName +
-                         " while generating headers");
-      result = failure();
-      continue;
+      return dialect->emitError("Error in Dialect " + dialectName +
+                                " while generating headers");
     }
 
     if (failed(generateLib(dialect, output, dialectStrings))) {
-      dialect->emitError("Error in Dialect " + dialectName +
-                         " while generating library");
-      result = failure();
-      continue;
+      return dialect->emitError("Error in Dialect " + dialectName +
+                                " while generating library");
     }
   }
 
