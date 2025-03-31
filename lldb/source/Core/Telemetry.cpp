@@ -41,15 +41,8 @@ static uint64_t ToNanosec(const SteadyTimePoint Point) {
 // user runs the two copies of binary at the same time.
 static std::string MakeUUID() {
   auto timestmap = std::chrono::steady_clock::now().time_since_epoch().count();
-
-  llvm::Expected<UUID> maybe_uuid = UUID::Generate();
-  if (!maybe_uuid) {
-    LLDB_LOG_ERROR(GetLog(LLDBLog::Host), maybe_uuid.takeError(),
-                   "Failed to generate random bytes for UUID: {0}");
-    return llvm::formatv("{0}", timestmap);
-  }
-
-  return llvm::formatv("{0}_{1}", maybe_uuid->GetAsString(), timestmap);
+  UUID uuid = UUID::Generate();
+  return llvm::formatv("{0}_{1}", uuid.GetAsString(), timestmap);
 }
 
 void LLDBBaseTelemetryInfo::serialize(Serializer &serializer) const {

@@ -88,11 +88,9 @@ TEST(UUIDTest, StringConverion) {
 }
 
 TEST(UUIDTest, Generate) {
-  llvm::Expected<UUID> u16 = UUID::Generate();
-  ASSERT_THAT_EXPECTED(u16, llvm::Succeeded());
-  EXPECT_EQ(u16->GetBytes().size(), 16UL);
+  UUID u16 = UUID::Generate();
+  EXPECT_EQ(u16.GetBytes().size(), 16UL);
 
-  llvm::Expected<UUID> u20 = UUID::Generate(20);
-  ASSERT_THAT_EXPECTED(u20, llvm::Succeeded());
-  EXPECT_EQ(u20->GetBytes().size(), 20UL);
+  UUID u20 = UUID::Generate(20);
+  EXPECT_EQ(u20.GetBytes().size(), 20UL);
 }

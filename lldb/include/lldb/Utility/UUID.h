@@ -16,7 +16,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
-#include <sys/_types/_u_int32_t.h>
 
 namespace lldb_private {
 
@@ -90,7 +89,7 @@ public:
                             llvm::SmallVectorImpl<uint8_t> &uuid_bytes);
 
   /// Create a random UUID.
-  static llvm::Expected<UUID> Generate(uint32_t num_bytes = 16);
+  static UUID Generate(uint32_t num_bytes = 16);
 
 private:
   // GNU ld generates 20-byte build-ids. Size chosen to avoid heap allocations
