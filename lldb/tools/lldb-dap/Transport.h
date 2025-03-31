@@ -31,7 +31,7 @@ public:
   EndOfFileError() = default;
 
   void log(llvm::raw_ostream &OS) const override {
-    OS << "End of file reached.";
+    OS << "end of file reached";
   }
   std::error_code convertToErrorCode() const override {
     return llvm::inconvertibleErrorCode();
@@ -45,7 +45,7 @@ public:
   TimeoutError() = default;
 
   void log(llvm::raw_ostream &OS) const override {
-    OS << "Operation timed out.";
+    OS << "operation timed out";
   }
   std::error_code convertToErrorCode() const override {
     return std::make_error_code(std::errc::timed_out);

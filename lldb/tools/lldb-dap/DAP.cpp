@@ -249,6 +249,9 @@ void DAP::Send(const Message &message) {
   // RequestHandler<> this should be handled in RequestHandler<>::operator().
   if (auto *resp = std::get_if<Response>(&message);
       resp && debugger.InterruptRequested()) {
+    // Clear the interrupt request.
+    debugger.CancelInterruptRequest();
+
     // If the debugger was interrupted, convert this response into a 'cancelled'
     // response because we might have a partial result.
     Response cancelled{/*request_seq=*/resp->request_seq,
@@ -699,7 +702,7 @@ bool DAP::HandleObject(const Message &M) {
       std::lock_guard<std::mutex> lock(m_active_request_mutex);
       m_active_request = req;
 
-      // Clear interrupt marker prior to handling the next request.
+      // Clear the interrupt request prior to invoking a handler.
       if (debugger.InterruptRequested())
         debugger.CancelInterruptRequest();
     }
@@ -814,7 +817,7 @@ llvm::Error DAP::Disconnect(bool terminateDebuggee) {
 
 bool DAP::IsCancelled(const protocol::Request &req) {
   std::lock_guard<std::mutex> lock(m_cancelled_requests_mutex);
-  return m_cancelled_requests.find(req.seq) != m_cancelled_requests.end();
+  return m_cancelled_requests.contains(req.seq);
 }
 
 void DAP::ClearCancelRequest(const CancelArguments &args) {

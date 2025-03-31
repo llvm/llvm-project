@@ -34,6 +34,7 @@
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -415,7 +416,7 @@ private:
   std::condition_variable m_queue_cv;
 
   std::mutex m_cancelled_requests_mutex;
-  std::set<int64_t> m_cancelled_requests;
+  llvm::SmallSet<int64_t, 4> m_cancelled_requests;
 
   std::mutex m_active_request_mutex;
   const protocol::Request *m_active_request;
