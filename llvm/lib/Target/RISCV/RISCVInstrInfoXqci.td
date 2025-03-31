@@ -158,11 +158,6 @@ def simm26_nosimm12 : ImmLeaf<XLenVT, [{
 def simm32_nosimm26 : ImmLeaf<XLenVT, [{
   return isInt<32>(Imm) && !isInt<26>(Imm);}]>;
 
-class BareSImmNAsmOperand<int width>
-    : ImmAsmOperand<"BareS", width, ""> {
-  let PredicateMethod = "isBareSimmN<" # width # ">";
-}
-
 // 32-bit Immediate, used by RV32 Instructions in 32-bit operations, so no
 // sign-/zero-extension. This is represented internally as a signed 32-bit value.
 def bare_simm32 : RISCVOp<XLenVT> {
