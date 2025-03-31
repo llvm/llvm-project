@@ -75,6 +75,9 @@ DEBUGOPT(DebugOmitUnreferencedMethods, 1, 0) ///< Omit unreferenced member
 BENIGN_ENUM_DEBUGOPT(AssignmentTrackingMode, AssignmentTrackingOpts, 2,
                      AssignmentTrackingOpts::Disabled)
 
+/// Whether or not to use Key Instructions to determine breakpoint locations.
+BENIGN_DEBUGOPT(DebugKeyInstructions, 1, 0)
+
 DEBUGOPT(DebugColumnInfo, 1, 0) ///< Whether or not to use column information
                                 ///< in debug info.
 
