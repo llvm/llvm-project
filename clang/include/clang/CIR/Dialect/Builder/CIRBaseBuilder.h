@@ -76,7 +76,7 @@ public:
   cir::ConstantOp getNullValue(mlir::Type ty, mlir::Location loc) {
     return getConstant(loc, getZeroInitAttr(ty));
   }
-  
+
   mlir::TypedAttr getConstNullPtrAttr(mlir::Type t) {
     assert(mlir::isa<cir::PointerType>(t) && "expected cir.ptr");
     return getConstPtrAttr(t, 0);

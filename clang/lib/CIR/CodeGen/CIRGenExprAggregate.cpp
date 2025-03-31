@@ -153,7 +153,7 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
     // Allocate the temporary variable
     // to store the pointer to first unitialized element
     auto tmpAddr = cgf.createTempAlloca(
-        cirElementPtrType, cgf.getPointerAlign(), loc, "arrayinit.temp");
+        cirElementPtrType, cgf.getPointerAlign(), loc, "arrayinit.temp", false);
     LValue tmpLV = LValue::makeAddr(tmpAddr, elementPtrType);
     cgf.emitStoreThroughLValue(RValue::get(element), tmpLV);
 
