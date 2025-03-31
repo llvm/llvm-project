@@ -1533,7 +1533,7 @@ void Sema::checkEnumArithmeticConversions(Expr *LHS, Expr *RHS,
     // In C++ 26, usual arithmetic conversions between 2 different enum types
     // are ill-formed.
     if (getLangOpts().CPlusPlus26)
-      DiagID = diag::err_conv_mixed_enum_types_cxx26;
+      DiagID = diag::warn_conv_mixed_enum_types_cxx26;
     else if (!L->castAs<EnumType>()->getDecl()->hasNameForLinkage() ||
              !R->castAs<EnumType>()->getDecl()->hasNameForLinkage()) {
       // If either enumeration type is unnamed, it's less likely that the
@@ -3113,8 +3113,15 @@ Sema::PerformObjectMemberConversion(Expr *From,
                                    /*IgnoreAccess=*/true))
     return ExprError();
 
-  return ImpCastExprToType(From, DestType, CK_UncheckedDerivedToBase,
-                           VK, &BasePath);
+  // Propagate qualifiers to base subobjects as per:
+  // C++ [basic.type.qualifier]p1.2:
+  //   A volatile object is [...] a subobject of a volatile object.
+  Qualifiers FromTypeQuals = FromType.getQualifiers();
+  FromTypeQuals.setAddressSpace(DestType.getAddressSpace());
+  DestType = Context.getQualifiedType(DestType, FromTypeQuals);
+
+  return ImpCastExprToType(From, DestType, CK_UncheckedDerivedToBase, VK,
+                           &BasePath);
 }
 
 bool Sema::UseArgumentDependentLookup(const CXXScopeSpec &SS,
@@ -4259,7 +4266,7 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(Expr *E,
   bool IsUnevaluatedOperand =
       (ExprKind == UETT_SizeOf || ExprKind == UETT_DataSizeOf ||
        ExprKind == UETT_AlignOf || ExprKind == UETT_PreferredAlignOf ||
-       ExprKind == UETT_VecStep);
+       ExprKind == UETT_VecStep || ExprKind == UETT_CountOf);
   if (IsUnevaluatedOperand) {
     ExprResult Result = CheckUnevaluatedOperand(E);
     if (Result.isInvalid())
@@ -4330,6 +4337,21 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(Expr *E,
   if (CheckObjCTraitOperandConstraints(*this, ExprTy, E->getExprLoc(),
                                        E->getSourceRange(), ExprKind))
     return true;
+
+  if (ExprKind == UETT_CountOf) {
+    // The type has to be an array type. We already checked for incomplete
+    // types above.
+    QualType ExprType = E->IgnoreParens()->getType();
+    if (!ExprType->isArrayType()) {
+      Diag(E->getExprLoc(), diag::err_countof_arg_not_array_type) << ExprType;
+      return true;
+    }
+    // FIXME: warn on _Countof on an array parameter. Not warning on it
+    // currently because there are papers in WG14 about array types which do
+    // not decay that could impact this behavior, so we want to see if anything
+    // changes here before coming up with a warning group for _Countof-related
+    // diagnostics.
+  }
 
   if (ExprKind == UETT_SizeOf) {
     if (const auto *DeclRef = dyn_cast<DeclRefExpr>(E->IgnoreParens())) {
@@ -4601,6 +4623,15 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(QualType ExprType,
     return true;
   }
 
+  if (ExprKind == UETT_CountOf) {
+    // The type has to be an array type. We already checked for incomplete
+    // types above.
+    if (!ExprType->isArrayType()) {
+      Diag(OpLoc, diag::err_countof_arg_not_array_type) << ExprType;
+      return true;
+    }
+  }
+
   // WebAssembly tables are always illegal operands to unary expressions and
   // type traits.
   if (Context.getTargetInfo().getTriple().isWasm() &&
@@ -4659,7 +4690,8 @@ ExprResult Sema::CreateUnaryExprOrTypeTraitExpr(TypeSourceInfo *TInfo,
   // properly deal with VLAs in nested calls of sizeof and typeof.
   if (currentEvaluationContext().isUnevaluated() &&
       currentEvaluationContext().InConditionallyConstantEvaluateContext &&
-      ExprKind == UETT_SizeOf && TInfo->getType()->isVariablyModifiedType())
+      (ExprKind == UETT_SizeOf || ExprKind == UETT_CountOf) &&
+      TInfo->getType()->isVariablyModifiedType())
     TInfo = TransformToPotentiallyEvaluated(TInfo);
 
   // C99 6.5.3.4p4: the type (an unsigned integer type) is size_t.
@@ -4690,16 +4722,16 @@ Sema::CreateUnaryExprOrTypeTraitExpr(Expr *E, SourceLocation OpLoc,
   } else if (E->refersToBitField()) {  // C99 6.5.3.4p1.
     Diag(E->getExprLoc(), diag::err_sizeof_alignof_typeof_bitfield) << 0;
     isInvalid = true;
-  } else if (ExprKind == UETT_VectorElements) {
-    isInvalid = CheckUnaryExprOrTypeTraitOperand(E, UETT_VectorElements);
-  } else {
-    isInvalid = CheckUnaryExprOrTypeTraitOperand(E, UETT_SizeOf);
+  } else if (ExprKind == UETT_VectorElements || ExprKind == UETT_SizeOf ||
+             ExprKind == UETT_CountOf) { // FIXME: __datasizeof?
+    isInvalid = CheckUnaryExprOrTypeTraitOperand(E, ExprKind);
   }
 
   if (isInvalid)
     return ExprError();
 
-  if (ExprKind == UETT_SizeOf && E->getType()->isVariableArrayType()) {
+  if ((ExprKind == UETT_SizeOf || ExprKind == UETT_CountOf) &&
+      E->getType()->isVariableArrayType()) {
     PE = TransformToPotentiallyEvaluated(E);
     if (PE.isInvalid()) return ExprError();
     E = PE.get();
@@ -6477,8 +6509,8 @@ ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
       ULE && ULE->hasExplicitTemplateArgs() &&
       ULE->decls_begin() == ULE->decls_end()) {
     Diag(Fn->getExprLoc(), getLangOpts().CPlusPlus20
-                               ? diag::warn_cxx17_compat_adl_only_template_id
-                               : diag::ext_adl_only_template_id)
+                               ? diag::compat_cxx20_adl_only_template_id
+                               : diag::compat_pre_cxx20_adl_only_template_id)
         << ULE->getName();
   }
 
@@ -7134,7 +7166,13 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
     return ExprError();
   LiteralExpr = Result.get();
 
-  bool isFileScope = !CurContext->isFunctionOrMethod();
+  // We treat the compound literal as being at file scope if it's not in a
+  // function or method body, or within the function's prototype scope. This
+  // means the following compound literal is not at file scope:
+  //   void func(char *para[(int [1]){ 0 }[0]);
+  const Scope *S = getCurScope();
+  bool IsFileScope = !CurContext->isFunctionOrMethod() &&
+                     (!S || !S->isFunctionPrototypeScope());
 
   // In C, compound literals are l-values for some reason.
   // For GCC compatibility, in C++, file-scope array compound literals with
@@ -7155,20 +7193,20 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
   // FIXME: GCC supports compound literals of reference type, which should
   // obviously have a value kind derived from the kind of reference involved.
   ExprValueKind VK =
-      (getLangOpts().CPlusPlus && !(isFileScope && literalType->isArrayType()))
+      (getLangOpts().CPlusPlus && !(IsFileScope && literalType->isArrayType()))
           ? VK_PRValue
           : VK_LValue;
 
-  if (isFileScope)
+  if (IsFileScope)
     if (auto ILE = dyn_cast<InitListExpr>(LiteralExpr))
       for (unsigned i = 0, j = ILE->getNumInits(); i != j; i++) {
         Expr *Init = ILE->getInit(i);
         ILE->setInit(i, ConstantExpr::Create(Context, Init));
       }
 
-  auto *E = new (Context) CompoundLiteralExpr(LParenLoc, TInfo, literalType,
-                                              VK, LiteralExpr, isFileScope);
-  if (isFileScope) {
+  auto *E = new (Context) CompoundLiteralExpr(LParenLoc, TInfo, literalType, VK,
+                                              LiteralExpr, IsFileScope);
+  if (IsFileScope) {
     if (!LiteralExpr->isTypeDependent() &&
         !LiteralExpr->isValueDependent() &&
         !literalType->isDependentType()) // C99 6.5.2.5p3
@@ -7184,7 +7222,7 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
     return ExprError();
   }
 
-  if (!isFileScope && !getLangOpts().CPlusPlus) {
+  if (!IsFileScope && !getLangOpts().CPlusPlus) {
     // Compound literals that have automatic storage duration are destroyed at
     // the end of the scope in C; in C++, they're just temporaries.
 
@@ -14301,9 +14339,8 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
     CXXMethodDecl *MD = cast<CXXMethodDecl>(DRE->getDecl());
 
     CheckUseOfCXXMethodAsAddressOfOperand(OpLoc, OrigOp.get(), MD);
-
     QualType MPTy = Context.getMemberPointerType(
-        op->getType(), Context.getTypeDeclType(MD->getParent()).getTypePtr());
+        op->getType(), DRE->getQualifier(), MD->getParent());
 
     if (getLangOpts().PointerAuthCalls && MD->isVirtual() &&
         !isUnevaluatedContext() && !MPTy->isDependentType()) {
@@ -14391,8 +14428,8 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
       // of some class C [...] and if E is a qualified-id, E is
       // not the un-parenthesized operand of the unary & operator [...]
       // the id-expression is transformed into a class member access expression.
-      if (isa<DeclRefExpr>(op) && cast<DeclRefExpr>(op)->getQualifier() &&
-          !isa<ParenExpr>(OrigOp.get())) {
+      if (auto *DRE = dyn_cast<DeclRefExpr>(op);
+          DRE && DRE->getQualifier() && !isa<ParenExpr>(OrigOp.get())) {
         DeclContext *Ctx = dcl->getDeclContext();
         if (Ctx && Ctx->isRecord()) {
           if (dcl->getType()->isReferenceType()) {
@@ -14406,8 +14443,7 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
             Ctx = Ctx->getParent();
 
           QualType MPTy = Context.getMemberPointerType(
-              op->getType(),
-              Context.getTypeDeclType(cast<RecordDecl>(Ctx)).getTypePtr());
+              op->getType(), DRE->getQualifier(), cast<CXXRecordDecl>(Ctx));
           // Under the MS ABI, lock down the inheritance model now.
           if (Context.getTargetInfo().getCXXABI().isMicrosoft())
             (void)isCompleteType(OpLoc, MPTy);
@@ -17933,8 +17969,7 @@ void Sema::PopExpressionEvaluationContext() {
   // Otherwise, merge the contexts together.
   } else {
     Cleanup.mergeFrom(Rec.ParentCleanup);
-    MaybeODRUseExprs.insert(Rec.SavedMaybeODRUseExprs.begin(),
-                            Rec.SavedMaybeODRUseExprs.end());
+    MaybeODRUseExprs.insert_range(Rec.SavedMaybeODRUseExprs);
   }
 
   // Pop the current expression evaluation context off the stack.
@@ -19838,6 +19873,12 @@ static void DoMarkVarDeclReferenced(
         SemaRef.runWithSufficientStackSpace(PointOfInstantiation, [&] {
           SemaRef.InstantiateVariableDefinition(PointOfInstantiation, Var);
         });
+
+        // The size of an incomplete array type can be updated by
+        // instantiating the initializer. The DeclRefExpr's type should be
+        // updated accordingly too, or users of it would be confused!
+        if (E)
+          SemaRef.getCompletedType(E);
 
         // Re-set the member to trigger a recomputation of the dependence bits
         // for the expression.

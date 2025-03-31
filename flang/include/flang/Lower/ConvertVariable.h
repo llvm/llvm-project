@@ -182,6 +182,22 @@ void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
 /// track the cray pointee as Fortran pointer.
 mlir::Type getCrayPointeeBoxType(mlir::Type);
 
+/// If the given array symbol must be repacked into contiguous
+/// memory, generate fir.pack_array for the given box array value.
+/// The returned extended value is a box with the same properties
+/// as the original.
+fir::ExtendedValue genPackArray(Fortran::lower::AbstractConverter &converter,
+                                const Fortran::semantics::Symbol &sym,
+                                fir::ExtendedValue exv);
+
+/// Given an operation defining the variable corresponding
+/// to the given symbol, generate fir.unpack_array operation
+/// that reverts the effect of fir.pack_array.
+/// \p def is expected to be hlfir.declare operation.
+void genUnpackArray(fir::FirOpBuilder &builder, mlir::Location loc,
+                    fir::FortranVariableOpInterface def,
+                    const Fortran::semantics::Symbol &sym);
+
 } // namespace lower
 } // namespace Fortran
 #endif // FORTRAN_LOWER_CONVERT_VARIABLE_H

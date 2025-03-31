@@ -737,12 +737,10 @@ void StructurizeCFG::findUndefBlocks(
     if (!VisitedBlock.insert(Current).second)
       continue;
 
-    if (FlowSet.contains(Current)) {
-      for (auto P : predecessors(Current))
-        Stack.push_back(P);
-    } else if (!Incomings.contains(Current)) {
+    if (FlowSet.contains(Current))
+      llvm::append_range(Stack, predecessors(Current));
+    else if (!Incomings.contains(Current))
       UndefBlks.push_back(Current);
-    }
   }
 }
 
@@ -819,8 +817,7 @@ void StructurizeCFG::setPhiValues() {
 
     // Get the undefined blocks shared by all the phi nodes.
     if (!BlkPhis.empty()) {
-      for (const auto &VI : BlkPhis.front().second)
-        Incomings.insert(VI.first);
+      Incomings.insert_range(llvm::make_first_range(BlkPhis.front().second));
       findUndefBlocks(To, Incomings, UndefBlks);
     }
 

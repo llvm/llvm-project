@@ -524,6 +524,18 @@ define void @foo() {
   auto *StructTy2Packed = sandboxir::ConstantStruct::getTypeForElements(
       Ctx, {ZeroI42, OneI42}, /*Packed=*/true);
   EXPECT_EQ(StructTy2Packed, StructTyPacked);
+
+  // Check ConstantVector::get().
+  auto *NewCV = sandboxir::ConstantVector::get({ZeroI42, OneI42});
+  EXPECT_EQ(NewCV, Vector);
+  // Check ConstantVector::getSplat(), getType().
+  auto *SplatRaw =
+      sandboxir::ConstantVector::getSplat(ElementCount::getFixed(2), OneI42);
+  auto *Splat = cast<sandboxir::ConstantVector>(SplatRaw);
+  EXPECT_EQ(Splat->getType()->getNumElements(), 2u);
+  EXPECT_THAT(Splat->operands(), testing::ElementsAre(OneI42, OneI42));
+  // Check ConstantVector::getSplatValue().
+  EXPECT_EQ(Splat->getSplatValue(), OneI42);
 }
 
 TEST_F(SandboxIRTest, ConstantAggregateZero) {

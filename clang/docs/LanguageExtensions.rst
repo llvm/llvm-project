@@ -1594,6 +1594,22 @@ C11 ``_Thread_local``
 Use ``__has_feature(c_thread_local)`` or ``__has_extension(c_thread_local)``
 to determine if support for ``_Thread_local`` variables is enabled.
 
+C2y
+---
+
+The features listed below are part of the C2y standard.  As a result, all these
+features are enabled with the ``-std=c2y`` or ``-std=gnu2y`` option when
+compiling C code.
+
+C2y ``_Countof``
+^^^^^^^^^^^^^^^^
+
+Use ``__has_feature(c_countof)`` (in C2y or later mode) or
+``__has_extension(c_countof)`` (in C23 or earlier mode) to determine if support
+for the ``_Countof`` operator is enabled. This feature is not available in C++
+mode.
+
+
 Modules
 -------
 
@@ -1653,6 +1669,7 @@ Array & element qualification (N2607)                                          C
 Attributes (N2335)                                                             C23           C89
 ``#embed`` (N3017)                                                             C23           C89, C++
 Octal literals prefixed with ``0o`` or ``0O``                                  C2y           C89, C++
+``_Countof`` (N3369, N3469)                                                    C2y           C89
 ============================================= ================================ ============= =============
 
 Builtin type aliases
@@ -1911,6 +1928,40 @@ A simplistic usage example as might be seen in standard C++ headers follows:
   #else
   // Emulate type trait for compatibility with other compilers.
   #endif
+
+
+.. _builtin_structured_binding_size-doc:
+
+__builtin_structured_binding_size (C++)
+---------------------------------------
+
+The ``__builtin_structured_binding_size(T)`` type trait returns
+the *structured binding size* ([dcl.struct.bind]) of type ``T``
+
+This is equivalent to the size of the pack ``p`` in ``auto&& [...p] = declval<T&>();``.
+If the argument cannot be decomposed, ``__builtin_structured_binding_size(T)``
+is not a valid expression (``__builtin_structured_binding_size`` is SFINAE-friendly).
+
+builtin arrays, builtin SIMD vectors,
+builtin complex types, *tuple-like* types, and decomposable class types
+are decomposable types.
+
+A type is considered a valid *tuple-like* if ``std::tuple_size_v<T>`` is a valid expression,
+even if there is no valid ``std::tuple_element`` specialization or suitable
+``get`` function for that type.
+
+.. code-block:: c++
+
+  template<std::size_t Idx, typename T>
+  requires (Idx < __builtin_structured_binding_size(T))
+  decltype(auto) constexpr get_binding(T&& obj) {
+      auto && [...p] = std::forward<T>(obj);
+      return p...[Idx];
+  }
+  struct S { int a = 0, b = 42; };
+  static_assert(__builtin_structured_binding_size(S) == 2);
+  static_assert(get_binding<1>(S{}) == 42);
+
 
 Blocks
 ======

@@ -16,6 +16,8 @@
 #include "OutputRedirector.h"
 #include "ProgressEvent.h"
 #include "Protocol/ProtocolBase.h"
+#include "Protocol/ProtocolRequests.h"
+#include "Protocol/ProtocolTypes.h"
 #include "SourceBreakpoint.h"
 #include "Transport.h"
 #include "lldb/API/SBBroadcaster.h"
@@ -57,6 +59,9 @@ typedef llvm::DenseMap<std::pair<uint32_t, uint32_t>, SourceBreakpoint>
 typedef llvm::StringMap<FunctionBreakpoint> FunctionBreakpointMap;
 typedef llvm::DenseMap<lldb::addr_t, InstructionBreakpoint>
     InstructionBreakpointMap;
+
+using AdapterFeature = protocol::AdapterFeature;
+using ClientFeature = protocol::ClientFeature;
 
 enum class OutputType { Console, Stdout, Stderr, Telemetry };
 
@@ -144,7 +149,7 @@ struct SendEventRequestHandler : public lldb::SBCommandPluginInterface {
 
 struct DAP {
   llvm::StringRef debug_adapter_path;
-  std::ofstream *log;
+  Log *log;
   Transport &transport;
   lldb::SBFile in;
   OutputRedirector out;
@@ -205,21 +210,22 @@ struct DAP {
   // empty; if the previous expression was a variable expression, this string
   // will contain that expression.
   std::string last_nonempty_var_expression;
+  /// The set of features supported by the connected client.
+  llvm::DenseSet<ClientFeature> clientFeatures;
 
   /// Creates a new DAP sessions.
   ///
   /// \param[in] path
   ///     Path to the lldb-dap binary.
   /// \param[in] log
-  ///     Log file stream, if configured.
+  ///     Log stream, if configured.
   /// \param[in] default_repl_mode
   ///     Default repl mode behavior, as configured by the binary.
   /// \param[in] pre_init_commands
   ///     LLDB commands to execute as soon as the debugger instance is allocaed.
   /// \param[in] transport
   ///     Transport for this debug session.
-  DAP(llvm::StringRef path, std::ofstream *log,
-      const ReplMode default_repl_mode,
+  DAP(llvm::StringRef path, Log *log, const ReplMode default_repl_mode,
       std::vector<std::string> pre_init_commands, Transport &transport);
 
   ~DAP();
@@ -361,8 +367,11 @@ struct DAP {
 
   /// Registers a request handler.
   template <typename Handler> void RegisterRequest() {
-    request_handlers[Handler::getCommand()] = std::make_unique<Handler>(*this);
+    request_handlers[Handler::GetCommand()] = std::make_unique<Handler>(*this);
   }
+
+  /// The set of capablities supported by this adapter.
+  protocol::Capabilities GetCapabilities();
 
   /// Debuggee will continue from stopped state.
   void WillContinue() { variables.Clear(); }

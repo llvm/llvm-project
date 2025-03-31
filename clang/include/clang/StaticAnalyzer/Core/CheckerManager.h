@@ -195,6 +195,13 @@ public:
   /// checker option value.
   void reportInvalidCheckerOptionValue(const CheckerBase *C,
                                        StringRef OptionName,
+                                       StringRef ExpectedValueDesc) const {
+    reportInvalidCheckerOptionValue(C, DefaultPart, OptionName,
+                                    ExpectedValueDesc);
+  }
+
+  void reportInvalidCheckerOptionValue(const CheckerBase *C, CheckerPartIdx Idx,
+                                       StringRef OptionName,
                                        StringRef ExpectedValueDesc) const;
 
   using CheckerTag = const void *;

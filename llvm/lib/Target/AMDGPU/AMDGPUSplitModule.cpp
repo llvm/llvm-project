@@ -569,7 +569,7 @@ void SplitGraph::buildGraph(CallGraph &CG) {
         LLVM_DEBUG(dbgs() << "    indirect call found\n");
         FnsWithIndirectCalls.push_back(&Fn);
       } else if (!KnownCallees.empty())
-        DirectCallees.insert(KnownCallees.begin(), KnownCallees.end());
+        DirectCallees.insert_range(KnownCallees);
     }
 
     Node &N = getNode(Cache, Fn);

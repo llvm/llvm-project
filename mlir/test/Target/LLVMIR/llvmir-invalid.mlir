@@ -411,3 +411,45 @@ module @no_known_conversion_innermost_eltype {
     }
   }
 #-}
+
+// -----
+
+llvm.mlir.global external @zed(42 : i32) : i32
+
+llvm.mlir.alias external @foo : i32 {
+  %0 = llvm.mlir.addressof @zed : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+llvm.func @call_alias_func() {
+  // expected-error @below{{'llvm.dso_local_equivalent' op must reference an alias to a function}}
+  %0 = llvm.dso_local_equivalent @foo : !llvm.ptr
+  llvm.call %0() : !llvm.ptr, () -> (i32)
+  llvm.return
+}
+
+// -----
+
+llvm.mlir.global external @y() : !llvm.ptr
+
+llvm.func @call_alias_func() {
+  // expected-error @below{{op must reference a global defined by 'llvm.func' or 'llvm.mlir.alias'}}
+  %0 = llvm.dso_local_equivalent @y : !llvm.ptr
+  llvm.call %0() : !llvm.ptr, () -> (i32)
+  llvm.return
+}
+
+// -----
+
+llvm.mlir.global external constant @const() {addr_space = 0 : i32, dso_local} : i32 {
+  %0 = llvm.mlir.addressof @const : !llvm.ptr
+  %1 = llvm.ptrtoint %0 : !llvm.ptr to i64
+  // expected-error @below{{'llvm.dso_local_equivalent' op target function with 'extern_weak' linkage not allowed}}
+  %2 = llvm.dso_local_equivalent @extern_func : !llvm.ptr
+  %3 = llvm.ptrtoint %2 : !llvm.ptr to i64
+  %4 = llvm.sub %3, %1 : i64
+  %5 = llvm.trunc %4 : i64 to i32
+  llvm.return %5 : i32
+}
+
+llvm.func extern_weak @extern_func()

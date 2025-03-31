@@ -1245,8 +1245,7 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
         SmallVector<const Value *, 4> Objects;
         getUnderlyingObjects(V, Objects, /* LI = */ nullptr);
 
-        for (const Value *O : Objects)
-          ObjSet.insert(O);
+        ObjSet.insert_range(Objects);
       }
 
       // Figure out if we're derived from anything that is not a noalias

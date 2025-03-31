@@ -85,6 +85,21 @@ end subroutine
 ! CHECK-NEXT: conflict: R/W
 ! CHECK-NEXT: run 1 save    : forall/region_assign1/lhs
 ! CHECK-NEXT: run 2 evaluate: forall/region_assign1
+
+subroutine test_character_no_conflict(c)
+ type tc
+    character(10), pointer :: p
+ end type
+ character(10), target :: c(10)
+ integer(8) :: i
+ type(tc) a(10)
+ forall(i=1:10)
+   a(i)%p => c(i)
+ end forall
+end subroutine
+! CHECK: ------------ scheduling forall in _QMforall_pointersPtest_character_no_conflict ------------
+! CHECK-NEXT: run 1 evaluate: forall/region_assign1
+
 end module
 
 ! End to end test provided for debugging purpose (not run by lit).

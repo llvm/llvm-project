@@ -5,7 +5,7 @@
 // CHECK: %__cblayout_CB = type <{ float, double, <2 x i32> }>
 // CHECK: %__cblayout_CB_1 = type <{ float, <2 x float> }>
 
-// CHECK: @CB.cb = external constant target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 176, 16, 168, 88))
+// CHECK: @CB.cb = global target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 176, 16, 168, 88))
 // CHECK: @a = external addrspace(2) global float, align 4
 // CHECK: @b = external addrspace(2) global double, align 8
 // CHECK: @c = external addrspace(2) global <2 x i32>, align 8
@@ -16,7 +16,7 @@ cbuffer CB : register(b1, space3) {
   int2 c : packoffset(c5.z);
 }
 
-// CHECK: @CB.cb.1 = external constant target("dx.CBuffer", target("dx.Layout", %__cblayout_CB_1, 92, 88, 80))
+// CHECK: @CB.cb.1 = global target("dx.CBuffer", target("dx.Layout", %__cblayout_CB_1, 92, 88, 80))
 // CHECK: @x = external addrspace(2) global float, align 4
 // CHECK: @y = external addrspace(2) global <2 x float>, align 8
 

@@ -63,8 +63,8 @@ static constexpr StringLiteral kHeaderSeparator = "\r\n\r\n";
 
 namespace lldb_dap {
 
-Transport::Transport(StringRef client_name, std::ofstream *log,
-                     IOObjectSP input, IOObjectSP output)
+Transport::Transport(StringRef client_name, Log *log, IOObjectSP input,
+                     IOObjectSP output)
     : m_client_name(client_name), m_log(log), m_input(std::move(input)),
       m_output(std::move(output)) {}
 

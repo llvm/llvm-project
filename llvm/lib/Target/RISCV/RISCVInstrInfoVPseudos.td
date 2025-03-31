@@ -6051,6 +6051,11 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 1 in {
                                [(set GPR:$rd, (riscv_read_vlenb))]>,
                         PseudoInstExpansion<(CSRRS GPR:$rd, SysRegVLENB.Encoding, X0)>,
                         Sched<[WriteRdVLENB]>;
+  let Defs = [VL, VTYPE] in {
+  def PseudoReadVLENBViaVSETVLIX0 : Pseudo<(outs GPR:$rd), (ins uimm5:$shamt),
+                                  []>,
+                           Sched<[WriteVSETVLI, ReadVSETVLI]>;
+  }
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 1,
