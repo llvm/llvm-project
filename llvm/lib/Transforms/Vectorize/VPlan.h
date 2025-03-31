@@ -2065,19 +2065,19 @@ public:
 /// scalar value.
 class VPPartialReductionRecipe : public VPSingleDefRecipe {
   unsigned Opcode;
-  unsigned ScaleFactor;
+  unsigned VFScaleFactor;
 
 public:
   VPPartialReductionRecipe(Instruction *ReductionInst, VPValue *Op0,
-                           VPValue *Op1, unsigned ScaleFactor)
+                           VPValue *Op1, unsigned VFScaleFactor)
       : VPPartialReductionRecipe(ReductionInst->getOpcode(), Op0, Op1,
-                                 ScaleFactor, ReductionInst) {}
+                                 VFScaleFactor, ReductionInst) {}
   VPPartialReductionRecipe(unsigned Opcode, VPValue *Op0, VPValue *Op1,
-                           unsigned ScaleFactor,
+                           unsigned VFScaleFactor,
                            Instruction *ReductionInst = nullptr)
       : VPSingleDefRecipe(VPDef::VPPartialReductionSC,
                           ArrayRef<VPValue *>({Op0, Op1}), ReductionInst),
-        Opcode(Opcode), ScaleFactor(ScaleFactor) {
+        Opcode(Opcode), VFScaleFactor(VFScaleFactor) {
     [[maybe_unused]] auto *AccumulatorRecipe =
         getOperand(1)->getDefiningRecipe();
     assert((isa<VPReductionPHIRecipe>(AccumulatorRecipe) ||
@@ -2088,7 +2088,7 @@ public:
 
   VPPartialReductionRecipe *clone() override {
     return new VPPartialReductionRecipe(Opcode, getOperand(0), getOperand(1),
-                                        ScaleFactor, getUnderlyingInstr());
+                                        VFScaleFactor, getUnderlyingInstr());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPPartialReductionSC)
@@ -2103,7 +2103,7 @@ public:
   /// Get the binary op's opcode.
   unsigned getOpcode() const { return Opcode; }
 
-  unsigned getScaleFactor() const { return ScaleFactor; }
+  unsigned getVFScaleFactor() const { return VFScaleFactor; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.

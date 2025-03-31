@@ -5034,7 +5034,7 @@ calculateRegisterUsage(VPlan &Plan, ArrayRef<ElementCount> VFs,
             VF = VF.divideCoefficientBy(ReductionR->getVFScaleFactor());
           else if (auto *PartialReductionR =
                        dyn_cast<VPPartialReductionRecipe>(R))
-            VF = VF.divideCoefficientBy(PartialReductionR->getScaleFactor());
+            VF = VF.divideCoefficientBy(PartialReductionR->getVFScaleFactor());
           if (VF != VFs[J])
             LLVM_DEBUG(dbgs() << "LV(REG): Scaled down VF from " << VFs[J]
                               << " to " << VF << " for ";
