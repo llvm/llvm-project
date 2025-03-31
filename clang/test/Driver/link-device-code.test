@@ -6,7 +6,7 @@
 
 # RUN: not clang-sycl-linker %t.bar.bc %t.baz.bc -triple=spirv64 --dry-run -o a.spv --print-linked-module 2>&1 | FileCheck %s --check-prefix=CHECK-MULTIPLE-DEFS
 
-# RUN: clang-sycl-linker %t.foo.bc %t.bar.bc -device-libs=%t.libsycl.bc -library-path=/ -triple=spirv64 --dry-run -o a.spv --print-linked-module 2>&1 | FileCheck %s --check-prefix=CHECK-DEVICE-LIB
+# RUN: clang-sycl-linker %t.foo.bc %t.bar.bc -device-libs=%t.libsycl.bc -library-path= -triple=spirv64 --dry-run -o a.spv --print-linked-module 2>&1 | FileCheck %s --check-prefix=CHECK-DEVICE-LIB
 
 ; CHECK-SIMPLE: define {{.*}}foo_func1{{.*}}
 ; CHECK-SIMPLE: define {{.*}}foo_func2{{.*}}

@@ -223,8 +223,6 @@ Expected<SmallVector<std::string>> getSYCLDeviceLibs(const ArgList &Args) {
   StringRef LibraryPath;
   if (Arg *A = Args.getLastArg(OPT_library_path_EQ))
     LibraryPath = A->getValue();
-  if (LibraryPath.empty())
-    return DeviceLibFiles;
   if (Arg *A = Args.getLastArg(OPT_device_libs_EQ)) {
     if (A->getValues().size() == 0)
       return createStringError(
