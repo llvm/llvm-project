@@ -1455,12 +1455,10 @@ bool Parser::zOSParseParameterList(
     TypeList = SmallVector<QualType, 4>();
     PP.Lex(Tok);
     while (Tok.isNot(tok::eof) && !Tok.is(tok::r_paren)) {
-      TypeResult TResult = ParseTypeName(nullptr, DeclaratorContext::Prototype);
+      TypeResult TResult = ParseTypeName(nullptr);
       if (!TResult.isInvalid()) {
         QualType QT = TResult.get().get();
         if (!QT.getTypePtr()->isVoidType()) {
-          fprintf(stderr, "SDP: paramType -\n");
-          QT.getCanonicalType()->dump();
           TypeList->push_back(QT);
         }
       }

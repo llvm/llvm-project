@@ -1,5 +1,5 @@
 // REQUIRES: systemz-registered-target
-// RUN: %clang_cc1 %s -emit-llvm -fzos-extensions -triple s390x-none-zos -fvisibility=hidden -verify -o - | FileCheck %s
+// RUN: %clang_cc1 %s -emit-llvm -fzos-extensions -triple s390x-none-zos -fvisibility=hidden -o - | FileCheck %s
 
 // Testing pragma export after decl.
 void f0(void) {}

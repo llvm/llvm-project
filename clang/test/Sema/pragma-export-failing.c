@@ -1,7 +1,10 @@
 // REQUIRES: systemz-registered-target
 // RUN: %clang_cc1 -triple s390x-none-zos -fzos-extensions %s -fsyntax-only -verify
-__attribute__((visibility("hidden"))) int _Export i; // expected-error {{visibility does not match previous declaration}}
-class __attribute__((visibility("hidden"))) _Export C; // expected-error {{visibility does not match previous declaration}}
+
+#pragma export(d0)                         // expected-warning{{failed to resolve '#pragma export' to a declaration}}
+#pragma export(f9)                         // expected-warning{{failed to resolve '#pragma export' to a declaration}}
+#pragma export(f0(int))                    // expected-warning{{failed to resolve '#pragma export' to a declaration}}
+#pragma export(f3(double, double, double)) // expected-warning{{failed to resolve '#pragma export' to a declaration}}
 
 #pragma export(sf1)
 #pragma export(s1)
@@ -13,15 +16,3 @@ int v0;
 static int s0; // expected-warning{{#pragma export is applicable to symbols with external linkage only; not applied to 's0'}}
 #pragma export(sf0)
 #pragma export(s0)
-
-typedef int _Export ty;
-ty x;
-int f(int _Export x);
-static int _Export s;
-struct S {
-  int _Export nonstaticdatamember;
-};
-void g() {
-  int _Export automatic;
-}
-

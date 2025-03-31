@@ -29,7 +29,6 @@ class _Export class1 {
 public:
   void foo();
 };
-#if 0
 
 class class2 {
 public:
@@ -51,4 +50,3 @@ public:
 
 void class3::foo() {};
 void class3::bar() {};
-#endif

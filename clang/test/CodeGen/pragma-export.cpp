@@ -1,31 +1,17 @@
 // REQUIRES: systemz-registered-target
-// RUN: %clang_cc1 %s -emit-llvm -triple s390x-none-zos -fzos-extensions -fvisibility=hidden -verify -o - | FileCheck %s
-
-// Testing missing declarations.
-#pragma export(d0)                         // expected-warning{{failed to resolve '#pragma export' to a declaration}}
-#pragma export(f9)                         // expected-warning{{failed to resolve '#pragma export' to a declaration}}
-#pragma export(f0(int))                    // expected-warning{{failed to resolve '#pragma export' to a declaration}}
-#pragma export(f3(double, double, double)) // expected-warning{{failed to resolve '#pragma export' to a declaration}}
+// RUN: %clang_cc1 -x c++ %s -emit-llvm -triple s390x-none-zos -fzos-extensions -fvisibility=hidden -o - | FileCheck %s
 
 // Testing pragma export after decl.
 void f0(void) {}
-static void sf0(void) {} // expected-warning{{#pragma export is applicable to symbols with external linkage only; not applied to 'sf0'}}
 int v0;
-static int s0; // expected-warning{{#pragma export is applicable to symbols with external linkage only; not applied to 's0'}}
 #pragma export(f0)
-#pragma export(sf0)
 #pragma export(v0)
-#pragma export(s0)
 
 // Testing pragma export before decl.
 #pragma export(f1)
-#pragma export(sf1)
 #pragma export(v1)
-#pragma export(s1)
 void f1(void) {}
-static void sf1(void) {} // expected-warning{{#pragma export is applicable to symbols with external linkage only; not applied to 'sf1'}}
 int v1;
-static int s1; // expected-warning{{#pragma export is applicable to symbols with external linkage only; not applied to 's1'}}
 
 // Testing overloaded functions.
 #pragma export(f2(double, double))
