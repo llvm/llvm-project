@@ -10104,7 +10104,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   case Intrinsic::amdgcn_raw_ptr_buffer_load_lds:
   case Intrinsic::amdgcn_struct_buffer_load_lds:
   case Intrinsic::amdgcn_struct_ptr_buffer_load_lds: {
-    if (!Subtarget->hasMemToLDSLoad())
+    if (!Subtarget->hasVMemToLDSLoad())
       return SDValue();
     unsigned Opc;
     bool HasVIndex =
@@ -10212,7 +10212,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     return SDValue(Load, 0);
   }
   case Intrinsic::amdgcn_global_load_lds: {
-    if (!Subtarget->hasMemToLDSLoad())
+    if (!Subtarget->hasVMemToLDSLoad())
       return SDValue();
 
     unsigned Opc;
