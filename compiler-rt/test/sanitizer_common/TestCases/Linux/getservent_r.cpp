@@ -21,8 +21,9 @@ int main(void) {
   struct servent result_buf;
   struct servent *result;
   char buf[1024];
-  CheckResult(getservent_r(&result_buf, buf, sizeof(buf), &result));
-  assert(result != nullptr);
+  // This can fail with ENOENT, which we cannot control.
+  if (getservent_r(&result_buf, buf, sizeof(buf), &result) == 0)
+    assert(result != nullptr);
 
   // If these fail, check /etc/services if "ssh" exists. I picked this because
   // it should exist everywhere, if it doesn't, I am sorry. Disable the test
