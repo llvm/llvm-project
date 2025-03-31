@@ -5473,6 +5473,9 @@ static void addAllocasForDeclareTargetFunctionPointerArgs(
   if (!llvm::Triple(M.getTargetTriple()).isAMDGPU())
     return;
 
+  if (Fn->empty())
+    return;
+
   llvm::IRBuilderBase &builder = ompBuilder->Builder;
   llvm::OpenMPIRBuilder::InsertPointTy curInsert = builder.saveIP();
   unsigned int allocaAS = M.getDataLayout().getAllocaAddrSpace();
