@@ -189,8 +189,8 @@ int UnnamedTemplateArg = TemplateFn(obj_of_unnamed_type); // expected-warning {{
 namespace RedundantParensInAddressTemplateParam {
   int n;
   template<int*p> struct S {};
-  S<(&n)> s; // expected-warning {{redundant parentheses surrounding address non-type template argument are incompatible with C++98}}
-  S<(((&n)))> t; // expected-warning {{redundant parentheses surrounding address non-type template argument are incompatible with C++98}}
+  S<(&n)> s; // expected-warning {{parentheses around address non-type template argument are incompatible with C++98}}
+  S<(((&n)))> t; // expected-warning {{parentheses around address non-type template argument are incompatible with C++98}}
 }
 #endif
 
@@ -202,7 +202,7 @@ template<> struct TemplateSpecOutOfScopeNs::S<char> {};
 struct Typename {
   template<typename T> struct Inner {};
 };
-typename ::Typename TypenameOutsideTemplate(); // expected-warning {{use of 'typename' outside of a template is incompatible with C++98}}
+typename ::Typename TypenameOutsideTemplate(); // expected-warning {{'typename' outside of a template is incompatible with C++98}}
 Typename::template Inner<int> TemplateOutsideTemplate(); // expected-warning {{use of 'template' keyword outside of a template is incompatible with C++98}}
 
 struct TrivialButNonPOD {

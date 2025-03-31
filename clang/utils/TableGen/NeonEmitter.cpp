@@ -1661,7 +1661,7 @@ Intrinsic::DagEmitter::emitDagShuffle(const DagInit *DI) {
         }
       }
 
-      Elts.insert(Revved.begin(), Revved.end());
+      Elts.insert_range(Revved);
     }
   };
 

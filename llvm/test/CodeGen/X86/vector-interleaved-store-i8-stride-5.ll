@@ -725,9 +725,8 @@ define void @store_i8_stride5_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecp
 ; AVX512-NEXT:    vmovd %eax, %xmm1
 ; AVX512-NEXT:    vpbroadcastw %xmm1, %xmm1
 ; AVX512-NEXT:    vpternlogq {{.*#+}} xmm1 = xmm1 ^ (mem & (xmm1 ^ xmm0))
-; AVX512-NEXT:    vinserti32x4 $2, %xmm1, %zmm3, %zmm0
 ; AVX512-NEXT:    vmovq %xmm1, 32(%r9)
-; AVX512-NEXT:    vmovdqa %ymm0, (%r9)
+; AVX512-NEXT:    vmovdqa %ymm3, (%r9)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
 ;
@@ -756,9 +755,8 @@ define void @store_i8_stride5_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecp
 ; AVX512-FCP-NEXT:    vmovd %eax, %xmm1
 ; AVX512-FCP-NEXT:    vpbroadcastw %xmm1, %xmm1
 ; AVX512-FCP-NEXT:    vpternlogq {{.*#+}} xmm1 = xmm1 ^ (mem & (xmm1 ^ xmm0))
-; AVX512-FCP-NEXT:    vinserti32x4 $2, %xmm1, %zmm3, %zmm0
 ; AVX512-FCP-NEXT:    vmovq %xmm1, 32(%r9)
-; AVX512-FCP-NEXT:    vmovdqa %ymm0, (%r9)
+; AVX512-FCP-NEXT:    vmovdqa %ymm3, (%r9)
 ; AVX512-FCP-NEXT:    vzeroupper
 ; AVX512-FCP-NEXT:    retq
 ;
@@ -787,9 +785,8 @@ define void @store_i8_stride5_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecp
 ; AVX512DQ-NEXT:    vmovd %eax, %xmm1
 ; AVX512DQ-NEXT:    vpbroadcastw %xmm1, %xmm1
 ; AVX512DQ-NEXT:    vpternlogq {{.*#+}} xmm1 = xmm1 ^ (mem & (xmm1 ^ xmm0))
-; AVX512DQ-NEXT:    vinserti32x4 $2, %xmm1, %zmm3, %zmm0
 ; AVX512DQ-NEXT:    vmovq %xmm1, 32(%r9)
-; AVX512DQ-NEXT:    vmovdqa %ymm0, (%r9)
+; AVX512DQ-NEXT:    vmovdqa %ymm3, (%r9)
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
 ;
@@ -818,9 +815,8 @@ define void @store_i8_stride5_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecp
 ; AVX512DQ-FCP-NEXT:    vmovd %eax, %xmm1
 ; AVX512DQ-FCP-NEXT:    vpbroadcastw %xmm1, %xmm1
 ; AVX512DQ-FCP-NEXT:    vpternlogq {{.*#+}} xmm1 = xmm1 ^ (mem & (xmm1 ^ xmm0))
-; AVX512DQ-FCP-NEXT:    vinserti32x4 $2, %xmm1, %zmm3, %zmm0
 ; AVX512DQ-FCP-NEXT:    vmovq %xmm1, 32(%r9)
-; AVX512DQ-FCP-NEXT:    vmovdqa %ymm0, (%r9)
+; AVX512DQ-FCP-NEXT:    vmovdqa %ymm3, (%r9)
 ; AVX512DQ-FCP-NEXT:    vzeroupper
 ; AVX512DQ-FCP-NEXT:    retq
 ;
@@ -852,9 +848,8 @@ define void @store_i8_stride5_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecp
 ; AVX512BW-NEXT:    movw $132, %ax
 ; AVX512BW-NEXT:    kmovd %eax, %k1
 ; AVX512BW-NEXT:    vmovdqu8 %xmm1, %xmm0 {%k1}
-; AVX512BW-NEXT:    vinserti32x4 $2, %xmm0, %zmm2, %zmm1
 ; AVX512BW-NEXT:    vmovq %xmm0, 32(%r9)
-; AVX512BW-NEXT:    vmovdqa %ymm1, (%r9)
+; AVX512BW-NEXT:    vmovdqa %ymm2, (%r9)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
@@ -886,9 +881,8 @@ define void @store_i8_stride5_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecp
 ; AVX512BW-FCP-NEXT:    movw $132, %ax
 ; AVX512BW-FCP-NEXT:    kmovd %eax, %k1
 ; AVX512BW-FCP-NEXT:    vmovdqu8 %xmm1, %xmm0 {%k1}
-; AVX512BW-FCP-NEXT:    vinserti32x4 $2, %xmm0, %zmm2, %zmm1
 ; AVX512BW-FCP-NEXT:    vmovq %xmm0, 32(%r9)
-; AVX512BW-FCP-NEXT:    vmovdqa %ymm1, (%r9)
+; AVX512BW-FCP-NEXT:    vmovdqa %ymm2, (%r9)
 ; AVX512BW-FCP-NEXT:    vzeroupper
 ; AVX512BW-FCP-NEXT:    retq
 ;
@@ -920,9 +914,8 @@ define void @store_i8_stride5_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecp
 ; AVX512DQ-BW-NEXT:    movw $132, %ax
 ; AVX512DQ-BW-NEXT:    kmovd %eax, %k1
 ; AVX512DQ-BW-NEXT:    vmovdqu8 %xmm1, %xmm0 {%k1}
-; AVX512DQ-BW-NEXT:    vinserti32x4 $2, %xmm0, %zmm2, %zmm1
 ; AVX512DQ-BW-NEXT:    vmovq %xmm0, 32(%r9)
-; AVX512DQ-BW-NEXT:    vmovdqa %ymm1, (%r9)
+; AVX512DQ-BW-NEXT:    vmovdqa %ymm2, (%r9)
 ; AVX512DQ-BW-NEXT:    vzeroupper
 ; AVX512DQ-BW-NEXT:    retq
 ;
@@ -954,9 +947,8 @@ define void @store_i8_stride5_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecp
 ; AVX512DQ-BW-FCP-NEXT:    movw $132, %ax
 ; AVX512DQ-BW-FCP-NEXT:    kmovd %eax, %k1
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu8 %xmm1, %xmm0 {%k1}
-; AVX512DQ-BW-FCP-NEXT:    vinserti32x4 $2, %xmm0, %zmm2, %zmm1
 ; AVX512DQ-BW-FCP-NEXT:    vmovq %xmm0, 32(%r9)
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa %ymm1, (%r9)
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa %ymm2, (%r9)
 ; AVX512DQ-BW-FCP-NEXT:    vzeroupper
 ; AVX512DQ-BW-FCP-NEXT:    retq
   %in.vec0 = load <8 x i8>, ptr %in.vecptr0, align 64

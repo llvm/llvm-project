@@ -819,6 +819,24 @@ public:
   }
 };
 
+struct NVGPUMBarrierGetLowering
+    : public MBarrierBasePattern<nvgpu::MBarrierGetOp> {
+  using MBarrierBasePattern<nvgpu::MBarrierGetOp>::MBarrierBasePattern;
+
+  LogicalResult
+  matchAndRewrite(nvgpu::MBarrierGetOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    ImplicitLocOpBuilder b(op->getLoc(), rewriter);
+    nvgpu::MBarrierGroupType mbarrierType = op.getBarriers().getType();
+    rewriter.setInsertionPoint(op);
+    Value barrier = getMbarrierPtr(b, mbarrierType, adaptor.getBarriers(),
+                                   adaptor.getMbarId(), rewriter);
+    Type resType = op.getMbarrierPointer().getType();
+    rewriter.replaceOpWithNewOp<LLVM::PtrToIntOp>(op, resType, barrier);
+    return success();
+  }
+};
+
 /// Lowers `nvgpu.mbarrier.init` to `nvvm.mbarrier.init`
 struct NVGPUMBarrierInitLowering
     : public MBarrierBasePattern<nvgpu::MBarrierInitOp> {
@@ -1653,6 +1671,28 @@ struct NVGPUWarpgroupMmaInitAccumulatorOpLowering
   }
 };
 
+struct NVGPUTmaFenceOpLowering
+    : public ConvertOpToLLVMPattern<nvgpu::TmaFenceOp> {
+  using ConvertOpToLLVMPattern<nvgpu::TmaFenceOp>::ConvertOpToLLVMPattern;
+  LogicalResult
+  matchAndRewrite(nvgpu::TmaFenceOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    MLIRContext *ctx = op.getContext();
+    ImplicitLocOpBuilder b(op->getLoc(), rewriter);
+    auto i32Ty = b.getI32Type();
+    Value tensormapSize =
+        b.create<LLVM::ConstantOp>(i32Ty, rewriter.getI32IntegerAttr(128));
+
+    auto memscope =
+        NVVM::MemScopeKindAttr::get(ctx, ::mlir::NVVM::MemScopeKind::SYS);
+
+    rewriter.replaceOpWithNewOp<NVVM::FenceProxyAcquireOp>(
+        op, memscope, adaptor.getTensorMapDescriptor(), tensormapSize);
+
+    return success();
+  }
+};
+
 struct NVGPUTmaPrefetchOpLowering
     : public ConvertOpToLLVMPattern<nvgpu::TmaPrefetchOp> {
   using ConvertOpToLLVMPattern<nvgpu::TmaPrefetchOp>::ConvertOpToLLVMPattern;
@@ -1706,6 +1746,7 @@ void mlir::populateNVGPUToNVVMConversionPatterns(
   patterns.add<
       NVGPUMBarrierCreateLowering,           // nvgpu.mbarrier.create
       NVGPUMBarrierInitLowering,             // nvgpu.mbarrier.init
+      NVGPUMBarrierGetLowering,              // nvgpu.mbarrier.get
       NVGPUMBarrierArriveLowering,           // nvgpu.mbarrier.arrive
       NVGPUMBarrierArriveNoCompleteLowering, // nvgpu.mbarrier.arrive.no_complete
       NVGPUMBarrierTestWaitLowering,         // nvgpu.mbarrier.test_wait_parity
@@ -1714,6 +1755,7 @@ void mlir::populateNVGPUToNVVMConversionPatterns(
       NVGPUTmaAsyncStoreOpLowering,          // nvgpu.tma.async.store
       NVGPUTmaCreateDescriptorOpLowering,    // nvgpu.tma.create.descriptor
       NVGPUTmaPrefetchOpLowering,            // nvgpu.tma.prefetch.descriptor
+      NVGPUTmaFenceOpLowering,               // nvgpu.tma.fence.descriptor
       NVGPUMBarrierArriveExpectTxLowering,   // nvgpu.mbarrier.arrive.expect_tx
       NVGPUGenerateWarpgroupDescriptorLowering, // nvgpu.warpgroup.generate.descriptor
       NVGPUWarpgroupMmaOpLowering,              // nvgpu.warpgroup.mma

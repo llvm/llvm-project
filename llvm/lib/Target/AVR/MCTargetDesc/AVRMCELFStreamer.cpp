@@ -22,8 +22,8 @@ using namespace llvm;
 
 void AVRMCELFStreamer::emitValueForModiferKind(
     const MCSymbol *Sym, unsigned SizeInBytes, SMLoc Loc,
-    AVRMCExpr::VariantKind ModifierKind) {
-  AVRMCExpr::VariantKind Kind = AVRMCExpr::VK_AVR_NONE;
+    AVRMCExpr::Specifier ModifierKind) {
+  AVRMCExpr::Specifier Kind = AVRMCExpr::VK_AVR_NONE;
   if (ModifierKind == AVRMCExpr::VK_AVR_NONE) {
     Kind = AVRMCExpr::VK_DIFF8;
     if (SizeInBytes == SIZE_LONG)

@@ -98,8 +98,8 @@ public:
 
 void foo() { Templ<Derived> x(&Derived::func); }
 // expected-error@-1 {{no matching constructor for initialization of 'Templ<Derived>'}}
-//   expected-note@#cwg203-ex3-Templ {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'int (cwg203::ex3::Base::*)() const' to 'const Templ<Derived>' for 1st argument}}
-//   since-cxx11-note@#cwg203-ex3-Templ {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'int (cwg203::ex3::Base::*)() const' to 'Templ<Derived>' for 1st argument}}
+//   expected-note@#cwg203-ex3-Templ {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'int (Derived::*)() const' (aka 'int (Base::*)() const') to 'const Templ<Derived>' for 1st argument}}
+//   since-cxx11-note@#cwg203-ex3-Templ {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'int (Derived::*)() const' (aka 'int (Base::*)() const') to 'Templ<Derived>' for 1st argument}}
 //   expected-note@#cwg203-ex3-Templ-ctor {{candidate template ignored: could not match 'cwg203::ex3::Derived' against 'cwg203::ex3::Base'}}
 } // namespace ex3
 

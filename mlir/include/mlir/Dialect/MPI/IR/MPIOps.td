@@ -244,7 +244,7 @@ def MPI_AllReduceOp : MPI_Op<"allreduce", []> {
   let arguments = (
     ins AnyMemRef : $sendbuf,
     AnyMemRef : $recvbuf,
-    MPI_OpClassAttr : $op
+    MPI_OpClassEnum : $op
   );
 
   let results = (outs Optional<MPI_Retval>:$retval);

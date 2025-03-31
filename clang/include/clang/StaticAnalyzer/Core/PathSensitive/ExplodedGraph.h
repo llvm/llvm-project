@@ -485,7 +485,7 @@ public:
     if (empty())
       Impl = S.Impl;
     else
-      Impl.insert(S.begin(), S.end());
+      Impl.insert_range(S);
   }
 
   iterator begin() { return Impl.begin(); }

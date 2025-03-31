@@ -244,6 +244,58 @@ ContextNode *getFlatProfile(FunctionData &Data, GUID Guid,
   return Data.FlatCtx;
 }
 
+// This should be called once for a Root. Allocate the first arena, set up the
+// first context.
+void setupContext(ContextRoot *Root, GUID Guid, uint32_t NumCounters,
+                  uint32_t NumCallsites) {
+  __sanitizer::GenericScopedLock<__sanitizer::SpinMutex> Lock(
+      &AllContextsMutex);
+  // Re-check - we got here without having had taken a lock.
+  if (Root->FirstMemBlock)
+    return;
+  const auto Needed = ContextNode::getAllocSize(NumCounters, NumCallsites);
+  auto *M = Arena::allocateNewArena(getArenaAllocSize(Needed));
+  Root->FirstMemBlock = M;
+  Root->CurrentMem = M;
+  Root->FirstNode = allocContextNode(M->tryBumpAllocate(Needed), Guid,
+                                     NumCounters, NumCallsites);
+  AllContextRoots.PushBack(Root);
+}
+
+ContextRoot *FunctionData::getOrAllocateContextRoot() {
+  auto *Root = CtxRoot;
+  if (Root)
+    return Root;
+  __sanitizer::GenericScopedLock<__sanitizer::StaticSpinMutex> L(&Mutex);
+  Root = CtxRoot;
+  if (!Root) {
+    Root = new (__sanitizer::InternalAlloc(sizeof(ContextRoot))) ContextRoot();
+    CtxRoot = Root;
+  }
+
+  assert(Root);
+  return Root;
+}
+
+ContextNode *tryStartContextGivenRoot(ContextRoot *Root, GUID Guid,
+                                      uint32_t Counters, uint32_t Callsites)
+    SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
+  IsUnderContext = true;
+  __sanitizer::atomic_fetch_add(&Root->TotalEntries, 1,
+                                __sanitizer::memory_order_relaxed);
+  if (!Root->FirstMemBlock) {
+    setupContext(Root, Guid, Counters, Callsites);
+  }
+  if (Root->Taken.TryLock()) {
+    __llvm_ctx_profile_current_context_root = Root;
+    onContextEnter(*Root->FirstNode);
+    return Root->FirstNode;
+  }
+  // If this thread couldn't take the lock, return scratch context.
+  __llvm_ctx_profile_current_context_root = nullptr;
+  return TheScratchContext;
+}
+
 ContextNode *getUnhandledContext(FunctionData &Data, GUID Guid,
                                  uint32_t NumCounters) {
 
@@ -333,60 +385,11 @@ ContextNode *__llvm_ctx_profile_get_context(FunctionData *Data, void *Callee,
   return Ret;
 }
 
-// This should be called once for a Root. Allocate the first arena, set up the
-// first context.
-void setupContext(ContextRoot *Root, GUID Guid, uint32_t NumCounters,
-                  uint32_t NumCallsites) {
-  __sanitizer::GenericScopedLock<__sanitizer::SpinMutex> Lock(
-      &AllContextsMutex);
-  // Re-check - we got here without having had taken a lock.
-  if (Root->FirstMemBlock)
-    return;
-  const auto Needed = ContextNode::getAllocSize(NumCounters, NumCallsites);
-  auto *M = Arena::allocateNewArena(getArenaAllocSize(Needed));
-  Root->FirstMemBlock = M;
-  Root->CurrentMem = M;
-  Root->FirstNode = allocContextNode(M->tryBumpAllocate(Needed), Guid,
-                                     NumCounters, NumCallsites);
-  AllContextRoots.PushBack(Root);
-}
-
-ContextRoot *FunctionData::getOrAllocateContextRoot() {
-  auto *Root = CtxRoot;
-  if (Root)
-    return Root;
-  __sanitizer::GenericScopedLock<__sanitizer::StaticSpinMutex> L(&Mutex);
-  Root = CtxRoot;
-  if (!Root) {
-    Root = new (__sanitizer::InternalAlloc(sizeof(ContextRoot))) ContextRoot();
-    CtxRoot = Root;
-  }
-
-  assert(Root);
-  return Root;
-}
-
-ContextNode *__llvm_ctx_profile_start_context(
-    FunctionData *FData, GUID Guid, uint32_t Counters,
-    uint32_t Callsites) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
-  IsUnderContext = true;
-
-  auto *Root = FData->getOrAllocateContextRoot();
-
-  __sanitizer::atomic_fetch_add(&Root->TotalEntries, 1,
-                                __sanitizer::memory_order_relaxed);
-
-  if (!Root->FirstMemBlock) {
-    setupContext(Root, Guid, Counters, Callsites);
-  }
-  if (Root->Taken.TryLock()) {
-    __llvm_ctx_profile_current_context_root = Root;
-    onContextEnter(*Root->FirstNode);
-    return Root->FirstNode;
-  }
-  // If this thread couldn't take the lock, return scratch context.
-  __llvm_ctx_profile_current_context_root = nullptr;
-  return TheScratchContext;
+ContextNode *__llvm_ctx_profile_start_context(FunctionData *FData, GUID Guid,
+                                              uint32_t Counters,
+                                              uint32_t Callsites) {
+  return tryStartContextGivenRoot(FData->getOrAllocateContextRoot(), Guid,
+                                  Counters, Callsites);
 }
 
 void __llvm_ctx_profile_release_context(FunctionData *FData)

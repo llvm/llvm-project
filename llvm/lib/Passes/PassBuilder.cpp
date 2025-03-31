@@ -105,6 +105,7 @@
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
+#include "llvm/CodeGen/LiveDebugValuesPass.h"
 #include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
@@ -678,6 +679,12 @@ Expected<HardwareLoopOptions> parseHardwareLoopOptions(StringRef Params) {
     }
   }
   return HardwareLoopOpts;
+}
+
+/// Parser of parameters for Lint pass.
+Expected<bool> parseLintOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(Params, "abort-on-error",
+                                            "LintPass");
 }
 
 /// Parser of parameters for LoopUnroll pass.

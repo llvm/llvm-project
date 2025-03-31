@@ -271,7 +271,7 @@ def sext_inreg_to_zext_inreg : GICombineRule<
     (G_SEXT_INREG $dst, $src, $imm):$root,
       [{
         unsigned BitWidth = MRI.getType(${src}.getReg()).getScalarSizeInBits();
-        return Helper.getKnownBits()->maskedValueIsZero(${src}.getReg(),
+        return Helper.getValueTracking()->maskedValueIsZero(${src}.getReg(),
                  APInt::getOneBitSet(BitWidth, ${imm}.getImm() - 1)); }]),
     (apply [{
       Helper.getBuilder().setInstrAndDebugLoc(*${root});
@@ -745,6 +745,17 @@ def shl_ashr_to_sext_inreg : GICombineRule<
   (match (wip_match_opcode G_ASHR): $root,
     [{ return Helper.matchAshrShlToSextInreg(*${root}, ${info}); }]),
   (apply [{ Helper.applyAshShlToSextInreg(*${root}, ${info});}])
+>;
+
+// Fold sub 0, (and x, 1) -> sext_inreg x, 1
+def neg_and_one_to_sext_inreg : GICombineRule<
+  (defs root:$dst),
+  (match (G_AND $and, $x, 1),
+         (G_SUB $dst, 0, $and),
+         [{ return MRI.hasOneNonDBGUse(${and}.getReg()) &&
+            Helper.isLegalOrBeforeLegalizer(
+              {TargetOpcode::G_SEXT_INREG, {MRI.getType(${x}.getReg())}}); }]),
+  (apply (G_SEXT_INREG $dst, $x, 1))
 >;
 
 // Fold and(and(x, C1), C2) -> C1&C2 ? and(x, C1&C2) : 0
@@ -1522,7 +1533,7 @@ def extract_vector_element_build_vector_trunc8 : GICombineRule<
 
 def sext_trunc : GICombineRule<
    (defs root:$root, build_fn_matchinfo:$matchinfo),
-   (match (G_TRUNC $src, $x, (MIFlags NoSWrap)),
+   (match (G_TRUNC $src, $x),
           (G_SEXT $root, $src),
    [{ return Helper.matchSextOfTrunc(${root}, ${matchinfo}); }]),
    (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
@@ -2013,7 +2024,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     undef_combines, identity_combines, phi_combines,
     simplify_add_to_sub, hoist_logic_op_with_same_opcode_hands, shifts_too_big,
     reassocs, ptr_add_immed_chain, cmp_combines,
-    shl_ashr_to_sext_inreg, sext_inreg_of_load,
+    shl_ashr_to_sext_inreg, neg_and_one_to_sext_inreg, sext_inreg_of_load,
     width_reduction_combines, select_combines,
     known_bits_simplifications, trunc_shift,
     not_cmp_fold, opt_brcond_by_inverting_cond,
