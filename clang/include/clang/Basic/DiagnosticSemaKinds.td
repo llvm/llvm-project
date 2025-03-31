@@ -8444,9 +8444,16 @@ let CategoryName = "Lambda Issue" in {
     "C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
 
   // C++20 class template argument deduction for alias templates.
-  def warn_cxx17_compat_ctad_for_alias_templates : Warning<
-  "class template argument deduction for alias templates is incompatible with "
-  "C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
+  def warn_cxx17_compat_ctad_for_alias_templates
+      : Warning<"class template argument deduction for alias templates is "
+                "incompatible with "
+                "C++ standards before C++20">,
+        InGroup<CXXPre20Compat>,
+        DefaultIgnore;
+  def ext_ctad_for_alias_templates_cxx20
+      : ExtWarn<"class template argument deduction for alias templates is a "
+                "C++20 extension">,
+        InGroup<CXX20>;
 }
 
 def err_return_in_captured_stmt : Error<
