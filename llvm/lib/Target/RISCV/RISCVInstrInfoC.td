@@ -661,7 +661,7 @@ def C_SLLI_HINT : RVInst16CI<0b000, 0b10, (outs GPRX0:$rd_wb),
                   Sched<[WriteShiftImm, ReadShiftImm]> {
   let Constraints = "$rd = $rd_wb";
   let Inst{11-7} = 0;
-  let DecoderMethod = "decodeRVCInstrRdRs1UImm";
+  let DecoderMethod = "decodeRVCInstrRdRs1UImmLog2XLenNonZero";
 }
 
 def C_SLLI64_HINT : RVInst16CI<0b000, 0b10, (outs GPR:$rd_wb), (ins GPR:$rd),
