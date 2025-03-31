@@ -322,6 +322,25 @@ def NVGPU_MBarrierCreateOp : NVGPU_Op<"mbarrier.create", []> {
   }];
 }
 
+def NVGPU_MBarrierGetOp : NVGPU_Op<"mbarrier.get", []> {
+  let summary = "Return a pointer to an `nvgpu.mbarrier`.";
+  let description = [{
+    The `nvgpu.mbarrier.get` operation retrieves a pointer to a specific 
+    `mbarrier` object from a group of barriers created by the `nvgpu.mbarrier.create` operation.
+
+    Example:
+    ```mlir
+      %mbars = nvgpu.mbarrier.create -> !nvgpu.mbarrier.group<memorySpace = #gpu.address_space<workgroup>, num_barriers = 10>
+      %mbar_pointer = nvgpu.mbarrier.get %mbars[%c2] : !nvgpu.mbarrier.group<memorySpace = #gpu.address_space<workgroup>>
+    ```
+  }];
+  let arguments = (ins NVGPU_MBarrierGroup:$barriers, Index:$mbarId);
+  let results = (outs AnyTypeOf<[I32, I64]>:$mbarrierPointer);
+  let assemblyFormat = [{
+    $barriers `[` $mbarId `]` attr-dict `:` type($barriers) `->` type($mbarrierPointer)
+  }];
+}
+
 def NVGPU_MBarrierInitOp : NVGPU_Op<"mbarrier.init", []> {
   let summary = "Initialize the `nvgpu.mbarrier`.";
   let description = [{
