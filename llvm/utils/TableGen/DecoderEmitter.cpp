@@ -1342,8 +1342,7 @@ void FilterChooser::emitPredicateTableEntry(DecoderTableInfo &TableInfo,
 
   TableInfo.Table.push_back(MCD::OPC_CheckPredicate);
   // Predicate index.
-  for (const auto PB : PBytes)
-    TableInfo.Table.push_back(PB);
+  llvm::append_range(TableInfo.Table, PBytes);
   // Push location for NumToSkip backpatching.
   TableInfo.FixupStack.back().push_back(TableInfo.Table.size());
   TableInfo.Table.push_back(0);
@@ -1402,15 +1401,13 @@ void FilterChooser::emitSoftFailTableEntry(DecoderTableInfo &TableInfo,
   raw_svector_ostream S(MaskBytes);
   if (NeedPositiveMask) {
     encodeULEB128(PositiveMask.getZExtValue(), S);
-    for (unsigned i = 0, e = MaskBytes.size(); i != e; ++i)
-      TableInfo.Table.push_back(MaskBytes[i]);
+    llvm::append_range(TableInfo.Table, MaskBytes);
   } else
     TableInfo.Table.push_back(0);
   if (NeedNegativeMask) {
     MaskBytes.clear();
     encodeULEB128(NegativeMask.getZExtValue(), S);
-    for (unsigned i = 0, e = MaskBytes.size(); i != e; ++i)
-      TableInfo.Table.push_back(MaskBytes[i]);
+    llvm::append_range(TableInfo.Table, MaskBytes);
   } else
     TableInfo.Table.push_back(0);
 }
@@ -1483,8 +1480,7 @@ void FilterChooser::emitSingletonTableEntry(DecoderTableInfo &TableInfo,
   encodeULEB128(DIdx, S);
 
   // Decoder index.
-  for (const auto B : Bytes)
-    TableInfo.Table.push_back(B);
+  llvm::append_range(TableInfo.Table, Bytes);
 
   if (!HasCompleteDecoder) {
     // Push location for NumToSkip backpatching.
