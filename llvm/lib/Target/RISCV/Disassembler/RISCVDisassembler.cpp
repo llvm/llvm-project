@@ -485,8 +485,8 @@ static DecodeStatus decodeRVCInstrRdRs1ImmZero(MCInst &Inst, uint32_t Insn,
                                                const MCDisassembler *Decoder);
 
 static DecodeStatus decodeRVCInstrRdSImm6(MCInst &Inst, uint32_t Insn,
-                                         uint64_t Address,
-                                         const MCDisassembler *Decoder);
+                                          uint64_t Address,
+                                          const MCDisassembler *Decoder);
 
 static DecodeStatus decodeRVCInstrRdCLUIImm(MCInst &Inst, uint32_t Insn,
                                             uint64_t Address,
