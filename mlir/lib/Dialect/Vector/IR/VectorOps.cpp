@@ -151,7 +151,7 @@ static bool isSupportedCombiningKind(CombiningKind combiningKind,
 }
 
 AffineMap mlir::vector::getTransferMinorIdentityMap(ShapedType shapedType,
-                                                    VectorType vectorType) {
+                                               VectorType vectorType) {
   int64_t elementVectorRank = 0;
   VectorType elementVectorType =
       llvm::dyn_cast<VectorType>(shapedType.getElementType());
@@ -164,6 +164,9 @@ AffineMap mlir::vector::getTransferMinorIdentityMap(ShapedType shapedType,
     return AffineMap::get(
         /*numDims=*/0, /*numSymbols=*/0,
         getAffineConstantExpr(0, shapedType.getContext()));
+  if (shapedType.getRank() < vectorType.getRank() - elementVectorRank) {
+    return AffineMap::get(shapedType.getContext());
+  }
   return AffineMap::getMinorIdentityMap(
       shapedType.getRank(), vectorType.getRank() - elementVectorRank,
       shapedType.getContext());
@@ -4260,6 +4263,10 @@ ParseResult TransferReadOp::parse(OpAsmParser &parser, OperationState &result) {
   AffineMap permMap;
   if (!permMapAttr) {
     permMap = getTransferMinorIdentityMap(shapedType, vectorType);
+    if (permMap.isEmpty()) {
+      return parser.emitError(typesLoc,
+                              "failed to create minor identity permutation map");
+    }
     result.attributes.set(permMapAttrName, AffineMapAttr::get(permMap));
   } else {
     permMap = llvm::cast<AffineMapAttr>(permMapAttr).getValue();

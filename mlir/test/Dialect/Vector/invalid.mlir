@@ -525,6 +525,15 @@ func.func @test_vector.transfer_read(%arg0: memref<?x?xvector<2x3xf32>>) {
 
 // -----
 
+func.func @test_vector.transfer_read(%arg1: memref<?xindex>) -> vector<3x4xi32> {
+  %c3_i32 = arith.constant 3 : i32
+  // expected-error@+1 {{failed to create minor identity permutation map}}
+  %0 = vector.transfer_read %arg1[%c3_i32, %c3_i32], %c3_i32 : memref<?xindex>, vector<3x4xi32>
+  return %0 : vector<3x4xi32>
+}
+
+// -----
+
 func.func @test_vector.transfer_write(%arg0: memref<?x?xf32>) {
   %c3 = arith.constant 3 : index
   %cst = arith.constant 3.0 : f32
