@@ -1746,7 +1746,7 @@ finish.loopexit:
 ;.
 ; IF-EVL: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; IF-EVL: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; IF-EVL: [[META2]] = !{!"llvm.loop.isvectorized.tailfoldingstyle", i32 0}
+; IF-EVL: [[META2]] = !{!"llvm.loop.isvectorized.tailfoldingstyle", !"evl"}
 ; IF-EVL: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; IF-EVL: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]]}
 ; IF-EVL: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]], [[META3]]}

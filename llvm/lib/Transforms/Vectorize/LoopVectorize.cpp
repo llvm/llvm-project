@@ -7993,16 +7993,24 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
       Hints.setAlreadyVectorized();
 
       // Check if it's EVL-vectorized and mark the corresponding metadata.
-      // Note that we could have done this during the codegen of
-      // ExplictVectorLength, but the enclosing vector loop was not in a good
-      // shape for us to attach the metadata.
-      if (any_of(*HeaderVPBB, [](const VPRecipeBase &Recipe) {
+      bool IsEVLVectorized =
+          llvm::any_of(*HeaderVPBB, [](const VPRecipeBase &Recipe) {
             // Looking for the ExplictVectorLength VPInstruction.
             if (const auto *VI = dyn_cast<VPInstruction>(&Recipe))
               return VI->getOpcode() == VPInstruction::ExplicitVectorLength;
             return false;
-          }))
-        Hints.setEVLVectorized();
+          });
+      if (IsEVLVectorized) {
+        LLVMContext &Context = L->getHeader()->getContext();
+        MDNode *LoopID = L->getLoopID();
+        auto *IsEVLVectorizedMD = MDNode::get(
+            Context,
+            {MDString::get(Context, "llvm.loop.isvectorized.tailfoldingstyle"),
+             MDString::get(Context, "evl")});
+        MDNode *NewLoopID = makePostTransformationMetadata(Context, LoopID, {},
+                                                           {IsEVLVectorizedMD});
+        L->setLoopID(NewLoopID);
+      }
     }
     TargetTransformInfo::UnrollingPreferences UP;
     TTI.getUnrollingPreferences(L, *PSE.getSE(), UP, ORE);

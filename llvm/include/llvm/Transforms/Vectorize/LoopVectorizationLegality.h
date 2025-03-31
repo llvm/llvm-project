@@ -64,8 +64,7 @@ class LoopVectorizeHints {
     HK_FORCE,
     HK_ISVECTORIZED,
     HK_PREDICATE,
-    HK_SCALABLE,
-    HK_TAILFOLDING
+    HK_SCALABLE
   };
 
   /// Hint - associates name and validation with the hint value.
@@ -91,9 +90,6 @@ class LoopVectorizeHints {
 
   /// Already Vectorized
   Hint IsVectorized;
-
-  /// Tail folding style of a vectorized loop.
-  Hint TailFoldingStyle;
 
   /// Vector Predicate
   Hint Predicate;
@@ -125,12 +121,6 @@ public:
     SK_PreferScalable = 1
   };
 
-  enum TailFoldingKind {
-    TFK_Unspecified = -1,
-    /// Tail folding with explicit vector length intrinsics.
-    TFK_EVL = 0
-  };
-
   LoopVectorizeHints(const Loop *L, bool InterleaveOnlyWhenForced,
                      OptimizationRemarkEmitter &ORE,
                      const TargetTransformInfo *TTI = nullptr);
@@ -140,10 +130,6 @@ public:
 
   bool allowVectorization(Function *F, Loop *L,
                           bool VectorizeOnlyWhenForced) const;
-
-  /// Mark the loop as being vectorized with a specific tail folding style.
-  void setVectorizedTailFoldingStyle(TailFoldingKind Kind);
-  void setEVLVectorized() { setVectorizedTailFoldingStyle(TFK_EVL); }
 
   /// Dumps all the hint information.
   void emitRemarkWithHints() const;
@@ -174,14 +160,6 @@ public:
   /// \return true if scalable vectorization has been explicitly disabled.
   bool isScalableVectorizationDisabled() const {
     return (ScalableForceKind)Scalable.Value == SK_FixedWidthOnly;
-  }
-
-  /// \return the tail folding style of a vectorized loop.
-  TailFoldingKind getVectorizedTailFoldingStyle() const {
-    return (TailFoldingKind)TailFoldingStyle.Value;
-  }
-  bool isEVLVectorized() const {
-    return getVectorizedTailFoldingStyle() == TFK_EVL;
   }
 
   /// If hints are provided that force vectorization, use the AlwaysPrint
