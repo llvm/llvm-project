@@ -82,7 +82,15 @@ static void CloseAllExternalUnits(const char *why) {
     }
     std::printf('\n');
   }
-  assert();
+#if defined(__CUDACC__)
+  // NVCC supports __trap().
+  __trap();
+#elif defined(__clang__)
+  // Clang supports __builtin_trap().
+  __builtin_trap();
+#else
+#error "unsupported compiler"
+#endif
 #else
   CloseAllExternalUnits("STOP statement");
   if (Fortran::runtime::executionEnvironment.noStopMessage && code == 0) {
@@ -112,7 +120,15 @@ static void CloseAllExternalUnits(const char *why) {
     }
   }
   if (isErrorStop) {
-    assert();
+#if defined(__CUDACC__)
+    // NVCC supports __trap().
+    __trap();
+#elif defined(__clang__)
+    // Clang supports __builtin_trap().
+    __builtin_trap();
+#else
+#error "unsupported compiler"
+#endif
   }
 #else
   CloseAllExternalUnits("STOP statement");
