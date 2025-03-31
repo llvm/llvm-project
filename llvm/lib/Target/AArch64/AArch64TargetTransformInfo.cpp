@@ -1476,7 +1476,7 @@ static std::optional<Instruction *> instCombineRDFFR(InstCombiner &IC,
   auto *PTrue = IC.Builder.CreateIntrinsic(Intrinsic::aarch64_sve_ptrue,
                                            {II.getType()}, {AllPat});
   auto *RDFFR =
-      IC.Builder.CreateIntrinsic(Intrinsic::aarch64_sve_rdffr_z, {}, {PTrue});
+      IC.Builder.CreateIntrinsic(Intrinsic::aarch64_sve_rdffr_z, {PTrue});
   RDFFR->takeName(&II);
   return IC.replaceInstUsesWith(II, RDFFR);
 }
