@@ -74,7 +74,7 @@ static void printSingleBlockRegion(OpAsmPrinter &p, Operation *op,
   if (!region.getBlocks().front().empty())
     p.printRegion(region);
 }
-static llvm::LogicalResult isSnakeCase(llvm::StringRef in, mlir::Operation *loc,
+static llvm::LogicalResult isValidName(llvm::StringRef in, mlir::Operation *loc,
                                        const Twine &label) {
   if (in.empty())
     return loc->emitError("name of ") << label << " is empty";
@@ -106,28 +106,28 @@ static llvm::LogicalResult isSnakeCase(llvm::StringRef in, mlir::Operation *loc,
 LogicalResult DialectOp::verify() {
   if (!Dialect::isValidNamespace(getName()))
     return emitOpError("invalid dialect name");
-  if (failed(isSnakeCase(getSymName(), getOperation(), "dialect")))
+  if (failed(isValidName(getSymName(), getOperation(), "dialect")))
     return failure();
 
   return success();
 }
 
 LogicalResult OperationOp::verify() {
-  return isSnakeCase(getSymName(), getOperation(), "operation");
+  return isValidName(getSymName(), getOperation(), "operation");
 }
 
 LogicalResult TypeOp::verify() {
   auto symName = getSymName();
   if (symName.front() == '!')
     symName = symName.substr(1);
-  return isSnakeCase(symName, getOperation(), "type");
+  return isValidName(symName, getOperation(), "type");
 }
 
 LogicalResult AttributeOp::verify() {
   auto symName = getSymName();
   if (symName.front() == '#')
     symName = symName.substr(1);
-  return isSnakeCase(symName, getOperation(), "attribute");
+  return isValidName(symName, getOperation(), "attribute");
 }
 
 LogicalResult OperationOp::verifyRegions() {
@@ -183,7 +183,7 @@ static LogicalResult verifyNames(Operation *op, StringRef kindName,
   for (auto [i, name] : llvm::enumerate(names)) {
     StringRef nameRef = llvm::cast<StringAttr>(name).getValue();
 
-    if (failed(isSnakeCase(nameRef, op, Twine(kindName) + " #" + Twine(i))))
+    if (failed(isValidName(nameRef, op, Twine(kindName) + " #" + Twine(i))))
       return failure();
 
     if (nameMap.contains(nameRef))
