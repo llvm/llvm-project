@@ -3726,7 +3726,7 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
       // add/cmp/csel/csneg should have similar cost while asr/negs/and should
       // have similar cost.
       auto VT = TLI->getValueType(DL, Ty);
-      if (LT.second.isScalarInteger() && VT.getSizeInBits() <= 64) {
+      if (VT.isScalarInteger() && VT.getSizeInBits() <= 64) {
         if (Op2Info.isPowerOf2()) {
           return ISD == ISD::SDIV ? (3 * AddCost + AsrCost)
                                   : (3 * AsrCost + AddCost);

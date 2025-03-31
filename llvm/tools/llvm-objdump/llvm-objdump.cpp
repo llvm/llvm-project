@@ -2073,8 +2073,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
       if (Start < SectionAddr || StopAddress <= Start)
         continue;
 
-      for (size_t i = 0; i < SymbolsHere.size(); ++i)
-        FoundDisasmSymbolSet.insert(SymNamesHere[i]);
+      FoundDisasmSymbolSet.insert_range(SymNamesHere);
 
       // The end is the section end, the beginning of the next symbol, or
       // --stop-address.
