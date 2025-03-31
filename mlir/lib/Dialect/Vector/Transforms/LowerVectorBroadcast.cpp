@@ -52,11 +52,7 @@ public:
 
     // Stretching scalar inside vector (e.g. vector<1xf32>) can use splat.
     if (srcRank <= 1 && dstRank == 1) {
-      Value ext;
-      if (srcRank == 0)
-        ext = rewriter.create<vector::ExtractElementOp>(loc, op.getSource());
-      else
-        ext = rewriter.create<vector::ExtractOp>(loc, op.getSource(), 0);
+      Value ext = rewriter.create<vector::ExtractOp>(loc, op.getSource());
       rewriter.replaceOpWithNewOp<vector::SplatOp>(op, dstType, ext);
       return success();
     }

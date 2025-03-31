@@ -11,7 +11,7 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_intentout_component_deallocate(
 ! CHECK-SAME:      %[[VAL_0:.*]]: !fir.ref<!fir.type<_QFtest_intentout_component_deallocateTt{x:!fir.box<!fir.heap<i32>>}>>
 ! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_out>, uniq_name = "_QFtest_intentout_component_deallocateEa"}
-! CHECK:  %[[VAL_2:.*]] = fir.embox %[[VAL_1]]#1 : (!fir.ref<!fir.type<_QFtest_intentout_component_deallocateTt{x:!fir.box<!fir.heap<i32>>}>>) -> !fir.box<!fir.type<_QFtest_intentout_component_deallocateTt{x:!fir.box<!fir.heap<i32>>}>>
+! CHECK:  %[[VAL_2:.*]] = fir.embox %[[VAL_1]]#0 : (!fir.ref<!fir.type<_QFtest_intentout_component_deallocateTt{x:!fir.box<!fir.heap<i32>>}>>) -> !fir.box<!fir.type<_QFtest_intentout_component_deallocateTt{x:!fir.box<!fir.heap<i32>>}>>
 ! CHECK:  %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.box<!fir.type<_QFtest_intentout_component_deallocateTt{x:!fir.box<!fir.heap<i32>>}>>) -> !fir.box<none>
 ! CHECK:  fir.call @_FortranADestroy(%[[VAL_3]]) fastmath<contract> : (!fir.box<none>) -> ()
 
@@ -24,9 +24,9 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_intentout_optional_component_deallocate(
 ! CHECK-SAME:      %[[VAL_0:.*]]: !fir.ref<!fir.type<_QFtest_intentout_optional_component_deallocateTt{x:!fir.box<!fir.heap<i32>>}>>
 ! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_out, optional>, uniq_name = "_QFtest_intentout_optional_component_deallocateEa"}
-! CHECK:  %[[VAL_2:.*]] = fir.is_present %[[VAL_1]]#1 : (!fir.ref<!fir.type<_QFtest_intentout_optional_component_deallocateTt{x:!fir.box<!fir.heap<i32>>}>>) -> i1
+! CHECK:  %[[VAL_2:.*]] = fir.is_present %[[VAL_1]]#0 : (!fir.ref<!fir.type<_QFtest_intentout_optional_component_deallocateTt{x:!fir.box<!fir.heap<i32>>}>>) -> i1
 ! CHECK:  fir.if %[[VAL_2]] {
-! CHECK:    %[[VAL_3:.*]] = fir.embox %[[VAL_1]]#1 : (!fir.ref<!fir.type<_QFtest_intentout_optional_component_deallocateTt{x:!fir.box<!fir.heap<i32>>}>>) -> !fir.box<!fir.type<_QFtest_intentout_optional_component_deallocateTt{x:!fir.box<!fir.heap<i32>>}>>
+! CHECK:    %[[VAL_3:.*]] = fir.embox %[[VAL_1]]#0 : (!fir.ref<!fir.type<_QFtest_intentout_optional_component_deallocateTt{x:!fir.box<!fir.heap<i32>>}>>) -> !fir.box<!fir.type<_QFtest_intentout_optional_component_deallocateTt{x:!fir.box<!fir.heap<i32>>}>>
 ! CHECK:    %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.box<!fir.type<_QFtest_intentout_optional_component_deallocateTt{x:!fir.box<!fir.heap<i32>>}>>) -> !fir.box<none>
 ! CHECK:    fir.call @_FortranADestroy(%[[VAL_4]]) fastmath<contract> : (!fir.box<none>) -> ()
 ! CHECK:  }

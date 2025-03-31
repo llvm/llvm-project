@@ -923,7 +923,6 @@ define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) inreg %src, ptr 
 ; SDAG-GFX1100-NEXT:    v_add_nc_u32_e32 v61, s0, v0
 ; SDAG-GFX1100-NEXT:    v_add_nc_u32_e32 v65, s8, v0
 ; SDAG-GFX1100-NEXT:    v_add_co_u32 v0, s1, 0x100, v0
-; SDAG-GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; SDAG-GFX1100-NEXT:    s_and_b32 vcc_lo, exec_lo, s1
 ; SDAG-GFX1100-NEXT:    s_clause 0xf
 ; SDAG-GFX1100-NEXT:    buffer_load_b128 v[1:4], v61, s[4:7], 0 offen
@@ -1097,7 +1096,6 @@ define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) inreg %src, ptr 
 ; GISEL-GFX1100-NEXT:    v_add_nc_u32_e32 v61, s0, v0
 ; GISEL-GFX1100-NEXT:    v_add_nc_u32_e32 v65, s8, v0
 ; GISEL-GFX1100-NEXT:    v_add_co_u32 v0, s1, 0x100, v0
-; GISEL-GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GISEL-GFX1100-NEXT:    s_xor_b32 s1, s1, -1
 ; GISEL-GFX1100-NEXT:    s_clause 0xf
 ; GISEL-GFX1100-NEXT:    buffer_load_b128 v[1:4], v61, s[4:7], 0 offen

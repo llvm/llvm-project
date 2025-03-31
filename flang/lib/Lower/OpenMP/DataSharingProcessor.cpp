@@ -257,6 +257,11 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
     return;
 
   if (mlir::isa<mlir::omp::WsloopOp>(op) || mlir::isa<mlir::omp::SimdOp>(op)) {
+    mlir::omp::LoopRelatedClauseOps result;
+    llvm::SmallVector<const semantics::Symbol *> iv;
+    collectLoopRelatedInfo(converter, converter.getCurrentLocation(), eval,
+                           clauses, result, iv);
+
     // Update the original variable just before exiting the worksharing
     // loop. Conversion as follows:
     //
@@ -280,9 +285,8 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
     mlir::Value cmpOp;
     llvm::SmallVector<mlir::Value> vs;
     vs.reserve(loopOp.getIVs().size());
-    for (auto [iv, ub, step] :
-         llvm::zip_equal(loopOp.getIVs(), loopOp.getLoopUpperBounds(),
-                         loopOp.getLoopSteps())) {
+    for (auto [iv, ub, step] : llvm::zip_equal(
+             loopOp.getIVs(), result.loopUpperBounds, result.loopSteps)) {
       // v = iv + step
       // cmp = step < 0 ? v < ub : v > ub
       mlir::Value v = firOpBuilder.create<mlir::arith::AddIOp>(loc, iv, step);

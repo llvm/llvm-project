@@ -1,5 +1,6 @@
 header: Uefi.h
-standards: UEFI
+standards:
+  - uefi
 macros: []
 types:
   - type_name: EFI_BOOT_SERVICES

@@ -20,11 +20,11 @@
 #include "src/math/generic/range_reduction_double_common.h"
 #include "src/math/generic/sincos_eval.h"
 
-#ifdef LIBC_TARGET_CPU_HAS_FMA
+#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 #include "range_reduction_double_fma.h"
 #else
 #include "range_reduction_double_nofma.h"
-#endif // LIBC_TARGET_CPU_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
 namespace LIBC_NAMESPACE_DECL {
 

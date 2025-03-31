@@ -57,7 +57,9 @@ def OpD : NS_Op<"type_attr_as_result_type", [FirstAttrDerivedResultType]> {
 
 // CHECK-LABEL: OpD definitions
 // CHECK: void OpD::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes)
-// CHECK: odsState.addTypes({::llvm::cast<::mlir::TypeAttr>(attr.getValue()).getValue()});
+// CHECK: odsState.addTypes({::llvm::cast<::mlir::TypeAttr>(typeAttr).getValue()});
+// CHECK: void OpD::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::ValueRange operands, const Properties &properties, ::llvm::ArrayRef<::mlir::NamedAttribute> discardableAttributes)
+// CHECK: odsState.addTypes({::llvm::cast<::mlir::TypeAttr>(typeAttr).getValue()});
 
 def OpE : NS_Op<"value_attr_as_result_type", [FirstAttrDerivedResultType]> {
   let arguments = (ins I32:$x, F32Attr:$attr);
@@ -66,7 +68,10 @@ def OpE : NS_Op<"value_attr_as_result_type", [FirstAttrDerivedResultType]> {
 
 // CHECK-LABEL: OpE definitions
 // CHECK: void OpE::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes)
-// CHECK: odsState.addTypes({::llvm::cast<::mlir::TypedAttr>(attr.getValue()).getType()});
+// CHECK: odsState.addTypes({::llvm::cast<::mlir::TypedAttr>(typeAttr).getType()});
+// CHECK: void OpE::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::ValueRange operands, const Properties &properties, ::llvm::ArrayRef<::mlir::NamedAttribute> discardableAttributes)
+// CHECK: ::mlir::Attribute typeAttr = properties.getAttr();
+// CHECK: odsState.addTypes({::llvm::cast<::mlir::TypedAttr>(typeAttr).getType()});
 
 def OpF : NS_Op<"one_variadic_result_op", []> {
   let results = (outs Variadic<I32>:$x);
@@ -117,6 +122,8 @@ def OpK : NS_Op<"only_input_is_variadic_with_same_value_type_op", [SameOperandsA
 }
 
 // CHECK-LABEL: OpK::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes)
+// CHECK: odsState.addTypes({operands[0].getType()});
+// CHECK-LABEL: OpK::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::ValueRange operands, const Properties &properties, ::llvm::ArrayRef<::mlir::NamedAttribute> discardableAttributes)
 // CHECK: odsState.addTypes({operands[0].getType()});
 
 // Test with inferred shapes and interleaved with operands/attributes.

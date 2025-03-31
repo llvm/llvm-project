@@ -483,6 +483,14 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
       return false;
     }
   }
+  case OpenACCClauseKind::Bind: {
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Routine:
+      return true;
+    default:
+      return false;
+    }
+  }
   }
 
   default:
@@ -509,11 +517,6 @@ bool checkAlreadyHasClauseOfKind(
 bool checkValidAfterDeviceType(
     SemaOpenACC &S, const OpenACCDeviceTypeClause &DeviceTypeClause,
     const SemaOpenACC::OpenACCParsedClause &NewClause) {
-  // This is implemented for everything but 'routine', so treat as 'fine' for
-  // that.
-  if (NewClause.getDirectiveKind() == OpenACCDirectiveKind::Routine)
-    return false;
-
   // OpenACC3.3: Section 2.4: Clauses that precede any device_type clause are
   // default clauses.  Clauses that follow a device_type clause up to the end of
   // the directive or up to the next device_type clause are device-specific
@@ -601,6 +604,19 @@ bool checkValidAfterDeviceType(
     default:
       break;
     }
+  } else if (NewClause.getDirectiveKind() == OpenACCDirectiveKind::Routine) {
+    // OpenACC 3.3 section 2.15: Only the 'gang', 'worker', 'vector', 'seq', and
+    // 'bind' clauses may follow a device_type clause.
+    switch (NewClause.getClauseKind()) {
+    case OpenACCClauseKind::Gang:
+    case OpenACCClauseKind::Worker:
+    case OpenACCClauseKind::Vector:
+    case OpenACCClauseKind::Seq:
+    case OpenACCClauseKind::Bind:
+      return false;
+    default:
+      break;
+    }
   }
   S.Diag(NewClause.getBeginLoc(), diag::err_acc_clause_after_device_type)
       << NewClause.getClauseKind() << DeviceTypeClause.getClauseKind()
@@ -669,10 +685,6 @@ public:
   SemaOpenACCClauseVisitor(SemaOpenACC &S,
                            ArrayRef<const OpenACCClause *> ExistingClauses)
       : SemaRef(S), Ctx(S.getASTContext()), ExistingClauses(ExistingClauses) {}
-  // Once we've implemented everything, we shouldn't need this infrastructure.
-  // But in the meantime, we use this to help decide whether the clause was
-  // handled for this directive.
-  bool diagNotImplemented() { return NotImplemented; }
 
   OpenACCClause *Visit(SemaOpenACC::OpenACCParsedClause &Clause) {
     switch (Clause.getClauseKind()) {
@@ -1256,10 +1268,6 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitWaitClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitDeviceTypeClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // Restrictions implemented properly on everything except 'routine'.
-  if (Clause.getDirectiveKind() == OpenACCDirectiveKind::Routine)
-    return isNotImplemented();
-
   // OpenACC 3.3 2.14.3: Two instances of the same clause may not appear on the
   // same directive.
   if (Clause.getDirectiveKind() == OpenACCDirectiveKind::Set &&
@@ -1981,6 +1989,20 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitCollapseClause(
                                        LoopCount.get(), Clause.getEndLoc());
 }
 
+OpenACCClause *SemaOpenACCClauseVisitor::VisitBindClause(
+    SemaOpenACC::OpenACCParsedClause &Clause) {
+  if (checkAlreadyHasClauseOfKind(SemaRef, ExistingClauses, Clause))
+    return nullptr;
+
+  if (std::holds_alternative<StringLiteral *>(Clause.getBindDetails()))
+    return OpenACCBindClause::Create(
+        Ctx, Clause.getBeginLoc(), Clause.getLParenLoc(),
+        std::get<StringLiteral *>(Clause.getBindDetails()), Clause.getEndLoc());
+  return OpenACCBindClause::Create(
+      Ctx, Clause.getBeginLoc(), Clause.getLParenLoc(),
+      std::get<IdentifierInfo *>(Clause.getBindDetails()), Clause.getEndLoc());
+}
+
 // Return true if the two vars refer to the same variable, for the purposes of
 // equality checking.
 bool areVarsEqual(Expr *VarExpr1, Expr *VarExpr2) {
@@ -2056,11 +2078,8 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
     return nullptr;
   }
 
-  if (const auto *DevTypeClause =
-          llvm::find_if(ExistingClauses,
-                        [&](const OpenACCClause *C) {
-                          return isa<OpenACCDeviceTypeClause>(C);
-                        });
+  if (const auto *DevTypeClause = llvm::find_if(
+          ExistingClauses, llvm::IsaPred<OpenACCDeviceTypeClause>);
       DevTypeClause != ExistingClauses.end()) {
     if (checkValidAfterDeviceType(
             *this, *cast<OpenACCDeviceTypeClause>(*DevTypeClause), Clause))
@@ -2072,12 +2091,7 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
   assert((!Result || Result->getClauseKind() == Clause.getClauseKind()) &&
          "Created wrong clause?");
 
-  if (Visitor.diagNotImplemented())
-    Diag(Clause.getBeginLoc(), diag::warn_acc_clause_unimplemented)
-        << Clause.getClauseKind();
-
   return Result;
-
 }
 
 /// OpenACC 3.3 section 2.5.15:
@@ -2457,14 +2471,14 @@ bool SemaOpenACC::CheckDeclareClause(SemaOpenACC::OpenACCParsedClause &Clause) {
       // directives for a function, subroutine, program, or module.
 
       if (CurDecl) {
-        auto Itr = DeclareVarReferences.find(CurDecl);
-        if (Itr != DeclareVarReferences.end()) {
+        auto [Itr, Inserted] = DeclareVarReferences.try_emplace(CurDecl);
+        if (!Inserted) {
           Diag(VarExpr->getBeginLoc(), diag::err_acc_multiple_references)
               << Clause.getClauseKind();
           Diag(Itr->second, diag::note_acc_previous_reference);
           continue;
         } else {
-          DeclareVarReferences[CurDecl] = VarExpr->getBeginLoc();
+          Itr->second = VarExpr->getBeginLoc();
         }
       }
     }

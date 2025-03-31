@@ -1,5 +1,5 @@
 ! Test lowering of derived type temporary creation and init
-! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir %s -o - | FileCheck %s
 
 program derived_temp_init
   type t1
@@ -13,7 +13,7 @@ program derived_temp_init
   y = t2(x)
 end
 
-! CHECK: %[[x:.*]] =  fir.alloca !fir.type<_QFTt1{i:!fir.box<!fir.heap<i32>>}> {bindc_name = "x", uniq_name = "_QFEx"}
+! CHECK: %[[ALLOC:.*]] =  fir.alloca !fir.type<_QFTt1{i:!fir.box<!fir.heap<i32>>}> {bindc_name = "x", uniq_name = "_QFEx"}
+! CHECK: %[[x:.*]]:2 = hlfir.declare %[[ALLOC]] {{.*}}
 ! CHECK: %[[ADDR:.*]] = fir.address_of(@_QQ_QFTt1.DerivedInit) : !fir.ref<!fir.type<_QFTt1{i:!fir.box<!fir.heap<i32>>}>>
-! CHECK: %[[LOAD:.*]] = fir.load %[[ADDR]] : !fir.ref<!fir.type<_QFTt1{i:!fir.box<!fir.heap<i32>>}>>
-! CHECK: fir.store %[[LOAD]] to %[[x]] : !fir.ref<!fir.type<_QFTt1{i:!fir.box<!fir.heap<i32>>}>>
+! CHECK: fir.copy %[[ADDR]] to %[[x]]#0 no_overlap : !fir.ref<!fir.type<_QFTt1{i:!fir.box<!fir.heap<i32>>}>>, !fir.ref<!fir.type<_QFTt1{i:!fir.box<!fir.heap<i32>>}>>

@@ -234,7 +234,7 @@ COMPILER_RT_VISIBILITY extern int64_t INSTR_PROF_PROFILE_BITMAP_BIAS_VAR
 #endif
 static const int ContinuousModeSupported = 1;
 static const int UseBiasVar = 1;
-/* TODO: If there are two DSOs, the second DSO initilization will truncate the
+/* TODO: If there are two DSOs, the second DSO initialization will truncate the
  * first profile file. */
 static const char *FileOpenMode = "w+b";
 /* This symbol is defined by the compiler when runtime counter relocation is
@@ -357,15 +357,6 @@ static uint32_t fileWriter(ProfDataWriter *This, ProfDataIOVec *IOVecs,
   return 0;
 }
 
-/* TODO: make buffer size controllable by an internal option, and compiler can pass the size
-   to runtime via a variable. */
-static uint32_t orderFileWriter(FILE *File, const uint32_t *DataStart) {
-  if (fwrite(DataStart, sizeof(uint32_t), INSTR_ORDER_FILE_BUFFER_SIZE, File) !=
-      INSTR_ORDER_FILE_BUFFER_SIZE)
-    return 1;
-  return 0;
-}
-
 static void initFileWriter(ProfDataWriter *This, FILE *File) {
   This->Write = fileWriter;
   This->WriterCtx = File;
@@ -428,17 +419,17 @@ static int getProfileFileSizeForMerging(FILE *ProfileFile,
  * \p ProfileBuffer. Returns -1 on failure. On success, the caller is
  * responsible for unmapping the mmap'd buffer in \p ProfileBuffer. */
 static int mmapProfileForMerging(FILE *ProfileFile, uint64_t ProfileFileSize,
-                                 char **ProfileBuffer) {
-  *ProfileBuffer = mmap(NULL, ProfileFileSize, PROT_READ, MAP_SHARED | MAP_FILE,
-                        fileno(ProfileFile), 0);
-  if (*ProfileBuffer == MAP_FAILED) {
-    PROF_ERR("Unable to merge profile data, mmap failed: %s\n",
-             strerror(errno));
+                                 ManagedMemory *ProfileBuffer) {
+  lprofGetFileContentBuffer(ProfileFile, ProfileFileSize, ProfileBuffer);
+
+  if (ProfileBuffer->Status == MS_INVALID) {
+    PROF_ERR("Unable to merge profile data: %s\n", "reading file failed");
     return -1;
   }
 
-  if (__llvm_profile_check_compatibility(*ProfileBuffer, ProfileFileSize)) {
-    (void)munmap(*ProfileBuffer, ProfileFileSize);
+  if (__llvm_profile_check_compatibility(ProfileBuffer->Addr,
+                                         ProfileFileSize)) {
+    (void)lprofReleaseBuffer(ProfileBuffer, ProfileFileSize);
     PROF_WARN("Unable to merge profile data: %s\n",
               "source profile file is not compatible.");
     return -1;
@@ -447,13 +438,13 @@ static int mmapProfileForMerging(FILE *ProfileFile, uint64_t ProfileFileSize,
 }
 
 /* Read profile data in \c ProfileFile and merge with in-memory
-   profile counters. Returns -1 if there is fatal error, otheriwse
+   profile counters. Returns -1 if there is fatal error, otherwise
    0 is returned. Returning 0 does not mean merge is actually
    performed. If merge is actually done, *MergeDone is set to 1.
 */
 static int doProfileMerging(FILE *ProfileFile, int *MergeDone) {
   uint64_t ProfileFileSize;
-  char *ProfileBuffer;
+  ManagedMemory ProfileBuffer;
 
   /* Get the size of the profile on disk. */
   if (getProfileFileSizeForMerging(ProfileFile, &ProfileFileSize) == -1)
@@ -469,9 +460,9 @@ static int doProfileMerging(FILE *ProfileFile, int *MergeDone) {
     return -1;
 
   /* Now start merging */
-  if (__llvm_profile_merge_from_buffer(ProfileBuffer, ProfileFileSize)) {
+  if (__llvm_profile_merge_from_buffer(ProfileBuffer.Addr, ProfileFileSize)) {
     PROF_ERR("%s\n", "Invalid profile data to merge");
-    (void)munmap(ProfileBuffer, ProfileFileSize);
+    (void)lprofReleaseBuffer(&ProfileBuffer, ProfileFileSize);
     return -1;
   }
 
@@ -480,7 +471,7 @@ static int doProfileMerging(FILE *ProfileFile, int *MergeDone) {
   (void)COMPILER_RT_FTRUNCATE(ProfileFile,
                               __llvm_profile_get_size_for_buffer());
 
-  (void)munmap(ProfileBuffer, ProfileFileSize);
+  (void)lprofReleaseBuffer(&ProfileBuffer, ProfileFileSize);
   *MergeDone = 1;
 
   return 0;
@@ -503,7 +494,7 @@ static void createProfileDir(const char *Filename) {
  * the original profile data is truncated and gets ready for the profile
  * dumper. With profile merging enabled, each executable as well as any of
  * its instrumented shared libraries dump profile data into their own data file.
-*/
+ */
 static FILE *openFileForMerging(const char *ProfileFileName, int *MergeDone) {
   FILE *ProfileFile = getProfileFile();
   int rc;
@@ -574,27 +565,6 @@ static int writeFile(const char *OutputName) {
   RetVal = lprofWriteData(&fileWriter, lprofGetVPDataReader(), MergeDone);
 
   closeFileObject(OutputFile);
-  return RetVal;
-}
-
-/* Write order data to file \c OutputName.  */
-static int writeOrderFile(const char *OutputName) {
-  int RetVal;
-  FILE *OutputFile;
-
-  OutputFile = fopen(OutputName, "w");
-
-  if (!OutputFile) {
-    PROF_WARN("can't open file with mode ab: %s\n", OutputName);
-    return -1;
-  }
-
-  FreeHook = &free;
-  setupIOBuffer();
-  const uint32_t *DataBegin = __llvm_profile_begin_orderfile();
-  RetVal = orderFileWriter(OutputFile, DataBegin);
-
-  fclose(OutputFile);
   return RetVal;
 }
 
@@ -702,13 +672,13 @@ static void initializeProfileForContinuousMode(void) {
     } else {
       /* The merged profile has a non-zero length. Check that it is compatible
        * with the data in this process. */
-      char *ProfileBuffer;
+      ManagedMemory ProfileBuffer;
       if (mmapProfileForMerging(File, ProfileFileSize, &ProfileBuffer) == -1) {
         lprofUnlockFileHandle(File);
         fclose(File);
         return;
       }
-      (void)munmap(ProfileBuffer, ProfileFileSize);
+      (void)lprofReleaseBuffer(&ProfileBuffer, ProfileFileSize);
     }
   } else {
     File = fopen(Filename, FileOpenMode);
@@ -880,8 +850,9 @@ static int parseFilenamePattern(const char *FilenamePat,
         __llvm_profile_set_page_size(getpagesize());
         __llvm_profile_enable_continuous_mode();
 #else
-        PROF_WARN("%s", "Continous mode is currently only supported for Mach-O,"
-                        " ELF and COFF formats.");
+        PROF_WARN("%s",
+                  "Continuous mode is currently only supported for Mach-O,"
+                  " ELF and COFF formats.");
         return -1;
 #endif
       } else {
@@ -1239,65 +1210,6 @@ int __llvm_profile_dump(void) {
   return rc;
 }
 
-/* Order file data will be saved in a file with suffx .order. */
-static const char *OrderFileSuffix = ".order";
-
-COMPILER_RT_VISIBILITY
-int __llvm_orderfile_write_file(void) {
-  int rc, Length, LengthBeforeAppend, SuffixLength;
-  const char *Filename;
-  char *FilenameBuf;
-
-  // Temporarily suspend getting SIGKILL when the parent exits.
-  int PDeathSig = lprofSuspendSigKill();
-
-  SuffixLength = strlen(OrderFileSuffix);
-  Length = getCurFilenameLength() + SuffixLength;
-  FilenameBuf = (char *)COMPILER_RT_ALLOCA(Length + 1);
-  Filename = getCurFilename(FilenameBuf, 1);
-
-  /* Check the filename. */
-  if (!Filename) {
-    PROF_ERR("Failed to write file : %s\n", "Filename not set");
-    if (PDeathSig == 1)
-      lprofRestoreSigKill();
-    return -1;
-  }
-
-  /* Append order file suffix */
-  LengthBeforeAppend = strlen(Filename);
-  memcpy(FilenameBuf + LengthBeforeAppend, OrderFileSuffix, SuffixLength);
-  FilenameBuf[LengthBeforeAppend + SuffixLength] = '\0';
-
-  /* Check if there is llvm/runtime version mismatch.  */
-  if (GET_VERSION(__llvm_profile_get_version()) != INSTR_PROF_RAW_VERSION) {
-    PROF_ERR("Runtime and instrumentation version mismatch : "
-             "expected %d, but get %d\n",
-             INSTR_PROF_RAW_VERSION,
-             (int)GET_VERSION(__llvm_profile_get_version()));
-    if (PDeathSig == 1)
-      lprofRestoreSigKill();
-    return -1;
-  }
-
-  /* Write order data to the file. */
-  rc = writeOrderFile(Filename);
-  if (rc)
-    PROF_ERR("Failed to write file \"%s\": %s\n", Filename, strerror(errno));
-
-  // Restore SIGKILL.
-  if (PDeathSig == 1)
-    lprofRestoreSigKill();
-
-  return rc;
-}
-
-COMPILER_RT_VISIBILITY
-int __llvm_orderfile_dump(void) {
-  int rc = __llvm_orderfile_write_file();
-  return rc;
-}
-
 static void writeFileWithoutReturn(void) { __llvm_profile_write_file(); }
 
 COMPILER_RT_VISIBILITY
@@ -1346,12 +1258,12 @@ COMPILER_RT_VISIBILITY int __llvm_profile_set_file_object(FILE *File,
     } else {
       /* The merged profile has a non-zero length. Check that it is compatible
        * with the data in this process. */
-      char *ProfileBuffer;
+      ManagedMemory ProfileBuffer;
       if (mmapProfileForMerging(File, ProfileFileSize, &ProfileBuffer) == -1) {
         lprofUnlockFileHandle(File);
         return 1;
       }
-      (void)munmap(ProfileBuffer, ProfileFileSize);
+      (void)lprofReleaseBuffer(&ProfileBuffer, ProfileFileSize);
     }
     mmapForContinuousMode(0, File);
     lprofUnlockFileHandle(File);
@@ -1362,10 +1274,14 @@ COMPILER_RT_VISIBILITY int __llvm_profile_set_file_object(FILE *File,
   return 0;
 }
 
-COMPILER_RT_USED int __llvm_write_custom_profile(
-    const char *Target, const __llvm_profile_data *DataBegin,
-    const __llvm_profile_data *DataEnd, const char *CountersBegin,
-    const char *CountersEnd, const char *NamesBegin, const char *NamesEnd) {
+#ifndef __APPLE__
+int __llvm_write_custom_profile(const char *Target,
+                                const __llvm_profile_data *DataBegin,
+                                const __llvm_profile_data *DataEnd,
+                                const char *CountersBegin,
+                                const char *CountersEnd, const char *NamesBegin,
+                                const char *NamesEnd,
+                                const uint64_t *VersionOverride) {
   int ReturnValue = 0, FilenameLength, TargetLength;
   char *FilenameBuf, *TargetFilename;
   const char *Filename;
@@ -1447,10 +1363,15 @@ COMPILER_RT_USED int __llvm_write_custom_profile(
   ProfDataWriter fileWriter;
   initFileWriter(&fileWriter, OutputFile);
 
+  uint64_t Version = __llvm_profile_get_version();
+  if (VersionOverride)
+    Version = *VersionOverride;
+
   /* Write custom data to the file */
-  ReturnValue = lprofWriteDataImpl(
-      &fileWriter, DataBegin, DataEnd, CountersBegin, CountersEnd, NULL, NULL,
-      lprofGetVPDataReader(), NULL, NULL, NULL, NULL, NamesBegin, NamesEnd, 0);
+  ReturnValue =
+      lprofWriteDataImpl(&fileWriter, DataBegin, DataEnd, CountersBegin,
+                         CountersEnd, NULL, NULL, lprofGetVPDataReader(), NULL,
+                         NULL, NULL, NULL, NamesBegin, NamesEnd, 0, Version);
   closeFileObject(OutputFile);
 
   // Restore SIGKILL.
@@ -1462,5 +1383,6 @@ COMPILER_RT_USED int __llvm_write_custom_profile(
 
   return ReturnValue;
 }
+#endif
 
 #endif

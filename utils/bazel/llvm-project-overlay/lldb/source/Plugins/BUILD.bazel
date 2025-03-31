@@ -1684,6 +1684,8 @@ cc_library(
         "//lldb:Symbol",
         "//lldb:Target",
         "//lldb:TargetHeaders",
+        "//lldb:Utility",
+        "//lldb:UtilityHeaders",
     ],
 )
 

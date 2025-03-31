@@ -56,7 +56,6 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBCommandReturnObject.cpp
   SBCommunication.cpp
   SBCompileUnit.cpp
-  SBSaveCoreOptions.cpp
   SBData.cpp
   SBDebugger.cpp
   SBDeclaration.cpp
@@ -65,8 +64,8 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBEvent.cpp
   SBExecutionContext.cpp
   SBExpressionOptions.cpp
-  SBFileSpec.cpp
   SBFile.cpp
+  SBFileSpec.cpp
   SBFileSpecList.cpp
   SBFormat.cpp
   SBFrame.cpp
@@ -82,14 +81,16 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBMemoryRegionInfoList.cpp
   SBModule.cpp
   SBModuleSpec.cpp
+  SBMutex.cpp
   SBPlatform.cpp
-  SBProgress.cpp
   SBProcess.cpp
   SBProcessInfo.cpp
   SBProcessInfoList.cpp
+  SBProgress.cpp
   SBQueue.cpp
   SBQueueItem.cpp
   SBReproducer.cpp
+  SBSaveCoreOptions.cpp
   SBScriptObject.cpp
   SBSection.cpp
   SBSourceManager.cpp
@@ -114,12 +115,12 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBTypeNameSpecifier.cpp
   SBTypeSummary.cpp
   SBTypeSynthetic.cpp
+  SBUnixSignals.cpp
   SBValue.cpp
   SBValueList.cpp
   SBVariablesOptions.cpp
   SBWatchpoint.cpp
   SBWatchpointOptions.cpp
-  SBUnixSignals.cpp
   SystemInitializerFull.cpp
   ${lldb_python_wrapper}
   ${lldb_lua_wrapper}

@@ -806,7 +806,6 @@ namespace cwg49 { // cwg49: 2.8
   // since-cxx17-error@#cwg49-c {{non-type template argument is not a constant expression}}
   //   since-cxx17-note@#cwg49-c {{read of non-constexpr variable 'q' is not allowed in a constant expression}}
   //   since-cxx17-note@#cwg49-q {{declared here}}
-  //   since-cxx17-note@#cwg49-A {{template parameter is declared here}}
 } // namespace cwg49
 
 namespace cwg50 { // cwg50: 2.7
@@ -860,7 +859,7 @@ namespace cwg54 { // cwg54: 2.8
   // expected-error@-1 {{cannot cast 'struct B' to its private base class 'A'}}
   //   expected-note@#cwg54-B {{declared private here}}
   int A::*smab = static_cast<int A::*>(&B::b);
-  // expected-error@-1 {{cannot cast 'cwg54::B' to its private base class 'A'}}
+  // expected-error@-1 {{cannot cast 'B' to its private base class 'A'}}
   //   expected-note@#cwg54-B {{declared private here}}
   B &sba = static_cast<B&>(a);
   // expected-error@-1 {{cannot cast private base class 'cwg54::A' to 'cwg54::B'}}
@@ -869,19 +868,19 @@ namespace cwg54 { // cwg54: 2.8
   // expected-error@-1 {{cannot cast private base class 'cwg54::A' to 'cwg54::B'}}
   //   expected-note@#cwg54-B {{declared private here}}
   int B::*smba = static_cast<int B::*>(&A::a);
-  // expected-error@-1 {{cannot cast private base class 'cwg54::A' to 'B'}}
+  // expected-error@-1 {{cannot cast private base class 'A' to 'B'}}
   //   expected-note@#cwg54-B {{declared private here}}
 
   V &svb = static_cast<V&>(b);
   V *spvb = static_cast<V*>(&b);
   int V::*smvb = static_cast<int V::*>(&B::b);
-  // expected-error@-1 {{conversion from pointer to member of class 'cwg54::B' to pointer to member of class 'V' via virtual base 'cwg54::V' is not allowed}}
+  // expected-error@-1 {{conversion from pointer to member of class 'B' to pointer to member of class 'V' via virtual base 'cwg54::V' is not allowed}}
   B &sbv = static_cast<B&>(v);
   // expected-error@-1 {{cannot cast 'struct V' to 'B &' via virtual base 'cwg54::V'}}
   B *spbv = static_cast<B*>(&v);
   // expected-error@-1 {{cannot cast 'cwg54::V *' to 'B *' via virtual base 'cwg54::V'}}
   int B::*smbv = static_cast<int B::*>(&V::v);
-  // expected-error@-1 {{conversion from pointer to member of class 'cwg54::V' to pointer to member of class 'B' via virtual base 'cwg54::V' is not allowed}}
+  // expected-error@-1 {{conversion from pointer to member of class 'V' to pointer to member of class 'B' via virtual base 'cwg54::V' is not allowed}}
 
   A &cab = (A&)(b);
   A *cpab = (A*)(&b);
@@ -893,13 +892,13 @@ namespace cwg54 { // cwg54: 2.8
   V &cvb = (V&)(b);
   V *cpvb = (V*)(&b);
   int V::*cmvb = (int V::*)(&B::b);
-  // expected-error@-1 {{conversion from pointer to member of class 'cwg54::B' to pointer to member of class 'V' via virtual base 'cwg54::V' is not allowed}}
+  // expected-error@-1 {{conversion from pointer to member of class 'B' to pointer to member of class 'V' via virtual base 'cwg54::V' is not allowed}}
   B &cbv = (B&)(v);
   // expected-error@-1 {{cannot cast 'struct V' to 'B &' via virtual base 'cwg54::V'}}
   B *cpbv = (B*)(&v);
   // expected-error@-1 {{cannot cast 'cwg54::V *' to 'B *' via virtual base 'cwg54::V'}}
   int B::*cmbv = (int B::*)(&V::v);
-  // expected-error@-1 {{conversion from pointer to member of class 'cwg54::V' to pointer to member of class 'B' via virtual base 'cwg54::V' is not allowed}}
+  // expected-error@-1 {{conversion from pointer to member of class 'V' to pointer to member of class 'B' via virtual base 'cwg54::V' is not allowed}}
 } // namespace cwg54
 
 namespace cwg55 { // cwg55: 2.7
@@ -1019,9 +1018,9 @@ namespace cwg62 { // cwg62: 2.9
   struct A {
     struct { int n; } b;
   };
-  template<typename T> struct X {}; // #cwg62-X
-  template<typename T> T get() { return get<T>(); } // #cwg62-get
-  template<typename T> int take(T) { return 0; } // #cwg62-take
+  template<typename T> struct X {};
+  template<typename T> T get() { return get<T>(); }
+  template<typename T> int take(T) { return 0; }
 
   X<A> x1;
   A a = get<A>();
@@ -1035,27 +1034,22 @@ namespace cwg62 { // cwg62: 2.9
 
   X<NoNameForLinkagePtr> x2;
   // cxx98-error@-1 {{template argument uses unnamed type}}
-  //   cxx98-note@#cwg62-X {{template parameter is declared here}}
   //   cxx98-note@#cwg62-unnamed {{unnamed type used in template argument was declared here}}
   X<const NoNameForLinkagePtr> x3;
   // cxx98-error@-1 {{template argument uses unnamed type}}
-  //   cxx98-note@#cwg62-X {{template parameter is declared here}}
   //   cxx98-note@#cwg62-unnamed {{unnamed type used in template argument was declared here}}
   NoNameForLinkagePtr p1 = get<NoNameForLinkagePtr>();
   // cxx98-error@-1 {{template argument uses unnamed type}}
-  //   cxx98-note@#cwg62-get {{template parameter is declared here}}
   //   cxx98-note@#cwg62-unnamed {{unnamed type used in template argument was declared here}}
-  //   cxx98-note@-4 {{while substituting explicitly-specified template arguments}}
+  //   cxx98-note@-3 {{while substituting explicitly-specified template arguments}}
   NoNameForLinkagePtr p2 = get<const NoNameForLinkagePtr>();
   // cxx98-error@-1 {{template argument uses unnamed type}}
-  //   cxx98-note@#cwg62-get {{template parameter is declared here}}
   //   cxx98-note@#cwg62-unnamed {{unnamed type used in template argument was declared here}}
-  //   cxx98-note@-4 {{while substituting explicitly-specified template arguments}}
+  //   cxx98-note@-3 {{while substituting explicitly-specified template arguments}}
   int n1 = take(noNameForLinkagePtr);
   // cxx98-error@-1 {{template argument uses unnamed type}}
-  //   cxx98-note@#cwg62-take {{template parameter is declared here}}
   //   cxx98-note@#cwg62-unnamed {{unnamed type used in template argument was declared here}}
-  //   cxx98-note@-4 {{while substituting deduced template arguments}}
+  //   cxx98-note@-3 {{while substituting deduced template arguments}}
 
   X<Danger> x4;
 
@@ -1063,24 +1057,18 @@ namespace cwg62 { // cwg62: 2.9
     struct NoLinkage {};
     X<NoLinkage> a;
     // cxx98-error@-1 {{template argument uses local type }}
-    //   cxx98-note@#cwg62-X {{template parameter is declared here}}
     X<const NoLinkage> b;
     // cxx98-error@-1 {{template argument uses local type }}
-    //   cxx98-note@#cwg62-X {{template parameter is declared here}}
     get<NoLinkage>();
     // cxx98-error@-1 {{template argument uses local type }}
-    //   cxx98-note@#cwg62-get {{template parameter is declared here}}
-    //   cxx98-note@-3 {{while substituting explicitly-specified template arguments}}
+    //   cxx98-note@-2 {{while substituting explicitly-specified template arguments}}
     get<const NoLinkage>();
     // cxx98-error@-1 {{template argument uses local type }}
-    //   cxx98-note@#cwg62-get {{template parameter is declared here}}
-    //   cxx98-note@-3 {{while substituting explicitly-specified template arguments}}
+    //   cxx98-note@-2 {{while substituting explicitly-specified template arguments}}
     X<void (*)(NoLinkage A::*)> c;
     // cxx98-error@-1 {{template argument uses local type }}
-    //   cxx98-note@#cwg62-X {{template parameter is declared here}}
     X<int NoLinkage::*> d;
     // cxx98-error@-1 {{template argument uses local type }}
-    //   cxx98-note@#cwg62-X {{template parameter is declared here}}
   }
 } // namespace cwg62
 
@@ -1147,11 +1135,10 @@ namespace cwg69 { // cwg69: 9
   extern template void f<char>();
   // cxx98-error@-1 {{extern templates are a C++11 extension}}
   // expected-error@-2 {{explicit instantiation declaration of 'f' with internal linkage}}
-  template<void(*)()> struct Q {}; // #cwg69-Q
+  template<void(*)()> struct Q {};
   Q<&f<int> > q;
   // cxx98-error@-1 {{non-type template argument referring to function 'f<int>' with internal linkage is a C++11 extension}}
   //   cxx98-note@#cwg69-f {{non-type template argument refers to function here}}
-  //   cxx98-note@#cwg69-Q {{template parameter is declared here}}
 } // namespace cwg69
 
 namespace cwg70 { // cwg70: 2.7

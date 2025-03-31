@@ -90,7 +90,7 @@ define void @or_select_multipleuses_logical(i32 %x, i1 %y) {
 
 define <3 x i4> @partial_undef_vec() {
 ; CHECK-LABEL: @partial_undef_vec(
-; CHECK-NEXT:    ret <3 x i4> <i4 0, i4 1, i4 0>
+; CHECK-NEXT:    ret <3 x i4> splat (i4 1)
 ;
   %f = freeze <3 x i4> <i4 poison, i4 1, i4 undef>
   ret <3 x i4> %f

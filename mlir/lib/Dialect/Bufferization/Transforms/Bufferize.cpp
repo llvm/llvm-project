@@ -38,16 +38,6 @@ using namespace mlir::bufferization;
 
 namespace {
 
-static LayoutMapOption parseLayoutMapOption(const std::string &s) {
-  if (s == "fully-dynamic-layout-map")
-    return LayoutMapOption::FullyDynamicLayoutMap;
-  if (s == "identity-layout-map")
-    return LayoutMapOption::IdentityLayoutMap;
-  if (s == "infer-layout-map")
-    return LayoutMapOption::InferLayoutMap;
-  llvm_unreachable("invalid layout map option");
-}
-
 static OneShotBufferizationOptions::AnalysisHeuristic
 parseHeuristicOption(const std::string &s) {
   if (s == "bottom-up")
@@ -83,8 +73,7 @@ struct OneShotBufferizePass
       opt.analysisHeuristic = parseHeuristicOption(analysisHeuristic);
       opt.copyBeforeWrite = copyBeforeWrite;
       opt.dumpAliasSets = dumpAliasSets;
-      opt.setFunctionBoundaryTypeConversion(
-          parseLayoutMapOption(functionBoundaryTypeConversion));
+      opt.setFunctionBoundaryTypeConversion(functionBoundaryTypeConversion);
 
       if (mustInferMemorySpace && useEncodingForMemorySpace) {
         emitError(getOperation()->getLoc())
@@ -118,8 +107,7 @@ struct OneShotBufferizePass
       opt.noAnalysisFuncFilter = noAnalysisFuncFilter;
 
       // Configure type converter.
-      LayoutMapOption unknownTypeConversionOption =
-          parseLayoutMapOption(unknownTypeConversion);
+      LayoutMapOption unknownTypeConversionOption = unknownTypeConversion;
       if (unknownTypeConversionOption == LayoutMapOption::InferLayoutMap) {
         emitError(UnknownLoc::get(&getContext()),
                   "Invalid option: 'infer-layout-map' is not a valid value for "
@@ -142,7 +130,7 @@ struct OneShotBufferizePass
       // Configure op filter.
       OpFilter::Entry::FilterFn filterFn = [&](Operation *op) {
         // Filter may be specified via options.
-        if (this->dialectFilter.hasValue())
+        if (this->dialectFilter.hasValue() && !(*this->dialectFilter).empty())
           return llvm::is_contained(this->dialectFilter,
                                     op->getDialect()->getNamespace());
         // No filter specified: All other ops are allowed.

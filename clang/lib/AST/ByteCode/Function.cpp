@@ -19,7 +19,7 @@ Function::Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
                    llvm::SmallVectorImpl<PrimType> &&ParamTypes,
                    llvm::DenseMap<unsigned, ParamDescriptor> &&Params,
                    llvm::SmallVectorImpl<unsigned> &&ParamOffsets,
-                   bool HasThisPointer, bool HasRVO)
+                   bool HasThisPointer, bool HasRVO, bool IsLambdaStaticInvoker)
     : P(P), Kind(FunctionKind::Normal), Source(Source), ArgSize(ArgSize),
       ParamTypes(std::move(ParamTypes)), Params(std::move(Params)),
       ParamOffsets(std::move(ParamOffsets)), HasThisPointer(HasThisPointer),
@@ -35,10 +35,12 @@ Function::Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
       Kind = FunctionKind::Dtor;
     } else if (const auto *MD = dyn_cast<CXXMethodDecl>(F)) {
       Virtual = MD->isVirtual();
-      if (MD->isLambdaStaticInvoker())
+      if (IsLambdaStaticInvoker)
         Kind = FunctionKind::LambdaStaticInvoker;
       else if (clang::isLambdaCallOperator(F))
         Kind = FunctionKind::LambdaCallOperator;
+      else if (MD->isCopyAssignmentOperator() || MD->isMoveAssignmentOperator())
+        Kind = FunctionKind::CopyOrMoveOperator;
     }
   }
 }

@@ -1278,16 +1278,16 @@ void Writer::createImportTables() {
       continue;
 
     std::string dll = StringRef(file->dllName).lower();
-    if (ctx.config.dllOrder.count(dll) == 0)
-      ctx.config.dllOrder[dll] = ctx.config.dllOrder.size();
+    ctx.config.dllOrder.try_emplace(dll, ctx.config.dllOrder.size());
 
     if (file->impSym && !isa<DefinedImportData>(file->impSym))
-      Fatal(ctx) << file->impSym << " was replaced";
+      Fatal(ctx) << file->symtab.printSymbol(file->impSym) << " was replaced";
     DefinedImportData *impSym = cast_or_null<DefinedImportData>(file->impSym);
     if (ctx.config.delayLoads.count(StringRef(file->dllName).lower())) {
       if (!file->thunkSym)
         Fatal(ctx) << "cannot delay-load " << toString(file)
-                   << " due to import of data: " << impSym;
+                   << " due to import of data: "
+                   << file->symtab.printSymbol(impSym);
       delayIdata.add(impSym);
     } else {
       idata.add(impSym);
@@ -1306,7 +1306,8 @@ void Writer::appendImportThunks() {
 
     if (file->thunkSym) {
       if (!isa<DefinedImportThunk>(file->thunkSym))
-        Fatal(ctx) << file->thunkSym << " was replaced";
+        Fatal(ctx) << file->symtab.printSymbol(file->thunkSym)
+                   << " was replaced";
       auto *chunk = cast<DefinedImportThunk>(file->thunkSym)->getChunk();
       if (chunk->live)
         textSec->addChunk(chunk);
@@ -1314,7 +1315,8 @@ void Writer::appendImportThunks() {
 
     if (file->auxThunkSym) {
       if (!isa<DefinedImportThunk>(file->auxThunkSym))
-        Fatal(ctx) << file->auxThunkSym << " was replaced";
+        Fatal(ctx) << file->symtab.printSymbol(file->auxThunkSym)
+                   << " was replaced";
       auto *chunk = cast<DefinedImportThunk>(file->auxThunkSym)->getChunk();
       if (chunk->live)
         textSec->addChunk(chunk);
@@ -1986,9 +1988,16 @@ static void maybeAddAddressTakenFunction(SymbolRVASet &addressTakenSyms,
     // Common is always data, so it is ignored.
     break;
   case Symbol::DefinedAbsoluteKind:
-  case Symbol::DefinedSyntheticKind:
     // Absolute is never code, synthetic generally isn't and usually isn't
     // determinable.
+    break;
+  case Symbol::DefinedSyntheticKind:
+    // For EC export thunks, mark both the thunk itself and its target.
+    if (auto expChunk = dyn_cast_or_null<ECExportThunkChunk>(
+            cast<Defined>(s)->getChunk())) {
+      addSymbolToRVASet(addressTakenSyms, cast<Defined>(s));
+      addSymbolToRVASet(addressTakenSyms, expChunk->target);
+    }
     break;
   case Symbol::LazyArchiveKind:
   case Symbol::LazyObjectKind:
@@ -2054,9 +2063,11 @@ void Writer::createGuardCFTables() {
     // with /guard:cf.
     for (ObjFile *file : ctx.objFileInstances) {
       if (file->hasGuardCF()) {
-        Symbol *flagSym = ctx.symtab.findUnderscore("__guard_flags");
-        cast<DefinedAbsolute>(flagSym)->setVA(
-            uint32_t(GuardFlags::CF_INSTRUMENTED));
+        ctx.forEachSymtab([&](SymbolTable &symtab) {
+          Symbol *flagSym = symtab.findUnderscore("__guard_flags");
+          cast<DefinedAbsolute>(flagSym)->setVA(
+              uint32_t(GuardFlags::CF_INSTRUMENTED));
+        });
         break;
       }
     }
@@ -2138,8 +2149,10 @@ void Writer::createGuardCFTables() {
     guardFlags |= uint32_t(GuardFlags::CF_LONGJUMP_TABLE_PRESENT);
   if (config->guardCF & GuardCFLevel::EHCont)
     guardFlags |= uint32_t(GuardFlags::EH_CONTINUATION_TABLE_PRESENT);
-  Symbol *flagSym = ctx.symtab.findUnderscore("__guard_flags");
-  cast<DefinedAbsolute>(flagSym)->setVA(guardFlags);
+  ctx.forEachSymtab([guardFlags](SymbolTable &symtab) {
+    Symbol *flagSym = symtab.findUnderscore("__guard_flags");
+    cast<DefinedAbsolute>(flagSym)->setVA(guardFlags);
+  });
 }
 
 // Take a list of input sections containing symbol table indices and add those
@@ -2210,10 +2223,12 @@ void Writer::maybeAddRVATable(SymbolRVASet tableSymbols, StringRef tableSym,
     tableChunk = make<RVATableChunk>(std::move(tableSymbols));
   rdataSec->addChunk(tableChunk);
 
-  Symbol *t = ctx.symtab.findUnderscore(tableSym);
-  Symbol *c = ctx.symtab.findUnderscore(countSym);
-  replaceSymbol<DefinedSynthetic>(t, t->getName(), tableChunk);
-  cast<DefinedAbsolute>(c)->setVA(tableChunk->getSize() / (hasFlag ? 5 : 4));
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
+    Symbol *t = symtab.findUnderscore(tableSym);
+    Symbol *c = symtab.findUnderscore(countSym);
+    replaceSymbol<DefinedSynthetic>(t, t->getName(), tableChunk);
+    cast<DefinedAbsolute>(c)->setVA(tableChunk->getSize() / (hasFlag ? 5 : 4));
+  });
 }
 
 // Create CHPE metadata chunks.

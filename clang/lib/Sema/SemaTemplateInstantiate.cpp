@@ -575,7 +575,6 @@ bool Sema::CodeSynthesisContext::isInstantiationRecord() const {
   case BuildingDeductionGuides:
   case TypeAliasTemplateInstantiation:
   case PartialOrderingTTP:
-  case CheckTemplateParameter:
     return false;
 
   // This function should never be called when Kind's value is Memoization.
@@ -810,16 +809,7 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation ArgLoc, PartialOrderingTTP,
     TemplateDecl *PArg, SourceRange InstantiationRange)
     : InstantiatingTemplate(SemaRef, CodeSynthesisContext::PartialOrderingTTP,
-                            ArgLoc, SourceRange(), PArg) {}
-
-Sema::InstantiatingTemplate::InstantiatingTemplate(Sema &SemaRef,
-                                                   CheckTemplateParameter,
-                                                   NamedDecl *Param)
-    : InstantiatingTemplate(
-          SemaRef, CodeSynthesisContext::CheckTemplateParameter,
-          Param->getLocation(), Param->getSourceRange(), Param) {
-  assert(Param->isTemplateParameter());
-}
+                            ArgLoc, InstantiationRange, PArg) {}
 
 void Sema::pushCodeSynthesisContext(CodeSynthesisContext Ctx) {
   Ctx.SavedInNonInstantiationSFINAEContext = InNonInstantiationSFINAEContext;
@@ -1261,18 +1251,12 @@ void Sema::PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc) {
     case CodeSynthesisContext::PartialOrderingTTP:
       DiagFunc(Active->PointOfInstantiation,
                PDiag(diag::note_template_arg_template_params_mismatch));
+      if (SourceLocation ParamLoc = Active->Entity->getLocation();
+          ParamLoc.isValid())
+        DiagFunc(ParamLoc, PDiag(diag::note_template_prev_declaration)
+                               << /*isTemplateTemplateParam=*/true
+                               << Active->InstantiationRange);
       break;
-    case CodeSynthesisContext::CheckTemplateParameter: {
-      const auto &ND = *cast<NamedDecl>(Active->Entity);
-      if (SourceLocation Loc = ND.getLocation(); Loc.isValid()) {
-        DiagFunc(Loc, PDiag(diag::note_template_param_here)
-                          << ND.getSourceRange());
-        break;
-      }
-      DiagFunc(SourceLocation(), PDiag(diag::note_template_param_external)
-                                     << toTerseString(ND).str());
-      break;
-    }
     }
   }
 }
@@ -1316,7 +1300,6 @@ std::optional<TemplateDeductionInfo *> Sema::isSFINAEContext() const {
     case CodeSynthesisContext::DefaultTemplateArgumentChecking:
     case CodeSynthesisContext::RewritingOperatorAsSpaceship:
     case CodeSynthesisContext::PartialOrderingTTP:
-    case CodeSynthesisContext::CheckTemplateParameter:
       // A default template argument instantiation and substitution into
       // template parameters with arguments for prior parameters may or may
       // not be a SFINAE context; look further up the stack.
@@ -1363,6 +1346,16 @@ std::optional<TemplateDeductionInfo *> Sema::isSFINAEContext() const {
   }
 
   return std::nullopt;
+}
+
+static TemplateArgument
+getPackSubstitutedTemplateArgument(Sema &S, TemplateArgument Arg) {
+  assert(S.ArgumentPackSubstitutionIndex >= 0);
+  assert(S.ArgumentPackSubstitutionIndex < (int)Arg.pack_size());
+  Arg = Arg.pack_begin()[S.ArgumentPackSubstitutionIndex];
+  if (Arg.isPackExpansion())
+    Arg = Arg.getPackExpansionPattern();
+  return Arg;
 }
 
 //===----------------------------------------------------------------------===/
@@ -1484,11 +1477,13 @@ namespace {
       }
     }
 
-    static TemplateArgument
+    TemplateArgument
     getTemplateArgumentPackPatternForRewrite(const TemplateArgument &TA) {
       if (TA.getKind() != TemplateArgument::Pack)
         return TA;
-      assert(TA.pack_size() == 1 &&
+      if (SemaRef.ArgumentPackSubstitutionIndex != -1)
+        return getPackSubstitutedTemplateArgument(SemaRef, TA);
+      assert(TA.pack_size() == 1 && TA.pack_begin()->isPackExpansion() &&
              "unexpected pack arguments in template rewrite");
       TemplateArgument Arg = *TA.pack_begin();
       if (Arg.isPackExpansion())
@@ -1591,6 +1586,8 @@ namespace {
     TransformStmtAlwaysInlineAttr(const Stmt *OrigS, const Stmt *InstS,
                                   const AlwaysInlineAttr *A);
     const CodeAlignAttr *TransformCodeAlignAttr(const CodeAlignAttr *CA);
+    const OpenACCRoutineDeclAttr *
+    TransformOpenACCRoutineDeclAttr(const OpenACCRoutineDeclAttr *A);
     ExprResult TransformPredefinedExpr(PredefinedExpr *E);
     ExprResult TransformDeclRefExpr(DeclRefExpr *E);
     ExprResult TransformCXXDefaultArgExpr(CXXDefaultArgExpr *E);
@@ -1647,6 +1644,9 @@ namespace {
       std::vector<TemplateArgument> TArgs;
       switch (Arg.getKind()) {
       case TemplateArgument::Pack:
+        assert(SemaRef.CodeSynthesisContexts.empty() ||
+               SemaRef.CodeSynthesisContexts.back().Kind ==
+                   Sema::CodeSynthesisContext::BuildingDeductionGuides);
         // Literally rewrite the template argument pack, instead of unpacking
         // it.
         for (auto &pack : Arg.getPackAsArray()) {
@@ -1665,6 +1665,23 @@ namespace {
         break;
       }
       return inherited::TransformTemplateArgument(Input, Output, Uneval);
+    }
+
+    std::optional<unsigned> ComputeSizeOfPackExprWithoutSubstitution(
+        ArrayRef<TemplateArgument> PackArgs) {
+      // Don't do this when rewriting template parameters for CTAD:
+      //   1) The heuristic needs the unpacked Subst* nodes to figure out the
+      //   expanded size, but this never applies since Subst* nodes are not
+      //   created in rewrite scenarios.
+      //
+      //   2) The heuristic substitutes into the pattern with pack expansion
+      //   suppressed, which does not meet the requirements for argument
+      //   rewriting when template arguments include a non-pack matching against
+      //   a pack, particularly when rewriting an alias CTAD.
+      if (TemplateArgs.isRewrite())
+        return std::nullopt;
+
+      return inherited::ComputeSizeOfPackExprWithoutSubstitution(PackArgs);
     }
 
     template<typename Fn>
@@ -1884,16 +1901,6 @@ bool TemplateInstantiator::AlreadyTransformed(QualType T) {
 
   getSema().MarkDeclarationsReferencedInType(Loc, T);
   return true;
-}
-
-static TemplateArgument
-getPackSubstitutedTemplateArgument(Sema &S, TemplateArgument Arg) {
-  assert(S.ArgumentPackSubstitutionIndex >= 0);
-  assert(S.ArgumentPackSubstitutionIndex < (int)Arg.pack_size());
-  Arg = Arg.pack_begin()[S.ArgumentPackSubstitutionIndex];
-  if (Arg.isPackExpansion())
-    Arg = Arg.getPackExpansionPattern();
-  return Arg;
 }
 
 Decl *TemplateInstantiator::TransformDecl(SourceLocation Loc, Decl *D) {
@@ -2270,6 +2277,12 @@ TemplateInstantiator::TransformCodeAlignAttr(const CodeAlignAttr *CA) {
   Expr *TransformedExpr = getDerived().TransformExpr(CA->getAlignment()).get();
   return getSema().BuildCodeAlignAttr(*CA, TransformedExpr);
 }
+const OpenACCRoutineDeclAttr *
+TemplateInstantiator::TransformOpenACCRoutineDeclAttr(
+    const OpenACCRoutineDeclAttr *A) {
+  llvm_unreachable("RoutineDecl should only be a declaration attribute, as it "
+                   "applies to a Function Decl (and a few places for VarDecl)");
+}
 
 ExprResult TemplateInstantiator::transformNonTypeTemplateParmRef(
     Decl *AssociatedDecl, const NonTypeTemplateParmDecl *parm,
@@ -2365,7 +2378,6 @@ TemplateInstantiator::TransformSubstNonTypeTemplateParmPackExpr(
 ExprResult
 TemplateInstantiator::TransformSubstNonTypeTemplateParmExpr(
                                           SubstNonTypeTemplateParmExpr *E) {
-  Sema::CheckTemplateParameterRAII CTP(SemaRef, E->getParameter());
   ExprResult SubstReplacement = E->getReplacement();
   if (!isa<ConstantExpr>(SubstReplacement.get()))
     SubstReplacement = TransformExpr(E->getReplacement());

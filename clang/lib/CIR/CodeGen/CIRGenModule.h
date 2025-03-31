@@ -91,6 +91,8 @@ public:
 
   void emitTopLevelDecl(clang::Decl *decl);
 
+  bool verifyModule() const;
+
   /// Return the address of the given function. If funcType is non-null, then
   /// this function will use the specified type if it has to create it.
   // TODO: this is a bit weird as `GetAddr` given we give back a FuncOp?
@@ -145,6 +147,20 @@ public:
         diags.getCustomDiagID(DiagnosticsEngine::Error,
                               "ClangIR code gen Not Yet Implemented: %0: %1");
     return diags.Report(loc, diagID) << feature << name;
+  }
+
+  DiagnosticBuilder errorNYI(mlir::Location loc, llvm::StringRef feature) {
+    // TODO: Convert the location to a SourceLocation
+    unsigned diagID = diags.getCustomDiagID(
+        DiagnosticsEngine::Error, "ClangIR code gen Not Yet Implemented: %0");
+    return diags.Report(diagID) << feature;
+  }
+
+  DiagnosticBuilder errorNYI(llvm::StringRef feature) {
+    // TODO: Make a default location? currSrcLoc?
+    unsigned diagID = diags.getCustomDiagID(
+        DiagnosticsEngine::Error, "ClangIR code gen Not Yet Implemented: %0");
+    return diags.Report(diagID) << feature;
   }
 
   DiagnosticBuilder errorNYI(SourceRange, llvm::StringRef);

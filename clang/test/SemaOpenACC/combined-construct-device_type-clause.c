@@ -173,8 +173,7 @@ void uses() {
   for(int i = 0; i < 5; ++i);
 #pragma acc serial loop device_type(*) collapse(1)
   for(int i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'bind' may not follow a 'device_type' clause in a 'parallel loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'bind' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop device_type(*) bind(Var)
   for(int i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'vector_length' clause is not valid on 'serial loop' directive}}

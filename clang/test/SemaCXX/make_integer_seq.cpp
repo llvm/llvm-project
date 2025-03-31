@@ -48,6 +48,5 @@ using illformed2 = ErrorSeq<int, -5>; // expected-note{{in instantiation}}
 template <typename T, T N> void f() {}
 __make_integer_seq<f, int, 0> x; // expected-error{{template template parameter must be a class template or type alias template}}
 
-__make_integer_seq<__make_integer_seq, int, 10> PR28494; // expected-note{{template template argument is incompatible}}
+__make_integer_seq<__make_integer_seq, int, 10> PR28494; // expected-note{{different template parameters}}
 // expected-error@make_integer_seq.cpp:* {{template argument for template template parameter must be a class template or type alias template}}
-// expected-note@*:* 3{{template parameter from hidden source: template <class, type-parameter-1-0 ...> class}}

@@ -63,7 +63,7 @@ class TestGdbRemoteTargetXmlPacket(gdbremote_testcase.GdbRemoteTestCaseBase):
             self.assertEqual(q_info_reg["format"], xml_info_reg.get("format"))
             self.assertEqual(q_info_reg["bitsize"], xml_info_reg.get("bitsize"))
 
-            if not self.isAArch64():
+            if not (self.isAArch64() or self.isRISCV()):
                 self.assertEqual(q_info_reg["offset"], xml_info_reg.get("offset"))
 
             self.assertEqual(q_info_reg["encoding"], xml_info_reg.get("encoding"))

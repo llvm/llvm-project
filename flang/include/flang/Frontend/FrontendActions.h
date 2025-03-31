@@ -13,10 +13,8 @@
 #ifndef FORTRAN_FRONTEND_FRONTENDACTIONS_H
 #define FORTRAN_FRONTEND_FRONTENDACTIONS_H
 
-#include "flang/Frontend/CodeGenOptions.h"
 #include "flang/Frontend/FrontendAction.h"
-#include "flang/Parser/parsing.h"
-#include "flang/Semantics/semantics.h"
+#include "flang/Frontend/ParserActions.h"
 
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/OwningOpRef.h"
@@ -25,21 +23,6 @@
 #include <memory>
 
 namespace Fortran::frontend {
-
-// TODO: This is a copy from f18.cpp. It doesn't really belong here and should
-// be moved to a more suitable place in future.
-struct MeasurementVisitor {
-  template <typename A>
-  bool Pre(const A &) {
-    return true;
-  }
-  template <typename A>
-  void Post(const A &) {
-    ++objects;
-    bytes += sizeof(A);
-  }
-  size_t objects{0}, bytes{0};
-};
 
 //===----------------------------------------------------------------------===//
 // Custom Consumer Actions

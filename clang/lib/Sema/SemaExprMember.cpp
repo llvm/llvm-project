@@ -1136,7 +1136,6 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
     if (Converted.isInvalid())
       return true;
     BaseExpr = Converted.get();
-    DiagnoseDiscardedExprMarkedNodiscard(BaseExpr);
     return false;
   };
   auto ConvertBaseExprToGLValue = [&] {
@@ -1697,7 +1696,7 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
         QualType(), false);
   }
 
-  if (BaseType->isExtVectorBoolType()) {
+  if (BaseType->isPackedVectorBoolType(S.Context)) {
     // We disallow element access for ext_vector_type bool.  There is no way to
     // materialize a reference to a vector element as a pointer (each element is
     // one bit in the vector).

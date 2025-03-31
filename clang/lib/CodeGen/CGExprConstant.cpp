@@ -364,14 +364,14 @@ bool ConstantAggregateBuilder::split(size_t Index, CharUnits Hint) {
     // FIXME: If possible, split into two ConstantDataSequentials at Hint.
     CharUnits ElemSize = getSize(CDS->getElementType());
     replace(Elems, Index, Index + 1,
-            llvm::map_range(llvm::seq(0u, CDS->getNumElements()),
-                            [&](unsigned Elem) {
+            llvm::map_range(llvm::seq(uint64_t(0u), CDS->getNumElements()),
+                            [&](uint64_t Elem) {
                               return CDS->getElementAsConstant(Elem);
                             }));
     replace(Offsets, Index, Index + 1,
             llvm::map_range(
-                llvm::seq(0u, CDS->getNumElements()),
-                [&](unsigned Elem) { return Offset + Elem * ElemSize; }));
+                llvm::seq(uint64_t(0u), CDS->getNumElements()),
+                [&](uint64_t Elem) { return Offset + Elem * ElemSize; }));
     return true;
   }
 
@@ -1981,7 +1981,10 @@ llvm::Constant *ConstantEmitter::emitForMemory(CodeGenModule &CGM,
   }
 
   // Zero-extend bool.
-  if (C->getType()->isIntegerTy(1) && !destType->isBitIntType()) {
+  // In HLSL bool vectors are stored in memory as a vector of i32
+  if ((C->getType()->isIntegerTy(1) && !destType->isBitIntType()) ||
+      (destType->isExtVectorBoolType() &&
+       !destType->isPackedVectorBoolType(CGM.getContext()))) {
     llvm::Type *boolTy = CGM.getTypes().ConvertTypeForMem(destType);
     llvm::Constant *Res = llvm::ConstantFoldCastOperand(
         llvm::Instruction::ZExt, C, boolTy, CGM.getDataLayout());

@@ -105,7 +105,7 @@ define amdgpu_kernel void @v_sad_u32_multi_use_sub_pat1(ptr addrspace(1) %out, i
   %t1 = select i1 %icmp1, i32 %a, i32 %b
 
   %ret0 = sub i32 %t0, %t1
-  store volatile i32 %ret0, ptr addrspace(5) undef
+  store volatile i32 %ret0, ptr addrspace(5) poison
   %ret = add i32 %ret0, %c
 
   store i32 %ret, ptr addrspace(1) %out
@@ -139,7 +139,7 @@ define amdgpu_kernel void @v_sad_u32_multi_use_add_pat1(ptr addrspace(1) %out, i
 
   %ret0 = sub i32 %t0, %t1
   %ret = add i32 %ret0, %c
-  store volatile i32 %ret, ptr addrspace(5) undef
+  store volatile i32 %ret, ptr addrspace(5) poison
   store i32 %ret, ptr addrspace(1) %out
   ret void
 }
@@ -167,7 +167,7 @@ define amdgpu_kernel void @v_sad_u32_multi_use_max_pat1(ptr addrspace(1) %out, i
 ; GCN-NEXT:    s_endpgm
   %icmp0 = icmp ugt i32 %a, %b
   %t0 = select i1 %icmp0, i32 %a, i32 %b
-  store volatile i32 %t0, ptr addrspace(5) undef
+  store volatile i32 %t0, ptr addrspace(5) poison
 
   %icmp1 = icmp ule i32 %a, %b
   %t1 = select i1 %icmp1, i32 %a, i32 %b
@@ -206,7 +206,7 @@ define amdgpu_kernel void @v_sad_u32_multi_use_min_pat1(ptr addrspace(1) %out, i
   %icmp1 = icmp ule i32 %a, %b
   %t1 = select i1 %icmp1, i32 %a, i32 %b
 
-  store volatile i32 %t1, ptr addrspace(5) undef
+  store volatile i32 %t1, ptr addrspace(5) poison
 
   %ret0 = sub i32 %t0, %t1
   %ret = add i32 %ret0, %c
@@ -238,7 +238,7 @@ define amdgpu_kernel void @v_sad_u32_multi_use_sub_pat2(ptr addrspace(1) %out, i
 ; GCN-NEXT:    s_endpgm
   %icmp0 = icmp ugt i32 %a, %b
   %sub0 = sub i32 %a, %b
-  store volatile i32 %sub0, ptr addrspace(5) undef
+  store volatile i32 %sub0, ptr addrspace(5) poison
   %sub1 = sub i32 %b, %a
   %ret0 = select i1 %icmp0, i32 %sub0, i32 %sub1
 
@@ -274,7 +274,7 @@ define amdgpu_kernel void @v_sad_u32_multi_use_select_pat2(ptr addrspace(1) %out
   %sub0 = sub i32 %a, %b
   %sub1 = sub i32 %b, %a
   %ret0 = select i1 %icmp0, i32 %sub0, i32 %sub1
-  store volatile i32 %ret0, ptr addrspace(5) undef
+  store volatile i32 %ret0, ptr addrspace(5) poison
 
   %ret = add i32 %ret0, %c
 
@@ -397,9 +397,9 @@ define amdgpu_kernel void @v_sad_u32_i16_pat2(ptr addrspace(1) %out) {
 ; GCN-NEXT:    v_mov_b32_e32 v1, s1
 ; GCN-NEXT:    flat_store_short v[0:1], v2
 ; GCN-NEXT:    s_endpgm
-  %a = load volatile i16, ptr addrspace(1) undef
-  %b = load volatile i16, ptr addrspace(1) undef
-  %c = load volatile i16, ptr addrspace(1) undef
+  %a = load volatile i16, ptr addrspace(1) poison
+  %b = load volatile i16, ptr addrspace(1) poison
+  %c = load volatile i16, ptr addrspace(1) poison
   %icmp0 = icmp ugt i16 %a, %b
   %sub0 = sub i16 %a, %b
   %sub1 = sub i16 %b, %a
@@ -456,9 +456,9 @@ define amdgpu_kernel void @v_sad_u32_i8_pat2(ptr addrspace(1) %out) {
 ; GCN-NEXT:    v_mov_b32_e32 v1, s1
 ; GCN-NEXT:    flat_store_byte v[0:1], v2
 ; GCN-NEXT:    s_endpgm
-  %a = load volatile i8, ptr addrspace(1) undef
-  %b = load volatile i8, ptr addrspace(1) undef
-  %c = load volatile i8, ptr addrspace(1) undef
+  %a = load volatile i8, ptr addrspace(1) poison
+  %b = load volatile i8, ptr addrspace(1) poison
+  %c = load volatile i8, ptr addrspace(1) poison
   %icmp0 = icmp ugt i8 %a, %b
   %sub0 = sub i8 %a, %b
   %sub1 = sub i8 %b, %a
