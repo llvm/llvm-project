@@ -396,6 +396,12 @@ public:
   virtual bool parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
     return getParser().parsePrimaryExpr(Res, EndLoc, nullptr);
   }
+  // Parse an expression in a data directive, possibly with a relocation
+  // specifier.
+  virtual bool parseDataExpr(const MCExpr *&Res) {
+    SMLoc EndLoc;
+    return getParser().parseExpression(Res, EndLoc);
+  }
 
   virtual bool parseRegister(MCRegister &Reg, SMLoc &StartLoc,
                              SMLoc &EndLoc) = 0;
