@@ -87,6 +87,13 @@ intrinsicToAttrMask(Intrinsic::ID ID, bool &NonKernelOnly, bool &NeedsImplicit,
   case Intrinsic::amdgcn_workgroup_id_z:
   case Intrinsic::r600_read_tgid_z:
     return WORKGROUP_ID_Z;
+  case Intrinsic::amdgcn_cluster_id_x:
+    NonKernelOnly = true;
+    return CLUSTER_ID_X;
+  case Intrinsic::amdgcn_cluster_id_y:
+    return CLUSTER_ID_Y;
+  case Intrinsic::amdgcn_cluster_id_z:
+    return CLUSTER_ID_Z;
   case Intrinsic::amdgcn_lds_kernel_id:
     return LDS_KERNEL_ID;
   case Intrinsic::amdgcn_dispatch_ptr:
