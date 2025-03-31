@@ -32,3 +32,11 @@ Operation *LinkState::cloneWithoutRegions(Operation *src) {
         return builder.cloneWithoutRegions(*op, mapping);
     });
 }
+
+Operation *LinkState::getDestinationOp() const {
+  return builder.getInsertionBlock()->getParentOp();
+}
+
+Operation *LinkState::remapped(Operation *src) const {
+  return mapping.lookupOrNull(src);
+}

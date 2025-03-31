@@ -141,6 +141,14 @@ StringRef symbol(Operation *op) {
   llvm_unreachable("unexpected operation");
 }
 
+StringAttr symbolAttr(Operation *op) {
+  if (auto gv = dyn_cast<LLVM::GlobalOp>(op))
+    return gv.getSymNameAttr();
+  if (auto fn = dyn_cast<LLVM::LLVMFuncOp>(op))
+    return fn.getSymNameAttr();
+  llvm_unreachable("unexpected operation");
+}
+
 bool isDeclaration(Operation *op) {
   if (auto gv = dyn_cast<LLVM::GlobalOp>(op))
     return gv.getInitializerRegion().empty() && !gv.getValue();
@@ -156,8 +164,6 @@ bool isDeclaration(Operation *op) {
 class LLVMSymbolLinkerInterface : public SymbolLinkerInterface {
 public:
   using SymbolLinkerInterface::SymbolLinkerInterface;
-
-  enum class LinkFrom { Dst, Src, Both };
 
   bool canBeLinked(Operation *op) const override {
     return isa<LLVM::GlobalOp>(op) || isa<LLVM::LLVMFuncOp>(op);
@@ -188,9 +194,13 @@ public:
 
     bool alreadyDeclared = pair.dst && isDeclaration(pair.dst);
 
-    // Don't import globals that are already defined
+    // Don't import globals that are already declared
     if (shouldLinkOnlyNeeded() && !alreadyDeclared)
       return false;
+
+    // Private dependencies are gonna be renamed and linked
+    if (forDependency && isPrivateLinkage(srcLinkage))
+      return true;
 
     // Always import dependencies that are not yet defined or declared
     if (forDependency && !pair.dst)
@@ -198,9 +208,6 @@ public:
 
     if (isDeclaration(pair.src))
       return false;
-
-    if (pair.hasConflict())
-      return true;
 
     if (shouldOverrideFromSrc())
       return true;
@@ -225,7 +232,20 @@ public:
       return success();
     }
 
+    // Conflicting private values are to be renamed.
+    if (isLocalLinkage(getLinkage(pair.dst))) {
+      uniqued.insert(pair.dst);
+      registerForLink(pair.src);
+      return success();
+    }
+
+    if (isLocalLinkage(getLinkage(pair.src))) {
+      uniqued.insert(pair.src);
+      return success();
+    }
+
     llvm_unreachable("unimplemented conflict resolution");
+    return failure();
   }
 
   void registerForLink(Operation *op) override {
@@ -233,16 +253,43 @@ public:
     summary[getSymbol(op)] = op;
   }
 
-  LogicalResult initialize(ModuleOp src) override {
-    symbolTable = std::make_unique<SymbolTable>(src);
-    return success();
-  }
+  LogicalResult initialize(ModuleOp src) override { return success(); }
 
   LogicalResult link(LinkState &state) const override {
+    SymbolTable st(state.getDestinationOp());
+
+    auto materializeError = [&](Operation *op) {
+      return op->emitError("failed to materialize symbol for linking");
+    };
+
     for (const auto &[symbol, op] : summary) {
-      if (!materialize(op, state)) {
-        return failure();
+      Operation *materialized = materialize(op, state);
+      if (!materialized)
+        return materializeError(op);
+
+      st.insert(materialized);
+    }
+
+    std::vector<std::pair<Operation *, StringAttr>> toRenameUsers;
+
+    for (Operation *op : uniqued) {
+      Operation *materialized = materialize(op, state);
+      if (!materialized)
+        return materializeError(op);
+
+      StringAttr name = symbolAttr(materialized);
+      if (st.lookup(name)) {
+        StringAttr newName = getUniqueNameIn(st, name);
+        st.setSymbolName(materialized, newName);
+        toRenameUsers.push_back({op, newName});
       }
+
+      st.insert(materialized);
+    }
+
+    for (auto &[op, newName] : toRenameUsers) {
+      if (failed(renameRemappedUsersOf(op, newName, state)))
+        return failure();
     }
 
     return success();
@@ -253,26 +300,63 @@ public:
   }
 
   SmallVector<Operation *> dependencies(Operation *op) const override {
+    // TODO: use something like SymbolTableAnalysis
+    Operation *module = op->getParentOfType<ModuleOp>();
+    SymbolTable st(module);
     SmallVector<Operation *> result;
-
-    Operation *symbolTableOp = symbolTable->getOp();
     op->walk([&](SymbolUserOpInterface user) {
       if (user.getOperation() == op)
         return;
 
-      if (SymbolRefAttr symbol = user.getUserSymbol())
-        if (Operation *dep = symbolTable->lookupSymbolIn(symbolTableOp, symbol))
+      if (SymbolRefAttr symbol = user.getUserSymbol()) {
+        if (Operation *dep = st.lookup(symbol.getRootReference())) {
           result.push_back(dep);
+        }
+      }
     });
 
     return result;
   }
 
 private:
-  std::unique_ptr<SymbolTable> symbolTable;
+  StringAttr getUniqueNameIn(SymbolTable &st, StringAttr name) const {
+    MLIRContext *context = name.getContext();
+    int uniqueId = 0;
+    Twine prefix = name.getValue() + ".";
+    while (st.lookup(name))
+      name = StringAttr::get(context, prefix + Twine(uniqueId++));
+    return name;
+  }
 
-  SetVector<Operation *> valuesToClone;
+  void renameSymbolRefIn(Operation *op, StringAttr newName) const {
+    AttrTypeReplacer replacer;
+    replacer.addReplacement([&](SymbolRefAttr attr) {
+      return SymbolRefAttr::get(newName, attr.getNestedReferences());
+    });
+    replacer.replaceElementsIn(op);
+  }
 
+  LogicalResult renameRemappedUsersOf(Operation *op, StringAttr newName,
+                                      LinkState &state) const {
+    ModuleOp module = op->getParentOfType<ModuleOp>();
+    // TODO: use something like SymbolTableAnalysis
+    SymbolTable src(module);
+    if (auto uses = src.getSymbolUses(op, module)) {
+      for (SymbolTable::SymbolUse use : *uses) {
+        // TODO: add test where user is not remapped
+        Operation *dstUser = state.remapped(use.getUser());
+        if (!dstUser)
+          continue;
+        renameSymbolRefIn(dstUser, newName);
+      }
+
+      return success();
+    }
+
+    return op->emitError("failed to rename symbol to a unique name");
+  }
+
+  SetVector<Operation *> uniqued;
   llvm::StringMap<Operation *> summary;
 };
 

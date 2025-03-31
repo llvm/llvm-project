@@ -64,9 +64,6 @@ public:
       linker->registerForLink(op);
     }
 
-    if (forDependency)
-      return success();
-
     for (Operation *dep : linker->dependencies(op)) {
       if (summarize(dep, flags, /*forDependency=*/true).failed())
         return failure();

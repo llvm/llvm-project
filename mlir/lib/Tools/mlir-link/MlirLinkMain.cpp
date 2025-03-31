@@ -280,9 +280,10 @@ LogicalResult mlir::MlirLinkMain(int argc, char **argv,
     return failure();
 
   OwningOpRef<ModuleOp> composite = linker.link(options.shouldSortSymbols());
-  if (failed(verify(composite.get(), true))) {
+  if (!composite)
+    return linker.emitError("Failed to link input files");
+  if (failed(verify(composite.get(), true)))
     return composite->emitError("verification after linking failed");
-  }
 
   composite->print(out->os());
   out->keep();

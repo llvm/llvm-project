@@ -39,6 +39,10 @@ public:
   Operation *clone(Operation *src);
   Operation *cloneWithoutRegions(Operation *src);
 
+  Operation *getDestinationOp() const;
+
+  Operation *remapped(Operation *src) const;
+
 private:
   IRMapping mapping;
   OpBuilder builder;
