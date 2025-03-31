@@ -41,11 +41,9 @@ TEST_F(SBMutexTest, LockTest) {
     ASSERT_FALSE(locked.exchange(true));
 
     f = std::async(std::launch::async, [&]() {
-      {
-        ASSERT_TRUE(locked);
-        target.BreakpointCreateByName("foo", "bar");
-        ASSERT_FALSE(locked);
-      }
+      ASSERT_TRUE(locked);
+      target.BreakpointCreateByName("foo", "bar");
+      ASSERT_FALSE(locked);
     });
     ASSERT_TRUE(f.valid());
 
