@@ -134,7 +134,6 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       // The folllowing linker options are needed to statically link to the
       // shared libflang_rt.runtime.a on AIX
       CmdArgs.push_back("-bI:/usr/lib/syscalls.exp");
-      CmdArgs.push_back("-bI:/usr/lib/aio.exp");
       CmdArgs.push_back("-bI:/usr/lib/threads.exp");
       CmdArgs.push_back("-lcrypt");
     }
