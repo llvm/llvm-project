@@ -697,6 +697,13 @@ MLIR_CAPI_EXPORTED MlirAttribute
 mlirStridedLayoutAttrGet(MlirContext ctx, int64_t offset, intptr_t numStrides,
                          const int64_t *strides);
 
+// Creates a strided layout attribute from given strides and offset,
+// canonicalizing the 0D and 1D unit stride to contiguous layout attributes. The
+// returned value may not be a StridedLayoutAttr.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirStridedLayoutAttrGetCanonical(MlirContext ctx, int64_t offset,
+                                  intptr_t numStrides, const int64_t *strides);
+
 // Returns the offset in the given strided layout layout attribute.
 MLIR_CAPI_EXPORTED int64_t mlirStridedLayoutAttrGetOffset(MlirAttribute attr);
 
@@ -710,6 +717,38 @@ MLIR_CAPI_EXPORTED int64_t mlirStridedLayoutAttrGetStride(MlirAttribute attr,
 
 /// Returns the typeID of a StridedLayout attribute.
 MLIR_CAPI_EXPORTED MlirTypeID mlirStridedLayoutAttrGetTypeID(void);
+
+//===----------------------------------------------------------------------===//
+// Contiguous layout attribute.
+//===----------------------------------------------------------------------===//
+
+// Checks wheather the given attribute is a contiguous layout attribute.
+MLIR_CAPI_EXPORTED bool mlirAttributeIsAContiguousLayout(MlirAttribute attr);
+
+// Creates a contiguous layout attribute from given permutation and offset.
+// There must be `rank` values in `permutation`.
+MLIR_CAPI_EXPORTED MlirAttribute mlirContiguousLayoutAttrGet(
+    MlirContext ctx, int64_t offset, intptr_t rank, const int64_t *permutation);
+
+// Creates a row-major contiguous layout attribute from given offset and rank.
+MLIR_CAPI_EXPORTED MlirAttribute mlirContiguousLayoutAttrGetRowMajor(
+    MlirContext ctx, int64_t offset, int64_t rank);
+
+// Returns the offset in the given contiguous layout attribute.
+MLIR_CAPI_EXPORTED int64_t
+mlirContiguousLayoutAttrGetOffset(MlirAttribute attr);
+
+// Returns the number of permutation entries in the given contiguous layout
+// attribute.
+MLIR_CAPI_EXPORTED intptr_t mlirContiguousLayoutAttrGetRank(MlirAttribute attr);
+
+// Returns the pos-th permutation entry stored in the given contiguous layout
+// attribute.
+MLIR_CAPI_EXPORTED int64_t
+mlirContiguousLayoutAttrGetPermutationEntry(MlirAttribute attr, intptr_t pos);
+
+/// Returns the typeID of a ContiguousLayout attribute.
+MLIR_CAPI_EXPORTED MlirTypeID mlirContiguousLayoutAttrGetTypeID(void);
 
 #ifdef __cplusplus
 }

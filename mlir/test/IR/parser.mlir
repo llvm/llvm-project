@@ -6,14 +6,14 @@
 // CHECK-DAG: #map{{[0-9]*}} = affine_map<(d0, d1, d2, d3, d4)[s0] -> (d0, d1, d2, d4, d3)>
 #map = affine_map<(d0, d1, d2, d3, d4)[s0] -> (d0, d1, d2, d4, d3)>
 
+// CHECK-DAG: #map{{[0-9]*}} = affine_map<(d0, d1, d2) -> (d1, d0, d2)>
+#map1 = affine_map<(d0, d1, d2) -> (d1, d0, d2)>
+
 // CHECK-DAG: #map{{[0-9]*}} = affine_map<(d0) -> (d0)>
-#map1 = affine_map<(d0) -> (d0)>
+#map2 = affine_map<(d0) -> (d0)>
 
 // CHECK-DAG: #map{{[0-9]*}} = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
-#map2 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
-
-// CHECK-DAG: #map{{[0-9]*}} = affine_map<(d0, d1, d2) -> (d1, d0, d2)>
-#map3 = affine_map<(d0, d1, d2) -> (d1, d0, d2)>
+#map3 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 
 // CHECK-DAG: #map{{[0-9]*}} = affine_map<()[s0] -> (0, s0 - 1)>
 #inline_map_minmax_loop1 = affine_map<()[s0] -> (0, s0 - 1)>
@@ -83,23 +83,17 @@ func.func private @tensor_encoding(tensor<16x32xf64, "sparse">)
 // CHECK: func private @large_shape_dimension(tensor<9223372036854775807xf32>)
 func.func private @large_shape_dimension(tensor<9223372036854775807xf32>)
 
-// CHECK: func private @functions((memref<1x?x4x?x?xi32, #map>, memref<8xi8>) -> (), () -> ())
-func.func private @functions((memref<1x?x4x?x?xi32, #map, 0>, memref<8xi8, #map1, 0>) -> (), ()->())
+// CHECK: func private @functions((memref<1x?x4x?x?xi32, #map>, memref<8xi8, #map2>) -> (), () -> ())
+func.func private @functions((memref<1x?x4x?x?xi32, #map, 0>, memref<8xi8, #map2, 0>) -> (), ()->())
+
+// CHECK: func private @functions_elide_layout((memref<1x?x4x?x?xi32, #map>, memref<8xi8>) -> (), () -> ())
+func.func private @functions_elide_layout((memref<1x?x4x?x?xi32, #map, 0>, memref<8xi8, contiguous<1>, 0>) -> (), ()->())
 
 // CHECK: func private @memrefs2(memref<2x4x8xi8, 1>)
-func.func private @memrefs2(memref<2x4x8xi8, #map2, 1>)
+func.func private @memrefs2(memref<2x4x8xi8, contiguous<3>, 1>)
 
 // CHECK: func private @memrefs3(memref<2x4x8xi8>)
-func.func private @memrefs3(memref<2x4x8xi8, affine_map<(d0, d1, d2) -> (d0, d1, d2)>>)
-
-// CHECK: func private @memrefs_drop_triv_id_inline(memref<2xi8>)
-func.func private @memrefs_drop_triv_id_inline(memref<2xi8, affine_map<(d0) -> (d0)>>)
-
-// CHECK: func private @memrefs_drop_triv_id_inline0(memref<2xi8>)
-func.func private @memrefs_drop_triv_id_inline0(memref<2xi8, affine_map<(d0) -> (d0)>, 0>)
-
-// CHECK: func private @memrefs_drop_triv_id_inline1(memref<2xi8, 1>)
-func.func private @memrefs_drop_triv_id_inline1(memref<2xi8, affine_map<(d0) -> (d0)>, 1>)
+func.func private @memrefs3(memref<2x4x8xi8, contiguous<3>>)
 
 // Test memref with custom memory space
 
@@ -107,25 +101,40 @@ func.func private @memrefs_drop_triv_id_inline1(memref<2xi8, affine_map<(d0) -> 
 func.func private @memrefs_nomap_nospace(memref<5x6x7xf32>)
 
 // CHECK: func private @memrefs_map_nospace(memref<5x6x7xf32, #map{{[0-9]*}}>)
-func.func private @memrefs_map_nospace(memref<5x6x7xf32, #map3>)
+func.func private @memrefs_map_nospace(memref<5x6x7xf32, #map1>)
 
 // CHECK: func private @memrefs_nomap_intspace(memref<5x6x7xf32, 3>)
 func.func private @memrefs_nomap_intspace(memref<5x6x7xf32, 3>)
 
 // CHECK: func private @memrefs_map_intspace(memref<5x6x7xf32, #map{{[0-9]*}}, 5>)
-func.func private @memrefs_map_intspace(memref<5x6x7xf32, #map3, 5>)
+func.func private @memrefs_map_intspace(memref<5x6x7xf32, #map1, 5>)
 
 // CHECK: func private @memrefs_nomap_strspace(memref<5x6x7xf32, "local">)
 func.func private @memrefs_nomap_strspace(memref<5x6x7xf32, "local">)
 
 // CHECK: func private @memrefs_map_strspace(memref<5x6x7xf32, #map{{[0-9]*}}, "private">)
-func.func private @memrefs_map_strspace(memref<5x6x7xf32, #map3, "private">)
+func.func private @memrefs_map_strspace(memref<5x6x7xf32, #map1, "private">)
 
 // CHECK: func private @memrefs_nomap_dictspace(memref<5x6x7xf32, {memSpace = "special", subIndex = 1 : i64}>)
 func.func private @memrefs_nomap_dictspace(memref<5x6x7xf32, {memSpace = "special", subIndex = 1}>)
 
 // CHECK: func private @memrefs_map_dictspace(memref<5x6x7xf32, #map{{[0-9]*}}, {memSpace = "special", subIndex = 3 : i64}>)
-func.func private @memrefs_map_dictspace(memref<5x6x7xf32, #map3, {memSpace = "special", subIndex = 3}>)
+func.func private @memrefs_map_dictspace(memref<5x6x7xf32, #map1, {memSpace = "special", subIndex = 3}>)
+
+// CHECK func private @memrefs_contiguous_attr(memref<5x6x7xf32>)
+func.func private @memrefs_contiguous_attr(memref<5x6x7xf32, contiguous<3, offset: 0>>)
+
+// CHECK func private @memrefs_contiguous_attr_long_perm(memref<5x6x7xf32>)
+func.func private @memrefs_contiguous_attr_long_perm(memref<5x6x7xf32, contiguous<[0, 1, 2], offset: 0>>)
+
+// CHECK func private @memrefs_contiguous_attr_static_offset(memref<5x6x7xf32, contiguous<3, offset: 5>>)
+func.func private @memrefs_contiguous_attr_static_offset(memref<5x6x7xf32, contiguous<3, offset: 5>>)
+
+// CHECK func private @memrefs_contiguous_attr_dynamic_offset(memref<5x6x7xf32, contiguous<3, offset: ?>>)
+func.func private @memrefs_contiguous_attr_dynamic_offset(memref<5x6x7xf32, contiguous<3, offset: ?>>)
+
+// CHECK func private @memrefs_contiguous_attr_0d_as_list(memref<f32>)
+func.func private @memrefs_contiguous_attr_0d_as_list(memref<f32, contiguous<[]>>)
 
 // CHECK: func private @complex_types(complex<i1>) -> complex<f32>
 func.func private @complex_types(complex<i1>) -> complex<f32>
@@ -386,13 +395,13 @@ func.func @attributes() {
   "foo"() {a = 1, b = -423, c = [true, false], d = 16.0 } : () -> ()
 
   // CHECK: "foo"() {map1 = #map{{[0-9]*}}}
-  "foo"() {map1 = #map1} : () -> ()
+  "foo"() {map1 = #map2} : () -> ()
 
   // CHECK: "foo"() {map2 = #map{{[0-9]*}}}
   "foo"() {map2 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>} : () -> ()
 
   // CHECK: "foo"() {map12 = [#map{{[0-9]*}}, #map{{[0-9]*}}]}
-  "foo"() {map12 = [#map1, #map2]} : () -> ()
+  "foo"() {map12 = [#map2, #map3]} : () -> ()
 
   // CHECK: "foo"() {set1 = #set{{[0-9]*}}}
   "foo"() {set1 = #set1} : () -> ()

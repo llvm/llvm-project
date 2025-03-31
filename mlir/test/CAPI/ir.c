@@ -1369,6 +1369,33 @@ int printBuiltinAttributes(MlirContext ctx) {
   if (!mlirAttributeIsALocation(locAttr))
     return 24;
 
+  int64_t contiguousPerm[3] = {2, 1, 0};
+  MlirAttribute contiguousLayoutAttr =
+      mlirContiguousLayoutAttrGet(ctx, 42, 3, contiguousPerm);
+
+  // CHECK: contiguous<[2, 1, 0], offset: 42>
+  mlirAttributeDump(contiguousLayoutAttr);
+
+  if (mlirContiguousLayoutAttrGetOffset(contiguousLayoutAttr) != 42 ||
+      mlirContiguousLayoutAttrGetRank(contiguousLayoutAttr) != 3 ||
+      mlirContiguousLayoutAttrGetPermutationEntry(contiguousLayoutAttr, 0) !=
+          2 ||
+      mlirContiguousLayoutAttrGetPermutationEntry(contiguousLayoutAttr, 1) !=
+          1 ||
+      mlirContiguousLayoutAttrGetPermutationEntry(contiguousLayoutAttr, 2) != 0)
+    return 25;
+
+  MlirAttribute rowMajorContiguous =
+      mlirContiguousLayoutAttrGetRowMajor(ctx, 42, 2);
+
+  // CHECK: contiguous<2, offset: 42>
+  mlirAttributeDump(rowMajorContiguous);
+  if (mlirContiguousLayoutAttrGetOffset(rowMajorContiguous) != 42 ||
+      mlirContiguousLayoutAttrGetRank(rowMajorContiguous) != 2 ||
+      mlirContiguousLayoutAttrGetPermutationEntry(rowMajorContiguous, 0) != 0 ||
+      mlirContiguousLayoutAttrGetPermutationEntry(rowMajorContiguous, 1) != 1)
+    return 26;
+
   return 0;
 }
 

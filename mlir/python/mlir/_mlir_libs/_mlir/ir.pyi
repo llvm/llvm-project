@@ -77,6 +77,7 @@ __all__ = [
     "BoolAttr",
     "ComplexType",
     "Context",
+    "ContiguousLayoutAttr",
     "DenseBoolArrayAttr",
     "DenseBoolArrayIterator",
     "DenseElementsAttr",
@@ -1016,6 +1017,40 @@ class Context:
         """
         Gets a container for accessing dialects by name
         """
+
+class ContiguousLayoutAttr(Attribute):
+    static_typeid: ClassVar[TypeID]
+    @staticmethod
+    def get(
+        offset: int, permutation: list[int], context: Context | None = None
+    ) -> ContiguousLayoutAttr:
+        """
+        Gets a contiguous layout attribute.
+        """
+    @staticmethod
+    def get_row_major(
+        offset: int, rank: int, context: Context | None = None
+    ) -> ContiguousLayoutAttr:
+        """
+        Gets a row-major contiguous layout attribute with the given offset and rank.
+        """
+    @staticmethod
+    def isinstance(other: Attribute) -> bool: ...
+    def __init__(self, cast_from_attr: Attribute) -> None: ...
+    @property
+    def offset(self) -> int:
+        """
+        Returns the offset in the given contiguous layout attribute.
+        """
+    @property
+    def permutation(self) -> list[int]:
+        """
+        Returns the value of the fpermutation in the given contiguous layout attribute.
+        """
+    @property
+    def type(self) -> Type: ...
+    @property
+    def typeid(self) -> TypeID: ...
 
 class DenseBoolArrayAttr(Attribute):
     @staticmethod

@@ -34,9 +34,9 @@ static MemRefType inferCastResultType(Value source, OpFoldResult offset) {
   SmallVector<int64_t> staticOffsets;
   SmallVector<Value> dynamicOffsets;
   dispatchIndexOpFoldResults(offset, dynamicOffsets, staticOffsets);
-  auto stridedLayout =
-      StridedLayoutAttr::get(source.getContext(), staticOffsets.front(), {});
-  return MemRefType::get({}, sourceType.getElementType(), stridedLayout,
+  auto contiguousLayout =
+      ContiguousLayoutAttr::get(source.getContext(), staticOffsets.front(), {});
+  return MemRefType::get({}, sourceType.getElementType(), contiguousLayout,
                          sourceType.getMemorySpace());
 }
 
@@ -50,6 +50,52 @@ static void setInsertionPointToStart(OpBuilder &builder, Value val) {
 
 static bool isInsideLaunch(Operation *op) {
   return op->getParentOfType<gpu::LaunchOp>();
+}
+
+static std::tuple<Value, OpFoldResult>
+linearizeContiguousIndex(OpBuilder &rewriter, Location loc, Value source,
+                         ValueRange offsets) {
+  auto sourceType = cast<MemRefType>(source.getType());
+  auto contigLayout = dyn_cast<ContiguousLayoutAttr>(sourceType.getLayout());
+  if (!contigLayout)
+    return std::make_tuple(Value{}, OpFoldResult{});
+  auto sourceRank = static_cast<unsigned>(sourceType.getRank());
+
+  memref::ExtractStridedMetadataOp newExtractStridedMetadata;
+  {
+    OpBuilder::InsertionGuard g(rewriter);
+    setInsertionPointToStart(rewriter, source);
+    newExtractStridedMetadata =
+        rewriter.create<memref::ExtractStridedMetadataOp>(loc, source);
+  }
+
+  auto getDim = [&](int64_t dim, Value dimVal) -> OpFoldResult {
+    return ShapedType::isDynamic(dim) ? getAsOpFoldResult(dimVal)
+                                      : rewriter.getIndexAttr(dim);
+  };
+  OpFoldResult origOffset =
+      getDim(contigLayout.getOffset(), newExtractStridedMetadata.getOffset());
+
+  ValueRange dynSizes = newExtractStridedMetadata.getSizes();
+  SmallVector<OpFoldResult> basis;
+  basis.reserve(sourceRank);
+  ArrayRef<int64_t> shape = sourceType.getShape();
+  SmallVector<Value> permutedOffsets;
+  permutedOffsets.reserve(sourceRank);
+  for (int64_t dim : contigLayout.getPermutation()) {
+    basis.push_back(getDim(shape[dim], dynSizes[dim]));
+    permutedOffsets.push_back(offsets[dim]);
+  }
+  OpFoldResult newOffset =
+      rewriter.createOrFold<affine::AffineLinearizeIndexOp>(
+          loc, permutedOffsets, basis, /*disjoint=*/true);
+  if (contigLayout.getOffset() == 0)
+    return {newExtractStridedMetadata.getBaseBuffer(), newOffset};
+  AffineExpr s0, s1;
+  bindSymbols(rewriter.getContext(), s0, s1);
+  OpFoldResult totalOffset = affine::makeComposedFoldedAffineApply(
+      rewriter, loc, s0 + s1, {newOffset, origOffset});
+  return {newExtractStridedMetadata.getBaseBuffer(), totalOffset};
 }
 
 static std::tuple<Value, OpFoldResult, SmallVector<OpFoldResult>>
@@ -106,9 +152,15 @@ getFlatOffsetAndStrides(OpBuilder &rewriter, Location loc, Value source,
 
 static Value getFlatMemref(OpBuilder &rewriter, Location loc, Value source,
                            ValueRange offsets) {
-  SmallVector<OpFoldResult> offsetsTemp = getAsOpFoldResult(offsets);
-  auto &&[base, offset, ignore] =
-      getFlatOffsetAndStrides(rewriter, loc, source, offsetsTemp);
+  Value base;
+  OpFoldResult offset;
+  std::tie(base, offset) =
+      linearizeContiguousIndex(rewriter, loc, source, offsets);
+  if (!offset) {
+    SmallVector<OpFoldResult> offsetsTemp = getAsOpFoldResult(offsets);
+    std::tie(base, offset, std::ignore) =
+        getFlatOffsetAndStrides(rewriter, loc, source, offsetsTemp);
+  }
   MemRefType retType = inferCastResultType(base, offset);
   return rewriter.create<memref::ReinterpretCastOp>(loc, retType, base, offset,
                                                     std::nullopt, std::nullopt);
@@ -122,7 +174,7 @@ static bool needFlatten(Value val) {
 static bool checkLayout(Value val) {
   auto type = cast<MemRefType>(val.getType());
   return type.getLayout().isIdentity() ||
-         isa<StridedLayoutAttr>(type.getLayout());
+         isa<StridedLayoutAttr, ContiguousLayoutAttr>(type.getLayout());
 }
 
 namespace {

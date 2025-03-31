@@ -2508,6 +2508,9 @@ void AsmPrinter::Impl::printAttributeImpl(Attribute attr,
     }
   } else if (auto stridedLayoutAttr = llvm::dyn_cast<StridedLayoutAttr>(attr)) {
     stridedLayoutAttr.print(os);
+  } else if (auto contiguousLayoutAttr =
+                 llvm::dyn_cast<ContiguousLayoutAttr>(attr)) {
+    contiguousLayoutAttr.print(os);
   } else if (auto denseArrayAttr = llvm::dyn_cast<DenseArrayAttr>(attr)) {
     os << "array<";
     printType(denseArrayAttr.getElementType());
@@ -2801,7 +2804,7 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
           os << 'x';
         printType(memrefTy.getElementType());
         MemRefLayoutAttrInterface layout = memrefTy.getLayout();
-        if (!llvm::isa<AffineMapAttr>(layout) || !layout.isIdentity()) {
+        if (!llvm::isa<ContiguousLayoutAttr>(layout) || !layout.isIdentity()) {
           os << ", ";
           printAttribute(memrefTy.getLayout(), AttrTypeElision::May);
         }

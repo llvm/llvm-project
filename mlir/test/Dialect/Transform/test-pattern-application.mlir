@@ -260,9 +260,9 @@ module {
 //   CHECK-NOT:   memref.copy
 func.func @canonicalization_and_cse(%m: memref<5xf32>) {
   %c2 = arith.constant 2 : index
-  %s0 = memref.subview %m[1] [2] [1] : memref<5xf32> to memref<2xf32, strided<[1], offset: 1>>
-  %s1 = memref.subview %m[1] [%c2] [1] : memref<5xf32> to memref<?xf32, strided<[1], offset: 1>>
-  memref.copy %s0, %s1 : memref<2xf32, strided<[1], offset: 1>> to memref<?xf32, strided<[1], offset: 1>>
+  %s0 = memref.subview %m[1] [2] [1] : memref<5xf32> to memref<2xf32, contiguous<1, offset: 1>>
+  %s1 = memref.subview %m[1] [%c2] [1] : memref<5xf32> to memref<?xf32, contiguous<1, offset: 1>>
+  memref.copy %s0, %s1 : memref<2xf32, contiguous<1, offset: 1>> to memref<?xf32, contiguous<1, offset: 1>>
   return
 }
 

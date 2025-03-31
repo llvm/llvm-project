@@ -61,8 +61,7 @@
 
 // Check that we don't print aliases for things that aren't printed.
 // CHECK: = loc(fused<memref<1xi32>
-// CHECK-NOT: #map
-"test.op"() {alias_test = loc(fused<memref<1xi32, affine_map<(d0) -> (d0)>>>["test.mlir":10:8])} : () -> ()
+"test.op"() {alias_test = loc(fused<memref<1xi32, contiguous<1>>>["test.mlir":10:8])} : () -> ()
 
 // -----
 

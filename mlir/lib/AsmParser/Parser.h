@@ -273,6 +273,9 @@ public:
   /// Parse an attribute dictionary.
   ParseResult parseAttributeDict(NamedAttrList &attributes);
 
+  /// Parse a contiguous layout attribute.
+  Attribute parseContiguousLayoutAttr();
+
   /// Parse a distinct attribute.
   Attribute parseDistinctAttr(Type type);
 

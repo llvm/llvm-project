@@ -90,8 +90,8 @@ func.func @alloc_tesor_copy_from_non_default_space_no_cast(%arg0: tensor<128xf32
 //       CHECK:     %[[v3:.+]] = bufferization.to_tensor %[[alloc]] : memref<128xf32, 2> to tensor<128xf32, 1 : i64>
 //       CHECK:     %[[alloc_0:.+]] = memref.alloc() {alignment = 64 : i64} : memref<128xf32, 1>
 //       CHECK:     memref.copy %[[v1]], %[[alloc_0]] : memref<128xf32, strided<[?], offset: ?>, 1> to memref<128xf32, 1>
-//       CHECK:     %[[subview:.+]] = memref.subview %[[alloc_0]][0] [4] [1] : memref<128xf32, 1> to memref<4xf32, strided<[1]>, 1>
-//       CHECK:     memref.copy %[[v0]], %[[subview]] : memref<4xf32, strided<[?], offset: ?>, 1> to memref<4xf32, strided<[1]>, 1>
+//       CHECK:     %[[subview:.+]] = memref.subview %[[alloc_0]][0] [4] [1] : memref<128xf32, 1> to memref<4xf32, 1>
+//       CHECK:     memref.copy %[[v0]], %[[subview]] : memref<4xf32, strided<[?], offset: ?>, 1> to memref<4xf32, 1>
 //       CHECK:     return %[[v3]] : tensor<128xf32, 1 : i64>
 
 // -----

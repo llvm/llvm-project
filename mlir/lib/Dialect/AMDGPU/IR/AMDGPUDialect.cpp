@@ -75,10 +75,17 @@ static FailureOr<MemRefType> getFatRawBufferTypeLike(MemRefType source,
       amdgpu::AddressSpaceAttr::get(ctx, amdgpu::AddressSpace::FatRawBuffer));
   MemRefLayoutAttrInterface layout = source.getLayout();
   if (resetOffset && !layout.isIdentity()) {
-    auto stridedLayout = dyn_cast<StridedLayoutAttr>(layout);
-    if (!stridedLayout)
+    MemRefLayoutAttrInterface newLayout;
+    if (auto stridedLayout = dyn_cast<StridedLayoutAttr>(layout)) {
+      newLayout =
+          StridedLayoutAttr::get(ctx, /*offset=*/0, stridedLayout.getStrides());
+    } else if (auto contiguousLayout = dyn_cast<ContiguousLayoutAttr>(layout)) {
+      newLayout = ContiguousLayoutAttr::get(ctx, /*offset=*/0,
+                                            contiguousLayout.getPermutation());
+    }
+    if (!newLayout)
       return failure();
-    mb.setLayout(StridedLayoutAttr::get(ctx, 0, stridedLayout.getStrides()));
+    mb.setLayout(newLayout);
   }
   return (MemRefType)(mb);
 }

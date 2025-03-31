@@ -670,6 +670,39 @@ def testStridedLayoutAttr():
         print(f"strides are dynamic: {[s == dynamic for s in attr.strides]}")
 
 
+# CHECK-LABEL: TEST: testContiguousLayoutAttr
+@run
+def testContiguousLayoutAttr():
+    with Context():
+        attr = ContiguousLayoutAttr.get(42, [2, 1, 0])
+        # CHECK: contiguous<[2, 1, 0], offset: 42>
+        print(attr)
+        # CHECK: 42
+        print(attr.offset)
+        # CHECK: 3
+        print(len(attr.permutation))
+        # CHECK: 2
+        print(attr.permutation[0])
+        # CHECK: 1
+        print(attr.permutation[1])
+        # CHECK: 0
+        print(attr.permutation[2])
+
+        dynamic = ShapedType.get_dynamic_stride_or_offset()
+        attr = ContiguousLayoutAttr.get_row_major(dynamic, 3)
+        # CHECK: contiguous<3, offset: ?>
+        print(attr)
+        # CHECK: offset is dynamic: True
+        print(f"offset is dynamic: {attr.offset == dynamic}")
+        # CHECK: rank: 3
+        print(f"rank: {len(attr.permutation)}")
+        # CHECK: 0
+        print(attr.permutation[0])
+        # CHECK: 1
+        print(attr.permutation[1])
+        # CHECK: 2
+        print(attr.permutation[2])
+
 # CHECK-LABEL: TEST: testConcreteTypesRoundTrip
 @run
 def testConcreteTypesRoundTrip():

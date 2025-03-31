@@ -178,8 +178,10 @@ LogicalResult reshapeLikeShapesAreCompatible(
     ArrayRef<int64_t> collapsedShape, ArrayRef<int64_t> expandedShape,
     ArrayRef<ReassociationIndices> reassociationMaps, bool isExpandingReshape);
 
-/// Returns true iff the type is a MemRefType and has a non-identity layout.
-bool hasNonIdentityLayout(Type type);
+/// Returns true iff the type is a MemRefType and has a layout that is not
+/// row-major contiguous - that is, the identity layout with an optional
+/// offset.
+bool hasNonRowMajorContiguousLayout(Type type);
 
 enum class ReshapeOpKind { kExpand, kCollapse };
 
@@ -197,9 +199,9 @@ struct ComposeReassociativeReshapeOps : public OpRewritePattern<ReshapeOpTy> {
 
     ShapedType resultType = reshapeOp.getResultType();
 
-    if (hasNonIdentityLayout(srcReshapeOp.getSrc().getType()) ||
-        hasNonIdentityLayout(reshapeOp.getSrc().getType()) ||
-        hasNonIdentityLayout(reshapeOp.getResult().getType()))
+    if (hasNonRowMajorContiguousLayout(srcReshapeOp.getSrc().getType()) ||
+        hasNonRowMajorContiguousLayout(reshapeOp.getSrc().getType()) ||
+        hasNonRowMajorContiguousLayout(reshapeOp.getResult().getType()))
       return failure();
 
     std::optional<SmallVector<ReassociationIndices>> reassociationIndices =
@@ -265,9 +267,9 @@ struct ComposeCollapseOfExpandOp : public OpRewritePattern<CollapseOpTy> {
     ShapedType srcType = expandOp.getSrcType();
     ShapedType resultType = collapseOp.getResultType();
 
-    if (hasNonIdentityLayout(collapseOp.getSrc().getType()) ||
-        hasNonIdentityLayout(expandOp.getSrc().getType()) ||
-        hasNonIdentityLayout(expandOp.getResult().getType()))
+    if (hasNonRowMajorContiguousLayout(collapseOp.getSrc().getType()) ||
+        hasNonRowMajorContiguousLayout(expandOp.getSrc().getType()) ||
+        hasNonRowMajorContiguousLayout(expandOp.getResult().getType()))
       return failure();
 
     int64_t srcRank = srcType.getRank();
@@ -331,9 +333,9 @@ struct ComposeExpandOfCollapseOp : public OpRewritePattern<ExpandOpTy> {
     ShapedType srcType = collapseOp.getSrcType();
     ShapedType resultType = expandOp.getResultType();
 
-    if (hasNonIdentityLayout(expandOp.getSrc().getType()) ||
-        hasNonIdentityLayout(collapseOp.getSrc().getType()) ||
-        hasNonIdentityLayout(collapseOp.getResult().getType()))
+    if (hasNonRowMajorContiguousLayout(expandOp.getSrc().getType()) ||
+        hasNonRowMajorContiguousLayout(collapseOp.getSrc().getType()) ||
+        hasNonRowMajorContiguousLayout(collapseOp.getResult().getType()))
       return failure();
 
     int64_t srcRank = srcType.getRank();
@@ -451,7 +453,7 @@ getLinearizedDimensions(ArrayRef<ReassociationIndices> reassociationIndices);
 ///    %4 = tensor.extract_slice %0 [%3#0, %3#1, %3#2, 0] [1, 1, 1, 10] [1, 1, 1, 1] :
 ///          tensor<3x7x11x10xf32> to tensor<1x1x1x10xf32>
 ///
-///    %5 = tensor.collapse_shape %4 [[0, 1, 2], [3]] : 
+///    %5 = tensor.collapse_shape %4 [[0, 1, 2], [3]] :
 ///          tensor<1x1x1x10xf32> into tensor<1x10xf32>
 ///    %6 = tensor.insert_slice %5 into %arg0 [%iv, 0] [1, 10] [1, 1] :
 ///          tensor<1x10xf32> into tensor<10x10xf32>
