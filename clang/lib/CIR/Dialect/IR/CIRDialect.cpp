@@ -277,7 +277,7 @@ LogicalResult cir::CastOp::verify() {
     if (!arrayPtrTy || !flatPtrTy)
       return emitOpError() << "requires !cir.ptr type for source and result";
 
-    // TODO: Make sure the AddrSpace of both types are equals
+    // TODO(CIR): Make sure the AddrSpace of both types are equals
     return success();
   }
   case cir::CastKind::bitcast: {

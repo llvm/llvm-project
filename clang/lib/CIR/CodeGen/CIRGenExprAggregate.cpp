@@ -157,7 +157,7 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
     LValue tmpLV = LValue::makeAddr(tmpAddr, elementPtrType);
     cgf.emitStoreThroughLValue(RValue::get(element), tmpLV);
 
-    // TODO:Replace this part later with cir::DoWhileOp
+    // TODO(CIR): Replace this part later with cir::DoWhileOp
     for (unsigned i = numInitElements; i != numArrayElements; ++i) {
       cir::LoadOp currentElement =
           builder.createLoad(loc, tmpAddr.getPointer());
