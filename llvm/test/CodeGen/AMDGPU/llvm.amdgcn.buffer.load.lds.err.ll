@@ -13,32 +13,24 @@
 ; LEGALIZER-FAIL: Do not know how to expand this operator's operand!
 
 ;--- struct.ll
-declare void @llvm.amdgcn.struct.buffer.load.lds(<4 x i32> %rsrc, ptr addrspace(3) nocapture, i32 %size, i32 %vindex, i32 %voffset, i32 %soffset, i32 %offset, i32 %aux)
-
 define amdgpu_ps void @buffer_load_lds(<4 x i32> inreg %rsrc, ptr addrspace(3) inreg %lds) {
   call void @llvm.amdgcn.struct.buffer.load.lds(<4 x i32> %rsrc, ptr addrspace(3) %lds, i32 4, i32 0, i32 0, i32 0, i32 0, i32 0)
   ret void
 }
 
 ;--- struct.ptr.ll
-declare void @llvm.amdgcn.struct.ptr.buffer.load.lds(ptr addrspace(8) %rsrc, ptr addrspace(3) nocapture, i32 %size, i32 %vindex, i32 %voffset, i32 %soffset, i32 %offset, i32 %aux)
-
 define amdgpu_ps void @buffer_load_lds(ptr addrspace(8) inreg %rsrc, ptr addrspace(3) inreg %lds) {
   call void @llvm.amdgcn.struct.ptr.buffer.load.lds(ptr addrspace(8) %rsrc, ptr addrspace(3) %lds, i32 4, i32 0, i32 0, i32 0, i32 0, i32 0)
   ret void
 }
 
 ;--- raw.ll
-declare void @llvm.amdgcn.raw.buffer.load.lds(<4 x i32> %rsrc, ptr addrspace(3) nocapture, i32 %size, i32 %voffset, i32 %soffset, i32 %offset, i32 %aux)
-
 define amdgpu_ps void @buffer_load_lds(<4 x i32> inreg %rsrc, ptr addrspace(3) inreg %lds) {
   call void @llvm.amdgcn.raw.buffer.load.lds(<4 x i32> %rsrc, ptr addrspace(3) %lds, i32 4, i32 0, i32 0, i32 0, i32 0)
   ret void
 }
 
 ;--- raw.ptr.ll
-declare void @llvm.amdgcn.raw.ptr.buffer.load.lds(ptr addrspace(8) %rsrc, ptr addrspace(3) nocapture, i32 %size, i32 %voffset, i32 %soffset, i32 %offset, i32 %aux)
-
 define amdgpu_ps void @buffer_load_lds(ptr addrspace(8) inreg %rsrc, ptr addrspace(3) inreg %lds) {
   call void @llvm.amdgcn.raw.ptr.buffer.load.lds(ptr addrspace(8) %rsrc, ptr addrspace(3) %lds, i32 4, i32 0, i32 0, i32 0, i32 0)
   ret void
