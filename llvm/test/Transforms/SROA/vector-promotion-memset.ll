@@ -5,91 +5,91 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 %ptr_pair = type { ptr, ptr }
 
 %struct.a = type { <32 x i8> }
-define void @vector_promote_memset_a(ptr %0) {
+define void @vector_promote_memset_a(ptr %arg0) {
 ; CHECK-LABEL: @vector_promote_memset_a(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP0:%.*]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[DOTSROA_0_0_VEC_INSERT:%.*]] = insertelement <32 x i8> zeroinitializer, i8 [[TMP3]], i32 0
 ; CHECK-NEXT:    ret void
 ;
-  %2 = alloca %struct.a, align 32
-  %3 = alloca %ptr_pair, align 8
-  call void @llvm.memset.p0.i64(ptr align 32 %2, i8 0, i64 32, i1 false)
+  %a0 = alloca %struct.a, align 32
+  %a1 = alloca %ptr_pair, align 8
+  call void @llvm.memset.p0.i64(ptr align 32 %a0, i8 0, i64 32, i1 false)
 
-  store ptr %2, ptr %3, align 8
+  store ptr %a0, ptr %a1, align 8
 
-  %4 = getelementptr inbounds %ptr_pair, ptr %3, i64 0, i32 1
-  %5 = load ptr, ptr %0, align 8
-  store ptr %5, ptr %4, align 8
+  %p1 = getelementptr inbounds %ptr_pair, ptr %a1, i64 0, i32 1
+  %v0 = load ptr, ptr %arg0, align 8
+  store ptr %v0, ptr %p1, align 8
 
-  %6 = getelementptr inbounds i8, ptr %3, i32 8
-  %7 = load ptr, ptr %6, align 8
+  %p2 = getelementptr inbounds i8, ptr %a1, i32 8
+  %v1 = load ptr, ptr %p2, align 8
 
-  %8 = load i8, ptr %7, align 1
-  store i8 %8, ptr %2, align 32
+  %v2 = load i8, ptr %v1, align 1
+  store i8 %v2, ptr %a0, align 32
 
   ret void
 }
 
 %struct.b = type { <16 x i16> }
-define void @vector_promote_memset_b(ptr %0) {
+define void @vector_promote_memset_b(ptr %arg0) {
 ; CHECK-LABEL: @vector_promote_memset_b(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP0:%.*]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[DOTSROA_0_0_VEC_INSERT:%.*]] = insertelement <16 x i16> zeroinitializer, i16 [[TMP3]], i32 0
 ; CHECK-NEXT:    ret void
 ;
-  %2 = alloca %struct.b, align 16
-  %3 = alloca %ptr_pair, align 8
-  call void @llvm.memset.p0.i64(ptr align 32 %2, i8 0, i64 32, i1 false)
+  %a0 = alloca %struct.b, align 16
+  %a1 = alloca %ptr_pair, align 8
+  call void @llvm.memset.p0.i64(ptr align 32 %a0, i8 0, i64 32, i1 false)
 
-  store ptr %2, ptr %3, align 8
+  store ptr %a0, ptr %a1, align 8
 
-  %4 = getelementptr inbounds %ptr_pair, ptr %3, i64 0, i32 1
-  %5 = load ptr, ptr %0, align 8
-  store ptr %5, ptr %4, align 8
+  %p1 = getelementptr inbounds %ptr_pair, ptr %a1, i64 0, i32 1
+  %v0 = load ptr, ptr %arg0, align 8
+  store ptr %v0, ptr %p1, align 8
 
-  %6 = getelementptr inbounds i8, ptr %3, i32 8
-  %7 = load ptr, ptr %6, align 8
+  %p2 = getelementptr inbounds i8, ptr %a1, i32 8
+  %v1 = load ptr, ptr %p2, align 8
 
-  %8 = load i16, ptr %7, align 1
-  store i16 %8, ptr %2, align 16
+  %v2 = load i16, ptr %v1, align 1
+  store i16 %v2, ptr %a0, align 16
 
   ret void
 }
 
 %struct.c = type { <4 x i32> }
-define void @vector_promote_memset_c(ptr %0) {
+define void @vector_promote_memset_c(ptr %arg0) {
 ; CHECK-LABEL: @vector_promote_memset_c(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP0:%.*]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[DOTSROA_0_8_VEC_INSERT:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[TMP3]], i32 2
 ; CHECK-NEXT:    ret void
 ;
-  %2 = alloca %struct.c, align 4
-  %3 = alloca %ptr_pair, align 8
-  call void @llvm.memset.p0.i64(ptr align 32 %2, i8 0, i64 16, i1 false)
+  %a0 = alloca %struct.c, align 4
+  %a1 = alloca %ptr_pair, align 8
+  call void @llvm.memset.p0.i64(ptr align 32 %a0, i8 0, i64 16, i1 false)
 
-  store ptr %2, ptr %3, align 8
+  store ptr %a0, ptr %a1, align 8
 
-  %4 = getelementptr inbounds %ptr_pair, ptr %3, i64 0, i32 1
-  %5 = load ptr, ptr %0, align 8
-  store ptr %5, ptr %4, align 8
+  %p1 = getelementptr inbounds %ptr_pair, ptr %a1, i64 0, i32 1
+  %v0 = load ptr, ptr %arg0, align 8
+  store ptr %v0, ptr %p1, align 8
 
-  %6 = getelementptr inbounds i8, ptr %3, i32 8
-  %7 = load ptr, ptr %6, align 8
+  %p2 = getelementptr inbounds i8, ptr %a1, i32 8
+  %v1 = load ptr, ptr %p2, align 8
 
-  %8 = load i32, ptr %7, align 1
+  %v2 = load i32, ptr %v1, align 1
 
-  %9 = getelementptr inbounds i32, ptr %2, i32 2
-  store i32 %8, ptr %9, align 4
+  %p3 = getelementptr inbounds i32, ptr %a0, i32 2
+  store i32 %v2, ptr %p3, align 4
 
   ret void
 }
 
 ; We currently prevent promotion if the vector would require padding
 %struct.d = type { <6 x i32> }
-define void @vector_promote_memset_d(ptr %0) {
+define void @vector_promote_memset_d(ptr %arg0) {
 ; CHECK-LABEL: @vector_promote_memset_d(
 ; CHECK-NEXT:    [[DOTSROA_2:%.*]] = alloca [3 x i32], align 4
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[DOTSROA_2]], i8 0, i64 12, i1 false)
@@ -97,26 +97,60 @@ define void @vector_promote_memset_d(ptr %0) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 1
 ; CHECK-NEXT:    ret void
 ;
-  %2 = alloca %struct.d, align 4
-  %3 = alloca %ptr_pair, align 8
-  call void @llvm.memset.p0.i64(ptr align 32 %2, i8 0, i64 24, i1 false)
+  %a0 = alloca %struct.d, align 4
+  %a1 = alloca %ptr_pair, align 8
+  call void @llvm.memset.p0.i64(ptr align 32 %a0, i8 0, i64 24, i1 false)
 
-  store ptr %2, ptr %3, align 8
+  store ptr %a0, ptr %a1, align 8
 
-  %4 = getelementptr inbounds %ptr_pair, ptr %3, i64 0, i32 1
-  %5 = load ptr, ptr %0, align 8
-  store ptr %5, ptr %4, align 8
+  %p1 = getelementptr inbounds %ptr_pair, ptr %a1, i64 0, i32 1
+  %v0 = load ptr, ptr %arg0, align 8
+  store ptr %v0, ptr %p1, align 8
 
-  %6 = getelementptr inbounds i8, ptr %3, i32 8
-  %7 = load ptr, ptr %6, align 8
+  %p2 = getelementptr inbounds i8, ptr %a1, i32 8
+  %v1 = load ptr, ptr %p2, align 8
 
-  %8 = load i32, ptr %7, align 1
+  %v2 = load i32, ptr %v1, align 1
 
-  %9 = getelementptr inbounds i32, ptr %2, i32 2
-  store i32 %8, ptr %9, align 4
+  %p3 = getelementptr inbounds i32, ptr %a0, i32 2
+  store i32 %v2, ptr %p3, align 4
 
   ret void
 }
+
+
+; We shouldn't promote large memsets.
+%struct.e = type { [65536 x i8] }
+define void @vector_promote_memset_e(ptr %arg0) {
+; CHECK-LABEL: @vector_promote_memset_e(
+; CHECK-NEXT:    [[A0_SROA_2:%.*]] = alloca [65524 x i8], align 4
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[A0_SROA_2]], i8 0, i64 65524, i1 false)
+; CHECK-NEXT:    [[V0:%.*]] = load ptr, ptr [[ARG0:%.*]], align 8
+; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[V0]], align 1
+; CHECK-NEXT:    ret void
+;
+  %a0 = alloca %struct.e, align 4
+  %a1 = alloca %ptr_pair, align 8
+  call void @llvm.memset.p0.i64(ptr align 32 %a0, i8 0, i64 65536, i1 false)
+
+  store ptr %a0, ptr %a1, align 8
+
+  %p1 = getelementptr inbounds %ptr_pair, ptr %a1, i64 0, i32 1
+  %v0 = load ptr, ptr %arg0, align 8
+  store ptr %v0, ptr %p1, align 8
+
+  %p2 = getelementptr inbounds i8, ptr %a1, i32 8
+  %v1 = load ptr, ptr %p2, align 8
+
+  %v2 = load i32, ptr %v1, align 1
+
+  %p3 = getelementptr inbounds i32, ptr %a0, i32 2
+  store i32 %v2, ptr %p3, align 4
+
+  ret void
+}
+
+
 
 ; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
 declare void @llvm.memset.p0.i64(ptr writeonly captures(none), i8, i64, i1 immarg) #0
