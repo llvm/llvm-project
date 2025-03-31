@@ -83,7 +83,7 @@ public:
       return std::nullopt;
 
     // The type to use for the computation of the remainder. This may be
-    // wider than the input/result type which affects the
+    // wider than the input/result type which affects the ...
     Type *ComputeTy = Ty;
     // ... maximum number of iterations of the remainder computation loop
     // to use. This value is for the case in which the computation
