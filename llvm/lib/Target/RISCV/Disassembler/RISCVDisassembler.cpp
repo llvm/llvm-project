@@ -558,8 +558,12 @@ static DecodeStatus decodeRVCInstrRdRs1UImm(MCInst &Inst, uint32_t Insn,
                                             const MCDisassembler *Decoder) {
   Inst.addOperand(MCOperand::createReg(RISCV::X0));
   Inst.addOperand(Inst.getOperand(0));
-  uint32_t UImm6 =
-      fieldFromInstruction(Insn, 12, 1) << 5 | fieldFromInstruction(Insn, 2, 5);
+
+  uint32_t UImm6 = fieldFromInstruction(Insn, 12, 1) << 5;
+  // On RV32C, uimm[5]=1 is reserved for custom extensions.
+  if (UImm6 != 0 && Decoder->getSubtargetInfo().hasFeature(RISCV::Feature32Bit))
+    return MCDisassembler::Fail;
+  UImm6 |= fieldFromInstruction(Insn, 2, 5);
   [[maybe_unused]] DecodeStatus Result =
       decodeUImmOperand<6>(Inst, UImm6, Address, Decoder);
   assert(Result == MCDisassembler::Success && "Invalid immediate");
@@ -784,7 +788,7 @@ DecodeStatus RISCVDisassembler::getInstruction16(MCInst &MI, uint64_t &Size,
     if (!Entry.haveContainedFeatures(STI.getFeatureBits()))
       continue;
 
-    LLVM_DEBUG(dbgs() << "Trying " << Entry.Desc << "table:\n");
+    LLVM_DEBUG(dbgs() << "Trying " << Entry.Desc << " table:\n");
     DecodeStatus Result =
         decodeInstruction(Entry.Table, MI, Insn, Address, this, STI);
     if (Result == MCDisassembler::Fail)
@@ -820,7 +824,7 @@ DecodeStatus RISCVDisassembler::getInstruction48(MCInst &MI, uint64_t &Size,
     if (!Entry.haveContainedFeatures(STI.getFeatureBits()))
       continue;
 
-    LLVM_DEBUG(dbgs() << "Trying " << Entry.Desc << "table:\n");
+    LLVM_DEBUG(dbgs() << "Trying " << Entry.Desc << " table:\n");
     DecodeStatus Result =
         decodeInstruction(Entry.Table, MI, Insn, Address, this, STI);
     if (Result == MCDisassembler::Fail)
