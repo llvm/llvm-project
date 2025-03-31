@@ -4916,7 +4916,6 @@ TEST(MemorySanitizer, getservent_r) {
   EXPECT_POISONED(result_buf);
   EXPECT_POISONED(result);
   EXPECT_POISONED(buf);
-  // This can fail with ENOENT, which we cannot control.
   ASSERT_EQ(getservent_r(&result_buf, buf, sizeof(buf), &result), 0);
   EXPECT_NOT_POISONED(result);
   ASSERT_NE(result, nullptr);

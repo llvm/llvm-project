@@ -4,11 +4,12 @@
 
 #include <arpa/inet.h>
 #include <assert.h>
-#include <errno.h>
+#include <fcntl.h>
 #include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 void CheckResult(const char *file, int line, int ret) {
   if (ret != 0) {
@@ -20,6 +21,7 @@ void CheckResult(const char *file, int line, int ret) {
 #define CHECK_RESULT(ret) CheckResult(__FILE__, __LINE__, ret)
 
 int main(void) {
+  assert(access("/etc/services", O_RDONLY) == 0);
   struct servent result_buf;
   struct servent *result;
   char buf[1024];
