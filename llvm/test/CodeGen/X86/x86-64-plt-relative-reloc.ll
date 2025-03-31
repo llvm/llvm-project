@@ -13,7 +13,7 @@ declare void @fn3()
 @global4 = external unnamed_addr global i8
 
 ; CHECK: .long 0
-; CHECK-NEXT: .long (fn1@PLT-vtable)-4
-; CHECK-NEXT: .long (fn2@PLT-vtable)-4
-; CHECK-NEXT: .long (fn3-vtable)-4
-; CHECK-NEXT: .long (global4-vtable)-4
+; CHECK-NEXT: .long fn1@PLT-vtable-4
+; CHECK-NEXT: .long fn2@PLT-vtable-4
+; CHECK-NEXT: .long fn3-vtable-4
+; CHECK-NEXT: .long global4-vtable-4
