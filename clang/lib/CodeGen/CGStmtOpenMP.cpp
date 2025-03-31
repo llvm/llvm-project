@@ -956,14 +956,19 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunction(
     // If Xteam found, use it. Otherwise, query again. This is required to make
     // sure that the outlined routines have the correct signature.
     if (FStmt) {
-      if (!CGM.isXteamRedKernel(FStmt))
-        isXteamKernel =
-            CGM.checkAndSetXteamRedKernel(D) == CodeGenModule::NxSuccess;
-      else
+      if (!CGM.isXteamRedKernel(FStmt)) {
+        CodeGenModule::NoLoopXteamErr NxStatus =
+            CGM.checkAndSetXteamRedKernel(D);
+        DEBUG_WITH_TYPE(NO_LOOP_XTEAM_RED,
+                        CGM.emitNxResult("[Xteam-host]", D, NxStatus));
+        isXteamKernel = (NxStatus == CodeGenModule::NxSuccess);
+      } else
         isXteamKernel = true;
     } else {
-      isXteamKernel =
-          CGM.checkAndSetXteamRedKernel(D) == CodeGenModule::NxSuccess;
+      CodeGenModule::NoLoopXteamErr NxStatus = CGM.checkAndSetXteamRedKernel(D);
+      DEBUG_WITH_TYPE(NO_LOOP_XTEAM_RED,
+                      CGM.emitNxResult("[Xteam-host]", D, NxStatus));
+      isXteamKernel = (NxStatus == CodeGenModule::NxSuccess);
     }
   }
 
@@ -7677,8 +7682,11 @@ static void emitCommonOMPTargetDirective(CodeGenFunction &CGF,
   const Stmt *OptKernelKey = CGM.getOptKernelKey(S);
   if (OptKernelKey)
     FStmt = CGM.getSingleForStmt(OptKernelKey);
-  if (FStmt && CGM.getLangOpts().OpenMPOffloadMandatory)
-    CGM.checkAndSetXteamRedKernel(S);
+  if (FStmt && CGM.getLangOpts().OpenMPOffloadMandatory) {
+    CodeGenModule::NoLoopXteamErr NxStatus = CGM.checkAndSetXteamRedKernel(S);
+    DEBUG_WITH_TYPE(NO_LOOP_XTEAM_RED,
+                    CGM.emitNxResult("[Xteam-host]", S, NxStatus));
+  }
 
   if (CGM.getLangOpts().OpenMPOffloadMandatory && !IsOffloadEntry) {
     unsigned DiagID = CGM.getDiags().getCustomDiagID(

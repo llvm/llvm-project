@@ -604,6 +604,62 @@ __OMP_RTL(__kmpc_rfun_sum_l, false, Void, Int64Ptr, Int64)
 
 __OMP_RTL(__kmpc_rfun_sum_lds_l, false, Void, Int64Ptr, Int64)
 
+__OMP_RTL(__kmpc_rfun_min_d, false, Void, DoublePtr, Double)
+
+__OMP_RTL(__kmpc_rfun_min_lds_d, false, Void, DoublePtr, Double)
+
+__OMP_RTL(__kmpc_rfun_min_f, false, Void, FloatPtr, Float)
+
+__OMP_RTL(__kmpc_rfun_min_lds_f, false, Void, FloatPtr, Float)
+
+__OMP_RTL(__kmpc_rfun_min_h, false, Void, HalfPtr, Half)
+
+__OMP_RTL(__kmpc_rfun_min_lds_h, false, Void, HalfPtr, Half)
+
+__OMP_RTL(__kmpc_rfun_min_bf, false, Void, BFloatPtr, BFloat)
+
+__OMP_RTL(__kmpc_rfun_min_lds_bf, false, Void, BFloatPtr, BFloat)
+
+__OMP_RTL(__kmpc_rfun_min_s, false, Void, Int16Ptr, Int16)
+
+__OMP_RTL(__kmpc_rfun_min_lds_s, false, Void, Int16Ptr, Int16)
+
+__OMP_RTL(__kmpc_rfun_min_i, false, Void, Int32Ptr, Int32)
+
+__OMP_RTL(__kmpc_rfun_min_lds_i, false, Void, Int32Ptr, Int32)
+
+__OMP_RTL(__kmpc_rfun_min_l, false, Void, Int64Ptr, Int64)
+
+__OMP_RTL(__kmpc_rfun_min_lds_l, false, Void, Int64Ptr, Int64)
+
+__OMP_RTL(__kmpc_rfun_max_d, false, Void, DoublePtr, Double)
+
+__OMP_RTL(__kmpc_rfun_max_lds_d, false, Void, DoublePtr, Double)
+
+__OMP_RTL(__kmpc_rfun_max_f, false, Void, FloatPtr, Float)
+
+__OMP_RTL(__kmpc_rfun_max_lds_f, false, Void, FloatPtr, Float)
+
+__OMP_RTL(__kmpc_rfun_max_h, false, Void, HalfPtr, Half)
+
+__OMP_RTL(__kmpc_rfun_max_lds_h, false, Void, HalfPtr, Half)
+
+__OMP_RTL(__kmpc_rfun_max_bf, false, Void, BFloatPtr, BFloat)
+
+__OMP_RTL(__kmpc_rfun_max_lds_bf, false, Void, BFloatPtr, BFloat)
+
+__OMP_RTL(__kmpc_rfun_max_s, false, Void, Int16Ptr, Int16)
+
+__OMP_RTL(__kmpc_rfun_max_lds_s, false, Void, Int16Ptr, Int16)
+
+__OMP_RTL(__kmpc_rfun_max_i, false, Void, Int32Ptr, Int32)
+
+__OMP_RTL(__kmpc_rfun_max_lds_i, false, Void, Int32Ptr, Int32)
+
+__OMP_RTL(__kmpc_rfun_max_l, false, Void, Int64Ptr, Int64)
+
+__OMP_RTL(__kmpc_rfun_max_lds_l, false, Void, Int64Ptr, Int64)
+
 __OMP_RTL(__kmpc_xteamr_d_16x64, false, Void, Double, DoublePtr, DoublePtr, Int32Ptr, VoidPtr, VoidPtr, Double, Int64, Int32, Int32)
 
 __OMP_RTL(__kmpc_xteamr_d_16x64_fast_sum, false, Void, Double, DoublePtr, DoublePtr, Int32Ptr, VoidPtr, VoidPtr, Double, Int64, Int32, Int32)
