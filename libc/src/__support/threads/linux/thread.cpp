@@ -482,6 +482,10 @@ int Thread::get_name(cpp::StringStream &name) const {
   return 0;
 }
 
+#ifdef LIBC_COPT_ENABLE_MALLOC_THREAD_CLEANUP
+extern "C" [[gnu::weak]] void _malloc_thread_cleanup();
+#endif // LIBC_COPT_ENABLE_MALLOC_THREAD_CLEANUP
+
 void thread_exit(ThreadReturnValue retval, ThreadStyle style) {
   auto attrib = self.attrib;
 
@@ -494,6 +498,11 @@ void thread_exit(ThreadReturnValue retval, ThreadStyle style) {
   // different thread. The destructors of thread local and TSS objects should
   // be called by the thread which owns them.
   internal::call_atexit_callbacks(attrib);
+#ifdef LIBC_COPT_ENABLE_MALLOC_THREAD_CLEANUP
+  // call _malloc_thread_cleanup after the atexit callbacks
+  if (_malloc_thread_cleanup)
+    _malloc_thread_cleanup();
+#endif // LIBC_COPT_ENABLE_MALLOC_THREAD_CLEANUP
 
   uint32_t joinable_state = uint32_t(DetachState::JOINABLE);
   if (!attrib->detach_state.compare_exchange_strong(
