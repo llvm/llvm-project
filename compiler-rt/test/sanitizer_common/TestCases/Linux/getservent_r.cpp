@@ -12,7 +12,7 @@
 
 void CheckResult(int ret) {
   if (ret != 0) {
-    fprintf(stderr, "%s\n", strerror(errno));
+    fprintf(stderr, "ERROR: %s\n", strerror(ret));
     abort();
   }
 }
