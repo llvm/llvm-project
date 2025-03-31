@@ -86,6 +86,7 @@ class DAPTestCaseBase(TestBase):
                 if (
                     body["reason"] != "breakpoint"
                     and body["reason"] != "instruction breakpoint"
+                    and body["reason"] != "function breakpoint"
                 ):
                     continue
                 if "description" not in body:
@@ -100,7 +101,7 @@ class DAPTestCaseBase(TestBase):
                 # location.
                 description = body["description"]
                 for breakpoint_id in breakpoint_ids:
-                    match_desc = "breakpoint %s." % (breakpoint_id)
+                    match_desc = "%s %s." % (body["reason"], breakpoint_id)
                     if match_desc in description:
                         return
         self.assertTrue(False, "breakpoint not hit")

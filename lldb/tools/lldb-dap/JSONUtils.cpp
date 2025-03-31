@@ -937,28 +937,47 @@ llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
     body.try_emplace("reason", "step");
     break;
   case lldb::eStopReasonBreakpoint: {
-    ExceptionBreakpoint *exc_bp = dap.GetExceptionBPFromStopReason(thread);
+    // Setting the reason as per DAP protocol spec.
+    // https://microsoft.github.io/debug-adapter-protocol/specification#Events_Stopped
+    const auto *exc_bp =
+        dap.GetBreakpointFromStopReason<ExceptionBreakpoint>(thread);
     if (exc_bp) {
       body.try_emplace("reason", "exception");
       EmplaceSafeString(body, "description", exc_bp->label);
     } else {
-      InstructionBreakpoint *inst_bp =
-          dap.GetInstructionBPFromStopReason(thread);
+      llvm::StringRef reason = "breakpoint";
+      const auto *inst_bp =
+          dap.GetBreakpointFromStopReason<InstructionBreakpoint>(thread);
       if (inst_bp) {
-        body.try_emplace("reason", "instruction breakpoint");
+        reason = "instruction breakpoint";
       } else {
-        body.try_emplace("reason", "breakpoint");
+        const auto *function_bp =
+            dap.GetBreakpointFromStopReason<FunctionBreakpoint>(thread);
+        if (function_bp) {
+          reason = "function breakpoint";
+        }
       }
+      body.try_emplace("reason", reason);
       lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(0);
       lldb::break_id_t bp_loc_id = thread.GetStopReasonDataAtIndex(1);
       std::string desc_str =
-          llvm::formatv("breakpoint {0}.{1}", bp_id, bp_loc_id);
+          llvm::formatv("{0} {1}.{2}", reason, bp_id, bp_loc_id);
       body.try_emplace("hitBreakpointIds",
                        llvm::json::Array{llvm::json::Value(bp_id)});
       EmplaceSafeString(body, "description", desc_str);
     }
   } break;
-  case lldb::eStopReasonWatchpoint:
+  case lldb::eStopReasonWatchpoint: {
+    // Assuming that all watch points are data breakpoints.
+    // data breakpoints are DAP terminology for watchpoints.
+    // https://microsoft.github.io/debug-adapter-protocol/specification#Requests_SetDataBreakpoints
+    body.try_emplace("reason", "data breakpoint");
+    lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(0);
+    lldb::break_id_t bp_loc_id = thread.GetStopReasonDataAtIndex(1);
+    std::string desc_str =
+        llvm::formatv("data breakpoint {0}.{1}", bp_id, bp_loc_id);
+    EmplaceSafeString(body, "description", desc_str);
+  } break;
   case lldb::eStopReasonInstrumentation:
     body.try_emplace("reason", "breakpoint");
     break;
