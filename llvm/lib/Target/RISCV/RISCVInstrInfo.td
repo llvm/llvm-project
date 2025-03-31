@@ -1118,10 +1118,7 @@ def : MnemonicAlias<"move", "mv">;
 def : MnemonicAlias<"scall", "ecall">;
 def : MnemonicAlias<"sbreak", "ebreak">;
 
-// This alias was added to the spec in December 2020. Don't print it by default
-// to allow assembly we print to be compatible with versions of GNU assembler
-// that don't support this alias.
-def : InstAlias<"zext.b $rd, $rs", (ANDI GPR:$rd, GPR:$rs, 0xFF), 0>;
+def : InstAlias<"zext.b $rd, $rs", (ANDI GPR:$rd, GPR:$rs, 0xFF)>;
 
 let Predicates = [HasStdExtZicfilp] in {
 def : InstAlias<"lpad $imm20", (AUIPC X0, uimm20:$imm20)>;
