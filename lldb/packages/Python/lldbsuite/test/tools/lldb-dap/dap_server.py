@@ -1174,8 +1174,10 @@ class DebugCommunication(object):
         return self.send_recv(command_dict)
 
     def terminate(self):
-        self.send.close()
-        # self.recv.close()
+        try:
+            self.send.close()
+        except BrokenPipeError:
+            pass
 
     def request_setInstructionBreakpoints(self, memory_reference=[]):
         breakpoints = []
