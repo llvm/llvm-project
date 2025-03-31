@@ -1,5 +1,5 @@
-add_llvm_component_library(LLVMRipple
-  RippleModulePass.cpp
+add_llvm_component_library(LLVMRippleFPExtFPTruncRevert
+  RippleFPExtFPTruncRevert.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms
@@ -12,9 +12,6 @@ add_llvm_component_library(LLVMRipple
   LINK_COMPONENTS
   Analysis
   Core
-  RippleBase
-  RippleSESE
-  RippleFPExtFPTrunc
-  RippleFPExtFPTruncRevert
   Support
+  TransformUtils
 )

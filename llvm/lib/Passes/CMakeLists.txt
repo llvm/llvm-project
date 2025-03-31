@@ -26,6 +26,8 @@ add_llvm_component_library(LLVMPasses
   InstCombine
   IRPrinter
   ObjCARC
+  RippleFPExtFPTrunc
+  RippleFPExtFPTruncRevert
   Ripple
   Scalar
   Support

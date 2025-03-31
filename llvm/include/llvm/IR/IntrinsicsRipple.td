@@ -100,4 +100,12 @@ def int_ripple_shuffle: DefaultAttrsIntrinsic<[llvm_any_ty],
                                                 llvm_i1_ty, llvm_ptr_ty],
                                               [IntrWillReturn, ImmArg<ArgIndex<2>>]>;
 
+def int_ripple_fpext: DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
+                                            [llvm_anyfloat_ty],
+                                            [IntrWillReturn, IntrNoMem, IntrSpeculatable]>;
+
+def int_ripple_fptrunc: DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
+                                            [llvm_anyfloat_ty],
+                                            [IntrWillReturn, IntrNoMem, IntrSpeculatable]>;
+
 } // End TargetPrefix = "ripple"
