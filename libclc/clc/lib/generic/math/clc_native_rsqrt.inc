@@ -6,12 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
-#include <clc/clcmacro.h>
-
-_CLC_OVERLOAD _CLC_DEF float native_rsqrt(float x)
-{
-    return __builtin_r600_recipsqrt_ieeef(x);
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_native_rsqrt(__CLC_GENTYPE val) {
+  return 1.0f / __clc_native_sqrt(val);
 }
-
-_CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, float, native_rsqrt, float);

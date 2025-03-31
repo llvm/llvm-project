@@ -6,6 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE native_rsqrt(__CLC_GENTYPE val) {
-  return 1.0f / native_sqrt(val);
-}
+#ifndef __CLC_MATH_CLC_NATIVE_RSQRT_H__
+#define __CLC_MATH_CLC_NATIVE_RSQRT_H__
+
+#define __FLOAT_ONLY
+#define __CLC_FUNCTION __clc_native_rsqrt
+#define __CLC_BODY <clc/shared/unary_decl.inc>
+
+#include <clc/math/gentype.inc>
+
+#undef __CLC_BODY
+#undef __CLC_FUNCTION
+#undef __FLOAT_ONLY
+
+#endif // __CLC_MATH_CLC_NATIVE_RSQRT_H__
