@@ -31,8 +31,8 @@ define half @f2(half %x, half %y) {
 ; CHECK-NEXT:    .cfi_offset %r15, -40
 ; CHECK-NEXT:    aghi %r15, -176
 ; CHECK-NEXT:    .cfi_def_cfa_offset 336
-; CHECK-NEXT:    std %f8, 168(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f9, 160(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    std %f8, 168(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f9, 160(%r15) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset %f8, -168
 ; CHECK-NEXT:    .cfi_offset %f9, -176
 ; CHECK-NEXT:    ler %f8, %f2
@@ -44,8 +44,8 @@ define half @f2(half %x, half %y) {
 ; CHECK-NEXT:    ler %f0, %f9
 ; CHECK-NEXT:    brasl %r14, powf@PLT
 ; CHECK-NEXT:    brasl %r14, __truncsfhf2@PLT
-; CHECK-NEXT:    ld %f8, 168(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f9, 160(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    ld %f8, 168(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f9, 160(%r15) # 8-byte Reload
 ; CHECK-NEXT:    lmg %r14, %r15, 288(%r15)
 ; CHECK-NEXT:    br %r14
   %tmp = call half @llvm.pow.f16(half %x, half %y)
@@ -179,8 +179,8 @@ define half @f10(half %x, half %y) {
 ; CHECK-NEXT:    .cfi_offset %r15, -40
 ; CHECK-NEXT:    aghi %r15, -176
 ; CHECK-NEXT:    .cfi_def_cfa_offset 336
-; CHECK-NEXT:    std %f8, 168(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f9, 160(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    std %f8, 168(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f9, 160(%r15) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset %f8, -168
 ; CHECK-NEXT:    .cfi_offset %f9, -176
 ; CHECK-NEXT:    ler %f8, %f2
@@ -192,8 +192,8 @@ define half @f10(half %x, half %y) {
 ; CHECK-NEXT:    ler %f0, %f9
 ; CHECK-NEXT:    brasl %r14, fminf@PLT
 ; CHECK-NEXT:    brasl %r14, __truncsfhf2@PLT
-; CHECK-NEXT:    ld %f8, 168(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f9, 160(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    ld %f8, 168(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f9, 160(%r15) # 8-byte Reload
 ; CHECK-NEXT:    lmg %r14, %r15, 288(%r15)
 ; CHECK-NEXT:    br %r14
   %tmp = call half @llvm.minnum.f16(half %x, half %y)
@@ -208,8 +208,8 @@ define half @f11(half %x, half %y) {
 ; CHECK-NEXT:    .cfi_offset %r15, -40
 ; CHECK-NEXT:    aghi %r15, -176
 ; CHECK-NEXT:    .cfi_def_cfa_offset 336
-; CHECK-NEXT:    std %f8, 168(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f9, 160(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    std %f8, 168(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f9, 160(%r15) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset %f8, -168
 ; CHECK-NEXT:    .cfi_offset %f9, -176
 ; CHECK-NEXT:    ler %f8, %f2
@@ -221,8 +221,8 @@ define half @f11(half %x, half %y) {
 ; CHECK-NEXT:    ler %f0, %f9
 ; CHECK-NEXT:    brasl %r14, fmaxf@PLT
 ; CHECK-NEXT:    brasl %r14, __truncsfhf2@PLT
-; CHECK-NEXT:    ld %f8, 168(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f9, 160(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    ld %f8, 168(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f9, 160(%r15) # 8-byte Reload
 ; CHECK-NEXT:    lmg %r14, %r15, 288(%r15)
 ; CHECK-NEXT:    br %r14
   %tmp = call half @llvm.maxnum.f16(half %x, half %y)
@@ -239,8 +239,8 @@ define half @f12(half %x, half %y) {
 ; CHECK-NEXT:    .cfi_offset %r15, -40
 ; CHECK-NEXT:    aghi %r15, -176
 ; CHECK-NEXT:    .cfi_def_cfa_offset 336
-; CHECK-NEXT:    std %f8, 168(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f9, 160(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    std %f8, 168(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f9, 160(%r15) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset %f8, -168
 ; CHECK-NEXT:    .cfi_offset %f9, -176
 ; CHECK-NEXT:    ler %f9, %f0
@@ -255,8 +255,8 @@ define half @f12(half %x, half %y) {
 ; CHECK-NEXT:    ler %f0, %f8
 ; CHECK-NEXT:  .LBB11_2:
 ; CHECK-NEXT:    brasl %r14, __truncsfhf2@PLT
-; CHECK-NEXT:    ld %f8, 168(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f9, 160(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    ld %f8, 168(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f9, 160(%r15) # 8-byte Reload
 ; CHECK-NEXT:    lmg %r14, %r15, 288(%r15)
 ; CHECK-NEXT:    br %r14
   %tmp = call nnan half @llvm.minnum.f16(half %x, half %y)
@@ -271,8 +271,8 @@ define half @f13(half %x, half %y) {
 ; CHECK-NEXT:    .cfi_offset %r15, -40
 ; CHECK-NEXT:    aghi %r15, -176
 ; CHECK-NEXT:    .cfi_def_cfa_offset 336
-; CHECK-NEXT:    std %f8, 168(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f9, 160(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    std %f8, 168(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f9, 160(%r15) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset %f8, -168
 ; CHECK-NEXT:    .cfi_offset %f9, -176
 ; CHECK-NEXT:    ler %f9, %f0
@@ -287,8 +287,8 @@ define half @f13(half %x, half %y) {
 ; CHECK-NEXT:    ler %f0, %f8
 ; CHECK-NEXT:  .LBB12_2:
 ; CHECK-NEXT:    brasl %r14, __truncsfhf2@PLT
-; CHECK-NEXT:    ld %f8, 168(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f9, 160(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    ld %f8, 168(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f9, 160(%r15) # 8-byte Reload
 ; CHECK-NEXT:    lmg %r14, %r15, 288(%r15)
 ; CHECK-NEXT:    br %r14
   %tmp = call nnan half @llvm.maxnum.f16(half %x, half %y)

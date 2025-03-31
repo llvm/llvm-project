@@ -15,8 +15,8 @@ define half @fun0(half %Op0, half %Op1) {
 ; NOVEC-NEXT:    .cfi_offset %r15, -40
 ; NOVEC-NEXT:    aghi %r15, -176
 ; NOVEC-NEXT:    .cfi_def_cfa_offset 336
-; NOVEC-NEXT:    std %f8, 168(%r15) # 8-byte Folded Spill
-; NOVEC-NEXT:    std %f9, 160(%r15) # 8-byte Folded Spill
+; NOVEC-NEXT:    std %f8, 168(%r15) # 8-byte Spill
+; NOVEC-NEXT:    std %f9, 160(%r15) # 8-byte Spill
 ; NOVEC-NEXT:    .cfi_offset %f8, -168
 ; NOVEC-NEXT:    .cfi_offset %f9, -176
 ; NOVEC-NEXT:    ler %f8, %f0
@@ -27,8 +27,8 @@ define half @fun0(half %Op0, half %Op1) {
 ; NOVEC-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; NOVEC-NEXT:    aebr %f0, %f9
 ; NOVEC-NEXT:    brasl %r14, __truncsfhf2@PLT
-; NOVEC-NEXT:    ld %f8, 168(%r15) # 8-byte Folded Reload
-; NOVEC-NEXT:    ld %f9, 160(%r15) # 8-byte Folded Reload
+; NOVEC-NEXT:    ld %f8, 168(%r15) # 8-byte Reload
+; NOVEC-NEXT:    ld %f9, 160(%r15) # 8-byte Reload
 ; NOVEC-NEXT:    lmg %r14, %r15, 288(%r15)
 ; NOVEC-NEXT:    br %r14
 ;
@@ -39,8 +39,8 @@ define half @fun0(half %Op0, half %Op1) {
 ; VECTOR-NEXT:    .cfi_offset %r15, -40
 ; VECTOR-NEXT:    aghi %r15, -176
 ; VECTOR-NEXT:    .cfi_def_cfa_offset 336
-; VECTOR-NEXT:    std %f8, 168(%r15) # 8-byte Folded Spill
-; VECTOR-NEXT:    std %f9, 160(%r15) # 8-byte Folded Spill
+; VECTOR-NEXT:    std %f8, 168(%r15) # 8-byte Spill
+; VECTOR-NEXT:    std %f9, 160(%r15) # 8-byte Spill
 ; VECTOR-NEXT:    .cfi_offset %f8, -168
 ; VECTOR-NEXT:    .cfi_offset %f9, -176
 ; VECTOR-NEXT:    ldr %f8, %f0
@@ -51,8 +51,8 @@ define half @fun0(half %Op0, half %Op1) {
 ; VECTOR-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; VECTOR-NEXT:    aebr %f0, %f9
 ; VECTOR-NEXT:    brasl %r14, __truncsfhf2@PLT
-; VECTOR-NEXT:    ld %f8, 168(%r15) # 8-byte Folded Reload
-; VECTOR-NEXT:    ld %f9, 160(%r15) # 8-byte Folded Reload
+; VECTOR-NEXT:    ld %f8, 168(%r15) # 8-byte Reload
+; VECTOR-NEXT:    ld %f9, 160(%r15) # 8-byte Reload
 ; VECTOR-NEXT:    lmg %r14, %r15, 288(%r15)
 ; VECTOR-NEXT:    br %r14
 entry:
@@ -68,8 +68,8 @@ define half @fun1(half %Op0, half %Op1) {
 ; NOVEC-NEXT:    .cfi_offset %r15, -40
 ; NOVEC-NEXT:    aghi %r15, -176
 ; NOVEC-NEXT:    .cfi_def_cfa_offset 336
-; NOVEC-NEXT:    std %f8, 168(%r15) # 8-byte Folded Spill
-; NOVEC-NEXT:    std %f9, 160(%r15) # 8-byte Folded Spill
+; NOVEC-NEXT:    std %f8, 168(%r15) # 8-byte Spill
+; NOVEC-NEXT:    std %f9, 160(%r15) # 8-byte Spill
 ; NOVEC-NEXT:    .cfi_offset %f8, -168
 ; NOVEC-NEXT:    .cfi_offset %f9, -176
 ; NOVEC-NEXT:    ler %f8, %f2
@@ -79,8 +79,8 @@ define half @fun1(half %Op0, half %Op1) {
 ; NOVEC-NEXT:    brasl %r14, __extendhfdf2@PLT
 ; NOVEC-NEXT:    adbr %f0, %f9
 ; NOVEC-NEXT:    brasl %r14, __truncdfhf2@PLT
-; NOVEC-NEXT:    ld %f8, 168(%r15) # 8-byte Folded Reload
-; NOVEC-NEXT:    ld %f9, 160(%r15) # 8-byte Folded Reload
+; NOVEC-NEXT:    ld %f8, 168(%r15) # 8-byte Reload
+; NOVEC-NEXT:    ld %f9, 160(%r15) # 8-byte Reload
 ; NOVEC-NEXT:    lmg %r14, %r15, 288(%r15)
 ; NOVEC-NEXT:    br %r14
 ;
@@ -91,8 +91,8 @@ define half @fun1(half %Op0, half %Op1) {
 ; VECTOR-NEXT:    .cfi_offset %r15, -40
 ; VECTOR-NEXT:    aghi %r15, -176
 ; VECTOR-NEXT:    .cfi_def_cfa_offset 336
-; VECTOR-NEXT:    std %f8, 168(%r15) # 8-byte Folded Spill
-; VECTOR-NEXT:    std %f9, 160(%r15) # 8-byte Folded Spill
+; VECTOR-NEXT:    std %f8, 168(%r15) # 8-byte Spill
+; VECTOR-NEXT:    std %f9, 160(%r15) # 8-byte Spill
 ; VECTOR-NEXT:    .cfi_offset %f8, -168
 ; VECTOR-NEXT:    .cfi_offset %f9, -176
 ; VECTOR-NEXT:    ldr %f8, %f2
@@ -102,8 +102,8 @@ define half @fun1(half %Op0, half %Op1) {
 ; VECTOR-NEXT:    brasl %r14, __extendhfdf2@PLT
 ; VECTOR-NEXT:    wfadb %f0, %f9, %f0
 ; VECTOR-NEXT:    brasl %r14, __truncdfhf2@PLT
-; VECTOR-NEXT:    ld %f8, 168(%r15) # 8-byte Folded Reload
-; VECTOR-NEXT:    ld %f9, 160(%r15) # 8-byte Folded Reload
+; VECTOR-NEXT:    ld %f8, 168(%r15) # 8-byte Reload
+; VECTOR-NEXT:    ld %f9, 160(%r15) # 8-byte Reload
 ; VECTOR-NEXT:    lmg %r14, %r15, 288(%r15)
 ; VECTOR-NEXT:    br %r14
 entry:
@@ -122,9 +122,9 @@ define half @fun2(half %Op0, half %Op1) {
 ; NOVEC-NEXT:    .cfi_offset %r15, -40
 ; NOVEC-NEXT:    aghi %r15, -232
 ; NOVEC-NEXT:    .cfi_def_cfa_offset 392
-; NOVEC-NEXT:    std %f8, 224(%r15) # 8-byte Folded Spill
-; NOVEC-NEXT:    std %f9, 216(%r15) # 8-byte Folded Spill
-; NOVEC-NEXT:    std %f11, 208(%r15) # 8-byte Folded Spill
+; NOVEC-NEXT:    std %f8, 224(%r15) # 8-byte Spill
+; NOVEC-NEXT:    std %f9, 216(%r15) # 8-byte Spill
+; NOVEC-NEXT:    std %f11, 208(%r15) # 8-byte Spill
 ; NOVEC-NEXT:    .cfi_offset %f8, -168
 ; NOVEC-NEXT:    .cfi_offset %f9, -176
 ; NOVEC-NEXT:    .cfi_offset %f11, -184
@@ -143,9 +143,9 @@ define half @fun2(half %Op0, half %Op1) {
 ; NOVEC-NEXT:    std %f0, 192(%r15)
 ; NOVEC-NEXT:    std %f2, 200(%r15)
 ; NOVEC-NEXT:    brasl %r14, __trunctfhf2@PLT
-; NOVEC-NEXT:    ld %f8, 224(%r15) # 8-byte Folded Reload
-; NOVEC-NEXT:    ld %f9, 216(%r15) # 8-byte Folded Reload
-; NOVEC-NEXT:    ld %f11, 208(%r15) # 8-byte Folded Reload
+; NOVEC-NEXT:    ld %f8, 224(%r15) # 8-byte Reload
+; NOVEC-NEXT:    ld %f9, 216(%r15) # 8-byte Reload
+; NOVEC-NEXT:    ld %f11, 208(%r15) # 8-byte Reload
 ; NOVEC-NEXT:    lmg %r14, %r15, 344(%r15)
 ; NOVEC-NEXT:    br %r14
 ;
@@ -156,7 +156,7 @@ define half @fun2(half %Op0, half %Op1) {
 ; VECTOR-NEXT:    .cfi_offset %r15, -40
 ; VECTOR-NEXT:    aghi %r15, -232
 ; VECTOR-NEXT:    .cfi_def_cfa_offset 392
-; VECTOR-NEXT:    std %f8, 224(%r15) # 8-byte Folded Spill
+; VECTOR-NEXT:    std %f8, 224(%r15) # 8-byte Spill
 ; VECTOR-NEXT:    .cfi_offset %f8, -168
 ; VECTOR-NEXT:    la %r2, 176(%r15)
 ; VECTOR-NEXT:    ldr %f8, %f2
@@ -172,7 +172,7 @@ define half @fun2(half %Op0, half %Op1) {
 ; VECTOR-NEXT:    la %r2, 208(%r15)
 ; VECTOR-NEXT:    vst %v0, 208(%r15), 3
 ; VECTOR-NEXT:    brasl %r14, __trunctfhf2@PLT
-; VECTOR-NEXT:    ld %f8, 224(%r15) # 8-byte Folded Reload
+; VECTOR-NEXT:    ld %f8, 224(%r15) # 8-byte Reload
 ; VECTOR-NEXT:    lmg %r14, %r15, 344(%r15)
 ; VECTOR-NEXT:    br %r14
 entry:
@@ -330,9 +330,9 @@ define half @fun6(half %Op0, half %Op1, half %Op2) {
 ; NOVEC-NEXT:    .cfi_offset %r15, -40
 ; NOVEC-NEXT:    aghi %r15, -184
 ; NOVEC-NEXT:    .cfi_def_cfa_offset 344
-; NOVEC-NEXT:    std %f8, 176(%r15) # 8-byte Folded Spill
-; NOVEC-NEXT:    std %f9, 168(%r15) # 8-byte Folded Spill
-; NOVEC-NEXT:    std %f10, 160(%r15) # 8-byte Folded Spill
+; NOVEC-NEXT:    std %f8, 176(%r15) # 8-byte Spill
+; NOVEC-NEXT:    std %f9, 168(%r15) # 8-byte Spill
+; NOVEC-NEXT:    std %f10, 160(%r15) # 8-byte Spill
 ; NOVEC-NEXT:    .cfi_offset %f8, -168
 ; NOVEC-NEXT:    .cfi_offset %f9, -176
 ; NOVEC-NEXT:    .cfi_offset %f10, -184
@@ -351,9 +351,9 @@ define half @fun6(half %Op0, half %Op1, half %Op2) {
 ; NOVEC-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; NOVEC-NEXT:    aebr %f0, %f9
 ; NOVEC-NEXT:    brasl %r14, __truncsfhf2@PLT
-; NOVEC-NEXT:    ld %f8, 176(%r15) # 8-byte Folded Reload
-; NOVEC-NEXT:    ld %f9, 168(%r15) # 8-byte Folded Reload
-; NOVEC-NEXT:    ld %f10, 160(%r15) # 8-byte Folded Reload
+; NOVEC-NEXT:    ld %f8, 176(%r15) # 8-byte Reload
+; NOVEC-NEXT:    ld %f9, 168(%r15) # 8-byte Reload
+; NOVEC-NEXT:    ld %f10, 160(%r15) # 8-byte Reload
 ; NOVEC-NEXT:    lmg %r14, %r15, 296(%r15)
 ; NOVEC-NEXT:    br %r14
 ;
@@ -364,9 +364,9 @@ define half @fun6(half %Op0, half %Op1, half %Op2) {
 ; VECTOR-NEXT:    .cfi_offset %r15, -40
 ; VECTOR-NEXT:    aghi %r15, -184
 ; VECTOR-NEXT:    .cfi_def_cfa_offset 344
-; VECTOR-NEXT:    std %f8, 176(%r15) # 8-byte Folded Spill
-; VECTOR-NEXT:    std %f9, 168(%r15) # 8-byte Folded Spill
-; VECTOR-NEXT:    std %f10, 160(%r15) # 8-byte Folded Spill
+; VECTOR-NEXT:    std %f8, 176(%r15) # 8-byte Spill
+; VECTOR-NEXT:    std %f9, 168(%r15) # 8-byte Spill
+; VECTOR-NEXT:    std %f10, 160(%r15) # 8-byte Spill
 ; VECTOR-NEXT:    .cfi_offset %f8, -168
 ; VECTOR-NEXT:    .cfi_offset %f9, -176
 ; VECTOR-NEXT:    .cfi_offset %f10, -184
@@ -385,9 +385,9 @@ define half @fun6(half %Op0, half %Op1, half %Op2) {
 ; VECTOR-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; VECTOR-NEXT:    wfasb %f0, %f9, %f0
 ; VECTOR-NEXT:    brasl %r14, __truncsfhf2@PLT
-; VECTOR-NEXT:    ld %f8, 176(%r15) # 8-byte Folded Reload
-; VECTOR-NEXT:    ld %f9, 168(%r15) # 8-byte Folded Reload
-; VECTOR-NEXT:    ld %f10, 160(%r15) # 8-byte Folded Reload
+; VECTOR-NEXT:    ld %f8, 176(%r15) # 8-byte Reload
+; VECTOR-NEXT:    ld %f9, 168(%r15) # 8-byte Reload
+; VECTOR-NEXT:    ld %f10, 160(%r15) # 8-byte Reload
 ; VECTOR-NEXT:    lmg %r14, %r15, 296(%r15)
 ; VECTOR-NEXT:    br %r14
 entry:
@@ -479,8 +479,8 @@ define half @fun9(half %Arg0, half %Arg1, half %Arg2, half %Arg3, half %Arg4) {
 ; NOVEC-NEXT:    .cfi_offset %r15, -40
 ; NOVEC-NEXT:    aghi %r15, -176
 ; NOVEC-NEXT:    .cfi_def_cfa_offset 336
-; NOVEC-NEXT:    std %f8, 168(%r15) # 8-byte Folded Spill
-; NOVEC-NEXT:    std %f9, 160(%r15) # 8-byte Folded Spill
+; NOVEC-NEXT:    std %f8, 168(%r15) # 8-byte Spill
+; NOVEC-NEXT:    std %f9, 160(%r15) # 8-byte Spill
 ; NOVEC-NEXT:    .cfi_offset %f8, -168
 ; NOVEC-NEXT:    .cfi_offset %f9, -176
 ; NOVEC-NEXT:    lh %r0, 342(%r15)
@@ -495,8 +495,8 @@ define half @fun9(half %Arg0, half %Arg1, half %Arg2, half %Arg3, half %Arg4) {
 ; NOVEC-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; NOVEC-NEXT:    aebr %f0, %f9
 ; NOVEC-NEXT:    brasl %r14, __truncsfhf2@PLT
-; NOVEC-NEXT:    ld %f8, 168(%r15) # 8-byte Folded Reload
-; NOVEC-NEXT:    ld %f9, 160(%r15) # 8-byte Folded Reload
+; NOVEC-NEXT:    ld %f8, 168(%r15) # 8-byte Reload
+; NOVEC-NEXT:    ld %f9, 160(%r15) # 8-byte Reload
 ; NOVEC-NEXT:    lmg %r14, %r15, 288(%r15)
 ; NOVEC-NEXT:    br %r14
 ;
@@ -507,8 +507,8 @@ define half @fun9(half %Arg0, half %Arg1, half %Arg2, half %Arg3, half %Arg4) {
 ; VECTOR-NEXT:    .cfi_offset %r15, -40
 ; VECTOR-NEXT:    aghi %r15, -176
 ; VECTOR-NEXT:    .cfi_def_cfa_offset 336
-; VECTOR-NEXT:    std %f8, 168(%r15) # 8-byte Folded Spill
-; VECTOR-NEXT:    std %f9, 160(%r15) # 8-byte Folded Spill
+; VECTOR-NEXT:    std %f8, 168(%r15) # 8-byte Spill
+; VECTOR-NEXT:    std %f9, 160(%r15) # 8-byte Spill
 ; VECTOR-NEXT:    .cfi_offset %f8, -168
 ; VECTOR-NEXT:    .cfi_offset %f9, -176
 ; VECTOR-NEXT:    vlreph %v0, 342(%r15)
@@ -519,8 +519,8 @@ define half @fun9(half %Arg0, half %Arg1, half %Arg2, half %Arg3, half %Arg4) {
 ; VECTOR-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; VECTOR-NEXT:    aebr %f0, %f9
 ; VECTOR-NEXT:    brasl %r14, __truncsfhf2@PLT
-; VECTOR-NEXT:    ld %f8, 168(%r15) # 8-byte Folded Reload
-; VECTOR-NEXT:    ld %f9, 160(%r15) # 8-byte Folded Reload
+; VECTOR-NEXT:    ld %f8, 168(%r15) # 8-byte Reload
+; VECTOR-NEXT:    ld %f9, 160(%r15) # 8-byte Reload
 ; VECTOR-NEXT:    lmg %r14, %r15, 288(%r15)
 ; VECTOR-NEXT:    br %r14
   %A0 = fadd half %Arg3, %Arg4

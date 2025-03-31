@@ -13,8 +13,8 @@ define half @fun0(half %Arg0, half %Arg1) {
 ; CHECK-NEXT:    .cfi_offset %r15, -40
 ; CHECK-NEXT:    aghi %r15, -176
 ; CHECK-NEXT:    .cfi_def_cfa_offset 336
-; CHECK-NEXT:    std %f8, 168(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f9, 160(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    std %f8, 168(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f9, 160(%r15) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset %f8, -168
 ; CHECK-NEXT:    .cfi_offset %f9, -176
 ; CHECK-NEXT:    ldr %f8, %f2
@@ -30,8 +30,8 @@ define half @fun0(half %Arg0, half %Arg1) {
 ; CHECK-NEXT:  .LBB0_2: # %entry
 ; CHECK-NEXT:    # kill: def $f0s killed $f0s killed $v0
 ; CHECK-NEXT:    brasl %r14, __truncsfhf2@PLT
-; CHECK-NEXT:    ld %f8, 168(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f9, 160(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    ld %f8, 168(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f9, 160(%r15) # 8-byte Reload
 ; CHECK-NEXT:    lmg %r14, %r15, 288(%r15)
 ; CHECK-NEXT:    br %r14
 entry:
@@ -100,8 +100,8 @@ define i64 @fun3(i64 %a, i64 %b, half %f1, half %f2) #0 {
 ; CHECK-NEXT:    .cfi_offset %r15, -40
 ; CHECK-NEXT:    aghi %r15, -176
 ; CHECK-NEXT:    .cfi_def_cfa_offset 336
-; CHECK-NEXT:    std %f8, 168(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f9, 160(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    std %f8, 168(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f9, 160(%r15) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset %f8, -168
 ; CHECK-NEXT:    .cfi_offset %f9, -176
 ; CHECK-NEXT:    ldr %f8, %f0
@@ -113,8 +113,8 @@ define i64 @fun3(i64 %a, i64 %b, half %f1, half %f2) #0 {
 ; CHECK-NEXT:    ldr %f0, %f8
 ; CHECK-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; CHECK-NEXT:    cebr %f0, %f9
-; CHECK-NEXT:    ld %f8, 168(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f9, 160(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    ld %f8, 168(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f9, 160(%r15) # 8-byte Reload
 ; CHECK-NEXT:    selgre %r2, %r12, %r13
 ; CHECK-NEXT:    lmg %r12, %r15, 272(%r15)
 ; CHECK-NEXT:    br %r14
