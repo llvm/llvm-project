@@ -3943,7 +3943,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.errno.errno
     libc.src.math.atanhf16
-    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.cast
 )
 
 add_fp_unittest(

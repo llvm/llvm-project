@@ -61,17 +61,20 @@ LLVM_LIBC_FUNCTION(float16, atanhf16, (float16 x)) {
 
   // For |x| less than approximately 0.10
   if (LIBC_UNLIKELY(x_abs <= 0x2e66U)) {
+    // atanh(+/-0) = +/-0
+    if (LIBC_UNLIKELY(x_abs == 0U))
+      return x;
     // The Taylor expansion of atanh(x) is:
     //    atanh(x) = x + x^3/3 + x^5/5 + x^7/7 + x^9/9 + x^11/11
     //             = x * [1 + x^2/3 + x^4/5 + x^6/7 + x^8/9 + x^10/11]
-    // When |x| < 0x0100U, this can be approximated by:
+    // When |x| < 2^-16, this can be approximated by:
     //    atanh(x) ≈ x + (1/3)*x^3
     if (LIBC_UNLIKELY(x_abs < 0x0100U)) {
-      return static_cast<float16>(
-          LIBC_UNLIKELY(x_abs == 0) ? x : (x + 0x1.555556p-2f * x * x * x));
+      float xf = x;
+      return fputil::cast<float16>(xf + 0x1.555556p-2f * xf * xf * xf);
     }
 
-    // For 0x0100U <= |x| <= 0x2e66U:
+    // For 2^-16 <= |x| <= 0x1.998p-4 (~0.10):
     //   Let t = x^2.
     //   Define P(t) ≈ (1/3)*t + (1/5)*t^2 + (1/7)*t^3 + (1/9)*t^4 + (1/11)*t^5.
     // Coefficients (from Sollya, RN, hexadecimal):
@@ -86,7 +89,7 @@ LLVM_LIBC_FUNCTION(float16, atanhf16, (float16 x)) {
   }
 
   float xf = x;
-  return fputil::cast<float16>(0.5f * log_eval((xf + 1.0f) / (xf - 1.0f)));
+  return fputil::cast<float16>(0.5 * log_eval((xf + 1.0f) / (xf - 1.0f)));
 }
 
 } // namespace LIBC_NAMESPACE_DECL
