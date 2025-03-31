@@ -571,7 +571,7 @@ int main(int argc, char *argv[]) {
   }
 
   lldb::IOObjectSP input = std::make_shared<NativeFile>(
-      fileno(stdin), File::eOpenOptionReadOnly, true);
+      fileno(stdin), File::eOpenOptionReadOnly, false);
   lldb::IOObjectSP output = std::make_shared<NativeFile>(
       stdout_fd, File::eOpenOptionWriteOnly, false);
 
