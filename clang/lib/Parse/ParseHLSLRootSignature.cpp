@@ -43,12 +43,11 @@ bool RootSignatureParser::parse() {
       break;
   }
 
-  if (!tryConsumeExpectedToken(TokenKind::end_of_stream)) {
-    getDiags().Report(CurToken.TokLoc, diag::err_hlsl_unexpected_end_of_params)
-        << /*expected=*/TokenKind::end_of_stream
-        << /*param of=*/TokenKind::kw_RootSignature;
+  if (consumeExpectedToken(TokenKind::end_of_stream,
+                           diag::err_hlsl_unexpected_end_of_params,
+                           /*param of=*/TokenKind::kw_RootSignature))
     return true;
-  }
+
   return false;
 }
 
@@ -74,12 +73,10 @@ bool RootSignatureParser::parseDescriptorTable() {
       break;
   }
 
-  if (!tryConsumeExpectedToken(TokenKind::pu_r_paren)) {
-    getDiags().Report(CurToken.TokLoc, diag::err_hlsl_unexpected_end_of_params)
-        << /*expected=*/TokenKind::pu_r_paren
-        << /*param of=*/TokenKind::kw_DescriptorTable;
+  if (consumeExpectedToken(TokenKind::pu_r_paren,
+                           diag::err_hlsl_unexpected_end_of_params,
+                           /*param of=*/TokenKind::kw_DescriptorTable))
     return true;
-  }
 
   Elements.push_back(Table);
   return false;
@@ -132,7 +129,7 @@ bool RootSignatureParser::parseDescriptorTableClause() {
     return true;
 
   if (consumeExpectedToken(TokenKind::pu_r_paren, diag::err_hlsl_unexpected_end_of_params,
-                           ParamKind))
+                           /*param of=*/ParamKind))
     return true;
 
   Elements.push_back(Clause);
@@ -279,6 +276,7 @@ bool RootSignatureParser::consumeExpectedToken(TokenKind Expected,
   case diag::err_expected:
     DB << Expected;
     break;
+  case diag::err_hlsl_unexpected_end_of_params:
   case diag::err_expected_either:
   case diag::err_expected_after:
     DB << Expected << Context;
