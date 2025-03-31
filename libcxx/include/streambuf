@@ -372,10 +372,10 @@ private:
   char_type* __eout_ = nullptr;
 };
 
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_streambuf<char>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI basic_streambuf<char>;
 
 #    if _LIBCPP_HAS_WIDE_CHARACTERS
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_streambuf<wchar_t>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI basic_streambuf<wchar_t>;
 #    endif
 
 _LIBCPP_END_NAMESPACE_STD

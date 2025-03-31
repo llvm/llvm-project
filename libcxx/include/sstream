@@ -1276,10 +1276,10 @@ swap(basic_stringstream<_CharT, _Traits, _Allocator>& __x, basic_stringstream<_C
 }
 
 #    if _LIBCPP_AVAILABILITY_HAS_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_stringbuf<char>;
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_stringstream<char>;
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ostringstream<char>;
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_istringstream<char>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI basic_stringbuf<char>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI basic_stringstream<char>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI basic_ostringstream<char>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI basic_istringstream<char>;
 #    endif
 
 _LIBCPP_END_NAMESPACE_STD
