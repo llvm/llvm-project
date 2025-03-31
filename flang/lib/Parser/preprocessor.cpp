@@ -410,6 +410,31 @@ void Preprocessor::Define(const std::string &macro, const std::string &value) {
 
 void Preprocessor::Undefine(std::string macro) { definitions_.erase(macro); }
 
+static TokenSequence MacroConstantExprTokenize(const TokenSequence &input) {
+  TokenSequence result;
+  std::size_t tokens = input.SizeInChars();
+  if (tokens == 0 ||
+      (tokens > 0 && !IsDecimalDigit(input.TokenAt(0).ToString()[0]))) {
+    return input;
+  }
+  for (std::size_t j{0}; j < input.SizeInTokens(); ++j) {
+    const CharBlock &token{input.TokenAt(j)};
+    std::size_t bytes{token.size()};
+    for (std::size_t k{0}; k < bytes; ++k) {
+      Provenance from{input.GetTokenProvenance(j, k)};
+      if (!IsDecimalDigit(token[k])) {
+        result.CloseToken();
+        result.PutNextTokenChar(token[k], from);
+        result.CloseToken();
+      } else {
+        result.PutNextTokenChar(token[k], from);
+      }
+    }
+  }
+  result.CloseToken();
+  return result;
+}
+
 std::optional<TokenSequence> Preprocessor::MacroReplacement(
     const TokenSequence &input, Prescanner &prescanner,
     std::optional<std::size_t> *partialFunctionLikeMacro, bool inIfExpression) {
@@ -537,8 +562,9 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
       }
       std::optional<std::size_t> partialFLM;
       def->set_isDisabled(true);
-      TokenSequence replaced{TokenPasting(ReplaceMacros(
-          def->replacement(), prescanner, &partialFLM, inIfExpression))};
+      TokenSequence replaced{
+          TokenPasting(MacroConstantExprTokenize(ReplaceMacros(
+              def->replacement(), prescanner, &partialFLM, inIfExpression)))};
       def->set_isDisabled(false);
       if (partialFLM &&
           CompleteFunctionLikeMacro(j + 1, replaced, *partialFLM)) {
