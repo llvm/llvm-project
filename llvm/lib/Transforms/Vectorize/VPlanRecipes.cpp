@@ -2071,8 +2071,18 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
     StartLane = State.Lane->getKnownLane();
     EndLane = StartLane + 1;
   }
-  Value *StartIdx0 =
-      createStepForVF(Builder, IntStepTy, State.VF, getUnrollPart(*this));
+  Value *StartIdx0;
+  if (getUnrollPart(*this) == 0)
+    StartIdx0 = ConstantInt::get(IntStepTy, 0);
+  else {
+    StartIdx0 = State.get(getOperand(2), true);
+    if (getUnrollPart(*this) != 1) {
+      StartIdx0 =
+          Builder.CreateMul(StartIdx0, ConstantInt::get(StartIdx0->getType(),
+                                                        getUnrollPart(*this)));
+    }
+    StartIdx0 = Builder.CreateTrunc(StartIdx0, IntStepTy);
+  }
 
   if (!FirstLaneOnly && State.VF.isScalable()) {
     auto *SplatStartIdx = Builder.CreateVectorSplat(State.VF, StartIdx0);
