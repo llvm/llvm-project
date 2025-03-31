@@ -1064,30 +1064,15 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-void VPIRInstruction::execute(VPTransformState &State) {
-  assert((isa<PHINode>(&I) || getNumOperands() == 0) &&
-         "Only PHINodes can have extra operands");
-  for (const auto &[Idx, Op] : enumerate(operands())) {
-    VPValue *ExitValue = Op;
-    auto Lane = vputils::isUniformAfterVectorization(ExitValue)
-                    ? VPLane::getFirstLane()
-                    : VPLane::getLastLaneForVF(State.VF);
-    VPBlockBase *Pred = getParent()->getPredecessors()[Idx];
-    auto *PredVPBB = Pred->getExitingBasicBlock();
-    BasicBlock *PredBB = State.CFG.VPBB2IRBB[PredVPBB];
-    // Set insertion point in PredBB in case an extract needs to be generated.
-    // TODO: Model extracts explicitly.
-    State.Builder.SetInsertPoint(PredBB, PredBB->getFirstNonPHIIt());
-    Value *V = State.get(ExitValue, VPLane(Lane));
-    auto *Phi = cast<PHINode>(&I);
-    // If there is no existing block for PredBB in the phi, add a new incoming
-    // value. Otherwise update the existing incoming value for PredBB.
-    if (Phi->getBasicBlockIndex(PredBB) == -1)
-      Phi->addIncoming(V, PredBB);
-    else
-      Phi->setIncomingValueForBlock(PredBB, V);
-  }
+VPIRInstruction *VPIRInstruction ::create(Instruction &I) {
+  if (auto *Phi = dyn_cast<PHINode>(&I))
+    return new VPIRPhi(*Phi);
+  return new VPIRInstruction(I);
+}
 
+void VPIRInstruction::execute(VPTransformState &State) {
+  assert(!isa<VPIRPhi>(this) && getNumOperands() == 0 &&
+         "PHINodes must be handled by VPIRPhi");
   // Advance the insert point after the wrapped IR instruction. This allows
   // interleaving VPIRInstructions and other recipes.
   State.Builder.SetInsertPoint(I.getParent(), std::next(I.getIterator()));
@@ -1120,6 +1105,40 @@ void VPIRInstruction::extractLastLaneOfOperand(VPBuilder &Builder) {
 void VPIRInstruction::print(raw_ostream &O, const Twine &Indent,
                             VPSlotTracker &SlotTracker) const {
   O << Indent << "IR " << I;
+}
+#endif
+
+void VPIRPhi::execute(VPTransformState &State) {
+  PHINode *Phi = &getIRPhi();
+  for (const auto &[Idx, Op] : enumerate(operands())) {
+    VPValue *ExitValue = Op;
+    auto Lane = vputils::isUniformAfterVectorization(ExitValue)
+                    ? VPLane::getFirstLane()
+                    : VPLane::getLastLaneForVF(State.VF);
+    VPBlockBase *Pred = getParent()->getPredecessors()[Idx];
+    auto *PredVPBB = Pred->getExitingBasicBlock();
+    BasicBlock *PredBB = State.CFG.VPBB2IRBB[PredVPBB];
+    // Set insertion point in PredBB in case an extract needs to be generated.
+    // TODO: Model extracts explicitly.
+    State.Builder.SetInsertPoint(PredBB, PredBB->getFirstNonPHIIt());
+    Value *V = State.get(ExitValue, VPLane(Lane));
+    // If there is no existing block for PredBB in the phi, add a new incoming
+    // value. Otherwise update the existing incoming value for PredBB.
+    if (Phi->getBasicBlockIndex(PredBB) == -1)
+      Phi->addIncoming(V, PredBB);
+    else
+      Phi->setIncomingValueForBlock(PredBB, V);
+  }
+
+  // Advance the insert point after the wrapped IR instruction. This allows
+  // interleaving VPIRInstructions and other recipes.
+  State.Builder.SetInsertPoint(Phi->getParent(), std::next(Phi->getIterator()));
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPIRPhi::print(raw_ostream &O, const Twine &Indent,
+                    VPSlotTracker &SlotTracker) const {
+  VPIRInstruction::print(O, Indent, SlotTracker);
 
   if (getNumOperands() != 0) {
     O << " (extra operand" << (getNumOperands() > 1 ? "s" : "") << ": ";

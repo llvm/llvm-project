@@ -861,8 +861,8 @@ void VPlanTransforms::optimizeInductionExitUsers(
   VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType());
   for (VPIRBasicBlock *ExitVPBB : Plan.getExitBlocks()) {
     for (VPRecipeBase &R : *ExitVPBB) {
-      auto *ExitIRI = cast<VPIRInstruction>(&R);
-      if (!isa<PHINode>(ExitIRI->getInstruction()))
+      auto *ExitIRI = dyn_cast<VPIRPhi>(&R);
+      if (!ExitIRI)
         break;
 
       for (auto [Idx, PredVPBB] : enumerate(ExitVPBB->getPredecessors())) {
@@ -2221,20 +2221,20 @@ void VPlanTransforms::handleUncountableEarlyExit(
   VPBuilder MiddleBuilder(NewMiddle);
   VPBuilder EarlyExitB(VectorEarlyExitVPBB);
   for (VPRecipeBase &R : *VPEarlyExitBlock) {
-    auto *ExitIRI = cast<VPIRInstruction>(&R);
-    auto *ExitPhi = dyn_cast<PHINode>(&ExitIRI->getInstruction());
-    if (!ExitPhi)
+    auto *ExitIRI = dyn_cast<VPIRPhi>(&R);
+    if (!ExitIRI)
       break;
 
+    PHINode &ExitPhi = ExitIRI->getIRPhi();
     VPValue *IncomingFromEarlyExit = RecipeBuilder.getVPValueOrAddLiveIn(
-        ExitPhi->getIncomingValueForBlock(UncountableExitingBlock));
+        ExitPhi.getIncomingValueForBlock(UncountableExitingBlock));
 
     if (OrigLoop->getUniqueExitBlock()) {
       // If there's a unique exit block, VPEarlyExitBlock has 2 predecessors
       // (MiddleVPBB and NewMiddle). Add the incoming value from MiddleVPBB
       // which is coming from the original latch.
       VPValue *IncomingFromLatch = RecipeBuilder.getVPValueOrAddLiveIn(
-          ExitPhi->getIncomingValueForBlock(OrigLoop->getLoopLatch()));
+          ExitPhi.getIncomingValueForBlock(OrigLoop->getLoopLatch()));
       ExitIRI->addOperand(IncomingFromLatch);
       ExitIRI->extractLastLaneOfOperand(MiddleBuilder);
     }
