@@ -5605,71 +5605,71 @@ int __num_get<_CharT>::__stage2_int_loop(
   return 0;
 }
 
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS collate<char>;
-_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS collate<wchar_t>;)
+template class _LIBCPP_EXPORTED_FROM_ABI collate<char>;
+_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_EXPORTED_FROM_ABI collate<wchar_t>;)
 
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS num_get<char>;
-_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS num_get<wchar_t>;)
+template class _LIBCPP_EXPORTED_FROM_ABI num_get<char>;
+_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_EXPORTED_FROM_ABI num_get<wchar_t>;)
 
-template struct _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __num_get<char>;
-_LIBCPP_IF_WIDE_CHARACTERS(template struct _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __num_get<wchar_t>;)
+template struct _LIBCPP_EXPORTED_FROM_ABI __num_get<char>;
+_LIBCPP_IF_WIDE_CHARACTERS(template struct _LIBCPP_EXPORTED_FROM_ABI __num_get<wchar_t>;)
 
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS num_put<char>;
-_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS num_put<wchar_t>;)
+template class _LIBCPP_EXPORTED_FROM_ABI num_put<char>;
+_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_EXPORTED_FROM_ABI num_put<wchar_t>;)
 
-template struct _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __num_put<char>;
-_LIBCPP_IF_WIDE_CHARACTERS(template struct _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __num_put<wchar_t>;)
+template struct _LIBCPP_EXPORTED_FROM_ABI __num_put<char>;
+_LIBCPP_IF_WIDE_CHARACTERS(template struct _LIBCPP_EXPORTED_FROM_ABI __num_put<wchar_t>;)
 
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS time_get<char>;
-_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS time_get<wchar_t>;)
+template class _LIBCPP_EXPORTED_FROM_ABI time_get<char>;
+_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_EXPORTED_FROM_ABI time_get<wchar_t>;)
 
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS time_get_byname<char>;
-_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS time_get_byname<wchar_t>;)
+template class _LIBCPP_EXPORTED_FROM_ABI time_get_byname<char>;
+_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_EXPORTED_FROM_ABI time_get_byname<wchar_t>;)
 
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS time_put<char>;
-_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS time_put<wchar_t>;)
+template class _LIBCPP_EXPORTED_FROM_ABI time_put<char>;
+_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_EXPORTED_FROM_ABI time_put<wchar_t>;)
 
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS time_put_byname<char>;
-_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS time_put_byname<wchar_t>;)
+template class _LIBCPP_EXPORTED_FROM_ABI time_put_byname<char>;
+_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_EXPORTED_FROM_ABI time_put_byname<wchar_t>;)
 
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS moneypunct<char, false>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS moneypunct<char, true>;
-_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS moneypunct<wchar_t, false>;)
-_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS moneypunct<wchar_t, true>;)
+template class _LIBCPP_EXPORTED_FROM_ABI moneypunct<char, false>;
+template class _LIBCPP_EXPORTED_FROM_ABI moneypunct<char, true>;
+_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_EXPORTED_FROM_ABI moneypunct<wchar_t, false>;)
+_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_EXPORTED_FROM_ABI moneypunct<wchar_t, true>;)
 
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS moneypunct_byname<char, false>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS moneypunct_byname<char, true>;
-_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS moneypunct_byname<wchar_t, false>;)
-_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS moneypunct_byname<wchar_t, true>;)
+template class _LIBCPP_EXPORTED_FROM_ABI moneypunct_byname<char, false>;
+template class _LIBCPP_EXPORTED_FROM_ABI moneypunct_byname<char, true>;
+_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_EXPORTED_FROM_ABI moneypunct_byname<wchar_t, false>;)
+_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_EXPORTED_FROM_ABI moneypunct_byname<wchar_t, true>;)
 
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS money_get<char>;
-_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS money_get<wchar_t>;)
+template class _LIBCPP_EXPORTED_FROM_ABI money_get<char>;
+_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_EXPORTED_FROM_ABI money_get<wchar_t>;)
 
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __money_get<char>;
-_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __money_get<wchar_t>;)
+template class _LIBCPP_EXPORTED_FROM_ABI __money_get<char>;
+_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_EXPORTED_FROM_ABI __money_get<wchar_t>;)
 
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS money_put<char>;
-_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS money_put<wchar_t>;)
+template class _LIBCPP_EXPORTED_FROM_ABI money_put<char>;
+_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_EXPORTED_FROM_ABI money_put<wchar_t>;)
 
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __money_put<char>;
-_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __money_put<wchar_t>;)
+template class _LIBCPP_EXPORTED_FROM_ABI __money_put<char>;
+_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_EXPORTED_FROM_ABI __money_put<wchar_t>;)
 
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS messages<char>;
-_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS messages<wchar_t>;)
+template class _LIBCPP_EXPORTED_FROM_ABI messages<char>;
+_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_EXPORTED_FROM_ABI messages<wchar_t>;)
 
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS messages_byname<char>;
-_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS messages_byname<wchar_t>;)
+template class _LIBCPP_EXPORTED_FROM_ABI messages_byname<char>;
+_LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_EXPORTED_FROM_ABI messages_byname<wchar_t>;)
 
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS codecvt_byname<char, char, mbstate_t>;
+template class _LIBCPP_EXPORTED_FROM_ABI codecvt_byname<char, char, mbstate_t>;
 _LIBCPP_IF_WIDE_CHARACTERS(
-    template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS codecvt_byname<wchar_t, char, mbstate_t>;)
-template class _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS
+    template class _LIBCPP_EXPORTED_FROM_ABI codecvt_byname<wchar_t, char, mbstate_t>;)
+template class _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_EXPORTED_FROM_ABI
     codecvt_byname<char16_t, char, mbstate_t>;
-template class _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS
+template class _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_EXPORTED_FROM_ABI
     codecvt_byname<char32_t, char, mbstate_t>;
 #if _LIBCPP_HAS_CHAR8_T
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS codecvt_byname<char16_t, char8_t, mbstate_t>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS codecvt_byname<char32_t, char8_t, mbstate_t>;
+template class _LIBCPP_EXPORTED_FROM_ABI codecvt_byname<char16_t, char8_t, mbstate_t>;
+template class _LIBCPP_EXPORTED_FROM_ABI codecvt_byname<char32_t, char8_t, mbstate_t>;
 #endif
 
 _LIBCPP_END_NAMESPACE_STD

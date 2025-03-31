@@ -94,11 +94,11 @@ locale::id moneypunct<_CharT, _International>::id;
 template <class _CharT, bool _International>
 const bool moneypunct<_CharT, _International>::intl;
 
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS moneypunct<char, false>;
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS moneypunct<char, true>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI moneypunct<char, false>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI moneypunct<char, true>;
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS moneypunct<wchar_t, false>;
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS moneypunct<wchar_t, true>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI moneypunct<wchar_t, false>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI moneypunct<wchar_t, true>;
 #  endif
 
 // moneypunct_byname
@@ -151,16 +151,16 @@ template <>
 _LIBCPP_EXPORTED_FROM_ABI void moneypunct_byname<char, false>::init(const char*);
 template <>
 _LIBCPP_EXPORTED_FROM_ABI void moneypunct_byname<char, true>::init(const char*);
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS moneypunct_byname<char, false>;
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS moneypunct_byname<char, true>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI moneypunct_byname<char, false>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI moneypunct_byname<char, true>;
 
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
 _LIBCPP_EXPORTED_FROM_ABI void moneypunct_byname<wchar_t, false>::init(const char*);
 template <>
 _LIBCPP_EXPORTED_FROM_ABI void moneypunct_byname<wchar_t, true>::init(const char*);
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS moneypunct_byname<wchar_t, false>;
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS moneypunct_byname<wchar_t, true>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI moneypunct_byname<wchar_t, false>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI moneypunct_byname<wchar_t, true>;
 #  endif
 
 // money_get
@@ -221,9 +221,9 @@ void __money_get<_CharT>::__gather_info(
   }
 }
 
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __money_get<char>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI __money_get<char>;
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __money_get<wchar_t>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI __money_get<wchar_t>;
 #  endif
 
 template <class _CharT, class _InputIterator = istreambuf_iterator<_CharT> >
@@ -535,9 +535,9 @@ _InputIterator money_get<_CharT, _InputIterator>::do_get(
   return __b;
 }
 
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS money_get<char>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI money_get<char>;
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS money_get<wchar_t>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI money_get<wchar_t>;
 #  endif
 
 // money_put
@@ -713,9 +713,9 @@ void __money_put<_CharT>::__format(
     __mi = __mb;
 }
 
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __money_put<char>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI __money_put<char>;
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __money_put<wchar_t>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI __money_put<wchar_t>;
 #  endif
 
 template <class _CharT, class _OutputIterator = ostreambuf_iterator<_CharT> >
@@ -859,9 +859,9 @@ _OutputIterator money_put<_CharT, _OutputIterator>::do_put(
   return std::__pad_and_output(__s, __mb, __mi, __me, __iob, __fl);
 }
 
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS money_put<char>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI money_put<char>;
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS money_put<wchar_t>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI money_put<wchar_t>;
 #  endif
 
 _LIBCPP_END_NAMESPACE_STD

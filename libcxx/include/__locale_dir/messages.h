@@ -112,9 +112,9 @@ void messages<_CharT>::do_close(catalog __c) const {
 #  endif // _LIBCPP_HAS_CATOPEN
 }
 
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS messages<char>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI messages<char>;
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS messages<wchar_t>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI messages<wchar_t>;
 #  endif
 
 template <class _CharT>
@@ -131,9 +131,9 @@ protected:
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~messages_byname() override {}
 };
 
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS messages_byname<char>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI messages_byname<char>;
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS messages_byname<wchar_t>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI messages_byname<wchar_t>;
 #  endif
 
 _LIBCPP_END_NAMESPACE_STD

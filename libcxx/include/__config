@@ -195,23 +195,12 @@ typedef __char32_t char32_t;
 #    endif
 
 #    if defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS) || (defined(__MINGW32__) && !defined(_LIBCPP_BUILDING_LIBRARY))
-#      define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS
-#      define _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS
 #      define _LIBCPP_OVERRIDABLE_FUNC_VIS
 #      define _LIBCPP_EXPORTED_FROM_ABI
 #    elif defined(_LIBCPP_BUILDING_LIBRARY)
-#      if defined(__MINGW32__)
-#        define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __declspec(dllexport)
-#        define _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS
-#      else
-#        define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS
-#        define _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __declspec(dllexport)
-#      endif
 #      define _LIBCPP_OVERRIDABLE_FUNC_VIS __declspec(dllexport)
 #      define _LIBCPP_EXPORTED_FROM_ABI __declspec(dllexport)
 #    else
-#      define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __declspec(dllimport)
-#      define _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS
 #      define _LIBCPP_OVERRIDABLE_FUNC_VIS
 #      define _LIBCPP_EXPORTED_FROM_ABI __declspec(dllimport)
 #    endif
@@ -231,8 +220,6 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_HIDDEN _LIBCPP_VISIBILITY("hidden")
 #    define _LIBCPP_TEMPLATE_DATA_VIS _LIBCPP_VISIBILITY("default")
 #    define _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_VISIBILITY("default")
-#    define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS _LIBCPP_VISIBILITY("default")
-#    define _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS
 
 // TODO: Make this a proper customization point or remove the option to override it.
 #    ifndef _LIBCPP_OVERRIDABLE_FUNC_VIS
@@ -382,6 +369,17 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_HIDE_FROM_ABI_AFTER_V1 _LIBCPP_HIDE_FROM_ABI
 #  endif
 
+#  if __has_warning("-Wdllexport-explicit-instantiation")
+#      define _LIBCPP_CLANG_DIAGNOSTIC_IGNORE_DLLEXPORT                                                                \
+        _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wdllexport-explicit-instantiation")
+#  elif defined(_LIBCPP_OBJECT_FORMAT_COFF)
+#    define _LIBCPP_CLANG_DIAGNOSTIC_IGNORE_DLLEXPORT                                                                  \
+      _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wignored-attributes")                                                         \
+      _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wdllexport-explicit-instantiation-decl")
+#  else
+#    define _LIBCPP_CLANG_DIAGNOSTIC_IGNORE_DLLEXPORT
+#  endif
+
 // Clang modules take a significant compile time hit when pushing and popping diagnostics.
 // Since all the headers are marked as system headers unless _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER is defined, we can
 // simply disable this pushing and popping when _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER isn't defined.
@@ -393,6 +391,7 @@ typedef __char32_t char32_t;
       _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++17-extensions")                                                           \
       _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++20-extensions")                                                           \
       _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++23-extensions")                                                           \
+      _LIBCPP_CLANG_DIAGNOSTIC_IGNORE_DLLEXPORT                                                                        \
       _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++14-extensions")                                                             \
       _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++17-extensions")                                                             \
       _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++20-extensions")                                                             \

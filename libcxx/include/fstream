@@ -1600,9 +1600,9 @@ inline void basic_fstream<_CharT, _Traits>::close() {
 }
 
 #    if _LIBCPP_AVAILABILITY_HAS_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ifstream<char>;
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ofstream<char>;
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_filebuf<char>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI basic_ifstream<char>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI basic_ofstream<char>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI basic_filebuf<char>;
 #    endif
 
 _LIBCPP_END_NAMESPACE_STD

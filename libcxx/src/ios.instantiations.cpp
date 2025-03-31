@@ -17,30 +17,30 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 // Original explicit instantiations provided in the library
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS basic_ios<char>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS basic_streambuf<char>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS basic_istream<char>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS basic_ostream<char>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS basic_iostream<char>;
+template class _LIBCPP_EXPORTED_FROM_ABI basic_ios<char>;
+template class _LIBCPP_EXPORTED_FROM_ABI basic_streambuf<char>;
+template class _LIBCPP_EXPORTED_FROM_ABI basic_istream<char>;
+template class _LIBCPP_EXPORTED_FROM_ABI basic_ostream<char>;
+template class _LIBCPP_EXPORTED_FROM_ABI basic_iostream<char>;
 
 #if _LIBCPP_HAS_WIDE_CHARACTERS
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS basic_ios<wchar_t>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS basic_streambuf<wchar_t>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS basic_istream<wchar_t>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS basic_ostream<wchar_t>;
+template class _LIBCPP_EXPORTED_FROM_ABI basic_ios<wchar_t>;
+template class _LIBCPP_EXPORTED_FROM_ABI basic_streambuf<wchar_t>;
+template class _LIBCPP_EXPORTED_FROM_ABI basic_istream<wchar_t>;
+template class _LIBCPP_EXPORTED_FROM_ABI basic_ostream<wchar_t>;
 #endif
 
 // Additional instantiations added later. Whether programs rely on these being
 // available is protected by _LIBCPP_AVAILABILITY_HAS_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1.
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS basic_stringbuf<char>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS basic_stringstream<char>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS basic_ostringstream<char>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS basic_istringstream<char>;
+template class _LIBCPP_EXPORTED_FROM_ABI basic_stringbuf<char>;
+template class _LIBCPP_EXPORTED_FROM_ABI basic_stringstream<char>;
+template class _LIBCPP_EXPORTED_FROM_ABI basic_ostringstream<char>;
+template class _LIBCPP_EXPORTED_FROM_ABI basic_istringstream<char>;
 
 #if _LIBCPP_HAS_FILESYSTEM
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS basic_ifstream<char>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS basic_ofstream<char>;
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS basic_filebuf<char>;
+template class _LIBCPP_EXPORTED_FROM_ABI basic_ifstream<char>;
+template class _LIBCPP_EXPORTED_FROM_ABI basic_ofstream<char>;
+template class _LIBCPP_EXPORTED_FROM_ABI basic_filebuf<char>;
 #endif
 
 // Add more here if needed...

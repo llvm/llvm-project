@@ -197,9 +197,9 @@ int __num_get<_CharT>::__stage2_float_loop(
   return 0;
 }
 
-extern template struct _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __num_get<char>;
+extern template struct _LIBCPP_EXPORTED_FROM_ABI __num_get<char>;
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
-extern template struct _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __num_get<wchar_t>;
+extern template struct _LIBCPP_EXPORTED_FROM_ABI __num_get<wchar_t>;
 #  endif
 
 template <class _Tp>
@@ -630,9 +630,9 @@ _InputIterator num_get<_CharT, _InputIterator>::do_get(
   return __res;
 }
 
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS num_get<char>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI num_get<char>;
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS num_get<wchar_t>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI num_get<wchar_t>;
 #  endif
 
 struct _LIBCPP_EXPORTED_FROM_ABI __num_put_base {
@@ -755,9 +755,9 @@ void __num_put<_CharT>::__widen_and_group_float(
     __op = __ob + (__np - __nb);
 }
 
-extern template struct _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __num_put<char>;
+extern template struct _LIBCPP_EXPORTED_FROM_ABI __num_put<char>;
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
-extern template struct _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __num_put<wchar_t>;
+extern template struct _LIBCPP_EXPORTED_FROM_ABI __num_put<wchar_t>;
 #  endif
 
 template <class _CharT, class _OutputIterator = ostreambuf_iterator<_CharT> >
@@ -1003,9 +1003,9 @@ num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob, char_ty
   return __res;
 }
 
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS num_put<char>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI num_put<char>;
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS num_put<wchar_t>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI num_put<wchar_t>;
 #  endif
 
 _LIBCPP_END_NAMESPACE_STD
