@@ -75,15 +75,13 @@ class CGBuilderTy : public CGBuilderBaseTy {
     llvm::APInt Offset(
         DL.getIndexSizeInBits(Addr.getType()->getPointerAddressSpace()), 0,
         /*isSigned=*/true);
-    llvm::Type *ElementTy = nullptr;
-    if (auto *GEP = dyn_cast<llvm::GEPOperator>(V)) {
-      if (!GEP->accumulateConstantOffset(DL, Offset))
-        llvm_unreachable("offset of GEP with constants is always computable");
-      ElementTy = GEP->getResultElementType();
-    } else {
-      ElementTy = llvm::GetElementPtrInst::getIndexedType(Addr.getElementType(),
-                                                          {Idx0, Idx1});
-    }
+    if (!llvm::GEPOperator::accumulateConstantOffset(
+            Addr.getElementType(), {getInt32(Idx0), getInt32(Idx1)}, DL,
+            Offset))
+      llvm_unreachable(
+          "accumulateConstantOffset with constant indices should not fail.");
+    llvm::Type *ElementTy = llvm::GetElementPtrInst::getIndexedType(
+        Addr.getElementType(), {Idx0, Idx1});
     return Address(V, ElementTy,
                    Addr.getAlignment().alignmentAtOffset(
                        CharUnits::fromQuantity(Offset.getSExtValue())),
