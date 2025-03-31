@@ -2497,10 +2497,10 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
 
   // Finally, if we got a target passed in, then we should tell the new module
   // about this target:
-  if (target_sp) {
+  if (target_sp)
     return SWIGBridge::LLDBSwigPythonCallModuleNewTarget(
         module_name.c_str(), m_dictionary_name.c_str(), target_sp);
-  }
+
   return true;
 }
 
