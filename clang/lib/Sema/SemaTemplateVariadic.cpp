@@ -49,7 +49,7 @@ class CollectUnexpandedParameterPacksVisitor
         if (FTD && FTD->getTemplateParameters()->getDepth() >= DepthLimit)
           return;
       } else if (ND->isTemplateParameterPack() &&
-                getDepthAndIndex(ND).first >= DepthLimit) {
+                 getDepthAndIndex(ND).first >= DepthLimit) {
         return;
       }
 
