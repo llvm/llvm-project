@@ -721,7 +721,8 @@ struct AllReduceOpLowering : public ConvertOpToLLVMPattern<mpi::AllReduceOp> {
         getRawPtrAndSize(loc, rewriter, adaptor.getRecvbuf(), elemType);
     Value dataType = mpiTraits->getDataType(loc, rewriter, elemType);
     Value mpiOp = mpiTraits->getMPIOp(loc, rewriter, op.getOp());
-    Value commWorld = mpiTraits->getCommWorld(loc, rewriter);
+    Value commWorld = mpiTraits->castComm(loc, rewriter, adaptor.getComm());
+
     // 'int MPI_Allreduce(const void *sendbuf, void *recvbuf, int count,
     //                    MPI_Datatype datatype, MPI_Op op, MPI_Comm comm)'
     auto funcType = LLVM::LLVMFunctionType::get(
@@ -774,10 +775,9 @@ void mpi::populateMPIToLLVMConversionPatterns(LLVMTypeConverter &converter,
   converter.addConversion([](mpi::CommType type) {
     return IntegerType::get(type.getContext(), 64);
   });
-  patterns
-      .add<CommRankOpLowering, CommSplitOpLowering, CommWorldOpLowering,
-           FinalizeOpLowering, InitOpLowering, SendOpLowering, RecvOpLowering,
-           AllReduceOpLowering>(converter);
+  patterns.add<CommRankOpLowering, CommSplitOpLowering, CommWorldOpLowering,
+               FinalizeOpLowering, InitOpLowering, SendOpLowering,
+               RecvOpLowering, AllReduceOpLowering>(converter);
 }
 
 void mpi::registerConvertMPIToLLVMInterface(DialectRegistry &registry) {

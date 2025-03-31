@@ -175,7 +175,7 @@ def MPI_ISendOp : MPI_Op<"isend", []> {
   let arguments = (
     ins AnyMemRef : $ref,
     I32 : $tag,
-    I32 : $rank,
+    I32 : $dest,
     MPI_Comm : $comm
   );
 
@@ -184,8 +184,8 @@ def MPI_ISendOp : MPI_Op<"isend", []> {
     MPI_Request : $req
   );
 
-  let assemblyFormat = "`(` $ref `,` $tag `,` $rank `,` $comm`)` attr-dict "
-                       "`:` type($ref) `,` type($tag) `,` type($rank) "
+  let assemblyFormat = "`(` $ref `,` $tag `,` $dest `,` $comm`)` attr-dict "
+                       "`:` type($ref) `,` type($tag) `,` type($dest) "
                        "`->` type(results)";
   let hasCanonicalizer = 1;
 }
@@ -229,11 +229,11 @@ def MPI_RecvOp : MPI_Op<"recv", []> {
 //===----------------------------------------------------------------------===//
 
 def MPI_IRecvOp : MPI_Op<"irecv", []> {
-  let summary = "Equivalent to `MPI_Irecv(ptr, size, dtype, dest, tag, "
+  let summary = "Equivalent to `MPI_Irecv(ptr, size, dtype, source, tag, "
                 "comm, &req)`";
   let description = [{
     MPI_Irecv begins a non-blocking receive of `size` elements of type `dtype` 
-    from rank `dest`. The `tag` value and communicator enables the library to 
+    from rank `source`. The `tag` value and communicator enables the library to
     determine the matching of multiple sends and receives between the same 
     ranks.
 
@@ -244,7 +244,7 @@ def MPI_IRecvOp : MPI_Op<"irecv", []> {
   let arguments = (
     ins AnyMemRef : $ref,
     I32 : $tag,
-    I32 : $rank,
+    I32 : $source,
     MPI_Comm : $comm
   );
 
@@ -253,8 +253,8 @@ def MPI_IRecvOp : MPI_Op<"irecv", []> {
     MPI_Request : $req
   );
 
-  let assemblyFormat = "`(` $ref `,` $tag `,` $rank `,` $comm`)` attr-dict "
-                       "`:` type($ref) `,` type($tag) `,` type($rank)"
+  let assemblyFormat = "`(` $ref `,` $tag `,` $source `,` $comm`)` attr-dict "
+                       "`:` type($ref) `,` type($tag) `,` type($source)"
                        "`->` type(results)";
   let hasCanonicalizer = 1;
 }
@@ -281,7 +281,7 @@ def MPI_AllReduceOp : MPI_Op<"allreduce", []> {
   let arguments = (
     ins AnyMemRef : $sendbuf,
     AnyMemRef : $recvbuf,
-    MPI_OpClassAttr : $op,
+    MPI_OpClassEnum : $op,
     MPI_Comm : $comm
   );
 
