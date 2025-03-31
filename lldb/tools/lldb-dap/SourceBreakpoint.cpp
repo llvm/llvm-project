@@ -34,8 +34,8 @@ SourceBreakpoint::SourceBreakpoint(DAP &dap, const llvm::json::Object &obj)
 
 void SourceBreakpoint::SetBreakpoint(const llvm::StringRef source_path) {
   lldb::SBFileSpecList module_list;
-  bp = dap.target.BreakpointCreateByLocation(source_path.str().c_str(), line,
-                                             column, 0, module_list);
+  m_bp = dap.target.BreakpointCreateByLocation(source_path.str().c_str(), line,
+                                               column, 0, module_list);
   if (!logMessage.empty())
     SetLogMessage();
   Breakpoint::SetBreakpoint();
@@ -288,7 +288,7 @@ void SourceBreakpoint::SetLogMessage() {
     }
   }
 
-  bp.SetCallback(BreakpointHitCallback, this);
+  m_bp.SetCallback(BreakpointHitCallback, this);
 }
 
 void SourceBreakpoint::NotifyLogMessageError(llvm::StringRef error) {

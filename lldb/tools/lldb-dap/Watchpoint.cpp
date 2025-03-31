@@ -23,33 +23,34 @@ Watchpoint::Watchpoint(DAP &d, const llvm::json::Object &obj)
   llvm::StringRef dataId = GetString(obj, "dataId").value_or("");
   std::string accessType = GetString(obj, "accessType").value_or("").str();
   auto [addr_str, size_str] = dataId.split('/');
-  llvm::to_integer(addr_str, addr, 16);
-  llvm::to_integer(size_str, size);
-  options.SetWatchpointTypeRead(accessType != "write");
+  llvm::to_integer(addr_str, m_addr, 16);
+  llvm::to_integer(size_str, m_size);
+  m_options.SetWatchpointTypeRead(accessType != "write");
   if (accessType != "read")
-    options.SetWatchpointTypeWrite(lldb::eWatchpointWriteTypeOnModify);
+    m_options.SetWatchpointTypeWrite(lldb::eWatchpointWriteTypeOnModify);
 }
 
-void Watchpoint::SetCondition() { wp.SetCondition(condition.c_str()); }
+void Watchpoint::SetCondition() { m_wp.SetCondition(condition.c_str()); }
 
 void Watchpoint::SetHitCondition() {
   uint64_t hitCount = 0;
   if (llvm::to_integer(hitCondition, hitCount))
-    wp.SetIgnoreCount(hitCount - 1);
+    m_wp.SetIgnoreCount(hitCount - 1);
 }
 
 void Watchpoint::CreateJsonObject(llvm::json::Object &object) {
-  if (!error.IsValid() || error.Fail()) {
+  if (!m_error.IsValid() || m_error.Fail()) {
     object.try_emplace("verified", false);
-    if (error.Fail())
-      EmplaceSafeString(object, "message", error.GetCString());
+    if (m_error.Fail())
+      EmplaceSafeString(object, "message", m_error.GetCString());
   } else {
     object.try_emplace("verified", true);
   }
 }
 
 void Watchpoint::SetWatchpoint() {
-  wp = dap.target.WatchpointCreateByAddress(addr, size, options, error);
+  m_wp =
+      dap.target.WatchpointCreateByAddress(m_addr, m_size, m_options, m_error);
   if (!condition.empty())
     SetCondition();
   if (!hitCondition.empty())
