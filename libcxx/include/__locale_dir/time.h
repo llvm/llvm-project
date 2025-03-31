@@ -558,9 +558,9 @@ _InputIterator time_get<_CharT, _InputIterator>::do_get(
   return __b;
 }
 
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_get<char>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI time_get<char>;
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_get<wchar_t>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI time_get<wchar_t>;
 #  endif
 
 class _LIBCPP_EXPORTED_FROM_ABI __time_get {
@@ -647,9 +647,9 @@ private:
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL const string_type& __X() const override { return this->__X_; }
 };
 
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_get_byname<char>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI time_get_byname<char>;
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_get_byname<wchar_t>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI time_get_byname<wchar_t>;
 #  endif
 
 class _LIBCPP_EXPORTED_FROM_ABI __time_put {
@@ -736,9 +736,9 @@ _OutputIterator time_put<_CharT, _OutputIterator>::do_put(
   return std::copy(__nb, __ne, __s);
 }
 
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_put<char>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI time_put<char>;
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_put<wchar_t>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI time_put<wchar_t>;
 #  endif
 
 template <class _CharT, class _OutputIterator = ostreambuf_iterator<_CharT> >
@@ -754,9 +754,9 @@ protected:
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~time_put_byname() override {}
 };
 
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_put_byname<char>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI time_put_byname<char>;
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_put_byname<wchar_t>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI time_put_byname<wchar_t>;
 #  endif
 
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
