@@ -108,17 +108,16 @@ public:
     RTC.visitTypedef(TD);
     auto QT = TD->getUnderlyingType().getCanonicalType();
     if (BR->getSourceManager().isInSystemHeader(TD->getBeginLoc())) {
-      if (auto *Type = QT.getTypePtrOrNull(); Type && QT->isPointerType())
+      if (auto *Type = QT.getTypePtrOrNull())
         SystemTypes.insert(Type);
     }
   }
 
   bool isUnknownType(QualType QT) const {
-    auto *Type = QT.getTypePtrOrNull();
-    if (!Type)
-      return false;
     auto *CanonicalType = QT.getCanonicalType().getTypePtrOrNull();
-    auto PointeeQT = Type->getPointeeType();
+    if (!CanonicalType)
+      return false;
+    auto PointeeQT = CanonicalType->getPointeeType();
     auto *PointeeType = PointeeQT.getTypePtrOrNull();
     if (!PointeeType)
       return false;
@@ -128,6 +127,7 @@ public:
     auto Name = R->getName();
     return !R->hasDefinition() && !RTC.isUnretained(QT) &&
            !SystemTypes.contains(CanonicalType) &&
+           !SystemTypes.contains(PointeeType) &&
            !Name.starts_with("Opaque") && Name != "_NSZone";
   }
 
