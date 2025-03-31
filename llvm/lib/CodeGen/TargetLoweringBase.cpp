@@ -1987,6 +1987,9 @@ void TargetLoweringBase::insertSSPDeclarations(Module &M) const {
 // Currently only support "standard" __stack_chk_guard.
 // TODO: add LOAD_STACK_GUARD support.
 Value *TargetLoweringBase::getSDagStackGuard(const Module &M) const {
+  if (getTargetMachine().getTargetTriple().isOSOpenBSD()) {
+    return M.getNamedValue("__guard_local");
+  }
   return M.getNamedValue("__stack_chk_guard");
 }
 
