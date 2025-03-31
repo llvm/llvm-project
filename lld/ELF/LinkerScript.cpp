@@ -1229,6 +1229,8 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
   // We can call this method multiple times during the creation of
   // thunks and want to start over calculation each time.
   sec->size = 0;
+  if (sec->firstInOverlay)
+    state->overlaySize = 0;
 
   // We visited SectionsCommands from processSectionCommands to
   // layout sections. Now, we visit SectionsCommands again to fix
@@ -1284,8 +1286,6 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
     // NOBITS TLS sections are similar. Additionally save the end address.
     state->tbssAddr = dot;
     dot = savedDot;
-  } else if (sec->lastInOverlay) {
-    state->overlaySize = 0;
   }
   return addressChanged;
 }

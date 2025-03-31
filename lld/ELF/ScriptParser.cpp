@@ -588,7 +588,7 @@ SmallVector<SectionCommand *, 0> ScriptParser::readOverlay() {
     prev = &osd->osec;
   }
   if (!v.empty())
-    static_cast<OutputDesc *>(v.back())->osec.lastInOverlay = true;
+    static_cast<OutputDesc *>(v.front())->osec.firstInOverlay = true;
   if (consume(">")) {
     StringRef regionName = readName();
     for (SectionCommand *od : v)
