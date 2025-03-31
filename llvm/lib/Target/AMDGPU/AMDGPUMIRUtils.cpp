@@ -509,6 +509,14 @@ static void updateSubReg(MachineOperand &UseMO,
   }
 }
 
+static unsigned getNumLanesIn32BitReg(Register Reg, const SIRegisterInfo *SIRI,
+                                      const MachineRegisterInfo &MRI) {
+  const TargetRegisterClass *RC = SIRI->getRegClassForReg(MRI, Reg);
+  const TargetRegisterClass *SubregRC =
+      SIRI->getSubRegisterClass(RC, AMDGPU::sub0);
+  return SubregRC->LaneMask.getNumLanes();
+}
+
 bool reduceChannel(unsigned Offset, MachineInstr &MI, const MCInstrDesc &Desc,
                    MachineRegisterInfo &MRI, const SIRegisterInfo *SIRI,
                    const SIInstrInfo *SIII, SlotIndexes *SlotIndexes) {
@@ -526,7 +534,19 @@ bool reduceChannel(unsigned Offset, MachineInstr &MI, const MCInstrDesc &Desc,
 
   const llvm::TargetRegisterClass *NewRC =
       SIRI->getRegClass(Desc.operands().front().RegClass);
-  unsigned Size = NewRC->getLaneMask().getNumLanes();
+  if (!NewRC->isAllocatable()) {
+    if (SIRI->isSGPRClass(NewRC))
+      NewRC = SIRI->getSGPRClassForBitWidth(NewRC->MC->RegSizeInBits);
+    else if (SIRI->isVGPRClass(NewRC))
+      NewRC = SIRI->getVGPRClassForBitWidth(NewRC->MC->RegSizeInBits);
+    else
+      return false;
+
+    if (!NewRC->isAllocatable())
+      return false;
+  }
+
+  unsigned NumLanes = NewRC->getLaneMask().getNumLanes();
   if (Offset > 0) {
     // Update offset operand in MI.
     MachineOperand *OffsetOp =
@@ -573,8 +593,8 @@ bool reduceChannel(unsigned Offset, MachineInstr &MI, const MCInstrDesc &Desc,
     for (MachineOperand *UseMO : UseMOs) {
       updateSubReg(*UseMO, NewRC, Offset, SIRI);
     }
-  } else if (Size == 1) {
-    // Clear subReg when size is 1.
+  } else if (NumLanes == getNumLanesIn32BitReg(Reg, SIRI, MRI)) {
+    // Clear subReg when it's a single 32-bit reg.
     for (MachineOperand *UseMO : UseMOs) {
       UseMO->setSubReg(0);
     }
@@ -630,7 +650,10 @@ bool removeUnusedLanes(llvm::MachineInstr &MI, MachineRegisterInfo &MRI,
     if (IsImm && Piece.Offset != 0)
       return false;
 
-    switch (Piece.Size) {
+    const unsigned Num32BitLanes =
+        Piece.Size / getNumLanesIn32BitReg(Reg, SIRI, MRI);
+
+    switch (Num32BitLanes) {
     default:
       return false;
     case 1:
@@ -645,7 +668,7 @@ bool removeUnusedLanes(llvm::MachineInstr &MI, MachineRegisterInfo &MRI,
                                          : AMDGPU::S_BUFFER_LOAD_DWORDX2_SGPR),
                            MRI, SIRI, SIII, SlotIndexes);
     case 3:
-      if (FullMask == 0xf)
+      if (FullMask == 0xff)
         return false;
       LLVM_FALLTHROUGH;
     case 4:
@@ -657,7 +680,7 @@ bool removeUnusedLanes(llvm::MachineInstr &MI, MachineRegisterInfo &MRI,
     case 5:
     case 6:
     case 7:
-      if (FullMask == 0xff)
+      if (FullMask == 0xffff)
         return false;
       LLVM_FALLTHROUGH;
     case 8:

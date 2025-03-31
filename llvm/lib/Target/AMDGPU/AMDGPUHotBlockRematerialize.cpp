@@ -2714,7 +2714,7 @@ bool tryHoldPacifist(MachineBasicBlock &MBB, LiveIntervals *LIS,
   SmallVector<MachineInstr *, 32> PacifistList;
   LLVM_DEBUG(dbgs() << "pacifist begin\n");
   for (MachineInstr &MI : MBB) {
-    if (MI.isDebugInstr())
+    if (MI.isDebugInstr() || MI.isPHI())
       continue;
     if (collectPacifist(MI, InputLive, OutputLive, MRI)) {
       PacifistList.emplace_back(&MI);
