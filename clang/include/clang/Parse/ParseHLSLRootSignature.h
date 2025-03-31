@@ -47,13 +47,13 @@ private:
   //   - Therefore, it is the callers responsibility to ensure that you are
   // at the correct CurToken. This should be done with the pattern of:
   //
-  //  if (TryConsumeExpectedToken(TokenKind))
+  //  if (TryConsumeExpectedToken(RootSignatureToken::Kind))
   //    if (Parse.*())
   //      return true;
   //
   // or,
   //
-  //  if (ConsumeExpectedToken(TokenKind, ...))
+  //  if (ConsumeExpectedToken(RootSignatureToken::Kind, ...))
   //    return true;
   //  if (Parse.*())
   //    return true;
@@ -73,24 +73,24 @@ private:
   void consumeNextToken() { CurToken = Lexer.ConsumeToken(); }
 
   /// Return true if the next token one of the expected kinds
-  bool peekExpectedToken(TokenKind Expected);
-  bool peekExpectedToken(ArrayRef<TokenKind> AnyExpected);
+  bool peekExpectedToken(RootSignatureToken::Kind Expected);
+  bool peekExpectedToken(ArrayRef<RootSignatureToken::Kind> AnyExpected);
 
   /// Consumes the next token and report an error if it is not of the expected
   /// kind.
   ///
   /// Returns true if there was an error reported.
-  bool consumeExpectedToken(TokenKind Expected,
-                            unsigned DiagID = diag::err_expected,
-                            TokenKind Context = TokenKind::invalid);
+  bool consumeExpectedToken(
+      RootSignatureToken::Kind Expected, unsigned DiagID = diag::err_expected,
+      RootSignatureToken::Kind Context = RootSignatureToken::Kind::invalid);
 
   /// Peek if the next token is of the expected kind and if it is then consume
   /// it.
   ///
   /// Returns true if it successfully matches the expected kind and the token
   /// was consumed.
-  bool tryConsumeExpectedToken(TokenKind Expected);
-  bool tryConsumeExpectedToken(ArrayRef<TokenKind> Expected);
+  bool tryConsumeExpectedToken(RootSignatureToken::Kind Expected);
+  bool tryConsumeExpectedToken(ArrayRef<RootSignatureToken::Kind> Expected);
 
 private:
   SmallVector<llvm::hlsl::rootsig::RootElement> &Elements;
