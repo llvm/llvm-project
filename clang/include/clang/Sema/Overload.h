@@ -1448,7 +1448,9 @@ class Sema;
         // For user defined conversion we need to check against different
         // combination of CV qualifiers and look at any expicit specifier, so
         // always deduce template candidate.
-        Kind != CSK_InitByUserDefinedConversion && Kind != CSK_CodeCompletion &&
+        Kind != CSK_InitByUserDefinedConversion
+        && Kind != CSK_InitByConstructor
+        && Kind != CSK_CodeCompletion &&
         Opts.CPlusPlus && (!Opts.CUDA || Opts.GPUExcludeWrongSideOverloads);
   }
 
