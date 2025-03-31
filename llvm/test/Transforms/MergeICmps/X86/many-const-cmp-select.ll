@@ -1,9 +1,13 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown-unknown -passes=mergeicmps -verify-dom-info -S 2>&1 | FileCheck %s
+; RUN: opt < %s -mtriple=x86_64-unknown-unknown -passes='mergeicmps,expand-memcmp' -verify-dom-info -S 2>&1 | FileCheck %s --check-prefix=EXPANDED
 
 ; Can merge contiguous const-comparison basic blocks that include a select statement.
 
 ; CHECK: [[MEMCMP_OP0:@memcmp_const_op]] = private constant <{ i8, i8 }> <{ i8 2, i8 7 }>
 ; CHECK: [[MEMCMP_OP1:@memcmp_const_op.1]] = private constant <{ i8, i8, i8, i8 }> <{ i8 -1, i8 -56, i8 -66, i8 1 }>
+
+; EXPANDED-NOT: [[MEMCMP_OP0:@memcmp_const_op]] = private constant <{ i8, i8 }> <{ i8 2, i8 7 }>
+; EXPANDED-NOT: [[MEMCMP_OP1:@memcmp_const_op.1]] = private constant <{ i8, i8, i8, i8 }> <{ i8 -1, i8 -56, i8 -66, i8 1 }>
 
 define dso_local zeroext i1 @is_all_ones_many(ptr nocapture noundef nonnull dereferenceable(24) %p) local_unnamed_addr {
 ; CHECK-LABEL: @is_all_ones_many(
@@ -13,8 +17,8 @@ define dso_local zeroext i1 @is_all_ones_many(ptr nocapture noundef nonnull dere
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[NEXT_MEMCMP:%.*]], label [[LAND_END:%.*]]
 ; CHECK:  "land.lhs.true16+land.lhs.true21":
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 6
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr [[TMP1]], ptr [[MEMCMP_OP0]], i64 2)
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[MEMCMP]], 0
+; CHECK-NEXT:    [[MEMCMP1:%.*]] = call i32 @memcmp(ptr [[TMP1]], ptr [[MEMCMP_OP0]], i64 2)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[MEMCMP1]], 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[LAST_CMP:%.*]], label [[LAND_END]]
 ; CHECK:  land.rhs1:
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 9

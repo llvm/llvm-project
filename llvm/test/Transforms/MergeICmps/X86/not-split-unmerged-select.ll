@@ -1,8 +1,10 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown-unknown -passes=mergeicmps -verify-dom-info -S | FileCheck %s
+; RUN: opt < %s -mtriple=x86_64-unknown-unknown -passes='mergeicmps,expand-memcmp' -verify-dom-info -S 2>&1 | FileCheck %s --check-prefix=EXPANDED
 
 ; No adjacent accesses to the same pointer so nothing should be merged. Select blocks won't get split.
 
 ; CHECK: [[MEMCMP_OP:@memcmp_const_op]] = private constant <{ i8, i8 }> <{ i8 1, i8 9 }>
+; EXPANDED-NOT: [[MEMCMP_OP:@memcmp_const_op]] = private constant <{ i8, i8 }> <{ i8 1, i8 9 }>
 
 define dso_local noundef zeroext i1 @unmergable_select(
     ptr noundef nonnull readonly align 8 captures(none) dereferenceable(24) %p) local_unnamed_addr {

@@ -1,4 +1,5 @@
 ; RUN: opt < %s -passes=mergeicmps -verify-dom-info -mtriple=x86_64-unknown-unknown -S | FileCheck %s --check-prefix=X86
+; RUN: opt < %s -mtriple=x86_64-unknown-unknown -passes='mergeicmps,expand-memcmp' -verify-dom-info -S 2>&1 | FileCheck %s --check-prefix=EXPANDED
 
 %S = type { i32, i32, i32, i32 }
 
@@ -6,6 +7,7 @@ declare void @foo(...)
 declare void @bar(...)
 
 ; X86: [[MEMCMP_OP:@memcmp_const_op]] = private constant <{ i8, i8, i8 }> <{ i8 100, i8 3, i8 -56 }>
+; EXPANDED-NOT: [[MEMCMP_OP:@memcmp_const_op]] = private constant <{ i8, i8, i8 }> <{ i8 100, i8 3, i8 -56 }>
 
 ; We can split %entry and create a memcmp(16 bytes).
 define zeroext i1 @opeq1(

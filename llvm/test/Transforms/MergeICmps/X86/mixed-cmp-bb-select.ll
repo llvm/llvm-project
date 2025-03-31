@@ -1,8 +1,10 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown-unknown -passes=mergeicmps -verify-dom-info -S | FileCheck %s
+; RUN: opt < %s -mtriple=x86_64-unknown-unknown -passes='mergeicmps,expand-memcmp' -verify-dom-info -S 2>&1 | FileCheck %s --check-prefix=EXPANDED
 
 ; Tests if a mixed chain of comparisons (including a select block) can still be merged into two memcmp calls.
 
 ; CHECK: [[MEMCMP_OP0:@memcmp_const_op]] = private constant <{ i32, i32, i32 }> <{ i32 255, i32 200, i32 100 }>
+; EXPANDED-NOT: [[MEMCMP_OP0:@memcmp_const_op]] = private constant <{ i32, i32, i32 }> <{ i32 255, i32 200, i32 100 }>
 
 define dso_local noundef zeroext i1 @cmp_mixed(
     ptr noundef nonnull readonly align 4 captures(none) dereferenceable(20) %a,
