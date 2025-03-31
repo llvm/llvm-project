@@ -1752,6 +1752,8 @@ RISCVInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
   default:
     break;
   case RISCV::ADD:
+  case RISCV::OR:
+  case RISCV::XOR:
     if (MI.getOperand(1).isReg() && MI.getOperand(1).getReg() == RISCV::X0 &&
         MI.getOperand(2).isReg())
       return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
@@ -1763,6 +1765,11 @@ RISCVInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
     // Operand 1 can be a frameindex but callers expect registers
     if (MI.getOperand(1).isReg() && MI.getOperand(2).isImm() &&
         MI.getOperand(2).getImm() == 0)
+      return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
+    break;
+  case RISCV::SUB:
+    if (MI.getOperand(2).isReg() && MI.getOperand(2).getReg() == RISCV::X0 &&
+        MI.getOperand(1).isReg())
       return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
     break;
   case RISCV::FSGNJ_D:
