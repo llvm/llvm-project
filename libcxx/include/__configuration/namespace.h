@@ -12,11 +12,25 @@
 
 #include <__config_site>
 #include <__configuration/attributes.h>
+#include <__configuration/compiler.h>
 #include <__configuration/diagnostic_suppression.h>
+#include <__configuration/platform.h>
 #include <__configuration/utility.h>
 
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
 #  pragma GCC system_header
+#endif
+
+#if __has_warning("-Wdllexport-explicit-instantiation")
+#  define _LIBCPP_CLANG_DIAGNOSTIC_IGNORE_DLLEXPORT                                                                    \
+    _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wdllexport-explicit-instantiation")
+// TODO(LLVM 24): Remove this fallback and assume that the warning exists
+#elif defined(_LIBCPP_OBJECT_FORMAT_COFF)
+#  define _LIBCPP_CLANG_DIAGNOSTIC_IGNORE_DLLEXPORT                                                                    \
+    _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wignored-attributes")                                                           \
+    _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wdllexport-explicit-instantiation-decl")
+#else
+#  define _LIBCPP_CLANG_DIAGNOSTIC_IGNORE_DLLEXPORT
 #endif
 
 // Clang modules take a significant compile time hit when pushing and popping diagnostics.
@@ -33,7 +47,8 @@
     _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++14-extensions")                                                               \
     _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++17-extensions")                                                               \
     _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++20-extensions")                                                               \
-    _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++23-extensions")
+    _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++23-extensions")                                                               \
+    _LIBCPP_CLANG_DIAGNOSTIC_IGNORE_DLLEXPORT
 #  define _LIBCPP_POP_EXTENSION_DIAGNOSTICS _LIBCPP_DIAGNOSTIC_POP
 #else
 #  define _LIBCPP_PUSH_EXTENSION_DIAGNOSTICS
