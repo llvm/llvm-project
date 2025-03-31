@@ -186,7 +186,7 @@ public:
     if (pair.src == pair.dst)
       return false;
 
-    LLVM::Linkage srcLinkage = getLinkage(pair.src);
+    Linkage srcLinkage = getLinkage(pair.src);
 
     // Always import variables with appending linkage.
     if (isAppendingLinkage(srcLinkage))
@@ -199,7 +199,7 @@ public:
       return false;
 
     // Private dependencies are gonna be renamed and linked
-    if (forDependency && isPrivateLinkage(srcLinkage))
+    if (forDependency && isLocalLinkage(srcLinkage))
       return true;
 
     // Always import dependencies that are not yet defined or declared
@@ -232,14 +232,17 @@ public:
       return success();
     }
 
+    Linkage srcLinkage = getLinkage(pair.src);
+    Linkage dstLinkage = getLinkage(pair.dst);
+
     // Conflicting private values are to be renamed.
-    if (isLocalLinkage(getLinkage(pair.dst))) {
+    if (isLocalLinkage(dstLinkage)) {
       uniqued.insert(pair.dst);
       registerForLink(pair.src);
       return success();
     }
 
-    if (isLocalLinkage(getLinkage(pair.src))) {
+    if (isLocalLinkage(srcLinkage)) {
       uniqued.insert(pair.src);
       return success();
     }
