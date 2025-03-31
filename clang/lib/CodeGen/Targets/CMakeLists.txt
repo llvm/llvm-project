@@ -28,8 +28,3 @@ add_clang_library(clangCodeGenTargets STATIC
   X86.cpp
   XCore.cpp
 )
-
-target_link_libraries(clangCodeGenTargets
-  PRIVATE
-  clangCodeGen
-)

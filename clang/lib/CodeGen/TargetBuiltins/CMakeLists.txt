@@ -12,8 +12,3 @@ add_clang_library(clangCodeGenTargetBuiltins STATIC
   WebAssembly.cpp
   X86.cpp
 )
-
-target_link_libraries(clangCodeGenTargetBuiltins
-  PRIVATE
-  clangCodeGen
-)
