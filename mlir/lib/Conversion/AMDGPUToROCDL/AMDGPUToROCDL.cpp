@@ -501,6 +501,10 @@ struct SchedBarrierOpLowering : public ConvertOpToLLVMPattern<SchedBarrierOp> {
 /// instead, which is what the f8f6f4 intrinsics use.
 /// 3. If `input` is a vector of N <= 8 bytes, bitcast it to a (N * 8)-bit
 /// integer.
+///
+/// Note that the type of `input` has already been LLVM type converted:
+/// therefore 8-bit and smaller floats are represented as their corresponding
+/// `iN` integers.
 static Value convertMFMAVectorOperand(ConversionPatternRewriter &rewriter,
                                       Location loc, Value input) {
   Type inputType = input.getType();
@@ -708,8 +712,7 @@ static std::optional<StringRef> mfmaOpToIntrinsic(MFMAOp mfma,
       return ROCDL::mfma_f32_16x16x8bf16::getOperationName();
   }
 
-  if (isa<IntegerType>(sourceElem) && sourceElem.getIntOrFloatBitWidth() >= 8 &&
-      destElem.isInteger(32)) {
+  if (sourceElem.isInteger(8) && destElem.isInteger(32)) {
     if (chipset >= kGfx950) {
       if (m == 32 && n == 32 && k == 32 && b == 1)
         return ROCDL::mfma_i32_32x32x32_i8::getOperationName();
