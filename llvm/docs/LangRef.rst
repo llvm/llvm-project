@@ -6212,6 +6212,35 @@ following:
   DW_ATE_unsigned      = 7
   DW_ATE_unsigned_char = 8
 
+.. _DIFixedPointType:
+
+DIFixedPointType
+""""""""""""""""
+
+``DIFixedPointType`` nodes represent fixed-point types.  A fixed-point
+type is conceptually an integer with a scale factor.
+``DIFixedPointType`` is derived from ``DIBasicType`` and inherits its
+attributes.  However, only certain encodings are accepted:
+
+.. code-block:: text
+
+  DW_ATE_signed_fixed   = 13
+  DW_ATE_unsigned_fixed = 14
+
+There are three kinds of fixed-point type: binary, where the scale
+factor is a power of 2; decimal, where the scale factor is a power of
+10; and rational, where the scale factor is an arbitrary rational
+number.
+
+.. code-block:: text
+
+    !0 = !DIFixedPointType(name: "decimal", size: 8, encoding: DW_ATE_signed_fixed,
+                           kind: Decimal, factor: -4)
+    !1 = !DIFixedPointType(name: "binary", size: 8, encoding: DW_ATE_unsigned_fixed,
+                           kind: Binary, factor: -16)
+    !2 = !DIFixedPointType(name: "rational", size: 8, encoding: DW_ATE_signed_fixed,
+                           kind: Rational, numerator: 1234, denominator: 5678)
+
 .. _DISubroutineType:
 
 DISubroutineType
