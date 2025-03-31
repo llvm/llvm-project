@@ -872,6 +872,11 @@ public:
     return EM;
   }
 
+  /// True when compiling for an offloading target device.
+  bool isTargetDevice() const {
+    return OpenMPIsTargetDevice || CUDAIsDevice || SYCLIsDevice;
+  }
+
   /* TO_UPSTREAM(BoundsSafety) ON */
   // Returns true iff -fbounds-safety is enabled. This is a convenience function
   // that can be called from Xcode disclosed clang without hitting a compilation
