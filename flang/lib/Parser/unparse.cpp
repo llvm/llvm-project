@@ -1855,6 +1855,7 @@ public:
               Word("!DIR$ UNROLL_AND_JAM");
               Walk(" ", unrollAndJam.v);
             },
+            [&](const CompilerDirective::IVDep &) { Word("!DIR$ IVDEP"); },
             [&](const CompilerDirective::Unrecognized &) {
               Word("!DIR$ ");
               Word(x.source.ToString());

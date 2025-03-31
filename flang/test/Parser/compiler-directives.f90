@@ -57,3 +57,10 @@ subroutine unroll_and_jam
   do i=1,10
   enddo
 end subroutine
+
+subroutine ivdep 
+  !dir$ ivdep 
+  ! CHECK: !DIR$ IVDEP 
+  do i=1,10
+  enddo
+end subroutine

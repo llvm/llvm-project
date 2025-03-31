@@ -634,6 +634,10 @@ struct CallOpConversion : public fir::FIROpConversion<fir::CallOp> {
     if (mlir::ArrayAttr resAttrs = call.getResAttrsAttr())
       llvmCall.setResAttrsAttr(resAttrs);
 
+    if (std::optional<mlir::ArrayAttr> optionalAccessGroups =
+            call.getAccessGroups())
+      llvmCall.setAccessGroups(*optionalAccessGroups);
+
     if (memAttr)
       llvmCall.setMemoryEffectsAttr(
           mlir::cast<mlir::LLVM::MemoryEffectsAttr>(memAttr));
@@ -3267,6 +3271,11 @@ struct LoadOpConversion : public fir::FIROpConversion<fir::LoadOp> {
         loadOp.setTBAATags(*optionalTag);
       else
         attachTBAATag(loadOp, load.getType(), load.getType(), nullptr);
+
+      if (std::optional<mlir::ArrayAttr> optionalAccessGroups =
+              load.getAccessGroups())
+        loadOp.setAccessGroups(*optionalAccessGroups);
+
       rewriter.replaceOp(load, loadOp.getResult());
     }
     return mlir::success();
@@ -3550,7 +3559,12 @@ struct StoreOpConversion : public fir::FIROpConversion<fir::StoreOp> {
       newOp = rewriter.create<mlir::LLVM::MemcpyOp>(
           loc, llvmMemref, llvmValue, boxSize, /*isVolatile=*/false);
     } else {
-      newOp = rewriter.create<mlir::LLVM::StoreOp>(loc, llvmValue, llvmMemref);
+      mlir::LLVM::StoreOp storeOp =
+          rewriter.create<mlir::LLVM::StoreOp>(loc, llvmValue, llvmMemref);
+      if (std::optional<mlir::ArrayAttr> optionalAccessGroups =
+              store.getAccessGroups())
+        storeOp.setAccessGroups(*optionalAccessGroups);
+      newOp = storeOp;
     }
     if (std::optional<mlir::ArrayAttr> optionalTag = store.getTbaa())
       newOp.setTBAATags(*optionalTag);

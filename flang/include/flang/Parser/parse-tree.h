@@ -3351,6 +3351,7 @@ struct StmtFunctionStmt {
 // !DIR$ name[=value] [, name[=value]]...    = can be :
 // !DIR$ UNROLL [N]
 // !DIR$ UNROLL_AND_JAM [N]
+// !DIR$ IVDEP
 // !DIR$ <anything else>
 struct CompilerDirective {
   UNION_CLASS_BOILERPLATE(CompilerDirective);
@@ -3376,10 +3377,12 @@ struct CompilerDirective {
   struct UnrollAndJam {
     WRAPPER_CLASS_BOILERPLATE(UnrollAndJam, std::optional<std::uint64_t>);
   };
+  EMPTY_CLASS(IVDep);
   EMPTY_CLASS(Unrecognized);
   CharBlock source;
   std::variant<std::list<IgnoreTKR>, LoopCount, std::list<AssumeAligned>,
-      VectorAlways, std::list<NameValue>, Unroll, UnrollAndJam, Unrecognized>
+      VectorAlways, std::list<NameValue>, Unroll, UnrollAndJam, Unrecognized,
+      IVDep>
       u;
 };
 
