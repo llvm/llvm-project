@@ -9905,7 +9905,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       // Update all users outside the vector region.
       for (VPUser *U : to_vector(OrigExitingVPV->users())) {
         auto *R = cast<VPRecipeBase>(U);
-        if (R->getParent()->getParent() == VectorLoopRegion )
+        if (R->getParent()->getParent() == VectorLoopRegion)
           continue;
         R->replaceUsesOfWith(PhiR->getStartValue(), Start);
       }
