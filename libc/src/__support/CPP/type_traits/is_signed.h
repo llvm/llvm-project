@@ -11,92 +11,37 @@
 #include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/CPP/type_traits/bool_constant.h"
 #include "src/__support/CPP/type_traits/is_arithmetic.h"
-#include "src/__support/CPP/type_traits/is_fixed_point.h"
+#include "src/__support/CPP/type_traits/is_same.h"
+#include "src/__support/CPP/type_traits/remove_cv.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
 
-// Primary template: handles arithmetic and signed fixed-point types
+#ifndef LIBC_COMPILER_HAS_FIXED_POINT
 template <typename T>
 struct is_signed : bool_constant<(is_arithmetic_v<T> && (T(-1) < T(0)))> {
   LIBC_INLINE constexpr operator bool() const { return is_signed::value; }
   LIBC_INLINE constexpr bool operator()() const { return is_signed::value; }
 };
+#else
+template <typename T> struct is_signed {
+private:
+  template <typename Head, typename... Args>
+  LIBC_INLINE static constexpr bool __is_unqualified_any_of() {
+    return (... || is_same_v<remove_cv_t<Head>, Args>);
+  }
 
-#ifdef LIBC_COMPILER_HAS_FIXED_POINT
-// Specializations for unsigned fixed-point types
-template <typename T, bool IsSigned>
-struct fixed_point_is_signed : bool_constant<IsSigned> {
-  LIBC_INLINE constexpr operator bool() const {
-    return fixed_point_is_signed::value;
-  }
-  LIBC_INLINE constexpr bool operator()() const {
-    return fixed_point_is_signed::value;
-  }
-};
-template <> struct is_signed<fract> : fixed_point_is_signed<fract, true> {};
-template <>
-struct is_signed<unsigned short fract>
-    : fixed_point_is_signed<unsigned short fract, false> {};
-template <>
-struct is_signed<unsigned fract>
-    : fixed_point_is_signed<unsigned fract, false> {};
-template <>
-struct is_signed<unsigned long fract>
-    : fixed_point_is_signed<unsigned long fract, false> {};
-template <>
-struct is_signed<short fract> : fixed_point_is_signed<short fract, true> {};
-template <>
-struct is_signed<long fract> : fixed_point_is_signed<long fract, true> {};
-template <> struct is_signed<accum> : fixed_point_is_signed<accum, true> {};
-template <>
-struct is_signed<unsigned short accum>
-    : fixed_point_is_signed<unsigned short accum, false> {};
-template <>
-struct is_signed<unsigned accum>
-    : fixed_point_is_signed<unsigned accum, false> {};
-template <>
-struct is_signed<unsigned long accum>
-    : fixed_point_is_signed<unsigned long accum, false> {};
-template <>
-struct is_signed<short accum> : fixed_point_is_signed<short accum, true> {};
-template <>
-struct is_signed<long accum> : fixed_point_is_signed<long accum, true> {};
-template <>
-struct is_signed<sat fract> : fixed_point_is_signed<sat fract, true> {};
-template <>
-struct is_signed<unsigned short sat fract>
-    : fixed_point_is_signed<unsigned short sat fract, false> {};
-template <>
-struct is_signed<unsigned sat fract>
-    : fixed_point_is_signed<unsigned sat fract, false> {};
-template <>
-struct is_signed<unsigned long sat fract>
-    : fixed_point_is_signed<unsigned long sat fract, false> {};
-template <>
-struct is_signed<short sat fract>
-    : fixed_point_is_signed<short sat fract, true> {};
-template <>
-struct is_signed<long sat fract> : fixed_point_is_signed<long sat fract, true> {
-};
-template <>
-struct is_signed<sat accum> : fixed_point_is_signed<sat accum, true> {};
-template <>
-struct is_signed<unsigned short sat accum>
-    : fixed_point_is_signed<unsigned short sat accum, false> {};
-template <>
-struct is_signed<unsigned sat accum>
-    : fixed_point_is_signed<unsigned sat accum, false> {};
-template <>
-struct is_signed<unsigned long sat accum>
-    : fixed_point_is_signed<unsigned long sat accum, false> {};
-template <>
-struct is_signed<short sat accum>
-    : fixed_point_is_signed<short sat accum, true> {};
-template <>
-struct is_signed<long sat accum> : fixed_point_is_signed<long sat accum, true> {
+public:
+  LIBC_INLINE_VAR static constexpr bool value =
+      (is_arithmetic_v<T> && (T(-1) < T(0))) ||
+      __is_unqualified_any_of<T, short fract, fract, long fract, short accum,
+                              accum, long accum, short sat fract, sat fract,
+                              long sat fract, short sat accum, sat accum,
+                              long sat accum>();
+  LIBC_INLINE constexpr operator bool() const { return is_signed::value; }
+  LIBC_INLINE constexpr bool operator()() const { return is_signed::value; }
 };
 #endif // LIBC_COMPILER_HAS_FIXED_POINT
 
