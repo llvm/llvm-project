@@ -115,8 +115,8 @@ static void CloseAllExternalUnits(const char *why) {
     if (Fortran::runtime::executionEnvironment.noStopMessage && !isErrorStop) {
       std::printf("%s\n", code);
     } else {
-      std::printf("Fortran %s: %s\n", isErrorStop ? "ERROR STOP" : "STOP",
-          code);
+      std::printf(
+          "Fortran %s: %s\n", isErrorStop ? "ERROR STOP" : "STOP", code);
     }
   }
   if (isErrorStop) {
