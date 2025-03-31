@@ -52,6 +52,10 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     IsDynamicVGPREnabled =
         F.getFnAttribute("amdgpu-dynamic-vgpr").getValueAsBool();
 
+  // FIXME: Remove after all users are migrated to the attribute.
+  if (ST.isDynamicVGPREnabled())
+    IsDynamicVGPREnabled = true;
+
   Occupancy = ST.computeOccupancy(F, getLDSSize()).second;
   CallingConv::ID CC = F.getCallingConv();
 

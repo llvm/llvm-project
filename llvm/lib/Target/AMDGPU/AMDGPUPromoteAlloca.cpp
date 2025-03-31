@@ -204,6 +204,11 @@ unsigned getMaxVGPRs(const TargetMachine &TM, const Function &F) {
     IsDynamicVGPR = F.getFnAttribute("amdgpu-dynamic-vgpr").getValueAsBool();
 
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
+
+  // FIXME: Delete after all users are migrated to use the attribute.
+  if (ST.isDynamicVGPREnabled())
+    IsDynamicVGPR = true;
+
   unsigned MaxVGPRs =
       ST.getMaxNumVGPRs(ST.getWavesPerEU(F).first, IsDynamicVGPR);
 

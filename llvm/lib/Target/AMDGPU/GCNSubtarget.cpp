@@ -405,7 +405,7 @@ unsigned GCNSubtarget::getReservedNumSGPRs(const Function &F) const {
 std::pair<unsigned, unsigned>
 GCNSubtarget::computeOccupancy(const Function &F, unsigned LDSSize,
                                unsigned NumSGPRs, unsigned NumVGPRs) const {
-  bool IsDynamicVGPR = false;
+  bool IsDynamicVGPR = isDynamicVGPREnabled();
   if (F.hasFnAttribute("amdgpu-dynamic-vgpr"))
     IsDynamicVGPR = F.getFnAttribute("amdgpu-dynamic-vgpr").getValueAsBool();
 
@@ -504,7 +504,7 @@ unsigned GCNSubtarget::getMaxNumSGPRs(const Function &F) const {
 
 unsigned GCNSubtarget::getBaseMaxNumVGPRs(
     const Function &F, std::pair<unsigned, unsigned> WavesPerEU) const {
-  bool IsDynamicVGPR = false;
+  bool IsDynamicVGPR = isDynamicVGPREnabled();
   if (F.hasFnAttribute("amdgpu-dynamic-vgpr"))
     IsDynamicVGPR = F.getFnAttribute("amdgpu-dynamic-vgpr").getValueAsBool();
 

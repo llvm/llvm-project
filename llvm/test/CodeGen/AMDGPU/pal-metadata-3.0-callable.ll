@@ -1,11 +1,13 @@
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck --check-prefixes=CHECK,GFX11 %s
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck --check-prefixes=CHECK,GFX12 %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 -mattr=+dynamic-vgpr -verify-machineinstrs < %s | FileCheck --check-prefixes=CHECK,GFX12,DVGPR %s
 
 ; CHECK:           .amdgpu_pal_metadata
 ; CHECK-NEXT: ---
 ; CHECK-NEXT: amdpal.pipelines:
 ; CHECK-NEXT:  - .api:            Vulkan
 ; CHECK-NEXT:    .compute_registers:
+; DVGPR-NEXT:      .dynamic_vgpr_en:   true
 ; CHECK-NEXT:      .tg_size_en:     true
 ; CHECK-NEXT:      .tgid_x_en:      false
 ; CHECK-NEXT:      .tgid_y_en:      false
