@@ -32,6 +32,7 @@
 #include <__type_traits/is_object.h>
 #include <__type_traits/is_primary_template.h>
 #include <__type_traits/is_reference.h>
+#include <__type_traits/is_referenceable.h>
 #include <__type_traits/is_valid_expansion.h>
 #include <__type_traits/nat.h>
 #include <__type_traits/remove_const.h>
@@ -49,14 +50,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 20
 
 template <class _Tp>
-using __with_reference _LIBCPP_NODEBUG = _Tp&;
-
-template <class _Tp>
-concept __can_reference = requires { typename __with_reference<_Tp>; };
-
-template <class _Tp>
 concept __dereferenceable = requires(_Tp& __t) {
-  { *__t } -> __can_reference; // not required to be equality-preserving
+  { *__t } -> __referenceable; // not required to be equality-preserving
 };
 
 // [iterator.traits]
@@ -138,9 +133,9 @@ public:
 namespace __iterator_traits_detail {
 template <class _Ip>
 concept __cpp17_iterator = requires(_Ip __i) {
-  { *__i } -> __can_reference;
+  { *__i } -> __referenceable;
   { ++__i } -> same_as<_Ip&>;
-  { *__i++ } -> __can_reference;
+  { *__i++ } -> __referenceable;
 } && copyable<_Ip>;
 
 template <class _Ip>

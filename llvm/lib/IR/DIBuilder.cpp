@@ -39,7 +39,7 @@ DIBuilder::DIBuilder(Module &m, bool AllowUnresolvedNodes, DICompileUnit *CU)
     if (const auto &IMs = CUNode->getImportedEntities())
       ImportedModules.assign(IMs.begin(), IMs.end());
     if (const auto &MNs = CUNode->getMacros())
-      AllMacrosPerParent.insert({nullptr, {MNs.begin(), MNs.end()}});
+      AllMacrosPerParent.insert({nullptr, {llvm::from_range, MNs}});
   }
 }
 

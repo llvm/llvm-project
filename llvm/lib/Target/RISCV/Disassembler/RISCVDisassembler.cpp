@@ -455,8 +455,7 @@ static DecodeStatus decodeCLUIImmOperand(MCInst &Inst, uint32_t Imm,
   assert(isUInt<6>(Imm) && "Invalid immediate");
   if (Imm == 0)
     return MCDisassembler::Fail;
-  if (Imm > 31)
-    Imm = (SignExtend64<6>(Imm) & 0xfffff);
+  Imm = SignExtend64<6>(Imm) & 0xfffff;
   Inst.addOperand(MCOperand::createImm(Imm));
   return MCDisassembler::Success;
 }
@@ -672,15 +671,15 @@ static constexpr FeatureBitset XRivosFeatureGroup = {
 };
 
 static constexpr FeatureBitset XqciFeatureGroup = {
-    RISCV::FeatureVendorXqcia,    RISCV::FeatureVendorXqciac,
-    RISCV::FeatureVendorXqcibi,   RISCV::FeatureVendorXqcibm,
-    RISCV::FeatureVendorXqcicli,  RISCV::FeatureVendorXqcicm,
-    RISCV::FeatureVendorXqcics,   RISCV::FeatureVendorXqcicsr,
-    RISCV::FeatureVendorXqciint,  RISCV::FeatureVendorXqcilb,
-    RISCV::FeatureVendorXqcili,   RISCV::FeatureVendorXqcilia,
-    RISCV::FeatureVendorXqcilo,   RISCV::FeatureVendorXqcilsm,
-    RISCV::FeatureVendorXqcisim,  RISCV::FeatureVendorXqcisls,
-    RISCV::FeatureVendorXqcisync,
+    RISCV::FeatureVendorXqcia,   RISCV::FeatureVendorXqciac,
+    RISCV::FeatureVendorXqcibi,  RISCV::FeatureVendorXqcibm,
+    RISCV::FeatureVendorXqcicli, RISCV::FeatureVendorXqcicm,
+    RISCV::FeatureVendorXqcics,  RISCV::FeatureVendorXqcicsr,
+    RISCV::FeatureVendorXqciint, RISCV::FeatureVendorXqciio,
+    RISCV::FeatureVendorXqcilb,  RISCV::FeatureVendorXqcili,
+    RISCV::FeatureVendorXqcilia, RISCV::FeatureVendorXqcilo,
+    RISCV::FeatureVendorXqcilsm, RISCV::FeatureVendorXqcisim,
+    RISCV::FeatureVendorXqcisls, RISCV::FeatureVendorXqcisync,
 };
 
 static constexpr FeatureBitset XSfVectorGroup = {

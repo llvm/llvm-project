@@ -46,6 +46,8 @@
 #include "llvm/Transforms/Utils/SanitizerStats.h"
 #include <optional>
 
+#define NO_LOOP_XTEAM_RED "no-loop-xteam-red"
+
 namespace llvm {
 class BasicBlock;
 class LLVMContext;
@@ -3773,6 +3775,10 @@ public:
   void
   InitializeXteamRedCapturedVars(SmallVectorImpl<llvm::Value *> &CapturedVars,
                                  QualType RedVarQualType);
+  /// Generate the sentinel (referred to as the reduction null value in
+  /// DeviceRTL) based on the reduction opcode.
+  llvm::Value *getXteamRedSentinel(llvm::Type *RedVarType,
+                                   CodeGenModule::XteamRedOpKind Opcode);
   void emitOMPSimpleStore(LValue LVal, RValue RVal, QualType RValTy,
                           SourceLocation Loc);
   /// Perform element by element copying of arrays with type \a
@@ -5599,16 +5605,36 @@ private:
   /// and Xteam reduction kernels.
   void EmitBigJumpLoopInc(const ForStmt &FStmt, const VarDecl *LoopVar,
                           const Address &NoLoopIvAddr);
+  /// For every reduction variable, emit the corresponding locally introducted
+  /// variable and initialize it.
   void EmitXteamLocalAggregator(const ForStmt *FStmt);
-  void EmitXteamRedSum(const ForStmt *FStmt, const FunctionArgList &Args,
-                       int BlockSize);
+  /// For every sum/min/max reduction variable, emit a call to the DeviceRTL
+  /// API.
+  void EmitXteamRedOperation(const ForStmt *FStmt, const FunctionArgList &Args,
+                             int BlockSize);
+  /// For every scan reduction variable, emit a call to the DeviceRTL API.
   void EmitXteamScanSum(const ForStmt *FStmt, const FunctionArgList &Args,
                         int BlockSize);
+  /// For every scan reduction variable, emit a call to the DeviceRTL API
+  /// required for phase 2 kernel.
   void EmitXteamScanPhaseTwo(const ForStmt *FStmt, llvm::Value *SegmentSize,
                              const FunctionArgList &Args, int BlockSize,
                              bool IsInclusiveScan);
+  /// Emit reduction into local variable for a statement within the BigJumpLoop.
   bool EmitXteamRedStmt(const Stmt *S);
-
+  /// Emit reduction into local variable for a statement within the BigJumpLoop.
+  void EmitLocalReductionStmt(const Expr *E, const VarDecl *RedVarDecl,
+                              const CodeGenModule::XteamRedVarMap &RedVarMap,
+                              CodeGenModule::XteamRedOpKind OpKind);
+  /// Helper function that extracts the other operand of the reduction
+  /// operation.
+  std::pair<const Expr *, CodeGenModule::XteamRedOpKind>
+  ExtractXteamRedRhsExpr(const CallExpr *Call, const VarDecl *RedVarDecl);
+  /// Emitter for reduction builtins recognized by Xteam reduction, currently
+  /// min/max.
+  void EmitXteamRedStmtForBuiltinCall(
+      const CallExpr *Call, const VarDecl *RedVarDecl,
+      const CodeGenModule::XteamRedVarMap &RedVarMap);
   llvm::Value *FormX86ResolverCondition(const FMVResolverOption &RO);
   llvm::Value *EmitAArch64CpuInit();
   llvm::Value *FormAArch64ResolverCondition(const FMVResolverOption &RO);

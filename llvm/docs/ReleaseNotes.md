@@ -142,6 +142,8 @@ Changes to the RISC-V Backend
   extension.
 * Adds experimental assembler support for the Qualcomm uC 'Xqcisync` (Sync Delay)
   extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqciio` (External Input Output)
+  extension.
 * Adds assembler support for the 'Zilsd` (Load/Store Pair Instructions)
   extension.
 * Adds assembler support for the 'Zclsd` (Compressed Load/Store Pair Instructions)
