@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Protocol/ProtocolBase.h"
-#include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -32,8 +31,11 @@ static bool mapRaw(const json::Value &Params, StringLiteral Prop,
 
 namespace lldb_dap::protocol {
 
-FLAGS_ENUM(MessageType){eMessageTypeRequest, eMessageTypeResponse,
-                        eMessageTypeEvent};
+enum MessageType : unsigned {
+  eMessageTypeRequest,
+  eMessageTypeResponse,
+  eMessageTypeEvent
+};
 
 bool fromJSON(const json::Value &Params, MessageType &M, json::Path P) {
   auto rawType = Params.getAsString();
