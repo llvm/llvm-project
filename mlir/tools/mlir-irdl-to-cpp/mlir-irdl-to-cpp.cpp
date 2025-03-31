@@ -43,23 +43,30 @@ processBuffer(llvm::raw_ostream &os,
 
   ctx.printOpOnDiagnostic(!verifyDiagnostics);
 
-  std::variant<std::monostate, SourceMgrDiagnosticHandler,
-               SourceMgrDiagnosticVerifierHandler>
-      sourceMgrHandler;
-  if (verifyDiagnostics)
-    sourceMgrHandler.emplace<SourceMgrDiagnosticVerifierHandler>(*sourceMgr,
-                                                                 &ctx);
-  else
-    sourceMgrHandler.emplace<SourceMgrDiagnosticHandler>(*sourceMgr, &ctx);
-  auto *sourceMgrVerifierHandler =
-      std::get_if<SourceMgrDiagnosticVerifierHandler>(&sourceMgrHandler);
+  using SourceDiagnosticHandlerVariant =
+      std::variant<SourceMgrDiagnosticHandler,
+                   SourceMgrDiagnosticVerifierHandler>;
+
+  auto sourceMgrHandler =
+      verifyDiagnostics
+          ? SourceDiagnosticHandlerVariant(
+                std::in_place_type_t<SourceMgrDiagnosticVerifierHandler>{},
+                *sourceMgr, &ctx)
+          : SourceDiagnosticHandlerVariant(
+                std::in_place_type_t<SourceMgrDiagnosticHandler>{}, *sourceMgr,
+                &ctx);
+
+  const auto verifyOr =
+      [verifier = std::get_if<SourceMgrDiagnosticVerifierHandler>(
+           &sourceMgrHandler)](LogicalResult res) -> LogicalResult {
+    return verifier ? verifier->verify() : res;
+  };
 
   ParserConfig parseConfig(&ctx);
   OwningOpRef<Operation *> op =
       parseSourceFileForTool(sourceMgr, parseConfig, true);
   if (!op)
-    return sourceMgrVerifierHandler ? sourceMgrVerifierHandler->verify()
-                                    : failure();
+    return verifyOr(failure());
 
   auto moduleOp = llvm::cast<ModuleOp>(*op);
   llvm::SmallVector<irdl::DialectOp> dialects{
@@ -67,11 +74,9 @@ processBuffer(llvm::raw_ostream &os,
   };
 
   if (failed(irdl::translateIRDLDialectToCpp(dialects, os)))
-    return sourceMgrVerifierHandler ? sourceMgrVerifierHandler->verify()
-                                    : failure();
+    return verifyOr(failure());
 
-  return sourceMgrVerifierHandler ? sourceMgrVerifierHandler->verify()
-                                  : success();
+  return verifyOr(success());
 }
 
 static LogicalResult translateIRDLToCpp(int argc, char **argv) {
@@ -85,27 +90,23 @@ static LogicalResult translateIRDLToCpp(int argc, char **argv) {
 
   bool verifyDiagnosticsFlag;
   std::string splitInputFileFlag;
-  static llvm::cl::opt<bool,
-                       /*ExternalStorage=*/true>
-      verifyDiagnostics(
-          "verify-diagnostics",
-          llvm::cl::desc("Check that emitted diagnostics match "
-                         "expected-* lines on the corresponding line"),
-          llvm::cl::location(verifyDiagnosticsFlag), llvm::cl::init(false));
+  static llvm::cl::opt<bool, true> verifyDiagnostics(
+      "verify-diagnostics",
+      llvm::cl::desc("Check that emitted diagnostics match "
+                     "expected-* lines on the corresponding line"),
+      llvm::cl::location(verifyDiagnosticsFlag), llvm::cl::init(false));
 
-  static llvm::cl::opt<std::string,
-                       /*ExternalStorage=*/true>
-      splitInputFile(
-          "split-input-file", llvm::cl::ValueOptional,
-          llvm::cl::callback([&](const std::string &str) {
-            // Implicit value: use default marker if flag was used without
-            // value.
-            if (str.empty())
-              splitInputFile.setValue(kDefaultSplitMarker);
-          }),
-          llvm::cl::desc("Split the input file into chunks using the given or "
-                         "default marker and process each chunk independently"),
-          llvm::cl::location(splitInputFileFlag), llvm::cl::init(""));
+  static llvm::cl::opt<std::string, true> splitInputFile(
+      "split-input-file", llvm::cl::ValueOptional,
+      llvm::cl::callback([&](const std::string &str) {
+        // Implicit value: use default marker if flag was used without
+        // value.
+        if (str.empty())
+          splitInputFile.setValue(kDefaultSplitMarker);
+      }),
+      llvm::cl::desc("Split the input file into chunks using the given or "
+                     "default marker and process each chunk independently"),
+      llvm::cl::location(splitInputFileFlag), llvm::cl::init(""));
 
   llvm::InitLLVM y(argc, argv);
 
@@ -133,16 +134,16 @@ static LogicalResult translateIRDLToCpp(int argc, char **argv) {
                          verifyDiagnostics, nullptr);
   };
 
-  if (splitInputFileFlag.size()) {
+  if (splitInputFileFlag.size())
     return splitAndProcessBuffer(std::move(input), chunkFn, output->os(),
                                  splitInputFileFlag, splitInputFileFlag);
-  }
 
   if (failed(chunkFn(std::move(input), output->os())))
     return failure();
 
   if (!verifyDiagnosticsFlag)
     output->keep();
+
   return success();
 }
 
