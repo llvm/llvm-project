@@ -36,6 +36,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include <cmath>
 #include <optional>
 
 #define DEBUG_TYPE "expand-fp"
@@ -64,9 +65,6 @@ class FRemExpander {
   /// wider than the \p FremTy.
   Type *ComputeFpTy;
 
-  /// Integer type that can hold floating point values of type \p FremTY.
-  Type *IntTy;
-
   /// Integer type used to hold the exponents returned by frexp.
   Type *ExTy;
 
@@ -77,19 +75,30 @@ class FRemExpander {
   /// Constant 1 of type \p ExTy.
   Value *One;
 
-  /// The sign bit for floating point values of type \p FremTy.
-  const unsigned long long Signbit;
-
 public:
   static std::optional<FRemExpander> create(IRBuilder<> &B, Type *Ty) {
-    if (Ty->is16bitFPTy())
-      return FRemExpander{B, Ty, 11, 0x8000, B.getFloatTy(), B.getInt16Ty()};
-    if (Ty->isFloatTy() || Ty->isHalfTy())
-      return FRemExpander{B, Ty, 12, 0x80000000UL, Ty, B.getInt32Ty()};
-    if (Ty->isDoubleTy())
-      return FRemExpander{B, Ty, 26, 0x8000000000000000ULL, Ty, B.getInt64Ty()};
+    // TODO The expansion should work for other types as well, but
+    // this would require additional testing.
+    if (!Ty->isIEEELikeFPTy() || Ty->isBFloatTy() || Ty->isFP128Ty())
+      return std::nullopt;
 
-    return std::nullopt;
+    // The type to use for the computation of the remainder. This may be
+    // wider than the input/result type which affects the
+    Type *ComputeTy = Ty;
+    // ... maximum number of iterations of the remainder computation loop
+    // to use. This value is for the case in which the computation
+    // uses the same input/result type.
+    unsigned MaxIter = 2;
+
+    if (Ty->is16bitFPTy()) {
+      // Use the wider type and less iterations.
+      ComputeTy = B.getFloatTy();
+      MaxIter = 1;
+    }
+
+    unsigned Precision =
+        llvm::APFloat::semanticsPrecision(Ty->getFltSemantics());
+    return FRemExpander{B, Ty, Precision / MaxIter, ComputeTy};
   }
 
   /// Build the FRem expansion for the numerator \p X and the
@@ -100,11 +109,9 @@ public:
   Value *buildFRem(Value *X, Value *Y, std::optional<SimplifyQuery> &SQ) const;
 
 private:
-  FRemExpander(IRBuilder<> &B, Type *FremTy, short Bits,
-               unsigned long long Signbit, Type *ComputeFpTy, Type *IntTy)
-      : B(B), FremTy(FremTy), ComputeFpTy(ComputeFpTy), IntTy(IntTy),
-        ExTy(B.getInt32Ty()), Bits(ConstantInt::get(ExTy, Bits)),
-        One(ConstantInt::get(ExTy, 1)), Signbit(Signbit) {};
+  FRemExpander(IRBuilder<> &B, Type *FremTy, unsigned Bits, Type *ComputeFpTy)
+      : B(B), FremTy(FremTy), ComputeFpTy(ComputeFpTy), ExTy(B.getInt32Ty()),
+        Bits(ConstantInt::get(ExTy, Bits)), One(ConstantInt::get(ExTy, 1)) {};
 
   Value *createRcp(Value *V, const Twine &Name) const {
     // Leave it to later optimizations to turn this into an rcp
@@ -159,7 +166,10 @@ private:
   /// denumerator. Add the incoming edge from the computation result
   /// to \p RetPhi.
   void buildRemainderComputation(Value *AxInitial, Value *AyInitial, Value *X,
-                                 PHINode *RetPhi) const {
+                                 PHINode *RetPhi, FastMathFlags FMF) const {
+    IRBuilder<>::FastMathFlagGuard Guard(B);
+    B.setFastMathFlags(FMF);
+
     // Build:
     // ex = BUILTIN_FREXP_EXP_ComputeFpTy(ax) - 1;
     // ax = BUILTIN_FLDEXP_ComputeFpTy(
@@ -222,18 +232,11 @@ private:
 
     // Build:
     //    ax = BUILTIN_FLDEXP_ComputeFpTy(ax, ey);
-    //    ret = AS_FLOAT((AS_INT(x) & SIGNBIT_SP32) ^ AS_INT(ax));
+    //    ret = copysign(ax,x);
     AxFinal = B.CreateLdexp(AxFinal, Ey, {}, "ax");
-
-    Value *XAsInt = B.CreateBitCast(X, IntTy, "x_as_int");
-    if (ComputeFpTy != X->getType())
-      AxFinal = B.CreateFPTrunc(AxFinal, X->getType());
-
-    Value *AxAsInt = B.CreateBitCast(AxFinal, IntTy, "ax_as_int");
-
-    Value *Ret =
-        B.CreateXor(B.CreateAnd(XAsInt, Signbit), AxAsInt, "Remainder");
-    Ret = B.CreateBitCast(Ret, X->getType());
+    if (ComputeFpTy != FremTy)
+      AxFinal = B.CreateFPTrunc(AxFinal, FremTy);
+    Value *Ret = B.CreateCopySign(AxFinal, X);
 
     RetPhi->addIncoming(Ret, ExitBB);
   }
@@ -245,9 +248,8 @@ private:
   void buildElseBranch(Value *Ax, Value *Ay, Value *X, PHINode *RetPhi) const {
     // Build:
     // ret = ax == ay ? BUILTIN_COPYSIGN_ComputeFpTy(0.0f, x) : x;
-    Value *ZeroWithXSign = B.CreateIntrinsic(
-        Intrinsic::copysign, {FremTy}, {ConstantFP::get(FremTy, 0.0), X}, {});
-
+    Value *ZeroWithXSign =
+        B.CreateCopySign(ConstantFP::get(FremTy, 0.0), X);
     Value *Ret = B.CreateSelect(B.CreateFCmpOEQ(Ax, Ay), ZeroWithXSign, X);
 
     RetPhi->addIncoming(Ret, B.GetInsertBlock());
@@ -259,22 +261,17 @@ private:
                                 std::optional<SimplifyQuery> &SQ,
                                 bool NoInfs) const {
     // Build:
-    //   ret = y == 0.0f ? QNAN_ComputeFpTy : ret;
-    //   bool c = !BUILTIN_ISNAN_ComputeFpTy(y) &&
-    //   BUILTIN_ISFINITE_ComputeFpTy(x);
-    //   ret = c ? ret : QNAN_ComputeFpTy;
+    //   ret = (y == 0.0f || isnan(y)) ? QNAN_ComputeFpTy : ret;
+    //   ret = isfinite(x) ? ret : QNAN_ComputeFpTy;
     Value *Nan = ConstantFP::getQNaN(FremTy);
-    Ret = B.CreateSelect(B.CreateFCmpOEQ(Y, ConstantFP::get(FremTy, 0.0)), Nan,
+    Ret = B.CreateSelect(B.CreateFCmpUEQ(Y, ConstantFP::get(FremTy, 0.0)), Nan,
                          Ret);
-    FPClassTest NotNan = FPClassTest::fcInf | FPClassTest::fcFinite;
-    Value *YNotNan = SQ && isKnownNeverNaN(Y, 0, *SQ)
-                         ? B.getTrue()
-                         : B.createIsFPClass(Y, NotNan);
-    Value *XFinite = NoInfs || (SQ && isKnownNeverInfinity(X, 0, *SQ))
-                         ? B.getTrue()
-                         : B.createIsFPClass(X, FPClassTest::fcFinite);
-    Value *C = B.CreateLogicalAnd(YNotNan, XFinite);
-    Ret = B.CreateSelect(C, Ret, Nan);
+    Value *XFinite =
+        NoInfs || (SQ && isKnownNeverInfinity(X, 0, *SQ))
+            ? B.getTrue()
+            : B.CreateFCmpULT(B.CreateUnaryIntrinsic(Intrinsic::fabs, X),
+                              ConstantFP::getInfinity(FremTy));
+    Ret = B.CreateSelect(XFinite, Ret, Nan);
 
     return Ret;
   }
@@ -327,9 +324,7 @@ Value *FRemExpander::buildFRem(Value *X, Value *Y,
   ComputeFMF.setNoNaNs();
 
   B.SetInsertPoint(ThenBB);
-  B.setFastMathFlags(ComputeFMF);
-  buildRemainderComputation(Ax, Ay, X, RetPhi);
-  B.setFastMathFlags(FMF);
+  buildRemainderComputation(Ax, Ay, X, RetPhi, FMF);
   B.CreateBr(RetPhi->getParent());
 
   // Build "else"-branch

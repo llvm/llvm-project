@@ -2599,7 +2599,6 @@ define amdgpu_kernel void @fcmp64(float %n, float %s) {
 ; GFX1032-NEXT:  .LBB51_7: ; %Flow12
 ; GFX1032-NEXT:    s_or_b32 exec_lo, exec_lo, s2
 ; GFX1032-NEXT:    v_add_nc_u32_e32 v4, -11, v4
-; GFX1032-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
 ; GFX1032-NEXT:    v_ldexp_f32 v4, v5, v4
 ; GFX1032-NEXT:    v_mul_f32_e32 v3, v4, v3
 ; GFX1032-NEXT:    v_rndne_f32_e32 v3, v3
@@ -2608,12 +2607,10 @@ define amdgpu_kernel void @fcmp64(float %n, float %s) {
 ; GFX1032-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v3
 ; GFX1032-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc_lo
 ; GFX1032-NEXT:    v_ldexp_f32 v1, v1, v2
-; GFX1032-NEXT:    v_xor_b32_e32 v1, v0, v1
+; GFX1032-NEXT:    v_bfi_b32 v1, 0x7fffffff, v1, v0
 ; GFX1032-NEXT:  .LBB51_8: ; %Flow14
 ; GFX1032-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; GFX1032-NEXT:    v_cmp_neq_f32_e64 s1, s0, 0
-; GFX1032-NEXT:    v_cmp_class_f32_e64 s0, s0, 0x3fc
-; GFX1032-NEXT:    s_and_b32 vcc_lo, s0, s1
+; GFX1032-NEXT:    v_cmp_lg_f32_e64 vcc_lo, s0, 0
 ; GFX1032-NEXT:    s_brev_b32 s1, 1
 ; GFX1032-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v1, vcc_lo
 ; GFX1032-NEXT:    v_cmp_eq_f32_e32 vcc_lo, 0, v0
@@ -2694,7 +2691,6 @@ define amdgpu_kernel void @fcmp64(float %n, float %s) {
 ; GFX1064-NEXT:  .LBB51_7: ; %Flow12
 ; GFX1064-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX1064-NEXT:    v_add_nc_u32_e32 v4, -11, v4
-; GFX1064-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
 ; GFX1064-NEXT:    v_ldexp_f32 v4, v5, v4
 ; GFX1064-NEXT:    v_mul_f32_e32 v3, v4, v3
 ; GFX1064-NEXT:    v_rndne_f32_e32 v3, v3
@@ -2703,12 +2699,10 @@ define amdgpu_kernel void @fcmp64(float %n, float %s) {
 ; GFX1064-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v3
 ; GFX1064-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GFX1064-NEXT:    v_ldexp_f32 v1, v1, v2
-; GFX1064-NEXT:    v_xor_b32_e32 v1, v0, v1
+; GFX1064-NEXT:    v_bfi_b32 v1, 0x7fffffff, v1, v0
 ; GFX1064-NEXT:  .LBB51_8: ; %Flow14
 ; GFX1064-NEXT:    s_or_b64 exec, exec, s[0:1]
-; GFX1064-NEXT:    v_cmp_neq_f32_e64 s[0:1], s6, 0
-; GFX1064-NEXT:    v_cmp_class_f32_e64 s[2:3], s6, 0x3fc
-; GFX1064-NEXT:    s_and_b64 vcc, s[2:3], s[0:1]
+; GFX1064-NEXT:    v_cmp_lg_f32_e64 vcc, s6, 0
 ; GFX1064-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v1, vcc
 ; GFX1064-NEXT:    v_cmp_eq_f32_e32 vcc, 0, v0
 ; GFX1064-NEXT:    s_lshr_b64 s[0:1], vcc, 1
@@ -2911,7 +2905,6 @@ define amdgpu_kernel void @fcmp32(float %n, float %s) {
 ; GFX1032-NEXT:  .LBB53_7: ; %Flow12
 ; GFX1032-NEXT:    s_or_b32 exec_lo, exec_lo, s2
 ; GFX1032-NEXT:    v_add_nc_u32_e32 v4, -11, v4
-; GFX1032-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
 ; GFX1032-NEXT:    v_ldexp_f32 v4, v5, v4
 ; GFX1032-NEXT:    v_mul_f32_e32 v3, v4, v3
 ; GFX1032-NEXT:    v_rndne_f32_e32 v3, v3
@@ -2920,12 +2913,10 @@ define amdgpu_kernel void @fcmp32(float %n, float %s) {
 ; GFX1032-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v3
 ; GFX1032-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc_lo
 ; GFX1032-NEXT:    v_ldexp_f32 v1, v1, v2
-; GFX1032-NEXT:    v_xor_b32_e32 v1, v0, v1
+; GFX1032-NEXT:    v_bfi_b32 v1, 0x7fffffff, v1, v0
 ; GFX1032-NEXT:  .LBB53_8: ; %Flow14
 ; GFX1032-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; GFX1032-NEXT:    v_cmp_neq_f32_e64 s1, s0, 0
-; GFX1032-NEXT:    v_cmp_class_f32_e64 s0, s0, 0x3fc
-; GFX1032-NEXT:    s_and_b32 vcc_lo, s0, s1
+; GFX1032-NEXT:    v_cmp_lg_f32_e64 vcc_lo, s0, 0
 ; GFX1032-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v1, vcc_lo
 ; GFX1032-NEXT:    v_cmp_eq_f32_e32 vcc_lo, 0, v0
 ; GFX1032-NEXT:    s_lshr_b32 s0, vcc_lo, 1
@@ -3006,7 +2997,6 @@ define amdgpu_kernel void @fcmp32(float %n, float %s) {
 ; GFX1064-NEXT:  .LBB53_7: ; %Flow12
 ; GFX1064-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX1064-NEXT:    v_add_nc_u32_e32 v4, -11, v4
-; GFX1064-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
 ; GFX1064-NEXT:    v_ldexp_f32 v4, v5, v4
 ; GFX1064-NEXT:    v_mul_f32_e32 v3, v4, v3
 ; GFX1064-NEXT:    v_rndne_f32_e32 v3, v3
@@ -3015,12 +3005,10 @@ define amdgpu_kernel void @fcmp32(float %n, float %s) {
 ; GFX1064-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v3
 ; GFX1064-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GFX1064-NEXT:    v_ldexp_f32 v1, v1, v2
-; GFX1064-NEXT:    v_xor_b32_e32 v1, v0, v1
+; GFX1064-NEXT:    v_bfi_b32 v1, 0x7fffffff, v1, v0
 ; GFX1064-NEXT:  .LBB53_8: ; %Flow14
 ; GFX1064-NEXT:    s_or_b64 exec, exec, s[0:1]
-; GFX1064-NEXT:    v_cmp_neq_f32_e64 s[0:1], s6, 0
-; GFX1064-NEXT:    v_cmp_class_f32_e64 s[2:3], s6, 0x3fc
-; GFX1064-NEXT:    s_and_b64 vcc, s[2:3], s[0:1]
+; GFX1064-NEXT:    v_cmp_lg_f32_e64 vcc, s6, 0
 ; GFX1064-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v1, vcc
 ; GFX1064-NEXT:    v_cmp_eq_f32_e32 vcc, 0, v0
 ; GFX1064-NEXT:    s_lshr_b32 s0, vcc_lo, 1
