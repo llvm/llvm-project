@@ -627,10 +627,10 @@ Function *AArch64Arm64ECCallLowering::buildGuestExitThunk(Function *F) {
       Function::Create(Arm64Ty, GlobalValue::WeakODRLinkage, 0, ThunkName, M);
   GuestExit->setComdat(M->getOrInsertComdat(ThunkName));
   GuestExit->setSection(".wowthk$aa");
-  GuestExit->setMetadata(
+  GuestExit->addMetadata(
       "arm64ec_unmangled_name",
-      MDNode::get(M->getContext(),
-                  MDString::get(M->getContext(), F->getName())));
+      *MDNode::get(M->getContext(),
+                   MDString::get(M->getContext(), F->getName())));
   GuestExit->setMetadata(
       "arm64ec_ecmangled_name",
       MDNode::get(M->getContext(),
@@ -803,6 +803,23 @@ bool AArch64Arm64ECCallLowering::runOnModule(Module &Mod) {
   DispatchFnGlobal =
       M->getOrInsertGlobal("__os_arm64x_dispatch_call", DispatchFnPtrType);
 
+  // Mangle names of function aliases and add the alias name to
+  // arm64ec_unmangled_name metadata to ensure a weak anti-dependency symbol is
+  // emitted for the alias as well. Do this early, before handling
+  // hybrid_patchable functions, to avoid mangling their aliases.
+  for (GlobalAlias &A : Mod.aliases()) {
+    auto F = dyn_cast_or_null<Function>(A.getAliaseeObject());
+    if (!F)
+      continue;
+    if (std::optional<std::string> MangledName =
+            getArm64ECMangledFunctionName(A.getName().str())) {
+      F->addMetadata("arm64ec_unmangled_name",
+                     *MDNode::get(M->getContext(),
+                                  MDString::get(M->getContext(), A.getName())));
+      A.setName(MangledName.value());
+    }
+  }
+
   DenseMap<GlobalAlias *, GlobalAlias *> FnsMap;
   SetVector<GlobalAlias *> PatchableFns;
 
@@ -837,20 +854,24 @@ bool AArch64Arm64ECCallLowering::runOnModule(Module &Mod) {
       // emitGlobalAlias to emit the right alias.
       auto *A =
           GlobalAlias::create(GlobalValue::LinkOnceODRLinkage, OrigName, &F);
+      auto *AM = GlobalAlias::create(GlobalValue::LinkOnceODRLinkage,
+                                     MangledName.value(), &F);
+      F.replaceUsesWithIf(AM,
+                          [](Use &U) { return isa<GlobalAlias>(U.getUser()); });
       F.replaceAllUsesWith(A);
       F.setMetadata("arm64ec_exp_name",
                     MDNode::get(M->getContext(),
                                 MDString::get(M->getContext(),
                                               "EXP+" + MangledName.value())));
       A->setAliasee(&F);
+      AM->setAliasee(&F);
 
       if (F.hasDLLExportStorageClass()) {
         A->setDLLStorageClass(GlobalValue::DLLExportStorageClass);
         F.setDLLStorageClass(GlobalValue::DefaultStorageClass);
       }
 
-      FnsMap[A] = GlobalAlias::create(GlobalValue::LinkOnceODRLinkage,
-                                      MangledName.value(), &F);
+      FnsMap[A] = AM;
       PatchableFns.insert(A);
     }
   }
@@ -928,9 +949,9 @@ bool AArch64Arm64ECCallLowering::processFunction(
   if (!F.hasLocalLinkage() || F.hasAddressTaken()) {
     if (std::optional<std::string> MangledName =
             getArm64ECMangledFunctionName(F.getName().str())) {
-      F.setMetadata("arm64ec_unmangled_name",
-                    MDNode::get(M->getContext(),
-                                MDString::get(M->getContext(), F.getName())));
+      F.addMetadata("arm64ec_unmangled_name",
+                    *MDNode::get(M->getContext(),
+                                 MDString::get(M->getContext(), F.getName())));
       if (F.hasComdat() && F.getComdat()->getName() == F.getName()) {
         Comdat *MangledComdat = M->getOrInsertComdat(MangledName.value());
         SmallVector<GlobalObject *> ComdatUsers =
