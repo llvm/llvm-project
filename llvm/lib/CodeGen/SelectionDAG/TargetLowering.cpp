@@ -3167,12 +3167,13 @@ bool TargetLowering::SimplifyDemandedVectorElts(
       // TODO - bigendian once we have test coverage.
       if (IsLE) {
         APInt DemandedSrcBits = APInt::getZero(SrcVT.getSizeInBits());
-        for (unsigned i = 0; i != NumElts; ++i)
-          if (DemandedElts[i]) {
-            unsigned Offset = i * VT.getScalarSizeInBits();
-            DemandedSrcBits.insertBits(
-                APInt::getAllOnes(VT.getScalarSizeInBits()), Offset);
+        unsigned EltSize = VT.getScalarSizeInBits();
+        for (unsigned I = 0; I != NumElts; ++I) {
+          if (DemandedElts[I]) {
+            unsigned Offset = I * EltSize;
+            DemandedSrcBits.setBits(Offset, Offset + EltSize);
           }
+        }
         KnownBits Known;
         if (SimplifyDemandedBits(Src, DemandedSrcBits, Known, TLO, Depth + 1))
           return true;
