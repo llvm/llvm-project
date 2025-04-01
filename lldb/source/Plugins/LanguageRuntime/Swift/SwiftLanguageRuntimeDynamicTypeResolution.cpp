@@ -695,8 +695,10 @@ void LogUnimplementedTypeKind(const char *function, CompilerType type) {
 #endif
 }
 
-CompilerType GetCanonicalClangType(CompilerType type) {
-  for (unsigned i = 0; i < 32; ++i) {
+/// Resolve a (chain of) typedefs.
+CompilerType GetTypedefedTypeRecursive(CompilerType type) {
+  // Guard against cycles.
+  for (unsigned i = 0; i < 128; ++i) {
     if (!type.IsTypedefType())
       return type;
     type = type.GetTypedefedType();
@@ -730,7 +732,7 @@ SwiftLanguageRuntime::GetNumChildren(CompilerType type,
     if (!clang_type)
       ts.IsImportedType(type.GetOpaqueQualType(), &clang_type);
     if (clang_type) {
-      clang_type = GetCanonicalClangType(clang_type);
+      clang_type = GetTypedefedTypeRecursive(clang_type);
       bool is_signed;
       if (clang_type.IsEnumerationType(is_signed))
         return 1;
@@ -1162,7 +1164,7 @@ SwiftLanguageRuntime::GetIndexOfChildMemberWithName(
   case TypeInfoKind::Builtin: {
     CompilerType clang_type;
     if (ts.IsImportedType(type.GetOpaqueQualType(), &clang_type)) {
-      clang_type = GetCanonicalClangType(clang_type);
+      clang_type = GetTypedefedTypeRecursive(clang_type);
       bool is_signed;
       if (clang_type.IsEnumerationType(is_signed)) {
         // Clang enums have an artificial rawValue property.
