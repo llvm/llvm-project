@@ -249,31 +249,22 @@ add_libc_test(
     libc.src.__support.memory_size
 )
 
-# FIXME: We shouldn't have regular executables created because we could be
-#        cross-compiling the tests and running through an emulator.
 if(NOT LIBC_TARGET_OS_IS_GPU)
-  add_executable(
-    libc_str_to_float_comparison_test
-    str_to_float_comparison_test.cpp
+  add_libc_test(
+    str_to_float_comparison_test
+    SUITE
+      libc-support-tests
+    SRCS
+      str_to_float_comparison_test.cpp
+    DEPENDS
+      libc.src.stdio.printf
+      libc.src.stdio.fopen
+      libc.src.stdio.fclose
+      libc.src.stdio.fgets
+      libc.src.stdlib.strtof
+      libc.src.stdlib.strtod
+    NO_RUN_POSTBUILD
   )
-
-  target_link_libraries(libc_str_to_float_comparison_test
-    PRIVATE
-      "${LIBC_TARGET}"
-  )
-
-  add_executable(
-    libc_system_str_to_float_comparison_test
-    str_to_float_comparison_test.cpp
-  )
-
-  set(float_test_file ${CMAKE_CURRENT_SOURCE_DIR}/str_to_float_comparison_data.txt)
-
-  add_custom_command(TARGET libc_str_to_float_comparison_test
-                     POST_BUILD
-                     COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:libc_str_to_float_comparison_test> ${float_test_file}
-                     COMMENT "Test the strtof and strtod implementations against precomputed results."
-                     VERBATIM)
 endif()
 
 add_subdirectory(CPP)

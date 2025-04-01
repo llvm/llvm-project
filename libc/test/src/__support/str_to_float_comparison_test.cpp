@@ -6,13 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-// #include "src/__support/str_float_conv_utils.h"
-
-// #include "src/__support/FPUtil/FPBits.h"
-
+#include "src/stdio/fclose.h"
+#include "src/stdio/fgets.h"
+#include "src/stdio/fopen.h"
+#include "src/stdio/printf.h"
+#include "src/stdlib/strtod.h"
+#include "src/stdlib/strtof.h"
+#include "test/UnitTest/Test.h"
 #include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 // The intent of this test is to read in files in the format used in this test
 // dataset: https://github.com/nigeltao/parse-number-fxx-test-data
@@ -56,17 +57,18 @@ int checkFile(char *inputFileName, int *totalFails, int *totalBitDiffs,
   int32_t curFails = 0;    // Only counts actual failures, not bitdiffs.
   int32_t curBitDiffs = 0; // A bitdiff is when the expected result and actual
                            // result are off by +/- 1 bit.
-  char line[100];
-  char num[100];
+  char *line = nullptr;
+  char *num = nullptr;
 
-  auto *fileHandle = fopen(inputFileName, "r");
+  auto *fileHandle = LIBC_NAMESPACE::fopen(inputFileName, "r");
 
   if (!fileHandle) {
-    printf("file '%s' failed to open. Exiting.\n", inputFileName);
+    LIBC_NAMESPACE::printf("file '%s' failed to open. Exiting.\n",
+                           inputFileName);
     return 1;
   }
 
-  while (fgets(line, sizeof(line), fileHandle)) {
+  while (LIBC_NAMESPACE::fgets(line, 100, fileHandle)) {
     if (line[0] == '#') {
       continue;
     }
@@ -76,11 +78,11 @@ int checkFile(char *inputFileName, int *totalFails, int *totalBitDiffs,
 
     expectedFloatRaw = fastHexToU32(line + 5);
     expectedDoubleRaw = fastHexToU64(line + 14);
-    sscanf(line + 31, "%s", num);
+    num = line + 31;
 
-    float floatResult = strtof(num, nullptr);
+    float floatResult = LIBC_NAMESPACE::strtof(num, nullptr);
 
-    double doubleResult = strtod(num, nullptr);
+    double doubleResult = LIBC_NAMESPACE::strtod(num, nullptr);
 
     uint32_t floatRaw = *(uint32_t *)(&floatResult);
 
@@ -99,8 +101,8 @@ int checkFile(char *inputFileName, int *totalFails, int *totalBitDiffs,
         curFails++;
       }
       if (curFails + curBitDiffs < 10) {
-        printf("Float fail for '%s'. Expected %x but got %x\n", num,
-               expectedFloatRaw, floatRaw);
+        LIBC_NAMESPACE::printf("Float fail for '%s'. Expected %x but got %x\n",
+                               num, expectedFloatRaw, floatRaw);
       }
     }
 
@@ -117,13 +119,14 @@ int checkFile(char *inputFileName, int *totalFails, int *totalBitDiffs,
         curFails++;
       }
       if (curFails + curBitDiffs < 10) {
-        printf("Double fail for '%s'. Expected %lx but got %lx\n", num,
-               expectedDoubleRaw, doubleRaw);
+        LIBC_NAMESPACE::printf(
+            "Double fail for '%s'. Expected %lx but got %lx\n", num,
+            expectedDoubleRaw, doubleRaw);
       }
     }
   }
 
-  fclose(fileHandle);
+  LIBC_NAMESPACE::fclose(fileHandle);
 
   *totalBitDiffs += curBitDiffs;
   *totalFails += curFails;
@@ -134,7 +137,7 @@ int checkFile(char *inputFileName, int *totalFails, int *totalBitDiffs,
   return 0;
 }
 
-int main(int argc, char *argv[]) {
+TEST(LlvmLibcStrToFloatComparisonTest, CheckFile) {
   int result = 0;
   int fails = 0;
 
@@ -146,27 +149,23 @@ int main(int argc, char *argv[]) {
   int detailedBitDiffs[4] = {0, 0, 0, 0};
 
   int total = 0;
-  for (int i = 1; i < argc; i++) {
-    printf("Starting file %s\n", argv[i]);
-    int curResult =
-        checkFile(argv[i], &fails, &bitdiffs, detailedBitDiffs, &total);
-    if (curResult == 1) {
-      result = 1;
-      break;
-    } else if (curResult == 2) {
-      result = 2;
-    }
-  }
-  printf("Results:\n"
-         "Total significant failed conversions: %d\n"
-         "Total conversions off by +/- 1 bit: %d\n"
-         "\t%d\tfloat low\n"
-         "\t%d\tfloat high\n"
-         "\t%d\tdouble low\n"
-         "\t%d\tdouble high\n"
-         "Total lines: %d\n",
-         fails, bitdiffs, detailedBitDiffs[0], detailedBitDiffs[1],
-         detailedBitDiffs[2], detailedBitDiffs[3], total);
 
-  return result;
+  char filename[] = "str_to_float_comparison_data.txt";
+  LIBC_NAMESPACE::printf("Starting file %s\n", filename);
+  int curResult =
+      checkFile(filename, &fails, &bitdiffs, detailedBitDiffs, &total);
+  if (curResult == 1) {
+    result = 1;
+  } else if (curResult == 2) {
+    result = 2;
+  }
+
+  EXPECT_EQ(result, 0);
+  EXPECT_EQ(fails, 0);
+  EXPECT_EQ(bitdiffs, 0);
+  EXPECT_EQ(detailedBitDiffs[0], 0);
+  EXPECT_EQ(detailedBitDiffs[1], 0);
+  EXPECT_EQ(detailedBitDiffs[2], 0);
+  EXPECT_EQ(detailedBitDiffs[3], 0);
+  EXPECT_EQ(total, 0);
 }
