@@ -446,6 +446,14 @@ class TypeSourceInfo;
     /// returns nullptr only if the FromId was nullptr.
     IdentifierInfo *Import(const IdentifierInfo *FromId);
 
+    /// Import the given identifier or overloaded operator from the "from"
+    /// context into the "to" context.
+    ///
+    /// \returns The equivalent identifier or overloaded operator in the "to"
+    /// context.
+    IdentifierOrOverloadedOperator
+    Import(IdentifierOrOverloadedOperator FromIO);
+
     /// Import the given Objective-C selector from the "from"
     /// context into the "to" context.
     ///
