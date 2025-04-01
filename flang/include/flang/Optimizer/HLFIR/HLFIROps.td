@@ -1419,28 +1419,26 @@ def hlfir_YieldOp : hlfir_Op<"yield", [Terminator, ParentOneOf<["RegionAssignOp"
   let assemblyFormat = "$entity attr-dict `:` type($entity) custom<YieldOpCleanup>($cleanup)";
 }
 
-def hlfir_ElementalAddrOp : hlfir_Op<"elemental_addr", [Terminator, HasParent<"RegionAssignOp">,
+def hlfir_ElementalAddrOp : hlfir_Op<"elemental_addr", [Terminator,
     RecursiveMemoryEffects, RecursivelySpeculatable, hlfir_ElementalOpInterface,
     AttrSizedOperandSegments]> {
   let summary = "Yield the address of a vector subscripted variable inside an hlfir.region_assign";
   let description = [{
-    Special terminator node for the left-hand side region of an hlfir.region_assign
-    to a vector subscripted entity.
+    Used to get the address of elements in an array which is being subscripted
+    by a vector.
 
     It represents how the address of an element of such entity is computed given
     one based indices.
 
     It is very similar to hlfir.elemental, except that it does not produce an SSA
     value because there is no hlfir type to describe a vector subscripted entity
-    (the codegen of such type would be problematic). Hence, it is tightly linked
-    to an hlfir.region_assign by its terminator property.
+    (the codegen of such type would be problematic).
 
     An optional cleanup region may be provided if any of the subscript expressions
     of the designator require a cleanup.
     This allows documenting cleanups that cannot be generated after the vector
     subscripted designator usage (that has not been materizaled yet). The cleanups
-    will be evaluated after the assignment once the related
-    hlfir.region_assign is lowered.
+    should be evaluated after the usage of the elemental addr.
 
     Example: "X(VECTOR) = Y"
 
