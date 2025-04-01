@@ -5515,7 +5515,7 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MachineOperand &Src0 = MI.getOperand(1);
     MachineOperand &Src1 = MI.getOperand(2);
 
-    if (ST.hasAddU64SubU64()) {
+    if (ST.hasAddSubU64Insts()) {
       auto I = BuildMI(*BB, MI, DL, TII->get(IsAdd ? AMDGPU::V_ADD_U64_e64
                                                    : AMDGPU::V_SUB_U64_e64),
                        Dest.getReg())
