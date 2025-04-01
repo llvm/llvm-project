@@ -6900,6 +6900,16 @@ void Sema::deduceHLSLAddressSpace(VarDecl *Decl) {
   if (Type->isSamplerT() || Type->isVoidType())
     return;
 
+  // Template instantiations can lack definition. In such case,
+  // we cannot deduce the AS.
+  // FIXME: figure out why RWBuffer<float> yields such declaration.
+  if (const RecordType *RT =
+          dyn_cast<RecordType>(Type->getUnqualifiedDesugaredType())) {
+    CXXRecordDecl *RD = Type->getAsCXXRecordDecl();
+    if (RD && !RD->isCompleteDefinition())
+      return;
+  }
+
   // Resource handles.
   if (Type->isHLSLIntangibleType())
     return;
@@ -7807,9 +7817,6 @@ NamedDecl *Sema::ActOnVariableDeclarator(
       NewVD = VarDecl::Create(Context, DC, D.getBeginLoc(),
                               D.getIdentifierLoc(), II, R, TInfo, SC);
 
-    if (getLangOpts().HLSL)
-      deduceHLSLAddressSpace(NewVD);
-
     // If this is supposed to be a variable template, create it as such.
     if (IsVariableTemplate) {
       NewTemplate =
@@ -7995,9 +8002,6 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     }
   }
 
-  if (getLangOpts().HLSL)
-    deduceHLSLAddressSpace(NewVD);
-
   // WebAssembly tables are always in address space 1 (wasm_var). Don't apply
   // address space if the table has local storage (semantic checks elsewhere
   // will produce an error anyway).
@@ -8013,8 +8017,11 @@ NamedDecl *Sema::ActOnVariableDeclarator(
   // Handle attributes prior to checking for duplicates in MergeVarDecl
   ProcessDeclAttributes(S, NewVD, D);
 
-  if (getLangOpts().HLSL)
+  if (getLangOpts().HLSL) {
     HLSL().ActOnVariableDeclarator(NewVD);
+    deduceHLSLAddressSpace(NewVD);
+  }
+
   if (getLangOpts().OpenACC)
     OpenACC().ActOnVariableDeclarator(NewVD);
 
