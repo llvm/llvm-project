@@ -15913,10 +15913,10 @@ BoUpSLP::getMatchedVectorizedOperand(const TreeEntry *E, unsigned NodeIdx,
                                      const InstructionsState &S) {
   if (!S)
     return nullptr;
-  if (TreeEntry *VE = getSameValuesTreeEntry(S.getMainOp(), VL);
-      VE && VE->UserTreeIndex.UserTE == E &&
-      VE->UserTreeIndex.EdgeIdx == NodeIdx)
-    return VE;
+  for (TreeEntry *TE : ScalarToTreeEntries.lookup(S.getMainOp()))
+    if (TE->UserTreeIndex.UserTE == E && TE->UserTreeIndex.EdgeIdx == NodeIdx &&
+        TE->isSame(VL))
+      return TE;
   return nullptr;
 }
 
