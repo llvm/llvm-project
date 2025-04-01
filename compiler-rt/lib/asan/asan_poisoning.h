@@ -27,8 +27,8 @@ namespace __asan {
 void InitializePoisonTracking();
 
 struct PoisonRecord {
-  unsigned int stack_id;
-  unsigned int thread_id;
+  u32 stack_id;
+  u32 thread_id;
   uptr begin;
   uptr end;
 };
