@@ -117,7 +117,9 @@ add_clang_library(clangCodeGen
   SanitizerMetadata.cpp
   SwiftCallingConv.cpp
   TargetInfo.cpp
+  Targets/DirectX.cpp
   VarBypassDetector.cpp
+
   DEPENDS
   vt_gen
   intrinsics_gen
