@@ -770,7 +770,7 @@ std::enable_if_t<std::is_signed_v<T>, bool> MulOverflow(T X, T Y, T &Result) {
 
   bool IsNegative = (X < 0) ^ (Y < 0);
 
-  // Safely compute absolute values (convert to int64_t first)
+  // Safely compute absolute values  
   const U AbsX = X < 0 ? (0 - static_cast<U>(X)) : static_cast<U>(X);
   const U AbsY = Y < 0 ? (0 - static_cast<U>(Y)) : static_cast<U>(Y);
 
