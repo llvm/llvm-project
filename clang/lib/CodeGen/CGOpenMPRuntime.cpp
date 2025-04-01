@@ -2614,8 +2614,7 @@ void CGOpenMPRuntime::emitDistributeStaticInit(
   llvm::Value *ThreadId = getThreadID(CGF, Loc);
   llvm::FunctionCallee StaticInitFunction;
   bool isGPUDistribute =
-      CGM.getLangOpts().OpenMPIsTargetDevice &&
-      (CGM.getTriple().isAMDGCN() || CGM.getTriple().isNVPTX());
+      CGM.getLangOpts().OpenMPIsTargetDevice && CGM.getTriple().isGPU();
   StaticInitFunction = OMPBuilder.createForStaticInitFunction(
       Values.IVSize, Values.IVSigned, isGPUDistribute);
 
@@ -2644,8 +2643,7 @@ void CGOpenMPRuntime::emitForStaticFinish(CodeGenFunction &CGF,
       getThreadID(CGF, Loc)};
   auto DL = ApplyDebugLocation::CreateDefaultArtificial(CGF, Loc);
   if (isOpenMPDistributeDirective(DKind) &&
-      CGM.getLangOpts().OpenMPIsTargetDevice &&
-      (CGM.getTriple().isAMDGCN() || CGM.getTriple().isNVPTX()))
+      CGM.getLangOpts().OpenMPIsTargetDevice && CGM.getTriple().isGPU())
     CGF.EmitRuntimeCall(
         OMPBuilder.getOrCreateRuntimeFunction(
             CGM.getModule(), OMPRTL___kmpc_distribute_static_fini),

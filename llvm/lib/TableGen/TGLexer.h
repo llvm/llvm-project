@@ -137,6 +137,7 @@ enum TokKind {
   XSize,
   XEmpty,
   XInitialized,
+  XInstances,
   XIf,
   XCond,
   XEq,

@@ -531,7 +531,7 @@ protected:
     unsigned : NumExprBits;
 
     LLVM_PREFERRED_TYPE(UnaryExprOrTypeTrait)
-    unsigned Kind : 3;
+    unsigned Kind : 4;
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsType : 1; // true if operand is a type, false if an expression.
   };

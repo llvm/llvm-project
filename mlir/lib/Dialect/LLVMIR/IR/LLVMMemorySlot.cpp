@@ -1345,8 +1345,7 @@ static bool memcpyCanRewire(MemcpyLike op, const DestructurableMemorySlot &slot,
     return false;
 
   if (op.getSrc() == slot.ptr)
-    for (Attribute index : llvm::make_first_range(slot.subelementTypes))
-      usedIndices.insert(index);
+    usedIndices.insert_range(llvm::make_first_range(slot.subelementTypes));
 
   return true;
 }

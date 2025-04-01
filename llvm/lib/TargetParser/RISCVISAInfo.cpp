@@ -745,9 +745,9 @@ Error RISCVISAInfo::checkDependency() {
 
   static constexpr StringLiteral XqciExts[] = {
       {"xqcia"},   {"xqciac"},  {"xqcibi"},  {"xqcibm"},  {"xqcicli"},
-      {"xqcicm"},  {"xqcics"},  {"xqcicsr"}, {"xqciint"}, {"xqcilb"},
-      {"xqcili"},  {"xqcilia"}, {"xqcilo"},  {"xqcilsm"}, {"xqcisim"},
-      {"xqcisls"}, {"xqcisync"}};
+      {"xqcicm"},  {"xqcics"},  {"xqcicsr"}, {"xqciint"}, {"xqciio"},
+      {"xqcilb"},  {"xqcili"},  {"xqcilia"}, {"xqcilo"},  {"xqcilsm"},
+      {"xqcisim"}, {"xqcisls"}, {"xqcisync"}};
   static constexpr StringLiteral ZcdOverlaps[] = {
       {"zcmt"}, {"zcmp"}, {"xqccmp"}, {"xqciac"}, {"xqcicm"}};
 
@@ -878,8 +878,8 @@ void RISCVISAInfo::updateImplication() {
 }
 
 static constexpr StringLiteral CombineIntoExts[] = {
-    {"zk"},    {"zkn"},  {"zks"},   {"zvkn"},  {"zvknc"},
-    {"zvkng"}, {"zvks"}, {"zvksc"}, {"zvksg"},
+    {"b"},     {"zk"},    {"zkn"},  {"zks"},   {"zvkn"},
+    {"zvknc"}, {"zvkng"}, {"zvks"}, {"zvksc"}, {"zvksg"},
 };
 
 void RISCVISAInfo::updateCombination() {
