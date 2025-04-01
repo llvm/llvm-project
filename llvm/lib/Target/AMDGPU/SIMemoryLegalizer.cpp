@@ -2571,9 +2571,11 @@ bool SIGfx12CacheControl::finalizeStore(MachineBasicBlock::iterator &MI,
                                         bool Atomic) const {
   // GFX120x specific: we must add waits before a system scope store.
   MachineOperand *CPol = TII->getNamedOperand(*MI, OpName::cpol);
+  if (!CPol)
+    return false;
 
   // No scope operand means SCOPE_CU.
-  const unsigned Scope = CPol ? (CPol->getImm() & CPol::SCOPE) : CPol::SCOPE_CU;
+  const unsigned Scope = CPol->getImm() & CPol::SCOPE;
 
   // GFX120x only: Extra waits needed before system scope stores.
   if (!ST.hasGFX1250Insts()) {
