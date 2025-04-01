@@ -1,19 +1,18 @@
-// Tests evaluating expressions with side effects on convenience variable.
-// Applied side effect should be visible to the debugger.
+// Same as TestExprWithSideEffectOnConvenienceVar.cpp but without $ escaping
 
-// UNSUPPORTED: system-windows
+// REQUIRES: target-windows
 
 // RUN: %build %s -o %t
 // RUN: %lldb %t -o run \
-// RUN:   -o "expr int \$y = 11" \
-// RUN:   -o "expr \$y" \
-// RUN:   -o "expr \$y = 100" \
-// RUN:   -o "expr \$y" \
+// RUN:   -o "expr int $y = 11" \
+// RUN:   -o "expr $y" \
+// RUN:   -o "expr $y = 100" \
+// RUN:   -o "expr $y" \
 // RUN:   -o "continue" \
-// RUN:   -o "expr \$y" \
-// RUN:   -o "expr X \$mine = {100, 200}" \
-// RUN:   -o "expr \$mine.a = 300" \
-// RUN:   -o "expr \$mine" \
+// RUN:   -o "expr $y" \
+// RUN:   -o "expr X $mine = {100, 200}" \
+// RUN:   -o "expr $mine.a = 300" \
+// RUN:   -o "expr $mine" \
 // RUN:   -o exit | FileCheck %s -dump-input=fail
 
 struct X {
