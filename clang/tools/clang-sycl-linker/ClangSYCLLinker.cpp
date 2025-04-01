@@ -205,7 +205,7 @@ Expected<std::unique_ptr<Module>> getBitcodeModule(StringRef File,
 
   auto M = getLazyIRFileModule(File, Err, C);
   if (M)
-    return M;
+    return std::move(M);
   return createStringError(Err.getMessage());
 }
 
