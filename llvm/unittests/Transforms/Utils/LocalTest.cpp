@@ -30,8 +30,6 @@ using namespace llvm;
 
 extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
 extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
-extern bool WriteNewDbgInfoFormatToBitcode;
-extern cl::opt<bool> WriteNewDbgInfoFormat;
 
 // Backup all of the existing settings that may be modified when
 // PreserveInputDbgFormat=true, so that when the test is finished we return them
@@ -39,13 +37,9 @@ extern cl::opt<bool> WriteNewDbgInfoFormat;
 static auto SaveDbgInfoFormat() {
   return make_scope_exit(
       [OldPreserveInputDbgFormat = PreserveInputDbgFormat.getValue(),
-       OldUseNewDbgInfoFormat = UseNewDbgInfoFormat.getValue(),
-       OldWriteNewDbgInfoFormatToBitcode = WriteNewDbgInfoFormatToBitcode,
-       OldWriteNewDbgInfoFormat = WriteNewDbgInfoFormat.getValue()] {
+       OldUseNewDbgInfoFormat = UseNewDbgInfoFormat.getValue()] {
         PreserveInputDbgFormat = OldPreserveInputDbgFormat;
         UseNewDbgInfoFormat = OldUseNewDbgInfoFormat;
-        WriteNewDbgInfoFormatToBitcode = OldWriteNewDbgInfoFormatToBitcode;
-        WriteNewDbgInfoFormat = OldWriteNewDbgInfoFormat;
       });
 }
 
