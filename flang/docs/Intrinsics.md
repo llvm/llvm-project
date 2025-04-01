@@ -1175,3 +1175,15 @@ by `ISIZE`.
 - **Standard:** lib3f (section 3f of old man pages).
 - **Class:** subroutine
 - **Syntax:** `CALL QSORT(ARRAY, LEN, ISIZE, COMPAR)`
+
+### Non-Standard Intrinsics: PERROR
+
+#### Description
+`PERROR(STRING)` prints (on the C stderr stream) a newline-terminated error message corresponding to the last system error.
+This is prefixed by `STRING`, a colon and a space.
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** subroutine
+- **Syntax:** `CALL PERROR(STRING)`
