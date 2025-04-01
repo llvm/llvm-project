@@ -41,8 +41,8 @@ struct TestOpConversion : public OpConversionPattern<test_irdl_to_cpp::BeefOp> {
   LogicalResult
   matchAndRewrite(mlir::test_irdl_to_cpp::BeefOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    assert(adaptor.getODSOperands(0).size() == 1);
-    assert(adaptor.getODSOperands(1).size() == 1);
+    assert(adaptor.getStructuredOperands(0).size() == 1);
+    assert(adaptor.getStructuredOperands(1).size() == 1);
 
     auto bar = rewriter.replaceOpWithNewOp<test_irdl_to_cpp::BarOp>(
         op, op->getResultTypes().front());
