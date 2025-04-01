@@ -1010,6 +1010,514 @@ static std::optional<Instruction *> processPhiNode(InstCombiner &IC,
   return IC.replaceInstUsesWith(II, NPN);
 }
 
+// A collection of properties common to SVE intrinsics that allow for combines
+// to be written without needing to know the specific intrinsic.
+struct SVEIntrinsicInfo {
+  //
+  // Helper routines for common intrinsic definitions.
+  //
+
+  // e.g. llvm.aarch64.sve.add pg, op1, op2
+  //        with IID ==> llvm.aarch64.sve.add_u
+  static SVEIntrinsicInfo
+  defaultMergingOp(Intrinsic::ID IID = Intrinsic::not_intrinsic) {
+    return SVEIntrinsicInfo()
+        .setGoverningPredicateOperandIdx(0)
+        .setOperandIdxInactiveLanesTakenFrom(1)
+        .setMatchingUndefIntrinsic(IID);
+  }
+
+  // e.g. llvm.aarch64.sve.neg inactive, pg, op
+  static SVEIntrinsicInfo defaultMergingUnaryOp() {
+    return SVEIntrinsicInfo()
+        .setGoverningPredicateOperandIdx(1)
+        .setOperandIdxInactiveLanesTakenFrom(0)
+        .setOperandIdxWithNoActiveLanes(0);
+  }
+
+  // e.g. llvm.aarch64.sve.fcvtnt inactive, pg, op
+  static SVEIntrinsicInfo defaultMergingUnaryNarrowingTopOp() {
+    return SVEIntrinsicInfo()
+        .setGoverningPredicateOperandIdx(1)
+        .setOperandIdxInactiveLanesTakenFrom(0);
+  }
+
+  // e.g. llvm.aarch64.sve.add_u pg, op1, op2
+  static SVEIntrinsicInfo defaultUndefOp() {
+    return SVEIntrinsicInfo()
+        .setGoverningPredicateOperandIdx(0)
+        .setInactiveLanesAreNotDefined();
+  }
+
+  // e.g. llvm.aarch64.sve.prf pg, ptr        (GPIndex = 0)
+  //      llvm.aarch64.sve.st1 data, pg, ptr  (GPIndex = 1)
+  static SVEIntrinsicInfo defaultVoidOp(unsigned GPIndex) {
+    return SVEIntrinsicInfo()
+        .setGoverningPredicateOperandIdx(GPIndex)
+        .setInactiveLanesAreUnused();
+  }
+
+  // e.g. llvm.aarch64.sve.cmpeq pg, op1, op2
+  //      llvm.aarch64.sve.ld1 pg, ptr
+  static SVEIntrinsicInfo defaultZeroingOp() {
+    return SVEIntrinsicInfo()
+        .setGoverningPredicateOperandIdx(0)
+        .setInactiveLanesAreUnused()
+        .setResultIsZeroInitialized();
+  }
+
+  // All properties relate to predication and thus having a general predicate
+  // is the minimum requirement to say there is intrinsic info to act on.
+  explicit operator bool() const { return hasGoverningPredicate(); }
+
+  //
+  // Properties relating to the governing predicate.
+  //
+
+  bool hasGoverningPredicate() const {
+    return GoverningPredicateIdx != std::numeric_limits<unsigned>::max();
+  }
+
+  unsigned getGoverningPredicateOperandIdx() const {
+    assert(hasGoverningPredicate() && "Propery not set!");
+    return GoverningPredicateIdx;
+  }
+
+  SVEIntrinsicInfo &setGoverningPredicateOperandIdx(unsigned Index) {
+    assert(!hasGoverningPredicate() && "Cannot set property twice!");
+    GoverningPredicateIdx = Index;
+    return *this;
+  }
+
+  //
+  // Properties relating to operations the intrinsic could be transformed into.
+  // NOTE: This does not mean such a transformation is always possible, but the
+  // knowledge makes it possible to reuse existing optimisations without needing
+  // to embed specific handling for each intrinsic. For example, instruction
+  // simplification can be used to optimise an intrinsic's active lanes.
+  //
+
+  bool hasMatchingUndefIntrinsic() const {
+    return UndefIntrinsic != Intrinsic::not_intrinsic;
+  }
+
+  Intrinsic::ID getMatchingUndefIntrinsic() const {
+    assert(hasMatchingUndefIntrinsic() && "Propery not set!");
+    return UndefIntrinsic;
+  }
+
+  SVEIntrinsicInfo &setMatchingUndefIntrinsic(Intrinsic::ID IID) {
+    assert(!hasMatchingUndefIntrinsic() && "Cannot set property twice!");
+    UndefIntrinsic = IID;
+    return *this;
+  }
+
+  //
+  // Properties relating to the result of inactive lanes.
+  //
+
+  bool inactiveLanesTakenFromOperand() const {
+    return ResultLanes == InactiveLanesTakenFromOperand;
+  }
+
+  unsigned getOperandIdxInactiveLanesTakenFrom() const {
+    assert(inactiveLanesTakenFromOperand() && "Propery not set!");
+    return OperandIdxForInactiveLanes;
+  }
+
+  SVEIntrinsicInfo &setOperandIdxInactiveLanesTakenFrom(unsigned Index) {
+    assert(ResultLanes == Uninitialized && "Cannot set property twice!");
+    ResultLanes = InactiveLanesTakenFromOperand;
+    OperandIdxForInactiveLanes = Index;
+    return *this;
+  }
+
+  bool inactiveLanesAreNotDefined() const {
+    return ResultLanes == InactiveLanesAreNotDefined;
+  }
+
+  SVEIntrinsicInfo &setInactiveLanesAreNotDefined() {
+    assert(ResultLanes == Uninitialized && "Cannot set property twice!");
+    ResultLanes = InactiveLanesAreNotDefined;
+    return *this;
+  }
+
+  bool inactiveLanesAreUnused() const {
+    return ResultLanes == InactiveLanesAreUnused;
+  }
+
+  SVEIntrinsicInfo &setInactiveLanesAreUnused() {
+    assert(ResultLanes == Uninitialized && "Cannot set property twice!");
+    ResultLanes = InactiveLanesAreUnused;
+    return *this;
+  }
+
+  // NOTE: Whilst not limited to only inactive lanes, the common use case is:
+  // inactiveLanesAreZerod =
+  //     resultIsZeroInitialized() && inactiveLanesAreUnused()
+  bool resultIsZeroInitialized() const { return ResultIsZeroInitialized; }
+
+  SVEIntrinsicInfo &setResultIsZeroInitialized() {
+    ResultIsZeroInitialized = true;
+    return *this;
+  }
+
+  //
+  // The first operand of unary merging operations is typically only used to
+  // set the result for inactive lanes. Knowing this allows us to deadcode the
+  // operand when we can prove there are no inactive lanes.
+  //
+
+  bool hasOperandWithNoActiveLanes() const {
+    return OperandIdxWithNoActiveLanes != std::numeric_limits<unsigned>::max();
+  }
+
+  unsigned getOperandIdxWithNoActiveLanes() const {
+    assert(hasOperandWithNoActiveLanes() && "Propery not set!");
+    return OperandIdxWithNoActiveLanes;
+  }
+
+  SVEIntrinsicInfo &setOperandIdxWithNoActiveLanes(unsigned Index) {
+    assert(!hasOperandWithNoActiveLanes() && "Cannot set property twice!");
+    OperandIdxWithNoActiveLanes = Index;
+    return *this;
+  }
+
+private:
+  unsigned GoverningPredicateIdx = std::numeric_limits<unsigned>::max();
+
+  Intrinsic::ID UndefIntrinsic = Intrinsic::not_intrinsic;
+
+  enum PredicationStyle {
+    Uninitialized,
+    InactiveLanesTakenFromOperand,
+    InactiveLanesAreNotDefined,
+    InactiveLanesAreUnused
+  } ResultLanes = Uninitialized;
+
+  bool ResultIsZeroInitialized = false;
+  unsigned OperandIdxForInactiveLanes = std::numeric_limits<unsigned>::max();
+  unsigned OperandIdxWithNoActiveLanes = std::numeric_limits<unsigned>::max();
+};
+
+static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
+  // Some SVE intrinsics do not use scalable vector types, but since they are
+  // not relevant from an SVEIntrinsicInfo perspective, they are also ignored.
+  if (!isa<ScalableVectorType>(II.getType()) &&
+      all_of(II.args(), [&](const Value *V) {
+        return !isa<ScalableVectorType>(V->getType());
+      }))
+    return SVEIntrinsicInfo();
+
+  Intrinsic::ID IID = II.getIntrinsicID();
+  switch (IID) {
+  default:
+    break;
+  case Intrinsic::aarch64_sve_fcvt_bf16f32_v2:
+  case Intrinsic::aarch64_sve_fcvt_f16f32:
+  case Intrinsic::aarch64_sve_fcvt_f16f64:
+  case Intrinsic::aarch64_sve_fcvt_f32f16:
+  case Intrinsic::aarch64_sve_fcvt_f32f64:
+  case Intrinsic::aarch64_sve_fcvt_f64f16:
+  case Intrinsic::aarch64_sve_fcvt_f64f32:
+  case Intrinsic::aarch64_sve_fcvtlt_f32f16:
+  case Intrinsic::aarch64_sve_fcvtlt_f64f32:
+  case Intrinsic::aarch64_sve_fcvtx_f32f64:
+  case Intrinsic::aarch64_sve_fcvtzs:
+  case Intrinsic::aarch64_sve_fcvtzs_i32f16:
+  case Intrinsic::aarch64_sve_fcvtzs_i32f64:
+  case Intrinsic::aarch64_sve_fcvtzs_i64f16:
+  case Intrinsic::aarch64_sve_fcvtzs_i64f32:
+  case Intrinsic::aarch64_sve_fcvtzu:
+  case Intrinsic::aarch64_sve_fcvtzu_i32f16:
+  case Intrinsic::aarch64_sve_fcvtzu_i32f64:
+  case Intrinsic::aarch64_sve_fcvtzu_i64f16:
+  case Intrinsic::aarch64_sve_fcvtzu_i64f32:
+  case Intrinsic::aarch64_sve_scvtf:
+  case Intrinsic::aarch64_sve_scvtf_f16i32:
+  case Intrinsic::aarch64_sve_scvtf_f16i64:
+  case Intrinsic::aarch64_sve_scvtf_f32i64:
+  case Intrinsic::aarch64_sve_scvtf_f64i32:
+  case Intrinsic::aarch64_sve_ucvtf:
+  case Intrinsic::aarch64_sve_ucvtf_f16i32:
+  case Intrinsic::aarch64_sve_ucvtf_f16i64:
+  case Intrinsic::aarch64_sve_ucvtf_f32i64:
+  case Intrinsic::aarch64_sve_ucvtf_f64i32:
+    return SVEIntrinsicInfo::defaultMergingUnaryOp();
+
+  case Intrinsic::aarch64_sve_fcvtnt_bf16f32_v2:
+  case Intrinsic::aarch64_sve_fcvtnt_f16f32:
+  case Intrinsic::aarch64_sve_fcvtnt_f32f64:
+  case Intrinsic::aarch64_sve_fcvtxnt_f32f64:
+    return SVEIntrinsicInfo::defaultMergingUnaryNarrowingTopOp();
+
+  case Intrinsic::aarch64_sve_fabd:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_fabd_u);
+  case Intrinsic::aarch64_sve_fadd:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_fadd_u);
+  case Intrinsic::aarch64_sve_fdiv:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_fdiv_u);
+  case Intrinsic::aarch64_sve_fmax:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_fmax_u);
+  case Intrinsic::aarch64_sve_fmaxnm:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_fmaxnm_u);
+  case Intrinsic::aarch64_sve_fmin:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_fmin_u);
+  case Intrinsic::aarch64_sve_fminnm:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_fminnm_u);
+  case Intrinsic::aarch64_sve_fmla:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_fmla_u);
+  case Intrinsic::aarch64_sve_fmls:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_fmls_u);
+  case Intrinsic::aarch64_sve_fmul:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_fmul_u);
+  case Intrinsic::aarch64_sve_fmulx:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_fmulx_u);
+  case Intrinsic::aarch64_sve_fnmla:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_fnmla_u);
+  case Intrinsic::aarch64_sve_fnmls:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_fnmls_u);
+  case Intrinsic::aarch64_sve_fsub:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_fsub_u);
+  case Intrinsic::aarch64_sve_add:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_add_u);
+  case Intrinsic::aarch64_sve_mla:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_mla_u);
+  case Intrinsic::aarch64_sve_mls:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_mls_u);
+  case Intrinsic::aarch64_sve_mul:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_mul_u);
+  case Intrinsic::aarch64_sve_sabd:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_sabd_u);
+  case Intrinsic::aarch64_sve_smax:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_smax_u);
+  case Intrinsic::aarch64_sve_smin:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_smin_u);
+  case Intrinsic::aarch64_sve_smulh:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_smulh_u);
+  case Intrinsic::aarch64_sve_sub:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_sub_u);
+  case Intrinsic::aarch64_sve_uabd:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_uabd_u);
+  case Intrinsic::aarch64_sve_umax:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_umax_u);
+  case Intrinsic::aarch64_sve_umin:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_umin_u);
+  case Intrinsic::aarch64_sve_umulh:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_umulh_u);
+  case Intrinsic::aarch64_sve_asr:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_asr_u);
+  case Intrinsic::aarch64_sve_lsl:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_lsl_u);
+  case Intrinsic::aarch64_sve_lsr:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_lsr_u);
+  case Intrinsic::aarch64_sve_and:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_and_u);
+  case Intrinsic::aarch64_sve_bic:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_bic_u);
+  case Intrinsic::aarch64_sve_eor:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_eor_u);
+  case Intrinsic::aarch64_sve_orr:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_orr_u);
+  case Intrinsic::aarch64_sve_sqsub:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_sqsub_u);
+  case Intrinsic::aarch64_sve_uqsub:
+    return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_uqsub_u);
+
+  case Intrinsic::aarch64_sve_addqv:
+  case Intrinsic::aarch64_sve_and_z:
+  case Intrinsic::aarch64_sve_bic_z:
+  case Intrinsic::aarch64_sve_brka_z:
+  case Intrinsic::aarch64_sve_brkb_z:
+  case Intrinsic::aarch64_sve_brkn_z:
+  case Intrinsic::aarch64_sve_brkpa_z:
+  case Intrinsic::aarch64_sve_brkpb_z:
+  case Intrinsic::aarch64_sve_cntp:
+  case Intrinsic::aarch64_sve_compact:
+  case Intrinsic::aarch64_sve_eor_z:
+  case Intrinsic::aarch64_sve_eorv:
+  case Intrinsic::aarch64_sve_eorqv:
+  case Intrinsic::aarch64_sve_nand_z:
+  case Intrinsic::aarch64_sve_nor_z:
+  case Intrinsic::aarch64_sve_orn_z:
+  case Intrinsic::aarch64_sve_orr_z:
+  case Intrinsic::aarch64_sve_orv:
+  case Intrinsic::aarch64_sve_orqv:
+  case Intrinsic::aarch64_sve_pnext:
+  case Intrinsic::aarch64_sve_rdffr_z:
+  case Intrinsic::aarch64_sve_saddv:
+  case Intrinsic::aarch64_sve_uaddv:
+  case Intrinsic::aarch64_sve_umaxv:
+  case Intrinsic::aarch64_sve_umaxqv:
+  case Intrinsic::aarch64_sve_cmpeq:
+  case Intrinsic::aarch64_sve_cmpeq_wide:
+  case Intrinsic::aarch64_sve_cmpge:
+  case Intrinsic::aarch64_sve_cmpge_wide:
+  case Intrinsic::aarch64_sve_cmpgt:
+  case Intrinsic::aarch64_sve_cmpgt_wide:
+  case Intrinsic::aarch64_sve_cmphi:
+  case Intrinsic::aarch64_sve_cmphi_wide:
+  case Intrinsic::aarch64_sve_cmphs:
+  case Intrinsic::aarch64_sve_cmphs_wide:
+  case Intrinsic::aarch64_sve_cmple_wide:
+  case Intrinsic::aarch64_sve_cmplo_wide:
+  case Intrinsic::aarch64_sve_cmpls_wide:
+  case Intrinsic::aarch64_sve_cmplt_wide:
+  case Intrinsic::aarch64_sve_cmpne:
+  case Intrinsic::aarch64_sve_cmpne_wide:
+  case Intrinsic::aarch64_sve_facge:
+  case Intrinsic::aarch64_sve_facgt:
+  case Intrinsic::aarch64_sve_fcmpeq:
+  case Intrinsic::aarch64_sve_fcmpge:
+  case Intrinsic::aarch64_sve_fcmpgt:
+  case Intrinsic::aarch64_sve_fcmpne:
+  case Intrinsic::aarch64_sve_fcmpuo:
+  case Intrinsic::aarch64_sve_ld1:
+  case Intrinsic::aarch64_sve_ld1_gather:
+  case Intrinsic::aarch64_sve_ld1_gather_index:
+  case Intrinsic::aarch64_sve_ld1_gather_scalar_offset:
+  case Intrinsic::aarch64_sve_ld1_gather_sxtw:
+  case Intrinsic::aarch64_sve_ld1_gather_sxtw_index:
+  case Intrinsic::aarch64_sve_ld1_gather_uxtw:
+  case Intrinsic::aarch64_sve_ld1_gather_uxtw_index:
+  case Intrinsic::aarch64_sve_ld1q_gather_index:
+  case Intrinsic::aarch64_sve_ld1q_gather_scalar_offset:
+  case Intrinsic::aarch64_sve_ld1q_gather_vector_offset:
+  case Intrinsic::aarch64_sve_ld1ro:
+  case Intrinsic::aarch64_sve_ld1rq:
+  case Intrinsic::aarch64_sve_ld1udq:
+  case Intrinsic::aarch64_sve_ld1uwq:
+  case Intrinsic::aarch64_sve_ld2_sret:
+  case Intrinsic::aarch64_sve_ld2q_sret:
+  case Intrinsic::aarch64_sve_ld3_sret:
+  case Intrinsic::aarch64_sve_ld3q_sret:
+  case Intrinsic::aarch64_sve_ld4_sret:
+  case Intrinsic::aarch64_sve_ld4q_sret:
+  case Intrinsic::aarch64_sve_ldff1:
+  case Intrinsic::aarch64_sve_ldff1_gather:
+  case Intrinsic::aarch64_sve_ldff1_gather_index:
+  case Intrinsic::aarch64_sve_ldff1_gather_scalar_offset:
+  case Intrinsic::aarch64_sve_ldff1_gather_sxtw:
+  case Intrinsic::aarch64_sve_ldff1_gather_sxtw_index:
+  case Intrinsic::aarch64_sve_ldff1_gather_uxtw:
+  case Intrinsic::aarch64_sve_ldff1_gather_uxtw_index:
+  case Intrinsic::aarch64_sve_ldnf1:
+  case Intrinsic::aarch64_sve_ldnt1:
+  case Intrinsic::aarch64_sve_ldnt1_gather:
+  case Intrinsic::aarch64_sve_ldnt1_gather_index:
+  case Intrinsic::aarch64_sve_ldnt1_gather_scalar_offset:
+  case Intrinsic::aarch64_sve_ldnt1_gather_uxtw:
+    return SVEIntrinsicInfo::defaultZeroingOp();
+
+  case Intrinsic::aarch64_sve_prf:
+  case Intrinsic::aarch64_sve_prfb_gather_index:
+  case Intrinsic::aarch64_sve_prfb_gather_scalar_offset:
+  case Intrinsic::aarch64_sve_prfb_gather_sxtw_index:
+  case Intrinsic::aarch64_sve_prfb_gather_uxtw_index:
+  case Intrinsic::aarch64_sve_prfd_gather_index:
+  case Intrinsic::aarch64_sve_prfd_gather_scalar_offset:
+  case Intrinsic::aarch64_sve_prfd_gather_sxtw_index:
+  case Intrinsic::aarch64_sve_prfd_gather_uxtw_index:
+  case Intrinsic::aarch64_sve_prfh_gather_index:
+  case Intrinsic::aarch64_sve_prfh_gather_scalar_offset:
+  case Intrinsic::aarch64_sve_prfh_gather_sxtw_index:
+  case Intrinsic::aarch64_sve_prfh_gather_uxtw_index:
+  case Intrinsic::aarch64_sve_prfw_gather_index:
+  case Intrinsic::aarch64_sve_prfw_gather_scalar_offset:
+  case Intrinsic::aarch64_sve_prfw_gather_sxtw_index:
+  case Intrinsic::aarch64_sve_prfw_gather_uxtw_index:
+    return SVEIntrinsicInfo::defaultVoidOp(0);
+
+  case Intrinsic::aarch64_sve_st1_scatter:
+  case Intrinsic::aarch64_sve_st1_scatter_scalar_offset:
+  case Intrinsic::aarch64_sve_st1_scatter_sxtw:
+  case Intrinsic::aarch64_sve_st1_scatter_sxtw_index:
+  case Intrinsic::aarch64_sve_st1_scatter_uxtw:
+  case Intrinsic::aarch64_sve_st1_scatter_uxtw_index:
+  case Intrinsic::aarch64_sve_st1dq:
+  case Intrinsic::aarch64_sve_st1q_scatter_index:
+  case Intrinsic::aarch64_sve_st1q_scatter_scalar_offset:
+  case Intrinsic::aarch64_sve_st1q_scatter_vector_offset:
+  case Intrinsic::aarch64_sve_st1wq:
+  case Intrinsic::aarch64_sve_stnt1:
+  case Intrinsic::aarch64_sve_stnt1_scatter:
+  case Intrinsic::aarch64_sve_stnt1_scatter_index:
+  case Intrinsic::aarch64_sve_stnt1_scatter_scalar_offset:
+  case Intrinsic::aarch64_sve_stnt1_scatter_uxtw:
+    return SVEIntrinsicInfo::defaultVoidOp(1);
+  case Intrinsic::aarch64_sve_st2:
+  case Intrinsic::aarch64_sve_st2q:
+    return SVEIntrinsicInfo::defaultVoidOp(2);
+  case Intrinsic::aarch64_sve_st3:
+  case Intrinsic::aarch64_sve_st3q:
+    return SVEIntrinsicInfo::defaultVoidOp(3);
+  case Intrinsic::aarch64_sve_st4:
+  case Intrinsic::aarch64_sve_st4q:
+    return SVEIntrinsicInfo::defaultVoidOp(4);
+  }
+
+  return SVEIntrinsicInfo();
+}
+
+static bool isAllActivePredicate(Value *Pred) {
+  // Look through convert.from.svbool(convert.to.svbool(...) chain.
+  Value *UncastedPred;
+  if (match(Pred, m_Intrinsic<Intrinsic::aarch64_sve_convert_from_svbool>(
+                      m_Intrinsic<Intrinsic::aarch64_sve_convert_to_svbool>(
+                          m_Value(UncastedPred)))))
+    // If the predicate has the same or less lanes than the uncasted
+    // predicate then we know the casting has no effect.
+    if (cast<ScalableVectorType>(Pred->getType())->getMinNumElements() <=
+        cast<ScalableVectorType>(UncastedPred->getType())->getMinNumElements())
+      Pred = UncastedPred;
+
+  return match(Pred, m_Intrinsic<Intrinsic::aarch64_sve_ptrue>(
+                         m_ConstantInt<AArch64SVEPredPattern::all>()));
+}
+
+// Use SVE intrinsic info to eliminate redundant operands and/or canonicalise
+// to operations with less strict inactive lane requirements.
+static std::optional<Instruction *>
+simplifySVEIntrinsic(InstCombiner &IC, IntrinsicInst &II,
+                     const SVEIntrinsicInfo &IInfo) {
+  if (!IInfo.hasGoverningPredicate())
+    return std::nullopt;
+
+  auto *OpPredicate = II.getOperand(IInfo.getGoverningPredicateOperandIdx());
+
+  // If there are no active lanes.
+  if (match(OpPredicate, m_ZeroInt())) {
+    if (IInfo.inactiveLanesTakenFromOperand())
+      return IC.replaceInstUsesWith(
+          II, II.getOperand(IInfo.getOperandIdxInactiveLanesTakenFrom()));
+
+    if (IInfo.inactiveLanesAreUnused()) {
+      if (IInfo.resultIsZeroInitialized())
+        IC.replaceInstUsesWith(II, Constant::getNullValue(II.getType()));
+
+      return IC.eraseInstFromFunction(II);
+    }
+  }
+
+  // If there are no inactive lanes.
+  if (isAllActivePredicate(OpPredicate)) {
+    if (IInfo.hasOperandWithNoActiveLanes()) {
+      unsigned OpIdx = IInfo.getOperandIdxWithNoActiveLanes();
+      if (!isa<UndefValue>(II.getOperand(OpIdx)))
+        return IC.replaceOperand(II, OpIdx, UndefValue::get(II.getType()));
+    }
+
+    if (IInfo.hasMatchingUndefIntrinsic()) {
+      auto *NewDecl = Intrinsic::getOrInsertDeclaration(
+          II.getModule(), IInfo.getMatchingUndefIntrinsic(), {II.getType()});
+      II.setCalledFunction(NewDecl);
+      return &II;
+    }
+  }
+
+  return std::nullopt;
+}
+
 // (from_svbool (binop (to_svbool pred) (svbool_t _) (svbool_t _))))
 // => (binop (pred) (from_svbool _) (from_svbool _))
 //
@@ -1121,85 +1629,6 @@ instCombineConvertFromSVBool(InstCombiner &IC, IntrinsicInst &II) {
   return IC.replaceInstUsesWith(II, EarliestReplacement);
 }
 
-static bool isAllActivePredicate(Value *Pred) {
-  // Look through convert.from.svbool(convert.to.svbool(...) chain.
-  Value *UncastedPred;
-  if (match(Pred, m_Intrinsic<Intrinsic::aarch64_sve_convert_from_svbool>(
-                      m_Intrinsic<Intrinsic::aarch64_sve_convert_to_svbool>(
-                          m_Value(UncastedPred)))))
-    // If the predicate has the same or less lanes than the uncasted
-    // predicate then we know the casting has no effect.
-    if (cast<ScalableVectorType>(Pred->getType())->getMinNumElements() <=
-        cast<ScalableVectorType>(UncastedPred->getType())->getMinNumElements())
-      Pred = UncastedPred;
-
-  return match(Pred, m_Intrinsic<Intrinsic::aarch64_sve_ptrue>(
-                         m_ConstantInt<AArch64SVEPredPattern::all>()));
-}
-
-// Simplify unary operation where predicate has all inactive lanes by replacing
-// instruction with its operand
-static std::optional<Instruction *>
-instCombineSVENoActiveReplace(InstCombiner &IC, IntrinsicInst &II,
-                              bool hasInactiveVector) {
-  int PredOperand = hasInactiveVector ? 1 : 0;
-  int ReplaceOperand = hasInactiveVector ? 0 : 1;
-  if (match(II.getOperand(PredOperand), m_ZeroInt())) {
-    IC.replaceInstUsesWith(II, II.getOperand(ReplaceOperand));
-    return IC.eraseInstFromFunction(II);
-  }
-  return std::nullopt;
-}
-
-// Simplify unary operation where predicate has all inactive lanes or
-// replace unused first operand with undef when all lanes are active
-static std::optional<Instruction *>
-instCombineSVEAllOrNoActiveUnary(InstCombiner &IC, IntrinsicInst &II) {
-  if (isAllActivePredicate(II.getOperand(1)) &&
-      !isa<llvm::UndefValue>(II.getOperand(0)) &&
-      !isa<llvm::PoisonValue>(II.getOperand(0))) {
-    Value *Undef = llvm::UndefValue::get(II.getType());
-    return IC.replaceOperand(II, 0, Undef);
-  }
-  return instCombineSVENoActiveReplace(IC, II, true);
-}
-
-// Erase unary operation where predicate has all inactive lanes
-static std::optional<Instruction *>
-instCombineSVENoActiveUnaryErase(InstCombiner &IC, IntrinsicInst &II,
-                                 int PredPos) {
-  if (match(II.getOperand(PredPos), m_ZeroInt())) {
-    return IC.eraseInstFromFunction(II);
-  }
-  return std::nullopt;
-}
-
-// Simplify operation where predicate has all inactive lanes by replacing
-// instruction with zeroed object
-static std::optional<Instruction *>
-instCombineSVENoActiveZero(InstCombiner &IC, IntrinsicInst &II) {
-  if (match(II.getOperand(0), m_ZeroInt())) {
-    Constant *Node;
-    Type *RetTy = II.getType();
-    if (RetTy->isStructTy()) {
-      auto StructT = cast<StructType>(RetTy);
-      auto VecT = StructT->getElementType(0);
-      SmallVector<llvm::Constant *, 4> ZerVec;
-      for (unsigned i = 0; i < StructT->getNumElements(); i++) {
-        ZerVec.push_back(VecT->isFPOrFPVectorTy() ? ConstantFP::get(VecT, 0.0)
-                                                  : ConstantInt::get(VecT, 0));
-      }
-      Node = ConstantStruct::get(StructT, ZerVec);
-    } else
-      Node = RetTy->isFPOrFPVectorTy() ? ConstantFP::get(RetTy, 0.0)
-                                       : ConstantInt::get(II.getType(), 0);
-
-    IC.replaceInstUsesWith(II, Node);
-    return IC.eraseInstFromFunction(II);
-  }
-  return std::nullopt;
-}
-
 static std::optional<Instruction *> instCombineSVESel(InstCombiner &IC,
                                                       IntrinsicInst &II) {
   // svsel(ptrue, x, y) => x
@@ -1249,10 +1678,6 @@ static std::optional<Instruction *> instCombineSVEDupX(InstCombiner &IC,
 static std::optional<Instruction *> instCombineSVECmpNE(InstCombiner &IC,
                                                         IntrinsicInst &II) {
   LLVMContext &Ctx = II.getContext();
-
-  // Replace by zero constant when all lanes are inactive
-  if (auto II_NA = instCombineSVENoActiveZero(IC, II))
-    return II_NA;
 
   // Check that the predicate is all active
   auto *Pg = dyn_cast<IntrinsicInst>(II.getArgOperand(0));
@@ -1618,10 +2043,6 @@ instCombineSVELD1(InstCombiner &IC, IntrinsicInst &II, const DataLayout &DL) {
   Value *PtrOp = II.getOperand(1);
   Type *VecTy = II.getType();
 
-  // Replace by zero constant when all lanes are inactive
-  if (auto II_NA = instCombineSVENoActiveZero(IC, II))
-    return II_NA;
-
   if (isAllActivePredicate(Pred)) {
     LoadInst *Load = IC.Builder.CreateLoad(VecTy, PtrOp);
     Load->copyMetadata(II);
@@ -1683,40 +2104,8 @@ instCombineSVEVectorBinOp(InstCombiner &IC, IntrinsicInst &II) {
   return IC.replaceInstUsesWith(II, BinOp);
 }
 
-// Canonicalise operations that take an all active predicate (e.g. sve.add ->
-// sve.add_u).
-static std::optional<Instruction *> instCombineSVEAllActive(IntrinsicInst &II,
-                                                            Intrinsic::ID IID) {
-  auto *OpPredicate = II.getOperand(0);
-  if (!match(OpPredicate, m_Intrinsic<Intrinsic::aarch64_sve_ptrue>(
-                              m_ConstantInt<AArch64SVEPredPattern::all>())))
-    return std::nullopt;
-
-  auto *Mod = II.getModule();
-  auto *NewDecl = Intrinsic::getOrInsertDeclaration(Mod, IID, {II.getType()});
-  II.setCalledFunction(NewDecl);
-
-  return &II;
-}
-
-// Simplify operations where predicate has all inactive lanes or try to replace
-// with _u form when all lanes are active
-static std::optional<Instruction *>
-instCombineSVEAllOrNoActive(InstCombiner &IC, IntrinsicInst &II,
-                            Intrinsic::ID IID) {
-  if (match(II.getOperand(0), m_ZeroInt())) {
-    //  llvm_ir, pred(0), op1, op2 - Spec says to return op1 when all lanes are
-    //  inactive for sv[func]_m
-    return IC.replaceInstUsesWith(II, II.getOperand(1));
-  }
-  return instCombineSVEAllActive(II, IID);
-}
-
 static std::optional<Instruction *> instCombineSVEVectorAdd(InstCombiner &IC,
                                                             IntrinsicInst &II) {
-  if (auto II_U =
-          instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_add_u))
-    return II_U;
   if (auto MLA = instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_mul,
                                                    Intrinsic::aarch64_sve_mla>(
           IC, II, true))
@@ -1730,9 +2119,6 @@ static std::optional<Instruction *> instCombineSVEVectorAdd(InstCombiner &IC,
 
 static std::optional<Instruction *>
 instCombineSVEVectorFAdd(InstCombiner &IC, IntrinsicInst &II) {
-  if (auto II_U =
-          instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fadd_u))
-    return II_U;
   if (auto FMLA =
           instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_fmul,
                                             Intrinsic::aarch64_sve_fmla>(IC, II,
@@ -1773,9 +2159,6 @@ instCombineSVEVectorFAddU(InstCombiner &IC, IntrinsicInst &II) {
 
 static std::optional<Instruction *>
 instCombineSVEVectorFSub(InstCombiner &IC, IntrinsicInst &II) {
-  if (auto II_U =
-          instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fsub_u))
-    return II_U;
   if (auto FMLS =
           instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_fmul,
                                             Intrinsic::aarch64_sve_fmls>(IC, II,
@@ -1816,9 +2199,6 @@ instCombineSVEVectorFSubU(InstCombiner &IC, IntrinsicInst &II) {
 
 static std::optional<Instruction *> instCombineSVEVectorSub(InstCombiner &IC,
                                                             IntrinsicInst &II) {
-  if (auto II_U =
-          instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_sub_u))
-    return II_U;
   if (auto MLS = instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_mul,
                                                    Intrinsic::aarch64_sve_mls>(
           IC, II, true))
@@ -1827,8 +2207,7 @@ static std::optional<Instruction *> instCombineSVEVectorSub(InstCombiner &IC,
 }
 
 static std::optional<Instruction *> instCombineSVEVectorMul(InstCombiner &IC,
-                                                            IntrinsicInst &II,
-                                                            Intrinsic::ID IID) {
+                                                            IntrinsicInst &II) {
   auto *OpPredicate = II.getOperand(0);
   auto *OpMultiplicand = II.getOperand(1);
   auto *OpMultiplier = II.getOperand(2);
@@ -1966,10 +2345,6 @@ instCombineLD1GatherIndex(InstCombiner &IC, IntrinsicInst &II) {
   Value *Index = II.getOperand(2);
   Type *Ty = II.getType();
   Value *PassThru = ConstantAggregateZero::get(Ty);
-
-  // Replace by zero constant when all lanes are inactive
-  if (auto II_NA = instCombineSVENoActiveZero(IC, II))
-    return II_NA;
 
   // Contiguous gather => masked load.
   // (sve.ld1.gather.index Mask BasePtr (sve.index IndexBase 1))
@@ -2229,172 +2604,16 @@ static std::optional<Instruction *> instCombineDMB(InstCombiner &IC,
 std::optional<Instruction *>
 AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
                                      IntrinsicInst &II) const {
+  const SVEIntrinsicInfo &IInfo = constructSVEIntrinsicInfo(II);
+  if (std::optional<Instruction *> I = simplifySVEIntrinsic(IC, II, IInfo))
+    return I;
+
   Intrinsic::ID IID = II.getIntrinsicID();
   switch (IID) {
   default:
     break;
   case Intrinsic::aarch64_dmb:
     return instCombineDMB(IC, II);
-  case Intrinsic::aarch64_sve_fcvt_bf16f32_v2:
-  case Intrinsic::aarch64_sve_fcvt_f16f32:
-  case Intrinsic::aarch64_sve_fcvt_f16f64:
-  case Intrinsic::aarch64_sve_fcvt_f32f16:
-  case Intrinsic::aarch64_sve_fcvt_f32f64:
-  case Intrinsic::aarch64_sve_fcvt_f64f16:
-  case Intrinsic::aarch64_sve_fcvt_f64f32:
-  case Intrinsic::aarch64_sve_fcvtlt_f32f16:
-  case Intrinsic::aarch64_sve_fcvtlt_f64f32:
-  case Intrinsic::aarch64_sve_fcvtx_f32f64:
-  case Intrinsic::aarch64_sve_fcvtzs:
-  case Intrinsic::aarch64_sve_fcvtzs_i32f16:
-  case Intrinsic::aarch64_sve_fcvtzs_i32f64:
-  case Intrinsic::aarch64_sve_fcvtzs_i64f16:
-  case Intrinsic::aarch64_sve_fcvtzs_i64f32:
-  case Intrinsic::aarch64_sve_fcvtzu:
-  case Intrinsic::aarch64_sve_fcvtzu_i32f16:
-  case Intrinsic::aarch64_sve_fcvtzu_i32f64:
-  case Intrinsic::aarch64_sve_fcvtzu_i64f16:
-  case Intrinsic::aarch64_sve_fcvtzu_i64f32:
-  case Intrinsic::aarch64_sve_scvtf:
-  case Intrinsic::aarch64_sve_scvtf_f16i32:
-  case Intrinsic::aarch64_sve_scvtf_f16i64:
-  case Intrinsic::aarch64_sve_scvtf_f32i64:
-  case Intrinsic::aarch64_sve_scvtf_f64i32:
-  case Intrinsic::aarch64_sve_ucvtf:
-  case Intrinsic::aarch64_sve_ucvtf_f16i32:
-  case Intrinsic::aarch64_sve_ucvtf_f16i64:
-  case Intrinsic::aarch64_sve_ucvtf_f32i64:
-  case Intrinsic::aarch64_sve_ucvtf_f64i32:
-    return instCombineSVEAllOrNoActiveUnary(IC, II);
-  case Intrinsic::aarch64_sve_fcvtnt_bf16f32_v2:
-  case Intrinsic::aarch64_sve_fcvtnt_f16f32:
-  case Intrinsic::aarch64_sve_fcvtnt_f32f64:
-  case Intrinsic::aarch64_sve_fcvtxnt_f32f64:
-    return instCombineSVENoActiveReplace(IC, II, true);
-  case Intrinsic::aarch64_sve_st1_scatter:
-  case Intrinsic::aarch64_sve_st1_scatter_scalar_offset:
-  case Intrinsic::aarch64_sve_st1_scatter_sxtw:
-  case Intrinsic::aarch64_sve_st1_scatter_sxtw_index:
-  case Intrinsic::aarch64_sve_st1_scatter_uxtw:
-  case Intrinsic::aarch64_sve_st1_scatter_uxtw_index:
-  case Intrinsic::aarch64_sve_st1dq:
-  case Intrinsic::aarch64_sve_st1q_scatter_index:
-  case Intrinsic::aarch64_sve_st1q_scatter_scalar_offset:
-  case Intrinsic::aarch64_sve_st1q_scatter_vector_offset:
-  case Intrinsic::aarch64_sve_st1wq:
-  case Intrinsic::aarch64_sve_stnt1:
-  case Intrinsic::aarch64_sve_stnt1_scatter:
-  case Intrinsic::aarch64_sve_stnt1_scatter_index:
-  case Intrinsic::aarch64_sve_stnt1_scatter_scalar_offset:
-  case Intrinsic::aarch64_sve_stnt1_scatter_uxtw:
-    return instCombineSVENoActiveUnaryErase(IC, II, 1);
-  case Intrinsic::aarch64_sve_st2:
-  case Intrinsic::aarch64_sve_st2q:
-    return instCombineSVENoActiveUnaryErase(IC, II, 2);
-  case Intrinsic::aarch64_sve_st3:
-  case Intrinsic::aarch64_sve_st3q:
-    return instCombineSVENoActiveUnaryErase(IC, II, 3);
-  case Intrinsic::aarch64_sve_st4:
-  case Intrinsic::aarch64_sve_st4q:
-    return instCombineSVENoActiveUnaryErase(IC, II, 4);
-  case Intrinsic::aarch64_sve_addqv:
-  case Intrinsic::aarch64_sve_and_z:
-  case Intrinsic::aarch64_sve_bic_z:
-  case Intrinsic::aarch64_sve_brka_z:
-  case Intrinsic::aarch64_sve_brkb_z:
-  case Intrinsic::aarch64_sve_brkn_z:
-  case Intrinsic::aarch64_sve_brkpa_z:
-  case Intrinsic::aarch64_sve_brkpb_z:
-  case Intrinsic::aarch64_sve_cntp:
-  case Intrinsic::aarch64_sve_compact:
-  case Intrinsic::aarch64_sve_eor_z:
-  case Intrinsic::aarch64_sve_eorv:
-  case Intrinsic::aarch64_sve_eorqv:
-  case Intrinsic::aarch64_sve_nand_z:
-  case Intrinsic::aarch64_sve_nor_z:
-  case Intrinsic::aarch64_sve_orn_z:
-  case Intrinsic::aarch64_sve_orr_z:
-  case Intrinsic::aarch64_sve_orv:
-  case Intrinsic::aarch64_sve_orqv:
-  case Intrinsic::aarch64_sve_pnext:
-  case Intrinsic::aarch64_sve_rdffr_z:
-  case Intrinsic::aarch64_sve_saddv:
-  case Intrinsic::aarch64_sve_uaddv:
-  case Intrinsic::aarch64_sve_umaxv:
-  case Intrinsic::aarch64_sve_umaxqv:
-  case Intrinsic::aarch64_sve_cmpeq:
-  case Intrinsic::aarch64_sve_cmpeq_wide:
-  case Intrinsic::aarch64_sve_cmpge:
-  case Intrinsic::aarch64_sve_cmpge_wide:
-  case Intrinsic::aarch64_sve_cmpgt:
-  case Intrinsic::aarch64_sve_cmpgt_wide:
-  case Intrinsic::aarch64_sve_cmphi:
-  case Intrinsic::aarch64_sve_cmphi_wide:
-  case Intrinsic::aarch64_sve_cmphs:
-  case Intrinsic::aarch64_sve_cmphs_wide:
-  case Intrinsic::aarch64_sve_cmple_wide:
-  case Intrinsic::aarch64_sve_cmplo_wide:
-  case Intrinsic::aarch64_sve_cmpls_wide:
-  case Intrinsic::aarch64_sve_cmplt_wide:
-  case Intrinsic::aarch64_sve_facge:
-  case Intrinsic::aarch64_sve_facgt:
-  case Intrinsic::aarch64_sve_fcmpeq:
-  case Intrinsic::aarch64_sve_fcmpge:
-  case Intrinsic::aarch64_sve_fcmpgt:
-  case Intrinsic::aarch64_sve_fcmpne:
-  case Intrinsic::aarch64_sve_fcmpuo:
-  case Intrinsic::aarch64_sve_ld1_gather:
-  case Intrinsic::aarch64_sve_ld1_gather_scalar_offset:
-  case Intrinsic::aarch64_sve_ld1_gather_sxtw:
-  case Intrinsic::aarch64_sve_ld1_gather_sxtw_index:
-  case Intrinsic::aarch64_sve_ld1_gather_uxtw:
-  case Intrinsic::aarch64_sve_ld1_gather_uxtw_index:
-  case Intrinsic::aarch64_sve_ld1q_gather_index:
-  case Intrinsic::aarch64_sve_ld1q_gather_scalar_offset:
-  case Intrinsic::aarch64_sve_ld1q_gather_vector_offset:
-  case Intrinsic::aarch64_sve_ld1ro:
-  case Intrinsic::aarch64_sve_ld1rq:
-  case Intrinsic::aarch64_sve_ld1udq:
-  case Intrinsic::aarch64_sve_ld1uwq:
-  case Intrinsic::aarch64_sve_ld2_sret:
-  case Intrinsic::aarch64_sve_ld2q_sret:
-  case Intrinsic::aarch64_sve_ld3_sret:
-  case Intrinsic::aarch64_sve_ld3q_sret:
-  case Intrinsic::aarch64_sve_ld4_sret:
-  case Intrinsic::aarch64_sve_ld4q_sret:
-  case Intrinsic::aarch64_sve_ldff1:
-  case Intrinsic::aarch64_sve_ldff1_gather:
-  case Intrinsic::aarch64_sve_ldff1_gather_index:
-  case Intrinsic::aarch64_sve_ldff1_gather_scalar_offset:
-  case Intrinsic::aarch64_sve_ldff1_gather_sxtw:
-  case Intrinsic::aarch64_sve_ldff1_gather_sxtw_index:
-  case Intrinsic::aarch64_sve_ldff1_gather_uxtw:
-  case Intrinsic::aarch64_sve_ldff1_gather_uxtw_index:
-  case Intrinsic::aarch64_sve_ldnf1:
-  case Intrinsic::aarch64_sve_ldnt1:
-  case Intrinsic::aarch64_sve_ldnt1_gather:
-  case Intrinsic::aarch64_sve_ldnt1_gather_index:
-  case Intrinsic::aarch64_sve_ldnt1_gather_scalar_offset:
-  case Intrinsic::aarch64_sve_ldnt1_gather_uxtw:
-    return instCombineSVENoActiveZero(IC, II);
-  case Intrinsic::aarch64_sve_prf:
-  case Intrinsic::aarch64_sve_prfb_gather_index:
-  case Intrinsic::aarch64_sve_prfb_gather_scalar_offset:
-  case Intrinsic::aarch64_sve_prfb_gather_sxtw_index:
-  case Intrinsic::aarch64_sve_prfb_gather_uxtw_index:
-  case Intrinsic::aarch64_sve_prfd_gather_index:
-  case Intrinsic::aarch64_sve_prfd_gather_scalar_offset:
-  case Intrinsic::aarch64_sve_prfd_gather_sxtw_index:
-  case Intrinsic::aarch64_sve_prfd_gather_uxtw_index:
-  case Intrinsic::aarch64_sve_prfh_gather_index:
-  case Intrinsic::aarch64_sve_prfh_gather_scalar_offset:
-  case Intrinsic::aarch64_sve_prfh_gather_sxtw_index:
-  case Intrinsic::aarch64_sve_prfh_gather_uxtw_index:
-  case Intrinsic::aarch64_sve_prfw_gather_index:
-  case Intrinsic::aarch64_sve_prfw_gather_scalar_offset:
-  case Intrinsic::aarch64_sve_prfw_gather_sxtw_index:
-  case Intrinsic::aarch64_sve_prfw_gather_uxtw_index:
-    return instCombineSVENoActiveUnaryErase(IC, II, 0);
   case Intrinsic::aarch64_neon_fmaxnm:
   case Intrinsic::aarch64_neon_fminnm:
     return instCombineMaxMinNM(IC, II);
@@ -2427,39 +2646,14 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_ptest_first:
   case Intrinsic::aarch64_sve_ptest_last:
     return instCombineSVEPTest(IC, II);
-  case Intrinsic::aarch64_sve_fabd:
-    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fabd_u);
   case Intrinsic::aarch64_sve_fadd:
     return instCombineSVEVectorFAdd(IC, II);
   case Intrinsic::aarch64_sve_fadd_u:
     return instCombineSVEVectorFAddU(IC, II);
-  case Intrinsic::aarch64_sve_fdiv:
-    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fdiv_u);
-  case Intrinsic::aarch64_sve_fmax:
-    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fmax_u);
-  case Intrinsic::aarch64_sve_fmaxnm:
-    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fmaxnm_u);
-  case Intrinsic::aarch64_sve_fmin:
-    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fmin_u);
-  case Intrinsic::aarch64_sve_fminnm:
-    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fminnm_u);
-  case Intrinsic::aarch64_sve_fmla:
-    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fmla_u);
-  case Intrinsic::aarch64_sve_fmls:
-    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fmls_u);
   case Intrinsic::aarch64_sve_fmul:
-    if (auto II_U =
-            instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fmul_u))
-      return II_U;
-    return instCombineSVEVectorMul(IC, II, Intrinsic::aarch64_sve_fmul_u);
+    return instCombineSVEVectorMul(IC, II);
   case Intrinsic::aarch64_sve_fmul_u:
-    return instCombineSVEVectorMul(IC, II, Intrinsic::aarch64_sve_fmul_u);
-  case Intrinsic::aarch64_sve_fmulx:
-    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fmulx_u);
-  case Intrinsic::aarch64_sve_fnmla:
-    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fnmla_u);
-  case Intrinsic::aarch64_sve_fnmls:
-    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_fnmls_u);
+    return instCombineSVEVectorMul(IC, II);
   case Intrinsic::aarch64_sve_fsub:
     return instCombineSVEVectorFSub(IC, II);
   case Intrinsic::aarch64_sve_fsub_u:
@@ -2470,57 +2664,16 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_mul_u,
                                              Intrinsic::aarch64_sve_mla_u>(
         IC, II, true);
-  case Intrinsic::aarch64_sve_mla:
-    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_mla_u);
-  case Intrinsic::aarch64_sve_mls:
-    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_mls_u);
   case Intrinsic::aarch64_sve_mul:
-    if (auto II_U =
-            instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_mul_u))
-      return II_U;
-    return instCombineSVEVectorMul(IC, II, Intrinsic::aarch64_sve_mul_u);
+    return instCombineSVEVectorMul(IC, II);
   case Intrinsic::aarch64_sve_mul_u:
-    return instCombineSVEVectorMul(IC, II, Intrinsic::aarch64_sve_mul_u);
-  case Intrinsic::aarch64_sve_sabd:
-    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_sabd_u);
-  case Intrinsic::aarch64_sve_smax:
-    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_smax_u);
-  case Intrinsic::aarch64_sve_smin:
-    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_smin_u);
-  case Intrinsic::aarch64_sve_smulh:
-    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_smulh_u);
+    return instCombineSVEVectorMul(IC, II);
   case Intrinsic::aarch64_sve_sub:
     return instCombineSVEVectorSub(IC, II);
   case Intrinsic::aarch64_sve_sub_u:
     return instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_mul_u,
                                              Intrinsic::aarch64_sve_mls_u>(
         IC, II, true);
-  case Intrinsic::aarch64_sve_uabd:
-    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_uabd_u);
-  case Intrinsic::aarch64_sve_umax:
-    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_umax_u);
-  case Intrinsic::aarch64_sve_umin:
-    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_umin_u);
-  case Intrinsic::aarch64_sve_umulh:
-    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_umulh_u);
-  case Intrinsic::aarch64_sve_asr:
-    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_asr_u);
-  case Intrinsic::aarch64_sve_lsl:
-    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_lsl_u);
-  case Intrinsic::aarch64_sve_lsr:
-    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_lsr_u);
-  case Intrinsic::aarch64_sve_and:
-    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_and_u);
-  case Intrinsic::aarch64_sve_bic:
-    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_bic_u);
-  case Intrinsic::aarch64_sve_eor:
-    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_eor_u);
-  case Intrinsic::aarch64_sve_orr:
-    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_orr_u);
-  case Intrinsic::aarch64_sve_sqsub:
-    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_sqsub_u);
-  case Intrinsic::aarch64_sve_uqsub:
-    return instCombineSVEAllOrNoActive(IC, II, Intrinsic::aarch64_sve_uqsub_u);
   case Intrinsic::aarch64_sve_tbl:
     return instCombineSVETBL(IC, II);
   case Intrinsic::aarch64_sve_uunpkhi:
