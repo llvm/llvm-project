@@ -517,14 +517,13 @@ static Value convertMFMAVectorOperand(ConversionPatternRewriter &rewriter,
       return rewriter.create<LLVM::BitcastOp>(
           loc, rewriter.getIntegerType(vectorType.getNumElements() * 8), input);
     if (isa<IntegerType>(vectorType.getElementType()) &&
-        vectorType.getElementTypeBitWidth() <= 8)
+        vectorType.getElementTypeBitWidth() <= 8) {
+      int64_t numWords = llvm::divideCeil(
+          vectorType.getNumElements() * vectorType.getElementTypeBitWidth(),
+          32);
       return rewriter.create<LLVM::BitcastOp>(
-          loc,
-          VectorType::get((vectorType.getNumElements() *
-                           vectorType.getElementTypeBitWidth()) /
-                              32,
-                          rewriter.getI32Type()),
-          input);
+          loc, VectorType::get(numWords, rewriter.getI32Type()), input);
+    }
   }
   return input;
 }
