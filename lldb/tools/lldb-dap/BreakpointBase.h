@@ -15,17 +15,9 @@
 
 namespace lldb_dap {
 
-struct BreakpointBase {
-  // Associated DAP session.
-  DAP &dap;
-
-  // An optional expression for conditional breakpoints.
-  std::string condition;
-  // An optional expression that controls how many hits of the breakpoint are
-  // ignored. The backend is expected to interpret the expression as needed
-  std::string hitCondition;
-
-  explicit BreakpointBase(DAP &d) : dap(d) {}
+class BreakpointBase {
+public:
+  explicit BreakpointBase(DAP &d) : m_dap(d) {}
   BreakpointBase(DAP &d, const llvm::json::Object &obj);
   virtual ~BreakpointBase() = default;
 
@@ -49,6 +41,17 @@ struct BreakpointBase {
   /// breakpoint in one of the DAP breakpoints that we should report changes
   /// for.
   static constexpr const char *kDAPBreakpointLabel = "dap";
+
+protected:
+  /// Associated DAP session.
+  DAP &m_dap;
+
+  /// An optional expression for conditional breakpoints.
+  std::string m_condition;
+
+  /// An optional expression that controls how many hits of the breakpoint are
+  /// ignored. The backend is expected to interpret the expression as needed
+  std::string m_hit_condition;
 };
 
 } // namespace lldb_dap
