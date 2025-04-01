@@ -353,8 +353,8 @@ protected:
 
   // Returns all registers that can be treated as if they are written by an
   // authentication instruction.
-  SmallVector<MCPhysReg> getAuthenticatedRegs(const MCInst &Point,
-                                              const State &Cur) const {
+  SmallVector<MCPhysReg> getRegsMadeSafeToDeref(const MCInst &Point,
+                                                const State &Cur) const {
     SmallVector<MCPhysReg> Regs;
     const MCPhysReg NoReg = BC.MIB->getNoRegister();
 
@@ -364,17 +364,16 @@ protected:
       Regs.push_back(*AutReg);
 
     // ... a safe address can be materialized, or
-    MCPhysReg NewAddrReg = BC.MIB->getSafelyMaterializedAddressReg(Point);
+    MCPhysReg NewAddrReg = BC.MIB->getMaterializedAddressRegForPtrAuth(Point);
     if (NewAddrReg != NoReg)
       Regs.push_back(NewAddrReg);
 
     // ... an address can be updated in a safe manner, producing the result
     // which is as trusted as the input address.
-    MCPhysReg ArithResult, ArithSrc;
-    std::tie(ArithResult, ArithSrc) =
-        BC.MIB->analyzeSafeAddressArithmetics(Point);
-    if (ArithResult != NoReg && Cur.SafeToDerefRegs[ArithSrc])
-      Regs.push_back(ArithResult);
+    if (auto DstAndSrc = BC.MIB->analyzeAddressArithmeticsForPtrAuth(Point)) {
+      if (Cur.SafeToDerefRegs[DstAndSrc->second])
+        Regs.push_back(DstAndSrc->first);
+    }
 
     return Regs;
   }
@@ -403,12 +402,8 @@ protected:
     // before its execution into account, if necessary.
 
     BitVector Clobbered = getClobberedRegs(Point);
-    // Compute the set of registers that can be considered as written by
-    // an authentication instruction. This includes operations that are
-    // *strictly better* than authentication, such as materializing a
-    // PC-relative constant.
-    SmallVector<MCPhysReg> AuthenticatedOrBetter =
-        getAuthenticatedRegs(Point, Cur);
+    SmallVector<MCPhysReg> NewSafeToDerefRegs =
+        getRegsMadeSafeToDeref(Point, Cur);
 
     // Then, compute the state after this instruction is executed.
     State Next = Cur;
@@ -423,12 +418,12 @@ protected:
     // After accounting for clobbered registers in general, override the state
     // according to authentication and other *special cases* of clobbering.
 
-    // The sub-registers of each authenticated register are also trusted now,
-    // but not their super-registers (as they retain untrusted register units).
-    BitVector AuthenticatedSubregs(NumRegs);
-    for (MCPhysReg AutReg : AuthenticatedOrBetter)
-      AuthenticatedSubregs |= BC.MIB->getAliases(AutReg, /*OnlySmaller=*/true);
-    for (MCPhysReg Reg : AuthenticatedSubregs.set_bits()) {
+    // The sub-registers are also safe-to-dereference now, but not their
+    // super-registers (as they retain untrusted register units).
+    BitVector NewSafeSubregs(NumRegs);
+    for (MCPhysReg AutReg : NewSafeToDerefRegs)
+      NewSafeSubregs |= BC.MIB->getAliases(AutReg, /*OnlySmaller=*/true);
+    for (MCPhysReg Reg : NewSafeSubregs.set_bits()) {
       Next.SafeToDerefRegs.set(Reg);
       if (RegsToTrackInstsFor.isTracked(Reg))
         lastWritingInsts(Next, Reg).clear();

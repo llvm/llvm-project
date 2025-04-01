@@ -1,4 +1,5 @@
-// RUN: %clang %cflags -march=armv8.3-a %s -o %t.exe
+// -Wl,--no-relax prevents converting ADRP+ADD pairs into NOP+ADR.
+// RUN: %clang %cflags -march=armv8.3-a -Wl,--no-relax %s -o %t.exe
 // RUN: llvm-bolt-binary-analysis --scanners=pauth %t.exe 2>&1 | FileCheck %s
 
 // Test various patterns that should or should not be considered safe

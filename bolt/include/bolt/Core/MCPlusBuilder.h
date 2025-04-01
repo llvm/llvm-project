@@ -587,18 +587,29 @@ public:
     return getNoRegister();
   }
 
-  virtual MCPhysReg getSafelyMaterializedAddressReg(const MCInst &Inst) const {
+  /// Returns the register containing an address which is safely materialized
+  /// under Pointer Authentication threat model, or NoRegister otherwise.
+  ///
+  /// The produced address should not be attacker-controlled, assuming an
+  /// attacker is able to modify any writable memory, but not executable code
+  /// (as it should be W^X).
+  virtual MCPhysReg getMaterializedAddressRegForPtrAuth(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return getNoRegister();
   }
 
-  /// Analyzes if this instruction can safely perform address arithmetics.
+  /// Analyzes if this instruction can safely perform address arithmetics
+  /// under Pointer Authentication threat model.
   ///
-  /// If the first element of the returned pair is no-register, this instruction
-  /// is considered unknown. Otherwise, (output, input) pair is returned,
-  /// so that output is as trusted as input is.
-  virtual std::pair<MCPhysReg, MCPhysReg>
-  analyzeSafeAddressArithmetics(const MCInst &Inst) const {
+  /// If an (OutReg, InReg) pair is returned, then after Inst is executed,
+  /// OutReg is as trusted as InReg is.
+  ///
+  /// The arithmetic instruction is considered safe if OutReg is not attacker-
+  /// controlled, provided InReg and executable code are not. Please note that
+  /// registers other than InReg as well as the contents of memory which is
+  /// writable by the process should be considered attacker-controlled.
+  virtual std::optional<std::pair<MCPhysReg, MCPhysReg>>
+  analyzeAddressArithmeticsForPtrAuth(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return std::make_pair(getNoRegister(), getNoRegister());
   }
