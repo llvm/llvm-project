@@ -15,5 +15,3 @@ body: |
   %2:vgpr_32 = V_AND_B32_e64 65535, %1.sub0, implicit $exec
   S_NOP 0, implicit %2
 ...
-
-
