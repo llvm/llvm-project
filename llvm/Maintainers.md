@@ -412,6 +412,11 @@ tejohnson@google.com (email), [teresajohnson](https://github.com/teresajohnson) 
 Aiden Grossman \
 agrossman154@yahoo.com (email), [boomanaiden154](https://github.com/boomanaiden154) (Github)
 
+#### llvm-reduce
+
+Matt Arsenault \
+Matthew.Arsenault@amd.com, arsenm2@gmail.com (email), [arsenm](https://github.com/arsenm) (GitHub)
+
 ### Other
 
 #### Release management

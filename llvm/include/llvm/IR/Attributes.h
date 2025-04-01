@@ -42,6 +42,7 @@ class ConstantRangeList;
 class FoldingSetNodeID;
 class Function;
 class LLVMContext;
+class Instruction;
 class Type;
 class raw_ostream;
 enum FPClassTest : unsigned;
@@ -1284,6 +1285,11 @@ public:
 
   /// Add initializes attribute.
   AttrBuilder &addInitializesAttr(const ConstantRangeList &CRL);
+
+  /// Add 0 or more parameter attributes which are equivalent to metadata
+  /// attached to \p I. e.g. !align -> align. This assumes the argument type is
+  /// the same as the original instruction and the attribute is compatible.
+  AttrBuilder &addFromEquivalentMetadata(const Instruction &I);
 
   ArrayRef<Attribute> attrs() const { return Attrs; }
 

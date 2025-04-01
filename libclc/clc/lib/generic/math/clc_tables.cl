@@ -197,6 +197,28 @@ DECLARE_TABLE(float, LOG_INV_TBL, 129) = {
 
 CLC_TABLE_FUNCTION(float, LOG_INV_TBL, log_inv_tbl);
 
+DECLARE_TABLE(float, EXP_TBL, 65) = {
+    0x1.000000p+0f, 0x1.02c9a4p+0f, 0x1.059b0ep+0f, 0x1.087452p+0f,
+    0x1.0b5586p+0f, 0x1.0e3ec4p+0f, 0x1.11301ep+0f, 0x1.1429aap+0f,
+    0x1.172b84p+0f, 0x1.1a35bep+0f, 0x1.1d4874p+0f, 0x1.2063b8p+0f,
+    0x1.2387a6p+0f, 0x1.26b456p+0f, 0x1.29e9e0p+0f, 0x1.2d285ap+0f,
+    0x1.306fe0p+0f, 0x1.33c08cp+0f, 0x1.371a74p+0f, 0x1.3a7db4p+0f,
+    0x1.3dea64p+0f, 0x1.4160a2p+0f, 0x1.44e086p+0f, 0x1.486a2cp+0f,
+    0x1.4bfdaep+0f, 0x1.4f9b28p+0f, 0x1.5342b6p+0f, 0x1.56f474p+0f,
+    0x1.5ab07ep+0f, 0x1.5e76f2p+0f, 0x1.6247ecp+0f, 0x1.662388p+0f,
+    0x1.6a09e6p+0f, 0x1.6dfb24p+0f, 0x1.71f75ep+0f, 0x1.75feb6p+0f,
+    0x1.7a1148p+0f, 0x1.7e2f34p+0f, 0x1.82589ap+0f, 0x1.868d9ap+0f,
+    0x1.8ace54p+0f, 0x1.8f1aeap+0f, 0x1.93737cp+0f, 0x1.97d82ap+0f,
+    0x1.9c4918p+0f, 0x1.a0c668p+0f, 0x1.a5503cp+0f, 0x1.a9e6b6p+0f,
+    0x1.ae89fap+0f, 0x1.b33a2cp+0f, 0x1.b7f770p+0f, 0x1.bcc1eap+0f,
+    0x1.c199bep+0f, 0x1.c67f12p+0f, 0x1.cb720ep+0f, 0x1.d072d4p+0f,
+    0x1.d5818ep+0f, 0x1.da9e60p+0f, 0x1.dfc974p+0f, 0x1.e502eep+0f,
+    0x1.ea4afap+0f, 0x1.efa1bep+0f, 0x1.f50766p+0f, 0x1.fa7c18p+0f,
+    0x1.000000p+1f,
+};
+
+CLC_TABLE_FUNCTION(float, EXP_TBL, exp_tbl);
+
 DECLARE_TABLE(float, EXP_TBL_EP_HEAD, 65) = {
     0x1.000000p+0f, 0x1.02c000p+0f, 0x1.058000p+0f, 0x1.084000p+0f,
     0x1.0b4000p+0f, 0x1.0e0000p+0f, 0x1.110000p+0f, 0x1.140000p+0f,
