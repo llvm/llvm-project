@@ -11165,25 +11165,25 @@ void OverloadCandidateSet::PerfectViableFunction(
 
   Best = end();
   for (auto It = begin(); It != end(); ++It) {
-    if (It->isPerfectMatch(S.getASTContext())) {
-      if (Best == end()) {
-        Best = It;
-      } else {
-        if (Best->Function && It->Function) {
-          FunctionDecl *D =
-              S.getMoreConstrainedFunction(Best->Function, It->Function);
-          if (D == nullptr) {
-            Best = end();
-            break;
-          }
-          if (D == It->Function)
-            Best = It;
-          continue;
-        }
+    if (!It->isPerfectMatch(S.getASTContext()))
+      continue;
+    if (Best == end()) {
+      Best = It;
+      continue;
+    }
+    if (Best->Function && It->Function) {
+      FunctionDecl *D =
+          S.getMoreConstrainedFunction(Best->Function, It->Function);
+      if (D == nullptr) {
         Best = end();
         break;
       }
+      if (D == It->Function)
+        Best = It;
+      continue;
     }
+    Best = end();
+    break;
   }
 }
 
