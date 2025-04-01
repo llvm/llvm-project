@@ -1007,3 +1007,11 @@ template <typename T> void f() {
   x[T{}] = 3;
 }
 } // namespace gh127776_false_positive
+
+namespace gh132931_false_positive {
+using T = const int;
+void valid(int i) {
+  const int arr0[] = {1, 2, 3};
+  T arr1[] = {1, 2, 3};
+}
+} // namespace gh132931_false_positive

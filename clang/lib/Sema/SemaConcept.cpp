@@ -453,6 +453,7 @@ static ExprResult calculateConstraintSatisfaction(
         Sema::InstantiatingTemplate Inst(
             S, AtomicExpr->getBeginLoc(),
             Sema::InstantiatingTemplate::ConstraintSubstitution{},
+            // FIXME: improve const-correctness of InstantiatingTemplate
             const_cast<NamedDecl *>(Template), Info,
             AtomicExpr->getSourceRange());
         if (Inst.isInvalid())
@@ -1435,9 +1436,9 @@ void Sema::DiagnoseUnsatisfiedConstraint(
   }
 }
 
-const NormalizedConstraint *
-Sema::getNormalizedAssociatedConstraints(
-    NamedDecl *ConstrainedDecl, ArrayRef<const Expr *> AssociatedConstraints) {
+const NormalizedConstraint *Sema::getNormalizedAssociatedConstraints(
+    const NamedDecl *ConstrainedDecl,
+    ArrayRef<const Expr *> AssociatedConstraints) {
   // In case the ConstrainedDecl comes from modules, it is necessary to use
   // the canonical decl to avoid different atomic constraints with the 'same'
   // declarations.
@@ -1461,7 +1462,7 @@ Sema::getNormalizedAssociatedConstraints(
 }
 
 const NormalizedConstraint *clang::getNormalizedAssociatedConstraints(
-    Sema &S, NamedDecl *ConstrainedDecl,
+    Sema &S, const NamedDecl *ConstrainedDecl,
     ArrayRef<const Expr *> AssociatedConstraints) {
   return S.getNormalizedAssociatedConstraints(ConstrainedDecl,
                                               AssociatedConstraints);
@@ -1527,7 +1528,8 @@ substituteParameterMappings(Sema &S, NormalizedConstraint &N,
   Sema::InstantiatingTemplate Inst(
       S, InstLocBegin,
       Sema::InstantiatingTemplate::ParameterMappingSubstitution{},
-      Atomic.ConstraintDecl, {InstLocBegin, InstLocEnd});
+      const_cast<NamedDecl *>(Atomic.ConstraintDecl),
+      {InstLocBegin, InstLocEnd});
   if (Inst.isInvalid())
     return true;
   if (S.SubstTemplateArguments(*Atomic.ParameterMapping, MLTAL, SubstArgs))
@@ -1591,7 +1593,7 @@ NormalizedConstraint &NormalizedConstraint::getRHS() const {
 }
 
 std::optional<NormalizedConstraint>
-NormalizedConstraint::fromConstraintExprs(Sema &S, NamedDecl *D,
+NormalizedConstraint::fromConstraintExprs(Sema &S, const NamedDecl *D,
                                           ArrayRef<const Expr *> E) {
   assert(E.size() != 0);
   auto Conjunction = fromConstraintExpr(S, D, E[0]);
@@ -1608,7 +1610,8 @@ NormalizedConstraint::fromConstraintExprs(Sema &S, NamedDecl *D,
 }
 
 std::optional<NormalizedConstraint>
-NormalizedConstraint::fromConstraintExpr(Sema &S, NamedDecl *D, const Expr *E) {
+NormalizedConstraint::fromConstraintExpr(Sema &S, const NamedDecl *D,
+                                         const Expr *E) {
   assert(E != nullptr);
 
   // C++ [temp.constr.normal]p1.1
@@ -1637,8 +1640,9 @@ NormalizedConstraint::fromConstraintExpr(Sema &S, NamedDecl *D, const Expr *E) {
     {
       Sema::InstantiatingTemplate Inst(
           S, CSE->getExprLoc(),
-          Sema::InstantiatingTemplate::ConstraintNormalization{}, D,
-          CSE->getSourceRange());
+          Sema::InstantiatingTemplate::ConstraintNormalization{},
+          // FIXME: improve const-correctness of InstantiatingTemplate
+          const_cast<NamedDecl *>(D), CSE->getSourceRange());
       if (Inst.isInvalid())
         return std::nullopt;
       // C++ [temp.constr.normal]p1.1
@@ -1726,9 +1730,9 @@ bool FoldExpandedConstraint::AreCompatibleForSubsumption(
   return false;
 }
 
-bool Sema::IsAtLeastAsConstrained(NamedDecl *D1,
+bool Sema::IsAtLeastAsConstrained(const NamedDecl *D1,
                                   MutableArrayRef<const Expr *> AC1,
-                                  NamedDecl *D2,
+                                  const NamedDecl *D2,
                                   MutableArrayRef<const Expr *> AC2,
                                   bool &Result) {
 #ifndef NDEBUG
@@ -1755,7 +1759,7 @@ bool Sema::IsAtLeastAsConstrained(NamedDecl *D1,
     return false;
   }
 
-  std::pair<NamedDecl *, NamedDecl *> Key{D1, D2};
+  std::pair<const NamedDecl *, const NamedDecl *> Key{D1, D2};
   auto CacheEntry = SubsumptionCache.find(Key);
   if (CacheEntry != SubsumptionCache.end()) {
     Result = CacheEntry->second;
@@ -1789,7 +1793,7 @@ bool Sema::IsAtLeastAsConstrained(NamedDecl *D1,
 }
 
 bool Sema::MaybeEmitAmbiguousAtomicConstraintsDiagnostic(
-    NamedDecl *D1, ArrayRef<const Expr *> AC1, NamedDecl *D2,
+    const NamedDecl *D1, ArrayRef<const Expr *> AC1, const NamedDecl *D2,
     ArrayRef<const Expr *> AC2) {
 
   if (isSFINAEContext())
@@ -2055,7 +2059,7 @@ FormulaType SubsumptionChecker::Normalize(const NormalizedConstraint &NC) {
   FormulaType Res;
 
   auto Add = [&, this](Clause C) {
-    // Sort each clause and remove duplicates for faster comparisons
+    // Sort each clause and remove duplicates for faster comparisons.
     llvm::sort(C);
     C.erase(llvm::unique(C), C.end());
     AddUniqueClauseToFormula(Res, std::move(C));
@@ -2102,9 +2106,9 @@ void SubsumptionChecker::AddUniqueClauseToFormula(Formula &F, Clause C) {
   F.push_back(C);
 }
 
-std::optional<bool> SubsumptionChecker::Subsumes(NamedDecl *DP,
+std::optional<bool> SubsumptionChecker::Subsumes(const NamedDecl *DP,
                                                  ArrayRef<const Expr *> P,
-                                                 NamedDecl *DQ,
+                                                 const NamedDecl *DQ,
                                                  ArrayRef<const Expr *> Q) {
   const NormalizedConstraint *PNormalized =
       getNormalizedAssociatedConstraints(SemaRef, DP, P);
