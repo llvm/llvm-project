@@ -107,14 +107,17 @@ isArgShapesValid(TensorDescType tdescTy, VectorType valueTy,
 
 static bool isEvenDistributed(llvm::ArrayRef<int64_t> shape,
                               xegpu::LayoutAttr attr) {
-  assert(attr && "workgroup map attribute is missing.");
+  assert(attr && "Layout attribute is missing.");
+  llvm::SmallVector<int32_t> defaults(shape.size(), 1);
   llvm::ArrayRef<int32_t> layout, data;
-  if (attr.getSgLayout()) {
-    data = attr.getSgData().asArrayRef();
-    layout = attr.getSgLayout().asArrayRef();
+  if (auto sg_layout = attr.getSgLayout()) {
+    layout = sg_layout.asArrayRef();
+    auto sg_data = attr.getSgData();
+    data = sg_data? sg_data.asArrayRef(): defaults;
   } else {
-    data = attr.getLaneData().asArrayRef();
     layout = attr.getLaneLayout().asArrayRef();
+    auto lane_data = attr.getLaneData();
+    data = lane_data? lane_data.asArrayRef(): defaults;
   }
   for (auto [s, d, l] : llvm::zip_equal(shape, data, layout)) {
     // check s % (d * l) != 0
