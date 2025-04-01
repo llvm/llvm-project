@@ -873,7 +873,7 @@ class BinOpSameOpcodeHelper {
   /// the instruction is neither Sub, Shl, nor AShr, we then check the left hand
   /// side (0).
   static std::pair<ConstantInt *, unsigned>
-  isBinOpWithConstantInt(Instruction *I) {
+  isBinOpWithConstantInt(const Instruction *I) {
     unsigned Opcode = I->getOpcode();
     assert(binary_search(SupportedOp, Opcode) && "Unsupported opcode.");
     (void)SupportedOp;
@@ -888,7 +888,7 @@ class BinOpSameOpcodeHelper {
     return {nullptr, 0};
   }
   struct InterchangeableInfo {
-    Instruction *I = nullptr;
+    const Instruction *I = nullptr;
     /// The bit it sets represents whether MainOp can be converted to.
     MaskType Mask = MainOpBIT | XorBIT | OrBIT | AndBIT | SubBIT | AddBIT |
                     MulBIT | AShrBIT | ShlBIT;
@@ -897,7 +897,7 @@ class BinOpSameOpcodeHelper {
     /// but << does not exist in VL. In the end, we convert VL to [x * 1, y *
     /// 1]. SeenBefore is used to know what operations have been seen before.
     MaskType SeenBefore = 0;
-    InterchangeableInfo(Instruction *I) : I(I) {}
+    InterchangeableInfo(const Instruction *I) : I(I) {}
     /// Return false allows BinOpSameOpcodeHelper to find an alternate
     /// instruction. Directly setting the mask will destroy the mask state,
     /// preventing us from determining which instruction it should convert to.
@@ -936,7 +936,7 @@ class BinOpSameOpcodeHelper {
         return Instruction::Xor;
       llvm_unreachable("Cannot find interchangeable instruction.");
     }
-    SmallVector<Value *> getOperand(Instruction *To) const {
+    SmallVector<Value *> getOperand(const Instruction *To) const {
       unsigned ToOpcode = To->getOpcode();
       unsigned FromOpcode = I->getOpcode();
       if (FromOpcode == ToOpcode)
@@ -1001,11 +1001,11 @@ class BinOpSameOpcodeHelper {
   };
   InterchangeableInfo MainOp;
   InterchangeableInfo AltOp;
-  bool isValidForAlternation(Instruction *I) const {
+  bool isValidForAlternation(const Instruction *I) const {
     return ::isValidForAlternation(MainOp.I->getOpcode()) &&
            ::isValidForAlternation(I->getOpcode());
   }
-  bool initializeAltOp(Instruction *I) {
+  bool initializeAltOp(const Instruction *I) {
     if (AltOp.I)
       return true;
     if (!isValidForAlternation(I))
@@ -1015,11 +1015,12 @@ class BinOpSameOpcodeHelper {
   }
 
 public:
-  BinOpSameOpcodeHelper(Instruction *MainOp, Instruction *AltOp = nullptr)
+  BinOpSameOpcodeHelper(const Instruction *MainOp,
+                        const Instruction *AltOp = nullptr)
       : MainOp(MainOp), AltOp(AltOp) {
     assert(is_sorted(SupportedOp) && "SupportedOp is not sorted.");
   }
-  bool add(Instruction *I) {
+  bool add(const Instruction *I) {
     assert(isa<BinaryOperator>(I) &&
            "BinOpSameOpcodeHelper only accepts BinaryOperator.");
     unsigned Opcode = I->getOpcode();
@@ -1095,7 +1096,7 @@ public:
   unsigned getAltOpcode() const {
     return hasAltOp() ? AltOp.getOpcode() : getMainOpcode();
   }
-  SmallVector<Value *> getOperand(Instruction *I) const {
+  SmallVector<Value *> getOperand(const Instruction *I) const {
     return MainOp.getOperand(I);
   }
 };
