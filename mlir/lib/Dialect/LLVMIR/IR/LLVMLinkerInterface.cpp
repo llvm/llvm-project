@@ -244,7 +244,6 @@ public:
     const bool srcIsDeclaration = isDeclarationForLinker(pair.src);
     const bool dstIsDeclaration = isDeclarationForLinker(pair.dst);
 
-
     if (isAvailableExternallyLinkage(srcLinkage) && dstIsDeclaration) {
       registerForLink(pair.src);
       return success();
@@ -274,8 +273,34 @@ public:
       return success();
     }
 
+    if (isLinkOnceLinkage(srcLinkage)) {
+      return success();
+    }
+
+    if (isLinkOnceLinkage(dstLinkage) || isWeakLinkage(dstLinkage)) {
+      registerForLink(pair.src);
+      return success();
+    }
+
+    if (isWeakForLinker(srcLinkage)) {
+      assert(!isExternalWeakLinkage(dstLinkage));
+      assert(!isAvailableExternallyLinkage(dstLinkage));
+      if (isLinkOnceLinkage(dstLinkage) && isWeakLinkage(srcLinkage)) {
+        registerForLink(pair.src);
+        return success();
+      } else {
+        // No need to link the `src`
+        return success();
+      }
+    }
+
+    if (isWeakForLinker(dstLinkage)) {
+      assert(isExternalLinkage(srcLinkage));
+      registerForLink(pair.src);
+      return success();
+    }
+
     llvm_unreachable("unimplemented conflict resolution");
-    return failure();
   }
 
   void registerForLink(Operation *op) override {
