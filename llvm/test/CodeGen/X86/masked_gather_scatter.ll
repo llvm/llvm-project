@@ -1334,7 +1334,6 @@ define void @test19(<4 x double>%a1, ptr %ptr, <4 x i1>%mask, <4 x i64> %ind) {
 ; KNL_64-NEXT:    vmovhps %xmm0, (%rcx)
 ; KNL_64-NEXT:  .LBB18_4: # %else2
 ; KNL_64-NEXT:    testb $4, %al
-; KNL_64-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; KNL_64-NEXT:    vextracti128 $1, %ymm1, %xmm1
 ; KNL_64-NEXT:    jne .LBB18_5
 ; KNL_64-NEXT:  # %bb.6: # %else4
@@ -1344,13 +1343,15 @@ define void @test19(<4 x double>%a1, ptr %ptr, <4 x i1>%mask, <4 x i64> %ind) {
 ; KNL_64-NEXT:    vzeroupper
 ; KNL_64-NEXT:    retq
 ; KNL_64-NEXT:  .LBB18_5: # %cond.store3
+; KNL_64-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; KNL_64-NEXT:    vmovq %xmm1, %rcx
-; KNL_64-NEXT:    vmovlps %xmm0, (%rcx)
+; KNL_64-NEXT:    vmovlps %xmm2, (%rcx)
 ; KNL_64-NEXT:    testb $8, %al
 ; KNL_64-NEXT:    je .LBB18_8
 ; KNL_64-NEXT:  .LBB18_7: # %cond.store5
+; KNL_64-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[3,2,2,3]
 ; KNL_64-NEXT:    vpextrq $1, %xmm1, %rax
-; KNL_64-NEXT:    vmovhps %xmm0, (%rax)
+; KNL_64-NEXT:    vmovlps %xmm0, (%rax)
 ; KNL_64-NEXT:    vzeroupper
 ; KNL_64-NEXT:    retq
 ;
@@ -1365,34 +1366,39 @@ define void @test19(<4 x double>%a1, ptr %ptr, <4 x i1>%mask, <4 x i64> %ind) {
 ; KNL_32-NEXT:    vpaddd %xmm1, %xmm2, %xmm1
 ; KNL_32-NEXT:    kmovw %k0, %eax
 ; KNL_32-NEXT:    testb $1, %al
-; KNL_32-NEXT:    je .LBB18_2
-; KNL_32-NEXT:  # %bb.1: # %cond.store
-; KNL_32-NEXT:    vmovd %xmm1, %ecx
-; KNL_32-NEXT:    vmovlps %xmm0, (%ecx)
-; KNL_32-NEXT:  .LBB18_2: # %else
+; KNL_32-NEXT:    jne .LBB18_1
+; KNL_32-NEXT:  # %bb.2: # %else
 ; KNL_32-NEXT:    testb $2, %al
-; KNL_32-NEXT:    je .LBB18_4
-; KNL_32-NEXT:  # %bb.3: # %cond.store1
-; KNL_32-NEXT:    vpextrd $1, %xmm1, %ecx
-; KNL_32-NEXT:    vmovhps %xmm0, (%ecx)
+; KNL_32-NEXT:    jne .LBB18_3
 ; KNL_32-NEXT:  .LBB18_4: # %else2
 ; KNL_32-NEXT:    testb $4, %al
-; KNL_32-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; KNL_32-NEXT:    jne .LBB18_5
-; KNL_32-NEXT:  # %bb.6: # %else4
+; KNL_32-NEXT:  .LBB18_6: # %else4
 ; KNL_32-NEXT:    testb $8, %al
 ; KNL_32-NEXT:    jne .LBB18_7
 ; KNL_32-NEXT:  .LBB18_8: # %else6
 ; KNL_32-NEXT:    vzeroupper
 ; KNL_32-NEXT:    retl
-; KNL_32-NEXT:  .LBB18_5: # %cond.store3
-; KNL_32-NEXT:    vpextrd $2, %xmm1, %ecx
+; KNL_32-NEXT:  .LBB18_1: # %cond.store
+; KNL_32-NEXT:    vmovd %xmm1, %ecx
 ; KNL_32-NEXT:    vmovlps %xmm0, (%ecx)
+; KNL_32-NEXT:    testb $2, %al
+; KNL_32-NEXT:    je .LBB18_4
+; KNL_32-NEXT:  .LBB18_3: # %cond.store1
+; KNL_32-NEXT:    vpextrd $1, %xmm1, %ecx
+; KNL_32-NEXT:    vmovhps %xmm0, (%ecx)
+; KNL_32-NEXT:    testb $4, %al
+; KNL_32-NEXT:    je .LBB18_6
+; KNL_32-NEXT:  .LBB18_5: # %cond.store3
+; KNL_32-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; KNL_32-NEXT:    vpextrd $2, %xmm1, %ecx
+; KNL_32-NEXT:    vmovlps %xmm2, (%ecx)
 ; KNL_32-NEXT:    testb $8, %al
 ; KNL_32-NEXT:    je .LBB18_8
 ; KNL_32-NEXT:  .LBB18_7: # %cond.store5
+; KNL_32-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[3,2,2,3]
 ; KNL_32-NEXT:    vpextrd $3, %xmm1, %eax
-; KNL_32-NEXT:    vmovhps %xmm0, (%eax)
+; KNL_32-NEXT:    vmovlps %xmm0, (%eax)
 ; KNL_32-NEXT:    vzeroupper
 ; KNL_32-NEXT:    retl
 ;
