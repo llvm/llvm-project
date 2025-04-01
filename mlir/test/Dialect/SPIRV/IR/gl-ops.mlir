@@ -663,3 +663,29 @@ func.func @reflect_invalid_type(%arg0 : i32, %arg1 : i32) {
   %0 = spirv.GL.Reflect %arg0, %arg1 : i32
   return
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Fract
+//===----------------------------------------------------------------------===//
+
+func.func @fract(%arg0 : f32) -> () {
+  // CHECK: spirv.GL.Fract {{%.*}} : f32
+  %0 = spirv.GL.Fract %arg0 : f32
+  return
+}
+
+func.func @fractvec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spirv.GL.Fract {{%.*}} : vector<3xf16>
+  %0 = spirv.GL.Fract %arg0 : vector<3xf16>
+  return
+}
+
+// -----
+
+func.func @fract_invalid_type(%arg0 : i32) {
+  // expected-error @+1 {{'spirv.GL.Fract' op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values}}
+  %0 = spirv.GL.Fract %arg0 : i32
+  return
+}

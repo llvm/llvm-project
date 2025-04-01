@@ -1,9 +1,9 @@
-<!--===- docs/Intrinsics.md 
-  
+<!--===- docs/Intrinsics.md
+
    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
    See https://llvm.org/LICENSE.txt for license information.
    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-  
+
 -->
 
 # A categorization of standard (2018) and extended Fortran intrinsic procedures
@@ -241,8 +241,14 @@ BESSEL_Y0(REAL(k) X) -> REAL(k)
 BESSEL_Y1(REAL(k) X) -> REAL(k)
 BESSEL_YN(INTEGER(n) N, REAL(k) X) -> REAL(k)
 ERF(REAL(k) X) -> REAL(k)
+DERF(REAL(8) X) -> REAL(8)
+QERF(REAL(16) X) -> REAL(16)
 ERFC(REAL(k) X) -> REAL(k)
+DERFC(REAL(8) X) -> REAL(8)
+QERFC(REAL(16) X) -> REAL(16)
 ERFC_SCALED(REAL(k) X) -> REAL(k)
+DERFC_SCALED(REAL(8) X) -> REAL(8)
+QERFC_SCALED(REAL(16) X) -> REAL(16)
 FRACTION(REAL(k) X) -> REAL(k)
 GAMMA(REAL(k) X) -> REAL(k)
 HYPOT(REAL(k) X, REAL(k) Y) -> REAL(k) = SQRT(X*X+Y*Y) without spurious overflow
@@ -703,7 +709,7 @@ CACHESIZE, EOF, FP_CLASS, INT_PTR_KIND, ISNAN, LOC
 MALLOC, FREE
 ```
 
-### Library subroutine 
+### Library subroutine
 ```
 CALL BACKTRACE()
 CALL FDATE(TIME)
@@ -810,7 +816,7 @@ otherwise an error message will be produced by f18 when attempting to fold relat
 
 | C/C++ Host Type | Intrinsic Functions with Host Standard C++ Library Based Folding Support |
 | --- | --- |
-| float, double and long double | ACOS, ACOSH, ASINH, ATAN, ATAN2, ATANH, COS, COSH, ERF, ERFC, EXP, GAMMA, HYPOT, LOG, LOG10, LOG_GAMMA, MOD, SIN, SQRT, SINH, SQRT, TAN, TANH |
+| float, double and long double | ACOS, ACOSH, ASINH, ATAN, ATAN2, ATANH, COS, COSH, DERF, DERFC, ERF, ERFC, EXP, GAMMA, HYPOT, LOG, LOG10, LOG_GAMMA, MOD, QERF, QERFC, SIN, SQRT, SINH, SQRT, TAN, TANH |
 | std::complex for float, double and long double| ACOS, ACOSH, ASIN, ASINH, ATAN, ATANH, COS, COSH, EXP, LOG, SIN, SINH, SQRT, TAN, TANH |
 
 On top of the default usage of C++ standard library functions for folding described
@@ -829,7 +835,7 @@ types related to host float and double types.
 
 | C/C++ Host Type | Additional Intrinsic Function Folding Support with Libpgmath (Optional) |
 | --- | --- |
-|float and double| BESSEL_J0, BESSEL_J1, BESSEL_JN (elemental only), BESSEL_Y0, BESSEL_Y1, BESSEL_Yn (elemental only), ERFC_SCALED |
+|float and double| BESSEL_J0, BESSEL_J1, BESSEL_JN (elemental only), BESSEL_Y0, BESSEL_Y1, BESSEL_Yn (elemental only), DERFC_SCALED, ERFC_SCALED, QERFC_SCALED |
 
 Libpgmath comes in three variants (precise, relaxed and fast). So far, only the
 precise version is used for intrinsic function folding in f18. It guarantees the greatest numerical precision.
@@ -961,7 +967,7 @@ program test_etime
     call ETIME(tarray, result)
     print *, result
     print *, tarray(1)
-    print *, tarray(2)   
+    print *, tarray(2)
     do i=1,100000000    ! Just a delay
         j = i * i - i
     end do
@@ -1002,6 +1008,38 @@ PROGRAM example_getcwd
   PRINT *, status
 END PROGRAM
 ```
+
+### Non-Standard Intrinsics: HOSTNM
+
+#### Description
+`HOSTNM(C, STATUS)` returns the host name of the system.
+
+This intrinsic is provided in both subroutine and function forms; however, only one form can be used in any given program unit.
+
+*C* and *STATUS* are `INTENT(OUT)` and provide the following:
+
+|            |                                                                                                   |
+|------------|---------------------------------------------------------------------------------------------------|
+| `C`        | The host name of the system. The type shall be `CHARACTER` and of default kind.       |
+| `STATUS`   | (Optional) Status flag. Returns 0 on success, a system specific and nonzero error code otherwise. The type shall be `INTEGER` and of a kind greater or equal to 4. |
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine, function
+- **Syntax:** `CALL HOSTNM(C, STATUS)`, `STATUS = HOSTNM(C)`
+
+#### Example
+```Fortran
+PROGRAM example_hostnm
+  CHARACTER(len=255) :: hnam
+  INTEGER :: status
+  CALL hostnm(hnam, status)
+  PRINT *, hnam
+  PRINT *, status
+END PROGRAM
+```
+
 
 ### Non-standard Intrinsics: RENAME
 `RENAME(OLD, NEW[, STATUS])` renames/moves a file on the filesystem.
@@ -1088,7 +1126,7 @@ This intrinsic is provided in both subroutine and function forms; however, only 
 ```Fortran
 program chdir_func
   character(len=) :: path
-  integer :: status 
+  integer :: status
 
   call chdir("/tmp")
   status = chdir("..")
@@ -1106,3 +1144,34 @@ end program chdir_func
 - **Standard:** GNU extension
 - **Class:** function
 - **Syntax:** `RESULT = IERRNO()`
+
+### Non-Standard Intrinsics: QSORT
+
+#### Description
+
+```
+SUBROUTINE QSORT(ARRAY, LEN, ISIZE, COMPAR)
+  TYPE(*) :: ARRAY(*)
+  INTEGER(4) :: LEN, ISIZE
+  INTERFACE
+    INTEGER(4) FUNCTION COMPAR(A, B)
+      TYPE(*) :: A, B
+    END FUNCTION
+  END INTERFACE
+END SUBROUTINE
+```
+
+Sort `ARRAY` in place in ascending order given the comparison function `COMPAR`.
+The array number of elements is given by `LEN` and the element byte size is given
+by `ISIZE`.
+
+`COMPAR` function takes the addresses of element `A` and `B` and must return:
+- a negative value if `A` < `B`
+- zero if `A` == `B`
+- a positive value otherwise. 
+
+#### Usage and Info
+
+- **Standard:** lib3f (section 3f of old man pages).
+- **Class:** subroutine
+- **Syntax:** `CALL QSORT(ARRAY, LEN, ISIZE, COMPAR)`

@@ -132,6 +132,8 @@ def relocatable: F<"relocatable">, HelpText<"Create relocatable object file">;
 
 defm reproduce: EEq<"reproduce", "Dump linker invocation and input files for debugging">;
 
+defm rpath: Eq<"rpath", "Add a DT_RUNPATH to the output">;
+
 defm rsp_quoting: Eq<"rsp-quoting", "Quoting style for response files">,
   MetaVarName<"[posix,windows]">;
 
@@ -229,6 +231,9 @@ def import_table: FF<"import-table">,
 
 def initial_heap: JJ<"initial-heap=">,
   HelpText<"Initial size of the heap">;
+
+def page_size: JJ<"page-size=">,
+  HelpText<"The Wasm page size (Defaults to 65536)">;
 
 def initial_memory: JJ<"initial-memory=">,
   HelpText<"Initial size of the linear memory">;

@@ -14,7 +14,7 @@
  * it does so by means of a wrapper header that establishes namespaces and
  * a macro for extra function attributes (RT_API_ATTRS).
  */
-#ifndef FORTRAN_ISO_FORTRAN_BINDING_WRAPPER_H_
+#ifndef FORTRAN_COMMON_ISO_FORTRAN_BINDING_WRAPPER_H_
 #include <stddef.h>
 #define FORTRAN_ISO_NAMESPACE_
 #endif

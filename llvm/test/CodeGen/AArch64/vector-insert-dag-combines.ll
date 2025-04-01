@@ -26,7 +26,7 @@ target triple = "aarch64-unknown-linux-gnu"
 
 define <16 x i8> @insert_small_fixed_into_big_fixed(<8 x i8> %a) #0 {
   %extract = call <4 x i8> @llvm.vector.extract(<8 x i8> %a, i64 0)
-  %insert = call <16 x i8> @llvm.vector.insert(<16 x i8> undef, <4 x i8> %extract, i64 0)
+  %insert = call <16 x i8> @llvm.vector.insert(<16 x i8> poison, <4 x i8> %extract, i64 0)
   ret <16 x i8> %insert
 }
 
@@ -49,7 +49,7 @@ define <16 x i8> @insert_small_fixed_into_big_fixed(<8 x i8> %a) #0 {
 
 define <vscale x 16 x i8> @insert_small_fixed_into_big_scalable(<8 x i8> %a) #0 {
   %extract = call <4 x i8> @llvm.vector.extract(<8 x i8> %a, i64 0)
-  %insert = call <vscale x 16 x i8> @llvm.vector.insert(<vscale x 16 x i8> undef, <4 x i8> %extract, i64 0)
+  %insert = call <vscale x 16 x i8> @llvm.vector.insert(<vscale x 16 x i8> poison, <4 x i8> %extract, i64 0)
   ret <vscale x 16 x i8> %insert
 }
 
@@ -76,7 +76,7 @@ define <vscale x 16 x i8> @insert_small_fixed_into_big_scalable(<8 x i8> %a) #0 
 ; Resulting insert would not be legal, so there's no transformation.
 define <16 x i8> @insert_small_scalable_into_big_fixed(<vscale x 8 x i8> %a) #0 {
   %extract = call <4 x i8> @llvm.vector.extract(<vscale x 8 x i8> %a, i64 0)
-  %insert = call <16 x i8> @llvm.vector.insert(<16 x i8> undef, <4 x i8> %extract, i64 0)
+  %insert = call <16 x i8> @llvm.vector.insert(<16 x i8> poison, <4 x i8> %extract, i64 0)
   ret <16 x i8> %insert
 }
 
@@ -101,7 +101,7 @@ define <16 x i8> @insert_small_scalable_into_big_fixed(<vscale x 8 x i8> %a) #0 
 
 define <vscale x 16 x i8> @insert_small_scalable_into_big_scalable_1(<vscale x 8 x i8> %a) #0 {
   %extract = call <4 x i8> @llvm.vector.extract(<vscale x 8 x i8> %a, i64 0)
-  %insert = call <vscale x 16 x i8> @llvm.vector.insert(<vscale x 16 x i8> undef, <4 x i8> %extract, i64 0)
+  %insert = call <vscale x 16 x i8> @llvm.vector.insert(<vscale x 16 x i8> poison, <4 x i8> %extract, i64 0)
   ret <vscale x 16 x i8> %insert
 }
 
@@ -126,7 +126,7 @@ define <vscale x 16 x i8> @insert_small_scalable_into_big_scalable_1(<vscale x 8
 
 define <vscale x 16 x i8> @insert_small_scalable_into_big_scalable_2(<vscale x 8 x i8> %a) #0 {
   %extract = call <vscale x 4 x i8> @llvm.vector.extract(<vscale x 8 x i8> %a, i64 0)
-  %insert = call <vscale x 16 x i8> @llvm.vector.insert(<vscale x 16 x i8> undef, <vscale x 4 x i8> %extract, i64 0)
+  %insert = call <vscale x 16 x i8> @llvm.vector.insert(<vscale x 16 x i8> poison, <vscale x 4 x i8> %extract, i64 0)
   ret <vscale x 16 x i8> %insert
 }
 
@@ -149,7 +149,7 @@ define <vscale x 16 x i8> @insert_small_scalable_into_big_scalable_2(<vscale x 8
 
 define <8 x i8> @extract_small_fixed_from_big_fixed(<16 x i8> %a) #0 {
   %extract = call <4 x i8> @llvm.vector.extract(<16 x i8> %a, i64 0)
-  %insert = call <8 x i8> @llvm.vector.insert(<8 x i8> undef, <4 x i8> %extract, i64 0)
+  %insert = call <8 x i8> @llvm.vector.insert(<8 x i8> poison, <4 x i8> %extract, i64 0)
   ret <8 x i8> %insert
 }
 
@@ -176,7 +176,7 @@ define <8 x i8> @extract_small_fixed_from_big_fixed(<16 x i8> %a) #0 {
 ; Resulting insert would not be legal, so there's no transformation.
 define <vscale x 8 x i8> @extract_small_scalable_from_big_fixed(<16 x i8> %a) #0 {
   %extract = call <4 x i8> @llvm.vector.extract(<16 x i8> %a, i64 0)
-  %insert = call <vscale x 8 x i8> @llvm.vector.insert(<vscale x 8 x i8> undef, <4 x i8> %extract, i64 0)
+  %insert = call <vscale x 8 x i8> @llvm.vector.insert(<vscale x 8 x i8> poison, <4 x i8> %extract, i64 0)
   ret <vscale x 8 x i8> %insert
 }
 
@@ -199,7 +199,7 @@ define <vscale x 8 x i8> @extract_small_scalable_from_big_fixed(<16 x i8> %a) #0
 
 define <8 x i8> @extract_small_fixed_from_big_scalable(<vscale x 16 x i8> %a) #0 {
   %extract = call <4 x i8> @llvm.vector.extract(<vscale x 16 x i8> %a, i64 0)
-  %insert = call <8 x i8> @llvm.vector.insert(<8 x i8> undef, <4 x i8> %extract, i64 0)
+  %insert = call <8 x i8> @llvm.vector.insert(<8 x i8> poison, <4 x i8> %extract, i64 0)
   ret <8 x i8> %insert
 }
 
@@ -224,7 +224,7 @@ define <8 x i8> @extract_small_fixed_from_big_scalable(<vscale x 16 x i8> %a) #0
 
 define <vscale x 8 x i8> @extract_small_scalable_from_big_scalable_1(<vscale x 16 x i8> %a) #0 {
   %extract = call <4 x i8> @llvm.vector.extract(<vscale x 16 x i8> %a, i64 0)
-  %insert = call <vscale x 8 x i8> @llvm.vector.insert(<vscale x 8 x i8> undef, <4 x i8> %extract, i64 0)
+  %insert = call <vscale x 8 x i8> @llvm.vector.insert(<vscale x 8 x i8> poison, <4 x i8> %extract, i64 0)
   ret <vscale x 8 x i8> %insert
 }
 
@@ -249,7 +249,7 @@ define <vscale x 8 x i8> @extract_small_scalable_from_big_scalable_1(<vscale x 1
 
 define <vscale x 8 x i8> @extract_small_scalable_from_big_scalable_2(<vscale x 16 x i8> %a) #0 {
   %extract = call <vscale x 4 x i8> @llvm.vector.extract(<vscale x 16 x i8> %a, i64 0)
-  %insert = call <vscale x 8 x i8> @llvm.vector.insert(<vscale x 8 x i8> undef, <vscale x 4 x i8> %extract, i64 0)
+  %insert = call <vscale x 8 x i8> @llvm.vector.insert(<vscale x 8 x i8> poison, <vscale x 4 x i8> %extract, i64 0)
   ret <vscale x 8 x i8> %insert
 }
 
@@ -276,7 +276,7 @@ define <vscale x 8 x i8> @extract_small_scalable_from_big_scalable_2(<vscale x 1
 ; opposite transformation and emit an extract instead.
 define <16 x i8> @extract_fixed_from_scalable(<vscale x 16 x i8> %a) #0 {
   %extract = call <4 x i8> @llvm.vector.extract(<vscale x 16 x i8> %a, i64 0)
-  %insert = call <16 x i8> @llvm.vector.insert(<16 x i8> undef, <4 x i8> %extract, i64 0)
+  %insert = call <16 x i8> @llvm.vector.insert(<16 x i8> poison, <4 x i8> %extract, i64 0)
   ret <16 x i8> %insert
 }
 
@@ -303,7 +303,7 @@ define <16 x i8> @extract_fixed_from_scalable(<vscale x 16 x i8> %a) #0 {
 ; opposite transformation and emit an insert instead.
 define <vscale x 16 x i8> @insert_fixed_into_scalable(<16 x i8> %a) #0 {
   %extract = call <4 x i8> @llvm.vector.extract(<16 x i8> %a, i64 0)
-  %insert = call <vscale x 16 x i8> @llvm.vector.insert(<vscale x 16 x i8> undef, <4 x i8> %extract, i64 0)
+  %insert = call <vscale x 16 x i8> @llvm.vector.insert(<vscale x 16 x i8> poison, <4 x i8> %extract, i64 0)
   ret <vscale x 16 x i8> %insert
 }
 

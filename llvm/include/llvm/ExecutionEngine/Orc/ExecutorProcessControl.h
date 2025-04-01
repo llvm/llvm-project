@@ -20,6 +20,7 @@
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/UnwindInfoManager.h"
 #include "llvm/ExecutionEngine/Orc/TaskDispatch.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
@@ -507,6 +508,9 @@ private:
                           SymbolLookupCompleteFn F) override;
 
   std::unique_ptr<jitlink::JITLinkMemoryManager> OwnedMemMgr;
+#ifdef __APPLE__
+  std::unique_ptr<UnwindInfoManager> UnwindInfoMgr;
+#endif // __APPLE__
   char GlobalManglingPrefix = 0;
 };
 

@@ -128,8 +128,7 @@ class VPRecipeBuilder {
   /// Check if \p I has an opcode that can be widened and return a VPWidenRecipe
   /// if it can. The function should only be called if the cost-model indicates
   /// that widening should be performed.
-  VPWidenRecipe *tryToWiden(Instruction *I, ArrayRef<VPValue *> Operands,
-                            VPBasicBlock *VPBB);
+  VPWidenRecipe *tryToWiden(Instruction *I, ArrayRef<VPValue *> Operands);
 
   /// Makes Histogram count operations safe for vectorization, by emitting a
   /// llvm.experimental.vector.histogram.add intrinsic in place of the
@@ -174,7 +173,7 @@ public:
   /// the given VF \p Range.
   VPRecipeBase *tryToCreateWidenRecipe(Instruction *Instr,
                                        ArrayRef<VPValue *> Operands,
-                                       VFRange &Range, VPBasicBlock *VPBB);
+                                       VFRange &Range);
 
   /// Create and return a partial reduction recipe for a reduction instruction
   /// along with binary operation and reduction phi operands.
@@ -225,15 +224,6 @@ public:
   VPReplicateRecipe *handleReplication(Instruction *I,
                                        ArrayRef<VPValue *> Operands,
                                        VFRange &Range);
-
-  /// Add the incoming values from the backedge to reduction & first-order
-  /// recurrence cross-iteration phis.
-  void fixHeaderPhis();
-
-  /// Returns a range mapping the values of the range \p Operands to their
-  /// corresponding VPValues.
-  iterator_range<mapped_iterator<Use *, std::function<VPValue *(Value *)>>>
-  mapToVPValues(User::op_range Operands);
 
   VPValue *getVPValueOrAddLiveIn(Value *V) {
     if (auto *I = dyn_cast<Instruction>(V)) {

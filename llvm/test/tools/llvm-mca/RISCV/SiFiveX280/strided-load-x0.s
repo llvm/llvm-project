@@ -55,31 +55,31 @@ vle64.v v1, (a1)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      19    17.00   *                   vlse8.v	v1, (a1), a2
-# CHECK-NEXT:  1      19    17.00   *                   vlse16.v	v1, (a1), a2
-# CHECK-NEXT:  1      19    17.00   *                   vlse32.v	v1, (a1), a2
-# CHECK-NEXT:  1      19    17.00   *                   vlse64.v	v1, (a1), a2
-# CHECK-NEXT:  1      19    17.00   *                   vlse8.v	v1, (a1), zero
-# CHECK-NEXT:  1      19    17.00   *                   vlse16.v	v1, (a1), zero
-# CHECK-NEXT:  1      19    17.00   *                   vlse32.v	v1, (a1), zero
-# CHECK-NEXT:  1      19    17.00   *                   vlse64.v	v1, (a1), zero
-# CHECK-NEXT:  1      4     2.00    *                   vle8.v	v1, (a1)
-# CHECK-NEXT:  1      4     2.00    *                   vle16.v	v1, (a1)
-# CHECK-NEXT:  1      4     3.00    *                   vle32.v	v1, (a1)
-# CHECK-NEXT:  1      4     5.00    *                   vle64.v	v1, (a1)
-# CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      11    9.00    *                   vlse8.v	v1, (a1), a2
-# CHECK-NEXT:  1      11    9.00    *                   vlse16.v	v1, (a1), a2
-# CHECK-NEXT:  1      11    9.00    *                   vlse32.v	v1, (a1), a2
-# CHECK-NEXT:  1      11    9.00    *                   vlse64.v	v1, (a1), a2
-# CHECK-NEXT:  1      11    9.00    *                   vlse8.v	v1, (a1), zero
-# CHECK-NEXT:  1      11    9.00    *                   vlse16.v	v1, (a1), zero
-# CHECK-NEXT:  1      11    9.00    *                   vlse32.v	v1, (a1), zero
-# CHECK-NEXT:  1      11    9.00    *                   vlse64.v	v1, (a1), zero
-# CHECK-NEXT:  1      4     2.00    *                   vle8.v	v1, (a1)
-# CHECK-NEXT:  1      4     2.00    *                   vle16.v	v1, (a1)
+# CHECK-NEXT:  1      19    16.00   *                   vlse8.v	v1, (a1), a2
+# CHECK-NEXT:  1      19    16.00   *                   vlse16.v	v1, (a1), a2
+# CHECK-NEXT:  1      19    16.00   *                   vlse32.v	v1, (a1), a2
+# CHECK-NEXT:  1      19    16.00   *                   vlse64.v	v1, (a1), a2
+# CHECK-NEXT:  1      19    16.00   *                   vlse8.v	v1, (a1), zero
+# CHECK-NEXT:  1      19    16.00   *                   vlse16.v	v1, (a1), zero
+# CHECK-NEXT:  1      19    16.00   *                   vlse32.v	v1, (a1), zero
+# CHECK-NEXT:  1      19    16.00   *                   vlse64.v	v1, (a1), zero
+# CHECK-NEXT:  1      4     1.00    *                   vle8.v	v1, (a1)
+# CHECK-NEXT:  1      4     1.00    *                   vle16.v	v1, (a1)
 # CHECK-NEXT:  1      4     2.00    *                   vle32.v	v1, (a1)
-# CHECK-NEXT:  1      4     3.00    *                   vle64.v	v1, (a1)
+# CHECK-NEXT:  1      4     4.00    *                   vle64.v	v1, (a1)
+# CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
+# CHECK-NEXT:  1      11    8.00    *                   vlse8.v	v1, (a1), a2
+# CHECK-NEXT:  1      11    8.00    *                   vlse16.v	v1, (a1), a2
+# CHECK-NEXT:  1      11    8.00    *                   vlse32.v	v1, (a1), a2
+# CHECK-NEXT:  1      11    8.00    *                   vlse64.v	v1, (a1), a2
+# CHECK-NEXT:  1      11    8.00    *                   vlse8.v	v1, (a1), zero
+# CHECK-NEXT:  1      11    8.00    *                   vlse16.v	v1, (a1), zero
+# CHECK-NEXT:  1      11    8.00    *                   vlse32.v	v1, (a1), zero
+# CHECK-NEXT:  1      11    8.00    *                   vlse64.v	v1, (a1), zero
+# CHECK-NEXT:  1      4     1.00    *                   vle8.v	v1, (a1)
+# CHECK-NEXT:  1      4     1.00    *                   vle16.v	v1, (a1)
+# CHECK-NEXT:  1      4     1.00    *                   vle32.v	v1, (a1)
+# CHECK-NEXT:  1      4     2.00    *                   vle64.v	v1, (a1)
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SiFive7FDiv

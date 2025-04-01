@@ -48,7 +48,7 @@ struct __common_type3 {};
 // sub-bullet 4 - "if COND_RES(CREF(D1), CREF(D2)) denotes a type..."
 template <class _Tp, class _Up>
 struct __common_type3<_Tp, _Up, void_t<__cond_type<const _Tp&, const _Up&>>> {
-  using type = remove_cvref_t<__cond_type<const _Tp&, const _Up&>>;
+  using type _LIBCPP_NODEBUG = remove_cvref_t<__cond_type<const _Tp&, const _Up&>>;
 };
 
 template <class _Tp, class _Up, class = void>

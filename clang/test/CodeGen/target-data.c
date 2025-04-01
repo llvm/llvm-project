@@ -160,11 +160,11 @@
 
 // RUN: %clang_cc1 -triple nvptx-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=NVPTX
-// NVPTX: target datalayout = "e-p:32:32-i64:64-i128:128-v16:16-v32:32-n16:32:64"
+// NVPTX: target datalayout = "e-p:32:32-p6:32:32-i64:64-i128:128-v16:16-v32:32-n16:32:64"
 
 // RUN: %clang_cc1 -triple nvptx64-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=NVPTX64
-// NVPTX64: target datalayout = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64"
+// NVPTX64: target datalayout = "e-p6:32:32-i64:64-i128:128-v16:16-v32:32-n16:32:64"
 
 // RUN: %clang_cc1 -triple r600-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=R600

@@ -22,94 +22,87 @@ namespace llvm {
 class StringRef;
 class SparcMCExpr : public MCTargetExpr {
 public:
-  enum VariantKind {
-    VK_Sparc_None,
-    VK_Sparc_LO,
-    VK_Sparc_HI,
-    VK_Sparc_H44,
-    VK_Sparc_M44,
-    VK_Sparc_L44,
-    VK_Sparc_HH,
-    VK_Sparc_HM,
-    VK_Sparc_LM,
-    VK_Sparc_PC22,
-    VK_Sparc_PC10,
-    VK_Sparc_GOT22,
-    VK_Sparc_GOT10,
-    VK_Sparc_GOT13,
-    VK_Sparc_13,
-    VK_Sparc_WPLT30,
-    VK_Sparc_WDISP30,
-    VK_Sparc_R_DISP32,
-    VK_Sparc_TLS_GD_HI22,
-    VK_Sparc_TLS_GD_LO10,
-    VK_Sparc_TLS_GD_ADD,
-    VK_Sparc_TLS_GD_CALL,
-    VK_Sparc_TLS_LDM_HI22,
-    VK_Sparc_TLS_LDM_LO10,
-    VK_Sparc_TLS_LDM_ADD,
-    VK_Sparc_TLS_LDM_CALL,
-    VK_Sparc_TLS_LDO_HIX22,
-    VK_Sparc_TLS_LDO_LOX10,
-    VK_Sparc_TLS_LDO_ADD,
-    VK_Sparc_TLS_IE_HI22,
-    VK_Sparc_TLS_IE_LO10,
-    VK_Sparc_TLS_IE_LD,
-    VK_Sparc_TLS_IE_LDX,
-    VK_Sparc_TLS_IE_ADD,
-    VK_Sparc_TLS_LE_HIX22,
-    VK_Sparc_TLS_LE_LOX10,
-    VK_Sparc_HIX22,
-    VK_Sparc_LOX10,
-    VK_Sparc_GOTDATA_HIX22,
-    VK_Sparc_GOTDATA_LOX10,
-    VK_Sparc_GOTDATA_OP,
+  enum Specifier {
+    VK_None,
+    VK_LO,
+    VK_HI,
+    VK_H44,
+    VK_M44,
+    VK_L44,
+    VK_HH,
+    VK_HM,
+    VK_LM,
+    VK_PC22,
+    VK_PC10,
+    VK_GOT22,
+    VK_GOT10,
+    VK_GOT13,
+    VK_13,
+    VK_WPLT30,
+    VK_WDISP30,
+    VK_R_DISP32,
+    VK_TLS_GD_HI22,
+    VK_TLS_GD_LO10,
+    VK_TLS_GD_ADD,
+    VK_TLS_GD_CALL,
+    VK_TLS_LDM_HI22,
+    VK_TLS_LDM_LO10,
+    VK_TLS_LDM_ADD,
+    VK_TLS_LDM_CALL,
+    VK_TLS_LDO_HIX22,
+    VK_TLS_LDO_LOX10,
+    VK_TLS_LDO_ADD,
+    VK_TLS_IE_HI22,
+    VK_TLS_IE_LO10,
+    VK_TLS_IE_LD,
+    VK_TLS_IE_LDX,
+    VK_TLS_IE_ADD,
+    VK_TLS_LE_HIX22,
+    VK_TLS_LE_LOX10,
+    VK_HIX22,
+    VK_LOX10,
+    VK_GOTDATA_HIX22,
+    VK_GOTDATA_LOX10,
+    VK_GOTDATA_OP,
   };
 
 private:
-  const VariantKind Kind;
+  const Specifier specifier;
   const MCExpr *Expr;
 
-  explicit SparcMCExpr(VariantKind Kind, const MCExpr *Expr)
-      : Kind(Kind), Expr(Expr) {}
+  explicit SparcMCExpr(Specifier S, const MCExpr *Expr)
+      : specifier(S), Expr(Expr) {}
 
 public:
   /// @name Construction
   /// @{
 
-  static const SparcMCExpr *create(VariantKind Kind, const MCExpr *Expr,
-                                 MCContext &Ctx);
+  static const SparcMCExpr *create(Specifier S, const MCExpr *Expr,
+                                   MCContext &Ctx);
   /// @}
   /// @name Accessors
   /// @{
 
-  /// getOpcode - Get the kind of this expression.
-  VariantKind getKind() const { return Kind; }
-
-  /// getSubExpr - Get the child of this expression.
+  Specifier getSpecifier() const { return specifier; }
   const MCExpr *getSubExpr() const { return Expr; }
-
-  /// getFixupKind - Get the fixup kind of this expression.
-  Sparc::Fixups getFixupKind() const { return getFixupKind(Kind); }
+  Sparc::Fixups getFixupKind() const { return getFixupKind(specifier); }
 
   /// @}
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
-  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                 const MCFixup *Fixup) const override;
+  bool evaluateAsRelocatableImpl(MCValue &Res,
+                                 const MCAssembler *Asm) const override;
   void visitUsedExpr(MCStreamer &Streamer) const override;
   MCFragment *findAssociatedFragment() const override {
     return getSubExpr()->findAssociatedFragment();
   }
 
-  void fixELFSymbolsInTLSFixups(MCAssembler &Asm) const override;
-
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;
   }
 
-  static VariantKind parseVariantKind(StringRef name);
-  static bool printVariantKind(raw_ostream &OS, VariantKind Kind);
-  static Sparc::Fixups getFixupKind(VariantKind Kind);
+  static Specifier parseSpecifier(StringRef name);
+  static bool printSpecifier(raw_ostream &OS, Specifier Kind);
+  static Sparc::Fixups getFixupKind(Specifier Kind);
 };
 
 } // end namespace llvm.

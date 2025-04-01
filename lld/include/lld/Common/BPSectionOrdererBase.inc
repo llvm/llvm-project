@@ -64,6 +64,10 @@ template <class D> struct BPOrderer {
                     const DenseMap<CachedHashStringRef, std::set<unsigned>>
                         &rootSymbolToSectionIdxs)
       -> llvm::DenseMap<const Section *, int>;
+
+  std::optional<StringRef> static getResolvedLinkageName(StringRef name) {
+    return {};
+  }
 };
 } // namespace lld
 
@@ -98,10 +102,11 @@ static SmallVector<std::pair<unsigned, UtilityNodes>> getUnsForCompression(
     // Merge sections that are nearly identical
     SmallVector<std::pair<unsigned, SmallVector<uint64_t>>> newSectionHashes;
     DenseMap<uint64_t, unsigned> wholeHashToSectionIdx;
+    unsigned threshold = sectionHashes.size() > 10000 ? 5 : 0;
     for (auto &[sectionIdx, hashes] : sectionHashes) {
       uint64_t wholeHash = 0;
       for (auto hash : hashes)
-        if (hashFrequency[hash] > 5)
+        if (hashFrequency[hash] > threshold)
           wholeHash ^= hash;
       auto [it, wasInserted] =
           wholeHashToSectionIdx.insert(std::make_pair(wholeHash, sectionIdx));
@@ -142,11 +147,14 @@ static SmallVector<std::pair<unsigned, UtilityNodes>> getUnsForCompression(
   return sectionUns;
 }
 
-/// Symbols can be appended with "(.__uniq.xxxx)?.llvm.yyyy" where "xxxx" and
-/// "yyyy" are numbers that could change between builds. We need to use the
-/// root symbol name before this suffix so these symbols can be matched with
-/// profiles which may have different suffixes.
+/// Symbols can be appended with "(.__uniq.xxxx)?(.llvm.yyyy)?(.Tgm)?" where
+/// "xxxx" and "yyyy" are numbers that could change between builds, and .Tgm is
+/// the global merge functions suffix
+/// (see GlobalMergeFunc::MergingInstanceSuffix). We need to use the root symbol
+/// name before this suffix so these symbols can be matched with profiles which
+/// may have different suffixes.
 inline StringRef getRootSymbol(StringRef name) {
+  name.consume_back(".Tgm");
   auto [P0, S0] = name.rsplit(".llvm.");
   auto [P1, S1] = P0.rsplit(".__uniq.");
   return P1;

@@ -937,7 +937,7 @@ entry:
 define i1 @ctlz_with_range_metadata(i16 %x) {
 ; CHECK-LABEL: @ctlz_with_range_metadata(
 ; CHECK-NEXT:    [[CTLZ:%.*]] = call i16 @llvm.ctlz.i16(i16 [[X:%.*]], i1 false), !range [[RNG5:![0-9]+]]
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i16 [[CTLZ]] to i8
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw nsw i16 [[CTLZ]] to i8
 ; CHECK-NEXT:    ret i1 true
 ;
   %ctlz = call i16 @llvm.ctlz.i16(i16 %x, i1 false), !range !{i16 0, i16 8}
@@ -949,7 +949,7 @@ define i1 @ctlz_with_range_metadata(i16 %x) {
 define i1 @abs_with_range_metadata(i16 %x) {
 ; CHECK-LABEL: @abs_with_range_metadata(
 ; CHECK-NEXT:    [[ABS:%.*]] = call i16 @llvm.abs.i16(i16 [[X:%.*]], i1 false), !range [[RNG5]]
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i16 [[ABS]] to i8
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw nsw i16 [[ABS]] to i8
 ; CHECK-NEXT:    ret i1 true
 ;
   %abs = call i16 @llvm.abs.i16(i16 %x, i1 false), !range !{i16 0, i16 8}

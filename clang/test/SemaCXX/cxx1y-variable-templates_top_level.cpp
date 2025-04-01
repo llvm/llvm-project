@@ -467,3 +467,29 @@ namespace VexingParse {
   template <typename> int var; // expected-note {{declared here}}
   int x(var); // expected-error {{use of variable template 'var' requires template arguments}}
 }
+
+#ifndef PRECXX11
+
+namespace GH79750 {
+
+enum class Values { A };
+
+template<typename E>
+constexpr Values values[] = {E::A};
+
+constexpr auto r = values<Values>[0] == Values::A;
+
+}
+
+namespace GH113956 {
+
+template <class T, T... VALUES>
+struct C {
+  static constexpr T VALUEARRAY[] = {VALUES...};
+};
+
+static_assert(C<int, 0,1,2,3,4>::VALUEARRAY[3] == 3, "");
+static_assert(C<int, 0,1,2,3,4>::VALUEARRAY[0] == 0, "");
+
+}
+#endif

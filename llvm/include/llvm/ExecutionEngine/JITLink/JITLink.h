@@ -587,6 +587,9 @@ public:
     return static_cast<const Block &>(*Base);
   }
 
+  /// Return the Section for this Symbol (Symbol must be defined).
+  Section &getSection() const { return getBlock().getSection(); }
+
   /// Returns the offset for this symbol within the underlying addressable.
   orc::ExecutorAddrDiff getOffset() const { return Offset; }
 
@@ -1460,7 +1463,7 @@ public:
       A.setAddress(orc::ExecutorAddr());
     } else {
       assert(Sym.isDefined() && "Sym is not a defined symbol");
-      Section &Sec = Sym.getBlock().getSection();
+      Section &Sec = Sym.getSection();
       Sec.removeSymbol(Sym);
       Sym.makeExternal(createAddressable(orc::ExecutorAddr(), false));
     }
@@ -1488,7 +1491,7 @@ public:
       Sym.setScope(Scope::Local);
     } else {
       assert(Sym.isDefined() && "Sym is not a defined symbol");
-      Section &Sec = Sym.getBlock().getSection();
+      Section &Sec = Sym.getSection();
       Sec.removeSymbol(Sym);
       Sym.makeAbsolute(createAddressable(Address));
     }
@@ -1534,7 +1537,7 @@ public:
   transferDefinedSymbol(Symbol &Sym, Block &DestBlock,
                         orc::ExecutorAddrDiff NewOffset,
                         std::optional<orc::ExecutorAddrDiff> ExplicitNewSize) {
-    auto &OldSection = Sym.getBlock().getSection();
+    auto &OldSection = Sym.getSection();
     Sym.setBlock(DestBlock);
     Sym.setOffset(NewOffset);
     if (ExplicitNewSize)
@@ -1622,7 +1625,7 @@ public:
   /// Removes defined symbols. Does not remove the underlying block.
   void removeDefinedSymbol(Symbol &Sym) {
     assert(Sym.isDefined() && "Sym is not a defined symbol");
-    Sym.getBlock().getSection().removeSymbol(Sym);
+    Sym.getSection().removeSymbol(Sym);
     destroySymbol(Sym);
   }
 

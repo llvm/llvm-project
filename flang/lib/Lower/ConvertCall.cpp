@@ -32,6 +32,7 @@
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "mlir/IR/IRMapping.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
@@ -1135,6 +1136,27 @@ isSimplyContiguous(const Fortran::evaluate::ActualArgument &arg,
          Fortran::evaluate::IsSimplyContiguous(*sym, foldingContext);
 }
 
+static bool isParameterObjectOrSubObject(hlfir::Entity entity) {
+  mlir::Value base = entity;
+  bool foundParameter = false;
+  while (mlir::Operation *op = base ? base.getDefiningOp() : nullptr) {
+    base =
+        llvm::TypeSwitch<mlir::Operation *, mlir::Value>(op)
+            .Case<hlfir::DeclareOp>([&](auto declare) -> mlir::Value {
+              foundParameter |= hlfir::Entity{declare}.isParameter();
+              return foundParameter ? mlir::Value{} : declare.getMemref();
+            })
+            .Case<hlfir::DesignateOp, hlfir::ParentComponentOp, fir::EmboxOp>(
+                [&](auto op) -> mlir::Value { return op.getMemref(); })
+            .Case<fir::ReboxOp>(
+                [&](auto rebox) -> mlir::Value { return rebox.getBox(); })
+            .Case<fir::ConvertOp>(
+                [&](auto convert) -> mlir::Value { return convert.getValue(); })
+            .Default([](mlir::Operation *) -> mlir::Value { return nullptr; });
+  }
+  return foundParameter;
+}
+
 /// When dummy is not ALLOCATABLE, POINTER and is not passed in register,
 /// prepare the actual argument according to the interface. Do as needed:
 /// - address element if this is an array argument in an elemental call.
@@ -1298,8 +1320,9 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
         // 'parameter' attribute. Even though the constant expressions
         // are not definable and explicit assignments to them are not
         // possible, we have to create a temporary copies when we pass
-        // them down the call stack.
-        entity.isParameter()) {
+        // them down the call stack because of potential compiler
+        // generated writes in copy-out.
+        isParameterObjectOrSubObject(entity)) {
       // Make a copy in a temporary.
       auto copy = builder.create<hlfir::AsExprOp>(loc, entity);
       mlir::Type storageType = entity.getType();

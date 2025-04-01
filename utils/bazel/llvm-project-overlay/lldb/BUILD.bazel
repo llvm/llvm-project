@@ -394,6 +394,7 @@ cc_library(
         ":TargetHeaders",
         ":Utility",
         "//llvm:Support",
+        "//llvm:Telemetry",
     ],
 )
 
@@ -634,14 +635,18 @@ cc_library(
 
 cc_library(
     name = "Core",
-    srcs = glob([
-        "source/Core/**/*.cpp",
-        "source/ValueObject/**/*.cpp",  # This should be its own library.
-    ]),
-    hdrs = glob([
-        "include/lldb/Core/**/*.h",
-        "include/lldb/ValueObject/**/*.h",  # This should be its own library.
-    ]),
+    srcs = glob(
+        [
+            "source/Core/**/*.cpp",
+            "source/ValueObject/**/*.cpp",  # This should be its own library.
+        ],
+    ),
+    hdrs = glob(
+        [
+            "include/lldb/Core/**/*.h",
+            "include/lldb/ValueObject/**/*.h",  # This should be its own library.
+        ],
+    ),
     includes = ["include"],
     deps = [
         ":BreakpointHeaders",
@@ -655,12 +660,16 @@ cc_library(
         ":SymbolHeaders",
         ":TargetHeaders",
         ":Utility",
+        ":Version",
         "//clang:driver",
         "//lldb/source/Plugins:PluginCPlusPlusLanguageHeaders",
         "//lldb/source/Plugins:PluginObjCLanguageHeaders",
+        "//llvm:BinaryFormat",
         "//llvm:Demangle",
         "//llvm:Support",
         "//llvm:TargetParser",
+        "//llvm:Telemetry",
+        "//llvm:config",
     ],
 )
 
@@ -1054,12 +1063,13 @@ gentbl_cc_library(
 cc_binary(
     name = "lldb-dap",
     srcs = glob([
-        "tools/lldb-dap/*.cpp",
-        "tools/lldb-dap/*.h",
+        "tools/lldb-dap/**/*.cpp",
+        "tools/lldb-dap/**/*.h",
     ]),
     additional_linker_inputs = [
         ":lldb-dap-plist",
     ],
+    includes = ["tools/lldb-dap"],
     linkopts = select({
         "@platforms//os:macos": [
             "-Wl,-sectcreate,__TEXT,__info_plist,$(location :lldb-dap-plist)",

@@ -101,8 +101,9 @@ enum class InterestingIdentifier {
   NUM_OBJC_KEYWORDS_AND_NOTABLE_IDENTIFIERS,
 
   NotBuiltin,
-#define BUILTIN(ID, TYPE, ATTRS) BI##ID,
+#define GET_BUILTIN_ENUMERATORS
 #include "clang/Basic/Builtins.inc"
+#undef GET_BUILTIN_ENUMERATORS
   FirstTSBuiltin,
 
   NotInterestingIdentifier = 65534

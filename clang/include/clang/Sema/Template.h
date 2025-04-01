@@ -365,7 +365,7 @@ enum class TemplateSubstitutionKind : char {
   class LocalInstantiationScope {
   public:
     /// A set of declarations.
-    using DeclArgumentPack = SmallVector<VarDecl *, 4>;
+    using DeclArgumentPack = SmallVector<ValueDecl *, 4>;
 
   private:
     /// Reference to the semantic analysis that is performing

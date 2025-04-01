@@ -42,7 +42,6 @@ end subroutine
 ! CHECK-LABEL: omp.private {type = firstprivate}
 ! CHECK-SAME: @[[PRIVATIZER_SYM:.*]] : [[TYPE:!fir.box<!fir.ptr<i32>>]] init {
 ! CHECK-NEXT: ^bb0(%[[PRIV_ARG:.*]]: !fir.ref<[[TYPE]]>, %[[PRIV_ALLOC:.*]]: !fir.ref<[[TYPE]]>):
-! CHECK-NEXT:   %[[ARG:.*]] = fir.load %[[PRIV_ARG]]
 ! CHECK-NEXT:   %[[NULL:.*]] = fir.zero_bits !fir.ptr<i32>
 ! CHECK-NEXT:   %[[INIT:.*]] = fir.embox %[[NULL]] : (!fir.ptr<i32>) -> !fir.box<!fir.ptr<i32>>
 ! CHECK-NEXT:   fir.store %[[INIT]] to %[[PRIV_ALLOC]] : !fir.ref<!fir.box<!fir.ptr<i32>>>

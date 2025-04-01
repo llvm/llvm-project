@@ -38,23 +38,23 @@ static bool isCommentSection(const Section &Sec) {
 }
 
 static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
-                               Object &Obj) {
+                               StringRef InputFilename, Object &Obj) {
   for (const Section &Sec : Obj.Sections) {
     if (Sec.Name == SecName) {
       ArrayRef<uint8_t> Contents = Sec.Contents;
       Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
           FileOutputBuffer::create(Filename, Contents.size());
       if (!BufferOrErr)
-        return BufferOrErr.takeError();
+        return createFileError(Filename, BufferOrErr.takeError());
       std::unique_ptr<FileOutputBuffer> Buf = std::move(*BufferOrErr);
       std::copy(Contents.begin(), Contents.end(), Buf->getBufferStart());
       if (Error E = Buf->commit())
-        return E;
+        return createFileError(Filename, std::move(E));
       return Error::success();
     }
   }
-  return createStringError(errc::invalid_argument, "section '%s' not found",
-                           SecName.str().c_str());
+  return createFileError(Filename, errc::invalid_argument,
+                         "section '%s' not found", SecName.str().c_str());
 }
 
 static void removeSections(const CommonConfig &Config, Object &Obj) {
@@ -115,8 +115,9 @@ static Error handleArgs(const CommonConfig &Config, Object &Obj) {
     StringRef SecName;
     StringRef FileName;
     std::tie(SecName, FileName) = Flag.split("=");
-    if (Error E = dumpSectionToFile(SecName, FileName, Obj))
-      return createFileError(FileName, std::move(E));
+    if (Error E =
+            dumpSectionToFile(SecName, FileName, Config.InputFilename, Obj))
+      return E;
   }
 
   removeSections(Config, Obj);

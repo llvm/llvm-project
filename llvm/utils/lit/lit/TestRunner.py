@@ -1231,7 +1231,7 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
                 # the shell's execution trace for the 'set' commands by
                 # redirecting their stderr to /dev/null.
                 if command:
-                    msg = f"'{dbg}': {shlex.quote(command.lstrip())}"
+                    msg = f"{shlex.quote(command.lstrip())} \\# '{dbg}'"
                 else:
                     msg = f"'{dbg}' has no command after substitutions"
                 commands[i] = (

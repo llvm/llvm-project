@@ -245,10 +245,58 @@ bool NestedNameSpecifier::containsErrors() const {
   return getDependence() & NestedNameSpecifierDependence::Error;
 }
 
+const Type *
+NestedNameSpecifier::translateToType(const ASTContext &Context) const {
+  NestedNameSpecifier *Prefix = getPrefix();
+  switch (getKind()) {
+  case SpecifierKind::Identifier:
+    return Context
+        .getDependentNameType(ElaboratedTypeKeyword::None, Prefix,
+                              getAsIdentifier())
+        .getTypePtr();
+  case SpecifierKind::TypeSpec:
+  case SpecifierKind::TypeSpecWithTemplate: {
+    const Type *T = getAsType();
+    switch (T->getTypeClass()) {
+    case Type::DependentTemplateSpecialization: {
+      const auto *DT = cast<DependentTemplateSpecializationType>(T);
+      // FIXME: The type node can't represent the template keyword.
+      return Context
+          .getDependentTemplateSpecializationType(ElaboratedTypeKeyword::None,
+                                                  Prefix, DT->getIdentifier(),
+                                                  DT->template_arguments())
+          .getTypePtr();
+    }
+    case Type::Record:
+    case Type::TemplateSpecialization:
+    case Type::Using:
+    case Type::Enum:
+    case Type::Typedef:
+    case Type::UnresolvedUsing:
+      return Context
+          .getElaboratedType(ElaboratedTypeKeyword::None, Prefix,
+                             QualType(T, 0))
+          .getTypePtr();
+    default:
+      assert(Prefix == nullptr && "unexpected type with elaboration");
+      return T;
+    }
+  }
+  case SpecifierKind::Global:
+  case SpecifierKind::Namespace:
+  case SpecifierKind::NamespaceAlias:
+  case SpecifierKind::Super:
+    // These are not representable as types.
+    return nullptr;
+  }
+  llvm_unreachable("Unhandled SpecifierKind enum");
+}
+
 /// Print this nested name specifier to the given output
 /// stream.
 void NestedNameSpecifier::print(raw_ostream &OS, const PrintingPolicy &Policy,
-                                bool ResolveTemplateArguments) const {
+                                bool ResolveTemplateArguments,
+                                bool PrintFinalScopeResOp) const {
   if (getPrefix())
     getPrefix()->print(OS, Policy);
 
@@ -269,7 +317,8 @@ void NestedNameSpecifier::print(raw_ostream &OS, const PrintingPolicy &Policy,
     break;
 
   case Global:
-    break;
+    OS << "::";
+    return;
 
   case Super:
     OS << "__super";
@@ -295,6 +344,7 @@ void NestedNameSpecifier::print(raw_ostream &OS, const PrintingPolicy &Policy,
 
     PrintingPolicy InnerPolicy(Policy);
     InnerPolicy.SuppressScope = true;
+    InnerPolicy.SuppressTagKeyword = true;
 
     // Nested-name-specifiers are intended to contain minimally-qualified
     // types. An actual ElaboratedType will not occur, since we'll store
@@ -331,7 +381,8 @@ void NestedNameSpecifier::print(raw_ostream &OS, const PrintingPolicy &Policy,
   }
   }
 
-  OS << "::";
+  if (PrintFinalScopeResOp)
+    OS << "::";
 }
 
 LLVM_DUMP_METHOD void NestedNameSpecifier::dump(const LangOptions &LO) const {

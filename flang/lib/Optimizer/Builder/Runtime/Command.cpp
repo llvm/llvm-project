@@ -101,3 +101,16 @@ mlir::Value fir::runtime::genGetCwd(fir::FirOpBuilder &builder,
       builder, loc, runtimeFuncTy, cwd, sourceFile, sourceLine);
   return builder.create<fir::CallOp>(loc, func, args).getResult(0);
 }
+
+mlir::Value fir::runtime::genHostnm(fir::FirOpBuilder &builder,
+                                    mlir::Location loc, mlir::Value res) {
+  mlir::func::FuncOp func =
+      fir::runtime::getRuntimeFunc<mkRTKey(Hostnm)>(loc, builder);
+  auto runtimeFuncTy = func.getFunctionType();
+  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  mlir::Value sourceLine =
+      fir::factory::locationToLineNo(builder, loc, runtimeFuncTy.getInput(2));
+  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+      builder, loc, runtimeFuncTy, res, sourceFile, sourceLine);
+  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+}

@@ -200,6 +200,12 @@ DumpValueObjectOptions::SetRevealEmptyAggregates(bool reveal) {
 }
 
 DumpValueObjectOptions &
+DumpValueObjectOptions::SetExpandPointerTypeFlags(unsigned flags) {
+  m_expand_ptr_type_flags = flags;
+  return *this;
+}
+
+DumpValueObjectOptions &
 DumpValueObjectOptions::SetElementCount(uint32_t element_count) {
   m_pointer_as_array = PointerAsArraySettings(element_count);
   return *this;

@@ -11,8 +11,8 @@ kernel __attribute__((vec_type_hint(uint4))) __attribute__((work_group_size_hint
 kernel __attribute__((intel_reqd_sub_group_size(8))) void kernel3(int a) {}
 // CHECK: define {{(dso_local )?}}spir_kernel void @kernel3(i32 {{[^%]*}}%a) {{[^{]+}} !intel_reqd_sub_group_size ![[MD5:[0-9]+]]
 
-// CHECK: [[MD1]] = !{i32 undef, i32 1}
+// CHECK: [[MD1]] = !{i32 poison, i32 1}
 // CHECK: [[MD2]] = !{i32 1, i32 2, i32 4}
-// CHECK: [[MD3]] = !{<4 x i32> undef, i32 0}
+// CHECK: [[MD3]] = !{<4 x i32> poison, i32 0}
 // CHECK: [[MD4]] = !{i32 8, i32 16, i32 32}
 // CHECK: [[MD5]] = !{i32 8}

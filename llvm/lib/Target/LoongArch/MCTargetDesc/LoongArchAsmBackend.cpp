@@ -76,7 +76,8 @@ LoongArchAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
 
-  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+  assert(unsigned(Kind - FirstTargetFixupKind) <
+             LoongArch::NumTargetFixupKinds &&
          "Invalid kind!");
   return Infos[Kind - FirstTargetFixupKind];
 }
@@ -251,10 +252,7 @@ bool LoongArchAsmBackend::shouldInsertFixupForCodeAlign(MCAssembler &Asm,
 bool LoongArchAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                                 const MCFixup &Fixup,
                                                 const MCValue &Target,
-                                                const uint64_t,
                                                 const MCSubtargetInfo *STI) {
-  if (Fixup.getKind() >= FirstLiteralRelocationKind)
-    return true;
   switch (Fixup.getTargetKind()) {
   default:
     return STI->hasFeature(LoongArch::FeatureRelax);
@@ -454,10 +452,12 @@ bool LoongArchAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
                                                   const MCFixup &Fixup,
                                                   const MCValue &Target,
                                                   uint64_t &FixedValue) const {
+  assert(Target.getRefKind() == 0 &&
+         "relocatable SymA-SymB cannot have relocation specifier");
   std::pair<MCFixupKind, MCFixupKind> FK;
   uint64_t FixedValueA, FixedValueB;
   const MCSymbol &SA = Target.getSymA()->getSymbol();
-  const MCSymbol &SB = Target.getSymB()->getSymbol();
+  const MCSymbol &SB = *Target.getSubSym();
 
   bool force = !SA.isInSection() || !SB.isInSection();
   if (!force) {

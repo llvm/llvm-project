@@ -9,8 +9,8 @@ llvm.func @ctor() {
   llvm.return
 }
 
-// expected-error@+1{{mismatch between the number of ctors and the number of priorities}}
-llvm.mlir.global_ctors {ctors = [@ctor], priorities = []}
+// expected-error@+1{{ctors, priorities, and data must have the same number of elements}}
+llvm.mlir.global_ctors ctors = [@ctor], priorities = [], data = [#llvm.zero]
 
 // -----
 
@@ -18,20 +18,29 @@ llvm.func @dtor() {
   llvm.return
 }
 
-// expected-error@+1{{mismatch between the number of dtors and the number of priorities}}
-llvm.mlir.global_dtors {dtors = [@dtor], priorities = [0 : i32, 32767 : i32]}
+// expected-error@+1{{dtors, priorities, and data must have the same number of elements}}
+llvm.mlir.global_dtors dtors = [@dtor], priorities = [0 : i32, 32767 : i32], data = [#llvm.zero]
 
 // -----
 
 // expected-error@+1{{'ctor' does not reference a valid LLVM function}}
-llvm.mlir.global_ctors {ctors = [@ctor], priorities = [0 : i32]}
+llvm.mlir.global_ctors ctors = [@ctor], priorities = [0 : i32], data = [#llvm.zero]
 
 // -----
 
 llvm.func @dtor()
 
 // expected-error@+1{{'dtor' does not have a definition}}
-llvm.mlir.global_dtors {dtors = [@dtor], priorities = [0 : i32]}
+llvm.mlir.global_dtors dtors = [@dtor], priorities = [0 : i32], data = [#llvm.zero]
+
+// -----
+
+llvm.func @dtor() {
+  llvm.return
+}
+
+// expected-error@+1{{data element must be symbol or #llvm.zero}}
+llvm.mlir.global_dtors dtors = [@dtor], priorities = [0 : i32], data = [0 : i32]
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -235,6 +244,7 @@ func.func @call_missing_ptr_type(%callee : !llvm.func<i8 (i8)>, %arg : i8) {
 func.func private @standard_func_callee()
 
 func.func @call_missing_ptr_type(%arg : i8) {
+  // expected-error@+2 {{expected '('}}
   // expected-error@+1 {{expected direct call to have 1 trailing type}}
   llvm.call @standard_func_callee(%arg) : !llvm.ptr, (i8) -> (i8)
   llvm.return
@@ -251,6 +261,7 @@ func.func @call_non_pointer_type(%callee : !llvm.func<i8 (i8)>, %arg : i8) {
 // -----
 
 func.func @call_non_function_type(%callee : !llvm.ptr, %arg : i8) {
+  // expected-error@+2 {{expected '('}}
   // expected-error@+1 {{expected trailing function type}}
   llvm.call %callee(%arg) : !llvm.ptr, !llvm.func<i8 (i8)>
   llvm.return
@@ -1691,6 +1702,15 @@ llvm.func @wrong_number_of_bundle_types() {
 
 // -----
 
+llvm.func @wrong_number_of_bundle_types_intrin(%arg0: i32) -> i32 {
+  %0 = llvm.mlir.constant(0 : i32) : i32
+  // expected-error@+1 {{expected 1 types for operand bundle operands for operand bundle #0, but actually got 2}}
+  %1 = llvm.call_intrinsic "llvm.riscv.sha256sig0"(%arg0) ["tag"(%0 : i32, i32)] : (i32 {llvm.signext}) -> (i32)
+  llvm.return %1 : i32
+}
+
+// -----
+
 llvm.func @foo()
 llvm.func @wrong_number_of_bundle_tags() {
   %0 = llvm.mlir.constant(0 : i32) : i32
@@ -1702,4 +1722,61 @@ llvm.func @wrong_number_of_bundle_tags() {
     op_bundle_sizes = array<i32: 1, 1>
   } : (i32, i32) -> ()
   llvm.return
+}
+
+// -----
+
+llvm.mlir.global external @x(42 : i32) : i32
+
+// expected-error@+1 {{expects type to be a valid element type for an LLVM global alias}}
+llvm.mlir.alias external @y : !llvm.label {
+  %0 = llvm.mlir.addressof @x : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.mlir.global external @x(42 : i32) : i32
+
+// expected-error@+1 {{linkage not supported in aliases, available options}}
+llvm.mlir.alias appending @y2 : i32 {
+  %0 = llvm.mlir.addressof @x : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+// expected-error@+1 {{initializer region must always return a pointer}}
+llvm.mlir.alias external @y3 : i32 {
+  %c = llvm.mlir.constant(42 : i64) : i64
+  llvm.return %c : i64
+}
+
+// -----
+
+llvm.mlir.global external @x(42 : i32) : i32
+
+llvm.mlir.alias external @y4 : i32 {
+  %0 = llvm.mlir.addressof @x : !llvm.ptr
+  // expected-error@+1 {{ops with side effects are not allowed in alias initializers}}
+  %2 = llvm.load %0 : !llvm.ptr -> i32
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.mlir.global external @x(42 : i32) : i32
+
+llvm.mlir.alias external @y5 : i32 {
+  // expected-error@+1 {{pointer address space must match address space}}
+  %0 = llvm.mlir.addressof @x : !llvm.ptr<4>
+  llvm.return %0 : !llvm.ptr<4>
+}
+
+// -----
+
+module {
+  // expected-error@+2 {{expected integer value}}
+  // expected-error@+1 {{failed to parse ModuleFlagAttr parameter 'value' which is to be a `uint32_t`}}
+  llvm.module_flags [#llvm.mlir.module_flag<error, "wchar_size", "yolo">]
 }

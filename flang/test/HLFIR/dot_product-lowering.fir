@@ -70,8 +70,8 @@ func.func @_QPdot_product2(%arg0: !fir.box<!fir.array<?x!fir.logical<4>>> {fir.b
 // CHECK-DAG:     %[[RHS_VAR:.*]]:2 = hlfir.declare %[[ARG1]]
 // CHECK-DAG:     %[[RES_VAR:.*]]:2 = hlfir.declare %[[ARG2]]
 
-// CHECK-DAG:     %[[LHS_BOX:.*]] = fir.embox %[[LHS_VAR]]#1
-// CHECK-DAG:     %[[RHS_BOX:.*]] = fir.embox %[[RHS_VAR]]#1
+// CHECK-DAG:     %[[LHS_BOX:.*]] = fir.embox %[[LHS_VAR]]#0
+// CHECK-DAG:     %[[RHS_BOX:.*]] = fir.embox %[[RHS_VAR]]#0
 // CHECK-DAG:     %[[LHS_ARG:.*]] = fir.convert %[[LHS_BOX]] : (!fir.box<!fir.array<5xi32>>) -> !fir.box<none>
 // CHECK-DAG:     %[[RHS_ARG:.*]] = fir.convert %[[RHS_BOX]] : (!fir.box<!fir.array<5xi32>>) -> !fir.box<none>
 

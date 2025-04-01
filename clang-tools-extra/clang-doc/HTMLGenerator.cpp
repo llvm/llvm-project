@@ -490,16 +490,26 @@ genReferencesBlock(const std::vector<Reference> &References,
   }
   return Out;
 }
+static std::unique_ptr<TagNode> writeSourceFileRef(const ClangDocContext &CDCtx,
+                                                   const Location &L) {
 
-static std::unique_ptr<TagNode>
-writeFileDefinition(const Location &L,
-                    std::optional<StringRef> RepositoryUrl = std::nullopt) {
-  if (!L.IsFileInRootDir || !RepositoryUrl)
+  if (!L.IsFileInRootDir && !CDCtx.RepositoryUrl)
     return std::make_unique<TagNode>(
         HTMLTag::TAG_P, "Defined at line " + std::to_string(L.LineNumber) +
                             " of file " + L.Filename);
-  SmallString<128> FileURL(*RepositoryUrl);
-  llvm::sys::path::append(FileURL, llvm::sys::path::Style::posix, L.Filename);
+
+  SmallString<128> FileURL(CDCtx.RepositoryUrl.value_or(""));
+  llvm::sys::path::append(
+      FileURL, llvm::sys::path::Style::posix,
+      // If we're on Windows, the file name will be in the wrong format, and
+      // append won't convert the full path being appended to the correct
+      // format, so we need to do that here.
+      llvm::sys::path::convert_to_slash(
+          L.Filename,
+          // The style here is the current style of the path, not the one we're
+          // targeting. If the string is already in the posix style, it will do
+          // nothing.
+          llvm::sys::path::Style::windows));
   auto Node = std::make_unique<TagNode>(HTMLTag::TAG_P);
   Node->Children.emplace_back(std::make_unique<TextNode>("Defined at line "));
   auto LocNumberNode =
@@ -507,7 +517,8 @@ writeFileDefinition(const Location &L,
   // The links to a specific line in the source code use the github /
   // googlesource notation so it won't work for all hosting pages.
   LocNumberNode->Attributes.emplace_back(
-      "href", (FileURL + "#" + std::to_string(L.LineNumber)).str());
+      "href", formatv("{0}#{1}{2}", FileURL,
+                      CDCtx.RepositoryLinePrefix.value_or(""), L.LineNumber));
   Node->Children.emplace_back(std::move(LocNumberNode));
   Node->Children.emplace_back(std::make_unique<TextNode>(" of file "));
   auto LocFileNode = std::make_unique<TagNode>(
@@ -515,6 +526,13 @@ writeFileDefinition(const Location &L,
   LocFileNode->Attributes.emplace_back("href", std::string(FileURL));
   Node->Children.emplace_back(std::move(LocFileNode));
   return Node;
+}
+
+static void maybeWriteSourceFileRef(std::vector<std::unique_ptr<TagNode>> &Out,
+                                    const ClangDocContext &CDCtx,
+                                    const std::optional<Location> &DefLoc) {
+  if (DefLoc)
+    Out.emplace_back(writeSourceFileRef(CDCtx, *DefLoc));
 }
 
 static std::vector<std::unique_ptr<TagNode>>
@@ -736,13 +754,7 @@ genHTML(const EnumInfo &I, const ClangDocContext &CDCtx) {
 
   Out.emplace_back(std::move(Table));
 
-  if (I.DefLoc) {
-    if (!CDCtx.RepositoryUrl)
-      Out.emplace_back(writeFileDefinition(*I.DefLoc));
-    else
-      Out.emplace_back(
-          writeFileDefinition(*I.DefLoc, StringRef{*CDCtx.RepositoryUrl}));
-  }
+  maybeWriteSourceFileRef(Out, CDCtx, I.DefLoc);
 
   std::string Description;
   if (!I.Description.empty())
@@ -785,13 +797,7 @@ genHTML(const FunctionInfo &I, const ClangDocContext &CDCtx,
   }
   FunctionHeader->Children.emplace_back(std::make_unique<TextNode>(")"));
 
-  if (I.DefLoc) {
-    if (!CDCtx.RepositoryUrl)
-      Out.emplace_back(writeFileDefinition(*I.DefLoc));
-    else
-      Out.emplace_back(writeFileDefinition(
-          *I.DefLoc, StringRef{*CDCtx.RepositoryUrl}));
-  }
+  maybeWriteSourceFileRef(Out, CDCtx, I.DefLoc);
 
   std::string Description;
   if (!I.Description.empty())
@@ -852,13 +858,7 @@ genHTML(const RecordInfo &I, Index &InfoIndex, const ClangDocContext &CDCtx,
   InfoTitle = (getTagType(I.TagType) + " " + I.Name).str();
   Out.emplace_back(std::make_unique<TagNode>(HTMLTag::TAG_H1, InfoTitle));
 
-  if (I.DefLoc) {
-    if (!CDCtx.RepositoryUrl)
-      Out.emplace_back(writeFileDefinition(*I.DefLoc));
-    else
-      Out.emplace_back(writeFileDefinition(
-          *I.DefLoc, StringRef{*CDCtx.RepositoryUrl}));
-  }
+  maybeWriteSourceFileRef(Out, CDCtx, I.DefLoc);
 
   std::string Description;
   if (!I.Description.empty())
@@ -964,7 +964,7 @@ HTMLGenerator::generateDocs(StringRef RootDir,
   for (const auto &Group : FileToInfos) {
     std::error_code FileErr;
     llvm::raw_fd_ostream InfoOS(Group.getKey(), FileErr,
-                                llvm::sys::fs::OF_None);
+                                llvm::sys::fs::OF_Text);
     if (FileErr) {
       return llvm::createStringError(FileErr, "Error opening file '%s'",
                                      Group.getKey().str().c_str());
@@ -1047,7 +1047,7 @@ static llvm::Error serializeIndex(ClangDocContext &CDCtx) {
   llvm::SmallString<128> FilePath;
   llvm::sys::path::native(CDCtx.OutDirectory, FilePath);
   llvm::sys::path::append(FilePath, "index_json.js");
-  llvm::raw_fd_ostream OS(FilePath, FileErr, llvm::sys::fs::OF_None);
+  llvm::raw_fd_ostream OS(FilePath, FileErr, llvm::sys::fs::OF_Text);
   if (FileErr != OK) {
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "error creating index file: " +
@@ -1064,6 +1064,11 @@ static llvm::Error serializeIndex(ClangDocContext &CDCtx) {
   std::string RootPathEscaped = RootPath.str().str();
   std::replace(RootPathEscaped.begin(), RootPathEscaped.end(), '\\', '/');
   OS << "var RootPath = \"" << RootPathEscaped << "\";\n";
+
+  llvm::SmallString<128> Base(CDCtx.Base);
+  std::string BaseEscaped = Base.str().str();
+  std::replace(BaseEscaped.begin(), BaseEscaped.end(), '\\', '/');
+  OS << "var Base = \"" << BaseEscaped << "\";\n";
 
   CDCtx.Idx.sort();
   llvm::json::OStream J(OS, 2);
@@ -1108,7 +1113,7 @@ static llvm::Error genIndex(const ClangDocContext &CDCtx) {
   llvm::SmallString<128> IndexPath;
   llvm::sys::path::native(CDCtx.OutDirectory, IndexPath);
   llvm::sys::path::append(IndexPath, "index.html");
-  llvm::raw_fd_ostream IndexOS(IndexPath, FileErr, llvm::sys::fs::OF_None);
+  llvm::raw_fd_ostream IndexOS(IndexPath, FileErr, llvm::sys::fs::OF_Text);
   if (FileErr != OK) {
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "error creating main index: " +

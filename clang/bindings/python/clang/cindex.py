@@ -1410,6 +1410,9 @@ class CursorKind(BaseEnumeration):
     # OpenMP scope directive.
     OMP_SCOPE_DIRECTIVE = 306
 
+    # OpenMP stripe directive.
+    OMP_STRIPE_DIRECTIVE = 310
+
     # OpenACC Compute Construct.
     OPEN_ACC_COMPUTE_DIRECTIVE = 320
 
@@ -1557,6 +1560,9 @@ class Cursor(Structure):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def __hash__(self) -> int:
+        return self.hash
 
     def is_definition(self):
         """
@@ -2033,6 +2039,13 @@ class Cursor(Structure):
         return self._lexical_parent
 
     @property
+    def specialized_template(self) -> Cursor | None:
+        """Return the primary template that this cursor is a specialization of, if any."""
+        return Cursor.from_cursor_result(
+            conf.lib.clang_getSpecializedCursorTemplate(self), self
+        )
+
+    @property
     def translation_unit(self):
         """Returns the TranslationUnit to which this Cursor belongs."""
         # If this triggers an AttributeError, the instance was not properly
@@ -2174,6 +2187,12 @@ class Cursor(Structure):
         Retrieve the width of a bitfield.
         """
         return conf.lib.clang_getFieldDeclBitWidth(self)  # type: ignore [no-any-return]
+
+    def has_attrs(self) -> bool:
+        """
+        Determine whether the given cursor has any attributes.
+        """
+        return bool(conf.lib.clang_Cursor_hasAttrs(self))
 
     @staticmethod
     def from_result(res, arg):
@@ -2710,6 +2729,21 @@ class Type(Structure):
         conf.lib.clang_visitCXXBaseClasses(self, fields_visit_callback(visitor), bases)
         return iter(bases)
 
+    def get_methods(self):
+        """Return an iterator for accessing the methods of this type."""
+
+        def visitor(method, children):
+            assert method != conf.lib.clang_getNullCursor()
+
+            # Create reference to TU so it isn't GC'd before Cursor.
+            method._tu = self._tu
+            methods.append(method)
+            return 1  # continue
+
+        methods: list[Cursor] = []
+        conf.lib.clang_visitCXXMethods(self, fields_visit_callback(visitor), methods)
+        return iter(methods)
+
     def get_exception_specification_kind(self):
         """
         Return the kind of the exception specification; a value from
@@ -2768,7 +2802,7 @@ class _CXUnsavedFile(Structure):
 # Functions calls through the python interface are rather slow. Fortunately,
 # for most symboles, we do not need to perform a function call. Their spelling
 # never changes and is consequently provided by this spelling cache.
-SpellingCache = {
+SPELLING_CACHE = {
     # 0: CompletionChunk.Kind("Optional"),
     # 1: CompletionChunk.Kind("TypedText"),
     # 2: CompletionChunk.Kind("Text"),
@@ -2814,8 +2848,8 @@ class CompletionChunk:
 
     @CachedProperty
     def spelling(self):
-        if self.__kindNumber in SpellingCache:
-            return SpellingCache[self.__kindNumber]
+        if self.__kindNumber in SPELLING_CACHE:
+            return SPELLING_CACHE[self.__kindNumber]
         return _CXString.from_result(
             conf.lib.clang_getCompletionChunkText(self.cs, self.key)
         )
@@ -3812,7 +3846,7 @@ cursor_visit_callback = CFUNCTYPE(c_int, Cursor, Cursor, py_object)
 fields_visit_callback = CFUNCTYPE(c_int, Cursor, py_object)
 
 # Functions strictly alphabetical order.
-functionList: list[LibFunc] = [
+FUNCTION_LIST: list[LibFunc] = [
     (
         "clang_annotateTokens",
         [TranslationUnit, POINTER(Token), c_uint, POINTER(Cursor)],
@@ -3914,6 +3948,7 @@ functionList: list[LibFunc] = [
     ("clang_getCursorType", [Cursor], Type),
     ("clang_getCursorUSR", [Cursor], _CXString),
     ("clang_Cursor_getMangling", [Cursor], _CXString),
+    ("clang_Cursor_hasAttrs", [Cursor], c_uint),
     # ("clang_getCXTUResourceUsage",
     #  [TranslationUnit],
     #  CXTUResourceUsage),
@@ -4017,6 +4052,7 @@ functionList: list[LibFunc] = [
     ),
     ("clang_visitChildren", [Cursor, cursor_visit_callback, py_object], c_uint),
     ("clang_visitCXXBaseClasses", [Type, fields_visit_callback, py_object], c_uint),
+    ("clang_visitCXXMethods", [Type, fields_visit_callback, py_object], c_uint),
     ("clang_Cursor_getNumArguments", [Cursor], c_int),
     ("clang_Cursor_getArgument", [Cursor, c_uint], Cursor),
     ("clang_Cursor_getNumTemplateArguments", [Cursor], c_int),
@@ -4089,7 +4125,7 @@ def register_functions(lib: CDLL, ignore_errors: bool) -> None:
     def register(item: LibFunc) -> None:
         register_function(lib, item, ignore_errors)
 
-    for f in functionList:
+    for f in FUNCTION_LIST:
         register(f)
 
 
