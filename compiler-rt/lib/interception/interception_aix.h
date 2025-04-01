@@ -30,7 +30,7 @@ bool InterceptFunction(const char *name, uptr *ptr_to_real, uptr func,
       ::__interception::InterceptFunction(              \
           #func, (::__interception::uptr *)&REAL(func), \
           (::__interception::uptr) & (func),            \
-          (::__interception::uptr)&WRAP(func))
+          (::__interception::uptr) & WRAP(func))
 
 #  endif  // INTERCEPTION_AIX_H
 #endif    // SANITIZER_AIX

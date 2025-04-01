@@ -378,16 +378,16 @@ inline void DoesNotSupportStaticLinking() {}
 #define INCLUDED_FROM_INTERCEPTION_LIB
 
 #if SANITIZER_AIX
-# include "interception_aix.h"
-# define INTERCEPT_FUNCTION(func) INTERCEPT_FUNCTION_AIX(func)
-# define INTERCEPT_FUNCTION_VER(func, symver) INTERCEPT_FUNCTION_AIX(func)
+#  include "interception_aix.h"
+#  define INTERCEPT_FUNCTION(func) INTERCEPT_FUNCTION_AIX(func)
+#  define INTERCEPT_FUNCTION_VER(func, symver) INTERCEPT_FUNCTION_AIX(func)
 
 #elif SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD || \
     SANITIZER_SOLARIS
 
-# include "interception_linux.h"
-# define INTERCEPT_FUNCTION(func) INTERCEPT_FUNCTION_LINUX_OR_FREEBSD(func)
-# define INTERCEPT_FUNCTION_VER(func, symver) \
+#  include "interception_linux.h"
+#  define INTERCEPT_FUNCTION(func) INTERCEPT_FUNCTION_LINUX_OR_FREEBSD(func)
+#  define INTERCEPT_FUNCTION_VER(func, symver) \
     INTERCEPT_FUNCTION_VER_LINUX_OR_FREEBSD(func, symver)
 #elif SANITIZER_APPLE
 # include "interception_mac.h"
