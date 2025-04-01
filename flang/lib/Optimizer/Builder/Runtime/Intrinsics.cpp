@@ -253,8 +253,8 @@ void fir::runtime::genRename(fir::FirOpBuilder &builder, mlir::Location loc,
 }
 
 /// generate runtime call to time intrinsic
-mlir::Value fir::runtime::genTime(
-    fir::FirOpBuilder &builder, mlir::Location loc) {
+mlir::Value fir::runtime::genTime(fir::FirOpBuilder &builder,
+                                  mlir::Location loc) {
   auto func = fir::runtime::getRuntimeFunc<mkRTKey(time)>(loc, builder);
   return builder.create<fir::CallOp>(loc, func, std::nullopt).getResult(0);
 }
