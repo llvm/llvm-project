@@ -32,24 +32,11 @@ static Mutex PoisonRecordsMutex;
 static PoisonRecordRingBuffer *PoisonRecords = nullptr;
 
 void InitializePoisonTracking() {
-  if (flags()->track_poison <= 0)
+  if (flags()->poison_history_size <= 0)
     return;
 
-  PoisonRecords = PoisonRecordRingBuffer::New(flags()->track_poison);
+  PoisonRecords = PoisonRecordRingBuffer::New(flags()->poison_history_size);
 }
-
-/*
-PoisonRecordRingBuffer *SANITIZER_ACQUIRE(PoisonRecordsMutex)
-    AcquirePoisonRecords() {
-  PoisonRecordsMutex.Lock();
-
-  return PoisonRecords;
-}
-
-void SANITIZER_RELEASE(PoisonRecordsMutex) ReleasePoisonRecords() {
-  PoisonRecordsMutex.Unlock();
-}
-*/
 
 void AddPoisonRecord(const PoisonRecord& newRecord) {
   PoisonRecordsMutex.Lock();
@@ -158,7 +145,7 @@ void __asan_poison_memory_region(void const volatile *addr, uptr size) {
   VPrintf(3, "Trying to poison memory region [%p, %p)\n", (void *)beg_addr,
           (void *)end_addr);
 
-  if (flags()->track_poison > 0) {
+  if (flags()->poison_history_size > 0) {
     GET_STACK_TRACE(/*max_size=*/16, /*fast=*/false);
     u32 current_tid = GetCurrentTidOrInvalid();
 

@@ -33,11 +33,6 @@ struct PoisonRecord {
   uptr end;
 };
 
-/*
-PoisonRecordRingBuffer* AcquirePoisonRecords();
-void ReleasePoisonRecords();
-*/
-
 void AddPoisonRecord(const PoisonRecord&);
 bool FindPoisonRecord(uptr addr, const PoisonRecord& match);
 

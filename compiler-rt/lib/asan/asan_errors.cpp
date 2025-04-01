@@ -603,6 +603,14 @@ static void PrintShadowMemoryForAddress(uptr addr) {
 }
 
 static void CheckPoisonRecords(uptr addr) {
+  Printf("\n");
+
+  if (flags()->poison_history_size <= 0) {
+    Printf("HINT: to identify which code set the poison, try the experimental "
+           "ASAN_OPTIONS=poison_history_size=<size>\n");
+    return;
+  }
+
   if (!AddrIsInMem(addr))
     return;
   uptr shadow_addr = MemToShadow(addr);
@@ -615,7 +623,6 @@ static void CheckPoisonRecords(uptr addr) {
   if (FindPoisonRecord(addr, record)) {
     StackTrace poison_stack = StackDepotGet(record.stack_id);
 
-    Printf("\n");
     Printf("Memory was manually poisoned by thread T%u:\n",
            record.thread_id);
     poison_stack.Print();
@@ -650,8 +657,7 @@ void ErrorGeneric::Print() {
   PrintShadowMemoryForAddress(addr);
 
   // This is an experimental flag, hence we don't make a special handler.
-  if (flags()->track_poison > 0)
-    CheckPoisonRecords(addr);
+  CheckPoisonRecords(addr);
 }
 
 }  // namespace __asan
