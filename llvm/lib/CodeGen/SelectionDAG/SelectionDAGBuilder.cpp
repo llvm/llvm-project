@@ -3384,8 +3384,26 @@ void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
              {LLVMContext::OB_deopt, LLVMContext::OB_funclet}) &&
          "Cannot lower callbrs with arbitrary operand bundles yet!");
 
-  assert(I.isInlineAsm() && "Only know how to handle inlineasm callbr");
-  visitInlineAsm(I);
+  if (I.isInlineAsm()) {
+    visitInlineAsm(I);
+  } else if (I.getIntrinsicID() != Intrinsic::not_intrinsic) {
+    switch (I.getIntrinsicID()) {
+    default:
+      report_fatal_error("Unsupported intrinsic for callbr");
+    case Intrinsic::amdgcn_kill:
+      if (I.getNumIndirectDests() != 1)
+          report_fatal_error(
+              "amdgcn.kill supportes exactly one indirect destination");
+      CallInst *CI =
+          CallInst::Create(I.getFunctionType(), I.getCalledFunction(),
+                           SmallVector<Value *, 1>(I.args()));
+      visitCall(*CI);
+      CI->deleteValue();
+      break;
+    }
+  } else {
+    report_fatal_error("Only know how to handle inlineasm/intrinsic callbr");
+  }
   CopyToExportRegsIfNeeded(&I);
 
   // Retrieve successors.
@@ -3395,15 +3413,20 @@ void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
 
   // Update successor info.
   addSuccessorWithProb(CallBrMBB, Return, BranchProbability::getOne());
-  for (unsigned i = 0, e = I.getNumIndirectDests(); i < e; ++i) {
-    BasicBlock *Dest = I.getIndirectDest(i);
-    MachineBasicBlock *Target = FuncInfo.getMBB(Dest);
-    Target->setIsInlineAsmBrIndirectTarget();
-    Target->setMachineBlockAddressTaken();
-    Target->setLabelMustBeEmitted();
-    // Don't add duplicate machine successors.
-    if (Dests.insert(Dest).second)
-      addSuccessorWithProb(CallBrMBB, Target, BranchProbability::getZero());
+  // TODO: For most of the cases where there is an intrinsic callbr, we're
+  // having exactly one indirect target, which will be unreachable. As soon as
+  // this changes, we might need to enhance Target->setIsInlineAsmBrIndirectTarget
+  // or add something similar for intrinsic indirect branches.
+  if (I.isInlineAsm()) {
+    for (BasicBlock *Dest : I.getIndirectDests()) {
+      MachineBasicBlock *Target = FuncInfo.getMBB(Dest);
+      Target->setIsInlineAsmBrIndirectTarget();
+      Target->setMachineBlockAddressTaken();
+      Target->setLabelMustBeEmitted();
+      // Don't add duplicate machine successors.
+      if (Dests.insert(Dest).second)
+        addSuccessorWithProb(CallBrMBB, Target, BranchProbability::getZero());
+    }
   }
   CallBrMBB->normalizeSuccProbs();
 
