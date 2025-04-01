@@ -325,12 +325,10 @@ LogicalResult GroupNonUniformRotateKHROp::verify() {
     int32_t clusterSize = 0;
 
     if (failed(extractValueFromConstOp(defOp, clusterSize)))
-      return emitOpError(
-          "cluster size operand must come from a constant op");
+      return emitOpError("cluster size operand must come from a constant op");
 
     if (!llvm::isPowerOf2_32(clusterSize))
-      return emitOpError(
-          "cluster size operand must be a power of two");
+      return emitOpError("cluster size operand must be a power of two");
   }
 
   return success();
