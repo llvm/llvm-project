@@ -587,15 +587,22 @@ public:
   /// use of the specified register.
   bool hasOneNonDBGUse(Register RegNo) const;
 
-  /// hasOneNonDBGUse - Return true if there is exactly one non-Debug
+  /// hasOneNonDBGUser - Return true if there is exactly one non-Debug
   /// instruction using the specified register. Said instruction may have
   /// multiple uses.
   bool hasOneNonDBGUser(Register RegNo) const;
 
-
-  /// hasAtMostUses - Return true if the given register has at most \p MaxUsers
+  /// hasAtMostUserInstrs - Return true if the given register has at most \p MaxUsers
   /// non-debug user instructions.
   bool hasAtMostUserInstrs(Register Reg, unsigned MaxUsers) const;
+
+  /// getOneNonDBGUse - Return the unique non-Debug use of \p RegNo,
+  /// or nullptr if the number of such operands is unequal to one.
+  MachineOperand *getOneNonDBGUse(Register RegNo) const;
+
+  /// getOneNonDBGUser - Return the unique non-Debug instruction using \p RegNo
+  /// or nullptr if the number of such instructions is unequal to one.
+  MachineInstr *getOneNonDBGUser(Register RegNo) const;
 
   /// replaceRegWith - Replace all instances of FromReg with ToReg in the
   /// machine function.  This is like llvm-level X->replaceAllUsesWith(Y),
