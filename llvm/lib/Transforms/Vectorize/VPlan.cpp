@@ -1372,7 +1372,6 @@ static bool isDefinedInsideLoopRegions(const VPValue *VPV) {
 bool VPValue::isDefinedOutsideLoopRegions() const {
   return !isDefinedInsideLoopRegions(this);
 }
-
 void VPValue::replaceAllUsesWith(VPValue *New) {
   replaceUsesWithIf(New, [](VPUser &, unsigned) { return true; });
 }

@@ -9894,22 +9894,14 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     // also modeled in VPlan.
     VPInstruction *FinalReductionResult;
     VPBuilder::InsertPointGuard Guard(Builder);
+    Builder.setInsertPoint(MiddleVPBB, IP);
     if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(
             RdxDesc.getRecurrenceKind())) {
       VPValue *Start = PhiR->getStartValue();
-      Builder.setInsertPoint(MiddleVPBB, IP);
       FinalReductionResult =
           Builder.createNaryOp(VPInstruction::ComputeFindLastIVResult,
                                {PhiR, Start, NewExitingVPV}, ExitDL);
-      // Update all users outside the vector region.
-      for (VPUser *U : to_vector(OrigExitingVPV->users())) {
-        auto *R = cast<VPRecipeBase>(U);
-        if (R->getParent()->getParent() == VectorLoopRegion)
-          continue;
-        R->replaceUsesOfWith(PhiR->getStartValue(), Start);
-      }
     } else {
-      Builder.setInsertPoint(MiddleVPBB, IP);
       FinalReductionResult = Builder.createNaryOp(
           VPInstruction::ComputeReductionResult, {PhiR, NewExitingVPV}, ExitDL);
     }
