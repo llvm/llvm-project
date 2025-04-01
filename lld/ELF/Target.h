@@ -102,6 +102,9 @@ public:
   virtual void applyJumpInstrMod(uint8_t *loc, JumpModType type,
                                  JumpModType val) const {}
 
+  // Used by ICF to determine if section full of @relocs can be folded safely with another
+  virtual bool canFoldSection(const SmallVector<Relocation> &relocs) const { return true; }
+
   virtual ~TargetInfo();
 
   // This deletes a jump insn at the end of the section if it is a fall thru to
