@@ -23,11 +23,11 @@
 ; CHECK-NOT:   DW_TAG
 ; CHECK:       DW_TAG_variable
 ; CHECK-NOT:   DW_TAG
-; CHECK:       DW_AT_decl_file       ("C:\Users\gbmorsej\source\bees/3.cpp")
+; CHECK:       DW_AT_decl_file       ("C:\Users\gbmorsej\source\bees{{\\|/}}3.cpp")
 ; CHECK-NOT:   DW_TAG
 ; CHECK:       DW_TAG_variable
 ; CHECK-NOT:   DW_TAG
-; CHECK:       DW_AT_decl_file       ("C:\users\gbmorsej\source/bees/2.cpp")
+; CHECK:       DW_AT_decl_file       ("C:\users\gbmorsej\source/bees{{\\|/}]2.cpp")
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-sie-ps5"
