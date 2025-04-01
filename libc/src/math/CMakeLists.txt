@@ -62,6 +62,7 @@ add_math_entrypoint_object(atanf)
 add_math_entrypoint_object(atan2)
 add_math_entrypoint_object(atan2f)
 add_math_entrypoint_object(atan2l)
+add_math_entrypoint_object(atan2f128)
 
 add_math_entrypoint_object(atanh)
 add_math_entrypoint_object(atanhf)
@@ -313,6 +314,7 @@ add_math_entrypoint_object(getpayloadf128)
 
 add_math_entrypoint_object(hypot)
 add_math_entrypoint_object(hypotf)
+add_math_entrypoint_object(hypotf16)
 
 add_math_entrypoint_object(ilogb)
 add_math_entrypoint_object(ilogbf)
