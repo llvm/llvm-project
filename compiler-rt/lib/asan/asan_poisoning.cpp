@@ -59,6 +59,13 @@ bool FindPoisonRecord(uptr addr, const PoisonRecord& match) {
   return false;
 }
 
+void SANITIZER_ACQUIRE(PoisonRecordsMutex) AcquirePoisonRecords() {
+  PoisonRecordsMutex.Lock();
+}
+
+void SANITIZER_RELEASE(PoisonRecordsMutex) ReleasePoisonRecords() {
+  PoisonRecordsMutex.Unlock();
+}
 
 void SetCanPoisonMemory(bool value) {
   atomic_store(&can_poison_memory, value, memory_order_release);

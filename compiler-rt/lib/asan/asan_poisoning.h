@@ -36,6 +36,9 @@ struct PoisonRecord {
 void AddPoisonRecord(const PoisonRecord&);
 bool FindPoisonRecord(uptr addr, const PoisonRecord& match);
 
+void AcquirePoisonRecords();
+void ReleasePoisonRecords();
+
 // Enable/disable memory poisoning.
 void SetCanPoisonMemory(bool value);
 bool CanPoisonMemory();
