@@ -747,9 +747,8 @@ define amdgpu_kernel void @add_i32_varying_vdata(ptr addrspace(1) %out, ptr addr
 ; GFX10W32-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10W32-NEXT:    s_ff1_i32_b32 s2, s1
 ; GFX10W32-NEXT:    v_readlane_b32 s3, v0, s2
-; GFX10W32-NEXT:    s_lshl_b32 s6, 1, s2
 ; GFX10W32-NEXT:    v_writelane_b32 v1, s0, s2
-; GFX10W32-NEXT:    s_andn2_b32 s1, s1, s6
+; GFX10W32-NEXT:    s_bitset0_b32 s1, s2
 ; GFX10W32-NEXT:    s_add_i32 s0, s0, s3
 ; GFX10W32-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX10W32-NEXT:    s_cbranch_scc1 .LBB2_1
@@ -834,9 +833,8 @@ define amdgpu_kernel void @add_i32_varying_vdata(ptr addrspace(1) %out, ptr addr
 ; GFX11W32-NEXT:    s_ctz_i32_b32 s2, s1
 ; GFX11W32-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11W32-NEXT:    v_readlane_b32 s3, v1, s2
-; GFX11W32-NEXT:    s_lshl_b32 s6, 1, s2
 ; GFX11W32-NEXT:    v_writelane_b32 v0, s0, s2
-; GFX11W32-NEXT:    s_and_not1_b32 s1, s1, s6
+; GFX11W32-NEXT:    s_bitset0_b32 s1, s2
 ; GFX11W32-NEXT:    s_add_i32 s0, s0, s3
 ; GFX11W32-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX11W32-NEXT:    s_cbranch_scc1 .LBB2_1
@@ -920,9 +918,8 @@ define amdgpu_kernel void @add_i32_varying_vdata(ptr addrspace(1) %out, ptr addr
 ; GFX12W32-NEXT:    s_ctz_i32_b32 s2, s1
 ; GFX12W32-NEXT:    s_wait_alu 0xfffe
 ; GFX12W32-NEXT:    v_readlane_b32 s3, v1, s2
-; GFX12W32-NEXT:    s_lshl_b32 s6, 1, s2
 ; GFX12W32-NEXT:    v_writelane_b32 v0, s0, s2
-; GFX12W32-NEXT:    s_and_not1_b32 s1, s1, s6
+; GFX12W32-NEXT:    s_bitset0_b32 s1, s2
 ; GFX12W32-NEXT:    s_add_co_i32 s0, s0, s3
 ; GFX12W32-NEXT:    s_wait_alu 0xfffe
 ; GFX12W32-NEXT:    s_cmp_lg_u32 s1, 0
@@ -1948,9 +1945,8 @@ define amdgpu_kernel void @sub_i32_varying_vdata(ptr addrspace(1) %out, ptr addr
 ; GFX10W32-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10W32-NEXT:    s_ff1_i32_b32 s2, s1
 ; GFX10W32-NEXT:    v_readlane_b32 s3, v0, s2
-; GFX10W32-NEXT:    s_lshl_b32 s6, 1, s2
 ; GFX10W32-NEXT:    v_writelane_b32 v1, s0, s2
-; GFX10W32-NEXT:    s_andn2_b32 s1, s1, s6
+; GFX10W32-NEXT:    s_bitset0_b32 s1, s2
 ; GFX10W32-NEXT:    s_add_i32 s0, s0, s3
 ; GFX10W32-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX10W32-NEXT:    s_cbranch_scc1 .LBB7_1
@@ -2035,9 +2031,8 @@ define amdgpu_kernel void @sub_i32_varying_vdata(ptr addrspace(1) %out, ptr addr
 ; GFX11W32-NEXT:    s_ctz_i32_b32 s2, s1
 ; GFX11W32-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11W32-NEXT:    v_readlane_b32 s3, v1, s2
-; GFX11W32-NEXT:    s_lshl_b32 s6, 1, s2
 ; GFX11W32-NEXT:    v_writelane_b32 v0, s0, s2
-; GFX11W32-NEXT:    s_and_not1_b32 s1, s1, s6
+; GFX11W32-NEXT:    s_bitset0_b32 s1, s2
 ; GFX11W32-NEXT:    s_add_i32 s0, s0, s3
 ; GFX11W32-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX11W32-NEXT:    s_cbranch_scc1 .LBB7_1
@@ -2122,9 +2117,8 @@ define amdgpu_kernel void @sub_i32_varying_vdata(ptr addrspace(1) %out, ptr addr
 ; GFX12W32-NEXT:    s_ctz_i32_b32 s2, s1
 ; GFX12W32-NEXT:    s_wait_alu 0xfffe
 ; GFX12W32-NEXT:    v_readlane_b32 s3, v1, s2
-; GFX12W32-NEXT:    s_lshl_b32 s6, 1, s2
 ; GFX12W32-NEXT:    v_writelane_b32 v0, s0, s2
-; GFX12W32-NEXT:    s_and_not1_b32 s1, s1, s6
+; GFX12W32-NEXT:    s_bitset0_b32 s1, s2
 ; GFX12W32-NEXT:    s_add_co_i32 s0, s0, s3
 ; GFX12W32-NEXT:    s_wait_alu 0xfffe
 ; GFX12W32-NEXT:    s_cmp_lg_u32 s1, 0
