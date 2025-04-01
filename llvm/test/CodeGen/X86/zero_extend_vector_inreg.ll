@@ -5409,20 +5409,36 @@ define void @vec384_v6i64_to_v3i128_factor2(ptr %in.vec.base.ptr, ptr %in.vec.bi
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
-; AVX512BW-LABEL: vec384_v6i64_to_v3i128_factor2:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX512BW-NEXT:    vpaddb (%rsi), %ymm0, %ymm0
-; AVX512BW-NEXT:    movb $5, %al
-; AVX512BW-NEXT:    kmovd %eax, %k1
-; AVX512BW-NEXT:    vpexpandq %ymm0, %ymm1 {%k1} {z}
-; AVX512BW-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX512BW-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
-; AVX512BW-NEXT:    vinserti32x4 $2, %xmm0, %zmm1, %zmm0
-; AVX512BW-NEXT:    vpaddb (%rdx), %zmm0, %zmm0
-; AVX512BW-NEXT:    vmovdqa64 %zmm0, (%rcx)
-; AVX512BW-NEXT:    vzeroupper
-; AVX512BW-NEXT:    retq
+; AVX512BW-SLOW-LABEL: vec384_v6i64_to_v3i128_factor2:
+; AVX512BW-SLOW:       # %bb.0:
+; AVX512BW-SLOW-NEXT:    vmovdqa (%rdi), %ymm0
+; AVX512BW-SLOW-NEXT:    vpaddb (%rsi), %ymm0, %ymm0
+; AVX512BW-SLOW-NEXT:    movb $5, %al
+; AVX512BW-SLOW-NEXT:    kmovd %eax, %k1
+; AVX512BW-SLOW-NEXT:    vpexpandq %ymm0, %ymm1 {%k1} {z}
+; AVX512BW-SLOW-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX512BW-SLOW-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; AVX512BW-SLOW-NEXT:    vinserti32x4 $2, %xmm0, %zmm1, %zmm0
+; AVX512BW-SLOW-NEXT:    vpaddb (%rdx), %zmm0, %zmm0
+; AVX512BW-SLOW-NEXT:    vmovdqa64 %zmm0, (%rcx)
+; AVX512BW-SLOW-NEXT:    vzeroupper
+; AVX512BW-SLOW-NEXT:    retq
+;
+; AVX512BW-FAST-LABEL: vec384_v6i64_to_v3i128_factor2:
+; AVX512BW-FAST:       # %bb.0:
+; AVX512BW-FAST-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [2,5]
+; AVX512BW-FAST-NEXT:    vmovdqa (%rdi), %ymm1
+; AVX512BW-FAST-NEXT:    vpaddb (%rsi), %ymm1, %ymm1
+; AVX512BW-FAST-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512BW-FAST-NEXT:    vpermi2q %ymm2, %ymm1, %ymm0
+; AVX512BW-FAST-NEXT:    movb $5, %al
+; AVX512BW-FAST-NEXT:    kmovd %eax, %k1
+; AVX512BW-FAST-NEXT:    vpexpandq %ymm1, %ymm1 {%k1} {z}
+; AVX512BW-FAST-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
+; AVX512BW-FAST-NEXT:    vpaddb (%rdx), %zmm0, %zmm0
+; AVX512BW-FAST-NEXT:    vmovdqa64 %zmm0, (%rcx)
+; AVX512BW-FAST-NEXT:    vzeroupper
+; AVX512BW-FAST-NEXT:    retq
   %in.vec.base = load <64 x i8>, ptr %in.vec.base.ptr, align 64
   %in.vec.bias = load <64 x i8>, ptr %in.vec.bias.ptr, align 64
   %in.vec = add <64 x i8> %in.vec.base, %in.vec.bias
@@ -7188,23 +7204,23 @@ define void @vec512_v16i32_to_v4i128_factor4(ptr %in.vec.base.ptr, ptr %in.vec.b
 ; AVX-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX-NEXT:    vpaddb (%rsi), %xmm0, %xmm0
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm2
+; AVX-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[2,3,0,1]
+; AVX-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[3,3,3,3]
+; AVX-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
 ; AVX-NEXT:    vblendps {{.*#+}} ymm2 = ymm2[0],ymm1[1,2,3],ymm2[4],ymm1[5,6,7]
-; AVX-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
-; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm3, %ymm0
+; AVX-NEXT:    vmovshdup {{.*#+}} ymm3 = ymm0[1,1,3,3,5,5,7,7]
+; AVX-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
 ; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3],ymm0[4],ymm1[5,6,7]
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX-NEXT:    vpaddb 48(%rdx), %xmm1, %xmm1
-; AVX-NEXT:    vpaddb 32(%rdx), %xmm0, %xmm0
+; AVX-NEXT:    vpaddb 16(%rdx), %xmm1, %xmm1
+; AVX-NEXT:    vpaddb (%rdx), %xmm0, %xmm0
 ; AVX-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; AVX-NEXT:    vpaddb 16(%rdx), %xmm3, %xmm3
-; AVX-NEXT:    vpaddb (%rdx), %xmm2, %xmm2
-; AVX-NEXT:    vmovdqa %xmm2, (%rcx)
-; AVX-NEXT:    vmovdqa %xmm3, 16(%rcx)
-; AVX-NEXT:    vmovdqa %xmm0, 32(%rcx)
-; AVX-NEXT:    vmovdqa %xmm1, 48(%rcx)
+; AVX-NEXT:    vpaddb 48(%rdx), %xmm3, %xmm3
+; AVX-NEXT:    vpaddb 32(%rdx), %xmm2, %xmm2
+; AVX-NEXT:    vmovdqa %xmm2, 32(%rcx)
+; AVX-NEXT:    vmovdqa %xmm3, 48(%rcx)
+; AVX-NEXT:    vmovdqa %xmm0, (%rcx)
+; AVX-NEXT:    vmovdqa %xmm1, 16(%rcx)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
