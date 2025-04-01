@@ -281,16 +281,9 @@ static void copyRegOperand(MachineOperand &To, const MachineOperand &From) {
   }
 }
 
-static bool isSameReg(const MachineOperand &Op, Register Reg) {
-  return Op.isReg() && Op.getReg() == Reg;
-}
-
-static bool isSameReg(const MachineOperand &Op, Register Reg, unsigned SubReg) {
-  return isSameReg(Op, Reg) && Op.getSubReg() == SubReg;
-}
-
 static bool isSameReg(const MachineOperand &LHS, const MachineOperand &RHS) {
-  return RHS.isReg() && isSameReg(LHS, RHS.getReg(), RHS.getSubReg());
+  return LHS.isReg() && RHS.isReg() && LHS.getReg() == RHS.getReg() &&
+         LHS.getSubReg() == RHS.getSubReg();
 }
 
 static MachineOperand *findSingleRegUse(const MachineOperand *Reg,
@@ -437,48 +430,29 @@ static std::optional<unsigned> regSequenceFindSubreg(const MachineInstr &RegSeq,
   auto *End = RegSeq.operands_end();
   // Operand pair at indices (i+1, i+2) is (register, subregister)
   for (auto *It = RegSeq.operands_begin() + 1; It != End; It += 2) {
-    if (isSameReg(*It, Reg))
+    if (It->getReg() == Reg)
       return (It + 1)->getImm();
   }
 
   return {};
 }
 
-/// Return the single use of \p RegSeq which accesses the subregister
+/// Return the single user of \p RegSeq which accesses the subregister
 /// that copies from \p Reg. Returns nullptr if \p Reg is not used by
 /// exactly one operand of \p RegSeq.
-static MachineInstr *regSequenceFindSingleSubregUse(MachineInstr &RegSeq,
-                                                    Register Reg,
-                                                    MachineRegisterInfo *MRI) {
+static MachineInstr *regSequenceFindSingleSubregUser(MachineInstr &RegSeq,
+                                                     Register Reg,
+                                                     MachineRegisterInfo *MRI) {
   Register SeqReg = RegSeq.getOperand(0).getReg();
   unsigned SubReg = *regSequenceFindSubreg(RegSeq, Reg);
 
-  MachineInstr *SingleUse = nullptr;
-  for (MachineInstr &UseMI : MRI->use_nodbg_instructions(SeqReg))
-    for (auto &Op : UseMI.operands())
-      if (Op.isReg() && Op.getReg() == SeqReg && Op.getSubReg() == SubReg) {
-        if (SingleUse)
-          return nullptr;
-        SingleUse = &UseMI;
-      }
+  MachineInstr *User = MRI->getOneNonDBGUser(SeqReg);
+  if (User)
+    for (auto &Op : User->operands())
+      if (Op.isReg() && Op.getReg() == SeqReg && Op.getSubReg() == SubReg)
+        return User;
 
-  return SingleUse;
-}
-
-/// If \p MI uses operand \p Reg and \p is defined by a copy-like
-/// instruction (currently, only REG_SEQUENCE is supported), this
-/// returns the instruction which defines the source register of the
-/// copy.
-static MachineInstr *findUseSrc(MachineInstr &MI, MachineOperand &Reg,
-                                MachineRegisterInfo *MRI) {
-  assert(Reg.isReg());
-
-  // TODO Handle other copy-like ops?
-  if (!MI.isRegSequence())
-    return &MI;
-
-  MachineInstr *Use = regSequenceFindSingleSubregUse(MI, Reg.getReg(), MRI);
-  return Use;
+  return nullptr;
 }
 
 MachineInstr *SDWASrcOperand::potentialToConvert(const SIInstrInfo *TII,
@@ -486,26 +460,34 @@ MachineInstr *SDWASrcOperand::potentialToConvert(const SIInstrInfo *TII,
                                                  SDWAOperandsMap *PotentialMatches) {
   if (PotentialMatches != nullptr) {
     // Fill out the map for all uses if all can be converted
-    MachineOperand *Reg = getReplacedOperand();
-    if (!Reg->isReg() || !Reg->isDef())
+    MachineOperand *Op = getReplacedOperand();
+    if (!Op->isReg() || !Op->isDef())
       return nullptr;
+    Register Reg = Op->getReg();
+    MachineRegisterInfo *MRI = getMRI();
 
     // Check that all instructions that use Reg can be converted
-    for (MachineInstr &UseMI :
-         getMRI()->use_nodbg_instructions(Reg->getReg())) {
-      MachineInstr *SrcMI = findUseSrc(UseMI, *Reg, getMRI());
+    for (MachineInstr &UseMI : MRI->use_nodbg_instructions(Reg)) {
+      MachineInstr *SrcMI =
+          UseMI.isRegSequence()
+              ? regSequenceFindSingleSubregUser(UseMI, Reg, MRI)
+              : &UseMI;
       if (!SrcMI || !isConvertibleToSDWA(*SrcMI, ST, TII) ||
           !canCombineSelections(*SrcMI, TII))
         return nullptr;
     }
     // Now that it's guaranteed all uses are legal, iterate over the uses again
     // to add them for later conversion.
-    for (MachineOperand &UseMO : getMRI()->use_nodbg_operands(Reg->getReg())) {
+    for (MachineOperand &UseMO : MRI->use_nodbg_operands(Reg)) {
       // Should not get a subregister here
-      assert(isSameReg(UseMO, *Reg));
+      assert(isSameReg(UseMO, *Op));
 
       SDWAOperandsMap &potentialMatchesMap = *PotentialMatches;
-      MachineInstr *UseSrcMI = findUseSrc(*UseMO.getParent(), *Reg, getMRI());
+      MachineInstr *Parent = UseMO.getParent();
+      MachineInstr *UseSrcMI =
+          Parent->isRegSequence()
+              ? regSequenceFindSingleSubregUser(*Parent, Reg, MRI)
+              : Parent;
       potentialMatchesMap[UseSrcMI].push_back(this);
     }
     return nullptr;
@@ -519,7 +501,7 @@ MachineInstr *SDWASrcOperand::potentialToConvert(const SIInstrInfo *TII,
 
   MachineInstr *Parent = PotentialMO->getParent();
   if (Parent->isRegSequence()) {
-    Parent = regSequenceFindSingleSubregUse(
+    Parent = regSequenceFindSingleSubregUser(
         *Parent, getReplacedOperand()->getReg(), getMRI());
     return Parent && canCombineSelections(*Parent, TII) ? Parent : nullptr;
   }
