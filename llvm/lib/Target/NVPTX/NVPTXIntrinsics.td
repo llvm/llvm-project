@@ -2070,8 +2070,8 @@ defm INT_PTX_ATOMIC_UMIN_32 : F_ATOMIC_2_AS<I32RT, atomic_load_umin_i32, "min.u3
 defm INT_PTX_ATOMIC_UMIN_64 : F_ATOMIC_2_AS<I64RT, atomic_load_umin_i64, "min.u64", [hasSM<32>]>;
 
 // atom_inc  atom_dec
-defm INT_PTX_ATOM_INC_32 : F_ATOMIC_2_AS<I32RT, int_nvvm_atomic_load_inc_32, "inc.u32">;
-defm INT_PTX_ATOM_DEC_32 : F_ATOMIC_2_AS<I32RT, int_nvvm_atomic_load_dec_32, "dec.u32">;
+defm INT_PTX_ATOM_INC_32 : F_ATOMIC_2_AS<I32RT, atomic_load_uinc_wrap_i32, "inc.u32">;
+defm INT_PTX_ATOM_DEC_32 : F_ATOMIC_2_AS<I32RT, atomic_load_udec_wrap_i32, "dec.u32">;
 
 // atom_and
 defm INT_PTX_ATOM_AND_32 : F_ATOMIC_2_AS<I32RT, atomic_load_and_i32, "and.b32">;
