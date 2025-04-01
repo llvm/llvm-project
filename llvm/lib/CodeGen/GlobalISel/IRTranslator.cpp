@@ -3007,8 +3007,63 @@ bool IRTranslator::translateInvoke(const User &U,
 
 bool IRTranslator::translateCallBr(const User &U,
                                    MachineIRBuilder &MIRBuilder) {
-  // FIXME: Implement this.
-  return false;
+  const CallBrInst &I = cast<CallBrInst>(U);
+  MachineBasicBlock *CallBrMBB = &MIRBuilder.getMBB();
+
+  // TODO: operand bundles (see SelDAG implementation of callbr)?
+  assert(!I.hasOperandBundles() &&
+         "Cannot lower callbrs with operand bundles yet");
+
+  if (I.isInlineAsm()) {
+    // FIXME: inline asm not yet supported
+    if (!translateInlineAsm(I, MIRBuilder))
+      return false;
+  } else if (I.getIntrinsicID() != Intrinsic::not_intrinsic) {
+    switch (I.getIntrinsicID()) {
+    default:
+      report_fatal_error("Unsupported intrinsic for callbr");
+    case Intrinsic::amdgcn_kill:
+      if (I.getNumIndirectDests() != 1)
+        report_fatal_error(
+            "amdgcn.kill supportes exactly one indirect destination");
+      CallInst *CI =
+          CallInst::Create(I.getFunctionType(), I.getCalledFunction(),
+                           SmallVector<Value *, 1>(I.args()));
+      bool Success = translateCall(*CI, MIRBuilder);
+      CI->deleteValue();
+      if (!Success)
+        return false;
+      break;
+    }
+  } else {
+    report_fatal_error("Only know how to handle inlineasm/intrinsic callbr");
+  }
+
+  // Retrieve successors.
+  SmallPtrSet<BasicBlock *, 8> Dests;
+  Dests.insert(I.getDefaultDest());
+  MachineBasicBlock *Return = &getMBB(*I.getDefaultDest());
+
+  // Update successor info.
+  addSuccessorWithProb(CallBrMBB, Return, BranchProbability::getOne());
+  // TODO: For most of the cases where there is an intrinsic callbr, we're
+  // having exactly one indirect target, which will be unreachable. As soon as
+  // this changes, we might need to enhance Target->setIsInlineAsmBrIndirectTarget
+  // or add something similar for intrinsic indirect branches.
+  if (I.isInlineAsm()) {
+    for (BasicBlock *Dest : I.getIndirectDests()) {
+      MachineBasicBlock *Target = &getMBB(*Dest);
+      Target->setIsInlineAsmBrIndirectTarget();
+      Target->setMachineBlockAddressTaken();
+      Target->setLabelMustBeEmitted();
+      // Don't add duplicate machine successors.
+      if (Dests.insert(Dest).second)
+        addSuccessorWithProb(CallBrMBB, Target, BranchProbability::getZero());
+    }
+  }
+  CallBrMBB->normalizeSuccProbs();
+
+  return true;
 }
 
 bool IRTranslator::translateLandingPad(const User &U,
