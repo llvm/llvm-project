@@ -4523,23 +4523,10 @@ getKmpcForStaticLoopForType(Type *Ty, OpenMPIRBuilder *OMPBuilder,
 static void createTargetLoopWorkshareCall(
     OpenMPIRBuilder *OMPBuilder, WorksharingLoopType LoopType,
     BasicBlock *InsertBlock, Value *Ident, Value *LoopBodyArg,
-    Type *ParallelTaskPtr, Value *TripCountOrig, Function &LoopBodyFn) {
+    Type *ParallelTaskPtr, Value *TripCount, Function &LoopBodyFn) {
+  Type *TripCountTy = TripCount->getType();
   Module &M = OMPBuilder->M;
   IRBuilder<> &Builder = OMPBuilder->Builder;
-  Value *TripCount = TripCountOrig;
-  // FIXME(JAN): The trip count is 1 larger than it should be for GPU, this may
-  // not be the right way to fix it, but this works for now.
-  if (OMPBuilder->Config.isGPU()) {
-    Builder.restoreIP({InsertBlock, std::prev(InsertBlock->end())});
-    LLVMContext &Ctx = M.getContext();
-    Type *IVTy = TripCountOrig->getType();
-    Type *InternalIVTy = IVTy->getIntegerBitWidth() <= 32
-                             ? Type::getInt32Ty(Ctx)
-                             : Type::getInt64Ty(Ctx);
-    Constant *One = ConstantInt::get(InternalIVTy, 1);
-    TripCount = Builder.CreateSub(TripCountOrig, One, "modified_trip_count");
-  }
-  Type *TripCountTy = TripCount->getType();
   FunctionCallee RTLFn =
       getKmpcForStaticLoopForType(TripCountTy, OMPBuilder, LoopType);
   SmallVector<Value *, 8> RealArgs;
