@@ -327,7 +327,7 @@ bool X86PreTileConfig::runOnMachineFunction(MachineFunction &MF) {
     MachineBasicBlock *MBB = CfgLiveInBBs.pop_back_val();
     for (auto *Pred : MBB->predecessors()) {
       auto &Info = BBVisitedInfo[Pred];
-      if (BBVisitedInfo[Pred].LastCall) {
+      if (Info.LastCall) {
         CfgNeedInsert.insert(Info.LastCall);
       } else if (!Info.NeedTileCfgLiveIn) {
         Info.NeedTileCfgLiveIn = true;

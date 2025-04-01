@@ -2612,13 +2612,13 @@ removeRedundantDbgLocsUsingForwardScan(const BasicBlock *BB,
         NumDefsScanned++;
         DebugVariable Key(FnVarLocs.getVariable(Loc.VariableID).getVariable(),
                           std::nullopt, Loc.DL.getInlinedAt());
-        auto VMI = VariableMap.find(Key);
+        auto [VMI, Inserted] = VariableMap.try_emplace(Key);
 
         // Update the map if we found a new value/expression describing the
         // variable, or if the variable wasn't mapped already.
-        if (VMI == VariableMap.end() || VMI->second.first != Loc.Values ||
+        if (Inserted || VMI->second.first != Loc.Values ||
             VMI->second.second != Loc.Expr) {
-          VariableMap[Key] = {Loc.Values, Loc.Expr};
+          VMI->second = {Loc.Values, Loc.Expr};
           NewDefs.push_back(Loc);
           continue;
         }

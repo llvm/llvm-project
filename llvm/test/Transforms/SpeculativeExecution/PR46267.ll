@@ -1,5 +1,4 @@
 ; RUN: opt < %s -S -passes='speculative-execution' | FileCheck %s
-; RUN: opt --try-experimental-debuginfo-iterators < %s -S -passes='speculative-execution' | FileCheck %s
 
 %class.B = type { ptr }
 

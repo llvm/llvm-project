@@ -168,61 +168,6 @@ void llvm::CloneFunctionAttributesInto(Function *NewFunc,
                          OldAttrs.getRetAttrs(), NewArgAttrs));
 }
 
-DISubprogram *llvm::CollectDebugInfoForCloning(const Function &F,
-                                               CloneFunctionChangeType Changes,
-                                               DebugInfoFinder &DIFinder) {
-  // CloneModule takes care of cloning debug info for ClonedModule. Cloning into
-  // DifferentModule is taken care of separately in ClonedFunctionInto as part
-  // of llvm.dbg.cu update.
-  if (Changes >= CloneFunctionChangeType::DifferentModule)
-    return nullptr;
-
-  DISubprogram *SPClonedWithinModule = nullptr;
-  if (Changes < CloneFunctionChangeType::DifferentModule) {
-    SPClonedWithinModule = F.getSubprogram();
-  }
-  if (SPClonedWithinModule)
-    DIFinder.processSubprogram(SPClonedWithinModule);
-
-  collectDebugInfoFromInstructions(F, DIFinder);
-
-  return SPClonedWithinModule;
-}
-
-MetadataSetTy
-llvm::FindDebugInfoToIdentityMap(CloneFunctionChangeType Changes,
-                                 DebugInfoFinder &DIFinder,
-                                 DISubprogram *SPClonedWithinModule) {
-  if (Changes >= CloneFunctionChangeType::DifferentModule)
-    return {};
-
-  if (DIFinder.subprogram_count() == 0)
-    assert(!SPClonedWithinModule &&
-           "Subprogram should be in DIFinder->subprogram_count()...");
-
-  MetadataSetTy MD;
-
-  // Avoid cloning types, compile units, and (other) subprograms.
-  for (DISubprogram *ISP : DIFinder.subprograms())
-    if (ISP != SPClonedWithinModule)
-      MD.insert(ISP);
-
-  // If a subprogram isn't going to be cloned skip its lexical blocks as well.
-  for (DIScope *S : DIFinder.scopes()) {
-    auto *LScope = dyn_cast<DILocalScope>(S);
-    if (LScope && LScope->getSubprogram() != SPClonedWithinModule)
-      MD.insert(S);
-  }
-
-    for (DICompileUnit *CU : DIFinder.compile_units())
-      MD.insert(CU);
-
-    for (DIType *Type : DIFinder.types())
-      MD.insert(Type);
-
-  return MD;
-}
-
 void llvm::CloneFunctionMetadataInto(Function &NewFunc, const Function &OldFunc,
                                      ValueToValueMapTy &VMap,
                                      RemapFlags RemapFlag,
@@ -321,24 +266,11 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
   if (OldFunc->isDeclaration())
     return;
 
-  // When we remap instructions within the same module, we want to avoid
-  // duplicating inlined DISubprograms, so record all subprograms we find as we
-  // duplicate instructions and then freeze them in the MD map. We also record
-  // information about dbg.value and dbg.declare to avoid duplicating the
-  // types.
-  DebugInfoFinder DIFinder;
-
-  // Track the subprogram attachment that needs to be cloned to fine-tune the
-  // mapping within the same module.
   if (Changes < CloneFunctionChangeType::DifferentModule) {
-    // Need to find subprograms, types, and compile units.
-
     assert((NewFunc->getParent() == nullptr ||
             NewFunc->getParent() == OldFunc->getParent()) &&
            "Expected NewFunc to have the same parent, or no parent");
   } else {
-    // Need to find all the compile units.
-
     assert((NewFunc->getParent() == nullptr ||
             NewFunc->getParent() != OldFunc->getParent()) &&
            "Expected NewFunc to have different parents, or no parent");
@@ -381,12 +313,11 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
   auto *NewModule = NewFunc->getParent();
   auto *NMD = NewModule->getOrInsertNamedMetadata("llvm.dbg.cu");
   // Avoid multiple insertions of the same DICompileUnit to NMD.
-  SmallPtrSet<const void *, 8> Visited;
-  for (auto *Operand : NMD->operands())
-    Visited.insert(Operand);
+  SmallPtrSet<const void *, 8> Visited(llvm::from_range, NMD->operands());
 
   // Collect and clone all the compile units referenced from the instructions in
-  // the function (e.g. as a scope).
+  // the function (e.g. as instructions' scope).
+  DebugInfoFinder DIFinder;
   collectDebugInfoFromInstructions(*OldFunc, DIFinder);
   for (auto *Unit : DIFinder.compile_units()) {
     MDNode *MappedUnit =

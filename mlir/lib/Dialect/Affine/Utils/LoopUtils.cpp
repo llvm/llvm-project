@@ -1604,10 +1604,8 @@ SmallVector<AffineForOp, 8> mlir::affine::tile(ArrayRef<AffineForOp> forOps,
                                                ArrayRef<uint64_t> sizes,
                                                AffineForOp target) {
   SmallVector<AffineForOp, 8> res;
-  for (auto loops : tile(forOps, sizes, ArrayRef<AffineForOp>(target))) {
-    assert(loops.size() == 1);
-    res.push_back(loops[0]);
-  }
+  for (auto loops : tile(forOps, sizes, ArrayRef<AffineForOp>(target)))
+    res.push_back(llvm::getSingleElement(loops));
   return res;
 }
 

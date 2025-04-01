@@ -1925,6 +1925,22 @@ void ModuleTranslation::setTBAAMetadata(AliasAnalysisOpInterface op,
   inst->setMetadata(llvm::LLVMContext::MD_tbaa, node);
 }
 
+void ModuleTranslation::setDereferenceableMetadata(
+    DereferenceableOpInterface op, llvm::Instruction *inst) {
+  DereferenceableAttr derefAttr = op.getDereferenceableOrNull();
+  if (!derefAttr)
+    return;
+
+  llvm::MDNode *derefSizeNode = llvm::MDNode::get(
+      getLLVMContext(),
+      llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+          llvm::IntegerType::get(getLLVMContext(), 64), derefAttr.getBytes())));
+  unsigned kindId = derefAttr.getMayBeNull()
+                        ? llvm::LLVMContext::MD_dereferenceable_or_null
+                        : llvm::LLVMContext::MD_dereferenceable;
+  inst->setMetadata(kindId, derefSizeNode);
+}
+
 void ModuleTranslation::setBranchWeightsMetadata(BranchWeightOpInterface op) {
   DenseI32ArrayAttr weightsAttr = op.getBranchWeightsOrNull();
   if (!weightsAttr)
@@ -2206,6 +2222,10 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   // it to use the debug info format desired by LLVM.
   // See https://llvm.org/docs/RemoveDIsDebugInfo.html
   translator.llvmModule->setIsNewDbgInfoFormat(UseNewDbgInfoFormat);
+
+  // Add the necessary debug info module flags, if they were not encoded in MLIR
+  // beforehand.
+  translator.debugTranslation->addModuleFlagsIfNotPresent();
 
   if (!disableVerification &&
       llvm::verifyModule(*translator.llvmModule, &llvm::errs()))

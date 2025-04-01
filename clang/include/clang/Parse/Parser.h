@@ -91,6 +91,8 @@ class Parser : public CodeCompletionHandler {
 
   DiagnosticsEngine &Diags;
 
+  StackExhaustionHandler StackHandler;
+
   /// ScopeCache - Cache scopes to reduce malloc traffic.
   enum { ScopeCacheSize = 16 };
   unsigned NumCachedScopes;
@@ -518,7 +520,7 @@ public:
   typedef Sema::FullExprArg FullExprArg;
 
   /// A SmallVector of statements.
-  typedef SmallVector<Stmt *, 32> StmtVector;
+  typedef SmallVector<Stmt *, 24> StmtVector;
 
   // Parsing methods.
 
@@ -3695,7 +3697,10 @@ public:
   /// diagnostic. Eventually will be split into a few functions to parse
   /// different situations.
 public:
-  DeclGroupPtrTy ParseOpenACCDirectiveDecl();
+  DeclGroupPtrTy ParseOpenACCDirectiveDecl(AccessSpecifier &AS,
+                                           ParsedAttributes &Attrs,
+                                           DeclSpec::TST TagType,
+                                           Decl *TagDecl);
   StmtResult ParseOpenACCDirectiveStmt();
 
 private:
@@ -3829,6 +3834,11 @@ private:
   OpenACCGangArgRes ParseOpenACCGangArg(SourceLocation GangLoc);
   /// Parses a 'condition' expr, ensuring it results in a
   ExprResult ParseOpenACCConditionExpr();
+  DeclGroupPtrTy
+  ParseOpenACCAfterRoutineDecl(AccessSpecifier &AS, ParsedAttributes &Attrs,
+                               DeclSpec::TST TagType, Decl *TagDecl,
+                               OpenACCDirectiveParseInfo &DirInfo);
+  StmtResult ParseOpenACCAfterRoutineStmt(OpenACCDirectiveParseInfo &DirInfo);
 
 private:
   //===--------------------------------------------------------------------===//
@@ -3842,6 +3852,8 @@ private:
   DeclGroupPtrTy ParseTemplateDeclarationOrSpecialization(
       DeclaratorContext Context, SourceLocation &DeclEnd,
       ParsedAttributes &AccessAttrs, AccessSpecifier AS);
+  clang::Parser::DeclGroupPtrTy ParseTemplateDeclarationOrSpecialization(
+      DeclaratorContext Context, SourceLocation &DeclEnd, AccessSpecifier AS);
   DeclGroupPtrTy ParseDeclarationAfterTemplate(
       DeclaratorContext Context, ParsedTemplateInfo &TemplateInfo,
       ParsingDeclRAIIObject &DiagsFromParams, SourceLocation &DeclEnd,

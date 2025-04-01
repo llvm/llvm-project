@@ -65,11 +65,14 @@ public:
     SignatureConversion(unsigned numOrigInputs)
         : remappedInputs(numOrigInputs) {}
 
-    /// This struct represents a range of new types or a single value that
+    /// This struct represents a range of new types or a range of values that
     /// remaps an existing signature input.
     struct InputMapping {
       size_t inputNo, size;
-      Value replacementValue;
+      SmallVector<Value, 1> replacementValues;
+
+      /// Return "true" if this input was replaces with one or multiple values.
+      bool replacedWithValues() const { return !replacementValues.empty(); }
     };
 
     /// Return the argument types for the new signature.
@@ -92,9 +95,9 @@ public:
     /// used if the new types are not intended to remap an existing input.
     void addInputs(ArrayRef<Type> types);
 
-    /// Remap an input of the original signature to another `replacement`
-    /// value. This drops the original argument.
-    void remapInput(unsigned origInputNo, Value replacement);
+    /// Remap an input of the original signature to `replacements`
+    /// values. This drops the original argument.
+    void remapInput(unsigned origInputNo, ArrayRef<Value> replacements);
 
   private:
     /// Remap an input of the original signature with a range of types in the
@@ -894,7 +897,18 @@ public:
 
   /// Replace the given operation with the new value ranges. The number of op
   /// results and value ranges must match. The given  operation is erased.
-  void replaceOpWithMultiple(Operation *op, ArrayRef<ValueRange> newValues);
+  void replaceOpWithMultiple(Operation *op,
+                             SmallVector<SmallVector<Value>> &&newValues);
+  template <typename RangeT = ValueRange>
+  void replaceOpWithMultiple(Operation *op, ArrayRef<RangeT> newValues) {
+    replaceOpWithMultiple(op,
+                          llvm::to_vector_of<SmallVector<Value>>(newValues));
+  }
+  template <typename RangeT>
+  void replaceOpWithMultiple(Operation *op, RangeT &&newValues) {
+    replaceOpWithMultiple(op,
+                          ArrayRef(llvm::to_vector_of<ValueRange>(newValues)));
+  }
 
   /// PatternRewriter hook for erasing a dead operation. The uses of this
   /// operation *must* be made dead by the end of the conversion process,

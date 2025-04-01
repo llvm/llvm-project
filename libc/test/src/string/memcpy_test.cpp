@@ -48,7 +48,7 @@ TEST(LlvmLibcMemcpyTest, CheckAccess) {
     auto page = pages.GetPageB().WithAccess(PROT_WRITE);
     // And fill it with random numbers.
     for (size_t i = 0; i < page.page_size; ++i)
-      page.page_ptr[i] = rand();
+      page.page_ptr[i] = static_cast<uint8_t>(rand());
     // Then return it in read mode.
     return page.WithAccess(PROT_READ);
   }();

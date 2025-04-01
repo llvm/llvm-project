@@ -18,6 +18,7 @@ add_clang_library(clangSerialization
   GeneratePCH.cpp
   GlobalModuleIndex.cpp
   InMemoryModuleCache.cpp
+  ModuleCache.cpp
   ModuleFile.cpp
   ModuleFileExtension.cpp
   ModuleManager.cpp

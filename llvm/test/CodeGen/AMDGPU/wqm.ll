@@ -209,7 +209,7 @@ define amdgpu_ps <4 x float> @test4(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp
 main_body:
   %c.1 = mul i32 %c, %d
 
-  call void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float> undef, <4 x i32> poison, i32 %c.1, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float> poison, <4 x i32> poison, i32 %c.1, i32 0, i32 0, i32 0)
   %c.1.bc = bitcast i32 %c.1 to float
   %tex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %c.1.bc, <8 x i32> %rsrc, <4 x i32> %sampler, i1 false, i32 0, i32 0) #0
   %tex0 = extractelement <4 x float> %tex, i32 0
@@ -247,7 +247,7 @@ define amdgpu_ps <4 x float> @test4_ptr_buf(<8 x i32> inreg %rsrc, <4 x i32> inr
 main_body:
   %c.1 = mul i32 %c, %d
 
-  call void @llvm.amdgcn.struct.ptr.buffer.store.v4f32(<4 x float> undef, ptr addrspace(8) poison, i32 %c.1, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.v4f32(<4 x float> poison, ptr addrspace(8) poison, i32 %c.1, i32 0, i32 0, i32 0)
   %c.1.bc = bitcast i32 %c.1 to float
   %tex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %c.1.bc, <8 x i32> %rsrc, <4 x i32> %sampler, i1 false, i32 0, i32 0) #0
   %tex0 = extractelement <4 x float> %tex, i32 0
@@ -1338,7 +1338,7 @@ define amdgpu_ps void @test_set_inactive2(i32 inreg %idx0, i32 inreg %idx1) {
 main_body:
   %src1 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx1, i32 0, i32 0, i32 0)
   %src1.0 = bitcast float %src1 to i32
-  %src1.1 = call i32 @llvm.amdgcn.set.inactive.i32(i32 %src1.0, i32 undef)
+  %src1.1 = call i32 @llvm.amdgcn.set.inactive.i32(i32 %src1.0, i32 poison)
   %src0 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx0, i32 0, i32 0, i32 0)
   %src0.0 = bitcast float %src0 to i32
   %src0.1 = call i32 @llvm.amdgcn.wqm.i32(i32 %src0.0)
@@ -3361,7 +3361,7 @@ define amdgpu_ps void @test_for_deactivating_lanes_in_wave32(ptr addrspace(6) in
 ; GFX9-W64-NEXT:    s_buffer_load_dword s0, s[0:3], 0x0
 ; GFX9-W64-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-W64-NEXT:    v_cmp_le_f32_e64 vcc, s0, 0
-; GFX9-W64-NEXT:    s_andn2_b64 s[4:5], exec, vcc
+; GFX9-W64-NEXT:    s_andn2_b64 exec, exec, vcc
 ; GFX9-W64-NEXT:    s_cbranch_scc0 .LBB55_1
 ; GFX9-W64-NEXT:    s_endpgm
 ; GFX9-W64-NEXT:  .LBB55_1:
@@ -3377,7 +3377,7 @@ define amdgpu_ps void @test_for_deactivating_lanes_in_wave32(ptr addrspace(6) in
 ; GFX10-W32-NEXT:    s_buffer_load_dword s0, s[0:3], 0x0
 ; GFX10-W32-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-W32-NEXT:    v_cmp_le_f32_e64 vcc_lo, s0, 0
-; GFX10-W32-NEXT:    s_andn2_b32 s4, exec_lo, vcc_lo
+; GFX10-W32-NEXT:    s_andn2_b32 exec_lo, exec_lo, vcc_lo
 ; GFX10-W32-NEXT:    s_cbranch_scc0 .LBB55_1
 ; GFX10-W32-NEXT:    s_endpgm
 ; GFX10-W32-NEXT:  .LBB55_1:

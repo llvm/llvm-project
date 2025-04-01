@@ -206,6 +206,10 @@ else()
   message(FATAL_ERROR "Unknown value for LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING: \"${LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING}\"!")
 endif()
 
+if(LLVM_EXPERIMENTAL_KEY_INSTRUCTIONS)
+  add_compile_definitions(EXPERIMENTAL_KEY_INSTRUCTIONS)
+endif()
+
 if( LLVM_REVERSE_ITERATION )
   set( LLVM_ENABLE_REVERSE_ITERATION 1 )
 endif()
@@ -686,9 +690,15 @@ endif( LLVM_COMPILER_IS_GCC_COMPATIBLE OR CMAKE_CXX_COMPILER_ID MATCHES "XL" )
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   append("-Werror=unguarded-availability-new" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+  if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 21.0)
+    # LLVM has a policy of including virtual "anchor" functions to control
+    # where the vtable is emitted. In `final` classes, these are exactly what
+    # this warning detects: unnecessary virtual methods.
+    append("-Wno-unnecessary-virtual-specifier" CMAKE_CXX_FLAGS)
+  endif()
 endif()
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND LLVM_ENABLE_LTO)
   # LLVM data structures like llvm::User and llvm::MDNode rely on
   # the value of object storage persisting beyond the lifetime of the
   # object (#24952).  This is not standard compliant and causes a runtime

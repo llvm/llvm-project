@@ -582,6 +582,7 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 #  include <__functional/binary_function.h>
 #  include <__functional/is_transparent.h>
 #  include <__functional/operations.h>
+#  include <__fwd/map.h>
 #  include <__iterator/erase_if_container.h>
 #  include <__iterator/iterator_traits.h>
 #  include <__iterator/ranges_iterator_traits.h>
@@ -756,10 +757,6 @@ public:
   }
 };
 
-template <class _Key, class _Tp, class _Compare, class _Allocator>
-class map;
-template <class _Key, class _Tp, class _Compare, class _Allocator>
-class multimap;
 template <class _TreeIterator>
 class __map_const_iterator;
 
@@ -971,7 +968,7 @@ public:
   friend class _LIBCPP_TEMPLATE_VIS __tree_const_iterator;
 };
 
-template <class _Key, class _Tp, class _Compare = less<_Key>, class _Allocator = allocator<pair<const _Key, _Tp> > >
+template <class _Key, class _Tp, class _Compare, class _Allocator>
 class _LIBCPP_TEMPLATE_VIS map {
 public:
   // types:
@@ -1656,7 +1653,7 @@ struct __container_traits<map<_Key, _Tp, _Compare, _Allocator> > {
   static _LIBCPP_CONSTEXPR const bool __emplacement_has_strong_exception_safety_guarantee = true;
 };
 
-template <class _Key, class _Tp, class _Compare = less<_Key>, class _Allocator = allocator<pair<const _Key, _Tp> > >
+template <class _Key, class _Tp, class _Compare, class _Allocator>
 class _LIBCPP_TEMPLATE_VIS multimap {
 public:
   // types:
