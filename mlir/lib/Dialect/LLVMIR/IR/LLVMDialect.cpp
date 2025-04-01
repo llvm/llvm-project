@@ -55,6 +55,7 @@ using mlir::LLVM::tailcallkind::getMaxEnumValForTailCallKind;
 
 //===----------------------------------------------------------------------===//
 // IntegerOverflowFlags
+//===----------------------------------------------------------------------===//
 
 namespace mlir {
 static Attribute convertToAttribute(MLIRContext *ctx,
