@@ -2291,6 +2291,38 @@ AttrBuilder &AttrBuilder::addInitializesAttr(const ConstantRangeList &CRL) {
   return addConstantRangeListAttr(Attribute::Initializes, CRL.rangesRef());
 }
 
+AttrBuilder &AttrBuilder::addFromEquivalentMetadata(const Instruction &I) {
+  if (const MDNode *NonNull = I.getMetadata(LLVMContext::MD_nonnull))
+    addAttribute(Attribute::NonNull);
+
+  if (const MDNode *NoUndef = I.getMetadata(LLVMContext::MD_noundef))
+    addAttribute(Attribute::NoUndef);
+
+  if (const MDNode *Align = I.getMetadata(LLVMContext::MD_align)) {
+    ConstantInt *CI = mdconst::extract<ConstantInt>(Align->getOperand(0));
+    addAlignmentAttr(CI->getZExtValue());
+  }
+
+  if (const MDNode *Dereferenceable =
+          I.getMetadata(LLVMContext::MD_dereferenceable)) {
+    ConstantInt *CI =
+        mdconst::extract<ConstantInt>(Dereferenceable->getOperand(0));
+    addDereferenceableAttr(CI->getZExtValue());
+  }
+
+  if (const MDNode *DereferenceableOrNull =
+          I.getMetadata(LLVMContext::MD_dereferenceable_or_null)) {
+    ConstantInt *CI =
+        mdconst::extract<ConstantInt>(DereferenceableOrNull->getOperand(0));
+    addDereferenceableAttr(CI->getZExtValue());
+  }
+
+  if (const MDNode *Range = I.getMetadata(LLVMContext::MD_range))
+    addRangeAttr(getConstantRangeFromMetadata(*Range));
+
+  return *this;
+}
+
 AttrBuilder &AttrBuilder::merge(const AttrBuilder &B) {
   // TODO: Could make this O(n) as we're merging two sorted lists.
   for (const auto &I : B.attrs())
