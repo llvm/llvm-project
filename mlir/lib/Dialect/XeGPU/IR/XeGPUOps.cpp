@@ -113,11 +113,11 @@ static bool isEvenDistributed(llvm::ArrayRef<int64_t> shape,
   if (auto sg_layout = attr.getSgLayout()) {
     layout = sg_layout.asArrayRef();
     auto sg_data = attr.getSgData();
-    data = sg_data? sg_data.asArrayRef(): defaults;
+    data = sg_data ? sg_data.asArrayRef() : defaults;
   } else {
     layout = attr.getLaneLayout().asArrayRef();
     auto lane_data = attr.getLaneData();
-    data = lane_data? lane_data.asArrayRef(): defaults;
+    data = lane_data ? lane_data.asArrayRef() : defaults;
   }
   for (auto [s, d, l] : llvm::zip_equal(shape, data, layout)) {
     // check s % (d * l) != 0
