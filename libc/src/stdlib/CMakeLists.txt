@@ -631,6 +631,7 @@ add_entrypoint_object(
   HDRS
     exit.h
   DEPENDS
+    libc.src.__support.threads.thread
     ${exit_deps}
 )
 
