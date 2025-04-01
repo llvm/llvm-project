@@ -2579,7 +2579,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   // RecordDecl
   Abv->Add(BitCodeAbbrevOp(
       BitCodeAbbrevOp::Fixed,
-      13)); // Packed Record Decl Bits: FlexibleArrayMember,
+      14)); // Packed Record Decl Bits: FlexibleArrayMember,
             // AnonymousStructUnion, hasObjectMember, hasVolatileMember,
             // isNonTrivialToPrimitiveDefaultInitialize,
             // isNonTrivialToPrimitiveCopy, isNonTrivialToPrimitiveDestroy,

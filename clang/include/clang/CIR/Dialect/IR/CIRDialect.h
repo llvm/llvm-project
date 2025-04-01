@@ -57,6 +57,9 @@ public:
 } // namespace OpTrait
 } // namespace mlir
 
+using BuilderCallbackRef =
+    llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>;
+
 // TableGen'erated files for MLIR dialects require that a macro be defined when
 // they are included.  GET_OP_CLASSES tells the file to define the classes for
 // the operations of that dialect.

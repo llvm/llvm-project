@@ -392,15 +392,13 @@ def AArch64splice : SDNode<"AArch64ISD::SPLICE", SDT_AArch64Arith>;
 
 def reinterpret_cast : SDNode<"AArch64ISD::REINTERPRET_CAST", SDTUnaryOp>;
 
+let HasOneUse = 1 in
 def AArch64mul_p_oneuse : PatFrag<(ops node:$pred, node:$src1, node:$src2),
-                                  (AArch64mul_p node:$pred, node:$src1, node:$src2), [{
-  return N->hasOneUse();
-}]>;
+                                  (AArch64mul_p node:$pred, node:$src1, node:$src2)>;
 
+let HasOneUse = 1 in
 def AArch64fmul_p_oneuse : PatFrag<(ops node:$pred, node:$src1, node:$src2),
-                                   (AArch64fmul_p node:$pred, node:$src1, node:$src2), [{
-  return N->hasOneUse();
-}]>;
+                                   (AArch64fmul_p node:$pred, node:$src1, node:$src2)>;
 
 
 def AArch64fabd_p : PatFrags<(ops node:$pg, node:$op1, node:$op2),
