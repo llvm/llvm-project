@@ -563,9 +563,7 @@ uptr TlsBaseAddr() {
 // defined as `_INTERNAL_POSIX_THREAD_KEYS_MAX +
 // `_INTERNAL_POSIX_THREAD_KEYS_END` (512 pointers on iPhone and 768 elsewhere).
 // Keep at 1024 for backwards compatibility.
-uptr TlsSize() {
-  return 1024 * sizeof(uptr);
-}
+uptr TlsSize() { return 1024 * sizeof(uptr); }
 
 void GetThreadStackAndTls(bool main, uptr *stk_begin, uptr *stk_end,
                           uptr *tls_begin, uptr *tls_end) {
