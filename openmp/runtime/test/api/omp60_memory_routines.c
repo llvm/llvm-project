@@ -44,7 +44,7 @@ extern void __tgt_omp_free(void *ptr, omp_allocator_handle_t allocator) {
   do {                                                                         \
     if (!(Expr))                                                               \
       return EXIT_FAILURE;                                                     \
-  } while(0)
+  } while (0)
 
 // Test user-initialized allocator with the given memory space
 static int test_user_allocator(omp_memspace_handle_t ms) {
