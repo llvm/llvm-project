@@ -143,40 +143,6 @@ Expected<StringRef> createTempFile(const ArgList &Args, const Twine &Prefix,
   return TempFiles.back();
 }
 
-Expected<std::string> findProgram(const ArgList &Args, StringRef Name,
-                                  ArrayRef<StringRef> Paths) {
-  if (Args.hasArg(OPT_dry_run))
-    return Name.str();
-  ErrorOr<std::string> Path = sys::findProgramByName(Name, Paths);
-  if (!Path)
-    Path = sys::findProgramByName(Name);
-  if (!Path)
-    return createStringError(Path.getError(),
-                             "Unable to find '" + Name + "' in path");
-  return *Path;
-}
-
-void printCommands(ArrayRef<StringRef> CmdArgs) {
-  if (CmdArgs.empty())
-    return;
-
-  llvm::errs() << " \"" << CmdArgs.front() << "\" ";
-  llvm::errs() << llvm::join(std::next(CmdArgs.begin()), CmdArgs.end(), " ")
-               << "\n";
-}
-
-/// Execute the command \p ExecutablePath with the arguments \p Args.
-Error executeCommands(StringRef ExecutablePath, ArrayRef<StringRef> Args) {
-  if (Verbose || DryRun)
-    printCommands(Args);
-
-  if (!DryRun)
-    if (sys::ExecuteAndWait(ExecutablePath, Args))
-      return createStringError(
-          "'%s' failed", sys::path::filename(ExecutablePath).str().c_str());
-  return Error::success();
-}
-
 Expected<SmallVector<std::string>> getInput(const ArgList &Args) {
   // Collect all input bitcode files to be passed to the device linking stage.
   SmallVector<std::string> BitcodeFiles;
