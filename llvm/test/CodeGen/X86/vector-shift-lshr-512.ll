@@ -330,9 +330,7 @@ define <64 x i8> @constant_shift_v64i8_pairs(<64 x i8> %a) nounwind {
 ; AVX512DQ-NEXT:    vpmulhuw %ymm2, %ymm1, %ymm1
 ; AVX512DQ-NEXT:    vpmulhuw %ymm2, %ymm0, %ymm0
 ; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; AVX512DQ-NEXT:    vbroadcasti32x4 {{.*#+}} zmm1 = [1,1,63,63,15,15,3,3,127,127,63,63,31,31,15,15,1,1,63,63,15,15,3,3,127,127,63,63,31,31,15,15,1,1,63,63,15,15,3,3,127,127,63,63,31,31,15,15,1,1,63,63,15,15,3,3,127,127,63,63,31,31,15,15]
-; AVX512DQ-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
-; AVX512DQ-NEXT:    vpandq %zmm0, %zmm1, %zmm0
+; AVX512DQ-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
 ; AVX512DQ-NEXT:    retq
 ;
 ; AVX512BW-LABEL: constant_shift_v64i8_pairs:
