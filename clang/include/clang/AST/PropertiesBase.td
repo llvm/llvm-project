@@ -692,25 +692,26 @@ let Class = PropertyTypeCase<TemplateName, "QualifiedTemplate"> in {
 let Class = PropertyTypeCase<TemplateName, "DependentTemplate"> in {
   def : ReadHelper<[{
     auto dtn = node.getAsDependentTemplateName();
+    auto name = dtn->getName();
   }]>;
   def : Property<"qualifier", NestedNameSpecifier> {
     let Read = [{ dtn->getQualifier() }];
   }
   def : Property<"identifier", Optional<Identifier>> {
-    let Read = [{ makeOptionalFromPointer(
-                    dtn->isIdentifier()
-                      ? dtn->getIdentifier()
-                      : nullptr) }];
+    let Read = [{ makeOptionalFromPointer(name.getIdentifier()) }];
   }
   def : Property<"operatorKind", OverloadedOperatorKind> {
     let Conditional = [{ !identifier }];
-    let Read = [{ dtn->getOperator() }];
+    let Read = [{ name.getOperator() }];
+  }
+  def : Property<"HasTemplateKeyword", Bool> {
+    let Read = [{ dtn->hasTemplateKeyword() }];
   }
   def : Creator<[{
     if (identifier) {
-      return ctx.getDependentTemplateName(qualifier, *identifier);
+      return ctx.getDependentTemplateName({qualifier, *identifier, HasTemplateKeyword});
     } else {
-      return ctx.getDependentTemplateName(qualifier, *operatorKind);
+      return ctx.getDependentTemplateName({qualifier, *operatorKind, HasTemplateKeyword});
     }
   }]>;
 }

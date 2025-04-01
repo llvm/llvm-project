@@ -252,8 +252,8 @@ static ParsedType recoverFromTypeInKnownDependentBase(Sema &S,
   S.Diag(NameLoc, diag::ext_found_in_dependent_base) << &II;
 
   ASTContext &Context = S.Context;
-  auto *NNS = NestedNameSpecifier::Create(Context, nullptr, false,
-                                          cast<Type>(Context.getRecordType(RD)));
+  auto *NNS = NestedNameSpecifier::Create(
+      Context, nullptr, cast<Type>(Context.getRecordType(RD)));
   QualType T =
       Context.getDependentNameType(ElaboratedTypeKeyword::Typename, NNS, &II);
 
@@ -580,10 +580,10 @@ synthesizeCurrentNestedNameSpecifier(ASTContext &Context, DeclContext *DC) {
     auto *ND = dyn_cast<NamespaceDecl>(DC);
     if (ND && !ND->isInline() && !ND->isAnonymousNamespace())
       return NestedNameSpecifier::Create(Context, nullptr, ND);
-    else if (auto *RD = dyn_cast<CXXRecordDecl>(DC))
-      return NestedNameSpecifier::Create(Context, nullptr, RD->isTemplateDecl(),
+    if (auto *RD = dyn_cast<CXXRecordDecl>(DC))
+      return NestedNameSpecifier::Create(Context, nullptr,
                                          RD->getTypeForDecl());
-    else if (isa<TranslationUnitDecl>(DC))
+    if (isa<TranslationUnitDecl>(DC))
       return NestedNameSpecifier::GlobalSpecifier(Context);
   }
   llvm_unreachable("something isn't in TU scope?");
@@ -624,8 +624,7 @@ ParsedType Sema::ActOnMSVCUnknownTypeName(const IdentifierInfo &II,
                  findRecordWithDependentBasesOfEnclosingMethod(CurContext)) {
     // Build a DependentNameType that will perform lookup into RD at
     // instantiation time.
-    NNS = NestedNameSpecifier::Create(Context, nullptr, RD->isTemplateDecl(),
-                                      RD->getTypeForDecl());
+    NNS = NestedNameSpecifier::Create(Context, nullptr, RD->getTypeForDecl());
 
     // Diagnose that this identifier was undeclared, and retry the lookup during
     // template instantiation.
@@ -6243,11 +6242,12 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
 
   NestedNameSpecifierLoc SpecLoc(SS.getScopeRep(), SS.location_data());
   do {
-    if (SpecLoc.getNestedNameSpecifier()->getKind() ==
-        NestedNameSpecifier::TypeSpecWithTemplate)
-      Diag(Loc, diag::ext_template_after_declarative_nns)
-          << FixItHint::CreateRemoval(
-                 SpecLoc.getTypeLoc().getTemplateKeywordLoc());
+    if (TypeLoc TL = SpecLoc.getTypeLoc()) {
+      if (SourceLocation TemplateKeywordLoc = TL.getTemplateKeywordLoc();
+          TemplateKeywordLoc.isValid())
+        Diag(Loc, diag::ext_template_after_declarative_nns)
+            << FixItHint::CreateRemoval(TemplateKeywordLoc);
+    }
 
     if (const Type *T = SpecLoc.getNestedNameSpecifier()->getAsType()) {
       if (const auto *TST = T->getAsAdjusted<TemplateSpecializationType>()) {

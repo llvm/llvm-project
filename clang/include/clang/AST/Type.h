@@ -7098,21 +7098,17 @@ class DependentTemplateSpecializationType : public TypeWithKeyword,
                                             public llvm::FoldingSetNode {
   friend class ASTContext; // ASTContext creates these
 
-  /// The nested name specifier containing the qualifier.
-  NestedNameSpecifier *NNS;
-
-  /// The identifier of the template.
-  const IdentifierInfo *Name;
+  DependentTemplateStorage Name;
 
   DependentTemplateSpecializationType(ElaboratedTypeKeyword Keyword,
-                                      NestedNameSpecifier *NNS,
-                                      const IdentifierInfo *Name,
+                                      const DependentTemplateStorage &Name,
                                       ArrayRef<TemplateArgument> Args,
                                       QualType Canon);
 
 public:
-  NestedNameSpecifier *getQualifier() const { return NNS; }
-  const IdentifierInfo *getIdentifier() const { return Name; }
+  const DependentTemplateStorage &getDependentTemplateName() const {
+    return Name;
+  }
 
   ArrayRef<TemplateArgument> template_arguments() const {
     return {reinterpret_cast<const TemplateArgument *>(this + 1),
@@ -7123,14 +7119,12 @@ public:
   QualType desugar() const { return QualType(this, 0); }
 
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
-    Profile(ID, Context, getKeyword(), NNS, Name, template_arguments());
+    Profile(ID, Context, getKeyword(), Name, template_arguments());
   }
 
-  static void Profile(llvm::FoldingSetNodeID &ID,
-                      const ASTContext &Context,
+  static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
                       ElaboratedTypeKeyword Keyword,
-                      NestedNameSpecifier *Qualifier,
-                      const IdentifierInfo *Name,
+                      const DependentTemplateStorage &Name,
                       ArrayRef<TemplateArgument> Args);
 
   static bool classof(const Type *T) {
