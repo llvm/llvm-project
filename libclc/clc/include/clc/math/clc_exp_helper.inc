@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
-#include <clc/math/clc_exp2.h>
-
-#define FUNCTION exp2
-#define __CLC_BODY <clc/shared/unary_def.inc>
-#include <clc/math/gentype.inc>
+_CLC_DECL _CLC_OVERLOAD __CLC_GENTYPE __clc_exp_helper(__CLC_GENTYPE x,
+                                                       __CLC_GENTYPE x_min,
+                                                       __CLC_GENTYPE x_max,
+                                                       __CLC_GENTYPE r,
+                                                       __CLC_INTN n);
