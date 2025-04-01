@@ -4,19 +4,11 @@
 ; This test shows that alias analysis works during bundling of indexed load/stores. It contains two
 ; loads, one of which is contrived to alias with a store operation, and the other which is not. It
 ; also demonstrates the CycleInfo analysis determining not to sink a CoreMI to a block which has
-; a largr cycle depth.
-
-source_filename = "C:\\develop\\llvm-project\\llvm\\test\\CodeGen\\AMDGPU\\alias_conflict.hip"
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-p9:192:256:256:32-p10:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9"
-target triple = "amdgcn-amd-amdhsa"
+; a larger cycle depth.
 
 @weights = external local_unnamed_addr addrspace(10) global [256 x i32], align 4
 @out = external local_unnamed_addr addrspace(10) global [32 x i32], align 4
-@__hip_cuid_ = addrspace(1) global i8 0
-@__oclc_ABI_version = weak_odr hidden local_unnamed_addr addrspace(4) constant i32 500
-@llvm.compiler.used = appending addrspace(1) global [1 x ptr] [ptr addrspacecast (ptr addrspace(1) @__hip_cuid_ to ptr)], section "llvm.metadata"
 
-; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, argmem: none, inaccessiblemem: none)
 define dso_local amdgpu_kernel void @_Z26test_amdgcn_alias_analysisv() local_unnamed_addr #0 {
 ; GCN-LABEL: _Z26test_amdgcn_alias_analysisv:
 ; GCN:       _Z26test_amdgcn_alias_analysisv$local:
@@ -89,19 +81,9 @@ entry:
   ret void
 }
 
-; Function Attrs: mustprogress nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare noundef i32 @llvm.amdgcn.workitem.id.x() #1
-
 attributes #0 = { mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, argmem: none, inaccessiblemem: none) "amdgpu-agpr-alloc"="0" "amdgpu-flat-work-group-size"="1,1024" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx1300" "target-features"="+16-bit-insts,+ashr-pk-insts,+atomic-buffer-global-pk-add-f16-insts,+atomic-buffer-pk-add-bf16-inst,+atomic-ds-pk-add-16-insts,+atomic-fadd-rtn-insts,+atomic-flat-pk-add-16-insts,+atomic-global-pk-add-bf16-inst,+bf16-cvt-insts,+bf16-pk-insts,+bf16-trans-insts,+bitop3-insts,+ci-insts,+dl-insts,+dot7-insts,+dot8-insts,+dpp,+f16bf16-to-fp6bf6-cvt-scale-insts,+f32-to-f16bf16-cvt-sr-insts,+fp8-conversion-insts,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx12-insts,+gfx1250-insts,+gfx1251-gemm-insts,+gfx13-insts,+gfx8-insts,+gfx9-insts,+parallel-bit-insts,+permlane16-swap,+prng-inst,+tanh-insts,+tensor-cvt-lut-insts,+transpose-load-f4f6-insts,+vmem-pref-insts,+wavefrontsize32" "uniform-work-group-size"="true" }
 attributes #1 = { mustprogress nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 
-!llvm.module.flags = !{!0, !1, !2}
-!llvm.ident = !{!3}
-
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}
-!1 = !{i32 1, !"amdgpu_printf_kind", !"hostcall"}
-!2 = !{i32 1, !"wchar_size", i32 4}
-!3 = !{!"clang version 21.0.0git (git@github.com:AMD-Lightning-Internal/llvm-project.git 5ed54b2098021aff87a9dfb95dbb6f6badb796ed)"}
 !4 = !{!5, !5, i64 0}
 !5 = !{!"int", !6, i64 0}
 !6 = !{!"omnipotent char", !7, i64 0}

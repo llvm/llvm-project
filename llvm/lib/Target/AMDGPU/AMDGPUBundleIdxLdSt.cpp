@@ -32,6 +32,7 @@ using namespace llvm;
 #define DEBUG_TYPE "bundle-indexed-load-store"
 
 constexpr unsigned NumSrcStagingRegs = 6;
+constexpr unsigned LANESHARED = 10; // Laneshared addrspace is 10.
 
 namespace {
 
@@ -296,10 +297,14 @@ AMDGPUBundleIdxLdSt::findSuccsToSinkTo(MachineInstr &MI,
       MachineBasicBlock *UseMBB = UseMI->getParent();
 
       // If there's a meta/debug use, we wouldn't be able to bundle all uses.
-      // TODO-GFX13 Handle phis.
-      if (UseMI->isPHI() || UseMI->isRegSequence() || UseMI->isInsertSubreg() ||
-          UseMI->isMetaInstruction() || UseMI->isCopy() || UseMI->isBarrier() ||
+      if (UseMI->isMetaInstruction() || UseMI->isCopy() ||
           UseMI->isDebugOrPseudoInstr() || UseMI->isFakeUse())
+        return {};
+      // TODO-GFX13 Update TwoAddressInstructionPass to handle Bundles
+      if (UseMI->isRegSequence() || UseMI->isInsertSubreg())
+        return {};
+      // TODO-GFX13 Handle phis.
+      if (UseMI->isPHI())
         return {};
 
       // Determine if this is CoreMI.
@@ -312,10 +317,9 @@ AMDGPUBundleIdxLdSt::findSuccsToSinkTo(MachineInstr &MI,
       if (!IsLoadMI && !IsCoreMI)
         return {};
 
-      // Check safety of sinking MI to U. If MI is not LoadMI, don't have to
-      // worry about any aliasing stores.
+      // Check safety of sinking MI to U.
       bool Store =
-          IsLoadMI ? hasStoreBetween(MI.getParent(), UseMBB, MI) : false;
+          MI.mayLoad() ? hasStoreBetween(MI.getParent(), UseMBB, MI) : false;
       if (!MI.isSafeToMove(Store))
         return {};
       if (!TII->isSafeToSink(MI, UseMBB, CI))
@@ -360,6 +364,24 @@ AMDGPUBundleIdxLdSt::findSuccsToSinkTo(MachineInstr &MI,
   }
 
   return Candidates;
+}
+
+// When sinking MIa, check if moving it past MIb creates a laneshared conflict.
+bool isLanesharedConflict(MachineInstr &MIa, MachineInstr &MIb) {
+  if (MIa.getOpcode() != AMDGPU::V_LOAD_IDX)
+    return false;
+  bool Laneshared = false;
+  for (const auto &MMO : MIb.memoperands()) {
+    if (MMO->getPointerInfo().getAddrSpace() == LANESHARED)
+      Laneshared = true;
+  }
+  if (!Laneshared)
+    return false;
+  auto Opcode = MIb.getOpcode();
+  if ((MIb.isBarrier() || Opcode == AMDGPU::ARITH_FENCE ||
+       Opcode == AMDGPU::ATOMIC_FENCE || Opcode == AMDGPU::G_FENCE))
+    return true;
+  return false;
 }
 
 // Check if any instruction aliases with MI between From and To. Two caches are
@@ -427,7 +449,8 @@ bool AMDGPUBundleIdxLdSt::hasStoreBetween(MachineBasicBlock *From,
       }
 
       for (MachineInstr &I : *BB) {
-        if (I.isCall() || I.hasOrderedMemoryRef()) {
+        if (I.isCall() || I.hasOrderedMemoryRef() ||
+            isLanesharedConflict(MI, I)) {
           HasStoreCache[BlockPair] = true;
           return true;
         }
@@ -492,6 +515,7 @@ bool AMDGPUBundleIdxLdSt::sinkInstruction(MachineInstr &MI, bool &SawStore) {
     }
 
     if (SinksRemaining > 1) {
+      assert(MI.getOpcode() == AMDGPU::V_LOAD_IDX);
       LLVM_DEBUG(dbgs() << "\t *** Duplicating MI and sinking to block "
                         << Succ->getNumber() << "\n");
       MachineInstr *DupLoad =
@@ -533,14 +557,8 @@ bool AMDGPUBundleIdxLdSt::sinkLoadsAndCoreMIs(MachineFunction &MF) {
     --I;
     bool ProcessedBegin = false;
     SmallVector<MachineInstr *, 8> Stores;
-    do {
-      MachineInstr &MI = *I; // The instruction to sink.
-
-      // Predecrement I (if it's not begin) so that it isn't invalidated by
-      // sinking.
-      ProcessedBegin = I == MBB->begin();
-      if (!ProcessedBegin)
-        --I;
+    for (auto &I : make_early_inc_range(llvm::reverse(*MBB))) {
+      MachineInstr &MI = I; // The instruction to sink.
 
       // Check if MI aliases with any of the previously seen stores in
       // this block
@@ -557,9 +575,7 @@ bool AMDGPUBundleIdxLdSt::sinkLoadsAndCoreMIs(MachineFunction &MF) {
 
       if (sinkInstruction(MI, SawStore))
         MadeChange = true;
-
-      // If we just processed the first instruction in the block, we're done.
-    } while (!ProcessedBegin);
+    }
   }
 
   // Now clear any kill flags for recorded registers.
