@@ -380,8 +380,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                                      {p0, p0, p0, 1},
                                      {v4s8, p0, v4s8, 1}});
     if (Is64Bit)
-      Action.legalForTypesWithMemDesc({{s64, p0, s64, 1},
-                                       {v2s32, p0, v2s32, 1}});
+      Action.legalForTypesWithMemDesc(
+          {{s64, p0, s64, 1}, {v2s32, p0, v2s32, 1}});
 
     if (HasSSE1)
       Action.legalForTypesWithMemDesc({{v4s32, p0, v4s32, 1}});
@@ -409,9 +409,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                                        {s32, p0, s8, 1},
                                        {s32, p0, s16, 1}});
       if (Is64Bit)
-        Action.legalForTypesWithMemDesc({{s64, p0, s8, 1},
-                                         {s64, p0, s16, 1},
-                                         {s64, p0, s32, 1}});
+        Action.legalForTypesWithMemDesc(
+            {{s64, p0, s8, 1}, {s64, p0, s16, 1}, {s64, p0, s32, 1}});
     } else {
       Action.customIf([=](const LegalityQuery &Query) {
         return Query.Types[0] != Query.MMODescrs[0].MemoryTy;
