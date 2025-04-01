@@ -2,264 +2,254 @@
 ; FIXME: fmaximumnum/fminimumnum have no vectorizing support yet.
 ; RUN: opt --passes=loop-vectorize --mtriple=riscv64 -mattr="+zvfh,+v,+zfh" -S < %s | FileCheck %s
 
-@input1_f32 = global [4096 x float] zeroinitializer, align 4
-@input2_f32 = global [4096 x float] zeroinitializer, align 4
-@output_f32 = global [4096 x float] zeroinitializer, align 4
-@input1_f64 = global [4096 x double] zeroinitializer, align 8
-@input2_f64 = global [4096 x double] zeroinitializer, align 8
-@output_f64 = global [4096 x double] zeroinitializer, align 8
-@input1_f16 = global [4096 x half] zeroinitializer, align 2
-@input2_f16 = global [4096 x half] zeroinitializer, align 2
-@output_f16 = global [4096 x half] zeroinitializer, align 2
-
-define void @f32min()  {
-; CHECK-LABEL: define void @f32min(
-; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
+define void @fmin32(ptr noundef readonly captures(none) %input1, ptr noundef readonly captures(none) %input2, ptr noundef writeonly captures(none) %output) {
+; CHECK-LABEL: define void @fmin32(
+; CHECK-SAME: ptr noundef readonly captures(none) [[INPUT1:%.*]], ptr noundef readonly captures(none) [[INPUT2:%.*]], ptr noundef writeonly captures(none) [[OUTPUT:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_COND_CLEANUP:.*]]:
-; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @input1_f32, i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP14:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @input2_f32, i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP15:%.*]] = load float, ptr [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[TMP16:%.*]] = tail call float @llvm.minimumnum.f32(float [[TMP14]], float [[TMP15]])
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @output_f32, i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store float [[TMP16]], ptr [[ARRAYIDX4]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x float], ptr [[INPUT1]], i64 0, i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[IN1:%.*]] = load float, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x float], ptr [[INPUT2]], i64 0, i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[IN2:%.*]] = load float, ptr [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[OUT:%.*]] = tail call float @llvm.minimumnum.f32(float [[IN1]], float [[IN2]])
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x float], ptr [[OUTPUT]], i64 0, i64 [[INDVARS_IV]]
+; CHECK-NEXT:    store float [[OUT]], ptr [[ARRAYIDX4]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 4096
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[FOR_BODY]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
-  ret void
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw [4096 x float], ptr %input1, i64 0, i64 %iv
+  %in1 = load float, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds nuw [4096 x float], ptr %input2, i64 0, i64 %iv
+  %in2 = load float, ptr %arrayidx2, align 4
+  %out = tail call float @llvm.minimumnum.f32(float %in1, float %in2)
+  %arrayidx4 = getelementptr inbounds nuw [4096 x float], ptr %output, i64 0, i64 %iv
+  store float %out, ptr %arrayidx4, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 4096
+  br i1 %exitcond.not, label %exit, label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds nuw [4096 x float], ptr @input1_f32, i64 0, i64 %indvars.iv
-  %input1 = load float, ptr %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds nuw [4096 x float], ptr @input2_f32, i64 0, i64 %indvars.iv
-  %input2 = load float, ptr %arrayidx2, align 4
-  %output = tail call float @llvm.minimumnum.f32(float %input1, float %input2)
-  %arrayidx4 = getelementptr inbounds nuw [4096 x float], ptr @output_f32, i64 0, i64 %indvars.iv
-  store float %output, ptr %arrayidx4, align 4
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, 4096
-  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+exit:
+  ret void
 }
 
 declare float @llvm.minimumnum.f32(float, float)
 
-define void @f32max()  {
-; CHECK-LABEL: define void @f32max(
-; CHECK-SAME: ) #[[ATTR0]] {
+define void @fmax32(ptr noundef readonly captures(none) %input1, ptr noundef readonly captures(none) %input2, ptr noundef writeonly captures(none) %output) {
+; CHECK-LABEL: define void @fmax32(
+; CHECK-SAME: ptr noundef readonly captures(none) [[INPUT1:%.*]], ptr noundef readonly captures(none) [[INPUT2:%.*]], ptr noundef writeonly captures(none) [[OUTPUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_COND_CLEANUP:.*]]:
-; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @input1_f32, i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP14:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @input2_f32, i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP15:%.*]] = load float, ptr [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[TMP16:%.*]] = tail call float @llvm.maximumnum.f32(float [[TMP14]], float [[TMP15]])
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x float], ptr @output_f32, i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store float [[TMP16]], ptr [[ARRAYIDX4]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x float], ptr [[INPUT1]], i64 0, i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[IN1:%.*]] = load float, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x float], ptr [[INPUT2]], i64 0, i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[IN2:%.*]] = load float, ptr [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[OUT:%.*]] = tail call float @llvm.maximumnum.f32(float [[IN1]], float [[IN2]])
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x float], ptr [[OUTPUT]], i64 0, i64 [[INDVARS_IV]]
+; CHECK-NEXT:    store float [[OUT]], ptr [[ARRAYIDX4]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 4096
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[FOR_BODY]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
-  ret void
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw [4096 x float], ptr %input1, i64 0, i64 %iv
+  %in1 = load float, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds nuw [4096 x float], ptr %input2, i64 0, i64 %iv
+  %in2 = load float, ptr %arrayidx2, align 4
+  %out = tail call float @llvm.maximumnum.f32(float %in1, float %in2)
+  %arrayidx4 = getelementptr inbounds nuw [4096 x float], ptr %output, i64 0, i64 %iv
+  store float %out, ptr %arrayidx4, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 4096
+  br i1 %exitcond.not, label %exit, label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds nuw [4096 x float], ptr @input1_f32, i64 0, i64 %indvars.iv
-  %input1 = load float, ptr %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds nuw [4096 x float], ptr @input2_f32, i64 0, i64 %indvars.iv
-  %input2 = load float, ptr %arrayidx2, align 4
-  %output = tail call float @llvm.maximumnum.f32(float %input1, float %input2)
-  %arrayidx4 = getelementptr inbounds nuw [4096 x float], ptr @output_f32, i64 0, i64 %indvars.iv
-  store float %output, ptr %arrayidx4, align 4
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, 4096
-  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+exit:
+  ret void
 }
 
 declare float @llvm.maximumnum.f32(float, float)
 
-define void @f64min()  {
-; CHECK-LABEL: define void @f64min(
-; CHECK-SAME: ) #[[ATTR0]] {
+define void @fmin64(ptr noundef readonly captures(none) %input1, ptr noundef readonly captures(none) %input2, ptr noundef writeonly captures(none) %output) {
+; CHECK-LABEL: define void @fmin64(
+; CHECK-SAME: ptr noundef readonly captures(none) [[INPUT1:%.*]], ptr noundef readonly captures(none) [[INPUT2:%.*]], ptr noundef writeonly captures(none) [[OUTPUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_COND_CLEANUP:.*]]:
-; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @input1_f64, i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP14:%.*]] = load double, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @input2_f64, i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP15:%.*]] = load double, ptr [[ARRAYIDX2]], align 8
-; CHECK-NEXT:    [[TMP16:%.*]] = tail call double @llvm.minimumnum.f64(double [[TMP14]], double [[TMP15]])
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @output_f64, i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store double [[TMP16]], ptr [[ARRAYIDX4]], align 8
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x double], ptr [[INPUT1]], i64 0, i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[IN1:%.*]] = load double, ptr [[ARRAYIDX]], align 8
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x double], ptr [[INPUT2]], i64 0, i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[IN2:%.*]] = load double, ptr [[ARRAYIDX2]], align 8
+; CHECK-NEXT:    [[OUT:%.*]] = tail call double @llvm.minimumnum.f64(double [[IN1]], double [[IN2]])
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x double], ptr [[OUTPUT]], i64 0, i64 [[INDVARS_IV]]
+; CHECK-NEXT:    store double [[OUT]], ptr [[ARRAYIDX4]], align 8
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 4096
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[FOR_BODY]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
-  ret void
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw [4096 x double], ptr %input1, i64 0, i64 %iv
+  %in1 = load double, ptr %arrayidx, align 8
+  %arrayidx2 = getelementptr inbounds nuw [4096 x double], ptr %input2, i64 0, i64 %iv
+  %in2 = load double, ptr %arrayidx2, align 8
+  %out = tail call double @llvm.minimumnum.f64(double %in1, double %in2)
+  %arrayidx4 = getelementptr inbounds nuw [4096 x double], ptr %output, i64 0, i64 %iv
+  store double %out, ptr %arrayidx4, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 4096
+  br i1 %exitcond.not, label %exit, label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds nuw [4096 x double], ptr @input1_f64, i64 0, i64 %indvars.iv
-  %input1 = load double, ptr %arrayidx, align 8
-  %arrayidx2 = getelementptr inbounds nuw [4096 x double], ptr @input2_f64, i64 0, i64 %indvars.iv
-  %input2 = load double, ptr %arrayidx2, align 8
-  %output = tail call double @llvm.minimumnum.f64(double %input1, double %input2)
-  %arrayidx4 = getelementptr inbounds nuw [4096 x double], ptr @output_f64, i64 0, i64 %indvars.iv
-  store double %output, ptr %arrayidx4, align 8
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, 4096
-  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+exit:
+  ret void
 }
 
 declare double @llvm.minimumnum.f64(double, double)
 
-define void @f64max()  {
-; CHECK-LABEL: define void @f64max(
-; CHECK-SAME: ) #[[ATTR0]] {
+define void @fmax64(ptr noundef readonly captures(none) %input1, ptr noundef readonly captures(none) %input2, ptr noundef writeonly captures(none) %output) {
+; CHECK-LABEL: define void @fmax64(
+; CHECK-SAME: ptr noundef readonly captures(none) [[INPUT1:%.*]], ptr noundef readonly captures(none) [[INPUT2:%.*]], ptr noundef writeonly captures(none) [[OUTPUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_COND_CLEANUP:.*]]:
-; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @input1_f64, i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP14:%.*]] = load double, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @input2_f64, i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP15:%.*]] = load double, ptr [[ARRAYIDX2]], align 8
-; CHECK-NEXT:    [[TMP16:%.*]] = tail call double @llvm.maximumnum.f64(double [[TMP14]], double [[TMP15]])
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x double], ptr @output_f64, i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store double [[TMP16]], ptr [[ARRAYIDX4]], align 8
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x double], ptr [[INPUT1]], i64 0, i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[IN1:%.*]] = load double, ptr [[ARRAYIDX]], align 8
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x double], ptr [[INPUT2]], i64 0, i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[IN2:%.*]] = load double, ptr [[ARRAYIDX2]], align 8
+; CHECK-NEXT:    [[OUT:%.*]] = tail call double @llvm.maximumnum.f64(double [[IN1]], double [[IN2]])
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x double], ptr [[OUTPUT]], i64 0, i64 [[INDVARS_IV]]
+; CHECK-NEXT:    store double [[OUT]], ptr [[ARRAYIDX4]], align 8
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 4096
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[FOR_BODY]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
-  ret void
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw [4096 x double], ptr %input1, i64 0, i64 %iv
+  %in1 = load double, ptr %arrayidx, align 8
+  %arrayidx2 = getelementptr inbounds nuw [4096 x double], ptr %input2, i64 0, i64 %iv
+  %in2 = load double, ptr %arrayidx2, align 8
+  %out = tail call double @llvm.maximumnum.f64(double %in1, double %in2)
+  %arrayidx4 = getelementptr inbounds nuw [4096 x double], ptr %output, i64 0, i64 %iv
+  store double %out, ptr %arrayidx4, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 4096
+  br i1 %exitcond.not, label %exit, label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds nuw [4096 x double], ptr @input1_f64, i64 0, i64 %indvars.iv
-  %input1 = load double, ptr %arrayidx, align 8
-  %arrayidx2 = getelementptr inbounds nuw [4096 x double], ptr @input2_f64, i64 0, i64 %indvars.iv
-  %input2 = load double, ptr %arrayidx2, align 8
-  %output = tail call double @llvm.maximumnum.f64(double %input1, double %input2)
-  %arrayidx4 = getelementptr inbounds nuw [4096 x double], ptr @output_f64, i64 0, i64 %indvars.iv
-  store double %output, ptr %arrayidx4, align 8
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, 4096
-  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+exit:
+  ret void
 }
 
 declare double @llvm.maximumnum.f64(double, double)
 
-define void @f16min()  {
-; CHECK-LABEL: define void @f16min(
-; CHECK-SAME: ) #[[ATTR0]] {
+define void @fmin16(ptr noundef readonly captures(none) %input1, ptr noundef readonly captures(none) %input2, ptr noundef writeonly captures(none) %output) {
+; CHECK-LABEL: define void @fmin16(
+; CHECK-SAME: ptr noundef readonly captures(none) [[INPUT1:%.*]], ptr noundef readonly captures(none) [[INPUT2:%.*]], ptr noundef writeonly captures(none) [[OUTPUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_COND_CLEANUP:.*]]:
-; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @input1_f16, i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP14:%.*]] = load half, ptr [[ARRAYIDX]], align 2
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @input2_f16, i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP15:%.*]] = load half, ptr [[ARRAYIDX2]], align 2
-; CHECK-NEXT:    [[TMP16:%.*]] = tail call half @llvm.minimumnum.f16(half [[TMP14]], half [[TMP15]])
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @output_f16, i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store half [[TMP16]], ptr [[ARRAYIDX4]], align 2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x half], ptr [[INPUT1]], i64 0, i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[IN1:%.*]] = load half, ptr [[ARRAYIDX]], align 2
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x half], ptr [[INPUT2]], i64 0, i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[IN2:%.*]] = load half, ptr [[ARRAYIDX2]], align 2
+; CHECK-NEXT:    [[OUT:%.*]] = tail call half @llvm.minimumnum.f16(half [[IN1]], half [[IN2]])
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x half], ptr [[OUTPUT]], i64 0, i64 [[INDVARS_IV]]
+; CHECK-NEXT:    store half [[OUT]], ptr [[ARRAYIDX4]], align 2
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 4096
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[FOR_BODY]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
-  ret void
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw [4096 x half], ptr %input1, i64 0, i64 %iv
+  %in1 = load half, ptr %arrayidx, align 2
+  %arrayidx2 = getelementptr inbounds nuw [4096 x half], ptr %input2, i64 0, i64 %iv
+  %in2 = load half, ptr %arrayidx2, align 2
+  %out = tail call half @llvm.minimumnum.f16(half %in1, half %in2)
+  %arrayidx4 = getelementptr inbounds nuw [4096 x half], ptr %output, i64 0, i64 %iv
+  store half %out, ptr %arrayidx4, align 2
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 4096
+  br i1 %exitcond.not, label %exit, label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds nuw [4096 x half], ptr @input1_f16, i64 0, i64 %indvars.iv
-  %input1 = load half, ptr %arrayidx, align 2
-  %arrayidx2 = getelementptr inbounds nuw [4096 x half], ptr @input2_f16, i64 0, i64 %indvars.iv
-  %input2 = load half, ptr %arrayidx2, align 2
-  %output = tail call half @llvm.minimumnum.f16(half %input1, half %input2)
-  %arrayidx4 = getelementptr inbounds nuw [4096 x half], ptr @output_f16, i64 0, i64 %indvars.iv
-  store half %output, ptr %arrayidx4, align 2
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, 4096
-  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+exit:
+  ret void
 }
 
 declare half @llvm.minimumnum.f16(half, half)
 
-define void @f16max()  {
-; CHECK-LABEL: define void @f16max(
-; CHECK-SAME: ) #[[ATTR0]] {
+define void @fmax16(ptr noundef readonly captures(none) %input1, ptr noundef readonly captures(none) %input2, ptr noundef writeonly captures(none) %output) {
+; CHECK-LABEL: define void @fmax16(
+; CHECK-SAME: ptr noundef readonly captures(none) [[INPUT1:%.*]], ptr noundef readonly captures(none) [[INPUT2:%.*]], ptr noundef writeonly captures(none) [[OUTPUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_COND_CLEANUP:.*]]:
-; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @input1_f16, i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP14:%.*]] = load half, ptr [[ARRAYIDX]], align 2
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @input2_f16, i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP15:%.*]] = load half, ptr [[ARRAYIDX2]], align 2
-; CHECK-NEXT:    [[TMP16:%.*]] = tail call half @llvm.maximumnum.f16(half [[TMP14]], half [[TMP15]])
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x half], ptr @output_f16, i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store half [[TMP16]], ptr [[ARRAYIDX4]], align 2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x half], ptr [[INPUT1]], i64 0, i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[IN1:%.*]] = load half, ptr [[ARRAYIDX]], align 2
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x half], ptr [[INPUT2]], i64 0, i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[IN2:%.*]] = load half, ptr [[ARRAYIDX2]], align 2
+; CHECK-NEXT:    [[OUT:%.*]] = tail call half @llvm.maximumnum.f16(half [[IN1]], half [[IN2]])
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4096 x half], ptr [[OUTPUT]], i64 0, i64 [[INDVARS_IV]]
+; CHECK-NEXT:    store half [[OUT]], ptr [[ARRAYIDX4]], align 2
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 4096
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[FOR_BODY]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
-  ret void
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw [4096 x half], ptr %input1, i64 0, i64 %iv
+  %in1 = load half, ptr %arrayidx, align 2
+  %arrayidx2 = getelementptr inbounds nuw [4096 x half], ptr %input2, i64 0, i64 %iv
+  %in2 = load half, ptr %arrayidx2, align 2
+  %out = tail call half @llvm.maximumnum.f16(half %in1, half %in2)
+  %arrayidx4 = getelementptr inbounds nuw [4096 x half], ptr %output, i64 0, i64 %iv
+  store half %out, ptr %arrayidx4, align 2
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 4096
+  br i1 %exitcond.not, label %exit, label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds nuw [4096 x half], ptr @input1_f16, i64 0, i64 %indvars.iv
-  %input1 = load half, ptr %arrayidx, align 2
-  %arrayidx2 = getelementptr inbounds nuw [4096 x half], ptr @input2_f16, i64 0, i64 %indvars.iv
-  %input2 = load half, ptr %arrayidx2, align 2
-  %output = tail call half @llvm.maximumnum.f16(half %input1, half %input2)
-  %arrayidx4 = getelementptr inbounds nuw [4096 x half], ptr @output_f16, i64 0, i64 %indvars.iv
-  store half %output, ptr %arrayidx4, align 2
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, 4096
-  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+exit:
+  ret void
 }
 
 declare half @llvm.maximumnum.f16(half, half)
