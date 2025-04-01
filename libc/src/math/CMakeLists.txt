@@ -313,6 +313,7 @@ add_math_entrypoint_object(getpayloadf128)
 
 add_math_entrypoint_object(hypot)
 add_math_entrypoint_object(hypotf)
+add_math_entrypoint_object(hypotf16)
 
 add_math_entrypoint_object(ilogb)
 add_math_entrypoint_object(ilogbf)
