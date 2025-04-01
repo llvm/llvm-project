@@ -6987,6 +6987,7 @@ may be significant, which may slow down some programs.
 
 Enabling array repacking may also change the behavior of certain
 programs:
+
 * The copy actions may introduce a data race in valid OpenACC/OpenMP programs.
   For example, if different threads execute the same subprogram
   with a non-contiguous assumed shape dummy array, and the different threads
