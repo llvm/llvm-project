@@ -149,12 +149,26 @@ StringAttr symbolAttr(Operation *op) {
   llvm_unreachable("unexpected operation");
 }
 
+/// Return true if the primary definition of this global value is outside of the
+/// current translation unit.
 bool isDeclaration(Operation *op) {
   if (auto gv = dyn_cast<LLVM::GlobalOp>(op))
     return gv.getInitializerRegion().empty() && !gv.getValue();
   if (auto fn = dyn_cast<LLVM::LLVMFuncOp>(op))
     return fn.getBody().empty();
   llvm_unreachable("unexpected operation");
+}
+
+bool isDeclarationForLinker(Operation *op) {
+  if (isAvailableExternallyLinkage(getLinkage(op)))
+    return true;
+  return isDeclaration(op);
+}
+
+/// Returns true if this global's definition will be the one chosen by the
+/// linker.
+bool isStrongDefinitionForLinker(Operation *op) {
+  return !(isDeclarationForLinker(op) || isWeakForLinker(getLinkage(op)));
 }
 
 //===----------------------------------------------------------------------===//
@@ -212,6 +226,9 @@ public:
     if (shouldOverrideFromSrc())
       return true;
 
+    if (pair.dst)
+      return true;
+
     // linkage specifies to keep operation only in source
     return !(isLocalLinkage(srcLinkage) || isLinkOnceLinkage(srcLinkage) ||
              isAvailableExternallyLinkage(srcLinkage));
@@ -221,19 +238,29 @@ public:
     assert(canBeLinked(pair.src) && "expected linkable operation");
     assert(canBeLinked(pair.dst) && "expected linkable operation");
 
-    // If both `src` and `dst` are declarations, we can ignore the conflict.
-    if (isDeclaration(pair.src) && isDeclaration(pair.dst)) {
-      return success();
-    }
+    Linkage srcLinkage = getLinkage(pair.src);
+    Linkage dstLinkage = getLinkage(pair.dst);
 
-    // If the `dst` is a declaration import `src` definition
-    if (isDeclaration(pair.dst) && !isDeclaration(pair.src)) {
+    const bool srcIsDeclaration = isDeclarationForLinker(pair.src);
+    const bool dstIsDeclaration = isDeclarationForLinker(pair.dst);
+
+
+    if (isAvailableExternallyLinkage(srcLinkage) && dstIsDeclaration) {
       registerForLink(pair.src);
       return success();
     }
 
-    Linkage srcLinkage = getLinkage(pair.src);
-    Linkage dstLinkage = getLinkage(pair.dst);
+    // If both `src` and `dst` are declarations, we can ignore the conflict.
+    if (srcIsDeclaration && dstIsDeclaration) {
+      return success();
+    }
+
+    // If the `dst` is a declaration import `src` definition
+    // Link an available_externally over a declaration.
+    if (dstIsDeclaration && !srcIsDeclaration) {
+      registerForLink(pair.src);
+      return success();
+    }
 
     // Conflicting private values are to be renamed.
     if (isLocalLinkage(dstLinkage)) {
