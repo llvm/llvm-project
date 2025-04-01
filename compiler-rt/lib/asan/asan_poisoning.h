@@ -23,9 +23,6 @@
 
 namespace __asan {
 
-// Set up data structures for track_poison.
-void InitializePoisonTracking();
-
 struct PoisonRecord {
   u32 stack_id;
   u32 thread_id;
