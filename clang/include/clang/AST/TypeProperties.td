@@ -100,12 +100,15 @@ let Class = MemberPointerType in {
   def : Property<"pointeeType", QualType> {
     let Read = [{ node->getPointeeType() }];
   }
-  def : Property<"baseType", QualType> {
-    let Read = [{ QualType(node->getClass(), 0) }];
+  def : Property<"Qualifier", NestedNameSpecifier> {
+    let Read = [{ node->getQualifier() }];
+  }
+  def : Property<"Cls", DeclRef> {
+    let Read = [{ node->getMostRecentCXXRecordDecl() }];
   }
 
   def : Creator<[{
-    return ctx.getMemberPointerType(pointeeType, baseType.getTypePtr());
+    return ctx.getMemberPointerType(pointeeType, Qualifier, cast_or_null<CXXRecordDecl>(Cls));
   }]>;
 }
 

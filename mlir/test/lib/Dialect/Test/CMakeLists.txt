@@ -84,6 +84,7 @@ mlir_target_link_libraries(MLIRTestDialect PUBLIC
   MLIRInferTypeOpInterface
   MLIRLinalgDialect
   MLIRLinalgTransforms
+  MLIRPtrDialect
   MLIRLLVMDialect
   MLIRPass
   MLIRPolynomialDialect

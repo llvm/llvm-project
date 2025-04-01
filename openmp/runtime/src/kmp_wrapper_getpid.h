@@ -17,7 +17,7 @@
 
 // On Unix-like systems (Linux* OS and OS X*) getpid() is declared in standard
 // headers.
-#if !defined(KMP_OS_AIX)
+#if !defined(KMP_OS_AIX) && !defined(KMP_OS_HAIKU)
 #include <sys/syscall.h>
 #endif
 #include <sys/types.h>
@@ -36,6 +36,9 @@
 #elif KMP_OS_AIX
 #include <pthread.h>
 #define __kmp_gettid() pthread_self()
+#elif KMP_OS_HAIKU
+#include <OS.h>
+#define __kmp_gettid() find_thread(NULL)
 #elif defined(SYS_gettid)
 // Hopefully other Unix systems define SYS_gettid syscall for getting os thread
 // id

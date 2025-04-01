@@ -20,7 +20,9 @@ class ASTContext;
 }
 namespace mlir {
 
+std::unique_ptr<Pass> createCIRCanonicalizePass();
 std::unique_ptr<Pass> createCIRFlattenCFGPass();
+std::unique_ptr<Pass> createHoistAllocasPass();
 
 void populateCIRPreLoweringPasses(mlir::OpPassManager &pm);
 

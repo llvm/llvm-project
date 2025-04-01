@@ -771,23 +771,23 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
   }];
 
   dag args = (ins OptionalAttr<TypeAttrOf<LLVM_FunctionType>>:$var_callee_type,
-                  OptionalAttr<FlatSymbolRefAttr>:$callee,
-                  Variadic<LLVM_Type>:$callee_operands,
-                  DefaultValuedAttr<LLVM_FastmathFlagsAttr,
-                                   "{}">:$fastmathFlags,
-                  OptionalAttr<DenseI32ArrayAttr>:$branch_weights,
-                  DefaultValuedAttr<CConv, "CConv::C">:$CConv,
-                  DefaultValuedAttr<TailCallKind, "TailCallKind::None">:$TailCallKind,
-                  OptionalAttr<LLVM_MemoryEffectsAttr>:$memory_effects,
-                  OptionalAttr<UnitAttr>:$convergent,
-                  OptionalAttr<UnitAttr>:$no_unwind,
-                  OptionalAttr<UnitAttr>:$will_return,
-                  VariadicOfVariadic<LLVM_Type,
-                                     "op_bundle_sizes">:$op_bundle_operands,
-                  DenseI32ArrayAttr:$op_bundle_sizes,
-                  OptionalAttr<ArrayAttr>:$op_bundle_tags,
-                  OptionalAttr<DictArrayAttr>:$arg_attrs,
-                  OptionalAttr<DictArrayAttr>:$res_attrs);
+      OptionalAttr<FlatSymbolRefAttr>:$callee,
+      Variadic<LLVM_Type>:$callee_operands,
+      DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags,
+      OptionalAttr<DenseI32ArrayAttr>:$branch_weights,
+      DefaultValuedAttr<CConv, "CConv::C">:$CConv,
+      DefaultValuedAttr<TailCallKind, "TailCallKind::None">:$TailCallKind,
+      OptionalAttr<LLVM_MemoryEffectsAttr>:$memory_effects,
+      OptionalAttr<UnitAttr>:$convergent,
+      OptionalAttr<UnitAttr>:$no_unwind,
+      OptionalAttr<UnitAttr>:$will_return,
+      VariadicOfVariadic<LLVM_Type, "op_bundle_sizes">:$op_bundle_operands,
+      DenseI32ArrayAttr:$op_bundle_sizes,
+      OptionalAttr<ArrayAttr>:$op_bundle_tags,
+      OptionalAttr<DictArrayAttr>:$arg_attrs,
+      OptionalAttr<DictArrayAttr>:$res_attrs,
+      OptionalAttr<UnitAttr>:$no_inline,
+      OptionalAttr<UnitAttr>:$always_inline);
   // Append the aliasing related attributes defined in LLVM_MemAccessOpBase.
   let arguments = !con(args, aliasAttrs);
   let results = (outs Optional<LLVM_Type>:$result);
@@ -1438,32 +1438,37 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
 
 def LLVM_GlobalCtorsOp : LLVM_Op<"mlir.global_ctors", [
                            DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
-  let arguments = (ins FlatSymbolRefArrayAttr
-                   : $ctors, I32ArrayAttr
-                   : $priorities);
+  let arguments = (ins FlatSymbolRefArrayAttr:$ctors,
+                       I32ArrayAttr:$priorities,
+                       ArrayAttr:$data);
   let summary = "LLVM dialect global_ctors.";
   let description = [{
-    Specifies a list of constructor functions and priorities. The functions
-    referenced by this array will be called in ascending order of priority (i.e.
-    lowest first) when the module is loaded. The order of functions with the
-    same priority is not defined. This operation is translated to LLVM's
-    global_ctors global variable. The initializer functions are run at load
-    time. The `data` field present in LLVM's global_ctors variable is not
-    modeled here.
+    Specifies a list of constructor functions, priorities, and associated data.
+    The functions referenced by this array will be called in ascending order
+    of priority (i.e. lowest first) when the module is loaded. The order of
+    functions with the same priority is not defined. This operation is
+    translated to LLVM's global_ctors global variable. The initializer
+    functions are run at load time. However, if the associated data is not
+    `#llvm.zero`, functions only run if the data is not discarded.
 
     Examples:
 
     ```mlir
-    llvm.mlir.global_ctors {@ctor}
-
     llvm.func @ctor() {
       ...
       llvm.return
     }
+    llvm.mlir.global_ctors ctors = [@ctor], priorities = [0],
+                                   data = [#llvm.zero]
     ```
 
   }];
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = [{
+    `ctors` `=` $ctors
+    `,` `priorities` `=` $priorities
+    `,` `data` `=` $data
+    attr-dict
+  }];
   let hasVerifier = 1;
 }
 
@@ -1471,16 +1476,18 @@ def LLVM_GlobalDtorsOp : LLVM_Op<"mlir.global_dtors", [
                            DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let arguments = (ins
     FlatSymbolRefArrayAttr:$dtors,
-    I32ArrayAttr:$priorities
+    I32ArrayAttr:$priorities,
+    ArrayAttr:$data
   );
   let summary = "LLVM dialect global_dtors.";
   let description = [{
     Specifies a list of destructor functions and priorities. The functions
-    referenced by this array will be called in descending order of priority (i.e.
-    highest first) when the module is unloaded. The order of functions with the
-    same priority is not defined. This operation is translated to LLVM's
-    global_dtors global variable. The `data` field present in LLVM's
-    global_dtors variable is not modeled here.
+    referenced by this array will be called in descending order of priority
+    (i.e. highest first) when the module is unloaded. The order of functions
+    with the same priority is not defined. This operation is translated to
+    LLVM's global_dtors global variable. The destruction functions are run at
+    load time. However, if the associated data is not `#llvm.zero`, functions
+    only run if the data is not discarded.
 
     Examples:
 
@@ -1488,11 +1495,16 @@ def LLVM_GlobalDtorsOp : LLVM_Op<"mlir.global_dtors", [
     llvm.func @dtor() {
       llvm.return
     }
-    llvm.mlir.global_dtors {@dtor}
+    llvm.mlir.global_dtors dtors = [@dtor], priorities = [0],
+                                   data = [#llvm.zero]
     ```
-
   }];
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = [{
+    `dtors` `=` $dtors
+    `,` `priorities` `=` $priorities
+    `,` `data` `=` $data
+    attr-dict
+  }];
   let hasVerifier = 1;
 }
 
@@ -1573,6 +1585,44 @@ def LLVM_AliasOp : LLVM_Op<"mlir.alias",
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
   let hasRegionVerifier = 1;
+}
+
+def LLVM_DSOLocalEquivalentOp : LLVM_Op<"dso_local_equivalent",
+    [Pure, ConstantLike, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let arguments = (ins FlatSymbolRefAttr:$function_name);
+  let results = (outs LLVM_AnyPointer:$res);
+
+  let summary = "Creates a LLVM dso_local_equivalent ptr";
+
+  let description = [{
+    Creates an SSA value containing a pointer to a global value (function or
+    alias to function). It represents a function which is functionally
+    equivalent to a given function, but is always defined in the current
+    linkage unit. The target function may not have `extern_weak` linkage.
+
+    Examples:
+
+    ```mlir
+    llvm.mlir.global external constant @const() : i64 {
+      %0 = llvm.mlir.addressof @const : !llvm.ptr
+      %1 = llvm.ptrtoint %0 : !llvm.ptr to i64
+      %2 = llvm.dso_local_equivalent @func : !llvm.ptr
+      %4 = llvm.ptrtoint %2 : !llvm.ptr to i64
+      llvm.return %4 : i64
+    }
+    ```
+  }];
+
+  let extraClassDeclaration = [{
+    /// Return the llvm.func operation that is referenced here.
+    LLVMFuncOp getFunction(SymbolTableCollection &symbolTable);
+    /// Return the llvm.mlir.alias operation that defined the value referenced
+    /// here.
+    AliasOp getAlias(SymbolTableCollection &symbolTable);
+  }];
+
+  let assemblyFormat = "$function_name attr-dict `:` qualified(type($res))";
+  let hasFolder = 1;
 }
 
 def LLVM_ComdatSelectorOp : LLVM_Op<"comdat_selector", [Symbol]> {

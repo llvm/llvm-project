@@ -1257,8 +1257,13 @@ void TargetPassConfig::addMachinePasses() {
       }
     }
     addPass(createMachineFunctionSplitterPass());
-    if (SplitStaticData || TM->Options.EnableStaticDataPartitioning)
+    if (SplitStaticData || TM->Options.EnableStaticDataPartitioning) {
+      // The static data splitter pass is a machine function pass. and
+      // static data annotator pass is a module-wide pass. See the file comment
+      // in StaticDataAnnotator.cpp for the motivation.
       addPass(createStaticDataSplitterPass());
+      addPass(createStaticDataAnnotatorPass());
+    }
   }
   // We run the BasicBlockSections pass if either we need BB sections or BB
   // address map (or both).
