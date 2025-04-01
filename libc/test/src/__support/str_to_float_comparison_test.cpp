@@ -8,14 +8,11 @@
 
 // #include "src/__support/str_float_conv_utils.h"
 
-#include <stdlib.h> // For string to float functions
-
 // #include "src/__support/FPUtil/FPBits.h"
 
-#include <cstdint>
-#include <fstream>
-#include <iostream>
-#include <string>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 // The intent of this test is to read in files in the format used in this test
 // dataset: https://github.com/nigeltao/parse-number-fxx-test-data
@@ -59,16 +56,17 @@ int checkFile(char *inputFileName, int *totalFails, int *totalBitDiffs,
   int32_t curFails = 0;    // Only counts actual failures, not bitdiffs.
   int32_t curBitDiffs = 0; // A bitdiff is when the expected result and actual
                            // result are off by +/- 1 bit.
-  std::string line;
-  std::string num;
+  char line[100];
+  char num[100];
 
-  std::ifstream fileStream(inputFileName, std::ifstream::in);
+  auto *fileHandle = fopen(inputFileName, "r");
 
-  if (!fileStream.is_open()) {
-    std::cout << "file '" << inputFileName << "' failed to open. Exiting.\n";
+  if (!fileHandle) {
+    printf("file '%s' failed to open. Exiting.\n", inputFileName);
     return 1;
   }
-  while (getline(fileStream, line)) {
+
+  while (fgets(line, sizeof(line), fileHandle)) {
     if (line[0] == '#') {
       continue;
     }
@@ -76,13 +74,13 @@ int checkFile(char *inputFileName, int *totalFails, int *totalBitDiffs,
     uint32_t expectedFloatRaw;
     uint64_t expectedDoubleRaw;
 
-    expectedFloatRaw = fastHexToU32(line.c_str() + 5);
-    expectedDoubleRaw = fastHexToU64(line.c_str() + 14);
-    num = line.substr(31);
+    expectedFloatRaw = fastHexToU32(line + 5);
+    expectedDoubleRaw = fastHexToU64(line + 14);
+    sscanf(line + 31, "%s", num);
 
-    float floatResult = strtof(num.c_str(), nullptr);
+    float floatResult = strtof(num, nullptr);
 
-    double doubleResult = strtod(num.c_str(), nullptr);
+    double doubleResult = strtod(num, nullptr);
 
     uint32_t floatRaw = *(uint32_t *)(&floatResult);
 
@@ -101,9 +99,8 @@ int checkFile(char *inputFileName, int *totalFails, int *totalBitDiffs,
         curFails++;
       }
       if (curFails + curBitDiffs < 10) {
-        std::cout << "Float fail for '" << num << "'. Expected " << std::hex
-                  << expectedFloatRaw << " but got " << floatRaw << "\n"
-                  << std::dec;
+        printf("Float fail for '%s'. Expected %x but got %x\n", num,
+               expectedFloatRaw, floatRaw);
       }
     }
 
@@ -120,14 +117,13 @@ int checkFile(char *inputFileName, int *totalFails, int *totalBitDiffs,
         curFails++;
       }
       if (curFails + curBitDiffs < 10) {
-        std::cout << "Double fail for '" << num << "'. Expected " << std::hex
-                  << expectedDoubleRaw << " but got " << doubleRaw << "\n"
-                  << std::dec;
+        printf("Double fail for '%s'. Expected %lx but got %lx\n", num,
+               expectedDoubleRaw, doubleRaw);
       }
     }
   }
 
-  fileStream.close();
+  fclose(fileHandle);
 
   *totalBitDiffs += curBitDiffs;
   *totalFails += curFails;
@@ -151,7 +147,7 @@ int main(int argc, char *argv[]) {
 
   int total = 0;
   for (int i = 1; i < argc; i++) {
-    std::cout << "Starting file " << argv[i] << "\n";
+    printf("Starting file %s\n", argv[i]);
     int curResult =
         checkFile(argv[i], &fails, &bitdiffs, detailedBitDiffs, &total);
     if (curResult == 1) {
@@ -161,13 +157,16 @@ int main(int argc, char *argv[]) {
       result = 2;
     }
   }
-  std::cout << "Results:\n"
-            << "Total significant failed conversions: " << fails << "\n"
-            << "Total conversions off by +/- 1 bit: " << bitdiffs << "\n"
-            << "\t" << detailedBitDiffs[0] << "\tfloat low\n"
-            << "\t" << detailedBitDiffs[1] << "\tfloat high\n"
-            << "\t" << detailedBitDiffs[2] << "\tdouble low\n"
-            << "\t" << detailedBitDiffs[3] << "\tdouble high\n"
-            << "Total lines: " << total << "\n";
+  printf("Results:\n"
+         "Total significant failed conversions: %d\n"
+         "Total conversions off by +/- 1 bit: %d\n"
+         "\t%d\tfloat low\n"
+         "\t%d\tfloat high\n"
+         "\t%d\tdouble low\n"
+         "\t%d\tdouble high\n"
+         "Total lines: %d\n",
+         fails, bitdiffs, detailedBitDiffs[0], detailedBitDiffs[1],
+         detailedBitDiffs[2], detailedBitDiffs[3], total);
+
   return result;
 }
