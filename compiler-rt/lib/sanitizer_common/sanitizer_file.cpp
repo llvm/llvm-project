@@ -203,7 +203,7 @@ bool ReadFileToVector(const char *file_name,
 
 static const char kPathSeparator = SANITIZER_WINDOWS ? ';' : ':';
 
-char *FindPathToBinary(const char *name, const char *env_string) {
+char *FindPathToBinary(const char *name) {
   if (FileExists(name)) {
     return internal_strdup(name);
   }
