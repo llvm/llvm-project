@@ -29,41 +29,40 @@ define void @pr15344(ptr noalias %ar, ptr noalias %ar2, i32 %exit.limit, i1 %con
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x double> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <2 x double> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP4]] = fadd fast <2 x double> [[VEC_PHI]], splat (double 1.000000e+00)
-; CHECK-NEXT:    [[TMP5]] = fadd fast <2 x double> [[VEC_PHI2]], splat (double 1.000000e+00)
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[AR2]], i32 [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[TMP6]], i32 2
-; CHECK-NEXT:    store <2 x float> splat (float 2.000000e+00), ptr [[TMP7]], align 4, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
-; CHECK-NEXT:    store <2 x float> splat (float 2.000000e+00), ptr [[TMP8]], align 4, !alias.scope [[META0]], !noalias [[META3]]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x double> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <2 x double> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP2]] = fadd fast <2 x double> [[VEC_PHI]], splat (double 1.000000e+00)
+; CHECK-NEXT:    [[TMP3]] = fadd fast <2 x double> [[VEC_PHI2]], splat (double 1.000000e+00)
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[AR2]], i32 [[INDEX]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[TMP4]], i32 2
+; CHECK-NEXT:    store <2 x float> splat (float 2.000000e+00), ptr [[TMP5]], align 4, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
+; CHECK-NEXT:    store <2 x float> splat (float 2.000000e+00), ptr [[TMP6]], align 4, !alias.scope [[META0]], !noalias [[META3]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd fast <2 x double> [[TMP5]], [[TMP4]]
-; CHECK-NEXT:    [[TMP10:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[BIN_RDX]])
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd fast <2 x double> [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[BIN_RDX]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[EXIT_LIMIT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT_LOOPEXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi double [ [[TMP10]], %[[MIDDLE_BLOCK]] ], [ 0.000000e+00, %[[LOOP_PREHEADER]] ], [ 0.000000e+00, %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi double [ [[TMP8]], %[[MIDDLE_BLOCK]] ], [ 0.000000e+00, %[[LOOP_PREHEADER]] ], [ 0.000000e+00, %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[LOOP_PREHEADER]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[RDX:%.*]] = phi double [ [[FADD:%.*]], %[[LOOP]] ], [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[GEP_AR:%.*]] = getelementptr inbounds [16 x double], ptr [[AR]], i32 0, i32 [[IV]]
-; CHECK-NEXT:    [[LD2:%.*]] = load double, ptr [[GEP_AR]], align 4
-; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[GEP_AR:%.*]] = getelementptr inbounds double, ptr [[AR]], i32 [[IV]]
+; CHECK-NEXT:    [[LD_AR:%.*]] = load double, ptr [[GEP_AR]], align 4
 ; CHECK-NEXT:    [[FADD]] = fadd fast double [[RDX]], 1.000000e+00
 ; CHECK-NEXT:    [[GEP_AR2:%.*]] = getelementptr inbounds float, ptr [[AR2]], i32 [[IV]]
 ; CHECK-NEXT:    store float 2.000000e+00, ptr [[GEP_AR2]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp eq i32 [[IV_NEXT]], [[EXIT_LIMIT]]
 ; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[EXIT_LOOPEXIT]], label %[[LOOP]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
-; CHECK-NEXT:    [[FADD_LCSSA:%.*]] = phi double [ [[FADD]], %[[LOOP]] ], [ [[TMP10]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[FADD_LCSSA:%.*]] = phi double [ [[FADD]], %[[LOOP]] ], [ [[TMP8]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[RET:%.*]] = phi double [ 0.000000e+00, %[[PH]] ], [ [[FADD_LCSSA]], %[[EXIT_LOOPEXIT]] ]
@@ -76,14 +75,14 @@ ph:
   br i1 %cond, label %loop, label %exit
 
 loop:
-  %rdx = phi double [ %fadd, %loop ], [ 0.0, %ph ]
-  %iv = phi i32 [ %iv.next, %loop ], [ 0, %ph ]
-  %gep.ar = getelementptr inbounds [16 x double], ptr %ar, i32 0, i32 %iv
-  %ld2 = load double, ptr %gep.ar, align 4
-  %iv.next = add nsw i32 %iv, 1
+  %rdx = phi double [ 0.0, %ph ], [ %fadd, %loop ]
+  %iv = phi i32 [ 0, %ph ], [ %iv.next, %loop ]
+  %gep.ar = getelementptr inbounds double, ptr %ar, i32 %iv
+  %ld.ar = load double, ptr %gep.ar, align 4
   %fadd = fadd fast double %rdx, 1.0
   %gep.ar2 = getelementptr inbounds float, ptr %ar2, i32 %iv
   store float 2.0, ptr %gep.ar2, align 4
+  %iv.next = add nsw i32 %iv, 1
   %exit.cond = icmp eq i32 %iv.next, %exit.limit
   br i1 %exit.cond, label %exit, label %loop
 
