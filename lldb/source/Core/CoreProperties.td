@@ -178,7 +178,7 @@ let Definition = "debugger" in {
     Desc<"Whether to show a statusline at the bottom of the terminal.">;
   def StatuslineFormat: Property<"statusline-format", "FormatEntity">,
     Global,
-    DefaultStringValue<"${ansi.bg.blue}${ansi.fg.black}{${target.file.basename}}{ | ${line.file.basename}:${line.number}:${line.column}}{ | ${thread.stop-reason}}{ | {${progress.count} }${progress.message}}">,
+    DefaultStringValue<"${ansi.negative}{${target.file.basename}}{ | ${line.file.basename}:${line.number}:${line.column}}{ | ${thread.stop-reason}}{ | {${progress.count} }${progress.message}}">,
     Desc<"The default statusline format string.">;
   def UseSourceCache: Property<"use-source-cache", "Boolean">,
     Global,

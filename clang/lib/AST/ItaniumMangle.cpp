@@ -5367,6 +5367,7 @@ recurse:
       MangleAlignofSizeofArg();
       break;
 
+    case UETT_CountOf:
     case UETT_VectorElements:
     case UETT_OpenMPRequiredSimdAlign:
     case UETT_VecStep:
@@ -6003,6 +6004,8 @@ void CXXNameMangler::mangleCXXDtorType(CXXDtorType T) {
   case Dtor_Comdat:
     Out << "D5";
     break;
+  case Dtor_VectorDeleting:
+    llvm_unreachable("Itanium ABI does not use vector deleting dtors");
   }
 }
 

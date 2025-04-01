@@ -7744,6 +7744,29 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
       Inst.setDesc(get(AMDGPU::IMPLICIT_DEF));
       return;
     }
+
+    // If this is a v2s copy src from vgpr16 to sgpr32,
+    // replace vgpr copy to subreg_to_reg
+    if (ST.useRealTrue16Insts() && Inst.isCopy() &&
+        Inst.getOperand(1).getReg().isVirtual() &&
+        RI.isVGPR(MRI, Inst.getOperand(1).getReg())) {
+      const TargetRegisterClass *SrcRegRC = getOpRegClass(Inst, 1);
+      if (16 == RI.getRegSizeInBits(*SrcRegRC) &&
+          32 == RI.getRegSizeInBits(*NewDstRC)) {
+        Register NewDstReg = MRI.createVirtualRegister(NewDstRC);
+        BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
+                get(TargetOpcode::SUBREG_TO_REG), NewDstReg)
+            .add(MachineOperand::CreateImm(0))
+            .add(Inst.getOperand(1))
+            .add(MachineOperand::CreateImm(AMDGPU::lo16));
+        Inst.eraseFromParent();
+
+        MRI.replaceRegWith(DstReg, NewDstReg);
+        addUsersToMoveToVALUWorklist(NewDstReg, MRI, Worklist);
+        return;
+      }
+    }
+
     Register NewDstReg = MRI.createVirtualRegister(NewDstRC);
     MRI.replaceRegWith(DstReg, NewDstReg);
     legalizeOperands(Inst, MDT);
@@ -7837,6 +7860,22 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
     assert(NewDstRC);
     NewDstReg = MRI.createVirtualRegister(NewDstRC);
     MRI.replaceRegWith(DstReg, NewDstReg);
+
+    // Check useMI of NewInstr. If used by a true16 instruction,
+    // add a lo16 subreg access if size mismatched
+    if (ST.useRealTrue16Insts() && NewDstRC == &AMDGPU::VGPR_32RegClass) {
+      for (MachineRegisterInfo::use_iterator I = MRI.use_begin(NewDstReg),
+                                             E = MRI.use_end();
+           I != E; ++I) {
+        MachineInstr &UseMI = *I->getParent();
+        unsigned UseMIOpcode = UseMI.getOpcode();
+        if (AMDGPU::isTrue16Inst(UseMIOpcode) &&
+            (16 ==
+             RI.getRegSizeInBits(*getOpRegClass(UseMI, I.getOperandNo())))) {
+          I->setSubReg(AMDGPU::lo16);
+        }
+      }
+    }
   }
   fixImplicitOperands(*NewInstr);
   // Legalize the operands

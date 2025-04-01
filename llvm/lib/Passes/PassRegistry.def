@@ -397,7 +397,6 @@ FUNCTION_PASS("kcfi", KCFIPass())
 FUNCTION_PASS("kernel-info", KernelInfoPrinter(TM))
 FUNCTION_PASS("lcssa", LCSSAPass())
 FUNCTION_PASS("libcalls-shrinkwrap", LibCallsShrinkWrapPass())
-FUNCTION_PASS("lint", LintPass())
 FUNCTION_PASS("load-store-vectorizer", LoadStoreVectorizerPass())
 FUNCTION_PASS("loop-data-prefetch", LoopDataPrefetchPass())
 FUNCTION_PASS("loop-distribute", LoopDistributePass())
@@ -423,7 +422,6 @@ FUNCTION_PASS("move-auto-init", MoveAutoInitPass())
 FUNCTION_PASS("nary-reassociate", NaryReassociatePass())
 FUNCTION_PASS("newgvn", NewGVNPass())
 FUNCTION_PASS("no-op-function", NoOpFunctionPass())
-FUNCTION_PASS("normalize", IRNormalizerPass())
 FUNCTION_PASS("objc-arc", ObjCARCOptPass())
 FUNCTION_PASS("objc-arc-contract", ObjCARCContractPass())
 FUNCTION_PASS("objc-arc-expand", ObjCARCExpandPass())
@@ -544,6 +542,11 @@ FUNCTION_PASS_WITH_PARAMS(
     "no-use-loop-info;use-loop-info;no-verify-fixpoint;verify-fixpoint;"
     "max-iterations=N")
 FUNCTION_PASS_WITH_PARAMS(
+    "lint", "LintPass",
+    [](bool AbortOnError) { return LintPass(AbortOnError); },
+    parseLintOptions,
+    "abort-on-error")
+FUNCTION_PASS_WITH_PARAMS(
     "loop-unroll", "LoopUnrollPass",
     [](LoopUnrollOptions Opts) { return LoopUnrollPass(Opts); },
     parseLoopUnrollOptions,
@@ -564,6 +567,11 @@ FUNCTION_PASS_WITH_PARAMS(
     "lower-matrix-intrinsics", "LowerMatrixIntrinsicsPass",
     [](bool Minimal) { return LowerMatrixIntrinsicsPass(Minimal); },
     parseLowerMatrixIntrinsicsPassOptions, "minimal")
+FUNCTION_PASS_WITH_PARAMS(
+    "normalize", "IRNormalizerPass",
+    [](IRNormalizerOptions Options) { return IRNormalizerPass(Options); },
+    parseIRNormalizerPassOptions,
+    "no-preserve-order;preserve-order;no-rename-all;rename-all;no-fold-all;fold-all;no-reorder-operands;reorder-operands")
 FUNCTION_PASS_WITH_PARAMS(
     "mldst-motion", "MergedLoadStoreMotionPass",
     [](MergedLoadStoreMotionOptions Opts) {
