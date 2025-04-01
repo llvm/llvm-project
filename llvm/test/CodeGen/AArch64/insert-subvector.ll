@@ -465,7 +465,7 @@ define <4 x i8> @load_v4i8_2_2(float %tmp, <4 x i8> %b, ptr %a) {
 ; CHECK-LABEL: load_v4i8_2_2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr h0, [x0]
-; CHECK-NEXT:    zip1 v2.8b, v0.8b, v0.8b
+; CHECK-NEXT:    ushll v2.8h, v0.8b, #0
 ; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    mov v0.s[1], v2.s[0]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0

@@ -97,9 +97,7 @@ define void @v3i8(ptr %p1, ptr %p2) {
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    ldr s0, [x0]
 ; CHECK-SD-NEXT:    ldr s1, [x1]
-; CHECK-SD-NEXT:    zip1 v0.8b, v0.8b, v0.8b
-; CHECK-SD-NEXT:    zip1 v1.8b, v1.8b, v0.8b
-; CHECK-SD-NEXT:    sub v0.4h, v0.4h, v1.4h
+; CHECK-SD-NEXT:    usubl v0.8h, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    uzp1 v1.8b, v0.8b, v0.8b
 ; CHECK-SD-NEXT:    umov w8, v0.h[2]
 ; CHECK-SD-NEXT:    str s1, [sp, #12]

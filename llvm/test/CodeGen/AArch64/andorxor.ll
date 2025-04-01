@@ -292,7 +292,7 @@ define void @and_v3i8(ptr %p1, ptr %p2) {
 ; CHECK-SD-NEXT:    ldr s0, [x0]
 ; CHECK-SD-NEXT:    ldr s1, [x1]
 ; CHECK-SD-NEXT:    zip1 v0.8b, v0.8b, v0.8b
-; CHECK-SD-NEXT:    zip1 v1.8b, v1.8b, v0.8b
+; CHECK-SD-NEXT:    zip1 v1.8b, v1.8b, v1.8b
 ; CHECK-SD-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    uzp1 v1.8b, v0.8b, v0.8b
 ; CHECK-SD-NEXT:    umov w8, v0.h[2]
@@ -340,7 +340,7 @@ define void @or_v3i8(ptr %p1, ptr %p2) {
 ; CHECK-SD-NEXT:    ldr s0, [x0]
 ; CHECK-SD-NEXT:    ldr s1, [x1]
 ; CHECK-SD-NEXT:    zip1 v0.8b, v0.8b, v0.8b
-; CHECK-SD-NEXT:    zip1 v1.8b, v1.8b, v0.8b
+; CHECK-SD-NEXT:    zip1 v1.8b, v1.8b, v1.8b
 ; CHECK-SD-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    uzp1 v1.8b, v0.8b, v0.8b
 ; CHECK-SD-NEXT:    umov w8, v0.h[2]
@@ -388,7 +388,7 @@ define void @xor_v3i8(ptr %p1, ptr %p2) {
 ; CHECK-SD-NEXT:    ldr s0, [x0]
 ; CHECK-SD-NEXT:    ldr s1, [x1]
 ; CHECK-SD-NEXT:    zip1 v0.8b, v0.8b, v0.8b
-; CHECK-SD-NEXT:    zip1 v1.8b, v1.8b, v0.8b
+; CHECK-SD-NEXT:    zip1 v1.8b, v1.8b, v1.8b
 ; CHECK-SD-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    uzp1 v1.8b, v0.8b, v0.8b
 ; CHECK-SD-NEXT:    umov w8, v0.h[2]
