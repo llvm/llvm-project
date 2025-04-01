@@ -1208,7 +1208,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     MS.initializeCallbacks(*F.getParent(), TLI);
     FnPrologueEnd =
         IRBuilder<>(&F.getEntryBlock(), F.getEntryBlock().getFirstNonPHIIt())
-            .CreateIntrinsic(Intrinsic::donothing, {}, {});
+            .CreateIntrinsic(Intrinsic::donothing, {});
 
     if (MS.CompileKernel) {
       IRBuilder<> IRB(FnPrologueEnd);
@@ -3552,8 +3552,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Function *ShadowFn = Intrinsic::getOrInsertDeclaration(
         F.getParent(), getSignedPackIntrinsic(I.getIntrinsicID()));
 
-    Value *S =
-        IRB.CreateCall(ShadowFn, {S1_ext, S2_ext}, "_msprop_vector_pack");
+    Value *S = IRB.CreateIntrinsic(getSignedPackIntrinsic(I.getIntrinsicID()),
+                                   {S1_ext, S2_ext}, /*FMFSource=*/nullptr,
+                                   "_msprop_vector_pack");
     if (MMXEltSizeInBits)
       S = IRB.CreateBitCast(S, getShadowTy(&I));
     setShadow(&I, S);

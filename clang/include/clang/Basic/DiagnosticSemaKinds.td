@@ -2733,7 +2733,7 @@ def note_final_dtor_non_final_class_silence : Note<
   "mark %0 as '%select{final|sealed}1' to silence this warning">;
 def warn_unnecessary_virtual_specifier : Warning<
   "virtual method %0 is inside a 'final' class and can never be overridden">,
-  InGroup<WarnUnnecessaryVirtualSpecifier>, DefaultIgnore;
+  InGroup<WarnUnnecessaryVirtualSpecifier>;
 
 // C++11 attributes
 def err_repeat_attribute : Error<"%0 attribute cannot be repeated">;
@@ -7031,10 +7031,10 @@ def err_offsetof_incomplete_type : Error<
 def err_offsetof_record_type : Error<
   "offsetof requires struct, union, or class type, %0 invalid">;
 def err_offsetof_array_type : Error<"offsetof requires array type, %0 invalid">;
-def ext_offsetof_non_pod_type : ExtWarn<"offset of on non-POD type %0">,
+def ext_offsetof_non_pod_type : ExtWarn<"'offsetof' on non-POD type %0">,
   InGroup<InvalidOffsetof>;
 def ext_offsetof_non_standardlayout_type : ExtWarn<
-  "offset of on non-standard-layout type %0">, InGroup<InvalidOffsetof>;
+  "'offsetof' on non-standard-layout type %0">, InGroup<InvalidOffsetof>;
 def err_offsetof_bitfield : Error<"cannot compute offset of bit-field %0">;
 def err_offsetof_field_of_virtual_base : Error<
   "invalid application of 'offsetof' to a field of a virtual base">;

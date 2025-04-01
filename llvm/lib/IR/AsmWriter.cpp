@@ -1896,6 +1896,7 @@ struct MDFieldPrinter {
                           DICompileUnit::DebugNameTableKind NTK);
   void printMemorySpace(StringRef Name, dwarf::MemorySpace MS);
   template <class RangeT> void printMetadataList(StringRef Name, RangeT Range);
+  void printFixedPointKind(StringRef Name, DIFixedPointType::FixedPointKind V);
 };
 
 } // end anonymous namespace
@@ -2059,6 +2060,11 @@ void MDFieldPrinter::printMetadataList(StringRef Name, RangeT Range) {
   Out << "}";
 }
 
+void MDFieldPrinter::printFixedPointKind(StringRef Name,
+                                         DIFixedPointType::FixedPointKind V) {
+  Out << FS << Name << ": " << DIFixedPointType::fixedPointKindString(V);
+}
+
 template <class IntTy, class Stringifier>
 void MDFieldPrinter::printDwarfEnum(StringRef Name, IntTy Value,
                                     Stringifier toString, bool ShouldSkipZero) {
@@ -2217,6 +2223,29 @@ static void writeDIBasicType(raw_ostream &Out, const DIBasicType *N,
                          dwarf::AttributeEncodingString);
   Printer.printInt("num_extra_inhabitants", N->getNumExtraInhabitants());
   Printer.printDIFlags("flags", N->getFlags());
+  Out << ")";
+}
+
+static void writeDIFixedPointType(raw_ostream &Out, const DIFixedPointType *N,
+                                  AsmWriterContext &) {
+  Out << "!DIFixedPointType(";
+  MDFieldPrinter Printer(Out);
+  if (N->getTag() != dwarf::DW_TAG_base_type)
+    Printer.printTag(N);
+  Printer.printString("name", N->getName());
+  Printer.printInt("size", N->getSizeInBits());
+  Printer.printInt("align", N->getAlignInBits());
+  Printer.printDwarfEnum("encoding", N->getEncoding(),
+                         dwarf::AttributeEncodingString);
+  Printer.printDIFlags("flags", N->getFlags());
+  Printer.printFixedPointKind("kind", N->getKind());
+  if (N->isRational()) {
+    bool IsUnsigned = !N->isSigned();
+    Printer.printAPInt("numerator", N->getNumerator(), IsUnsigned, false);
+    Printer.printAPInt("denominator", N->getDenominator(), IsUnsigned, false);
+  } else {
+    Printer.printInt("factor", N->getFactor());
+  }
   Out << ")";
 }
 
