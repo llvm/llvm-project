@@ -738,13 +738,14 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   auto ts_or_err = target->GetScratchTypeSystemForLanguage(
       lldb::eLanguageTypeSwift, /*create_on_demand=*/true);
   if (!ts_or_err)
-    return error("could not create a Swift scratch context: ",
+    return error("could not create a Swift scratch typesystem",
                  llvm::toString(ts_or_err.takeError()).c_str());
   m_swift_scratch_ctx =
       std::static_pointer_cast<TypeSystemSwiftTypeRefForExpressions>(
           *ts_or_err);
   if (!m_swift_scratch_ctx)
-    return error("could not create a Swift scratch context: ", "unknown error");
+    return error("could not create a Swift scratch typesystem",
+                 "unknown error");
   // Notify SwiftASTContext that this is a Playground.
   if (m_options.GetPlaygroundTransformEnabled())
     m_swift_scratch_ctx->SetCompilerOptions("");
@@ -765,12 +766,13 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
         std::static_pointer_cast<SwiftASTContextForExpressions>(swift_ast_ctx);
 
   if (!m_swift_ast_ctx)
-    return error("could not create a Swift AST context");
+    return error("could not initialize Swift compiler",
+                 "run 'swift-healthcheck' for more details");
 
   if (m_swift_ast_ctx->HasFatalErrors()) {
     m_swift_ast_ctx->PrintDiagnostics(diagnostic_manager);
-    LLDB_LOG(log, "Swift AST context is in a fatal error state");
-    return false;
+    return error("Swift AST context is in a fatal error state",
+                 "run 'swift-healthcheck' for more details");
   }
   
   // This may destroy the scratch context.
