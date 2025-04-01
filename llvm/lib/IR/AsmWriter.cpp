@@ -177,7 +177,7 @@ static OrderMap orderModule(const Module *M) {
         // are wrapped in debug-info.
         for (const DbgRecord &R : I.getDbgRecordRange()) {
           const DbgVariableRecord *VariableRecord =
-            dyn_cast<const DbgVariableRecord>(&R);
+              dyn_cast<const DbgVariableRecord>(&R);
           if (!VariableRecord)
             continue;
           for (const Value *V : VariableRecord->location_ops())
