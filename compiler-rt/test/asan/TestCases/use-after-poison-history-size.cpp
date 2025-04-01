@@ -22,13 +22,13 @@
 extern "C" void __asan_poison_memory_region(void *, size_t);
 extern "C" void __asan_unpoison_memory_region(void *, size_t);
 
-void i_poisoned_your_memory(char *x) {
+void honey_ive_poisoned_the_memory(char *x) {
   __asan_poison_memory_region(x, 64);       // A
   __asan_unpoison_memory_region(x + 16, 8); // B
   __asan_poison_memory_region(x + 24, 16);  // C
 }
 
-void foo(char *x) { i_poisoned_your_memory(x); }
+void foo(char *x) { honey_ive_poisoned_the_memory(x); }
 
 int main(int argc, char **argv) {
   char *x = new char[64];
@@ -46,8 +46,8 @@ int main(int argc, char **argv) {
   // CHECK-D: try the experimental setting ASAN_OPTIONS=poison_history_size=
 
   // CHECK-AC: Memory was manually poisoned by thread T0:
-  // CHECK-A: i_poisoned_your_memory{{.*}}use-after-poison-history-size.cpp:[[@LINE-23]]
-  // CHECK-C: i_poisoned_your_memory{{.*}}use-after-poison-history-size.cpp:[[@LINE-22]]
+  // CHECK-A: honey_ive_poisoned_the_memory{{.*}}use-after-poison-history-size.cpp:[[@LINE-23]]
+  // CHECK-C: honey_ive_poisoned_the_memory{{.*}}use-after-poison-history-size.cpp:[[@LINE-22]]
   // CHECK-AC: foo{{.*}}use-after-poison-history-size.cpp:[[@LINE-20]]
   // CHECK-AC: main{{.*}}use-after-poison-history-size.cpp:[[@LINE-16]]
   // CHECK-BDE-NOT: Memory was manually poisoned by thread T0:
