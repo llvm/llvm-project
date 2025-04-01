@@ -5170,9 +5170,6 @@ bool Type::isHLSLIntangibleType() const {
   CXXRecordDecl *RD = RT->getAsCXXRecordDecl();
   assert(RD != nullptr &&
          "all HLSL structs and classes should be CXXRecordDecl");
-
-  if (!RD->isCompleteDefinition())
-    return false;
   assert(RD->isCompleteDefinition() && "expecting complete type");
   return RD->isHLSLIntangible();
 }
