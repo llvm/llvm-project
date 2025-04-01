@@ -536,10 +536,14 @@ class DAPTestCaseBase(TestBase):
         # This function accepts data in decimal and hexadecimal format,
         # converts it to a Base64 string, and send it to the DAP,
         # which expects Base64 encoded data.
-        encodedData = "" if data is None else base64.b64encode(
-            # (bit_length + 7 (rounding up to nearest byte) ) //8 = converts to bytes.
-            data.to_bytes((data.bit_length() + 7) // 8, "little")
-        ).decode()
+        encodedData = (
+            ""
+            if data is None
+            else base64.b64encode(
+                # (bit_length + 7 (rounding up to nearest byte) ) //8 = converts to bytes.
+                data.to_bytes((data.bit_length() + 7) // 8, "little")
+            ).decode()
+        )
         response = self.dap_server.request_writeMemory(
             memoryReference, encodedData, offset=offset, allowPartial=allowPartial
         )

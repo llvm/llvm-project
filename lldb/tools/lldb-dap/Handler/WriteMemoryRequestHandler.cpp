@@ -105,10 +105,8 @@ void WriteMemoryRequestHandler::operator()(
                                         memoryReference.str());
     return;
   }
-
-  lldb::addr_t address = *addr_opt;
-  lldb::addr_t address_offset =
-      address + GetInteger<uint64_t>(arguments, "offset").value_or(0);
+  lldb::addr_t address =
+      *addr_opt + GetInteger<uint64_t>(arguments, "offset").value_or(0);
 
   llvm::StringRef data64 = GetString(arguments, "data").value_or("");
   if (data64.empty()) {
@@ -133,27 +131,32 @@ void WriteMemoryRequestHandler::operator()(
   lldb::SBError write_error;
   uint64_t bytes_written = 0;
 
-  // Write the memory
+  // Write the memory.
   if (!output.empty()) {
     lldb::SBProcess process = dap.target.GetProcess();
     // If 'allowPartial' is false or missing, a debug adapter should attempt to
     // verify the region is writable before writing, and fail the response if it
     // is not.
-    if (allowPartial == false) {
-
+    if (!allowPartial) {
+      // Compute the end of the write range.
+      lldb::addr_t end_address = address + output.size();
+      // Get memory region info for the given address.
+      // This provides the region's base, end, and permissions
+      // (read/write/executable).
       lldb::SBMemoryRegionInfo region_info;
-      lldb::SBError error =
-          process.GetMemoryRegionInfo(address_offset, region_info);
-      if (!error.Success() || !region_info.IsWritable()) {
-        dap.SendErrorResponse(response, "Memory 0x" +
-                                            llvm::utohexstr(address_offset) +
+      lldb::SBError error = process.GetMemoryRegionInfo(address, region_info);
+      // Fail if the region info retrieval fails, is not writable, or the range
+      // exceeds the region.
+      if (!error.Success() || !region_info.IsWritable() ||
+          end_address > region_info.GetRegionEnd()) {
+        dap.SendErrorResponse(response, "Memory 0x" + llvm::utohexstr(address) +
                                             " region is not writable");
         return;
       }
     }
 
     bytes_written =
-        process.WriteMemory(address_offset, static_cast<void *>(output.data()),
+        process.WriteMemory(address, static_cast<void *>(output.data()),
                             output.size(), write_error);
   }
 

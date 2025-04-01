@@ -131,8 +131,8 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
         ptr_deref = self.dap_server.request_evaluate("not_a_ptr")["body"]
         memref = ptr_deref["memoryReference"]
 
-        # Write the Base64-encoded string "Mg==", which decodes to binary 0x32
-        # which is decimal 50 and corresponds to the ASCII character '2'.
+        # Write the decimal value 50 (0x32 in hexadecimal) to memory.
+        # This corresponds to the ASCII character '2' and encodes to Base64 as "Mg==".
         mem_response = self.writeMemory(memref, 50, 0, True)
         self.assertEqual(mem_response["success"], True)
         self.assertEqual(mem_response["body"]["bytesWritten"], 1)
@@ -142,6 +142,19 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
         mem_response = self.dap_server.request_readMemory(memref, 0, 1)
         self.assertEqual(mem_response["success"], True)
         self.assertEqual(mem_response["body"]["data"], "Mg==")
+
+        # Write the decimal value 100 (0x64 in hexadecimal) to memory.
+        # This corresponds to the ASCII character 'd' and encodes to Base64 as "ZA==".
+        # allowPartial=False
+        mem_response = self.writeMemory(memref, 100, 0, False)
+        self.assertEqual(mem_response["success"], True)
+        self.assertEqual(mem_response["body"]["bytesWritten"], 1)
+
+        # Read back the modified memory and verify that the written data matches
+        # the expected result.
+        mem_response = self.dap_server.request_readMemory(memref, 0, 1)
+        self.assertEqual(mem_response["success"], True)
+        self.assertEqual(mem_response["body"]["data"], "ZA==")
 
         # Memory write failed for 0x0.
         mem_response = self.writeMemory("0x0", 50, 0, True)
