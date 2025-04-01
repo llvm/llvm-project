@@ -876,7 +876,7 @@ define i32 @reduction_min(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK:       pred.load.continue6:
 ; CHECK-NEXT:    [[TMP23:%.*]] = phi <4 x i32> [ [[TMP17]], [[PRED_LOAD_CONTINUE4]] ], [ [[TMP22]], [[PRED_LOAD_IF5]] ]
 ; CHECK-NEXT:    [[TMP24:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[VEC_PHI]], <4 x i32> [[TMP23]])
-; CHECK-NEXT:    [[TMP25]] = select <4 x i1> [[TMP0]], <4 x i32> [[TMP24]], <4 x i32> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP25]] = select <4 x i1> [[TMP0]], <4 x i32> [[TMP24]], <4 x i32> [[TMP23]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i16> [[VEC_IND]], splat (i16 4)
 ; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq i32 [[INDEX_NEXT]], 260
@@ -962,7 +962,7 @@ define i32 @reduction_max(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK:       pred.load.continue6:
 ; CHECK-NEXT:    [[TMP23:%.*]] = phi <4 x i32> [ [[TMP17]], [[PRED_LOAD_CONTINUE4]] ], [ [[TMP22]], [[PRED_LOAD_IF5]] ]
 ; CHECK-NEXT:    [[TMP24:%.*]] = call <4 x i32> @llvm.umax.v4i32(<4 x i32> [[VEC_PHI]], <4 x i32> [[TMP23]])
-; CHECK-NEXT:    [[TMP25]] = select <4 x i1> [[TMP0]], <4 x i32> [[TMP24]], <4 x i32> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP25]] = select <4 x i1> [[TMP0]], <4 x i32> [[TMP24]], <4 x i32> [[TMP23]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i16> [[VEC_IND]], splat (i16 4)
 ; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq i32 [[INDEX_NEXT]], 260

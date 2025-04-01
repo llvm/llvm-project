@@ -990,6 +990,26 @@ static VPValue *simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
                          m_LogicalAnd(m_Deferred(X), m_Not(m_Deferred(Y))))))
     return X;
 
+  // select c1, (select c2, x, y), x -> select (c1 & c2), x, y
+  VPBuilder Builder(&R);
+  VPValue *C1, *C2;
+  if (match(&R, m_Select(m_VPValue(C1),
+                         m_Select(m_VPValue(C2), m_VPValue(X), m_VPValue(Y)),
+                         m_Deferred(X))) &&
+      !R.getOperand(1)->hasMoreThanOneUniqueUser()) {
+    auto *S = Builder.createSelect(Builder.createLogicalAnd(C1, C2), X, Y,
+                                   R.getDebugLoc());
+    S->setUnderlyingValue(R.getVPSingleValue()->getUnderlyingValue());
+    return S;
+  }
+
+  // select !c, x, y -> select c, y, x
+  if (match(&R, m_Select(m_Not(m_VPValue(C1)), m_VPValue(X), m_VPValue(Y)))) {
+    auto *S = Builder.createSelect(C1, Y, X, R.getDebugLoc());
+    S->setUnderlyingValue(R.getVPSingleValue()->getUnderlyingValue());
+    return S;
+  }
+
   if (match(&R, m_c_Mul(m_VPValue(A), m_SpecificInt(1))))
     return A;
 
@@ -1075,38 +1095,17 @@ void VPlanTransforms::simplifyBlends(VPlan &Plan) {
         }
       }
 
-      SmallVector<VPValue *, 4> OperandsWithMask;
-      OperandsWithMask.push_back(Blend->getIncomingValue(StartIndex));
-
+      VPBuilder Builder(&R);
+      VPValue *Select = Blend->getIncomingValue(StartIndex);
       for (unsigned I = 0; I != Blend->getNumIncomingValues(); ++I) {
         if (I == StartIndex)
           continue;
-        OperandsWithMask.push_back(Blend->getIncomingValue(I));
-        OperandsWithMask.push_back(Blend->getMask(I));
+        Select =
+            Builder.createSelect(Blend->getMask(I), Blend->getIncomingValue(I),
+                                 Select, R.getDebugLoc(), "predphi");
+        Select->setUnderlyingValue(Blend->getUnderlyingValue());
       }
-
-      auto *NewBlend = new VPBlendRecipe(
-          cast<PHINode>(Blend->getUnderlyingValue()), OperandsWithMask);
-      NewBlend->insertBefore(&R);
-
-      VPValue *DeadMask = Blend->getMask(StartIndex);
-      Blend->replaceAllUsesWith(NewBlend);
-      Blend->eraseFromParent();
-      recursivelyDeleteDeadRecipes(DeadMask);
-
-      /// Simplify BLEND %a, %b, Not(%mask) -> BLEND %b, %a, %mask.
-      VPValue *NewMask;
-      if (NewBlend->getNumOperands() == 3 &&
-          match(NewBlend->getMask(1), m_Not(m_VPValue(NewMask)))) {
-        VPValue *Inc0 = NewBlend->getOperand(0);
-        VPValue *Inc1 = NewBlend->getOperand(1);
-        VPValue *OldMask = NewBlend->getOperand(2);
-        NewBlend->setOperand(0, Inc1);
-        NewBlend->setOperand(1, Inc0);
-        NewBlend->setOperand(2, NewMask);
-        if (OldMask->getNumUsers() == 0)
-          cast<VPInstruction>(OldMask)->eraseFromParent();
-      }
+      Blend->replaceAllUsesWith(Select);
     }
   }
 }
