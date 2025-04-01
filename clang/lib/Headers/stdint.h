@@ -322,20 +322,20 @@ typedef __UINTMAX_TYPE__ uintmax_t;
  */
 
 #ifdef __int_least64_t
-#define INT64_C(v) __INT64(v)
-#define UINT64_C(v) __UINT64(v)
+#define INT64_C(v) __INT64_C(v)
+#define UINT64_C(v) __UINT64_C(v)
 #endif /* __int_least64_t */
 
 
 #ifdef __INT56_TYPE__
-#define INT56_C(v) __INT56(v)
-#define UINT56_C(v) __UINT56(v)
+#define INT56_C(v) __INT56_C(v)
+#define UINT56_C(v) __UINT56_C(v)
 #endif /* __INT56_TYPE__ */
 
 
 #ifdef __INT48_TYPE__
-#define INT48_C(v) __INT48(v)
-#define UINT48_C(v) __UINT48(v)
+#define INT48_C(v) __INT48_C(v)
+#define UINT48_C(v) __UINT48_C(v)
 #endif /* __INT48_TYPE__ */
 
 
