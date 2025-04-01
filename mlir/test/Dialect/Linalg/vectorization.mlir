@@ -666,7 +666,7 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 // This case is supported because low padding `%l0` is applied on
-// a unit dimentsion which is supported, non unit result dimension low
+// a unit dimension which is supported, non unit result dimension low
 // padding is currently unsupported.
 //  CHECK-LABEL: func @test_masked_vectorize_unit_lowpad
 func.func @test_masked_vectorize_unit_lowpad(
