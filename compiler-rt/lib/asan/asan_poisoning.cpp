@@ -20,6 +20,7 @@
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_interface_internal.h"
 #include "sanitizer_common/sanitizer_libc.h"
+#include "sanitizer_common/sanitizer_ring_buffer.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 
 namespace __asan {

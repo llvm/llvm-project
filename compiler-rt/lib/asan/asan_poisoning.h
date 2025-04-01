@@ -19,7 +19,6 @@
 #include "asan_mapping.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_platform.h"
-#include "sanitizer_common/sanitizer_ring_buffer.h"
 
 namespace __asan {
 
