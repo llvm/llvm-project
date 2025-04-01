@@ -1,6 +1,6 @@
 # RUN: llvm-mc -triple=aarch64 -filetype=obj %s -o %t1.o
-# RUN: llvm-mc -triple=aarch64 -filetype=obj %p/Inputs/build-attributes-to-gnu_properties-2.s -o %t2.o
-# RUN: llvm-mc -triple=aarch64 -filetype=obj %p/Inputs/build-attributes-to-gnu_properties-3.s -o %t3.o
+# RUN: llvm-mc -triple=aarch64 -filetype=obj %p/Inputs/build-attributes-merged-2.s -o %t2.o
+# RUN: llvm-mc -triple=aarch64 -filetype=obj %p/Inputs/build-attributes-merged-3.s -o %t3.o
 # RUN: ld.lld -r %t1.o %t2.o %t3.o -o %t.merged.o
 # RUN: llvm-readelf -n %t.merged.o | FileCheck %s
 

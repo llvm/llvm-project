@@ -6,10 +6,14 @@
   .asciz "GNU"      // Name
   .p2align 3
 begin:
+  .long 0xc0000000 // GNU_PROPERTY_AARCH64_FEATURE_1_AND
+  .long 4
+  .long 3          // GNU_PROPERTY_AARCH64_FEATURE_1_BTI and PAC
+  .long 0
   # PAuth ABI property note
   .long 0xc0000001  // Type: GNU_PROPERTY_AARCH64_FEATURE_PAUTH
   .long 16          // Data size
-  .quad 49           // PAuth ABI platform
-  .quad 19           // PAuth ABI version
+  .quad 49          // PAuth ABI platform
+  .quad 19          // PAuth ABI version
   .p2align 3        // Align to 8 byte for 64 bit
 end:
