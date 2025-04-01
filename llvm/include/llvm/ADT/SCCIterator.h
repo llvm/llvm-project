@@ -354,10 +354,10 @@ scc_member_iterator<GraphT, GT>::scc_member_iterator(
   // Walk through SortedEdges to initialize the queue, instead of using NodeInfoMap
   // to ensure an ordered deterministic push.
   for (auto *Edge : SortedEdges) {
-    if (!NodeInfoMap[Edge->Source].Visited &&
-        NodeInfoMap[Edge->Source].IncomingMSTEdges.empty()) {
+    auto &Info = NodeInfoMap[Edge->Source];
+    if (!Info.Visited && Info.IncomingMSTEdges.empty()) {
       Queue.push(Edge->Source);
-      NodeInfoMap[Edge->Source].Visited = true;
+      Info.Visited = true;
     }
   }
 
@@ -366,9 +366,9 @@ scc_member_iterator<GraphT, GT>::scc_member_iterator(
     Queue.pop();
     Nodes.push_back(Node);
     for (auto &Edge : Node->Edges) {
-      NodeInfoMap[Edge.Target].IncomingMSTEdges.erase(&Edge);
-      if (MSTEdges.count(&Edge) &&
-          NodeInfoMap[Edge.Target].IncomingMSTEdges.empty()) {
+      NodeInfo &Info = NodeInfoMap[Edge.Target];
+      Info.IncomingMSTEdges.erase(&Edge);
+      if (MSTEdges.count(&Edge) && Info.IncomingMSTEdges.empty()) {
         Queue.push(Edge.Target);
       }
     }

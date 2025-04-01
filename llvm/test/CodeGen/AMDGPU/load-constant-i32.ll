@@ -846,29 +846,29 @@ define amdgpu_kernel void @constant_load_v11i32(ptr addrspace(1) %out, ptr addrs
 ;
 ; GFX7-HSA-LABEL: constant_load_v11i32:
 ; GFX7-HSA:       ; %bb.0: ; %entry
-; GFX7-HSA-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; GFX7-HSA-NEXT:    s_load_dwordx4 s[8:11], s[8:9], 0x0
 ; GFX7-HSA-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-HSA-NEXT:    s_load_dwordx4 s[12:15], s[2:3], 0x8
-; GFX7-HSA-NEXT:    s_load_dwordx8 s[4:11], s[2:3], 0x0
-; GFX7-HSA-NEXT:    s_add_u32 s2, s0, 16
-; GFX7-HSA-NEXT:    s_addc_u32 s3, s1, 0
-; GFX7-HSA-NEXT:    v_mov_b32_e32 v8, s3
-; GFX7-HSA-NEXT:    v_mov_b32_e32 v7, s2
+; GFX7-HSA-NEXT:    s_load_dwordx4 s[12:15], s[10:11], 0x8
+; GFX7-HSA-NEXT:    s_load_dwordx8 s[0:7], s[10:11], 0x0
+; GFX7-HSA-NEXT:    s_add_u32 s10, s8, 16
+; GFX7-HSA-NEXT:    s_addc_u32 s11, s9, 0
+; GFX7-HSA-NEXT:    v_mov_b32_e32 v7, s10
+; GFX7-HSA-NEXT:    v_mov_b32_e32 v8, s11
 ; GFX7-HSA-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-HSA-NEXT:    v_mov_b32_e32 v0, s8
-; GFX7-HSA-NEXT:    v_mov_b32_e32 v1, s9
-; GFX7-HSA-NEXT:    v_mov_b32_e32 v2, s10
-; GFX7-HSA-NEXT:    v_mov_b32_e32 v3, s11
-; GFX7-HSA-NEXT:    flat_store_dwordx4 v[7:8], v[0:3]
-; GFX7-HSA-NEXT:    v_mov_b32_e32 v8, s1
 ; GFX7-HSA-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-HSA-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX7-HSA-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX7-HSA-NEXT:    v_mov_b32_e32 v3, s7
-; GFX7-HSA-NEXT:    v_mov_b32_e32 v7, s0
-; GFX7-HSA-NEXT:    s_add_u32 s0, s0, 32
 ; GFX7-HSA-NEXT:    flat_store_dwordx4 v[7:8], v[0:3]
-; GFX7-HSA-NEXT:    s_addc_u32 s1, s1, 0
+; GFX7-HSA-NEXT:    v_mov_b32_e32 v7, s8
+; GFX7-HSA-NEXT:    v_mov_b32_e32 v0, s0
+; GFX7-HSA-NEXT:    v_mov_b32_e32 v1, s1
+; GFX7-HSA-NEXT:    v_mov_b32_e32 v2, s2
+; GFX7-HSA-NEXT:    v_mov_b32_e32 v3, s3
+; GFX7-HSA-NEXT:    v_mov_b32_e32 v8, s9
+; GFX7-HSA-NEXT:    s_add_u32 s0, s8, 32
+; GFX7-HSA-NEXT:    flat_store_dwordx4 v[7:8], v[0:3]
+; GFX7-HSA-NEXT:    s_addc_u32 s1, s9, 0
 ; GFX7-HSA-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-HSA-NEXT:    v_mov_b32_e32 v4, s12
 ; GFX7-HSA-NEXT:    v_mov_b32_e32 v5, s13

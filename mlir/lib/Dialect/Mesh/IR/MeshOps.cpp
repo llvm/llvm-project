@@ -269,7 +269,7 @@ ShapedType mesh::shardShapedType(ShapedType shape, MeshOp mesh,
 
 Type mesh::shardType(Type type, MeshOp mesh, MeshSharding sharding) {
   RankedTensorType rankedTensorType = dyn_cast<RankedTensorType>(type);
-  if (rankedTensorType) {
+  if (rankedTensorType && !rankedTensorType.getShape().empty()) {
     return shardShapedType(rankedTensorType, mesh, sharding);
   }
   return type;
@@ -831,12 +831,19 @@ MeshSharding MeshSharding::get(::mlir::FlatSymbolRefAttr mesh_,
 // mesh.shard_shape
 //===----------------------------------------------------------------------===//
 
+void ShardShapeOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  setNameFn(getResult()[0], "shard_shape");
+}
+
 void ShardShapeOp::build(::mlir::OpBuilder &odsBuilder,
                          ::mlir::OperationState &odsState,
-                         ::llvm::ArrayRef<int64_t> shape,
-                         ::mlir::Value sharding, ::mlir::Value device) {
-  SmallVector<mlir::Type> resType(shape.size(), odsBuilder.getIndexType());
-  build(odsBuilder, odsState, resType, shape, sharding, device);
+                         ::llvm::ArrayRef<int64_t> dims,
+                         ArrayRef<Value> dims_dyn, ::mlir::Value sharding,
+                         ::mlir::ValueRange device) {
+  SmallVector<mlir::Type> resType(dims.size(), odsBuilder.getIndexType());
+  build(odsBuilder, odsState, resType, dims, dims_dyn, sharding,
+        SmallVector<int64_t>(device.size(), ShapedType::kDynamic), device);
 }
 
 //===----------------------------------------------------------------------===//

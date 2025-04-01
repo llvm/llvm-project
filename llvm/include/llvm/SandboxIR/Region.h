@@ -114,8 +114,13 @@ class Region {
   /// ID (for later deregistration) of the "erase instruction" callback.
   Context::CallbackID EraseInstCB;
 
-  // TODO: Add cost modeling.
-  // TODO: Add a way to encode/decode region info to/from metadata.
+  /// Adds I to the set.
+  void add(Instruction *I);
+  /// Removes I from the set.
+  void remove(Instruction *I);
+  friend class Context; // The callbacks need to call add() and remove().
+  friend class RegionInternalsAttorney; // For unit tests.
+  friend class RegionsFromBBs;          // For add().
 
   /// Set \p I as the \p Idx'th element in the auxiliary vector.
   /// NOTE: This is for internal use, it does not set the metadata.
@@ -130,11 +135,6 @@ public:
   ~Region();
 
   Context &getContext() const { return Ctx; }
-
-  /// Adds I to the set.
-  void add(Instruction *I);
-  /// Removes I from the set.
-  void remove(Instruction *I);
   /// Returns true if I is in the Region.
   bool contains(Instruction *I) const { return Insts.contains(I); }
   /// Returns true if the Region has no instructions.
@@ -168,6 +168,13 @@ public:
     return OS;
   }
 #endif
+};
+
+/// A helper client-attorney class for unit tests.
+class RegionInternalsAttorney {
+public:
+  static void add(Region &Rgn, Instruction *I) { Rgn.add(I); }
+  static void remove(Region &Rgn, Instruction *I) { Rgn.remove(I); }
 };
 
 } // namespace llvm::sandboxir

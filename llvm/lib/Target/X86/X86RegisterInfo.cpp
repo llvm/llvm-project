@@ -1019,7 +1019,7 @@ Register X86RegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   return TFI->hasFP(MF) ? FramePtr : StackPtr;
 }
 
-unsigned
+Register
 X86RegisterInfo::getPtrSizedFrameRegister(const MachineFunction &MF) const {
   const X86Subtarget &Subtarget = MF.getSubtarget<X86Subtarget>();
   Register FrameReg = getFrameRegister(MF);
@@ -1028,7 +1028,7 @@ X86RegisterInfo::getPtrSizedFrameRegister(const MachineFunction &MF) const {
   return FrameReg;
 }
 
-unsigned
+Register
 X86RegisterInfo::getPtrSizedStackRegister(const MachineFunction &MF) const {
   const X86Subtarget &Subtarget = MF.getSubtarget<X86Subtarget>();
   Register StackReg = getStackRegister();
@@ -1213,8 +1213,7 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
       Hints.push_back(PhysReg);
   };
 
-  SmallSet<MCPhysReg, 4> CopyHints;
-  CopyHints.insert(Hints.begin(), Hints.end());
+  SmallSet<MCPhysReg, 4> CopyHints(llvm::from_range, Hints);
   Hints.clear();
   for (auto Hint : CopyHints) {
     if (RC.contains(Hint) && !MRI->isReserved(Hint))

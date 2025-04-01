@@ -20,16 +20,17 @@ namespace tensor {
 // width is calculated as: resDim - sourceDim.
 //
 // Handling static sizes is trivial. Dynamic dimensions are trickier (*):
-//  1. dynamic input sizes are extracted from `source`
-//  2. for dynamic output dims, there are two options:
-//    2.1 all output dynamic dim sizes are specified in `dynOutDim`,
-//    2.2 `dynOutDim` is empty and the corresponding padding width is set to 0.
+//  1. Dynamic input sizes are extracted from `source` (e.g. via `tensor.dim`).
+//  2. For dynamic output dims, there are two options:
+//    2.1 All output dynamic dim sizes are specified in `dynOutDims`, or
+//    2.2 `dynOutDims is empty - the padding width for all the output dynamic
+//        dims is set to 0.
 //
 // (*) Note that `resType` is just a shape and it only encodes the actual sizes
 // for _static_ dimensions.
 PadOp createPadHighOp(RankedTensorType resType, Value source, Value pad,
                       bool nofold, Location loc, OpBuilder &builder,
-                      SmallVector<Value> dynOutDim = {});
+                      SmallVector<Value> dynOutDims = {});
 
 // Creates dim ops for each dynamic dimension of the ranked tensor argument and
 // returns these as values.

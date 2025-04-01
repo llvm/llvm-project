@@ -821,12 +821,12 @@ define void @infiniteloop() {
 ; ENABLE-NEXT:    movq %rsp, %rcx
 ; ENABLE-NEXT:    addq $-16, %rcx
 ; ENABLE-NEXT:    movq %rcx, %rsp
-; ENABLE-NEXT:    ## InlineAsm Start
-; ENABLE-NEXT:    movl $1, %edx
-; ENABLE-NEXT:    ## InlineAsm End
 ; ENABLE-NEXT:    .p2align 4
 ; ENABLE-NEXT:  LBB10_2: ## %for.body
 ; ENABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
+; ENABLE-NEXT:    ## InlineAsm Start
+; ENABLE-NEXT:    movl $1, %edx
+; ENABLE-NEXT:    ## InlineAsm End
 ; ENABLE-NEXT:    addl %edx, %eax
 ; ENABLE-NEXT:    movl %eax, (%rcx)
 ; ENABLE-NEXT:    jmp LBB10_2
@@ -853,12 +853,12 @@ define void @infiniteloop() {
 ; DISABLE-NEXT:    movq %rsp, %rcx
 ; DISABLE-NEXT:    addq $-16, %rcx
 ; DISABLE-NEXT:    movq %rcx, %rsp
-; DISABLE-NEXT:    ## InlineAsm Start
-; DISABLE-NEXT:    movl $1, %edx
-; DISABLE-NEXT:    ## InlineAsm End
 ; DISABLE-NEXT:    .p2align 4
 ; DISABLE-NEXT:  LBB10_2: ## %for.body
 ; DISABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
+; DISABLE-NEXT:    ## InlineAsm Start
+; DISABLE-NEXT:    movl $1, %edx
+; DISABLE-NEXT:    ## InlineAsm End
 ; DISABLE-NEXT:    addl %edx, %eax
 ; DISABLE-NEXT:    movl %eax, (%rcx)
 ; DISABLE-NEXT:    jmp LBB10_2

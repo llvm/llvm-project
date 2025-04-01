@@ -1784,7 +1784,7 @@ template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 _Tp& unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::at(const key_type& __k) {
   iterator __i = find(__k);
   if (__i == end())
-    __throw_out_of_range("unordered_map::at: key not found");
+    std::__throw_out_of_range("unordered_map::at: key not found");
   return __i->second;
 }
 
@@ -1792,7 +1792,7 @@ template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 const _Tp& unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::at(const key_type& __k) const {
   const_iterator __i = find(__k);
   if (__i == end())
-    __throw_out_of_range("unordered_map::at: key not found");
+    std::__throw_out_of_range("unordered_map::at: key not found");
   return __i->second;
 }
 

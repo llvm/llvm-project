@@ -133,7 +133,7 @@ bool ValueObjectSynthetic::MightHaveChildren() {
   return (m_might_have_children != eLazyBoolNo);
 }
 
-std::optional<uint64_t> ValueObjectSynthetic::GetByteSize() {
+llvm::Expected<uint64_t> ValueObjectSynthetic::GetByteSize() {
   return m_parent->GetByteSize();
 }
 
@@ -362,7 +362,9 @@ lldb::ValueObjectSP ValueObjectSynthetic::GetNonSyntheticValue() {
 }
 
 void ValueObjectSynthetic::CopyValueData(ValueObject *source) {
-  m_value = (source->UpdateValueIfNeeded(), source->GetValue());
+  if (!source->UpdateValueIfNeeded())
+    return;
+  m_value = source->GetValue();
   ExecutionContext exe_ctx(GetExecutionContextRef());
   m_error = m_value.GetValueAsData(&exe_ctx, m_data, GetModule().get());
 }

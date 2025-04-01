@@ -18,6 +18,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
 class FunctionPass;
@@ -52,6 +53,7 @@ FunctionPass *createNVPTXLowerUnreachablePass(bool TrapUnreachable,
                                               bool NoTrapAfterNoreturn);
 MachineFunctionPass *createNVPTXPeephole();
 MachineFunctionPass *createNVPTXProxyRegErasurePass();
+MachineFunctionPass *createNVPTXForwardParamsPass();
 
 struct NVVMIntrRangePass : PassInfoMixin<NVVMIntrRangePass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
@@ -71,6 +73,15 @@ struct GenericToNVVMPass : PassInfoMixin<GenericToNVVMPass> {
 };
 
 struct NVPTXCopyByValArgsPass : PassInfoMixin<NVPTXCopyByValArgsPass> {
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+struct NVPTXLowerArgsPass : PassInfoMixin<NVPTXLowerArgsPass> {
+private:
+  TargetMachine &TM;
+
+public:
+  NVPTXLowerArgsPass(TargetMachine &TM) : TM(TM) {};
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 

@@ -5709,7 +5709,7 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use0(ptr addrspace(1)
   %b = load volatile float, ptr addrspace(1) %gep1
   %c = load volatile float, ptr addrspace(1) %gep2
   %tmp0 = call float @llvm.minnum.f32(float %a, float %b)
-  store volatile float %tmp0, ptr addrspace(1) undef
+  store volatile float %tmp0, ptr addrspace(1) poison
   %tmp1 = call float @llvm.maxnum.f32(float %a, float %b)
   %tmp2 = call float @llvm.minnum.f32(float %tmp1, float %c)
   %med3 = call float @llvm.maxnum.f32(float %tmp0, float %tmp2)
@@ -5937,7 +5937,7 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use1(ptr addrspace(1)
   %c = load volatile float, ptr addrspace(1) %gep2
   %tmp0 = call float @llvm.minnum.f32(float %a, float %b)
   %tmp1 = call float @llvm.maxnum.f32(float %a, float %b)
-  store volatile float %tmp1, ptr addrspace(1) undef
+  store volatile float %tmp1, ptr addrspace(1) poison
   %tmp2 = call float @llvm.minnum.f32(float %tmp1, float %c)
   %med3 = call float @llvm.maxnum.f32(float %tmp0, float %tmp2)
   store float %med3, ptr addrspace(1) %outgep
@@ -6140,7 +6140,7 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use2(ptr addrspace(1)
   %tmp0 = call float @llvm.minnum.f32(float %a, float %b)
   %tmp1 = call float @llvm.maxnum.f32(float %a, float %b)
   %tmp2 = call float @llvm.minnum.f32(float %tmp1, float %c)
-  store volatile float %tmp2, ptr addrspace(1) undef
+  store volatile float %tmp2, ptr addrspace(1) poison
   %med3 = call float @llvm.maxnum.f32(float %tmp0, float %tmp2)
   store float %med3, ptr addrspace(1) %outgep
   ret void
@@ -7568,7 +7568,7 @@ define amdgpu_kernel void @v_test_nnan_input_fmed3_r_i_i_f16(ptr addrspace(1) %o
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    global_load_u16 v0, v1, s[2:3]
+; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_b16 v0, v1, s[2:3]
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_f16_e32 v0.l, 1.0, v0.l
 ; GFX11-SDAG-TRUE16-NEXT:    v_med3_f16 v0.l, v0.l, 2.0, 4.0
@@ -7582,7 +7582,7 @@ define amdgpu_kernel void @v_test_nnan_input_fmed3_r_i_i_f16(ptr addrspace(1) %o
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-GISEL-TRUE16-NEXT:    global_load_u16 v0, v1, s[2:3]
+; GFX11-GISEL-TRUE16-NEXT:    global_load_d16_b16 v0, v1, s[2:3]
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, 1.0, v0.l
 ; GFX11-GISEL-TRUE16-NEXT:    v_med3_f16 v0.l, v0.l, 2.0, 4.0
@@ -7816,16 +7816,13 @@ define amdgpu_kernel void @v_nnan_inputs_med3_f16_pat0(ptr addrspace(1) %out, pt
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 1, v0
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    global_load_u16 v0, v2, s[2:3] glc dlc
+; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_b16 v0, v2, s[2:3] glc dlc
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    global_load_u16 v1, v2, s[4:5] glc dlc
+; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_hi_b16 v0, v2, s[4:5] glc dlc
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    global_load_u16 v3, v2, s[6:7] glc dlc
+; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_b16 v1, v2, s[6:7] glc dlc
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_f16_e32 v0.l, 1.0, v0.l
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v3.l
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_f16_e32 v0.h, 2.0, v0.h
 ; GFX11-SDAG-TRUE16-NEXT:    v_add_f16_e32 v1.l, 4.0, v1.l
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -7840,15 +7837,15 @@ define amdgpu_kernel void @v_nnan_inputs_med3_f16_pat0(ptr addrspace(1) %out, pt
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 1, v0
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-GISEL-TRUE16-NEXT:    global_load_u16 v0, v2, s[2:3] glc dlc
+; GFX11-GISEL-TRUE16-NEXT:    global_load_d16_b16 v0, v2, s[2:3] glc dlc
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-GISEL-TRUE16-NEXT:    global_load_u16 v1, v2, s[4:5] glc dlc
+; GFX11-GISEL-TRUE16-NEXT:    global_load_d16_hi_b16 v0, v2, s[4:5] glc dlc
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-GISEL-TRUE16-NEXT:    global_load_u16 v3, v2, s[6:7] glc dlc
+; GFX11-GISEL-TRUE16-NEXT:    global_load_d16_b16 v1, v2, s[6:7] glc dlc
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, 1.0, v0.l
-; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.h, 2.0, v1.l
-; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v1.l, 4.0, v3.l
+; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.h, 2.0, v0.h
+; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v1.l, 4.0, v1.l
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-TRUE16-NEXT:    v_med3_f16 v0.l, v0.l, v0.h, v1.l
 ; GFX11-GISEL-TRUE16-NEXT:    global_store_b16 v2, v0, s[0:1]
@@ -8142,7 +8139,7 @@ define amdgpu_kernel void @one_non_inline_constant(ptr addrspace(1) %out, ptr ad
   store float %med, ptr addrspace(1) %out.gep
 
   %extra.use = fadd float %a, 16.0
-  store volatile float %extra.use, ptr addrspace(1) undef
+  store volatile float %extra.use, ptr addrspace(1) poison
   ret void
 }
 
@@ -8346,9 +8343,9 @@ define amdgpu_kernel void @two_non_inline_constant_multi_use(ptr addrspace(1) %o
   store float %med, ptr addrspace(1) %out.gep
 
   %extra.use0 = fadd float %a, 16.0
-  store volatile float %extra.use0, ptr addrspace(1) undef
+  store volatile float %extra.use0, ptr addrspace(1) poison
   %extra.use1 = fadd float %a, 8.0
-  store volatile float %extra.use1, ptr addrspace(1) undef
+  store volatile float %extra.use1, ptr addrspace(1) poison
   ret void
 }
 

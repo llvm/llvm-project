@@ -23,10 +23,11 @@ define i32 @a() {
 ; CHECK-NEXT:    li 5, 0
 ; CHECK-NEXT:    mr 30, 3
 ; CHECK-NEXT:    addic 6, 4, 6
-; CHECK-NEXT:    addze. 5, 5
-; CHECK-NEXT:    rlwinm 5, 6, 0, 28, 26
-; CHECK-NEXT:    cmplw 1, 5, 4
-; CHECK-NEXT:    crnand 20, 4, 2
+; CHECK-NEXT:    addze 5, 5
+; CHECK-NEXT:    rlwinm 6, 6, 0, 28, 26
+; CHECK-NEXT:    andi. 5, 5, 1
+; CHECK-NEXT:    cmplw 1, 6, 4
+; CHECK-NEXT:    crorc 20, 1, 4
 ; CHECK-NEXT:    bc 12, 20, .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    bl e

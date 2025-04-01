@@ -207,6 +207,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     COMPONENT lld-headers
     FILES_MATCHING
     PATTERN "*.h"
+    PATTERN "*.inc"
     )
 
   if (NOT LLVM_ENABLE_IDE)

@@ -6,16 +6,16 @@
 
 // Regression tests involving macros
 #define CONCAT(a, b) a##b
-CONCAT(cons, t) int p22(){}
+CONCAT(cons, t) int p22(){ return 0; }
 // CHECK-MESSAGES: [[@LINE-1]]:1: warning: return type 'const int' is 'const'-qu
 // We warn, but we can't give a fix
 
 #define CONSTINT const int
-CONSTINT p23() {}
+CONSTINT p23() { return 0; }
 // CHECK-MESSAGES: [[@LINE-1]]:1: warning: return type 'const int' is 'const'-qu
 
 #define CONST const
-CONST int p24() {}
+CONST int p24() { return 0; }
 // CHECK-MESSAGES: [[@LINE-1]]:1: warning: return type 'const int' is 'const'-qu
 
 #define CREATE_FUNCTION()                    \

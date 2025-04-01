@@ -65,7 +65,7 @@ LIBC_INLINE double sincos_eval(const DoubleDouble &u, DoubleDouble &sin_u,
   double u_hi_neg_half = (-0.5) * u.hi;
   DoubleDouble v;
 
-#ifdef LIBC_TARGET_CPU_HAS_FMA
+#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
   v.hi = fputil::multiply_add(u.hi, u_hi_neg_half, 1.0);
   v.lo = 1.0 - v.hi; // Exact
   v.lo = fputil::multiply_add(u.hi, u_hi_neg_half, v.lo);
@@ -73,7 +73,7 @@ LIBC_INLINE double sincos_eval(const DoubleDouble &u, DoubleDouble &sin_u,
   DoubleDouble u_hi_sq_neg_half = fputil::exact_mult(u.hi, u_hi_neg_half);
   v = fputil::exact_add(1.0, u_hi_sq_neg_half.hi);
   v.lo += u_hi_sq_neg_half.lo;
-#endif // LIBC_TARGET_CPU_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
   // r1 ~ -1/720 + u_hi^2 / 40320
   double r1 = fputil::multiply_add(u_hi_sq, 0x1.a01a01a01a01ap-16,

@@ -772,6 +772,7 @@ void TestDerivedAttributeDriver::runOnOperation() {
 namespace {
 //===----------------------------------------------------------------------===//
 // Region-Block Rewrite Testing
+//===----------------------------------------------------------------------===//
 
 /// This pattern applies a signature conversion to a block inside a detached
 /// region.
@@ -958,6 +959,7 @@ struct TestUndoPropertiesModification : public ConversionPattern {
 
 //===----------------------------------------------------------------------===//
 // Type-Conversion Rewrite Testing
+//===----------------------------------------------------------------------===//
 
 /// This patterns erases a region operation that has had a type conversion.
 struct TestDropOpSignatureConversion : public ConversionPattern {
@@ -1193,22 +1195,31 @@ public:
   }
 };
 
-/// This pattern matches a test.duplicate_block_args op and duplicates all
-/// block arguments.
-class TestDuplicateBlockArgs
-    : public OpConversionPattern<DuplicateBlockArgsOp> {
-  using OpConversionPattern<DuplicateBlockArgsOp>::OpConversionPattern;
+/// This pattern matches a test.convert_block_args op. It either:
+/// a) Duplicates all block arguments,
+/// b) or: drops all block arguments and replaces each with 2x the first
+///    operand.
+class TestConvertBlockArgs : public OpConversionPattern<ConvertBlockArgsOp> {
+  using OpConversionPattern<ConvertBlockArgsOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(DuplicateBlockArgsOp op, OpAdaptor adaptor,
+  matchAndRewrite(ConvertBlockArgsOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     if (op.getIsLegal())
       return failure();
-    rewriter.startOpModification(op);
     Block *body = &op.getBody().front();
     TypeConverter::SignatureConversion result(body->getNumArguments());
-    for (auto it : llvm::enumerate(body->getArgumentTypes()))
-      result.addInputs(it.index(), {it.value(), it.value()});
+    for (auto it : llvm::enumerate(body->getArgumentTypes())) {
+      if (op.getReplaceWithOperand()) {
+        result.remapInput(it.index(), {adaptor.getVal(), adaptor.getVal()});
+      } else if (op.getDuplicate()) {
+        result.addInputs(it.index(), {it.value(), it.value()});
+      } else {
+        // No action specified. Pattern does not apply.
+        return failure();
+      }
+    }
+    rewriter.startOpModification(op);
     rewriter.applySignatureConversion(body, result, getTypeConverter());
     op.setIsLegal(true);
     rewriter.finalizeOpModification(op);
@@ -1269,6 +1280,29 @@ public:
   }
 };
 
+/// Test unambiguous overload resolution of replaceOpWithMultiple. This
+/// function is just to trigger compiler errors. It is never executed.
+[[maybe_unused]] void testReplaceOpWithMultipleOverloads(
+    ConversionPatternRewriter &rewriter, Operation *op, ArrayRef<ValueRange> r1,
+    SmallVector<ValueRange> r2, ArrayRef<SmallVector<Value>> r3,
+    SmallVector<SmallVector<Value>> r4, ArrayRef<ArrayRef<Value>> r5,
+    SmallVector<ArrayRef<Value>> r6, SmallVector<SmallVector<Value>> &&r7,
+    Value v, ValueRange vr, ArrayRef<Value> ar) {
+  rewriter.replaceOpWithMultiple(op, r1);
+  rewriter.replaceOpWithMultiple(op, r2);
+  rewriter.replaceOpWithMultiple(op, r3);
+  rewriter.replaceOpWithMultiple(op, r4);
+  rewriter.replaceOpWithMultiple(op, r5);
+  rewriter.replaceOpWithMultiple(op, r6);
+  rewriter.replaceOpWithMultiple(op, std::move(r7));
+  rewriter.replaceOpWithMultiple(op, {vr});
+  rewriter.replaceOpWithMultiple(op, {ar});
+  rewriter.replaceOpWithMultiple(op, {{v}});
+  rewriter.replaceOpWithMultiple(op, {{v, v}});
+  rewriter.replaceOpWithMultiple(op, {{v, v}, vr});
+  rewriter.replaceOpWithMultiple(op, {{v, v}, ar});
+  rewriter.replaceOpWithMultiple(op, {ar, {v, v}, vr});
+}
 } // namespace
 
 namespace {
@@ -1355,7 +1389,7 @@ struct TestLegalizePatternDriver
     patterns.add<TestDropOpSignatureConversion, TestDropAndReplaceInvalidOp,
                  TestPassthroughInvalidOp, TestMultiple1ToNReplacement>(
         &getContext(), converter);
-    patterns.add<TestDuplicateBlockArgs>(converter, &getContext());
+    patterns.add<TestConvertBlockArgs>(converter, &getContext());
     mlir::populateAnyFunctionOpInterfaceTypeConversionPattern(patterns,
                                                               converter);
     mlir::populateCallOpTypeConversionPattern(patterns, converter);
@@ -1406,8 +1440,8 @@ struct TestLegalizePatternDriver
     target.addDynamicallyLegalOp<TestOpInPlaceSelfFold>(
         [](TestOpInPlaceSelfFold op) { return op.getFolded(); });
 
-    target.addDynamicallyLegalOp<DuplicateBlockArgsOp>(
-        [](DuplicateBlockArgsOp op) { return op.getIsLegal(); });
+    target.addDynamicallyLegalOp<ConvertBlockArgsOp>(
+        [](ConvertBlockArgsOp op) { return op.getIsLegal(); });
 
     // Handle a partial conversion.
     if (mode == ConversionMode::Partial) {

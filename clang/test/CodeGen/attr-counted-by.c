@@ -333,7 +333,7 @@ size_t test3_bdos(struct annotated *p) {
 // SANITIZE-WITH-ATTR-NEXT:    [[COUNT50:%.*]] = sext i32 [[DOTCOUNTED_BY_LOAD44]] to i64
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP10:%.*]] = sub nsw i64 [[COUNT50]], [[IDXPROM42]]
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP11:%.*]] = tail call i64 @llvm.smax.i64(i64 [[TMP10]], i64 0)
-// SANITIZE-WITH-ATTR-NEXT:    [[DOTTR:%.*]] = trunc nuw i64 [[TMP11]] to i32
+// SANITIZE-WITH-ATTR-NEXT:    [[DOTTR:%.*]] = trunc nuw nsw i64 [[TMP11]] to i32
 // SANITIZE-WITH-ATTR-NEXT:    [[CONV54:%.*]] = shl i32 [[DOTTR]], 2
 // SANITIZE-WITH-ATTR-NEXT:    [[CONV55:%.*]] = and i32 [[CONV54]], 252
 // SANITIZE-WITH-ATTR-NEXT:    store i32 [[CONV55]], ptr [[ARRAYIDX65]], align 4, !tbaa [[TBAA4]]

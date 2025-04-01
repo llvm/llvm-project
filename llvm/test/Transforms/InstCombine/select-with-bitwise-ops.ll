@@ -1754,9 +1754,9 @@ define i8 @select_icmp_eq_and_1_0_lshr_tv(i8 %x, i8 %y) {
 
 define i8 @select_trunc_or_2(i8 %x, i8 %y) {
 ; CHECK-LABEL: @select_trunc_or_2(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[X:%.*]] to i1
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[Y:%.*]], 2
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[TRUNC]], i8 [[OR]], i8 [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 2
+; CHECK-NEXT:    [[SELECT:%.*]] = or i8 [[Y:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret i8 [[SELECT]]
 ;
   %trunc = trunc i8 %x to i1
@@ -1767,9 +1767,9 @@ define i8 @select_trunc_or_2(i8 %x, i8 %y) {
 
 define i8 @select_not_trunc_or_2(i8 %x, i8 %y) {
 ; CHECK-LABEL: @select_not_trunc_or_2(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[X:%.*]] to i1
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[Y:%.*]], 2
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[TRUNC]], i8 [[OR]], i8 [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 2
+; CHECK-NEXT:    [[SELECT:%.*]] = or i8 [[Y:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret i8 [[SELECT]]
 ;
   %trunc = trunc i8 %x to i1
@@ -1781,9 +1781,8 @@ define i8 @select_not_trunc_or_2(i8 %x, i8 %y) {
 
 define i8 @select_trunc_nuw_or_2(i8 %x, i8 %y) {
 ; CHECK-LABEL: @select_trunc_nuw_or_2(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i1
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[Y:%.*]], 2
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[TRUNC]], i8 [[OR]], i8 [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[SELECT:%.*]] = or i8 [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[SELECT]]
 ;
   %trunc = trunc nuw i8 %x to i1
@@ -1794,9 +1793,9 @@ define i8 @select_trunc_nuw_or_2(i8 %x, i8 %y) {
 
 define i8 @select_trunc_nsw_or_2(i8 %x, i8 %y) {
 ; CHECK-LABEL: @select_trunc_nsw_or_2(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nsw i8 [[X:%.*]] to i1
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[Y:%.*]], 2
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[TRUNC]], i8 [[OR]], i8 [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 2
+; CHECK-NEXT:    [[SELECT:%.*]] = or i8 [[Y:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret i8 [[SELECT]]
 ;
   %trunc = trunc nsw i8 %x to i1
@@ -1807,9 +1806,9 @@ define i8 @select_trunc_nsw_or_2(i8 %x, i8 %y) {
 
 define <2 x i8> @select_trunc_or_2_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @select_trunc_or_2_vec(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <2 x i8> [[X:%.*]] to <2 x i1>
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i8> [[Y:%.*]], splat (i8 2)
-; CHECK-NEXT:    [[SELECT:%.*]] = select <2 x i1> [[TRUNC]], <2 x i8> [[OR]], <2 x i8> [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i8> [[X:%.*]], splat (i8 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i8> [[TMP1]], splat (i8 2)
+; CHECK-NEXT:    [[SELECT:%.*]] = or <2 x i8> [[Y:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i8> [[SELECT]]
 ;
   %trunc = trunc <2 x i8> %x to <2 x i1>
@@ -1829,4 +1828,43 @@ define i8 @neg_select_trunc_or_2(i8 %x, i8 %y) {
   %or = or i8 %y, 2
   %select = select i1 %trunc, i8 %y, i8 %or
   ret i8 %select
+}
+
+define i8 @select_icmp_bittest_range(i8 range(i8 0, 64) %a, i8 %y) {
+; CHECK-LABEL: @select_icmp_bittest_range(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 [[A:%.*]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 2
+; CHECK-NEXT:    [[RES:%.*]] = or i8 [[Y:%.*]], [[TMP2]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %cmp = icmp ult i8 %a, 32
+  %or = or i8 %y, 2
+  %res = select i1 %cmp, i8 %y, i8 %or
+  ret i8 %res
+}
+
+define i8 @neg_select_icmp_bittest_range(i8 range(i8 0, 65) %a, i8 %y) {
+; CHECK-LABEL: @neg_select_icmp_bittest_range(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i8 [[A:%.*]], 32
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[Y:%.*]], 2
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i8 [[Y]], i8 [[OR]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %cmp = icmp ult i8 %a, 32
+  %or = or i8 %y, 2
+  %res = select i1 %cmp, i8 %y, i8 %or
+  ret i8 %res
+}
+
+define i8 @neg_select_icmp_bittest_range_2(i8 range(i8 0, 64) %a, i8 %y) {
+; CHECK-LABEL: @neg_select_icmp_bittest_range_2(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i8 [[A:%.*]], 16
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[Y:%.*]], 2
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i8 [[Y]], i8 [[OR]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %cmp = icmp ult i8 %a, 16
+  %or = or i8 %y, 2
+  %res = select i1 %cmp, i8 %y, i8 %or
+  ret i8 %res
 }

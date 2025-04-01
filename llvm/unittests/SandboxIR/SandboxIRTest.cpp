@@ -524,6 +524,18 @@ define void @foo() {
   auto *StructTy2Packed = sandboxir::ConstantStruct::getTypeForElements(
       Ctx, {ZeroI42, OneI42}, /*Packed=*/true);
   EXPECT_EQ(StructTy2Packed, StructTyPacked);
+
+  // Check ConstantVector::get().
+  auto *NewCV = sandboxir::ConstantVector::get({ZeroI42, OneI42});
+  EXPECT_EQ(NewCV, Vector);
+  // Check ConstantVector::getSplat(), getType().
+  auto *SplatRaw =
+      sandboxir::ConstantVector::getSplat(ElementCount::getFixed(2), OneI42);
+  auto *Splat = cast<sandboxir::ConstantVector>(SplatRaw);
+  EXPECT_EQ(Splat->getType()->getNumElements(), 2u);
+  EXPECT_THAT(Splat->operands(), testing::ElementsAre(OneI42, OneI42));
+  // Check ConstantVector::getSplatValue().
+  EXPECT_EQ(Splat->getSplatValue(), OneI42);
 }
 
 TEST_F(SandboxIRTest, ConstantAggregateZero) {
@@ -6165,4 +6177,27 @@ define void @bar() {
   EXPECT_NE(Ctx.getValue(&LLVMBar), nullptr);
   // This should not crash, even though there is already a value for LLVMBar.
   Ctx.createFunction(&LLVMBar);
+}
+
+TEST_F(SandboxIRTest, OpaqueValue) {
+  parseIR(C, R"IR(
+declare void @bar(metadata)
+define void @foo() {
+  call void @bar(metadata !1)
+  call void asm "asm", ""()
+  ret void
+}
+!1 = !{}
+)IR");
+  Function &LLVMFoo = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(&LLVMFoo);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Call = cast<sandboxir::CallInst>(&*It++);
+  auto *Op0 = Call->getOperand(0);
+  EXPECT_TRUE(isa<sandboxir::OpaqueValue>(Op0));
+  auto *Asm = cast<sandboxir::CallInst>(&*It++);
+  auto *AsmOp0 = Asm->getOperand(0);
+  EXPECT_TRUE(isa<sandboxir::OpaqueValue>(AsmOp0));
 }

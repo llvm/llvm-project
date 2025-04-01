@@ -64,6 +64,22 @@ constexpr bool test() {
     }
   }
 
+  { // Ensure that insert_range doesn't use unexpected assignment.
+    struct Wrapper {
+      constexpr Wrapper(int n) : n_(n) {}
+      void operator=(int) = delete;
+
+      int n_;
+    };
+
+    int a[]{1, 2, 3, 4, 5};
+    std::vector<Wrapper> v;
+    v.insert_range(v.end(), a);
+    assert(v.size() == std::size(a));
+    for (std::size_t i = 0; i != std::size(a); ++i)
+      assert(v[i].n_ == a[i]);
+  }
+
   return true;
 }
 

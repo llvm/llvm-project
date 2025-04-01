@@ -26,6 +26,7 @@
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
 #include "llvm/ADT/DenseMap.h"
@@ -119,7 +120,40 @@ public:
 
   virtual MemRegionManager &getMemRegionManager() const = 0;
 
-  LLVM_ATTRIBUTE_RETURNS_NONNULL const MemSpaceRegion *getMemorySpace() const;
+  /// Deprecated. Gets the 'raw' memory space of a memory region's base region.
+  /// If the MemRegion is originally associated with Unknown memspace, then the
+  /// State may have a more accurate memspace for this region.
+  /// Use getMemorySpace(ProgramStateRef) instead.
+  [[nodiscard]] LLVM_ATTRIBUTE_RETURNS_NONNULL const MemSpaceRegion *
+  getRawMemorySpace() const;
+
+  /// Deprecated. Use getMemorySpace(ProgramStateRef) instead.
+  template <class MemSpace>
+  [[nodiscard]] const MemSpace *getRawMemorySpaceAs() const {
+    return dyn_cast<MemSpace>(getRawMemorySpace());
+  }
+
+  /// Returns the most specific memory space for this memory region in the given
+  /// ProgramStateRef. We may infer a more accurate memory space for unknown
+  /// space regions and associate this in the State.
+  [[nodiscard]] LLVM_ATTRIBUTE_RETURNS_NONNULL const MemSpaceRegion *
+  getMemorySpace(ProgramStateRef State) const;
+
+  template <class MemSpace>
+  [[nodiscard]] const MemSpace *getMemorySpaceAs(ProgramStateRef State) const {
+    return dyn_cast<MemSpace>(getMemorySpace(State));
+  }
+
+  template <typename... MemorySpaces>
+  [[nodiscard]] bool hasMemorySpace(ProgramStateRef State) const {
+    static_assert(sizeof...(MemorySpaces));
+    return isa<MemorySpaces...>(getMemorySpace(State));
+  }
+
+  /// Set the dynamically deduced memory space of a MemRegion that currently has
+  /// UnknownSpaceRegion. \p Space shouldn't be UnknownSpaceRegion.
+  [[nodiscard]] ProgramStateRef
+  setMemorySpace(ProgramStateRef State, const MemSpaceRegion *Space) const;
 
   LLVM_ATTRIBUTE_RETURNS_NONNULL const MemRegion *getBaseRegion() const;
 
@@ -139,12 +173,6 @@ public:
   /// goes up the base chain looking for the first symbolic base region.
   /// It might return null.
   const SymbolicRegion *getSymbolicBase() const;
-
-  bool hasStackStorage() const;
-
-  bool hasStackNonParametersStorage() const;
-
-  bool hasStackParametersStorage() const;
 
   /// Compute the offset within the top level memory object.
   RegionOffset getAsOffset() const;

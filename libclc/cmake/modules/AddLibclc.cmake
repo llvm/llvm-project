@@ -107,9 +107,13 @@ function(link_bc)
     set( LINK_INPUT_ARG "@${RSP_FILE}" )
   endif()
 
+  if( ARG_INTERNALIZE )
+    set( link_flags --internalize --only-needed )
+  endif()
+
   add_custom_command(
     OUTPUT ${ARG_TARGET}.bc
-    COMMAND ${llvm-link_exe} $<$<BOOL:${ARG_INTERNALIZE}>:--internalize> -o ${ARG_TARGET}.bc ${LINK_INPUT_ARG}
+    COMMAND ${llvm-link_exe} ${link_flags} -o ${ARG_TARGET}.bc ${LINK_INPUT_ARG}
     DEPENDS ${llvm-link_target} ${ARG_DEPENDENCIES} ${ARG_INPUTS} ${RSP_FILE}
   )
 
@@ -210,9 +214,10 @@ endfunction()
 #      Optimization options (for opt)
 #  * ALIASES <string> ...
 #      List of aliases
-#  * INTERNAL_LINK_DEPENDENCIES <string> ...
-#      A list of extra bytecode files to link into the builtin library. Symbols
-#      from these link dependencies will be internalized during linking.
+#  * INTERNAL_LINK_DEPENDENCIES <target> ...
+#      A list of extra bytecode file's targets. The bitcode files will be linked
+#      into the builtin library. Symbols from these link dependencies will be
+#      internalized during linking.
 function(add_libclc_builtin_set)
   cmake_parse_arguments(ARG
     "CLC_INTERNAL"
@@ -256,11 +261,17 @@ function(add_libclc_builtin_set)
 
     get_filename_component( file_dir ${file} DIRECTORY )
 
+    set( file_specific_compile_options )
+    get_source_file_property( compile_opts ${file} COMPILE_OPTIONS)
+    if( compile_opts )
+      set( file_specific_compile_options "${compile_opts}" )
+    endif()
+
     compile_to_bc(
       TRIPLE ${ARG_TRIPLE}
       INPUT ${input_file}
       OUTPUT ${output_file}
-      EXTRA_OPTS -fno-builtin -nostdlib
+      EXTRA_OPTS -fno-builtin -nostdlib "${file_specific_compile_options}"
         "${ARG_COMPILE_FLAGS}" -I${CMAKE_CURRENT_SOURCE_DIR}/${file_dir}
       DEPENDENCIES ${input_file_dep}
     )
@@ -309,12 +320,16 @@ function(add_libclc_builtin_set)
       INPUTS ${bytecode_files}
       DEPENDENCIES ${builtins_comp_lib_tgt}
     )
+    set( internal_link_depend_files )
+    foreach( tgt ${ARG_INTERNAL_LINK_DEPENDENCIES} )
+      list( APPEND internal_link_depend_files $<TARGET_PROPERTY:${tgt},TARGET_FILE> )
+    endforeach()
     link_bc(
       INTERNALIZE
       TARGET ${builtins_link_lib_tgt}
       INPUTS $<TARGET_PROPERTY:${builtins_link_lib_tmp_tgt},TARGET_FILE>
-        ${ARG_INTERNAL_LINK_DEPENDENCIES}
-      DEPENDENCIES ${builtins_link_lib_tmp_tgt}
+        ${internal_link_depend_files}
+      DEPENDENCIES ${builtins_link_lib_tmp_tgt} ${ARG_INTERNAL_LINK_DEPENDENCIES}
     )
   endif()
 
@@ -402,7 +417,8 @@ endfunction(add_libclc_builtin_set)
 #     directory. If not provided, is set to '.'.
 # * DIRS <string> ...
 #     List of directories under LIB_ROOT_DIR to walk over searching for SOURCES
-#     files
+#     files. Directories earlier in the list have lower priority than
+#     subsequent ones.
 function(libclc_configure_lib_source LIB_FILE_LIST)
   cmake_parse_arguments(ARG
     "CLC_INTERNAL"
@@ -417,7 +433,7 @@ function(libclc_configure_lib_source LIB_FILE_LIST)
 
   # Enumerate SOURCES* files
   set( source_list )
-  foreach( l ${ARG_DIRS} )
+  foreach( l IN LISTS ARG_DIRS )
     foreach( s "SOURCES" "SOURCES_${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}" )
       if( ARG_CLC_INTERNAL )
         file( TO_CMAKE_PATH ${ARG_LIB_ROOT_DIR}/lib/${l}/${s} file_loc )
@@ -425,10 +441,10 @@ function(libclc_configure_lib_source LIB_FILE_LIST)
         file( TO_CMAKE_PATH ${ARG_LIB_ROOT_DIR}/${l}/lib/${s} file_loc )
       endif()
       file( TO_CMAKE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${file_loc} loc )
-      # Prepend the location to give higher priority to
-      # specialized implementation
+      # Prepend the location to give higher priority to the specialized
+      # implementation
       if( EXISTS ${loc} )
-        set( source_list ${file_loc} ${source_list} )
+        list( PREPEND source_list ${file_loc} )
       endif()
     endforeach()
   endforeach()

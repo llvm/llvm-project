@@ -219,7 +219,7 @@ Operation *mlir::cloneWithoutRegions(OpBuilder &b, Operation *op,
 SmallVector<NamedAttribute>
 mlir::getPrunedAttributeList(Operation *op, ArrayRef<StringRef> elidedAttrs) {
   llvm::StringSet<> elidedAttrsSet;
-  elidedAttrsSet.insert(elidedAttrs.begin(), elidedAttrs.end());
+  elidedAttrsSet.insert_range(elidedAttrs);
   SmallVector<NamedAttribute> attrs;
   for (auto attr : op->getAttrs()) {
     if (elidedAttrsSet.count(attr.getName()))

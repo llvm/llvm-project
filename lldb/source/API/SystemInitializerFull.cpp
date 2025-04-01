@@ -68,9 +68,6 @@ llvm::Error SystemInitializerFull::Initialize() {
   const char *arg0 = "lldb";
   llvm::cl::ParseCommandLineOptions(1, &arg0);
 
-  // Initialize the progress manager.
-  ProgressManager::Initialize();
-
 #define LLDB_PLUGIN(p) LLDB_PLUGIN_INITIALIZE(p);
 #include "Plugins/Plugins.def"
 
@@ -103,9 +100,6 @@ void SystemInitializerFull::Terminate() {
 
 #define LLDB_PLUGIN(p) LLDB_PLUGIN_TERMINATE(p);
 #include "Plugins/Plugins.def"
-
-  // Terminate the progress manager.
-  ProgressManager::Terminate();
 
   // Now shutdown the common parts, in reverse order.
   SystemInitializerCommon::Terminate();

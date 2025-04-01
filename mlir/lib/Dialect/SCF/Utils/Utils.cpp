@@ -374,7 +374,7 @@ static void generateUnrolledLoop(
 }
 
 /// Unrolls 'forOp' by 'unrollFactor', returns the unrolled main loop and the
-/// eplilog loop, if the loop is unrolled.
+/// epilogue loop, if the loop is unrolled.
 FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
     scf::ForOp forOp, uint64_t unrollFactor,
     function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn) {
@@ -1310,10 +1310,8 @@ SmallVector<Loops, 8> mlir::tile(ArrayRef<scf::ForOp> forOps,
 Loops mlir::tile(ArrayRef<scf::ForOp> forOps, ArrayRef<Value> sizes,
                  scf::ForOp target) {
   SmallVector<scf::ForOp, 8> res;
-  for (auto loops : tile(forOps, sizes, ArrayRef<scf::ForOp>(target))) {
-    assert(loops.size() == 1);
-    res.push_back(loops[0]);
-  }
+  for (auto loops : tile(forOps, sizes, ArrayRef<scf::ForOp>(target)))
+    res.push_back(llvm::getSingleElement(loops));
   return res;
 }
 

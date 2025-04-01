@@ -85,7 +85,8 @@ static bool hasPagecacheTHPSupport() {
   KernelVersionTy KernelVersion;
 
   getKernelVersion((uint32_t *)&KernelVersion);
-  if (KernelVersion.major >= 5 && KernelVersion.minor >= 10)
+  if (KernelVersion.major >= 6 ||
+      (KernelVersion.major == 5 && KernelVersion.minor >= 10))
     return true;
 
   return false;

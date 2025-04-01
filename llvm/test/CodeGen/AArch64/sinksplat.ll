@@ -517,7 +517,7 @@ define <vscale x 4 x float> @fmul_scalable(ptr %x, ptr %y) "target-features"="+s
 ; CHECK-NEXT:    lsl x8, x8, #2
 ; CHECK-NEXT:  .LBB15_1: // %l1
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x1]
+; CHECK-NEXT:    ldr z2, [x1]
 ; CHECK-NEXT:    subs w9, w9, #1
 ; CHECK-NEXT:    add x1, x1, x8
 ; CHECK-NEXT:    fmul z2.s, z2.s, z1.s

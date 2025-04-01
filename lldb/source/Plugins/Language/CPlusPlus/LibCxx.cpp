@@ -501,8 +501,8 @@ ExtractLibcxxStringInfo(ValueObject &valobj) {
     // likely that the string isn't initialized and we're reading garbage.
     ExecutionContext exe_ctx(location_sp->GetExecutionContextRef());
     const std::optional<uint64_t> max_bytes =
-        location_sp->GetCompilerType().GetByteSize(
-            exe_ctx.GetBestExecutionContextScope());
+        llvm::expectedToOptional(location_sp->GetCompilerType().GetByteSize(
+            exe_ctx.GetBestExecutionContextScope()));
     if (!max_bytes || size > *max_bytes)
       return {};
 

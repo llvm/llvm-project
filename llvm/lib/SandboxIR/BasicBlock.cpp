@@ -67,12 +67,6 @@ void BasicBlock::buildBasicBlockFromLLVMIR(llvm::BasicBlock *LLVMBB) {
       // Skip instruction's label operands
       if (isa<llvm::BasicBlock>(Op))
         continue;
-      // Skip metadata
-      if (isa<llvm::MetadataAsValue>(Op))
-        continue;
-      // Skip asm
-      if (isa<llvm::InlineAsm>(Op))
-        continue;
       Ctx.getOrCreateValue(Op);
     }
   }

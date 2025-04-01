@@ -382,7 +382,14 @@ ResourceTypeInfo::UAVInfo ResourceTypeInfo::getUAV() const {
 
 uint32_t ResourceTypeInfo::getCBufferSize(const DataLayout &DL) const {
   assert(isCBuffer() && "Not a CBuffer");
-  return cast<CBufferExtType>(HandleTy)->getCBufferSize();
+
+  Type *ElTy = cast<CBufferExtType>(HandleTy)->getResourceType();
+
+  if (auto *LayoutTy = dyn_cast<LayoutExtType>(ElTy))
+    return LayoutTy->getSize();
+
+  // TODO: What should we do with unannotated arrays?
+  return DL.getTypeAllocSize(ElTy);
 }
 
 dxil::SamplerType ResourceTypeInfo::getSamplerType() const {
@@ -748,6 +755,11 @@ void DXILBindingMap::populate(Module &M, DXILResourceTypeMap &DRTM) {
       FirstSampler = I;
       NextID = 0;
     }
+
+    // We need to make sure the types of resource are ordered even if some are
+    // missing.
+    FirstCBuffer = std::min({FirstCBuffer, FirstSampler});
+    FirstUAV = std::min({FirstUAV, FirstCBuffer});
 
     // Adjust the resource binding to use the next ID.
     RBI.setBindingID(NextID++);

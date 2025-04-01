@@ -24,6 +24,12 @@ functions:
     return_type: _Noreturn void
     arguments:
       - type: int
+  - name: a64l
+    standards:
+      - posix
+    return_type: long
+    arguments:
+      - type: const char *
   - name: abort
     standards:
       - stdc
@@ -127,6 +133,12 @@ functions:
     arguments:
       - type: long long
       - type: long long
+  - name: memalignment
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: const void *
   - name: posix_memalign
     standards:
       - posix

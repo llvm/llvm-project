@@ -19,13 +19,15 @@ define void @test_bcc_fallthrough_taken(i64 %in) nounwind {
 ; CHECK-NEXT:    ori $a1, $zero, 42
 ; CHECK-NEXT:    bne $a0, $a1, .LBB0_3
 ; CHECK-NEXT:  # %bb.1: # %true
-; CHECK-NEXT:    bl %plt(test_true)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(test_true)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:  .LBB0_2: # %true
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_3: # %false
-; CHECK-NEXT:    bl %plt(test_false)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(test_false)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    b .LBB0_2
   %tst = icmp eq i64 %in, 42
   br i1 %tst, label %true, label %false, !prof !0
@@ -51,13 +53,15 @@ define void @test_bcc_fallthrough_nottaken(i64 %in) nounwind {
 ; CHECK-NEXT:    ori $a1, $zero, 42
 ; CHECK-NEXT:    beq $a0, $a1, .LBB1_3
 ; CHECK-NEXT:  # %bb.1: # %false
-; CHECK-NEXT:    bl %plt(test_false)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(test_false)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:  .LBB1_2: # %true
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB1_3: # %true
-; CHECK-NEXT:    bl %plt(test_true)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(test_true)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    b .LBB1_2
   %tst = icmp eq i64 %in, 42
   br i1 %tst, label %true, label %false, !prof !1

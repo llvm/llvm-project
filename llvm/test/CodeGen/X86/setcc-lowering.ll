@@ -38,7 +38,7 @@ define <8 x i16> @pr25080(<8 x i32> %a) nounwind {
 ; KNL-32-NEXT:    movb $15, %al
 ; KNL-32-NEXT:    kmovw %eax, %k1
 ; KNL-32-NEXT:    korw %k1, %k0, %k1
-; KNL-32-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; KNL-32-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; KNL-32-NEXT:    vpmovdw %zmm0, %ymm0
 ; KNL-32-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; KNL-32-NEXT:    retl

@@ -12,12 +12,11 @@ define void @test() nounwind comdat {
 ; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stdu 1, -64(1)
 ; CHECK-NEXT:    std 0, 80(1)
-; CHECK-NEXT:    li 4, 0
 ; CHECK-NEXT:    ld 3, 0(3)
 ; CHECK-NEXT:    ld 30, 32(1)
-; CHECK-NEXT:    subc 3, 3, 30
-; CHECK-NEXT:    addze. 4, 4
-; CHECK-NEXT:    iseleq 3, 0, 3
+; CHECK-NEXT:    sub 4, 3, 30
+; CHECK-NEXT:    cmpld 4, 3
+; CHECK-NEXT:    iselgt 3, 0, 4
 ; CHECK-NEXT:    addi 29, 3, 1
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %forcond

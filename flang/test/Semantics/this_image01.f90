@@ -8,7 +8,7 @@ subroutine test
   type(team_type) :: coteam[*]
   integer :: coscalar[*], coarray(3)[*]
   save :: coteam, coscalar, coarray
-  real coarray1[*], coarray2[2,*], coarray3[2,3,*]
+  real, save :: coarray1[*], coarray2[2,*], coarray3[2,3,*]
   integer indices(3)
 
   ! correct calls, should produce no errors

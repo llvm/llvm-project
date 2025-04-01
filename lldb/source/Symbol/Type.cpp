@@ -455,14 +455,18 @@ Type *Type::GetEncodingType() {
   return m_encoding_type;
 }
 
-std::optional<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
+llvm::Expected<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
   if (m_byte_size_has_value)
     return static_cast<uint64_t>(m_byte_size);
 
   switch (m_encoding_uid_type) {
   case eEncodingInvalid:
+    return llvm::createStringError("could not get type size: invalid encoding");
+
   case eEncodingIsSyntheticUID:
-    break;
+    return llvm::createStringError(
+        "could not get type size: synthetic encoding");
+
   case eEncodingIsUID:
   case eEncodingIsConstUID:
   case eEncodingIsRestrictUID:
@@ -472,18 +476,18 @@ std::optional<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
     Type *encoding_type = GetEncodingType();
     if (encoding_type)
       if (std::optional<uint64_t> size =
-              encoding_type->GetByteSize(exe_scope)) {
+              llvm::expectedToOptional(encoding_type->GetByteSize(exe_scope))) {
         m_byte_size = *size;
         m_byte_size_has_value = true;
         return static_cast<uint64_t>(m_byte_size);
       }
 
-    if (std::optional<uint64_t> size =
-            GetLayoutCompilerType().GetByteSize(exe_scope)) {
-      m_byte_size = *size;
-      m_byte_size_has_value = true;
-      return static_cast<uint64_t>(m_byte_size);
-    }
+    auto size_or_err = GetLayoutCompilerType().GetByteSize(exe_scope);
+    if (!size_or_err)
+      return size_or_err.takeError();
+    m_byte_size = *size_or_err;
+    m_byte_size_has_value = true;
+    return static_cast<uint64_t>(m_byte_size);
   } break;
 
     // If we are a pointer or reference, then this is just a pointer size;
@@ -498,7 +502,8 @@ std::optional<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
       }
     } break;
   }
-  return {};
+  return llvm::createStringError(
+      "could not get type size: unexpected encoding");
 }
 
 llvm::Expected<uint32_t> Type::GetNumChildren(bool omit_empty_base_classes) {
@@ -539,7 +544,9 @@ bool Type::ReadFromMemory(ExecutionContext *exe_ctx, lldb::addr_t addr,
   }
 
   const uint64_t byte_size =
-      GetByteSize(exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr)
+      llvm::expectedToOptional(
+          GetByteSize(exe_ctx ? exe_ctx->GetBestExecutionContextScope()
+                              : nullptr))
           .value_or(0);
   if (data.GetByteSize() < byte_size) {
     lldb::DataBufferSP data_sp(new DataBufferHeap(byte_size, '\0'));

@@ -96,6 +96,28 @@ llvm.func @fold_extract_extractvalue(%arr: !llvm.struct<(i64, array<1 x ptr<1>>)
 
 // -----
 
+// CHECK-LABEL: fold_extract_const
+// CHECK-NOT: extractvalue
+// CHECK:  llvm.mlir.constant(5.000000e-01 : f64)
+llvm.func @fold_extract_const() -> f64 {
+  %a = llvm.mlir.constant(dense<[-8.900000e+01, 5.000000e-01]> : tensor<2xf64>) : !llvm.array<2 x f64>
+  %b = llvm.extractvalue %a[1] : !llvm.array<2 x f64>
+  llvm.return %b : f64
+}
+
+// -----
+
+// CHECK-LABEL: fold_extract_splat
+// CHECK-NOT: extractvalue
+// CHECK: llvm.mlir.constant(-8.900000e+01 : f64)
+llvm.func @fold_extract_splat() -> f64 {
+  %a = llvm.mlir.constant(dense<-8.900000e+01> : tensor<2xf64>) : !llvm.array<2 x f64>
+  %b = llvm.extractvalue %a[1] : !llvm.array<2 x f64>
+  llvm.return %b : f64
+}
+
+// -----
+
 // CHECK-LABEL: fold_bitcast
 // CHECK-SAME: %[[ARG:[[:alnum:]]+]]
 // CHECK-NEXT: llvm.return %[[ARG]]

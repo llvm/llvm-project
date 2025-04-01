@@ -22,7 +22,7 @@
 
 namespace mlir {
 namespace bufferization {
-#define GEN_PASS_DEF_BUFFERDEALLOCATIONSIMPLIFICATION
+#define GEN_PASS_DEF_BUFFERDEALLOCATIONSIMPLIFICATIONPASS
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
 } // namespace bufferization
 } // namespace mlir
@@ -453,7 +453,7 @@ namespace {
 /// into the right positions. Furthermore, it inserts additional clones if
 /// necessary. It uses the algorithm described at the top of the file.
 struct BufferDeallocationSimplificationPass
-    : public bufferization::impl::BufferDeallocationSimplificationBase<
+    : public bufferization::impl::BufferDeallocationSimplificationPassBase<
           BufferDeallocationSimplificationPass> {
   void runOnOperation() override {
     BufferOriginAnalysis analysis(getOperation());
@@ -477,8 +477,3 @@ struct BufferDeallocationSimplificationPass
 };
 
 } // namespace
-
-std::unique_ptr<Pass>
-mlir::bufferization::createBufferDeallocationSimplificationPass() {
-  return std::make_unique<BufferDeallocationSimplificationPass>();
-}

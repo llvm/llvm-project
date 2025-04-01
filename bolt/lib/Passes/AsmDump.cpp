@@ -143,7 +143,7 @@ void dumpFunction(const BinaryFunction &BF) {
                         std::move(MCEInstance.MCE), std::move(MAB)));
   AsmStreamer->initSections(true, *BC.STI);
   std::unique_ptr<TargetMachine> TM(BC.TheTarget->createTargetMachine(
-      BC.TripleName, "", "", TargetOptions(), std::nullopt));
+      *BC.TheTriple, "", "", TargetOptions(), std::nullopt));
   std::unique_ptr<AsmPrinter> MAP(
       BC.TheTarget->createAsmPrinter(*TM, std::move(AsmStreamer)));
 

@@ -2,6 +2,26 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
+load("//libc:libc_build_rules.bzl", "libc_release_library")
+
 package(default_visibility = ["//visibility:public"])
 
 exports_files(["libc_test_rules.bzl"])
+
+# Smoke test verifying libc_release_library macro functionality.
+libc_release_library(
+    name = "libc_release_test",
+    libc_functions = [
+        "//libc:acosf",
+        "//libc:read",
+    ],
+    weak_symbols = [
+        "read",
+    ],
+)
+
+build_test(
+    name = "libc_release_build_test",
+    targets = [":libc_release_test"],
+)

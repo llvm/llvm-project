@@ -137,7 +137,8 @@ lldb_private::formatters::LibcxxStdProxyArraySyntheticFrontEnd::Update() {
     return ChildCacheState::eRefetch;
 
   m_element_type = type.GetTypeTemplateArgument(0);
-  if (std::optional<uint64_t> size = m_element_type.GetByteSize(nullptr))
+  if (std::optional<uint64_t> size =
+          llvm::expectedToOptional(m_element_type.GetByteSize(nullptr)))
     m_element_size = *size;
 
   if (m_element_size == 0)
@@ -152,7 +153,8 @@ lldb_private::formatters::LibcxxStdProxyArraySyntheticFrontEnd::Update() {
     return ChildCacheState::eRefetch;
 
   m_element_type_size_t = type.GetTypeTemplateArgument(0);
-  if (std::optional<uint64_t> size = m_element_type_size_t.GetByteSize(nullptr))
+  if (std::optional<uint64_t> size =
+          llvm::expectedToOptional(m_element_type_size_t.GetByteSize(nullptr)))
     m_element_size_size_t = *size;
 
   if (m_element_size_size_t == 0)

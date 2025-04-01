@@ -432,12 +432,12 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI _Rp operator()(_ArgTypes&&... __args) const {
     if (__f_ == nullptr)
-      __throw_bad_function_call();
+      std::__throw_bad_function_call();
     return (*__f_)(std::forward<_ArgTypes>(__args)...);
   }
 
   _LIBCPP_HIDE_FROM_ABI void swap(__value_func& __f) _NOEXCEPT {
-    if (&__f == this)
+    if (std::addressof(__f) == this)
       return;
     if ((void*)__f_ == &__buf_ && (void*)__f.__f_ == &__f.__buf_) {
       _LIBCPP_SUPPRESS_DEPRECATED_PUSH
@@ -550,8 +550,8 @@ private:
   template <typename _Fun>
   _LIBCPP_HIDE_FROM_ABI static const __policy* __choose_policy(/* is_small = */ false_type) {
     static constexpr __policy __policy = {
-        &__large_clone<_Fun>,
-        &__large_destroy<_Fun>,
+        std::addressof(__large_clone<_Fun>),
+        std::addressof(__large_destroy<_Fun>),
         false,
 #  if _LIBCPP_HAS_RTTI
         &typeid(typename _Fun::_Target)
@@ -600,14 +600,14 @@ struct __policy_invoker<_Rp(_ArgTypes...)> {
   // Creates an invoker that calls the given instance of __func.
   template <typename _Fun>
   _LIBCPP_HIDE_FROM_ABI static __policy_invoker __create() {
-    return __policy_invoker(&__call_impl<_Fun>);
+    return __policy_invoker(std::addressof(__call_impl<_Fun>));
   }
 
 private:
   _LIBCPP_HIDE_FROM_ABI explicit __policy_invoker(__Call __c) : __call_(__c) {}
 
   _LIBCPP_HIDE_FROM_ABI static _Rp __call_empty(const __policy_storage*, __fast_forward<_ArgTypes>...) {
-    __throw_bad_function_call();
+    std::__throw_bad_function_call();
   }
 
   template <typename _Fun>

@@ -96,7 +96,7 @@ if (LLVM_TREE_AVAILABLE)
   # being added to the build. Flang uses the same resource dir as clang.
   include(GetClangResourceDir)
   get_clang_resource_dir(FLANG_RT_OUTPUT_RESOURCE_DIR PREFIX "${LLVM_LIBRARY_OUTPUT_INTDIR}/..")
-  get_clang_resource_dir(FLANG_RT_INSTALL_RESOURCE_PATH)
+  get_clang_resource_dir(FLANG_RT_INSTALL_RESOURCE_PATH_DEFAULT)
 
   extend_path(FLANG_RT_OUTPUT_RESOURCE_LIB_DIR "${FLANG_RT_OUTPUT_RESOURCE_DIR}" "${toolchain_lib_subdir}")
 else ()
@@ -108,10 +108,12 @@ else ()
   # be installed there using the same prefix. This is to not have a difference
   # between bootstrap and standalone runtimes builds.
   set(FLANG_RT_OUTPUT_RESOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}")
-  set(FLANG_RT_INSTALL_RESOURCE_PATH "lib${LLVM_LIBDIR_SUFFIX}/clang/${LLVM_VERSION_MAJOR}")
+  set(FLANG_RT_INSTALL_RESOURCE_PATH_DEFAULT "lib${LLVM_LIBDIR_SUFFIX}/clang/${LLVM_VERSION_MAJOR}")
 
   extend_path(FLANG_RT_OUTPUT_RESOURCE_LIB_DIR "${FLANG_RT_OUTPUT_RESOURCE_DIR}" "lib${LLVM_LIBDIR_SUFFIX}")
 endif ()
+set(FLANG_RT_INSTALL_RESOURCE_PATH "${FLANG_RT_INSTALL_RESOURCE_PATH_DEFAULT}"
+    CACHE PATH "Path to install runtime libraries to (default: clang resource dir)")
 extend_path(FLANG_RT_INSTALL_RESOURCE_LIB_PATH "${FLANG_RT_INSTALL_RESOURCE_PATH}" "${toolchain_lib_subdir}")
 cmake_path(NORMAL_PATH FLANG_RT_OUTPUT_RESOURCE_DIR)
 cmake_path(NORMAL_PATH FLANG_RT_INSTALL_RESOURCE_PATH)
@@ -137,6 +139,17 @@ cmake_path(NORMAL_PATH FLANG_RT_INSTALL_RESOURCE_LIB_PATH)
 
 option(FLANG_RT_INCLUDE_TESTS "Generate build targets for the flang-rt unit and regression-tests." "${LLVM_INCLUDE_TESTS}")
 
+# Provide an interface to link against the LLVM libc/libc++ projects directly.
+set(FLANG_RT_SUPPORTED_PROVIDERS system llvm)
+set(FLANG_RT_LIBC_PROVIDER "system" CACHE STRING "Specify C library to use. Supported values are ${FLANG_RT_SUPPORTED_PROVIDERS}.")
+if (NOT "${FLANG_RT_LIBC_PROVIDER}" IN_LIST FLANG_RT_SUPPORTED_PROVIDERS)
+  message(FATAL_ERROR "Unsupported library: '${FLANG_RT_RUNTIME_PROVIDER}'. Supported values are ${FLANG_RT_SUPPORTED_PROVIDERS}.")
+endif ()
+
+set(FLANG_RT_LIBCXX_PROVIDER "system" CACHE STRING "Specify C++ library to use. Supported values are ${FLANG_RT_SUPPORTED_PROVIDERS}.")
+if (NOT "${FLANG_RT_LIBCXX_PROVIDER}" IN_LIST FLANG_RT_SUPPORTED_PROVIDERS)
+  message(FATAL_ERROR "Unsupported library: '${FLANG_RT_LIBCXX_PROVIDER}'. Supported values are ${FLANG_RT_SUPPORTED_PROVIDERS}.")
+endif ()
 
 option(FLANG_RT_ENABLE_STATIC "Build Flang-RT as a static library." ON)
 if (WIN32)
@@ -208,6 +221,15 @@ endif()
 # System Introspection #
 ########################
 
+# The GPU targets require a few mandatory arguments to make the standard CMake
+# check flags happy.
+if ("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn")
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nogpulib")
+elseif ("${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx")
+  set(CMAKE_REQUIRED_FLAGS
+      "${CMAKE_REQUIRED_FLAGS} -flto -c -Wno-unused-command-line-argument")
+endif()
+
 include(CheckCXXSymbolExists)
 include(CheckCXXSourceCompiles)
 check_cxx_symbol_exists(strerror_r string.h HAVE_STRERROR_R)
@@ -221,12 +243,17 @@ check_cxx_source_compiles(
   "
   HAVE_DECL_STRERROR_S)
 
-
 # Search for clang_rt.builtins library. Need in addition to msvcrt.
 if (WIN32)
   find_compiler_rt_library(builtins FLANG_RT_BUILTINS_LIBRARY)
 endif ()
 
+# Build with _XOPEN_SOURCE on AIX to avoid errors caused by _ALL_SOURCE.
+# We need to enable the large-file API as well.
+if (UNIX AND CMAKE_SYSTEM_NAME MATCHES "AIX")
+  add_compile_definitions(_XOPEN_SOURCE=700)
+  add_compile_definitions(_LARGE_FILE_API)
+endif ()
 
 # Check whether the compiler can undefine a macro using the "-U" flag.
 # Aternatively, we could use
@@ -237,6 +264,25 @@ check_cxx_compiler_flag("-UTESTFLAG" FLANG_RT_SUPPORTS_UNDEFINE_FLAG)
 # Check whether -fno-lto is supported.
 check_cxx_compiler_flag(-fno-lto FLANG_RT_HAS_FNO_LTO_FLAG)
 
+# Check whether -nostdlibinc is supported.
+check_cxx_compiler_flag(-nostdlibinc FLANG_RT_HAS_NOSTDLIBINC_FLAG)
+
+# Check whether -nostdlib is supported.
+check_cxx_compiler_flag(-nostdlib FLANG_RT_HAS_NOSTDLIB_FLAG)
+
+# Check whether -stdlib= is supported.
+check_cxx_compiler_flag(-stdlib=platform FLANG_RT_HAS_STDLIB_FLAG)
+
+# Check whether -Wl,--as-needed is supported.
+check_linker_flag(C "LINKER:--as-needed" LINKER_SUPPORTS_AS_NEEDED)
+if (LINKER_SUPPORTS_AS_NEEDED)
+  set(LINKER_AS_NEEDED_OPT "LINKER:--as-needed")
+endif()
+
+# Different platform may have different name for the POSIX thread library.
+# For example, libpthread.a on AIX. Search for it as it is needed when
+# building the shared flang_rt.runtime.so.
+find_package(Threads)
 
 # function checks
 find_package(Backtrace)
@@ -247,6 +293,8 @@ set(BACKTRACE_HEADER ${Backtrace_HEADER})
 #####################
 # Build Preparation #
 #####################
+
+include(HandleLibs)
 
 if (FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT AND FLANG_RT_INCLUDE_TESTS)
   # If Fortran runtime is built as CUDA library, the linking
@@ -265,7 +313,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED YES)
 
 
 configure_file(cmake/config.h.cmake.in config.h)
-
+if (FLANG_INCLUDE_QUADMATH_H)
+  configure_file("cmake/quadmath_wrapper.h.in" "${FLANG_RT_BINARY_DIR}/quadmath_wrapper.h")
+endif ()
 
 # The bootstrap build will create a phony target with the same as the top-level
 # directory ("flang-rt") and delegate it to the runtimes build dir.

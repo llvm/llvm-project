@@ -328,7 +328,7 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
     }
   } else {
     if (force_symbol_search) {
-      lldb::StreamSP s = target.GetDebugger().GetAsyncErrorStream();
+      lldb::StreamUP s = target.GetDebugger().GetAsyncErrorStream();
       s->Printf("Unable to find file");
       if (!name.empty())
         s->Printf(" %s", name.str().c_str());

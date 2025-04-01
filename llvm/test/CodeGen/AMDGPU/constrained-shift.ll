@@ -192,10 +192,8 @@ define amdgpu_ps <4 x i32> @s_csh_v4i32(<4 x i32> inreg %a, <4 x i32> inreg %b) 
 ;
 ; GISEL-LABEL: s_csh_v4i32:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_mov_b32 s8, 31
-; GISEL-NEXT:    s_mov_b32 s9, s8
-; GISEL-NEXT:    s_and_b64 s[4:5], s[4:5], s[8:9]
-; GISEL-NEXT:    s_and_b64 s[6:7], s[6:7], s[8:9]
+; GISEL-NEXT:    s_and_b64 s[4:5], s[4:5], 31
+; GISEL-NEXT:    s_and_b64 s[6:7], s[6:7], 31
 ; GISEL-NEXT:    s_lshl_b32 s8, s0, s4
 ; GISEL-NEXT:    s_lshl_b32 s9, s1, s5
 ; GISEL-NEXT:    s_lshl_b32 s10, s2, s6

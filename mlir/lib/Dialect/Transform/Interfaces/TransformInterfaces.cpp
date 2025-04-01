@@ -1390,6 +1390,21 @@ void transform::ErrorCheckingTrackingListener::notifyPayloadReplacementNotFound(
   ++errorCounter;
 }
 
+std::string
+transform::ErrorCheckingTrackingListener::getLatestMatchFailureMessage() {
+  if (!matchFailure) {
+    return "";
+  }
+  return matchFailure->str();
+}
+
+void transform::ErrorCheckingTrackingListener::notifyMatchFailure(
+    Location loc, function_ref<void(Diagnostic &)> reasonCallback) {
+  Diagnostic diag(loc, DiagnosticSeverity::Remark);
+  reasonCallback(diag);
+  matchFailure = std::move(diag);
+}
+
 //===----------------------------------------------------------------------===//
 // TransformRewriter
 //===----------------------------------------------------------------------===//

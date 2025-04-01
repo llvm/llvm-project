@@ -27,10 +27,10 @@ static bool validateDeclsInsideHLSLBuffer(Parser::DeclGroupPtrTy DG,
     return false;
   DeclGroupRef Decls = DG.get();
   bool IsValid = true;
-  // Only allow function, variable, record decls inside HLSLBuffer.
+  // Only allow function, variable, record, and empty decls inside HLSLBuffer.
   for (DeclGroupRef::iterator I = Decls.begin(), E = Decls.end(); I != E; ++I) {
     Decl *D = *I;
-    if (isa<CXXRecordDecl, RecordDecl, FunctionDecl, VarDecl>(D))
+    if (isa<CXXRecordDecl, RecordDecl, FunctionDecl, VarDecl, EmptyDecl>(D))
       continue;
 
     // FIXME: support nested HLSLBuffer and namespace inside HLSLBuffer.

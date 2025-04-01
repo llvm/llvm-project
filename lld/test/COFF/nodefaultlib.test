@@ -36,3 +36,12 @@ MSVC stamps uppercase references in OBJ directives, thus ensure that passing low
 
 UPPERCASE-NOT: OLDNAMES
 UPPERCASE-NOT: LIBCMT
+
+# RUN: yaml2obj -o %T/defaultlib.obj %p/Inputs/defaultlib.yaml
+# RUN: mkdir -p %t.dir/sysroot/VC/Tools/MSVC/1.1.1.1/lib/x64
+# RUN: cp %p/Inputs/ret42.lib %t.dir/sysroot/VC/Tools/MSVC/1.1.1.1/lib/x64/default.lib
+
+# RUN: lld-link /winsysroot:%t.dir/sysroot /out:%t.exe /entry:main /subsystem:console %T/defaultlib.obj
+# RUN: not lld-link /winsysroot:%t.dir/sysroot /out:%t.exe /entry:main /subsystem:console /nodefaultlib:default.lib %T/defaultlib.obj 2>&1 | FileCheck -check-prefix=CHECK4 %s
+
+CHECK4: error: <root>: undefined symbol: main

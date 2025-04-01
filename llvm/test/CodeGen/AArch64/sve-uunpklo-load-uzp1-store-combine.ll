@@ -15,7 +15,7 @@ define <vscale x 8 x i16> @uunpklo_i8_valid(ptr %b) #0 {
 ; CHECK-NEXT:    ld1b { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %mask = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 11)
-  %load = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8(ptr %b, i32 2, <vscale x 16 x i1> %mask, <vscale x 16 x i8> undef)
+  %load = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8(ptr %b, i32 2, <vscale x 16 x i1> %mask, <vscale x 16 x i8> poison)
   %uzp = call <vscale x 8 x i16> @llvm.aarch64.sve.uunpklo.nxv8i16(<vscale x 16 x i8> %load)
   ret <vscale x 8 x i16> %uzp
 }
@@ -28,7 +28,7 @@ define <vscale x 8 x i16> @uunpklo_i8_invalid(ptr %b) #0 {
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    ret
   %mask = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 12)
-  %load = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8(ptr %b, i32 2, <vscale x 16 x i1> %mask, <vscale x 16 x i8> undef)
+  %load = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8(ptr %b, i32 2, <vscale x 16 x i1> %mask, <vscale x 16 x i8> poison)
   %uzp = call <vscale x 8 x i16> @llvm.aarch64.sve.uunpklo.nxv8i16(<vscale x 16 x i8> %load)
   ret <vscale x 8 x i16> %uzp
 }
@@ -40,7 +40,7 @@ define <vscale x 4 x i32> @uunpklo_i16_valid(ptr %b) #0 {
 ; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %mask = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 10)
-  %load = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16(ptr %b, i32 2, <vscale x 8 x i1> %mask, <vscale x 8 x i16> undef)
+  %load = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16(ptr %b, i32 2, <vscale x 8 x i1> %mask, <vscale x 8 x i16> poison)
   %uzp = call <vscale x 4 x i32> @llvm.aarch64.sve.uunpklo.nxv4i32(<vscale x 8 x i16> %load)
   ret <vscale x 4 x i32> %uzp
 }
@@ -53,7 +53,7 @@ define <vscale x 4 x i32> @uunpklo_i16_invalid(ptr %b) #0 {
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    ret
   %mask = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 11)
-  %load = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16(ptr %b, i32 2, <vscale x 8 x i1> %mask, <vscale x 8 x i16> undef)
+  %load = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16(ptr %b, i32 2, <vscale x 8 x i1> %mask, <vscale x 8 x i16> poison)
   %uzp = call <vscale x 4 x i32> @llvm.aarch64.sve.uunpklo.nxv4i32(<vscale x 8 x i16> %load)
   ret <vscale x 4 x i32> %uzp
 }
@@ -65,7 +65,7 @@ define <vscale x 2 x i64> @uunpklo_i32_valid(ptr %b) #0 {
 ; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %mask = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 9)
-  %load = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32(ptr %b, i32 2, <vscale x 4 x i1> %mask, <vscale x 4 x i32> undef)
+  %load = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32(ptr %b, i32 2, <vscale x 4 x i1> %mask, <vscale x 4 x i32> poison)
   %uzp = call <vscale x 2 x i64> @llvm.aarch64.sve.uunpklo.nxv2i64(<vscale x 4 x i32> %load)
   ret <vscale x 2 x i64> %uzp
 }
@@ -78,7 +78,7 @@ define <vscale x 2 x i64> @uunpklo_i32_invalid(ptr %b) #0 {
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    ret
   %mask = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 10)
-  %load = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32(ptr %b, i32 2, <vscale x 4 x i1> %mask, <vscale x 4 x i32> undef)
+  %load = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32(ptr %b, i32 2, <vscale x 4 x i1> %mask, <vscale x 4 x i32> poison)
   %uzp = call <vscale x 2 x i64> @llvm.aarch64.sve.uunpklo.nxv2i64(<vscale x 4 x i32> %load)
   ret <vscale x 2 x i64> %uzp
 }
@@ -91,7 +91,7 @@ define <vscale x 2 x i64> @uunpklo_invalid_all(ptr %b) #0 {
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    ret
   %mask = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %load = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32(ptr %b, i32 2, <vscale x 4 x i1> %mask, <vscale x 4 x i32> undef)
+  %load = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32(ptr %b, i32 2, <vscale x 4 x i1> %mask, <vscale x 4 x i32> poison)
   %uzp = call <vscale x 2 x i64> @llvm.aarch64.sve.uunpklo.nxv2i64(<vscale x 4 x i32> %load)
   ret <vscale x 2 x i64> %uzp
 }

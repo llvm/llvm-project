@@ -113,7 +113,7 @@ define hidden ptr @thingWithValue(ptr %self) uwtable ssp {
 ; CHECK-NEXT:  ## %bb.1: ## %someThingWithValue.exit
 ; CHECK-NEXT:    retq
 entry:
-  br i1 undef, label %if.then.i, label %if.else.i
+  br i1 poison, label %if.then.i, label %if.else.i
 
 if.then.i:                                        ; preds = %entry
   br label %someThingWithValue.exit

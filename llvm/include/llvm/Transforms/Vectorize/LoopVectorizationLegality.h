@@ -308,7 +308,7 @@ public:
   RecurrenceSet &getFixedOrderRecurrences() { return FixedOrderRecurrences; }
 
   /// Returns the widest induction type.
-  Type *getWidestInductionType() { return WidestIndTy; }
+  IntegerType *getWidestInductionType() { return WidestIndTy; }
 
   /// Returns True if given store is a final invariant store of one of the
   /// reductions found in the loop.
@@ -382,7 +382,8 @@ public:
   const LoopAccessInfo *getLAI() const { return LAI; }
 
   bool isSafeForAnyVectorWidth() const {
-    return LAI->getDepChecker().isSafeForAnyVectorWidth();
+    return LAI->getDepChecker().isSafeForAnyVectorWidth() &&
+           LAI->getDepChecker().isSafeForAnyStoreLoadForwardDistances();
   }
 
   uint64_t getMaxSafeVectorWidthInBits() const {
@@ -404,6 +405,17 @@ public:
   /// is exactly one.
   BasicBlock *getUncountableEarlyExitBlock() const {
     return hasUncountableEarlyExit() ? getUncountableEdge()->second : nullptr;
+  }
+
+  /// Return true if there is store-load forwarding dependencies.
+  bool isSafeForAnyStoreLoadForwardDistances() const {
+    return LAI->getDepChecker().isSafeForAnyStoreLoadForwardDistances();
+  }
+
+  /// Return safe power-of-2 number of elements, which do not prevent store-load
+  /// forwarding and safe to operate simultaneously.
+  uint64_t getMaxStoreLoadForwardSafeDistanceInBits() const {
+    return LAI->getDepChecker().getStoreLoadForwardSafeDistanceInBits();
   }
 
   /// Returns true if vector representation of the instruction \p I
@@ -595,7 +607,7 @@ private:
   RecurrenceSet FixedOrderRecurrences;
 
   /// Holds the widest induction type encountered.
-  Type *WidestIndTy = nullptr;
+  IntegerType *WidestIndTy = nullptr;
 
   /// Allowed outside users. This holds the variables that can be accessed from
   /// outside the loop.

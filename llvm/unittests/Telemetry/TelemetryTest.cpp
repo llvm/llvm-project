@@ -212,7 +212,13 @@ std::shared_ptr<Config> getTelemetryConfig(const TestContext &Ctxt) {
   return std::make_shared<Config>(false);
 }
 
-TEST(TelemetryTest, TelemetryDisabled) {
+#if LLVM_ENABLE_TELEMETRY
+#define TELEMETRY_TEST(suite, test) TEST(suite, test)
+#else
+#define TELEMETRY_TEST(suite, test) TEST(DISABLED_##suite, test)
+#endif
+
+TELEMETRY_TEST(TelemetryTest, TelemetryDisabled) {
   TestContext Context;
   Context.HasVendorPlugin = false;
 
@@ -221,7 +227,7 @@ TEST(TelemetryTest, TelemetryDisabled) {
   EXPECT_EQ(nullptr, Manager);
 }
 
-TEST(TelemetryTest, TelemetryEnabled) {
+TELEMETRY_TEST(TelemetryTest, TelemetryEnabled) {
   const std::string ToolName = "TelemetryTestTool";
 
   // Preset some params.

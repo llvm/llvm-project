@@ -551,7 +551,7 @@ void MCPlusBuilder::initSizeMap() {
 bool MCPlusBuilder::setOperandToSymbolRef(MCInst &Inst, int OpNum,
                                           const MCSymbol *Symbol,
                                           int64_t Addend, MCContext *Ctx,
-                                          uint64_t RelType) const {
+                                          uint32_t RelType) const {
   MCOperand Operand;
   if (!Addend) {
     Operand = MCOperand::createExpr(getTargetExprFor(

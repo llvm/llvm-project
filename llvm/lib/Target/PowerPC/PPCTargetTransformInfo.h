@@ -139,6 +139,8 @@ public:
       bool UseMaskForCond = false, bool UseMaskForGaps = false);
   InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                         TTI::TargetCostKind CostKind);
+  bool areInlineCompatible(const Function *Caller,
+                           const Function *Callee) const;
   bool areTypesABICompatible(const Function *Caller, const Function *Callee,
                              const ArrayRef<Type *> &Types) const;
   bool hasActiveVectorLength(unsigned Opcode, Type *DataType,

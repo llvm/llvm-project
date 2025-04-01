@@ -83,10 +83,52 @@ exit:
 define void @dependency_check_and_runtime_checks_needed_select_of_ptr_add_recs(ptr %a, ptr %b, ptr %c, i64 %offset, i64 %n) {
 ; CHECK-LABEL: 'dependency_check_and_runtime_checks_needed_select_of_ptr_add_recs'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: cannot check memory dependencies at runtime
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group ([[GRP5:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %gep.a.iv = getelementptr inbounds float, ptr %a, i64 %iv
+; CHECK-NEXT:        Against group ([[GRP6:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %select = select i1 %cmp, ptr %gep.b, ptr %gep.c
+; CHECK-NEXT:      Check 1:
+; CHECK-NEXT:        Comparing group ([[GRP5]]):
+; CHECK-NEXT:          %gep.a.iv = getelementptr inbounds float, ptr %a, i64 %iv
+; CHECK-NEXT:        Against group ([[GRP7:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %select = select i1 %cmp, ptr %gep.b, ptr %gep.c
+; CHECK-NEXT:      Check 2:
+; CHECK-NEXT:        Comparing group ([[GRP5]]):
+; CHECK-NEXT:          %gep.a.iv = getelementptr inbounds float, ptr %a, i64 %iv
+; CHECK-NEXT:        Against group ([[GRP8:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %gep.a.iv.off = getelementptr inbounds float, ptr %a, i64 %iv.offset
+; CHECK-NEXT:      Check 3:
+; CHECK-NEXT:        Comparing group ([[GRP6]]):
+; CHECK-NEXT:          %select = select i1 %cmp, ptr %gep.b, ptr %gep.c
+; CHECK-NEXT:        Against group ([[GRP7]]):
+; CHECK-NEXT:          %select = select i1 %cmp, ptr %gep.b, ptr %gep.c
+; CHECK-NEXT:      Check 4:
+; CHECK-NEXT:        Comparing group ([[GRP6]]):
+; CHECK-NEXT:          %select = select i1 %cmp, ptr %gep.b, ptr %gep.c
+; CHECK-NEXT:        Against group ([[GRP8]]):
+; CHECK-NEXT:          %gep.a.iv.off = getelementptr inbounds float, ptr %a, i64 %iv.offset
+; CHECK-NEXT:      Check 5:
+; CHECK-NEXT:        Comparing group ([[GRP7]]):
+; CHECK-NEXT:          %select = select i1 %cmp, ptr %gep.b, ptr %gep.c
+; CHECK-NEXT:        Against group ([[GRP8]]):
+; CHECK-NEXT:          %gep.a.iv.off = getelementptr inbounds float, ptr %a, i64 %iv.offset
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group [[GRP5]]:
+; CHECK-NEXT:          (Low: %a High: ((4 * %n) + %a))
+; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop>
+; CHECK-NEXT:        Group [[GRP6]]:
+; CHECK-NEXT:          (Low: %b High: ((4 * %n) + %b))
+; CHECK-NEXT:            Member: {%b,+,4}<%loop>
+; CHECK-NEXT:        Group [[GRP7]]:
+; CHECK-NEXT:          (Low: %c High: ((4 * %n) + %c))
+; CHECK-NEXT:            Member: {%c,+,4}<%loop>
+; CHECK-NEXT:        Group [[GRP8]]:
+; CHECK-NEXT:          (Low: ((4 * %offset) + %a) High: ((4 * %offset) + (4 * %n) + %a))
+; CHECK-NEXT:            Member: {((4 * %offset) + %a),+,4}<%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -121,7 +163,7 @@ exit:
 define void @dependency_check_and_runtime_checks_needed_select_of_ptr_add_recs_may_wrap_1(ptr %a, ptr %b, ptr %c, i64 %offset, i64 %n) {
 ; CHECK-LABEL: 'dependency_check_and_runtime_checks_needed_select_of_ptr_add_recs_may_wrap_1'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: cannot check memory dependencies at runtime
+; CHECK-NEXT:      Report: cannot identify array bounds
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
@@ -162,7 +204,7 @@ exit:
 define void @dependency_check_and_runtime_checks_needed_select_of_ptr_add_recs_may_wrap_2(ptr %a, ptr %b, ptr %c, i64 %offset, i64 %n) {
 ; CHECK-LABEL: 'dependency_check_and_runtime_checks_needed_select_of_ptr_add_recs_may_wrap_2'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: cannot check memory dependencies at runtime
+; CHECK-NEXT:      Report: cannot identify array bounds
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:

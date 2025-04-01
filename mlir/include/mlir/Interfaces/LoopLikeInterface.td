@@ -180,12 +180,12 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
         For loop operations that dont yield a value, this should return
         std::nullopt.
       }],
-      /*retTy=*/"std::optional<::llvm::MutableArrayRef<::mlir::OpOperand>>",
+      /*retTy=*/"::std::optional<::llvm::MutableArrayRef<::mlir::OpOperand>>",
       /*methodName=*/"getYieldedValuesMutable",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return std::nullopt;
+        return ::std::nullopt;
       }]
     >,
     InterfaceMethod<[{
@@ -239,7 +239,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
     /// Returns if a block is inside a loop (within the current function). This
     /// can either be because the block is nested inside a LoopLikeInterface, or
     /// because the control flow graph is cyclic
-    static bool blockIsInLoop(Block *block);
+    static bool blockIsInLoop(::mlir::Block *block);
   }];
 
   let extraSharedClassDeclaration = [{
@@ -249,7 +249,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       auto inductionVars = $_op.getLoopInductionVars();
       if (inductionVars.has_value() && (*inductionVars).size() == 1)
           return (*inductionVars)[0];
-        return std::nullopt;
+        return ::std::nullopt;
     }
     /// Return the single lower bound value or attribute if it exists, otherwise
     /// return std::nullopt.
@@ -257,7 +257,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       auto lowerBounds = $_op.getLoopLowerBounds();
       if (lowerBounds.has_value() && (*lowerBounds).size() == 1)
           return (*lowerBounds)[0];
-      return std::nullopt;
+      return ::std::nullopt;
     }
     /// Return the single step value or attribute if it exists, otherwise
     /// return std::nullopt.
@@ -265,7 +265,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       auto steps = $_op.getLoopSteps();
       if (steps.has_value() && (*steps).size() == 1)
           return (*steps)[0];
-      return std::nullopt;
+      return ::std::nullopt;
     }
     /// Return the single upper bound value or attribute if it exists, otherwise
     /// return std::nullopt.
@@ -273,7 +273,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       auto upperBounds = $_op.getLoopUpperBounds();
       if (upperBounds.has_value() && (*upperBounds).size() == 1)
           return (*upperBounds)[0];
-      return std::nullopt;
+      return ::std::nullopt;
     }
 
     /// Append the specified additional "init" operands: replace this loop with
@@ -287,8 +287,9 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
                                           bool replaceInitOperandUsesInLoop) {
       return $_op.replaceWithAdditionalYields(
           rewriter, newInitOperands, replaceInitOperandUsesInLoop,
-          [](OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBBArgs) {
-            return SmallVector<Value>(newBBArgs);
+          [](::mlir::OpBuilder &b, ::mlir::Location loc,
+             ::mlir::ArrayRef<::mlir::BlockArgument> newBBArgs) {
+            return ::mlir::SmallVector<::mlir::Value>(newBBArgs);
           });
     }
 
@@ -298,9 +299,9 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       auto mutableValues = $_op.getYieldedValuesMutable();
       if (!mutableValues || mutableValues->empty())
         return {};
-      Operation *yieldOp = mutableValues->begin()->getOwner();
+      ::mlir::Operation *yieldOp = mutableValues->begin()->getOwner();
       unsigned firstOperandIndex = mutableValues->begin()->getOperandNumber();
-      return OperandRange(
+      return ::mlir::OperandRange(
           yieldOp->operand_begin() + firstOperandIndex,
           yieldOp->operand_begin() + firstOperandIndex + mutableValues->size());
     }
@@ -312,7 +313,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       if (initsMutable.empty())
         return ::mlir::OperandRange($_op->operand_end(), $_op->operand_end());
       unsigned firstOperandIndex = initsMutable.begin()->getOperandNumber();
-      return OperandRange(
+      return ::mlir::OperandRange(
           $_op->operand_begin() + firstOperandIndex,
           $_op->operand_begin() + firstOperandIndex + initsMutable.size());
     }
@@ -320,99 +321,103 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
     /// Return the region iter_arg that corresponds to the given init operand.
     /// Return an "empty" block argument if the given operand is not an init
     /// operand of this loop op.
-    BlockArgument getTiedLoopRegionIterArg(OpOperand *opOperand) {
+    ::mlir::BlockArgument getTiedLoopRegionIterArg(
+        ::mlir::OpOperand *opOperand) {
       auto initsMutable = $_op.getInitsMutable();
-      auto it = llvm::find(initsMutable, *opOperand);
+      auto it = ::llvm::find(initsMutable, *opOperand);
       if (it == initsMutable.end())
         return {};
-      return $_op.getRegionIterArgs()[std::distance(initsMutable.begin(), it)];
+      return $_op.getRegionIterArgs()[
+          ::std::distance(initsMutable.begin(), it)];
     }
 
     /// Return the region iter_arg that corresponds to the given loop result.
     /// Return an "empty" block argument if the given OpResult is not a loop
     /// result or if this op does not expose any loop results.
-    BlockArgument getTiedLoopRegionIterArg(OpResult opResult) {
+    ::mlir::BlockArgument getTiedLoopRegionIterArg(::mlir::OpResult opResult) {
       auto loopResults = $_op.getLoopResults();
       if (!loopResults)
         return {};
-      auto it = llvm::find(*loopResults, opResult);
+      auto it = ::llvm::find(*loopResults, opResult);
       if (it == loopResults->end())
         return {};
-      return $_op.getRegionIterArgs()[std::distance(loopResults->begin(), it)];
+      return $_op.getRegionIterArgs()[
+          ::std::distance(loopResults->begin(), it)];
     }
 
     /// Return the init operand that corresponds to the given region iter_arg.
     /// Return "nullptr" if the given block argument is not a region iter_arg
     /// of this loop op.
-    OpOperand *getTiedLoopInit(BlockArgument bbArg) {
+    ::mlir::OpOperand *getTiedLoopInit(::mlir::BlockArgument bbArg) {
       auto iterArgs = $_op.getRegionIterArgs();
-      auto it = llvm::find(iterArgs, bbArg);
+      auto it = ::llvm::find(iterArgs, bbArg);
       if (it == iterArgs.end())
         return {};
-      return &$_op.getInitsMutable()[std::distance(iterArgs.begin(), it)];
+      return &$_op.getInitsMutable()[::std::distance(iterArgs.begin(), it)];
     }
 
     /// Return the init operand that corresponds to the given loop result.
     /// Return "nullptr" if the given OpResult is not a loop result or if this
     /// op does not expose any loop results.
-    OpOperand *getTiedLoopInit(OpResult opResult) {
+    ::mlir::OpOperand *getTiedLoopInit(::mlir::OpResult opResult) {
       auto loopResults = $_op.getLoopResults();
       if (!loopResults)
         return nullptr;
-      auto it = llvm::find(*loopResults, opResult);
+      auto it = ::llvm::find(*loopResults, opResult);
       if (it == loopResults->end())
         return nullptr;
-      return &$_op.getInitsMutable()[std::distance(loopResults->begin(), it)];
+      return &$_op.getInitsMutable()[::std::distance(
+          loopResults->begin(), it)];
     }
 
     /// Return the yielded value that corresponds to the given region iter_arg.
     /// Return "nullptr" if the given block argument is not a region iter_arg
     /// of this loop op or if there is no yield corresponding to this `bbArg`.
-    OpOperand *getTiedLoopYieldedValue(BlockArgument bbArg) {
+    ::mlir::OpOperand *getTiedLoopYieldedValue(::mlir::BlockArgument bbArg) {
       auto iterArgs = $_op.getRegionIterArgs();
-      auto it = llvm::find(iterArgs, bbArg);
+      auto it = ::llvm::find(iterArgs, bbArg);
       if (it == iterArgs.end())
         return {};
-      std::optional<llvm::MutableArrayRef<::mlir::OpOperand>> yieldValues =
+      ::std::optional<::llvm::MutableArrayRef<::mlir::OpOperand>> yieldValues =
         $_op.getYieldedValuesMutable();
       if (!yieldValues)
         return {};
-      return &yieldValues.value()[std::distance(iterArgs.begin(), it)];
+      return &yieldValues.value()[::std::distance(iterArgs.begin(), it)];
     }
 
     /// Return the loop result that corresponds to the given init operand.
     /// Return an "empty" OpResult if the given operand is not an init operand
     /// of this loop op or if this op does not expose any loop results.
-    OpResult getTiedLoopResult(OpOperand *opOperand) {
+    ::mlir::OpResult getTiedLoopResult(::mlir::OpOperand *opOperand) {
       auto loopResults = $_op.getLoopResults();
       if (!loopResults)
         return {};
       auto initsMutable = $_op.getInitsMutable();
-      auto it = llvm::find(initsMutable, *opOperand);
+      auto it = ::llvm::find(initsMutable, *opOperand);
       if (it == initsMutable.end())
         return {};
-      return (*loopResults)[std::distance(initsMutable.begin(), it)];
+      return (*loopResults)[::std::distance(initsMutable.begin(), it)];
     }
 
     /// Return the loop result that corresponds to the given region iter_arg.
     /// Return an "empty" OpResult if the given block argument is not a region
     /// iter_arg of this loop op or if this op does not expose any loop results.
-    OpResult getTiedLoopResult(BlockArgument bbArg) {
+    ::mlir::OpResult getTiedLoopResult(::mlir::BlockArgument bbArg) {
       auto loopResults = $_op.getLoopResults();
       if (!loopResults)
         return {};
       auto iterArgs = $_op.getRegionIterArgs();
-      auto it = llvm::find(iterArgs, bbArg);
+      auto it = ::llvm::find(iterArgs, bbArg);
       if (it == iterArgs.end())
         return {};
-      return (*loopResults)[std::distance(iterArgs.begin(), it)];
+      return (*loopResults)[::std::distance(iterArgs.begin(), it)];
     }
   }];
 
   let verifyWithRegions = 1;
 
   let verify = [{
-    return detail::verifyLoopLikeOpInterface($_op);
+    return ::mlir::detail::verifyLoopLikeOpInterface($_op);
   }];
 }
 

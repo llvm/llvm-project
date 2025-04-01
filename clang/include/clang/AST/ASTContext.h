@@ -410,14 +410,8 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// The identifier 'NSCopying'.
   IdentifierInfo *NSCopyingName = nullptr;
 
-  /// The identifier '__make_integer_seq'.
-  mutable IdentifierInfo *MakeIntegerSeqName = nullptr;
-
-  /// The identifier '__type_pack_element'.
-  mutable IdentifierInfo *TypePackElementName = nullptr;
-
-  /// The identifier '__builtin_common_type'.
-  mutable IdentifierInfo *BuiltinCommonTypeName = nullptr;
+#define BuiltinTemplate(BTName) mutable IdentifierInfo *Name##BTName = nullptr;
+#include "clang/Basic/BuiltinTemplates.inc"
 
   QualType ObjCConstantStringType;
   mutable RecordDecl *CFConstantStringTagDecl = nullptr;
@@ -629,9 +623,10 @@ private:
 
   TranslationUnitDecl *TUDecl = nullptr;
   mutable ExternCContextDecl *ExternCContext = nullptr;
-  mutable BuiltinTemplateDecl *MakeIntegerSeqDecl = nullptr;
-  mutable BuiltinTemplateDecl *TypePackElementDecl = nullptr;
-  mutable BuiltinTemplateDecl *BuiltinCommonTypeDecl = nullptr;
+
+#define BuiltinTemplate(BTName)                                                \
+  mutable BuiltinTemplateDecl *Decl##BTName = nullptr;
+#include "clang/Basic/BuiltinTemplates.inc"
 
   /// The associated SourceManager object.
   SourceManager &SourceMgr;
@@ -728,7 +723,7 @@ public:
   // (However they are still accessible via TranslationUnitDecl->decls())
   //
   // Changing the scope clears the parent cache, which is expensive to rebuild.
-  std::vector<Decl *> getTraversalScope() const { return TraversalScope; }
+  ArrayRef<Decl *> getTraversalScope() const { return TraversalScope; }
   void setTraversalScope(const std::vector<Decl *> &);
 
   /// Forwards to get node parents from the ParentMapContext. New callers should
@@ -1157,9 +1152,9 @@ public:
   }
 
   ExternCContextDecl *getExternCContextDecl() const;
-  BuiltinTemplateDecl *getMakeIntegerSeqDecl() const;
-  BuiltinTemplateDecl *getTypePackElementDecl() const;
-  BuiltinTemplateDecl *getBuiltinCommonTypeDecl() const;
+
+#define BuiltinTemplate(BTName) BuiltinTemplateDecl *get##BTName##Decl() const;
+#include "clang/Basic/BuiltinTemplates.inc"
 
   // Builtin Types.
   CanQualType VoidTy;
@@ -1563,10 +1558,9 @@ public:
   QualType getRValueReferenceType(QualType T) const;
 
   /// Return the uniqued reference to the type for a member pointer to
-  /// the specified type in the specified class.
-  ///
-  /// The class \p Cls is a \c Type because it could be a dependent name.
-  QualType getMemberPointerType(QualType T, const Type *Cls) const;
+  /// the specified type in the specified nested name.
+  QualType getMemberPointerType(QualType T, NestedNameSpecifier *Qualifier,
+                                const CXXRecordDecl *Cls) const;
 
   /// Return a non-unique reference to the type for a variable array of
   /// the specified element type.
@@ -2107,23 +2101,13 @@ public:
     return BoolName;
   }
 
-  IdentifierInfo *getMakeIntegerSeqName() const {
-    if (!MakeIntegerSeqName)
-      MakeIntegerSeqName = &Idents.get("__make_integer_seq");
-    return MakeIntegerSeqName;
+#define BuiltinTemplate(BTName)                                                \
+  IdentifierInfo *get##BTName##Name() const {                                  \
+    if (!Name##BTName)                                                         \
+      Name##BTName = &Idents.get(#BTName);                                     \
+    return Name##BTName;                                                       \
   }
-
-  IdentifierInfo *getTypePackElementName() const {
-    if (!TypePackElementName)
-      TypePackElementName = &Idents.get("__type_pack_element");
-    return TypePackElementName;
-  }
-
-  IdentifierInfo *getBuiltinCommonTypeName() const {
-    if (!BuiltinCommonTypeName)
-      BuiltinCommonTypeName = &Idents.get("__builtin_common_type");
-    return BuiltinCommonTypeName;
-  }
+#include "clang/Basic/BuiltinTemplates.inc"
 
   /// Retrieve the Objective-C "instancetype" type, if already known;
   /// otherwise, returns a NULL type;

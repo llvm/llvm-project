@@ -1072,7 +1072,7 @@ namespace {
 struct ConvertComplexToStandardPass
     : public impl::ConvertComplexToStandardPassBase<
           ConvertComplexToStandardPass> {
-  using ConvertComplexToStandardPassBase::ConvertComplexToStandardPassBase;
+  using Base::Base;
 
   void runOnOperation() override;
 };

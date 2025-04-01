@@ -307,3 +307,21 @@ void test() {
 }
 
 }
+
+namespace GH128175 {
+
+template <class> void f() {
+  [i{0}] {
+    [&] {
+      [&] {
+        []()
+          requires true
+        {}();
+      }();
+    }();
+  }();
+}
+
+template void f<int>();
+
+}

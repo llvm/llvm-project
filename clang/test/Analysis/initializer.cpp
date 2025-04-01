@@ -254,6 +254,224 @@ void foo() {
 }
 } // namespace CXX17_aggregate_construction
 
+namespace newexpr_init_list_initialization {
+template <class FirstT, class... Rest>
+void escape(FirstT first, Rest... args);
+
+struct S {
+  int foo;
+  int bar;
+};
+void none_designated() {
+  S *s = new S{13,1};
+  clang_analyzer_eval(13 == s->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(1 == s->bar); // expected-warning{{TRUE}}
+  delete s;
+}
+void none_designated_swapped() {
+  S *s = new S{1,13};
+  clang_analyzer_eval(1 == s->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(13 == s->bar); // expected-warning{{TRUE}}
+  delete s;
+}
+void one_designated_one_not() {
+  S *s = new S{ 1, .bar = 13 };
+  clang_analyzer_eval(1 == s->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(13 == s->bar); // expected-warning{{TRUE}}
+  delete s;
+}
+void all_designated() {
+  S *s = new S{
+      .foo = 13,
+      .bar = 1,
+  };
+  clang_analyzer_eval(13 == s->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(1 == s->bar); // expected-warning{{TRUE}}
+  delete s;
+}
+void non_designated_array_of_aggr_struct() {
+  S *s = new S[2] { {1, 2}, {3, 4} };
+  clang_analyzer_eval(1 == s[0].foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(2 == s[0].bar); // expected-warning{{TRUE}}
+  clang_analyzer_eval(3 == s[1].foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(4 == s[1].bar); // expected-warning{{TRUE}}
+  delete[] s;
+}
+
+struct WithGaps {
+  int foo;
+  int bar;
+  int baz;
+};
+void out_of_order_designated_initializers_with_gaps() {
+  WithGaps *s = new WithGaps{
+    .foo = 13,
+    .baz = 1,
+  };
+  clang_analyzer_eval(13 == s->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(0 == s->bar); // expected-warning{{TRUE}}
+  clang_analyzer_eval(1 == s->baz); // expected-warning{{TRUE}}
+  delete s;
+}
+
+// https://eel.is/c++draft/dcl.init.aggr#note-6:
+// Static data members, non-static data members of anonymous
+// union members, and unnamed bit-fields are not considered
+// elements of the aggregate.
+struct NonConsideredFields {
+  int i;
+  static int s;
+  int j;
+  int :17;
+  int k;
+};
+void considered_fields_initd() {
+  auto S = new NonConsideredFields { 1, 2, 3 };
+  clang_analyzer_eval(1 == S->i); // expected-warning{{TRUE}}
+  clang_analyzer_eval(2 == S->j); // expected-warning{{TRUE}}
+  clang_analyzer_eval(3 == S->k); // expected-warning{{TRUE}}
+  delete S;
+}
+
+#if __cplusplus >= 201703L
+enum Enum : int {
+};
+void list_init_enum() {
+  Enum *E = new Enum{53};
+  clang_analyzer_eval(53 == *E); // expected-warning{{TRUE}}
+  delete E;
+}
+#endif // __cplusplus >= 201703L
+
+class PubClass {
+public:
+  int foo;
+  int bar;
+};
+void public_class_designated_initializers() {
+  S *s = new S{
+      .foo = 13,
+      .bar = 1,
+  };
+  clang_analyzer_eval(13 == s->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(1 == s->bar); // expected-warning{{TRUE}}
+  delete s;
+}
+
+union UnionTestTy {
+  int x;
+  char y;
+};
+void new_expr_aggr_init_union_no_designator() {
+  UnionTestTy *u = new UnionTestTy{};
+  clang_analyzer_eval(0 == u->x); // expected-warning{{UNKNOWN}} FIXME: should be TRUE
+  clang_analyzer_eval(u->y); // expected-warning{{UNKNOWN}} FIXME: should be undefined, warning
+  delete u;
+}
+void new_expr_aggr_init_union_designated_first_field() {
+  UnionTestTy *u = new UnionTestTy{ .x = 14 };
+  clang_analyzer_eval(14 == u->x); // expected-warning{{UNKNOWN}} FIXME: should be TRUE
+  clang_analyzer_eval(u->y); // expected-warning{{UNKNOWN}} FIXME: should be undefined, warning
+  delete u;
+}
+void new_expr_aggr_init_union_designated_non_first_field() {
+  UnionTestTy *u = new UnionTestTy{ .y = 3 };
+  clang_analyzer_eval(3 == u->y); // expected-warning{{UNKNOWN}} FIXME: should be TRUE
+  clang_analyzer_eval(u->x); // expected-warning{{UNKNOWN}} FIXME: should be undefined, warning
+  delete u;
+}
+
+union UnionTestTyWithDefaultMemberInit {
+  int x;
+  char y = 14;
+};
+void union_with_default_member_init_empty_init_list() {
+  auto U = new UnionTestTyWithDefaultMemberInit{};
+  // clang_analyzer_eval(14 == U->y); // FIXME: Should be true
+  clang_analyzer_eval(U->x); // expected-warning{{UNKNOWN}} FIXME: should be undefined, warning
+  delete U;
+}
+
+struct Inner {
+  int bar;
+};
+struct Nested {
+  int foo;
+  Inner inner;
+  int baz;
+};
+void nested_aggregates() {
+  auto N = new Nested{};
+  clang_analyzer_eval(0 == N->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(0 == N->inner.bar); // expected-warning{{TRUE}}
+  clang_analyzer_eval(0 == N->baz); // expected-warning{{TRUE}}
+
+  auto N1 = new Nested{1};
+  clang_analyzer_eval(1 == N1->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(0 == N1->inner.bar); // expected-warning{{TRUE}}
+  clang_analyzer_eval(0 == N1->baz); // expected-warning{{TRUE}}
+
+  auto N2 = new Nested{.baz = 14};
+  clang_analyzer_eval(0 == N2->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(0 == N2->inner.bar); // expected-warning{{TRUE}}
+  clang_analyzer_eval(14 == N2->baz); // expected-warning{{TRUE}}
+
+  auto N3 = new Nested{1,2,3};
+  clang_analyzer_eval(1 == N3->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(2 == N3->inner.bar); // expected-warning{{TRUE}}
+  clang_analyzer_eval(3 == N3->baz); // expected-warning{{TRUE}}
+
+  auto N4 = new Nested{1, {}, 3};
+  clang_analyzer_eval(1 == N4->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(0 == N4->inner.bar); // expected-warning{{TRUE}}
+  clang_analyzer_eval(3 == N4->baz); // expected-warning{{TRUE}}
+
+  auto N5 = new Nested{{},{},{}};
+  clang_analyzer_eval(0 == N5->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(0 == N5->inner.bar); // expected-warning{{TRUE}}
+  clang_analyzer_eval(0 == N5->baz); // expected-warning{{TRUE}}
+
+  auto N6 = new Nested{1, {.bar = 2}, 3};
+  clang_analyzer_eval(1 == N6->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(2 == N6->inner.bar); // expected-warning{{TRUE}}
+  clang_analyzer_eval(3 == N6->baz); // expected-warning{{TRUE}}
+
+  auto N7 = new Nested{1, {2}, 3};
+  clang_analyzer_eval(1 == N7->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(2 == N7->inner.bar); // expected-warning{{TRUE}}
+  clang_analyzer_eval(3 == N7->baz); // expected-warning{{TRUE}}
+
+  escape(N,N1,N2,N3,N4,N5,N6,N7);
+}
+} // namespace newexpr_init_list_initialization
+
+namespace placement_new_initializer_list_arg {
+struct S {
+  int x;
+};
+void aggregate_struct() {
+  S s;
+  S *s_ptr = new (&s) S{1};
+  clang_analyzer_eval(1 == s_ptr->x); // expected-warning{{TRUE}}
+
+  S vi;
+  S *vi_ptr = new (&vi) S{};
+  clang_analyzer_eval(0 == vi_ptr->x); // expected-warning{{TRUE}}
+
+  S di;
+  S *di_ptr = new (&di) S;
+  int z = di_ptr->x + 1; // expected-warning{{The left operand of '+' is a garbage value}}
+}
+void initialize_non_zeroth_element(S arr[2]) {
+  S *s = new (&arr[1]) S{1};
+  clang_analyzer_eval(1 == s->x); // expected-warning{{TRUE}}
+}
+void initialize_non_zeroth_argument_pointers(S *arr[2]) {
+  arr[1] = new (arr[1]) S{1};
+  clang_analyzer_eval(1 == arr[1]->x); // expected-warning{{TRUE}}
+}
+} // namespace placement_new_initializer_list_arg
+
 namespace CXX17_transparent_init_list_exprs {
 class A {};
 

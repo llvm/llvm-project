@@ -45,6 +45,21 @@
 #if defined(__ARM_FEATURE_FMA) || (defined(__AVX2__) && defined(__FMA__)) ||   \
     defined(__NVPTX__) || defined(__AMDGPU__) || defined(__LIBC_RISCV_USE_FMA)
 #define LIBC_TARGET_CPU_HAS_FMA
+// Provide a more fine-grained control of FMA instruction for ARM targets.
+#if defined(__ARM_FP)
+#if (__ARM_FP & 0x2)
+#define LIBC_TARGET_CPU_HAS_FMA_HALF
+#endif // LIBC_TARGET_CPU_HAS_FMA_HALF
+#if (__ARM_FP & 0x4)
+#define LIBC_TARGET_CPU_HAS_FMA_FLOAT
+#endif // LIBC_TARGET_CPU_HAS_FMA_FLOAT
+#if (__ARM_FP & 0x8)
+#define LIBC_TARGET_CPU_HAS_FMA_DOUBLE
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
+#else
+#define LIBC_TARGET_CPU_HAS_FMA_FLOAT
+#define LIBC_TARGET_CPU_HAS_FMA_DOUBLE
+#endif
 #endif
 
 #if defined(LIBC_TARGET_ARCH_IS_AARCH64) ||                                    \

@@ -163,7 +163,7 @@ private:
 
   void emitInstruction(const MachineInstr *) override;
   void lowerToMCInst(const MachineInstr *MI, MCInst &OutMI);
-  bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp);
+  MCOperand lowerOperand(const MachineOperand &MO);
   MCOperand GetSymbolRef(const MCSymbol *Symbol);
   unsigned encodeVirtualRegister(unsigned Reg);
 
@@ -225,10 +225,6 @@ private:
   void emitAliasDeclaration(const GlobalAlias *, raw_ostream &O);
   void emitDeclarationWithName(const Function *, MCSymbol *, raw_ostream &O);
   void emitDemotedVars(const Function *, raw_ostream &);
-
-  bool lowerImageHandleOperand(const MachineInstr *MI, unsigned OpNo,
-                               MCOperand &MCOp);
-  void lowerImageHandleSymbol(unsigned Index, MCOperand &MCOp);
 
   bool isLoopHeaderOfNoUnroll(const MachineBasicBlock &MBB) const;
 

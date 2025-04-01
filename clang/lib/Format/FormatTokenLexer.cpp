@@ -610,9 +610,9 @@ bool FormatTokenLexer::precedesOperand(FormatToken *Tok) {
                       tok::r_brace, tok::l_square, tok::semi, tok::exclaim,
                       tok::colon, tok::question, tok::tilde) ||
          Tok->isOneOf(tok::kw_return, tok::kw_do, tok::kw_case, tok::kw_throw,
-                      tok::kw_else, tok::kw_new, tok::kw_delete, tok::kw_void,
-                      tok::kw_typeof, Keywords.kw_instanceof, Keywords.kw_in) ||
-         Tok->isBinaryOperator();
+                      tok::kw_else, tok::kw_void, tok::kw_typeof,
+                      Keywords.kw_instanceof, Keywords.kw_in) ||
+         Tok->isPlacementOperator() || Tok->isBinaryOperator();
 }
 
 bool FormatTokenLexer::canPrecedeRegexLiteral(FormatToken *Prev) {
@@ -1306,15 +1306,12 @@ FormatToken *FormatTokenLexer::getNextToken() {
         FormatTok->isOneOf(tok::kw_struct, tok::kw_union, tok::kw_delete,
                            tok::kw_operator)) {
       FormatTok->Tok.setKind(tok::identifier);
-      FormatTok->Tok.setIdentifierInfo(nullptr);
     } else if (Style.isJavaScript() &&
                FormatTok->isOneOf(tok::kw_struct, tok::kw_union,
                                   tok::kw_operator)) {
       FormatTok->Tok.setKind(tok::identifier);
-      FormatTok->Tok.setIdentifierInfo(nullptr);
     } else if (Style.isTableGen() && !Keywords.isTableGenKeyword(*FormatTok)) {
       FormatTok->Tok.setKind(tok::identifier);
-      FormatTok->Tok.setIdentifierInfo(nullptr);
     }
   } else if (FormatTok->is(tok::greatergreater)) {
     FormatTok->Tok.setKind(tok::greater);

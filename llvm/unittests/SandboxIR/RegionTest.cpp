@@ -55,31 +55,31 @@ define i8 @foo(i8 %v0, i8 %v1) {
 
   // Check add / remove / empty.
   EXPECT_TRUE(Rgn.empty());
-  Rgn.add(T0);
+  sandboxir::RegionInternalsAttorney::add(Rgn, T0);
   EXPECT_FALSE(Rgn.empty());
-  Rgn.remove(T0);
+  sandboxir::RegionInternalsAttorney::remove(Rgn, T0);
   EXPECT_TRUE(Rgn.empty());
 
   // Check iteration.
-  Rgn.add(T0);
-  Rgn.add(T1);
-  Rgn.add(Ret);
+  sandboxir::RegionInternalsAttorney::add(Rgn, T0);
+  sandboxir::RegionInternalsAttorney::add(Rgn, T1);
+  sandboxir::RegionInternalsAttorney::add(Rgn, Ret);
   // Use an ordered matcher because we're supposed to preserve the insertion
   // order for determinism.
   EXPECT_THAT(Rgn.insts(), testing::ElementsAre(T0, T1, Ret));
 
   // Check contains
   EXPECT_TRUE(Rgn.contains(T0));
-  Rgn.remove(T0);
+  sandboxir::RegionInternalsAttorney::remove(Rgn, T0);
   EXPECT_FALSE(Rgn.contains(T0));
 
 #ifndef NDEBUG
   // Check equality comparison. Insert in reverse order into `Other` to check
   // that comparison is order-independent.
   sandboxir::Region Other(Ctx, *TTI);
-  Other.add(Ret);
+  sandboxir::RegionInternalsAttorney::add(Other, Ret);
   EXPECT_NE(Rgn, Other);
-  Other.add(T1);
+  sandboxir::RegionInternalsAttorney::add(Other, T1);
   EXPECT_EQ(Rgn, Other);
 #endif
 }
@@ -102,8 +102,8 @@ define i8 @foo(i8 %v0, i8 %v1, ptr %ptr) {
   auto *T1 = cast<sandboxir::Instruction>(&*It++);
   auto *Ret = cast<sandboxir::Instruction>(&*It++);
   sandboxir::Region Rgn(Ctx, *TTI);
-  Rgn.add(T0);
-  Rgn.add(T1);
+  sandboxir::RegionInternalsAttorney::add(Rgn, T0);
+  sandboxir::RegionInternalsAttorney::add(Rgn, T1);
 
   // Test creation.
   auto *NewI = sandboxir::StoreInst::create(T0, Ptr, /*Align=*/std::nullopt,
@@ -186,9 +186,9 @@ define i8 @foo(i8 %v0, i8 %v1) {
   auto *T2 = cast<sandboxir::Instruction>(&*It++);
   [[maybe_unused]] auto *Ret = cast<sandboxir::Instruction>(&*It++);
   sandboxir::Region Rgn(Ctx, *TTI);
-  Rgn.add(T0);
+  sandboxir::RegionInternalsAttorney::add(Rgn, T0);
   sandboxir::Region Rgn2(Ctx, *TTI);
-  Rgn2.add(T2);
+  sandboxir::RegionInternalsAttorney::add(Rgn2, T2);
 
   std::string output;
   llvm::raw_string_ostream RSO(output);
@@ -230,8 +230,8 @@ define i8 @foo(i8 %v0, i8 %v1) {
   auto *T1 = cast<sandboxir::Instruction>(&*It++);
 
   sandboxir::Region Rgn(Ctx, *TTI);
-  Rgn.add(T0);
-  Rgn.add(T1);
+  sandboxir::RegionInternalsAttorney::add(Rgn, T0);
+  sandboxir::RegionInternalsAttorney::add(Rgn, T1);
 
   SmallVector<std::unique_ptr<sandboxir::Region>> Regions =
       sandboxir::Region::createRegionsFromMD(*F, *TTI);
@@ -276,19 +276,19 @@ define void @foo(i8 %v0, i8 %v1, i8 %v2) {
     return TTI->getInstructionCost(LLVMI, Operands, CostKind);
   };
   // Add `Add0` to the region, should be counted in "After".
-  Rgn.add(Add0);
+  sandboxir::RegionInternalsAttorney::add(Rgn, Add0);
   EXPECT_EQ(SB.getBeforeCost(), 0);
   EXPECT_EQ(SB.getAfterCost(), GetCost(LLVMAdd0));
   // Same for `Add1`.
-  Rgn.add(Add1);
+  sandboxir::RegionInternalsAttorney::add(Rgn, Add1);
   EXPECT_EQ(SB.getBeforeCost(), 0);
   EXPECT_EQ(SB.getAfterCost(), GetCost(LLVMAdd0) + GetCost(LLVMAdd1));
   // Remove `Add0`, should be subtracted from "After".
-  Rgn.remove(Add0);
+  sandboxir::RegionInternalsAttorney::remove(Rgn, Add0);
   EXPECT_EQ(SB.getBeforeCost(), 0);
   EXPECT_EQ(SB.getAfterCost(), GetCost(LLVMAdd1));
   // Remove `Add2` which was never in the region, should counted in "Before".
-  Rgn.remove(Add2);
+  sandboxir::RegionInternalsAttorney::remove(Rgn, Add2);
   EXPECT_EQ(SB.getBeforeCost(), GetCost(LLVMAdd2));
   EXPECT_EQ(SB.getAfterCost(), GetCost(LLVMAdd1));
 }
@@ -446,11 +446,11 @@ define i8 @foo(i8 %v0, i8 %v1) {
   auto *T1 = cast<sandboxir::Instruction>(&*It++);
 
   sandboxir::Region Rgn(Ctx, *TTI);
-  Rgn.add(T0);
-  Rgn.add(T1);
 #ifndef NDEBUG
   EXPECT_DEATH(Rgn.setAux({T0, T0}), ".*already.*");
 #endif
+  sandboxir::RegionInternalsAttorney::add(Rgn, T0);
+  sandboxir::RegionInternalsAttorney::add(Rgn, T1);
   Rgn.setAux({T1, T0});
 
   SmallVector<std::unique_ptr<sandboxir::Region>> Regions =

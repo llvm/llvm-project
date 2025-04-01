@@ -694,6 +694,9 @@ LazyValueInfoImpl::solveBlockValueNonLocal(Value *Val, BasicBlock *BB) {
   // canonicalizing to make this true rather than relying on this happy
   // accident.
   for (BasicBlock *Pred : predecessors(BB)) {
+    // Skip self loops.
+    if (Pred == BB)
+      continue;
     std::optional<ValueLatticeElement> EdgeResult = getEdgeValue(Val, Pred, BB);
     if (!EdgeResult)
       // Explore that input, then return here

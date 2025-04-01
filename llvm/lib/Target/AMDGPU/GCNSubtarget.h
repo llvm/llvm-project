@@ -78,6 +78,7 @@ protected:
   bool BackOffBarrier = false;
   bool UnalignedScratchAccess = false;
   bool UnalignedAccessMode = false;
+  bool RelaxedBufferOOBMode = false;
   bool HasApertureRegs = false;
   bool SupportsXNACK = false;
   bool KernargPreload = false;
@@ -190,6 +191,8 @@ protected:
   /// indicates a lack of S_CLAUSE support.
   unsigned MaxHardClauseLength = 0;
   bool SupportsSRAMECC = false;
+  bool DynamicVGPR = false;
+  bool DynamicVGPRBlockSize32 = false;
 
   // This should not be used directly. 'TargetID' tracks the dynamic settings
   // for SRAMECC.
@@ -226,12 +229,14 @@ protected:
   bool HasRestrictedSOffset = false;
   bool HasBitOp3Insts = false;
   bool HasPrngInst = false;
+  bool HasBVHDualAndBVH8Insts = false;
   bool HasPermlane16Swap = false;
   bool HasPermlane32Swap = false;
   bool HasVcmpxPermlaneHazard = false;
   bool HasVMEMtoScalarWriteHazard = false;
   bool HasSMEMtoVectorWriteHazard = false;
   bool HasInstFwdPrefetchBug = false;
+  bool HasSafeSmemPrefetch = false;
   bool HasVcmpxExecWARHazard = false;
   bool HasLdsBranchVmemWARHazard = false;
   bool HasNSAtoVMEMBug = false;
@@ -252,6 +257,7 @@ protected:
   bool HasMinimum3Maximum3F32 = false;
   bool HasMinimum3Maximum3F16 = false;
   bool HasMinimum3Maximum3PKF16 = false;
+  bool HasLshlAddU64Inst = false;
 
   bool RequiresCOV6 = false;
 
@@ -607,6 +613,8 @@ public:
     return UnalignedAccessMode;
   }
 
+  bool hasRelaxedBufferOOBMode() const { return RelaxedBufferOOBMode; }
+
   bool hasApertureRegs() const {
     return HasApertureRegs;
   }
@@ -960,6 +968,8 @@ public:
 
   bool hasPrefetch() const { return GFX12Insts; }
 
+  bool hasSafeSmemPrefetch() const { return HasSafeSmemPrefetch; }
+
   // Has s_cmpk_* instructions.
   bool hasSCmpK() const { return getGeneration() < GFX12; }
 
@@ -1131,7 +1141,7 @@ public:
 
   bool hasMovB64() const { return GFX940Insts; }
 
-  bool hasLshlAddB64() const { return GFX940Insts; }
+  bool hasLshlAddU64Inst() const { return HasLshlAddU64Inst; }
 
   bool enableSIScheduler() const {
     return EnableSIScheduler;
@@ -1356,6 +1366,8 @@ public:
   unsigned maxHardClauseLength() const { return MaxHardClauseLength; }
 
   bool hasPrngInst() const { return HasPrngInst; }
+
+  bool hasBVHDualAndBVH8Insts() const { return HasBVHDualAndBVH8Insts; }
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs
@@ -1646,6 +1658,8 @@ public:
     // the nop.
     return true;
   }
+
+  bool isDynamicVGPREnabled() const { return DynamicVGPR; }
 
   bool requiresDisjointEarlyClobberAndUndef() const override {
     // AMDGPU doesn't care if early-clobber and undef operands are allocated

@@ -170,15 +170,18 @@ void NVPTXRegisterInfo::addToDebugRegisterMap(
 }
 
 int64_t NVPTXRegisterInfo::getDwarfRegNum(MCRegister RegNum, bool isEH) const {
-  if (RegNum.isPhysical()) {
-    StringRef Name = NVPTXInstPrinter::getRegisterName(RegNum.id());
-    // In NVPTXFrameLowering.cpp, we do arrange for %Depot to be accessible from
-    // %SP. Using the %Depot register doesn't provide any debug info in
-    // cuda-gdb, but switching it to %SP does.
-    if (RegNum.id() == NVPTX::VRDepot)
-      Name = "%SP";
-    return encodeRegisterForDwarf(Name);
-  }
+  StringRef Name = NVPTXInstPrinter::getRegisterName(RegNum.id());
+  // In NVPTXFrameLowering.cpp, we do arrange for %Depot to be accessible from
+  // %SP. Using the %Depot register doesn't provide any debug info in
+  // cuda-gdb, but switching it to %SP does.
+  if (RegNum.id() == NVPTX::VRDepot)
+    Name = "%SP";
+  return encodeRegisterForDwarf(Name);
+}
+
+int64_t NVPTXRegisterInfo::getDwarfRegNumForVirtReg(Register RegNum,
+                                                    bool isEH) const {
+  assert(RegNum.isVirtual());
   uint64_t lookup = debugRegisterMap.lookup(RegNum.id());
   if (lookup)
     return lookup;
