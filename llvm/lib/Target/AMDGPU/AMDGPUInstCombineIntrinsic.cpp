@@ -743,8 +743,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (!CArg)
       break;
 
-    int CI4BitAsInt = CArg->getValue().trunc(4).getSExtValue();
-    float ResVal = 0.0625 * CI4BitAsInt;
+    int CArg4BitAsInt = CArg->getValue().trunc(4).getSExtValue();
+    float ResVal = 0.0625 * CArg4BitAsInt;
     Constant *Res = ConstantFP::get(II.getType(), ResVal);
     return IC.replaceInstUsesWith(II, Res);
   }
