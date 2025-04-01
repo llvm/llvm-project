@@ -68,20 +68,14 @@ define <4 x i32> @z_i32_v4i32(i32 %x) {
 define <4 x i64> @z_i32_v4i64(i32 %x) {
 ; CHECK-SD-LABEL: z_i32_v4i64:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fmov s0, w0
-; CHECK-SD-NEXT:    movi v1.2d, #0x000000000000ff
-; CHECK-SD-NEXT:    umov w8, v0.b[2]
-; CHECK-SD-NEXT:    umov w9, v0.b[0]
-; CHECK-SD-NEXT:    umov w10, v0.b[3]
-; CHECK-SD-NEXT:    umov w11, v0.b[1]
-; CHECK-SD-NEXT:    fmov s0, w9
-; CHECK-SD-NEXT:    fmov s2, w8
-; CHECK-SD-NEXT:    mov v0.s[1], w11
-; CHECK-SD-NEXT:    mov v2.s[1], w10
-; CHECK-SD-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-SD-NEXT:    ushll v2.2d, v2.2s, #0
-; CHECK-SD-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-SD-NEXT:    and v1.16b, v2.16b, v1.16b
+; CHECK-SD-NEXT:    fmov s1, w0
+; CHECK-SD-NEXT:    movi v0.2d, #0x000000000000ff
+; CHECK-SD-NEXT:    zip1 v1.8b, v1.8b, v1.8b
+; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
+; CHECK-SD-NEXT:    ushll2 v2.2d, v1.4s, #0
+; CHECK-SD-NEXT:    ushll v3.2d, v1.2s, #0
+; CHECK-SD-NEXT:    and v1.16b, v2.16b, v0.16b
+; CHECK-SD-NEXT:    and v0.16b, v3.16b, v0.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: z_i32_v4i64:
@@ -112,9 +106,8 @@ define <4 x i16> @s_i32_v4i16(i32 %x) {
 ; CHECK-SD-LABEL: s_i32_v4i16:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fmov s0, w0
-; CHECK-SD-NEXT:    zip1 v0.8b, v0.8b, v0.8b
-; CHECK-SD-NEXT:    shl v0.4h, v0.4h, #8
-; CHECK-SD-NEXT:    sshr v0.4h, v0.4h, #8
+; CHECK-SD-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: s_i32_v4i16:
@@ -176,20 +169,14 @@ define <4 x i64> @s_i32_v4i64(i32 %x) {
 ; CHECK-SD-LABEL: s_i32_v4i64:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fmov s0, w0
-; CHECK-SD-NEXT:    umov w8, v0.b[2]
-; CHECK-SD-NEXT:    umov w9, v0.b[0]
-; CHECK-SD-NEXT:    umov w10, v0.b[3]
-; CHECK-SD-NEXT:    umov w11, v0.b[1]
-; CHECK-SD-NEXT:    fmov s0, w9
-; CHECK-SD-NEXT:    fmov s1, w8
-; CHECK-SD-NEXT:    mov v0.s[1], w11
-; CHECK-SD-NEXT:    mov v1.s[1], w10
+; CHECK-SD-NEXT:    zip1 v0.8b, v0.8b, v0.8b
+; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-SD-NEXT:    ushll2 v1.2d, v0.4s, #0
 ; CHECK-SD-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-SD-NEXT:    ushll v1.2d, v1.2s, #0
-; CHECK-SD-NEXT:    shl v0.2d, v0.2d, #56
 ; CHECK-SD-NEXT:    shl v1.2d, v1.2d, #56
-; CHECK-SD-NEXT:    sshr v0.2d, v0.2d, #56
+; CHECK-SD-NEXT:    shl v0.2d, v0.2d, #56
 ; CHECK-SD-NEXT:    sshr v1.2d, v1.2d, #56
+; CHECK-SD-NEXT:    sshr v0.2d, v0.2d, #56
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: s_i32_v4i64:

@@ -1366,11 +1366,11 @@ define <4 x i32> @atomic(ptr %p) {
 ; CHECK-LABEL: atomic:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldar w8, [x0]
-; CHECK-NEXT:    movi v0.2d, #0x0000ff000000ff
 ; CHECK-NEXT:    ldr s1, [x0, #4]
+; CHECK-NEXT:    movi v0.2d, #0x0000ff000000ff
 ; CHECK-NEXT:    fmov s2, w8
 ; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-NEXT:    zip1 v2.8b, v2.8b, v0.8b
+; CHECK-NEXT:    zip1 v2.8b, v2.8b, v2.8b
 ; CHECK-NEXT:    ushll v1.4s, v1.4h, #3
 ; CHECK-NEXT:    ushll v2.4s, v2.4h, #0
 ; CHECK-NEXT:    and v0.16b, v2.16b, v0.16b

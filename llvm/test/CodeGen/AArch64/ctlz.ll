@@ -42,9 +42,9 @@ define void @v3i8(ptr %p1) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-SD-NEXT:    movi v0.4h, #8
 ; CHECK-SD-NEXT:    ldr s1, [x0]
-; CHECK-SD-NEXT:    zip1 v1.8b, v1.8b, v0.8b
+; CHECK-SD-NEXT:    movi v0.4h, #8
+; CHECK-SD-NEXT:    zip1 v1.8b, v1.8b, v1.8b
 ; CHECK-SD-NEXT:    bic v1.4h, #255, lsl #8
 ; CHECK-SD-NEXT:    clz v1.4h, v1.4h
 ; CHECK-SD-NEXT:    sub v0.4h, v1.4h, v0.4h

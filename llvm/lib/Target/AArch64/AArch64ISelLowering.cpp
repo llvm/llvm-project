@@ -1426,6 +1426,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BITCAST, MVT::v2i16, Custom);
     setOperationAction(ISD::BITCAST, MVT::v4i8, Custom);
 
+    setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v4i8, Custom);
+
     setLoadExtAction(ISD::EXTLOAD,  MVT::v4i16, MVT::v4i8, Custom);
     setLoadExtAction(ISD::SEXTLOAD, MVT::v4i16, MVT::v4i8, Custom);
     setLoadExtAction(ISD::ZEXTLOAD, MVT::v4i16, MVT::v4i8, Custom);
@@ -27308,12 +27310,22 @@ void AArch64TargetLowering::ReplaceExtractSubVectorResults(
     SDNode *N, SmallVectorImpl<SDValue> &Results, SelectionDAG &DAG) const {
   SDValue In = N->getOperand(0);
   EVT InVT = In.getValueType();
+  SDLoc DL(N);
+
+  if (N->getValueType(0) == MVT::v4i8 &&
+      N->getOperand(0).getValueType() == MVT::v8i8 &&
+      (N->getConstantOperandVal(1) == 0 || N->getConstantOperandVal(1) == 4)) {
+    SDValue Ext =
+        DAG.getNode(ISD::ANY_EXTEND, DL, MVT::v8i16, N->getOperand(0));
+    Ext = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v4i16, Ext,
+                      N->getOperand(1));
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::v4i8, Ext));
+  }
 
   // Common code will handle these just fine.
   if (!InVT.isScalableVector() || !InVT.isInteger())
     return;
 
-  SDLoc DL(N);
   EVT VT = N->getValueType(0);
 
   // The following checks bail if this is not a halving operation.
