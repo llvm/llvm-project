@@ -14,6 +14,20 @@
 #include "kmp_io.h"
 #include "kmp_wrapper_malloc.h"
 
+#if KMP_USE_HWLOC
+#if HWLOC_API_VERSION > 0x00020300
+#define KMP_HWLOC_LOCATION_TYPE_CPUSET HWLOC_LOCATION_TYPE_CPUSET
+#elif HWLOC_API_VERSION == 0x00020300
+#define KMP_HWLOC_LOCATION_TYPE_CPUSET                                         \
+  hwloc_location::HWLOC_LOCATION_TYPE_CPUSET
+#else
+enum hwloc_memattr_id_e {
+  HWLOC_MEMATTR_ID_BANDWIDTH,
+  HWLOC_MEMATTR_ID_CAPACITY
+};
+#endif
+#endif // KMP_USE_HWLOC
+
 // Disable bget when it is not used
 #if KMP_USE_BGET
 
@@ -1358,7 +1372,7 @@ void __kmp_fini_memkind() {
 
 #if KMP_USE_HWLOC
 static bool __kmp_is_hwloc_membind_supported(hwloc_membind_policy_t policy) {
-#if HWLOC_API_VERSION >= 0x00020400
+#if HWLOC_API_VERSION >= 0x00020300
   const hwloc_topology_support *support;
   support = hwloc_topology_get_support(__kmp_hwloc_topology);
   if (support) {
@@ -1377,7 +1391,7 @@ static bool __kmp_is_hwloc_membind_supported(hwloc_membind_policy_t policy) {
 
 void *__kmp_hwloc_alloc_membind(hwloc_memattr_id_e attr, size_t size,
                                 hwloc_membind_policy_t policy) {
-#if HWLOC_API_VERSION >= 0x00020400
+#if HWLOC_API_VERSION >= 0x00020300
   void *ptr = NULL;
   hwloc_obj_t node;
   struct hwloc_location initiator;
@@ -1392,7 +1406,7 @@ void *__kmp_hwloc_alloc_membind(hwloc_memattr_id_e attr, size_t size,
     hwloc_bitmap_free(mask);
     return ptr;
   }
-  initiator.type = HWLOC_LOCATION_TYPE_CPUSET;
+  initiator.type = KMP_HWLOC_LOCATION_TYPE_CPUSET;
   initiator.location.cpuset = mask;
   ret = hwloc_memattr_get_best_target(__kmp_hwloc_topology, attr, &initiator, 0,
                                       &node, NULL);
@@ -1408,7 +1422,7 @@ void *__kmp_hwloc_alloc_membind(hwloc_memattr_id_e attr, size_t size,
 
 void *__kmp_hwloc_membind_policy(omp_memspace_handle_t ms, size_t size,
                                  hwloc_membind_policy_t policy) {
-#if HWLOC_API_VERSION >= 0x00020400
+#if HWLOC_API_VERSION >= 0x00020300
   void *ptr = NULL;
   if (ms == omp_high_bw_mem_space) {
     ptr = __kmp_hwloc_alloc_membind(HWLOC_MEMATTR_ID_BANDWIDTH, size, policy);
