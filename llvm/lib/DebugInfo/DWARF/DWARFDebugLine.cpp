@@ -1539,7 +1539,8 @@ bool DWARFDebugLine::LineTable::getFileLineInfoForAddress(
     return false;
   // Take file number and line/column from the row.
   const auto &Row = Rows[RowIndex];
-  if (!getFileNameByIndex(Row.File, CompDir, Kind, Result.FileName))
+  if (Row.Line == 0 ||
+      !getFileNameByIndex(Row.File, CompDir, Kind, Result.FileName))
     return false;
   Result.Line = Row.Line;
   Result.Column = Row.Column;

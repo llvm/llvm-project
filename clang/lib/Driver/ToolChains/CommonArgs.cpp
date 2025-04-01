@@ -515,7 +515,7 @@ void tools::AddLinkerInputs(const ToolChain &TC, const InputInfoList &Inputs,
       //
       // 1. On Linux, link only when actually needed.
       //
-      // 2. Prefer libm functions over libamath.
+      // 2. Prefer libm functions over libamath (when no -nostdlib in use).
       //
       // 3. Link against libm to resolve libamath dependencies.
       //
@@ -523,9 +523,11 @@ void tools::AddLinkerInputs(const ToolChain &TC, const InputInfoList &Inputs,
         CmdArgs.push_back(Args.MakeArgString("--push-state"));
         CmdArgs.push_back(Args.MakeArgString("--as-needed"));
       }
-      CmdArgs.push_back(Args.MakeArgString("-lm"));
+      if (!Args.hasArg(options::OPT_nostdlib))
+        CmdArgs.push_back(Args.MakeArgString("-lm"));
       CmdArgs.push_back(Args.MakeArgString("-lamath"));
-      CmdArgs.push_back(Args.MakeArgString("-lm"));
+      if (!Args.hasArg(options::OPT_nostdlib))
+        CmdArgs.push_back(Args.MakeArgString("-lm"));
       if (Triple.isOSLinux())
         CmdArgs.push_back(Args.MakeArgString("--pop-state"));
       addArchSpecificRPath(TC, Args, CmdArgs);

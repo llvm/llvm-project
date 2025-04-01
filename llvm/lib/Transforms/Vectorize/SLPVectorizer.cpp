@@ -3733,16 +3733,8 @@ private:
       Last->ReorderIndices.append(ReorderIndices.begin(), ReorderIndices.end());
     }
     if (EntryState == TreeEntry::SplitVectorize) {
-      auto *MainOp =
-          cast<Instruction>(*find_if(Last->Scalars, IsaPred<Instruction>));
-      auto *AltOp = cast<Instruction>(*find_if(Last->Scalars, [=](Value *V) {
-        auto *I = dyn_cast<Instruction>(V);
-        if (!I)
-          return false;
-        InstructionsState LocalS = getSameOpcode({I, MainOp}, *TLI);
-        return !LocalS || LocalS.isAltShuffle();
-      }));
-      Last->setOperations(InstructionsState(MainOp, AltOp));
+      assert(S && "Split nodes must have operations.");
+      Last->setOperations(S);
       SmallPtrSet<Value *, 4> Processed;
       for (Value *V : VL) {
         auto *I = dyn_cast<Instruction>(V);
@@ -8862,7 +8854,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       // FIXME: Reshuffing scalars is not supported yet for non-power-of-2 ops.
       if ((UserTreeIdx.UserTE &&
            UserTreeIdx.UserTE->hasNonWholeRegisterOrNonPowerOf2Vec(*TTI)) ||
-          !hasFullVectorsOrPowerOf2(*TTI, VL.front()->getType(), VL.size())) {
+          !hasFullVectorsOrPowerOf2(*TTI, getValueType(VL.front()),
+                                    VL.size())) {
         LLVM_DEBUG(dbgs() << "SLP: Reshuffling scalars not yet supported "
                              "for nodes with padding.\n");
         auto Invalid = ScheduleBundle::invalid();
@@ -9020,8 +9013,11 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         Op1Indices.set(Idx);
         continue;
       }
-      InstructionsState NewS = getSameOpcode({LocalState.getMainOp(), I}, *TLI);
-      if (NewS && !NewS.isAltShuffle()) {
+      if ((LocalState.getAltOpcode() != LocalState.getOpcode() &&
+           I->getOpcode() == LocalState.getOpcode()) ||
+          (LocalState.getAltOpcode() == LocalState.getOpcode() &&
+           !isAlternateInstruction(I, LocalState.getMainOp(),
+                                   LocalState.getAltOp(), *TLI))) {
         Op1.push_back(V);
         Op1Indices.set(Idx);
         continue;
