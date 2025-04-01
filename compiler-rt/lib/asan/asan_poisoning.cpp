@@ -52,7 +52,7 @@ bool FindPoisonRecord(uptr addr, const PoisonRecord &match) {
     for (unsigned int i = 0; i < poison_records->size(); i++) {
       struct PoisonRecord record = (*poison_records)[i];
       if (record.begin <= addr && addr < record.end) {
-        internal_memcpy((void*)&match, (void*)&record,
+        internal_memcpy((void *)&match, (void *)&record,
                         sizeof(struct PoisonRecord));
         poison_records_mutex.Unlock();
         return true;
