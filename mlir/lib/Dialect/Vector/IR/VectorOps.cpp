@@ -4265,8 +4265,9 @@ ParseResult TransferReadOp::parse(OpAsmParser &parser, OperationState &result) {
   if (!permMapAttr) {
     permMap = getTransferMinorIdentityMap(shapedType, vectorType);
     if (!permMap) {
-      return parser.emitError(
-          typesLoc, "failed to create minor identity permutation map");
+      return parser.emitError(typesLoc,
+                              "expected the same rank for the vector and the "
+                              "results of the permutation map");
     }
     result.attributes.set(permMapAttrName, AffineMapAttr::get(permMap));
   } else {
@@ -4676,6 +4677,11 @@ ParseResult TransferWriteOp::parse(OpAsmParser &parser,
   AffineMap permMap;
   if (!permMapAttr) {
     permMap = getTransferMinorIdentityMap(shapedType, vectorType);
+    if (!permMap) {
+      return parser.emitError(typesLoc,
+                              "expected the same rank for the vector and the "
+                              "results of the permutation map");
+    }
     result.attributes.set(permMapAttrName, AffineMapAttr::get(permMap));
   } else {
     permMap = llvm::cast<AffineMapAttr>(permMapAttr).getValue();
