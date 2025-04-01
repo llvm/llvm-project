@@ -1366,8 +1366,7 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
   const mlir::Location loc = cgf.getLoc(e->getSourceRange());
   if (auto kind = e->getKind();
       kind == UETT_SizeOf || kind == UETT_DataSizeOf) {
-    if (const VariableArrayType *variableArrTy =
-            cgf.getContext().getAsVariableArrayType(typeToSize)) {
+    if (cgf.getContext().getAsVariableArrayType(typeToSize)) {
       cgf.getCIRGenModule().errorNYI(e->getSourceRange(),
                                      "sizeof operator for VariableArrayType",
                                      e->getStmtClassName());
