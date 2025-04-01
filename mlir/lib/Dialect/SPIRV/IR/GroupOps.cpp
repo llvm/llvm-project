@@ -305,6 +305,38 @@ LogicalResult GroupNonUniformLogicalXorOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.GroupNonUniformRotateKHR
+//===----------------------------------------------------------------------===//
+
+LogicalResult GroupNonUniformRotateKHROp::verify() {
+  spirv::Scope scope = getExecutionScope();
+  if (scope != spirv::Scope::Workgroup && scope != spirv::Scope::Subgroup)
+    return emitOpError("execution scope must be 'Workgroup' or 'Subgroup'");
+
+  if (getDelta().getType().isSignedInteger())
+    return emitOpError("delta must be a singless/unsigned integer");
+
+  auto clusterSizeVal = getClusterSize();
+  if (clusterSizeVal) {
+    if (clusterSizeVal.getType().isSignedInteger())
+      return emitOpError("cluster size must be a singless/unsigned integer");
+
+    mlir::Operation *defOp = clusterSizeVal.getDefiningOp();
+    int32_t clusterSize = 0;
+
+    if (failed(extractValueFromConstOp(defOp, clusterSize)))
+      return emitOpError(
+          "cluster size operand must come from a constant op");
+
+    if (!llvm::isPowerOf2_32(clusterSize))
+      return emitOpError(
+          "cluster size operand must be a power of two");
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // Group op verification
 //===----------------------------------------------------------------------===//
 

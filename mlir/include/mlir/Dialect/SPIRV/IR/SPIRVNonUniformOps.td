@@ -1361,7 +1361,8 @@ def SPIRV_GroupNonUniformBallotBitCountOp : SPIRV_Op<"GroupNonUniformBallotBitCo
 
 // -----
 
-def SPIRV_GroupNonUniformRotateKHR : SPIRV_Op<"GroupNonUniformRotateKHR", []> {
+def SPIRV_GroupNonUniformRotateKHROp : SPIRV_Op<"GroupNonUniformRotateKHR", [
+  Pure, AllTypesMatch<["value", "result"]>]> {
   let summary = [{
     Rotate values across invocations within a subgroup.
   }];
@@ -1424,10 +1425,8 @@ def SPIRV_GroupNonUniformRotateKHR : SPIRV_Op<"GroupNonUniformRotateKHR", []> {
   );
 
   let results = (outs
-    SPIRV_Type:$result
+    AnyTypeOf<[SPIRV_ScalarOrVectorOf<SPIRV_Float>, SPIRV_ScalarOrVectorOf<SPIRV_Integer>, SPIRV_ScalarOrVectorOf<SPIRV_Bool>]>:$result
   );
-
-  let hasVerifier = 0;
 
   let assemblyFormat = [{
     $execution_scope `,` $value `,` $delta (`,` `cluster_size` `(` $cluster_size^ `)`)? attr-dict `:` type($value) `,` type($delta) (`,` type($cluster_size)^)? `->` type(results)
