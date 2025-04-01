@@ -1124,6 +1124,7 @@ void OverloadCandidateSet::clear(CandidateSetKind CSK) {
   Candidates.clear();
   Functions.clear();
   Kind = CSK;
+  HasDeferredTemplateConstructors = false;
 }
 
 namespace {
@@ -7883,6 +7884,11 @@ static bool isNonDependentlyExplicit(FunctionTemplateDecl *FTD) {
   return ExplicitSpecifier::getFromDecl(FTD->getTemplatedDecl()).isExplicit();
 }
 
+static bool hasDependentExplicit(FunctionTemplateDecl *FTD) {
+  return ExplicitSpecifier::getFromDecl(FTD->getTemplatedDecl()).getKind() ==
+         ExplicitSpecKind::Unresolved;
+}
+
 static void AddTemplateOverloadCandidateImmediately(
     Sema &S, OverloadCandidateSet &CandidateSet,
     FunctionTemplateDecl *FunctionTemplate, DeclAccessPair FoundDecl,
@@ -7974,7 +7980,10 @@ void Sema::AddTemplateOverloadCandidate(
     return;
 
   if (ExplicitTemplateArgs ||
-      !CandidateSet.shouldDeferTemplateArgumentDeduction(getLangOpts())) {
+      !CandidateSet.shouldDeferTemplateArgumentDeduction(getLangOpts()) ||
+      (isa<CXXConstructorDecl>(FunctionTemplate->getTemplatedDecl()) &&
+       hasDependentExplicit(FunctionTemplate))) {
+
     AddTemplateOverloadCandidateImmediately(
         *this, CandidateSet, FunctionTemplate, FoundDecl, ExplicitTemplateArgs,
         Args, SuppressUserConversions, PartialOverloading, AllowExplicit,
@@ -8362,7 +8371,9 @@ void Sema::AddTemplateConversionCandidate(
   if (!CandidateSet.isNewCandidate(FunctionTemplate))
     return;
 
-  if (!CandidateSet.shouldDeferTemplateArgumentDeduction(getLangOpts())) {
+  if (!CandidateSet.shouldDeferTemplateArgumentDeduction(getLangOpts()) ||
+      hasDependentExplicit(FunctionTemplate)) {
+
     AddTemplateConversionCandidateImmediately(
         *this, CandidateSet, FunctionTemplate, FoundDecl, ActingDC, From,
         ToType, AllowObjCConversionOnExplicit, AllowExplicit,
@@ -11003,6 +11014,8 @@ void OverloadCandidateSet::AddDeferredTemplateCandidate(
                                               AllowExplicit,
                                               AggregateCandidateDeduction};
   DeferredCandidates.emplace_back(std::move(C));
+  HasDeferredTemplateConstructors |=
+      isa<CXXConstructorDecl>(FunctionTemplate->getTemplatedDecl());
 }
 
 void OverloadCandidateSet::AddDeferredMethodTemplateCandidate(
@@ -11158,6 +11171,15 @@ void OverloadCandidateSet::PerfectViableFunction(
   for (auto It = begin(); It != end(); ++It) {
     if (!It->isPerfectMatch(S.getASTContext()))
       continue;
+    // We found a suitable conversion function
+    // but if there is a template constructor in the target class
+    // we might prefer that instead.
+    if (HasDeferredTemplateConstructors &&
+        isa_and_nonnull<CXXConversionDecl>(It->Function)) {
+      Best = end();
+      break;
+    }
+
     if (Best == end()) {
       Best = It;
       continue;
