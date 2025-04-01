@@ -121,6 +121,11 @@ public:
     return cir::BoolAttr::get(getContext(), getBoolTy(), state);
   }
 
+  mlir::Value createNot(mlir::Value value) {
+    return create<cir::UnaryOp>(value.getLoc(), value.getType(),
+                                cir::UnaryOpKind::Not, value);
+  }
+
   /// Create a do-while operation.
   cir::DoWhileOp createDoWhile(
       mlir::Location loc,
