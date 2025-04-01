@@ -1594,15 +1594,14 @@ public:
   // Status, the status returned from ReadMemoryFromInferior
   // DataBufferHeap, buffer with bytes potentially written to it
   // addr_t, the current_addr, start + bytes read so far.
-  // uint64_t bytes_to_read, the expected bytes read, this 
+  // uint64_t bytes_to_read, the expected bytes read, this
   // is important if it's a partial read
-  // uint64_t bytes_read_for_chunk, the actual count of bytes read for this 
+  // uint64_t bytes_read_for_chunk, the actual count of bytes read for this
   // chunk
-  typedef std::function<IterationAction(lldb_private::Status&,
-                                        lldb_private::DataBufferHeap&,
-                                        lldb::addr_t,
-                                        uint64_t,
-                                        uint64_t)> ReadMemoryChunkCallback;
+  typedef std::function<IterationAction(lldb_private::Status &,
+                                        lldb_private::DataBufferHeap &,
+                                        lldb::addr_t, uint64_t, uint64_t)>
+      ReadMemoryChunkCallback;
 
   /// Read of memory from a process in discrete chunks, terminating
   /// either when all bytes are read, or the supplied callback returns
