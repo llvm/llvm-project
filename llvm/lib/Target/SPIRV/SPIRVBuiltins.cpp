@@ -697,7 +697,8 @@ static bool buildAtomicStoreInst(const SPIRV::IncomingCall *Call,
                                  MachineIRBuilder &MIRBuilder,
                                  SPIRVGlobalRegistry *GR) {
   if (Call->isSpirvOp())
-    return buildOpFromWrapper(MIRBuilder, SPIRV::OpAtomicStore, Call, Register(0));
+    return buildOpFromWrapper(MIRBuilder, SPIRV::OpAtomicStore, Call,
+                              Register(0));
 
   Register ScopeRegister =
       buildConstantIntReg32(SPIRV::Scope::Device, MIRBuilder, GR);
@@ -2252,6 +2253,17 @@ static bool generateExtendedBitOpsInst(const SPIRV::IncomingCall *Call,
 
   return buildExtendedBitOpsInst(Call, Opcode, MIRBuilder, GR);
 }
+static bool generateSubgroup2DBlockInst(const SPIRV::IncomingCall *Call,
+                                        MachineIRBuilder &MIRBuilder,
+                                        SPIRVGlobalRegistry *GR) {
+  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+  unsigned Opcode =
+      SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
+  auto MIB = MIRBuilder.buildInstr(Opcode);
+  for (unsigned i = 0; i < Call->Arguments.size(); i++)
+    MIB.addUse(Call->Arguments[i]);
+  return true;
+}
 
 static bool generateBindlessImageINTELInst(const SPIRV::IncomingCall *Call,
                                            MachineIRBuilder &MIRBuilder,
@@ -2845,6 +2857,8 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     return generateExtendedBitOpsInst(Call.get(), MIRBuilder, GR);
   case SPIRV::BindlessINTEL:
     return generateBindlessImageINTELInst(Call.get(), MIRBuilder, GR);
+  case SPIRV::Subgroup2DBlock:
+    return generateSubgroup2DBlockInst(Call.get(), MIRBuilder, GR);
   }
   return false;
 }

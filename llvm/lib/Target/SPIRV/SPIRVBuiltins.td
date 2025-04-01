@@ -67,6 +67,7 @@ def CoopMatr : BuiltinGroup;
 def ICarryBorrow : BuiltinGroup;
 def ExtendedBitOps : BuiltinGroup;
 def BindlessINTEL : BuiltinGroup;
+def Subgroup2DBlock: BuiltinGroup;
 
 //===----------------------------------------------------------------------===//
 // Class defining a demangled builtin record. The information in the record
@@ -713,6 +714,13 @@ defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixGetElementCoordINTEL", O
 defm : DemangledNativeBuiltin<"__spirv_ConvertHandleToImageINTEL", OpenCL_std, BindlessINTEL, 1, 1, OpConvertHandleToImageINTEL>;
 defm : DemangledNativeBuiltin<"__spirv_ConvertHandleToSamplerINTEL", OpenCL_std, BindlessINTEL, 1, 1, OpConvertHandleToSamplerINTEL>;
 defm : DemangledNativeBuiltin<"__spirv_ConvertHandleToSampledImageINTEL", OpenCL_std, BindlessINTEL, 1, 1, OpConvertHandleToSampledImageINTEL>;
+
+//SPV_INTEL_2d_block_io
+defm : DemangledNativeBuiltin<"__spirv_Subgroup2DBlockLoadINTEL", OpenCL_std, Subgroup2DBlock, 10, 10, OpSubgroup2DBlockLoadINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_Subgroup2DBlockLoadTransposeINTEL", OpenCL_std, Subgroup2DBlock, 10, 10, OpSubgroup2DBlockLoadTransposeINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_Subgroup2DBlockLoadTransformINTEL", OpenCL_std, Subgroup2DBlock, 10, 10, OpSubgroup2DBlockLoadTransformINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_Subgroup2DBlockPrefetchINTEL", OpenCL_std, Subgroup2DBlock, 9, 9, OpSubgroup2DBlockPrefetchINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_Subgroup2DBlockStoreINTEL", OpenCL_std, Subgroup2DBlock, 10, 10, OpSubgroup2DBlockStoreINTEL>;
 
 //===----------------------------------------------------------------------===//
 // Class defining a work/sub group builtin that should be translated into a
