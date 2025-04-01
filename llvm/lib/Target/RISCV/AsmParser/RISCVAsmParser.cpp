@@ -2079,19 +2079,23 @@ ParseStatus RISCVAsmParser::parseCallSymbol(OperandVector &Operands) {
 
   if (getLexer().getKind() != AsmToken::Identifier)
     return ParseStatus::NoMatch;
+  std::string Identifier(getTok().getIdentifier());
 
-  // Avoid parsing the register in `call rd, foo` as a call symbol.
-  if (getLexer().peekTok().getKind() != AsmToken::EndOfStatement)
+  if (getLexer().peekTok().is(AsmToken::At)) {
+    Lex();
+    Lex();
+    StringRef PLT;
+    if (getParser().parseIdentifier(PLT) || PLT != "plt")
+      return ParseStatus::Failure;
+  } else if (!getLexer().peekTok().is(AsmToken::EndOfStatement)) {
+    // Avoid parsing the register in `call rd, foo` as a call symbol.
     return ParseStatus::NoMatch;
-
-  StringRef Identifier;
-  if (getParser().parseIdentifier(Identifier))
-    return ParseStatus::Failure;
+  } else {
+    Lex();
+  }
 
   SMLoc E = SMLoc::getFromPointer(S.getPointer() + Identifier.size());
-
   RISCVMCExpr::Specifier Kind = RISCVMCExpr::VK_CALL_PLT;
-  (void)Identifier.consume_back("@plt");
 
   MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
   Res = MCSymbolRefExpr::create(Sym, getContext());
@@ -2636,7 +2640,8 @@ ParseStatus RISCVAsmParser::parseRegListCommon(OperandVector &Operands,
       if (getLexer().isNot(AsmToken::Identifier))
         return Error(getLoc(), "invalid register");
       StringRef EndName = getLexer().getTok().getIdentifier();
-      if (MatchRegisterName(EndName) != RISCV::X18)
+      RegEnd = MatchRegisterName(EndName);
+      if (RegEnd != RISCV::X18)
         return Error(getLoc(),
                      "second contiguous registers pair of register list "
                      "must start from 'x18'");
@@ -2647,11 +2652,11 @@ ParseStatus RISCVAsmParser::parseRegListCommon(OperandVector &Operands,
         if (getLexer().isNot(AsmToken::Identifier))
           return Error(getLoc(), "invalid register");
         EndName = getLexer().getTok().getIdentifier();
-        if (!MatchRegisterName(EndName))
+        RegEnd = MatchRegisterName(EndName);
+        if (!RegEnd)
           return Error(getLoc(), "invalid register");
         getLexer().Lex();
       }
-      RegEnd = MatchRegisterName(EndName);
     }
   }
 
