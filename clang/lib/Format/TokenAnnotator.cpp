@@ -1418,7 +1418,8 @@ private:
       } else if (Contexts.back().ContextType == Context::C11GenericSelection) {
         Tok->setType(TT_GenericSelectionColon);
         auto *Prev = Tok->getPreviousNonComment();
-        if (Prev && Prev->isPointerOrReference())
+        assert(Prev);
+        if (Prev->isPointerOrReference())
           Prev->setFinalizedType(TT_PointerOrReference);
       } else if (CurrentToken && CurrentToken->is(tok::numeric_constant)) {
         Tok->setType(TT_BitFieldColon);
