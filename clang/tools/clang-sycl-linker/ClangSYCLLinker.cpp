@@ -302,18 +302,9 @@ Expected<StringRef> linkDeviceCode(ArrayRef<std::string> InputFiles,
   WriteBitcodeToFile(*LinkerOutput, OS);
 
   if (Verbose) {
-    std::string Inputs =
-        std::accumulate(std::next(InputFiles.begin()), InputFiles.end(),
-                        InputFiles.front(), [](std::string a, std::string b) {
-                          return std::move(a) + ", " + std::move(b);
-                        });
-    std::string LibInputs = "";
-    if (!(*SYCLDeviceLibFiles).empty())
-      LibInputs = std::accumulate(
-          std::next((*SYCLDeviceLibFiles).begin()), (*SYCLDeviceLibFiles).end(),
-          (*SYCLDeviceLibFiles).front(), [](std::string a, std::string b) {
-            return std::move(a) + ", " + std::move(b);
-          });
+    std::string Inputs = llvm::join(InputFiles.begin(), InputFiles.end(), ", ");
+    std::string LibInputs = llvm::join((*SYCLDeviceLibFiles).begin(),
+                                       (*SYCLDeviceLibFiles).end(), ", ");
     errs() << formatv(
         "sycl-device-link: inputs: {0} libfiles: {1} output: {2}\n", Inputs,
         LibInputs, *BitcodeOutput);
