@@ -127,8 +127,7 @@ void UnsatisfiedSymbolDependencies::log(raw_ostream &OS) const {
 SymbolsNotFound::SymbolsNotFound(std::shared_ptr<SymbolStringPool> SSP,
                                  SymbolNameSet Symbols)
     : SSP(std::move(SSP)) {
-  for (auto &Sym : Symbols)
-    this->Symbols.push_back(Sym);
+  llvm::append_range(this->Symbols, Symbols);
   assert(!this->Symbols.empty() && "Can not fail to resolve an empty set");
 }
 
@@ -2387,8 +2386,8 @@ void ExecutionSession::OL_applyQueryPhase1(
       // Build the definition generator stack for this JITDylib.
       runSessionLocked([&] {
         IPLS->CurDefGeneratorStack.reserve(JD.DefGenerators.size());
-        for (auto &DG : reverse(JD.DefGenerators))
-          IPLS->CurDefGeneratorStack.push_back(DG);
+        llvm::append_range(IPLS->CurDefGeneratorStack,
+                           reverse(JD.DefGenerators));
       });
 
       // Flag that we've done our initialization.

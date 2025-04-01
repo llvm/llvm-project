@@ -58896,23 +58896,6 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
         Mask[i + IdxVal] = i + ExtIdxVal + VecNumElts;
       return DAG.getVectorShuffle(OpVT, dl, Vec, ExtSrc, Mask);
     }
-    // If we're broadcasting, see if we can use a blend instead of
-    // extract/insert pair. For subvector broadcasts, we must ensure that the
-    // subvector is aligned with the insertion/extractions.
-    if (ExtSrc.getOpcode() == X86ISD::VBROADCAST ||
-        ExtSrc.getOpcode() == X86ISD::VBROADCAST_LOAD ||
-        (ExtSrc.getOpcode() == X86ISD::SUBV_BROADCAST_LOAD &&
-         (ExtIdxVal % SubVecNumElts) == 0 && (IdxVal % SubVecNumElts) == 0 &&
-         cast<MemIntrinsicSDNode>(ExtSrc)->getMemoryVT() == SubVecVT)) {
-      SmallVector<int, 64> Mask(VecNumElts);
-      // First create an identity shuffle mask.
-      for (int i = 0; i != VecNumElts; ++i)
-        Mask[i] = i;
-      // Now blend the broadcast.
-      for (int i = 0; i != SubVecNumElts; ++i)
-        Mask[i + IdxVal] = i + IdxVal + VecNumElts;
-      return DAG.getVectorShuffle(OpVT, dl, Vec, ExtSrc, Mask);
-    }
   }
 
   // Match concat_vector style patterns.

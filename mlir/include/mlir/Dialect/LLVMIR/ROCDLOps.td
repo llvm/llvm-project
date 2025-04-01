@@ -145,6 +145,7 @@ class ROCDL_DimGetterFunctionOp<string mnemonic, string device_function,
 
 //===----------------------------------------------------------------------===//
 // Wave-level primitives
+//===----------------------------------------------------------------------===//
 
 class ROCDL_MbcntOp<string mnemonic> :
     ROCDL_IntrPure1Op<"mbcnt." # mnemonic>,
@@ -205,6 +206,7 @@ def ROCDL_ReadlaneOp : ROCDL_IntrOp<"readlane", [], [0], [AllTypesMatch<["res", 
 
 //===----------------------------------------------------------------------===//
 // Thread index and Block index
+//===----------------------------------------------------------------------===//
 
 def ROCDL_ThreadIdXOp : ROCDL_SpecialIdRegisterOp<"workitem.id.x">;
 def ROCDL_ThreadIdYOp : ROCDL_SpecialIdRegisterOp<"workitem.id.y">;
@@ -216,6 +218,7 @@ def ROCDL_BlockIdZOp : ROCDL_SpecialIdRegisterOp<"workgroup.id.z">;
 
 //===----------------------------------------------------------------------===//
 // Thread range and Block range
+//===----------------------------------------------------------------------===//
 
 def ROCDL_BlockDimXOp : ROCDL_DimGetterFunctionOp<"workgroup.dim.x",
                                                "__ockl_get_local_size", 0>;
@@ -237,6 +240,7 @@ def ROCDL_GridDimZOp : ROCDL_DimGetterFunctionOp<"grid.dim.z",
 
 //===----------------------------------------------------------------------===//
 // Synchronization primitives
+//===----------------------------------------------------------------------===//
 
 // Emits the waintcnt instruction. The bitfield's semantics depend
 // on the target chipset
@@ -423,9 +427,15 @@ def ROCDLGlobalBuffer : LLVM_PointerInAddressSpace<1>;
 def ROCDLBufferLDS : LLVM_PointerInAddressSpace<3>;
 
 class ROCDL_LDS_Read_Tr_IntrOp<string mnemonic> :
-  ROCDL_IntrOp<mnemonic, [1], [], [], 1>,
-  Arguments<(ins Arg<ROCDLBufferLDS, "", [MemRead]>:$ptr)>{
+  ROCDL_IntrOp<mnemonic, [1], [], [], 1, 0, 1> {
+  dag args = (ins Arg<ROCDLBufferLDS, "", [MemRead]>:$ptr);
+  let arguments = !con(args, aliasAttrs);
   let assemblyFormat = "$ptr attr-dict `:` type($ptr) `->` type($res)";
+  let extraClassDefinition = [{
+    ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+      return {getPtr()};
+    }
+  }];
 }
 
 def ROCDL_ds_read_tr4_b64 : ROCDL_LDS_Read_Tr_IntrOp<"ds.read.tr4.b64">;
@@ -437,13 +447,19 @@ def ROCDL_ds_read_tr16_b64 : ROCDL_LDS_Read_Tr_IntrOp<"ds.read.tr16.b64">;
 // Global load to LDS intrinsic (available in GFX950)
 
 def ROCDL_GlobalLoadLDSOp :
-  ROCDL_IntrOp<"global.load.lds", [], [], [], 0>,
-  Arguments<(ins Arg<ROCDLGlobalBuffer, "", [MemRead]>:$globalPtr,
+  ROCDL_IntrOp<"global.load.lds", [], [], [], 0, 0, 1> {
+  dag args = (ins Arg<ROCDLGlobalBuffer, "", [MemRead]>:$globalPtr,
                  Arg<ROCDLBufferLDS, "", [MemWrite]>:$ldsPtr,
                  I32:$size,
                  I32:$offset,
-                 I32:$aux)> {
+                 I32:$aux);
+  let arguments = !con(args, aliasAttrs);
   let assemblyFormat = "operands attr-dict";
+  let extraClassDefinition = [{
+    ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+      return {getGlobalPtr(), getLdsPtr()};
+    }
+  }];
 }
 
 //===---------------------------------------------------------------------===//

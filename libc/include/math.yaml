@@ -59,6 +59,13 @@ functions:
     return_type: float
     arguments:
       - type: float
+  - name: asinhf16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: atan
     standards:
       - stdc
@@ -1388,6 +1395,14 @@ functions:
     arguments:
       - type: float
       - type: float
+  - name: hypotf16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: ilogb
     standards:
       - stdc

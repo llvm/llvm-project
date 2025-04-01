@@ -897,9 +897,11 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     if (!IsStructurallyEquivalent(Context, MemPtr1->getQualifier(),
                                   MemPtr2->getQualifier()))
       return false;
-    if (!IsStructurallyEquivalent(Context,
-                                  MemPtr1->getMostRecentCXXRecordDecl(),
-                                  MemPtr2->getMostRecentCXXRecordDecl()))
+    CXXRecordDecl *D1 = MemPtr1->getMostRecentCXXRecordDecl(),
+                  *D2 = MemPtr2->getMostRecentCXXRecordDecl();
+    if (D1 == D2)
+      break;
+    if (!D1 || !D2 || !IsStructurallyEquivalent(Context, D1, D2))
       return false;
     break;
   }

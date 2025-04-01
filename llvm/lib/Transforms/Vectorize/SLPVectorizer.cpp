@@ -1821,7 +1821,7 @@ public:
 
       auto CheckSameEntryOrFail = [&]() {
         if (ArrayRef<TreeEntry *> TEs1 = R.getTreeEntries(V1); !TEs1.empty()) {
-          SmallPtrSet<TreeEntry *, 4> Set(TEs1.begin(), TEs1.end());
+          SmallPtrSet<TreeEntry *, 4> Set(llvm::from_range, TEs1);
           if (ArrayRef<TreeEntry *> TEs2 = R.getTreeEntries(V2);
               !TEs2.empty() &&
               any_of(TEs2, [&](TreeEntry *E) { return Set.contains(E); }))
@@ -3733,16 +3733,8 @@ private:
       Last->ReorderIndices.append(ReorderIndices.begin(), ReorderIndices.end());
     }
     if (EntryState == TreeEntry::SplitVectorize) {
-      auto *MainOp =
-          cast<Instruction>(*find_if(Last->Scalars, IsaPred<Instruction>));
-      auto *AltOp = cast<Instruction>(*find_if(Last->Scalars, [=](Value *V) {
-        auto *I = dyn_cast<Instruction>(V);
-        if (!I)
-          return false;
-        InstructionsState LocalS = getSameOpcode({I, MainOp}, *TLI);
-        return !LocalS || LocalS.isAltShuffle();
-      }));
-      Last->setOperations(InstructionsState(MainOp, AltOp));
+      assert(S && "Split nodes must have operations.");
+      Last->setOperations(S);
       SmallPtrSet<Value *, 4> Processed;
       for (Value *V : VL) {
         auto *I = dyn_cast<Instruction>(V);
@@ -6896,8 +6888,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
       SmallVector<TreeEntry *> GatherOps;
       if (!canReorderOperands(Data.first, Data.second, NonVectorized,
                               GatherOps)) {
-        for (const std::pair<unsigned, TreeEntry *> &Op : Data.second)
-          Visited.insert(Op.second);
+        Visited.insert_range(llvm::make_second_range(Data.second));
         continue;
       }
       // All operands are reordered and used only in this node - propagate the
@@ -7073,8 +7064,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
         }
       }
       if (OrdersUses.empty()) {
-        for (const std::pair<unsigned, TreeEntry *> &Op : Data.second)
-          Visited.insert(Op.second);
+        Visited.insert_range(llvm::make_second_range(Data.second));
         continue;
       }
       // Choose the most used order.
@@ -7103,8 +7093,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
       }
       // Set order of the user node.
       if (isIdentityOrder(BestOrder)) {
-        for (const std::pair<unsigned, TreeEntry *> &Op : Data.second)
-          Visited.insert(Op.second);
+        Visited.insert_range(llvm::make_second_range(Data.second));
         continue;
       }
       fixupOrderingIndices(BestOrder);
@@ -8865,7 +8854,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       // FIXME: Reshuffing scalars is not supported yet for non-power-of-2 ops.
       if ((UserTreeIdx.UserTE &&
            UserTreeIdx.UserTE->hasNonWholeRegisterOrNonPowerOf2Vec(*TTI)) ||
-          !hasFullVectorsOrPowerOf2(*TTI, VL.front()->getType(), VL.size())) {
+          !hasFullVectorsOrPowerOf2(*TTI, getValueType(VL.front()),
+                                    VL.size())) {
         LLVM_DEBUG(dbgs() << "SLP: Reshuffling scalars not yet supported "
                              "for nodes with padding.\n");
         auto Invalid = ScheduleBundle::invalid();
@@ -8938,7 +8928,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         }
         return;
       }
-      SmallPtrSet<Value *, 8> Values(E->Scalars.begin(), E->Scalars.end());
+      SmallPtrSet<Value *, 8> Values(llvm::from_range, E->Scalars);
       if (all_of(VL, [&](Value *V) {
             return isa<PoisonValue>(V) || Values.contains(V);
           })) {
@@ -9023,8 +9013,11 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         Op1Indices.set(Idx);
         continue;
       }
-      InstructionsState NewS = getSameOpcode({LocalState.getMainOp(), I}, *TLI);
-      if (NewS && !NewS.isAltShuffle()) {
+      if ((LocalState.getAltOpcode() != LocalState.getOpcode() &&
+           I->getOpcode() == LocalState.getOpcode()) ||
+          (LocalState.getAltOpcode() == LocalState.getOpcode() &&
+           !isAlternateInstruction(I, LocalState.getMainOp(),
+                                   LocalState.getAltOp(), *TLI))) {
         Op1.push_back(V);
         Op1Indices.set(Idx);
         continue;
@@ -9038,8 +9031,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     SmallBitVector OpcodeMask(getAltInstrMask(VL, Opcode0, Opcode1));
     // Enable split node, only if all nodes do not form legal alternate
     // instruction (like X86 addsub).
-    SmallPtrSet<Value *, 4> UOp1(Op1.begin(), Op1.end());
-    SmallPtrSet<Value *, 4> UOp2(Op2.begin(), Op2.end());
+    SmallPtrSet<Value *, 4> UOp1(llvm::from_range, Op1);
+    SmallPtrSet<Value *, 4> UOp2(llvm::from_range, Op2);
     if (UOp1.size() <= 1 || UOp2.size() <= 1 ||
         TTI.isLegalAltInstr(VecTy, Opcode0, Opcode1, OpcodeMask) ||
         !hasFullVectorsOrPowerOf2(TTI, Op1.front()->getType(), Op1.size()) ||
@@ -9258,9 +9251,9 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   // alternate node.
   if (S && S.isAltShuffle()) {
     auto GetNumVectorizedExtracted = [&]() {
-      unsigned NumVectorized = 0;
-      unsigned NumExtracted = 0;
-      for (Value *V : VL) {
+      APInt Extracted = APInt::getZero(VL.size());
+      APInt Vectorized = APInt::getAllOnes(VL.size());
+      for (auto [Idx, V] : enumerate(VL)) {
         auto *I = dyn_cast<Instruction>(V);
         if (!I || doesNotNeedToBeScheduled(V) ||
             all_of(I->operands(), [&](const Use &U) {
@@ -9268,24 +9261,27 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
             }))
           continue;
         if (isVectorized(V))
-          ++NumVectorized;
+         Vectorized.clearBit(Idx);
         else if (!V->hasOneUser() && !areAllUsersVectorized(I, UserIgnoreList))
-          ++NumExtracted;
+          Extracted.setBit(Idx);
       }
-      return std::make_pair(NumVectorized, NumExtracted);
+      return std::make_pair(Vectorized, Extracted);
     };
-    auto [NumVectorized, NumExtracted] = GetNumVectorizedExtracted();
+    auto [Vectorized, Extracted] = GetNumVectorizedExtracted();
     constexpr TTI::TargetCostKind Kind = TTI::TCK_RecipThroughput;
-    bool PreferScalarize = NumVectorized > 0 && VL.size() == 2;
-    if (NumVectorized > 0 && !PreferScalarize) {
+    bool PreferScalarize = !Vectorized.isAllOnes() && VL.size() == 2;
+    if (!Vectorized.isAllOnes() && !PreferScalarize) {
       // Rough cost estimation, if the vector code (+ potential extracts) is
       // more profitable than the scalar + buildvector.
+      Type *ScalarTy = VL.front()->getType();
+      auto *VecTy = getWidenedType(ScalarTy, VL.size());
       InstructionCost VectorizeCostEstimate =
-          getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc,
-                         getWidenedType(VL.front()->getType(), VL.size()), {},
-                         Kind) +
-          NumExtracted;
-      InstructionCost ScalarizeCostEstimate = VL.size() - NumVectorized;
+          ::getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc, VecTy, {}, Kind) +
+          ::getScalarizationOverhead(*TTI, ScalarTy, VecTy, Extracted,
+                                     /*Insert=*/false, /*Extract=*/true, Kind);
+      InstructionCost ScalarizeCostEstimate =
+          ::getScalarizationOverhead(*TTI, ScalarTy, VecTy, Vectorized,
+                                     /*Insert=*/true, /*Extract=*/false, Kind);
       PreferScalarize = VectorizeCostEstimate > ScalarizeCostEstimate;
     }
     if (PreferScalarize) {
@@ -13378,7 +13374,8 @@ InstructionCost BoUpSLP::getSpillCost() {
     for (const TreeEntry *Op : Operands) {
       if (!Op->isGather())
         LiveEntries.push_back(Op);
-      if ((Entry->getOpcode() != Instruction::PHI && Op->isGather()) ||
+      if (Entry->State == TreeEntry::SplitVectorize ||
+          (Entry->getOpcode() != Instruction::PHI && Op->isGather()) ||
           (Op->isGather() && allConstant(Op->Scalars)))
         continue;
       Budget = 0;
@@ -14300,7 +14297,7 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     return std::nullopt;
   auto *NodeUI = DT->getNode(TEInsertBlock);
   assert(NodeUI && "Should only process reachable instructions");
-  SmallPtrSet<Value *, 4> GatheredScalars(VL.begin(), VL.end());
+  SmallPtrSet<Value *, 4> GatheredScalars(llvm::from_range, VL);
   auto CheckOrdering = [&](const Instruction *InsertPt) {
     // Argument InsertPt is an instruction where vector code for some other
     // tree entry (one that shares one or more scalars with TE) is going to be
@@ -21507,7 +21504,7 @@ public:
           }
         }
         V.transformNodes();
-        SmallPtrSet<Value *, 4> VLScalars(VL.begin(), VL.end());
+        SmallPtrSet<Value *, 4> VLScalars(llvm::from_range, VL);
         // Gather externally used values.
         SmallPtrSet<Value *, 4> Visited;
         for (unsigned Cnt = 0; Cnt < NumReducedVals; ++Cnt) {
@@ -23395,7 +23392,7 @@ bool SLPVectorizerPass::vectorizeGEPIndices(BasicBlock *BB, BoUpSLP &R) {
       // SetVector here to preserve program order. If the index computations
       // are vectorizable and begin with loads, we want to minimize the chance
       // of having to reorder them later.
-      SetVector<Value *> Candidates(GEPList.begin(), GEPList.end());
+      SetVector<Value *> Candidates(llvm::from_range, GEPList);
 
       // Some of the candidates may have already been vectorized after we
       // initially collected them or their index is optimized to constant value.

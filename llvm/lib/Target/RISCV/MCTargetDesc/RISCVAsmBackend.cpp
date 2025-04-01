@@ -560,12 +560,11 @@ bool RISCVAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
   }
   }
 
-  if (!AUIPCTarget.getSymA() || AUIPCTarget.getSubSym())
+  if (!AUIPCTarget.getSymA())
     return false;
 
-  const MCSymbolRefExpr *A = AUIPCTarget.getSymA();
-  const MCSymbolELF &SA = cast<MCSymbolELF>(A->getSymbol());
-  if (getSpecifier(A) != RISCVMCExpr::VK_None || SA.isUndefined())
+  const MCSymbolELF &SA = cast<MCSymbolELF>(*AUIPCTarget.getAddSym());
+  if (SA.isUndefined())
     return false;
 
   bool IsResolved = &SA.getSection() == AUIPCDF->getParent() &&
@@ -590,6 +589,8 @@ bool RISCVAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
                                               const MCFixup &Fixup,
                                               const MCValue &Target,
                                               uint64_t &FixedValue) const {
+  assert(Target.getRefKind() == 0 &&
+         "relocatable SymA-SymB cannot have relocation specifier");
   uint64_t FixedValueA, FixedValueB;
   unsigned TA = 0, TB = 0;
   switch (Fixup.getKind()) {

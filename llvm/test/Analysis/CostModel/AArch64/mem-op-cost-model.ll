@@ -394,11 +394,11 @@ declare <256 x float> @llvm.masked.gather.v256f32.v256p0(<256 x ptr>, i32, <256 
 define void @sve_gather_vls_float(<256 x i1> %v256i1mask) {
 ; CHECK-LABEL: 'sve_gather_vls_float'
 ; CHECK-NEON-LABEL: 'sve_gather_vls_float'
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:1664 CodeSize:1920 Lat:1920 SizeLat:1920 for: %res.v256f32 = call <256 x float> @llvm.masked.gather.v256f32.v256p0(<256 x ptr> undef, i32 0, <256 x i1> %v256i1mask, <256 x float> zeroinitializer)
+; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:1664 CodeSize:1728 Lat:1920 SizeLat:1920 for: %res.v256f32 = call <256 x float> @llvm.masked.gather.v256f32.v256p0(<256 x ptr> undef, i32 0, <256 x i1> %v256i1mask, <256 x float> zeroinitializer)
 ; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-SVE-128-LABEL: 'sve_gather_vls_float'
-; CHECK-SVE-128-NEXT:  Cost Model: Found costs of RThru:1664 CodeSize:1920 Lat:1920 SizeLat:1920 for: %res.v256f32 = call <256 x float> @llvm.masked.gather.v256f32.v256p0(<256 x ptr> undef, i32 0, <256 x i1> %v256i1mask, <256 x float> zeroinitializer)
+; CHECK-SVE-128-NEXT:  Cost Model: Found costs of RThru:1664 CodeSize:1728 Lat:1920 SizeLat:1920 for: %res.v256f32 = call <256 x float> @llvm.masked.gather.v256f32.v256p0(<256 x ptr> undef, i32 0, <256 x i1> %v256i1mask, <256 x float> zeroinitializer)
 ; CHECK-SVE-128-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-SVE-256-LABEL: 'sve_gather_vls_float'
@@ -442,11 +442,11 @@ declare void @llvm.masked.scatter.v512f16.v512p0(<512 x half>, <512 x ptr>, i32,
 define void @sve_scatter_vls_float(<512 x i1> %v512i1mask){
 ; CHECK-LABEL: 'sve_scatter_vls_float'
 ; CHECK-NEON-LABEL: 'sve_scatter_vls_float'
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:3456 CodeSize:3968 Lat:3968 SizeLat:3968 for: call void @llvm.masked.scatter.v512f16.v512p0(<512 x half> undef, <512 x ptr> undef, i32 0, <512 x i1> %v512i1mask)
+; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:3456 CodeSize:3520 Lat:3968 SizeLat:3968 for: call void @llvm.masked.scatter.v512f16.v512p0(<512 x half> undef, <512 x ptr> undef, i32 0, <512 x i1> %v512i1mask)
 ; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-SVE-128-LABEL: 'sve_scatter_vls_float'
-; CHECK-SVE-128-NEXT:  Cost Model: Found costs of RThru:3456 CodeSize:3968 Lat:3968 SizeLat:3968 for: call void @llvm.masked.scatter.v512f16.v512p0(<512 x half> undef, <512 x ptr> undef, i32 0, <512 x i1> %v512i1mask)
+; CHECK-SVE-128-NEXT:  Cost Model: Found costs of RThru:3456 CodeSize:3520 Lat:3968 SizeLat:3968 for: call void @llvm.masked.scatter.v512f16.v512p0(<512 x half> undef, <512 x ptr> undef, i32 0, <512 x i1> %v512i1mask)
 ; CHECK-SVE-128-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-SVE-256-LABEL: 'sve_scatter_vls_float'
