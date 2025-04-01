@@ -175,6 +175,11 @@ public:
     // Only leaders provide anything to iterate over.
     return member_iterator(I->isLeader() ? &*I : nullptr);
   }
+  member_iterator member_begin(const ECValue &ECV) const {
+    // Only leaders provide anything to iterate over.
+    return member_iterator(ECV.getLeader());
+  }
+
   member_iterator member_end() const {
     return member_iterator(nullptr);
   }
@@ -216,26 +221,28 @@ public:
 
   /// insert - Insert a new value into the union/find set, ignoring the request
   /// if the value already exists.
-  iterator insert(const ElemTy &Data) {
-    return TheMapping.insert(ECValue(Data)).first;
+  const ECValue &insert(const ElemTy &Data) {
+    return *TheMapping.insert(ECValue(Data)).first;
   }
 
   /// findLeader - Given a value in the set, return a member iterator for the
   /// equivalence class it is in.  This does the path-compression part that
   /// makes union-find "union findy".  This returns an end iterator if the value
   /// is not in the equivalence class.
-  member_iterator findLeader(iterator I) const {
-    if (I == TheMapping.end()) return member_end();
-    return member_iterator(I->getLeader());
-  }
   member_iterator findLeader(const ElemTy &V) const {
-    return findLeader(TheMapping.find(V));
+    auto I = TheMapping.find(V);
+    if (I == TheMapping.end())
+      return member_iterator(nullptr);
+    return findLeader(*I);
+  }
+  member_iterator findLeader(const ECValue &ECV) const {
+    return member_iterator(ECV.getLeader());
   }
 
   /// union - Merge the two equivalence sets for the specified values, inserting
   /// them if they do not already exist in the equivalence set.
   member_iterator unionSets(const ElemTy &V1, const ElemTy &V2) {
-    iterator V1I = insert(V1), V2I = insert(V2);
+    const ECValue &V1I = insert(V1), &V2I = insert(V2);
     return unionSets(findLeader(V1I), findLeader(V2I));
   }
   member_iterator unionSets(member_iterator L1, member_iterator L2) {
