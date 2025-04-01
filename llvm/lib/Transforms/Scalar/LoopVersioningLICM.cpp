@@ -344,6 +344,13 @@ bool LoopVersioningLICM::instructionSafeForVersioning(Instruction *I) {
     }
     LoadAndStoreCounter++;
     Value *Ptr = St->getPointerOperand();
+    // Don't allow stores that we don't have runtime checks for, as we won't be
+    // able to mark them noalias meaning they would prevent any code motion.
+    auto &Pointers = LAI->getRuntimePointerChecking()->Pointers;
+    if (!any_of(Pointers, [&](auto &P) { return P.PointerValue == Ptr; })) {
+      LLVM_DEBUG(dbgs() << "    Found a store without a runtime check.\n");
+      return false;
+    }
     // Check loop invariant.
     if (SE->isLoopInvariant(SE->getSCEV(Ptr), CurLoop))
       InvariantCounter++;
@@ -361,6 +368,13 @@ bool LoopVersioningLICM::legalLoopInstructions() {
   InvariantCounter = 0;
   IsReadOnlyLoop = true;
   using namespace ore;
+  // Get LoopAccessInfo from current loop via the proxy.
+  LAI = &LAIs.getInfo(*CurLoop);
+  // Check LoopAccessInfo for need of runtime check.
+  if (LAI->getRuntimePointerChecking()->getChecks().empty()) {
+    LLVM_DEBUG(dbgs() << "    LAA: Runtime check not found !!\n");
+    return false;
+  }
   // Iterate over loop blocks and instructions of each block and check
   // instruction safety.
   for (auto *Block : CurLoop->getBlocks())
@@ -374,13 +388,6 @@ bool LoopVersioningLICM::legalLoopInstructions() {
         return false;
       }
     }
-  // Get LoopAccessInfo from current loop via the proxy.
-  LAI = &LAIs.getInfo(*CurLoop);
-  // Check LoopAccessInfo for need of runtime check.
-  if (LAI->getRuntimePointerChecking()->getChecks().empty()) {
-    LLVM_DEBUG(dbgs() << "    LAA: Runtime check not found !!\n");
-    return false;
-  }
   // Number of runtime-checks should be less then RuntimeMemoryCheckThreshold
   if (LAI->getNumRuntimePointerChecks() >
       VectorizerParams::RuntimeMemoryCheckThreshold) {
@@ -515,13 +522,16 @@ void LoopVersioningLICM::setNoAliasToLoop(Loop *VerLoop) {
   StringRef Name = "LVAliasScope";
   MDNode *NewScope = MDB.createAnonymousAliasScope(NewDomain, Name);
   SmallVector<Metadata *, 4> Scopes{NewScope}, NoAliases{NewScope};
+  auto &Pointers = LAI->getRuntimePointerChecking()->Pointers;
+
   // Iterate over each instruction of loop.
   // set no-alias for all load & store instructions.
   for (auto *Block : CurLoop->getBlocks()) {
     for (auto &Inst : *Block) {
-      // Only interested in instruction that may modify or read memory.
-      if (!Inst.mayReadFromMemory() && !Inst.mayWriteToMemory())
-        continue;
+      // We can only add noalias to pointers that we've inserted checks for
+      Value *V = getLoadStorePointerOperand(&Inst);
+      if (!V || !any_of(Pointers, [&](auto &P) { return P.PointerValue == V; }))
+	continue;
       // Set no-alias for current instruction.
       Inst.setMetadata(
           LLVMContext::MD_noalias,
