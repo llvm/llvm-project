@@ -37,7 +37,7 @@ def InvalidTypeC : InvalidType<"InvalidTypeC", "invalid_c"> {
 def InvalidTypeD : InvalidType<"InvalidTypeD", "invalid_d"> {
   let parameters = (ins "int":$v0);
   // CHECK: literals may only be used in the top-level section of the format
-  // CHECK: expected a variable in `struct` argument list
+  // CHECK: expected a variable or `custom` directive in `struct` argument list
   let assemblyFormat = "`<` struct($v0, `,`) `>`";
 }
 
@@ -143,4 +143,18 @@ def InvalidTypeT : InvalidType<"InvalidTypeT", "invalid_t"> {
   let parameters = (ins OptionalParameter<"int">:$a);
   // CHECK: `custom` directive with no bound parameters cannot be used as optional group anchor
   let assemblyFormat = "$a (`(` custom<Foo>(ref($a))^ `)`)?";
+}
+
+// Test `struct` with nested `custom` directive with multiple fields.
+def InvalidTypeU : InvalidType<"InvalidTypeU", "invalid_u"> {
+  let parameters = (ins OptionalParameter<"int">:$a, "int":$b);
+  // CHECK: `struct` can only contain `custom` directives with a single argument
+  let assemblyFormat = "struct(custom<Foo>($a, $b))";
+}
+
+// Test `struct` with nested `custom` directive invalid parameter.
+def InvalidTypeV : InvalidType<"InvalidTypeV", "invalid_v"> {
+  let parameters = (ins OptionalParameter<"int">:$a);
+  // CHECK: a `custom` directive nested within a `struct` must be passed a parameter
+  let assemblyFormat = "struct($a, custom<Foo>(ref($a)))";
 }
