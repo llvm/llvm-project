@@ -173,6 +173,8 @@ static bool handleOverflow(InterpState &S, CodePtr OpPC, const T &SrcValue) {
 bool handleFixedPointOverflow(InterpState &S, CodePtr OpPC,
                               const FixedPoint &FP);
 
+bool isConstexprUnknown(const Pointer &P);
+
 enum class ShiftDir { Left, Right };
 
 /// Checks if the shift operation is legal.
@@ -1060,6 +1062,11 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
           << P.toDiagnosticString(S.getASTContext());
       return false;
     }
+  }
+
+  if (!S.inConstantContext()) {
+    if (isConstexprUnknown(LHS) || isConstexprUnknown(RHS))
+      return false;
   }
 
   if (Pointer::hasSameBase(LHS, RHS)) {
