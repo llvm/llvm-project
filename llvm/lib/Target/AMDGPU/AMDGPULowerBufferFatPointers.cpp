@@ -2249,8 +2249,8 @@ PtrParts SplitPtrStructs::visitIntrinsicInst(IntrinsicInst &I) {
   case Intrinsic::amdgcn_buffer_fat_ptr_load_lds: {
     Value *BufferPtr = I.getArgOperand(0);
     assert(isSplitFatPtr(BufferPtr->getType()) &&
-           "amdgcn.buffer.fat.pointer.load.lds has a buffer fat pointer as "
-           "argument 0");
+           "amdgcn.buffer.fat.pointer.load.lds must have a buffer fat pointer "
+           "as argument 0");
     IRB.SetInsertPoint(&I);
     auto [Rsrc, Off] = getPtrParts(BufferPtr);
     Value *LDSPtr = I.getArgOperand(1);
