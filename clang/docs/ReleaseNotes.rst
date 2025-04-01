@@ -275,6 +275,10 @@ Improvements to Clang's diagnostics
 - Diagnostics on chained comparisons (``a < b < c``) are now an error by default. This can be disabled with
   ``-Wno-error=parentheses``.
 - Clang now better preserves the sugared types of pointers to member.
+- Clang now better preserves the presence of the template keyword with dependent
+  prefixes.
+- When printing types for diagnostics, clang now doesn't suppress the scopes of
+  template arguments contained within nested names.
 - The ``-Wshift-bool`` warning has been added to warn about shifting a boolean. (#GH28334)
 - Fixed diagnostics adding a trailing ``::`` when printing some source code
   constructs, like base classes.

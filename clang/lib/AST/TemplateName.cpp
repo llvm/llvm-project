@@ -122,6 +122,31 @@ void SubstTemplateTemplateParmPackStorage::Profile(
   ID.AddBoolean(Final);
 }
 
+IdentifierOrOverloadedOperator::IdentifierOrOverloadedOperator(
+    const IdentifierInfo *II)
+    : PtrOrOp(reinterpret_cast<uintptr_t>(II)) {
+  static_assert(NUM_OVERLOADED_OPERATORS <= 4096,
+                "NUM_OVERLOADED_OPERATORS is too large");
+  assert(II);
+  assert(getIdentifier() == II);
+}
+IdentifierOrOverloadedOperator::IdentifierOrOverloadedOperator(
+    OverloadedOperatorKind OOK)
+    : PtrOrOp(-uintptr_t(OOK)) {
+  assert(OOK != OO_None);
+  assert(getOperator() == OOK);
+}
+
+void IdentifierOrOverloadedOperator::Profile(llvm::FoldingSetNodeID &ID) const {
+  if (auto *Identifier = getIdentifier()) {
+    ID.AddBoolean(false);
+    ID.AddPointer(Identifier);
+  } else {
+    ID.AddBoolean(true);
+    ID.AddInteger(getOperator());
+  }
+}
+
 TemplateName::TemplateName(void *Ptr) {
   Storage = StorageType::getFromOpaqueValue(Ptr);
 }
@@ -275,6 +300,36 @@ UsingShadowDecl *TemplateName::getAsUsingShadowDecl() const {
   return nullptr;
 }
 
+DependentTemplateStorage::DependentTemplateStorage(
+    NestedNameSpecifier *Qualifier, IdentifierOrOverloadedOperator Name,
+    bool HasTemplateKeyword)
+    : Qualifier(Qualifier, HasTemplateKeyword), Name(Name) {
+  assert((!Qualifier || Qualifier->isDependent()) &&
+         "Qualifier must be dependent");
+}
+
+TemplateNameDependence DependentTemplateStorage::getDependence() const {
+  auto D = TemplateNameDependence::DependentInstantiation;
+  if (NestedNameSpecifier *Qualifier = getQualifier())
+    D |= toTemplateNameDependence(Qualifier->getDependence());
+  return D;
+}
+
+void DependentTemplateStorage::print(raw_ostream &OS,
+                                     const PrintingPolicy &Policy) const {
+  if (NestedNameSpecifier *NNS = getQualifier())
+    NNS->print(OS, Policy);
+
+  if (hasTemplateKeyword())
+    OS << "template ";
+
+  IdentifierOrOverloadedOperator Name = getName();
+  if (const IdentifierInfo *II = Name.getIdentifier())
+    OS << II->getName();
+  else
+    OS << "operator " << getOperatorSpelling(Name.getOperator());
+}
+
 DeducedTemplateStorage *TemplateName::getAsDeducedTemplateName() const {
   if (UncommonTemplateNameStorage *Uncommon =
           dyn_cast_if_present<UncommonTemplateNameStorage *>(Storage))
@@ -313,7 +368,8 @@ TemplateNameDependence TemplateName::getDependence() const {
   case NameKind::DependentTemplate: {
     DependentTemplateName *S = getAsDependentTemplateName();
     auto D = TemplateNameDependence::DependentInstantiation;
-    D |= toTemplateNameDependence(S->getQualifier()->getDependence());
+    if (NestedNameSpecifier *Qualifier = S->getQualifier())
+      D |= toTemplateNameDependence(Qualifier->getDependence());
     return D;
   }
   case NameKind::SubstTemplateTemplateParm: {
@@ -401,14 +457,7 @@ void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
     else
       OS << *UTD;
   } else if (DependentTemplateName *DTN = getAsDependentTemplateName()) {
-    if (NestedNameSpecifier *NNS = DTN->getQualifier())
-      NNS->print(OS, Policy);
-    OS << "template ";
-
-    if (DTN->isIdentifier())
-      OS << DTN->getIdentifier()->getName();
-    else
-      OS << "operator " << getOperatorSpelling(DTN->getOperator());
+    DTN->print(OS, Policy);
   } else if (SubstTemplateTemplateParmStorage *subst =
                  getAsSubstTemplateTemplateParm()) {
     subst->getReplacement().print(OS, Policy, Qual);
