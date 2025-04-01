@@ -19,7 +19,7 @@
 #  include "sanitizer_posix.h"
 
 struct prmap;
- typedef struct prmap prmap_t;
+typedef struct prmap prmap_t;
 
 namespace __sanitizer {
 

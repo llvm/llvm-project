@@ -13,17 +13,17 @@
 
 #if SANITIZER_AIX
 #  include <assert.h>
-#  include <stdlib.h>
 #  include <stdio.h>
+#  include <stdlib.h>
 #  include <sys/procfs.h>
 
 #  include "sanitizer_common.h"
-#  include "sanitizer_procmaps.h"
 #  include "sanitizer_file.h"
+#  include "sanitizer_procmaps.h"
 
 namespace __sanitizer {
 
-static int qsort_comp(const void *va, const void * vb) {
+static int qsort_comp(const void *va, const void *vb) {
   const prmap_t *a = (const prmap_t *)va;
   const prmap_t *b = (const prmap_t *)vb;
 
@@ -37,12 +37,11 @@ static int qsort_comp(const void *va, const void * vb) {
 }
 
 static prmap_t *SortProcMapEntries(char *buffer) {
-  prmap_t *begin = (prmap_t*)buffer;
+  prmap_t *begin = (prmap_t *)buffer;
   prmap_t *mapIter = begin;
   // The AIX procmap utility detects the end of the array of `prmap`s by finding
   // an entry where pr_size and pr_vaddr are both zero.
-  while (mapIter->pr_size != 0 || mapIter->pr_vaddr != 0)
-    ++mapIter;
+  while (mapIter->pr_size != 0 || mapIter->pr_vaddr != 0) ++mapIter;
   prmap_t *end = mapIter;
 
   size_t count = end - begin;
@@ -57,7 +56,8 @@ void ReadProcMaps(ProcSelfMapsBuff *proc_maps) {
   constexpr unsigned BUFFER_SIZE = 128;
   char filenameBuf[BUFFER_SIZE] = {};
   internal_snprintf(filenameBuf, BUFFER_SIZE, "/proc/%d/map", pid);
-  if (!ReadFileToBuffer(filenameBuf, &proc_maps->data, &proc_maps->mmaped_size, &proc_maps->len)) {
+  if (!ReadFileToBuffer(filenameBuf, &proc_maps->data, &proc_maps->mmaped_size,
+                        &proc_maps->len)) {
     proc_maps->data = nullptr;
     proc_maps->mmaped_size = 0;
     proc_maps->len = 0;
@@ -106,15 +106,17 @@ bool MemoryMappingLayout::Next(MemoryMappedSegment *segment) {
     constexpr unsigned BUFFER_SIZE = 128;
     char objPath[BUFFER_SIZE] = {};
     // Use path /proc/<pid>/object/<object_id> to pass to the symbolizer.
-    internal_snprintf(objPath, BUFFER_SIZE, "/proc/%d/object/%s", internal_getpid(), mapIter->pr_mapname);
+    internal_snprintf(objPath, BUFFER_SIZE, "/proc/%d/object/%s",
+                      internal_getpid(), mapIter->pr_mapname);
     len = Min((uptr)internal_strlen(objPath), segment->filename_size - 1);
     internal_strncpy(segment->filename, objPath, len);
     segment->filename[len] = 0;
 
-    // We don't have the full path to user libraries, so we use what we have available as the
-    // display name.
+    // We don't have the full path to user libraries, so we use what we have
+    // available as the display name.
     const char *displayPath = data_.proc_self_maps.data + mapIter->pr_pathoff;
-    len = Min((uptr)internal_strlen(displayPath), segment->displayname_size - 1);
+    len =
+        Min((uptr)internal_strlen(displayPath), segment->displayname_size - 1);
     internal_strncpy(segment->displayname, displayPath, len);
     segment->displayname[len] = 0;
   } else if (segment->filename) {
@@ -126,7 +128,7 @@ bool MemoryMappingLayout::Next(MemoryMappedSegment *segment) {
   segment->offset = 0;
 
   ++mapIter;
-  data_.current = (const char*)mapIter;
+  data_.current = (const char *)mapIter;
 
   return true;
 }
