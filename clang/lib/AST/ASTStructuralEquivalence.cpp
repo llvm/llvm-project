@@ -453,109 +453,38 @@ public:
 };
 } // namespace
 
-static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
-                                     const Attr *Attr1, const Attr *Attr2) {
-  // Two attributes are structurally equivalent if they are the same kind
-  // of attribute, spelled with the same spelling kind, and have the same
-  // arguments. This means that [[noreturn]] and __attribute__((noreturn)) are
-  // not structurally equivalent, nor are [[nodiscard("foo")]] and
-  // [[nodiscard("bar")]].
-  if (Attr1->getKind() != Attr2->getKind())
-    return false;
-
-  if (Attr1->getSyntax() != Attr2->getSyntax())
-    return false;
-
-  if (Attr1->getSpellingListIndex() != Attr2->getSpellingListIndex())
-    return false;
-
-  auto GetAttrName = [](const Attr *A) {
-    if (const IdentifierInfo *II = A->getAttrName())
-      return II->getName();
-    return StringRef{};
-  };
-
-  if (GetAttrName(Attr1) != GetAttrName(Attr2))
-    return false;
-
-  // FIXME: check the attribute arguments. Attr does not track the arguments on
-  // the base class, which makes this awkward. We may want to tablegen a
-  // comparison function for attributes? In the meantime, we're doing this the
-  // cheap way by pretty printing the attributes and checking they produce
-  // equivalent string representations.
-  std::string AttrStr1, AttrStr2;
-  PrintingPolicy DefaultPolicy(Context.LangOpts);
-  llvm::raw_string_ostream SS1(AttrStr1), SS2(AttrStr2);
-  Attr1->printPretty(SS1, DefaultPolicy);
-  Attr2->printPretty(SS2, DefaultPolicy);
-
-  return SS1.str() == SS2.str();
-}
-
 static bool
 CheckStructurallyEquivalentAttributes(StructuralEquivalenceContext &Context,
                                       const Decl *D1, const Decl *D2,
                                       const Decl *PrimaryDecl = nullptr) {
-  // Gather the attributes and sort them by name so that they're in equivalent
-  // orders. This means that __attribute__((foo, bar)) is equivalent to
-  // __attribute__((bar, foo)).
-  llvm::SmallVector<const Attr *, 2> Attrs1, Attrs2;
-  llvm::copy(D1->attrs(), std::back_inserter(Attrs1));
-  llvm::copy(D2->attrs(), std::back_inserter(Attrs2));
-
-  auto Sorter = [](const Attr *LHS, const Attr *RHS) {
-    const IdentifierInfo *II1 = LHS->getAttrName(), *II2 = RHS->getAttrName();
-    if (!II1 || !II2)
-      return II1 == II2;
-    return *II1 < *II2;
-  };
-  llvm::sort(Attrs1, Sorter);
-  llvm::sort(Attrs2, Sorter);
-
-  auto A2 = Attrs2.begin(), A2End = Attrs2.end();
-  const auto *DiagnoseDecl = cast<TypeDecl>(PrimaryDecl ? PrimaryDecl : D2);
-  for (auto A1 = Attrs1.begin(), A1End = Attrs1.end(); A1 != A1End;
-       ++A1, ++A2) {
-    if (A2 == A2End) {
-      if (Context.Complain) {
-        Context.Diag2(DiagnoseDecl->getLocation(),
-                      Context.getApplicableDiagnostic(
-                          diag::err_odr_tag_type_inconsistent))
-            << Context.ToCtx.getTypeDeclType(DiagnoseDecl)
-            << (&Context.FromCtx != &Context.ToCtx);
-        Context.Diag1((*A1)->getLocation(), diag::note_odr_attr) << *A1;
-        Context.Diag2(D2->getLocation(), diag::note_odr_attr_missing);
-      }
-      return false;
-    }
-
-    if (!IsStructurallyEquivalent(Context, *A1, *A2)) {
-      if (Context.Complain) {
-        Context.Diag2(DiagnoseDecl->getLocation(),
-                      Context.getApplicableDiagnostic(
-                          diag::err_odr_tag_type_inconsistent))
-            << Context.ToCtx.getTypeDeclType(DiagnoseDecl)
-            << (&Context.FromCtx != &Context.ToCtx);
-        Context.Diag2((*A2)->getLocation(), diag::note_odr_attr) << *A2;
-        Context.Diag1((*A1)->getLocation(), diag::note_odr_attr) << *A1;
-      }
-      return false;
-    }
+  // If either declaration has an attribute on it, we treat the declarations
+  // as not being structurally equivalent.
+  // FIXME: this should be handled on a case-by-case basis via tablegen in
+  // Attr.td. There are multiple cases to consider: one declation with the
+  // attribute, another without it; different attribute syntax|spellings for
+  // the same semantic attribute, differences in attribute arguments, order
+  // in which attributes are applied, how to merge attributes if the types are
+  // structurally equivalent, etc.
+  const Attr *D1Attr = nullptr, *D2Attr = nullptr;
+  if (D1->hasAttrs())
+    D1Attr = *D1->getAttrs().begin();
+  if (D2->hasAttrs())
+    D2Attr = *D2->getAttrs().begin();
+  if (D1Attr || D2Attr) {
+    const auto *DiagnoseDecl = cast<TypeDecl>(PrimaryDecl ? PrimaryDecl : D2);
+    Context.Diag2(DiagnoseDecl->getLocation(),
+                  diag::warn_odr_tag_type_with_attributes)
+        << Context.ToCtx.getTypeDeclType(DiagnoseDecl)
+        << (PrimaryDecl != nullptr);
+    if (D1Attr)
+      Context.Diag1(D1Attr->getLoc(), diag::note_odr_attr_here) << D1Attr;
+    if (D2Attr)
+      Context.Diag1(D2Attr->getLoc(), diag::note_odr_attr_here) << D2Attr;
   }
 
-  if (A2 != A2End) {
-    if (Context.Complain) {
-      Context.Diag2(
-          DiagnoseDecl->getLocation(),
-          Context.getApplicableDiagnostic(diag::err_odr_tag_type_inconsistent))
-          << Context.ToCtx.getTypeDeclType(DiagnoseDecl)
-          << (&Context.FromCtx != &Context.ToCtx);
-      Context.Diag1(D1->getLocation(), diag::note_odr_attr_missing);
-      Context.Diag1((*A2)->getLocation(), diag::note_odr_attr) << *A2;
-    }
-    return false;
-  }
-
+  // The above diagnostic is a warning which defaults to an error. If treated
+  // as a warning, we'll go ahead and allow any attribute differences to be
+  // undefined behavior and the user gets what they get in terms of behavior.
   return true;
 }
 

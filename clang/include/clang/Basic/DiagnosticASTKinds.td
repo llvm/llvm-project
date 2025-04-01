@@ -478,8 +478,11 @@ def warn_odr_function_type_inconsistent : Warning<
   "external function %0 declared with incompatible types in different "
   "translation units (%1 vs. %2)">,
   InGroup<ODR>;
-def note_odr_attr : Note<"attribute %0 here">;
-def note_odr_attr_missing : Note<"no corresponding attribute here">;
+def warn_odr_tag_type_with_attributes : Warning<
+  "type %0 has %select{an attribute|a member with an attribute}1 which "
+  "currently causes the types to be treated as though they are incompatible">,
+  InGroup<ODR>, DefaultError;
+def note_odr_attr_here : Note<"attribute %0 here">;
 def err_odr_tag_type_inconsistent
     : Error<"type %0 has incompatible definitions%select{| in different "
             "translation units}1">;
