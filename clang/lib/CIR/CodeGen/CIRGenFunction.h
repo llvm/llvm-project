@@ -110,8 +110,6 @@ private:
 public:
   mlir::Value createDummyValue(mlir::Location loc, clang::QualType qt);
 
-  void emitAggExpr(const clang::Expr *e, AggValueSlot slot);
-
   void emitNullInitialization(mlir::Location loc, Address destPtr, QualType ty);
 
 private:
@@ -380,6 +378,8 @@ public:
                          mlir::Location loc, clang::CharUnits alignment,
                          mlir::OpBuilder::InsertPoint ip,
                          mlir::Value arraySize = nullptr);
+
+  void emitAggExpr(const clang::Expr *e, AggValueSlot slot);
 
   /// Emit code to compute the specified expression which can have any type. The
   /// result is returned as an RValue struct. If this is an aggregate
