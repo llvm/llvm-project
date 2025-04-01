@@ -171,6 +171,10 @@ bool isStrongDefinitionForLinker(Operation *op) {
   return !(isDeclarationForLinker(op) || isWeakForLinker(getLinkage(op)));
 }
 
+unsigned getBitWidth(LLVM::GlobalOp op) {
+  return op.getType().getIntOrFloatBitWidth();
+}
+
 //===----------------------------------------------------------------------===//
 // LLVMSymbolLinkerInterface
 //===----------------------------------------------------------------------===//
@@ -213,8 +217,8 @@ public:
       return false;
 
     // Private dependencies are gonna be renamed and linked
-    if (forDependency && isLocalLinkage(srcLinkage))
-      return true;
+    if (isLocalLinkage(srcLinkage))
+      return forDependency;
 
     // Always import dependencies that are not yet defined or declared
     if (forDependency && !pair.dst)
@@ -230,7 +234,7 @@ public:
       return true;
 
     // linkage specifies to keep operation only in source
-    return !(isLocalLinkage(srcLinkage) || isLinkOnceLinkage(srcLinkage) ||
+    return !(isLinkOnceLinkage(srcLinkage) ||
              isAvailableExternallyLinkage(srcLinkage));
   }
 
@@ -279,6 +283,18 @@ public:
 
     if (isLinkOnceLinkage(dstLinkage) || isWeakLinkage(dstLinkage)) {
       registerForLink(pair.src);
+      return success();
+    }
+
+    if (isCommonLinkage(srcLinkage)) {
+      if (!isCommonLinkage(dstLinkage))
+        return success();
+
+      auto srcOp = cast<LLVM::GlobalOp>(pair.src);
+      auto dstOp = cast<LLVM::GlobalOp>(pair.dst);
+      if (getBitWidth(srcOp) > getBitWidth(dstOp))
+        registerForLink(pair.src);
+
       return success();
     }
 
