@@ -10,6 +10,7 @@ declare void @fn1() unnamed_addr
 declare void @fn2() unnamed_addr
 declare void @fn3()
 
+;; Create a PC-relative relocation that the linker might decline if the addend symbol is preemptible.
 ; CHECK: .long 0
 ; CHECK-NEXT: .long fn1(prel31)-vtable-4
 ; CHECK-NEXT: .long fn2(prel31)-vtable-4
