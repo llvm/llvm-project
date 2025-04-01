@@ -15,6 +15,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "LLVMContextImpl.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -59,6 +60,7 @@
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/TrackingMDRef.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/TypeFinder.h"
 #include "llvm/IR/TypedPointerType.h"
@@ -81,6 +83,7 @@
 #include <iterator>
 #include <memory>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -99,6 +102,8 @@ static cl::opt<bool> PrintInstDebugLocs(
 static cl::opt<bool> PrintProfData(
     "print-prof-data", cl::Hidden,
     cl::desc("Pretty print perf data (branch weights, etc) when dumping"));
+
+cl::opt<bool> ShouldWriteDILocations("write-dilocations", cl::init(true));
 
 // Make virtual table appear in this compilation unit.
 AssemblyAnnotationWriter::~AssemblyAnnotationWriter() = default;
@@ -729,6 +734,7 @@ public:
   /// ValueMap - A mapping of Values to slot numbers.
   using ValueMap = DenseMap<const Value *, unsigned>;
 
+  SmallDenseMap<Function *, SmallVector<DILocation *, 0>> ExpelledFunctionDILocations;
 private:
   /// TheModule - The module for which we are holding slot numbers.
   const Module* TheModule;
@@ -1166,6 +1172,15 @@ void SlotTracker::processGlobalObjectMetadata(const GlobalObject &GO) {
 
 void SlotTracker::processFunctionMetadata(const Function &F) {
   processGlobalObjectMetadata(F);
+  // For efficiency, DebugLoc-related metadata is stored as direct arrays on the
+  // DISubprogram and must be handled directly.
+  if (auto *SP = F.getSubprogram(); SP && !ShouldWriteDILocations) {
+    SmallVector<DILocScopeData> UsedLocScopes;
+    SP->getUsedLocScopes(const_cast<Function*>(&F), UsedLocScopes);
+    // The only Metadata* we need to read are DILocalScopes from FnLocScopes.
+    for (auto LocScope : UsedLocScopes)
+      CreateMetadataSlot(LocScope.Scope);
+  }
   for (auto &BB : F) {
     for (auto &I : BB) {
       for (const DbgRecord &DR : I.getDbgRecordRange())
@@ -1178,7 +1193,7 @@ void SlotTracker::processFunctionMetadata(const Function &F) {
 void SlotTracker::processDbgRecordMetadata(const DbgRecord &DR) {
   if (const DbgVariableRecord *DVR = dyn_cast<const DbgVariableRecord>(&DR)) {
     // Process metadata used by DbgRecords; we only specifically care about the
-    // DILocalVariable, DILocation, and DIAssignID fields, as the Value and
+    // DILocalVariable and DIAssignID fields, as the Value and
     // Expression fields should only be printed inline and so do not use a slot.
     // Note: The above doesn't apply for empty-metadata operands.
     if (auto *Empty = dyn_cast<MDNode>(DVR->getRawLocation()))
@@ -1194,7 +1209,6 @@ void SlotTracker::processDbgRecordMetadata(const DbgRecord &DR) {
   } else {
     llvm_unreachable("unsupported DbgRecord kind");
   }
-  CreateMetadataSlot(DR.getDebugLoc().getAsMDNode());
 }
 
 void SlotTracker::processInstructionMetadata(const Instruction &I) {
@@ -1212,6 +1226,11 @@ void SlotTracker::processInstructionMetadata(const Instruction &I) {
   I.getAllMetadata(MDs);
   for (auto &MD : MDs)
     CreateMetadataSlot(MD.second);
+  if (DebugLoc DL = I.getDebugLoc(); DL && ShouldWriteDILocations) {
+    SmallVector<DILocation*, 0> &ExpelledDILocations = ExpelledFunctionDILocations[const_cast<Function*>(I.getFunction())];
+    DILocation *DILoc = ExpelledDILocations[DL.SrcLocIndex];
+    CreateMetadataSlot(DILoc);
+  }
 }
 
 /// Clean up after incorporating a function. This is the only way to get out of
@@ -1886,6 +1905,9 @@ struct MDFieldPrinter {
                   bool ShouldSkipZero);
   void printBool(StringRef Name, bool Value,
                  std::optional<bool> Default = std::nullopt);
+  void printDebugLoc(StringRef Name, DebugLoc Value);
+  template <class Ty>
+  void printBigArray(StringRef Name, const SmallVectorImpl<Ty> &Arr, StringRef IndexCommentPrefix, StringRef IndexCommentSuffix);
   void printDIFlags(StringRef Name, DINode::DIFlags Flags);
   void printDISPFlags(StringRef Name, DISubprogram::DISPFlags Flags);
   template <class IntTy, class Stringifier>
@@ -1957,6 +1979,57 @@ void MDFieldPrinter::printInt(StringRef Name, IntTy Int, bool ShouldSkipZero) {
     return;
 
   Out << FS << Name << ": " << Int;
+}
+
+void MDFieldPrinter::printDebugLoc(StringRef Name, DebugLoc Value) {
+  Out << FS << Name << ": DebugLoc(srcLoc: " << Value.SrcLocIndex << FS << "locScope: " << Value.LocScopeIndex << ")";
+}
+
+template <>
+void MDFieldPrinter::printBigArray<DILocScopeData>(StringRef Name, const SmallVectorImpl<DILocScopeData> &Arr, StringRef IndexCommentPrefix, StringRef IndexCommentSuffix) {
+  if (Arr.empty())
+    return;
+  Out << FS << Name << ": [";
+  if (Arr.empty()) {
+    Out << "]";
+    return;
+  }
+  Out << '\n';
+  for (size_t Idx = 0; Idx < Arr.size(); ++Idx) {
+    Out << "  {scope: ";
+    writeMetadataAsOperand(Out, Arr[Idx].Scope, WriterCtx);
+    if (Arr[Idx].InlinedAt)
+      printDebugLoc("inlinedAt", Arr[Idx].InlinedAt);
+    Out << '}';
+    if (!IndexCommentPrefix.empty())
+      Out << " ; " << IndexCommentPrefix << Idx << IndexCommentSuffix;
+    Out << '\n';
+  }
+  Out << ']';
+}
+
+template <>
+void MDFieldPrinter::printBigArray<DISrcLocData>(StringRef Name, const SmallVectorImpl<DISrcLocData> &Arr, StringRef IndexCommentPrefix, StringRef IndexCommentSuffix) {
+  if (Arr.empty())
+    return;
+  Out << FS << Name << ": [";
+  if (Arr.empty()) {
+    Out << "]";
+    return;
+  }
+  Out << '\n';
+  for (size_t Idx = 0; Idx < Arr.size(); ++Idx) {
+    Out << "  {line: " << Arr[Idx].Line;
+    printInt("column", Arr[Idx].Column, true);
+    printInt("atomGroup", Arr[Idx].AtomGroup, true);
+    printInt<unsigned>("atomRank", Arr[Idx].AtomRank, true);
+    printBool("isImplicitCode", Arr[Idx].IsImplicitCode, false);
+    Out << '}';
+    if (!IndexCommentPrefix.empty())
+      Out << " ; " << IndexCommentPrefix << Idx << IndexCommentSuffix;
+    Out << '\n';
+  }
+  Out << ']';
 }
 
 void MDFieldPrinter::printAPInt(StringRef Name, const APInt &Int,
@@ -2393,6 +2466,21 @@ static void writeDISubprogram(raw_ostream &Out, const DISubprogram *N,
   Printer.printMetadata("thrownTypes", N->getRawThrownTypes());
   Printer.printMetadata("annotations", N->getRawAnnotations());
   Printer.printString("targetFuncName", N->getTargetFuncName());
+  // If we're writing DILocations then almost every DISubprogram should have
+  // expelled their DILocations and therefore these fields will be empty and not
+  // be printed; however, we don't expel locations from DISubprograms that are
+  // not attached to functions, which can exist, so just trim these out now.
+  if (!ShouldWriteDILocations) {
+    int Slot = WriterCtx.Machine ? WriterCtx.Machine->getMetadataSlot(N) : 0;
+    std::stringstream SrcLocSuffixSS;
+    SrcLocSuffixSS << " !" << Slot;
+    std::string SrcLocSuffix = SrcLocSuffixSS.str();
+    std::stringstream LocScopeSuffixSS;
+    LocScopeSuffixSS << " !" << Slot;
+    std::string LocScopeSuffix = LocScopeSuffixSS.str();
+    Printer.printBigArray("srcLocs", N->FnSrcLocs, "srcLoc: ", SrcLocSuffix);
+    Printer.printBigArray("locScopes", N->FnLocScopes, "locScope: ", LocScopeSuffix);
+  }
   Out << ")";
 }
 
@@ -3023,6 +3111,16 @@ void AssemblyWriter::writeOperandBundles(const CallBase *Call) {
 }
 
 void AssemblyWriter::printModule(const Module *M) {
+  if (ShouldWriteDILocations) {
+    for (const Function &F : M->functions()) {
+      if (F.isDeclaration())
+        continue;
+      if (auto *SP = F.getSubprogram()) {
+        Function *Fn = const_cast<Function*>(&F);
+        Machine.ExpelledFunctionDILocations[Fn] = SP->expelDILocations(Fn);
+      }
+    }
+  }
   Machine.initializeIfNeeded();
 
   if (ShouldPreserveUseListOrder)
@@ -3115,6 +3213,17 @@ void AssemblyWriter::printModule(const Module *M) {
   if (!Machine.mdn_empty()) {
     Out << '\n';
     writeAllMDNodes();
+  }
+  if (ShouldWriteDILocations) {
+    for (const Function &F : M->functions()) {
+      if (F.getSubprogram() && !F.isDeclaration()) {
+       Function *Fn = const_cast<Function*>(&F);
+       Fn->getSubprogram()->absorbDILocations(Fn, Machine.ExpelledFunctionDILocations[Fn]);
+       Machine.ExpelledFunctionDILocations.erase(Fn);
+      }
+    }
+    M->getContext().clearUniqueDILocationStorage();
+    M->getContext().clearDistinctDILocationStorage();
   }
 }
 
@@ -4759,6 +4868,24 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
   } else if (const ShuffleVectorInst *SVI = dyn_cast<ShuffleVectorInst>(&I)) {
     PrintShuffleMask(Out, SVI->getType(), SVI->getShuffleMask());
   }
+  
+  // Print DebugLoc attachment.
+  if (DebugLoc DL = I.getDebugLoc()) {
+    if (ShouldWriteDILocations) {
+      SmallVector<DILocation*, 0> &ExpelledDILocations = Machine.ExpelledFunctionDILocations[const_cast<Function*>(I.getFunction())];
+      DILocation *DILoc = ExpelledDILocations[DL.SrcLocIndex];
+      SmallVector<std::pair<unsigned, MDNode *>, 1> DILocAttachment = {std::make_pair(LLVMContext::MD_dbg, DILoc)};
+      printMetadataAttachments(DILocAttachment, ", ");
+    } else {
+      Out << ", !DebugLoc(srcLoc: " << DL.SrcLocIndex << ", locScope: " << DL.LocScopeIndex << ")";
+      if (auto *SP = I.getFunction()->getSubprogram()) {
+        // Print a handy comment to help lookup
+        Out << " ; ";
+        auto WriterCtx = getContext();
+        WriteAsOperandInternal(Out, SP, WriterCtx);
+      }
+    }
+  }
 
   // Print Metadata info.
   SmallVector<std::pair<unsigned, MDNode *>, 4> InstMD;
@@ -4823,8 +4950,22 @@ void AssemblyWriter::printDbgVariableRecord(const DbgVariableRecord &DVR) {
     WriteAsOperandInternal(Out, DVR.getRawAddressExpression(), WriterCtx, true);
     Out << ", ";
   }
-  WriteAsOperandInternal(Out, DVR.getDebugLoc().getAsMDNode(), WriterCtx, true);
-  Out << ")";
+
+  // Print DebugLoc.
+  if (ShouldWriteDILocations) {
+    SmallVector<DILocation*, 0> &ExpelledDILocations = Machine.ExpelledFunctionDILocations[const_cast<Function*>(DVR.getFunction())];
+    DILocation *DILoc = ExpelledDILocations[DVR.getDebugLoc().SrcLocIndex];
+    WriteAsOperandInternal(Out, DILoc, WriterCtx, true);
+    Out << ")";
+  } else {
+    Out << "!DebugLoc(srcLoc: " << DVR.getDebugLoc().SrcLocIndex << ", locScope: " << DVR.getDebugLoc().LocScopeIndex << "))";
+    if (auto *SP = DVR.getFunction()->getSubprogram()) {
+      // Print a handy comment to help lookup
+      Out << " ; ";
+      auto WriterCtx = getContext();
+      WriteAsOperandInternal(Out, SP, WriterCtx);
+    }
+  }
 }
 
 /// printDbgRecordLine - Print a DbgRecord with indentation and a newline
@@ -4841,8 +4982,21 @@ void AssemblyWriter::printDbgLabelRecord(const DbgLabelRecord &Label) {
   Out << "#dbg_label(";
   WriteAsOperandInternal(Out, Label.getRawLabel(), WriterCtx, true);
   Out << ", ";
-  WriteAsOperandInternal(Out, Label.getDebugLoc(), WriterCtx, true);
-  Out << ")";
+  // Print DebugLoc.
+  if (ShouldWriteDILocations) {
+    SmallVector<DILocation*, 0> &ExpelledDILocations = Machine.ExpelledFunctionDILocations[const_cast<Function*>(Label.getFunction())];
+    DILocation *DILoc = ExpelledDILocations[Label.getDebugLoc().SrcLocIndex];
+    WriteAsOperandInternal(Out, DILoc, WriterCtx, true);
+    Out << ")";
+  } else {
+    Out << "!DebugLoc(srcLoc: " << Label.getDebugLoc().SrcLocIndex << ", locScope: " << Label.getDebugLoc().LocScopeIndex << "))";
+    if (auto *SP = Label.getFunction()->getSubprogram()) {
+      // Print a handy comment to help lookup
+      Out << " ; ";
+      auto WriterCtx = getContext();
+      WriteAsOperandInternal(Out, SP, WriterCtx);
+    }
+  }
 }
 
 void AssemblyWriter::printMetadataAttachments(

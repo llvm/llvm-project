@@ -1384,7 +1384,7 @@ SDValue AMDGPUTargetLowering::lowerUnhandledCall(CallLoweringInfo &CLI,
     FuncName = G->getGlobal()->getName();
 
   DiagnosticInfoUnsupported NoCalls(
-    Fn, Reason + FuncName, CLI.DL.getDebugLoc());
+    Fn, Reason + FuncName, DILocRef(Fn.getSubprogram(), CLI.DL.getDebugLoc()));
   DAG.getContext()->diagnose(NoCalls);
 
   if (!CLI.IsTailCall) {
@@ -1405,7 +1405,7 @@ SDValue AMDGPUTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   const Function &Fn = DAG.getMachineFunction().getFunction();
 
   DiagnosticInfoUnsupported NoDynamicAlloca(Fn, "unsupported dynamic alloca",
-                                            SDLoc(Op).getDebugLoc());
+                                            DILocRef(Fn.getSubprogram(), SDLoc(Op).getDebugLoc()));
   DAG.getContext()->diagnose(NoDynamicAlloca);
   auto Ops = {DAG.getConstant(0, SDLoc(), Op.getValueType()), Op.getOperand(0)};
   return DAG.getMergeValues(Ops, SDLoc());
@@ -1523,7 +1523,7 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
       const Function &Fn = DAG.getMachineFunction().getFunction();
       DiagnosticInfoUnsupported BadLDSDecl(
         Fn, "local memory global used by non-kernel function",
-        DL.getDebugLoc(), DS_Warning);
+        DILocRef(Fn.getSubprogram(), DL.getDebugLoc()), DS_Warning);
       DAG.getContext()->diagnose(BadLDSDecl);
 
       // We currently don't have a way to correctly allocate LDS objects that

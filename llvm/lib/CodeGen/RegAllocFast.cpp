@@ -1210,7 +1210,7 @@ MCPhysReg RegAllocFastImpl::getErrorAssignment(const LiveReg &LR,
     if (EmitError) {
       Fn.getContext().diagnose(DiagnosticInfoRegAllocFailure(
           "no registers from class available to allocate", Fn,
-          MI.getDebugLoc()));
+          DILocRef(MI)));
     }
 
     ArrayRef<MCPhysReg> RawRegs = RC.getRegisters();
@@ -1228,7 +1228,7 @@ MCPhysReg RegAllocFastImpl::getErrorAssignment(const LiveReg &LR,
       const Function &Fn = MBB->getParent()->getFunction();
       Fn.getContext().diagnose(DiagnosticInfoRegAllocFailure(
           "ran out of registers during register allocation", Fn,
-          MI.getDebugLoc()));
+          DILocRef(MI)));
     }
   }
 

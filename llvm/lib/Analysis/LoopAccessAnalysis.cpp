@@ -37,6 +37,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -2773,9 +2774,9 @@ void LoopAccessInfo::emitUnsafeDependenceRemark() {
   }
 
   if (Instruction *I = Dep.getSource(getDepChecker())) {
-    DebugLoc SourceLoc = I->getDebugLoc();
+    DILocRef SourceLoc = *I;
     if (auto *DD = dyn_cast_or_null<Instruction>(getPointerOperand(I)))
-      SourceLoc = DD->getDebugLoc();
+      SourceLoc = *DD;
     if (SourceLoc)
       R << " Memory location is the same as accessed at "
         << ore::NV("Location", SourceLoc);
@@ -2796,14 +2797,14 @@ LoopAccessInfo::recordAnalysis(StringRef RemarkName, const Instruction *I) {
   assert(!Report && "Multiple reports generated");
 
   const Value *CodeRegion = TheLoop->getHeader();
-  DebugLoc DL = TheLoop->getStartLoc();
+  DILocRef DL(TheLoop->getStartLocRef());
 
   if (I) {
     CodeRegion = I->getParent();
     // If there is no debug location attached to the instruction, revert back to
     // using the loop's.
     if (I->getDebugLoc())
-      DL = I->getDebugLoc();
+      DL = DILocRef(*I);
   }
 
   Report = std::make_unique<OptimizationRemarkAnalysis>(DEBUG_TYPE, RemarkName, DL,

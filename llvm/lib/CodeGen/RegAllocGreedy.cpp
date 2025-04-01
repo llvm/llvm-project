@@ -2823,7 +2823,7 @@ RAGreedy::RAGreedyStats RAGreedy::reportStats(MachineLoop *L) {
 
     ORE->emit([&]() {
       MachineOptimizationRemarkMissed R(DEBUG_TYPE, "LoopSpillReloadCopies",
-                                        L->getStartLoc(), L->getHeader());
+                                        DILocRef(MF->getFunction().getSubprogram(), L->getStartLoc()), L->getHeader());
       Stats.report(R);
       R << "generated in loop";
       return R;
@@ -2846,9 +2846,9 @@ void RAGreedy::reportStats() {
     using namespace ore;
 
     ORE->emit([&]() {
-      DebugLoc Loc;
+      DILocRef Loc;
       if (auto *SP = MF->getFunction().getSubprogram())
-        Loc = DILocation::get(SP->getContext(), SP->getLine(), 1, SP);
+        Loc = DILocRef(SP, DebugLoc(SP->getSrcLocIndex(DISrcLocData(SP->getLine(), 1), DebugLoc(), true), 0));
       MachineOptimizationRemarkMissed R(DEBUG_TYPE, "SpillReloadCopies", Loc,
                                         &MF->front());
       Stats.report(R);

@@ -17,6 +17,7 @@
 #define LLVM_IR_DEBUGINFO_H
 
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -25,6 +26,7 @@
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PassManager.h"
 #include <optional>
@@ -89,7 +91,7 @@ bool stripNonLineTableDebugInfo(Module &M);
 /// operand in the MD_loop metadata: the returned value is included in the
 /// updated loop metadata node if it is non-null.
 void updateLoopMetadataDebugLocations(
-    Instruction &I, function_ref<Metadata *(Metadata *)> Updater);
+    Instruction &I, function_ref<DebugLoc (DebugLoc)> Updater);
 
 /// Return Debug Info Metadata Version by checking module flags.
 unsigned getDebugMetadataVersionFromModule(const Module &M);
@@ -98,10 +100,9 @@ unsigned getDebugMetadataVersionFromModule(const Module &M);
 ///
 /// DebugInfoFinder tries to list all debug info MDNodes used in a module. To
 /// list debug info MDNodes used by an instruction, DebugInfoFinder uses
-/// processDeclare, processValue and processLocation to handle DbgDeclareInst,
-/// DbgValueInst and DbgLoc attached to instructions. processModule will go
-/// through all DICompileUnits in llvm.dbg.cu and list debug info MDNodes
-/// used by the CUs.
+/// processDeclare, and processValue to handle DbgDeclareInst and DbgValueInst.
+/// processModule will go through all DICompileUnits in llvm.dbg.cu and list
+/// debug info MDNodes used by the CUs.
 class DebugInfoFinder {
 public:
   /// Process entire module and collect debug info anchors.
@@ -111,8 +112,6 @@ public:
 
   /// Process a DILocalVariable.
   void processVariable(const Module &M, const DILocalVariable *DVI);
-  /// Process debug info location.
-  void processLocation(const Module &M, const DILocation *Loc);
   /// Process a DbgRecord (e.g, treat a DbgVariableRecord like a
   /// DbgVariableIntrinsic).
   void processDbgRecord(const Module &M, const DbgRecord &DR);
@@ -282,13 +281,13 @@ void remapAssignID(DenseMap<DIAssignID *, DIAssignID *> &Map, Instruction &I);
 /// capture.
 struct VarRecord {
   DILocalVariable *Var;
-  DILocation *DL;
+  DebugLoc DL;
 
   VarRecord(DbgVariableIntrinsic *DVI)
       : Var(DVI->getVariable()), DL(getDebugValueLoc(DVI)) {}
   VarRecord(DbgVariableRecord *DVR)
       : Var(DVR->getVariable()), DL(getDebugValueLoc(DVR)) {}
-  VarRecord(DILocalVariable *Var, DILocation *DL) : Var(Var), DL(DL) {}
+  VarRecord(DILocalVariable *Var, DebugLoc DL) : Var(Var), DL(DL) {}
   friend bool operator<(const VarRecord &LHS, const VarRecord &RHS) {
     return std::tie(LHS.Var, LHS.DL) < std::tie(RHS.Var, RHS.DL);
   }
@@ -302,12 +301,12 @@ struct VarRecord {
 template <> struct DenseMapInfo<at::VarRecord> {
   static inline at::VarRecord getEmptyKey() {
     return at::VarRecord(DenseMapInfo<DILocalVariable *>::getEmptyKey(),
-                         DenseMapInfo<DILocation *>::getEmptyKey());
+                         DenseMapInfo<DebugLoc>::getEmptyKey());
   }
 
   static inline at::VarRecord getTombstoneKey() {
     return at::VarRecord(DenseMapInfo<DILocalVariable *>::getTombstoneKey(),
-                         DenseMapInfo<DILocation *>::getTombstoneKey());
+                         DenseMapInfo<DebugLoc>::getTombstoneKey());
   }
 
   static unsigned getHashValue(const at::VarRecord &Var) {

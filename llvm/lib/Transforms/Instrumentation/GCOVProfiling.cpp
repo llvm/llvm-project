@@ -22,6 +22,7 @@
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/IRBuilder.h"
@@ -581,6 +582,7 @@ static bool functionHasLines(const Function &F, unsigned &EndLine) {
   // Check whether this function actually has any source lines. Not only
   // do these waste space, they also can crash gcov.
   EndLine = 0;
+  auto *SP = F.getSubprogram();
   for (const auto &BB : F) {
     for (const auto &I : BB) {
       // Debug intrinsic locations correspond to the location of the
@@ -592,8 +594,9 @@ static bool functionHasLines(const Function &F, unsigned &EndLine) {
         continue;
 
       // Artificial lines such as calls to the global constructors.
-      if (Loc.getLine() == 0) continue;
-      EndLine = std::max(EndLine, Loc.getLine());
+      uint32_t SrcLine = SP->getSrcLoc(Loc).Line;
+      if (SrcLine == 0) continue;
+      EndLine = std::max(EndLine, SrcLine);
 
       return true;
     }
@@ -882,19 +885,21 @@ bool GCOVProfiler::emitProfileNotes(
           if (!Loc)
             continue;
 
+          DISrcLocData SrcLoc = SP->getSrcLoc(Loc);
           // Artificial lines such as calls to the global constructors.
-          if (Loc.getLine() == 0 || Loc.isImplicitCode())
+          if (SrcLoc.Line == 0 || SrcLoc.IsImplicitCode)
             continue;
+          DILocScopeData LocScope = SP->getLocScope(Loc);
 
-          if (Line == Loc.getLine()) continue;
-          Line = Loc.getLine();
-          MDNode *Scope = Loc.getScope();
+          if (Line == SrcLoc.Line) continue;
+          Line = SrcLoc.Line;
+          MDNode *Scope = LocScope.Scope;
           // TODO: Handle blocks from another file due to #line, #include, etc.
           if (isa<DILexicalBlockFile>(Scope) || SP != getDISubprogram(Scope))
             continue;
 
           GCOVLines &Lines = Block.getFile(Filename);
-          Lines.addLine(Loc.getLine());
+          Lines.addLine(SrcLoc.Line);
         }
         Line = 0;
       }

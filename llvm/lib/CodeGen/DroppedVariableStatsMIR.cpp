@@ -52,14 +52,14 @@ void DroppedVariableStatsMIR::calculateDroppedVarStatsOnMachineFunction(
 }
 
 void DroppedVariableStatsMIR::visitEveryInstruction(
-    unsigned &DroppedCount, DenseMap<VarID, DILocation *> &InlinedAtsMap,
+    unsigned &DroppedCount, DenseMap<VarID, DILocRef> &InlinedAtsMap,
     VarID Var) {
   unsigned PrevDroppedCount = DroppedCount;
   const DIScope *DbgValScope = std::get<0>(Var);
   for (const auto &MBB : *MFunc) {
     for (const auto &MI : MBB) {
       if (!MI.isDebugInstr()) {
-        auto *DbgLoc = MI.getDebugLoc().get();
+        DILocRef DbgLoc(MI);
         if (!DbgLoc)
           continue;
 
@@ -78,7 +78,7 @@ void DroppedVariableStatsMIR::visitEveryInstruction(
 
 void DroppedVariableStatsMIR::visitEveryDebugRecord(
     DenseSet<VarID> &VarIDSet,
-    DenseMap<StringRef, DenseMap<VarID, DILocation *>> &InlinedAtsMap,
+    DenseMap<StringRef, DenseMap<VarID, DILocRef>> &InlinedAtsMap,
     StringRef FuncName, bool Before) {
   for (const auto &MBB : *MFunc) {
     for (const auto &MI : MBB) {
@@ -86,7 +86,7 @@ void DroppedVariableStatsMIR::visitEveryDebugRecord(
         auto *DbgVar = MI.getDebugVariable();
         if (!DbgVar)
           continue;
-        auto DbgLoc = MI.getDebugLoc();
+        DILocRef DbgLoc(MI);
         populateVarIDSetAndInlinedMap(DbgVar, DbgLoc, VarIDSet, InlinedAtsMap,
                                       FuncName, Before);
       }

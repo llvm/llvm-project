@@ -14,6 +14,7 @@
 #define LLVM_LIB_CODEGEN_ASMPRINTER_PSEUDOPROBEPRINTER_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/IR/DebugLoc.h"
 
 namespace llvm {
 
@@ -30,7 +31,7 @@ public:
   PseudoProbeHandler(AsmPrinter *A) : Asm(A) {};
 
   void emitPseudoProbe(uint64_t Guid, uint64_t Index, uint64_t Type,
-                       uint64_t Attr, const DILocation *DebugLoc);
+                       uint64_t Attr, DILocRefWrapper DebugLoc);
 };
 
 } // namespace llvm

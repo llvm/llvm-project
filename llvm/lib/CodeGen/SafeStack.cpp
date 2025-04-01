@@ -39,6 +39,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -787,9 +788,10 @@ bool SafeStack::run() {
   IRBuilder<> IRB(&F.front(), F.begin()->getFirstInsertionPt());
   // Calls must always have a debug location, or else inlining breaks. So
   // we explicitly set a artificial debug location here.
+  // FIXME: Can we use (0,0) here instead?
   if (DISubprogram *SP = F.getSubprogram())
     IRB.SetCurrentDebugLocation(
-        DILocation::get(SP->getContext(), SP->getScopeLine(), 0, SP));
+      DebugLoc(SP->getSrcLocIndex(DISrcLocData(SP->getScopeLine()), DebugLoc(), true), 0));
   if (SafeStackUsePointerAddress) {
     FunctionCallee Fn = F.getParent()->getOrInsertFunction(
         "__safestack_pointer_address", IRB.getPtrTy(0));

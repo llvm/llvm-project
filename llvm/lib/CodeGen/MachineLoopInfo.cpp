@@ -19,6 +19,8 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
@@ -140,6 +142,21 @@ DebugLoc MachineLoop::getStartLoc() const {
       return HeadBB->getTerminator()->getDebugLoc();
 
   return DebugLoc();
+}
+DILocRefWrapper MachineLoop::getStartLocRef() const {
+  // Try the pre-header first.
+  if (MachineBasicBlock *PHeadMBB = getLoopPreheader())
+    if (const BasicBlock *PHeadBB = PHeadMBB->getBasicBlock())
+      if (DILocRefWrapper DL = PHeadBB->getTerminator()->getDLWrapper())
+        return DL;
+
+  // If we have no pre-header or there are no instructions with debug
+  // info in it, try the header.
+  if (MachineBasicBlock *HeadMBB = getHeader())
+    if (const BasicBlock *HeadBB = HeadMBB->getBasicBlock())
+      return HeadBB->getTerminator()->getDLWrapper();
+
+  return DILocRefWrapper();
 }
 
 MachineBasicBlock *

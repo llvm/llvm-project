@@ -36,6 +36,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
@@ -66,6 +67,11 @@ using namespace llvm;
 static cl::opt<bool>
     PrintMIAddrs("print-mi-addrs", cl::Hidden,
                  cl::desc("Print addresses of MachineInstrs when dumping"));
+
+DebugVariable::DebugVariable(const MachineInstr *MI)
+    : Variable(MI->getDebugVariable()),
+      Fragment(MI->getDebugExpression()->getFragmentInfo()),
+      InlinedAt(DILocRef(*MI).getInlinedAt()) {}
 
 static const MachineFunction *getMFIfAvailable(const MachineInstr &MI) {
   if (const MachineBasicBlock *MBB = MI.getParent())
@@ -140,6 +146,18 @@ MachineInstr::MachineInstr(MachineFunction &MF, const MachineInstr &MI)
 
   // Copy all the sensible flags.
   setFlags(MI.Flags);
+}
+
+DILocRefWrapper MachineInstr::getDILocRef() const {
+  assert(getParent() && getMF() && "Only safe to call this on a machine instruction inserted into a function!");
+  return DILocRefWrapper(getMF()->getFunction().getSubprogram(), getDebugLoc());
+}
+
+DILocRef::DILocRef(MachineInstr &MI) : DILocRef(MI.getDILocRef()) {
+  assert(MI.getParent() && MI.getMF() && "Only safe to call this on a machine instruction inserted into a function!");
+}
+DILocRef::DILocRef(const MachineInstr &MI) : DILocRef(MI.getDILocRef()) {
+  assert(MI.getParent() && MI.getMF() && "Only safe to call this on a machine instruction inserted into a function!");
 }
 
 void MachineInstr::setDesc(const MCInstrDesc &TID) {
@@ -2017,11 +2035,11 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
   }
 
   if (!SkipDebugLoc) {
-    if (const DebugLoc &DL = getDebugLoc()) {
+    if (DebugLoc DL = getDebugLoc()) {
       if (!FirstOp)
         OS << ',';
       OS << " debug-location ";
-      DL->printAsOperand(OS, MST);
+      OS << "!DebugLoc(srcLoc: " << DL.SrcLocIndex << ", locScope: " << DL.LocScopeIndex << ")";
     }
   }
 
@@ -2054,7 +2072,7 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
   bool HaveSemi = false;
 
   // Print debug location information.
-  if (const DebugLoc &DL = getDebugLoc()) {
+  if (DebugLoc DL = getDebugLoc()) {
     if (!HaveSemi) {
       OS << ';';
       HaveSemi = true;
@@ -2316,10 +2334,10 @@ void MachineInstr::emitInlineAsmError(const Twine &Msg) const {
 void MachineInstr::emitGenericError(const Twine &Msg) const {
   const Function &Fn = getMF()->getFunction();
   Fn.getContext().diagnose(
-      DiagnosticInfoGenericWithLoc(Msg, Fn, getDebugLoc()));
+      DiagnosticInfoGenericWithLoc(Msg, Fn, DILocRef(*this)));
 }
 
-MachineInstrBuilder llvm::BuildMI(MachineFunction &MF, const DebugLoc &DL,
+MachineInstrBuilder llvm::BuildMI(MachineFunction &MF, DebugLoc DL,
                                   const MCInstrDesc &MCID, bool IsIndirect,
                                   Register Reg, const MDNode *Variable,
                                   const MDNode *Expr) {
@@ -2335,7 +2353,7 @@ MachineInstrBuilder llvm::BuildMI(MachineFunction &MF, const DebugLoc &DL,
   return MIB.addMetadata(Variable).addMetadata(Expr);
 }
 
-MachineInstrBuilder llvm::BuildMI(MachineFunction &MF, const DebugLoc &DL,
+MachineInstrBuilder llvm::BuildMI(MachineFunction &MF, DebugLoc DL,
                                   const MCInstrDesc &MCID, bool IsIndirect,
                                   ArrayRef<MachineOperand> DebugOps,
                                   const MDNode *Variable, const MDNode *Expr) {
@@ -2371,7 +2389,7 @@ MachineInstrBuilder llvm::BuildMI(MachineFunction &MF, const DebugLoc &DL,
 
 MachineInstrBuilder llvm::BuildMI(MachineBasicBlock &BB,
                                   MachineBasicBlock::iterator I,
-                                  const DebugLoc &DL, const MCInstrDesc &MCID,
+                                  DebugLoc DL, const MCInstrDesc &MCID,
                                   bool IsIndirect, Register Reg,
                                   const MDNode *Variable, const MDNode *Expr) {
   MachineFunction &MF = *BB.getParent();
@@ -2382,7 +2400,7 @@ MachineInstrBuilder llvm::BuildMI(MachineBasicBlock &BB,
 
 MachineInstrBuilder llvm::BuildMI(MachineBasicBlock &BB,
                                   MachineBasicBlock::iterator I,
-                                  const DebugLoc &DL, const MCInstrDesc &MCID,
+                                  DebugLoc DL, const MCInstrDesc &MCID,
                                   bool IsIndirect,
                                   ArrayRef<MachineOperand> DebugOps,
                                   const MDNode *Variable, const MDNode *Expr) {

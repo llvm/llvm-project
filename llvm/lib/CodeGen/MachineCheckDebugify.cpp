@@ -61,7 +61,7 @@ struct CheckDebugMachineModule : public ModulePass {
         for (MachineInstr &MI : MBB) {
           if (MI.isDebugValue())
             continue;
-          const DebugLoc DL = MI.getDebugLoc();
+          DILocRef DL(MI.getDILocRef());
           if (DL && DL.getLine() != 0) {
             MissingLines.reset(DL.getLine() - 1);
             continue;

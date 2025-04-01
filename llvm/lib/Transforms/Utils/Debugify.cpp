@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -120,8 +121,9 @@ bool llvm::applyDebugifyMetadata(
         DISubprogram::SPFlagDefinition | DISubprogram::SPFlagOptimized;
     if (F.hasPrivateLinkage() || F.hasInternalLinkage())
       SPFlags |= DISubprogram::SPFlagLocalToUnit;
-    auto SP = DIB.createFunction(CU, F.getName(), F.getName(), File, NextLine,
+    auto *SP = DIB.createFunction(CU, F.getName(), F.getName(), File, NextLine,
                                  SPType, NextLine, DINode::FlagZero, SPFlags);
+    SP->setupFnDebugLocs();
     F.setSubprogram(SP);
 
     // Helper that inserts a dbg.value before \p InsertBefore, copying the
@@ -132,8 +134,8 @@ bool llvm::applyDebugifyMetadata(
       Value *V = &TemplateInst;
       if (TemplateInst.getType()->isVoidTy())
         V = ConstantInt::get(Int32Ty, 0);
-      const DILocation *Loc = TemplateInst.getDebugLoc().get();
-      auto LocalVar = DIB.createAutoVariable(SP, Name, File, Loc->getLine(),
+      DebugLoc Loc = TemplateInst.getDebugLoc();
+      auto LocalVar = DIB.createAutoVariable(SP, Name, File, Loc.getLine(SP),
                                              getCachedDIType(V->getType()),
                                              /*AlwaysPreserve=*/true);
       DIB.insertDbgValueIntrinsic(V, LocalVar, DIB.createExpression(), Loc,
@@ -142,8 +144,14 @@ bool llvm::applyDebugifyMetadata(
 
     for (BasicBlock &BB : F) {
       // Attach debug locations.
-      for (Instruction &I : BB)
-        I.setDebugLoc(DILocation::get(Ctx, NextLine++, 1, SP));
+      for (Instruction &I : BB) {
+        // Instead of the usual method of adding srclocs and normalizing after,
+        // we can just directly add to the FnSrcLocs array, as we know they are
+        // already normalized.
+        uint32_t NewSrcLocIndex = SP->FnSrcLocs.size();
+        SP->FnSrcLocs.push_back(DISrcLocData(NextLine++, 1));
+        I.setDebugLoc(DebugLoc(NewSrcLocIndex, 0));
+      }
 
       if (DebugifyLevel < Level::LocationsAndVariables)
         continue;
@@ -340,7 +348,7 @@ bool llvm::collectDebugInfoMetadata(Module &M,
             if (!SP)
               return;
             // Skip inlined variables.
-            if (DbgVar->getDebugLoc().getInlinedAt())
+            if (DbgVar->getDebugLoc().getInlinedAt(SP))
               return;
             // Skip undef values.
             if (DbgVar->isKillLocation())
@@ -362,8 +370,7 @@ bool llvm::collectDebugInfoMetadata(Module &M,
         LLVM_DEBUG(dbgs() << "  Collecting info for inst: " << I << '\n');
         DebugInfoBeforePass.InstToDelete.insert({&I, &I});
 
-        const DILocation *Loc = I.getDebugLoc().get();
-        bool HasLoc = Loc != nullptr;
+        bool HasLoc = (bool)I.getDebugLoc();
         DebugInfoBeforePass.DILocations.insert({&I, HasLoc});
       }
     }
@@ -442,14 +449,14 @@ static bool checkInstructions(const DebugInstMap &DILocsBefore,
     auto InstrIt = DILocsBefore.find(Instr);
     if (InstrIt == DILocsBefore.end()) {
       if (ShouldWriteIntoJSON)
-        Bugs.push_back(llvm::json::Object({{"metadata", "DILocation"},
+        Bugs.push_back(llvm::json::Object({{"metadata", "DebugLoc"},
                                            {"fn-name", FnName.str()},
                                            {"bb-name", BBName.str()},
                                            {"instr", InstName},
                                            {"action", "not-generate"}}));
       else
         dbg() << "WARNING: " << NameOfWrappedPass
-              << " did not generate DILocation for " << *Instr
+              << " did not generate DebugLoc for " << *Instr
               << " (BB: " << BBName << ", Fn: " << FnName
               << ", File: " << FileNameFromCU << ")\n";
       Preserved = false;
@@ -459,13 +466,13 @@ static bool checkInstructions(const DebugInstMap &DILocsBefore,
       // If the instr had the !dbg attached before the pass, consider it as
       // a debug info issue.
       if (ShouldWriteIntoJSON)
-        Bugs.push_back(llvm::json::Object({{"metadata", "DILocation"},
+        Bugs.push_back(llvm::json::Object({{"metadata", "DebugLoc"},
                                            {"fn-name", FnName.str()},
                                            {"bb-name", BBName.str()},
                                            {"instr", InstName},
                                            {"action", "drop"}}));
       else
-        dbg() << "WARNING: " << NameOfWrappedPass << " dropped DILocation of "
+        dbg() << "WARNING: " << NameOfWrappedPass << " dropped DebugLoc of "
               << *Instr << " (BB: " << BBName << ", Fn: " << FnName
               << ", File: " << FileNameFromCU << ")\n";
       Preserved = false;
@@ -586,7 +593,7 @@ bool llvm::checkDebugInfoMetadata(Module &M,
             if (!SP)
               return;
             // Skip inlined variables.
-            if (DbgVar->getDebugLoc().getInlinedAt())
+            if (DbgVar->getDebugLoc().getInlinedAt(SP))
               return;
             // Skip undef values.
             if (DbgVar->isKillLocation())
@@ -607,8 +614,7 @@ bool llvm::checkDebugInfoMetadata(Module &M,
 
         LLVM_DEBUG(dbgs() << "  Collecting info for inst: " << I << '\n');
 
-        const DILocation *Loc = I.getDebugLoc().get();
-        bool HasLoc = Loc != nullptr;
+        bool HasLoc = (bool)I.getDebugLoc();
 
         DebugInfoAfterPass.DILocations.insert({&I, HasLoc});
       }
@@ -745,7 +751,7 @@ bool checkDebugifyMetadata(Module &M,
       if (isa<DbgValueInst>(&I))
         continue;
 
-      auto DL = I.getDebugLoc();
+      auto DL = DILocRef(I);
       if (DL && DL.getLine() != 0) {
         MissingLines.reset(DL.getLine() - 1);
         continue;

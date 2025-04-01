@@ -12,7 +12,7 @@ target triple = "x86_64-unknown-linux-gnu"
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
-define <4 x float> @inner_vectors(<4 x float> %a, <4 x float> %b) {
+define <4 x float> @inner_vectors(<4 x float> %a, <4 x float> %b) !dbg !6 {
 entry:
   call void @llvm.dbg.value(metadata i32 undef, metadata !DILocalVariable(scope: !6), metadata !DIExpression()), !dbg !DILocation(scope: !6)
   %mul = fmul <4 x float> %a, <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>
@@ -23,16 +23,16 @@ entry:
   ret <4 x float> %add
 }
 
-define float @outer_vectors(<4 x float> %a, <4 x float> %b) {
+define float @outer_vectors(<4 x float> %a, <4 x float> %b) !dbg !7 {
 ; CHECK-LABEL: @outer_vectors(
 ; CHECK-NOT: call <4 x float> @inner_vectors(
 ; CHECK: ret float
 
 entry:
-  call void @llvm.dbg.value(metadata i32 undef, metadata !DILocalVariable(scope: !6), metadata !DIExpression()), !dbg !DILocation(scope: !6)
-  call void @llvm.dbg.value(metadata i32 undef, metadata !DILocalVariable(scope: !6), metadata !DIExpression()), !dbg !DILocation(scope: !6)
+  call void @llvm.dbg.value(metadata i32 undef, metadata !DILocalVariable(scope: !7), metadata !DIExpression()), !dbg !DILocation(scope: !7)
+  call void @llvm.dbg.value(metadata i32 undef, metadata !DILocalVariable(scope: !7), metadata !DIExpression()), !dbg !DILocation(scope: !7)
   %call = call <4 x float> @inner_vectors(<4 x float> %a, <4 x float> %b)
-  call void @llvm.dbg.value(metadata i32 undef, metadata !DILocalVariable(scope: !6), metadata !DIExpression()), !dbg !DILocation(scope: !6)
+  call void @llvm.dbg.value(metadata i32 undef, metadata !DILocalVariable(scope: !7), metadata !DIExpression()), !dbg !DILocation(scope: !7)
   %vecext = extractelement <4 x float> %call, i32 0
   %vecext1 = extractelement <4 x float> %call, i32 1
   %add = fadd float %vecext, %vecext1
@@ -56,3 +56,4 @@ attributes #0 = { nounwind readnone }
 !4 = !{i32 1, !"Debug Info Version", i32 3}
 !5 = !{!""}
 !6 = distinct !DISubprogram(unit: !0)
+!7 = distinct !DISubprogram(unit: !0)

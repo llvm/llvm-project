@@ -469,7 +469,7 @@ declare i32 @bar(i32)
 
 
 ; The load should be commoned.
-define i32 @test14(i1 zeroext %flag, i32 %w, i32 %x, i32 %y, ptr %s) {
+define i32 @test14(i1 zeroext %flag, i32 %w, i32 %x, i32 %y, ptr %s) !dbg !8 {
 ; CHECK-LABEL: @test14(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[FLAG:%.*]], i32 1, i32 4

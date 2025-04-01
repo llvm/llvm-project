@@ -1,5 +1,4 @@
 ; RUN: opt -passes=inline < %s -S | FileCheck %s
-
 ; CHECK: define {{.*}}@f1
 ; CHECK-NOT: define
 
@@ -12,7 +11,7 @@ define linkonce_odr void @f1() {
   ret void
 }
 
-define linkonce_odr void @f2(ptr %__f) {
+define linkonce_odr void @f2(ptr %__f) !dbg !3 {
   call void @llvm.dbg.value(metadata ptr %__f, metadata !2, metadata !DIExpression()), !dbg !10
   call void %__f()
   ret void

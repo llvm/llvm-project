@@ -91,6 +91,7 @@ static void debugHWLoopFailure(const StringRef DebugMsg,
 static OptimizationRemarkAnalysis
 createHWLoopAnalysis(StringRef RemarkName, Loop *L, Instruction *I) {
   Value *CodeRegion = L->getHeader();
+  auto *SP = L->getBlocks().back()->getParent()->getSubprogram();
   DebugLoc DL = L->getStartLoc();
 
   if (I) {
@@ -101,7 +102,7 @@ createHWLoopAnalysis(StringRef RemarkName, Loop *L, Instruction *I) {
       DL = I->getDebugLoc();
   }
 
-  OptimizationRemarkAnalysis R(DEBUG_TYPE, RemarkName, DL, CodeRegion);
+  OptimizationRemarkAnalysis R(DEBUG_TYPE, RemarkName, DILocRef(SP, DL), CodeRegion);
   R << "hardware-loop not created: ";
   return R;
 }

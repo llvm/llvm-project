@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Bitcode/BitcodeWriter.h"
+#include "../../IR/LLVMContextImpl.h"
 #include "ValueEnumerator.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
@@ -3644,7 +3645,7 @@ void ModuleBitcodeWriter::writeFunction(
 
   bool NeedsMetadataAttachment = F.hasMetadata();
 
-  DILocation *LastDL = nullptr;
+  DebugLoc LastDL;
   SmallSetVector<Function *, 4> BlockAddressUsers;
 
   // Finally, emit all the instructions, in order.
@@ -3659,11 +3660,12 @@ void ModuleBitcodeWriter::writeFunction(
       NeedsMetadataAttachment |= I.hasMetadataOtherThanDebugLoc();
 
       // If the instruction has a debug location, emit it.
-      if (DILocation *DL = I.getDebugLoc()) {
-        if (DL == LastDL) {
+      if (DebugLoc DLoc = I.getDebugLoc()) {
+        if (DLoc == LastDL) {
           // Just repeat the same debug loc as last time.
           Stream.EmitRecord(bitc::FUNC_CODE_DEBUG_LOC_AGAIN, Vals);
         } else {
+          DILocation *DL = VE.TempDILocations[const_cast<Function*>(&F)][DLoc.SrcLocIndex];
           Vals.push_back(DL->getLine());
           Vals.push_back(DL->getColumn());
           Vals.push_back(VE.getMetadataOrNullID(DL->getScope()));
@@ -3671,7 +3673,7 @@ void ModuleBitcodeWriter::writeFunction(
           Vals.push_back(DL->isImplicitCode());
           Stream.EmitRecord(bitc::FUNC_CODE_DEBUG_LOC, Vals);
           Vals.clear();
-          LastDL = DL;
+          LastDL = DLoc;
         }
       }
 
@@ -3708,7 +3710,7 @@ void ModuleBitcodeWriter::writeFunction(
         // re-attach to the instruction reading the records in.
         for (DbgRecord &DR : I.DebugMarker->getDbgRecordRange()) {
           if (DbgLabelRecord *DLR = dyn_cast<DbgLabelRecord>(&DR)) {
-            Vals.push_back(VE.getMetadataID(&*DLR->getDebugLoc()));
+            Vals.push_back(VE.getMetadataID(VE.TempDILocations[const_cast<Function*>(&F)][DLR->getDebugLoc().SrcLocIndex]));
             Vals.push_back(VE.getMetadataID(DLR->getLabel()));
             Stream.EmitRecord(bitc::FUNC_CODE_DEBUG_RECORD_LABEL, Vals);
             Vals.clear();
@@ -3726,7 +3728,7 @@ void ModuleBitcodeWriter::writeFunction(
           // dbg_assign (FUNC_CODE_DEBUG_RECORD_ASSIGN)
           //   ..., LocationMetadata, DIAssignID, DIExpression, LocationMetadata
           DbgVariableRecord &DVR = cast<DbgVariableRecord>(DR);
-          Vals.push_back(VE.getMetadataID(&*DVR.getDebugLoc()));
+          Vals.push_back(VE.getMetadataID(VE.TempDILocations[const_cast<Function*>(&F)][DVR.getDebugLoc().SrcLocIndex]));
           Vals.push_back(VE.getMetadataID(DVR.getVariable()));
           Vals.push_back(VE.getMetadataID(DVR.getExpression()));
           if (DVR.isDbgValue()) {
@@ -5211,6 +5213,19 @@ void ModuleBitcodeWriter::write() {
   writeGlobalValueSymbolTable(FunctionToBitcodeIndex);
 
   writeModuleHash(Stream.getMarkedBufferAndResumeFlushing());
+
+  for (const Function &F : M) {
+    if (F.isDeclaration())
+      continue;
+    Function *Fn = const_cast<Function*>(&F);
+    auto *SP = Fn->getSubprogram();
+    if (SP) {
+      SP->absorbDILocations(Fn, VE.TempDILocations[Fn]);
+      VE.TempDILocations.erase(Fn);
+    }
+  }
+  M.getContext().clearUniqueDILocationStorage();
+  M.getContext().clearDistinctDILocationStorage();
 
   Stream.ExitBlock();
 }

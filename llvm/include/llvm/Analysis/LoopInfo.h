@@ -376,6 +376,7 @@ public:
   /// cannot find a terminating instruction with location information,
   /// it returns an unknown location.
   DebugLoc getStartLoc() const;
+  DILocRefWrapper getStartLocRef() const;
 
   /// Return the source code span of the loop.
   LocRange getLocRange() const;

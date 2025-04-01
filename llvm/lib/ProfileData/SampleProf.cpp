@@ -213,12 +213,12 @@ void sampleprof::sortFuncProfiles(
   });
 }
 
-unsigned FunctionSamples::getOffset(const DILocation *DIL) {
-  return (DIL->getLine() - DIL->getScope()->getSubprogram()->getLine()) &
+unsigned FunctionSamples::getOffset(DILocRef DL) {
+  return (DL->getLine() - DL->getScope()->getSubprogram()->getLine()) &
       0xffff;
 }
 
-LineLocation FunctionSamples::getCallSiteIdentifier(const DILocation *DIL,
+LineLocation FunctionSamples::getCallSiteIdentifier(DILocRef DL,
                                                     bool ProfileIsFS) {
   if (FunctionSamples::ProfileIsProbeBased) {
     // In a pseudo-probe based profile, a callsite is simply represented by the
@@ -226,23 +226,22 @@ LineLocation FunctionSamples::getCallSiteIdentifier(const DILocation *DIL,
     // encoded in the Discriminator field of the call instruction's debug
     // metadata.
     return LineLocation(PseudoProbeDwarfDiscriminator::extractProbeIndex(
-                            DIL->getDiscriminator()),
+                            DL->getDiscriminator()),
                         0);
-  } else {
-    unsigned Discriminator =
-        ProfileIsFS ? DIL->getDiscriminator() : DIL->getBaseDiscriminator();
-    return LineLocation(FunctionSamples::getOffset(DIL), Discriminator);
   }
+  unsigned Discriminator =
+      ProfileIsFS ? DL->getDiscriminator() : DL->getBaseDiscriminator();
+  return LineLocation(FunctionSamples::getOffset(DL), Discriminator);
 }
 
 const FunctionSamples *FunctionSamples::findFunctionSamples(
-    const DILocation *DIL, SampleProfileReaderItaniumRemapper *Remapper,
+    DILocRef DIL, SampleProfileReaderItaniumRemapper *Remapper,
     const HashKeyMap<std::unordered_map, FunctionId, FunctionId>
         *FuncNameToProfNameMap) const {
   assert(DIL);
   SmallVector<std::pair<LineLocation, StringRef>, 10> S;
 
-  const DILocation *PrevDIL = DIL;
+  DILocRef PrevDIL = DIL;
   for (DIL = DIL->getInlinedAt(); DIL; DIL = DIL->getInlinedAt()) {
     // Use C++ linkage name if possible.
     StringRef Name = PrevDIL->getScope()->getSubprogram()->getLinkageName();

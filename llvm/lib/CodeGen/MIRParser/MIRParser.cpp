@@ -907,7 +907,7 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
       return true;
     if (MaybeInfo->DIVar || MaybeInfo->DIExpr || MaybeInfo->DILoc)
       PFS.MF.setVariableDbgInfo(MaybeInfo->DIVar, MaybeInfo->DIExpr,
-                                Reg.asMCReg(), MaybeInfo->DILoc);
+                                Reg.asMCReg(), DebugLoc()/*MaybeInfo->DILoc*/);
   }
 
   // Initialize the ordinary frame objects.
@@ -1035,7 +1035,7 @@ bool MIRParserImpl::parseStackObjectsDebugInfo(PerFunctionMIParsingState &PFS,
   // objects aren't supported.
   if (MaybeInfo->DIVar || MaybeInfo->DIExpr || MaybeInfo->DILoc)
     PFS.MF.setVariableDbgInfo(MaybeInfo->DIVar, MaybeInfo->DIExpr, FrameIdx,
-                              MaybeInfo->DILoc);
+                              DebugLoc()/*MaybeInfo->DILoc*/);
   return false;
 }
 

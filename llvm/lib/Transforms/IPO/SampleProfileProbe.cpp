@@ -51,9 +51,9 @@ static cl::opt<bool>
     UpdatePseudoProbe("update-pseudo-probe", cl::init(true), cl::Hidden,
                       cl::desc("Update pseudo probe distribution factor"));
 
-static uint64_t getCallStackHash(const DILocation *DIL) {
+static uint64_t getCallStackHash(DILocRef DIL) {
   uint64_t Hash = 0;
-  const DILocation *InlinedAt = DIL ? DIL->getInlinedAt() : nullptr;
+  DILocRef InlinedAt = DIL ? DIL.getInlinedAt() : DILocRef();
   while (InlinedAt) {
     Hash ^= MD5Hash(std::to_string(InlinedAt->getLine()));
     Hash ^= MD5Hash(std::to_string(InlinedAt->getColumn()));
@@ -65,7 +65,7 @@ static uint64_t getCallStackHash(const DILocation *DIL) {
 }
 
 static uint64_t computeCallStackHash(const Instruction &Inst) {
-  return getCallStackHash(Inst.getDebugLoc());
+  return getCallStackHash(Inst);
 }
 
 bool PseudoProbeVerifier::shouldVerifyFunction(const Function *F) {
@@ -363,9 +363,8 @@ void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
     assert((isa<PseudoProbeInst>(I) || isa<CallBase>(I)) &&
            "Expecting pseudo probe or call instructions");
     if (!I->getDebugLoc()) {
-      if (auto *SP = F.getSubprogram()) {
-        auto DIL = DILocation::get(SP->getContext(), 0, 0, SP);
-        I->setDebugLoc(DIL);
+      if (F.getSubprogram()) {
+        I->setDebugLoc(DebugLoc(0, 0));
         ArtificialDbgLine++;
         LLVM_DEBUG({
           dbgs() << "\nIn Function " << F.getName()
@@ -408,7 +407,7 @@ void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
     AssignDebugLoc(Probe);
     // Reset the dwarf discriminator if the debug location comes with any. The
     // discriminator field may be used by FS-AFDO later in the pipeline.
-    if (auto DIL = Probe->getDebugLoc()) {
+    if (auto DIL = DILocRef(*Probe)) {
       if (DIL->getDiscriminator()) {
         DIL = DIL->cloneWithDiscriminator(0);
         Probe->setDebugLoc(DIL);
@@ -426,7 +425,7 @@ void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
                         ? (uint32_t)PseudoProbeType::DirectCall
                         : (uint32_t)PseudoProbeType::IndirectCall;
     AssignDebugLoc(Call);
-    if (auto DIL = Call->getDebugLoc()) {
+    if (auto DIL = DILocRef(*Call)) {
       // Levarge the 32-bit discriminator field of debug data to store the ID
       // and type of a callsite probe. This gets rid of the dependency on
       // plumbing a customized metadata through the codegen pipeline.

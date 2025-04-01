@@ -28,6 +28,7 @@
 #include "llvm/IR/ConstantRangeList.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalIFunc.h"
@@ -41,6 +42,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/TrackingMDRef.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Support/Casting.h"
@@ -426,6 +428,63 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
     if (N.second && !N.second->isResolved())
       N.second->resolveCycles();
   }
+
+  // We should also have finished collecting DILocations and DISubprograms now,
+  // so transfer the transient DILocations over...
+  {
+    DenseSet<Metadata *> OldLoopAttachments;
+    for (auto &[Fn, DILs] : TempDILoopAttachments) {
+      SmallVector<TrackingMDNodeRef> LoopDILocs;
+      for (MDNode *LoopMD : TempDILoopAttachments[Fn]) {
+        for (unsigned Idx = 1; Idx < std::min(3u, LoopMD->getNumOperands()); ++Idx) {
+          if (auto *DIL = dyn_cast<DILocation>(LoopMD->getOperand(Idx))) {
+            LoopDILocs.emplace_back(DIL);
+            OldLoopAttachments.insert(LoopMD);
+          } else
+            break;
+        }
+      }
+      if (!LoopDILocs.empty())
+        TempDILocationAttachments[Fn].append(LoopDILocs);
+    }
+    TempDILoopAttachments.clear();
+    for (auto It = NumberedMetadata.begin(), End = NumberedMetadata.end(); It != End;) {
+      if (isa<DILocation>(It->second) || OldLoopAttachments.contains(It->second))
+        It = NumberedMetadata.erase(It);
+      else
+        ++It;
+    }
+  }
+  M->getContext().clearDistinctDILocationStorage();
+  for (auto &F : *M) {
+    if (F.isDeclaration())
+      continue;
+    auto *SP = F.getSubprogram();
+    if (auto FLocsIt = TempDILocationAttachments.find(&F); FLocsIt != TempDILocationAttachments.end()) {
+      auto &DILs = FLocsIt->second;
+      if (!SP) {
+        // FIXME: Some tests have functions without subprogram attachments. This
+        // seems incorrect, so for now just find the right subprogram and attach it.
+        auto *DIL = cast<DILocation>(DILs[0]);
+        auto *Scope = DIL->getInlinedAtScope();
+        SP = Scope->getSubprogram();
+        F.setSubprogram(SP);
+        assert(SP);
+      }
+      assert(all_of(DILs, [SP](auto MD) {
+        return cast<DILocation>(MD)->getInlinedAtScope()->getSubprogram() == SP;
+      }) && "Can't have multiple DILocations in a function with a different inlinedAt Subprogram!");
+      // Collect DILocations that appear on loops as well.
+      SP->absorbDILocations(&F, DILs);
+      assert(SP->FnLocScopes.size() >= 1);
+      DILs.clear();
+    } else if (SP) {
+      // Otherwise just setup the default entries.
+      SP->FnSrcLocs.push_back(DISrcLocData(0));
+      SP->FnLocScopes.push_back(DILocScopeData(SP, DebugLoc()));
+    }
+  }
+  M->getContext().clearUniqueDILocationStorage();
 
   for (auto *Inst : InstsWithTBAATag) {
     MDNode *MD = Inst->getMetadata(LLVMContext::MD_tbaa);
@@ -2358,13 +2417,23 @@ bool LLParser::parseInstructionMetadata(Instruction &Inst) {
     if (parseMetadataAttachment(MDK, N))
       return true;
 
-    if (MDK == LLVMContext::MD_DIAssignID)
+    if (MDK == LLVMContext::MD_DIAssignID) {
       TempDIAssignIDAttachments[N].push_back(&Inst);
-    else
+    } else if (MDK == LLVMContext::MD_dbg) {
+      // Copy the model used by DISubprogram.
+      uint32_t NewIdx = TempDILocationAttachments[Inst.getFunction()].size();
+      TempDILocationAttachments[Inst.getFunction()].emplace_back(N);
+      Inst.setDebugLoc(DebugLoc(NewIdx, 0xFFFFFFFF));
+    } else {
       Inst.setMetadata(MDK, N);
+    }
+
+    if (MDK == LLVMContext::MD_loop)
+      TempDILoopAttachments[Inst.getFunction()].emplace_back(N);
 
     if (MDK == LLVMContext::MD_tbaa)
       InstsWithTBAATag.push_back(&Inst);
+
 
     // If this is the end of the list, we're done.
   } while (EatIfPresent(lltok::comma));
@@ -6960,9 +7029,14 @@ bool LLParser::parseDebugRecord(DbgRecord *&DR, PerFunctionState &PFS) {
     MDNode *DbgLoc;
     if (parseMDNode(DbgLoc))
       return true;
+    // Copy the model used by DISubprogram.
+    uint32_t NewIdx = TempDILocationAttachments[&PFS.getFunction()].size();
+    TempDILocationAttachments[&PFS.getFunction()].emplace_back(DbgLoc);
+    DebugLoc TempDL(NewIdx, 0xFFFFFFFF);
     if (parseToken(lltok::rparen, "Expected ')' here"))
       return true;
-    DR = DbgLabelRecord::createUnresolvedDbgLabelRecord(Label, DbgLoc);
+
+    DR = DbgLabelRecord::createUnresolvedDbgLabelRecord(Label, TempDL);
     return false;
   }
 
@@ -7021,15 +7095,19 @@ bool LLParser::parseDebugRecord(DbgRecord *&DR, PerFunctionState &PFS) {
   }
 
   /// Parse DILocation.
-  MDNode *DebugLoc;
-  if (parseMDNode(DebugLoc))
+  MDNode *DbgLoc;
+  if (parseMDNode(DbgLoc))
     return true;
+  // Copy the model used by DISubprogram.
+  uint32_t NewIdx = TempDILocationAttachments[&PFS.getFunction()].size();
+  TempDILocationAttachments[&PFS.getFunction()].emplace_back(DbgLoc);
+  DebugLoc TempDL(NewIdx, 0xFFFFFFFF);
 
   if (parseToken(lltok::rparen, "Expected ')' here"))
     return true;
   DR = DbgVariableRecord::createUnresolvedDbgVariableRecord(
       ValueType, ValLocMD, Variable, Expression, AssignID, AddressLocation,
-      AddressExpression, DebugLoc);
+      AddressExpression, TempDL);
   return false;
 }
 //===----------------------------------------------------------------------===//

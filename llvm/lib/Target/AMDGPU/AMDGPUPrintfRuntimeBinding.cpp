@@ -138,7 +138,7 @@ static void diagnoseInvalidFormatString(const CallBase *CI) {
       *CI->getParent()->getParent(),
       "printf format string must be a trivially resolved constant string "
       "global variable",
-      CI->getDebugLoc());
+      DILocRef(*CI));
   CI->getContext().diagnose(UnsupportedFormatStr);
 }
 

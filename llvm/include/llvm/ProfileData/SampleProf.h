@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/ProfileData/FunctionId.h"
@@ -39,7 +40,6 @@
 
 namespace llvm {
 
-class DILocation;
 class raw_ostream;
 
 const std::error_category &sampleprof_category();
@@ -1147,13 +1147,13 @@ public:
 
   /// Returns the line offset to the start line of the subprogram.
   /// We assume that a single function will not exceed 65535 LOC.
-  static unsigned getOffset(const DILocation *DIL);
+  static unsigned getOffset(DILocRef DL);
 
   /// Returns a unique call site identifier for a given debug location of a call
   /// instruction. This is wrapper of two scenarios, the probe-based profile and
   /// regular profile, to hide implementation details from the sample loader and
   /// the context tracker.
-  static LineLocation getCallSiteIdentifier(const DILocation *DIL,
+  static LineLocation getCallSiteIdentifier(DILocRef DL,
                                             bool ProfileIsFS = false);
 
   /// Returns a unique hash code for a combination of a callsite location and
@@ -1178,7 +1178,7 @@ public:
   /// to find matching FunctionSamples with not exactly the same but equivalent
   /// name.
   const FunctionSamples *findFunctionSamples(
-      const DILocation *DIL,
+      DILocRef DIL,
       SampleProfileReaderItaniumRemapper *Remapper = nullptr,
       const HashKeyMap<std::unordered_map, FunctionId, FunctionId>
           *FuncNameToProfNameMap = nullptr) const;

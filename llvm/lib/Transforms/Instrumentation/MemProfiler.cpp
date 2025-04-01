@@ -827,7 +827,7 @@ memprof::extractCallsFromIR(Module &M, const TargetLibraryInfo &TLI,
                             function_ref<bool(uint64_t)> IsPresentInProfile) {
   DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>> Calls;
 
-  auto GetOffset = [](const DILocation *DIL) {
+  auto GetOffset = [](DILocRef DIL) {
     return (DIL->getLine() - DIL->getScope()->getSubprogram()->getLine()) &
            0xffff;
   };
@@ -854,8 +854,7 @@ memprof::extractCallsFromIR(Module &M, const TargetLibraryInfo &TLI,
         // True for the first iteration below, indicating that we are looking at
         // a leaf node.
         bool IsLeaf = true;
-        for (const DILocation *DIL = I.getDebugLoc(); DIL;
-             DIL = DIL->getInlinedAt()) {
+        for (DILocRef DIL = DILocRef(I); DIL; DIL = DIL->getInlinedAt()) {
           StringRef CallerName = DIL->getSubprogramLinkageName();
           assert(!CallerName.empty() &&
                  "Be sure to enable -fdebug-info-for-profiling");
@@ -1060,7 +1059,8 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
     assert(Idx <= CS.Frames.size() && CS.Frames[Idx - 1].Function == FuncGUID);
   }
 
-  auto GetOffset = [](const DILocation *DIL) {
+  auto *SP = F.getSubprogram();
+  auto GetOffset = [SP](DILocRef DIL) {
     return (DIL->getLine() - DIL->getScope()->getSubprogram()->getLine()) &
            0xffff;
   };
@@ -1091,8 +1091,7 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
       // and another callsite).
       auto AllocInfoIter = LocHashToAllocInfo.end();
       auto CallSitesIter = LocHashToCallSites.end();
-      for (const DILocation *DIL = I.getDebugLoc(); DIL != nullptr;
-           DIL = DIL->getInlinedAt()) {
+      for (DILocRef DIL = DILocRef(I); DIL; DIL = DIL->getInlinedAt()) {
         // Use C++ linkage name if possible. Need to compile with
         // -fdebug-info-for-profiling to get linkage name.
         StringRef Name = DIL->getScope()->getSubprogram()->getLinkageName();

@@ -14,6 +14,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
@@ -395,16 +396,16 @@ SmallVector<Metadata *, 4> LoopInfo::createMetadata(
     bool &HasUserTransforms) {
   SmallVector<Metadata *, 3> LoopProperties;
 
+  LLVMContext &Ctx = Header->getContext();
   // If we have a valid start debug location for the loop, add it.
   if (StartLoc) {
-    LoopProperties.push_back(StartLoc.getAsMDNode());
-
+    LoopProperties.push_back(StartLoc.toMetadata(Ctx));
+    
     // If we also have a valid end debug location for the loop, add it.
     if (EndLoc)
-      LoopProperties.push_back(EndLoc.getAsMDNode());
+      LoopProperties.push_back(EndLoc.toMetadata(Ctx));
   }
 
-  LLVMContext &Ctx = Header->getContext();
   if (Attrs.MustProgress)
     LoopProperties.push_back(
         MDNode::get(Ctx, MDString::get(Ctx, "llvm.loop.mustprogress")));

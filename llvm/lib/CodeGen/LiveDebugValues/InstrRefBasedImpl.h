@@ -36,7 +36,7 @@ class DbgOpIDMap;
 using namespace llvm;
 
 using DebugVariableID = unsigned;
-using VarAndLoc = std::pair<DebugVariable, const DILocation *>;
+using VarAndLoc = std::pair<DebugVariable, DebugLoc>;
 
 /// Mapping from DebugVariable to/from a unique identifying number. Each
 /// DebugVariable consists of three pointers, and after a small amount of
@@ -54,7 +54,7 @@ public:
     return It->second;
   }
 
-  DebugVariableID insertDVID(DebugVariable &Var, const DILocation *Loc) {
+  DebugVariableID insertDVID(DebugVariable &Var, DebugLoc Loc) {
     unsigned Size = VarToIdx.size();
     auto ItPair = VarToIdx.insert({Var, Size});
     if (ItPair.second) {
@@ -1017,7 +1017,7 @@ public:
   /// information in \pProperties, for variable Var. Don't insert it anywhere,
   /// just return the builder for it.
   MachineInstrBuilder emitLoc(const SmallVectorImpl<ResolvedDbgOp> &DbgOps,
-                              const DebugVariable &Var, const DILocation *DILoc,
+                              const DebugVariable &Var, DebugLoc DILoc,
                               const DbgValueProperties &Properties);
 };
 
@@ -1047,7 +1047,7 @@ public:
   /// movement of values between locations inside of a block is handled at a
   /// much later stage, in the TransferTracker class.
   SmallMapVector<DebugVariableID, DbgValue, 8> Vars;
-  SmallDenseMap<DebugVariableID, const DILocation *, 8> Scopes;
+  SmallDenseMap<DebugVariableID, DebugLoc, 8> Scopes;
   MachineBasicBlock *MBB = nullptr;
   const OverlapMap &OverlappingFragments;
   DbgValueProperties EmptyProperties;
@@ -1062,21 +1062,21 @@ public:
               const SmallVectorImpl<DbgOpID> &DebugOps) {
     assert(MI.isDebugValueLike());
     DebugVariable Var(MI.getDebugVariable(), MI.getDebugExpression(),
-                      MI.getDebugLoc()->getInlinedAt());
+                      DILocRef(MI)->getInlinedAt());
     // Either insert or fetch an ID number for this variable.
-    DebugVariableID VarID = DVMap.insertDVID(Var, MI.getDebugLoc().get());
+    DebugVariableID VarID = DVMap.insertDVID(Var, MI.getDebugLoc());
     DbgValue Rec = (DebugOps.size() > 0)
                        ? DbgValue(DebugOps, Properties)
                        : DbgValue(Properties, DbgValue::Undef);
 
     // Attempt insertion; overwrite if it's already mapped.
     Vars.insert_or_assign(VarID, Rec);
-    Scopes[VarID] = MI.getDebugLoc().get();
+    Scopes[VarID] = MI.getDebugLoc();
 
-    considerOverlaps(Var, MI.getDebugLoc().get());
+    considerOverlaps(Var, MI.getDebugLoc());
   }
 
-  void considerOverlaps(const DebugVariable &Var, const DILocation *Loc) {
+  void considerOverlaps(const DebugVariable &Var, DebugLoc Loc) {
     auto Overlaps = OverlappingFragments.find(
         {Var.getVariable(), Var.getFragmentOrDefault()});
     if (Overlaps == OverlappingFragments.end())
@@ -1139,8 +1139,8 @@ public:
   /// Used as the result type for the variable value dataflow problem.
   using LiveInsT = SmallVector<SmallVector<VarAndLoc, 8>, 8>;
 
-  /// Mapping from lexical scopes to a DILocation in that scope.
-  using ScopeToDILocT = DenseMap<const LexicalScope *, const DILocation *>;
+  /// Mapping from lexical scopes to a DebugLoc in that scope.
+  using ScopeToDILocT = DenseMap<const LexicalScope *, DebugLoc>;
 
   /// Mapping from lexical scopes to variables in that scope.
   using ScopeToVarsT =
@@ -1406,7 +1406,7 @@ private:
   /// \p Output Set to put in-scope-blocks into.
   /// \p AssignBlocks Blocks known to contain assignments of variables in scope.
   void
-  getBlocksForScope(const DILocation *DILoc,
+  getBlocksForScope(DebugLoc DILoc,
                     SmallPtrSetImpl<const MachineBasicBlock *> &Output,
                     const SmallPtrSetImpl<MachineBasicBlock *> &AssignBlocks);
 
@@ -1422,7 +1422,7 @@ private:
   /// \p AssignBlocks contains the set of blocks that aren't in \p DILoc's
   /// scope, but which do contain DBG_VALUEs, which VarLocBasedImpl tracks
   /// locations through.
-  void buildVLocValueMap(const DILocation *DILoc,
+  void buildVLocValueMap(DebugLoc DILoc,
                          const SmallSet<DebugVariableID, 4> &VarsWeCareAbout,
                          SmallPtrSetImpl<MachineBasicBlock *> &AssignBlocks,
                          LiveInsT &Output, FuncValueTable &MOutLocs,

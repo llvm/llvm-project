@@ -2021,7 +2021,7 @@ public:
 
   /// Return the (LLVM-IR) string describing the DebugLoc \p DL. Use \p F as
   /// fallback if \p DL does not specify the function name.
-  Constant *getOrCreateSrcLocStr(DebugLoc DL, uint32_t &SrcLocStrSize,
+  Constant *getOrCreateSrcLocStr(DILocRefWrapper DLW, uint32_t &SrcLocStrSize,
                                  Function *F = nullptr);
 
   /// Return the (LLVM-IR) string describing the source location \p Loc.

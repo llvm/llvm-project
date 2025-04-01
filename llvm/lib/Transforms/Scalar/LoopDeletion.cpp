@@ -471,7 +471,7 @@ static LoopDeletionResult deleteLoopIfDead(Loop *L, DominatorTree &DT,
                 PoisonValue::get(P.getType()));
     }
     ORE.emit([&]() {
-      return OptimizationRemark(DEBUG_TYPE, "NeverExecutes", L->getStartLoc(),
+      return OptimizationRemark(DEBUG_TYPE, "NeverExecutes", L->getStartLocRef(),
                                 L->getHeader())
              << "Loop deleted because it never executes";
     });
@@ -504,7 +504,7 @@ static LoopDeletionResult deleteLoopIfDead(Loop *L, DominatorTree &DT,
 
   LLVM_DEBUG(dbgs() << "Loop is invariant, delete it!\n");
   ORE.emit([&]() {
-    return OptimizationRemark(DEBUG_TYPE, "Invariant", L->getStartLoc(),
+    return OptimizationRemark(DEBUG_TYPE, "Invariant", L->getStartLocRef(),
                               L->getHeader())
            << "Loop deleted because it is invariant";
   });

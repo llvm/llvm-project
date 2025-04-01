@@ -35,6 +35,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
@@ -218,6 +219,10 @@ void llvm::addStringMetadataToLoop(Loop *TheLoop, const char *StringMD,
   MDNode *LoopID = TheLoop->getLoopID();
   if (LoopID) {
     for (unsigned i = 1, ie = LoopID->getNumOperands(); i < ie; ++i) {
+      if (ConstantAsMetadata *CAM = dyn_cast<ConstantAsMetadata>(LoopID->getOperand(i))) {
+        MDs.push_back(CAM);
+        continue;
+      }
       MDNode *Node = cast<MDNode>(LoopID->getOperand(i));
       // If it is of form key = value, try to parse it.
       if (Node->getNumOperands() == 2) {
@@ -636,8 +641,7 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
         if (Block->IsNewDbgInfoFormat) {
           for (DbgVariableRecord &DVR : llvm::make_early_inc_range(
                    filterDbgVars(I.getDbgRecordRange()))) {
-            DebugVariable Key(DVR.getVariable(), DVR.getExpression(),
-                              DVR.getDebugLoc().get());
+            DebugVariable Key(&DVR);
             if (!DeadDebugSet.insert(Key).second)
               continue;
             // Unlinks the DVR from it's container, for later insertion.

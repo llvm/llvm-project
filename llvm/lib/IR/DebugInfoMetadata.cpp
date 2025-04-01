@@ -13,17 +13,39 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "LLVMContextImpl.h"
 #include "MetadataImpl.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/TrackingMDRef.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Debug.h"
 
+#include <algorithm>
+#include <cstdint>
+#include <iomanip>
 #include <numeric>
 #include <optional>
+#include <tuple>
+#include <utility>
 
 using namespace llvm;
 
@@ -44,16 +66,16 @@ const DIExpression::FragmentInfo DebugVariable::DefaultFragment = {
 DebugVariable::DebugVariable(const DbgVariableIntrinsic *DII)
     : Variable(DII->getVariable()),
       Fragment(DII->getExpression()->getFragmentInfo()),
-      InlinedAt(DII->getDebugLoc().getInlinedAt()) {}
+      InlinedAt(DII->getDebugLoc().getInlinedAt(DII->getFunction()->getSubprogram())) {}
 
 DebugVariable::DebugVariable(const DbgVariableRecord *DVR)
     : Variable(DVR->getVariable()),
       Fragment(DVR->getExpression()->getFragmentInfo()),
-      InlinedAt(DVR->getDebugLoc().getInlinedAt()) {}
+      InlinedAt(DVR->getDebugLoc().getInlinedAt(DVR->getFunction()->getSubprogram())) {}
 
 DebugVariableAggregate::DebugVariableAggregate(const DbgVariableIntrinsic *DVI)
     : DebugVariable(DVI->getVariable(), std::nullopt,
-                    DVI->getDebugLoc()->getInlinedAt()) {}
+                    DVI->getDebugLoc().getInlinedAt(DVI->getFunction()->getSubprogram())) {}
 
 DILocation::DILocation(LLVMContext &C, StorageType Storage, unsigned Line,
                        unsigned Column, ArrayRef<Metadata *> MDs,
@@ -75,6 +97,48 @@ static void adjustColumn(unsigned &Column) {
   // Set to unknown on overflow.  We only have 16 bits to play with here.
   if (Column >= (1u << 16))
     Column = 0;
+}
+
+#include <iostream>
+class DILocStorageStats {
+  DenseMap<std::pair<Metadata *, Metadata *>, size_t> InlinedAtScopeUniqueCounts;
+  DenseMap<DISubprogram *, SmallVector<std::pair<Metadata *, Metadata *>>> FunctionScopeInlinedAts;
+  size_t MaxUniqueCount = 1;
+public:
+  size_t NumOriginalDILocs = 0;
+  size_t NumDuplicateDILocs = 0;
+  size_t NumDistinctDILocs = 0;
+  ~DILocStorageStats() {
+    // printStats();
+  }
+  void printStats() {
+    int Width = 0;
+    while (MaxUniqueCount > 0) {
+      Width += 1;
+      MaxUniqueCount /= 10;
+    }
+    for (auto It : InlinedAtScopeUniqueCounts) {
+      std::cout << "Unique counts - " << (It.first.first ? "Inline:  " : "Outline: ") << std::setw(Width) << It.second << '\n';
+    }
+    std::cout << "Original DILocs:  " << NumOriginalDILocs << '\n';
+    std::cout << "Duplicate DILocs: " << NumDuplicateDILocs << '\n';
+    std::cout << "Distinct DILocs:  " << NumDistinctDILocs << '\n';
+  }
+  void AddUnique(Metadata *InlinedAt, Metadata *Scope) {
+    auto Pair = std::make_pair(InlinedAt, Scope);
+    auto ExistingIt = InlinedAtScopeUniqueCounts.find(Pair);
+    if (ExistingIt != InlinedAtScopeUniqueCounts.end()) {
+      ExistingIt->second += 1;
+      if (ExistingIt->second > MaxUniqueCount)
+        MaxUniqueCount = ExistingIt->second;
+    } else {
+      InlinedAtScopeUniqueCounts[Pair] = 1;
+    }
+  }
+};
+static DILocStorageStats LocStorageStatsInstance;
+void llvm::printLocStats() {
+  LocStorageStatsInstance.printStats();
 }
 
 DILocation *DILocation::getImpl(LLVMContext &Context, unsigned Line,
@@ -1131,6 +1195,699 @@ DILocalScope *DILocalScope::cloneScopeForSubprogram(
   }
 
   return cast<DILocalScope>(UpdatedScope);
+}
+
+// Only invariant we need to retain is that LocScope appears after whatever
+// LocScope it was inlined at.
+void addDILocScopeIdx(SmallVectorImpl<std::pair<DIScope *, DILocation *>> &DILocScopes, DIScope *Scope, DILocation *InlinedAt) {
+  auto Pair = std::make_pair(Scope, InlinedAt);
+  if (is_contained(DILocScopes, Pair))
+    return;
+  if (InlinedAt)
+    addDILocScopeIdx(DILocScopes, InlinedAt->getScope(), InlinedAt->getInlinedAt());
+  DILocScopes.push_back(Pair);
+}
+
+DISrcLocData getSrcLocFromDILocation(DILocation *DIL) {
+  return DISrcLocData(DIL->getLine(), DIL->getColumn(), DIL->isImplicitCode());
+}
+
+
+DILocRefWrapper Instruction::getDLWrapper() const {
+  assert(getParent() && getFunction() && "Only safe to call this on an instruction inserted into a function!");
+  if (!getDebugLoc())
+    return DILocRefWrapper();
+  return DILocRefWrapper(getFunction()->getSubprogram(), getDebugLoc());
+}
+
+template <>
+struct DenseMapInfo<DISrcLocData> {
+  static inline DISrcLocData getEmptyKey() {
+    return DISrcLocData::fromRawInteger(0xffffffff);
+  }
+  static inline DISrcLocData getTombstoneKey() {
+    return DISrcLocData::fromRawInteger(0xfffffffe);
+  }
+  static unsigned getHashValue(const DISrcLocData &SrcLoc) {
+    return DenseMapInfo<uint64_t>::getHashValue(SrcLoc.toRawInteger());
+  }
+  static bool isEqual(const DISrcLocData &LHS, const DISrcLocData &RHS) {
+    return LHS == RHS;
+  }
+
+};
+#undef DEBUG_TYPE
+#define DEBUG_TYPE "di-loc-opt"
+void DISubprogram::absorbDILocations(Function *F, SmallVectorImpl<TrackingMDNodeRef> &TransientDILocations) {
+  SmallVector<DILocation *, 0> DILs;
+  DILs.reserve(TransientDILocations.size());
+  for (auto MDN : TransientDILocations)
+    DILs.push_back(cast<DILocation>(MDN));
+  absorbDILocations(F, DILs);
+}
+void DISubprogram::absorbDILocations(Function *F, SmallVectorImpl<DILocation*> &TransientDILocations) {
+  assert(!isUsingFnDebugLocs() && "Already using internalized DILocations?");
+  LLVM_DEBUG(
+    dbgs() << "Before Step 1:\n";
+    dbgs() << "  TransientDILocations:\n";
+    for (DILocation *DL : TransientDILocations)
+      dbgs() << "    " << *DL << "\n";
+  );
+  // Step 1: Visit all DILocations. Build up buckets of DILocations, mapping
+  // each inline call location to its directly inlined DILocations, and building
+  // an ordered vector of inline call locations s.t. each inline call appears
+  // after any inline calls above it.
+  // At the same time, build an ordered vector of {Scope + InlinedCall} s.t.
+  // each such pair appears after the entry corresponding to its inline caller
+  // (if any).
+  DenseMap<DILocation *, SetVector<DISrcLocData>> SrcLocsByInlinedAt;
+  SmallVector<DILocation *> InlinedAts(1, nullptr);
+  SmallVector<std::pair<DIScope *, DILocation *>> DILocScopes(1, std::make_pair(this, nullptr));
+  SrcLocsByInlinedAt[nullptr].insert(0);
+  for (DILocation *DIL : TransientDILocations) {
+    DILocation *InlinedAt = DIL->getInlinedAt();
+    addDILocScopeIdx(DILocScopes, DIL->getScope(), InlinedAt);
+    if (SrcLocsByInlinedAt.count(InlinedAt)) {
+      // We don't need a SrcLoc for this if it's line 0.
+      if (DIL->getLine() != 0)
+        SrcLocsByInlinedAt[InlinedAt].insert(getSrcLocFromDILocation(DIL));
+      continue;
+    }
+    // If we haven't encountered a location in this inlined call yet, add
+    // the full inlinedAt chain to InlinedAts 
+    SmallVector<DILocation *, 1> InlineStack(1, InlinedAt);
+    DILocation *NextInlinedAt = InlinedAt;
+    while ((NextInlinedAt = NextInlinedAt->getInlinedAt())) {
+      if (SrcLocsByInlinedAt.count(NextInlinedAt))
+        break;
+      InlineStack.push_back(NextInlinedAt);
+    }
+    // InlinedAts should already contain the location this is inlined at
+    // (including nullptr if it is not inlined).
+    auto *InlinePos = find(InlinedAts, InlineStack.back()->getInlinedAt());
+    assert(InlinePos != InlinedAts.end());
+    for (DILocation *InlinedAt : reverse(InlineStack)) {
+      SrcLocsByInlinedAt.try_emplace(InlinedAt);
+      InlinePos = InlinedAts.insert(InlinePos + 1, InlinedAt);
+    }
+    // We don't need a SrcLoc for this if it's line 0.
+    if (DIL->getLine() != 0)
+      SrcLocsByInlinedAt[InlinedAt].insert(getSrcLocFromDILocation(DIL));
+  }
+  LLVM_DEBUG(
+    dbgs() << "End of Step 1:\n";
+    dbgs() << "  SrcLocsByInlinedAt:\n";
+    for (auto &[DIL, SrcLocs] : SrcLocsByInlinedAt) {
+      if (DIL)
+        dbgs() << "    " << DIL << " (" << DIL->getLine() << "," << DIL->getColumn() << "):";
+      else
+        dbgs() << "    " << DIL << " (0,0):";
+      for (auto SrcLoc : SrcLocs)
+        dbgs() << " (" << SrcLoc.Line << "," << SrcLoc.Column << ")";
+      dbgs() << "\n";
+    }
+    dbgs() << "  InlinedAts:";
+    for (auto DIL : InlinedAts)
+      dbgs() << " " << DIL;
+    dbgs() << "\n  DILocScopes:";
+    for (auto &[Scope, DIL] : DILocScopes)
+      dbgs() << " (" << Scope << ", " << DIL << ")";
+    dbgs() << "\n";
+  );
+
+  // Step 2: We now have what we need to start building the Subprogram's entries
+  // correctly. We first insert SrcLocs, in order of their appearance in
+  // InlinedAts. We can then use this map to fill in LocScopes, and then finally
+  // remap (and delete) DILocations.
+  uint32_t MaxSrcLocs = 0;
+  DenseMap<DILocation *, uint32_t> InlineSrcLocIndices;
+  for (DILocation *InlinedAt : InlinedAts) {
+    InlineSrcLocIndices.insert(std::make_pair(InlinedAt, MaxSrcLocs));
+    uint32_t NumForInlineBucket = SrcLocsByInlinedAt[InlinedAt].size();
+    // For the non-inlined case, the line 0 location is included in the
+    // SrcLocsByInlinedAt bucket, while for the inlined case the inlined
+    // location is not; therefore we count that one extra inlined location
+    // when necessary, since it will appear in FnSrcLocs.
+    if (InlinedAt)
+      NumForInlineBucket += 1;
+    MaxSrcLocs += NumForInlineBucket;
+    if (InlinedAt != InlinedAts.back())
+      FnInlinedAtSrcLocRanges.push_back(MaxSrcLocs);
+  }
+  FnSrcLocs.reserve(MaxSrcLocs);
+  for (DILocation *InlinedAt : InlinedAts) {
+    if (InlinedAt)
+      FnSrcLocs.push_back(getSrcLocFromDILocation(InlinedAt));
+    SmallVector<DISrcLocData> OrderedSrcLocs(SrcLocsByInlinedAt[InlinedAt].begin(), SrcLocsByInlinedAt[InlinedAt].end());
+    llvm::sort(OrderedSrcLocs);
+    FnSrcLocs.append(OrderedSrcLocs.begin(), OrderedSrcLocs.end());
+  }
+  // FnSrcLocs are done and FnInlinedAtSrcLocRanges are done, now time for FnLocScopes.
+  DenseMap<std::pair<DIScope *, DILocation *>, uint32_t> DILocScopeIndices;
+  for (auto &[Scope, InlinedAt] : DILocScopes) {
+    DILocScopeIndices.insert(std::make_pair(std::make_pair(Scope, InlinedAt), FnLocScopes.size()));
+    if (!InlinedAt) {
+      DILocScopeData LocScope(cast<DILocalScope>(Scope), DebugLoc());
+      FnLocScopes.push_back(LocScope);
+      continue;
+    }
+    auto InlinedScopePair = std::make_pair(InlinedAt->getScope(), InlinedAt->getInlinedAt());
+    assert(DILocScopeIndices.count(InlinedScopePair));
+    uint32_t InlinedSrcLoc = InlineSrcLocIndices[InlinedAt];
+    uint32_t InlinedScope = DILocScopeIndices[InlinedScopePair];
+    FnLocScopes.push_back(DILocScopeData(cast<DILocalScope>(Scope), DebugLoc(InlinedSrcLoc, InlinedScope)));
+  }
+
+  LLVM_DEBUG(
+    dbgs() << "End of Step 2:\n";
+    dbgs() << "  MaxSrcLocs: " << MaxSrcLocs << "\n";
+    dbgs() << "  InlineSrcLocIndices:\n";
+    for (auto &[DIL, Index] : InlineSrcLocIndices) {
+      dbgs() << "    " << Index << ": ";
+      if (DIL) dbgs() << *DIL;
+      else dbgs() << "<not inlined>";
+      dbgs() << "\n";
+    }
+  );
+
+  // Step 3, we update Instructions, and delete.
+  DenseMap<MDNode *, MDNode *> LoopMDMap;
+  for (auto &BB : *F) {
+    for (auto &I : BB) {
+      for (auto &DR : I.getDbgRecordRange()) {
+        DILocation *DIL = cast<DILocation>(TransientDILocations[DR.getDebugLoc().SrcLocIndex]);
+        uint32_t LocScopeIndex = DILocScopeIndices[std::make_pair(DIL->getScope(), DIL->getInlinedAt())];
+        uint32_t SrcLocIndex = getSrcLocIndex(getSrcLocFromDILocation(DIL), FnLocScopes[LocScopeIndex].InlinedAt, false);
+        DR.setDebugLoc(DebugLoc(SrcLocIndex, LocScopeIndex));
+      }
+      // First we handle DebugLocs directly on I...
+      if (DebugLoc DL = I.getDebugLoc()) {
+        DILocation *DIL = cast<DILocation>(TransientDILocations[I.getDebugLoc().SrcLocIndex]);
+        uint32_t LocScopeIndex = DILocScopeIndices[std::make_pair(DIL->getScope(), DIL->getInlinedAt())];
+        uint32_t SrcLocIndex = getSrcLocIndex(getSrcLocFromDILocation(DIL), FnLocScopes[LocScopeIndex].InlinedAt, false);
+        I.setDebugLoc(DebugLoc(SrcLocIndex, LocScopeIndex));
+      }
+      // ...and then any DebugLoc on I's loop metadata, if any.
+      if (auto *LoopMD = I.getMetadata(LLVMContext::MD_loop)) {
+        if (auto NewMDIt = LoopMDMap.find(LoopMD); NewMDIt != LoopMDMap.end()) {
+          I.setMetadata(LLVMContext::MD_loop, NewMDIt->second);
+          continue;
+        }
+        unsigned NumDebugLocs = 0;
+        for (unsigned Idx = 1; Idx < std::min(3u, LoopMD->getNumOperands()); ++Idx)
+          if (isa<DILocation>(LoopMD->getOperand(Idx)))
+            NumDebugLocs += 1;
+        if (!NumDebugLocs)
+          continue;
+        SmallVector<Metadata *> Args;
+        Args.push_back(nullptr);
+        for (unsigned Idx = 1; Idx < 1 + NumDebugLocs; ++Idx) {
+          auto *DIL = cast<DILocation>(LoopMD->getOperand(Idx));
+          assert(DILocScopeIndices.count(std::make_pair(DIL->getScope(), DIL->getInlinedAt())));
+          uint32_t LocScopeIndex = DILocScopeIndices[std::make_pair(DIL->getScope(), DIL->getInlinedAt())];
+          uint32_t SrcLocIndex = getSrcLocIndex(getSrcLocFromDILocation(DIL), FnLocScopes[LocScopeIndex].InlinedAt, false);
+          assert(SrcLocIndex != 0xFFFFFFFF);
+          Args.push_back(DebugLoc(SrcLocIndex, LocScopeIndex).toMetadata(getContext()));
+        }
+        Args.append(LoopMD->op_begin() + 1 + NumDebugLocs, LoopMD->op_end());
+        MDNode *NewMD = LoopMD->isDistinct() ? MDNode::getDistinct(getContext(), Args)
+                                             : MDNode::get(getContext(), Args);
+        NewMD->replaceOperandWith(0, NewMD);
+        LoopMDMap[LoopMD] = NewMD;
+        I.setMetadata(LLVMContext::MD_loop, NewMD);
+      }
+    }
+  }
+  LLVM_DEBUG(
+    dbgs() << "Final state of " << F->getName() << ":\n";
+    dbgs() << "  TransientDILocations removed: " << TransientDILocations.size() << " (" << TransientDILocations.size_in_bytes() << ")\n";
+    dbgs() << "  FnSrcLocs: " << FnSrcLocs.size() << " (" << FnSrcLocs.size_in_bytes() << " / " << FnSrcLocs.size_in_bytes() << ")\n";
+    dbgs() << "  FnLocScopes: " << FnLocScopes.size() << " (" << FnLocScopes.size_in_bytes() << " / " << FnLocScopes.size_in_bytes() << ")\n";
+  );
+  for (MDNode *MDN : TransientDILocations)
+    MDN->dropAllReferences();
+  for (DILocation *InlinedAt : drop_begin(InlinedAts))
+    InlinedAt->dropAllReferences();
+  for (auto &[OldLoopMD, NewLoopMD] : LoopMDMap)
+    OldLoopMD->dropAllReferences();
+  {
+    // There may be DILocations that appear multiple times in
+    // TransientDILocations, or appear in both TransientDILocations and
+    // InlinedAts, so track which ones we've actually deleted.
+    DenseSet<MDNode *> DeletedDILocations;
+    for (MDNode *MDN : TransientDILocations) {
+      if (DeletedDILocations.insert(MDN).second)
+        MDN->deleteAsSubclass();
+    }
+    for (DILocation *InlinedAt : drop_begin(InlinedAts)) {
+      if (DeletedDILocations.insert(InlinedAt).second)
+        InlinedAt->deleteAsSubclass();
+    }
+  }
+  erase_if(F->getContext().pImpl->DistinctMDNodes, [&LoopMDMap](MDNode *MD) {
+    return LoopMDMap.contains(MD);
+  });
+  for (auto &[OldLoopMD, NewLoopMD] : LoopMDMap)
+    OldLoopMD->deleteAsSubclass();
+}
+SmallVector<DILocation *, 0> DISubprogram::expelDILocations(Function *F) {
+  assert(!FnSrcLocs.empty() && !FnLocScopes.empty() && "Not using internalized DILocations?");
+  normalizeDebugLocs(F);
+  DenseMap<uint32_t, DILocation *> InlineCallDLs;
+  for (DILocScopeData LocScope : FnLocScopes) {
+    if (!LocScope.InlinedAt || InlineCallDLs.count(LocScope.InlinedAt.SrcLocIndex))
+      continue;
+    DILocScopeData InlinedAtLocScope = FnLocScopes[LocScope.InlinedAt.LocScopeIndex];
+    DISrcLocData InlinedAtSrcLoc = getSrcLoc(LocScope.InlinedAt.SrcLocIndex);
+    assert(!InlinedAtLocScope.InlinedAt || InlineCallDLs.count(InlinedAtLocScope.InlinedAt.SrcLocIndex));
+    DILocation *InlinedAtInlinedAt = InlinedAtLocScope.InlinedAt ? InlineCallDLs[InlinedAtLocScope.InlinedAt.SrcLocIndex] : nullptr;
+    DILocation *InlinedAtDL = DILocation::getDistinct(F->getContext(), InlinedAtSrcLoc.Line, InlinedAtSrcLoc.Column, InlinedAtLocScope.Scope, InlinedAtInlinedAt, InlinedAtSrcLoc.IsImplicitCode);
+    InlineCallDLs[LocScope.InlinedAt.SrcLocIndex] = InlinedAtDL;
+  }
+  SmallVector<DILocation *, 0> TransientDILocations;
+  SmallDenseMap<MDNode *, MDNode *> LoopMDMap;
+  for (auto &BB : *F) {
+    for (auto &I : BB) {
+      auto RemapDebugLoc = [&](DebugLoc DL) -> DebugLoc {
+        DILocScopeData LocScope = FnLocScopes[DL.LocScopeIndex];
+        DISrcLocData SrcLoc = getSrcLoc(DL);
+        DILocation *InlinedAt = LocScope.InlinedAt ? InlineCallDLs[LocScope.InlinedAt.SrcLocIndex] : nullptr;
+        DILocation *DIL = DILocation::get(F->getContext(), SrcLoc.Line, SrcLoc.Column, LocScope.Scope, InlinedAt, SrcLoc.IsImplicitCode);
+        uint32_t NewIndex = TransientDILocations.size();
+        TransientDILocations.push_back(DIL);
+        return DebugLoc(NewIndex, 0xffffffff);
+      };
+      for (DbgRecord &DR : I.getDbgRecordRange())
+        DR.setDebugLoc(RemapDebugLoc(DR.getDebugLoc()));
+      if (DebugLoc DL = I.getDebugLoc())
+        I.setDebugLoc(RemapDebugLoc(DL));
+      if (MDNode *LoopMD = I.getMetadata(LLVMContext::MD_loop)) {
+        if (auto Existing = LoopMDMap.find(LoopMD); Existing != LoopMDMap.end()) {
+          I.setMetadata(LLVMContext::MD_loop, Existing->second);
+          continue;
+        }
+
+        unsigned MaxLocOp = std::min(3u, LoopMD->getNumOperands());
+        SmallVector<Metadata *> Args;
+        Args.push_back(nullptr);
+        for (unsigned Op = 1; Op < MaxLocOp; ++Op) {
+          if (auto *CAM = dyn_cast<ConstantAsMetadata>(LoopMD->getOperand(Op))) {
+            DebugLoc DL(cast<ConstantInt>(CAM->getValue())->getZExtValue());
+            DebugLoc Remapped = RemapDebugLoc(DL);
+            Args.push_back(TransientDILocations[Remapped.SrcLocIndex]);
+          } else {
+            break;
+          }
+        }
+        if (Args.size() == 1)
+          continue;
+
+        Args.append(LoopMD->op_begin() + Args.size(), LoopMD->op_end());
+        MDNode *NewMD = LoopMD->isDistinct() ? MDNode::getDistinct(getContext(), Args)
+                                             : MDNode::get(getContext(), Args);
+        NewMD->replaceOperandWith(0, NewMD);
+        LoopMDMap[LoopMD] = NewMD;
+        I.setMetadata(LLVMContext::MD_loop, NewMD);
+      }
+    }
+  }
+  erase_if(F->getContext().pImpl->DistinctMDNodes, [&LoopMDMap](MDNode *MD) {
+    return LoopMDMap.contains(MD);
+  });
+  for (auto &[OldLoopMD, NewLoopMD] : LoopMDMap)
+    OldLoopMD->deleteAsSubclass();
+  FnSrcLocs.clear();
+  FnLocScopes.clear();
+  FnInlinedAtSrcLocRanges.clear();
+  NonNormalFnSrcLocs.clear();
+  return TransientDILocations;
+}
+
+// TODO: In order to avoid inserting new DebugLocs in response to getting new
+// 0-columned locs, we should insert a (line: N, column: 0) entry for each case
+// where this could be updated.
+void DISubprogram::normalizeDebugLocs(Function *F) {
+  if (NonNormalFnSrcLocs.empty())
+    return;
+  LLVM_DEBUG(
+    dbgs() << "Normalizing SP for " << F->getName() << ":\n"
+           << "  Normalized SrcLoc Count = " << FnSrcLocs.size() << "\n"
+           << "  Non-Normalized SrcLoc Count = " << NonNormalFnSrcLocs.size() << "\n"
+  );
+  // Pair of (SrcLoc, OriginalPosition)
+  using LocEntry = std::pair<DISrcLocData, uint32_t>;
+  MapVector<uint32_t, SmallVector<LocEntry>> BucketedLocEntries;
+  uint32_t CurrentBucketIdx = 0;
+  uint32_t CurrentBucket = 0;
+  // Step 1: Collecting all existing FnSrcLocs.
+  // We build a MapVector where each entry is one of the inlinedAt FnSrcLocs
+  // buckets, containing all elements including the inlinedAt entry itself.
+  for (uint32_t Idx = 0; Idx < FnSrcLocs.size(); ++Idx) {
+    if (!FnInlinedAtSrcLocRanges.empty() && CurrentBucketIdx < FnInlinedAtSrcLocRanges.size() && FnInlinedAtSrcLocRanges[CurrentBucketIdx] == Idx) {
+      CurrentBucket = Idx;
+      ++CurrentBucketIdx;
+    }
+    BucketedLocEntries[CurrentBucket].push_back(std::make_pair(FnSrcLocs[Idx], Idx));
+  }
+  for (uint32_t Idx = 0; Idx < NonNormalFnSrcLocs.size(); ++Idx) {
+    uint32_t AdjustedIdx = Idx + FnSrcLocs.size();
+    // A non-inlined DebugLoc has InlinedAt=0xFFFFFFFF, but this is the
+    // tombstone value, so we don't use it as the key for non-inlined values.
+    // "0" can almost never be used as an InlinedAt value, and in the event it
+    // appears it will need to enter the non-inlined bucket, so just insert it
+    // there.
+    uint32_t Bucket = NonNormalFnSrcLocs[Idx].second == -1u ? 0 : NonNormalFnSrcLocs[Idx].second;
+    BucketedLocEntries[Bucket].push_back(std::make_pair(NonNormalFnSrcLocs[Idx].first, AdjustedIdx));
+  }
+
+  // dbgs() << "Bucket State: \n";
+  // for (auto &[Bucket, Entries] : BucketedLocEntries) {
+  //   dbgs() << "  [" << Bucket << "]: {";
+  //   dbgs() << "(" << Entries[0].first.Line << ", " << Entries[0].second << ")";
+  //   for (auto Entry : drop_begin(Entries))
+  //     dbgs() << ", (" << Entry.first.Line << ", " << Entry.second << ")";
+  //   dbgs() << "}\n";
+  // }
+
+  // Step 2: Sort each bucket, and build a de-duplicated replacement list.
+  uint32_t MaxSize = FnSrcLocs.size() + NonNormalFnSrcLocs.size();
+  FnSrcLocs.clear();
+  uint32_t NewIdx = 0;
+  SmallVector<uint32_t> FnSrcLocRemap(MaxSize, -1u);
+  FnInlinedAtSrcLocRanges.clear();
+  for (auto &[Bucket, Entries] : BucketedLocEntries) {
+    if (NewIdx > 0)
+      FnInlinedAtSrcLocRanges.push_back(NewIdx);
+    llvm::sort(Entries.begin() + 1, Entries.end(), [](LocEntry A, LocEntry B) {
+      return A.first < B.first;
+    });
+    FnSrcLocs.push_back(Entries[0].first);
+    FnSrcLocRemap[Entries[0].second] = NewIdx++;
+    std::optional<DISrcLocData> LastSrcLoc;
+    for (auto Entry : drop_begin(Entries)) {
+      if (LastSrcLoc == Entry.first) {
+        FnSrcLocRemap[Entry.second] = NewIdx - 1;
+        continue;
+      }
+      FnSrcLocs.push_back(Entry.first);
+      FnSrcLocRemap[Entry.second] = NewIdx++;
+      LastSrcLoc = Entry.first;
+    }
+  }
+  FnSrcLocs.truncate(FnSrcLocs.size());
+  LLVM_DEBUG(
+    dbgs() << "  New SrcLoc Count = " << FnSrcLocs.size() << " (-" << (MaxSize - FnSrcLocs.size()) << ")\n"
+  );
+  for (uint32_t RemapEntry : FnSrcLocRemap) {
+    assert(RemapEntry != -1u);
+  }
+
+  // Step 3: Remap SrcLoc indexes according to the new mapping.
+  // Remap Instructions and DebugRecords...
+  for (auto &BB : *F) {
+    for (auto &I : BB) {
+      for (auto &DR : I.getDbgRecordRange()) {
+        DebugLoc DL = DR.getDebugLoc();
+        if (!DL)
+          continue;
+        DL.SrcLocIndex = FnSrcLocRemap[DL.SrcLocIndex];
+        DR.setDebugLoc(DL);
+      }
+      DebugLoc DL = I.getDebugLoc();
+      if (!DL)
+        continue;
+      DL.SrcLocIndex = FnSrcLocRemap[DL.SrcLocIndex];
+      I.setDebugLoc(DL);
+      updateLoopMetadataDebugLocations(I, [&FnSrcLocRemap](DebugLoc Old) {
+        return DebugLoc(FnSrcLocRemap[Old.SrcLocIndex], Old.LocScopeIndex);
+      });
+    }
+  }
+  // ... and also remap InlinedAt entries.
+  for (DILocScopeData &LocScope : FnLocScopes)
+    if (LocScope.InlinedAt)
+      LocScope.InlinedAt.SrcLocIndex = FnSrcLocRemap[LocScope.InlinedAt.SrcLocIndex];
+  NonNormalFnSrcLocs.clear();
+}
+#undef DEBUG_TYPE
+
+DebugLoc DISubprogram::addInlinedLocations(DISubprogram *OtherSP, DebugLoc CallDL) {
+  // Handle the cases where we aren't adding inlined SrcLocs, either because
+  // we're inlining from a function without DebugInfo, or just from a function
+  // that contains no DILocations. In this case, the only thing we want to do is
+  // preserve a
+  // unique caller SrcLoc, and add no inline scopes.
+  assert(NonNormalFnSrcLocs.empty() && "Cannot add inlined locations with non-normalized SrcLocs present!");
+  if (!OtherSP || OtherSP->FnSrcLocs.empty()) {
+    uint32_t NewSrcLocIndex = FnSrcLocs.size();
+    FnSrcLocs.reserve(FnSrcLocs.size() + 1);
+    FnSrcLocs.push_back(FnSrcLocs[CallDL.SrcLocIndex]);
+    FnInlinedAtSrcLocRanges.push_back(NewSrcLocIndex);
+    // If there is no other subprogram, inlined instructions will use the
+    // same LocScope as the call. If there is a subprogram and it simply doesn't
+    // contain any source lines, then add a new inlined LocScope.
+    uint32_t NewLocScopeIndex = CallDL.LocScopeIndex;
+    if (OtherSP) {
+      NewLocScopeIndex = FnLocScopes.size();
+      FnLocScopes.push_back(DILocScopeData(OtherSP, DebugLoc(NewSrcLocIndex, CallDL.LocScopeIndex)));
+    }
+    return DebugLoc(NewSrcLocIndex, NewLocScopeIndex);
+  }
+  FnInlinedAtSrcLocRanges.push_back(FnSrcLocs.size());
+  uint32_t SrcLocOffset = FnSrcLocs.size();
+  FnSrcLocs.reserve(FnSrcLocs.size() + OtherSP->FnSrcLocs.size());
+  // We don't need the Line-0 SrcLoc from OtherSP, but we do need another copy
+  // of the CallDL (or do we? We might be able to drop this!).
+  // Just in case OtherSP == this, define the range of locs to copy before we
+  // actually modify FnSrcLocs.
+  ArrayRef FnSrcLocsToCopy(OtherSP->FnSrcLocs.begin() + 1, OtherSP->FnSrcLocs.end());
+  FnSrcLocs.push_back(FnSrcLocs[CallDL.SrcLocIndex]);
+  FnSrcLocs.append(FnSrcLocsToCopy.begin(), FnSrcLocsToCopy.end());
+  uint32_t LocScopeOffset = FnLocScopes.size();
+  FnLocScopes.reserve(FnLocScopes.size() + OtherSP->FnLocScopes.size());
+  FnLocScopes.append(OtherSP->FnLocScopes.begin(), OtherSP->FnLocScopes.end());
+  // For any new inlined LocScopes that already have an InlinedAt, we offset
+  // their InlinedAt values such that they correctly reference the values that
+  // we just appended to FnSrcLocs/FnLocScopes.
+  // For any new LocScopes that do not have an InlinedAt, their InlinedAt should
+  // now point to the "distinct" DebugLoc for the inlined call.
+  for (uint32_t Index = LocScopeOffset; Index < FnLocScopes.size(); ++Index) {
+    if (!FnLocScopes[Index].InlinedAt) {
+      FnLocScopes[Index].InlinedAt = DebugLoc(SrcLocOffset, CallDL.LocScopeIndex);
+    } else {
+      FnLocScopes[Index].InlinedAt.SrcLocIndex += SrcLocOffset;
+      FnLocScopes[Index].InlinedAt.LocScopeIndex += LocScopeOffset;
+    }
+  }
+  return DebugLoc(SrcLocOffset, LocScopeOffset);
+}
+DebugLoc DISubprogram::cloneWithDiscriminator(DebugLoc Idx, unsigned Discriminator) {
+  DILocScopeData LocScope = getLocScope(Idx);
+  DIScope *Scope = LocScope.Scope;
+  // Skip all parent DILexicalBlockFile that already have a discriminator
+  // assigned. We do not want to have nested DILexicalBlockFiles that have
+  // mutliple discriminators because only the leaf DILexicalBlockFile's
+  // dominator will be used.
+  for (auto *LBF = dyn_cast<DILexicalBlockFile>(Scope);
+      LBF && LBF->getDiscriminator() != 0;
+      LBF = dyn_cast<DILexicalBlockFile>(Scope))
+    Scope = LBF->getScope();
+  DILexicalBlockFile *NewScope =
+      DILexicalBlockFile::get(getContext(), Scope, getFile(), Discriminator);
+  uint32_t NewLocScopeIdx = FnLocScopes.size();
+  FnLocScopes.push_back(DILocScopeData(NewScope, LocScope.InlinedAt));
+  return DebugLoc(Idx.SrcLocIndex, NewLocScopeIdx);
+}
+
+
+DebugLoc DISubprogram::getMergedLocation(DebugLoc LocA, DebugLoc LocB) {
+  if (!LocA || !LocB)
+    return DebugLoc();
+
+  if (LocA == LocB)
+    return LocA;
+
+  using LocVec = SmallVector<DebugLoc>;
+  LocVec ALocs;
+  LocVec BLocs;
+  SmallDenseMap<std::pair<const DISubprogram *, DebugLoc>, unsigned,
+                4>
+      ALookup;
+
+  // Walk through LocA and its inlined-at locations, populate them in ALocs and
+  // save the index for the subprogram and inlined-at pair, which we use to find
+  // a matching starting location in LocB's chain.
+  for (auto [L, I] = std::make_pair(LocA, 0U); L; L = getLocScope(L).InlinedAt, I++) {
+    ALocs.push_back(L);
+    auto Res = ALookup.try_emplace(
+        {getLocScope(L).Scope->getSubprogram(), getLocScope(L).InlinedAt}, I);
+    assert(Res.second && "Multiple <SP, InlinedAt> pairs in a location chain?");
+    (void)Res;
+  }
+
+  LocVec::reverse_iterator ARIt = ALocs.rend();
+  LocVec::reverse_iterator BRIt = BLocs.rend();
+
+  // Populate BLocs and look for a matching starting location, the first
+  // location with the same subprogram and inlined-at location as in LocA's
+  // chain. Since the two locations have the same inlined-at location we do
+  // not need to look at those parts of the chains.
+  for (auto [L, I] = std::make_pair(LocB, 0U); L; L = getLocScope(L).InlinedAt, I++) {
+    BLocs.push_back(L);
+
+    if (ARIt != ALocs.rend())
+      // We have already found a matching starting location.
+      continue;
+
+    auto IT = ALookup.find({getLocScope(L).Scope->getSubprogram(), getLocScope(L).InlinedAt});
+    if (IT == ALookup.end())
+      continue;
+
+    // The + 1 is to account for the &*rev_it = &(it - 1) relationship.
+    ARIt = LocVec::reverse_iterator(ALocs.begin() + IT->second + 1);
+    BRIt = LocVec::reverse_iterator(BLocs.begin() + I + 1);
+
+    // If we have found a matching starting location we do not need to add more
+    // locations to BLocs, since we will only look at location pairs preceding
+    // the matching starting location, and adding more elements to BLocs could
+    // invalidate the iterator that we initialized here.
+    break;
+  }
+
+  // Merge the two locations if possible, using the supplied
+  // inlined-at location for the created location.
+  auto MergeLocPair = [this](DebugLoc L1, DebugLoc L2,
+                                     DebugLoc InlinedAt) -> DebugLoc {
+    DILocScopeData L1LocScope = getLocScope(L1);
+    if (L1 == L2) {
+      DILocScopeData MergedLocScope = DILocScopeData(L1LocScope.Scope, InlinedAt);
+      return DebugLoc(L1.SrcLocIndex, getLocScopeIndex(MergedLocScope, true));
+    }
+    DILocScopeData L2LocScope = getLocScope(L1);
+
+    // If the locations originate from different subprograms we can't produce
+    // a common location.
+    if (L1LocScope.Scope->getSubprogram() != L2LocScope.Scope->getSubprogram())
+      return DebugLoc();
+
+    // Return the nearest common scope inside a subprogram.
+    auto GetNearestCommonScope = [](DIScope *S1, DIScope *S2) -> DIScope * {
+      SmallPtrSet<DIScope *, 8> Scopes;
+      for (; S1; S1 = S1->getScope()) {
+        Scopes.insert(S1);
+        if (isa<DISubprogram>(S1))
+          break;
+      }
+
+      for (; S2; S2 = S2->getScope()) {
+        if (Scopes.count(S2))
+          return S2;
+        if (isa<DISubprogram>(S2))
+          break;
+      }
+
+      return nullptr;
+    };
+
+    auto *Scope = GetNearestCommonScope(L1LocScope.Scope, L2LocScope.Scope);
+    assert(Scope && "No common scope in the same subprogram?");
+    assert(isa<DILocalScope>(Scope));
+    DILocScopeData MergedLocScope = DILocScopeData(cast<DILocalScope>(Scope), InlinedAt);
+    uint32_t NewLocScopeIdx = getLocScopeIndex(MergedLocScope, true);
+
+    DISrcLocData L1SrcLoc = getSrcLoc(L1);
+    DISrcLocData L2SrcLoc = getSrcLoc(L2);
+    bool SameLine = L1SrcLoc.Line == L2SrcLoc.Line;
+    bool SameCol = L1SrcLoc.Column == L2SrcLoc.Column;
+    unsigned Line = SameLine ? L1SrcLoc.Line : 0;
+    unsigned Col = SameLine && SameCol ? L1SrcLoc.Column : 0;
+    bool ImplicitCode = 0;
+    DISrcLocData NewSrcLoc = DISrcLocData(Line, Col, ImplicitCode);
+    uint32_t NewSrcLocIdx = (NewSrcLoc == L1SrcLoc) ? L1.SrcLocIndex : getSrcLocIndex(NewSrcLoc, InlinedAt, true);
+    return DebugLoc(NewSrcLocIdx, NewLocScopeIdx);
+  };
+
+  DebugLoc Result = ARIt != ALocs.rend() ? getLocScope(*ARIt).InlinedAt : DebugLoc();
+
+  // If we have found a common starting location, walk up the inlined-at chains
+  // and try to produce common locations.
+  for (; ARIt != ALocs.rend() && BRIt != BLocs.rend(); ++ARIt, ++BRIt) {
+    DebugLoc Tmp = MergeLocPair(*ARIt, *BRIt, Result);
+
+    if (!Tmp)
+      // We have walked up to a point in the chains where the two locations
+      // are irreconsilable. At this point Result contains the nearest common
+      // location in the inlined-at chains of LocA and LocB, so we break here.
+      break;
+
+    Result = Tmp;
+  }
+
+  if (Result)
+    return Result;
+
+  // We ended up with LocA and LocB as irreconsilable locations. Produce a
+  // location at 0:0 with one of the locations' scope. The function has
+  // historically picked A's scope, and a nullptr inlined-at location, so that
+  // behavior is mimicked here but I am not sure if this is always the correct
+  // way to handle this.
+  /// REGARDING THE ABOVE : 
+  /// For simplicity, and probably because it's correct, I've changed this to
+  /// use a line 0 with subprogram scope, since it's the least incorrect.
+  return DebugLoc(0, 0);
+}
+
+
+DebugLoc DISubprogram::getMergedLocations(ArrayRef<DebugLoc> Locs) {
+  if (Locs.empty())
+    return DebugLoc();
+  if (Locs.size() == 1)
+    return Locs[0];
+  auto Merged = Locs[0];
+  for (DebugLoc L : llvm::drop_begin(Locs)) {
+    Merged = getMergedLocation(Merged, L);
+    if (!Merged)
+      break;
+  }
+  return Merged;
+}
+
+
+void DISubprogram::getUsedLocScopes(Function *F, SmallVectorImpl<DILocScopeData> &UsedLocScopes) {
+  DenseSet<uint32_t> UsedLocScopeIdxs;
+  UsedLocScopes.clear();
+  for (BasicBlock &BB : *F) {
+    for (Instruction &I : BB) {
+      if (I.getDebugLoc() && UsedLocScopeIdxs.insert(I.getDebugLoc().LocScopeIndex).second)
+        UsedLocScopes.push_back(FnLocScopes[I.getDebugLoc().LocScopeIndex]);
+    }
+  }
+}
+void DISubprogram::getUsedSrcLocs(Function *F, SmallVectorImpl<DISrcLocData> &UsedSrcLocs) {
+  DenseSet<uint32_t> UsedSrcLocIdxs;
+  UsedSrcLocs.clear();
+  for (BasicBlock &BB : *F) {
+    for (Instruction &I : BB) {
+      if (I.getDebugLoc() && UsedSrcLocIdxs.insert(I.getDebugLoc().SrcLocIndex).second)
+        UsedSrcLocs.push_back(getSrcLoc(I.getDebugLoc().SrcLocIndex));
+    }
+  }
+}
+void DISubprogram::getUsedSrcLocScopes(Function *F, SmallVectorImpl<DISrcLocData> &UsedSrcLocs, SmallVectorImpl<DILocScopeData> &UsedLocScopes) {
+  DenseSet<uint32_t> UsedLocScopeIdxs;
+  DenseSet<uint32_t> UsedSrcLocIdxs;
+  UsedLocScopes.clear();
+  UsedSrcLocs.clear();
+  for (BasicBlock &BB : *F) {
+    for (Instruction &I : BB) {
+      if (auto DL = I.getDebugLoc()) {
+        if (UsedLocScopeIdxs.insert(DL.LocScopeIndex).second)
+          UsedLocScopes.push_back(FnLocScopes[I.getDebugLoc().LocScopeIndex]);
+        if (UsedSrcLocIdxs.insert(DL.SrcLocIndex).second)
+          UsedSrcLocs.push_back(getSrcLoc(I.getDebugLoc().SrcLocIndex));
+      }
+    }
+  }
 }
 
 DISubprogram::DISPFlags DISubprogram::getFlag(StringRef Flag) {

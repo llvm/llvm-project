@@ -47,9 +47,10 @@ void InstCombinerImpl::PHIArgMergedDebugLoc(Instruction *Inst, PHINode &PN) {
   // will be inefficient.
   assert(!isa<CallInst>(Inst));
 
+  auto *SP = PN.getFunction()->getSubprogram();
   for (Value *V : drop_begin(PN.incoming_values())) {
     auto *I = cast<Instruction>(V);
-    Inst->applyMergedLocation(Inst->getDebugLoc(), I->getDebugLoc());
+    Inst->setDebugLoc(SP->getMergedLocation(Inst->getDebugLoc(), I->getDebugLoc()));
   }
 }
 

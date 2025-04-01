@@ -498,7 +498,8 @@ public:
   void unbundleFromSucc();
 
   /// Returns the debug location id of this MachineInstr.
-  const DebugLoc &getDebugLoc() const { return DbgLoc; }
+  DebugLoc getDebugLoc() const { return DbgLoc; }
+  DILocRefWrapper getDILocRef() const;
 
   /// Return the operand containing the offset to be used if this DBG_VALUE
   /// instruction is indirect; will be an invalid register if this value is

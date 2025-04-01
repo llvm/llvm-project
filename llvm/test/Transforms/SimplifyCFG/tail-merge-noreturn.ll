@@ -505,7 +505,7 @@ define void @dead_phi_and_dbg(i32 %c) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  call void @llvm.dbg.value(metadata i32 %c, i64 0, metadata !12, metadata !13), !dbg !14
+  call void @llvm.dbg.value(metadata i32 %c, i64 0, metadata !12, metadata !13), !dbg !24
   switch i32 %c, label %sw.epilog [
   i32 13, label %sw.bb
   i32 42, label %sw.bb1
@@ -514,7 +514,7 @@ entry:
 
 sw.bb:                                            ; preds = %entry
   %c.1 = phi i32 [ 55, %entry], [ 67, %sw.bb1 ]
-  call void @llvm.dbg.value(metadata i32 %c.1, i64 0, metadata !12, metadata !13), !dbg !14
+  call void @llvm.dbg.value(metadata i32 %c.1, i64 0, metadata !12, metadata !13), !dbg !24
   tail call void @abort()
   unreachable
 
@@ -522,7 +522,7 @@ sw.bb1:
   br label %sw.bb
 
 sw.bb2:                                           ; preds = %entry
-  call void @llvm.dbg.value(metadata i32 84, i64 0, metadata !12, metadata !13), !dbg !14
+  call void @llvm.dbg.value(metadata i32 84, i64 0, metadata !12, metadata !13), !dbg !24
   tail call void @abort()
   unreachable
 
@@ -542,3 +542,5 @@ sw.epilog:                                        ; preds = %entry
 !12 = !DILocalVariable(name: "c", scope: !7)
 !13 = !DIExpression()
 !14 = !DILocation(line: 2, column: 12, scope: !7)
+!17 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 2, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, unit: !0)
+!24 = !DILocation(line: 2, column: 12, scope: !17)

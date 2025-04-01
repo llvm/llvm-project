@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/InlineAdvisor.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 
 namespace llvm {
 class CallBase;
@@ -50,7 +51,7 @@ struct ReplayInlinerSettings {
 };
 
 /// Get call site location as a string with the given format
-std::string formatCallSiteLocation(DebugLoc DLoc, const CallSiteFormat &Format);
+std::string formatCallSiteLocation(DILocRef DLoc, const CallSiteFormat &Format);
 
 std::unique_ptr<InlineAdvisor>
 getReplayInlineAdvisor(Module &M, FunctionAnalysisManager &FAM,

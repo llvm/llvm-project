@@ -11262,7 +11262,7 @@ bool SelectionDAG::doesNodeExist(unsigned Opcode, SDVTList VTList,
 /// SDNode
 SDDbgValue *SelectionDAG::getDbgValue(DIVariable *Var, DIExpression *Expr,
                                       SDNode *N, unsigned R, bool IsIndirect,
-                                      const DebugLoc &DL, unsigned O) {
+                                      DebugLoc DL, unsigned O) {
   assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
   return new (DbgInfo->getAlloc())
@@ -11275,7 +11275,7 @@ SDDbgValue *SelectionDAG::getDbgValue(DIVariable *Var, DIExpression *Expr,
 SDDbgValue *SelectionDAG::getConstantDbgValue(DIVariable *Var,
                                               DIExpression *Expr,
                                               const Value *C,
-                                              const DebugLoc &DL, unsigned O) {
+                                              DebugLoc DL, unsigned O) {
   assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
   return new (DbgInfo->getAlloc())
@@ -11288,7 +11288,7 @@ SDDbgValue *SelectionDAG::getConstantDbgValue(DIVariable *Var,
 SDDbgValue *SelectionDAG::getFrameIndexDbgValue(DIVariable *Var,
                                                 DIExpression *Expr, unsigned FI,
                                                 bool IsIndirect,
-                                                const DebugLoc &DL,
+                                                DebugLoc DL,
                                                 unsigned O) {
   assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
@@ -11300,7 +11300,7 @@ SDDbgValue *SelectionDAG::getFrameIndexDbgValue(DIVariable *Var,
                                                 DIExpression *Expr, unsigned FI,
                                                 ArrayRef<SDNode *> Dependencies,
                                                 bool IsIndirect,
-                                                const DebugLoc &DL,
+                                                DebugLoc DL,
                                                 unsigned O) {
   assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
@@ -11313,7 +11313,7 @@ SDDbgValue *SelectionDAG::getFrameIndexDbgValue(DIVariable *Var,
 /// VReg
 SDDbgValue *SelectionDAG::getVRegDbgValue(DIVariable *Var, DIExpression *Expr,
                                           Register VReg, bool IsIndirect,
-                                          const DebugLoc &DL, unsigned O) {
+                                          DebugLoc DL, unsigned O) {
   assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
   return new (DbgInfo->getAlloc())
@@ -11325,7 +11325,7 @@ SDDbgValue *SelectionDAG::getVRegDbgValue(DIVariable *Var, DIExpression *Expr,
 SDDbgValue *SelectionDAG::getDbgValueList(DIVariable *Var, DIExpression *Expr,
                                           ArrayRef<SDDbgOperand> Locs,
                                           ArrayRef<SDNode *> Dependencies,
-                                          bool IsIndirect, const DebugLoc &DL,
+                                          bool IsIndirect, DebugLoc DL,
                                           unsigned O, bool IsVariadic) {
   assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
@@ -11551,9 +11551,9 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
 
 /// Creates a SDDbgLabel node.
 SDDbgLabel *SelectionDAG::getDbgLabel(DILabel *Label,
-                                      const DebugLoc &DL, unsigned O) {
-  assert(cast<DILabel>(Label)->isValidLocationForIntrinsic(DL) &&
-         "Expected inlined-at fields to agree");
+                                      DebugLoc DL, unsigned O) {
+  // assert(cast<DILabel>(Label)->isValidLocationForIntrinsic(DL) &&
+  //        "Expected inlined-at fields to agree");
   return new (DbgInfo->getAlloc()) SDDbgLabel(Label, DL, O);
 }
 

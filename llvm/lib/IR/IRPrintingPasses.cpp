@@ -13,6 +13,7 @@
 
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PrintPasses.h"

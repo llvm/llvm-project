@@ -42,7 +42,7 @@ static void errorUnsupported(SelectionDAG &DAG, const SDLoc &dl,
                              const char *Msg) {
   MachineFunction &MF = DAG.getMachineFunction();
   DAG.getContext()->diagnose(
-      DiagnosticInfoUnsupported(MF.getFunction(), Msg, dl.getDebugLoc()));
+      DiagnosticInfoUnsupported(MF.getFunction(), Msg, DILocRef(MF.getFunction().getSubprogram(), dl.getDebugLoc())));
 }
 
 /// Returns true if a CC can dynamically exclude a register from the list of

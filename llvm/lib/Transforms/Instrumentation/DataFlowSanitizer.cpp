@@ -79,6 +79,7 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -1069,16 +1070,17 @@ void DFSanFunction::addReachesFunctionCallbacksIfEnabled(IRBuilder<> &IRB,
   if (!ClReachesFunctionCallbacks) {
     return;
   }
-  const DebugLoc &dbgloc = I.getDebugLoc();
+  DILocRef dbgloc(I);
   Value *DataShadow = collapseToPrimitiveShadow(getShadow(Data), IRB);
   ConstantInt *CILine;
   llvm::Value *FilePathPtr;
 
-  if (dbgloc.get() == nullptr) {
+  if (!dbgloc) {
     CILine = llvm::ConstantInt::get(I.getContext(), llvm::APInt(32, 0));
     FilePathPtr = IRB.CreateGlobalString(
         I.getFunction()->getParent()->getSourceFileName());
   } else {
+    DISubprogram *SP = I.getFunction()->getSubprogram();
     CILine = llvm::ConstantInt::get(I.getContext(),
                                     llvm::APInt(32, dbgloc.getLine()));
     FilePathPtr = IRB.CreateGlobalString(dbgloc->getFilename());

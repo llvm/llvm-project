@@ -64,7 +64,7 @@ protected:
   /// determine label location to indicate scope boundaries in debug info.
   /// We track the previous instruction's source location (if not line 0),
   /// whether it was a label, and its parent BB.
-  DebugLoc PrevInstLoc;
+  DILocRef PrevInstLoc;
   MCSymbol *PrevLabel = nullptr;
   const MachineBasicBlock *PrevInstBB = nullptr;
 

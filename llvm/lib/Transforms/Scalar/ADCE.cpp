@@ -140,6 +140,7 @@ class AggressiveDeadCodeElimination {
 
   /// Debug info scopes around a live instruction.
   SmallPtrSet<const Metadata *, 32> AliveScopes;
+  SmallSet<DebugLoc, 32> VisitedLocs;
 
   /// Set of blocks with not known to have live terminators.
   SmallSetVector<BasicBlock *, 16> BlocksWithDeadTerminators;
@@ -174,7 +175,7 @@ class AggressiveDeadCodeElimination {
 
   /// Record the Debug Scopes which surround live debug information.
   void collectLiveScopes(const DILocalScope &LS);
-  void collectLiveScopes(const DILocation &DL);
+  void collectLiveScopes(DILocRef DL);
 
   /// Analyze dead branches to find those whose branches are the sources
   /// of control dependences impacting a live block. Those branches are
@@ -390,8 +391,8 @@ void AggressiveDeadCodeElimination::markLive(Instruction *I) {
   Worklist.push_back(I);
 
   // Collect the live debug info scopes attached to this instruction.
-  if (const DILocation *DL = I->getDebugLoc())
-    collectLiveScopes(*DL);
+  if (auto DL = DILocRef(*I))
+    collectLiveScopes(DL);
 
   // Mark the containing block live
   auto &BBInfo = *Info.Block;
@@ -433,18 +434,17 @@ void AggressiveDeadCodeElimination::collectLiveScopes(const DILocalScope &LS) {
   collectLiveScopes(cast<DILocalScope>(*LS.getScope()));
 }
 
-void AggressiveDeadCodeElimination::collectLiveScopes(const DILocation &DL) {
-  // Even though DILocations are not scopes, shove them into AliveScopes so we
-  // don't revisit them.
-  if (!AliveScopes.insert(&DL).second)
+void AggressiveDeadCodeElimination::collectLiveScopes(DILocRef DL) {
+  // Don't revisit locations.
+  if (!VisitedLocs.insert(DL.Index).second)
     return;
 
   // Collect live scopes from the scope chain.
   collectLiveScopes(*DL.getScope());
 
   // Tail-recurse through the inlined-at chain.
-  if (const DILocation *IA = DL.getInlinedAt())
-    collectLiveScopes(*IA);
+  if (auto IA = DL.getInlinedAt())
+    collectLiveScopes(IA);
 }
 
 void AggressiveDeadCodeElimination::markPhiLive(PHINode *PN) {
@@ -521,7 +521,7 @@ ADCEChanged AggressiveDeadCodeElimination::removeDeadInstructions() {
 
       if (auto *DII = dyn_cast<DbgVariableIntrinsic>(&I)) {
         // Check if the scope of this variable location is alive.
-        if (AliveScopes.count(DII->getDebugLoc()->getScope()))
+        if (AliveScopes.count(DII->getDebugLoc().getScope(F.getSubprogram())))
           continue;
 
         // If intrinsic is pointing at a live SSA value, there may be an
@@ -555,7 +555,7 @@ ADCEChanged AggressiveDeadCodeElimination::removeDeadInstructions() {
           DVR && DVR->isDbgAssign())
         if (!at::getAssignmentInsts(DVR).empty())
           continue;
-      if (AliveScopes.count(DR.getDebugLoc()->getScope()))
+      if (AliveScopes.count(DILocRef(DR)->getScope()))
         continue;
       I.dropOneDbgRecord(&DR);
     }
@@ -571,7 +571,7 @@ ADCEChanged AggressiveDeadCodeElimination::removeDeadInstructions() {
         if (!at::getAssignmentInsts(DAI).empty())
           continue;
       // Check if the scope of this variable location is alive.
-      if (AliveScopes.count(DII->getDebugLoc()->getScope()))
+      if (AliveScopes.count(DILocRef(*DII)->getScope()))
         continue;
 
       // Fallthrough and drop the intrinsic.
@@ -693,8 +693,8 @@ void AggressiveDeadCodeElimination::makeUnconditional(BasicBlock *BB,
                                                       BasicBlock *Target) {
   Instruction *PredTerm = BB->getTerminator();
   // Collect the live debug info scopes attached to this instruction.
-  if (const DILocation *DL = PredTerm->getDebugLoc())
-    collectLiveScopes(*DL);
+  if (auto DL = DILocRef(*PredTerm))
+    collectLiveScopes(DL);
 
   // Just mark live an existing unconditional branch
   if (isUnconditionalBranch(PredTerm)) {
@@ -707,7 +707,7 @@ void AggressiveDeadCodeElimination::makeUnconditional(BasicBlock *BB,
   IRBuilder<> Builder(PredTerm);
   auto *NewTerm = Builder.CreateBr(Target);
   InstInfo[NewTerm].Live = true;
-  if (const DILocation *DL = PredTerm->getDebugLoc())
+  if (DebugLoc DL = PredTerm->getDebugLoc())
     NewTerm->setDebugLoc(DL);
 
   InstInfo.erase(PredTerm);

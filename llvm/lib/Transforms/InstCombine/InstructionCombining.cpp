@@ -5041,9 +5041,7 @@ void InstCombinerImpl::tryToSinkInstructionDbgValues(
     if (isa<DbgDeclareInst>(User))
       continue;
 
-    DebugVariable DbgUserVariable =
-        DebugVariable(User->getVariable(), User->getExpression(),
-                      User->getDebugLoc()->getInlinedAt());
+    DebugVariable DbgUserVariable(User);
 
     if (!SunkVariables.insert(DbgUserVariable).second)
       continue;
@@ -5109,9 +5107,7 @@ void InstCombinerImpl::tryToSinkInstructionDbgVariableRecords(
     SmallDenseMap<InstVarPair, unsigned> CountMap;
     // Count how many assignments to each variable there is per instruction.
     for (DbgVariableRecord *DVR : DbgVariableRecordsToSink) {
-      DebugVariable DbgUserVariable =
-          DebugVariable(DVR->getVariable(), DVR->getExpression(),
-                        DVR->getDebugLoc()->getInlinedAt());
+      DebugVariable DbgUserVariable(DVR);
       CountMap[std::make_pair(DVR->getInstruction(), DbgUserVariable)] += 1;
     }
 
@@ -5130,9 +5126,7 @@ void InstCombinerImpl::tryToSinkInstructionDbgVariableRecords(
     for (const Instruction *Inst : DupSet) {
       for (DbgVariableRecord &DVR :
            llvm::reverse(filterDbgVars(Inst->getDbgRecordRange()))) {
-        DebugVariable DbgUserVariable =
-            DebugVariable(DVR.getVariable(), DVR.getExpression(),
-                          DVR.getDebugLoc()->getInlinedAt());
+        DebugVariable DbgUserVariable(&DVR);
         auto FilterIt =
             FilterOutMap.find(std::make_pair(Inst, DbgUserVariable));
         if (FilterIt == FilterOutMap.end())
@@ -5151,10 +5145,7 @@ void InstCombinerImpl::tryToSinkInstructionDbgVariableRecords(
   for (DbgVariableRecord *DVR : DbgVariableRecordsToSink) {
     if (DVR->Type == DbgVariableRecord::LocationType::Declare)
       continue;
-
-    DebugVariable DbgUserVariable =
-        DebugVariable(DVR->getVariable(), DVR->getExpression(),
-                      DVR->getDebugLoc()->getInlinedAt());
+    DebugVariable DbgUserVariable(DVR);
 
     // For any variable where there were multiple assignments in the same place,
     // ignore all but the last assignment.

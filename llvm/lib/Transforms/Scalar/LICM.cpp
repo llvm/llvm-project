@@ -2225,10 +2225,11 @@ bool llvm::promoteLoopAccessesToScalars(
   });
 
   // Look at all the loop uses, and try to merge their locations.
-  std::vector<DILocation *> LoopUsesLocs;
+  auto *SP = LoopUses[0]->getFunction()->getSubprogram();
+  std::vector<DebugLoc> LoopUsesLocs;
   for (auto *U : LoopUses)
-    LoopUsesLocs.push_back(U->getDebugLoc().get());
-  auto DL = DebugLoc(DILocation::getMergedLocations(LoopUsesLocs));
+    LoopUsesLocs.push_back(U->getDebugLoc());
+  auto DL = SP->getMergedLocations(LoopUsesLocs);
 
   // We use the SSAUpdater interface to insert phi nodes as required.
   SmallVector<PHINode *, 16> NewPHIs;

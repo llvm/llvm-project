@@ -296,7 +296,7 @@ bool MachinePipeliner::scheduleLoop(MachineLoop &L) {
     LLVM_DEBUG(dbgs() << "\n!!! Can not pipeline loop.\n");
     ORE->emit([&]() {
       return MachineOptimizationRemarkMissed(DEBUG_TYPE, "canPipelineLoop",
-                                             L.getStartLoc(), L.getHeader())
+                                             L.getStartLocRef(), L.getHeader())
              << "Failed to pipeline loop";
     });
 
@@ -370,7 +370,7 @@ bool MachinePipeliner::canPipelineLoop(MachineLoop &L) {
   if (L.getNumBlocks() != 1) {
     ORE->emit([&]() {
       return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "canPipelineLoop",
-                                               L.getStartLoc(), L.getHeader())
+                                               L.getStartLocRef(), L.getHeader())
              << "Not a single basic block: "
              << ore::NV("NumBlocks", L.getNumBlocks());
     });
@@ -380,7 +380,7 @@ bool MachinePipeliner::canPipelineLoop(MachineLoop &L) {
   if (disabledByPragma) {
     ORE->emit([&]() {
       return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "canPipelineLoop",
-                                               L.getStartLoc(), L.getHeader())
+                                               L.getStartLocRef(), L.getHeader())
              << "Disabled by Pragma.";
     });
     return false;
@@ -396,7 +396,7 @@ bool MachinePipeliner::canPipelineLoop(MachineLoop &L) {
     NumFailBranch++;
     ORE->emit([&]() {
       return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "canPipelineLoop",
-                                               L.getStartLoc(), L.getHeader())
+                                               L.getStartLocRef(), L.getHeader())
              << "The branch can't be understood";
     });
     return false;
@@ -410,7 +410,7 @@ bool MachinePipeliner::canPipelineLoop(MachineLoop &L) {
     NumFailLoop++;
     ORE->emit([&]() {
       return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "canPipelineLoop",
-                                               L.getStartLoc(), L.getHeader())
+                                               L.getStartLocRef(), L.getHeader())
              << "The loop structure is not supported";
     });
     return false;
@@ -421,7 +421,7 @@ bool MachinePipeliner::canPipelineLoop(MachineLoop &L) {
     NumFailPreheader++;
     ORE->emit([&]() {
       return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "canPipelineLoop",
-                                               L.getStartLoc(), L.getHeader())
+                                               L.getStartLocRef(), L.getHeader())
              << "No loop preheader found";
     });
     return false;
@@ -596,7 +596,7 @@ void SwingSchedulerDAG::schedule() {
     NumFailZeroMII++;
     Pass.ORE->emit([&]() {
       return MachineOptimizationRemarkAnalysis(
-                 DEBUG_TYPE, "schedule", Loop.getStartLoc(), Loop.getHeader())
+                 DEBUG_TYPE, "schedule", Loop.getStartLocRef(), Loop.getHeader())
              << "Invalid Minimal Initiation Interval: 0";
     });
     return;
@@ -609,7 +609,7 @@ void SwingSchedulerDAG::schedule() {
     NumFailLargeMaxMII++;
     Pass.ORE->emit([&]() {
       return MachineOptimizationRemarkAnalysis(
-                 DEBUG_TYPE, "schedule", Loop.getStartLoc(), Loop.getHeader())
+                 DEBUG_TYPE, "schedule", Loop.getStartLocRef(), Loop.getHeader())
              << "Minimal Initiation Interval too large: "
              << ore::NV("MII", (int)MII) << " > "
              << ore::NV("SwpMaxMii", SwpMaxMii) << "."
@@ -659,7 +659,7 @@ void SwingSchedulerDAG::schedule() {
     NumFailNoSchedule++;
     Pass.ORE->emit([&]() {
       return MachineOptimizationRemarkAnalysis(
-                 DEBUG_TYPE, "schedule", Loop.getStartLoc(), Loop.getHeader())
+                 DEBUG_TYPE, "schedule", Loop.getStartLocRef(), Loop.getHeader())
              << "Unable to find schedule";
     });
     return;
@@ -672,7 +672,7 @@ void SwingSchedulerDAG::schedule() {
     NumFailZeroStage++;
     Pass.ORE->emit([&]() {
       return MachineOptimizationRemarkAnalysis(
-                 DEBUG_TYPE, "schedule", Loop.getStartLoc(), Loop.getHeader())
+                 DEBUG_TYPE, "schedule", Loop.getStartLocRef(), Loop.getHeader())
              << "No need to pipeline - no overlapped iterations in schedule.";
     });
     return;
@@ -684,7 +684,7 @@ void SwingSchedulerDAG::schedule() {
     NumFailLargeMaxStage++;
     Pass.ORE->emit([&]() {
       return MachineOptimizationRemarkAnalysis(
-                 DEBUG_TYPE, "schedule", Loop.getStartLoc(), Loop.getHeader())
+                 DEBUG_TYPE, "schedule", Loop.getStartLocRef(), Loop.getHeader())
              << "Too many stages in schedule: "
              << ore::NV("numStages", (int)numStages) << " > "
              << ore::NV("SwpMaxStages", SwpMaxStages)
@@ -694,7 +694,7 @@ void SwingSchedulerDAG::schedule() {
   }
 
   Pass.ORE->emit([&]() {
-    return MachineOptimizationRemark(DEBUG_TYPE, "schedule", Loop.getStartLoc(),
+    return MachineOptimizationRemark(DEBUG_TYPE, "schedule", Loop.getStartLocRef(),
                                      Loop.getHeader())
            << "Pipelined succesfully!";
   });
@@ -2509,7 +2509,7 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
     Schedule.finalizeSchedule(this);
     Pass.ORE->emit([&]() {
       return MachineOptimizationRemarkAnalysis(
-                 DEBUG_TYPE, "schedule", Loop.getStartLoc(), Loop.getHeader())
+                 DEBUG_TYPE, "schedule", Loop.getStartLocRef(), Loop.getHeader())
              << "Schedule found with Initiation Interval: "
              << ore::NV("II", Schedule.getInitiationInterval())
              << ", MaxStageCount: "

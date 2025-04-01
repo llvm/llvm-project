@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"

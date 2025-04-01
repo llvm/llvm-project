@@ -66,6 +66,7 @@
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
@@ -451,11 +452,10 @@ struct VirtualCallSite {
   emitRemark(const StringRef OptName, const StringRef TargetName,
              function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter) {
     Function *F = CB.getCaller();
-    DebugLoc DLoc = CB.getDebugLoc();
     BasicBlock *Block = CB.getParent();
 
     using namespace ore;
-    OREGetter(F).emit(OptimizationRemark(DEBUG_TYPE, OptName, DLoc, Block)
+    OREGetter(F).emit(OptimizationRemark(DEBUG_TYPE, OptName, DILocRef(CB), Block)
                       << NV("Optimization", OptName)
                       << ": devirtualized a call to "
                       << NV("FunctionName", TargetName));
@@ -1985,7 +1985,7 @@ bool DevirtModule::areRemarksEnabled() {
   for (const Function &Fn : FL) {
     if (Fn.empty())
       continue;
-    auto DI = OptimizationRemark(DEBUG_TYPE, "", DebugLoc(), &Fn.front());
+    auto DI = OptimizationRemark(DEBUG_TYPE, "", DILocRef(), &Fn.front());
     return DI.isEnabled();
   }
   return false;

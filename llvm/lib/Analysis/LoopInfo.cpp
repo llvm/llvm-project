@@ -629,7 +629,10 @@ bool Loop::isAnnotatedParallel() const {
   return true;
 }
 
-DebugLoc Loop::getStartLoc() const { return getLocRange().getStart(); }
+DebugLoc Loop::getStartLoc() const { return getStartLocRef(); }
+DILocRefWrapper Loop::getStartLocRef() const {
+  return DILocRefWrapper(getBlocks().front()->getParent()->getSubprogram(), getLocRange().getStart());
+}
 
 Loop::LocRange Loop::getLocRange() const {
   // If we have a debug location in the loop ID, then use it.
@@ -639,11 +642,11 @@ Loop::LocRange Loop::getLocRange() const {
     // and if there is a second DebugLoc in the header we use it as end location
     // of the loop.
     for (const MDOperand &MDO : llvm::drop_begin(LoopID->operands())) {
-      if (DILocation *L = dyn_cast<DILocation>(MDO)) {
+      if (auto DLOpt = DebugLoc::fromMetadata(MDO)) {
         if (!Start)
-          Start = DebugLoc(L);
-        else
-          return LocRange(Start, DebugLoc(L));
+          Start = *DLOpt;
+        else 
+          return LocRange(Start, *DLOpt);
       }
     }
 

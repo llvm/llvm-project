@@ -21,6 +21,7 @@
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
@@ -293,6 +294,21 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
   CloneFunctionBodyInto(*NewFunc, *OldFunc, VMap, RemapFlag, Returns,
                         NameSuffix, CodeInfo, TypeMapper, Materializer,
                         &IdentityMD);
+
+  if (NewFunc->getSubprogram() && OldFunc->getSubprogram() && NewFunc->getSubprogram() != OldFunc->getSubprogram()) {
+    auto *NewSP = NewFunc->getSubprogram();
+    auto *OldSP = OldFunc->getSubprogram();
+    // Copy over the source location information as-is...
+    NewSP->FnSrcLocs = OldSP->FnSrcLocs;
+    NewSP->FnLocScopes = OldSP->FnLocScopes;
+    NewSP->FnInlinedAtSrcLocRanges = OldSP->FnInlinedAtSrcLocRanges;
+    NewSP->NonNormalFnSrcLocs = OldSP->NonNormalFnSrcLocs;
+    // ...and then apply the metadata remapping to our Scope references.
+    for (auto &LocScope : NewSP->FnLocScopes) {
+      LocScope.Scope = cast<DILocalScope>(MapMetadata(
+        LocScope.Scope, VMap, RemapFlag, TypeMapper, Materializer));
+    }
+  }
 
   // Only update !llvm.dbg.cu for DifferentModule (not CloneModule). In the
   // same module, the compile unit will already be listed (or not). When

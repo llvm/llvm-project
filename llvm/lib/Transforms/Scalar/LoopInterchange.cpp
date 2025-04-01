@@ -132,7 +132,7 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
                       << MaxMemInstrCount << " load/stores in a loop\n");
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedLoop",
-                                      L->getStartLoc(), L->getHeader())
+                                      L->getStartLocRef(), L->getHeader())
              << "Number of loads/stores exceeded, the supported maximum "
                 "can be increased with option "
                 "-loop-interchange-maxmeminstr-count.";
@@ -271,7 +271,7 @@ static bool hasSupportedLoopDepth(SmallVectorImpl<Loop *> &LoopList,
     Loop **OuterLoop = LoopList.begin();
     ORE.emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedLoopNestDepth",
-                                      (*OuterLoop)->getStartLoc(),
+                                      (*OuterLoop)->getStartLocRef(),
                                       (*OuterLoop)->getHeader())
              << "Unsupported depth of loop nest, the supported range is ["
              << std::to_string(MinLoopNestDepth) << ", "
@@ -552,7 +552,7 @@ struct LoopInterchange {
 
     ORE->emit([&]() {
       return OptimizationRemark(DEBUG_TYPE, "Interchanged",
-                                InnerLoop->getStartLoc(),
+                                InnerLoop->getStartLocRef(),
                                 InnerLoop->getHeader())
              << "Loop interchanged with enclosing loop.";
     });
@@ -821,7 +821,7 @@ bool LoopInterchangeLegality::currentLimitations() {
                << " supported currently.\n");
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "ExitingNotLatch",
-                                      OuterLoop->getStartLoc(),
+                                      OuterLoop->getStartLocRef(),
                                       OuterLoop->getHeader())
              << "Loops where the latch is not the exiting block cannot be"
                 " interchange currently.";
@@ -836,7 +836,7 @@ bool LoopInterchangeLegality::currentLimitations() {
                << "are supported currently.\n");
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedPHIOuter",
-                                      OuterLoop->getStartLoc(),
+                                      OuterLoop->getStartLocRef(),
                                       OuterLoop->getHeader())
              << "Only outer loops with induction or reduction PHI nodes can be"
                 " interchanged currently.";
@@ -858,7 +858,7 @@ bool LoopInterchangeLegality::currentLimitations() {
                 << "are supported currently.\n");
       ORE->emit([&]() {
         return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedPHIInner",
-                                        CurLevelLoop->getStartLoc(),
+                                        CurLevelLoop->getStartLocRef(),
                                         CurLevelLoop->getHeader())
               << "Only inner loops with induction or reduction PHI nodes can be"
                   " interchange currently.";
@@ -872,7 +872,7 @@ bool LoopInterchangeLegality::currentLimitations() {
     LLVM_DEBUG(dbgs() << "Loop structure not understood by pass\n");
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedStructureInner",
-                                      InnerLoop->getStartLoc(),
+                                      InnerLoop->getStartLocRef(),
                                       InnerLoop->getHeader())
              << "Inner loop structure not understood currently.";
     });
@@ -989,7 +989,7 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
                       << " due to dependence\n");
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "Dependence",
-                                      InnerLoop->getStartLoc(),
+                                      InnerLoop->getStartLocRef(),
                                       InnerLoop->getHeader())
              << "Cannot interchange loops due to dependences.";
     });
@@ -1007,7 +1007,7 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
                    << "safely.");
         ORE->emit([&]() {
           return OptimizationRemarkMissed(DEBUG_TYPE, "CallInst",
-                                          CI->getDebugLoc(),
+                                          DILocRef(*CI),
                                           CI->getParent())
                  << "Cannot interchange loops due to call instruction.";
         });
@@ -1024,7 +1024,7 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
     LLVM_DEBUG(dbgs() << "Found unsupported PHI nodes in inner loop latch.\n");
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedInnerLatchPHI",
-                                      InnerLoop->getStartLoc(),
+                                      InnerLoop->getStartLocRef(),
                                       InnerLoop->getHeader())
              << "Cannot interchange loops because unsupported PHI nodes found "
                 "in inner loop latch.";
@@ -1044,7 +1044,7 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
     LLVM_DEBUG(dbgs() << "Loops not tightly nested\n");
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "NotTightlyNested",
-                                      InnerLoop->getStartLoc(),
+                                      InnerLoop->getStartLocRef(),
                                       InnerLoop->getHeader())
              << "Cannot interchange loops because they are not tightly "
                 "nested.";
@@ -1057,7 +1057,7 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
     LLVM_DEBUG(dbgs() << "Found unsupported PHI nodes in inner loop exit.\n");
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedExitPHI",
-                                      InnerLoop->getStartLoc(),
+                                      InnerLoop->getStartLocRef(),
                                       InnerLoop->getHeader())
              << "Found unsupported PHI node in loop exit.";
     });
@@ -1068,7 +1068,7 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
     LLVM_DEBUG(dbgs() << "Found unsupported PHI nodes in outer loop exit.\n");
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedExitPHI",
-                                      OuterLoop->getStartLoc(),
+                                      OuterLoop->getStartLocRef(),
                                       OuterLoop->getHeader())
              << "Found unsupported PHI node in loop exit.";
     });
@@ -1246,7 +1246,7 @@ bool LoopInterchangeProfitability::isProfitable(
   if (!shouldInterchange.has_value()) {
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "InterchangeNotProfitable",
-                                      InnerLoop->getStartLoc(),
+                                      InnerLoop->getStartLocRef(),
                                       InnerLoop->getHeader())
              << "Insufficient information to calculate the cost of loop for "
                 "interchange.";
@@ -1255,7 +1255,7 @@ bool LoopInterchangeProfitability::isProfitable(
   } else if (!shouldInterchange.value()) {
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "InterchangeNotProfitable",
-                                      InnerLoop->getStartLoc(),
+                                      InnerLoop->getStartLocRef(),
                                       InnerLoop->getHeader())
              << "Interchanging loops is not considered to improve cache "
                 "locality nor vectorization.";
@@ -1805,7 +1805,7 @@ PreservedAnalyses LoopInterchangePass::run(LoopNest &LN,
 
   ORE.emit([&]() {
     return OptimizationRemarkAnalysis(DEBUG_TYPE, "Dependence",
-                                      LN.getOutermostLoop().getStartLoc(),
+                                      LN.getOutermostLoop().getStartLocRef(),
                                       LN.getOutermostLoop().getHeader())
            << "Computed dependence info, invoking the transform.";
   });

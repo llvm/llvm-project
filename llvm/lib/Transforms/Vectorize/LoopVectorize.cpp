@@ -838,14 +838,14 @@ static void debugVectorizationMessage(const StringRef Prefix,
 /// the remark. \return the remark object that can be streamed to.
 static OptimizationRemarkAnalysis
 createLVAnalysis(const char *PassName, StringRef RemarkName, Loop *TheLoop,
-                 Instruction *I, DebugLoc DL = {}) {
+                 Instruction *I, DILocRef DL = {}) {
   Value *CodeRegion = I ? I->getParent() : TheLoop->getHeader();
   // If debug location is attached to the instruction, use it. Otherwise if DL
   // was not provided, use the loop's.
   if (I && I->getDebugLoc())
-    DL = I->getDebugLoc();
+    DL = DILocRef(*I);
   else if (!DL)
-    DL = TheLoop->getStartLoc();
+    DL = TheLoop->getStartLocRef();
 
   return OptimizationRemarkAnalysis(PassName, RemarkName, DL, CodeRegion);
 }
@@ -882,7 +882,7 @@ void reportVectorizationFailure(const StringRef DebugMsg,
 static void reportVectorizationInfo(const StringRef Msg, const StringRef ORETag,
                                     OptimizationRemarkEmitter *ORE,
                                     Loop *TheLoop, Instruction *I = nullptr,
-                                    DebugLoc DL = {}) {
+                                    DILocRef DL = {}) {
   LLVM_DEBUG(debugVectorizationMessage("", Msg, I));
   LoopVectorizeHints Hints(TheLoop, true /* doesn't matter */, *ORE);
   ORE->emit(createLVAnalysis(Hints.vectorizeAnalysisPassName(), ORETag, TheLoop,
@@ -899,7 +899,7 @@ static void reportVectorization(OptimizationRemarkEmitter *ORE, Loop *TheLoop,
       nullptr));
   StringRef LoopType = TheLoop->isInnermost() ? "" : "outer ";
   ORE->emit([&]() {
-    return OptimizationRemark(LV_NAME, "Vectorized", TheLoop->getStartLoc(),
+    return OptimizationRemark(LV_NAME, "Vectorized", TheLoop->getStartLocRef(),
                               TheLoop->getHeader())
            << "vectorized " << LoopType << "loop (vectorization width: "
            << ore::NV("VectorizationFactor", VF.Width)
@@ -2615,7 +2615,7 @@ BasicBlock *InnerLoopVectorizer::emitMemRuntimeChecks(BasicBlock *Bypass) {
            "to vectorize.");
     ORE->emit([&]() {
       return OptimizationRemarkAnalysis(DEBUG_TYPE, "VectorizationCodeSize",
-                                        OrigLoop->getStartLoc(),
+                                        OrigLoop->getStartLocRef(),
                                         OrigLoop->getHeader())
              << "Code-size may be reduced by not forcing "
                 "vectorization, or by source-code modifications "
@@ -3851,7 +3851,7 @@ FixedScalableVFPair LoopVectorizationCostModel::computeFeasibleMaxVF(
                         << MaxSafeFixedVF << ".\n");
       ORE->emit([&]() {
         return OptimizationRemarkAnalysis(DEBUG_TYPE, "VectorizationFactor",
-                                          TheLoop->getStartLoc(),
+                                          TheLoop->getStartLocRef(),
                                           TheLoop->getHeader())
                << "User-specified vectorization factor "
                << ore::NV("UserVectorizationFactor", UserVF)
@@ -3867,7 +3867,7 @@ FixedScalableVFPair LoopVectorizationCostModel::computeFeasibleMaxVF(
                            "available.\n");
       ORE->emit([&]() {
         return OptimizationRemarkAnalysis(DEBUG_TYPE, "VectorizationFactor",
-                                          TheLoop->getStartLoc(),
+                                          TheLoop->getStartLocRef(),
                                           TheLoop->getHeader())
                << "User-specified vectorization factor "
                << ore::NV("UserVectorizationFactor", UserVF)
@@ -3879,7 +3879,7 @@ FixedScalableVFPair LoopVectorizationCostModel::computeFeasibleMaxVF(
                         << " is unsafe. Ignoring scalable UserVF.\n");
       ORE->emit([&]() {
         return OptimizationRemarkAnalysis(DEBUG_TYPE, "VectorizationFactor",
-                                          TheLoop->getStartLoc(),
+                                          TheLoop->getStartLocRef(),
                                           TheLoop->getHeader())
                << "User-specified vectorization factor "
                << ore::NV("UserVectorizationFactor", UserVF)
@@ -4429,7 +4429,7 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
       } else
         OS << " " << Instruction::getOpcodeName(Opcode);
       reportVectorizationInfo(OutString, "InvalidCost", ORE, OrigLoop, nullptr,
-                              R->getDebugLoc());
+                              DILocRef());// TODO: Fix up Vectorizer support. R->getDebugLoc());
       Tail = Tail.drop_front(Subset.size());
       Subset = {};
     } else
@@ -7710,7 +7710,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // Perform the actual loop transformation.
   VPTransformState State(&TTI, BestVF, BestUF, LI, DT, ILV.Builder, &ILV,
                          &BestVPlan, OrigLoop->getParentLoop(),
-                         Legal->getWidestInductionType());
+                         Legal->getWidestInductionType(), OrigLoop->getHeader()->getParent()->getSubprogram());
 
 #ifdef EXPENSIVE_CHECKS
   assert(DT->verify(DominatorTree::VerificationLevel::Fast));
@@ -10172,7 +10172,7 @@ static void checkMixedPrecision(Loop *L, OptimizationRemarkEmitter *ORE) {
     if (isa<FPExtInst>(I) && EmittedRemark.insert(I).second)
       ORE->emit([&]() {
         return OptimizationRemarkAnalysis(LV_NAME, "VectorMixedPrecision",
-                                          I->getDebugLoc(), L->getHeader())
+                                          DILocRef(*I), L->getHeader())
                << "floating point conversion changes vector width. "
                << "Mixed floating point precision requires an up/down "
                << "cast that will negatively impact performance.";
@@ -10675,7 +10675,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     ORE->emit([&]() {
       auto *ExactFPMathInst = Requirements.getExactFPInst();
       return OptimizationRemarkAnalysisFPCommute(DEBUG_TYPE, "CantReorderFPOps",
-                                                 ExactFPMathInst->getDebugLoc(),
+                                                 DILocRef(*ExactFPMathInst),
                                                  ExactFPMathInst->getParent())
              << "loop not vectorized: cannot prove it is safe to reorder "
                 "floating-point operations";
@@ -10730,7 +10730,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                      CM.getVScaleForTuning())) {
       ORE->emit([&]() {
         return OptimizationRemarkAnalysisAliasing(
-                   DEBUG_TYPE, "CantReorderMemOps", L->getStartLoc(),
+                   DEBUG_TYPE, "CantReorderMemOps", L->getStartLocRef(),
                    L->getHeader())
                << "loop not vectorized: cannot prove it is safe to reorder "
                   "memory operations";
@@ -10806,12 +10806,12 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     // Do not vectorize or interleaving the loop.
     ORE->emit([&]() {
       return OptimizationRemarkMissed(VAPassName, VecDiagMsg.first,
-                                      L->getStartLoc(), L->getHeader())
+                                      L->getStartLocRef(), L->getHeader())
              << VecDiagMsg.second;
     });
     ORE->emit([&]() {
       return OptimizationRemarkMissed(LV_NAME, IntDiagMsg.first,
-                                      L->getStartLoc(), L->getHeader())
+                                      L->getStartLocRef(), L->getHeader())
              << IntDiagMsg.second;
     });
     return false;
@@ -10821,7 +10821,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     LLVM_DEBUG(dbgs() << "LV: Interleave Count is " << IC << '\n');
     ORE->emit([&]() {
       return OptimizationRemarkAnalysis(VAPassName, VecDiagMsg.first,
-                                        L->getStartLoc(), L->getHeader())
+                                        L->getStartLocRef(), L->getHeader())
              << VecDiagMsg.second;
     });
   } else if (VectorizeLoop && !InterleaveLoop) {
@@ -10829,7 +10829,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                       << ") in " << L->getLocStr() << '\n');
     ORE->emit([&]() {
       return OptimizationRemarkAnalysis(LV_NAME, IntDiagMsg.first,
-                                        L->getStartLoc(), L->getHeader())
+                                        L->getStartLocRef(), L->getHeader())
              << IntDiagMsg.second;
     });
   } else if (VectorizeLoop && InterleaveLoop) {
@@ -10854,7 +10854,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       LVP.executePlan(VF.Width, IC, BestPlan, Unroller, DT, false);
 
       ORE->emit([&]() {
-        return OptimizationRemark(LV_NAME, "Interleaved", L->getStartLoc(),
+        return OptimizationRemark(LV_NAME, "Interleaved", L->getStartLocRef(),
                                   L->getHeader())
                << "interleaved loop (interleaved count: "
                << NV("InterleaveCount", IC) << ")";

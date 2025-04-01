@@ -691,9 +691,9 @@ void Verifier::visitDbgRecords(Instruction &I) {
   for (DbgRecord &DR : I.getDbgRecordRange()) {
     CheckDI(DR.getMarker() == I.DebugMarker,
             "DbgRecord had invalid DebugMarker", &I, &DR);
-    if (auto *Loc =
-            dyn_cast_or_null<DILocation>(DR.getDebugLoc().getAsMDNode()))
-      visitMDNode(*Loc, AreDebugLocsAllowed::Yes);
+    // if (auto *Loc =
+    //         dyn_cast_or_null<DILocation>(DR.getDebugLoc().getAsMDNode()))
+    //   visitMDNode(*Loc, AreDebugLocsAllowed::Yes);
     if (auto *DVR = dyn_cast<DbgVariableRecord>(&DR)) {
       visit(*DVR);
       // These have to appear after `visit` for consistency with existing
@@ -1065,8 +1065,6 @@ void Verifier::visitMDNode(const MDNode &MD, AreDebugLocsAllowed AllowLocs) {
       continue;
     Check(!isa<LocalAsMetadata>(Op), "Invalid operand for global metadata!",
           &MD, Op);
-    CheckDI(!isa<DILocation>(Op) || AllowLocs == AreDebugLocsAllowed::Yes,
-            "DILocation not allowed within this metadata node", &MD, Op);
     if (auto *N = dyn_cast<MDNode>(Op)) {
       visitMDNode(*N, AllowLocs);
       continue;
@@ -1137,12 +1135,13 @@ static bool isScope(const Metadata *MD) { return !MD || isa<DIScope>(MD); }
 static bool isDINode(const Metadata *MD) { return !MD || isa<DINode>(MD); }
 
 void Verifier::visitDILocation(const DILocation &N) {
-  CheckDI(N.getRawScope() && isa<DILocalScope>(N.getRawScope()),
-          "location requires a valid scope", &N, N.getRawScope());
-  if (auto *IA = N.getRawInlinedAt())
-    CheckDI(isa<DILocation>(IA), "inlined-at should be a location", &N, IA);
-  if (auto *SP = dyn_cast<DISubprogram>(N.getRawScope()))
-    CheckDI(SP->isDefinition(), "scope points into the type hierarchy", &N);
+  CheckDI(false, "There should be no DILocations left.");
+  // CheckDI(N.getRawScope() && isa<DILocalScope>(N.getRawScope()),
+  //         "location requires a valid scope", &N, N.getRawScope());
+  // if (auto *IA = N.getRawInlinedAt())
+  //   CheckDI(isa<DILocation>(IA), "inlined-at should be a location", &N, IA);
+  // if (auto *SP = dyn_cast<DISubprogram>(N.getRawScope()))
+  //   CheckDI(SP->isDefinition(), "scope points into the type hierarchy", &N);
 }
 
 void Verifier::visitGenericDINode(const GenericDINode &N) {
@@ -3108,13 +3107,14 @@ void Verifier::visitFunction(const Function &F) {
             "!dbg attachment points at wrong subprogram for function", N, &F,
             &I, DL, Scope, SP);
   };
+  // TODO: Figure out what checks, if any, should replace these.
   for (auto &BB : F)
     for (auto &I : BB) {
-      VisitDebugLoc(I, I.getDebugLoc().getAsMDNode());
+      // VisitDebugLoc(I, I.getDebugLoc().getAsMDNode());
       // The llvm.loop annotations also contain two DILocations.
-      if (auto MD = I.getMetadata(LLVMContext::MD_loop))
-        for (unsigned i = 1; i < MD->getNumOperands(); ++i)
-          VisitDebugLoc(I, dyn_cast_or_null<MDNode>(MD->getOperand(i)));
+      // if (auto MD = I.getMetadata(LLVMContext::MD_loop))
+      //   for (unsigned i = 1; i < MD->getNumOperands(); ++i)
+      //     VisitDebugLoc(I, dyn_cast_or_null<MDNode>(MD->getOperand(i)));
       if (BrokenDebugInfo)
         return;
     }
@@ -5360,10 +5360,10 @@ void Verifier::visitInstruction(Instruction &I) {
   if (MDNode *Annotation = I.getMetadata(LLVMContext::MD_annotation))
     visitAnnotationMetadata(Annotation);
 
-  if (MDNode *N = I.getDebugLoc().getAsMDNode()) {
-    CheckDI(isa<DILocation>(N), "invalid !dbg metadata attachment", &I, N);
-    visitMDNode(*N, AreDebugLocsAllowed::Yes);
-  }
+  // if (MDNode *N = I.getDebugLoc().getAsMDNode()) {
+  //   CheckDI(isa<DILocation>(N), "invalid !dbg metadata attachment", &I, N);
+  //   visitMDNode(*N, AreDebugLocsAllowed::Yes);
+  // }
 
   if (auto *DII = dyn_cast<DbgVariableIntrinsic>(&I)) {
     verifyFragmentExpression(*DII);
@@ -6603,27 +6603,27 @@ void Verifier::visit(DbgLabelRecord &DLR) {
           "invalid #dbg_label intrinsic variable", &DLR, DLR.getRawLabel());
 
   // Ignore broken !dbg attachments; they're checked elsewhere.
-  if (MDNode *N = DLR.getDebugLoc().getAsMDNode())
-    if (!isa<DILocation>(N))
-      return;
+  // if (MDNode *N = DLR.getDebugLoc().getAsMDNode())
+  //   if (!isa<DILocation>(N))
+  //     return;
 
   BasicBlock *BB = DLR.getParent();
   Function *F = BB ? BB->getParent() : nullptr;
 
   // The scopes for variables and !dbg attachments must agree.
   DILabel *Label = DLR.getLabel();
-  DILocation *Loc = DLR.getDebugLoc();
-  CheckDI(Loc, "#dbg_label record requires a !dbg attachment", &DLR, BB, F);
+  // DILocation *Loc = DLR.getDebugLoc();
+  // CheckDI(Loc, "#dbg_label record requires a !dbg attachment", &DLR, BB, F);
 
   DISubprogram *LabelSP = getSubprogram(Label->getRawScope());
-  DISubprogram *LocSP = getSubprogram(Loc->getRawScope());
-  if (!LabelSP || !LocSP)
-    return;
+  // DISubprogram *LocSP = getSubprogram(Loc->getRawScope());
+  // if (!LabelSP || !LocSP)
+  //   return;
 
-  CheckDI(LabelSP == LocSP,
-          "mismatched subprogram between #dbg_label label and !dbg attachment",
-          &DLR, BB, F, Label, Label->getScope()->getSubprogram(), Loc,
-          Loc->getScope()->getSubprogram());
+  // CheckDI(LabelSP == LocSP,
+  //         "mismatched subprogram between #dbg_label label and !dbg attachment",
+  //         &DLR, BB, F, Label, Label->getScope()->getSubprogram(), Loc,
+  //         Loc->getScope()->getSubprogram());
 }
 
 void Verifier::visit(DbgVariableRecord &DVR) {
@@ -6688,21 +6688,21 @@ void Verifier::visit(DbgVariableRecord &DVR) {
   CheckDI(isType(Var->getRawType()), "invalid type ref", Var,
           Var->getRawType());
 
-  auto *DLNode = DVR.getDebugLoc().getAsMDNode();
-  CheckDI(isa_and_nonnull<DILocation>(DLNode), "invalid #dbg record DILocation",
-          &DVR, DLNode);
-  DILocation *Loc = DVR.getDebugLoc();
+  // auto *DLNode = DVR.getDebugLoc().getAsMDNode();
+  // CheckDI(isa_and_nonnull<DILocation>(DLNode), "invalid #dbg record DILocation",
+  //         &DVR, DLNode);
+  // DILocation *Loc = DVR.getDebugLoc();
 
   // The scopes for variables and !dbg attachments must agree.
   DISubprogram *VarSP = getSubprogram(Var->getRawScope());
-  DISubprogram *LocSP = getSubprogram(Loc->getRawScope());
-  if (!VarSP || !LocSP)
-    return; // Broken scope chains are checked elsewhere.
+  // DISubprogram *LocSP = getSubprogram(Loc->getRawScope());
+  // if (!VarSP || !LocSP)
+  //   return; // Broken scope chains are checked elsewhere.
 
-  CheckDI(VarSP == LocSP,
-          "mismatched subprogram between #dbg record variable and DILocation",
-          &DVR, BB, F, Var, Var->getScope()->getSubprogram(), Loc,
-          Loc->getScope()->getSubprogram());
+  // CheckDI(VarSP == LocSP,
+  //         "mismatched subprogram between #dbg record variable and DILocation",
+  //         &DVR, BB, F, Var, Var->getScope()->getSubprogram(), Loc,
+  //         Loc->getScope()->getSubprogram());
 
   verifyFnArgs(DVR);
 }
@@ -6975,29 +6975,29 @@ void Verifier::visitDbgIntrinsic(StringRef Kind, DbgVariableIntrinsic &DII) {
   }
 
   // Ignore broken !dbg attachments; they're checked elsewhere.
-  if (MDNode *N = DII.getDebugLoc().getAsMDNode())
-    if (!isa<DILocation>(N))
-      return;
+  // if (MDNode *N = DII.getDebugLoc().getAsMDNode())
+  //   if (!isa<DILocation>(N))
+  //     return;
 
   BasicBlock *BB = DII.getParent();
   Function *F = BB ? BB->getParent() : nullptr;
 
   // The scopes for variables and !dbg attachments must agree.
   DILocalVariable *Var = DII.getVariable();
-  DILocation *Loc = DII.getDebugLoc();
-  CheckDI(Loc, "llvm.dbg." + Kind + " intrinsic requires a !dbg attachment",
-          &DII, BB, F);
+  // DILocation *Loc = DII.getDebugLoc();
+  // CheckDI(Loc, "llvm.dbg." + Kind + " intrinsic requires a !dbg attachment",
+  //         &DII, BB, F);
 
-  DISubprogram *VarSP = getSubprogram(Var->getRawScope());
-  DISubprogram *LocSP = getSubprogram(Loc->getRawScope());
-  if (!VarSP || !LocSP)
-    return; // Broken scope chains are checked elsewhere.
+  // DISubprogram *VarSP = getSubprogram(Var->getRawScope());
+  // DISubprogram *LocSP = getSubprogram(Loc->getRawScope());
+  // if (!VarSP || !LocSP)
+  //   return; // Broken scope chains are checked elsewhere.
 
-  CheckDI(VarSP == LocSP,
-          "mismatched subprogram between llvm.dbg." + Kind +
-              " variable and !dbg attachment",
-          &DII, BB, F, Var, Var->getScope()->getSubprogram(), Loc,
-          Loc->getScope()->getSubprogram());
+  // CheckDI(VarSP == LocSP,
+  //         "mismatched subprogram between llvm.dbg." + Kind +
+  //             " variable and !dbg attachment",
+  //         &DII, BB, F, Var, Var->getScope()->getSubprogram(), Loc,
+  //         Loc->getScope()->getSubprogram());
 
   // This check is redundant with one in visitLocalVariable().
   CheckDI(isType(Var->getRawType()), "invalid type ref", Var,
@@ -7011,29 +7011,29 @@ void Verifier::visitDbgLabelIntrinsic(StringRef Kind, DbgLabelInst &DLI) {
           DLI.getRawLabel());
 
   // Ignore broken !dbg attachments; they're checked elsewhere.
-  if (MDNode *N = DLI.getDebugLoc().getAsMDNode())
-    if (!isa<DILocation>(N))
-      return;
+  // if (MDNode *N = DLI.getDebugLoc().getAsMDNode())
+  //   if (!isa<DILocation>(N))
+  //     return;
 
   BasicBlock *BB = DLI.getParent();
   Function *F = BB ? BB->getParent() : nullptr;
 
   // The scopes for variables and !dbg attachments must agree.
   DILabel *Label = DLI.getLabel();
-  DILocation *Loc = DLI.getDebugLoc();
-  Check(Loc, "llvm.dbg." + Kind + " intrinsic requires a !dbg attachment", &DLI,
-        BB, F);
+  // DILocation *Loc = DLI.getDebugLoc();
+  // Check(Loc, "llvm.dbg." + Kind + " intrinsic requires a !dbg attachment", &DLI,
+  //       BB, F);
 
-  DISubprogram *LabelSP = getSubprogram(Label->getRawScope());
-  DISubprogram *LocSP = getSubprogram(Loc->getRawScope());
-  if (!LabelSP || !LocSP)
-    return;
+  // DISubprogram *LabelSP = getSubprogram(Label->getRawScope());
+  // DISubprogram *LocSP = getSubprogram(Loc->getRawScope());
+  // if (!LabelSP || !LocSP)
+  //   return;
 
-  CheckDI(LabelSP == LocSP,
-          "mismatched subprogram between llvm.dbg." + Kind +
-              " label and !dbg attachment",
-          &DLI, BB, F, Label, Label->getScope()->getSubprogram(), Loc,
-          Loc->getScope()->getSubprogram());
+  // CheckDI(LabelSP == LocSP,
+  //         "mismatched subprogram between llvm.dbg." + Kind +
+  //             " label and !dbg attachment",
+  //         &DLI, BB, F, Label, Label->getScope()->getSubprogram(), Loc,
+  //         Loc->getScope()->getSubprogram());
 }
 
 void Verifier::verifyFragmentExpression(const DbgVariableIntrinsic &I) {
@@ -7110,7 +7110,7 @@ void Verifier::verifyFnArgs(const DbgVariableIntrinsic &I) {
     return;
 
   // For performance reasons only check non-inlined ones.
-  if (I.getDebugLoc()->getInlinedAt())
+  if (DILocRef(I)->getInlinedAt())
     return;
 
   DILocalVariable *Var = I.getVariable();
@@ -7138,7 +7138,7 @@ void Verifier::verifyFnArgs(const DbgVariableRecord &DVR) {
     return;
 
   // For performance reasons only check non-inlined ones.
-  if (DVR.getDebugLoc()->getInlinedAt())
+  if (DILocRef(DVR)->getInlinedAt())
     return;
 
   DILocalVariable *Var = DVR.getVariable();

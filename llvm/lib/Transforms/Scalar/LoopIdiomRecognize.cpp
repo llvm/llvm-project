@@ -1156,7 +1156,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
 
   ORE.emit([&]() {
     OptimizationRemark R(DEBUG_TYPE, "ProcessLoopStridedStore",
-                         NewCall->getDebugLoc(), Preheader);
+                         DILocRef(*NewCall), Preheader);
     R << "Transformed loop-strided store in "
       << ore::NV("Function", TheStore->getFunction())
       << " function into a call to "
@@ -1462,7 +1462,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
 
   ORE.emit([&]() {
     return OptimizationRemark(DEBUG_TYPE, "ProcessLoopStoreOfLoopLoad",
-                              NewCall->getDebugLoc(), Preheader)
+                              DILocRef(*NewCall), Preheader)
            << "Formed a call to "
            << ore::NV("NewFunction", NewCall->getCalledFunction())
            << "() intrinsic from " << ore::NV("Inst", InstRemark)
@@ -1810,7 +1810,7 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
   LLVM_DEBUG(dbgs() << "  Formed strlen idiom: " << *StrLenFunc << "\n");
   ORE.emit([&]() {
     return OptimizationRemark(DEBUG_TYPE, "recognizeAndInsertStrLen",
-                              CurLoop->getStartLoc(), Preheader)
+                              CurLoop->getStartLocRef(), Preheader)
            << "Transformed " << StrLenFunc->getName() << " loop idiom";
   });
 

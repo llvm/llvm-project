@@ -292,7 +292,7 @@ class UserValue {
   const DILocalVariable *Variable; ///< The debug info variable we are part of.
   /// The part of the variable we describe.
   const std::optional<DIExpression::FragmentInfo> Fragment;
-  DebugLoc dl;            ///< The debug location for the variable. This is
+  DILocRef dl;            ///< The debug location for the variable. This is
                           ///< used by dwarf writer to find lexical scope.
   UserValue *leader;      ///< Equivalence class leader.
   UserValue *next = nullptr; ///< Next value in equivalence class, or null.
@@ -324,9 +324,9 @@ class UserValue {
 public:
   /// Create a new UserValue.
   UserValue(const DILocalVariable *var,
-            std::optional<DIExpression::FragmentInfo> Fragment, DebugLoc L,
+            std::optional<DIExpression::FragmentInfo> Fragment, DILocRef L,
             LocMap::Allocator &alloc)
-      : Variable(var), Fragment(Fragment), dl(std::move(L)), leader(this),
+      : Variable(var), Fragment(Fragment), dl(L), leader(this),
         locInts(alloc) {}
 
   /// Get the leader of this value's equivalence class.
@@ -494,7 +494,8 @@ public:
                        BlockSkipInstsMap &BBSkipInstsMap);
 
   /// Return DebugLoc of this UserValue.
-  const DebugLoc &getDebugLoc() { return dl; }
+  DebugLoc getDebugLoc() { return dl; }
+  DILocRef getDILocRef() { return dl; }
 
   void print(raw_ostream &, const TargetRegisterInfo *);
 };
@@ -502,7 +503,7 @@ public:
 /// A user label is a part of a debug info user label.
 class UserLabel {
   const DILabel *Label; ///< The debug info label we are part of.
-  DebugLoc dl;          ///< The debug location for the label. This is
+  DILocRef dl;          ///< The debug location for the label. This is
                         ///< used by dwarf writer to find lexical scope.
   SlotIndex loc;        ///< Slot used by the debug label.
 
@@ -513,13 +514,13 @@ class UserLabel {
 
 public:
   /// Create a new UserLabel.
-  UserLabel(const DILabel *label, DebugLoc L, SlotIndex Idx)
-      : Label(label), dl(std::move(L)), loc(Idx) {}
+  UserLabel(const DILabel *label, DILocRef L, SlotIndex Idx)
+      : Label(label), dl(L), loc(Idx) {}
 
   /// Does this UserLabel match the parameters?
-  bool matches(const DILabel *L, const DILocation *IA,
-             const SlotIndex Index) const {
-    return Label == L && dl->getInlinedAt() == IA && loc == Index;
+  bool matches(const DILabel *L, DILocRef IA,
+               const SlotIndex Index) const {
+    return Label == L && dl.getInlinedAt() == IA && loc == Index;
   }
 
   /// Recreate DBG_LABEL instruction from data structures.
@@ -527,7 +528,8 @@ public:
                       BlockSkipInstsMap &BBSkipInstsMap);
 
   /// Return DebugLoc of this UserLabel.
-  const DebugLoc &getDebugLoc() { return dl; }
+  DebugLoc getDebugLoc() { return dl; }
+  DILocRef getDILocRef() { return dl; }
 
   void print(raw_ostream &, const TargetRegisterInfo *);
 };
@@ -597,7 +599,7 @@ class LiveDebugVariables::LDVImpl {
   /// Find or create a UserValue.
   UserValue *getUserValue(const DILocalVariable *Var,
                           std::optional<DIExpression::FragmentInfo> Fragment,
-                          const DebugLoc &DL);
+                          DILocRef DL);
 
   /// Find the EC leader for VirtReg or null.
   UserValue *lookupVirtReg(Register VirtReg);
@@ -685,7 +687,7 @@ public:
 
 } // namespace llvm
 
-static void printDebugLoc(const DebugLoc &DL, raw_ostream &CommentOS,
+static void printDebugLoc(DILocRef DL, raw_ostream &CommentOS,
                           const LLVMContext &Ctx) {
   if (!DL)
     return;
@@ -697,7 +699,7 @@ static void printDebugLoc(const DebugLoc &DL, raw_ostream &CommentOS,
   if (DL.getCol() != 0)
     CommentOS << ':' << DL.getCol();
 
-  DebugLoc InlinedAtDL = DL.getInlinedAt();
+  DILocRef InlinedAtDL = DL.getInlinedAt();
   if (!InlinedAtDL)
     return;
 
@@ -707,7 +709,7 @@ static void printDebugLoc(const DebugLoc &DL, raw_ostream &CommentOS,
 }
 
 static void printExtendedName(raw_ostream &OS, const DINode *Node,
-                              const DILocation *DL) {
+                              DILocRef DL) {
   const LLVMContext &Ctx = Node->getContext();
   StringRef Res;
   unsigned Line = 0;
@@ -721,13 +723,11 @@ static void printExtendedName(raw_ostream &OS, const DINode *Node,
 
   if (!Res.empty())
     OS << Res << "," << Line;
-  auto *InlinedAt = DL ? DL->getInlinedAt() : nullptr;
+  auto InlinedAt = DL ? DL->getInlinedAt() : nullptr;
   if (InlinedAt) {
-    if (DebugLoc InlinedAtDL = InlinedAt) {
-      OS << " @[";
-      printDebugLoc(InlinedAtDL, OS, Ctx);
-      OS << "]";
-    }
+    OS << " @[";
+    printDebugLoc(InlinedAt, OS, Ctx);
+    OS << "]";
   }
 }
 
@@ -781,7 +781,7 @@ void UserValue::mapVirtRegs(LiveDebugVariables::LDVImpl *LDV) {
 
 UserValue *LiveDebugVariables::LDVImpl::getUserValue(
     const DILocalVariable *Var,
-    std::optional<DIExpression::FragmentInfo> Fragment, const DebugLoc &DL) {
+    std::optional<DIExpression::FragmentInfo> Fragment, DILocRef DL) {
   // FIXME: Handle partially overlapping fragments. See
   // https://reviews.llvm.org/D70121#1849741.
   DebugVariable ID(Var, Fragment, DL->getInlinedAt());
@@ -865,7 +865,7 @@ bool LiveDebugVariables::LDVImpl::handleDebugValue(MachineInstr &MI,
   bool IsList = MI.isDebugValueList();
   const DILocalVariable *Var = MI.getDebugVariable();
   const DIExpression *Expr = MI.getDebugExpression();
-  UserValue *UV = getUserValue(Var, Expr->getFragmentInfo(), MI.getDebugLoc());
+  UserValue *UV = getUserValue(Var, Expr->getFragmentInfo(), DILocRef(MI));
   if (!Discard)
     UV->addDef(Idx,
                ArrayRef<MachineOperand>(MI.debug_operands().begin(),
@@ -914,7 +914,7 @@ bool LiveDebugVariables::LDVImpl::handleDebugLabel(MachineInstr &MI,
 
   // Get or create the UserLabel for label here.
   const DILabel *Label = MI.getDebugLabel();
-  const DebugLoc &DL = MI.getDebugLoc();
+  DILocRef DL(MI);
   bool Found = false;
   for (auto const &L : userLabels) {
     if (L->matches(Label, DL->getInlinedAt(), Idx)) {

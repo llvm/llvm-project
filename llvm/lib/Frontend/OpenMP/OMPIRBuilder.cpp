@@ -34,6 +34,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -980,26 +981,26 @@ OpenMPIRBuilder::getOrCreateDefaultSrcLocStr(uint32_t &SrcLocStrSize) {
   return getOrCreateSrcLocStr(UnknownLoc, SrcLocStrSize);
 }
 
-Constant *OpenMPIRBuilder::getOrCreateSrcLocStr(DebugLoc DL,
+Constant *OpenMPIRBuilder::getOrCreateSrcLocStr(DILocRefWrapper DLW,
                                                 uint32_t &SrcLocStrSize,
                                                 Function *F) {
-  DILocation *DIL = DL.get();
-  if (!DIL)
+  DILocRef DL = DLW;
+  if (!DL)
     return getOrCreateDefaultSrcLocStr(SrcLocStrSize);
   StringRef FileName = M.getName();
-  if (DIFile *DIF = DIL->getFile())
+  if (DIFile *DIF = DL.getFile())
     if (std::optional<StringRef> Source = DIF->getSource())
       FileName = *Source;
-  StringRef Function = DIL->getScope()->getSubprogram()->getName();
+  StringRef Function = DL.getScope()->getSubprogram()->getName();
   if (Function.empty() && F)
     Function = F->getName();
-  return getOrCreateSrcLocStr(Function, FileName, DIL->getLine(),
-                              DIL->getColumn(), SrcLocStrSize);
+  return getOrCreateSrcLocStr(Function, FileName, DL.getLine(),
+                              DL.getColumn(), SrcLocStrSize);
 }
 
 Constant *OpenMPIRBuilder::getOrCreateSrcLocStr(const LocationDescription &Loc,
                                                 uint32_t &SrcLocStrSize) {
-  return getOrCreateSrcLocStr(Loc.DL, SrcLocStrSize,
+  return getOrCreateSrcLocStr(DILocRefWrapper(Loc.IP.getBlock()->getParent()->getSubprogram(), Loc.DL), SrcLocStrSize,
                               Loc.IP.getBlock()->getParent());
 }
 
@@ -4140,7 +4141,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyStaticWorkshareLoop(
   Builder.SetCurrentDebugLocation(DL);
 
   uint32_t SrcLocStrSize;
-  Constant *SrcLocStr = getOrCreateSrcLocStr(DL, SrcLocStrSize);
+  Constant *SrcLocStr = getOrCreateSrcLocStr(DILocRefWrapper(AllocaIP.getBlock()->getParent()->getSubprogram(), DL), SrcLocStrSize);
   Value *SrcLoc = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
 
   // Declare useful OpenMP runtime functions.
@@ -4289,7 +4290,7 @@ OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(DebugLoc DL,
   // Call the "init" function and update the trip count of the loop with the
   // value it produced.
   uint32_t SrcLocStrSize;
-  Constant *SrcLocStr = getOrCreateSrcLocStr(DL, SrcLocStrSize);
+  Constant *SrcLocStr = getOrCreateSrcLocStr(DILocRefWrapper(AllocaIP.getBlock()->getParent()->getSubprogram(), DL), SrcLocStrSize);
   Value *SrcLoc = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
   Value *ThreadNum = getOrCreateThreadID(SrcLoc);
   Builder.CreateCall(StaticInit,
@@ -4531,7 +4532,7 @@ OpenMPIRBuilder::applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
                                           InsertPointTy AllocaIP,
                                           WorksharingLoopType LoopType) {
   uint32_t SrcLocStrSize;
-  Constant *SrcLocStr = getOrCreateSrcLocStr(DL, SrcLocStrSize);
+  Constant *SrcLocStr = getOrCreateSrcLocStr(DILocRefWrapper(AllocaIP.getBlock()->getParent()->getSubprogram(), DL), SrcLocStrSize);
   Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
 
   OutlineInfo OI;
@@ -4739,7 +4740,7 @@ OpenMPIRBuilder::applyDynamicWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
   Builder.SetCurrentDebugLocation(DL);
 
   uint32_t SrcLocStrSize;
-  Constant *SrcLocStr = getOrCreateSrcLocStr(DL, SrcLocStrSize);
+  Constant *SrcLocStr = getOrCreateSrcLocStr(DILocRefWrapper(AllocaIP.getBlock()->getParent()->getSubprogram(), DL), SrcLocStrSize);
   Value *SrcLoc = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
 
   // Declare useful OpenMP runtime functions.
@@ -6835,8 +6836,7 @@ static void FixupDebugInfoForOutlinedFunction(
     DILocalVariable *Var = DB.createParameterVariable(
         NewSP, "dyn_ptr", /*ArgNo*/ 1, NewSP->getFile(), /*LineNo=*/0,
         VoidPtrTy, /*AlwaysPreserve=*/false, DINode::DIFlags::FlagArtificial);
-    auto Loc = DILocation::get(Func->getContext(), 0, 0, NewSP, 0);
-    DB.insertDeclare(&(*Func->arg_begin()), Var, DB.createExpression(), Loc,
+    DB.insertDeclare(&(*Func->arg_begin()), Var, DB.createExpression(), DebugLoc(0, 0),
                      &(*Func->begin()));
   }
 }
@@ -6908,17 +6908,17 @@ static Expected<Function *> createOutlinedFunction(
                                           DISubprogram::SPFlagOptimized |
                                           DISubprogram::SPFlagLocalToUnit;
 
+        // TODO: Copy over the source location storage, or better yet have DIBuilder do it for us!
         DISubprogram *OutlinedSP = DB.createFunction(
-            CU, FuncName, FuncName, SP->getFile(), DL.getLine(), Ty,
-            DL.getLine(), DINode::DIFlags::FlagArtificial, SPFlags);
+            CU, FuncName, FuncName, SP->getFile(), DL.getLine(SP), Ty,
+            DL.getLine(SP), DINode::DIFlags::FlagArtificial, SPFlags);
 
         // Attach subprogram to the function.
         Func->setSubprogram(OutlinedSP);
         // Update the CurrentDebugLocation in the builder so that right scope
         // is used for things inside outlined function.
-        Builder.SetCurrentDebugLocation(
-            DILocation::get(Func->getContext(), DL.getLine(), DL.getCol(),
-                            OutlinedSP, DL.getInlinedAt()));
+
+        Builder.SetCurrentDebugLocation(DL);
       }
     }
   }

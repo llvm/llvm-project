@@ -488,7 +488,7 @@ struct ARMInstructionSelector::InsertInfo {
 
   MachineBasicBlock &MBB;
   const MachineBasicBlock::instr_iterator InsertBefore;
-  const DebugLoc &DbgLoc;
+  DebugLoc DbgLoc;
 };
 
 void ARMInstructionSelector::putConstant(InsertInfo I, unsigned DestReg,
@@ -770,7 +770,7 @@ bool ARMInstructionSelector::selectSelect(MachineInstrBuilder &MIB,
                                           MachineRegisterInfo &MRI) const {
   auto &MBB = *MIB->getParent();
   auto InsertBefore = std::next(MIB->getIterator());
-  auto &DbgLoc = MIB->getDebugLoc();
+  auto DbgLoc = MIB->getDebugLoc();
 
   // Compare the condition to 1.
   auto CondReg = MIB.getReg(1);

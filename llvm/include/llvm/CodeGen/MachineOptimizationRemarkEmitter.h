@@ -124,7 +124,7 @@ public:
   MachineOptimizationRemarkAnalysis(const char *PassName, StringRef RemarkName,
                                     const MachineInstr *MI)
       : DiagnosticInfoMIROptimization(DK_MachineOptimizationRemarkAnalysis,
-                                      PassName, RemarkName, MI->getDebugLoc(),
+                                      PassName, RemarkName, MI->getDILocRef(),
                                       MI->getParent()) {}
 
   static bool classof(const DiagnosticInfo *DI) {

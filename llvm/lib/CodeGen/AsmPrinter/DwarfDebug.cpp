@@ -1535,7 +1535,7 @@ void DwarfDebug::collectVariableInfoFromMFTable(
     assert(VI.Var->isValidLocationForIntrinsic(VI.Loc) &&
            "Expected inlined-at fields to agree");
 
-    InlinedEntity Var(VI.Var, VI.Loc->getInlinedAt());
+    InlinedEntity Var(VI.Var, VI.Loc.getInlinedAt(Asm->MF->getFunction().getSubprogram()));
     Processed.insert(Var);
     LexicalScope *Scope = LScopes.findLexicalScope(VI.Loc);
 
@@ -1596,7 +1596,7 @@ static bool validThroughout(LexicalScopes &LScopes,
                             const InstructionOrdering &Ordering) {
   assert(DbgValue->getDebugLoc() && "DBG_VALUE without a debug location");
   auto MBB = DbgValue->getParent();
-  auto DL = DbgValue->getDebugLoc();
+  DILocRef DL(*DbgValue);
   auto *LScope = LScopes.findLexicalScope(DL);
   // Scope doesn't exist; this is a dead DBG_VALUE.
   if (!LScope)
@@ -1618,7 +1618,7 @@ static bool validThroughout(LexicalScopes &LScopes,
     for (++Pred; Pred != MBB->rend(); ++Pred) {
       if (Pred->getFlag(MachineInstr::FrameSetup))
         break;
-      auto PredDL = Pred->getDebugLoc();
+      DILocRef PredDL(*Pred);
       if (!PredDL || Pred->isMetaInstruction())
         continue;
       // Check whether the instruction preceding the DBG_VALUE is in the same
@@ -1851,7 +1851,7 @@ bool DwarfDebug::buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
 DbgEntity *DwarfDebug::createConcreteEntity(DwarfCompileUnit &TheCU,
                                             LexicalScope &Scope,
                                             const DINode *Node,
-                                            const DILocation *Location,
+                                            DebugLoc Location,
                                             const MCSymbol *Sym) {
   ensureAbstractEntityIsCreatedIfScoped(TheCU, Node, Scope.getScopeNode());
   if (isa<const DILocalVariable>(Node)) {
@@ -1892,7 +1892,7 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
 
     LexicalScope *Scope = nullptr;
     const DILocalVariable *LocalVar = cast<DILocalVariable>(IV.first);
-    if (const DILocation *IA = IV.second)
+    if (DebugLoc IA = IV.second)
       Scope = LScopes.findInlinedScope(LocalVar->getScope(), IA);
     else
       Scope = LScopes.findLexicalScope(LocalVar->getScope());
@@ -1962,7 +1962,7 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
     const DILocalScope *LocalScope =
         Label->getScope()->getNonLexicalBlockFileScope();
     // Get inlined DILocation if it is inlined label.
-    if (const DILocation *IA = IL.second)
+    if (DebugLoc IA = IL.second)
       Scope = LScopes.findInlinedScope(LocalScope, IA);
     else
       Scope = LScopes.findLexicalScope(LocalScope);
@@ -2042,7 +2042,7 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   // any line record, as there is no correspondence with any user code.
   if (MI->isMetaInstruction() || MI->getFlag(MachineInstr::FrameSetup))
     return;
-  const DebugLoc &DL = MI->getDebugLoc();
+  DILocRef DL(*MI);
   unsigned Flags = 0;
 
   if (MI->getFlag(MachineInstr::FrameDestroy) && DL) {
@@ -2177,7 +2177,7 @@ findPrologueEndLoc(const MachineFunction *MF) {
       // frame setup, and a compiler-generated line 0 location is not a
       // meaningful breakpoint. If none is found, return the first
       // location after the frame setup.
-      if (MI.getDebugLoc().getLine())
+      if (!MI.getDebugLoc().hasLineZero())
         return std::make_pair(&MI, IsEmptyPrologue);
     }
 
@@ -2313,8 +2313,8 @@ DwarfDebug::emitInitialLocDirective(const MachineFunction &MF, unsigned CUID) {
       // Avoid trying to assign prologue_end to a line-zero location.
       // Instructions with no DebugLoc at all are fine, they'll be given the
       // scope line nuumber.
-      const DebugLoc &DL = PrologEndLoc->getDebugLoc();
-      if (!DL || DL->getLine() != 0)
+      DebugLoc DL = PrologEndLoc->getDebugLoc();
+      if (!DL || !DL.hasLineZero())
         return PrologEndLoc;
 
       // Later, don't place the prologue_end flag on this line-zero location.
@@ -2378,7 +2378,7 @@ void DwarfDebug::findForceIsStmtInstrs(const MachineFunction *MF) {
     if (MBB.empty() || MBB.pred_empty())
       continue;
     for (auto &MI : MBB) {
-      if (MI.getDebugLoc() && MI.getDebugLoc()->getLine()) {
+      if (MI.getDebugLoc() && DILocRef(MI)->getLine()) {
         PredMBBsToExamine.insert_range(MBB.predecessors());
         PotentialIsStmtMBBInstrs.insert({&MBB, &MI});
         break;
@@ -2397,7 +2397,7 @@ void DwarfDebug::findForceIsStmtInstrs(const MachineFunction *MF) {
       if (MBBInstrIt == PotentialIsStmtMBBInstrs.end())
         return;
       MachineInstr *MI = MBBInstrIt->second;
-      if (MI->getDebugLoc()->getLine() == OutgoingLine)
+      if (DILocRef(*MI)->getLine() == OutgoingLine)
         return;
       PotentialIsStmtMBBInstrs.erase(MBBInstrIt);
       ForceIsStmtInstrs.insert(MI);
@@ -2429,8 +2429,8 @@ void DwarfDebug::findForceIsStmtInstrs(const MachineFunction *MF) {
       // the the false destination only; otherwise, both destinations share an
       // outgoing loc.
       if (!AnalyzeFailed && !Cond.empty() && FBB != nullptr &&
-          MBB->back().getDebugLoc() && MBB->back().getDebugLoc()->getLine()) {
-        unsigned FBBLine = MBB->back().getDebugLoc()->getLine();
+          MBB->back().getDebugLoc() && DILocRef(MBB->back())->getLine()) {
+        unsigned FBBLine = DILocRef(MBB->back())->getLine();
         assert(MIIt->isBranch() && "Bad result from analyzeBranch?");
         CheckMBBEdge(FBB, FBBLine);
         ++MIIt;
@@ -2458,7 +2458,7 @@ void DwarfDebug::findForceIsStmtInstrs(const MachineFunction *MF) {
     // enough for this to be worthwhile.
     unsigned LastLine = 0;
     while (MIIt != MBB->rend()) {
-      if (auto DL = MIIt->getDebugLoc(); DL && DL->getLine()) {
+      if (DILocRef DL = DILocRef(*MIIt); DL && DL->getLine()) {
         LastLine = DL->getLine();
         break;
       }

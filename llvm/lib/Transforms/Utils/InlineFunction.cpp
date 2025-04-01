@@ -1715,8 +1715,8 @@ static void HandleByValArgumentInit(Type *ByValType, Value *Dst, Value *Src,
   // from debug-info-bearing functions have a debug location (for inlining
   // purposes). Assign a dummy location to satisfy the constraint.
   if (!CI->getDebugLoc() && InsertBlock->getParent()->getSubprogram())
-    if (DISubprogram *SP = CalledFunc->getSubprogram())
-      CI->setDebugLoc(DILocation::get(SP->getContext(), 0, 0, SP));
+    if (CalledFunc->getSubprogram())
+      CI->setDebugLoc(DebugLoc(0, 0));
 }
 
 /// When inlining a call site that has a byval argument,
@@ -1806,32 +1806,33 @@ static bool allocaWouldBeStaticInEntry(const AllocaInst *AI ) {
   return isa<Constant>(AI->getArraySize()) && !AI->isUsedWithInAlloca();
 }
 
-/// Returns a DebugLoc for a new DILocation which is a clone of \p OrigDL
-/// inlined at \p InlinedAt. \p IANodes is an inlined-at cache.
-static DebugLoc inlineDebugLoc(DebugLoc OrigDL, DILocation *InlinedAt,
-                               LLVMContext &Ctx,
-                               DenseMap<const MDNode *, MDNode *> &IANodes) {
-  auto IA = DebugLoc::appendInlinedAt(OrigDL, InlinedAt, Ctx, IANodes);
-  return DILocation::get(Ctx, OrigDL.getLine(), OrigDL.getCol(),
-                         OrigDL.getScope(), IA);
+/// Returns a DebugLoc for a new DebugLoc which is \p OrigDL offset by
+/// \p InlinedDLOffset.
+static DebugLoc inlineDebugLoc(DebugLoc OrigDL, DebugLoc InlinedDLOffset) {
+  return DebugLoc(
+    OrigDL.SrcLocIndex == 0 ? 0 : OrigDL.SrcLocIndex + InlinedDLOffset.SrcLocIndex,
+    OrigDL.LocScopeIndex + InlinedDLOffset.LocScopeIndex);
 }
 
 /// Update inlined instructions' line numbers to
 /// to encode location where these instructions are inlined.
 static void fixupLineNumbers(Function *Fn, Function::iterator FI,
-                             Instruction *TheCall, bool CalleeHasDebugInfo) {
-  const DebugLoc &TheCallDL = TheCall->getDebugLoc();
-  if (!TheCallDL)
+                             Instruction *TheCall, DISubprogram *CalleeSP) {
+  const DebugLoc &OrigCallDL = TheCall->getDebugLoc();
+  if (!OrigCallDL)
     return;
 
-  auto &Ctx = Fn->getContext();
-  DILocation *InlinedAtNode = TheCallDL;
-
-  // Create a unique call site, not to be confused with any other call from the
-  // same location.
-  InlinedAtNode = DILocation::getDistinct(
-      Ctx, InlinedAtNode->getLine(), InlinedAtNode->getColumn(),
-      InlinedAtNode->getScope(), InlinedAtNode->getInlinedAt());
+  bool CalleeHasDebugInfo = CalleeSP != nullptr;
+  
+  // OffsetDebugLoc should be used for recalculating the DebugLocs from the
+  // inlined function, while InlineCallDL should be used as the location of
+  // the call if we are using it for the inlined instructions.
+  // These DebugLocs point to the same SrcLoc (the call location), but
+  // OffsetDebugLoc points to the outermost inlined scope (the called
+  // DISubprogram if one exists, otherwise it is an invalid index), while
+  // InlinedCallDL points to the scope of the original call.
+  DebugLoc OffsetDebugLoc = Fn->getSubprogram()->addInlinedLocations(CalleeSP, OrigCallDL);
+  DebugLoc InlineCallDL(OffsetDebugLoc.SrcLocIndex, OrigCallDL.LocScopeIndex);
 
   // Cache the inlined-at nodes as they're built so they are reused, without
   // this every instruction's inlined-at chain would become distinct from each
@@ -1846,22 +1847,20 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
   auto UpdateInst = [&](Instruction &I) {
     // Loop metadata needs to be updated so that the start and end locs
     // reference inlined-at locations.
-    auto updateLoopInfoLoc = [&Ctx, &InlinedAtNode,
-                              &IANodes](Metadata *MD) -> Metadata * {
-      if (auto *Loc = dyn_cast_or_null<DILocation>(MD))
-        return inlineDebugLoc(Loc, InlinedAtNode, Ctx, IANodes).get();
-      return MD;
+    auto updateLoopInfoLoc = [&OffsetDebugLoc](DebugLoc DL) -> DebugLoc {
+      return inlineDebugLoc(DL, OffsetDebugLoc);
     };
     updateLoopMetadataDebugLocations(I, updateLoopInfoLoc);
 
     if (!NoInlineLineTables)
       if (DebugLoc DL = I.getDebugLoc()) {
+        assert(CalleeHasDebugInfo);
         DebugLoc IDL =
-            inlineDebugLoc(DL, InlinedAtNode, I.getContext(), IANodes);
+          inlineDebugLoc(DL, OffsetDebugLoc);
         I.setDebugLoc(IDL);
         return;
       }
-
+      
     if (CalleeHasDebugInfo && !NoInlineLineTables)
       return;
 
@@ -1879,23 +1878,25 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
     // Do not force a debug loc for pseudo probes, since they do not need to
     // be debuggable, and also they are expected to have a zero/null dwarf
     // discriminator at this point which could be violated otherwise.
-    if (isa<PseudoProbeInst>(I))
+    if (isa<PseudoProbeInst>(I)) {
+      // TODO: We may *need* to do some remapping here just to keep PseudoProbe
+      // locations coherent.
+      assert(!I.getDebugLoc());
       return;
+    }
 
-    I.setDebugLoc(TheCallDL);
+    I.setDebugLoc(InlineCallDL);
   };
 
   // Helper-util for updating debug-info records attached to instructions.
   auto UpdateDVR = [&](DbgRecord *DVR) {
     assert(DVR->getDebugLoc() && "Debug Value must have debug loc");
     if (NoInlineLineTables) {
-      DVR->setDebugLoc(TheCallDL);
+      DVR->setDebugLoc(InlineCallDL);
       return;
     }
     DebugLoc DL = DVR->getDebugLoc();
-    DebugLoc IDL =
-        inlineDebugLoc(DL, InlinedAtNode,
-                       DVR->getMarker()->getParent()->getContext(), IANodes);
+    DebugLoc IDL = inlineDebugLoc(DL, OffsetDebugLoc);
     DVR->setDebugLoc(IDL);
   };
 
@@ -1964,9 +1965,10 @@ static at::StorageToVarsMap collectEscapedLocals(const DataLayout &DL,
       continue;
 
     // Find all local variables associated with the backing storage.
+    auto *SP = Base->getFunction()->getSubprogram();
     auto CollectAssignsForStorage = [&](auto *DbgAssign) {
       // Skip variables from inlined functions - they are not local variables.
-      if (DbgAssign->getDebugLoc().getInlinedAt())
+      if (DbgAssign->getDebugLoc().getInlinedAt(SP))
         return;
       LLVM_DEBUG(errs() << " > DEF : " << *DbgAssign << "\n");
       EscapedLocals[Base].insert(at::VarRecord(DbgAssign));
@@ -2757,11 +2759,16 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
       }
     }
 
+    // Normalize subprograms!
+    if (CalledFunc->getSubprogram())
+      CalledFunc->getSubprogram()->normalizeDebugLocs(CalledFunc);
+    if (Caller->getSubprogram())
+      Caller->getSubprogram()->normalizeDebugLocs(Caller);
     // For 'nodebug' functions, the associated DISubprogram is always null.
     // Conservatively avoid propagating the callsite debug location to
     // instructions inlined from a function whose DISubprogram is not null.
     fixupLineNumbers(Caller, FirstNewBlock, &CB,
-                     CalledFunc->getSubprogram() != nullptr);
+                     CalledFunc->getSubprogram());
 
     if (isAssignmentTrackingEnabled(*Caller->getParent())) {
       // Interpret inlined stores to caller-local variables as assignments.

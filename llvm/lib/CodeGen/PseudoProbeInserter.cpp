@@ -58,10 +58,10 @@ public:
         if (!MI.isPseudo())
           FirstInstr = &MI;
         if (MI.isCall()) {
-          if (DILocation *DL = MI.getDebugLoc()) {
+          if (DILocRef DL = MI.getDILocRef()) {
             auto Value = DL->getDiscriminator();
             if (DILocation::isPseudoProbeDiscriminator(Value)) {
-              BuildMI(MBB, MI, DL, TII->get(TargetOpcode::PSEUDO_PROBE))
+              BuildMI(MBB, MI, DL.Index, TII->get(TargetOpcode::PSEUDO_PROBE))
                   .addImm(getFuncGUID(MF.getFunction().getParent(), DL))
                   .addImm(
                       PseudoProbeDwarfDiscriminator::extractProbeIndex(Value))
@@ -127,7 +127,7 @@ public:
   }
 
 private:
-  uint64_t getFuncGUID(Module *M, DILocation *DL) {
+  uint64_t getFuncGUID(Module *M, DILocRef DL) {
     auto Name = DL->getSubprogramLinkageName();
     return Function::getGUID(Name);
   }

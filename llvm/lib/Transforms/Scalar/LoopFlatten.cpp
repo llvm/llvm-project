@@ -752,7 +752,7 @@ static bool DoFlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
   LLVM_DEBUG(dbgs() << "Checks all passed, doing the transformation\n");
   {
     using namespace ore;
-    OptimizationRemark Remark(DEBUG_TYPE, "Flattened", FI.InnerLoop->getStartLoc(),
+    OptimizationRemark Remark(DEBUG_TYPE, "Flattened", FI.InnerLoop->getStartLocRef(),
                               FI.InnerLoop->getHeader());
     OptimizationRemarkEmitter ORE(F);
     Remark << "Flattened into outer loop";

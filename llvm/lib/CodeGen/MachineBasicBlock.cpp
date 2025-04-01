@@ -32,6 +32,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -1251,7 +1252,7 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
     // number, the scope and non-zero column and line number is same with that
     // branch instruction so we can safely use it.
     DebugLoc DL, MergedDL = findBranchDebugLoc();
-    if (MergedDL && (MergedDL.getLine() || MergedDL.getCol()))
+    if (MergedDL && MergedDL.SrcLocIndex)
       DL = MergedDL;
     TII->insertBranch(*NMBB, Succ, nullptr, Cond, DL);
   }
@@ -1529,6 +1530,14 @@ MachineBasicBlock::findDebugLoc(instr_iterator MBBI) {
     return MBBI->getDebugLoc();
   return {};
 }
+DILocRefWrapper
+MachineBasicBlock::findDILocRef(instr_iterator MBBI) {
+  // Skip debug declarations, we don't want a DebugLoc from them.
+  MBBI = skipDebugInstructionsForward(MBBI, instr_end());
+  if (MBBI != instr_end())
+    return MBBI->getDILocRef();
+  return {};
+}
 
 DebugLoc MachineBasicBlock::rfindDebugLoc(reverse_instr_iterator MBBI) {
   if (MBBI == instr_rend())
@@ -1567,6 +1576,7 @@ DebugLoc MachineBasicBlock::rfindPrevDebugLoc(reverse_instr_iterator MBBI) {
 DebugLoc
 MachineBasicBlock::findBranchDebugLoc() {
   DebugLoc DL;
+  auto *SP = getParent()->getFunction().getSubprogram();
   auto TI = getFirstTerminator();
   while (TI != end() && !TI->isBranch())
     ++TI;
@@ -1575,7 +1585,7 @@ MachineBasicBlock::findBranchDebugLoc() {
     DL = TI->getDebugLoc();
     for (++TI ; TI != end() ; ++TI)
       if (TI->isBranch())
-        DL = DILocation::getMergedLocation(DL, TI->getDebugLoc());
+        DL = SP->getMergedLocation(DL, TI->getDebugLoc());
   }
   return DL;
 }

@@ -388,7 +388,7 @@ bool LoopVersioningLICM::legalLoopInstructions() {
         dbgs() << "    LAA: Runtime checks are more than threshold !!\n");
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "RuntimeCheck",
-                                      CurLoop->getStartLoc(),
+                                      CurLoop->getStartLocRef(),
                                       CurLoop->getHeader())
              << "Number of runtime checks "
              << NV("RuntimeChecks", LAI->getNumRuntimePointerChecks())
@@ -420,7 +420,7 @@ bool LoopVersioningLICM::legalLoopInstructions() {
                       << InvariantThreshold << "%\n");
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "InvariantThreshold",
-                                      CurLoop->getStartLoc(),
+                                      CurLoop->getStartLocRef(),
                                       CurLoop->getHeader())
              << "Invariant load & store "
              << NV("LoadAndStoreCounter",
@@ -463,7 +463,7 @@ bool LoopVersioningLICM::isLegalForVersioning() {
         dbgs() << "    Loop structure not suitable for LoopVersioningLICM\n\n");
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "IllegalLoopStruct",
-                                      CurLoop->getStartLoc(),
+                                      CurLoop->getStartLocRef(),
                                       CurLoop->getHeader())
              << " Unsafe Loop structure";
     });
@@ -483,7 +483,7 @@ bool LoopVersioningLICM::isLegalForVersioning() {
         << "    Loop memory access not suitable for LoopVersioningLICM\n\n");
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "IllegalLoopMemoryAccess",
-                                      CurLoop->getStartLoc(),
+                                      CurLoop->getStartLocRef(),
                                       CurLoop->getHeader())
              << " Unsafe Loop memory access";
     });
@@ -493,7 +493,7 @@ bool LoopVersioningLICM::isLegalForVersioning() {
   LLVM_DEBUG(dbgs() << "    Loop Versioning found to be beneficial\n\n");
   ORE->emit([&]() {
     return OptimizationRemark(DEBUG_TYPE, "IsLegalForVersioning",
-                              CurLoop->getStartLoc(), CurLoop->getHeader())
+                              CurLoop->getStartLocRef(), CurLoop->getHeader())
            << " Versioned loop for LICM."
            << " Number of runtime checks we had to insert "
            << NV("RuntimeChecks", LAI->getNumRuntimePointerChecks());

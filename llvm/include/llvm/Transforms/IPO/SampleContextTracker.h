@@ -24,7 +24,6 @@
 
 namespace llvm {
 class CallBase;
-class DILocation;
 class Function;
 class Instruction;
 
@@ -101,10 +100,10 @@ public:
                                               StringRef CalleeName);
   // Get samples for indirect call targets for call site at given location.
   std::vector<const FunctionSamples *>
-  getIndirectCalleeContextSamplesFor(const DILocation *DIL);
+  getIndirectCalleeContextSamplesFor(DILocRef DL);
   // Query context profile for a given location. The full context
-  // is identified by input DILocation.
-  FunctionSamples *getContextSamplesFor(const DILocation *DIL);
+  // is identified by input DebugLoc.
+  FunctionSamples *getContextSamplesFor(DILocRef DL);
   // Query context profile for a given sample contxt of a function.
   FunctionSamples *getContextSamplesFor(const SampleContext &Context);
   // Get all context profile for given function.
@@ -188,8 +187,8 @@ public:
   void dump();
 
 private:
-  ContextTrieNode *getContextFor(const DILocation *DIL);
-  ContextTrieNode *getCalleeContextFor(const DILocation *DIL,
+  ContextTrieNode *getContextFor(DILocRef DL);
+  ContextTrieNode *getCalleeContextFor(DILocRef DL,
                                        FunctionId CalleeName);
   ContextTrieNode *getTopLevelContextNode(FunctionId FName);
   ContextTrieNode &addTopLevelContextNode(FunctionId FName);

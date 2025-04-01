@@ -1428,7 +1428,7 @@ bool SelectionDAGISel::PrepareEHLandingPad() {
         assert(EHPhysReg && "target lacks exception pointer register");
         MBB->addLiveIn(EHPhysReg);
         Register VReg = FuncInfo->getCatchPadExceptionPointerVReg(CPI, PtrRC);
-        BuildMI(*MBB, FuncInfo->InsertPt, SDB->getCurDebugLoc(),
+        BuildMI(*MBB, FuncInfo->InsertPt, DebugLoc(SDB->getCurDebugLoc()),
                 TII->get(TargetOpcode::COPY), VReg)
             .addReg(EHPhysReg, RegState::Kill);
       }
@@ -1441,7 +1441,7 @@ bool SelectionDAGISel::PrepareEHLandingPad() {
   MCSymbol *Label = MF->addLandingPad(MBB);
 
   const MCInstrDesc &II = TII->get(TargetOpcode::EH_LABEL);
-  BuildMI(*MBB, FuncInfo->InsertPt, SDB->getCurDebugLoc(), II)
+  BuildMI(*MBB, FuncInfo->InsertPt, SDB->getCurDebugLoc().Index, II)
     .addSym(Label);
 
   // If the unwinder does not preserve all registers, ensure that the
@@ -1490,7 +1490,7 @@ void SelectionDAGISel::reportIPToStateForBlocks(MachineFunction *MF) {
       MCSymbol *BeginLabel = MF->getContext().createTempSymbol();
       MCSymbol *EndLabel = MF->getContext().createTempSymbol();
       EHInfo->addIPToStateRange(State, BeginLabel, EndLabel);
-      BuildMI(MBB, MBBb, SDB->getCurDebugLoc(),
+      BuildMI(MBB, MBBb, DebugLoc(SDB->getCurDebugLoc()),
               TII->get(TargetOpcode::EH_LABEL))
           .addSym(BeginLabel);
       auto MBBe = MBB.instr_end();
@@ -1499,7 +1499,7 @@ void SelectionDAGISel::reportIPToStateForBlocks(MachineFunction *MF) {
       while (MIe->isTerminator())
         MIe = &*(--MBBe);
       ++MBBe;
-      BuildMI(MBB, MBBe, SDB->getCurDebugLoc(),
+      BuildMI(MBB, MBBe, DebugLoc(SDB->getCurDebugLoc()),
               TII->get(TargetOpcode::EH_LABEL))
           .addSym(EndLabel);
     }
@@ -1808,7 +1808,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
         if (isa<CallInst>(Inst) && !isa<GCStatepointInst>(Inst) &&
             !isa<GCRelocateInst>(Inst) && !isa<GCResultInst>(Inst)) {
           OptimizationRemarkMissed R("sdagisel", "FastISelFailure",
-                                     Inst->getDebugLoc(), LLVMBB);
+                                     DILocRef(*Inst), LLVMBB);
 
           R << "FastISel missed call";
 
@@ -1850,7 +1850,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
         }
 
         OptimizationRemarkMissed R("sdagisel", "FastISelFailure",
-                                   Inst->getDebugLoc(), LLVMBB);
+                                   DILocRef(*Inst), LLVMBB);
 
         bool ShouldAbort = EnableFastISelAbort;
         if (Inst->isTerminator()) {

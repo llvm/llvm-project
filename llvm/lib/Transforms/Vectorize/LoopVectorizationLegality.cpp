@@ -198,7 +198,7 @@ bool LoopVectorizeHints::allowVectorization(
     // to differentiate between disabled vectorization and a width of 1.
     ORE.emit([&]() {
       return OptimizationRemarkAnalysis(vectorizeAnalysisPassName(),
-                                        "AllDisabled", L->getStartLoc(),
+                                        "AllDisabled", L->getStartLocRef(),
                                         L->getHeader())
              << "loop not vectorized: vectorization and interleaving are "
                 "explicitly disabled, or the loop has already been "
@@ -216,11 +216,11 @@ void LoopVectorizeHints::emitRemarkWithHints() const {
   ORE.emit([&]() {
     if (Force.Value == LoopVectorizeHints::FK_Disabled)
       return OptimizationRemarkMissed(LV_NAME, "MissedExplicitlyDisabled",
-                                      TheLoop->getStartLoc(),
+                                      TheLoop->getStartLocRef(),
                                       TheLoop->getHeader())
              << "loop not vectorized: vectorization is explicitly disabled";
 
-    OptimizationRemarkMissed R(LV_NAME, "MissedDetails", TheLoop->getStartLoc(),
+    OptimizationRemarkMissed R(LV_NAME, "MissedDetails", TheLoop->getStartLocRef(),
                                TheLoop->getHeader());
     R << "loop not vectorized";
     if (Force.Value == LoopVectorizeHints::FK_Enabled) {

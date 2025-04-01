@@ -2414,9 +2414,9 @@ public:
         for (Value *S : SI->second) {
           if (S == Leaf)
             continue;
-          DebugLoc DL = cast<Instruction>(S)->getDebugLoc();
-          write("shared with remark at line " + std::to_string(DL.getLine()) +
-                " column " + std::to_string(DL.getCol()) + " (");
+          DISrcLocData SrcLoc = getSrcLoc(*cast<Instruction>(S));
+          write("shared with remark at line " + std::to_string(SrcLoc.Line) +
+                " column " + std::to_string(SrcLoc.Column) + " (");
         }
         ExprShared = SI->second.size() > 1;
       }
@@ -2564,11 +2564,11 @@ public:
       for (const auto &KV : Inst2Matrix) {
         if (Func.getSubprogram()) {
           auto *I = cast<Instruction>(KV.first);
-          DILocation *Context = I->getDebugLoc();
+          DILocRef Context(*I);
           while (Context) {
             Subprog2Exprs[getSubprogram(Context->getScope())].push_back(
                 KV.first);
-            Context = DebugLoc(Context).getInlinedAt();
+            Context = Context.getInlinedAt();
           }
         } else {
           Subprog2Exprs[nullptr].push_back(KV.first);
@@ -2585,15 +2585,14 @@ public:
 
         // Generate remarks for each leaf.
         for (auto *L : Leaves) {
-
-          DebugLoc Loc = cast<Instruction>(L)->getDebugLoc();
-          DILocation *Context = cast<Instruction>(L)->getDebugLoc();
+          DILocRef Context(*cast<Instruction>(L));
+          DILocRef Loc(*cast<Instruction>(L));
           while (Context) {
             if (getSubprogram(Context->getScope()) == KV.first) {
               Loc = Context;
               break;
             }
-            Context = DebugLoc(Context).getInlinedAt();
+            Context = Context->getInlinedAt();
           }
 
           SmallPtrSet<Value *, 8> ReusedExprs;

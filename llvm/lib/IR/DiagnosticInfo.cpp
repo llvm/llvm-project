@@ -19,6 +19,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/Function.h"
@@ -142,12 +143,30 @@ void DiagnosticInfoStackSize::anchor() {}
 void DiagnosticInfoWithLocationBase::anchor() {}
 void DiagnosticInfoIROptimization::anchor() {}
 
-DiagnosticLocation::DiagnosticLocation(const DebugLoc &DL) {
+DiagnosticLocation::DiagnosticLocation(DILocRef DL) {
   if (!DL)
     return;
+  DISrcLocData SrcLoc = DL.getSrcLoc();
   File = DL->getFile();
-  Line = DL->getLine();
-  Column = DL->getColumn();
+  Line = SrcLoc.Line;
+  Column = SrcLoc.Column;
+}
+DiagnosticLocation::DiagnosticLocation(DILocRefWrapper DL) : DiagnosticLocation(DILocRef(DL)) {}
+DiagnosticLocation::DiagnosticLocation(const DISubprogram *SP, const DebugLoc &DL) {
+  if (!DL || !SP)
+    return;
+  DISrcLocData SrcLoc = const_cast<DISubprogram*>(SP)->getSrcLoc(DL);
+  File = const_cast<DISubprogram*>(SP)->getLocScope(DL).Scope->getFile();
+  Line = SrcLoc.Line;
+  Column = SrcLoc.Column;
+}
+
+DiagnosticLocation::DiagnosticLocation(DILocationData DL) {
+  if (!DL)
+    return;
+  File = DL.Scope->getFile();
+  Line = DL.Line;
+  Column = DL.Column;
 }
 
 DiagnosticLocation::DiagnosticLocation(const DISubprogram *SP) {
@@ -202,7 +221,7 @@ DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key,
       Loc = SP;
   }
   else if (auto *I = dyn_cast<Instruction>(V))
-    Loc = I->getDebugLoc();
+    Loc = DILocRef(*I);
 
   // Only include names that correspond to user variables.  FIXME: We should use
   // debug info if available to get the name of the user variable.
@@ -265,11 +284,21 @@ DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key,
   C.print(OS);
 }
 
-DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, DebugLoc Loc)
-    : Key(std::string(Key)), Loc(Loc) {
+DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, DILocRef DL)
+    : Key(std::string(Key)), Loc(DL.SP, DL.Index) {
+  if (DL) {
+    Val = (Loc.getRelativePath() + ":" + Twine(Loc.getLine()) + ":" +
+           Twine(Loc.getColumn())).str();
+  } else {
+    Val = "<UNKNOWN LOCATION>";
+  }
+}
+
+DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, DISubprogram *SP, DebugLoc Loc)
+    : Key(std::string(Key)), Loc(SP, Loc) {
   if (Loc) {
-    Val = (Loc->getFilename() + ":" + Twine(Loc.getLine()) + ":" +
-           Twine(Loc.getCol())).str();
+    Val = (this->Loc.getRelativePath() + ":" + Twine(this->Loc.getLine()) + ":" +
+           Twine(this->Loc.getColumn())).str();
   } else {
     Val = "<UNKNOWN LOCATION>";
   }
@@ -294,7 +323,7 @@ OptimizationRemark::OptimizationRemark(const char *PassName,
                                        const Instruction *Inst)
     : DiagnosticInfoIROptimization(DK_OptimizationRemark, DS_Remark, PassName,
                                    RemarkName, *Inst->getParent()->getParent(),
-                                   Inst->getDebugLoc(), Inst->getParent()) {}
+                                   DILocRef(*Inst), Inst->getParent()) {}
 
 static const BasicBlock *getFirstFunctionBlock(const Function *Func) {
   return Func->empty() ? nullptr : &Func->front();
@@ -326,7 +355,7 @@ OptimizationRemarkMissed::OptimizationRemarkMissed(const char *PassName,
     : DiagnosticInfoIROptimization(DK_OptimizationRemarkMissed, DS_Remark,
                                    PassName, RemarkName,
                                    *Inst->getParent()->getParent(),
-                                   Inst->getDebugLoc(), Inst->getParent()) {}
+                                   DILocRef(*Inst), Inst->getParent()) {}
 
 OptimizationRemarkMissed::OptimizationRemarkMissed(const char *PassName,
                                                    StringRef RemarkName,
@@ -354,7 +383,7 @@ OptimizationRemarkAnalysis::OptimizationRemarkAnalysis(const char *PassName,
     : DiagnosticInfoIROptimization(DK_OptimizationRemarkAnalysis, DS_Remark,
                                    PassName, RemarkName,
                                    *Inst->getParent()->getParent(),
-                                   Inst->getDebugLoc(), Inst->getParent()) {}
+                                   DILocRef(*Inst), Inst->getParent()) {}
 
 OptimizationRemarkAnalysis::OptimizationRemarkAnalysis(
     enum DiagnosticKind Kind, const char *PassName, StringRef RemarkName,
@@ -446,7 +475,7 @@ DiagnosticInfoMisExpect::DiagnosticInfoMisExpect(const Instruction *Inst,
                                                  Twine &Msg)
     : DiagnosticInfoWithLocationBase(DK_MisExpect, DS_Warning,
                                      *Inst->getParent()->getParent(),
-                                     Inst->getDebugLoc()),
+                                     DILocRef(*Inst)),
       Msg(Msg) {}
 
 void DiagnosticInfoMisExpect::print(DiagnosticPrinter &DP) const {

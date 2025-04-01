@@ -311,12 +311,12 @@ static void
 printStackObjectDbgInfo(const MachineFunction::VariableDbgInfo &DebugVar,
                         T &Object, ModuleSlotTracker &MST) {
   std::array<std::string *, 3> Outputs{{&Object.DebugVar.Value,
-                                        &Object.DebugExpr.Value,
-                                        &Object.DebugLoc.Value}};
+                                        &Object.DebugExpr.Value}};
   std::array<const Metadata *, 3> Metas{{DebugVar.Var,
-                                        DebugVar.Expr,
-                                        DebugVar.Loc}};
-  for (unsigned i = 0; i < 3; ++i) {
+                                        DebugVar.Expr}};
+  // &Object.DebugLoc.Value
+  // DebugVar.Loc
+  for (unsigned i = 0; i < 2; ++i) {
     raw_string_ostream StrOS(*Outputs[i]);
     Metas[i]->printAsOperand(StrOS, MST);
   }
@@ -937,7 +937,7 @@ void MIPrinter::print(const MachineInstr &MI) {
       if (NeedComma)
         OS << ',';
       OS << " debug-location ";
-      DL->printAsOperand(OS, MST);
+      OS << "!DebugLoc(srcLoc: " << DL.SrcLocIndex << ", locScope: " << DL.LocScopeIndex << ")";
     }
   }
 

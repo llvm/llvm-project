@@ -106,7 +106,7 @@ namespace {
 
 static void createDebugValue(DIBuilder &DIB, Value *NewValue,
                              DILocalVariable *Variable,
-                             DIExpression *Expression, const DILocation *DI,
+                             DIExpression *Expression, DebugLoc DI,
                              DbgVariableRecord *InsertBefore) {
   // FIXME: Merge these two functions now that DIBuilder supports
   // DbgVariableRecords. We neeed the API to accept DbgVariableRecords as an
@@ -117,7 +117,7 @@ static void createDebugValue(DIBuilder &DIB, Value *NewValue,
 }
 static void createDebugValue(DIBuilder &DIB, Value *NewValue,
                              DILocalVariable *Variable,
-                             DIExpression *Expression, const DILocation *DI,
+                             DIExpression *Expression, DebugLoc DI,
                              Instruction *InsertBefore) {
   DIB.insertDbgValueIntrinsic(NewValue, Variable, Expression, DI,
                               InsertBefore->getIterator());

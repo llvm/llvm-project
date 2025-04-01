@@ -112,8 +112,9 @@ public:
 /// Common base class shared among various IRBuilders.
 class IRBuilderBase {
   /// Pairs of (metadata kind, MDNode *) that should be added to all newly
-  /// created instructions, like !dbg metadata.
+  /// created instructions, excluding !dbg metadata.
   SmallVector<std::pair<unsigned, MDNode *>, 2> MetadataToCopy;
+  DebugLoc DebugLocToCopy;
 
   /// Add or update the an entry (Kind, MD) to MetadataToCopy, if \p MD is not
   /// null. If \p MD is null, remove the entry with \p Kind.
@@ -237,7 +238,7 @@ public:
 
   /// Set location information used by debugging information.
   void SetCurrentDebugLocation(DebugLoc L) {
-    AddOrRemoveMetadataToCopy(LLVMContext::MD_dbg, L.getAsMDNode());
+    DebugLocToCopy = L;
   }
 
   /// Set nosanitize metadata.
@@ -251,8 +252,12 @@ public:
   /// not on \p Src will be dropped from MetadataToCopy.
   void CollectMetadataToCopy(Instruction *Src,
                              ArrayRef<unsigned> MetadataKinds) {
-    for (unsigned K : MetadataKinds)
-      AddOrRemoveMetadataToCopy(K, Src->getMetadata(K));
+    for (unsigned K : MetadataKinds) {
+      if (K == LLVMContext::MD_dbg)
+        DebugLocToCopy = Src->getDebugLoc();
+      else
+        AddOrRemoveMetadataToCopy(K, Src->getMetadata(K));
+    }
   }
 
   /// Get location information used by debugging information.
@@ -264,6 +269,8 @@ public:
 
   /// Add all entries in MetadataToCopy to \p I.
   void AddMetadataToInst(Instruction *I) const {
+    if (DebugLocToCopy)
+      I->setDebugLoc(DebugLocToCopy);
     for (const auto &KV : MetadataToCopy)
       I->setMetadata(KV.first, KV.second);
   }

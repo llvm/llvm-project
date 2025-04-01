@@ -1699,14 +1699,14 @@ static void insertDbgValueOrDbgVariableRecord(DIBuilder &Builder, Value *DV,
     // DbgVariableRecord directly instead of a dbg.value intrinsic.
     ValueAsMetadata *DVAM = ValueAsMetadata::get(DV);
     DbgVariableRecord *DV =
-        new DbgVariableRecord(DVAM, DIVar, DIExpr, NewLoc.get());
+        new DbgVariableRecord(DVAM, DIVar, DIExpr, NewLoc);
     Instr->getParent()->insertDbgRecordBefore(DV, Instr);
   }
 }
 
 static void insertDbgValueOrDbgVariableRecordAfter(
     DIBuilder &Builder, Value *DV, DILocalVariable *DIVar, DIExpression *DIExpr,
-    const DebugLoc &NewLoc, Instruction *Instr) {
+    DebugLoc NewLoc, Instruction *Instr) {
   BasicBlock::iterator NextIt = std::next(Instr->getIterator());
   NextIt.setHeadBit(true);
   insertDbgValueOrDbgVariableRecord(Builder, DV, DIVar, DIExpr, NewLoc, NextIt);
@@ -1847,7 +1847,7 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR,
   DV = PoisonValue::get(DV->getType());
   ValueAsMetadata *DVAM = ValueAsMetadata::get(DV);
   DbgVariableRecord *NewDVR =
-      new DbgVariableRecord(DVAM, DIVar, DIExpr, NewLoc.get());
+      new DbgVariableRecord(DVAM, DIVar, DIExpr, NewLoc);
   SI->getParent()->insertDbgRecordBefore(NewDVR, SI->getIterator());
 }
 
@@ -1925,7 +1925,7 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR, LoadInst *LI,
   // Create a DbgVariableRecord directly and insert.
   ValueAsMetadata *LIVAM = ValueAsMetadata::get(LI);
   DbgVariableRecord *DV =
-      new DbgVariableRecord(LIVAM, DIVar, DIExpr, NewLoc.get());
+      new DbgVariableRecord(LIVAM, DIVar, DIExpr, NewLoc);
   LI->getParent()->insertDbgRecordAfter(DV, LI);
 }
 
@@ -3482,6 +3482,8 @@ void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {
       break;
     }
   }
+  // The DebugLoc must be copied separately.
+  Dest.setDebugLoc(Source.getDebugLoc());
 }
 
 void llvm::patchReplacementInstruction(Instruction *I, Value *Repl) {
@@ -3705,7 +3707,7 @@ void llvm::hoistAllInstructionsInto(BasicBlock *DomBlock, Instruction *InsertPt,
   //
   // As per PR39141 (comment #8), the more fundamental reason why the dbg.values
   // need to be deleted, is because there will not be any instructions with a
-  // DILocation in either branch left after performing the transformation. We
+  // DebugLoc in either branch left after performing the transformation. We
   // can only insert a dbg.value after the two branches are joined again.
   //
   // See PR38762, PR39243 for more details.

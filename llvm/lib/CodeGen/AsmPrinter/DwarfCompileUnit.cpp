@@ -746,7 +746,7 @@ DIE *DwarfCompileUnit::constructInlinedScopeDIE(LexicalScope *Scope,
   attachRangesOrLowHighPC(*ScopeDIE, Scope->getRanges());
 
   // Add the call site information to the DIE.
-  const DILocation *IA = Scope->getInlinedAt();
+  DILocRef IA(Scope->getInlinedAtSubprogram(), Scope->getInlinedAt());
   addUInt(*ScopeDIE, dwarf::DW_AT_call_file, std::nullopt,
           getOrCreateSourceID(IA->getFile()));
   addUInt(*ScopeDIE, dwarf::DW_AT_call_line, std::nullopt, IA->getLine());

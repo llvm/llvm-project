@@ -19,6 +19,8 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
@@ -160,6 +162,7 @@ public:
 void FunctionVarLocs::print(raw_ostream &OS, const Function &Fn) const {
   // Print the variable table first. TODO: Sorting by variable could make the
   // output more stable?
+  auto *SP = Fn.getSubprogram();
   unsigned Counter = -1;
   OS << "=== Variables ===\n";
   for (const DebugVariable &V : Variables) {
@@ -172,8 +175,8 @@ void FunctionVarLocs::print(raw_ostream &OS, const Function &Fn) const {
     if (auto F = V.getFragment())
       OS << " bits [" << F->OffsetInBits << ", "
          << F->OffsetInBits + F->SizeInBits << ")";
-    if (const auto *IA = V.getInlinedAt())
-      OS << " inlined-at " << *IA;
+    if (DebugLoc IA = V.getInlinedAt())
+      OS << " inlined-at " << IA;
     OS << "\n";
   }
 
@@ -249,7 +252,7 @@ void FunctionVarLocs::init(FunctionVarLocsBuilder &Builder) {
   // UniqueVectors IDs are one-based (which means the VarLocInfo VarID values
   // are one-based) so reserve an extra and insert a dummy.
   Variables.reserve(Builder.Variables.size() + 1);
-  Variables.push_back(DebugVariable(nullptr, std::nullopt, nullptr));
+  Variables.push_back(DebugVariable(nullptr, std::nullopt, DebugLoc()));
   Variables.append(Builder.Variables.begin(), Builder.Variables.end());
 }
 
@@ -326,9 +329,9 @@ getDerefOffsetInBytes(const DIExpression *DIExpr) {
 }
 
 /// A whole (unfragmented) source variable.
-using DebugAggregate = std::pair<const DILocalVariable *, const DILocation *>;
+using DebugAggregate = std::pair<const DILocalVariable *, DebugLoc>;
 static DebugAggregate getAggregate(const DbgVariableIntrinsic *DII) {
-  return DebugAggregate(DII->getVariable(), DII->getDebugLoc().getInlinedAt());
+  return DebugAggregate(DII->getVariable(), DILocRef(*DII)->getInlinedAt().Index);
 }
 static DebugAggregate getAggregate(const DebugVariable &Var) {
   return DebugAggregate(Var.getVariable(), Var.getInlinedAt());
@@ -674,7 +677,7 @@ class MemLocFragmentFill {
     if (!VarsWithStackSlot->count(getAggregate(DbgVar)))
       return;
     unsigned Var = Aggregates.insert(
-        DebugAggregate(DbgVar.getVariable(), VarLoc.DL.getInlinedAt()));
+        DebugAggregate(DbgVar.getVariable(), VarLoc.DL.getInlinedAt(Fn.getSubprogram())));
 
     // [StartBit: EndBit) are the bits affected by this def.
     const DIExpression *DIExpr = VarLoc.Expr;
@@ -974,7 +977,7 @@ public:
           Expr = DIExpression::prepend(Expr, DIExpression::DerefAfter,
                                        FragMemLoc.OffsetInBits / 8);
           DebugVariable Var(Aggregates[FragMemLoc.Var].first, Expr,
-                            FragMemLoc.DL.getInlinedAt());
+                            FragMemLoc.DL.getInlinedAt(Fn.getSubprogram()));
           FnVarLocs->addVarLoc(InsertBefore, Var, Expr, FragMemLoc.DL,
                                Bases[FragMemLoc.Base]);
         }
@@ -1535,7 +1538,7 @@ void AssignmentTrackingLowering::emitDbgValue(
     AssignmentTrackingLowering::LocKind Kind, const T Source,
     VarLocInsertPt After) {
 
-  DILocation *DL = Source->getDebugLoc();
+  DebugLoc DL = Source->getDebugLoc();
   auto Emit = [this, Source, After, DL](Metadata *Val, DIExpression *Expr) {
     assert(Expr);
     if (!Val)
@@ -1657,9 +1660,9 @@ void AssignmentTrackingLowering::processUntaggedInstruction(
     assert(InsertBefore && "Shouldn't be inserting after a terminator");
 
     // Get DILocation for this unrecorded assignment.
-    DILocation *InlinedAt = const_cast<DILocation *>(V.getInlinedAt());
-    const DILocation *DILoc = DILocation::get(
-        Fn.getContext(), 0, 0, V.getVariable()->getScope(), InlinedAt);
+    // TODO: Could we track the Scope+InlinedAt combination earlier?
+    DebugLoc InlinedAt = V.getInlinedAt();
+    DebugLoc DILoc = DebugLoc(0, Fn.getSubprogram()->getLocScopeIndex(DILocScopeData(V.getVariable()->getScope(), InlinedAt), true));
 
     VarLocInfo VarLoc;
     VarLoc.VariableID = static_cast<VariableID>(Var);
@@ -2207,7 +2210,7 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
 
           DebugVariable DV =
               DebugVariable(Assign->getVariable(), FragInfo,
-                            Assign->getDebugLoc().getInlinedAt());
+                            Assign->getDebugLoc().getInlinedAt(Fn.getSubprogram()));
           DebugAggregate DA = {DV.getVariable(), DV.getInlinedAt()};
           if (!VarsWithStackSlot.contains(DA))
             return;
@@ -2589,6 +2592,7 @@ static bool
 removeRedundantDbgLocsUsingForwardScan(const BasicBlock *BB,
                                        FunctionVarLocsBuilder &FnVarLocs) {
   bool Changed = false;
+  auto *SP = BB->getParent()->getSubprogram();
   DenseMap<DebugVariable, std::pair<RawLocationWrapper, DIExpression *>>
       VariableMap;
 
@@ -2611,7 +2615,7 @@ removeRedundantDbgLocsUsingForwardScan(const BasicBlock *BB,
       for (const VarLocInfo &Loc : *Locs) {
         NumDefsScanned++;
         DebugVariable Key(FnVarLocs.getVariable(Loc.VariableID).getVariable(),
-                          std::nullopt, Loc.DL.getInlinedAt());
+                          std::nullopt, Loc.DL.getInlinedAt(SP));
         auto [VMI, Inserted] = VariableMap.try_emplace(Key);
 
         // Update the map if we found a new value/expression describing the
@@ -2647,6 +2651,7 @@ removeRedundantDbgLocsUsingForwardScan(const BasicBlock *BB,
 static bool
 removeUndefDbgLocsFromEntryBlock(const BasicBlock *BB,
                                  FunctionVarLocsBuilder &FnVarLocs) {
+  auto *SP = BB->getParent()->getSubprogram();
   assert(BB->isEntryBlock());
   // Do extra work to ensure that we remove semantically unimportant undefs.
   //
@@ -2699,7 +2704,7 @@ removeUndefDbgLocsFromEntryBlock(const BasicBlock *BB,
       for (const VarLocInfo &Loc : *Locs) {
         NumDefsScanned++;
         DebugAggregate Aggr{FnVarLocs.getVariable(Loc.VariableID).getVariable(),
-                            Loc.DL.getInlinedAt()};
+                            Loc.DL.getInlinedAt(SP)};
         DebugVariable Var = FnVarLocs.getVariable(Loc.VariableID);
 
         // Remove undef entries that are encountered before any non-undef
@@ -2745,6 +2750,7 @@ static bool removeRedundantDbgLocs(const BasicBlock *BB,
 }
 
 static DenseSet<DebugAggregate> findVarsWithStackSlot(Function &Fn) {
+  auto *SP = Fn.getSubprogram();
   DenseSet<DebugAggregate> Result;
   for (auto &BB : Fn) {
     for (auto &I : BB) {
@@ -2754,10 +2760,10 @@ static DenseSet<DebugAggregate> findVarsWithStackSlot(Function &Fn) {
       // case, we need to consider the variable interesting for NFC behaviour
       // with this change. TODO: Consider only looking at allocas.
       for (DbgAssignIntrinsic *DAI : at::getAssignmentMarkers(&I)) {
-        Result.insert({DAI->getVariable(), DAI->getDebugLoc().getInlinedAt()});
+        Result.insert({DAI->getVariable(), DAI->getDebugLoc().getInlinedAt(SP)});
       }
       for (DbgVariableRecord *DVR : at::getDVRAssignmentMarkers(&I)) {
-        Result.insert({DVR->getVariable(), DVR->getDebugLoc().getInlinedAt()});
+        Result.insert({DVR->getVariable(), DVR->getDebugLoc().getInlinedAt(SP)});
       }
     }
   }

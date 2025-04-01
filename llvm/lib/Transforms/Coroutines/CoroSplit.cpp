@@ -807,7 +807,7 @@ static void updateScopeLine(Instruction *ActiveSuspend,
 
   // No subsequent instruction -> fallback to the location of ActiveSuspend.
   if (!ActiveSuspend->getNextNonDebugInstruction()) {
-    if (auto DL = ActiveSuspend->getDebugLoc())
+    if (auto DL = DILocRef(*ActiveSuspend))
       if (SPToUpdate.getFile() == DL->getFile())
         SPToUpdate.setScopeLine(DL->getLine());
     return;
@@ -826,7 +826,7 @@ static void updateScopeLine(Instruction *ActiveSuspend,
   BasicBlock *PBB = Successor->getParent();
   for (; Successor != PBB->end(); Successor = std::next(Successor)) {
     Successor = skipDebugIntrinsics(Successor);
-    auto DL = Successor->getDebugLoc();
+    DILocRef DL(*Successor);
     if (!DL || DL.getLine() == 0)
       continue;
 
@@ -839,7 +839,7 @@ static void updateScopeLine(Instruction *ActiveSuspend,
   }
 
   // If the search above failed, fallback to the location of ActiveSuspend.
-  if (auto DL = ActiveSuspend->getDebugLoc())
+  if (auto DL = DILocRef(*ActiveSuspend))
     if (SPToUpdate.getFile() == DL->getFile())
       SPToUpdate.setScopeLine(DL->getLine());
 }

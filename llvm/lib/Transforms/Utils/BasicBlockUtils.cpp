@@ -409,7 +409,7 @@ DbgVariableRecordsRemoveRedundantDbgInstrsUsingBackwardScan(BasicBlock *BB) {
       }
 
       DebugVariable Key(DVR.getVariable(), DVR.getExpression(),
-                        DVR.getDebugLoc()->getInlinedAt());
+                        DILocRef(DVR)->getInlinedAt());
       auto R = VariableSet.insert(Key);
       // If the same variable fragment is described more than once it is enough
       // to keep the last one (i.e. the first found since we for reverse
@@ -448,7 +448,7 @@ static bool removeRedundantDbgInstrsUsingBackwardScan(BasicBlock *BB) {
     if (DbgValueInst *DVI = dyn_cast<DbgValueInst>(&I)) {
       DebugVariable Key(DVI->getVariable(),
                         DVI->getExpression(),
-                        DVI->getDebugLoc()->getInlinedAt());
+                        DILocRef(*DVI)->getInlinedAt());
       auto R = VariableSet.insert(Key);
       // If the variable fragment hasn't been seen before then we don't want
       // to remove this dbg intrinsic.
@@ -510,7 +510,7 @@ DbgVariableRecordsRemoveRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
       if (DVR.getType() == DbgVariableRecord::LocationType::Declare)
         continue;
       DebugVariable Key(DVR.getVariable(), std::nullopt,
-                        DVR.getDebugLoc()->getInlinedAt());
+                        DILocRef(DVR)->getInlinedAt());
       auto [VMI, Inserted] = VariableMap.try_emplace(Key);
       // A dbg.assign with no linked instructions can be treated like a
       // dbg.value (i.e. can be deleted).
@@ -550,7 +550,7 @@ DbgVariableRecordsRemoveUndefDbgAssignsFromEntryBlock(BasicBlock *BB) {
   // Returns the DebugVariable for DVI with no fragment info.
   auto GetAggregateVariable = [](const DbgVariableRecord &DVR) {
     return DebugVariable(DVR.getVariable(), std::nullopt,
-                         DVR.getDebugLoc().getInlinedAt());
+                         DILocRef(DVR).getInlinedAt());
   };
 
   // Remove undef dbg.assign intrinsics that are encountered before
@@ -590,7 +590,7 @@ static bool removeRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
   for (auto &I : *BB) {
     if (DbgValueInst *DVI = dyn_cast<DbgValueInst>(&I)) {
       DebugVariable Key(DVI->getVariable(), std::nullopt,
-                        DVI->getDebugLoc()->getInlinedAt());
+                        DILocRef(*DVI)->getInlinedAt());
       auto [VMI, Inserted] = VariableMap.try_emplace(Key);
       auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI);
       // A dbg.assign with no linked instructions can be treated like a
@@ -654,7 +654,7 @@ static bool removeUndefDbgAssignsFromEntryBlock(BasicBlock *BB) {
   // Returns the DebugVariable for DVI with no fragment info.
   auto GetAggregateVariable = [](DbgValueInst *DVI) {
     return DebugVariable(DVI->getVariable(), std::nullopt,
-                         DVI->getDebugLoc()->getInlinedAt());
+                         DILocRef(*DVI)->getInlinedAt());
   };
 
   // Remove undef dbg.assign intrinsics that are encountered before

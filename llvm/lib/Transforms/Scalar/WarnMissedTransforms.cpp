@@ -28,7 +28,7 @@ static void warnAboutLeftoverTransformations(Loop *L,
     ORE->emit(
         DiagnosticInfoOptimizationFailure(DEBUG_TYPE,
                                           "FailedRequestedUnrolling",
-                                          L->getStartLoc(), L->getHeader())
+                                          L->getStartLocRef(), L->getHeader())
         << "loop not unrolled: the optimizer was unable to perform the "
            "requested transformation; the transformation might be disabled or "
            "specified as part of an unsupported transformation ordering");
@@ -39,7 +39,7 @@ static void warnAboutLeftoverTransformations(Loop *L,
     ORE->emit(
         DiagnosticInfoOptimizationFailure(DEBUG_TYPE,
                                           "FailedRequestedUnrollAndJamming",
-                                          L->getStartLoc(), L->getHeader())
+                                          L->getStartLocRef(), L->getHeader())
         << "loop not unroll-and-jammed: the optimizer was unable to perform "
            "the requested transformation; the transformation might be disabled "
            "or specified as part of an unsupported transformation ordering");
@@ -56,7 +56,7 @@ static void warnAboutLeftoverTransformations(Loop *L,
       ORE->emit(
           DiagnosticInfoOptimizationFailure(DEBUG_TYPE,
                                             "FailedRequestedVectorization",
-                                            L->getStartLoc(), L->getHeader())
+                                            L->getStartLocRef(), L->getHeader())
           << "loop not vectorized: the optimizer was unable to perform the "
              "requested transformation; the transformation might be disabled "
              "or specified as part of an unsupported transformation ordering");
@@ -64,7 +64,7 @@ static void warnAboutLeftoverTransformations(Loop *L,
       ORE->emit(
           DiagnosticInfoOptimizationFailure(DEBUG_TYPE,
                                             "FailedRequestedInterleaving",
-                                            L->getStartLoc(), L->getHeader())
+                                            L->getStartLocRef(), L->getHeader())
           << "loop not interleaved: the optimizer was unable to perform the "
              "requested transformation; the transformation might be disabled "
              "or specified as part of an unsupported transformation ordering");
@@ -75,7 +75,7 @@ static void warnAboutLeftoverTransformations(Loop *L,
     ORE->emit(
         DiagnosticInfoOptimizationFailure(DEBUG_TYPE,
                                           "FailedRequestedDistribution",
-                                          L->getStartLoc(), L->getHeader())
+                                          L->getStartLocRef(), L->getHeader())
         << "loop not distributed: the optimizer was unable to perform the "
            "requested transformation; the transformation might be disabled or "
            "specified as part of an unsupported transformation ordering");

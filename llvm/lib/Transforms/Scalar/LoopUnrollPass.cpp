@@ -1036,7 +1036,7 @@ bool llvm::computeUnrollCount(
       ORE->emit([&]() {
         return OptimizationRemarkMissed(DEBUG_TYPE,
                                         "FullUnrollAsDirectedTooLarge",
-                                        L->getStartLoc(), L->getHeader())
+                                        L->getStartLocRef(), L->getHeader())
                << "Unable to fully unroll loop as directed by unroll pragma "
                   "because "
                   "unrolled size is too large.";
@@ -1048,7 +1048,7 @@ bool llvm::computeUnrollCount(
           ORE->emit([&]() {
             return OptimizationRemarkMissed(DEBUG_TYPE,
                                             "UnrollAsDirectedTooLarge",
-                                            L->getStartLoc(), L->getHeader())
+                                            L->getStartLocRef(), L->getHeader())
                    << "Unable to unroll loop as directed by unroll(enable) "
                       "pragma "
                       "because unrolled size is too large.";
@@ -1063,7 +1063,7 @@ bool llvm::computeUnrollCount(
     ORE->emit([&]() {
       return OptimizationRemarkMissed(
                  DEBUG_TYPE, "CantFullUnrollAsDirectedRuntimeTripCount",
-                 L->getStartLoc(), L->getHeader())
+                 L->getStartLocRef(), L->getHeader())
              << "Unable to fully unroll loop as directed by unroll(full) "
                 "pragma "
                 "because loop has a runtime trip count.";
@@ -1129,7 +1129,7 @@ bool llvm::computeUnrollCount(
       ORE->emit([&]() {
         return OptimizationRemarkMissed(DEBUG_TYPE,
                                         "DifferentUnrollCountFromDirected",
-                                        L->getStartLoc(), L->getHeader())
+                                        L->getStartLocRef(), L->getHeader())
                << "Unable to unroll loop the number of times directed by "
                   "unroll_count pragma because remainder loop is restricted "
                   "(that could architecture specific or because the loop "
@@ -1307,7 +1307,7 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
     LLVM_DEBUG(dbgs() << "PEELING loop %" << L->getHeader()->getName()
                       << " with iteration count " << PP.PeelCount << "!\n");
     ORE.emit([&]() {
-      return OptimizationRemark(DEBUG_TYPE, "Peeled", L->getStartLoc(),
+      return OptimizationRemark(DEBUG_TYPE, "Peeled", L->getStartLocRef(),
                                 L->getHeader())
              << " peeled loop by " << ore::NV("PeelCount", PP.PeelCount)
              << " iterations";

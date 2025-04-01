@@ -227,8 +227,8 @@ FunctionSamples *
 SampleContextTracker::getCalleeContextSamplesFor(const CallBase &Inst,
                                                  StringRef CalleeName) {
   LLVM_DEBUG(dbgs() << "Getting callee context for instr: " << Inst << "\n");
-  DILocation *DIL = Inst.getDebugLoc();
-  if (!DIL)
+  DebugLoc DL = Inst.getDebugLoc();
+  if (!DL)
     return nullptr;
 
   CalleeName = FunctionSamples::getCanonicalFnName(CalleeName);
@@ -237,7 +237,7 @@ SampleContextTracker::getCalleeContextSamplesFor(const CallBase &Inst,
 
   // For indirect call, CalleeName will be empty, in which case the context
   // profile for callee with largest total samples will be returned.
-  ContextTrieNode *CalleeContext = getCalleeContextFor(DIL, FName);
+  ContextTrieNode *CalleeContext = getCalleeContextFor(DILocRef(Inst), FName);
   if (CalleeContext) {
     FunctionSamples *FSamples = CalleeContext->getFunctionSamples();
     LLVM_DEBUG(if (FSamples) {
@@ -252,13 +252,13 @@ SampleContextTracker::getCalleeContextSamplesFor(const CallBase &Inst,
 
 std::vector<const FunctionSamples *>
 SampleContextTracker::getIndirectCalleeContextSamplesFor(
-    const DILocation *DIL) {
+    DILocRef DL) {
   std::vector<const FunctionSamples *> R;
-  if (!DIL)
+  if (!DL)
     return R;
 
-  ContextTrieNode *CallerNode = getContextFor(DIL);
-  LineLocation CallSite = FunctionSamples::getCallSiteIdentifier(DIL);
+  ContextTrieNode *CallerNode = getContextFor(DL);
+  LineLocation CallSite = FunctionSamples::getCallSiteIdentifier(DL);
   for (auto &It : CallerNode->getAllChildContext()) {
     ContextTrieNode &ChildNode = It.second;
     if (ChildNode.getCallSiteLoc() != CallSite)
@@ -271,10 +271,10 @@ SampleContextTracker::getIndirectCalleeContextSamplesFor(
 }
 
 FunctionSamples *
-SampleContextTracker::getContextSamplesFor(const DILocation *DIL) {
-  assert(DIL && "Expect non-null location");
+SampleContextTracker::getContextSamplesFor(DILocRef DL) {
+  assert(DL && "Expect non-null location");
 
-  ContextTrieNode *ContextNode = getContextFor(DIL);
+  ContextTrieNode *ContextNode = getContextFor(DL);
   if (!ContextNode)
     return nullptr;
 
@@ -372,13 +372,14 @@ void SampleContextTracker::promoteMergeContextSamplesTree(
                     << Inst << "\n");
   // Get the caller context for the call instruction, we don't use callee
   // name from call because there can be context from indirect calls too.
-  DILocation *DIL = Inst.getDebugLoc();
-  ContextTrieNode *CallerNode = getContextFor(DIL);
+  DILocRef DL(Inst);
+  DISubprogram *SP = Inst.getFunction()->getSubprogram();
+  ContextTrieNode *CallerNode = getContextFor(DL);
   if (!CallerNode)
     return;
 
   // Get the context that needs to be promoted
-  LineLocation CallSite = FunctionSamples::getCallSiteIdentifier(DIL);
+  LineLocation CallSite = FunctionSamples::getCallSiteIdentifier(DL);
   // For indirect call, CalleeName will be empty, in which case we need to
   // promote all non-inlined child context profiles.
   if (CalleeName.empty()) {
@@ -463,41 +464,41 @@ SampleContextTracker::getContextFor(const SampleContext &Context) {
 }
 
 ContextTrieNode *
-SampleContextTracker::getCalleeContextFor(const DILocation *DIL,
+SampleContextTracker::getCalleeContextFor(DILocRef DL,
                                           FunctionId CalleeName) {
-  assert(DIL && "Expect non-null location");
+  assert(DL && "Expect non-null location");
 
-  ContextTrieNode *CallContext = getContextFor(DIL);
+  ContextTrieNode *CallContext = getContextFor(DL);
   if (!CallContext)
     return nullptr;
 
   // When CalleeName is empty, the child context profile with max
   // total samples will be returned.
   return CallContext->getChildContext(
-      FunctionSamples::getCallSiteIdentifier(DIL), CalleeName);
+      FunctionSamples::getCallSiteIdentifier(DL), CalleeName);
 }
 
-ContextTrieNode *SampleContextTracker::getContextFor(const DILocation *DIL) {
-  assert(DIL && "Expect non-null location");
+ContextTrieNode *SampleContextTracker::getContextFor(DILocRef DL) {
+  assert(DL && "Expect non-null location");
   SmallVector<std::pair<LineLocation, FunctionId>, 10> S;
 
   // Use C++ linkage name if possible.
-  const DILocation *PrevDIL = DIL;
-  for (DIL = DIL->getInlinedAt(); DIL; DIL = DIL->getInlinedAt()) {
-    StringRef Name = PrevDIL->getScope()->getSubprogram()->getLinkageName();
+  DILocRef PrevDL = DL;
+  for (DL = DL->getInlinedAt(); DL; DL = DL->getInlinedAt()) {
+    StringRef Name = PrevDL->getScope()->getSubprogram()->getLinkageName();
     if (Name.empty())
-      Name = PrevDIL->getScope()->getSubprogram()->getName();
+      Name = PrevDL->getScope()->getSubprogram()->getName();
     S.push_back(
-        std::make_pair(FunctionSamples::getCallSiteIdentifier(DIL),
+        std::make_pair(FunctionSamples::getCallSiteIdentifier(DL),
                        getRepInFormat(Name)));
-    PrevDIL = DIL;
+    PrevDL = DL;
   }
 
   // Push root node, note that root node like main may only
   // a name, but not linkage name.
-  StringRef RootName = PrevDIL->getScope()->getSubprogram()->getLinkageName();
+  StringRef RootName = PrevDL->getScope()->getSubprogram()->getLinkageName();
   if (RootName.empty())
-    RootName = PrevDIL->getScope()->getSubprogram()->getName();
+    RootName = PrevDL->getScope()->getSubprogram()->getName();
   S.push_back(std::make_pair(LineLocation(0, 0),
                              getRepInFormat(RootName)));
 

@@ -42,6 +42,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
@@ -157,9 +158,12 @@ void ApplyDebugLocation::init(SourceLocation TemporaryLocation,
 
   // Construct a location that has a valid scope, but no line info.
   assert(!DI->LexicalBlockStack.empty());
+  llvm::DIScope *Scope = DI->LexicalBlockStack.back();
+  while (!isa<llvm::DISubprogram>(Scope))
+    Scope = Scope->getScope();
   CGF->Builder.SetCurrentDebugLocation(
-      llvm::DILocation::get(DI->LexicalBlockStack.back()->getContext(), 0, 0,
-                            DI->LexicalBlockStack.back(), DI->getInlinedAt()));
+      llvm::DebugLoc(0, cast<llvm::DISubprogram>(Scope)->getLocScopeIndex(
+        llvm::DILocScopeData(cast<llvm::DILocalScope>(DI->LexicalBlockStack.back()), DI->getInlinedAt()), true)));
 }
 
 ApplyDebugLocation::ApplyDebugLocation(CodeGenFunction &CGF, const Expr *E)
@@ -194,8 +198,9 @@ ApplyInlineDebugLocation::ApplyInlineDebugLocation(CodeGenFunction &CGF,
   }
   auto &DI = *CGF.getDebugInfo();
   SavedLocation = DI.getLocation();
+  llvm::DISubprogram *SP = CGF.Builder.GetInsertBlock()->getParent()->getSubprogram();
   assert((DI.getInlinedAt() ==
-          CGF.Builder.getCurrentDebugLocation()->getInlinedAt()) &&
+          CGF.Builder.getCurrentDebugLocation().getInlinedAt(SP)) &&
          "CGDebugInfo and IRBuilder are out of sync");
 
   DI.EmitInlineFunctionStart(CGF.Builder, InlinedFn);
@@ -535,6 +540,12 @@ unsigned CGDebugInfo::getColumnNumber(SourceLocation Loc, bool Force) {
   SourceManager &SM = CGM.getContext().getSourceManager();
   PresumedLoc PLoc = SM.getPresumedLoc(Loc.isValid() ? Loc : CurLoc);
   return PLoc.isValid() ? PLoc.getColumn() : 0;
+}
+
+llvm::DISrcLocData CGDebugInfo::getDISrcLoc(SourceLocation Loc, bool ForceColumn) {
+  unsigned Line = getLineNumber(Loc);
+  unsigned Column = getColumnNumber(Loc, ForceColumn);
+  return llvm::DISrcLocData(Line, Column);
 }
 
 StringRef CGDebugInfo::getCurrentDirname() {
@@ -3614,7 +3625,7 @@ llvm::DIMacroFile *CGDebugInfo::CreateTempMacroFile(llvm::DIMacroFile *Parent,
   return DBuilder.createTempMacroFile(Parent, Line, FName);
 }
 
-llvm::DILocation *CGDebugInfo::CreateTrapFailureMessageFor(
+llvm::DebugLoc CGDebugInfo::CreateTrapFailureMessageFor(
     llvm::DebugLoc TrapLocation, StringRef Category, StringRef FailureMsg) {
   // Create a debug location from `TrapLocation` that adds an artificial inline
   // frame.
@@ -3626,9 +3637,9 @@ llvm::DILocation *CGDebugInfo::CreateTrapFailureMessageFor(
   FuncName += FailureMsg;
 
   llvm::DISubprogram *TrapSP =
-      createInlinedTrapSubprogram(FuncName, TrapLocation->getFile());
-  return llvm::DILocation::get(CGM.getLLVMContext(), /*Line=*/0, /*Column=*/0,
-                               /*Scope=*/TrapSP, /*InlinedAt=*/TrapLocation);
+      createInlinedTrapSubprogram(FuncName, llvm::DILocRef(CurSP, TrapLocation)->getFile());
+  CurSP->FnLocScopes.push_back(llvm::DILocScopeData(TrapSP, TrapLocation));
+  return llvm::DebugLoc(0, CurSP->FnLocScopes.size() - 1);
 }
 
 static QualType UnwrapTypeForDebugInfo(QualType T, const ASTContext &C) {
@@ -4455,6 +4466,7 @@ void CGDebugInfo::emitFunctionStart(GlobalDecl GD, SourceLocation Loc,
       if (SP && SP->isDefinition()) {
         LexicalBlockStack.emplace_back(SP);
         RegionMap[D].reset(SP);
+        CurSP = SP;
         return;
       }
     }
@@ -4531,6 +4543,7 @@ void CGDebugInfo::emitFunctionStart(GlobalDecl GD, SourceLocation Loc,
     DeclCache[D->getCanonicalDecl()].reset(SP);
 
   // Push the function onto the lexical block stack.
+  CurSP = SP;
   LexicalBlockStack.emplace_back(SP);
 
   if (HasDecl)
@@ -4652,7 +4665,7 @@ void CGDebugInfo::EmitInlineFunctionStart(CGBuilderTy &Builder, GlobalDecl GD) {
 void CGDebugInfo::EmitInlineFunctionEnd(CGBuilderTy &Builder) {
   assert(CurInlinedAt && "unbalanced inline scope stack");
   EmitFunctionEnd(Builder, nullptr);
-  setInlinedAt(llvm::DebugLoc(CurInlinedAt).getInlinedAt());
+  setInlinedAt(CurInlinedAt.getInlinedAt(CurSP));
 }
 
 void CGDebugInfo::EmitLocation(CGBuilderTy &Builder, SourceLocation Loc) {
@@ -4664,8 +4677,7 @@ void CGDebugInfo::EmitLocation(CGBuilderTy &Builder, SourceLocation Loc) {
 
   llvm::MDNode *Scope = LexicalBlockStack.back();
   Builder.SetCurrentDebugLocation(
-      llvm::DILocation::get(CGM.getLLVMContext(), getLineNumber(CurLoc),
-                            getColumnNumber(CurLoc), Scope, CurInlinedAt));
+      CurSP->getDebugLoc(getDISrcLoc(CurLoc), llvm::DILocScopeData(cast<llvm::DILocalScope>(Scope), CurInlinedAt), true));
 }
 
 void CGDebugInfo::CreateLexicalBlock(SourceLocation Loc) {
@@ -4696,9 +4708,8 @@ void CGDebugInfo::EmitLexicalBlockStart(CGBuilderTy &Builder,
   setLocation(Loc);
 
   // Emit a line table change for the current location inside the new scope.
-  Builder.SetCurrentDebugLocation(llvm::DILocation::get(
-      CGM.getLLVMContext(), getLineNumber(Loc), getColumnNumber(Loc),
-      LexicalBlockStack.back(), CurInlinedAt));
+  Builder.SetCurrentDebugLocation(
+    CurSP->getDebugLoc(getDISrcLoc(CurLoc), llvm::DILocScopeData(cast<llvm::DILocalScope>(LexicalBlockStack.back()), CurInlinedAt), true));
 
   if (DebugKind <= llvm::codegenoptions::DebugLineTablesOnly)
     return;
@@ -4733,8 +4744,10 @@ void CGDebugInfo::EmitFunctionEnd(CGBuilderTy &Builder, llvm::Function *Fn) {
   }
   FnBeginRegionCount.pop_back();
 
-  if (Fn && Fn->getSubprogram())
+  if (Fn && Fn->getSubprogram()) {
     DBuilder.finalizeSubprogram(Fn->getSubprogram());
+    Fn->getSubprogram()->normalizeDebugLocs(Fn);
+  }
 }
 
 CGDebugInfo::BlockByRefType
@@ -4914,9 +4927,7 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
 
         // Insert an llvm.dbg.declare into the current block.
         DBuilder.insertDeclare(Storage, D, DBuilder.createExpression(Expr),
-                               llvm::DILocation::get(CGM.getLLVMContext(), Line,
-                                                     Column, Scope,
-                                                     CurInlinedAt),
+          CurSP->getDebugLoc(llvm::DISrcLocData(Line, Column), llvm::DILocScopeData(cast<llvm::DILocalScope>(Scope), CurInlinedAt), true),
                                Builder.GetInsertBlock());
       }
     }
@@ -4983,8 +4994,7 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
   }
   // Insert an llvm.dbg.declare into the current block.
   DBuilder.insertDeclare(Storage, D, DBuilder.createExpression(Expr),
-                         llvm::DILocation::get(CGM.getLLVMContext(), Line,
-                                               Column, Scope, CurInlinedAt),
+    CurSP->getDebugLoc(llvm::DISrcLocData(Line, Column), llvm::DILocScopeData(cast<llvm::DILocalScope>(Scope), CurInlinedAt), true),
                          Builder.GetInsertBlock());
 
   return D;
@@ -5089,8 +5099,7 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const BindingDecl *BD,
 
   // Insert an llvm.dbg.declare into the current block.
   DBuilder.insertDeclare(Storage, D, DBuilder.createExpression(Expr),
-                         llvm::DILocation::get(CGM.getLLVMContext(), Line,
-                                               Column, Scope, CurInlinedAt),
+    CurSP->getDebugLoc(llvm::DISrcLocData(Line, Column), llvm::DILocScopeData(cast<llvm::DILocalScope>(Scope), CurInlinedAt), true),
                          Builder.GetInsertBlock());
 
   return D;
@@ -5136,8 +5145,7 @@ void CGDebugInfo::EmitLabel(const LabelDecl *D, CGBuilderTy &Builder) {
 
   // Insert an llvm.dbg.label into the current block.
   DBuilder.insertLabel(L,
-                       llvm::DILocation::get(CGM.getLLVMContext(), Line, Column,
-                                             Scope, CurInlinedAt),
+                      CurSP->getDebugLoc(llvm::DISrcLocData(Line, Column), llvm::DILocScopeData(cast<llvm::DILocalScope>(Scope), CurInlinedAt), true),
                        Builder.GetInsertBlock()->end());
 }
 
@@ -5212,8 +5220,7 @@ void CGDebugInfo::EmitDeclareOfBlockDeclRefVariable(
       Line, Ty, false, llvm::DINode::FlagZero, Align);
 
   // Insert an llvm.dbg.declare into the current block.
-  auto DL = llvm::DILocation::get(CGM.getLLVMContext(), Line, Column,
-                                  LexicalBlockStack.back(), CurInlinedAt);
+  auto DL = CurSP->getDebugLoc(llvm::DISrcLocData(Line, Column), llvm::DILocScopeData(cast<llvm::DILocalScope>(LexicalBlockStack.back()), CurInlinedAt), true);
   auto *Expr = DBuilder.createExpression(addr);
   if (InsertPoint)
     DBuilder.insertDeclare(Storage, D, Expr, DL, InsertPoint->getIterator());
@@ -5399,8 +5406,7 @@ void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
 
   // Insert an llvm.dbg.declare into the current block.
   DBuilder.insertDeclare(Alloca, debugVar, DBuilder.createExpression(),
-                         llvm::DILocation::get(CGM.getLLVMContext(), line,
-                                               column, scope, CurInlinedAt),
+    CurSP->getDebugLoc(llvm::DISrcLocData(line, column), llvm::DILocScopeData(scope, CurInlinedAt), true),
                          Builder.GetInsertBlock());
 }
 
@@ -5851,7 +5857,7 @@ void CGDebugInfo::EmitPseudoVariable(CGBuilderTy &Builder,
       llvm::codegenoptions::DebugLineTablesOnly)
     return;
 
-  llvm::DILocation *DIL = Value->getDebugLoc().get();
+  llvm::DILocRef DIL(*Value);
   if (!DIL)
     return;
 
@@ -6163,8 +6169,7 @@ llvm::DebugLoc CGDebugInfo::SourceLocToDebugLoc(SourceLocation Loc) {
     return llvm::DebugLoc();
 
   llvm::MDNode *Scope = LexicalBlockStack.back();
-  return llvm::DILocation::get(CGM.getLLVMContext(), getLineNumber(Loc),
-                               getColumnNumber(Loc), Scope);
+  return CurSP->getDebugLoc(getDISrcLoc(Loc), llvm::DILocScopeData(cast<llvm::DILocalScope>(Scope), CurInlinedAt), true);
 }
 
 llvm::DINode::DIFlags CGDebugInfo::getCallSiteRelatedAttrs() const {

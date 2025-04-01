@@ -944,6 +944,7 @@ void WinEHPrepareImpl::cloneCommonBlocks(Function &F) {
       // Add basic block mapping.
       VMap[BB] = CBB;
 
+
       // Record delta operations that we need to perform to our color mappings.
       Orig2Clone.emplace_back(BB, CBB);
     }

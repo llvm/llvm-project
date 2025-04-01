@@ -41,6 +41,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
@@ -2077,11 +2078,12 @@ bool SimplifyCFGOpt::hoistSuccIdenticalTerminatorToSwitchOrIf(
 
   // Ensure terminator gets a debug location, even an unknown one, in case
   // it involves inlinable calls.
-  SmallVector<DILocation *, 4> Locs;
+  auto *SP = BB1->getParent()->getSubprogram();
+  SmallVector<DebugLoc, 4> Locs;
   Locs.push_back(I1->getDebugLoc());
   for (auto *OtherSuccTI : OtherSuccTIs)
     Locs.push_back(OtherSuccTI->getDebugLoc());
-  NT->setDebugLoc(DILocation::getMergedLocations(Locs));
+  NT->setDebugLoc(SP->getMergedLocations(Locs));
 
   // PHIs created below will adopt NT's merged DebugLoc.
   IRBuilder<NoFolder> Builder(NT);
@@ -2878,14 +2880,15 @@ static void mergeCompatibleInvokesImpl(ArrayRef<InvokeInst *> Invokes,
   // And finally, replace the original `invoke`s with an unconditional branch
   // to the block with the merged `invoke`. Also, give that merged `invoke`
   // the merged debugloc of all the original `invoke`s.
-  DILocation *MergedDebugLoc = nullptr;
+  auto *SP = MergedInvoke->getFunction()->getSubprogram();
+  DebugLoc MergedDebugLoc;
   for (InvokeInst *II : Invokes) {
     // Compute the debug location common to all the original `invoke`s.
     if (!MergedDebugLoc)
       MergedDebugLoc = II->getDebugLoc();
     else
       MergedDebugLoc =
-          DILocation::getMergedLocation(MergedDebugLoc, II->getDebugLoc());
+          SP->getMergedLocation(MergedDebugLoc, II->getDebugLoc());
 
     // And replace the old `invoke` with an unconditionally branch
     // to the block with the merged `invoke`.
@@ -3374,7 +3377,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   // hoisting above.
   for (auto &I : make_early_inc_range(*ThenBB)) {
     if (!SpeculatedStoreValue || &I != SpeculatedStore) {
-      // Don't update the DILocation of dbg.assign intrinsics.
+      // Don't update the DebugLoc of dbg.assign intrinsics.
       if (!isa<DbgAssignIntrinsic>(&I))
         I.setDebugLoc(DebugLoc());
     }

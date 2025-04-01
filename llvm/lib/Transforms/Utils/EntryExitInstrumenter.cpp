@@ -9,6 +9,7 @@
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
@@ -126,8 +127,9 @@ static bool runOnFunction(Function &F, bool PostInlining) {
 
   if (!EntryFunc.empty()) {
     DebugLoc DL;
-    if (auto SP = F.getSubprogram())
-      DL = DILocation::get(SP->getContext(), SP->getScopeLine(), 0, SP);
+    if (auto SP = F.getSubprogram()) {
+      DL = DebugLoc(SP->getSrcLocIndex(DISrcLocData(SP->getScopeLine()), DebugLoc(), true));
+    }
 
     insertCall(F, EntryFunc, F.begin()->getFirstInsertionPt(), DL);
     Changed = true;
@@ -148,7 +150,7 @@ static bool runOnFunction(Function &F, bool PostInlining) {
       if (DebugLoc TerminatorDL = T->getDebugLoc())
         DL = TerminatorDL;
       else if (auto SP = F.getSubprogram())
-        DL = DILocation::get(SP->getContext(), 0, 0, SP);
+        DL = DebugLoc(0, 0);
 
       insertCall(F, ExitFunc, T->getIterator(), DL);
       Changed = true;

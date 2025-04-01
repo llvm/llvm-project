@@ -25,6 +25,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/ValueHandle.h"
@@ -66,7 +67,10 @@ class CGDebugInfo {
   ModuleMap *ClangModuleMap = nullptr;
   ASTSourceDescriptor PCHDescriptor;
   SourceLocation CurLoc;
-  llvm::MDNode *CurInlinedAt = nullptr;
+  /// The DISubprogram of the current function, if any, ignoring any inlined
+  /// functions.
+  llvm::DISubprogram *CurSP = nullptr;
+  llvm::DebugLoc CurInlinedAt;
   llvm::DIType *VTablePtrType = nullptr;
   llvm::DIType *ClassTy = nullptr;
   llvm::DICompositeType *ObjTy = nullptr;
@@ -454,10 +458,10 @@ public:
 
   /// Update the current inline scope. All subsequent calls to \p EmitLocation
   /// will create a location with this inlinedAt field.
-  void setInlinedAt(llvm::MDNode *InlinedAt) { CurInlinedAt = InlinedAt; }
+  void setInlinedAt(llvm::DebugLoc InlinedAt) { CurInlinedAt = InlinedAt; }
 
   /// \return the current inline scope.
-  llvm::MDNode *getInlinedAt() const { return CurInlinedAt; }
+  llvm::DebugLoc getInlinedAt() const { return CurInlinedAt; }
 
   // Converts a SourceLocation to a DebugLoc
   llvm::DebugLoc SourceLocToDebugLoc(SourceLocation Loc);
@@ -632,9 +636,9 @@ public:
   /// `<Prefix>` is "__clang_trap_msg".
   ///
   /// This is used to store failure reasons for traps.
-  llvm::DILocation *CreateTrapFailureMessageFor(llvm::DebugLoc TrapLocation,
-                                                StringRef Category,
-                                                StringRef FailureMsg);
+  llvm::DebugLoc CreateTrapFailureMessageFor(llvm::DebugLoc TrapLocation,
+                                             StringRef Category,
+                                             StringRef FailureMsg);
 
 private:
   /// Emit call to llvm.dbg.declare for a variable declaration.
@@ -819,6 +823,11 @@ private:
   /// invalid then use current location.
   /// \param Force  Assume DebugColumnInfo option is true.
   unsigned getColumnNumber(SourceLocation Loc, bool Force = false);
+  
+  /// Get the LLVM SrcLoc for the location. If location is invalid then use
+  /// current location.
+  /// \param ForceColumn  Assume DebugColumnInfo option is true.
+  llvm::DISrcLocData getDISrcLoc(SourceLocation Loc, bool ForceColumn = false);
 
   /// Collect various properties of a FunctionDecl.
   /// \param GD  A GlobalDecl whose getDecl() must return a FunctionDecl.

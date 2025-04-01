@@ -1576,8 +1576,7 @@ void AsmPrinter::emitPseudoProbe(const MachineInstr &MI) {
     auto Index = MI.getOperand(1).getImm();
     auto Type = MI.getOperand(2).getImm();
     auto Attr = MI.getOperand(3).getImm();
-    DILocation *DebugLoc = MI.getDebugLoc();
-    PP->emitPseudoProbe(GUID, Index, Type, Attr, DebugLoc);
+    PP->emitPseudoProbe(GUID, Index, Type, Attr, MI.getDILocRef());
   }
 }
 
@@ -1987,7 +1986,7 @@ void AsmPrinter::emitFunctionBody() {
         continue;
 
       MachineOptimizationRemarkAnalysis R(DEBUG_TYPE, "InstructionMix",
-                                          MBB.begin()->getDebugLoc(), &MBB);
+                                          DILocRef(*MBB.begin()), &MBB);
 
       // Generate instruction mix remark. First, sort counts in descending order
       // by count and name.

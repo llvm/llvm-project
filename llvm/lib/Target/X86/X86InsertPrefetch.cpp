@@ -69,7 +69,7 @@ using PrefetchHints = SampleRecord::CallTargetMap;
 // are returned as pairs (name, delta).
 ErrorOr<const PrefetchHints &>
 getPrefetchHints(const FunctionSamples *TopSamples, const MachineInstr &MI) {
-  if (const auto &Loc = MI.getDebugLoc())
+  if (DILocRef Loc = DILocRef(MI))
     if (const auto *Samples = TopSamples->findFunctionSamples(Loc))
       return Samples->findCallTargetMapAt(FunctionSamples::getOffset(Loc),
                                           Loc->getBaseDiscriminator());

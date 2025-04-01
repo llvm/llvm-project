@@ -542,10 +542,6 @@ Value *Mapper::mapValue(const Value *V) {
 }
 
 void Mapper::remapDbgRecord(DbgRecord &DR) {
-  // Remap DILocations.
-  auto *MappedDILoc = mapMetadata(DR.getDebugLoc());
-  DR.setDebugLoc(DebugLoc(cast<DILocation>(MappedDILoc)));
-
   if (DbgLabelRecord *DLR = dyn_cast<DbgLabelRecord>(&DR)) {
     // Remap labels.
     DLR->setLabel(cast<DILabel>(mapMetadata(DLR->getLabel())));
@@ -1001,6 +997,8 @@ void Mapper::remapInstruction(Instruction *I) {
   }
 
   // Remap attached metadata.
+  // DebugLocs will not be remapped here, but will be remapped elsewhere if
+  // necessary.
   SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
   I->getAllMetadata(MDs);
   for (const auto &MI : MDs) {

@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/Support/BranchProbability.h"
@@ -60,7 +61,6 @@ class DbgValueInst;
 class DataLayout;
 class DIExpression;
 class DILocalVariable;
-class DILocation;
 class FenceInst;
 class FunctionLoweringInfo;
 class GCFunctionInfo;
@@ -111,16 +111,16 @@ class SelectionDAGBuilder {
   public:
     DILocalVariable *Variable;
     DIExpression *Expression;
-    DebugLoc dl;
+    DILocRef dl;
     DanglingDebugInfo() = default;
-    DanglingDebugInfo(DILocalVariable *Var, DIExpression *Expr, DebugLoc DL,
+    DanglingDebugInfo(DILocalVariable *Var, DIExpression *Expr, DILocRef DL,
                       unsigned SDNO)
         : SDNodeOrder(SDNO), Variable(Var), Expression(Expr),
           dl(std::move(DL)) {}
 
     DILocalVariable *getVariable() const { return Variable; }
     DIExpression *getExpression() const { return Expression; }
-    DebugLoc getDebugLoc() const { return dl; }
+    DILocRef getDebugLoc() const { return dl; }
     unsigned getSDNodeOrder() const { return SDNodeOrder; }
 
     /// Helper for printing DanglingDebugInfo. This hoop-jumping is to
@@ -316,8 +316,8 @@ public:
     return SDLoc(CurInst, SDNodeOrder);
   }
 
-  DebugLoc getCurDebugLoc() const {
-    return CurInst ? CurInst->getDebugLoc() : DebugLoc();
+  DILocRef getCurDebugLoc() const {
+    return CurInst ? DILocRef(*CurInst) : DILocRef();
   }
 
   void CopyValueToVirtualRegister(const Value *V, Register Reg,
@@ -335,7 +335,7 @@ public:
   /// Register a dbg_value which relies on a Value which we have not yet seen.
   void addDanglingDebugInfo(SmallVectorImpl<Value *> &Values,
                             DILocalVariable *Var, DIExpression *Expr,
-                            bool IsVariadic, DebugLoc DL, unsigned Order);
+                            bool IsVariadic, DILocRef DL, unsigned Order);
 
   /// If we have dangling debug info that describes \p Variable, or an
   /// overlapping part of variable considering the \p Expr, then this method
@@ -355,15 +355,15 @@ public:
   /// For a given list of Values, attempt to create and record a SDDbgValue in
   /// the SelectionDAG.
   bool handleDebugValue(ArrayRef<const Value *> Values, DILocalVariable *Var,
-                        DIExpression *Expr, DebugLoc DbgLoc, unsigned Order,
+                        DIExpression *Expr, DILocRef DbgLoc, unsigned Order,
                         bool IsVariadic);
 
   /// Create a record for a kill location debug intrinsic.
   void handleKillDebugValue(DILocalVariable *Var, DIExpression *Expr,
-                            DebugLoc DbgLoc, unsigned Order);
+    DILocRef DbgLoc, unsigned Order);
 
   void handleDebugDeclare(Value *Address, DILocalVariable *Variable,
-                          DIExpression *Expression, DebugLoc DL);
+                          DIExpression *Expression, DILocRef DL);
 
   /// Evict any dangling debug information, attempting to salvage it first.
   void resolveOrClearDbgInfo();
@@ -623,7 +623,7 @@ private:
 
   bool visitEntryValueDbgValue(ArrayRef<const Value *> Values,
                                DILocalVariable *Variable, DIExpression *Expr,
-                               DebugLoc DbgLoc);
+                               DILocRef DbgLoc);
   void visitIntrinsicCall(const CallInst &I, unsigned Intrinsic);
   void visitTargetIntrinsic(const CallInst &I, unsigned Intrinsic);
   void visitConstrainedFPIntrinsic(const ConstrainedFPIntrinsic &FPI);
@@ -689,7 +689,7 @@ private:
   /// instruction for it now. At the end of instruction selection, they will be
   /// inserted to the entry BB.
   bool EmitFuncArgumentDbgValue(const Value *V, DILocalVariable *Variable,
-                                DIExpression *Expr, DILocation *DL,
+                                DIExpression *Expr, DILocRef DL,
                                 FuncArgumentDbgValueKind Kind,
                                 const SDValue &N);
 
@@ -702,7 +702,7 @@ private:
 
   /// Return the appropriate SDDbgValue based on N.
   SDDbgValue *getDbgValue(SDValue N, DILocalVariable *Variable,
-                          DIExpression *Expr, const DebugLoc &dl,
+                          DIExpression *Expr, DILocRef dl,
                           unsigned DbgSDNodeOrder);
 
   SDValue lowerStartEH(SDValue Chain, const BasicBlock *EHPadBB,

@@ -352,7 +352,7 @@ void DebugHandlerBase::beginFunction(const MachineFunction *MF) {
     requestLabelBeforeInsn(MI);
   }
 
-  PrevInstLoc = DebugLoc();
+  PrevInstLoc = DILocRef();
   PrevLabel = Asm->getFunctionBegin();
   beginFunctionImpl(MF);
 }

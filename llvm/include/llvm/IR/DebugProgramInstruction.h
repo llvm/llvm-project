@@ -54,6 +54,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/SymbolTableListTraits.h"
+#include "llvm/IR/TrackingMDRef.h"
 #include "llvm/Support/Casting.h"
 
 namespace llvm {
@@ -69,6 +70,8 @@ class DIAssignID;
 class DbgMarker;
 class DbgVariableRecord;
 class raw_ostream;
+class DIExpression;
+class ValueAsMetadata;
 
 /// A typed tracking MDNode reference that does not require a definition for its
 /// parameter type. Necessary to avoid including DebugInfoMetadata.h, which has
@@ -234,7 +237,7 @@ class DbgLabelRecord : public DbgRecord {
   /// This constructor intentionally left private, so that it is only called via
   /// "createUnresolvedDbgLabelRecord", which clearly expresses that it is for
   /// parsing only.
-  DbgLabelRecord(MDNode *Label, MDNode *DL);
+  DbgLabelRecord(MDNode *Label, DebugLoc DL);
 
 public:
   DbgLabelRecord(DILabel *Label, DebugLoc DL);
@@ -244,7 +247,7 @@ public:
   /// they are resolved, or if they resolve to the wrong type, will result in a
   /// crash.
   static DbgLabelRecord *createUnresolvedDbgLabelRecord(MDNode *Label,
-                                                        MDNode *DL);
+                                                        DebugLoc DL);
 
   DbgLabelRecord *clone() const;
   void print(raw_ostream &O, bool IsForDebug = false) const;
@@ -301,12 +304,12 @@ public:
   /// Directly construct a new DbgVariableRecord representing a dbg.value
   /// intrinsic assigning \p Location to the DV / Expr / DI variable.
   DbgVariableRecord(Metadata *Location, DILocalVariable *DV, DIExpression *Expr,
-                    const DILocation *DI,
+                    DebugLoc DL,
                     LocationType Type = LocationType::Value);
   DbgVariableRecord(Metadata *Value, DILocalVariable *Variable,
                     DIExpression *Expression, DIAssignID *AssignID,
                     Metadata *Address, DIExpression *AddressExpression,
-                    const DILocation *DI);
+                    DebugLoc DL);
 
 private:
   /// Private constructor for creating new instances during parsing only. Only
@@ -315,7 +318,7 @@ private:
   /// depending on which Type is passed.
   DbgVariableRecord(LocationType Type, Metadata *Val, MDNode *Variable,
                     MDNode *Expression, MDNode *AssignID, Metadata *Address,
-                    MDNode *AddressExpression, MDNode *DI);
+                    MDNode *AddressExpression, DebugLoc DL);
 
 public:
   /// Used to create DbgVariableRecords during parsing, where some metadata
@@ -329,34 +332,34 @@ public:
   createUnresolvedDbgVariableRecord(LocationType Type, Metadata *Val,
                                     MDNode *Variable, MDNode *Expression,
                                     MDNode *AssignID, Metadata *Address,
-                                    MDNode *AddressExpression, MDNode *DI);
+                                    MDNode *AddressExpression, DebugLoc DL);
 
   static DbgVariableRecord *
   createDVRAssign(Value *Val, DILocalVariable *Variable,
                   DIExpression *Expression, DIAssignID *AssignID,
                   Value *Address, DIExpression *AddressExpression,
-                  const DILocation *DI);
+                  DebugLoc DL);
   static DbgVariableRecord *
   createLinkedDVRAssign(Instruction *LinkedInstr, Value *Val,
                         DILocalVariable *Variable, DIExpression *Expression,
                         Value *Address, DIExpression *AddressExpression,
-                        const DILocation *DI);
+                        DebugLoc DL);
 
   static DbgVariableRecord *createDbgVariableRecord(Value *Location,
                                                     DILocalVariable *DV,
                                                     DIExpression *Expr,
-                                                    const DILocation *DI);
+                                                    DebugLoc DL);
   static DbgVariableRecord *
   createDbgVariableRecord(Value *Location, DILocalVariable *DV,
-                          DIExpression *Expr, const DILocation *DI,
+                          DIExpression *Expr, DebugLoc DL,
                           DbgVariableRecord &InsertBefore);
   static DbgVariableRecord *createDVRDeclare(Value *Address,
                                              DILocalVariable *DV,
                                              DIExpression *Expr,
-                                             const DILocation *DI);
+                                             DebugLoc DL);
   static DbgVariableRecord *
   createDVRDeclare(Value *Address, DILocalVariable *DV, DIExpression *Expr,
-                   const DILocation *DI, DbgVariableRecord &InsertBefore);
+                   DebugLoc DL, DbgVariableRecord &InsertBefore);
 
   /// Iterator for ValueAsMetadata that internally uses direct pointer iteration
   /// over either a ValueAsMetadata* or a ValueAsMetadata**, dereferencing to the

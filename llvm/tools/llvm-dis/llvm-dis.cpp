@@ -102,9 +102,9 @@ extern cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInfoFormat;
 
 namespace {
 
-static void printDebugLoc(const DebugLoc &DL, formatted_raw_ostream &OS) {
+static void printDebugLoc(DILocRef DL, formatted_raw_ostream &OS) {
   OS << DL.getLine() << ":" << DL.getCol();
-  if (DILocation *IDL = DL.getInlinedAt()) {
+  if (DILocRef IDL = DL.getInlinedAt()) {
     OS << "@";
     printDebugLoc(IDL, OS);
   }
@@ -125,7 +125,7 @@ public:
       OS << "; [#uses=" << V.getNumUses() << " type=" << *V.getType() << "]";
     }
     if (const Instruction *I = dyn_cast<Instruction>(&V)) {
-      if (const DebugLoc &DL = I->getDebugLoc()) {
+      if (DILocRef DL = DILocRef(*I)) {
         if (!Padded) {
           OS.PadToColumn(50);
           Padded = true;

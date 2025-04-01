@@ -12,6 +12,7 @@
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/LazyCallGraph.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/PassManager.h"
 #include <memory>
 
@@ -108,7 +109,7 @@ public:
 
   /// Get the inlining recommendation.
   bool isInliningRecommended() const { return IsInliningRecommended; }
-  const DebugLoc &getOriginalCallSiteDebugLoc() const { return DLoc; }
+  DILocRef getOriginalCallSiteDebugLoc() const { return DLoc; }
   const BasicBlock *getOriginalCallSiteBasicBlock() const { return Block; }
 
 protected:
@@ -125,7 +126,7 @@ protected:
   // Capture the context of CB before inlining, as a successful inlining may
   // change that context, and we want to report success or failure in the
   // original context.
-  const DebugLoc DLoc;
+  DILocRef DLoc;
   const BasicBlock *const Block;
   OptimizationRemarkEmitter &ORE;
   const bool IsInliningRecommended;
@@ -367,21 +368,21 @@ shouldInline(CallBase &CB, TargetTransformInfo &CalleeTTI,
              OptimizationRemarkEmitter &ORE, bool EnableDeferral = true);
 
 /// Emit ORE message.
-void emitInlinedInto(OptimizationRemarkEmitter &ORE, DebugLoc DLoc,
+void emitInlinedInto(OptimizationRemarkEmitter &ORE, DILocRef DLoc,
                      const BasicBlock *Block, const Function &Callee,
                      const Function &Caller, bool IsMandatory,
                      function_ref<void(OptimizationRemark &)> ExtraContext = {},
                      const char *PassName = nullptr);
 
 /// Emit ORE message based in cost (default heuristic).
-void emitInlinedIntoBasedOnCost(OptimizationRemarkEmitter &ORE, DebugLoc DLoc,
+void emitInlinedIntoBasedOnCost(OptimizationRemarkEmitter &ORE, DILocRef DLoc,
                                 const BasicBlock *Block, const Function &Callee,
                                 const Function &Caller, const InlineCost &IC,
                                 bool ForProfileContext = false,
                                 const char *PassName = nullptr);
 
 /// Add location info to ORE message.
-void addLocationToRemarks(OptimizationRemark &Remark, DebugLoc DLoc);
+void addLocationToRemarks(OptimizationRemark &Remark, DILocRef DLoc);
 
 /// Set the inline-remark attribute.
 void setInlineRemark(CallBase &CB, StringRef Message);

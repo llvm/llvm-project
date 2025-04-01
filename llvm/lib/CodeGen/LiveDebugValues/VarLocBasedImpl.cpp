@@ -423,7 +423,7 @@ private:
 
     VarLoc(const MachineInstr &MI)
         : Var(MI.getDebugVariable(), MI.getDebugExpression(),
-              MI.getDebugLoc()->getInlinedAt()),
+              DILocRef(MI)->getInlinedAt()),
           Expr(MI.getDebugExpression()), MI(MI) {
       assert(MI.isDebugValue() && "not a DBG_VALUE");
       assert((MI.isDebugValueList() || MI.getNumOperands() == 4) &&
@@ -707,7 +707,7 @@ private:
     /// Determine whether the lexical scope of this value's debug location
     /// dominates MBB.
     bool dominates(LexicalScopes &LS, MachineBasicBlock &MBB) const {
-      return LS.dominates(MI.getDebugLoc().get(), &MBB);
+      return LS.dominates(MI.getDebugLoc(), &MBB);
     }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -755,7 +755,7 @@ private:
 
       Out << ", \"" << Var.getVariable()->getName() << "\", " << *Expr << ", ";
       if (Var.getInlinedAt())
-        Out << "!" << Var.getInlinedAt()->getMetadataID() << ")\n";
+        Out << "!" << Var.getInlinedAt() << ")\n";
       else
         Out << "(null))";
 
@@ -1413,9 +1413,9 @@ void VarLocBasedLDV::transferDebugValue(const MachineInstr &MI,
     return;
   const DILocalVariable *Var = MI.getDebugVariable();
   const DIExpression *Expr = MI.getDebugExpression();
-  const DILocation *DebugLoc = MI.getDebugLoc();
-  const DILocation *InlinedAt = DebugLoc->getInlinedAt();
-  assert(Var->isValidLocationForIntrinsic(DebugLoc) &&
+  DILocRef DL(MI);
+  DebugLoc InlinedAt = DL->getInlinedAt();
+  assert(Var->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
 
   DebugVariable V(Var, Expr, InlinedAt);
@@ -1955,7 +1955,7 @@ void VarLocBasedLDV::accumulateFragmentMap(MachineInstr &MI,
                                             VarToFragments &SeenFragments,
                                             OverlapMap &OverlappingFragments) {
   DebugVariable MIVar(MI.getDebugVariable(), MI.getDebugExpression(),
-                      MI.getDebugLoc()->getInlinedAt());
+                      DILocRef(MI)->getInlinedAt());
   FragmentInfo ThisFragment = MIVar.getFragmentOrDefault();
 
   // If this is the first sighting of this variable, then we are guaranteed
@@ -2140,7 +2140,7 @@ bool VarLocBasedLDV::isEntryValueCandidate(
     return false;
 
   // Do not consider parameters that belong to an inlined function.
-  if (MI.getDebugLoc()->getInlinedAt())
+  if (DILocRef(MI)->getInlinedAt())
     return false;
 
   // Only consider parameters that are described using registers. Parameters
@@ -2189,7 +2189,7 @@ void VarLocBasedLDV::recordEntryValue(const MachineInstr &MI,
     return;
 
   DebugVariable V(MI.getDebugVariable(), MI.getDebugExpression(),
-                  MI.getDebugLoc()->getInlinedAt());
+                  DILocRef(MI)->getInlinedAt());
 
   if (!isEntryValueCandidate(MI, DefinedRegs) ||
       OpenRanges.getEntryValueBackup(V))
@@ -2285,8 +2285,8 @@ bool VarLocBasedLDV::ExtendRanges(MachineFunction &MF,
         accumulateFragmentMap(MI, SeenFragments, OverlapFragments);
 
   auto hasNonArtificialLocation = [](const MachineInstr &MI) -> bool {
-    if (const DebugLoc &DL = MI.getDebugLoc())
-      return DL.getLine() != 0;
+    if (DebugLoc DL = MI.getDebugLoc())
+      return DL.SrcLocIndex != 0;
     return false;
   };
   for (auto &MBB : MF)

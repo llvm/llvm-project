@@ -533,6 +533,8 @@ void MLInlineAdvice::updateCachedCallerFPI(FunctionAnalysisManager &FAM) const {
 
 void MLInlineAdvice::recordInliningImpl() {
   ORE.emit([&]() {
+    // TODO: This probably doesn't want the inner location, but the outermost non-inlined location;
+    // the whole "InlineAdvice" analysis needs attention.
     OptimizationRemark R(DEBUG_TYPE, "InliningSuccess", DLoc, Block);
     reportContextForRemark(R);
     return R;
@@ -555,7 +557,7 @@ void MLInlineAdvice::recordUnsuccessfulInliningImpl(
   getAdvisor()->getCachedFPI(*Caller) = PreInlineCallerFPI;
   ORE.emit([&]() {
     OptimizationRemarkMissed R(DEBUG_TYPE, "InliningAttemptedAndUnsuccessful",
-                               DLoc, Block);
+      DLoc, Block);
     reportContextForRemark(R);
     return R;
   });

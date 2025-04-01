@@ -595,7 +595,7 @@ void MachineOutliner::emitNotOutliningCheaperRemark(
   MachineOptimizationRemarkEmitter MORE(*(C.getMF()), nullptr);
   MORE.emit([&]() {
     MachineOptimizationRemarkMissed R(DEBUG_TYPE, "NotOutliningCheaper",
-                                      C.front().getDebugLoc(), C.getMBB());
+                                      DILocRef(C.front()), C.getMBB());
     R << "Did not outline " << NV("Length", StringLen) << " instructions"
       << " from " << NV("NumOccurrences", CandidatesForRepeatedSeq.size())
       << " locations."
@@ -608,7 +608,7 @@ void MachineOutliner::emitNotOutliningCheaperRemark(
     // Tell the user the other places the candidate was found.
     for (unsigned i = 1, e = CandidatesForRepeatedSeq.size(); i < e; i++) {
       R << NV((Twine("OtherStartLoc") + Twine(i)).str(),
-              CandidatesForRepeatedSeq[i].front().getDebugLoc());
+              DILocRef(CandidatesForRepeatedSeq[i].front()));
       if (i != e - 1)
         R << ", ";
     }
@@ -622,7 +622,7 @@ void MachineOutliner::emitOutlinedFunctionRemark(OutlinedFunction &OF) {
   MachineBasicBlock *MBB = &*OF.MF->begin();
   MachineOptimizationRemarkEmitter MORE(*OF.MF, nullptr);
   MachineOptimizationRemark R(DEBUG_TYPE, "OutlinedFunction",
-                              MBB->findDebugLoc(MBB->begin()), MBB);
+                              MBB->findDILocRef(MBB->begin()), MBB);
   R << "Saved " << NV("OutliningBenefit", OF.getBenefit()) << " bytes by "
     << "outlining " << NV("Length", OF.getNumInstrs()) << " instructions "
     << "from " << NV("NumOccurrences", OF.getOccurrenceCount())
@@ -633,7 +633,7 @@ void MachineOutliner::emitOutlinedFunctionRemark(OutlinedFunction &OF) {
   for (size_t i = 0, e = OF.Candidates.size(); i < e; i++) {
 
     R << NV((Twine("StartLoc") + Twine(i)).str(),
-            OF.Candidates[i].front().getDebugLoc());
+            DILocRef(OF.Candidates[i].front()));
     if (i != e - 1)
       R << ", ";
   }

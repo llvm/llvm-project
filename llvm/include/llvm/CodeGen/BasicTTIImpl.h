@@ -724,7 +724,7 @@ public:
 
           if (ORE) {
             ORE->emit([&]() {
-              return OptimizationRemark("TTI", "DontUnroll", L->getStartLoc(),
+              return OptimizationRemark("TTI", "DontUnroll", DILocRef(BB->getParent()->getSubprogram(), L->getStartLoc()),
                                         L->getHeader())
                      << "advising against unrolling the loop because it "
                         "contains a "

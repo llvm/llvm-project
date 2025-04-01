@@ -231,7 +231,7 @@ protected:
   ErrorOr<uint64_t> getInstWeightImpl(const InstructionT &Inst);
   virtual ErrorOr<uint64_t> getProbeWeight(const InstructionT &Inst);
   ErrorOr<uint64_t> getBlockWeight(const BasicBlockT *BB);
-  mutable DenseMap<const DILocation *, const FunctionSamples *>
+  mutable DenseMap<DebugLoc, const FunctionSamples *>
       DILocation2SampleMap;
   virtual const FunctionSamples *
   findFunctionSamples(const InstructionT &I) const;
@@ -412,17 +412,16 @@ SampleProfileLoaderBaseImpl<BT>::getInstWeightImpl(const InstructionT &Inst) {
   if (!FS)
     return std::error_code();
 
-  const DebugLoc &DLoc = Inst.getDebugLoc();
-  if (!DLoc)
+  DILocRef DL(Inst);
+  if (!DL)
     return std::error_code();
 
-  const DILocation *DIL = DLoc;
-  uint32_t LineOffset = FunctionSamples::getOffset(DIL);
+  uint32_t LineOffset = FunctionSamples::getOffset(DL);
   uint32_t Discriminator;
   if (EnableFSDiscriminator)
-    Discriminator = DIL->getDiscriminator();
+    Discriminator = DL->getDiscriminator();
   else
-    Discriminator = DIL->getBaseDiscriminator();
+    Discriminator = DL->getBaseDiscriminator();
 
   ErrorOr<uint64_t> R = FS->findSamplesAt(LineOffset, Discriminator);
   if (R) {
@@ -442,7 +441,7 @@ SampleProfileLoaderBaseImpl<BT>::getInstWeightImpl(const InstructionT &Inst) {
         return Remark;
       });
     }
-    LLVM_DEBUG(dbgs() << "    " << DLoc.getLine() << "." << Discriminator << ":"
+    LLVM_DEBUG(dbgs() << "    " << DL.getLine() << "." << Discriminator << ":"
                       << Inst << " (line offset: " << LineOffset << "."
                       << Discriminator << " - weight: " << R.get() << ")\n");
   }
@@ -559,13 +558,13 @@ bool SampleProfileLoaderBaseImpl<BT>::computeBlockWeights(FunctionT &F) {
 template <typename BT>
 const FunctionSamples *SampleProfileLoaderBaseImpl<BT>::findFunctionSamples(
     const InstructionT &Inst) const {
-  const DILocation *DIL = Inst.getDebugLoc();
-  if (!DIL)
+  DILocRef DL(Inst);
+  if (!DL)
     return Samples;
 
-  auto it = DILocation2SampleMap.try_emplace(DIL, nullptr);
+  auto it = DILocation2SampleMap.try_emplace(DL, nullptr);
   if (it.second) {
-    it.first->second = Samples->findFunctionSamples(DIL, Reader->getRemapper());
+    it.first->second = Samples->findFunctionSamples(DL, Reader->getRemapper());
   }
   return it.first->second;
 }

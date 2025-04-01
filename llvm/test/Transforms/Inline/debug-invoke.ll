@@ -2,22 +2,23 @@
 
 ; Test that the debug location is preserved when rewriting an inlined call as an invoke
 
+; CHECK: define void @inl(){{.*}}!dbg [[INL_SP:![0-9]+]]
+; CHECK: define void @caller(){{.*}}!dbg [[CALLER_SP:![0-9]+]]
 ; CHECK: invoke void @test()
 ; CHECK-NEXT: to label {{.*}} unwind label {{.*}}, !dbg [[INL_LOC:!.*]]
-; CHECK: [[SP:.*]] = distinct !DISubprogram(
-; CHECK: [[INL_LOC]] = !DILocation(line: 1, scope: [[SP]], inlinedAt: [[INL_AT:.*]])
-; CHECK: [[INL_AT]] = distinct !DILocation(line: 2, scope: [[SP]])
+; CHECK: [[INL_LOC]] = !DILocation(line: 1, scope: [[INL_SP]], inlinedAt: [[INL_AT:.*]])
+; CHECK: [[INL_AT]] = distinct !DILocation(line: 2, scope: [[CALLER_SP]])
 
 declare void @test()
 declare i32 @__gxx_personality_v0(...)
 
 attributes #0 = { alwaysinline }
-define void @inl() #0 {
+define void @inl() #0 !dbg !2 {
   call void @test(), !dbg !3
   ret void
 }
 
-define void @caller() personality ptr @__gxx_personality_v0 {
+define void @caller() personality ptr @__gxx_personality_v0 !dbg !7 {
   invoke void @inl()
     to label %cont unwind label %lpad, !dbg !4
 
@@ -35,8 +36,9 @@ lpad:
 
 !1 = !{i32 2, !"Debug Info Version", i32 3}
 !2 = distinct !DISubprogram(unit: !5)
+!7 = distinct !DISubprogram(unit: !5)
 !3 = !DILocation(line: 1, scope: !2)
-!4 = !DILocation(line: 2, scope: !2)
+!4 = !DILocation(line: 2, scope: !7)
 !5 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang",
                              file: !6,
                              isOptimized: true, flags: "-O2",

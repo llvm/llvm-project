@@ -24,6 +24,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/EHPersonalities.h"
@@ -255,7 +256,7 @@ bool DwarfEHPrepare::InsertUnwindResumeCalls() {
     Function *RewindFn = dyn_cast<Function>(RewindFunction.getCallee());
     if (RewindFn && RewindFn->getSubprogram())
       if (DISubprogram *SP = F.getSubprogram())
-        CI->setDebugLoc(DILocation::get(SP->getContext(), 0, 0, SP));
+        CI->setDebugLoc(DebugLoc(0, 0));
     CI->setCallingConv(RewindFunctionCallingConv);
 
     // We never expect _Unwind_Resume to return.
@@ -298,7 +299,7 @@ bool DwarfEHPrepare::InsertUnwindResumeCalls() {
   Function *RewindFn = dyn_cast<Function>(RewindFunction.getCallee());
   if (RewindFn && RewindFn->getSubprogram())
     if (DISubprogram *SP = F.getSubprogram())
-      CI->setDebugLoc(DILocation::get(SP->getContext(), 0, 0, SP));
+      CI->setDebugLoc(DebugLoc(0, 0));
   CI->setCallingConv(RewindFunctionCallingConv);
 
   // We never expect _Unwind_Resume to return.

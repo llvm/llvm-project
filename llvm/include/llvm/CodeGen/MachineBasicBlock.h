@@ -1166,6 +1166,10 @@ public:
   DebugLoc findDebugLoc(iterator MBBI) {
     return findDebugLoc(MBBI.getInstrIterator());
   }
+  DILocRefWrapper findDILocRef(instr_iterator MBBI);
+  DILocRefWrapper findDILocRef(iterator MBBI) {
+    return findDILocRef(MBBI.getInstrIterator());
+  }
 
   /// Has exact same behavior as @ref findDebugLoc (it also searches towards the
   /// end of this MBB) except that this function takes a reverse iterator to

@@ -44,7 +44,7 @@ static void runImpl(Function &F, const TargetLibraryInfo &TLI) {
     return;
 
   // Track all annotated instructions aggregated based on their debug location.
-  DenseMap<MDNode *, SmallVector<Instruction *, 4>> DebugLoc2Annotated;
+  DenseMap<DebugLoc, SmallVector<Instruction *, 4>> DebugLoc2Annotated;
 
   OptimizationRemarkEmitter ORE(&F);
   // First, generate a summary of the annotated instructions.
@@ -52,7 +52,7 @@ static void runImpl(Function &F, const TargetLibraryInfo &TLI) {
   for (Instruction &I : instructions(F)) {
     if (!I.hasMetadata(LLVMContext::MD_annotation))
       continue;
-    DebugLoc2Annotated[I.getDebugLoc().getAsMDNode()].push_back(&I);
+    DebugLoc2Annotated[I.getDebugLoc()].push_back(&I);
 
     for (const MDOperand &Op :
          I.getMetadata(LLVMContext::MD_annotation)->operands()) {

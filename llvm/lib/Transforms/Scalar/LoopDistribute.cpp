@@ -843,7 +843,7 @@ public:
     ++NumLoopsDistributed;
     // Report the success.
     ORE->emit([&]() {
-      return OptimizationRemark(LDIST_NAME, "Distribute", L->getStartLoc(),
+      return OptimizationRemark(LDIST_NAME, "Distribute", L->getStartLocRef(),
                                 L->getHeader())
              << "distributed loop";
     });
@@ -860,7 +860,7 @@ public:
     // With Rpass-missed report that distribution failed.
     ORE->emit([&]() {
       return OptimizationRemarkMissed(LDIST_NAME, "NotDistributed",
-                                      L->getStartLoc(), L->getHeader())
+                                      L->getStartLocRef(), L->getHeader())
              << "loop not distributed: use -Rpass-analysis=loop-distribute for "
                 "more "
                 "info";
@@ -870,14 +870,14 @@ public:
     // was requested explicitly.
     ORE->emit(OptimizationRemarkAnalysis(
                   Forced ? OptimizationRemarkAnalysis::AlwaysPrint : LDIST_NAME,
-                  RemarkName, L->getStartLoc(), L->getHeader())
+                  RemarkName, L->getStartLocRef(), L->getHeader())
               << "loop not distributed: " << Message);
 
     // Also issue a warning if distribution was requested explicitly but it
     // failed.
     if (Forced)
       Ctx.diagnose(DiagnosticInfoOptimizationFailure(
-          *F, L->getStartLoc(), "loop not distributed: failed "
+          *F, L->getStartLocRef(), "loop not distributed: failed "
                                 "explicitly specified loop distribution"));
 
     return false;

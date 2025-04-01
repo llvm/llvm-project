@@ -834,6 +834,7 @@ mergeOperations(MachineBasicBlock::iterator MBBIStartPos,
 
 void BranchFolder::mergeCommonTails(unsigned commonTailIndex) {
   MachineBasicBlock *MBB = SameTails[commonTailIndex].getBlock();
+  auto *SP = MBB->getParent()->getFunction().getSubprogram();
 
   std::vector<MachineBasicBlock::iterator> NextCommonInsts(SameTails.size());
   for (unsigned int i = 0 ; i != SameTails.size() ; ++i) {
@@ -863,7 +864,9 @@ void BranchFolder::mergeCommonTails(unsigned commonTailIndex) {
             "Reached BB end within common tail");
       }
       assert(MI.isIdenticalTo(*Pos) && "Expected matching MIIs!");
-      DL = DILocation::getMergedLocation(DL, Pos->getDebugLoc());
+      // This is actually safe to call even if SP is nullptr, because if there
+      // is no SP then the DebugLocs must be invalid and we'll early exit.
+      DL = SP->getMergedLocation(DL, Pos->getDebugLoc());
       NextCommonInsts[i] = ++Pos;
     }
     MI.setDebugLoc(DL);

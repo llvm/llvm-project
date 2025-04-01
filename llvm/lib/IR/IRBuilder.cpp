@@ -62,18 +62,11 @@ Type *IRBuilderBase::getCurrentFunctionReturnType() const {
 }
 
 DebugLoc IRBuilderBase::getCurrentDebugLocation() const {
-  for (auto &KV : MetadataToCopy)
-    if (KV.first == LLVMContext::MD_dbg)
-      return {cast<DILocation>(KV.second)};
-
-  return {};
+  return DebugLocToCopy;
 }
 void IRBuilderBase::SetInstDebugLocation(Instruction *I) const {
-  for (const auto &KV : MetadataToCopy)
-    if (KV.first == LLVMContext::MD_dbg) {
-      I->setDebugLoc(DebugLoc(KV.second));
-      return;
-    }
+  if (DebugLocToCopy)
+    I->setDebugLoc(DebugLocToCopy);
 }
 
 CallInst *

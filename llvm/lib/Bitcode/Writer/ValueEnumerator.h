@@ -28,6 +28,7 @@ namespace llvm {
 class BasicBlock;
 class Comdat;
 class DIArgList;
+class DILocation;
 class Function;
 class Instruction;
 class LocalAsMetadata;
@@ -53,6 +54,7 @@ public:
 
   UseListOrderStack UseListOrders;
 
+  DenseMap<Function *, SmallVector<DILocation *, 0>> TempDILocations;
 private:
   using TypeMapType = DenseMap<Type *, unsigned>;
   TypeMapType TypeMap;

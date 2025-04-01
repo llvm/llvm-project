@@ -335,6 +335,12 @@ public:
   StringRef getDefaultTargetFeatures();
   void setDefaultTargetFeatures(StringRef Features);
 
+  // These clear the DILocation map and remove distinct DILocations from the
+  // distinct metadata map respectively; delete the DILocations separately, as
+  // this does not and they will otherwise leak.
+  void clearUniqueDILocationStorage();
+  void clearDistinctDILocationStorage();
+
 private:
   // Module needs access to the add/removeModule methods.
   friend class Module;

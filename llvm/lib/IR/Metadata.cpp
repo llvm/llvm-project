@@ -794,6 +794,9 @@ void MDNode::makeDistinct() {
 }
 
 void MDNode::resolve() {
+  if (!isUniqued()) {
+    dbgs() << "Line: " << SubclassData32 << " Column: " << SubclassData16 << "\n";
+  }
   assert(isUniqued() && "Expected this to be uniqued");
   assert(!isResolved() && "Expected this to be unresolved");
 
@@ -1619,15 +1622,10 @@ void Instruction::setMetadata(StringRef Kind, MDNode *Node) {
 MDNode *Instruction::getMetadataImpl(StringRef Kind) const {
   const LLVMContext &Ctx = getContext();
   unsigned KindID = Ctx.getMDKindID(Kind);
-  if (KindID == LLVMContext::MD_dbg)
-    return DbgLoc.getAsMDNode();
   return Value::getMetadata(KindID);
 }
 
 void Instruction::eraseMetadataIf(function_ref<bool(unsigned, MDNode *)> Pred) {
-  if (DbgLoc && Pred(LLVMContext::MD_dbg, DbgLoc.getAsMDNode()))
-    DbgLoc = {};
-
   Value::eraseMetadataIf(Pred);
 }
 
@@ -1679,12 +1677,6 @@ void Instruction::updateDIAssignIDMapping(DIAssignID *ID) {
 void Instruction::setMetadata(unsigned KindID, MDNode *Node) {
   if (!Node && !hasMetadata())
     return;
-
-  // Handle 'dbg' as a special case since it is not stored in the hash table.
-  if (KindID == LLVMContext::MD_dbg) {
-    DbgLoc = DebugLoc(Node);
-    return;
-  }
 
   // Update DIAssignID to Instruction(s) mapping.
   if (KindID == LLVMContext::MD_DIAssignID) {
@@ -1776,12 +1768,6 @@ void Instruction::setNoSanitizeMetadata() {
 void Instruction::getAllMetadataImpl(
     SmallVectorImpl<std::pair<unsigned, MDNode *>> &Result) const {
   Result.clear();
-
-  // Handle 'dbg' as a special case since it is not stored in the hash table.
-  if (DbgLoc) {
-    Result.push_back(
-        std::make_pair((unsigned)LLVMContext::MD_dbg, DbgLoc.getAsMDNode()));
-  }
   Value::getAllMetadata(Result);
 }
 

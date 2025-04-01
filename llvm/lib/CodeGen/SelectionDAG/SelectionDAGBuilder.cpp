@@ -1174,7 +1174,7 @@ SDValue SelectionDAGBuilder::getControlRoot() {
 void SelectionDAGBuilder::handleDebugDeclare(Value *Address,
                                              DILocalVariable *Variable,
                                              DIExpression *Expression,
-                                             DebugLoc DL) {
+                                             DILocRef DL) {
   assert(Variable && "Missing variable");
 
   // Check if address has undef value.
@@ -1235,16 +1235,16 @@ void SelectionDAGBuilder::visitDbgInfo(const Instruction &I) {
       auto *Var = FnVarLocs->getDILocalVariable(It->VariableID);
       dropDanglingDebugInfo(Var, It->Expr);
       if (It->Values.isKillLocation(It->Expr)) {
-        handleKillDebugValue(Var, It->Expr, It->DL, SDNodeOrder);
+        handleKillDebugValue(Var, It->Expr, DILocRef(I.getFunction()->getSubprogram(), It->DL), SDNodeOrder);
         continue;
       }
       SmallVector<Value *> Values(It->Values.location_ops());
-      if (!handleDebugValue(Values, Var, It->Expr, It->DL, SDNodeOrder,
+      if (!handleDebugValue(Values, Var, It->Expr, DILocRef(I.getFunction()->getSubprogram(), It->DL), SDNodeOrder,
                             It->Values.hasArgList())) {
         SmallVector<Value *, 4> Vals(It->Values.location_ops());
         addDanglingDebugInfo(Vals,
                              FnVarLocs->getDILocalVariable(It->VariableID),
-                             It->Expr, Vals.size() > 1, It->DL, SDNodeOrder);
+                             It->Expr, Vals.size() > 1, DILocRef(I.getFunction()->getSubprogram(), It->DL), SDNodeOrder);
       }
     }
   }
@@ -1282,14 +1282,14 @@ void SelectionDAGBuilder::visitDbgInfo(const Instruction &I) {
       LLVM_DEBUG(dbgs() << "SelectionDAG visiting dbg_declare: " << DVR
                         << "\n");
       handleDebugDeclare(DVR.getVariableLocationOp(0), Variable, Expression,
-                         DVR.getDebugLoc());
+                         DILocRef(DVR));
       continue;
     }
 
     // A DbgVariableRecord with no locations is a kill location.
     SmallVector<Value *, 4> Values(DVR.location_ops());
     if (Values.empty()) {
-      handleKillDebugValue(Variable, Expression, DVR.getDebugLoc(),
+      handleKillDebugValue(Variable, Expression, DILocRef(DVR),
                            SDNodeOrder);
       continue;
     }
@@ -1298,16 +1298,16 @@ void SelectionDAGBuilder::visitDbgInfo(const Instruction &I) {
     // location.
     if (llvm::any_of(Values,
                      [](Value *V) { return !V || isa<UndefValue>(V); })) {
-      handleKillDebugValue(Variable, Expression, DVR.getDebugLoc(),
+      handleKillDebugValue(Variable, Expression, DILocRef(DVR),
                            SDNodeOrder);
       continue;
     }
 
     bool IsVariadic = DVR.hasArgList();
-    if (!handleDebugValue(Values, Variable, Expression, DVR.getDebugLoc(),
+    if (!handleDebugValue(Values, Variable, Expression, DILocRef(DVR),
                           SDNodeOrder, IsVariadic)) {
       addDanglingDebugInfo(Values, Variable, Expression, IsVariadic,
-                           DVR.getDebugLoc(), SDNodeOrder);
+                           DILocRef(DVR), SDNodeOrder);
     }
   }
 }
@@ -1381,7 +1381,7 @@ void SelectionDAGBuilder::visit(unsigned Opcode, const User &I) {
 
 static bool handleDanglingVariadicDebugInfo(SelectionDAG &DAG,
                                             DILocalVariable *Variable,
-                                            DebugLoc DL, unsigned Order,
+                                            DILocRef DL, unsigned Order,
                                             SmallVectorImpl<Value *> &Values,
                                             DIExpression *Expression) {
   // For variadic dbg_values we will now insert poison.
@@ -1401,7 +1401,7 @@ static bool handleDanglingVariadicDebugInfo(SelectionDAG &DAG,
 void SelectionDAGBuilder::addDanglingDebugInfo(SmallVectorImpl<Value *> &Values,
                                                DILocalVariable *Var,
                                                DIExpression *Expr,
-                                               bool IsVariadic, DebugLoc DL,
+                                               bool IsVariadic, DILocRef DL,
                                                unsigned Order) {
   if (IsVariadic) {
     handleDanglingVariadicDebugInfo(DAG, Var, DL, Order, Values, Expr);
@@ -1451,7 +1451,7 @@ void SelectionDAGBuilder::resolveDanglingDebugInfo(const Value *V,
 
   DanglingDebugInfoVector &DDIV = DanglingDbgInfoIt->second;
   for (auto &DDI : DDIV) {
-    DebugLoc DL = DDI.getDebugLoc();
+    DILocRef DL = DDI.getDebugLoc();
     unsigned ValSDNodeOrder = Val.getNode()->getIROrder();
     unsigned DbgSDNodeOrder = DDI.getSDNodeOrder();
     DILocalVariable *Variable = DDI.getVariable();
@@ -1506,7 +1506,7 @@ void SelectionDAGBuilder::salvageUnresolvedDbgValue(const Value *V,
   const Value *OrigV = V;
   DILocalVariable *Var = DDI.getVariable();
   DIExpression *Expr = DDI.getExpression();
-  DebugLoc DL = DDI.getDebugLoc();
+  DILocRef DL = DDI.getDebugLoc();
   unsigned SDOrder = DDI.getSDNodeOrder();
 
   // Currently we consider only dbg.value intrinsics -- we tell the salvager
@@ -1565,7 +1565,7 @@ void SelectionDAGBuilder::salvageUnresolvedDbgValue(const Value *V,
 
 void SelectionDAGBuilder::handleKillDebugValue(DILocalVariable *Var,
                                                DIExpression *Expr,
-                                               DebugLoc DbgLoc,
+                                               DILocRef DbgLoc,
                                                unsigned Order) {
   Value *Poison = PoisonValue::get(Type::getInt1Ty(*Context));
   DIExpression *NewExpr =
@@ -1576,7 +1576,7 @@ void SelectionDAGBuilder::handleKillDebugValue(DILocalVariable *Var,
 
 bool SelectionDAGBuilder::handleDebugValue(ArrayRef<const Value *> Values,
                                            DILocalVariable *Var,
-                                           DIExpression *Expr, DebugLoc DbgLoc,
+                                           DIExpression *Expr, DILocRef DbgLoc,
                                            unsigned Order, bool IsVariadic) {
   if (Values.empty())
     return true;
@@ -5965,7 +5965,7 @@ getUnderlyingArgRegs(SmallVectorImpl<std::pair<Register, TypeSize>> &Regs,
 /// appear for function arguments or in the prologue.
 bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
     const Value *V, DILocalVariable *Variable, DIExpression *Expr,
-    DILocation *DL, FuncArgumentDbgValueKind Kind, const SDValue &N) {
+    DILocRef DL, FuncArgumentDbgValueKind Kind, const SDValue &N) {
   const Argument *Arg = dyn_cast<Argument>(V);
   if (!Arg)
     return false;
@@ -6190,7 +6190,7 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
 SDDbgValue *SelectionDAGBuilder::getDbgValue(SDValue N,
                                              DILocalVariable *Variable,
                                              DIExpression *Expr,
-                                             const DebugLoc &dl,
+                                             DILocRef dl,
                                              unsigned DbgSDNodeOrder) {
   if (auto *FISDN = dyn_cast<FrameIndexSDNode>(N.getNode())) {
     // Construct a FrameIndexDbgValue for FrameIndexSDNodes so we can describe
@@ -6255,7 +6255,7 @@ static const CallBase *FindPreallocatedCall(const Value *PreallocatedSetup) {
 /// (guaranteed to exist by the verifier).
 bool SelectionDAGBuilder::visitEntryValueDbgValue(
     ArrayRef<const Value *> Values, DILocalVariable *Variable,
-    DIExpression *Expr, DebugLoc DbgLoc) {
+    DIExpression *Expr, DILocRef DbgLoc) {
   if (!Expr->isEntryValue() || !hasSingleElement(Values))
     return false;
 
@@ -6395,7 +6395,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                                              unsigned Intrinsic) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDLoc sdl = getCurSDLoc();
-  DebugLoc dl = getCurDebugLoc();
+  DILocRef dl = getCurDebugLoc();
   SDValue Res;
 
   SDNodeFlags Flags;
@@ -6639,7 +6639,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // it is non-variadic.
     assert(!DI.hasArgList() && "Only dbg.value should currently use DIArgList");
     handleDebugDeclare(DI.getVariableLocationOp(0), Variable, Expression,
-                       DI.getDebugLoc());
+                       DILocRef(DI));
     return;
   }
   case Intrinsic::dbg_label: {
@@ -6672,7 +6672,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     dropDanglingDebugInfo(Variable, Expression);
 
     if (DI.isKillLocation()) {
-      handleKillDebugValue(Variable, Expression, DI.getDebugLoc(), SDNodeOrder);
+      handleKillDebugValue(Variable, Expression, DILocRef(DI), SDNodeOrder);
       return;
     }
 
@@ -6681,10 +6681,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       return;
 
     bool IsVariadic = DI.hasArgList();
-    if (!handleDebugValue(Values, Variable, Expression, DI.getDebugLoc(),
+    if (!handleDebugValue(Values, Variable, Expression, DILocRef(DI),
                           SDNodeOrder, IsVariadic))
       addDanglingDebugInfo(Values, Variable, Expression, IsVariadic,
-                           DI.getDebugLoc(), SDNodeOrder);
+                           DILocRef(DI), SDNodeOrder);
     return;
   }
 
@@ -7695,7 +7695,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       int FI = FuncInfo.StaticAllocaMap[Slot];
       MCSymbol *FrameAllocSym = MF.getContext().getOrCreateFrameAllocSymbol(
           GlobalValue::dropLLVMManglingEscape(MF.getName()), Idx);
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, dl,
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DebugLoc(dl),
               TII->get(TargetOpcode::LOCAL_ESCAPE))
           .addSym(FrameAllocSym)
           .addFrameIndex(FI);

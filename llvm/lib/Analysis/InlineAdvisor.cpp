@@ -183,7 +183,7 @@ InlineAdvice::InlineAdvice(InlineAdvisor *Advisor, CallBase &CB,
                            OptimizationRemarkEmitter &ORE,
                            bool IsInliningRecommended)
     : Advisor(Advisor), Caller(CB.getCaller()), Callee(CB.getCalledFunction()),
-      DLoc(CB.getDebugLoc()), Block(CB.getParent()), ORE(ORE),
+      DLoc(CB), Block(CB.getParent()), ORE(ORE),
       IsInliningRecommended(IsInliningRecommended) {}
 
 void InlineAdvice::recordInlineStatsIfNeeded() {
@@ -440,62 +440,64 @@ llvm::shouldInline(CallBase &CB, TargetTransformInfo &CalleeTTI,
   return IC;
 }
 
-std::string llvm::formatCallSiteLocation(DebugLoc DLoc,
+std::string llvm::formatCallSiteLocation(DILocRef DLoc,
                                          const CallSiteFormat &Format) {
   std::string Buffer;
   raw_string_ostream CallSiteLoc(Buffer);
   bool First = true;
-  for (DILocation *DIL = DLoc.get(); DIL; DIL = DIL->getInlinedAt()) {
+  while (DLoc) {
     if (!First)
       CallSiteLoc << " @ ";
     // Note that negative line offset is actually possible, but we use
     // unsigned int to match line offset representation in remarks so
     // it's directly consumable by relay advisor.
     uint32_t Offset =
-        DIL->getLine() - DIL->getScope()->getSubprogram()->getLine();
-    uint32_t Discriminator = DIL->getBaseDiscriminator();
-    StringRef Name = DIL->getScope()->getSubprogram()->getLinkageName();
+        DLoc->getLine() - DLoc->getScope()->getSubprogram()->getLine();
+    uint32_t Discriminator = DLoc->getBaseDiscriminator();
+    StringRef Name = DLoc->getScope()->getSubprogram()->getLinkageName();
     if (Name.empty())
-      Name = DIL->getScope()->getSubprogram()->getName();
+      Name = DLoc->getScope()->getSubprogram()->getName();
     CallSiteLoc << Name.str() << ":" << llvm::utostr(Offset);
     if (Format.outputColumn())
-      CallSiteLoc << ":" << llvm::utostr(DIL->getColumn());
+      CallSiteLoc << ":" << llvm::utostr(DLoc->getColumn());
     if (Format.outputDiscriminator() && Discriminator)
       CallSiteLoc << "." << llvm::utostr(Discriminator);
     First = false;
+    DLoc = DLoc->getInlinedAt();
   }
 
   return CallSiteLoc.str();
 }
 
-void llvm::addLocationToRemarks(OptimizationRemark &Remark, DebugLoc DLoc) {
+void llvm::addLocationToRemarks(OptimizationRemark &Remark, DILocRef DLoc) {
   if (!DLoc) {
     return;
   }
 
   bool First = true;
   Remark << " at callsite ";
-  for (DILocation *DIL = DLoc.get(); DIL; DIL = DIL->getInlinedAt()) {
+  while (DLoc) {
     if (!First)
       Remark << " @ ";
-    unsigned int Offset = DIL->getLine();
-    Offset -= DIL->getScope()->getSubprogram()->getLine();
-    unsigned int Discriminator = DIL->getBaseDiscriminator();
-    StringRef Name = DIL->getScope()->getSubprogram()->getLinkageName();
+    unsigned int Offset = DLoc->getLine();
+    Offset -= DLoc->getScope()->getSubprogram()->getLine();
+    unsigned int Discriminator = DLoc.getBaseDiscriminator();
+    StringRef Name = DLoc->getScope()->getSubprogram()->getLinkageName();
     if (Name.empty())
-      Name = DIL->getScope()->getSubprogram()->getName();
+      Name = DLoc->getScope()->getSubprogram()->getName();
     Remark << Name << ":" << ore::NV("Line", Offset) << ":"
-           << ore::NV("Column", DIL->getColumn());
+           << ore::NV("Column", DLoc->getColumn());
     if (Discriminator)
       Remark << "." << ore::NV("Disc", Discriminator);
     First = false;
+    DLoc = DLoc->getInlinedAt();
   }
 
   Remark << ";";
 }
 
 void llvm::emitInlinedInto(
-    OptimizationRemarkEmitter &ORE, DebugLoc DLoc, const BasicBlock *Block,
+    OptimizationRemarkEmitter &ORE, DILocRef DLoc, const BasicBlock *Block,
     const Function &Callee, const Function &Caller, bool AlwaysInline,
     function_ref<void(OptimizationRemark &)> ExtraContext,
     const char *PassName) {
@@ -513,7 +515,7 @@ void llvm::emitInlinedInto(
 }
 
 void llvm::emitInlinedIntoBasedOnCost(
-    OptimizationRemarkEmitter &ORE, DebugLoc DLoc, const BasicBlock *Block,
+    OptimizationRemarkEmitter &ORE, DILocRef DLoc, const BasicBlock *Block,
     const Function &Callee, const Function &Caller, const InlineCost &IC,
     bool ForProfileContext, const char *PassName) {
   llvm::emitInlinedInto(

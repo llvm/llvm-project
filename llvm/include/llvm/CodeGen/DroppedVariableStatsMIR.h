@@ -45,12 +45,12 @@ private:
   /// specifically.
   virtual void
   visitEveryInstruction(unsigned &DroppedCount,
-                        DenseMap<VarID, DILocation *> &InlinedAtsMap,
+                        DenseMap<VarID, DILocRef> &InlinedAtsMap,
                         VarID Var) override;
   /// Override base class method to run on DBG_VALUEs specifically.
   virtual void visitEveryDebugRecord(
       DenseSet<VarID> &VarIDSet,
-      DenseMap<StringRef, DenseMap<VarID, DILocation *>> &InlinedAtsMap,
+      DenseMap<StringRef, DenseMap<VarID, DILocRef>> &InlinedAtsMap,
       StringRef FuncName, bool Before) override;
 };
 

@@ -1745,39 +1745,39 @@ public:
 
   /// Creates a SDDbgValue node.
   SDDbgValue *getDbgValue(DIVariable *Var, DIExpression *Expr, SDNode *N,
-                          unsigned R, bool IsIndirect, const DebugLoc &DL,
+                          unsigned R, bool IsIndirect, DebugLoc DL,
                           unsigned O);
 
   /// Creates a constant SDDbgValue node.
   SDDbgValue *getConstantDbgValue(DIVariable *Var, DIExpression *Expr,
-                                  const Value *C, const DebugLoc &DL,
+                                  const Value *C, DebugLoc DL,
                                   unsigned O);
 
   /// Creates a FrameIndex SDDbgValue node.
   SDDbgValue *getFrameIndexDbgValue(DIVariable *Var, DIExpression *Expr,
                                     unsigned FI, bool IsIndirect,
-                                    const DebugLoc &DL, unsigned O);
+                                    DebugLoc DL, unsigned O);
 
   /// Creates a FrameIndex SDDbgValue node.
   SDDbgValue *getFrameIndexDbgValue(DIVariable *Var, DIExpression *Expr,
                                     unsigned FI,
                                     ArrayRef<SDNode *> Dependencies,
-                                    bool IsIndirect, const DebugLoc &DL,
+                                    bool IsIndirect, DebugLoc DL,
                                     unsigned O);
 
   /// Creates a VReg SDDbgValue node.
   SDDbgValue *getVRegDbgValue(DIVariable *Var, DIExpression *Expr,
                               Register VReg, bool IsIndirect,
-                              const DebugLoc &DL, unsigned O);
+                              DebugLoc DL, unsigned O);
 
   /// Creates a SDDbgValue node from a list of locations.
   SDDbgValue *getDbgValueList(DIVariable *Var, DIExpression *Expr,
                               ArrayRef<SDDbgOperand> Locs,
                               ArrayRef<SDNode *> Dependencies, bool IsIndirect,
-                              const DebugLoc &DL, unsigned O, bool IsVariadic);
+                              DebugLoc DL, unsigned O, bool IsVariadic);
 
   /// Creates a SDDbgLabel node.
-  SDDbgLabel *getDbgLabel(DILabel *Label, const DebugLoc &DL, unsigned O);
+  SDDbgLabel *getDbgLabel(DILabel *Label, DebugLoc DL, unsigned O);
 
   /// Transfer debug values from one node to another, while optionally
   /// generating fragment expressions for split-up values. If \p InvalidateDbg

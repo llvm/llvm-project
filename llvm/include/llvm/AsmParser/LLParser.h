@@ -21,6 +21,7 @@
 #include "llvm/IR/FMF.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
+#include "llvm/IR/TrackingMDRef.h"
 #include "llvm/Support/ModRef.h"
 #include <map>
 #include <optional>
@@ -125,6 +126,8 @@ namespace llvm {
     /// non-temporary DIAssignID are attached to instructions (recorded here)
     /// then replaced later.
     DenseMap<MDNode *, SmallVector<Instruction *, 2>> TempDIAssignIDAttachments;
+    DenseMap<Function *, SmallVector<TrackingMDNodeRef>> TempDILocationAttachments;
+    DenseMap<Function *, SmallVector<TrackingMDNodeRef>> TempDILoopAttachments;
 
     // Type resolution handling data structures.  The location is set when we
     // have processed a use of the type but not a definition yet.

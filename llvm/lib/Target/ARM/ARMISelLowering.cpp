@@ -2941,14 +2941,14 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       DiagnosticInfoUnsupported Diag(DAG.getMachineFunction().getFunction(),
                                      "call to non-secure function would "
                                      "require passing arguments on stack",
-                                     dl.getDebugLoc());
+                                     DILocRef(MF.getFunction().getSubprogram(), dl.getDebugLoc()));
       DAG.getContext()->diagnose(Diag);
     }
     if (isStructRet) {
       DiagnosticInfoUnsupported Diag(
           DAG.getMachineFunction().getFunction(),
           "call to non-secure function would return value through pointer",
-          dl.getDebugLoc());
+          DILocRef(MF.getFunction().getSubprogram(), dl.getDebugLoc()));
       DAG.getContext()->diagnose(Diag);
     }
   }
@@ -3320,7 +3320,7 @@ ARMTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     DiagnosticInfoUnsupported Diag(
         DAG.getMachineFunction().getFunction(),
         "secure entry function would return value through pointer",
-        SDLoc().getDebugLoc());
+        DILocRef());
     DAG.getContext()->diagnose(Diag);
   }
 
@@ -4809,7 +4809,7 @@ SDValue ARMTargetLowering::LowerFormalArguments(
     if (AFI->isCmseNSEntryFunction()) {
       DiagnosticInfoUnsupported Diag(
           DAG.getMachineFunction().getFunction(),
-          "secure entry function must not be variadic", dl.getDebugLoc());
+          "secure entry function must not be variadic", DILocRef(MF.getFunction().getSubprogram(), dl.getDebugLoc()));
       DAG.getContext()->diagnose(Diag);
     }
   }
@@ -4830,7 +4830,7 @@ SDValue ARMTargetLowering::LowerFormalArguments(
   if (CCInfo.getStackSize() > 0 && AFI->isCmseNSEntryFunction()) {
     DiagnosticInfoUnsupported Diag(
         DAG.getMachineFunction().getFunction(),
-        "secure entry function requires arguments on stack", dl.getDebugLoc());
+        "secure entry function requires arguments on stack", DILocRef(MF.getFunction().getSubprogram(),  dl.getDebugLoc()));
     DAG.getContext()->diagnose(Diag);
   }
 

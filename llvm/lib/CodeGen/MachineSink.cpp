@@ -1014,7 +1014,7 @@ void MachineSinking::ProcessDbgInst(MachineInstr &MI) {
   assert(MI.isDebugValue() && "Expected DBG_VALUE for processing");
 
   DebugVariable Var(MI.getDebugVariable(), MI.getDebugExpression(),
-                    MI.getDebugLoc()->getInlinedAt());
+                    DILocRef(MI.getDILocRef())->getInlinedAt());
   bool SeenBefore = SeenDbgVars.contains(Var);
 
   for (MachineOperand &MO : MI.debug_operands()) {
@@ -1610,8 +1610,9 @@ static void performSink(MachineInstr &MI, MachineBasicBlock &SuccToSinkTo,
   // If we cannot find a location to use (merge with), then we erase the debug
   // location to prevent debug-info driven tools from potentially reporting
   // wrong location information.
+  auto *SP = MI.getParent()->getParent()->getFunction().getSubprogram();
   if (!SuccToSinkTo.empty() && InsertPos != SuccToSinkTo.end())
-    MI.setDebugLoc(DILocation::getMergedLocation(MI.getDebugLoc(),
+    MI.setDebugLoc(SP->getMergedLocation(MI.getDebugLoc(),
                                                  InsertPos->getDebugLoc()));
   else
     MI.setDebugLoc(DebugLoc());

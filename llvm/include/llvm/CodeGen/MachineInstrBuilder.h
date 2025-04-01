@@ -350,16 +350,13 @@ public:
   MIMetadata() = default;
   MIMetadata(DebugLoc DL, MDNode *PCSections = nullptr, MDNode *MMRA = nullptr)
       : DL(std::move(DL)), PCSections(PCSections), MMRA(MMRA) {}
-  MIMetadata(const DILocation *DI, MDNode *PCSections = nullptr,
-             MDNode *MMRA = nullptr)
-      : DL(DI), PCSections(PCSections), MMRA(MMRA) {}
   explicit MIMetadata(const Instruction &From)
       : DL(From.getDebugLoc()),
         PCSections(From.getMetadata(LLVMContext::MD_pcsections)) {}
   explicit MIMetadata(const MachineInstr &From)
       : DL(From.getDebugLoc()), PCSections(From.getPCSections()) {}
 
-  const DebugLoc &getDL() const { return DL; }
+  DebugLoc getDL() const { return DL; }
   MDNode *getPCSections() const { return PCSections; }
   MDNode *getMMRAMetadata() const { return MMRA; }
 
@@ -503,14 +500,14 @@ inline MachineInstrBuilder BuildMI(MachineBasicBlock *BB,
 /// for either a value in a register or a register-indirect
 /// address.  The convention is that a DBG_VALUE is indirect iff the
 /// second operand is an immediate.
-MachineInstrBuilder BuildMI(MachineFunction &MF, const DebugLoc &DL,
+MachineInstrBuilder BuildMI(MachineFunction &MF, DebugLoc DL,
                             const MCInstrDesc &MCID, bool IsIndirect,
                             Register Reg, const MDNode *Variable,
                             const MDNode *Expr);
 
 /// This version of the builder builds a DBG_VALUE or DBG_VALUE_LIST intrinsic
 /// for a MachineOperand.
-MachineInstrBuilder BuildMI(MachineFunction &MF, const DebugLoc &DL,
+MachineInstrBuilder BuildMI(MachineFunction &MF, DebugLoc DL,
                             const MCInstrDesc &MCID, bool IsIndirect,
                             ArrayRef<MachineOperand> MOs,
                             const MDNode *Variable, const MDNode *Expr);
@@ -519,7 +516,7 @@ MachineInstrBuilder BuildMI(MachineFunction &MF, const DebugLoc &DL,
 /// for either a value in a register or a register-indirect
 /// address and inserts it at position I.
 MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
-                            MachineBasicBlock::iterator I, const DebugLoc &DL,
+                            MachineBasicBlock::iterator I, DebugLoc DL,
                             const MCInstrDesc &MCID, bool IsIndirect,
                             Register Reg, const MDNode *Variable,
                             const MDNode *Expr);
@@ -527,7 +524,7 @@ MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
 /// This version of the builder builds a DBG_VALUE, DBG_INSTR_REF, or
 /// DBG_VALUE_LIST intrinsic for a machine operand and inserts it at position I.
 MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
-                            MachineBasicBlock::iterator I, const DebugLoc &DL,
+                            MachineBasicBlock::iterator I, DebugLoc DL,
                             const MCInstrDesc &MCID, bool IsIndirect,
                             ArrayRef<MachineOperand> MOs,
                             const MDNode *Variable, const MDNode *Expr);

@@ -9,131 +9,69 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include <optional>
 using namespace llvm;
 
 //===----------------------------------------------------------------------===//
 // DebugLoc Implementation
 //===----------------------------------------------------------------------===//
-DebugLoc::DebugLoc(const DILocation *L) : Loc(const_cast<DILocation *>(L)) {}
-DebugLoc::DebugLoc(const MDNode *L) : Loc(const_cast<MDNode *>(L)) {}
 
-DILocation *DebugLoc::get() const {
-  return cast_or_null<DILocation>(Loc.get());
+Metadata *DebugLoc::toMetadata(LLVMContext &C) const {
+  return ConstantAsMetadata::get(ConstantInt::get(llvm::Type::getInt64Ty(C), getAsRawInteger()));
+}
+std::optional<DebugLoc> DebugLoc::fromMetadata(Metadata *MD) {
+  if (auto *CAM = dyn_cast<ConstantAsMetadata>(MD))
+    if (auto *CI = dyn_cast<ConstantInt>(CAM->getValue()))
+      return DebugLoc(CI->getZExtValue());
+  return std::nullopt;
 }
 
-unsigned DebugLoc::getLine() const {
-  assert(get() && "Expected valid DebugLoc");
-  return get()->getLine();
+MDNode *DebugLoc::getTransientDILocation(DISubprogram *SP) {
+  if (!isUsingTransientDILocation())
+    return nullptr;
+  return nullptr;
+  // return SP->TransientDILocations[SrcLocIndex];
 }
 
-unsigned DebugLoc::getCol() const {
-  assert(get() && "Expected valid DebugLoc");
-  return get()->getColumn();
+unsigned DebugLoc::getLine(DISubprogram *SP) const {
+  assert(SP && *this && "Expected valid DebugLoc");
+  return SP->getSrcLoc(*this).Line;
 }
 
-MDNode *DebugLoc::getScope() const {
-  assert(get() && "Expected valid DebugLoc");
-  return get()->getScope();
+unsigned DebugLoc::getCol(DISubprogram *SP) const {
+  assert(SP && *this && "Expected valid DebugLoc");
+  return SP->getSrcLoc(*this).Column;
 }
 
-DILocation *DebugLoc::getInlinedAt() const {
-  assert(get() && "Expected valid DebugLoc");
-  return get()->getInlinedAt();
+DILocalScope *DebugLoc::getScope(DISubprogram *SP) const {
+  assert(SP && *this && "Expected valid DebugLoc");
+  return SP->getLocScope(*this).Scope;
 }
 
-MDNode *DebugLoc::getInlinedAtScope() const {
-  return cast<DILocation>(Loc)->getInlinedAtScope();
+DebugLoc DebugLoc::getInlinedAt(DISubprogram *SP) const {
+  assert(SP && *this && "Expected valid DebugLoc");
+  DebugLoc InlinedAt = SP->getLocScope(*this).InlinedAt;
+  return DebugLoc(InlinedAt.SrcLocIndex, InlinedAt.LocScopeIndex);
 }
 
-DebugLoc DebugLoc::getFnDebugLoc() const {
-  // FIXME: Add a method on \a DILocation that does this work.
-  const MDNode *Scope = getInlinedAtScope();
-  if (auto *SP = getDISubprogram(Scope))
-    return DILocation::get(SP->getContext(), SP->getScopeLine(), 0, SP);
-
-  return DebugLoc();
+uint64_t DebugLoc::getAtomGroup(DISubprogram *SP) const {
+  return SP->getSrcLoc(*this).AtomGroup;
+}
+uint8_t DebugLoc::getAtomRank(DISubprogram *SP) const {
+  return SP->getSrcLoc(*this).AtomRank;
 }
 
-bool DebugLoc::isImplicitCode() const {
-  if (DILocation *Loc = get()) {
-    return Loc->isImplicitCode();
-  }
-  return true;
+DILocalScope *DebugLoc::getInlinedAtScope(DISubprogram *SP) const {
+  if (!SP)
+    return nullptr;
+  return SP->getInlinedAtScope(*this);
 }
 
-void DebugLoc::setImplicitCode(bool ImplicitCode) {
-  if (DILocation *Loc = get()) {
-    Loc->setImplicitCode(ImplicitCode);
-  }
-}
-
-DebugLoc DebugLoc::replaceInlinedAtSubprogram(
-    const DebugLoc &RootLoc, DISubprogram &NewSP, LLVMContext &Ctx,
-    DenseMap<const MDNode *, MDNode *> &Cache) {
-  SmallVector<DILocation *> LocChain;
-  DILocation *CachedResult = nullptr;
-
-  // Collect the inline chain, stopping if we find a location that has already
-  // been processed.
-  for (DILocation *Loc = RootLoc; Loc; Loc = Loc->getInlinedAt()) {
-    if (auto It = Cache.find(Loc); It != Cache.end()) {
-      CachedResult = cast<DILocation>(It->second);
-      break;
-    }
-    LocChain.push_back(Loc);
-  }
-
-  DILocation *UpdatedLoc = CachedResult;
-  if (!UpdatedLoc) {
-    // If no cache hits, then back() is the end of the inline chain, that is,
-    // the DILocation whose scope ends in the Subprogram to be replaced.
-    DILocation *LocToUpdate = LocChain.pop_back_val();
-    DIScope *NewScope = DILocalScope::cloneScopeForSubprogram(
-        *LocToUpdate->getScope(), NewSP, Ctx, Cache);
-    UpdatedLoc = DILocation::get(Ctx, LocToUpdate->getLine(),
-                                 LocToUpdate->getColumn(), NewScope);
-    Cache[LocToUpdate] = UpdatedLoc;
-  }
-
-  // Recreate the location chain, bottom-up, starting at the new scope (or a
-  // cached result).
-  for (const DILocation *LocToUpdate : reverse(LocChain)) {
-    UpdatedLoc =
-        DILocation::get(Ctx, LocToUpdate->getLine(), LocToUpdate->getColumn(),
-                        LocToUpdate->getScope(), UpdatedLoc);
-    Cache[LocToUpdate] = UpdatedLoc;
-  }
-
-  return UpdatedLoc;
-}
-
-DebugLoc DebugLoc::appendInlinedAt(const DebugLoc &DL, DILocation *InlinedAt,
-                                   LLVMContext &Ctx,
-                                   DenseMap<const MDNode *, MDNode *> &Cache) {
-  SmallVector<DILocation *, 3> InlinedAtLocations;
-  DILocation *Last = InlinedAt;
-  DILocation *CurInlinedAt = DL;
-
-  // Gather all the inlined-at nodes.
-  while (DILocation *IA = CurInlinedAt->getInlinedAt()) {
-    // Skip any we've already built nodes for.
-    if (auto *Found = Cache[IA]) {
-      Last = cast<DILocation>(Found);
-      break;
-    }
-
-    InlinedAtLocations.push_back(IA);
-    CurInlinedAt = IA;
-  }
-
-  // Starting from the top, rebuild the nodes to point to the new inlined-at
-  // location (then rebuilding the rest of the chain behind it) and update the
-  // map of already-constructed inlined-at nodes.
-  for (const DILocation *MD : reverse(InlinedAtLocations))
-    Cache[MD] = Last = DILocation::getDistinct(
-        Ctx, MD->getLine(), MD->getColumn(), MD->getScope(), Last);
-
-  return Last;
+bool DebugLoc::isImplicitCode(DISubprogram *SP) const {
+  if (!SP)
+    return true;
+  return SP->getSrcLoc(DebugLoc(SrcLocIndex, LocScopeIndex)).IsImplicitCode;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -141,17 +79,25 @@ LLVM_DUMP_METHOD void DebugLoc::dump() const { print(dbgs()); }
 #endif
 
 void DebugLoc::print(raw_ostream &OS) const {
-  if (!Loc)
+  if (!isValid())
     return;
 
-  // Print source line info.
-  auto *Scope = cast<DIScope>(getScope());
-  OS << Scope->getFilename();
-  OS << ':' << getLine();
-  if (getCol() != 0)
-    OS << ':' << getCol();
+  // Print indices without source info.
+  OS << "DebugLoc(Src: " << SrcLocIndex << ", Scope: " << LocScopeIndex << ")";
+}
 
-  if (DebugLoc InlinedAtDL = getInlinedAt()) {
+void DebugLoc::print(raw_ostream &OS, DISubprogram *SP) const {
+  if (!isValid())
+    return;
+
+  // Print source location info using SP.
+  auto *Scope = getScope(SP);
+  OS << Scope->getFilename();
+  OS << ':' << getLine(SP);
+  if (getCol(SP) != 0)
+    OS << ':' << getCol(SP);
+
+  if (DebugLoc InlinedAtDL = getInlinedAt(SP)) {
     OS << " @[ ";
     InlinedAtDL.print(OS);
     OS << " ]";

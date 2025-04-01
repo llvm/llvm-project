@@ -1208,7 +1208,7 @@ private:
         OR << "Parallel region merged with parallel region"
            << (MergableCIs.size() > 2 ? "s" : "") << " at ";
         for (auto *CI : llvm::drop_begin(MergableCIs)) {
-          OR << ore::NV("OpenMPParallelMerge", CI->getDebugLoc());
+          OR << ore::NV("OpenMPParallelMerge", DILocRef(*CI));
           if (CI != MergableCIs.back())
             OR << ", ";
         }

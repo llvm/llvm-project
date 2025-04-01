@@ -105,16 +105,16 @@ static void remarkAlloca(OptimizationRemarkEmitter &ORE, const Function &Caller,
                          TypeSize::ScalarTy StaticSize) {
   ORE.emit([&] {
     StringRef DbgName;
-    DebugLoc Loc;
+    DILocRef Loc;
     bool Artificial = false;
     auto DVRs = findDVRDeclares(&const_cast<AllocaInst &>(Alloca));
     if (!DVRs.empty()) {
       const DbgVariableRecord &DVR = **DVRs.begin();
       DbgName = DVR.getVariable()->getName();
-      Loc = DVR.getDebugLoc();
+      Loc = DILocRef(DVR);
       Artificial = DVR.Variable->isArtificial();
     }
-    OptimizationRemark R(DEBUG_TYPE, "Alloca", DiagnosticLocation(Loc),
+    OptimizationRemark R(DEBUG_TYPE, "Alloca", Loc,
                          Alloca.getParent());
     R << "in ";
     identifyFunction(R, Caller);

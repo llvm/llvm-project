@@ -19,6 +19,7 @@
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -58,7 +59,7 @@ bool AlwaysInlineImpl(
     for (CallBase *CB : Calls) {
       Function *Caller = CB->getCaller();
       OptimizationRemarkEmitter ORE(Caller);
-      DebugLoc DLoc = CB->getDebugLoc();
+      DILocRef DLoc(*CB);
       BasicBlock *Block = CB->getParent();
 
       InlineFunctionInfo IFI(GetAssumptionCache, &PSI, nullptr, nullptr);

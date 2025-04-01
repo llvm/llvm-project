@@ -193,7 +193,7 @@ bool Localizer::localizeIntraBlock(LocalizedSetVecT &LocalizedInstrs) {
       const auto &DefDL = MI->getDebugLoc();
       const auto &UserDL = (*Users.begin())->getDebugLoc();
 
-      if ((!DefDL || DefDL.getLine() == 0) && UserDL && UserDL.getLine() != 0) {
+      if ((!DefDL || DefDL.SrcLocIndex == 0) && UserDL && UserDL.SrcLocIndex != 0) {
         MI->setDebugLoc(UserDL);
       }
     }

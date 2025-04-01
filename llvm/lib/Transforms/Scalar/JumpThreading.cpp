@@ -2059,6 +2059,7 @@ void JumpThreadingPass::cloneInstructions(ValueToValueMapTy &ValueMapping,
   // Clone the phi nodes of the source basic block into NewBB.  The resulting
   // phi nodes are trivial since NewBB only has one predecessor, but SSAUpdater
   // might need to rewrite the operand of the cloned phi.
+  auto *SP = PredBB->getParent()->getSubprogram();
   for (; PHINode *PN = dyn_cast<PHINode>(BI); ++BI) {
     PHINode *NewPN = PHINode::Create(PN->getType(), 1, PN->getName(), NewBB);
     NewPN->addIncoming(PN->getIncomingValueForBlock(PredBB), PredBB);

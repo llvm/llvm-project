@@ -1029,8 +1029,10 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
   bool IsEntryBB = &BB == &F.getEntryBlock();
   DebugLoc EntryLoc;
   if (IsEntryBB) {
-    if (auto SP = F.getSubprogram())
-      EntryLoc = DILocation::get(SP->getContext(), SP->getScopeLine(), 0, SP);
+    if (auto *SP = F.getSubprogram()) {
+      DISrcLocData NewSrcLoc(SP->getScopeLine());
+      EntryLoc = DebugLoc(SP->getSrcLocIndex(NewSrcLoc, DebugLoc(), true), 0);
+    }
     // Keep static allocas and llvm.localescape calls in the entry block.  Even
     // if we aren't splitting the block, it's nice for allocas to be before
     // calls.

@@ -62,17 +62,17 @@ DbgVariableRecord::DbgVariableRecord(const DbgVariableRecord &DVR)
       AddressExpression(DVR.AddressExpression) {}
 
 DbgVariableRecord::DbgVariableRecord(Metadata *Location, DILocalVariable *DV,
-                                     DIExpression *Expr, const DILocation *DI,
+                                     DIExpression *Expr, DebugLoc DL,
                                      LocationType Type)
-    : DbgRecord(ValueKind, DI), DebugValueUser({Location, nullptr, nullptr}),
+    : DbgRecord(ValueKind, DL), DebugValueUser({Location, nullptr, nullptr}),
       Type(Type), Variable(DV), Expression(Expr) {}
 
 DbgVariableRecord::DbgVariableRecord(Metadata *Value, DILocalVariable *Variable,
                                      DIExpression *Expression,
                                      DIAssignID *AssignID, Metadata *Address,
                                      DIExpression *AddressExpression,
-                                     const DILocation *DI)
-    : DbgRecord(ValueKind, DI), DebugValueUser({Value, Address, AssignID}),
+                                     DebugLoc DL)
+    : DbgRecord(ValueKind, DL), DebugValueUser({Value, Address, AssignID}),
       Type(LocationType::Assign), Variable(Variable), Expression(Expression),
       AddressExpression(AddressExpression) {}
 
@@ -142,8 +142,8 @@ DbgRecord::createDebugIntrinsic(Module *M, Instruction *InsertBefore) const {
   llvm_unreachable("unsupported DbgRecord kind");
 }
 
-DbgLabelRecord::DbgLabelRecord(MDNode *Label, MDNode *DL)
-    : DbgRecord(LabelKind, DebugLoc(DL)), Label(Label) {
+DbgLabelRecord::DbgLabelRecord(MDNode *Label, DebugLoc DL)
+    : DbgRecord(LabelKind, DL), Label(Label) {
   assert(Label && "Unexpected nullptr");
   assert((isa<DILabel>(Label) || Label->isTemporary()) &&
          "Label type must be or resolve to a DILabel");
@@ -154,7 +154,7 @@ DbgLabelRecord::DbgLabelRecord(DILabel *Label, DebugLoc DL)
 }
 
 DbgLabelRecord *DbgLabelRecord::createUnresolvedDbgLabelRecord(MDNode *Label,
-                                                               MDNode *DL) {
+                                                               DebugLoc DL) {
   return new DbgLabelRecord(Label, DL);
 }
 
@@ -162,31 +162,31 @@ DbgVariableRecord::DbgVariableRecord(DbgVariableRecord::LocationType Type,
                                      Metadata *Val, MDNode *Variable,
                                      MDNode *Expression, MDNode *AssignID,
                                      Metadata *Address,
-                                     MDNode *AddressExpression, MDNode *DI)
-    : DbgRecord(ValueKind, DebugLoc(DI)),
+                                     MDNode *AddressExpression, DebugLoc DL)
+    : DbgRecord(ValueKind, DL),
       DebugValueUser({Val, Address, AssignID}), Type(Type), Variable(Variable),
       Expression(Expression), AddressExpression(AddressExpression) {}
 
 DbgVariableRecord *DbgVariableRecord::createUnresolvedDbgVariableRecord(
     DbgVariableRecord::LocationType Type, Metadata *Val, MDNode *Variable,
     MDNode *Expression, MDNode *AssignID, Metadata *Address,
-    MDNode *AddressExpression, MDNode *DI) {
+    MDNode *AddressExpression, DebugLoc DL) {
   return new DbgVariableRecord(Type, Val, Variable, Expression, AssignID,
-                               Address, AddressExpression, DI);
+                               Address, AddressExpression, DL);
 }
 
 DbgVariableRecord *
 DbgVariableRecord::createDbgVariableRecord(Value *Location, DILocalVariable *DV,
                                            DIExpression *Expr,
-                                           const DILocation *DI) {
-  return new DbgVariableRecord(ValueAsMetadata::get(Location), DV, Expr, DI,
+                                           DebugLoc DL) {
+  return new DbgVariableRecord(ValueAsMetadata::get(Location), DV, Expr, DL,
                                LocationType::Value);
 }
 
 DbgVariableRecord *DbgVariableRecord::createDbgVariableRecord(
     Value *Location, DILocalVariable *DV, DIExpression *Expr,
-    const DILocation *DI, DbgVariableRecord &InsertBefore) {
-  auto *NewDbgVariableRecord = createDbgVariableRecord(Location, DV, Expr, DI);
+    DebugLoc DL, DbgVariableRecord &InsertBefore) {
+  auto *NewDbgVariableRecord = createDbgVariableRecord(Location, DV, Expr, DL);
   NewDbgVariableRecord->insertBefore(&InsertBefore);
   return NewDbgVariableRecord;
 }
@@ -194,16 +194,16 @@ DbgVariableRecord *DbgVariableRecord::createDbgVariableRecord(
 DbgVariableRecord *DbgVariableRecord::createDVRDeclare(Value *Address,
                                                        DILocalVariable *DV,
                                                        DIExpression *Expr,
-                                                       const DILocation *DI) {
-  return new DbgVariableRecord(ValueAsMetadata::get(Address), DV, Expr, DI,
+                                                       DebugLoc DL) {
+  return new DbgVariableRecord(ValueAsMetadata::get(Address), DV, Expr, DL,
                                LocationType::Declare);
 }
 
 DbgVariableRecord *
 DbgVariableRecord::createDVRDeclare(Value *Address, DILocalVariable *DV,
-                                    DIExpression *Expr, const DILocation *DI,
+                                    DIExpression *Expr, DebugLoc DL,
                                     DbgVariableRecord &InsertBefore) {
-  auto *NewDVRDeclare = createDVRDeclare(Address, DV, Expr, DI);
+  auto *NewDVRDeclare = createDVRDeclare(Address, DV, Expr, DL);
   NewDVRDeclare->insertBefore(&InsertBefore);
   return NewDVRDeclare;
 }
@@ -211,21 +211,21 @@ DbgVariableRecord::createDVRDeclare(Value *Address, DILocalVariable *DV,
 DbgVariableRecord *DbgVariableRecord::createDVRAssign(
     Value *Val, DILocalVariable *Variable, DIExpression *Expression,
     DIAssignID *AssignID, Value *Address, DIExpression *AddressExpression,
-    const DILocation *DI) {
+    DebugLoc DL) {
   return new DbgVariableRecord(ValueAsMetadata::get(Val), Variable, Expression,
                                AssignID, ValueAsMetadata::get(Address),
-                               AddressExpression, DI);
+                               AddressExpression, DL);
 }
 
 DbgVariableRecord *DbgVariableRecord::createLinkedDVRAssign(
     Instruction *LinkedInstr, Value *Val, DILocalVariable *Variable,
     DIExpression *Expression, Value *Address, DIExpression *AddressExpression,
-    const DILocation *DI) {
+    DebugLoc DL) {
   auto *Link = LinkedInstr->getMetadata(LLVMContext::MD_DIAssignID);
   assert(Link && "Linked instruction must have DIAssign metadata attached");
   auto *NewDVRAssign = DbgVariableRecord::createDVRAssign(
       Val, Variable, Expression, cast<DIAssignID>(Link), Address,
-      AddressExpression, DI);
+      AddressExpression, DL);
   LinkedInstr->getParent()->insertDbgRecordAfter(NewDVRAssign, LinkedInstr);
   return NewDVRAssign;
 }
@@ -402,12 +402,13 @@ DbgLabelRecord *DbgLabelRecord::clone() const {
 DbgVariableIntrinsic *
 DbgVariableRecord::createDebugIntrinsic(Module *M,
                                         Instruction *InsertBefore) const {
+  auto *SP = getFunction()->getSubprogram();
   [[maybe_unused]] DICompileUnit *Unit =
-      getDebugLoc()->getScope()->getSubprogram()->getUnit();
+      cast<DILocalScope>(getDebugLoc().getScope(SP))->getSubprogram()->getUnit();
   assert(M && Unit &&
          "Cannot clone from BasicBlock that is not part of a Module or "
          "DICompileUnit!");
-  LLVMContext &Context = getDebugLoc()->getContext();
+  LLVMContext &Context = Unit->getContext();
   Function *IntrinsicFn;
 
   // Work out what sort of intrinsic we're going to produce.
@@ -461,7 +462,7 @@ DbgLabelRecord::createDebugIntrinsic(Module *M,
                                      Instruction *InsertBefore) const {
   auto *LabelFn = Intrinsic::getOrInsertDeclaration(M, Intrinsic::dbg_label);
   Value *Args[] = {
-      MetadataAsValue::get(getDebugLoc()->getContext(), getLabel())};
+      MetadataAsValue::get(getInstruction()->getContext(), getLabel())};
   DbgLabelInst *DbgLabel = cast<DbgLabelInst>(
       CallInst::Create(LabelFn->getFunctionType(), LabelFn, Args));
   DbgLabel->setTailCall();

@@ -22,10 +22,11 @@ using namespace llvm;
 namespace llvm {
 
 std::optional<PseudoProbe>
-extractProbeFromDiscriminator(const DILocation *DIL) {
-  if (DIL) {
-    auto Discriminator = DIL->getDiscriminator();
-    if (DILocation::isPseudoProbeDiscriminator(Discriminator)) {
+extractProbeFromDiscriminator(const DISubprogram *SP, DebugLoc DL) {
+  if (DL) {
+    auto Discriminator = SP->getDiscriminator(DL);
+
+    if (DILocRef::isPseudoProbeDiscriminator(Discriminator)) {
       PseudoProbe Probe;
       Probe.Id =
           PseudoProbeDwarfDiscriminator::extractProbeIndex(Discriminator);
@@ -49,7 +50,7 @@ extractProbeFromDiscriminator(const Instruction &Inst) {
          "Only call instructions should have pseudo probe encodes as their "
          "Dwarf discriminators");
   if (const DebugLoc &DLoc = Inst.getDebugLoc())
-    return extractProbeFromDiscriminator(DLoc);
+    return extractProbeFromDiscriminator(Inst.getFunction()->getSubprogram(), DLoc);
   return std::nullopt;
 }
 
@@ -63,7 +64,7 @@ std::optional<PseudoProbe> extractProbe(const Instruction &Inst) {
                    (float)PseudoProbeFullDistributionFactor;
     Probe.Discriminator = 0;
     if (const DebugLoc &DLoc = Inst.getDebugLoc())
-      Probe.Discriminator = DLoc->getDiscriminator();
+      Probe.Discriminator = Inst.getFunction()->getSubprogram()->getDiscriminator(DLoc);
     return Probe;
   }
 
@@ -85,10 +86,9 @@ void setProbeDistributionFactor(Instruction &Inst, float Factor) {
     if (IntFactor != OrigFactor)
       II->replaceUsesOfWith(II->getFactor(), Builder.getInt64(IntFactor));
   } else if (isa<CallBase>(&Inst) && !isa<IntrinsicInst>(&Inst)) {
-    if (const DebugLoc &DLoc = Inst.getDebugLoc()) {
-      const DILocation *DIL = DLoc;
-      auto Discriminator = DIL->getDiscriminator();
-      if (DILocation::isPseudoProbeDiscriminator(Discriminator)) {
+    if (DILocRef DLoc = DILocRef(Inst)) {
+      auto Discriminator = DLoc->getDiscriminator();
+      if (DILocRef::isPseudoProbeDiscriminator(Discriminator)) {
         auto Index =
             PseudoProbeDwarfDiscriminator::extractProbeIndex(Discriminator);
         auto Type =
@@ -105,8 +105,8 @@ void setProbeDistributionFactor(Instruction &Inst, float Factor) {
           IntFactor *= Factor;
         uint32_t V = PseudoProbeDwarfDiscriminator::packProbeData(
             Index, Type, Attr, IntFactor, DwarfBaseDiscriminator);
-        DIL = DIL->cloneWithDiscriminator(V);
-        Inst.setDebugLoc(DIL);
+        DLoc = DLoc->cloneWithDiscriminator(V);
+        Inst.setDebugLoc(DLoc);
       }
     }
   }

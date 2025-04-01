@@ -3443,9 +3443,10 @@ void FunctionStackPoisoner::processStaticAllocas() {
 
   int StackMallocIdx = -1;
   DebugLoc EntryDebugLocation;
-  if (auto SP = F.getSubprogram())
-    EntryDebugLocation =
-        DILocation::get(SP->getContext(), SP->getScopeLine(), 0, SP);
+  if (auto *SP = F.getSubprogram()) {
+    DISrcLocData NewSrcLoc(SP->getScopeLine());
+    EntryDebugLocation = DebugLoc(SP->getSrcLocIndex(NewSrcLoc, DebugLoc(), true), 0);
+  }
 
   Instruction *InsBefore = AllocaVec[0];
   IRBuilder<> IRB(InsBefore);
@@ -3506,10 +3507,11 @@ void FunctionStackPoisoner::processStaticAllocas() {
 
     ASanStackVariableDescription &Desc = *AllocaToSVDMap[APC.AI];
     Desc.LifetimeSize = Desc.Size;
-    if (const DILocation *FnLoc = EntryDebugLocation.get()) {
-      if (const DILocation *LifetimeLoc = APC.InsBefore->getDebugLoc().get()) {
-        if (LifetimeLoc->getFile() == FnLoc->getFile())
-          if (unsigned Line = LifetimeLoc->getLine())
+    if (DebugLoc FnLoc = EntryDebugLocation) {
+      if (DebugLoc LifetimeLoc = APC.InsBefore->getDebugLoc()) {
+        auto *SP = F.getSubprogram();
+        if (DILocRef(SP, LifetimeLoc)->getFile() == DILocRef(SP, FnLoc)->getFile())
+          if (unsigned Line = LifetimeLoc.getLine(SP))
             Desc.Line = std::min(Desc.Line ? Desc.Line : Line, Line);
       }
     }

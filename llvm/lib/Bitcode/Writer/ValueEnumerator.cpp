@@ -336,6 +336,16 @@ static bool isIntOrIntVectorValue(const std::pair<const Value*, unsigned> &V) {
 ValueEnumerator::ValueEnumerator(const Module &M,
                                  bool ShouldPreserveUseListOrder)
     : ShouldPreserveUseListOrder(ShouldPreserveUseListOrder) {
+  
+  for (const Function &F : M) {
+    if (F.isDeclaration())
+      continue;
+    Function *Fn = const_cast<Function*>(&F);
+    auto *SP = Fn->getSubprogram();
+    if (SP)
+      TempDILocations[Fn] = SP->expelDILocations(Fn);
+  }
+
   if (ShouldPreserveUseListOrder)
     UseListOrders = predictUseListOrder(M);
 
@@ -412,6 +422,7 @@ ValueEnumerator::ValueEnumerator(const Module &M,
 
   // Enumerate types used by function bodies and argument lists.
   for (const Function &F : M) {
+    auto *Fn = const_cast<Function*>(&F);
     for (const Argument &A : F.args())
       EnumerateType(A.getType());
 
@@ -443,7 +454,7 @@ ValueEnumerator::ValueEnumerator(const Module &M,
         for (DbgRecord &DR : I.getDbgRecordRange()) {
           if (DbgLabelRecord *DLR = dyn_cast<DbgLabelRecord>(&DR)) {
             EnumerateMetadata(&F, DLR->getLabel());
-            EnumerateMetadata(&F, &*DLR->getDebugLoc());
+            EnumerateMetadata(&F, TempDILocations[Fn][DLR->getDebugLoc().SrcLocIndex]);
             continue;
           }
           // Enumerate non-local location metadata.
@@ -451,7 +462,7 @@ ValueEnumerator::ValueEnumerator(const Module &M,
           EnumerateNonLocalValuesFromMetadata(DVR.getRawLocation());
           EnumerateMetadata(&F, DVR.getExpression());
           EnumerateMetadata(&F, DVR.getVariable());
-          EnumerateMetadata(&F, &*DVR.getDebugLoc());
+          EnumerateMetadata(&F, TempDILocations[Fn][DVR.getDebugLoc().SrcLocIndex]);
           if (DVR.isDbgAssign()) {
             EnumerateNonLocalValuesFromMetadata(DVR.getRawAddress());
             EnumerateMetadata(&F, DVR.getAssignID());
@@ -487,9 +498,11 @@ ValueEnumerator::ValueEnumerator(const Module &M,
 
         // Don't enumerate the location directly -- it has a special record
         // type -- but enumerate its operands.
-        if (DILocation *L = I.getDebugLoc())
+        if (DebugLoc DL = I.getDebugLoc()) {
+          DILocation *L = TempDILocations[Fn][DL.SrcLocIndex];
           for (const Metadata *Op : L->operands())
             EnumerateMetadata(&F, Op);
+        }
       }
   }
 

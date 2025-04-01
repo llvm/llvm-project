@@ -18,6 +18,7 @@
 #include "llvm/ADT/Bitfields.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/ilist_node.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/SymbolTableListTraits.h"
 #include "llvm/IR/User.h"
@@ -33,6 +34,7 @@ class DataLayout;
 class DbgMarker;
 class FastMathFlags;
 class MDNode;
+class DIAssignID;
 class Module;
 struct AAMDNodes;
 class DbgMarker;
@@ -425,8 +427,6 @@ public:
   /// If the metadata is not found then return null.
   MDNode *getMetadata(unsigned KindID) const {
     // Handle 'dbg' as a special case since it is not stored in the hash table.
-    if (KindID == LLVMContext::MD_dbg)
-      return DbgLoc.getAsMDNode();
     return Value::getMetadata(KindID);
   }
 
@@ -509,6 +509,7 @@ public:
 
   /// Return the debug location for this node as a DebugLoc.
   const DebugLoc &getDebugLoc() const { return DbgLoc; }
+  DILocRefWrapper getDLWrapper() const;
 
   /// Fetch the debug location for this node, unless this is a debug intrinsic,
   /// in which case fetch the debug location of the next non-debug node.
@@ -691,7 +692,7 @@ public:
   ///     applications, thus the N-way merging should be in code path.
   /// The DebugLoc attached to this instruction will be overwritten by the
   /// merged DebugLoc.
-  void applyMergedLocation(DILocation *LocA, DILocation *LocB);
+  void applyMergedLocation(DebugLoc LocA, DebugLoc LocB);
 
   /// Updates the debug location given that the instruction has been hoisted
   /// from a block to a predecessor of that block.

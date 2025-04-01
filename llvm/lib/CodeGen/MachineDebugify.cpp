@@ -51,7 +51,7 @@ bool applyDebugifyMetadataToMachineFunction(MachineModuleInfo &MMI,
       // source function and into subsequent ones. We don't do anything about
       // that as it doesn't really matter to the compiler where the line is in
       // the imaginary source code.
-      MI.setDebugLoc(DILocation::get(Ctx, NextLine++, 1, SP));
+      // MI.setDebugLoc(DILocation::get(Ctx, NextLine++, 1, SP));
     }
   }
 
@@ -73,10 +73,10 @@ bool applyDebugifyMetadataToMachineFunction(MachineModuleInfo &MMI,
       auto *DVI = dyn_cast<DbgValueInst>(U.getUser());
       if (!DVI || DVI->getFunction() != &F)
         continue;
-      unsigned Line = DVI->getDebugLoc().getLine();
+      unsigned Line = 0;//DVI->getDebugLoc().getLine();
       assert(Line != 0 && "debugify should not insert line 0 locations");
       Line2Var[Line] = DVI->getVariable();
-      if (!EarliestDVI || Line < EarliestDVI->getDebugLoc().getLine())
+      if (!EarliestDVI || Line < 0)//EarliestDVI->getDebugLoc().getLine())
         EarliestDVI = DVI;
       Expr = DVI->getExpression();
     }
@@ -86,10 +86,10 @@ bool applyDebugifyMetadataToMachineFunction(MachineModuleInfo &MMI,
       for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
         if (!DVR.isDbgValue())
           continue;
-        unsigned Line = DVR.getDebugLoc().getLine();
+        unsigned Line = 0;//DVR.getDebugLoc().getLine();
         assert(Line != 0 && "debugify should not insert line 0 locations");
         Line2Var[Line] = DVR.getVariable();
-        if (!EarliestDVR || Line < EarliestDVR->getDebugLoc().getLine())
+        if (!EarliestDVR || Line < 0)//EarliestDVR->getDebugLoc().getLine())
           EarliestDVR = &DVR;
         Expr = DVR.getExpression();
       }
@@ -122,11 +122,12 @@ bool applyDebugifyMetadataToMachineFunction(MachineModuleInfo &MMI,
       auto InsertBeforeIt = MI.isPHI() ? FirstNonPHIIt : I;
 
       // Find a suitable local variable for the DBG_VALUE.
-      unsigned Line = MI.getDebugLoc().getLine();
+      // TODO: Implement.
+      unsigned Line = 0;//MI.getDebugLoc().getLine();
       auto It = Line2Var.find(Line);
       if (It == Line2Var.end()) {
-        Line = EarliestDVI ? EarliestDVI->getDebugLoc().getLine()
-                           : EarliestDVR->getDebugLoc().getLine();
+        Line = EarliestDVI ? 0//EarliestDVI->getDebugLoc().getLine()
+                           : 0;//EarliestDVR->getDebugLoc().getLine();
         It = Line2Var.find(Line);
         assert(It != Line2Var.end());
       }

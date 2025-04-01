@@ -324,6 +324,9 @@ public:
                                     const ValueLocPair &B) {
     return A.first < B.first;
   };
+  DISubprogram *getSubprogram() const {
+    return MF.getFunction().getSubprogram();
+  }
 
   // Returns the LocationQuality for the location L iff the quality of L is
   // is strictly greater than the provided minimum quality.
@@ -690,7 +693,7 @@ public:
   /// Change a variable value after encountering a DBG_VALUE inside a block.
   void redefVar(const MachineInstr &MI) {
     DebugVariable Var(MI.getDebugVariable(), MI.getDebugExpression(),
-                      MI.getDebugLoc()->getInlinedAt());
+                      DILocRef(MI)->getInlinedAt());
     DbgValueProperties Properties(MI);
     DebugVariableID VarID = DVMap.getDVID(Var);
 
@@ -730,7 +733,7 @@ public:
   void redefVar(const MachineInstr &MI, const DbgValueProperties &Properties,
                 SmallVectorImpl<ResolvedDbgOp> &NewLocs) {
     DebugVariable Var(MI.getDebugVariable(), MI.getDebugExpression(),
-                      MI.getDebugLoc()->getInlinedAt());
+                      DILocRef(MI)->getInlinedAt());
     DebugVariableID VarID = DVMap.getDVID(Var);
     // Any use-before-defs no longer apply.
     UseBeforeDefVariables.erase(VarID);
@@ -948,9 +951,8 @@ public:
   MachineInstrBuilder emitMOLoc(const MachineOperand &MO,
                                 const DebugVariable &Var,
                                 const DbgValueProperties &Properties) {
-    DebugLoc DL = DILocation::get(Var.getVariable()->getContext(), 0, 0,
-                                  Var.getVariable()->getScope(),
-                                  const_cast<DILocation *>(Var.getInlinedAt()));
+    DebugLoc DL(0, getSubprogram()->getLocScopeIndex(
+      DILocScopeData(Var.getVariable()->getScope(), Var.getInlinedAt()), true));
     auto MIB = BuildMI(MF, DL, TII->get(TargetOpcode::DBG_VALUE));
     MIB.add(MO);
     if (Properties.Indirect)
@@ -1185,7 +1187,7 @@ LLVM_DUMP_METHOD void MLocTracker::dump_mloc_map() {
 
 MachineInstrBuilder
 MLocTracker::emitLoc(const SmallVectorImpl<ResolvedDbgOp> &DbgOps,
-                     const DebugVariable &Var, const DILocation *DILoc,
+                     const DebugVariable &Var, DebugLoc DILoc,
                      const DbgValueProperties &Properties) {
   DebugLoc DL = DebugLoc(DILoc);
 
@@ -1429,7 +1431,7 @@ bool InstrRefBasedLDV::transferDebugValue(const MachineInstr &MI) {
 
   // If there are no instructions in this lexical scope, do no location tracking
   // at all, this variable shouldn't get a legitimate location range.
-  auto *Scope = LS.findLexicalScope(MI.getDebugLoc().get());
+  auto *Scope = LS.findLexicalScope(MI.getDebugLoc());
   if (Scope == nullptr)
     return true; // handled it; by doing nothing
 
@@ -1629,14 +1631,14 @@ bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI,
 
   const DILocalVariable *Var = MI.getDebugVariable();
   const DIExpression *Expr = MI.getDebugExpression();
-  const DILocation *DebugLoc = MI.getDebugLoc();
-  const DILocation *InlinedAt = DebugLoc->getInlinedAt();
-  assert(Var->isValidLocationForIntrinsic(DebugLoc) &&
+  DILocRef DbgLoc(MI);
+  DebugLoc InlinedAt = DbgLoc->getInlinedAt();
+  assert(Var->isValidLocationForIntrinsic(DbgLoc) &&
          "Expected inlined-at fields to agree");
 
   DebugVariable V(Var, Expr, InlinedAt);
 
-  auto *Scope = LS.findLexicalScope(MI.getDebugLoc().get());
+  auto *Scope = LS.findLexicalScope(MI.getDebugLoc());
   if (Scope == nullptr)
     return true; // Handled by doing nothing. This variable is never in scope.
 
@@ -1754,7 +1756,7 @@ bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI,
       LastUseBeforeDef = std::max(LastUseBeforeDef, NewID.getInst());
     }
     if (IsValidUseBeforeDef) {
-      DebugVariableID VID = DVMap.insertDVID(V, MI.getDebugLoc().get());
+      DebugVariableID VID = DVMap.insertDVID(V, MI.getDebugLoc());
       TTracker->addUseBeforeDef(VID, {MI.getDebugExpression(), false, true},
                                 DbgOps, LastUseBeforeDef);
     }
@@ -1765,7 +1767,7 @@ bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI,
   // FoundLoc is illegal.
   // (XXX -- could morph the DBG_INSTR_REF in the future).
   MachineInstr *DbgMI =
-      MTracker->emitLoc(NewLocs, V, MI.getDebugLoc().get(), Properties);
+      MTracker->emitLoc(NewLocs, V, MI.getDebugLoc(), Properties);
   DebugVariableID ID = DVMap.getDVID(V);
 
   TTracker->PendingDbgValues.push_back(std::make_pair(ID, DbgMI));
@@ -2244,7 +2246,7 @@ bool InstrRefBasedLDV::transferRegisterCopy(MachineInstr &MI) {
 void InstrRefBasedLDV::accumulateFragmentMap(MachineInstr &MI) {
   assert(MI.isDebugValueLike());
   DebugVariable MIVar(MI.getDebugVariable(), MI.getDebugExpression(),
-                      MI.getDebugLoc()->getInlinedAt());
+                      DILocRef(MI)->getInlinedAt());
   FragmentInfo ThisFragment = MIVar.getFragmentOrDefault();
 
   // If this is the first sighting of this variable, then we are guaranteed
@@ -3077,7 +3079,7 @@ bool InstrRefBasedLDV::vlocJoin(
 }
 
 void InstrRefBasedLDV::getBlocksForScope(
-    const DILocation *DILoc,
+    DebugLoc DILoc,
     SmallPtrSetImpl<const MachineBasicBlock *> &BlocksToExplore,
     const SmallPtrSetImpl<MachineBasicBlock *> &AssignBlocks) {
   // Get the set of "normal" in-lexical-scope blocks.
@@ -3140,7 +3142,7 @@ void InstrRefBasedLDV::getBlocksForScope(
 }
 
 void InstrRefBasedLDV::buildVLocValueMap(
-    const DILocation *DILoc,
+    DebugLoc DILoc,
     const SmallSet<DebugVariableID, 4> &VarsWeCareAbout,
     SmallPtrSetImpl<MachineBasicBlock *> &AssignBlocks, LiveInsT &Output,
     FuncValueTable &MOutLocs, FuncValueTable &MInLocs,
@@ -3444,7 +3446,7 @@ void InstrRefBasedLDV::initialSetup(MachineFunction &MF) {
 
   auto hasNonArtificialLocation = [](const MachineInstr &MI) -> bool {
     if (const DebugLoc &DL = MI.getDebugLoc())
-      return DL.getLine() != 0;
+      return DL.SrcLocIndex;
     return false;
   };
 
@@ -3604,11 +3606,11 @@ bool InstrRefBasedLDV::depthFirstVLocAndEmit(
     // We obesrve scopes with children twice here, once descending in, once
     // ascending out of the scope nest. Use HighestDFSIn as a ratchet to ensure
     // we don't process a scope twice. Additionally, ignore scopes that don't
-    // have a DILocation -- by proxy, this means we never tracked any variable
+    // have a DebugLoc -- by proxy, this means we never tracked any variable
     // assignments in that scope.
     auto DILocIt = ScopeToDILocation.find(WS);
     if (HighestDFSIn <= WS->getDFSIn() && DILocIt != ScopeToDILocation.end()) {
-      const DILocation *DILoc = DILocIt->second;
+      DebugLoc DILoc = DILocIt->second;
       auto &VarsWeCareAbout = ScopeToVars.find(WS)->second;
       auto &BlocksInScope = ScopeToAssignBlocks.find(WS)->second;
 
@@ -3807,7 +3809,7 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
     // Collect each variable with a DBG_VALUE in this block.
     for (auto &idx : VTracker->Vars) {
       DebugVariableID VarID = idx.first;
-      const DILocation *ScopeLoc = VTracker->Scopes[VarID];
+      DebugLoc ScopeLoc = VTracker->Scopes[VarID];
       assert(ScopeLoc != nullptr);
       auto *Scope = LS.findLexicalScope(ScopeLoc);
 

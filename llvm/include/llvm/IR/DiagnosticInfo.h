@@ -19,6 +19,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -325,7 +326,10 @@ class DiagnosticLocation {
 
 public:
   DiagnosticLocation() = default;
-  DiagnosticLocation(const DebugLoc &DL);
+  DiagnosticLocation(DILocRef DL);
+  DiagnosticLocation(DILocRefWrapper DL);
+  DiagnosticLocation(const DISubprogram *SP, const DebugLoc &DL);
+  DiagnosticLocation(DILocationData DL);
   DiagnosticLocation(const DISubprogram *SP);
 
   bool isValid() const { return File; }
@@ -517,7 +521,8 @@ public:
     Argument(StringRef Key, unsigned long long N);
     Argument(StringRef Key, ElementCount EC);
     Argument(StringRef Key, bool B) : Key(Key), Val(B ? "true" : "false") {}
-    Argument(StringRef Key, DebugLoc dl);
+    Argument(StringRef Key, DILocRef DL);
+    Argument(StringRef Key, DISubprogram *SP, DebugLoc dl);
     Argument(StringRef Key, InstructionCost C);
   };
 

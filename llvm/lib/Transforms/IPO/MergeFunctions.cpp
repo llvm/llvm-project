@@ -810,12 +810,10 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
   if (MergeFunctionsPDI) {
     DISubprogram *DIS = G->getSubprogram();
     if (DIS) {
-      DebugLoc CIDbgLoc =
-          DILocation::get(DIS->getContext(), DIS->getScopeLine(), 0, DIS);
-      DebugLoc RIDbgLoc =
-          DILocation::get(DIS->getContext(), DIS->getScopeLine(), 0, DIS);
-      CI->setDebugLoc(CIDbgLoc);
-      RI->setDebugLoc(RIDbgLoc);
+      DISrcLocData NewSrcLoc(DIS->getScopeLine());
+      DebugLoc DbgLoc = DebugLoc(DIS->getSrcLocIndex(NewSrcLoc, DebugLoc(), true), 0);
+      CI->setDebugLoc(DbgLoc);
+      RI->setDebugLoc(DbgLoc);
     } else {
       LLVM_DEBUG(
           dbgs() << "writeThunk: (MergeFunctionsPDI) No DISubprogram for "

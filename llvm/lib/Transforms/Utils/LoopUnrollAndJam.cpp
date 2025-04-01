@@ -263,13 +263,13 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
     LLVM_DEBUG(dbgs() << "COMPLETELY UNROLL AND JAMMING loop %"
                       << Header->getName() << " with trip count " << TripCount
                       << "!\n");
-    ORE->emit(OptimizationRemark(DEBUG_TYPE, "FullyUnrolled", L->getStartLoc(),
+    ORE->emit(OptimizationRemark(DEBUG_TYPE, "FullyUnrolled", L->getStartLocRef(),
                                  L->getHeader())
               << "completely unroll and jammed loop with "
               << NV("UnrollCount", TripCount) << " iterations");
   } else {
     auto DiagBuilder = [&]() {
-      OptimizationRemark Diag(DEBUG_TYPE, "PartialUnrolled", L->getStartLoc(),
+      OptimizationRemark Diag(DEBUG_TYPE, "PartialUnrolled", L->getStartLocRef(),
                               L->getHeader());
       return Diag << "unroll and jammed loop by a factor of "
                   << NV("UnrollCount", Count);
@@ -348,7 +348,7 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
     for (BasicBlock *BB : L->getBlocks())
       for (Instruction &I : *BB)
         if (!I.isDebugOrPseudoInst())
-          if (const DILocation *DIL = I.getDebugLoc()) {
+          if (auto DIL = DILocRef(I)) {
             auto NewDIL = DIL->cloneByMultiplyingDuplicationFactor(Count);
             if (NewDIL)
               I.setDebugLoc(*NewDIL);

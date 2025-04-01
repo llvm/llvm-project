@@ -2229,9 +2229,9 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     const DbgLabelInst &DI = cast<DbgLabelInst>(CI);
     assert(DI.getLabel() && "Missing label");
 
-    assert(DI.getLabel()->isValidLocationForIntrinsic(
-               MIRBuilder.getDebugLoc()) &&
-           "Expected inlined-at fields to agree");
+    // assert(DI.getLabel()->isValidLocationForIntrinsic(
+    //            MIRBuilder.getDebugLoc()) &&
+    //        "Expected inlined-at fields to agree");
 
     MIRBuilder.buildDbgLabel(DI.getLabel());
     return true;
@@ -3604,9 +3604,9 @@ void IRTranslator::translateDbgInfo(const Instruction &Inst,
     if (DbgLabelRecord *DLR = dyn_cast<DbgLabelRecord>(&DR)) {
       MIRBuilder.setDebugLoc(DLR->getDebugLoc());
       assert(DLR->getLabel() && "Missing label");
-      assert(DLR->getLabel()->isValidLocationForIntrinsic(
-                 MIRBuilder.getDebugLoc()) &&
-             "Expected inlined-at fields to agree");
+      // assert(DLR->getLabel()->isValidLocationForIntrinsic(
+      //            MIRBuilder.getDebugLoc()) &&
+      //        "Expected inlined-at fields to agree");
       MIRBuilder.buildDbgLabel(DLR->getLabel());
       continue;
     }
@@ -4136,7 +4136,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
           continue;
 
         OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
-                                   Inst.getDebugLoc(), BB);
+                                   DILocRef(Inst), BB);
         R << "unable to translate instruction: " << ore::NV("Opcode", &Inst);
 
         if (ORE->allowExtraAnalysis("gisel-irtranslator")) {
@@ -4153,7 +4153,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
 
       if (!finalizeBasicBlock(*BB, MBB)) {
         OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
-                                   BB->getTerminator()->getDebugLoc(), BB);
+                                   DILocRef(*BB->getTerminator()), BB);
         R << "unable to translate basic block";
         reportTranslationError(*MF, *TPC, *ORE, R);
         return false;

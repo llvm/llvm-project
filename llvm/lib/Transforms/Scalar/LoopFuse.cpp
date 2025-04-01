@@ -373,7 +373,7 @@ private:
 #if LLVM_ENABLE_STATS
     ++Stat;
     ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, Stat.getName(),
-                                        L->getStartLoc(), Preheader)
+                                        L->getStartLocRef(), Preheader)
              << "[" << Preheader->getParent()->getName() << "]: "
              << "Loop is not a candidate for fusion: " << Stat.getDesc());
 #endif
@@ -1788,7 +1788,7 @@ private:
     using namespace ore;
 #if LLVM_ENABLE_STATS
     ++Stat;
-    ORE.emit(RemarkKind(DEBUG_TYPE, Stat.getName(), FC0.L->getStartLoc(),
+    ORE.emit(RemarkKind(DEBUG_TYPE, Stat.getName(), FC0.L->getStartLocRef(),
                         FC0.Preheader)
              << "[" << FC0.Preheader->getParent()->getName()
              << "]: " << NV("Cand1", StringRef(FC0.Preheader->getName()))

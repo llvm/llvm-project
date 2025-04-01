@@ -35,7 +35,7 @@ void LostDebugLocObserver::analyzeDebugLocations() {
       continue;
     // Check this first in case there's a matching line-0 location on both input
     // and output.
-    if (MI->getDebugLoc().getLine() == 0) {
+    if (MI->getDebugLoc().SrcLocIndex == 0) {
       LOC_DEBUG(
           dbgs() << ".. Assuming line-0 location covers remainder (if any)\n");
       return;

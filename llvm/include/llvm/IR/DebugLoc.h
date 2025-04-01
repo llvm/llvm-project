@@ -14,108 +14,155 @@
 #ifndef LLVM_IR_DEBUGLOC_H
 #define LLVM_IR_DEBUGLOC_H
 
-#include "llvm/IR/TrackingMDRef.h"
-#include "llvm/Support/DataTypes.h"
+#include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/Hashing.h"
+#include <cstddef>
+#include <cstdint>
+#include <optional>
+#include <tuple>
+
 
 namespace llvm {
-
+  
   class LLVMContext;
   class raw_ostream;
-  class DILocation;
+  class DILocalScope;
+  class DISubprogram;
+  class MDNode;
+  class Metadata;
+  class LLVMContext;
 
   /// A debug info location.
   ///
-  /// This class is a wrapper around a tracking reference to an \a DILocation
-  /// pointer.
-  ///
-  /// To avoid extra includes, \a DebugLoc doubles the \a DILocation API with a
-  /// one based on relatively opaque \a MDNode pointers.
+  /// This class is used to index the location of a debug info location in a
+  /// particular \a DISubprogram.
   class DebugLoc {
-    TrackingMDNodeRef Loc;
+  public:
+    uint32_t SrcLocIndex;
+    uint32_t LocScopeIndex;
 
   public:
-    DebugLoc() = default;
+    DebugLoc() : SrcLocIndex(0xFFFFFFFF), LocScopeIndex(0xFFFFFFFF) {
+      static_assert(sizeof(DebugLoc) == sizeof(uint64_t), "Should fit into 64 bits.");
+    };
+    DebugLoc(std::nullptr_t) : DebugLoc() {}
+    DebugLoc(uint32_t SrcLoc, uint32_t LocScope) :
+      SrcLocIndex(SrcLoc), LocScopeIndex(LocScope) {}
 
-    /// Construct from an \a DILocation.
-    DebugLoc(const DILocation *L);
+    DebugLoc(uint64_t RawInt) :
+      SrcLocIndex(static_cast<uint32_t>(RawInt >> 32)),
+      LocScopeIndex(static_cast<uint32_t>(RawInt)) {}
+    
+    DebugLoc(const DebugLoc &) = default;
+    DebugLoc(DebugLoc &&) = default;
+    DebugLoc &operator=(const DebugLoc &) = default;
+    DebugLoc &operator=(DebugLoc &&) = default;
 
-    /// Construct from an \a MDNode.
-    ///
-    /// Note: if \c N is not an \a DILocation, a verifier check will fail, and
-    /// accessors will crash.  However, construction from other nodes is
-    /// supported in order to handle forward references when reading textual
-    /// IR.
-    explicit DebugLoc(const MDNode *N);
+    bool isUsingTransientDILocation() {
+      return LocScopeIndex == 0xFFFFFFFF && SrcLocIndex != 0xFFFFFFFF;
+    }
+    MDNode *getTransientDILocation(DISubprogram *SP);
 
-    /// Get the underlying \a DILocation.
-    ///
-    /// \pre !*this or \c isa<DILocation>(getAsMDNode()).
-    /// @{
-    DILocation *get() const;
-    operator DILocation *() const { return get(); }
-    DILocation *operator->() const { return get(); }
-    DILocation &operator*() const { return *get(); }
-    /// @}
+    inline uint64_t getAsRawInteger() const {
+      return (static_cast<uint64_t>(SrcLocIndex) << 32) | LocScopeIndex;
+    }
 
-    /// Check for null.
-    ///
-    /// Check for null in a way that is safe with broken debug info.  Unlike
-    /// the conversion to \c DILocation, this doesn't require that \c Loc is of
-    /// the right type.  Important for cases like \a llvm::StripDebugInfo() and
-    /// \a Instruction::hasMetadata().
-    explicit operator bool() const { return Loc; }
+    bool hasLineZero() const {
+      return SrcLocIndex != 0xFFFFFFFF && SrcLocIndex > 0;
+    }
+    DebugLoc getWithLineZero() const {
+      return DebugLoc(0, LocScopeIndex);
+    }
+
+    DebugLoc &get() {
+      return *this;
+    }
+
+    uint32_t getSrcLocIndex() const { return SrcLocIndex; };
+    uint32_t getLocScopeIndex() const { return LocScopeIndex; };
+
+    Metadata *toMetadata(LLVMContext &C) const;
+    static std::optional<DebugLoc> fromMetadata(Metadata *MD);
+
+    /// Check whether this is an empty location.
+    explicit operator bool() const { return SrcLocIndex != 0xFFFFFFFF || LocScopeIndex != 0xFFFFFFFF; }
+    bool isValid() const { return SrcLocIndex != 0xFFFFFFFF || LocScopeIndex != 0xFFFFFFFF; }
 
     /// Check whether this has a trivial destructor.
-    bool hasTrivialDestructor() const { return Loc.hasTrivialDestructor(); }
+    bool hasTrivialDestructor() const { return true; }
 
-    enum { ReplaceLastInlinedAt = true };
-    /// Rebuild the entire inlined-at chain for this instruction so that the top of
-    /// the chain now is inlined-at the new call site.
-    /// \param   InlinedAt    The new outermost inlined-at in the chain.
-    static DebugLoc appendInlinedAt(const DebugLoc &DL, DILocation *InlinedAt,
-                                    LLVMContext &Ctx,
-                                    DenseMap<const MDNode *, MDNode *> &Cache);
-
-    unsigned getLine() const;
-    unsigned getCol() const;
-    MDNode *getScope() const;
-    DILocation *getInlinedAt() const;
+    unsigned getLine(DISubprogram *SP) const;
+    unsigned getCol(DISubprogram *SP) const;
+    DILocalScope *getScope(DISubprogram *SP) const;
+    DebugLoc getInlinedAt(DISubprogram *SP) const;
+    uint64_t getAtomGroup(DISubprogram *SP) const;
+    uint8_t getAtomRank(DISubprogram *SP) const;
 
     /// Get the fully inlined-at scope for a DebugLoc.
     ///
     /// Gets the inlined-at scope for a DebugLoc.
-    MDNode *getInlinedAtScope() const;
-
-    /// Rebuild the entire inline-at chain by replacing the subprogram at the
-    /// end of the chain with NewSP.
-    static DebugLoc
-    replaceInlinedAtSubprogram(const DebugLoc &DL, DISubprogram &NewSP,
-                               LLVMContext &Ctx,
-                               DenseMap<const MDNode *, MDNode *> &Cache);
-
-    /// Find the debug info location for the start of the function.
-    ///
-    /// Walk up the scope chain of given debug loc and find line number info
-    /// for the function.
-    ///
-    /// FIXME: Remove this.  Users should use DILocation/DILocalScope API to
-    /// find the subprogram, and then DILocation::get().
-    DebugLoc getFnDebugLoc() const;
-
-    /// Return \c this as a bar \a MDNode.
-    MDNode *getAsMDNode() const { return Loc; }
+    DILocalScope *getInlinedAtScope(DISubprogram *SP) const;
 
     /// Check if the DebugLoc corresponds to an implicit code.
-    bool isImplicitCode() const;
-    void setImplicitCode(bool ImplicitCode);
+    bool isImplicitCode(DISubprogram *SP) const;
 
-    bool operator==(const DebugLoc &DL) const { return Loc == DL.Loc; }
-    bool operator!=(const DebugLoc &DL) const { return Loc != DL.Loc; }
+    bool operator==(const DebugLoc &DL) const {
+      return getAsRawInteger() == DL.getAsRawInteger();
+    }
+    bool operator!=(const DebugLoc &DL) const {
+      return getAsRawInteger() != DL.getAsRawInteger();
+    }
 
     void dump() const;
 
     /// prints source location /path/to/file.exe:line:col @[inlined at]
     void print(raw_ostream &OS) const;
+    void print(raw_ostream &OS, DISubprogram *SP) const;
+
+    bool operator<(const DebugLoc &DL) const {
+      return std::tie(SrcLocIndex, LocScopeIndex) < std::tie(DL.SrcLocIndex, DL.LocScopeIndex);
+    }
+  };
+
+  inline hash_code hash_value(DebugLoc DL) {
+    return llvm::hash_value(DL.getAsRawInteger());
+  }
+
+  template <>
+  struct DenseMapInfo<DebugLoc> {
+  
+    static DebugLoc getEmptyKey() {
+      return DebugLoc(0xfffffffe, 0xfffffffe);
+    }
+  
+    static DebugLoc getTombstoneKey() {
+      return DebugLoc(0xfffffffd, 0xfffffffd);
+    }
+  
+    static unsigned getHashValue(DebugLoc V) {
+      return hash_value(V.getAsRawInteger());
+    }
+  
+    static bool isEqual(const DebugLoc &LHS, const DebugLoc &RHS) { return LHS == RHS; }
+  };
+
+
+  inline raw_ostream &operator<<(raw_ostream &OS, const DebugLoc &DL) {
+    DL.print(OS);
+    return OS;
+  }
+
+  /// Wrapper class for DILocRef that does not depend on DebugInfoMetadata.h,
+  /// and can be implicitly converted to DILocRef when DebugInfoMetadata.h is
+  /// included.
+  class DILocRefWrapper {
+  public:
+    DILocRefWrapper() : SP(nullptr), Index() {}
+    DILocRefWrapper(DISubprogram *SP, DebugLoc Index) : SP(SP), Index(Index) {}
+    DISubprogram *SP;
+    DebugLoc Index;
+    operator bool() const { return (bool)Index; }
+    operator DebugLoc() { return Index; }
   };
 
 } // end namespace llvm

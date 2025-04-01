@@ -719,8 +719,7 @@ BasicBlock *CreateFailBB(Function *F, const Triple &Trip) {
   BasicBlock *FailBB = BasicBlock::Create(Context, "CallStackCheckFailBlk", F);
   IRBuilder<> B(FailBB);
   if (F->getSubprogram())
-    B.SetCurrentDebugLocation(
-        DILocation::get(Context, 0, 0, F->getSubprogram()));
+    B.SetCurrentDebugLocation(DebugLoc(0, 0));
   FunctionCallee StackChkFail;
   SmallVector<Value *, 1> Args;
   if (Trip.isOSOpenBSD()) {

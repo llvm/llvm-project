@@ -485,7 +485,7 @@ def Main():
                     skipped_bugs += 1
                     continue
 
-                if bugs_metadata == "DILocation":
+                if bugs_metadata == "DebugLoc":
                     try:
                         action = bug["action"]
                         bb_name = bug["bb-name"]

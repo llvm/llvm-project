@@ -31,7 +31,7 @@
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret i16 0
 
-define i16 @test1() {
+define i16 @test1() !dbg !7 {
 entry:
   call void @llvm.dbg.declare(metadata ptr poison, metadata !4, metadata !DIExpression()), !dbg !16
   ret i16 0

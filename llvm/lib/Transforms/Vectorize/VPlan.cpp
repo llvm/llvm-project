@@ -219,10 +219,11 @@ VPTransformState::VPTransformState(const TargetTransformInfo *TTI,
                                    ElementCount VF, unsigned UF, LoopInfo *LI,
                                    DominatorTree *DT, IRBuilderBase &Builder,
                                    InnerLoopVectorizer *ILV, VPlan *Plan,
-                                   Loop *CurrentParentLoop, Type *CanonicalIVTy)
+                                   Loop *CurrentParentLoop, Type *CanonicalIVTy,
+                                   DISubprogram *SP)
     : TTI(TTI), VF(VF), CFG(DT), LI(LI), Builder(Builder), ILV(ILV), Plan(Plan),
       CurrentParentLoop(CurrentParentLoop), LVer(nullptr),
-      TypeAnalysis(CanonicalIVTy), VPDT(*Plan) {}
+      TypeAnalysis(CanonicalIVTy), VPDT(*Plan), SP(SP) {}
 
 Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
   if (Def->isLiveIn())
@@ -376,7 +377,9 @@ void VPTransformState::addMetadata(Value *To, Instruction *From) {
 }
 
 void VPTransformState::setDebugLocFrom(DebugLoc DL) {
-  const DILocation *DIL = DL;
+  if (!SP)
+    return;
+  DILocRef DIL(SP, DL);
   // When a FSDiscriminator is enabled, we don't need to add the multiply
   // factors to the discriminators.
   if (DIL &&

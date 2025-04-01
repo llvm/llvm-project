@@ -59,6 +59,7 @@
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/ProfDataUtils.h"
+#include "llvm/IR/TrackingMDRef.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Verifier.h"
@@ -927,7 +928,7 @@ private:
   /// Save the positions of the Metadata blocks and skip parsing the blocks.
   Error rememberAndSkipMetadata();
   Error typeCheckLoadStoreInst(Type *ValType, Type *PtrType);
-  Error parseFunctionBody(Function *F);
+  Error parseFunctionBody(Function *F, SmallVectorImpl<TrackingMDNodeRef> &TempDILocations);
   Error globalCleanup();
   Error resolveGlobalAndIndirectSymbolInits();
   Error parseUseLists();
@@ -4922,7 +4923,7 @@ Error BitcodeReader::propagateAttributeTypes(CallBase *CB,
 }
 
 /// Lazily parse the specified function body block.
-Error BitcodeReader::parseFunctionBody(Function *F) {
+Error BitcodeReader::parseFunctionBody(Function *F, SmallVectorImpl<TrackingMDNodeRef> &TempDILocations) {
   if (Error Err = Stream.EnterSubBlock(bitc::FUNCTION_BLOCK_ID))
     return Err;
 
@@ -5101,7 +5102,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
 
     case bitc::FUNC_CODE_DEBUG_LOC: {      // DEBUG_LOC: [line, col, scope, ia]
       I = getLastInstruction();
-      if (!I || Record.size() < 4)
+      if (!I || Record.size() < 2)
         return error("Invalid record");
 
       unsigned Line = Record[0], Col = Record[1];
@@ -5121,8 +5122,11 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         if (!IA)
           return error("Invalid record");
       }
-      LastLoc = DILocation::get(Scope->getContext(), Line, Col, Scope, IA,
+
+      DILocation *NewDILoc = DILocation::get(Scope->getContext(), Line, Col, Scope, IA,
                                 isImplicitCode);
+      LastLoc = DebugLoc(TempDILocations.size(), 0xFFFFFFFF);
+      TempDILocations.emplace_back(NewDILoc);
       I->setDebugLoc(LastLoc);
       I = nullptr;
       continue;
@@ -6649,9 +6653,11 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       if (!Inst)
         return error("Invalid dbg record: missing instruction");
       DILocation *DIL = cast<DILocation>(getFnMetadataByID(Record[0]));
+      DebugLoc LabelLoc = DebugLoc(TempDILocations.size(), 0xFFFFFFFF);
+      TempDILocations.emplace_back(DIL);
       DILabel *Label = cast<DILabel>(getFnMetadataByID(Record[1]));
       Inst->getParent()->insertDbgRecordBefore(
-          new DbgLabelRecord(Label, DebugLoc(DIL)), Inst->getIterator());
+          new DbgLabelRecord(Label, LabelLoc), Inst->getIterator());
       continue; // This isn't an instruction.
     }
     case bitc::FUNC_CODE_DEBUG_RECORD_VALUE_SIMPLE:
@@ -6666,7 +6672,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         return error("Invalid dbg record: missing instruction");
 
       // First 3 fields are common to all kinds:
-      //   DILocation, DILocalVariable, DIExpression
+      //   DebugLoc, DILocalVariable, DIExpression
       // dbg_value (FUNC_CODE_DEBUG_RECORD_VALUE)
       //   ..., LocationMetadata
       // dbg_value (FUNC_CODE_DEBUG_RECORD_VALUE_SIMPLE - abbrev'd)
@@ -6678,6 +6684,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       unsigned Slot = 0;
       // Common fields (0-2).
       DILocation *DIL = cast<DILocation>(getFnMetadataByID(Record[Slot++]));
+      DebugLoc RecordLoc = DebugLoc(TempDILocations.size(), 0xFFFFFFFF);
+      TempDILocations.emplace_back(DIL);
       DILocalVariable *Var =
           cast<DILocalVariable>(getFnMetadataByID(Record[Slot++]));
       DIExpression *Expr =
@@ -6707,11 +6715,11 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       switch (BitCode) {
       case bitc::FUNC_CODE_DEBUG_RECORD_VALUE:
       case bitc::FUNC_CODE_DEBUG_RECORD_VALUE_SIMPLE:
-        DVR = new DbgVariableRecord(RawLocation, Var, Expr, DIL,
+        DVR = new DbgVariableRecord(RawLocation, Var, Expr, RecordLoc,
                                     DbgVariableRecord::LocationType::Value);
         break;
       case bitc::FUNC_CODE_DEBUG_RECORD_DECLARE:
-        DVR = new DbgVariableRecord(RawLocation, Var, Expr, DIL,
+        DVR = new DbgVariableRecord(RawLocation, Var, Expr, RecordLoc,
                                     DbgVariableRecord::LocationType::Declare);
         break;
       case bitc::FUNC_CODE_DEBUG_RECORD_ASSIGN: {
@@ -6720,7 +6728,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
             cast<DIExpression>(getFnMetadataByID(Record[Slot++]));
         Metadata *Addr = getFnMetadataByID(Record[Slot++]);
         DVR = new DbgVariableRecord(RawLocation, Var, Expr, ID, Addr, AddrExpr,
-                                    DIL);
+                                    RecordLoc);
         break;
       }
       default:
@@ -7014,7 +7022,8 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
   // IsNewDbgInfoFormat=true to construct any debug records seen in the bitcode.
   F->IsNewDbgInfoFormat = true;
 
-  if (Error Err = parseFunctionBody(F))
+  SmallVector<TrackingMDNodeRef, 0> TempDILocations;
+  if (Error Err = parseFunctionBody(F, TempDILocations))
     return Err;
   F->setIsMaterializable(false);
 
@@ -7064,8 +7073,12 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
   }
 
   // Finish fn->subprogram upgrade for materialized functions.
-  if (DISubprogram *SP = MDLoader->lookupSubprogramForFunction(F))
+  if (DISubprogram *SP = MDLoader->lookupSubprogramForFunction(F)) {
     F->setSubprogram(SP);
+  }
+  if (auto *SP = F->getSubprogram())
+    if (!F->isDeclaration())
+      SP->absorbDILocations(F, TempDILocations);
 
   // Check if the TBAA Metadata are valid, otherwise we will need to strip them.
   if (!MDLoader->isStrippingTBAA()) {
@@ -7178,6 +7191,9 @@ Error BitcodeReader::materializeModule() {
   UpgradeNVVMAnnotations(*TheModule);
 
   UpgradeARCRuntime(*TheModule);
+  
+  TheModule->getContext().clearUniqueDILocationStorage();
+  TheModule->getContext().clearDistinctDILocationStorage();
 
   return Error::success();
 }

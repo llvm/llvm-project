@@ -1074,6 +1074,7 @@ class MDNode : public Metadata {
   friend class ReplaceableMetadataImpl;
   friend class LLVMContextImpl;
   friend class DIAssignID;
+  friend class DISubprogram;
 
   /// The header that is coallocated with an MDNode along with its "small"
   /// operands. It is located immediately before the main body of the node.

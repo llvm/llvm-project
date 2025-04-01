@@ -43,6 +43,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
@@ -700,7 +701,7 @@ ErrorOr<uint64_t> SampleProfileLoader::getInstWeight(const Instruction &Inst) {
 /// \returns The FunctionSamples pointer to the inlined instance.
 const FunctionSamples *
 SampleProfileLoader::findCalleeFunctionSamples(const CallBase &Inst) const {
-  const DILocation *DIL = Inst.getDebugLoc();
+  DILocRef DIL(Inst);
   if (!DIL) {
     return nullptr;
   }
@@ -727,7 +728,7 @@ SampleProfileLoader::findCalleeFunctionSamples(const CallBase &Inst) const {
 std::vector<const FunctionSamples *>
 SampleProfileLoader::findIndirectCallFunctionSamples(
     const Instruction &Inst, uint64_t &Sum) const {
-  const DILocation *DIL = Inst.getDebugLoc();
+  DILocRef DIL(Inst);
   std::vector<const FunctionSamples *> R;
 
   if (!DIL) {
@@ -787,11 +788,11 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
       return nullptr;
   }
 
-  const DILocation *DIL = Inst.getDebugLoc();
+  DILocRef DIL(Inst);
   if (!DIL)
     return Samples;
 
-  auto it = DILocation2SampleMap.try_emplace(DIL,nullptr);
+  auto it = DILocation2SampleMap.try_emplace(DIL, nullptr);
   if (it.second) {
     if (FunctionSamples::ProfileIsCS)
       it.first->second = ContextTracker->getContextSamplesFor(DIL);
@@ -1024,7 +1025,7 @@ void SampleProfileLoader::emitOptimizationRemarksForInlineCandidates(
     Function *CalledFunction = I->getCalledFunction();
     if (CalledFunction) {
       ORE->emit(OptimizationRemarkAnalysis(getAnnotatedRemarkPassName(),
-                                           "InlineAttempt", I->getDebugLoc(),
+                                           "InlineAttempt", DILocRef(*I),
                                            I->getParent())
                 << "previous inlining reattempted for "
                 << (Hot ? "hotness: '" : "size: '")
@@ -1245,7 +1246,7 @@ bool SampleProfileLoader::tryInlineCandidate(
   CallBase &CB = *Candidate.CallInstr;
   Function *CalledFunction = CB.getCalledFunction();
   assert(CalledFunction && "Expect a callee with definition");
-  DebugLoc DLoc = CB.getDebugLoc();
+  DILocRef DLoc(CB);
   BasicBlock *BB = CB.getParent();
 
   InlineCost Cost = shouldInlineCandidate(Candidate);
@@ -1557,7 +1558,7 @@ void SampleProfileLoader::promoteMergeNotInlinedContextSamples(
 
     ORE->emit(
         OptimizationRemarkAnalysis(getAnnotatedRemarkPassName(), "NotInline",
-                                   I->getDebugLoc(), I->getParent())
+                                   DILocRef(*I), I->getParent())
         << "previous inlining not repeated: '" << ore::NV("Callee", Callee)
         << "' into '" << ore::NV("Caller", &F) << "'");
 
@@ -1631,14 +1632,13 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
         if (!isa<CallInst>(I) && !isa<InvokeInst>(I))
           continue;
         if (!cast<CallBase>(I).getCalledFunction()) {
-          const DebugLoc &DLoc = I.getDebugLoc();
+          DILocRef DLoc(I);
           if (!DLoc)
             continue;
-          const DILocation *DIL = DLoc;
           const FunctionSamples *FS = findFunctionSamples(I);
           if (!FS)
             continue;
-          auto CallSite = FunctionSamples::getCallSiteIdentifier(DIL);
+          auto CallSite = FunctionSamples::getCallSiteIdentifier(DLoc);
           ErrorOr<SampleRecord::CallTargetMap> T =
               FS->findCallTargetMapAt(CallSite);
           if (!T || T.get().empty())
@@ -1697,9 +1697,9 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
         !isa<IndirectBrInst>(TI))
       continue;
 
-    DebugLoc BranchLoc = TI->getDebugLoc();
+    DILocRef BranchLoc(*TI);
     LLVM_DEBUG(dbgs() << "\nGetting weights for branch at line "
-                      << ((BranchLoc) ? Twine(BranchLoc.getLine())
+                      << ((BranchLoc) ? Twine(BranchLoc->getLine())
                                       : Twine("<UNKNOWN LOCATION>"))
                       << ".\n");
     SmallVector<uint32_t, 4> Weights;
@@ -2150,7 +2150,7 @@ void SampleProfileLoader::removePseudoProbeInstsDiscriminator(Module &M) {
         if (isa<PseudoProbeInst>(&I))
           InstsToDel.push_back(&I);
         else if (isa<CallBase>(&I))
-          if (const DILocation *DIL = I.getDebugLoc().get()) {
+          if (DILocRef DIL = DILocRef(I)) {
             // Restore dwarf discriminator for call.
             unsigned Discriminator = DIL->getDiscriminator();
             if (DILocation::isPseudoProbeDiscriminator(Discriminator)) {

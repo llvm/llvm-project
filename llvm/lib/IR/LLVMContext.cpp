@@ -377,3 +377,12 @@ StringRef LLVMContext::getDefaultTargetFeatures() {
 void LLVMContext::setDefaultTargetFeatures(StringRef Features) {
   pImpl->DefaultTargetFeatures = Features;
 }
+
+void LLVMContext::clearUniqueDILocationStorage() {
+  pImpl->DILocations = DenseSet<DILocation*, MDNodeInfo<DILocation>>();
+}
+void LLVMContext::clearDistinctDILocationStorage() {
+  erase_if(pImpl->DistinctMDNodes, [](MDNode *MD) {
+    return isa<DILocation>(MD);
+  });
+}

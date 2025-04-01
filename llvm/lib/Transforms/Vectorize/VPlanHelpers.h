@@ -205,7 +205,8 @@ struct VPTransformState {
   VPTransformState(const TargetTransformInfo *TTI, ElementCount VF, unsigned UF,
                    LoopInfo *LI, DominatorTree *DT, IRBuilderBase &Builder,
                    InnerLoopVectorizer *ILV, VPlan *Plan,
-                   Loop *CurrentParentLoop, Type *CanonicalIVTy);
+                   Loop *CurrentParentLoop, Type *CanonicalIVTy,
+                   DISubprogram *SP);
   /// Target Transform Info.
   const TargetTransformInfo *TTI;
 
@@ -360,6 +361,8 @@ struct VPTransformState {
 
   /// VPlan-based dominator tree.
   VPDominatorTree VPDT;
+
+  DISubprogram *SP;
 };
 
 /// Struct to hold various analysis needed for cost computations.

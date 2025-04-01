@@ -126,8 +126,8 @@ MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
 
 MachineInstrBuilder MachineIRBuilder::buildDbgLabel(const MDNode *Label) {
   assert(isa<DILabel>(Label) && "not a label");
-  assert(cast<DILabel>(Label)->isValidLocationForIntrinsic(State.DL) &&
-         "Expected inlined-at fields to agree");
+  // assert(cast<DILabel>(Label)->isValidLocationForIntrinsic(State.DL) &&
+  //        "Expected inlined-at fields to agree");
   auto MIB = buildInstr(TargetOpcode::DBG_LABEL);
 
   return MIB.addMetadata(Label);

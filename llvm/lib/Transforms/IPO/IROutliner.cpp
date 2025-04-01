@@ -734,12 +734,10 @@ static void moveFunctionData(Function &Old, Function &New,
         // Loop info metadata may contain line locations. Update them to have no
         // value in the new subprogram since the outlined code could be from
         // several locations.
-        auto updateLoopInfoLoc = [&New](Metadata *MD) -> Metadata * {
-          if (DISubprogram *SP = New.getSubprogram())
-            if (auto *Loc = dyn_cast_or_null<DILocation>(MD))
-              return DILocation::get(New.getContext(), Loc->getLine(),
-                                     Loc->getColumn(), SP, nullptr);
-          return MD;
+        auto updateLoopInfoLoc = [&New](DebugLoc DL) -> DebugLoc {
+          if (New.getSubprogram())
+            return DebugLoc(DL.SrcLocIndex, 0);
+          return DebugLoc();
         };
         updateLoopMetadataDebugLocations(Val, updateLoopInfoLoc);
         continue;
@@ -755,10 +753,8 @@ static void moveFunctionData(Function &Old, Function &New,
       }
 
       // Edit the scope of called functions inside of outlined functions.
-      if (DISubprogram *SP = New.getSubprogram()) {
-        DILocation *DI = DILocation::get(New.getContext(), 0, 0, SP);
-        Val.setDebugLoc(DI);
-      }
+      if (New.getSubprogram())
+        Val.setDebugLoc(DebugLoc(0, 0));
     }
 
     for (Instruction *I : DebugInsts)
@@ -2887,7 +2883,7 @@ unsigned IROutliner::doOutline(Module &M) {
             [&R](OutlinableRegion *Region) {
               R << ore::NV(
                   "DebugLoc",
-                  Region->Candidate->frontInstruction()->getDebugLoc());
+                  DILocRef(*Region->Candidate->frontInstruction()));
             },
             [&R]() { R << " "; });
         return R;
@@ -2992,7 +2988,7 @@ unsigned IROutliner::doOutline(Module &M) {
           CurrentGroup.Regions.begin(), CurrentGroup.Regions.end(),
           [&R](OutlinableRegion *Region) {
             R << ore::NV("DebugLoc",
-                         Region->Candidate->frontInstruction()->getDebugLoc());
+                         DILocRef(*Region->Candidate->frontInstruction()));
           },
           [&R]() { R << " "; });
       return R;

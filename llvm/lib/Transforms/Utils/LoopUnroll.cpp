@@ -611,7 +611,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
                       << " with trip count " << ULO.Count << "!\n");
     if (ORE)
       ORE->emit([&]() {
-        return OptimizationRemark(DEBUG_TYPE, "FullyUnrolled", L->getStartLoc(),
+        return OptimizationRemark(DEBUG_TYPE, "FullyUnrolled", L->getStartLocRef(),
                                   L->getHeader())
                << "completely unrolled loop with "
                << NV("UnrollCount", ULO.Count) << " iterations";
@@ -625,7 +625,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
     if (ORE)
       ORE->emit([&]() {
-        OptimizationRemark Diag(DEBUG_TYPE, "PartialUnrolled", L->getStartLoc(),
+        OptimizationRemark Diag(DEBUG_TYPE, "PartialUnrolled", L->getStartLocRef(),
                                 L->getHeader());
         Diag << "unrolled loop by a factor of " << NV("UnrollCount", ULO.Count);
         if (ULO.Runtime)
@@ -693,7 +693,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     for (BasicBlock *BB : L->getBlocks())
       for (Instruction &I : *BB)
         if (!I.isDebugOrPseudoInst())
-          if (const DILocation *DIL = I.getDebugLoc()) {
+          if (auto DIL = DILocRef(I)) {
             auto NewDIL = DIL->cloneByMultiplyingDuplicationFactor(ULO.Count);
             if (NewDIL)
               I.setDebugLoc(*NewDIL);

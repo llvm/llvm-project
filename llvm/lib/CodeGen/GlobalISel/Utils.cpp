@@ -268,7 +268,7 @@ void llvm::reportGISelFailure(MachineFunction &MF, const TargetPassConfig &TPC,
                               const char *PassName, StringRef Msg,
                               const MachineInstr &MI) {
   MachineOptimizationRemarkMissed R(PassName, "GISelFailure: ",
-                                    MI.getDebugLoc(), MI.getParent());
+                                    DILocRef(MI), MI.getParent());
   R << Msg;
   // Printing MI is expensive;  only do it if expensive remarks are enabled.
   if (TPC.isGlobalISelAbortEnabled() || MORE.allowExtraAnalysis(PassName))

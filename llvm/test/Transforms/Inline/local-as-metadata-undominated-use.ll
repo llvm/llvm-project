@@ -28,6 +28,12 @@ entry:
   ret i32 %call
 }
 
+define i32 @callest(i32 %a, i32 %b) !dbg !14 {
+  %c = add i32 %a, %b
+  %call = tail call i32 @caller(i32 %c), !dbg !15
+  ret i32 %call
+}
+
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
@@ -46,3 +52,5 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !11 = !DILocation(line: 2, column: 13, scope: !4)
 !12 = !DILocation(line: 2, column: 27, scope: !4)
 !13 = !DILocation(line: 2, column: 18, scope: !4)
+!14 = distinct !DISubprogram(name: "callest", scope: !1, file: !1, line: 2, type: !5, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: true, unit: !0)
+!15 = !DILocation(line: 2, column: 18, scope: !14)

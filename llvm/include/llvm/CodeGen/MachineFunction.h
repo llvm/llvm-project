@@ -430,14 +430,14 @@ public:
   public:
     const DILocalVariable *Var;
     const DIExpression *Expr;
-    const DILocation *Loc;
+    DebugLoc Loc;
 
     VariableDbgInfo(const DILocalVariable *Var, const DIExpression *Expr,
-                    int Slot, const DILocation *Loc)
+                    int Slot, DebugLoc Loc)
         : Address(Slot), Var(Var), Expr(Expr), Loc(Loc) {}
 
     VariableDbgInfo(const DILocalVariable *Var, const DIExpression *Expr,
-                    MCRegister EntryValReg, const DILocation *Loc)
+                    MCRegister EntryValReg, DebugLoc Loc)
         : Address(EntryValReg), Var(Var), Expr(Expr), Loc(Loc) {}
 
     /// Return true if this variable is in a stack slot.
@@ -1359,14 +1359,14 @@ public:
   /// Collect information used to emit debugging information of a variable in a
   /// stack slot.
   void setVariableDbgInfo(const DILocalVariable *Var, const DIExpression *Expr,
-                          int Slot, const DILocation *Loc) {
+                          int Slot, DebugLoc Loc) {
     VariableDbgInfos.emplace_back(Var, Expr, Slot, Loc);
   }
 
   /// Collect information used to emit debugging information of a variable in
   /// the entry value of a register.
   void setVariableDbgInfo(const DILocalVariable *Var, const DIExpression *Expr,
-                          MCRegister Reg, const DILocation *Loc) {
+                          MCRegister Reg, DebugLoc Loc) {
     VariableDbgInfos.emplace_back(Var, Expr, Reg, Loc);
   }
 

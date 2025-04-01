@@ -98,7 +98,7 @@ static inline bool checkIfSupported(GlobalVariable &G) {
 
   G.getContext().diagnose(
     DiagnosticInfoUnsupported(*I->getParent()->getParent(), W,
-                              I->getDebugLoc(), DS_Error));
+                              DILocRef(*I), DS_Error));
 
   return false;
 }
@@ -180,7 +180,7 @@ static inline bool checkIfSupported(const Function *F, const CallBase *CB) {
   auto Caller = CB->getParent()->getParent();
 
   Caller->getContext().diagnose(
-    DiagnosticInfoUnsupported(*Caller, W, CB->getDebugLoc(), DS_Error));
+    DiagnosticInfoUnsupported(*Caller, W, DILocRef(*CB), DS_Error));
 
   return false;
 }

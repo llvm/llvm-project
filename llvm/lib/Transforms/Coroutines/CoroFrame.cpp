@@ -21,6 +21,7 @@
 #include "llvm/Analysis/StackLifetime.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -838,9 +839,7 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
 
   // Construct the location for the frame debug variable. The column number
   // is fake but it should be fine.
-  DILocation *DILoc =
-      DILocation::get(DIS->getContext(), LineNum, /*Column=*/1, DIS);
-  assert(FrameDIVar->isValidLocationForIntrinsic(DILoc));
+  DebugLoc DILoc(DIS->getSrcLocIndex(DISrcLocData(LineNum, 1), DebugLoc(), true), 0);
 
   if (UseNewDbgInfoFormat) {
     DbgVariableRecord *NewDVR =
@@ -1961,8 +1960,8 @@ void coro::salvageDebugInfo(
     if (auto *I = dyn_cast<Instruction>(Storage)) {
       InsertPt = I->getInsertionPointAfterDef();
       // Update DILocation only if variable was not inlined.
-      DebugLoc ILoc = I->getDebugLoc();
-      DebugLoc DVILoc = DVI.getDebugLoc();
+      DILocRef ILoc(*I);
+      DILocRef DVILoc(DVI);
       if (ILoc && DVILoc &&
           DVILoc->getScope()->getSubprogram() ==
               ILoc->getScope()->getSubprogram())
@@ -2003,8 +2002,8 @@ void coro::salvageDebugInfo(
     if (auto *I = dyn_cast<Instruction>(Storage)) {
       InsertPt = I->getInsertionPointAfterDef();
       // Update DILocation only if variable was not inlined.
-      DebugLoc ILoc = I->getDebugLoc();
-      DebugLoc DVRLoc = DVR.getDebugLoc();
+      DILocRef ILoc(*I);
+      DILocRef DVRLoc(DVR);
       if (ILoc && DVRLoc &&
           DVRLoc->getScope()->getSubprogram() ==
               ILoc->getScope()->getSubprogram())

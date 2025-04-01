@@ -144,6 +144,7 @@ static bool addDiscriminators(Function &F) {
   if (NoDiscriminators || !F.getSubprogram())
     return false;
 
+  auto *SP = F.getSubprogram();
   // Create FSDiscriminatorVariable if flow sensitive discriminators are used.
   if (EnableFSDiscriminator)
     createFSDiscriminatorVariable(F.getParent());
@@ -172,7 +173,7 @@ static bool addDiscriminators(Function &F) {
       // should have a valid discriminator.
       if (!shouldHaveDiscriminator(&I))
         continue;
-      const DILocation *DIL = I.getDebugLoc();
+      DILocRef DIL(SP, I.getDebugLoc());
       if (!DIL)
         continue;
       Location L = std::make_pair(DIL->getFilename(), DIL->getLine());
@@ -192,7 +193,7 @@ static bool addDiscriminators(Function &F) {
                           << DIL->getColumn() << ":" << Discriminator << " "
                           << I << "\n");
       } else {
-        I.setDebugLoc(*NewDIL);
+        I.setDebugLoc(NewDIL->Index);
         LLVM_DEBUG(dbgs() << DIL->getFilename() << ":" << DIL->getLine() << ":"
                    << DIL->getColumn() << ":" << Discriminator << " " << I
                    << "\n");
@@ -215,7 +216,7 @@ static bool addDiscriminators(Function &F) {
       if (!isa<InvokeInst>(I) && (!isa<CallInst>(I) || isa<IntrinsicInst>(I)))  
         continue;
 
-      DILocation *CurrentDIL = I.getDebugLoc();
+      DILocRef CurrentDIL(SP, I.getDebugLoc());
       if (!CurrentDIL)
         continue;
       Location L =
@@ -230,7 +231,7 @@ static bool addDiscriminators(Function &F) {
                      << CurrentDIL->getLine() << ":" << CurrentDIL->getColumn()
                      << ":" << Discriminator << " " << I << "\n");
         } else {
-          I.setDebugLoc(*NewDIL);
+          I.setDebugLoc(NewDIL->Index);
           Changed = true;
         }
       }

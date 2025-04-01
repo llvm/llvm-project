@@ -1460,7 +1460,7 @@ const char *LLVMGetDebugLocDirectory(LLVMValueRef Val, unsigned *Length) {
   if (!Length) return nullptr;
   StringRef S;
   if (const auto *I = dyn_cast<Instruction>(unwrap(Val))) {
-    if (const auto &DL = I->getDebugLoc()) {
+    if (DILocRef DL = DILocRef(*I)) {
       S = DL->getDirectory();
     }
   } else if (const auto *GV = dyn_cast<GlobalVariable>(unwrap(Val))) {
@@ -1484,7 +1484,7 @@ const char *LLVMGetDebugLocFilename(LLVMValueRef Val, unsigned *Length) {
   if (!Length) return nullptr;
   StringRef S;
   if (const auto *I = dyn_cast<Instruction>(unwrap(Val))) {
-    if (const auto &DL = I->getDebugLoc()) {
+    if (DILocRef DL = DILocRef(*I)) {
       S = DL->getFilename();
     }
   } else if (const auto *GV = dyn_cast<GlobalVariable>(unwrap(Val))) {
@@ -1507,7 +1507,7 @@ const char *LLVMGetDebugLocFilename(LLVMValueRef Val, unsigned *Length) {
 unsigned LLVMGetDebugLocLine(LLVMValueRef Val) {
   unsigned L = 0;
   if (const auto *I = dyn_cast<Instruction>(unwrap(Val))) {
-    if (const auto &DL = I->getDebugLoc()) {
+    if (DILocRef DL = DILocRef(*I)) {
       L = DL->getLine();
     }
   } else if (const auto *GV = dyn_cast<GlobalVariable>(unwrap(Val))) {
@@ -1529,7 +1529,7 @@ unsigned LLVMGetDebugLocLine(LLVMValueRef Val) {
 unsigned LLVMGetDebugLocColumn(LLVMValueRef Val) {
   unsigned C = 0;
   if (const auto *I = dyn_cast<Instruction>(unwrap(Val)))
-    if (const auto &DL = I->getDebugLoc())
+    if (DILocRef DL = DILocRef(*I))
       C = DL->getColumn();
   return C;
 }
@@ -3316,26 +3316,27 @@ void LLVMDisposeBuilder(LLVMBuilderRef Builder) {
 /*--.. Metadata builders ...................................................--*/
 
 LLVMMetadataRef LLVMGetCurrentDebugLocation2(LLVMBuilderRef Builder) {
-  return wrap(unwrap(Builder)->getCurrentDebugLocation().getAsMDNode());
+  return wrap((MDNode*)nullptr);
 }
 
 void LLVMSetCurrentDebugLocation2(LLVMBuilderRef Builder, LLVMMetadataRef Loc) {
-  if (Loc)
-    unwrap(Builder)->SetCurrentDebugLocation(DebugLoc(unwrap<MDNode>(Loc)));
-  else
-    unwrap(Builder)->SetCurrentDebugLocation(DebugLoc());
+  // if (Loc)
+  //   unwrap(Builder)->SetCurrentDebugLocation(DebugLoc(unwrap<MDNode>(Loc)));
+  // else
+  //   unwrap(Builder)->SetCurrentDebugLocation(DebugLoc());
 }
 
 void LLVMSetCurrentDebugLocation(LLVMBuilderRef Builder, LLVMValueRef L) {
-  MDNode *Loc =
-      L ? cast<MDNode>(unwrap<MetadataAsValue>(L)->getMetadata()) : nullptr;
-  unwrap(Builder)->SetCurrentDebugLocation(DebugLoc(Loc));
+  // MDNode *Loc =
+  //     L ? cast<MDNode>(unwrap<MetadataAsValue>(L)->getMetadata()) : nullptr;
+  // unwrap(Builder)->SetCurrentDebugLocation(DebugLoc(Loc));
 }
 
 LLVMValueRef LLVMGetCurrentDebugLocation(LLVMBuilderRef Builder) {
-  LLVMContext &Context = unwrap(Builder)->getContext();
-  return wrap(MetadataAsValue::get(
-      Context, unwrap(Builder)->getCurrentDebugLocation().getAsMDNode()));
+  // LLVMContext &Context = unwrap(Builder)->getContext();
+  // return wrap(MetadataAsValue::get(
+  //     Context, unwrap(Builder)->getCurrentDebugLocation().getAsMDNode()));
+  return wrap((Value*)nullptr);
 }
 
 void LLVMSetInstDebugLocation(LLVMBuilderRef Builder, LLVMValueRef Inst) {

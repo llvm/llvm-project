@@ -44,13 +44,13 @@ namespace {
 
 using Location = std::pair<StringRef, unsigned>;
 
-Location diToLocation(const DILocation *Loc) {
+Location diToLocation(DILocRef Loc) {
   return std::make_pair(Loc->getFilename(), Loc->getLine());
 }
 
 /// Ensure each instruction having a memory operand has a distinct <LineNumber,
 /// Discriminator> pair.
-void updateDebugInfo(MachineInstr *MI, const DILocation *Loc) {
+void updateDebugInfo(MachineInstr *MI, DILocRef Loc) {
   DebugLoc DL(Loc);
   MI->setDebugLoc(DL);
 }
@@ -95,8 +95,7 @@ bool X86DiscriminateMemOps::runOnMachineFunction(MachineFunction &MF) {
 
   // Have a default DILocation, if we find instructions with memops that don't
   // have any debug info.
-  const DILocation *ReferenceDI =
-      DILocation::get(FDI->getContext(), FDI->getLine(), 0, FDI);
+  DILocRef ReferenceDI(FDI, DebugLoc(FDI->getSrcLocIndex(DISrcLocData(FDI->getLine()), DebugLoc(), true), 0));
   assert(ReferenceDI && "ReferenceDI should not be nullptr");
   DenseMap<Location, unsigned> MemOpDiscriminators;
   MemOpDiscriminators[diToLocation(ReferenceDI)] = 0;
@@ -107,7 +106,7 @@ bool X86DiscriminateMemOps::runOnMachineFunction(MachineFunction &MF) {
   // for the goals of this pass, however, it avoids unnecessary ambiguity.
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
-      const auto &DI = MI.getDebugLoc();
+      DILocRef DI(MI);
       if (!DI)
         continue;
       if (BypassPrefetchInstructions && IsPrefetchOpcode(MI.getDesc().Opcode))
@@ -130,7 +129,7 @@ bool X86DiscriminateMemOps::runOnMachineFunction(MachineFunction &MF) {
         continue;
       if (BypassPrefetchInstructions && IsPrefetchOpcode(MI.getDesc().Opcode))
         continue;
-      const DILocation *DI = MI.getDebugLoc();
+      DILocRef DI(MI);
       bool HasDebug = DI;
       if (!HasDebug) {
         DI = ReferenceDI;

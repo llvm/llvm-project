@@ -317,11 +317,11 @@ calculateFragment(DILocalVariable *Variable,
 
 static DebugVariable getAggregateVariable(DbgVariableIntrinsic *DVI) {
   return DebugVariable(DVI->getVariable(), std::nullopt,
-                       DVI->getDebugLoc().getInlinedAt());
+                       DILocRef(*DVI).getInlinedAt());
 }
 static DebugVariable getAggregateVariable(DbgVariableRecord *DVR) {
   return DebugVariable(DVR->getVariable(), std::nullopt,
-                       DVR->getDebugLoc().getInlinedAt());
+  DILocRef(*DVR).getInlinedAt());
 }
 
 /// Helpers for handling new and old debug info modes in migrateDebugInfo.
@@ -5435,8 +5435,8 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
       auto RemoveOne = [DbgVariable](auto *OldDII) {
         auto SameVariableFragment = [](const auto *LHS, const auto *RHS) {
           return LHS->getVariable() == RHS->getVariable() &&
-                 LHS->getDebugLoc()->getInlinedAt() ==
-                     RHS->getDebugLoc()->getInlinedAt();
+                 DILocRef(*LHS)->getInlinedAt() ==
+                     DILocRef(*RHS)->getInlinedAt();
         };
         if (SameVariableFragment(OldDII, DbgVariable))
           OldDII->eraseFromParent();

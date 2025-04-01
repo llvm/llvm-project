@@ -928,6 +928,7 @@ bool EarlyIfConverter::shouldConvertIf() {
   unsigned CritLimit = SchedModel.MispredictPenalty/2;
 
   MachineBasicBlock &MBB = *IfConv.Head;
+  auto *SP = MBB.getParent()->getFunction().getSubprogram();
   MachineOptimizationRemarkEmitter MORE(*MBB.getParent(), nullptr);
 
   // If-conversion only makes sense when there is unexploited ILP. Compute the
@@ -943,7 +944,7 @@ bool EarlyIfConverter::shouldConvertIf() {
     LLVM_DEBUG(dbgs() << "Not enough available ILP.\n");
     MORE.emit([&]() {
       MachineOptimizationRemarkMissed R(DEBUG_TYPE, "IfConversion",
-                                        MBB.findDebugLoc(MBB.back()), &MBB);
+                                        DILocRef(SP, MBB.findDebugLoc(MBB.back())), &MBB);
       R << "did not if-convert branch: the resulting critical path ("
         << Cycles{"ResLength", ResLength}
         << ") would extend the shorter leg's critical path ("
@@ -1028,7 +1029,7 @@ bool EarlyIfConverter::shouldConvertIf() {
   if (ShouldConvert) {
     MORE.emit([&]() {
       MachineOptimizationRemark R(DEBUG_TYPE, "IfConversion",
-                                  MBB.back().getDebugLoc(), &MBB);
+                                  DILocRef(SP, MBB.back().getDebugLoc()), &MBB);
       R << "performing if-conversion on branch: the condition adds "
         << Cycles{"CondCycles", Cond.Extra} << " to the critical path";
       if (Short.Extra > 0)
@@ -1044,7 +1045,7 @@ bool EarlyIfConverter::shouldConvertIf() {
   } else {
     MORE.emit([&]() {
       MachineOptimizationRemarkMissed R(DEBUG_TYPE, "IfConversion",
-                                        MBB.back().getDebugLoc(), &MBB);
+                                        DILocRef(SP, MBB.back().getDebugLoc()), &MBB);
       R << "did not if-convert branch: the condition would add "
         << Cycles{"CondCycles", Cond.Extra} << " to the critical path";
       if (Cond.Extra > CritLimit)

@@ -20,7 +20,7 @@ entry:
 ; CHECK-DAG: {{![0-9]+}} = !{!"MaxFunctionCount", i64 3}
 
 !1 = distinct !DISubprogram(name: "bar")
-!2 = !DILocation(line: 2, scope: !2)
+!2 = !DILocation(line: 2, scope: !1)
 !3 = distinct !DISubprogram(name: "baz")
-!4 = !DILocation(line: 1, scope: !4)
-!5 = !DILocation(line: 2, scope: !5)
+!4 = !DILocation(line: 1, scope: !3)
+!5 = !DILocation(line: 2, scope: !3)

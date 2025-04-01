@@ -27,7 +27,7 @@ DroppedVariableStats::DroppedVariableStats(bool DroppedVarStatsEnabled)
 
 void DroppedVariableStats::setup() {
   DebugVariablesStack.push_back({DenseMap<const Function *, DebugVariables>()});
-  InlinedAts.push_back({DenseMap<StringRef, DenseMap<VarID, DILocation *>>()});
+  InlinedAts.push_back({DenseMap<StringRef, DenseMap<VarID, DILocRef>>()});
 }
 
 void DroppedVariableStats::cleanup() {
@@ -47,7 +47,7 @@ void DroppedVariableStats::calculateDroppedStatsAndPrint(
   auto It = InlinedAts.back().find(FuncName);
   if (It == InlinedAts.back().end())
     return;
-  DenseMap<VarID, DILocation *> &InlinedAtsMap = It->second;
+  DenseMap<VarID, DILocRef> &InlinedAtsMap = It->second;
   // Find an Instruction that shares the same scope as the dropped #dbg_value
   // or has a scope that is the child of the scope of the #dbg_value, and has
   // an inlinedAt equal to the inlinedAt of the #dbg_value or it's inlinedAt
@@ -68,8 +68,8 @@ void DroppedVariableStats::calculateDroppedStatsAndPrint(
 }
 
 bool DroppedVariableStats::updateDroppedCount(
-    DILocation *DbgLoc, const DIScope *Scope, const DIScope *DbgValScope,
-    DenseMap<VarID, DILocation *> &InlinedAtsMap, VarID Var,
+    DILocRef DbgLoc, const DIScope *Scope, const DIScope *DbgValScope,
+    DenseMap<VarID, DILocRef> &InlinedAtsMap, VarID Var,
     unsigned &DroppedCount) {
   // If the Scope is a child of, or equal to the DbgValScope and is inlined at
   // the Var's InlinedAt location, return true to signify that the Var has
@@ -92,14 +92,14 @@ void DroppedVariableStats::run(DebugVariables &DbgVariables, StringRef FuncName,
                            : DbgVariables.DebugVariablesAfter);
   auto &InlinedAtsMap = InlinedAts.back();
   if (Before)
-    InlinedAtsMap.try_emplace(FuncName, DenseMap<VarID, DILocation *>());
+    InlinedAtsMap.try_emplace(FuncName, DenseMap<VarID, DILocRef>());
   VarIDSet = DenseSet<VarID>();
   visitEveryDebugRecord(VarIDSet, InlinedAtsMap, FuncName, Before);
 }
 
 void DroppedVariableStats::populateVarIDSetAndInlinedMap(
-    const DILocalVariable *DbgVar, DebugLoc DbgLoc, DenseSet<VarID> &VarIDSet,
-    DenseMap<StringRef, DenseMap<VarID, DILocation *>> &InlinedAtsMap,
+    const DILocalVariable *DbgVar, DILocRef DbgLoc, DenseSet<VarID> &VarIDSet,
+    DenseMap<StringRef, DenseMap<VarID, DILocRef>> &InlinedAtsMap,
     StringRef FuncName, bool Before) {
   VarID Key{DbgVar->getScope(), DbgLoc->getInlinedAtScope(), DbgVar};
   VarIDSet.insert(Key);
@@ -133,12 +133,12 @@ bool DroppedVariableStats::isScopeChildOfOrEqualTo(const DIScope *Scope,
 }
 
 bool DroppedVariableStats::isInlinedAtChildOfOrEqualTo(
-    const DILocation *InlinedAt, const DILocation *DbgValInlinedAt) {
+    DILocRef InlinedAt, DILocRef DbgValInlinedAt) {
   if (DbgValInlinedAt == InlinedAt)
     return true;
   if (!DbgValInlinedAt)
     return false;
-  auto *IA = InlinedAt;
+  auto IA = InlinedAt;
   while (IA) {
     if (IA == DbgValInlinedAt)
       return true;

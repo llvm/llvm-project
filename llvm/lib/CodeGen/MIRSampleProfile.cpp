@@ -105,7 +105,7 @@ std::optional<PseudoProbe> extractProbe(const MachineInstr &MI) {
     Probe.Type = MI.getOperand(2).getImm();
     Probe.Attr = MI.getOperand(3).getImm();
     Probe.Factor = 1;
-    DILocation *DebugLoc = MI.getDebugLoc();
+    DILocRef DebugLoc(MI);
     Probe.Discriminator = DebugLoc ? DebugLoc->getDiscriminator() : 0;
     return Probe;
   }
@@ -267,8 +267,9 @@ void MIRProfileLoader::setBranchProbs(MachineFunction &F) {
       Show = (Diff >= BranchProbability(FSProfileDebugProbDiffThreshold, 100));
       Show &= (BBWeightOrig >= FSProfileDebugBWThreshold);
 
-      auto DIL = BB->findBranchDebugLoc();
-      auto SuccDIL = Succ->findBranchDebugLoc();
+      auto *SP = F.getFunction().getSubprogram();
+      auto DIL = DILocRef(SP, BB->findBranchDebugLoc());
+      auto SuccDIL = DILocRef(SP, Succ->findBranchDebugLoc());
       if (Show) {
         dbgs() << "Set branch fs prob: MBB (" << BB->getNumber() << " -> "
                << Succ->getNumber() << "): ";

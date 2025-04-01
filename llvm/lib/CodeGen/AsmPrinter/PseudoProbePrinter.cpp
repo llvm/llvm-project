@@ -13,6 +13,7 @@
 #include "PseudoProbePrinter.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PseudoProbe.h"
 #include "llvm/MC/MCPseudoProbe.h"
@@ -22,13 +23,14 @@ using namespace llvm;
 
 void PseudoProbeHandler::emitPseudoProbe(uint64_t Guid, uint64_t Index,
                                          uint64_t Type, uint64_t Attr,
-                                         const DILocation *DebugLoc) {
+                                         DILocRefWrapper DbgLocW) {
   // Gather all the inlined-at nodes.
   // When it's done ReversedInlineStack looks like ([66, B], [88, A])
   // which means, Function A inlines function B at calliste with a probe id 88,
   // and B inlines C at probe 66 where C is represented by Guid.
   SmallVector<InlineSite, 8> ReversedInlineStack;
-  auto *InlinedAt = DebugLoc ? DebugLoc->getInlinedAt() : nullptr;
+  DILocRef DbgLoc(DbgLocW);
+  auto InlinedAt = DbgLoc ? DbgLoc->getInlinedAt() : nullptr;
   while (InlinedAt) {
     auto Name = InlinedAt->getSubprogramLinkageName();
     // Use caching to avoid redundant md5 computation for build speed.
@@ -43,9 +45,9 @@ void PseudoProbeHandler::emitPseudoProbe(uint64_t Guid, uint64_t Index,
   uint64_t Discriminator = 0;
   // For now only block probes have FS discriminators. See
   // MIRFSDiscriminator.cpp for more details.
-  if (EnableFSDiscriminator && DebugLoc &&
+  if (EnableFSDiscriminator && DbgLoc &&
       (Type == (uint64_t)PseudoProbeType::Block))
-    Discriminator = DebugLoc->getDiscriminator();
+    Discriminator = DbgLoc->getDiscriminator();
   assert((EnableFSDiscriminator || Discriminator == 0) &&
          "Discriminator should not be set in non-FSAFDO mode");
   SmallVector<InlineSite, 8> InlineStack(llvm::reverse(ReversedInlineStack));

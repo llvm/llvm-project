@@ -1287,7 +1287,7 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
   auto UpdateDbgLabel = [&](auto *LabelRecord) {
     // Point the label record to a fresh label within the new function if
     // the record was not inlined from some other function.
-    if (LabelRecord->getDebugLoc().getInlinedAt())
+    if (LabelRecord->getDebugLoc().getInlinedAt(OldSP))
       return;
     DILabel *OldLabel = LabelRecord->getLabel();
     DINode *&NewLabel = RemappedMetadata[OldLabel];
@@ -1318,7 +1318,7 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
         DVRsToDelete.push_back(&DVR);
         continue;
       }
-      if (!DVR.getDebugLoc().getInlinedAt())
+      if (!DVR.getDebugLoc().getInlinedAt(OldSP))
         DVR.setVariable(GetUpdatedDIVariable(DVR.getVariable()));
     }
   };
@@ -1351,7 +1351,7 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
     }
     // If the variable was in the scope of the old function, i.e. it was not
     // inlined, point the intrinsic to a fresh variable within the new function.
-    if (!DVI->getDebugLoc().getInlinedAt())
+    if (!DVI->getDebugLoc().getInlinedAt(OldSP))
       DVI->setVariable(GetUpdatedDIVariable(DVI->getVariable()));
   }
 
@@ -1365,24 +1365,27 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
   // debug assignment metadata in the new function.
   DenseMap<DIAssignID *, DIAssignID *> AssignmentIDMap;
   for (Instruction &I : instructions(NewFunc)) {
-    if (const DebugLoc &DL = I.getDebugLoc())
-      I.setDebugLoc(
-          DebugLoc::replaceInlinedAtSubprogram(DL, *NewSP, Ctx, Cache));
-    for (DbgRecord &DR : I.getDbgRecordRange())
-      DR.setDebugLoc(DebugLoc::replaceInlinedAtSubprogram(DR.getDebugLoc(),
-                                                          *NewSP, Ctx, Cache));
-
-    // Loop info metadata may contain line locations. Fix them up.
-    auto updateLoopInfoLoc = [&Ctx, &Cache, NewSP](Metadata *MD) -> Metadata * {
-      if (auto *Loc = dyn_cast_or_null<DILocation>(MD))
-        return DebugLoc::replaceInlinedAtSubprogram(Loc, *NewSP, Ctx, Cache);
-      return MD;
-    };
-    updateLoopMetadataDebugLocations(I, updateLoopInfoLoc);
     at::remapAssignID(AssignmentIDMap, I);
   }
+  // Fix up the scope information attached to the line locations in the new
+  // function.
+  // FIXME: We take the simplest functional approach here, which is to copy
+  // everything to the extracted function and forget about removing duplicates
+  // or optimizing.
+  // The correct step should be to run a step to remove unused location data
+  // from the subprogram and remap the elements, but this step doesn't exist
+  // yet.
+  NewSP->FnSrcLocs = OldSP->FnSrcLocs;
+  NewSP->FnLocScopes = OldSP->FnLocScopes;
+  NewSP->NonNormalFnSrcLocs = OldSP->NonNormalFnSrcLocs;
+  NewSP->NextAtomGroup = OldSP->NextAtomGroup;
+  NewSP->FnInlinedAtSrcLocRanges = OldSP->FnInlinedAtSrcLocRanges;
+  NewSP->FnLocScopes[0] = DILocScopeData(NewSP, DebugLoc());
+  for (DILocScopeData &LocScope : llvm::drop_begin(NewSP->FnLocScopes))
+    LocScope.Scope = DILocalScope::cloneScopeForSubprogram(
+      *LocScope.Scope, *NewSP, Ctx, Cache);
   if (!TheCall.getDebugLoc())
-    TheCall.setDebugLoc(DILocation::get(Ctx, 0, 0, OldSP));
+    TheCall.setDebugLoc(DebugLoc(0, 0));
 
   eraseDebugIntrinsicsWithNonLocalRefs(NewFunc);
 }

@@ -102,11 +102,11 @@ void DroppedVariableStatsIR::registerCallbacks(
 }
 
 void DroppedVariableStatsIR::visitEveryInstruction(
-    unsigned &DroppedCount, DenseMap<VarID, DILocation *> &InlinedAtsMap,
+    unsigned &DroppedCount, DenseMap<VarID, DILocRef> &InlinedAtsMap,
     VarID Var) {
   const DIScope *DbgValScope = std::get<0>(Var);
   for (const auto &I : instructions(Func)) {
-    auto *DbgLoc = I.getDebugLoc().get();
+    DILocRef DbgLoc(I);
     if (!DbgLoc)
       continue;
     if (updateDroppedCount(DbgLoc, DbgLoc->getScope(), DbgValScope,
@@ -117,13 +117,13 @@ void DroppedVariableStatsIR::visitEveryInstruction(
 
 void DroppedVariableStatsIR::visitEveryDebugRecord(
     DenseSet<VarID> &VarIDSet,
-    DenseMap<StringRef, DenseMap<VarID, DILocation *>> &InlinedAtsMap,
+    DenseMap<StringRef, DenseMap<VarID, DILocRef>> &InlinedAtsMap,
     StringRef FuncName, bool Before) {
   for (const auto &I : instructions(Func)) {
     for (DbgRecord &DR : I.getDbgRecordRange()) {
       if (auto *Dbg = dyn_cast<DbgVariableRecord>(&DR)) {
         auto *DbgVar = Dbg->getVariable();
-        auto DbgLoc = DR.getDebugLoc();
+        DILocRef DbgLoc(DR);
         populateVarIDSetAndInlinedMap(DbgVar, DbgLoc, VarIDSet, InlinedAtsMap,
                                       FuncName, Before);
       }

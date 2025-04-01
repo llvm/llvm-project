@@ -1331,9 +1331,10 @@ bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
     DebugLoc DLoc;
     BasicBlock *Block;
     std::tie(DLoc, Block) = getOneDebugLoc(*Cloner.ClonedFunc);
+    auto LocData = Block->getParent()->getSubprogram()->getInnerLocation(DLoc);
     OrigFuncORE.emit([&]() {
       return OptimizationRemarkAnalysis(DEBUG_TYPE, "OutlineRegionTooSmall",
-                                        DLoc, Block)
+                                        LocData, Block)
              << ore::NV("Function", Cloner.OrigFunc)
              << " not partially inlined into callers (Original Size = "
              << ore::NV("OutlinedRegionOriginalSize", Cloner.OutlinedRegionCost)
