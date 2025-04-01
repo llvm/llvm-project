@@ -7,7 +7,7 @@
 define half @f1(ptr %src) {
 ; CHECK-LABEL: f1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lh %r0, 0(%r2)
+; CHECK-NEXT:    lgh %r0, 0(%r2)
 ; CHECK-NEXT:    sllg %r0, %r0, 48
 ; CHECK-NEXT:    ldgr %f0, %r0
 ; CHECK-NEXT:    # kill: def $f0h killed $f0h killed $f0d

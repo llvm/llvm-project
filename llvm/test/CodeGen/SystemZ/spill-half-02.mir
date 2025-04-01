@@ -12,10 +12,10 @@ body:             |
 
     ; CHECK-LABEL: fun0:
     ; CHECK:       vlreph %v0, 0(%r2)
-    ; CHECK-NEXT:  vsteh %v0, 166(%r15), 0        # 2-byte Folded Spill
+    ; CHECK-NEXT:  vsteh %v0, 166(%r15), 0        # 2-byte Spill
     ; CHECK-NEXT:  #APP
     ; CHECK-NEXT:  #NO_APP
-    ; CHECK-NEXT:  vlreph %v0, 166(%r15)          # 2-byte Folded Reload
+    ; CHECK-NEXT:  vlreph %v0, 166(%r15)          # 2-byte Reload
     ; CHECK-NEXT:  vsteh %v0, 0(%r3), 0
 
     %1:addr64bit = COPY $r3d

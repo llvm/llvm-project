@@ -17,9 +17,8 @@ define half @f1() {
 ; NOVEC-NEXT:    .cfi_def_cfa_offset 328
 ; NOVEC-NEXT:    la %r2, 166(%r15)
 ; NOVEC-NEXT:    brasl %r14, foo@PLT
-; NOVEC-NEXT:    lh %r0, 166(%r15)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 166(%r15)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f0, %r0
 ; NOVEC-NEXT:    # kill: def $f0h killed $f0h killed $f0d
 ; NOVEC-NEXT:    lmg %r14, %r15, 280(%r15)
@@ -48,9 +47,8 @@ define half @f1() {
 define half @f2(ptr %P) {
 ; NOVEC-LABEL: f2:
 ; NOVEC:       # %bb.0:
-; NOVEC-NEXT:    lh %r0, 6(%r2)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 6(%r2)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f0, %r0
 ; NOVEC-NEXT:    # kill: def $f0h killed $f0h killed $f0d
 ; NOVEC-NEXT:    br %r14

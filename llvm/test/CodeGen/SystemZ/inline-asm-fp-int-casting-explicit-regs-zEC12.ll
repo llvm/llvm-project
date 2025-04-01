@@ -6,17 +6,14 @@
 define signext i16 @short_and_f(i16 signext %cc_dep1) {
 ; CHECK-LABEL: short_and_f:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    sll %r2, 16
-; CHECK-NEXT:    risbhg %r0, %r2, 0, 159, 32
+; CHECK-NEXT:    sllg %r0, %r2, 48
 ; CHECK-NEXT:    ldgr %f1, %r0
 ; CHECK-NEXT:    # kill: def $f1h killed $f1h killed $f1d
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    # kill: def $f1h killed $f1h def $f1d
 ; CHECK-NEXT:    lgdr %r0, %f1
-; CHECK-NEXT:    risblg %r0, %r0, 0, 159, 32
-; CHECK-NEXT:    srl %r0, 16
-; CHECK-NEXT:    lghr %r2, %r0
+; CHECK-NEXT:    srag %r2, %r0, 48
 ; CHECK-NEXT:    br %r14
 entry:
   %0 = tail call i16 asm sideeffect "", "={f1},0"(i16 %cc_dep1)
@@ -76,12 +73,10 @@ define half @half_and_r(half %cc_dep1) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $f0h killed $f0h def $f0d
 ; CHECK-NEXT:    lgdr %r0, %f0
-; CHECK-NEXT:    risblg %r2, %r0, 0, 159, 32
-; CHECK-NEXT:    srl %r2, 16
+; CHECK-NEXT:    srlg %r2, %r0, 48
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    sll %r2, 16
-; CHECK-NEXT:    risbhg %r0, %r2, 0, 159, 32
+; CHECK-NEXT:    sllg %r0, %r2, 48
 ; CHECK-NEXT:    ldgr %f0, %r0
 ; CHECK-NEXT:    # kill: def $f0h killed $f0h killed $f0d
 ; CHECK-NEXT:    br %r14

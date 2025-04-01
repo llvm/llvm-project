@@ -10,9 +10,8 @@ define half @f1(ptr %ptr) {
 ; NOVEC-LABEL: f1:
 ; NOVEC:       # %bb.0:
 ; NOVEC-NEXT:    lh %r0, 0(%r2)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    oilh %r0, 255
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    oill %r0, 255
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f0, %r0
 ; NOVEC-NEXT:    # kill: def $f0h killed $f0h killed $f0d
 ; NOVEC-NEXT:    br %r14
@@ -32,8 +31,8 @@ define half @f1(ptr %ptr) {
 define half @f2(i16 %Arg) {
 ; NOVEC-LABEL: f2:
 ; NOVEC:       # %bb.0:
-; NOVEC-NEXT:    sll %r2, 16
-; NOVEC-NEXT:    risbhg %r0, %r2, 0, 159, 32
+; NOVEC-NEXT:    # kill: def $r2l killed $r2l def $r2d
+; NOVEC-NEXT:    sllg %r0, %r2, 48
 ; NOVEC-NEXT:    ldgr %f0, %r0
 ; NOVEC-NEXT:    # kill: def $f0h killed $f0h killed $f0d
 ; NOVEC-NEXT:    br %r14
@@ -51,8 +50,7 @@ define void @f3(half %val, ptr %ptr) {
 ; NOVEC:       # %bb.0:
 ; NOVEC-NEXT:    # kill: def $f0h killed $f0h def $f0d
 ; NOVEC-NEXT:    lgdr %r0, %f0
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    stc %r0, 0(%r2)
 ; NOVEC-NEXT:    br %r14
 ;
@@ -72,8 +70,8 @@ define i16 @f4(half %Arg) {
 ; NOVEC:       # %bb.0:
 ; NOVEC-NEXT:    # kill: def $f0h killed $f0h def $f0d
 ; NOVEC-NEXT:    lgdr %r0, %f0
-; NOVEC-NEXT:    risblg %r2, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r2, 16
+; NOVEC-NEXT:    srlg %r2, %r0, 48
+; NOVEC-NEXT:    # kill: def $r2l killed $r2l killed $r2d
 ; NOVEC-NEXT:    br %r14
 ;
 ; VECTOR-LABEL: f4:

@@ -10,8 +10,6 @@
 #define DST_DOUBLE
 #include "fp_extend_impl.inc"
 
-// Use a forwarding definition and noinline to implement a poor man's alias,
-// as there isn't a good cross-platform way of defining one.
 COMPILER_RT_ABI NOINLINE dst_t __extendhfdf2(src_t a) {
   return __extendXfYf2__(a);
 }
