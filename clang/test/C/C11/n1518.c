@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -verify=c11 -std=c11 %s
-// RUN: %clang_cc1 -verify=c23 -std=c23 %s
+// RUN: %clang_cc1 -verify=c11,both -std=c11 %s
+// RUN: %clang_cc1 -verify=c23,both -std=c23 %s
 
 /* WG14 N1518: Clang 15
  * Recommendations for extended identifier characters for C and C++
@@ -19,3 +19,6 @@ extern int ٢;  // c23-error {{character <U+0662> not allowed at the start of an
 extern int ∞;  // c11-error {{unexpected character <U+221E>}} \
                   c11-warning {{declaration does not declare anything}} \
                   c23-warning {{mathematical notation character <U+221E> in an identifier is a Clang extension}}
+
+int \u1DC0;  // both-error {{expected identifier or '('}}
+int e\u1DC0; // Ok
