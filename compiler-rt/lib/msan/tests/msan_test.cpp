@@ -4910,6 +4910,8 @@ TEST(MemorySanitizer, timer_create) {
 }
 
 TEST(MemorySanitizer, getservent_r) {
+  if (access("/etc/services", O_RDONLY) != 0)
+    GTEST_SKIP() << "Missing /etc/services";
   struct servent result_buf;
   struct servent *result;
   char buf[1024];
@@ -4924,6 +4926,8 @@ TEST(MemorySanitizer, getservent_r) {
 }
 
 TEST(MemorySanitizer, getservbyname_r) {
+  if (access("/etc/services", O_RDONLY) != 0)
+    GTEST_SKIP() << "Missing /etc/services";
   struct servent result_buf;
   struct servent *result;
   char buf[1024];
@@ -4943,6 +4947,8 @@ TEST(MemorySanitizer, getservbyname_r) {
 }
 
 TEST(MemorySanitizer, getservbyname_r_unknown) {
+  if (access("/etc/services", O_RDONLY) != 0)
+    GTEST_SKIP() << "Missing /etc/services";
   struct servent result_buf;
   struct servent *result;
   char buf[1024];
@@ -4959,6 +4965,8 @@ TEST(MemorySanitizer, getservbyname_r_unknown) {
 }
 
 TEST(MemorySanitizer, getservbyport_r) {
+  if (access("/etc/services", O_RDONLY) != 0)
+    GTEST_SKIP() << "Missing /etc/services";
   struct servent result_buf;
   struct servent *result;
   char buf[1024];
@@ -4978,6 +4986,8 @@ TEST(MemorySanitizer, getservbyport_r) {
 }
 
 TEST(MemorySanitizer, getservbyport_r_smallbuf) {
+  if (access("/etc/services", O_RDONLY) != 0)
+    GTEST_SKIP() << "Missing /etc/services";
   struct servent result_buf;
   struct servent *result;
   char buf[1];
