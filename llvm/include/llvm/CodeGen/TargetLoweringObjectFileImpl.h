@@ -125,6 +125,10 @@ public:
   lowerSymbolDifference(const MCSymbol *LHS, const MCSymbol *RHS,
                         int64_t Addend,
                         std::optional<int64_t> PCRelativeOffset) const;
+  const MCExpr *lowerRelativeReference(const GlobalValue *LHS,
+                                       const GlobalValue *RHS, int64_t Addend,
+                                       std::optional<int64_t> PCRelativeOffset,
+                                       const TargetMachine &TM) const override;
 
   const MCExpr *lowerDSOLocalEquivalent(const MCSymbol *LHS,
                                         const MCSymbol *RHS, int64_t Addend,
