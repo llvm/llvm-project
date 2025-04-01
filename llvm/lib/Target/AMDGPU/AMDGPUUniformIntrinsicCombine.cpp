@@ -104,7 +104,7 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
 static bool runUniformIntrinsicCombine(Function &F, const UniformityInfo *UI) {
   Module *M = F.getParent();
   // List of AMDGPU intrinsics to optimize if their arguments are uniform.
-  std::vector<Intrinsic::ID> Intrinsics = {
+  constexpr Intrinsic::ID Intrinsics[] = {
       Intrinsic::amdgcn_permlane64, Intrinsic::amdgcn_readfirstlane,
       Intrinsic::amdgcn_readlane, Intrinsic::amdgcn_ballot};
 
@@ -112,14 +112,13 @@ static bool runUniformIntrinsicCombine(Function &F, const UniformityInfo *UI) {
   for (Function &Func : M->functions()) {
     // Continue if intrinsic doesn't exists or not in the intrinsic list.
     Intrinsic::ID IID = Func.getIntrinsicID();
-    if (IID == Intrinsic::not_intrinsic || !llvm::is_contained(Intrinsics, IID))
+    if (!llvm::is_contained(Intrinsics, IID))
       continue;
 
     for (User *U : Func.users()) {
       if (auto *II = dyn_cast<IntrinsicInst>(U)) {
-        if (II->getFunction() == &F) {
+        if (II->getFunction() == &F)
           IsChanged |= optimizeUniformIntrinsic(*II, UI);
-        }
       }
     }
   }
@@ -135,6 +134,7 @@ public:
   }
   bool runOnFunction(Function &F) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<UniformityInfoWrapperPass>();
     AU.addPreserved<UniformityInfoWrapperPass>();
   }
 };
