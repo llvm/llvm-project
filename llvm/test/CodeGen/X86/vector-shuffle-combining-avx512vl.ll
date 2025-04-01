@@ -29,15 +29,21 @@ define <4 x double> @concat_vpermv3_ops_vpermv_v4f64(ptr %p0, <4 x i64> %m) {
 define <4 x double> @concat_vpermv3_ops_vpermv_swap_v4f64(ptr %p0, <4 x i64> %m) {
 ; X86-LABEL: concat_vpermv3_ops_vpermv_swap_v4f64:
 ; X86:       # %bb.0:
+; X86-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vmovapd 32(%eax), %ymm1
-; X86-NEXT:    vpermi2pd (%eax), %ymm1, %ymm0
+; X86-NEXT:    vmovupd (%eax), %zmm1
+; X86-NEXT:    vshuff64x2 {{.*#+}} zmm1 = zmm1[4,5,6,7,0,1,2,3]
+; X86-NEXT:    vpermpd %zmm1, %zmm0, %zmm0
+; X86-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: concat_vpermv3_ops_vpermv_swap_v4f64:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovapd 32(%rdi), %ymm1
-; X64-NEXT:    vpermi2pd (%rdi), %ymm1, %ymm0
+; X64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; X64-NEXT:    vmovupd (%rdi), %zmm1
+; X64-NEXT:    vshuff64x2 {{.*#+}} zmm1 = zmm1[4,5,6,7,0,1,2,3]
+; X64-NEXT:    vpermpd %zmm1, %zmm0, %zmm0
+; X64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; X64-NEXT:    retq
   %p1 = getelementptr inbounds nuw i8, ptr %p0, i64 32
   %lo = load <4 x double>, ptr %p1, align 32
