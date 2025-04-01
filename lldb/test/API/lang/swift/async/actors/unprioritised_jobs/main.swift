@@ -21,7 +21,6 @@ actor Actor {
         async let _ = a.work()
         async let _ = a.work()
         async let _ = a.work()
-        try? await Task.sleep(for: .seconds(0.5))
         print("break here")
     }
 }
