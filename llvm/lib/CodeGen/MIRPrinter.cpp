@@ -118,6 +118,8 @@ public:
                const TargetRegisterInfo *TRI);
   void convert(ModuleSlotTracker &MST, yaml::MachineFrameInfo &YamlMFI,
                const MachineFrameInfo &MFI);
+  void convert(ModuleSlotTracker &MST, yaml::SaveRestorePoints &YamlSRPoints,
+               std::vector<MachineBasicBlock *> SaveRestorePoints);
   void convert(yaml::MachineFunction &MF,
                const MachineConstantPool &ConstantPool);
   void convert(ModuleSlotTracker &MST, yaml::MachineJumpTable &YamlJTI,
@@ -397,14 +399,10 @@ void MIRPrinter::convert(ModuleSlotTracker &MST,
   YamlMFI.HasTailCall = MFI.hasTailCall();
   YamlMFI.IsCalleeSavedInfoValid = MFI.isCalleeSavedInfoValid();
   YamlMFI.LocalFrameSize = MFI.getLocalFrameSize();
-  if (MFI.getSavePoint()) {
-    raw_string_ostream StrOS(YamlMFI.SavePoint.Value);
-    StrOS << printMBBReference(*MFI.getSavePoint());
-  }
-  if (MFI.getRestorePoint()) {
-    raw_string_ostream StrOS(YamlMFI.RestorePoint.Value);
-    StrOS << printMBBReference(*MFI.getRestorePoint());
-  }
+  if (!MFI.getSavePoints().empty())
+    convert(MST, YamlMFI.SavePoints, MFI.getSavePoints());
+  if (!MFI.getRestorePoints().empty())
+    convert(MST, YamlMFI.RestorePoints, MFI.getRestorePoints());
 }
 
 void MIRPrinter::convertEntryValueObjects(yaml::MachineFunction &YMF,
@@ -643,6 +641,22 @@ void MIRPrinter::convert(yaml::MachineFunction &MF,
     YamlConstant.IsTargetSpecific = Constant.isMachineConstantPoolEntry();
 
     MF.Constants.push_back(std::move(YamlConstant));
+  }
+}
+
+void MIRPrinter::convert(ModuleSlotTracker &MST,
+                         yaml::SaveRestorePoints &YamlSRPoints,
+                         std::vector<MachineBasicBlock *> SRPoints) {
+  auto &Points =
+      std::get<std::vector<yaml::SaveRestorePointEntry>>(YamlSRPoints);
+  for (const auto &MBB : SRPoints) {
+    SmallString<16> Str;
+    yaml::SaveRestorePointEntry Entry;
+    raw_svector_ostream StrOS(Str);
+    StrOS << printMBBReference(*MBB);
+    Entry.Point = StrOS.str().str();
+    Str.clear();
+    Points.push_back(Entry);
   }
 }
 
