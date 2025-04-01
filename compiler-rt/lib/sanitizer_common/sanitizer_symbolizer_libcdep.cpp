@@ -260,31 +260,31 @@ class LLVMSymbolizerProcess final : public SymbolizerProcess {
   // script/asan_symbolize.py and sanitizer_common.h.
   void GetArgV(const char *path_to_binary,
                const char *(&argv)[kArgVMax]) const override {
-#if defined(__x86_64h__)
+#  if defined(__x86_64h__)
     const char* const kSymbolizerArch = "--default-arch=x86_64h";
-#elif defined(__x86_64__)
+#  elif defined(__x86_64__)
     const char* const kSymbolizerArch = "--default-arch=x86_64";
-#elif defined(__i386__)
+#  elif defined(__i386__)
     const char* const kSymbolizerArch = "--default-arch=i386";
-#elif SANITIZER_LOONGARCH64
+#  elif SANITIZER_LOONGARCH64
     const char *const kSymbolizerArch = "--default-arch=loongarch64";
-#elif SANITIZER_RISCV64
+#  elif SANITIZER_RISCV64
     const char *const kSymbolizerArch = "--default-arch=riscv64";
-#elif defined(__aarch64__)
+#  elif defined(__aarch64__)
     const char* const kSymbolizerArch = "--default-arch=arm64";
-#elif defined(__arm__)
+#  elif defined(__arm__)
     const char* const kSymbolizerArch = "--default-arch=arm";
-#elif defined(__powerpc64__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#  elif defined(__powerpc64__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
     const char* const kSymbolizerArch = "--default-arch=powerpc64";
-#elif defined(__powerpc64__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#  elif defined(__powerpc64__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     const char* const kSymbolizerArch = "--default-arch=powerpc64le";
-#elif defined(__s390x__)
+#  elif defined(__s390x__)
     const char* const kSymbolizerArch = "--default-arch=s390x";
-#elif defined(__s390__)
+#  elif defined(__s390__)
     const char* const kSymbolizerArch = "--default-arch=s390";
-#else
+#  else
     const char* const kSymbolizerArch = "--default-arch=unknown";
-#endif
+#  endif
 
     const char *const demangle_flag =
         common_flags()->demangle ? "--demangle" : "--no-demangle";
