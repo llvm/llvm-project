@@ -23,12 +23,6 @@ struct prmap;
 
 namespace __sanitizer {
 
-#  if SANITIZER_WORDSIZE == 32
-static const uptr InstructionStart = 0x10000000;
-#  else
-static const uptr InstructionStart = 0x100000000;
-#  endif
-
 struct ProcSelfMapsBuff {
   char *data;
   uptr mmaped_size;

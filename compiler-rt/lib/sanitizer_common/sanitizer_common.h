@@ -835,8 +835,7 @@ class LoadedModule {
         max_address_(0),
         arch_(kModuleArchUnknown),
         uuid_size_(0),
-        instrumented_(false),
-        instr_start_(0) {
+        instrumented_(false) {
     internal_memset(uuid_, 0, kModuleUUIDSize);
     ranges_.clear();
   }
@@ -856,8 +855,6 @@ class LoadedModule {
   const u8 *uuid() const { return uuid_; }
   uptr uuid_size() const { return uuid_size_; }
   bool instrumented() const { return instrumented_; }
-  uptr get_instr_start() const { return instr_start_; }
-  void set_instr_start(uptr start) { instr_start_ = start; }
 
   struct AddressRange {
     AddressRange *next;
@@ -888,7 +885,6 @@ class LoadedModule {
   uptr uuid_size_;
   u8 uuid_[kModuleUUIDSize];
   bool instrumented_;
-  uptr instr_start_;
   IntrusiveList<AddressRange> ranges_;
 };
 
