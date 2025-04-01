@@ -36,7 +36,7 @@ static bool canReduceUse(Use &Op) {
     return false;
 
   // Don't pass labels/metadata as arguments.
-  if (Ty->isLabelTy() || Ty->isMetadataTy())
+  if (Ty->isLabelTy() || Ty->isMetadataTy() || Ty->isTokenTy())
     return false;
 
   // No need to replace values that are already arguments.
