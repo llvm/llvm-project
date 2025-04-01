@@ -560,9 +560,9 @@ llvm::json::Object CreateEventObject(const llvm::StringRef event_name) {
 protocol::ExceptionBreakpointsFilter
 CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp) {
   protocol::ExceptionBreakpointsFilter filter;
-  filter.filter = bp.filter;
-  filter.label = bp.label;
-  filter.defaultState = bp.default_value;
+  filter.filter = bp.GetFilter();
+  filter.label = bp.GetLabel();
+  filter.defaultState = ExceptionBreakpoint::kDefaultValue;
   return filter;
 }
 
@@ -940,7 +940,7 @@ llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
     ExceptionBreakpoint *exc_bp = dap.GetExceptionBPFromStopReason(thread);
     if (exc_bp) {
       body.try_emplace("reason", "exception");
-      EmplaceSafeString(body, "description", exc_bp->label);
+      EmplaceSafeString(body, "description", exc_bp->GetLabel());
     } else {
       InstructionBreakpoint *inst_bp =
           dap.GetInstructionBPFromStopReason(thread);
