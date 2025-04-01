@@ -32,6 +32,7 @@ math/clc_ceil.cl
 math/clc_copysign.cl
 math/clc_cospi.cl
 math/clc_ep_log.cl
+math/clc_exp10.cl
 math/clc_fabs.cl
 math/clc_fma.cl
 math/clc_fmod.cl
