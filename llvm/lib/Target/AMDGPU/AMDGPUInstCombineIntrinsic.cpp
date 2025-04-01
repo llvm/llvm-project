@@ -730,9 +730,19 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     break;
   }
   case Intrinsic::amdgcn_cvt_off_f32_i4: {
+    Value* Arg = II.getArgOperand(0);
+    Type *Ty = II.getType();
+
+    if (isa<PoisonValue>(Arg))
+      return IC.replaceInstUsesWith(II, PoisonValue::get(Ty));
+
+    if(IC.getSimplifyQuery().isUndefValue(Arg))
+      return IC.replaceInstUsesWith(II, Constant::getNullValue(Ty));
+
     ConstantInt *CArg = dyn_cast<ConstantInt>(II.getArgOperand(0));
     if (!CArg)
       break;
+
     int CI4BitAsInt = CArg->getValue().trunc(4).getSExtValue();
     float ResVal = 0.0625 * CI4BitAsInt;
     Constant *Res = ConstantFP::get(II.getType(), ResVal);

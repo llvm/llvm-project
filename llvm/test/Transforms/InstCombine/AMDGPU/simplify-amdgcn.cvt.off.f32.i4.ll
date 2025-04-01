@@ -156,3 +156,19 @@ define float @cvt_imm_overflow() {
   %ret = call float @llvm.amdgcn.cvt.off.f32.i4(i32 16)
   ret float %ret
 }
+
+define float @cvt_imm_poison() {
+; CHECK-LABEL: define float @cvt_imm_poison() {
+; CHECK-NEXT:    ret float poison
+;
+  %ret = call float @llvm.amdgcn.cvt.off.f32.i4(i32 poison)
+  ret float %ret
+}
+
+define float @cvt_imm_undef() {
+; CHECK-LABEL: define float @cvt_imm_undef() {
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %ret = call float @llvm.amdgcn.cvt.off.f32.i4(i32 undef)
+  ret float %ret
+}
