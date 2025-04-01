@@ -1101,34 +1101,6 @@ public:
   }
 };
 
-bool isConvertible(Instruction *I, Instruction *MainOp, Instruction *AltOp) {
-  assert(MainOp && "MainOp cannot be nullptr.");
-  if (I->getOpcode() == MainOp->getOpcode())
-    return true;
-  assert(AltOp && "AltOp cannot be nullptr.");
-  if (I->getOpcode() == AltOp->getOpcode())
-    return true;
-  if (!I->isBinaryOp())
-    return false;
-  BinOpSameOpcodeHelper Converter(MainOp, AltOp);
-  return Converter.add(I) && Converter.add(MainOp) && Converter.add(AltOp);
-}
-
-std::pair<Instruction *, SmallVector<Value *>>
-convertTo(Instruction *I, Instruction *MainOp, Instruction *AltOp) {
-  assert(isConvertible(I, MainOp, AltOp) && "Cannot convert the instruction.");
-  if (I->getOpcode() == MainOp->getOpcode())
-    return std::make_pair(MainOp, SmallVector<Value *>(I->operands()));
-  // Prefer AltOp instead of interchangeable instruction of MainOp.
-  if (I->getOpcode() == AltOp->getOpcode())
-    return std::make_pair(AltOp, SmallVector<Value *>(I->operands()));
-  assert(I->isBinaryOp() && "Cannot convert the instruction.");
-  BinOpSameOpcodeHelper Converter(I);
-  if (Converter.add(I) && Converter.add(MainOp) && !Converter.hasAltOp())
-    return std::make_pair(MainOp, Converter.getOperand(MainOp));
-  return std::make_pair(AltOp, Converter.getOperand(AltOp));
-}
-
 /// Main data required for vectorization of instructions.
 class InstructionsState {
   /// The main/alternate instruction. MainOp is also VL0.
@@ -1155,7 +1127,16 @@ public:
   bool isAltShuffle() const { return getMainOp() != getAltOp(); }
 
   bool isOpcodeOrAlt(Instruction *I) const {
-    return isConvertible(I, MainOp, AltOp);
+    assert(MainOp && "MainOp cannot be nullptr.");
+    if (I->getOpcode() == MainOp->getOpcode())
+      return true;
+    assert(AltOp && "AltOp cannot be nullptr.");
+    if (I->getOpcode() == AltOp->getOpcode())
+      return true;
+    if (!I->isBinaryOp())
+      return false;
+    BinOpSameOpcodeHelper Converter(MainOp, AltOp);
+    return Converter.add(I) && Converter.add(MainOp) && Converter.add(AltOp);
   }
 
   /// Checks if main/alt instructions are shift operations.
@@ -1197,6 +1178,22 @@ public:
       : MainOp(MainOp), AltOp(AltOp) {}
   static InstructionsState invalid() { return {nullptr, nullptr}; }
 };
+
+std::pair<Instruction *, SmallVector<Value *>>
+convertTo(Instruction *I, Instruction *MainOp, Instruction *AltOp) {
+  assert(InstructionsState(MainOp, AltOp).isOpcodeOrAlt(I) &&
+         "Cannot convert the instruction.");
+  if (I->getOpcode() == MainOp->getOpcode())
+    return std::make_pair(MainOp, SmallVector<Value *>(I->operands()));
+  // Prefer AltOp instead of interchangeable instruction of MainOp.
+  if (I->getOpcode() == AltOp->getOpcode())
+    return std::make_pair(AltOp, SmallVector<Value *>(I->operands()));
+  assert(I->isBinaryOp() && "Cannot convert the instruction.");
+  BinOpSameOpcodeHelper Converter(I);
+  if (Converter.add(I) && Converter.add(MainOp) && !Converter.hasAltOp())
+    return std::make_pair(MainOp, Converter.getOperand(MainOp));
+  return std::make_pair(AltOp, Converter.getOperand(AltOp));
+}
 
 } // end anonymous namespace
 
