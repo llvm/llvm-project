@@ -14,6 +14,12 @@
 namespace LIBC_NAMESPACE_DECL {
 
 extern "C" void __cxa_finalize(void *);
+
+// exit needs to clean up TLS and call associated destructors.
+// TODO: Strictly speaking, it is not valid to call exit in overlay mode
+//       as we have no way to ensure system libc will call the TLS destructors.
+//       We should run exit related tests in hermetic mode but this is currently
+//       blocked by https://github.com/llvm/llvm-project/issues/133925.
 extern "C" [[gnu::weak]] void __cxa_thread_finalize();
 
 // TODO: use recursive mutex to protect this routine.
