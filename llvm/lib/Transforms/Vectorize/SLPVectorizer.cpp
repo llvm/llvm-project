@@ -9255,14 +9255,14 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       APInt Vectorized = APInt::getAllOnes(VL.size());
       for (auto [Idx, V] : enumerate(VL)) {
         auto *I = dyn_cast<Instruction>(V);
-        if (!I || doesNotNeedToBeScheduled(V) ||
+        if (!I || doesNotNeedToBeScheduled(I) ||
             all_of(I->operands(), [&](const Use &U) {
               return isa<ExtractElementInst>(U.get());
             }))
           continue;
-        if (isVectorized(V))
+        if (isVectorized(I))
           Vectorized.clearBit(Idx);
-        else if (!V->hasOneUser() && !areAllUsersVectorized(I, UserIgnoreList))
+        else if (!I->hasOneUser() && !areAllUsersVectorized(I, UserIgnoreList))
           Extracted.setBit(Idx);
       }
       return std::make_pair(Vectorized, Extracted);
