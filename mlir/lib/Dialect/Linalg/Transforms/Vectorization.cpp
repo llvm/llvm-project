@@ -2178,6 +2178,17 @@ vectorizePadOpPrecondition(tensor::PadOp padOp,
                                               inputVectorSizes)))
     return failure();
 
+  // Low padding is currently unsupported for the general case as this
+  // would require shifting the results to the right for the low padded dims by
+  // the required amount of low padding. However, we do support low padding if
+  // the dims being low padded have result sizes of 1. The reason is when we
+  // have a low pad on a unit result dim, the input size of that dimension will
+  // be dynamically zero (as the sum of the low pad and input dim size has to be
+  // one) and hence we will create a zero mask as the lowering logic just makes
+  // the mask one for the input dim size - which is zero here. Hence we will
+  // load the pad value which is what we want in this case. If the low pad is
+  // dynamically zero then the lowering is correct as well as no shifts are
+  // necessary.
   if (llvm::any_of(llvm::enumerate(padOp.getLow()), [&](const auto &en) {
         Value padValue = en.value();
         unsigned pos = en.index();

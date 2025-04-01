@@ -665,27 +665,29 @@ module attributes {transform.with_named_sequence} {
 }
 
 // -----
-
+// This case is supported because low padding `%l0` is applied on
+// a unit dimentsion which is supported, non unit result dimension low
+// padding is currently unsupported.
 //  CHECK-LABEL: func @test_masked_vectorize_unit_lowpad
 func.func @test_masked_vectorize_unit_lowpad(
   %0 : tensor<?x?xf32>, %h0 : index, %h1 : index, %l0 : index)
     -> tensor<1x4xf32>
 {
-  //  CHECK-DAG: %[[c42:.*]] = arith.constant 4.243000e+01 : f32
-  //  CHECK-DAG: %[[c0:.*]] = arith.constant 0 : index
-  //      CHECK: %[[c0_1:.*]] = arith.constant 0 : index
-  //  CHECK-DAG: %[[d0:.*]] = tensor.dim {{.*}} : tensor<?x?xf32>
-  //  CHECK-DAG: %[[d1:.*]] = tensor.dim {{.*}} : tensor<?x?xf32>
-  //      CHECK: %[[mask:.*]] = vector.create_mask %[[d0]], %[[d1]] : vector<1x4xi1>
-  //      CHECK: %[[masked_read:.*]] = vector.mask %[[mask]] {
-  // CHECK-SAME:   vector.transfer_read %{{.*}}[%[[c0_1]], %[[c0_1]]], %[[c42]]
+  //  CHECK-DAG: %[[C42:.*]] = arith.constant 4.243000e+01 : f32
+  //  CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+  //      CHECK: %[[C0_1:.*]] = arith.constant 0 : index
+  //  CHECK-DAG: %[[D0:.*]] = tensor.dim {{.*}} : tensor<?x?xf32>
+  //  CHECK-DAG: %[[D1:.*]] = tensor.dim {{.*}} : tensor<?x?xf32>
+  //      CHECK: %[[MASK:.*]] = vector.create_mask %[[D0]], %[[D1]] : vector<1x4xi1>
+  //      CHECK: %[[MASKED_READ:.*]] = vector.mask %[[MASK]] {
+  // CHECK-SAME:   vector.transfer_read %{{.*}}[%[[C0_1]], %[[C0_1]]], %[[C42]]
   // CHECK-SAME:   {in_bounds = [true, true]} : tensor<?x?xf32>, vector<1x4xf32>
   // CHECK-SAME: } : vector<1x4xi1> -> vector<1x4xf32>
-  //  CHECK-DAG: %[[empty:.*]] = tensor.empty() : tensor<1x4xf32>
-  //  CHECK-DAG: %[[c0_2:.*]] = arith.constant 0 : index
-  //      CHECK: %[[masked_write:.*]] = vector.transfer_write %[[masked_read]], %[[empty]][%[[c0_2]], %[[c0_2]]]
+  //  CHECK-DAG: %[[EMPTY:.*]] = tensor.empty() : tensor<1x4xf32>
+  //  CHECK-DAG: %[[C0_2:.*]] = arith.constant 0 : index
+  //      CHECK: %[[MASKED_WRITE:.*]] = vector.transfer_write %[[MASKED_READ]], %[[EMPTY]][%[[C0_2]], %[[C0_2]]]
   // CHECK-SAME:   {in_bounds = [true, true]} : vector<1x4xf32>, tensor<1x4xf32>
-  //      CHECK: return %[[masked_write]] : tensor<1x4xf32>
+  //      CHECK: return %[[MASKED_WRITE]] : tensor<1x4xf32>
   %cst = arith.constant 42.43 : f32
   %c0 = arith.constant 0 : index
   %1 = tensor.pad %0 low[%l0, %c0] high[%h0, %h1]  {
