@@ -77,6 +77,12 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
     // A TensorDesc with 8x16 f32 elements for a memory region in shared memory space.
     xegpu.tensor_desc<8x16xf32, #xegpu.tdesc_attr<memory_space = slm>>
 
+    // A 1D TensorDesc with a layout for subgroup level programming, each lane access two continuous elements
+    xegpu.tensor_desc<32xf32, #xegpu.layout<lane_layout = [16], lane_data = [2]>>
+
+    // A 1D TensorDesc with a layout for subgroup level programming, each lane access two elements with stride = 16
+    xegpu.tensor_desc<32xf32, #xegpu.layout<lane_layout = [16], lane_data = [1]>>
+
     // A TensorDesc with a layout for subgroup level programming
     xegpu.tensor_desc<8x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
 
