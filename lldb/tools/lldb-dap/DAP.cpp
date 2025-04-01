@@ -1173,7 +1173,8 @@ llvm::StringMap<bool> DAP::GetCapabilities() {
   return capabilities;
 }
 
-void DAP::SendErrorResponse(llvm::json::Object &response, llvm::StringRef message) {
+void DAP::SendErrorResponse(llvm::json::Object &response,
+                            llvm::StringRef message) {
   response["success"] = false;
   EmplaceSafeString(response, "message", message);
   SendJSON(llvm::json::Value(std::move(response)));
