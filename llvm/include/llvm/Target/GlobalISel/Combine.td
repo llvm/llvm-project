@@ -747,6 +747,17 @@ def shl_ashr_to_sext_inreg : GICombineRule<
   (apply [{ Helper.applyAshShlToSextInreg(*${root}, ${info});}])
 >;
 
+// Fold sub 0, (and x, 1) -> sext_inreg x, 1
+def neg_and_one_to_sext_inreg : GICombineRule<
+  (defs root:$dst),
+  (match (G_AND $and, $x, 1),
+         (G_SUB $dst, 0, $and),
+         [{ return MRI.hasOneNonDBGUse(${and}.getReg()) &&
+            Helper.isLegalOrBeforeLegalizer(
+              {TargetOpcode::G_SEXT_INREG, {MRI.getType(${x}.getReg())}}); }]),
+  (apply (G_SEXT_INREG $dst, $x, 1))
+>;
+
 // Fold and(and(x, C1), C2) -> C1&C2 ? and(x, C1&C2) : 0
 def overlapping_and: GICombineRule <
   (defs root:$root, build_fn_matchinfo:$info),
@@ -2013,7 +2024,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     undef_combines, identity_combines, phi_combines,
     simplify_add_to_sub, hoist_logic_op_with_same_opcode_hands, shifts_too_big,
     reassocs, ptr_add_immed_chain, cmp_combines,
-    shl_ashr_to_sext_inreg, sext_inreg_of_load,
+    shl_ashr_to_sext_inreg, neg_and_one_to_sext_inreg, sext_inreg_of_load,
     width_reduction_combines, select_combines,
     known_bits_simplifications, trunc_shift,
     not_cmp_fold, opt_brcond_by_inverting_cond,

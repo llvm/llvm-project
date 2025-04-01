@@ -1199,9 +1199,9 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
         return false;
       }
     }
-    // Parse symbol variant
+    // Parse an optional relocation specifier.
     std::pair<StringRef, StringRef> Split;
-    if (!MAI.useParensForSymbolVariant()) {
+    if (MAI.useAtForSpecifier()) {
       if (FirstTokenKind == AsmToken::String) {
         if (Lexer.is(AsmToken::At)) {
           Lex(); // eat @
@@ -1215,8 +1215,8 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
       } else {
         Split = Identifier.split('@');
       }
-    } else if (Lexer.is(AsmToken::LParen)) {
-      Lex(); // eat '('.
+    } else if (MAI.useParensForSpecifier() &&
+               parseOptionalToken(AsmToken::LParen)) {
       StringRef VName;
       parseIdentifier(VName);
       if (parseRParen())
@@ -1239,7 +1239,7 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
       if (MaybeVariant) {
         SymbolName = Split.first;
         Variant = MCSymbolRefExpr::VariantKind(*MaybeVariant);
-      } else if (MAI.doesAllowAtInName() && !MAI.useParensForSymbolVariant()) {
+      } else if (MAI.doesAllowAtInName()) {
         Variant = MCSymbolRefExpr::VK_None;
       } else {
         return Error(SMLoc::getFromPointer(Split.second.begin()),
@@ -1471,7 +1471,8 @@ bool AsmParser::parseExpression(const MCExpr *&Res, SMLoc &EndLoc) {
   // As a special case, we support 'a op b @ modifier' by rewriting the
   // expression to include the modifier. This is inefficient, but in general we
   // expect users to use 'a@modifier op b'.
-  if (parseOptionalToken(AsmToken::At)) {
+  if (Ctx.getAsmInfo()->useAtForSpecifier() &&
+      parseOptionalToken(AsmToken::At)) {
     if (Lexer.isNot(AsmToken::Identifier))
       return TokError("unexpected symbol modifier following '@'");
 
