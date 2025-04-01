@@ -1,6 +1,6 @@
 // RUN: %clangxx -O0 %s -o %t && %run %t
 
-// REQUIRES: glibc
+// REQUIRES: glibc, netbase
 
 #include <arpa/inet.h>
 #include <assert.h>
