@@ -1726,7 +1726,7 @@ void ASTDeclWriter::VisitCXXConstructorDecl(CXXConstructorDecl *D) {
                 "CXXConstructorDeclBits");
 
   Record.push_back(D->getTrailingAllocKind());
-  addExplicitSpecifier(D->getExplicitSpecifier(), Record);
+  addExplicitSpecifier(D->getExplicitSpecifierInternal(), Record);
   if (auto Inherited = D->getInheritedConstructor()) {
     Record.AddDeclRef(Inherited.getShadowDecl());
     Record.AddDeclRef(Inherited.getConstructor());
@@ -2579,7 +2579,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   // RecordDecl
   Abv->Add(BitCodeAbbrevOp(
       BitCodeAbbrevOp::Fixed,
-      13)); // Packed Record Decl Bits: FlexibleArrayMember,
+      14)); // Packed Record Decl Bits: FlexibleArrayMember,
             // AnonymousStructUnion, hasObjectMember, hasVolatileMember,
             // isNonTrivialToPrimitiveDefaultInitialize,
             // isNonTrivialToPrimitiveCopy, isNonTrivialToPrimitiveDestroy,

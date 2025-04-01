@@ -755,7 +755,7 @@ getRequiredQualification(ASTContext &Context, const DeclContext *CurContext,
       Result = NestedNameSpecifier::Create(Context, Result, Namespace);
     } else if (const auto *TD = dyn_cast<TagDecl>(Parent))
       Result = NestedNameSpecifier::Create(
-          Context, Result, false, Context.getTypeDeclType(TD).getTypePtr());
+          Context, Result, Context.getTypeDeclType(TD).getTypePtr());
   }
   return Result;
 }
@@ -1216,7 +1216,7 @@ void ResultBuilder::MaybeAddResult(Result R, DeclContext *CurContext) {
           NestedNameSpecifier::Create(SemaRef.Context, nullptr, Namespace);
     else if (const TagDecl *Tag = dyn_cast<TagDecl>(Ctx))
       R.Qualifier = NestedNameSpecifier::Create(
-          SemaRef.Context, nullptr, false,
+          SemaRef.Context, nullptr,
           SemaRef.Context.getTypeDeclType(Tag).getTypePtr());
     else
       R.QualifierIsInformative = false;
@@ -1405,7 +1405,7 @@ void ResultBuilder::AddResult(Result R, DeclContext *CurContext,
           NestedNameSpecifier::Create(SemaRef.Context, nullptr, Namespace);
     else if (const auto *Tag = dyn_cast<TagDecl>(Ctx))
       R.Qualifier = NestedNameSpecifier::Create(
-          SemaRef.Context, nullptr, false,
+          SemaRef.Context, nullptr,
           SemaRef.Context.getTypeDeclType(Tag).getTypePtr());
     else
       R.QualifierIsInformative = false;

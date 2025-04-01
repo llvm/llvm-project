@@ -140,16 +140,19 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
     // certain constant expressions is implemented for now.
     const VarDecl *initDecl;
     const Expr *initExpr = vd->getAnyInitializer(initDecl);
+    mlir::Attribute initializer;
     if (initExpr) {
-      mlir::Attribute initializer;
       if (APValue *value = initDecl->evaluateValue()) {
         ConstantEmitter emitter(*this);
         initializer = emitter.tryEmitPrivateForMemory(*value, astTy);
       } else {
         errorNYI(initExpr->getSourceRange(), "non-constant initializer");
       }
-      varOp.setInitialValueAttr(initializer);
+    } else {
+      initializer = builder.getZeroInitAttr(convertType(astTy));
     }
+
+    varOp.setInitialValueAttr(initializer);
 
     // Set CIR's linkage type as appropriate.
     cir::GlobalLinkageKind linkage =

@@ -522,7 +522,8 @@ public:
   LoadScriptingModule(const char *filename, const LoadScriptOptions &options,
                       lldb_private::Status &error,
                       StructuredData::ObjectSP *module_sp = nullptr,
-                      FileSpec extra_search_dir = {});
+                      FileSpec extra_search_dir = {},
+                      lldb::TargetSP loaded_into_target_sp = {});
 
   virtual bool IsReservedWord(const char *word) { return false; }
 

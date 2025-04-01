@@ -91,25 +91,25 @@ _g9:
 .quad ("_g 7" + 7)@AUTH(ia,16)
 .quad 0
 
-// ASM:          .xword (_g9@AUTH(ia,42))-(_g8@AUTH(ia,42))
+// ASM:          .xword _g9@AUTH(ia,42)-_g8@AUTH(ia,42)
 .quad _g9@AUTH(ia,42) - _g8@AUTH(ia,42)
 .quad 0
 
 .ifdef ASMONLY
 
-// ASM:          .xword (_g10@AUTH(ia,42))+1
+// ASM:          .xword _g10@AUTH(ia,42)+1
 .quad _g10@AUTH(ia,42) + 1
 
-// ASM:          .xword 1+(_g11@AUTH(ia,42))
+// ASM:          .xword 1+_g11@AUTH(ia,42)
 .quad 1 + _g11@AUTH(ia,42)
 
-// ASM:          .xword (1+(_g12@AUTH(ia,42)))+1
+// ASM:          .xword 1+_g12@AUTH(ia,42)+1
 .quad 1 + _g12@AUTH(ia,42) + 1
 
-// ASM:          .xword (_g13@AUTH(ia,42))+(_g14@AUTH(ia,42))
+// ASM:          .xword _g13@AUTH(ia,42)+_g14@AUTH(ia,42)
 .quad _g13@AUTH(ia,42) + _g14@AUTH(ia,42)
 
-// ASM:          .xword (_g9@AUTH(ia,42))-_g8
+// ASM:          .xword _g9@AUTH(ia,42)-_g8
 .quad _g9@AUTH(ia,42) - _g8
 .quad 0
 

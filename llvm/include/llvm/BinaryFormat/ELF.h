@@ -20,6 +20,7 @@
 #define LLVM_BINARYFORMAT_ELF_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cstdint>
 #include <cstring>
 #include <type_traits>
@@ -2017,6 +2018,9 @@ uint16_t convertArchNameToEMachine(StringRef Arch);
 
 /// Convert an ELF's e_machine value into an architecture name.
 StringRef convertEMachineToArchName(uint16_t EMachine);
+
+// Convert a triple's architecture to ELF's e_machine value.
+uint16_t convertTripleArchTypeToEMachine(Triple::ArchType ArchType);
 
 // Convert a lowercase string identifier into an OSABI value.
 uint8_t convertNameToOSABI(StringRef Name);

@@ -2,7 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-# Tests for LLVM libc string.h functions.
+# Tests for LLVM libc sys/epoll.h functions.
 
 load("//libc/test:libc_test_rules.bzl", "libc_test")
 
@@ -17,6 +17,9 @@ libc_test(
         "//libc:epoll_create",
         "//libc:close",
     ],
+    deps = [
+        "//libc/test/UnitTest:errno_test_helpers",
+    ],
 )
 
 libc_test(
@@ -28,6 +31,7 @@ libc_test(
     ],
     deps = [
         "//libc:hdr_sys_epoll_macros",
+        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -43,6 +47,7 @@ libc_test(
     deps = [
         "//libc:hdr_sys_epoll_macros",
         "//libc:types_struct_epoll_event",
+        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -59,6 +64,7 @@ libc_test(
     deps = [
         "//libc:hdr_sys_epoll_macros",
         "//libc:types_struct_epoll_event",
+        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -75,6 +81,7 @@ libc_test(
     deps = [
         "//libc:hdr_sys_epoll_macros",
         "//libc:types_struct_epoll_event",
+        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -92,5 +99,6 @@ libc_test(
         "//libc:hdr_sys_epoll_macros",
         "//libc:types_struct_epoll_event",
         "//libc:types_struct_timespec",
+        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )

@@ -1,7 +1,7 @@
-! RUN: %flang_fc1 -emit-llvm -debug-info-kind=standalone %s -mllvm --write-experimental-debuginfo=false -o - | FileCheck %s --check-prefixes=BOTH,INTRINSICS
-! RUN: %flang_fc1 -emit-llvm -debug-info-kind=standalone %s -mllvm --write-experimental-debuginfo=true -o - | FileCheck %s --check-prefixes=BOTH,RECORDS
-! RUN: %flang_fc1 -emit-llvm -debug-info-kind=line-tables-only %s -mllvm --write-experimental-debuginfo=false -o - | FileCheck --check-prefix=LINEONLY %s
-! RUN: %flang_fc1 -emit-llvm -debug-info-kind=line-tables-only %s -mllvm --write-experimental-debuginfo=true -o - | FileCheck --check-prefix=LINEONLY %s
+! RUN: %flang_fc1 -emit-llvm -debug-info-kind=standalone %s -mllvm --experimental-debuginfo-iterators=false -o - | FileCheck %s --check-prefixes=BOTH,INTRINSICS
+! RUN: %flang_fc1 -emit-llvm -debug-info-kind=standalone %s -mllvm --experimental-debuginfo-iterators=true -o - | FileCheck %s --check-prefixes=BOTH,RECORDS
+! RUN: %flang_fc1 -emit-llvm -debug-info-kind=line-tables-only %s -mllvm --experimental-debuginfo-iterators=false -o - | FileCheck --check-prefix=LINEONLY %s
+! RUN: %flang_fc1 -emit-llvm -debug-info-kind=line-tables-only %s -mllvm --experimental-debuginfo-iterators=true -o - | FileCheck --check-prefix=LINEONLY %s
 
 ! This tests checks the debug information for local variables in llvm IR.
 
