@@ -80,7 +80,7 @@ static void CloseAllExternalUnits(const char *why) {
     if (code != EXIT_SUCCESS) {
       std::printf(": code %d\n", code);
     }
-    std::printf('\n');
+    std::printf("\n");
   }
 #if defined(__CUDACC__)
   // NVCC supports __trap().
