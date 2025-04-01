@@ -163,6 +163,15 @@ class RequestHandler : public BaseRequestHandler {
         response.body = std::move(*body);
     }
 
+    // Mark the request as 'cancelled' if the debugger was interrupted while
+    // evaluating this handler.
+    if (dap.debugger.InterruptRequested()) {
+      dap.debugger.CancelInterruptRequest();
+      response.success = false;
+      response.message = protocol::eResponseMessageCancelled;
+      response.body = std::nullopt;
+    }
+
     dap.Send(response);
   };
 
@@ -472,8 +481,8 @@ class CancelRequestHandler
 public:
   using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "cancel"; }
-  llvm::StringMap<bool> GetCapabilities() const override {
-    return {{"supportsCancelRequest", true}};
+  FeatureSet GetSupportedFeatures() const override {
+    return {protocol::eAdapterFeatureCancelRequest};
   }
   llvm::Expected<protocol::CancelResponseBody>
   Run(const protocol::CancelArguments &args) const override;

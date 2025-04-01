@@ -11,6 +11,7 @@
 #include "Handler/ResponseHandler.h"
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
+#include "Protocol/ProtocolBase.h"
 #include "RunInTerminal.h"
 #include "llvm/Support/Error.h"
 
@@ -173,7 +174,7 @@ void BaseRequestHandler::Run(const Request &request) {
     Response cancelled{/*request_seq=*/request.seq,
                        /*command=*/request.command,
                        /*success=*/false,
-                       /*message=*/Response::Message::cancelled,
+                       /*message=*/eResponseMessageCancelled,
                        /*body=*/std::nullopt};
     dap.Send(cancelled);
     return;

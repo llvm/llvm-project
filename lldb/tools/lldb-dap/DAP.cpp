@@ -258,7 +258,7 @@ void DAP::Send(const Message &message) {
     Response cancelled{/*request_seq=*/resp->request_seq,
                        /*command=*/resp->command,
                        /*success=*/false,
-                       /*message=*/Response::Message::cancelled,
+                       /*message=*/eResponseMessageCancelled,
                        /*body=*/std::nullopt};
     if (llvm::Error err = transport.Write(cancelled))
       DAP_LOG_ERROR(log, std::move(err), "({1}) write failed: {0}",
