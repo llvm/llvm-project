@@ -1279,6 +1279,10 @@ public:
   /// was moved to VGPR. \returns true if succeeded.
   bool moveFlatAddrToVGPR(MachineInstr &Inst) const;
 
+  /// Fix operands in Inst to fix 16bit SALU to VALU lowering.
+  void legalizeOperandsVALUt16(MachineInstr &Inst,
+                               MachineRegisterInfo &MRI) const;
+
   /// Replace the instructions opcode with the equivalent VALU
   /// opcode.  This function will also move the users of MachineInstruntions
   /// in the \p WorkList to the VALU if necessary. If present, \p MDT is

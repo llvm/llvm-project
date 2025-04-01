@@ -7228,6 +7228,29 @@ bool SIInstrWorklist::isDeferred(MachineInstr *MI) {
   return DeferredList.contains(MI);
 }
 
+// 16bit SALU use sgpr32. If a 16bit SALU get lowered to VALU in true16 mode,
+// sgpr32 is replaced to vgpr32 which is illegal in t16 inst. Need to add
+// subreg access properly. This can be removed after we have sgpr16 in place
+void SIInstrInfo::legalizeOperandsVALUt16(MachineInstr &Inst,
+                                          MachineRegisterInfo &MRI) const {
+  unsigned Opcode = Inst.getOpcode();
+  if (!AMDGPU::isTrue16Inst(Opcode) || !ST.useRealTrue16Insts())
+    return;
+
+  for (MachineOperand &Op : Inst.explicit_operands()) {
+    unsigned OpIdx = Op.getOperandNo();
+    if (!OpIdx)
+      continue;
+    if (Op.isReg() && RI.isVGPR(MRI, Op.getReg())) {
+      unsigned RCID = get(Opcode).operands()[OpIdx].RegClass;
+      const TargetRegisterClass *RC = RI.getRegClass(RCID);
+      if (RI.getRegSizeInBits(*RC) == 16) {
+        Op.setSubReg(AMDGPU::lo16);
+      }
+    }
+  }
+}
+
 void SIInstrInfo::moveToVALU(SIInstrWorklist &Worklist,
                              MachineDominatorTree *MDT) const {
 
@@ -7613,6 +7636,7 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
           .add(Inst.getOperand(0))
           .add(Inst.getOperand(1));
     }
+    legalizeOperandsVALUt16(*NewInstr, MRI);
     legalizeOperands(*NewInstr, MDT);
     int SCCIdx = Inst.findRegisterDefOperandIdx(AMDGPU::SCC, /*TRI=*/nullptr);
     MachineOperand SCCOp = Inst.getOperand(SCCIdx);
@@ -7682,6 +7706,7 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
                                  .addImm(0)  // omod
                                  .addImm(0); // opsel0
     MRI.replaceRegWith(Inst.getOperand(0).getReg(), NewDst);
+    legalizeOperandsVALUt16(*NewInstr, MRI);
     legalizeOperands(*NewInstr, MDT);
     addUsersToMoveToVALUWorklist(NewDst, MRI, Worklist);
     Inst.eraseFromParent();
@@ -7747,6 +7772,7 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
 
     // If this is a v2s copy src from vgpr16 to sgpr32,
     // replace vgpr copy to subreg_to_reg
+    // This can be remove after we have sgpr16 in place
     if (ST.useRealTrue16Insts() && Inst.isCopy() &&
         Inst.getOperand(1).getReg().isVirtual() &&
         RI.isVGPR(MRI, Inst.getOperand(1).getReg())) {
@@ -7785,11 +7811,7 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
       NewInstr.addImm(0);
     if (AMDGPU::hasNamedOperand(NewOpcode, AMDGPU::OpName::src0)) {
       MachineOperand Src = Inst.getOperand(1);
-      if (AMDGPU::isTrue16Inst(NewOpcode) && ST.useRealTrue16Insts() &&
-          Src.isReg() && RI.isVGPR(MRI, Src.getReg()))
-        NewInstr.addReg(Src.getReg(), 0, AMDGPU::lo16);
-      else
-        NewInstr->addOperand(Src);
+      NewInstr->addOperand(Src);
     }
 
     if (Opcode == AMDGPU::S_SEXT_I32_I8 || Opcode == AMDGPU::S_SEXT_I32_I16) {
@@ -7863,6 +7885,7 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
 
     // Check useMI of NewInstr. If used by a true16 instruction,
     // add a lo16 subreg access if size mismatched
+    // This can be remove after we have sgpr16 in place
     if (ST.useRealTrue16Insts() && NewDstRC == &AMDGPU::VGPR_32RegClass) {
       for (MachineRegisterInfo::use_iterator I = MRI.use_begin(NewDstReg),
                                              E = MRI.use_end();
@@ -7878,6 +7901,9 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
     }
   }
   fixImplicitOperands(*NewInstr);
+
+  legalizeOperandsVALUt16(*NewInstr, MRI);
+
   // Legalize the operands
   legalizeOperands(*NewInstr, MDT);
   if (NewDstReg)
