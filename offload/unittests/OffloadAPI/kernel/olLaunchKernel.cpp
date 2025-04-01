@@ -26,6 +26,8 @@ struct olLaunchKernelTest : OffloadQueueTest {
     LaunchArgs.NumGroupsX = 1;
     LaunchArgs.NumGroupsY = 1;
     LaunchArgs.NumGroupsZ = 1;
+
+    LaunchArgs.DynSharedMemory = 0;
   }
 
   void TearDown() override {

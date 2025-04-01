@@ -524,6 +524,7 @@ olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
   LaunchArgs.ThreadLimit[0] = LaunchSizeArgs->GroupSizeX;
   LaunchArgs.ThreadLimit[1] = LaunchSizeArgs->GroupSizeY;
   LaunchArgs.ThreadLimit[2] = LaunchSizeArgs->GroupSizeZ;
+  LaunchArgs.DynCGroupMem = LaunchSizeArgs->DynSharedMemory;
 
   KernelLaunchParamsTy Params;
   Params.Data = const_cast<void *>(ArgumentsData);

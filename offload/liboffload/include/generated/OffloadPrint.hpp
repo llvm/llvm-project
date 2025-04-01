@@ -362,6 +362,9 @@ operator<<(llvm::raw_ostream &os,
   os << ", ";
   os << ".GroupSizeZ = ";
   os << params.GroupSizeZ;
+  os << ", ";
+  os << ".DynSharedMemory = ";
+  os << params.DynSharedMemory;
   os << "}";
   return os;
 }
