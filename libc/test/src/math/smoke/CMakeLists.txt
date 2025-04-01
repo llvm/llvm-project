@@ -3122,6 +3122,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  hypotf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    hypotf16_test.cpp
+  HDRS
+    HypotTest.h
+  DEPENDS
+    libc.src.math.hypotf16
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   hypot_test
   SUITE
     libc-math-smoke-tests

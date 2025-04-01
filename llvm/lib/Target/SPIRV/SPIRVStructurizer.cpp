@@ -615,7 +615,7 @@ class SPIRVStructurizer : public FunctionPass {
           getSpirvLoopControlOperandsFromLoopMetadata(L);
       for (unsigned Imm : LoopControlImms)
         Args.emplace_back(llvm::ConstantInt::get(Builder.getInt32Ty(), Imm));
-      Builder.CreateIntrinsic(Intrinsic::spv_loop_merge, {}, {Args});
+      Builder.CreateIntrinsic(Intrinsic::spv_loop_merge, {Args});
       Modified = true;
     }
 
