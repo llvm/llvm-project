@@ -74,8 +74,6 @@ ol_impl_result_t olCreateProgram_impl(ol_device_handle_t Device,
 
 ol_impl_result_t olDestroyProgram_impl(ol_program_handle_t Program);
 
-ol_impl_result_t olCreateKernel_impl(ol_program_handle_t Program,
-                                     const char *KernelName,
-                                     ol_kernel_handle_t *Kernel);
-
-ol_impl_result_t olDestroyKernel_impl(ol_kernel_handle_t Kernel);
+ol_impl_result_t olGetKernel_impl(ol_program_handle_t Program,
+                                  const char *KernelName,
+                                  ol_kernel_handle_t *Kernel);

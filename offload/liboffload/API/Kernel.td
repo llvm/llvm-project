@@ -11,23 +11,15 @@
 //===----------------------------------------------------------------------===//
 
 def : Function {
-    let name = "olCreateKernel";
-    let desc = "Create a kernel from the function identified by `KernelName` in the given program.";
-    let details = [];
+    let name = "olGetKernel";
+    let desc = "Get a kernel from the function identified by `KernelName` in the given program.";
+    let details = [
+        "The kernel handle returned is owned by the device so does not need to be destroyed."
+    ];
     let params = [
         Param<"ol_program_handle_t", "Program", "handle of the program", PARAM_IN>,
         Param<"const char*", "KernelName", "name of the kernel entry point in the program", PARAM_IN>,
-        Param<"ol_kernel_handle_t*", "Kernel", "output pointer for the created kernel", PARAM_OUT>
-    ];
-    let returns = [];
-}
-
-def : Function {
-    let name = "olDestroyKernel";
-    let desc = "Destroy the kernel and free all underlying resources.";
-    let details = [];
-    let params = [
-        Param<"ol_kernel_handle_t", "Kernel", "handle of the kernel", PARAM_IN>
+        Param<"ol_kernel_handle_t*", "Kernel", "output pointer for the fetched kernel", PARAM_OUT>
     ];
     let returns = [];
 }
