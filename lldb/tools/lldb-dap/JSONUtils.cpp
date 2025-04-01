@@ -1400,7 +1400,6 @@ llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit) {
 /// https://microsoft.github.io/debug-adapter-protocol/specification#Reverse_Requests_RunInTerminal
 llvm::json::Object
 CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
-                                  llvm::StringRef debug_adapter_path,
                                   llvm::StringRef comm_file,
                                   lldb::pid_t debugger_pid) {
   llvm::json::Object run_in_terminal_args;
@@ -1410,7 +1409,7 @@ CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
 
   const auto *launch_request_arguments = launch_request.getObject("arguments");
   // The program path must be the first entry in the "args" field
-  std::vector<std::string> args = {debug_adapter_path.str(), "--comm-file",
+  std::vector<std::string> args = {DAP::debug_adapter_path.str(), "--comm-file",
                                    comm_file.str()};
   if (debugger_pid != LLDB_INVALID_PROCESS_ID) {
     args.push_back("--debugger-pid");
