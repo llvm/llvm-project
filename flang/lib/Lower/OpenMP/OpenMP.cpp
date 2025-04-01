@@ -557,7 +557,6 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
     HostEvalInfo &hostInfo = hostEvalInfo.back();
 
     switch (extractOmpDirective(*ompEval)) {
-    // Cases where 'teams' and target SPMD clauses might be present.
     case OMPD_teams_distribute_parallel_do:
     case OMPD_teams_distribute_parallel_do_simd:
       cp.processThreadLimit(stmtCtx, hostInfo.ops);
@@ -575,18 +574,16 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
       cp.processCollapse(loc, eval, hostInfo.ops, hostInfo.iv);
       break;
 
-    // Cases where 'teams' clauses might be present, and target SPMD is
-    // possible by looking at nested evaluations.
     case OMPD_teams:
       cp.processThreadLimit(stmtCtx, hostInfo.ops);
       [[fallthrough]];
     case OMPD_target_teams:
       cp.processNumTeams(stmtCtx, hostInfo.ops);
-      processSingleNestedIf(
-          [](Directive nestedDir) { return topDistributeSet.test(nestedDir); });
+      processSingleNestedIf([](Directive nestedDir) {
+        return topDistributeSet.test(nestedDir) || topLoopSet.test(nestedDir);
+      });
       break;
 
-    // Cases where only 'teams' host-evaluated clauses might be present.
     case OMPD_teams_distribute:
     case OMPD_teams_distribute_simd:
       cp.processThreadLimit(stmtCtx, hostInfo.ops);
@@ -595,6 +592,16 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
     case OMPD_target_teams_distribute_simd:
       cp.processCollapse(loc, eval, hostInfo.ops, hostInfo.iv);
       cp.processNumTeams(stmtCtx, hostInfo.ops);
+      break;
+
+    case OMPD_teams_loop:
+      cp.processThreadLimit(stmtCtx, hostInfo.ops);
+      [[fallthrough]];
+    case OMPD_target_teams_loop:
+      cp.processNumTeams(stmtCtx, hostInfo.ops);
+      [[fallthrough]];
+    case OMPD_loop:
+      cp.processCollapse(loc, eval, hostInfo.ops, hostInfo.iv);
       break;
 
     // Standalone 'target' case.
