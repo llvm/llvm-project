@@ -14,7 +14,7 @@ public:
 public:
   __OP_CPP_NAME__GenericAdaptorBase(::mlir::Operation *op) : odsAttrs(op->getRawDictionaryAttrs()), odsOpName(op->getName()), odsRegions(op->getRegions()) {}
 
-  std::pair<unsigned, unsigned> getODSOperandIndexAndLength(unsigned index, unsigned odsOperandsSize) {
+  std::pair<unsigned, unsigned> getStructuredOperandIndexAndLength(unsigned index, unsigned odsOperandsSize) {
     return {index, __OP_OPERAND_COUNT__};
   }
 
@@ -45,12 +45,12 @@ public:
   template <typename LateInst = __OP_CPP_NAME__, typename = std::enable_if_t<std::is_same_v<LateInst, __OP_CPP_NAME__>>>
   __OP_CPP_NAME__GenericAdaptor(RangeT values, LateInst op) : Base(op), odsOperands(values) {}
 
-  std::pair<unsigned, unsigned> getODSOperandIndexAndLength(unsigned index) {
-    return Base::getODSOperandIndexAndLength(index, odsOperands.size());
+  std::pair<unsigned, unsigned> getStructuredOperandIndexAndLength(unsigned index) {
+    return Base::getStructuredOperandIndexAndLength(index, odsOperands.size());
   }
 
-  RangeT getODSOperands(unsigned index) {
-    auto valueRange = getODSOperandIndexAndLength(index);
+  RangeT getStructuredOperands(unsigned index) {
+    auto valueRange = getStructuredOperandIndexAndLength(index);
     return {std::next(odsOperands.begin(), valueRange.first),
              std::next(odsOperands.begin(), valueRange.first + valueRange.second)};
   }
@@ -109,22 +109,22 @@ public:
     return getResultNames()[index];
   }
 
-  std::pair<unsigned, unsigned> getODSOperandIndexAndLength(unsigned index) {
+  std::pair<unsigned, unsigned> getStructuredOperandIndexAndLength(unsigned index) {
     return {index, __OP_OPERAND_COUNT__};
   }
 
-  ::mlir::Operation::operand_range getODSOperands(unsigned index) {
-    auto valueRange = getODSOperandIndexAndLength(index);
+  ::mlir::Operation::operand_range getStructuredOperands(unsigned index) {
+    auto valueRange = getStructuredOperandIndexAndLength(index);
     return {std::next(getOperation()->operand_begin(), valueRange.first),
              std::next(getOperation()->operand_begin(), valueRange.first + valueRange.second)};
   }
 
-  std::pair<unsigned, unsigned> getODSResultIndexAndLength(unsigned index) {
+  std::pair<unsigned, unsigned> getStructuredResultIndexAndLength(unsigned index) {
     return {index, __OP_RESULT_COUNT__};
   }
 
-  ::mlir::Operation::result_range getODSResults(unsigned index) {
-    auto valueRange = getODSResultIndexAndLength(index);
+  ::mlir::Operation::result_range getStructuredResults(unsigned index) {
+    auto valueRange = getStructuredResultIndexAndLength(index);
     return {std::next(getOperation()->result_begin(), valueRange.first),
              std::next(getOperation()->result_begin(), valueRange.first + valueRange.second)};
   }
