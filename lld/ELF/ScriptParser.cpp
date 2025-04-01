@@ -565,7 +565,6 @@ SmallVector<SectionCommand *, 0> ScriptParser::readOverlay() {
     addrExpr = readExpr();
     expect(":");
   }
-
   bool noCrossRefs = consume("NOCROSSREFS");
   Expr lmaExpr = consume("AT") ? readParenExpr() : Expr{};
   expect("{");
