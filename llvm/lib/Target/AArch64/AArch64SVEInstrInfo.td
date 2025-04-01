@@ -3455,6 +3455,24 @@ let Predicates = [HasSVE_or_SME] in {
   def : Pat<(i64(find_last_active nxv2i1:$P1)), (LASTB_RPZ_D $P1, (INDEX_II_D 0,
                                                                       1))>;
 
+  def : Pat<(nxv16i1(get_active_lane_mask i32:$index, i32:$tc)),
+            (WHILELO_PWW_B $index, $tc)>;
+  def : Pat<(nxv8i1(get_active_lane_mask i32:$index, i32:$tc)),
+            (WHILELO_PWW_H $index, $tc)>;
+  def : Pat<(nxv4i1(get_active_lane_mask i32:$index, i32:$tc)),
+            (WHILELO_PWW_S $index, $tc)>;
+  def : Pat<(nxv2i1(get_active_lane_mask i32:$index, i32:$tc)),
+            (WHILELO_PWW_D $index, $tc)>;
+
+  def : Pat<(nxv16i1(get_active_lane_mask i64:$index, i64:$tc)),
+            (WHILELO_PXX_B $index, $tc)>;
+  def : Pat<(nxv8i1(get_active_lane_mask i64:$index, i64:$tc)),
+            (WHILELO_PXX_H $index, $tc)>;
+  def : Pat<(nxv4i1(get_active_lane_mask i64:$index, i64:$tc)),
+            (WHILELO_PXX_S $index, $tc)>;
+  def : Pat<(nxv2i1(get_active_lane_mask i64:$index, i64:$tc)),
+            (WHILELO_PXX_D $index, $tc)>;
+
   // Move element from the bottom 128-bits of a scalable vector to a single-element vector.
   // Alternative case where insertelement is just scalar_to_vector rather than vector_insert.
   def : Pat<(v1f64 (scalar_to_vector
