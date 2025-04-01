@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
-#include <clc/clcmacro.h>
+#include <clc/internal/clc.h>
 
-_CLC_OVERLOAD _CLC_DEF float native_exp2(float val) {
-  return __builtin_amdgcn_exp2f(val);
-}
+#define __FLOAT_ONLY
+#define FUNCTION __clc_native_log2
+#define __CLC_FUNCTION(x) __builtin_elementwise_log2
+#define __CLC_BODY <clc/shared/unary_def.inc>
 
-_CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, float, native_exp2, float)
+#include <clc/math/gentype.inc>

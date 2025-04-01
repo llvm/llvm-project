@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define __CLC_BODY <math/clc_rootn.inc>
-#include <clc/math/gentype.inc>
-#undef __CLC_BODY
+#include <clc/clcmacro.h>
+#include <clc/internal/clc.h>
+
+_CLC_OVERLOAD _CLC_DEF float __clc_native_exp2(float val) {
+  return __builtin_amdgcn_exp2f(val);
+}
+
+_CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, float, __clc_native_exp2, float)

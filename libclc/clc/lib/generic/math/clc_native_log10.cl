@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE native_exp(__CLC_GENTYPE val) {
-  return native_exp2(val * M_LOG2E_F);
-}
+#include <clc/internal/clc.h>
+
+#define __FLOAT_ONLY
+#define FUNCTION __clc_native_log10
+#define __CLC_FUNCTION(x) __builtin_elementwise_log10
+#define __CLC_BODY <clc/shared/unary_def.inc>
+
+#include <clc/math/gentype.inc>

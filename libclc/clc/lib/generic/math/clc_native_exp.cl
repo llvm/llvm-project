@@ -6,4 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE rootn(__CLC_GENTYPE a, __CLC_INTN b);
+#include <clc/internal/clc.h>
+
+#define __FLOAT_ONLY
+#define FUNCTION __clc_native_exp
+#define __CLC_FUNCTION(x) __builtin_elementwise_exp
+#define __CLC_BODY <clc/shared/unary_def.inc>
+
+#include <clc/math/gentype.inc>

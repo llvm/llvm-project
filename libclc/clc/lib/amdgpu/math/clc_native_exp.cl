@@ -6,6 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE rootn(__CLC_GENTYPE x, __CLC_INTN y) {
-  return __clc_rootn(x, y);
-}
+#include <clc/float/definitions.h>
+#include <clc/internal/clc.h>
+#include <clc/math/clc_native_exp2.h>
+
+#define __CLC_BODY <clc_native_exp.inc>
+#define __FLOAT_ONLY
+#include <clc/math/gentype.inc>

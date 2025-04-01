@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
-
-#define __CLC_BODY <native_exp.inc>
-#define __FLOAT_ONLY
-#include <clc/math/gentype.inc>
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_native_rsqrt(__CLC_GENTYPE val) {
+  return 1.0f / __clc_native_sqrt(val);
+}

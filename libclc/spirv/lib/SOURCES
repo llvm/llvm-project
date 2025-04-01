@@ -63,7 +63,6 @@ math/fma.cl
 ../../generic/lib/math/powr.cl
 ../../generic/lib/math/remainder.cl
 ../../generic/lib/math/remquo.cl
-../../generic/lib/math/clc_rootn.cl
 ../../generic/lib/math/rootn.cl
 ../../generic/lib/math/sin.cl
 ../../generic/lib/math/sincos.cl
