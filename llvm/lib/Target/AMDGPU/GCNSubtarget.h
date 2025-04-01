@@ -257,6 +257,7 @@ protected:
   bool HasMinimum3Maximum3F32 = false;
   bool HasMinimum3Maximum3F16 = false;
   bool HasMinimum3Maximum3PKF16 = false;
+  bool HasLshlAddU64Inst = false;
 
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
@@ -1141,7 +1142,7 @@ public:
 
   bool hasMovB64() const { return GFX940Insts; }
 
-  bool hasLshlAddB64() const { return GFX940Insts; }
+  bool hasLshlAddU64Inst() const { return HasLshlAddU64Inst; }
 
   bool enableSIScheduler() const {
     return EnableSIScheduler;

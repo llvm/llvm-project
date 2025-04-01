@@ -1053,11 +1053,10 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   // TODO: Split up into simpler, modular combines: (X && Y) || (X && Z) into X
   // && (Y || Z) and (X || !X) into true. This requires queuing newly created
   // recipes to be visited during simplification.
-  VPValue *X, *Y, *X1, *Y1;
+  VPValue *X, *Y;
   if (match(&R,
             m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
-                         m_LogicalAnd(m_VPValue(X1), m_Not(m_VPValue(Y1))))) &&
-      X == X1 && Y == Y1) {
+                         m_LogicalAnd(m_Deferred(X), m_Not(m_Deferred(Y)))))) {
     R.getVPSingleValue()->replaceAllUsesWith(X);
     R.eraseFromParent();
     return;
@@ -1896,6 +1895,10 @@ static VPRecipeBase *createEVLRecipe(VPValue *HeaderMask,
   using namespace llvm::VPlanPatternMatch;
   auto GetNewMask = [&](VPValue *OrigMask) -> VPValue * {
     assert(OrigMask && "Unmasked recipe when folding tail");
+    // HeaderMask will be handled using EVL.
+    VPValue *Mask;
+    if (match(OrigMask, m_LogicalAnd(m_Specific(HeaderMask), m_VPValue(Mask))))
+      return Mask;
     return HeaderMask == OrigMask ? nullptr : OrigMask;
   };
 

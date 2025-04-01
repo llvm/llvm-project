@@ -363,6 +363,10 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   ASSERT_EQ(Tokens.size(), 20u) << Tokens;
   EXPECT_TOKEN(Tokens[14], tok::star, TT_PointerOrReference);
 
+  Tokens = annotate("#define foo(x) _Generic(x, bar *: 1, default: 0)");
+  ASSERT_EQ(Tokens.size(), 20u) << Tokens;
+  EXPECT_TOKEN(Tokens[11], tok::star, TT_PointerOrReference);
+
   Tokens = annotate("Thingy kConfig = {\n"
                     "    1,\n"
                     "    (uint16_t)(kScale * height_pixels),\n"
