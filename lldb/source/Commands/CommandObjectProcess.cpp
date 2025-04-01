@@ -1827,6 +1827,33 @@ public:
   ~CommandObjectMultiwordProcessTrace() override = default;
 };
 
+// CommandObjectProcessDumpModId
+class CommandObjectProcessDumpModId : public CommandObjectParsed {
+public:
+  CommandObjectProcessDumpModId(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "process dump-mod-id",
+                            "Dump the state of the ProcessModID. Intended to "
+                            "be used for debugging LLDB itself.",
+                            "process dump-mod-id",
+                            eCommandRequiresProcess) {}
+
+  ~CommandObjectProcessDumpModId() override = default;
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    Process *process = m_exe_ctx.GetProcessPtr();
+    StateType state = process->GetState();
+    if (state != eStateStopped) {
+      result.SetStatus(eReturnStatusFailed);
+      return;
+    }
+
+    ProcessModID process_mod_id = process->GetModID();
+    process_mod_id.Dump(result.GetOutputStream());
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+  }
+};
+
 // CommandObjectMultiwordProcess
 
 CommandObjectMultiwordProcess::CommandObjectMultiwordProcess(
@@ -1866,6 +1893,8 @@ CommandObjectMultiwordProcess::CommandObjectMultiwordProcess(
   LoadSubCommand(
       "trace",
       CommandObjectSP(new CommandObjectMultiwordProcessTrace(interpreter)));
+  LoadSubCommand("dump-mod-id",
+                 CommandObjectSP(new CommandObjectProcessDumpModId(interpreter)));
 }
 
 CommandObjectMultiwordProcess::~CommandObjectMultiwordProcess() = default;

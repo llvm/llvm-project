@@ -2,7 +2,9 @@
 // Applied side effect should be visible to the debugger.
 
 // RUN: %build %s -o %t
-// RUN: %lldb %t -o run \
+// RUN: %lldb %t \
+// RUN:   -o "settings set target.process.process-state-tracks-memory-cache false" \
+// RUN:   -o "run" \
 // RUN:   -o "frame variable x" \
 // RUN:   -o "expr x.inc()" \
 // RUN:   -o "frame variable x" \
@@ -12,7 +14,7 @@
 // RUN:   -o "frame variable x" \
 // RUN:   -o "continue" \
 // RUN:   -o "frame variable x" \
-// RUN:   -o exit | FileCheck %s -dump-input=fail
+// RUN:   -o "exit" | FileCheck %s -dump-input=fail
 
 class X {
   int i = 0;
