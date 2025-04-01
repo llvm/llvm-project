@@ -81,7 +81,6 @@ static const char *Executable;
 static SmallVector<SmallString<128>> TempFiles;
 
 namespace {
-
 // Must not overlap with llvm::opt::DriverFlag.
 enum LinkerFlags { LinkerOnlyOption = (1 << 4) };
 
@@ -323,7 +322,7 @@ static Expected<StringRef> runSPIRVCodeGen(StringRef File,
   LLVMContext C;
   std::unique_ptr<Module> M = parseIRFile(File, Err, C);
   if (!M)
-    return createStringError(inconvertibleErrorCode(), Err.getMessage());
+    return createStringError(Err.getMessage());
 
   Triple TargetTriple(Args.getLastArgValue(OPT_triple_EQ));
   M->setTargetTriple(TargetTriple);
@@ -363,10 +362,9 @@ static Expected<StringRef> runSPIRVCodeGen(StringRef File,
     return createStringError("Failed to execute SPIR-V Backend");
   CodeGenPasses.run(*M);
 
-  if (Verbose) {
+  if (Verbose)
     errs() << formatv("SPIR-V Backend: input: {0}, output: {1}\n", File,
                       OutputFile);
-  }
 
   return OutputFile;
 }
