@@ -9261,7 +9261,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
             }))
           continue;
         if (isVectorized(V))
-         Vectorized.clearBit(Idx);
+          Vectorized.clearBit(Idx);
         else if (!V->hasOneUser() && !areAllUsersVectorized(I, UserIgnoreList))
           Extracted.setBit(Idx);
       }
