@@ -1915,6 +1915,19 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "atan_utils",
+    hdrs = ["src/math/generic/atan_utils.h"],
+    deps = [
+        ":__support_integer_literals",
+        ":__support_fputil_double_double",
+        ":__support_fputil_dyadic_float",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_macros_optimization",
+    ],
+)
+
+libc_support_library(
     name = "log_range_reduction",
     hdrs = ["src/math/generic/log_range_reduction.h"],
     deps = [
@@ -2313,7 +2326,7 @@ libc_math_function(
         ":__support_fputil_double_double",
         ":__support_fputil_nearest_integer",
         ":__support_macros_optimization",
-        ":inv_trigf_utils",
+        ":atan_utils",
     ],
 )
 
@@ -2331,7 +2344,7 @@ libc_math_function(
     additional_deps = [
         ":__support_fputil_double_double",
         ":__support_fputil_nearest_integer",
-        ":inv_trigf_utils",
+        ":atan_utils",
     ],
 )
 
