@@ -769,7 +769,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"perror",
      &I::genPerror,
      {{{"string", asBox}}},
-     /*isElemental=*/false},
+     /*isElemental*/ false},
     {"popcnt", &I::genPopcnt},
     {"poppar", &I::genPoppar},
     {"present",
