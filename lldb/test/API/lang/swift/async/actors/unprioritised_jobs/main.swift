@@ -4,7 +4,7 @@ actor Actor {
     var data: Int = 15
 
     func occupy() async {
-        Thread.sleep(forTimeInterval: 200)
+        Thread.sleep(forTimeInterval: 100)
     }
 
     func work() async -> Int {
