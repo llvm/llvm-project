@@ -298,6 +298,15 @@ Improvements to Clang's diagnostics
 
 - Improve the ``-Wundefined-func-template`` warning when a function template is not instantiated due to being unreachable in modules.
 
+- Fixed an assertion when referencing an out-of-bounds parameter via a function
+  attribute whose argument list refers to parameters by index and the function
+  is variadic. e.g.,
+  .. code-block:: c
+
+    __attribute__ ((__format_arg__(2))) void test (int i, ...) { }
+
+  Fixes #GH61635
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -371,6 +380,7 @@ Bug Fixes to C++ Support
 - Fixed a Clang regression in C++20 mode where unresolved dependent call expressions were created inside non-dependent contexts (#GH122892)
 - Clang now emits the ``-Wunused-variable`` warning when some structured bindings are unused
   and the ``[[maybe_unused]]`` attribute is not applied. (#GH125810)
+- Fixed a crash caused by invalid declarations of ``std::initializer_list``. (#GH132256)
 - Clang no longer crashes when establishing subsumption between some constraint expressions. (#GH122581)
 - Clang now issues an error when placement new is used to modify a const-qualified variable
   in a ``constexpr`` function. (#GH131432)
@@ -413,10 +423,13 @@ Hexagon Support
 X86 Support
 ^^^^^^^^^^^
 
-- Disable ``-m[no-]avx10.1`` and switch ``-m[no-]avx10.2`` to alias of 512 bit
-  options.
-- Change ``-mno-avx10.1-512`` to alias of ``-mno-avx10.1-256`` to disable both
-  256 and 512 bit instructions.
+- The 256-bit maximum vector register size control was removed from
+  `AVX10 whitepaper <https://cdrdv2.intel.com/v1/dl/getContent/784343>_`.
+  * Re-target ``m[no-]avx10.1`` to enable AVX10.1 with 512-bit maximum vector register size.
+  * Emit warning for ``mavx10.x-256``, noting AVX10/256 is not supported.
+  * Emit warning for ``mavx10.x-512``, noting to use ``m[no-]avx10.x`` instead.
+  * Emit warning for ``m[no-]evex512``, noting AVX10/256 is not supported.
+  * The features avx10.x-256/512 keep unchanged and will be removed in the next release.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -434,6 +447,7 @@ Windows Support
 - Clang now can process the `i128` and `ui128` integeral suffixes when MSVC
   extensions are enabled. This allows for properly processing ``intsafe.h`` in
   the Windows SDK.
+- Clang now supports MSVC vector deleting destructors (GH19772).
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
@@ -492,6 +506,8 @@ clang-format
 - Allow specifying the language (C, C++, or Objective-C) for a ``.h`` file by
   adding a special comment (e.g. ``// clang-format Language: ObjC``) near the
   top of the file.
+- Add ``EnumTrailingComma`` option for inserting/removing commas at the end of
+  ``enum`` enumerator lists.
 
 libclang
 --------

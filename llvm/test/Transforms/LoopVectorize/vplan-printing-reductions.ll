@@ -7,6 +7,7 @@
 define float @print_reduction(i64 %n, ptr noalias %y) {
 ; CHECK-LABEL: Checking a loop in 'print_reduction'
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VF:%.]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
@@ -21,7 +22,7 @@ define float @print_reduction(i64 %n, ptr noalias %y) {
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
 ; CHECK-NEXT:   WIDEN-REDUCTION-PHI ir<%red> = phi ir<0.000000e+00>, ir<%red.next>
-; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:   CLONE ir<%arrayidx> = getelementptr inbounds ir<%y>, vp<[[STEPS]]>
 ; CHECK-NEXT:   vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%arrayidx>
 ; CHECK-NEXT:   WIDEN ir<%lv> = load vp<[[VEC_PTR]]>
@@ -74,6 +75,7 @@ exit:                                          ; preds = %loop, %entry
 define void @print_reduction_with_invariant_store(i64 %n, ptr noalias %y, ptr noalias %dst) {
 ; CHECK-LABEL: Checking a loop in 'print_reduction_with_invariant_store'
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VF:%.]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
@@ -88,7 +90,7 @@ define void @print_reduction_with_invariant_store(i64 %n, ptr noalias %y, ptr no
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
 ; CHECK-NEXT:   WIDEN-REDUCTION-PHI ir<%red> = phi ir<0.000000e+00>, ir<%red.next>
-; CHECK-NEXT:   vp<[[IV:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:   vp<[[IV:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:   CLONE ir<%arrayidx> = getelementptr inbounds ir<%y>, vp<[[IV]]>
 ; CHECK-NEXT:   vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%arrayidx>
 ; CHECK-NEXT:   WIDEN ir<%lv> = load vp<[[VEC_PTR]]>
@@ -142,6 +144,7 @@ exit:                                          ; preds = %loop, %entry
 define float @print_fmuladd_strict(ptr %a, ptr %b, i64 %n) {
 ; CHECK-LABEL: Checking a loop in 'print_fmuladd_strict'
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VF:%.]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
@@ -156,7 +159,7 @@ define float @print_fmuladd_strict(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
 ; CHECK-NEXT:   WIDEN-REDUCTION-PHI ir<%sum.07> = phi ir<0.000000e+00>, ir<%muladd>
-; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:   CLONE ir<%arrayidx> = getelementptr inbounds ir<%a>, vp<[[STEPS]]>
 ; CHECK-NEXT:   vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%arrayidx>
 ; CHECK-NEXT:   WIDEN ir<%l.a> = load vp<[[VEC_PTR]]>

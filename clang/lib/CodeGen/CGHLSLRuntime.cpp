@@ -385,8 +385,8 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
   SmallVector<OperandBundleDef, 1> OB;
   if (CGM.shouldEmitConvergenceTokens()) {
     assert(EntryFn->isConvergent());
-    llvm::Value *I = B.CreateIntrinsic(
-        llvm::Intrinsic::experimental_convergence_entry, {}, {});
+    llvm::Value *I =
+        B.CreateIntrinsic(llvm::Intrinsic::experimental_convergence_entry, {});
     llvm::Value *bundleArgs[] = {I};
     OB.emplace_back("convergencectrl", bundleArgs);
   }

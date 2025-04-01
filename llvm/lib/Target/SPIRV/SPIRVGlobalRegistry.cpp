@@ -32,13 +32,10 @@
 
 using namespace llvm;
 
-namespace {
-
-bool allowEmitFakeUse(const Value *Arg) {
+static bool allowEmitFakeUse(const Value *Arg) {
   if (isSpvIntrinsic(Arg))
     return false;
-  if (dyn_cast<AtomicCmpXchgInst>(Arg) || dyn_cast<InsertValueInst>(Arg) ||
-      dyn_cast<UndefValue>(Arg))
+  if (isa<AtomicCmpXchgInst, InsertValueInst, UndefValue>(Arg))
     return false;
   if (const auto *LI = dyn_cast<LoadInst>(Arg))
     if (LI->getType()->isAggregateType())
@@ -46,7 +43,7 @@ bool allowEmitFakeUse(const Value *Arg) {
   return true;
 }
 
-inline unsigned typeToAddressSpace(const Type *Ty) {
+static unsigned typeToAddressSpace(const Type *Ty) {
   if (auto PType = dyn_cast<TypedPointerType>(Ty))
     return PType->getAddressSpace();
   if (auto PType = dyn_cast<PointerType>(Ty))
@@ -56,8 +53,6 @@ inline unsigned typeToAddressSpace(const Type *Ty) {
     return ExtTy->getIntParameter(0);
   report_fatal_error("Unable to convert LLVM type to SPIRVType", true);
 }
-
-} // anonymous namespace
 
 SPIRVGlobalRegistry::SPIRVGlobalRegistry(unsigned PointerSize)
     : PointerSize(PointerSize), Bound(0) {}
@@ -1847,9 +1842,9 @@ void SPIRVGlobalRegistry::buildAssignType(IRBuilder<> &B, Type *Ty,
     SmallVector<Metadata *, 2> ArgMDs{
         MDNode::get(Ctx, ValueAsMetadata::getConstant(OfType)),
         MDString::get(Ctx, Arg->getName())};
-    B.CreateIntrinsic(Intrinsic::spv_value_md, {},
+    B.CreateIntrinsic(Intrinsic::spv_value_md,
                       {MetadataAsValue::get(Ctx, MDTuple::get(Ctx, ArgMDs))});
-    AssignCI = B.CreateIntrinsic(Intrinsic::fake_use, {}, {Arg});
+    AssignCI = B.CreateIntrinsic(Intrinsic::fake_use, {Arg});
   } else {
     AssignCI = buildIntrWithMD(Intrinsic::spv_assign_type, {Arg->getType()},
                                OfType, Arg, {}, B);

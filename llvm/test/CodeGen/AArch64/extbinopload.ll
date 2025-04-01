@@ -649,7 +649,7 @@ define <16 x i32> @extrause_load(ptr %p, ptr %q, ptr %r, ptr %s, ptr %z) {
 ; CHECK-NEXT:    add x8, x3, #8
 ; CHECK-NEXT:    add x11, x1, #12
 ; CHECK-NEXT:    str s1, [x4]
-; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-NEXT:    zip1 v1.8b, v1.8b, v1.8b
 ; CHECK-NEXT:    ldr s0, [x2]
 ; CHECK-NEXT:    ushll v2.8h, v0.8b, #0
 ; CHECK-NEXT:    umov w9, v2.h[0]
@@ -659,7 +659,7 @@ define <16 x i32> @extrause_load(ptr %p, ptr %q, ptr %r, ptr %s, ptr %z) {
 ; CHECK-NEXT:    mov v0.b[9], w10
 ; CHECK-NEXT:    umov w10, v2.h[3]
 ; CHECK-NEXT:    ldr s2, [x1]
-; CHECK-NEXT:    ushll v2.8h, v2.8b, #0
+; CHECK-NEXT:    zip1 v2.8b, v2.8b, v2.8b
 ; CHECK-NEXT:    mov v0.b[10], w9
 ; CHECK-NEXT:    add x9, x1, #4
 ; CHECK-NEXT:    mov v1.d[1], v2.d[0]

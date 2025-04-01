@@ -19,7 +19,7 @@
 #include "AMDGPUMemoryUtils.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/Analysis.h"
-#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -5936,9 +5936,8 @@ unsigned AMDGPUTargetLowering::ComputeNumSignBitsForTargetNode(
 }
 
 unsigned AMDGPUTargetLowering::computeNumSignBitsForTargetInstr(
-  GISelKnownBits &Analysis, Register R,
-  const APInt &DemandedElts, const MachineRegisterInfo &MRI,
-  unsigned Depth) const {
+    GISelValueTracking &Analysis, Register R, const APInt &DemandedElts,
+    const MachineRegisterInfo &MRI, unsigned Depth) const {
   const MachineInstr *MI = MRI.getVRegDef(R);
   if (!MI)
     return 1;
