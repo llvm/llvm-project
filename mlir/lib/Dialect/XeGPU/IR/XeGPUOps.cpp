@@ -82,7 +82,7 @@ isArgShapesValid(TensorDescType tdescTy, VectorType valueTy,
   auto valueShape = valueTy.getShape();
   // layout not present means IR is in SIMD mode. In this case value shape must
   // match adjusted tensor descriptor shape.
-  if (!layout || !layout.isForWorkItemLevel())
+  if (!layout)
     return valueShape == adjustedTdescShape
                ? success()
                : emitError()
@@ -606,13 +606,6 @@ LogicalResult DpasOp::verify() {
       result |= (aLayout != nullptr) ^ (cLayout != nullptr);
     }
     result = !result;
-
-    if (aLayout) {
-      auto scope = aLayout.getScope();
-      result &= bLayout ? scope == bLayout.getScope() : false;
-      if (hasAcc())
-        result &= cLayout ? scope == cLayout.getScope() : false;
-    }
     return result;
   };
 
@@ -622,7 +615,7 @@ LogicalResult DpasOp::verify() {
         "code) or not set at all (for SIMD code).");
 
   // query the scope from aLayout (a valid setting).
-  if (aLayout && aLayout.isForWorkItemLevel()) {
+  if (aLayout) {
     // In SIMT mode, All data fragments must be 2D
     if (lhsRank != 2 || rhsRank != 2 || resRank != 2)
       return emitOpError("expecting lhs, rhs, and result to be a 2D vector.");
@@ -673,14 +666,14 @@ LogicalResult ConvertLayoutOp::verify() {
   if (!resMap)
     return emitOpError("expected resMap.");
 
-  if (srcMap.getScope() != resMap.getScope())
-    return emitOpError("expected srcMap and resMap be in the same scope.");
-
   if (srcMap == resMap)
     return emitOpError("expected different srcMap and resMap.");
 
-  if (srcMap.isForWorkItemLevel())
-    return emitOpError("doesn't work on SIMT code.");
+  // both srcMap and resMap should be WgLayout or SgLayout at the same time.
+  if ((!srcMap.isWgLayout() || !resMap.isWgLayout()) &&
+      (!srcMap.isSgLayout() || !resMap.isSgLayout()))
+    return emitOpError(
+        "expected srcMap and resMap be WgLayout or SgLayout at the same time.");
 
   auto shape = getSource().getType().getShape();
   if (!isEvenDistributed(shape, srcMap))

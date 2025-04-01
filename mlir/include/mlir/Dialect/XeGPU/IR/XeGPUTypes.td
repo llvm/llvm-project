@@ -39,7 +39,7 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
     metadata and does not hold the data itself. It is primarily designed to support 2D block load/store
     and DPAS (matrix multiplication instruction) on Intel GPUs. It encodes the following information:
 
-    * shape:  the sizes/shape of the intereted data block, e.g., 8x16 means 8 rows
+    * shape:  the sizes/shape of the interested data block, e.g., 8x16 means 8 rows
               and each row contains 16 contiguous data element. The rows could be
               either contiguous or not, depends on the encoding attribute. If the
               encoding is a BlockTensorDescAttr, rows are contiguous. If the encoding
@@ -62,7 +62,7 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
     static-dim-list ::= decimal-literal `x` decimal-literal
     attr-list = (, encoding-attr)? (, layout-attr)?
     enconding-attr = (, memory_space = value)? (, arr_len = value)? (, boundary_check = value)? (, scattered = value)?
-    layout-attr = (, layout `<` (scope = value,)? (sg_layout = value, sg_data = value, order = value)? lane_layout = value, lane_data = value `>`)?
+    layout-attr = (, layout `<`sg_layout = value, sg_data = value, inst_data = value, lane_layout = value, lane_data = value, order = value`>`)?
     ```
 
     Examples:
@@ -77,14 +77,15 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
     // A TensorDesc with 8x16 f32 elements for a memory region in shared memory space.
     xegpu.tensor_desc<8x16xf32, #xegpu.tdesc_attr<memory_space = slm>>
 
+    // A TensorDesc with a layout for subgroup level programming
+    xegpu.tensor_desc<8x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+
     // A TensorDesc with a layout for workgroup level programming
     xegpu.tensor_desc<32x64xf32, #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1]>>
 
-    // A TensorDesc with a layout for subgroup level programming
-    xegpu.tensor_desc<8x16xf32, #xegpu.layout<scope = sg, lane_layout = [1, 16], lane_data = [1, 1]>>
+    // A TensorDesc with a layout for workgroup level programming without lane_layout and lane_data
+    xegpu.tensor_desc<32x64xf32, #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16]>>
 
-    // A TensorDesc with a layout for workitem level programming
-    xegpu.tensor_desc<8x16xf32, #xegpu.layout<scope = wi, lane_layout = [1, 16], lane_data = [1, 1]>>
     ```
   }];
 

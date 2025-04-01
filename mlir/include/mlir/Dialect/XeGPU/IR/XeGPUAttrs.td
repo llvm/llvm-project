@@ -35,7 +35,7 @@ def XeGPU_BlockTensorDescAttr: XeGPU_TensorDescAttr<"BlockTensorDesc", "block_td
         It is default to `Global`.
     2. `array_length`: It describes how many horizontally consecutive blocks
         will be loaded by a hardware load instruction. If the TensorDesc shape
-        is 8x16, with array_length = 2. The loaded block shape will be acctually
+        is 8x16, with array_length = 2. The loaded block shape will be actually
         8x32. Its default value is 1.
     3. `boundary_check`: It is used to indicates the hardware whether to do
         out-of-boundary check. The default value is true.
@@ -154,26 +154,6 @@ def XeGPU_FenceScopeAttr:
     let assemblyFormat = "$value";
 }
 
-def XeGPU_ScopeWG:     I32EnumAttrCase<"WG", 0, "wg">;        // workgroup level code
-def XeGPU_ScopeSG:     I32EnumAttrCase<"SG", 1, "sg">;        // subgroup level code
-def XeGPU_ScopeLane:   I32EnumAttrCase<"Lane", 2, "lane">;    // simt level code
-
-def XeGPU_ScopeEnums : I32EnumAttr<"Scope", "enumeration of scope",
-  [XeGPU_ScopeWG, XeGPU_ScopeSG, XeGPU_ScopeLane]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::xegpu";
-}
-
-def XeGPU_ScopeAttr
-  : EnumAttr<XeGPU_Dialect, XeGPU_ScopeEnums, "Scope"> {
-    let summary = [{Defines the programming scope of the IR,
-                    where WG represents the workgroup level,
-                    SG represents the subgroup level, and
-                    Lane represents the work-item level}];
-
-    let assemblyFormat = "``$value";
-}
-
 def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
   let summary = [{
     Describes the data distribution to subgroups and work-items for a tensor
@@ -182,75 +162,99 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
   let description = [{
     XeGPU operations use `LayoutAttr` to define how data is distributed across subgroups and work-items.
     This attribute is specified in tensor descriptors during tensor description creation. `LayoutAttr`
-    includes the following parameters, categorized into three groups:
+    includes the following parameters:
 
-    ### Group 1:
-    * scope: Defines the scope of the code, which can be `wg` (workgroup), `sg` (subgroup),
-      or `lane` (work-item). It is mandatory for subgroup-level programming but optional
-      for workgroup and work-item levels. By default:
-        - If sg_layout is included, the layout is treated as workgroup level.
-        - If only `lane_layout` and `lane_data` are included, it is considered work-item level
-
-    ### Group 2:
-    * sg_layout (optional): Specifies the total number of subgroups and their layout within a workgroup.
-      It is mandatory for workgroup-level programming. Its presence implies workgroup-level code, and
-      the scope must be empty or set to `wg`.
-    * sg_data (optional): Defines the data size accessed per subgroup. It must be used with sg_layout or
-      left empty, in which case it can be derived from `lane_layout` and `lane_data` using the formula:
-      `sg_data[i] = lane_layout[i] * lane_data[i]`.
-    * order (optional): Specifies the dimension order used to linearize n-dimensional sbugroup IDs to
-      1-dimensional IDs. The first dimension in the order list is the fastest-changing dimension.
-
-    ### Group 3:
-    * lane_layout (required): Specifies the total number of work-items and their layout within a subgroup
-    * lane_data: (required): Specifies the data size accessed per work-item for a single distribution.
-
-    `lane_data[0] * lane_data[1]` can be greater than 1, indicating that each work item operates on multiple
-    elements. These elements are eventually lowered to a "SIMT-flavor" vector, such as a SPIR-V vector or
-    an LLVM vector, or packed into a storage data type. The multiple elements specified by lane_data must
-    come from a single dimension and be contiguous in memory along either dimension.
+    * `sg_layout`: Specifies the total number of subgroups and their layout within a workgroup.
+      It is mandatory for workgroup-level programming and optional for subgroup programming. Its
+      presence implies workgroup-level code.
+    * `sg_data`: Defines the data size accessed per subgroup. It is optionally used with `sg_layout`
+      for workgroup-level programming. When it is left empty, the size accessed per subgroup can be
+      derived from the tensor shape and `sg_layout` using the formula:
+      `sg_data[i] = tensor_shape[i] / sg_layout[i]`.
+    * `inst_data`: Specifies the data size that is processed by an instruction. It is optionally
+      used with lane_layout. When it is left empty, the data size per instruction is equivalent to
+      the sg_data for workgroup-level programming or equivalent to tensor shape for subgroup-level
+      programming.
+    * `lane_layout` : Specifies the total number of work-items and their arrangement within a subgroup.
+      It is mandatory for subgroup-level programming and optional for workgroup-level programming.
+    * `lane_data` : Specifies the shape of the tensor fragment that each lane accesses. It defines a single,
+      minimal distribution unit. Processing the entire tensor may require one or more distribution units per
+      hardware instruction.
+    * `order`: Specifies the dimension order used to linearize n-dimensional sg_layout and lane_layout to
+      1-dimensional layout. The first dimension in the order list is the fastest-changing dimension. If it
+      is not present, the default value is [1, 0].
 
     ### Examples:
-      1. Work-item level layout:
+      1. Subgroup level layout:
       ```mlir
-      #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+      #xegpu.layout<lane_layout = [2, 8], lane_data = [1, 1]>
       ```
-      In this example, the subgroup consists of 16 work items arranged as lane_layout=[1, 16], with
-      each work item accessing a single element as defined by lane_data=[1, 1].
+      In this example, there are 16 work-items per subgroup, and is organized as
+      [[0, 1, 2, .., 7],[8, 9, .., 15]]. The distribution unit is 1x1.
 
-      2. Workgroup level layout:
+      2. Subgroup level layout with order:
       ```mlir
-      #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1]>
+      #xegpu.layout<lane_layout = [2, 8], lane_data = [1, 1], order = [0, 1]>
+      ```
+      In this example, there are 16 work-items per subgroup, and is organized as
+      [[0, 2, 4, ..., 14], [1, 3, 5, ..., 15]]. The distribution unit is 1x1.
+
+      3. Workgroup level layout:
+      ```mlir
+      #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], lane_layout = [2, 8], lane_data = [1, 1]>
       ```
       In this example, the layout represents a workgroup distribution. A workgroup consists of 8 subgroups
-      arranged in a 2x4 layout. Each subgroup accesses a 16x16 block per instruction, which is further
-      distributed to 16 work items as described above.
+      arranged as [[0, 1, 2, 3], [4, 5, 6, 7]]. Each subgroup accesses a 16x16 block per instruction, which
+      is further distributed to 16 work items which is organized as [[0, 1, 2, .., 7],[8, 9, .., 15]].
+
+      4. Workgroup level layout with order:
+      ```mlir
+      #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], lane_layout = [2, 8], lane_data = [1, 1], order = [0, 1]>
+      ```
+      In this example, the layout represents a workgroup distribution. A workgroup consists of 8 subgroups
+      arranged as [[0, 2, 4, 6], [1, 3, 5, 7]]. Each subgroup accesses a 16x16 block per instruction, which
+      is further distributed to 16 work items which is organized as [[0, 2, 4, ..., 14], [1, 3, 5, ..., 15]].
+
   }];
 
   let parameters = (ins
-    OptionalParameter<"ScopeAttr">: $scope,
     OptionalParameter<"DenseI32ArrayAttr">: $sg_layout,
     OptionalParameter<"DenseI32ArrayAttr">: $sg_data,
-    OptionalParameter<"DenseI32ArrayAttr">: $order,
-    "DenseI32ArrayAttr": $lane_layout,
-    "DenseI32ArrayAttr": $lane_data
+    OptionalParameter<"DenseI32ArrayAttr">: $inst_data,
+    OptionalParameter<"DenseI32ArrayAttr">: $lane_layout,
+    OptionalParameter<"DenseI32ArrayAttr">: $lane_data,
+    OptionalParameter<"DenseI32ArrayAttr">: $order
   );
 
+  let builders = [
+    AttrBuilder<(ins "llvm::ArrayRef<int>": $lane_layout,
+                     "llvm::ArrayRef<int>": $lane_data),
+      [{
+        auto sg_layout = DenseI32ArrayAttr();
+        auto sg_data = DenseI32ArrayAttr();
+        auto inst_data = DenseI32ArrayAttr();
+        auto order = DenseI32ArrayAttr();
+        return $_get($_ctxt, sg_layout, sg_data, inst_data,
+                     DenseI32ArrayAttr::get($_ctxt, lane_layout),
+                     DenseI32ArrayAttr::get($_ctxt, lane_data), order);
+      }]>
+  ];
+
   let extraClassDeclaration = [{
-    bool isForWorkgroupLevel() {
-      if (!getScope())
-        return getSgLayout() != nullptr;
-      return getScope() == ScopeAttr::get(getContext(), Scope::WG);
+    bool isWgLayout() {
+      return getSgLayout() != nullptr;
     }
 
-    bool isForSubgroupLevel() {
-      return getScope() == ScopeAttr::get(getContext(), Scope::SG);
+    bool isSgLayout() {
+      return getSgLayout() == nullptr && getLaneLayout() != nullptr;
     }
 
-    bool isForWorkItemLevel() {
-      if (!getScope())
-        return !getSgLayout() && !getSgData() && !getOrder();
-      return getScope() == ScopeAttr::get(getContext(), Scope::Lane);
+    int64_t getRank() {
+      if (auto attr = getSgLayout())
+        return attr.size();
+      if (auto attr = getLaneLayout())
+        return attr.size();
+      return 0;
     }
   }];
 
