@@ -102,68 +102,24 @@ bool MemoryMappingLayout::Next(MemoryMappedSegment *segment) {
     segment->protection |= kProtectionShared;
 
   if (segment->filename && mapIter->pr_pathoff) {
-    if (type == MA_MAINDATA || type == MA_MAINEXEC) {
-      // AIX procmap does not print full name for the binary, however when using
-      // llvm-symbolizer, it requires the binary must be with full name.
-      const char *BinaryName = GetBinaryName();
-      uptr len =
-          Min((uptr)(internal_strlen(BinaryName)), segment->filename_size - 1);
-      internal_strncpy(segment->filename, BinaryName, len);
-      segment->filename[len] = 0;
-    } else {
-      // AIX library may exist as xxx.a[yyy.o], to find the path to xxx.a,
-      // the [yyy.o] part needs to be removed.
+    uptr len;
+    constexpr unsigned BUFFER_SIZE = 128;
+    char objPath[BUFFER_SIZE] = {};
+    // Use path /proc/<pid>/object/<object_id> to pass to the symbolizer.
+    internal_snprintf(objPath, BUFFER_SIZE, "/proc/%d/object/%s", internal_getpid(), mapIter->pr_mapname);
+    len = Min((uptr)internal_strlen(objPath), segment->filename_size - 1);
+    internal_strncpy(segment->filename, objPath, len);
+    segment->filename[len] = 0;
 
-      // TODO FIXME
-      const char *pathPtr = data_.proc_self_maps.data + mapIter->pr_pathoff;
-      uptr len = Min((uptr)internal_strlen(pathPtr),
-                     segment->filename_size - 1);
-      internal_strncpy(segment->filename, pathPtr, len);
-      segment->filename[len] = 0;
-      // AIX procmap does not print full name for user's library , however when
-      // use llvm-symbolizer, it requires the library must be with full name.
-      if ((type == MA_SLIBTEXT || type == MA_PLIBDATA) &&
-          segment->filename[0] != '/') {
-        // First check if the library is in the directory where the binary is
-        // executed. On AIX, there is no need to put library in same dir with
-        // the binary to path search envs.
-        char *path = nullptr;
-        char buf[kMaxPathLength];
-        unsigned buf_len = kMaxPathLength;
-        bool found = false;
-        if ((path = internal_getcwd(buf, buf_len)) != nullptr) {
-          // if the path is too long, don't do other search either.
-          if (internal_strlen(path) > segment->filename_size - 1)
-            found = true;
-          else {
-            internal_snprintf(
-                buf + internal_strlen(path),
-                segment->filename_size - 1 - internal_strlen(path), "/%s",
-                segment->filename);
-            if (FileExists(buf)) {
-              uptr len =
-                  Min((uptr)(internal_strlen(buf)), segment->filename_size - 1);
-              internal_strncpy(segment->filename, buf, len);
-              segment->filename[len] = 0;
-              found = true;
-            }
-          }
-        }
-        if (!found) {
-          const char *LibName =
-              FindPathToBinaryOrLibrary(segment->filename, "LIBPATH");
-          CHECK(LibName);
-          uptr len =
-              Min((uptr)(internal_strlen(LibName)), segment->filename_size - 1);
-          internal_strncpy(segment->filename, LibName, len);
-          segment->filename[len] = 0;
-	  found = true;
-        }
-        CHECK(found);
-      }
-    }
+    // We don't have the full path to user libraries, so we use what we have available as the
+    // display name.
+    const char *displayPath = data_.proc_self_maps.data + mapIter->pr_pathoff;
+    len = Min((uptr)internal_strlen(displayPath), segment->displayname_size - 1);
+    internal_strncpy(segment->displayname, displayPath, len);
+    segment->displayname[len] = 0;
   } else if (segment->filename) {
     segment->filename[0] = 0;
+    segment->displayname[0] = 0;
   }
 
   assert(mapIter->pr_off == 0 && "expect a zero offset into module.");

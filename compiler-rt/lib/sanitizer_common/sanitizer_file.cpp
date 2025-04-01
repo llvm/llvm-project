@@ -203,12 +203,12 @@ bool ReadFileToVector(const char *file_name,
 
 static const char kPathSeparator = SANITIZER_WINDOWS ? ';' : ':';
 
-char *FindPathToBinaryOrLibrary(const char *name, const char *env_string) {
+char *FindPathToBinary(const char *name, const char *env_string) {
   if (FileExists(name)) {
     return internal_strdup(name);
   }
 
-  const char *path = GetEnv(env_string);
+  const char *path = GetEnv("PATH");
   if (!path)
     return nullptr;
   uptr name_len = internal_strlen(name);

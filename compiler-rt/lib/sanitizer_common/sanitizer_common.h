@@ -290,7 +290,6 @@ uptr ReadBinaryNameCached(/*out*/char *buf, uptr buf_len);
 uptr ReadBinaryDir(/*out*/ char *buf, uptr buf_len);
 uptr ReadLongProcessName(/*out*/ char *buf, uptr buf_len);
 const char *GetProcessName();
-const char *GetBinaryName();
 void UpdateProcessName();
 void CacheBinaryName();
 void DisableCoreDumperIfNecessary();

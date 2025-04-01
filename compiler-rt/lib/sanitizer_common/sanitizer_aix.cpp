@@ -384,7 +384,7 @@ uptr ReadBinaryName(char *buf, uptr buf_len) {
   }
 
   // Find the binary in the env PATH.
-  if ((path = FindPathToBinaryOrLibrary(binary_name)) != nullptr)
+  if ((path = FindPathToBinary(binary_name)) != nullptr)
     return internal_snprintf(buf, buf_len, "%s", path);
 
   return 0;
