@@ -11042,7 +11042,8 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
     else
       Loc = RD->getLocation();
 
-    DeclarationName Name = Context.DeclarationNames.getCXXOperatorName(OO_Delete);
+    DeclarationName Name =
+        Context.DeclarationNames.getCXXOperatorName(OO_Delete);
     // If we have a virtual destructor, look up the deallocation function
     if (FunctionDecl *OperatorDelete =
             FindDeallocationFunctionForDestructor(Loc, RD, Name)) {
