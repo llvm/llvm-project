@@ -11,9 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXTargetStreamer.h"
+#include "NVPTXUtilities.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCObjectFileInfo.h"
+#include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/Casting.h"
 
 using namespace llvm;
 
@@ -88,10 +92,8 @@ void NVPTXTargetStreamer::changeSection(const MCSection *CurSection,
   assert(!SubSection && "SubSection is not null!");
   const MCObjectFileInfo *FI = getStreamer().getContext().getObjectFileInfo();
   // Emit closing brace for DWARF sections only.
-  if (isDwarfSection(FI, CurSection) && HasDWARFSections) {
-    HasDWARFSections = false;
+  if (isDwarfSection(FI, CurSection))
     OS << "\t}\n";
-  }
   if (isDwarfSection(FI, Section)) {
     // Emit DWARF .file directives in the outermost scope.
     outputDwarfFileDirectives();
@@ -102,7 +104,6 @@ void NVPTXTargetStreamer::changeSection(const MCSection *CurSection,
     // DWARF sections are enclosed into braces - emit the open one.
     OS << "\t{\n";
     HasSections = true;
-    HasDWARFSections = true;
   }
 }
 
@@ -138,3 +139,16 @@ void NVPTXTargetStreamer::emitRawBytes(StringRef Data) {
 #endif
 }
 
+void NVPTXTargetStreamer::emitValue(const MCExpr *Value) {
+  if (Value->getKind() == MCExpr::SymbolRef) {
+    const MCSymbolRefExpr &SRE = cast<MCSymbolRefExpr>(*Value);
+    StringRef SymName = SRE.getSymbol().getName();
+    if (!SymName.starts_with(".debug")) {
+      Streamer.emitRawText(NVPTX::getValidPTXIdentifier(SymName));
+      return;
+    }
+    // Fall through to the normal printing.
+  }
+  // Otherwise, print the Value normally.
+  MCTargetStreamer::emitValue(Value);
+}

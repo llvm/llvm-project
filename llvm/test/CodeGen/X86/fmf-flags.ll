@@ -124,13 +124,13 @@ define dso_local float @div_arcp_by_const(half %x) {
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, (%esp)
-; X86-NEXT:    calll __gnu_h2f_ieee
+; X86-NEXT:    calll __extendhfsf2
 ; X86-NEXT:    fmuls {{\.?LCPI[0-9]+_[0-9]+}}
 ; X86-NEXT:    fstps (%esp)
-; X86-NEXT:    calll __gnu_f2h_ieee
+; X86-NEXT:    calll __truncsfhf2
 ; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    movl %eax, (%esp)
-; X86-NEXT:    calll __gnu_h2f_ieee
+; X86-NEXT:    calll __extendhfsf2
 ; X86-NEXT:    popl %eax
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl

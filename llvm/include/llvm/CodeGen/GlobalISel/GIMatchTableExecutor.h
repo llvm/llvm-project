@@ -15,13 +15,16 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_GIMATCHTABLEEXECUTOR_H
 #define LLVM_CODEGEN_GLOBALISEL_GIMATCHTABLEEXECUTOR_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Bitset.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/Function.h"
+#include "llvm/Transforms/Utils/SizeOpts.h"
 #include <bitset>
 #include <cstddef>
 #include <cstdint>
@@ -38,7 +41,7 @@ class MachineBasicBlock;
 class ProfileSummaryInfo;
 class APInt;
 class APFloat;
-class GISelKnownBits;
+class GISelValueTracking;
 class MachineInstr;
 class MachineIRBuilder;
 class MachineInstrBuilder;
@@ -132,6 +135,12 @@ enum {
   /// - InsnID(ULEB128) - Instruction ID
   /// - Ops(ULEB128) - Expected number of operands
   GIM_CheckNumOperands,
+
+  /// Check the instruction has a number of operands <= or >= than given number.
+  /// - InsnID(ULEB128) - Instruction ID
+  /// - Ops(ULEB128) - Number of operands
+  GIM_CheckNumOperandsLE,
+  GIM_CheckNumOperandsGE,
 
   /// Check an immediate predicate on the specified instruction
   /// - InsnID(ULEB128) - Instruction ID
@@ -294,12 +303,15 @@ enum {
   /// Check the specified operands are identical.
   /// The IgnoreCopies variant looks through COPY instructions before
   /// comparing the operands.
+  /// The "All" variants check all operands starting from the index.
   /// - InsnID(ULEB128) - Instruction ID
   /// - OpIdx(ULEB128) - Operand index
   /// - OtherInsnID(ULEB128) - Other instruction ID
   /// - OtherOpIdx(ULEB128) - Other operand index
   GIM_CheckIsSameOperand,
   GIM_CheckIsSameOperandIgnoreCopies,
+  GIM_CheckAllSameOperand,
+  GIM_CheckAllSameOperandIgnoreCopies,
 
   /// Check we can replace all uses of a register with another.
   /// - OldInsnID(ULEB128)
@@ -361,6 +373,13 @@ enum {
   GIR_Copy,
   /// GIR_Copy but with both New/OldInsnIDs omitted and defaulting to zero.
   GIR_RootToRootCopy,
+
+  /// Copies all operand starting from OpIdx in OldInsnID into the new
+  /// instruction NewInsnID.
+  /// - NewInsnID(ULEB128) - Instruction ID to modify
+  /// - OldInsnID(ULEB128) - Instruction ID to copy from
+  /// - OpIdx(ULEB128) - The first operand to copy
+  GIR_CopyRemaining,
 
   /// Copy an operand to the specified instruction or add a zero register if the
   /// operand is a zero immediate.
@@ -569,7 +588,7 @@ public:
   virtual ~GIMatchTableExecutor() = default;
 
   CodeGenCoverage *CoverageInfo = nullptr;
-  GISelKnownBits *KB = nullptr;
+  GISelValueTracking *VT = nullptr;
   MachineFunction *MF = nullptr;
   ProfileSummaryInfo *PSI = nullptr;
   BlockFrequencyInfo *BFI = nullptr;
@@ -579,12 +598,12 @@ public:
   virtual void setupGeneratedPerFunctionState(MachineFunction &MF) = 0;
 
   /// Setup per-MF executor state.
-  virtual void setupMF(MachineFunction &mf, GISelKnownBits *kb,
+  virtual void setupMF(MachineFunction &mf, GISelValueTracking *vt,
                        CodeGenCoverage *covinfo = nullptr,
                        ProfileSummaryInfo *psi = nullptr,
                        BlockFrequencyInfo *bfi = nullptr) {
     CoverageInfo = covinfo;
-    KB = kb;
+    VT = vt;
     MF = &mf;
     PSI = psi;
     BFI = bfi;
@@ -601,7 +620,7 @@ protected:
   struct MatcherState {
     std::vector<ComplexRendererFns::value_type> Renderers;
     RecordedMIVector MIs;
-    DenseMap<unsigned, unsigned> TempRegisters;
+    DenseMap<unsigned, Register> TempRegisters;
     /// Named operands that predicate with 'let PredicateCodeUsesOperands = 1'
     /// referenced in its argument list. Operands are inserted at index set by
     /// emitter, it corresponds to the order in which names appear in argument
@@ -617,8 +636,12 @@ protected:
 
   bool shouldOptForSize(const MachineFunction *MF) const {
     const auto &F = MF->getFunction();
-    return F.hasOptSize() || F.hasMinSize() ||
-           (PSI && BFI && CurMBB && llvm::shouldOptForSize(*CurMBB, PSI, BFI));
+    if (F.hasOptSize())
+      return true;
+    if (CurMBB)
+      if (auto *BB = CurMBB->getBasicBlock())
+        return llvm::shouldOptimizeForSize(BB, PSI, BFI);
+    return false;
   }
 
 public:
@@ -711,6 +734,12 @@ protected:
     Ty Ret;
     memcpy(&Ret, MatchTable, sizeof(Ret));
     return Ret;
+  }
+
+  static ArrayRef<MachineOperand> getRemainingOperands(const MachineInstr &MI,
+                                                       unsigned FirstVarOp) {
+    auto Operands = drop_begin(MI.operands(), FirstVarOp);
+    return {Operands.begin(), Operands.end()};
   }
 
 public:

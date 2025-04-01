@@ -48,12 +48,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Opts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Opts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr opt::OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
@@ -63,7 +64,8 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class LibtoolDarwinOptTable : public opt::GenericOptTable {
 public:
-  LibtoolDarwinOptTable() : GenericOptTable(InfoTable) {}
+  LibtoolDarwinOptTable()
+      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
 };
 } // end anonymous namespace
 
@@ -183,7 +185,7 @@ static Error validateArchitectureName(StringRef ArchitectureName) {
     return createStringError(
         std::errc::invalid_argument,
         "invalid architecture '%s': valid architecture names are %s",
-        ArchitectureName.str().c_str(), OS.str().c_str());
+        ArchitectureName.str().c_str(), Buf.c_str());
   }
   return Error::success();
 }

@@ -1,6 +1,6 @@
 // RUN: %clang -target armv6-apple-darwin9 -c %s -### 2>&1 | \
-// RUN:   FileCheck --check-prefix=CHECK-VERSION-OSX %s
-// CHECK-VERSION-OSX: "armv6k-apple-macosx10.5.0"
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-IOS %s
+// CHECK-VERSION-IOS: "armv6k-apple-ios5.0.0"
 // RUN: %clang -target armv6-apple-darwin9 -miphoneos-version-min=2.0 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-IOS2 %s
 // CHECK-VERSION-IOS2: "armv6k-apple-ios2.0.0"

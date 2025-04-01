@@ -1,24 +1,33 @@
+//===-- Unittests for str_to_float<double> --------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "src/__support/macros/config.h"
 #include "str_to_fp_test.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 using LlvmLibcStrToDblTest = LlvmLibcStrToFloatTest<double>;
 
 TEST_F(LlvmLibcStrToDblTest, ClingerFastPathFloat64Simple) {
-  clinger_fast_path_test(123, 0, 0xEC00000000000, 1029);
-  clinger_fast_path_test(1234567890123456, 1, 0x5ee2a2eb5a5c0, 1076);
-  clinger_fast_path_test(1234567890, -10, 0xf9add3739635f, 1019);
+  clinger_fast_path_test(123, 0, 0x1EC00000000000, 1029);
+  clinger_fast_path_test(1234567890123456, 1, 0x15ee2a2eb5a5c0, 1076);
+  clinger_fast_path_test(1234567890, -10, 0x1f9add3739635f, 1019);
 }
 
 TEST_F(LlvmLibcStrToDblTest, ClingerFastPathFloat64ExtendedExp) {
-  clinger_fast_path_test(1, 30, 0x93e5939a08cea, 1122);
-  clinger_fast_path_test(1, 37, 0xe17b84357691b, 1145);
+  clinger_fast_path_test(1, 30, 0x193e5939a08cea, 1122);
+  clinger_fast_path_test(1, 37, 0x1e17b84357691b, 1145);
   clinger_fast_path_fails_test(10, 37);
   clinger_fast_path_fails_test(1, 100);
 }
 
 TEST_F(LlvmLibcStrToDblTest, ClingerFastPathFloat64NegativeExp) {
-  clinger_fast_path_test(1, -10, 0xb7cdfd9d7bdbb, 989);
-  clinger_fast_path_test(1, -20, 0x79ca10c924223, 956);
+  clinger_fast_path_test(1, -10, 0x1b7cdfd9d7bdbb, 989);
+  clinger_fast_path_test(1, -20, 0x179ca10c924223, 956);
   clinger_fast_path_fails_test(1, -25);
 }
 
@@ -95,11 +104,11 @@ TEST(LlvmLibcStrToDblTest, SimpleDecimalConversionExtraTypes) {
       internal::simple_decimal_conversion<double>("123456789012345678900");
 
   double_output_mantissa = double_result.num.mantissa;
-  output_exp2 = double_result.num.exponent;
+  output_exp2 = static_cast<uint32_t>(double_result.num.exponent);
 
   EXPECT_EQ(double_output_mantissa, uint64_t(0x1AC53A7E04BCDA));
   EXPECT_EQ(output_exp2, uint32_t(1089));
   EXPECT_EQ(double_result.error, 0);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

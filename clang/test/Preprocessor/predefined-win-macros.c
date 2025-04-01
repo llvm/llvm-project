@@ -56,7 +56,12 @@
 // RUN: %clang_cc1 %s -x c++ -E -dM -triple i686-pc-win32 -fms-extensions -fms-compatibility \
 // RUN:     -fms-compatibility-version=19.00 -std=c++23 -o - | FileCheck -match-full-lines %s --check-prefix=CHECK-MS-CPP2B
 // CHECK-MS-CPP2B: #define _MSC_VER 1900
-// CHECK-MS-CPP2B: #define _MSVC_LANG 202004L
+// CHECK-MS-CPP2B: #define _MSVC_LANG 202302L
+
+// RUN: %clang_cc1 %s -x c++ -E -dM -triple i686-pc-win32 -fms-extensions -fms-compatibility \
+// RUN:     -fms-compatibility-version=19.00 -std=c++26 -o - | FileCheck -match-full-lines %s --check-prefix=CHECK-MS-CPP2C
+// CHECK-MS-CPP2C: #define _MSC_VER 1900
+// CHECK-MS-CPP2C: #define _MSVC_LANG 202400L
 
 // RUN: %clang_cc1 -triple i386-windows %s -E -dM -o - \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-X86-WIN
@@ -107,6 +112,13 @@
 // CHECK-ARM64EC-WIN: #define _M_X64 100
 // CHECK-ARM64EC-WIN: #define _WIN32 1
 // CHECK-ARM64EC-WIN: #define _WIN64 1
+
+// RUN: %clang_cc1 -triple mipsel-windows %s -E -dM -o - \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-MIPSEL-WIN
+
+// CHECK-MIPSEL-WIN: #define _M_MRX000 4000
+// CHECK-MIPSEL-WIN: #define _WIN32 1
+// CHECK-MIPSEL-WIN-NOT: #define _MIPS_ 1
 
 // RUN: %clang_cc1 -triple i686-windows-gnu %s -E -dM -o - \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-X86-MINGW
@@ -168,3 +180,12 @@
 // CHECK-ARM64EC-MINGW: #define __arm64ec__ 1
 // CHECK-ARM64EC-MINGW: #define __x86_64 1
 // CHECK-ARM64EC-MINGW: #define __x86_64__ 1
+
+// RUN: %clang_cc1 -triple mipsel-windows-gnu %s -E -dM -o - \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-MIPSEL-MINGW
+
+// CHECK-MIPSEL-MINGW-NOT: #define _M_MRX000 4000
+// CHECK-MIPSEL-MINGW: #define _MIPS_ 1
+// CHECK-MIPSEL-MINGW: #define _WIN32 1
+// CHECK-MIPSEL-MINGW: #define __mips 32
+// CHECK-MIPSEL-MINGW: #define __mips__ 1

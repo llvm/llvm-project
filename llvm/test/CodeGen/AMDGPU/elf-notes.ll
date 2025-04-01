@@ -66,7 +66,8 @@
 ; OSABI-PAL-ELF: amdpal.pipelines:
 ; OSABI-PAL-ELF:   - .hardware_stages:
 ; OSABI-PAL-ELF:       .cs:
-; OSABI-PAL-ELF:         .entry_point:    elf_notes
+; OSABI-PAL-ELF:         .entry_point:    _amdgpu_cs
+; OSABI-PAL-ELF:         .entry_point_symbol:    elf_notes
 ; OSABI-PAL-ELF:         .scratch_memory_size: 0
 ; OSABI-PAL-ELF:         .sgpr_count:     96
 ; OSABI-PAL-ELF:         .vgpr_count:     1
@@ -80,9 +81,11 @@
 ; R600-NOT: .amd_amdgpu_hsa_metadata
 ; R600-NOT: .amd_amdgpu_pal_metadata
 
-define amdgpu_kernel void @elf_notes() {
+define amdgpu_kernel void @elf_notes() #0 {
   ret void
 }
+
+attributes #0 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

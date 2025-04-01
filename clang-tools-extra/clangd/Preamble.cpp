@@ -613,23 +613,22 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
         for (const auto &L : ASTListeners)
           L->sawDiagnostic(D, Diag);
       });
+  auto VFS = Inputs.TFS->view(Inputs.CompileCommand.Directory);
   llvm::IntrusiveRefCntPtr<DiagnosticsEngine> PreambleDiagsEngine =
-      CompilerInstance::createDiagnostics(&CI.getDiagnosticOpts(),
+      CompilerInstance::createDiagnostics(*VFS, &CI.getDiagnosticOpts(),
                                           &PreambleDiagnostics,
                                           /*ShouldOwnClient=*/false);
   const Config &Cfg = Config::current();
   PreambleDiagnostics.setLevelAdjuster([&](DiagnosticsEngine::Level DiagLevel,
                                            const clang::Diagnostic &Info) {
     if (Cfg.Diagnostics.SuppressAll ||
-        isBuiltinDiagnosticSuppressed(Info.getID(), Cfg.Diagnostics.Suppress,
-                                      CI.getLangOpts()))
+        isDiagnosticSuppressed(Info, Cfg.Diagnostics.Suppress,
+                               CI.getLangOpts()))
       return DiagnosticsEngine::Ignored;
     switch (Info.getID()) {
     case diag::warn_no_newline_eof:
-    case diag::warn_cxx98_compat_no_newline_eof:
-    case diag::ext_no_newline_eof:
       // If the preamble doesn't span the whole file, drop the no newline at
-      // eof warnings.
+      // eof warning.
       return Bounds.Size != ContentsBuffer->getBufferSize()
                  ? DiagnosticsEngine::Level::Ignored
                  : DiagLevel;
@@ -651,7 +650,6 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
         for (const auto &L : ASTListeners)
           L->beforeExecute(CI);
       });
-  auto VFS = Inputs.TFS->view(Inputs.CompileCommand.Directory);
   llvm::SmallString<32> AbsFileName(FileName);
   VFS->makeAbsolute(AbsFileName);
   auto StatCache = std::make_shared<PreambleFileStatusCache>(AbsFileName);
@@ -664,6 +662,7 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
       CI, ContentsBuffer.get(), Bounds, *PreambleDiagsEngine,
       Stats ? TimedFS : StatCacheFS, std::make_shared<PCHContainerOperations>(),
       StoreInMemory, /*StoragePath=*/"", CapturedInfo);
+
   PreambleTimer.stopTimer();
 
   // We have to setup DiagnosticConsumer that will be alife
@@ -672,7 +671,6 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
   // Reset references to ref-counted-ptrs before executing the callbacks, to
   // prevent resetting them concurrently.
   PreambleDiagsEngine.reset();
-  CI.DiagnosticOpts.reset();
 
   // When building the AST for the main file, we do want the function
   // bodies.
@@ -696,6 +694,19 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
     Result->Includes = CapturedInfo.takeIncludes();
     Result->Pragmas = std::make_shared<const include_cleaner::PragmaIncludes>(
         CapturedInfo.takePragmaIncludes());
+
+    if (Inputs.ModulesManager) {
+      WallTimer PrerequisiteModuleTimer;
+      PrerequisiteModuleTimer.startTimer();
+      Result->RequiredModules =
+          Inputs.ModulesManager->buildPrerequisiteModulesFor(FileName,
+                                                             *Inputs.TFS);
+      PrerequisiteModuleTimer.stopTimer();
+
+      log("Built prerequisite modules for file {0} in {1} seconds", FileName,
+          PrerequisiteModuleTimer.getTime());
+    }
+
     Result->Macros = CapturedInfo.takeMacros();
     Result->Marks = CapturedInfo.takeMarks();
     Result->StatCache = StatCache;
@@ -737,7 +748,9 @@ bool isPreambleCompatible(const PreambleData &Preamble,
   auto VFS = Inputs.TFS->view(Inputs.CompileCommand.Directory);
   return compileCommandsAreEqual(Inputs.CompileCommand,
                                  Preamble.CompileCommand) &&
-         Preamble.Preamble.CanReuse(CI, *ContentsBuffer, Bounds, *VFS);
+         Preamble.Preamble.CanReuse(CI, *ContentsBuffer, Bounds, *VFS) &&
+         (!Preamble.RequiredModules ||
+          Preamble.RequiredModules->canReuse(CI, VFS));
 }
 
 void escapeBackslashAndQuotes(llvm::StringRef Text, llvm::raw_ostream &OS) {
@@ -897,7 +910,6 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
   PP.PatchedMarks = std::move(ModifiedScan->Marks);
   PP.PatchedMacros = std::move(ModifiedScan->Macros);
   dlog("Created preamble patch: {0}", Patch.str());
-  Patch.flush();
   return PP;
 }
 

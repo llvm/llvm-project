@@ -65,7 +65,7 @@ end
 ! CHECK:         %[[VAL_46:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         %[[VAL_47:.*]] = fir.convert %[[VAL_40]] : (index) -> i64
 ! CHECK:         %[[VAL_48:.*]] = fir.convert %[[VAL_44]] : (index) -> i64
-! CHECK:         %[[VAL_49:.*]] = fir.call @_FortranAPointerSetBounds(%[[VAL_46]], %[[VAL_45]], %[[VAL_47]], %[[VAL_48]]) {{.*}}: (!fir.ref<!fir.box<none>>, i32, i64, i64) -> none
+! CHECK:         fir.call @_FortranAPointerSetBounds(%[[VAL_46]], %[[VAL_45]], %[[VAL_47]], %[[VAL_48]]) {{.*}}: (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
 ! CHECK:         %[[VAL_50:.*]] = arith.constant 1 : index
 ! CHECK:         %[[VAL_51:.*]]:3 = fir.box_dims %[[VAL_35]], %[[VAL_50]] : (!fir.box<!fir.array<?x?xi32>>, index) -> (index, index, index)
 ! CHECK:         %[[VAL_52:.*]] = arith.addi %[[VAL_51]]#1, %[[VAL_40]] : index
@@ -74,16 +74,16 @@ end
 ! CHECK:         %[[VAL_55:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         %[[VAL_56:.*]] = fir.convert %[[VAL_40]] : (index) -> i64
 ! CHECK:         %[[VAL_57:.*]] = fir.convert %[[VAL_53]] : (index) -> i64
-! CHECK:         %[[VAL_58:.*]] = fir.call @_FortranAPointerSetBounds(%[[VAL_55]], %[[VAL_54]], %[[VAL_56]], %[[VAL_57]]) {{.*}}: (!fir.ref<!fir.box<none>>, i32, i64, i64) -> none
+! CHECK:         fir.call @_FortranAPointerSetBounds(%[[VAL_55]], %[[VAL_54]], %[[VAL_56]], %[[VAL_57]]) {{.*}}: (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
 ! CHECK:         %[[VAL_59:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         %[[VAL_60:.*]] = fir.convert %[[VAL_35]] : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<none>
 ! CHECK:         %[[VAL_62:.*]] = fir.call @_FortranAPointerAllocateSource(%[[VAL_59]], %[[VAL_60]], %[[VAL_30]], %[[VAL_31]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
-! CHECK:         %[[VAL_76:.*]] = fir.call @_FortranAPointerSetBounds(
-! CHECK:         %[[VAL_85:.*]] = fir.call @_FortranAPointerSetBounds(
+! CHECK:         fir.call @_FortranAPointerSetBounds(
+! CHECK:         fir.call @_FortranAPointerSetBounds(
 ! CHECK:         %[[VAL_89:.*]] = fir.call @_FortranAPointerAllocateSource(
 ! CHECK:         %[[VAL_90:.*]] = arith.constant true
-! CHECK:         %[[VAL_122:.*]] = fir.call @_FortranAPointerSetBounds(
-! CHECK:         %[[VAL_131:.*]] = fir.call @_FortranAPointerSetBounds(
+! CHECK:         fir.call @_FortranAPointerSetBounds(
+! CHECK:         fir.call @_FortranAPointerSetBounds(
 ! CHECK:         %[[VAL_135:.*]] = fir.call @_FortranAPointerAllocateSource(%{{.*}}, %{{.*}}, %[[VAL_90]]
 
 subroutine test_pointer_2d_array(n, a)
@@ -131,7 +131,7 @@ end
 ! CHECK:         %[[VAL_32:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         %[[VAL_33:.*]] = fir.convert %[[VAL_29]] : (i32) -> i64
 ! CHECK:         %[[VAL_34:.*]] = fir.convert %[[VAL_30]] : (i32) -> i64
-! CHECK:         %[[VAL_35:.*]] = fir.call @_FortranAPointerSetBounds(%[[VAL_32]], %[[VAL_31]], %[[VAL_33]], %[[VAL_34]]) {{.*}}: (!fir.ref<!fir.box<none>>, i32, i64, i64) -> none
+! CHECK:         fir.call @_FortranAPointerSetBounds(%[[VAL_32]], %[[VAL_31]], %[[VAL_33]], %[[VAL_34]]) {{.*}}: (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
 ! CHECK:         %[[VAL_36:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         %[[VAL_37:.*]] = fir.convert %[[VAL_24]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
 ! CHECK:         %[[VAL_39:.*]] = fir.call @_FortranAPointerAllocateSource(%[[VAL_36]], %[[VAL_37]], %[[VAL_19]], %[[VAL_20]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
@@ -146,7 +146,7 @@ end
 ! CHECK:         %[[VAL_47:.*]] = fir.convert %[[VAL_8]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         %[[VAL_48:.*]] = fir.convert %[[VAL_44]] : (index) -> i64
 ! CHECK:         %[[VAL_49:.*]] = fir.convert %[[VAL_45]] : (i32) -> i64
-! CHECK:         %[[VAL_50:.*]] = fir.call @_FortranAPointerSetBounds(%[[VAL_47]], %[[VAL_46]], %[[VAL_48]], %[[VAL_49]]) {{.*}}: (!fir.ref<!fir.box<none>>, i32, i64, i64) -> none
+! CHECK:         fir.call @_FortranAPointerSetBounds(%[[VAL_47]], %[[VAL_46]], %[[VAL_48]], %[[VAL_49]]) {{.*}}: (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
 ! CHECK:         %[[VAL_51:.*]] = fir.convert %[[VAL_8]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         %[[VAL_52:.*]] = fir.convert %[[VAL_24]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
 ! CHECK:         %[[VAL_54:.*]] = fir.call @_FortranAPointerAllocateSource(%[[VAL_51]], %[[VAL_52]], %[[VAL_19]], %[[VAL_20]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
@@ -203,7 +203,7 @@ end
 ! CHECK:         %[[VAL_40:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         %[[VAL_41:.*]] = fir.convert %[[VAL_34]] : (index) -> i64
 ! CHECK:         %[[VAL_42:.*]] = fir.convert %[[VAL_38]] : (index) -> i64
-! CHECK:         %[[VAL_43:.*]] = fir.call @_FortranAPointerSetBounds(%[[VAL_40]], %[[VAL_39]], %[[VAL_41]], %[[VAL_42]]) {{.*}}: (!fir.ref<!fir.box<none>>, i32, i64, i64) -> none
+! CHECK:         fir.call @_FortranAPointerSetBounds(%[[VAL_40]], %[[VAL_39]], %[[VAL_41]], %[[VAL_42]]) {{.*}}: (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
 ! CHECK:         %[[VAL_44:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         %[[VAL_45:.*]] = fir.convert %[[VAL_29]] : (!fir.box<!fir.array<5xi32>>) -> !fir.box<none>
 ! CHECK:         %[[VAL_47:.*]] = fir.call @_FortranAPointerAllocateSource(%[[VAL_44]], %[[VAL_45]], %[[VAL_7]], %[[VAL_8]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
@@ -253,7 +253,7 @@ end
 ! CHECK:         %[[VAL_31:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,4>>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         %[[VAL_32:.*]] = fir.convert %[[VAL_25]] : (index) -> i64
 ! CHECK:         %[[VAL_33:.*]] = fir.convert %[[VAL_29]] : (index) -> i64
-! CHECK:         %[[VAL_34:.*]] = fir.call @_FortranAPointerSetBounds(%[[VAL_31]], %[[VAL_30]], %[[VAL_32]], %[[VAL_33]]) {{.*}}: (!fir.ref<!fir.box<none>>, i32, i64, i64) -> none
+! CHECK:         fir.call @_FortranAPointerSetBounds(%[[VAL_31]], %[[VAL_30]], %[[VAL_32]], %[[VAL_33]]) {{.*}}: (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
 ! CHECK:         %[[VAL_35:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,4>>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         %[[VAL_36:.*]] = fir.convert %[[VAL_20]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> !fir.box<none>
 ! CHECK:         %[[VAL_38:.*]] = fir.call @_FortranAPointerAllocateSource(%[[VAL_35]], %[[VAL_36]], %[[VAL_15]], %[[VAL_16]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
@@ -290,7 +290,7 @@ end
 ! CHECK:         %[[VAL_18:.*]] = arith.constant 1 : i32
 ! CHECK:         %[[VAL_19:.*]] = arith.constant 0 : i32
 ! CHECK:         %[[VAL_20:.*]] = arith.constant 0 : i32
-! CHECK:         %[[VAL_21:.*]] = fir.call @_FortranAPointerNullifyCharacter(%[[VAL_16]], %[[VAL_17]], %[[VAL_18]], %[[VAL_19]], %[[VAL_20]]) {{.*}}: (!fir.ref<!fir.box<none>>, i64, i32, i32, i32) -> none
+! CHECK:         fir.call @_FortranAPointerNullifyCharacter(%[[VAL_16]], %[[VAL_17]], %[[VAL_18]], %[[VAL_19]], %[[VAL_20]]) {{.*}}: (!fir.ref<!fir.box<none>>, i64, i32, i32, i32) -> ()
 ! CHECK:         %[[VAL_22:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         %[[VAL_23:.*]] = fir.convert %[[VAL_11]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
 ! CHECK:         %[[VAL_25:.*]] = fir.call @_FortranAPointerAllocateSource(%[[VAL_22]], %[[VAL_23]], %[[VAL_7]], %[[VAL_8]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
@@ -339,7 +339,7 @@ end
 ! CHECK:         %[[VAL_25:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFtest_pointer_derived_typeTt{x:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         %[[VAL_26:.*]] = fir.convert %[[VAL_12]]#0 : (index) -> i64
 ! CHECK:         %[[VAL_27:.*]] = fir.convert %[[VAL_23]] : (index) -> i64
-! CHECK:         %[[VAL_28:.*]] = fir.call @_FortranAPointerSetBounds(%[[VAL_25]], %[[VAL_24]], %[[VAL_26]], %[[VAL_27]]) {{.*}}: (!fir.ref<!fir.box<none>>, i32, i64, i64) -> none
+! CHECK:         fir.call @_FortranAPointerSetBounds(%[[VAL_25]], %[[VAL_24]], %[[VAL_26]], %[[VAL_27]]) {{.*}}: (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
 ! CHECK:         %[[VAL_29:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFtest_pointer_derived_typeTt{x:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         %[[VAL_30:.*]] = fir.convert %[[VAL_14]] : (!fir.box<!fir.array<?x!fir.type<_QFtest_pointer_derived_typeTt{x:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>>) -> !fir.box<none>
 ! CHECK:         %[[VAL_32:.*]] = fir.call @_FortranAPointerAllocateSource(%[[VAL_29]], %[[VAL_30]], %[[VAL_6]], %[[VAL_7]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32

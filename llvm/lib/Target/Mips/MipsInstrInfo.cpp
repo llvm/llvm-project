@@ -13,6 +13,7 @@
 #include "MipsInstrInfo.h"
 #include "MCTargetDesc/MipsBaseInfo.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
+#include "Mips.h"
 #include "MipsSubtarget.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -571,6 +572,13 @@ unsigned MipsInstrInfo::getEquivalentCompactForm(
   return 0;
 }
 
+bool MipsInstrInfo::SafeAfterMflo(const MachineInstr &MI) const {
+  if (IsDIVMULT(MI.getOpcode()))
+    return false;
+
+  return true;
+}
+
 /// Predicate for distingushing between control transfer instructions and all
 /// other instructions for handling forbidden slots. Consider inline assembly
 /// as unsafe as well.
@@ -623,6 +631,13 @@ bool MipsInstrInfo::SafeInLoadDelaySlot(const MachineInstr &MIInSlot,
   });
 }
 
+bool MipsInstrInfo::IsMfloOrMfhi(const MachineInstr &MI) const {
+  if (IsMFLOMFHI(MI.getOpcode()))
+    return true;
+
+  return false;
+}
+
 /// Predicate for distingushing instructions that have forbidden slots.
 bool MipsInstrInfo::HasForbiddenSlot(const MachineInstr &MI) const {
   return (MI.getDesc().TSFlags & MipsII::HasForbiddenSlot) != 0;
@@ -661,6 +676,22 @@ bool MipsInstrInfo::HasLoadDelaySlot(const MachineInstr &MI) const {
   default:
     return false;
   }
+}
+
+bool MipsInstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
+  const unsigned Opcode = MI.getOpcode();
+  switch (Opcode) {
+  default:
+    break;
+  case Mips::ADDiu:
+  case Mips::ADDiu_MM:
+  case Mips::DADDiu:
+    return ((MI.getOperand(2).isImm() && MI.getOperand(2).getImm() == 0) ||
+            (MI.getOperand(1).isReg() &&
+             (MI.getOperand(1).getReg() == Mips::ZERO ||
+              MI.getOperand(1).getReg() == Mips::ZERO_64)));
+  }
+  return MI.isAsCheapAsAMove();
 }
 
 /// Return the number of bytes of code the specified instruction may be.

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s
+; RUN: llc -mtriple=hexagon < %s
 ; REQUIRES: asserts
 
 ; The register coalescer created (via rematerialization) a definition of

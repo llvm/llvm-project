@@ -9,22 +9,22 @@
 #ifndef MLIR_BINDINGS_PYTHON_GLOBALS_H
 #define MLIR_BINDINGS_PYTHON_GLOBALS_H
 
-#include "PybindUtils.h"
+#include <optional>
+#include <string>
+#include <vector>
 
+#include "NanobindUtils.h"
 #include "mlir-c/IR.h"
 #include "mlir/CAPI/Support.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 
-#include <optional>
-#include <string>
-#include <vector>
-
 namespace mlir {
 namespace python {
 
 /// Globals that are always accessible once the extension has been initialized.
+/// Methods of this class are thread-safe.
 class PyGlobals {
 public:
   PyGlobals();
@@ -38,11 +38,17 @@ public:
 
   /// Get and set the list of parent modules to search for dialect
   /// implementation classes.
-  std::vector<std::string> &getDialectSearchPrefixes() {
+  std::vector<std::string> getDialectSearchPrefixes() {
+    nanobind::ft_lock_guard lock(mutex);
     return dialectSearchPrefixes;
   }
   void setDialectSearchPrefixes(std::vector<std::string> newValues) {
+    nanobind::ft_lock_guard lock(mutex);
     dialectSearchPrefixes.swap(newValues);
+  }
+  void addDialectSearchPrefix(std::string value) {
+    nanobind::ft_lock_guard lock(mutex);
+    dialectSearchPrefixes.push_back(std::move(value));
   }
 
   /// Loads a python module corresponding to the given dialect namespace.
@@ -57,71 +63,74 @@ public:
   /// Raises an exception if the mapping already exists and replace == false.
   /// This is intended to be called by implementation code.
   void registerAttributeBuilder(const std::string &attributeKind,
-                                pybind11::function pyFunc,
+                                nanobind::callable pyFunc,
                                 bool replace = false);
 
   /// Adds a user-friendly type caster. Raises an exception if the mapping
   /// already exists and replace == false. This is intended to be called by
   /// implementation code.
-  void registerTypeCaster(MlirTypeID mlirTypeID, pybind11::function typeCaster,
+  void registerTypeCaster(MlirTypeID mlirTypeID, nanobind::callable typeCaster,
                           bool replace = false);
 
   /// Adds a user-friendly value caster. Raises an exception if the mapping
   /// already exists and replace == false. This is intended to be called by
   /// implementation code.
   void registerValueCaster(MlirTypeID mlirTypeID,
-                           pybind11::function valueCaster,
+                           nanobind::callable valueCaster,
                            bool replace = false);
 
   /// Adds a concrete implementation dialect class.
   /// Raises an exception if the mapping already exists.
   /// This is intended to be called by implementation code.
   void registerDialectImpl(const std::string &dialectNamespace,
-                           pybind11::object pyClass);
+                           nanobind::object pyClass);
 
   /// Adds a concrete implementation operation class.
   /// Raises an exception if the mapping already exists and replace == false.
   /// This is intended to be called by implementation code.
   void registerOperationImpl(const std::string &operationName,
-                             pybind11::object pyClass, bool replace = false);
+                             nanobind::object pyClass, bool replace = false);
 
   /// Returns the custom Attribute builder for Attribute kind.
-  std::optional<pybind11::function>
+  std::optional<nanobind::callable>
   lookupAttributeBuilder(const std::string &attributeKind);
 
   /// Returns the custom type caster for MlirTypeID mlirTypeID.
-  std::optional<pybind11::function> lookupTypeCaster(MlirTypeID mlirTypeID,
+  std::optional<nanobind::callable> lookupTypeCaster(MlirTypeID mlirTypeID,
                                                      MlirDialect dialect);
 
   /// Returns the custom value caster for MlirTypeID mlirTypeID.
-  std::optional<pybind11::function> lookupValueCaster(MlirTypeID mlirTypeID,
+  std::optional<nanobind::callable> lookupValueCaster(MlirTypeID mlirTypeID,
                                                       MlirDialect dialect);
 
   /// Looks up a registered dialect class by namespace. Note that this may
   /// trigger loading of the defining module and can arbitrarily re-enter.
-  std::optional<pybind11::object>
+  std::optional<nanobind::object>
   lookupDialectClass(const std::string &dialectNamespace);
 
   /// Looks up a registered operation class (deriving from OpView) by operation
   /// name. Note that this may trigger a load of the dialect, which can
   /// arbitrarily re-enter.
-  std::optional<pybind11::object>
+  std::optional<nanobind::object>
   lookupOperationClass(llvm::StringRef operationName);
 
 private:
   static PyGlobals *instance;
+
+  nanobind::ft_mutex mutex;
+
   /// Module name prefixes to search under for dialect implementation modules.
   std::vector<std::string> dialectSearchPrefixes;
   /// Map of dialect namespace to external dialect class object.
-  llvm::StringMap<pybind11::object> dialectClassMap;
+  llvm::StringMap<nanobind::object> dialectClassMap;
   /// Map of full operation name to external operation class object.
-  llvm::StringMap<pybind11::object> operationClassMap;
+  llvm::StringMap<nanobind::object> operationClassMap;
   /// Map of attribute ODS name to custom builder.
-  llvm::StringMap<pybind11::object> attributeBuilderMap;
+  llvm::StringMap<nanobind::callable> attributeBuilderMap;
   /// Map of MlirTypeID to custom type caster.
-  llvm::DenseMap<MlirTypeID, pybind11::object> typeCasterMap;
+  llvm::DenseMap<MlirTypeID, nanobind::callable> typeCasterMap;
   /// Map of MlirTypeID to custom value caster.
-  llvm::DenseMap<MlirTypeID, pybind11::object> valueCasterMap;
+  llvm::DenseMap<MlirTypeID, nanobind::callable> valueCasterMap;
   /// Set of dialect namespaces that we have attempted to import implementation
   /// modules for.
   llvm::StringSet<> loadedDialectModules;

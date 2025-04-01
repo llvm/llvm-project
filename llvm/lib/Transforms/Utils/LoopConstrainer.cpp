@@ -510,7 +510,7 @@ void LoopConstrainer::cloneLoop(LoopConstrainer::ClonedLoop &Result,
       for (PHINode &PN : SBB->phis()) {
         Value *OldIncoming = PN.getIncomingValueForBlock(OriginalBB);
         PN.addIncoming(GetClonedValue(OldIncoming), ClonedBB);
-        SE.forgetValue(&PN);
+        SE.forgetLcssaPhiWithNewPredecessor(&OriginalLoop, &PN);
       }
     }
   }

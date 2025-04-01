@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_DIV_H
 #define LLVM_LIBC_SRC_STDLIB_DIV_H
 
-#include <stdlib.h>
+#include "hdr/types/div_t.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 div_t div(int x, int y);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDLIB_DIV_H

@@ -90,40 +90,38 @@ const char *BeginHeader =
 
 const char *JSForCoverage =
     R"javascript(
-
 function next_uncovered(selector, reverse, scroll_selector) {
   function visit_element(element) {
     element.classList.add("seen");
     element.classList.add("selected");
-  
-  if (!scroll_selector) {
-    scroll_selector = "tr:has(.selected) td.line-number"
+
+    if (!scroll_selector) {
+      scroll_selector = "tr:has(.selected) td.line-number"
+    }
+
+    const scroll_to = document.querySelector(scroll_selector);
+    if (scroll_to) {
+      scroll_to.scrollIntoView({behavior: "smooth", block: "center", inline: "end"});
+    }
   }
-  
-  const scroll_to = document.querySelector(scroll_selector);
-  if (scroll_to) {
-    scroll_to.scrollIntoView({behavior: "smooth", block: "center", inline: "end"});
-  }
-  
-  }
-  
+
   function select_one() {
     if (!reverse) {
       const previously_selected = document.querySelector(".selected");
-      
+
       if (previously_selected) {
         previously_selected.classList.remove("selected");
       }
-      
+
       return document.querySelector(selector + ":not(.seen)");
-    } else {      
+    } else {
       const previously_selected = document.querySelector(".selected");
-      
+
       if (previously_selected) {
         previously_selected.classList.remove("selected");
         previously_selected.classList.remove("seen");
       }
-      
+
       const nodes = document.querySelectorAll(selector + ".seen");
       if (nodes) {
         const last = nodes[nodes.length - 1]; // last
@@ -133,54 +131,52 @@ function next_uncovered(selector, reverse, scroll_selector) {
       }
     }
   }
-  
+
   function reset_all() {
     if (!reverse) {
       const all_seen = document.querySelectorAll(selector + ".seen");
-  
+
       if (all_seen) {
         all_seen.forEach(e => e.classList.remove("seen"));
       }
     } else {
       const all_seen = document.querySelectorAll(selector + ":not(.seen)");
-  
+
       if (all_seen) {
         all_seen.forEach(e => e.classList.add("seen"));
       }
     }
-    
+
   }
-  
+
   const uncovered = select_one();
 
   if (uncovered) {
     visit_element(uncovered);
   } else {
     reset_all();
-    
-    
+
     const uncovered = select_one();
-    
+
     if (uncovered) {
       visit_element(uncovered);
     }
   }
 }
 
-function next_line(reverse) { 
+function next_line(reverse) {
   next_uncovered("td.uncovered-line", reverse)
 }
 
-function next_region(reverse) { 
+function next_region(reverse) {
   next_uncovered("span.red.region", reverse);
 }
 
-function next_branch(reverse) { 
+function next_branch(reverse) {
   next_uncovered("span.red.branch", reverse);
 }
 
 document.addEventListener("keypress", function(event) {
-  console.log(event);
   const reverse = event.shiftKey;
   if (event.code == "KeyL") {
     next_line(reverse);
@@ -191,7 +187,6 @@ document.addEventListener("keypress", function(event) {
   if (event.code == "KeyR") {
     next_region(reverse);
   }
-  
 });
 )javascript";
 
@@ -1024,19 +1019,22 @@ void SourceCoverageViewHTML::renderLine(raw_ostream &OS, LineRef L,
     // Just consider the segments which start *and* end on this line.
     for (unsigned I = 0, E = Segments.size() - 1; I < E; ++I) {
       const auto *CurSeg = Segments[I];
+      auto CurSegCount = BinaryCount(CurSeg->Count);
+      auto LCSCount = BinaryCount(LCS.getExecutionCount());
       if (!CurSeg->IsRegionEntry)
         continue;
-      if (CurSeg->Count == LCS.getExecutionCount())
+      if (CurSegCount == LCSCount)
         continue;
 
       Snippets[I + 1] =
-          tag("div", Snippets[I + 1] + tag("span", formatCount(CurSeg->Count),
-                                           "tooltip-content"),
+          tag("div",
+              Snippets[I + 1] +
+                  tag("span", formatCount(CurSegCount), "tooltip-content"),
               "tooltip");
 
       if (getOptions().Debug)
         errs() << "Marker at " << CurSeg->Line << ":" << CurSeg->Col << " = "
-               << formatCount(CurSeg->Count) << "\n";
+               << formatCount(CurSegCount) << "\n";
     }
   }
 
@@ -1056,7 +1054,7 @@ void SourceCoverageViewHTML::renderLineCoverageColumn(
     raw_ostream &OS, const LineCoverageStats &Line) {
   std::string Count;
   if (Line.isMapped())
-    Count = tag("pre", formatCount(Line.getExecutionCount()));
+    Count = tag("pre", formatBinaryCount(Line.getExecutionCount()));
   std::string CoverageClass =
       (Line.getExecutionCount() > 0)
           ? "covered-line"
@@ -1101,20 +1099,31 @@ void SourceCoverageViewHTML::renderBranchView(raw_ostream &OS, BranchView &BRV,
   if (getOptions().Debug)
     errs() << "Branch at line " << BRV.getLine() << '\n';
 
+  auto BranchCount = [&](StringRef Label, uint64_t Count, bool Folded,
+                         double Total) {
+    if (Folded)
+      return std::string{"Folded"};
+
+    std::string Str;
+    raw_string_ostream OS(Str);
+
+    OS << tag("span", Label, (Count ? "None" : "red branch")) << ": ";
+    if (getOptions().ShowBranchCounts)
+      OS << tag("span", formatBinaryCount(Count),
+                (Count ? "covered-line" : "uncovered-line"));
+    else
+      OS << format("%0.2f", (Total != 0 ? 100.0 * Count / Total : 0.0)) << "%";
+
+    return Str;
+  };
+
   OS << BeginExpansionDiv;
   OS << BeginPre;
   for (const auto &R : BRV.Regions) {
-    // Calculate TruePercent and False Percent.
-    double TruePercent = 0.0;
-    double FalsePercent = 0.0;
-    // FIXME: It may overflow when the data is too large, but I have not
-    // encountered it in actual use, and not sure whether to use __uint128_t.
-    uint64_t Total = R.ExecutionCount + R.FalseExecutionCount;
-
-    if (!getOptions().ShowBranchCounts && Total != 0) {
-      TruePercent = ((double)(R.ExecutionCount) / (double)Total) * 100.0;
-      FalsePercent = ((double)(R.FalseExecutionCount) / (double)Total) * 100.0;
-    }
+    // This can be `double` since it is only used as a denominator.
+    // FIXME: It is still inaccurate if Count is greater than (1LL << 53).
+    double Total =
+        static_cast<double>(R.ExecutionCount) + R.FalseExecutionCount;
 
     // Display Line + Column.
     std::string LineNoStr = utostr(uint64_t(R.LineStart));
@@ -1128,36 +1137,14 @@ void SourceCoverageViewHTML::renderBranchView(raw_ostream &OS, BranchView &BRV,
               "line-number") +
               "): [";
 
-    if (R.Folded) {
+    if (R.TrueFolded && R.FalseFolded) {
       OS << "Folded - Ignored]\n";
       continue;
     }
 
-    // Display TrueCount or TruePercent.
-    std::string TrueColor = R.ExecutionCount ? "None" : "red branch";
-    std::string TrueCovClass =
-        (R.ExecutionCount > 0) ? "covered-line" : "uncovered-line";
-
-    OS << tag("span", "True", TrueColor);
-    OS << ": ";
-    if (getOptions().ShowBranchCounts)
-      OS << tag("span", formatCount(R.ExecutionCount), TrueCovClass) << ", ";
-    else
-      OS << format("%0.2f", TruePercent) << "%, ";
-
-    // Display FalseCount or FalsePercent.
-    std::string FalseColor = R.FalseExecutionCount ? "None" : "red branch";
-    std::string FalseCovClass =
-        (R.FalseExecutionCount > 0) ? "covered-line" : "uncovered-line";
-
-    OS << tag("span", "False", FalseColor);
-    OS << ": ";
-    if (getOptions().ShowBranchCounts)
-      OS << tag("span", formatCount(R.FalseExecutionCount), FalseCovClass);
-    else
-      OS << format("%0.2f", FalsePercent) << "%";
-
-    OS << "]\n";
+    OS << BranchCount("True", R.ExecutionCount, R.TrueFolded, Total) << ", "
+       << BranchCount("False", R.FalseExecutionCount, R.FalseFolded, Total)
+       << "]\n";
   }
   OS << EndPre;
   OS << EndExpansionDiv;
@@ -1204,7 +1191,6 @@ void SourceCoverageViewHTML::renderMCDCView(raw_ostream &OS, MCDCView &MRV,
     OS << EndPre;
     OS << EndExpansionDiv;
   }
-  return;
 }
 
 void SourceCoverageViewHTML::renderInstantiationView(raw_ostream &OS,

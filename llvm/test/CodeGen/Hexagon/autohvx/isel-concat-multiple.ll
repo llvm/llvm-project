@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; This code generates a concat_vectors with more than 2 inputs. Make sure
 ; that this compiles successfully.

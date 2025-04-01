@@ -285,8 +285,8 @@ Dependence on Cycles Headers
 Contradictions in *convergence-before* are possible only between two
 nodes that are inside some cycle. The dynamic instances of such nodes
 may be interleaved in the same thread, and this interleaving may be
-different for different threads.
-
+different for different threads. Cycle headers serve as implicit
+*points of convergence* in the maximal converged-with relation.
 When a thread executes a node ``X`` once and then executes it again,
 it must have followed a closed path in the CFG that includes ``X``.
 Such a path must pass through the header of at least one cycle --- the
@@ -294,14 +294,6 @@ smallest cycle that includes the entire closed path. In a given
 thread, two dynamic instances of ``X`` are either separated by the
 execution of at least one cycle header, or ``X`` itself is a cycle
 header.
-
-In reducible cycles (natural loops), each execution of the header is
-equivalent to the start of a new iteration of the cycle. But this
-analogy breaks down in the presence of explicit constraints on the
-converged-with relation, such as those described in :ref:`future
-work<convergence-note-convergence>`. Instead, cycle headers should be
-treated as implicit *points of convergence* in a maximal
-converged-with relation.
 
 Consider a sequence of nested cycles ``C1``, ``C2``, ..., ``Ck`` such
 that ``C1`` is the outermost cycle and ``Ck`` is the innermost cycle,

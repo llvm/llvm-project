@@ -10,7 +10,6 @@
 #include "CommandObjectMemoryTag.h"
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Core/ValueObjectMemory.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
@@ -36,6 +35,7 @@
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/ValueObject/ValueObjectMemory.h"
 #include "llvm/Support/MathExtras.h"
 #include <cinttypes>
 #include <memory>
@@ -68,7 +68,7 @@ public:
     case 'l':
       error = m_num_per_line.SetValueFromString(option_value);
       if (m_num_per_line.GetCurrentValue() == 0)
-        error.SetErrorStringWithFormat(
+        error = Status::FromErrorStringWithFormat(
             "invalid value for --num-per-line option '%s'",
             option_value.str().c_str());
       break;
@@ -176,7 +176,7 @@ public:
     case eFormatBytesWithASCII:
       if (byte_size_option_set) {
         if (byte_size_value > 1)
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "display format (bytes/bytes with ASCII) conflicts with the "
               "specified byte size %" PRIu64 "\n"
               "\tconsider using a different display format or don't specify "
@@ -519,14 +519,14 @@ protected:
         --pointer_count;
       }
 
-      std::optional<uint64_t> size = compiler_type.GetByteSize(nullptr);
-      if (!size) {
+      auto size_or_err = compiler_type.GetByteSize(nullptr);
+      if (!size_or_err) {
         result.AppendErrorWithFormat(
-            "unable to get the byte size of the type '%s'\n",
-            view_as_type_cstr);
+            "unable to get the byte size of the type '%s'\n%s",
+            view_as_type_cstr, llvm::toString(size_or_err.takeError()).c_str());
         return;
       }
-      m_format_options.GetByteSizeValue() = *size;
+      m_format_options.GetByteSizeValue() = *size_or_err;
 
       if (!m_format_options.GetCountValue().OptionWasSet())
         m_format_options.GetCountValue() = 1;
@@ -639,15 +639,16 @@ protected:
       if (!m_format_options.GetFormatValue().OptionWasSet())
         m_format_options.GetFormatValue().SetCurrentValue(eFormatDefault);
 
-      std::optional<uint64_t> size = compiler_type.GetByteSize(nullptr);
-      if (!size) {
-        result.AppendError("can't get size of type");
+      auto size_or_err = compiler_type.GetByteSize(nullptr);
+      if (!size_or_err) {
+        result.AppendError(llvm::toString(size_or_err.takeError()));
         return;
       }
-      bytes_read = *size * m_format_options.GetCountValue().GetCurrentValue();
+      auto size = *size_or_err;
+      bytes_read = size * m_format_options.GetCountValue().GetCurrentValue();
 
       if (argc > 0)
-        addr = addr + (*size * m_memory_options.m_offset.GetCurrentValue());
+        addr = addr + (size * m_memory_options.m_offset.GetCurrentValue());
     } else if (m_format_options.GetFormatValue().GetCurrentValue() !=
                eFormatCString) {
       data_sp = std::make_shared<DataBufferHeap>(total_byte_size, '\0');
@@ -913,12 +914,12 @@ public:
 
       case 'c':
         if (m_count.SetValueFromString(option_value).Fail())
-          error.SetErrorString("unrecognized value for count");
+          error = Status::FromErrorString("unrecognized value for count");
         break;
 
       case 'o':
         if (m_offset.SetValueFromString(option_value).Fail())
-          error.SetErrorString("unrecognized value for dump-offset");
+          error = Status::FromErrorString("unrecognized value for dump-offset");
         break;
 
       default:
@@ -1034,8 +1035,8 @@ protected:
                frame, result_sp)) &&
           result_sp) {
         uint64_t value = result_sp->GetValueAsUnsigned(0);
-        std::optional<uint64_t> size =
-            result_sp->GetCompilerType().GetByteSize(nullptr);
+        std::optional<uint64_t> size = llvm::expectedToOptional(
+            result_sp->GetCompilerType().GetByteSize(nullptr));
         if (!size)
           return;
         switch (*size) {
@@ -1150,16 +1151,16 @@ public:
         FileSystem::Instance().Resolve(m_infile);
         if (!FileSystem::Instance().Exists(m_infile)) {
           m_infile.Clear();
-          error.SetErrorStringWithFormat("input file does not exist: '%s'",
-                                         option_value.str().c_str());
+          error = Status::FromErrorStringWithFormat(
+              "input file does not exist: '%s'", option_value.str().c_str());
         }
         break;
 
       case 'o': {
         if (option_value.getAsInteger(0, m_infile_offset)) {
           m_infile_offset = 0;
-          error.SetErrorStringWithFormat("invalid offset string '%s'",
-                                         option_value.str().c_str());
+          error = Status::FromErrorStringWithFormat(
+              "invalid offset string '%s'", option_value.str().c_str());
         }
       } break;
 
@@ -1570,7 +1571,8 @@ protected:
 
     const bool stop_format = false;
     for (auto thread : thread_list) {
-      thread->GetStatus(*output_stream, 0, UINT32_MAX, 0, stop_format);
+      thread->GetStatus(*output_stream, 0, UINT32_MAX, 0, stop_format,
+                        /*should_filter*/ false);
     }
 
     result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -1663,6 +1665,9 @@ protected:
     MemoryRegionInfo::OptionalBool memory_tagged = range_info.GetMemoryTagged();
     if (memory_tagged == MemoryRegionInfo::OptionalBool::eYes)
       result.AppendMessage("memory tagging: enabled");
+    MemoryRegionInfo::OptionalBool is_shadow_stack = range_info.IsShadowStack();
+    if (is_shadow_stack == MemoryRegionInfo::OptionalBool::eYes)
+      result.AppendMessage("shadow stack: yes");
 
     const std::optional<std::vector<addr_t>> &dirty_page_list =
         range_info.GetDirtyPageList();
@@ -1736,7 +1741,7 @@ protected:
 
     // It is important that we track the address used to request the region as
     // this will give the correct section name in the case that regions overlap.
-    // On Windows we get mutliple regions that start at the same place but are
+    // On Windows we get multiple regions that start at the same place but are
     // different sizes and refer to different sections.
     std::vector<std::pair<lldb_private::MemoryRegionInfo, lldb::addr_t>>
         region_list;

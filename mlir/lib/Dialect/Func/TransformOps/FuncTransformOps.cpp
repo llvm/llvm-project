@@ -51,8 +51,7 @@ transform::CastAndCallOp::apply(transform::TransformRewriter &rewriter,
 
   SetVector<Value> outputs;
   if (getOutputs()) {
-    for (auto output : state.getPayloadValues(getOutputs()))
-      outputs.insert(output);
+    outputs.insert_range(state.getPayloadValues(getOutputs()));
 
     // Verify that the set of output values to be replaced is unique.
     if (outputs.size() !=
@@ -236,6 +235,8 @@ class FuncTransformDialectExtension
     : public transform::TransformDialectExtension<
           FuncTransformDialectExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(FuncTransformDialectExtension)
+
   using Base::Base;
 
   void init() {

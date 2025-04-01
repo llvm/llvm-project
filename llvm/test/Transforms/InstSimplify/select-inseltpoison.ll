@@ -59,7 +59,7 @@ define <2 x i32> @equal_arms_vec(<2 x i1> %cond, <2 x i32> %x) {
 
 define <2 x i32> @equal_arms_vec_poison(<2 x i1> %cond) {
 ; CHECK-LABEL: @equal_arms_vec_poison(
-; CHECK-NEXT:    ret <2 x i32> <i32 42, i32 42>
+; CHECK-NEXT:    ret <2 x i32> splat (i32 42)
 ;
   %V = select <2 x i1> %cond, <2 x i32> <i32 42, i32 poison>, <2 x i32> <i32 poison, i32 42>
   ret <2 x i32> %V
@@ -265,7 +265,7 @@ define i32 @test11(i32 %X) {
 
 define <2 x i8> @test11vec(<2 x i8> %X) {
 ; CHECK-LABEL: @test11vec(
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[X:%.*]], <i8 127, i8 127>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 127)
 ; CHECK-NEXT:    ret <2 x i8> [[AND]]
 ;
   %cmp = icmp sgt <2 x i8> %X, <i8 -1, i8 -1>
@@ -658,8 +658,8 @@ define i1 @and_cmps(i32 %x) {
 
 define <2 x i1> @and_cmps_vector(<2 x i32> %x) {
 ; CHECK-LABEL: @and_cmps_vector(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt <2 x i32> [[X:%.*]], <i32 92, i32 92>
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt <2 x i32> [[X]], <i32 11, i32 11>
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt <2 x i32> [[X:%.*]], splat (i32 92)
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt <2 x i32> [[X]], splat (i32 11)
 ; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[CMP1]], <2 x i1> [[CMP2]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
@@ -940,13 +940,13 @@ define i1 @expand_binop_undef(i32 %x, i32 %y) {
 define i32 @pr47322_more_poisonous_replacement(i32 %arg) {
 ; CHECK-LABEL: @pr47322_more_poisonous_replacement(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[ARG:%.*]], 0
-; CHECK-NEXT:    [[TRAILING:%.*]] = call i32 @llvm.cttz.i32(i32 [[ARG]], i1 immarg true)
+; CHECK-NEXT:    [[TRAILING:%.*]] = call i32 @llvm.cttz.i32(i32 [[ARG]], i1 true)
 ; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[ARG]], [[TRAILING]]
 ; CHECK-NEXT:    [[R1_SROA_0_1:%.*]] = select i1 [[CMP]], i32 0, i32 [[SHIFTED]]
 ; CHECK-NEXT:    ret i32 [[R1_SROA_0_1]]
 ;
   %cmp = icmp eq i32 %arg, 0
-  %trailing = call i32 @llvm.cttz.i32(i32 %arg, i1 immarg true)
+  %trailing = call i32 @llvm.cttz.i32(i32 %arg, i1 true)
   %shifted = lshr i32 %arg, %trailing
   %r1.sroa.0.1 = select i1 %cmp, i32 0, i32 %shifted
   ret i32 %r1.sroa.0.1

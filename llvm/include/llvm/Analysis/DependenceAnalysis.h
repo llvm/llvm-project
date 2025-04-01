@@ -303,12 +303,8 @@ namespace llvm {
     /// depends - Tests for a dependence between the Src and Dst instructions.
     /// Returns NULL if no dependence; otherwise, returns a Dependence (or a
     /// FullDependence) with as much information as can be gleaned.
-    /// The flag PossiblyLoopIndependent should be set by the caller
-    /// if it appears that control flow can reach from Src to Dst
-    /// without traversing a loop back edge.
     std::unique_ptr<Dependence> depends(Instruction *Src,
-                                        Instruction *Dst,
-                                        bool PossiblyLoopIndependent);
+                                        Instruction *Dst);
 
     /// getSplitIteration - Give a dependence that's splittable at some
     /// particular level, return the iteration that should be used to split

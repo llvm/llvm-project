@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass expand-condsets %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass expand-condsets %s -o - | FileCheck %s
 # Check that we can expand a mux with a global as an immediate operand.
 # CHECK: C2_cmoveif undef %0:predregs, @G
 

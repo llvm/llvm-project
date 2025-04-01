@@ -472,6 +472,14 @@ public:
     return LLVM_LIKELY(Type == T_Array) ? &as<json::Array>() : nullptr;
   }
 
+  void print(llvm::raw_ostream &OS) const;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const {
+    print(llvm::dbgs());
+    llvm::dbgs() << '\n';
+  }
+#endif // !NDEBUG || LLVM_ENABLE_DUMP
+
 private:
   void destroy();
   void copyFrom(const Value &M);
@@ -646,6 +654,8 @@ inline std::pair<Object::iterator, bool> Object::insert(KV E) {
 inline bool Object::erase(StringRef K) {
   return M.erase(ObjectKey(K));
 }
+
+std::vector<const Object::value_type *> sortedElements(const Object &O);
 
 /// A "cursor" marking a position within a Value.
 /// The Value is a tree, and this is the path from the root to the current node.

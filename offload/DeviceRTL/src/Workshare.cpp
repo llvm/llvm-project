@@ -12,13 +12,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Workshare.h"
 #include "Debug.h"
+#include "DeviceTypes.h"
+#include "DeviceUtils.h"
 #include "Interface.h"
 #include "Mapping.h"
 #include "State.h"
 #include "Synchronization.h"
-#include "Types.h"
-#include "Utils.h"
 
 using namespace ompx;
 
@@ -43,10 +44,8 @@ struct DynamicScheduleTracker {
 #define NOT_FINISHED 1
 #define LAST_CHUNK 2
 
-#pragma omp begin declare target device_type(nohost)
-
 // TODO: This variable is a hack inherited from the old runtime.
-static uint64_t SHARED(Cnt);
+[[clang::loader_uninitialized]] static Local<uint64_t> Cnt;
 
 template <typename T, typename ST> struct omptarget_nvptx_LoopSupport {
   ////////////////////////////////////////////////////////////////////////////////
@@ -78,7 +77,7 @@ template <typename T, typename ST> struct omptarget_nvptx_LoopSupport {
     lb = lb + entityId * chunk;
     T inputUb = ub;
     ub = lb + chunk - 1; // Clang uses i <= ub
-    // Say ub' is the begining of the last chunk. Then who ever has a
+    // Say ub' is the beginning of the last chunk. Then who ever has a
     // lower bound plus a multiple of the increment equal to ub' is
     // the last one.
     T beginingLastChunk = inputUb - (inputUb % chunk);
@@ -348,7 +347,7 @@ template <typename T, typename ST> struct omptarget_nvptx_LoopSupport {
     if (rank == 0) {
       warp_res = atomic::add(&Cnt, change, atomic::seq_cst);
     }
-    warp_res = utils::shuffle(active, warp_res, leader);
+    warp_res = utils::shuffle(active, warp_res, leader, mapping::getWarpSize());
     return warp_res + rank;
   }
 
@@ -444,28 +443,78 @@ template <typename T, typename ST> struct omptarget_nvptx_LoopSupport {
 // KMP interface implementation (dyn loops)
 ////////////////////////////////////////////////////////////////////////////////
 
-// TODO: This is a stopgap. We probably want to expand the dispatch API to take
-//       an DST pointer which can then be allocated properly without malloc.
-static DynamicScheduleTracker *THREAD_LOCAL(ThreadDSTPtr);
+// TODO: Expand the dispatch API to take a DST pointer which can then be
+//       allocated properly without malloc.
+// For now, each team will contain an LDS pointer (ThreadDST) to a global array
+// of references to the DST structs allocated (in global memory) for each thread
+// in the team. The global memory array is allocated during the init phase if it
+// was not allocated already and will be deallocated when the dispatch phase
+// ends:
+//
+//  __kmpc_dispatch_init
+//
+//  ** Dispatch loop **
+//
+//  __kmpc_dispatch_deinit
+//
+[[clang::loader_uninitialized]] static Local<DynamicScheduleTracker **>
+    ThreadDST;
 
 // Create a new DST, link the current one, and define the new as current.
 static DynamicScheduleTracker *pushDST() {
+  int32_t ThreadIndex = mapping::getThreadIdInBlock();
+  // Each block will allocate an array of pointers to DST structs. The array is
+  // equal in length to the number of threads in that block.
+  if (!ThreadDST) {
+    // Allocate global memory array of pointers to DST structs:
+    if (mapping::isMainThreadInGenericMode() || ThreadIndex == 0)
+      ThreadDST = static_cast<DynamicScheduleTracker **>(
+          memory::allocGlobal(mapping::getNumberOfThreadsInBlock() *
+                                  sizeof(DynamicScheduleTracker *),
+                              "new ThreadDST array"));
+    synchronize::threads(atomic::seq_cst);
+
+    // Initialize the array pointers:
+    ThreadDST[ThreadIndex] = nullptr;
+  }
+
+  // Create a DST struct for the current thread:
   DynamicScheduleTracker *NewDST = static_cast<DynamicScheduleTracker *>(
       memory::allocGlobal(sizeof(DynamicScheduleTracker), "new DST"));
   *NewDST = DynamicScheduleTracker({0});
-  NewDST->NextDST = ThreadDSTPtr;
-  ThreadDSTPtr = NewDST;
-  return ThreadDSTPtr;
+
+  // Add the new DST struct to the array of DST structs:
+  NewDST->NextDST = ThreadDST[ThreadIndex];
+  ThreadDST[ThreadIndex] = NewDST;
+  return NewDST;
 }
 
 // Return the current DST.
-static DynamicScheduleTracker *peekDST() { return ThreadDSTPtr; }
+static DynamicScheduleTracker *peekDST() {
+  return ThreadDST[mapping::getThreadIdInBlock()];
+}
 
 // Pop the current DST and restore the last one.
 static void popDST() {
-  DynamicScheduleTracker *OldDST = ThreadDSTPtr->NextDST;
-  memory::freeGlobal(ThreadDSTPtr, "remove DST");
-  ThreadDSTPtr = OldDST;
+  int32_t ThreadIndex = mapping::getThreadIdInBlock();
+  DynamicScheduleTracker *CurrentDST = ThreadDST[ThreadIndex];
+  DynamicScheduleTracker *OldDST = CurrentDST->NextDST;
+  memory::freeGlobal(CurrentDST, "remove DST");
+  ThreadDST[ThreadIndex] = OldDST;
+
+  // Check if we need to deallocate the global array. Ensure all threads
+  // in the block have finished deallocating the individual DSTs.
+  synchronize::threads(atomic::seq_cst);
+  if (!ThreadDST[ThreadIndex] && !ThreadIndex) {
+    memory::freeGlobal(ThreadDST, "remove ThreadDST array");
+    ThreadDST = nullptr;
+  }
+  synchronize::threads(atomic::seq_cst);
+}
+
+void workshare::init(bool IsSPMD) {
+  if (mapping::isInitialThreadInLevel0(IsSPMD))
+    ThreadDST = nullptr;
 }
 
 extern "C" {
@@ -533,23 +582,22 @@ int __kmpc_dispatch_next_8u(IdentTy *loc, int32_t tid, int32_t *p_last,
 // fini
 void __kmpc_dispatch_fini_4(IdentTy *loc, int32_t tid) {
   omptarget_nvptx_LoopSupport<int32_t, int32_t>::dispatch_fini();
-  popDST();
 }
 
 void __kmpc_dispatch_fini_4u(IdentTy *loc, int32_t tid) {
   omptarget_nvptx_LoopSupport<uint32_t, int32_t>::dispatch_fini();
-  popDST();
 }
 
 void __kmpc_dispatch_fini_8(IdentTy *loc, int32_t tid) {
   omptarget_nvptx_LoopSupport<int64_t, int64_t>::dispatch_fini();
-  popDST();
 }
 
 void __kmpc_dispatch_fini_8u(IdentTy *loc, int32_t tid) {
   omptarget_nvptx_LoopSupport<uint64_t, int64_t>::dispatch_fini();
-  popDST();
 }
+
+// deinit
+void __kmpc_dispatch_deinit(IdentTy *loc, int32_t tid) { popDST(); }
 
 ////////////////////////////////////////////////////////////////////////////////
 // KMP interface implementation (static loops)
@@ -757,7 +805,7 @@ public:
                                 NumIters, OneIterationPerThread);
   }
 
-  /// Worksharing `distrbute`-loop.
+  /// Worksharing `distribute`-loop.
   static void Distribute(IdentTy *Loc, void (*LoopBody)(Ty, void *), void *Arg,
                          Ty NumIters, Ty BlockChunk) {
     ASSERT(icv::Level == 0, "Bad distribute");
@@ -772,7 +820,6 @@ public:
     Ty ThreadChunk = 0;
     Ty NumThreads = 1;
     Ty TId = 0;
-    ASSERT(TId == mapping::getThreadIdInBlock(), "Bad thread id");
 
     // All teams need to participate.
     Ty NumBlocks = mapping::getNumberOfBlocksInKernel();
@@ -804,7 +851,7 @@ public:
     ASSERT(state::ParallelTeamSize == 1, "Bad distribute");
   }
 
-  /// Worksharing `distrbute parallel for`-loop.
+  /// Worksharing `distribute parallel for`-loop.
   static void DistributeFor(IdentTy *Loc, void (*LoopBody)(Ty, void *),
                             void *Arg, Ty NumIters, Ty NumThreads,
                             Ty BlockChunk, Ty ThreadChunk) {
@@ -864,19 +911,19 @@ public:
           IdentTy *loc, void (*fn)(TY, void *), void *arg, TY num_iters,       \
           TY num_threads, TY block_chunk, TY thread_chunk) {                   \
     ompx::StaticLoopChunker<TY>::DistributeFor(                                \
-        loc, fn, arg, num_iters + 1, num_threads, block_chunk, thread_chunk);  \
+        loc, fn, arg, num_iters, num_threads, block_chunk, thread_chunk);      \
   }                                                                            \
   [[gnu::flatten, clang::always_inline]] void                                  \
       __kmpc_distribute_static_loop##BW(IdentTy *loc, void (*fn)(TY, void *),  \
                                         void *arg, TY num_iters,               \
                                         TY block_chunk) {                      \
-    ompx::StaticLoopChunker<TY>::Distribute(loc, fn, arg, num_iters + 1,       \
+    ompx::StaticLoopChunker<TY>::Distribute(loc, fn, arg, num_iters,           \
                                             block_chunk);                      \
   }                                                                            \
   [[gnu::flatten, clang::always_inline]] void __kmpc_for_static_loop##BW(      \
       IdentTy *loc, void (*fn)(TY, void *), void *arg, TY num_iters,           \
       TY num_threads, TY thread_chunk) {                                       \
-    ompx::StaticLoopChunker<TY>::For(loc, fn, arg, num_iters + 1, num_threads, \
+    ompx::StaticLoopChunker<TY>::For(loc, fn, arg, num_iters, num_threads,     \
                                      thread_chunk);                            \
   }
 
@@ -886,5 +933,3 @@ OMP_LOOP_ENTRY(_4u, uint32_t)
 OMP_LOOP_ENTRY(_8, int64_t)
 OMP_LOOP_ENTRY(_8u, uint64_t)
 }
-
-#pragma omp end declare target

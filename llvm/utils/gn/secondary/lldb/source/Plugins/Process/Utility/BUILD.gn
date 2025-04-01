@@ -11,6 +11,7 @@ static_library("Utility") {
 
     #"//lldb/source/Target", # Dependency cycle.
     "//lldb/source/Utility",
+    "//lldb/source/ValueObject",
     "//llvm/lib/Support",
     "//llvm/lib/TargetParser",
   ]
@@ -28,10 +29,13 @@ static_library("Utility") {
     "LinuxSignals.cpp",
     "MemoryTagManagerAArch64MTE.cpp",
     "NativeProcessSoftwareSingleStep.cpp",
+    "NativeRegisterContextDBReg.cpp",
     "NativeRegisterContextDBReg_arm64.cpp",
+    "NativeRegisterContextDBReg_loongarch.cpp",
     "NativeRegisterContextDBReg_x86.cpp",
     "NativeRegisterContextRegisterInfo.cpp",
     "NetBSDSignals.cpp",
+    "OpenBSDSignals.cpp",
     "RegisterContextDarwin_arm.cpp",
     "RegisterContextDarwin_arm64.cpp",
     "RegisterContextDarwin_i386.cpp",
@@ -66,7 +70,7 @@ static_library("Utility") {
     "RegisterContextWindows_i386.cpp",
     "RegisterContextWindows_x86_64.cpp",
     "RegisterContext_x86.cpp",
-    "RegisterFlagsLinux_arm64.cpp",
+    "RegisterFlagsDetector_arm64.cpp",
     "RegisterInfoPOSIX_arm.cpp",
     "RegisterInfoPOSIX_arm64.cpp",
     "RegisterInfoPOSIX_loongarch64.cpp",

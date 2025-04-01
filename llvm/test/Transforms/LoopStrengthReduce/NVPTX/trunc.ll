@@ -13,7 +13,7 @@ target triple = "nvptx64-nvidia-cuda"
 ; That would be worthless, because "i" is simulated by two 32-bit registers and
 ; truncating it to 32-bit is as simple as directly using the register that
 ; contains the low bits.
-define void @trunc_is_free(i64 %begin, i64 %stride, i64 %end) {
+define ptx_kernel void @trunc_is_free(i64 %begin, i64 %stride, i64 %end) {
 ; CHECK-LABEL: @trunc_is_free(
 entry:
   %cmp.4 = icmp eq i64 %begin, %end
@@ -41,5 +41,3 @@ for.body:                                         ; preds = %for.body.preheader,
 
 declare void @_Z3usei(i32)
 
-!nvvm.annotations = !{!0}
-!0 = !{ptr @trunc_is_free, !"kernel", i32 1}

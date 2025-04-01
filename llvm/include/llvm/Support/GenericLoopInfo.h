@@ -294,6 +294,10 @@ public:
   /// Otherwise return null.
   BlockT *getUniqueExitBlock() const;
 
+  /// Return the unique exit block for the latch, or null if there are multiple
+  /// different exit blocks or the latch is not exiting.
+  BlockT *getUniqueLatchExitBlock() const;
+
   /// Return true if this loop does not have any exit blocks.
   bool hasNoExitBlocks() const;
 

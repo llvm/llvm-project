@@ -9,13 +9,12 @@
 // number of instructions, set the prefLoopAlignment to 32 bytes (5).
 //===----------------------------------------------------------------------===//
 
-#define DEBUG_TYPE "hexagon-loop-align"
-
 #include "HexagonTargetMachine.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
-#include "llvm/CodeGen/SchedulerRegistry.h"
 #include "llvm/Support/Debug.h"
+
+#define DEBUG_TYPE "hexagon-loop-align"
 
 using namespace llvm;
 
@@ -50,7 +49,7 @@ static cl::opt<uint32_t> TinyLoopBndlAlignLimit(
 
 static cl::opt<uint32_t>
     LoopEdgeThreshold("hexagon-loop-edge-threshold", cl::Hidden, cl::init(7500),
-                      cl::desc("Set hexagon loop align edge theshold"));
+                      cl::desc("Set hexagon loop align edge threshold"));
 
 namespace llvm {
 FunctionPass *createHexagonLoopAlign();
@@ -75,7 +74,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
-    AU.addRequired<MachineBlockFrequencyInfo>();
+    AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -150,7 +149,7 @@ bool HexagonLoopAlign::attemptToBalignSmallLoop(MachineFunction &MF,
   const MachineBranchProbabilityInfo *MBPI =
       &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
   const MachineBlockFrequencyInfo *MBFI =
-      &getAnalysis<MachineBlockFrequencyInfo>();
+      &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
 
   // Compute frequency of back edge,
   BlockFrequency BlockFreq = MBFI->getBlockFreq(&MBB);

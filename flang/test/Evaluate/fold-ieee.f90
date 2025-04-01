@@ -26,11 +26,13 @@ module m
   logical, parameter :: test_fl_ix_all = ieee_support_flag(ieee_inexact)
   logical, parameter :: test_fl_ix_4 = ieee_support_flag(ieee_inexact, 1.)
   logical, parameter :: test_fl_ix_8 = ieee_support_flag(ieee_inexact, 1.d0)
+#if __x86_64__
   logical, parameter :: test_halt_in = ieee_support_halting(ieee_invalid)
   logical, parameter :: test_halt_ov = ieee_support_halting(ieee_overflow)
   logical, parameter :: test_halt_d0 = ieee_support_halting(ieee_divide_by_zero)
   logical, parameter :: test_halt_un = ieee_support_halting(ieee_underflow)
   logical, parameter :: test_halt_ix = ieee_support_halting(ieee_inexact)
+#endif
   logical, parameter :: test_inf_all = ieee_support_inf()
   logical, parameter :: test_inf_4 = ieee_support_inf(1.)
   logical, parameter :: test_inf_8 = ieee_support_inf(1.d0)
@@ -52,13 +54,15 @@ module m
   logical, parameter :: test_sq_all = ieee_support_sqrt()
   logical, parameter :: test_sq_4 = ieee_support_sqrt(1.)
   logical, parameter :: test_sq_8 = ieee_support_sqrt(1.d0)
-  logical, parameter :: test_std_all = ieee_support_standard()
-  logical, parameter :: test_std_4 = ieee_support_standard(1.)
-  logical, parameter :: test_std_8 = ieee_support_standard(1.d0)
   logical, parameter :: test_sn_all = ieee_support_subnormal()
   logical, parameter :: test_sn_4 = ieee_support_subnormal(1.)
   logical, parameter :: test_sn_8 = ieee_support_subnormal(1.d0)
-  logical, parameter :: test_uc_all = ieee_support_underflow_control()
+#if __x86_64__
+  logical, parameter :: test_uc_all = .not. ieee_support_underflow_control()
   logical, parameter :: test_uc_4 = ieee_support_underflow_control(1.)
   logical, parameter :: test_uc_8 = ieee_support_underflow_control(1.d0)
+  logical, parameter :: test_std_all = ieee_support_standard()
+  logical, parameter :: test_std_4 = ieee_support_standard(1.)
+  logical, parameter :: test_std_8 = ieee_support_standard(1.d0)
+#endif
 end

@@ -26,7 +26,7 @@
 
 @.BSS3 = internal unnamed_addr global %struct.BSS3 zeroinitializer, align 32, !dbg !0, !dbg !7, !dbg !29
 ;CHECK: @.BSS3.0 = internal unnamed_addr global double 0.000000e+00, align 32, !dbg ![[GVE1:.*]], !dbg ![[GVE2:.*]]
-;CHECK: @.BSS3.1 = internal unnamed_addr global double 0.000000e+00, align 32, !dbg ![[GVE3:.*]], !dbg ![[GVE4:.*]], !dbg ![[GVE6:.*]]
+;CHECK: @.BSS3.1 = internal unnamed_addr global double 0.000000e+00, align 8, !dbg ![[GVE3:.*]], !dbg ![[GVE4:.*]], !dbg ![[GVE6:.*]]
 ;CHECK: @.BSS3.2 = internal unnamed_addr global double 0.000000e+00, align 16, !dbg ![[GVE5:.*]]
 
 @.C363_mymod_bar_ = internal constant [2 x i8] c"IF"

@@ -34,11 +34,14 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @switch.table.unreachable_case = private unnamed_addr constant [9 x i32] [i32 0, i32 0, i32 0, i32 2, i32 -1, i32 1, i32 1, i32 1, i32 1], align 4
 ; CHECK: @switch.table.unreachable_default = private unnamed_addr constant [4 x i32] [i32 42, i32 52, i32 1, i32 2], align 4
 ; CHECK: @switch.table.nodefaultnoholes = private unnamed_addr constant [4 x i32] [i32 55, i32 123, i32 0, i32 -1], align 4
-; CHECK: @switch.table.nodefaultwithholes = private unnamed_addr constant [6 x i32] [i32 55, i32 123, i32 0, i32 -1, i32 55, i32 -1], align 4
+; CHECK: @switch.table.nodefaultwithholes = private unnamed_addr constant [6 x i32] [i32 55, i32 123, i32 0, i32 -1, i32 poison, i32 -1], align 4
 ; CHECK: @switch.table.threecases = private unnamed_addr constant [3 x i32] [i32 10, i32 7, i32 5], align 4
-; CHECK: @switch.table.covered_switch_with_bit_tests = private unnamed_addr constant [8 x i32] [i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 1, i32 1], align 4
+; CHECK: @switch.table.covered_switch_with_bit_tests = private unnamed_addr constant [8 x i32] [i32 2, i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 1, i32 1], align 4
 ; CHECK: @switch.table.signed_overflow1 = private unnamed_addr constant [4 x i32] [i32 3333, i32 4444, i32 1111, i32 2222], align 4
-; CHECK: @switch.table.signed_overflow2 = private unnamed_addr constant [4 x i32] [i32 3333, i32 4444, i32 2222, i32 2222], align 4
+; CHECK: @switch.table.signed_overflow2 = private unnamed_addr constant [4 x i32] [i32 3333, i32 4444, i32 poison, i32 2222], align 4
+; CHECK: @switch.table.constant_hole_unreachable_default_firstundef = private unnamed_addr constant [5 x i32] [i32 undef, i32 poison, i32 1, i32 1, i32 1], align 4
+; CHECK: @switch.table.constant_hole_unreachable_default_lastundef = private unnamed_addr constant [5 x i32] [i32 1, i32 poison, i32 1, i32 1, i32 undef], align 4
+; CHECK: @switch.table.linearmap_hole_unreachable_default = private unnamed_addr constant [5 x i32] [i32 1, i32 poison, i32 5, i32 7, i32 9], align 4
 ;.
 define i32 @f(i32 %c) {
 ; CHECK-LABEL: @f(
@@ -314,20 +317,20 @@ lor.end:
 define i32 @overflow(i32 %type) {
 ; CHECK-LABEL: @overflow(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    switch i32 [[TYPE:%.*]], label [[IF_END:%.*]] [
+; CHECK-NEXT:    switch i32 [[TYPE:%.*]], label [[SW_DEFAULT:%.*]] [
 ; CHECK-NEXT:      i32 3, label [[SW_BB3:%.*]]
 ; CHECK-NEXT:      i32 -2147483645, label [[SW_BB3]]
-; CHECK-NEXT:      i32 1, label [[SW_BB1:%.*]]
+; CHECK-NEXT:      i32 1, label [[IF_END:%.*]]
 ; CHECK-NEXT:      i32 2, label [[SW_BB2:%.*]]
 ; CHECK-NEXT:    ]
-; CHECK:       sw.bb1:
-; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       sw.bb2:
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       sw.bb3:
 ; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       sw.default:
+; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[DIRENT_TYPE_0:%.*]] = phi i32 [ 6, [[SW_BB3]] ], [ 5, [[SW_BB2]] ], [ 0, [[SW_BB1]] ], [ 3, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[DIRENT_TYPE_0:%.*]] = phi i32 [ 3, [[SW_DEFAULT]] ], [ 6, [[SW_BB3]] ], [ 5, [[SW_BB2]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[DIRENT_TYPE_0]]
 ;
 entry:
@@ -340,15 +343,23 @@ entry:
   i32 3, label %sw.bb3
   ]
 
-sw.bb: br label %if.end
-sw.bb1: br label %if.end
-sw.bb2: br label %if.end
-sw.bb3: br label %if.end
-sw.default: br label %if.end
-if.else: br label %if.end
+sw.bb:                                            ; preds = %entry, %entry
+  br label %if.end
 
-if.end:
-  %dirent_type.0 = phi i32 [ 3, %sw.default ], [ 6, %sw.bb3 ], [ 5, %sw.bb2 ], [ 0, %sw.bb1 ], [ 3, %sw.bb ], [ 0, %if.else ]
+sw.bb1:                                           ; preds = %entry
+  br label %if.end
+
+sw.bb2:                                           ; preds = %entry
+  br label %if.end
+
+sw.bb3:                                           ; preds = %entry, %entry
+  br label %if.end
+
+sw.default:                                       ; preds = %entry
+  br label %if.end
+
+if.end:                                           ; preds = %sw.default, %sw.bb3, %sw.bb2, %sw.bb1, %sw.bb
+  %dirent_type.0 = phi i32 [ 3, %sw.default ], [ 6, %sw.bb3 ], [ 5, %sw.bb2 ], [ 0, %sw.bb1 ], [ 3, %sw.bb ]
   ret i32 %dirent_type.0
 }
 
@@ -2118,6 +2129,31 @@ cond.end:                                         ; preds = %entry, %cond.false
   ret i8 %conv
 }
 
+define i1 @linearmap_trunc_smaller_table_size(i8 %arg) {
+; CHECK-LABEL: @linearmap_trunc_smaller_table_size(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i8 [[ARG:%.*]], 10
+; CHECK-NEXT:    [[SWITCH_IDX_CAST:%.*]] = trunc i8 [[ARG]] to i1
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[TMP0]], i1 [[SWITCH_IDX_CAST]], i1 false
+; CHECK-NEXT:    ret i1 [[SPEC_SELECT]]
+;
+entry:
+  switch i8 %arg, label %exit [
+  i8 1, label %sw
+  i8 3, label %sw
+  i8 5, label %sw
+  i8 7, label %sw
+  i8 9, label %sw
+  ]
+
+sw:
+  br label %exit
+
+exit:
+  %phi = phi i1 [ true, %sw ], [ false, %entry ]
+  ret i1 %phi
+}
+
 ; Don't create a table with an unknown type
 define { i8, i8 } @test_unknown_result_type(i8 %n) {
 ; CHECK-LABEL: @test_unknown_result_type(
@@ -2150,4 +2186,227 @@ sw.default:                                       ; preds = %entry
 return:                                           ; preds = %sw.default, %entry, %entry, %entry
   %retval.0 = phi { i8, i8 } [ undef, %entry ], [ undef, %entry ], [ undef, %entry ], [ %1, %sw.default ]
   ret { i8, i8 } %retval.0
+}
+
+; The switch has a hole which falls through to an unreachable default case, but it can still be optimized into a constant load because
+; the poison value used for the hole is ignored.
+define i32 @constant_hole_unreachable_default(i32 %x) {
+; CHECK-LABEL: @constant_hole_unreachable_default(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i32 1
+;
+entry:
+  switch i32 %x, label %sw.default [
+  i32 0, label %bb0
+  i32 2, label %bb0
+  i32 3, label %bb0
+  i32 4, label %bb0
+  ]
+
+sw.default: unreachable
+bb0: br label %return
+
+return:
+  %res = phi i32 [ 1, %bb0 ]
+  ret i32 %res
+}
+
+; The switch has a hole which falls through to an unreachable default case and the first case explicitly returns undef, yet it cannot be optimized into a simple
+; constant because we actually treat undef as a unique value rather than ignoring it.
+define i32 @constant_hole_unreachable_default_firstundef(i32 %x) {
+; CHECK-LABEL: @constant_hole_unreachable_default_firstundef(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [5 x i32], ptr @switch.table.constant_hole_unreachable_default_firstundef, i32 0, i32 [[X:%.*]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
+; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
+;
+entry:
+  switch i32 %x, label %sw.default [
+  i32 0, label %bb.undef
+  i32 2, label %bb0
+  i32 3, label %bb0
+  i32 4, label %bb0
+  ]
+
+sw.default: unreachable
+bb.undef: br label %return
+bb0: br label %return
+
+return:
+  %res = phi i32 [ undef, %bb.undef ], [ 1, %bb0 ]
+  ret i32 %res
+}
+
+; The switch has a hole which falls through to an unreachable default case and the last case explicitly returns undef, yet it cannot be optimized into a simple
+; constant because we actually treat undef as a unique value rather than ignoring it.
+define i32 @constant_hole_unreachable_default_lastundef(i32 %x) {
+; CHECK-LABEL: @constant_hole_unreachable_default_lastundef(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [5 x i32], ptr @switch.table.constant_hole_unreachable_default_lastundef, i32 0, i32 [[X:%.*]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
+; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
+;
+entry:
+  switch i32 %x, label %sw.default [
+  i32 0, label %bb0
+  i32 2, label %bb0
+  i32 3, label %bb0
+  i32 4, label %bb.undef
+  ]
+
+sw.default: unreachable
+bb.undef: br label %return
+bb0: br label %return
+
+return:
+  %res = phi i32 [ undef, %bb.undef ], [ 1, %bb0 ]
+  ret i32 %res
+}
+
+; The switch has a hole which falls through to an unreachable default case and the first case explicitly returns poison, but it can still
+; be optimized into a constant load because the poison values are ignored.
+define i32 @constant_hole_unreachable_default_firstpoison(i32 %x) {
+; CHECK-LABEL: @constant_hole_unreachable_default_firstpoison(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i32 1
+;
+entry:
+  switch i32 %x, label %sw.default [
+  i32 0, label %bb.poison
+  i32 2, label %bb0
+  i32 3, label %bb0
+  i32 4, label %bb0
+  ]
+
+sw.default: unreachable
+bb.poison: br label %return
+bb0: br label %return
+
+return:
+  %res = phi i32 [ poison, %bb.poison ], [ 1, %bb0 ]
+  ret i32 %res
+}
+
+; The switch has a hole which falls through to an unreachable default case and the first case explicitly returns poison, but it can still
+; be optimized into a constant load because the poison values are ignored.
+define i32 @constant_hole_unreachable_default_lastpoison(i32 %x) {
+; CHECK-LABEL: @constant_hole_unreachable_default_lastpoison(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i32 1
+;
+entry:
+  switch i32 %x, label %sw.default [
+  i32 0, label %bb0
+  i32 2, label %bb0
+  i32 3, label %bb0
+  i32 4, label %bb.poison
+  ]
+
+sw.default: unreachable
+bb.poison: br label %return
+bb0: br label %return
+
+return:
+  %res = phi i32 [ poison, %bb.poison ], [ 1, %bb0 ]
+  ret i32 %res
+}
+
+define i32 @constant_hole_unreachable_default_undef_poison(i32 %x) {
+; CHECK-LABEL: @constant_hole_unreachable_default_undef_poison(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i32 undef
+;
+entry:
+  switch i32 %x, label %sw.default [
+  i32 0, label %bb.undef
+  i32 2, label %bb.poison
+  i32 3, label %bb.poison
+  i32 4, label %bb.poison
+  ]
+
+sw.default: unreachable
+bb.undef: br label %return
+bb.poison: br label %return
+
+return:
+  %res = phi i32 [ undef, %bb.undef ], [ poison, %bb.poison ]
+  ret i32 %res
+}
+
+define i32 @constant_hole_unreachable_default_poison_undef(i32 %x) {
+; CHECK-LABEL: @constant_hole_unreachable_default_poison_undef(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i32 undef
+;
+entry:
+  switch i32 %x, label %sw.default [
+  i32 0, label %bb.poison
+  i32 2, label %bb.poison
+  i32 3, label %bb.poison
+  i32 4, label %bb.undef
+  ]
+
+sw.default: unreachable
+bb.undef: br label %return
+bb.poison: br label %return
+
+return:
+  %res = phi i32 [ undef, %bb.undef ], [ poison, %bb.poison ]
+  ret i32 %res
+}
+
+; The switch has a hole which falls through to an unreachable default case, which prevents it from being optimized into a linear mapping 2*x+1.
+; TODO: We should add support for this, at least in certain cases.
+define i32 @linearmap_hole_unreachable_default(i32 %x) {
+; CHECK-LABEL: @linearmap_hole_unreachable_default(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [5 x i32], ptr @switch.table.linearmap_hole_unreachable_default, i32 0, i32 [[X:%.*]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
+; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
+;
+entry:
+  switch i32 %x, label %sw.default [
+  i32 0, label %bb0
+  i32 2, label %bb2
+  i32 3, label %bb3
+  i32 4, label %bb4
+  ]
+
+sw.default: unreachable
+bb0: br label %return
+bb2: br label %return
+bb3: br label %return
+bb4: br label %return
+
+return:
+  %res = phi i32 [ 1, %bb0 ], [ 5, %bb2 ], [ 7, %bb3 ], [ 9, %bb4 ]
+  ret i32 %res
+}
+
+; The switch has a hole which falls through to an unreachable default case, but it can still be optimized into a bitmask extraction because
+; the poison value used for the hole is simply replaced with zero.
+define i1 @bitset_hole_unreachable_default(i32 %x) {
+; CHECK-LABEL: @bitset_hole_unreachable_default(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i32 [[X:%.*]] to i5
+; CHECK-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul nuw nsw i5 [[SWITCH_CAST]], 1
+; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i5 8, [[SWITCH_SHIFTAMT]]
+; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i5 [[SWITCH_DOWNSHIFT]] to i1
+; CHECK-NEXT:    ret i1 [[SWITCH_MASKED]]
+;
+entry:
+  switch i32 %x, label %sw.default [
+  i32 0, label %bb0
+  i32 2, label %bb0
+  i32 3, label %bb1
+  i32 4, label %bb0
+  ]
+
+sw.default: unreachable
+bb0: br label %return
+bb1: br label %return
+
+return:
+  %res = phi i1 [ 0, %bb0 ], [ 1, %bb1 ]
+  ret i1 %res
 }

@@ -182,6 +182,12 @@ LLVMErrorTypeId LLVMGetErrorTypeId(LLVMErrorRef Err) {
 
 void LLVMConsumeError(LLVMErrorRef Err) { consumeError(unwrap(Err)); }
 
+
+
+void LLVMCantFail(LLVMErrorRef Err) {
+  cantFail(unwrap(Err));
+}
+
 char *LLVMGetErrorMessage(LLVMErrorRef Err) {
   std::string Tmp = toString(unwrap(Err));
   char *ErrMsg = new char[Tmp.size() + 1];

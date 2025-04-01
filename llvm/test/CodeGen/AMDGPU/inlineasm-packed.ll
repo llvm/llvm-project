@@ -10,7 +10,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}inline_asm_input_v2f16:
-; GCN: s_mov_b32 s0, s{{[0-9]+}}
+; GCN: s_mov_b32 s2, s{{[0-9]+}}
 define amdgpu_kernel void @inline_asm_input_v2f16(ptr addrspace(1) %out, <2 x half> %in) #0 {
 entry:
   %val = call i32 asm "s_mov_b32 $0, $1", "=r,r"(<2 x half> %in) #0

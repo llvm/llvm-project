@@ -220,10 +220,10 @@ bool mlir::isIdentityPermutation(ArrayRef<int64_t> permutation) {
 }
 
 bool mlir::isPermutationVector(ArrayRef<int64_t> interchange) {
-  assert(llvm::all_of(interchange, [](int64_t s) { return s >= 0; }) &&
-         "permutation must be non-negative");
   llvm::SmallDenseSet<int64_t, 4> seenVals;
   for (auto val : interchange) {
+    if (val < 0 || static_cast<uint64_t>(val) >= interchange.size())
+      return false;
     if (seenVals.count(val))
       return false;
     seenVals.insert(val);
@@ -248,6 +248,32 @@ mlir::computePermutationVector(int64_t permSize, ArrayRef<int64_t> positions,
       ++nextPos;
     entry = nextPos;
     ++nextPos;
+  }
+  return res;
+}
+
+SmallVector<int64_t> mlir::dropDims(ArrayRef<int64_t> inputPerm,
+                                    ArrayRef<int64_t> dropPositions) {
+  assert(inputPerm.size() >= dropPositions.size() &&
+         "expect inputPerm size large than position to drop");
+  SmallVector<int64_t> res;
+  unsigned permSize = inputPerm.size();
+  for (unsigned inputIndex = 0; inputIndex < permSize; ++inputIndex) {
+    int64_t targetIndex = inputPerm[inputIndex];
+    bool shouldDrop = false;
+    unsigned dropSize = dropPositions.size();
+    for (unsigned dropIndex = 0; dropIndex < dropSize; dropIndex++) {
+      if (dropPositions[dropIndex] == inputPerm[inputIndex]) {
+        shouldDrop = true;
+        break;
+      }
+      if (dropPositions[dropIndex] < inputPerm[inputIndex]) {
+        targetIndex--;
+      }
+    }
+    if (!shouldDrop) {
+      res.push_back(targetIndex);
+    }
   }
   return res;
 }

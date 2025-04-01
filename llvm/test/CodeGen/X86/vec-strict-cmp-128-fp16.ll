@@ -907,14 +907,14 @@ define <4 x i16> @test_v4f16_olt_q(<4 x i16> %a, <4 x i16> %b, <4 x half> %f1, <
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    vmovsh 8(%ebp), %xmm3
+; X86-NEXT:    vmovsh {{.*#+}} xmm3 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    vcomish %xmm2, %xmm3
 ; X86-NEXT:    seta %al
 ; X86-NEXT:    kmovd %eax, %k0
 ; X86-NEXT:    kshiftlb $7, %k0, %k0
 ; X86-NEXT:    kshiftrb $7, %k0, %k0
 ; X86-NEXT:    vpsrld $16, %xmm2, %xmm3
-; X86-NEXT:    vmovsh 10(%ebp), %xmm4
+; X86-NEXT:    vmovsh {{.*#+}} xmm4 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    vcomish %xmm3, %xmm4
 ; X86-NEXT:    seta %al
 ; X86-NEXT:    kmovd %eax, %k1
@@ -925,7 +925,7 @@ define <4 x i16> @test_v4f16_olt_q(<4 x i16> %a, <4 x i16> %b, <4 x half> %f1, <
 ; X86-NEXT:    kmovd %eax, %k1
 ; X86-NEXT:    kandb %k1, %k0, %k0
 ; X86-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm2[1,1,3,3]
-; X86-NEXT:    vmovsh 12(%ebp), %xmm4
+; X86-NEXT:    vmovsh {{.*#+}} xmm4 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    vcomish %xmm3, %xmm4
 ; X86-NEXT:    seta %al
 ; X86-NEXT:    kmovd %eax, %k1
@@ -936,7 +936,7 @@ define <4 x i16> @test_v4f16_olt_q(<4 x i16> %a, <4 x i16> %b, <4 x half> %f1, <
 ; X86-NEXT:    kmovd %eax, %k1
 ; X86-NEXT:    kandb %k1, %k0, %k0
 ; X86-NEXT:    vpsrlq $48, %xmm2, %xmm2
-; X86-NEXT:    vmovsh 14(%ebp), %xmm3
+; X86-NEXT:    vmovsh {{.*#+}} xmm3 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    vcomish %xmm2, %xmm3
 ; X86-NEXT:    seta %al
 ; X86-NEXT:    kmovd %eax, %k1

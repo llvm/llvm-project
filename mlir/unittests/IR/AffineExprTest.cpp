@@ -15,6 +15,13 @@
 
 using namespace mlir;
 
+static std::string toString(AffineExpr expr) {
+  std::string s;
+  llvm::raw_string_ostream ss(s);
+  ss << expr;
+  return s;
+}
+
 // Test creating AffineExprs using the overloaded binary operators.
 TEST(AffineExprTest, constructFromBinaryOperators) {
   MLIRContext ctx;
@@ -75,4 +82,68 @@ TEST(AffineExprTest, constantFolding) {
   auto cminfloordivcn1 =
       getAffineBinaryOpExpr(AffineExprKind::FloorDiv, cmin, cn1);
   ASSERT_EQ(cminfloordivcn1.getKind(), AffineExprKind::FloorDiv);
+}
+
+TEST(AffineExprTest, divisionSimplification) {
+  MLIRContext ctx;
+  OpBuilder b(&ctx);
+  auto cn6 = b.getAffineConstantExpr(-6);
+  auto c6 = b.getAffineConstantExpr(6);
+  auto d0 = b.getAffineDimExpr(0);
+  auto d1 = b.getAffineDimExpr(1);
+
+  ASSERT_EQ(c6.floorDiv(-1), cn6);
+  ASSERT_EQ((d0 * 6).floorDiv(2), d0 * 3);
+  ASSERT_EQ((d0 * 6).floorDiv(4).getKind(), AffineExprKind::FloorDiv);
+  ASSERT_EQ((d0 * 6).floorDiv(-2), d0 * -3);
+  ASSERT_EQ((d0 * 6 + d1).floorDiv(2), d0 * 3 + d1.floorDiv(2));
+  ASSERT_EQ((d0 * 6 + d1).floorDiv(-2), d0 * -3 + d1.floorDiv(-2));
+  ASSERT_EQ((d0 * 6 + d1).floorDiv(4).getKind(), AffineExprKind::FloorDiv);
+
+  ASSERT_EQ(c6.ceilDiv(-1), cn6);
+  ASSERT_EQ((d0 * 6).ceilDiv(2), d0 * 3);
+  ASSERT_EQ((d0 * 6).ceilDiv(4).getKind(), AffineExprKind::CeilDiv);
+  ASSERT_EQ((d0 * 6).ceilDiv(-2), d0 * -3);
+}
+
+TEST(AffineExprTest, modSimplificationRegression) {
+  MLIRContext ctx;
+  OpBuilder b(&ctx);
+  auto d0 = b.getAffineDimExpr(0);
+  auto sum = d0 + d0.floorDiv(3).floorDiv(-3);
+  ASSERT_EQ(sum.getKind(), AffineExprKind::Add);
+}
+
+TEST(AffineExprTest, divisorOfNegativeFloorDiv) {
+  MLIRContext ctx;
+  OpBuilder b(&ctx);
+  ASSERT_EQ(b.getAffineDimExpr(0).floorDiv(-1).getLargestKnownDivisor(), 1);
+}
+
+TEST(AffineExprTest, d0PlusD0FloorDivNeg2) {
+  // Regression test for a bug where this was rewritten to d0 mod -2. We do not
+  // support a negative RHS for mod in LowerAffinePass.
+  MLIRContext ctx;
+  OpBuilder b(&ctx);
+  auto d0 = b.getAffineDimExpr(0);
+  auto sum = d0 + d0.floorDiv(-2) * 2;
+  ASSERT_EQ(toString(sum), "d0 + (d0 floordiv -2) * 2");
+}
+
+TEST(AffineExprTest, simpleAffineExprFlattenerRegression) {
+
+  // Regression test for a bug where mod simplification was not handled
+  // properly when `lhs % rhs` was happened to have the property that `lhs
+  // floordiv rhs = lhs`.
+  MLIRContext ctx;
+  OpBuilder b(&ctx);
+
+  auto d0 = b.getAffineDimExpr(0);
+
+  // Manually replace variables by constants to avoid constant folding.
+  AffineExpr expr = (d0 - (d0 + 2)).floorDiv(8) % 8;
+  AffineExpr result = mlir::simplifyAffineExpr(expr, 1, 0);
+
+  ASSERT_TRUE(isa<AffineConstantExpr>(result));
+  ASSERT_EQ(cast<AffineConstantExpr>(result).getValue(), 7);
 }

@@ -111,7 +111,9 @@ public:
   // Process Control
   Status WillResume() override;
 
-  Status DoResume() override;
+  bool SupportsReverseDirection() override;
+
+  Status DoResume(lldb::RunDirection direction) override;
 
   Status DoHalt(bool &caused_stop) override;
 
@@ -439,6 +441,10 @@ private:
   void HandleAsyncMisc(llvm::StringRef data) override;
   void HandleStopReply() override;
   void HandleAsyncStructuredDataPacket(llvm::StringRef data) override;
+
+  lldb::ThreadSP
+  HandleThreadAsyncInterrupt(uint8_t signo,
+                             const std::string &description) override;
 
   void SetThreadPc(const lldb::ThreadSP &thread_sp, uint64_t index);
   using ModuleCacheKey = std::pair<std::string, std::string>;

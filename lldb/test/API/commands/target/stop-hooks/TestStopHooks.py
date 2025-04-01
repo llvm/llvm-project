@@ -26,9 +26,14 @@ class TestStopHooks(TestBase):
         self.step_out_test()
 
     def test_stop_hooks_after_expr(self):
-        """Test that a stop hook fires when hitting a breakpoint
-        that runs an expression"""
+        """Test that a stop hook fires when hitting a breakpoint that
+        runs an expression"""
         self.after_expr_test()
+
+    def test_stop_hooks_before_and_after_creation(self):
+        """Test that if we add stop hooks in the dummy target,
+        they aren't overridden by the ones set directly in the target."""
+        self.before_and_after_target()
 
     def step_out_test(self):
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
@@ -85,3 +90,19 @@ class TestStopHooks(TestBase):
         var = target.FindFirstGlobalVariable("g_var")
         self.assertTrue(var.IsValid())
         self.assertEqual(var.GetValueAsUnsigned(), 1, "Updated g_var")
+
+    def before_and_after_target(self):
+        interp = self.dbg.GetCommandInterpreter()
+        result = lldb.SBCommandReturnObject()
+        interp.HandleCommand("target stop-hook add -o 'expr g_var++'", result)
+        self.assertTrue(result.Succeeded(), "Set the target stop hook")
+
+        (target, process, thread, first_bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "Set a breakpoint here", self.main_source_file
+        )
+
+        interp.HandleCommand("target stop-hook add -o 'thread backtrace'", result)
+        self.assertTrue(result.Succeeded(), "Set the target stop hook")
+        self.expect(
+            "target stop-hook list", substrs=["expr g_var++", "thread backtrace"]
+        )

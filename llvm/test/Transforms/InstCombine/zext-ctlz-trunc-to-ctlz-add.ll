@@ -28,7 +28,7 @@ define i16 @trunc_ctlz_zext_i16_i32(i16 %x) {
 define <2 x i8> @trunc_ctlz_zext_v2i8_v2i33(<2 x i8> %x) {
 ; CHECK-LABEL: @trunc_ctlz_zext_v2i8_v2i33(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call range(i8 0, 9) <2 x i8> @llvm.ctlz.v2i8(<2 x i8> [[X:%.*]], i1 true)
-; CHECK-NEXT:    [[ZZ:%.*]] = add nuw nsw <2 x i8> [[TMP1]], <i8 25, i8 25>
+; CHECK-NEXT:    [[ZZ:%.*]] = add nuw nsw <2 x i8> [[TMP1]], splat (i8 25)
 ; CHECK-NEXT:    ret <2 x i8> [[ZZ]]
 ;
   %z = zext <2 x i8> %x to <2 x i33>
@@ -42,7 +42,7 @@ define <2 x i8> @trunc_ctlz_zext_v2i8_v2i33(<2 x i8> %x) {
 define <vscale x 2 x i16> @trunc_ctlz_zext_nxv2i16_nxv2i64(<vscale x 2 x i16> %x) {
 ; CHECK-LABEL: @trunc_ctlz_zext_nxv2i16_nxv2i64(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call range(i16 0, 17) <vscale x 2 x i16> @llvm.ctlz.nxv2i16(<vscale x 2 x i16> [[X:%.*]], i1 false)
-; CHECK-NEXT:    [[ZZ:%.*]] = add nuw nsw <vscale x 2 x i16> [[TMP1]], shufflevector (<vscale x 2 x i16> insertelement (<vscale x 2 x i16> poison, i16 48, i64 0), <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[ZZ:%.*]] = add nuw nsw <vscale x 2 x i16> [[TMP1]], splat (i16 48)
 ; CHECK-NEXT:    ret <vscale x 2 x i16> [[ZZ]]
 ;
   %z = zext <vscale x 2 x i16> %x to <vscale x 2 x i64>
@@ -74,7 +74,7 @@ define <vscale x 2 x i16> @trunc_ctlz_zext_nxv2i16_nxv2i63_multiple_uses(<vscale
 ; CHECK-LABEL: @trunc_ctlz_zext_nxv2i16_nxv2i63_multiple_uses(
 ; CHECK-NEXT:    [[Z:%.*]] = zext <vscale x 2 x i16> [[X:%.*]] to <vscale x 2 x i63>
 ; CHECK-NEXT:    [[TMP1:%.*]] = call range(i16 0, 17) <vscale x 2 x i16> @llvm.ctlz.nxv2i16(<vscale x 2 x i16> [[X]], i1 true)
-; CHECK-NEXT:    [[ZZ:%.*]] = add nuw nsw <vscale x 2 x i16> [[TMP1]], shufflevector (<vscale x 2 x i16> insertelement (<vscale x 2 x i16> poison, i16 47, i64 0), <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[ZZ:%.*]] = add nuw nsw <vscale x 2 x i16> [[TMP1]], splat (i16 47)
 ; CHECK-NEXT:    call void @use1(<vscale x 2 x i63> [[Z]])
 ; CHECK-NEXT:    ret <vscale x 2 x i16> [[ZZ]]
 ;

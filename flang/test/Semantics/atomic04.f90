@@ -4,7 +4,7 @@
 
 program test_atomic_define
   use iso_fortran_env, only: atomic_int_kind, atomic_logical_kind
-  implicit none
+  implicit none(external, type)
 
   integer(kind=atomic_int_kind) :: scalar_coarray[*], non_scalar_coarray(10)[*], val, non_coarray
   integer(kind=atomic_int_kind) :: repeated_atom[*], repeated_val, array(10)
@@ -64,16 +64,16 @@ program test_atomic_define
   !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_define'
   call atomic_define(array, val)
 
-  !ERROR: Actual argument for 'atom=' must have kind=atomic_int_kind or atomic_logical_kind, but is 'INTEGER(4)'
+  !ERROR: Actual argument for 'atom=' must have kind=atomic_int_kind, but is 'INTEGER(4)'
   call atomic_define(default_kind_coarray, val)
 
-  !ERROR: Actual argument for 'atom=' must have kind=atomic_int_kind or atomic_logical_kind, but is 'INTEGER(1)'
+  !ERROR: Actual argument for 'atom=' must have kind=atomic_int_kind, but is 'INTEGER(1)'
   call atomic_define(kind1_coarray, val)
 
-  !ERROR: Actual argument for 'atom=' must have kind=atomic_int_kind or atomic_logical_kind, but is 'LOGICAL(4)'
+  !ERROR: Actual argument for 'atom=' must have kind=atomic_logical_kind, but is 'LOGICAL(4)'
   call atomic_define(default_kind_logical_coarray, val_logical)
 
-  !ERROR: Actual argument for 'atom=' must have kind=atomic_int_kind or atomic_logical_kind, but is 'LOGICAL(1)'
+  !ERROR: Actual argument for 'atom=' must have kind=atomic_logical_kind, but is 'LOGICAL(1)'
   call atomic_define(kind1_logical_coarray, val_logical)
 
   !ERROR: 'value=' argument to 'atomic_define' must have same type as 'atom=', but is 'LOGICAL(8)'

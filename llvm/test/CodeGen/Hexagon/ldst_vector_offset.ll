@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc -O3 -march=hexagon < %s -o /dev/null
+; RUN: llc -O3 -mtriple=hexagon < %s -o /dev/null
 ; Make sure that this doesn't crash.
 ; This test validates that the compiler would not assert when analyzing the
 ; offset of V6_vS32b_pred_ai instruction

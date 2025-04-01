@@ -47,12 +47,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Opts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Opts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 using namespace llvm::opt;
 static constexpr opt::OptTable::Info InfoTable[] = {
@@ -63,7 +64,8 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class DwpOptTable : public opt::GenericOptTable {
 public:
-  DwpOptTable() : GenericOptTable(InfoTable) {}
+  DwpOptTable()
+      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
 };
 } // end anonymous namespace
 
@@ -266,9 +268,8 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
 
   std::unique_ptr<MCStreamer> MS(TheTarget->createMCObjectStreamer(
       *ErrOrTriple, MC, std::unique_ptr<MCAsmBackend>(MAB),
-      MAB->createObjectWriter(*OS), std::unique_ptr<MCCodeEmitter>(MCE), *MSTI,
-      MCOptions.MCRelaxAll, MCOptions.MCIncrementalLinkerCompatible,
-      /*DWARFMustBeAtTheEnd*/ false));
+      MAB->createObjectWriter(*OS), std::unique_ptr<MCCodeEmitter>(MCE),
+      *MSTI));
   if (!MS)
     return error("no object streamer for target " + TripleName, Context);
 

@@ -102,6 +102,212 @@ void BranchCloneCheck::registerMatchers(MatchFinder *Finder) {
       this);
   Finder->addMatcher(switchStmt().bind("switch"), this);
   Finder->addMatcher(conditionalOperator().bind("condOp"), this);
+  Finder->addMatcher(
+      ifStmt((hasThen(hasDescendant(ifStmt())))).bind("ifWithDescendantIf"),
+      this);
+}
+
+/// Determines whether two statement trees are identical regarding
+/// operators and symbols.
+///
+/// Exceptions: expressions containing macros or functions with possible side
+/// effects are never considered identical.
+/// Limitations: (t + u) and (u + t) are not considered identical.
+/// t*(u + t) and t*u + t*t are not considered identical.
+///
+static bool isIdenticalStmt(const ASTContext &Ctx, const Stmt *Stmt1,
+                            const Stmt *Stmt2, bool IgnoreSideEffects) {
+
+  if (!Stmt1 || !Stmt2)
+    return !Stmt1 && !Stmt2;
+
+  // If Stmt1 & Stmt2 are of different class then they are not
+  // identical statements.
+  if (Stmt1->getStmtClass() != Stmt2->getStmtClass())
+    return false;
+
+  const auto *Expr1 = dyn_cast<Expr>(Stmt1);
+  const auto *Expr2 = dyn_cast<Expr>(Stmt2);
+
+  if (Expr1 && Expr2) {
+    // If Stmt1 has side effects then don't warn even if expressions
+    // are identical.
+    if (!IgnoreSideEffects && Expr1->HasSideEffects(Ctx) &&
+        Expr2->HasSideEffects(Ctx))
+      return false;
+    // If either expression comes from a macro then don't warn even if
+    // the expressions are identical.
+    if ((Expr1->getExprLoc().isMacroID()) || (Expr2->getExprLoc().isMacroID()))
+      return false;
+
+    // If all children of two expressions are identical, return true.
+    Expr::const_child_iterator I1 = Expr1->child_begin();
+    Expr::const_child_iterator I2 = Expr2->child_begin();
+    while (I1 != Expr1->child_end() && I2 != Expr2->child_end()) {
+      if (!isIdenticalStmt(Ctx, *I1, *I2, IgnoreSideEffects))
+        return false;
+      ++I1;
+      ++I2;
+    }
+    // If there are different number of children in the statements, return
+    // false.
+    if (I1 != Expr1->child_end())
+      return false;
+    if (I2 != Expr2->child_end())
+      return false;
+  }
+
+  switch (Stmt1->getStmtClass()) {
+  default:
+    return false;
+  case Stmt::CallExprClass:
+  case Stmt::ArraySubscriptExprClass:
+  case Stmt::ArraySectionExprClass:
+  case Stmt::OMPArrayShapingExprClass:
+  case Stmt::OMPIteratorExprClass:
+  case Stmt::ImplicitCastExprClass:
+  case Stmt::ParenExprClass:
+  case Stmt::BreakStmtClass:
+  case Stmt::ContinueStmtClass:
+  case Stmt::NullStmtClass:
+    return true;
+  case Stmt::CStyleCastExprClass: {
+    const auto *CastExpr1 = cast<CStyleCastExpr>(Stmt1);
+    const auto *CastExpr2 = cast<CStyleCastExpr>(Stmt2);
+
+    return CastExpr1->getTypeAsWritten() == CastExpr2->getTypeAsWritten();
+  }
+  case Stmt::ReturnStmtClass: {
+    const auto *ReturnStmt1 = cast<ReturnStmt>(Stmt1);
+    const auto *ReturnStmt2 = cast<ReturnStmt>(Stmt2);
+
+    return isIdenticalStmt(Ctx, ReturnStmt1->getRetValue(),
+                           ReturnStmt2->getRetValue(), IgnoreSideEffects);
+  }
+  case Stmt::ForStmtClass: {
+    const auto *ForStmt1 = cast<ForStmt>(Stmt1);
+    const auto *ForStmt2 = cast<ForStmt>(Stmt2);
+
+    if (!isIdenticalStmt(Ctx, ForStmt1->getInit(), ForStmt2->getInit(),
+                         IgnoreSideEffects))
+      return false;
+    if (!isIdenticalStmt(Ctx, ForStmt1->getCond(), ForStmt2->getCond(),
+                         IgnoreSideEffects))
+      return false;
+    if (!isIdenticalStmt(Ctx, ForStmt1->getInc(), ForStmt2->getInc(),
+                         IgnoreSideEffects))
+      return false;
+    if (!isIdenticalStmt(Ctx, ForStmt1->getBody(), ForStmt2->getBody(),
+                         IgnoreSideEffects))
+      return false;
+    return true;
+  }
+  case Stmt::DoStmtClass: {
+    const auto *DStmt1 = cast<DoStmt>(Stmt1);
+    const auto *DStmt2 = cast<DoStmt>(Stmt2);
+
+    if (!isIdenticalStmt(Ctx, DStmt1->getCond(), DStmt2->getCond(),
+                         IgnoreSideEffects))
+      return false;
+    if (!isIdenticalStmt(Ctx, DStmt1->getBody(), DStmt2->getBody(),
+                         IgnoreSideEffects))
+      return false;
+    return true;
+  }
+  case Stmt::WhileStmtClass: {
+    const auto *WStmt1 = cast<WhileStmt>(Stmt1);
+    const auto *WStmt2 = cast<WhileStmt>(Stmt2);
+
+    if (!isIdenticalStmt(Ctx, WStmt1->getCond(), WStmt2->getCond(),
+                         IgnoreSideEffects))
+      return false;
+    if (!isIdenticalStmt(Ctx, WStmt1->getBody(), WStmt2->getBody(),
+                         IgnoreSideEffects))
+      return false;
+    return true;
+  }
+  case Stmt::IfStmtClass: {
+    const auto *IStmt1 = cast<IfStmt>(Stmt1);
+    const auto *IStmt2 = cast<IfStmt>(Stmt2);
+
+    if (!isIdenticalStmt(Ctx, IStmt1->getCond(), IStmt2->getCond(),
+                         IgnoreSideEffects))
+      return false;
+    if (!isIdenticalStmt(Ctx, IStmt1->getThen(), IStmt2->getThen(),
+                         IgnoreSideEffects))
+      return false;
+    if (!isIdenticalStmt(Ctx, IStmt1->getElse(), IStmt2->getElse(),
+                         IgnoreSideEffects))
+      return false;
+    return true;
+  }
+  case Stmt::CompoundStmtClass: {
+    const auto *CompStmt1 = cast<CompoundStmt>(Stmt1);
+    const auto *CompStmt2 = cast<CompoundStmt>(Stmt2);
+
+    if (CompStmt1->size() != CompStmt2->size())
+      return false;
+
+    if (!llvm::all_of(llvm::zip(CompStmt1->body(), CompStmt2->body()),
+                      [&Ctx, IgnoreSideEffects](
+                          std::tuple<const Stmt *, const Stmt *> stmtPair) {
+                        const Stmt *stmt0 = std::get<0>(stmtPair);
+                        const Stmt *stmt1 = std::get<1>(stmtPair);
+                        return isIdenticalStmt(Ctx, stmt0, stmt1,
+                                               IgnoreSideEffects);
+                      })) {
+      return false;
+    }
+
+    return true;
+  }
+  case Stmt::CompoundAssignOperatorClass:
+  case Stmt::BinaryOperatorClass: {
+    const auto *BinOp1 = cast<BinaryOperator>(Stmt1);
+    const auto *BinOp2 = cast<BinaryOperator>(Stmt2);
+    return BinOp1->getOpcode() == BinOp2->getOpcode();
+  }
+  case Stmt::CharacterLiteralClass: {
+    const auto *CharLit1 = cast<CharacterLiteral>(Stmt1);
+    const auto *CharLit2 = cast<CharacterLiteral>(Stmt2);
+    return CharLit1->getValue() == CharLit2->getValue();
+  }
+  case Stmt::DeclRefExprClass: {
+    const auto *DeclRef1 = cast<DeclRefExpr>(Stmt1);
+    const auto *DeclRef2 = cast<DeclRefExpr>(Stmt2);
+    return DeclRef1->getDecl() == DeclRef2->getDecl();
+  }
+  case Stmt::IntegerLiteralClass: {
+    const auto *IntLit1 = cast<IntegerLiteral>(Stmt1);
+    const auto *IntLit2 = cast<IntegerLiteral>(Stmt2);
+
+    llvm::APInt I1 = IntLit1->getValue();
+    llvm::APInt I2 = IntLit2->getValue();
+    if (I1.getBitWidth() != I2.getBitWidth())
+      return false;
+    return I1 == I2;
+  }
+  case Stmt::FloatingLiteralClass: {
+    const auto *FloatLit1 = cast<FloatingLiteral>(Stmt1);
+    const auto *FloatLit2 = cast<FloatingLiteral>(Stmt2);
+    return FloatLit1->getValue().bitwiseIsEqual(FloatLit2->getValue());
+  }
+  case Stmt::StringLiteralClass: {
+    const auto *StringLit1 = cast<StringLiteral>(Stmt1);
+    const auto *StringLit2 = cast<StringLiteral>(Stmt2);
+    return StringLit1->getBytes() == StringLit2->getBytes();
+  }
+  case Stmt::MemberExprClass: {
+    const auto *MemberStmt1 = cast<MemberExpr>(Stmt1);
+    const auto *MemberStmt2 = cast<MemberExpr>(Stmt2);
+    return MemberStmt1->getMemberDecl() == MemberStmt2->getMemberDecl();
+  }
+  case Stmt::UnaryOperatorClass: {
+    const auto *UnaryOp1 = cast<UnaryOperator>(Stmt1);
+    const auto *UnaryOp2 = cast<UnaryOperator>(Stmt2);
+    return UnaryOp1->getOpcode() == UnaryOp2->getOpcode();
+  }
+  }
 }
 
 void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
@@ -265,6 +471,21 @@ void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
         diag(EndLoc, "last of these clones ends here", DiagnosticIDs::Note);
       }
       BeginCurrent = EndCurrent;
+    }
+    return;
+  }
+
+  if (const auto *IS = Result.Nodes.getNodeAs<IfStmt>("ifWithDescendantIf")) {
+    const Stmt *Then = IS->getThen();
+    auto CS = dyn_cast<CompoundStmt>(Then);
+    if (CS && (!CS->body_empty())) {
+      const auto *InnerIf = dyn_cast<IfStmt>(*CS->body_begin());
+      if (InnerIf && isIdenticalStmt(Context, IS->getCond(), InnerIf->getCond(),
+                                     /*IgnoreSideEffects=*/false)) {
+        diag(IS->getBeginLoc(), "if with identical inner if statement");
+        diag(InnerIf->getBeginLoc(), "inner if starts here",
+             DiagnosticIDs::Note);
+      }
     }
     return;
   }

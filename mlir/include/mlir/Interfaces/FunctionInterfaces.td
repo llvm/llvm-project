@@ -83,7 +83,7 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface", [
       Note: The default implementation merely checks that if the entry block
       exists, it has the same number and type of arguments as the function type.
     }],
-    "::mlir::LogicalResult", "verifyBody", (ins),
+    "::llvm::LogicalResult", "verifyBody", (ins),
     /*methodBody=*/[{}], /*defaultImplementation=*/[{
       if ($_op.isExternal())
         return success();
@@ -114,7 +114,7 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface", [
       Verify the type attribute of the function for derived op-specific
       invariants.
     }],
-    "::mlir::LogicalResult", "verifyType", (ins),
+    "::llvm::LogicalResult", "verifyType", (ins),
     /*methodBody=*/[{}], /*defaultImplementation=*/[{
       return success();
     }]>,
@@ -538,6 +538,10 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface", [
     /// such name.
     ::mlir::Attribute removeResultAttr(unsigned index, ::mlir::StringAttr name) {
       return ::mlir::function_interface_impl::removeResultAttr($_op, index, name);
+    }
+    ::mlir::Attribute removeResultAttr(unsigned index, ::llvm::StringRef name) {
+      return removeResultAttr(
+          index, ::mlir::StringAttr::get(this->getOperation()->getContext(), name));
     }
 
     /// Returns the dictionary attribute corresponding to the argument at

@@ -15,7 +15,6 @@
 
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -89,7 +88,7 @@ bool KCFI::emitCheck(MachineBasicBlock &MBB,
 }
 
 bool KCFI::runOnMachineFunction(MachineFunction &MF) {
-  const Module *M = MF.getMMI().getModule();
+  const Module *M = MF.getFunction().getParent();
   if (!M->getModuleFlag("kcfi"))
     return false;
 

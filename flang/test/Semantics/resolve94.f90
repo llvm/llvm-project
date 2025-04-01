@@ -6,6 +6,7 @@
 ! C931 A stat-variable in an image-selector shall not be a coindexed object.
 subroutine s1()
   use ISO_FORTRAN_ENV
+  save
   type(team_type) :: team1, team2
   real :: rCoarray[10,20,*]
   real :: rVar1, rVar2
@@ -17,8 +18,15 @@ subroutine s1()
   intCoVar = 343
   ! OK
   rVar1 = rCoarray[1,2,3]
+  associate (x => rCoarray)
+    rVar1 = x[1,2,3] ! also ok
+  end associate
   !ERROR: 'rcoarray' has corank 3, but coindexed reference has 2 cosubscripts
   rVar1 = rCoarray[1,2]
+  associate (x => rCoarray)
+  !ERROR: 'x' has corank 3, but coindexed reference has 2 cosubscripts
+    rVar1 = x[1,2]
+  end associate
   !ERROR: Must have INTEGER type, but is REAL(4)
   rVar1 = rCoarray[1,2,3.4]
   !ERROR: Must have INTEGER type, but is REAL(4)

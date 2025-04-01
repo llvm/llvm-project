@@ -71,6 +71,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Transforms/Scalar.h"
 
 using namespace llvm;
 
@@ -327,7 +328,8 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
     auto Current = I;
     ++I;
     if (!NotHoisted.count(&*Current)) {
-      Current->moveBefore(ToBlock.getTerminator());
+      Current->moveBefore(ToBlock.getTerminator()->getIterator());
+      Current->dropLocation();
     }
   }
   return true;

@@ -116,16 +116,16 @@ public:
     collectUsedGlobalVariables(M, Vec, /*CompilerUsed=*/false);
     // Next collect those in the llvm.compiler.used set.
     collectUsedGlobalVariables(M, Vec, /*CompilerUsed=*/true);
-    Used = {Vec.begin(), Vec.end()};
+    Used = {llvm::from_range, Vec};
 #endif
   }
 
-  bool run();
+  void run();
 };
 
 /// Perform in-place global value handling on the given Module for
 /// exported local functions renamed and promoted for ThinLTO.
-bool renameModuleForThinLTO(
+void renameModuleForThinLTO(
     Module &M, const ModuleSummaryIndex &Index,
     bool ClearDSOLocalOnDeclarations,
     SetVector<GlobalValue *> *GlobalsToImport = nullptr);

@@ -29,10 +29,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -518,19 +515,17 @@ void TemplateArgument::print(const PrintingPolicy &Policy, raw_ostream &Out,
   }
 
   case Declaration: {
-    NamedDecl *ND = getAsDecl();
+    ValueDecl *VD = getAsDecl();
     if (getParamTypeForDecl()->isRecordType()) {
-      if (auto *TPO = dyn_cast<TemplateParamObjectDecl>(ND)) {
+      if (auto *TPO = dyn_cast<TemplateParamObjectDecl>(VD)) {
         TPO->getType().getUnqualifiedType().print(Out, Policy);
         TPO->printAsInit(Out, Policy);
         break;
       }
     }
-    if (auto *VD = dyn_cast<ValueDecl>(ND)) {
-      if (needsAmpersandOnTemplateArg(getParamTypeForDecl(), VD->getType()))
-        Out << "&";
-    }
-    ND->printQualifiedName(Out);
+    if (needsAmpersandOnTemplateArg(getParamTypeForDecl(), VD->getType()))
+      Out << "&";
+    VD->printQualifiedName(Out);
     break;
   }
 

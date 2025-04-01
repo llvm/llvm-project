@@ -120,7 +120,7 @@ class CodeGenTBAA {
   llvm::Module &Module;
   const CodeGenOptions &CodeGenOpts;
   const LangOptions &Features;
-  MangleContext &MContext;
+  std::unique_ptr<MangleContext> MangleCtx;
 
   // MDHelper - Helper for creating metadata.
   llvm::MDBuilder MDHelper;
@@ -139,6 +139,7 @@ class CodeGenTBAA {
 
   llvm::MDNode *Root;
   llvm::MDNode *Char;
+  llvm::SmallVector<llvm::MDNode *, 4> AnyPtrs;
 
   /// getRoot - This is the mdnode for the root of the metadata type graph
   /// for this translation unit.
@@ -147,6 +148,10 @@ class CodeGenTBAA {
   /// getChar - This is the mdnode for "char", which is special, and any types
   /// considered to be equivalent to it.
   llvm::MDNode *getChar();
+
+  /// getAnyPtr - This is the mdnode for any pointer type of (at least) the
+  /// given pointer depth.
+  llvm::MDNode *getAnyPtr(unsigned PtrDepth = 1);
 
   /// CollectFields - Collect information about the fields of a type for
   /// !tbaa.struct metadata formation. Return false for an unsupported type.
@@ -174,8 +179,7 @@ class CodeGenTBAA {
 
 public:
   CodeGenTBAA(ASTContext &Ctx, CodeGenTypes &CGTypes, llvm::Module &M,
-              const CodeGenOptions &CGO, const LangOptions &Features,
-              MangleContext &MContext);
+              const CodeGenOptions &CGO, const LangOptions &Features);
   ~CodeGenTBAA();
 
   /// getTypeInfo - Get metadata used to describe accesses to objects of the

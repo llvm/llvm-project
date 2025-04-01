@@ -19,15 +19,18 @@
 
 namespace llvm {
 
+class FeatureBitset;
 class MCAsmBackend;
 class MCCodeEmitter;
 class MCContext;
 class MCInstrInfo;
 class MCObjectTargetWriter;
 class MCObjectWriter;
+class MCRegister;
 class MCRegisterInfo;
 class MCSubtargetInfo;
 class MCTargetOptions;
+class MachineInstr;
 class StringRef;
 class Target;
 class raw_ostream;
@@ -43,6 +46,18 @@ MCAsmBackend *createXtensaMCAsmBackend(const Target &T,
                                        const MCTargetOptions &Options);
 std::unique_ptr<MCObjectTargetWriter>
 createXtensaObjectWriter(uint8_t OSABI, bool IsLittleEndian);
+
+namespace Xtensa {
+// Check address offset for load/store instructions.
+// The offset should be multiple of scale.
+bool isValidAddrOffset(int Scale, int64_t OffsetVal);
+
+// Check address offset for load/store instructions.
+bool isValidAddrOffsetForOpcode(unsigned Opcode, int64_t Offset);
+
+// Verify if it's correct to use a special register.
+bool checkRegister(MCRegister RegNo, const FeatureBitset &FeatureBits);
+} // namespace Xtensa
 } // end namespace llvm
 
 // Defines symbolic names for Xtensa registers.

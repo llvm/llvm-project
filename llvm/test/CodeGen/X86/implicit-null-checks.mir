@@ -5,15 +5,15 @@
   target triple = "x86_64-apple-macosx"
 
   ;; Positive test
-  define i32 @imp_null_check_with_bitwise_op_0(ptr %x, i32 %val) {
+  define i32 @imp_null_check_with_bitwise_op_0(ptr %x, i32 %val, i1 %arg) {
   entry:
-    br i1 undef, label %is_null, label %not_null, !make.implicit !0
+    br i1 %arg, label %is_null, label %not_null, !make.implicit !0
 
   is_null:
     ret i32 42
 
   not_null:
-    br i1 undef, label %ret_100, label %ret_200
+    br i1 %arg, label %ret_100, label %ret_200
 
   ret_100:
     ret i32 100
@@ -24,15 +24,15 @@
 
   ;; Negative test.  The regalloc is such that we cannot hoist the
   ;; instruction materializing 2200000 into $eax
-  define i32 @imp_null_check_with_bitwise_op_1(ptr %x, i32 %val, ptr %ptr) {
+  define i32 @imp_null_check_with_bitwise_op_1(ptr %x, i32 %val, ptr %ptr, i1 %arg) {
   entry:
-    br i1 undef, label %is_null, label %not_null, !make.implicit !0
+    br i1 %arg, label %is_null, label %not_null, !make.implicit !0
 
   is_null:
     ret i32 undef
 
   not_null:
-    br i1 undef, label %ret_100, label %ret_200
+    br i1 %arg, label %ret_100, label %ret_200
 
   ret_100:
     ret i32 100
@@ -43,15 +43,15 @@
 
   ;; Negative test: IR is identical to
   ;; @imp_null_check_with_bitwise_op_0 but MIR differs.
-  define i32 @imp_null_check_with_bitwise_op_2(ptr %x, i32 %val) {
+  define i32 @imp_null_check_with_bitwise_op_2(ptr %x, i32 %val, i1 %arg) {
   entry:
-    br i1 undef, label %is_null, label %not_null, !make.implicit !0
+    br i1 %arg, label %is_null, label %not_null, !make.implicit !0
 
   is_null:
     ret i32 42
 
   not_null:
-    br i1 undef, label %ret_100, label %ret_200
+    br i1 %arg, label %ret_100, label %ret_200
 
   ret_100:
     ret i32 100
@@ -62,15 +62,15 @@
 
   ;; Negative test: IR is identical to
   ;; @imp_null_check_with_bitwise_op_0 but MIR differs.
-  define i32 @imp_null_check_with_bitwise_op_3(ptr %x, i32 %val) {
+  define i32 @imp_null_check_with_bitwise_op_3(ptr %x, i32 %val, i1 %arg) {
   entry:
-    br i1 undef, label %is_null, label %not_null, !make.implicit !0
+    br i1 %arg, label %is_null, label %not_null, !make.implicit !0
 
   is_null:
     ret i32 42
 
   not_null:
-    br i1 undef, label %ret_100, label %ret_200
+    br i1 %arg, label %ret_100, label %ret_200
 
   ret_100:
     ret i32 100
@@ -80,15 +80,15 @@
   }
 
   ;; Positive test
-  define i32 @imp_null_check_with_bitwise_op_4(ptr %x, i32 %val) {
+  define i32 @imp_null_check_with_bitwise_op_4(ptr %x, i32 %val, i1 %arg) {
   entry:
-    br i1 undef, label %is_null, label %not_null, !make.implicit !0
+    br i1 %arg, label %is_null, label %not_null, !make.implicit !0
 
   is_null:
     ret i32 42
 
   not_null:
-    br i1 undef, label %ret_100, label %ret_200
+    br i1 %arg, label %ret_100, label %ret_200
 
   ret_100:
     ret i32 100

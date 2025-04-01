@@ -129,6 +129,12 @@ TEST(ArchSpecTest, TestSetTriple) {
   EXPECT_STREQ("msp430", AS.GetArchitectureName());
   EXPECT_EQ(ArchSpec::eCore_msp430, AS.GetCore());
 
+  AS = ArchSpec();
+  EXPECT_TRUE(AS.SetTriple("amd64-unknown-openbsd"));
+  EXPECT_EQ(llvm::Triple::x86_64, AS.GetTriple().getArch());
+  EXPECT_STREQ("amd64", AS.GetArchitectureName());
+  EXPECT_EQ(ArchSpec::eCore_x86_64_amd64, AS.GetCore());
+
   // Various flavors of invalid triples.
   AS = ArchSpec();
   EXPECT_FALSE(AS.SetTriple("unknown-unknown-unknown"));
@@ -393,6 +399,12 @@ TEST(ArchSpecTest, Compatibility) {
     // ios-macabi wins.
     B.MergeFrom(A);
     ASSERT_TRUE(B.IsExactMatch(C));
+  }
+  {
+    ArchSpec A("x86_64-apple-driverkit19.0");
+    ArchSpec B("x86_64-apple-macosx10.15.0");
+    ASSERT_FALSE(A.IsExactMatch(B));
+    ASSERT_TRUE(A.IsCompatibleMatch(B));
   }
 }
 

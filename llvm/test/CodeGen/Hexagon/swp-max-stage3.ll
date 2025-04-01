@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O3 -fp-contract=fast -pipeliner-max-stages=3 < %s
+; RUN: llc -mtriple=hexagon -O3 -fp-contract=fast -pipeliner-max-stages=3 < %s
 ; REQUIRES: asserts
 
 ; Check Phis are generated correctly in epilogs after setting -swp-max-stages=3

@@ -8,6 +8,8 @@
 
 // ADDITIONAL_COMPILE_FLAGS(clang): -Wprivate-header
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <__iterator/aliasing_iterator.h>
 #include <cassert>
 

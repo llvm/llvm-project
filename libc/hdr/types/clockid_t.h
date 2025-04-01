@@ -9,7 +9,8 @@
 #ifndef LLVM_LIBC_HDR_TYPES_CLOCKID_T_H
 #define LLVM_LIBC_HDR_TYPES_CLOCKID_T_H
 
-#ifdef LIBC_FULL_BUILD
+// TODO: we will need to decide how to export extension to windows.
+#if defined(LIBC_FULL_BUILD) || defined(_WIN32)
 
 #include "include/llvm-libc-types/clockid_t.h"
 

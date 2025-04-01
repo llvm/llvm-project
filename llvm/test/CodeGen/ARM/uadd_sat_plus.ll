@@ -44,31 +44,29 @@ define i32 @func32(i32 %x, i32 %y, i32 %z) nounwind {
 define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 ; CHECK-T1-LABEL: func64:
 ; CHECK-T1:       @ %bb.0:
-; CHECK-T1-NEXT:    .save {r4, r5, r7, lr}
-; CHECK-T1-NEXT:    push {r4, r5, r7, lr}
-; CHECK-T1-NEXT:    movs r5, #0
-; CHECK-T1-NEXT:    ldr r2, [sp, #20]
-; CHECK-T1-NEXT:    ldr r3, [sp, #16]
+; CHECK-T1-NEXT:    .save {r4, lr}
+; CHECK-T1-NEXT:    push {r4, lr}
+; CHECK-T1-NEXT:    movs r4, #0
+; CHECK-T1-NEXT:    ldr r2, [sp, #12]
+; CHECK-T1-NEXT:    ldr r3, [sp, #8]
 ; CHECK-T1-NEXT:    adds r3, r0, r3
 ; CHECK-T1-NEXT:    adcs r2, r1
-; CHECK-T1-NEXT:    mov r4, r5
-; CHECK-T1-NEXT:    adcs r4, r5
-; CHECK-T1-NEXT:    mvns r1, r5
-; CHECK-T1-NEXT:    cmp r4, #0
+; CHECK-T1-NEXT:    mov r0, r4
+; CHECK-T1-NEXT:    adcs r0, r4
+; CHECK-T1-NEXT:    mvns r1, r4
+; CHECK-T1-NEXT:    cmp r0, #0
 ; CHECK-T1-NEXT:    mov r0, r1
 ; CHECK-T1-NEXT:    beq .LBB1_3
 ; CHECK-T1-NEXT:  @ %bb.1:
-; CHECK-T1-NEXT:    cmp r4, #0
 ; CHECK-T1-NEXT:    beq .LBB1_4
 ; CHECK-T1-NEXT:  .LBB1_2:
-; CHECK-T1-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-T1-NEXT:    pop {r4, pc}
 ; CHECK-T1-NEXT:  .LBB1_3:
 ; CHECK-T1-NEXT:    mov r0, r3
-; CHECK-T1-NEXT:    cmp r4, #0
 ; CHECK-T1-NEXT:    bne .LBB1_2
 ; CHECK-T1-NEXT:  .LBB1_4:
 ; CHECK-T1-NEXT:    mov r1, r2
-; CHECK-T1-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-T1-NEXT:    pop {r4, pc}
 ;
 ; CHECK-T2-LABEL: func64:
 ; CHECK-T2:       @ %bb.0:

@@ -1,3 +1,11 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #define _CLC_VSTORE_DECL(SUFFIX, PRIM_TYPE, VEC_TYPE, WIDTH, ADDR_SPACE, RND) \
   _CLC_OVERLOAD _CLC_DECL void vstore##SUFFIX##WIDTH##RND(VEC_TYPE vec, size_t offset, ADDR_SPACE PRIM_TYPE *out);
 

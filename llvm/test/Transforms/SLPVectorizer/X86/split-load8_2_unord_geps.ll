@@ -8,14 +8,14 @@ define void @test(ptr noalias %p, ptr noalias %addr, ptr noalias %s) {
 ; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <8 x ptr> [[TMP0]], <8 x ptr> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, <8 x ptr> [[SHUFFLE1]], <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, <8 x ptr> [[SHUFFLE1]], <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
-; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> [[TMP2]], i32 8, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> poison)
+; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> [[TMP2]], i32 8, <8 x i1> splat (i1 true), <8 x i32> poison)
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x ptr> poison, ptr [[P:%.*]], i32 0
 ; CHECK-NEXT:    [[SHUFFLE2:%.*]] = shufflevector <8 x ptr> [[TMP4]], <8 x ptr> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, <8 x ptr> [[SHUFFLE2]], <8 x i32> [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> [[TMP5]], i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> poison)
-; CHECK-NEXT:    [[TMP7:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> [[TMP1]], i32 8, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> poison)
+; CHECK-NEXT:    [[TMP6:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> [[TMP5]], i32 4, <8 x i1> splat (i1 true), <8 x i32> poison)
+; CHECK-NEXT:    [[TMP7:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> [[TMP1]], i32 8, <8 x i1> splat (i1 true), <8 x i32> poison)
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i32, <8 x ptr> [[SHUFFLE2]], <8 x i32> [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> [[TMP8]], i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> poison)
+; CHECK-NEXT:    [[TMP9:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> [[TMP8]], i32 4, <8 x i1> splat (i1 true), <8 x i32> poison)
 ; CHECK-NEXT:    [[TMP10:%.*]] = add nsw <8 x i32> [[TMP9]], [[TMP6]]
 ; CHECK-NEXT:    store <8 x i32> [[TMP10]], ptr [[S:%.*]], align 4
 ; CHECK-NEXT:    ret void

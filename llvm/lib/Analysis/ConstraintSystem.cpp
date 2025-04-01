@@ -52,9 +52,6 @@ bool ConstraintSystem::eliminateUsingFM() {
   for (unsigned R1 = 0; R1 < NumRemainingConstraints; R1++) {
     // FIXME do not use copy
     for (unsigned R2 = R1 + 1; R2 < NumRemainingConstraints; R2++) {
-      if (R1 == R2)
-        continue;
-
       int64_t UpperLast = getLastCoefficient(RemainingRows[R2], LastIdx);
       int64_t LowerLast = getLastCoefficient(RemainingRows[R1], LastIdx);
       assert(

@@ -16,6 +16,7 @@
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/SourceMgr.h"
@@ -56,11 +57,10 @@ public:
       GTEST_SKIP();
     TargetOptions Options;
     TM = std::unique_ptr<TargetMachine>(
-        T->createTargetMachine("X86", "", "", Options, std::nullopt));
+        T->createTargetMachine(TargetTriple, "", "", Options, std::nullopt));
     if (!TM)
       GTEST_SKIP();
-    MMI = std::make_unique<MachineModuleInfo>(
-        static_cast<LLVMTargetMachine *>(TM.get()));
+    MMI = std::make_unique<MachineModuleInfo>(TM.get());
 
     PassBuilder PB(TM.get());
     PB.registerModuleAnalyses(MAM);
@@ -72,7 +72,7 @@ public:
     MAM.registerPass([&] { return MachineModuleAnalysis(*MMI); });
   }
 
-  bool parseMIR(StringRef MIRCode, const char *FnName) {
+  bool parseMIR(StringRef MIRCode) {
     SMDiagnostic Diagnostic;
     std::unique_ptr<MemoryBuffer> MBuffer = MemoryBuffer::getMemBuffer(MIRCode);
     MIR = createMIRParser(std::move(MBuffer), Context);
@@ -116,7 +116,7 @@ body:             |
     successors: %bb.2, %bb.4
     liveins: $rdi, $rsi
 
-    %1:gr32 = COPY $rsi
+    %1:gr64 = COPY $rsi
     %0:gr64 = COPY $rdi
     MOV64mr %1, 1, $noreg, 0, $noreg, %0 :: (store (s64) into %ir.p)
     %2:gr64 = SUB64ri32 %0, 1, implicit-def $eflags
@@ -148,7 +148,7 @@ body:             |
 ...
 )";
 
-  ASSERT_TRUE(parseMIR(MIRString, "f0"));
+  ASSERT_TRUE(parseMIR(MIRString));
 
   auto &MF =
       FAM.getResult<MachineFunctionAnalysis>(*M->getFunction("f0")).getMF();
@@ -179,7 +179,6 @@ body:             |
   DTU.deleteBB(&*BB4);
   EXPECT_EQ(BB1->succ_size(), 1u);
   ASSERT_TRUE(DT.dominates(&*BB1, &*BB2));
-  ASSERT_EQ(DT.getNode(&*BB4), nullptr);
 }
 
 TEST_F(MachineDomTreeUpdaterTest, LazyUpdateBasicOperations) {
@@ -207,7 +206,7 @@ body:             |
     successors: %bb.2, %bb.4
     liveins: $rdi, $rsi
 
-    %1:gr32 = COPY $rsi
+    %1:gr64 = COPY $rsi
     %0:gr64 = COPY $rdi
     MOV64mr %1, 1, $noreg, 0, $noreg, %0 :: (store (s64) into %ir.p)
     %2:gr64 = SUB64ri32 %0, 1, implicit-def $eflags
@@ -239,7 +238,7 @@ body:             |
 ...
 )";
 
-  ASSERT_TRUE(parseMIR(MIRString, "f0"));
+  ASSERT_TRUE(parseMIR(MIRString));
 
   auto &MF =
       FAM.getResult<MachineFunctionAnalysis>(*M->getFunction("f0")).getMF();
@@ -268,9 +267,9 @@ body:             |
   ASSERT_TRUE(DT.dominates(&*BB1, &*BB4));
   BB1->removeSuccessor(&*BB4);
   DTU.deleteBB(&*BB4);
+  ASSERT_TRUE(DTU.hasPendingDeletedBB());
   EXPECT_EQ(BB1->succ_size(), 1u);
   ASSERT_TRUE(DT.dominates(&*BB1, &*BB2));
   ASSERT_NE(DT.getNode(&*BB4), nullptr);
   DTU.flush();
-  ASSERT_EQ(DT.getNode(&*BB4), nullptr);
 }

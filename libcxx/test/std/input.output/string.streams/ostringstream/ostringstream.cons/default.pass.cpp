@@ -15,9 +15,12 @@
 // basic_ostringstream() : basic_ostringstream(ios_base::out) {}           // C++20
 // explicit basic_ostringstream(ios_base::openmode which);                 // C++20
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <sstream>
 #include <cassert>
 
+#include "operator_hijacker.h"
 #include "test_macros.h"
 #if TEST_STD_VER >= 11
 #include "test_convertible.h"
@@ -33,28 +36,53 @@ int main(int, char**)
 {
     {
         std::ostringstream ss;
-        assert(ss.rdbuf() != 0);
+        assert(ss.rdbuf() != nullptr);
         assert(ss.good());
         assert(ss.str() == "");
     }
     {
+      std::basic_ostringstream<char, std::char_traits<char>, operator_hijacker_allocator<char> > ss;
+      assert(ss.rdbuf() != nullptr);
+      assert(ss.good());
+      assert(ss.str() == "");
+    }
+    {
         std::ostringstream ss(std::ios_base::out);
-        assert(ss.rdbuf() != 0);
+        assert(ss.rdbuf() != nullptr);
         assert(ss.good());
         assert(ss.str() == "");
+    }
+    {
+      std::basic_ostringstream<char, std::char_traits<char>, operator_hijacker_allocator<char> > ss(std::ios_base::out);
+      assert(ss.rdbuf() != nullptr);
+      assert(ss.good());
+      assert(ss.str() == "");
     }
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::wostringstream ss;
-        assert(ss.rdbuf() != 0);
+        assert(ss.rdbuf() != nullptr);
         assert(ss.good());
         assert(ss.str() == L"");
     }
     {
+      std::basic_ostringstream<wchar_t, std::char_traits<wchar_t>, operator_hijacker_allocator<wchar_t> > ss;
+      assert(ss.rdbuf() != nullptr);
+      assert(ss.good());
+      assert(ss.str() == L"");
+    }
+    {
         std::wostringstream ss(std::ios_base::out);
-        assert(ss.rdbuf() != 0);
+        assert(ss.rdbuf() != nullptr);
         assert(ss.good());
         assert(ss.str() == L"");
+    }
+    {
+      std::basic_ostringstream<wchar_t, std::char_traits<wchar_t>, operator_hijacker_allocator<wchar_t> > ss(
+          std::ios_base::out);
+      assert(ss.rdbuf() != nullptr);
+      assert(ss.good());
+      assert(ss.str() == L"");
     }
 #endif // TEST_HAS_NO_WIDE_CHARACTERS
 

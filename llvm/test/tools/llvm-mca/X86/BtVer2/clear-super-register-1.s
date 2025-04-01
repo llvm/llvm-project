@@ -15,12 +15,12 @@ bsf   %rax, %rcx
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      400
-# CHECK-NEXT: Total Cycles:      655
+# CHECK-NEXT: Total Cycles:      663
 # CHECK-NEXT: Total uOps:        1000
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    1.53
-# CHECK-NEXT: IPC:               0.61
+# CHECK-NEXT: uOps Per Cycle:    1.51
+# CHECK-NEXT: IPC:               0.60
 # CHECK-NEXT: Block RThroughput: 5.0
 
 # CHECK:      Instruction Info:

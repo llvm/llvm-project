@@ -482,7 +482,7 @@ llvm::Error dwarfgen::Generator::init(Triple TheTriple, uint16_t V) {
                                        TripleName,
                                    inconvertibleErrorCode());
 
-  TM.reset(TheTarget->createTargetMachine(TripleName, "", "", TargetOptions(),
+  TM.reset(TheTarget->createTargetMachine(TheTriple, "", "", TargetOptions(),
                                           std::nullopt));
   if (!TM)
     return make_error<StringError>("no target machine for target " + TripleName,
@@ -503,8 +503,7 @@ llvm::Error dwarfgen::Generator::init(Triple TheTriple, uint16_t V) {
   MS = TheTarget->createMCObjectStreamer(
       TheTriple, *MC, std::unique_ptr<MCAsmBackend>(MAB),
       MAB->createObjectWriter(*Stream), std::unique_ptr<MCCodeEmitter>(MCE),
-      *MSTI, MCOptions.MCRelaxAll, MCOptions.MCIncrementalLinkerCompatible,
-      /*DWARFMustBeAtTheEnd*/ false);
+      *MSTI);
   if (!MS)
     return make_error<StringError>("no object streamer for target " +
                                        TripleName,

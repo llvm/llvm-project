@@ -285,12 +285,13 @@ public:
     ScopedIncrement ScopedDepth(&CurrentDepth);
 
     for (unsigned I = 0, N = Node->capture_size(); I != N; ++I) {
-      const auto *C = Node->capture_begin() + I;
+      const LambdaCapture *C = Node->capture_begin() + I;
       if (!C->isExplicit())
         continue;
       if (Node->isInitCapture(C) && !match(*C->getCapturedVar()))
         return false;
-      if (!match(*Node->capture_init_begin()[I]))
+      const Expr *CIE = Node->capture_init_begin()[I];
+      if (CIE != nullptr && !match(*CIE))
         return false;
     }
 
@@ -1286,6 +1287,27 @@ private:
     auto Aliases = TypeAliases.find(CanonicalType);
     if (Aliases == TypeAliases.end())
       return false;
+
+    if (const auto *ElaboratedTypeNode =
+            llvm::dyn_cast<ElaboratedType>(TypeNode)) {
+      if (ElaboratedTypeNode->isSugared() && Aliases->second.size() > 1) {
+        const auto &DesugaredTypeName =
+            ElaboratedTypeNode->desugar().getAsString();
+
+        for (const TypedefNameDecl *Alias : Aliases->second) {
+          if (Alias->getName() != DesugaredTypeName) {
+            continue;
+          }
+
+          BoundNodesTreeBuilder Result(*Builder);
+          if (Matcher.matches(*Alias, this, &Result)) {
+            *Builder = std::move(Result);
+            return true;
+          }
+        }
+      }
+    }
+
     for (const TypedefNameDecl *Alias : Aliases->second) {
       BoundNodesTreeBuilder Result(*Builder);
       if (Matcher.matches(*Alias, this, &Result)) {

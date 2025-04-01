@@ -30,20 +30,24 @@ PreservedAnalyses PassManager<IRUnitT, AnalysisManagerT, ExtraArgTs...>::run(
     IRUnitT &IR, AnalysisManagerT &AM, ExtraArgTs... ExtraArgs) {
   class StackTraceEntry : public PrettyStackTraceEntry {
     const PassInstrumentation &PI;
-    PassConceptT &Pass;
     IRUnitT &IR;
+    PassConceptT *Pass = nullptr;
 
   public:
-    explicit StackTraceEntry(const PassInstrumentation &PI, PassConceptT &Pass,
-                             IRUnitT &IR)
-        : PI(PI), Pass(Pass), IR(IR) {}
+    explicit StackTraceEntry(const PassInstrumentation &PI, IRUnitT &IR)
+        : PI(PI), IR(IR) {}
+
+    void setPass(PassConceptT *P) { Pass = P; }
 
     void print(raw_ostream &OS) const override {
       OS << "Running pass \"";
-      Pass.printPipeline(OS, [this](StringRef ClassName) {
-        auto PassName = PI.getPassNameForClassName(ClassName);
-        return PassName.empty() ? ClassName : PassName;
-      });
+      if (Pass)
+        Pass->printPipeline(OS, [this](StringRef ClassName) {
+          auto PassName = PI.getPassNameForClassName(ClassName);
+          return PassName.empty() ? ClassName : PassName;
+        });
+      else
+        OS << "unknown";
       OS << "\" on ";
       printIRUnitNameForStackTrace(OS, IR);
       OS << "\n";
@@ -64,14 +68,16 @@ PreservedAnalyses PassManager<IRUnitT, AnalysisManagerT, ExtraArgTs...>::run(
   // for duration of these passes.
   ScopedDbgInfoFormatSetter FormatSetter(IR, UseNewDbgInfoFormat);
 
+  StackTraceEntry Entry(PI, IR);
   for (auto &Pass : Passes) {
+    Entry.setPass(&*Pass);
+
     // Check the PassInstrumentation's BeforePass callbacks before running the
     // pass, skip its execution completely if asked to (callback returns
     // false).
     if (!PI.runBeforePass<IRUnitT>(*Pass, IR))
       continue;
 
-    StackTraceEntry Entry(PI, *Pass, IR);
     PreservedAnalyses PassPA = Pass->run(IR, AM, ExtraArgs...);
 
     // Update the analysis manager as each pass runs and potentially

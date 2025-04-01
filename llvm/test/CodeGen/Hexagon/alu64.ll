@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O0 < %s | FileCheck %s
 
 ; CHECK-LABEL: @test00
 ; CHECK: = cmp.eq(r1:0,r3:2)

@@ -175,6 +175,8 @@ llvm::SplitKnownCriticalEdge(Instruction *TI, unsigned SuccNum,
   // Create our unconditional branch.
   BranchInst *NewBI = BranchInst::Create(DestBB, NewBB);
   NewBI->setDebugLoc(TI->getDebugLoc());
+  if (auto *LoopMD = TI->getMetadata(LLVMContext::MD_loop))
+    NewBI->setMetadata(LLVMContext::MD_loop, LoopMD);
 
   // Insert the block into the function... right after the block TI lives in.
   Function &F = *TIBB->getParent();
@@ -345,8 +347,7 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
   SmallSetVector<BasicBlock *, 16> Targets;
   for (auto &BB : F) {
     if (isa<IndirectBrInst>(BB.getTerminator()))
-      for (BasicBlock *Succ : successors(&BB))
-        Targets.insert(Succ);
+      Targets.insert_range(successors(&BB));
   }
 
   if (Targets.empty())
@@ -366,8 +367,8 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
       continue;
 
     // Don't even think about ehpads/landingpads.
-    Instruction *FirstNonPHI = Target->getFirstNonPHI();
-    if (FirstNonPHI->isEHPad() || Target->isLandingPad())
+    auto FirstNonPHIIt = Target->getFirstNonPHIIt();
+    if (FirstNonPHIIt->isEHPad() || Target->isLandingPad())
       continue;
 
     // Remember edge probabilities if needed.
@@ -380,7 +381,7 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
       BPI->eraseBlock(Target);
     }
 
-    BasicBlock *BodyBlock = Target->splitBasicBlock(FirstNonPHI, ".split");
+    BasicBlock *BodyBlock = Target->splitBasicBlock(FirstNonPHIIt, ".split");
     if (ShouldUpdateAnalysis) {
       // Copy the BFI/BPI from Target to BodyBlock.
       BPI->setEdgeProbability(BodyBlock, EdgeProbabilities);

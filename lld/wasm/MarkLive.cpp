@@ -63,13 +63,15 @@ void MarkLive::enqueue(Symbol *sym) {
   sym->markLive();
 
   if (markImplicitDeps) {
-    // Mark ctor functions in the object that defines this symbol live.
-    // The ctor functions are all referenced by the synthetic callCtors
-    // function. However, this function does not contain relocations so we
-    // have to manually mark the ctors as live.
-    enqueueInitFunctions(cast<ObjFile>(file));
-    // Mark retained segments in the object that defines this symbol live.
-    enqueueRetainedSegments(cast<ObjFile>(file));
+    if (auto obj = dyn_cast<ObjFile>(file)) {
+      // Mark as live the ctor functions in the object that defines this symbol.
+      // The ctor functions are all referenced by the synthetic callCtors
+      // function. However, this function does not contain relocations so we
+      // have to manually mark the ctors as live.
+      enqueueInitFunctions(obj);
+      // Mark retained segments in the object that defines this symbol live.
+      enqueueRetainedSegments(obj);
+    }
   }
 
   if (InputChunk *chunk = sym->getChunk())
@@ -104,8 +106,8 @@ void MarkLive::enqueueRetainedSegments(const ObjFile *file) {
 
 void MarkLive::run() {
   // Add GC root symbols.
-  if (!config->entry.empty())
-    enqueue(symtab->find(config->entry));
+  if (!ctx.arg.entry.empty())
+    enqueue(symtab->find(ctx.arg.entry));
 
   // We need to preserve any no-strip or exported symbol
   for (Symbol *sym : symtab->symbols())
@@ -164,7 +166,7 @@ void MarkLive::mark() {
 }
 
 void markLive() {
-  if (!config->gcSections)
+  if (!ctx.arg.gcSections)
     return;
 
   LLVM_DEBUG(dbgs() << "markLive\n");
@@ -173,7 +175,7 @@ void markLive() {
   marker.run();
 
   // Report garbage-collected sections.
-  if (config->printGcSections) {
+  if (ctx.arg.printGcSections) {
     for (const ObjFile *obj : ctx.objectFiles) {
       for (InputChunk *c : obj->functions)
         if (!c->live)
@@ -205,7 +207,7 @@ void markLive() {
 
 bool MarkLive::isCallCtorsLive() {
   // In a reloctable link, we don't call `__wasm_call_ctors`.
-  if (config->relocatable)
+  if (ctx.arg.relocatable)
     return false;
 
   // In Emscripten-style PIC, we call `__wasm_call_ctors` which calls

@@ -20,7 +20,7 @@ define i32 @test(i32 signext %x, i32 signext %c) {
 ; CHECK-NEXT:    lw $6, %got($JTI0_0)($3)
 ; CHECK-NEXT:    addu16 $5, $5, $6
 ; CHECK-NEXT:    lw $5, %lo($JTI0_0)($5)
-; CHECK-NEXT:    addu16 $3, $5, $3
+; CHECK-NEXT:    addu16 $3, $3, $5
 ; CHECK-NEXT:    jr $3
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:  $BB0_2: # %sw.bb2

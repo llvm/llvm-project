@@ -29,18 +29,18 @@ int main(int, char**) {
   std::array<float, 10> data;
   // make sure we are not failing because of using index_type instead of size_type
   {
-    layout_wrapping_integral<4>::mapping<std::dextents<char, 2>> map(
-        std::dextents<char, 2>(100, 2), not_extents_constructible_tag());
-    std::mdspan<float, std::dextents<char, 2>, layout_wrapping_integral<4>> mds(data.data(), map);
-    assert(map.required_span_size() == char(8));
+    layout_wrapping_integral<4>::mapping<std::dextents<signed char, 2>> map(
+        std::dextents<signed char, 2>(100, 2), not_extents_constructible_tag());
+    std::mdspan<float, std::dextents<signed char, 2>, layout_wrapping_integral<4>> mds(data.data(), map);
+    assert(map.required_span_size() == static_cast<signed char>(8));
     assert((static_cast<unsigned char>(200) == mds.size()));
   }
   {
-    layout_wrapping_integral<4>::mapping<std::dextents<char, 2>> map(
-        std::dextents<char, 2>(100, 3), not_extents_constructible_tag());
-    std::mdspan<float, std::dextents<char, 2>, layout_wrapping_integral<4>> mds(data.data(), map);
+    layout_wrapping_integral<4>::mapping<std::dextents<signed char, 2>> map(
+        std::dextents<signed char, 2>(100, 3), not_extents_constructible_tag());
+    std::mdspan<float, std::dextents<signed char, 2>, layout_wrapping_integral<4>> mds(data.data(), map);
     // sanity check
-    assert(map.required_span_size() == char(12));
+    assert(map.required_span_size() == static_cast<signed char>(12));
     // 100 x 3 exceeds 256
     {
       TEST_LIBCPP_ASSERT_FAILURE(([=] { mds.size(); }()), "mdspan: size() is not representable as size_type");

@@ -14,7 +14,7 @@
 
 #include "clang/Basic/Stack.h"
 #include "clang/Basic/TargetOptions.h"
-#include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
+#include "clang/CodeGen/ObjectFilePCHContainerWriter.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
@@ -25,6 +25,7 @@
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/FrontendTool/Utils.h"
+#include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/llvm-config.h"
@@ -44,6 +45,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
@@ -109,9 +111,10 @@ static void ensureSufficientStack() {}
 
 /// Print supported cpus of the given target.
 static int PrintSupportedCPUs(std::string TargetStr) {
+  llvm::Triple Triple(TargetStr);
   std::string Error;
   const llvm::Target *TheTarget =
-      llvm::TargetRegistry::lookupTarget(TargetStr, Error);
+      llvm::TargetRegistry::lookupTarget(Triple, Error);
   if (!TheTarget) {
     llvm::errs() << Error;
     return 1;
@@ -120,15 +123,16 @@ static int PrintSupportedCPUs(std::string TargetStr) {
   // the target machine will handle the mcpu printing
   llvm::TargetOptions Options;
   std::unique_ptr<llvm::TargetMachine> TheTargetMachine(
-      TheTarget->createTargetMachine(TargetStr, "", "+cpuhelp", Options,
+      TheTarget->createTargetMachine(Triple, "", "+cpuhelp", Options,
                                      std::nullopt));
   return 0;
 }
 
 static int PrintSupportedExtensions(std::string TargetStr) {
+  llvm::Triple Triple(TargetStr);
   std::string Error;
   const llvm::Target *TheTarget =
-      llvm::TargetRegistry::lookupTarget(TargetStr, Error);
+      llvm::TargetRegistry::lookupTarget(Triple, Error);
   if (!TheTarget) {
     llvm::errs() << Error;
     return 1;
@@ -136,7 +140,7 @@ static int PrintSupportedExtensions(std::string TargetStr) {
 
   llvm::TargetOptions Options;
   std::unique_ptr<llvm::TargetMachine> TheTargetMachine(
-      TheTarget->createTargetMachine(TargetStr, "", "", Options, std::nullopt));
+      TheTarget->createTargetMachine(Triple, "", "", Options, std::nullopt));
   const llvm::Triple &MachineTriple = TheTargetMachine->getTargetTriple();
   const llvm::MCSubtargetInfo *MCInfo = TheTargetMachine->getMCSubtargetInfo();
   const llvm::ArrayRef<llvm::SubtargetFeatureKV> Features =
@@ -147,7 +151,7 @@ static int PrintSupportedExtensions(std::string TargetStr) {
     DescMap.insert({feature.Key, feature.Desc});
 
   if (MachineTriple.isRISCV())
-    llvm::riscvExtensionsHelp(DescMap);
+    llvm::RISCVISAInfo::printSupportedExtensions(DescMap);
   else if (MachineTriple.isAArch64())
     llvm::AArch64::PrintSupportedExtensions();
   else if (MachineTriple.isARM())
@@ -163,9 +167,10 @@ static int PrintSupportedExtensions(std::string TargetStr) {
 }
 
 static int PrintEnabledExtensions(const TargetOptions& TargetOpts) {
+  llvm::Triple Triple(TargetOpts.Triple);
   std::string Error;
   const llvm::Target *TheTarget =
-      llvm::TargetRegistry::lookupTarget(TargetOpts.Triple, Error);
+      llvm::TargetRegistry::lookupTarget(Triple, Error);
   if (!TheTarget) {
     llvm::errs() << Error;
     return 1;
@@ -177,7 +182,8 @@ static int PrintEnabledExtensions(const TargetOptions& TargetOpts) {
   llvm::TargetOptions BackendOptions;
   std::string FeaturesStr = llvm::join(TargetOpts.FeaturesAsWritten, ",");
   std::unique_ptr<llvm::TargetMachine> TheTargetMachine(
-      TheTarget->createTargetMachine(TargetOpts.Triple, TargetOpts.CPU, FeaturesStr, BackendOptions, std::nullopt));
+      TheTarget->createTargetMachine(Triple, TargetOpts.CPU, FeaturesStr,
+                                     BackendOptions, std::nullopt));
   const llvm::Triple &MachineTriple = TheTargetMachine->getTargetTriple();
   const llvm::MCSubtargetInfo *MCInfo = TheTargetMachine->getMCSubtargetInfo();
 
@@ -190,13 +196,20 @@ static int PrintEnabledExtensions(const TargetOptions& TargetOpts) {
   for (const llvm::SubtargetFeatureKV &feature : Features)
     EnabledFeatureNames.insert(feature.Key);
 
-  if (!MachineTriple.isAArch64()) {
+  if (MachineTriple.isAArch64())
+    llvm::AArch64::printEnabledExtensions(EnabledFeatureNames);
+  else if (MachineTriple.isRISCV()) {
+    llvm::StringMap<llvm::StringRef> DescMap;
+    for (const llvm::SubtargetFeatureKV &feature : Features)
+      DescMap.insert({feature.Key, feature.Desc});
+    llvm::RISCVISAInfo::printEnabledExtensions(MachineTriple.isArch64Bit(),
+                                               EnabledFeatureNames, DescMap);
+  } else {
     // The option was already checked in Driver::HandleImmediateArgs,
     // so we do not expect to get here if we are not a supported architecture.
     assert(0 && "Unhandled triple for --print-enabled-extensions option.");
     return 1;
   }
-  llvm::AArch64::printEnabledExtensions(EnabledFeatureNames);
 
   return 0;
 }
@@ -234,7 +247,8 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
 
   if (!Clang->getFrontendOpts().TimeTracePath.empty()) {
     llvm::timeTraceProfilerInitialize(
-        Clang->getFrontendOpts().TimeTraceGranularity, Argv0);
+        Clang->getFrontendOpts().TimeTraceGranularity, Argv0,
+        Clang->getFrontendOpts().TimeTraceVerbose);
   }
   // --print-supported-cpus takes priority over the actual compilation.
   if (Clang->getFrontendOpts().PrintSupportedCPUs)
@@ -255,7 +269,7 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
       CompilerInvocation::GetResourcesPath(Argv0, MainAddr);
 
   // Create the actual diagnostics engine.
-  Clang->createDiagnostics();
+  Clang->createDiagnostics(*llvm::vfs::getRealFileSystem());
   if (!Clang->hasDiagnostics())
     return 1;
 
@@ -273,6 +287,10 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   // Execute the frontend actions.
   {
     llvm::TimeTraceScope TimeScope("ExecuteCompiler");
+    bool TimePasses = Clang->getCodeGenOpts().TimePasses;
+    if (TimePasses)
+      Clang->createFrontendTimer();
+    llvm::TimeRegion Timer(TimePasses ? &Clang->getFrontendTimer() : nullptr);
     Success = ExecuteCompilerInvocation(Clang.get());
   }
 

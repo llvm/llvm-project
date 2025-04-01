@@ -16,7 +16,6 @@
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectWriter.h"
-#include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCSymbolXCOFF.h"
@@ -91,10 +90,6 @@ public:
                                          : llvm::endianness::big),
         TT(TT) {}
 
-  unsigned getNumFixupKinds() const override {
-    return PPC::NumTargetFixupKinds;
-  }
-
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override {
     const static MCFixupKindInfo InfosBE[PPC::NumTargetFixupKinds] = {
       // name                    offset  bits  flags
@@ -131,7 +126,7 @@ public:
     if (Kind < FirstTargetFixupKind)
       return MCAsmBackend::getFixupKindInfo(Kind);
 
-    assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+    assert(Kind - FirstTargetFixupKind < PPC::NumTargetFixupKinds &&
            "Invalid kind!");
     return (Endian == llvm::endianness::little
                 ? InfosLE
@@ -167,7 +162,7 @@ public:
     MCFixupKind Kind = Fixup.getKind();
     switch ((unsigned)Kind) {
     default:
-      return Kind >= FirstLiteralRelocationKind;
+      return false;
     case PPC::fixup_ppc_br24:
     case PPC::fixup_ppc_br24abs:
     case PPC::fixup_ppc_br24_notoc:
@@ -189,14 +184,6 @@ public:
       }
       return false;
     }
-  }
-
-  bool fixupNeedsRelaxation(const MCFixup &Fixup,
-                            uint64_t Value,
-                            const MCRelaxableFragment *DF,
-                            const MCAsmLayout &Layout) const override {
-    // FIXME.
-    llvm_unreachable("relaxInstruction() unimplemented");
   }
 
   void relaxInstruction(MCInst &Inst,

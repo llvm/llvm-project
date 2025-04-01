@@ -65,6 +65,7 @@ static void walkReferencedSymbolNodes(
 
 //===----------------------------------------------------------------------===//
 // CGUseList
+//===----------------------------------------------------------------------===//
 
 namespace {
 /// This struct tracks the uses of callgraph nodes that can be dropped when
@@ -713,9 +714,11 @@ bool Inliner::Impl::shouldInline(ResolvedCall &resolvedCall) {
     return false;
 
   // Don't allow inlining if the target is a self-recursive function.
+  // Don't allow inlining if the call graph is like A->B->A.
   if (llvm::count_if(*resolvedCall.targetNode,
                      [&](CallGraphNode::Edge const &edge) -> bool {
-                       return edge.getTarget() == resolvedCall.targetNode;
+                       return edge.getTarget() == resolvedCall.targetNode ||
+                              edge.getTarget() == resolvedCall.sourceNode;
                      }) > 0)
     return false;
 

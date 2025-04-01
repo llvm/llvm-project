@@ -1,15 +1,15 @@
 # REQUIRES: x86
 
-# RUN: yaml2obj %s -o %t.o
-# RUN: not ld.lld %t.o -o /dev/null 2>&1 | FileCheck --check-prefix=ERR %s
-# ERR: R_X86_64_GOTTPOFF must be used in MOVQ or ADDQ instructions only
-# ERR: R_X86_64_GOTTPOFF must be used in MOVQ or ADDQ instructions only
+# RUN: yaml2obj --docnum=1 %s -o %t1.o
+# RUN: not ld.lld %t1.o -o /dev/null 2>&1 | FileCheck --check-prefix=ERR %s
+# ERR: error: {{.*}}: R_X86_64_GOTTPOFF must be used in MOVQ or ADDQ instructions only
+# ERR: error: {{.*}}: R_X86_64_GOTTPOFF must be used in MOVQ or ADDQ instructions only
 
 ## YAML below contains 2 relocations of type R_X86_64_GOTTPOFF, and a .text
 ## with fake content filled by 0xFF. That means instructions for relaxation are
 ## "broken", so they does not match any known valid relaxations. We also generate
 ## .tls section because we need it for correct processing of STT_TLS symbol.
-!ELF
+--- !ELF
 FileHeader:
   Class:           ELFCLASS64
   Data:            ELFDATA2LSB
@@ -44,4 +44,131 @@ Symbols:
     Value:    0x12345
     Size:     4
     Binding:  STB_GLOBAL
- 
+
+
+# RUN: yaml2obj --docnum=2 %s -o %t2.o
+# RUN: not ld.lld %t2.o -o /dev/null 2>&1 | FileCheck --check-prefix=ERR2 %s
+# ERR2: error: {{.*}}: invalid prefix with R_X86_64_CODE_4_GOTTPOFF!
+# ERR2: error: {{.*}}: invalid prefix with R_X86_64_CODE_6_GOTTPOFF!
+
+## YAML below contains 2 relocations of
+## R_X86_64_CODE_4_GOTTPOFF/R_X86_64_CODE_6_GOTTPOFF type, and a .text with
+## fake content filled by 0xFF. It's expected to get "invalid prefix" error
+##  message as above.
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  OSABI:           ELFOSABI_FREEBSD
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Type:            SHT_PROGBITS
+    Name:            .text
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x04
+    Content:         "FFFFFFFFFFFFFFFFFFFF"
+  - Type:            SHT_PROGBITS
+    Name:            .tls
+    Flags:           [ SHF_ALLOC, SHF_TLS ]
+  - Type:            SHT_REL
+    Name:            .rel.text
+    Link:            .symtab
+    Info:            .text
+    AddressAlign:    0x04
+    Relocations:
+      - Offset:          4
+        Symbol:          foo
+        Type:            R_X86_64_CODE_4_GOTTPOFF
+      - Offset:          6
+        Symbol:          foo
+        Type:            R_X86_64_CODE_6_GOTTPOFF
+Symbols:
+  - Name:     foo
+    Type:     STT_TLS
+    Section:  .text
+    Value:    0x12345
+    Size:     4
+    Binding:  STB_GLOBAL
+
+
+# RUN: yaml2obj --docnum=3 %s -o %t3.o
+# RUN: not ld.lld %t3.o -o /dev/null 2>&1 | FileCheck --check-prefix=ERR3 %s
+# ERR3: error: {{.*}}: R_X86_64_CODE_4_GOTTPOFF must be used in MOVQ or ADDQ instructions only
+
+## YAML below contains R_X86_64_CODE_4_GOTTPOFF relocation type, and a .text
+## with fake content filled by 0xd5, 0xFF, ... and 0xFF. It's expected to get
+## the error message as above.
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  OSABI:           ELFOSABI_FREEBSD
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Type:            SHT_PROGBITS
+    Name:            .text
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x04
+    Content:         "d5FFFFFFFFFFFFFFFFFF"
+  - Type:            SHT_PROGBITS
+    Name:            .tls
+    Flags:           [ SHF_ALLOC, SHF_TLS ]
+  - Type:            SHT_REL
+    Name:            .rel.text
+    Link:            .symtab
+    Info:            .text
+    AddressAlign:    0x04
+    Relocations:
+      - Offset:          4
+        Symbol:          foo
+        Type:            R_X86_64_CODE_4_GOTTPOFF
+Symbols:
+  - Name:     foo
+    Type:     STT_TLS
+    Section:  .text
+    Value:    0x12345
+    Size:     4
+    Binding:  STB_GLOBAL
+
+
+# RUN: yaml2obj --docnum=4 %s -o %t4.o
+# RUN: not ld.lld %t4.o -o /dev/null 2>&1 | FileCheck --check-prefix=ERR4 %s
+# ERR4: error: {{.*}}: R_X86_64_CODE_6_GOTTPOFF must be used in ADDQ instructions with NDD/NF/NDD+NF only
+
+## YAML below contains R_X86_64_CODE_6_GOTTPOFF relocation type, and a .text
+## with fake content filled by 0x62, 0xFF, ... and 0xFF. It's expected to get
+## the error message as above.
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  OSABI:           ELFOSABI_FREEBSD
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Type:            SHT_PROGBITS
+    Name:            .text
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x04
+    Content:         "62FFFFFFFFFFFFFFFFFF"
+  - Type:            SHT_PROGBITS
+    Name:            .tls
+    Flags:           [ SHF_ALLOC, SHF_TLS ]
+  - Type:            SHT_REL
+    Name:            .rel.text
+    Link:            .symtab
+    Info:            .text
+    AddressAlign:    0x04
+    Relocations:
+      - Offset:          6
+        Symbol:          foo
+        Type:            R_X86_64_CODE_6_GOTTPOFF
+Symbols:
+  - Name:     foo
+    Type:     STT_TLS
+    Section:  .text
+    Value:    0x12345
+    Size:     4
+    Binding:  STB_GLOBAL

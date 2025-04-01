@@ -95,7 +95,14 @@ public:
   /// Find all declarations with the given name in the
   /// given context.
   bool FindExternalVisibleDeclsByName(const DeclContext *DC,
-                                      DeclarationName Name) override;
+                                      DeclarationName Name,
+                                      const DeclContext *OriginalDC) override;
+
+  bool LoadExternalSpecializations(const Decl *D, bool OnlyPartial) override;
+
+  bool
+  LoadExternalSpecializations(const Decl *D,
+                              ArrayRef<TemplateArgument> TemplateArgs) override;
 
   /// Ensures that the table of all visible declarations inside this
   /// context is up to date.
@@ -361,7 +368,7 @@ public:
                                         QualType T) override;
 
   // Inform all attached sources that a mangling number was assigned.
-  void AssignedLambdaNumbering(const CXXRecordDecl *Lambda) override;
+  void AssignedLambdaNumbering(CXXRecordDecl *Lambda) override;
 
   /// LLVM-style RTTI.
   /// \{

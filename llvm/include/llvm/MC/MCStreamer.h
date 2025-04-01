@@ -100,6 +100,7 @@ public:
   virtual ~MCTargetStreamer();
 
   MCStreamer &getStreamer() { return Streamer; }
+  MCContext &getContext();
 
   // Allow a target to add behavior to the EmitLabel of MCStreamer.
   virtual void emitLabel(MCSymbol *Symbol);
@@ -144,11 +145,11 @@ public:
   virtual void emitPersonality(const MCSymbol *Personality);
   virtual void emitPersonalityIndex(unsigned Index);
   virtual void emitHandlerData();
-  virtual void emitSetFP(unsigned FpReg, unsigned SpReg,
+  virtual void emitSetFP(MCRegister FpReg, MCRegister SpReg,
                          int64_t Offset = 0);
-  virtual void emitMovSP(unsigned Reg, int64_t Offset = 0);
+  virtual void emitMovSP(MCRegister Reg, int64_t Offset = 0);
   virtual void emitPad(int64_t Offset);
-  virtual void emitRegSave(const SmallVectorImpl<unsigned> &RegList,
+  virtual void emitRegSave(const SmallVectorImpl<MCRegister> &RegList,
                            bool isVector);
   virtual void emitUnwindRaw(int64_t StackOffset,
                              const SmallVectorImpl<uint8_t> &Opcodes);
@@ -168,6 +169,8 @@ public:
 
   virtual void annotateTLSDescriptorSequence(const MCSymbolRefExpr *SRE);
 
+  // Note in the output that the specified \p Symbol is a Thumb mode function.
+  virtual void emitThumbFunc(MCSymbol *Symbol);
   virtual void emitThumbSet(MCSymbol *Symbol, const MCExpr *Value);
 
   void emitConstantPools() override;
@@ -228,10 +231,6 @@ class MCStreamer {
   WinEH::FrameInfo *CurrentWinFrameInfo;
   size_t CurrentProcWinFrameInfoStartIndex;
 
-  /// Tracks an index to represent the order a symbol was emitted in.
-  /// Zero means we did not emit that symbol.
-  DenseMap<const MCSymbol *, unsigned> SymbolOrdering;
-
   /// This is stack of current and previous section values saved by
   /// pushSection.
   SmallVector<std::pair<MCSectionSubPair, MCSectionSubPair>, 4> SectionStack;
@@ -256,6 +255,12 @@ class MCStreamer {
   bool AllowAutoPadding = false;
 
 protected:
+  // True if we are processing SEH directives in an epilogue.
+  bool InEpilogCFI = false;
+
+  // Symbol of the current epilog for which we are processing SEH directives.
+  MCSymbol *CurrentEpilog = nullptr;
+
   MCFragment *CurFrag = nullptr;
 
   MCStreamer(MCContext &Ctx);
@@ -317,6 +322,8 @@ public:
   void setAllowAutoPadding(bool v) { AllowAutoPadding = v; }
   bool getAllowAutoPadding() const { return AllowAutoPadding; }
 
+  MCSymbol *emitLineTableLabel();
+
   /// When emitting an object file, create and emit a real label. When emitting
   /// textual assembly, this should do nothing to avoid polluting our output.
   virtual MCSymbol *emitCFILabel();
@@ -334,6 +341,10 @@ public:
   ArrayRef<std::unique_ptr<WinEH::FrameInfo>> getWinFrameInfos() const {
     return WinFrameInfos;
   }
+
+  MCSymbol *getCurrentEpilog() const { return CurrentEpilog; }
+
+  bool isInEpilogCFI() const { return InEpilogCFI; }
 
   void generateCompactUnwindEncodings(MCAsmBackend *MAB);
 
@@ -416,12 +427,6 @@ public:
     return CurFrag;
   }
 
-  /// Returns an index to represent the order a symbol was emitted in.
-  /// (zero if we did not emit that symbol)
-  unsigned getSymbolOrder(const MCSymbol *Sym) const {
-    return SymbolOrdering.lookup(Sym);
-  }
-
   /// Save the current and previous section on the section stack.
   void pushSection() {
     SectionStack.push_back(
@@ -432,7 +437,7 @@ public:
   /// Calls changeSection as needed.
   ///
   /// Returns false if the stack was empty.
-  bool popSection();
+  virtual bool popSection();
 
   /// Set the current section where code is being emitted to \p Section.  This
   /// is required to update CurSection.
@@ -449,15 +454,9 @@ public:
 
   MCSymbol *endSection(MCSection *Section);
 
-  /// Sets the symbol's section.
-  ///
-  /// Each emitted symbol will be tracked in the ordering table,
-  /// so we can sort on them later.
-  void assignFragment(MCSymbol *Symbol, MCFragment *Fragment);
-
   /// Returns the mnemonic for \p MI, if the streamer has access to a
   /// instruction printer and returns an empty string otherwise.
-  virtual StringRef getMnemonic(MCInst &MI) { return ""; }
+  virtual StringRef getMnemonic(const MCInst &MI) const { return ""; }
 
   /// Emit a label for \p Symbol into the current section.
   ///
@@ -504,10 +503,6 @@ public:
                             const VersionTuple &SDKVersion,
                             const Triple *DarwinTargetVariantTriple,
                             const VersionTuple &DarwinTargetVariantSDKVersion);
-
-  /// Note in the output that the specified \p Func is a Thumb mode
-  /// function (ARM target only).
-  virtual void emitThumbFunc(MCSymbol *Func);
 
   /// Emit an assignment of \p Value to \p Symbol.
   ///
@@ -582,6 +577,14 @@ public:
   ///
   /// \param Symbol - Symbol the image relative relocation should point to.
   virtual void emitCOFFImgRel32(MCSymbol const *Symbol, int64_t Offset);
+
+  /// Emits the physical number of the section containing the given symbol as
+  /// assigned during object writing (i.e., this is not a runtime relocation).
+  virtual void emitCOFFSecNumber(MCSymbol const *Symbol);
+
+  /// Emits the offset of the symbol from the beginning of the section during
+  /// object writing (i.e., this is not a runtime relocation).
+  virtual void emitCOFFSecOffset(MCSymbol const *Symbol);
 
   /// Emits an lcomm directive with XCOFF csect information.
   ///
@@ -759,48 +762,6 @@ public:
   void emitSymbolValue(const MCSymbol *Sym, unsigned Size,
                        bool IsSectionRelative = false);
 
-  /// Emit the expression \p Value into the output as a dtprel
-  /// (64-bit DTP relative) value.
-  ///
-  /// This is used to implement assembler directives such as .dtpreldword on
-  /// targets that support them.
-  virtual void emitDTPRel64Value(const MCExpr *Value);
-
-  /// Emit the expression \p Value into the output as a dtprel
-  /// (32-bit DTP relative) value.
-  ///
-  /// This is used to implement assembler directives such as .dtprelword on
-  /// targets that support them.
-  virtual void emitDTPRel32Value(const MCExpr *Value);
-
-  /// Emit the expression \p Value into the output as a tprel
-  /// (64-bit TP relative) value.
-  ///
-  /// This is used to implement assembler directives such as .tpreldword on
-  /// targets that support them.
-  virtual void emitTPRel64Value(const MCExpr *Value);
-
-  /// Emit the expression \p Value into the output as a tprel
-  /// (32-bit TP relative) value.
-  ///
-  /// This is used to implement assembler directives such as .tprelword on
-  /// targets that support them.
-  virtual void emitTPRel32Value(const MCExpr *Value);
-
-  /// Emit the expression \p Value into the output as a gprel64 (64-bit
-  /// GP relative) value.
-  ///
-  /// This is used to implement assembler directives such as .gpdword on
-  /// targets that support them.
-  virtual void emitGPRel64Value(const MCExpr *Value);
-
-  /// Emit the expression \p Value into the output as a gprel32 (32-bit
-  /// GP relative) value.
-  ///
-  /// This is used to implement assembler directives such as .gprel32 on
-  /// targets that support them.
-  virtual void emitGPRel32Value(const MCExpr *Value);
-
   /// Emit NumBytes bytes worth of the value specified by FillValue.
   /// This implements directives such as '.space'.
   void emitFill(uint64_t NumBytes, uint8_t FillValue);
@@ -926,7 +887,11 @@ public:
   virtual void emitDwarfLocDirective(unsigned FileNo, unsigned Line,
                                      unsigned Column, unsigned Flags,
                                      unsigned Isa, unsigned Discriminator,
-                                     StringRef FileName);
+                                     StringRef FileName,
+                                     StringRef Comment = {});
+
+  /// This implements the '.loc_label Name' directive.
+  virtual void emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name);
 
   /// Associate a filename with a specified logical file number, and also
   /// specify that file's checksum information.  This implements the '.cv_file 4
@@ -1035,6 +1000,10 @@ public:
                                SMLoc Loc = {});
   virtual void emitCFIWindowSave(SMLoc Loc = {});
   virtual void emitCFINegateRAState(SMLoc Loc = {});
+  virtual void emitCFINegateRAStateWithPC(SMLoc Loc = {});
+  virtual void emitCFILabelDirective(SMLoc Loc, StringRef Name);
+  virtual void emitCFIValOffset(int64_t Register, int64_t Offset,
+                                SMLoc Loc = {});
 
   virtual void emitWinCFIStartProc(const MCSymbol *Symbol, SMLoc Loc = SMLoc());
   virtual void emitWinCFIEndProc(SMLoc Loc = SMLoc());
@@ -1055,6 +1024,8 @@ public:
                                  SMLoc Loc = SMLoc());
   virtual void emitWinCFIPushFrame(bool Code, SMLoc Loc = SMLoc());
   virtual void emitWinCFIEndProlog(SMLoc Loc = SMLoc());
+  virtual void emitWinCFIBeginEpilogue(SMLoc Loc = SMLoc());
+  virtual void emitWinCFIEndEpilogue(SMLoc Loc = SMLoc());
   virtual void emitWinEHHandler(const MCSymbol *Sym, bool Unwind, bool Except,
                                 SMLoc Loc = SMLoc());
   virtual void emitWinEHHandlerData(SMLoc Loc = SMLoc());
@@ -1134,7 +1105,8 @@ public:
   virtual void emitDwarfLineStartLabel(MCSymbol *StartSym);
 
   /// Emit the debug line end entry.
-  virtual void emitDwarfLineEndEntry(MCSection *Section, MCSymbol *LastLabel) {}
+  virtual void emitDwarfLineEndEntry(MCSection *Section, MCSymbol *LastLabel,
+                                     MCSymbol *EndLabel = nullptr) {}
 
   /// If targets does not support representing debug line section by .loc/.file
   /// directives in assembly output, we need to populate debug line section with
@@ -1143,10 +1115,11 @@ public:
                                         const MCSymbol *LastLabel,
                                         const MCSymbol *Label,
                                         unsigned PointerSize) {}
-
-  /// Do finalization for the streamer at the end of a section.
-  virtual void doFinalizationAtSectionEnd(MCSection *Section) {}
 };
+
+inline MCContext &MCTargetStreamer::getContext() {
+  return Streamer.getContext();
+}
 
 /// Create a dummy machine code streamer, which does nothing. This is useful for
 /// timing the assembler front end.

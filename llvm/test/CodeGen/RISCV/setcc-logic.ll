@@ -96,8 +96,8 @@ define i1 @and_icmps_const_not1bit_diff(i32 %x) nounwind {
 ; RV32I-LABEL: and_icmps_const_not1bit_diff:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi a1, a0, -44
-; RV32I-NEXT:    snez a1, a1
 ; RV32I-NEXT:    addi a0, a0, -92
+; RV32I-NEXT:    snez a1, a1
 ; RV32I-NEXT:    snez a0, a0
 ; RV32I-NEXT:    and a0, a1, a0
 ; RV32I-NEXT:    ret
@@ -106,8 +106,8 @@ define i1 @and_icmps_const_not1bit_diff(i32 %x) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    addi a1, a0, -44
-; RV64I-NEXT:    snez a1, a1
 ; RV64I-NEXT:    addi a0, a0, -92
+; RV64I-NEXT:    snez a1, a1
 ; RV64I-NEXT:    snez a0, a0
 ; RV64I-NEXT:    and a0, a1, a0
 ; RV64I-NEXT:    ret

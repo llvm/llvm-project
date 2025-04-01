@@ -10,12 +10,13 @@
 
 #include "src/__support/CPP/limits.h"
 #include "src/__support/arg_list.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/printf_main.h"
 #include "src/stdio/printf_core/writer.h"
 
 #include <stdarg.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, vsprintf,
                    (char *__restrict buffer, const char *__restrict format,
@@ -24,12 +25,14 @@ LLVM_LIBC_FUNCTION(int, vsprintf,
                                  // and pointer semantics, as well as handling
                                  // destruction automatically.
 
-  printf_core::WriteBuffer wb(buffer, cpp::numeric_limits<size_t>::max());
-  printf_core::Writer writer(&wb);
+  printf_core::WriteBuffer<printf_core::Mode<
+      printf_core::WriteMode::FILL_BUFF_AND_DROP_OVERFLOW>::value>
+      wb(buffer, cpp::numeric_limits<size_t>::max());
+  printf_core::Writer writer(wb);
 
   int ret_val = printf_core::printf_main(&writer, format, args);
   wb.buff[wb.buff_cur] = '\0';
   return ret_val;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

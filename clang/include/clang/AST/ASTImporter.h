@@ -62,7 +62,8 @@ class TypeSourceInfo;
   class ASTImporter {
     friend class ASTNodeImporter;
   public:
-    using NonEquivalentDeclSet = llvm::DenseSet<std::pair<Decl *, Decl *>>;
+    using NonEquivalentDeclSet =
+        llvm::DenseSet<std::tuple<Decl *, Decl *, int>>;
     using ImportedCXXBaseSpecifierMap =
         llvm::DenseMap<const CXXBaseSpecifier *, CXXBaseSpecifier *>;
 
@@ -258,7 +259,6 @@ class TypeSourceInfo;
     FoundDeclsTy findDeclsInToCtx(DeclContext *DC, DeclarationName Name);
 
     void AddToLookupTable(Decl *ToD);
-    llvm::Error ImportAttrs(Decl *ToD, Decl *FromD);
 
   protected:
     /// Can be overwritten by subclasses to implement their own import logic.
@@ -484,6 +484,11 @@ class TypeSourceInfo;
     /// Import the definition of the given declaration, including all of
     /// the declarations it contains.
     [[nodiscard]] llvm::Error ImportDefinition(Decl *From);
+
+    llvm::Error
+    ImportTemplateArguments(ArrayRef<TemplateArgument> FromArgs,
+                            SmallVectorImpl<TemplateArgument> &ToArgs);
+    Expected<TemplateArgument> Import(const TemplateArgument &From);
 
     /// Cope with a name conflict when importing a declaration into the
     /// given context.

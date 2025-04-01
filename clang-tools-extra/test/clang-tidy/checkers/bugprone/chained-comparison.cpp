@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++98-or-later %s bugprone-chained-comparison %t
+// RUN: %check_clang_tidy -std=c++98-or-later --extra-arg=-Wno-error=parentheses %s bugprone-chained-comparison %t
 
 void badly_chained_1(int x, int y, int z)
 {

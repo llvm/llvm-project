@@ -75,11 +75,25 @@ const CGFunctionInfo &arrangeCXXMethodType(CodeGenModule &CGM,
                                            const FunctionProtoType *FTP,
                                            const CXXMethodDecl *MD);
 
-const CGFunctionInfo &arrangeFreeFunctionCall(CodeGenModule &CGM,
-                                              CanQualType returnType,
-                                              ArrayRef<CanQualType> argTypes,
-                                              FunctionType::ExtInfo info,
-                                              RequiredArgs args);
+const CGFunctionInfo &
+arrangeCXXMethodCall(CodeGenModule &CGM, CanQualType returnType,
+                     ArrayRef<CanQualType> argTypes, FunctionType::ExtInfo info,
+                     ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos,
+                     RequiredArgs args);
+
+const CGFunctionInfo &arrangeFreeFunctionCall(
+    CodeGenModule &CGM, CanQualType returnType, ArrayRef<CanQualType> argTypes,
+    FunctionType::ExtInfo info,
+    ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos,
+    RequiredArgs args);
+
+// An overload with an empty `paramInfos`
+inline const CGFunctionInfo &
+arrangeFreeFunctionCall(CodeGenModule &CGM, CanQualType returnType,
+                        ArrayRef<CanQualType> argTypes,
+                        FunctionType::ExtInfo info, RequiredArgs args) {
+  return arrangeFreeFunctionCall(CGM, returnType, argTypes, info, {}, args);
+}
 
 /// Returns the implicit arguments to add to a complete, non-delegating C++
 /// constructor call.
@@ -107,6 +121,10 @@ unsigned getLLVMFieldNumber(CodeGenModule &CGM,
 
 /// Return a declaration discriminator for the given global decl.
 uint16_t getPointerAuthDeclDiscriminator(CodeGenModule &CGM, GlobalDecl GD);
+
+/// Return a type discriminator for the given function type.
+uint16_t getPointerAuthTypeDiscriminator(CodeGenModule &CGM,
+                                         QualType FunctionType);
 
 /// Given the language and code-generation options that Clang was configured
 /// with, set the default LLVM IR attributes for a function definition.

@@ -27,6 +27,7 @@
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCRegister.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -58,6 +59,8 @@ enum class IndirectBranchType : char {
   POSSIBLE_PIC_JUMP_TABLE, /// Possibly a jump table for PIC.
   POSSIBLE_GOTO,           /// Possibly a gcc's computed goto.
   POSSIBLE_FIXED_BRANCH,   /// Possibly an indirect branch to a fixed location.
+  POSSIBLE_PIC_FIXED_BRANCH, /// Possibly an indirect jump to a fixed entry in a
+                             /// PIC jump table.
 };
 
 class MCPlusBuilder {
@@ -470,7 +473,7 @@ public:
   ///
   /// For X86, they might be used in scanExternalRefs when we want to skip
   /// a function but still patch references inside it.
-  virtual bool shouldRecordCodeRelocation(uint64_t RelType) const {
+  virtual bool shouldRecordCodeRelocation(uint32_t RelType) const {
     llvm_unreachable("not implemented");
     return false;
   }
@@ -548,6 +551,32 @@ public:
     return Analysis->isReturn(Inst);
   }
 
+  /// Returns the registers that are trusted at function entry.
+  ///
+  /// Each register should be treated as if a successfully authenticated
+  /// pointer was written to it before entering the function (i.e. the
+  /// pointer is safe to jump to as well as to be signed).
+  virtual SmallVector<MCPhysReg> getTrustedLiveInRegs() const {
+    llvm_unreachable("not implemented");
+    return {};
+  }
+
+  virtual ErrorOr<MCPhysReg> getAuthenticatedReg(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return getNoRegister();
+  }
+
+  virtual bool isAuthenticationOfReg(const MCInst &Inst,
+                                     MCPhysReg AuthenticatedReg) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  virtual ErrorOr<MCPhysReg> getRegUsedAsRetDest(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return getNoRegister();
+  }
+
   virtual bool isTerminator(const MCInst &Inst) const;
 
   virtual bool isNoop(const MCInst &Inst) const {
@@ -618,8 +647,14 @@ public:
     return false;
   }
 
-  virtual void getADRReg(const MCInst &Inst, MCPhysReg &RegName) const {
+  virtual bool isAddXri(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
+    return false;
+  }
+
+  virtual bool isMOVW(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
   }
 
   virtual bool isMoveMem2Reg(const MCInst &Inst) const { return false; }
@@ -930,13 +965,6 @@ public:
   /// Return true if the instruction is encoded using EVEX (AVX-512).
   virtual bool hasEVEXEncoding(const MCInst &Inst) const { return false; }
 
-  /// Return true if a pair of instructions represented by \p Insts
-  /// could be fused into a single uop.
-  virtual bool isMacroOpFusionPair(ArrayRef<MCInst> Insts) const {
-    llvm_unreachable("not implemented");
-    return false;
-  }
-
   struct X86MemOperand {
     unsigned BaseRegNum;
     int64_t ScaleImm;
@@ -1066,7 +1094,7 @@ public:
   /// MCExpr referencing \p Symbol + \p Addend.
   virtual bool setOperandToSymbolRef(MCInst &Inst, int OpNum,
                                      const MCSymbol *Symbol, int64_t Addend,
-                                     MCContext *Ctx, uint64_t RelType) const;
+                                     MCContext *Ctx, uint32_t RelType) const;
 
   /// Replace an immediate operand in the instruction \p Inst with a reference
   /// of the passed \p Symbol plus \p Addend. If the instruction does not have
@@ -1074,7 +1102,7 @@ public:
   /// return true.
   virtual bool replaceImmWithSymbolRef(MCInst &Inst, const MCSymbol *Symbol,
                                        int64_t Addend, MCContext *Ctx,
-                                       int64_t &Value, uint64_t RelType) const {
+                                       int64_t &Value, uint32_t RelType) const {
     llvm_unreachable("not implemented");
     return false;
   }
@@ -1209,6 +1237,11 @@ public:
   /// Get instruction size specified via annotation.
   std::optional<uint32_t> getSize(const MCInst &Inst) const;
 
+  /// Get target-specific instruction size.
+  virtual std::optional<uint32_t> getInstructionSize(const MCInst &Inst) const {
+    return std::nullopt;
+  }
+
   /// Set instruction size.
   void setSize(MCInst &Inst, uint32_t Size) const;
 
@@ -1231,9 +1264,16 @@ public:
     return nullptr;
   }
 
-  /// Return MCSymbol extracted from a target expression
+  /// Return MCSymbol extracted from the expression.
   virtual const MCSymbol *getTargetSymbol(const MCExpr *Expr) const {
-    return &cast<const MCSymbolRefExpr>(Expr)->getSymbol();
+    if (auto *BinaryExpr = dyn_cast<const MCBinaryExpr>(Expr))
+      return getTargetSymbol(BinaryExpr->getLHS());
+
+    auto *SymbolRefExpr = dyn_cast<const MCSymbolRefExpr>(Expr);
+    if (SymbolRefExpr && SymbolRefExpr->getKind() == MCSymbolRefExpr::VK_None)
+      return &SymbolRefExpr->getSymbol();
+
+    return nullptr;
   }
 
   /// Return addend that represents an offset from MCSymbol target
@@ -1274,7 +1314,7 @@ public:
   /// Return the MCExpr used for absolute references in this target
   virtual const MCExpr *getTargetExprFor(MCInst &Inst, const MCExpr *Expr,
                                          MCContext &Ctx,
-                                         uint64_t RelType) const {
+                                         uint32_t RelType) const {
     return Expr;
   }
 
@@ -1426,11 +1466,12 @@ public:
   }
 
   /// Creates an indirect call to the function within the \p DirectCall PLT
-  /// stub. The function's memory location is pointed by the \p TargetLocation
+  /// stub. The function's address location is pointed by the \p TargetLocation
   /// symbol.
+  /// Move instruction annotations from \p DirectCall to the indirect call.
   virtual InstructionListType
-  createIndirectPltCall(const MCInst &DirectCall,
-                        const MCSymbol *TargetLocation, MCContext *Ctx) {
+  createIndirectPLTCall(MCInst &&DirectCall, const MCSymbol *TargetLocation,
+                        MCContext *Ctx) {
     llvm_unreachable("not implemented");
     return {};
   }
@@ -1481,12 +1522,11 @@ public:
   /// will be set to the different components of the branch.  \p MemLocInstr
   /// is the instruction that loads up the indirect function pointer.  It may
   /// or may not be same as \p Instruction.
-  virtual IndirectBranchType
-  analyzeIndirectBranch(MCInst &Instruction, InstructionIterator Begin,
-                        InstructionIterator End, const unsigned PtrSize,
-                        MCInst *&MemLocInstr, unsigned &BaseRegNum,
-                        unsigned &IndexRegNum, int64_t &DispValue,
-                        const MCExpr *&DispExpr, MCInst *&PCRelBaseOut) const {
+  virtual IndirectBranchType analyzeIndirectBranch(
+      MCInst &Instruction, InstructionIterator Begin, InstructionIterator End,
+      const unsigned PtrSize, MCInst *&MemLocInstr, unsigned &BaseRegNum,
+      unsigned &IndexRegNum, int64_t &DispValue, const MCExpr *&DispExpr,
+      MCInst *&PCRelBaseOut, MCInst *&FixedEntryLoadInst) const {
     llvm_unreachable("not implemented");
     return IndirectBranchType::UNKNOWN;
   }
@@ -1521,6 +1561,13 @@ public:
     llvm_unreachable("not implemented");
   }
 
+  /// Undo the linker's ADRP+ADD to ADR relaxation. Take \p ADRInst and return
+  /// ADRP+ADD instruction sequence.
+  virtual InstructionListType undoAdrpAddRelaxation(const MCInst &ADRInst,
+                                                    MCContext *Ctx) const {
+    llvm_unreachable("not implemented");
+  }
+
   /// Return not 0 if the instruction CurInst, in combination with the recent
   /// history of disassembled instructions supplied by [Begin, End), is a linker
   /// generated veneer/stub that needs patching. This happens in AArch64 when
@@ -1539,6 +1586,14 @@ public:
                                      MCInst *&TargetHiBits,
                                      MCInst *&TargetLowBits,
                                      uint64_t &Target) const {
+    llvm_unreachable("not implemented");
+  }
+
+  /// Match function \p BF to a long veneer for absolute code. Return true if
+  /// the match was successful and populate \p TargetAddress with an address of
+  /// the function veneer jumps to.
+  virtual bool matchAbsLongVeneer(const BinaryFunction &BF,
+                                  uint64_t &TargetAddress) const {
     llvm_unreachable("not implemented");
   }
 
@@ -2048,9 +2103,14 @@ public:
     return InstructionListType();
   }
 
-  virtual InstructionListType createDummyReturnFunction(MCContext *Ctx) const {
-    llvm_unreachable("not implemented");
-    return InstructionListType();
+  /// Returns a function body that contains only a return instruction. An
+  /// example usage is a workaround for the '__bolt_fini_trampoline' of
+  // Instrumentation.
+  virtual InstructionListType
+  createReturnInstructionList(MCContext *Ctx) const {
+    InstructionListType Insts(1);
+    createReturn(Insts[0]);
+    return Insts;
   }
 
   /// This method takes an indirect call instruction and splits it up into an

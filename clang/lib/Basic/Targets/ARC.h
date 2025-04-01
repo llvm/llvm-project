@@ -40,8 +40,8 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override {
-    return std::nullopt;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override {
+    return {};
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
@@ -60,7 +60,7 @@ public:
   }
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
-    return std::nullopt;
+    return {};
   }
 
   bool validateAsmConstraint(const char *&Name,

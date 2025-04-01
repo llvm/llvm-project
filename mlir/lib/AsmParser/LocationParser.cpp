@@ -12,7 +12,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Location.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -98,37 +98,82 @@ ParseResult Parser::parseFusedLocation(LocationAttr &loc) {
   return success();
 }
 
-ParseResult Parser::parseNameOrFileLineColLocation(LocationAttr &loc) {
+ParseResult Parser::parseNameOrFileLineColRange(LocationAttr &loc) {
   auto *ctx = getContext();
   auto str = getToken().getStringValue();
   consumeToken(Token::string);
+
+  std::optional<unsigned> startLine, startColumn, endLine, endColumn;
 
   // If the next token is ':' this is a filelinecol location.
   if (consumeIf(Token::colon)) {
     // Parse the line number.
     if (getToken().isNot(Token::integer))
       return emitWrongTokenError(
-          "expected integer line number in FileLineColLoc");
-    auto line = getToken().getUnsignedIntegerValue();
-    if (!line)
+          "expected integer line number in FileLineColRange");
+    startLine = getToken().getUnsignedIntegerValue();
+    if (!startLine)
       return emitWrongTokenError(
-          "expected integer line number in FileLineColLoc");
+          "expected integer line number in FileLineColRange");
     consumeToken(Token::integer);
 
     // Parse the ':'.
-    if (parseToken(Token::colon, "expected ':' in FileLineColLoc"))
-      return failure();
+    if (getToken().isNot(Token::colon)) {
+      loc = FileLineColRange::get(StringAttr::get(ctx, str), *startLine);
+      return success();
+    }
+    consumeToken(Token::colon);
 
     // Parse the column number.
-    if (getToken().isNot(Token::integer))
+    if (getToken().isNot(Token::integer)) {
       return emitWrongTokenError(
-          "expected integer column number in FileLineColLoc");
-    auto column = getToken().getUnsignedIntegerValue();
-    if (!column.has_value())
-      return emitError("expected integer column number in FileLineColLoc");
+          "expected integer column number in FileLineColRange");
+    }
+    startColumn = getToken().getUnsignedIntegerValue();
+    if (!startColumn.has_value())
+      return emitError("expected integer column number in FileLineColRange");
     consumeToken(Token::integer);
 
-    loc = FileLineColLoc::get(ctx, str, *line, *column);
+    if (!isCurrentTokenAKeyword() || getTokenSpelling() != "to") {
+      loc = FileLineColLoc::get(ctx, str, *startLine, *startColumn);
+      return success();
+    }
+    consumeToken();
+
+    // Parse the line number.
+    if (getToken().is(Token::integer)) {
+      endLine = getToken().getUnsignedIntegerValue();
+      if (!endLine) {
+        return emitWrongTokenError(
+            "expected integer line number in FileLineColRange");
+      }
+      consumeToken(Token::integer);
+    }
+
+    // Parse the ':'.
+    if (getToken().isNot(Token::colon)) {
+      return emitWrongTokenError(
+          "expected either integer or `:` post `to` in FileLineColRange");
+    }
+    consumeToken(Token::colon);
+
+    // Parse the column number.
+    if (getToken().isNot(Token::integer)) {
+      return emitWrongTokenError(
+          "expected integer column number in FileLineColRange");
+    }
+    endColumn = getToken().getUnsignedIntegerValue();
+    if (!endColumn.has_value())
+      return emitError("expected integer column number in FileLineColRange");
+    consumeToken(Token::integer);
+
+    if (endLine.has_value()) {
+      loc = FileLineColRange::get(StringAttr::get(ctx, str), *startLine,
+                                  *startColumn, *endLine, *endColumn);
+    } else {
+      loc = FileLineColRange::get(StringAttr::get(ctx, str), *startLine,
+                                  *startColumn, *endColumn);
+    }
     return success();
   }
 
@@ -167,7 +212,7 @@ ParseResult Parser::parseLocationInstance(LocationAttr &loc) {
 
   // Handle either name or filelinecol locations.
   if (getToken().is(Token::string))
-    return parseNameOrFileLineColLocation(loc);
+    return parseNameOrFileLineColRange(loc);
 
   // Bare tokens required for other cases.
   if (!getToken().is(Token::bare_identifier))

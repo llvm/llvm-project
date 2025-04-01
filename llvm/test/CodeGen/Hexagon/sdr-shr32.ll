@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; CHECK-NOT: lsr{{.*}}#31
 
 target datalayout = "e-m:e-p:32:32-i64:64-a:0-v32:32-n16:32"

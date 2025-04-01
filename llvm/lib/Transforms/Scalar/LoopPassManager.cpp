@@ -14,7 +14,6 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Support/TimeProfiler.h"
 
 using namespace llvm;
 
@@ -269,12 +268,9 @@ PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
   PI.pushBeforeNonSkippedPassCallback([&LAR, &LI](StringRef PassID, Any IR) {
     if (isSpecialPass(PassID, {"PassManager"}))
       return;
-    assert(llvm::any_cast<const Loop *>(&IR) ||
-           llvm::any_cast<const LoopNest *>(&IR));
+    assert(llvm::any_cast<const Loop *>(&IR));
     const Loop **LPtr = llvm::any_cast<const Loop *>(&IR);
     const Loop *L = LPtr ? *LPtr : nullptr;
-    if (!L)
-      L = &llvm::any_cast<const LoopNest *>(IR)->getOutermostLoop();
     assert(L && "Loop should be valid for printing");
 
     // Verify the loop structure and LCSSA form before visiting the loop.
@@ -293,7 +289,7 @@ PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
     Updater.CurrentL = L;
     Updater.SkipCurrentLoop = false;
 
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     // Save a parent loop pointer for asserts.
     Updater.ParentL = L->getParentLoop();
 #endif

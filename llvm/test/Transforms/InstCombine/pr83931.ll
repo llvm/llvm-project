@@ -5,7 +5,7 @@ define <vscale x 2 x i1> @dont_crash(<vscale x 2 x i64> %x) {
 ; CHECK-LABEL: define <vscale x 2 x i1> @dont_crash(
 ; CHECK-SAME: <vscale x 2 x i64> [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RET:%.*]] = icmp sgt <vscale x 2 x i64> [[X]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 -309383, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[RET:%.*]] = icmp sgt <vscale x 2 x i64> [[X]], splat (i64 -309383)
 ; CHECK-NEXT:    ret <vscale x 2 x i1> [[RET]]
 ;
 entry:

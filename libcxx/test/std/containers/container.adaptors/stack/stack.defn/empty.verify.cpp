@@ -17,6 +17,6 @@
 #include <stack>
 
 void f() {
-    std::stack<int> c;
-    c.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::stack<int> c;
+  c.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }

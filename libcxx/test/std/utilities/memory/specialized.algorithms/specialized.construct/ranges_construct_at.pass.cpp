@@ -85,7 +85,7 @@ constexpr bool test() {
   {
     std::allocator<Counted> alloc;
     Counted* out = alloc.allocate(2);
-    int count = 0;
+    int count    = 0;
 
     Counted* result = std::ranges::construct_at(out, count);
     assert(result == out);
@@ -99,35 +99,27 @@ constexpr bool test() {
     alloc.deallocate(out, 2);
   }
 
-  // Works with const pointers.
-  {
-    int x = 1;
-    const int* ptr = &x;
-
-    const int* result = std::ranges::construct_at(ptr, 42);
-    assert(result == ptr);
-    assert(x == 42);
-  }
-
   return true;
 }
 
 constexpr bool can_construct_at(auto&&... args)
   requires requires { std::ranges::construct_at(decltype(args)(args)...); }
-  { return true; }
+{
+  return true;
+}
 
 constexpr bool can_construct_at(auto&&...) { return false; }
 
 // Check that SFINAE works.
-static_assert( can_construct_at((Foo*)nullptr, 1, 2));
+static_assert(can_construct_at((Foo*)nullptr, 1, 2));
 static_assert(!can_construct_at((Foo*)nullptr, 1));
 static_assert(!can_construct_at((Foo*)nullptr, 1, 2, 3));
 static_assert(!can_construct_at(nullptr, 1, 2));
 static_assert(!can_construct_at((int*)nullptr, 1, 2));
 static_assert(!can_construct_at(contiguous_iterator<Foo*>(), 1, 2));
 // Can't construct function pointers.
-static_assert(!can_construct_at((int(*)())nullptr));
-static_assert(!can_construct_at((int(*)())nullptr, nullptr));
+static_assert(!can_construct_at((int (*)()) nullptr));
+static_assert(!can_construct_at((int (*)()) nullptr, nullptr));
 // TODO(varconst): check that array types work once D114649 implementing LWG3639 lands.
 
 int main(int, char**) {

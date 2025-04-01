@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <cmath>
 #include <cstdint>
 #include <limits>
 #include <utility>
@@ -26,6 +27,7 @@ using namespace mlir::detail;
 
 using llvm::divideCeilSigned;
 using llvm::divideFloorSigned;
+using llvm::divideSignedWouldOverflow;
 using llvm::mod;
 
 MLIRContext *AffineExpr::getContext() const { return expr->context; }
@@ -256,7 +258,7 @@ int64_t AffineExpr::getLargestKnownDivisor() const {
     if (rhs && rhs.getValue() != 0) {
       int64_t lhsDiv = binExpr.getLHS().getLargestKnownDivisor();
       if (lhsDiv % rhs.getValue() == 0)
-        return lhsDiv / rhs.getValue();
+        return std::abs(lhsDiv / rhs.getValue());
     }
     return 1;
   }
@@ -354,8 +356,9 @@ unsigned AffineDimExpr::getPosition() const {
 ///`exprKind` is floordiv and `expr` is also a binary expression of a floordiv
 /// operation, then the commutative property can be used otherwise, the floordiv
 /// operation is not divisible. The same argument holds for ceildiv operation.
-static bool isDivisibleBySymbol(AffineExpr expr, unsigned symbolPos,
-                                AffineExprKind opKind) {
+static bool canSimplifyDivisionBySymbol(AffineExpr expr, unsigned symbolPos,
+                                        AffineExprKind opKind,
+                                        bool fromMul = false) {
   // The argument `opKind` can either be Modulo, Floordiv or Ceildiv only.
   assert((opKind == AffineExprKind::Mod || opKind == AffineExprKind::FloorDiv ||
           opKind == AffineExprKind::CeilDiv) &&
@@ -370,8 +373,9 @@ static bool isDivisibleBySymbol(AffineExpr expr, unsigned symbolPos,
   // Checks divisibility by the given symbol for both operands.
   case AffineExprKind::Add: {
     AffineBinaryOpExpr binaryExpr = cast<AffineBinaryOpExpr>(expr);
-    return isDivisibleBySymbol(binaryExpr.getLHS(), symbolPos, opKind) &&
-           isDivisibleBySymbol(binaryExpr.getRHS(), symbolPos, opKind);
+    return canSimplifyDivisionBySymbol(binaryExpr.getLHS(), symbolPos,
+                                       opKind) &&
+           canSimplifyDivisionBySymbol(binaryExpr.getRHS(), symbolPos, opKind);
   }
   // Checks divisibility by the given symbol for both operands. Consider the
   // expression `(((s1*s0) floordiv w) mod ((s1 * s2) floordiv p)) floordiv s1`,
@@ -380,16 +384,18 @@ static bool isDivisibleBySymbol(AffineExpr expr, unsigned symbolPos,
   // `AffineExprKind::Mod` for this reason.
   case AffineExprKind::Mod: {
     AffineBinaryOpExpr binaryExpr = cast<AffineBinaryOpExpr>(expr);
-    return isDivisibleBySymbol(binaryExpr.getLHS(), symbolPos,
-                               AffineExprKind::Mod) &&
-           isDivisibleBySymbol(binaryExpr.getRHS(), symbolPos,
-                               AffineExprKind::Mod);
+    return canSimplifyDivisionBySymbol(binaryExpr.getLHS(), symbolPos,
+                                       AffineExprKind::Mod) &&
+           canSimplifyDivisionBySymbol(binaryExpr.getRHS(), symbolPos,
+                                       AffineExprKind::Mod);
   }
   // Checks if any of the operand divisible by the given symbol.
   case AffineExprKind::Mul: {
     AffineBinaryOpExpr binaryExpr = cast<AffineBinaryOpExpr>(expr);
-    return isDivisibleBySymbol(binaryExpr.getLHS(), symbolPos, opKind) ||
-           isDivisibleBySymbol(binaryExpr.getRHS(), symbolPos, opKind);
+    return canSimplifyDivisionBySymbol(binaryExpr.getLHS(), symbolPos, opKind,
+                                       true) ||
+           canSimplifyDivisionBySymbol(binaryExpr.getRHS(), symbolPos, opKind,
+                                       true);
   }
   // Floordiv and ceildiv are divisible by the given symbol when the first
   // operand is divisible, and the affine expression kind of the argument expr
@@ -397,14 +403,19 @@ static bool isDivisibleBySymbol(AffineExpr expr, unsigned symbolPos,
   // property of floordiv and ceildiv operations and are as follow:
   // (exp1 floordiv exp2) floordiv exp3 = (exp1 floordiv exp3) floordiv exp2
   // (exp1 ceildiv exp2) ceildiv exp3 = (exp1 ceildiv exp3) ceildiv expr2
-  // It will fail if operations are not same. For example:
-  // (exps1 ceildiv exp2) floordiv exp3 can not be simplified.
+  // It will fail 1.if operations are not same. For example:
+  // (exps1 ceildiv exp2) floordiv exp3 can not be simplified. 2.if there is a
+  // multiplication operation in the expression. For example:
+  //  (exps1 ceildiv exp2) mul exp3 ceildiv exp4 can not be simplified.
   case AffineExprKind::FloorDiv:
   case AffineExprKind::CeilDiv: {
     AffineBinaryOpExpr binaryExpr = cast<AffineBinaryOpExpr>(expr);
     if (opKind != expr.getKind())
       return false;
-    return isDivisibleBySymbol(binaryExpr.getLHS(), symbolPos, expr.getKind());
+    if (fromMul)
+      return false;
+    return canSimplifyDivisionBySymbol(binaryExpr.getLHS(), symbolPos,
+                                       expr.getKind());
   }
   }
   llvm_unreachable("Unknown AffineExpr");
@@ -446,7 +457,7 @@ static AffineExpr symbolicDivide(AffineExpr expr, unsigned symbolPos,
   // Dividing any of the operand by the given symbol.
   case AffineExprKind::Mul: {
     AffineBinaryOpExpr binaryExpr = cast<AffineBinaryOpExpr>(expr);
-    if (!isDivisibleBySymbol(binaryExpr.getLHS(), symbolPos, opKind))
+    if (!canSimplifyDivisionBySymbol(binaryExpr.getLHS(), symbolPos, opKind))
       return binaryExpr.getLHS() *
              symbolicDivide(binaryExpr.getRHS(), symbolPos, opKind);
     return symbolicDivide(binaryExpr.getLHS(), symbolPos, opKind) *
@@ -581,11 +592,16 @@ static AffineExpr simplifySemiAffine(AffineExpr expr, unsigned numDims,
     if (!symbolExpr)
       return getAffineBinaryOpExpr(expr.getKind(), sLHS, sRHS);
     unsigned symbolPos = symbolExpr.getPosition();
-    if (!isDivisibleBySymbol(binaryExpr.getLHS(), symbolPos, expr.getKind()))
+    if (!canSimplifyDivisionBySymbol(binaryExpr.getLHS(), symbolPos,
+                                     expr.getKind()))
       return getAffineBinaryOpExpr(expr.getKind(), sLHS, sRHS);
     if (expr.getKind() == AffineExprKind::Mod)
       return getAffineConstantExpr(0, expr.getContext());
-    return symbolicDivide(sLHS, symbolPos, expr.getKind());
+    AffineExpr simplifiedQuotient =
+        symbolicDivide(sLHS, symbolPos, expr.getKind());
+    return simplifiedQuotient
+               ? simplifiedQuotient
+               : getAffineBinaryOpExpr(expr.getKind(), sLHS, sRHS);
   }
   }
   llvm_unreachable("Unknown AffineExpr");
@@ -750,14 +766,19 @@ static AffineExpr simplifyAdd(AffineExpr lhs, AffineExpr rhs) {
   }
 
   // Process lrhs, which is 'expr floordiv c'.
+  // expr + (expr // c * -c) = expr % c
   AffineBinaryOpExpr lrBinOpExpr = dyn_cast<AffineBinaryOpExpr>(lrhs);
-  if (!lrBinOpExpr || lrBinOpExpr.getKind() != AffineExprKind::FloorDiv)
+  if (!lrBinOpExpr || rhs.getKind() != AffineExprKind::Mul ||
+      lrBinOpExpr.getKind() != AffineExprKind::FloorDiv)
     return nullptr;
 
   llrhs = lrBinOpExpr.getLHS();
   rlrhs = lrBinOpExpr.getRHS();
+  auto rlrhsConstOpExpr = dyn_cast<AffineConstantExpr>(rlrhs);
+  // We don't support modulo with a negative RHS.
+  bool isPositiveRhs = rlrhsConstOpExpr && rlrhsConstOpExpr.getValue() > 0;
 
-  if (lhs == llrhs && rlrhs == -rrhs) {
+  if (isPositiveRhs && lhs == llrhs && rlrhs == -rrhs) {
     return lhs % rlrhs;
   }
   return nullptr;
@@ -855,16 +876,12 @@ static AffineExpr simplifyFloorDiv(AffineExpr lhs, AffineExpr rhs) {
   auto lhsConst = dyn_cast<AffineConstantExpr>(lhs);
   auto rhsConst = dyn_cast<AffineConstantExpr>(rhs);
 
-  // mlir floordiv by zero or negative numbers is undefined and preserved as is.
-  if (!rhsConst || rhsConst.getValue() < 1)
+  if (!rhsConst || rhsConst.getValue() == 0)
     return nullptr;
 
   if (lhsConst) {
-    // divideFloorSigned can only overflow in this case:
-    if (lhsConst.getValue() == std::numeric_limits<int64_t>::min() &&
-        rhsConst.getValue() == -1) {
+    if (divideSignedWouldOverflow(lhsConst.getValue(), rhsConst.getValue()))
       return nullptr;
-    }
     return getAffineConstantExpr(
         divideFloorSigned(lhsConst.getValue(), rhsConst.getValue()),
         lhs.getContext());
@@ -875,12 +892,12 @@ static AffineExpr simplifyFloorDiv(AffineExpr lhs, AffineExpr rhs) {
   if (rhsConst == 1)
     return lhs;
 
-  // Simplify (expr * const) floordiv divConst when expr is known to be a
-  // multiple of divConst.
+  // Simplify `(expr * lrhs) floordiv rhsConst` when `lrhs` is known to be a
+  // multiple of `rhsConst`.
   auto lBin = dyn_cast<AffineBinaryOpExpr>(lhs);
   if (lBin && lBin.getKind() == AffineExprKind::Mul) {
     if (auto lrhs = dyn_cast<AffineConstantExpr>(lBin.getRHS())) {
-      // rhsConst is known to be a positive constant.
+      // `rhsConst` is known to be a nonzero constant.
       if (lrhs.getValue() % rhsConst.getValue() == 0)
         return lBin.getLHS() * (lrhs.getValue() / rhsConst.getValue());
     }
@@ -891,7 +908,7 @@ static AffineExpr simplifyFloorDiv(AffineExpr lhs, AffineExpr rhs) {
   if (lBin && lBin.getKind() == AffineExprKind::Add) {
     int64_t llhsDiv = lBin.getLHS().getLargestKnownDivisor();
     int64_t lrhsDiv = lBin.getRHS().getLargestKnownDivisor();
-    // rhsConst is known to be a positive constant.
+    // rhsConst is known to be a nonzero constant.
     if (llhsDiv % rhsConst.getValue() == 0 ||
         lrhsDiv % rhsConst.getValue() == 0)
       return lBin.getLHS().floorDiv(rhsConst.getValue()) +
@@ -918,15 +935,12 @@ static AffineExpr simplifyCeilDiv(AffineExpr lhs, AffineExpr rhs) {
   auto lhsConst = dyn_cast<AffineConstantExpr>(lhs);
   auto rhsConst = dyn_cast<AffineConstantExpr>(rhs);
 
-  if (!rhsConst || rhsConst.getValue() < 1)
+  if (!rhsConst || rhsConst.getValue() == 0)
     return nullptr;
 
   if (lhsConst) {
-    // divideCeilSigned can only overflow in this case:
-    if (lhsConst.getValue() == std::numeric_limits<int64_t>::min() &&
-        rhsConst.getValue() == -1) {
+    if (divideSignedWouldOverflow(lhsConst.getValue(), rhsConst.getValue()))
       return nullptr;
-    }
     return getAffineConstantExpr(
         divideCeilSigned(lhsConst.getValue(), rhsConst.getValue()),
         lhs.getContext());
@@ -937,12 +951,12 @@ static AffineExpr simplifyCeilDiv(AffineExpr lhs, AffineExpr rhs) {
   if (rhsConst.getValue() == 1)
     return lhs;
 
-  // Simplify (expr * const) ceildiv divConst when const is known to be a
-  // multiple of divConst.
+  // Simplify `(expr * lrhs) ceildiv rhsConst` when `lrhs` is known to be a
+  // multiple of `rhsConst`.
   auto lBin = dyn_cast<AffineBinaryOpExpr>(lhs);
   if (lBin && lBin.getKind() == AffineExprKind::Mul) {
     if (auto lrhs = dyn_cast<AffineConstantExpr>(lBin.getRHS())) {
-      // rhsConst is known to be a positive constant.
+      // `rhsConst` is known to be a nonzero constant.
       if (lrhs.getValue() % rhsConst.getValue() == 0)
         return lBin.getLHS() * (lrhs.getValue() / rhsConst.getValue());
     }
@@ -1022,8 +1036,7 @@ AffineExpr AffineExpr::operator%(AffineExpr other) const {
 }
 
 AffineExpr AffineExpr::compose(AffineMap map) const {
-  SmallVector<AffineExpr, 8> dimReplacements(map.getResults().begin(),
-                                             map.getResults().end());
+  SmallVector<AffineExpr, 8> dimReplacements(map.getResults());
   return replaceDimsAndSymbols(dimReplacements, {});
 }
 raw_ostream &mlir::operator<<(raw_ostream &os, AffineExpr expr) {
@@ -1376,7 +1389,7 @@ LogicalResult SimpleAffineExprFlattener::visitModExpr(AffineBinaryOpExpr expr) {
     lhs[getLocalVarStartIndex() + numLocals - 1] = -rhsConst;
   } else {
     // Reuse the existing local id.
-    lhs[getLocalVarStartIndex() + loc] = -rhsConst;
+    lhs[getLocalVarStartIndex() + loc] -= rhsConst;
   }
   return success();
 }

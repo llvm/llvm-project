@@ -99,7 +99,8 @@ void ClangASTSource::StartTranslationUnit(ASTConsumer *Consumer) {
 
 // The core lookup interface.
 bool ClangASTSource::FindExternalVisibleDeclsByName(
-    const DeclContext *decl_ctx, DeclarationName clang_decl_name) {
+    const DeclContext *decl_ctx, DeclarationName clang_decl_name,
+    const clang::DeclContext *original_dc) {
   if (!m_ast_context) {
     SetNoExternalVisibleDeclsForName(decl_ctx, clang_decl_name);
     return false;
@@ -293,7 +294,7 @@ void ClangASTSource::CompleteType(clang::ObjCInterfaceDecl *interface_decl) {
 
   LLDB_LOG(log,
            "    [CompleteObjCInterfaceDecl] on (ASTContext*){0:x} '{1}' "
-           "Completing an ObjCInterfaceDecl named {1}",
+           "Completing an ObjCInterfaceDecl named {2}",
            m_ast_context, m_clang_ast_context->getDisplayName(),
            interface_decl->getName());
   LLDB_LOG(log, "      [COID] Before:\n{0}",

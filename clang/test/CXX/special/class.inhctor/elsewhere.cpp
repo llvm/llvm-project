@@ -33,14 +33,14 @@ struct D1 : I1 {
 template<typename T> struct A {};
 
 template<typename T> struct B : A<bool>, A<char> {
-  using A<T>::A; // expected-error {{'A<double>::', which is not a base class of 'B<double>'}}
+  using A<T>::A; // expected-error {{'A<double>', which is not a base class of 'B<double>'}}
 };
 B<bool> bb;
 B<char> bc;
 B<double> bd; // expected-note {{here}}
 
 template<typename T> struct C : A<T> {
-  using A<bool>::A; // expected-error {{'A<bool>::', which is not a base class of 'C<char>'}}
+  using A<bool>::A; // expected-error {{'A<bool>', which is not a base class of 'C<char>'}}
 };
 C<bool> cb;
 C<char> cc; // expected-note {{here}}

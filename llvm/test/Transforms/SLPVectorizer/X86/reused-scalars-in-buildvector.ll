@@ -5,7 +5,7 @@ define void @test(ptr %p, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[A:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[B:%.*]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = sub <2 x i32> [[TMP2]], <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = sub <2 x i32> [[TMP2]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[E:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[F:%.*]], i32 1

@@ -145,6 +145,9 @@ public:
     // file. Called with the empty string for other tasks.
     // (When called, the context from BackgroundIndex construction is active).
     std::function<Context(PathRef)> ContextProvider = nullptr;
+    // Whether the index needs to support the containedRefs() operation.
+    // May use extra memory.
+    bool SupportContainedRefs = true;
   };
 
   /// Creates a new background index and starts its threads.

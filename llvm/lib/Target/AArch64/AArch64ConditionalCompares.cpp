@@ -416,7 +416,7 @@ bool SSACCmpConv::canSpeculateInstrs(MachineBasicBlock *MBB,
 
     // We never speculate stores, so an AA pointer isn't necessary.
     bool DontMoveAcrossStore = true;
-    if (!I.isSafeToMove(nullptr, DontMoveAcrossStore)) {
+    if (!I.isSafeToMove(DontMoveAcrossStore)) {
       LLVM_DEBUG(dbgs() << "Can't speculate: " << I);
       return false;
     }
@@ -711,7 +711,6 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
   Head->updateTerminator(CmpBB->getNextNode());
 
   RemovedBlocks.push_back(CmpBB);
-  CmpBB->eraseFromParent();
   LLVM_DEBUG(dbgs() << "Result:\n" << *Head);
   ++NumConverted;
 }
@@ -796,7 +795,7 @@ INITIALIZE_PASS_BEGIN(AArch64ConditionalCompares, "aarch64-ccmp",
                       "AArch64 CCMP Pass", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineTraceMetrics)
+INITIALIZE_PASS_DEPENDENCY(MachineTraceMetricsWrapperPass)
 INITIALIZE_PASS_END(AArch64ConditionalCompares, "aarch64-ccmp",
                     "AArch64 CCMP Pass", false, false)
 
@@ -808,10 +807,10 @@ void AArch64ConditionalCompares::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
-  AU.addRequired<MachineLoopInfo>();
-  AU.addPreserved<MachineLoopInfo>();
-  AU.addRequired<MachineTraceMetrics>();
-  AU.addPreserved<MachineTraceMetrics>();
+  AU.addRequired<MachineLoopInfoWrapperPass>();
+  AU.addPreserved<MachineLoopInfoWrapperPass>();
+  AU.addRequired<MachineTraceMetricsWrapperPass>();
+  AU.addPreserved<MachineTraceMetricsWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -918,6 +917,8 @@ bool AArch64ConditionalCompares::tryConvert(MachineBasicBlock *MBB) {
     CmpConv.convert(RemovedBlocks);
     Changed = true;
     updateDomTree(RemovedBlocks);
+    for (MachineBasicBlock *MBB : RemovedBlocks)
+      MBB->eraseFromParent();
     updateLoops(RemovedBlocks);
   }
   return Changed;
@@ -934,9 +935,9 @@ bool AArch64ConditionalCompares::runOnMachineFunction(MachineFunction &MF) {
   SchedModel = MF.getSubtarget().getSchedModel();
   MRI = &MF.getRegInfo();
   DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  Loops = &getAnalysis<MachineLoopInfo>();
+  Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
-  Traces = &getAnalysis<MachineTraceMetrics>();
+  Traces = &getAnalysis<MachineTraceMetricsWrapperPass>().getMTM();
   MinInstr = nullptr;
   MinSize = MF.getFunction().hasMinSize();
 

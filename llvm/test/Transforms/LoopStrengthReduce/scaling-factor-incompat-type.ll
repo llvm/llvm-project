@@ -54,5 +54,5 @@ bb11:                                             ; preds = %bb4
 
 bb13:                                             ; preds = %bb4
   %t14 = add nuw nsw i64 %t5, 6
-  br i1 undef, label %bb1, label %bb4
+  br i1 true, label %bb1, label %bb4
 }

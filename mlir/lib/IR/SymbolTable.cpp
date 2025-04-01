@@ -623,7 +623,7 @@ struct SymbolScope {
   std::optional<WalkResult> walk(CallbackT cback) {
     if (Region *region = llvm::dyn_cast_if_present<Region *>(limit))
       return walkSymbolUses(*region, cback);
-    return walkSymbolUses(limit.get<Operation *>(), cback);
+    return walkSymbolUses(cast<Operation *>(limit), cback);
   }
   /// This variant is used when the callback type matches a stripped down type:
   /// void(SymbolTable::SymbolUse use)
@@ -643,7 +643,7 @@ struct SymbolScope {
   std::optional<WalkResult> walkSymbolTable(CallbackT &&cback) {
     if (Region *region = llvm::dyn_cast_if_present<Region *>(limit))
       return ::walkSymbolTable(*region, cback);
-    return ::walkSymbolTable(limit.get<Operation *>(), cback);
+    return ::walkSymbolTable(cast<Operation *>(limit), cback);
   }
 
   /// The representation of the symbol within this scope.
@@ -759,6 +759,7 @@ static bool isReferencePrefixOf(SymbolRefAttr subRef, SymbolRefAttr ref) {
 
 //===----------------------------------------------------------------------===//
 // SymbolTable::getSymbolUses
+//===----------------------------------------------------------------------===//
 
 /// The implementation of SymbolTable::getSymbolUses below.
 template <typename FromT>
@@ -789,6 +790,7 @@ auto SymbolTable::getSymbolUses(Region *from) -> std::optional<UseRange> {
 
 //===----------------------------------------------------------------------===//
 // SymbolTable::getSymbolUses
+//===----------------------------------------------------------------------===//
 
 /// The implementation of SymbolTable::getSymbolUses below.
 template <typename SymbolT, typename IRUnitT>
@@ -828,6 +830,7 @@ auto SymbolTable::getSymbolUses(Operation *symbol, Region *from)
 
 //===----------------------------------------------------------------------===//
 // SymbolTable::symbolKnownUseEmpty
+//===----------------------------------------------------------------------===//
 
 /// The implementation of SymbolTable::symbolKnownUseEmpty below.
 template <typename SymbolT, typename IRUnitT>
@@ -863,6 +866,7 @@ bool SymbolTable::symbolKnownUseEmpty(Operation *symbol, Region *from) {
 
 //===----------------------------------------------------------------------===//
 // SymbolTable::replaceAllSymbolUses
+//===----------------------------------------------------------------------===//
 
 /// Generates a new symbol reference attribute with a new leaf reference.
 static SymbolRefAttr generateNewRefAttr(SymbolRefAttr oldAttr,

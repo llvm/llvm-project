@@ -19,7 +19,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTARMSMETOSCF
+#define GEN_PASS_DEF_CONVERTARMSMETOSCFPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -245,8 +245,8 @@ struct TileLoadOpConversion : public OpRewritePattern<arm_sme::TileLoadOp> {
 ///      : memref<?x?xi32>, vector<[4]xi1>,
 ///        vector<[4]xi32> into vector<[4]xi32>
 ///    // Insert slice into tile
-///    %tile_update = arm_sme.move_vector_to_tile_slice
-///      %slice, %iter_tile, %tile_slice_idx :
+///    %tile_update = arm_sme.insert_tile_slice
+///      %slice, %iter_tile[%tile_slice_idx] :
 ///      vector<[4]xi32> into vector<[4]x[4]xi32>
 ///    scf.yield %tile_update : vector<[4]x[4]xi32>
 ///  }
@@ -332,11 +332,11 @@ struct TileLoadOpWithMaskAndPadNonZeroConversion
         loc, tileSliceType, tileLoadOp.getBase(), memrefIndices, maskOp1D,
         /*passthru=*/pad1DOp);
 
-    // Create 'arm_sme.move_vector_to_tile_slice' to move slice into tile.
-    auto moveSlice = rewriter.create<arm_sme::MoveVectorToTileSliceOp>(
+    // Create 'arm_sme.insert_tile_slice' to insert slice into tile.
+    auto insertSlice = rewriter.create<arm_sme::InsertTileSliceOp>(
         loc, tileType, loadSlice->getResult(0), currentTile, tileSliceIndex,
         tileLoadOp.getLayout());
-    rewriter.create<scf::YieldOp>(loc, moveSlice.getResult());
+    rewriter.create<scf::YieldOp>(loc, insertSlice.getResult());
 
     rewriter.setInsertionPointAfter(forOp);
 
@@ -397,7 +397,7 @@ void mlir::populateArmSMEToSCFConversionPatterns(RewritePatternSet &patterns) {
 namespace {
 
 struct ConvertArmSMEToSCFPass
-    : public impl::ConvertArmSMEToSCFBase<ConvertArmSMEToSCFPass> {
+    : public impl::ConvertArmSMEToSCFPassBase<ConvertArmSMEToSCFPass> {
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     ConversionTarget target(getContext());
@@ -412,7 +412,3 @@ struct ConvertArmSMEToSCFPass
 };
 
 } // namespace
-
-std::unique_ptr<Pass> mlir::createConvertArmSMEToSCFPass() {
-  return std::make_unique<ConvertArmSMEToSCFPass>();
-}

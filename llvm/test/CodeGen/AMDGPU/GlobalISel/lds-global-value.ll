@@ -2,13 +2,13 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=bonaire -verify-machineinstrs < %s | FileCheck %s
 ; TODO: Replace with existing DAG tests
 
-@lds_512_4 = internal unnamed_addr addrspace(3) global [128 x i32] undef, align 4
-@lds_4_8 = addrspace(3) global i32 undef, align 8
+@lds_512_4 = internal unnamed_addr addrspace(3) global [128 x i32] poison, align 4
+@lds_4_8 = addrspace(3) global i32 poison, align 8
 
 define amdgpu_kernel void @use_lds_globals(ptr addrspace(1) %out, ptr addrspace(3) %in) #0 {
 ; CHECK-LABEL: use_lds_globals:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 4
 ; CHECK-NEXT:    s_mov_b32 m0, -1
 ; CHECK-NEXT:    ds_read_b32 v2, v0

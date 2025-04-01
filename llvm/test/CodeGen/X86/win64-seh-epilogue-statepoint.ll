@@ -10,7 +10,9 @@ define i32 @foobar() gc "statepoint-example" personality ptr @__gxx_personality_
 ; CHECK-NEXT:    callq bar
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    nop
+; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    addq $40, %rsp
+; CHECK-NEXT:    .seh_endepilogue
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:    .seh_endproc
     %statepoint_token = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(i32 ()) @bar, i32 0, i32 0, i32 0, i32 0)

@@ -20,8 +20,6 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
-#include "clang/Sema/SemaDiagnostic.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
@@ -374,6 +372,21 @@ bool SemaCUDA::inferTargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
                                                    CXXMethodDecl *MemberDecl,
                                                    bool ConstRHS,
                                                    bool Diagnose) {
+  // If MemberDecl is virtual destructor of an explicit template class
+  // instantiation, it must be emitted, therefore it needs to be inferred
+  // conservatively by ignoring implicit host/device attrs of member and parent
+  // dtors called by it. Also, it needs to be checed by deferred diag visitor.
+  bool IsExpVDtor = false;
+  if (isa<CXXDestructorDecl>(MemberDecl) && MemberDecl->isVirtual()) {
+    if (auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(ClassDecl)) {
+      TemplateSpecializationKind TSK = Spec->getTemplateSpecializationKind();
+      IsExpVDtor = TSK == TSK_ExplicitInstantiationDeclaration ||
+                   TSK == TSK_ExplicitInstantiationDefinition;
+    }
+  }
+  if (IsExpVDtor)
+    SemaRef.DeclsToCheckForDeferredDiags.insert(MemberDecl);
+
   // If the defaulted special member is defined lexically outside of its
   // owning class, or the special member already has explicit device or host
   // attributes, do not infer.
@@ -424,7 +437,9 @@ bool SemaCUDA::inferTargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
     if (!SMOR.getMethod())
       continue;
 
-    CUDAFunctionTarget BaseMethodTarget = IdentifyTarget(SMOR.getMethod());
+    CUDAFunctionTarget BaseMethodTarget =
+        IdentifyTarget(SMOR.getMethod(), IsExpVDtor);
+
     if (!InferredTarget) {
       InferredTarget = BaseMethodTarget;
     } else {
@@ -468,7 +483,9 @@ bool SemaCUDA::inferTargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
     if (!SMOR.getMethod())
       continue;
 
-    CUDAFunctionTarget FieldMethodTarget = IdentifyTarget(SMOR.getMethod());
+    CUDAFunctionTarget FieldMethodTarget =
+        IdentifyTarget(SMOR.getMethod(), IsExpVDtor);
+
     if (!InferredTarget) {
       InferredTarget = FieldMethodTarget;
     } else {
@@ -659,9 +676,9 @@ void SemaCUDA::checkAllowedInitializer(VarDecl *VD) {
   // Return early if VD is inside a non-instantiated template function since
   // the implicit constructor is not defined yet.
   if (const FunctionDecl *FD =
-          dyn_cast_or_null<FunctionDecl>(VD->getDeclContext()))
-    if (FD->isDependentContext())
-      return;
+          dyn_cast_or_null<FunctionDecl>(VD->getDeclContext());
+      FD && FD->isDependentContext())
+    return;
 
   // Do not check dependent variables since the ctor/dtor/initializer are not
   // determined. Do it after instantiation.
@@ -835,7 +852,7 @@ SemaBase::SemaDiagnosticBuilder SemaCUDA::DiagIfDeviceCode(SourceLocation Loc,
       if (!getLangOpts().CUDAIsDevice)
         return SemaDiagnosticBuilder::K_Nop;
       if (SemaRef.IsLastErrorImmediate &&
-          getDiagnostics().getDiagnosticIDs()->isBuiltinNote(DiagID))
+          getDiagnostics().getDiagnosticIDs()->isNote(DiagID))
         return SemaDiagnosticBuilder::K_Immediate;
       return (SemaRef.getEmissionStatus(CurFunContext) ==
               Sema::FunctionEmissionStatus::Emitted)
@@ -866,7 +883,7 @@ Sema::SemaDiagnosticBuilder SemaCUDA::DiagIfHostCode(SourceLocation Loc,
       if (getLangOpts().CUDAIsDevice)
         return SemaDiagnosticBuilder::K_Nop;
       if (SemaRef.IsLastErrorImmediate &&
-          getDiagnostics().getDiagnosticIDs()->isBuiltinNote(DiagID))
+          getDiagnostics().getDiagnosticIDs()->isNote(DiagID))
         return SemaDiagnosticBuilder::K_Immediate;
       return (SemaRef.getEmissionStatus(CurFunContext) ==
               Sema::FunctionEmissionStatus::Emitted)
@@ -1068,6 +1085,9 @@ void SemaCUDA::inheritTargetAttrs(FunctionDecl *FD,
 }
 
 std::string SemaCUDA::getConfigureFuncName() const {
+  if (getLangOpts().OffloadViaLLVM)
+    return "__llvmPushCallConfiguration";
+
   if (getLangOpts().HIP)
     return getLangOpts().HIPUseNewLaunchAPI ? "__hipPushCallConfiguration"
                                             : "hipConfigureCall";

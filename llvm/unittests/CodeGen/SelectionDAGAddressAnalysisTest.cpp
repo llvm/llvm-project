@@ -47,9 +47,9 @@ protected:
       GTEST_SKIP();
 
     TargetOptions Options;
-    TM = std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
-        T->createTargetMachine("AArch64", "", "+sve", Options, std::nullopt,
-                               std::nullopt, CodeGenOptLevel::Aggressive)));
+    TM = std::unique_ptr<TargetMachine>(
+        T->createTargetMachine(TargetTriple, "", "+sve", Options, std::nullopt,
+                               std::nullopt, CodeGenOptLevel::Aggressive));
     if (!TM)
       GTEST_SKIP();
 
@@ -72,13 +72,14 @@ protected:
     MachineModuleInfo MMI(TM.get());
 
     MF = std::make_unique<MachineFunction>(*F, *TM, *TM->getSubtargetImpl(*F),
-                                           0, MMI);
+                                           MMI.getContext(), 0);
 
     DAG = std::make_unique<SelectionDAG>(*TM, CodeGenOptLevel::None);
     if (!DAG)
       report_fatal_error("DAG?");
     OptimizationRemarkEmitter ORE(F);
-    DAG->init(*MF, ORE, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+    DAG->init(*MF, ORE, nullptr, nullptr, nullptr, nullptr, nullptr, MMI,
+              nullptr);
   }
 
   TargetLoweringBase::LegalizeTypeAction getTypeAction(EVT VT) {
@@ -90,7 +91,7 @@ protected:
   }
 
   LLVMContext Context;
-  std::unique_ptr<LLVMTargetMachine> TM;
+  std::unique_ptr<TargetMachine> TM;
   std::unique_ptr<Module> M;
   Function *F;
   GlobalVariable *G;

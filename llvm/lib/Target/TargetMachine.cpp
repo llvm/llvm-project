@@ -26,6 +26,11 @@
 #include "llvm/Target/TargetLoweringObjectFile.h"
 using namespace llvm;
 
+cl::opt<bool> NoKernelInfoEndLTO(
+    "no-kernel-info-end-lto",
+    cl::desc("remove the kernel-info pass at the end of the full LTO pipeline"),
+    cl::init(false), cl::Hidden);
+
 //---------------------------------------------------------------------------
 // TargetMachine Class
 //
@@ -204,7 +209,7 @@ bool TargetMachine::shouldAssumeDSOLocal(const GlobalValue *GV) const {
     // don't assume the variables to be DSO local unless we actually know
     // that for sure. This only has to be done for variables; for functions
     // the linker can insert thunks for calling functions from another DLL.
-    if (TT.isWindowsGNUEnvironment() && GV->isDeclarationForLinker() &&
+    if (TT.isOSCygMing() && GV->isDeclarationForLinker() &&
         isa<GlobalVariable>(GV))
       return false;
 
@@ -261,11 +266,6 @@ TLSModel::Model TargetMachine::getTLSModel(const GlobalValue *GV) const {
 
   return Model;
 }
-
-/// Returns the optimization level: None, Less, Default, or Aggressive.
-CodeGenOptLevel TargetMachine::getOptLevel() const { return OptLevel; }
-
-void TargetMachine::setOptLevel(CodeGenOptLevel Level) { OptLevel = Level; }
 
 TargetTransformInfo
 TargetMachine::getTargetTransformInfo(const Function &F) const {

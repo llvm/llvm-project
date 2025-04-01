@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ABIInfoImpl.h"
 #include "CGBlocks.h"
 #include "CGCXXABI.h"
 #include "CGDebugInfo.h"
@@ -24,7 +25,6 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/Basic/CodeGenOptions.h"
-#include "clang/Basic/TargetBuiltins.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Metadata.h"
@@ -161,10 +161,9 @@ CodeGenFunction::EmitCXXMemberDataPointerAddress(const Expr *E, Address base,
   QualType memberType = memberPtrType->getPointeeType();
   CharUnits memberAlign =
       CGM.getNaturalTypeAlignment(memberType, BaseInfo, TBAAInfo);
-  memberAlign =
-    CGM.getDynamicOffsetAlignment(base.getAlignment(),
-                            memberPtrType->getClass()->getAsCXXRecordDecl(),
-                                  memberAlign);
+  memberAlign = CGM.getDynamicOffsetAlignment(
+      base.getAlignment(), memberPtrType->getMostRecentCXXRecordDecl(),
+      memberAlign);
   return Address(ptr, ConvertTypeForMem(memberPtrType->getPointeeType()),
                  memberAlign);
 }
@@ -208,7 +207,7 @@ CodeGenModule::GetNonVirtualBaseClassOffset(const CXXRecordDecl *ClassDecl,
     return nullptr;
 
   llvm::Type *PtrDiffTy =
-  Types.ConvertType(getContext().getPointerDiffType());
+      getTypes().ConvertType(getContext().getPointerDiffType());
 
   return llvm::ConstantInt::get(PtrDiffTy, Offset.getQuantity());
 }
@@ -933,7 +932,7 @@ namespace {
     }
 
     void addMemcpyableField(FieldDecl *F) {
-      if (F->isZeroSize(CGF.getContext()))
+      if (isEmptyFieldForLayout(CGF.getContext(), F))
         return;
       if (!FirstField)
         addInitialField(F);
@@ -945,7 +944,7 @@ namespace {
       ASTContext &Ctx = CGF.getContext();
       unsigned LastFieldSize =
           LastField->isBitField()
-              ? LastField->getBitWidthValue(Ctx)
+              ? LastField->getBitWidthValue()
               : Ctx.toBits(
                     Ctx.getTypeInfoDataSizeInChars(LastField->getType()).Width);
       uint64_t MemcpySizeBits = LastFieldOffset + LastFieldSize -
@@ -1433,6 +1432,70 @@ static bool CanSkipVTablePointerInitialization(CodeGenFunction &CGF,
   return true;
 }
 
+static void EmitConditionalArrayDtorCall(const CXXDestructorDecl *DD,
+                                         CodeGenFunction &CGF,
+                                         llvm::Value *ShouldDeleteCondition) {
+  Address ThisPtr = CGF.LoadCXXThisAddress();
+  llvm::BasicBlock *ScalarBB = CGF.createBasicBlock("dtor.scalar");
+  llvm::BasicBlock *callDeleteBB =
+      CGF.createBasicBlock("dtor.call_delete_after_array_destroy");
+  llvm::BasicBlock *VectorBB = CGF.createBasicBlock("dtor.vector");
+  auto *CondTy = cast<llvm::IntegerType>(ShouldDeleteCondition->getType());
+  llvm::Value *CheckTheBitForArrayDestroy = CGF.Builder.CreateAnd(
+      ShouldDeleteCondition, llvm::ConstantInt::get(CondTy, 2));
+  llvm::Value *ShouldDestroyArray =
+      CGF.Builder.CreateIsNull(CheckTheBitForArrayDestroy);
+  CGF.Builder.CreateCondBr(ShouldDestroyArray, ScalarBB, VectorBB);
+
+  CGF.EmitBlock(VectorBB);
+
+  llvm::Value *numElements = nullptr;
+  llvm::Value *allocatedPtr = nullptr;
+  CharUnits cookieSize;
+  QualType EltTy = DD->getThisType()->getPointeeType();
+  CGF.CGM.getCXXABI().ReadArrayCookie(CGF, ThisPtr, EltTy, numElements,
+                                      allocatedPtr, cookieSize);
+
+  // Destroy the elements.
+  QualType::DestructionKind dtorKind = EltTy.isDestructedType();
+
+  assert(dtorKind);
+  assert(numElements && "no element count for a type with a destructor!");
+
+  CharUnits elementSize = CGF.getContext().getTypeSizeInChars(EltTy);
+  CharUnits elementAlign =
+      ThisPtr.getAlignment().alignmentOfArrayElement(elementSize);
+
+  llvm::Value *arrayBegin = ThisPtr.emitRawPointer(CGF);
+  llvm::Value *arrayEnd = CGF.Builder.CreateInBoundsGEP(
+      ThisPtr.getElementType(), arrayBegin, numElements, "delete.end");
+
+  // We already checked that the array is not 0-length before entering vector
+  // deleting dtor.
+  CGF.emitArrayDestroy(arrayBegin, arrayEnd, EltTy, elementAlign,
+                       CGF.getDestroyer(dtorKind),
+                       /*checkZeroLength*/ false, CGF.needsEHCleanup(dtorKind));
+
+  llvm::BasicBlock *VectorBBCont = CGF.createBasicBlock("dtor.vector.cont");
+  CGF.EmitBlock(VectorBBCont);
+
+  llvm::Value *CheckTheBitForDeleteCall = CGF.Builder.CreateAnd(
+      ShouldDeleteCondition, llvm::ConstantInt::get(CondTy, 1));
+
+  llvm::Value *ShouldCallDelete =
+      CGF.Builder.CreateIsNull(CheckTheBitForDeleteCall);
+  CGF.Builder.CreateCondBr(ShouldCallDelete, CGF.ReturnBlock.getBlock(),
+                           callDeleteBB);
+  CGF.EmitBlock(callDeleteBB);
+  const CXXDestructorDecl *Dtor = cast<CXXDestructorDecl>(CGF.CurCodeDecl);
+  const CXXRecordDecl *ClassDecl = Dtor->getParent();
+  CGF.EmitDeleteCall(Dtor->getOperatorDelete(), allocatedPtr,
+                     CGF.getContext().getTagDeclType(ClassDecl));
+
+  CGF.EmitBranchThroughCleanup(CGF.ReturnBlock);
+  CGF.EmitBlock(ScalarBB);
+}
+
 /// EmitDestructorBody - Emits the body of the current destructor.
 void CodeGenFunction::EmitDestructorBody(FunctionArgList &Args) {
   const CXXDestructorDecl *Dtor = cast<CXXDestructorDecl>(CurGD.getDecl());
@@ -1462,7 +1525,9 @@ void CodeGenFunction::EmitDestructorBody(FunctionArgList &Args) {
   // outside of the function-try-block, which means it's always
   // possible to delegate the destructor body to the complete
   // destructor.  Do so.
-  if (DtorType == Dtor_Deleting) {
+  if (DtorType == Dtor_Deleting || DtorType == Dtor_VectorDeleting) {
+    if (CXXStructorImplicitParamValue && DtorType == Dtor_VectorDeleting)
+      EmitConditionalArrayDtorCall(Dtor, *this, CXXStructorImplicitParamValue);
     RunCleanupsScope DtorEpilogue(*this);
     EnterDtorCleanups(Dtor, Dtor_Deleting);
     if (HaveInsertPoint()) {
@@ -1491,6 +1556,8 @@ void CodeGenFunction::EmitDestructorBody(FunctionArgList &Args) {
   switch (DtorType) {
   case Dtor_Comdat: llvm_unreachable("not expecting a COMDAT");
   case Dtor_Deleting: llvm_unreachable("already handled deleting case");
+  case Dtor_VectorDeleting:
+    llvm_unreachable("already handled vector deleting case");
 
   case Dtor_Complete:
     assert((Body || getTarget().getCXXABI().isMicrosoft()) &&
@@ -1573,7 +1640,6 @@ namespace {
       return CGF.EmitScalarExpr(ThisArg);
     return CGF.LoadCXXThis();
   }
-
   /// Call the operator delete associated with the current destructor.
   struct CallDtorDelete final : EHScopeStack::Cleanup {
     CallDtorDelete() {}
@@ -1592,8 +1658,10 @@ namespace {
                                      bool ReturnAfterDelete) {
     llvm::BasicBlock *callDeleteBB = CGF.createBasicBlock("dtor.call_delete");
     llvm::BasicBlock *continueBB = CGF.createBasicBlock("dtor.continue");
-    llvm::Value *ShouldCallDelete
-      = CGF.Builder.CreateIsNull(ShouldDeleteCondition);
+    auto *CondTy = cast<llvm::IntegerType>(ShouldDeleteCondition->getType());
+    llvm::Value *CheckTheBit = CGF.Builder.CreateAnd(
+        ShouldDeleteCondition, llvm::ConstantInt::get(CondTy, 1));
+    llvm::Value *ShouldCallDelete = CGF.Builder.CreateIsNull(CheckTheBit);
     CGF.Builder.CreateCondBr(ShouldCallDelete, continueBB, callDeleteBB);
 
     CGF.EmitBlock(callDeleteBB);
@@ -1815,7 +1883,7 @@ namespace {
                               const CXXDestructorDecl *DD)
        : Context(Context), EHStack(EHStack), DD(DD), StartIndex(std::nullopt) {}
    void PushCleanupForField(const FieldDecl *Field) {
-     if (Field->isZeroSize(Context))
+     if (isEmptyFieldForLayout(Context, Field))
        return;
      unsigned FieldIndex = Field->getFieldIndex();
      if (FieldHasTrivialDestructorBody(Context, Field)) {
@@ -2191,15 +2259,11 @@ static bool canEmitDelegateCallArgs(CodeGenFunction &CGF,
   return true;
 }
 
-void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
-                                             CXXCtorType Type,
-                                             bool ForVirtualBase,
-                                             bool Delegating,
-                                             Address This,
-                                             CallArgList &Args,
-                                             AggValueSlot::Overlap_t Overlap,
-                                             SourceLocation Loc,
-                                             bool NewPointerIsChecked) {
+void CodeGenFunction::EmitCXXConstructorCall(
+    const CXXConstructorDecl *D, CXXCtorType Type, bool ForVirtualBase,
+    bool Delegating, Address This, CallArgList &Args,
+    AggValueSlot::Overlap_t Overlap, SourceLocation Loc,
+    bool NewPointerIsChecked, llvm::CallBase **CallOrInvoke) {
   const CXXRecordDecl *ClassDecl = D->getParent();
 
   if (!NewPointerIsChecked)
@@ -2247,7 +2311,7 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
   const CGFunctionInfo &Info = CGM.getTypes().arrangeCXXConstructorCall(
       Args, D, Type, ExtraArgs.Prefix, ExtraArgs.Suffix, PassPrototypeArgs);
   CGCallee Callee = CGCallee::forDirect(CalleePtr, GlobalDecl(D, Type));
-  EmitCall(Info, Callee, ReturnValueSlot(), Args, nullptr, false, Loc);
+  EmitCall(Info, Callee, ReturnValueSlot(), Args, CallOrInvoke, false, Loc);
 
   // Generate vtable assumptions if we're constructing a complete object
   // with a vtable.  We don't do this for base subobjects for two reasons:
@@ -2847,23 +2911,23 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
       !CGM.HasHiddenLTOVisibility(RD))
     return;
 
-  SanitizerMask M;
+  SanitizerKind::SanitizerOrdinal M;
   llvm::SanitizerStatKind SSK;
   switch (TCK) {
   case CFITCK_VCall:
-    M = SanitizerKind::CFIVCall;
+    M = SanitizerKind::SO_CFIVCall;
     SSK = llvm::SanStat_CFI_VCall;
     break;
   case CFITCK_NVCall:
-    M = SanitizerKind::CFINVCall;
+    M = SanitizerKind::SO_CFINVCall;
     SSK = llvm::SanStat_CFI_NVCall;
     break;
   case CFITCK_DerivedCast:
-    M = SanitizerKind::CFIDerivedCast;
+    M = SanitizerKind::SO_CFIDerivedCast;
     SSK = llvm::SanStat_CFI_DerivedCast;
     break;
   case CFITCK_UnrelatedCast:
-    M = SanitizerKind::CFIUnrelatedCast;
+    M = SanitizerKind::SO_CFIUnrelatedCast;
     SSK = llvm::SanStat_CFI_UnrelatedCast;
     break;
   case CFITCK_ICall:
@@ -2873,7 +2937,8 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
   }
 
   std::string TypeName = RD->getQualifiedNameAsString();
-  if (getContext().getNoSanitizeList().containsType(M, TypeName))
+  if (getContext().getNoSanitizeList().containsType(
+          SanitizerMask::bitPosToMask(M), TypeName))
     return;
 
   SanitizerScope SanScope(this);
@@ -2940,16 +3005,20 @@ llvm::Value *CodeGenFunction::EmitVTableTypeCheckedLoad(
       CGM.CreateMetadataIdentifierForType(QualType(RD->getTypeForDecl(), 0));
   llvm::Value *TypeId = llvm::MetadataAsValue::get(CGM.getLLVMContext(), MD);
 
+  auto CheckedLoadIntrinsic = CGM.getVTables().useRelativeLayout()
+                                  ? llvm::Intrinsic::type_checked_load_relative
+                                  : llvm::Intrinsic::type_checked_load;
   llvm::Value *CheckedLoad = Builder.CreateCall(
-      CGM.getIntrinsic(llvm::Intrinsic::type_checked_load),
+      CGM.getIntrinsic(CheckedLoadIntrinsic),
       {VTable, llvm::ConstantInt::get(Int32Ty, VTableByteOffset), TypeId});
+
   llvm::Value *CheckResult = Builder.CreateExtractValue(CheckedLoad, 1);
 
   std::string TypeName = RD->getQualifiedNameAsString();
   if (SanOpts.has(SanitizerKind::CFIVCall) &&
       !getContext().getNoSanitizeList().containsType(SanitizerKind::CFIVCall,
                                                      TypeName)) {
-    EmitCheck(std::make_pair(CheckResult, SanitizerKind::CFIVCall),
+    EmitCheck(std::make_pair(CheckResult, SanitizerKind::SO_CFIVCall),
               SanitizerHandler::CFICheckFail, {}, {});
   }
 

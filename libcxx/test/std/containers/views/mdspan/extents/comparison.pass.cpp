@@ -17,10 +17,10 @@
 // if lhs.extent(r) equals rhs.extent(r) for every rank index r of rhs, otherwise false.
 //
 
-#include <mdspan>
-#include <type_traits>
-#include <concepts>
 #include <cassert>
+#include <cstddef>
+#include <mdspan>
+#include <span> // dynamic_extent
 
 #include "test_macros.h"
 

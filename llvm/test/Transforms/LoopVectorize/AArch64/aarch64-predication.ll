@@ -13,7 +13,7 @@ target triple = "aarch64--linux-gnu"
 ; %var4 a lower scalarization overhead.
 ;
 ; COST-LABEL:  predicated_udiv_scalarized_operand
-; COST:        LV: Found an estimated cost of 5 for VF 2 For instruction: %var4 = udiv i64 %var2, %var3
+; COST:        Cost of 5 for VF 2: profitable to scalarize   %var4 = udiv i64 %var2, %var3
 ;
 ;
 define i64 @predicated_udiv_scalarized_operand(ptr %a, i64 %x) optsize {

@@ -11,7 +11,6 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/StorageUniquerSupport.h"
-#include "mlir/Support/LogicalResult.h"
 
 using namespace mlir;
 

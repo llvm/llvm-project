@@ -1,0 +1,198 @@
+## Check incompatible options.
+# RUN: not llvm-objcopy --remove-note=1 --remove-section=.test - 2>&1 | FileCheck %s --check-prefix=ERR-REMSEC
+# RUN: not llvm-objcopy --remove-note=1 --add-section=.test=%s - 2>&1 | FileCheck %s --check-prefix=ERR-ADDSEC
+# RUN: not llvm-objcopy --remove-note=1 --update-section=.test=%s - 2>&1 | FileCheck %s --check-prefix=ERR-UPDSEC
+
+# ERR-REMSEC: error: cannot specify both --remove-note and --remove-section
+# ERR-ADDSEC: error: cannot specify both --remove-note and --add-section
+# ERR-UPDSEC: error: cannot specify both --remove-note and --update-section
+
+## Check invalid argument formats.
+# RUN: not llvm-objcopy --remove-note= - 2>&1 | FileCheck %s --check-prefix=ERR-NOTYPEID
+# RUN: not llvm-objcopy --remove-note=CORE/ - 2>&1 | FileCheck %s --check-prefix=ERR-NOTYPEID
+# RUN: not llvm-objcopy --remove-note=/1 - 2>&1 | FileCheck %s --check-prefix=ERR-EMPTYNAME
+# RUN: not llvm-objcopy --remove-note=CORE/1/2 - 2>&1 | FileCheck %s --check-prefix=ERR-INVNUM1
+# RUN: not llvm-objcopy --remove-note=Notanumber - 2>&1 | FileCheck %s --check-prefix=ERR-INVNUM2
+# RUN: not llvm-objcopy --remove-note=CORE/Notanumber - 2>&1 | FileCheck %s --check-prefix=ERR-INVNUM2
+
+# ERR-NOTYPEID: error: bad format for --remove-note, missing type_id
+# ERR-EMPTYNAME: error: bad format for --remove-note, note name is empty
+# ERR-INVNUM1: error: bad note type_id for --remove-note: '1/2'
+# ERR-INVNUM2: error: bad note type_id for --remove-note: 'Notanumber'
+
+## Check deleting notes:
+## * --remove-note=1 will remove note "CORE/1" and "LINUX/1",
+## * --remove-note=DUMMY/2 will not remove any notes because there are no notes with this owner,
+## * --remove-note=CORE/3 will remove "CORE/3" but preserve "LINUX/3".
+# RUN: yaml2obj --docnum=1 -D ALIGN=8 -D ELFCLASS=64 -D ENDIANNESS=LSB %s -o %t8.64.lsb
+# RUN: llvm-objcopy --remove-note=0x01 --remove-note=DUMMY/2 --remove-note=CORE/0x03 %t8.64.lsb %t8.64.lsb.o
+# RUN: llvm-readobj --segments --sections --notes %t8.64.lsb.o | \
+# RUN:   FileCheck %s -D#SIZE0=32 -D#SIZE1=64
+
+# RUN: yaml2obj --docnum=1 -D ALIGN=4 -D ELFCLASS=64 -D ENDIANNESS=MSB %s -o %t4.64.msb
+# RUN: llvm-objcopy --remove-note=0x01 --remove-note=DUMMY/0x02 --remove-note=CORE/3 %t4.64.msb %t4.64.msb.o
+# RUN: llvm-readobj --segments --sections --notes %t4.64.msb.o | \
+# RUN:   FileCheck %s -D#SIZE0=24 -D#SIZE1=48
+
+# RUN: yaml2obj --docnum=1 -D ALIGN=4 -D ELFCLASS=32 -D ENDIANNESS=LSB %s -o %t4.32.lsb
+# RUN: llvm-objcopy --remove-note=1 --remove-note=DUMMY/0x02 --remove-note=CORE/3 %t4.32.lsb %t4.32.lsb.o
+# RUN: llvm-readobj --segments --sections --notes %t4.32.lsb.o | \
+# RUN:   FileCheck %s -D#SIZE0=24 -D#SIZE1=48
+
+# CHECK:      Sections [
+# CHECK:        Section {
+# CHECK:          Name: .note0
+# CHECK-NEXT:     Type: SHT_NOTE
+# CHECK-NEXT:     Flags [
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Address:
+# CHECK-NEXT:     Offset:
+# CHECK-NEXT:     Size: [[#%d,SIZE0]]
+# CHECK:          Name: .note1
+# CHECK-NEXT:     Type: SHT_NOTE
+# CHECK-NEXT:     Flags [
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Address:
+# CHECK-NEXT:     Offset:
+# CHECK-NEXT:     Size: [[#%d,SIZE1]]
+# CHECK:          Name: .note2
+# CHECK-NEXT:     Type: SHT_NOTE
+# CHECK-NEXT:     Flags [
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Address:
+# CHECK-NEXT:     Offset:
+# CHECK-NEXT:     Size: 0
+
+# CHECK:      NoteSections [
+# CHECK-NEXT:   NoteSection {
+# CHECK-NEXT:     Name: .note0
+# CHECK-NEXT:     Offset:
+# CHECK-NEXT:     Size: 0x[[#%X,SIZE0]]
+# CHECK-NEXT:     Notes [
+# CHECK-NEXT:       {
+# CHECK-NEXT:         Owner: CORE
+# CHECK-NEXT:         Data size: 0x2
+# CHECK-NEXT:         Type: NT_ARCH
+# CHECK-NEXT:         Description data (
+# CHECK-NEXT:           0000: 0201
+# CHECK-NEXT:         )
+# CHECK-NEXT:       }
+# CHECK-NEXT:     ]
+# CHECK-NEXT:   }
+# CHECK-NEXT:   NoteSection {
+# CHECK-NEXT:     Name: .note1
+# CHECK-NEXT:     Offset:
+# CHECK-NEXT:     Size: 0x[[#%X,SIZE1]]
+# CHECK-NEXT:     Notes [
+# CHECK-NEXT:       {
+# CHECK-NEXT:         Owner: LINUX
+# CHECK-NEXT:         Data size: 0x2
+# CHECK-NEXT:         Type: Unknown (0x00000003)
+# CHECK-NEXT:         Description data (
+# CHECK-NEXT:           0000: 0301
+# CHECK-NEXT:         )
+# CHECK-NEXT:       }
+# CHECK-NEXT:       {
+# CHECK-NEXT:         Owner: CORE
+# CHECK-NEXT:         Data size: 0x2
+# CHECK-NEXT:         Type: Unknown (0x00000004)
+# CHECK-NEXT:         Description data (
+# CHECK-NEXT:           0000: 0401
+# CHECK-NEXT:         )
+# CHECK-NEXT:       }
+# CHECK-NEXT:     ]
+# CHECK-NEXT:   }
+# CHECK-NEXT:   NoteSection {
+# CHECK-NEXT:     Name: .note2
+# CHECK-NEXT:     Offset:
+# CHECK-NEXT:     Size: 0x0
+# CHECK-NEXT:     Notes [
+# CHECK-NEXT:     ]
+# CHECK-NEXT:   }
+
+--- !ELF
+FileHeader:
+  Class:          ELFCLASS[[ELFCLASS]]
+  Data:           ELFDATA2[[ENDIANNESS]]
+  Type:           ET_REL
+  Machine:        EM_X86_64
+Sections:
+  - Name:         .note0
+    Type:         SHT_NOTE
+    AddressAlign: [[ALIGN]]
+    Notes:
+      - Name:   CORE
+        Type:   0x01
+        Desc:   0101
+      - Name:   CORE
+        Type:   0x02
+        Desc:   0201
+  - Name:         .note1
+    Type:         SHT_NOTE
+    AddressAlign: [[ALIGN]]
+    Notes:
+      - Name:   LINUX
+        Type:   0x03
+        Desc:   0301
+      - Name:   CORE
+        Type:   0x03
+        Desc:   0302
+      - Name:   CORE
+        Type:   0x04
+        Desc:   0401
+  - Name:         .note2
+    Type:         SHT_NOTE
+    AddressAlign: [[ALIGN]]
+    Notes:
+      - Name:   LINUX
+        Type:   0x01
+        Desc:   0102
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-objcopy --remove-note=1 %t2 %t2o 2>&1 | FileCheck %s --check-prefix=TEST2
+# TEST2: warning: note segments are not supported
+# TEST2-NOT: note segments are not supported
+
+--- !ELF
+FileHeader:
+  Class:          ELFCLASS64
+  Data:           ELFDATA2LSB
+  Type:           ET_CORE
+  Machine:        EM_X86_64
+ProgramHeaders:
+  - Type:         PT_NOTE
+    FirstSec:     .data0
+    LastSec:      .data0
+  - Type:         PT_NOTE
+    FirstSec:     .data1
+    LastSec:      .data1
+Sections:
+  - Name:         .data0
+    Type:         Fill
+    Size:         8
+  - Name:         .data1
+    Type:         Fill
+    Size:         8
+
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: llvm-objcopy --remove-note=1 %t3 %t3o 2>&1 | FileCheck %s --check-prefix=TEST3
+# TEST3: warning: cannot remove note(s) from .note: sections in segments are not supported
+
+--- !ELF
+FileHeader:
+  Class:          ELFCLASS64
+  Data:           ELFDATA2LSB
+  Type:           ET_EXEC
+  Machine:        EM_X86_64
+ProgramHeaders:
+  - Type:         PT_LOAD
+    FirstSec:     .note
+    LastSec:      .note
+Sections:
+  - Name:         .note
+    Type:         SHT_NOTE
+    AddressAlign: 4
+    Notes:
+      - Name:     ABC
+        Type:     1
+        Desc:     0102

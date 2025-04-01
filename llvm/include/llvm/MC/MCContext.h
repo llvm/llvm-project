@@ -468,6 +468,10 @@ public:
   /// true, behaves like getOrCreateSymbol, prefixed with PrivateLabelPrefix.
   MCSymbol *createBlockSymbol(const Twine &Name, bool AlwaysEmit = false);
 
+  /// Create a local, non-temporary symbol like an ELF mapping symbol. Calling
+  /// the function with the same name will generate new, unique instances.
+  MCSymbol *createLocalSymbol(StringRef Name);
+
   /// Create the definition of a directional local symbol for numbered label
   /// (used for "1:" definitions).
   MCSymbol *createDirectionalLocalSymbol(unsigned LocalLabelVal);
@@ -522,13 +526,6 @@ public:
 
   /// \name Section Management
   /// @{
-
-  enum : unsigned {
-    /// Pass this value as the UniqueID during section creation to get the
-    /// generic section with the given name and characteristics. The usual
-    /// sections such as .text use this ID.
-    GenericSectionID = ~0U
-  };
 
   /// Return the MCSection for the specified mach-o section.  This requires
   /// the operands to be valid.
@@ -607,7 +604,7 @@ public:
 
   MCSectionCOFF *getCOFFSection(StringRef Section, unsigned Characteristics,
                                 StringRef COMDATSymName, int Selection,
-                                unsigned UniqueID = GenericSectionID);
+                                unsigned UniqueID = MCSection::NonUniqueID);
 
   MCSectionCOFF *getCOFFSection(StringRef Section, unsigned Characteristics);
 
@@ -617,33 +614,22 @@ public:
   /// as Sec and the function symbol as KeySym.
   MCSectionCOFF *
   getAssociativeCOFFSection(MCSectionCOFF *Sec, const MCSymbol *KeySym,
-                            unsigned UniqueID = GenericSectionID);
+                            unsigned UniqueID = MCSection::NonUniqueID);
 
   MCSectionSPIRV *getSPIRVSection();
 
   MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
                                 unsigned Flags = 0) {
-    return getWasmSection(Section, K, Flags, nullptr);
-  }
-
-  MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
-                                unsigned Flags, const char *BeginSymName) {
-    return getWasmSection(Section, K, Flags, "", ~0, BeginSymName);
+    return getWasmSection(Section, K, Flags, "", ~0);
   }
 
   MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
                                 unsigned Flags, const Twine &Group,
-                                unsigned UniqueID) {
-    return getWasmSection(Section, K, Flags, Group, UniqueID, nullptr);
-  }
-
-  MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
-                                unsigned Flags, const Twine &Group,
-                                unsigned UniqueID, const char *BeginSymName);
+                                unsigned UniqueID);
 
   MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
                                 unsigned Flags, const MCSymbolWasm *Group,
-                                unsigned UniqueID, const char *BeginSymName);
+                                unsigned UniqueID);
 
   /// Get the section for the provided Section name
   MCSectionDXContainer *getDXContainerSection(StringRef Section, SectionKind K);
@@ -654,7 +640,7 @@ public:
   MCSectionXCOFF *getXCOFFSection(
       StringRef Section, SectionKind K,
       std::optional<XCOFF::CsectProperties> CsectProp = std::nullopt,
-      bool MultiSymbolsAllowed = false, const char *BeginSymName = nullptr,
+      bool MultiSymbolsAllowed = false,
       std::optional<XCOFF::DwarfSectionSubtypeFlags> DwarfSubtypeFlags =
           std::nullopt);
 

@@ -12,15 +12,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/DomTreeUpdater.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/GenericDomTreeUpdaterImpl.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/GenericDomTree.h"
-#include <algorithm>
 #include <functional>
-#include <utility>
 
 namespace llvm {
 
@@ -30,6 +27,13 @@ template class GenericDomTreeUpdater<DomTreeUpdater, DominatorTree,
 template void
 GenericDomTreeUpdater<DomTreeUpdater, DominatorTree,
                       PostDominatorTree>::recalculate(Function &F);
+
+template void
+GenericDomTreeUpdater<DomTreeUpdater, DominatorTree, PostDominatorTree>::
+    applyUpdatesImpl</*IsForward=*/true>();
+template void
+GenericDomTreeUpdater<DomTreeUpdater, DominatorTree, PostDominatorTree>::
+    applyUpdatesImpl</*IsForward=*/false>();
 
 bool DomTreeUpdater::forceFlushDeletedBB() {
   if (DeletedBBs.empty())
@@ -42,9 +46,8 @@ bool DomTreeUpdater::forceFlushDeletedBB() {
     // delete only has an UnreachableInst inside.
     assert(BB->size() == 1 && isa<UnreachableInst>(BB->getTerminator()) &&
            "DelBB has been modified while awaiting deletion.");
-    BB->removeFromParent();
     eraseDelBBNode(BB);
-    delete BB;
+    BB->eraseFromParent();
   }
   DeletedBBs.clear();
   Callbacks.clear();
@@ -63,9 +66,8 @@ void DomTreeUpdater::deleteBB(BasicBlock *DelBB) {
     return;
   }
 
-  DelBB->removeFromParent();
   eraseDelBBNode(DelBB);
-  delete DelBB;
+  DelBB->eraseFromParent();
 }
 
 void DomTreeUpdater::callbackDeleteBB(
@@ -77,8 +79,8 @@ void DomTreeUpdater::callbackDeleteBB(
     return;
   }
 
-  DelBB->removeFromParent();
   eraseDelBBNode(DelBB);
+  DelBB->removeFromParent();
   Callback(DelBB);
   delete DelBB;
 }

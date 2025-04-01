@@ -32,7 +32,7 @@ define void @global_inst_offset(ptr addrspace(1) nocapture %p) {
 define amdgpu_kernel void @load_i16_lo(ptr %arg, ptr %out) {
   %gep = getelementptr inbounds i16, ptr %arg, i32 4
   %ld = load i16, ptr %gep, align 2
-  %vec = insertelement <2 x i16> <i16 undef, i16 0>, i16 %ld, i32 0
+  %vec = insertelement <2 x i16> <i16 poison, i16 0>, i16 %ld, i32 0
   %v = add <2 x i16> %vec, %vec
   store <2 x i16> %v, ptr %out, align 4
   ret void
@@ -44,7 +44,7 @@ define amdgpu_kernel void @load_i16_lo(ptr %arg, ptr %out) {
 define amdgpu_kernel void @load_i16_hi(ptr %arg, ptr %out) {
   %gep = getelementptr inbounds i16, ptr %arg, i32 4
   %ld = load i16, ptr %gep, align 2
-  %vec = insertelement <2 x i16> <i16 0, i16 undef>, i16 %ld, i32 1
+  %vec = insertelement <2 x i16> <i16 0, i16 poison>, i16 %ld, i32 1
   %v = add <2 x i16> %vec, %vec
   store <2 x i16> %v, ptr %out, align 4
   ret void
@@ -56,7 +56,7 @@ define amdgpu_kernel void @load_i16_hi(ptr %arg, ptr %out) {
 define amdgpu_kernel void @load_half_lo(ptr %arg, ptr %out) {
   %gep = getelementptr inbounds half, ptr %arg, i32 4
   %ld = load half, ptr %gep, align 2
-  %vec = insertelement <2 x half> <half undef, half 0xH0000>, half %ld, i32 0
+  %vec = insertelement <2 x half> <half poison, half 0xH0000>, half %ld, i32 0
   %v = fadd <2 x half> %vec, %vec
   store <2 x half> %v, ptr %out, align 4
   ret void
@@ -68,7 +68,7 @@ define amdgpu_kernel void @load_half_lo(ptr %arg, ptr %out) {
 define amdgpu_kernel void @load_half_hi(ptr %arg, ptr %out) {
   %gep = getelementptr inbounds half, ptr %arg, i32 4
   %ld = load half, ptr %gep, align 2
-  %vec = insertelement <2 x half> <half 0xH0000, half undef>, half %ld, i32 1
+  %vec = insertelement <2 x half> <half 0xH0000, half poison>, half %ld, i32 1
   %v = fadd <2 x half> %vec, %vec
   store <2 x half> %v, ptr %out, align 4
   ret void

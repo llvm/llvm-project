@@ -10,7 +10,8 @@
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DIEREF_H
 
 #include "lldb/Core/dwarf.h"
-#include "lldb/Utility/LLDBAssert.h"
+#include "lldb/lldb-defines.h"
+#include "lldb/lldb-types.h"
 #include <cassert>
 #include <optional>
 

@@ -11,7 +11,10 @@
 //
 // Comparison operators
 
-#include <iterator>
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
+#include <concepts>
+#include <__iterator/bounded_iter.h>
 
 #include "test_iterators.h"
 #include "test_macros.h"
@@ -59,6 +62,12 @@ TEST_CONSTEXPR_CXX14 bool tests() {
     assert(iter1 >= iter1);
   }
 
+#if TEST_STD_VER >= 20
+  // P1614
+  std::same_as<std::strong_ordering> decltype(auto) r1 = iter1 <=> iter2;
+  assert(r1 == std::strong_ordering::less);
+#endif
+
   return true;
 }
 
@@ -69,8 +78,11 @@ int main(int, char**) {
 #endif
 
 #if TEST_STD_VER > 17
-  tests<contiguous_iterator<int*> >();
-  static_assert(tests<contiguous_iterator<int*> >(), "");
+  tests<contiguous_iterator<int*>>();
+  static_assert(tests<contiguous_iterator<int*>>());
+
+  tests<three_way_contiguous_iterator<int*>>();
+  static_assert(tests<three_way_contiguous_iterator<int*>>());
 #endif
 
   return 0;

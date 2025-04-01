@@ -18,6 +18,7 @@
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Program.h"
 
 #define DEBUG_TYPE "bolt-rtlib"
 
@@ -26,8 +27,8 @@ using namespace bolt;
 
 void RuntimeLibrary::anchor() {}
 
-std::string RuntimeLibrary::getLibPath(StringRef ToolPath,
-                                       StringRef LibFileName) {
+std::string RuntimeLibrary::getLibPathByToolPath(StringRef ToolPath,
+                                                 StringRef LibFileName) {
   StringRef Dir = llvm::sys::path::parent_path(ToolPath);
   SmallString<128> LibPath = llvm::sys::path::parent_path(Dir);
   llvm::sys::path::append(LibPath, "lib" LLVM_LIBDIR_SUFFIX);
@@ -39,10 +40,50 @@ std::string RuntimeLibrary::getLibPath(StringRef ToolPath,
   }
   llvm::sys::path::append(LibPath, LibFileName);
   if (!llvm::sys::fs::exists(LibPath)) {
+    // If it is a symlink, check the directory that the symlink points to.
+    if (llvm::sys::fs::is_symlink_file(ToolPath)) {
+      SmallString<256> RealPath;
+      llvm::sys::fs::real_path(ToolPath, RealPath);
+      if (llvm::ErrorOr<std::string> P =
+              llvm::sys::findProgramByName(RealPath)) {
+        outs() << "BOLT-INFO: library not found: " << LibPath << "\n"
+               << "BOLT-INFO: " << ToolPath << " is a symlink; will look up "
+               << LibFileName
+               << " at the target directory that the symlink points to\n";
+        return getLibPath(*P, LibFileName);
+      }
+    }
     errs() << "BOLT-ERROR: library not found: " << LibPath << "\n";
     exit(1);
   }
   return std::string(LibPath);
+}
+
+std::string RuntimeLibrary::getLibPathByInstalled(StringRef LibFileName) {
+  SmallString<128> LibPath(CMAKE_INSTALL_FULL_LIBDIR);
+  llvm::sys::path::append(LibPath, LibFileName);
+  return std::string(LibPath);
+}
+
+std::string RuntimeLibrary::getLibPath(StringRef ToolPath,
+                                       StringRef LibFileName) {
+  if (llvm::sys::fs::exists(LibFileName)) {
+    return std::string(LibFileName);
+  }
+
+  std::string ByTool = getLibPathByToolPath(ToolPath, LibFileName);
+  if (llvm::sys::fs::exists(ByTool)) {
+    return ByTool;
+  }
+
+  std::string ByInstalled = getLibPathByInstalled(LibFileName);
+  if (llvm::sys::fs::exists(ByInstalled)) {
+    return ByInstalled;
+  }
+
+  errs() << "BOLT-ERROR: library not found: " << ByTool << ", " << ByInstalled
+         << ", or " << LibFileName << "\n";
+  exit(1);
 }
 
 void RuntimeLibrary::loadLibrary(StringRef LibPath, BOLTLinker &Linker,

@@ -379,8 +379,10 @@ void ClassifyRefs::classify(const Expr *E, Class C) {
   }
 
   FindVarResult Var = findVar(E, DC);
-  if (const DeclRefExpr *DRE = Var.getDeclRefExpr())
-    Classification[DRE] = std::max(Classification[DRE], C);
+  if (const DeclRefExpr *DRE = Var.getDeclRefExpr()) {
+    auto &Class = Classification[DRE];
+    Class = std::max(Class, C);
+  }
 }
 
 void ClassifyRefs::VisitDeclStmt(DeclStmt *DS) {

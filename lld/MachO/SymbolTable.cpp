@@ -67,10 +67,15 @@ static void transplantSymbolsAtOffset(InputSection *fromIsec,
                                       InputSection *toIsec, Defined *skip,
                                       uint64_t fromOff, uint64_t toOff) {
   // Ensure the symbols will still be in address order after our insertions.
-  auto insertIt = llvm::upper_bound(toIsec->symbols, toOff,
-                                    [](uint64_t off, const Symbol *s) {
-                                      return cast<Defined>(s)->value < off;
-                                    });
+  auto symSucceedsOff = [](uint64_t off, const Symbol *s) {
+    return cast<Defined>(s)->value > off;
+  };
+  assert(std::is_partitioned(toIsec->symbols.begin(), toIsec->symbols.end(),
+                             [symSucceedsOff, toOff](const Symbol *s) {
+                               return !symSucceedsOff(toOff, s);
+                             }) &&
+         "Symbols in toIsec must be partitioned by toOff.");
+  auto insertIt = llvm::upper_bound(toIsec->symbols, toOff, symSucceedsOff);
   llvm::erase_if(fromIsec->symbols, [&](Symbol *s) {
     auto *d = cast<Defined>(s);
     if (d->value != fromOff)
@@ -198,9 +203,9 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
   }
 
   // With -flat_namespace, all extern symbols in dylibs are interposable.
-  // FIXME: Add support for `-interposable` (PR53680).
-  bool interposable = config->namespaceKind == NamespaceKind::flat &&
-                      config->outputType != MachO::MH_EXECUTE &&
+  bool interposable = ((config->namespaceKind == NamespaceKind::flat &&
+                        config->outputType != MachO::MH_EXECUTE) ||
+                       config->interposable) &&
                       !isPrivateExtern;
   Defined *defined = replaceSymbol<Defined>(
       s, name, file, isec, value, size, isWeakDef, /*isExternal=*/true,

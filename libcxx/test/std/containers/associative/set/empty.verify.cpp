@@ -17,6 +17,6 @@
 #include <set>
 
 void f() {
-    std::set<int> c;
-    c.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::set<int> c;
+  c.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }

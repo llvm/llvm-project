@@ -15,6 +15,12 @@ The LLVM Project uses `GitHub <https://github.com/>`_ for
 This page describes how the LLVM Project users and developers can
 participate in the project using GitHub.
 
+Before your first PR
+====================
+
+Please ensure that you have set a valid email address in your GitHub account,
+see :ref:`github-email-address`.
+
 Branches
 ========
 
@@ -22,6 +28,23 @@ It is possible to create branches that starts with `users/<username>/`, however 
 intended to be able to support "stacked" pull-request. Do not create any branches in the
 llvm/llvm-project repository otherwise, please use a fork (see below). User branches that
 aren't associated with a pull-request **will be deleted**.
+
+Using Graphite for stacked Pull Requests
+========================================
+
+`Graphite <https://app.graphite.dev/>`_ is a stacked pull request tool supported
+by the LLVM repo (the other being `reviewable.io <https://reviewable.io>`_).
+
+Graphite will want to create branches under ``llvm/llvm-project`` rather than your
+private fork, so the guidance above, about branch naming, is critical, otherwise
+``gt submit`` (i.e. publish your PRs for review) will fail.
+
+Use ``gt config`` then ``Branch naming settings`` and ``Set a prefix for branch names``.
+Include the last ``/``.
+
+If you didn't do the above and Graphite created non-prefixed branches, a simple way to
+unblock is to rename (``git -m <old name> <new name>``), and then checkout the branch
+and ``gt track``.
 
 Pull Requests
 =============
@@ -33,7 +56,7 @@ documentation refer to `GitHub's documentation <https://docs.github.com/pull-req
 .. note::
    If you are using a Pull Request for purposes other than review
    (eg: precommit CI results, convenient web-based reverts, etc)
-   `skip-precommit-approval <https://github.com/llvm/llvm-project/labels?q=skip-precommit-approval>`_
+   add the `skip-precommit-approval <https://github.com/llvm/llvm-project/labels?q=skip-precommit-approval>`_
    label to the PR.
 
 GitHub Tools
@@ -116,65 +139,124 @@ or in some dependent code.
 After your PR is reviewed and accepted, you want to rebase your branch to ensure
 you won't encounter merge conflicts when landing the PR.
 
+.. note::
+  This guide assumes that the PR branch only has 1 author. If you are
+  collaborating with others on a single branch, be careful how and when you push
+  changes. ``--force-with-lease`` may be useful in this situation.
+
+Approvals
+---------
+
+Before merging a PR you must have the required approvals. See
+:ref:`lgtm_how_a_patch_is_accepted` for more details.
+
+
 Landing your change
 -------------------
-When your PR has been accepted you can use the web interface to land your change.
-If you have created multiple commits to address feedback at this point you need
-to consolidate those commits into one commit. There are two different ways to
-do this:
 
-`Interactive rebase <https://git-scm.com/docs/git-rebase#_interactive_mode>`_
-with fixup's. This is the recommended method since you can control the final
-commit message and inspect that the final commit looks as you expect. When
-your local state is correct, remember to force-push to your branch and press
-the merge button afterwards.
+After your PR is approved, ensure that:
 
-Use the button `Squash and merge` in GitHub's web interface, if you do this
-remember to review the commit message when prompted.
+  * The PR title and description describe the final changes. These will be used
+    as the title and message of the final squashed commit. The titles and
+    messages of commits in the PR will **not** be used.
+  * You have set a valid email address in your GitHub account, see :ref:`github-email-address`.
 
-Afterwards you can select the option `Delete branch` to delete the branch
-from your fork.
+.. note::
+   The LLVM Project monorepo on GitHub is configured to always use "Squash
+   and Merge" as the pull request merge option when using the web interface.
+   With this option, GitHub uses the PR summary as the default commit
+   message.
 
-You can also merge via the CLI by switching to your branch locally and run:
+   Users with write access who can merge PRs have a final opportunity to edit
+   the commit title and message before merging. However, this option is not
+   available to contributors without write access.
 
-::
+At this point, you can merge your changes. If you do not have write permissions
+for the repository, the merge button in GitHub's web interface will be
+disabled. If this is the case, continue following the steps here but ask one of
+your reviewers to click the merge button on your behalf.
 
-  gh pr merge --squash --delete-branch
+If the PR is a single commit, all you need to do is click the merge button in
+GitHub's web interface.
 
-If you observe an error message from the above informing you that your pull
-request is not mergeable, then that is likely because upstream has been
-modified since your pull request was authored in a way that now results in a
-merge conflict. You must first resolve this merge conflict in order to merge
-your pull request. In order to do that:
+If your PR contains multiple commits, you need to consolidate those commits into
+one commit. There are three different ways to do this, shown here with the most
+commonly used first:
 
-::
+* Use the button `Squash and merge` in GitHub's web interface, if you do this
+  remember to review the commit message when prompted.
 
-  git fetch upstream
-  git rebase upstream/main
+  Afterwards you can select the option `Delete branch` to delete the branch
+  from your fork.
 
-Then fix the source files causing merge conflicts and make sure to rebuild and
-retest the result. Then:
+* `Interactive rebase <https://git-scm.com/docs/git-rebase#_interactive_mode>`_
+  with fixups. This is the recommended method since you can control the final
+  commit message and check that the final commit looks as you expect. When
+  your local state is correct, remember to force-push to your branch and press
+  the merge button in GitHub's web interface afterwards.
 
-::
+* Merge using the GitHub command line interface. Switch to your branch locally
+  and run:
 
-  git add <files with resolved merge conflicts>
-  git rebase --continue
+  ::
 
-Finally, you'll need to force push to your branch one more time before you can
-merge:
+    gh pr merge --squash --delete-branch
 
-::
+  If you observe an error message from the above informing you that your pull
+  request is not mergeable, then that is likely because upstream has been
+  modified since your pull request was authored in a way that now results in a
+  merge conflict. You must first resolve this merge conflict in order to merge
+  your pull request. In order to do that:
 
-  git push -f
-  gh pr merge --squash --delete-branch
+  ::
 
-This force push may ask if you intend to push hundreds, or potentially
-thousands of patches (depending on how long it's been since your pull request
-was initially authored vs. when you intended to merge it). Since you're pushing
-to a branch in your fork, this is ok and expected. Github's UI for the pull
-request will understand that you're rebasing just your patches, and display
-this result correctly with a note that a force push did occur.
+    git fetch upstream
+    git rebase upstream/main
 
+  Then fix the source files causing merge conflicts and make sure to rebuild and
+  retest the result. Then:
+
+  ::
+
+    git add <files with resolved merge conflicts>
+    git rebase --continue
+
+  Finally, you'll need to force push to your branch one more time before you can
+  merge:
+
+  ::
+
+    git push --force
+    gh pr merge --squash --delete-branch
+
+  This force push may ask if you intend to push hundreds, or potentially
+  thousands of patches (depending on how long it's been since your pull request
+  was initially authored vs. when you intended to merge it). Since you're pushing
+  to a branch in your fork, this is ok and expected. Github's UI for the pull
+  request will understand that you're rebasing just your patches, and display
+  this result correctly with a note that a force push did occur.
+
+Pre-merge Continuous Integration (CI)
+-------------------------------------
+
+Multiple checks will be applied on a pull-request, either for linting/formatting
+or some build and tests. None of these are perfect and you will encounter
+false positive, infrastructure failures (unstable or unavailable worker), or
+you will be unlucky and based your change on a broken revision of the main branch.
+
+None of the checks are strictly mandatory: these are tools to help us build a
+better codebase and be more productive (by avoiding issues found post-merge and
+possible reverts). As a developer you're empowered to exercise your judgement
+about bypassing any of the checks when merging code.
+
+The infrastructure can print messages that make it seem like these are mandatory,
+but this is just an artifact of GitHub infrastructure and not a policy of the
+project.
+
+However, please make sure you do not force-merge any changes that have clear
+test failures directly linked to your changes. Our policy is still to keep the
+``main`` branch in a good condition, and introducing failures to be fixed later
+violates that policy.
 
 Problems After Landing Your Change
 ==================================
@@ -266,7 +348,7 @@ checks:
   ninja check
 
   # Push the rebased changes to your fork.
-  git push origin my_change -f
+  git push origin my_change --force
 
   # Now merge it
   gh pr merge --squash --delete-branch
@@ -361,7 +443,7 @@ checks:
   ninja check
 
   # Push the rebased changes to your fork.
-  git push origin my_change -f
+  git push origin my_change --force
 
 Once your PR is approved, rebased, and tests are passing, click `Squash and
 Merge` on your PR in the GitHub web interface.
@@ -376,10 +458,14 @@ Releases
 
 Backporting Fixes to the Release Branches
 -----------------------------------------
-You can use special comments on issues to make backport requests for the
-release branches.  This is done by making a comment containing the following
-command on any issue that has been added to one of the "X.Y.Z Release"
-milestones.
+You can use special comments on issues or pull requests to make backport
+requests for the release branches.  To do this, after your pull request has been
+merged:
+
+1. Edit "Milestone" at the right side of the isssue or pull request
+   to say "LLVM X.Y Release"
+
+2. Add a comment to it in the following format:
 
 ::
 
@@ -388,9 +474,18 @@ milestones.
 This command takes one or more git commit hashes as arguments and will attempt
 to cherry-pick the commit(s) to the release branch.  If the commit(s) fail to
 apply cleanly, then a comment with a link to the failing job will be added to
-the issue.  If the commit(s) do apply cleanly, then a pull request will
-be created with the specified commits.
+the issue/pull request.  If the commit(s) do apply cleanly, then a pull request
+will be created with the specified commits.
 
 If a commit you want to backport does not apply cleanly, you may resolve
 the conflicts locally and then create a pull request against the release
 branch.  Just make sure to add the release milestone to the pull request.
+
+Getting admin access to CI infrastructure
+=========================================
+
+Any individual who is responsible for setting up and/or maintaining CI infrastructure for a LLVM project can
+request to be granted the CI/CD role to the LLVM organization admins. The request can be made by creating
+`a Github issue <https://github.com/llvm/llvm-project/issues/new>`_ and using the ``infrastructure`` label.
+Applicants must include a justification for why the role is being requested. Applications are reviewed on a
+case-by-case basis by the LLVM admins and the role can be revoked at any point as the LLVM admins see fit.

@@ -21,7 +21,7 @@ class AArch64_ELFTargetObjectFile : public TargetLoweringObjectFileELF {
 
 public:
   AArch64_ELFTargetObjectFile() {
-    PLTRelativeVariantKind = MCSymbolRefExpr::VK_PLT;
+    PLTRelativeSpecifier = MCSymbolRefExpr::VK_PLT;
     SupportIndirectSymViaGOTPCRel = true;
   }
 
@@ -35,6 +35,16 @@ public:
                                  MachineModuleInfo *MMI, const MCSymbol *RawSym,
                                  AArch64PACKey::ID Key,
                                  uint16_t Discriminator) const;
+
+  void emitPersonalityValueImpl(MCStreamer &Streamer, const DataLayout &DL,
+                                const MCSymbol *Sym,
+                                const MachineModuleInfo *MMI) const override;
+
+  MCSection *getExplicitSectionGlobal(const GlobalObject *GO, SectionKind Kind,
+                                      const TargetMachine &TM) const override;
+
+  MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
+                                    const TargetMachine &TM) const override;
 };
 
 /// AArch64_MachoTargetObjectFile - This TLOF implementation is used for Darwin.
@@ -60,6 +70,11 @@ public:
 
   void getNameWithPrefix(SmallVectorImpl<char> &OutName, const GlobalValue *GV,
                          const TargetMachine &TM) const override;
+
+  MCSymbol *getAuthPtrSlotSymbol(const TargetMachine &TM,
+                                 MachineModuleInfo *MMI, const MCSymbol *RawSym,
+                                 AArch64PACKey::ID Key,
+                                 uint16_t Discriminator) const;
 };
 
 /// This implementation is used for AArch64 COFF targets.

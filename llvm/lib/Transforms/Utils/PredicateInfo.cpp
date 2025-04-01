@@ -27,7 +27,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/FormattedStream.h"
-#include <algorithm>
 #define DEBUG_TYPE "predicateinfo"
 using namespace llvm;
 using namespace PatternMatch;
@@ -559,7 +558,7 @@ Value *PredicateInfoBuilder::materializeStack(unsigned int &Counter,
     if (isa<PredicateWithEdge>(ValInfo)) {
       IRBuilder<> B(getBranchTerminator(ValInfo));
       auto NumDecls = F.getParent()->getNumNamedValues();
-      Function *IF = Intrinsic::getDeclaration(
+      Function *IF = Intrinsic::getOrInsertDeclaration(
           F.getParent(), Intrinsic::ssa_copy, Op->getType());
       if (NumDecls != F.getParent()->getNumNamedValues())
         PI.CreatedDeclarations.insert(IF);
@@ -575,7 +574,7 @@ Value *PredicateInfoBuilder::materializeStack(unsigned int &Counter,
       // directly before it, assume(i1 true) is not a useful fact.
       IRBuilder<> B(PAssume->AssumeInst->getNextNode());
       auto NumDecls = F.getParent()->getNumNamedValues();
-      Function *IF = Intrinsic::getDeclaration(
+      Function *IF = Intrinsic::getOrInsertDeclaration(
           F.getParent(), Intrinsic::ssa_copy, Op->getType());
       if (NumDecls != F.getParent()->getNumNamedValues())
         PI.CreatedDeclarations.insert(IF);

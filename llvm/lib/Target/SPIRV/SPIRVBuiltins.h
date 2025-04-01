@@ -19,7 +19,10 @@
 
 namespace llvm {
 namespace SPIRV {
-/// Lowers a builtin funtion call using the provided \p DemangledCall skeleton
+/// Parses the name part of the demangled builtin call.
+std::string lookupBuiltinNameHelper(StringRef DemangledCall,
+                                    FPDecorationId *DecorationId = nullptr);
+/// Lowers a builtin function call using the provided \p DemangledCall skeleton
 /// and external instruction \p Set.
 ///
 /// \return the lowering success status if the called function is a recognized
@@ -38,6 +41,12 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
                                  const SmallVectorImpl<Register> &Args,
                                  SPIRVGlobalRegistry *GR);
 
+/// Helper function for finding a builtin function attributes
+/// by a demangled function name. Defined in SPIRVBuiltins.cpp.
+std::tuple<int, unsigned, unsigned>
+mapBuiltinToOpcode(const StringRef DemangledCall,
+                   SPIRV::InstructionSet::InstructionSet Set);
+
 /// Parses the provided \p ArgIdx argument base type in the \p DemangledCall
 /// skeleton. A base type is either a basic type (e.g. i32 for int), pointer
 /// element type (e.g. i8 for char*), or builtin type (TargetExtType).
@@ -48,6 +57,9 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
 /// \p ArgIdx is the index of the argument to parse.
 Type *parseBuiltinCallArgumentBaseType(const StringRef DemangledCall,
                                        unsigned ArgIdx, LLVMContext &Ctx);
+bool parseBuiltinTypeStr(SmallVector<StringRef, 10> &BuiltinArgsTypeStrs,
+                         const StringRef DemangledCall, LLVMContext &Ctx);
+Type *parseBuiltinCallArgumentType(StringRef TypeStr, LLVMContext &Ctx);
 
 /// Translates a string representing a SPIR-V or OpenCL builtin type to a
 /// TargetExtType that can be further lowered with lowerBuiltinType().

@@ -6,15 +6,15 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0
-
     ; CHECK-LABEL: name: add_v16s8
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[LOAD:%[0-9]+]]:_(<16 x s8>) = G_LOAD [[COPY]](p0) :: (load (<16 x s8>))
-    ; CHECK: [[VECREDUCE_ADD:%[0-9]+]]:_(s8) = G_VECREDUCE_ADD [[LOAD]](<16 x s8>)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[VECREDUCE_ADD]](s8)
-    ; CHECK: $w0 = COPY [[ANYEXT]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(<16 x s8>) = G_LOAD [[COPY]](p0) :: (load (<16 x s8>))
+    ; CHECK-NEXT: [[VECREDUCE_ADD:%[0-9]+]]:_(s8) = G_VECREDUCE_ADD [[LOAD]](<16 x s8>)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[VECREDUCE_ADD]](s8)
+    ; CHECK-NEXT: $w0 = COPY [[ANYEXT]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(p0) = COPY $x0
     %1:_(<16 x s8>) = G_LOAD %0(p0) :: (load (<16 x s8>))
     %2:_(s8) = G_VECREDUCE_ADD %1(<16 x s8>)
@@ -29,15 +29,15 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0
-
     ; CHECK-LABEL: name: add_v8s16
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[LOAD:%[0-9]+]]:_(<8 x s16>) = G_LOAD [[COPY]](p0) :: (load (<8 x s16>))
-    ; CHECK: [[VECREDUCE_ADD:%[0-9]+]]:_(s16) = G_VECREDUCE_ADD [[LOAD]](<8 x s16>)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[VECREDUCE_ADD]](s16)
-    ; CHECK: $w0 = COPY [[ANYEXT]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(<8 x s16>) = G_LOAD [[COPY]](p0) :: (load (<8 x s16>))
+    ; CHECK-NEXT: [[VECREDUCE_ADD:%[0-9]+]]:_(s16) = G_VECREDUCE_ADD [[LOAD]](<8 x s16>)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[VECREDUCE_ADD]](s16)
+    ; CHECK-NEXT: $w0 = COPY [[ANYEXT]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(p0) = COPY $x0
     %1:_(<8 x s16>) = G_LOAD %0(p0) :: (load (<8 x s16>))
     %2:_(s16) = G_VECREDUCE_ADD %1(<8 x s16>)
@@ -52,14 +52,14 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0
-
     ; CHECK-LABEL: name: add_v4s32
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[COPY]](p0) :: (load (<4 x s32>))
-    ; CHECK: [[VECREDUCE_ADD:%[0-9]+]]:_(s32) = G_VECREDUCE_ADD [[LOAD]](<4 x s32>)
-    ; CHECK: $w0 = COPY [[VECREDUCE_ADD]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[COPY]](p0) :: (load (<4 x s32>))
+    ; CHECK-NEXT: [[VECREDUCE_ADD:%[0-9]+]]:_(s32) = G_VECREDUCE_ADD [[LOAD]](<4 x s32>)
+    ; CHECK-NEXT: $w0 = COPY [[VECREDUCE_ADD]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(p0) = COPY $x0
     %1:_(<4 x s32>) = G_LOAD %0(p0) :: (load (<4 x s32>))
     %2:_(s32) = G_VECREDUCE_ADD %1(<4 x s32>)
@@ -73,14 +73,14 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0
-
     ; CHECK-LABEL: name: add_v2s64
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[LOAD:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[COPY]](p0) :: (load (<2 x s64>))
-    ; CHECK: [[VECREDUCE_ADD:%[0-9]+]]:_(s64) = G_VECREDUCE_ADD [[LOAD]](<2 x s64>)
-    ; CHECK: $x0 = COPY [[VECREDUCE_ADD]](s64)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[COPY]](p0) :: (load (<2 x s64>))
+    ; CHECK-NEXT: [[VECREDUCE_ADD:%[0-9]+]]:_(s64) = G_VECREDUCE_ADD [[LOAD]](<2 x s64>)
+    ; CHECK-NEXT: $x0 = COPY [[VECREDUCE_ADD]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(p0) = COPY $x0
     %1:_(<2 x s64>) = G_LOAD %0(p0) :: (load (<2 x s64>))
     %2:_(s64) = G_VECREDUCE_ADD %1(<2 x s64>)
@@ -94,14 +94,14 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0
-
     ; CHECK-LABEL: name: add_v2s32
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[LOAD:%[0-9]+]]:_(<2 x s32>) = G_LOAD [[COPY]](p0) :: (load (<2 x s32>))
-    ; CHECK: [[VECREDUCE_ADD:%[0-9]+]]:_(s32) = G_VECREDUCE_ADD [[LOAD]](<2 x s32>)
-    ; CHECK: $w0 = COPY [[VECREDUCE_ADD]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(<2 x s32>) = G_LOAD [[COPY]](p0) :: (load (<2 x s32>))
+    ; CHECK-NEXT: [[VECREDUCE_ADD:%[0-9]+]]:_(s32) = G_VECREDUCE_ADD [[LOAD]](<2 x s32>)
+    ; CHECK-NEXT: $w0 = COPY [[VECREDUCE_ADD]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(p0) = COPY $x0
     %1:_(<2 x s32>) = G_LOAD %0(p0) :: (load (<2 x s32>))
     %2:_(s32) = G_VECREDUCE_ADD %1(<2 x s32>)
@@ -111,24 +111,25 @@ body:             |
 ...
 ---
 name:            test_v8i64
+# This is a power-of-2 legalization, so use a tree reduction.
 alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0, $q1, $q2, $q3
-    ; This is a power-of-2 legalization, so use a tree reduction.
     ; CHECK-LABEL: name: test_v8i64
     ; CHECK: liveins: $q0, $q1, $q2, $q3
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(<2 x s64>) = COPY $q2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(<2 x s64>) = COPY $q3
-    ; CHECK: [[ADD:%[0-9]+]]:_(<2 x s64>) = G_ADD [[COPY]], [[COPY1]]
-    ; CHECK: [[ADD1:%[0-9]+]]:_(<2 x s64>) = G_ADD [[COPY2]], [[COPY3]]
-    ; CHECK: [[ADD2:%[0-9]+]]:_(<2 x s64>) = G_ADD [[ADD]], [[ADD1]]
-    ; CHECK: [[VECREDUCE_ADD:%[0-9]+]]:_(s64) = G_VECREDUCE_ADD [[ADD2]](<2 x s64>)
-    ; CHECK: $x0 = COPY [[VECREDUCE_ADD]](s64)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<2 x s64>) = COPY $q2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(<2 x s64>) = COPY $q3
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<2 x s64>) = G_ADD [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[ADD1:%[0-9]+]]:_(<2 x s64>) = G_ADD [[COPY2]], [[COPY3]]
+    ; CHECK-NEXT: [[ADD2:%[0-9]+]]:_(<2 x s64>) = G_ADD [[ADD]], [[ADD1]]
+    ; CHECK-NEXT: [[VECREDUCE_ADD:%[0-9]+]]:_(s64) = G_VECREDUCE_ADD [[ADD2]](<2 x s64>)
+    ; CHECK-NEXT: $x0 = COPY [[VECREDUCE_ADD]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(<2 x s64>) = COPY $q0
     %1:_(<2 x s64>) = COPY $q1
     %2:_(<2 x s64>) = COPY $q2
@@ -143,25 +144,31 @@ body:             |
 ...
 ---
 name:            test_v6i64
+# This is a non-power-of-2 legalization, generate multiple vector reductions
+# and combine them with scalar ops.
 alignment:       4
 tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0, $q1, $q2, $q3
-    ; This is a non-power-of-2 legalization, generate multiple vector reductions
-    ; and combine them with scalar ops.
     ; CHECK-LABEL: name: test_v6i64
     ; CHECK: liveins: $q0, $q1, $q2, $q3
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(<2 x s64>) = COPY $q2
-    ; CHECK: [[VECREDUCE_ADD:%[0-9]+]]:_(s64) = G_VECREDUCE_ADD [[COPY]](<2 x s64>)
-    ; CHECK: [[VECREDUCE_ADD1:%[0-9]+]]:_(s64) = G_VECREDUCE_ADD [[COPY1]](<2 x s64>)
-    ; CHECK: [[VECREDUCE_ADD2:%[0-9]+]]:_(s64) = G_VECREDUCE_ADD [[COPY2]](<2 x s64>)
-    ; CHECK: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[VECREDUCE_ADD]], [[VECREDUCE_ADD1]]
-    ; CHECK: [[ADD1:%[0-9]+]]:_(s64) = G_ADD [[ADD]], [[VECREDUCE_ADD2]]
-    ; CHECK: $x0 = COPY [[ADD1]](s64)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<2 x s64>) = COPY $q2
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[DEF]](s64), [[DEF]](s64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[IVEC:%[0-9]+]]:_(<2 x s64>) = G_INSERT_VECTOR_ELT [[BUILD_VECTOR]], [[C]](s64), [[C]](s64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[IVEC1:%[0-9]+]]:_(<2 x s64>) = G_INSERT_VECTOR_ELT [[IVEC]], [[C]](s64), [[C1]](s64)
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<2 x s64>) = G_ADD [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[ADD1:%[0-9]+]]:_(<2 x s64>) = G_ADD [[COPY2]], [[IVEC1]]
+    ; CHECK-NEXT: [[ADD2:%[0-9]+]]:_(<2 x s64>) = G_ADD [[ADD]], [[ADD1]]
+    ; CHECK-NEXT: [[VECREDUCE_ADD:%[0-9]+]]:_(s64) = G_VECREDUCE_ADD [[ADD2]](<2 x s64>)
+    ; CHECK-NEXT: $x0 = COPY [[VECREDUCE_ADD]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(<2 x s64>) = COPY $q0
     %1:_(<2 x s64>) = COPY $q1
     %2:_(<2 x s64>) = COPY $q2

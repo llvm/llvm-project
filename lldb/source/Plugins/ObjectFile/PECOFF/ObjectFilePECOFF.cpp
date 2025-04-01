@@ -17,6 +17,7 @@
 #include "lldb/Interpreter/OptionValueDictionary.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
@@ -355,11 +356,12 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
 }
 
 bool ObjectFilePECOFF::SaveCore(const lldb::ProcessSP &process_sp,
-                                const lldb_private::FileSpec &outfile,
-                                lldb::SaveCoreStyle &core_style,
+                                lldb_private::SaveCoreOptions &options,
                                 lldb_private::Status &error) {
-  core_style = eSaveCoreFull;
-  return SaveMiniDump(process_sp, outfile, error);
+  // Outfile and process_sp are validated by PluginManager::SaveCore
+  assert(options.GetOutputFile().has_value());
+  assert(process_sp);
+  return SaveMiniDump(process_sp, options, error);
 }
 
 bool ObjectFilePECOFF::MagicBytesMatch(DataBufferSP data_sp) {
@@ -480,7 +482,7 @@ bool ObjectFilePECOFF::SetLoadAddress(Target &target, addr_t value,
         // that have SHF_ALLOC in their flag bits.
         SectionSP section_sp(section_list->GetSectionAtIndex(sect_idx));
         if (section_sp && !section_sp->IsThreadSpecific()) {
-          if (target.GetSectionLoadList().SetSectionLoadAddress(
+          if (target.SetSectionLoadAddress(
                   section_sp, section_sp->GetFileAddress() + value))
             ++num_loaded_sections;
         }
@@ -859,14 +861,9 @@ ObjectFilePECOFF::AppendFromExportTable(SectionList *sect_list,
   for (const auto &entry : m_binary->export_directories()) {
     llvm::StringRef sym_name;
     if (auto err = entry.getSymbolName(sym_name)) {
-      if (log)
-        log->Format(
-            __FILE__, __func__,
-            "ObjectFilePECOFF::AppendFromExportTable - failed to get export "
-            "table entry name: {0}",
-            llvm::fmt_consume(std::move(err)));
-      else
-        llvm::consumeError(std::move(err));
+      LLDB_LOG_ERROR(log, std::move(err),
+                     "ObjectFilePECOFF::AppendFromExportTable - failed to get "
+                     "export table entry name: {0}");
       continue;
     }
     Symbol symbol;
@@ -884,13 +881,10 @@ ObjectFilePECOFF::AppendFromExportTable(SectionList *sect_list,
       // it in symtab and make a note using the symbol name.
       llvm::StringRef forwarder_name;
       if (auto err = entry.getForwardTo(forwarder_name)) {
-        if (log)
-          log->Format(__FILE__, __func__,
-                      "ObjectFilePECOFF::AppendFromExportTable - failed to get "
-                      "forwarder name of forwarder export '{0}': {1}",
-                      sym_name, llvm::fmt_consume(std::move(err)));
-        else
-          llvm::consumeError(std::move(err));
+        LLDB_LOG_ERROR(log, std::move(err),
+                       "ObjectFilePECOFF::AppendFromExportTable - failed to "
+                       "get forwarder name of forwarder export '{1}': {0}",
+                       sym_name);
         continue;
       }
       llvm::SmallString<256> new_name = {symbol.GetDisplayName().GetStringRef(),
@@ -902,13 +896,10 @@ ObjectFilePECOFF::AppendFromExportTable(SectionList *sect_list,
 
     uint32_t function_rva;
     if (auto err = entry.getExportRVA(function_rva)) {
-      if (log)
-        log->Format(__FILE__, __func__,
-                    "ObjectFilePECOFF::AppendFromExportTable - failed to get "
-                    "address of export entry '{0}': {1}",
-                    sym_name, llvm::fmt_consume(std::move(err)));
-      else
-        llvm::consumeError(std::move(err));
+      LLDB_LOG_ERROR(log, std::move(err),
+                     "ObjectFilePECOFF::AppendFromExportTable - failed to get "
+                     "address of export entry '{1}': {0}",
+                     sym_name);
       continue;
     }
     // Skip the symbol if it doesn't look valid.
@@ -1008,6 +999,8 @@ SectionType ObjectFilePECOFF::GetSectionType(llvm::StringRef sect_name,
           // .eh_frame can be truncated to 8 chars.
           .Cases(".eh_frame", ".eh_fram", eSectionTypeEHFrame)
           .Case(".gosymtab", eSectionTypeGoSymtab)
+          .Case(".lldbsummaries", lldb::eSectionTypeLLDBTypeSummaries)
+          .Case(".lldbformatters", lldb::eSectionTypeLLDBFormatters)
           .Case("swiftast", eSectionTypeSwiftModules)
           .Default(eSectionTypeInvalid);
   if (section_type != eSectionTypeInvalid)

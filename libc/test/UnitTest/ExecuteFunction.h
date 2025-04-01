@@ -9,9 +9,11 @@
 #ifndef LLVM_LIBC_TEST_UNITTEST_EXECUTEFUNCTION_H
 #define LLVM_LIBC_TEST_UNITTEST_EXECUTEFUNCTION_H
 
+#include "src/__support/CPP/limits.h"
+#include "src/__support/macros/config.h"
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace testutils {
 
 class FunctionCaller {
@@ -24,7 +26,7 @@ struct ProcessStatus {
   int platform_defined;
   const char *failure = nullptr;
 
-  static constexpr unsigned TIMEOUT = ~0U;
+  static constexpr int TIMEOUT = cpp::numeric_limits<int>::max();
 
   static ProcessStatus error(const char *error) { return {0, error}; }
   static ProcessStatus timed_out_ps() {
@@ -40,13 +42,12 @@ struct ProcessStatus {
   int get_fatal_signal();
 };
 
-ProcessStatus
-invoke_in_subprocess(FunctionCaller *func,
-                     unsigned timeout_ms = ProcessStatus::TIMEOUT);
+ProcessStatus invoke_in_subprocess(FunctionCaller *func,
+                                   int timeout_ms = ProcessStatus::TIMEOUT);
 
 const char *signal_as_string(int signum);
 
 } // namespace testutils
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_TEST_UNITTEST_EXECUTEFUNCTION_H

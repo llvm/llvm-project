@@ -1,8 +1,8 @@
 # RUN: lldb-dap --help | FileCheck %s
+# CHECK: --connection
 # CHECK: -g
 # CHECK: --help
 # CHECK: -h
-# CHECK: --port
-# CHECK: -p
+# CHECK: --repl-mode
 # CHECK: --wait-for-debugger
 

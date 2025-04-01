@@ -9,9 +9,10 @@
 #include "src/__support/CPP/bit.h" // bit_ceil
 #include "src/__support/HashTable/randomness.h"
 #include "src/__support/HashTable/table.h"
+#include "src/__support/macros/config.h"
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 TEST(LlvmLibcTableTest, AllocationAndDeallocation) {
   size_t caps[] = {0, 1, 2, 3, 4, 7, 11, 37, 1024, 5261, 19999};
@@ -42,11 +43,11 @@ TEST(LlvmLibcTableTest, Iteration) {
     counter[i] = 0;
     if (i >= 256) {
       keys[i].bytes[0] = 2;
-      keys[i].bytes[1] = i % 256;
+      keys[i].bytes[1] = static_cast<uint8_t>(i % 256);
       keys[i].bytes[2] = 0;
     } else {
       keys[i].bytes[0] = 1;
-      keys[i].bytes[1] = i;
+      keys[i].bytes[1] = static_cast<uint8_t>(i);
       keys[i].bytes[2] = 0;
     }
     HashTable::insert(table, {reinterpret_cast<char *>(keys[i].bytes),
@@ -81,7 +82,7 @@ TEST(LlvmLibcTableTest, GrowthSequence) {
 }
 
 TEST(LlvmLibcTableTest, Insertion) {
-  union key {
+  struct key {
     char bytes[2];
   } keys[256];
   for (size_t k = 0; k < 256; ++k) {
@@ -128,4 +129,4 @@ TEST(LlvmLibcTableTest, Insertion) {
 }
 
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -18,9 +18,8 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
+int main(int, char**) {
+  {
     std::list<int> d(10, 1);
     std::list<int>::iterator i = d.insert(std::next(d.cbegin(), 2), {3, 4, 5, 6});
     assert(d.size() == 14);
@@ -40,8 +39,8 @@ int main(int, char**)
     assert(*i++ == 1);
     assert(*i++ == 1);
     assert(*i++ == 1);
-    }
-    {
+  }
+  {
     std::list<int, min_allocator<int>> d(10, 1);
     std::list<int, min_allocator<int>>::iterator i = d.insert(std::next(d.cbegin(), 2), {3, 4, 5, 6});
     assert(d.size() == 14);
@@ -61,7 +60,7 @@ int main(int, char**)
     assert(*i++ == 1);
     assert(*i++ == 1);
     assert(*i++ == 1);
-    }
+  }
 
   return 0;
 }

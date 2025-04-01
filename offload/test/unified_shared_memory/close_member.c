@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
     s.x = 11;
     s.y = 21;
   }
-// To determine whether x needs to be transfered or deleted, the runtime
+// To determine whether x needs to be transferred or deleted, the runtime
 // cannot simply check whether unified shared memory is enabled and the
 // 'close' modifier is specified.  It must check whether x was previously
 // placed in device memory by, for example, a 'close' modifier that isn't

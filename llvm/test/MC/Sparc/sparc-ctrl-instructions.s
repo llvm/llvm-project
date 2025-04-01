@@ -5,22 +5,43 @@
         ! CHECK:              !   fixup A - offset: 0, value: foo, kind: fixup_sparc_call30
         call foo
 
+        ! CHECK: call foo, 0  ! encoding: [0b01AAAAAA,A,A,A]
+        ! CHECK:              !   fixup A - offset: 0, value: foo, kind: fixup_sparc_call30
+        call foo, 0
+
         ! CHECK: call %g1+%i2 ! encoding: [0x9f,0xc0,0x40,0x1a]
         call %g1 + %i2
+
+        ! CHECK: call %g1+%i2, 1 ! encoding: [0x9f,0xc0,0x40,0x1a]
+        call %g1 + %i2, 1
 
         ! CHECK: call %o1+8   ! encoding: [0x9f,0xc2,0x60,0x08]
         call %o1 + 8
 
+        ! CHECK: call %o1+8, 2   ! encoding: [0x9f,0xc2,0x60,0x08]
+        call %o1 + 8, 2
+
         ! CHECK: call %g1     ! encoding: [0x9f,0xc0,0x40,0x00]
         call %g1
+
+        ! CHECK: call %g1, 3     ! encoding: [0x9f,0xc0,0x40,0x00]
+        call %g1, 3
 
         ! CHECK: call %g1+%lo(sym)   ! encoding: [0x9f,0xc0,0b011000AA,A]
         ! CHECK-NEXT:                ! fixup A - offset: 0, value: %lo(sym), kind: fixup_sparc_lo10
         call %g1+%lo(sym)
 
+        ! CHECK: call %g1+%lo(sym), 4   ! encoding: [0x9f,0xc0,0b011000AA,A]
+        ! CHECK-NEXT:                ! fixup A - offset: 0, value: %lo(sym), kind: fixup_sparc_lo10
+        call %g1+%lo(sym), 4
+
         ! CHECK-LABEL: .Ltmp0:
         ! CHECK: call .Ltmp0-4 ! encoding: [0b01AAAAAA,A,A,A]
         call . - 4
+
+        ! CHECK-LABEL: .Ltmp1:
+        ! CHECK: call .Ltmp1-4, 5 ! encoding: [0b01AAAAAA,A,A,A]
+        call . - 4, 5
 
         ! CHECK: jmp %g1+%i2  ! encoding: [0x81,0xc0,0x40,0x1a]
         jmp %g1 + %i2

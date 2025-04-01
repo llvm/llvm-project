@@ -67,6 +67,12 @@ static llvm::cl::opt<std::string>
                  llvm::cl::desc("Directory for outputting generated files."),
                  llvm::cl::init("docs"), llvm::cl::cat(ClangDocCategory));
 
+static llvm::cl::opt<std::string>
+    BaseDirectory("base",
+                  llvm::cl::desc(R"(Base Directory for generated documentation.
+URLs will be rooted at this directory for HTML links.)"),
+                  llvm::cl::init(""), llvm::cl::cat(ClangDocCategory));
+
 static llvm::cl::opt<bool>
     PublicOnly("public", llvm::cl::desc("Document only public declarations."),
                llvm::cl::init(false), llvm::cl::cat(ClangDocCategory));
@@ -98,6 +104,11 @@ static llvm::cl::opt<std::string>
 URL of repository that hosts code.
 Used for links to definition locations.)"),
                   llvm::cl::cat(ClangDocCategory));
+
+static llvm::cl::opt<std::string> RepositoryCodeLinePrefix(
+    "repository-line-prefix",
+    llvm::cl::desc("Prefix of line code for repository."),
+    llvm::cl::cat(ClangDocCategory));
 
 enum OutputFormatTy {
   md,
@@ -141,8 +152,7 @@ llvm::Error getAssetFiles(clang::doc::ClangDocContext &CDCtx) {
   using DirIt = llvm::sys::fs::directory_iterator;
   std::error_code FileErr;
   llvm::SmallString<128> FilePath(UserAssetPath);
-  for (DirIt DirStart = DirIt(UserAssetPath, FileErr),
-                   DirEnd;
+  for (DirIt DirStart = DirIt(UserAssetPath, FileErr), DirEnd;
        !FileErr && DirStart != DirEnd; DirStart.increment(FileErr)) {
     FilePath = DirStart->path();
     if (llvm::sys::fs::is_regular_file(FilePath)) {
@@ -205,6 +215,22 @@ llvm::Error getHtmlAssetFiles(const char *Argv0,
   return getDefaultAssetFiles(Argv0, CDCtx);
 }
 
+/// Make the output of clang-doc deterministic by sorting the children of
+/// namespaces and records.
+void sortUsrToInfo(llvm::StringMap<std::unique_ptr<doc::Info>> &USRToInfo) {
+  for (auto &I : USRToInfo) {
+    auto &Info = I.second;
+    if (Info->IT == doc::InfoType::IT_namespace) {
+      auto *Namespace = static_cast<clang::doc::NamespaceInfo *>(Info.get());
+      Namespace->Children.sort();
+    }
+    if (Info->IT == doc::InfoType::IT_record) {
+      auto *Record = static_cast<clang::doc::RecordInfo *>(Info.get());
+      Record->Children.sort();
+    }
+  }
+}
+
 int main(int argc, const char **argv) {
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
   std::error_code OK;
@@ -252,8 +278,9 @@ Example usage for a project using a compile commands database:
       OutDirectory,
       SourceRoot,
       RepositoryUrl,
-      {UserStylesheets.begin(), UserStylesheets.end()}
-  };
+      RepositoryCodeLinePrefix,
+      BaseDirectory,
+      {UserStylesheets.begin(), UserStylesheets.end()}};
 
   if (Format == "html") {
     if (auto Err = getHtmlAssetFiles(argv[0], CDCtx)) {
@@ -284,8 +311,7 @@ Example usage for a project using a compile commands database:
   llvm::StringMap<std::vector<StringRef>> USRToBitcode;
   Executor->get()->getToolResults()->forEachResult(
       [&](StringRef Key, StringRef Value) {
-        auto R = USRToBitcode.try_emplace(Key, std::vector<StringRef>());
-        R.first->second.emplace_back(Value);
+        USRToBitcode[Key].emplace_back(Value);
       });
 
   // Collects all Infos according to their unique USR value. This map is added
@@ -303,7 +329,6 @@ Example usage for a project using a compile commands database:
   for (auto &Group : USRToBitcode) {
     Pool.async([&]() {
       std::vector<std::unique_ptr<doc::Info>> Infos;
-
       for (auto &Bitcode : Group.getValue()) {
         llvm::BitstreamCursor Stream(Bitcode);
         doc::ClangDocBitcodeReader Reader(Stream);
@@ -341,6 +366,8 @@ Example usage for a project using a compile commands database:
 
   if (Error)
     return 1;
+
+  sortUsrToInfo(USRToInfo);
 
   // Ensure the root output directory exists.
   if (std::error_code Err = llvm::sys::fs::create_directories(OutDirectory);

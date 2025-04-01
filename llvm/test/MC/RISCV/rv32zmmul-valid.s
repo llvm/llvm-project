@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+zmmul -riscv-no-aliases 2>&1 \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+zmmul -M no-aliases 2>&1 \
 # RUN:  | FileCheck -check-prefixes=CHECK-INST %s
 
 # CHECK-INST: mul a4, ra, s0
