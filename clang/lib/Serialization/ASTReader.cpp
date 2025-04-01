@@ -9657,12 +9657,12 @@ ExternalASTSource::ExtKind ASTReader::hasExternalDefinitions(const Decl *FD) {
   auto I = DefinitionSource.find(FD);
   if (I == DefinitionSource.end())
     return EK_ReplyHazy;
-  return I->second.HasExternalDefinitions;
+  return I->second ? EK_Never : EK_Always;
 }
 
 bool ASTReader::wasThisDeclarationADefinition(const FunctionDecl *FD) {
-  auto I = DefinitionSource.find(FD);
-  if (I == DefinitionSource.end())
+  auto I = ExternalDeclarationBitsMap.find(FD);
+  if (I == ExternalDeclarationBitsMap.end())
     return false;
   return I->second.ThisDeclarationWasADefinition;
 }

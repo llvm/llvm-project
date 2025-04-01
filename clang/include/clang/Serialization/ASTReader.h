@@ -1390,19 +1390,21 @@ private:
   /// predefines buffer may contain additional definitions.
   std::string SuggestedPredefines;
 
-  struct DefinitionSourceBits {
-    ExtKind HasExternalDefinitions : 2;
+  llvm::DenseMap<const Decl *, bool> DefinitionSource;
 
+  /// The set of extra flags about declarations that we have read from
+  /// the module file.
+  struct ExternalDeclarationBits {
     /// Indicates if given function declaration was a definition but its body
     /// was removed due to declaration merging.
     bool ThisDeclarationWasADefinition : 1;
 
-    DefinitionSourceBits()
-        : HasExternalDefinitions(EK_ReplyHazy),
-          ThisDeclarationWasADefinition(false) {}
+    ExternalDeclarationBits() : ThisDeclarationWasADefinition(false) {}
   };
 
-  llvm::DenseMap<const Decl *, DefinitionSourceBits> DefinitionSource;
+  /// A mapping from declarations to extra bits of information about this decl.
+  llvm::DenseMap<const Decl *, ExternalDeclarationBits>
+      ExternalDeclarationBitsMap;
 
   bool shouldDisableValidationForFile(const serialization::ModuleFile &M) const;
 
