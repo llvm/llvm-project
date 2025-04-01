@@ -277,11 +277,7 @@ if(LLVM_CCACHE_BUILD)
   if(CCACHE_PROGRAM)
     # ccache --version example output: "ccache version 4.9.1\n(..)"
     execute_process(COMMAND ${CCACHE_PROGRAM} --version OUTPUT_VARIABLE CCACHE_VERSION_STR)
-    # Strip the prefix before the version number, taking some extra characters
-    string(SUBSTRING "${CCACHE_VERSION_STR}" 15 10 CCACHE_VERSION_STR)
-    string(FIND "${CCACHE_VERSION_STR}" "\n" CCACHE_VERSION_ENDPOS)
-    # Extract the actual version number
-    string(SUBSTRING "${CCACHE_VERSION_STR}" 0 "${CCACHE_VERSION_ENDPOS}" CCACHE_VERSION)
+    string(REGEX MATCH "[0-9]+\.[0-9]+\.?[0-9]*" CCACHE_VERSION "${CCACHE_VERSION_STR}")
 
     set(LLVM_CCACHE_MAXSIZE "" CACHE STRING "Size of ccache")
     set(LLVM_CCACHE_DIR "" CACHE STRING "Directory to keep ccached data")

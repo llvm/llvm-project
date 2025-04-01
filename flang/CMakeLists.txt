@@ -436,8 +436,8 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-semantic-interposition")
   endif()
 
-  # gcc requires this flag in order for precompiled headers to work with ccache
-  if (NOT CMAKE_CXX_COMPILER_ID MATCHES Clang AND NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
+  # GCC requires this flag in order for precompiled headers to work with ccache
+  if (CMAKE_CXX_COMPILER_ID MATCHES GCC AND NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpch-preprocess")
   endif()
 endif()
