@@ -8443,15 +8443,13 @@ static std::pair<size_t, size_t> generateKeySubkey(
 
 /// Checks if the specified instruction \p I is an main operation for the given
 /// \p MainOp and \p AltOp instructions.
-static bool isMainInstruction(const Instruction *I, const Instruction *MainOp,
-                              const Instruction *AltOp,
-                              const TargetLibraryInfo &TLI);
+static bool isMainInstruction(Instruction *I, Instruction *MainOp,
+                              Instruction *AltOp, const TargetLibraryInfo &TLI);
 
 /// Checks if the specified instruction \p I is an alternate operation for
 /// the given \p MainOp and \p AltOp instructions.
-static bool isAlternateInstruction(const Instruction *I,
-                                   const Instruction *MainOp,
-                                   const Instruction *AltOp,
+static bool isAlternateInstruction(Instruction *I, Instruction *MainOp,
+                                   Instruction *AltOp,
                                    const TargetLibraryInfo &TLI);
 
 bool BoUpSLP::areAltOperandsProfitable(const InstructionsState &S,
@@ -10291,20 +10289,14 @@ void BoUpSLP::TreeEntry::buildAltOpShuffleMask(
   }
 }
 
-static bool isMainInstruction(const Instruction *I, const Instruction *MainOp,
-                              const Instruction *AltOp,
+static bool isMainInstruction(Instruction *I, Instruction *MainOp,
+                              Instruction *AltOp,
                               const TargetLibraryInfo &TLI) {
-  if (I->getOpcode() == MainOp->getOpcode())
-    return true;
-  if (I->getOpcode() == AltOp->getOpcode() || !I->isBinaryOp())
-    return false;
-  BinOpSameOpcodeHelper Converter(I);
-  return Converter.add(I) && Converter.add(MainOp) && !Converter.hasAltOp();
+  return InstructionsState(MainOp, AltOp).isOpcodeOrAlt(I) == MainOp;
 }
 
-static bool isAlternateInstruction(const Instruction *I,
-                                   const Instruction *MainOp,
-                                   const Instruction *AltOp,
+static bool isAlternateInstruction(Instruction *I, Instruction *MainOp,
+                                   Instruction *AltOp,
                                    const TargetLibraryInfo &TLI) {
   if (auto *MainCI = dyn_cast<CmpInst>(MainOp)) {
     auto *AltCI = cast<CmpInst>(AltOp);
@@ -10324,14 +10316,7 @@ static bool isAlternateInstruction(const Instruction *I,
            "their swap.");
     return MainP != P && MainP != SwappedP;
   }
-  if (I->getOpcode() == MainOp->getOpcode())
-    return false;
-  if (I->getOpcode() == AltOp->getOpcode())
-    return true;
-  if (!I->isBinaryOp())
-    return false;
-  BinOpSameOpcodeHelper Converter(I);
-  return Converter.add(I) && Converter.add(AltOp) && !Converter.hasAltOp();
+  return InstructionsState(MainOp, AltOp).isOpcodeOrAlt(I) == AltOp;
 }
 
 TTI::OperandValueInfo BoUpSLP::getOperandInfo(ArrayRef<Value *> Ops) {
