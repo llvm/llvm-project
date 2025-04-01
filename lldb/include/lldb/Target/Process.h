@@ -1589,10 +1589,19 @@ public:
   size_t ReadMemoryFromInferior(lldb::addr_t vm_addr, void *buf, size_t size,
                                 Status &error);
 
-  typedef lldb::IterationAction(ReadMemoryChunkCallback)(lldb::Status &,
-                                                         DataBufferHeap &, lldb
-                                                         : addr_t,
-                                                           lldb::offset_t);
+  // Callback definition for read Memory in chunks
+  //
+  // Status, the status returned from ReadMemoryFromInferior
+  // uint8_t*, pointer to the bytes read
+  // addr_t, the current_addr, start + bytes read so far.
+  // uint64_t bytes_to_read, the expected bytes read, this
+  // is important if it's a partial read
+  // uint64_t bytes_read_for_chunk, the actual count of bytes read for this
+  // chunk
+  typedef std::function<IterationAction(lldb_private::Status &, const void *,
+    lldb::addr_t, uint64_t, uint64_t)>
+      ReadMemoryChunkCallback;
+
   /// Read of memory from a process in discrete chunks, terminating
   /// either when all bytes are read, or the supplied callback returns
   /// IterationAction::Stop
@@ -1610,9 +1619,6 @@ public:
   ///
   /// \param[in] callback
   ///     The callback to invoke when a chunk is read from memory.
-  /// \param[in] cacheReads
-  ///     Whether to use the ReadMemory instead of ReadMemory inferior, defaults
-  ///     to false.
   ///
   /// \return
   ///     The number of bytes that were actually read into \a buf and
@@ -1622,8 +1628,7 @@ public:
   ///     vm_addr, \a buf, and \a size updated appropriately. Zero is
   ///     returned in the case of an error.
   size_t ReadMemoryInChunks(lldb::addr_t vm_addr, DataBufferHeap &data,
-                            size_t size, ReadMemoryChunkCallback callback,
-                            bool cacheReads = false);
+                            size_t size, ReadMemoryChunkCallback callback);
 
   /// Read a NULL terminated C string from memory
   ///

@@ -974,68 +974,57 @@ Status MinidumpFileBuilder::ReadWriteMemoryInChunks(
     const lldb_private::CoreFileMemoryRange &range, uint64_t &bytes_read) {
 
   Log *log = GetLog(LLDBLog::Object);
-  const lldb::addr_t addr = range.range.start();
-  const lldb::addr_t size = range.range.size();
-
-  uint64_t bytes_remaining = size;
-  Status error;
-  while (bytes_remaining > 0) {
-    // Get the next read chunk size as the minimum of the remaining bytes and
-    // the write chunk max size.
-    const size_t bytes_to_read =
-        std::min(bytes_remaining, data_buffer.GetByteSize());
-    const size_t bytes_read_for_chunk =
-        m_process_sp->ReadMemory(range.range.start() + bytes_read,
-                                 data_buffer.GetBytes(), bytes_to_read, error);
+  Status addDataError;
+  Process::ReadMemoryChunkCallback callback =
+      [&](Status &error, const void *buf, lldb::addr_t current_addr,
+          uint64_t bytes_to_read,
+          uint64_t bytes_read_for_chunk) -> lldb_private::IterationAction {
     if (error.Fail() || bytes_read_for_chunk == 0) {
       LLDB_LOGF(log,
                 "Failed to read memory region at: %" PRIx64
                 ". Bytes read: %zu, error: %s",
-                addr, bytes_read_for_chunk, error.AsCString());
+                current_addr, bytes_read_for_chunk, error.AsCString());
 
       // If we failed in a memory read, we would normally want to skip
       // this entire region, if we had already written to the minidump
-      // file, we can't easily rewind the state.
+      // file, we can't easily rewind that state.
       //
       // So if we do encounter an error while reading, we just return
       // immediately, any prior bytes read will still be included but
       // any bytes partially read before the error are ignored.
-      return Status();
+      return lldb_private::IterationAction::Stop;
     }
 
-    // Write to the minidump file with the chunk potentially flushing to disk.
-    // this is the only place we want to return a true error, so that we can
-    // fail. If we get an error writing to disk we can't easily gaurauntee
-    // that we won't corrupt the minidump.
-    error = AddData(data_buffer.GetBytes(), bytes_read_for_chunk);
-    if (error.Fail())
-      return error;
-
-    // If the bytes read in this chunk would cause us to overflow, something
-    // went wrong and we should fail out of creating the Minidump.
-    if (bytes_read_for_chunk > bytes_remaining)
-      return Status::FromErrorString("Unexpected number of bytes read.");
-    else
-      bytes_remaining -= bytes_read_for_chunk;
-
-    // Update the caller with the number of bytes read, but also written to the
-    // underlying buffer.
-    bytes_read += bytes_read_for_chunk;
+    // Write to the minidump file with the chunk potentially flushing to
+    // disk.
+    // This error will be captured by the outer scope and is considered fatal.
+    // If we get an error writing to disk we can't easily guarauntee that we
+    // won't corrupt the minidump.
+    addDataError = AddData(buf, bytes_read_for_chunk);
+    if (addDataError.Fail())
+      return lldb_private::IterationAction::Stop;
 
     if (bytes_read_for_chunk != bytes_to_read) {
       LLDB_LOGF(log,
                 "Memory region at: %" PRIx64 " partiall read %" PRIx64
                 " bytes out of %" PRIx64 " bytes.",
-                addr, bytes_read_for_chunk,
+                current_addr, bytes_read_for_chunk,
                 bytes_to_read - bytes_read_for_chunk);
 
       // If we've read some bytes, we stop trying to read more and return
       // this best effort attempt
-      break;
+      return lldb_private::IterationAction::Stop;
     }
-  }
 
-  return error;
+    // No problems, keep going!
+    return lldb_private::IterationAction::Continue;
+  };
+
+  const lldb::addr_t addr = range.range.start();
+  const lldb::addr_t size = range.range.size();
+  bytes_read = m_process_sp->ReadMemoryInChunks(
+      addr, data_buffer.GetBytes(), data_buffer.GetByteSize(), size, callback);
+  return addDataError;
 }
 
 static uint64_t
