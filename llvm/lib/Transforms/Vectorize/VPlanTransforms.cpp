@@ -923,7 +923,7 @@ static void recursivelyDeleteDeadRecipes(VPValue *V) {
 }
 
 /// Try to simplify recipe \p R.
-static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
+static VPValue *simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   using namespace llvm::VPlanPatternMatch;
 
   // VPScalarIVSteps can only be simplified after unrolling. VPScalarIVSteps for
@@ -932,8 +932,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(&R)) {
     if (Steps->getParent()->getPlan()->isUnrolled() && Steps->isPart0() &&
         vputils::onlyFirstLaneUsed(Steps)) {
-      Steps->replaceAllUsesWith(Steps->getOperand(0));
-      return;
+      return Steps->getOperand(0);
     }
   }
 
@@ -943,11 +942,11 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     Type *TruncTy = TypeInfo.inferScalarType(Trunc);
     Type *ATy = TypeInfo.inferScalarType(A);
     if (TruncTy == ATy) {
-      Trunc->replaceAllUsesWith(A);
+      return A;
     } else {
       // Don't replace a scalarizing recipe with a widened cast.
       if (isa<VPReplicateRecipe>(&R))
-        return;
+        return nullptr;
       if (ATy->getScalarSizeInBits() < TruncTy->getScalarSizeInBits()) {
 
         unsigned ExtOpcode = match(R.getOperand(0), m_SExt(m_VPValue()))
@@ -960,11 +959,11 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
           VPC->setUnderlyingValue(UnderlyingExt);
         }
         VPC->insertBefore(&R);
-        Trunc->replaceAllUsesWith(VPC);
+        return VPC;
       } else if (ATy->getScalarSizeInBits() > TruncTy->getScalarSizeInBits()) {
         auto *VPC = new VPWidenCastRecipe(Instruction::Trunc, A, TruncTy);
         VPC->insertBefore(&R);
-        Trunc->replaceAllUsesWith(VPC);
+        return VPC;
       }
     }
 #ifndef NDEBUG
@@ -988,20 +987,17 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   VPValue *X, *Y;
   if (match(&R,
             m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
-                         m_LogicalAnd(m_Deferred(X), m_Not(m_Deferred(Y)))))) {
-    R.getVPSingleValue()->replaceAllUsesWith(X);
-    R.eraseFromParent();
-    return;
-  }
+                         m_LogicalAnd(m_Deferred(X), m_Not(m_Deferred(Y))))))
+    return X;
 
   if (match(&R, m_Select(m_VPValue(), m_VPValue(X), m_Deferred(X))))
-    return R.getVPSingleValue()->replaceAllUsesWith(X);
+    return X;
 
   if (match(&R, m_c_Mul(m_VPValue(A), m_SpecificInt(1))))
-    return R.getVPSingleValue()->replaceAllUsesWith(A);
+    return A;
 
   if (match(&R, m_Not(m_Not(m_VPValue(A)))))
-    return R.getVPSingleValue()->replaceAllUsesWith(A);
+    return A;
 
   // Remove redundant DerviedIVs, that is 0 + A * 1 -> A and 0 + 0 * x -> 0.
   if ((match(&R,
@@ -1010,16 +1006,31 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
              m_DerivedIV(m_SpecificInt(0), m_SpecificInt(0), m_VPValue()))) &&
       TypeInfo.inferScalarType(R.getOperand(1)) ==
           TypeInfo.inferScalarType(R.getVPSingleValue()))
-    return R.getVPSingleValue()->replaceAllUsesWith(R.getOperand(1));
+    return R.getOperand(1);
+
+  return nullptr;
 }
 
 void VPlanTransforms::simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy) {
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getEntry());
   VPTypeAnalysis TypeInfo(&CanonicalIVTy);
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
-    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      simplifyRecipe(R, TypeInfo);
+  SetVector<VPRecipeBase *> Worklist;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT))
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB))
+      Worklist.insert(&R);
+
+  while (!Worklist.empty()) {
+    VPRecipeBase *R = Worklist.pop_back_val();
+    if (VPValue *Result = simplifyRecipe(*R, TypeInfo)) {
+      R->getVPSingleValue()->replaceAllUsesWith(Result);
+      R->eraseFromParent();
+      if (VPRecipeBase *ResultR = Result->getDefiningRecipe())
+        Worklist.insert(ResultR);
+      for (VPUser *U : Result->users())
+        if (auto *UR = dyn_cast<VPRecipeBase>(U))
+          if (UR != R)
+            Worklist.insert(UR);
     }
   }
 }
