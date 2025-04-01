@@ -907,6 +907,7 @@ class SettingsCommandTestCase(TestBase):
                 "target.process.extra-startup-command",
                 "target.process.thread.trace-thread",
                 "target.process.thread.step-avoid-regexp",
+                "target.process.process-state-tracks-memory-cache",
             ],
         )
 

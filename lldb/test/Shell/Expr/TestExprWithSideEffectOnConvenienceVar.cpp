@@ -4,7 +4,9 @@
 // UNSUPPORTED: system-windows
 
 // RUN: %build %s -o %t
-// RUN: %lldb %t -o run \
+// RUN: %lldb %t \
+// RUN:   -o "settings set target.process.process-state-tracks-memory-cache false" \
+// RUN:   -o "run" \
 // RUN:   -o "expr int \$y = 11" \
 // RUN:   -o "expr \$y" \
 // RUN:   -o "expr \$y = 100" \
@@ -14,7 +16,7 @@
 // RUN:   -o "expr X \$mine = {100, 200}" \
 // RUN:   -o "expr \$mine.a = 300" \
 // RUN:   -o "expr \$mine" \
-// RUN:   -o exit | FileCheck %s -dump-input=fail
+// RUN:   -o "exit" | FileCheck %s -dump-input=fail
 
 struct X {
   int a;
