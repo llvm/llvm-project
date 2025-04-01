@@ -63,6 +63,10 @@ void PluginManager::init() {
 
 void PluginManager::deinit() {
   TIMESCOPE();
+  if (OffloadPolicy::isOffloadDisabled()) {
+    DP("Offload is disabled. Skipping plugin deinitialization\n");
+    return;
+  }
   DP("Unloading RTLs...\n");
 
 #ifdef OMPT_SUPPORT
