@@ -2015,7 +2015,8 @@ static bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
     }
     if (VecTyA && VecTyB) {
       bool retValue = false;
-      if (VecTyA->getElementType() != VecTyB->getElementType()) {
+      if (!S->Context.hasSameUnqualifiedType(VecTyA->getElementType(),
+					     VecTyB->getElementType())) {
         // Note: type promotion is intended to be handeled via the intrinsics
         //  and not the builtin itself.
         S->Diag(TheCall->getBeginLoc(),
@@ -2466,31 +2467,11 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case Builtin::BI__builtin_hlsl_dot: {
     if (SemaRef.checkArgCount(TheCall, 2))
       return true;
-    // check no bool or bool vectors
-    const Expr *Arg0 = TheCall->getArg(0);
-    QualType T0 = Arg0->getType();
-    const Expr *Arg1 = TheCall->getArg(1);
-    QualType T1 = Arg1->getType();
-    QualType BoolType = SemaRef.getASTContext().BoolTy;
-    if (const auto *VT0 = T0->getAs<VectorType>())
-      T0 = VT0->getElementType();
-    if (const auto *VT1 = T1->getAs<VectorType>())
-      T1 = VT1->getElementType();
-    if (SemaRef.Context.hasSameUnqualifiedType(T0, BoolType))
-      return SemaRef.Diag(Arg0->getBeginLoc(),
-                          diag::err_builtin_invalid_arg_type)
-             << 1 << /* scalar or vector of */ 5 << /* integer ty */ 1
-             << /* fp type */ 1 << Arg0->getType();
-    if (SemaRef.Context.hasSameUnqualifiedType(T1, BoolType))
-      return SemaRef.Diag(Arg1->getBeginLoc(),
-                          diag::err_builtin_invalid_arg_type)
-             << 2 << /* scalar or vector of */ 5 << /* integer ty */ 1
-             << /* fp type */ 1 << Arg1->getType();
-    if (CheckNoDoubleVectors(&SemaRef, TheCall))
-      return true;
-    if (CheckAllArgsHaveSameType(&SemaRef, TheCall))
+    if (CheckVectorElementCallArgs(&SemaRef, TheCall))
       return true;
     if (SemaRef.BuiltinVectorToScalarMath(TheCall))
+      return true;
+    if (CheckNoDoubleVectors(&SemaRef, TheCall))
       return true;
     break;
   }

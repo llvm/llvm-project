@@ -76,37 +76,37 @@ int64_t test_builtin_dot_vec_int16_to_int64_promotion(int64_t2 p0,
 
 float test_builtin_dot_float2_splat(float p0, float2 p1) {
   return __builtin_hlsl_dot(p0, p1);
-  // expected-error@-1 {{all arguments to '__builtin_hlsl_dot' must have the same type}}
+  // expected-error@-1 {{all arguments to '__builtin_hlsl_dot' must be vectors}}
 }
 
 float test_builtin_dot_float3_splat(float p0, float3 p1) {
   return __builtin_hlsl_dot(p0, p1);
-  // expected-error@-1 {{all arguments to '__builtin_hlsl_dot' must have the same type}}
+  // expected-error@-1 {{all arguments to '__builtin_hlsl_dot' must be vectors}}
 }
 
 float test_builtin_dot_float4_splat(float p0, float4 p1) {
   return __builtin_hlsl_dot(p0, p1);
-  // expected-error@-1 {{all arguments to '__builtin_hlsl_dot' must have the same type}}
+  // expected-error@-1 {{all arguments to '__builtin_hlsl_dot' must be vectors}}
 }
 
 float test_dot_float2_int_splat(float2 p0, int p1) {
   return __builtin_hlsl_dot(p0, p1);
-  // expected-error@-1 {{all arguments to '__builtin_hlsl_dot' must have the same type}}
+  // expected-error@-1 {{all arguments to '__builtin_hlsl_dot' must be vectors}}
 }
 
 float test_dot_float3_int_splat(float3 p0, int p1) {
   return __builtin_hlsl_dot(p0, p1);
-  // expected-error@-1 {{all arguments to '__builtin_hlsl_dot' must have the same type}}
+  // expected-error@-1 {{all arguments to '__builtin_hlsl_dot' must be vectors}}
 }
 
 float test_builtin_dot_int_vect_to_float_vec_promotion(int2 p0, float p1) {
   return __builtin_hlsl_dot(p0, p1);
-  // expected-error@-1 {{all arguments to '__builtin_hlsl_dot' must have the same type}}
+  // expected-error@-1 {{all arguments to '__builtin_hlsl_dot' must be vectors}}
 }
 
 int test_builtin_dot_bool_type_promotion(bool p0, float p1) {
   return __builtin_hlsl_dot(p0, p1);
-  // expected-error@-1 {{1st argument must be a scalar or vector of integer or floating-point types (was 'bool')}}
+  // expected-error@-1 {{1st argument must be a vector, integer or floating-point type (was 'bool')}}
 }
 
 double test_dot_double(double2 p0, double2 p1) {
@@ -120,10 +120,10 @@ double test_dot_double_builtin(double2 p0, double2 p1) {
 
 float builtin_bool_to_float_type_promotion ( float p0, bool p1 ) {
   return __builtin_hlsl_dot ( p0, p1 );
-   // expected-error@-1 {{2nd argument must be a scalar or vector of integer or floating-point types (was 'bool')}}
+   // expected-error@-1 {{are of different types ('float' vs 'bool')}}
 }
 
 float builtin_dot_int_to_float_promotion ( float p0, int p1 ) {
   return __builtin_hlsl_dot (p0, p1 );
-  // expected-error@-1 {{all arguments to '__builtin_hlsl_dot' must have the same type}}
+  // expected-error@-1 {{are of different types ('float' vs 'int')}}
 }
