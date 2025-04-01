@@ -1,16 +1,4 @@
-/*
-{0}: TypeDef list
-{1}: TypeParser function
-{2}: TypePrinter function
-{3}: Dialect CppName
-{4}: TypeID Defines
-{5}: Namespace open
-{6}: Namespace close
-*/
-
 R"(
-
-
 
 __TYPE_DEFINES__
 
@@ -36,8 +24,7 @@ __TYPE_PRINTER__
 /// Print a type registered to this dialect.
 void __DIALECT_CPP_NAME__::printType(::mlir::Type type,
                     ::mlir::DialectAsmPrinter &printer) const {
-  if (::mlir::succeeded(generatedTypePrinter(type, printer)))
-    return;
+  ((void) generatedTypePrinter(type, printer));
   
 }
 

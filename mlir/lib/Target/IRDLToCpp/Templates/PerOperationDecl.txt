@@ -134,10 +134,6 @@ public:
   
   __OP_BUILD_DECLS__
   static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::TypeRange resultTypes, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {});
-  
-  ::llvm::LogicalResult verifyInvariantsImpl();
-  ::llvm::LogicalResult verifyInvariants();
-public:
 };
 
 

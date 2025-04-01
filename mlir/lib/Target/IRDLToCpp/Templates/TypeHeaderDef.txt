@@ -1,11 +1,3 @@
-/*
-{0}: Dialect BaseTypeName
-{1}: Dialect CppName
-
-{2}: Namespace open
-{3}: Namespace close
-*/
-
 R"(
 __NAMESPACE_OPEN__
 

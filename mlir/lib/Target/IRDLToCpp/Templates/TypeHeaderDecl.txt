@@ -1,12 +1,3 @@
-/*
-{0}: Dialect BaseTypeName
-
-{1}: Open namespace 
-{2}: Close namespace
-{3}: Namespace path
-*/
-
-
 R"(
 __NAMESPACE_OPEN__
 

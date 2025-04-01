@@ -193,7 +193,7 @@ static LogicalResult generateOperationInclude(irdl::OperationOp op,
     const auto op =
         llvm::convertToCamelFromSnakeCase(opStrings.opResultNames[i], true);
     res_getters += llvm::formatv(
-        R"(::mlir::TypedValue<::mlir::Type> get{0}() { return ::llvm::cast<::mlir::TypedValue<::mlir::Type>>(getODSResults({1}).front()); }
+        R"(::mlir::Value get{0}() { return ::llvm::cast<::mlir::Value>(getODSResults({1}).front()); }
   )",
         op, i);
   }

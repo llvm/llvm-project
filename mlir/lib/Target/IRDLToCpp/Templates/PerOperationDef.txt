@@ -1,14 +1,3 @@
-/*
-0: Operation CppName
-1: Operand count
-2: Result count
-3: Build definitions
-
-4: open namespace
-5: close namespace
-6: namespace path
-*/
-
 R"(
 
 //===----------------------------------------------------------------------===//
@@ -16,14 +5,6 @@ R"(
 //===----------------------------------------------------------------------===//
 
 __NAMESPACE_OPEN__
-
-::llvm::LogicalResult __OP_CPP_NAME__::verifyInvariantsImpl() {
-  return ::mlir::success();
-}
-
-::llvm::LogicalResult __OP_CPP_NAME__::verifyInvariants() {
-  return verifyInvariantsImpl();
-}
 
 __OP_BUILD_DEFS__
 
