@@ -36,6 +36,18 @@ entry:
 }
 
 define void @test2(i64 %_xstride) {
+; CHECK-LABEL: @test2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MUL3:%.*]] = mul i64 [[_XSTRIDE:%.*]], 1
+; CHECK-NEXT:    [[MUL5:%.*]] = mul i64 0, 0
+; CHECK-NEXT:    [[MUL9:%.*]] = sub i64 0, [[_XSTRIDE]]
+; CHECK-NEXT:    [[MUL12:%.*]] = shl i64 [[_XSTRIDE]], 1
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i8, ptr null, i64 [[MUL3]]
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr i8, ptr null, i64 [[MUL5]]
+; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr i8, ptr null, i64 [[MUL9]]
+; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr i8, ptr null, i64 [[MUL12]]
+; CHECK-NEXT:    ret void
+;
 entry:
   %mul3 = mul i64 %_xstride, 1
   %mul5 = mul i64 0, 0

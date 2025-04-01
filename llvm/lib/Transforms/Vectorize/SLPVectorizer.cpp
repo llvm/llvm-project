@@ -1143,7 +1143,7 @@ public:
       return AltOp;
     if (!I->isBinaryOp())
       return nullptr;
-    BinOpSameOpcodeHelper Converter(MainOp, AltOp);
+    BinOpSameOpcodeHelper Converter(MainOp);
     if (Converter.add(I) && Converter.add(MainOp) && !Converter.hasAltOp())
       return MainOp;
     return AltOp;
