@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=integer-divide-by-zero -O3 %s -o - -fsanitize-recover=integer-divide-by-zero | FileCheck %s --check-prefixes=RECOVER
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=integer-divide-by-zero -O3 %s -o - | FileCheck %s --check-prefixes=ABORT
 
-// RECOVER: Function Attrs: mustprogress nounwind willreturn memory(read, argmem: readwrite, inaccessiblemem: readwrite)
+// RECOVER: Function Attrs: mustprogress nounwind memory(read, argmem: readwrite, inaccessiblemem: readwrite)
 // RECOVER-LABEL: define dso_local noundef range(i32 -32768, 32768) i32 @_Z4testRiRs(
 // RECOVER-SAME: ptr noundef nonnull align 4 captures(none) dereferenceable(4) [[A:%.*]], ptr noundef nonnull readonly align 2 captures(none) dereferenceable(2) [[C:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // RECOVER-NEXT:  [[ENTRY:.*:]]
@@ -44,10 +44,11 @@ int test(int &a, short &c) {
 }
 
 // Make sure that we don't eliminate the call to ubsan handler.
-// RECOVER: Function Attrs: mustprogress nofree norecurse noreturn nosync nounwind willreturn memory(none)
+// RECOVER: Function Attrs: mustprogress noreturn nounwind memory(read, argmem: none, inaccessiblemem: readwrite)
 // RECOVER-LABEL: define dso_local noundef i32 @_Z16test_unreachablev(
 // RECOVER-SAME: ) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // RECOVER-NEXT:  [[ENTRY:.*:]]
+// RECOVER-NEXT:    tail call void @__ubsan_handle_divrem_overflow(ptr nonnull @{{.+}}, i64 1, i64 0) #[[ATTR3]], !nosanitize [[META9]]
 // RECOVER-NEXT:    unreachable
 //
 // ABORT: Function Attrs: mustprogress noreturn nounwind
@@ -65,9 +66,9 @@ int test_unreachable() {
 }
 
 //.
-// RECOVER: attributes #[[ATTR0]] = { mustprogress nounwind willreturn memory(read, argmem: readwrite, inaccessiblemem: readwrite) "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
-// RECOVER: attributes #[[ATTR1:[0-9]+]] = { mustprogress willreturn memory(argmem: read, inaccessiblemem: readwrite) uwtable }
-// RECOVER: attributes #[[ATTR2]] = { mustprogress nofree norecurse noreturn nosync nounwind willreturn memory(none) "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
+// RECOVER: attributes #[[ATTR0]] = { mustprogress nounwind memory(read, argmem: readwrite, inaccessiblemem: readwrite) "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
+// RECOVER: attributes #[[ATTR1:[0-9]+]] = { mustprogress memory(argmem: read, inaccessiblemem: readwrite) uwtable }
+// RECOVER: attributes #[[ATTR2]] = { mustprogress noreturn nounwind memory(read, argmem: none, inaccessiblemem: readwrite) "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
 // RECOVER: attributes #[[ATTR3]] = { nomerge nounwind }
 //.
 // ABORT: attributes #[[ATTR0]] = { mustprogress nounwind "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }

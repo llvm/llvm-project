@@ -3639,8 +3639,8 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
     if (CheckHandler != SanitizerHandler::DynamicTypeCacheMiss)
       B.addMemoryAttr(llvm::MemoryEffects::argMemOnly(llvm::ModRefInfo::Ref) |
                       llvm::MemoryEffects::inaccessibleMemOnly());
-    // If the handler does not return, we must hit a undefined behavior.
-    B.addAttribute(llvm::Attribute::WillReturn);
+    // If the handler does not return, it must interact with the environment in an observable way.
+    B.addAttribute(llvm::Attribute::MustProgress);
   }
 
   llvm::FunctionCallee Fn = CGF.CGM.CreateRuntimeFunction(
