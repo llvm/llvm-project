@@ -1126,17 +1126,27 @@ public:
   /// Some of the instructions in the list have alternate opcodes.
   bool isAltShuffle() const { return getMainOp() != getAltOp(); }
 
-  bool isOpcodeOrAlt(Instruction *I) const {
+  /// Checks if the instruction matches either the main or alternate opcode.
+  /// \returns
+  /// - MainOp if \param I matches MainOp's opcode directly or can be converted
+  /// to it
+  /// - AltOp if \param I matches AltOp's opcode directly or can be converted to
+  /// it
+  /// - nullptr if \param I cannot be matched or converted to either opcode
+  Instruction *isOpcodeOrAlt(Instruction *I) const {
     assert(MainOp && "MainOp cannot be nullptr.");
     if (I->getOpcode() == MainOp->getOpcode())
-      return true;
+      return MainOp;
+    // Prefer AltOp instead of interchangeable instruction of MainOp.
     assert(AltOp && "AltOp cannot be nullptr.");
     if (I->getOpcode() == AltOp->getOpcode())
-      return true;
+      return AltOp;
     if (!I->isBinaryOp())
-      return false;
+      return nullptr;
     BinOpSameOpcodeHelper Converter(MainOp, AltOp);
-    return Converter.add(I) && Converter.add(MainOp) && Converter.add(AltOp);
+    if (Converter.add(I) && Converter.add(MainOp) && !Converter.hasAltOp())
+      return MainOp;
+    return AltOp;
   }
 
   /// Checks if main/alt instructions are shift operations.
@@ -1180,19 +1190,14 @@ public:
 };
 
 std::pair<Instruction *, SmallVector<Value *>>
-convertTo(Instruction *I, Instruction *MainOp, Instruction *AltOp) {
-  assert(InstructionsState(MainOp, AltOp).isOpcodeOrAlt(I) &&
-         "Cannot convert the instruction.");
-  if (I->getOpcode() == MainOp->getOpcode())
-    return std::make_pair(MainOp, SmallVector<Value *>(I->operands()));
-  // Prefer AltOp instead of interchangeable instruction of MainOp.
-  if (I->getOpcode() == AltOp->getOpcode())
-    return std::make_pair(AltOp, SmallVector<Value *>(I->operands()));
-  assert(I->isBinaryOp() && "Cannot convert the instruction.");
-  BinOpSameOpcodeHelper Converter(I);
-  if (Converter.add(I) && Converter.add(MainOp) && !Converter.hasAltOp())
-    return std::make_pair(MainOp, Converter.getOperand(MainOp));
-  return std::make_pair(AltOp, Converter.getOperand(AltOp));
+convertTo(Instruction *I, const InstructionsState &S) {
+  Instruction *SelectedOp = S.isOpcodeOrAlt(I);
+  assert(SelectedOp && "Cannot convert the instruction.");
+  if (I->isBinaryOp()) {
+    BinOpSameOpcodeHelper Converter(I);
+    return std::make_pair(SelectedOp, Converter.getOperand(SelectedOp));
+  }
+  return std::make_pair(SelectedOp, SmallVector<Value *>(I->operands()));
 }
 
 } // end anonymous namespace
@@ -2831,8 +2836,7 @@ public:
         // Since operand reordering is performed on groups of commutative
         // operations or alternating sequences (e.g., +, -), we can safely tell
         // the inverse operations by checking commutativity.
-        auto [SelectedOp, Ops] =
-            convertTo(cast<Instruction>(VL[Lane]), MainOp, S.getAltOp());
+        auto [SelectedOp, Ops] = convertTo(cast<Instruction>(VL[Lane]), S);
         bool IsInverseOperation = !isCommutative(SelectedOp);
         for (unsigned OpIdx = 0; OpIdx != NumOperands; ++OpIdx) {
           bool APO = (OpIdx == 0) ? false : IsInverseOperation;
@@ -3801,7 +3805,9 @@ private:
     /// Some of the instructions in the list have alternate opcodes.
     bool isAltShuffle() const { return S.isAltShuffle(); }
 
-    bool isOpcodeOrAlt(Instruction *I) const { return S.isOpcodeOrAlt(I); }
+    Instruction *isOpcodeOrAlt(Instruction *I) const {
+      return S.isOpcodeOrAlt(I);
+    }
 
     /// Chooses the correct key for scheduling data. If \p Op has the same (or
     /// alternate) opcode as \p OpValue, the key is \p Op. Otherwise the key is
