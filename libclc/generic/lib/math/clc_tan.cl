@@ -35,7 +35,7 @@ _CLC_DEF _CLC_OVERLOAD float __clc_tan(float x) {
 _CLC_UNARY_VECTORIZE(_CLC_DEF _CLC_OVERLOAD, float, __clc_tan, float);
 
 #ifdef cl_khr_fp64
-#include "sincosD_piby4.h"
+#include <clc/math/clc_sincos_piby4.h>
 
 _CLC_DEF _CLC_OVERLOAD double __clc_tan(double x) {
   double y = __clc_fabs(x);
@@ -48,9 +48,10 @@ _CLC_DEF _CLC_OVERLOAD double __clc_tan(double x) {
   else
     __clc_remainder_piby2_large(y, &r, &rr, &regn);
 
-  double2 tt = __clc_tan_piby4(r, rr);
+  double lead, tail;
+  __clc_tan_piby4(r, rr, &lead, &tail);
 
-  int2 t = as_int2(regn & 1 ? tt.y : tt.x);
+  int2 t = as_int2(regn & 1 ? tail : lead);
   t.hi ^= (x < 0.0) << 31;
 
   return __clc_isnan(x) || __clc_isinf(x) ? as_double(QNANBITPATT_DP64)
