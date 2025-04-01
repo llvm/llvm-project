@@ -1376,6 +1376,13 @@ def HasVendorXqcicm
       AssemblerPredicate<(all_of FeatureVendorXqcicm),
                          "'Xqcicm' (Qualcomm uC Conditional Move Extension)">;
 
+def FeatureVendorXqciio
+    : RISCVExperimentalExtension<0, 1, "Qualcomm uC External Input Output Extension">;
+def HasVendorXqciio
+    : Predicate<"Subtarget->hasVendorXqciio()">,
+      AssemblerPredicate<(all_of FeatureVendorXqciio),
+                         "'Xqciio' (Qualcomm uC External Input Output Extension)">;
+
 def FeatureVendorXqciint
     : RISCVExperimentalExtension<0, 4, "Qualcomm uC Interrupts Extension",
                                  [FeatureStdExtZca]>;

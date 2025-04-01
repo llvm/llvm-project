@@ -13,11 +13,12 @@
 #ifndef LLVM_TOOLS_LLVM_REDUCE_DELTAS_UTILS_H
 #define LLVM_TOOLS_LLVM_REDUCE_DELTAS_UTILS_H
 
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Value.h"
 #include "llvm/Support/CommandLine.h"
 
 namespace llvm {
+class Function;
+class Type;
+class Value;
 
 extern cl::opt<bool> Verbose;
 

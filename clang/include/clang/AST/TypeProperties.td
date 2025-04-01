@@ -774,22 +774,37 @@ let Class = TemplateSpecializationType in {
 }
 
 let Class = DependentTemplateSpecializationType in {
+  def : ReadHelper<[{
+    const auto &dtn = node->getDependentTemplateName();
+    auto name = dtn.getName();
+  }]>;
+
+  def : Property<"qualifier", NestedNameSpecifier> {
+    let Read = [{ dtn.getQualifier() }];
+  }
+  def : Property<"identifier", Optional<Identifier>> {
+    let Read = [{ makeOptionalFromPointer(name.getIdentifier()) }];
+  }
+  def : Property<"operatorKind", OverloadedOperatorKind> {
+    let Conditional = [{ !identifier }];
+    let Read = [{ name.getOperator() }];
+  }
+  def : Property<"HasTemplateKeyword", Bool> {
+    let Read = [{ dtn.hasTemplateKeyword() }];
+  }
+
   def : Property<"keyword", ElaboratedTypeKeyword> {
     let Read = [{ node->getKeyword() }];
-  }
-  def : Property<"qualifier", NestedNameSpecifier> {
-    let Read = [{ node->getQualifier() }];
-  }
-  def : Property<"name", Identifier> {
-    let Read = [{ node->getIdentifier() }];
   }
   def : Property<"templateArguments", Array<TemplateArgument>> {
     let Read = [{ node->template_arguments() }];
   }
 
   def : Creator<[{
-    return ctx.getDependentTemplateSpecializationType(keyword, qualifier,
-                                                      name, templateArguments);
+    DependentTemplateStorage S(qualifier, identifier ? IdentifierOrOverloadedOperator(*identifier) :
+                                                       IdentifierOrOverloadedOperator(*operatorKind),
+                               HasTemplateKeyword);
+    return ctx.getDependentTemplateSpecializationType(keyword, S, templateArguments);
   }]>;
 }
 
@@ -926,22 +941,10 @@ let Class = DependentNameType in {
   def : Property<"qualifier", NestedNameSpecifier> {
     let Read = [{ node->getQualifier() }];
   }
-  def : Property<"name", Identifier> {
-    let Read = [{ node->getIdentifier() }];
-  }
-  def : Property<"underlyingType", Optional<QualType>> {
-    let Read = [{
-      node->isCanonicalUnqualified()
-        ? std::nullopt
-        : std::optional<QualType>(node->getCanonicalTypeInternal())
-    }];
-  }
+  def : Property<"name", Identifier> { let Read = [{ node->getIdentifier() }]; }
 
   def : Creator<[{
-    QualType canon = (underlyingType
-                        ? ctx.getCanonicalType(*underlyingType)
-                        : QualType());
-    return ctx.getDependentNameType(keyword, qualifier, name, canon);
+    return ctx.getDependentNameType(keyword, qualifier, name);
   }]>;
 }
 

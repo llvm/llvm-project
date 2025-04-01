@@ -1830,4 +1830,8 @@ def err_hlsl_virtual_function
 def err_hlsl_virtual_inheritance
     : Error<"virtual inheritance is unsupported in HLSL">;
 
+// HLSL Root Siganture diagnostic messages
+def err_hlsl_unexpected_end_of_params
+    : Error<"expected %0 to denote end of parameters, or, another valid parameter of %1">;
+
 } // end of Parser diagnostics
