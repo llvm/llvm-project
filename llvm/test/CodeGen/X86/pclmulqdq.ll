@@ -365,12 +365,9 @@ define <8 x i64> @pclmul512_lo_lo(<8 x i64> %a0, <8 x i64> %a1) {
 ;
 ; AVX512-VPCLMULQDQ-LABEL: pclmul512_lo_lo:
 ; AVX512-VPCLMULQDQ:       # %bb.0:
-; AVX512-VPCLMULQDQ-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
-; AVX512-VPCLMULQDQ-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],ymm2[0],ymm0[2],ymm2[2]
-; AVX512-VPCLMULQDQ-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
-; AVX512-VPCLMULQDQ-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
-; AVX512-VPCLMULQDQ-NEXT:    vpunpcklqdq {{.*#+}} ymm1 = ymm1[0],ymm2[0],ymm1[2],ymm2[2]
-; AVX512-VPCLMULQDQ-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,2,1,3]
+; AVX512-VPCLMULQDQ-NEXT:    vpmovsxbq {{.*#+}} ymm2 = [0,2,4,6]
+; AVX512-VPCLMULQDQ-NEXT:    vpermq %zmm0, %zmm2, %zmm0
+; AVX512-VPCLMULQDQ-NEXT:    vpermq %zmm1, %zmm2, %zmm1
 ; AVX512-VPCLMULQDQ-NEXT:    vextracti128 $1, %ymm0, %xmm2
 ; AVX512-VPCLMULQDQ-NEXT:    vextracti128 $1, %ymm1, %xmm3
 ; AVX512-VPCLMULQDQ-NEXT:    vpclmulqdq $17, %xmm1, %xmm0, %xmm4

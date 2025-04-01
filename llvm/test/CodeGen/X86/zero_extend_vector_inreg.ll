@@ -5396,20 +5396,36 @@ define void @vec384_v6i64_to_v3i128_factor2(ptr %in.vec.base.ptr, ptr %in.vec.bi
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
-; AVX512BW-LABEL: vec384_v6i64_to_v3i128_factor2:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX512BW-NEXT:    vpaddb (%rsi), %ymm0, %ymm0
-; AVX512BW-NEXT:    movb $5, %al
-; AVX512BW-NEXT:    kmovd %eax, %k1
-; AVX512BW-NEXT:    vpexpandq %ymm0, %ymm1 {%k1} {z}
-; AVX512BW-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX512BW-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
-; AVX512BW-NEXT:    vinserti32x4 $2, %xmm0, %zmm1, %zmm0
-; AVX512BW-NEXT:    vpaddb (%rdx), %zmm0, %zmm0
-; AVX512BW-NEXT:    vmovdqa64 %zmm0, (%rcx)
-; AVX512BW-NEXT:    vzeroupper
-; AVX512BW-NEXT:    retq
+; AVX512BW-SLOW-LABEL: vec384_v6i64_to_v3i128_factor2:
+; AVX512BW-SLOW:       # %bb.0:
+; AVX512BW-SLOW-NEXT:    vmovdqa (%rdi), %ymm0
+; AVX512BW-SLOW-NEXT:    vpaddb (%rsi), %ymm0, %ymm0
+; AVX512BW-SLOW-NEXT:    movb $5, %al
+; AVX512BW-SLOW-NEXT:    kmovd %eax, %k1
+; AVX512BW-SLOW-NEXT:    vpexpandq %ymm0, %ymm1 {%k1} {z}
+; AVX512BW-SLOW-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX512BW-SLOW-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; AVX512BW-SLOW-NEXT:    vinserti32x4 $2, %xmm0, %zmm1, %zmm0
+; AVX512BW-SLOW-NEXT:    vpaddb (%rdx), %zmm0, %zmm0
+; AVX512BW-SLOW-NEXT:    vmovdqa64 %zmm0, (%rcx)
+; AVX512BW-SLOW-NEXT:    vzeroupper
+; AVX512BW-SLOW-NEXT:    retq
+;
+; AVX512BW-FAST-LABEL: vec384_v6i64_to_v3i128_factor2:
+; AVX512BW-FAST:       # %bb.0:
+; AVX512BW-FAST-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [2,5]
+; AVX512BW-FAST-NEXT:    vmovdqa (%rdi), %ymm1
+; AVX512BW-FAST-NEXT:    vpaddb (%rsi), %ymm1, %ymm1
+; AVX512BW-FAST-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512BW-FAST-NEXT:    vpermi2q %ymm2, %ymm1, %ymm0
+; AVX512BW-FAST-NEXT:    movb $5, %al
+; AVX512BW-FAST-NEXT:    kmovd %eax, %k1
+; AVX512BW-FAST-NEXT:    vpexpandq %ymm1, %ymm1 {%k1} {z}
+; AVX512BW-FAST-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
+; AVX512BW-FAST-NEXT:    vpaddb (%rdx), %zmm0, %zmm0
+; AVX512BW-FAST-NEXT:    vmovdqa64 %zmm0, (%rcx)
+; AVX512BW-FAST-NEXT:    vzeroupper
+; AVX512BW-FAST-NEXT:    retq
   %in.vec.base = load <64 x i8>, ptr %in.vec.base.ptr, align 64
   %in.vec.bias = load <64 x i8>, ptr %in.vec.bias.ptr, align 64
   %in.vec = add <64 x i8> %in.vec.base, %in.vec.bias

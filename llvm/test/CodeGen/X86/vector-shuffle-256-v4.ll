@@ -2396,21 +2396,57 @@ define <8 x i32> @shuffle_v8i32_0zzzzzzz_pgso(<8 x i32> %a) !prof !14 {
 }
 
 define <4 x i64> @unpckh_v4i64(<4 x i64> %x, <4 x i64> %y) {
-; ALL-LABEL: unpckh_v4i64:
-; ALL:       # %bb.0:
-; ALL-NEXT:    vextractf128 $1, %ymm1, %xmm1
-; ALL-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
-; ALL-NEXT:    retq
+; AVX1OR2-LABEL: unpckh_v4i64:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1OR2-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; AVX1OR2-NEXT:    retq
+;
+; AVX512VL-SLOW-LABEL: unpckh_v4i64:
+; AVX512VL-SLOW:       # %bb.0:
+; AVX512VL-SLOW-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX512VL-SLOW-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; AVX512VL-SLOW-NEXT:    retq
+;
+; AVX512VL-FAST-ALL-LABEL: unpckh_v4i64:
+; AVX512VL-FAST-ALL:       # %bb.0:
+; AVX512VL-FAST-ALL-NEXT:    vpmovsxbq {{.*#+}} xmm2 = [1,7]
+; AVX512VL-FAST-ALL-NEXT:    vpermt2q %ymm1, %ymm2, %ymm0
+; AVX512VL-FAST-ALL-NEXT:    retq
+;
+; AVX512VL-FAST-PERLANE-LABEL: unpckh_v4i64:
+; AVX512VL-FAST-PERLANE:       # %bb.0:
+; AVX512VL-FAST-PERLANE-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX512VL-FAST-PERLANE-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; AVX512VL-FAST-PERLANE-NEXT:    retq
   %unpckh = shufflevector <4 x i64> %x, <4 x i64> %y, <4 x i32> <i32 1, i32 7, i32 poison, i32 poison>
   ret <4 x i64> %unpckh
 }
 
 define <4 x double> @unpckh_v4f64(<4 x double> %x, <4 x double> %y) {
-; ALL-LABEL: unpckh_v4f64:
-; ALL:       # %bb.0:
-; ALL-NEXT:    vextractf128 $1, %ymm1, %xmm1
-; ALL-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
-; ALL-NEXT:    retq
+; AVX1OR2-LABEL: unpckh_v4f64:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1OR2-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; AVX1OR2-NEXT:    retq
+;
+; AVX512VL-SLOW-LABEL: unpckh_v4f64:
+; AVX512VL-SLOW:       # %bb.0:
+; AVX512VL-SLOW-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX512VL-SLOW-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; AVX512VL-SLOW-NEXT:    retq
+;
+; AVX512VL-FAST-ALL-LABEL: unpckh_v4f64:
+; AVX512VL-FAST-ALL:       # %bb.0:
+; AVX512VL-FAST-ALL-NEXT:    vpmovsxbq {{.*#+}} xmm2 = [1,7]
+; AVX512VL-FAST-ALL-NEXT:    vpermt2pd %ymm1, %ymm2, %ymm0
+; AVX512VL-FAST-ALL-NEXT:    retq
+;
+; AVX512VL-FAST-PERLANE-LABEL: unpckh_v4f64:
+; AVX512VL-FAST-PERLANE:       # %bb.0:
+; AVX512VL-FAST-PERLANE-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX512VL-FAST-PERLANE-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; AVX512VL-FAST-PERLANE-NEXT:    retq
   %unpckh = shufflevector <4 x double> %x, <4 x double> %y, <4 x i32> <i32 1, i32 7, i32 poison, i32 poison>
   ret <4 x double> %unpckh
 }

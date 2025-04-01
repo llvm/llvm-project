@@ -529,34 +529,35 @@ define <4 x double> @test_compress_v4f64(<4 x double> %vec, <4 x i1> %mask, <4 x
 ; AVX2-NEXT:    addl %eax, %ecx
 ; AVX2-NEXT:    andl $3, %ecx
 ; AVX2-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX2-NEXT:    vmovlpd %xmm0, (%rsp)
+; AVX2-NEXT:    vmovlps %xmm0, (%rsp)
 ; AVX2-NEXT:    vmovq %xmm3, %rax
 ; AVX2-NEXT:    andl $1, %eax
 ; AVX2-NEXT:    movl %eax, %ecx
-; AVX2-NEXT:    vmovhpd %xmm0, (%rsp,%rcx,8)
+; AVX2-NEXT:    vmovhps %xmm0, (%rsp,%rcx,8)
 ; AVX2-NEXT:    vpextrq $1, %xmm3, %rcx
 ; AVX2-NEXT:    subq %rcx, %rax
 ; AVX2-NEXT:    movl %eax, %ecx
-; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    vmovlpd %xmm0, (%rsp,%rcx,8)
+; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX2-NEXT:    vmovlps %xmm2, (%rsp,%rcx,8)
 ; AVX2-NEXT:    vextracti128 $1, %ymm3, %xmm2
 ; AVX2-NEXT:    vmovq %xmm2, %rcx
 ; AVX2-NEXT:    subq %rcx, %rax
 ; AVX2-NEXT:    movl %eax, %ecx
 ; AVX2-NEXT:    andl $3, %ecx
-; AVX2-NEXT:    vmovhpd %xmm0, (%rsp,%rcx,8)
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[3,2,2,3]
+; AVX2-NEXT:    vmovlps %xmm0, (%rsp,%rcx,8)
 ; AVX2-NEXT:    vpextrq $1, %xmm2, %rcx
 ; AVX2-NEXT:    subq %rcx, %rax
 ; AVX2-NEXT:    cmpq $4, %rax
-; AVX2-NEXT:    jb .LBB7_2
+; AVX2-NEXT:    jae .LBB7_2
 ; AVX2-NEXT:  # %bb.1:
-; AVX2-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX2-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX2-NEXT:  .LBB7_2:
 ; AVX2-NEXT:    cmpq $3, %rax
 ; AVX2-NEXT:    movl $3, %ecx
 ; AVX2-NEXT:    cmovbq %rax, %rcx
 ; AVX2-NEXT:    movl %ecx, %eax
-; AVX2-NEXT:    vmovsd %xmm1, (%rsp,%rax,8)
+; AVX2-NEXT:    vmovsd %xmm0, (%rsp,%rax,8)
 ; AVX2-NEXT:    vmovaps (%rsp), %ymm0
 ; AVX2-NEXT:    movq %rbp, %rsp
 ; AVX2-NEXT:    popq %rbp
@@ -1010,12 +1011,13 @@ define <8 x double> @test_compress_v8f64(<8 x double> %vec, <8 x i1> %mask, <8 x
 ; AVX2-NEXT:    vpextrw $1, %xmm2, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rax, %rcx
-; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    vmovlps %xmm0, (%rsp,%rcx,8)
+; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm4
+; AVX2-NEXT:    vmovlps %xmm4, (%rsp,%rcx,8)
 ; AVX2-NEXT:    vpextrw $2, %xmm2, %eax
 ; AVX2-NEXT:    andl $1, %eax
 ; AVX2-NEXT:    addq %rcx, %rax
-; AVX2-NEXT:    vmovhps %xmm0, (%rsp,%rax,8)
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[3,2,2,3]
+; AVX2-NEXT:    vmovlps %xmm0, (%rsp,%rax,8)
 ; AVX2-NEXT:    vpextrw $3, %xmm2, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rax, %rcx
@@ -1024,36 +1026,37 @@ define <8 x double> @test_compress_v8f64(<8 x double> %vec, <8 x i1> %mask, <8 x
 ; AVX2-NEXT:    addq %rcx, %rax
 ; AVX2-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
 ; AVX2-NEXT:    andl $7, %ecx
-; AVX2-NEXT:    vmovlpd %xmm1, (%rsp,%rcx,8)
+; AVX2-NEXT:    vmovlps %xmm1, (%rsp,%rcx,8)
 ; AVX2-NEXT:    vpextrw $5, %xmm2, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rax, %rcx
 ; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax def $rax
 ; AVX2-NEXT:    andl $7, %eax
-; AVX2-NEXT:    vmovhpd %xmm1, (%rsp,%rax,8)
+; AVX2-NEXT:    vmovhps %xmm1, (%rsp,%rax,8)
 ; AVX2-NEXT:    vpextrw $6, %xmm2, %edx
 ; AVX2-NEXT:    andl $1, %edx
 ; AVX2-NEXT:    addq %rcx, %rdx
 ; AVX2-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
 ; AVX2-NEXT:    andl $7, %ecx
 ; AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm0
-; AVX2-NEXT:    vmovlpd %xmm0, (%rsp,%rcx,8)
+; AVX2-NEXT:    vmovlps %xmm0, (%rsp,%rcx,8)
 ; AVX2-NEXT:    vpextrw $7, %xmm2, %eax
 ; AVX2-NEXT:    andl $1, %eax
 ; AVX2-NEXT:    addq %rdx, %rax
 ; AVX2-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX2-NEXT:    andl $7, %edx
-; AVX2-NEXT:    vmovhpd %xmm0, (%rsp,%rdx,8)
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm1[3,2,2,3]
+; AVX2-NEXT:    vmovlps %xmm0, (%rsp,%rdx,8)
 ; AVX2-NEXT:    cmpq $8, %rax
-; AVX2-NEXT:    jb .LBB11_2
+; AVX2-NEXT:    jae .LBB11_2
 ; AVX2-NEXT:  # %bb.1:
-; AVX2-NEXT:    vshufpd {{.*#+}} xmm3 = xmm0[1,0]
+; AVX2-NEXT:    vmovaps %xmm3, %xmm0
 ; AVX2-NEXT:  .LBB11_2:
 ; AVX2-NEXT:    cmpq $7, %rax
 ; AVX2-NEXT:    movl $7, %ecx
 ; AVX2-NEXT:    cmovbq %rax, %rcx
 ; AVX2-NEXT:    movl %ecx, %eax
-; AVX2-NEXT:    vmovsd %xmm3, (%rsp,%rax,8)
+; AVX2-NEXT:    vmovsd %xmm0, (%rsp,%rax,8)
 ; AVX2-NEXT:    vmovaps (%rsp), %ymm0
 ; AVX2-NEXT:    vmovaps {{[0-9]+}}(%rsp), %ymm1
 ; AVX2-NEXT:    movq %rbp, %rsp

@@ -1552,15 +1552,13 @@ define <8 x i32> @reduce_ctpop_v4i64_buildvector_v8i32(<4 x i64> %a0, <4 x i64> 
 ; AVX512VL-NEXT:    vinserti64x4 $1, %ymm4, %zmm5, %zmm4
 ; AVX512VL-NEXT:    vpxor %xmm5, %xmm5, %xmm5
 ; AVX512VL-NEXT:    vpsadbw %zmm5, %zmm4, %zmm4
-; AVX512VL-NEXT:    vpmovsxbd {{.*#+}} ymm6 = [8,12,8,12,8,12,0,4]
-; AVX512VL-NEXT:    vpermd %zmm4, %zmm6, %zmm4
 ; AVX512VL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm1
 ; AVX512VL-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; AVX512VL-NEXT:    vpsadbw %zmm5, %zmm0, %zmm0
-; AVX512VL-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [8,12,0,4]
-; AVX512VL-NEXT:    vpermd %zmm0, %zmm1, %zmm0
-; AVX512VL-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm4[4,5,6,7]
+; AVX512VL-NEXT:    vpsadbw %zmm5, %zmm0, %zmm1
+; AVX512VL-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [8,12,0,4,24,28,16,20]
+; AVX512VL-NEXT:    vpermi2d %zmm4, %zmm1, %zmm0
+; AVX512VL-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512VPOPCNT-LABEL: reduce_ctpop_v4i64_buildvector_v8i32:
@@ -1586,15 +1584,13 @@ define <8 x i32> @reduce_ctpop_v4i64_buildvector_v8i32(<4 x i64> %a0, <4 x i64> 
 ; AVX512VPOPCNT-NEXT:    vinserti64x4 $1, %ymm4, %zmm5, %zmm4
 ; AVX512VPOPCNT-NEXT:    vpxor %xmm5, %xmm5, %xmm5
 ; AVX512VPOPCNT-NEXT:    vpsadbw %zmm5, %zmm4, %zmm4
-; AVX512VPOPCNT-NEXT:    vpmovsxbd {{.*#+}} ymm6 = [8,12,8,12,8,12,0,4]
-; AVX512VPOPCNT-NEXT:    vpermd %zmm4, %zmm6, %zmm4
 ; AVX512VPOPCNT-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512VPOPCNT-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm1
 ; AVX512VPOPCNT-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; AVX512VPOPCNT-NEXT:    vpsadbw %zmm5, %zmm0, %zmm0
-; AVX512VPOPCNT-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [8,12,0,4]
-; AVX512VPOPCNT-NEXT:    vpermd %zmm0, %zmm1, %zmm0
-; AVX512VPOPCNT-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm4[4,5,6,7]
+; AVX512VPOPCNT-NEXT:    vpsadbw %zmm5, %zmm0, %zmm1
+; AVX512VPOPCNT-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [8,12,0,4,24,28,16,20]
+; AVX512VPOPCNT-NEXT:    vpermi2d %zmm4, %zmm1, %zmm0
+; AVX512VPOPCNT-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512VPOPCNT-NEXT:    retq
   %p0 = tail call <4 x i64> @llvm.ctpop.v4i64(<4 x i64> %a0)
   %p1 = tail call <4 x i64> @llvm.ctpop.v4i64(<4 x i64> %a1)

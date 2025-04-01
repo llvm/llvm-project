@@ -5950,18 +5950,32 @@ define void @one_mask_bit_set4(ptr %addr, <4 x double> %val) nounwind {
 ; SSE-NEXT:    movhps %xmm1, 24(%rdi)
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: one_mask_bit_set4:
-; AVX:       ## %bb.0:
-; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX-NEXT:    vmovhps %xmm0, 24(%rdi)
-; AVX-NEXT:    vzeroupper
-; AVX-NEXT:    retq
+; AVX1-LABEL: one_mask_bit_set4:
+; AVX1:       ## %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vmovhps %xmm0, 24(%rdi)
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: one_mask_bit_set4:
+; AVX2:       ## %bb.0:
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[3,2,2,3]
+; AVX2-NEXT:    vmovlps %xmm0, 24(%rdi)
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: one_mask_bit_set4:
+; AVX512:       ## %bb.0:
+; AVX512-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[3,2,2,3]
+; AVX512-NEXT:    vmovlps %xmm0, 24(%rdi)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
 ;
 ; X86-AVX512-LABEL: one_mask_bit_set4:
 ; X86-AVX512:       ## %bb.0:
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; X86-AVX512-NEXT:    vmovhps %xmm0, 24(%eax)
+; X86-AVX512-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[3,2,2,3]
+; X86-AVX512-NEXT:    vmovlps %xmm0, 24(%eax)
 ; X86-AVX512-NEXT:    vzeroupper
 ; X86-AVX512-NEXT:    retl
   call void @llvm.masked.store.v4f64.p0(<4 x double> %val, ptr %addr, i32 4, <4 x i1><i1 false, i1 false, i1 false, i1 true>)
@@ -6048,8 +6062,7 @@ define void @one_mask_bit_set6(ptr %addr, <16 x i64> %val) nounwind {
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vextractf32x4 $3, %zmm0, %xmm0
 ; X86-AVX512-NEXT:    vmovlps %xmm0, 48(%eax)
-; X86-AVX512-NEXT:    vextractf128 $1, %ymm1, %xmm0
-; X86-AVX512-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; X86-AVX512-NEXT:    vpermpd {{.*#+}} ymm0 = ymm1[3,2,2,3]
 ; X86-AVX512-NEXT:    vmovlps %xmm0, 88(%eax)
 ; X86-AVX512-NEXT:    vzeroupper
 ; X86-AVX512-NEXT:    retl
@@ -6992,18 +7005,19 @@ define void @store_v24i32_v24i32_stride6_vf4_only_even_numbered_elts(ptr %trigge
 ; AVX2-NEXT:    vpcmpgtd %ymm5, %ymm3, %ymm3
 ; AVX2-NEXT:    vpacksswb %ymm3, %ymm4, %ymm3
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm4 = ymm3[0,2,1,3]
-; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm4, %ymm4
 ; AVX2-NEXT:    vpmovzxwq {{.*#+}} ymm3 = xmm3[0],zero,zero,zero,xmm3[1],zero,zero,zero,xmm3[2],zero,zero,zero,xmm3[3],zero,zero,zero
 ; AVX2-NEXT:    vpslld $31, %ymm3, %ymm3
 ; AVX2-NEXT:    vpmaskmovd %ymm0, %ymm3, (%rdx)
-; AVX2-NEXT:    vextracti128 $1, %ymm4, %xmm0
-; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
-; AVX2-NEXT:    vpslld $31, %ymm0, %ymm0
-; AVX2-NEXT:    vpmaskmovd %ymm2, %ymm0, 64(%rdx)
-; AVX2-NEXT:    vpunpckhbw {{.*#+}} xmm0 = xmm4[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
+; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm4[4],xmm0[4],xmm4[5],xmm0[5],xmm4[6],xmm0[6],xmm4[7],xmm0[7]
 ; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; AVX2-NEXT:    vpslld $31, %ymm0, %ymm0
 ; AVX2-NEXT:    vpmaskmovd %ymm1, %ymm0, 32(%rdx)
+; AVX2-NEXT:    vextracti128 $1, %ymm4, %xmm0
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}+16(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
+; AVX2-NEXT:    vpslld $31, %ymm0, %ymm0
+; AVX2-NEXT:    vpmaskmovd %ymm2, %ymm0, 64(%rdx)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;

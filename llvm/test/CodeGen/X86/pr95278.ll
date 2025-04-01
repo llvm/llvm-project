@@ -5,8 +5,8 @@ define void @PR95278(ptr %p0, ptr %p1) {
 ; CHECK-LABEL: PR95278:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtph2ps 2016(%rdi), %zmm0
-; CHECK-NEXT:    vextractf32x4 $3, %zmm0, %xmm0
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
+; CHECK-NEXT:    vmovaps {{.*#+}} xmm1 = [7,6]
+; CHECK-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
 ; CHECK-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; CHECK-NEXT:    vpextrw $0, %xmm0, (%rsi)
 ; CHECK-NEXT:    vzeroupper

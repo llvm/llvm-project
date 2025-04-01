@@ -70,14 +70,14 @@ define <8 x i32> @foo_avx10.2(<8 x double> %f) {
 ; CHECK-AVX10_1-NEXT:    cmovpl %eax, %edx
 ; CHECK-AVX10_1-NEXT:    vmovd %edx, %xmm2
 ; CHECK-AVX10_1-NEXT:    vpinsrd $1, %ecx, %xmm2, %xmm2
-; CHECK-AVX10_1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; CHECK-AVX10_1-NEXT:    vmaxsd %xmm3, %xmm0, %xmm4
-; CHECK-AVX10_1-NEXT:    vminsd %xmm5, %xmm4, %xmm4
-; CHECK-AVX10_1-NEXT:    vcvttsd2si %xmm4, %ecx
-; CHECK-AVX10_1-NEXT:    vucomisd %xmm0, %xmm0
+; CHECK-AVX10_1-NEXT:    vextractf128 $1, %ymm0, %xmm4
+; CHECK-AVX10_1-NEXT:    vmaxsd %xmm3, %xmm4, %xmm6
+; CHECK-AVX10_1-NEXT:    vminsd %xmm5, %xmm6, %xmm6
+; CHECK-AVX10_1-NEXT:    vcvttsd2si %xmm6, %ecx
+; CHECK-AVX10_1-NEXT:    vucomisd %xmm4, %xmm4
 ; CHECK-AVX10_1-NEXT:    cmovpl %eax, %ecx
 ; CHECK-AVX10_1-NEXT:    vpinsrd $2, %ecx, %xmm2, %xmm2
-; CHECK-AVX10_1-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
+; CHECK-AVX10_1-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[3,2,2,3]
 ; CHECK-AVX10_1-NEXT:    vmaxsd %xmm3, %xmm0, %xmm3
 ; CHECK-AVX10_1-NEXT:    vminsd %xmm5, %xmm3, %xmm3
 ; CHECK-AVX10_1-NEXT:    vcvttsd2si %xmm3, %ecx
