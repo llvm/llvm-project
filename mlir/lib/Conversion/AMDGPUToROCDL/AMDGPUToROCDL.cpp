@@ -791,7 +791,7 @@ static std::optional<uint32_t> mfmaTypeSelectCode(Type mlirElemType) {
       .Default([](Type) { return std::nullopt; });
 }
 
-/// If there is a scaled MFMA intsruction for the input element types `aType`
+/// If there is a scaled MFMA instruction for the input element types `aType`
 /// and `bType`, output type `destType`, problem size M, N, K, and B (number of
 /// blocks) on the given `chipset`, return a tuple consisting of the
 /// OperationName of the intrinsic and the type codes that need to be passed to
@@ -937,8 +937,7 @@ struct MFMAOpLowering : public ConvertOpToLLVMPattern<MFMAOp> {
          adaptor.getDestC()});
     if (isScaled) {
       Value zero = createI32Constant(rewriter, loc, 0);
-      auto [scaledName, aTypeCode, bTypeCode] = *maybeScaledIntrinsic;
-      std::ignore = scaledName;
+      auto [_scaledName, aTypeCode, bTypeCode] = *maybeScaledIntrinsic;
       loweredOp.addOperands({createI32Constant(rewriter, loc, aTypeCode),
                              createI32Constant(rewriter, loc, bTypeCode),
                              /*scale A byte=*/zero, /*scale A=*/zero,
