@@ -965,6 +965,7 @@ exit:
 define void @sinking_requires_duplication(ptr %addr) {
 ; CHECK-LABEL: LV: Checking a loop in 'sinking_requires_duplication'
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VF:%.+]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<201> = original trip-count
@@ -978,7 +979,7 @@ define void @sinking_requires_duplication(ptr %addr) {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:   CLONE ir<%gep> = getelementptr ir<%addr>, vp<[[STEPS]]>
 ; CHECK-NEXT:   vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep>
 ; CHECK-NEXT:   WIDEN ir<%0> = load vp<[[VEC_PTR]]>
@@ -1038,6 +1039,7 @@ exit:
 define void @merge_with_dead_gep_between_regions(i32 %n, ptr noalias %src, ptr noalias %dst) optsize {
 ; CHECK-LABEL: LV: Checking a loop in 'merge_with_dead_gep_between_regions'
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VF:%.+]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
@@ -1064,7 +1066,7 @@ define void @merge_with_dead_gep_between_regions(i32 %n, ptr noalias %src, ptr n
 ; CHECK-NEXT:     Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:     pred.store.if:
-; CHECK-NEXT:       vp<[[SCALAR_STEPS:%.+]]>    = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<-1>
+; CHECK-NEXT:       vp<[[SCALAR_STEPS:%.+]]>    = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<-1>, vp<[[VF]]>
 ; CHECK-NEXT:       REPLICATE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<[[SCALAR_STEPS]]>
 ; CHECK-NEXT:       REPLICATE ir<%l> = load ir<%gep.src>
 ; CHECK-NEXT:       REPLICATE ir<%gep.dst> = getelementptr inbounds ir<%dst>, vp<[[SCALAR_STEPS]]>

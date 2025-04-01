@@ -2,11 +2,13 @@ add_compiler_rt_component(ctx_profile)
 
 set(CTX_PROFILE_SOURCES
   CtxInstrProfiling.cpp
+  RootAutoDetector.cpp
   )
 
 set(CTX_PROFILE_HEADERS
   CtxInstrContextNode.h
   CtxInstrProfiling.h
+  RootAutoDetector.h
   )
 
 include_directories(..)

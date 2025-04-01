@@ -90,6 +90,8 @@ Changes to the AMDGPU Backend
   [FWD_PROGRESS bit](https://llvm.org/docs/AMDGPUUsage.html#code-object-v3-kernel-descriptor)
   for all GFX ISAs greater or equal to 10, for the AMDHSA OS.
 
+* Bump the default `.amdhsa_code_object_version` to 6. ROCm 6.3 is required to run any program compiled with COV6.
+
 Changes to the ARM Backend
 --------------------------
 
@@ -102,11 +104,19 @@ Changes to the DirectX Backend
 Changes to the Hexagon Backend
 ------------------------------
 
+* The default Hexagon architecture version in ELF object files produced by
+  the tools such as llvm-mc is changed to v68. This version will be set if
+  the user does not provide the CPU version in the command line.
+
 Changes to the LoongArch Backend
 --------------------------------
 
+* Changing the default code model from `small` to `medium` for 64-bit.
+
 Changes to the MIPS Backend
 ---------------------------
+
+* `-mcpu=i6400` and `-mcpu=i6500` were added.
 
 Changes to the PowerPC Backend
 ------------------------------
@@ -114,6 +124,8 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
+* Adds experimental assembler support for the Qualcomm uC 'Xqcilb` (Long Branch)
+  extension.
 * Adds experimental assembler support for the Qualcomm uC 'Xqcili` (Load Large Immediate)
   extension.
 * Adds experimental assembler support for the Qualcomm uC 'Xqcilia` (Large Immediate Arithmetic)
@@ -128,6 +140,23 @@ Changes to the RISC-V Backend
 * Added non-quadratic ``log-vrgather`` cost model for ``vrgather.vv`` instruction
 * Adds experimental assembler support for the Qualcomm uC 'Xqcisim` (Simulation Hint)
   extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcisync` (Sync Delay)
+  extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqciio` (External Input Output)
+  extension.
+* Adds assembler support for the 'Zilsd` (Load/Store Pair Instructions)
+  extension.
+* Adds assembler support for the 'Zclsd` (Compressed Load/Store Pair Instructions)
+  extension.
+* Adds experimental assembler support for Zvqdotq.
+* Adds Support for Qualcomm's `qci-nest` and `qci-nonest` interrupt types, which
+  use instructions from `Xqciint` to save and restore some GPRs during interrupt
+  handlers.
+* When the experimental extension `Xqcili` is enabled, `qc.e.li` and `qc.li` may
+  now be used to materialize immediates.
+* Adds assembler support for ``.option exact``, which disables automatic compression,
+  and branch and linker relaxation. This can be disabled with ``.option noexact``,
+  which is also the default.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -187,6 +216,13 @@ Changes to LLDB
   Windows 11 on the Microsoft SQ2 and Snapdragon Elite X platforms.
 * LLDB now steps through C++ thunks. This fixes an issue where previously, it
   wouldn't step into multiple inheritance virtual functions.
+* A statusline was added to command-line LLDB to show progress events and
+  information about the current state of the debugger at the bottom of the
+  terminal. This is on by default and can be configured using the
+  `show-statusline` and `statusline-format` settings.
+* The `min-gdbserver-port` and `max-gdbserver-port` options have been removed
+  from `lldb-server`'s platform mode. Since the changes to `lldb-server`'s port
+  handling in LLDB 20, these options have had no effect.
 
 ### Changes to lldb-dap
 

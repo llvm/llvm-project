@@ -3304,7 +3304,7 @@ void MicrosoftRecordLayoutBuilder::computeVtorDispSet(
     if (MethodRange.begin() == MethodRange.end())
       BasesWithOverriddenMethods.insert(MD->getParent());
     else
-      Work.insert(MethodRange.begin(), MethodRange.end());
+      Work.insert_range(MethodRange);
     // We've finished processing this element, remove it from the working set.
     Work.erase(MD);
   }

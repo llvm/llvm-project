@@ -23,9 +23,9 @@ end subroutine
 !CHECK:    omp.parallel private({{.*}} %[[I_DECL]]#0 -> %[[I_PVT_ADDR:.*]] : {{.*}}) {
 !CHECK:      %[[I_PVT_DECL:.*]]:2 = hlfir.declare %[[I_PVT_ADDR]] {uniq_name = "_QFsb1Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:      %[[I_FINAL_VAL:.*]]:2 = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[I_VAL:.*]] = %{{.*}}) -> (index, i32) {
-!CHECK:        fir.store %[[I_VAL]] to %[[I_PVT_DECL]]#1 : !fir.ref<i32>
+!CHECK:        fir.store %[[I_VAL]] to %[[I_PVT_DECL]]#0 : !fir.ref<i32>
 !CHECK:      }
-!CHECK:      fir.store %[[I_FINAL_VAL]]#1 to %[[I_PVT_DECL]]#1 : !fir.ref<i32>
+!CHECK:      fir.store %[[I_FINAL_VAL]]#1 to %[[I_PVT_DECL]]#0 : !fir.ref<i32>
 !CHECK:      omp.terminator
 !CHECK:    }
 !CHECK:    return
@@ -59,19 +59,19 @@ end subroutine
 !CHECK:      %[[I_PVT_DECL:.*]]:2 = hlfir.declare %[[I_PVT_ADDR]] {uniq_name = "_QFsb2Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
 !CHECK:      %[[FINAL_J_VAL:.*]]:2 = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[J_VAL:.*]] = %{{.*}}) -> (index, i32) {
-!CHECK:        fir.store %[[J_VAL]] to %[[J_PVT_DECL]]#1 : !fir.ref<i32>
+!CHECK:        fir.store %[[J_VAL]] to %[[J_PVT_DECL]]#0 : !fir.ref<i32>
 !CHECK:        fir.if %{{.*}} {
 !CHECK:          %[[FINAL_I_VAL:.*]]:2 = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[I_VAL:.*]] = %{{.*}}) -> (index, i32) {
-!CHECK:            fir.store %[[I_VAL]] to %[[I_PVT_DECL]]#1 : !fir.ref<i32>
+!CHECK:            fir.store %[[I_VAL]] to %[[I_PVT_DECL]]#0 : !fir.ref<i32>
 !CHECK:          }
-!CHECK:          fir.store %[[FINAL_I_VAL]]#1 to %[[I_PVT_DECL]]#1 : !fir.ref<i32>
+!CHECK:          fir.store %[[FINAL_I_VAL]]#1 to %[[I_PVT_DECL]]#0 : !fir.ref<i32>
 !CHECK:        }
 !CHECK:        %[[FINAL_I_VAL:.*]]:2 = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[I_VAL:.*]] = %{{.*}}) -> (index, i32) {
-!CHECK:          fir.store %[[I_VAL]] to %[[I_PVT_DECL]]#1 : !fir.ref<i32>
+!CHECK:          fir.store %[[I_VAL]] to %[[I_PVT_DECL]]#0 : !fir.ref<i32>
 !CHECK:        }
-!CHECK:        fir.store %[[FINAL_I_VAL]]#1 to %[[I_PVT_DECL]]#1 : !fir.ref<i32>
+!CHECK:        fir.store %[[FINAL_I_VAL]]#1 to %[[I_PVT_DECL]]#0 : !fir.ref<i32>
 !CHECK:      }
-!CHECK:      fir.store %[[FINAL_J_VAL]]#1 to %[[J_PVT_DECL]]#1 : !fir.ref<i32>
+!CHECK:      fir.store %[[FINAL_J_VAL]]#1 to %[[J_PVT_DECL]]#0 : !fir.ref<i32>
 !CHECK:      omp.terminator
 !CHECK:    }
 !CHECK:    return

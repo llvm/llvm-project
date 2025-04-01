@@ -302,6 +302,17 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC,
     TYPE_SWITCH(Ty, S.Stk.discard<T>());
 }
 
+// FIXME: Instead of using this fairly expensive test, we should
+// just mark constexpr-unknown values when creating them.
+bool isConstexprUnknown(const Pointer &P) {
+  if (!P.isBlockPointer())
+    return false;
+  if (P.isDummy())
+    return false;
+  const VarDecl *VD = P.block()->getDescriptor()->asVarDecl();
+  return VD && VD->hasLocalStorage();
+}
+
 bool CheckBCPResult(InterpState &S, const Pointer &Ptr) {
   if (Ptr.isDummy())
     return false;
@@ -602,8 +613,15 @@ bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   // In C++14 onwards, it is permitted to read a mutable member whose
   // lifetime began within the evaluation.
   if (S.getLangOpts().CPlusPlus14 &&
-      Ptr.block()->getEvalID() == S.Ctx.getEvalID())
+      Ptr.block()->getEvalID() == S.Ctx.getEvalID()) {
+    // FIXME: This check is necessary because (of the way) we revisit
+    // variables in Compiler.cpp:visitDeclRef. Revisiting a so far
+    // unknown variable will get the same EvalID and we end up allowing
+    // reads from mutable members of it.
+    if (!S.inConstantContext() && isConstexprUnknown(Ptr))
+      return false;
     return true;
+  }
 
   const SourceInfo &Loc = S.Current->getSource(OpPC);
   const FieldDecl *Field = Ptr.getField();
@@ -979,17 +997,7 @@ bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC,
   if (AllocForm == DeleteForm)
     return true;
 
-  QualType TypeToDiagnose;
-  // We need to shuffle things around a bit here to get a better diagnostic,
-  // because the expression we allocated the block for was of type int*,
-  // but we want to get the array size right.
-  if (D->isArray()) {
-    QualType ElemQT = D->getType()->getPointeeType();
-    TypeToDiagnose = S.getASTContext().getConstantArrayType(
-        ElemQT, APInt(64, static_cast<uint64_t>(D->getNumElems()), false),
-        nullptr, ArraySizeModifier::Normal, 0);
-  } else
-    TypeToDiagnose = D->getType()->getPointeeType();
+  QualType TypeToDiagnose = D->getDataType(S.getASTContext());
 
   const SourceInfo &E = S.Current->getSource(OpPC);
   S.FFDiag(E, diag::note_constexpr_new_delete_mismatch)
@@ -1449,6 +1457,7 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
       if (!CheckInvoke(S, OpPC, ThisPtr))
         return cleanup();
       if (!Func->isConstructor() && !Func->isDestructor() &&
+          !Func->isCopyOrMoveOperator() &&
           !CheckActive(S, OpPC, ThisPtr, AK_MemberCall))
         return false;
     }
@@ -1664,15 +1673,7 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
     return false;
 
   const auto *NewExpr = cast<CXXNewExpr>(E);
-  QualType StorageType = Ptr.getType();
-
-  if ((isa_and_nonnull<CXXNewExpr>(Ptr.getFieldDesc()->asExpr()) ||
-       isa_and_nonnull<CXXMemberCallExpr>(Ptr.getFieldDesc()->asExpr())) &&
-      StorageType->isPointerType()) {
-    // FIXME: Are there other cases where this is a problem?
-    StorageType = StorageType->getPointeeType();
-  }
-
+  QualType StorageType = Ptr.getFieldDesc()->getDataType(S.getASTContext());
   const ASTContext &ASTCtx = S.getASTContext();
   QualType AllocType;
   if (ArraySize) {

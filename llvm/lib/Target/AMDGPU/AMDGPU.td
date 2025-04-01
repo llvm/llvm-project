@@ -1094,10 +1094,10 @@ def FeaturePrngInst : SubtargetFeature<"prng-inst",
   "Has v_prng_b32 instruction"
 >;
 
-def FeatureBVHDualInst : SubtargetFeature<"bvh-dual-inst",
-  "HasBVHDualInst",
+def FeatureBVHDualAndBVH8Insts : SubtargetFeature<"bvh-dual-bvh-8-insts",
+  "HasBVHDualAndBVH8Insts",
   "true",
-  "Has image_bvh_dual_intersect_ray instruction"
+  "Has image_bvh_dual_intersect_ray and image_bvh8_intersect_ray instructions"
 >;
 
 //===------------------------------------------------------------===//
@@ -1268,6 +1268,10 @@ def FeatureDynamicVGPRBlockSize32 : SubtargetFeature<"dynamic-vgpr-block-size-32
   "true",
   "Use a block size of 32 for dynamic VGPR allocation (default is 16)"
 >;
+
+def FeatureLshlAddU64Inst
+    : SubtargetFeature<"lshl-add-u64-inst", "HasLshlAddU64Inst", "true",
+                       "Has v_lshl_add_u64 instruction">;
 
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
@@ -1622,7 +1626,8 @@ def FeatureISAVersion9_4_Common : FeatureSet<
    FeatureAtomicFMinFMaxF64FlatInsts,
    FeatureAgentScopeFineGrainedRemoteMemoryAtomics,
    FeatureMemoryAtomicFAddF32DenormalSupport,
-   FeatureFlatBufferGlobalAtomicFaddF64Inst
+   FeatureFlatBufferGlobalAtomicFaddF64Inst,
+   FeatureLshlAddU64Inst,
    ]>;
 
 def FeatureISAVersion9_5_Common : FeatureSet<
@@ -1857,7 +1862,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureMaxHardClauseLength32,
    Feature1_5xVGPRs,
    FeatureMemoryAtomicFAddF32DenormalSupport,
-   FeatureBVHDualInst
+   FeatureBVHDualAndBVH8Insts
    ]>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
@@ -2513,8 +2518,8 @@ def HasBitOp3Insts : Predicate<"Subtarget->hasBitOp3Insts()">,
 def HasPrngInst : Predicate<"Subtarget->hasPrngInst()">,
   AssemblerPredicate<(all_of FeaturePrngInst)>;
 
-def HasBVHDualInst : Predicate<"Subtarget->hasBVHDualInst()">,
-  AssemblerPredicate<(all_of FeatureBVHDualInst)>;
+def HasBVHDualAndBVH8Insts : Predicate<"Subtarget->hasBVHDualAndBVH8Insts()">,
+  AssemblerPredicate<(all_of FeatureBVHDualAndBVH8Insts)>;
 
 def HasFP8ConversionScaleInsts : Predicate<"Subtarget->hasFP8ConversionScaleInsts()">,
   AssemblerPredicate<(all_of FeatureFP8ConversionScaleInsts)>;
@@ -2553,6 +2558,9 @@ def HasXF32Insts : Predicate<"Subtarget->hasXF32Insts()">,
 
 def HasAshrPkInsts : Predicate<"Subtarget->hasAshrPkInsts()">,
   AssemblerPredicate<(all_of FeatureAshrPkInsts)>;
+
+def HasLshlAddU64Inst : Predicate<"Subtarget->hasLshlAddU64Inst()">,
+                        AssemblerPredicate<(all_of FeatureLshlAddU64Inst)>;
 
 // Include AMDGPU TD files
 include "SISchedule.td"

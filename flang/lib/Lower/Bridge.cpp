@@ -948,13 +948,20 @@ public:
       std::function<void(const Fortran::semantics::Symbol &, bool)>
           insertSymbols = [&](const Fortran::semantics::Symbol &oriSymbol,
                               bool collectSymbol) {
-            if (collectSymbol && oriSymbol.test(flag))
+            if (collectSymbol && oriSymbol.test(flag)) {
               symbolSet.insert(&oriSymbol);
-            else if (checkHostAssociatedSymbols)
+            } else if (const auto *commonDetails =
+                           oriSymbol.detailsIf<
+                               Fortran::semantics::CommonBlockDetails>()) {
+              for (const auto &mem : commonDetails->objects())
+                if (collectSymbol && mem->test(flag))
+                  symbolSet.insert(&(*mem).GetUltimate());
+            } else if (checkHostAssociatedSymbols) {
               if (const auto *details{
                       oriSymbol
                           .detailsIf<Fortran::semantics::HostAssocDetails>()})
                 insertSymbols(details->symbol(), true);
+            }
           };
       insertSymbols(sym, collectSymbols);
     };
@@ -5967,10 +5974,27 @@ private:
           Fortran::lower::pft::getScopeVariableListMap(mod);
       for (const auto &var : Fortran::lower::pft::getScopeVariableList(
                mod.getScope(), scopeVariableListMap)) {
+
         // Only define the variables owned by this module.
         const Fortran::semantics::Scope *owningScope = var.getOwningScope();
-        if (!owningScope || mod.getScope() == *owningScope)
-          Fortran::lower::defineModuleVariable(*this, var);
+        if (owningScope && mod.getScope() != *owningScope)
+          continue;
+
+        // Very special case: The value of numeric_storage_size depends on
+        // compilation options and therefore its value is not yet known when
+        // building the builtins runtime. Instead, the parameter is folding a
+        // __numeric_storage_size() expression which is loaded into the user
+        // program. For the iso_fortran_env object file, omit the symbol as it
+        // is never used.
+        if (var.hasSymbol()) {
+          const Fortran::semantics::Symbol &sym = var.getSymbol();
+          const Fortran::semantics::Scope &owner = sym.owner();
+          if (sym.name() == "numeric_storage_size" && owner.IsModule() &&
+              DEREF(owner.symbol()).name() == "iso_fortran_env")
+            continue;
+        }
+
+        Fortran::lower::defineModuleVariable(*this, var);
       }
       for (auto &eval : mod.evaluationList)
         genFIR(eval);

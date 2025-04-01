@@ -572,6 +572,32 @@ static void instantiateDependentAMDGPUFlatWorkGroupSizeAttr(
   S.AMDGPU().addAMDGPUFlatWorkGroupSizeAttr(New, Attr, MinExpr, MaxExpr);
 }
 
+static void instantiateDependentReqdWorkGroupSizeAttr(
+    Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
+    const ReqdWorkGroupSizeAttr &Attr, Decl *New) {
+  // Both min and max expression are constant expressions.
+  EnterExpressionEvaluationContext Unevaluated(
+      S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+
+  ExprResult Result = S.SubstExpr(Attr.getXDim(), TemplateArgs);
+  if (Result.isInvalid())
+    return;
+  Expr *X = Result.getAs<Expr>();
+
+  Result = S.SubstExpr(Attr.getYDim(), TemplateArgs);
+  if (Result.isInvalid())
+    return;
+  Expr *Y = Result.getAs<Expr>();
+
+  Result = S.SubstExpr(Attr.getZDim(), TemplateArgs);
+  if (Result.isInvalid())
+    return;
+  Expr *Z = Result.getAs<Expr>();
+
+  ASTContext &Context = S.getASTContext();
+  New->addAttr(::new (Context) ReqdWorkGroupSizeAttr(Context, Attr, X, Y, Z));
+}
+
 ExplicitSpecifier Sema::instantiateExplicitSpecifier(
     const MultiLevelTemplateArgumentList &TemplateArgs, ExplicitSpecifier ES) {
   if (!ES.getExpr())
@@ -743,6 +769,11 @@ attrToRetainOwnershipKind(const Attr *A) {
   }
 }
 
+// Implementation is down with the rest of the OpenACC Decl instantiations.
+static void instantiateDependentOpenACCRoutineDeclAttr(
+    Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
+    const OpenACCRoutineDeclAttr *OldAttr, const Decl *Old, Decl *New);
+
 void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
                             const Decl *Tmpl, Decl *New,
                             LateInstantiatedAttrVec *LateAttrs,
@@ -812,6 +843,12 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
       continue;
     }
 
+    if (const auto *ReqdWorkGroupSize =
+            dyn_cast<ReqdWorkGroupSizeAttr>(TmplAttr)) {
+      instantiateDependentReqdWorkGroupSizeAttr(*this, TemplateArgs,
+                                                *ReqdWorkGroupSize, New);
+    }
+
     if (const auto *AMDGPUFlatWorkGroupSize =
             dyn_cast<AMDGPUFlatWorkGroupSizeAttr>(TmplAttr)) {
       instantiateDependentAMDGPUFlatWorkGroupSizeAttr(
@@ -833,6 +870,12 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
     if (const auto *ParamAttr = dyn_cast<HLSLParamModifierAttr>(TmplAttr)) {
       instantiateDependentHLSLParamModifierAttr(*this, TemplateArgs, ParamAttr,
                                                 New);
+      continue;
+    }
+
+    if (const auto *RoutineAttr = dyn_cast<OpenACCRoutineDeclAttr>(TmplAttr)) {
+      instantiateDependentOpenACCRoutineDeclAttr(*this, TemplateArgs,
+                                                 RoutineAttr, Tmpl, New);
       continue;
     }
 
@@ -1287,6 +1330,25 @@ llvm::SmallVector<OpenACCClause *> InstantiateOpenACCClauseList(
 
 } // namespace
 
+static void instantiateDependentOpenACCRoutineDeclAttr(
+    Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
+    const OpenACCRoutineDeclAttr *OldAttr, const Decl *OldDecl, Decl *NewDecl) {
+  OpenACCRoutineDeclAttr *A =
+      OpenACCRoutineDeclAttr::Create(S.getASTContext(), OldAttr->getLocation());
+
+  if (!OldAttr->Clauses.empty()) {
+    llvm::SmallVector<OpenACCClause *> TransformedClauses =
+        InstantiateOpenACCClauseList(
+            S, TemplateArgs, OpenACCDirectiveKind::Routine, OldAttr->Clauses);
+    A->Clauses.assign(TransformedClauses.begin(), TransformedClauses.end());
+  }
+
+  // We don't end up having to do any magic-static or bind checking here, since
+  // the first phase should have caught this, since we always apply to the
+  // functiondecl.
+  NewDecl->addAttr(A);
+}
+
 Decl *TemplateDeclInstantiator::VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D) {
   SemaRef.OpenACC().ActOnConstruct(D->getDirectiveKind(), D->getBeginLoc());
   llvm::SmallVector<OpenACCClause *> TransformedClauses =
@@ -1298,8 +1360,8 @@ Decl *TemplateDeclInstantiator::VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D) {
     return nullptr;
 
   DeclGroupRef Res = SemaRef.OpenACC().ActOnEndDeclDirective(
-      D->getDirectiveKind(), D->getBeginLoc(), D->getDirectiveLoc(), {},
-      nullptr, {}, D->getEndLoc(), TransformedClauses);
+      D->getDirectiveKind(), D->getBeginLoc(), D->getDirectiveLoc(), {}, {},
+      D->getEndLoc(), TransformedClauses);
 
   if (Res.isNull())
     return nullptr;
@@ -1326,10 +1388,9 @@ Decl *TemplateDeclInstantiator::VisitOpenACCRoutineDecl(OpenACCRoutineDecl *D) {
           D->getDirectiveKind(), D->getBeginLoc(), TransformedClauses))
     return nullptr;
 
-  DeclGroupRef Res = SemaRef.OpenACC().ActOnEndDeclDirective(
-      D->getDirectiveKind(), D->getBeginLoc(), D->getDirectiveLoc(),
-      D->getLParenLoc(), FuncRef.get(), D->getRParenLoc(), D->getEndLoc(),
-      TransformedClauses);
+  DeclGroupRef Res = SemaRef.OpenACC().ActOnEndRoutineDeclDirective(
+      D->getBeginLoc(), D->getDirectiveLoc(), D->getLParenLoc(), FuncRef.get(),
+      D->getRParenLoc(), TransformedClauses, D->getEndLoc(), nullptr);
 
   if (Res.isNull())
     return nullptr;
@@ -1638,6 +1699,9 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
 
   if (Var->getTLSKind())
     SemaRef.CheckThreadLocalForLargeAlignment(Var);
+
+  if (SemaRef.getLangOpts().OpenACC)
+    SemaRef.OpenACC().ActOnVariableDeclarator(Var);
 
   return Var;
 }

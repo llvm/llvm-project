@@ -2777,7 +2777,7 @@ class TypeTraitExpr final
                 ArrayRef<TypeSourceInfo *> Args, SourceLocation RParenLoc,
                 std::variant<bool, APValue> Value);
 
-  TypeTraitExpr(EmptyShell Empty) : Expr(TypeTraitExprClass, Empty) {}
+  TypeTraitExpr(EmptyShell Empty, bool IsStoredAsBool);
 
   size_t numTrailingObjects(OverloadToken<TypeSourceInfo *>) const {
     return getNumArgs();

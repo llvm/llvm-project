@@ -33,7 +33,7 @@ public:
               CompFuncTy Comp) const override {
     const auto &RISCVExprA = cast<RISCVMCExpr>(A);
     const auto &RISCVExprB = cast<RISCVMCExpr>(B);
-    if (RISCVExprA.getKind() != RISCVExprB.getKind())
+    if (RISCVExprA.getSpecifier() != RISCVExprB.getSpecifier())
       return false;
 
     return MCPlusBuilder::equals(*RISCVExprA.getSubExpr(),
@@ -338,15 +338,7 @@ public:
     if (RISCVExpr && RISCVExpr->getSubExpr())
       return getTargetSymbol(RISCVExpr->getSubExpr());
 
-    auto *BinExpr = dyn_cast<MCBinaryExpr>(Expr);
-    if (BinExpr)
-      return getTargetSymbol(BinExpr->getLHS());
-
-    auto *SymExpr = dyn_cast<MCSymbolRefExpr>(Expr);
-    if (SymExpr && SymExpr->getKind() == MCSymbolRefExpr::VK_None)
-      return &SymExpr->getSymbol();
-
-    return nullptr;
+    return MCPlusBuilder::getTargetSymbol(Expr);
   }
 
   const MCSymbol *getTargetSymbol(const MCInst &Inst,
@@ -468,7 +460,7 @@ public:
     if (!isa<RISCVMCExpr>(ImmExpr))
       return false;
 
-    switch (cast<RISCVMCExpr>(ImmExpr)->getKind()) {
+    switch (cast<RISCVMCExpr>(ImmExpr)->getSpecifier()) {
     default:
       return false;
     case RISCVMCExpr::VK_CALL:

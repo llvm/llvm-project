@@ -3,7 +3,7 @@
 declare void @callee(ptr)
 
 ; CHECK-LABEL: Function: test
-; CHECK: Both ModRef: Ptr: i32* %a.gep <-> call void @callee(ptr %gep)
+; CHECK: NoModRef: Ptr: i32* %a.gep <-> call void @callee(ptr %gep)
 define void @test(i1 %c, ptr %arg) {
   %a = alloca [2 x i32]
   %a.gep = getelementptr i8, ptr %a, i64 4

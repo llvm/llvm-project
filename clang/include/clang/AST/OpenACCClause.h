@@ -251,6 +251,12 @@ public:
   }
 };
 
+bool operator==(const OpenACCBindClause &LHS, const OpenACCBindClause &RHS);
+inline bool operator!=(const OpenACCBindClause &LHS,
+                       const OpenACCBindClause &RHS) {
+  return !(LHS == RHS);
+}
+
 using DeviceTypeArgument = std::pair<IdentifierInfo *, SourceLocation>;
 /// A 'device_type' or 'dtype' clause, takes a list of either an 'asterisk' or
 /// an identifier. The 'asterisk' means 'the rest'.

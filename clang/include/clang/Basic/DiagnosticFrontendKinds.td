@@ -386,4 +386,12 @@ def warn_hlsl_langstd_minimal :
   Warning<"support for HLSL language version %0 is incomplete, "
           "recommend using %1 instead">,
   InGroup<HLSLDXCCompat>;
+
+// ClangIR frontend errors
+def err_cir_to_cir_transform_failed : Error<
+    "CIR-to-CIR transformation failed">, DefaultFatal;
+
+def err_cir_verification_failed_pre_passes : Error<
+    "CIR module verification error before running CIR-to-CIR passes">,
+    DefaultFatal;
 }

@@ -918,7 +918,7 @@ bool x86AssemblyInspectionEngine::GetNonCallSiteUnwindPlanFromAssembly(
   UnwindPlan::Row::AbstractRegisterLocation initial_regloc;
   UnwindPlan::Row row;
 
-  unwind_plan.SetPlanValidAddressRange(func_range);
+  unwind_plan.SetPlanValidAddressRanges({func_range});
   unwind_plan.SetRegisterKind(eRegisterKindLLDB);
 
   // At the start of the function, find the CFA by adding wordsize to the SP
@@ -1538,7 +1538,7 @@ bool x86AssemblyInspectionEngine::AugmentUnwindPlanFromCallSite(
     }
   }
 
-  unwind_plan.SetPlanValidAddressRange(func_range);
+  unwind_plan.SetPlanValidAddressRanges({func_range});
   if (unwind_plan_updated) {
     std::string unwind_plan_source(unwind_plan.GetSourceName().AsCString());
     unwind_plan_source += " plus augmentation from assembly parsing";

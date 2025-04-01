@@ -3,7 +3,7 @@
 
 // CHECK: %__cblayout_A = type <{ float }>
 
-// CHECK: @A.cb = external constant target("dx.CBuffer", target("dx.Layout", %__cblayout_A, 4, 0))
+// CHECK: @A.cb = global target("dx.CBuffer", target("dx.Layout", %__cblayout_A, 4, 0))
 // CHECK: @a = external addrspace(2) global float, align 4
 // CHECK-DAG: @_ZL1b = internal global float 3.000000e+00, align 4
 // CHECK-NOT: @B.cb

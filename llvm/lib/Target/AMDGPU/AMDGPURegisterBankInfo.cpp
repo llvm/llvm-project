@@ -3240,9 +3240,12 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     return;
   }
   case AMDGPU::G_AMDGPU_BVH_INTERSECT_RAY:
+  case AMDGPU::G_AMDGPU_BVH8_INTERSECT_RAY:
   case AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY: {
-    bool IsDual = MI.getOpcode() == AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY;
-    unsigned NumMods = IsDual ? 0 : 1; // Has A16 modifier
+    bool IsDualOrBVH8 =
+        MI.getOpcode() == AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY ||
+        MI.getOpcode() == AMDGPU::G_AMDGPU_BVH8_INTERSECT_RAY;
+    unsigned NumMods = IsDualOrBVH8 ? 0 : 1; // Has A16 modifier
     unsigned LastRegOpIdx = MI.getNumExplicitOperands() - 1 - NumMods;
     applyDefaultMapping(OpdMapper);
     executeInWaterfallLoop(B, MI, {LastRegOpIdx});
@@ -5036,13 +5039,16 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     return getImageMapping(MRI, MI, RSrcIntrin->RsrcArg);
   }
   case AMDGPU::G_AMDGPU_BVH_INTERSECT_RAY:
+  case AMDGPU::G_AMDGPU_BVH8_INTERSECT_RAY:
   case AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY: {
-    bool IsDual = MI.getOpcode() == AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY;
-    unsigned NumMods = IsDual ? 0 : 1; // Has A16 modifier
+    bool IsDualOrBVH8 =
+        MI.getOpcode() == AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY ||
+        MI.getOpcode() == AMDGPU::G_AMDGPU_BVH8_INTERSECT_RAY;
+    unsigned NumMods = IsDualOrBVH8 ? 0 : 1; // Has A16 modifier
     unsigned LastRegOpIdx = MI.getNumExplicitOperands() - 1 - NumMods;
     unsigned DstSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
     OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, DstSize);
-    if (IsDual) {
+    if (IsDualOrBVH8) {
       OpdsMapping[1] = AMDGPU::getValueMapping(
           AMDGPU::VGPRRegBankID,
           MRI.getType(MI.getOperand(1).getReg()).getSizeInBits());
@@ -5060,7 +5066,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
     } else {
       // NSA form
-      unsigned FirstSrcOpIdx = IsDual ? 4 : 2;
+      unsigned FirstSrcOpIdx = IsDualOrBVH8 ? 4 : 2;
       for (unsigned I = FirstSrcOpIdx; I < LastRegOpIdx; ++I) {
         unsigned Size = MRI.getType(MI.getOperand(I).getReg()).getSizeInBits();
         OpdsMapping[I] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);

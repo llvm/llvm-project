@@ -127,11 +127,16 @@ std::string OpenMPCounterVisitor::getName(const OpenMPConstruct &c) {
   return std::visit(
       Fortran::common::visitors{
           [&](const OpenMPStandaloneConstruct &c) -> std::string {
-            return std::visit(
-                [&](const auto &c) {
-                  // Get source from the directive or verbatim fields
-                  const CharBlock &source{std::get<0>(c.t).source};
-                  return normalize_construct_name(source.ToString());
+            return common::visit(
+                common::visitors{
+                    [&](const OmpMetadirectiveDirective &d) {
+                      return normalize_construct_name(d.source.ToString());
+                    },
+                    [&](auto &&d) {
+                      const CharBlock &source{
+                          std::get<OmpDirectiveName>(d.v.t).source};
+                      return normalize_construct_name(source.ToString());
+                    },
                 },
                 c.u);
           },

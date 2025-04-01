@@ -92,8 +92,14 @@ MCStreamer *Target::createAsmStreamer(MCContext &Ctx,
                                       std::unique_ptr<MCCodeEmitter> CE,
                                       std::unique_ptr<MCAsmBackend> TAB) const {
   formatted_raw_ostream &OSRef = *OS;
-  MCStreamer *S = llvm::createAsmStreamer(Ctx, std::move(OS), IP,
-                                          std::move(CE), std::move(TAB));
+  MCStreamer *S;
+  if (AsmStreamerCtorFn)
+    S = AsmStreamerCtorFn(Ctx, std::move(OS), IP, std::move(CE),
+                          std::move(TAB));
+  else
+    S = llvm::createAsmStreamer(Ctx, std::move(OS), IP, std::move(CE),
+                                std::move(TAB));
+
   createAsmTargetStreamer(*S, OSRef, IP);
   return S;
 }
