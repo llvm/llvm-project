@@ -6,10 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
-#include <clc/math/clc_sinpi.h>
+#ifndef __CLC_MATH_CLC_NATIVE_DIVIDE_H__
+#define __CLC_MATH_CLC_NATIVE_DIVIDE_H__
 
-#define FUNCTION sinpi
-#define __CLC_BODY <clc/shared/unary_def.inc>
+#define __FLOAT_ONLY
+#define __CLC_FUNCTION __clc_native_divide
+#define __CLC_BODY <clc/shared/binary_decl.inc>
 
 #include <clc/math/gentype.inc>
+
+#undef __CLC_BODY
+#undef __CLC_FUNCTION
+#undef __FLOAT_ONLY
+
+#endif // __CLC_MATH_CLC_NATIVE_DIVIDE_H__
