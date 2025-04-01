@@ -153,6 +153,8 @@ struct timespec {
 
 #if defined(__aarch64__)
 #include "sys_aarch64.h"
+#elif defined(__riscv)
+#include "sys_riscv64.h"
 #else
 #include "sys_x86_64.h"
 #endif
