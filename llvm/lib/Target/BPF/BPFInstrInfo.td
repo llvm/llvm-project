@@ -31,6 +31,8 @@ def SDT_BPFMEMCPY       : SDTypeProfile<0, 4, [SDTCisVT<0, i64>,
                                                SDTCisVT<1, i64>,
                                                SDTCisVT<2, i64>,
                                                SDTCisVT<3, i64>]>;
+def SDT_BPFBrJt         : SDTypeProfile<0, 2, [SDTCisVT<0, i32>,    // jump table
+                                               SDTCisVT<1, i64>]>;  // index
 
 def BPFcall         : SDNode<"BPFISD::CALL", SDT_BPFCall,
                              [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
@@ -49,6 +51,9 @@ def BPFWrapper      : SDNode<"BPFISD::Wrapper", SDT_BPFWrapper>;
 def BPFmemcpy       : SDNode<"BPFISD::MEMCPY", SDT_BPFMEMCPY,
                              [SDNPHasChain, SDNPInGlue, SDNPOutGlue,
                               SDNPMayStore, SDNPMayLoad]>;
+def BPFBrJt         : SDNode<"BPFISD::BPF_BR_JT", SDT_BPFBrJt,
+                             [SDNPHasChain]>;
+
 def BPFIsLittleEndian : Predicate<"Subtarget->isLittleEndian()">;
 def BPFIsBigEndian    : Predicate<"!Subtarget->isLittleEndian()">;
 def BPFHasALU32 : Predicate<"Subtarget->getHasAlu32()">;
@@ -183,6 +188,15 @@ class TYPE_LD_ST<bits<3> mode, bits<2> size,
   let Inst{60-59} = size;
 }
 
+// For indirect jump
+class TYPE_IND_JMP<bits<4> op, bits<1> srctype,
+                   dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstBPF<outs, ins, asmstr, pattern> {
+
+  let Inst{63-60} = op;
+  let Inst{59} = srctype;
+}
+
 // jump instructions
 class JMP_RR<BPFJumpOp Opc, string OpcodeStr, PatLeaf Cond>
     : TYPE_ALU_JMP<Opc.Value, BPF_X.Value,
@@ -213,6 +227,18 @@ class JMP_RI<BPFJumpOp Opc, string OpcodeStr, PatLeaf Cond>
   let Inst{51-48} = dst;
   let Inst{47-32} = BrDst;
   let Inst{31-0} = imm;
+  let BPFClass = BPF_JMP;
+}
+
+class JMP_IND<BPFJumpOp Opc, string OpcodeStr, list<dag> Pattern>
+    : TYPE_ALU_JMP<Opc.Value, BPF_X.Value,
+                   (outs),
+                   (ins GPR:$dst, i32imm:$jt),
+                   !strconcat(OpcodeStr, " $dst"),
+                   Pattern> {
+  bits<4> dst;
+
+  let Inst{51-48} = dst;
   let BPFClass = BPF_JMP;
 }
 
@@ -281,6 +307,10 @@ defm JSLT : J<BPF_JSLT, "s<", BPF_CC_LT, BPF_CC_LT_32>;
 defm JSLE : J<BPF_JSLE, "s<=", BPF_CC_LE, BPF_CC_LE_32>;
 defm JSET : J<BPF_JSET, "&", NoCond, NoCond>;
 def JCOND : JMP_JCOND<BPF_JCOND, "may_goto", []>;
+
+let isIndirectBranch = 1 in {
+  def JX : JMP_IND<BPF_JA, "gotox", [(BPFBrJt tjumptable:$jt, i64:$dst)]>;
+}
 }
 
 // ALU instructions

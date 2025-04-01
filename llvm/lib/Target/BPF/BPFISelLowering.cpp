@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/ValueTypes.h"
@@ -25,6 +26,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/Module.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -37,6 +39,10 @@ using namespace llvm;
 static cl::opt<bool> BPFExpandMemcpyInOrder("bpf-expand-memcpy-in-order",
   cl::Hidden, cl::init(false),
   cl::desc("Expand memcpy into load/store pairs in order"));
+
+static cl::opt<unsigned> BPFMinimumJumpTableEntries(
+    "bpf-min-jump-table-entries", cl::init(4), cl::Hidden,
+    cl::desc("Set minimum number of entries to use a jump table on BPF"));
 
 static void fail(const SDLoc &DL, SelectionDAG &DAG, const Twine &Msg,
                  SDValue Val = {}) {
@@ -66,8 +72,7 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
   setStackPointerRegisterToSaveRestore(BPF::R11);
 
   setOperationAction(ISD::BR_CC, MVT::i64, Custom);
-  setOperationAction(ISD::BR_JT, MVT::Other, Expand);
-  setOperationAction(ISD::BRIND, MVT::Other, Expand);
+  setOperationAction(ISD::BR_JT, MVT::Other, Custom);
   setOperationAction(ISD::BRCOND, MVT::Other, Expand);
 
   setOperationAction(ISD::TRAP, MVT::Other, Custom);
@@ -159,6 +164,7 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
 
   setBooleanContents(ZeroOrOneBooleanContent);
   setMaxAtomicSizeInBitsSupported(64);
+  setMinimumJumpTableEntries(BPFMinimumJumpTableEntries);
 
   // Function alignments
   setMinFunctionAlignment(Align(8));
@@ -332,6 +338,8 @@ SDValue BPFTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerATOMIC_LOAD_STORE(Op, DAG);
   case ISD::TRAP:
     return LowerTRAP(Op, DAG);
+  case ISD::BR_JT:
+    return LowerBR_JT(Op, DAG);
   }
 }
 
@@ -780,6 +788,16 @@ SDValue BPFTargetLowering::LowerTRAP(SDValue Op, SelectionDAG &DAG) const {
   return LowerCall(CLI, InVals);
 }
 
+SDValue BPFTargetLowering::LowerBR_JT(SDValue Op, SelectionDAG &DAG) const {
+  SDValue Chain = Op->getOperand(0);
+  SDValue Table = Op->getOperand(1);
+  SDValue Index = Op->getOperand(2);
+  JumpTableSDNode *JT = cast<JumpTableSDNode>(Table);
+  SDLoc DL(Op);
+  SDValue TargetJT = DAG.getTargetJumpTable(JT->getIndex(), MVT::i32);
+  return DAG.getNode(BPFISD::BPF_BR_JT, DL, MVT::Other, Chain, TargetJT, Index);
+}
+
 const char *BPFTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch ((BPFISD::NodeType)Opcode) {
   case BPFISD::FIRST_NUMBER:
@@ -796,6 +814,8 @@ const char *BPFTargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "BPFISD::Wrapper";
   case BPFISD::MEMCPY:
     return "BPFISD::MEMCPY";
+  case BPFISD::BPF_BR_JT:
+    return "BPFISD::BPF_BR_JT";
   }
   return nullptr;
 }
@@ -1068,4 +1088,22 @@ bool BPFTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   }
 
   return true;
+}
+
+MCSymbol *BPFTargetLowering::getJXAnchorSymbol(const MachineFunction *MF,
+                                               unsigned JTI) {
+  const MCAsmInfo *MAI = MF->getContext().getAsmInfo();
+  SmallString<60> Name;
+  raw_svector_ostream(Name) << MAI->getPrivateGlobalPrefix() << "BPF.JX."
+                            << MF->getFunctionNumber() << '.' << JTI;
+  return MF->getContext().getOrCreateSymbol(Name);
+}
+
+unsigned BPFTargetLowering::getJumpTableEncoding() const {
+  return MachineJumpTableInfo::EK_LabelDifference32;
+}
+
+const MCExpr *BPFTargetLowering::getPICJumpTableRelocBaseExpr(
+    const MachineFunction *MF, unsigned JTI, MCContext &Ctx) const {
+  return MCSymbolRefExpr::create(getJXAnchorSymbol(MF, JTI), Ctx);
 }

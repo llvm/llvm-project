@@ -181,6 +181,10 @@ bool BPFInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
     if (!isUnpredicatedTerminator(*I))
       break;
 
+    // If a JX insn, we're done.
+    if (I->getOpcode() == BPF::JX)
+      break;
+
     // A terminator that isn't a branch can't easily be handled
     // by this analysis.
     if (!I->isBranch())
@@ -258,4 +262,12 @@ unsigned BPFInstrInfo::removeBranch(MachineBasicBlock &MBB,
   }
 
   return Count;
+}
+
+int BPFInstrInfo::getJumpTableIndex(const MachineInstr &MI) const {
+  if (MI.getOpcode() != BPF::JX)
+    return -1;
+  const MachineOperand &MO = MI.getOperand(1);
+  assert(MO.isJTI() && "JX operand #0 should be isJTI");
+  return MO.getIndex();
 }

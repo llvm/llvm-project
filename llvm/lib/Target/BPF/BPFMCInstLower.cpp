@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "BPFMCInstLower.h"
+#include "BPFISelLowering.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -19,6 +20,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -42,6 +44,29 @@ MCOperand BPFMCInstLower::LowerSymbolOperand(const MachineOperand &MO,
     llvm_unreachable("unknown symbol op");
 
   return MCOperand::createExpr(Expr);
+}
+
+MCOperand BPFMCInstLower::LowerJTIOperand(const MachineInstr &MI,
+                                          const MachineOperand &MO,
+                                          int JTI) const {
+  // Emit relocation entry referencing jump table symbol plus a label
+  // for JX anchor, e.g.:
+  //
+  //   .LBPF.JX.0.0:
+  //        .reloc 0, FK_SecRel_8, BPF.JT.0.0
+  //        gotox r1
+  assert((MI.getOpcode() == BPF::JX) &&
+         "Jump Table Index operands are expected only for JX instructions");
+  const MachineFunction *MF = MI.getMF();
+  Printer.OutStreamer->emitLabel(BPFTargetLowering::getJXAnchorSymbol(MF, JTI));
+  MCSymbol *JT = Printer.GetJTISymbol(JTI);
+  const MCExpr *Zero = MCConstantExpr::create(0, Ctx);
+  Printer.OutStreamer->emitRelocDirective(*Zero, "FK_SecRel_8",
+                                          MCSymbolRefExpr::create(JT, Ctx), {},
+                                          *Ctx.getSubtargetInfo());
+  // JTI parameter is used only to emit relocation and is not a part
+  // of JX instruction encoding, so this operand is not really used.
+  return MCOperand::createImm(JTI);
 }
 
 void BPFMCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
@@ -76,6 +101,9 @@ void BPFMCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
       break;
     case MachineOperand::MO_ConstantPoolIndex:
       MCOp = LowerSymbolOperand(MO, Printer.GetCPISymbol(MO.getIndex()));
+      break;
+    case MachineOperand::MO_JumpTableIndex:
+      MCOp = LowerJTIOperand(*MI, MO, MO.getIndex());
       break;
     }
 
