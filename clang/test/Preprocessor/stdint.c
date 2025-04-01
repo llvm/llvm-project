@@ -1644,6 +1644,7 @@
 // it will not interfere with the definitions in stdint.h due to invalid tokens
 // formed via token pasting. See GH85995 for details.
 #define L %
+#define U %
 #define UL %
 #define LL %
 #define ULL %
