@@ -167,7 +167,10 @@ C11 Feature Support
   expression resulting in an rvalue with structure or union type and that type
   contains a member of array type, the expression result is an automatic storage
   duration object with temporary lifetime which begins when the expression is
-  evaluated and ends at the evaluation of the containing full expression.
+  evaluated and ends at the evaluation of the containing full expression. This
+  functionality is also implemented for earlier C language modes because the
+  C99 semantics will never be implemented (it would require dynamic allocations
+  of memory which leaks, which users would not appreciate).
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------

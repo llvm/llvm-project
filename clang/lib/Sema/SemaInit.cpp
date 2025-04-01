@@ -7653,8 +7653,11 @@ ExprResult Sema::TemporaryMaterializationConversion(Expr *E) {
   // In C++98, we don't want to implicitly create an xvalue.
   // FIXME: This means that AST consumers need to deal with "prvalues" that
   // denote materialized temporaries. Maybe we should add another ValueKind
-  // for "xvalue pretending to be a prvalue" for C++98 support.
-  if (!E->isPRValue() || (!getLangOpts().CPlusPlus11 && !getLangOpts().C11))
+  // for "xvalue pretending to be a prvalue" for C++98 support. C11 added the
+  // same rule, but C99 is broken without this behavior and so we treat the
+  // change as applying to all C language modes.
+  if (!E->isPRValue() ||
+      (!getLangOpts().CPlusPlus11 && getLangOpts().CPlusPlus))
     return E;
 
   // C++1z [conv.rval]/1: T shall be a complete type.

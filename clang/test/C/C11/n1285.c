@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify=good -std=c99 %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,c -std=c99 %s
 // RUN: %clang_cc1 -fsyntax-only -verify=expected,c -std=c11 %s
 // RUN: %clang_cc1 -fsyntax-only -verify=expected,cpp -std=c++11 -x c++ %s
 
@@ -8,9 +8,10 @@
  * This paper introduced the notion of an object with a temporary lifetime. Any
  * operation resulting in an rvalue of structure or union type which contains
  * an array results in an object with temporary lifetime.
+ *
+ * Even though this is a change for C11, we treat it as a DR and apply it
+ * retroactively to earlier C language modes.
  */
-
-// good-no-diagnostics
 
 // C11 6.2.4p8: A non-lvalue expression with structure or union type, where the
 // structure or union contains a member with array type (including,
