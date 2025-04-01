@@ -3,8 +3,7 @@
 
 // CHECK-LABEL: define noundef nofpclass(nan inf) <4 x float> @_Z12dstWithFloatDv4_fS_(
 // CHECK-SAME: <4 x float> noundef nofpclass(nan inf) [[P:%.*]], <4 x float> noundef nofpclass(nan inf) [[Q:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] { 
-// CHECK-NEXT: entry:
-// CHECK-NEXT: [[VECEXT:%.*]] = extractelement <4 x float> [[P]], i64 1
+// CHECK: [[VECEXT:%.*]] = extractelement <4 x float> [[P]], i64 1
 // CHECK-NEXT: [[VECEXT1:%.*]] = extractelement <4 x float> [[Q]], i64 1
 // CHECK-NEXT: [[MULRES:%.*]] = fmul reassoc nnan ninf nsz arcp afn float [[VECEXT1]], [[VECEXT]]
 // CHECK-NEXT: [[VECINIT:%.*]] = insertelement <4 x float> <float 1.000000e+00, float poison, float poison, float poison>, float [[MULRES]], i64 1
@@ -19,8 +18,7 @@ float4 dstWithFloat(float4 p1, float4 p2)
 
 // CHECK-LABEL: define noundef nofpclass(nan inf) <4 x half> @_Z11dstwithHalfDv4_DhS_(
 // CHECK-SAME: <4 x half> noundef nofpclass(nan inf) [[P:%.*]], <4 x half> noundef nofpclass(nan inf) [[Q:%.*]]) local_unnamed_addr #[[ATTR0]] {
-// CHECK-NEXT: entry:
-// CHECK-NEXT: [[VECEXT:%.*]] = extractelement <4 x half> [[P]], i64 1
+// CHECK: [[VECEXT:%.*]] = extractelement <4 x half> [[P]], i64 1
 // CHECK-NEXT: [[VECEXT1:%.*]] = extractelement <4 x half> [[Q]], i64 1
 // CHECK-NEXT: [[MULRES:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[VECEXT1]], [[VECEXT]]
 // CHECK-NEXT: [[VECINIT:%.*]] = insertelement <4 x half> <half 0xH3C00, half poison, half poison, half poison>, half [[MULRES]], i64 1
@@ -34,8 +32,7 @@ half4 dstwithHalf(half4 p1, half4 p2)
 
 // CHECK-LABEL: define noundef nofpclass(nan inf) <4 x double> @_Z13dstWithDoubleDv4_dS_(
 // CHECK-SAME: <4 x double> noundef nofpclass(nan inf) [[P:%.*]], <4 x double> noundef nofpclass(nan inf) [[Q:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] { 
-// CHECK-NEXT: entry:
-// CHECK-NEXT: [[VECEXT:%.*]] = extractelement <4 x double> [[P]], i64 1
+// CHECK: [[VECEXT:%.*]] = extractelement <4 x double> [[P]], i64 1
 // CHECK-NEXT: [[VECEXT1:%.*]] = extractelement <4 x double> [[Q]], i64 1
 // CHECK-NEXT: [[MULRES:%.*]] = fmul reassoc nnan ninf nsz arcp afn double [[VECEXT1]], [[VECEXT]]
 // CHECK-NEXT: [[VECINIT:%.*]] = insertelement <4 x double> <double 1.000000e+00, double poison, double poison, double poison>, double [[MULRES]], i64 1
