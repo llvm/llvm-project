@@ -5,12 +5,12 @@
 ; RUN: llvm-readelf -s %t-la64 | FileCheck %s --check-prefix=LA64
 
 ; LA32:      Symbol table '.symtab' contains [[#]] entries:
-; LA32-NEXT:    Num:    Value  Size Type    Bind   Vis      Ndx Name
-; LA32:              00000000     0 NOTYPE  GLOBAL DEFAULT  UND tls_sym
+; LA32-NEXT:    Num:    Value  Size Type  Bind   Vis      Ndx Name
+; LA32:              00000000     0 TLS   GLOBAL DEFAULT  UND tls_sym
 
 ; LA64:      Symbol table '.symtab' contains [[#]] entries:
-; LA64-NEXT:    Num:    Value          Size Type    Bind   Vis      Ndx Name
-; LA64:              0000000000000000     0 NOTYPE  GLOBAL DEFAULT  UND tls_sym
+; LA64-NEXT:    Num:    Value          Size Type  Bind   Vis      Ndx Name
+; LA64:              0000000000000000     0 TLS   GLOBAL DEFAULT  UND tls_sym
 
 @tls_sym = external thread_local(localexec) global i32
 

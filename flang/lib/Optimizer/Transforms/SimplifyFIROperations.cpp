@@ -18,8 +18,10 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Transforms/Passes.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include <optional>
 
 namespace fir {
 #define GEN_PASS_DEF_SIMPLIFYFIROPERATIONS
@@ -122,6 +124,57 @@ mlir::LogicalResult BoxTotalElementsConversion::matchAndRewrite(
   return mlir::failure();
 }
 
+class DoConcurrentConversion
+    : public mlir::OpRewritePattern<fir::DoConcurrentOp> {
+public:
+  using mlir::OpRewritePattern<fir::DoConcurrentOp>::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::DoConcurrentOp doConcurentOp,
+                  mlir::PatternRewriter &rewriter) const override {
+    assert(doConcurentOp.getRegion().hasOneBlock());
+    mlir::Block &wrapperBlock = doConcurentOp.getRegion().getBlocks().front();
+    auto loop =
+        mlir::cast<fir::DoConcurrentLoopOp>(wrapperBlock.getTerminator());
+    assert(loop.getRegion().hasOneBlock());
+    mlir::Block &loopBlock = loop.getRegion().getBlocks().front();
+
+    // Collect iteration variable(s) allocations do that we can move them
+    // outside the `fir.do_concurrent` wrapper.
+    llvm::SmallVector<mlir::Operation *> opsToMove;
+    for (mlir::Operation &op : llvm::drop_end(wrapperBlock))
+      opsToMove.push_back(&op);
+
+    fir::FirOpBuilder firBuilder(
+        rewriter, doConcurentOp->getParentOfType<mlir::ModuleOp>());
+    auto *allocIt = firBuilder.getAllocaBlock();
+
+    for (mlir::Operation *op : llvm::reverse(opsToMove))
+      rewriter.moveOpBefore(op, allocIt, allocIt->begin());
+
+    rewriter.setInsertionPointAfter(doConcurentOp);
+    fir::DoLoopOp innermostUnorderdLoop;
+    mlir::SmallVector<mlir::Value> ivArgs;
+
+    for (auto [lb, ub, st, iv] :
+         llvm::zip_equal(loop.getLowerBound(), loop.getUpperBound(),
+                         loop.getStep(), *loop.getLoopInductionVars())) {
+      innermostUnorderdLoop = rewriter.create<fir::DoLoopOp>(
+          doConcurentOp.getLoc(), lb, ub, st,
+          /*unordred=*/true, /*finalCountValue=*/false,
+          /*iterArgs=*/std::nullopt, loop.getReduceOperands(),
+          loop.getReduceAttrsAttr());
+      ivArgs.push_back(innermostUnorderdLoop.getInductionVar());
+      rewriter.setInsertionPointToStart(innermostUnorderdLoop.getBody());
+    }
+
+    rewriter.inlineBlockBefore(
+        &loopBlock, innermostUnorderdLoop.getBody()->getTerminator(), ivArgs);
+    rewriter.eraseOp(doConcurentOp);
+    return mlir::success();
+  }
+};
+
 void SimplifyFIROperationsPass::runOnOperation() {
   mlir::ModuleOp module = getOperation();
   mlir::MLIRContext &context = getContext();
@@ -142,4 +195,5 @@ void fir::populateSimplifyFIROperationsPatterns(
     mlir::RewritePatternSet &patterns, bool preferInlineImplementation) {
   patterns.insert<IsContiguousBoxCoversion, BoxTotalElementsConversion>(
       patterns.getContext(), preferInlineImplementation);
+  patterns.insert<DoConcurrentConversion>(patterns.getContext());
 }

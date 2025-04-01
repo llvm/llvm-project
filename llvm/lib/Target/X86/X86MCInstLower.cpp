@@ -349,12 +349,8 @@ MCOperand X86MCInstLower::LowerMachineOperand(const MachineInstr *MI,
     return MCOperand::createImm(MO.getImm());
   case MachineOperand::MO_MachineBasicBlock:
   case MachineOperand::MO_GlobalAddress:
+  case MachineOperand::MO_ExternalSymbol:
     return LowerSymbolOperand(MO, GetSymbolFromOperand(MO));
-  case MachineOperand::MO_ExternalSymbol: {
-    MCSymbol *Sym = GetSymbolFromOperand(MO);
-    Sym->setExternal(true);
-    return LowerSymbolOperand(MO, Sym);
-  }
   case MachineOperand::MO_MCSymbol:
     return LowerSymbolOperand(MO, MO.getMCSymbol());
   case MachineOperand::MO_JumpTableIndex:
@@ -448,7 +444,7 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     }
     OutMI.setOpcode(NewOpc);
     // Duplicate the destination.
-    unsigned DestReg = OutMI.getOperand(0).getReg();
+    MCRegister DestReg = OutMI.getOperand(0).getReg();
     OutMI.insert(OutMI.begin(), MCOperand::createReg(DestReg));
     break;
   }
@@ -1580,7 +1576,7 @@ static void printConstant(const Constant *COp, unsigned BitWidth,
     bool IsInteger = EltTy->isIntegerTy();
     bool IsFP = EltTy->isHalfTy() || EltTy->isFloatTy() || EltTy->isDoubleTy();
     unsigned EltBits = EltTy->getPrimitiveSizeInBits();
-    unsigned E = std::min(BitWidth / EltBits, CDS->getNumElements());
+    unsigned E = std::min(BitWidth / EltBits, (unsigned)CDS->getNumElements());
     if ((BitWidth % EltBits) == 0) {
       for (unsigned I = 0; I != E; ++I) {
         if (I != 0)

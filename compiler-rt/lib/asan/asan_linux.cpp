@@ -111,7 +111,7 @@ void FlushUnneededASanShadowMemory(uptr p, uptr size) {
   ReleaseMemoryPagesToOS(MemToShadow(p), MemToShadow(p + size));
 }
 
-void ReExecWithoutASLR() {
+void TryReExecWithoutASLR() {
 #    if SANITIZER_LINUX
   // ASLR personality check.
   // Caution: 'personality' is sometimes forbidden by sandboxes, so only call

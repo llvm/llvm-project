@@ -118,7 +118,6 @@ void CIRCanonicalizePass::runOnOperation() {
   // Collect operations to apply patterns.
   llvm::SmallVector<Operation *, 16> ops;
   getOperation()->walk([&](Operation *op) {
-    assert(!cir::MissingFeatures::brCondOp());
     assert(!cir::MissingFeatures::switchOp());
     assert(!cir::MissingFeatures::tryOp());
     assert(!cir::MissingFeatures::selectOp());
@@ -128,7 +127,7 @@ void CIRCanonicalizePass::runOnOperation() {
     assert(!cir::MissingFeatures::callOp());
     // CastOp and UnaryOp are here to perform a manual `fold` in
     // applyOpPatternsGreedily.
-    if (isa<BrOp, ScopeOp, CastOp, UnaryOp>(op))
+    if (isa<BrOp, BrCondOp, ScopeOp, CastOp, UnaryOp>(op))
       ops.push_back(op);
   });
 

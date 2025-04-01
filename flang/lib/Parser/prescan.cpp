@@ -720,8 +720,8 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
     } else if (*at_ == '.') {
       while (IsDecimalDigit(EmitCharAndAdvance(tokens, *at_))) {
       }
-      ExponentAndKind(tokens);
-    } else if (ExponentAndKind(tokens)) {
+      HandleExponentAndOrKindSuffix(tokens);
+    } else if (HandleExponentAndOrKindSuffix(tokens)) {
     } else if (digits == 1 && n == 0 && (*at_ == 'x' || *at_ == 'X') &&
         inPreprocessorDirective_) {
       do {
@@ -743,7 +743,7 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
     if (!inPreprocessorDirective_ && IsDecimalDigit(nch)) {
       while (IsDecimalDigit(EmitCharAndAdvance(tokens, *at_))) {
       }
-      ExponentAndKind(tokens);
+      HandleExponentAndOrKindSuffix(tokens);
     } else if (nch == '.' && EmitCharAndAdvance(tokens, '.') == '.') {
       EmitCharAndAdvance(tokens, '.'); // variadic macro definition ellipsis
     }
@@ -839,37 +839,50 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
   return true;
 }
 
-bool Prescanner::ExponentAndKind(TokenSequence &tokens) {
-  char ed{ToLowerCaseLetter(*at_)};
-  if (ed != 'e' && ed != 'd') {
-    return false;
-  }
-  // Do some look-ahead to ensure that this 'e'/'d' is an exponent,
-  // not the start of an identifier that could be a macro.
-  const char *p{at_};
-  if (int n{IsSpace(++p)}) {
-    p += n;
-  }
-  if (*p == '+' || *p == '-') {
-    if (int n{IsSpace(++p)}) {
-      p += n;
+bool Prescanner::HandleExponent(TokenSequence &tokens) {
+  if (char ed{ToLowerCaseLetter(*at_)}; ed == 'e' || ed == 'd') {
+    // Do some look-ahead to ensure that this 'e'/'d' is an exponent,
+    // not the start of an identifier that could be a macro.
+    const char *p{SkipWhiteSpace(at_ + 1)};
+    if (*p == '+' || *p == '-') {
+      p = SkipWhiteSpace(p + 1);
     }
-  }
-  if (IsDecimalDigit(*p)) { // it's an exponent
-    EmitCharAndAdvance(tokens, ed);
-    if (*at_ == '+' || *at_ == '-') {
-      EmitCharAndAdvance(tokens, *at_);
-    }
-    while (IsDecimalDigit(*at_)) {
-      EmitCharAndAdvance(tokens, *at_);
-    }
-    if (*at_ == '_') {
-      while (IsLegalInIdentifier(EmitCharAndAdvance(tokens, *at_))) {
+    if (IsDecimalDigit(*p)) { // it's an exponent
+      EmitCharAndAdvance(tokens, ed);
+      if (*at_ == '+' || *at_ == '-') {
+        EmitCharAndAdvance(tokens, *at_);
       }
+      while (IsDecimalDigit(*at_)) {
+        EmitCharAndAdvance(tokens, *at_);
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
+bool Prescanner::HandleKindSuffix(TokenSequence &tokens) {
+  if (*at_ == '_' && IsLegalInIdentifier(*SkipWhiteSpace(at_ + 1))) {
+    EmitCharAndAdvance(tokens, *at_);
+    if (IsLegalIdentifierStart(*at_)) {
+      // The kind specifier might be a macro, so put it into its own token.
+      tokens.CloseToken();
+    }
+    while (IsLegalInIdentifier(*at_)) {
+      EmitCharAndAdvance(tokens, *at_);
     }
     return true;
   } else {
     return false;
+  }
+}
+
+bool Prescanner::HandleExponentAndOrKindSuffix(TokenSequence &tokens) {
+  bool hadExponent{HandleExponent(tokens)};
+  if (HandleKindSuffix(tokens)) {
+    return true;
+  } else {
+    return hadExponent;
   }
 }
 

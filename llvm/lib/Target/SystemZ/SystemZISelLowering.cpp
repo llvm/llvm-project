@@ -10743,22 +10743,6 @@ SDValue SystemZTargetLowering::lowerVECREDUCE_ADD(SDValue Op,
       DAG.getConstant(OpVT.getVectorNumElements() - 1, DL, MVT::i32));
 }
 
-// Only consider a function fully internal as long as it has local linkage
-// and is not used in any other way than acting as the called function at
-// call sites.
-bool SystemZTargetLowering::isFullyInternal(const Function *Fn) const {
-  if (!Fn->hasLocalLinkage())
-    return false;
-  for (const User *U : Fn->users()) {
-    if (auto *CB = dyn_cast<CallBase>(U)) {
-      if (CB->getCalledFunction() != Fn)
-        return false;
-    } else
-      return false;
-  }
-  return true;
-}
-
 static void printFunctionArgExts(const Function *F, raw_fd_ostream &OS) {
   FunctionType *FT = F->getFunctionType();
   const AttributeList &Attrs = F->getAttributes();
@@ -10777,6 +10761,16 @@ static void printFunctionArgExts(const Function *F, raw_fd_ostream &OS) {
   OS << ")\n";
 }
 
+bool SystemZTargetLowering::isInternal(const Function *Fn) const {
+  std::map<const Function *, bool>::iterator Itr = IsInternalCache.find(Fn);
+  if (Itr == IsInternalCache.end())
+    Itr = IsInternalCache
+              .insert(std::pair<const Function *, bool>(
+                  Fn, (Fn->hasLocalLinkage() && !Fn->hasAddressTaken())))
+              .first;
+  return Itr->second;
+}
+
 void SystemZTargetLowering::
 verifyNarrowIntegerArgs_Call(const SmallVectorImpl<ISD::OutputArg> &Outs,
                              const Function *F, SDValue Callee) const {
@@ -10789,8 +10783,8 @@ verifyNarrowIntegerArgs_Call(const SmallVectorImpl<ISD::OutputArg> &Outs,
   const Function *CalleeFn = nullptr;
   if (auto *G = dyn_cast<GlobalAddressSDNode>(Callee))
     if ((CalleeFn = dyn_cast<Function>(G->getGlobal())))
-      IsInternal = isFullyInternal(CalleeFn);
-  if (!verifyNarrowIntegerArgs(Outs, IsInternal)) {
+      IsInternal = isInternal(CalleeFn);
+  if (!IsInternal && !verifyNarrowIntegerArgs(Outs)) {
     errs() << "ERROR: Missing extension attribute of passed "
            << "value in call to function:\n" << "Callee:  ";
     if (CalleeFn != nullptr)
@@ -10811,7 +10805,7 @@ verifyNarrowIntegerArgs_Ret(const SmallVectorImpl<ISD::OutputArg> &Outs,
   if (!EnableIntArgExtCheck)
     return;
 
-  if (!verifyNarrowIntegerArgs(Outs, isFullyInternal(F))) {
+  if (!isInternal(F) && !verifyNarrowIntegerArgs(Outs)) {
     errs() << "ERROR: Missing extension attribute of returned "
            << "value from function:\n";
     printFunctionArgExts(F, errs());
@@ -10821,10 +10815,9 @@ verifyNarrowIntegerArgs_Ret(const SmallVectorImpl<ISD::OutputArg> &Outs,
 
 // Verify that narrow integer arguments are extended as required by the ABI.
 // Return false if an error is found.
-bool SystemZTargetLowering::
-verifyNarrowIntegerArgs(const SmallVectorImpl<ISD::OutputArg> &Outs,
-                        bool IsInternal) const {
-  if (IsInternal || !Subtarget.isTargetELF())
+bool SystemZTargetLowering::verifyNarrowIntegerArgs(
+    const SmallVectorImpl<ISD::OutputArg> &Outs) const {
+  if (!Subtarget.isTargetELF())
     return true;
 
   if (EnableIntArgExtCheck.getNumOccurrences()) {

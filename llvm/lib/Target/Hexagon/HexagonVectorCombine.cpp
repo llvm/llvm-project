@@ -2392,7 +2392,7 @@ auto HexagonVectorCombine::vralignb(IRBuilderBase &Builder, Value *Lo,
     Type *Int64Ty = Type::getInt64Ty(F.getContext());
     Value *Lo64 = Builder.CreateBitCast(Lo, Int64Ty, "cst");
     Value *Hi64 = Builder.CreateBitCast(Hi, Int64Ty, "cst");
-    Value *Call = Builder.CreateIntrinsic(Intrinsic::hexagon_S2_valignrb, {},
+    Value *Call = Builder.CreateIntrinsic(Intrinsic::hexagon_S2_valignrb,
                                           {Hi64, Lo64, Amt},
                                           /*FMFSource=*/nullptr, "cup");
     return Builder.CreateBitCast(Call, Lo->getType(), "cst");

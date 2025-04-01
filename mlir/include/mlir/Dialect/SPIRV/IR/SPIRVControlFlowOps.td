@@ -351,7 +351,8 @@ def SPIRV_LoopOp : SPIRV_Op<"mlir.loop", [InFunctionScope]> {
 
 // -----
 
-def SPIRV_MergeOp : SPIRV_Op<"mlir.merge", [Pure, Terminator]> {
+def SPIRV_MergeOp : SPIRV_Op<"mlir.merge", [
+    Pure, Terminator, ParentOneOf<["SelectionOp", "LoopOp"]>]> {
   let summary = "A special terminator for merging a structured selection/loop.";
 
   let description = [{
@@ -371,6 +372,8 @@ def SPIRV_MergeOp : SPIRV_Op<"mlir.merge", [Pure, Terminator]> {
   let hasOpcode = 0;
 
   let autogenSerialization = 0;
+
+  let hasVerifier = 0;
 }
 
 // -----

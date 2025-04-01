@@ -53,7 +53,7 @@ end subroutine
 !CHECK-KIND10:               %[[VAL_46:.*]] = arith.select %[[VAL_30]], %[[VAL_43]], %[[VAL_45]] : f16
 !CHECK-KIND10:               %[[VAL_47:.*]] = arith.constant 48 : i32
 !CHECK-KIND10:               %[[VAL_48:.*]] = fir.call @_FortranAMapException(%[[VAL_47]]) fastmath<contract> : (i32) -> i32
-!CHECK-KIND10:               %[[VAL_49:.*]] = fir.call @feraiseexcept(%[[VAL_48]]) fastmath<contract> : (i32) -> i32
+!CHECK-KIND10:                                fir.call {{.*}}feraiseexcept(%[[VAL_48]]) fastmath<contract> : (i32)
 !CHECK-KIND10:               fir.result %[[VAL_46]] : f16
 !CHECK-KIND10:             } else {
 !CHECK-KIND10:               %[[VAL_50:.*]] = arith.bitcast %[[VAL_23]] : f16 to i16
@@ -65,13 +65,13 @@ end subroutine
 !CHECK-KIND10:               fir.if %[[VAL_55]] {
 !CHECK-KIND10:                 %[[VAL_56:.*]] = arith.constant 40 : i32
 !CHECK-KIND10:                 %[[VAL_57:.*]] = fir.call @_FortranAMapException(%[[VAL_56]]) fastmath<contract> : (i32) -> i32
-!CHECK-KIND10:                 %[[VAL_58:.*]] = fir.call @feraiseexcept(%[[VAL_57]]) fastmath<contract> : (i32) -> i32
+!CHECK-KIND10:                                  fir.call {{.*}}feraiseexcept(%[[VAL_57]]) fastmath<contract> : (i32)
 !CHECK-KIND10:               }
 !CHECK-KIND10:               %[[VAL_59:.*]] = "llvm.intr.is.fpclass"(%[[VAL_54]]) <{bit = 144 : i32}> : (f16) -> i1
 !CHECK-KIND10:               fir.if %[[VAL_59]] {
 !CHECK-KIND10:                 %[[VAL_60:.*]] = arith.constant 48 : i32
 !CHECK-KIND10:                 %[[VAL_61:.*]] = fir.call @_FortranAMapException(%[[VAL_60]]) fastmath<contract> : (i32) -> i32
-!CHECK-KIND10:                 %[[VAL_62:.*]] = fir.call @feraiseexcept(%[[VAL_61]]) fastmath<contract> : (i32) -> i32
+!CHECK-KIND10:                                  fir.call {{.*}}feraiseexcept(%[[VAL_61]]) fastmath<contract> : (i32)
 !CHECK-KIND10:               }
 !CHECK-KIND10:               fir.result %[[VAL_54]] : f16
 !CHECK-KIND10:             }
@@ -106,7 +106,7 @@ end subroutine
 !CHECK:             fir.if %[[VAL_27]] {
 !CHECK:               %[[VAL_28:.*]] = arith.constant 1 : i32
 !CHECK:               %[[VAL_29:.*]] = fir.call @_FortranAMapException(%[[VAL_28]]) fastmath<contract> : (i32) -> i32
-!CHECK:               %[[VAL_30:.*]] = fir.call @feraiseexcept(%[[VAL_29]]) fastmath<contract> : (i32) -> i32
+!CHECK:                                fir.call {{.*}}feraiseexcept(%[[VAL_29]]) fastmath<contract> : (i32)
 !CHECK:             }
 !CHECK:             fir.result %[[VAL_13]] : bf16
 !CHECK:           } else {
@@ -156,7 +156,7 @@ end subroutine
 !CHECK:             fir.if %[[VAL_26]] {
 !CHECK:               %[[VAL_27:.*]] = arith.constant 1 : i32
 !CHECK:               %[[VAL_28:.*]] = fir.call @_FortranAMapException(%[[VAL_27]]) fastmath<contract> : (i32) -> i32
-!CHECK:               %[[VAL_29:.*]] = fir.call @feraiseexcept(%[[VAL_28]]) fastmath<contract> : (i32) -> i32
+!CHECK:                                fir.call {{.*}}feraiseexcept(%[[VAL_28]]) fastmath<contract> : (i32)
 !CHECK:             }
 !CHECK:             fir.result %[[VAL_13]] : f32
 !CHECK:           } else {
@@ -227,7 +227,7 @@ end subroutine
 !CHECK:               %[[VAL_46:.*]] = arith.select %[[VAL_30]], %[[VAL_43]], %[[VAL_45]] : f64
 !CHECK:               %[[VAL_47:.*]] = arith.constant 48 : i32
 !CHECK:               %[[VAL_48:.*]] = fir.call @_FortranAMapException(%[[VAL_47]]) fastmath<contract> : (i32) -> i32
-!CHECK:               %[[VAL_49:.*]] = fir.call @feraiseexcept(%[[VAL_48]]) fastmath<contract> : (i32) -> i32
+!CHECK:                                fir.call {{.*}}feraiseexcept(%[[VAL_48]]) fastmath<contract> : (i32)
 !CHECK:               fir.result %[[VAL_46]] : f64
 !CHECK:             } else {
 !CHECK:               %[[VAL_50:.*]] = arith.bitcast %[[VAL_23]] : f64 to i64
@@ -239,13 +239,13 @@ end subroutine
 !CHECK:               fir.if %[[VAL_55]] {
 !CHECK:                 %[[VAL_56:.*]] = arith.constant 40 : i32
 !CHECK:                 %[[VAL_57:.*]] = fir.call @_FortranAMapException(%[[VAL_56]]) fastmath<contract> : (i32) -> i32
-!CHECK:                 %[[VAL_58:.*]] = fir.call @feraiseexcept(%[[VAL_57]]) fastmath<contract> : (i32) -> i32
+!CHECK:                                  fir.call {{.*}}feraiseexcept(%[[VAL_57]]) fastmath<contract> : (i32)
 !CHECK:               }
 !CHECK:               %[[VAL_59:.*]] = "llvm.intr.is.fpclass"(%[[VAL_54]]) <{bit = 144 : i32}> : (f64) -> i1
 !CHECK:               fir.if %[[VAL_59]] {
 !CHECK:                 %[[VAL_60:.*]] = arith.constant 48 : i32
 !CHECK:                 %[[VAL_61:.*]] = fir.call @_FortranAMapException(%[[VAL_60]]) fastmath<contract> : (i32) -> i32
-!CHECK:                 %[[VAL_62:.*]] = fir.call @feraiseexcept(%[[VAL_61]]) fastmath<contract> : (i32) -> i32
+!CHECK:                                  fir.call {{.*}}feraiseexcept(%[[VAL_61]]) fastmath<contract> : (i32)
 !CHECK:               }
 !CHECK:               fir.result %[[VAL_54]] : f64
 !CHECK:             }
@@ -279,7 +279,7 @@ end subroutine
 !CHECK-KIND10:             fir.if %[[VAL_26]] {
 !CHECK-KIND10:               %[[VAL_27:.*]] = arith.constant 1 : i32
 !CHECK-KIND10:               %[[VAL_28:.*]] = fir.call @_FortranAMapException(%[[VAL_27]]) fastmath<contract> : (i32) -> i32
-!CHECK-KIND10:               %[[VAL_29:.*]] = fir.call @feraiseexcept(%[[VAL_28]]) fastmath<contract> : (i32) -> i32
+!CHECK-KIND10:                                fir.call {{.*}}feraiseexcept(%[[VAL_28]]) fastmath<contract> : (i32)
 !CHECK-KIND10:             }
 !CHECK-KIND10:             fir.result %[[VAL_13]] : f80
 !CHECK-KIND10:           } else {
@@ -294,12 +294,12 @@ end subroutine
 !CHECK-KIND10:             } else {
 !CHECK-KIND10:               %[[VAL_37:.*]] = arith.constant 63 : i32
 !CHECK-KIND10:               %[[VAL_38:.*]] = fir.call @_FortranAMapException(%[[VAL_37]]) fastmath<contract> : (i32) -> i32
-!CHECK-KIND10:               %[[VAL_39:.*]] = fir.call @fetestexcept(%[[VAL_38]]) fastmath<contract> : (i32) -> i32
-!CHECK-KIND10:               %[[VAL_40:.*]] = fir.call @fedisableexcept(%[[VAL_38]]) fastmath<contract> : (i32) -> i32
+!CHECK-KIND10:               %[[VAL_39:.*]] = fir.call {{.*}}fetestexcept(%[[VAL_38]]) fastmath<contract> : (i32) -> i32
+!CHECK-KIND10:               %[[VAL_40:.*]] = fir.call {{.*}}fedisableexcept(%[[VAL_38]]) fastmath<contract> : (i32) -> i32
 !CHECK-KIND10:               %[[VAL_41:.*]] = fir.call @_FortranANearest10(%[[VAL_13]], %[[VAL_16]]) fastmath<contract> : (f80, i1) -> f80
-!CHECK-KIND10:               %[[VAL_42:.*]] = fir.call @feclearexcept(%[[VAL_38]]) fastmath<contract> : (i32) -> i32
-!CHECK-KIND10:               %[[VAL_43:.*]] = fir.call @feraiseexcept(%[[VAL_39]]) fastmath<contract> : (i32) -> i32
-!CHECK-KIND10:               %[[VAL_44:.*]] = fir.call @feenableexcept(%[[VAL_40]]) fastmath<contract> : (i32) -> i32
+!CHECK-KIND10:               %[[VAL_42:.*]] = fir.call {{.*}}feclearexcept(%[[VAL_38]]) fastmath<contract> : (i32) -> i32
+!CHECK-KIND10:                                fir.call {{.*}}feraiseexcept(%[[VAL_39]]) fastmath<contract> : (i32)
+!CHECK-KIND10:               %[[VAL_44:.*]] = fir.call {{.*}}feenableexcept(%[[VAL_40]]) fastmath<contract> : (i32) -> i32
 !CHECK-KIND10:               fir.result %[[VAL_41]] : f80
 !CHECK-KIND10:             }
 !CHECK-KIND10:             fir.result %[[VAL_32]] : f80
@@ -332,7 +332,7 @@ end subroutine
 !CHECK-KIND16:             fir.if %[[VAL_26]] {
 !CHECK-KIND16:               %[[VAL_27:.*]] = arith.constant 1 : i32
 !CHECK-KIND16:               %[[VAL_28:.*]] = fir.call @_FortranAMapException(%[[VAL_27]]) fastmath<contract> : (i32) -> i32
-!CHECK-KIND16:               %[[VAL_29:.*]] = fir.call @feraiseexcept(%[[VAL_28]]) fastmath<contract> : (i32) -> i32
+!CHECK-KIND16:                                fir.call {{.*}}feraiseexcept(%[[VAL_28]]) fastmath<contract> : (i32)
 !CHECK-KIND16:             }
 !CHECK-KIND16:             fir.result %[[VAL_13]] : f128
 !CHECK-KIND16:           } else {

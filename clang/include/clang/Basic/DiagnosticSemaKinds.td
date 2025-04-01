@@ -2733,7 +2733,7 @@ def note_final_dtor_non_final_class_silence : Note<
   "mark %0 as '%select{final|sealed}1' to silence this warning">;
 def warn_unnecessary_virtual_specifier : Warning<
   "virtual method %0 is inside a 'final' class and can never be overridden">,
-  InGroup<WarnUnnecessaryVirtualSpecifier>, DefaultIgnore;
+  InGroup<WarnUnnecessaryVirtualSpecifier>;
 
 // C++11 attributes
 def err_repeat_attribute : Error<"%0 attribute cannot be repeated">;
@@ -6975,10 +6975,8 @@ def err_illegal_decl_mempointer_to_reference : Error<
   "'%0' declared as a member pointer to a reference of type %1">;
 def err_illegal_decl_mempointer_to_void : Error<
   "'%0' declared as a member pointer to void">;
-def err_illegal_decl_mempointer_in_nonclass : Error<
-  "'%0' does not point into a class">;
-def err_mempointer_in_nonclass_type : Error<
-  "member pointer refers into non-class type %0">;
+def err_illegal_decl_mempointer_in_nonclass
+    : Error<"%0 does not point into a class">;
 def err_reference_to_void : Error<"cannot form a reference to 'void'">;
 def err_nonfunction_block_type : Error<
   "block pointer to non-function type is invalid">;
@@ -7024,6 +7022,8 @@ def err_sizeof_alignof_typeof_bitfield : Error<
   "bit-field">;
 def err_alignof_member_of_incomplete_type : Error<
   "invalid application of 'alignof' to a field of a class still being defined">;
+def err_countof_arg_not_array_type : Error<
+  "'_Countof' requires an argument of array type; %0 invalid">;
 def err_vecstep_non_scalar_vector_type : Error<
   "'vec_step' requires built-in scalar or vector type, %0 invalid">;
 def err_offsetof_incomplete_type : Error<
@@ -7031,10 +7031,10 @@ def err_offsetof_incomplete_type : Error<
 def err_offsetof_record_type : Error<
   "offsetof requires struct, union, or class type, %0 invalid">;
 def err_offsetof_array_type : Error<"offsetof requires array type, %0 invalid">;
-def ext_offsetof_non_pod_type : ExtWarn<"offset of on non-POD type %0">,
+def ext_offsetof_non_pod_type : ExtWarn<"'offsetof' on non-POD type %0">,
   InGroup<InvalidOffsetof>;
 def ext_offsetof_non_standardlayout_type : ExtWarn<
-  "offset of on non-standard-layout type %0">, InGroup<InvalidOffsetof>;
+  "'offsetof' on non-standard-layout type %0">, InGroup<InvalidOffsetof>;
 def err_offsetof_bitfield : Error<"cannot compute offset of bit-field %0">;
 def err_offsetof_field_of_virtual_base : Error<
   "invalid application of 'offsetof' to a field of a virtual base">;
@@ -13040,6 +13040,16 @@ def err_acc_magic_static_in_routine
 def err_acc_duplicate_bind
     : Error<"multiple 'routine' directives with 'bind' clauses are not "
             "permitted to refer to the same function">;
+def err_acc_duplicate_unnamed_bind
+    : Error<"OpenACC 'bind' clause on a declaration must bind to the same name "
+            "as previous bind clauses">;
+def warn_acc_confusing_routine_name
+    : Warning<"OpenACC 'routine' directive with a name refers to a function "
+              "with the same name as the function on the following line; this "
+              "may be unintended">,
+      InGroup<DiagGroup<"openacc-confusing-routine-name">>;
+def err_acc_decl_for_routine
+    : Error<"expected function or lambda declaration for 'routine' construct">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;
