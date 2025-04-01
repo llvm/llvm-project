@@ -578,6 +578,7 @@ SectionType ObjectFileXCOFF::GetSectionType(llvm::StringRef sect_name,
       .Case(".dwinfo", eSectionTypeDWARFDebugInfo)
       .Case(".dwline", eSectionTypeDWARFDebugLine)
       .Case(".dwabrev", eSectionTypeDWARFDebugAbbrev)
+      .Case(".dwrnges", eSectionTypeDWARFDebugRanges)
       .Default(eSectionTypeInvalid);
 
     if (section_type != eSectionTypeInvalid)
