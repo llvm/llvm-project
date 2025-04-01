@@ -129,6 +129,17 @@ bool coro::declaresIntrinsics(const Module &M,
   return false;
 }
 
+// Verifies if a module has any intrinsics.
+bool coro::declaresIntrinsics(const Module &M,
+                              const DenseSet<Intrinsic::ID> &Identifiers) {
+  for (const Function &F : M.functions()) {
+    if (Identifiers.contains(F.getIntrinsicID()))
+      return true;
+  }
+
+  return false;
+}
+
 // Replace all coro.frees associated with the provided CoroId either with 'null'
 // if Elide is true and with its frame parameter otherwise.
 void coro::replaceCoroFree(CoroIdInst *CoroId, bool Elide) {
