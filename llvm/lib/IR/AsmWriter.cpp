@@ -171,6 +171,18 @@ static OrderMap orderModule(const Module *M) {
     for (const BasicBlock &BB : F) {
       orderValue(&BB, OM);
       for (const Instruction &I : BB) {
+        // Debug records can contain Value references, that can then contain
+        // Values disconnected from the rest of the Value hierachy, if wrapped
+        // in some kind of constant-expression. Find and order any Values that
+        // are wrapped in debug-info.
+        for (const DbgRecord &R : I.getDbgRecordRange()) {
+          const DbgVariableRecord *VariableRecord =
+            dyn_cast<const DbgVariableRecord>(&R);
+          if (!VariableRecord)
+            continue;
+          for (const Value *V : VariableRecord->location_ops())
+            orderValue(V, OM);
+        }
         for (const Value *Op : I.operands()) {
           Op = skipMetadataWrapper(Op);
           if ((isa<Constant>(*Op) && !isa<GlobalValue>(*Op)) ||

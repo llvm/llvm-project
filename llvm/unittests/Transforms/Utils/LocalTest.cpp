@@ -28,21 +28,6 @@
 
 using namespace llvm;
 
-extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
-extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
-
-// Backup all of the existing settings that may be modified when
-// PreserveInputDbgFormat=true, so that when the test is finished we return them
-// (and the "preserve" setting) to their original values.
-static auto SaveDbgInfoFormat() {
-  return make_scope_exit(
-      [OldPreserveInputDbgFormat = PreserveInputDbgFormat.getValue(),
-       OldUseNewDbgInfoFormat = UseNewDbgInfoFormat.getValue()] {
-        PreserveInputDbgFormat = OldPreserveInputDbgFormat;
-        UseNewDbgInfoFormat = OldUseNewDbgInfoFormat;
-      });
-}
-
 TEST(Local, RecursivelyDeleteDeadPHINodes) {
   LLVMContext C;
 
@@ -598,53 +583,6 @@ TEST_F(SalvageDebugInfoTest, RecursiveBlockSimplification) {
   bool Deleted = SimplifyInstructionsInBlock(BB);
   ASSERT_TRUE(Deleted);
   verifyDebugValuesAreSalvaged();
-}
-
-TEST(Local, wouldInstructionBeTriviallyDead) {
-  LLVMContext Ctx;
-  // FIXME: PreserveInputDbgFormat is set to true because this test has
-  // been written to expect debug intrinsics rather than debug records.
-  // TODO: This test doesn't have a DbgRecord equivalent form so delete
-  // it when debug intrinsics are removed.
-  auto SettingGuard = SaveDbgInfoFormat();
-  PreserveInputDbgFormat = cl::boolOrDefault::BOU_TRUE;
-  std::unique_ptr<Module> M = parseIR(Ctx,
-                                      R"(
-    define dso_local void @fun() local_unnamed_addr #0 !dbg !9 {
-    entry:
-      call void @llvm.dbg.declare(metadata !{}, metadata !13, metadata !DIExpression()), !dbg !16
-      ret void, !dbg !16
-    }
-
-    declare void @llvm.dbg.declare(metadata, metadata, metadata)
-
-    !llvm.dbg.cu = !{!0}
-    !llvm.module.flags = !{!2, !3}
-    !llvm.ident = !{!8}
-
-    !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 16.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
-    !1 = !DIFile(filename: "test.c", directory: "/")
-    !2 = !{i32 7, !"Dwarf Version", i32 5}
-    !3 = !{i32 2, !"Debug Info Version", i32 3}
-    !8 = !{!"clang version 16.0.0"}
-    !9 = distinct !DISubprogram(name: "fun", scope: !1, file: !1, line: 1, type: !10, scopeLine: 1, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !12)
-    !10 = !DISubroutineType(types: !11)
-    !11 = !{null}
-    !12 = !{!13}
-    !13 = !DILocalVariable(name: "a", scope: !9, file: !1, line: 1, type: !14)
-    !14 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-    !16 = !DILocation(line: 1, column: 21, scope: !9)
-    )");
-  bool BrokenDebugInfo = true;
-  verifyModule(*M, &errs(), &BrokenDebugInfo);
-  ASSERT_FALSE(BrokenDebugInfo);
-
-  // Get the dbg.declare.
-  Function &F = *cast<Function>(M->getNamedValue("fun"));
-  Instruction *DbgDeclare = &F.front().front();
-  ASSERT_TRUE(isa<DbgDeclareInst>(DbgDeclare));
-  // Debug intrinsics with empty metadata arguments are not dead.
-  EXPECT_FALSE(wouldInstructionBeTriviallyDead(DbgDeclare));
 }
 
 TEST(Local, ChangeToUnreachable) {
@@ -1365,72 +1303,3 @@ TEST(Local, ExpressionForConstant) {
   EXPECT_EQ(Expr, nullptr);
 }
 
-TEST(Local, ReplaceDbgVariableRecord) {
-  LLVMContext C;
-  // FIXME: PreserveInputDbgFormat is set to true because this test has
-  // been written to expect debug intrinsics rather than debug records; use the
-  // intrinsic format until we update the test checks.
-  auto SettingGuard = SaveDbgInfoFormat();
-  PreserveInputDbgFormat = cl::boolOrDefault::BOU_TRUE;
-
-  // Test that RAUW also replaces the operands of DbgVariableRecord objects,
-  // i.e. non-instruction stored debugging information.
-  std::unique_ptr<Module> M = parseIR(C,
-                                      R"(
-      declare void @llvm.dbg.value(metadata, metadata, metadata)
-      define void @f(i32 %a) !dbg !8 {
-      entry:
-        %foo = add i32 %a, 1, !dbg !13
-        %bar = add i32 %foo, 0, !dbg !13
-        call void @llvm.dbg.value(metadata i32 %bar, metadata !11, metadata !DIExpression()), !dbg !13
-        ret void, !dbg !14
-      }
-      !llvm.dbg.cu = !{!0}
-      !llvm.module.flags = !{!3, !4}
-      !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 6.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
-      !1 = !DIFile(filename: "t2.c", directory: "foo")
-      !2 = !{}
-      !3 = !{i32 2, !"Dwarf Version", i32 4}
-      !4 = !{i32 2, !"Debug Info Version", i32 3}
-      !8 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !9, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, unit: !0, retainedNodes: !2)
-      !9 = !DISubroutineType(types: !10)
-      !10 = !{null}
-      !11 = !DILocalVariable(name: "x", scope: !8, file: !1, line: 2, type: !12)
-      !12 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-      !13 = !DILocation(line: 2, column: 7, scope: !8)
-      !14 = !DILocation(line: 3, column: 1, scope: !8)
-      )");
-  auto *GV = M->getNamedValue("f");
-  ASSERT_TRUE(GV);
-  auto *F = dyn_cast<Function>(GV);
-  ASSERT_TRUE(F);
-  BasicBlock::iterator It = F->front().begin();
-  Instruction *FooInst = &*It;
-  It = std::next(It);
-  Instruction *BarInst = &*It;
-  It = std::next(It);
-  DbgValueInst *DVI = dyn_cast<DbgValueInst>(It);
-  ASSERT_TRUE(DVI);
-  It = std::next(It);
-  Instruction *RetInst = &*It;
-
-  // Convert DVI into a DbgVariableRecord.
-  RetInst->DebugMarker = new DbgMarker();
-  RetInst->DebugMarker->MarkedInstr = RetInst;
-  DbgVariableRecord *DVR = new DbgVariableRecord(DVI);
-  RetInst->DebugMarker->insertDbgRecord(DVR, false);
-  // ... and erase the dbg.value.
-  DVI->eraseFromParent();
-
-  // DVR should originally refer to %bar,
-  EXPECT_EQ(DVR->getVariableLocationOp(0), BarInst);
-
-  // Now try to replace the computation of %bar with %foo -- this should cause
-  // the DbgVariableRecord's to have it's operand updated beneath it.
-  BarInst->replaceAllUsesWith(FooInst);
-  // Check DVR now points at %foo.
-  EXPECT_EQ(DVR->getVariableLocationOp(0), FooInst);
-
-  // Teardown.
-  RetInst->DebugMarker->eraseFromParent();
-}
