@@ -138,12 +138,10 @@ DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
   // not useful for PGO.
   if (PickMergedSourceLocations) {
     auto A = std::make_tuple(LocA->getLine(), LocA->getColumn(),
-                             LocA->getDiscriminator(),
-                             LocA->getFilename(),
+                             LocA->getDiscriminator(), LocA->getFilename(),
                              LocA->getDirectory());
     auto B = std::make_tuple(LocB->getLine(), LocB->getColumn(),
-                             LocB->getDiscriminator(),
-                             LocB->getFilename(),
+                             LocB->getDiscriminator(), LocB->getFilename(),
                              LocB->getDirectory());
     return A < B ? LocA : LocB;
   }
