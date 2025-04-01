@@ -2583,9 +2583,8 @@ ParseStatus RISCVAsmParser::parseRegListCommon(OperandVector &Operands,
     return Error(getLoc(), "register list must start from 'ra' or 'x1'");
 
   StringRef RegName = getLexer().getTok().getIdentifier();
-  MCRegister RegStart = matchRegisterNameHelper(RegName);
-  MCRegister RegEnd;
-  if (RegStart != RISCV::X1)
+  MCRegister RegEnd = matchRegisterNameHelper(RegName);
+  if (RegEnd != RISCV::X1)
     return Error(getLoc(), "register list must start from 'ra' or 'x1'");
   getLexer().Lex();
 
@@ -2606,10 +2605,10 @@ ParseStatus RISCVAsmParser::parseRegListCommon(OperandVector &Operands,
     if (getLexer().isNot(AsmToken::Identifier))
       return Error(getLoc(), "invalid register");
     StringRef RegName = getLexer().getTok().getIdentifier();
-    RegStart = matchRegisterNameHelper(RegName);
-    if (!RegStart)
+    RegEnd = matchRegisterNameHelper(RegName);
+    if (!RegEnd)
       return Error(getLoc(), "invalid register");
-    if (RegStart != RISCV::X8)
+    if (RegEnd != RISCV::X8)
       return Error(getLoc(),
                    "continuous register list must start from 's0' or 'x8'");
     getLexer().Lex(); // eat reg
@@ -2620,7 +2619,8 @@ ParseStatus RISCVAsmParser::parseRegListCommon(OperandVector &Operands,
     StringRef EndName = getLexer().getTok().getIdentifier();
     // FIXME: the register mapping and checks of EABI is wrong
     RegEnd = matchRegisterNameHelper(EndName);
-    if (!RegEnd)
+    if (!(RegEnd == RISCV::X9 ||
+          (RegEnd >= RISCV::X18 && RegEnd <= RISCV::X27)))
       return Error(getLoc(), "invalid register");
     if (IsEABI && RegEnd != RISCV::X9)
       return Error(getLoc(), "contiguous register list of EABI can only be "
@@ -2653,7 +2653,7 @@ ParseStatus RISCVAsmParser::parseRegListCommon(OperandVector &Operands,
           return Error(getLoc(), "invalid register");
         EndName = getLexer().getTok().getIdentifier();
         RegEnd = MatchRegisterName(EndName);
-        if (!RegEnd)
+        if (!(RegEnd >= RISCV::X19 && RegEnd <= RISCV::X27))
           return Error(getLoc(), "invalid register");
         getLexer().Lex();
       }
@@ -2666,9 +2666,6 @@ ParseStatus RISCVAsmParser::parseRegListCommon(OperandVector &Operands,
 
   if (parseToken(AsmToken::RCurly, "register list must end with '}'"))
     return ParseStatus::Failure;
-
-  if (!RegEnd)
-    RegEnd = RegStart;
 
   auto Encode = RISCVZC::encodeRlist(RegEnd, IsEABI);
   assert(Encode != RISCVZC::INVALID_RLIST);
