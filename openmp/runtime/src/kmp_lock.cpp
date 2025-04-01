@@ -3952,7 +3952,7 @@ void __kmp_cleanup_user_locks(void) {
 
 #define IS_CRITICAL(lck)                                                       \
   ((__kmp_get_user_lock_flags_ != NULL) &&                                     \
-   ((*__kmp_get_user_lock_flags_)(lck)&kmp_lf_critical_section))
+   ((*__kmp_get_user_lock_flags_)(lck) & kmp_lf_critical_section))
 
   // Loop through lock table, free all locks.
   // Do not free item [0], it is reserved for lock tables list.
