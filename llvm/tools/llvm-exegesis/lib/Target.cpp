@@ -16,6 +16,9 @@
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 
+#include <linux/prctl.h> // For PR_PAC_* constants
+#include <sys/prctl.h>
+
 namespace llvm {
 namespace exegesis {
 
@@ -41,7 +44,7 @@ ExegesisTarget::getIgnoredOpcodeReasonOrNull(const LLVMState &State,
   const MCInstrDesc &InstrDesc = State.getIC().getInstr(Opcode).Description;
   if (InstrDesc.isPseudo())
     return "Unsupported opcode: isPseudo";
-  if ( InstrDesc.usesCustomInsertionHook())
+  if (InstrDesc.usesCustomInsertionHook())
     return "Unsupported opcode: usesCustomInserter";
   if (InstrDesc.isBranch())
     return "Unsupported opcode: isBranch";
@@ -52,7 +55,11 @@ ExegesisTarget::getIgnoredOpcodeReasonOrNull(const LLVMState &State,
   if (InstrDesc.isReturn())
     return "Unsupported opcode: isReturn";
   if (isPointerAuth(Opcode))
-    return "Unsupported opcode: isPointerAuth";
+    prctl(PR_PAC_SET_ENABLED_KEYS,
+          PR_PAC_APIAKEY | PR_PAC_APIBKEY | PR_PAC_APDAKEY |
+              PR_PAC_APDBKEY, // all keys
+          0,                  // disable all
+          0, 0);
   if (isLoadTagMultiple(Opcode))
     return "Unsupported opcode: load tag multiple";
   return nullptr;
@@ -123,9 +130,8 @@ ExegesisTarget::createBenchmarkRunner(
   case Benchmark::InverseThroughput:
     if (BenchmarkPhaseSelector == BenchmarkPhaseSelectorE::Measure &&
         !PfmCounters.CycleCounter) {
-      const char *ModeName = Mode == Benchmark::Latency
-                                 ? "latency"
-                                 : "inverse_throughput";
+      const char *ModeName =
+          Mode == Benchmark::Latency ? "latency" : "inverse_throughput";
       return make_error<Failure>(
           Twine("can't run '")
               .concat(ModeName)
@@ -158,7 +164,8 @@ std::unique_ptr<SnippetGenerator> ExegesisTarget::createSerialSnippetGenerator(
   return std::make_unique<SerialSnippetGenerator>(State, Opts);
 }
 
-std::unique_ptr<SnippetGenerator> ExegesisTarget::createParallelSnippetGenerator(
+std::unique_ptr<SnippetGenerator>
+ExegesisTarget::createParallelSnippetGenerator(
     const LLVMState &State, const SnippetGenerator::Options &Opts) const {
   return std::make_unique<ParallelSnippetGenerator>(State, Opts);
 }
