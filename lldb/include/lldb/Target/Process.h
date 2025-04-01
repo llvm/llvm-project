@@ -1589,6 +1589,42 @@ public:
   size_t ReadMemoryFromInferior(lldb::addr_t vm_addr, void *buf, size_t size,
                                 Status &error);
 
+  typedef lldb::IterationAction(ReadMemoryChunkCallback)(lldb::Status &,
+                                                         DataBufferHeap &, lldb
+                                                         : addr_t,
+                                                           lldb::offset_t);
+  /// Read of memory from a process in discrete chunks, terminating
+  /// either when all bytes are read, or the supplied callback returns
+  /// IterationAction::Stop
+  ///
+  /// \param[in] vm_addr
+  ///     A virtual load address that indicates where to start reading
+  ///     memory from.
+  ///
+  /// \param[in] data
+  ///     The data buffer heap to use to read the chunk. The chunk size
+  ///     depends upon the byte size of the buffer.
+  ///
+  /// \param[in] size
+  ///     The number of bytes to read.
+  ///
+  /// \param[in] callback
+  ///     The callback to invoke when a chunk is read from memory.
+  /// \param[in] cacheReads
+  ///     Whether to use the ReadMemory instead of ReadMemory inferior, defaults
+  ///     to false.
+  ///
+  /// \return
+  ///     The number of bytes that were actually read into \a buf and
+  ///     written to the provided callback.
+  ///     If the returned number is greater than zero, yet less than \a
+  ///     size, then this function will get called again with \a
+  ///     vm_addr, \a buf, and \a size updated appropriately. Zero is
+  ///     returned in the case of an error.
+  size_t ReadMemoryInChunks(lldb::addr_t vm_addr, DataBufferHeap &data,
+                            size_t size, ReadMemoryChunkCallback callback,
+                            bool cacheReads = false);
+
   /// Read a NULL terminated C string from memory
   ///
   /// This function will read a cache page at a time until the NULL

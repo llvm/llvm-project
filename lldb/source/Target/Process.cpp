@@ -2233,6 +2233,27 @@ size_t Process::ReadMemoryFromInferior(addr_t addr, void *buf, size_t size,
   return bytes_read;
 }
 
+size_t Process::ReadMemoryInChunks(lldb::addr_t vm_addr, DataBufferHeap &data,
+                                   size_t size, ReadMemoryChunkCallback callback) {
+  uint64_t bytes_remaining = size;
+  uint64_t bytes_read = 0;
+  Status error;
+  while (bytes_remaining > 0) {
+    // Get the next read chunk size as the minimum of the remaining bytes and
+    // the write chunk max size.
+    const size_t bytes_to_read =
+        std::min(bytes_remaining, data.GetByteSize());
+    const lldb::addr_t current_addr = vm_addr + bytes_read
+    const size_t bytes_read_for_chunk =
+        m_process_sp->ReadMemory(current_addr,
+                                 data.GetBytes(), bytes_to_read, error);
+    if (callback(error, data, current_addr, bytes_read_for_chunk) == lldb::IterationAction::Stop)
+      break;
+  }
+
+  return bytes_read;
+}
+
 uint64_t Process::ReadUnsignedIntegerFromMemory(lldb::addr_t vm_addr,
                                                 size_t integer_byte_size,
                                                 uint64_t fail_value,
