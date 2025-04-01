@@ -1652,6 +1652,9 @@ bool AMDGPUCodeGenPrepareImpl::visitBinaryOperator(BinaryOperator &I) {
 
   if (UseMul24Intrin && replaceMulWithMul24(I))
     return true;
+  if (tryNarrowMathIfNoOverflow(&I, ST.getTargetLowering(),
+                                TM.getTargetTransformInfo(F), DL))
+    return true;
 
   bool Changed = false;
   Instruction::BinaryOps Opc = I.getOpcode();
@@ -1725,9 +1728,6 @@ bool AMDGPUCodeGenPrepareImpl::visitBinaryOperator(BinaryOperator &I) {
       Changed = true;
     }
   }
-
-  Changed = tryNarrowMathIfNoOverflow(&I, ST.getTargetLowering(),
-                                      TM.getTargetTransformInfo(F), DL);
 
   return Changed;
 }
