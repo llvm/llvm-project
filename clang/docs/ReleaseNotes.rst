@@ -141,6 +141,13 @@ C2y Feature Support
   paper also introduced octal and hexadecimal delimited escape sequences (e.g.,
   ``"\x{12}\o{12}"``) which are also supported as an extension in older C
   language modes.
+- Implemented `WG14 N3369 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3369.pdf>`_
+  which introduces the ``_Lengthof`` operator, and `WG14 N3469 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3469.htm>`_
+  which renamed ``_Lengthof`` to ``_Countof``. This feature is implemented as
+  a conforming extension in earlier C language modes, but not in C++ language
+  modes (``std::extent`` and ``std::size`` already provide the same
+  functionality but with more granularity). The feature can be tested via
+  ``__has_feature(c_countof)`` or ``__has_extension(c_countof)``.
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -316,6 +323,7 @@ Bug Fixes in This Version
 - Fixed a modules crash where exception specifications were not propagated properly (#GH121245, relanded in #GH129982)
 - Fixed a problematic case with recursive deserialization within ``FinishedDeserializing()`` where
   ``PassInterestingDeclsToConsumer()`` was called before the declarations were safe to be passed. (#GH129982)
+- Fixed a modules crash where an explicit Constructor was deserialized. (#GH132794)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -340,6 +348,9 @@ Bug Fixes to C++ Support
   by template argument deduction.
 - Clang is now better at instantiating the function definition after its use inside
   of a constexpr lambda. (#GH125747)
+- Clang no longer crashes when trying to unify the types of arrays with
+  certain differences in qualifiers (this could happen during template argument
+  deduction or when building a ternary operator). (#GH97005)
 - The initialization kind of elements of structured bindings
   direct-list-initialized from an array is corrected to direct-initialization.
 - Clang no longer crashes when a coroutine is declared ``[[noreturn]]``. (#GH127327)
@@ -353,11 +364,16 @@ Bug Fixes to C++ Support
 - Fixed an assertion failure affecting code that uses C++23 "deducing this". (#GH130272)
 - Clang now properly instantiates destructors for initialized members within non-delegating constructors. (#GH93251)
 - Correctly diagnoses if unresolved using declarations shadows template paramters (#GH129411)
+- Fixed C++20 aggregate initialization rules being incorrectly applied in certain contexts. (#GH131320)
 - Clang was previously coalescing volatile writes to members of volatile base class subobjects.
   The issue has been addressed by propagating qualifiers during derived-to-base conversions in the AST. (#GH127824)
+- Correctly propagates the instantiated array type to the ``DeclRefExpr`` that refers to it. (#GH79750), (#GH113936), (#GH133047)
 - Fixed a Clang regression in C++20 mode where unresolved dependent call expressions were created inside non-dependent contexts (#GH122892)
 - Clang now emits the ``-Wunused-variable`` warning when some structured bindings are unused
   and the ``[[maybe_unused]]`` attribute is not applied. (#GH125810)
+- Clang no longer crashes when establishing subsumption between some constraint expressions. (#GH122581)
+- Clang now issues an error when placement new is used to modify a const-qualified variable
+  in a ``constexpr`` function. (#GH131432)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -372,6 +388,8 @@ Miscellaneous Bug Fixes
 
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fixed crash when ``-print-stats`` is enabled in compiling IR files. (#GH131608)
 
 OpenACC Specific Changes
 ------------------------
@@ -395,10 +413,13 @@ Hexagon Support
 X86 Support
 ^^^^^^^^^^^
 
-- Disable ``-m[no-]avx10.1`` and switch ``-m[no-]avx10.2`` to alias of 512 bit
-  options.
-- Change ``-mno-avx10.1-512`` to alias of ``-mno-avx10.1-256`` to disable both
-  256 and 512 bit instructions.
+- The 256-bit maximum vector register size control was removed from
+  `AVX10 whitepaper <https://cdrdv2.intel.com/v1/dl/getContent/784343>_`.
+  * Re-target ``m[no-]avx10.1`` to enable AVX10.1 with 512-bit maximum vector register size.
+  * Emit warning for ``mavx10.x-256``, noting AVX10/256 is not supported.
+  * Emit warning for ``mavx10.x-512``, noting to use ``m[no-]avx10.x`` instead.
+  * Emit warning for ``m[no-]evex512``, noting AVX10/256 is not supported.
+  * The features avx10.x-256/512 keep unchanged and will be removed in the next release.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -416,6 +437,7 @@ Windows Support
 - Clang now can process the `i128` and `ui128` integeral suffixes when MSVC
   extensions are enabled. This allows for properly processing ``intsafe.h`` in
   the Windows SDK.
+- Clang now supports MSVC vector deleting destructors (GH19772).
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
@@ -424,6 +446,11 @@ RISC-V Support
 ^^^^^^^^^^^^^^
 
 - Add support for `-mtune=generic-ooo` (a generic out-of-order model).
+
+- Adds support for `__attribute__((interrupt("qci-nest")))` and
+  `__attribute__((interrupt("qci-nonest")))`. These use instructions from
+  Qualcomm's `Xqciint` extension to save and restore some GPRs in interrupt
+  service routines.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -458,11 +485,6 @@ AST Matchers
 - Ensure ``isDerivedFrom`` matches the correct base in case more than one alias exists.
 - Extend ``templateArgumentCountIs`` to support function and variable template
   specialization.
-- Move ``ast_matchers::MatchFinder::MatchFinderOptions`` to
-  ``ast_matchers::MatchFinderOptions``.
-- Add a boolean member ``SkipSystemHeaders`` to ``MatchFinderOptions``, and make
-  ``MatchASTConsumer`` receive a reference to ``MatchFinderOptions`` in the
-  constructor. This allows it to skip system headers when traversing the AST.
 
 clang-format
 ------------
@@ -474,6 +496,8 @@ clang-format
 - Allow specifying the language (C, C++, or Objective-C) for a ``.h`` file by
   adding a special comment (e.g. ``// clang-format Language: ObjC``) near the
   top of the file.
+- Add ``EnumTrailingComma`` option for inserting/removing commas at the end of
+  ``enum`` enumerator lists.
 
 libclang
 --------
@@ -525,6 +549,12 @@ Sanitizers
 
 Python Binding Changes
 ----------------------
+- Made ``Cursor`` hashable.
+- Added ``Cursor.has_attrs``, a binding for ``clang_Cursor_hasAttrs``, to check
+  whether a cursor has any attributes.
+- Added ``Cursor.specialized_template``, a binding for
+  ``clang_getSpecializedCursorTemplate``, to retrieve the primary template that
+  the cursor is a specialization of.
 - Added ``Type.get_methods``, a binding for ``clang_visitCXXMethods``, which
   allows visiting the methods of a class.
 

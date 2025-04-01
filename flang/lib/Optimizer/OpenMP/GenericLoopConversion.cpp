@@ -398,8 +398,8 @@ public:
 
   static mlir::omp::LoopOp
   tryToFindNestedLoopWithReduction(mlir::omp::TeamsOp teamsOp) {
-    assert(!teamsOp.getRegion().empty() &&
-           teamsOp.getRegion().getBlocks().size() == 1);
+    if (teamsOp.getRegion().getBlocks().size() != 1)
+      return nullptr;
 
     mlir::Block &teamsBlock = *teamsOp.getRegion().begin();
     auto loopOpIter = llvm::find_if(teamsBlock, [](mlir::Operation &op) {

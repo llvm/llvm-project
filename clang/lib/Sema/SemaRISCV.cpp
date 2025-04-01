@@ -206,7 +206,7 @@ public:
 void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
     ArrayRef<RVVIntrinsicRecord> Recs, IntrinsicKind K) {
   const TargetInfo &TI = Context.getTargetInfo();
-  static const std::pair<const char *, RVVRequire> FeatureCheckList[] = {
+  static const std::pair<const char *, unsigned> FeatureCheckList[] = {
       {"64bit", RVV_REQ_RV64},
       {"xsfvcp", RVV_REQ_Xsfvcp},
       {"xsfvfnrclipxfqf", RVV_REQ_Xsfvfnrclipxfqf},
@@ -232,7 +232,8 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
   for (auto &Record : Recs) {
     // Check requirements.
     if (llvm::any_of(FeatureCheckList, [&](const auto &Item) {
-          return (Record.RequiredExtensions & Item.second) == Item.second &&
+          return ((Record.RequiredExtensions[Item.second / 32] &
+                   (1U << (Item.second % 32))) != 0) &&
                  !TI.hasFeature(Item.first);
         }))
       continue;

@@ -417,9 +417,10 @@ void UnwindPlan::InsertRow(Row row, bool replace_existing) {
   }
 }
 
-const UnwindPlan::Row *UnwindPlan::GetRowForFunctionOffset(int offset) const {
-  auto it = offset == -1 ? m_row_list.end()
-                         : llvm::upper_bound(m_row_list, offset, RowLess());
+const UnwindPlan::Row *
+UnwindPlan::GetRowForFunctionOffset(std::optional<int> offset) const {
+  auto it = offset ? llvm::upper_bound(m_row_list, *offset, RowLess())
+                   : m_row_list.end();
   if (it == m_row_list.begin())
     return nullptr;
   // upper_bound returns the row strictly greater than our desired offset, which

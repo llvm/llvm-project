@@ -453,9 +453,9 @@ static DecodeStatus decodeCLUIImmOperand(MCInst &Inst, uint32_t Imm,
                                          int64_t Address,
                                          const MCDisassembler *Decoder) {
   assert(isUInt<6>(Imm) && "Invalid immediate");
-  if (Imm > 31) {
-    Imm = (SignExtend64<6>(Imm) & 0xfffff);
-  }
+  if (Imm == 0)
+    return MCDisassembler::Fail;
+  Imm = SignExtend64<6>(Imm) & 0xfffff;
   Inst.addOperand(MCOperand::createImm(Imm));
   return MCDisassembler::Success;
 }
@@ -488,9 +488,10 @@ static DecodeStatus decodeRVCInstrRdSImm(MCInst &Inst, uint32_t Insn,
                                          uint64_t Address,
                                          const MCDisassembler *Decoder);
 
-static DecodeStatus decodeRVCInstrRdRs1UImm(MCInst &Inst, uint32_t Insn,
-                                            uint64_t Address,
-                                            const MCDisassembler *Decoder);
+static DecodeStatus
+decodeRVCInstrRdRs1UImmLog2XLenNonZero(MCInst &Inst, uint32_t Insn,
+                                       uint64_t Address,
+                                       const MCDisassembler *Decoder);
 
 static DecodeStatus decodeRVCInstrRdRs2(MCInst &Inst, uint32_t Insn,
                                         uint64_t Address,
@@ -507,8 +508,8 @@ static DecodeStatus decodeXTHeadMemPair(MCInst &Inst, uint32_t Insn,
 static DecodeStatus decodeZcmpRlist(MCInst &Inst, uint32_t Imm,
                                     uint64_t Address, const void *Decoder);
 
-static DecodeStatus decodeRegReg(MCInst &Inst, uint32_t Insn, uint64_t Address,
-                                 const MCDisassembler *Decoder);
+static DecodeStatus decodeXqccmpRlistS0(MCInst &Inst, uint32_t Imm,
+                                        uint64_t Address, const void *Decoder);
 
 static DecodeStatus decodeZcmpSpimm(MCInst &Inst, uint32_t Imm,
                                     uint64_t Address, const void *Decoder);
@@ -553,17 +554,16 @@ static DecodeStatus decodeRVCInstrRdSImm(MCInst &Inst, uint32_t Insn,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus decodeRVCInstrRdRs1UImm(MCInst &Inst, uint32_t Insn,
-                                            uint64_t Address,
-                                            const MCDisassembler *Decoder) {
+static DecodeStatus
+decodeRVCInstrRdRs1UImmLog2XLenNonZero(MCInst &Inst, uint32_t Insn,
+                                       uint64_t Address,
+                                       const MCDisassembler *Decoder) {
   Inst.addOperand(MCOperand::createReg(RISCV::X0));
   Inst.addOperand(Inst.getOperand(0));
+
   uint32_t UImm6 =
       fieldFromInstruction(Insn, 12, 1) << 5 | fieldFromInstruction(Insn, 2, 5);
-  [[maybe_unused]] DecodeStatus Result =
-      decodeUImmOperand<6>(Inst, UImm6, Address, Decoder);
-  assert(Result == MCDisassembler::Success && "Invalid immediate");
-  return MCDisassembler::Success;
+  return decodeUImmLog2XLenNonZeroOperand(Inst, UImm6, Address, Decoder);
 }
 
 static DecodeStatus decodeRVCInstrRdRs2(MCInst &Inst, uint32_t Insn,
@@ -615,18 +615,17 @@ static DecodeStatus decodeXTHeadMemPair(MCInst &Inst, uint32_t Insn,
 
 static DecodeStatus decodeZcmpRlist(MCInst &Inst, uint32_t Imm,
                                     uint64_t Address, const void *Decoder) {
-  if (Imm <= 3)
+  if (Imm < RISCVZC::RA)
     return MCDisassembler::Fail;
   Inst.addOperand(MCOperand::createImm(Imm));
   return MCDisassembler::Success;
 }
 
-static DecodeStatus decodeRegReg(MCInst &Inst, uint32_t Insn, uint64_t Address,
-                                 const MCDisassembler *Decoder) {
-  uint32_t Rs1 = fieldFromInstruction(Insn, 0, 5);
-  uint32_t Rs2 = fieldFromInstruction(Insn, 5, 5);
-  DecodeGPRRegisterClass(Inst, Rs1, Address, Decoder);
-  DecodeGPRRegisterClass(Inst, Rs2, Address, Decoder);
+static DecodeStatus decodeXqccmpRlistS0(MCInst &Inst, uint32_t Imm,
+                                        uint64_t Address, const void *Decoder) {
+  if (Imm < RISCVZC::RA_S0)
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::createImm(Imm));
   return MCDisassembler::Success;
 }
 
@@ -672,15 +671,15 @@ static constexpr FeatureBitset XRivosFeatureGroup = {
 };
 
 static constexpr FeatureBitset XqciFeatureGroup = {
-    RISCV::FeatureVendorXqcia,    RISCV::FeatureVendorXqciac,
-    RISCV::FeatureVendorXqcibi,   RISCV::FeatureVendorXqcibm,
-    RISCV::FeatureVendorXqcicli,  RISCV::FeatureVendorXqcicm,
-    RISCV::FeatureVendorXqcics,   RISCV::FeatureVendorXqcicsr,
-    RISCV::FeatureVendorXqciint,  RISCV::FeatureVendorXqcilb,
-    RISCV::FeatureVendorXqcili,   RISCV::FeatureVendorXqcilia,
-    RISCV::FeatureVendorXqcilo,   RISCV::FeatureVendorXqcilsm,
-    RISCV::FeatureVendorXqcisim,  RISCV::FeatureVendorXqcisls,
-    RISCV::FeatureVendorXqcisync,
+    RISCV::FeatureVendorXqcia,   RISCV::FeatureVendorXqciac,
+    RISCV::FeatureVendorXqcibi,  RISCV::FeatureVendorXqcibm,
+    RISCV::FeatureVendorXqcicli, RISCV::FeatureVendorXqcicm,
+    RISCV::FeatureVendorXqcics,  RISCV::FeatureVendorXqcicsr,
+    RISCV::FeatureVendorXqciint, RISCV::FeatureVendorXqciio,
+    RISCV::FeatureVendorXqcilb,  RISCV::FeatureVendorXqcili,
+    RISCV::FeatureVendorXqcilia, RISCV::FeatureVendorXqcilo,
+    RISCV::FeatureVendorXqcilsm, RISCV::FeatureVendorXqcisim,
+    RISCV::FeatureVendorXqcisls, RISCV::FeatureVendorXqcisync,
 };
 
 static constexpr FeatureBitset XSfVectorGroup = {
@@ -785,7 +784,7 @@ DecodeStatus RISCVDisassembler::getInstruction16(MCInst &MI, uint64_t &Size,
     if (!Entry.haveContainedFeatures(STI.getFeatureBits()))
       continue;
 
-    LLVM_DEBUG(dbgs() << "Trying " << Entry.Desc << "table:\n");
+    LLVM_DEBUG(dbgs() << "Trying " << Entry.Desc << " table:\n");
     DecodeStatus Result =
         decodeInstruction(Entry.Table, MI, Insn, Address, this, STI);
     if (Result == MCDisassembler::Fail)
@@ -821,7 +820,7 @@ DecodeStatus RISCVDisassembler::getInstruction48(MCInst &MI, uint64_t &Size,
     if (!Entry.haveContainedFeatures(STI.getFeatureBits()))
       continue;
 
-    LLVM_DEBUG(dbgs() << "Trying " << Entry.Desc << "table:\n");
+    LLVM_DEBUG(dbgs() << "Trying " << Entry.Desc << " table:\n");
     DecodeStatus Result =
         decodeInstruction(Entry.Table, MI, Insn, Address, this, STI);
     if (Result == MCDisassembler::Fail)

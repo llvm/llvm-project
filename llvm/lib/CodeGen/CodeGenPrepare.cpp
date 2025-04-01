@@ -4370,8 +4370,7 @@ private:
         // If it does not match, collect all Phi nodes from matcher.
         // if we end up with no match, them all these Phi nodes will not match
         // later.
-        for (auto M : Matched)
-          WillNotMatch.insert(M.first);
+        WillNotMatch.insert_range(llvm::make_first_range(Matched));
         Matched.clear();
       }
       if (IsMatched) {

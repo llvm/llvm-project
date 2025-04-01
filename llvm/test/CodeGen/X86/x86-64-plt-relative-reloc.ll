@@ -14,7 +14,7 @@ declare void @fn3()
 
 ;; Generate a PC-relative relocation, which might be rejected by the linker if the referenced symbol is preemptible.
 ; CHECK: .long 0
-; CHECK-NEXT: .long (fn1-vtable)-4
-; CHECK-NEXT: .long (fn2-vtable)-4
-; CHECK-NEXT: .long (fn3-vtable)-4
-; CHECK-NEXT: .long (global4-vtable)-4
+; CHECK-NEXT: .long fn1-vtable-4
+; CHECK-NEXT: .long fn2-vtable-4
+; CHECK-NEXT: .long fn3-vtable-4
+; CHECK-NEXT: .long global4-vtable-4

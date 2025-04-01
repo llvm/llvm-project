@@ -94,8 +94,9 @@ bool RegisterContextUnwind::IsUnwindPlanValidForCurrentPC(
     return true;
   }
 
-  // if m_current_offset <= 0, we've got nothing else to try
-  if (m_current_offset <= 0)
+  // If don't have an offset or we're at the start of the function, we've got
+  // nothing else to try.
+  if (!m_current_offset || m_current_offset == 0)
     return false;
 
   // check pc - 1 to see if it's valid
@@ -198,8 +199,8 @@ void RegisterContextUnwind::InitializeZerothFrame() {
     m_current_offset_backed_up_one = m_current_offset;
   } else {
     m_start_pc = m_current_pc;
-    m_current_offset = -1;
-    m_current_offset_backed_up_one = -1;
+    m_current_offset = std::nullopt;
+    m_current_offset_backed_up_one = std::nullopt;
   }
 
   // We've set m_frame_type and m_sym_ctx before these calls.
@@ -437,8 +438,8 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
         m_frame_type = eNormalFrame;
       }
       m_all_registers_available = false;
-      m_current_offset = -1;
-      m_current_offset_backed_up_one = -1;
+      m_current_offset = std::nullopt;
+      m_current_offset_backed_up_one = std::nullopt;
       RegisterKind row_register_kind = m_full_unwind_plan_sp->GetRegisterKind();
       if (const UnwindPlan::Row *row =
               m_full_unwind_plan_sp->GetRowForFunctionOffset(0)) {
@@ -569,16 +570,16 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
     m_current_offset = pc - m_start_pc.GetLoadAddress(&process->GetTarget());
     m_current_offset_backed_up_one = m_current_offset;
     if (decr_pc_and_recompute_addr_range &&
-        m_current_offset_backed_up_one > 0) {
-      m_current_offset_backed_up_one--;
+        m_current_offset_backed_up_one != 0) {
+      --*m_current_offset_backed_up_one;
       if (m_sym_ctx_valid) {
         m_current_pc.SetLoadAddress(pc - 1, &process->GetTarget());
       }
     }
   } else {
     m_start_pc = m_current_pc;
-    m_current_offset = -1;
-    m_current_offset_backed_up_one = -1;
+    m_current_offset = std::nullopt;
+    m_current_offset_backed_up_one = std::nullopt;
   }
 
   if (IsTrapHandlerSymbol(process, m_sym_ctx)) {
@@ -746,7 +747,7 @@ bool RegisterContextUnwind::BehavesLikeZerothFrame() const {
 //   2. m_sym_ctx should already be filled in, and
 //   3. m_current_pc should have the current pc value for this frame
 //   4. m_current_offset_backed_up_one should have the current byte offset into
-//   the function, maybe backed up by 1, -1 if unknown
+//   the function, maybe backed up by 1, std::nullopt if unknown
 
 UnwindPlanSP RegisterContextUnwind::GetFastUnwindPlanForFrame() {
   UnwindPlanSP unwind_plan_sp;
@@ -790,7 +791,7 @@ UnwindPlanSP RegisterContextUnwind::GetFastUnwindPlanForFrame() {
 //   2. m_sym_ctx should already be filled in, and
 //   3. m_current_pc should have the current pc value for this frame
 //   4. m_current_offset_backed_up_one should have the current byte offset into
-//   the function, maybe backed up by 1, -1 if unknown
+//   the function, maybe backed up by 1, std::nullopt if unknown
 
 UnwindPlanSP RegisterContextUnwind::GetFullUnwindPlanForFrame() {
   UnwindPlanSP unwind_plan_sp;
