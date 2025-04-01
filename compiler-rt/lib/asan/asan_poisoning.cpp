@@ -31,15 +31,13 @@ using PoisonRecordRingBuffer = RingBuffer<struct PoisonRecord>;
 static Mutex PoisonRecordsMutex;
 static PoisonRecordRingBuffer *PoisonRecords = nullptr;
 
-void InitializePoisonTracking() {
+void AddPoisonRecord(const PoisonRecord& newRecord) {
   if (flags()->poison_history_size <= 0)
     return;
 
-  PoisonRecords = PoisonRecordRingBuffer::New(flags()->poison_history_size);
-}
-
-void AddPoisonRecord(const PoisonRecord& newRecord) {
   PoisonRecordsMutex.Lock();
+  if (PoisonRecords == nullptr)
+    PoisonRecords = PoisonRecordRingBuffer::New(flags()->poison_history_size);
   PoisonRecords->push(newRecord);
   PoisonRecordsMutex.Unlock();
 }
