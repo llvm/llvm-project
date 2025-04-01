@@ -552,7 +552,7 @@ Syntax:
 
 .. code-block:: llvm
 
-  declare void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster(ptr addrspace(3) %dst, ptr addrspace(3) %mbar, ptr addrspace(1) %src, i32 %size, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster(ptr addrspace(7) %dst, ptr addrspace(3) %mbar, ptr addrspace(1) %src, i32 %size, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch)
 
 Overview:
 """""""""
@@ -616,7 +616,7 @@ Syntax:
 
 .. code-block:: llvm
 
-  declare void @llvm.nvvm.cp.async.bulk.shared.cta.to.cluster(ptr addrspace(3) %dst, ptr addrspace(3) %mbar, ptr addrspace(3) %src, i32 %size)
+  declare void @llvm.nvvm.cp.async.bulk.shared.cta.to.cluster(ptr addrspace(7) %dst, ptr addrspace(3) %mbar, ptr addrspace(3) %src, i32 %size)
 
 Overview:
 """""""""
@@ -771,7 +771,7 @@ Syntax:
 
 .. code-block:: llvm
 
-  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch)
   declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.2d(..., i32 %d0, i32 %d1, ...)
   declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.3d(..., i32 %d0, i32 %d1, i32 %d2, ...)
   declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
