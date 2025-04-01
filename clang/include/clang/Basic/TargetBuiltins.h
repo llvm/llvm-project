@@ -263,6 +263,10 @@ namespace clang {
       EltType ET = getEltType();
       return ET == Poly8 || ET == Poly16 || ET == Poly64;
     }
+    bool isFloatingPoint() const {
+      EltType ET = getEltType();
+      return ET == Float16 || ET == Float32 || ET == Float64 || ET == BFloat16;
+    }
     bool isUnsigned() const { return (Flags & UnsignedFlag) != 0; }
     bool isQuad() const { return (Flags & QuadFlag) != 0; }
     unsigned getEltSizeInBits() const {
