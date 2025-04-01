@@ -70,12 +70,11 @@ private:
                               const ISD::InputArg &Arg) const;
 #if LLPC_BUILD_NPI
 
-  SDValue getGlobalWorkGroupId(
+  SDValue lowerWorkGroupId(
       SelectionDAG &DAG, const SIMachineFunctionInfo &MFI, EVT VT,
       AMDGPUFunctionArgInfo::PreloadedValue ClusterIdPV,
       AMDGPUFunctionArgInfo::PreloadedValue ClusterMaxIdPV,
-      AMDGPUFunctionArgInfo::PreloadedValue ClusterWorkGroupIdPV,
-      bool ClustersKnownToBeUsed) const;
+      AMDGPUFunctionArgInfo::PreloadedValue ClusterWorkGroupIdPV) const;
 #endif /* LLPC_BUILD_NPI */
   SDValue getPreloadedValue(SelectionDAG &DAG,
                             const SIMachineFunctionInfo &MFI,

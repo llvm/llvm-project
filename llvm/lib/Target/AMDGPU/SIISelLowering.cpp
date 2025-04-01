@@ -2717,16 +2717,21 @@ SDValue SITargetLowering::lowerStackParameter(SelectionDAG &DAG,
 }
 
 #if LLPC_BUILD_NPI
-SDValue SITargetLowering::getGlobalWorkGroupId(
+SDValue SITargetLowering::lowerWorkGroupId(
     SelectionDAG &DAG, const SIMachineFunctionInfo &MFI, EVT VT,
-    AMDGPUFunctionArgInfo::PreloadedValue ClusterIdPV,
+    AMDGPUFunctionArgInfo::PreloadedValue WorkGroupIdPV,
     AMDGPUFunctionArgInfo::PreloadedValue ClusterMaxIdPV,
-    AMDGPUFunctionArgInfo::PreloadedValue ClusterWorkGroupIdPV,
-    bool ClustersKnownToBeUsed) const {
+    AMDGPUFunctionArgInfo::PreloadedValue ClusterWorkGroupIdPV) const {
+  if (!Subtarget->hasClusters())
+    return getPreloadedValue(DAG, MFI, VT, WorkGroupIdPV);
+
+  // Clusters are supported. Return the global position in the grid. If clusters
+  // are enabled, WorkGroupIdPV returns the cluster ID not the workgroup ID.
+
   // WorkGroupIdXYZ = ClusterId == 0 ?
   //   ClusterIdXYZ :
   //   ClusterIdXYZ * (ClusterMaxIdXYZ + 1) + ClusterWorkGroupIdXYZ
-  SDValue ClusterIdXYZ = getPreloadedValue(DAG, MFI, VT, ClusterIdPV);
+  SDValue ClusterIdXYZ = getPreloadedValue(DAG, MFI, VT, WorkGroupIdPV);
   SDLoc SL(ClusterIdXYZ);
   SDValue ClusterMaxIdXYZ = getPreloadedValue(DAG, MFI, VT, ClusterMaxIdPV);
   SDValue One = DAG.getConstant(1, SL, VT);
@@ -2736,7 +2741,9 @@ SDValue SITargetLowering::getGlobalWorkGroupId(
   SDValue GlobalIdXYZ =
       DAG.getNode(ISD::ADD, SL, VT, ClusterWorkGroupIdXYZ,
                   DAG.getNode(ISD::MUL, SL, VT, ClusterIdXYZ, ClusterSizeXYZ));
-  if (ClustersKnownToBeUsed)
+
+  std::optional<std::array<unsigned, 3>> ClusterDims = MFI.getClusterDims();
+  if (ClusterDims.has_value())
     return GlobalIdXYZ;
 
   using namespace AMDGPU::Hwreg;
@@ -2757,33 +2764,6 @@ SDValue SITargetLowering::getGlobalWorkGroupId(
 SDValue SITargetLowering::getPreloadedValue(
     SelectionDAG &DAG, const SIMachineFunctionInfo &MFI, EVT VT,
     AMDGPUFunctionArgInfo::PreloadedValue PVID) const {
-#if LLPC_BUILD_NPI
-  // Return the global position in the grid where clusters are supported.
-  std::optional<std::array<unsigned, 3>> ClusterDims = MFI.getClusterDims();
-  if (Subtarget->hasClusters()) {
-    bool ClustersKnownToBeUsed = ClusterDims.has_value();
-    switch (PVID) {
-    case AMDGPUFunctionArgInfo::WORKGROUP_ID_X:
-      return getGlobalWorkGroupId(
-          DAG, MFI, VT, AMDGPUFunctionArgInfo::CLUSTER_ID_X,
-          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_X,
-          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_X, ClustersKnownToBeUsed);
-    case AMDGPUFunctionArgInfo::WORKGROUP_ID_Y:
-      return getGlobalWorkGroupId(
-          DAG, MFI, VT, AMDGPUFunctionArgInfo::CLUSTER_ID_Y,
-          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Y,
-          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Y, ClustersKnownToBeUsed);
-    case AMDGPUFunctionArgInfo::WORKGROUP_ID_Z:
-      return getGlobalWorkGroupId(
-          DAG, MFI, VT, AMDGPUFunctionArgInfo::CLUSTER_ID_Z,
-          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Z,
-          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z, ClustersKnownToBeUsed);
-    default:
-      break;
-    }
-  }
-
-#endif /* LLPC_BUILD_NPI */
   const ArgDescriptor *Reg = nullptr;
   const TargetRegisterClass *RC;
   LLT Ty;
@@ -2822,26 +2802,20 @@ SDValue SITargetLowering::getPreloadedValue(
 #endif /* LLPC_BUILD_NPI */
   if (Subtarget->hasArchitectedSGPRs() &&
       (AMDGPU::isCompute(CC) || CC == CallingConv::AMDGPU_Gfx)) {
-    switch (PVID) {
 #if LLPC_BUILD_NPI
-    case AMDGPUFunctionArgInfo::CLUSTER_ID_X:
+    std::optional<std::array<unsigned, 3>> ClusterDims = MFI.getClusterDims();
 #endif /* LLPC_BUILD_NPI */
+    switch (PVID) {
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_X:
       Reg = &WorkGroupIDX;
       RC = &AMDGPU::SReg_32RegClass;
       Ty = LLT::scalar(32);
       break;
-#if LLPC_BUILD_NPI
-    case AMDGPUFunctionArgInfo::CLUSTER_ID_Y:
-#endif /* LLPC_BUILD_NPI */
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_Y:
       Reg = &WorkGroupIDY;
       RC = &AMDGPU::SReg_32RegClass;
       Ty = LLT::scalar(32);
       break;
-#if LLPC_BUILD_NPI
-    case AMDGPUFunctionArgInfo::CLUSTER_ID_Z:
-#endif /* LLPC_BUILD_NPI */
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_Z:
       Reg = &WorkGroupIDZ;
       RC = &AMDGPU::SReg_32RegClass;
@@ -4111,6 +4085,18 @@ void SITargetLowering::passSpecialInputs(
   // in the same location as the input.
   // clang-format off
   static constexpr std::pair<AMDGPUFunctionArgInfo::PreloadedValue,
+#if LLPC_BUILD_NPI
+      std::array<StringLiteral, 2>> ImplicitAttrs[] = {
+    {AMDGPUFunctionArgInfo::DISPATCH_PTR, {"amdgpu-no-dispatch-ptr", ""}},
+    {AMDGPUFunctionArgInfo::QUEUE_PTR, {"amdgpu-no-queue-ptr", ""}},
+    {AMDGPUFunctionArgInfo::IMPLICIT_ARG_PTR, {"amdgpu-no-implicitarg-ptr", ""}},
+    {AMDGPUFunctionArgInfo::DISPATCH_ID, {"amdgpu-no-dispatch-id", ""}},
+    {AMDGPUFunctionArgInfo::WORKGROUP_ID_X, {"amdgpu-no-workgroup-id-x", "amdgpu-no-cluster-id-x"}},
+    {AMDGPUFunctionArgInfo::WORKGROUP_ID_Y, {"amdgpu-no-workgroup-id-y", "amdgpu-no-cluster-id-y"}},
+    {AMDGPUFunctionArgInfo::WORKGROUP_ID_Z, {"amdgpu-no-workgroup-id-z", "amdgpu-no-cluster-id-z"}},
+    {AMDGPUFunctionArgInfo::LDS_KERNEL_ID, {"amdgpu-no-lds-kernel-id", ""}},
+  };
+#else /* LLPC_BUILD_NPI */
                               StringLiteral> ImplicitAttrs[] = {
      {AMDGPUFunctionArgInfo::DISPATCH_PTR, "amdgpu-no-dispatch-ptr"},
      {AMDGPUFunctionArgInfo::QUEUE_PTR, "amdgpu-no-queue-ptr" },
@@ -4121,11 +4107,22 @@ void SITargetLowering::passSpecialInputs(
      {AMDGPUFunctionArgInfo::WORKGROUP_ID_Z,"amdgpu-no-workgroup-id-z"},
      {AMDGPUFunctionArgInfo::LDS_KERNEL_ID,"amdgpu-no-lds-kernel-id"},
    };
+#endif /* LLPC_BUILD_NPI */
   // clang-format on
 
+#if LLPC_BUILD_NPI
+  for (auto [InputID, Attrs] : ImplicitAttrs) {
+#else /* LLPC_BUILD_NPI */
   for (auto [InputID, Attr] : ImplicitAttrs) {
+#endif /* LLPC_BUILD_NPI */
     // If the callee does not use the attribute value, skip copying the value.
+#if LLPC_BUILD_NPI
+    if (all_of(Attrs, [&](StringRef Attr) {
+          return Attr.empty() || CLI.CB->hasFnAttr(Attr);
+        }))
+#else /* LLPC_BUILD_NPI */
     if (CLI.CB->hasFnAttr(Attr))
+#endif /* LLPC_BUILD_NPI */
       continue;
 
     const auto [OutgoingArg, ArgRC, ArgTy] =
@@ -10278,29 +10275,45 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return lowerImplicitZextParam(DAG, Op, MVT::i16,
                                   SI::KernelInputOffsets::LOCAL_SIZE_Z);
   case Intrinsic::amdgcn_workgroup_id_x:
+#if LLPC_BUILD_NPI
+    return lowerWorkGroupId(DAG, *MFI, VT,
+                            AMDGPUFunctionArgInfo::WORKGROUP_ID_X,
+                            AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_X,
+                            AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_X);
+#else /* LLPC_BUILD_NPI */
     return getPreloadedValue(DAG, *MFI, VT,
                              AMDGPUFunctionArgInfo::WORKGROUP_ID_X);
+#endif /* LLPC_BUILD_NPI */
   case Intrinsic::amdgcn_workgroup_id_y:
+#if LLPC_BUILD_NPI
+    return lowerWorkGroupId(DAG, *MFI, VT,
+                            AMDGPUFunctionArgInfo::WORKGROUP_ID_Y,
+                            AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Y,
+                            AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Y);
+#else /* LLPC_BUILD_NPI */
     return getPreloadedValue(DAG, *MFI, VT,
                              AMDGPUFunctionArgInfo::WORKGROUP_ID_Y);
+#endif /* LLPC_BUILD_NPI */
   case Intrinsic::amdgcn_workgroup_id_z:
-    return getPreloadedValue(DAG, *MFI, VT,
-                             AMDGPUFunctionArgInfo::WORKGROUP_ID_Z);
 #if LLPC_BUILD_NPI
+    return lowerWorkGroupId(DAG, *MFI, VT,
+                            AMDGPUFunctionArgInfo::WORKGROUP_ID_Z,
+                            AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Z,
+                            AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z);
   case Intrinsic::amdgcn_cluster_id_x:
     return Subtarget->hasGFX1250Insts()
                ? getPreloadedValue(DAG, *MFI, VT,
-                                   AMDGPUFunctionArgInfo::CLUSTER_ID_X)
+                                   AMDGPUFunctionArgInfo::WORKGROUP_ID_X)
                : DAG.getUNDEF(VT);
   case Intrinsic::amdgcn_cluster_id_y:
     return Subtarget->hasGFX1250Insts()
                ? getPreloadedValue(DAG, *MFI, VT,
-                                   AMDGPUFunctionArgInfo::CLUSTER_ID_Y)
+                                   AMDGPUFunctionArgInfo::WORKGROUP_ID_Y)
                : DAG.getUNDEF(VT);
   case Intrinsic::amdgcn_cluster_id_z:
     return Subtarget->hasGFX1250Insts()
                ? getPreloadedValue(DAG, *MFI, VT,
-                                   AMDGPUFunctionArgInfo::CLUSTER_ID_Z)
+                                   AMDGPUFunctionArgInfo::WORKGROUP_ID_Z)
                : DAG.getUNDEF(VT);
   case Intrinsic::amdgcn_cluster_workgroup_id_x:
     return Subtarget->hasGFX1250Insts()
@@ -10351,6 +10364,9 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                      DAG, *MFI, VT,
                      AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_FLAT_ID)
                : DAG.getUNDEF(VT);
+#else /* LLPC_BUILD_NPI */
+    return getPreloadedValue(DAG, *MFI, VT,
+                             AMDGPUFunctionArgInfo::WORKGROUP_ID_Z);
 #endif /* LLPC_BUILD_NPI */
   case Intrinsic::amdgcn_wave_id:
     return lowerWaveID(DAG, Op);

@@ -4538,12 +4538,22 @@ void AMDGPULegalizerInfo::buildLoadInputValue(Register DstReg,
 }
 
 #if LLPC_BUILD_NPI
-bool AMDGPULegalizerInfo::loadGlobalWorkGroupId(
-    Register DstReg, MachineIRBuilder &B,
-    AMDGPUFunctionArgInfo::PreloadedValue ClusterIdPV,
+bool AMDGPULegalizerInfo::legalizeWorkGroupId(
+    MachineInstr &MI, MachineIRBuilder &B,
+    AMDGPUFunctionArgInfo::PreloadedValue WorkGroupIdPV,
     AMDGPUFunctionArgInfo::PreloadedValue ClusterMaxIdPV,
-    AMDGPUFunctionArgInfo::PreloadedValue ClusterWorkGroupIdPV,
-    bool ClustersKnownToBeUsed) const {
+    AMDGPUFunctionArgInfo::PreloadedValue ClusterWorkGroupIdPV) const {
+  Register DstReg = MI.getOperand(0).getReg();
+  if (!ST.hasClusters()) {
+    if (!loadInputValue(DstReg, B, WorkGroupIdPV))
+      return false;
+    MI.eraseFromParent();
+    return true;
+  }
+
+  // Clusters are supported. Return the global position in the grid. If clusters
+  // are enabled, WorkGroupIdPV returns the cluster ID not the workgroup ID.
+
   // WorkGroupIdXYZ = ClusterId == 0 ?
   //   ClusterIdXYZ :
   //   ClusterIdXYZ * (ClusterMaxIdXYZ + 1) + ClusterWorkGroupIdXYZ
@@ -4552,7 +4562,7 @@ bool AMDGPULegalizerInfo::loadGlobalWorkGroupId(
   Register ClusterIdXYZ = MRI.createGenericVirtualRegister(S32);
   Register ClusterMaxIdXYZ = MRI.createGenericVirtualRegister(S32);
   Register ClusterWorkGroupIdXYZ = MRI.createGenericVirtualRegister(S32);
-  if (!loadInputValue(ClusterIdXYZ, B, ClusterIdPV) ||
+  if (!loadInputValue(ClusterIdXYZ, B, WorkGroupIdPV) ||
       !loadInputValue(ClusterWorkGroupIdXYZ, B, ClusterWorkGroupIdPV) ||
       !loadInputValue(ClusterMaxIdXYZ, B, ClusterMaxIdPV))
     return false;
@@ -4561,8 +4571,12 @@ bool AMDGPULegalizerInfo::loadGlobalWorkGroupId(
   auto ClusterSizeXYZ = B.buildAdd(S32, ClusterMaxIdXYZ, One);
   auto GlobalIdXYZ = B.buildAdd(S32, ClusterWorkGroupIdXYZ,
                                 B.buildMul(S32, ClusterIdXYZ, ClusterSizeXYZ));
-  if (ClustersKnownToBeUsed) {
+
+  const SIMachineFunctionInfo *MFI = B.getMF().getInfo<SIMachineFunctionInfo>();
+  std::optional<std::array<unsigned, 3>> ClusterDims = MFI->getClusterDims();
+  if (ClusterDims.has_value()) {
     B.buildCopy(DstReg, GlobalIdXYZ);
+    MI.eraseFromParent();
     return true;
   }
 
@@ -4580,6 +4594,7 @@ bool AMDGPULegalizerInfo::loadGlobalWorkGroupId(
   auto NoClusters =
       B.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1), ClusterId, Zero);
   B.buildSelect(DstReg, NoClusters, ClusterIdXYZ, GlobalIdXYZ);
+  MI.eraseFromParent();
   return true;
 }
 
@@ -4587,36 +4602,7 @@ bool AMDGPULegalizerInfo::loadGlobalWorkGroupId(
 bool AMDGPULegalizerInfo::loadInputValue(
     Register DstReg, MachineIRBuilder &B,
     AMDGPUFunctionArgInfo::PreloadedValue ArgType) const {
-#if LLPC_BUILD_NPI
-  // Return the global position in the grid where clusters are supported.
-#endif /* LLPC_BUILD_NPI */
   const SIMachineFunctionInfo *MFI = B.getMF().getInfo<SIMachineFunctionInfo>();
-#if LLPC_BUILD_NPI
-  std::optional<std::array<unsigned, 3>> ClusterDims = MFI->getClusterDims();
-  if (ST.hasClusters()) {
-    bool ClustersKnownToBeUsed = ClusterDims.has_value();
-    switch (ArgType) {
-    case AMDGPUFunctionArgInfo::WORKGROUP_ID_X:
-      return loadGlobalWorkGroupId(
-          DstReg, B, AMDGPUFunctionArgInfo::CLUSTER_ID_X,
-          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_X,
-          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_X, ClustersKnownToBeUsed);
-    case AMDGPUFunctionArgInfo::WORKGROUP_ID_Y:
-      return loadGlobalWorkGroupId(
-          DstReg, B, AMDGPUFunctionArgInfo::CLUSTER_ID_Y,
-          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Y,
-          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Y, ClustersKnownToBeUsed);
-    case AMDGPUFunctionArgInfo::WORKGROUP_ID_Z:
-      return loadGlobalWorkGroupId(
-          DstReg, B, AMDGPUFunctionArgInfo::CLUSTER_ID_Z,
-          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Z,
-          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z, ClustersKnownToBeUsed);
-    default:
-      break;
-    }
-  }
-
-#endif /* LLPC_BUILD_NPI */
   const ArgDescriptor *Arg = nullptr;
   const TargetRegisterClass *ArgRC;
   LLT ArgTy;
@@ -4656,26 +4642,20 @@ bool AMDGPULegalizerInfo::loadInputValue(
 #endif /* LLPC_BUILD_NPI */
   if (ST.hasArchitectedSGPRs() &&
       (AMDGPU::isCompute(CC) || CC == CallingConv::AMDGPU_Gfx)) {
-    switch (ArgType) {
 #if LLPC_BUILD_NPI
-    case AMDGPUFunctionArgInfo::CLUSTER_ID_X:
+    std::optional<std::array<unsigned, 3>> ClusterDims = MFI->getClusterDims();
 #endif /* LLPC_BUILD_NPI */
+    switch (ArgType) {
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_X:
       Arg = &WorkGroupIDX;
       ArgRC = &AMDGPU::SReg_32RegClass;
       ArgTy = LLT::scalar(32);
       break;
-#if LLPC_BUILD_NPI
-    case AMDGPUFunctionArgInfo::CLUSTER_ID_Y:
-#endif /* LLPC_BUILD_NPI */
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_Y:
       Arg = &WorkGroupIDY;
       ArgRC = &AMDGPU::SReg_32RegClass;
       ArgTy = LLT::scalar(32);
       break;
-#if LLPC_BUILD_NPI
-    case AMDGPUFunctionArgInfo::CLUSTER_ID_Z:
-#endif /* LLPC_BUILD_NPI */
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_Z:
       Arg = &WorkGroupIDZ;
       ArgRC = &AMDGPU::SReg_32RegClass;
@@ -8032,27 +8012,47 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return legalizeWorkitemIDIntrinsic(MI, MRI, B, 2,
                                        AMDGPUFunctionArgInfo::WORKITEM_ID_Z);
   case Intrinsic::amdgcn_workgroup_id_x:
+#if LLPC_BUILD_NPI
+    return legalizeWorkGroupId(
+        MI, B, AMDGPUFunctionArgInfo::WORKGROUP_ID_X,
+        AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_X,
+        AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_X);
+#else /* LLPC_BUILD_NPI */
     return legalizePreloadedArgIntrin(MI, MRI, B,
                                       AMDGPUFunctionArgInfo::WORKGROUP_ID_X);
+#endif /* LLPC_BUILD_NPI */
   case Intrinsic::amdgcn_workgroup_id_y:
+#if LLPC_BUILD_NPI
+    return legalizeWorkGroupId(
+        MI, B, AMDGPUFunctionArgInfo::WORKGROUP_ID_Y,
+        AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Y,
+        AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Y);
+#else /* LLPC_BUILD_NPI */
     return legalizePreloadedArgIntrin(MI, MRI, B,
                                       AMDGPUFunctionArgInfo::WORKGROUP_ID_Y);
+#endif /* LLPC_BUILD_NPI */
   case Intrinsic::amdgcn_workgroup_id_z:
-    return legalizePreloadedArgIntrin(MI, MRI, B,
-                                      AMDGPUFunctionArgInfo::WORKGROUP_ID_Z);
 #if LLPC_BUILD_NPI
+    return legalizeWorkGroupId(
+        MI, B, AMDGPUFunctionArgInfo::WORKGROUP_ID_Z,
+        AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Z,
+        AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z);
   case Intrinsic::amdgcn_cluster_id_x:
     return ST.hasGFX1250Insts() &&
            legalizePreloadedArgIntrin(MI, MRI, B,
-                                      AMDGPUFunctionArgInfo::CLUSTER_ID_X);
+                                      AMDGPUFunctionArgInfo::WORKGROUP_ID_X);
   case Intrinsic::amdgcn_cluster_id_y:
     return ST.hasGFX1250Insts() &&
            legalizePreloadedArgIntrin(MI, MRI, B,
-                                      AMDGPUFunctionArgInfo::CLUSTER_ID_Y);
+                                      AMDGPUFunctionArgInfo::WORKGROUP_ID_Y);
   case Intrinsic::amdgcn_cluster_id_z:
     return ST.hasGFX1250Insts() &&
            legalizePreloadedArgIntrin(MI, MRI, B,
-                                      AMDGPUFunctionArgInfo::CLUSTER_ID_Z);
+#else /* LLPC_BUILD_NPI */
+    return legalizePreloadedArgIntrin(MI, MRI, B,
+#endif /* LLPC_BUILD_NPI */
+                                      AMDGPUFunctionArgInfo::WORKGROUP_ID_Z);
+#if LLPC_BUILD_NPI
   case Intrinsic::amdgcn_cluster_workgroup_id_x:
     return ST.hasGFX1250Insts() &&
            legalizePreloadedArgIntrin(

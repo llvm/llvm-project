@@ -122,13 +122,28 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
   if (!AMDGPU::isGraphics(CC) ||
       ((CC == CallingConv::AMDGPU_CS || CC == CallingConv::AMDGPU_Gfx) &&
        ST.hasArchitectedSGPRs())) {
+#if LLPC_BUILD_NPI
+    if (IsKernel || !F.hasFnAttribute("amdgpu-no-workgroup-id-x") ||
+        !F.hasFnAttribute("amdgpu-no-cluster-id-x"))
+#else /* LLPC_BUILD_NPI */
     if (IsKernel || !F.hasFnAttribute("amdgpu-no-workgroup-id-x"))
+#endif /* LLPC_BUILD_NPI */
       WorkGroupIDX = true;
 
+#if LLPC_BUILD_NPI
+    if (!F.hasFnAttribute("amdgpu-no-workgroup-id-y") ||
+        !F.hasFnAttribute("amdgpu-no-cluster-id-y"))
+#else /* LLPC_BUILD_NPI */
     if (!F.hasFnAttribute("amdgpu-no-workgroup-id-y"))
+#endif /* LLPC_BUILD_NPI */
       WorkGroupIDY = true;
 
+#if LLPC_BUILD_NPI
+    if (!F.hasFnAttribute("amdgpu-no-workgroup-id-z") ||
+        !F.hasFnAttribute("amdgpu-no-cluster-id-z"))
+#else /* LLPC_BUILD_NPI */
     if (!F.hasFnAttribute("amdgpu-no-workgroup-id-z"))
+#endif /* LLPC_BUILD_NPI */
       WorkGroupIDZ = true;
   }
 

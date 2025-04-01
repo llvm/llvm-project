@@ -111,17 +111,20 @@ struct AMDGPUFunctionArgInfo {
     DISPATCH_ID         =  4,
     FLAT_SCRATCH_INIT   =  5,
     LDS_KERNEL_ID       =  6, // LLVM internal, not part of the ABI
+#if LLPC_BUILD_NPI
+    WORKGROUP_ID_X      = 10, // Also used for cluster ID X.
+    WORKGROUP_ID_Y      = 11, // Also used for cluster ID Y.
+    WORKGROUP_ID_Z      = 12, // Also used for cluster ID Z.
+#else /* LLPC_BUILD_NPI */
     WORKGROUP_ID_X      = 10,
     WORKGROUP_ID_Y      = 11,
     WORKGROUP_ID_Z      = 12,
+#endif /* LLPC_BUILD_NPI */
     PRIVATE_SEGMENT_WAVE_BYTE_OFFSET = 14,
     IMPLICIT_BUFFER_PTR = 15,
     IMPLICIT_ARG_PTR = 16,
     PRIVATE_SEGMENT_SIZE = 17,
 #if LLPC_BUILD_NPI
-    CLUSTER_ID_X = 18,
-    CLUSTER_ID_Y = 19,
-    CLUSTER_ID_Z = 20,
     CLUSTER_WORKGROUP_ID_X = 21,
     CLUSTER_WORKGROUP_ID_Y = 22,
     CLUSTER_WORKGROUP_ID_Z = 23,

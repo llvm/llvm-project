@@ -115,12 +115,11 @@ public:
                            const ArgDescriptor *Arg,
                            const TargetRegisterClass *ArgRC, LLT ArgTy) const;
 #if LLPC_BUILD_NPI
-  bool loadGlobalWorkGroupId(
-      Register DstReg, MachineIRBuilder &B,
+  bool legalizeWorkGroupId(
+      MachineInstr &MI, MachineIRBuilder &B,
       AMDGPUFunctionArgInfo::PreloadedValue ClusterIdPV,
       AMDGPUFunctionArgInfo::PreloadedValue ClusterMaxIdPV,
-      AMDGPUFunctionArgInfo::PreloadedValue ClusterWorkGroupIdPV,
-      bool ClustersKnownToBeUsed) const;
+      AMDGPUFunctionArgInfo::PreloadedValue ClusterWorkGroupIdPV) const;
 #endif /* LLPC_BUILD_NPI */
   bool loadInputValue(Register DstReg, MachineIRBuilder &B,
                       AMDGPUFunctionArgInfo::PreloadedValue ArgType) const;

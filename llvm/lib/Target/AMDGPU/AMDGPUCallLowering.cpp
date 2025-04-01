@@ -775,6 +775,17 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
     AMDGPUFunctionArgInfo::LDS_KERNEL_ID,
   };
 
+#if LLPC_BUILD_NPI
+  static constexpr StringLiteral ImplicitAttrNames[][2] = {
+      {"amdgpu-no-dispatch-ptr", ""},
+      {"amdgpu-no-queue-ptr", ""},
+      {"amdgpu-no-implicitarg-ptr", ""},
+      {"amdgpu-no-dispatch-id", ""},
+      {"amdgpu-no-workgroup-id-x", "amdgpu-no-cluster-id-x"},
+      {"amdgpu-no-workgroup-id-y", "amdgpu-no-cluster-id-y"},
+      {"amdgpu-no-workgroup-id-z", "amdgpu-no-cluster-id-z"},
+      {"amdgpu-no-lds-kernel-id", ""},
+#else /* LLPC_BUILD_NPI */
   static constexpr StringLiteral ImplicitAttrNames[] = {
     "amdgpu-no-dispatch-ptr",
     "amdgpu-no-queue-ptr",
@@ -784,6 +795,7 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
     "amdgpu-no-workgroup-id-y",
     "amdgpu-no-workgroup-id-z",
     "amdgpu-no-lds-kernel-id",
+#endif /* LLPC_BUILD_NPI */
   };
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -799,7 +811,13 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
     LLT ArgTy;
 
     // If the callee does not use the attribute value, skip copying the value.
+#if LLPC_BUILD_NPI
+    if (all_of(ImplicitAttrNames[I++], [&](StringRef AttrName) {
+          return AttrName.empty() || Info.CB->hasFnAttr(AttrName);
+        }))
+#else /* LLPC_BUILD_NPI */
     if (Info.CB->hasFnAttr(ImplicitAttrNames[I++]))
+#endif /* LLPC_BUILD_NPI */
       continue;
 
     std::tie(OutgoingArg, ArgRC, ArgTy) =
