@@ -177,15 +177,25 @@ LLVM-libc specific rules
      options and tradeoffs is so large that creating a program (the compiler)
      to perform the optimizations for us is much more efficient. There are
      places where the compiler misses optimizations, to be sure, but many more
-     where it finds optimizations that humans would never imagine. By fixing
-     those problem and improving the compiler, it improves not just our code,
+     where it finds optimizations that humans could never imagine. By fixing
+     those problems and improving the compiler, it improves not just our code,
      but everyone's code.
 
 #. Mark all functions in headers with ``LIBC_INLINE``
 
    * This is to avoid ODR violations, but also to allow adding properties to
      the function.
-     .. TODO: Fix this phrasing.
+   * Functions in headers effectively get "defined" by every file that includes
+     the header. This is a problem for C++'s One Definition Rule (ODR), which
+     says that only one copy of a function should exist. In practice, this means
+     link errors when linking two cpp files that include the same header. By
+     marking a function ``inline`` it tells the compiler to remove the
+     function's public definition and move it into the caller (inlining it).
+     This means the inlined function is gone by link time, so there's no
+     conflict.
+   * Normally marking functions in headers ``inline`` is sufficient, but there
+     are cases where we want to add attributes to the inline functions. The
+     macro lets us do that by redefining the ``LIBC_INLINE`` macro.
 
 #. Use ``LIBC_ASSERT`` for runtime assertions.
 
