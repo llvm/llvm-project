@@ -304,7 +304,8 @@ public:
     }
   }
 
-  MCPhysReg getMaterializedAddressRegForPtrAuth(const MCInst &Inst) const override {
+  MCPhysReg
+  getMaterializedAddressRegForPtrAuth(const MCInst &Inst) const override {
     switch (Inst.getOpcode()) {
     case AArch64::ADR:
     case AArch64::ADRP:

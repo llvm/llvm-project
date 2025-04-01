@@ -593,7 +593,8 @@ public:
   /// The produced address should not be attacker-controlled, assuming an
   /// attacker is able to modify any writable memory, but not executable code
   /// (as it should be W^X).
-  virtual MCPhysReg getMaterializedAddressRegForPtrAuth(const MCInst &Inst) const {
+  virtual MCPhysReg
+  getMaterializedAddressRegForPtrAuth(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return getNoRegister();
   }
