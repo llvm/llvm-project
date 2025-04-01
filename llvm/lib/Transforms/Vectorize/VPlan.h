@@ -3469,6 +3469,11 @@ class VPlan {
   /// VPlan is destroyed.
   SmallVector<VPBlockBase *> CreatedBlocks;
 
+  /// Sign/Zero extend instructions used for scaled reductions. We can use
+  /// this to better model costs, since the extension operations will happen
+  /// as part of a combined instruction on the target.
+  SmallPtrSet<const Instruction *, 8> ScaledReductionExtends;
+
   /// Construct a VPlan with \p Entry to the plan and with \p ScalarHeader
   /// wrapping the original header of the scalar loop.
   VPlan(VPBasicBlock *Entry, VPIRBasicBlock *ScalarHeader)
@@ -3747,6 +3752,17 @@ public:
   /// successors of the block in VPlan. The returned block is owned by the VPlan
   /// and deleted once the VPlan is destroyed.
   VPIRBasicBlock *createVPIRBasicBlock(BasicBlock *IRBB);
+
+  /// Add an extension to the list of operations covered by a scaled reduction
+  /// so it can be checked when cost modelling.
+  void addScaledReductionExtension(const Instruction *Extend) {
+    ScaledReductionExtends.insert(Extend);
+  }
+
+  /// Check whether a given extension is part of a scaled reduction.
+  bool isScaledReductionExtension(const Instruction *Extend) const {
+    return ScaledReductionExtends.contains(Extend);
+  }
 };
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

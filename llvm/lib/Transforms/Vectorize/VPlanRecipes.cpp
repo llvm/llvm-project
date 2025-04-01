@@ -1796,6 +1796,11 @@ InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
   // For Z/Sext, get the context from the operand.
   else if (Opcode == Instruction::ZExt || Opcode == Instruction::SExt ||
            Opcode == Instruction::FPExt) {
+    // If the extend is performed as part of another operation, it can be
+    // considered 'free'.
+    const VPlan *Plan = getParent()->getPlan();
+    if (Plan->isScaledReductionExtension(getUnderlyingInstr()))
+      return TargetTransformInfo::TCC_Free;
     if (Operand->isLiveIn())
       CCH = TTI::CastContextHint::Normal;
     else if (Operand->getDefiningRecipe())

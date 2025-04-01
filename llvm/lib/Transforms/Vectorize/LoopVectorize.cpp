@@ -8770,8 +8770,11 @@ void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
   for (auto Pair : PartialReductionChains) {
     PartialReductionChain Chain = Pair.first;
     if (ExtendIsOnlyUsedByPartialReductions(Chain.ExtendA) &&
-        ExtendIsOnlyUsedByPartialReductions(Chain.ExtendB))
+        ExtendIsOnlyUsedByPartialReductions(Chain.ExtendB)) {
       ScaledReductionMap.insert(std::make_pair(Chain.Reduction, Pair.second));
+      Plan.addScaledReductionExtension(Chain.ExtendA);
+      Plan.addScaledReductionExtension(Chain.ExtendB);
+    }
   }
 }
 
