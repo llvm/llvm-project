@@ -317,6 +317,8 @@ private:
   bool translateInvoke(const User &U, MachineIRBuilder &MIRBuilder);
 
   bool translateCallBr(const User &U, MachineIRBuilder &MIRBuilder);
+  bool translateCallBrIntrinsic(const CallBrInst &I,
+                                MachineIRBuilder &MIRBuilder);
 
   bool translateLandingPad(const User &U, MachineIRBuilder &MIRBuilder);
 
