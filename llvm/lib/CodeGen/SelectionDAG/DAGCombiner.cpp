@@ -7166,7 +7166,8 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
 
   // if (and x, c) is known to be zero, return 0
   unsigned BitWidth = VT.getScalarSizeInBits();
-  ConstantSDNode *N1C = isConstOrConstSplat(N1);
+  ConstantSDNode *N1C =
+      isConstOrConstSplat(N1, /*AllowUndef*/ false, /*AllowTrunc*/ true);
   if (N1C && DAG.MaskedValueIsZero(SDValue(N, 0), APInt::getAllOnes(BitWidth)))
     return DAG.getConstant(0, DL, VT);
 
@@ -7205,7 +7206,8 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
       return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, N0Op0);
 
     // fold (and (any_ext V), c) -> (zero_ext (and (trunc V), c)) if profitable.
-    if (N1C->getAPIntValue().countLeadingZeros() >= (BitWidth - SrcBitWidth) &&
+    APInt N1APInt = N1C->getAPIntValue().trunc(VT.getScalarSizeInBits());
+    if (N1APInt.countLeadingZeros() >= (BitWidth - SrcBitWidth) &&
         TLI.isTruncateFree(VT, SrcVT) && TLI.isZExtFree(SrcVT, VT) &&
         TLI.isTypeDesirableForOp(ISD::AND, SrcVT) &&
         TLI.isNarrowingProfitable(N, VT, SrcVT))

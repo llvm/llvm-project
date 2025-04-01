@@ -6,8 +6,8 @@ define <4 x i16> @z_i32_v4i16(i32 %x) {
 ; CHECK-SD-LABEL: z_i32_v4i16:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fmov s0, w0
-; CHECK-SD-NEXT:    zip1 v0.8b, v0.8b, v0.8b
-; CHECK-SD-NEXT:    bic v0.4h, #255, lsl #8
+; CHECK-SD-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: z_i32_v4i16:
