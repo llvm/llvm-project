@@ -9,7 +9,7 @@ define void @insert_subvector_broadcast_as_blend() {
 ; CHECK-NEXT:    vpbroadcastq %rax, %zmm0
 ; CHECK-NEXT:    vpslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6,7]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm1
-; CHECK-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm1
+; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm1 = zmm1[0,1,2,3],zmm0[4,5,6,7]
 ; CHECK-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %k0
 ; CHECK-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %k1
 ; CHECK-NEXT:    kunpckbw %k0, %k1, %k1
