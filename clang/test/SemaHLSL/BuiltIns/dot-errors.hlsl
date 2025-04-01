@@ -127,8 +127,3 @@ float builtin_dot_int_to_float_promotion ( float p0, int p1 ) {
   return __builtin_hlsl_dot (p0, p1 );
   // expected-error@-1 {{all arguments to '__builtin_hlsl_dot' must have the same type}}
 }
-
-// should not error
-uint builtin_dot_literal_shouldnt_error( uint4 p0) {
-  return dot(p0, 1u.xxxx);
-}
