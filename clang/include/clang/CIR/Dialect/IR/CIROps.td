@@ -695,9 +695,12 @@ def UnaryOp : CIR_Op<"unary", [Pure, SameOperandsAndResultType]> {
     It requires one input operand and has one result, both types
     should be the same.
 
+    If the `nsw` (no signed wrap) attribute is present, the result is poison if
+    signed overflow occurs.
+
     ```mlir
     %7 = cir.unary(inc, %1) : i32 -> i32
-    %8 = cir.unary(dec, %2) : i32 -> i32
+    %8 = cir.unary(dec, %2) nsw : i32 -> i32
     ```
   }];
 
@@ -868,9 +871,21 @@ def BinOp : CIR_Op<"binop", [Pure,
     It requires two input operands and has one result, all types
     should be the same.
 
+    If the `nsw` (no signed wrap) or `nuw` (no unsigned wrap) attributes are
+    present, the result is poison if signed or unsigned overflow occurs
+    (respectively).
+
+    If the `sat` (saturated) attribute is present, the result is clamped to
+    the maximum value representatable by the type if it would otherwise
+    exceed that value and is clamped to the minimum representable value if
+    it would otherwise be below that value.
+
     ```mlir
-    %7 = cir.binop(add, %1, %2) : !s32i
-    %7 = cir.binop(mul, %1, %2) : !u8i
+    %5 = cir.binop(add, %1, %2) : !s32i
+    %6 = cir.binop(mul, %1, %2) : !u8i
+    %7 = cir.binop(add, %1, %2) nsw : !s32i
+    %8 = cir.binop(add, %3, %4) nuw : !u32i
+    %9 = cir.binop(add, %1, %2) sat : !s32i
     ```
   }];
 
