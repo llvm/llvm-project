@@ -4,7 +4,7 @@
 
 ; CUMODE-ERR: LLVM ERROR: cannot enable cumode when wavegroup is enabled
 
-define amdgpu_kernel void @wavegroup_kernel(ptr addrspace(1) %p) #0 "amdgpu-wavegroup-enable" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-dispatch-id" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" !reqd_work_group_size !{i32 32, i32 8, i32 1} {
+define amdgpu_kernel void @wavegroup_kernel(ptr addrspace(1) %p) #0 "amdgpu-wavegroup-enable" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-dispatch-id" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" !reqd_work_group_size !{i32 32, i32 8, i32 1} {
 ; CHECK-LABEL: wavegroup_kernel:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
