@@ -58,6 +58,36 @@ def CompoundAttrNested : Test_Attr<"CompoundAttrNested"> {
   let assemblyFormat = "`<` `nested` `=` $nested `>`";
 }
 
+// Nested attributes for reproducing.
+def InternalAttr : Test_Attr<"Internal"> {
+  let mnemonic = "internal";
+
+  let parameters = (ins
+    "int64_t":$key,
+    "int64_t":$value
+  );
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def ExternalAttr : Test_Attr<"External"> {
+  let mnemonic = "external";
+
+  let parameters = (ins InternalAttr:$internal);
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def ExternalArrayAttr : Test_Attr<"ExternalArray"> {
+  let mnemonic = "external_array";
+
+  let parameters = (ins
+    ArrayRefParameter<"InternalAttr">:$internals
+  );
+
+  let assemblyFormat = "`<` `[` struct(params) `]` `>`";
+}
+
 // An attribute testing AttributeSelfTypeParameter.
 def AttrWithSelfTypeParam
     : Test_Attr<"AttrWithSelfTypeParam", [TypedAttrInterface]> {

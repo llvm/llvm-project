@@ -345,6 +345,27 @@ module attributes {test.someAttr = #test.cmpnd_nested_outer<i <42 <1, !test.smpl
 
 //-----
 
+// CHECK: module attributes {test.internal = #test.internal<key = 8, value = 9>} {
+// CHECK-NEXT: }
+module attributes {test.internal = #test.internal<key = 8, value = 9>} {
+}
+
+//-----
+
+// CHECK: module attributes {test.external = #test.external<internal = <key = 1, value = 2>>} {
+// CHECK-NEXT: }
+module attributes {test.external = #test.external<internal = #test.internal<key = 1, value = 2>>} {
+}
+
+//-----
+
+// CHECK: module attributes {test.external_array = #test.external_array<[internals = <key = 1, value = 2>, <key = 8, value = 9>]>} {
+// CHECK-NEXT: }
+module attributes {test.external_array = #test.external_array<[internals = #test.internal<key = 1, value = 2>, #test.internal<key = 8, value = 9>]>} {
+}
+
+//-----
+
 // CHECK: test.format_cpmd_nested_attr nested <i <42 <1, !test.smpla, [5, 6]>>>
 test.format_cpmd_nested_attr nested <i <42 <1, !test.smpla, [5, 6]>>>
 
