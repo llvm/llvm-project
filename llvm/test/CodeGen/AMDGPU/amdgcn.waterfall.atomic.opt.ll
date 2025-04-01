@@ -34,7 +34,8 @@ define dllexport amdgpu_cs void @atomic_add_in_wf(ptr addrspace(1) %arg, i32 inr
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_ashr_i32 s3, s0, 31
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc, v0, s0
-; GFX11-NEXT:    v_add_co_ci_u32_e32 v1, vcc, s3, v1, vcc
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, s3, v1, vcc
 ; GFX11-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off offset:4
 ; GFX11-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
@@ -123,7 +124,8 @@ define dllexport amdgpu_cs void @atomic_add_before(ptr addrspace(1) %arg, i32 in
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_ashr_i32 s6, s0, 31
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc, v0, s0
-; GFX11-NEXT:    v_add_co_ci_u32_e32 v1, vcc, s6, v1, vcc
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, s6, v1, vcc
 ; GFX11-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX11-NEXT:    s_mov_b64 s[6:7], exec
 ; GFX11-NEXT:    global_load_b64 v[0:1], v[0:1], off
@@ -235,7 +237,8 @@ define dllexport amdgpu_cs void @atomic_add_after(ptr addrspace(1) %arg, i32 inr
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_ashr_i32 s4, s0, 31
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc, v0, s0
-; GFX11-NEXT:    v_add_co_ci_u32_e32 v1, vcc, s4, v1, vcc
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, s4, v1, vcc
 ; GFX11-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX11-NEXT:    global_load_b32 v1, v[0:1], off offset:4
 ; GFX11-NEXT:  .LBB2_1: ; =>This Inner Loop Header: Depth=1
@@ -344,7 +347,7 @@ define dllexport amdgpu_cs void @atomic_add_in_wf_partial(ptr addrspace(1) %arg,
 ; GFX11-NEXT:    s_addc_u32 s5, s2, s5
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc, v0, s0
 ; GFX11-NEXT:    s_load_b128 s[4:7], s[4:5], 0x0
-; GFX11-NEXT:    v_add_co_ci_u32_e32 v1, vcc, s8, v1, vcc
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, s8, v1, vcc
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 1
 ; GFX11-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX11-NEXT:    global_load_b64 v[0:1], v[0:1], off

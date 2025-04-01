@@ -40,6 +40,9 @@ function at-exit {
   then
     python3 "${MONOREPO_ROOT}"/.ci/generate_test_report_buildkite.py ":linux: Linux x64 Test Results" \
       "linux-x64-test-results" $retcode "${BUILD_DIR}"/test-results.*.xml
+  else
+    python3 "${MONOREPO_ROOT}"/.ci/generate_test_report_github.py ":linux: Linux x64 Test Results" \
+      $retcode "${BUILD_DIR}"/test-results.*.xml >> $GITHUB_STEP_SUMMARY
   fi
 }
 trap at-exit EXIT

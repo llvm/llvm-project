@@ -73,7 +73,7 @@ static Instruction *genAMDGPUReportBlock(Module &M, IRBuilder<> &IRB,
 
   Trm = SplitBlockAndInsertIfThen(Cond, Trm, false);
   IRB.SetInsertPoint(Trm);
-  return IRB.CreateIntrinsic(Intrinsic::amdgcn_unreachable, {}, {});
+  return IRB.CreateIntrinsic(Intrinsic::amdgcn_unreachable, {});
 }
 
 static Value *createSlowPathCmp(Module &M, IRBuilder<> &IRB, Type *IntptrTy,
