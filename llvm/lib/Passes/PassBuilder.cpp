@@ -176,6 +176,7 @@
 #include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Regex.h"
@@ -944,6 +945,32 @@ parseLowerAllowCheckPassOptions(StringRef Params) {
     }
   }
 
+  return Result;
+}
+
+Expected<MetaRenamerOptions> parseMetaRenamerPassOptions(StringRef Params) {
+  MetaRenamerOptions Result;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+    bool Enable = !ParamName.consume_front("no-");
+    if (ParamName == "rename-only-inst") {
+      Result.RenameOnlyInst = Enable;
+    } else if (ParamName.consume_front("rename-exclude-struct-prefixes=")) {
+      Result.RenameExcludeStructPrefixes = ParamName;
+    } else if (ParamName.consume_front("rename-exclude-global-prefixes=")) {
+      Result.RenameExcludeGlobalPrefixes = ParamName;
+    } else if (ParamName.consume_front("rename-exclude-alias-prefixes=")) {
+      Result.RenameExcludeAliasPrefixes = ParamName;
+    } else if (ParamName.consume_front("rename-exclude-function-prefixes=")) {
+      Result.RenameExcludeFunctionPrefixes = ParamName;
+    } else {
+      return make_error<StringError>(
+        formatv("invalid MetaRenamer pass parameter '{0}' ", ParamName)
+            .str(),
+        inconvertibleErrorCode());
+    }
+  }
   return Result;
 }
 

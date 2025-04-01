@@ -35,36 +35,6 @@
 
 using namespace llvm;
 
-static cl::opt<std::string> RenameExcludeFunctionPrefixes(
-    "rename-exclude-function-prefixes",
-    cl::desc("Prefixes for functions that don't need to be renamed, separated "
-             "by a comma"),
-    cl::Hidden);
-
-static cl::opt<std::string> RenameExcludeAliasPrefixes(
-    "rename-exclude-alias-prefixes",
-    cl::desc("Prefixes for aliases that don't need to be renamed, separated "
-             "by a comma"),
-    cl::Hidden);
-
-static cl::opt<std::string> RenameExcludeGlobalPrefixes(
-    "rename-exclude-global-prefixes",
-    cl::desc(
-        "Prefixes for global values that don't need to be renamed, separated "
-        "by a comma"),
-    cl::Hidden);
-
-static cl::opt<std::string> RenameExcludeStructPrefixes(
-    "rename-exclude-struct-prefixes",
-    cl::desc("Prefixes for structs that don't need to be renamed, separated "
-             "by a comma"),
-    cl::Hidden);
-
-static cl::opt<bool>
-    RenameOnlyInst("rename-only-inst", cl::init(false),
-                   cl::desc("only rename the instructions in the function"),
-                   cl::Hidden);
-
 static const char *const metaNames[] = {
   // See http://en.wikipedia.org/wiki/Metasyntactic_variable
   "foo", "bar", "baz", "quux", "barney", "snork", "zot", "blam", "hoge",
@@ -129,7 +99,8 @@ void MetaRename(Function &F) {
 }
 
 void MetaRename(Module &M,
-                function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
+                function_ref<TargetLibraryInfo &(Function &)> GetTLI,
+                MetaRenamerOptions const& Options) {
   // Seed our PRNG with simple additive sum of ModuleID. We're looking to
   // simply avoid always having the same function names, and we need to
   // remain deterministic.
@@ -143,10 +114,10 @@ void MetaRename(Module &M,
   SmallVector<StringRef, 8> ExcludedGlobalsPrefixes;
   SmallVector<StringRef, 8> ExcludedStructsPrefixes;
   SmallVector<StringRef, 8> ExcludedFuncPrefixes;
-  parseExcludedPrefixes(RenameExcludeAliasPrefixes, ExcludedAliasesPrefixes);
-  parseExcludedPrefixes(RenameExcludeGlobalPrefixes, ExcludedGlobalsPrefixes);
-  parseExcludedPrefixes(RenameExcludeStructPrefixes, ExcludedStructsPrefixes);
-  parseExcludedPrefixes(RenameExcludeFunctionPrefixes, ExcludedFuncPrefixes);
+  parseExcludedPrefixes(Options.RenameExcludeAliasPrefixes, ExcludedAliasesPrefixes);
+  parseExcludedPrefixes(Options.RenameExcludeGlobalPrefixes, ExcludedGlobalsPrefixes);
+  parseExcludedPrefixes(Options.RenameExcludeStructPrefixes, ExcludedStructsPrefixes);
+  parseExcludedPrefixes(Options.RenameExcludeFunctionPrefixes, ExcludedFuncPrefixes);
 
   auto IsNameExcluded = [](StringRef &Name,
                            SmallVectorImpl<StringRef> &ExcludedPrefixes) {
@@ -164,7 +135,7 @@ void MetaRename(Module &M,
            IsNameExcluded(Name, ExcludedFuncPrefixes);
   };
 
-  if (RenameOnlyInst) {
+  if (Options.RenameOnlyInst) {
     // Rename all functions
     for (auto &F : M) {
       if (ExcludeLibFuncs(F))
@@ -230,7 +201,7 @@ PreservedAnalyses MetaRenamerPass::run(Module &M, ModuleAnalysisManager &AM) {
   auto GetTLI = [&FAM](Function &F) -> TargetLibraryInfo & {
     return FAM.getResult<TargetLibraryAnalysis>(F);
   };
-  MetaRename(M, GetTLI);
+  MetaRename(M, GetTLI, Options);
 
   return PreservedAnalyses::all();
 }

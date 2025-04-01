@@ -18,7 +18,33 @@
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
+
+struct MetaRenamerOptions {
+  /// Prefixes for functions that don't need to be renamed, separated by a comma
+  std::string RenameExcludeFunctionPrefixes;
+
+  /// Prefixes for aliases that don't need to be renamed, separated by a comma
+  std::string RenameExcludeAliasPrefixes;
+
+  /// Prefixes for global values that don't need to be renamed, separated by a
+  /// comma
+  std::string RenameExcludeGlobalPrefixes;
+
+  /// Prefixes for structs that don't need to be renamed, separated by a comma
+  std::string RenameExcludeStructPrefixes;
+
+  /// Only rename the instructions in the function
+  bool RenameOnlyInst = false;
+};
+
 struct MetaRenamerPass : PassInfoMixin<MetaRenamerPass> {
+private:
+  const MetaRenamerOptions Options;
+
+public:
+  MetaRenamerPass(MetaRenamerOptions Options = MetaRenamerOptions())
+      : Options(Options) {}
+
   PreservedAnalyses run(Module &, ModuleAnalysisManager &);
 };
 } // namespace llvm
