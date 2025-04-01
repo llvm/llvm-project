@@ -70,7 +70,8 @@ void llvm::reduceGlobalValuesDeltaPass(Oracle &O, ReducerWorkItem &Program) {
       if (GVar->isExternallyInitialized() && !O.shouldKeep())
         GVar->setExternallyInitialized(false);
 
-      // TODO: Reduce code model
+      if (GVar->getCodeModel() && !O.shouldKeep())
+        GVar->clearCodeModel();
     }
   }
 }
