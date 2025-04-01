@@ -2616,7 +2616,8 @@ ParseStatus RISCVAsmParser::parseRegListCommon(OperandVector &Operands,
     StringRef EndName = getLexer().getTok().getIdentifier();
     // FIXME: the register mapping and checks of EABI is wrong
     RegEnd = matchRegisterNameHelper(EndName);
-    if (!RegEnd)
+    if (!(RegEnd == RISCV::X9 ||
+          (RegEnd >= RISCV::X18 && RegEnd <= RISCV::X27)))
       return Error(getLoc(), "invalid register");
     if (IsEABI && RegEnd != RISCV::X9)
       return Error(getLoc(), "contiguous register list of EABI can only be "
@@ -2649,7 +2650,7 @@ ParseStatus RISCVAsmParser::parseRegListCommon(OperandVector &Operands,
           return Error(getLoc(), "invalid register");
         EndName = getLexer().getTok().getIdentifier();
         RegEnd = MatchRegisterName(EndName);
-        if (!RegEnd)
+        if (!(RegEnd >= RISCV::X19 && RegEnd <= RISCV::X27))
           return Error(getLoc(), "invalid register");
         getLexer().Lex();
       }
