@@ -439,8 +439,7 @@ struct FragmentCompiler {
           [Normalized(std::move(Normalized))](const Params &, Config &C) {
             if (C.Diagnostics.SuppressAll)
               return;
-            for (llvm::StringRef N : Normalized)
-              C.Diagnostics.Suppress.insert(N);
+            C.Diagnostics.Suppress.insert_range(Normalized);
           });
 
     if (F.UnusedIncludes) {

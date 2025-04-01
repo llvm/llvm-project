@@ -1264,9 +1264,16 @@ public:
     return nullptr;
   }
 
-  /// Return MCSymbol extracted from a target expression
+  /// Return MCSymbol extracted from the expression.
   virtual const MCSymbol *getTargetSymbol(const MCExpr *Expr) const {
-    return &cast<const MCSymbolRefExpr>(Expr)->getSymbol();
+    if (auto *BinaryExpr = dyn_cast<const MCBinaryExpr>(Expr))
+      return getTargetSymbol(BinaryExpr->getLHS());
+
+    auto *SymbolRefExpr = dyn_cast<const MCSymbolRefExpr>(Expr);
+    if (SymbolRefExpr && SymbolRefExpr->getKind() == MCSymbolRefExpr::VK_None)
+      return &SymbolRefExpr->getSymbol();
+
+    return nullptr;
   }
 
   /// Return addend that represents an offset from MCSymbol target

@@ -57,9 +57,6 @@ Value *EmitAMDGPUImplicitArgPtr(CodeGenFunction &CGF) {
 /// COV_NONE : Emit code to load a global variable "__oclc_ABI_version"
 ///            and use its value for COV_4 or COV_5+ approach. It is used for
 ///            compiling device libraries in an ABI-agnostic way.
-///
-/// Note: "__oclc_ABI_version" is supposed to be emitted and intialized by
-///       clang during compilation of user code.
 Value *EmitAMDGPUWorkGroupSize(CodeGenFunction &CGF, unsigned Index) {
   llvm::LoadInst *LD;
 

@@ -703,8 +703,7 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
   for (auto I : Primary->Exports)
     AllImports.insert(I.getPointer());
   // Ones that we only import.
-  for (Module *M : Primary->Imports)
-    AllImports.insert(M);
+  AllImports.insert_range(Primary->Imports);
   // Ones that we import in the global module fragment or the private module
   // fragment.
   for (Module *SubM : Primary->submodules()) {
@@ -714,8 +713,7 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
     assert(SubM->Exports.empty() &&
            "The global mdoule fragments and the private module fragments are "
            "not allowed to export import modules.");
-    for (Module *M : SubM->Imports)
-      AllImports.insert(M);
+    AllImports.insert_range(SubM->Imports);
   }
 
   SmallVector<llvm::Function *, 8> ModuleInits;
@@ -1152,7 +1150,7 @@ void CodeGenFunction::GenerateCXXGlobalCleanUpFunc(
       llvm::Constant *Arg;
       std::tie(CalleeTy, Callee, Arg) = DtorsOrStermFinalizers[e - i - 1];
 
-      llvm::CallInst *CI = nullptr;
+      llvm::CallBase *CI = nullptr;
       if (Arg == nullptr) {
         assert(
             CGM.getCXXABI().useSinitAndSterm() &&
@@ -1164,6 +1162,9 @@ void CodeGenFunction::GenerateCXXGlobalCleanUpFunc(
       // Make sure the call and the callee agree on calling convention.
       if (llvm::Function *F = dyn_cast<llvm::Function>(Callee))
         CI->setCallingConv(F->getCallingConv());
+
+      if (CGM.shouldEmitConvergenceTokens() && CI->isConvergent())
+        CI = addConvergenceControlToken(CI);
     }
   }
 

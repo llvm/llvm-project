@@ -1796,17 +1796,7 @@ public:
     if (!Op.isExpr())
       return nullptr;
 
-    auto *SymExpr = dyn_cast<MCSymbolRefExpr>(Op.getExpr());
-    if (!SymExpr || SymExpr->getKind() != MCSymbolRefExpr::VK_None)
-      return nullptr;
-
-    return &SymExpr->getSymbol();
-  }
-
-  // This is the same as the base class, but since we are overriding one of
-  // getTargetSymbol's signatures above, we need to override all of them.
-  const MCSymbol *getTargetSymbol(const MCExpr *Expr) const override {
-    return &cast<const MCSymbolRefExpr>(Expr)->getSymbol();
+    return MCPlusBuilder::getTargetSymbol(Op.getExpr());
   }
 
   bool analyzeBranch(InstructionIterator Begin, InstructionIterator End,

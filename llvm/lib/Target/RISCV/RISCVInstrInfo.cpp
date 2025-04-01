@@ -993,7 +993,7 @@ static RISCVCC::CondCode getCondFromBranchOpc(unsigned Opc) {
   }
 }
 
-static bool evaluateCondBranch(unsigned CC, int64_t C0, int64_t C1) {
+bool RISCVInstrInfo::evaluateCondBranch(unsigned CC, int64_t C0, int64_t C1) {
   switch (CC) {
   default:
     llvm_unreachable("Unexpected CC");
@@ -1297,6 +1297,31 @@ bool RISCVInstrInfo::reverseBranchCondition(
   return false;
 }
 
+// Return true if the instruction is a load immediate instruction (i.e.
+// ADDI x0, imm).
+static bool isLoadImm(const MachineInstr *MI, int64_t &Imm) {
+  if (MI->getOpcode() == RISCV::ADDI && MI->getOperand(1).isReg() &&
+      MI->getOperand(1).getReg() == RISCV::X0) {
+    Imm = MI->getOperand(2).getImm();
+    return true;
+  }
+  return false;
+}
+
+bool RISCVInstrInfo::isFromLoadImm(const MachineRegisterInfo &MRI,
+                                   const MachineOperand &Op, int64_t &Imm) {
+  // Either a load from immediate instruction or X0.
+  if (!Op.isReg())
+    return false;
+
+  Register Reg = Op.getReg();
+  if (Reg == RISCV::X0) {
+    Imm = 0;
+    return true;
+  }
+  return Reg.isVirtual() && isLoadImm(MRI.getVRegDef(Reg), Imm);
+}
+
 bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   MachineBasicBlock *MBB = MI.getParent();
   MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
@@ -1319,31 +1344,10 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
     MI.eraseFromParent();
   };
 
-  // Right now we only care about LI (i.e. ADDI x0, imm)
-  auto isLoadImm = [](const MachineInstr *MI, int64_t &Imm) -> bool {
-    if (MI->getOpcode() == RISCV::ADDI && MI->getOperand(1).isReg() &&
-        MI->getOperand(1).getReg() == RISCV::X0) {
-      Imm = MI->getOperand(2).getImm();
-      return true;
-    }
-    return false;
-  };
-  // Either a load from immediate instruction or X0.
-  auto isFromLoadImm = [&](const MachineOperand &Op, int64_t &Imm) -> bool {
-    if (!Op.isReg())
-      return false;
-    Register Reg = Op.getReg();
-    if (Reg == RISCV::X0) {
-      Imm = 0;
-      return true;
-    }
-    return Reg.isVirtual() && isLoadImm(MRI.getVRegDef(Reg), Imm);
-  };
-
   // Canonicalize conditional branches which can be constant folded into
   // beqz or bnez.  We can't modify the CFG here.
   int64_t C0, C1;
-  if (isFromLoadImm(Cond[1], C0) && isFromLoadImm(Cond[2], C1)) {
+  if (isFromLoadImm(MRI, Cond[1], C0) && isFromLoadImm(MRI, Cond[2], C1)) {
     unsigned NewCC =
         evaluateCondBranch(CC, C0, C1) ? RISCVCC::COND_EQ : RISCVCC::COND_NE;
     Cond[0] = MachineOperand::CreateImm(NewCC);
@@ -1389,7 +1393,7 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
     return Register();
   };
 
-  if (isFromLoadImm(LHS, C0) && MRI.hasOneUse(LHS.getReg())) {
+  if (isFromLoadImm(MRI, LHS, C0) && MRI.hasOneUse(LHS.getReg())) {
     // Might be case 1.
     // Signed integer overflow is UB. (UINT64_MAX is bigger so we don't need
     // to worry about unsigned overflow here)
@@ -1404,7 +1408,7 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
         modifyBranch();
         return true;
       }
-  } else if (isFromLoadImm(RHS, C0) && MRI.hasOneUse(RHS.getReg())) {
+  } else if (isFromLoadImm(MRI, RHS, C0) && MRI.hasOneUse(RHS.getReg())) {
     // Might be case 2.
     // For unsigned cases, we don't want C1 to wrap back to UINT64_MAX
     // when C0 is zero.
@@ -1748,6 +1752,8 @@ RISCVInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
   default:
     break;
   case RISCV::ADD:
+  case RISCV::OR:
+  case RISCV::XOR:
     if (MI.getOperand(1).isReg() && MI.getOperand(1).getReg() == RISCV::X0 &&
         MI.getOperand(2).isReg())
       return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
@@ -1760,6 +1766,21 @@ RISCVInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
     if (MI.getOperand(1).isReg() && MI.getOperand(2).isImm() &&
         MI.getOperand(2).getImm() == 0)
       return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
+    break;
+  case RISCV::SUB:
+    if (MI.getOperand(2).isReg() && MI.getOperand(2).getReg() == RISCV::X0 &&
+        MI.getOperand(1).isReg())
+      return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
+    break;
+  case RISCV::SH1ADD:
+  case RISCV::SH1ADD_UW:
+  case RISCV::SH2ADD:
+  case RISCV::SH2ADD_UW:
+  case RISCV::SH3ADD:
+  case RISCV::SH3ADD_UW:
+    if (MI.getOperand(1).isReg() && MI.getOperand(1).getReg() == RISCV::X0 &&
+        MI.getOperand(2).isReg())
+      return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
     break;
   case RISCV::FSGNJ_D:
   case RISCV::FSGNJ_S:
@@ -2674,6 +2695,12 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           break;
         case RISCVOp::OPERAND_RVKRNUM_2_14:
           Ok = Imm >= 2 && Imm <= 14;
+          break;
+        case RISCVOp::OPERAND_RLIST:
+          Ok = Imm >= RISCVZC::RA && Imm <= RISCVZC::RA_S0_S11;
+          break;
+        case RISCVOp::OPERAND_RLIST_S0:
+          Ok = Imm >= RISCVZC::RA_S0 && Imm <= RISCVZC::RA_S0_S11;
           break;
         case RISCVOp::OPERAND_SPIMM:
           Ok = (Imm & 0xf) == 0;

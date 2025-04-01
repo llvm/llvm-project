@@ -10,7 +10,6 @@
 #include "lldb/Core/Telemetry.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/UUID.h"
-#include "lldb/Version/Version.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
