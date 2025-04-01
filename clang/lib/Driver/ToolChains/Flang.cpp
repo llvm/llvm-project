@@ -157,16 +157,26 @@ void Flang::addCodegenOptions(const ArgList &Args,
   if (shouldLoopVersion(Args))
     CmdArgs.push_back("-fversion-loops-for-stride");
 
-  Args.addAllArgs(CmdArgs,
-                  {options::OPT_fdo_concurrent_to_openmp_EQ,
-                   options::OPT_flang_experimental_hlfir,
-                   options::OPT_flang_deprecated_no_hlfir,
-                   options::OPT_fno_ppc_native_vec_elem_order,
-                   options::OPT_fppc_native_vec_elem_order,
-                   options::OPT_finit_global_zero,
-                   options::OPT_fno_init_global_zero, options::OPT_ftime_report,
-                   options::OPT_ftime_report_EQ, options::OPT_funroll_loops,
-                   options::OPT_fno_unroll_loops});
+  for (const auto &arg :
+       Args.getAllArgValues(options::OPT_frepack_arrays_contiguity_EQ))
+    if (arg.compare("whole") != 0 && arg.compare("innermost") != 0) {
+      getToolChain().getDriver().Diag(diag::err_drv_unsupported_option_argument)
+          << "-frepack-arrays-contiguity=" << arg;
+    }
+
+  Args.addAllArgs(
+      CmdArgs,
+      {options::OPT_fdo_concurrent_to_openmp_EQ,
+       options::OPT_flang_experimental_hlfir,
+       options::OPT_flang_deprecated_no_hlfir,
+       options::OPT_fno_ppc_native_vec_elem_order,
+       options::OPT_fppc_native_vec_elem_order, options::OPT_finit_global_zero,
+       options::OPT_fno_init_global_zero, options::OPT_frepack_arrays,
+       options::OPT_fno_repack_arrays,
+       options::OPT_frepack_arrays_contiguity_EQ,
+       options::OPT_fstack_repack_arrays, options::OPT_fno_stack_repack_arrays,
+       options::OPT_ftime_report, options::OPT_ftime_report_EQ,
+       options::OPT_funroll_loops, options::OPT_fno_unroll_loops});
 }
 
 void Flang::addPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {

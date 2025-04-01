@@ -56,6 +56,11 @@ ENUM_LOWERINGOPT(StackArrays, unsigned, 1, 0)
 /// packed into contiguous memory.
 ENUM_LOWERINGOPT(RepackArrays, unsigned, 1, 0)
 
+/// If true, the temporary arrays created under RepackArrays
+/// control will be allocated in stack memory. If false,
+/// they will be allocated in heap memory.
+ENUM_LOWERINGOPT(StackRepackArrays, unsigned, 1, 0)
+
 /// If true, the repacking (RepackArrays option above)
 /// will be done for arrays non-contiguous in any dimension,
 /// otherwise, it will be done only for arrays non-contiguous
