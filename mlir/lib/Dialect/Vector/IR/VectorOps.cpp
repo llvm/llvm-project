@@ -5670,6 +5670,23 @@ public:
   }
 };
 
+// Pattern to rewrite a ShapeCast(PoisonOp) -> PoisonOp.
+class ShapeCastPoisonFolder final : public OpRewritePattern<ShapeCastOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ShapeCastOp shapeCastOp,
+                                PatternRewriter &rewriter) const override {
+
+    if (!shapeCastOp.getSource().getDefiningOp<ub::PoisonOp>())
+      return failure();
+
+    rewriter.replaceOpWithNewOp<ub::PoisonOp>(shapeCastOp,
+                                              shapeCastOp.getType());
+    return success();
+  }
+};
+
 /// Helper function that computes a new vector type based on the input vector
 /// type by removing the trailing one dims:
 ///
@@ -5828,8 +5845,10 @@ public:
 
 void ShapeCastOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  results.add<ShapeCastConstantFolder, ShapeCastCreateMaskFolderTrailingOneDim,
-              ShapeCastBroadcastFolder>(context);
+  results
+      .add<ShapeCastConstantFolder, ShapeCastPoisonFolder,
+           ShapeCastCreateMaskFolderTrailingOneDim, ShapeCastBroadcastFolder>(
+          context);
 }
 
 //===----------------------------------------------------------------------===//
