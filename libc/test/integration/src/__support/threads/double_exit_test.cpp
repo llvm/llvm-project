@@ -16,8 +16,18 @@ void *__dso_handle = nullptr;
 int __cxa_thread_atexit_impl(void (*func)(void *), void *arg, void *dso);
 }
 
+int call_num = 0;
+
+[[gnu::destructor]]
+void check() {
+  // This destructor should be called only once.
+  if (call_num != 1)
+    __builtin_trap();
+}
+
 TEST_MAIN() {
   __cxa_thread_atexit_impl([](void *) { LIBC_NAMESPACE::exit(0); }, nullptr,
                            __dso_handle);
-  return 0;
+  __cxa_thread_atexit_impl([](void *) { ++call_num; }, nullptr, __dso_handle);
+  LIBC_NAMESPACE::exit(1);
 }

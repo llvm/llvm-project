@@ -154,9 +154,6 @@ ThreadAtExitCallbackMgr *get_thread_atexit_callback_mgr() {
 }
 
 void call_atexit_callbacks(ThreadAttributes *attrib) {
-  if (attrib->dtors_called)
-    return;
-  attrib->dtors_called = true;
   attrib->atexit_callback_mgr->call();
   for (size_t i = 0; i < TSS_KEY_COUNT; ++i) {
     TSSValueUnit &unit = tss_values[i];
