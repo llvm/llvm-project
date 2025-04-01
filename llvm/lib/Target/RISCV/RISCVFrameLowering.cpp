@@ -1465,7 +1465,7 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   // Emit epilogue for shadow call stack.
   emitSCSEpilogue(MF, MBB, MBBI, DL);
 
-  //
+  // SiFive CLIC needs to swap `sf.mscratchcsw` into `sp`
   emitSiFiveCLICStackSwap(MF, MBB, MBBI, DL);
 }
 
