@@ -1275,28 +1275,8 @@ TypeSystemSwiftTypeRef::Canonicalize(swift::Demangle::Demangler &dem,
     // Hit the safeguard limit.
     return node;
   }
-  default: {
-    llvm::SmallVector<NodePointer, 2> children;
-    bool changed = false;
-    for (NodePointer child : *node) {
-      NodePointer transformed = GetCanonicalNode(dem, child, flavor);
-      changed |= (child != transformed);
-      children.push_back(transformed);
-    }
-    if (changed) {
-      // Create a new node with the transformed children.
-      auto kind = node->getKind();
-      if (node->hasText())
-        node = dem.createNodeWithAllocatedText(kind, node->getText());
-      else if (node->hasIndex())
-        node = dem.createNode(kind, node->getIndex());
-      else
-        node = dem.createNode(kind);
-      for (NodePointer transformed_child : children)
-        node->addChild(transformed_child, dem);
-    }
+  default:
     return node;
-  }
   }
   return node;
 }
