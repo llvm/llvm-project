@@ -121,21 +121,23 @@ void MemoryMappingLayout::DumpListOfModules(
     InternalMmapVectorNoCtor<LoadedModule> *modules) {
   Reset();
   InternalMmapVector<char> module_name(kMaxPathLength);
-#if SANITIZER_AIX
+#  if SANITIZER_AIX
   InternalMmapVector<char> module_displayname(kMaxPathLength);
   MemoryMappedSegment segment(module_name.data(), module_name.size(),
-                              module_displayname.data(), module_displayname.size());
-#else
+                              module_displayname.data(),
+                              module_displayname.size());
+#  else
   MemoryMappedSegment segment(module_name.data(), module_name.size());
-#endif
+#  endif
   for (uptr i = 0; Next(&segment); i++) {
-// On AIX, filename contains /proc/<pid>/object/<object_id> to pass to the symbolizer, so we use displayname to
-// contain the real path to present to users
-#if SANITIZER_AIX
+// On AIX, filename contains /proc/<pid>/object/<object_id> to pass to the
+// symbolizer, so we use displayname to contain the real path to present to
+// users
+#  if SANITIZER_AIX
     const char *cur_name = segment.displayname;
-#else
+#  else
     const char *cur_name = segment.filename;
-#endif
+#  endif
     if (cur_name[0] == '\0')
       continue;
     // Don't subtract 'cur_beg' from the first entry:
