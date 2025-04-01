@@ -94,7 +94,8 @@ LayoutAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
     if (!sg_layout)
       return emitError() << "expected sg_layout being used with sg_data";
     if (sg_data.size() != sg_layout.size())
-      return emitError() << "expected sg_data having the same rank as sg_layout";
+      return emitError()
+             << "expected sg_data having the same rank as sg_layout";
   }
 
   // inst_data is optional for Subgroup layout, but its presence requires
@@ -297,8 +298,8 @@ LogicalResult TensorDescType::verify(
       uint32_t numElemPerWi = laneLayout[i] * laneData[i];
       if (tensorShape[i] < numElemPerWi || tensorShape[i] % numElemPerWi != 0)
         return emitError() << "cannot distribute " << tensorShape[i] << " over "
-                           << laneLayout[i] << " work items with " << laneData[i]
-                           << " elements each";
+                           << laneLayout[i] << " work items with "
+                           << laneData[i] << " elements each";
     }
   }
 
