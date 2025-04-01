@@ -1640,6 +1640,14 @@
 // JOIN:INTMAX_C_(0) 0LL
 // JOIN:UINTMAX_C_(0) 0ULL
 
+// Demonstrate that you can define the integer literal suffixes as a macro and
+// it will not interfere with the definitions in stdint.h due to invalid tokens
+// formed via token pasting. See GH85995 for details.
+#define L %
+#define UL %
+#define LL %
+#define ULL %
+
 #include <stdint.h>
 
 INT8_MAX_ INT8_MAX
