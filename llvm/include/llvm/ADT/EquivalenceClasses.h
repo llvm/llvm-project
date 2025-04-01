@@ -146,9 +146,9 @@ public:
 
   EquivalenceClasses &operator=(const EquivalenceClasses &RHS) {
     TheMapping.clear();
-    for (iterator I = RHS.begin(), E = RHS.end(); I != E; ++I)
-      if (I->isLeader()) {
-        member_iterator MI = RHS.member_begin(*I);
+    for (const auto &E : RHS)
+      if (E.isLeader()) {
+        member_iterator MI = RHS.member_begin(E);
         member_iterator LeaderIt = member_begin(insert(*MI));
         for (++MI; MI != member_end(); ++MI)
           unionSets(LeaderIt, member_begin(insert(*MI)));
@@ -207,8 +207,9 @@ public:
   /// Note that this is a linear time operation.
   unsigned getNumClasses() const {
     unsigned NC = 0;
-    for (iterator I = begin(), E = end(); I != E; ++I)
-      if (I->isLeader()) ++NC;
+    for (const auto &E : *this)
+      if (E.isLeader())
+        ++NC;
     return NC;
   }
 
