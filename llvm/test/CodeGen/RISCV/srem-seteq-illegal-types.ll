@@ -635,19 +635,19 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV32MV-NEXT:    vmv.v.x v8, a0
 ; RV32MV-NEXT:    vslide1down.vx v8, v8, a1
 ; RV32MV-NEXT:    addi a0, sp, 32
-; RV32MV-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
+; RV32MV-NEXT:    vs2r.v v8, (a0) # vscale x 16-byte Folded Spill
 ; RV32MV-NEXT:    li a2, 7
 ; RV32MV-NEXT:    mv a0, s2
 ; RV32MV-NEXT:    mv a1, s4
 ; RV32MV-NEXT:    li a3, 0
 ; RV32MV-NEXT:    call __moddi3
 ; RV32MV-NEXT:    addi a2, sp, 32
-; RV32MV-NEXT:    vl2r.v v8, (a2) # Unknown-size Folded Reload
+; RV32MV-NEXT:    vl2r.v v8, (a2) # vscale x 16-byte Folded Reload
 ; RV32MV-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32MV-NEXT:    vslide1down.vx v8, v8, a0
 ; RV32MV-NEXT:    vslide1down.vx v8, v8, a1
 ; RV32MV-NEXT:    addi a0, sp, 32
-; RV32MV-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
+; RV32MV-NEXT:    vs2r.v v8, (a0) # vscale x 16-byte Folded Spill
 ; RV32MV-NEXT:    li a2, -5
 ; RV32MV-NEXT:    li a3, -1
 ; RV32MV-NEXT:    mv a0, s1
@@ -657,7 +657,7 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV32MV-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32MV-NEXT:    vlse64.v v8, (a2), zero
 ; RV32MV-NEXT:    addi a2, sp, 32
-; RV32MV-NEXT:    vl2r.v v10, (a2) # Unknown-size Folded Reload
+; RV32MV-NEXT:    vl2r.v v10, (a2) # vscale x 16-byte Folded Reload
 ; RV32MV-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32MV-NEXT:    vslide1down.vx v10, v10, a0
 ; RV32MV-NEXT:    vslide1down.vx v10, v10, a1

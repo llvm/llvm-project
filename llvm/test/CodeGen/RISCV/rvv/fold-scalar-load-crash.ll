@@ -24,7 +24,7 @@ define i32 @test(i32 %size, ptr %add.ptr, i64 %const) {
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; RV32-NEXT:    vmseq.vi v9, v9, 0
 ; RV32-NEXT:    vmv.x.s a0, v9
-; RV32-NEXT:    andi a3, a0, 255
+; RV32-NEXT:    zext.b a3, a0
 ; RV32-NEXT:    mv a0, a2
 ; RV32-NEXT:    bnez a3, .LBB0_1
 ; RV32-NEXT:  # %bb.2: # %if.then381
@@ -51,7 +51,7 @@ define i32 @test(i32 %size, ptr %add.ptr, i64 %const) {
 ; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; RV64-NEXT:    vmseq.vi v9, v9, 0
 ; RV64-NEXT:    vmv.x.s a0, v9
-; RV64-NEXT:    andi a3, a0, 255
+; RV64-NEXT:    zext.b a3, a0
 ; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:    bnez a3, .LBB0_1
 ; RV64-NEXT:  # %bb.2: # %if.then381

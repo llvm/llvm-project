@@ -75,8 +75,8 @@ void cir::CIRDialect::initialize() {
 
 // Check if a region's termination omission is valid and, if so, creates and
 // inserts the omitted terminator into the region.
-LogicalResult ensureRegionTerm(OpAsmParser &parser, Region &region,
-                               SMLoc errLoc) {
+static LogicalResult ensureRegionTerm(OpAsmParser &parser, Region &region,
+                                      SMLoc errLoc) {
   Location eLoc = parser.getEncodedSourceLoc(parser.getCurrentLocation());
   OpBuilder builder(parser.getBuilder().getContext());
 
@@ -102,7 +102,7 @@ LogicalResult ensureRegionTerm(OpAsmParser &parser, Region &region,
 }
 
 // True if the region's terminator should be omitted.
-bool omitRegionTerm(mlir::Region &r) {
+static bool omitRegionTerm(mlir::Region &r) {
   const auto singleNonEmptyBlock = r.hasOneBlock() && !r.back().empty();
   const auto yieldsNothing = [&r]() {
     auto y = dyn_cast<cir::YieldOp>(r.back().getTerminator());
@@ -346,9 +346,9 @@ LogicalResult cir::CastOp::verify() {
       return emitOpError() << "requires two types differ in addrspace only";
     return success();
   }
+  default:
+    llvm_unreachable("Unknown CastOp kind?");
   }
-
-  llvm_unreachable("Unknown CastOp kind?");
 }
 
 static bool isIntOrBoolCast(cir::CastOp op) {
@@ -727,6 +727,37 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
 // TODO(CIR): The properties of functions that require verification haven't
 // been implemented yet.
 mlir::LogicalResult cir::FuncOp::verify() { return success(); }
+
+LogicalResult cir::BinOp::verify() {
+  bool noWrap = getNoUnsignedWrap() || getNoSignedWrap();
+  bool saturated = getSaturated();
+
+  if (!isa<cir::IntType>(getType()) && noWrap)
+    return emitError()
+           << "only operations on integer values may have nsw/nuw flags";
+
+  bool noWrapOps = getKind() == cir::BinOpKind::Add ||
+                   getKind() == cir::BinOpKind::Sub ||
+                   getKind() == cir::BinOpKind::Mul;
+
+  bool saturatedOps =
+      getKind() == cir::BinOpKind::Add || getKind() == cir::BinOpKind::Sub;
+
+  if (noWrap && !noWrapOps)
+    return emitError() << "The nsw/nuw flags are applicable to opcodes: 'add', "
+                          "'sub' and 'mul'";
+  if (saturated && !saturatedOps)
+    return emitError() << "The saturated flag is applicable to opcodes: 'add' "
+                          "and 'sub'";
+  if (noWrap && saturated)
+    return emitError() << "The nsw/nuw flags and the saturated flag are "
+                          "mutually exclusive";
+
+  assert(!cir::MissingFeatures::complexType());
+  // TODO(cir): verify for complex binops
+
+  return mlir::success();
+}
 
 //===----------------------------------------------------------------------===//
 // UnaryOp

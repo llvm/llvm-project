@@ -654,7 +654,7 @@ define amdgpu_kernel void @double8_inselt(ptr addrspace(1) %out, <8 x double> %v
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v16, 0x3ff00000
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_lshl_b32 s2, s2, 1
+; GCN-NEXT:    s_lshl_b32 m0, s2, 1
 ; GCN-NEXT:    v_mov_b32_e32 v0, s8
 ; GCN-NEXT:    v_mov_b32_e32 v1, s9
 ; GCN-NEXT:    v_mov_b32_e32 v2, s10
@@ -671,7 +671,6 @@ define amdgpu_kernel void @double8_inselt(ptr addrspace(1) %out, <8 x double> %v
 ; GCN-NEXT:    v_mov_b32_e32 v13, s21
 ; GCN-NEXT:    v_mov_b32_e32 v14, s22
 ; GCN-NEXT:    v_mov_b32_e32 v15, s23
-; GCN-NEXT:    s_mov_b32 m0, s2
 ; GCN-NEXT:    s_add_u32 s2, s0, 48
 ; GCN-NEXT:    v_movreld_b32_e32 v0, 0
 ; GCN-NEXT:    s_addc_u32 s3, s1, 0
@@ -720,15 +719,14 @@ define amdgpu_kernel void @double7_inselt(ptr addrspace(1) %out, <7 x double> %v
 ; GCN-NEXT:    v_mov_b32_e32 v4, s12
 ; GCN-NEXT:    v_mov_b32_e32 v5, s13
 ; GCN-NEXT:    v_mov_b32_e32 v6, s14
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_lshl_b32 s0, s0, 1
 ; GCN-NEXT:    v_mov_b32_e32 v7, s15
 ; GCN-NEXT:    v_mov_b32_e32 v9, s1
 ; GCN-NEXT:    v_mov_b32_e32 v10, s2
 ; GCN-NEXT:    v_mov_b32_e32 v11, s3
 ; GCN-NEXT:    v_mov_b32_e32 v12, s16
 ; GCN-NEXT:    v_mov_b32_e32 v13, s17
-; GCN-NEXT:    s_mov_b32 m0, s0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_lshl_b32 m0, s0, 1
 ; GCN-NEXT:    v_movreld_b32_e32 v0, 0
 ; GCN-NEXT:    s_add_u32 s0, s6, 16
 ; GCN-NEXT:    v_movreld_b32_e32 v1, v16
@@ -765,8 +763,7 @@ define amdgpu_kernel void @double16_inselt(ptr addrspace(1) %out, <16 x double> 
 ; GCN-NEXT:    v_mov_b32_e32 v32, 0x3ff00000
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s36
-; GCN-NEXT:    s_lshl_b32 s0, s0, 1
-; GCN-NEXT:    s_mov_b32 m0, s0
+; GCN-NEXT:    s_lshl_b32 m0, s0, 1
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v1, s37
 ; GCN-NEXT:    v_mov_b32_e32 v2, s38
@@ -872,8 +869,7 @@ define amdgpu_kernel void @double15_inselt(ptr addrspace(1) %out, <15 x double> 
 ; GCN-NEXT:    v_mov_b32_e32 v3, s11
 ; GCN-NEXT:    v_mov_b32_e32 v4, s12
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_lshl_b32 s0, s0, 1
-; GCN-NEXT:    s_mov_b32 m0, s0
+; GCN-NEXT:    s_lshl_b32 m0, s0, 1
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v5, s13
 ; GCN-NEXT:    v_mov_b32_e32 v6, s14

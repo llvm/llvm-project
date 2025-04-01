@@ -13,7 +13,7 @@
 #ifndef MLIR_DIALECT_SPIRV_IMAGE_INTERFACES
 #define MLIR_DIALECT_SPIRV_IMAGE_INTERFACES
 
-include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
+include "mlir/IR/OpBase.td"
 
 // -----
 

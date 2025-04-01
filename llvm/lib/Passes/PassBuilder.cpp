@@ -165,6 +165,7 @@
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/CodeGen/WasmEHPrepare.h"
 #include "llvm/CodeGen/WinEHPrepare.h"
+#include "llvm/CodeGen/XRayInstrumentation.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/PassManager.h"
@@ -679,6 +680,12 @@ Expected<HardwareLoopOptions> parseHardwareLoopOptions(StringRef Params) {
     }
   }
   return HardwareLoopOpts;
+}
+
+/// Parser of parameters for Lint pass.
+Expected<bool> parseLintOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(Params, "abort-on-error",
+                                            "LintPass");
 }
 
 /// Parser of parameters for LoopUnroll pass.

@@ -215,8 +215,7 @@ void for_test_scalable_1(int *List, int Length) {
 // CHECK: ![[VECTORIZE_ENABLE]] = !{!"llvm.loop.vectorize.enable", i1 true}
 
 // CHECK: ![[LOOP_3]] = distinct !{![[LOOP_3]], [[MP]], ![[INTERLEAVE_4:.*]], ![[VECTORIZE_ENABLE]], ![[FOLLOWUP_VECTOR_3:.*]]}
-// CHECK: ![[FOLLOWUP_VECTOR_3]] = !{!"llvm.loop.vectorize.followup_all", ![[AFTER_VECTOR_3:.*]]}
-// CHECK: ![[AFTER_VECTOR_3]] = distinct !{![[AFTER_VECTOR_3]], [[MP]], ![[ISVECTORIZED:.*]], ![[UNROLL_8:.*]]}
+// CHECK: ![[FOLLOWUP_VECTOR_3]] = !{!"llvm.loop.vectorize.followup_all", [[MP]], ![[ISVECTORIZED:.*]], ![[UNROLL_8:.*]]}
 // CHECK: ![[ISVECTORIZED]] = !{!"llvm.loop.isvectorized"}
 // CHECK: ![[UNROLL_8]] = !{!"llvm.loop.unroll.count", i32 8}
 
@@ -227,36 +226,26 @@ void for_test_scalable_1(int *List, int Length) {
 // CHECK: ![[LOOP_5]] = distinct !{![[LOOP_5]], ![[UNROLL_DISABLE:.*]], ![[DISTRIBUTE_DISABLE:.*]], ![[WIDTH_1:.*]]}
 // CHECK: ![[WIDTH_1]] = !{!"llvm.loop.vectorize.width", i32 1}
 
-// CHECK: ![[LOOP_6]] = distinct !{![[LOOP_6]], [[MP]], ![[WIDTH_2:.*]], ![[FIXED_VEC]], ![[INTERLEAVE_2:.*]], ![[FOLLOWUP_VECTOR_6:.*]]}
-// CHECK: ![[FOLLOWUP_VECTOR_6]] = !{!"llvm.loop.vectorize.followup_all", ![[AFTER_VECTOR_6:.*]]}
-// CHECK: ![[AFTER_VECTOR_6]] = distinct !{![[AFTER_VECTOR_6]], ![[ISVECTORIZED:.*]], ![[UNROLL_8:.*]]}
+// CHECK: ![[LOOP_6]] = distinct !{![[LOOP_6]], [[MP]], ![[WIDTH_2:.*]], ![[FIXED_VEC]], ![[INTERLEAVE_2:.*]], ![[FOLLOWUP_VECTOR_3]]}
 
 // CHECK: ![[LOOP_7]] = distinct !{![[LOOP_7]], [[MP]], ![[WIDTH_5:.*]], ![[FIXED_VEC]], ![[VECTORIZE_ENABLE]]}
 // CHECK: ![[WIDTH_5]] = !{!"llvm.loop.vectorize.width", i32 5}
 
 // CHECK: ![[LOOP_8]] = distinct !{![[LOOP_8]], [[MP]], ![[WIDTH_5:.*]], ![[FIXED_VEC]], ![[VECTORIZE_ENABLE]]}
 
-// CHECK: ![[LOOP_9]] = distinct !{![[LOOP_9]], ![[WIDTH_8:.*]], ![[FIXED_VEC]], ![[INTERLEAVE_8:.*]], ![[FOLLOWUP_VECTOR_9:.*]]}
-// CHECK: ![[FOLLOWUP_VECTOR_9]] = !{!"llvm.loop.vectorize.followup_all", ![[AFTER_VECTOR_9:.*]]}
-// CHECK: ![[AFTER_VECTOR_9]] = distinct !{![[AFTER_VECTOR_9]], ![[ISVECTORIZED:.*]], ![[UNROLL_8:.*]]}
+// CHECK: ![[LOOP_9]] = distinct !{![[LOOP_9]], ![[WIDTH_8:.*]], ![[FIXED_VEC]], ![[INTERLEAVE_8:.*]], ![[FOLLOWUP_VECTOR_3]]}
 
-// CHECK: ![[LOOP_10]] = distinct !{![[LOOP_10]], ![[WIDTH_2:.*]], ![[FIXED_VEC]], ![[INTERLEAVE_2:.*]], ![[FOLLOWUP_VECTOR_10:.*]]}
-// CHECK: ![[FOLLOWUP_VECTOR_10]] = !{!"llvm.loop.vectorize.followup_all", ![[AFTER_VECTOR_10:.*]]}
-// CHECK: ![[AFTER_VECTOR_10]] = distinct !{![[AFTER_VECTOR_10]], ![[ISVECTORIZED:.*]], ![[UNROLL_8:.*]]}
+// CHECK: ![[LOOP_10]] = distinct !{![[LOOP_10]], ![[WIDTH_2:.*]], ![[FIXED_VEC]], ![[INTERLEAVE_2:.*]], ![[FOLLOWUP_VECTOR_3]]}
 
-// CHECK: ![[LOOP_11]] = distinct !{![[LOOP_11]], ![[WIDTH_2:.*]], ![[FIXED_VEC]], ![[INTERLEAVE_4:.*]], ![[FOLLOWUP_VECTOR_11:.*]]}
-// CHECK: ![[FOLLOWUP_VECTOR_11]] = !{!"llvm.loop.vectorize.followup_all", ![[AFTER_VECTOR_11:.*]]}
-// CHECK: ![[AFTER_VECTOR_11]] = distinct !{![[AFTER_VECTOR_11]], ![[ISVECTORIZED:.*]], ![[UNROLL_8:.*]]}
+// CHECK: ![[LOOP_11]] = distinct !{![[LOOP_11]], ![[WIDTH_2:.*]], ![[FIXED_VEC]], ![[INTERLEAVE_4:.*]], ![[FOLLOWUP_VECTOR_3]]}
 
 // CHECK: ![[LOOP_12]] = distinct !{![[LOOP_12]], ![[WIDTH_6:.*]], ![[FIXED_VEC]], ![[INTERLEAVE_10:.*]], ![[FOLLOWUP_VECTOR_12:.*]]}
-// CHECK: ![[FOLLOWUP_VECTOR_12]] = !{!"llvm.loop.vectorize.followup_all", ![[AFTER_VECTOR_12:.*]]}
-// CHECK: ![[AFTER_VECTOR_12]] = distinct !{![[AFTER_VECTOR_12]], ![[ISVECTORIZED:.*]], ![[UNROLL_24:.*]]}
+// CHECK: ![[FOLLOWUP_VECTOR_12]] = !{!"llvm.loop.vectorize.followup_all", ![[ISVECTORIZED:.*]], ![[UNROLL_24:.*]]}
 // CHECK: ![[UNROLL_24]] = !{!"llvm.loop.unroll.count", i32 24}
 
 // CHECK: ![[LOOP_13]] = distinct !{![[LOOP_13]], ![[WIDTH_8:.*]], ![[INTERLEAVE_16:.*]], ![[VECTORIZE_ENABLE]], ![[FOLLOWUP_VECTOR_13:.*]]}
 // CHECK: ![[INTERLEAVE_16]] = !{!"llvm.loop.interleave.count", i32 16}
-// CHECK: ![[FOLLOWUP_VECTOR_13]] = !{!"llvm.loop.vectorize.followup_all", ![[AFTER_VECTOR_13:.*]]}
-// CHECK: ![[AFTER_VECTOR_13]] = distinct !{![[AFTER_VECTOR_13]], ![[ISVECTORIZED:.*]], ![[UNROLL_32:.*]]}
+// CHECK: ![[FOLLOWUP_VECTOR_13]] = !{!"llvm.loop.vectorize.followup_all", ![[ISVECTORIZED:.*]], ![[UNROLL_32:.*]]}
 // CHECK: ![[UNROLL_32]] = !{!"llvm.loop.unroll.count", i32 32}
 
 // CHECK: ![[LOOP_14]] = distinct !{![[LOOP_14]], [[MP]], ![[WIDTH_10:.*]], ![[FIXED_VEC]], ![[VECTORIZE_ENABLE]]}

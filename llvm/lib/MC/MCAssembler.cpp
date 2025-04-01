@@ -175,7 +175,7 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
   bool IsPCRel = FixupFlags & MCFixupKindInfo::FKF_IsPCRel;
   bool IsResolved = false;
   if (IsPCRel) {
-    if (Target.getSymB()) {
+    if (Target.getSubSym()) {
       IsResolved = false;
     } else if (!Target.getSymA()) {
       IsResolved = false;
@@ -233,13 +233,6 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
       WasForced = true;
     }
   }
-
-  // A linker relaxation target may emit ADD/SUB relocations for A-B+C. Let
-  // recordRelocation handle non-VK_None cases like A@plt-B+C.
-  if (!IsResolved && Target.getSymA() && Target.getSubSym() &&
-      Target.getSymA()->getKind() == MCSymbolRefExpr::VK_None &&
-      getBackend().handleAddSubRelocations(*this, *DF, Fixup, Target, Value))
-    return true;
 
   return IsResolved;
 }
