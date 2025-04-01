@@ -10,18 +10,18 @@
 extern "C" void __asan_poison_memory_region(void *, size_t);
 extern "C" void __asan_unpoison_memory_region(void *, size_t);
 
-void novichok(char *x) {
+void i_poisoned_your_memory(char *x) {
   __asan_poison_memory_region(x, 64);       // A
   __asan_unpoison_memory_region(x + 16, 8); // B
   __asan_poison_memory_region(x + 24, 16);  // C
 }
 
-void fsb(char *x) { novichok(x); }
+void foo(char *x) { i_poisoned_your_memory(x); }
 
 int main(int argc, char **argv) {
   char *x = new char[64];
   x[10] = 0;
-  fsb(x);
+  foo(x);
   // Bytes [ 0, 15]: poisoned by A
   // Bytes [16, 23]: unpoisoned by B
   // Bytes [24, 63]: poisoned by C
@@ -32,9 +32,9 @@ int main(int argc, char **argv) {
   // CHECK-B-NOT: ERROR: AddressSanitizer: use-after-poison
 
   // CHECK-AC: Memory was manually poisoned by thread T0:
-  // CHECK-A: novichok{{.*}}use-after-poison-history-size.cpp:[[@LINE-21]]
-  // CHECK-C: novichok{{.*}}use-after-poison-history-size.cpp:[[@LINE-20]]
-  // CHECK-AC: fsb{{.*}}use-after-poison-history-size.cpp:[[@LINE-18]]
+  // CHECK-A: i_poisoned_your_memory{{.*}}use-after-poison-history-size.cpp:[[@LINE-21]]
+  // CHECK-C: i_poisoned_your_memory{{.*}}use-after-poison-history-size.cpp:[[@LINE-20]]
+  // CHECK-AC: foo{{.*}}use-after-poison-history-size.cpp:[[@LINE-18]]
   // CHECK-AC: main{{.*}}use-after-poison-history-size.cpp:[[@LINE-14]]
   // CHECK-B-NOT: Memory was manually poisoned by thread T0:
 
