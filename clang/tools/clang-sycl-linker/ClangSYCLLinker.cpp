@@ -211,8 +211,8 @@ Expected<std::unique_ptr<Module>> getBitcodeModule(StringRef File,
 
   auto M = getLazyIRFileModule(File, Err, C);
   if (M)
-    return std::move(M);
-  return createStringError("Unable to parse file");
+    return M;
+  return createStringError(Err.getMessage());
 }
 
 /// Gather all SYCL device library files that will be linked with input device

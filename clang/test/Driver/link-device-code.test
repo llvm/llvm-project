@@ -14,7 +14,7 @@
 ; CHECK-SIMPLE-NOT: define {{.*}}addFive{{.*}}
 ; CHECK-SIMPLE-NOT: define {{.*}}unusedFunc{{.*}}
 
-;CHECK-MULTIPLE-DEFS: error: Linking globals named {{.*}}bar_func1{{.*}} symbol multiply defined!
+; CHECK-MULTIPLE-DEFS: error: Linking globals named {{.*}}bar_func1{{.*}} symbol multiply defined!
 
 ; CHECK-DEVICE-LIB: define {{.*}}foo_func1{{.*}}
 ; CHECK-DEVICE-LIB: define {{.*}}foo_func2{{.*}}
