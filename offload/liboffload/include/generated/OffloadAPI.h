@@ -99,7 +99,7 @@ typedef struct ol_program_impl_t *ol_program_handle_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Handle of kernel object
-typedef struct ol_kernel_impl_t *ol_kernel_handle_t;
+typedef void *ol_kernel_handle_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Defines Return/Error codes
@@ -757,10 +757,12 @@ OL_APIEXPORT ol_result_t OL_APICALL olDestroyProgram(
     ol_program_handle_t Program);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Create a kernel from the function identified by `KernelName` in the
+/// @brief Get a kernel from the function identified by `KernelName` in the
 /// given program.
 ///
 /// @details
+///    - The kernel handle returned is owned by the device so does not need to
+///    be destroyed.
 ///
 /// @returns
 ///     - ::OL_RESULT_SUCCESS
@@ -771,29 +773,13 @@ OL_APIEXPORT ol_result_t OL_APICALL olDestroyProgram(
 ///     - ::OL_ERRC_INVALID_NULL_POINTER
 ///         + `NULL == KernelName`
 ///         + `NULL == Kernel`
-OL_APIEXPORT ol_result_t OL_APICALL olCreateKernel(
+OL_APIEXPORT ol_result_t OL_APICALL olGetKernel(
     // [in] handle of the program
     ol_program_handle_t Program,
     // [in] name of the kernel entry point in the program
     const char *KernelName,
-    // [out] output pointer for the created kernel
+    // [out] output pointer for the fetched kernel
     ol_kernel_handle_t *Kernel);
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Destroy the kernel and free all underlying resources.
-///
-/// @details
-///
-/// @returns
-///     - ::OL_RESULT_SUCCESS
-///     - ::OL_ERRC_UNINITIALIZED
-///     - ::OL_ERRC_DEVICE_LOST
-///     - ::OL_ERRC_INVALID_NULL_HANDLE
-///         + `NULL == Kernel`
-///     - ::OL_ERRC_INVALID_NULL_POINTER
-OL_APIEXPORT ol_result_t OL_APICALL olDestroyKernel(
-    // [in] handle of the kernel
-    ol_kernel_handle_t Kernel);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Function parameters for olGetPlatform
@@ -969,20 +955,13 @@ typedef struct ol_destroy_program_params_t {
 } ol_destroy_program_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Function parameters for olCreateKernel
+/// @brief Function parameters for olGetKernel
 /// @details Each entry is a pointer to the parameter passed to the function;
-typedef struct ol_create_kernel_params_t {
+typedef struct ol_get_kernel_params_t {
   ol_program_handle_t *pProgram;
   const char **pKernelName;
   ol_kernel_handle_t **pKernel;
-} ol_create_kernel_params_t;
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Function parameters for olDestroyKernel
-/// @details Each entry is a pointer to the parameter passed to the function;
-typedef struct ol_destroy_kernel_params_t {
-  ol_kernel_handle_t *pKernel;
-} ol_destroy_kernel_params_t;
+} ol_get_kernel_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Variant of olInit that also sets source code location information
@@ -1149,19 +1128,12 @@ OL_APIEXPORT ol_result_t OL_APICALL olDestroyProgramWithCodeLoc(
     ol_program_handle_t Program, ol_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Variant of olCreateKernel that also sets source code location
+/// @brief Variant of olGetKernel that also sets source code location
 /// information
-/// @details See also ::olCreateKernel
-OL_APIEXPORT ol_result_t OL_APICALL olCreateKernelWithCodeLoc(
+/// @details See also ::olGetKernel
+OL_APIEXPORT ol_result_t OL_APICALL olGetKernelWithCodeLoc(
     ol_program_handle_t Program, const char *KernelName,
     ol_kernel_handle_t *Kernel, ol_code_location_t *CodeLocation);
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Variant of olDestroyKernel that also sets source code location
-/// information
-/// @details See also ::olDestroyKernel
-OL_APIEXPORT ol_result_t OL_APICALL olDestroyKernelWithCodeLoc(
-    ol_kernel_handle_t Kernel, ol_code_location_t *CodeLocation);
 
 #if defined(__cplusplus)
 } // extern "C"

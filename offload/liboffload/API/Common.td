@@ -77,9 +77,10 @@ def : Handle {
   let desc = "Handle of program object";
 }
 
-def : Handle {
+def : Typedef {
   let name = "ol_kernel_handle_t";
   let desc = "Handle of kernel object";
+  let value = "void *";
 }
 
 def : Enum {

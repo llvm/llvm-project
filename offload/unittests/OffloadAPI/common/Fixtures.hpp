@@ -96,13 +96,10 @@ struct OffloadProgramTest : OffloadDeviceTest {
 struct OffloadKernelTest : OffloadProgramTest {
   void SetUp() override {
     RETURN_ON_FATAL_FAILURE(OffloadProgramTest::SetUp());
-    ASSERT_SUCCESS(olCreateKernel(Program, "foo", &Kernel));
+    ASSERT_SUCCESS(olGetKernel(Program, "foo", &Kernel));
   }
 
   void TearDown() override {
-    if (Kernel) {
-      olDestroyKernel(Kernel);
-    }
     RETURN_ON_FATAL_FAILURE(OffloadProgramTest::TearDown());
   }
 

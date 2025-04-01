@@ -83,10 +83,6 @@ struct ol_program_impl_t {
   __tgt_device_image DeviceImage;
 };
 
-struct ol_kernel_impl_t {
-  GenericKernelTy *KernelImpl;
-};
-
 namespace llvm {
 namespace offload {
 
@@ -490,9 +486,9 @@ ol_impl_result_t olDestroyProgram_impl(ol_program_handle_t Program) {
   return olDestroy(Program);
 }
 
-ol_impl_result_t olCreateKernel_impl(ol_program_handle_t Program,
-                                     const char *KernelName,
-                                     ol_kernel_handle_t *Kernel) {
+ol_impl_result_t olGetKernel_impl(ol_program_handle_t Program,
+                                  const char *KernelName,
+                                  ol_kernel_handle_t *Kernel) {
 
   auto &Device = Program->Image->getDevice();
   auto KernelImpl = Device.constructKernel(KernelName);
@@ -503,15 +499,9 @@ ol_impl_result_t olCreateKernel_impl(ol_program_handle_t Program,
   if (Err)
     return {OL_ERRC_UNKNOWN, "Could not initialize the kernel"};
 
-  ol_kernel_handle_t CreatedKernel = new ol_kernel_impl_t();
-  CreatedKernel->KernelImpl = &*KernelImpl;
-  *Kernel = CreatedKernel;
+  *Kernel = &*KernelImpl;
 
   return OL_SUCCESS;
-}
-
-ol_impl_result_t olDestroyKernel_impl(ol_kernel_handle_t Kernel) {
-  return olDestroy(Kernel);
 }
 
 ol_impl_result_t
@@ -543,8 +533,9 @@ olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
   // Don't do anything with pointer indirection; use arg data as-is
   LaunchArgs.Flags.IsCUDA = true;
 
-  auto Err = Kernel->KernelImpl->launch(*DeviceImpl, LaunchArgs.ArgPtrs,
-                                        nullptr, LaunchArgs, AsyncInfoWrapper);
+  auto *KernelImpl = reinterpret_cast<GenericKernelTy *>(Kernel);
+  auto Err = KernelImpl->launch(*DeviceImpl, LaunchArgs.ArgPtrs, nullptr,
+                                LaunchArgs, AsyncInfoWrapper);
 
   AsyncInfoWrapper.finalize(Err);
   if (Err)

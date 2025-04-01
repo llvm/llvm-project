@@ -1,4 +1,4 @@
-//===------- Offload API tests - olCreateKernel ---------------------------===//
+//===------- Offload API tests - olGetKernel ---------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,22 +10,21 @@
 #include <OffloadAPI.h>
 #include <gtest/gtest.h>
 
-using olCreateKernelTest = OffloadProgramTest;
+using olGetKernelTest = OffloadProgramTest;
 
-TEST_F(olCreateKernelTest, Success) {
+TEST_F(olGetKernelTest, Success) {
   ol_kernel_handle_t Kernel = nullptr;
-  ASSERT_SUCCESS(olCreateKernel(Program, "foo", &Kernel));
+  ASSERT_SUCCESS(olGetKernel(Program, "foo", &Kernel));
   ASSERT_NE(Kernel, nullptr);
-  ASSERT_SUCCESS(olDestroyKernel(Kernel));
 }
 
-TEST_F(olCreateKernelTest, InvalidNullProgram) {
+TEST_F(olGetKernelTest, InvalidNullProgram) {
   ol_kernel_handle_t Kernel = nullptr;
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,
-               olCreateKernel(nullptr, "foo", &Kernel));
+               olGetKernel(nullptr, "foo", &Kernel));
 }
 
-TEST_F(olCreateKernelTest, InvalidNullKernelPointer) {
+TEST_F(olGetKernelTest, InvalidNullKernelPointer) {
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
-               olCreateKernel(Program, "foo", nullptr));
+               olGetKernel(Program, "foo", nullptr));
 }

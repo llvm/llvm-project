@@ -25,7 +25,6 @@ template <> struct is_handle<ol_context_handle_t> : std::true_type {};
 template <> struct is_handle<ol_queue_handle_t> : std::true_type {};
 template <> struct is_handle<ol_event_handle_t> : std::true_type {};
 template <> struct is_handle<ol_program_handle_t> : std::true_type {};
-template <> struct is_handle<ol_kernel_handle_t> : std::true_type {};
 template <typename T> inline constexpr bool is_handle_v = is_handle<T>::value;
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
@@ -635,22 +634,13 @@ operator<<(llvm::raw_ostream &os,
 }
 
 inline llvm::raw_ostream &
-operator<<(llvm::raw_ostream &os,
-           const struct ol_create_kernel_params_t *params) {
+operator<<(llvm::raw_ostream &os, const struct ol_get_kernel_params_t *params) {
   os << ".Program = ";
   printPtr(os, *params->pProgram);
   os << ", ";
   os << ".KernelName = ";
   printPtr(os, *params->pKernelName);
   os << ", ";
-  os << ".Kernel = ";
-  printPtr(os, *params->pKernel);
-  return os;
-}
-
-inline llvm::raw_ostream &
-operator<<(llvm::raw_ostream &os,
-           const struct ol_destroy_kernel_params_t *params) {
   os << ".Kernel = ";
   printPtr(os, *params->pKernel);
   return os;

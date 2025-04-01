@@ -17,7 +17,7 @@ struct olLaunchKernelTest : OffloadQueueTest {
     ASSERT_GE(DeviceBin->getBufferSize(), 0lu);
     ASSERT_SUCCESS(olCreateProgram(Device, DeviceBin->getBufferStart(),
                                    DeviceBin->getBufferSize(), &Program));
-    ASSERT_SUCCESS(olCreateKernel(Program, "foo", &Kernel));
+    ASSERT_SUCCESS(olGetKernel(Program, "foo", &Kernel));
     LaunchArgs.Dimensions = 1;
     LaunchArgs.GroupSizeX = 64;
     LaunchArgs.GroupSizeY = 1;
@@ -29,9 +29,6 @@ struct olLaunchKernelTest : OffloadQueueTest {
   }
 
   void TearDown() override {
-    if (Kernel) {
-      olDestroyKernel(Kernel);
-    }
     if (Program) {
       olDestroyProgram(Program);
     }

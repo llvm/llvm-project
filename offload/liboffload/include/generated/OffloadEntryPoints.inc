@@ -983,9 +983,9 @@ ol_result_t olDestroyProgramWithCodeLoc(ol_program_handle_t Program,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olCreateKernel_val(ol_program_handle_t Program,
-                                    const char *KernelName,
-                                    ol_kernel_handle_t *Kernel) {
+ol_impl_result_t olGetKernel_val(ol_program_handle_t Program,
+                                 const char *KernelName,
+                                 ol_kernel_handle_t *Kernel) {
   if (offloadConfig().ValidationEnabled) {
     if (NULL == Program) {
       return OL_ERRC_INVALID_NULL_HANDLE;
@@ -1000,19 +1000,19 @@ ol_impl_result_t olCreateKernel_val(ol_program_handle_t Program,
     }
   }
 
-  return llvm::offload::olCreateKernel_impl(Program, KernelName, Kernel);
+  return llvm::offload::olGetKernel_impl(Program, KernelName, Kernel);
 }
-OL_APIEXPORT ol_result_t OL_APICALL olCreateKernel(ol_program_handle_t Program,
-                                                   const char *KernelName,
-                                                   ol_kernel_handle_t *Kernel) {
+OL_APIEXPORT ol_result_t OL_APICALL olGetKernel(ol_program_handle_t Program,
+                                                const char *KernelName,
+                                                ol_kernel_handle_t *Kernel) {
   if (offloadConfig().TracingEnabled) {
-    llvm::errs() << "---> olCreateKernel";
+    llvm::errs() << "---> olGetKernel";
   }
 
-  ol_result_t Result = olCreateKernel_val(Program, KernelName, Kernel);
+  ol_result_t Result = olGetKernel_val(Program, KernelName, Kernel);
 
   if (offloadConfig().TracingEnabled) {
-    ol_create_kernel_params_t Params = {&Program, &KernelName, &Kernel};
+    ol_get_kernel_params_t Params = {&Program, &KernelName, &Kernel};
     llvm::errs() << "(" << &Params << ")";
     llvm::errs() << "-> " << Result << "\n";
     if (Result && Result->Details) {
@@ -1021,48 +1021,12 @@ OL_APIEXPORT ol_result_t OL_APICALL olCreateKernel(ol_program_handle_t Program,
   }
   return Result;
 }
-ol_result_t olCreateKernelWithCodeLoc(ol_program_handle_t Program,
-                                      const char *KernelName,
-                                      ol_kernel_handle_t *Kernel,
-                                      ol_code_location_t *CodeLocation) {
+ol_result_t olGetKernelWithCodeLoc(ol_program_handle_t Program,
+                                   const char *KernelName,
+                                   ol_kernel_handle_t *Kernel,
+                                   ol_code_location_t *CodeLocation) {
   currentCodeLocation() = CodeLocation;
-  ol_result_t Result = ::olCreateKernel(Program, KernelName, Kernel);
-
-  currentCodeLocation() = nullptr;
-  return Result;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olDestroyKernel_val(ol_kernel_handle_t Kernel) {
-  if (offloadConfig().ValidationEnabled) {
-    if (NULL == Kernel) {
-      return OL_ERRC_INVALID_NULL_HANDLE;
-    }
-  }
-
-  return llvm::offload::olDestroyKernel_impl(Kernel);
-}
-OL_APIEXPORT ol_result_t OL_APICALL olDestroyKernel(ol_kernel_handle_t Kernel) {
-  if (offloadConfig().TracingEnabled) {
-    llvm::errs() << "---> olDestroyKernel";
-  }
-
-  ol_result_t Result = olDestroyKernel_val(Kernel);
-
-  if (offloadConfig().TracingEnabled) {
-    ol_destroy_kernel_params_t Params = {&Kernel};
-    llvm::errs() << "(" << &Params << ")";
-    llvm::errs() << "-> " << Result << "\n";
-    if (Result && Result->Details) {
-      llvm::errs() << "     *Error Details* " << Result->Details << " \n";
-    }
-  }
-  return Result;
-}
-ol_result_t olDestroyKernelWithCodeLoc(ol_kernel_handle_t Kernel,
-                                       ol_code_location_t *CodeLocation) {
-  currentCodeLocation() = CodeLocation;
-  ol_result_t Result = ::olDestroyKernel(Kernel);
+  ol_result_t Result = ::olGetKernel(Program, KernelName, Kernel);
 
   currentCodeLocation() = nullptr;
   return Result;
