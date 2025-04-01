@@ -2433,8 +2433,7 @@ bool Sema::addInstantiatedCapturesToScope(
   if (LambdaPattern->capture_size() && !LambdaClass->capture_size()) {
     for (FunctionScopeInfo *Scope : llvm::reverse(FunctionScopes)) {
       auto *LSI = dyn_cast<LambdaScopeInfo>(Scope);
-      if (!LSI ||
-          LSI->CallOperator->getTemplateInstantiationPattern() != PatternDecl)
+      if (!LSI || getPatternFunctionDecl(LSI->CallOperator) != PatternDecl)
         continue;
       InstantiatingScope = LSI;
       break;
