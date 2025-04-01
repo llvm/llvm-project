@@ -44,3 +44,25 @@ def : Function {
   ];
   let returns = [];
 }
+
+def : Function {
+    let name = "olMemcpy";
+    let desc = "Enqueue a memcpy operation.";
+    let details = [
+        "For host pointers, use the device returned by olGetHostDevice",
+        "If a queue is specified, at least one device must be a non-host device",
+        "If a queue is not specified, the memcpy happens synchronously"
+    ];
+    let params = [
+        Param<"ol_queue_handle_t", "Queue", "handle of the queue.", PARAM_IN_OPTIONAL>,
+        Param<"void*", "DstPtr", "pointer to copy to", PARAM_IN>,
+        Param<"ol_device_handle_t", "DstDevice", "device that DstPtr belongs to", PARAM_IN>,
+        Param<"void*", "SrcPtr", "pointer to copy from", PARAM_IN>,
+        Param<"ol_device_handle_t", "SrcDevice", "device that SrcPtr belongs to", PARAM_IN>,
+        Param<"size_t", "Size", "size in bytes of data to copy", PARAM_IN>,
+        Param<"ol_event_handle_t*", "EventOut", "optional recorded event for the enqueued operation", PARAM_OUT_OPTIONAL>
+    ];
+    let returns = [
+        Return<"OL_ERRC_INVALID_ARGUMENT", ["`Queue == NULL && EventOut != NULL`"]>
+    ];
+}

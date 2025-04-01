@@ -516,6 +516,31 @@ operator<<(llvm::raw_ostream &os, const struct ol_mem_free_params_t *params) {
   return os;
 }
 
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                                     const struct ol_memcpy_params_t *params) {
+  os << ".Queue = ";
+  printPtr(os, *params->pQueue);
+  os << ", ";
+  os << ".DstPtr = ";
+  printPtr(os, *params->pDstPtr);
+  os << ", ";
+  os << ".DstDevice = ";
+  printPtr(os, *params->pDstDevice);
+  os << ", ";
+  os << ".SrcPtr = ";
+  printPtr(os, *params->pSrcPtr);
+  os << ", ";
+  os << ".SrcDevice = ";
+  printPtr(os, *params->pSrcDevice);
+  os << ", ";
+  os << ".Size = ";
+  os << *params->pSize;
+  os << ", ";
+  os << ".EventOut = ";
+  printPtr(os, *params->pEventOut);
+  return os;
+}
+
 inline llvm::raw_ostream &
 operator<<(llvm::raw_ostream &os,
            const struct ol_create_queue_params_t *params) {
@@ -557,57 +582,6 @@ operator<<(llvm::raw_ostream &os, const struct ol_wait_event_params_t *params) {
   return os;
 }
 
-inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
-                                     const struct ol_memcpy_params_t *params) {
-  os << ".Queue = ";
-  printPtr(os, *params->pQueue);
-  os << ", ";
-  os << ".DstPtr = ";
-  printPtr(os, *params->pDstPtr);
-  os << ", ";
-  os << ".DstDevice = ";
-  printPtr(os, *params->pDstDevice);
-  os << ", ";
-  os << ".SrcPtr = ";
-  printPtr(os, *params->pSrcPtr);
-  os << ", ";
-  os << ".SrcDevice = ";
-  printPtr(os, *params->pSrcDevice);
-  os << ", ";
-  os << ".Size = ";
-  os << *params->pSize;
-  os << ", ";
-  os << ".EventOut = ";
-  printPtr(os, *params->pEventOut);
-  return os;
-}
-
-inline llvm::raw_ostream &
-operator<<(llvm::raw_ostream &os,
-           const struct ol_launch_kernel_params_t *params) {
-  os << ".Queue = ";
-  printPtr(os, *params->pQueue);
-  os << ", ";
-  os << ".Device = ";
-  printPtr(os, *params->pDevice);
-  os << ", ";
-  os << ".Kernel = ";
-  printPtr(os, *params->pKernel);
-  os << ", ";
-  os << ".ArgumentsData = ";
-  printPtr(os, *params->pArgumentsData);
-  os << ", ";
-  os << ".ArgumentsSize = ";
-  os << *params->pArgumentsSize;
-  os << ", ";
-  os << ".LaunchSizeArgs = ";
-  printPtr(os, *params->pLaunchSizeArgs);
-  os << ", ";
-  os << ".EventOut = ";
-  printPtr(os, *params->pEventOut);
-  return os;
-}
-
 inline llvm::raw_ostream &
 operator<<(llvm::raw_ostream &os,
            const struct ol_create_program_params_t *params) {
@@ -643,6 +617,32 @@ operator<<(llvm::raw_ostream &os, const struct ol_get_kernel_params_t *params) {
   os << ", ";
   os << ".Kernel = ";
   printPtr(os, *params->pKernel);
+  return os;
+}
+
+inline llvm::raw_ostream &
+operator<<(llvm::raw_ostream &os,
+           const struct ol_launch_kernel_params_t *params) {
+  os << ".Queue = ";
+  printPtr(os, *params->pQueue);
+  os << ", ";
+  os << ".Device = ";
+  printPtr(os, *params->pDevice);
+  os << ", ";
+  os << ".Kernel = ";
+  printPtr(os, *params->pKernel);
+  os << ", ";
+  os << ".ArgumentsData = ";
+  printPtr(os, *params->pArgumentsData);
+  os << ", ";
+  os << ".ArgumentsSize = ";
+  os << *params->pArgumentsSize;
+  os << ", ";
+  os << ".LaunchSizeArgs = ";
+  printPtr(os, *params->pLaunchSizeArgs);
+  os << ", ";
+  os << ".EventOut = ";
+  printPtr(os, *params->pEventOut);
   return os;
 }
 
