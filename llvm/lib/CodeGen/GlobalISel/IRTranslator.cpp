@@ -3048,8 +3048,9 @@ bool IRTranslator::translateCallBr(const User &U,
   addSuccessorWithProb(CallBrMBB, Return, BranchProbability::getOne());
   // TODO: For most of the cases where there is an intrinsic callbr, we're
   // having exactly one indirect target, which will be unreachable. As soon as
-  // this changes, we might need to enhance Target->setIsInlineAsmBrIndirectTarget
-  // or add something similar for intrinsic indirect branches.
+  // this changes, we might need to enhance
+  // Target->setIsInlineAsmBrIndirectTarget or add something similar for
+  // intrinsic indirect branches.
   if (I.isInlineAsm()) {
     for (BasicBlock *Dest : I.getIndirectDests()) {
       MachineBasicBlock *Target = &getMBB(*Dest);
