@@ -5,7 +5,7 @@ from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 
 
-@skipIfCpuDoesNotSupportIntelPT
+@skipIfNoIntelPT
 class TestTraceStartStop(TraceIntelPTTestCaseBase):
     def expectGenericHelpMessageForStartCommand(self):
         self.expect(

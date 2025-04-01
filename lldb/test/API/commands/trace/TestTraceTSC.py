@@ -5,7 +5,7 @@ from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 
 
-@skipIfCpuDoesNotSupportIntelPT
+@skipIfNoIntelPT
 class TestTraceTimestampCounters(TraceIntelPTTestCaseBase):
     @testSBAPIAndCommands
     @skipIf(oslist=no_match(["linux"]), archs=no_match(["i386", "x86_64"]))

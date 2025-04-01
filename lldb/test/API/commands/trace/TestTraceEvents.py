@@ -45,7 +45,7 @@ class TestTraceEvents(TraceIntelPTTestCaseBase):
             ],
         )
 
-    @skipIfCpuDoesNotSupportIntelPT
+    @skipIfNoIntelPT
     @testSBAPIAndCommands
     def testPauseEvents(self):
         """

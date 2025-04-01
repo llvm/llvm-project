@@ -18,7 +18,7 @@ def testSBAPIAndCommands(func):
     return wrapper
 
 
-def skipIfCpuDoesNotSupportIntelPT(func):
+def skipIfNoIntelPT(func):
     """Skip tests if the system does not support tracing."""
 
     supported = os.path.exists("/sys/bus/event_source/devices/intel_pt/type")
