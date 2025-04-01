@@ -6,9 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
-#include <clc/math/clc_exp2.h>
+#include <clc/clc_convert.h>
+#include <clc/float/definitions.h>
+#include <clc/internal/clc.h>
+#include <clc/math/clc_exp_helper.h>
+#include <clc/math/clc_fma.h>
+#include <clc/math/clc_mad.h>
+#include <clc/math/clc_rint.h>
+#include <clc/math/math.h>
+#include <clc/relational/clc_isnan.h>
 
-#define FUNCTION exp2
-#define __CLC_BODY <clc/shared/unary_def.inc>
+#define __CLC_BODY <clc_exp2.inc>
 #include <clc/math/gentype.inc>
