@@ -43,7 +43,7 @@ suspend:
 ; CHECK:         %x = alloca i64, align 8, !coro.outside.frame !0
 ; CHECK-NOT:     %x.reload.addr = getelementptr inbounds %f.Frame, ptr %hdl, i32 0, i32 2
 ; CHECK:         %y.reload.addr = getelementptr inbounds %f.Frame, ptr %hdl, i32 0, i32 2
-; CHECK:         %alias_phi = phi ptr [ %y.reload.addr, %merge.from.flag_false ], [ %x, %entry ]
+; CHECK:         %alias_phi = select i1 %n, ptr %x, ptr %y.reload.addr
 
 declare ptr @llvm.coro.free(token, ptr)
 declare i32 @llvm.coro.size.i32()
