@@ -377,9 +377,12 @@ protected:
   /// names in .cfi_* directives.  Defaults to false.
   bool DwarfRegNumForCFI = false;
 
-  /// True if target uses parens to indicate the symbol variant instead of @.
-  /// For example, foo(plt) instead of foo@plt.  Defaults to false.
-  bool UseParensForSymbolVariant = false;
+  /// True if target uses @ (expr@specifier) for relocation specifiers.
+  bool UseAtForSpecifier = true;
+
+  /// (ARM-specific) Uses parens for relocation specifier in data
+  /// directives, e.g. .word foo(got).
+  bool UseParensForSpecifier = false;
 
   /// True if the target uses parens for symbol names starting with
   /// '$' character to distinguish them from absolute names.
@@ -649,7 +652,8 @@ public:
 
   bool doDwarfFDESymbolsUseAbsDiff() const { return DwarfFDESymbolsUseAbsDiff; }
   bool useDwarfRegNumForCFI() const { return DwarfRegNumForCFI; }
-  bool useParensForSymbolVariant() const { return UseParensForSymbolVariant; }
+  bool useAtForSpecifier() const { return UseAtForSpecifier; }
+  bool useParensForSpecifier() const { return UseParensForSpecifier; }
   bool supportsExtendedDwarfLocDirective() const {
     return SupportsExtendedDwarfLocDirective;
   }

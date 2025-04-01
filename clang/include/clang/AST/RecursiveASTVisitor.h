@@ -795,7 +795,6 @@ bool RecursiveASTVisitor<Derived>::TraverseNestedNameSpecifier(
     return true;
 
   case NestedNameSpecifier::TypeSpec:
-  case NestedNameSpecifier::TypeSpecWithTemplate:
     TRY_TO(TraverseType(QualType(NNS->getAsType(), 0)));
   }
 
@@ -820,7 +819,6 @@ bool RecursiveASTVisitor<Derived>::TraverseNestedNameSpecifierLoc(
     return true;
 
   case NestedNameSpecifier::TypeSpec:
-  case NestedNameSpecifier::TypeSpecWithTemplate:
     TRY_TO(TraverseTypeLoc(NNS.getTypeLoc()));
     break;
   }
@@ -1172,7 +1170,8 @@ DEF_TRAVERSE_TYPE(DependentNameType,
                   { TRY_TO(TraverseNestedNameSpecifier(T->getQualifier())); })
 
 DEF_TRAVERSE_TYPE(DependentTemplateSpecializationType, {
-  TRY_TO(TraverseNestedNameSpecifier(T->getQualifier()));
+  const DependentTemplateStorage &S = T->getDependentTemplateName();
+  TRY_TO(TraverseNestedNameSpecifier(S.getQualifier()));
   TRY_TO(TraverseTemplateArguments(T->template_arguments()));
 })
 
