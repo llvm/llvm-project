@@ -841,12 +841,6 @@ libc_support_library(
 libc_support_library(
     name = "__support_libc_assert",
     hdrs = ["src/__support/libc_assert.h"],
-    deps = [
-        ":__support_integer_to_string",
-        ":__support_macros_attributes",
-        ":__support_osutil_exit",
-        ":__support_osutil_io",
-    ],
 )
 
 libc_support_library(
@@ -868,7 +862,7 @@ libc_support_library(
         ":__support_ctype_utils",
         ":__support_str_to_num_result",
         ":__support_uint128",
-        ":errno",
+        ":hdr_errno_macros",
     ],
 )
 
@@ -892,7 +886,7 @@ libc_support_library(
         ":__support_str_to_integer",
         ":__support_str_to_num_result",
         ":__support_uint128",
-        ":errno",
+        ":hdr_errno_macros",
     ],
 )
 
@@ -1590,21 +1584,6 @@ libc_support_library(
 
 ########################## externally shared targets ###########################
 
-# TODO: Remove this once downstream users are migrated to libcxx_shared_headers.
-libc_support_library(
-    name = "libc_external_common",
-    hdrs = glob(
-        ["shared/*.h"],
-        exclude = ["shared/rpc_server.h"],
-    ),
-    deps = [
-        ":__support_common",
-        ":__support_fputil_fp_bits",
-        ":__support_str_to_float",
-        ":__support_str_to_integer",
-    ],
-)
-
 libc_header_library(
     name = "libcxx_shared_headers",
     hdrs = [
@@ -1911,6 +1890,7 @@ libc_support_library(
         ":__support_fputil_fma",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
+        ":__support_integer_literals",
     ],
 )
 
