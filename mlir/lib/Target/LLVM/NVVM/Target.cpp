@@ -455,6 +455,7 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
   LLVM_DEBUG({
     llvm::dbgs() << "Tool invocation for module: "
                  << getOperation().getNameAttr() << "\n";
+    llvm::dbgs() << "ptxas executable:" << ptxasCompiler.value() << "\n";
     llvm::interleave(ptxasArgs, llvm::dbgs(), " ");
     llvm::dbgs() << "\n";
     if (createFatbin) {
@@ -672,7 +673,6 @@ NVPTXSerializer::moduleToObject(llvm::Module &llvmModule) {
   llvm::Timer moduleToObjectTimer(
       "moduleToObjectTimer",
       "Timer for perf llvm-ir -> isa and isa -> binary.");
-  moduleToObjectTimer.startTimer();
   // Return LLVM IR if the compilation target is `offload`.
 #define DEBUG_TYPE "serialize-to-llvm"
   LLVM_DEBUG({
@@ -699,16 +699,17 @@ NVPTXSerializer::moduleToObject(llvm::Module &llvmModule) {
                                << triple << ", can't optimize with LLVM\n";
     return std::nullopt;
   }
+  moduleToObjectTimer.startTimer();
   std::optional<std::string> serializedISA =
       translateToISA(llvmModule, **targetMachine);
+  moduleToObjectTimer.stopTimer();
+  llvmToISATimeInMs = moduleToObjectTimer.getTotalTime().getWallTime() * 1000;
+  moduleToObjectTimer.clear();
   if (!serializedISA) {
     getOperation().emitError() << "Failed translating the module to ISA.";
     return std::nullopt;
   }
 
-  moduleToObjectTimer.stopTimer();
-  llvmToISATimeInMs = moduleToObjectTimer.getTotalTime().getWallTime() * 1000;
-  moduleToObjectTimer.clear();
   if (isaCallback)
     isaCallback(serializedISA.value());
 

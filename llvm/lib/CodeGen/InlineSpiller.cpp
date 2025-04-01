@@ -1461,7 +1461,7 @@ void HoistSpillHelper::getVisitOrders(
       // with BBs containing hoisted spills which will be inserted to
       // SpillsToKeep later during hoisting.
       SpillsToKeep[MDT[Block]] = Register();
-      WorkSet.insert(NodesOnPath.begin(), NodesOnPath.end());
+      WorkSet.insert_range(NodesOnPath);
     }
     NodesOnPath.clear();
   }

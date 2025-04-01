@@ -12,8 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceOperandBundles.h"
-#include "Delta.h"
-#include "TestRunner.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -95,17 +93,11 @@ static void maybeRewriteCallWithDifferentBundles(
 }
 
 /// Removes out-of-chunk operand bundles from calls.
-static void extractOperandBundesFromModule(Oracle &O,
-                                           ReducerWorkItem &WorkItem) {
+void llvm::reduceOperandBundesDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
   Module &Program = WorkItem.getModule();
   OperandBundleRemapper R(O);
   R.visit(Program);
 
   for (const auto &I : R.CallsToRefine)
     maybeRewriteCallWithDifferentBundles(I.first, I.second);
-}
-
-void llvm::reduceOperandBundesDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, extractOperandBundesFromModule,
-               "Reducing Operand Bundles");
 }

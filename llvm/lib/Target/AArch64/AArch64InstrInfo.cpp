@@ -53,6 +53,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <iterator>
 #include <utility>
@@ -1491,13 +1492,22 @@ AArch64InstrInfo::canRemovePTestInstr(MachineInstr *PTest, MachineInstr *Mask,
     if ((Mask == Pred) && PTest->getOpcode() == AArch64::PTEST_PP_ANY)
       return PredOpcode;
 
+    auto PTestLikeMask = MRI->getUniqueVRegDef(Pred->getOperand(1).getReg());
+
+    // If the PTEST like instruction's general predicate is not `Mask`, attempt
+    // to look through a copy and try again. This is because some instructions
+    // take a predicate whose register class is a subset of its result class.
+    if (Mask != PTestLikeMask && PTestLikeMask->isFullCopy() &&
+        PTestLikeMask->getOperand(1).getReg().isVirtual())
+      PTestLikeMask =
+          MRI->getUniqueVRegDef(PTestLikeMask->getOperand(1).getReg());
+
     // For PTEST(PTRUE_ALL, PTEST_LIKE), the PTEST is redundant if the
     // the element size matches and either the PTEST_LIKE instruction uses
     // the same all active mask or the condition is "any".
     if (isPTrueOpcode(MaskOpcode) && Mask->getOperand(1).getImm() == 31 &&
         getElementSizeForOpcode(MaskOpcode) ==
             getElementSizeForOpcode(PredOpcode)) {
-      auto PTestLikeMask = MRI->getUniqueVRegDef(Pred->getOperand(1).getReg());
       if (Mask == PTestLikeMask || PTest->getOpcode() == AArch64::PTEST_PP_ANY)
         return PredOpcode;
     }
@@ -1524,7 +1534,6 @@ AArch64InstrInfo::canRemovePTestInstr(MachineInstr *PTest, MachineInstr *Mask,
     // active flag, whereas the PTEST instruction with the same mask doesn't.
     // For PTEST_ANY this doesn't apply as the flags in this case would be
     // identical regardless of element size.
-    auto PTestLikeMask = MRI->getUniqueVRegDef(Pred->getOperand(1).getReg());
     uint64_t PredElementSize = getElementSizeForOpcode(PredOpcode);
     if (Mask == PTestLikeMask && (PredElementSize == AArch64::ElementSizeB ||
                                   PTest->getOpcode() == AArch64::PTEST_PP_ANY))
@@ -6762,6 +6771,133 @@ static bool getMaddPatterns(MachineInstr &Root,
   }
   return Found;
 }
+
+bool AArch64InstrInfo::isAccumulationOpcode(unsigned Opcode) const {
+  switch (Opcode) {
+  default:
+    break;
+  case AArch64::UABALB_ZZZ_D:
+  case AArch64::UABALB_ZZZ_H:
+  case AArch64::UABALB_ZZZ_S:
+  case AArch64::UABALT_ZZZ_D:
+  case AArch64::UABALT_ZZZ_H:
+  case AArch64::UABALT_ZZZ_S:
+  case AArch64::SABALB_ZZZ_D:
+  case AArch64::SABALB_ZZZ_S:
+  case AArch64::SABALB_ZZZ_H:
+  case AArch64::SABALT_ZZZ_D:
+  case AArch64::SABALT_ZZZ_S:
+  case AArch64::SABALT_ZZZ_H:
+  case AArch64::UABALv16i8_v8i16:
+  case AArch64::UABALv2i32_v2i64:
+  case AArch64::UABALv4i16_v4i32:
+  case AArch64::UABALv4i32_v2i64:
+  case AArch64::UABALv8i16_v4i32:
+  case AArch64::UABALv8i8_v8i16:
+  case AArch64::UABAv16i8:
+  case AArch64::UABAv2i32:
+  case AArch64::UABAv4i16:
+  case AArch64::UABAv4i32:
+  case AArch64::UABAv8i16:
+  case AArch64::UABAv8i8:
+  case AArch64::SABALv16i8_v8i16:
+  case AArch64::SABALv2i32_v2i64:
+  case AArch64::SABALv4i16_v4i32:
+  case AArch64::SABALv4i32_v2i64:
+  case AArch64::SABALv8i16_v4i32:
+  case AArch64::SABALv8i8_v8i16:
+  case AArch64::SABAv16i8:
+  case AArch64::SABAv2i32:
+  case AArch64::SABAv4i16:
+  case AArch64::SABAv4i32:
+  case AArch64::SABAv8i16:
+  case AArch64::SABAv8i8:
+    return true;
+  }
+
+  return false;
+}
+
+unsigned AArch64InstrInfo::getAccumulationStartOpcode(
+    unsigned AccumulationOpcode) const {
+  switch (AccumulationOpcode) {
+  default:
+    llvm_unreachable("Unsupported accumulation Opcode!");
+  case AArch64::UABALB_ZZZ_D:
+    return AArch64::UABDLB_ZZZ_D;
+  case AArch64::UABALB_ZZZ_H:
+    return AArch64::UABDLB_ZZZ_H;
+  case AArch64::UABALB_ZZZ_S:
+    return AArch64::UABDLB_ZZZ_S;
+  case AArch64::UABALT_ZZZ_D:
+    return AArch64::UABDLT_ZZZ_D;
+  case AArch64::UABALT_ZZZ_H:
+    return AArch64::UABDLT_ZZZ_H;
+  case AArch64::UABALT_ZZZ_S:
+    return AArch64::UABDLT_ZZZ_S;
+  case AArch64::UABALv16i8_v8i16:
+    return AArch64::UABDLv16i8_v8i16;
+  case AArch64::UABALv2i32_v2i64:
+    return AArch64::UABDLv2i32_v2i64;
+  case AArch64::UABALv4i16_v4i32:
+    return AArch64::UABDLv4i16_v4i32;
+  case AArch64::UABALv4i32_v2i64:
+    return AArch64::UABDLv4i32_v2i64;
+  case AArch64::UABALv8i16_v4i32:
+    return AArch64::UABDLv8i16_v4i32;
+  case AArch64::UABALv8i8_v8i16:
+    return AArch64::UABDLv8i8_v8i16;
+  case AArch64::UABAv16i8:
+    return AArch64::UABDv16i8;
+  case AArch64::UABAv2i32:
+    return AArch64::UABDv2i32;
+  case AArch64::UABAv4i16:
+    return AArch64::UABDv4i16;
+  case AArch64::UABAv4i32:
+    return AArch64::UABDv4i32;
+  case AArch64::UABAv8i16:
+    return AArch64::UABDv8i16;
+  case AArch64::UABAv8i8:
+    return AArch64::UABDv8i8;
+  case AArch64::SABALB_ZZZ_D:
+    return AArch64::SABDLB_ZZZ_D;
+  case AArch64::SABALB_ZZZ_S:
+    return AArch64::SABDLB_ZZZ_S;
+  case AArch64::SABALB_ZZZ_H:
+    return AArch64::SABDLB_ZZZ_H;
+  case AArch64::SABALT_ZZZ_D:
+    return AArch64::SABDLT_ZZZ_D;
+  case AArch64::SABALT_ZZZ_S:
+    return AArch64::SABDLT_ZZZ_S;
+  case AArch64::SABALT_ZZZ_H:
+    return AArch64::SABDLT_ZZZ_H;
+  case AArch64::SABALv16i8_v8i16:
+    return AArch64::SABDLv16i8_v8i16;
+  case AArch64::SABALv2i32_v2i64:
+    return AArch64::SABDLv2i32_v2i64;
+  case AArch64::SABALv4i16_v4i32:
+    return AArch64::SABDLv4i16_v4i32;
+  case AArch64::SABALv4i32_v2i64:
+    return AArch64::SABDLv4i32_v2i64;
+  case AArch64::SABALv8i16_v4i32:
+    return AArch64::SABDLv8i16_v4i32;
+  case AArch64::SABALv8i8_v8i16:
+    return AArch64::SABDLv8i8_v8i16;
+  case AArch64::SABAv16i8:
+    return AArch64::SABDv16i8;
+  case AArch64::SABAv2i32:
+    return AArch64::SABAv2i32;
+  case AArch64::SABAv4i16:
+    return AArch64::SABDv4i16;
+  case AArch64::SABAv4i32:
+    return AArch64::SABDv4i32;
+  case AArch64::SABAv8i16:
+    return AArch64::SABDv8i16;
+  case AArch64::SABAv8i8:
+    return AArch64::SABDv8i8;
+  }
+}
+
 /// Floating-Point Support
 
 /// Find instructions that can be turned into madd.
@@ -7523,6 +7659,63 @@ static void genSubAdd2SubSub(MachineFunction &MF, MachineRegisterInfo &MRI,
   DelInstrs.push_back(&Root);
 }
 
+unsigned AArch64InstrInfo::getReduceOpcodeForAccumulator(
+    unsigned int AccumulatorOpCode) const {
+  switch (AccumulatorOpCode) {
+  case AArch64::UABALB_ZZZ_D:
+  case AArch64::SABALB_ZZZ_D:
+  case AArch64::UABALT_ZZZ_D:
+  case AArch64::SABALT_ZZZ_D:
+    return AArch64::ADD_ZZZ_D;
+  case AArch64::UABALB_ZZZ_H:
+  case AArch64::SABALB_ZZZ_H:
+  case AArch64::UABALT_ZZZ_H:
+  case AArch64::SABALT_ZZZ_H:
+    return AArch64::ADD_ZZZ_H;
+  case AArch64::UABALB_ZZZ_S:
+  case AArch64::SABALB_ZZZ_S:
+  case AArch64::UABALT_ZZZ_S:
+  case AArch64::SABALT_ZZZ_S:
+    return AArch64::ADD_ZZZ_S;
+  case AArch64::UABALv16i8_v8i16:
+  case AArch64::SABALv8i8_v8i16:
+  case AArch64::SABAv8i16:
+  case AArch64::UABAv8i16:
+    return AArch64::ADDv8i16;
+  case AArch64::SABALv2i32_v2i64:
+  case AArch64::UABALv2i32_v2i64:
+  case AArch64::SABALv4i32_v2i64:
+    return AArch64::ADDv2i64;
+  case AArch64::UABALv4i16_v4i32:
+  case AArch64::SABALv4i16_v4i32:
+  case AArch64::SABALv8i16_v4i32:
+  case AArch64::SABAv4i32:
+  case AArch64::UABAv4i32:
+    return AArch64::ADDv4i32;
+  case AArch64::UABALv4i32_v2i64:
+    return AArch64::ADDv2i64;
+  case AArch64::UABALv8i16_v4i32:
+    return AArch64::ADDv4i32;
+  case AArch64::UABALv8i8_v8i16:
+  case AArch64::SABALv16i8_v8i16:
+    return AArch64::ADDv8i16;
+  case AArch64::UABAv16i8:
+  case AArch64::SABAv16i8:
+    return AArch64::ADDv16i8;
+  case AArch64::UABAv4i16:
+  case AArch64::SABAv4i16:
+    return AArch64::ADDv4i16;
+  case AArch64::UABAv2i32:
+  case AArch64::SABAv2i32:
+    return AArch64::ADDv2i32;
+  case AArch64::UABAv8i8:
+  case AArch64::SABAv8i8:
+    return AArch64::ADDv8i8;
+  default:
+    llvm_unreachable("Unknown accumulator opcode");
+  }
+}
+
 /// When getMachineCombinerPatterns() finds potential patterns,
 /// this function generates the instructions that could replace the
 /// original code sequence
@@ -7758,7 +7951,6 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     MUL = genMaddR(MF, MRI, TII, Root, InsInstrs, 1, Opc, NewVR, RC);
     break;
   }
-
   case AArch64MachineCombinerPattern::MULADDv8i8_OP1:
     Opc = AArch64::MLAv8i8;
     RC = &AArch64::FPR64RegClass;

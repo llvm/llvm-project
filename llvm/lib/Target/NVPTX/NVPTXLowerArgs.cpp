@@ -162,27 +162,16 @@
 using namespace llvm;
 
 namespace llvm {
-void initializeNVPTXLowerArgsPass(PassRegistry &);
+void initializeNVPTXLowerArgsLegacyPassPass(PassRegistry &);
 }
 
 namespace {
-class NVPTXLowerArgs : public FunctionPass {
+class NVPTXLowerArgsLegacyPass : public FunctionPass {
   bool runOnFunction(Function &F) override;
-
-  bool runOnKernelFunction(const NVPTXTargetMachine &TM, Function &F);
-  bool runOnDeviceFunction(const NVPTXTargetMachine &TM, Function &F);
-
-  // handle byval parameters
-  void handleByValParam(const NVPTXTargetMachine &TM, Argument *Arg);
-  // Knowing Ptr must point to the global address space, this function
-  // addrspacecasts Ptr to global and then back to generic. This allows
-  // NVPTXInferAddressSpaces to fold the global-to-generic cast into
-  // loads/stores that appear later.
-  void markPointerAsGlobal(Value *Ptr);
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  NVPTXLowerArgs() : FunctionPass(ID) {}
+  NVPTXLowerArgsLegacyPass() : FunctionPass(ID) {}
   StringRef getPassName() const override {
     return "Lower pointer arguments of CUDA kernels";
   }
@@ -192,12 +181,12 @@ public:
 };
 } // namespace
 
-char NVPTXLowerArgs::ID = 1;
+char NVPTXLowerArgsLegacyPass::ID = 1;
 
-INITIALIZE_PASS_BEGIN(NVPTXLowerArgs, "nvptx-lower-args",
+INITIALIZE_PASS_BEGIN(NVPTXLowerArgsLegacyPass, "nvptx-lower-args",
                       "Lower arguments (NVPTX)", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_END(NVPTXLowerArgs, "nvptx-lower-args",
+INITIALIZE_PASS_END(NVPTXLowerArgsLegacyPass, "nvptx-lower-args",
                     "Lower arguments (NVPTX)", false, false)
 
 // =============================================================================
@@ -552,8 +541,7 @@ void copyByValParam(Function &F, Argument &Arg) {
 }
 } // namespace
 
-void NVPTXLowerArgs::handleByValParam(const NVPTXTargetMachine &TM,
-                                      Argument *Arg) {
+static void handleByValParam(const NVPTXTargetMachine &TM, Argument *Arg) {
   Function *Func = Arg->getParent();
   bool HasCvtaParam =
       TM.getSubtargetImpl(*Func)->hasCvtaParam() && isKernelFunction(*Func);
@@ -647,20 +635,19 @@ static void markPointerAsAS(Value *Ptr, const unsigned AS) {
   PtrInGlobal->setOperand(0, Ptr);
 }
 
-void NVPTXLowerArgs::markPointerAsGlobal(Value *Ptr) {
+static void markPointerAsGlobal(Value *Ptr) {
   markPointerAsAS(Ptr, ADDRESS_SPACE_GLOBAL);
 }
 
 // =============================================================================
 // Main function for this pass.
 // =============================================================================
-bool NVPTXLowerArgs::runOnKernelFunction(const NVPTXTargetMachine &TM,
-                                         Function &F) {
+static bool runOnKernelFunction(const NVPTXTargetMachine &TM, Function &F) {
   // Copying of byval aggregates + SROA may result in pointers being loaded as
   // integers, followed by intotoptr. We may want to mark those as global, too,
   // but only if the loaded integer is used exclusively for conversion to a
   // pointer with inttoptr.
-  auto HandleIntToPtr = [this](Value &V) {
+  auto HandleIntToPtr = [](Value &V) {
     if (llvm::all_of(V.users(), [](User *U) { return isa<IntToPtrInst>(U); })) {
       SmallVector<User *, 16> UsersToUpdate(V.users());
       for (User *U : UsersToUpdate)
@@ -705,8 +692,7 @@ bool NVPTXLowerArgs::runOnKernelFunction(const NVPTXTargetMachine &TM,
 }
 
 // Device functions only need to copy byval args into local memory.
-bool NVPTXLowerArgs::runOnDeviceFunction(const NVPTXTargetMachine &TM,
-                                         Function &F) {
+static bool runOnDeviceFunction(const NVPTXTargetMachine &TM, Function &F) {
   LLVM_DEBUG(dbgs() << "Lowering function args of " << F.getName() << "\n");
 
   const auto *TLI =
@@ -720,14 +706,18 @@ bool NVPTXLowerArgs::runOnDeviceFunction(const NVPTXTargetMachine &TM,
   return true;
 }
 
-bool NVPTXLowerArgs::runOnFunction(Function &F) {
-  auto &TM = getAnalysis<TargetPassConfig>().getTM<NVPTXTargetMachine>();
-
+static bool processFunction(Function &F, NVPTXTargetMachine &TM) {
   return isKernelFunction(F) ? runOnKernelFunction(TM, F)
                              : runOnDeviceFunction(TM, F);
 }
 
-FunctionPass *llvm::createNVPTXLowerArgsPass() { return new NVPTXLowerArgs(); }
+bool NVPTXLowerArgsLegacyPass::runOnFunction(Function &F) {
+  auto &TM = getAnalysis<TargetPassConfig>().getTM<NVPTXTargetMachine>();
+  return processFunction(F, TM);
+}
+FunctionPass *llvm::createNVPTXLowerArgsPass() {
+  return new NVPTXLowerArgsLegacyPass();
+}
 
 static bool copyFunctionByValArgs(Function &F) {
   LLVM_DEBUG(dbgs() << "Creating a copy of byval args of " << F.getName()
@@ -746,4 +736,11 @@ PreservedAnalyses NVPTXCopyByValArgsPass::run(Function &F,
                                               FunctionAnalysisManager &AM) {
   return copyFunctionByValArgs(F) ? PreservedAnalyses::none()
                                   : PreservedAnalyses::all();
+}
+
+PreservedAnalyses NVPTXLowerArgsPass::run(Function &F,
+                                          FunctionAnalysisManager &AM) {
+  auto &NTM = static_cast<NVPTXTargetMachine &>(TM);
+  bool Changed = processFunction(F, NTM);
+  return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }

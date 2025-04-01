@@ -146,9 +146,10 @@ bool AMDGPUSetWavePriority::runOnMachineFunction(MachineFunction &MF) {
     bool SuccsMayReachVMEMLoad = false;
     unsigned NumFollowingVALUInsts = 0;
     for (const MachineBasicBlock *Succ : MBB->successors()) {
-      SuccsMayReachVMEMLoad |= MBBInfos[Succ].MayReachVMEMLoad;
+      const MBBInfo &SuccInfo = MBBInfos[Succ];
+      SuccsMayReachVMEMLoad |= SuccInfo.MayReachVMEMLoad;
       NumFollowingVALUInsts =
-          std::max(NumFollowingVALUInsts, MBBInfos[Succ].NumVALUInstsAtStart);
+          std::max(NumFollowingVALUInsts, SuccInfo.NumVALUInstsAtStart);
     }
     MBBInfo &Info = MBBInfos[MBB];
     if (AtStart)
@@ -200,12 +201,12 @@ bool AMDGPUSetWavePriority::runOnMachineFunction(MachineFunction &MF) {
   }
 
   for (MachineBasicBlock *MBB : PriorityLoweringBlocks) {
-    BuildSetprioMI(
-        *MBB,
-        MBBInfos[MBB].LastVMEMLoad
-            ? std::next(MachineBasicBlock::iterator(MBBInfos[MBB].LastVMEMLoad))
-            : MBB->begin(),
-        LowPriority);
+    MachineInstr *LastVMEMLoad = MBBInfos[MBB].LastVMEMLoad;
+    BuildSetprioMI(*MBB,
+                   LastVMEMLoad
+                       ? std::next(MachineBasicBlock::iterator(LastVMEMLoad))
+                       : MBB->begin(),
+                   LowPriority);
   }
 
   return true;

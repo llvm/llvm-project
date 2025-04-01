@@ -111,6 +111,14 @@ public:
   }
 
   void visitObjCDecl(const ObjCContainerDecl *CD) const {
+    if (BR->getSourceManager().isInSystemHeader(CD->getLocation()))
+      return;
+
+    ObjCContainerDecl::PropertyMap map;
+    CD->collectPropertiesToImplement(map);
+    for (auto it : map)
+      visitObjCPropertyDecl(CD, it.second);
+
     if (auto *ID = dyn_cast<ObjCInterfaceDecl>(CD)) {
       for (auto *Ivar : ID->ivars())
         visitIvarDecl(CD, Ivar);
@@ -125,6 +133,8 @@ public:
 
   void visitIvarDecl(const ObjCContainerDecl *CD,
                      const ObjCIvarDecl *Ivar) const {
+    if (BR->getSourceManager().isInSystemHeader(Ivar->getLocation()))
+      return;
     auto QT = Ivar->getType();
     const Type *IvarType = QT.getTypePtrOrNull();
     if (!IvarType)
@@ -133,6 +143,37 @@ public:
       std::optional<bool> IsCompatible = isPtrCompatible(QT, IvarCXXRD);
       if (IsCompatible && *IsCompatible)
         reportBug(Ivar, IvarType, IvarCXXRD, CD);
+    } else {
+      std::optional<bool> IsCompatible = isPtrCompatible(QT, nullptr);
+      auto *PointeeType = IvarType->getPointeeType().getTypePtrOrNull();
+      if (IsCompatible && *IsCompatible) {
+        auto *Desugared = PointeeType->getUnqualifiedDesugaredType();
+        if (auto *ObjCType = dyn_cast_or_null<ObjCInterfaceType>(Desugared))
+          reportBug(Ivar, IvarType, ObjCType->getDecl(), CD);
+      }
+    }
+  }
+
+  void visitObjCPropertyDecl(const ObjCContainerDecl *CD,
+                             const ObjCPropertyDecl *PD) const {
+    if (BR->getSourceManager().isInSystemHeader(PD->getLocation()))
+      return;
+    auto QT = PD->getType();
+    const Type *PropType = QT.getTypePtrOrNull();
+    if (!PropType)
+      return;
+    if (auto *PropCXXRD = PropType->getPointeeCXXRecordDecl()) {
+      std::optional<bool> IsCompatible = isPtrCompatible(QT, PropCXXRD);
+      if (IsCompatible && *IsCompatible)
+        reportBug(PD, PropType, PropCXXRD, CD);
+    } else {
+      std::optional<bool> IsCompatible = isPtrCompatible(QT, nullptr);
+      auto *PointeeType = PropType->getPointeeType().getTypePtrOrNull();
+      if (IsCompatible && *IsCompatible) {
+        auto *Desugared = PointeeType->getUnqualifiedDesugaredType();
+        if (auto *ObjCType = dyn_cast_or_null<ObjCInterfaceType>(Desugared))
+          reportBug(PD, PropType, ObjCType->getDecl(), CD);
+      }
     }
   }
 
@@ -181,9 +222,12 @@ public:
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
 
-    if (isa<ObjCContainerDecl>(ClassCXXRD))
-      Os << "Instance variable ";
-    else
+    if (isa<ObjCContainerDecl>(ClassCXXRD)) {
+      if (isa<ObjCPropertyDecl>(Member))
+        Os << "Property ";
+      else
+        Os << "Instance variable ";
+    } else
       Os << "Member variable ";
     printQuotedName(Os, Member);
     Os << " in ";
@@ -223,7 +267,7 @@ public:
   std::optional<bool>
   isPtrCompatible(const clang::QualType,
                   const clang::CXXRecordDecl *R) const final {
-    return R && isRefCountable(R);
+    return R ? isRefCountable(R) : std::nullopt;
   }
 
   bool isPtrCls(const clang::CXXRecordDecl *R) const final {
@@ -246,7 +290,7 @@ public:
   std::optional<bool>
   isPtrCompatible(const clang::QualType,
                   const clang::CXXRecordDecl *R) const final {
-    return R && isCheckedPtrCapable(R);
+    return R ? isCheckedPtrCapable(R) : std::nullopt;
   }
 
   bool isPtrCls(const clang::CXXRecordDecl *R) const final {

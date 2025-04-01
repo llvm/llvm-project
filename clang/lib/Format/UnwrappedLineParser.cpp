@@ -1708,6 +1708,7 @@ void UnwrappedLineParser::parseStructuralElement(
     break;
   }
 
+  bool SeenEqual = false;
   for (const bool InRequiresExpression =
            OpeningBrace && OpeningBrace->isOneOf(TT_RequiresExpressionLBrace,
                                                  TT_CompoundRequirementLBrace);
@@ -1782,7 +1783,7 @@ void UnwrappedLineParser::parseStructuralElement(
       break;
     case tok::kw_requires: {
       if (IsCpp) {
-        bool ParsedClause = parseRequires();
+        bool ParsedClause = parseRequires(SeenEqual);
         if (ParsedClause)
           return;
       } else {
@@ -2062,6 +2063,7 @@ void UnwrappedLineParser::parseStructuralElement(
         break;
       }
 
+      SeenEqual = true;
       nextToken();
       if (FormatTok->is(tok::l_brace)) {
         // Block kind should probably be set to BK_BracedInit for any language.
@@ -3416,7 +3418,7 @@ void UnwrappedLineParser::parseAccessSpecifier() {
 /// \brief Parses a requires, decides if it is a clause or an expression.
 /// \pre The current token has to be the requires keyword.
 /// \returns true if it parsed a clause.
-bool UnwrappedLineParser::parseRequires() {
+bool UnwrappedLineParser::parseRequires(bool SeenEqual) {
   assert(FormatTok->is(tok::kw_requires) && "'requires' expected");
   auto RequiresToken = FormatTok;
 
@@ -3472,7 +3474,7 @@ bool UnwrappedLineParser::parseRequires() {
     // We check the one token before that for a const:
     // void member(...) const && requires (C<T> ...
     auto PrevPrev = PreviousNonComment->getPreviousNonComment();
-    if (PrevPrev && PrevPrev->is(tok::kw_const)) {
+    if ((PrevPrev && PrevPrev->is(tok::kw_const)) || !SeenEqual) {
       parseRequiresClause(RequiresToken);
       return true;
     }
