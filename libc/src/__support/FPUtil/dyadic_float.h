@@ -434,7 +434,12 @@ template <size_t Bits> struct DyadicFloat {
     if (exponent > 0) {
       new_mant <<= exponent;
     } else {
-      new_mant >>= (-exponent);
+      // Cast the exponent to size_t before negating it, rather than after,
+      // to avoid undefined behavior negating INT_MIN as an integer (although
+      // exponents coming in to this function _shouldn't_ be that large). The
+      // result should always end up as a positive size_t.
+      size_t shift = -static_cast<size_t>(exponent);
+      new_mant >>= shift;
     }
 
     if (sign.is_neg()) {

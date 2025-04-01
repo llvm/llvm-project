@@ -202,7 +202,7 @@ public:
 /// VPTransformState holds information passed down when "executing" a VPlan,
 /// needed for generating the output IR.
 struct VPTransformState {
-  VPTransformState(const TargetTransformInfo *TTI, ElementCount VF, unsigned UF,
+  VPTransformState(const TargetTransformInfo *TTI, ElementCount VF,
                    LoopInfo *LI, DominatorTree *DT, IRBuilderBase &Builder,
                    InnerLoopVectorizer *ILV, VPlan *Plan,
                    Loop *CurrentParentLoop, Type *CanonicalIVTy);

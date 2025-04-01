@@ -625,22 +625,19 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-shared");
   }
 
-  addLinkerCompressDebugSectionsOption(getToolChain(), Args, CmdArgs);
-  Args.AddAllArgs(CmdArgs, options::OPT_L);
-  getToolChain().AddFilePathLibArgs(Args, CmdArgs);
-  AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
   if (C.getDriver().isUsingLTO()) {
     const bool ThinLTO = (C.getDriver().getLTOMode() == LTOK_Thin);
     addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs[0], ThinLTO);
-
-    if (!ThinLTO && JA.getOffloadingDeviceKind() == Action::OFK_HIP)
-      addFullLTOPartitionOption(C.getDriver(), Args, CmdArgs);
   } else if (Args.hasArg(options::OPT_mcpu_EQ)) {
     CmdArgs.push_back(Args.MakeArgString(
         "-plugin-opt=mcpu=" +
         getProcessorFromTargetID(getToolChain().getTriple(),
                                  Args.getLastArgValue(options::OPT_mcpu_EQ))));
   }
+  addLinkerCompressDebugSectionsOption(getToolChain(), Args, CmdArgs);
+  getToolChain().AddFilePathLibArgs(Args, CmdArgs);
+  Args.AddAllArgs(CmdArgs, options::OPT_L);
+  AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
 
   // Always pass the target-id features to the LTO job.
   std::vector<StringRef> Features;
@@ -709,26 +706,6 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
 
   handleTargetFeaturesGroup(D, Triple, Args, Features,
                             options::OPT_m_amdgpu_Features_Group);
-}
-
-static unsigned getFullLTOPartitions(const Driver &D, const ArgList &Args) {
-  int Value = 0;
-  StringRef A = Args.getLastArgValue(options::OPT_flto_partitions_EQ, "8");
-  if (A.getAsInteger(10, Value) || (Value < 1)) {
-    Arg *Arg = Args.getLastArg(options::OPT_flto_partitions_EQ);
-    D.Diag(diag::err_drv_invalid_int_value)
-        << Arg->getAsString(Args) << Arg->getValue();
-    return 1;
-  }
-
-  return Value;
-}
-
-void amdgpu::addFullLTOPartitionOption(const Driver &D,
-                                       const llvm::opt::ArgList &Args,
-                                       llvm::opt::ArgStringList &CmdArgs) {
-  CmdArgs.push_back(Args.MakeArgString("--lto-partitions=" +
-                                       Twine(getFullLTOPartitions(D, Args))));
 }
 
 /// AMDGPU Toolchain
