@@ -736,13 +736,14 @@ OL_APIEXPORT ol_result_t OL_APICALL olGetKernel(
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Size-related arguments for a kernel launch.
 typedef struct ol_kernel_launch_size_args_t {
-  size_t Dimensions; /// Number of work dimensions
-  size_t NumGroupsX; /// Number of work groups on the X dimension
-  size_t NumGroupsY; /// Number of work groups on the Y dimension
-  size_t NumGroupsZ; /// Number of work groups on the Z dimension
-  size_t GroupSizeX; /// Size of a work group on the X dimension.
-  size_t GroupSizeY; /// Size of a work group on the Y dimension.
-  size_t GroupSizeZ; /// Size of a work group on the Z dimension.
+  size_t Dimensions;      /// Number of work dimensions
+  size_t NumGroupsX;      /// Number of work groups on the X dimension
+  size_t NumGroupsY;      /// Number of work groups on the Y dimension
+  size_t NumGroupsZ;      /// Number of work groups on the Z dimension
+  size_t GroupSizeX;      /// Size of a work group on the X dimension.
+  size_t GroupSizeY;      /// Size of a work group on the Y dimension.
+  size_t GroupSizeZ;      /// Size of a work group on the Z dimension.
+  size_t DynSharedMemory; /// Size of dynamic shared memory in bytes.
 } ol_kernel_launch_size_args_t;
 
 ///////////////////////////////////////////////////////////////////////////////

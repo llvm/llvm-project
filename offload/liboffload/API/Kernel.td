@@ -34,7 +34,8 @@ def : Struct {
         StructMember<"size_t", "NumGroupsZ", "Number of work groups on the Z dimension">,
         StructMember<"size_t", "GroupSizeX", "Size of a work group on the X dimension.">,
         StructMember<"size_t", "GroupSizeY", "Size of a work group on the Y dimension.">,
-        StructMember<"size_t", "GroupSizeZ", "Size of a work group on the Z dimension.">
+        StructMember<"size_t", "GroupSizeZ", "Size of a work group on the Z dimension.">,
+        StructMember<"size_t", "DynSharedMemory", "Size of dynamic shared memory in bytes.">
     ];
 }
 
