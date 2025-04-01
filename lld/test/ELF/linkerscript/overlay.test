@@ -134,13 +134,10 @@ SECTIONS {
 # UNCLOSED:     error: unclosed.lds:2: unexpected EOF
 # UNCLOSED-NOT: {{.}}
 
-#--- invalid-before-brace.lds
-SECTIONS {
-  OVERLAY 0x1000 : INVALID {
-  }
-}
+#--- at-nocrossrefs-order.lds
+SECTIONS { OVERLAY 0x1000 : AT(0x1234) NOCROSSREFS {} }
 
-# RUN: not ld.lld a.o -T invalid-before-brace.lds 2>&1 | FileCheck %s --check-prefix=INVALID-BEFORE-BRACE --strict-whitespace
-# INVALID-BEFORE-BRACE:{{.*}}error: invalid-before-brace.lds:2: { expected, but got INVALID
-# INVALID-BEFORE-BRACE-NEXT:>>>   OVERLAY 0x1000 : INVALID {
-# INVALID-BEFORE-BRACE-NEXT:>>>                    ^
+# RUN: not ld.lld a.o -T at-nocrossrefs-order.lds 2>&1 | FileCheck %s --check-prefix=AT-NOCROSSREFS-ORDER --strict-whitespace
+# AT-NOCROSSREFS-ORDER:{{.*}}error: at-nocrossrefs-order.lds:1: { expected, but got NOCROSSREFS
+# AT-NOCROSSREFS-ORDER-NEXT:>>> SECTIONS { OVERLAY 0x1000 : AT(0x1234) NOCROSSREFS {} }
+# AT-NOCROSSREFS-ORDER-NEXT:>>>                                        ^
