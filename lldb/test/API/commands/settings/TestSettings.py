@@ -905,7 +905,7 @@ class SettingsCommandTestCase(TestBase):
                 "target.use-hex-immediates",
                 "target.process.disable-memory-cache",
                 "target.process.extra-startup-command",
-                "target.process.process-state-tracks-memory-cache",
+                "target.process.track-memory-cache-changes",
                 "target.process.thread.trace-thread",
                 "target.process.thread.step-avoid-regexp",
             ],

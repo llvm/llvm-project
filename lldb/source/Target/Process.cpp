@@ -369,8 +369,8 @@ FollowForkMode ProcessProperties::GetFollowForkMode() const {
                g_process_properties[idx].default_uint_value));
 }
 
-bool ProcessProperties::GetProcessStateTracksMemoryCache() const {
-  const uint32_t idx = ePropertyProcessStateTracksMemoryCache;
+bool ProcessProperties::TrackMemoryCacheChanges() const {
+  const uint32_t idx = ePropertyTrackMemoryCacheChanges;
   return GetPropertyAtIndexAs<bool>(
       idx, g_process_properties[idx].default_uint_value != 0);
 }
@@ -2287,7 +2287,7 @@ size_t Process::WriteMemory(addr_t addr, const void *buf, size_t size,
     return 0;
 
 #if defined(USE_ALLOCATE_MEMORY_CACHE)
-  if (GetProcessStateTracksMemoryCache() ||
+  if (TrackMemoryCacheChanges() ||
       !m_allocated_memory_cache.IsInCache(addr))
     m_mod_id.BumpMemoryID();
 #else

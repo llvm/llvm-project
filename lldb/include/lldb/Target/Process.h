@@ -111,7 +111,7 @@ public:
   void SetOSPluginReportsAllThreads(bool does_report);
   bool GetSteppingRunsAllThreads() const;
   FollowForkMode GetFollowForkMode() const;
-  bool GetProcessStateTracksMemoryCache() const;
+  bool TrackMemoryCacheChanges() const;
 
 protected:
   Process *m_process; // Can be nullptr for global ProcessProperties

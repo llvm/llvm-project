@@ -5,7 +5,7 @@
 
 // RUN: %build %s -o %t
 // RUN: %lldb %t \
-// RUN:   -o "settings set target.process.process-state-tracks-memory-cache false" \
+// RUN:   -o "settings set target.process.track-memory-cache-changes false" \
 // RUN:   -o "run" \
 // RUN:   -o "expr int \$y = 11" \
 // RUN:   -o "expr \$y" \
