@@ -476,7 +476,6 @@ ol_impl_result_t olCreateProgram_impl(ol_device_handle_t Device,
   }
 
   Prog->Image = *Res;
-  // Prog->ImageData = std::move(ImageData);
   *Program = Prog;
 
   return OL_SUCCESS;

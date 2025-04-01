@@ -567,6 +567,71 @@ ol_result_t olMemFreeWithCodeLoc(void *Address,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+ol_impl_result_t olMemcpy_val(ol_queue_handle_t Queue, void *DstPtr,
+                              ol_device_handle_t DstDevice, void *SrcPtr,
+                              ol_device_handle_t SrcDevice, size_t Size,
+                              ol_event_handle_t *EventOut) {
+  if (offloadConfig().ValidationEnabled) {
+    if (Queue == NULL && EventOut != NULL) {
+      return OL_ERRC_INVALID_ARGUMENT;
+    }
+
+    if (NULL == DstDevice) {
+      return OL_ERRC_INVALID_NULL_HANDLE;
+    }
+
+    if (NULL == SrcDevice) {
+      return OL_ERRC_INVALID_NULL_HANDLE;
+    }
+
+    if (NULL == DstPtr) {
+      return OL_ERRC_INVALID_NULL_POINTER;
+    }
+
+    if (NULL == SrcPtr) {
+      return OL_ERRC_INVALID_NULL_POINTER;
+    }
+  }
+
+  return llvm::offload::olMemcpy_impl(Queue, DstPtr, DstDevice, SrcPtr,
+                                      SrcDevice, Size, EventOut);
+}
+OL_APIEXPORT ol_result_t OL_APICALL
+olMemcpy(ol_queue_handle_t Queue, void *DstPtr, ol_device_handle_t DstDevice,
+         void *SrcPtr, ol_device_handle_t SrcDevice, size_t Size,
+         ol_event_handle_t *EventOut) {
+  if (offloadConfig().TracingEnabled) {
+    llvm::errs() << "---> olMemcpy";
+  }
+
+  ol_result_t Result =
+      olMemcpy_val(Queue, DstPtr, DstDevice, SrcPtr, SrcDevice, Size, EventOut);
+
+  if (offloadConfig().TracingEnabled) {
+    ol_memcpy_params_t Params = {&Queue,     &DstPtr, &DstDevice, &SrcPtr,
+                                 &SrcDevice, &Size,   &EventOut};
+    llvm::errs() << "(" << &Params << ")";
+    llvm::errs() << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      llvm::errs() << "     *Error Details* " << Result->Details << " \n";
+    }
+  }
+  return Result;
+}
+ol_result_t olMemcpyWithCodeLoc(ol_queue_handle_t Queue, void *DstPtr,
+                                ol_device_handle_t DstDevice, void *SrcPtr,
+                                ol_device_handle_t SrcDevice, size_t Size,
+                                ol_event_handle_t *EventOut,
+                                ol_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  ol_result_t Result =
+      ::olMemcpy(Queue, DstPtr, DstDevice, SrcPtr, SrcDevice, Size, EventOut);
+
+  currentCodeLocation() = nullptr;
+  return Result;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 ol_impl_result_t olCreateQueue_val(ol_device_handle_t Device,
                                    ol_queue_handle_t *Queue) {
   if (offloadConfig().ValidationEnabled) {
@@ -754,143 +819,6 @@ ol_result_t olWaitEventWithCodeLoc(ol_event_handle_t Event,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olMemcpy_val(ol_queue_handle_t Queue, void *DstPtr,
-                              ol_device_handle_t DstDevice, void *SrcPtr,
-                              ol_device_handle_t SrcDevice, size_t Size,
-                              ol_event_handle_t *EventOut) {
-  if (offloadConfig().ValidationEnabled) {
-    if (Queue == NULL && EventOut != NULL) {
-      return OL_ERRC_INVALID_ARGUMENT;
-    }
-
-    if (NULL == DstDevice) {
-      return OL_ERRC_INVALID_NULL_HANDLE;
-    }
-
-    if (NULL == SrcDevice) {
-      return OL_ERRC_INVALID_NULL_HANDLE;
-    }
-
-    if (NULL == DstPtr) {
-      return OL_ERRC_INVALID_NULL_POINTER;
-    }
-
-    if (NULL == SrcPtr) {
-      return OL_ERRC_INVALID_NULL_POINTER;
-    }
-  }
-
-  return llvm::offload::olMemcpy_impl(Queue, DstPtr, DstDevice, SrcPtr,
-                                      SrcDevice, Size, EventOut);
-}
-OL_APIEXPORT ol_result_t OL_APICALL
-olMemcpy(ol_queue_handle_t Queue, void *DstPtr, ol_device_handle_t DstDevice,
-         void *SrcPtr, ol_device_handle_t SrcDevice, size_t Size,
-         ol_event_handle_t *EventOut) {
-  if (offloadConfig().TracingEnabled) {
-    llvm::errs() << "---> olMemcpy";
-  }
-
-  ol_result_t Result =
-      olMemcpy_val(Queue, DstPtr, DstDevice, SrcPtr, SrcDevice, Size, EventOut);
-
-  if (offloadConfig().TracingEnabled) {
-    ol_memcpy_params_t Params = {&Queue,     &DstPtr, &DstDevice, &SrcPtr,
-                                 &SrcDevice, &Size,   &EventOut};
-    llvm::errs() << "(" << &Params << ")";
-    llvm::errs() << "-> " << Result << "\n";
-    if (Result && Result->Details) {
-      llvm::errs() << "     *Error Details* " << Result->Details << " \n";
-    }
-  }
-  return Result;
-}
-ol_result_t olMemcpyWithCodeLoc(ol_queue_handle_t Queue, void *DstPtr,
-                                ol_device_handle_t DstDevice, void *SrcPtr,
-                                ol_device_handle_t SrcDevice, size_t Size,
-                                ol_event_handle_t *EventOut,
-                                ol_code_location_t *CodeLocation) {
-  currentCodeLocation() = CodeLocation;
-  ol_result_t Result =
-      ::olMemcpy(Queue, DstPtr, DstDevice, SrcPtr, SrcDevice, Size, EventOut);
-
-  currentCodeLocation() = nullptr;
-  return Result;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t
-olLaunchKernel_val(ol_queue_handle_t Queue, ol_device_handle_t Device,
-                   ol_kernel_handle_t Kernel, const void *ArgumentsData,
-                   size_t ArgumentsSize,
-                   const ol_kernel_launch_size_args_t *LaunchSizeArgs,
-                   ol_event_handle_t *EventOut) {
-  if (offloadConfig().ValidationEnabled) {
-    if (Queue == NULL && EventOut != NULL) {
-      return OL_ERRC_INVALID_ARGUMENT;
-    }
-
-    if (NULL == Device) {
-      return OL_ERRC_INVALID_NULL_HANDLE;
-    }
-
-    if (NULL == Kernel) {
-      return OL_ERRC_INVALID_NULL_HANDLE;
-    }
-
-    if (NULL == ArgumentsData) {
-      return OL_ERRC_INVALID_NULL_POINTER;
-    }
-
-    if (NULL == LaunchSizeArgs) {
-      return OL_ERRC_INVALID_NULL_POINTER;
-    }
-  }
-
-  return llvm::offload::olLaunchKernel_impl(Queue, Device, Kernel,
-                                            ArgumentsData, ArgumentsSize,
-                                            LaunchSizeArgs, EventOut);
-}
-OL_APIEXPORT ol_result_t OL_APICALL olLaunchKernel(
-    ol_queue_handle_t Queue, ol_device_handle_t Device,
-    ol_kernel_handle_t Kernel, const void *ArgumentsData, size_t ArgumentsSize,
-    const ol_kernel_launch_size_args_t *LaunchSizeArgs,
-    ol_event_handle_t *EventOut) {
-  if (offloadConfig().TracingEnabled) {
-    llvm::errs() << "---> olLaunchKernel";
-  }
-
-  ol_result_t Result =
-      olLaunchKernel_val(Queue, Device, Kernel, ArgumentsData, ArgumentsSize,
-                         LaunchSizeArgs, EventOut);
-
-  if (offloadConfig().TracingEnabled) {
-    ol_launch_kernel_params_t Params = {
-        &Queue,         &Device,         &Kernel,  &ArgumentsData,
-        &ArgumentsSize, &LaunchSizeArgs, &EventOut};
-    llvm::errs() << "(" << &Params << ")";
-    llvm::errs() << "-> " << Result << "\n";
-    if (Result && Result->Details) {
-      llvm::errs() << "     *Error Details* " << Result->Details << " \n";
-    }
-  }
-  return Result;
-}
-ol_result_t olLaunchKernelWithCodeLoc(
-    ol_queue_handle_t Queue, ol_device_handle_t Device,
-    ol_kernel_handle_t Kernel, const void *ArgumentsData, size_t ArgumentsSize,
-    const ol_kernel_launch_size_args_t *LaunchSizeArgs,
-    ol_event_handle_t *EventOut, ol_code_location_t *CodeLocation) {
-  currentCodeLocation() = CodeLocation;
-  ol_result_t Result =
-      ::olLaunchKernel(Queue, Device, Kernel, ArgumentsData, ArgumentsSize,
-                       LaunchSizeArgs, EventOut);
-
-  currentCodeLocation() = nullptr;
-  return Result;
-}
-
-///////////////////////////////////////////////////////////////////////////////
 ol_impl_result_t olCreateProgram_val(ol_device_handle_t Device,
                                      const void *ProgData, size_t ProgDataSize,
                                      ol_program_handle_t *Program) {
@@ -1027,6 +955,78 @@ ol_result_t olGetKernelWithCodeLoc(ol_program_handle_t Program,
                                    ol_code_location_t *CodeLocation) {
   currentCodeLocation() = CodeLocation;
   ol_result_t Result = ::olGetKernel(Program, KernelName, Kernel);
+
+  currentCodeLocation() = nullptr;
+  return Result;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+ol_impl_result_t
+olLaunchKernel_val(ol_queue_handle_t Queue, ol_device_handle_t Device,
+                   ol_kernel_handle_t Kernel, const void *ArgumentsData,
+                   size_t ArgumentsSize,
+                   const ol_kernel_launch_size_args_t *LaunchSizeArgs,
+                   ol_event_handle_t *EventOut) {
+  if (offloadConfig().ValidationEnabled) {
+    if (Queue == NULL && EventOut != NULL) {
+      return OL_ERRC_INVALID_ARGUMENT;
+    }
+
+    if (NULL == Device) {
+      return OL_ERRC_INVALID_NULL_HANDLE;
+    }
+
+    if (NULL == Kernel) {
+      return OL_ERRC_INVALID_NULL_HANDLE;
+    }
+
+    if (NULL == ArgumentsData) {
+      return OL_ERRC_INVALID_NULL_POINTER;
+    }
+
+    if (NULL == LaunchSizeArgs) {
+      return OL_ERRC_INVALID_NULL_POINTER;
+    }
+  }
+
+  return llvm::offload::olLaunchKernel_impl(Queue, Device, Kernel,
+                                            ArgumentsData, ArgumentsSize,
+                                            LaunchSizeArgs, EventOut);
+}
+OL_APIEXPORT ol_result_t OL_APICALL olLaunchKernel(
+    ol_queue_handle_t Queue, ol_device_handle_t Device,
+    ol_kernel_handle_t Kernel, const void *ArgumentsData, size_t ArgumentsSize,
+    const ol_kernel_launch_size_args_t *LaunchSizeArgs,
+    ol_event_handle_t *EventOut) {
+  if (offloadConfig().TracingEnabled) {
+    llvm::errs() << "---> olLaunchKernel";
+  }
+
+  ol_result_t Result =
+      olLaunchKernel_val(Queue, Device, Kernel, ArgumentsData, ArgumentsSize,
+                         LaunchSizeArgs, EventOut);
+
+  if (offloadConfig().TracingEnabled) {
+    ol_launch_kernel_params_t Params = {
+        &Queue,         &Device,         &Kernel,  &ArgumentsData,
+        &ArgumentsSize, &LaunchSizeArgs, &EventOut};
+    llvm::errs() << "(" << &Params << ")";
+    llvm::errs() << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      llvm::errs() << "     *Error Details* " << Result->Details << " \n";
+    }
+  }
+  return Result;
+}
+ol_result_t olLaunchKernelWithCodeLoc(
+    ol_queue_handle_t Queue, ol_device_handle_t Device,
+    ol_kernel_handle_t Kernel, const void *ArgumentsData, size_t ArgumentsSize,
+    const ol_kernel_launch_size_args_t *LaunchSizeArgs,
+    ol_event_handle_t *EventOut, ol_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  ol_result_t Result =
+      ::olLaunchKernel(Queue, Device, Kernel, ArgumentsData, ArgumentsSize,
+                       LaunchSizeArgs, EventOut);
 
   currentCodeLocation() = nullptr;
   return Result;
