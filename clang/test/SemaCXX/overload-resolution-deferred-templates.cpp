@@ -116,6 +116,18 @@ static_assert(m1.g(0) == 1);
 static_assert(Members<int[3]>{}.s(0) == 2);
 
 
+namespace ConstructorInit{
+struct S {
+  template <typename T>
+  S(T&&) {}
+};
+struct Test {
+  operator S() = delete;
+};
+
+static_assert(__is_constructible(S, Test));
+}
+
 
 namespace GH62096 {
 template <typename T>

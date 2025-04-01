@@ -1199,6 +1199,9 @@ class Sema;
     llvm::SmallPtrSet<uintptr_t, 16> Functions;
     SmallVector<DeferredTemplateOverloadCandidate, 8> DeferredCandidates;
 
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned HasDeferredTemplateConstructors : 1;
+
     // Allocator for ConversionSequenceLists and deferred candidate args.
     // We store the first few of these
     // inline to avoid allocation for small sets.
@@ -1248,7 +1251,8 @@ class Sema;
   public:
     OverloadCandidateSet(SourceLocation Loc, CandidateSetKind CSK,
                          OperatorRewriteInfo RewriteInfo = {})
-        : Loc(Loc), Kind(CSK), RewriteInfo(RewriteInfo) {}
+        : HasDeferredTemplateConstructors(false), Loc(Loc), Kind(CSK),
+          RewriteInfo(RewriteInfo) {}
     OverloadCandidateSet(const OverloadCandidateSet &) = delete;
     OverloadCandidateSet &operator=(const OverloadCandidateSet &) = delete;
     ~OverloadCandidateSet() { destroyCandidates(); }
@@ -1260,7 +1264,7 @@ class Sema;
     /// Whether diagnostics should be deferred.
     bool shouldDeferDiags(Sema &S, ArrayRef<Expr *> Args, SourceLocation OpLoc);
 
-    // Whether the resolution of template candidates should be defered
+    // Whether the resolution of template candidates should be deferred
     bool shouldDeferTemplateArgumentDeduction(const LangOptions &Opts) const;
 
     /// Determine when this overload candidate will be new to the
@@ -1455,10 +1459,9 @@ class Sema;
       const LangOptions &Opts) const {
     return
         // For user defined conversion we need to check against different
-        // combination of CV qualifiers and look at any expicit specifier, so
+        // combination of CV qualifiers and look at any explicit specifier, so
         // always deduce template candidates.
-        Kind != CSK_InitByUserDefinedConversion &&
-        Kind != CSK_InitByConstructor
+        Kind != CSK_InitByUserDefinedConversion
         // When doing code completion, we want to see all the
         // viable candidates.
         && Kind != CSK_CodeCompletion
