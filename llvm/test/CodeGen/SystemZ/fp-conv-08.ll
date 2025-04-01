@@ -5,7 +5,9 @@
 ; Test i64->f16. For z10, this results in just a single a libcall.
 define half @f0(i64 %i) {
 ; CHECK-LABEL: f0:
-; CHECK: brasl %r14, __floatundihf@PLT
+; CHECK: cegbr
+; CHECK: aebr
+; CHECK: brasl %r14, __truncsfhf2@PLT
 ; CHECK: br %r14
   %conv = uitofp i64 %i to half
   ret half %conv

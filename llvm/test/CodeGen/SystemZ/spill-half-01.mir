@@ -25,14 +25,14 @@ body:             |
 
     ; VECTOR-LABEL: fun0:
     ; VECTOR:      aghi %r15, -232
-    ; VECTOR:      vsteh %v4, 166(%r15), 0     # 2-byte Folded Spill
-    ; VECTOR-NEXT: vsteh %v2, 162(%r15), 0     # 2-byte Folded Spill
-    ; VECTOR-NEXT: vsteh %v0, 164(%r15), 0     # 2-byte Folded Spill
+    ; VECTOR:      vsteh %v4, 166(%r15), 0     # 2-byte Spill
+    ; VECTOR-NEXT: vsteh %v2, 162(%r15), 0     # 2-byte Spill
+    ; VECTOR-NEXT: vsteh %v0, 164(%r15), 0     # 2-byte Spill
     ; VECTOR-NEXT: #APP
     ; VECTOR-NEXT: #NO_APP
-    ; VECTOR-NEXT: vlreph %v0, 162(%r15)       # 2-byte Folded Reload
-    ; VECTOR:      vlreph %v0, 164(%r15)       # 2-byte Folded Reload
-    ; VECTOR:      vlreph %v0, 166(%r15)       # 2-byte Folded Reload
+    ; VECTOR-NEXT: vlreph %v0, 162(%r15)       # 2-byte Reload
+    ; VECTOR:      vlreph %v0, 164(%r15)       # 2-byte Reload
+    ; VECTOR:      vlreph %v0, 166(%r15)       # 2-byte Reload
 
     %2:fp16bit = COPY $f4h
     %1:fp16bit = COPY $f2h

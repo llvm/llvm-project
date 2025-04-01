@@ -33,7 +33,8 @@ define float @f3(i128 %i) {
 ; Test signed i128->f16.
 define half @f4(i128 %i) {
 ; CHECK-LABEL: f4:
-; CHECK: brasl %r14, __floattihf@PLT
+; CHECK: brasl   %r14, __floattisf@PLT
+; CHECK: brasl   %r14, __truncsfhf2@PLT
 ; CHECK: br %r14
   %conv = sitofp i128 %i to half
   ret half %conv
@@ -69,7 +70,8 @@ define float @f7(i128 %i) {
 ; Test unsigned i128->f16.
 define half @f8(i128 %i) {
 ; CHECK-LABEL: f8:
-; CHECK: brasl %r14, __floatuntihf@PLT
+; CHECK: brasl   %r14, __floatuntisf@PLT
+; CHECK: brasl   %r14, __truncsfhf2@PLT
 ; CHECK: br %r14
   %conv = uitofp i128 %i to half
   ret half %conv
@@ -105,7 +107,8 @@ define i128 @f11(float %f) {
 ; Test signed f16->i128.
 define i128 @f12(half %f) {
 ; CHECK-LABEL: f12:
-; CHECK: brasl %r14, __fixhfti@PLT
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: brasl %r14, __fixsfti@PLT
 ; CHECK: br %r14
   %conv = fptosi half %f to i128
   ret i128 %conv
@@ -141,7 +144,8 @@ define i128 @f15(float %f) {
 ; Test unsigned f16->i128.
 define i128 @f16(half %f) {
 ; CHECK-LABEL: f16:
-; CHECK: brasl %r14, __fixunshfti@PLT
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: brasl %r14, __fixunssfti@PLT
 ; CHECK: br %r14
   %conv = fptoui half %f to i128
   ret i128 %conv

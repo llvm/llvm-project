@@ -10,7 +10,9 @@ declare fp128 @llvm.experimental.constrained.uitofp.f128.i64(i64, metadata, meta
 ; Test i64->f16. For z10, this results in just a single a libcall.
 define half @f0(i64 %i) #0 {
 ; CHECK-LABEL: f0:
-; CHECK: brasl %r14, __floatundihf@PLT
+; CHECK: cegbr
+; CHECK: aebr
+; CHECK: brasl %r14, __truncsfhf2@PLT
 ; CHECK: br %r14
   %conv = call half @llvm.experimental.constrained.uitofp.f16.i64(i64 %i,
                                                metadata !"round.dynamic",

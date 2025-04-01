@@ -627,6 +627,9 @@ public:
                    bool IsSigned, SDLoc DL, bool DoesNotReturn,
                    bool IsReturnValueUsed) const;
 
+  SDValue useLibCall(SelectionDAG &DAG, RTLIB::Libcall LC, MVT VT, SDValue Arg,
+                     SDLoc DL, SDValue Chain, bool IsStrict) const;
+
   bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                       bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
@@ -747,9 +750,7 @@ private:
   SDValue lowerFSHR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
   SDValue lower_FP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerSTRICT_FP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
   SDValue lower_INT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerSTRICT_INT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerLoadF16(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerStoreF16(SDValue Op, SelectionDAG &DAG) const;
 

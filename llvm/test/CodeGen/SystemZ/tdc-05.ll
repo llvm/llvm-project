@@ -12,7 +12,8 @@ declare fp128 @llvm.fabs.f128(fp128)
 define i32 @f0(half %x) {
 ; CHECK-LABEL: f0
 ; CHECK:       lgdr %r0, %f0
-; CHECK-NEXT:  srag %r0, %r0, 48
+; CHECK-NEXT:  srlg %r0, %r0, 48
+; CHECK-NEXT:  lhr %r0, %r0
 ; CHECK-NEXT:  chi %r0, 0
 ; CHECK-NEXT:  ipm %r0
 ; CHECK-NEXT:  risbg %r13, %r0, 63, 191, 36

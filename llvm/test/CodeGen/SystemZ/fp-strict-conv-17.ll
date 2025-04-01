@@ -59,7 +59,8 @@ define float @f3(i128 %i) #0 {
 ; Test signed i128->f16.
 define half @f4(i128 %i) #0 {
 ; CHECK-LABEL: f4:
-; CHECK: brasl %r14, __floattihf@PLT
+; CHECK: %r14, __floattisf@PLT
+; CHECK: %r14, __truncsfhf2@PLT
 ; CHECK: br %r14
   %conv = call half @llvm.experimental.constrained.sitofp.f16.i128(i128 %i,
                                                metadata !"round.dynamic",
@@ -103,7 +104,8 @@ define float @f7(i128 %i) #0 {
 ; Test unsigned i128->f16.
 define half @f8(i128 %i) #0 {
 ; CHECK-LABEL: f8:
-; CHECK: brasl %r14, __floatuntihf@PLT
+; CHECK: brasl %r14, __floatuntisf@PLT
+; CHECK: brasl %r14, __truncsfhf2@PLT
 ; CHECK: br %r14
   %conv = call half @llvm.experimental.constrained.uitofp.f16.i128(i128 %i,
                                                metadata !"round.dynamic",
@@ -144,7 +146,8 @@ define i128 @f11(float %f) #0 {
 ; Test signed f16->i128.
 define i128 @f12(half %f) #0 {
 ; CHECK-LABEL: f12:
-; CHECK: brasl %r14, __fixhfti@PLT
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: brasl %r14, __fixsfti@PLT
 ; CHECK: br %r14
   %conv = call i128 @llvm.experimental.constrained.fptosi.i128.f16(half %f,
                                                metadata !"fpexcept.strict") #0
@@ -184,7 +187,8 @@ define i128 @f15(float %f) #0 {
 ; Test unsigned f16->i128.
 define i128 @f16(half %f) #0 {
 ; CHECK-LABEL: f16:
-; CHECK: brasl %r14, __fixunshfti@PLT
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: brasl %r14, __fixunssfti@PLT
 ; CHECK: br %r14
   %conv = call i128 @llvm.experimental.constrained.fptoui.i128.f16(half %f,
                                                metadata !"fpexcept.strict") #0

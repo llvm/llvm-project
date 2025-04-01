@@ -30,25 +30,21 @@ define <8 x half> @fun0(<8 x half> %Op) {
 ; NOVEC-NEXT:    .cfi_offset %f13, -208
 ; NOVEC-NEXT:    .cfi_offset %f14, -216
 ; NOVEC-NEXT:    .cfi_offset %f15, -224
-; NOVEC-NEXT:    lh %r0, 414(%r15)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    ldgr %f15, %r0
-; NOVEC-NEXT:    lh %r0, 406(%r15)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 414(%r15)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
+; NOVEC-NEXT:    ldgr %f14, %r0
+; NOVEC-NEXT:    lgh %r0, 406(%r15)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f12, %r0
-; NOVEC-NEXT:    lh %r0, 398(%r15)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 398(%r15)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f9, %r0
-; NOVEC-NEXT:    lh %r0, 390(%r15)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 390(%r15)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ler %f10, %f6
 ; NOVEC-NEXT:    ler %f11, %f4
 ; NOVEC-NEXT:    ler %f13, %f2
-; NOVEC-NEXT:    ler %f14, %f0
+; NOVEC-NEXT:    ler %f15, %f0
 ; NOVEC-NEXT:    lgr %r13, %r2
 ; NOVEC-NEXT:    ldgr %f0, %r0
 ; NOVEC-NEXT:    # kill: def $f0h killed $f0h killed $f0d
@@ -66,16 +62,16 @@ define <8 x half> @fun0(<8 x half> %Op) {
 ; NOVEC-NEXT:    aebr %f0, %f0
 ; NOVEC-NEXT:    brasl %r14, __truncsfhf2@PLT
 ; NOVEC-NEXT:    ler %f12, %f0
-; NOVEC-NEXT:    ler %f0, %f15
-; NOVEC-NEXT:    brasl %r14, __extendhfsf2@PLT
-; NOVEC-NEXT:    aebr %f0, %f0
-; NOVEC-NEXT:    brasl %r14, __truncsfhf2@PLT
-; NOVEC-NEXT:    ler %f15, %f0
 ; NOVEC-NEXT:    ler %f0, %f14
 ; NOVEC-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; NOVEC-NEXT:    aebr %f0, %f0
 ; NOVEC-NEXT:    brasl %r14, __truncsfhf2@PLT
 ; NOVEC-NEXT:    ler %f14, %f0
+; NOVEC-NEXT:    ler %f0, %f15
+; NOVEC-NEXT:    brasl %r14, __extendhfsf2@PLT
+; NOVEC-NEXT:    aebr %f0, %f0
+; NOVEC-NEXT:    brasl %r14, __truncsfhf2@PLT
+; NOVEC-NEXT:    ler %f15, %f0
 ; NOVEC-NEXT:    ler %f0, %f13
 ; NOVEC-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; NOVEC-NEXT:    aebr %f0, %f0
@@ -92,36 +88,28 @@ define <8 x half> @fun0(<8 x half> %Op) {
 ; NOVEC-NEXT:    brasl %r14, __truncsfhf2@PLT
 ; NOVEC-NEXT:    # kill: def $f0h killed $f0h def $f0d
 ; NOVEC-NEXT:    lgdr %r0, %f0
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    sth %r0, 6(%r13)
 ; NOVEC-NEXT:    lgdr %r0, %f11
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    sth %r0, 4(%r13)
 ; NOVEC-NEXT:    lgdr %r0, %f13
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    sth %r0, 2(%r13)
-; NOVEC-NEXT:    lgdr %r0, %f14
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
-; NOVEC-NEXT:    sth %r0, 0(%r13)
 ; NOVEC-NEXT:    lgdr %r0, %f15
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
+; NOVEC-NEXT:    sth %r0, 0(%r13)
+; NOVEC-NEXT:    lgdr %r0, %f14
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    sth %r0, 14(%r13)
 ; NOVEC-NEXT:    lgdr %r0, %f12
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    sth %r0, 12(%r13)
 ; NOVEC-NEXT:    lgdr %r0, %f9
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    sth %r0, 10(%r13)
 ; NOVEC-NEXT:    lgdr %r0, %f8
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    sth %r0, 8(%r13)
 ; NOVEC-NEXT:    ld %f8, 216(%r15) # 8-byte Reload
 ; NOVEC-NEXT:    ld %f9, 208(%r15) # 8-byte Reload
@@ -404,69 +392,53 @@ entry:
 define void @fun3(ptr %Src, ptr %Dst) {
 ; NOVEC-LABEL: fun3:
 ; NOVEC:       # %bb.0: # %entry
-; NOVEC-NEXT:    lh %r0, 0(%r2)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 0(%r2)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f0, %r0
-; NOVEC-NEXT:    lh %r0, 2(%r2)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 2(%r2)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f1, %r0
-; NOVEC-NEXT:    lh %r0, 4(%r2)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 4(%r2)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f2, %r0
-; NOVEC-NEXT:    lh %r0, 6(%r2)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 6(%r2)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f3, %r0
-; NOVEC-NEXT:    lh %r0, 8(%r2)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 8(%r2)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f4, %r0
-; NOVEC-NEXT:    lh %r0, 10(%r2)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 10(%r2)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f5, %r0
-; NOVEC-NEXT:    lh %r0, 12(%r2)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 12(%r2)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f6, %r0
-; NOVEC-NEXT:    lh %r0, 14(%r2)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 14(%r2)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f7, %r0
 ; NOVEC-NEXT:    lgdr %r0, %f7
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    sth %r0, 14(%r3)
 ; NOVEC-NEXT:    lgdr %r0, %f6
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    sth %r0, 12(%r3)
 ; NOVEC-NEXT:    lgdr %r0, %f5
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    sth %r0, 10(%r3)
 ; NOVEC-NEXT:    lgdr %r0, %f4
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    sth %r0, 8(%r3)
 ; NOVEC-NEXT:    lgdr %r0, %f3
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    sth %r0, 6(%r3)
 ; NOVEC-NEXT:    lgdr %r0, %f2
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    sth %r0, 4(%r3)
 ; NOVEC-NEXT:    lgdr %r0, %f1
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    sth %r0, 2(%r3)
 ; NOVEC-NEXT:    lgdr %r0, %f0
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    sth %r0, 0(%r3)
 ; NOVEC-NEXT:    br %r14
 ;
@@ -506,124 +478,96 @@ define void @fun4(ptr %Src, ptr %Dst) {
 ; NOVEC-NEXT:    .cfi_offset %r15, -40
 ; NOVEC-NEXT:    aghi %r15, -208
 ; NOVEC-NEXT:    .cfi_def_cfa_offset 368
-; NOVEC-NEXT:    lh %r0, 0(%r2)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 0(%r2)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f0, %r0
-; NOVEC-NEXT:    lh %r0, 2(%r2)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    # kill: def $f0h killed $f0h killed $f0d
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 2(%r2)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f2, %r0
+; NOVEC-NEXT:    # kill: def $f0h killed $f0h killed $f0d
 ; NOVEC-NEXT:    # kill: def $f2h killed $f2h killed $f2d
-; NOVEC-NEXT:    lh %r0, 4(%r2)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 4(%r2)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f4, %r0
 ; NOVEC-NEXT:    # kill: def $f4h killed $f4h killed $f4d
-; NOVEC-NEXT:    lh %r0, 6(%r2)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 6(%r2)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f6, %r0
 ; NOVEC-NEXT:    # kill: def $f6h killed $f6h killed $f6d
-; NOVEC-NEXT:    lh %r0, 8(%r2)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 8(%r2)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f1, %r0
-; NOVEC-NEXT:    lh %r0, 10(%r2)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 10(%r2)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f3, %r0
-; NOVEC-NEXT:    lh %r0, 12(%r2)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 12(%r2)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f5, %r0
-; NOVEC-NEXT:    lh %r0, 14(%r2)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 14(%r2)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f7, %r0
 ; NOVEC-NEXT:    lgdr %r0, %f7
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    sth %r0, 190(%r15)
 ; NOVEC-NEXT:    lgdr %r0, %f5
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    sth %r0, 182(%r15)
 ; NOVEC-NEXT:    lgdr %r0, %f3
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    sth %r0, 174(%r15)
 ; NOVEC-NEXT:    lgdr %r0, %f1
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    la %r2, 192(%r15)
 ; NOVEC-NEXT:    lgr %r13, %r3
 ; NOVEC-NEXT:    sth %r0, 166(%r15)
 ; NOVEC-NEXT:    brasl %r14, foo@PLT
-; NOVEC-NEXT:    lh %r0, 192(%r15)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 192(%r15)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f0, %r0
-; NOVEC-NEXT:    lh %r0, 194(%r15)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 194(%r15)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f1, %r0
-; NOVEC-NEXT:    lh %r0, 196(%r15)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 196(%r15)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f2, %r0
-; NOVEC-NEXT:    lh %r0, 198(%r15)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 198(%r15)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f3, %r0
-; NOVEC-NEXT:    lh %r0, 200(%r15)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 200(%r15)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f4, %r0
-; NOVEC-NEXT:    lh %r0, 202(%r15)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 202(%r15)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f5, %r0
-; NOVEC-NEXT:    lh %r0, 204(%r15)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 204(%r15)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f6, %r0
-; NOVEC-NEXT:    lh %r0, 206(%r15)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 206(%r15)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f7, %r0
 ; NOVEC-NEXT:    lgdr %r0, %f7
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    sth %r0, 14(%r13)
 ; NOVEC-NEXT:    lgdr %r0, %f6
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    sth %r0, 12(%r13)
 ; NOVEC-NEXT:    lgdr %r0, %f5
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    sth %r0, 10(%r13)
 ; NOVEC-NEXT:    lgdr %r0, %f4
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    sth %r0, 8(%r13)
 ; NOVEC-NEXT:    lgdr %r0, %f3
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    sth %r0, 6(%r13)
 ; NOVEC-NEXT:    lgdr %r0, %f2
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    sth %r0, 4(%r13)
 ; NOVEC-NEXT:    lgdr %r0, %f1
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    sth %r0, 2(%r13)
 ; NOVEC-NEXT:    lgdr %r0, %f0
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    sth %r0, 0(%r13)
 ; NOVEC-NEXT:    lmg %r13, %r15, 312(%r15)
 ; NOVEC-NEXT:    br %r14
@@ -694,69 +638,53 @@ define void @fun5(<4 x half> %dummy, <8 x half> %Arg5) {
 ; NOVEC-NEXT:    .cfi_offset %f9, -176
 ; NOVEC-NEXT:    .cfi_offset %f10, -184
 ; NOVEC-NEXT:    .cfi_offset %f11, -192
-; NOVEC-NEXT:    lh %r0, 422(%r15)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 422(%r15)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f1, %r0
-; NOVEC-NEXT:    lh %r0, 430(%r15)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 430(%r15)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f3, %r0
-; NOVEC-NEXT:    lh %r0, 438(%r15)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 438(%r15)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f5, %r0
-; NOVEC-NEXT:    lh %r0, 446(%r15)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 446(%r15)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f7, %r0
-; NOVEC-NEXT:    lh %r0, 454(%r15)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 454(%r15)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f8, %r0
-; NOVEC-NEXT:    lh %r0, 462(%r15)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 462(%r15)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f9, %r0
-; NOVEC-NEXT:    lh %r0, 470(%r15)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 470(%r15)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f10, %r0
-; NOVEC-NEXT:    lh %r0, 478(%r15)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 478(%r15)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    ldgr %f11, %r0
 ; NOVEC-NEXT:    lgdr %r0, %f11
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    sth %r0, 222(%r15)
 ; NOVEC-NEXT:    lgdr %r0, %f10
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    sth %r0, 214(%r15)
 ; NOVEC-NEXT:    lgdr %r0, %f9
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    sth %r0, 206(%r15)
 ; NOVEC-NEXT:    lgdr %r0, %f8
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    sth %r0, 198(%r15)
 ; NOVEC-NEXT:    lgdr %r0, %f7
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    sth %r0, 190(%r15)
 ; NOVEC-NEXT:    lgdr %r0, %f5
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    sth %r0, 182(%r15)
 ; NOVEC-NEXT:    lgdr %r0, %f3
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    sth %r0, 174(%r15)
 ; NOVEC-NEXT:    lgdr %r0, %f1
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    sth %r0, 166(%r15)
 ; NOVEC-NEXT:    brasl %r14, foo2@PLT
 ; NOVEC-NEXT:    ld %f8, 248(%r15) # 8-byte Reload

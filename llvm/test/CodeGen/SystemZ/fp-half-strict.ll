@@ -77,9 +77,8 @@ define void @fun1(ptr %Src, ptr %Dst) #0 {
 ; NOVEC-NEXT:    .cfi_offset %r15, -40
 ; NOVEC-NEXT:    aghi %r15, -160
 ; NOVEC-NEXT:    .cfi_def_cfa_offset 320
-; NOVEC-NEXT:    lh %r0, 0(%r2)
-; NOVEC-NEXT:    sll %r0, 16
-; NOVEC-NEXT:    risbhg %r0, %r0, 0, 159, 32
+; NOVEC-NEXT:    lgh %r0, 0(%r2)
+; NOVEC-NEXT:    sllg %r0, %r0, 48
 ; NOVEC-NEXT:    lgr %r13, %r3
 ; NOVEC-NEXT:    ldgr %f0, %r0
 ; NOVEC-NEXT:    # kill: def $f0h killed $f0h killed $f0d
@@ -88,8 +87,7 @@ define void @fun1(ptr %Src, ptr %Dst) #0 {
 ; NOVEC-NEXT:    brasl %r14, __truncdfhf2@PLT
 ; NOVEC-NEXT:    # kill: def $f0h killed $f0h def $f0d
 ; NOVEC-NEXT:    lgdr %r0, %f0
-; NOVEC-NEXT:    risblg %r0, %r0, 0, 159, 32
-; NOVEC-NEXT:    srl %r0, 16
+; NOVEC-NEXT:    srlg %r0, %r0, 48
 ; NOVEC-NEXT:    sth %r0, 0(%r13)
 ; NOVEC-NEXT:    bcr 14, %r0
 ; NOVEC-NEXT:    lmg %r13, %r15, 264(%r15)
