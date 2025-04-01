@@ -3077,6 +3077,14 @@ let TargetPrefix = "aarch64" in {
           LLVMMatchType<0>,
           LLVMMatchType<0>], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects]>;
 
+  class SME_OuterProduct_QuarterTile_Multi_Multi
+      : DefaultAttrsIntrinsic<[],
+          [llvm_i32_ty,
+          llvm_anyvector_ty,
+          LLVMMatchType<0>,
+          LLVMMatchType<0>,
+          LLVMMatchType<0>], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects]>;
+
   // 2-way and 4-way multi-vector signed/unsigned Quarter Tile Quarter Product A/S
   foreach mode = ["s", "a"] in {
     foreach za = ["", "_za64"] in {
@@ -3084,6 +3092,7 @@ let TargetPrefix = "aarch64" in {
         def int_aarch64_sme_ # ty # "mop4" # mode # za # "_wide_1x1" : SME_OuterProduct_QuarterTile_Single_Single;
         def int_aarch64_sme_ # ty # "mop4" # mode # za # "_wide_1x2" : SME_OuterProduct_QuarterTile_Single_Multi;
         def int_aarch64_sme_ # ty # "mop4" # mode # za # "_wide_2x1" : SME_OuterProduct_QuarterTile_Single_Multi;
+        def int_aarch64_sme_ # ty # "mop4" # mode # za # "_wide_2x2" : SME_OuterProduct_QuarterTile_Multi_Multi;
       }
     }
   }
@@ -3094,6 +3103,7 @@ let TargetPrefix = "aarch64" in {
       def int_aarch64_sme_mop4 # mode # wide # "_1x1" : SME_OuterProduct_QuarterTile_Single_Single;
       def int_aarch64_sme_mop4 # mode # wide # "_1x2" : SME_OuterProduct_QuarterTile_Single_Multi;
       def int_aarch64_sme_mop4 # mode # wide # "_2x1" : SME_OuterProduct_QuarterTile_Single_Multi;
+      def int_aarch64_sme_mop4 # mode # wide # "_2x2" : SME_OuterProduct_QuarterTile_Multi_Multi;
     }
   }
 
