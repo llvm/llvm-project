@@ -155,6 +155,19 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
     }
   }
 
+  if (auto *x{std::getenv("NV_CUDAFOR_DEVICE_IS_MANAGED")}) {
+    char *end;
+    auto n{std::strtol(x, &end, 10)};
+    if (n >= 0 && n <= 1 && *end == '\0') {
+      cudaDeviceIsManaged = n != 0;
+    } else {
+      std::fprintf(stderr,
+          "Fortran runtime: NV_CUDAFOR_DEVICE_IS_MANAGED=%s is invalid; "
+          "ignored\n",
+          x);
+    }
+  }
+
   // TODO: Set RP/ROUND='PROCESSOR_DEFINED' from environment
 }
 
