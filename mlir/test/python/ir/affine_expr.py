@@ -417,6 +417,7 @@ def testAffineExprShift():
         assert (dims[2] + dims[3]) == (dims[0] + dims[1]).shift_dims(2, 2)
         assert (syms[2] + syms[3]) == (syms[0] + syms[1]).shift_symbols(2, 2, 0)
 
+
 # CHECK-LABEL: TEST: testAffineExprSimplify
 @run
 def testAffineExprSimplify():
