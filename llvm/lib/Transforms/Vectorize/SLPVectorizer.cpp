@@ -1434,7 +1434,14 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
   }
   assert((MainOp == AltOp || !allSameOpcode(VL)) &&
          "Incorrect implementation of allSameOpcode.");
-  return InstructionsState(MainOp, AltOp);
+  InstructionsState S(MainOp, AltOp);
+  assert(all_of(VL,
+                [&](Value *V) {
+                  return isa<PoisonValue>(V) ||
+                         S.isOpcodeOrAlt(cast<Instruction>(V));
+                }) &&
+         "Invalid InstructionsState.");
+  return S;
 }
 
 /// \returns true if all of the values in \p VL have the same type or false
