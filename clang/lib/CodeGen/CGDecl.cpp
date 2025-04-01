@@ -1227,6 +1227,7 @@ void CodeGenFunction::emitStoresForConstant(const VarDecl &D, Address Loc,
     }
     auto *I = Builder.CreateMemSet(
         Loc, llvm::ConstantInt::get(CGM.Int8Ty, Value), SizeVal, isVolatile);
+    addInstToCurrentSourceAtom(I, nullptr);
     if (IsAutoInit)
       I->addAnnotationMetadata("auto-init");
     return;
