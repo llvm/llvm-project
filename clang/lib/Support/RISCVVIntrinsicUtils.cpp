@@ -1243,13 +1243,10 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, enum RVVRequire Require) {
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                               const RequiredExtensions &Exts) {
   OS << "{";
-  const char *Sep = "";
-  for (unsigned I = 0; I < RVV_REQ_NUM; I++) {
-    if (Exts[I]) {
-      OS << Sep << static_cast<RVVRequire>(I);
-      Sep = ", ";
-    }
-  }
+  ListSeparator LS;
+  for (unsigned I = 0; I < RVV_REQ_NUM; I++)
+    if (Exts[I])
+      OS << LS << static_cast<RVVRequire>(I);
   OS << "}";
   return OS;
 }
