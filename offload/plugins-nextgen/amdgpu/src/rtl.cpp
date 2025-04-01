@@ -5355,9 +5355,18 @@ static OmptKernelTimingArgsAsyncTy *getOmptTimingsArgs(void *Data) {
 static std::pair<uint64_t, uint64_t>
 getKernelStartAndEndTime(const OmptKernelTimingArgsAsyncTy *Args) {
   assert(Args->Signal && "Invalid AMDGPUSignal Pointer in OMPT profiling");
-  hsa_amd_profiling_dispatch_time_t TimeRec;
-  hsa_amd_profiling_get_dispatch_time(Args->Agent, Args->Signal->get(),
-                                      &TimeRec);
+  hsa_amd_profiling_dispatch_time_t TimeRec{0, 0};
+  hsa_status_t Status = hsa_amd_profiling_get_dispatch_time(
+      Args->Agent, Args->Signal->get(), &TimeRec);
+  if (auto Err = Plugin::check(
+          Status,
+          "WARNING Could not retrieve kernel dispatch timestamps: %s")) {
+    MESSAGE0(toString(std::move(Err)).data());
+    static BoolEnvar OMPX_StrictSanityChecks{"OMPX_STRICT_SANITY_CHECKS",
+                                             false};
+    if (OMPX_StrictSanityChecks)
+      llvm_unreachable("User-requested hard stop on sanity check errors.");
+  }
 
   uint64_t StartTime = TimeRec.start * Args->TicksToTime;
   uint64_t EndTime = TimeRec.end * Args->TicksToTime;
@@ -5368,8 +5377,18 @@ getKernelStartAndEndTime(const OmptKernelTimingArgsAsyncTy *Args) {
 static std::pair<uint64_t, uint64_t>
 getCopyStartAndEndTime(const OmptKernelTimingArgsAsyncTy *Args) {
   assert(Args->Signal && "Invalid AMDGPUSignal Pointer in OMPT profiling");
-  hsa_amd_profiling_async_copy_time_t TimeRec;
-  hsa_amd_profiling_get_async_copy_time(Args->Signal->get(), &TimeRec);
+  hsa_amd_profiling_async_copy_time_t TimeRec{0, 0};
+  hsa_status_t Status =
+      hsa_amd_profiling_get_async_copy_time(Args->Signal->get(), &TimeRec);
+  if (auto Err = Plugin::check(
+          Status, "WARNING Could not retrieve data-copy timestamps: %s")) {
+    MESSAGE0(toString(std::move(Err)).data());
+    static BoolEnvar OMPX_StrictSanityChecks{"OMPX_STRICT_SANITY_CHECKS",
+                                             false};
+    if (OMPX_StrictSanityChecks)
+      llvm_unreachable("User-requested hard stop on sanity check errors.");
+  }
+
   uint64_t StartTime = TimeRec.start * Args->TicksToTime;
   uint64_t EndTime = TimeRec.end * Args->TicksToTime;
 
