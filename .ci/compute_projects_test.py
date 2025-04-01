@@ -179,6 +179,15 @@ class TestComputeProjects(unittest.TestCase):
         self.assertEqual(env_variables["runtimes_to_build"], "")
         self.assertEqual(env_variables["runtimes_check_targets"], "")
 
+    def test_exclude_gn(self):
+        env_variables = compute_projects.get_env_variables(
+            ["llvm/utils/gn/build/BUILD.gn"], "Linux"
+        )
+        self.assertEqual(env_variables["projects_to_build"], "")
+        self.assertEqual(env_variables["project_check_targets"], "")
+        self.assertEqual(env_variables["runtimes_to_build"], "")
+        self.assertEqual(env_variables["runtimes_check_targets"], "")
+
 
 if __name__ == "__main__":
     unittest.main()
