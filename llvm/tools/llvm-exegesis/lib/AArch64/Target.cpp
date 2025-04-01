@@ -153,9 +153,9 @@ bool isPointerAuth(unsigned Opcode) {
     return false;
 
   // FIXME: Pointer Authentication instructions.
-  // We would like to measure these instructions, but they can behave differently on
-  // different platforms, and maybe the snippets need to look different for these instructions,
-  // so let's disable this for now. 
+  // We would like to measure these instructions, but they can behave
+  // differently on different platforms, and maybe the snippets need to look
+  // different for these instructions, so let's disable this for now.
   case AArch64::AUTDA:
   case AArch64::AUTDB:
   case AArch64::AUTDZA:

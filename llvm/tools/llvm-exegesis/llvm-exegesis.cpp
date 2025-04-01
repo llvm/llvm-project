@@ -281,7 +281,7 @@ static cl::opt<std::string> MAttr(
 static ExitOnError ExitOnErr("llvm-exegesis error: ");
 
 // Helper function that logs the error(s) and exits.
-template <typename... ArgTs> static void ExitWithError(ArgTs &&... Args) {
+template <typename... ArgTs> static void ExitWithError(ArgTs &&...Args) {
   ExitOnErr(make_error<Failure>(std::forward<ArgTs>(Args)...));
 }
 
@@ -444,8 +444,7 @@ static void runBenchmarkConfigurations(
     Benchmark &Result = AllResults.front();
 
     // If any of our measurements failed, pretend they all have failed.
-    if (AllResults.size() > 1 &&
-        any_of(AllResults, [](const Benchmark &R) {
+    if (AllResults.size() > 1 && any_of(AllResults, [](const Benchmark &R) {
           return R.Measurements.empty();
         }))
       Result.Measurements.clear();
@@ -505,7 +504,6 @@ void benchmarkMain() {
   if (!Runner) {
     ExitWithError("cannot create benchmark runner");
   }
-
   const auto Opcodes = getOpcodesOrDie(State);
   std::vector<BenchmarkCode> Configurations;
 
@@ -643,8 +641,7 @@ static void analysisMain() {
       errorOrToExpected(MemoryBuffer::getFile(BenchmarkFile, /*IsText=*/true)));
 
   const auto TriplesAndCpus = ExitOnFileError(
-      BenchmarkFile,
-      Benchmark::readTriplesAndCpusFromYamls(*MemoryBuffer));
+      BenchmarkFile, Benchmark::readTriplesAndCpusFromYamls(*MemoryBuffer));
   if (TriplesAndCpus.empty()) {
     errs() << "no benchmarks to analyze\n";
     return;
