@@ -1199,7 +1199,8 @@ class Sema;
     llvm::SmallPtrSet<uintptr_t, 16> Functions;
     SmallVector<DeferredTemplateOverloadCandidate, 8> DeferredCandidates;
 
-    // Allocator for ConversionSequenceLists. We store the first few of these
+    // Allocator for ConversionSequenceLists and deferred candidate args.
+    // We store the first few of these
     // inline to avoid allocation for small sets.
     llvm::BumpPtrAllocator SlabAllocator;
 
@@ -1207,6 +1208,8 @@ class Sema;
     CandidateSetKind Kind;
     OperatorRewriteInfo RewriteInfo;
 
+    /// Small storage size for ImplicitConversionSequences
+    /// and the persisted arguments of deferred candidates.
     constexpr static unsigned NumInlineBytes =
         32 * sizeof(ImplicitConversionSequence);
 
@@ -1304,6 +1307,11 @@ class Sema;
       return ConversionSequenceList(Conversions, NumConversions);
     }
 
+    /// Provide storage for any Expr* arg that must be preserved
+    /// until deferred template candidates are deduced.
+    /// Typically this should be used for reversed operator arguments
+    /// and any time the argument array is transformed while adding
+    /// a template candidate.
     llvm::MutableArrayRef<Expr *> getPersistentArgsArray(unsigned N) {
       Expr **Exprs = slabAllocate<Expr *>(N);
       return llvm::MutableArrayRef<Expr *>(Exprs, N);
@@ -1454,10 +1462,9 @@ class Sema;
         // When doing code completion, we want to see all the
         // viable candidates.
         && Kind != CSK_CodeCompletion
-        // When -fgpu-exclude-wrong-side-overloads, CUDA needs
-        // to exclude templates from the overload sets after they
-        // have been instantiated. See CudaExcludeWrongSideCandidates.
-        && (!Opts.CUDA || !Opts.GPUExcludeWrongSideOverloads);
+        // CUDA may prefer template candidates even when a non-candidate
+        // is a perfect match
+        && !Opts.CUDA;
   }
 
 } // namespace clang
