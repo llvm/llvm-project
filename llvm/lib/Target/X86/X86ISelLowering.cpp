@@ -30365,7 +30365,7 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
     // element to the other.
     // This optimized lowering is only valid if the elements in a pair can
     // be treated identically.
-    SmallVector<SDValue, 32> AmtWideElts(Amt->op_begin(), Amt->op_end());
+    SmallVector<SDValue, 32> AmtWideElts(Amt->ops());
     SmallVector<SDValue, 32> TmpAmtWideElts;
     int WideEltSizeInBits = EltSizeInBits;
     while (WideEltSizeInBits < 32) {
