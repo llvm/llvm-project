@@ -17,13 +17,13 @@
 // Helper to suppress warnings related to 8-byte atomic accesses when the target
 // is 32-bit AIX (where such accesses use libatomic).
 #if defined(_AIX) && !defined(__powerpc64__) && defined(__clang__)
-#define SANITIZER_IGNORE_ATOMIC_ALIGNMENT_BEGIN                                \
-  _Pragma("clang diagnostic push")                                             \
-      _Pragma("clang diagnostic ignored \"-Watomic-alignment\"")
-#define SANITIZER_IGNORE_ATOMIC_ALIGNMENT_END _Pragma("clang diagnostic pop")
+#  define SANITIZER_IGNORE_ATOMIC_ALIGNMENT_BEGIN \
+    _Pragma("clang diagnostic push")              \
+        _Pragma("clang diagnostic ignored \"-Watomic-alignment\"")
+#  define SANITIZER_IGNORE_ATOMIC_ALIGNMENT_END _Pragma("clang diagnostic pop")
 #else
-#define SANITIZER_IGNORE_ATOMIC_ALIGNMENT_BEGIN
-#define SANITIZER_IGNORE_ATOMIC_ALIGNMENT_END
+#  define SANITIZER_IGNORE_ATOMIC_ALIGNMENT_BEGIN
+#  define SANITIZER_IGNORE_ATOMIC_ALIGNMENT_END
 #endif
 
 namespace __sanitizer {

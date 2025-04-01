@@ -170,10 +170,10 @@ void ReserveShadowMemoryRange(uptr beg, uptr end, const char *name,
     Report(
         "ReserveShadowMemoryRange failed while trying to map 0x%zx bytes. "
         "Perhaps you're using ulimit -v "
-#if SANITIZER_AIX && SANITIZER_WORDSIZE == 32
+#  if SANITIZER_AIX && SANITIZER_WORDSIZE == 32
         "or using large address-space model for 32-bit XCOFF by using ldedit "
         "or setting LDR_CNTRL=MAXDATA or compiling the binary with -bmaxdata "
-#endif
+#  endif
         "\n",
         size);
     Die();

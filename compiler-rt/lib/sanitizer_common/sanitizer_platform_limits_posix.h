@@ -16,25 +16,25 @@
 
 #if SANITIZER_LINUX || SANITIZER_APPLE || SANITIZER_AIX
 
-#include "sanitizer_internal_defs.h"
-#include "sanitizer_platform.h"
-#include "sanitizer_mallinfo.h"
+#  include "sanitizer_internal_defs.h"
+#  include "sanitizer_platform.h"
+#  include "sanitizer_mallinfo.h"
 
-#if SANITIZER_APPLE
-#include <sys/cdefs.h>
-#if !__DARWIN_ONLY_64_BIT_INO_T
-#define SANITIZER_HAS_STAT64 1
-#define SANITIZER_HAS_STATFS64 1
-#else
-#define SANITIZER_HAS_STAT64 0
-#define SANITIZER_HAS_STATFS64 0
-#endif
-#elif SANITIZER_GLIBC || SANITIZER_ANDROID || SANITIZER_AIX
-#define SANITIZER_HAS_STAT64 1
-#define SANITIZER_HAS_STATFS64 1
-#endif
+#  if SANITIZER_APPLE
+#    include <sys/cdefs.h>
+#    if !__DARWIN_ONLY_64_BIT_INO_T
+#      define SANITIZER_HAS_STAT64 1
+#      define SANITIZER_HAS_STATFS64 1
+#    else
+#      define SANITIZER_HAS_STAT64 0
+#      define SANITIZER_HAS_STATFS64 0
+#    endif
+#  elif SANITIZER_GLIBC || SANITIZER_ANDROID || SANITIZER_AIX
+#    define SANITIZER_HAS_STAT64 1
+#    define SANITIZER_HAS_STATFS64 1
+#  endif
 
-#if defined(__sparc__)
+#  if defined(__sparc__)
 // FIXME: This can't be included from tsan which does not support sparc yet.
 #include "sanitizer_glibc_version.h"
 #endif
@@ -319,7 +319,7 @@ struct __sanitizer_iovec {
   usize iov_len;
 };
 
-#if !SANITIZER_ANDROID && !SANITIZER_AIX
+#  if !SANITIZER_ANDROID && !SANITIZER_AIX
 struct __sanitizer_ifaddrs {
   struct __sanitizer_ifaddrs *ifa_next;
   char *ifa_name;
@@ -341,7 +341,7 @@ typedef unsigned long __sanitizer_pthread_key_t;
 typedef unsigned __sanitizer_pthread_key_t;
 #endif
 
-#if (SANITIZER_LINUX && !SANITIZER_ANDROID) || SANITIZER_AIX
+#  if (SANITIZER_LINUX && !SANITIZER_ANDROID) || SANITIZER_AIX
 
 struct __sanitizer_XDR {
   int x_op;
@@ -433,10 +433,10 @@ struct __sanitizer_tm {
   int tm_wday;
   int tm_yday;
   int tm_isdst;
-#if !SANITIZER_AIX
+#  if !SANITIZER_AIX
   long int tm_gmtoff;
   const char *tm_zone;
-#endif
+#  endif
 };
 
 #if SANITIZER_LINUX
@@ -480,19 +480,19 @@ struct __sanitizer_msghdr {
   struct __sanitizer_iovec *msg_iov;
   uptr msg_iovlen;
   void *msg_control;
-#if !SANITIZER_AIX
+#    if !SANITIZER_AIX
   uptr msg_controllen;
-#else
+#    else
   unsigned msg_controllen;
-#endif
+#    endif
   int msg_flags;
 };
 struct __sanitizer_cmsghdr {
-#if !SANITIZER_AIX
+#    if !SANITIZER_AIX
   uptr cmsg_len;
-#else
+#    else
   unsigned cmsg_len;
-#endif
+#    endif
   int cmsg_level;
   int cmsg_type;
 };
@@ -522,13 +522,13 @@ struct __sanitizer_dirent {
 };
 #  else
 struct __sanitizer_dirent {
-#if SANITIZER_AIX
+#    if SANITIZER_AIX
   uptr d_offset;
   uptr d_ino;
-#else
+#    else
   uptr d_ino;
   uptr d_off;
-#endif
+#    endif
   unsigned short d_reclen;
   // more fields that we don't care about
 };
@@ -544,16 +544,16 @@ struct __sanitizer_dirent64 {
 extern unsigned struct_sock_fprog_sz;
 #endif
 
-#if SANITIZER_AIX
+#  if SANITIZER_AIX
 typedef int __sanitizer_clock_t;
 typedef int __sanitizer_clockid_t;
-#elif defined(__x86_64__) && !defined(_LP64)
+#  elif defined(__x86_64__) && !defined(_LP64)
 typedef long long __sanitizer_clock_t;
-#else
+#  else
 typedef long __sanitizer_clock_t;
-#endif
+#  endif
 
-#if SANITIZER_LINUX
+#  if SANITIZER_LINUX
 typedef int __sanitizer_clockid_t;
 typedef unsigned long long __sanitizer_eventfd_t;
 #endif
@@ -607,15 +607,15 @@ struct __sanitizer_sigset_t {
   // The size is determined by looking at sizeof of real sigset_t on linux.
   uptr val[128 / sizeof(uptr)];
 };
-#elif SANITIZER_AIX
+#  elif SANITIZER_AIX
 struct __sanitizer_sigset_t {
-#if SANITIZER_WORDSIZE == 64
+#    if SANITIZER_WORDSIZE == 64
   uptr val[4];
-#else
+#    else
   uptr val[2];
-#endif
+#    endif
 };
-#endif
+#  endif
 
 struct __sanitizer_siginfo_pad {
 #if SANITIZER_X32
@@ -805,12 +805,12 @@ struct __sanitizer_addrinfo {
   int ai_family;
   int ai_socktype;
   int ai_protocol;
-#if SANITIZER_ANDROID || SANITIZER_APPLE || SANITIZER_AIX
-#if SANITIZER_AIX // AIX ai_addrlen type is size_t
+#  if SANITIZER_ANDROID || SANITIZER_APPLE || SANITIZER_AIX
+#    if SANITIZER_AIX  // AIX ai_addrlen type is size_t
   uptr ai_addrlen;
-#else
+#    else
   unsigned ai_addrlen;
-#endif
+#    endif
   char *ai_canonname;
   void *ai_addr;
 #else // LINUX
@@ -819,9 +819,9 @@ struct __sanitizer_addrinfo {
   char *ai_canonname;
 #endif
   struct __sanitizer_addrinfo *ai_next;
-#if SANITIZER_AIX
+#  if SANITIZER_AIX
   int ai_eflags;
-#endif
+#  endif
 };
 
 struct __sanitizer_hostent {
@@ -838,7 +838,7 @@ struct __sanitizer_pollfd {
   short revents;
 };
 
-#if SANITIZER_ANDROID || SANITIZER_APPLE || SANITIZER_AIX
+#  if SANITIZER_ANDROID || SANITIZER_APPLE || SANITIZER_AIX
 typedef unsigned __sanitizer_nfds_t;
 #else
 typedef unsigned long __sanitizer_nfds_t;
@@ -876,10 +876,10 @@ struct __sanitizer_wordexp_t {
   uptr we_wordc;
   char **we_wordv;
   uptr we_offs;
-#if SANITIZER_AIX
+#  if SANITIZER_AIX
   int we_sflags;
   uptr we_soffs;
-#endif
+#  endif
 };
 
 #if SANITIZER_LINUX && !SANITIZER_ANDROID
@@ -1139,7 +1139,7 @@ extern unsigned fpos_t_sz;
 // when it can not be determined without including any system headers.
 extern const unsigned IOCTL_NOT_PRESENT;
 
-#if SANITIZER_AIX
+#  if SANITIZER_AIX
 extern uptr IOCTL_FIOASYNC;
 extern uptr IOCTL_FIONBIO;
 extern uptr IOCTL_FIOSETOWN;
@@ -1153,7 +1153,7 @@ extern uptr IOCTL_TIOCSETD;
 extern uptr IOCTL_TIOCSPGRP;
 extern uptr IOCTL_TIOCSTI;
 extern uptr IOCTL_TIOCSWINSZ;
-#else
+#  else
 extern unsigned IOCTL_FIOASYNC;
 extern unsigned IOCTL_FIONBIO;
 extern unsigned IOCTL_FIOSETOWN;
@@ -1167,7 +1167,7 @@ extern unsigned IOCTL_TIOCSETD;
 extern unsigned IOCTL_TIOCSPGRP;
 extern unsigned IOCTL_TIOCSTI;
 extern unsigned IOCTL_TIOCSWINSZ;
-#endif
+#  endif
 
 extern unsigned IOCTL_FIOCLEX;
 extern unsigned IOCTL_FIOGETOWN;
@@ -1199,10 +1199,10 @@ extern unsigned IOCTL_TIOCMGET;
 extern unsigned IOCTL_TIOCNOTTY;
 extern unsigned IOCTL_TIOCNXCL;
 extern unsigned IOCTL_TIOCOUTQ;
-#if !SANITIZER_AIX
+#  if !SANITIZER_AIX
 extern unsigned IOCTL_TIOCSCTTY;
-#endif
-#if SANITIZER_LINUX && !SANITIZER_ANDROID
+#  endif
+#  if SANITIZER_LINUX && !SANITIZER_ANDROID
 extern unsigned IOCTL_SIOCGETSGCNT;
 extern unsigned IOCTL_SIOCGETVIFCNT;
 #endif

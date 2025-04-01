@@ -142,7 +142,7 @@
 #  define SANITIZER_MUSL 0
 #endif
 
-#define SANITIZER_POSIX                                     \
+#define SANITIZER_POSIX                                       \
   (SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_APPLE || \
    SANITIZER_NETBSD || SANITIZER_SOLARIS || SANITIZER_AIX)
 
