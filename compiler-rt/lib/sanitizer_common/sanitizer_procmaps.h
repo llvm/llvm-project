@@ -40,6 +40,9 @@ class MemoryMappedSegment {
  public:
   explicit MemoryMappedSegment(char *buff = nullptr, uptr size = 0)
       : filename(buff), filename_size(size), data_(nullptr) {}
+  explicit MemoryMappedSegment(char *buff, uptr size, char *display_buff, uptr display_size)
+      : filename(buff), filename_size(size), displayname(display_buff),
+      displayname_size(display_size), data_(nullptr) {}
   ~MemoryMappedSegment() {}
 
   bool IsReadable() const { return protection & kProtectionRead; }
@@ -54,6 +57,8 @@ class MemoryMappedSegment {
   uptr offset;
   char *filename;  // owned by caller
   uptr filename_size;
+  char *displayname;
+  uptr displayname_size;
   uptr protection;
   ModuleArch arch;
   u8 uuid[kModuleUUIDSize];
