@@ -369,12 +369,12 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     }
     // For vectors, validate types and emit the appropriate intrinsic
     assert(CGM.getContext().hasSameUnqualifiedType(E->getArg(0)->getType(),
-				  E->getArg(1)->getType())
-	   && "Dot product operands must have the same type.");
+                                                   E->getArg(1)->getType()) &&
+           "Dot product operands must have the same type.");
 
     auto *VecTy0 = E->getArg(0)->getType()->castAs<VectorType>();
     assert(VecTy0 && "Dot product argument must be a vector.");
-    
+
     return Builder.CreateIntrinsic(
         /*ReturnType=*/T0->getScalarType(),
         getDotProductIntrinsic(CGM.getHLSLRuntime(), VecTy0->getElementType()),

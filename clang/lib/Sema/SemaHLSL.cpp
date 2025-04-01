@@ -2016,7 +2016,7 @@ static bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
     if (VecTyA && VecTyB) {
       bool retValue = false;
       if (!S->Context.hasSameUnqualifiedType(VecTyA->getElementType(),
-					     VecTyB->getElementType())) {
+                                             VecTyB->getElementType())) {
         // Note: type promotion is intended to be handeled via the intrinsics
         //  and not the builtin itself.
         S->Diag(TheCall->getBeginLoc(),
