@@ -15440,9 +15440,9 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
       // Bail out, unless we have a non-wrapping, monotonic range.
       if (ExactRegion.isWrappedSet() || ExactRegion.isFullSet())
         return false;
-      auto I = RewriteMap.find(LHSUnknown);
-      const SCEV *RewrittenLHS = I != RewriteMap.end() ? I->second : LHSUnknown;
-      RewriteMap[LHSUnknown] = SE.getUMaxExpr(
+      auto [I, Inserted] = RewriteMap.try_emplace(LHSUnknown);
+      const SCEV *RewrittenLHS = Inserted ? LHSUnknown : I->second;
+      I->second = SE.getUMaxExpr(
           SE.getConstant(ExactRegion.getUnsignedMin()),
           SE.getUMinExpr(RewrittenLHS,
                          SE.getConstant(ExactRegion.getUnsignedMax())));
