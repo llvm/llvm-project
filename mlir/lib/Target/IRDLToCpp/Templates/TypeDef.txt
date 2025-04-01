@@ -21,6 +21,7 @@ __TYPE_PRINTER__
       << mnemonic << "` in dialect `" << getNamespace() << "`";
   return {};
 }
+
 /// Print a type registered to this dialect.
 void __DIALECT_CPP_NAME__::printType(::mlir::Type type,
                     ::mlir::DialectAsmPrinter &printer) const {

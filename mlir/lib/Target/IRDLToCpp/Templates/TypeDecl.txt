@@ -1,5 +1,9 @@
 R"(
 
+//===----------------------------------------------------------------------===//
+// __NAMESPACE_PATH__::__TYPE_CPP_NAME__ declarations
+//===----------------------------------------------------------------------===//
+
 __NAMESPACE_OPEN__
 
 class __TYPE_CPP_NAME__ : public ::mlir::Type::TypeBase<__TYPE_CPP_NAME__, __DIALECT_BASE_TYPE_NAME__, ::mlir::TypeStorage> {

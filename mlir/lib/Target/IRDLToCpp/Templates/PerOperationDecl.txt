@@ -14,13 +14,15 @@ public:
 public:
   __OP_CPP_NAME__GenericAdaptorBase(::mlir::Operation *op) : odsAttrs(op->getRawDictionaryAttrs()), odsOpName(op->getName()), odsRegions(op->getRegions()) {}
 
+  /// Return the unstructured operand index of a structured operand along with the amount of unstructured operands it contains.
   std::pair<unsigned, unsigned> getStructuredOperandIndexAndLength(unsigned index, unsigned odsOperandsSize) {
-    return {index, __OP_OPERAND_COUNT__};
+    return {index, 1};
   }
 
   const Properties &getProperties() {
     return properties;
   }
+
   ::mlir::DictionaryAttr getAttributes() {
     return odsAttrs;
   }
@@ -42,13 +44,16 @@ public:
 
   __OP_CPP_NAME__GenericAdaptor(RangeT values, const __OP_CPP_NAME__GenericAdaptorBase &base) : Base(base), odsOperands(values) {}
 
+  // HACK ALERT: This template parameter allows using __OP_CPP_NAME__ which is declared later.
   template <typename LateInst = __OP_CPP_NAME__, typename = std::enable_if_t<std::is_same_v<LateInst, __OP_CPP_NAME__>>>
   __OP_CPP_NAME__GenericAdaptor(RangeT values, LateInst op) : Base(op), odsOperands(values) {}
 
+  /// Return the unstructured operand index of a structured operand along with the amount of unstructured operands it contains.
   std::pair<unsigned, unsigned> getStructuredOperandIndexAndLength(unsigned index) {
     return Base::getStructuredOperandIndexAndLength(index, odsOperands.size());
   }
 
+  /// Get the n-th structured operand (single value, variadic or optional).
   RangeT getStructuredOperands(unsigned index) {
     auto valueRange = getStructuredOperandIndexAndLength(index);
     return {std::next(odsOperands.begin(), valueRange.first),
@@ -109,20 +114,24 @@ public:
     return getResultNames()[index];
   }
 
+  /// Return the unstructured operand index of a structured operand along with the amount of unstructured operands it contains.
   std::pair<unsigned, unsigned> getStructuredOperandIndexAndLength(unsigned index) {
-    return {index, __OP_OPERAND_COUNT__};
+    return {index, 1};
   }
 
+  /// Get the n-th structured operand (single value, variadic or optional).
   ::mlir::Operation::operand_range getStructuredOperands(unsigned index) {
     auto valueRange = getStructuredOperandIndexAndLength(index);
     return {std::next(getOperation()->operand_begin(), valueRange.first),
              std::next(getOperation()->operand_begin(), valueRange.first + valueRange.second)};
   }
 
+  /// Return the unstructured result index of a structured result along with the amount of unstructured results it contains.
   std::pair<unsigned, unsigned> getStructuredResultIndexAndLength(unsigned index) {
-    return {index, __OP_RESULT_COUNT__};
+    return {index, 1};
   }
 
+  /// Get the n-th structured result (single value, variadic or optional).
   ::mlir::Operation::result_range getStructuredResults(unsigned index) {
     auto valueRange = getStructuredResultIndexAndLength(index);
     return {std::next(getOperation()->result_begin(), valueRange.first),
