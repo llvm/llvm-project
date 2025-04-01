@@ -51,8 +51,7 @@ namespace {
     StringRef getPassName() const override { return "Bitcode Writer"; }
 
     bool runOnModule(Module &M) override {
-      ScopedDbgInfoFormatSetter FormatSetter(
-          M, M.IsNewDbgInfoFormat);
+      ScopedDbgInfoFormatSetter FormatSetter(M, M.IsNewDbgInfoFormat);
       if (M.IsNewDbgInfoFormat)
         M.removeDebugIntrinsicDeclarations();
 
