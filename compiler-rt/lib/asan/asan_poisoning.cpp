@@ -26,6 +26,8 @@ namespace __asan {
 
 static atomic_uint8_t can_poison_memory;
 
+using PoisonRecordRingBuffer = RingBuffer<struct PoisonRecord>;
+
 static Mutex PoisonRecordsMutex;
 static PoisonRecordRingBuffer *PoisonRecords = nullptr;
 
@@ -36,6 +38,7 @@ void InitializePoisonTracking() {
   PoisonRecords = PoisonRecordRingBuffer::New(flags()->track_poison);
 }
 
+/*
 PoisonRecordRingBuffer *SANITIZER_ACQUIRE(PoisonRecordsMutex)
     AcquirePoisonRecords() {
   PoisonRecordsMutex.Lock();
@@ -46,6 +49,31 @@ PoisonRecordRingBuffer *SANITIZER_ACQUIRE(PoisonRecordsMutex)
 void SANITIZER_RELEASE(PoisonRecordsMutex) ReleasePoisonRecords() {
   PoisonRecordsMutex.Unlock();
 }
+*/
+
+void AddPoisonRecord(const PoisonRecord& newRecord) {
+  PoisonRecordsMutex.Lock();
+  PoisonRecords->push(newRecord);
+  PoisonRecordsMutex.Unlock();
+}
+
+bool FindPoisonRecord(uptr addr, const PoisonRecord& match) {
+  PoisonRecordsMutex.Lock();
+
+  if (PoisonRecords) {
+    for (unsigned int i = 0; i < PoisonRecords->size(); i++) {
+      struct PoisonRecord record = (*PoisonRecords)[i];
+      if (record.begin <= addr && addr < record.end) {
+        internal_memcpy((void*)&match, (void*)&record, sizeof(struct PoisonRecord));
+        PoisonRecordsMutex.Unlock();
+        return true;
+      }
+    }
+  }
+  PoisonRecordsMutex.Unlock();
+  return false;
+}
+
 
 void SetCanPoisonMemory(bool value) {
   atomic_store(&can_poison_memory, value, memory_order_release);
@@ -142,8 +170,7 @@ void __asan_poison_memory_region(void const volatile *addr, uptr size) {
                         .thread_id = current_tid,
                         .begin = beg_addr,
                         .end = end_addr};
-    AcquirePoisonRecords()->push(record);
-    ReleasePoisonRecords();
+    AddPoisonRecord(record);
   }
 
   ShadowSegmentEndpoint beg(beg_addr);

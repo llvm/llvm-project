@@ -23,6 +23,9 @@
 
 namespace __asan {
 
+// Set up data structures for track_poison.
+void InitializePoisonTracking();
+
 struct PoisonRecord {
   unsigned int stack_id;
   unsigned int thread_id;
@@ -30,13 +33,13 @@ struct PoisonRecord {
   uptr end;
 };
 
-using PoisonRecordRingBuffer = RingBuffer<struct PoisonRecord>;
-
-// Set up data structures for track_poison.
-void InitializePoisonTracking();
-
+/*
 PoisonRecordRingBuffer* AcquirePoisonRecords();
 void ReleasePoisonRecords();
+*/
+
+void AddPoisonRecord(const PoisonRecord&);
+bool FindPoisonRecord(uptr addr, const PoisonRecord& match);
 
 // Enable/disable memory poisoning.
 void SetCanPoisonMemory(bool value);

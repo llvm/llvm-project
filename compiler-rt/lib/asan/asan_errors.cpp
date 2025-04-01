@@ -611,32 +611,18 @@ static void CheckPoisonRecords(uptr addr) {
   if (poison_magic != kAsanUserPoisonedMemoryMagic)
     return;
 
-  PoisonRecordRingBuffer *PoisonRecord = AcquirePoisonRecords();
-  if (PoisonRecord) {
-    bool FoundMatch = false;
+  struct PoisonRecord record;
+  if (FindPoisonRecord(addr, record)) {
+    StackTrace poison_stack = StackDepotGet(record.stack_id);
 
-    for (unsigned int i = 0; i < PoisonRecord->size(); i++) {
-      struct PoisonRecord Record = (*PoisonRecord)[i];
-      if (Record.begin <= addr && addr <= Record.end) {
-        FoundMatch = true;
-
-        StackTrace poison_stack = StackDepotGet(Record.stack_id);
-
-        Printf("\n");
-        Printf("Memory was manually poisoned by thread T%u:\n",
-               Record.thread_id);
-        poison_stack.Print();
-
-        break;
-      }
-    }
-
-    if (!FoundMatch) {
-      Printf("ERROR: no matching poison tracking record found.\n");
-      Printf("Try setting a larger track_poison value.\n");
-    }
+    Printf("\n");
+    Printf("Memory was manually poisoned by thread T%u:\n",
+           record.thread_id);
+    poison_stack.Print();
+  } else {
+    Printf("ERROR: no matching poison tracking record found.\n");
+    Printf("Try setting a larger track_poison value.\n");
   }
-  ReleasePoisonRecords();
 }
 
 void ErrorGeneric::Print() {
