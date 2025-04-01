@@ -2521,6 +2521,7 @@ int __kmp_get_load_balance(int max) {
 
   return running_threads;
 }
+
 #elif KMP_OS_HAIKU
 
 int __kmp_get_load_balance(int max) { return -1; }
