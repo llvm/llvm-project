@@ -14,6 +14,7 @@
 #include "llvm/Support/RandomNumberGenerator.h"
 
 #include <cctype>
+#include <chrono>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
