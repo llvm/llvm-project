@@ -3392,8 +3392,8 @@ void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
       report_fatal_error("Unsupported intrinsic for callbr");
     case Intrinsic::amdgcn_kill:
       if (I.getNumIndirectDests() != 1)
-          report_fatal_error(
-              "amdgcn.kill supportes exactly one indirect destination");
+        report_fatal_error(
+            "amdgcn.kill supportes exactly one indirect destination");
       CallInst *CI =
           CallInst::Create(I.getFunctionType(), I.getCalledFunction(),
                            SmallVector<Value *, 1>(I.args()));
@@ -3415,8 +3415,9 @@ void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
   addSuccessorWithProb(CallBrMBB, Return, BranchProbability::getOne());
   // TODO: For most of the cases where there is an intrinsic callbr, we're
   // having exactly one indirect target, which will be unreachable. As soon as
-  // this changes, we might need to enhance Target->setIsInlineAsmBrIndirectTarget
-  // or add something similar for intrinsic indirect branches.
+  // this changes, we might need to enhance
+  // Target->setIsInlineAsmBrIndirectTarget or add something similar for
+  // intrinsic indirect branches.
   if (I.isInlineAsm()) {
     for (BasicBlock *Dest : I.getIndirectDests()) {
       MachineBasicBlock *Target = FuncInfo.getMBB(Dest);

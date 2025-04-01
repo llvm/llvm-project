@@ -3285,8 +3285,8 @@ void Verifier::visitCallBrInst(CallBrInst &CBI) {
             "Callbr amdgcn_kill only supports one indirect dest");
       bool Unreachable = isa<UnreachableInst>(CBI.getIndirectDest(0)->begin());
       CallInst *Call = dyn_cast<CallInst>(CBI.getIndirectDest(0)->begin());
-      Check(Unreachable ||
-                (Call && Call->getIntrinsicID() == Intrinsic::amdgcn_unreachable),
+      Check(Unreachable || (Call && Call->getIntrinsicID() ==
+                                        Intrinsic::amdgcn_unreachable),
             "Callbr amdgcn_kill indirect dest needs to be unreachable");
       visitIntrinsicCall(Intrinsic::amdgcn_kill, CBI);
       break;
