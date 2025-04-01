@@ -1082,6 +1082,15 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   if (match(Def, m_Select(m_VPValue(), m_VPValue(X), m_Deferred(X))))
     return Def->replaceAllUsesWith(X);
 
+  // select !c, x, y -> select c, y, x
+  VPValue *C;
+  if (match(Def, m_Select(m_Not(m_VPValue(C)), m_VPValue(X), m_VPValue(Y)))) {
+    Def->setOperand(0, C);
+    Def->setOperand(1, Y);
+    Def->setOperand(2, X);
+    return;
+  }
+
   if (match(Def, m_c_Mul(m_VPValue(A), m_SpecificInt(1))))
     return Def->replaceAllUsesWith(A);
 
@@ -1288,38 +1297,17 @@ static void simplifyBlends(VPlan &Plan) {
         }
       }
 
-      SmallVector<VPValue *, 4> OperandsWithMask;
-      OperandsWithMask.push_back(Blend->getIncomingValue(StartIndex));
-
+      VPBuilder Builder(&R);
+      VPValue *Select = Blend->getIncomingValue(StartIndex);
       for (unsigned I = 0; I != Blend->getNumIncomingValues(); ++I) {
         if (I == StartIndex)
           continue;
-        OperandsWithMask.push_back(Blend->getIncomingValue(I));
-        OperandsWithMask.push_back(Blend->getMask(I));
+        Select =
+            Builder.createSelect(Blend->getMask(I), Blend->getIncomingValue(I),
+                                 Select, R.getDebugLoc(), "predphi");
+        Select->setUnderlyingValue(Blend->getUnderlyingValue());
       }
-
-      auto *NewBlend = new VPBlendRecipe(
-          cast<PHINode>(Blend->getUnderlyingValue()), OperandsWithMask);
-      NewBlend->insertBefore(&R);
-
-      VPValue *DeadMask = Blend->getMask(StartIndex);
-      Blend->replaceAllUsesWith(NewBlend);
-      Blend->eraseFromParent();
-      recursivelyDeleteDeadRecipes(DeadMask);
-
-      /// Simplify BLEND %a, %b, Not(%mask) -> BLEND %b, %a, %mask.
-      VPValue *NewMask;
-      if (NewBlend->getNumOperands() == 3 &&
-          match(NewBlend->getMask(1), m_Not(m_VPValue(NewMask)))) {
-        VPValue *Inc0 = NewBlend->getOperand(0);
-        VPValue *Inc1 = NewBlend->getOperand(1);
-        VPValue *OldMask = NewBlend->getOperand(2);
-        NewBlend->setOperand(0, Inc1);
-        NewBlend->setOperand(1, Inc0);
-        NewBlend->setOperand(2, NewMask);
-        if (OldMask->getNumUsers() == 0)
-          cast<VPInstruction>(OldMask)->eraseFromParent();
-      }
+      Blend->replaceAllUsesWith(Select);
     }
   }
 }

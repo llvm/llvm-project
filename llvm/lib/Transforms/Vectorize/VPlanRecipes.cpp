@@ -909,6 +909,19 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     return Ctx.TTI.getVectorInstrCost(Instruction::ExtractElement, VecTy,
                                       Ctx.CostKind);
   }
+  case Instruction::Select: {
+    if (!getUnderlyingValue())
+      return 0;
+    // Handle cases where only the first lane is used the same way as the legacy
+    // cost model.
+    if (vputils::onlyFirstLaneUsed(this))
+      return Ctx.TTI.getCFInstrCost(Instruction::PHI, Ctx.CostKind);
+    Type *ResTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
+    Type *CmpTy = toVectorTy(Type::getInt1Ty(Ctx.Types.getContext()), VF);
+    return Ctx.TTI.getCmpSelInstrCost(Instruction::Select, ResTy, CmpTy,
+                                      CmpInst::BAD_ICMP_PREDICATE,
+                                      Ctx.CostKind);
+  }
   case VPInstruction::AnyOf: {
     auto *VecTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
     return Ctx.TTI.getArithmeticReductionCost(
@@ -2380,53 +2393,7 @@ void VPVectorPointerRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPBlendRecipe::execute(VPTransformState &State) {
-  assert(isNormalized() && "Expected blend to be normalized!");
-  // We know that all PHIs in non-header blocks are converted into
-  // selects, so we don't have to worry about the insertion order and we
-  // can just use the builder.
-  // At this point we generate the predication tree. There may be
-  // duplications since this is a simple recursive scan, but future
-  // optimizations will clean it up.
-
-  unsigned NumIncoming = getNumIncomingValues();
-
-  // Generate a sequence of selects of the form:
-  // SELECT(Mask3, In3,
-  //        SELECT(Mask2, In2,
-  //               SELECT(Mask1, In1,
-  //                      In0)))
-  // Note that Mask0 is never used: lanes for which no path reaches this phi and
-  // are essentially undef are taken from In0.
-  bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
-  Value *Result = nullptr;
-  for (unsigned In = 0; In < NumIncoming; ++In) {
-    // We might have single edge PHIs (blocks) - use an identity
-    // 'select' for the first PHI operand.
-    Value *In0 = State.get(getIncomingValue(In), OnlyFirstLaneUsed);
-    if (In == 0)
-      Result = In0; // Initialize with the first incoming value.
-    else {
-      // Select between the current value and the previous incoming edge
-      // based on the incoming mask.
-      Value *Cond = State.get(getMask(In), OnlyFirstLaneUsed);
-      Result = State.Builder.CreateSelect(Cond, In0, Result, "predphi");
-    }
-  }
-  State.set(this, Result, OnlyFirstLaneUsed);
-}
-
-InstructionCost VPBlendRecipe::computeCost(ElementCount VF,
-                                           VPCostContext &Ctx) const {
-  // Handle cases where only the first lane is used the same way as the legacy
-  // cost model.
-  if (vputils::onlyFirstLaneUsed(this))
-    return Ctx.TTI.getCFInstrCost(Instruction::PHI, Ctx.CostKind);
-
-  Type *ResultTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
-  Type *CmpTy = toVectorTy(Type::getInt1Ty(Ctx.Types.getContext()), VF);
-  return (getNumIncomingValues() - 1) *
-         Ctx.TTI.getCmpSelInstrCost(Instruction::Select, ResultTy, CmpTy,
-                                    CmpInst::BAD_ICMP_PREDICATE, Ctx.CostKind);
+  llvm_unreachable("VPBlendRecipe should be expanded by simplifyBlends");
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
