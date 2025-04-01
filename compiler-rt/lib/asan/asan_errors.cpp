@@ -603,6 +603,14 @@ static void PrintShadowMemoryForAddress(uptr addr) {
 }
 
 static void CheckPoisonRecords(uptr addr) {
+  if (!AddrIsInMem(addr))
+    return;
+  uptr shadow_addr = MemToShadow(addr);
+  unsigned char poison_magic = *(reinterpret_cast<u8 *>(shadow_addr));
+
+  if (poison_magic != kAsanUserPoisonedMemoryMagic)
+    return;
+
   Printf("\n");
 
   if (flags()->poison_history_size <= 0) {
@@ -611,17 +619,9 @@ static void CheckPoisonRecords(uptr addr) {
         "the poisoned memory.\n");
     Printf(
         "To identify the code that *poisoned* the memory, try the "
-        "experimental setting ASAN_OPTIONS=poison_history_size=<size>\n");
+        "experimental setting ASAN_OPTIONS=poison_history_size=<size>.\n");
     return;
   }
-
-  if (!AddrIsInMem(addr))
-    return;
-  uptr shadow_addr = MemToShadow(addr);
-  unsigned char poison_magic = *(reinterpret_cast<u8 *>(shadow_addr));
-
-  if (poison_magic != kAsanUserPoisonedMemoryMagic)
-    return;
 
   struct PoisonRecord record;
   if (FindPoisonRecord(addr, record)) {
@@ -634,7 +634,7 @@ static void CheckPoisonRecords(uptr addr) {
     }
   } else {
     Printf("ERROR: no matching poison tracking record found.\n");
-    Printf("Try setting a larger track_poison value.\n");
+    Printf("Try a larger value for ASAN_OPTIONS=poison_history_size=<size>.\n");
   }
 }
 

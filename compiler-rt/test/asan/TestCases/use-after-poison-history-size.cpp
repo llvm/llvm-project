@@ -1,8 +1,17 @@
 // Check that __asan_poison_memory_region and ASAN_OPTIONS=poison_history_size work.
 //
-// RUN: %clangxx_asan -O0 %s -o %t && env ASAN_OPTIONS=poison_history_size=1000 not %run %t       2>&1 | FileCheck %s --check-prefixes=CHECK-AC,CHECK-A
-// RUN: %clangxx_asan -O0 %s -o %t && env ASAN_OPTIONS=poison_history_size=1000     %run %t 20    2>&1 | FileCheck %s --check-prefixes=CHECK-B
-// RUN: %clangxx_asan -O0 %s -o %t && env ASAN_OPTIONS=poison_history_size=1000 not %run %t 30 30 2>&1 | FileCheck %s --check-prefixes=CHECK-AC,CHECK-C
+// Poisoned access with history
+// RUN: %clangxx_asan -O0 %s -o %t && env ASAN_OPTIONS=poison_history_size=1000 not %run %t       2>&1 | FileCheck %s --check-prefixes=CHECK-ACD,CHECK-ABC,CHECK-AC,CHECK-A
+//
+// Not poisoned access
+// RUN: %clangxx_asan -O0 %s -o %t && env ASAN_OPTIONS=poison_history_size=1000     %run %t 20    2>&1 | FileCheck %s --check-prefixes=CHECK-ABC,CHECK-B,CHECK-BD
+//
+// Poisoned access with history (different stack trace)
+// RUN: %clangxx_asan -O0 %s -o %t && env ASAN_OPTIONS=poison_history_size=1000 not %run %t 30 30 2>&1 | FileCheck %s --check-prefixes=CHECK-ABC,CHECK-ACD,CHECK-AC,CHECK-C
+//
+// Poisoned access without history
+// RUN: %clangxx_asan -O0 %s -o %t &&                                           not %run %t       2>&1 | FileCheck %s --check-prefixes=CHECK-ACD,CHECK-BD,CHECK-D
+// RUN: %clangxx_asan -O0 %s -o %t && env ASAN_OPTIONS=poison_history_size=0    not %run %t       2>&1 | FileCheck %s --check-prefixes=CHECK-ACD,CHECK-BD,CHECK-D
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,16 +36,18 @@ int main(int argc, char **argv) {
   // Bytes [24, 63]: poisoned by C
 
   int res = x[argc * 10]; // BOOOM
-  // CHECK-AC: ERROR: AddressSanitizer: use-after-poison
-  // CHECK-AC: main{{.*}}use-after-poison-history-size.cpp:[[@LINE-2]]
+  // CHECK-ACD: ERROR: AddressSanitizer: use-after-poison
+  // CHECK-ACD: main{{.*}}use-after-poison-history-size.cpp:[[@LINE-2]]
   // CHECK-B-NOT: ERROR: AddressSanitizer: use-after-poison
+  // CHECK-ABC-NOT: try the experimental setting ASAN_OPTIONS=poison_history_size=
+  // CHECK-D: try the experimental setting ASAN_OPTIONS=poison_history_size=
 
   // CHECK-AC: Memory was manually poisoned by thread T0:
-  // CHECK-A: i_poisoned_your_memory{{.*}}use-after-poison-history-size.cpp:[[@LINE-21]]
-  // CHECK-C: i_poisoned_your_memory{{.*}}use-after-poison-history-size.cpp:[[@LINE-20]]
-  // CHECK-AC: foo{{.*}}use-after-poison-history-size.cpp:[[@LINE-18]]
-  // CHECK-AC: main{{.*}}use-after-poison-history-size.cpp:[[@LINE-14]]
-  // CHECK-B-NOT: Memory was manually poisoned by thread T0:
+  // CHECK-A: i_poisoned_your_memory{{.*}}use-after-poison-history-size.cpp:[[@LINE-23]]
+  // CHECK-C: i_poisoned_your_memory{{.*}}use-after-poison-history-size.cpp:[[@LINE-22]]
+  // CHECK-AC: foo{{.*}}use-after-poison-history-size.cpp:[[@LINE-20]]
+  // CHECK-AC: main{{.*}}use-after-poison-history-size.cpp:[[@LINE-16]]
+  // CHECK-BD-NOT: Memory was manually poisoned by thread T0:
 
   delete[] x;
 
