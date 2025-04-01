@@ -169,36 +169,33 @@ static LogicalResult generateTypeInclude(irdl::TypeOp type, raw_ostream &output,
   return success();
 }
 
-static LogicalResult generateOperationInclude(irdl::OperationOp op,
-                                              raw_ostream &output,
-                                              irdl::detail::dictionary &dict) {
-  static const auto perOpDeclTemplate = irdl::detail::Template(
-#include "Templates/PerOperationDecl.txt"
-  );
-  const auto opStrings = getStrings(op);
-  fillDict(dict, opStrings);
-
-  auto op_getters = std::string{};
-  auto res_getters = std::string{};
+static void generateOpGetterDeclarations(irdl::detail::dictionary &dict,
+                                         const OpStrings &opStrings) {
+  auto opGetters = std::string{};
+  auto resGetters = std::string{};
 
   for (size_t i = 0; i < opStrings.opOperandNames.size(); ++i) {
     const auto op =
         llvm::convertToCamelFromSnakeCase(opStrings.opOperandNames[i], true);
-    op_getters += llvm::formatv("::mlir::Value get{0}() { return "
-                                "getStructuredOperands({1}).front(); }\n  ",
-                                op, i);
+    opGetters += llvm::formatv("::mlir::Value get{0}() { return "
+                               "getStructuredOperands({1}).front(); }\n  ",
+                               op, i);
   }
   for (size_t i = 0; i < opStrings.opResultNames.size(); ++i) {
     const auto op =
         llvm::convertToCamelFromSnakeCase(opStrings.opResultNames[i], true);
-    res_getters += llvm::formatv(
+    resGetters += llvm::formatv(
         R"(::mlir::Value get{0}() { return ::llvm::cast<::mlir::Value>(getStructuredResults({1}).front()); }
   )",
         op, i);
   }
 
-  dict["OP_OPERAND_GETTER_DECLS"] = op_getters;
-  dict["OP_RESULT_GETTER_DECLS"] = res_getters;
+  dict["OP_OPERAND_GETTER_DECLS"] = opGetters;
+  dict["OP_RESULT_GETTER_DECLS"] = resGetters;
+}
+
+static void generateOpBuilderDeclarations(irdl::detail::dictionary &dict,
+                                          const OpStrings &opStrings) {
   std::string buildDecls;
   llvm::raw_string_ostream stream{buildDecls};
 
@@ -224,6 +221,19 @@ static LogicalResult generateOperationInclude(irdl::OperationOp op,
       R"(static void build(::mlir::OpBuilder &opBuilder, ::mlir::OperationState &opState, {0} {1} ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {{});)",
       resultParams, operandParams);
   dict["OP_BUILD_DECLS"] = buildDecls;
+}
+
+static LogicalResult generateOperationInclude(irdl::OperationOp op,
+                                              raw_ostream &output,
+                                              irdl::detail::dictionary &dict) {
+  static const auto perOpDeclTemplate = irdl::detail::Template(
+#include "Templates/PerOperationDecl.txt"
+  );
+  const auto opStrings = getStrings(op);
+  fillDict(dict, opStrings);
+
+  generateOpGetterDeclarations(dict, opStrings);
+  generateOpBuilderDeclarations(dict, opStrings);
 
   perOpDeclTemplate.render(output, dict);
   return success();
