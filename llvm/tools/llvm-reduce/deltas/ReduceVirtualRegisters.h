@@ -17,8 +17,6 @@
 #include "Delta.h"
 
 namespace llvm {
-class TestRunner;
-
 /// Remove register allocation hints from virtual registes.
 void reduceVirtualRegisterHintsDeltaPass(Oracle &O, ReducerWorkItem &WorkItem);
 
