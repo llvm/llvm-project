@@ -24,47 +24,51 @@
 
 namespace __asan {
 
-static atomic_uint8_t can_poison_memory;
-
 using PoisonRecordRingBuffer = RingBuffer<struct PoisonRecord>;
 
-static Mutex PoisonRecordsMutex;
-static PoisonRecordRingBuffer *PoisonRecords = nullptr;
+static atomic_uint8_t can_poison_memory;
 
-void AddPoisonRecord(const PoisonRecord& newRecord) {
+static Mutex poison_records_mutex;
+static PoisonRecordRingBuffer *poison_records = nullptr;
+
+void AddPoisonRecord(const PoisonRecord &new_record) {
   if (flags()->poison_history_size <= 0)
     return;
 
-  PoisonRecordsMutex.Lock();
-  if (PoisonRecords == nullptr)
-    PoisonRecords = PoisonRecordRingBuffer::New(flags()->poison_history_size);
-  PoisonRecords->push(newRecord);
-  PoisonRecordsMutex.Unlock();
+  poison_records_mutex.Lock();
+
+  if (poison_records == nullptr)
+    poison_records = PoisonRecordRingBuffer::New(flags()->poison_history_size);
+
+  poison_records->push(new_record);
+
+  poison_records_mutex.Unlock();
 }
 
 bool FindPoisonRecord(uptr addr, const PoisonRecord& match) {
-  PoisonRecordsMutex.Lock();
+  poison_records_mutex.Lock();
 
-  if (PoisonRecords) {
-    for (unsigned int i = 0; i < PoisonRecords->size(); i++) {
-      struct PoisonRecord record = (*PoisonRecords)[i];
+  if (poison_records) {
+    for (unsigned int i = 0; i < poison_records->size(); i++) {
+      struct PoisonRecord record = (*poison_records)[i];
       if (record.begin <= addr && addr < record.end) {
         internal_memcpy((void*)&match, (void*)&record, sizeof(struct PoisonRecord));
-        PoisonRecordsMutex.Unlock();
+        poison_records_mutex.Unlock();
         return true;
       }
     }
   }
-  PoisonRecordsMutex.Unlock();
+
+  poison_records_mutex.Unlock();
   return false;
 }
 
-void SANITIZER_ACQUIRE(PoisonRecordsMutex) AcquirePoisonRecords() {
-  PoisonRecordsMutex.Lock();
+void SANITIZER_ACQUIRE(poison_records_mutex) AcquirePoisonRecords() {
+  poison_records_mutex.Lock();
 }
 
-void SANITIZER_RELEASE(PoisonRecordsMutex) ReleasePoisonRecords() {
-  PoisonRecordsMutex.Unlock();
+void SANITIZER_RELEASE(poison_records_mutex) ReleasePoisonRecords() {
+  poison_records_mutex.Unlock();
 }
 
 void SetCanPoisonMemory(bool value) {

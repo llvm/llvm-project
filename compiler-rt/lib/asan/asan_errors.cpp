@@ -606,8 +606,12 @@ static void CheckPoisonRecords(uptr addr) {
   Printf("\n");
 
   if (flags()->poison_history_size <= 0) {
-    Printf("HINT: to identify which code set the poison, try the experimental "
-           "ASAN_OPTIONS=poison_history_size=<size>\n");
+    Printf(
+        "NOTE: the stack trace above identifies the code that *accessed* "
+        "the poisoned memory.\n");
+    Printf(
+        "To identify the code that *poisoned* the memory, try the "
+        "experimental setting ASAN_OPTIONS=poison_history_size=<size>\n");
     return;
   }
 
@@ -625,8 +629,7 @@ static void CheckPoisonRecords(uptr addr) {
     if (poison_stack.size == 0) {
       Printf("ERROR: stack depot did not have a matching stack.\n");
     } else {
-      Printf("Memory was manually poisoned by thread T%u:\n",
-             record.thread_id);
+      Printf("Memory was manually poisoned by thread T%u:\n", record.thread_id);
       poison_stack.Print();
     }
   } else {
