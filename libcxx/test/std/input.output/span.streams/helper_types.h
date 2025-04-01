@@ -128,4 +128,18 @@ static_assert(!std::convertible_to<const NonReadOnlySpan<wchar_t>, std::span<con
 
 struct NonMode {};
 
+// Spanbuffer wrapper
+
+template <typename CharT, typename TraitsT>
+class spanbuf_wrapper : public std::basic_spanbuf<CharT, TraitsT> {
+public:
+  using std::basic_spanbuf<CharT, TraitsT>::eback;
+  using std::basic_spanbuf<CharT, TraitsT>::egptr;
+  using std::basic_spanbuf<CharT, TraitsT>::epptr;
+  using std::basic_spanbuf<CharT, TraitsT>::gptr;
+  using std::basic_spanbuf<CharT, TraitsT>::pbase;
+  using std::basic_spanbuf<CharT, TraitsT>::pptr;
+};
+
+
 #endif // TEST_STD_INPUTOUTPUT_SPANSTREAMS_TYPES_H

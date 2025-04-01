@@ -25,9 +25,11 @@
 #include "nasty_string.h"
 #include "test_macros.h"
 
+#include "../../helper_types.h"
+
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
 void test() {
-  using SpStream = std::basic_ospanstream<CharT, TraitsT>;
+  using SpStream = std::basic_ispanstream<CharT, TraitsT>;
 
   CharT arr[4];
 
@@ -38,18 +40,20 @@ void test() {
   // Mode: default (`in`)
   {
     SpStream spSt{sp};
-    assert(spSt.rdbuf()->span().data() == arr);
-    assert(spSt.rdbuf()->span().size() == 0);
+    auto* spBuf = static_cast<spanbuf_wrapper<CharT, TraitsT>*>(spSt.rdbuf());
+
+    assert(spBuf->span().size() == 4);
+    assert(spBuf->span().data() == arr);
+    assert(spBuf->eback() == arr);
+    assert(spBuf->gptr() == arr);
+    assert(spBuf->egptr() == arr + 4);
+    assert(spBuf->pbase() == nullptr);
+    assert(spBuf->pptr() == nullptr);
+    assert(spBuf->epptr() == nullptr);
   }
   // Mode: explicit `in`
   {
     SpStream spSt{sp, std::ios_base::in};
-    assert(spSt.rdbuf()->span().data() == arr);
-    assert(spSt.rdbuf()->span().size() == 0);
-  }
-  // Mode: `ate`
-  {
-    SpStream spSt{sp, std::ios_base::ate};
     assert(spSt.rdbuf()->span().data() == arr);
     assert(spSt.rdbuf()->span().size() == 4);
   }
