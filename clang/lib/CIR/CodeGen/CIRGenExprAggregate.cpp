@@ -31,7 +31,9 @@ class AggExprEmitter : public StmtVisitor<AggExprEmitter> {
   AggValueSlot ensureSlot(mlir::Location loc, QualType t) {
     if (!dest.isIgnored())
       return dest;
-    llvm_unreachable("Slot for ignored address NTI");
+
+    cgf.cgm.errorNYI(loc, "Slot for ignored address");
+    return dest;
   }
 
 public:
@@ -89,7 +91,8 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
       cgf.getContext().getAsArrayType(arrayQTy)->getElementType();
 
   if (elementType.isDestructedType()) {
-    llvm_unreachable("dtorKind NYI");
+    cgf.cgm.errorNYI(loc, "dtorKind NYI");
+    return;
   }
 
   const QualType elementPtrType = cgf.getContext().getPointerType(elementType);
@@ -123,8 +126,7 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
     // Advance to the next element.
     if (i > 0) {
       one = builder.getConstantInt(loc, cgf.PtrDiffTy, i);
-      element =
-          builder.create<cir::PtrStrideOp>(loc, cirElementPtrType, begin, one);
+      element = builder.createPtrStride(loc, begin, one);
     }
 
     const Address address = Address(element, cirElementType, elementAlign);
@@ -152,8 +154,9 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
 
     // Allocate the temporary variable
     // to store the pointer to first unitialized element
-    auto tmpAddr = cgf.createTempAlloca(
-        cirElementPtrType, cgf.getPointerAlign(), loc, "arrayinit.temp", false);
+    const Address tmpAddr = cgf.createTempAlloca(
+        cirElementPtrType, cgf.getPointerAlign(), loc, "arrayinit.temp",
+        /*insertIntoFnEntryBlock=*/false);
     LValue tmpLV = LValue::makeAddr(tmpAddr, elementPtrType);
     cgf.emitStoreThroughLValue(RValue::get(element), tmpLV);
 
@@ -173,8 +176,8 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
 
       // Advance pointer and store them to temporary variable
       one = builder.getConstantInt(loc, cgf.PtrDiffTy, 1);
-      auto nextElement = builder.create<cir::PtrStrideOp>(
-          loc, cirElementPtrType, currentElement, one);
+      cir::PtrStrideOp nextElement =
+          builder.createPtrStride(loc, currentElement, one);
       cgf.emitStoreThroughLValue(RValue::get(nextElement), tmpLV);
     }
   }
@@ -223,7 +226,7 @@ void AggExprEmitter::emitNullInitializationToLValue(mlir::Location loc,
 
   if (cgf.hasScalarEvaluationKind(type)) {
     // For non-aggregates, we can store the appropriate null constant.
-    auto null = cgf.cgm.emitNullConstant(type, loc);
+    mlir::Value null = cgf.cgm.emitNullConstant(type, loc);
     if (lv.isSimple()) {
       cgf.emitStoreOfScalar(null, lv, /* isInitialization */ true);
       return;

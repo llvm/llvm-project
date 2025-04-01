@@ -165,6 +165,11 @@ public:
     return createLoad(loc, addr);
   }
 
+  cir::PtrStrideOp createPtrStride(mlir::Location loc, mlir::Value base,
+                                   mlir::Value stride) {
+    return create<cir::PtrStrideOp>(loc, base.getType(), base, stride);
+  }
+
   //===--------------------------------------------------------------------===//
   // Cast/Conversion Operators
   //===--------------------------------------------------------------------===//
