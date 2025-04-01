@@ -592,8 +592,8 @@ public:
   /// multiple uses.
   bool hasOneNonDBGUser(Register RegNo) const;
 
-  /// hasAtMostUserInstrs - Return true if the given register has at most \p MaxUsers
-  /// non-debug user instructions.
+  /// hasAtMostUserInstrs - Return true if the given register has at most \p
+  /// MaxUsers non-debug user instructions.
   bool hasAtMostUserInstrs(Register Reg, unsigned MaxUsers) const;
 
   /// getOneNonDBGUse - Return the unique non-Debug use of \p RegNo,
