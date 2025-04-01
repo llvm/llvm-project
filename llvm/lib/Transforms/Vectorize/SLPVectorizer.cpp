@@ -8435,6 +8435,12 @@ static std::pair<size_t, size_t> generateKeySubkey(
   return std::make_pair(Key, SubKey);
 }
 
+/// Checks if the specified instruction \p I is an main operation for the given
+/// \p MainOp and \p AltOp instructions.
+static bool isMainInstruction(const Instruction *I, const Instruction *MainOp,
+                              const Instruction *AltOp,
+                              const TargetLibraryInfo &TLI);
+
 /// Checks if the specified instruction \p I is an alternate operation for
 /// the given \p MainOp and \p AltOp instructions.
 static bool isAlternateInstruction(const Instruction *I,
@@ -9326,7 +9332,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         continue;
       }
       if ((LocalState.getAltOpcode() != LocalState.getOpcode() &&
-           I->getOpcode() == LocalState.getOpcode()) ||
+           isMainInstruction(I, LocalState.getMainOp(), LocalState.getAltOp(),
+                             *TLI)) ||
           (LocalState.getAltOpcode() == LocalState.getOpcode() &&
            !isAlternateInstruction(I, LocalState.getMainOp(),
                                    LocalState.getAltOp(), *TLI))) {
@@ -10276,6 +10283,12 @@ void BoUpSLP::TreeEntry::buildAltOpShuffleMask(
     });
     Mask.swap(NewMask);
   }
+}
+
+static bool isMainInstruction(const Instruction *I, const Instruction *MainOp,
+                              const Instruction *AltOp,
+                              const TargetLibraryInfo &TLI) {
+  return I->getOpcode() == MainOp->getOpcode();
 }
 
 static bool isAlternateInstruction(const Instruction *I,
