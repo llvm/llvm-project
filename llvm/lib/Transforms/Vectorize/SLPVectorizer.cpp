@@ -10288,7 +10288,12 @@ void BoUpSLP::TreeEntry::buildAltOpShuffleMask(
 static bool isMainInstruction(const Instruction *I, const Instruction *MainOp,
                               const Instruction *AltOp,
                               const TargetLibraryInfo &TLI) {
-  return I->getOpcode() == MainOp->getOpcode();
+  if (I->getOpcode() == MainOp->getOpcode())
+    return true;
+  if (I->getOpcode() == AltOp->getOpcode() || !I->isBinaryOp())
+    return false;
+  BinOpSameOpcodeHelper Converter(I);
+  return Converter.add(I) && Converter.add(MainOp) && !Converter.hasAltOp();
 }
 
 static bool isAlternateInstruction(const Instruction *I,
@@ -10313,7 +10318,14 @@ static bool isAlternateInstruction(const Instruction *I,
            "their swap.");
     return MainP != P && MainP != SwappedP;
   }
-  return I->getOpcode() == AltOp->getOpcode();
+  if (I->getOpcode() == MainOp->getOpcode())
+    return false;
+  if (I->getOpcode() == AltOp->getOpcode())
+    return true;
+  if (!I->isBinaryOp())
+    return false;
+  BinOpSameOpcodeHelper Converter(I);
+  return Converter.add(I) && Converter.add(AltOp) && !Converter.hasAltOp();
 }
 
 TTI::OperandValueInfo BoUpSLP::getOperandInfo(ArrayRef<Value *> Ops) {
