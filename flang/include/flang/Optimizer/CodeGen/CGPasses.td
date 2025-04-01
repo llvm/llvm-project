@@ -99,4 +99,15 @@ def BoxedProcedurePass : Pass<"boxed-procedure", "mlir::ModuleOp"> {
   ];
 }
 
+def LowerRepackArraysPass : Pass<"lower-repack-arrays", "mlir::ModuleOp"> {
+  let summary = "Convert fir.pack/unpack_array to other FIR operations";
+  let description = [{
+    Convert fir.pack/unpack_array operations to other FIR operations
+    and Fortran runtime calls that implement the semantics
+    of packing/unpacking.
+  }];
+  let dependentDialects = ["fir::FIROpsDialect", "mlir::arith::ArithDialect",
+                           "mlir::func::FuncDialect"];
+}
+
 #endif // FORTRAN_OPTIMIZER_CODEGEN_FIR_PASSES

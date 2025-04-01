@@ -1,8 +1,8 @@
-FROM docker.io/library/ubuntu:22.04 as base
+FROM docker.io/library/ubuntu:24.04 as base
 ENV LLVM_SYSROOT=/opt/llvm
 
 FROM base as stage1-toolchain
-ENV LLVM_VERSION=19.1.5
+ENV LLVM_VERSION=20.1.1
 
 RUN apt-get update && \
     apt-get install -y \
@@ -14,17 +14,15 @@ RUN apt-get update && \
     python3 \
     git \
     curl \
-    zlib1g-dev
+    zlib1g-dev && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-RUN curl -O -L https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-$LLVM_VERSION.tar.gz && tar -xf llvmorg-$LLVM_VERSION.tar.gz
+RUN curl -O -L https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-$LLVM_VERSION.tar.gz && \
+  tar -xf llvmorg-$LLVM_VERSION.tar.gz && \
+  rm -f llvmorg-$LLVM_VERSION.tar.gz
 
 WORKDIR /llvm-project-llvmorg-$LLVM_VERSION
-
-# Patch to enable better PGO profile data.
-# TODO: Remove this for llvm 20
-ADD https://github.com/llvm/llvm-project/commit/738250989ce516f02f809bdfde474a039c77e81f.patch .
-
-RUN patch -p1 < 738250989ce516f02f809bdfde474a039c77e81f.patch
 
 RUN cmake -B ./build -G Ninja ./llvm \
   -C ./clang/cmake/caches/BOLT-PGO.cmake \
@@ -65,7 +63,9 @@ RUN apt-get update && \
     python3-pip \
     ccache \
     file \
-    tzdata
+    tzdata && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install sccache as it is needed by most of the project test workflows and
 # cannot be installed by the ccache action when executing as a non-root user.

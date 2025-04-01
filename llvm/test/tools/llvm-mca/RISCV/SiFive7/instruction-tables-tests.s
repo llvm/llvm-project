@@ -183,7 +183,7 @@
 
 # ISN:        [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # ISN-NEXT:    1      3     1.00                  U     vsetvli	a3, a2, e16, m1, tu, mu
-# ISN-NEXT:    1      4     3.00    *                   vlm.v	v4, (a1)
+# ISN-NEXT:    1      4     2.00    *                   vlm.v	v4, (a1)
 
 # NISB:       Instruction Info:
 # NISB-NEXT:  [1]: #uOps
@@ -217,43 +217,43 @@
 
 # ISF:        [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]                                        [9]                        Instructions:
 # ISF-NEXT:    1      3     1.00                  U      1     SiFive7PipeA,SiFive7PipeAB                 VSETVLI                    vsetvli	a3, a2, e16, m1, tu, mu	// Comment
-# ISF-NEXT:    1      4     3.00    *                    4     SiFive7VCQ,SiFive7VL[1,3]                  VLM_V                      vlm.v	v4, (a1)
+# ISF-NEXT:    1      4     2.00    *                    4     SiFive7VCQ,SiFive7VL[1,3]                  VLM_V                      vlm.v	v4, (a1)
 
 # ISFB:       [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]                                        [9]                        [10]   [11]   Instructions:
 # ISFB-NEXT:   1      3     1.00                  U      1     SiFive7PipeA,SiFive7PipeAB                 VSETVLI                                  vsetvli	a3, a2, e16, m1, tu, mu	// Comment
-# ISFB-NEXT:   1      4     3.00    *                    4     SiFive7VCQ,SiFive7VL[1,3]                  VLM_V                                    vlm.v	v4, (a1)
+# ISFB-NEXT:   1      4     2.00    *                    4     SiFive7VCQ,SiFive7VL[1,3]                  VLM_V                                    vlm.v	v4, (a1)
 
 # ISFBE:      [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]                                        [9]                        [10]   [11]   [12]   Encodings:                    Instructions:
 # ISFBE-NEXT:  1      3     1.00                  U      1     SiFive7PipeA,SiFive7PipeAB                 VSETVLI                                   4     d7 76 86 00                   vsetvli	a3, a2, e16, m1, tu, mu	// Comment
-# ISFBE-NEXT:  1      4     3.00    *                    4     SiFive7VCQ,SiFive7VL[1,3]                  VLM_V                                     4     07 82 b5 02                   vlm.v	v4, (a1)
+# ISFBE-NEXT:  1      4     2.00    *                    4     SiFive7VCQ,SiFive7VL[1,3]                  VLM_V                                     4     07 82 b5 02                   vlm.v	v4, (a1)
 
 # ISFE:       [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]                                        [9]                        [10]   Encodings:                    Instructions:
 # ISFE-NEXT:   1      3     1.00                  U      1     SiFive7PipeA,SiFive7PipeAB                 VSETVLI                     4     d7 76 86 00                   vsetvli	a3, a2, e16, m1, tu, mu	// Comment
-# ISFE-NEXT:   1      4     3.00    *                    4     SiFive7VCQ,SiFive7VL[1,3]                  VLM_V                       4     07 82 b5 02                   vlm.v	v4, (a1)
+# ISFE-NEXT:   1      4     2.00    *                    4     SiFive7VCQ,SiFive7VL[1,3]                  VLM_V                       4     07 82 b5 02                   vlm.v	v4, (a1)
 
 # ISNB:       [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    Instructions:
 # ISNB-NEXT:   1      3     1.00                  U                   vsetvli	a3, a2, e16, m1, tu, mu
-# ISNB-NEXT:   1      4     3.00    *                                 vlm.v	v4, (a1)
+# ISNB-NEXT:   1      4     2.00    *                                 vlm.v	v4, (a1)
 
 # ISNBE:      [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    Encodings:                    Instructions:
 # ISNBE-NEXT:  1      3     1.00                  U                    4     d7 76 86 00                   vsetvli	a3, a2, e16, m1, tu, mu
-# ISNBE-NEXT:  1      4     3.00    *                                  4     07 82 b5 02                   vlm.v	v4, (a1)
+# ISNBE-NEXT:  1      4     2.00    *                                  4     07 82 b5 02                   vlm.v	v4, (a1)
 
 # ISNE:       [1]    [2]    [3]    [4]    [5]    [6]    [7]    Encodings:                    Instructions:
 # ISNE-NEXT:   1      3     1.00                  U      4     d7 76 86 00                   vsetvli	a3, a2, e16, m1, tu, mu
-# ISNE-NEXT:   1      4     3.00    *                    4     07 82 b5 02                   vlm.v	v4, (a1)
+# ISNE-NEXT:   1      4     2.00    *                    4     07 82 b5 02                   vlm.v	v4, (a1)
 
 # NISB:       [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    Instructions:
 # NISB-NEXT:   1      3     1.00                  U                   vsetvli	a3, a2, e16, m1, tu, mu
-# NISB-NEXT:   1      4     3.00    *                                 vlm.v	v4, (a1)
+# NISB-NEXT:   1      4     2.00    *                                 vlm.v	v4, (a1)
 
 # NISBE:      [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    Encodings:                    Instructions:
 # NISBE-NEXT:  1      3     1.00                  U                    4     d7 76 86 00                   vsetvli	a3, a2, e16, m1, tu, mu
-# NISBE-NEXT:  1      4     3.00    *                                  4     07 82 b5 02                   vlm.v	v4, (a1)
+# NISBE-NEXT:  1      4     2.00    *                                  4     07 82 b5 02                   vlm.v	v4, (a1)
 
 # NISE:       [1]    [2]    [3]    [4]    [5]    [6]    [7]    Encodings:                    Instructions:
 # NISE-NEXT:   1      3     1.00                  U      4     d7 76 86 00                   vsetvli	a3, a2, e16, m1, tu, mu
-# NISE-NEXT:   1      4     3.00    *                    4     07 82 b5 02                   vlm.v	v4, (a1)
+# NISE-NEXT:   1      4     2.00    *                    4     07 82 b5 02                   vlm.v	v4, (a1)
 
 # ISN:        Resources:
 # ISN-NEXT:   [0]   - SiFive7FDiv

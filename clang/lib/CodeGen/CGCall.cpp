@@ -2607,6 +2607,15 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     if (shouldDisableTailCalls())
       FuncAttrs.addAttribute("disable-tail-calls", "true");
 
+    // These functions require the returns_twice attribute for correct codegen,
+    // but the attribute may not be added if -fno-builtin is specified. We
+    // explicitly add that attribute here.
+    static const llvm::StringSet<> ReturnsTwiceFn{
+        "_setjmpex", "setjmp",      "_setjmp", "vfork",
+        "sigsetjmp", "__sigsetjmp", "savectx", "getcontext"};
+    if (ReturnsTwiceFn.contains(Name))
+      FuncAttrs.addAttribute(llvm::Attribute::ReturnsTwice);
+
     // CPU/feature overrides.  addDefaultFunctionDefinitionAttributes
     // handles these separately to set them based on the global defaults.
     GetCPUAndFeaturesAttributes(CalleeInfo.getCalleeDecl(), FuncAttrs);
@@ -3633,7 +3642,7 @@ static llvm::StoreInst *findDominatingStoreToReturnValue(CodeGenFunction &CGF) {
     // Look at directly preceding instruction, skipping bitcasts, lifetime
     // markers, and fake uses and their operands.
     const llvm::Instruction *LoadIntoFakeUse = nullptr;
-    for (llvm::Instruction &I : make_range(IP->rbegin(), IP->rend())) {
+    for (llvm::Instruction &I : llvm::reverse(*IP)) {
       // Ignore instructions that are just loads for fake uses; the load should
       // immediately precede the fake use, so we only need to remember the
       // operand for the last fake use seen.

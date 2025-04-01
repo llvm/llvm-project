@@ -297,6 +297,12 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FFLOOR, {MVT::f32, MVT::f64}, Legal);
     setOperationAction(ISD::FTRUNC, {MVT::f32, MVT::f64}, Legal);
     setOperationAction(ISD::FROUNDEVEN, {MVT::f32, MVT::f64}, Legal);
+
+    for (MVT VT :
+         {MVT::v16i8, MVT::v8i8, MVT::v4i8, MVT::v2i8, MVT::v8i16, MVT::v4i16,
+          MVT::v2i16, MVT::v4i32, MVT::v2i32, MVT::v2i64}) {
+      setOperationAction(ISD::TRUNCATE, VT, Custom);
+    }
   }
 
   // Set operations for 'LASX' feature.
@@ -3392,6 +3398,44 @@ void LoongArchTargetLowering::ReplaceNodeResults(
   }
   case ISD::ATOMIC_CMP_SWAP: {
     replaceCMP_XCHG_128Results(N, Results, DAG);
+    break;
+  }
+  case ISD::TRUNCATE: {
+    MVT VT = N->getSimpleValueType(0);
+    if (getTypeAction(*DAG.getContext(), VT) != TypeWidenVector)
+      return;
+
+    MVT WidenVT = getTypeToTransformTo(*DAG.getContext(), VT).getSimpleVT();
+    SDValue In = N->getOperand(0);
+    EVT InVT = In.getValueType();
+    EVT InEltVT = InVT.getVectorElementType();
+    EVT EltVT = VT.getVectorElementType();
+    unsigned MinElts = VT.getVectorNumElements();
+    unsigned WidenNumElts = WidenVT.getVectorNumElements();
+    unsigned InBits = InVT.getSizeInBits();
+
+    if ((128 % InBits) == 0 && WidenVT.is128BitVector()) {
+      if ((InEltVT.getSizeInBits() % EltVT.getSizeInBits()) == 0) {
+        int Scale = InEltVT.getSizeInBits() / EltVT.getSizeInBits();
+        SmallVector<int, 16> TruncMask(WidenNumElts, -1);
+        for (unsigned I = 0; I < MinElts; ++I)
+          TruncMask[I] = Scale * I;
+
+        unsigned WidenNumElts = 128 / In.getScalarValueSizeInBits();
+        MVT SVT = In.getSimpleValueType().getScalarType();
+        MVT VT = MVT::getVectorVT(SVT, WidenNumElts);
+        SDValue WidenIn =
+            DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT), In,
+                        DAG.getVectorIdxConstant(0, DL));
+        assert(isTypeLegal(WidenVT) && isTypeLegal(WidenIn.getValueType()) &&
+               "Illegal vector type in truncation");
+        WidenIn = DAG.getBitcast(WidenVT, WidenIn);
+        Results.push_back(
+            DAG.getVectorShuffle(WidenVT, DL, WidenIn, WidenIn, TruncMask));
+        return;
+      }
+    }
+
     break;
   }
   }

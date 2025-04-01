@@ -6907,8 +6907,7 @@ bool ARMPipelinerLoopInfo::tooMuchRegisterPressure(SwingSchedulerDAG &SSD,
           SMS.getInstructions(Cycle + Stage * SMS.getInitiationInterval());
       std::sort(Instrs.begin(), Instrs.end(),
                 [](SUnit *A, SUnit *B) { return A->NodeNum > B->NodeNum; });
-      for (SUnit *SU : Instrs)
-        ProposedSchedule.push_back(SU);
+      llvm::append_range(ProposedSchedule, Instrs);
     }
 
   // Learn whether the last use/def of each cross-iteration register is a use or

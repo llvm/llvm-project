@@ -33,8 +33,7 @@ define void @sdiv_feeding_gep(ptr %dst, i32 %x, i64 %M, i64 %conv6, i64 %N) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP24:%.*]] = sub i64 [[TMP12]], [[TMP22]]
+; CHECK-NEXT:    [[TMP24:%.*]] = sub i64 [[INDEX]], [[TMP22]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = trunc i64 [[TMP24]] to i32
 ; CHECK-NEXT:    [[TMP30:%.*]] = add i32 [[TMP28]], [[TMP26]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = sext i32 [[TMP30]] to i64
