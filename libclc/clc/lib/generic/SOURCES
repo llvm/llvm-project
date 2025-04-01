@@ -28,6 +28,7 @@ math/clc_atan2.cl
 math/clc_atan2pi.cl
 math/clc_atanh.cl
 math/clc_atanpi.cl
+math/clc_cbrt.cl
 math/clc_ceil.cl
 math/clc_copysign.cl
 math/clc_cospi.cl
