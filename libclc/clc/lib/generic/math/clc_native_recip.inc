@@ -6,10 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
-#include <clc/math/clc_sinpi.h>
-
-#define FUNCTION sinpi
-#define __CLC_BODY <clc/shared/unary_def.inc>
-
-#include <clc/math/gentype.inc>
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_native_recip(__CLC_GENTYPE val) {
+  return 1.0f / val;
+}

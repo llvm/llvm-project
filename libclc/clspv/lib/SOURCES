@@ -18,7 +18,6 @@ subnormal_config.cl
 ../../generic/lib/math/cbrt.cl
 ../../generic/lib/math/clc_exp10.cl
 ../../generic/lib/math/clc_tan.cl
-../../generic/lib/math/clc_tanpi.cl
 ../../generic/lib/math/cos.cl
 ../../generic/lib/math/cosh.cl
 ../../generic/lib/math/cospi.cl
