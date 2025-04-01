@@ -1358,6 +1358,7 @@ void __kmp_fini_memkind() {
 
 #if KMP_USE_HWLOC
 static bool __kmp_is_hwloc_membind_supported(hwloc_membind_policy_t policy) {
+#if HWLOC_API_VERSION >= 0x00020400
   const hwloc_topology_support *support;
   support = hwloc_topology_get_support(__kmp_hwloc_topology);
   if (support) {
@@ -1369,10 +1370,14 @@ static bool __kmp_is_hwloc_membind_supported(hwloc_membind_policy_t policy) {
               support->membind->interleave_membind);
   }
   return false;
+#else
+  return false;
+#endif
 }
 
 void *__kmp_hwloc_alloc_membind(hwloc_memattr_id_e attr, size_t size,
                                 hwloc_membind_policy_t policy) {
+#if HWLOC_API_VERSION >= 0x00020400
   void *ptr = NULL;
   hwloc_obj_t node;
   struct hwloc_location initiator;
@@ -1396,10 +1401,14 @@ void *__kmp_hwloc_alloc_membind(hwloc_memattr_id_e attr, size_t size,
   }
   return hwloc_alloc_membind(__kmp_hwloc_topology, size, node->nodeset, policy,
                              HWLOC_MEMBIND_BYNODESET);
+#else
+  return NULL;
+#endif
 }
 
 void *__kmp_hwloc_membind_policy(omp_memspace_handle_t ms, size_t size,
                                  hwloc_membind_policy_t policy) {
+#if HWLOC_API_VERSION >= 0x00020400
   void *ptr = NULL;
   if (ms == omp_high_bw_mem_space) {
     ptr = __kmp_hwloc_alloc_membind(HWLOC_MEMATTR_ID_BANDWIDTH, size, policy);
@@ -1409,8 +1418,11 @@ void *__kmp_hwloc_membind_policy(omp_memspace_handle_t ms, size_t size,
     ptr = hwloc_alloc(__kmp_hwloc_topology, size);
   }
   return ptr;
-}
+#else
+  return NULL;
 #endif
+}
+#endif // KMP_USE_HWLOC
 
 void __kmp_init_target_mem() {
   *(void **)(&kmp_target_alloc_host) = KMP_DLSYM("llvm_omp_target_alloc_host");
