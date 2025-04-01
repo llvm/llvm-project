@@ -17,8 +17,8 @@
 #if SANITIZER_LINUX || SANITIZER_APPLE || SANITIZER_AIX
 
 #  include "sanitizer_internal_defs.h"
-#  include "sanitizer_platform.h"
 #  include "sanitizer_mallinfo.h"
+#  include "sanitizer_platform.h"
 
 #  if SANITIZER_APPLE
 #    include <sys/cdefs.h>
