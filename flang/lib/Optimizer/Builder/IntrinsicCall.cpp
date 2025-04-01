@@ -753,6 +753,10 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genParity,
      {{{"mask", asBox}, {"dim", asValue}}},
      /*isElemental=*/false},
+    {"perror",
+     &I::genPerror,
+     {{{"string", asBox}}},
+     /*isElemental*/ false},
     {"popcnt", &I::genPopcnt},
     {"poppar", &I::genPoppar},
     {"present",
@@ -7156,6 +7160,17 @@ IntrinsicLibrary::genParity(mlir::Type resultType,
   // Call runtime. The runtime is allocating the result.
   fir::runtime::genParityDescriptor(builder, loc, resultIrBox, mask, dim);
   return readAndAddCleanUp(resultMutableBox, resultType, "PARITY");
+}
+
+// PERROR
+void IntrinsicLibrary::genPerror(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+
+  fir::ExtendedValue str = args[0];
+  const auto *box = str.getBoxOf<fir::BoxValue>();
+  mlir::Value addr =
+      builder.create<fir::BoxAddrOp>(loc, box->getMemTy(), fir::getBase(*box));
+  fir::runtime::genPerror(builder, loc, addr);
 }
 
 // POPCNT

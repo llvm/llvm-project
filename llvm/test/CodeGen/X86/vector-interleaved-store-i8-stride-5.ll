@@ -725,9 +725,8 @@ define void @store_i8_stride5_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecp
 ; AVX512-NEXT:    vmovd %eax, %xmm1
 ; AVX512-NEXT:    vpbroadcastw %xmm1, %xmm1
 ; AVX512-NEXT:    vpternlogq {{.*#+}} xmm1 = xmm1 ^ (mem & (xmm1 ^ xmm0))
-; AVX512-NEXT:    vinserti32x4 $2, %xmm1, %zmm3, %zmm0
 ; AVX512-NEXT:    vmovq %xmm1, 32(%r9)
-; AVX512-NEXT:    vmovdqa %ymm0, (%r9)
+; AVX512-NEXT:    vmovdqa %ymm3, (%r9)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
 ;
@@ -756,9 +755,8 @@ define void @store_i8_stride5_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecp
 ; AVX512-FCP-NEXT:    vmovd %eax, %xmm1
 ; AVX512-FCP-NEXT:    vpbroadcastw %xmm1, %xmm1
 ; AVX512-FCP-NEXT:    vpternlogq {{.*#+}} xmm1 = xmm1 ^ (mem & (xmm1 ^ xmm0))
-; AVX512-FCP-NEXT:    vinserti32x4 $2, %xmm1, %zmm3, %zmm0
 ; AVX512-FCP-NEXT:    vmovq %xmm1, 32(%r9)
-; AVX512-FCP-NEXT:    vmovdqa %ymm0, (%r9)
+; AVX512-FCP-NEXT:    vmovdqa %ymm3, (%r9)
 ; AVX512-FCP-NEXT:    vzeroupper
 ; AVX512-FCP-NEXT:    retq
 ;
@@ -787,9 +785,8 @@ define void @store_i8_stride5_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecp
 ; AVX512DQ-NEXT:    vmovd %eax, %xmm1
 ; AVX512DQ-NEXT:    vpbroadcastw %xmm1, %xmm1
 ; AVX512DQ-NEXT:    vpternlogq {{.*#+}} xmm1 = xmm1 ^ (mem & (xmm1 ^ xmm0))
-; AVX512DQ-NEXT:    vinserti32x4 $2, %xmm1, %zmm3, %zmm0
 ; AVX512DQ-NEXT:    vmovq %xmm1, 32(%r9)
-; AVX512DQ-NEXT:    vmovdqa %ymm0, (%r9)
+; AVX512DQ-NEXT:    vmovdqa %ymm3, (%r9)
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
 ;
@@ -818,9 +815,8 @@ define void @store_i8_stride5_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecp
 ; AVX512DQ-FCP-NEXT:    vmovd %eax, %xmm1
 ; AVX512DQ-FCP-NEXT:    vpbroadcastw %xmm1, %xmm1
 ; AVX512DQ-FCP-NEXT:    vpternlogq {{.*#+}} xmm1 = xmm1 ^ (mem & (xmm1 ^ xmm0))
-; AVX512DQ-FCP-NEXT:    vinserti32x4 $2, %xmm1, %zmm3, %zmm0
 ; AVX512DQ-FCP-NEXT:    vmovq %xmm1, 32(%r9)
-; AVX512DQ-FCP-NEXT:    vmovdqa %ymm0, (%r9)
+; AVX512DQ-FCP-NEXT:    vmovdqa %ymm3, (%r9)
 ; AVX512DQ-FCP-NEXT:    vzeroupper
 ; AVX512DQ-FCP-NEXT:    retq
 ;
@@ -852,9 +848,8 @@ define void @store_i8_stride5_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecp
 ; AVX512BW-NEXT:    movw $132, %ax
 ; AVX512BW-NEXT:    kmovd %eax, %k1
 ; AVX512BW-NEXT:    vmovdqu8 %xmm1, %xmm0 {%k1}
-; AVX512BW-NEXT:    vinserti32x4 $2, %xmm0, %zmm2, %zmm1
 ; AVX512BW-NEXT:    vmovq %xmm0, 32(%r9)
-; AVX512BW-NEXT:    vmovdqa %ymm1, (%r9)
+; AVX512BW-NEXT:    vmovdqa %ymm2, (%r9)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
@@ -886,9 +881,8 @@ define void @store_i8_stride5_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecp
 ; AVX512BW-FCP-NEXT:    movw $132, %ax
 ; AVX512BW-FCP-NEXT:    kmovd %eax, %k1
 ; AVX512BW-FCP-NEXT:    vmovdqu8 %xmm1, %xmm0 {%k1}
-; AVX512BW-FCP-NEXT:    vinserti32x4 $2, %xmm0, %zmm2, %zmm1
 ; AVX512BW-FCP-NEXT:    vmovq %xmm0, 32(%r9)
-; AVX512BW-FCP-NEXT:    vmovdqa %ymm1, (%r9)
+; AVX512BW-FCP-NEXT:    vmovdqa %ymm2, (%r9)
 ; AVX512BW-FCP-NEXT:    vzeroupper
 ; AVX512BW-FCP-NEXT:    retq
 ;
@@ -920,9 +914,8 @@ define void @store_i8_stride5_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecp
 ; AVX512DQ-BW-NEXT:    movw $132, %ax
 ; AVX512DQ-BW-NEXT:    kmovd %eax, %k1
 ; AVX512DQ-BW-NEXT:    vmovdqu8 %xmm1, %xmm0 {%k1}
-; AVX512DQ-BW-NEXT:    vinserti32x4 $2, %xmm0, %zmm2, %zmm1
 ; AVX512DQ-BW-NEXT:    vmovq %xmm0, 32(%r9)
-; AVX512DQ-BW-NEXT:    vmovdqa %ymm1, (%r9)
+; AVX512DQ-BW-NEXT:    vmovdqa %ymm2, (%r9)
 ; AVX512DQ-BW-NEXT:    vzeroupper
 ; AVX512DQ-BW-NEXT:    retq
 ;
@@ -954,9 +947,8 @@ define void @store_i8_stride5_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecp
 ; AVX512DQ-BW-FCP-NEXT:    movw $132, %ax
 ; AVX512DQ-BW-FCP-NEXT:    kmovd %eax, %k1
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu8 %xmm1, %xmm0 {%k1}
-; AVX512DQ-BW-FCP-NEXT:    vinserti32x4 $2, %xmm0, %zmm2, %zmm1
 ; AVX512DQ-BW-FCP-NEXT:    vmovq %xmm0, 32(%r9)
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa %ymm1, (%r9)
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa %ymm2, (%r9)
 ; AVX512DQ-BW-FCP-NEXT:    vzeroupper
 ; AVX512DQ-BW-FCP-NEXT:    retq
   %in.vec0 = load <8 x i8>, ptr %in.vecptr0, align 64
@@ -1314,13 +1306,13 @@ define void @store_i8_stride5_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512-NEXT:    vmovdqa (%rdi), %xmm1
 ; AVX512-NEXT:    vmovdqa (%rdx), %xmm2
 ; AVX512-NEXT:    vmovdqa (%r8), %xmm0
-; AVX512-NEXT:    vinserti128 $1, (%rcx), %ymm2, %ymm2
 ; AVX512-NEXT:    vinserti128 $1, (%rsi), %ymm1, %ymm1
 ; AVX512-NEXT:    vpshufb {{.*#+}} ymm3 = ymm1[u,u,u,7],zero,ymm1[u,u,u,8],zero,ymm1[u,u,u,9],zero,ymm1[u,u,u],zero,ymm1[26,u,u,u],zero,ymm1[27,u,u,u],zero,ymm1[28,u,u]
 ; AVX512-NEXT:    vpermq {{.*#+}} ymm4 = ymm1[2,3,0,1]
 ; AVX512-NEXT:    vpshufb {{.*#+}} ymm4 = ymm4[u,u,u],zero,ymm4[7,u,u,u],zero,ymm4[8,u,u,u],zero,ymm4[9,u,u,u,26],zero,ymm4[u,u,u,27],zero,ymm4[u,u,u,28],zero,ymm4[u,u]
 ; AVX512-NEXT:    vmovdqa {{.*#+}} ymm5 = [255,255,255,0,0,255,255,255,0,0,255,255,255,0,0,255,255,255,0,0,255,255,255,0,0,255,255,255,0,0,255,255]
 ; AVX512-NEXT:    vpternlogq {{.*#+}} ymm4 = ~ymm5 & (ymm4 | ymm3)
+; AVX512-NEXT:    vinserti128 $1, (%rcx), %ymm2, %ymm2
 ; AVX512-NEXT:    vpermq {{.*#+}} ymm3 = ymm2[0,2,0,2]
 ; AVX512-NEXT:    vpshufb {{.*#+}} ymm3 = zero,zero,ymm3[0,8,u],zero,zero,ymm3[1,9,u],zero,zero,ymm3[2,10,u],zero,zero,ymm3[19,27,u],zero,zero,ymm3[20,28,u],zero,zero,ymm3[21,29,u],zero,zero
 ; AVX512-NEXT:    vinserti64x4 $1, %ymm4, %zmm3, %zmm3
@@ -1353,10 +1345,10 @@ define void @store_i8_stride5_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512-FCP-NEXT:    vmovdqa (%rdi), %xmm1
 ; AVX512-FCP-NEXT:    vmovdqa (%rdx), %xmm2
 ; AVX512-FCP-NEXT:    vmovdqa (%r8), %xmm0
-; AVX512-FCP-NEXT:    vinserti128 $1, (%rsi), %ymm1, %ymm1
 ; AVX512-FCP-NEXT:    vinserti128 $1, (%rcx), %ymm2, %ymm2
 ; AVX512-FCP-NEXT:    vpermq {{.*#+}} ymm3 = ymm2[0,2,0,2]
 ; AVX512-FCP-NEXT:    vpshufb {{.*#+}} ymm3 = zero,zero,ymm3[0,8,u],zero,zero,ymm3[1,9,u],zero,zero,ymm3[2,10,u],zero,zero,ymm3[19,27,u],zero,zero,ymm3[20,28,u],zero,zero,ymm3[21,29,u],zero,zero
+; AVX512-FCP-NEXT:    vinserti128 $1, (%rsi), %ymm1, %ymm1
 ; AVX512-FCP-NEXT:    vpmovsxbd {{.*#+}} ymm4 = [1,5,2,6,2,6,3,7]
 ; AVX512-FCP-NEXT:    vpermd %ymm1, %ymm4, %ymm4
 ; AVX512-FCP-NEXT:    vpshufb {{.*#+}} ymm4 = zero,zero,ymm4[u,3,7],zero,zero,ymm4[u,8,12],zero,zero,ymm4[u,9,13],zero,zero,ymm4[u,18,22],zero,zero,ymm4[u,19,23],zero,zero,ymm4[u,24,28],zero,zero
@@ -1389,13 +1381,13 @@ define void @store_i8_stride5_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512DQ-NEXT:    vmovdqa (%rdi), %xmm1
 ; AVX512DQ-NEXT:    vmovdqa (%rdx), %xmm2
 ; AVX512DQ-NEXT:    vmovdqa (%r8), %xmm0
-; AVX512DQ-NEXT:    vinserti128 $1, (%rcx), %ymm2, %ymm2
 ; AVX512DQ-NEXT:    vinserti128 $1, (%rsi), %ymm1, %ymm1
 ; AVX512DQ-NEXT:    vpshufb {{.*#+}} ymm3 = ymm1[u,u,u,7],zero,ymm1[u,u,u,8],zero,ymm1[u,u,u,9],zero,ymm1[u,u,u],zero,ymm1[26,u,u,u],zero,ymm1[27,u,u,u],zero,ymm1[28,u,u]
 ; AVX512DQ-NEXT:    vpermq {{.*#+}} ymm4 = ymm1[2,3,0,1]
 ; AVX512DQ-NEXT:    vpshufb {{.*#+}} ymm4 = ymm4[u,u,u],zero,ymm4[7,u,u,u],zero,ymm4[8,u,u,u],zero,ymm4[9,u,u,u,26],zero,ymm4[u,u,u,27],zero,ymm4[u,u,u,28],zero,ymm4[u,u]
 ; AVX512DQ-NEXT:    vmovdqa {{.*#+}} ymm5 = [255,255,255,0,0,255,255,255,0,0,255,255,255,0,0,255,255,255,0,0,255,255,255,0,0,255,255,255,0,0,255,255]
 ; AVX512DQ-NEXT:    vpternlogq {{.*#+}} ymm4 = ~ymm5 & (ymm4 | ymm3)
+; AVX512DQ-NEXT:    vinserti128 $1, (%rcx), %ymm2, %ymm2
 ; AVX512DQ-NEXT:    vpermq {{.*#+}} ymm3 = ymm2[0,2,0,2]
 ; AVX512DQ-NEXT:    vpshufb {{.*#+}} ymm3 = zero,zero,ymm3[0,8,u],zero,zero,ymm3[1,9,u],zero,zero,ymm3[2,10,u],zero,zero,ymm3[19,27,u],zero,zero,ymm3[20,28,u],zero,zero,ymm3[21,29,u],zero,zero
 ; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm4, %zmm3, %zmm3
@@ -1428,10 +1420,10 @@ define void @store_i8_stride5_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512DQ-FCP-NEXT:    vmovdqa (%rdi), %xmm1
 ; AVX512DQ-FCP-NEXT:    vmovdqa (%rdx), %xmm2
 ; AVX512DQ-FCP-NEXT:    vmovdqa (%r8), %xmm0
-; AVX512DQ-FCP-NEXT:    vinserti128 $1, (%rsi), %ymm1, %ymm1
 ; AVX512DQ-FCP-NEXT:    vinserti128 $1, (%rcx), %ymm2, %ymm2
 ; AVX512DQ-FCP-NEXT:    vpermq {{.*#+}} ymm3 = ymm2[0,2,0,2]
 ; AVX512DQ-FCP-NEXT:    vpshufb {{.*#+}} ymm3 = zero,zero,ymm3[0,8,u],zero,zero,ymm3[1,9,u],zero,zero,ymm3[2,10,u],zero,zero,ymm3[19,27,u],zero,zero,ymm3[20,28,u],zero,zero,ymm3[21,29,u],zero,zero
+; AVX512DQ-FCP-NEXT:    vinserti128 $1, (%rsi), %ymm1, %ymm1
 ; AVX512DQ-FCP-NEXT:    vpmovsxbd {{.*#+}} ymm4 = [1,5,2,6,2,6,3,7]
 ; AVX512DQ-FCP-NEXT:    vpermd %ymm1, %ymm4, %ymm4
 ; AVX512DQ-FCP-NEXT:    vpshufb {{.*#+}} ymm4 = zero,zero,ymm4[u,3,7],zero,zero,ymm4[u,8,12],zero,zero,ymm4[u,9,13],zero,zero,ymm4[u,18,22],zero,zero,ymm4[u,19,23],zero,zero,ymm4[u,24,28],zero,zero
@@ -1464,12 +1456,12 @@ define void @store_i8_stride5_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512BW-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512BW-NEXT:    vmovdqa (%rdx), %xmm1
 ; AVX512BW-NEXT:    vmovdqa (%r8), %xmm2
-; AVX512BW-NEXT:    vinserti128 $1, (%rcx), %ymm1, %ymm1
 ; AVX512BW-NEXT:    vinserti128 $1, (%rsi), %ymm0, %ymm0
 ; AVX512BW-NEXT:    vpshufb {{.*#+}} ymm3 = zero,zero,zero,ymm0[7],zero,zero,zero,zero,ymm0[8],zero,zero,zero,zero,ymm0[9],zero,zero,zero,zero,zero,ymm0[26],zero,zero,zero,zero,ymm0[27],zero,zero,zero,zero,ymm0[28],zero,zero
 ; AVX512BW-NEXT:    vpermq {{.*#+}} ymm4 = ymm0[2,3,0,1]
 ; AVX512BW-NEXT:    vpshufb {{.*#+}} ymm4 = zero,zero,zero,zero,ymm4[7],zero,zero,zero,zero,ymm4[8],zero,zero,zero,zero,ymm4[9],zero,zero,zero,ymm4[26],zero,zero,zero,zero,ymm4[27],zero,zero,zero,zero,ymm4[28],zero,zero,zero
 ; AVX512BW-NEXT:    vpor %ymm4, %ymm3, %ymm3
+; AVX512BW-NEXT:    vinserti128 $1, (%rcx), %ymm1, %ymm1
 ; AVX512BW-NEXT:    vpshufb {{.*#+}} ymm4 = ymm1[6],zero,zero,zero,zero,ymm1[7],zero,zero,zero,zero,ymm1[8],zero,zero,zero,zero,ymm1[9,25],zero,zero,zero,zero,ymm1[26],zero,zero,zero,zero,ymm1[27],zero,zero,zero,zero,ymm1[28]
 ; AVX512BW-NEXT:    vpermq {{.*#+}} ymm5 = ymm1[2,3,0,1]
 ; AVX512BW-NEXT:    vpshufb {{.*#+}} ymm5 = zero,ymm5[6],zero,zero,zero,zero,ymm5[7],zero,zero,zero,zero,ymm5[8],zero,zero,zero,zero,zero,zero,zero,zero,ymm5[26],zero,zero,zero,zero,ymm5[27],zero,zero,zero,zero,ymm5[28],zero
@@ -1504,8 +1496,8 @@ define void @store_i8_stride5_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512BW-FCP-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512BW-FCP-NEXT:    vmovdqa (%rdx), %xmm1
 ; AVX512BW-FCP-NEXT:    vmovdqa (%r8), %xmm2
-; AVX512BW-FCP-NEXT:    vinserti128 $1, (%rsi), %ymm0, %ymm0
 ; AVX512BW-FCP-NEXT:    vinserti128 $1, (%rcx), %ymm1, %ymm1
+; AVX512BW-FCP-NEXT:    vinserti128 $1, (%rsi), %ymm0, %ymm0
 ; AVX512BW-FCP-NEXT:    vpmovsxbd {{.*#+}} zmm3 = [0,0,4,0,4,5,0,1,17,21,18,22,22,18,19,23]
 ; AVX512BW-FCP-NEXT:    vpermi2d %zmm1, %zmm0, %zmm3
 ; AVX512BW-FCP-NEXT:    vpshufb {{.*#+}} zmm3 = zmm3[0,8],zero,zero,zero,zmm3[1,9],zero,zero,zero,zmm3[2,10],zero,zero,zero,zmm3[3,19],zero,zero,zero,zmm3[28,20],zero,zero,zero,zmm3[29,21],zero,zero,zero,zmm3[30,22,34,38],zero,zero,zero,zmm3[35,39],zero,zero,zero,zmm3[40,44],zero,zero,zero,zmm3[41,49],zero,zero,zero,zmm3[54,50],zero,zero,zero,zmm3[55,51],zero,zero,zero,zmm3[56,60]
@@ -1534,12 +1526,12 @@ define void @store_i8_stride5_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512DQ-BW-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512DQ-BW-NEXT:    vmovdqa (%rdx), %xmm1
 ; AVX512DQ-BW-NEXT:    vmovdqa (%r8), %xmm2
-; AVX512DQ-BW-NEXT:    vinserti128 $1, (%rcx), %ymm1, %ymm1
 ; AVX512DQ-BW-NEXT:    vinserti128 $1, (%rsi), %ymm0, %ymm0
 ; AVX512DQ-BW-NEXT:    vpshufb {{.*#+}} ymm3 = zero,zero,zero,ymm0[7],zero,zero,zero,zero,ymm0[8],zero,zero,zero,zero,ymm0[9],zero,zero,zero,zero,zero,ymm0[26],zero,zero,zero,zero,ymm0[27],zero,zero,zero,zero,ymm0[28],zero,zero
 ; AVX512DQ-BW-NEXT:    vpermq {{.*#+}} ymm4 = ymm0[2,3,0,1]
 ; AVX512DQ-BW-NEXT:    vpshufb {{.*#+}} ymm4 = zero,zero,zero,zero,ymm4[7],zero,zero,zero,zero,ymm4[8],zero,zero,zero,zero,ymm4[9],zero,zero,zero,ymm4[26],zero,zero,zero,zero,ymm4[27],zero,zero,zero,zero,ymm4[28],zero,zero,zero
 ; AVX512DQ-BW-NEXT:    vpor %ymm4, %ymm3, %ymm3
+; AVX512DQ-BW-NEXT:    vinserti128 $1, (%rcx), %ymm1, %ymm1
 ; AVX512DQ-BW-NEXT:    vpshufb {{.*#+}} ymm4 = ymm1[6],zero,zero,zero,zero,ymm1[7],zero,zero,zero,zero,ymm1[8],zero,zero,zero,zero,ymm1[9,25],zero,zero,zero,zero,ymm1[26],zero,zero,zero,zero,ymm1[27],zero,zero,zero,zero,ymm1[28]
 ; AVX512DQ-BW-NEXT:    vpermq {{.*#+}} ymm5 = ymm1[2,3,0,1]
 ; AVX512DQ-BW-NEXT:    vpshufb {{.*#+}} ymm5 = zero,ymm5[6],zero,zero,zero,zero,ymm5[7],zero,zero,zero,zero,ymm5[8],zero,zero,zero,zero,zero,zero,zero,zero,ymm5[26],zero,zero,zero,zero,ymm5[27],zero,zero,zero,zero,ymm5[28],zero
@@ -1574,8 +1566,8 @@ define void @store_i8_stride5_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa (%rdx), %xmm1
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa (%r8), %xmm2
-; AVX512DQ-BW-FCP-NEXT:    vinserti128 $1, (%rsi), %ymm0, %ymm0
 ; AVX512DQ-BW-FCP-NEXT:    vinserti128 $1, (%rcx), %ymm1, %ymm1
+; AVX512DQ-BW-FCP-NEXT:    vinserti128 $1, (%rsi), %ymm0, %ymm0
 ; AVX512DQ-BW-FCP-NEXT:    vpmovsxbd {{.*#+}} zmm3 = [0,0,4,0,4,5,0,1,17,21,18,22,22,18,19,23]
 ; AVX512DQ-BW-FCP-NEXT:    vpermi2d %zmm1, %zmm0, %zmm3
 ; AVX512DQ-BW-FCP-NEXT:    vpshufb {{.*#+}} zmm3 = zmm3[0,8],zero,zero,zero,zmm3[1,9],zero,zero,zero,zmm3[2,10],zero,zero,zero,zmm3[3,19],zero,zero,zero,zmm3[28,20],zero,zero,zero,zmm3[29,21],zero,zero,zero,zmm3[30,22,34,38],zero,zero,zero,zmm3[35,39],zero,zero,zero,zmm3[40,44],zero,zero,zero,zmm3[41,49],zero,zero,zero,zmm3[54,50],zero,zero,zero,zmm3[55,51],zero,zero,zero,zmm3[56,60]
