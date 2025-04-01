@@ -69,6 +69,7 @@ struct PreISelIntrinsicLowering {
   static bool shouldExpandMemIntrinsicWithSize(Value *Size,
                                                const TargetTransformInfo &TTI);
   bool expandMemIntrinsicUses(Function &F) const;
+  bool expandStrlenIntrinsicUses(Function &F) const;
   bool lowerIntrinsics(Module &M) const;
 };
 
@@ -441,6 +442,103 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
   return Changed;
 }
 
+static ConstantInt *getByteWidth(Type *CharType) {
+  auto *IntTy = dyn_cast<IntegerType>(CharType);
+  assert(IntTy && "operand must be an integer type");
+  return ConstantInt::get(CharType->getContext(),
+                          APInt(64, IntTy->getBitWidth() / 8));
+}
+
+// %ptr <- ptr
+// preheader:
+//   br label %body
+// body:
+//   %str = phi [%preheader %ptr], [%term %ptr.inc]
+//   %char = load i8, ptr %str, align 1
+//   %cmp.not = icmp eq %char, 0
+//   %str.inc = gep %str, 1, 0
+//   br %cond, label %body, label %term
+// term:
+//   %end = phi [%term %ptr]
+//   %base.int = ptrtoint %ptr
+//   %str.int = ptrtoint %str
+//   %len = sub i64 %str.int, %base.int
+static Value *expandStrlenAsLoop(Instruction *Instr, Value *Src,
+                                 Type *CharacterType,
+                                 const TargetLibraryInfo &TLI) {
+  auto *PtrTy = dyn_cast<PointerType>(Src->getType());
+  assert(PtrTy && "strlen intrinsic operand must be a pointer");
+
+  BasicBlock *Preheader = Instr->getParent();
+  BasicBlock *LoopTerm =
+      Preheader->splitBasicBlock(Instr, "strlen-loop-expansion-terminator");
+  BasicBlock *LoopBody =
+      BasicBlock::Create(Instr->getContext(), "strlen-loop-expansion",
+                         Preheader->getParent(), LoopTerm);
+
+  BranchInst *BI = dyn_cast<BranchInst>(Preheader->getTerminator());
+  assert(BI && BI->isUnconditional() &&
+         "expected unconditional branch to be created");
+  BI->setOperand(0, LoopBody);
+
+  Value *NullTerm = ConstantInt::get(CharacterType, 0);
+  ConstantInt *ByteWidth = getByteWidth(CharacterType);
+
+  IRBuilder<> Builder(LoopBody);
+  PHINode *IncomingPtr = Builder.CreatePHI(PtrTy, 2, "str");
+  Value *Char = Builder.CreateLoad(CharacterType, IncomingPtr, "char");
+  Value *Cmp = Builder.CreateCmp(CmpInst::ICMP_EQ, Char, NullTerm, "cmp.not");
+  Value *IncPtr = Builder.CreatePtrAdd(IncomingPtr, ByteWidth, "str.inc");
+  Builder.CreateCondBr(Cmp, LoopTerm, LoopBody);
+
+  IncomingPtr->addIncoming(Src, Preheader);
+  IncomingPtr->addIncoming(IncPtr, LoopBody);
+
+  IRBuilder<> TBuilder(Instr);
+  Value *Result = TBuilder.CreateSub(
+      TBuilder.CreatePtrToInt(IncomingPtr,
+                              TLI.getSizeTType(*Instr->getModule())),
+      TBuilder.CreatePtrToInt(Src, TLI.getSizeTType(*Instr->getModule())));
+  if (ByteWidth->getValue().ugt(1))
+    Result = TBuilder.CreateLShr(Result, ByteWidth->getValue().exactLogBase2(),
+                                 "str.len");
+  return Result;
+}
+
+bool PreISelIntrinsicLowering::expandStrlenIntrinsicUses(Function &F) const {
+  bool Changed = false;
+  for (User *U : llvm::make_early_inc_range(F.users())) {
+    Instruction *Inst = cast<Instruction>(U);
+    auto *Strlen = cast<StrlenInst>(Inst);
+    unsigned CharacterWidth = Strlen->getOperandWidth();
+    Function *ParentFunc = Strlen->getFunction();
+
+    IRBuilder<> Builder(Strlen);
+    const TargetLibraryInfo &TLI = LookupTLI(*ParentFunc);
+    const DataLayout &DL = ParentFunc->getDataLayout();
+
+    Value *Result = nullptr;
+    if (CharacterWidth == 8 &&
+        isLibFuncEmittable(F.getParent(), &TLI, LibFunc_strlen)) {
+      Result = emitStrLen(Strlen->getOperand(0), Builder, DL, &TLI);
+    } else if (CharacterWidth == 8 * TLI.getWCharSize(*F.getParent()) &&
+               isLibFuncEmittable(F.getParent(), &TLI, LibFunc_wcslen)) {
+      Result = emitWcsLen(Strlen->getOperand(0), Builder, DL, &TLI);
+    } else {
+      Result = expandStrlenAsLoop(Inst, Inst->getOperand(0),
+                                  Inst->getOperand(1)->getType(), TLI);
+    }
+    assert(Result && "failed to lower strlen intrinsic");
+    if (Result->getType() != Strlen->getType())
+      Result = Builder.CreateSExtOrTrunc(Result, Strlen->getType());
+
+    Strlen->replaceAllUsesWith(Result);
+    Strlen->eraseFromParent();
+    Changed = true;
+  }
+  return Changed;
+}
+
 bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
   bool Changed = false;
   for (Function &F : M) {
@@ -454,6 +552,9 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
     case Intrinsic::memset_inline:
     case Intrinsic::experimental_memset_pattern:
       Changed |= expandMemIntrinsicUses(F);
+      break;
+    case Intrinsic::strlen:
+      Changed |= expandStrlenIntrinsicUses(F);
       break;
     case Intrinsic::load_relative:
       Changed |= lowerLoadRelative(F);

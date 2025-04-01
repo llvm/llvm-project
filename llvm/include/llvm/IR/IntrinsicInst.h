@@ -1463,8 +1463,27 @@ public:
       return false;
     }
   }
+
   static bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
+/// This class represents any sized strlen intrinsic
+class StrlenInst : public IntrinsicInst {
+public:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::strlen;
+  }
+
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+
+  unsigned getOperandWidth() const {
+    const Type *IntTy = dyn_cast<IntegerType>(getArgOperand(1)->getType());
+    assert(IntTy && "strlen intrinsics argument must be an integer");
+    return IntTy->getIntegerBitWidth();
   }
 };
 

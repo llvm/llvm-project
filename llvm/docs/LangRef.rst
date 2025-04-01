@@ -15756,6 +15756,46 @@ If ``<count>`` is not a well-defined value, the behavior is undefined.
 If ``<count>`` is not zero, ``<dest>`` should be well-defined, otherwise the
 behavior is undefined.
 
+.. _int_strlen:
+
+'``llvm.strlen.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use llvm.strlen on any character bit
+width and for different address spaces.
+
+::
+
+    declare i64 @llvm.strlen.p0.i8(ptr <src>, i8 0)
+    declare i64 @llvm.strlen.p0.i16(ptr <src>, i16 0)
+    declare i64 @llvm.strlen.p0.i32(ptr <src>, i32 0)
+
+Overview:
+"""""""""
+
+The '``llvm.strlen.*``' intrinsics returns the length of the given
+null-terminated string ``str``. This will be replaced by the corresponding
+``strlen`` or ``wcslen`` library call if available and the string character
+type are compatible, otherwise an inline loop is emitted.
+
+Arguments:
+""""""""""
+
+The first argument is a pointer to the first character of the string. The
+second argument specifies the underlying type of the characters.
+
+Semantics:
+""""""""""
+
+The '``llvm.strlen.*``' intrinsics returns the number of characters in the
+character array whose first character is pointed to by ``<src>`` up to but
+not including the first null terminator character. If ``<src>`` is not a
+null-terminated string or if ``<src>`` is null, then the behavior is undefined.
+
+
 .. _int_sqrt:
 
 '``llvm.sqrt.*``' Intrinsic

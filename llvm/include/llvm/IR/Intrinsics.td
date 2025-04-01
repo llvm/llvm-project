@@ -1032,6 +1032,13 @@ def int_experimental_memset_pattern
        NoCapture<ArgIndex<0>>, WriteOnly<ArgIndex<0>>,
        ImmArg<ArgIndex<3>>]>;
 
+def int_strlen : Intrinsic<
+  [llvm_anyint_ty],
+  [llvm_anyptr_ty, llvm_anyint_ty],
+  [IntrReadMem, IntrArgMemOnly,
+   NoCapture<ArgIndex<0>>, ReadOnly<ArgIndex<0>>,
+   NoUndef<RetIndex>, NonNull<ArgIndex<0>>]>;
+
 // FIXME: Add version of these floating point intrinsics which allow non-default
 // rounding modes and FP exception handling.
 
