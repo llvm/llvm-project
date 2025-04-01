@@ -263,6 +263,23 @@ if ( clspv-- IN_LIST LIBCLC_TARGETS_TO_BUILD OR clspv64-- IN_LIST LIBCLC_TARGETS
 endif()
 
 set_source_files_properties(
+  # CLC builtins
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_cos.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_exp2.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_exp.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_log10.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_log2.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_log.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_rsqrt.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_sin.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_sqrt.cl
+  # Target-specific CLC builtins
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/amdgpu/math/clc_native_exp2.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/amdgpu/math/clc_native_exp.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/amdgpu/math/clc_native_log10.cl
+  # Target-specific OpenCL builtins
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/r600/math/clc_native_rsqrt.cl
+  # OpenCL builtins
   ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_cos.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_divide.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_exp.cl
@@ -277,10 +294,6 @@ set_source_files_properties(
   ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_sin.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_sqrt.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_tan.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/amdgpu/lib/math/native_exp.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/amdgpu/lib/math/native_log.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/amdgpu/lib/math/native_log10.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/r600/lib/math/native_rsqrt.cl
   PROPERTIES COMPILE_OPTIONS -fapprox-func
 )
 
