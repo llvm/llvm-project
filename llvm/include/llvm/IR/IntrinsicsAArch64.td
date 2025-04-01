@@ -3031,7 +3031,7 @@ let TargetPrefix = "aarch64" in {
 
   def int_aarch64_sme_write_lane_zt
        :  DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_anyvector_ty, llvm_i32_ty],
-            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrInaccessibleMemOnly, IntrWriteMem]>;
+            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrInaccessibleMemOnly]>;
 
   def int_aarch64_sme_write_zt
        :  DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_anyvector_ty],
