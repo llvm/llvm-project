@@ -10,14 +10,14 @@ define amdgpu_ps void @sat_pk4_i4_i8_f32_v(i32 %src, ptr %out) #1 {
 ; GCN-SDAG:       ; %bb.0:
 ; GCN-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GCN-SDAG-NEXT:    v_sat_pk4_i4_i8_e32 v0, v0
-; GCN-SDAG-NEXT:    flat_store_b16 v[2:3], v0
+; GCN-SDAG-NEXT:    flat_store_b16 v[2:3], v0 scope:SCOPE_SE
 ; GCN-SDAG-NEXT:    s_endpgm
 ;
 ; GCN-GISEL-LABEL: sat_pk4_i4_i8_f32_v:
 ; GCN-GISEL:       ; %bb.0:
 ; GCN-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
 ; GCN-GISEL-NEXT:    v_sat_pk4_i4_i8_e32 v0, v0
-; GCN-GISEL-NEXT:    flat_store_b16 v[4:5], v0
+; GCN-GISEL-NEXT:    flat_store_b16 v[4:5], v0 scope:SCOPE_SE
 ; GCN-GISEL-NEXT:    s_endpgm
   %cvt = call i16 @llvm.amdgcn.sat.pk4.i4.i8(i32 %src) #0
   store i16 %cvt, ptr %out
@@ -28,7 +28,7 @@ define amdgpu_ps void @sat_pk4_i4_i8_f32_s(i32 inreg %src, ptr %out) #1 {
 ; GCN-LABEL: sat_pk4_i4_i8_f32_s:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_sat_pk4_i4_i8_e32 v2, s0
-; GCN-NEXT:    flat_store_b16 v[0:1], v2
+; GCN-NEXT:    flat_store_b16 v[0:1], v2 scope:SCOPE_SE
 ; GCN-NEXT:    s_endpgm
   %cvt = call i16 @llvm.amdgcn.sat.pk4.i4.i8(i32 %src) #0
   store i16 %cvt, ptr %out
@@ -39,7 +39,7 @@ define amdgpu_ps void @sat_pk4_i4_i8_f32_i(ptr %out) #1 {
 ; GCN-LABEL: sat_pk4_i4_i8_f32_i:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_sat_pk4_i4_i8_e32 v2, 0x64
-; GCN-NEXT:    flat_store_b16 v[0:1], v2
+; GCN-NEXT:    flat_store_b16 v[0:1], v2 scope:SCOPE_SE
 ; GCN-NEXT:    s_endpgm
   %cvt = call i16 @llvm.amdgcn.sat.pk4.i4.i8(i32 100) #0
   store i16 %cvt, ptr %out
@@ -51,14 +51,14 @@ define amdgpu_ps void @sat_pk4_u4_u8_f32_v(i32 %src, ptr %out) #1 {
 ; GCN-SDAG:       ; %bb.0:
 ; GCN-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GCN-SDAG-NEXT:    v_sat_pk4_u4_u8_e32 v0, v0
-; GCN-SDAG-NEXT:    flat_store_b16 v[2:3], v0
+; GCN-SDAG-NEXT:    flat_store_b16 v[2:3], v0 scope:SCOPE_SE
 ; GCN-SDAG-NEXT:    s_endpgm
 ;
 ; GCN-GISEL-LABEL: sat_pk4_u4_u8_f32_v:
 ; GCN-GISEL:       ; %bb.0:
 ; GCN-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
 ; GCN-GISEL-NEXT:    v_sat_pk4_u4_u8_e32 v0, v0
-; GCN-GISEL-NEXT:    flat_store_b16 v[4:5], v0
+; GCN-GISEL-NEXT:    flat_store_b16 v[4:5], v0 scope:SCOPE_SE
 ; GCN-GISEL-NEXT:    s_endpgm
   %cvt = call i16 @llvm.amdgcn.sat.pk4.u4.u8(i32 %src) #0
   store i16 %cvt, ptr %out
@@ -69,7 +69,7 @@ define amdgpu_ps void @sat_pk4_u4_u8_f32_s(i32 inreg %src, ptr %out) #1 {
 ; GCN-LABEL: sat_pk4_u4_u8_f32_s:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_sat_pk4_u4_u8_e32 v2, s0
-; GCN-NEXT:    flat_store_b16 v[0:1], v2
+; GCN-NEXT:    flat_store_b16 v[0:1], v2 scope:SCOPE_SE
 ; GCN-NEXT:    s_endpgm
   %cvt = call i16 @llvm.amdgcn.sat.pk4.u4.u8(i32 %src) #0
   store i16 %cvt, ptr %out
@@ -80,7 +80,7 @@ define amdgpu_ps void @sat_pk4_u4_u8_f32_i(ptr %out) #1 {
 ; GCN-LABEL: sat_pk4_u4_u8_f32_i:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_sat_pk4_u4_u8_e32 v2, 0x64
-; GCN-NEXT:    flat_store_b16 v[0:1], v2
+; GCN-NEXT:    flat_store_b16 v[0:1], v2 scope:SCOPE_SE
 ; GCN-NEXT:    s_endpgm
   %cvt = call i16 @llvm.amdgcn.sat.pk4.u4.u8(i32 100) #0
   store i16 %cvt, ptr %out

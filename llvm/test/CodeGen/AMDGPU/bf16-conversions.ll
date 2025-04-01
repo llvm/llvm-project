@@ -361,7 +361,7 @@ define amdgpu_ps void @fptrunc_f32_to_bf16(float %a, ptr %out) {
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
-; GFX1250-NEXT:    flat_store_b16 v[2:3], v0
+; GFX1250-NEXT:    flat_store_b16 v[2:3], v0 scope:SCOPE_SE
 ; GFX1250-NEXT:    s_endpgm
 entry:
   %a.cvt = fptrunc float %a to bfloat
@@ -397,7 +397,7 @@ define amdgpu_ps void @fptrunc_f32_to_bf16_abs(float %a, ptr %out) {
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v0, |v0|, s0
-; GFX1250-NEXT:    flat_store_b16 v[2:3], v0
+; GFX1250-NEXT:    flat_store_b16 v[2:3], v0 scope:SCOPE_SE
 ; GFX1250-NEXT:    s_endpgm
 entry:
   %a.abs = call float @llvm.fabs.f32(float %a)
@@ -434,7 +434,7 @@ define amdgpu_ps void @fptrunc_f32_to_bf16_neg(float %a, ptr %out) {
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v0, -v0, s0
-; GFX1250-NEXT:    flat_store_b16 v[2:3], v0
+; GFX1250-NEXT:    flat_store_b16 v[2:3], v0 scope:SCOPE_SE
 ; GFX1250-NEXT:    s_endpgm
 entry:
   %a.neg = fneg float %a
@@ -503,7 +503,7 @@ define amdgpu_ps void @fptrunc_f64_to_bf16(double %a, ptr %out) {
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_and_or_b32 v0, 0x80000000, v1, v0
 ; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
-; GFX1250-NEXT:    flat_store_b16 v[2:3], v0
+; GFX1250-NEXT:    flat_store_b16 v[2:3], v0 scope:SCOPE_SE
 ; GFX1250-NEXT:    s_endpgm
 entry:
   %a.cvt = fptrunc double %a to bfloat
@@ -574,7 +574,7 @@ define amdgpu_ps void @fptrunc_f64_to_bf16_neg(double %a, ptr %out) {
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_and_or_b32 v0, 0x80000000, v1, v0
 ; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
-; GFX1250-NEXT:    flat_store_b16 v[2:3], v0
+; GFX1250-NEXT:    flat_store_b16 v[2:3], v0 scope:SCOPE_SE
 ; GFX1250-NEXT:    s_endpgm
 entry:
   %a.neg = fneg double %a
@@ -646,7 +646,7 @@ define amdgpu_ps void @fptrunc_f64_to_bf16_abs(double %a, ptr %out) {
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_and_or_b32 v0, 0x80000000, v1, v0
 ; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
-; GFX1250-NEXT:    flat_store_b16 v[2:3], v0
+; GFX1250-NEXT:    flat_store_b16 v[2:3], v0 scope:SCOPE_SE
 ; GFX1250-NEXT:    s_endpgm
 entry:
   %a.abs = call double @llvm.fabs.f64(double %a)
