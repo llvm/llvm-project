@@ -1886,7 +1886,8 @@ struct DarwinPlatform {
     assert(IsValid && "invalid SDK version");
     return DarwinSDKInfo(
         Version,
-        /*MaximumDeploymentTarget=*/VersionTuple(Version.getMajor(), 0, 99));
+        /*MaximumDeploymentTarget=*/VersionTuple(Version.getMajor(), 0, 99),
+        getOSFromPlatform(Platform));
   }
 
 private:
@@ -1913,6 +1914,23 @@ private:
       return DarwinPlatformKind::DriverKit;
     default:
       llvm_unreachable("Unable to infer Darwin variant");
+    }
+  }
+
+  static llvm::Triple::OSType getOSFromPlatform(DarwinPlatformKind Platform) {
+    switch (Platform) {
+    case DarwinPlatformKind::MacOS:
+      return llvm::Triple::MacOSX;
+    case DarwinPlatformKind::IPhoneOS:
+      return llvm::Triple::IOS;
+    case DarwinPlatformKind::TvOS:
+      return llvm::Triple::TvOS;
+    case DarwinPlatformKind::WatchOS:
+      return llvm::Triple::WatchOS;
+    case DarwinPlatformKind::DriverKit:
+      return llvm::Triple::DriverKit;
+    case DarwinPlatformKind::XROS:
+      return llvm::Triple::XROS;
     }
   }
 
@@ -2966,20 +2984,8 @@ bool Darwin::isAlignedAllocationUnavailable() const {
   return TargetVersion < alignedAllocMinVersion(OS);
 }
 
-static bool sdkSupportsBuiltinModules(
-    const Darwin::DarwinPlatformKind &TargetPlatform,
-    const Darwin::DarwinEnvironmentKind &TargetEnvironment,
-    const std::optional<DarwinSDKInfo> &SDKInfo) {
-  if (TargetEnvironment == Darwin::NativeEnvironment ||
-      TargetEnvironment == Darwin::Simulator ||
-      TargetEnvironment == Darwin::MacCatalyst) {
-    // Standard xnu/Mach/Darwin based environments
-    // depend on the SDK version.
-  } else {
-    // All other environments support builtin modules from the start.
-    return true;
-  }
-
+static bool
+sdkSupportsBuiltinModules(const std::optional<DarwinSDKInfo> &SDKInfo) {
   if (!SDKInfo)
     // If there is no SDK info, assume this is building against a
     // pre-SDK version of macOS (i.e. before Mac OS X 10.4). Those
@@ -2990,26 +2996,18 @@ static bool sdkSupportsBuiltinModules(
     return false;
 
   VersionTuple SDKVersion = SDKInfo->getVersion();
-  switch (TargetPlatform) {
+  switch (SDKInfo->getOS()) {
   // Existing SDKs added support for builtin modules in the fall
   // 2024 major releases.
-  case Darwin::MacOS:
+  case llvm::Triple::MacOSX:
     return SDKVersion >= VersionTuple(15U);
-  case Darwin::IPhoneOS:
-    switch (TargetEnvironment) {
-    case Darwin::MacCatalyst:
-      // Mac Catalyst uses `-target arm64-apple-ios18.0-macabi` so the platform
-      // is iOS, but it builds with the macOS SDK, so it's the macOS SDK version
-      // that's relevant.
-      return SDKVersion >= VersionTuple(15U);
-    default:
-      return SDKVersion >= VersionTuple(18U);
-    }
-  case Darwin::TvOS:
+  case llvm::Triple::IOS:
     return SDKVersion >= VersionTuple(18U);
-  case Darwin::WatchOS:
+  case llvm::Triple::TvOS:
+    return SDKVersion >= VersionTuple(18U);
+  case llvm::Triple::WatchOS:
     return SDKVersion >= VersionTuple(11U);
-  case Darwin::XROS:
+  case llvm::Triple::XROS:
     return SDKVersion >= VersionTuple(2U);
 
   // New SDKs support builtin modules from the start.
@@ -3138,7 +3136,7 @@ void Darwin::addClangTargetOptions(
   // i.e. when the builtin stdint.h is in the Darwin module too, the cycle
   // goes away. Note that -fbuiltin-headers-in-system-modules does nothing
   // to fix the same problem with C++ headers, and is generally fragile.
-  if (!sdkSupportsBuiltinModules(TargetPlatform, TargetEnvironment, SDKInfo))
+  if (!sdkSupportsBuiltinModules(SDKInfo))
     CC1Args.push_back("-fbuiltin-headers-in-system-modules");
 
   if (!DriverArgs.hasArgNoClaim(options::OPT_fdefine_target_os_macros,
