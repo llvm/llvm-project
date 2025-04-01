@@ -2292,10 +2292,10 @@ AttrBuilder &AttrBuilder::addInitializesAttr(const ConstantRangeList &CRL) {
 }
 
 AttrBuilder &AttrBuilder::addFromEquivalentMetadata(const Instruction &I) {
-  if (const MDNode *NonNull = I.getMetadata(LLVMContext::MD_nonnull))
+  if (I.hasMetadata(LLVMContext::MD_nonnull))
     addAttribute(Attribute::NonNull);
 
-  if (const MDNode *NoUndef = I.getMetadata(LLVMContext::MD_noundef))
+  if (I.hasMetadata(LLVMContext::MD_noundef))
     addAttribute(Attribute::NoUndef);
 
   if (const MDNode *Align = I.getMetadata(LLVMContext::MD_align)) {
