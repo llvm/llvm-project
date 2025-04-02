@@ -6,12 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/bit.h"
 #include "src/stdio/fclose.h"
 #include "src/stdio/fgets.h"
 #include "src/stdio/fopen.h"
 #include "src/stdio/printf.h"
+#include "src/stdlib/getenv.h"
 #include "src/stdlib/strtod.h"
 #include "src/stdlib/strtof.h"
+#include "src/string/strtok.h"
 #include "test/UnitTest/Test.h"
 #include <stdint.h>
 
@@ -57,8 +60,8 @@ int checkFile(char *inputFileName, int *totalFails, int *totalBitDiffs,
   int32_t curFails = 0;    // Only counts actual failures, not bitdiffs.
   int32_t curBitDiffs = 0; // A bitdiff is when the expected result and actual
                            // result are off by +/- 1 bit.
-  char *line = nullptr;
-  char *num = nullptr;
+  char line[100];
+  char *num;
 
   auto *fileHandle = LIBC_NAMESPACE::fopen(inputFileName, "r");
 
@@ -68,7 +71,7 @@ int checkFile(char *inputFileName, int *totalFails, int *totalBitDiffs,
     return 1;
   }
 
-  while (LIBC_NAMESPACE::fgets(line, 100, fileHandle)) {
+  while (LIBC_NAMESPACE::fgets(line, sizeof(line), fileHandle)) {
     if (line[0] == '#') {
       continue;
     }
@@ -84,9 +87,9 @@ int checkFile(char *inputFileName, int *totalFails, int *totalBitDiffs,
 
     double doubleResult = LIBC_NAMESPACE::strtod(num, nullptr);
 
-    uint32_t floatRaw = *(uint32_t *)(&floatResult);
+    uint32_t floatRaw = LIBC_NAMESPACE::cpp::bit_cast<uint32_t>(floatResult);
 
-    uint64_t doubleRaw = *(uint64_t *)(&doubleResult);
+    uint64_t doubleRaw = LIBC_NAMESPACE::cpp::bit_cast<uint64_t>(doubleResult);
 
     if (!(expectedFloatRaw == floatRaw)) {
       if (expectedFloatRaw == floatRaw + 1 ||
@@ -150,22 +153,24 @@ TEST(LlvmLibcStrToFloatComparisonTest, CheckFile) {
 
   int total = 0;
 
-  char filename[] = "str_to_float_comparison_data.txt";
-  LIBC_NAMESPACE::printf("Starting file %s\n", filename);
-  int curResult =
-      checkFile(filename, &fails, &bitdiffs, detailedBitDiffs, &total);
-  if (curResult == 1) {
-    result = 1;
-  } else if (curResult == 2) {
-    result = 2;
+  char *files = LIBC_NAMESPACE::getenv("FILES");
+  for (char *file = LIBC_NAMESPACE::strtok(files, ","); file != nullptr;
+       file = LIBC_NAMESPACE::strtok(nullptr, ",")) {
+    int curResult =
+        checkFile(file, &fails, &bitdiffs, detailedBitDiffs, &total);
+    if (curResult == 1) {
+      result = 1;
+    } else if (curResult == 2) {
+      result = 2;
+    }
   }
 
   EXPECT_EQ(result, 0);
   EXPECT_EQ(fails, 0);
   EXPECT_EQ(bitdiffs, 0);
-  EXPECT_EQ(detailedBitDiffs[0], 0);
-  EXPECT_EQ(detailedBitDiffs[1], 0);
-  EXPECT_EQ(detailedBitDiffs[2], 0);
-  EXPECT_EQ(detailedBitDiffs[3], 0);
-  EXPECT_EQ(total, 0);
+  EXPECT_EQ(detailedBitDiffs[0], 0); // float low
+  EXPECT_EQ(detailedBitDiffs[1], 0); // float high
+  EXPECT_EQ(detailedBitDiffs[2], 0); // double low
+  EXPECT_EQ(detailedBitDiffs[3], 0); // double high
+  EXPECT_EQ(total, 6);
 }

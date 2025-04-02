@@ -254,6 +254,8 @@ if(NOT LIBC_TARGET_OS_IS_GPU)
     str_to_float_comparison_test
     SUITE
       libc-support-tests
+    NO_RUN_POSTBUILD
+    ENV "FILES=${CMAKE_CURRENT_SOURCE_DIR}/str_to_float_comparison_data.txt"
     SRCS
       str_to_float_comparison_test.cpp
     DEPENDS
@@ -263,7 +265,9 @@ if(NOT LIBC_TARGET_OS_IS_GPU)
       libc.src.stdio.fgets
       libc.src.stdlib.strtof
       libc.src.stdlib.strtod
-    NO_RUN_POSTBUILD
+      libc.src.stdlib.getenv
+      libc.src.string.strtok
+      libc.src.__support.CPP.bit
   )
 endif()
 
