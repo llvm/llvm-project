@@ -26,6 +26,24 @@ GOFFObjectWriter &MCGOFFStreamer::getWriter() {
   return static_cast<GOFFObjectWriter &>(getAssembler().getWriter());
 }
 
+void MCGOFFStreamer::initSections(bool NoExecStack,
+                                  const MCSubtargetInfo &STI) {
+  MCContext &Ctx = getContext();
+
+  // Initialize the special names for the code and ada section.
+  StringRef FileName = Ctx.getMainFileName();
+  RootSDName = Twine(FileName).concat("#C").str();
+  ADAPRName = Twine(FileName).concat("#S").str();
+  MCSectionGOFF *TextSection = static_cast<MCSectionGOFF *>(Ctx.getObjectFileInfo()->getTextSection());
+  MCSectionGOFF *ADASection = static_cast<MCSectionGOFF *>(Ctx.getObjectFileInfo()->getADASection());
+  TextSection->setSDName(RootSDName);
+  ADASection->setLDorPRName(ADAPRName);
+  ADASection->setADA();
+
+  // Switch to the code section.
+  switchSection(TextSection);
+}
+
 MCStreamer *llvm::createGOFFStreamer(MCContext &Context,
                                      std::unique_ptr<MCAsmBackend> &&MAB,
                                      std::unique_ptr<MCObjectWriter> &&OW,

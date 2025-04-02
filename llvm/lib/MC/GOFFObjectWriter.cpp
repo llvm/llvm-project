@@ -13,7 +13,7 @@
 #include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCGOFFObjectWriter.h"
-#include "llvm/MC/MCGOFFSymbolMapper.h"
+#include "llvm/MC/MCGOFFAttributes.h"
 #include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Casting.h"
@@ -219,7 +219,7 @@ public:
 
   GOFFSymbol() : EsdId(0), ParentEsdId(0) {}
 
-  GOFFSymbol(StringRef Name, uint32_t EsdID, const SDAttr &Attr)
+  GOFFSymbol(StringRef Name, uint32_t EsdID, const GOFF::SDAttr &Attr)
       : Name(Name.data(), Name.size()), EsdId(EsdID), ParentEsdId(0),
         SymbolType(GOFF::ESD_ST_SectionDefinition) {
     BehavAttrs.setTaskingBehavior(Attr.TaskingBehavior);
@@ -227,7 +227,7 @@ public:
   }
 
   GOFFSymbol(StringRef Name, uint32_t EsdID, uint32_t ParentEsdID,
-             const EDAttr &Attr)
+             const GOFF::EDAttr &Attr)
       : Name(Name.data(), Name.size()), EsdId(EsdID), ParentEsdId(ParentEsdID),
         SymbolType(GOFF::ESD_ST_ElementDefinition) {
     this->NameSpace = Attr.NameSpace;
@@ -245,7 +245,7 @@ public:
   }
 
   GOFFSymbol(StringRef Name, uint32_t EsdID, uint32_t ParentEsdID,
-             const LDAttr &Attr)
+             const GOFF::LDAttr &Attr)
       : Name(Name.data(), Name.size()), EsdId(EsdID), ParentEsdId(ParentEsdID),
         SymbolType(GOFF::ESD_ST_LabelDefinition) {
     this->NameSpace = Attr.NameSpace;
@@ -258,7 +258,7 @@ public:
   }
 
   GOFFSymbol(StringRef Name, uint32_t EsdID, uint32_t ParentEsdID,
-             const PRAttr &Attr)
+             const GOFF::PRAttr &Attr)
       : Name(Name.data(), Name.size()), EsdId(EsdID), ParentEsdId(ParentEsdID),
         SymbolType(GOFF::ESD_ST_PartReference) {
     this->NameSpace = Attr.NameSpace;
@@ -277,9 +277,6 @@ class GOFFWriter {
   GOFFOstream OS;
   [[maybe_unused]] MCAssembler &Asm;
 
-  /// Mapping from MCSectionGOFF/MCSymbolGOFF to GOFF symbols and attributes.
-  GOFFSymbolMapper SymbolMapper;
-
   /// Counter for symbol id's.
   uint32_t EsdIdCounter = 0;
 
@@ -291,12 +288,12 @@ class GOFFWriter {
   void writeSymbol(const GOFFSymbol &Symbol);
   void writeEnd();
 
-  GOFFSymbol createGOFFSymbol(StringRef Name, const SDAttr &Attr);
-  GOFFSymbol createGOFFSymbol(StringRef Name, const EDAttr &Attr,
+  GOFFSymbol createGOFFSymbol(StringRef Name, const GOFF::SDAttr &Attr);
+  GOFFSymbol createGOFFSymbol(StringRef Name, const GOFF::EDAttr &Attr,
                               uint32_t ParentEsdId);
-  GOFFSymbol createGOFFSymbol(StringRef Name, const LDAttr &Attr,
+  GOFFSymbol createGOFFSymbol(StringRef Name, const GOFF::LDAttr &Attr,
                               uint32_t ParentEsdId);
-  GOFFSymbol createGOFFSymbol(StringRef Name, const PRAttr &Attr,
+  GOFFSymbol createGOFFSymbol(StringRef Name, const GOFF::PRAttr &Attr,
                               uint32_t ParentEsdId);
 
   void defineRootSymbol(const MCSectionGOFF *Text);
@@ -311,64 +308,62 @@ public:
 
 GOFFWriter::GOFFWriter(raw_pwrite_stream &OS) : OS(OS) {}
 
-GOFFSymbol GOFFWriter::createGOFFSymbol(StringRef Name, const SDAttr &Attr) {
+GOFFSymbol GOFFWriter::createGOFFSymbol(StringRef Name, const GOFF::SDAttr &Attr) {
   return GOFFSymbol(Name, ++EsdIdCounter, Attr);
 }
 
-GOFFSymbol GOFFWriter::createGOFFSymbol(StringRef Name, const EDAttr &Attr,
+GOFFSymbol GOFFWriter::createGOFFSymbol(StringRef Name, const GOFF::EDAttr &Attr,
                                         uint32_t ParentEsdId) {
   return GOFFSymbol(Name, ++EsdIdCounter, ParentEsdId, Attr);
 }
 
-GOFFSymbol GOFFWriter::createGOFFSymbol(StringRef Name, const LDAttr &Attr,
+GOFFSymbol GOFFWriter::createGOFFSymbol(StringRef Name, const GOFF::LDAttr &Attr,
                                         uint32_t ParentEsdId) {
   return GOFFSymbol(Name, ++EsdIdCounter, ParentEsdId, Attr);
 }
 
-GOFFSymbol GOFFWriter::createGOFFSymbol(StringRef Name, const PRAttr &Attr,
+GOFFSymbol GOFFWriter::createGOFFSymbol(StringRef Name, const GOFF::PRAttr &Attr,
                                         uint32_t ParentEsdId) {
   return GOFFSymbol(Name, ++EsdIdCounter, ParentEsdId, Attr);
 }
 
 void GOFFWriter::defineRootSymbol(const MCSectionGOFF *Text) {
-  // There is always a text section except for DWARF unit tests.
-  SymbolMapper.determineRootSD("");
+  // There is always a text section except for DWARF unit tests, so be lenient.
   GOFFSymbol RootSD =
-      createGOFFSymbol(SymbolMapper.getRootSDName(), SymbolMapper.getRootSD());
+      Text ? createGOFFSymbol(Text->getSDName(), Text->getSDAttributes())
+           : createGOFFSymbol("", GOFF::SDAttr{GOFF::ESD_TA_Unspecified,
+                                               GOFF::ESD_BSC_Unspecified});
   writeSymbol(RootSD);
   RootSDEsdId = RootSD.EsdId;
 }
 
 void GOFFWriter::defineSectionSymbols(const MCSectionGOFF &Section) {
-  auto [GOFFSectionData, Found] = SymbolMapper.getSection(Section);
-  if (Found) {
     uint32_t SDEsdId = RootSDEsdId;
-    if (!GOFFSectionData.IsSDRootSD) {
-      GOFFSymbol SD = createGOFFSymbol(GOFFSectionData.SDName,
-                                       GOFFSectionData.SDAttributes);
+    if (!Section.usesRootSD()) {
+      GOFFSymbol SD =
+          createGOFFSymbol(Section.getSDName(), Section.getSDAttributes());
       SDEsdId = SD.EsdId;
       writeSymbol(SD);
     }
 
-    GOFFSymbol ED = createGOFFSymbol(GOFFSectionData.EDName,
-                                     GOFFSectionData.EDAttributes, SDEsdId);
-    if (GOFFSectionData.Tag == GOFFSectionData::None ||
-        GOFFSectionData.Tag == GOFFSectionData::LD) {
+    GOFFSymbol ED = createGOFFSymbol(Section.getEDName(),
+                                     Section.getEDAttributes(), SDEsdId);
+    if ((!Section.hasLD() && !Section.hasPR()) || Section.hasLD()) {
       ED.SectionLength = Asm.getSectionAddressSize(Section);
     }
     writeSymbol(ED);
 
-    if (GOFFSectionData.Tag == GOFFSectionData::LD) {
-      GOFFSymbol LD = createGOFFSymbol(GOFFSectionData.LDorPRName,
-                                       GOFFSectionData.LDAttributes, ED.EsdId);
+    if (Section.hasLD()) {
+      GOFFSymbol LD = createGOFFSymbol(Section.getLDorPRName(),
+                                       Section.getLDAttributes(), ED.EsdId);
       if (Section.isText())
         LD.ADAEsdId = ADAEsdId;
       writeSymbol(LD);
     }
 
-    if (GOFFSectionData.Tag == GOFFSectionData::PR) {
-      GOFFSymbol PR = createGOFFSymbol(GOFFSectionData.LDorPRName,
-                                       GOFFSectionData.PRAttributes, ED.EsdId);
+    if (Section.hasPR()) {
+      GOFFSymbol PR = createGOFFSymbol(Section.getLDorPRName(),
+                                       Section.getPRAttributes(), ED.EsdId);
       PR.SectionLength = Asm.getSectionAddressSize(Section);
       if (Section.getName() == ".ada") {
         // We cannot have a zero-length section for data.  If we do,
@@ -382,21 +377,18 @@ void GOFFWriter::defineSectionSymbols(const MCSectionGOFF &Section) {
       }
       writeSymbol(PR);
     }
-    return;
-  }
-  // TODO It is possible to get here. This will be handled later.
 }
 
 void GOFFWriter::defineSymbols() {
-  // Search for .text and .ada sections. These should be the first sections in
-  // the list, so the loop should be cheap.
+  // Search for .text and .ada sections.
   MCSectionGOFF *Text = nullptr;
   MCSectionGOFF *ADA = nullptr;
   for (MCSection &S : Asm) {
-    if (S.getName() == ".text")
-      Text = &cast<MCSectionGOFF>(S);
-    if (S.getName() == ".ada")
-      ADA = &cast<MCSectionGOFF>(S);
+    auto &Section = cast<MCSectionGOFF>(S);
+    if (Section.isText())
+      Text = &Section;
+    if (Section.isADA())
+      ADA = &Section;
   }
   defineRootSymbol(Text);
   if (ADA)

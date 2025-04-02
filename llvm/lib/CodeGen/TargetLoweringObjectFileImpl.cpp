@@ -47,6 +47,7 @@
 #include "llvm/MC/MCAsmInfoDarwin.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCGOFFAttributes.h"
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSectionGOFF.h"
@@ -2775,6 +2776,12 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForLSDA(
 //===----------------------------------------------------------------------===//
 TargetLoweringObjectFileGOFF::TargetLoweringObjectFileGOFF() = default;
 
+void TargetLoweringObjectFileGOFF::getModuleMetadata(Module &M) {
+  // Set the main file name if not set previously by the tool.
+  if (getContext().getMainFileName().empty())
+    getContext().setMainFileName(M.getSourceFileName());
+}
+
 MCSection *TargetLoweringObjectFileGOFF::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   return SelectSectionForGlobal(GO, Kind, TM);
@@ -2783,15 +2790,55 @@ MCSection *TargetLoweringObjectFileGOFF::getExplicitSectionGlobal(
 MCSection *TargetLoweringObjectFileGOFF::getSectionForLSDA(
     const Function &F, const MCSymbol &FnSym, const TargetMachine &TM) const {
   std::string Name = ".gcc_exception_table." + F.getName().str();
-  return getContext().getGOFFSection(Name, SectionKind::getData(), nullptr, 0);
+  constexpr bool Is64Bit = true;
+  constexpr bool UsesXPLINK = true;
+  return getContext().getGOFFSection(
+      SectionKind::getData(), GOFF::WSA<true>,
+      GOFF::EDAttr{false, GOFF::ESD_EXE_DATA, GOFF::AMODE<Is64Bit>,
+                   GOFF::RMODE<Is64Bit>, GOFF::ESD_NS_Parts,
+                   GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Merge,
+                   GOFF::LOADBEHAVIOR<UsesXPLINK>, GOFF::ESD_RQ_0,
+                   GOFF::ESD_ALIGN_Doubleword},
+      Name,
+      GOFF::PRAttr{true, false, GOFF::ESD_EXE_Unspecified, GOFF::ESD_NS_Parts,
+                   GOFF::LINKAGE<UsesXPLINK>, GOFF::AMODE<Is64Bit>,
+                   GOFF::ESD_BSC_Section, GOFF::ESD_DSS_NoWarning,
+                   GOFF::ESD_ALIGN_Fullword, 0});
 }
 
 MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   auto *Symbol = TM.getSymbol(GO);
-  if (Kind.isBSS())
-    return getContext().getGOFFSection(Symbol->getName(), SectionKind::getBSS(),
-                                       nullptr, 0);
+  constexpr bool Is64Bit = true;
+  constexpr bool UsesXPLINK = true;
 
-  return getContext().getObjectFileInfo()->getTextSection();
+  if (Kind.isBSS() || Kind.isData()) {
+    GOFF::ESDBindingScope PRBindingScope =
+        GO->hasExternalLinkage()
+            ? (GO->hasDefaultVisibility() ? GOFF::ESD_BSC_ImportExport
+                                          : GOFF::ESD_BSC_Library)
+            : GOFF::ESD_BSC_Section;
+    GOFF::ESDBindingScope SDBindingScope =
+        PRBindingScope == GOFF::ESD_BSC_Section ? GOFF::ESD_BSC_Section
+                                                : GOFF::ESD_BSC_Unspecified;
+    return getContext().getGOFFSection(
+        Kind, Symbol->getName(),
+        GOFF::SDAttr{GOFF::ESD_TA_Unspecified, SDBindingScope},
+        GOFF::WSA<Is64Bit>,
+        GOFF::EDAttr{false, GOFF::ESD_EXE_DATA, GOFF::AMODE<Is64Bit>,
+                     GOFF::RMODE<Is64Bit>, GOFF::ESD_NS_Parts,
+                     GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Merge,
+                     GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_0,
+                     static_cast<GOFF::ESDAlignment>(GO->getAlignment())
+
+        },
+        Symbol->getName(),
+        GOFF::PRAttr{false, false, GOFF::ESD_EXE_DATA, GOFF::ESD_NS_Parts,
+                     GOFF::LINKAGE<UsesXPLINK>, GOFF::AMODE<Is64Bit>,
+                     PRBindingScope, GOFF::ESD_DSS_NoWarning,
+                     static_cast<GOFF::ESDAlignment>(GO->getAlignment()), 0
+
+        });
+  }
+  return TextSection;
 }

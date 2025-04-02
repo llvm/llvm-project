@@ -19,8 +19,10 @@
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCAsmMacro.h"
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/MC/MCGOFFAttributes.h"
 #include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/MC/MCSection.h"
+#include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCSymbolTableEntry.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Support/Allocator.h"
@@ -54,7 +56,6 @@ class MCSection;
 class MCSectionCOFF;
 class MCSectionDXContainer;
 class MCSectionELF;
-class MCSectionGOFF;
 class MCSectionMachO;
 class MCSectionSPIRV;
 class MCSectionWasm;
@@ -606,9 +607,36 @@ public:
   getELFUniqueIDForEntsize(StringRef SectionName, unsigned Flags,
                            unsigned EntrySize);
 
-  LLVM_ABI MCSectionGOFF *getGOFFSection(StringRef Section, SectionKind Kind,
-                                         MCSection *Parent,
-                                         uint32_t Subsection = 0);
+private:
+  MCSectionGOFF *getGOFFSection(SectionKind Kind, StringRef SDName,
+                                GOFF::SDAttr SDAttributes, StringRef EDName,
+                                GOFF::EDAttr EDAttributes, StringRef LDorPRName,
+                                GOFF::LDAttr LDAttributes,
+                                GOFF::PRAttr PRAttributes,
+                                MCSectionGOFF::SectionFlags Flags);
+
+public:
+  // Create a section with SD/ED/LD symbols.
+  MCSectionGOFF *getGOFFSection(SectionKind Kind, StringRef SDName,
+                                GOFF::SDAttr SDAttributes, StringRef EDName,
+                                GOFF::EDAttr EDAttributes, StringRef LDorPRName,
+                                GOFF::LDAttr LDAttributes);
+  // Create a section with SD/ED/PR symbols.
+  MCSectionGOFF *getGOFFSection(SectionKind Kind, StringRef SDName,
+                                GOFF::SDAttr SDAttributes, StringRef EDName,
+                                GOFF::EDAttr EDAttributes, StringRef LDorPRName,
+                                GOFF::PRAttr PRAttributes);
+  // Create a section with root-SD/ED/LD symbols, using the root-SD name for LD.
+  MCSectionGOFF *getGOFFSection(SectionKind Kind, StringRef EDName,
+                                GOFF::EDAttr EDAttributes,
+                                GOFF::LDAttr LDAttributes);
+  // Create a section with root-SD/ED/PR symbols.
+  MCSectionGOFF *getGOFFSection(SectionKind Kind, StringRef EDName,
+                                GOFF::EDAttr EDAttributes, StringRef PRName,
+                                GOFF::PRAttr PRAttributes);
+  // Create a section with root-SD/ED symbols.
+  MCSectionGOFF *getGOFFSection(SectionKind Kind, StringRef EDName,
+                                GOFF::EDAttr EDAttributes);
 
   LLVM_ABI MCSectionCOFF *
   getCOFFSection(StringRef Section, unsigned Characteristics,

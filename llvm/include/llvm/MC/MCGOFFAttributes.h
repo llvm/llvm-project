@@ -1,4 +1,4 @@
-//===- MCGOFFSymbolMapper.h - Maps MC section/symbol to GOFF symbols ------===//
+//===- MCGOFFAttributes.h - Attributes of GOFF symbols --------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,25 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Maps a section or a symbol to the GOFF symbols it is composed of, and their
-// attributes.
+// Defines the various attribute collections defining GOFF symbols.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_MC_MCGOFFSYMBOLMAPPER_H
-#define LLVM_MC_MCGOFFSYMBOLMAPPER_H
+#ifndef LLVM_MC_MCGOFFATTRIBUTES_H
+#define LLVM_MC_MCGOFFATTRIBUTES_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/GOFF.h"
-#include "llvm/Support/Alignment.h"
-#include <string>
-#include <utility>
 
 namespace llvm {
-class MCAssembler;
-class MCContext;
-class MCSectionGOFF;
-
+namespace GOFF {
 // An "External Symbol Definition" in the GOFF file has a type, and depending on
 // the type a different subset of the fields is used.
 //
@@ -40,8 +33,8 @@ class MCSectionGOFF;
 // the whole data is pulled into the resulting executable, and the addresses
 // given by the LD symbols are resolved.
 //
-// The alternative is to use a Part Definition (PR). In this case, the data (in a
-// text record) is associated with the part. When binding, only the data of
+// The alternative is to use a Part Definition (PR). In this case, the data (in
+// a text record) is associated with the part. When binding, only the data of
 // referenced PRs is pulled into the resulting binary.
 //
 // Both approaches are used, which means that the equivalent of a section in ELF
@@ -95,54 +88,40 @@ struct PRAttr {
   uint32_t SortKey = 0;
 };
 
-struct GOFFSectionData {
-  // Name and attributes of SD symbol.
-  StringRef SDName;
-  SDAttr SDAttributes;
+// Class names and other values depending on AMODE64 or AMODE31, and other
+// environment properties.
+template <bool Is64Bit>
+constexpr StringLiteral CODE =
+    Is64Bit ? StringLiteral("C_CODE64") : StringLiteral("C_CODE");
 
-  // Name and attributes of ED symbol.
-  StringRef EDName;
-  EDAttr EDAttributes;
+template <bool Is64Bit>
+constexpr StringLiteral WSA =
+    Is64Bit ? StringLiteral("C_WSA64") : StringLiteral("C_WSA");
 
-  // Name and attributes of LD or PR symbol.
-  StringRef LDorPRName;
-  LDAttr LDAttributes;
-  PRAttr PRAttributes;
+template <bool Is64Bit>
+constexpr StringLiteral DATA =
+    Is64Bit ? StringLiteral("C_DATA64") : StringLiteral("C_DATA");
 
-  // Indicates if there is a LD or PR symbol.
-  enum { None, LD, PR } Tag;
+template <bool Is64Bit>
+constexpr StringLiteral PPA2 =
+    Is64Bit ? StringLiteral("C_@@QPPA2") : StringLiteral("C_@@PPA2");
 
-  // Indicates if the SD symbol is to root symbol (aka the Csect Code).
-  bool IsSDRootSD;
-};
+template <bool Is64Bit>
+constexpr GOFF::ESDAmode AMODE =
+    Is64Bit ? GOFF::ESD_AMODE_64 : GOFF::ESD_AMODE_ANY;
 
-class GOFFSymbolMapper {
-  MCContext &Ctx;
+template <bool Is64Bit>
+constexpr GOFF::ESDRmode RMODE =
+    Is64Bit ? GOFF::ESD_RMODE_64 : GOFF::ESD_RMODE_31;
 
-  std::string RootSDName;
-  SDAttr RootSDAttributes;
+template <bool IsXPLINK>
+constexpr GOFF::ESDLinkageType LINKAGE =
+    IsXPLINK ? GOFF::ESD_LT_XPLink : GOFF::ESD_LT_OS;
 
-  std::string ADALDName;
-
-  StringRef BaseName;
-
-  bool IsCsectCodeNameEmpty;
-  bool Is64Bit;
-  bool UsesXPLINK;
-
-public:
-  GOFFSymbolMapper(MCContext &Ctx);
-  GOFFSymbolMapper(MCAssembler &Asm);
-
-  // Required order: .text first, then .ada.
-  std::pair<GOFFSectionData, bool> getSection(const MCSectionGOFF &Section);
-
-  void setBaseName();
-  void determineRootSD(StringRef CSectCodeName);
-  llvm::StringRef getRootSDName() const;
-  const SDAttr &getRootSD() const;
-};
-
+template <bool IsXPLINK>
+constexpr GOFF::ESDLoadingBehavior LOADBEHAVIOR =
+    IsXPLINK ? GOFF::ESD_LB_Initial : GOFF::ESD_LB_Deferred;
+} // namespace GOFF
 } // namespace llvm
 
 #endif

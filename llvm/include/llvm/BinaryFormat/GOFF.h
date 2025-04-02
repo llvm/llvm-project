@@ -204,8 +204,8 @@ public:
 };
 
 // Structure for the flag field of a symbol. See
-// https://www.ibm.com/docs/en/zos/3.1.0?topic=formats-external-symbol-definition-record ,
-// offset 41, for the definition.
+// https://www.ibm.com/docs/en/zos/3.1.0?topic=formats-external-symbol-definition-record
+// at offset 41 for the definition.
 struct SymbolFlags {
   Flags SymFlags;
 

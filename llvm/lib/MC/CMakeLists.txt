@@ -26,7 +26,6 @@ add_llvm_component_library(LLVMMC
   MCExpr.cpp
   MCFragment.cpp
   MCGOFFStreamer.cpp
-  MCGOFFSymbolMapper.cpp
   MCInst.cpp
   MCInstPrinter.cpp
   MCInstrAnalysis.cpp

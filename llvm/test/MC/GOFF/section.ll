@@ -1,6 +1,5 @@
 ; RUN: llc <%s --mtriple s390x-ibm-zos --filetype=obj -o - | \
 ; RUN:   od -Ax -tx1 -v | FileCheck --ignore-case %s
-; REQUIRES: systemz-registered-target
 
 source_filename = "test.ll"
 
