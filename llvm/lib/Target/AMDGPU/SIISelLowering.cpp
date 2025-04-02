@@ -1211,7 +1211,7 @@ MVT SITargetLowering::getPointerMemTy(const DataLayout &DL, unsigned AS) const {
 }
 
 bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                          const CallInst &CI,
+                                          const CallBase &CI,
                                           MachineFunction &MF,
                                           unsigned IntrID) const {
   Info.flags = MachineMemOperand::MONone;
@@ -1497,7 +1497,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
 }
 
 void SITargetLowering::CollectTargetIntrinsicOperands(
-    const CallInst &I, SmallVectorImpl<SDValue> &Ops, SelectionDAG &DAG) const {
+    const CallBase &I, SmallVectorImpl<SDValue> &Ops, SelectionDAG &DAG) const {
   switch (cast<IntrinsicInst>(I).getIntrinsicID()) {
   case Intrinsic::amdgcn_addrspacecast_nonnull: {
     // The DAG's ValueType loses the addrspaces.
