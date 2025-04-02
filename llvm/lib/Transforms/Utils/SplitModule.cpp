@@ -182,7 +182,7 @@ static void findPartitions(Module &M, ClusterIDMapType &ClusterIDMap,
        I != E; ++I)
     if (I->isLeader())
       Sets.push_back(
-          std::make_pair(std::distance(GVtoClusterMap.member_begin(I),
+          std::make_pair(std::distance(GVtoClusterMap.member_begin(*I),
                                        GVtoClusterMap.member_end()),
                          I));
 

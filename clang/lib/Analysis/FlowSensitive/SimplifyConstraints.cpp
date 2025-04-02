@@ -151,11 +151,10 @@ void simplifyConstraints(llvm::SetVector<const Formula *> &Constraints,
   }
 
   if (Info) {
-    for (auto It = EquivalentAtoms.begin(), End = EquivalentAtoms.end();
-         It != End; ++It) {
-      if (!It->isLeader())
+    for (const auto &E : EquivalentAtoms) {
+      if (!E.isLeader())
         continue;
-      Atom At = *EquivalentAtoms.findLeader(*It);
+      Atom At = *EquivalentAtoms.findLeader(E);
       if (TrueAtoms.contains(At) || FalseAtoms.contains(At))
         continue;
       llvm::SmallVector<Atom> Atoms =
