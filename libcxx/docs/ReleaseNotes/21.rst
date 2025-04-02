@@ -77,7 +77,10 @@ LLVM 22
 ABI Affecting Changes
 ---------------------
 
-- TODO
+- When using GCC, the ``std`` namespace is now annotated with ``[[gnu::visibility("default")]]``. This may cause more
+  symbols to be exported from shared libraries when building with ``-fvisibility=hidden``. This also fixes RTTI
+  comparison between shared libraries, since all RTTI has the correct visibility now. There is no behaviour change on
+  Clang.
 
 
 Build System Changes
