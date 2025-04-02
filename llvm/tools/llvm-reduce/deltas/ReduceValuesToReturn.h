@@ -12,7 +12,8 @@
 #include "Delta.h"
 
 namespace llvm {
-void reduceValuesToReturnDeltaPass(Oracle &O, ReducerWorkItem &WorkItem);
+void reduceArgumentsToReturnDeltaPass(Oracle &O, ReducerWorkItem &WorkItem);
+void reduceInstructionsToReturnDeltaPass(Oracle &O, ReducerWorkItem &WorkItem);
 } // namespace llvm
 
 #endif

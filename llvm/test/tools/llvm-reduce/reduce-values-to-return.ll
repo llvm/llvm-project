@@ -1,7 +1,7 @@
 ; Test that llvm-reduce can move intermediate values by inserting
 ; early returns
 ;
-; RUN: llvm-reduce --abort-on-invalid-reduction --delta-passes=values-to-return --test FileCheck --test-arg --check-prefixes=CHECK,INTERESTING --test-arg %s --test-arg --input-file %s -o %t
+; RUN: llvm-reduce --abort-on-invalid-reduction --delta-passes=instructions-to-return --test FileCheck --test-arg --check-prefixes=CHECK,INTERESTING --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: FileCheck --check-prefixes=CHECK,RESULT %s < %t
 
 @gv = global i32 0, align 4
