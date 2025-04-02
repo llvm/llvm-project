@@ -428,7 +428,7 @@ void GOFFWriter::writeHeader() {
 
 void GOFFWriter::writeSymbol(const GOFFSymbol &Symbol) {
   if (Symbol.Offset >= (((uint64_t)1) << 31))
-    report_fatal_error("ESD offset outof range");
+    report_fatal_error("ESD offset out of range");
 
   // All symbol names are in EBCDIC.
   SmallString<256> Name;
