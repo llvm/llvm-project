@@ -45,6 +45,12 @@ class JumpTable : public BinaryData {
   JumpTable(const JumpTable &) = delete;
   JumpTable &operator=(const JumpTable &) = delete;
 
+  /// Size of the entry used for storage.
+  size_t EntrySize;
+
+  /// Size of the entry size we will write (we may use a more compact layout)
+  size_t OutputEntrySize;
+
 public:
   enum JumpTableType : char {
     JTT_NORMAL,
@@ -57,11 +63,10 @@ public:
     uint64_t Count{0};
   };
 
-  /// Size of the entry used for storage.
-  size_t EntrySize;
+  size_t getEntrySize() const { return EntrySize; }
 
-  /// Size of the entry size we will write (we may use a more compact layout)
-  size_t OutputEntrySize;
+  size_t getOutputEntrySize() const { return OutputEntrySize; }
+  void setOutputEntrySize(size_t val) { OutputEntrySize = val; }
 
   /// The type of this jump table.
   JumpTableType Type;
