@@ -51,10 +51,10 @@ bb2:
 ; INTERESTING-LABEL: define {{.+}} @callsite_different_type_unused_0(
 
 ; RESULT-LABEL: define i64 @callsite_different_type_unused_0(ptr %arg) {
-; RESULT-NEXT: %unused0 = call i64 @inst_to_return_has_different_type_but_call_result_unused(ptr %arg)
+; RESULT-NEXT: %unused0 = call range(i64 99, 1024) i64 @inst_to_return_has_different_type_but_call_result_unused(ptr %arg)
 ; RESULT-NEXT: ret i64 %unused0
 define void @callsite_different_type_unused_0(ptr %arg) {
-  %unused0 = call i64 @inst_to_return_has_different_type_but_call_result_unused(ptr %arg)
+  %unused0 = call range(i64 99, 1024) i64 @inst_to_return_has_different_type_but_call_result_unused(ptr %arg)
   %unused1 = call i64 @inst_to_return_has_different_type_but_call_result_unused(ptr null)
   ret void
 }
@@ -121,4 +121,35 @@ bb2:
 define void @call_multiple_returns_wrong_return_type(ptr %arg, i1 %cond, i32 %arg2) {
   %unused = call <2 x i32> @multiple_returns_wrong_return_type(ptr %arg, i1 %cond, i32 %arg2)
   ret void
+}
+
+; INTERESTING-LABEL: @drop_incompatible_type_return_attrs(
+
+; RESULT-LABEL: define i32 @drop_incompatible_type_return_attrs(ptr %arg, float %arg1) {
+; RESULT-NEXT: %load = load i32, ptr %arg, align 4
+; RESULT-NEXT: ret i32 %load
+define nofpclass(nan inf) float @drop_incompatible_type_return_attrs(ptr %arg, float %arg1) {
+  %load = load i32, ptr %arg
+  store i32 %load, ptr @gv
+  ret float %arg1
+}
+
+; INTERESTING-LABEL: @drop_incompatible_return_range(
+; RESULT-LABEL: define i32 @drop_incompatible_return_range(ptr %arg, i64 %arg1) {
+; RESULT-NEXT: %load = load i32, ptr %arg, align 4
+; RESULT-NEXT: ret i32 %load
+define range(i64 8, 256) i64 @drop_incompatible_return_range(ptr %arg, i64 %arg1) {
+  %load = load i32, ptr %arg
+  store i32 %load, ptr @gv
+  ret i64 %arg1
+}
+
+; INTERESTING-LABEL: @preserve_compatible_return_range(
+; RESULT-LABEL: define range(i32 8, 256) i32 @preserve_compatible_return_range(ptr %arg, <2 x i32> %arg1) {
+; RESULT-NEXT: %load = load i32, ptr %arg, align 4
+; RESULT-NEXT: ret i32 %load
+define range(i32 8, 256) <2 x i32> @preserve_compatible_return_range(ptr %arg, <2 x i32> %arg1) {
+  %load = load i32, ptr %arg
+  store i32 %load, ptr @gv
+  ret <2 x i32> %arg1
 }

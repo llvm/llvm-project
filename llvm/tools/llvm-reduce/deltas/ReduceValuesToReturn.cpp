@@ -18,6 +18,8 @@
 
 #include "Delta.h"
 #include "Utils.h"
+#include "llvm/IR/AttributeMask.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/Debug.h"
@@ -55,8 +57,10 @@ static void rewriteFuncWithReturnType(Function &OldF, Value *NewRetValue) {
   BasicBlock::iterator NewValIt =
       NewRetI ? NewRetI->getIterator() : EntryBB.end();
 
+  Type *OldRetTy = OldFuncTy->getReturnType();
+
   // Hack up any return values in other blocks, we can't leave them as ret void.
-  if (OldFuncTy->getReturnType() != NewRetTy) {
+  if (OldRetTy != NewRetTy) {
     for (BasicBlock &OtherRetBB : OldF) {
       if (&OtherRetBB != NewRetBlock) {
         auto *OrigRI = dyn_cast<ReturnInst>(OtherRetBB.getTerminator());
@@ -91,6 +95,15 @@ static void rewriteFuncWithReturnType(Function &OldF, Value *NewRetValue) {
   // probably ought to only be pruning blocks that became dead directly as a
   // result of our pruning here.
   EliminateUnreachableBlocks(OldF);
+
+
+  // Drop the incompatible attributes before we copy over to the new function.
+  if (OldRetTy != NewRetTy) {
+    AttributeList AL = OldF.getAttributes();
+    AttributeMask IncompatibleAttrs =
+        AttributeFuncs::typeIncompatible(NewRetTy, AL.getRetAttrs());
+    OldF.removeRetAttrs(IncompatibleAttrs);
+  }
 
   Function *NewF =
       Function::Create(NewFuncTy, OldF.getLinkage(), OldF.getAddressSpace(), "",
