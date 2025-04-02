@@ -29,10 +29,12 @@
 # RUN: ld.lld a.o b.o -o out1 -z undefs
 # RUN: llvm-readelf -r -x .data out1 | FileCheck %s --check-prefix=STATIC1
 # RUN: ld.lld a.o b.o -o out1.pie -pie -z undefs
-# RUN: llvm-readelf -r -x .data out1.pie | FileCheck %s --check-prefix=STATIC2
+# RUN: llvm-readelf -r -x .data out1.pie | FileCheck %s --check-prefix=STATIC1
 
 # STATIC1:      no relocations
-# STATIC2:      R_X86_64_RELATIVE
+# STATIC1:      Hex dump of section '.data':
+# STATIC1-NEXT: {{.*}} 00000000 00000000 00000000 00000000 .
+# STATIC1-EMPTY:
 
 # RUN: ld.lld a.o b.o c.o -pie -z undefs 2>&1 | count 0
 
