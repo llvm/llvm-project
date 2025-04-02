@@ -5810,7 +5810,8 @@ static Instruction *foldICmpPow2Test(ICmpInst &I,
 
 /// Find all possible pairs (BinOp, RHS) that BinOp V, RHS can be simplified.
 using OffsetOp = std::pair<Instruction::BinaryOps, Value *>;
-static void collectOffsetOp(Value *V, SmallVectorImpl<OffsetOp> &Offsets) {
+static void collectOffsetOp(Value *V, SmallVectorImpl<OffsetOp> &Offsets,
+                            bool AllowRecursion) {
   Instruction *Inst = dyn_cast<Instruction>(V);
   if (!Inst)
     return;
@@ -5826,10 +5827,50 @@ static void collectOffsetOp(Value *V, SmallVectorImpl<OffsetOp> &Offsets) {
     Offsets.emplace_back(Instruction::Xor, Inst->getOperand(1));
     Offsets.emplace_back(Instruction::Xor, Inst->getOperand(0));
     break;
+  case Instruction::Select:
+    if (AllowRecursion) {
+      Value *TrueV = Inst->getOperand(1);
+      if (TrueV->hasOneUse())
+        collectOffsetOp(TrueV, Offsets, /*AllowRecursion=*/false);
+      Value *FalseV = Inst->getOperand(2);
+      if (FalseV->hasOneUse())
+        collectOffsetOp(FalseV, Offsets, /*AllowRecursion=*/false);
+    }
+    break;
   default:
     break;
   }
 }
+
+enum class OffsetKind { Invalid, Value, Select };
+
+struct OffsetResult {
+  OffsetKind Kind;
+  Value *V0, *V1, *V2;
+
+  static OffsetResult invalid() {
+    return {OffsetKind::Invalid, nullptr, nullptr, nullptr};
+  }
+  static OffsetResult value(Value *V) {
+    return {OffsetKind::Value, V, nullptr, nullptr};
+  }
+  static OffsetResult select(Value *Cond, Value *TrueV, Value *FalseV) {
+    return {OffsetKind::Select, Cond, TrueV, FalseV};
+  }
+  bool isValid() const { return Kind != OffsetKind::Invalid; }
+  Value *materialize(InstCombiner::BuilderTy &Builder) const {
+    switch (Kind) {
+    case OffsetKind::Invalid:
+      llvm_unreachable("Invalid offset result");
+    case OffsetKind::Value:
+      return V0;
+    case OffsetKind::Select:
+      return Builder.CreateSelect(V0, V1, V2);
+    default:
+      llvm_unreachable("Unknown offset result kind");
+    }
+  }
+};
 
 /// Offset both sides of an equality icmp to see if we can save some
 /// instructions. icmp eq/ne X, Y -> icmp eq/ne X op C, Y op C Note: This
@@ -5844,22 +5885,47 @@ static Instruction *foldICmpEqualityWithOffset(ICmpInst &I,
 
   SmallVector<OffsetOp, 4> OffsetOps;
   if (Op0->hasOneUse())
-    collectOffsetOp(Op0, OffsetOps);
+    collectOffsetOp(Op0, OffsetOps, /*AllowRecursion=*/true);
   if (Op1->hasOneUse())
-    collectOffsetOp(Op1, OffsetOps);
+    collectOffsetOp(Op1, OffsetOps, /*AllowRecursion=*/true);
+
+  auto ApplyOffsetImpl = [&](Value *V, unsigned BinOpc, Value *RHS) -> Value * {
+    Value *Simplified = simplifyBinOp(BinOpc, V, RHS, SQ);
+    // Avoid infinite loops by checking if RHS is an identity for the BinOp.
+    if (!Simplified || Simplified == V)
+      return nullptr;
+    return Simplified;
+  };
+
+  auto ApplyOffset = [&](Value *V, unsigned BinOpc,
+                         Value *RHS) -> OffsetResult {
+    if (auto *Sel = dyn_cast<SelectInst>(V)) {
+      Value *TrueVal = ApplyOffsetImpl(Sel->getTrueValue(), BinOpc, RHS);
+      if (!TrueVal)
+        return OffsetResult::invalid();
+      Value *FalseVal = ApplyOffsetImpl(Sel->getFalseValue(), BinOpc, RHS);
+      if (!FalseVal)
+        return OffsetResult::invalid();
+      return OffsetResult::select(Sel->getCondition(), TrueVal, FalseVal);
+    } else if (Value *Simplified = ApplyOffsetImpl(V, BinOpc, RHS)) {
+      return OffsetResult::value(Simplified);
+    }
+    return OffsetResult::invalid();
+  };
+
   for (auto [BinOp, RHS] : OffsetOps) {
     auto BinOpc = static_cast<unsigned>(BinOp);
 
-    Value *Simplified0 = simplifyBinOp(BinOpc, Op0, RHS, SQ);
-    if (!Simplified0 || Simplified0 == Op0)
+    auto Op0Result = ApplyOffset(Op0, BinOpc, RHS);
+    if (!Op0Result.isValid())
       continue;
-
-    Value *Simplified1 = simplifyBinOp(BinOpc, Op1, RHS, SQ);
-    if (!Simplified1 || Simplified1 == Op1)
+    auto Op1Result = ApplyOffset(Op1, BinOpc, RHS);
+    if (!Op1Result.isValid())
       continue;
 
     return new ICmpInst(static_cast<ICmpInst::Predicate>(I.getPredicate()),
-                        Simplified0, Simplified1);
+                        Op0Result.materialize(Builder),
+                        Op1Result.materialize(Builder));
   }
 
   return nullptr;
