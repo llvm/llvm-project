@@ -94,6 +94,8 @@ def simm5nonzero : RISCVOp<XLenVT>,
 
 def simm11 : RISCVSImmLeafOp<11>;
 
+def simm16 : RISCVSImmOp<16>;
+
 def simm16nonzero : RISCVOp<XLenVT>,
                     ImmLeaf<XLenVT, [{return (Imm != 0) && isInt<16>(Imm);}]> {
   let ParserMatchClass = SImmAsmOperand<16, "NonZero">;
@@ -138,6 +140,219 @@ def simm32_lsb0 : Operand<OtherVT> {
 //===----------------------------------------------------------------------===//
 // Instruction Formats
 //===----------------------------------------------------------------------===//
+
+
+class DirectiveInsnQC_EAI<dag outs, dag ins, string argstr>
+  : RVInst48<outs, ins, "", "", [], InstFormatQC_EAI> {
+  bits<7> opcode;
+  bits<3> func3;
+  bits<1> func1;
+
+  bits<5> rd;
+  bits<32> imm32;
+
+  let Inst{47-16} = imm32;
+  let Inst{15}    = func1;
+  let Inst{14-12} = func3;
+  let Inst{11-7}  = rd;
+  let Inst{6-0}   = opcode;
+
+  let AsmString = ".insn qc.eai " # argstr;
+}
+
+class DirectiveInsnQC_EI<dag outs, dag ins, string argstr>
+  : RVInst48<outs, ins, "", "", [], InstFormatQC_EI> {
+  bits<7> opcode;
+  bits<3> func3;
+  bits<2> func2;
+
+  bits<5> rd;
+  bits<5> rs1;
+  bits<26> imm26;
+
+  let Inst{47-32} = imm26{25-10};
+  let Inst{31-30} = func2;
+  let Inst{29-20} = imm26{9-0};
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = func3;
+  let Inst{11-7}  = rd;
+  let Inst{6-0}   = opcode;
+
+  let AsmString = ".insn qc.ei " # argstr;
+}
+
+class DirectiveInsnQC_EB<dag outs, dag ins, string argstr>
+  : RVInst48<outs, ins, "", "", [], InstFormatQC_EB> {
+  bits<7> opcode;
+  bits<3> func3;
+  bits<5> func5;
+
+  bits<5> rs1;
+  bits<12> imm12; // This one is the PC-relative offset
+  bits<16> imm16;
+
+  let Inst{47-32} = imm16;
+  let Inst{31}    = imm12{11};
+  let Inst{30-25} = imm12{9-4};
+  let Inst{24-20} = func5;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = func3;
+  let Inst{11-8}  = imm12{3-0};
+  let Inst{7}     = imm12{10};
+  let Inst{6-0}   = opcode;
+
+  let AsmString = ".insn qc.eb " # argstr;
+}
+
+class DirectiveInsnQC_EJ<dag outs, dag ins, string argstr>
+  : RVInst48<outs, ins, "", "", [], InstFormatQC_EJ> {
+  bits<7> opcode;
+  bits<3> func3;
+  bits<2> func2;
+  bits<5> func5;
+
+  bits<31> imm31;
+
+  let Inst{47-32} = imm31{30-15};
+  let Inst{31}    = imm31{11};
+  let Inst{30-25} = imm31{9-4};
+  let Inst{24-20} = func5;
+  let Inst{19-17} = imm31{14-12};
+  let Inst{16-15} = func2;
+  let Inst{14-12} = func3;
+  let Inst{11-8}  = imm31{3-0};
+  let Inst{7}     = imm31{10};
+  let Inst{6-0}   = opcode;
+
+  let AsmString = ".insn qc.ej " # argstr;
+}
+
+class DirectiveInsnQC_ES<dag outs, dag ins, string argstr>
+  : RVInst48<outs, ins, "", "", [], InstFormatQC_ES> {
+  bits<7> opcode;
+  bits<3> func3;
+  bits<2> func2;
+
+  bits<5> rs1;
+  bits<5> rs2;
+  bits<26> imm26;
+
+  let Inst{47-32} = imm26{25-10};
+  let Inst{31-30} = func2;
+  let Inst{29-25} = imm26{9-5};
+  let Inst{24-20} = rs2;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = func3;
+  let Inst{11-7}  = imm26{4-0};
+  let Inst{6-0}   = opcode;
+
+  let AsmString = ".insn qc.es " # argstr;
+}
+
+
+let isCodeGenOnly = true, hasSideEffects = true, mayLoad = true,
+    mayStore = true, hasNoSchedulingInfo = true, Predicates=[IsRV32] in {
+def InsnQC_EAI : DirectiveInsnQC_EAI<(outs AnyReg:$rd),
+                                     (ins uimm7_opcode:$opcode,
+                                          uimm3:$func3,
+                                          uimm1:$func1,
+                                          simm32:$imm32),
+                                     "$opcode, $func3, $func1, $rd, $imm32">;
+def InsnQC_EI : DirectiveInsnQC_EI<(outs AnyReg:$rd),
+                                   (ins uimm7_opcode:$opcode,
+                                        uimm3:$func3,
+                                        uimm2:$func2,
+                                        AnyReg:$rs1,
+                                        simm26:$imm26),
+                                   "$opcode, $func3, $func2, $rd, $rs1, $imm26">;
+def InsnQC_EI_Mem : DirectiveInsnQC_EI<(outs AnyReg:$rd),
+                                       (ins uimm7_opcode:$opcode,
+                                            uimm3:$func3,
+                                            uimm2:$func2,
+                                            AnyReg:$rs1,
+                                            simm26:$imm26),
+                                       "$opcode, $func3, $func2, $rd, ${imm26}(${rs1})">;
+def InsnQC_EB : DirectiveInsnQC_EB<(outs),
+                                   (ins uimm7_opcode:$opcode,
+                                        uimm3:$func3,
+                                        uimm5:$func5,
+                                        AnyReg:$rs1,
+                                        simm16:$imm16,
+                                        simm13_lsb0:$imm12),
+                                   "$opcode, $func3, $func5, $rs1, $imm16, $imm12">;
+def InsnQC_EJ : DirectiveInsnQC_EJ<(outs),
+                                   (ins uimm7_opcode:$opcode,
+                                        uimm3:$func3,
+                                        uimm2:$func2,
+                                        uimm5:$func5,
+                                        simm32_lsb0:$imm31),
+                                   "$opcode, $func3, $func2, $func5, $imm31">;
+def InsnQC_ES : DirectiveInsnQC_ES<(outs),
+                                   (ins uimm7_opcode:$opcode,
+                                        uimm3:$func3,
+                                        uimm2:$func2,
+                                        AnyReg:$rs2,
+                                        AnyReg:$rs1,
+                                        simm26:$imm26),
+                                   "$opcode, $func3, $func2, $rs2, ${imm26}(${rs1})">;
+} // isCodeGenOnly, hasSideEffects, mayLoad, mayStore, hasNoSchedulingInfo, Predicates
+
+let EmitPriority = 0, Predicates = [IsRV32] in {
+def : InstAlias<".insn_qc.eai $opcode, $func3, $func1, $rd, $imm32",
+                (InsnQC_EAI AnyReg:$rd,
+                            uimm7_opcode:$opcode,
+                            uimm3:$func3,
+                            uimm1:$func1,
+                            simm32:$imm32)>;
+def : InstAlias<".insn_qc.ei $opcode, $func3, $func2, $rd, $rs1, $imm26",
+                (InsnQC_EI AnyReg:$rd,
+                           uimm7_opcode:$opcode,
+                           uimm3:$func3,
+                           uimm2:$func2,
+                           AnyReg:$rs1,
+                           simm26:$imm26)>;
+def : InstAlias<".insn_qc.ei $opcode, $func3, $func2, $rd, ${imm26}(${rs1})",
+                (InsnQC_EI_Mem AnyReg:$rd,
+                               uimm7_opcode:$opcode,
+                               uimm3:$func3,
+                               uimm2:$func2,
+                               AnyReg:$rs1,
+                               simm26:$imm26)>;
+def : InstAlias<".insn_qc.ei $opcode, $func3, $func2, $rd, (${rs1})",
+                (InsnQC_EI_Mem AnyReg:$rd,
+                               uimm7_opcode:$opcode,
+                               uimm3:$func3,
+                               uimm2:$func2,
+                               AnyReg:$rs1,
+                               0)>;
+def : InstAlias<".insn_qc.eb $opcode, $func3, $func5, $rs1, $imm16, $imm12",
+                 (InsnQC_EB uimm7_opcode:$opcode,
+                            uimm3:$func3,
+                            uimm5:$func5,
+                            AnyReg:$rs1,
+                            simm16:$imm16,
+                            simm13_lsb0:$imm12)>;
+def : InstAlias<".insn_qc.ej $opcode, $func3, $func2, $func5, $imm31",
+                 (InsnQC_EJ uimm7_opcode:$opcode,
+                            uimm3:$func3,
+                            uimm2:$func2,
+                            uimm5:$func5,
+                            simm32_lsb0:$imm31)>;
+def : InstAlias<".insn_qc.es $opcode, $func3, $func2, $rs2, ${imm26}(${rs1})",
+                 (InsnQC_ES uimm7_opcode:$opcode,
+                            uimm3:$func3,
+                            uimm2:$func2,
+                            AnyReg:$rs2,
+                            AnyReg:$rs1,
+                            simm26:$imm26)>;
+def : InstAlias<".insn_qc.es $opcode, $func3, $func2, $rs2, (${rs1})",
+                 (InsnQC_ES uimm7_opcode:$opcode,
+                            uimm3:$func3,
+                            uimm2:$func2,
+                            AnyReg:$rs2,
+                            AnyReg:$rs1,
+                            0)>;
+} // EmitPriority = 0, Predicates = [IsRV32]
 
 //===----------------------------------------------------------------------===//
 // Instruction Class Templates
