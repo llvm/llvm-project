@@ -759,6 +759,46 @@ BreakpointSiteMatchesREPLBreakpoint(const BreakpointSiteSP &bp_site_sp) {
   return false;
 }
 
+/// Returns true if reason is Trace/Breakpoint/Watchpoint/PlanComplete.
+static bool IsDebuggerCausedStop(StopReason reason) {
+  switch (reason) {
+  case eStopReasonInvalid:
+  case eStopReasonNone:
+  case eStopReasonSignal:
+  case eStopReasonException:
+  case eStopReasonExec:
+  case eStopReasonFork:
+  case eStopReasonVFork:
+  case eStopReasonVForkDone:
+  case eStopReasonThreadExiting:
+  case eStopReasonInstrumentation:
+  case eStopReasonProcessorTrace:
+  case eStopReasonInterrupt:
+  case eStopReasonHistoryBoundary:
+    return false;
+
+  case eStopReasonTrace:
+  case eStopReasonBreakpoint:
+  case eStopReasonWatchpoint:
+  case eStopReasonPlanComplete:
+    return true;
+  }
+  return false;
+}
+
+/// Returns true if any thread in thread_list has a stop reason of
+/// Trace/Breakpoint/Watchpoint/PlanComplete.
+static bool AnyDebuggerCausedStop(ThreadList &thread_list) {
+  for (const auto &thread_sp : thread_list.Threads()) {
+    if (!thread_sp)
+      continue;
+    StopReason stop_reason = thread_sp->GetStopReason();
+    if (IsDebuggerCausedStop(stop_reason))
+      return true;
+  }
+  return false;
+}
+
 bool Process::HandleProcessStateChangedEvent(
     const EventSP &event_sp, Stream *stream,
     SelectMostRelevant select_most_relevant,
@@ -911,8 +951,6 @@ bool Process::HandleProcessStateChangedEvent(
             case eStopReasonTrace:
             case eStopReasonBreakpoint:
             case eStopReasonWatchpoint:
-              check_for_repl_breakpoint = repl_is_enabled;
-              LLVM_FALLTHROUGH;
             case eStopReasonException:
             case eStopReasonExec:
             case eStopReasonFork:
@@ -926,7 +964,6 @@ bool Process::HandleProcessStateChangedEvent(
                 other_thread = thread;
               break;
             case eStopReasonPlanComplete:
-              check_for_repl_breakpoint = repl_is_enabled;
               if (!plan_thread)
                 plan_thread = thread;
               break;
@@ -949,26 +986,15 @@ bool Process::HandleProcessStateChangedEvent(
             if (thread)
               thread_list.SetSelectedThreadByID(thread->GetID());
           }
-        } else {
-          switch (curr_thread_stop_reason) {
-          case eStopReasonBreakpoint:
-          case eStopReasonWatchpoint:
-            check_for_repl_breakpoint = repl_is_enabled;
-            break;
-          case eStopReasonPlanComplete:
-            // We might have hit a breakpoint during our REPL evaluation and be
-            // stopped
-            // at the REPL breakpoint
-            check_for_repl_breakpoint = repl_is_enabled;
-            break;
-          default:
-            break;
-          }
         }
+
+        check_for_repl_breakpoint =
+            prefer_curr_thread ? IsDebuggerCausedStop(curr_thread_stop_reason)
+                               : AnyDebuggerCausedStop(thread_list);
       }
 
       BreakpointSiteSP bp_site_sp;
-      if (check_for_repl_breakpoint) {
+      if (repl_is_enabled && check_for_repl_breakpoint) {
         // Make sure this isn't the internal "REPL" breakpoint
         if (curr_thread) {
           StopInfoSP stop_info_sp = curr_thread->GetStopInfo();
