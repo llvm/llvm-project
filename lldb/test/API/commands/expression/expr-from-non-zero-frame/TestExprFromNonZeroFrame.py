@@ -16,7 +16,7 @@ class ExprFromNonZeroFrame(TestBase):
         self.build()
 
         (_, _, thread, _) = lldbutil.run_to_source_breakpoint(
-            self, "Break here", lldb.SBFileSpec("main.cpp")
+            self, "Break here", lldb.SBFileSpec("main.c")
         )
         frame = thread.GetFrameAtIndex(1)
 
