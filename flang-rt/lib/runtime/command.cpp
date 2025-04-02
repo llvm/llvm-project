@@ -310,7 +310,7 @@ std::int32_t RTNAME(Hostnm)(
 }
 
 std::int32_t RTNAME(Unlink)(
-    const char *str, std::size_t strLength, const char *sourceFile, int line) {
+    const char *str, size_t strLength, const char *sourceFile, int line) {
   Terminator terminator{sourceFile, line};
 
   auto pathLength = TrimTrailingSpaces(str, strLength);
