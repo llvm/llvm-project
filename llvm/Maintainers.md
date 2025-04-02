@@ -398,7 +398,9 @@ min.hsu@sifive.com, min@myhsu.dev (email), [mshockwave](https://github.com/mshoc
 #### llvm-cov and Coverage parts of ProfileData
 
 Takumi Nakamura \
-geek4civic@gmail.com (email), [chapuni](https://github.com/chapuni) (GitHub)
+geek4civic@gmail.com (email), [chapuni](https://github.com/chapuni) (GitHub) \
+Alan Philipps \
+a-phipps@ti.com (email), [evodius96](https://github.com/evodius96) (GitHub)
 
 #### Binary Utilities
 
