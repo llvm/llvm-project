@@ -1,7 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  Support
-  )
-
 add_clang_unittest(LexTests
   DependencyDirectivesScannerTest.cpp
   HeaderMapTest.cpp
@@ -13,20 +9,16 @@ add_clang_unittest(LexTests
   PPConditionalDirectiveRecordTest.cpp
   PPDependencyDirectivesTest.cpp
   PPMemoryAllocationsTest.cpp
-  )
-
-clang_target_link_libraries(LexTests
-  PRIVATE
+  CLANG_LIBS
   clangAST
   clangBasic
   clangLex
   clangAPINotes
   clangParse
   clangSema
-  )
-
-target_link_libraries(LexTests
-  PRIVATE
+  LINK_LIBS
   LLVMTestingAnnotations
   LLVMTestingSupport
+  LLVM_COMPONENTS
+  Support
   )
