@@ -903,15 +903,15 @@ struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
   }
 };
 
-struct GlobalLoadLDSOpLowering
-    : public ConvertOpToLLVMPattern<GlobalLoadLDSOp> {
-  GlobalLoadLDSOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
-      : ConvertOpToLLVMPattern<GlobalLoadLDSOp>(converter), chipset(chipset) {}
+struct GatherToLDSOpLowering
+    : public ConvertOpToLLVMPattern<GatherToLDSOp> {
+  GatherToLDSOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
+      : ConvertOpToLLVMPattern<GatherToLDSOp>(converter), chipset(chipset) {}
 
   Chipset chipset;
 
   LogicalResult
-  matchAndRewrite(GlobalLoadLDSOp op, GlobalLoadLDSOpAdaptor adaptor,
+  matchAndRewrite(GatherToLDSOp op, GatherToLDSOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
 
@@ -925,8 +925,7 @@ struct GlobalLoadLDSOpLowering
     // `global_load_lds` instructions.
     auto loadWidth = elemSizeInBits / 8;
 
-    const Chipset GlobalLoadEnabled{9, 0x4, 0x0};
-    if (chipset < GlobalLoadEnabled)
+    if (chipset < kGfx942)
       return op.emitOpError("chipset not supported");
 
     // Currently only 1, 2, and 4 byte loads are supported.
@@ -1362,5 +1361,5 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
            AMDGPUDPPLowering, LDSBarrierOpLowering, SchedBarrierOpLowering,
            MFMAOpLowering, WMMAOpLowering, ExtPackedFp8OpLowering,
            PackedTrunc2xFp8OpLowering, PackedStochRoundFp8OpLowering,
-           GlobalLoadLDSOpLowering>(converter, chipset);
+           GatherToLDSOpLowering>(converter, chipset);
 }

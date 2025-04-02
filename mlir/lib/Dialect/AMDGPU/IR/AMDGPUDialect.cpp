@@ -25,7 +25,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/IR/Metadata.h"
 
 #include <limits>
 #include <optional>
@@ -461,26 +460,28 @@ LogicalResult DPPOp::verify() {
   return success();
 }
 
-LogicalResult GlobalLoadLDSOp::verify() {
+LogicalResult GatherToLDSOp::verify() {
   MemRefType srcType = cast<MemRefType>(getSrc().getType());
   MemRefType dstType = cast<MemRefType>(getDst().getType());
 
-  if (!memref::isStaticShapeAndContiguousRowMajor(srcType) ||
-      !memref::isStaticShapeAndContiguousRowMajor(dstType))
+  if (!memref::isStaticShapeAndContiguousRowMajor(dstType))
     return emitOpError(
-        "source and destination types must have static shape  and contiguous");
+        "destination types must have static shape  and contiguous");
 
+  auto elemType = srcType.getElementType();
   // Check $src and $dst element types are the same.
-  if (srcType.getElementType() != dstType.getElementType())
+  if (elemType != dstType.getElementType())
     return emitOpError("source and destination element types must match");
 
-  // Check $src and $dst memory spaces.
-  auto srcAddrSpace = llvm::dyn_cast<IntegerAttr>(srcType.getMemorySpace());
-  auto dstAddrSpace = llvm::dyn_cast<IntegerAttr>(dstType.getMemorySpace());
-  if (!srcAddrSpace || srcAddrSpace.getInt() != 1)
-    return emitOpError("source memory address space must be Global");
-  if (dstAddrSpace.getInt() != 3)
+  // Element type sizes should be 1, 2, or 4 bytes.
+  auto elemSize = elemType.getIntOrFloatBitWidth();
+  if (elemSize != 8 && elemSize != 16 && elemSize != 32)
+    return emitOpError("source and destination element types must be 8, 16, "
+                       "or 32 bits");
+
+  if (!gpu::GPUDialect::hasWorkgroupMemoryAddressSpace(dstType))
     return emitOpError("destination memory address space must be Workgroup");
+
   return success();
 }
 

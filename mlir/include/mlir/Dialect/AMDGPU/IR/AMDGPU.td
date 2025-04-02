@@ -668,12 +668,6 @@ def WMMAInTypes : AnyTypeOf<[VectorOfLengthAndType<
 def WMMAOutTypes : AnyTypeOf<[VectorOfLengthAndType<[4, 8], [F32, I32]>,
                               VectorOfLengthAndType<[4, 8, 16], [F16, BF16]>]>;
 
-// MI300: limit to only 4 bytes per elements.
-def GlobalLoadTypes : AnyTypeOf<[F16, F32, I8, SI8, UI8, I16, I32,
-                                VectorOfLengthAndType<[2], [F16, BF16, I16]>,
-                                VectorOfLengthAndType<[2, 4], [I8, SI8, UI8]>
-                               ]>;
-
 def AMDGPU_MFMAOp :
     AMDGPU_Op<"mfma", [AllTypesMatch<["destC", "destD"]>,
                         Pure]>,
@@ -771,14 +765,12 @@ def AMDGPU_WMMAOp :
   let hasVerifier = 1;
 }
 
-def GlobalLoadMemRefType : MemRefOf<[GlobalLoadTypes]>;
-
-def AMDGPU_GlobalLoadLDSOp :
-    AMDGPU_Op<"global_load", [SameVariadicOperandSize]>,
+def AMDGPU_GatherToLDSOp :
+    AMDGPU_Op<"gather_to_lds", [SameVariadicOperandSize]>,
     Arguments<(ins
-                   Arg<GlobalLoadMemRefType, "buffer to read from", [MemRead]>:$src,
+                   Arg<AnyMemRef, "buffer to gather from", [MemRead]>:$src,
                    Variadic<I32>:$srcIndices,
-                   Arg<GlobalLoadMemRefType, "buffer to write to", [MemWrite]>:$dst,
+                   Arg<AnyMemRef, "buffer to write to", [MemWrite]>:$dst,
                    Variadic<I32>:$dstIndices
                    )>,
     Results<(outs)> {
