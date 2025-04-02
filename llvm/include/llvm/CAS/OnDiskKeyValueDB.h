@@ -60,6 +60,9 @@ public:
        StringRef ValueName, size_t ValueSize,
        std::shared_ptr<OnDiskCASLogger> Logger = nullptr);
 
+  using CheckValueT = function_ref<Error(FileOffset Offset, ArrayRef<char>)>;
+  Error validate(CheckValueT CheckValue) const;
+
 private:
   OnDiskKeyValueDB(size_t ValueSize, OnDiskHashMappedTrie Cache)
       : ValueSize(ValueSize), Cache(std::move(Cache)) {}

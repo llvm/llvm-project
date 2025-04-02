@@ -52,6 +52,7 @@
 #include "llvm/CAS/UnifiedOnDiskCache.h"
 #include "OnDiskCommon.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/CAS/OnDiskCASLogger.h"
 #include "llvm/CAS/OnDiskKeyValueDB.h"
 #include "llvm/Support/Compiler.h"
@@ -121,6 +122,30 @@ UnifiedOnDiskCache::faultInFromUpstreamKV(ArrayRef<uint8_t> Key) {
   if (LLVM_UNLIKELY(!PrimaryID))
     return PrimaryID.takeError();
   return KVPut(Key, *PrimaryID);
+}
+
+Error UnifiedOnDiskCache::validateActionCache() {
+  auto ValidateRef = [&](FileOffset Offset, ArrayRef<char> Value) -> Error {
+    assert(Value.size() == sizeof(uint64_t) && "should be validated already");
+    auto ID = ObjectID::fromOpaqueData(support::endian::read64le(Value.data()));
+    auto formatError = [&](Twine Msg) {
+      return createStringError(
+          llvm::errc::illegal_byte_sequence,
+          "bad record at 0x" +
+              utohexstr((unsigned)Offset.get(), /*LowerCase=*/true) + ": " +
+              Msg.str());
+    };
+    if (ID.getOpaqueData() == 0)
+      return formatError("zero is not a valid ref");
+    if (!PrimaryGraphDB->containsObject(ID))
+      return formatError("cas does not contain ref");
+    return Error::success();
+  };
+  if (Error E = PrimaryKVDB->validate(ValidateRef))
+    return E;
+  if (UpstreamKVDB)
+    return UpstreamKVDB->validate(ValidateRef);
+  return Error::success();
 }
 
 /// \returns all the 'v<version>.<x>' names of sub-directories, sorted with

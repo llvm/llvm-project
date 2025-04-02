@@ -114,6 +114,9 @@ public:
                         Globally, std::move(Callback), CancelObj);
   }
 
+  /// Validate the ActionCache contents.
+  virtual Error validate() const = 0;
+
   virtual ~ActionCache() = default;
 
 protected:

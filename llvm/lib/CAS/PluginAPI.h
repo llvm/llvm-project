@@ -108,6 +108,8 @@ struct llcas_functions_t {
                                            bool globally, void *ctx_cb,
                                            llcas_actioncache_put_cb,
                                            llcas_cancellable_t *);
+
+  bool (*actioncache_validate)(llcas_cas_t, char **error);
 };
 
 #endif // LLVM_LIB_CAS_PLUGINAPI_H

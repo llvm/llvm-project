@@ -124,6 +124,8 @@ public:
 
   ~UnifiedOnDiskCache();
 
+  Error validateActionCache();
+
 private:
   UnifiedOnDiskCache();
 
