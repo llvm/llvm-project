@@ -31,11 +31,11 @@ end
 ! CHECK: omp.loop_nest ({{[^[:space:]]+}}) {{.*}} {
 ! CHECK:   fir.do_loop %[[J_IV:.*]] = {{.*}} {
 ! CHECK:     %[[J_IV_CONV:.*]] = fir.convert %[[J_IV]] : (index) -> i32
-! CHECK:       fir.store %[[J_IV_CONV]] to %[[ORIG_J_DECL]]#1
+! CHECK:       fir.store %[[J_IV_CONV]] to %[[ORIG_J_DECL]]#0
 
 ! CHECK:     fir.do_loop %[[K_IV:.*]] = {{.*}} {
 ! CHECK:       %[[K_IV_CONV:.*]] = fir.convert %[[K_IV]] : (index) -> i32
-! CHECK:         fir.store %[[K_IV_CONV]] to %[[ORIG_K_DECL]]#1
+! CHECK:         fir.store %[[K_IV_CONV]] to %[[ORIG_K_DECL]]#0
 ! CHECK:     }
 ! CHECK:   }
 ! CHECK: omp.yield
