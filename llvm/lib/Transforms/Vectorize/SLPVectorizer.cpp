@@ -11329,8 +11329,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
     if (!E2 && InVectors.size() == 1) {
       unsigned VF = E1.getVectorFactor();
       if (Value *V1 = dyn_cast<Value *>(InVectors.front())) {
-        VF = std::max(VF,
-                      cast<FixedVectorType>(V1->getType())->getNumElements());
+        VF = std::max(VF, getVF(V1));
       } else {
         const auto *E = cast<const TreeEntry *>(InVectors.front());
         VF = std::max(VF, E->getVectorFactor());
