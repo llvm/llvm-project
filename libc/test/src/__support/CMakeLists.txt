@@ -251,10 +251,9 @@ add_libc_test(
 
 add_libc_test(
   str_to_float_comparison_test
+  NO_RUN_POSTBUILD
   SUITE
     libc-support-tests
-  NO_RUN_POSTBUILD
-  ENV "FILES=${CMAKE_CURRENT_SOURCE_DIR}/str_to_float_comparison_data.txt"
   SRCS
     str_to_float_comparison_test.cpp
   DEPENDS
@@ -267,6 +266,7 @@ add_libc_test(
     libc.src.stdlib.getenv
     libc.src.string.strtok
     libc.src.__support.CPP.bit
+  ENV "FILES=${CMAKE_CURRENT_SOURCE_DIR}/str_to_float_comparison_data.txt"
 )
 
 add_subdirectory(CPP)

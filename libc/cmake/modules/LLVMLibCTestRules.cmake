@@ -324,32 +324,26 @@ function(create_libc_unittest fq_target_name)
     get_target_property(gpu_loader_exe libc.utils.gpu.loader "EXECUTABLE")
   endif()
 
-  set(test_cmd ${LIBC_UNITTEST_ENV}
-      $<$<BOOL:${LIBC_TARGET_OS_IS_GPU}>:${gpu_loader_exe}> ${CMAKE_CROSSCOMPILING_EMULATOR} ${LIBC_UNITTEST_LOADER_ARGS}
-      $<TARGET_FILE:${fq_build_target_name}> ${LIBC_UNITTEST_ARGS})
-  add_custom_target(
-    ${fq_target_name}
-    DEPENDS ${fq_target_name}-cmd
-  )
-
-  add_custom_command(
-    OUTPUT ${fq_target_name}-cmd
-    COMMAND ${test_cmd}
-    COMMAND_EXPAND_LISTS
-    COMMENT "Running unit test ${fq_target_name}"
-    ${LIBC_UNIT_TEST_JOB_POOL}
-  )
-
-  set_source_files_properties(${fq_target_name}-cmd
-    PROPERTIES
-      SYMBOLIC "TRUE"
-  )
-
   if(NOT LIBC_UNITTEST_NO_RUN_POSTBUILD)
+    set(test_cmd ${LIBC_UNITTEST_ENV}
+        $<$<BOOL:${LIBC_TARGET_OS_IS_GPU}>:${gpu_loader_exe}> ${CMAKE_CROSSCOMPILING_EMULATOR} ${LIBC_UNITTEST_LOADER_ARGS}
+        $<TARGET_FILE:${fq_build_target_name}> ${LIBC_UNITTEST_ARGS})
     add_custom_target(
       ${fq_target_name}
-      COMMAND ${fq_build_target_name}
+      DEPENDS ${fq_target_name}-cmd
+    )
+
+    add_custom_command(
+      OUTPUT ${fq_target_name}-cmd
+      COMMAND ${test_cmd}
+      COMMAND_EXPAND_LISTS
       COMMENT "Running unit test ${fq_target_name}"
+      ${LIBC_UNIT_TEST_JOB_POOL}
+    )
+
+    set_source_files_properties(${fq_target_name}-cmd
+      PROPERTIES
+        SYMBOLIC "TRUE"
     )
   endif()
 
@@ -730,7 +724,6 @@ function(add_libc_hermetic test_name)
   endif()
   list(REMOVE_DUPLICATES link_object_files)
 
-
   # Make a library of all deps
   add_library(
     ${fq_target_name}.__libc__
@@ -825,32 +818,26 @@ function(add_libc_hermetic test_name)
     get_target_property(gpu_loader_exe libc.utils.gpu.loader "EXECUTABLE")
   endif()
 
-  set(test_cmd ${HERMETIC_TEST_ENV}
-      $<$<BOOL:${LIBC_TARGET_OS_IS_GPU}>:${gpu_loader_exe}> ${CMAKE_CROSSCOMPILING_EMULATOR} ${HERMETIC_TEST_LOADER_ARGS}
-      $<TARGET_FILE:${fq_build_target_name}> ${HERMETIC_TEST_ARGS})
-  add_custom_target(
-    ${fq_target_name}
-    DEPENDS ${fq_target_name}-cmd
-  )
-
-  add_custom_command(
-    OUTPUT ${fq_target_name}-cmd
-    COMMAND ${test_cmd}
-    COMMAND_EXPAND_LISTS
-    COMMENT "Running hermetic test ${fq_target_name}"
-    ${LIBC_HERMETIC_TEST_JOB_POOL}
-  )
-
-  set_source_files_properties(${fq_target_name}-cmd
-    PROPERTIES
-      SYMBOLIC "TRUE"
-  )
-
   if(NOT HERMETIC_TEST_NO_RUN_POSTBUILD)
+    set(test_cmd ${HERMETIC_TEST_ENV}
+        $<$<BOOL:${LIBC_TARGET_OS_IS_GPU}>:${gpu_loader_exe}> ${CMAKE_CROSSCOMPILING_EMULATOR} ${HERMETIC_TEST_LOADER_ARGS}
+        $<TARGET_FILE:${fq_build_target_name}> ${HERMETIC_TEST_ARGS})
     add_custom_target(
       ${fq_target_name}
-      COMMAND ${fq_build_target_name}
+      DEPENDS ${fq_target_name}-cmd
+    )
+
+    add_custom_command(
+      OUTPUT ${fq_target_name}-cmd
+      COMMAND ${test_cmd}
+      COMMAND_EXPAND_LISTS
       COMMENT "Running hermetic test ${fq_target_name}"
+      ${LIBC_HERMETIC_TEST_JOB_POOL}
+    )
+
+    set_source_files_properties(${fq_target_name}-cmd
+      PROPERTIES
+        SYMBOLIC "TRUE"
     )
   endif()
 
