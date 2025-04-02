@@ -211,12 +211,11 @@ Expected<SmallVector<std::string>> getSYCLDeviceLibs(const ArgList &Args) {
 /// 3. Link all the images gathered in Step 2 with the output of Step 1 using
 /// linkInModule API. LinkOnlyNeeded flag is used.
 Expected<StringRef> linkDeviceCode(ArrayRef<std::string> InputFiles,
-                                   const ArgList &Args) {
+                                   const ArgList &Args, LLVMContext &C) {
   llvm::TimeTraceScope TimeScope("SYCL link device code");
 
   assert(InputFiles.size() && "No inputs to link");
 
-  LLVMContext C;
   auto LinkerOutput = std::make_unique<Module>("sycl-device-link", C);
   Linker L(*LinkerOutput);
   // Link SYCL device input files.
@@ -280,12 +279,11 @@ Expected<StringRef> linkDeviceCode(ArrayRef<std::string> InputFiles,
 /// 'Args' encompasses all arguments required for linking device code and will
 /// be parsed to generate options required to be passed into the backend.
 static Expected<StringRef> runSPIRVCodeGen(StringRef File,
-                                           const ArgList &Args) {
+                                           const ArgList &Args, LLVMContext &C) {
   llvm::TimeTraceScope TimeScope("SPIR-V code generation");
 
   // Parse input module.
   SMDiagnostic Err;
-  LLVMContext C;
   std::unique_ptr<Module> M = parseIRFile(File, Err, C);
   if (!M)
     return createStringError(Err.getMessage());
@@ -341,13 +339,15 @@ static Expected<StringRef> runSPIRVCodeGen(StringRef File,
 Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
   llvm::TimeTraceScope TimeScope("SYCL device linking");
 
+  LLVMContext C;
+
   // Link all input bitcode files and SYCL device library files, if any.
-  auto LinkedFile = linkDeviceCode(Files, Args);
+  auto LinkedFile = linkDeviceCode(Files, Args, C);
   if (!LinkedFile)
     reportError(LinkedFile.takeError());
 
   // SPIR-V code generation step.
-  auto SPVFile = runSPIRVCodeGen(*LinkedFile, Args);
+  auto SPVFile = runSPIRVCodeGen(*LinkedFile, Args, C);
   if (!SPVFile)
     return SPVFile.takeError();
   return Error::success();
