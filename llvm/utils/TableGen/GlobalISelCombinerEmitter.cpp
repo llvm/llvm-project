@@ -583,7 +583,8 @@ CombineRuleOperandTypeChecker::getRuleEqClasses() const {
     errs() << "Final Type Equivalence Classes: ";
     for (const auto &Class : TECs) {
       // only print non-empty classes.
-      if (auto MembIt = TECs.member_begin(Class); MembIt != TECs.member_end()) {
+      if (auto MembIt = TECs.member_begin(*Class);
+          MembIt != TECs.member_end()) {
         errs() << '[';
         StringRef Sep = "";
         for (; MembIt != TECs.member_end(); ++MembIt) {
