@@ -6904,9 +6904,9 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getNode(ISD::BITCAST, DL, MVT::f16, Trunc);
   }
 
-  assert (DstVT.getScalarType() == MVT::bf16 &&
+  assert(DstVT.getScalarType() == MVT::bf16 &&
           "custom lower FP_ROUND for f16 or bf16");
-  assert (Subtarget->hasBF16ConversionInsts() && "f32 -> bf16 is legal");
+  assert(Subtarget->hasBF16ConversionInsts() && "f32 -> bf16 is legal");
 
   // Round-inexact-to-odd f64 to f32, then do the final rounding using the
   // hardware f32 -> bf16 instruction.
