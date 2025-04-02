@@ -10001,7 +10001,8 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   case Intrinsic::amdgcn_raw_ptr_buffer_load_lds:
   case Intrinsic::amdgcn_struct_buffer_load_lds:
   case Intrinsic::amdgcn_struct_ptr_buffer_load_lds: {
-    assert(!AMDGPU::isGFX12Plus(*Subtarget));
+    if (!Subtarget->hasVMemToLDSLoad())
+      return SDValue();
     unsigned Opc;
     bool HasVIndex =
         IntrinsicID == Intrinsic::amdgcn_struct_buffer_load_lds ||
@@ -10108,6 +10109,9 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     return SDValue(Load, 0);
   }
   case Intrinsic::amdgcn_global_load_lds: {
+    if (!Subtarget->hasVMemToLDSLoad())
+      return SDValue();
+
     unsigned Opc;
     unsigned Size = Op->getConstantOperandVal(4);
     switch (Size) {
