@@ -1005,7 +1005,7 @@ void VPlanTransforms::simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy) {
   VPTypeAnalysis TypeInfo(&CanonicalIVTy);
   SetVector<VPRecipeBase *> Worklist;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT))
-    for (VPRecipeBase &R : make_early_inc_range(*VPBB))
+    for (VPRecipeBase &R : reverse(*VPBB))
       Worklist.insert(&R);
 
   while (!Worklist.empty()) {
