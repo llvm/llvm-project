@@ -2053,6 +2053,37 @@ private:
     // so no clean-up needs to be generated for these entities.
   }
 
+  // Add attribute(s) on operations in fir::DoLoopOp if necessary.
+  void attachAttributesToDoLoopOperations(fir::DoLoopOp &doLoop) {
+    if (!doLoop.getOperation())
+      return;
+    if (auto loopAnnotAttr = doLoop.getLoopAnnotationAttr()) {
+      if (loopAnnotAttr.getParallelAccesses().size()) {
+        mlir::LLVM::AccessGroupAttr accessGroupAttr =
+            loopAnnotAttr.getParallelAccesses().front();
+        for (mlir::Block &block : doLoop.getRegion()) {
+          mlir::ArrayAttr attrs =
+              mlir::ArrayAttr::get(builder->getContext(), {accessGroupAttr});
+          for (mlir::Operation &op : block.getOperations()) {
+            if (fir::StoreOp storeOp = mlir::dyn_cast<fir::StoreOp>(op)) {
+              storeOp.setAccessGroupsAttr(attrs);
+            } else if (fir::LoadOp loadOp = mlir::dyn_cast<fir::LoadOp>(op)) {
+              loadOp.setAccessGroupsAttr(attrs);
+            } else if (hlfir::AssignOp assignOp =
+                           mlir::dyn_cast<hlfir::AssignOp>(op)) {
+              // In some loops, the HLFIR AssignOp operation can be translated
+              // into FIR operation(s) containing StoreOp. It is therefore
+              // necessary to forward the AccessGroups attribute.
+              assignOp.getOperation()->setAttr("access_groups", attrs);
+            } else if (fir::CallOp callOp = mlir::dyn_cast<fir::CallOp>(op)) {
+              callOp.setAccessGroupsAttr(attrs);
+            }
+          }
+        }
+      }
+    }
+  }
+
   /// Generate FIR for a DO construct. There are six variants:
   ///  - unstructured infinite and while loops
   ///  - structured and unstructured increment loops
@@ -2162,6 +2193,10 @@ private:
 
     // This call may generate a branch in some contexts.
     genFIR(endDoEval, unstructuredContext);
+
+    // Add attribute(s) on operations in fir::DoLoopOp if necessary
+    for (IncrementLoopInfo &info : incrementLoopNestInfo)
+      attachAttributesToDoLoopOperations(info.doLoop);
   }
 
   /// Generate FIR to evaluate loop control values (lower, upper and step).
@@ -2242,22 +2277,28 @@ private:
         {}, {}, {}, {});
   }
 
+  // Enabling loop vectorization attribute.
+  mlir::LLVM::LoopVectorizeAttr genLoopVectorizeAttr(bool enable = true) {
+    mlir::BoolAttr disableAttr =
+        mlir::BoolAttr::get(builder->getContext(), !enable);
+    return mlir::LLVM::LoopVectorizeAttr::get(builder->getContext(),
+                                              /*disable=*/disableAttr, {}, {},
+                                              {}, {}, {}, {});
+  }
+
   void addLoopAnnotationAttr(
       IncrementLoopInfo &info,
       llvm::SmallVectorImpl<const Fortran::parser::CompilerDirective *> &dirs) {
     mlir::LLVM::LoopVectorizeAttr va;
     mlir::LLVM::LoopUnrollAttr ua;
     mlir::LLVM::LoopUnrollAndJamAttr uja;
+    llvm::SmallVector<mlir::LLVM::AccessGroupAttr> aga;
     bool has_attrs = false;
     for (const auto *dir : dirs) {
       Fortran::common::visit(
           Fortran::common::visitors{
               [&](const Fortran::parser::CompilerDirective::VectorAlways &) {
-                mlir::BoolAttr falseAttr =
-                    mlir::BoolAttr::get(builder->getContext(), false);
-                va = mlir::LLVM::LoopVectorizeAttr::get(builder->getContext(),
-                                                        /*disable=*/falseAttr,
-                                                        {}, {}, {}, {}, {}, {});
+                va = genLoopVectorizeAttr();
                 has_attrs = true;
               },
               [&](const Fortran::parser::CompilerDirective::Unroll &u) {
@@ -2268,12 +2309,19 @@ private:
                 uja = genLoopUnrollAndJamAttr(u.v);
                 has_attrs = true;
               },
+              [&](const Fortran::parser::CompilerDirective::IVDep &iv) {
+                va = genLoopVectorizeAttr();
+                aga.push_back(
+                    mlir::LLVM::AccessGroupAttr::get(builder->getContext()));
+                has_attrs = true;
+              },
               [&](const auto &) {}},
           dir->u);
     }
     mlir::LLVM::LoopAnnotationAttr la = mlir::LLVM::LoopAnnotationAttr::get(
         builder->getContext(), {}, /*vectorize=*/va, {}, /*unroll*/ ua,
-        /*unroll_and_jam*/ uja, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+        /*unroll_and_jam*/ uja, {}, {}, {}, {}, {}, {}, {}, {}, {},
+        /*parallelAccesses*/ aga);
     if (has_attrs)
       info.doLoop.setLoopAnnotationAttr(la);
   }
@@ -2930,6 +2978,9 @@ private:
               attachDirectiveToLoop(dir, &eval);
             },
             [&](const Fortran::parser::CompilerDirective::UnrollAndJam &) {
+              attachDirectiveToLoop(dir, &eval);
+            },
+            [&](const Fortran::parser::CompilerDirective::IVDep &) {
               attachDirectiveToLoop(dir, &eval);
             },
             [&](const auto &) {}},

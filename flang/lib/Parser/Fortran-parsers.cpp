@@ -1294,6 +1294,7 @@ TYPE_PARSER(construct<StatOrErrmsg>("STAT =" >> statVariable) ||
 // !DIR$ LOOP COUNT (n1[, n2]...)
 // !DIR$ name[=value] [, name[=value]]...
 // !DIR$ UNROLL [n]
+// !DIR$ IVDEP
 // !DIR$ <anything else>
 constexpr auto ignore_tkr{
     "IGNORE_TKR" >> optionalList(construct<CompilerDirective::IgnoreTKR>(
@@ -1310,6 +1311,7 @@ constexpr auto unroll{
     "UNROLL" >> construct<CompilerDirective::Unroll>(maybe(digitString64))};
 constexpr auto unrollAndJam{"UNROLL_AND_JAM" >>
     construct<CompilerDirective::UnrollAndJam>(maybe(digitString64))};
+constexpr auto ivdep{"IVDEP" >> construct<CompilerDirective::IVDep>()};
 TYPE_PARSER(beginDirective >> "DIR$ "_tok >>
     sourced((construct<CompilerDirective>(ignore_tkr) ||
                 construct<CompilerDirective>(loopCount) ||
@@ -1317,6 +1319,7 @@ TYPE_PARSER(beginDirective >> "DIR$ "_tok >>
                 construct<CompilerDirective>(vectorAlways) ||
                 construct<CompilerDirective>(unrollAndJam) ||
                 construct<CompilerDirective>(unroll) ||
+                construct<CompilerDirective>(ivdep) ||
                 construct<CompilerDirective>(
                     many(construct<CompilerDirective::NameValue>(
                         name, maybe(("="_tok || ":"_tok) >> digitString64))))) /

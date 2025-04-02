@@ -649,7 +649,8 @@ Fortran::lower::genCallOpAndResult(
     // Standard procedure call with fir.call.
     auto call = builder.create<fir::CallOp>(
         loc, funcType.getResults(), funcSymbolAttr, operands,
-        /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, procAttrs);
+        /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, procAttrs,
+        /*accessGroups*/ mlir::ArrayAttr{});
 
     callNumResults = call.getNumResults();
     if (callNumResults != 0)

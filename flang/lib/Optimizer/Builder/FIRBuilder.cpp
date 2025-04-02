@@ -1371,12 +1371,11 @@ fir::ExtendedValue fir::factory::arraySectionElementToExtendedValue(
   return fir::factory::componentToExtendedValue(builder, loc, element);
 }
 
-void fir::factory::genScalarAssignment(fir::FirOpBuilder &builder,
-                                       mlir::Location loc,
-                                       const fir::ExtendedValue &lhs,
-                                       const fir::ExtendedValue &rhs,
-                                       bool needFinalization,
-                                       bool isTemporaryLHS) {
+void fir::factory::genScalarAssignment(
+    fir::FirOpBuilder &builder, mlir::Location loc,
+    const fir::ExtendedValue &lhs, const fir::ExtendedValue &rhs,
+    bool needFinalization, bool isTemporaryLHS,
+    std::optional<mlir::ArrayAttr> accessGroups) {
   assert(lhs.rank() == 0 && rhs.rank() == 0 && "must be scalars");
   auto type = fir::unwrapSequenceType(
       fir::unwrapPassByRefType(fir::getBase(lhs).getType()));
@@ -1398,7 +1397,9 @@ void fir::factory::genScalarAssignment(fir::FirOpBuilder &builder,
     mlir::Value lhsAddr = fir::getBase(lhs);
     rhsVal = builder.createConvert(loc, fir::unwrapRefType(lhsAddr.getType()),
                                    rhsVal);
-    builder.create<fir::StoreOp>(loc, rhsVal, lhsAddr);
+    fir::StoreOp store = builder.create<fir::StoreOp>(loc, rhsVal, lhsAddr);
+    if (accessGroups)
+      store.setAccessGroupsAttr(*accessGroups);
   }
 }
 

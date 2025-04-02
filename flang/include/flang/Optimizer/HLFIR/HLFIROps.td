@@ -21,6 +21,7 @@ include "flang/Optimizer/Dialect/FIRAttr.td"
 include "flang/Optimizer/Dialect/FortranVariableInterface.td"
 include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/Arith/IR/ArithOpsInterfaces.td"
+include "mlir/Dialect/LLVMIR/LLVMAttrDefs.td"
 include "mlir/IR/BuiltinAttributes.td"
 
 // Base class for FIR operations.
