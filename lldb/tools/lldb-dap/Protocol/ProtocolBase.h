@@ -20,7 +20,6 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_PROTOCOL_H
 #define LLDB_TOOLS_LLDB_DAP_PROTOCOL_H
 
-#include "lldb/lldb-enumerations.h"
 #include "llvm/Support/JSON.h"
 #include <cstdint>
 #include <optional>
@@ -65,11 +64,11 @@ struct Event {
 llvm::json::Value toJSON(const Event &);
 bool fromJSON(const llvm::json::Value &, Event &, llvm::json::Path);
 
-FLAGS_ENUM(ResponseMessage){
-    /// The request was cancelled
-    eResponseMessageCancelled,
-    /// The request may be retried once the adapter is in a 'stopped' state
-    eResponseMessageNotStopped,
+enum ResponseMessage : unsigned {
+  /// The request was cancelled
+  eResponseMessageCancelled,
+  /// The request may be retried once the adapter is in a 'stopped' state
+  eResponseMessageNotStopped,
 };
 
 /// Response for a request.
