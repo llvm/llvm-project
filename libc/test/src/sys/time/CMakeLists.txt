@@ -3,7 +3,7 @@ add_custom_target(libc_sys_time_unittests)
 add_subdirectory(testdata)
 
 add_libc_unittest(
-  time_test
+  utimes_test
   SUITE
     libc_sys_time_unittests
   SRCS
