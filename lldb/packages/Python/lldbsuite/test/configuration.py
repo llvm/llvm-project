@@ -109,6 +109,7 @@ failed = False
 lldb_platform_name = None
 lldb_platform_url = None
 lldb_platform_working_dir = None
+lldb_platform_available_ports = None
 
 # Apple SDK
 apple_sdk = None
