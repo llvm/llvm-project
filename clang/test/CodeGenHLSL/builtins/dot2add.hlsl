@@ -8,7 +8,7 @@
 // Test basic lowering to runtime function call.
 
 // CHECK-LABEL: define {{.*}}test
-float test(half2 p1, half2 p2, float p3) {
+float test_default_parameter(half2 p1, half2 p2, float p3) {
   // CHECK-SPIRV:  %[[RES:.*]] = call {{.*}} float @_ZN4hlsl7dot2addEDv2_DhS0_f(<2 x half> {{.*}} %1, <2 x half> {{.*}} %2, float {{.*}} %3) #3 {{.*}}
   // CHECK-DXIL:  %[[RES:.*]] = call {{.*}} float @_ZN4hlsl7dot2addEDv2_DhS0_f(<2 x half> {{.*}} %0, <2 x half> {{.*}} %1, float {{.*}} %2) #2
   // CHECK:  ret float %[[RES]]
