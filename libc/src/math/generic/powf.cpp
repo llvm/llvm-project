@@ -742,7 +742,7 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
         }
       }
       if (y_abs > 0x4f17'0000) {
-        // y is NaN
+        // if y is NaN
         if (y_abs > 0x7f80'0000) {
           if (x_u == 0x3f80'0000) { // x = 1.0f
             // pow(1, NaN) = 1
@@ -811,6 +811,7 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
     }
 
     if (x_abs > 0x7f80'0000) {
+      // x is NaN.
       // pow (aNaN, 0) is already taken care above.
       return x;
     }

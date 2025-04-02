@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/fenv_macros.h"
-#include "src/errno/libc_errno.h"
 #include "src/math/pow.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -30,7 +29,7 @@ TEST_F(LlvmLibcPowTest, SpecialNumbers) {
     if (!__r.success)
       continue;
 
-    // pow( sNaN, exponent)
+    // pow( sNaN, exponent )
     EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::pow(sNaN, sNaN),
                                 FE_INVALID);
     EXPECT_FP_EQ_WITH_EXCEPTION(

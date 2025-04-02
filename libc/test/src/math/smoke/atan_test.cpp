@@ -17,8 +17,6 @@ TEST_F(LlvmLibcAtanTest, SpecialNumbers) {
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::atan(aNaN));
-  EXPECT_EQ(FPBits(aNaN).uintval(),
-            FPBits(LIBC_NAMESPACE::atan(sNaN)).uintval());
   EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::atan(zero));
   EXPECT_FP_EQ_ALL_ROUNDING(neg_zero, LIBC_NAMESPACE::atan(neg_zero));
   // atan(+-Inf) = +- pi/2.

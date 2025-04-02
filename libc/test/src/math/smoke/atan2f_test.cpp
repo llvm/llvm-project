@@ -22,11 +22,11 @@ TEST_F(LlvmLibcAtan2fTest, SpecialNumbers) {
                               FE_INVALID);
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::atan2f(sNaN, 1.0),
+  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::atan2f(sNaN, 1.0f),
                               FE_INVALID);
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::atan2f(1.0, sNaN),
+  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::atan2f(1.0f, sNaN),
                               FE_INVALID);
   EXPECT_MATH_ERRNO(0);
 

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/atan2f.h"
-#include "hdr/fenv_macros.h"
 #include "inv_trigf_utils.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
