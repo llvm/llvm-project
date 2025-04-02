@@ -43,8 +43,6 @@ using MBBInfoSet = DenseMap<const MachineBasicBlock *, MBBInfo>;
 
 class AMDGPUSetWavePriority {
 public:
-  static char ID;
-
   bool run(MachineFunction &MF);
 
 private:
