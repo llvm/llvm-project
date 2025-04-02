@@ -417,7 +417,7 @@ public:
     return false;
   }
   bool inUnion() const {
-    if (isBlockPointer())
+    if (isBlockPointer() && asBlockPointer().Base >= sizeof(InlineDescriptor))
       return getInlineDesc()->InUnion;
     return false;
   };
@@ -726,6 +726,8 @@ public:
 
   /// Prints the pointer.
   void print(llvm::raw_ostream &OS) const;
+
+  size_t computeOffsetForComparison() const;
 
 private:
   friend class Block;
