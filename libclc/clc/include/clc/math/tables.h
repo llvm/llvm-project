@@ -78,7 +78,6 @@ CLC_TABLE_FUNCTION_DECL(float, exp_tbl_ep_tail);
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
-TABLE_FUNCTION_DECL(double2, ln_tbl);
 CLC_TABLE_FUNCTION_DECL(double, ln_tbl_lo);
 CLC_TABLE_FUNCTION_DECL(double, ln_tbl_hi);
 CLC_TABLE_FUNCTION_DECL(double, atan_jby256_tbl_head);
