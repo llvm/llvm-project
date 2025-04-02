@@ -793,6 +793,31 @@ Expected<bool> parseLowerMatrixIntrinsicsPassOptions(StringRef Params) {
                                             "LowerMatrixIntrinsics");
 }
 
+Expected<IRNormalizerOptions> parseIRNormalizerPassOptions(StringRef Params) {
+  IRNormalizerOptions Result;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    bool Enable = !ParamName.consume_front("no-");
+    if (ParamName == "preserve-order")
+      Result.PreserveOrder = Enable;
+    else if (ParamName == "rename-all")
+      Result.RenameAll = Enable;
+    else if (ParamName == "fold-all") // FIXME: Name mismatch
+      Result.FoldPreOutputs = Enable;
+    else if (ParamName == "reorder-operands")
+      Result.ReorderOperands = Enable;
+    else {
+      return make_error<StringError>(
+          formatv("invalid normalize pass parameter '{0}' ", ParamName).str(),
+          inconvertibleErrorCode());
+    }
+  }
+
+  return Result;
+}
+
 Expected<AddressSanitizerOptions> parseASanPassOptions(StringRef Params) {
   AddressSanitizerOptions Result;
   while (!Params.empty()) {

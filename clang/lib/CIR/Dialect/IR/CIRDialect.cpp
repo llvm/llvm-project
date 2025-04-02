@@ -539,20 +539,6 @@ Block *cir::BrCondOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
-// ForOp
-//===----------------------------------------------------------------------===//
-
-void cir::ForOp::getSuccessorRegions(
-    mlir::RegionBranchPoint point,
-    llvm::SmallVectorImpl<mlir::RegionSuccessor> &regions) {
-  LoopOpInterface::getLoopOpSuccessorRegions(*this, point, regions);
-}
-
-llvm::SmallVector<Region *> cir::ForOp::getLoopRegions() {
-  return {&getBody()};
-}
-
-//===----------------------------------------------------------------------===//
 // GlobalOp
 //===----------------------------------------------------------------------===//
 
