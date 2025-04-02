@@ -1189,6 +1189,7 @@ void CodeGenFunction::emitStoresForConstant(const VarDecl &D, Address Loc,
                           Ty->isPtrOrPtrVectorTy() || Ty->isFPOrFPVectorTy();
   if (canDoSingleStore) {
     auto *I = Builder.CreateStore(constant, Loc, isVolatile);
+    addInstToCurrentSourceAtom(I, nullptr);
     if (IsAutoInit)
       I->addAnnotationMetadata("auto-init");
     return;
