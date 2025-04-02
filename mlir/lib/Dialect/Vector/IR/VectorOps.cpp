@@ -165,8 +165,8 @@ AffineMap mlir::vector::getTransferMinorIdentityMap(ShapedType shapedType,
         /*numDims=*/0, /*numSymbols=*/0,
         getAffineConstantExpr(0, shapedType.getContext()));
   if (shapedType.getRank() < vectorType.getRank() - elementVectorRank) {
-    return AffineMap(); // Not enough dimensions in the shaped type to form a
-                        // minor identity map.
+    // Not enough dimensions in the shaped type to form a minor identity map.
+    return AffineMap();
   }
   return AffineMap::getMinorIdentityMap(
       shapedType.getRank(), vectorType.getRank() - elementVectorRank,
@@ -4265,9 +4265,8 @@ ParseResult TransferReadOp::parse(OpAsmParser &parser, OperationState &result) {
   if (!permMapAttr) {
     permMap = getTransferMinorIdentityMap(shapedType, vectorType);
     if (!permMap) {
-      return parser.emitError(typesLoc,
-                              "expected the same rank for the vector and the "
-                              "results of the permutation map");
+      return parser.emitError(
+          typesLoc, "source rank is less than required for vector rank");
     }
     result.attributes.set(permMapAttrName, AffineMapAttr::get(permMap));
   } else {
@@ -4678,9 +4677,8 @@ ParseResult TransferWriteOp::parse(OpAsmParser &parser,
   if (!permMapAttr) {
     permMap = getTransferMinorIdentityMap(shapedType, vectorType);
     if (!permMap) {
-      return parser.emitError(typesLoc,
-                              "expected the same rank for the vector and the "
-                              "results of the permutation map");
+      return parser.emitError(
+          typesLoc, "result rank is less than required for vector rank");
     }
     result.attributes.set(permMapAttrName, AffineMapAttr::get(permMap));
   } else {
