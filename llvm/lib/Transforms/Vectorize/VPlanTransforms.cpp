@@ -1018,8 +1018,7 @@ void VPlanTransforms::simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy) {
         Worklist.insert(ResultR);
       for (VPUser *U : Result->users())
         if (auto *UR = dyn_cast<VPRecipeBase>(U))
-          if (UR != R)
-            Worklist.insert(UR);
+          Worklist.insert(UR);
 
 #ifndef NDEBUG
       // Verify that the cached type info is for both Result and its users is
