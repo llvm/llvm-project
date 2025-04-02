@@ -11,7 +11,7 @@ int main(int argc, char **argv) {
 REQUIRES: system-linux,bolt-runtime
 
 RUN: %clang %cflags -no-pie %s -o %t.nopie.exe -Wl,-q
-RUN: %clang %cflags %s -o %t.pie.exe -Wl,-q
+RUN: %clang %cflags -fpic %s -o %t.pie.exe -Wl,-q
 
 RUN: llvm-bolt %t.nopie.exe --lite=0 -o %t.nopie --hugify
 RUN: llvm-bolt %t.pie.exe --lite=0 -o %t.pie --hugify
