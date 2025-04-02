@@ -5191,10 +5191,10 @@ public:
   ///
   /// \returns true if IdxExpr is a valid index.
   template <typename AttrInfo>
-  bool checkFunctionOrMethodParameterIndex(const Decl *D, const AttrInfo &AI,
-                                           unsigned AttrArgNum,
-                                           const Expr *IdxExpr, ParamIdx &Idx,
-                                           bool CanIndexImplicitThis = false) {
+  bool checkFunctionOrMethodParameterIndex(
+      const Decl *D, const AttrInfo &AI, unsigned AttrArgNum,
+      const Expr *IdxExpr, ParamIdx &Idx, bool CanIndexImplicitThis = false,
+      bool CanIndexVariadicArguments = false) {
     assert(isFunctionOrMethodOrBlockForAttrSubject(D));
 
     // In C++ the implicit 'this' function parameter also counts.
@@ -5215,7 +5215,8 @@ public:
     }
 
     unsigned IdxSource = IdxInt->getLimitedValue(UINT_MAX);
-    if (IdxSource < 1 || (!IV && IdxSource > NumParams)) {
+    if (IdxSource < 1 ||
+        ((!IV || !CanIndexVariadicArguments) && IdxSource > NumParams)) {
       Diag(getAttrLoc(AI), diag::err_attribute_argument_out_of_bounds)
           << &AI << AttrArgNum << IdxExpr->getSourceRange();
       return false;
