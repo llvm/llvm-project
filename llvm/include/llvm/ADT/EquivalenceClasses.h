@@ -179,10 +179,9 @@ public:
     return member_iterator(nullptr);
   }
 
-  /// findValue - Return an iterator to the specified value.  If it does not
-  /// exist, end() is returned.
-  iterator findValue(const ElemTy &V) const {
-    return TheMapping.find(V);
+  /// Returns true if \p V is contained an equivalence class.
+  bool contains(const ElemTy &V) const {
+    return TheMapping.find(V) != TheMapping.end();
   }
 
   /// getLeaderValue - Return the leader for the specified value that is in the
