@@ -74,7 +74,8 @@ define amdgpu_ps void @flat_store_saddr_uniform_ptr_in_vgprs(i32 %voffset, i8 %d
 ; GFX1250-GISEL-NEXT:    ds_load_b64 v[2:3], v2
 ; GFX1250-GISEL-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v0
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
 ; GFX1250-GISEL-NEXT:    flat_store_b8 v[2:3], v1
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %sbase = load ptr, ptr addrspace(3) @ptr.in.lds
@@ -102,7 +103,8 @@ define amdgpu_ps void @flat_store_saddr_uniform_ptr_in_vgprs_immoffset(i32 %voff
 ; GFX1250-GISEL-NEXT:    ds_load_b64 v[2:3], v2
 ; GFX1250-GISEL-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v0
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
 ; GFX1250-GISEL-NEXT:    flat_store_b8 v[2:3], v1 offset:-120
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %sbase = load ptr, ptr addrspace(3) @ptr.in.lds

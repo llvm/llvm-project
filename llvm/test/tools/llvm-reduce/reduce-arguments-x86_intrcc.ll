@@ -20,7 +20,7 @@ declare x86_intrcc void @extern_decl(ptr byval(i32), i32, i32)
 
 ; INTERESTING-LABEL: void @callsite(
 ; INTERESTING: call
-; REDUCED: call x86_intrcc void @func(ptr %k, i32 %other.keep)
+; REDUCED: call x86_intrcc void @func(ptr byval(i32) %k, i32 %other.keep)
 define void @callsite(ptr %k, i32 %other.keep, i32 %other.drop) {
   call x86_intrcc void @func(ptr byval(i32) %k, i32 %other.keep, i32 %other.drop)
   ret void

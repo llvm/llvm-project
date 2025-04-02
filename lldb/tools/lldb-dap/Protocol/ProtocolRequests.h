@@ -22,6 +22,7 @@
 
 #include "Protocol/ProtocolBase.h"
 #include "Protocol/ProtocolTypes.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/JSON.h"
 #include <cstdint>
 #include <optional>
@@ -55,7 +56,7 @@ bool fromJSON(const llvm::json::Value &, DisconnectArguments &,
 using DisconnectResponse = VoidResponse;
 
 /// Features supported by DAP clients.
-enum ClientFeature {
+enum ClientFeature : unsigned {
   eClientFeatureVariableType,
   eClientFeatureVariablePaging,
   eClientFeatureRunInTerminalRequest,
@@ -74,7 +75,7 @@ enum ClientFeature {
 };
 
 /// Format of paths reported by the debug adapter.
-enum PathFormat { ePatFormatPath, ePathFormatURI };
+enum PathFormat : unsigned { ePatFormatPath, ePathFormatURI };
 
 /// Arguments for `initialize` request.
 struct InitializeRequestArguments {

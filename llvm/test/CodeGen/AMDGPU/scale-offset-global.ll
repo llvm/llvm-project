@@ -11,10 +11,10 @@ define amdgpu_ps float @global_load_b32_idxprom(ptr addrspace(1) align 4 inreg %
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
-%idxprom = sext i32 %idx to i64
-%arrayidx = getelementptr inbounds float, ptr addrspace(1) %p, i64 %idxprom
-%ret = load float, ptr addrspace(1) %arrayidx, align 4
-ret float %ret
+  %idxprom = sext i32 %idx to i64
+  %arrayidx = getelementptr inbounds float, ptr addrspace(1) %p, i64 %idxprom
+  %ret = load float, ptr addrspace(1) %arrayidx, align 4
+  ret float %ret
 }
 
 define amdgpu_ps float @global_load_b32_idx32(ptr addrspace(1) align 4 inreg %p, i32 %idx) {
@@ -24,9 +24,9 @@ define amdgpu_ps float @global_load_b32_idx32(ptr addrspace(1) align 4 inreg %p,
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
-%arrayidx = getelementptr inbounds float, ptr addrspace(1) %p, i32 %idx
-%ret = load float, ptr addrspace(1) %arrayidx, align 4
-ret float %ret
+  %arrayidx = getelementptr inbounds float, ptr addrspace(1) %p, i32 %idx
+  %ret = load float, ptr addrspace(1) %arrayidx, align 4
+  ret float %ret
 }
 
 define amdgpu_ps float @global_load_b32_idxprom_wrong_stride(ptr addrspace(1) align 4 inreg %p, i32 %idx) {
@@ -46,8 +46,8 @@ define amdgpu_ps float @global_load_b32_idxprom_wrong_stride(ptr addrspace(1) al
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_lshlrev_b64_e32 v[0:1], 3, v[0:1]
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v3, v1, vcc_lo
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, v3, v1, vcc_lo
 ; GFX1250-GISEL-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-GISEL-NEXT:    ; return to shader part epilog
@@ -68,16 +68,16 @@ define amdgpu_ps float @global_load_b32_idxprom_wrong_stride(ptr addrspace(1) al
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-GISEL-NEXT:    v_lshlrev_b64_e32 v[0:1], 3, v[0:1]
 ; GFX13-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
-; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX13-GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v3, v1, vcc_lo
+; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, v3, v1, vcc_lo
 ; GFX13-GISEL-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-GISEL-NEXT:    ; return to shader part epilog
 entry:
-%idxprom = sext i32 %idx to i64
-%arrayidx = getelementptr inbounds <2 x float>, ptr addrspace(1) %p, i64 %idxprom
-%ret = load float, ptr addrspace(1) %arrayidx, align 4
-ret float %ret
+  %idxprom = sext i32 %idx to i64
+  %arrayidx = getelementptr inbounds <2 x float>, ptr addrspace(1) %p, i64 %idxprom
+  %ret = load float, ptr addrspace(1) %arrayidx, align 4
+  ret float %ret
 }
 
 define amdgpu_ps float @global_load_b16_idxprom_ioffset(ptr addrspace(1) align 4 inreg %p, i32 %idx) {
@@ -87,13 +87,13 @@ define amdgpu_ps float @global_load_b16_idxprom_ioffset(ptr addrspace(1) align 4
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
-%idxprom = sext i32 %idx to i64
-%idxadd = add i64 %idxprom, 16
-%arrayidx = getelementptr inbounds i16, ptr addrspace(1) %p, i64 %idxadd
-%ld = load i16, ptr addrspace(1) %arrayidx, align 2
-%ret.i32 = zext i16 %ld to i32
-%ret = bitcast i32 %ret.i32 to float
-ret float %ret
+  %idxprom = sext i32 %idx to i64
+  %idxadd = add i64 %idxprom, 16
+  %arrayidx = getelementptr inbounds i16, ptr addrspace(1) %p, i64 %idxadd
+  %ld = load i16, ptr addrspace(1) %arrayidx, align 2
+  %ret.i32 = zext i16 %ld to i32
+  %ret = bitcast i32 %ret.i32 to float
+  ret float %ret
 }
 
 define amdgpu_ps <2 x float> @global_load_b64_idxprom(ptr addrspace(1) align 4 inreg %p, i32 %idx) {
@@ -103,10 +103,10 @@ define amdgpu_ps <2 x float> @global_load_b64_idxprom(ptr addrspace(1) align 4 i
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
-%idxprom = sext i32 %idx to i64
-%arrayidx = getelementptr inbounds <2 x float>, ptr addrspace(1) %p, i64 %idxprom
-%ret = load <2 x float>, ptr addrspace(1) %arrayidx, align 4
-ret <2 x float> %ret
+  %idxprom = sext i32 %idx to i64
+  %arrayidx = getelementptr inbounds <2 x float>, ptr addrspace(1) %p, i64 %idxprom
+  %ret = load <2 x float>, ptr addrspace(1) %arrayidx, align 4
+  ret <2 x float> %ret
 }
 
 define amdgpu_ps <3 x float> @global_load_b96_idxprom(ptr addrspace(1) align 4 inreg %p, i32 %idx) {
@@ -116,10 +116,10 @@ define amdgpu_ps <3 x float> @global_load_b96_idxprom(ptr addrspace(1) align 4 i
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
-%idxprom = sext i32 %idx to i64
-%arrayidx = getelementptr inbounds [3 x float], ptr addrspace(1) %p, i64 %idxprom
-%ret = load <3 x float>, ptr addrspace(1) %arrayidx, align 4
-ret <3 x float> %ret
+  %idxprom = sext i32 %idx to i64
+  %arrayidx = getelementptr inbounds [3 x float], ptr addrspace(1) %p, i64 %idxprom
+  %ret = load <3 x float>, ptr addrspace(1) %arrayidx, align 4
+  ret <3 x float> %ret
 }
 
 define amdgpu_ps <3 x float> @global_load_b96_idxpromi_ioffset(ptr addrspace(1) align 4 inreg %p, i32 %idx) {
@@ -129,11 +129,11 @@ define amdgpu_ps <3 x float> @global_load_b96_idxpromi_ioffset(ptr addrspace(1) 
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
-%idxprom = sext i32 %idx to i64
-%idxadd = add i64 %idxprom, 16
-%arrayidx = getelementptr inbounds [3 x float], ptr addrspace(1) %p, i64 %idxadd
-%ret = load <3 x float>, ptr addrspace(1) %arrayidx, align 4
-ret <3 x float> %ret
+  %idxprom = sext i32 %idx to i64
+  %idxadd = add i64 %idxprom, 16
+  %arrayidx = getelementptr inbounds [3 x float], ptr addrspace(1) %p, i64 %idxadd
+  %ret = load <3 x float>, ptr addrspace(1) %arrayidx, align 4
+  ret <3 x float> %ret
 }
 
 define amdgpu_ps <4 x float> @global_load_b128_idxprom(ptr addrspace(1) align 4 inreg %p, i32 %idx) {
@@ -143,10 +143,10 @@ define amdgpu_ps <4 x float> @global_load_b128_idxprom(ptr addrspace(1) align 4 
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
-%idxprom = sext i32 %idx to i64
-%arrayidx = getelementptr inbounds <4 x float>, ptr addrspace(1) %p, i64 %idxprom
-%ret = load <4 x float>, ptr addrspace(1) %arrayidx, align 4
-ret <4 x float> %ret
+  %idxprom = sext i32 %idx to i64
+  %arrayidx = getelementptr inbounds <4 x float>, ptr addrspace(1) %p, i64 %idxprom
+  %ret = load <4 x float>, ptr addrspace(1) %arrayidx, align 4
+  ret <4 x float> %ret
 }
 
 define amdgpu_ps float @global_load_b32_idxprom_range(ptr addrspace(1) align 4 inreg %p, ptr addrspace(1) align 4 %pp) {
@@ -158,11 +158,11 @@ define amdgpu_ps float @global_load_b32_idxprom_range(ptr addrspace(1) align 4 i
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
-%idx = load i32, ptr addrspace(1) %pp, align 4, !range !0
-%idxprom = sext i32 %idx to i64
-%arrayidx = getelementptr inbounds float, ptr addrspace(1) %p, i64 %idxprom
-%ret = load float, ptr addrspace(1) %arrayidx, align 4
-ret float %ret
+  %idx = load i32, ptr addrspace(1) %pp, align 4, !range !0
+  %idxprom = sext i32 %idx to i64
+  %arrayidx = getelementptr inbounds float, ptr addrspace(1) %p, i64 %idxprom
+  %ret = load float, ptr addrspace(1) %arrayidx, align 4
+  ret float %ret
 }
 
 define amdgpu_ps float @global_load_b32_idxprom_range_ioffset(ptr addrspace(1) align 4 inreg %p, ptr addrspace(1) align 4 %pp) {
@@ -174,12 +174,12 @@ define amdgpu_ps float @global_load_b32_idxprom_range_ioffset(ptr addrspace(1) a
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
-%idx = load i32, ptr addrspace(1) %pp, align 4, !range !0
-%idxprom = sext i32 %idx to i64
-%idxadd = add i64 %idxprom, 16
-%arrayidx = getelementptr inbounds float, ptr addrspace(1) %p, i64 %idxadd
-%ret = load float, ptr addrspace(1) %arrayidx, align 4
-ret float %ret
+  %idx = load i32, ptr addrspace(1) %pp, align 4, !range !0
+  %idxprom = sext i32 %idx to i64
+  %idxadd = add i64 %idxprom, 16
+  %arrayidx = getelementptr inbounds float, ptr addrspace(1) %p, i64 %idxadd
+  %ret = load float, ptr addrspace(1) %arrayidx, align 4
+  ret float %ret
 }
 
 ; Note: this is a byte load, there is nothing to scale
@@ -193,14 +193,14 @@ define amdgpu_ps float @global_load_b8_idxprom_range_ioffset(ptr addrspace(1) al
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
-%idx = load i32, ptr addrspace(1) %pp, align 4, !range !0
-%idxprom = sext i32 %idx to i64
-%idxadd = add i64 %idxprom, 16
-%arrayidx = getelementptr inbounds i8, ptr addrspace(1) %p, i64 %idxadd
-%ld = load i8, ptr addrspace(1) %arrayidx
-%ret.i32 = zext i8 %ld to i32
-%ret = bitcast i32 %ret.i32 to float
-ret float %ret
+  %idx = load i32, ptr addrspace(1) %pp, align 4, !range !0
+  %idxprom = sext i32 %idx to i64
+  %idxadd = add i64 %idxprom, 16
+  %arrayidx = getelementptr inbounds i8, ptr addrspace(1) %p, i64 %idxadd
+  %ld = load i8, ptr addrspace(1) %arrayidx
+  %ret.i32 = zext i8 %ld to i32
+  %ret = bitcast i32 %ret.i32 to float
+  ret float %ret
 }
 
 define amdgpu_ps float @global_load_b16_idxprom_range(ptr addrspace(1) align 4 inreg %p, ptr addrspace(1) align 4 %pp) {
@@ -212,13 +212,13 @@ define amdgpu_ps float @global_load_b16_idxprom_range(ptr addrspace(1) align 4 i
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
-%idx = load i32, ptr addrspace(1) %pp, align 4, !range !0
-%idxprom = sext i32 %idx to i64
-%arrayidx = getelementptr inbounds i16, ptr addrspace(1) %p, i64 %idxprom
-%ld = load i16, ptr addrspace(1) %arrayidx, align 2
-%ret.i32 = zext i16 %ld to i32
-%ret = bitcast i32 %ret.i32 to float
-ret float %ret
+  %idx = load i32, ptr addrspace(1) %pp, align 4, !range !0
+  %idxprom = sext i32 %idx to i64
+  %arrayidx = getelementptr inbounds i16, ptr addrspace(1) %p, i64 %idxprom
+  %ld = load i16, ptr addrspace(1) %arrayidx, align 2
+  %ret.i32 = zext i16 %ld to i32
+  %ret = bitcast i32 %ret.i32 to float
+  ret float %ret
 }
 
 define amdgpu_ps float @global_load_b16_idxprom_range_ioffset(ptr addrspace(1) align 4 inreg %p, ptr addrspace(1) align 4 %pp) {
@@ -230,14 +230,14 @@ define amdgpu_ps float @global_load_b16_idxprom_range_ioffset(ptr addrspace(1) a
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
-%idx = load i32, ptr addrspace(1) %pp, align 4, !range !0
-%idxprom = sext i32 %idx to i64
-%idxadd = add i64 %idxprom, 16
-%arrayidx = getelementptr inbounds i16, ptr addrspace(1) %p, i64 %idxadd
-%ld = load i16, ptr addrspace(1) %arrayidx, align 2
-%ret.i32 = zext i16 %ld to i32
-%ret = bitcast i32 %ret.i32 to float
-ret float %ret
+  %idx = load i32, ptr addrspace(1) %pp, align 4, !range !0
+  %idxprom = sext i32 %idx to i64
+  %idxadd = add i64 %idxprom, 16
+  %arrayidx = getelementptr inbounds i16, ptr addrspace(1) %p, i64 %idxadd
+  %ld = load i16, ptr addrspace(1) %arrayidx, align 2
+  %ret.i32 = zext i16 %ld to i32
+  %ret = bitcast i32 %ret.i32 to float
+  ret float %ret
 }
 
 define amdgpu_ps <2 x float> @global_load_b64_idxprom_range(ptr addrspace(1) align 4 inreg %p, ptr addrspace(1) align 4 %pp) {
@@ -249,11 +249,11 @@ define amdgpu_ps <2 x float> @global_load_b64_idxprom_range(ptr addrspace(1) ali
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
-%idx = load i32, ptr addrspace(1) %pp, align 4, !range !0
-%idxprom = sext i32 %idx to i64
-%arrayidx = getelementptr inbounds <2 x float>, ptr addrspace(1) %p, i64 %idxprom
-%ret = load <2 x float>, ptr addrspace(1) %arrayidx, align 4
-ret <2 x float> %ret
+  %idx = load i32, ptr addrspace(1) %pp, align 4, !range !0
+  %idxprom = sext i32 %idx to i64
+  %arrayidx = getelementptr inbounds <2 x float>, ptr addrspace(1) %p, i64 %idxprom
+  %ret = load <2 x float>, ptr addrspace(1) %arrayidx, align 4
+  ret <2 x float> %ret
 }
 
 define amdgpu_ps <3 x float> @global_load_b96_idxprom_range(ptr addrspace(1) align 4 inreg %p, ptr addrspace(1) align 4 %pp) {
@@ -265,11 +265,11 @@ define amdgpu_ps <3 x float> @global_load_b96_idxprom_range(ptr addrspace(1) ali
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
-%idx = load i32, ptr addrspace(1) %pp, align 4, !range !0
-%idxprom = sext i32 %idx to i64
-%arrayidx = getelementptr inbounds [3 x float], ptr addrspace(1) %p, i64 %idxprom
-%ret = load <3 x float>, ptr addrspace(1) %arrayidx, align 4
-ret <3 x float> %ret
+  %idx = load i32, ptr addrspace(1) %pp, align 4, !range !0
+  %idxprom = sext i32 %idx to i64
+  %arrayidx = getelementptr inbounds [3 x float], ptr addrspace(1) %p, i64 %idxprom
+  %ret = load <3 x float>, ptr addrspace(1) %arrayidx, align 4
+  ret <3 x float> %ret
 }
 
 define amdgpu_ps <3 x float> @global_load_b96_idxprom_range_ioffset(ptr addrspace(1) align 4 inreg %p, ptr addrspace(1) align 4 %pp) {
@@ -281,12 +281,12 @@ define amdgpu_ps <3 x float> @global_load_b96_idxprom_range_ioffset(ptr addrspac
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
-%idx = load i32, ptr addrspace(1) %pp, align 4, !range !0
-%idxprom = sext i32 %idx to i64
-%idxadd = add i64 %idxprom, 16
-%arrayidx = getelementptr inbounds [3 x float], ptr addrspace(1) %p, i64 %idxadd
-%ret = load <3 x float>, ptr addrspace(1) %arrayidx, align 4
-ret <3 x float> %ret
+  %idx = load i32, ptr addrspace(1) %pp, align 4, !range !0
+  %idxprom = sext i32 %idx to i64
+  %idxadd = add i64 %idxprom, 16
+  %arrayidx = getelementptr inbounds [3 x float], ptr addrspace(1) %p, i64 %idxadd
+  %ret = load <3 x float>, ptr addrspace(1) %arrayidx, align 4
+  ret <3 x float> %ret
 }
 
 define amdgpu_ps <4 x float> @global_load_b128_idxprom_range(ptr addrspace(1) align 4 inreg %p, ptr addrspace(1) align 4 %pp) {
@@ -298,11 +298,11 @@ define amdgpu_ps <4 x float> @global_load_b128_idxprom_range(ptr addrspace(1) al
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    ; return to shader part epilog
 entry:
-%idx = load i32, ptr addrspace(1) %pp, align 4, !range !0
-%idxprom = sext i32 %idx to i64
-%arrayidx = getelementptr inbounds <4 x float>, ptr addrspace(1) %p, i64 %idxprom
-%ret = load <4 x float>, ptr addrspace(1) %arrayidx, align 4
-ret <4 x float> %ret
+  %idx = load i32, ptr addrspace(1) %pp, align 4, !range !0
+  %idxprom = sext i32 %idx to i64
+  %arrayidx = getelementptr inbounds <4 x float>, ptr addrspace(1) %p, i64 %idxprom
+  %ret = load <4 x float>, ptr addrspace(1) %arrayidx, align 4
+  ret <4 x float> %ret
 }
 
 define amdgpu_ps void @global_store_b32_idxprom(ptr addrspace(1) align 4 inreg %p, i32 %idx) {
@@ -312,10 +312,10 @@ define amdgpu_ps void @global_store_b32_idxprom(ptr addrspace(1) align 4 inreg %
 ; GCN-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
 ; GCN-NEXT:    s_endpgm
 entry:
-%idxprom = sext i32 %idx to i64
-%arrayidx = getelementptr inbounds float, ptr addrspace(1) %p, i64 %idxprom
-store float 1.0, ptr addrspace(1) %arrayidx, align 4
-ret void
+  %idxprom = sext i32 %idx to i64
+  %arrayidx = getelementptr inbounds float, ptr addrspace(1) %p, i64 %idxprom
+  store float 1.0, ptr addrspace(1) %arrayidx, align 4
+  ret void
 }
 
 define amdgpu_ps void @global_store_b16_idxprom(ptr addrspace(1) align 2 inreg %p, i32 %idx) {
@@ -325,10 +325,10 @@ define amdgpu_ps void @global_store_b16_idxprom(ptr addrspace(1) align 2 inreg %
 ; GCN-NEXT:    global_store_b16 v0, v1, s[0:1] scale_offset
 ; GCN-NEXT:    s_endpgm
 entry:
-%idxprom = sext i32 %idx to i64
-%arrayidx = getelementptr inbounds i16, ptr addrspace(1) %p, i64 %idxprom
-store i16 1, ptr addrspace(1) %arrayidx, align 2
-ret void
+  %idxprom = sext i32 %idx to i64
+  %arrayidx = getelementptr inbounds i16, ptr addrspace(1) %p, i64 %idxprom
+  store i16 1, ptr addrspace(1) %arrayidx, align 2
+  ret void
 }
 
 define amdgpu_ps void @global_store_b64_idxprom(ptr addrspace(1) align 4 inreg %p, i32 %idx) {
@@ -345,10 +345,10 @@ define amdgpu_ps void @global_store_b64_idxprom(ptr addrspace(1) align 4 inreg %
 ; GFX13-NEXT:    global_store_b64 v0, v[2:3], s[0:1] scale_offset
 ; GFX13-NEXT:    s_endpgm
 entry:
-%idxprom = sext i32 %idx to i64
-%arrayidx = getelementptr inbounds double, ptr addrspace(1) %p, i64 %idxprom
-store double 1.0, ptr addrspace(1) %arrayidx, align 4
-ret void
+  %idxprom = sext i32 %idx to i64
+  %arrayidx = getelementptr inbounds double, ptr addrspace(1) %p, i64 %idxprom
+  store double 1.0, ptr addrspace(1) %arrayidx, align 4
+  ret void
 }
 
 define amdgpu_ps void @global_atomicrmw_b32_idxprom(ptr addrspace(1) align 4 inreg %p, i32 %idx) {
@@ -358,10 +358,10 @@ define amdgpu_ps void @global_atomicrmw_b32_idxprom(ptr addrspace(1) align 4 inr
 ; GCN-NEXT:    global_atomic_add_u32 v0, v1, s[0:1] scale_offset scope:SCOPE_SYS
 ; GCN-NEXT:    s_endpgm
 entry:
-%idxprom = sext i32 %idx to i64
-%arrayidx = getelementptr inbounds i32, ptr addrspace(1) %p, i64 %idxprom
-atomicrmw add ptr addrspace(1) %arrayidx, i32 1 monotonic
-ret void
+  %idxprom = sext i32 %idx to i64
+  %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %p, i64 %idxprom
+  atomicrmw add ptr addrspace(1) %arrayidx, i32 1 monotonic
+  ret void
 }
 
 define amdgpu_ps <2 x float> @global_atomicrmw_b64_rtn_idxprom(ptr addrspace(1) align 8 inreg %p, i32 %idx) {
@@ -380,11 +380,11 @@ define amdgpu_ps <2 x float> @global_atomicrmw_b64_rtn_idxprom(ptr addrspace(1) 
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 entry:
-%idxprom = sext i32 %idx to i64
-%arrayidx = getelementptr inbounds i64, ptr addrspace(1) %p, i64 %idxprom
-%ret = atomicrmw add ptr addrspace(1) %arrayidx, i64 1 monotonic
-%ret.cast = bitcast i64 %ret to <2 x float>
-ret <2 x float> %ret.cast
+  %idxprom = sext i32 %idx to i64
+  %arrayidx = getelementptr inbounds i64, ptr addrspace(1) %p, i64 %idxprom
+  %ret = atomicrmw add ptr addrspace(1) %arrayidx, i64 1 monotonic
+  %ret.cast = bitcast i64 %ret to <2 x float>
+  ret <2 x float> %ret.cast
 }
 
 !0 = !{i32 0, i32 1024}
