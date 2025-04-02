@@ -20549,14 +20549,16 @@ static bool ValidateAMDGPUPredicateBI(Sema &Sema, CallExpr *CE) {
         (!Sema.getASTContext().getAuxTargetInfo() ||
          !Sema.getASTContext().getAuxTargetInfo()->isValidCPUName(N))) {
       Sema.Diag(CE->getExprLoc(),
-                diag::err_amdgcn_processor_is_arg_invalid_value) << N;
+                diag::err_amdgcn_processor_is_arg_invalid_value)
+          << N;
       return false;
     }
   } else {
     auto Arg = CE->getArg(0);
     if (!Arg || Arg->getType() != Sema.getASTContext().BuiltinFnTy) {
       Sema.Diag(CE->getExprLoc(),
-                diag::err_amdgcn_is_invocable_arg_invalid_value) << Arg;
+                diag::err_amdgcn_is_invocable_arg_invalid_value)
+          << Arg;
       return false;
     }
   }
@@ -20568,10 +20570,9 @@ static Expr *MaybeHandleAMDGPUPredicateBI(Sema &Sema, Expr *E, bool &Invalid) {
   if (auto UO = dyn_cast<UnaryOperator>(E)) {
     auto SE = dyn_cast<CallExpr>(UO->getSubExpr());
     if (IsAMDGPUPredicateBI(SE)) {
-      assert(
-        UO->getOpcode() == UnaryOperator::Opcode::UO_LNot &&
-        "__builtin_amdgcn_processor_is and __builtin_amdgcn_is_invocable "
-          "can only be used as operands of logical ops!");
+      assert(UO->getOpcode() == UnaryOperator::Opcode::UO_LNot &&
+             "__builtin_amdgcn_processor_is and __builtin_amdgcn_is_invocable "
+             "can only be used as operands of logical ops!");
 
       if (!ValidateAMDGPUPredicateBI(Sema, SE)) {
         Invalid = true;
@@ -20588,10 +20589,9 @@ static Expr *MaybeHandleAMDGPUPredicateBI(Sema &Sema, Expr *E, bool &Invalid) {
     auto LHS = dyn_cast<CallExpr>(BO->getLHS());
     auto RHS = dyn_cast<CallExpr>(BO->getRHS());
     if (IsAMDGPUPredicateBI(LHS) && IsAMDGPUPredicateBI(RHS)) {
-      assert(
-          BO->isLogicalOp() &&
-          "__builtin_amdgcn_processor_is and __builtin_amdgcn_is_invocable "
-            "can only be used as operands of logical ops!");
+      assert(BO->isLogicalOp() &&
+             "__builtin_amdgcn_processor_is and __builtin_amdgcn_is_invocable "
+             "can only be used as operands of logical ops!");
 
       if (!ValidateAMDGPUPredicateBI(Sema, LHS) ||
           !ValidateAMDGPUPredicateBI(Sema, RHS)) {

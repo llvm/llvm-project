@@ -292,8 +292,8 @@ static Value *GetOrInsertAMDGPUPredicate(CodeGenFunction &CGF, Twine Name) {
   P->setConstant(true);
   P->setExternallyInitialized(true);
 
-  return CGF.Builder.CreateLoad(RawAddress(P, PTy, CharUnits::One(),
-                                           KnownNonNull));
+  return CGF.Builder.CreateLoad(
+      RawAddress(P, PTy, CharUnits::One(), KnownNonNull));
 }
 
 Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
@@ -600,7 +600,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_processor_is: {
     assert(CGM.getTriple().isSPIRV() &&
            "__builtin_amdgcn_processor_is should never reach CodeGen for "
-             "concrete targets!");
+           "concrete targets!");
     StringRef Proc = cast<clang::StringLiteral>(E->getArg(0))->getString();
     return GetOrInsertAMDGPUPredicate(*this, "llvm.amdgcn.is." + Proc);
   }
@@ -609,7 +609,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
            "__builtin_amdgcn_is_invocable should never reach CodeGen for "
            "concrete targets!");
     auto FD = cast<FunctionDecl>(
-      cast<DeclRefExpr>(E->getArg(0))->getReferencedDeclOfCallee());
+        cast<DeclRefExpr>(E->getArg(0))->getReferencedDeclOfCallee());
     StringRef RF =
         getContext().BuiltinInfo.getRequiredFeatures(FD->getBuiltinID());
     return GetOrInsertAMDGPUPredicate(*this, "llvm.amdgcn.has." + RF);
