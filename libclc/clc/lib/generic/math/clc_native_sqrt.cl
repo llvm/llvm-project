@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
-#include <clc/math/clc_native_cos.h>
+#include <clc/internal/clc.h>
 
 #define __FLOAT_ONLY
-#define FUNCTION native_cos
+#define FUNCTION __clc_native_sqrt
+#define __CLC_FUNCTION(x) __builtin_elementwise_sqrt
 #define __CLC_BODY <clc/shared/unary_def.inc>
 
 #include <clc/math/gentype.inc>

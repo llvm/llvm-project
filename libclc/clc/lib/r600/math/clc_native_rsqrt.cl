@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
-#include <clc/math/clc_native_cos.h>
+#include <clc/clcmacro.h>
+#include <clc/internal/clc.h>
 
-#define __FLOAT_ONLY
-#define FUNCTION native_cos
-#define __CLC_BODY <clc/shared/unary_def.inc>
+_CLC_OVERLOAD _CLC_DEF float __clc_native_rsqrt(float x) {
+  return __builtin_r600_recipsqrt_ieeef(x);
+}
 
-#include <clc/math/gentype.inc>
+_CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, float, __clc_native_rsqrt, float);
