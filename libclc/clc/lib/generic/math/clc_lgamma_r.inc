@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define __CLC_FUNCTION lgamma_r
-#define __CLC_BODY <clc/math/unary_decl_with_int_ptr.inc>
-
-#include <clc/math/gentype.inc>
-
-#undef __CLC_BODY
-#undef __CLC_FUNCTION
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE
+__clc_lgamma_r(__CLC_GENTYPE x, __CLC_ADDRSPACE __CLC_INTN *iptr) {
+  __CLC_INTN private_iptr;
+  __CLC_GENTYPE ret = __clc_lgamma_r(x, &private_iptr);
+  *iptr = private_iptr;
+  return ret;
+}
