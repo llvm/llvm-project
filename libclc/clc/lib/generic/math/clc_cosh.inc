@@ -21,8 +21,8 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_cosh(__CLC_GENTYPE x) {
   const __CLC_GENTYPE small_threshold = 0x1.0a2b24p+3f;
 
   __CLC_UINTN ux = __CLC_AS_UINTN(x);
-  __CLC_UINTN aux = ux & EXSIGNBIT_SP32;
-  __CLC_GENTYPE y = __CLC_AS_GENTYPE(aux);
+  __CLC_GENTYPE y = __clc_fabs(x);
+  __CLC_UINTN aux = __CLC_AS_UINTN(y);
 
   // Find the integer part y0 of y and the increment dy = y - y0. We then
   // compute z = sinh(y) = sinh(y0)cosh(dy) + cosh(y0)sinh(dy) z = cosh(y) =
@@ -91,7 +91,6 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_cosh(__CLC_GENTYPE x) {
 #elif __CLC_FPSIZE == 64
 
 _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_cosh(__CLC_GENTYPE x) {
-
   // After dealing with special cases the computation is split into
   // regions as follows:
   //
@@ -106,9 +105,8 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_cosh(__CLC_GENTYPE x) {
   // compute p = exp(y) - 1 and then z = 0.5*(p+(p/(p+1.0)))
   // cosh(x) is then sign(x)*z.
 
-  // This is ln(2^1025)
-  const __CLC_GENTYPE max_cosh_arg =
-      7.10475860073943977113e+02; // 0x408633ce8fb9f87e
+  // This is ln(2^1025) = 0x408633ce8fb9f87e
+  const __CLC_GENTYPE max_cosh_arg = 7.10475860073943977113e+02;
 
   // This is where exp(-x) is insignificant compared to exp(x) = ln(2^27)
   const __CLC_GENTYPE small_threshold = 0x1.2b708872320e2p+4;

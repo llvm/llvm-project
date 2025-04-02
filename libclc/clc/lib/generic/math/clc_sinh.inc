@@ -20,9 +20,9 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_sinh(__CLC_GENTYPE x) {
   const __CLC_GENTYPE small_threshold = 0x1.0a2b24p+3f;
 
   __CLC_UINTN ux = __CLC_AS_UINTN(x);
-  __CLC_UINTN aux = ux & EXSIGNBIT_SP32;
+  __CLC_GENTYPE y = __clc_fabs(x);
+  __CLC_UINTN aux = __CLC_AS_UINTN(y);
   __CLC_UINTN xs = ux ^ aux;
-  __CLC_GENTYPE y = __CLC_AS_GENTYPE(aux);
 
   // We find the integer part y0 of y and the increment dy = y - y0. We then
   // compute z = sinh(y) = sinh(y0)cosh(dy) + cosh(y0)sinh(dy) where sinh(y0)
@@ -106,8 +106,8 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_sinh(__CLC_GENTYPE x) {
   // compute p = exp(y) - 1 and then z = 0.5*(p+(p/(p+1.0)))
   // sinh(x) is then sign(x)*z.
 
-  const __CLC_GENTYPE max_sinh_arg =
-      7.10475860073943977113e+02; // 0x408633ce8fb9f87e
+  // 0x408633ce8fb9f87e
+  const __CLC_GENTYPE max_sinh_arg = 7.10475860073943977113e+02;
 
   // This is where exp(-x) is insignificant compared to exp(x) = ln(2^27)
   const __CLC_GENTYPE small_threshold = 0x1.2b708872320e2p+4;
