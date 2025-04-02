@@ -213,13 +213,11 @@ struct KnownAArch64BuildAttrSubsections {
   struct PauthSubSection {
     unsigned tagPlatform = 0;
     unsigned tagSchema = 0;
-    bool ignore = 1;
   } pauth;
   struct FAndBSubSection {
     unsigned tagBTI = 0;
     unsigned tagPAC = 0;
     unsigned tagGCS = 0;
-    bool ignore = 1;
   } fAndB;
 };
 
