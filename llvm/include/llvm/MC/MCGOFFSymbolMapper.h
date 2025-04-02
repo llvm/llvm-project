@@ -40,7 +40,7 @@ class MCSectionGOFF;
 // the whole data is pulled into the resulting executable, and the addresses
 // given by the LD symbols are resolved.
 //
-// The alternative is to use a Part Defiition (PR). In this case, the data (in a
+// The alternative is to use a Part Definition (PR). In this case, the data (in a
 // text record) is associated with the part. When binding, only the data of
 // referenced PRs is pulled into the resulting binary.
 //
