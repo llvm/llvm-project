@@ -322,18 +322,18 @@ function(create_libc_unittest fq_target_name)
         ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:${fq_build_target_name}>)
     add_custom_target(
       ${fq_target_name}
-      DEPENDS ${fq_target_name}-cmd
+      DEPENDS ${fq_target_name}.__cmd__
     )
 
     add_custom_command(
-      OUTPUT ${fq_target_name}-cmd
+      OUTPUT ${fq_target_name}.__cmd__
       COMMAND ${test_cmd}
       COMMAND_EXPAND_LISTS
       COMMENT "Running unit test ${fq_target_name}"
       ${LIBC_UNIT_TEST_JOB_POOL}
     )
 
-    set_source_files_properties(${fq_target_name}-cmd
+    set_source_files_properties(${fq_target_name}.__cmd__
       PROPERTIES
         SYMBOLIC "TRUE"
     )
@@ -820,18 +820,18 @@ function(add_libc_hermetic test_name)
         $<TARGET_FILE:${fq_build_target_name}> ${HERMETIC_TEST_ARGS})
     add_custom_target(
       ${fq_target_name}
-      DEPENDS ${fq_target_name}-cmd
+      DEPENDS ${fq_target_name}.__cmd__
     )
 
     add_custom_command(
-      OUTPUT ${fq_target_name}-cmd
+      OUTPUT ${fq_target_name}.__cmd__
       COMMAND ${test_cmd}
       COMMAND_EXPAND_LISTS
       COMMENT "Running hermetic test ${fq_target_name}"
       ${LIBC_HERMETIC_TEST_JOB_POOL}
     )
 
-    set_source_files_properties(${fq_target_name}-cmd
+    set_source_files_properties(${fq_target_name}.__cmd__
       PROPERTIES
         SYMBOLIC "TRUE"
     )
