@@ -2235,8 +2235,8 @@ public:
       }
     }
 
-    // When LIBOMPTARGET_EXE_TIME is set, register the callback function to get
-    // the kernel duration.
+    // When LIBOMPTARGET_KERNEL_EXE_TIME is set, register the callback function
+    // to get the kernel duration.
     if (Device.enableKernelDurationTracing()) {
       KernelDurationTracingArgs.Agent = Agent;
       KernelDurationTracingArgs.Signal = OutputSignal;
@@ -2689,8 +2689,8 @@ struct AMDGPUStreamManagerTy final
         OMPX_EnableQueueProfiling("LIBOMPTARGET_AMDGPU_ENABLE_QUEUE_PROFILING",
                                   false),
         NextQueue(0), Agent(HSAAgent) {
-    // If OMPX_ENABLE_RUNTIME_AUTOTUNING or LIBOMPTARGET_EXE_TIME is enabled,
-    // set queue profiling to true.
+    // If OMPX_ENABLE_RUNTIME_AUTOTUNING or LIBOMPTARGET_KERNEL_EXE_TIME is
+    // enabled, set queue profiling to true.
     if (Device.enableRuntimeAutotuning() ||
         Device.enableKernelDurationTracing()) {
       OMPX_EnableQueueProfiling = true;
