@@ -20630,10 +20630,10 @@ ExprResult Sema::CheckBooleanCondition(SourceLocation Loc, Expr *E,
 
   if (!E->isTypeDependent()) {
     if (E->getType()->isVoidType()) {
-      bool IsInvalidPredicate = false;
-      if (auto *BIC = MaybeHandleAMDGPUPredicateBI(*this, E, IsInvalidPredicate))
+      bool InvalidPredicate = false;
+      if (auto *BIC = MaybeHandleAMDGPUPredicateBI(*this, E, InvalidPredicate))
         return BIC;
-      else if (IsInvalidPredicate)
+      else if (InvalidPredicate)
         return ExprError();
     }
 
