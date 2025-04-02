@@ -2,6 +2,7 @@
 ; RUN: opt -passes=loop-vectorize -enable-epilogue-vectorization=false -mattr=+neon,+dotprod -force-vector-interleave=1 -S < %s | FileCheck %s --check-prefixes=CHECK-INTERLEAVE1
 ; RUN: opt -passes=loop-vectorize -enable-epilogue-vectorization=false -mattr=+neon,+dotprod -S < %s | FileCheck %s --check-prefixes=CHECK-INTERLEAVED
 ; RUN: opt -passes=loop-vectorize -enable-epilogue-vectorization=false -mattr=+neon,+dotprod -force-vector-interleave=1 -vectorizer-maximize-bandwidth -S < %s | FileCheck %s --check-prefixes=CHECK-MAXBW
+; RUN: opt -passes=loop-vectorize -debug-only=loop-vectorize --disable-output -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK-REGS
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-none-unknown-elf"
@@ -947,6 +948,12 @@ define i32 @dotp_unrolled(i32 %num_out, i64 %num_in, ptr %a, ptr %b) {
 ; CHECK-MAXBW-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK-MAXBW:       scalar.ph:
 ;
+; CHECK-REGS:      LV: Checking a loop in 'dotp_unrolled' from <stdin>
+; CHECK-REGS:      LV(REG): VF = 16
+; CHECK-REGS-NEXT: LV(REG): Found max usage: 2 item
+; CHECK-REGS-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 9 registers
+; CHECK-REGS-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 24 registers
+; CHECK-REGS-NEXT: LV(REG): Found invariant usage: 1 item
 entry:
   br label %for.body
 
