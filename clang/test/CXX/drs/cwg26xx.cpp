@@ -36,7 +36,7 @@ namespace std {
 } // namespace std
 
 namespace cwg2611 { // cwg2611: 21
-#if __cpp_fold_expressions >= 201603
+#if __cplusplus >= 201703L
 template<class> class R {};
 template<class... Ts> auto a(Ts... xs) -> R<decltype((xs + ...))>;
 template<class... Ts> auto b(Ts... xs) -> R<decltype((..., xs))>;
