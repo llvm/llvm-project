@@ -9,16 +9,16 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_UEFI_ERROR_H
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_UEFI_ERROR_H
 
+#include "hdr/errno_macros.h"
 #include "include/llvm-libc-types/EFI_STATUS.h"
 #include "src/__support/CPP/array.h"
+#include "src/__support/CPP/limits.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
-#include <errno.h>
-#include <limits.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
-#define EFI_ERROR_MAX_BIT (1 << (sizeof(EFI_STATUS) * sizeof(char) - 1))
+#define EFI_ERROR_MAX_BIT (cpp::numeric_limits<EFI_STATUS>::max())
 #define EFI_ENCODE_ERROR(value)                                                \
   (EFI_ERROR_MAX_BIT | (EFI_ERROR_MAX_BIT >> 2) | (value))
 #define EFI_ENCODE_WARNING(value) ((EFI_ERROR_MAX_BIT >> 2) | (value))
@@ -28,7 +28,7 @@ struct UefiStatusErrnoEntry {
   int errno_value;
 };
 
-static constexpr cpp::array<UefiStatusErrnoEntry, 43> UEFI_STATUS_ERRNO_MAP = {{
+static const cpp::array<UefiStatusErrnoEntry, 43> UEFI_STATUS_ERRNO_MAP = {{
     {EFI_SUCCESS, 0},
     {EFI_ENCODE_ERROR(EFI_LOAD_ERROR), EINVAL},
     {EFI_ENCODE_ERROR(EFI_INVALID_PARAMETER), EINVAL},
