@@ -430,7 +430,9 @@ static Error runAOTCompileIntelGPU(StringRef InputFile, const ArgList &Args) {
   CmdArgs.push_back("-spirv_input");
 
   StringRef Arch(Args.getLastArgValue(OPT_arch_EQ));
-  assert(!Arch.empty() && "Arch must be specified for AOT compilation");
+  if (Arch.empty())
+    return createStringError(inconvertibleErrorCode(),
+                             "Arch must be specified for AOT compilation");
   CmdArgs.push_back("-device");
   CmdArgs.push_back(Arch);
 
