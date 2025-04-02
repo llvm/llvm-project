@@ -161,7 +161,9 @@ static bool canReplaceFuncUsers(const Function &F, Type *NewRetTy) {
     if (CB->getType() == NewRetTy)
       continue;
 
-    LLVM_DEBUG(dbgs() << "Cannot replace callsite with wrong type: " << *CB
+    // TODO: If all callsites have no uses, we could mutate the type of all the
+    // callsites. This will complicate the visit and rewrite ordering though.
+    LLVM_DEBUG(dbgs() << "Cannot replace used callsite with wrong type: " << *CB
                       << '\n');
     return false;
   }
@@ -197,8 +199,7 @@ static bool shouldForwardValueToReturn(const BasicBlock &BB, const Value *V,
   if (!isReallyValidReturnType(V->getType()))
     return false;
 
-  return (RetTy->isVoidTy() ||
-          (RetTy == V->getType() && shouldReplaceNonVoidReturnValue(BB, V))) &&
+  return (RetTy->isVoidTy() || shouldReplaceNonVoidReturnValue(BB, V)) &&
          canReplaceFuncUsers(*BB.getParent(), V->getType());
 }
 
