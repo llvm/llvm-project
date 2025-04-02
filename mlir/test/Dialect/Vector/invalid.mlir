@@ -526,9 +526,9 @@ func.func @test_vector.transfer_read(%arg0: memref<?x?xvector<2x3xf32>>) {
 // -----
 
 func.func @test_vector.transfer_read(%arg1: memref<?xindex>) -> vector<3x4xi32> {
-  %c3_i32 = arith.constant 3 : i32
-  // expected-error@+1 {{source rank is less than required for vector rank}}
-  %0 = vector.transfer_read %arg1[%c3_i32, %c3_i32], %c3_i32 : memref<?xindex>, vector<3x4xi32>
+  %c3 = arith.constant 3 : index
+  // expected-error@+1 {{failed to create a minor identity map, source rank is less than required for vector rank}}
+  %0 = vector.transfer_read %arg1[%c3, %c3], %c3 : memref<?xindex>, vector<3x4xi32>
   return %0 : vector<3x4xi32>
 }
 
@@ -657,7 +657,7 @@ func.func @test_vector.transfer_write(%arg0: memref<?xf32>, %arg1: vector<7xf32>
 
 func.func @test_vector.transfer_write(%vec_to_write: vector<3x4xi32>, %output_memref: memref<?xindex>) {
   %c3_idx = arith.constant 3 : index
-  // expected-error@+1 {{result rank is less than required for vector rank}}
+  // expected-error@+1 {{failed to create a minor identity map, result rank is less than required for vector rank}}
   vector.transfer_write %vec_to_write, %output_memref[%c3_idx, %c3_idx] : vector<3x4xi32>, memref<?xindex>
 }
 

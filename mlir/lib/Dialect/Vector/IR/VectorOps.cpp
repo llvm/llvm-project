@@ -152,11 +152,6 @@ static bool isSupportedCombiningKind(CombiningKind combiningKind,
 
 AffineMap mlir::vector::getTransferMinorIdentityMap(ShapedType shapedType,
                                                     VectorType vectorType) {
-  int64_t elementVectorRank = 0;
-  VectorType elementVectorType =
-      llvm::dyn_cast<VectorType>(shapedType.getElementType());
-  if (elementVectorType)
-    elementVectorRank += elementVectorType.getRank();
   // 0-d transfers are to/from tensor<t>/memref<t> and vector<1xt>.
   // TODO: replace once we have 0-d vectors.
   if (shapedType.getRank() == 0 &&
@@ -164,6 +159,11 @@ AffineMap mlir::vector::getTransferMinorIdentityMap(ShapedType shapedType,
     return AffineMap::get(
         /*numDims=*/0, /*numSymbols=*/0,
         getAffineConstantExpr(0, shapedType.getContext()));
+  int64_t elementVectorRank = 0;
+  VectorType elementVectorType =
+      llvm::dyn_cast<VectorType>(shapedType.getElementType());
+  if (elementVectorType)
+    elementVectorRank += elementVectorType.getRank();
   if (shapedType.getRank() < vectorType.getRank() - elementVectorRank) {
     // Not enough dimensions in the shaped type to form a minor identity map.
     return AffineMap();
@@ -4266,7 +4266,7 @@ ParseResult TransferReadOp::parse(OpAsmParser &parser, OperationState &result) {
     permMap = getTransferMinorIdentityMap(shapedType, vectorType);
     if (!permMap) {
       return parser.emitError(
-          typesLoc, "source rank is less than required for vector rank");
+          typesLoc, "failed to create a minor identity map, source rank is less than required for vector rank");
     }
     result.attributes.set(permMapAttrName, AffineMapAttr::get(permMap));
   } else {
@@ -4678,7 +4678,7 @@ ParseResult TransferWriteOp::parse(OpAsmParser &parser,
     permMap = getTransferMinorIdentityMap(shapedType, vectorType);
     if (!permMap) {
       return parser.emitError(
-          typesLoc, "result rank is less than required for vector rank");
+          typesLoc, "failed to create a minor identity map, result rank is less than required for vector rank");
     }
     result.attributes.set(permMapAttrName, AffineMapAttr::get(permMap));
   } else {
