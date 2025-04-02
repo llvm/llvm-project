@@ -3569,9 +3569,8 @@ Sema::FindUsualDeallocationFunction(SourceLocation StartLoc,
   return Result.FD;
 }
 
-FunctionDecl *Sema::FindDeallocationFunctionForDestructor(SourceLocation Loc,
-                                                          CXXRecordDecl *RD) {
-  DeclarationName Name = Context.DeclarationNames.getCXXOperatorName(OO_Delete);
+FunctionDecl *Sema::FindDeallocationFunctionForDestructor(
+    SourceLocation Loc, CXXRecordDecl *RD, DeclarationName Name) {
 
   FunctionDecl *OperatorDelete = nullptr;
   QualType DeallocType = Context.getRecordType(RD);
@@ -3585,8 +3584,7 @@ FunctionDecl *Sema::FindDeallocationFunctionForDestructor(SourceLocation Loc,
   if (OperatorDelete)
     return OperatorDelete;
 
-  // If there's no class-specific operator delete, look up the global
-  // non-array delete.
+  // If there's no class-specific operator delete, look up the global delete.
   QualType RecordType = Context.getRecordType(RD);
   IDP.PassAlignment =
       alignedAllocationModeFromBool(hasNewExtendedAlignment(*this, RecordType));
