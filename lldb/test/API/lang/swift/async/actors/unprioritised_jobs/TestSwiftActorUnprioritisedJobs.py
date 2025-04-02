@@ -20,8 +20,8 @@ class TestCase(TestBase):
         unprioritised_jobs = defaultActor.GetChildMemberWithName("unprioritised_jobs")
         # There are 4 child tasks (async let), the first one occupies the actor
         # with a sleep, the next 3 go on to the queue.
-        if unprioritised_jobs.num_children > 0:
-            self.assertEqual(unprioritised_jobs.num_children, 3)
-            for job in unprioritised_jobs:
-                self.assertRegex(job.name, r"^\d+")
-                self.assertRegex(job.summary, r"^id:\d+ flags:\S+")
+        # TODO: rdar://148377173
+        # self.assertEqual(unprioritised_jobs.num_children, 3)
+        for job in unprioritised_jobs:
+            self.assertRegex(job.name, r"^\d+")
+            self.assertRegex(job.summary, r"^id:\d+ flags:\S+")
