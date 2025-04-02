@@ -78,7 +78,8 @@ void runThroughTest(StringRef InputFile) {
     if (Partials) {
       for (auto& PartialPairs : *Partials->getAsObject()) {
         const auto& [Partial, Str] = PartialPairs;
-        T.registerPartial(*Str.getAsString(), Partial);
+        T.registerPartial((*Str.getAsString()).str(), 
+                          Partial.str());
       }
     }
     std::string ActualStr;
