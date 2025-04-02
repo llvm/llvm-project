@@ -2245,7 +2245,8 @@ static OffloadArch getOffloadArch(CodeGenModule &CGM) {
 /// a restriction for OpenMP requires clause "unified_shared_memory".
 void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
   for (const OMPClause *Clause : D->clauselists()) {
-    if (Clause->getClauseKind() == OMPC_unified_shared_memory) {
+    if (Clause->getClauseKind() == OMPC_unified_shared_memory ||
+        Clause->getClauseKind() == OMPC_self_maps) {
       OffloadArch Arch = getOffloadArch(CGM);
       switch (Arch) {
       case OffloadArch::SM_20:
