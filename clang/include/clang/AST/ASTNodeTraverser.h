@@ -396,8 +396,7 @@ public:
     // FIXME: Provide a NestedNameSpecifier visitor.
     NestedNameSpecifier *Qualifier = T->getQualifier();
     if (NestedNameSpecifier::SpecifierKind K = Qualifier->getKind();
-        K == NestedNameSpecifier::TypeSpec ||
-        K == NestedNameSpecifier::TypeSpecWithTemplate)
+        K == NestedNameSpecifier::TypeSpec)
       Visit(Qualifier->getAsType());
     if (T->isSugared())
       Visit(T->getMostRecentCXXRecordDecl()->getTypeForDecl());

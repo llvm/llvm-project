@@ -1219,6 +1219,11 @@ void BinaryFunction::handleIndirectBranch(MCInst &Instruction, uint64_t Size,
   case IndirectBranchType::UNKNOWN:
     // Keep processing. We'll do more checks and fixes in
     // postProcessIndirectBranches().
+    if (opts::Verbosity > 2) {
+      outs() << "BOLT-WARNING: failed to match indirect branch, "
+             << getPrintName() << " at 0x" << Twine::utohexstr(Offset)
+             << " offset\n";
+    }
     UnknownIndirectBranchOffsets.emplace(Offset);
     break;
   }
@@ -1997,7 +2002,7 @@ void BinaryFunction::postProcessJumpTables() {
 bool BinaryFunction::validateExternallyReferencedOffsets() {
   SmallPtrSet<MCSymbol *, 4> JTTargets;
   for (const JumpTable *JT : llvm::make_second_range(JumpTables))
-    JTTargets.insert(JT->Entries.begin(), JT->Entries.end());
+    JTTargets.insert_range(JT->Entries);
 
   bool HasUnclaimedReference = false;
   for (uint64_t Destination : ExternallyReferencedOffsets) {
