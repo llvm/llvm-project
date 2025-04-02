@@ -4222,10 +4222,11 @@ public:
                                            SourceLocation DirLoc,
                                            OpenACCAtomicKind AtKind,
                                            SourceLocation EndLoc,
+                                           ArrayRef<OpenACCClause *> Clauses,
                                            StmtResult AssociatedStmt) {
     return getSema().OpenACC().ActOnEndStmtDirective(
         OpenACCDirectiveKind::Atomic, BeginLoc, DirLoc, SourceLocation{},
-        SourceLocation{}, {}, AtKind, SourceLocation{}, EndLoc, {},
+        SourceLocation{}, {}, AtKind, SourceLocation{}, EndLoc, Clauses,
         AssociatedStmt);
   }
 
@@ -12744,6 +12745,10 @@ StmtResult TreeTransform<Derived>::TransformOpenACCAtomicConstruct(
     OpenACCAtomicConstruct *C) {
   getSema().OpenACC().ActOnConstruct(C->getDirectiveKind(), C->getBeginLoc());
 
+  llvm::SmallVector<OpenACCClause *> TransformedClauses =
+      getDerived().TransformOpenACCClauseList(C->getDirectiveKind(),
+                                              C->clauses());
+
   if (getSema().OpenACC().ActOnStartStmtDirective(C->getDirectiveKind(),
                                                   C->getBeginLoc(), {}))
     return StmtError();
@@ -12759,7 +12764,7 @@ StmtResult TreeTransform<Derived>::TransformOpenACCAtomicConstruct(
 
   return getDerived().RebuildOpenACCAtomicConstruct(
       C->getBeginLoc(), C->getDirectiveLoc(), C->getAtomicKind(),
-      C->getEndLoc(), AssocStmt);
+      C->getEndLoc(), TransformedClauses, AssocStmt);
 }
 
 template <typename Derived>
