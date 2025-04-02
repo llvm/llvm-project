@@ -79,7 +79,7 @@ func.func @call() {
 
 // CHECK-LABEL: emitc.func @use_index
 // CHECK-SAME: (%[[Arg0:.*]]: !emitc.size_t) -> !emitc.size_t
-// CHECK: emitc.return %[[Arg0]] : !emitc.size_t
+// CHECK: return %[[Arg0]] : !emitc.size_t
 func.func @use_index(%arg0: index) -> index {
   return %arg0 : index
 }
@@ -90,8 +90,8 @@ func.func @use_index(%arg0: index) -> index {
 func.func private @prototype_index(%arg0: index) -> index
 
 // CHECK-LABEL: emitc.func @call(%arg0: !emitc.size_t) -> !emitc.size_t
-// CHECK-NEXT: %0 = emitc.call @prototype_index(%arg0) : (!emitc.size_t) -> !emitc.size_t
-// CHECK-NEXT: emitc.return %0 : !emitc.size_t
+// CHECK-NEXT: %0 = call @prototype_index(%arg0) : (!emitc.size_t) -> !emitc.size_t
+// CHECK-NEXT: return %0 : !emitc.size_t
 func.func @call(%arg0: index) -> index {
   %0 = call @prototype_index(%arg0) : (index) -> (index)
   return %0 : index
@@ -108,14 +108,14 @@ func.func @index_args_only(%i: index) -> f32 {
 // -----
 
 // CHECK-LABEL: emitc.func private @return_void() attributes {specifiers = ["static"]}
-// CHECK-NEXT: emitc.return
+// CHECK-NEXT: return
 func.func private @return_void() {
   return
 }
 
 // CHECK-LABEL: emitc.func @call()
-// CHECK-NEXT: emitc.call @return_void() : () -> ()
-// CHECK-NEXT: emitc.return
+// CHECK-NEXT: call @return_void() : () -> ()
+// CHECK-NEXT: return
 func.func @call() {
   call @return_void() : () -> ()
   return
