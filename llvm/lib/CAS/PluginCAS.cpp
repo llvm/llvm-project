@@ -461,6 +461,8 @@ public:
 
   PluginActionCache(std::shared_ptr<PluginCASContext>);
 
+  Error validate() const final;
+
 private:
   std::shared_ptr<PluginCASContext> Ctx;
 };
@@ -595,6 +597,16 @@ void PluginActionCache::putImplAsync(ArrayRef<uint8_t> ResolvedKey,
 
 PluginActionCache::PluginActionCache(std::shared_ptr<PluginCASContext> CASCtx)
     : ActionCache(*CASCtx), Ctx(std::move(CASCtx)) {}
+
+Error PluginActionCache::validate() const {
+  if (Ctx->Functions.actioncache_validate) {
+    char *c_err = nullptr;
+    if (Ctx->Functions.actioncache_validate(Ctx->c_cas, &c_err))
+      return Ctx->errorAndDispose(c_err);
+    return Error::success();
+  }
+  return createStringError("plugin action cache doesn't support validation");
+}
 
 //===----------------------------------------------------------------------===//
 // createPluginCASDatabases API

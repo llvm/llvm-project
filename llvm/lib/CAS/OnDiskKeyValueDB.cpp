@@ -81,3 +81,25 @@ OnDiskKeyValueDB::open(StringRef Path, StringRef HashName, unsigned KeySize,
   return std::unique_ptr<OnDiskKeyValueDB>(
       new OnDiskKeyValueDB(ValueSize, std::move(*ActionCache)));
 }
+
+Error OnDiskKeyValueDB::validate(CheckValueT CheckValue) const {
+  return Cache.validate(
+      [&](FileOffset Offset,
+          OnDiskHashMappedTrie::ConstValueProxy Record) -> Error {
+        auto formatError = [&](Twine Msg) {
+          return createStringError(
+              llvm::errc::illegal_byte_sequence,
+              "bad cache value at 0x" +
+                  utohexstr((unsigned)Offset.get(), /*LowerCase=*/true) + ": " +
+                  Msg.str());
+        };
+
+        if (Record.Data.size() != ValueSize)
+          return formatError("wrong cache value size");
+        if (!isAligned(Align(8), Record.Data.size()))
+          return formatError("wrong cache value alignment");
+        if (CheckValue)
+          return CheckValue(Offset, Record.Data);
+        return Error::success();
+      });
+}

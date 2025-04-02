@@ -64,7 +64,7 @@ static int putCacheKey(ObjectStore &CAS, ActionCache &AC,
                        ArrayRef<std::string> Objects);
 static int getCacheResult(ObjectStore &CAS, ActionCache &AC, const CASID &ID);
 static int validateObject(ObjectStore &CAS, const CASID &ID);
-static int validate(ObjectStore &CAS, bool CheckHash);
+static int validate(ObjectStore &CAS, ActionCache &AC, bool CheckHash);
 static int ingestCasIDFile(cas::ObjectStore &CAS, ArrayRef<std::string> CASIDs);
 static int checkLockFiles(StringRef CASPath);
 
@@ -184,7 +184,7 @@ int main(int Argc, char **Argv) {
     return dump(*CAS);
 
   if (Command == Validate)
-    return validate(*CAS, CheckHash);
+    return validate(*CAS, *AC, CheckHash);
 
   if (Command == MakeBlob)
     return makeBlob(*CAS, DataPath);
@@ -722,9 +722,10 @@ int validateObject(ObjectStore &CAS, const CASID &ID) {
   return 0;
 }
 
-int validate(ObjectStore &CAS, bool CheckHash) {
+int validate(ObjectStore &CAS, ActionCache &AC, bool CheckHash) {
   ExitOnError ExitOnErr("llvm-cas: validate: ");
   ExitOnErr(CAS.validate(CheckHash));
+  ExitOnErr(AC.validate());
   outs() << "validated successfully\n";
   return 0;
 }
