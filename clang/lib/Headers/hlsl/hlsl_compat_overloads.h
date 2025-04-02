@@ -9,8 +9,6 @@
 #ifndef _HLSL_COMPAT_OVERLOADS_H_
 #define _HLSl_COMPAT_OVERLOADS_H_
 
-#include "hlsl/hlsl_intrinsic_helpers.h"
-
 namespace hlsl {
 
 // Note: Functions in this file are sorted alphabetically, then grouped by base
@@ -286,21 +284,16 @@ _DXC_COMPAT_TERNARY_INTEGER_OVERLOADS(lerp)
 // lit builtins overloads
 //===----------------------------------------------------------------------===//
 
-// Note: calling lit_impl because calling lit directly causes infinite recursion
-constexpr float4 lit(double V1, double V2, double V3) {
-  return lit((float)V1, (float)V2, (float)V3);
-}
-constexpr float4 lit(int V1, int V2, int V3) {
-  return lit((float)V1, (float)V2, (float)V3);
-}
-constexpr float4 lit(uint V1, uint V2, uint V3) {
-  return lit((float)V1, (float)V2, (float)V3);
-}
-constexpr float4 lit(int64_t V1, int64_t V2, int64_t V3) {
-  return lit((float)V1, (float)V2, (float)V3);
-}
-constexpr float4 lit(uint64_t V1, uint64_t V2, uint64_t V3) {
-  return lit((float)V1, (float)V2, (float)V3);
+template <typename T>
+constexpr __detail::enable_if_t<__detail::is_arithmetic<T>::Value &&
+                                    (__detail::is_same<double, T>::value ||
+                                     __detail::is_same<int, T>::value ||
+                                     __detail::is_same<uint, T>::value ||
+                                     __detail::is_same<int64_t, T>::value ||
+                                     __detail::is_same<uint64_t, T>::value),
+                                vector<T, 4>>
+lit(T NDotL, T NDotH, T M) {
+  return lit((float)NDotL, (float)NDotH, (float)M);
 }
 
 //===----------------------------------------------------------------------===//
