@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceDIMetadata.h"
-#include "Delta.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -76,7 +75,7 @@ void identifyUninterestingMDNodes(Oracle &O, MDNodeList &MDs) {
   }
 }
 
-static void extractDIMetadataFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
+void llvm::reduceDIMetadataDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
   Module &Program = WorkItem.getModule();
 
   MDNodeList MDs;
@@ -93,8 +92,4 @@ static void extractDIMetadataFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
         MDs.push_back(DI);
   }
   identifyUninterestingMDNodes(O, MDs);
-}
-
-void llvm::reduceDIMetadataDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, extractDIMetadataFromModule, "Reducing DIMetadata");
 }
