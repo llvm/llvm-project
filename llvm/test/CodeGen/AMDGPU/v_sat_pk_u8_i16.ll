@@ -187,11 +187,8 @@ define amdgpu_kernel void @basic_smax_smin_sgpr(ptr addrspace(1) %out, i32 inreg
 ; SDAG-GFX12-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; SDAG-GFX12-TRUE16-NEXT:    v_mov_b32_e32 v2, 0
 ; SDAG-GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; SDAG-GFX12-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s2
-; SDAG-GFX12-TRUE16-NEXT:    v_mov_b16_e32 v0.h, s3
-; SDAG-GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; SDAG-GFX12-TRUE16-NEXT:    v_med3_i16 v0.l, v0.l, 0, 0xff
-; SDAG-GFX12-TRUE16-NEXT:    v_med3_i16 v1.l, v0.h, 0, 0xff
+; SDAG-GFX12-TRUE16-NEXT:    v_med3_i16 v0.l, s2, 0, 0xff
+; SDAG-GFX12-TRUE16-NEXT:    v_med3_i16 v1.l, s3, 0, 0xff
 ; SDAG-GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; SDAG-GFX12-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; SDAG-GFX12-TRUE16-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
