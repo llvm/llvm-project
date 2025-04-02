@@ -2636,7 +2636,8 @@ ParseStatus RISCVAsmParser::parseRegListCommon(OperandVector &Operands,
       if (getLexer().isNot(AsmToken::Identifier))
         return Error(getLoc(), "invalid register");
       StringRef EndName = getLexer().getTok().getIdentifier();
-      if (MatchRegisterName(EndName) != RISCV::X18)
+      RegEnd = MatchRegisterName(EndName);
+      if (RegEnd != RISCV::X18)
         return Error(getLoc(),
                      "second contiguous registers pair of register list "
                      "must start from 'x18'");
@@ -2647,11 +2648,11 @@ ParseStatus RISCVAsmParser::parseRegListCommon(OperandVector &Operands,
         if (getLexer().isNot(AsmToken::Identifier))
           return Error(getLoc(), "invalid register");
         EndName = getLexer().getTok().getIdentifier();
-        if (!MatchRegisterName(EndName))
+        RegEnd = MatchRegisterName(EndName);
+        if (!RegEnd)
           return Error(getLoc(), "invalid register");
         getLexer().Lex();
       }
-      RegEnd = MatchRegisterName(EndName);
     }
   }
 
