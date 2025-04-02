@@ -1419,9 +1419,9 @@ def SPIRV_GroupNonUniformRotateKHROp : SPIRV_Op<"GroupNonUniformRotateKHR", [
 
   let arguments = (ins
     SPIRV_ScopeAttr:$execution_scope,
-    SPIRV_Type:$value,
-    SPIRV_Integer:$delta,
-    Optional<SPIRV_Integer>:$cluster_size
+    AnyTypeOf<[SPIRV_ScalarOrVectorOf<SPIRV_Float>, SPIRV_ScalarOrVectorOf<SPIRV_Integer>, SPIRV_ScalarOrVectorOf<SPIRV_Bool>]>:$value,
+    SPIRV_SignlessOrUnsignedInt:$delta,
+    Optional<SPIRV_SignlessOrUnsignedInt>:$cluster_size
   );
 
   let results = (outs

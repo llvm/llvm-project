@@ -641,7 +641,7 @@ func.func @group_non_uniform_rotate_khr(%val: f32, %delta: i32) -> f32 {
 
 func.func @group_non_uniform_rotate_khr(%val: f32, %delta: si32) -> f32 {
   %four = spirv.Constant 4 : i32
-  // expected-error @+1 {{delta must be a singless/unsigned integer}}
+  // expected-error @+1 {{op operand #1 must be 8/16/32/64-bit signless/unsigned integer, but got 'si32'}}
   %0 = spirv.GroupNonUniformRotateKHR <Subgroup>, %val, %delta, cluster_size(%four) : f32, si32, i32 -> f32
   return %0: f32
 }
@@ -650,7 +650,7 @@ func.func @group_non_uniform_rotate_khr(%val: f32, %delta: si32) -> f32 {
 
 func.func @group_non_uniform_rotate_khr(%val: f32, %delta: i32) -> f32 {
   %four = spirv.Constant 4 : si32
-  // expected-error @+1 {{cluster size must be a singless/unsigned integer}}
+  // expected-error @+1 {{op operand #2 must be 8/16/32/64-bit signless/unsigned integer, but got 'si32'}}
   %0 = spirv.GroupNonUniformRotateKHR <Subgroup>, %val, %delta, cluster_size(%four) : f32, i32, si32 -> f32
   return %0: f32
 }

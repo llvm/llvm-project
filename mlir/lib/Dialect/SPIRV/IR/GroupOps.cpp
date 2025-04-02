@@ -313,14 +313,7 @@ LogicalResult GroupNonUniformRotateKHROp::verify() {
   if (scope != spirv::Scope::Workgroup && scope != spirv::Scope::Subgroup)
     return emitOpError("execution scope must be 'Workgroup' or 'Subgroup'");
 
-  if (getDelta().getType().isSignedInteger())
-    return emitOpError("delta must be a singless/unsigned integer");
-
-  auto clusterSizeVal = getClusterSize();
-  if (clusterSizeVal) {
-    if (clusterSizeVal.getType().isSignedInteger())
-      return emitOpError("cluster size must be a singless/unsigned integer");
-
+  if (TypedValue<Type> clusterSizeVal = getClusterSize()) {
     mlir::Operation *defOp = clusterSizeVal.getDefiningOp();
     int32_t clusterSize = 0;
 
