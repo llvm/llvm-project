@@ -604,7 +604,7 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
   uint64_t size = objSections.size();
   sections.resize(size);
 
-  // check whether gun properties section present
+  // Check whether GNU properties section present.
   bool hasGnuProperties = false;
   for (size_t i = 0; i != size; ++i) {
     const Elf_Shdr &sec = objSections[i];
@@ -716,7 +716,7 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
           InputSection isec(*this, sec, name);
           Warn(ctx) << &isec << ": " << std::move(e);
         } else {
-          // for functions that has to warn/err/report
+          // For functions that has to warn/err/report.
           InputSection isec(*this, sec, name);
           KnownAArch64BuildAttrSubsections subSections =
               extractBuildAttributesSubsections(ctx, attributes, isec);
