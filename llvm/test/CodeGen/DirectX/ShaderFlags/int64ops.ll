@@ -7,7 +7,7 @@ target triple = "dxil-pc-shadermodel6.7-library"
 ;CHECK-NEXT: ; Shader Flags Value: 0x00100000
 ;CHECK-NEXT: ;
 ;CHECK-NEXT: ; Note: shader requires additional functionality:
-;CHECK-NEXT: ;       64-Bit integer
+;CHECK-NEXT: ;       64-bit integer
 ;CHECK-NEXT: ; Note: extra DXIL module flags:
 ;CHECK-NEXT: ;
 ;CHECK-NEXT: ; Shader Flags for Module Functions

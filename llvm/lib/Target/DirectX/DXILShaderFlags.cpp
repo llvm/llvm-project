@@ -94,7 +94,7 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
     case Instruction::SIToFP:
     case Instruction::FPToUI:
     case Instruction::FPToSI:
-      CSF.DX11_1_DoubleExtensions = true;
+      CSF.DoubleExtensions = true;
       break;
     }
   }
@@ -154,7 +154,7 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
     if (FunctionFlags.contains(CF))
       CSF.merge(FunctionFlags[CF]);
 
-    // TODO: Set DX11_1_DoubleExtensions if I is a call to DXIL intrinsic
+    // TODO: Set DoubleExtensions if I is a call to DXIL intrinsic
     // DXIL::Opcode::Fma https://github.com/llvm/llvm-project/issues/114554
 
     CSF.WaveOps |= checkWaveOps(CI->getIntrinsicID());

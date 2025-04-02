@@ -7,8 +7,8 @@ target triple = "dxil-pc-shadermodel6.7-library"
 
 ; CHECK: ; Note: shader requires additional functionality:
 ; CHECK-NEXT: ;       Double-precision floating point
-; CHECK-NEXT: ;       Double-precision extensions for 11.1
-; CHECK-NEXT: ;       64-Bit integer
+; CHECK-NEXT: ;       Double-precision extensions
+; CHECK-NEXT: ;       64-bit integer
 ; CHECK-NEXT: ; Note: extra DXIL module flags:
 ; CHECK-NEXT: ;
 ; CHECK-NEXT: ; Shader Flags for Module Functions

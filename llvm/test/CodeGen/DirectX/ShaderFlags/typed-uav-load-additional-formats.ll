@@ -11,7 +11,7 @@ target triple = "dxil-pc-shadermodel6.7-library"
 ; CHECK-NEXT: Shader Flags Value: 0x00002000
 
 ; CHECK: Note: shader requires additional functionality:
-; CHECK:       Typed UAV Load Additional Formats
+; CHECK:       Typed UAV load additional formats
 
 ; CHECK: Function multicomponent : 0x00002000
 define <4 x float> @multicomponent() #0 {
