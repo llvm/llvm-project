@@ -15,7 +15,7 @@
 constexpr int threadLocalDataSize = 101;
 _Thread_local int a[threadLocalDataSize] = {123};
 
-TEST_MAIN(int argc, char **argv, char **envp) {
+TEST_MAIN(int /*argc*/, char ** /*argv*/, char ** /*envp*/) {
   ASSERT_TRUE(a[0] == 123);
 
   for (int i = 1; i < threadLocalDataSize; ++i)
