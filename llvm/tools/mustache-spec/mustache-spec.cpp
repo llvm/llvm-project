@@ -76,11 +76,9 @@ void runThroughTest(StringRef InputFile) {
 
     Template T = Template(TemplateStr);
     if (Partials) {
-      for (auto PartialPairs : *Partials->getAsObject()) {
-        const auto& [First, Second] = Partials->getAsObject();
-        StringRef Partial = First.getAsString().value();
-        StringRef Str = llvm::StringRef(Second);
-        T.registerPartial(Str, Partial);
+      for (auto& PartialPairs : *Partials->getAsObject()) {
+        const auto& [Partial, Str] = PartialPairs;
+        T.registerPartial(*Str.getAsString(), Partial);
       }
     }
     std::string ActualStr;
