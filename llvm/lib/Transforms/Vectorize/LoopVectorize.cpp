@@ -2385,7 +2385,7 @@ void InnerLoopVectorizer::scalarizeInstruction(const Instruction *Instr,
 
   RepRecipe->setFlags(Cloned);
 
-  if (auto DL = Instr->getDebugLoc())
+  if (auto DL = RepRecipe->getDebugLoc())
     State.setDebugLocFrom(DL);
 
   // Replace the operands of the cloned instructions with their scalar
