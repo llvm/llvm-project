@@ -26,6 +26,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Support/Compiler.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
+#include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/VersionTuple.h"
