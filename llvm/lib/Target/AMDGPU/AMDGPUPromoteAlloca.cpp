@@ -731,7 +731,7 @@ static bool isSupportedAccessType(FixedVectorType *VecTy, Type *AccessTy,
     // If the type size and the store size don't match, we would need to do more
     // than just bitcast to translate between an extracted/insertable subvectors
     // and the accessed value.
-    if (DL.getTypeStoreSizeInBits(AccessTy) != DL.getTypeSizeInBits(AccessTy))
+    if (!DL.typeSizeEqualsStoreSize(AccessTy))
       return false;
     TypeSize AccTS = DL.getTypeStoreSize(AccessTy);
     TypeSize VecTS = DL.getTypeStoreSize(VecTy->getElementType());
