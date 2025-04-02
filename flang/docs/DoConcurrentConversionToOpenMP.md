@@ -219,7 +219,7 @@ exceptions to this are:
      `flang/test/Transforms/DoConcurrent/locally_destroyed_temp.f90`.
 
 Implicit mapping detection (for mapping to the target device) is still quite
-limited and work to make it smarter is underway for both OpenMP in general
+limited and work to make it smarter is underway for both OpenMP in general 
 and `do concurrent` mapping.
 
 #### Non-perfectly-nested loops' IVs
@@ -365,4 +365,3 @@ targeting OpenMP.
 - [ ] Basic host/CPU mapping support.
 - [ ] Basic device/GPU mapping support.
 - [ ] More advanced host and device support (expaned to multiple items as needed).
-
