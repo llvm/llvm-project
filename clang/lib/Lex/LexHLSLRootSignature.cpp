@@ -11,6 +11,8 @@
 namespace clang {
 namespace hlsl {
 
+using TokenKind = RootSignatureToken::Kind;
+
 // Lexer Definitions
 
 static bool IsNumberChar(char C) {
@@ -34,7 +36,7 @@ RootSignatureToken RootSignatureLexer::LexToken() {
   switch (C) {
 #define PUNCTUATOR(X, Y)                                                       \
   case Y: {                                                                    \
-    Result.Kind = TokenKind::pu_##X;                                           \
+    Result.TokKind = TokenKind::pu_##X;                                        \
     AdvanceBuffer();                                                           \
     return Result;                                                             \
   }
@@ -45,7 +47,7 @@ RootSignatureToken RootSignatureLexer::LexToken() {
 
   // Integer literal
   if (isdigit(C)) {
-    Result.Kind = TokenKind::int_literal;
+    Result.TokKind = TokenKind::int_literal;
     Result.NumSpelling = Buffer.take_while(IsNumberChar);
     AdvanceBuffer(Result.NumSpelling.size());
     return Result;
@@ -65,16 +67,16 @@ RootSignatureToken RootSignatureLexer::LexToken() {
     // Convert character to the register type.
     switch (C) {
     case 'b':
-      Result.Kind = TokenKind::bReg;
+      Result.TokKind = TokenKind::bReg;
       break;
     case 't':
-      Result.Kind = TokenKind::tReg;
+      Result.TokKind = TokenKind::tReg;
       break;
     case 'u':
-      Result.Kind = TokenKind::uReg;
+      Result.TokKind = TokenKind::uReg;
       break;
     case 's':
-      Result.Kind = TokenKind::sReg;
+      Result.TokKind = TokenKind::sReg;
       break;
     default:
       llvm_unreachable("Switch for an expected token was not provided");
@@ -100,14 +102,14 @@ RootSignatureToken RootSignatureLexer::LexToken() {
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
 
   // Then attempt to retreive a string from it
-  Result.Kind = Switch.Default(TokenKind::invalid);
+  Result.TokKind = Switch.Default(TokenKind::invalid);
   AdvanceBuffer(TokSpelling.size());
   return Result;
 }
 
 RootSignatureToken RootSignatureLexer::ConsumeToken() {
   // If we previously peeked then just return the previous value over
-  if (NextToken && NextToken->Kind != TokenKind::end_of_stream) {
+  if (NextToken && NextToken->TokKind != TokenKind::end_of_stream) {
     RootSignatureToken Result = *NextToken;
     NextToken = std::nullopt;
     return Result;

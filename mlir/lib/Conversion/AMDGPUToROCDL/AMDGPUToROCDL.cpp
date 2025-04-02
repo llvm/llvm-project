@@ -22,6 +22,7 @@
 #include "../LLVMCommon/MemRefDescriptor.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include <optional>
 
 namespace mlir {
@@ -36,6 +37,7 @@ using namespace mlir::amdgpu;
 constexpr Chipset kGfx908 = Chipset(9, 0, 8);
 constexpr Chipset kGfx90a = Chipset(9, 0, 0xa);
 constexpr Chipset kGfx942 = Chipset(9, 4, 2);
+constexpr Chipset kGfx950 = Chipset(9, 5, 0);
 
 /// Convert an unsigned number `val` to i32.
 static Value convertUnsignedToI32(ConversionPatternRewriter &rewriter,
@@ -494,8 +496,15 @@ struct SchedBarrierOpLowering : public ConvertOpToLLVMPattern<SchedBarrierOp> {
 /// and LLVM AMDGPU intrinsics convention.
 ///
 /// Specifically:
-/// 1. If `input` is a vector of N bytes, bitcast it to a (N * 8)-bit integer.
-/// 2. If the element type is bfloat16, bitcast it to i16.
+/// 1. If the element type is bfloat16, bitcast it to i16.
+/// 2. If instead we have a more than 64-bit quantity, use a <N / 4 x i32>
+/// instead, which is what the f8f6f4 intrinsics use.
+/// 3. If `input` is a vector of N <= 8 bytes, bitcast it to a (N * 8)-bit
+/// integer.
+///
+/// Note that the type of `input` has already been LLVM type converted:
+/// therefore 8-bit and smaller floats are represented as their corresponding
+/// `iN` integers.
 static Value convertMFMAVectorOperand(ConversionPatternRewriter &rewriter,
                                       Location loc, Value input) {
   Type inputType = input.getType();
@@ -503,9 +512,17 @@ static Value convertMFMAVectorOperand(ConversionPatternRewriter &rewriter,
     if (vectorType.getElementType().isBF16())
       return rewriter.create<LLVM::BitcastOp>(
           loc, vectorType.clone(rewriter.getI16Type()), input);
-    if (vectorType.getElementType().isInteger(8)) {
+    if (vectorType.getElementType().isInteger(8) &&
+        vectorType.getNumElements() <= 8)
       return rewriter.create<LLVM::BitcastOp>(
           loc, rewriter.getIntegerType(vectorType.getNumElements() * 8), input);
+    if (isa<IntegerType>(vectorType.getElementType()) &&
+        vectorType.getElementTypeBitWidth() <= 8) {
+      int64_t numWords = llvm::divideCeil(
+          vectorType.getNumElements() * vectorType.getElementTypeBitWidth(),
+          32);
+      return rewriter.create<LLVM::BitcastOp>(
+          loc, VectorType::get(numWords, rewriter.getI32Type()), input);
     }
   }
   return input;
@@ -622,12 +639,8 @@ static std::optional<StringRef> mfmaOpToIntrinsic(MFMAOp mfma,
                                                   Chipset chipset) {
   uint32_t m = mfma.getM(), n = mfma.getN(), k = mfma.getK(),
            b = mfma.getBlocks();
-  Type sourceElem = mfma.getSourceA().getType();
-  if (auto sourceType = dyn_cast<VectorType>(sourceElem))
-    sourceElem = sourceType.getElementType();
-  Type destElem = mfma.getDestC().getType();
-  if (auto destType = dyn_cast<VectorType>(destElem))
-    destElem = destType.getElementType();
+  Type sourceElem = getElementTypeOrSelf(mfma.getSourceA().getType());
+  Type destElem = getElementTypeOrSelf(mfma.getDestC().getType());
 
   if (sourceElem.isF32() && destElem.isF32()) {
     if (mfma.getReducePrecision() && chipset >= kGfx942) {
@@ -649,6 +662,12 @@ static std::optional<StringRef> mfmaOpToIntrinsic(MFMAOp mfma,
   }
 
   if (sourceElem.isF16() && destElem.isF32()) {
+    if (chipset >= kGfx950) {
+      if (m == 32 && n == 32 && k == 16 && b == 1)
+        return ROCDL::mfma_f32_32x32x16_f16::getOperationName();
+      if (m == 16 && n == 16 && k == 32 && b == 1)
+        return ROCDL::mfma_f32_16x16x32_f16::getOperationName();
+    }
     if (m == 32 && n == 32 && k == 4 && b == 2)
       return ROCDL::mfma_f32_32x32x4f16::getOperationName();
     if (m == 16 && n == 16 && k == 4 && b == 4)
@@ -661,20 +680,25 @@ static std::optional<StringRef> mfmaOpToIntrinsic(MFMAOp mfma,
       return ROCDL::mfma_f32_16x16x16f16::getOperationName();
   }
 
-  if (sourceElem.isBF16() && destElem.isF32() && chipset >= kGfx90a) {
-    if (m == 32 && n == 32 && k == 4 && b == 2)
-      return ROCDL::mfma_f32_32x32x4bf16_1k::getOperationName();
-    if (m == 16 && n == 16 && k == 4 && b == 4)
-      return ROCDL::mfma_f32_16x16x4bf16_1k::getOperationName();
-    if (m == 4 && n == 4 && k == 4 && b == 16)
-      return ROCDL::mfma_f32_4x4x4bf16_1k::getOperationName();
-    if (m == 32 && n == 32 && k == 8 && b == 1)
-      return ROCDL::mfma_f32_32x32x8bf16_1k::getOperationName();
-    if (m == 16 && n == 16 && k == 16 && b == 1)
-      return ROCDL::mfma_f32_16x16x16bf16_1k::getOperationName();
-  }
-
   if (sourceElem.isBF16() && destElem.isF32()) {
+    if (chipset >= kGfx950) {
+      if (m == 32 && n == 32 && k == 16 && b == 1)
+        return ROCDL::mfma_f32_32x32x16_bf16::getOperationName();
+      if (m == 16 && n == 16 && k == 32 && b == 1)
+        return ROCDL::mfma_f32_16x16x32_bf16::getOperationName();
+    }
+    if (chipset >= kGfx90a) {
+      if (m == 32 && n == 32 && k == 4 && b == 2)
+        return ROCDL::mfma_f32_32x32x4bf16_1k::getOperationName();
+      if (m == 16 && n == 16 && k == 4 && b == 4)
+        return ROCDL::mfma_f32_16x16x4bf16_1k::getOperationName();
+      if (m == 4 && n == 4 && k == 4 && b == 16)
+        return ROCDL::mfma_f32_4x4x4bf16_1k::getOperationName();
+      if (m == 32 && n == 32 && k == 8 && b == 1)
+        return ROCDL::mfma_f32_32x32x8bf16_1k::getOperationName();
+      if (m == 16 && n == 16 && k == 16 && b == 1)
+        return ROCDL::mfma_f32_16x16x16bf16_1k::getOperationName();
+    }
     if (m == 32 && n == 32 && k == 2 && b == 2)
       return ROCDL::mfma_f32_32x32x2bf16::getOperationName();
     if (m == 16 && n == 16 && k == 2 && b == 4)
@@ -687,7 +711,13 @@ static std::optional<StringRef> mfmaOpToIntrinsic(MFMAOp mfma,
       return ROCDL::mfma_f32_16x16x8bf16::getOperationName();
   }
 
-  if (isa<IntegerType>(sourceElem) && destElem.isInteger(32)) {
+  if (sourceElem.isInteger(8) && destElem.isInteger(32)) {
+    if (chipset >= kGfx950) {
+      if (m == 32 && n == 32 && k == 32 && b == 1)
+        return ROCDL::mfma_i32_32x32x32_i8::getOperationName();
+      if (m == 16 && n == 16 && k == 64 && b == 1)
+        return ROCDL::mfma_i32_16x16x64_i8::getOperationName();
+    }
     if (m == 32 && n == 32 && k == 4 && b == 2)
       return ROCDL::mfma_i32_32x32x4i8::getOperationName();
     if (m == 16 && n == 16 && k == 4 && b == 4)
@@ -748,6 +778,59 @@ static std::optional<StringRef> mfmaOpToIntrinsic(MFMAOp mfma,
   }
 
   return std::nullopt;
+}
+
+static std::optional<uint32_t> mfmaTypeSelectCode(Type mlirElemType) {
+  return llvm::TypeSwitch<Type, std::optional<uint32_t>>(mlirElemType)
+      .Case([](Float8E4M3FNType) { return 0u; })
+      .Case([](Float8E5M2Type) { return 1u; })
+      .Case([](Float6E2M3FNType) { return 2u; })
+      .Case([](Float6E3M2FNType) { return 3u; })
+      .Case([](Float4E2M1FNType) { return 4u; })
+      .Default([](Type) { return std::nullopt; });
+}
+
+/// If there is a scaled MFMA instruction for the input element types `aType`
+/// and `bType`, output type `destType`, problem size M, N, K, and B (number of
+/// blocks) on the given `chipset`, return a tuple consisting of the
+/// OperationName of the intrinsic and the type codes that need to be passed to
+/// that intrinsic. Note that this is also used to implement some un-scaled
+/// MFMAs, since the compiler represents the ordinary instruction as a "scaled"
+/// MFMA with a scale of 0.
+static std::optional<std::tuple<StringRef, uint32_t, uint32_t>>
+mfmaOpToScaledIntrinsic(Type aType, Type bType, Type destType, uint32_t m,
+                        uint32_t n, uint32_t k, uint32_t b, Chipset chipset) {
+  aType = getElementTypeOrSelf(aType);
+  bType = getElementTypeOrSelf(bType);
+  destType = getElementTypeOrSelf(destType);
+
+  if (chipset < kGfx950)
+    return std::nullopt;
+  if (!isa<Float32Type>(destType))
+    return std::nullopt;
+
+  std::optional<uint32_t> aTypeCode = mfmaTypeSelectCode(aType);
+  std::optional<uint32_t> bTypeCode = mfmaTypeSelectCode(bType);
+  if (!aTypeCode || !bTypeCode)
+    return std::nullopt;
+
+  if (m == 32 && n == 32 && k == 64 && b == 1)
+    return std::tuple{ROCDL::mfma_scale_f32_32x32x64_f8f6f4::getOperationName(),
+                      *aTypeCode, *bTypeCode};
+  if (m == 16 && n == 16 && k == 128 && b == 1)
+    return std::tuple{
+        ROCDL::mfma_scale_f32_16x16x128_f8f6f4::getOperationName(), *aTypeCode,
+        *bTypeCode};
+
+  return std::nullopt;
+}
+
+static std::optional<std::tuple<StringRef, uint32_t, uint32_t>>
+mfmaOpToScaledIntrinsic(MFMAOp mfma, Chipset chipset) {
+  return mfmaOpToScaledIntrinsic(
+      mfma.getSourceA().getType(), mfma.getSourceB().getType(),
+      mfma.getDestC().getType(), mfma.getM(), mfma.getN(), mfma.getK(),
+      mfma.getBlocks(), chipset);
 }
 
 /// Return the `rocdl` intrinsic corresponding to a WMMA operation `wmma`
@@ -829,16 +912,40 @@ struct MFMAOpLowering : public ConvertOpToLLVMPattern<MFMAOp> {
           op.getNegateA() | (op.getNegateB() << 1) | (op.getNegateC() << 2);
     }
     std::optional<StringRef> maybeIntrinsic = mfmaOpToIntrinsic(op, chipset);
-    if (!maybeIntrinsic.has_value())
+    std::optional<std::tuple<StringRef, uint32_t, uint32_t>>
+        maybeScaledIntrinsic = mfmaOpToScaledIntrinsic(op, chipset);
+    if (!maybeIntrinsic.has_value() && !maybeScaledIntrinsic.has_value())
       return op.emitOpError("no intrinsic matching MFMA size on given chipset");
-    OperationState loweredOp(loc, *maybeIntrinsic);
+
+    bool isScaled =
+        !maybeIntrinsic.has_value() && maybeScaledIntrinsic.has_value();
+    if (isScaled &&
+        (adaptor.getAbid() > 0 || getBlgpField > 0 || op.getCbsz() > 0)) {
+      return op.emitOpError(
+          "non-default abid, blgp, and cbsz aren't supported on MFMAs that can "
+          "be scaled as those fields are used for type information");
+    }
+
+    StringRef intrinsicName =
+        isScaled ? std::get<0>(*maybeScaledIntrinsic) : *maybeIntrinsic;
+    OperationState loweredOp(loc, intrinsicName);
     loweredOp.addTypes(intrinsicOutType);
     loweredOp.addOperands(
         {convertMFMAVectorOperand(rewriter, loc, adaptor.getSourceA()),
          convertMFMAVectorOperand(rewriter, loc, adaptor.getSourceB()),
-         adaptor.getDestC(), createI32Constant(rewriter, loc, op.getCbsz()),
-         createI32Constant(rewriter, loc, op.getAbid()),
-         createI32Constant(rewriter, loc, getBlgpField)});
+         adaptor.getDestC()});
+    if (isScaled) {
+      Value zero = createI32Constant(rewriter, loc, 0);
+      auto [_scaledName, aTypeCode, bTypeCode] = *maybeScaledIntrinsic;
+      loweredOp.addOperands({createI32Constant(rewriter, loc, aTypeCode),
+                             createI32Constant(rewriter, loc, bTypeCode),
+                             /*scale A byte=*/zero, /*scale A=*/zero,
+                             /*scale B byte=*/zero, /*scale B=*/zero});
+    } else {
+      loweredOp.addOperands({createI32Constant(rewriter, loc, op.getCbsz()),
+                             createI32Constant(rewriter, loc, op.getAbid()),
+                             createI32Constant(rewriter, loc, getBlgpField)});
+    };
     Value lowered = rewriter.create(loweredOp)->getResult(0);
     if (outType != intrinsicOutType)
       lowered = rewriter.create<LLVM::BitcastOp>(loc, outType, lowered);

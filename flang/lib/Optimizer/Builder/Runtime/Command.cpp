@@ -10,6 +10,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Runtime/command.h"
+#include "flang/Runtime/extensions.h"
 
 using namespace Fortran::runtime;
 
@@ -113,4 +114,14 @@ mlir::Value fir::runtime::genHostnm(fir::FirOpBuilder &builder,
   llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
       builder, loc, runtimeFuncTy, res, sourceFile, sourceLine);
   return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+}
+
+void fir::runtime::genPerror(fir::FirOpBuilder &builder, mlir::Location loc,
+                             mlir::Value string) {
+  auto runtimeFunc =
+      fir::runtime::getRuntimeFunc<mkRTKey(Perror)>(loc, builder);
+  mlir::FunctionType runtimeFuncTy = runtimeFunc.getFunctionType();
+  llvm::SmallVector<mlir::Value> args =
+      fir::runtime::createArguments(builder, loc, runtimeFuncTy, string);
+  builder.create<fir::CallOp>(loc, runtimeFunc, args);
 }
