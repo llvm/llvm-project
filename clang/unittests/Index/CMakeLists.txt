@@ -1,6 +1,14 @@
+set(LLVM_LINK_COMPONENTS
+  ${LLVM_TARGETS_TO_BUILD}
+  Support
+  )
+
 add_clang_unittest(IndexTests
   IndexTests.cpp
-  CLANG_LIBS
+  )
+
+clang_target_link_libraries(IndexTests
+  PRIVATE
   clangAST
   clangBasic
   clangFrontend
@@ -8,7 +16,4 @@ add_clang_unittest(IndexTests
   clangLex
   clangSerialization
   clangTooling
-  LLVM_COMPONENTS
-  ${LLVM_TARGETS_TO_BUILD}
-  Support
   )
