@@ -127,8 +127,8 @@ void fir::runtime::genPerror(fir::FirOpBuilder &builder, mlir::Location loc,
 }
 
 mlir::Value fir::runtime::genUnlink(fir::FirOpBuilder &builder,
-                                    mlir::Location loc, 
-                                    mlir::Value path, mlir::Value pathLength) {
+                                    mlir::Location loc, mlir::Value path,
+                                    mlir::Value pathLength) {
   mlir::func::FuncOp func =
       fir::runtime::getRuntimeFunc<mkRTKey(Unlink)>(loc, builder);
   auto runtimeFuncTy = func.getFunctionType();

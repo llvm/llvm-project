@@ -65,8 +65,8 @@ std::int32_t RTNAME(Hostnm)(
     const Descriptor &res, const char *sourceFile, int line);
 
 // Calls unlink()
-std::int32_t RTNAME(Unlink)(
-    const char *str, const std::size_t strLength, const char *sourceFile, int line);
+std::int32_t RTNAME(Unlink)(const char *str, const std::size_t strLength,
+    const char *sourceFile, int line);
 
 } // extern "C"
 } // namespace Fortran::runtime

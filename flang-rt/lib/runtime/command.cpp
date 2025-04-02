@@ -12,8 +12,8 @@
 #include "flang-rt/runtime/stat.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/tools.h"
-#include <cstdlib>
 #include <cerrno>
+#include <cstdlib>
 #include <limits>
 
 #ifdef _WIN32

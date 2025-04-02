@@ -8507,7 +8507,8 @@ IntrinsicLibrary::genUnlink(std::optional<mlir::Type> resultType,
 
   mlir::Value path = fir::getBase(args[0]);
   mlir::Value pathLength = fir::getLen(args[0]);
-  mlir::Value statusValue = fir::runtime::genUnlink(builder, loc, path, pathLength);
+  mlir::Value statusValue =
+      fir::runtime::genUnlink(builder, loc, path, pathLength);
 
   if (resultType.has_value()) {
     // Function form, return status.

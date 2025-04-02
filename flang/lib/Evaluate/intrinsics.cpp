@@ -1010,8 +1010,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         KINDUnsigned},
     {"umaskl", {{"i", AnyInt}, DefaultingKIND}, KINDUnsigned},
     {"umaskr", {{"i", AnyInt}, DefaultingKIND}, KINDUnsigned},
-    {"unlink", {{"path", DefaultChar, Rank::scalar}}, DefaultInt,
-        Rank::scalar, IntrinsicClass::transformationalFunction},
+    {"unlink", {{"path", DefaultChar, Rank::scalar}}, DefaultInt, Rank::scalar,
+        IntrinsicClass::transformationalFunction},
     {"unpack",
         {{"vector", SameType, Rank::vector}, {"mask", AnyLogical, Rank::array},
             {"field", SameType, Rank::conformable}},
@@ -1636,8 +1636,10 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             common::Intent::In}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"unlink",
-        {{"path", DefaultChar, Rank::scalar, Optionality::required, common::Intent::In},
-         {"status", DefaultInt, Rank::scalar, Optionality::optional, common::Intent::Out}},
+        {{"path", DefaultChar, Rank::scalar, Optionality::required,
+             common::Intent::In},
+            {"status", DefaultInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
 };
 
