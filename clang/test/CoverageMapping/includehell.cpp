@@ -25,17 +25,17 @@ int main() {
 // RUN: FileCheck -input-file %tmapping %s --check-prefix=CHECK-END
 
 // CHECK-MAIN: File [[MAIN:[0-9]]], 3:12 -> 20:2 = #0
-// CHECK-MAIN-NEXT: Expansion,File [[MAIN]], 6:12 -> 6:35 = #0
+// CHECK-MAIN-NEXT: Expansion,File [[MAIN]], 6:12 -> 6:35 = 0
 // CHECK-MAIN-NEXT: File [[MAIN]], 6:35 -> 10:33 = #1
-// CHECK-MAIN-NEXT: Expansion,File [[MAIN]], 8:14 -> 8:29 = #1
-// CHECK-MAIN-NEXT: Expansion,File [[MAIN]], 10:12 -> 10:33 = #0
-// CHECK-MAIN-NEXT: Expansion,File [[MAIN]], 12:12 -> 12:35 = #0
+// CHECK-MAIN-NEXT: Expansion,File [[MAIN]], 8:14 -> 8:29 = 0
+// CHECK-MAIN-NEXT: Expansion,File [[MAIN]], 10:12 -> 10:33 = 0
+// CHECK-MAIN-NEXT: Expansion,File [[MAIN]], 12:12 -> 12:35 = 0
 // CHECK-MAIN-NEXT: File [[MAIN]], 12:35 -> 14:33 = #5
-// CHECK-MAIN-NEXT: Expansion,File [[MAIN]], 13:14 -> 13:29 = #5
-// CHECK-MAIN-NEXT: Expansion,File [[MAIN]], 14:12 -> 14:33 = #0
-// CHECK-MAIN-NEXT: Expansion,File [[MAIN]], 16:12 -> 16:35 = #0
+// CHECK-MAIN-NEXT: Expansion,File [[MAIN]], 13:14 -> 13:29 = 0
+// CHECK-MAIN-NEXT: Expansion,File [[MAIN]], 14:12 -> 14:33 = 0
+// CHECK-MAIN-NEXT: Expansion,File [[MAIN]], 16:12 -> 16:35 = 0
 // CHECK-MAIN-NEXT: File [[MAIN]], 16:35 -> 17:33 = #9
-// CHECK-MAIN-NEXT: Expansion,File [[MAIN]], 17:12 -> 17:33 = #0
+// CHECK-MAIN-NEXT: Expansion,File [[MAIN]], 17:12 -> 17:33 = 0
 
 // CHECK-START: File [[START1:[0-9]]], 1:1 -> 5:1 = #0
 // CHECK-START: File [[START1]], 4:17 -> 4:22 = (#0 + #1)
