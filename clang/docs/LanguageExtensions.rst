@@ -4956,7 +4956,9 @@ a functional mechanism for programatically querying:
 
   while (__builtin_amdgcn_processor_is("gfx1101")) *p += x;
 
-  do { *p -= x; } while (__builtin_amdgcn_processor_is("gfx1010"));
+  do {
+    *p -= x;
+  } while (__builtin_amdgcn_processor_is("gfx1010"));
 
   for (; __builtin_amdgcn_processor_is("gfx1201"); ++*p) break;
 
@@ -4967,9 +4969,11 @@ a functional mechanism for programatically querying:
 
   do {
     *p -= x;
-  } while (__builtin_amdgcn_is_invocable(__builtin_amdgcn_global_load_tr_b64_i32));
+  } while (
+      __builtin_amdgcn_is_invocable(__builtin_amdgcn_global_load_tr_b64_i32));
 
-  for (; __builtin_amdgcn_is_invocable(__builtin_amdgcn_permlane64); ++*p) break;
+  for (; __builtin_amdgcn_is_invocable(__builtin_amdgcn_permlane64); ++*p)
+    break;
 
 **Description**:
 
