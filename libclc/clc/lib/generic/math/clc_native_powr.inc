@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE native_exp10(__CLC_GENTYPE val) {
-  return native_exp2(val * M_LOG210_F);
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_native_powr(__CLC_GENTYPE x,
+                                                       __CLC_GENTYPE y) {
+  // x^y == 2^{log2 x^y} == 2^{y * log2 x}
+  // for x < 0 propagate nan created by log2
+  return __clc_native_exp2(y * __clc_native_log2(x));
 }
