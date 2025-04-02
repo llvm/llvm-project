@@ -1,4 +1,4 @@
-//===- TranslationRegistration.h - Register translation ---------*- C++ -*-===//
+//===- IRDLToCpp.h - Register translation -----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,8 +21,7 @@ namespace irdl {
 /// Translates an IRDL dialect definition to a C++ definition that can be used
 /// with MLIR.
 ///
-/// As with TableGen declarations, the following preprocessor macros will
-/// generate the corresponding code:
+/// The following preprocessor macros will generate the following code:
 ///
 ///  // This define generates code for the dialect's class declarations
 ///  #define GEN_DIALECT_DECL_HEADER
