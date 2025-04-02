@@ -691,9 +691,6 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
                             TII->get(AMDGPU::COPY), NewDst)
                         .addReg(MO.getReg());
                 MO.setReg(NewDst);
-
-                // FIXME: We are transitively revisiting users of this
-                // instruction for every input.
                 analyzeVGPRToSGPRCopy(NewCopy);
               }
             }
@@ -931,8 +928,6 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
 
   V2SCopyInfo Info(getNextVGPRToSGPRCopyId(), MI,
                       TRI->getRegSizeInBits(*DstRC));
-  V2SCopies[Info.ID] = Info;
-
   SmallVector<MachineInstr *, 8> AnalysisWorklist;
   // Needed because the SSA is not a tree but a graph and may have
   // forks and joins. We should not then go same way twice.
@@ -981,6 +976,7 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
       AnalysisWorklist.push_back(U);
     }
   }
+  V2SCopies[Info.ID] = Info;
 }
 
 // The main function that computes the VGPR to SGPR copy score
