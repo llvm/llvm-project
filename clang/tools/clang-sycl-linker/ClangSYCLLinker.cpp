@@ -278,8 +278,8 @@ Expected<StringRef> linkDeviceCode(ArrayRef<std::string> InputFiles,
 /// Converts 'File' from LLVM bitcode to SPIR-V format using SPIR-V backend.
 /// 'Args' encompasses all arguments required for linking device code and will
 /// be parsed to generate options required to be passed into the backend.
-static Expected<StringRef> runSPIRVCodeGen(StringRef File,
-                                           const ArgList &Args, LLVMContext &C) {
+static Expected<StringRef> runSPIRVCodeGen(StringRef File, const ArgList &Args,
+                                           LLVMContext &C) {
   llvm::TimeTraceScope TimeScope("SPIR-V code generation");
 
   // Parse input module.
