@@ -183,10 +183,6 @@ struct VPlanTransforms {
   /// CanonicalIVTy as type for all un-typed live-ins in VPTypeAnalysis.
   static void simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy);
 
-  /// Normalize and simplify VPBlendRecipes. Should be run after simplifyRecipes
-  /// to make sure the masks are simplified.
-  static void simplifyBlends(VPlan &Plan);
-
   /// If there's a single exit block, optimize its phi recipes that use exiting
   /// IV values by feeding them precomputed end values instead, possibly taken
   /// one step backwards.
