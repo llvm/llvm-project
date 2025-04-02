@@ -141,6 +141,13 @@ C2y Feature Support
   paper also introduced octal and hexadecimal delimited escape sequences (e.g.,
   ``"\x{12}\o{12}"``) which are also supported as an extension in older C
   language modes.
+- Implemented `WG14 N3369 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3369.pdf>`_
+  which introduces the ``_Lengthof`` operator, and `WG14 N3469 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3469.htm>`_
+  which renamed ``_Lengthof`` to ``_Countof``. This feature is implemented as
+  a conforming extension in earlier C language modes, but not in C++ language
+  modes (``std::extent`` and ``std::size`` already provide the same
+  functionality but with more granularity). The feature can be tested via
+  ``__has_feature(c_countof)`` or ``__has_extension(c_countof)``.
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
