@@ -66,13 +66,13 @@ static Value *handleHlslClip(const CallExpr *E, CodeGenFunction *CGF) {
     CMP = CGF->Builder.CreateIntrinsic(
         CGF->Builder.getInt1Ty(), CGF->CGM.getHLSLRuntime().getAnyIntrinsic(),
         {FCompInst});
-  } else
+  } else {
     CMP = CGF->Builder.CreateFCmpOLT(Op0, FZeroConst);
+  }
 
-  if (CGF->CGM.getTarget().getTriple().isDXIL())
-    LastInstr =
-        CGF->Builder.CreateIntrinsic(CGF->VoidTy, Intrinsic::dx_discard, {CMP});
-  else if (CGF->CGM.getTarget().getTriple().isSPIRV()) {
+  if (CGF->CGM.getTarget().getTriple().isDXIL()) {
+    LastInstr = CGF->Builder.CreateIntrinsic(Intrinsic::dx_discard, {CMP});
+  } else if (CGF->CGM.getTarget().getTriple().isSPIRV()) {
     BasicBlock *LT0 = CGF->createBasicBlock("lt0", CGF->CurFn);
     BasicBlock *End = CGF->createBasicBlock("end", CGF->CurFn);
 
@@ -80,7 +80,7 @@ static Value *handleHlslClip(const CallExpr *E, CodeGenFunction *CGF) {
 
     CGF->Builder.SetInsertPoint(LT0);
 
-    CGF->Builder.CreateIntrinsic(CGF->VoidTy, Intrinsic::spv_discard, {});
+    CGF->Builder.CreateIntrinsic(Intrinsic::spv_discard, {});
 
     LastInstr = CGF->Builder.CreateBr(End);
     CGF->Builder.SetInsertPoint(End);
@@ -109,7 +109,6 @@ static Value *handleHlslSplitdouble(const CallExpr *E, CodeGenFunction *CGF) {
   Value *HighBits = nullptr;
 
   if (CGF->CGM.getTarget().getTriple().isDXIL()) {
-
     llvm::Type *RetElementTy = CGF->Int32Ty;
     if (auto *Op0VecTy = E->getArg(0)->getType()->getAs<clang::VectorType>())
       RetElementTy = llvm::VectorType::get(
@@ -121,7 +120,6 @@ static Value *handleHlslSplitdouble(const CallExpr *E, CodeGenFunction *CGF) {
 
     LowBits = CGF->Builder.CreateExtractValue(CI, 0);
     HighBits = CGF->Builder.CreateExtractValue(CI, 1);
-
   } else {
     // For Non DXIL targets we generate the instructions.
 
