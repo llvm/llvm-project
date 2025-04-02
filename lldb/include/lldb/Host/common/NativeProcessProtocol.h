@@ -179,6 +179,9 @@ public:
   // Accessors
   lldb::pid_t GetID() const { return m_pid; }
 
+  // Get process info
+  virtual bool GetProcessInfo(ProcessInstanceInfo &proc_info);
+
   lldb::StateType GetState() const;
 
   bool IsRunning() const {

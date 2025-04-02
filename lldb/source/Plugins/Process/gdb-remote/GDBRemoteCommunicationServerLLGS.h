@@ -85,10 +85,15 @@ public:
 
   Status InitializeConnection(std::unique_ptr<Connection> connection);
 
-  using ProcessCreatedCallback = std::function<void(NativeProcessProtocol *)>;
+  using ProcessStoppedChangedCallback = 
+      std::function<std::string (GDBRemoteCommunicationServerLLGS &server,
+                                 NativeProcessProtocol *process)>;
 
-  void SetProcessCreatedCallback(ProcessCreatedCallback callback) {
-    m_process_created_callback = callback;
+  bool SetProcessStoppedCallback(ProcessStoppedChangedCallback callback) {
+    if (m_process_stopped_callback)
+      return false;
+    m_process_stopped_callback = callback;
+    return true;
   }
 
   struct DebuggedProcess {
@@ -129,7 +134,7 @@ protected:
 
   NativeProcessProtocol::Extension m_extensions_supported = {};
 
-  ProcessCreatedCallback m_process_created_callback = nullptr;
+  ProcessStoppedChangedCallback m_process_stopped_callback = nullptr;
 
   // Typically we would use a SmallVector for this data but in this context we
   // don't know how much data we're recieving so we would have to heap allocate
@@ -144,11 +149,13 @@ protected:
 
   PacketResult SendStopReplyPacketForThread(NativeProcessProtocol &process,
                                             lldb::tid_t tid,
-                                            bool force_synchronous);
+                                            bool force_synchronous,
+                                            llvm::StringRef extra_stop_reply_args = {});
 
   PacketResult SendStopReasonForState(NativeProcessProtocol &process,
                                       lldb::StateType process_state,
-                                      bool force_synchronous);
+                                      bool force_synchronous, 
+                                      llvm::StringRef extra_stop_reply_args = {});
 
   void EnqueueStopReplyPackets(lldb::tid_t thread_to_skip);
 

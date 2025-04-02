@@ -405,10 +405,10 @@ public:
 
   llvm::ErrorOr<llvm::MD5::MD5Result> CalculateMD5(const FileSpec &file_spec);
 
-  lldb::DataBufferSP ReadRegister(
-      lldb::tid_t tid,
-      uint32_t
-          reg_num); // Must be the eRegisterKindProcessPlugin register number
+  lldb::DataBufferSP
+  ReadRegister(lldb::tid_t tid,
+               uint32_t reg_num); // Must be the eRegisterKindProcessPlugin
+                                  // register number
 
   lldb::DataBufferSP ReadAllRegisters(lldb::tid_t tid);
 
@@ -530,6 +530,13 @@ public:
 
   llvm::Expected<int> KillProcess(lldb::pid_t pid);
 
+  // If this function is called with a valid file descriptor, a thread will be
+  // started that will listen for messages on fd from the socket pair. This
+  // allows us to pass file descriptors from the lldb-server to this client to
+  // allow another GDB remote connection to be started. This is used for GPU
+  // debugging on a local machine.
+  void SetFilePassingFD(int fd);
+
 protected:
   LazyBool m_supports_not_sending_acks = eLazyBoolCalculate;
   LazyBool m_supports_thread_suffix = eLazyBoolCalculate;
@@ -583,8 +590,7 @@ protected:
       m_supports_qSymbol : 1, m_qSymbol_requests_done : 1,
       m_supports_qModuleInfo : 1, m_supports_jThreadsInfo : 1,
       m_supports_jModulesInfo : 1, m_supports_vFileSize : 1,
-      m_supports_vFileMode : 1, m_supports_vFileExists : 1,
-      m_supports_vRun : 1;
+      m_supports_vFileMode : 1, m_supports_vFileExists : 1, m_supports_vRun : 1;
 
   /// Current gdb remote protocol process identifier for all other operations
   lldb::pid_t m_curr_pid = LLDB_INVALID_PROCESS_ID;
@@ -619,8 +625,8 @@ protected:
       UINT32_MAX; // from reply to qGDBServerVersion, zero if
                   // qGDBServerVersion is not supported
   std::chrono::seconds m_default_packet_timeout;
-  int m_target_vm_page_size = 0; // target system VM page size; 0 unspecified
-  uint64_t m_max_packet_size = 0;    // as returned by qSupported
+  int m_target_vm_page_size = 0;  // target system VM page size; 0 unspecified
+  uint64_t m_max_packet_size = 0; // as returned by qSupported
   std::string m_qSupported_response; // the complete response to qSupported
 
   bool m_supported_async_json_packets_is_valid = false;
@@ -628,7 +634,8 @@ protected:
 
   std::vector<MemoryRegionInfo> m_qXfer_memory_map;
   bool m_qXfer_memory_map_loaded = false;
-
+  // Used to pass a file descriptor from the GDB server back to the client.
+  std::optional<int> m_file_passing_fd;
   bool GetCurrentProcessInfo(bool allow_lazy_pid = true);
 
   bool GetGDBServerVersion();

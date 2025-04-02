@@ -6,41 +6,41 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TOOLS_LLDB_SERVER_LLDBSERVERPLUGIN_H
-#define LLDB_TOOLS_LLDB_SERVER_LLDBSERVERPLUGIN_H
+#ifndef LLDB_TOOLS_LLDB_SERVER_LLDBSERVERNATIVEPROCESS_H
+#define LLDB_TOOLS_LLDB_SERVER_LLDBSERVERNATIVEPROCESS_H
 
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-types.h"
 #include <memory>
 
 namespace lldb_private {
+
+class NativeProcessProtocol;
+
 namespace lldb_server {
 
 /// A class that interfaces back to the lldb-server native process for
 /// LLDBServerNativeProcess objects.
 class LLDBServerNativeProcess {
-public:
-  static LLDBServerNativeProcess *GetNativeProcess();
-  // lldb-server will call this function to set the native process object prior
-  // to any plug-ins being loaded.
-  static void SetNativeProcess(LLDBServerNativeProcess *process);
+  NativeProcessProtocol *m_native_process;
 
-  virtual ~LLDBServerNativeProcess();
+public:
+  LLDBServerNativeProcess(NativeProcessProtocol *native_process);
+  ~LLDBServerNativeProcess();
+
   /// Set a breakpoint in the native process.
   ///
   /// When the breakpoints gets hit, lldb-server will call
   /// LLDBServerPlugin::BreakpointWasHit with this address. This will allow
-  /// LLDBServerPlugin plugins to synchronously handle a breakpoint hit in the
-  /// native process.
-  virtual lldb::user_id_t SetBreakpoint(lldb::addr_t address) = 0;
-
-  virtual Status RegisterSignalCatcher(int signo) = 0;
-
-  virtual Status HaltProcess() = 0;
-  virtual Status ContinueProcess() = 0;
+  /// LLDBServerPlugin plugins to synchronously handle a breakpoint hit in
+  /// the native process.
+  lldb::user_id_t SetBreakpoint(lldb::addr_t address);
+  Status RegisterSignalCatcher(int signo);
+  Status HaltProcess();
+  Status ContinueProcess();
 };
 
 } // namespace lldb_server
 } // namespace lldb_private
 
-#endif
+#endif // #ifndef LLDB_TOOLS_LLDB_SERVER_LLDBSERVERNATIVEPROCESS_H

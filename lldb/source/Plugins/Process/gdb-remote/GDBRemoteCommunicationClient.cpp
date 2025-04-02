@@ -1238,8 +1238,8 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
   Log *log = GetLog(GDBRLog::Process);
 
   if (force || m_qHostInfo_is_valid == eLazyBoolCalculate) {
-    // host info computation can require DNS traffic and shelling out to external processes.
-    // Increase the timeout to account for that.
+    // host info computation can require DNS traffic and shelling out to
+    // external processes. Increase the timeout to account for that.
     ScopedTimeout timeout(*this, seconds(10));
     m_qHostInfo_is_valid = eLazyBoolNo;
     StringExtractorGDBRemote response;
@@ -2262,7 +2262,7 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
                  !vendor_name.empty()) {
         llvm::Triple triple(llvm::Twine("-") + vendor_name + "-" + os_name);
         if (!environment.empty())
-            triple.setEnvironmentName(environment);
+          triple.setEnvironmentName(environment);
 
         assert(triple.getObjectFormat() != llvm::Triple::UnknownObjectFormat);
         assert(triple.getObjectFormat() != llvm::Triple::Wasm);
@@ -2297,7 +2297,8 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
         }
         m_process_arch.GetTriple().setVendorName(llvm::StringRef(vendor_name));
         m_process_arch.GetTriple().setOSName(llvm::StringRef(os_name));
-        m_process_arch.GetTriple().setEnvironmentName(llvm::StringRef(environment));
+        m_process_arch.GetTriple().setEnvironmentName(
+            llvm::StringRef(environment));
       }
       return true;
     }
@@ -2925,7 +2926,7 @@ GDBRemoteCommunicationClient::GetCurrentProcessAndThreadIDs(
 
           ids.push_back(*pid_tid);
           ch = response.GetChar(); // Skip the command separator
-        } while (ch == ',');       // Make sure we got a comma separator
+        } while (ch == ','); // Make sure we got a comma separator
       }
     }
 
@@ -4378,3 +4379,5 @@ llvm::Expected<int> GDBRemoteCommunicationClient::KillProcess(lldb::pid_t pid) {
                                  "unexpected response to k packet: %s",
                                  response.GetStringRef().str().c_str());
 }
+
+void GDBRemoteCommunicationClient::SetFilePassingFD(int fd) {}

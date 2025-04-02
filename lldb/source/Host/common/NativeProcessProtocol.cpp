@@ -766,4 +766,8 @@ void NativeProcessProtocol::DoStopIDBumped(uint32_t /* newBumpId */) {
   // Default implementation does nothing.
 }
 
+bool NativeProcessProtocol::GetProcessInfo(ProcessInstanceInfo &proc_info) {
+  return Host::GetProcessInfo(m_pid, proc_info);
+}
+
 NativeProcessProtocol::Manager::~Manager() = default;

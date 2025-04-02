@@ -31,6 +31,7 @@ static constexpr Log::Category g_categories[] = {
     {{"step"}, {"log step related activities"}, GDBRLog::Step},
     {{"thread"}, {"log thread events and activities"}, GDBRLog::Thread},
     {{"watch"}, {"log watchpoint related activities"}, GDBRLog::Watchpoints},
+    {{"plugin"}, {"log internal lldb-server plugin messages"}, GDBRLog::Plugin},
 };
 
 static Log::Channel g_channel(g_categories, GDBRLog::Packets);

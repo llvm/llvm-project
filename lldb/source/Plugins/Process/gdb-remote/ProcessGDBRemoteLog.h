@@ -27,6 +27,7 @@ enum class GDBRLog : Log::MaskType {
   Step = Log::ChannelFlag<8>,
   Thread = Log::ChannelFlag<9>,
   Watchpoints = Log::ChannelFlag<10>,
+  Plugin = Log::ChannelFlag<11>,
   LLVM_MARK_AS_BITMASK_ENUM(Watchpoints)
 };
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
