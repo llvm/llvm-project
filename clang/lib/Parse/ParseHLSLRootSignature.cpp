@@ -138,12 +138,15 @@ bool RootSignatureParser::parseDescriptorTableClause() {
 }
 
 // Helper struct defined to use the overloaded notation of std::visit.
-template <class... Ts> struct ParseMethods : Ts... { using Ts::operator()...; };
-template <class... Ts> ParseMethods(Ts...) -> ParseMethods<Ts...>;
+template <class... Ts> struct ParseParamTypeMethods : Ts... {
+  using Ts::operator()...;
+};
+template <class... Ts>
+ParseParamTypeMethods(Ts...) -> ParseParamTypeMethods<Ts...>;
 
 bool RootSignatureParser::parseParam(ParamType Ref) {
   return std::visit(
-      ParseMethods{
+      ParseParamTypeMethods{
           [this](Register *X) -> bool { return parseRegister(X); },
           [this](uint32_t *X) -> bool {
             return consumeExpectedToken(TokenKind::pu_equal,
