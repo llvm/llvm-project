@@ -4370,8 +4370,7 @@ private:
         // If it does not match, collect all Phi nodes from matcher.
         // if we end up with no match, them all these Phi nodes will not match
         // later.
-        for (auto M : Matched)
-          WillNotMatch.insert(M.first);
+        WillNotMatch.insert_range(llvm::make_first_range(Matched));
         Matched.clear();
       }
       if (IsMatched) {
@@ -8576,7 +8575,8 @@ static bool optimizeBranch(BranchInst *Branch, const TargetLowering &TLI,
     }
     if (Cmp->isEquality() &&
         (match(UI, m_Add(m_Specific(X), m_SpecificInt(-CmpC))) ||
-         match(UI, m_Sub(m_Specific(X), m_SpecificInt(CmpC))))) {
+         match(UI, m_Sub(m_Specific(X), m_SpecificInt(CmpC))) ||
+         match(UI, m_Xor(m_Specific(X), m_SpecificInt(CmpC))))) {
       IRBuilder<> Builder(Branch);
       if (UI->getParent() != Branch->getParent())
         UI->moveBefore(Branch->getIterator());

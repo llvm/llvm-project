@@ -252,8 +252,8 @@ static ParsedType recoverFromTypeInKnownDependentBase(Sema &S,
   S.Diag(NameLoc, diag::ext_found_in_dependent_base) << &II;
 
   ASTContext &Context = S.Context;
-  auto *NNS = NestedNameSpecifier::Create(Context, nullptr, false,
-                                          cast<Type>(Context.getRecordType(RD)));
+  auto *NNS = NestedNameSpecifier::Create(
+      Context, nullptr, cast<Type>(Context.getRecordType(RD)));
   QualType T =
       Context.getDependentNameType(ElaboratedTypeKeyword::Typename, NNS, &II);
 
@@ -580,10 +580,10 @@ synthesizeCurrentNestedNameSpecifier(ASTContext &Context, DeclContext *DC) {
     auto *ND = dyn_cast<NamespaceDecl>(DC);
     if (ND && !ND->isInline() && !ND->isAnonymousNamespace())
       return NestedNameSpecifier::Create(Context, nullptr, ND);
-    else if (auto *RD = dyn_cast<CXXRecordDecl>(DC))
-      return NestedNameSpecifier::Create(Context, nullptr, RD->isTemplateDecl(),
+    if (auto *RD = dyn_cast<CXXRecordDecl>(DC))
+      return NestedNameSpecifier::Create(Context, nullptr,
                                          RD->getTypeForDecl());
-    else if (isa<TranslationUnitDecl>(DC))
+    if (isa<TranslationUnitDecl>(DC))
       return NestedNameSpecifier::GlobalSpecifier(Context);
   }
   llvm_unreachable("something isn't in TU scope?");
@@ -624,8 +624,7 @@ ParsedType Sema::ActOnMSVCUnknownTypeName(const IdentifierInfo &II,
                  findRecordWithDependentBasesOfEnclosingMethod(CurContext)) {
     // Build a DependentNameType that will perform lookup into RD at
     // instantiation time.
-    NNS = NestedNameSpecifier::Create(Context, nullptr, RD->isTemplateDecl(),
-                                      RD->getTypeForDecl());
+    NNS = NestedNameSpecifier::Create(Context, nullptr, RD->getTypeForDecl());
 
     // Diagnose that this identifier was undeclared, and retry the lookup during
     // template instantiation.
@@ -6243,11 +6242,12 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
 
   NestedNameSpecifierLoc SpecLoc(SS.getScopeRep(), SS.location_data());
   do {
-    if (SpecLoc.getNestedNameSpecifier()->getKind() ==
-        NestedNameSpecifier::TypeSpecWithTemplate)
-      Diag(Loc, diag::ext_template_after_declarative_nns)
-          << FixItHint::CreateRemoval(
-                 SpecLoc.getTypeLoc().getTemplateKeywordLoc());
+    if (TypeLoc TL = SpecLoc.getTypeLoc()) {
+      if (SourceLocation TemplateKeywordLoc = TL.getTemplateKeywordLoc();
+          TemplateKeywordLoc.isValid())
+        Diag(Loc, diag::ext_template_after_declarative_nns)
+            << FixItHint::CreateRemoval(TemplateKeywordLoc);
+    }
 
     if (const Type *T = SpecLoc.getNestedNameSpecifier()->getAsType()) {
       if (const auto *TST = T->getAsAdjusted<TemplateSpecializationType>()) {
@@ -7649,10 +7649,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
           IsVariableTemplate = true;
 
           // Only C++1y supports variable templates (N3651).
-          Diag(D.getIdentifierLoc(),
-               getLangOpts().CPlusPlus14
-                   ? diag::compat_cxx14_variable_template
-                   : diag::compat_pre_cxx14_variable_template);
+          DiagCompat(D.getIdentifierLoc(), diag_compat::variable_template);
         }
       }
     } else {
@@ -7718,10 +7715,8 @@ NamedDecl *Sema::ActOnVariableDeclarator(
           } else if (RD->isUnion()) {
             // C++98 [class.union]p1: If a union contains a static data member,
             // the program is ill-formed. C++11 drops this restriction.
-            Diag(D.getIdentifierLoc(),
-                 getLangOpts().CPlusPlus11
-                     ? diag::compat_cxx11_static_data_member_in_union
-                     : diag::compat_pre_cxx11_static_data_member_in_union)
+            DiagCompat(D.getIdentifierLoc(),
+                       diag_compat::static_data_member_in_union)
                 << Name;
           }
         }
@@ -7860,8 +7855,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
            diag::err_thread_non_global)
         << DeclSpec::getSpecifierName(TSCS);
     else if (!Context.getTargetInfo().isTLSSupported()) {
-      if (getLangOpts().CUDA || getLangOpts().OpenMPIsTargetDevice ||
-          getLangOpts().SYCLIsDevice) {
+      if (getLangOpts().CUDA || getLangOpts().isTargetDevice()) {
         // Postpone error emission until we've collected attributes required to
         // figure out whether it's a host or device variable and whether the
         // error should be ignored.
@@ -7994,8 +7988,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     if (const auto *TT = R->getAs<TypedefType>())
       copyAttrFromTypedefToDecl<AllocSizeAttr>(*this, NewVD, TT);
 
-  if (getLangOpts().CUDA || getLangOpts().OpenMPIsTargetDevice ||
-      getLangOpts().SYCLIsDevice) {
+  if (getLangOpts().CUDA || getLangOpts().isTargetDevice()) {
     if (EmitTLSUnsupportedError &&
         ((getLangOpts().CUDA && DeclAttrsMatchCUDAMode(getLangOpts(), NewVD)) ||
          (getLangOpts().OpenMPIsTargetDevice &&
@@ -16586,9 +16579,8 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
     DiscardCleanupsInEvaluationContext();
   }
 
-  if (FD && ((LangOpts.OpenMP && (LangOpts.OpenMPIsTargetDevice ||
-                                  !LangOpts.OMPTargetTriples.empty())) ||
-             LangOpts.CUDA || LangOpts.SYCLIsDevice)) {
+  if (FD && (LangOpts.isTargetDevice() || LangOpts.CUDA ||
+             (LangOpts.OpenMP && !LangOpts.OMPTargetTriples.empty()))) {
     auto ES = getEmissionStatus(FD);
     if (ES == Sema::FunctionEmissionStatus::Emitted ||
         ES == Sema::FunctionEmissionStatus::Unknown)
@@ -19133,8 +19125,9 @@ static void SetEligibleMethods(Sema &S, CXXRecordDecl *Record,
         AnotherMethodIsMoreConstrained = true;
         break;
       }
-      if (S.IsAtLeastAsConstrained(OtherMethod, {OtherConstraints}, OrigMethod,
-                                   {Constraints},
+      AssociatedConstraint Other(OtherConstraints);
+      AssociatedConstraint Orig(Constraints);
+      if (S.IsAtLeastAsConstrained(OtherMethod, {Other}, OrigMethod, {Orig},
                                    AnotherMethodIsMoreConstrained)) {
         // There was an error with the constraints comparison. Exit the loop
         // and don't consider this function eligible.

@@ -60,7 +60,7 @@ ParsedType Sema::getInheritingConstructorName(CXXScopeSpec &SS,
                                               SourceLocation NameLoc,
                                               const IdentifierInfo &Name) {
   NestedNameSpecifier *NNS = SS.getScopeRep();
-  if (const IdentifierInfo *II = NNS->getAsIdentifier())
+  if ([[maybe_unused]] const IdentifierInfo *II = NNS->getAsIdentifier())
     assert(II == &Name && "not a constructor name");
 
   QualType Type(NNS->translateToType(Context), 0);
@@ -508,7 +508,6 @@ bool Sema::checkLiteralOperatorId(const CXXScopeSpec &SS,
   switch (SS.getScopeRep()->getKind()) {
   case NestedNameSpecifier::Identifier:
   case NestedNameSpecifier::TypeSpec:
-  case NestedNameSpecifier::TypeSpecWithTemplate:
     // Per C++11 [over.literal]p2, literal operators can only be declared at
     // namespace scope. Therefore, this unqualified-id cannot name anything.
     // Reject it early, because we have no AST representation for this in the
@@ -3266,9 +3265,8 @@ FunctionDecl *Sema::FindUsualDeallocationFunction(SourceLocation StartLoc,
   return Result.FD;
 }
 
-FunctionDecl *Sema::FindDeallocationFunctionForDestructor(SourceLocation Loc,
-                                                          CXXRecordDecl *RD) {
-  DeclarationName Name = Context.DeclarationNames.getCXXOperatorName(OO_Delete);
+FunctionDecl *Sema::FindDeallocationFunctionForDestructor(
+    SourceLocation Loc, CXXRecordDecl *RD, DeclarationName Name) {
 
   FunctionDecl *OperatorDelete = nullptr;
   if (FindDeallocationFunction(Loc, RD, Name, OperatorDelete))
@@ -3276,8 +3274,7 @@ FunctionDecl *Sema::FindDeallocationFunctionForDestructor(SourceLocation Loc,
   if (OperatorDelete)
     return OperatorDelete;
 
-  // If there's no class-specific operator delete, look up the global
-  // non-array delete.
+  // If there's no class-specific operator delete, look up the global delete.
   return FindUsualDeallocationFunction(
       Loc, true, hasNewExtendedAlignment(*this, Context.getRecordType(RD)),
       Name);
@@ -9552,7 +9549,8 @@ concepts::NestedRequirement *
 Sema::BuildNestedRequirement(Expr *Constraint) {
   ConstraintSatisfaction Satisfaction;
   if (!Constraint->isInstantiationDependent() &&
-      CheckConstraintSatisfaction(nullptr, {Constraint}, /*TemplateArgs=*/{},
+      CheckConstraintSatisfaction(nullptr, AssociatedConstraint(Constraint),
+                                  /*TemplateArgs=*/{},
                                   Constraint->getSourceRange(), Satisfaction))
     return nullptr;
   return new (Context) concepts::NestedRequirement(Context, Constraint,

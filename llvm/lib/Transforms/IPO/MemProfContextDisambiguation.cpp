@@ -2286,8 +2286,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy,
     std::vector<CallInfo> AllCalls;
     AllCalls.reserve(Node->MatchingCalls.size() + 1);
     AllCalls.push_back(Node->Call);
-    AllCalls.insert(AllCalls.end(), Node->MatchingCalls.begin(),
-                    Node->MatchingCalls.end());
+    llvm::append_range(AllCalls, Node->MatchingCalls);
 
     // First see if we can partition the calls by callee function, creating new
     // nodes to host each set of calls calling the same callees. This is
@@ -2468,9 +2467,8 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::partitionCallsByCallee(
         // The first call becomes the primary call for this caller node, and the
         // rest go in the matching calls list.
         Info->Node->setCall(Info->Calls.front());
-        Info->Node->MatchingCalls.insert(Info->Node->MatchingCalls.end(),
-                                         Info->Calls.begin() + 1,
-                                         Info->Calls.end());
+        llvm::append_range(Info->Node->MatchingCalls,
+                           llvm::drop_begin(Info->Calls));
         // Save the primary call to node correspondence so that we can update
         // the NonAllocationCallToContextNodeMap, which is being iterated in the
         // caller of this function.
@@ -4117,8 +4115,7 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
       // Ignore original Node if we moved all of its contexts to clones.
       if (!Node->emptyContextIds())
         ClonesWorklist.push_back(Node);
-      ClonesWorklist.insert(ClonesWorklist.end(), Node->Clones.begin(),
-                            Node->Clones.end());
+      llvm::append_range(ClonesWorklist, Node->Clones);
 
       // Now walk through all of the clones of this callsite Node that we need,
       // and determine the assignment to a corresponding clone of the current
