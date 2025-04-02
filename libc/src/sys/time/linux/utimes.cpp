@@ -15,13 +15,15 @@
 
 #include "src/errno/libc_errno.h"
 
+#include <cerrno>
 #include <sys/syscall.h>
 #include <sys/stat.h>
+#include <fcntl.h>
 
 namespace LIBC_NAMESPACE_DECL {
   
-  LLVM_LIBC_FUNCTION(int, utimes, (const char *path, const struct timeval times[2]) {
-    long ret;
+  LLVM_LIBC_FUNCTION(int, utimes, (const char *path, const struct timeval times[2])) {
+    int ret;
   
   #ifdef SYS_utimensat
     //the utimensat syscall requires a timespec struct, not timeval.
@@ -35,6 +37,7 @@ namespace LIBC_NAMESPACE_DECL {
       // ensure consistent values
       if ((times[0].tv_usec < 0 || times[1].tv_usec < 0) || 
          (times[0].tv_usec >= 1000000 || times[1].tv_usec >= 1000000)) {
+           libc_errno = EINVAL;
            return -1;
       }
       
@@ -45,6 +48,8 @@ namespace LIBC_NAMESPACE_DECL {
       // convert u-seconds to nanoseconds
       ts[0].tv_nsec = times[0].tv_usec * 1000;
       ts[1].tv_nsec = times[1].tv_usec * 1000;
+      
+      ts_ptr = ts;
     }
     
     // If times was NULL, ts_ptr remains NULL, which utimensat interprets
@@ -52,12 +57,12 @@ namespace LIBC_NAMESPACE_DECL {
   
     // utimensat syscall. 
     // flags=0 means don't follow symlinks (like utimes)
-    ret = LIBC_NAMESPACE::syscall_impl<long>(SYS_utimensat, AT_FDCWD, path,
+    ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_utimensat, AT_FDCWD, path,
                                              ts_ptr, 0);
   
   #elif defined(SYS_utimes)
     // No need to define a timespec struct, use the syscall directly.
-    ret = LIBC_NAMESPACE::syscall_impl<long>(SYS_utimes, path, times);
+    ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_utimes, path, times);
   #else
   #error "utimensat and utimes syscalls not available."
     // To avoid compilation errors when neither is defined, return an error.

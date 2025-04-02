@@ -6,61 +6,76 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/string_view.h"
-#include "src/errno/libc_errno.h"
-#include "src/fcntl/open.h"
-#include "src/sys/time/utimes.h"
-#include "src/unistd/close.h"
-#include "src/unistd/read.h"
-#include "src/unistd/unlink.h"
-#include "src/unistd/write.h"
-#include "test/UnitTest/ErrnoSetterMatcher.h"
+// temp file related stuff
+#include "src/fcntl/open.h"    // to open
+#include "src/unistd/close.h"  // to close
+#include "src/sys/stat/stat.h" // for info
+#include "src/unistd/unlink.h" // to delete
+// testing error handling
 #include "test/UnitTest/Test.h"
-
+#include "src/errno/libc_errno.h"           
+#include "test/UnitTest/ErrnoSetterMatcher.h"
+// dependencies for the tests themselves
+#include "hdr/types/struct_timeval.h"
+#include <cerrno>
+#include <fcntl.h>
 #include "hdr/fcntl_macros.h"
-#include <sys/stat.h>
+// the utimes function
+#include "src/sys/time/utimes.h" 
+constexpr const char* TEST_FILE = "testdata/utimes.test"; 
 
-namespace cpp = LIBC_NAMESPACE::cpp;
-
-TEST(LlvmLibcSendfileTest, CreateAndTransfer) {
-  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
+// SUCCESS: Takes a file and successfully updates 
+// its last access and modified times.
+TEST(LlvmLibcUtimesTest, ChangeTimesSpecific){
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
+  
+  // make a dummy timeval struct
+  struct timeval times[2];
+  times[0].tv_sec = 54321;
+  times[0].tv_usec = 12345;
+  times[1].tv_sec = 43210;
+  times[1].tv_usec = 23456;
+  
+  // ensure utimes succeeds
+  ASSERT_THAT(LIBC_NAMESPACE::utimes(TEST_FILE, times), Succeeds(0));
 
-  // The test strategy is to
-  //   1. Create a temporary file with known data.
-  //   2. Use sendfile to copy it to another file.
-  //   3. Make sure that the data was actually copied.
-  //   4. Clean up the temporary files.
-  constexpr const char *IN_FILE = "testdata/sendfile_in.test";
-  constexpr const char *OUT_FILE = "testdata/sendfile_out.test";
-  const char IN_DATA[] = "sendfile test";
-  constexpr ssize_t IN_SIZE = ssize_t(sizeof(IN_DATA));
-  LIBC_NAMESPACE::libc_errno = 0;
+  // verify the times values against stat of the TEST_FILE
+  struct stat statbuf;
+  ASSERT_EQ(stat(TEST_FILE, &statbuf), 0);
+  
+  // seconds
+  ASSERT_EQ(statbuf.st_atim.tv_sec, times[0].tv_sec);
+  ASSERT_EQ(statbuf.st_mtim.tv_sec, times[1].tv_sec);
 
-  int in_fd = LIBC_NAMESPACE::open(IN_FILE, O_CREAT | O_WRONLY, S_IRWXU);
-  ASSERT_GT(in_fd, 0);
-  ASSERT_ERRNO_SUCCESS();
-  ASSERT_EQ(LIBC_NAMESPACE::write(in_fd, IN_DATA, IN_SIZE), IN_SIZE);
-  ASSERT_THAT(LIBC_NAMESPACE::close(in_fd), Succeeds(0));
+  //microseconds
+  ASSERT_EQ(statbuf.st_atim.tv_nsec, times[0].tv_usec * 1000);
+  ASSERT_EQ(statbuf.st_mtim.tv_nsec, times[1].tv_usec * 1000); 
+}
 
-  in_fd = LIBC_NAMESPACE::open(IN_FILE, O_RDONLY);
-  ASSERT_GT(in_fd, 0);
-  ASSERT_ERRNO_SUCCESS();
-  int out_fd = LIBC_NAMESPACE::open(OUT_FILE, O_CREAT | O_WRONLY, S_IRWXU);
-  ASSERT_GT(out_fd, 0);
-  ASSERT_ERRNO_SUCCESS();
-  ssize_t size = LIBC_NAMESPACE::sendfile(in_fd, out_fd, nullptr, IN_SIZE);
-  ASSERT_EQ(size, IN_SIZE);
-  ASSERT_THAT(LIBC_NAMESPACE::close(in_fd), Succeeds(0));
-  ASSERT_THAT(LIBC_NAMESPACE::close(out_fd), Succeeds(0));
+// FAILURE: Invalid values in the timeval struct
+// to check that utimes rejects it.
+TEST(LlvmLibcUtimesTest, InvalidMicroseconds){
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails; 
+  
+  // make a dummy timeval struct 
+  // populated with bad usec values
+  struct timeval times[2];
+  times[0].tv_sec = 54321;
+  times[0].tv_usec = 4567;
+  times[1].tv_sec = 43210;
+  times[1].tv_usec = 1000000; //invalid
+  
+  // ensure utimes fails
+  ASSERT_THAT(LIBC_NAMESPACE::utimes(TEST_FILE, times), Fails(EINVAL));
+  
+  // check for failure on 
+  // the other possible bad values
 
-  out_fd = LIBC_NAMESPACE::open(OUT_FILE, O_RDONLY);
-  ASSERT_GT(out_fd, 0);
-  ASSERT_ERRNO_SUCCESS();
-  char buf[IN_SIZE];
-  ASSERT_EQ(IN_SIZE, LIBC_NAMESPACE::read(out_fd, buf, IN_SIZE));
-  ASSERT_EQ(cpp::string_view(buf), cpp::string_view(IN_DATA));
-
-  ASSERT_THAT(LIBC_NAMESPACE::unlink(IN_FILE), Succeeds(0));
-  ASSERT_THAT(LIBC_NAMESPACE::unlink(OUT_FILE), Succeeds(0));
+  times[0].tv_sec = 54321;
+  times[0].tv_usec = -4567; //invalid
+  times[1].tv_sec = 43210;
+  times[1].tv_usec = 1000;
+  
+  // ensure utimes fails once more
+  ASSERT_THAT(LIBC_NAMESPACE::utimes(TEST_FILE, times), Fails(EINVAL));  
 }
