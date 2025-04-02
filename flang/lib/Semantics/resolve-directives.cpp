@@ -2514,6 +2514,15 @@ void OmpAttributeVisitor::ResolveOmpObject(
                         name->ToString());
                   }
                 }
+                if (ompFlag == Symbol::Flag::OmpDeclareTarget) {
+                  if (symbol->IsFuncResult()) {
+                    if (Symbol * func{currScope().symbol()}) {
+                      CHECK(func->IsSubprogram());
+                      func->set(ompFlag);
+                      name->symbol = func;
+                    }
+                  }
+                }
                 if (GetContext().directive ==
                     llvm::omp::Directive::OMPD_target_data) {
                   checkExclusivelists(symbol, Symbol::Flag::OmpUseDevicePtr,
