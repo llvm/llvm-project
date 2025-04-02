@@ -146,7 +146,8 @@ Changes in existing checks
   `AllowedTypes`, that excludes specified types from const-correctness
   checking and fixing false positives when modifying variant by ``operator[]``
   with template in parameters and supporting to check pointee mutation by
-  `AnalyzePointers` option.
+  `AnalyzePointers` option and fixing false positives when using const array
+  type.
 
 - Improved :doc:`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` check by providing additional
