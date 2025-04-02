@@ -24,7 +24,7 @@ void foo() {
       ;
     #pragma omp metadirective when(device = {arch(nvptx)} : parallel) default() // omp52-warning {{'default' clause for 'metadirective' is deprecated; use 'otherwise' instead}}
       ;
-    #pragma omp metadirective when(device = {arch(nvptx)} : parallel) xyz() //omp52-error {{unknown clause 'xyz' in metadirective}} 
+    #pragma omp metadirective when(device = {arch(nvptx)} : parallel) xyz() //omp52-error {{expected an OpenMP clause}} 
       ;
   #else
     #pragma omp metadirective // expected-error {{expected expression}}
@@ -43,7 +43,9 @@ void foo() {
       ;
     #pragma omp metadirective when(device = {isa("some-unsupported-feature")} : parallel) default(single) // expected-warning {{isa trait 'some-unsupported-feature' is not known to the current target; verify the spelling or consider restricting the context selector with the 'arch' selector further}}
       ;
-    #pragma omp metadirective when(device = {arch(nvptx)} : parallel) xyz() //expected-error {{unknown clause 'xyz' in metadirective}} 
+    #pragma omp metadirective when(device = {isa("some-unsupported-feature")} : parallel) otherwise(single) // expected-warning {{isa trait 'some-unsupported-feature' is not known to the current target; verify the spelling or consider restricting the context selector with the 'arch' selector further}} //expected-error{{unexpected OpenMP clause 'otherwise' in directive '#pragma omp metadirective'}}
+      ;
+    #pragma omp metadirective when(device = {arch(nvptx)} : parallel) xyz() //expected-error {{expected an OpenMP clause}} 
       ;
   #endif
   }
