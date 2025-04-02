@@ -155,7 +155,7 @@ void simplifyConstraints(llvm::SetVector<const Formula *> &Constraints,
          It != End; ++It) {
       if (!It->isLeader())
         continue;
-      Atom At = *EquivalentAtoms.findLeader(It);
+      Atom At = *EquivalentAtoms.findLeader(*It);
       if (TrueAtoms.contains(At) || FalseAtoms.contains(At))
         continue;
       llvm::SmallVector<Atom> Atoms =
