@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
 #include <memory>
@@ -33,6 +34,7 @@
 #include <vector>
 
 namespace llvm {
+extern cl::opt<bool> EmitJumpTableSizesSection;
 
 class AddrLabelMap;
 class AsmPrinterHandler;
