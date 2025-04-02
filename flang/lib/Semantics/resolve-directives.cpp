@@ -2517,8 +2517,8 @@ void OmpAttributeVisitor::ResolveOmpObject(
                 if (ompFlag == Symbol::Flag::OmpDeclareTarget) {
                   if (symbol->IsFuncResult()) {
                     if (Symbol * func{currScope().symbol()}) {
-                      assert(func->IsSubprogram() &&
-                          "Expecting function scope");
+                      assert(
+                          func->IsSubprogram() && "Expecting function scope");
                       func->set(ompFlag);
                       name->symbol = func;
                     }
