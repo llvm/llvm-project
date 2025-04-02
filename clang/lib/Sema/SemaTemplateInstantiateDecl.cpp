@@ -5590,7 +5590,6 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
   Function->setLocation(PatternDecl->getLocation());
   Function->setInnerLocStart(PatternDecl->getInnerLocStart());
   Function->setRangeEnd(PatternDecl->getEndLoc());
-  Function->setDeclarationNameLoc(PatternDecl->getNameInfo().getInfo());
 
   EnterExpressionEvaluationContext EvalContext(
       *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
@@ -5712,6 +5711,23 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     }
     MultiLevelTemplateArgumentList TemplateArgs = getTemplateInstantiationArgs(
         Function, DC, /*Final=*/false, Innermost, false, PatternDecl);
+
+    // Let the instantiation use the Pattern's DeclarationNameInfo, due to the
+    // following awkwards:
+    // 1. The function we're instantiating might come from an (implicit)
+    // declaration, while the pattern comes from a definition.
+    // 2. We want the instantiated definition to have a source range pointing to
+    // the definition. Note that we can't set the pattern's DeclarationNameInfo
+    // blindly, as it might contain associated TypeLocs that should have
+    // already been transformed. So we transform the Pattern's DNI for that
+    // purpose. Technically, we should create a new function declaration and
+    // give it everything we want, but InstantiateFunctionDefinition does update
+    // the declaration in place.
+    DeclarationNameInfo DN =
+        SubstDeclarationNameInfo(PatternDecl->getNameInfo(), TemplateArgs);
+    if (!DN.getName())
+      return;
+    Function->setDeclarationNameLoc(DN.getInfo());
 
     // Substitute into the qualifier; we can get a substitution failure here
     // through evil use of alias templates.

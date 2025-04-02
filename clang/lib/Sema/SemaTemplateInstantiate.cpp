@@ -4264,7 +4264,8 @@ Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
       if (FunctionDecl *Pattern =
               Function->getInstantiatedFromMemberFunction()) {
 
-        if (Function->isIneligibleOrNotSelected())
+        if (!Instantiation->getDeclContext()->isDependentContext() &&
+            Function->isIneligibleOrNotSelected())
           continue;
 
         if (Function->getTrailingRequiresClause()) {
