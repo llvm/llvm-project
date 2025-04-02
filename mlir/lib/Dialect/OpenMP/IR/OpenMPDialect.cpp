@@ -1509,6 +1509,10 @@ static ParseResult parseMapClause(OpAsmParser &parser, IntegerAttr &mapType) {
     if (mapTypeMod == "descriptor")
       mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DESCRIPTOR;
 
+    if (mapTypeMod == "descriptor_base_addr")
+      mapTypeBits |=
+          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DESCRIPTOR_BASE_ADDR;
+
     if (mapTypeMod == "to")
       mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
 
@@ -1566,6 +1570,11 @@ static void printMapClause(OpAsmPrinter &p, Operation *op,
           mapTypeBits,
           llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DESCRIPTOR))
     mapTypeStrs.push_back("descriptor");
+
+  if (mapTypeToBitFlag(
+          mapTypeBits,
+          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DESCRIPTOR_BASE_ADDR))
+    mapTypeStrs.push_back("descriptor_base_addr");
 
   // special handling of to/from/tofrom/delete and release/alloc, release +
   // alloc are the abscense of one of the other flags, whereas tofrom requires

@@ -551,12 +551,12 @@ void insertChildMapInfoIntoParent(
       mapOp.setMembersIndexAttr(firOpBuilder.create2DI64ArrayAttr(
           indices.second.memberPlacementIndices));
     } else {
-      // NOTE: We take the map type of the first child, this may not
-      // be the correct thing to do, however, we shall see. For the moment
-      // it allows this to work with enter and exit without causing MLIR
-      // verification issues. The more appropriate thing may be to take
-      // the "main" map type clause from the directive being used.
-      uint64_t mapType = indices.second.memberMap[0].getMapType();
+      // NOTE: We do not assign default mapped parents a map type, as
+      // selecting a childs can result in the incorrect map type being
+      // applied to the parent and data being incorrectly moved to or
+      // from device.
+      uint64_t mapType = llvm::to_underlying(
+          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE);
 
       llvm::SmallVector<mlir::Value> members;
       members.reserve(indices.second.memberMap.size());

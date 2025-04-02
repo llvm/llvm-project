@@ -119,6 +119,9 @@ def version : Flag<["--", "-"], "version">, Flags<[HelpHidden]>, Alias<v>;
 def whole_archive : Flag<["--", "-"], "whole-archive">, Flags<[HelpHidden]>;
 def no_whole_archive : Flag<["--", "-"], "no-whole-archive">, Flags<[HelpHidden]>;
 
+def no_nvptx_whole_archive : Flag<["--", "-"], "no-nvptx-whole-archive">, Flags<[HelpHidden]>;
+def no_amdgpu_whole_archive : Flag<["--", "-"], "no-amdgpu-whole-archive">, Flags<[HelpHidden]>;
+
 def relocatable : Flag<["--", "-"], "relocatable">, 
     HelpText<"Link device code to create a relocatable offloading application">;
 def r : Flag<["-"], "r">, Alias<relocatable>;
