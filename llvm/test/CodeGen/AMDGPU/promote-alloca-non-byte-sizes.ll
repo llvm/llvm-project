@@ -7,55 +7,55 @@
 
 define <7 x i9> @load_elem_i9_access_8xi9() {
 ; CHECK-LABEL: @load_elem_i9_access_8xi9(
-; CHECK-NEXT:    [[P:%.*]] = alloca <16 x i9>, align 1
-; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[P]], i64 4
-; CHECK-NEXT:    [[L:%.*]] = load <7 x i9>, ptr [[G]], align 1
+; CHECK-NEXT:    [[P:%.*]] = alloca <16 x i9>, align 1, addrspace(5)
+; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr addrspace(5) [[P]], i64 4
+; CHECK-NEXT:    [[L:%.*]] = load <7 x i9>, ptr addrspace(5) [[G]], align 1
 ; CHECK-NEXT:    ret <7 x i9> [[L]]
 ;
-  %p = alloca <16 x i9>, align 1
-  %g = getelementptr i8, ptr %p, i64 4
-  %l = load <7 x i9>, ptr %g, align 1
+  %p = alloca <16 x i9>, align 1, addrspace(5)
+  %g = getelementptr i8, ptr addrspace(5) %p, i64 4
+  %l = load <7 x i9>, ptr addrspace(5) %g, align 1
   ret <7 x i9> %l
 }
 
 define <8 x i1> @load_elem_i1_access_8xi1() {
 ; CHECK-LABEL: @load_elem_i1_access_8xi1(
-; CHECK-NEXT:    [[P:%.*]] = alloca <16 x i1>, align 1
-; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[P]], i64 4
-; CHECK-NEXT:    [[L:%.*]] = load <8 x i1>, ptr [[G]], align 1
+; CHECK-NEXT:    [[P:%.*]] = alloca <16 x i1>, align 1, addrspace(5)
+; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr addrspace(5) [[P]], i64 4
+; CHECK-NEXT:    [[L:%.*]] = load <8 x i1>, ptr addrspace(5) [[G]], align 1
 ; CHECK-NEXT:    ret <8 x i1> [[L]]
 ;
-  %p = alloca <16 x i1>, align 1
-  %g = getelementptr i8, ptr %p, i64 4
-  %l = load <8 x i1>, ptr %g, align 1
+  %p = alloca <16 x i1>, align 1, addrspace(5)
+  %g = getelementptr i8, ptr addrspace(5) %p, i64 4
+  %l = load <8 x i1>, ptr addrspace(5) %g, align 1
   ret <8 x i1> %l
 }
 
 define <3 x i1> @load_elem_i1_access_3xi1() {
 ; CHECK-LABEL: @load_elem_i1_access_3xi1(
-; CHECK-NEXT:    [[P:%.*]] = alloca <16 x i1>, align 1
-; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[P]], i64 4
-; CHECK-NEXT:    [[L:%.*]] = load <3 x i1>, ptr [[G]], align 1
+; CHECK-NEXT:    [[P:%.*]] = alloca <16 x i1>, align 1, addrspace(5)
+; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr addrspace(5) [[P]], i64 4
+; CHECK-NEXT:    [[L:%.*]] = load <3 x i1>, ptr addrspace(5) [[G]], align 1
 ; CHECK-NEXT:    ret <3 x i1> [[L]]
 ;
-  %p = alloca <16 x i1>, align 1
-  %g = getelementptr i8, ptr %p, i64 4
-  %l = load <3 x i1>, ptr %g, align 1
+  %p = alloca <16 x i1>, align 1, addrspace(5)
+  %g = getelementptr i8, ptr addrspace(5) %p, i64 4
+  %l = load <3 x i1>, ptr addrspace(5) %g, align 1
   ret <3 x i1> %l
 }
 
 define <3 x i1> @load_elem_i8_access_3xi1() {
 ; CHECK-LABEL: @load_elem_i8_access_3xi1(
-; CHECK-NEXT:    [[P:%.*]] = alloca <8 x i8>, align 1
-; CHECK-NEXT:    store <8 x i8> <i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8>, ptr [[P]], align 1
-; CHECK-NEXT:    [[G:%.*]] = getelementptr <4 x i8>, ptr [[P]], i64 1
-; CHECK-NEXT:    [[L:%.*]] = load <3 x i1>, ptr [[G]], align 1
+; CHECK-NEXT:    [[P:%.*]] = alloca <8 x i8>, align 1, addrspace(5)
+; CHECK-NEXT:    store <8 x i8> <i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8>, ptr addrspace(5) [[P]], align 1
+; CHECK-NEXT:    [[G:%.*]] = getelementptr <4 x i8>, ptr addrspace(5) [[P]], i64 1
+; CHECK-NEXT:    [[L:%.*]] = load <3 x i1>, ptr addrspace(5) [[G]], align 1
 ; CHECK-NEXT:    ret <3 x i1> [[L]]
 ;
-  %p = alloca <8 x i8>, align 1
-  store <8 x i8> <i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8>, ptr %p, align 1
-  %g = getelementptr <4 x i8>, ptr %p, i64 1
-  %l = load <3 x i1>, ptr %g, align 1
+  %p = alloca <8 x i8>, align 1, addrspace(5)
+  store <8 x i8> <i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8>, ptr addrspace(5) %p, align 1
+  %g = getelementptr <4 x i8>, ptr addrspace(5) %p, i64 1
+  %l = load <3 x i1>, ptr addrspace(5) %g, align 1
   ret <3 x i1> %l
 }
 
@@ -65,57 +65,57 @@ define <8 x i1> @load_elem_i8_access_8xi1() {
 ; CHECK-NEXT:    [[P:%.*]] = freeze <8 x i8> poison
 ; CHECK-NEXT:    ret <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false>
 ;
-  %p = alloca <8 x i8>, align 1
-  store <8 x i8> <i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8>, ptr %p, align 1
-  %g = getelementptr <4 x i8>, ptr %p, i64 1
-  %l = load <8 x i1>, ptr %g, align 1
+  %p = alloca <8 x i8>, align 1, addrspace(5)
+  store <8 x i8> <i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8>, ptr addrspace(5) %p, align 1
+  %g = getelementptr <4 x i8>, ptr addrspace(5) %p, i64 1
+  %l = load <8 x i1>, ptr addrspace(5) %g, align 1
   ret <8 x i1> %l
 }
 
 define <8 x i1> @storeload_elem_i1_access_8xi1() {
 ; CHECK-LABEL: @storeload_elem_i1_access_8xi1(
-; CHECK-NEXT:    [[P:%.*]] = alloca <16 x i1>, align 1
-; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[P]], i64 4
-; CHECK-NEXT:    store <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false>, ptr [[G]], align 1
-; CHECK-NEXT:    [[L:%.*]] = load <8 x i1>, ptr [[G]], align 1
+; CHECK-NEXT:    [[P:%.*]] = alloca <16 x i1>, align 1, addrspace(5)
+; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr addrspace(5) [[P]], i64 4
+; CHECK-NEXT:    store <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false>, ptr addrspace(5) [[G]], align 1
+; CHECK-NEXT:    [[L:%.*]] = load <8 x i1>, ptr addrspace(5) [[G]], align 1
 ; CHECK-NEXT:    ret <8 x i1> [[L]]
 ;
-  %p = alloca <16 x i1>, align 1
-  %g = getelementptr i8, ptr %p, i64 4
-  store <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false>, ptr %g, align 1
-  %l = load <8 x i1>, ptr %g, align 1
+  %p = alloca <16 x i1>, align 1, addrspace(5)
+  %g = getelementptr i8, ptr addrspace(5) %p, i64 4
+  store <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false>, ptr addrspace(5) %g, align 1
+  %l = load <8 x i1>, ptr addrspace(5) %g, align 1
   ret <8 x i1> %l
 }
 
 define <3 x i1> @storeload_elem_i1_access_3xi1() {
 ; CHECK-LABEL: @storeload_elem_i1_access_3xi1(
-; CHECK-NEXT:    [[P:%.*]] = alloca <16 x i1>, align 1
-; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[P]], i64 4
-; CHECK-NEXT:    store <3 x i1> <i1 true, i1 false, i1 true>, ptr [[G]], align 1
-; CHECK-NEXT:    [[L:%.*]] = load <3 x i1>, ptr [[G]], align 1
+; CHECK-NEXT:    [[P:%.*]] = alloca <16 x i1>, align 1, addrspace(5)
+; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr addrspace(5) [[P]], i64 4
+; CHECK-NEXT:    store <3 x i1> <i1 true, i1 false, i1 true>, ptr addrspace(5) [[G]], align 1
+; CHECK-NEXT:    [[L:%.*]] = load <3 x i1>, ptr addrspace(5) [[G]], align 1
 ; CHECK-NEXT:    ret <3 x i1> [[L]]
 ;
-  %p = alloca <16 x i1>, align 1
-  %g = getelementptr i8, ptr %p, i64 4
-  store <3 x i1> <i1 true, i1 false, i1 true>, ptr %g, align 1
-  %l = load <3 x i1>, ptr %g, align 1
+  %p = alloca <16 x i1>, align 1, addrspace(5)
+  %g = getelementptr i8, ptr addrspace(5) %p, i64 4
+  store <3 x i1> <i1 true, i1 false, i1 true>, ptr addrspace(5) %g, align 1
+  %l = load <3 x i1>, ptr addrspace(5) %g, align 1
   ret <3 x i1> %l
 }
 
 define <3 x i1> @storeload_elem_i8_access_3xi1() {
 ; CHECK-LABEL: @storeload_elem_i8_access_3xi1(
-; CHECK-NEXT:    [[P:%.*]] = alloca <8 x i8>, align 1
-; CHECK-NEXT:    store <8 x i8> <i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8>, ptr [[P]], align 1
-; CHECK-NEXT:    [[G:%.*]] = getelementptr <4 x i8>, ptr [[P]], i64 1
-; CHECK-NEXT:    store <3 x i1> <i1 true, i1 false, i1 true>, ptr [[G]], align 1
-; CHECK-NEXT:    [[L:%.*]] = load <3 x i1>, ptr [[G]], align 1
+; CHECK-NEXT:    [[P:%.*]] = alloca <8 x i8>, align 1, addrspace(5)
+; CHECK-NEXT:    store <8 x i8> <i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8>, ptr addrspace(5) [[P]], align 1
+; CHECK-NEXT:    [[G:%.*]] = getelementptr <4 x i8>, ptr addrspace(5) [[P]], i64 1
+; CHECK-NEXT:    store <3 x i1> <i1 true, i1 false, i1 true>, ptr addrspace(5) [[G]], align 1
+; CHECK-NEXT:    [[L:%.*]] = load <3 x i1>, ptr addrspace(5) [[G]], align 1
 ; CHECK-NEXT:    ret <3 x i1> [[L]]
 ;
-  %p = alloca <8 x i8>, align 1
-  store <8 x i8> <i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8>, ptr %p, align 1
-  %g = getelementptr <4 x i8>, ptr %p, i64 1
-  store <3 x i1> <i1 true, i1 false, i1 true>, ptr %g, align 1
-  %l = load <3 x i1>, ptr %g, align 1
+  %p = alloca <8 x i8>, align 1, addrspace(5)
+  store <8 x i8> <i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8>, ptr addrspace(5) %p, align 1
+  %g = getelementptr <4 x i8>, ptr addrspace(5) %p, i64 1
+  store <3 x i1> <i1 true, i1 false, i1 true>, ptr addrspace(5) %g, align 1
+  %l = load <3 x i1>, ptr addrspace(5) %g, align 1
   ret <3 x i1> %l
 }
 
@@ -125,58 +125,58 @@ define <8 x i1> @storeload_elem_i8_access_8xi1() {
 ; CHECK-NEXT:    [[P:%.*]] = freeze <8 x i8> poison
 ; CHECK-NEXT:    ret <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false>
 ;
-  %p = alloca <8 x i8>, align 1
-  store <8 x i8> <i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8>, ptr %p, align 1
-  %g = getelementptr <4 x i8>, ptr %p, i64 1
-  store <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false>, ptr %g, align 1
-  %l = load <8 x i1>, ptr %g, align 1
+  %p = alloca <8 x i8>, align 1, addrspace(5)
+  store <8 x i8> <i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8>, ptr addrspace(5) %p, align 1
+  %g = getelementptr <4 x i8>, ptr addrspace(5) %p, i64 1
+  store <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false>, ptr addrspace(5) %g, align 1
+  %l = load <8 x i1>, ptr addrspace(5) %g, align 1
   ret <8 x i1> %l
 }
 
 define <8 x i1> @array_of_vec_elem_i1_access_8xi1() {
 ; CHECK-LABEL: @array_of_vec_elem_i1_access_8xi1(
-; CHECK-NEXT:    [[P:%.*]] = alloca [2 x <16 x i1>], align 1
-; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[P]], i64 4
-; CHECK-NEXT:    store <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false>, ptr [[G]], align 1
-; CHECK-NEXT:    [[L:%.*]] = load <8 x i1>, ptr [[G]], align 1
+; CHECK-NEXT:    [[P:%.*]] = alloca [2 x <16 x i1>], align 1, addrspace(5)
+; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr addrspace(5) [[P]], i64 4
+; CHECK-NEXT:    store <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false>, ptr addrspace(5) [[G]], align 1
+; CHECK-NEXT:    [[L:%.*]] = load <8 x i1>, ptr addrspace(5) [[G]], align 1
 ; CHECK-NEXT:    ret <8 x i1> [[L]]
 ;
-  %p = alloca [2 x <16 x i1>], align 1
-  %g = getelementptr i8, ptr %p, i64 4
-  store <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false>, ptr %g, align 1
-  %l = load <8 x i1>, ptr %g, align 1
+  %p = alloca [2 x <16 x i1>], align 1, addrspace(5)
+  %g = getelementptr i8, ptr addrspace(5) %p, i64 4
+  store <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false>, ptr addrspace(5) %g, align 1
+  %l = load <8 x i1>, ptr addrspace(5) %g, align 1
   ret <8 x i1> %l
 }
 
 define <3 x i1> @array_of_vec_elem_i1_access_3xi1() {
 ; CHECK-LABEL: @array_of_vec_elem_i1_access_3xi1(
-; CHECK-NEXT:    [[P:%.*]] = alloca [2 x <16 x i1>], align 1
-; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[P]], i64 4
-; CHECK-NEXT:    store <3 x i1> <i1 true, i1 false, i1 true>, ptr [[G]], align 1
-; CHECK-NEXT:    [[L:%.*]] = load <3 x i1>, ptr [[G]], align 1
+; CHECK-NEXT:    [[P:%.*]] = alloca [2 x <16 x i1>], align 1, addrspace(5)
+; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr addrspace(5) [[P]], i64 4
+; CHECK-NEXT:    store <3 x i1> <i1 true, i1 false, i1 true>, ptr addrspace(5) [[G]], align 1
+; CHECK-NEXT:    [[L:%.*]] = load <3 x i1>, ptr addrspace(5) [[G]], align 1
 ; CHECK-NEXT:    ret <3 x i1> [[L]]
 ;
-  %p = alloca [2 x <16 x i1>], align 1
-  %g = getelementptr i8, ptr %p, i64 4
-  store <3 x i1> <i1 true, i1 false, i1 true>, ptr %g, align 1
-  %l = load <3 x i1>, ptr %g, align 1
+  %p = alloca [2 x <16 x i1>], align 1, addrspace(5)
+  %g = getelementptr i8, ptr addrspace(5) %p, i64 4
+  store <3 x i1> <i1 true, i1 false, i1 true>, ptr addrspace(5) %g, align 1
+  %l = load <3 x i1>, ptr addrspace(5) %g, align 1
   ret <3 x i1> %l
 }
 
 define <3 x i1> @array_of_vec_elem_i8_access_3xi1() {
 ; CHECK-LABEL: @array_of_vec_elem_i8_access_3xi1(
-; CHECK-NEXT:    [[P:%.*]] = alloca [2 x <8 x i8>], align 1
-; CHECK-NEXT:    store <8 x i8> <i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8>, ptr [[P]], align 1
-; CHECK-NEXT:    [[G:%.*]] = getelementptr <4 x i8>, ptr [[P]], i64 1
-; CHECK-NEXT:    store <3 x i1> <i1 true, i1 false, i1 true>, ptr [[G]], align 1
-; CHECK-NEXT:    [[L:%.*]] = load <3 x i1>, ptr [[G]], align 1
+; CHECK-NEXT:    [[P:%.*]] = alloca [2 x <8 x i8>], align 1, addrspace(5)
+; CHECK-NEXT:    store <8 x i8> <i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8>, ptr addrspace(5) [[P]], align 1
+; CHECK-NEXT:    [[G:%.*]] = getelementptr <4 x i8>, ptr addrspace(5) [[P]], i64 1
+; CHECK-NEXT:    store <3 x i1> <i1 true, i1 false, i1 true>, ptr addrspace(5) [[G]], align 1
+; CHECK-NEXT:    [[L:%.*]] = load <3 x i1>, ptr addrspace(5) [[G]], align 1
 ; CHECK-NEXT:    ret <3 x i1> [[L]]
 ;
-  %p = alloca [2 x <8 x i8>], align 1
-  store <8 x i8> <i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8>, ptr %p, align 1
-  %g = getelementptr <4 x i8>, ptr %p, i64 1
-  store <3 x i1> <i1 true, i1 false, i1 true>, ptr %g, align 1
-  %l = load <3 x i1>, ptr %g, align 1
+  %p = alloca [2 x <8 x i8>], align 1, addrspace(5)
+  store <8 x i8> <i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8>, ptr addrspace(5) %p, align 1
+  %g = getelementptr <4 x i8>, ptr addrspace(5) %p, i64 1
+  store <3 x i1> <i1 true, i1 false, i1 true>, ptr addrspace(5) %g, align 1
+  %l = load <3 x i1>, ptr addrspace(5) %g, align 1
   ret <3 x i1> %l
 }
 
@@ -192,13 +192,13 @@ define <8 x i1> @array_of_vec_elem_i8_access_8xi1() {
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <16 x i8> [[TMP5]], i8 6, i32 5
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <16 x i8> [[TMP6]], i8 7, i32 6
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <16 x i8> [[TMP7]], i8 8, i32 7
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <16 x i8> [[TMP8]], i8 5, i64 4
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <16 x i8> [[TMP8]], i8 5, i32 4
 ; CHECK-NEXT:    ret <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false>
 ;
-  %p = alloca [2 x <8 x i8>], align 1
-  store <8 x i8> <i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8>, ptr %p, align 1
-  %g = getelementptr <4 x i8>, ptr %p, i64 1
-  store <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false>, ptr %g, align 1
-  %l = load <8 x i1>, ptr %g, align 1
+  %p = alloca [2 x <8 x i8>], align 1, addrspace(5)
+  store <8 x i8> <i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8>, ptr addrspace(5) %p, align 1
+  %g = getelementptr <4 x i8>, ptr addrspace(5) %p, i64 1
+  store <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false>, ptr addrspace(5) %g, align 1
+  %l = load <8 x i1>, ptr addrspace(5) %g, align 1
   ret <8 x i1> %l
 }
