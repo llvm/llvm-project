@@ -428,7 +428,7 @@ public:
     bool m_unspecified_registers_are_undefined = false;
   }; // class Row
 
-  typedef std::shared_ptr<Row> RowSP;
+  typedef std::unique_ptr<Row> RowUP;
 
   UnwindPlan(lldb::RegisterKind reg_kind)
       : m_register_kind(reg_kind), m_return_addr_register(LLDB_INVALID_REGNUM),
@@ -449,8 +449,8 @@ public:
         m_lsda_address(rhs.m_lsda_address),
         m_personality_func_addr(rhs.m_personality_func_addr) {
     m_row_list.reserve(rhs.m_row_list.size());
-    for (const RowSP &row_sp : rhs.m_row_list)
-      m_row_list.emplace_back(new Row(*row_sp));
+    for (const RowUP &row_up : rhs.m_row_list)
+      m_row_list.emplace_back(new Row(*row_up));
   }
   UnwindPlan(UnwindPlan &&rhs) = default;
   UnwindPlan &operator=(const UnwindPlan &rhs) {
@@ -570,7 +570,7 @@ public:
   }
 
 private:
-  std::vector<RowSP> m_row_list;
+  std::vector<RowUP> m_row_list;
   std::vector<AddressRange> m_plan_valid_ranges;
   lldb::RegisterKind m_register_kind; // The RegisterKind these register numbers
                                       // are in terms of - will need to be
