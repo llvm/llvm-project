@@ -92,8 +92,6 @@ private:
 
   void BailOut(const std::string &error, uint32_t loc, uint16_t err_len);
 
-  void BailOut(Status error);
-
   void Expect(Token::Kind kind);
 
   void TentativeParsingRollback(uint32_t saved_idx) {

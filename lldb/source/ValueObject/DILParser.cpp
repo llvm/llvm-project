@@ -253,17 +253,6 @@ void DILParser::BailOut(const std::string &error, uint32_t loc,
   m_dil_lexer.ResetTokenIdx(m_dil_lexer.NumLexedTokens() - 1);
 }
 
-void DILParser::BailOut(Status error) {
-  if (m_error)
-    // If error is already set, then the parser is in the "bail-out" mode. Don't
-    // do anything and keep the original error.
-    return;
-
-  m_error = error.ToError();
-  // Advance the lexer token index to the end of the lexed tokens vector.
-  m_dil_lexer.ResetTokenIdx(m_dil_lexer.NumLexedTokens() - 1);
-}
-
 void DILParser::Expect(Token::Kind kind) {
   if (CurToken().IsNot(kind)) {
     BailOut(llvm::formatv("expected {0}, got: {1}", kind, CurToken()),
