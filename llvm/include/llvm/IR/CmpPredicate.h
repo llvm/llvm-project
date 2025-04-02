@@ -43,7 +43,7 @@ public:
 
   /// Drops samesign information. This is used when the samesign information
   /// should be dropped explicitly.
-  CmpInst::Predicate withoutSameSign() const { return Pred; }
+  CmpInst::Predicate dropSameSign() const { return Pred; }
 
   /// Compares two CmpPredicates taking samesign into account and returns the
   /// canonicalized CmpPredicate if they match. An alternative to operator==.
