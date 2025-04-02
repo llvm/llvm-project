@@ -4845,6 +4845,12 @@ def HLSLRawBuffer : TypeAttr {
   let Documentation = [InternalOnly];
 }
 
+def HLSLCounter : TypeAttr {
+  let Spellings = [CXX11<"hlsl", "counter">];
+  let LangOpts = [HLSL];
+  let Documentation = [InternalOnly];
+}
+
 def HLSLGroupSharedAddressSpace : TypeAttr {
   let Spellings = [CustomKeyword<"groupshared">];
   let Subjects = SubjectList<[Var]>;

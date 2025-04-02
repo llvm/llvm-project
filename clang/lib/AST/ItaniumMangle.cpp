@@ -4659,6 +4659,8 @@ void CXXNameMangler::mangleType(const HLSLAttributedResourceType *T) {
     Str += "_ROV";
   if (Attrs.RawBuffer)
     Str += "_Raw";
+  if (Attrs.Counter)
+    Str += "_CNT";
   if (T->hasContainedType())
     Str += "_CT";
   mangleVendorQualifier(Str);

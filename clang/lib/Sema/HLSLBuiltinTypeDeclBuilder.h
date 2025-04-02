@@ -74,6 +74,9 @@ public:
   BuiltinTypeDeclBuilder &
   addHandleMember(ResourceClass RC, bool IsROV, bool RawBuffer,
                   AccessSpecifier Access = AccessSpecifier::AS_private);
+  BuiltinTypeDeclBuilder &
+  addCounterHandleMember(ResourceClass RC, bool IsROV, bool RawBuffer,
+                         AccessSpecifier Access = AccessSpecifier::AS_private);
   BuiltinTypeDeclBuilder &addArraySubscriptOperators();
 
   // Builtin types methods
@@ -90,6 +93,7 @@ public:
 
 private:
   FieldDecl *getResourceHandleField();
+  FieldDecl *getResourceCounterHandleField();
   QualType getFirstTemplateTypeParam();
   QualType getHandleElementType();
   Expr *getConstantIntExpr(int value);

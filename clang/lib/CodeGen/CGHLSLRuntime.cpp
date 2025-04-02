@@ -494,52 +494,74 @@ void CGHLSLRuntime::generateGlobalCtorDtorCalls() {
   }
 }
 
+static Value *createHandle(CGBuilderTy &Builder, CodeGenModule &CGM,
+                           llvm::Type *ReturnTy, unsigned int Space,
+                           unsigned int Slot, uint32_t ArraySize,
+                           uint32_t ArrayIndex, bool IsNonUniform) {
+  llvm::Type *Int1Ty = llvm::Type::getInt1Ty(Builder.getContext());
+  Value *Args[] = {
+      ConstantInt::get(CGM.IntTy, Space),      /* reg_space */
+      ConstantInt::get(CGM.IntTy, Slot),       /* lower_bound */
+      ConstantInt::get(CGM.IntTy, ArraySize),  /* range_size */
+      ConstantInt::get(CGM.IntTy, ArrayIndex), /* index */
+      ConstantInt::get(Int1Ty, IsNonUniform)   /* non-uniform */
+  };
+  Value *CreateHandle = Builder.CreateIntrinsic(
+      ReturnTy, CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic(),
+      Args, nullptr);
+  return CreateHandle;
+}
+
+static void CreateAndStoreHandle(GlobalVariable *GV, unsigned int Slot,
+                                 unsigned int Space, uint32_t structIdx,
+                                 CodeGenModule &CGM, CGBuilderTy &Builder) {
+  llvm::Type *HandleTy = GV->getValueType();
+  assert((!HandleTy->isTargetExtTy() || structIdx == 0) &&
+         "No struct to index into.");
+  assert((HandleTy->isTargetExtTy() || HandleTy->isStructTy()) &&
+         "Unexpected type.");
+  assert((HandleTy->isTargetExtTy() ||
+          HandleTy->getStructElementType(structIdx)->isTargetExtTy()) &&
+         "Can not access handle.");
+
+  if (!HandleTy->isTargetExtTy())
+    HandleTy = HandleTy->getStructElementType(structIdx);
+
+  // FIXME: resource arrays are not yet implemented. Using size 1.
+  // FIXME: NonUniformResourceIndex bit is not yet implemented. Using false;
+  const DataLayout &DL = CGM.getModule().getDataLayout();
+  Value *CreateHandle =
+      createHandle(Builder, CGM, HandleTy, Space, Slot, 1, 0, false);
+  CreateHandle->setName(Twine(GV->getName()).concat("_h"));
+  Value *HandleRef = Builder.CreateStructGEP(GV->getValueType(), GV, structIdx);
+  Builder.CreateAlignedStore(CreateHandle, HandleRef,
+                             HandleRef->getPointerAlignment(DL));
+}
+
 static void createResourceInitFn(CodeGenModule &CGM, llvm::GlobalVariable *GV,
                                  unsigned Slot, unsigned Space) {
-  LLVMContext &Ctx = CGM.getLLVMContext();
-  llvm::Type *Int1Ty = llvm::Type::getInt1Ty(Ctx);
-
   llvm::Function *InitResFunc = llvm::Function::Create(
       llvm::FunctionType::get(CGM.VoidTy, false),
       llvm::GlobalValue::InternalLinkage,
       ("_init_resource_" + GV->getName()).str(), CGM.getModule());
   InitResFunc->addFnAttr(llvm::Attribute::AlwaysInline);
 
+  LLVMContext &Ctx = CGM.getLLVMContext();
   llvm::BasicBlock *EntryBB =
       llvm::BasicBlock::Create(Ctx, "entry", InitResFunc);
   CGBuilderTy Builder(CGM, Ctx);
-  const DataLayout &DL = CGM.getModule().getDataLayout();
   Builder.SetInsertPoint(EntryBB);
 
-  // Make sure the global variable is resource handle (cbuffer) or
-  // resource class (=class where the first element is a resource handle).
-  llvm::Type *HandleTy = GV->getValueType();
-  assert((HandleTy->isTargetExtTy() ||
-          (HandleTy->isStructTy() &&
-           HandleTy->getStructElementType(0)->isTargetExtTy())) &&
-         "unexpected type of the global");
-  if (!HandleTy->isTargetExtTy())
-    HandleTy = HandleTy->getStructElementType(0);
+  CreateAndStoreHandle(GV, Slot, Space, 0, CGM, Builder);
+  StructType *ST = dyn_cast<StructType>(GV->getValueType());
+  if (ST && ST->getNumElements() > 1) {
+    // TODO(124561): This needs to be updated to get the correct slot for
+    // SPIR-V. Using a placeholder value for now.
+    uint32_t CounterSlot = (CGM.getTriple().isSPIRV() ? Slot + 1 : Slot);
+    CreateAndStoreHandle(GV, CounterSlot, Space, 0, CGM, Builder);
+  }
 
-  llvm::Value *Args[] = {
-      llvm::ConstantInt::get(CGM.IntTy, Space), /* reg_space */
-      llvm::ConstantInt::get(CGM.IntTy, Slot),  /* lower_bound */
-      // FIXME: resource arrays are not yet implemented
-      llvm::ConstantInt::get(CGM.IntTy, 1), /* range_size */
-      llvm::ConstantInt::get(CGM.IntTy, 0), /* index */
-      // FIXME: NonUniformResourceIndex bit is not yet implemented
-      llvm::ConstantInt::get(Int1Ty, false) /* non-uniform */
-  };
-  llvm::Value *CreateHandle = Builder.CreateIntrinsic(
-      /*ReturnType=*/HandleTy,
-      CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic(), Args, nullptr,
-      Twine(GV->getName()).concat("_h"));
-
-  llvm::Value *HandleRef = Builder.CreateStructGEP(GV->getValueType(), GV, 0);
-  Builder.CreateAlignedStore(CreateHandle, HandleRef,
-                             HandleRef->getPointerAlignment(DL));
   Builder.CreateRetVoid();
-
   CGM.AddCXXGlobalInit(InitResFunc);
 }
 
