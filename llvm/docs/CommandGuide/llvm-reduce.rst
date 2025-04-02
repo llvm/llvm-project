@@ -71,6 +71,12 @@ GENERIC OPTIONS
 
  Delta passes to not run, separated by commas. By default, run all delta passes.
 
+.. option::--skip-verify-interesting-after-counting-chunks
+
+ Do not validate testcase is interesting after counting chunks. This
+ will save time by avoiding extra executions of the interestingness
+ test, but a warning will no longer be printed on flaky reproducers.
+
 .. option:: --starting-granularity-level=<uint>
 
   Number of times to divide chunks prior to first test.
