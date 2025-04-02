@@ -527,7 +527,7 @@ SDValue LoongArchTargetLowering::lowerBITREVERSE(SDValue Op,
 
 /// Attempts to match a shuffle mask against the VBSLL, VBSRL, VSLLI and VSRLI
 /// instruction.
-// The funciton matches elements form one of the input vector shuffled to the
+// The funciton matches elements from one of the input vector shuffled to the
 // left or right with zeroable elements 'shifted in'. It handles both the
 // strictly bit-wise element shifts and the byte shfit across an entire 128-bit
 // lane.

@@ -1352,7 +1352,7 @@ multiclass PatShiftVrVr<SDPatternOperator OpNode, string Inst> {
             (!cast<LAInst>(Inst#"_D") LSX128:$vj, LSX128:$vk)>;
 }
 
-multiclass PatShiftVrUimm<SDPatternOperator OpNode, string Inst> {
+multiclass PatShiftVrSplatUimm<SDPatternOperator OpNode, string Inst> {
   def : Pat<(OpNode (v16i8 LSX128:$vj), (v16i8 (SplatPat_uimm3 uimm3:$imm))),
             (!cast<LAInst>(Inst#"_B") LSX128:$vj, uimm3:$imm)>;
   def : Pat<(OpNode (v8i16 LSX128:$vj), (v8i16 (SplatPat_uimm4 uimm4:$imm))),
@@ -1360,6 +1360,17 @@ multiclass PatShiftVrUimm<SDPatternOperator OpNode, string Inst> {
   def : Pat<(OpNode (v4i32 LSX128:$vj), (v4i32 (SplatPat_uimm5 uimm5:$imm))),
             (!cast<LAInst>(Inst#"_W") LSX128:$vj, uimm5:$imm)>;
   def : Pat<(OpNode (v2i64 LSX128:$vj), (v2i64 (SplatPat_uimm6 uimm6:$imm))),
+            (!cast<LAInst>(Inst#"_D") LSX128:$vj, uimm6:$imm)>;
+}
+
+multiclass PatShiftVrUimm<SDPatternOperator OpNode, string Inst> {
+  def : Pat<(OpNode(v16i8 LSX128:$vj), uimm3:$imm),
+            (!cast<LAInst>(Inst#"_B") LSX128:$vj, uimm3:$imm)>;
+  def : Pat<(OpNode(v8i16 LSX128:$vj), uimm4:$imm),
+            (!cast<LAInst>(Inst#"_H") LSX128:$vj, uimm4:$imm)>;
+  def : Pat<(OpNode(v4i32 LSX128:$vj), uimm5:$imm),
+            (!cast<LAInst>(Inst#"_W") LSX128:$vj, uimm5:$imm)>;
+  def : Pat<(OpNode(v2i64 LSX128:$vj), uimm6:$imm),
             (!cast<LAInst>(Inst#"_D") LSX128:$vj, uimm6:$imm)>;
 }
 
@@ -1501,63 +1512,31 @@ def : Pat<(xor (v16i8 LSX128:$vj), (v16i8 (SplatPat_uimm8 uimm8:$imm))),
           (VXORI_B LSX128:$vj, uimm8:$imm)>;
 
 // VBSLL_V
-def : Pat<(loongarch_vbsll v16i8:$vj, uimm5:$imm), (VBSLL_V v16i8:$vj,
-                                                       uimm5:$imm)>;
-def : Pat<(loongarch_vbsll v8i16:$vj, uimm5:$imm), (VBSLL_V v8i16:$vj,
-                                                       uimm5:$imm)>;
-def : Pat<(loongarch_vbsll v4i32:$vj, uimm5:$imm), (VBSLL_V v4i32:$vj,
-                                                       uimm5:$imm)>;
-def : Pat<(loongarch_vbsll v2i64:$vj, uimm5:$imm), (VBSLL_V v2i64:$vj,
-                                                       uimm5:$imm)>;
-def : Pat<(loongarch_vbsll v4f32:$vj, uimm5:$imm), (VBSLL_V v4f32:$vj,
-                                                       uimm5:$imm)>;
-def : Pat<(loongarch_vbsll v2f64:$vj, uimm5:$imm), (VBSLL_V v2f64:$vj,
-                                                       uimm5:$imm)>;
+foreach vt = [v16i8, v8i16, v4i32, v2i64, v4f32,
+              v2f64] in def : Pat<(loongarch_vbsll(vt LSX128:$vj), uimm5:$imm),
+                                  (VBSLL_V LSX128:$vj, uimm5:$imm)>;
 
 // VBSRL_V
-def : Pat<(loongarch_vbsrl v16i8:$vj, uimm5:$imm), (VBSRL_V v16i8:$vj,
-                                                       uimm5:$imm)>;
-def : Pat<(loongarch_vbsrl v8i16:$vj, uimm5:$imm), (VBSRL_V v8i16:$vj,
-                                                       uimm5:$imm)>;
-def : Pat<(loongarch_vbsrl v4i32:$vj, uimm5:$imm), (VBSRL_V v4i32:$vj,
-                                                       uimm5:$imm)>;
-def : Pat<(loongarch_vbsrl v2i64:$vj, uimm5:$imm), (VBSRL_V v2i64:$vj,
-                                                       uimm5:$imm)>;
-def : Pat<(loongarch_vbsrl v4f32:$vj, uimm5:$imm), (VBSRL_V v4f32:$vj,
-                                                       uimm5:$imm)>;
-def : Pat<(loongarch_vbsrl v2f64:$vj, uimm5:$imm), (VBSRL_V v2f64:$vj,
-                                                       uimm5:$imm)>;
+foreach vt = [v16i8, v8i16, v4i32, v2i64, v4f32,
+              v2f64] in def : Pat<(loongarch_vbsrl(vt LSX128:$vj), uimm5:$imm),
+                                  (VBSRL_V LSX128:$vj, uimm5:$imm)>;
 
 // VSLL[I]_{B/H/W/D}
 defm : PatVrVr<shl, "VSLL">;
 defm : PatShiftVrVr<shl, "VSLL">;
-defm : PatShiftVrUimm<shl, "VSLLI">;
-def : Pat<(loongarch_vslli v16i8:$vj, uimm3:$imm), (VSLLI_B v16i8:$vj,
-                                                       uimm3:$imm)>;
-def : Pat<(loongarch_vslli v8i16:$vj, uimm4:$imm), (VSLLI_H v8i16:$vj,
-                                                       uimm4:$imm)>;
-def : Pat<(loongarch_vslli v4i32:$vj, uimm5:$imm), (VSLLI_W v4i32:$vj,
-                                                       uimm5:$imm)>;
-def : Pat<(loongarch_vslli v2i64:$vj, uimm6:$imm), (VSLLI_D v2i64:$vj,
-                                                       uimm6:$imm)>;
+defm : PatShiftVrSplatUimm<shl, "VSLLI">;
+defm : PatShiftVrUimm<loongarch_vslli, "VSLLI">;
 
 // VSRL[I]_{B/H/W/D}
 defm : PatVrVr<srl, "VSRL">;
 defm : PatShiftVrVr<srl, "VSRL">;
-defm : PatShiftVrUimm<srl, "VSRLI">;
-def : Pat<(loongarch_vsrli v16i8:$vj, uimm3:$imm), (VSRLI_B v16i8:$vj,
-                                                       uimm3:$imm)>;
-def : Pat<(loongarch_vsrli v8i16:$vj, uimm4:$imm), (VSRLI_H v8i16:$vj,
-                                                       uimm4:$imm)>;
-def : Pat<(loongarch_vsrli v4i32:$vj, uimm5:$imm), (VSRLI_W v4i32:$vj,
-                                                       uimm5:$imm)>;
-def : Pat<(loongarch_vsrli v2i64:$vj, uimm6:$imm), (VSRLI_D v2i64:$vj,
-                                                       uimm6:$imm)>;
+defm : PatShiftVrSplatUimm<srl, "VSRLI">;
+defm : PatShiftVrUimm<loongarch_vsrli, "VSRLI">;
 
 // VSRA[I]_{B/H/W/D}
 defm : PatVrVr<sra, "VSRA">;
 defm : PatShiftVrVr<sra, "VSRA">;
-defm : PatShiftVrUimm<sra, "VSRAI">;
+defm : PatShiftVrSplatUimm<sra, "VSRAI">;
 
 // VCLZ_{B/H/W/D}
 defm : PatVr<ctlz, "VCLZ">;
