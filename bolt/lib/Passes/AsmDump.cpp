@@ -78,7 +78,7 @@ void dumpJumpTableSymbols(raw_ostream &OS, const JumpTable *JT, AsmPrinter &MAP,
   }
   OS << "\"" << JT->getName() << "\":\n";
   for (MCSymbol *JTEntry : JT->Entries)
-    MAP.OutStreamer->emitSymbolValue(JTEntry, JT->OutputEntrySize);
+    MAP.OutStreamer->emitSymbolValue(JTEntry, JT->getOutputEntrySize());
   OS << '\n';
 }
 

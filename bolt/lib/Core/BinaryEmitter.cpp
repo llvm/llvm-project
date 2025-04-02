@@ -796,7 +796,7 @@ void BinaryEmitter::emitJumpTable(const JumpTable &JT, MCSection *HotSection,
     MCSymbol *CurrentLabel = It->second;
     uint64_t CurrentLabelCount = 0;
     for (unsigned Index = 0; Index < JT.Entries.size(); ++Index) {
-      auto LI = JT.Labels.find(Index * JT.EntrySize);
+      auto LI = JT.Labels.find(Index * JT.getEntrySize());
       if (LI != JT.Labels.end()) {
         LabelCounts[CurrentLabel] = CurrentLabelCount;
         CurrentLabel = LI->second;
@@ -807,7 +807,7 @@ void BinaryEmitter::emitJumpTable(const JumpTable &JT, MCSection *HotSection,
     LabelCounts[CurrentLabel] = CurrentLabelCount;
   } else {
     Streamer.switchSection(JT.Count > 0 ? HotSection : ColdSection);
-    Streamer.emitValueToAlignment(Align(JT.EntrySize));
+    Streamer.emitValueToAlignment(Align(JT.getEntrySize()));
   }
   MCSymbol *JTLabel = nullptr;
   uint64_t Offset = 0;
@@ -849,7 +849,7 @@ void BinaryEmitter::emitJumpTable(const JumpTable &JT, MCSection *HotSection,
     }
   emitEntry:
     if (JT.Type == JumpTable::JTT_NORMAL) {
-      Streamer.emitSymbolValue(Entry, JT.OutputEntrySize);
+      Streamer.emitSymbolValue(Entry, JT.getOutputEntrySize());
     } else { // JTT_PIC
       const MCSymbolRefExpr *JTExpr =
           MCSymbolRefExpr::create(JTLabel, Streamer.getContext());
@@ -857,9 +857,9 @@ void BinaryEmitter::emitJumpTable(const JumpTable &JT, MCSection *HotSection,
           MCSymbolRefExpr::create(Entry, Streamer.getContext());
       const MCBinaryExpr *Value =
           MCBinaryExpr::createSub(E, JTExpr, Streamer.getContext());
-      Streamer.emitValue(Value, JT.EntrySize);
+      Streamer.emitValue(Value, JT.getEntrySize());
     }
-    Offset += JT.EntrySize;
+    Offset += JT.getEntrySize();
   }
 }
 
