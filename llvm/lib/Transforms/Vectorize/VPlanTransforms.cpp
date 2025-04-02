@@ -966,18 +966,6 @@ static VPValue *simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
         return VPC;
       }
     }
-#ifndef NDEBUG
-    // Verify that the cached type info is for both A and its users is still
-    // accurate by comparing it to freshly computed types.
-    VPTypeAnalysis TypeInfo2(
-        R.getParent()->getPlan()->getCanonicalIV()->getScalarType());
-    assert(TypeInfo.inferScalarType(A) == TypeInfo2.inferScalarType(A));
-    for (VPUser *U : A->users()) {
-      auto *R = cast<VPRecipeBase>(U);
-      for (VPValue *VPV : R->definedValues())
-        assert(TypeInfo.inferScalarType(VPV) == TypeInfo2.inferScalarType(VPV));
-    }
-#endif
   }
 
   // Simplify (X && Y) || (X && !Y) -> X.
@@ -1024,6 +1012,7 @@ void VPlanTransforms::simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy) {
     VPRecipeBase *R = Worklist.pop_back_val();
     if (VPValue *Result = simplifyRecipe(*R, TypeInfo)) {
       R->getVPSingleValue()->replaceAllUsesWith(Result);
+      TypeInfo.erase(R->getVPSingleValue());
       R->eraseFromParent();
       if (VPRecipeBase *ResultR = Result->getDefiningRecipe())
         Worklist.insert(ResultR);
@@ -1031,6 +1020,20 @@ void VPlanTransforms::simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy) {
         if (auto *UR = dyn_cast<VPRecipeBase>(U))
           if (UR != R)
             Worklist.insert(UR);
+
+#ifndef NDEBUG
+      // Verify that the cached type info is for both Result and its users is
+      // still accurate by comparing it to freshly computed types.
+      VPTypeAnalysis TypeInfo2(&CanonicalIVTy);
+      assert(TypeInfo.inferScalarType(Result) ==
+             TypeInfo2.inferScalarType(Result));
+      for (VPUser *U : Result->users()) {
+        auto *R = cast<VPRecipeBase>(U);
+        for (VPValue *VPV : R->definedValues())
+          assert(TypeInfo.inferScalarType(VPV) ==
+                 TypeInfo2.inferScalarType(VPV));
+      }
+#endif
     }
   }
 }
