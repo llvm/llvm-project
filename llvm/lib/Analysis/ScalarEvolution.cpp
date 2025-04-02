@@ -11622,7 +11622,7 @@ bool ScalarEvolution::isBasicBlockEntryGuardedByCond(const BasicBlock *BB,
   // to prove non-equality and non-strict comparison separately.
   CmpPredicate NonStrictPredicate = ICmpInst::getNonStrictCmpPredicate(Pred);
   const bool ProvingStrictComparison =
-      (Pred != static_cast<CmpInst::Predicate>(NonStrictPredicate));
+      Pred != NonStrictPredicate.dropSameSign();
   bool ProvedNonStrictComparison = false;
   bool ProvedNonEquality = false;
 
@@ -11792,9 +11792,8 @@ bool ScalarEvolution::isImpliedCond(CmpPredicate Pred, const SCEV *LHS,
         const SCEV *TruncFoundLHS = getTruncateExpr(FoundLHS, NarrowType);
         const SCEV *TruncFoundRHS = getTruncateExpr(FoundRHS, NarrowType);
         // We cannot preserve samesign after truncation.
-        if (isImpliedCondBalancedTypes(
-                Pred, LHS, RHS, static_cast<ICmpInst::Predicate>(FoundPred),
-                TruncFoundLHS, TruncFoundRHS, CtxI))
+        if (isImpliedCondBalancedTypes(Pred, LHS, RHS, FoundPred.dropSameSign(),
+                                       TruncFoundLHS, TruncFoundRHS, CtxI))
           return true;
       }
     }
