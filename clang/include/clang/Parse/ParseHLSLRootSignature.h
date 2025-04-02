@@ -70,7 +70,7 @@ private:
   bool parseDescriptorTableClause();
 
   /// Invoke the Lexer to consume a token and update CurToken with the result
-  void consumeNextToken() { CurToken = Lexer.ConsumeToken(); }
+  void consumeNextToken() { CurToken = Lexer.consumeToken(); }
 
   /// Return true if the next token one of the expected kinds
   bool peekExpectedToken(RootSignatureToken::Kind Expected);

@@ -61,13 +61,13 @@ public:
       : Buffer(Signature), SourceLoc(SourceLoc) {}
 
   /// Consumes and returns the next token.
-  RootSignatureToken ConsumeToken();
+  RootSignatureToken consumeToken();
 
   /// Returns the token that proceeds CurToken
-  RootSignatureToken PeekNextToken();
+  RootSignatureToken peekNextToken();
 
-  bool EndOfBuffer() {
-    AdvanceBuffer(Buffer.take_while(isspace).size());
+  bool isEndOfBuffer() {
+    advanceBuffer(Buffer.take_while(isspace).size());
     return Buffer.empty();
   }
 
@@ -82,11 +82,11 @@ private:
   clang::SourceLocation SourceLoc;
 
   /// Consumes the buffer and returns the lexed token.
-  RootSignatureToken LexToken();
+  RootSignatureToken lexToken();
 
   /// Advance the buffer by the specified number of characters.
   /// Updates the SourceLocation appropriately.
-  void AdvanceBuffer(unsigned NumCharacters = 1) {
+  void advanceBuffer(unsigned NumCharacters = 1) {
     Buffer = Buffer.drop_front(NumCharacters);
     SourceLoc = SourceLoc.getLocWithOffset(NumCharacters);
   }
