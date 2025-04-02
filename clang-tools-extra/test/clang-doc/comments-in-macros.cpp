@@ -1,4 +1,5 @@
-// Fixes #59819. The underlying problem was fixed in https://reviews.llvm.org/D142560, but this patch adds a proper regression test.
+// Regression test for https://github.com/llvm/llvm-project/issues/59819
+
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: clang-doc --format=md --doxygen --output=%t --executor=standalone %s
 // RUN: FileCheck %s < %t/GlobalNamespace/MyClass.md --check-prefix=MD-MYCLASS-LINE
