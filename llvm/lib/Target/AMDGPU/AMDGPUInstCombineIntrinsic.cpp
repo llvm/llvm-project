@@ -729,6 +729,29 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     break;
   }
+  case Intrinsic::amdgcn_cvt_off_f32_i4: {
+    Value* Arg = II.getArgOperand(0);
+    Type *Ty = II.getType();
+
+    if (isa<PoisonValue>(Arg))
+      return IC.replaceInstUsesWith(II, PoisonValue::get(Ty));
+
+    if(IC.getSimplifyQuery().isUndefValue(Arg))
+      return IC.replaceInstUsesWith(II, Constant::getNullValue(Ty));
+
+    ConstantInt *CArg = dyn_cast<ConstantInt>(II.getArgOperand(0));
+    if (!CArg)
+      break;
+
+    // Tabulated 0.0625 * (sext (CArg & 0xf)).
+    constexpr size_t ResValsSize = 16;
+    static constexpr float ResVals[ResValsSize] = {
+        0.0,  0.0625,  0.125,  0.1875,  0.25,  0.3125,  0.375,  0.4375,
+        -0.5, -0.4375, -0.375, -0.3125, -0.25, -0.1875, -0.125, -0.0625};
+    Constant *Res =
+        ConstantFP::get(Ty, ResVals[CArg->getZExtValue() & (ResValsSize - 1)]);
+    return IC.replaceInstUsesWith(II, Res);
+  }
   case Intrinsic::amdgcn_ubfe:
   case Intrinsic::amdgcn_sbfe: {
     // Decompose simple cases into standard shifts.

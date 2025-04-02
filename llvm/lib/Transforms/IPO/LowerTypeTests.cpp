@@ -2339,36 +2339,17 @@ bool LowerTypeTestsModule::lower() {
   if (GlobalClasses.empty())
     return false;
 
-  // Build a list of disjoint sets ordered by their maximum global index for
-  // determinism.
-  std::vector<std::pair<GlobalClassesTy::iterator, unsigned>> Sets;
-  for (GlobalClassesTy::iterator I = GlobalClasses.begin(),
-                                 E = GlobalClasses.end();
-       I != E; ++I) {
-    if (!I->isLeader())
-      continue;
-    ++NumTypeIdDisjointSets;
-
-    unsigned MaxUniqueId = 0;
-    for (GlobalClassesTy::member_iterator MI = GlobalClasses.member_begin(*I);
-         MI != GlobalClasses.member_end(); ++MI) {
-      if (auto *MD = dyn_cast_if_present<Metadata *>(*MI))
-        MaxUniqueId = std::max(MaxUniqueId, TypeIdInfo[MD].UniqueId);
-      else if (auto *BF = dyn_cast_if_present<ICallBranchFunnel *>(*MI))
-        MaxUniqueId = std::max(MaxUniqueId, BF->UniqueId);
-    }
-    Sets.emplace_back(I, MaxUniqueId);
-  }
-  llvm::sort(Sets, llvm::less_second());
-
   // For each disjoint set we found...
-  for (const auto &S : Sets) {
+  for (const auto &C : GlobalClasses) {
+    if (!C->isLeader())
+      continue;
+
+    ++NumTypeIdDisjointSets;
     // Build the list of type identifiers in this disjoint set.
     std::vector<Metadata *> TypeIds;
     std::vector<GlobalTypeMember *> Globals;
     std::vector<ICallBranchFunnel *> ICallBranchFunnels;
-    for (GlobalClassesTy::member_iterator MI =
-             GlobalClasses.member_begin(*S.first);
+    for (GlobalClassesTy::member_iterator MI = GlobalClasses.member_begin(*C);
          MI != GlobalClasses.member_end(); ++MI) {
       if (isa<Metadata *>(*MI))
         TypeIds.push_back(cast<Metadata *>(*MI));

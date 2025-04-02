@@ -1,3 +1,7 @@
+set(LLVM_LINK_COMPONENTS
+  Support
+  )
+
 add_clang_unittest(BasicTests
   CharInfoTest.cpp
   DarwinSDKInfoTest.cpp
@@ -8,11 +12,15 @@ add_clang_unittest(BasicTests
   SanitizersTest.cpp
   SarifTest.cpp
   SourceManagerTest.cpp
-  CLANG_LIBS
+  )
+
+clang_target_link_libraries(BasicTests
+  PRIVATE
   clangBasic
   clangLex
-  LINK_LIBS
-  LLVMTestingSupport
-  LLVM_COMPONENTS
-  Support
   )
+
+target_link_libraries(BasicTests
+  PRIVATE
+  LLVMTestingSupport
+)
