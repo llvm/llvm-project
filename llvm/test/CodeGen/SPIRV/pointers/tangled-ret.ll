@@ -1,6 +1,6 @@
 ; The only pass criterion is that spirv-val considers output valid.
 
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown-opencl %s -o - -filetype=obj | spirv-val %}
 
 %subgr = type { i64, i64 }
 %t_range = type { %t_arr }

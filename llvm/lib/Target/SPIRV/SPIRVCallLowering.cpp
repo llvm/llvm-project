@@ -281,14 +281,14 @@ getExecutionModel(const SPIRVSubtarget &STI, const Function &F) {
   auto attribute = F.getFnAttribute("hlsl.shader");
   if (!attribute.isValid()) {
     report_fatal_error(
-        "This entry point lacks mandatory hlsl.shader attribute.");
+        "This entry point lacks mandatory hlsl.shader attribute.", false);
   }
 
   const auto value = attribute.getValueAsString();
   if (value == "compute")
     return SPIRV::ExecutionModel::GLCompute;
 
-  report_fatal_error("This HLSL entry point is not supported by this backend.");
+  report_fatal_error("This HLSL entry point is not supported by this backend.", false);
 }
 
 bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,

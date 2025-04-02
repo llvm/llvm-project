@@ -1,4 +1,4 @@
-; RUN: %if spirv-tools %{ llc -O0 -verify-machineinstrs -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -verify-machineinstrs -mtriple=spirv64-unknown-unknown-opencl %s -o - -filetype=obj | spirv-val %}
 ; This test checks the OpDecorate MIR is generated after the associated
 ; vreg definition in the case of an array size declared through this lowering.
 

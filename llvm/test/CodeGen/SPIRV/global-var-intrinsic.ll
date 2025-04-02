@@ -6,7 +6,7 @@
 ; clang -S -emit-llvm --target=spir example.cpp
 
 ; Test passes if use of "-verify-machineinstrs" doesn't lead to crash.
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown-opencl %s -o - | FileCheck %s
 ; CHECK: OpFunction
 
 @ptr_0 = dso_local global ptr null, align 4

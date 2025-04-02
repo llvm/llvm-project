@@ -3,7 +3,7 @@
 ;;   return c;
 ;; }
 
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown-opencl %s -o - | FileCheck %s
 
 ; CHECK: %[[#TypeInt:]] = OpTypeInt 32
 ; CHECK: %[[#TypeVector:]] = OpTypeVector %[[#TypeInt]] 8

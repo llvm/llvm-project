@@ -78,14 +78,10 @@ public:
   unsigned getPointerSize() const { return PointerSize; }
   unsigned getBound() const { return GR->getBound(); }
   bool canDirectlyComparePointers() const;
-  // TODO: this environment is not implemented in Triple, we need to decide
-  // how to standardize its support. For now, let's assume SPIR-V with physical
-  // addressing is OpenCL, and Logical addressing is Vulkan.
   bool isOpenCLEnv() const {
-    return TargetTriple.getArch() == Triple::spirv32 ||
-           TargetTriple.getArch() == Triple::spirv64;
+   return TargetTriple.getEnvironment() == Triple::OpenCL;
   }
-  bool isVulkanEnv() const { return TargetTriple.getArch() == Triple::spirv; }
+  bool isVulkanEnv() const { return !isOpenCLEnv(); }
   const std::string &getTargetTripleAsStr() const { return TargetTriple.str(); }
   VersionTuple getSPIRVVersion() const { return SPIRVVersion; };
   bool isAtLeastSPIRVVer(VersionTuple VerToCompareTo) const;

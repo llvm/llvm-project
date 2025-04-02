@@ -1,8 +1,8 @@
 ; This test ensures that LLVM IR bitwise instructions result in logical SPIR-V instructions
 ; when applied to i1 type
 
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown-opencl %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown-opencl %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: %[[#Char:]] = OpTypeInt 8 0
 ; CHECK-DAG: %[[#Vec2Char:]] = OpTypeVector %[[#Char]] 2

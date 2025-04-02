@@ -3,8 +3,8 @@
 ; The purpose of this test is to check that the work_group_size_hint metadata
 ; is correctly converted to the LocalSizeHint execution mode.
 
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown-opencl %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown-opencl %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK: OpMemoryModel
 ; CHECK-DAG: OpEntryPoint Kernel %[[#ENTRY1:]] "test1"

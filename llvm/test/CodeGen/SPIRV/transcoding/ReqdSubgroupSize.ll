@@ -3,7 +3,7 @@
 ;; kernel __attribute__((intel_reqd_sub_group_size(8)))
 ;; void foo() {}
 
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown-opencl %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 
 ; CHECK-SPIRV: OpCapability SubgroupDispatch
 ; CHECK-SPIRV: OpEntryPoint Kernel %[[#kernel:]] "foo"

@@ -4,7 +4,7 @@
 ;; kernel void test(read_only image2d_t img) {}
 ;; -----------------------------------------------
 
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown-opencl %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 
 @d = addrspace(1) global double 1.000000e+00, align 8
 

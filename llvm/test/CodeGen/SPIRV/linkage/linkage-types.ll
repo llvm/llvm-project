@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=SPIRV
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown-opencl %s -o - | FileCheck %s --check-prefix=SPIRV
 
 ; SPIRV: OpCapability Linkage
 ; SPIRV: OpEntryPoint Kernel %[[#kern:]] "kern"

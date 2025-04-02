@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown-opencl %s -o - | FileCheck %s
 
 ; CHECK-DAG: %[[#int_32:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#float:]] = OpTypeFloat 32

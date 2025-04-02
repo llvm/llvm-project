@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown-opencl %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 
 ; CHECK-SPIRV-NOT: OpStore %[[#]] %[[#]] Volatile Aligned 8
 ; CHECK-SPIRV:     OpStore %[[#]] %[[#]] Volatile|Aligned 8
