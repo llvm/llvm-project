@@ -903,8 +903,7 @@ struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
   }
 };
 
-struct GatherToLDSOpLowering
-    : public ConvertOpToLLVMPattern<GatherToLDSOp> {
+struct GatherToLDSOpLowering : public ConvertOpToLLVMPattern<GatherToLDSOp> {
   GatherToLDSOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
       : ConvertOpToLLVMPattern<GatherToLDSOp>(converter), chipset(chipset) {}
 
@@ -936,15 +935,13 @@ struct GatherToLDSOpLowering
     if (loadWidth != 1 && loadWidth != 2 && loadWidth != 4)
       return op.emitOpError("chipset unsupported element size");
 
-    auto convertIndices =
-        [&](ValueRange indices) -> SmallVector<Value, 4> {
+    auto convertIndices = [&](ValueRange indices) -> SmallVector<Value, 4> {
       SmallVector<Value, 4> convertedIndices;
-      
+
       for (Value index : indices) {
         Type convertedType = getTypeConverter()->convertType(index.getType());
         auto convertedIndex = rewriter.create<LLVM::ConstantOp>(
-            loc, convertedType,
-            rewriter.getIntegerAttr(convertedType, 0));
+            loc, convertedType, rewriter.getIntegerAttr(convertedType, 0));
         convertedIndices.push_back(convertedIndex);
       }
       return convertedIndices;
