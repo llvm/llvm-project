@@ -2287,8 +2287,7 @@ size_t Process::WriteMemory(addr_t addr, const void *buf, size_t size,
     return 0;
 
 #if defined(USE_ALLOCATE_MEMORY_CACHE)
-  if (TrackMemoryCacheChanges() ||
-      !m_allocated_memory_cache.IsInCache(addr))
+  if (TrackMemoryCacheChanges() || !m_allocated_memory_cache.IsInCache(addr))
     m_mod_id.BumpMemoryID();
 #else
   m_mod_id.BumpMemoryID();

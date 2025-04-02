@@ -1834,8 +1834,7 @@ public:
       : CommandObjectParsed(interpreter, "process dump-mod-id",
                             "Dump the state of the ProcessModID. Intended to "
                             "be used for debugging LLDB itself.",
-                            "process dump-mod-id",
-                            eCommandRequiresProcess) {}
+                            "process dump-mod-id", eCommandRequiresProcess) {}
 
   ~CommandObjectProcessDumpModId() override = default;
 
@@ -1893,8 +1892,9 @@ CommandObjectMultiwordProcess::CommandObjectMultiwordProcess(
   LoadSubCommand(
       "trace",
       CommandObjectSP(new CommandObjectMultiwordProcessTrace(interpreter)));
-  LoadSubCommand("dump-mod-id",
-                 CommandObjectSP(new CommandObjectProcessDumpModId(interpreter)));
+  LoadSubCommand(
+      "dump-mod-id",
+      CommandObjectSP(new CommandObjectProcessDumpModId(interpreter)));
 }
 
 CommandObjectMultiwordProcess::~CommandObjectMultiwordProcess() = default;
