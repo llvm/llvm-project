@@ -7361,11 +7361,7 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
   llvm::SmallVector<const FunctionDecl *, 2> TypeAwareArrayDeleteDecls;
 
   for (auto *D : Record->decls()) {
-    const FunctionDecl *FnDecl = nullptr;
-    if (auto *FTD = dyn_cast<FunctionTemplateDecl>(D))
-      FnDecl = FTD->getTemplatedDecl();
-    else if (auto *FD = dyn_cast<FunctionDecl>(D))
-      FnDecl = FD;
+    const FunctionDecl *FnDecl = D->getAsFunction();
     if (!FnDecl || !FnDecl->isTypeAwareOperatorNewOrDelete())
       continue;
     switch (FnDecl->getOverloadedOperator()) {
@@ -16651,8 +16647,7 @@ static inline bool CheckOperatorNewDeleteTypes(
                CanResultType->isDependentType()
                    ? diag::err_operator_new_delete_dependent_result_type
                    : diag::err_operator_new_delete_invalid_result_type)
-           << FnDecl->getDeclName() << ExpectedResultType
-           << FnDecl->getReturnTypeSourceRange();
+           << FnDecl->getDeclName() << ExpectedResultType;
   }
 
   // A function template must have at least 2 parameters.

@@ -1401,8 +1401,9 @@ static UsualDeleteParams getUsualDeleteParams(const FunctionDecl *FD) {
     ++AI;
   }
 
-  // The first argument after type_identity (if any) is always a void*
-  // (or C* for a destroying operator delete for class type C).
+  // The first argument after the type-identity parameter (if any) is
+  // always a void* (or C* for a destroying operator delete for class
+  // type C).
   ++AI;
 
   // The next parameter may be a std::destroying_delete_t.
@@ -1493,8 +1494,8 @@ namespace {
         ++FirstNonTypeArg;
         DeleteArgs.add(Traits::get(CGF, TypeIdentity), SpecializedTypeIdentity);
       }
-      // The first argument after type_identity (if any) is always a void*
-      // (or C* for a destroying operator delete for class type C).
+      // The first argument after type-identity parameter (if any) is always
+      // a void* (or C* for a destroying operator delete for class type C).
       DeleteArgs.add(Traits::get(CGF, Ptr), FPT->getParamType(FirstNonTypeArg));
 
       // Figure out what other parameters we should be implicitly passing.
