@@ -1186,18 +1186,6 @@ struct YieldOpInterface
   }
 };
 
-/// Return `true` if the given loop may have 0 iterations.
-bool mayHaveZeroIterations(scf::ForallOp forallOp) {
-  for (auto [lb, ub] : llvm::zip(forallOp.getMixedLowerBound(),
-                                 forallOp.getMixedUpperBound())) {
-    std::optional<int64_t> lbConst = getConstantIntValue(lb);
-    std::optional<int64_t> ubConst = getConstantIntValue(ub);
-    if (!lbConst.has_value() || !ubConst.has_value() || *lbConst >= *ubConst)
-      return true;
-  }
-  return false;
-}
-
 /// Bufferization of ForallOp. This also bufferizes the terminator of the
 /// region. There are op interfaces for the terminators (InParallelOp
 /// and ParallelInsertSliceOp), but these are only used during analysis. Not
@@ -1207,17 +1195,11 @@ struct ForallOpInterface
                                                     ForallOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
                               const AnalysisState &state) const {
-    auto forallOp = cast<ForallOp>(op);
-
-    // If the loop has zero iterations, the results of the op are their
-    // corresponding shared_outs, meaning that the shared_outs bufferize to a
-    // read.
-    if (mayHaveZeroIterations(forallOp))
-      return true;
-
-    // scf::ForallOp alone doesn't bufferize to a memory read, one of the
-    // uses of its matching bbArg may.
-    return state.isValueRead(forallOp.getTiedBlockArgument(&opOperand));
+    // All tensor operands to `scf.forall` are `shared_outs` and all
+    // shared outs are assumed to be read by the loop. This does not
+    // account for the case where the entire value is over-written,
+    // but being conservative here.
+    return true;
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
