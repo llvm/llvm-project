@@ -1353,6 +1353,16 @@ public:
   /// that can be vectorized.
   bool stridedAccessCanBeWidened(Instruction *I, ElementCount VF) const;
 
+  /// Get the stride of the strided memory access instruction \p Instr. Return 0
+  /// if the instruction \p Instr is not considered for vectorization as a
+  /// strided memory access.
+  int64_t getStride(Instruction *Instr) const {
+    auto It = StrideInfo.find(Instr);
+    if (It != StrideInfo.end())
+      return It->second;
+    return 0;
+  }
+
   /// Returns true if we're required to use a scalar epilogue for at least
   /// the final iteration of the original loop.
   bool requiresScalarEpilogue(bool IsVectorizing) const {
@@ -1764,6 +1774,9 @@ private:
     return SmallVector<Value *, 4>(make_filter_range(
         Ops, [this, VF](Value *V) { return this->needsExtract(V, VF); }));
   }
+
+  /// The mapping of memory access instructions to their stride values.
+  DenseMap<Instruction *, int64_t> StrideInfo;
 
 public:
   /// The loop that we evaluate.
@@ -6176,6 +6189,7 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
           if (StridedLoadStoreCost < Cost) {
             Decision = CM_Strided;
             Cost = StridedLoadStoreCost;
+            StrideInfo[&I] = ConsecutiveStride;
           }
         }
         setWideningDecision(&I, VF, Decision, Cost);
@@ -8427,9 +8441,12 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
     if (Strided) {
       const DataLayout &DL = Load->getDataLayout();
       auto *StrideTy = DL.getIndexType(Load->getPointerOperand()->getType());
-      VPValue *Stride = Plan.getOrAddLiveIn(ConstantInt::get(
-          StrideTy, -1 * DL.getTypeAllocSize(getLoadStoreType(Load))));
-      return new VPWidenStridedLoadRecipe(*Load, Ptr, Stride, &Plan.getVF(),
+      int64_t Stride = CM.getStride(Load);
+      assert(Stride == -1 &&
+             "Only stride memory access with a stride of -1 is supported.");
+      VPValue *StrideVPV = Plan.getOrAddLiveIn(ConstantInt::get(
+          StrideTy, Stride * DL.getTypeAllocSize(getLoadStoreType(Load))));
+      return new VPWidenStridedLoadRecipe(*Load, Ptr, StrideVPV, &Plan.getVF(),
                                           Mask, I->getDebugLoc());
     }
     return new VPWidenLoadRecipe(*Load, Ptr, Mask, Consecutive, Reverse,
