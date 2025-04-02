@@ -482,7 +482,7 @@ public:
     m_return_addr_register = regnum;
   }
 
-  uint32_t GetReturnAddressRegister() { return m_return_addr_register; }
+  uint32_t GetReturnAddressRegister() const { return m_return_addr_register; }
 
   uint32_t GetInitialCFARegister() const {
     if (m_row_list.empty())
@@ -497,7 +497,7 @@ public:
     m_plan_valid_ranges = std::move(ranges);
   }
 
-  bool PlanValidAtAddress(Address addr);
+  bool PlanValidAtAddress(Address addr) const;
 
   bool IsValidRowIndex(uint32_t idx) const;
 
