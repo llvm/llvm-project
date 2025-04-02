@@ -1028,7 +1028,6 @@ void VPlanTransforms::simplifyBlends(VPlan &Plan) {
   using namespace llvm::VPlanPatternMatch;
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getEntry());
-  SetVector<VPRecipeBase *> Worklist;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       auto *Blend = dyn_cast<VPBlendRecipe>(&R);
