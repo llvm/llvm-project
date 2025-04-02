@@ -144,7 +144,7 @@ TEST(UnifiedOnDiskCacheTest, Basic) {
   reopenDB();
 
   EXPECT_FALSE(UniDB->hasExceededSizeLimit());
-  EXPECT_FALSE(UniDB->needsGarbaseCollection());
+  EXPECT_FALSE(UniDB->needsGarbageCollection());
 
   checkRootTree();
   checkKey(Key1Hash, "root");
@@ -154,10 +154,10 @@ TEST(UnifiedOnDiskCacheTest, Basic) {
   }
   PrevStoreSize = UniDB->getStorageSize();
   ASSERT_THAT_ERROR(UniDB->close(), Succeeded());
-  EXPECT_TRUE(UniDB->needsGarbaseCollection());
+  EXPECT_TRUE(UniDB->needsGarbageCollection());
 
   reopenDB();
-  EXPECT_TRUE(UniDB->needsGarbaseCollection());
+  EXPECT_TRUE(UniDB->needsGarbageCollection());
 
   std::optional<size_t> DirSizeBefore;
   ASSERT_THAT_ERROR(countFileSizes(Temp.path()).moveInto(DirSizeBefore),
@@ -172,7 +172,7 @@ TEST(UnifiedOnDiskCacheTest, Basic) {
   EXPECT_LT(*DirSizeAfter, *DirSizeBefore);
 
   reopenDB();
-  EXPECT_FALSE(UniDB->needsGarbaseCollection());
+  EXPECT_FALSE(UniDB->needsGarbageCollection());
 
   checkRootTree();
   checkKey(Key1Hash, "root");

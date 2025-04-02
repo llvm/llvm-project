@@ -21,7 +21,7 @@ class OnDiskKeyValueDB;
 /// High-level properties:
 /// * While \p UnifiedOnDiskCache is open on a directory, by any process, the
 ///   storage size in that directory will keep growing unrestricted. For data to
-///   become eligible for garbase-collection there should be no open instances
+///   become eligible for garbage-collection there should be no open instances
 ///   of \p UnifiedOnDiskCache for that directory, by any process.
 /// * Garbage-collection needs to be triggered explicitly by the client. It can
 ///   be triggered on a directory concurrently, at any time and by any process,
@@ -84,7 +84,7 @@ public:
 
   /// This is called implicitly at destruction time, so it is not required for a
   /// client to call this. After calling \p close the only method that is valid
-  /// to call is \p needsGarbaseCollection.
+  /// to call is \p needsGarbageCollection.
   ///
   /// \param CheckSizeLimit if true it will check whether the primary store has
   /// exceeded its intended size limit. If false the check is skipped even if a
@@ -106,7 +106,7 @@ public:
 
   /// \returns whether there are unused data that can be deleted using a
   /// \p collectGarbage call.
-  bool needsGarbaseCollection() const { return NeedsGarbageCollection; }
+  bool needsGarbageCollection() const { return NeedsGarbageCollection; }
 
   /// Remove any unused data from the directory at \p Path. If there are no such
   /// data the operation is a no-op.
