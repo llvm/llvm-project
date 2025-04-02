@@ -442,6 +442,8 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genUnpack(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genVerify(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genVoteAllSync(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genVoteAnySync(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genVoteBallotSync(mlir::Type, llvm::ArrayRef<mlir::Value>);
 
   /// Implement all conversion functions like DBLE, the first argument is
   /// the value to convert. There may be an additional KIND arguments that
