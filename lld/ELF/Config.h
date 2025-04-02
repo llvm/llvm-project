@@ -695,10 +695,6 @@ struct Ctx : CommonLinkerContext {
   llvm::raw_fd_ostream openAuxiliaryFile(llvm::StringRef, std::error_code &);
 
   ArrayRef<uint8_t> aarch64PauthAbiCoreInfo;
-
-  // AArch64 Build Attributes data
-  std::optional<llvm::BuildAttributeSubSection> mergedPauthSubSection;
-  std::optional<llvm::BuildAttributeSubSection> mergedFAndBSubSection;
 };
 
 // The first two elements of versionDefinitions represent VER_NDX_LOCAL and
