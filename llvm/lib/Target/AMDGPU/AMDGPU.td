@@ -1459,6 +1459,10 @@ def FeatureLshlAddU64Inst
     : SubtargetFeature<"lshl-add-u64-inst", "HasLshlAddU64Inst", "true",
                        "Has v_lshl_add_u64 instruction">;
 
+def FeatureAddSubU64Insts
+    : SubtargetFeature<"add-sub-u64-insts", "HasAddSubU64Insts", "true",
+                       "Has v_add_u64 and v_sub_u64 instructions">;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
@@ -2136,6 +2140,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureKernargPreload,
    FeatureVmemPrefInsts,
    FeatureLshlAddU64Inst,
+   FeatureAddSubU64Insts,
 ]>;
 
 def FeatureISAVersion12_51 : FeatureSet<
@@ -2215,6 +2220,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureF16BF16ToFP6BF6ConversionScaleInsts,
    FeatureBVHDualAndBVH8Insts,
    FeatureLshlAddU64Inst,
+   FeatureAddSubU64Insts,
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -3039,6 +3045,9 @@ def HasAshrPkInsts : Predicate<"Subtarget->hasAshrPkInsts()">,
 
 def HasLshlAddU64Inst : Predicate<"Subtarget->hasLshlAddU64Inst()">,
                         AssemblerPredicate<(all_of FeatureLshlAddU64Inst)>;
+
+def HasAddSubU64Insts : Predicate<"Subtarget->hasAddSubU64Insts()">,
+                        AssemblerPredicate<(all_of FeatureAddSubU64Insts)>;
 
 def HasExclusiveScanInsts : Predicate<"Subtarget->hasExclusiveScanInsts()">,
   AssemblerPredicate<(all_of FeatureExclusiveScanInsts)>;
