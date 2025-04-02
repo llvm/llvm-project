@@ -10,21 +10,19 @@
 #define _HLSL_HLSL_SPIRV_H_
 
 namespace hlsl {
-    namespace vk {
-    // template <class T> using Foo = __hlsl_spirv_t;
-    // typedef Foo
-    template <typename T, T v> struct integral_constant {
-      static constexpr T value = v;
-    };
-    
-    template <typename T> struct Literal {};
-    
-    template <uint Opcode, uint Size, uint Alignment, typename... Operands>
-    using SpirvType = __hlsl_spirv_type<Opcode, Size, Alignment, Operands...>;
-    
-    template <uint Opcode, typename... Operands>
-    using SpirvOpaqueType = __hlsl_spirv_type<Opcode, 0, 0, Operands...>;
-    } // namespace vk
-    } // namespace hlsl
+namespace vk {
+template <typename T, T v> struct integral_constant {
+  static constexpr T value = v;
+};
+
+template <typename T> struct Literal {};
+
+template <uint Opcode, uint Size, uint Alignment, typename... Operands>
+using SpirvType = __hlsl_spirv_type<Opcode, Size, Alignment, Operands...>;
+
+template <uint Opcode, typename... Operands>
+using SpirvOpaqueType = __hlsl_spirv_type<Opcode, 0, 0, Operands...>;
+} // namespace vk
+} // namespace hlsl
 
 #endif // _HLSL_HLSL_SPIRV_H_
