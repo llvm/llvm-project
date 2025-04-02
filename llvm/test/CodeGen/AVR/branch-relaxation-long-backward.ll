@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=avr -mcpu=attiny85 -filetype=obj -o - | llvm-objdump --mcpu=attiny85 -dr --no-show-raw-insn --no-leading-addr - | FileCheck --check-prefix=ATTINY85 %s
-; RUN: not llc < %s -mtriple=avr -mcpu=avr25 -filetype=obj -o - 2>&1 | FileCheck --check-prefix=AVR25 %s
+; RUN: llc < %s -mtriple=avr -mcpu=avr25 -filetype=obj -o - | llvm-objdump --mcpu=avr25 -dr --no-show-raw-insn --no-leading-addr - | FileCheck --check-prefix=AVR25 %s
 ; RUN: llc < %s -mtriple=avr -mcpu=avr3 -filetype=obj -o - | llvm-objdump --mcpu=avr3 -dr --no-show-raw-insn --no-leading-addr - | FileCheck --check-prefix=AVR3 %s
 
 ; ATTINY85: <main>:
@@ -10,7 +10,14 @@
 ; ATTINY85: ldi r24, 0x3
 ; ATTINY85-NEXT: ret
 
-; AVR25: error: out of range branch target (expected an integer in the range -4096 to 4095)
+; AVR25: <main>:
+; AVR25-NEXT: andi r24, 0x1
+; AVR25: cpi r24, 0x0
+; AVR25-NEXT: breq .+2
+; AVR25-NEXT: rjmp .-2
+; AVR25-NEXT: R_AVR_13_PCREL .text+0x2
+; AVR25: ldi r24, 0x3
+; AVR25-NEXT: ret
 
 ; AVR3: <main>:
 ; AVR3-NEXT: andi r24, 0x1

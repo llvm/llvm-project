@@ -113,6 +113,9 @@ public:
   LiveIntervals(LiveIntervals &&) = default;
   ~LiveIntervals();
 
+  bool invalidate(MachineFunction &MF, const PreservedAnalyses &PA,
+                  MachineFunctionAnalysisManager::Invalidator &Inv);
+
   /// Calculate the spill weight to assign to a single instruction.
   /// If \p PSI is provided the calculation is altered for optsize functions.
   static float getSpillWeight(bool isDef, bool isUse,

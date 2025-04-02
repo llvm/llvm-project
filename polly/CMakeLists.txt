@@ -112,6 +112,14 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     )
 endif()
 
+# add_llvm_pass_plugin() already declares the option, but we need access to
+# it earlier than that.
+set(link_into_tools_default OFF)
+if (LLVM_TOOL_POLLY_BUILD)
+  set(link_into_tools_default ON)
+endif()
+option(LLVM_POLLY_LINK_INTO_TOOLS "Statically link Polly into tools (if available)" ${link_into_tools_default})
+
 add_definitions( -D_GNU_SOURCE )
 
 add_subdirectory(docs)

@@ -29,7 +29,7 @@ define void @foo() {
 define internal void @bar(%p_t %p)  {
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@bar
-; CGSCC-SAME: (ptr nocapture nofree readnone [[P:%.*]]) #[[ATTR0]] {
+; CGSCC-SAME: (ptr nofree readnone captures(none) [[P:%.*]]) #[[ATTR0]] {
 ; CGSCC-NEXT:      #dbg_value(ptr [[P]], [[META3:![0-9]+]], !DIExpression(), [[META5:![0-9]+]])
 ; CGSCC-NEXT:    ret void
 ;

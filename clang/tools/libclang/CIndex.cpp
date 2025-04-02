@@ -2877,6 +2877,14 @@ void OpenACCClauseEnqueue::VisitPrivateClause(const OpenACCPrivateClause &C) {
   VisitVarList(C);
 }
 
+void OpenACCClauseEnqueue::VisitHostClause(const OpenACCHostClause &C) {
+  VisitVarList(C);
+}
+
+void OpenACCClauseEnqueue::VisitDeviceClause(const OpenACCDeviceClause &C) {
+  VisitVarList(C);
+}
+
 void OpenACCClauseEnqueue::VisitFirstPrivateClause(
     const OpenACCFirstPrivateClause &C) {
   VisitVarList(C);
@@ -7194,6 +7202,7 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
   case Decl::TopLevelStmt:
   case Decl::StaticAssert:
   case Decl::Block:
+  case Decl::OutlinedFunction:
   case Decl::Captured:
   case Decl::OMPCapturedExpr:
   case Decl::Label: // FIXME: Is this right??

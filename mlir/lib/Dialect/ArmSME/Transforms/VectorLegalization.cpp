@@ -304,7 +304,7 @@ struct LegalizeTransferReadOpsByDecomposition
                                          kMatchFailureNonPermutationMap);
 
     // Note: For 2D vector types the only non-identity permutation is a simple
-    // tranpose [1, 0].
+    // transpose [1, 0].
     bool transposed = !permutationMap.isIdentity();
 
     auto loc = readOp.getLoc();
@@ -352,7 +352,7 @@ struct LegalizeTransferWriteOpsByDecomposition
                                          kMatchFailureNonPermutationMap);
 
     // Note: For 2D vector types the only non-identity permutation is a simple
-    // tranpose [1, 0].
+    // transpose [1, 0].
     bool transposed = !permutationMap.isIdentity();
 
     auto loc = writeOp.getLoc();

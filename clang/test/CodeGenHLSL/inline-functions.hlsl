@@ -43,7 +43,7 @@ void BubbleSort(unsigned Buf[MAX], unsigned size) {
 
 // Note ExtAttr is the inlined export set of attribs
 // CHECK: Function Attrs: alwaysinline
-// CHECK: define noundef i32 @_Z11RemoveDupesA100_jj(ptr {{[a-z_ ]*}}noundef byval([100 x i32]) align 4 %Buf, i32 noundef %size) {{[a-z_ ]*}}[[ExtAttr:\#[0-9]+]]
+// CHECK: define noundef i32 @_Z11RemoveDupesA100_jj(ptr {{[a-z_ ]*}}noundef byval([100 x i32]) align 4 {{.*}}%Buf, i32 noundef %size) {{[a-z_ ]*}}[[ExtAttr:\#[0-9]+]]
 // CHECK: ret i32
 // Sort Buf and remove any duplicate values
 // returns the number of values left

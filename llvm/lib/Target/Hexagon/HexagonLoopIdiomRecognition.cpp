@@ -1097,8 +1097,7 @@ bool PolynomialMultiplyRecognize::promoteTypes(BasicBlock *LoopB,
       promoteTo(In, DestTy, LoopB);
 
   // Fix up the PHI nodes in the exit block.
-  Instruction *EndI = ExitB->getFirstNonPHI();
-  BasicBlock::iterator End = EndI ? EndI->getIterator() : ExitB->end();
+  BasicBlock::iterator End = ExitB->getFirstNonPHIIt();
   for (auto I = ExitB->begin(); I != End; ++I) {
     PHINode *P = dyn_cast<PHINode>(I);
     if (!P)

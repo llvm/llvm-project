@@ -975,8 +975,8 @@ PDBASTParser::GetDeclForSymbol(const llvm::pdb::PDBSymbol &symbol) {
         }
       }
     }
-    if (params.size())
-      m_ast.SetFunctionParameters(decl, params);
+    if (params.size() && decl)
+      decl->setParams(params);
 
     m_uid_to_decl[sym_id] = decl;
 

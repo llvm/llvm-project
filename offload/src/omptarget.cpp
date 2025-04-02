@@ -977,9 +977,9 @@ TableMap *getTableMap(void *HostPtr) {
     TranslationTable *TransTable = &Itr->second;
     // iterate over all the host table entries to see if we can locate the
     // host_ptr.
-    __tgt_offload_entry *Cur = TransTable->HostTable.EntriesBegin;
+    llvm::offloading::EntryTy *Cur = TransTable->HostTable.EntriesBegin;
     for (uint32_t I = 0; Cur < TransTable->HostTable.EntriesEnd; ++Cur, ++I) {
-      if (Cur->addr != HostPtr)
+      if (Cur->Address != HostPtr)
         continue;
       // we got a match, now fill the HostPtrToTableMap so that we
       // may avoid this search next time.
@@ -1437,9 +1437,10 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
   }
 
   // Launch device execution.
-  void *TgtEntryPtr = TargetTable->EntriesBegin[TM->Index].addr;
+  void *TgtEntryPtr = TargetTable->EntriesBegin[TM->Index].Address;
   DP("Launching target execution %s with pointer " DPxMOD " (index=%d).\n",
-     TargetTable->EntriesBegin[TM->Index].name, DPxPTR(TgtEntryPtr), TM->Index);
+     TargetTable->EntriesBegin[TM->Index].SymbolName, DPxPTR(TgtEntryPtr),
+     TM->Index);
 
   {
     assert(KernelArgs.NumArgs == TgtArgs.size() && "Argument count mismatch!");
@@ -1525,9 +1526,10 @@ int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
 
   // Retrieve the target kernel pointer, allocate and store the recorded device
   // memory data, and launch device execution.
-  void *TgtEntryPtr = TargetTable->EntriesBegin[TM->Index].addr;
+  void *TgtEntryPtr = TargetTable->EntriesBegin[TM->Index].Address;
   DP("Launching target execution %s with pointer " DPxMOD " (index=%d).\n",
-     TargetTable->EntriesBegin[TM->Index].name, DPxPTR(TgtEntryPtr), TM->Index);
+     TargetTable->EntriesBegin[TM->Index].SymbolName, DPxPTR(TgtEntryPtr),
+     TM->Index);
 
   void *TgtPtr = Device.allocData(DeviceMemorySize, /*HstPtr=*/nullptr,
                                   TARGET_ALLOC_DEFAULT);

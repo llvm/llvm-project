@@ -5,7 +5,7 @@ struct S {
   int f(this S&);
 };
 
-int main() {
+void main() {
   S s;
   int x = s.f();
   // CHECK: CallExpr 0x{{[^ ]*}} <col:11, col:15> 'int

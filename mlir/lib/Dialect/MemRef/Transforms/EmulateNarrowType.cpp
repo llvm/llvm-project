@@ -632,7 +632,7 @@ void memref::populateMemRefNarrowTypeEmulationConversions(
         // Currently only handle innermost stride being 1, checking
         SmallVector<int64_t> strides;
         int64_t offset;
-        if (failed(getStridesAndOffset(ty, strides, offset)))
+        if (failed(ty.getStridesAndOffset(strides, offset)))
           return nullptr;
         if (!strides.empty() && strides.back() != 1)
           return nullptr;

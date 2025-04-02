@@ -825,7 +825,7 @@ unsigned ARMBaseInstrInfo::getInstBundleLength(const MachineInstr &MI) const {
 
 void ARMBaseInstrInfo::copyFromCPSR(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator I,
-                                    unsigned DestReg, bool KillSrc,
+                                    MCRegister DestReg, bool KillSrc,
                                     const ARMSubtarget &Subtarget) const {
   unsigned Opc = Subtarget.isThumb()
                      ? (Subtarget.isMClass() ? ARM::t2MRS_M : ARM::t2MRS_AR)
@@ -845,7 +845,7 @@ void ARMBaseInstrInfo::copyFromCPSR(MachineBasicBlock &MBB,
 
 void ARMBaseInstrInfo::copyToCPSR(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator I,
-                                  unsigned SrcReg, bool KillSrc,
+                                  MCRegister SrcReg, bool KillSrc,
                                   const ARMSubtarget &Subtarget) const {
   unsigned Opc = Subtarget.isThumb()
                      ? (Subtarget.isMClass() ? ARM::t2MSR_M : ARM::t2MSR_AR)
@@ -1118,7 +1118,8 @@ void ARMBaseInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                            Register SrcReg, bool isKill, int FI,
                                            const TargetRegisterClass *RC,
                                            const TargetRegisterInfo *TRI,
-                                           Register VReg) const {
+                                           Register VReg,
+                                           MachineInstr::MIFlag Flags) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   Align Alignment = MFI.getObjectAlign(FI);
@@ -1379,12 +1380,10 @@ Register ARMBaseInstrInfo::isStoreToStackSlotPostFE(const MachineInstr &MI,
   return false;
 }
 
-void ARMBaseInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
-                                            MachineBasicBlock::iterator I,
-                                            Register DestReg, int FI,
-                                            const TargetRegisterClass *RC,
-                                            const TargetRegisterInfo *TRI,
-                                            Register VReg) const {
+void ARMBaseInstrInfo::loadRegFromStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register DestReg,
+    int FI, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
+    Register VReg, MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (I != MBB.end()) DL = I->getDebugLoc();
   MachineFunction &MF = *MBB.getParent();
@@ -1727,10 +1726,10 @@ bool ARMBaseInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     return false;
 
   const TargetRegisterInfo *TRI = &getRegisterInfo();
-  unsigned DstRegD = TRI->getMatchingSuperReg(DstRegS, ARM::ssub_0,
-                                              &ARM::DPRRegClass);
-  unsigned SrcRegD = TRI->getMatchingSuperReg(SrcRegS, ARM::ssub_0,
-                                              &ARM::DPRRegClass);
+  MCRegister DstRegD =
+      TRI->getMatchingSuperReg(DstRegS, ARM::ssub_0, &ARM::DPRRegClass);
+  MCRegister SrcRegD =
+      TRI->getMatchingSuperReg(SrcRegS, ARM::ssub_0, &ARM::DPRRegClass);
   if (!DstRegD || !SrcRegD)
     return false;
 
@@ -2594,7 +2593,7 @@ bool llvm::tryFoldSPUpdateIntoPushPop(const ARMSubtarget &Subtarget,
   // Now try to find enough space in the reglist to allocate NumBytes.
   for (int CurRegEnc = FirstRegEnc - 1; CurRegEnc >= 0 && RegsNeeded;
        --CurRegEnc) {
-    unsigned CurReg = RegClass->getRegister(CurRegEnc);
+    MCRegister CurReg = RegClass->getRegister(CurRegEnc);
     if (IsT1PushPop && CurRegEnc > TRI->getEncodingValue(ARM::R7))
       continue;
     if (!IsPop) {
@@ -5089,13 +5088,14 @@ ARMBaseInstrInfo::getExecutionDomain(const MachineInstr &MI) const {
   return std::make_pair(ExeGeneric, 0);
 }
 
-static unsigned getCorrespondingDRegAndLane(const TargetRegisterInfo *TRI,
-                                            unsigned SReg, unsigned &Lane) {
-  unsigned DReg = TRI->getMatchingSuperReg(SReg, ARM::ssub_0, &ARM::DPRRegClass);
+static MCRegister getCorrespondingDRegAndLane(const TargetRegisterInfo *TRI,
+                                              unsigned SReg, unsigned &Lane) {
+  MCRegister DReg =
+      TRI->getMatchingSuperReg(SReg, ARM::ssub_0, &ARM::DPRRegClass);
   Lane = 0;
 
-  if (DReg != ARM::NoRegister)
-   return DReg;
+  if (DReg)
+    return DReg;
 
   Lane = 1;
   DReg = TRI->getMatchingSuperReg(SReg, ARM::ssub_1, &ARM::DPRRegClass);
@@ -5120,12 +5120,13 @@ static unsigned getCorrespondingDRegAndLane(const TargetRegisterInfo *TRI,
 /// (including the case where the DPR itself is defined), it should not.
 ///
 static bool getImplicitSPRUseForDPRUse(const TargetRegisterInfo *TRI,
-                                       MachineInstr &MI, unsigned DReg,
-                                       unsigned Lane, unsigned &ImplicitSReg) {
+                                       MachineInstr &MI, MCRegister DReg,
+                                       unsigned Lane,
+                                       MCRegister &ImplicitSReg) {
   // If the DPR is defined or used already, the other SPR lane will be chained
   // correctly, so there is nothing to be done.
   if (MI.definesRegister(DReg, TRI) || MI.readsRegister(DReg, TRI)) {
-    ImplicitSReg = 0;
+    ImplicitSReg = MCRegister();
     return true;
   }
 
@@ -5142,13 +5143,14 @@ static bool getImplicitSPRUseForDPRUse(const TargetRegisterInfo *TRI,
 
   // If the register is known not to be live, there is no need to add an
   // implicit-use.
-  ImplicitSReg = 0;
+  ImplicitSReg = MCRegister();
   return true;
 }
 
 void ARMBaseInstrInfo::setExecutionDomain(MachineInstr &MI,
                                           unsigned Domain) const {
-  unsigned DstReg, SrcReg, DReg;
+  unsigned DstReg, SrcReg;
+  MCRegister DReg;
   unsigned Lane;
   MachineInstrBuilder MIB(*MI.getParent()->getParent(), MI);
   const TargetRegisterInfo *TRI = &getRegisterInfo();
@@ -5218,7 +5220,7 @@ void ARMBaseInstrInfo::setExecutionDomain(MachineInstr &MI,
 
     DReg = getCorrespondingDRegAndLane(TRI, DstReg, Lane);
 
-    unsigned ImplicitSReg;
+    MCRegister ImplicitSReg;
     if (!getImplicitSPRUseForDPRUse(TRI, MI, DReg, Lane, ImplicitSReg))
       break;
 
@@ -5237,7 +5239,7 @@ void ARMBaseInstrInfo::setExecutionDomain(MachineInstr &MI,
     // The narrower destination must be marked as set to keep previous chains
     // in place.
     MIB.addReg(DstReg, RegState::Define | RegState::Implicit);
-    if (ImplicitSReg != 0)
+    if (ImplicitSReg)
       MIB.addReg(ImplicitSReg, RegState::Implicit);
     break;
     }
@@ -5249,11 +5251,12 @@ void ARMBaseInstrInfo::setExecutionDomain(MachineInstr &MI,
       DstReg = MI.getOperand(0).getReg();
       SrcReg = MI.getOperand(1).getReg();
 
-      unsigned DstLane = 0, SrcLane = 0, DDst, DSrc;
+      unsigned DstLane = 0, SrcLane = 0;
+      MCRegister DDst, DSrc;
       DDst = getCorrespondingDRegAndLane(TRI, DstReg, DstLane);
       DSrc = getCorrespondingDRegAndLane(TRI, SrcReg, SrcLane);
 
-      unsigned ImplicitSReg;
+      MCRegister ImplicitSReg;
       if (!getImplicitSPRUseForDPRUse(TRI, MI, DSrc, SrcLane, ImplicitSReg))
         break;
 
@@ -5273,7 +5276,7 @@ void ARMBaseInstrInfo::setExecutionDomain(MachineInstr &MI,
         // more, so add them in manually.
         MIB.addReg(DstReg, RegState::Implicit | RegState::Define);
         MIB.addReg(SrcReg, RegState::Implicit);
-        if (ImplicitSReg != 0)
+        if (ImplicitSReg)
           MIB.addReg(ImplicitSReg, RegState::Implicit);
         break;
       }
@@ -5297,7 +5300,7 @@ void ARMBaseInstrInfo::setExecutionDomain(MachineInstr &MI,
       // On the first instruction, both DSrc and DDst may be undef if present.
       // Specifically when the original instruction didn't have them as an
       // <imp-use>.
-      unsigned CurReg = SrcLane == 1 && DstLane == 1 ? DSrc : DDst;
+      MCRegister CurReg = SrcLane == 1 && DstLane == 1 ? DSrc : DDst;
       bool CurUndef = !MI.readsRegister(CurReg, TRI);
       NewMIB.addReg(CurReg, getUndefRegState(CurUndef));
 
@@ -5402,8 +5405,8 @@ unsigned ARMBaseInstrInfo::getPartialRegUpdateClearance(
       return 0;
   } else if (ARM::SPRRegClass.contains(Reg)) {
     // Physical register: MI must define the full D-reg.
-    unsigned DReg = TRI->getMatchingSuperReg(Reg, ARM::ssub_0,
-                                             &ARM::DPRRegClass);
+    MCRegister DReg =
+        TRI->getMatchingSuperReg(Reg, ARM::ssub_0, &ARM::DPRRegClass);
     if (!DReg || !MI.definesRegister(DReg, TRI))
       return 0;
   }
@@ -6847,8 +6850,6 @@ public:
   void setPreheader(MachineBasicBlock *NewPreheader) override {}
 
   void adjustTripCount(int TripCountAdjust) override {}
-
-  void disposed() override {}
 };
 
 void ARMPipelinerLoopInfo::bumpCrossIterationPressure(RegPressureTracker &RPT,

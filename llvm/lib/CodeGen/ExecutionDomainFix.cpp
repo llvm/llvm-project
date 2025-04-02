@@ -445,7 +445,7 @@ bool ExecutionDomainFix::runOnMachineFunction(MachineFunction &mf) {
     for (unsigned i = 0, e = RC->getNumRegs(); i != e; ++i)
       for (MCRegAliasIterator AI(RC->getRegister(i), TRI, true); AI.isValid();
            ++AI)
-        AliasMap[*AI].push_back(i);
+        AliasMap[(*AI).id()].push_back(i);
   }
 
   // Initialize the MBBOutRegsInfos

@@ -1892,3 +1892,44 @@ func.func @acc_combined() {
 // CHECK: acc.loop combined(kernels)
 // CHECK: acc.serial combined(loop)
 // CHECK: acc.loop combined(serial)
+
+acc.firstprivate.recipe @firstprivatization_memref_i32 : memref<i32> init {
+^bb0(%arg0: memref<i32>):
+  %alloca = memref.alloca() : memref<i32>
+  acc.yield %alloca : memref<i32>
+} copy {
+^bb0(%arg0: memref<i32>, %arg1: memref<i32>):
+  %0 = memref.load %arg1[] : memref<i32>
+  memref.store %0, %arg0[] : memref<i32>
+  acc.terminator
+}
+
+// CHECK-LABEL: acc.firstprivate.recipe @firstprivatization_memref_i32
+// CHECK:       memref.alloca
+
+acc.reduction.recipe @reduction_add_memref_i32 : memref<i32> reduction_operator <add> init {
+^bb0(%arg0: memref<i32>):
+  %c0_i32 = arith.constant 0 : i32
+  %alloca = memref.alloca() : memref<i32>
+  memref.store %c0_i32, %alloca[] : memref<i32>
+  acc.yield %alloca : memref<i32>
+} combiner {
+^bb0(%arg0: memref<i32>, %arg1: memref<i32>):
+  %0 = memref.load %arg0[] : memref<i32>
+  %1 = memref.load %arg1[] : memref<i32>
+  %2 = arith.addi %0, %1 : i32
+  memref.store %2, %arg0[] : memref<i32>
+  acc.yield %arg0 : memref<i32>
+}
+
+// CHECK-LABEL: acc.reduction.recipe @reduction_add_memref_i32
+// CHECK:       memref.alloca
+
+acc.private.recipe @privatization_memref_i32 : memref<i32> init {
+^bb0(%arg0: memref<i32>):
+  %alloca = memref.alloca() : memref<i32>
+  acc.yield %alloca : memref<i32>
+}
+
+// CHECK-LABEL: acc.private.recipe @privatization_memref_i32
+// CHECK:       memref.alloca

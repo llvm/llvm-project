@@ -1979,7 +1979,7 @@ public:
         return DT->dominates(A, B);
       });
       for (Instruction *I : ToHoist)
-        I->moveBefore(MatMul);
+        I->moveBefore(MatMul->getIterator());
 
       // Deal with lifetime.end calls that might be between Load0/Load1 and the
       // store. To avoid introducing loads to dead objects (i.e. after the

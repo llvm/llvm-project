@@ -10,6 +10,7 @@ from ..._mlir_libs._mlirDialectsLinalg import *
 #   DSL -> YAML -> tblgen -> pytblgen -> build/.../_linalg_ops_gen.py.
 from .._linalg_ops_gen import *
 from .._linalg_enum_gen import *
+from .._linalg_enum_gen import _iteratortypeenum
 
 # These are the ground truth functions defined as:
 # ```
@@ -58,6 +59,7 @@ from .opdsl.ops.core_named_ops import *
 
 from ...ir import *
 from .._ods_common import get_op_result_or_value as _get_op_result_or_value
+from ...extras.meta import region_op
 
 
 def transpose(
@@ -102,3 +104,46 @@ def broadcast(
     )
     fill_builtin_region(op.operation)
     return op
+
+
+@register_attribute_builder("IteratorTypeArrayAttr")
+def _IteratorTypeArrayAttr(x, context):
+    return ArrayAttr.get([_iteratortypeenum(v, context) for v in x])
+
+
+# The underscore is needed here so that there's no collision with opdsl generation.
+class GenericOp_(GenericOp):
+    def __init__(
+        self,
+        inputs,
+        outputs,
+        indexing_maps,
+        iterator_types,
+        *,
+        doc=None,
+        library_call=None,
+        loc=None,
+        ip=None,
+    ):
+        result_types = []
+        if isinstance(outputs[0].type, RankedTensorType):
+            result_types = [o.type for o in outputs]
+
+        super().__init__(
+            result_types,
+            inputs,
+            outputs,
+            indexing_maps,
+            iterator_types,
+            doc=doc,
+            library_call=library_call,
+            loc=loc,
+            ip=ip,
+        )
+        element_types = [i.type.element_type for i in inputs] + [
+            o.type.element_type for o in outputs
+        ]
+        self.regions[0].blocks.append(*element_types)
+
+
+generic = region_op(GenericOp_, terminator=YieldOp)

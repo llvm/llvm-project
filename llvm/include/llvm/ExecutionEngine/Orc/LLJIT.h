@@ -244,8 +244,6 @@ protected:
 
   Error applyDataLayout(Module &M);
 
-  void recordCtorDtors(Module &M);
-
   std::unique_ptr<ExecutionSession> ES;
   std::unique_ptr<PlatformSupport> PS;
 

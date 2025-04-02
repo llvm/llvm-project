@@ -115,6 +115,9 @@ llvm.func @func_with_debug(%arg: i64) {
   // CHECK: call void @func_no_debug(), !dbg ![[FILE_LOC:[0-9]+]]
   llvm.call @func_no_debug() : () -> () loc("foo.mlir":1:2)
 
+  // CHECK: call void @func_no_debug(), !dbg ![[FILE_LOC:[0-9]+]]
+  llvm.call @func_no_debug() : () -> () loc("foo.mlir":1:2 to 5:6)
+
   // CHECK: call void @func_no_debug(), !dbg ![[NAMED_LOC:[0-9]+]]
   llvm.call @func_no_debug() : () -> () loc("named"("foo.mlir":10:10))
 

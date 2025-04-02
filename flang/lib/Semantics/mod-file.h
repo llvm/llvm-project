@@ -102,7 +102,7 @@ public:
 private:
   SemanticsContext &context_;
 
-  parser::Message &Say(SourceName, const std::string &,
+  parser::Message &Say(const char *verb, SourceName, const std::string &,
       parser::MessageFixedText &&, const std::string &);
 };
 

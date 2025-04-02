@@ -4830,7 +4830,7 @@ static const MachineInstrBuilder &AddSubReg(const MachineInstrBuilder &MIB,
   if (!SubIdx)
     return MIB.addReg(Reg, State);
 
-  if (Register::isPhysicalRegister(Reg))
+  if (Reg.isPhysical())
     return MIB.addReg(TRI->getSubReg(Reg, SubIdx), State);
   return MIB.addReg(Reg, State, SubIdx);
 }
@@ -5278,7 +5278,8 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                            Register SrcReg, bool isKill, int FI,
                                            const TargetRegisterClass *RC,
                                            const TargetRegisterInfo *TRI,
-                                           Register VReg) const {
+                                           Register VReg,
+                                           MachineInstr::MIFlag Flags) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
 
@@ -5445,12 +5446,10 @@ static void loadRegPairFromStackSlot(const TargetRegisterInfo &TRI,
       .addMemOperand(MMO);
 }
 
-void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
-                                            MachineBasicBlock::iterator MBBI,
-                                            Register DestReg, int FI,
-                                            const TargetRegisterClass *RC,
-                                            const TargetRegisterInfo *TRI,
-                                            Register VReg) const {
+void AArch64InstrInfo::loadRegFromStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register DestReg,
+    int FI, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
+    Register VReg, MachineInstr::MIFlag Flags) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(MF, FI);
@@ -9742,9 +9741,11 @@ AArch64InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
 
   // AArch64::ORRWrs and AArch64::ORRXrs with WZR/XZR reg
   // and zero immediate operands used as an alias for mov instruction.
-  if (MI.getOpcode() == AArch64::ORRWrs &&
-      MI.getOperand(1).getReg() == AArch64::WZR &&
-      MI.getOperand(3).getImm() == 0x0 &&
+  if (((MI.getOpcode() == AArch64::ORRWrs &&
+        MI.getOperand(1).getReg() == AArch64::WZR &&
+        MI.getOperand(3).getImm() == 0x0) ||
+       (MI.getOpcode() == AArch64::ORRWrr &&
+        MI.getOperand(1).getReg() == AArch64::WZR)) &&
       // Check that the w->w move is not a zero-extending w->x mov.
       (!MI.getOperand(0).getReg().isVirtual() ||
        MI.getOperand(0).getSubReg() == 0) &&
@@ -9764,9 +9765,11 @@ AArch64InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
 
 std::optional<DestSourcePair>
 AArch64InstrInfo::isCopyLikeInstrImpl(const MachineInstr &MI) const {
-  if (MI.getOpcode() == AArch64::ORRWrs &&
-      MI.getOperand(1).getReg() == AArch64::WZR &&
-      MI.getOperand(3).getImm() == 0x0)
+  if ((MI.getOpcode() == AArch64::ORRWrs &&
+       MI.getOperand(1).getReg() == AArch64::WZR &&
+       MI.getOperand(3).getImm() == 0x0) ||
+      (MI.getOpcode() == AArch64::ORRWrr &&
+       MI.getOperand(1).getReg() == AArch64::WZR))
     return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
   return std::nullopt;
 }
@@ -10140,7 +10143,6 @@ public:
 
   void adjustTripCount(int TripCountAdjust) override {}
 
-  void disposed() override {}
   bool isMVEExpanderSupported() override { return true; }
 };
 } // namespace

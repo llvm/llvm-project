@@ -136,6 +136,66 @@ void BM_InsertValueRehash(benchmark::State& st, Container c, GenInputs gen) {
 }
 
 template <class Container, class GenInputs>
+void BM_Insert_InputIterIter_NoRealloc(benchmark::State& st, Container c, GenInputs gen) {
+  auto in = gen(st.range(0));
+  DoNotOptimizeData(in);
+  const auto size = c.size();
+  const auto beg  = cpp17_input_iterator(in.begin());
+  const auto end  = cpp17_input_iterator(in.end());
+  c.reserve(size + in.size()); // force no reallocation
+  for (auto _ : st) {
+    benchmark::DoNotOptimize(&(*c.insert(c.begin(), beg, end)));
+    st.PauseTiming();
+    c.erase(c.begin() + size, c.end()); // avoid the container to grow indefinitely
+    st.ResumeTiming();
+    DoNotOptimizeData(c);
+    benchmark::ClobberMemory();
+  }
+}
+
+template <class Container, class GenInputs>
+void BM_Insert_InputIterIter_Realloc_HalfFilled(benchmark::State& st, Container, GenInputs gen) {
+  const auto size = st.range(0);
+  Container a     = gen(size);
+  Container in    = gen(size + 10);
+  DoNotOptimizeData(a);
+  DoNotOptimizeData(in);
+  const auto beg = cpp17_input_iterator(in.begin());
+  const auto end = cpp17_input_iterator(in.end());
+  for (auto _ : st) {
+    st.PauseTiming();
+    Container c;
+    c.reserve(size * 2); // Reallocation with half-filled container
+    c = a;
+    st.ResumeTiming();
+    benchmark::DoNotOptimize(&(*c.insert(c.begin(), beg, end)));
+    DoNotOptimizeData(c);
+    benchmark::ClobberMemory();
+  }
+}
+
+template <class Container, class GenInputs>
+void BM_Insert_InputIterIter_Realloc_NearFull(benchmark::State& st, Container, GenInputs gen) {
+  const auto size = st.range(0);
+  Container a     = gen(size);
+  Container in    = gen(10);
+  DoNotOptimizeData(a);
+  DoNotOptimizeData(in);
+  const auto beg = cpp17_input_iterator(in.begin());
+  const auto end = cpp17_input_iterator(in.end());
+  for (auto _ : st) {
+    st.PauseTiming();
+    Container c;
+    c.reserve(size + 5); // Reallocation almost-full container
+    c = a;
+    st.ResumeTiming();
+    benchmark::DoNotOptimize(&(*c.insert(c.begin(), beg, end)));
+    DoNotOptimizeData(c);
+    benchmark::ClobberMemory();
+  }
+}
+
+template <class Container, class GenInputs>
 void BM_InsertDuplicate(benchmark::State& st, Container c, GenInputs gen) {
   auto in        = gen(st.range(0));
   const auto end = in.end();

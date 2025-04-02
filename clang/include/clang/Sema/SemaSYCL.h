@@ -63,6 +63,9 @@ public:
 
   void handleKernelAttr(Decl *D, const ParsedAttr &AL);
   void handleKernelEntryPointAttr(Decl *D, const ParsedAttr &AL);
+
+  void CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD);
+  StmtResult BuildSYCLKernelCallStmt(FunctionDecl *FD, CompoundStmt *Body);
 };
 
 } // namespace clang

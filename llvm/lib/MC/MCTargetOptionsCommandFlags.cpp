@@ -156,7 +156,7 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
   MCBINDOPT(X86Sse2Avx);
 
   static cl::opt<std::string> ABIName(
-      "target-abi", cl::Hidden,
+      "target-abi",
       cl::desc("The name of the ABI to be targeted from the backend."),
       cl::init(""));
   MCBINDOPT(ABIName);

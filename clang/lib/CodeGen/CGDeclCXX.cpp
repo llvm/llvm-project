@@ -1131,14 +1131,6 @@ CodeGenFunction::GenerateCXXGlobalInitFunc(llvm::Function *Fn,
       if (Decls[i])
         EmitRuntimeCall(Decls[i]);
 
-    if (getLangOpts().HLSL) {
-      CGHLSLRuntime &CGHLSL = CGM.getHLSLRuntime();
-      if (CGHLSL.needsResourceBindingInitFn()) {
-        llvm::Function *ResInitFn = CGHLSL.createResourceBindingInitFn();
-        Builder.CreateCall(llvm::FunctionCallee(ResInitFn), {});
-      }
-    }
-
     Scope.ForceCleanup();
 
     if (ExitBlock) {

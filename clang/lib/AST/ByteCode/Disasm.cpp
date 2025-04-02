@@ -62,6 +62,12 @@ inline IntegralAP<true> ReadArg<IntegralAP<true>>(Program &P, CodePtr &OpPC) {
   return I;
 }
 
+template <> inline FixedPoint ReadArg<FixedPoint>(Program &P, CodePtr &OpPC) {
+  FixedPoint I = FixedPoint::deserialize(*OpPC);
+  OpPC += align(I.bytesToSerialize());
+  return I;
+}
+
 LLVM_DUMP_METHOD void Function::dump() const { dump(llvm::errs()); }
 
 LLVM_DUMP_METHOD void Function::dump(llvm::raw_ostream &OS) const {
@@ -368,10 +374,10 @@ LLVM_DUMP_METHOD void EvaluationResult::dump() const {
   case LValue: {
     assert(Source);
     QualType SourceType;
-    if (const auto *D = Source.dyn_cast<const Decl *>()) {
+    if (const auto *D = dyn_cast<const Decl *>(Source)) {
       if (const auto *VD = dyn_cast<ValueDecl>(D))
         SourceType = VD->getType();
-    } else if (const auto *E = Source.dyn_cast<const Expr *>()) {
+    } else if (const auto *E = dyn_cast<const Expr *>(Source)) {
       SourceType = E->getType();
     }
 

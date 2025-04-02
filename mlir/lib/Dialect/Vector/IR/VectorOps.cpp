@@ -19,6 +19,7 @@
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/AffineExpr.h"
@@ -1274,6 +1275,13 @@ OpFoldResult vector::ExtractElementOp::fold(FoldAdaptor adaptor) {
   return srcElements[posIdx];
 }
 
+// Returns `true` if `index` is either within [0, maxIndex) or equal to
+// `poisonValue`.
+static bool isValidPositiveIndexOrPoison(int64_t index, int64_t poisonValue,
+                                         int64_t maxIndex) {
+  return index == poisonValue || (index >= 0 && index < maxIndex);
+}
+
 //===----------------------------------------------------------------------===//
 // ExtractOp
 //===----------------------------------------------------------------------===//
@@ -1355,11 +1363,12 @@ LogicalResult vector::ExtractOp::verify() {
   for (auto [idx, pos] : llvm::enumerate(position)) {
     if (auto attr = dyn_cast<Attribute>(pos)) {
       int64_t constIdx = cast<IntegerAttr>(attr).getInt();
-      if (constIdx < 0 || constIdx >= getSourceVectorType().getDimSize(idx)) {
+      if (!isValidPositiveIndexOrPoison(
+              constIdx, kPoisonIndex, getSourceVectorType().getDimSize(idx))) {
         return emitOpError("expected position attribute #")
                << (idx + 1)
                << " to be a non-negative integer smaller than the "
-                  "corresponding vector dimension";
+                  "corresponding vector dimension or poison (-1)";
       }
     }
   }
@@ -1479,7 +1488,7 @@ private:
 
   /// Try to fold in place to extract(source, extractPosition) and return the
   /// folded result. Return null if folding is not possible (e.g. due to an
-  /// internal tranposition in the result).
+  /// internal transposition in the result).
   Value tryToFoldExtractOpInPlace(Value source);
 
   ExtractOp extractOp;
@@ -1573,7 +1582,7 @@ ExtractFromInsertTransposeChainState::handleInsertOpWithPrefixPos(Value &res) {
 
 /// Try to fold in place to extract(source, extractPosition) and return the
 /// folded result. Return null if folding is not possible (e.g. due to an
-/// internal tranposition in the result).
+/// internal transposition in the result).
 Value ExtractFromInsertTransposeChainState::tryToFoldExtractOpInPlace(
     Value source) {
   // TODO: Canonicalization for dynamic position not implemented yet.
@@ -1977,12 +1986,26 @@ static Value foldScalarExtractFromFromElements(ExtractOp extractOp) {
   return fromElementsOp.getElements()[flatIndex];
 }
 
-OpFoldResult ExtractOp::fold(FoldAdaptor) {
+/// Fold an insert or extract operation into an poison value when a poison index
+/// is found at any dimension of the static position.
+static ub::PoisonAttr
+foldPoisonIndexInsertExtractOp(MLIRContext *context,
+                               ArrayRef<int64_t> staticPos, int64_t poisonVal) {
+  if (!llvm::is_contained(staticPos, poisonVal))
+    return ub::PoisonAttr();
+
+  return ub::PoisonAttr::get(context);
+}
+
+OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
   // Fold "vector.extract %v[] : vector<2x2xf32> from vector<2x2xf32>" to %v.
   // Note: Do not fold "vector.extract %v[] : f32 from vector<f32>" (type
   // mismatch).
   if (getNumIndices() == 0 && getVector().getType() == getResult().getType())
     return getVector();
+  if (auto res = foldPoisonIndexInsertExtractOp(
+          getContext(), adaptor.getStaticPosition(), kPoisonIndex))
+    return res;
   if (succeeded(foldExtractOpFromExtractChain(*this)))
     return getResult();
   if (auto res = ExtractFromInsertTransposeChainState(*this).fold())
@@ -2249,6 +2272,21 @@ LogicalResult foldExtractFromFromElements(ExtractOp extractOp,
                                          resultType.getNumElements()));
   return success();
 }
+
+/// Fold an insert or extract operation into an poison value when a poison index
+/// is found at any dimension of the static position.
+template <typename OpTy>
+LogicalResult
+canonicalizePoisonIndexInsertExtractOp(OpTy op, PatternRewriter &rewriter) {
+  if (auto poisonAttr = foldPoisonIndexInsertExtractOp(
+          op.getContext(), op.getStaticPosition(), OpTy::kPoisonIndex)) {
+    rewriter.replaceOpWithNewOp<ub::PoisonOp>(op, op.getType(), poisonAttr);
+    return success();
+  }
+
+  return failure();
+}
+
 } // namespace
 
 void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
@@ -2257,6 +2295,7 @@ void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
               ExtractOpFromBroadcast, ExtractOpFromCreateMask>(context);
   results.add(foldExtractFromShapeCastToShapeCast);
   results.add(foldExtractFromFromElements);
+  results.add(canonicalizePoisonIndexInsertExtractOp<ExtractOp>);
 }
 
 static void populateFromInt64AttrArray(ArrayAttr arrayAttr,
@@ -2600,7 +2639,7 @@ LogicalResult ShuffleOp::verify() {
   int64_t indexSize = (v1Type.getRank() == 0 ? 1 : v1Type.getDimSize(0)) +
                       (v2Type.getRank() == 0 ? 1 : v2Type.getDimSize(0));
   for (auto [idx, maskPos] : llvm::enumerate(mask)) {
-    if (maskPos < 0 || maskPos >= indexSize)
+    if (!isValidPositiveIndexOrPoison(maskPos, kPoisonIndex, indexSize))
       return emitOpError("mask index #") << (idx + 1) << " out of range";
   }
   return success();
@@ -2882,7 +2921,8 @@ LogicalResult InsertOp::verify() {
   for (auto [idx, pos] : llvm::enumerate(position)) {
     if (auto attr = pos.dyn_cast<Attribute>()) {
       int64_t constIdx = cast<IntegerAttr>(attr).getInt();
-      if (constIdx < 0 || constIdx >= destVectorType.getDimSize(idx)) {
+      if (!isValidPositiveIndexOrPoison(constIdx, kPoisonIndex,
+                                        destVectorType.getDimSize(idx))) {
         return emitOpError("expected position attribute #")
                << (idx + 1)
                << " to be a non-negative integer smaller than the "
@@ -3020,6 +3060,7 @@ void InsertOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
   results.add<InsertToBroadcast, BroadcastFolder, InsertSplatToSplat,
               InsertOpConstantFolder>(context);
+  results.add(canonicalizePoisonIndexInsertExtractOp<InsertOp>);
 }
 
 OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {
@@ -3028,6 +3069,10 @@ OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {
   // (type mismatch).
   if (getNumIndices() == 0 && getSourceType() == getType())
     return getSource();
+  if (auto res = foldPoisonIndexInsertExtractOp(
+          getContext(), adaptor.getStaticPosition(), kPoisonIndex))
+    return res;
+
   return {};
 }
 
@@ -4974,7 +5019,7 @@ static LogicalResult verifyLoadStoreMemRefLayout(Operation *op,
       (vecTy.getRank() == 0 || vecTy.getNumElements() == 1))
     return success();
 
-  if (!isLastMemrefDimUnitStride(memRefTy))
+  if (!memRefTy.isLastDimUnitStride())
     return op->emitOpError("most minor memref dim must have unit stride");
   return success();
 }
@@ -5184,6 +5229,23 @@ std::optional<SmallVector<int64_t, 4>> GatherOp::getShapeForUnroll() {
   return llvm::to_vector<4>(getVectorType().getShape());
 }
 
+/// Cheeck if `indexVec` is constant 1D vec of consecutive values [0, 1, 2, ...]
+static LogicalResult isZeroBasedContiguousSeq(Value indexVec) {
+  auto vecType = dyn_cast<VectorType>(indexVec.getType());
+  if (!vecType || vecType.getRank() != 1 || vecType.isScalable())
+    return failure();
+
+  if (indexVec.getDefiningOp<StepOp>())
+    return success();
+
+  DenseIntElementsAttr elements;
+  if (!matchPattern(indexVec, m_Constant(&elements)))
+    return failure();
+
+  return success(
+      llvm::equal(elements, llvm::seq<int64_t>(0, vecType.getNumElements())));
+}
+
 namespace {
 class GatherFolder final : public OpRewritePattern<GatherOp> {
 public:
@@ -5202,11 +5264,28 @@ public:
     llvm_unreachable("Unexpected 1DMaskFormat on GatherFolder");
   }
 };
+
+/// Fold gathers with consecutive offsets [0, 1, 2, ...] into contiguous
+/// maskedload. Only 1D fixed vectors are supported for now.
+class FoldContiguousGather final : public OpRewritePattern<GatherOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(GatherOp op,
+                                PatternRewriter &rewriter) const override {
+    if (failed(isZeroBasedContiguousSeq(op.getIndexVec())))
+      return failure();
+
+    rewriter.replaceOpWithNewOp<MaskedLoadOp>(op, op.getType(), op.getBase(),
+                                              op.getIndices(), op.getMask(),
+                                              op.getPassThru());
+    return success();
+  }
+};
 } // namespace
 
 void GatherOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
-  results.add<GatherFolder>(context);
+  results.add<GatherFolder, FoldContiguousGather>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -5248,11 +5327,27 @@ public:
     llvm_unreachable("Unexpected 1DMaskFormat on ScatterFolder");
   }
 };
+
+/// Fold scatters with consecutive offsets [0, 1, 2, ...] into contiguous
+/// maskedstore. Only 1D fixed vectors are supported for now.
+class FoldContiguousScatter final : public OpRewritePattern<ScatterOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(ScatterOp op,
+                                PatternRewriter &rewriter) const override {
+    if (failed(isZeroBasedContiguousSeq(op.getIndexVec())))
+      return failure();
+
+    rewriter.replaceOpWithNewOp<MaskedStoreOp>(
+        op, op.getBase(), op.getIndices(), op.getMask(), op.getValueToStore());
+    return success();
+  }
+};
 } // namespace
 
 void ScatterOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.add<ScatterFolder>(context);
+  results.add<ScatterFolder, FoldContiguousScatter>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -5789,7 +5884,7 @@ void TypeCastOp::build(OpBuilder &builder, OperationState &result,
 }
 
 LogicalResult TypeCastOp::verify() {
-  MemRefType canonicalType = canonicalizeStridedLayout(getMemRefType());
+  MemRefType canonicalType = getMemRefType().canonicalizeStridedLayout();
   if (!canonicalType.getLayout().isIdentity())
     return emitOpError("expects operand to be a memref with identity layout");
   if (!getResultMemRefType().getLayout().isIdentity())

@@ -650,7 +650,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
 
         NextDbgInsts = I->getDbgRecordRange();
 
-        Inst->moveBefore(LoopEntryBranch);
+        Inst->moveBefore(LoopEntryBranch->getIterator());
 
         ++NumInstrsHoisted;
         continue;
@@ -658,7 +658,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
 
       // Otherwise, create a duplicate of the instruction.
       Instruction *C = Inst->clone();
-      C->insertBefore(LoopEntryBranch);
+      C->insertBefore(LoopEntryBranch->getIterator());
 
       ++NumInstrsDuplicated;
 

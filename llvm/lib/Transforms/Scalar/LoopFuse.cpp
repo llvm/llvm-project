@@ -1662,7 +1662,7 @@ private:
       if (SE.isSCEVable(PHI->getType()))
         SE.forgetValue(PHI);
       if (PHI->hasNUsesOrMore(1))
-        PHI->moveBefore(&*FC0.Header->getFirstInsertionPt());
+        PHI->moveBefore(FC0.Header->getFirstInsertionPt());
       else
         PHI->eraseFromParent();
     }
@@ -1947,7 +1947,7 @@ private:
       if (SE.isSCEVable(PHI->getType()))
         SE.forgetValue(PHI);
       if (PHI->hasNUsesOrMore(1))
-        PHI->moveBefore(&*FC0.Header->getFirstInsertionPt());
+        PHI->moveBefore(FC0.Header->getFirstInsertionPt());
       else
         PHI->eraseFromParent();
     }

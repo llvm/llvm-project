@@ -926,6 +926,26 @@ bool RISCVRegisterInfo::getRegAllocationHints(
         tryAddHint(MO, MI.getOperand(0), NeedGPRC);
       }
     }
+
+    // Add a hint if it would allow auipc/lui+addi(w) fusion.
+    if ((MI.getOpcode() == RISCV::ADDIW || MI.getOpcode() == RISCV::ADDI) &&
+        MI.getOperand(1).isReg()) {
+      const MachineBasicBlock &MBB = *MI.getParent();
+      MachineBasicBlock::const_iterator I = MI.getIterator();
+      // Is the previous instruction a LUI or AUIPC that can be fused?
+      if (I != MBB.begin()) {
+        I = skipDebugInstructionsBackward(std::prev(I), MBB.begin());
+        if (((I->getOpcode() == RISCV::LUI && Subtarget.hasLUIADDIFusion()) ||
+             (I->getOpcode() == RISCV::AUIPC &&
+              Subtarget.hasAUIPCADDIFusion())) &&
+            I->getOperand(0).getReg() == MI.getOperand(1).getReg()) {
+          if (OpIdx == 0)
+            tryAddHint(MO, MI.getOperand(1), /*NeedGPRC=*/false);
+          else
+            tryAddHint(MO, MI.getOperand(0), /*NeedGPRC=*/false);
+        }
+      }
+    }
   }
 
   for (MCPhysReg OrderReg : Order)

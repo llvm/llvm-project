@@ -167,8 +167,8 @@ void LoongArchFrameLowering::processFunctionBeforeFrameFinalized(
 
   // Create emergency spill slots.
   for (unsigned i = 0; i < ScavSlotsNum; ++i) {
-    int FI = MFI.CreateStackObject(RI->getSpillSize(RC), RI->getSpillAlign(RC),
-                                   false);
+    int FI =
+        MFI.CreateSpillStackObject(RI->getSpillSize(RC), RI->getSpillAlign(RC));
     RS->addScavengingFrameIndex(FI);
     if (IsLargeFunction && LAFI->getBranchRelaxationSpillFrameIndex() == -1)
       LAFI->setBranchRelaxationSpillFrameIndex(FI);

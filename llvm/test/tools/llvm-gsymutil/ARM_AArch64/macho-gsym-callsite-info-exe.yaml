@@ -4,7 +4,7 @@
 # RUN: split-file %s %t
 # RUN: yaml2obj %t/call_sites.exe.yaml -o %t/call_sites.exe
 
-# RUN: llvm-gsymutil --convert=%t/call_sites.exe --callsites-yaml-file=%t/callsites.yaml -o %t/call_sites_exe.gsym
+# RUN: llvm-gsymutil --num-threads=1 --convert=%t/call_sites.exe --callsites-yaml-file=%t/callsites.yaml -o %t/call_sites_exe.gsym
 
 # Dump the GSYM file and check the output for callsite information
 # RUN: llvm-gsymutil %t/call_sites_exe.gsym | FileCheck --check-prefix=CHECK-GSYM %s

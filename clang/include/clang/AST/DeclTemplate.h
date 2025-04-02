@@ -367,12 +367,11 @@ public:
     if (!isSet())
       ValueOrInherited = InheritedFrom;
     else if ([[maybe_unused]] auto *D =
-                 ValueOrInherited.template dyn_cast<ParmDecl *>()) {
+                 dyn_cast<ParmDecl *>(ValueOrInherited)) {
       assert(C.isSameDefaultTemplateArgument(D, InheritedFrom));
       ValueOrInherited =
           new (allocateDefaultArgStorageChain(C)) Chain{InheritedFrom, get()};
-    } else if (auto *Inherited =
-                   ValueOrInherited.template dyn_cast<Chain *>()) {
+    } else if (auto *Inherited = dyn_cast<Chain *>(ValueOrInherited)) {
       assert(C.isSameDefaultTemplateArgument(Inherited->PrevDeclWithDefaultArg,
                                              InheritedFrom));
       Inherited->PrevDeclWithDefaultArg = InheritedFrom;
@@ -1010,6 +1009,15 @@ public:
   /// pattern.
   bool isThisDeclarationADefinition() const {
     return getTemplatedDecl()->isThisDeclarationADefinition();
+  }
+
+  bool isCompatibleWithDefinition() const {
+    return getTemplatedDecl()->isInstantiatedFromMemberTemplate() ||
+           isThisDeclarationADefinition();
+  }
+  void setInstantiatedFromMemberTemplate(FunctionTemplateDecl *D) {
+    getTemplatedDecl()->setInstantiatedFromMemberTemplate();
+    RedeclarableTemplateDecl::setInstantiatedFromMemberTemplate(D);
   }
 
   /// Return the specialization with the provided arguments if it exists,
@@ -2010,7 +2018,8 @@ public:
   /// Retrieve the template argument list as written in the sources,
   /// if any.
   const ASTTemplateArgumentListInfo *getTemplateArgsAsWritten() const {
-    if (auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>())
+    if (auto *Info =
+            dyn_cast_if_present<ExplicitInstantiationInfo *>(ExplicitInfo))
       return Info->TemplateArgsAsWritten;
     return cast<const ASTTemplateArgumentListInfo *>(ExplicitInfo);
   }
@@ -2018,7 +2027,8 @@ public:
   /// Set the template argument list as written in the sources.
   void
   setTemplateArgsAsWritten(const ASTTemplateArgumentListInfo *ArgsWritten) {
-    if (auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>())
+    if (auto *Info =
+            dyn_cast_if_present<ExplicitInstantiationInfo *>(ExplicitInfo))
       Info->TemplateArgsAsWritten = ArgsWritten;
     else
       ExplicitInfo = ArgsWritten;
@@ -2032,7 +2042,8 @@ public:
 
   /// Gets the location of the extern keyword, if present.
   SourceLocation getExternKeywordLoc() const {
-    if (auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>())
+    if (auto *Info =
+            dyn_cast_if_present<ExplicitInstantiationInfo *>(ExplicitInfo))
       return Info->ExternKeywordLoc;
     return SourceLocation();
   }
@@ -2042,7 +2053,8 @@ public:
 
   /// Gets the location of the template keyword, if present.
   SourceLocation getTemplateKeywordLoc() const {
-    if (auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>())
+    if (auto *Info =
+            dyn_cast_if_present<ExplicitInstantiationInfo *>(ExplicitInfo))
       return Info->TemplateKeywordLoc;
     return SourceLocation();
   }
@@ -2779,7 +2791,8 @@ public:
   /// Retrieve the template argument list as written in the sources,
   /// if any.
   const ASTTemplateArgumentListInfo *getTemplateArgsAsWritten() const {
-    if (auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>())
+    if (auto *Info =
+            dyn_cast_if_present<ExplicitInstantiationInfo *>(ExplicitInfo))
       return Info->TemplateArgsAsWritten;
     return cast<const ASTTemplateArgumentListInfo *>(ExplicitInfo);
   }
@@ -2787,7 +2800,8 @@ public:
   /// Set the template argument list as written in the sources.
   void
   setTemplateArgsAsWritten(const ASTTemplateArgumentListInfo *ArgsWritten) {
-    if (auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>())
+    if (auto *Info =
+            dyn_cast_if_present<ExplicitInstantiationInfo *>(ExplicitInfo))
       Info->TemplateArgsAsWritten = ArgsWritten;
     else
       ExplicitInfo = ArgsWritten;
@@ -2801,7 +2815,8 @@ public:
 
   /// Gets the location of the extern keyword, if present.
   SourceLocation getExternKeywordLoc() const {
-    if (auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>())
+    if (auto *Info =
+            dyn_cast_if_present<ExplicitInstantiationInfo *>(ExplicitInfo))
       return Info->ExternKeywordLoc;
     return SourceLocation();
   }
@@ -2811,7 +2826,8 @@ public:
 
   /// Gets the location of the template keyword, if present.
   SourceLocation getTemplateKeywordLoc() const {
-    if (auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>())
+    if (auto *Info =
+            dyn_cast_if_present<ExplicitInstantiationInfo *>(ExplicitInfo))
       return Info->TemplateKeywordLoc;
     return SourceLocation();
   }

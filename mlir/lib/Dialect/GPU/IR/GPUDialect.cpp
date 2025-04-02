@@ -29,6 +29,7 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -217,6 +218,10 @@ void GPUDialect::initialize() {
   addInterfaces<GPUInlinerInterface>();
   declarePromisedInterface<bufferization::BufferDeallocationOpInterface,
                            TerminatorOp>();
+  declarePromisedInterfaces<
+      ValueBoundsOpInterface, ClusterDimOp, ClusterDimBlocksOp, ClusterIdOp,
+      ClusterBlockIdOp, BlockDimOp, BlockIdOp, GridDimOp, ThreadIdOp, LaneIdOp,
+      SubgroupIdOp, GlobalIdOp, NumSubgroupsOp, SubgroupSizeOp, LaunchOp>();
 }
 
 static std::string getSparseHandleKeyword(SparseHandleKind kind) {
@@ -1898,7 +1903,7 @@ LogicalResult SubgroupMmaLoadMatrixOp::verify() {
   auto operand = resMatrixType.getOperand();
   auto srcMemrefType = llvm::cast<MemRefType>(srcType);
 
-  if (!isLastMemrefDimUnitStride(srcMemrefType))
+  if (!srcMemrefType.isLastDimUnitStride())
     return emitError(
         "expected source memref most minor dim must have unit stride");
 
@@ -1918,7 +1923,7 @@ LogicalResult SubgroupMmaStoreMatrixOp::verify() {
   auto srcMatrixType = llvm::cast<gpu::MMAMatrixType>(srcType);
   auto dstMemrefType = llvm::cast<MemRefType>(dstType);
 
-  if (!isLastMemrefDimUnitStride(dstMemrefType))
+  if (!dstMemrefType.isLastDimUnitStride())
     return emitError(
         "expected destination memref most minor dim must have unit stride");
 

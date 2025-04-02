@@ -3241,7 +3241,7 @@ bool
 ARMTargetLowering::CanLowerReturn(CallingConv::ID CallConv,
                                   MachineFunction &MF, bool isVarArg,
                                   const SmallVectorImpl<ISD::OutputArg> &Outs,
-                                  LLVMContext &Context) const {
+                                  LLVMContext &Context, const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, isVarArg, MF, RVLocs, Context);
   return CCInfo.CheckReturn(Outs, CCAssignFnForReturn(CallConv, isVarArg));

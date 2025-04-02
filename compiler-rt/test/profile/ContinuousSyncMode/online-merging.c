@@ -1,4 +1,5 @@
 // REQUIRES: continuous-mode
+// UNSUPPORTED: powerpc-{{.*}}
 
 // Test the online merging mode (%m) along with continuous mode (%c).
 //

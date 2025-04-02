@@ -155,7 +155,7 @@ unsigned Program::getOrCreateDummy(const DeclTy &D) {
 
   QualType QT;
   bool IsWeak = false;
-  if (const auto *E = D.dyn_cast<const Expr *>()) {
+  if (const auto *E = dyn_cast<const Expr *>(D)) {
     QT = E->getType();
   } else {
     const ValueDecl *VD = cast<ValueDecl>(cast<const Decl *>(D));
@@ -453,15 +453,21 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
 
   // Complex types - represented as arrays of elements.
   if (const auto *CT = Ty->getAs<ComplexType>()) {
-    PrimType ElemTy = *Ctx.classify(CT->getElementType());
-    return allocateDescriptor(D, ElemTy, MDSize, 2, IsConst, IsTemporary,
+    std::optional<PrimType> ElemTy = Ctx.classify(CT->getElementType());
+    if (!ElemTy)
+      return nullptr;
+
+    return allocateDescriptor(D, *ElemTy, MDSize, 2, IsConst, IsTemporary,
                               IsMutable);
   }
 
   // Same with vector types.
   if (const auto *VT = Ty->getAs<VectorType>()) {
-    PrimType ElemTy = *Ctx.classify(VT->getElementType());
-    return allocateDescriptor(D, ElemTy, MDSize, VT->getNumElements(), IsConst,
+    std::optional<PrimType> ElemTy = Ctx.classify(VT->getElementType());
+    if (!ElemTy)
+      return nullptr;
+
+    return allocateDescriptor(D, *ElemTy, MDSize, VT->getNumElements(), IsConst,
                               IsTemporary, IsMutable);
   }
 

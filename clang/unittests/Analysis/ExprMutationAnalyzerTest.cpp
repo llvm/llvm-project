@@ -14,6 +14,7 @@
 #include "clang/Tooling/Tooling.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <cassert>
 #include <cctype>
 
 namespace clang {
@@ -1609,4 +1610,398 @@ TEST(ExprMutationAnalyzerTest, ReproduceFailureMinimal) {
       match(withEnclosingCompound(declRefTo("x")), AST11->getASTContext());
   EXPECT_FALSE(isMutated(Results11, AST11.get()));
 }
+
+static bool isPointeeMutated(const SmallVectorImpl<BoundNodes> &Results,
+                             ASTUnit *AST) {
+  const auto *const S = selectFirst<Stmt>("stmt", Results);
+  const auto *const E = selectFirst<Expr>("expr", Results);
+  assert(S && E);
+  TraversalKindScope RAII(AST->getASTContext(), TK_AsIs);
+  return ExprMutationAnalyzer(*S, AST->getASTContext()).isPointeeMutated(E);
+}
+
+static bool isDeclPointeeMutated(const SmallVectorImpl<BoundNodes> &Results,
+                                 ASTUnit *AST) {
+  const auto *const S = selectFirst<Stmt>("stmt", Results);
+  const auto *const D = selectFirst<Decl>("decl", Results);
+  assert(S && D);
+  TraversalKindScope RAII(AST->getASTContext(), TK_AsIs);
+  return ExprMutationAnalyzer(*S, AST->getASTContext()).isPointeeMutated(D);
+}
+
+TEST(ExprMutationAnalyzerTest, PointeeMutatedByAssign) {
+  {
+    const std::string Code = "void f() { int* x = nullptr; int b = *x; }";
+    auto AST = buildASTFromCodeWithArgs(Code, {});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_FALSE(isPointeeMutated(Results, AST.get()));
+  }
+  {
+    const std::string Code = "void f() { int* x = nullptr; *x = 100; }";
+    auto AST = buildASTFromCodeWithArgs(Code, {});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+  }
+  {
+    const std::string Code = "void f() { int* x = nullptr; (*x)++; }";
+    auto AST = buildASTFromCodeWithArgs(Code, {"-Wno-unused-value"});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+  }
+}
+
+TEST(ExprMutationAnalyzerTest, PointeeMutatedByMember) {
+  {
+    const std::string Code =
+        "struct A { int v; }; void f() { A* x = nullptr; int b = x->v; }";
+    auto AST = buildASTFromCodeWithArgs(Code, {});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_FALSE(isPointeeMutated(Results, AST.get()));
+  }
+  {
+    const std::string Code =
+        "struct A { int v; }; void f() { A* x = nullptr; x->v = 1; }";
+    auto AST = buildASTFromCodeWithArgs(Code, {});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+  }
+  {
+    const std::string Code =
+        "struct A { int v; }; void f() { A* x = nullptr; x->v++; }";
+    auto AST = buildASTFromCodeWithArgs(Code, {"-Wno-unused-value"});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+  }
+}
+TEST(ExprMutationAnalyzerTest, PointeeMutatedByMethod) {
+  {
+    const std::string Code = "struct A { int v; void foo(); };"
+                             "void f() { A* x = nullptr; x->foo(); }";
+    auto AST = buildASTFromCodeWithArgs(Code, {});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+  }
+  {
+    const std::string Code = "struct A { int v; void foo() const; };"
+                             "void f() { A* x = nullptr; x->foo(); }";
+    auto AST = buildASTFromCodeWithArgs(Code, {});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_FALSE(isPointeeMutated(Results, AST.get()));
+  }
+}
+TEST(ExprMutationAnalyzerTest, PointeeMutatedByOperatorOverload) {
+  {
+    const std::string Code = "struct A { int v; int operator++(); };"
+                             "void f() { A* x = nullptr; x->operator++(); }";
+    auto AST = buildASTFromCodeWithArgs(Code, {});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+  }
+  {
+    const std::string Code = "struct A { int v; int operator++() const; };"
+                             "void f() { A* x = nullptr; x->operator++(); }";
+    auto AST = buildASTFromCodeWithArgs(Code, {});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_FALSE(isPointeeMutated(Results, AST.get()));
+  }
+}
+
+TEST(ExprMutationAnalyzerTest, PointeeMutatedByInitToNonConst) {
+  {
+    const std::string Code = "void f() { int* x = nullptr; int const* b = x; }";
+    auto AST = buildASTFromCodeWithArgs(Code, {});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_FALSE(isPointeeMutated(Results, AST.get()));
+  }
+  {
+    const std::string Code = "void f() { int* x = nullptr; int* b = x; }";
+    auto AST = buildASTFromCodeWithArgs(Code, {});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+  }
+  {
+    const std::string Code = "void f() { int* x = nullptr; int* const b = x; }";
+    auto AST = buildASTFromCodeWithArgs(Code, {});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+  }
+}
+
+TEST(ExprMutationAnalyzerTest, PointeeMutatedByAssignToNonConst) {
+  {
+    const std::string Code =
+        "void f() { int* x = nullptr; int const* b; b = x; }";
+    auto AST = buildASTFromCodeWithArgs(Code, {});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_FALSE(isPointeeMutated(Results, AST.get()));
+  }
+  {
+    const std::string Code = "void f() { int* x = nullptr; int* b; b = x; }";
+    auto AST = buildASTFromCodeWithArgs(Code, {});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+  }
+}
+
+TEST(ExprMutationAnalyzerTest, PointeeMutatedByPassAsArgument) {
+  {
+    const std::string Code =
+        "void b(int const*); void f() { int* x = nullptr; b(x); }";
+    auto AST = buildASTFromCodeWithArgs(Code, {});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_FALSE(isPointeeMutated(Results, AST.get()));
+  }
+  {
+    const std::string Code =
+        "void b(int *); void f() { int* x = nullptr; b(x); }";
+    auto AST = buildASTFromCodeWithArgs(Code, {});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+  }
+}
+
+TEST(ExprMutationAnalyzerTest, PointeeMutatedByPassAsArgumentInConstruct) {
+  {
+    const std::string Code = "struct A { A(int const*); };"
+                             "void f() { int *x; A a{x}; }";
+    auto AST = buildASTFromCodeWithArgs(Code, {});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_FALSE(isPointeeMutated(Results, AST.get()));
+  }
+  {
+    const std::string Code = "struct A { A(int const*); };"
+                             "void f() { int *x; A a(x); }";
+    auto AST = buildASTFromCodeWithArgs(Code, {});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_FALSE(isPointeeMutated(Results, AST.get()));
+  }
+  {
+    const std::string Code = "struct A { A(int const*); };"
+                             "void f() { int *x; A a = x; }";
+    auto AST = buildASTFromCodeWithArgs(Code, {});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_FALSE(isPointeeMutated(Results, AST.get()));
+  }
+  {
+    const std::string Code = "struct A { A(int *); };"
+                             "void f() { int *x; A a{x}; }";
+    auto AST = buildASTFromCodeWithArgs(Code, {});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+  }
+}
+
+TEST(ExprMutationAnalyzerTest,
+     PointeeMutatedByPassAsArgumentInTemplateConstruct) {
+  const std::string Code = "template<class T> void f() { int *x; new T(x); }";
+  auto AST = buildASTFromCodeWithArgs(Code, {"-fno-delayed-template-parsing"});
+  auto Results =
+      match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+}
+
+TEST(ExprMutationAnalyzerTest, PointeeMutatedByPassAsArgumentInInitList) {
+  {
+    const std::string Code =
+        "namespace std {"
+        "template<class T>"
+        "struct initializer_list{ T const* begin; T const* end; };"
+        "}"
+        "void f() { int *x; std::initializer_list<int*> a{x, x, x}; }";
+    auto AST =
+        buildASTFromCodeWithArgs(Code, {"-fno-delayed-template-parsing"});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+  }
+}
+
+TEST(ExprMutationAnalyzerTest, PointeeMutatedByThis) {
+  {
+    const std::string Code =
+        "struct A { void m() const; }; void f() { A* x = nullptr; x->m(); }";
+    auto AST = buildASTFromCodeWithArgs(Code, {});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_FALSE(isPointeeMutated(Results, AST.get()));
+  }
+  {
+    const std::string Code =
+        "struct A { void m(); }; void f() { A* x = nullptr; x->m(); }";
+    auto AST = buildASTFromCodeWithArgs(Code, {});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+  }
+}
+
+TEST(ExprMutationAnalyzerTest, PointeeMutatedByExplicitCastToNonConst) {
+  {
+    const std::string Code =
+        "void f() { int* x = nullptr; static_cast<int const*>(x); }";
+    auto AST = buildASTFromCodeWithArgs(Code, {"-Wno-everything"});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_FALSE(isPointeeMutated(Results, AST.get()));
+  }
+  {
+    const std::string Code =
+        "void f() { int* x = nullptr; static_cast<int*>(x); }";
+    auto AST = buildASTFromCodeWithArgs(Code, {"-Wno-everything"});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+  }
+}
+
+TEST(ExprMutationAnalyzerTest, PointeeMutatedByConstCastToNonConst) {
+  // const_cast to non-const even treat as mutated.
+  {
+    const std::string Code =
+        "void f() { int* x = nullptr; const_cast<int const*>(x); }";
+    auto AST = buildASTFromCodeWithArgs(Code, {"-Wno-everything"});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_FALSE(isPointeeMutated(Results, AST.get()));
+  }
+  {
+    const std::string Code =
+        "void f() { int* x = nullptr; const_cast<int*>(x); }";
+    auto AST = buildASTFromCodeWithArgs(Code, {"-Wno-everything"});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+  }
+}
+
+TEST(ExprMutationAnalyzerTest, PointeeMutatedByUnresolvedCall) {
+  const std::string Code =
+      "template <class T> struct S;"
+      "template <class T> void f() { S<T> s; int* x = nullptr; s.m(x); }";
+  auto AST = buildASTFromCodeWithArgs(
+      Code, {"-fno-delayed-template-parsing", "-Wno-everything"});
+  auto Results =
+      match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+}
+
+TEST(ExprMutationAnalyzerTest, PointeeMutatedByAssignToUnknownType) {
+  {
+    const std::string Code = "template <class T> void f() {"
+                             "  int* x = nullptr;"
+                             "  T t = x;"
+                             "}";
+    auto AST = buildASTFromCodeWithArgs(
+        Code, {"-fno-delayed-template-parsing", "-Wno-everything"});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+  }
+  {
+    const std::string Code = "template <class T> void f() {"
+                             "  int* x = nullptr;"
+                             "  typename T::t t = x;"
+                             "}";
+    auto AST = buildASTFromCodeWithArgs(
+        Code, {"-fno-delayed-template-parsing", "-Wno-everything"});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+  }
+}
+
+TEST(ExprMutationAnalyzerTest, PointeeMutatedByLambdaCapture) {
+  const std::string Code = R"(
+      void f() {
+        int* x;
+        [x] () { *x = 1; };
+      })";
+  auto AST = buildASTFromCodeWithArgs(Code, {"-Wno-everything"});
+  auto Results =
+      match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_TRUE(isDeclPointeeMutated(Results, AST.get()));
+}
+
+TEST(ExprMutationAnalyzerTest, PointeeMutatedByLambdaCaptureInit) {
+  const std::string Code = R"(
+      void f() {
+        int* x;
+        [t = x] () { *t = 1; };
+      })";
+  auto AST = buildASTFromCodeWithArgs(Code, {"-Wno-everything"});
+  auto Results =
+      match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_TRUE(isDeclPointeeMutated(Results, AST.get()));
+}
+
+TEST(ExprMutationAnalyzerTest, PointeeMutatedByPointerArithmeticAdd) {
+  {
+    const std::string Code = R"(
+      void f() {
+        int* x;
+        int* y = x + 1;
+      })";
+    auto AST = buildASTFromCodeWithArgs(Code, {"-Wno-everything"});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+  }
+  {
+    const std::string Code = R"(
+      void f() {
+        int* x;
+        x + 1;
+      })";
+    auto AST = buildASTFromCodeWithArgs(Code, {"-Wno-everything"});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_FALSE(isPointeeMutated(Results, AST.get()));
+  }
+}
+
+TEST(ExprMutationAnalyzerTest, PointeeMutatedByPointerArithmeticSubElement) {
+  const std::string Code = R"(
+      void f() {
+        int* x;
+        int* y = &x[1];
+      })";
+  auto AST = buildASTFromCodeWithArgs(Code, {"-Wno-everything"});
+  auto Results =
+      match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+}
+
+TEST(ExprMutationAnalyzerTest, PointeeMutatedByConditionOperator) {
+  const std::string Code = R"(
+      void f() {
+        int* x;
+        int* y = 1 ? nullptr : x;
+      })";
+  auto AST = buildASTFromCodeWithArgs(Code, {"-Wno-everything"});
+  auto Results =
+      match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+}
+
 } // namespace clang

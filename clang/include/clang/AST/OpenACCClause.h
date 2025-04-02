@@ -965,6 +965,52 @@ public:
   Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
          ArrayRef<Expr *> VarList, SourceLocation EndLoc);
 };
+class OpenACCHostClause final
+    : public OpenACCClauseWithVarList,
+      private llvm::TrailingObjects<OpenACCHostClause, Expr *> {
+  friend TrailingObjects;
+
+  OpenACCHostClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                    ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+      : OpenACCClauseWithVarList(OpenACCClauseKind::Host, BeginLoc, LParenLoc,
+                                 EndLoc) {
+    std::uninitialized_copy(VarList.begin(), VarList.end(),
+                            getTrailingObjects<Expr *>());
+    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+  }
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Host;
+  }
+  static OpenACCHostClause *Create(const ASTContext &C, SourceLocation BeginLoc,
+                                   SourceLocation LParenLoc,
+                                   ArrayRef<Expr *> VarList,
+                                   SourceLocation EndLoc);
+};
+
+class OpenACCDeviceClause final
+    : public OpenACCClauseWithVarList,
+      private llvm::TrailingObjects<OpenACCDeviceClause, Expr *> {
+  friend TrailingObjects;
+
+  OpenACCDeviceClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                      ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+      : OpenACCClauseWithVarList(OpenACCClauseKind::Device, BeginLoc, LParenLoc,
+                                 EndLoc) {
+    std::uninitialized_copy(VarList.begin(), VarList.end(),
+                            getTrailingObjects<Expr *>());
+    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+  }
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Device;
+  }
+  static OpenACCDeviceClause *
+  Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
+         ArrayRef<Expr *> VarList, SourceLocation EndLoc);
+};
 
 class OpenACCCopyClause final
     : public OpenACCClauseWithVarList,

@@ -266,7 +266,7 @@ void StackSlotColoring::InitializeSlots() {
   for (auto *I : Intervals) {
     LiveInterval &li = I->second;
     LLVM_DEBUG(li.dump());
-    int FI = Register::stackSlot2Index(li.reg());
+    int FI = li.reg().stackSlotIndex();
     if (MFI->isDeadObjectIndex(FI))
       continue;
 
@@ -300,7 +300,7 @@ void StackSlotColoring::InitializeSlots() {
 int StackSlotColoring::ColorSlot(LiveInterval *li) {
   int Color = -1;
   bool Share = false;
-  int FI = Register::stackSlot2Index(li->reg());
+  int FI = li->reg().stackSlotIndex();
   uint8_t StackID = MFI->getStackID(FI);
 
   if (!DisableSharing) {
@@ -361,7 +361,7 @@ bool StackSlotColoring::ColorSlots(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "Color spill slot intervals:\n");
   bool Changed = false;
   for (LiveInterval *li : SSIntervals) {
-    int SS = Register::stackSlot2Index(li->reg());
+    int SS = li->reg().stackSlotIndex();
     int NewSS = ColorSlot(li);
     assert(NewSS >= 0 && "Stack coloring failed?");
     SlotMapping[SS] = NewSS;
@@ -373,7 +373,7 @@ bool StackSlotColoring::ColorSlots(MachineFunction &MF) {
 
   LLVM_DEBUG(dbgs() << "\nSpill slots after coloring:\n");
   for (LiveInterval *li : SSIntervals) {
-    int SS = Register::stackSlot2Index(li->reg());
+    int SS = li->reg().stackSlotIndex();
     li->setWeight(SlotWeights[SS]);
   }
   // Sort them by new weight.

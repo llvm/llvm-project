@@ -10,7 +10,7 @@ target triple = "aarch64"
 
 define void @test_pr25490(i32 %n, ptr noalias nocapture %a, ptr noalias nocapture %b, ptr noalias nocapture readonly %c) {
 ; CHECK-LABEL: define void @test_pr25490
-; CHECK-SAME: (i32 [[N:%.*]], ptr noalias nocapture [[A:%.*]], ptr noalias nocapture [[B:%.*]], ptr noalias nocapture readonly [[C:%.*]]) {
+; CHECK-SAME: (i32 [[N:%.*]], ptr noalias captures(none) [[A:%.*]], ptr noalias captures(none) [[B:%.*]], ptr noalias readonly captures(none) [[C:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP_28:%.*]] = icmp eq i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP_28]], label [[FOR_COND_CLEANUP:%.*]], label [[ITER_CHECK:%.*]]

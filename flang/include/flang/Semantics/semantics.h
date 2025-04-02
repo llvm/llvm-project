@@ -110,6 +110,12 @@ public:
   }
   Scope &globalScope() { return globalScope_; }
   Scope &intrinsicModulesScope() { return intrinsicModulesScope_; }
+  Scope *currentHermeticModuleFileScope() {
+    return currentHermeticModuleFileScope_;
+  }
+  void set_currentHermeticModuleFileScope(Scope *scope) {
+    currentHermeticModuleFileScope_ = scope;
+  }
   parser::Messages &messages() { return messages_; }
   evaluate::FoldingContext &foldingContext() { return foldingContext_; }
   parser::AllCookedSources &allCookedSources() { return allCookedSources_; }
@@ -313,6 +319,7 @@ private:
   evaluate::TargetCharacteristics targetCharacteristics_;
   Scope globalScope_;
   Scope &intrinsicModulesScope_;
+  Scope *currentHermeticModuleFileScope_{nullptr};
   ScopeIndex scopeIndex_;
   parser::Messages messages_;
   evaluate::FoldingContext foldingContext_;

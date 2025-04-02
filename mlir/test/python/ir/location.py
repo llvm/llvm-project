@@ -47,12 +47,17 @@ run(testLocationAttr)
 def testFileLineCol():
     with Context() as ctx:
         loc = Location.file("foo.txt", 123, 56)
+        range = Location.file("foo.txt", 123, 56, 123, 100)
     ctx = None
     gc.collect()
     # CHECK: file str: loc("foo.txt":123:56)
     print("file str:", str(loc))
     # CHECK: file repr: loc("foo.txt":123:56)
     print("file repr:", repr(loc))
+    # CHECK: file range str: loc("foo.txt":123:56 to :100)
+    print("file range str:", str(range))
+    # CHECK: file range repr: loc("foo.txt":123:56 to :100)
+    print("file range repr:", repr(range))
 
 
 run(testFileLineCol)

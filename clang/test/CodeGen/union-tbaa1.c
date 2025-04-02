@@ -8,7 +8,7 @@ typedef union __attribute__((aligned(4))) {
 void bar(vect32 p[][2]);
 
 // CHECK-LABEL: define dso_local void @fred
-// CHECK-SAME: (i32 noundef [[NUM:%.*]], ptr nocapture noundef writeonly initializes((0, 8)) [[VEC:%.*]], ptr nocapture noundef readonly [[INDEX:%.*]], ptr nocapture noundef readonly [[ARR:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: (i32 noundef [[NUM:%.*]], ptr noundef writeonly captures(none) initializes((0, 8)) [[VEC:%.*]], ptr noundef readonly captures(none) [[INDEX:%.*]], ptr noundef readonly captures(none) [[ARR:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP:%.*]] = alloca [4 x [2 x %union.vect32]], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[TMP]]) #[[ATTR3:[0-9]+]]

@@ -21,7 +21,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class>
-inline constexpr bool is_execution_policy_v = false;
+_LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_execution_policy_v = false;
 
 template <class>
 inline constexpr bool __is_unsequenced_execution_policy_impl = false;

@@ -264,6 +264,13 @@ static void CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
   updateStringLiteralType(Str, DeclT);
 }
 
+void emitUninitializedExplicitInitFields(Sema &S, const RecordDecl *R) {
+  for (const FieldDecl *Field : R->fields()) {
+    if (Field->hasAttr<ExplicitInitAttr>())
+      S.Diag(Field->getLocation(), diag::note_entity_declared_at) << Field;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Semantic checking for initializer lists.
 //===----------------------------------------------------------------------===//
@@ -738,6 +745,14 @@ void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
         ILE->updateInit(SemaRef.Context, Init, Filler);
       return;
     }
+
+    if (!VerifyOnly && Field->hasAttr<ExplicitInitAttr>()) {
+      SemaRef.Diag(ILE->getExprLoc(), diag::warn_field_requires_explicit_init)
+          << /* Var-in-Record */ 0 << Field;
+      SemaRef.Diag(Field->getLocation(), diag::note_entity_declared_at)
+          << Field;
+    }
+
     // C++1y [dcl.init.aggr]p7:
     //   If there are fewer initializer-clauses in the list than there are
     //   members in the aggregate, then each member not explicitly initialized
@@ -4558,6 +4573,14 @@ static void TryConstructorInitialization(Sema &S,
 
   CXXConstructorDecl *CtorDecl = cast<CXXConstructorDecl>(Best->Function);
   if (Result != OR_Deleted) {
+    if (!IsListInit && Kind.getKind() == InitializationKind::IK_Default &&
+        DestRecordDecl != nullptr && DestRecordDecl->isAggregate() &&
+        DestRecordDecl->hasUninitializedExplicitInitFields()) {
+      S.Diag(Kind.getLocation(), diag::warn_field_requires_explicit_init)
+          << /* Var-in-Record */ 1 << DestRecordDecl;
+      emitUninitializedExplicitInitFields(S, DestRecordDecl);
+    }
+
     // C++11 [dcl.init]p6:
     //   If a program calls for the default initialization of an object
     //   of a const-qualified type T, T shall be a class type with a
@@ -5852,6 +5875,12 @@ static void TryOrBuildParenListInitialization(
       } else {
         // We've processed all of the args, but there are still members that
         // have to be initialized.
+        if (!VerifyOnly && FD->hasAttr<ExplicitInitAttr>()) {
+          S.Diag(Kind.getLocation(), diag::warn_field_requires_explicit_init)
+              << /* Var-in-Record */ 0 << FD;
+          S.Diag(FD->getLocation(), diag::note_entity_declared_at) << FD;
+        }
+
         if (FD->hasInClassInitializer()) {
           if (!VerifyOnly) {
             // C++ [dcl.init]p16.6.2.2
@@ -6454,6 +6483,19 @@ void InitializationSequence::InitializeFrom(Sema &S,
       TryListInitialization(S, Entity, Kind, InitList, *this,
                             TreatUnavailableAsInvalid);
       return;
+    }
+  }
+
+  if (!S.getLangOpts().CPlusPlus &&
+      Kind.getKind() == InitializationKind::IK_Default) {
+    RecordDecl *Rec = DestType->getAsRecordDecl();
+    if (Rec && Rec->hasUninitializedExplicitInitFields()) {
+      VarDecl *Var = dyn_cast_or_null<VarDecl>(Entity.getDecl());
+      if (Var && !Initializer) {
+        S.Diag(Var->getLocation(), diag::warn_field_requires_explicit_init)
+            << /* Var-in-Record */ 1 << Rec;
+        emitUninitializedExplicitInitFields(S, Rec);
+      }
     }
   }
 
@@ -7309,6 +7351,22 @@ PerformConstructorInitialization(Sema &S,
     // An explicitly-constructed temporary, e.g., X(1, 2).
     if (S.DiagnoseUseOfDecl(Step.Function.FoundDecl, Loc))
       return ExprError();
+
+    if (Kind.getKind() == InitializationKind::IK_Value &&
+        Constructor->isImplicit()) {
+      auto *RD = Step.Type.getCanonicalType()->getAsCXXRecordDecl();
+      if (RD && RD->isAggregate() && RD->hasUninitializedExplicitInitFields()) {
+        unsigned I = 0;
+        for (const FieldDecl *FD : RD->fields()) {
+          if (I >= ConstructorArgs.size() && FD->hasAttr<ExplicitInitAttr>()) {
+            S.Diag(Loc, diag::warn_field_requires_explicit_init)
+                << /* Var-in-Record */ 0 << FD;
+            S.Diag(FD->getLocation(), diag::note_entity_declared_at) << FD;
+          }
+          ++I;
+        }
+      }
+    }
 
     TypeSourceInfo *TSInfo = Entity.getTypeSourceInfo();
     if (!TSInfo)

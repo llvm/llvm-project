@@ -37,11 +37,11 @@ define void @bar() {
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_readlane_b32 s31, v40, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v40, 0
+; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    v_readlane_b32 s4, v40, 2
 ; CHECK-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; CHECK-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b64 exec, s[6:7]
-; CHECK-NEXT:    s_addk_i32 s32, 0xfc00
 ; CHECK-NEXT:    s_mov_b32 s33, s4
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]

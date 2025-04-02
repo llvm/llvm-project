@@ -262,6 +262,7 @@ if(LIBC_TARGET_OS_IS_GPU)
 endif()
 
 include(LLVMLibCCheckMPFR)
+include(LLVMLibCCheckMPC)
 
 if(LLVM_LIBC_CLANG_TIDY)
   set(LLVM_LIBC_ENABLE_LINTING ON)
@@ -322,6 +323,9 @@ option(LLVM_LIBC_INCLUDE_SCUDO "Include the SCUDO standalone as the allocator fo
 if(LLVM_LIBC_INCLUDE_SCUDO)
   if (NOT ("compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS OR "compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES))
     message(FATAL_ERROR "SCUDO cannot be included without adding compiler-rt to LLVM_ENABLE_PROJECTS or LLVM_ENABLE_RUNTIMES")
+  endif()
+  if (DEFINED COMPILER_RT_BUILD_SANITIZERS AND NOT COMPILER_RT_BUILD_SANITIZERS)
+    message(FATAL_ERROR "Disabling COMPILER_RT_BUILD_SANITIZERS will produce a libc without malloc/free")
   endif()
 endif()
 

@@ -107,7 +107,8 @@ define <vscale x 4 x i32> @different_vl_with_ta(<vscale x 4 x i32> %a, <vscale x
   ret <vscale x 4 x i32> %w
 }
 
-; Test case to make sure VL won't propgate if using tail-undisturbed policy.
+; We can propagate VL to a tail-undisturbed policy, provided none of its users
+; are passthrus (i.e. read past VL).
 define <vscale x 4 x i32> @different_vl_with_tu(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl1, iXLen %vl2) {
 ; CHECK-LABEL: different_vl_with_tu:
 ; CHECK:       # %bb.0:
@@ -118,22 +119,65 @@ define <vscale x 4 x i32> @different_vl_with_tu(<vscale x 4 x i32> %passthru, <v
 ; CHECK-NEXT:    vadd.vv v8, v14, v10
 ; CHECK-NEXT:    ret
   %v = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl1)
-  %w = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %v, <vscale x 4 x i32> %a,iXLen %vl2)
+  %w = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %v, <vscale x 4 x i32> %a, iXLen %vl2)
   ret <vscale x 4 x i32> %w
 }
 
-; Test case to make sure VL won't propgate if using tail-undisturbed policy.
+; We can propagate VL to a tail-undisturbed policy, provided none of its users
+; are passthrus (i.e. read past VL).
 define <vscale x 4 x i32> @different_imm_vl_with_tu(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl1, iXLen %vl2) {
-; CHECK-LABEL: different_imm_vl_with_tu:
+; NOVLOPT-LABEL: different_imm_vl_with_tu:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetivli zero, 5, e32, m2, tu, ma
+; NOVLOPT-NEXT:    vmv2r.v v14, v10
+; NOVLOPT-NEXT:    vadd.vv v14, v10, v12
+; NOVLOPT-NEXT:    vsetivli zero, 4, e32, m2, tu, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v14, v10
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: different_imm_vl_with_tu:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetivli zero, 4, e32, m2, tu, ma
+; VLOPT-NEXT:    vmv2r.v v14, v10
+; VLOPT-NEXT:    vadd.vv v14, v10, v12
+; VLOPT-NEXT:    vadd.vv v8, v14, v10
+; VLOPT-NEXT:    ret
+  %v = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen 5)
+  %w = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %v, <vscale x 4 x i32> %a, iXLen 4)
+  ret <vscale x 4 x i32> %w
+}
+
+; We can't reduce the VL as %v is used as a passthru, i.e. the elements past VL
+; are demanded.
+define <vscale x 4 x i32> @different_vl_as_passthru(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl1, iXLen %vl2) {
+; CHECK-LABEL: different_vl_as_passthru:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
+; CHECK-NEXT:    vmv2r.v v12, v8
+; CHECK-NEXT:    vadd.vv v12, v8, v10
+; CHECK-NEXT:    vsetvli zero, a1, e32, m2, tu, ma
+; CHECK-NEXT:    vadd.vv v12, v8, v10
+; CHECK-NEXT:    vmv2r.v v8, v12
+; CHECK-NEXT:    ret
+  %v = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl1)
+  %w = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> %v, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl2)
+  ret <vscale x 4 x i32> %w
+}
+
+; We can't reduce the VL as %v is used as a passthru, i.e. the elements past VL
+; are demanded.
+define <vscale x 4 x i32> @different_imm_vl_as_passthru(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl1, iXLen %vl2) {
+; CHECK-LABEL: different_imm_vl_as_passthru:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 5, e32, m2, tu, ma
-; CHECK-NEXT:    vmv2r.v v14, v10
-; CHECK-NEXT:    vadd.vv v14, v10, v12
+; CHECK-NEXT:    vmv2r.v v12, v8
+; CHECK-NEXT:    vadd.vv v12, v8, v10
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m2, tu, ma
-; CHECK-NEXT:    vadd.vv v8, v14, v10
+; CHECK-NEXT:    vadd.vv v12, v8, v10
+; CHECK-NEXT:    vmv2r.v v8, v12
 ; CHECK-NEXT:    ret
   %v = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen 5)
-  %w = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %v, <vscale x 4 x i32> %a,iXLen 4)
+  %w = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> %v, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen 4)
   ret <vscale x 4 x i32> %w
 }
 

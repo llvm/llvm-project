@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s -test-lower-to-llvm  | \
-// RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
+// RUN: mlir-runner -e entry -entry-point-result=void  \
 // RUN:   -O0 -enable-matrix -matrix-allow-contract -matrix-default-layout=column-major \
 // RUN:   -shared-libs=%mlir_c_runner_utils | \
 // RUN: FileCheck %s

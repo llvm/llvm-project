@@ -104,7 +104,7 @@ def FileLineColRange : DialectAttribute<(attr
     WithPrinter<"writeFileLineColRangeLocs($_writer, $_name)">>>>:$rawLocData
 )> {
   let cBuilder = "getFileLineColRange(context, filename, rawLocData)";
-  let printerPredicate = "!::llvm::isa<FileLineColLoc>($_val)";
+  let printerPredicate = "!isStrictFileLineColLoc($_val)";
 }
 
 def FileLineColLoc : DialectAttribute<(attr
@@ -112,7 +112,7 @@ def FileLineColLoc : DialectAttribute<(attr
   VarInt:$start_line,
   VarInt:$start_column
 )> {
-  let printerPredicate = "::llvm::isa<FileLineColLoc>($_val)";
+  let printerPredicate = "isStrictFileLineColLoc($_val)";
 }
 }
 

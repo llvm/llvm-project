@@ -199,6 +199,8 @@ llvm.func @bar(!llvm.ptr)
 // CHECK-DAG:     %[[RED_ALLOC:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, i64 1, align 8
 
 // CHECK:         omp.par.region:
+// CHECK:           br label %omp.reduction.init
+// CHECK:         omp.reduction.init:
 // CHECK:           br label %[[PAR_REG_BEG:.*]]
 // CHECK:         [[PAR_REG_BEG]]:
 // CHECK-NEXT:      %{{.*}} = load { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[RED_ALLOC]], align 8

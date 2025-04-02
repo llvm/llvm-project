@@ -949,7 +949,7 @@ void ClauseProcessor::processMapObjects(
     std::stringstream asFortran;
     std::optional<omp::Object> parentObj;
 
-    lower::AddrAndBoundsInfo info =
+    fir::factory::AddrAndBoundsInfo info =
         lower::gatherDataOperandAddrAndBounds<mlir::omp::MapBoundsOp,
                                               mlir::omp::MapBoundsType>(
             converter, firOpBuilder, semaCtx, stmtCtx, *object.sym(),

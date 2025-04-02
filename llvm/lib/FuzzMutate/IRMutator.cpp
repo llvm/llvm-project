@@ -660,7 +660,7 @@ void ShuffleBlockStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   Instruction *Terminator = BB.getTerminator();
   // Then put instructions back.
   for (Instruction *I : Insts) {
-    I->insertBefore(Terminator);
+    I->insertBefore(Terminator->getIterator());
   }
 }
 

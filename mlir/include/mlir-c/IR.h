@@ -256,6 +256,11 @@ mlirLocationFromAttribute(MlirAttribute attribute);
 MLIR_CAPI_EXPORTED MlirLocation mlirLocationFileLineColGet(
     MlirContext context, MlirStringRef filename, unsigned line, unsigned col);
 
+/// Creates an File/Line/Column range location owned by the given context.
+MLIR_CAPI_EXPORTED MlirLocation mlirLocationFileLineColRangeGet(
+    MlirContext context, MlirStringRef filename, unsigned start_line,
+    unsigned start_col, unsigned end_line, unsigned end_col);
+
 /// Creates a call site location with a callee and a caller.
 MLIR_CAPI_EXPORTED MlirLocation mlirLocationCallSiteGet(MlirLocation callee,
                                                         MlirLocation caller);

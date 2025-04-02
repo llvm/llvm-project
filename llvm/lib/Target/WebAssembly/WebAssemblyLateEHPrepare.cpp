@@ -128,7 +128,7 @@ bool WebAssemblyLateEHPrepare::runOnMachineFunction(MachineFunction &MF) {
     Changed |= hoistCatches(MF);
     Changed |= addCatchAlls(MF);
     Changed |= replaceFuncletReturns(MF);
-    if (WebAssembly::WasmEnableExnref)
+    if (!WebAssembly::WasmUseLegacyEH)
       Changed |= addCatchRefsAndThrowRefs(MF);
   }
   Changed |= removeUnnecessaryUnreachables(MF);
@@ -217,9 +217,9 @@ bool WebAssemblyLateEHPrepare::addCatchAlls(MachineFunction &MF) {
     if (InsertPos == MBB.end() ||
         !WebAssembly::isCatch(InsertPos->getOpcode())) {
       Changed = true;
-      unsigned CatchAllOpcode = WebAssembly::WasmEnableExnref
-                                    ? WebAssembly::CATCH_ALL
-                                    : WebAssembly::CATCH_ALL_LEGACY;
+      unsigned CatchAllOpcode = WebAssembly::WasmUseLegacyEH
+                                    ? WebAssembly::CATCH_ALL_LEGACY
+                                    : WebAssembly::CATCH_ALL;
       BuildMI(MBB, InsertPos,
               InsertPos == MBB.end() ? DebugLoc() : InsertPos->getDebugLoc(),
               TII.get(CatchAllOpcode));

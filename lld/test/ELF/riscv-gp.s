@@ -18,6 +18,14 @@
 
 # ERR: error: relocation R_RISCV_PCREL_HI20 cannot be used against symbol '__global_pointer$'; recompile with -fPIC
 
+# RUN: ld.lld -pie --no-dynamic-linker --export-dynamic %t.64.o -o %t.64e
+# RUN: llvm-readelf -s %t.64e | FileCheck %s --check-prefix=STATICPIE
+
+# STATICPIE:     '.dynsym'
+# STATICPIE-NOT: __global_pointer$
+# STATICPIE:     '.symtab'
+# STATICPIE:     __global_pointer$
+
 ## -r mode does not define __global_pointer$.
 # RUN: ld.lld -r %t.64.o -o %t.64.ro
 # RUN: llvm-readelf -s %t.64.ro | FileCheck --check-prefix=RELOCATABLE %s

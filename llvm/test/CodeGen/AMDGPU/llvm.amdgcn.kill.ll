@@ -55,7 +55,7 @@ define amdgpu_gs void @false() {
 ; GCN: v_cmp_lt_i32
 ; GCN: v_cmp_lt_i32
 ; GCN: s_or_b64 s[0:1]
-; GCN: s_xor_b64 s[0:1], s[0:1], exec
+; GCN: s_and{{n2|_not1}}_b64 s[0:1], exec, s[0:1]
 ; GCN: s_and{{n2|_not1}}_b64 s[2:3], s[2:3], s[0:1]
 ; GCN: s_and_b64 exec, exec, s[2:3]
 define amdgpu_gs void @and(i32 %a, i32 %b, i32 %c, i32 %d) {
@@ -238,7 +238,7 @@ define amdgpu_ps void @fcmp_x2(float %a) #0 {
 ; GCN: v_cmp_neq_f32_e32 vcc, 0
 ; GCN-DAG: s_wqm_b64 s[2:3], vcc
 ; GCN-DAG: s_mov_b64 s[0:1], exec
-; GCN: s_xor_b64 s[2:3], s[2:3], exec
+; GCN: s_and{{n2|_not1}}_b64 s[2:3], exec, s[2:3]
 ; GCN: s_and{{n2|_not1}}_b64 s[0:1], s[0:1], s[2:3]
 ; GCN: s_and_b64 exec, exec, s[0:1]
 define amdgpu_ps float @wqm(float %a) {

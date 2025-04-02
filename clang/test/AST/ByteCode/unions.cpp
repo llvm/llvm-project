@@ -401,4 +401,24 @@ namespace UnionInBase {
                                         // both-note {{subobject 'y' is not initialized}}
   static_assert(return_uninit().a.x == 2);
 }
+
+/// FIXME: Our diagnostic here is a little off.
+namespace One {
+  struct A { long x; };
+
+  union U;
+  constexpr A foo(U *up);
+  union U {
+    A a = foo(this); // both-note {{in call to 'foo(&u)'}}
+    int y;
+  };
+
+  constexpr A foo(U *up) {
+    return {up->y}; // both-note {{read of member 'y' of union}}
+  }
+
+  constinit U u = {}; // both-error {{constant init}} \
+                      // both-note {{constinit}}
+}
+
 #endif

@@ -219,3 +219,12 @@ class PluginPythonOSPlugin(TestBase):
             6,
             "Make sure we stepped from line 5 to line 6 in main.c",
         )
+
+        thread_bp_number = lldbutil.run_break_set_by_source_regexp(
+            self, "Set tid-specific breakpoint here", num_expected_locations=1
+        )
+        breakpoint = target.FindBreakpointByID(thread_bp_number)
+        # This breakpoint should not be hit.
+        breakpoint.SetThreadID(123)
+        process.Continue()
+        self.assertState(process.GetState(), lldb.eStateExited)

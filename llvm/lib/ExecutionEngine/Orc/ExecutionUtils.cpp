@@ -525,49 +525,17 @@ Error DLLImportDefinitionGenerator::tryToGenerate(
   return L.add(JD, std::move(*G));
 }
 
-Expected<unsigned>
-DLLImportDefinitionGenerator::getTargetPointerSize(const Triple &TT) {
-  switch (TT.getArch()) {
-  case Triple::x86_64:
-    return 8;
-  default:
-    return make_error<StringError>(
-        "architecture unsupported by DLLImportDefinitionGenerator",
-        inconvertibleErrorCode());
-  }
-}
-
-Expected<llvm::endianness>
-DLLImportDefinitionGenerator::getEndianness(const Triple &TT) {
-  switch (TT.getArch()) {
-  case Triple::x86_64:
-    return llvm::endianness::little;
-  default:
-    return make_error<StringError>(
-        "architecture unsupported by DLLImportDefinitionGenerator",
-        inconvertibleErrorCode());
-  }
-}
-
 Expected<std::unique_ptr<jitlink::LinkGraph>>
 DLLImportDefinitionGenerator::createStubsGraph(const SymbolMap &Resolved) {
-  Triple TT = ES.getTargetTriple();
-  auto PointerSize = getTargetPointerSize(TT);
-  if (!PointerSize)
-    return PointerSize.takeError();
-  auto Endianness = getEndianness(TT);
-  if (!Endianness)
-    return Endianness.takeError();
-
   auto G = std::make_unique<jitlink::LinkGraph>(
-      "<DLLIMPORT_STUBS>", ES.getSymbolStringPool(), TT, *PointerSize,
-      *Endianness, jitlink::getGenericEdgeKindName);
+      "<DLLIMPORT_STUBS>", ES.getSymbolStringPool(), ES.getTargetTriple(),
+      SubtargetFeatures(), jitlink::getGenericEdgeKindName);
   jitlink::Section &Sec =
       G->createSection(getSectionName(), MemProt::Read | MemProt::Exec);
 
   for (auto &KV : Resolved) {
     jitlink::Symbol &Target = G->addAbsoluteSymbol(
-        *KV.first, KV.second.getAddress(), *PointerSize,
+        *KV.first, KV.second.getAddress(), G->getPointerSize(),
         jitlink::Linkage::Strong, jitlink::Scope::Local, false);
 
     // Create __imp_ symbol

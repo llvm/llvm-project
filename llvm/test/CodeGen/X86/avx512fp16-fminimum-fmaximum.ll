@@ -41,7 +41,7 @@ define <8 x half> @test_fminimum_v8f16(<8 x half> %x, <8 x half> %y) "no-nans-fp
 define half @test_fminimum_nnan(half %x, half %y) "no-nans-fp-math"="true" {
 ; CHECK-LABEL: test_fminimum_nnan:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfpclasssh $5, %xmm1, %k1
+; CHECK-NEXT:    vfpclasssh $5, %xmm1, %k1 # k1 = isQuietNaN(xmm1) | isNegativeZero(xmm1)
 ; CHECK-NEXT:    vmovaps %xmm0, %xmm2
 ; CHECK-NEXT:    vmovsh %xmm1, %xmm0, %xmm2 {%k1}
 ; CHECK-NEXT:    vmovsh %xmm0, %xmm0, %xmm1 {%k1}
@@ -78,7 +78,7 @@ define half @test_fminimum_combine_cmps(half %x, half %y) {
 ; CHECK-LABEL: test_fminimum_combine_cmps:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vdivsh %xmm0, %xmm1, %xmm1
-; CHECK-NEXT:    vfpclasssh $5, %xmm0, %k1
+; CHECK-NEXT:    vfpclasssh $5, %xmm0, %k1 # k1 = isQuietNaN(xmm0) | isNegativeZero(xmm0)
 ; CHECK-NEXT:    vmovaps %xmm1, %xmm2
 ; CHECK-NEXT:    vmovsh %xmm0, %xmm0, %xmm2 {%k1}
 ; CHECK-NEXT:    vmovsh %xmm1, %xmm0, %xmm0 {%k1}
@@ -121,7 +121,7 @@ define half @test_fmaximum_nnan(half %x, half %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vaddsh %xmm1, %xmm0, %xmm2
 ; CHECK-NEXT:    vsubsh %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vfpclasssh $3, %xmm0, %k1
+; CHECK-NEXT:    vfpclasssh $3, %xmm0, %k1 # k1 = isQuietNaN(xmm0) | isPositiveZero(xmm0)
 ; CHECK-NEXT:    vmovaps %xmm2, %xmm1
 ; CHECK-NEXT:    vmovsh %xmm0, %xmm0, %xmm1 {%k1}
 ; CHECK-NEXT:    vmovsh %xmm2, %xmm0, %xmm0 {%k1}
@@ -161,7 +161,7 @@ define half @test_fmaximum_combine_cmps(half %x, half %y) {
 ; CHECK-LABEL: test_fmaximum_combine_cmps:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vdivsh %xmm0, %xmm1, %xmm1
-; CHECK-NEXT:    vfpclasssh $3, %xmm0, %k1
+; CHECK-NEXT:    vfpclasssh $3, %xmm0, %k1 # k1 = isQuietNaN(xmm0) | isPositiveZero(xmm0)
 ; CHECK-NEXT:    vmovaps %xmm1, %xmm2
 ; CHECK-NEXT:    vmovsh %xmm0, %xmm0, %xmm2 {%k1}
 ; CHECK-NEXT:    vmovsh %xmm1, %xmm0, %xmm0 {%k1}

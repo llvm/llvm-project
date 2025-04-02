@@ -30,7 +30,7 @@ template <class _Tp>
 using __decay_t _LIBCPP_NODEBUG = __decay(_Tp);
 
 template <class _Tp>
-struct decay {
+struct _LIBCPP_NO_SPECIALIZATIONS decay {
   using type _LIBCPP_NODEBUG = __decay_t<_Tp>;
 };
 

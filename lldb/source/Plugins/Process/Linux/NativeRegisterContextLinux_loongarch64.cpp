@@ -27,7 +27,17 @@
 // struct iovec definition
 #include <sys/uio.h>
 
-#define REG_CONTEXT_SIZE (GetGPRSize() + GetFPRSize())
+#ifndef NT_LOONGARCH_LSX
+#define NT_LOONGARCH_LSX 0xa02 /* LoongArch SIMD eXtension registers */
+#endif
+
+#ifndef NT_LOONGARCH_LASX
+#define NT_LOONGARCH_LASX                                                      \
+  0xa03 /* LoongArch Advanced SIMD eXtension registers */
+#endif
+
+#define REG_CONTEXT_SIZE                                                       \
+  (GetGPRSize() + GetFPRSize() + sizeof(m_lsx) + sizeof(m_lasx))
 
 using namespace lldb;
 using namespace lldb_private;
@@ -62,6 +72,8 @@ NativeRegisterContextLinux_loongarch64::NativeRegisterContextLinux_loongarch64(
       NativeRegisterContextLinux(native_thread) {
   ::memset(&m_fpr, 0, sizeof(m_fpr));
   ::memset(&m_gpr, 0, sizeof(m_gpr));
+  ::memset(&m_lsx, 0, sizeof(m_lsx));
+  ::memset(&m_lasx, 0, sizeof(m_lasx));
 
   ::memset(&m_hwp_regs, 0, sizeof(m_hwp_regs));
   ::memset(&m_hbp_regs, 0, sizeof(m_hbp_regs));
@@ -75,6 +87,8 @@ NativeRegisterContextLinux_loongarch64::NativeRegisterContextLinux_loongarch64(
 
   m_gpr_is_valid = false;
   m_fpu_is_valid = false;
+  m_lsx_is_valid = false;
+  m_lasx_is_valid = false;
 }
 
 const RegisterInfoPOSIX_loongarch64 &
@@ -135,6 +149,22 @@ Status NativeRegisterContextLinux_loongarch64::ReadRegister(
     offset = CalculateFprOffset(reg_info);
     assert(offset < GetFPRSize());
     src = (uint8_t *)GetFPRBuffer() + offset;
+  } else if (IsLSX(reg)) {
+    error = ReadLSX();
+    if (error.Fail())
+      return error;
+
+    offset = CalculateLsxOffset(reg_info);
+    assert(offset < sizeof(m_lsx));
+    src = (uint8_t *)&m_lsx + offset;
+  } else if (IsLASX(reg)) {
+    error = ReadLASX();
+    if (error.Fail())
+      return error;
+
+    offset = CalculateLasxOffset(reg_info);
+    assert(offset < sizeof(m_lasx));
+    src = (uint8_t *)&m_lasx + offset;
   } else
     return Status::FromErrorString(
         "failed - register wasn't recognized to be a GPR or an FPR, "
@@ -184,6 +214,28 @@ Status NativeRegisterContextLinux_loongarch64::WriteRegister(
     ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
 
     return WriteFPR();
+  } else if (IsLSX(reg)) {
+    error = ReadLSX();
+    if (error.Fail())
+      return error;
+
+    offset = CalculateLsxOffset(reg_info);
+    assert(offset < sizeof(m_lsx));
+    dst = (uint8_t *)&m_lsx + offset;
+    ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
+
+    return WriteLSX();
+  } else if (IsLASX(reg)) {
+    error = ReadLASX();
+    if (error.Fail())
+      return error;
+
+    offset = CalculateLasxOffset(reg_info);
+    assert(offset < sizeof(m_lasx));
+    dst = (uint8_t *)&m_lasx + offset;
+    ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
+
+    return WriteLASX();
   }
 
   return Status::FromErrorString("Failed to write register value");
@@ -203,10 +255,22 @@ Status NativeRegisterContextLinux_loongarch64::ReadAllRegisterValues(
   if (error.Fail())
     return error;
 
+  error = ReadLSX();
+  if (error.Fail())
+    return error;
+
+  error = ReadLASX();
+  if (error.Fail())
+    return error;
+
   uint8_t *dst = data_sp->GetBytes();
   ::memcpy(dst, GetGPRBuffer(), GetGPRSize());
   dst += GetGPRSize();
   ::memcpy(dst, GetFPRBuffer(), GetFPRSize());
+  dst += GetFPRSize();
+  ::memcpy(dst, &m_lsx, sizeof(m_lsx));
+  dst += sizeof(m_lsx);
+  ::memcpy(dst, &m_lasx, sizeof(m_lasx));
 
   return error;
 }
@@ -247,8 +311,24 @@ Status NativeRegisterContextLinux_loongarch64::WriteAllRegisterValues(
 
   src += GetRegisterInfoInterface().GetGPRSize();
   ::memcpy(GetFPRBuffer(), src, GetFPRSize());
-
+  m_fpu_is_valid = true;
   error = WriteFPR();
+  if (error.Fail())
+    return error;
+
+  // Currently, we assume that LoongArch always support LASX.
+  // TODO: check whether LSX/LASX exists.
+  src += GetFPRSize();
+  ::memcpy(&m_lsx, src, sizeof(m_lsx));
+  m_lsx_is_valid = true;
+  error = WriteLSX();
+  if (error.Fail())
+    return error;
+
+  src += sizeof(m_lsx);
+  ::memcpy(&m_lasx, src, sizeof(m_lasx));
+  m_lasx_is_valid = true;
+  error = WriteLASX();
   if (error.Fail())
     return error;
 
@@ -263,6 +343,16 @@ bool NativeRegisterContextLinux_loongarch64::IsGPR(unsigned reg) const {
 bool NativeRegisterContextLinux_loongarch64::IsFPR(unsigned reg) const {
   return GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg) ==
          RegisterInfoPOSIX_loongarch64::FPRegSet;
+}
+
+bool NativeRegisterContextLinux_loongarch64::IsLSX(unsigned reg) const {
+  return GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg) ==
+         RegisterInfoPOSIX_loongarch64::LSXRegSet;
+}
+
+bool NativeRegisterContextLinux_loongarch64::IsLASX(unsigned reg) const {
+  return GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg) ==
+         RegisterInfoPOSIX_loongarch64::LASXRegSet;
 }
 
 Status NativeRegisterContextLinux_loongarch64::ReadGPR() {
@@ -325,18 +415,100 @@ Status NativeRegisterContextLinux_loongarch64::WriteFPR() {
   ioVec.iov_len = GetFPRSize();
 
   m_fpu_is_valid = false;
+  m_lsx_is_valid = false;
+  m_lasx_is_valid = false;
 
   return WriteRegisterSet(&ioVec, GetFPRSize(), NT_FPREGSET);
+}
+
+Status NativeRegisterContextLinux_loongarch64::ReadLSX() {
+  Status error;
+
+  if (m_lsx_is_valid)
+    return error;
+
+  struct iovec ioVec;
+  ioVec.iov_base = &m_lsx;
+  ioVec.iov_len = sizeof(m_lsx);
+
+  error = ReadRegisterSet(&ioVec, sizeof(m_lsx), NT_LOONGARCH_LSX);
+
+  if (error.Success())
+    m_lsx_is_valid = true;
+
+  return error;
+}
+
+Status NativeRegisterContextLinux_loongarch64::WriteLSX() {
+  Status error = ReadLSX();
+  if (error.Fail())
+    return error;
+
+  struct iovec ioVec;
+  ioVec.iov_base = &m_lsx;
+  ioVec.iov_len = sizeof(m_lsx);
+
+  m_fpu_is_valid = false;
+  m_lsx_is_valid = false;
+  m_lasx_is_valid = false;
+
+  return WriteRegisterSet(&ioVec, sizeof(m_lsx), NT_LOONGARCH_LSX);
+}
+
+Status NativeRegisterContextLinux_loongarch64::ReadLASX() {
+  Status error;
+
+  if (m_lasx_is_valid)
+    return error;
+
+  struct iovec ioVec;
+  ioVec.iov_base = &m_lasx;
+  ioVec.iov_len = sizeof(m_lasx);
+
+  error = ReadRegisterSet(&ioVec, sizeof(m_lasx), NT_LOONGARCH_LASX);
+
+  if (error.Success())
+    m_lasx_is_valid = true;
+
+  return error;
+}
+
+Status NativeRegisterContextLinux_loongarch64::WriteLASX() {
+  Status error = ReadLASX();
+  if (error.Fail())
+    return error;
+
+  struct iovec ioVec;
+  ioVec.iov_base = &m_lasx;
+  ioVec.iov_len = sizeof(m_lasx);
+
+  m_fpu_is_valid = false;
+  m_lsx_is_valid = false;
+  m_lasx_is_valid = false;
+
+  return WriteRegisterSet(&ioVec, sizeof(m_lasx), NT_LOONGARCH_LASX);
 }
 
 void NativeRegisterContextLinux_loongarch64::InvalidateAllRegisters() {
   m_gpr_is_valid = false;
   m_fpu_is_valid = false;
+  m_lsx_is_valid = false;
+  m_lasx_is_valid = false;
 }
 
 uint32_t NativeRegisterContextLinux_loongarch64::CalculateFprOffset(
     const RegisterInfo *reg_info) const {
   return reg_info->byte_offset - GetGPRSize();
+}
+
+uint32_t NativeRegisterContextLinux_loongarch64::CalculateLsxOffset(
+    const RegisterInfo *reg_info) const {
+  return reg_info->byte_offset - GetGPRSize() - sizeof(m_fpr);
+}
+
+uint32_t NativeRegisterContextLinux_loongarch64::CalculateLasxOffset(
+    const RegisterInfo *reg_info) const {
+  return reg_info->byte_offset - GetGPRSize() - sizeof(m_fpr) - sizeof(m_lsx);
 }
 
 std::vector<uint32_t>

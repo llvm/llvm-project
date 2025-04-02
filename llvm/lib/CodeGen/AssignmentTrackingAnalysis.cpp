@@ -230,9 +230,10 @@ void FunctionVarLocs::init(FunctionVarLocsBuilder &Builder) {
     for (const DbgVariableRecord &DVR : filterDbgVars(I->getDbgRecordRange())) {
       // Even though DVR defines a variable location, VarLocsBeforeInst can
       // still be empty if that VarLoc was redundant.
-      if (!Builder.VarLocsBeforeInst.count(&DVR))
+      auto It = Builder.VarLocsBeforeInst.find(&DVR);
+      if (It == Builder.VarLocsBeforeInst.end())
         continue;
-      for (const VarLocInfo &VarLoc : Builder.VarLocsBeforeInst[&DVR])
+      for (const VarLocInfo &VarLoc : It->second)
         VarLocRecords.emplace_back(VarLoc);
     }
     for (const VarLocInfo &VarLoc : P.second)

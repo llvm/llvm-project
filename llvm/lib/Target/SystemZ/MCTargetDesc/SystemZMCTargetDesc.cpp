@@ -15,6 +15,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
@@ -243,6 +244,10 @@ createNullTargetStreamer(MCStreamer &S) {
   return new SystemZTargetStreamer(S);
 }
 
+static MCInstrAnalysis *createSystemZMCInstrAnalysis(const MCInstrInfo *Info) {
+  return new MCInstrAnalysis(Info);
+}
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZTargetMC() {
   // Register the MCAsmInfo.
   TargetRegistry::RegisterMCAsmInfo(getTheSystemZTarget(),
@@ -283,4 +288,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZTargetMC() {
   // Register the null streamer
   TargetRegistry::RegisterNullTargetStreamer(getTheSystemZTarget(),
                                              createNullTargetStreamer);
+
+  // Register the MCInstrAnalysis.
+  TargetRegistry::RegisterMCInstrAnalysis(getTheSystemZTarget(),
+                                          createSystemZMCInstrAnalysis);
 }

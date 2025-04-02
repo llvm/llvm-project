@@ -588,20 +588,6 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // more information.
   ArgStringList CmdArgs;
 
-  /// Hack(tm) to ignore linking errors when we are doing ARC migration.
-  if (Args.hasArg(options::OPT_ccc_arcmt_check,
-                  options::OPT_ccc_arcmt_migrate)) {
-    for (const auto &Arg : Args)
-      Arg->claim();
-    const char *Exec =
-        Args.MakeArgString(getToolChain().GetProgramPath("touch"));
-    CmdArgs.push_back(Output.getFilename());
-    C.addCommand(std::make_unique<Command>(JA, *this,
-                                           ResponseFileSupport::None(), Exec,
-                                           CmdArgs, std::nullopt, Output));
-    return;
-  }
-
   VersionTuple Version = getMachOToolChain().getLinkerVersion(Args);
 
   bool LinkerIsLLD;
@@ -910,7 +896,9 @@ void darwin::Lipo::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(II.getFilename());
   }
 
-  const char *Exec = Args.MakeArgString(getToolChain().GetProgramPath("lipo"));
+  StringRef LipoName = Args.getLastArgValue(options::OPT_fuse_lipo_EQ, "lipo");
+  const char *Exec =
+      Args.MakeArgString(getToolChain().GetProgramPath(LipoName.data()));
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
                                          Exec, CmdArgs, Inputs, Output));
 }
@@ -2162,7 +2150,8 @@ inferDeploymentTargetFromArch(DerivedArgList &Args, const Darwin &Toolchain,
   StringRef MachOArchName = Toolchain.getMachOArchName(Args);
   if (MachOArchName == "arm64" || MachOArchName == "arm64e")
     OSTy = llvm::Triple::MacOSX;
-  else if (MachOArchName == "armv7" || MachOArchName == "armv7s")
+  else if (MachOArchName == "armv7" || MachOArchName == "armv7s" ||
+           MachOArchName == "armv6")
     OSTy = llvm::Triple::IOS;
   else if (MachOArchName == "armv7k" || MachOArchName == "arm64_32")
     OSTy = llvm::Triple::WatchOS;

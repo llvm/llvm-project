@@ -12,7 +12,7 @@
 ; Check that the bitcast is not hoisted because it is after an indirect call
 define i32 @foo(ptr nocapture readonly %i) {
 ; CHECK-LABEL: define i32 @foo
-; CHECK-SAME: (ptr nocapture readonly [[I:%.*]]) {
+; CHECK-SAME: (ptr readonly captures(none) [[I:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AGG_TMP:%.*]] = alloca [[CLASS_BAR:%.*]], align 8
 ; CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds [[CLASS_BAR]], ptr [[AGG_TMP]], i64 0, i32 1
@@ -64,7 +64,7 @@ sw.default:                                       ; preds = %entry
 ; there is no path to exit of the function.
 define i32 @foo1(ptr nocapture readonly %i) {
 ; CHECK-LABEL: define i32 @foo1
-; CHECK-SAME: (ptr nocapture readonly [[I:%.*]]) {
+; CHECK-SAME: (ptr readonly captures(none) [[I:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AGG_TMP:%.*]] = alloca [[CLASS_BAR:%.*]], align 8
 ; CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds [[CLASS_BAR]], ptr [[AGG_TMP]], i64 0, i32 1
@@ -118,7 +118,7 @@ sw.default:                                       ; preds = %entry
 ; Check that bitcast is hoisted even when one of them is partially redundant.
 define i32 @test13(ptr %P, ptr %Ptr, ptr nocapture readonly %i) {
 ; CHECK-LABEL: define i32 @test13
-; CHECK-SAME: (ptr [[P:%.*]], ptr [[PTR:%.*]], ptr nocapture readonly [[I:%.*]]) {
+; CHECK-SAME: (ptr [[P:%.*]], ptr [[PTR:%.*]], ptr readonly captures(none) [[I:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AGG_TMP:%.*]] = alloca [[CLASS_BAR:%.*]], align 8
 ; CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds [[CLASS_BAR]], ptr [[AGG_TMP]], i64 0, i32 1
@@ -165,7 +165,7 @@ F:
 ; do not have the bitcast instruction.
 define i32 @test14(ptr %P, ptr %Ptr, ptr nocapture readonly %i) {
 ; CHECK-LABEL: define i32 @test14
-; CHECK-SAME: (ptr [[P:%.*]], ptr [[PTR:%.*]], ptr nocapture readonly [[I:%.*]]) {
+; CHECK-SAME: (ptr [[P:%.*]], ptr [[PTR:%.*]], ptr readonly captures(none) [[I:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AGG_TMP:%.*]] = alloca [[CLASS_BAR:%.*]], align 8
 ; CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds [[CLASS_BAR]], ptr [[AGG_TMP]], i64 0, i32 1
@@ -217,7 +217,7 @@ F:
 ; due to indirect branches
 define i32 @test16(ptr %P, ptr %Ptr, ptr nocapture readonly %i) {
 ; CHECK-LABEL: define i32 @test16
-; CHECK-SAME: (ptr [[P:%.*]], ptr [[PTR:%.*]], ptr nocapture readonly [[I:%.*]]) {
+; CHECK-SAME: (ptr [[P:%.*]], ptr [[PTR:%.*]], ptr readonly captures(none) [[I:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AGG_TMP:%.*]] = alloca [[CLASS_BAR:%.*]], align 8
 ; CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds [[CLASS_BAR]], ptr [[AGG_TMP]], i64 0, i32 1
@@ -274,7 +274,7 @@ F:
 
 define i32 @foo2(ptr nocapture readonly %i) local_unnamed_addr personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: define i32 @foo2
-; CHECK-SAME: (ptr nocapture readonly [[I:%.*]]) local_unnamed_addr personality ptr @__gxx_personality_v0 {
+; CHECK-SAME: (ptr readonly captures(none) [[I:%.*]]) local_unnamed_addr personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP0]], 0
@@ -284,11 +284,11 @@ define i32 @foo2(ptr nocapture readonly %i) local_unnamed_addr personality ptr @
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast ptr [[EXCEPTION]] to ptr
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP1]], align 16
 ; CHECK-NEXT:    invoke void @__cxa_throw(ptr [[EXCEPTION]], ptr @_ZTIi, ptr null) #[[ATTR2:[0-9]+]]
-; CHECK-NEXT:    to label [[UNREACHABLE:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[UNREACHABLE:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[TMP2:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    catch ptr @_ZTIi
-; CHECK-NEXT:    catch ptr null
+; CHECK-NEXT:            catch ptr @_ZTIi
+; CHECK-NEXT:            catch ptr null
 ; CHECK-NEXT:    [[BC1:%.*]] = add i32 [[TMP0]], 10
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i32 } [[TMP2]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { ptr, i32 } [[TMP2]], 1
@@ -300,7 +300,7 @@ define i32 @foo2(ptr nocapture readonly %i) local_unnamed_addr personality ptr @
 ; CHECK-NEXT:    br i1 [[MATCHES]], label [[CATCH1:%.*]], label [[CATCH:%.*]]
 ; CHECK:       catch1:
 ; CHECK-NEXT:    invoke void @__cxa_rethrow() #[[ATTR2]]
-; CHECK-NEXT:    to label [[UNREACHABLE]] unwind label [[LPAD4:%.*]]
+; CHECK-NEXT:            to label [[UNREACHABLE]] unwind label [[LPAD4:%.*]]
 ; CHECK:       catch:
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[I]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP7]], 1
@@ -308,11 +308,11 @@ define i32 @foo2(ptr nocapture readonly %i) local_unnamed_addr personality ptr @
 ; CHECK-NEXT:    br label [[TRY_CONT]]
 ; CHECK:       lpad4:
 ; CHECK-NEXT:    [[TMP8:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    [[BC5:%.*]] = add i32 [[TMP0]], 10
 ; CHECK-NEXT:    tail call void @__cxa_end_catch() #[[ATTR1]]
 ; CHECK-NEXT:    invoke void @__cxa_throw(ptr [[EXCEPTION]], ptr @_ZTIi, ptr null) #[[ATTR2]]
-; CHECK-NEXT:    to label [[UNREACHABLE]] unwind label [[LPAD]]
+; CHECK-NEXT:            to label [[UNREACHABLE]] unwind label [[LPAD]]
 ; CHECK:       try.cont:
 ; CHECK-NEXT:    [[K_0:%.*]] = phi i32 [ [[ADD]], [[CATCH]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[BC6:%.*]] = add i32 [[TMP0]], 10

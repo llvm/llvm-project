@@ -139,6 +139,13 @@ inline bool isa_builtin_cptr_type(mlir::Type t) {
   return false;
 }
 
+// Is `t` type(c_devptr)?
+inline bool isa_builtin_c_devptr_type(mlir::Type t) {
+  if (auto recTy = mlir::dyn_cast_or_null<fir::RecordType>(t))
+    return recTy.getName().ends_with("T__builtin_c_devptr");
+  return false;
+}
+
 /// Is `t` type(c_devptr)?
 inline bool isa_builtin_cdevptr_type(mlir::Type t) {
   if (auto recTy = mlir::dyn_cast_or_null<fir::RecordType>(t))
@@ -439,7 +446,7 @@ inline mlir::Type wrapInClassOrBoxType(mlir::Type eleTy,
 /// Return the elementType where intrinsic types are replaced with none for
 /// unlimited polymorphic entities.
 ///
-/// i32 -> none
+/// i32 -> ()
 /// !fir.array<2xf32> -> !fir.array<2xnone>
 /// !fir.heap<!fir.array<2xf32>> -> !fir.heap<!fir.array<2xnone>>
 inline mlir::Type updateTypeForUnlimitedPolymorphic(mlir::Type ty) {

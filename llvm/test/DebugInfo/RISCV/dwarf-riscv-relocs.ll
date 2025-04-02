@@ -71,7 +71,7 @@
 ; DWARF-DUMP-NEXT: ------------------ ------ ------ ------ --- ------------- ------- -------------
 ; DWARF-DUMP-NEXT: 0x0000000000000000      2      0      0   0             0       0  is_stmt
 ; DWARF-DUMP-NEXT: 0x000000000000001c      3      5      0   0             0       0  is_stmt prologue_end
-; DWARF-DUMP-NEXT: 0x0000000000000028      3      5      0   0             0       0  epilogue_begin
+; DWARF-DUMP-NEXT: 0x0000000000000020      3      5      0   0             0       0  epilogue_begin
 ; DWARF-DUMP-NEXT: 0x0000000000000030      3      5      0   0             0       0  end_sequence
 
 ; ModuleID = 'dwarf-riscv-relocs.c'

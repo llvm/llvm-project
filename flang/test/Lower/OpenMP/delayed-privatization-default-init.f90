@@ -41,7 +41,7 @@ end subroutine
 ! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.type<_QFdelayed_privatization_default_initTt{i:i32}> {bindc_name = "a", pinned, uniq_name = "_QFdelayed_privatization_default_initEa"}
 ! CHECK:           %[[VAL_2:.*]] = fir.embox %[[VAL_1]] : (!fir.ref<!fir.type<_QFdelayed_privatization_default_initTt{i:i32}>>) -> !fir.box<!fir.type<_QFdelayed_privatization_default_initTt{i:i32}>>
 ! CHECK:           %[[VAL_6:.*]] = fir.convert %[[VAL_2]] : (!fir.box<!fir.type<_QFdelayed_privatization_default_initTt{i:i32}>>) -> !fir.box<none>
-! CHECK:           %[[VAL_8:.*]] = fir.call @_FortranAInitialize(%[[VAL_6]],{{.*}}
+! CHECK:           fir.call @_FortranAInitialize(%[[VAL_6]],{{.*}}
 ! CHECK-NEXT:      %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFdelayed_privatization_default_initEa"} : (!fir.ref<!fir.type<_QFdelayed_privatization_default_initTt{i:i32}>>) -> (!fir.ref<!fir.type<_QFdelayed_privatization_default_initTt{i:i32}>>, !fir.ref<!fir.type<_QFdelayed_privatization_default_initTt{i:i32}>>)
 ! CHECK:           omp.yield(%[[VAL_9]]#0 : !fir.ref<!fir.type<_QFdelayed_privatization_default_initTt{i:i32}>>)
 ! CHECK:   }

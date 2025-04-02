@@ -128,9 +128,8 @@ if [[ "${windows_projects}" != "" ]]; then
         limit: 2
   timeout_in_minutes: 150
   env:
-    CC: 'cl'
-    CXX: 'cl'
-    LD: 'link'
+    MAX_PARALLEL_COMPILE_JOBS: '16'
+    MAX_PARALLEL_LINK_JOBS: '4'
   commands:
   - 'C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64'
   - 'bash .ci/monolithic-windows.sh "$(echo ${windows_projects} | tr ' ' ';')" "$(echo ${windows_check_targets})"'

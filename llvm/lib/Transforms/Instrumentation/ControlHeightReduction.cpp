@@ -1468,7 +1468,7 @@ static void hoistValue(Value *V, Instruction *HoistPoint, Region *R,
     for (Value *Op : I->operands()) {
       hoistValue(Op, HoistPoint, R, HoistStopMap, HoistedSet, TrivialPHIs, DT);
     }
-    I->moveBefore(HoistPoint);
+    I->moveBefore(HoistPoint->getIterator());
     HoistedSet.insert(I);
     CHR_DEBUG(dbgs() << "hoistValue " << *I << "\n");
   }

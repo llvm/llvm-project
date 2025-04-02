@@ -38,7 +38,9 @@ bool OpenACCClauseWithVarList::classof(const OpenACCClause *C) {
          OpenACCNoCreateClause::classof(C) ||
          OpenACCPresentClause::classof(C) || OpenACCCopyClause::classof(C) ||
          OpenACCCopyInClause::classof(C) || OpenACCCopyOutClause::classof(C) ||
-         OpenACCReductionClause::classof(C) || OpenACCCreateClause::classof(C);
+         OpenACCReductionClause::classof(C) ||
+         OpenACCCreateClause::classof(C) || OpenACCDeviceClause::classof(C) ||
+         OpenACCHostClause::classof(C);
 }
 bool OpenACCClauseWithCondition::classof(const OpenACCClause *C) {
   return OpenACCIfClause::classof(C);
@@ -406,6 +408,26 @@ OpenACCPresentClause *OpenACCPresentClause::Create(const ASTContext &C,
   return new (Mem) OpenACCPresentClause(BeginLoc, LParenLoc, VarList, EndLoc);
 }
 
+OpenACCHostClause *OpenACCHostClause::Create(const ASTContext &C,
+                                             SourceLocation BeginLoc,
+                                             SourceLocation LParenLoc,
+                                             ArrayRef<Expr *> VarList,
+                                             SourceLocation EndLoc) {
+  void *Mem =
+      C.Allocate(OpenACCHostClause::totalSizeToAlloc<Expr *>(VarList.size()));
+  return new (Mem) OpenACCHostClause(BeginLoc, LParenLoc, VarList, EndLoc);
+}
+
+OpenACCDeviceClause *OpenACCDeviceClause::Create(const ASTContext &C,
+                                                 SourceLocation BeginLoc,
+                                                 SourceLocation LParenLoc,
+                                                 ArrayRef<Expr *> VarList,
+                                                 SourceLocation EndLoc) {
+  void *Mem =
+      C.Allocate(OpenACCDeviceClause::totalSizeToAlloc<Expr *>(VarList.size()));
+  return new (Mem) OpenACCDeviceClause(BeginLoc, LParenLoc, VarList, EndLoc);
+}
+
 OpenACCCopyClause *
 OpenACCCopyClause::Create(const ASTContext &C, OpenACCClauseKind Spelling,
                           SourceLocation BeginLoc, SourceLocation LParenLoc,
@@ -706,6 +728,20 @@ void OpenACCClausePrinter::VisitNoCreateClause(const OpenACCNoCreateClause &C) {
 
 void OpenACCClausePrinter::VisitPresentClause(const OpenACCPresentClause &C) {
   OS << "present(";
+  llvm::interleaveComma(C.getVarList(), OS,
+                        [&](const Expr *E) { printExpr(E); });
+  OS << ")";
+}
+
+void OpenACCClausePrinter::VisitHostClause(const OpenACCHostClause &C) {
+  OS << "host(";
+  llvm::interleaveComma(C.getVarList(), OS,
+                        [&](const Expr *E) { printExpr(E); });
+  OS << ")";
+}
+
+void OpenACCClausePrinter::VisitDeviceClause(const OpenACCDeviceClause &C) {
+  OS << "device(";
   llvm::interleaveComma(C.getVarList(), OS,
                         [&](const Expr *E) { printExpr(E); });
   OS << ")";

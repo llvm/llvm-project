@@ -104,13 +104,12 @@ define void @no_free_vgprs_at_agpr_to_agpr_copy(float %v0, float %v1) #0 {
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ; copy
 ; GFX908-NEXT:    ;;#ASMEND
-; GFX908-NEXT:    v_accvgpr_read_b32 v39, a1
-; GFX908-NEXT:    s_nop 1
-; GFX908-NEXT:    v_accvgpr_write_b32 a16, v39
 ; GFX908-NEXT:    buffer_load_dword v39, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX908-NEXT:    v_accvgpr_read_b32 v32, a1
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    v_accvgpr_write_b32 a0, v39 ; Reload Reuse
 ; GFX908-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
+; GFX908-NEXT:    v_accvgpr_write_b32 a16, v32
 ; GFX908-NEXT:    v_accvgpr_write_b32 a11, v38 ; Reload Reuse
 ; GFX908-NEXT:    v_accvgpr_write_b32 a12, v37 ; Reload Reuse
 ; GFX908-NEXT:    v_accvgpr_write_b32 a13, v36 ; Reload Reuse
@@ -369,7 +368,7 @@ define amdgpu_kernel void @no_agpr_no_reserve(ptr addrspace(1) %arg) #0 {
 ; FIXME: This case is broken. The asm value passed in v32 is live
 ; through the range where the reserved def for the copy is introduced,
 ; clobbering the user value.
-define void @v32_asm_def_use(float %v0, float %v1) #0 {
+define void @v32_asm_def_use(float %v0, float %v1) #4 {
 ; GFX908-LABEL: v32_asm_def_use:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1002,13 +1001,12 @@ define void @no_free_vgprs_at_sgpr_to_agpr_copy(float %v0, float %v1) #0 {
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ; copy
 ; GFX908-NEXT:    ;;#ASMEND
-; GFX908-NEXT:    v_accvgpr_read_b32 v39, a1
-; GFX908-NEXT:    s_nop 1
-; GFX908-NEXT:    v_accvgpr_write_b32 a32, v39
 ; GFX908-NEXT:    buffer_load_dword v39, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX908-NEXT:    v_accvgpr_read_b32 v33, a1
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    v_accvgpr_write_b32 a0, v39 ; Reload Reuse
 ; GFX908-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
+; GFX908-NEXT:    v_accvgpr_write_b32 a32, v33
 ; GFX908-NEXT:    v_accvgpr_write_b32 a11, v38 ; Reload Reuse
 ; GFX908-NEXT:    v_accvgpr_write_b32 a12, v37 ; Reload Reuse
 ; GFX908-NEXT:    v_accvgpr_write_b32 a13, v36 ; Reload Reuse
@@ -1147,3 +1145,4 @@ attributes #0 = { "amdgpu-waves-per-eu"="6,6" }
 attributes #1 = { convergent nounwind readnone willreturn }
 attributes #2 = { nounwind readnone willreturn }
 attributes #3 = { "amdgpu-waves-per-eu"="7,7" }
+attributes #4 = { "amdgpu-waves-per-eu"="6,6" "amdgpu-flat-work-group-size"="1024,1024" }

@@ -314,6 +314,18 @@ void foo() {
 // CHECK: {{^orig:[ ]+'.*templight-empty-entries-fix.cpp:289:35'$}}
 // CHECK: {{^poi:[ ]+''$}}
 // CHECK-LABEL: {{^---$}}
+// CHECK: {{^name:[ ]+unnamed template template parameter 0 of d$}}
+// CHECK: {{^kind:[ ]+PartialOrderingTTP$}}
+// CHECK: {{^event:[ ]+Begin$}}
+// CHECK: {{^orig:[ ]+'.*templight-empty-entries-fix.cpp:289:35'$}}
+// CHECK: {{^poi:[ ]+'.*templight-empty-entries-fix.cpp:295:5'$}}
+// CHECK-LABEL: {{^---$}}
+// CHECK: {{^name:[ ]+unnamed template template parameter 0 of d$}}
+// CHECK: {{^kind:[ ]+PartialOrderingTTP$}}
+// CHECK: {{^event:[ ]+End$}}
+// CHECK: {{^orig:[ ]+'.*templight-empty-entries-fix.cpp:289:35'$}}
+// CHECK: {{^poi:[ ]+'.*templight-empty-entries-fix.cpp:295:5'$}}
+// CHECK-LABEL: {{^---$}}
 // CHECK: {{^name:[ ]+d$}}
 // CHECK: {{^kind:[ ]+ExplicitTemplateArgumentSubstitution$}}
 // CHECK: {{^event:[ ]+End$}}

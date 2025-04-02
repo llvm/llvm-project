@@ -30,18 +30,12 @@
 
 #include "llvm/TargetParser/Host.h"
 
-extern "C" {
-extern char **environ;
-}
-
 using namespace lldb;
 using namespace lldb_private;
 
 namespace lldb_private {
 class ProcessLaunchInfo;
 }
-
-Environment Host::GetEnvironment() { return Environment(environ); }
 
 static bool
 GetOpenBSDProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,

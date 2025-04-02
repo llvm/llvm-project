@@ -795,7 +795,6 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
 
   auto Begin = Instructions.begin();
   if (BC.isAArch64()) {
-    PreserveNops = BC.HasRelocations;
     // Start at the last label as an approximation of the current basic block.
     // This is a heuristic, since the full set of labels have yet to be
     // determined
@@ -2300,6 +2299,10 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
       BC.errs() << "BOLT-WARNING: failed to post-process indirect branches for "
                 << *this << '\n';
     }
+
+    if (BC.isAArch64())
+      PreserveNops = BC.HasRelocations;
+
     // In relocation mode we want to keep processing the function but avoid
     // optimizing it.
     setSimple(false);

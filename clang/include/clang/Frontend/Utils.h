@@ -120,7 +120,6 @@ protected:
 private:
   void outputDependencyFile(DiagnosticsEngine &Diags);
 
-  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
   std::string OutputFile;
   std::vector<std::string> Targets;
   bool IncludeSystemHeaders;

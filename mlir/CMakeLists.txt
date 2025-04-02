@@ -174,6 +174,8 @@ configure_file(
 # disable all package setup and control it themselves.
 #-------------------------------------------------------------------------------
 
+set(MLIR_BINDINGS_PYTHON_NB_DOMAIN "mlir"
+  CACHE STRING "nanobind domain for MLIR python bindings.")
 set(MLIR_ENABLE_BINDINGS_PYTHON 0 CACHE BOOL
        "Enables building of Python bindings.")
 set(MLIR_DETECT_PYTHON_ENV_PRIME_SEARCH 1 CACHE BOOL

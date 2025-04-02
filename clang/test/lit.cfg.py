@@ -33,6 +33,7 @@ config.suffixes = [
     ".m",
     ".mm",
     ".cu",
+    ".cuh",
     ".hip",
     ".hlsl",
     ".ll",

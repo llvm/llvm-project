@@ -372,7 +372,7 @@ func.func @tensor.expand_shape(%t1: tensor<?x10xf32>, %sz0: index) -> tensor<2x?
   // CHECK: %[[C0:.*]] = arith.constant 0 : index
   // CHECK: %[[DIM:.*]] = memref.dim %[[m1]], %[[C0]] : memref<?x10xf32>
   // CHECK: %[[C2:.*]] = arith.constant 2 : index
-  // CHECK: %[[VAL_1:.*]] = arith.divui %[[DIM]], %[[C2]] : index
+  // CHECK: %[[VAL_1:.*]] = arith.divsi %[[DIM]], %[[C2]] : index
   // CHECK: %[[expanded:.*]] = memref.expand_shape %[[m1]] {{\[\[}}0, 1], [2]] output_shape [2, %[[VAL_1]], 10] : memref<?x10xf32> into memref<2x?x10xf32>
   %0 = tensor.expand_shape %t1 [[0, 1], [2]] output_shape [2, %sz0, 10]
       : tensor<?x10xf32> into tensor<2x?x10xf32>
@@ -393,7 +393,7 @@ func.func @tensor.expand_shape_of_slice(
   %0 = tensor.extract_slice %t1[%o1, 5][%s1, 10][1, 1] :
       tensor<?x20xf32> to tensor<?x10xf32>
   // CHECK: %[[C7:.*]] = arith.constant 7 : index
-  // CHECK: %[[VAL_1:.*]] = arith.divui %{{.*}}, %[[C7]] : index
+  // CHECK: %[[VAL_1:.*]] = arith.divsi %{{.*}}, %[[C7]] : index
   // CHECK: %[[expanded:.*]] = memref.expand_shape %[[subview]] {{\[\[}}0, 1], [2, 3]] output_shape [%[[VAL_1]], 7, 2, 5] : memref<?x10xf32, strided<[20, 1], offset: ?>> into memref<?x7x2x5xf32, strided<[140, 20, 5, 1], offset: ?>>
   %1 = tensor.expand_shape %0 [[0, 1], [2, 3]] output_shape [%sz0, 7, 2, 5] :
       tensor<?x10xf32> into tensor<?x7x2x5xf32>

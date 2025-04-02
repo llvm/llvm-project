@@ -339,7 +339,7 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
         indices.push_back(value);
       else
         indices.push_back(
-            builder.getInt32(valueOrAttr.get<IntegerAttr>().getInt()));
+            builder.getInt32(cast<IntegerAttr>(valueOrAttr).getInt()));
     }
     Type baseElementType = op.getElemType();
     llvm::Type *elementType = moduleTranslation.convertType(baseElementType);

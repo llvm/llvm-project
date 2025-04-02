@@ -1883,7 +1883,7 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
       return;
     }
 
-    fun_address = function->GetAddressRange().GetBaseAddress();
+    fun_address = function->GetAddress();
 
     CompilerType copied_function_type = GuardedCopyType(function_clang_type);
     if (copied_function_type) {

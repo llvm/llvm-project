@@ -99,7 +99,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
   GetReturnInfo(CC, Fn->getReturnType(), Fn->getAttributes(), Outs, *TLI,
                 mf.getDataLayout());
   CanLowerReturn =
-      TLI->CanLowerReturn(CC, *MF, Fn->isVarArg(), Outs, Fn->getContext());
+      TLI->CanLowerReturn(CC, *MF, Fn->isVarArg(), Outs, Fn->getContext(), Fn->getReturnType());
 
   // If this personality uses funclets, we need to do a bit more work.
   DenseMap<const AllocaInst *, TinyPtrVector<int *>> CatchObjects;
@@ -250,7 +250,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
     // Don't create MachineBasicBlocks for imaginary EH pad blocks. These blocks
     // are really data, and no instructions can live here.
     if (BB.isEHPad()) {
-      const Instruction *PadInst = BB.getFirstNonPHI();
+      BasicBlock::const_iterator PadInst = BB.getFirstNonPHIIt();
       // If this is a non-landingpad EH pad, mark this function as using
       // funclets.
       // FIXME: SEH catchpads do not create EH scope/funclets, so we could avoid
@@ -261,13 +261,13 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
         MF->getFrameInfo().setHasOpaqueSPAdjustment(true);
       }
       if (isa<CatchSwitchInst>(PadInst)) {
-        assert(&*BB.begin() == PadInst &&
+        assert(BB.begin() == PadInst &&
                "WinEHPrepare failed to remove PHIs from imaginary BBs");
         continue;
       }
       if (isa<FuncletPadInst>(PadInst) &&
           Personality != EHPersonality::Wasm_CXX)
-        assert(&*BB.begin() == PadInst && "WinEHPrepare failed to demote PHIs");
+        assert(BB.begin() == PadInst && "WinEHPrepare failed to demote PHIs");
     }
 
     MachineBasicBlock *MBB = mf.CreateMachineBasicBlock(&BB);

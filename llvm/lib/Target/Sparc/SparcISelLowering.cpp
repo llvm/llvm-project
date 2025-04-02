@@ -234,7 +234,8 @@ static unsigned toCallerWindow(unsigned Reg) {
 
 bool SparcTargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool isVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
+    const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, isVarArg, MF, RVLocs, Context);
   return CCInfo.CheckReturn(Outs, Subtarget->is64Bit() ? RetCC_Sparc64
@@ -2322,7 +2323,7 @@ SDValue SparcTargetLowering::LowerF128_LibCallArg(SDValue Chain,
                          Align(8));
 
     Entry.Node = FIPtr;
-    Entry.Ty   = PointerType::getUnqual(ArgTy);
+    Entry.Ty = PointerType::getUnqual(ArgTy->getContext());
   }
   Args.push_back(Entry);
   return Chain;
@@ -2350,7 +2351,7 @@ SparcTargetLowering::LowerF128Op(SDValue Op, SelectionDAG &DAG,
     int RetFI = MFI.CreateStackObject(16, Align(8), false);
     RetPtr = DAG.getFrameIndex(RetFI, PtrVT);
     Entry.Node = RetPtr;
-    Entry.Ty   = PointerType::getUnqual(RetTy);
+    Entry.Ty = PointerType::getUnqual(RetTy->getContext());
     if (!Subtarget->is64Bit()) {
       Entry.IsSRet = true;
       Entry.IndirectType = RetTy;

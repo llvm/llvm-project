@@ -24,6 +24,7 @@ namespace mlir {
 namespace python {
 
 /// Globals that are always accessible once the extension has been initialized.
+/// Methods of this class are thread-safe.
 class PyGlobals {
 public:
   PyGlobals();
@@ -37,11 +38,17 @@ public:
 
   /// Get and set the list of parent modules to search for dialect
   /// implementation classes.
-  std::vector<std::string> &getDialectSearchPrefixes() {
+  std::vector<std::string> getDialectSearchPrefixes() {
+    nanobind::ft_lock_guard lock(mutex);
     return dialectSearchPrefixes;
   }
   void setDialectSearchPrefixes(std::vector<std::string> newValues) {
+    nanobind::ft_lock_guard lock(mutex);
     dialectSearchPrefixes.swap(newValues);
+  }
+  void addDialectSearchPrefix(std::string value) {
+    nanobind::ft_lock_guard lock(mutex);
+    dialectSearchPrefixes.push_back(std::move(value));
   }
 
   /// Loads a python module corresponding to the given dialect namespace.
@@ -109,6 +116,9 @@ public:
 
 private:
   static PyGlobals *instance;
+
+  nanobind::ft_mutex mutex;
+
   /// Module name prefixes to search under for dialect implementation modules.
   std::vector<std::string> dialectSearchPrefixes;
   /// Map of dialect namespace to external dialect class object.

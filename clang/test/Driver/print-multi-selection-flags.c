@@ -90,3 +90,10 @@
 // CHECK-RV32E-ORDER: --target=riscv32-unknown-none-elf
 // CHECK-RV32E-ORDER: -mabi=ilp32e
 // CHECK-RV32E-ORDER: -march=rv32e{{[0-9]+p[0-9]+}}_c{{[0-9]+p[0-9]+}}_zicsr{{[0-9]+p[0-9]+}}
+
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/multilib-custom-flags.yaml -print-multi-flags-experimental --target=armv8m.main-none-eabi -fmultilib-flag=foo -fmultilib-flag=bar | FileCheck --check-prefixes=CHECK-MULTILIB-CUSTOM-FLAG,CHECK-ARM-MULTILIB-CUSTOM-FLAG %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/multilib-custom-flags.yaml -print-multi-flags-experimental --target=aarch64-none-eabi     -fmultilib-flag=foo -fmultilib-flag=bar | FileCheck --check-prefixes=CHECK-MULTILIB-CUSTOM-FLAG,CHECK-AARCH64-MULTILIB-CUSTOM-FLAG %s
+// CHECK-ARM-MULTILIB-CUSTOM-FLAG:     --target=thumbv8m.main-unknown-none-eabi
+// CHECK-AARCH64-MULTILIB-CUSTOM-FLAG: --target=aarch64-unknown-none-eabi
+// CHECK-MULTILIB-CUSTOM-FLAG-DAG:     -fmultilib-flag=foo
+// CHECK-MULTILIB-CUSTOM-FLAG-DAG:     -fmultilib-flag=bar

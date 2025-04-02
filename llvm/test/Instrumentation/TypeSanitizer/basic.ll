@@ -5,6 +5,8 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
+declare i32 @declaration_only(i32 %a) sanitize_type
+
 ;.
 ; CHECK: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @tysan.module_ctor, ptr null }]
 ; CHECK: @__tysan_v1_Simple_20C_2b_2b_20TBAA = linkonce_odr constant { i64, i64, [16 x i8] } { i64 2, i64 0, [16 x i8] c"Simple C++ TBAA\00" }, comdat

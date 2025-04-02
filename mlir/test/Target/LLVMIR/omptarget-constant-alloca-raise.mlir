@@ -10,7 +10,7 @@
 // constant sized) allocations performs its task reasonably in these 
 // scenarios. 
 
-module attributes {omp.is_target_device = true} {
+module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
   llvm.func @_QQmain() attributes {omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to)>} {
     %1 = llvm.mlir.constant(1 : i64) : i64
     %2 = llvm.alloca %1 x !llvm.struct<(ptr)> : (i64) -> !llvm.ptr
@@ -33,7 +33,7 @@ module attributes {omp.is_target_device = true} {
   llvm.func @_ExternalCall(!llvm.ptr, !llvm.ptr) -> !llvm.struct<()>
 }
 
-// CHECK:      define weak_odr protected void @{{.*}}QQmain_l{{.*}}({{.*}}, {{.*}}) {
+// CHECK:      define weak_odr protected amdgpu_kernel void @{{.*}}QQmain_l{{.*}}({{.*}}, {{.*}}) #{{[0-9]+}} {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:  %[[MOVED_ALLOCA1:.*]] = alloca { ptr }, align 8
 // CHECK-NEXT:  %[[MOVED_ALLOCA2:.*]] = alloca i32, i64 1, align 4

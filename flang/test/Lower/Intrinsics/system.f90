@@ -23,7 +23,7 @@ call system(command, exitstat)
 ! CHECK-NEXT:   %[[command:.*]] = fir.convert %[[commandBox]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
 ! CHECK-NEXT:   %[[exitstat:.*]] = fir.convert %[[exitstatBox]] : (!fir.box<i32>) -> !fir.box<none>
 ! CHECK-NEXT:   %[[cmdstat:.*]] = fir.convert %[[cmdstatBox]] : (!fir.box<i16>) -> !fir.box<none>
-! CHECK:        %[[VAL_13:.*]] = fir.call @_FortranAExecuteCommandLine(%[[command]], %[[true]], %[[exitstat]], %[[cmdstat]], %[[absentBox]], %[[VAL_12:.*]], %[[c9_i32]]) fastmath<contract> : (!fir.box<none>, i1, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK:        fir.call @_FortranAExecuteCommandLine(%[[command]], %[[true]], %[[exitstat]], %[[cmdstat]], %[[absentBox]], %[[VAL_12:.*]], %[[c9_i32]]) fastmath<contract> : (!fir.box<none>, i1, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
 ! CHECK-NEXT:   return
 ! CHECK-NEXT:  }
 end subroutine all_args
@@ -47,7 +47,7 @@ call system(command)
 ! CHECK:        %[[c35_i32:.*]] = arith.constant {{[0-9]+}} : i32
 ! CHECK-NEXT:   %[[command:.*]] = fir.convert %[[commandBox]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
 ! CHECK-NEXT:   %[[cmdstat:.*]] = fir.convert %[[cmdstatBox]] : (!fir.box<i16>) -> !fir.box<none>
-! CHECK:        %[[VAL_12:.*]] = fir.call @_FortranAExecuteCommandLine(%[[command]], %[[true]], %[[absentBox]], %[[cmdstat]], %[[absentBox2]], %[[VAL_11:.*]], %[[c35_i32]]) fastmath<contract> : (!fir.box<none>, i1, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK:        fir.call @_FortranAExecuteCommandLine(%[[command]], %[[true]], %[[absentBox]], %[[cmdstat]], %[[absentBox2]], %[[VAL_11:.*]], %[[c35_i32]]) fastmath<contract> : (!fir.box<none>, i1, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
 ! CHECK-NEXT:   return
 ! CHECK-NEXT:    }
 end subroutine only_command
@@ -77,7 +77,7 @@ end subroutine
 ! CHECK-NEXT:   %[[command:.*]] = fir.convert %[[commandBox]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
 ! CHECK-NEXT:   %[[exitstat:.*]] = fir.convert %[[exitstatBox]] : (!fir.box<i32>) -> !fir.box<none>
 ! CHECK-NEXT:   %[[cmdstat:.*]] = fir.convert %[[cmdstatBox]] : (!fir.box<i16>) -> !fir.box<none>
-! CHECK:        %[[VAL_13:.*]] = fir.call @_FortranAExecuteCommandLine(%[[command]], %[[true]], %[[exitstat]], %[[cmdstat]], %[[absentBox]], %[[VAL_12:.*]], %[[LINE_NO]]) fastmath<contract> : (!fir.box<none>, i1, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK:        fir.call @_FortranAExecuteCommandLine(%[[command]], %[[true]], %[[exitstat]], %[[cmdstat]], %[[absentBox]], %[[VAL_12:.*]], %[[LINE_NO]]) fastmath<contract> : (!fir.box<none>, i1, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
 ! CHECK-NEXT:   %[[RET_ADDR:.*]] = fir.box_addr %[[exitstatBox]] : (!fir.box<i32>) -> !fir.ref<i32>
 ! CHECK-NEXT:   %[[RET:.*]] = fir.load %[[RET_ADDR]] : !fir.ref<i32>
 ! CHECK-NEXT:   hlfir.assign %[[RET]] to %[[exitstatDeclare]]#0 : i32, !fir.ref<i32>

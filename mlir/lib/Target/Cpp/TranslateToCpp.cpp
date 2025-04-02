@@ -120,6 +120,10 @@ struct CppEmitter {
   LogicalResult emitAttribute(Location loc, Attribute attr);
 
   /// Emits operation 'op' with/without training semicolon or returns failure.
+  ///
+  /// For operations that should never be followed by a semicolon, like ForOp,
+  /// the `trailingSemicolon` argument is ignored and a semicolon is not
+  /// emitted.
   LogicalResult emitOperation(Operation &op, bool trailingSemicolon);
 
   /// Emits type 'type' or returns failure.
@@ -471,7 +475,10 @@ static LogicalResult printOperation(CppEmitter &emitter,
                                     emitc::SwitchOp switchOp) {
   raw_indented_ostream &os = emitter.ostream();
 
-  os << "\nswitch (" << emitter.getOrCreateName(switchOp.getArg()) << ") {";
+  os << "\nswitch (";
+  if (failed(emitter.emitOperand(switchOp.getArg())))
+    return failure();
+  os << ") {";
 
   for (auto pair : llvm::zip(switchOp.getCases(), switchOp.getCaseRegions())) {
     os << "\ncase " << std::get<0>(pair) << ": {\n";
@@ -1036,16 +1043,7 @@ static LogicalResult printFunctionBody(CppEmitter &emitter,
         return failure();
     }
     for (Operation &op : block.getOperations()) {
-      // When generating code for an emitc.if or cf.cond_br op no semicolon
-      // needs to be printed after the closing brace.
-      // When generating code for an emitc.for and emitc.verbatim op, printing a
-      // trailing semicolon is handled within the printOperation function.
-      bool trailingSemicolon =
-          !isa<cf::CondBranchOp, emitc::DeclareFuncOp, emitc::ForOp,
-               emitc::IfOp, emitc::SwitchOp, emitc::VerbatimOp>(op);
-
-      if (failed(emitter.emitOperation(
-              op, /*trailingSemicolon=*/trailingSemicolon)))
+      if (failed(emitter.emitOperation(op, /*trailingSemicolon=*/true)))
         return failure();
     }
   }
@@ -1606,6 +1604,12 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
       (isa<emitc::ExpressionOp>(op) &&
        shouldBeInlined(cast<emitc::ExpressionOp>(op))))
     return success();
+
+  // Never emit a semicolon for some operations, especially if endening with
+  // `}`.
+  trailingSemicolon &=
+      !isa<cf::CondBranchOp, emitc::DeclareFuncOp, emitc::ForOp, emitc::IfOp,
+           emitc::IncludeOp, emitc::SwitchOp, emitc::VerbatimOp>(op);
 
   os << (trailingSemicolon ? ";\n" : "\n");
 

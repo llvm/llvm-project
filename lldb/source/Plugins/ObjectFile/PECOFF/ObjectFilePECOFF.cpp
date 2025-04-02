@@ -482,7 +482,7 @@ bool ObjectFilePECOFF::SetLoadAddress(Target &target, addr_t value,
         // that have SHF_ALLOC in their flag bits.
         SectionSP section_sp(section_list->GetSectionAtIndex(sect_idx));
         if (section_sp && !section_sp->IsThreadSpecific()) {
-          if (target.GetSectionLoadList().SetSectionLoadAddress(
+          if (target.SetSectionLoadAddress(
                   section_sp, section_sp->GetFileAddress() + value))
             ++num_loaded_sections;
         }

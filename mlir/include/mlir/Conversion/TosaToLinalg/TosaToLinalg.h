@@ -52,7 +52,8 @@ void populateTosaToLinalgConversionPatterns(const TypeConverter &converter,
 
 /// Populates conversion passes from TOSA dialect to Linalg named operations.
 void populateTosaToLinalgNamedConversionPatterns(
-    RewritePatternSet *patterns, const TosaToLinalgNamedOptions &options);
+    const TypeConverter &converter, RewritePatternSet *patterns,
+    const TosaToLinalgNamedOptions &options);
 
 } // namespace tosa
 } // namespace mlir

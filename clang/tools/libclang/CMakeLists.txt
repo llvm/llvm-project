@@ -20,7 +20,6 @@ endif()
 #       to clean up previous inconsistencies.
 
 set(SOURCES
-  ARCMigrate.cpp
   BuildSystem.cpp
   CIndex.cpp
   CIndexCXX.cpp
@@ -70,10 +69,6 @@ set(LIBS
   clangSerialization
   clangTooling
 )
-
-if (CLANG_ENABLE_ARCMT)
-  list(APPEND LIBS clangARCMigrate)
-endif ()
 
 if (HAVE_LIBDL)
   list(APPEND LIBS ${CMAKE_DL_LIBS})
@@ -208,9 +203,6 @@ if(ENABLE_SHARED)
       target_link_options(libclang PRIVATE "-Wl,--version-script,${CMAKE_CURRENT_SOURCE_DIR}/libclang.map")
     endif()
     # Ensure that libclang.so gets rebuilt when the linker script changes.
-    set_property(SOURCE ARCMigrate.cpp APPEND PROPERTY
-                 OBJECT_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/libclang.map)
-
     set_target_properties(libclang PROPERTIES
                           VERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}${LLVM_VERSION_SUFFIX}
                           ${LIBCLANG_SOVERSION_ARG})

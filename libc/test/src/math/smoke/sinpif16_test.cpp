@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/FPUtil/cast.h"
 #include "src/errno/libc_errno.h"
 #include "src/math/sinpif16.h"
 #include "test/UnitTest/FPMatcher.h"
@@ -33,10 +34,18 @@ TEST_F(LlvmLibcSinpif16Test, SpecialNumbers) {
 }
 
 TEST_F(LlvmLibcSinpif16Test, Integers) {
-  EXPECT_FP_EQ(neg_zero, LIBC_NAMESPACE::sinpif16(-0x420));
-  EXPECT_FP_EQ(neg_zero, LIBC_NAMESPACE::sinpif16(-0x1p+10));
-  EXPECT_FP_EQ(neg_zero, LIBC_NAMESPACE::sinpif16(-0x1.4p+14));
-  EXPECT_FP_EQ(zero, LIBC_NAMESPACE::sinpif16(0x420));
-  EXPECT_FP_EQ(zero, LIBC_NAMESPACE::sinpif16(0x1.cp+15));
-  EXPECT_FP_EQ(zero, LIBC_NAMESPACE::sinpif16(0x1.cp+7));
+  EXPECT_FP_EQ(neg_zero,
+               LIBC_NAMESPACE::sinpif16(
+                   LIBC_NAMESPACE::fputil::cast<float16>(-0x420.0p0)));
+  EXPECT_FP_EQ(neg_zero, LIBC_NAMESPACE::sinpif16(
+                             LIBC_NAMESPACE::fputil::cast<float16>(-0x1p+10)));
+  EXPECT_FP_EQ(neg_zero,
+               LIBC_NAMESPACE::sinpif16(
+                   LIBC_NAMESPACE::fputil::cast<float16>(-0x1.4p+14)));
+  EXPECT_FP_EQ(zero, LIBC_NAMESPACE::sinpif16(
+                         LIBC_NAMESPACE::fputil::cast<float16>(0x420.0p0)));
+  EXPECT_FP_EQ(zero, LIBC_NAMESPACE::sinpif16(
+                         LIBC_NAMESPACE::fputil::cast<float16>(0x1.cp+15)));
+  EXPECT_FP_EQ(zero, LIBC_NAMESPACE::sinpif16(
+                         LIBC_NAMESPACE::fputil::cast<float16>(0x1.cp+7)));
 }

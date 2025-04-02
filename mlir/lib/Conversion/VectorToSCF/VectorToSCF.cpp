@@ -1650,7 +1650,7 @@ struct TransferOp1dConversion : public VectorToSCFPattern<OpTy> {
       return failure();
     if (xferOp.getVectorType().getRank() != 1)
       return failure();
-    if (map.isMinorIdentity() && isLastMemrefDimUnitStride(memRefType))
+    if (map.isMinorIdentity() && memRefType.isLastDimUnitStride())
       return failure(); // Handled by ConvertVectorToLLVM
 
     // Loop bounds, step, state...

@@ -11,7 +11,6 @@
 
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/CPP/type_traits/is_complex.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/fpbits_str.h"

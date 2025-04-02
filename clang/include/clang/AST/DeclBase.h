@@ -836,6 +836,10 @@ public:
     return isFromASTFile() ? getImportedOwningModule() : getLocalOwningModule();
   }
 
+  /// Get the top level owning named module that owns this declaration if any.
+  /// \returns nullptr if the declaration is not owned by a named module.
+  Module *getTopLevelOwningNamedModule() const;
+
   /// Get the module that owns this declaration for linkage purposes.
   /// There only ever is such a standard C++ module.
   Module *getOwningModuleForLinkage() const;
@@ -1334,7 +1338,7 @@ public:
 
     reference operator*() const {
       assert(Ptr && "dereferencing end() iterator");
-      if (DeclListNode *CurNode = Ptr.dyn_cast<DeclListNode*>())
+      if (DeclListNode *CurNode = dyn_cast<DeclListNode *>(Ptr))
         return CurNode->D;
       return cast<NamedDecl *>(Ptr);
     }
@@ -1344,7 +1348,7 @@ public:
     inline iterator &operator++() { // ++It
       assert(!Ptr.isNull() && "Advancing empty iterator");
 
-      if (DeclListNode *CurNode = Ptr.dyn_cast<DeclListNode*>())
+      if (DeclListNode *CurNode = dyn_cast<DeclListNode *>(Ptr))
         Ptr = CurNode->Rest;
       else
         Ptr = nullptr;
@@ -1387,7 +1391,7 @@ public:
   const_iterator end() const { return iterator(); }
 
   bool empty() const { return Result.isNull();  }
-  bool isSingleResult() const { return Result.dyn_cast<NamedDecl*>(); }
+  bool isSingleResult() const { return isa_and_present<NamedDecl *>(Result); }
   reference front() const { return *begin(); }
 
   // Find the first declaration of the given type in the list. Note that this
@@ -1445,6 +1449,9 @@ class DeclContext {
   /// For hasNeedToReconcileExternalVisibleStorage,
   /// hasLazyLocalLexicalLookups, hasLazyExternalLexicalLookups
   friend class ASTWriter;
+
+protected:
+  enum { NumOdrHashBits = 25 };
 
   // We use uint64_t in the bit-fields below since some bit-fields
   // cross the unsigned boundary and this breaks the packing.
@@ -1667,6 +1674,14 @@ class DeclContext {
     LLVM_PREFERRED_TYPE(bool)
     uint64_t HasNonTrivialToPrimitiveCopyCUnion : 1;
 
+    /// True if any field is marked as requiring explicit initialization with
+    /// [[clang::require_explicit_initialization]].
+    /// In C++, this is also set for types without a user-provided default
+    /// constructor, and is propagated from any base classes and/or member
+    /// variables whose types are aggregates.
+    LLVM_PREFERRED_TYPE(bool)
+    uint64_t HasUninitializedExplicitInitFields : 1;
+
     /// Indicates whether this struct is destroyed in the callee.
     LLVM_PREFERRED_TYPE(bool)
     uint64_t ParamDestroyedInCallee : 1;
@@ -1681,7 +1696,7 @@ class DeclContext {
 
     /// True if a valid hash is stored in ODRHash. This should shave off some
     /// extra storage and prevent CXXRecordDecl to store unused bits.
-    uint64_t ODRHash : 26;
+    uint64_t ODRHash : NumOdrHashBits;
   };
 
   /// Number of inherited and non-inherited bits in RecordDeclBitfields.
@@ -1762,6 +1777,8 @@ class DeclContext {
     uint64_t HasImplicitReturnZero : 1;
     LLVM_PREFERRED_TYPE(bool)
     uint64_t IsLateTemplateParsed : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    uint64_t IsInstantiatedFromMemberTemplate : 1;
 
     /// Kind of contexpr specifier as defined by ConstexprSpecKind.
     LLVM_PREFERRED_TYPE(ConstexprSpecKind)
@@ -1812,7 +1829,7 @@ class DeclContext {
   };
 
   /// Number of inherited and non-inherited bits in FunctionDeclBitfields.
-  enum { NumFunctionDeclBits = NumDeclContextBits + 31 };
+  enum { NumFunctionDeclBits = NumDeclContextBits + 32 };
 
   /// Stores the bits used by CXXConstructorDecl. If modified
   /// NumCXXConstructorDeclBits and the accessor
@@ -1823,12 +1840,12 @@ class DeclContext {
     LLVM_PREFERRED_TYPE(FunctionDeclBitfields)
     uint64_t : NumFunctionDeclBits;
 
-    /// 20 bits to fit in the remaining available space.
+    /// 19 bits to fit in the remaining available space.
     /// Note that this makes CXXConstructorDeclBitfields take
     /// exactly 64 bits and thus the width of NumCtorInitializers
     /// will need to be shrunk if some bit is added to NumDeclContextBitfields,
     /// NumFunctionDeclBitfields or CXXConstructorDeclBitfields.
-    uint64_t NumCtorInitializers : 17;
+    uint64_t NumCtorInitializers : 16;
     LLVM_PREFERRED_TYPE(bool)
     uint64_t IsInheritingConstructor : 1;
 
@@ -1842,7 +1859,7 @@ class DeclContext {
   };
 
   /// Number of inherited and non-inherited bits in CXXConstructorDeclBitfields.
-  enum { NumCXXConstructorDeclBits = NumFunctionDeclBits + 20 };
+  enum { NumCXXConstructorDeclBits = NumFunctionDeclBits + 19 };
 
   /// Stores the bits used by ObjCMethodDecl.
   /// If modified NumObjCMethodDeclBits and the accessor
@@ -2711,6 +2728,9 @@ public:
                    bool Deserialize = false) const;
 
 private:
+  lookup_result lookupImpl(DeclarationName Name,
+                           const DeclContext *OriginalLookupDC) const;
+
   /// Whether this declaration context has had externally visible
   /// storage added since the last lookup. In this case, \c LookupPtr's
   /// invariant may not hold and needs to be fixed before we perform

@@ -230,7 +230,6 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK:         IR   %indvars.iv.next = add nsw i64 %indvars.iv, -1
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT:  }
-; CHECK:  LV: Loop does not require scalar epilogue
 ;
 entry:
   %cmp7 = icmp sgt i32 %n, 0
@@ -480,7 +479,6 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK:         IR   %indvars.iv.next = add nsw i64 %indvars.iv, -1
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT:  }
-; CHECK:  LV: Loop does not require scalar epilogue
 ;
 entry:
   %cmp7 = icmp sgt i32 %n, 0

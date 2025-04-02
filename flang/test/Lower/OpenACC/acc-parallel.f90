@@ -244,6 +244,9 @@ subroutine acc_parallel
 ! CHECK:      acc.parallel dataOperands(%[[COPYIN_A]], %[[COPYIN_B]], %[[COPYIN_C]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
+! CHECK:      acc.delete accPtr(%[[COPYIN_A]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%{{.*}}, %{{.*}}) {dataClause = #acc<data_clause acc_copyin>, name = "a"}
+! CHECK:      acc.delete accPtr(%[[COPYIN_B]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%{{.*}}, %{{.*}}) {dataClause = #acc<data_clause acc_copyin_readonly>, name = "b"}
+! CHECK:      acc.delete accPtr(%[[COPYIN_C]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%{{.*}}, %{{.*}}) {dataClause = #acc<data_clause acc_copyin_readonly>, name = "c"}
 
   !$acc parallel copyout(a) copyout(zero: b) copyout(c)
   !$acc end parallel

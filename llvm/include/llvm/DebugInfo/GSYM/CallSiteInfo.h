@@ -49,6 +49,15 @@ struct CallSiteInfo {
   /// Bitwise OR of CallSiteInfo::Flags values
   uint8_t Flags = CallSiteInfo::Flags::None;
 
+  /// Equality comparison operator for CallSiteInfo.
+  bool operator==(const CallSiteInfo &RHS) const {
+    return ReturnOffset == RHS.ReturnOffset && MatchRegex == RHS.MatchRegex &&
+           Flags == RHS.Flags;
+  }
+
+  /// Inequality comparison operator for CallSiteInfo.
+  bool operator!=(const CallSiteInfo &RHS) const { return !(*this == RHS); }
+
   /// Decode a CallSiteInfo object from a binary data stream.
   ///
   /// \param Data The binary stream to read the data from.

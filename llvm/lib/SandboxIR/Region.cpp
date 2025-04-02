@@ -11,7 +11,29 @@
 
 namespace llvm::sandboxir {
 
-Region::Region(Context &Ctx) : Ctx(Ctx) {
+InstructionCost ScoreBoard::getCost(Instruction *I) const {
+  auto *LLVMI = cast<llvm::Instruction>(I->Val);
+  SmallVector<const llvm::Value *> Operands(LLVMI->operands());
+  return TTI.getInstructionCost(LLVMI, Operands, CostKind);
+}
+
+void ScoreBoard::remove(Instruction *I) {
+  auto Cost = getCost(I);
+  if (Rgn.contains(I))
+    // If `I` is one the newly added ones, then we should adjust `AfterCost`
+    AfterCost -= Cost;
+  else
+    // If `I` is one of the original instructions (outside the region) then it
+    // is part of the original code, so adjust `BeforeCost`.
+    BeforeCost += Cost;
+}
+
+#ifndef NDEBUG
+void ScoreBoard::dump() const { dump(dbgs()); }
+#endif
+
+Region::Region(Context &Ctx, TargetTransformInfo &TTI)
+    : Ctx(Ctx), Scoreboard(*this, TTI) {
   LLVMContext &LLVMCtx = Ctx.LLVMCtx;
   auto *RegionStrMD = MDString::get(LLVMCtx, RegionStr);
   RegionMDN = MDNode::getDistinct(LLVMCtx, {RegionStrMD});
@@ -31,9 +53,15 @@ void Region::add(Instruction *I) {
   Insts.insert(I);
   // TODO: Consider tagging instructions lazily.
   cast<llvm::Instruction>(I->Val)->setMetadata(MDKind, RegionMDN);
+  // Keep track of the instruction cost.
+  Scoreboard.add(I);
 }
 
 void Region::remove(Instruction *I) {
+  // Keep track of the instruction cost. This need to be done *before* we remove
+  // `I` from the region.
+  Scoreboard.remove(I);
+
   Insts.remove(I);
   cast<llvm::Instruction>(I->Val)->setMetadata(MDKind, nullptr);
 }
@@ -58,7 +86,8 @@ void Region::dump() const {
 }
 #endif // NDEBUG
 
-SmallVector<std::unique_ptr<Region>> Region::createRegionsFromMD(Function &F) {
+SmallVector<std::unique_ptr<Region>>
+Region::createRegionsFromMD(Function &F, TargetTransformInfo &TTI) {
   SmallVector<std::unique_ptr<Region>> Regions;
   DenseMap<MDNode *, Region *> MDNToRegion;
   auto &Ctx = F.getContext();
@@ -68,7 +97,7 @@ SmallVector<std::unique_ptr<Region>> Region::createRegionsFromMD(Function &F) {
         Region *R = nullptr;
         auto It = MDNToRegion.find(MDN);
         if (It == MDNToRegion.end()) {
-          Regions.push_back(std::make_unique<Region>(Ctx));
+          Regions.push_back(std::make_unique<Region>(Ctx, TTI));
           R = Regions.back().get();
           MDNToRegion[MDN] = R;
         } else {

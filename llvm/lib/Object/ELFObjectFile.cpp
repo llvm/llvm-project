@@ -802,6 +802,10 @@ std::vector<ELFPltEntry> ELFObjectFileBase::getPltEntries() const {
     case Triple::aarch64_be:
       JumpSlotReloc = ELF::R_AARCH64_JUMP_SLOT;
       break;
+    case Triple::hexagon:
+      JumpSlotReloc = ELF::R_HEX_JMP_SLOT;
+      GlobDatReloc = ELF::R_HEX_GLOB_DAT;
+      break;
     default:
       return {};
   }

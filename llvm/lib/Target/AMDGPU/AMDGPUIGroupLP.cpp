@@ -239,23 +239,6 @@ public:
   }
 };
 
-// Remove all existing edges from a SCHED_BARRIER or SCHED_GROUP_BARRIER.
-static void resetEdges(SUnit &SU, ScheduleDAGInstrs *DAG) {
-  assert(SU.getInstr()->getOpcode() == AMDGPU::SCHED_BARRIER ||
-         SU.getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER ||
-         SU.getInstr()->getOpcode() == AMDGPU::IGLP_OPT);
-
-  while (!SU.Preds.empty())
-    for (auto &P : SU.Preds)
-      SU.removePred(P);
-
-  while (!SU.Succs.empty())
-    for (auto &S : SU.Succs)
-      for (auto &SP : S.getSUnit()->Preds)
-        if (SP.getSUnit() == &SU)
-          S.getSUnit()->removePred(SP);
-}
-
 using SUToCandSGsPair = std::pair<SUnit *, SmallVector<int, 4>>;
 using SUsToCandSGsVec = SmallVector<SUToCandSGsPair, 4>;
 
@@ -269,7 +252,7 @@ using SUsToCandSGsVec = SmallVector<SUToCandSGsPair, 4>;
 // only be used for small sized problems or medium sized problems where an exact
 // solution is highly desired.
 class PipelineSolver {
-  ScheduleDAGMI *DAG;
+  [[maybe_unused]] ScheduleDAGMI *DAG;
 
   // Instructions that can be assigned to multiple SchedGroups
   DenseMap<int, SUnitsToCandidateSGsMap> SyncedInstrs;
@@ -459,7 +442,6 @@ void PipelineSolver::makePipeline() {
       // Command line requested IGroupLP doesn't have SGBarr
       if (!SGBarr)
         continue;
-      resetEdges(*SGBarr, DAG);
       SG.link(*SGBarr, false);
     }
   }
@@ -2611,7 +2593,6 @@ void IGroupLPDAGMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
       initSchedGroupBarrierPipelineStage(R);
       FoundSB = true;
     } else if (Opc == AMDGPU::IGLP_OPT) {
-      resetEdges(*R, DAG);
       if (!FoundSB && !FoundIGLP) {
         FoundIGLP = true;
         ShouldApplyIGLP = initIGLPOpt(*R);
@@ -2633,7 +2614,6 @@ void IGroupLPDAGMutation::addSchedBarrierEdges(SUnit &SchedBarrier) {
   assert(MI.getOpcode() == AMDGPU::SCHED_BARRIER);
   // Remove all existing edges from the SCHED_BARRIER that were added due to the
   // instruction having side effects.
-  resetEdges(SchedBarrier, DAG);
   LLVM_DEBUG(dbgs() << "Building SchedGroup for SchedBarrier with Mask: "
                     << MI.getOperand(0).getImm() << "\n");
   auto InvertedMask =
@@ -2691,7 +2671,6 @@ void IGroupLPDAGMutation::initSchedGroupBarrierPipelineStage(
     std::vector<SUnit>::reverse_iterator RIter) {
   // Remove all existing edges from the SCHED_GROUP_BARRIER that were added due
   // to the instruction having side effects.
-  resetEdges(*RIter, DAG);
   MachineInstr &SGB = *RIter->getInstr();
   assert(SGB.getOpcode() == AMDGPU::SCHED_GROUP_BARRIER);
   int32_t SGMask = SGB.getOperand(0).getImm();

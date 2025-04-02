@@ -264,7 +264,7 @@ void ICF::run() {
 
   // Collect only mergeable sections and group by hash value.
   uint32_t nextId = 1;
-  for (Chunk *c : ctx.symtab.getChunks()) {
+  for (Chunk *c : ctx.driver.getChunks()) {
     if (auto *sc = dyn_cast<SectionChunk>(c)) {
       if (isEligible(sc))
         chunks.push_back(sc);

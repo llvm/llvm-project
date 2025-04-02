@@ -192,10 +192,18 @@ public:
 
   DbgRecord *getNextNode() { return &*std::next(getIterator()); }
   DbgRecord *getPrevNode() { return &*std::prev(getIterator()); }
+
+  // Some generic lambdas supporting intrinsic-based debug-info mean we need
+  // to support both iterator and instruction position based insertion.
   void insertBefore(DbgRecord *InsertBefore);
   void insertAfter(DbgRecord *InsertAfter);
   void moveBefore(DbgRecord *MoveBefore);
   void moveAfter(DbgRecord *MoveAfter);
+
+  void insertBefore(self_iterator InsertBefore);
+  void insertAfter(self_iterator InsertAfter);
+  void moveBefore(self_iterator MoveBefore);
+  void moveAfter(self_iterator MoveAfter);
 
   DebugLoc getDebugLoc() const { return DbgLoc; }
   void setDebugLoc(DebugLoc Loc) { DbgLoc = std::move(Loc); }

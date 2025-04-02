@@ -1,6 +1,7 @@
 ! Test -fsave-main-program switch.
 ! RUN: %flang_fc1 -emit-hlfir -o - %s | FileCheck --check-prefix=CHECK-DEFAULT %s
 ! RUN: %flang_fc1 -fsave-main-program -emit-hlfir -o - %s | FileCheck --check-prefix=CHECK-SAVE %s
+! RUN: %flang_fc1 -fsave-main-program -fno-save-main-program -emit-hlfir -o - %s | FileCheck --check-prefix=CHECK-DEFAULT %s
 program test
 integer :: i
 call foo(i)

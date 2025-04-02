@@ -523,7 +523,7 @@ bool GreedyPatternRewriteDriver::processWorklist() {
           }
           // Materialize Attributes as SSA values.
           Operation *constOp = op->getDialect()->materializeConstant(
-              rewriter, ofr.get<Attribute>(), resultType, op->getLoc());
+              rewriter, cast<Attribute>(ofr), resultType, op->getLoc());
 
           if (!constOp) {
             // If materialization fails, cleanup any operations generated for

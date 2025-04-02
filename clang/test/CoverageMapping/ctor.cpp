@@ -11,8 +11,8 @@ public:
     int c;
     B(int x, int y)
     : A(x),                 // CHECK:      File 0, [[@LINE]]:7 -> [[@LINE]]:11 = #0
-                            // CHECK-NEXT: File 0, [[@LINE+1]]:7 -> [[@LINE+1]]:13 = #0
-    b(x == 0? 1: 2),        // CHECK-NEXT: File 0, [[@LINE]]:7 -> [[@LINE]]:19 = #0
+                            // CHECK-NEXT: File 0, [[@LINE+1]]:7 -> [[@LINE+1]]:19 = #0
+    b(x == 0? 1: 2),        // CHECK-NEXT: File 0, [[@LINE]]:7 -> [[@LINE]]:13 = #0
                             // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:7 -> [[@LINE-1]]:13 = #1, (#0 - #1)
                             // CHECK-NEXT: Gap,File 0, [[@LINE-2]]:14 -> [[@LINE-2]]:15 = #1
                             // CHECK-NEXT: File 0, [[@LINE-3]]:15 -> [[@LINE-3]]:16 = #1

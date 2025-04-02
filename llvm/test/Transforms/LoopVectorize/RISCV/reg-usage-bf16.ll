@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -passes=loop-vectorize -mtriple riscv64 -mattr=+v,+zvfbfmin -debug-only=loop-vectorize -riscv-v-register-bit-width-lmul=1 -S < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=loop-vectorize -mtriple riscv64 -mattr=+v,+zvfbfmin -debug-only=loop-vectorize --disable-output -riscv-v-register-bit-width-lmul=1 -S < %s 2>&1 | FileCheck %s
 
 define void @add(ptr noalias nocapture readonly %src1, ptr noalias nocapture readonly %src2, i32 signext %size, ptr noalias nocapture writeonly %result) {
 ; CHECK-LABEL: add

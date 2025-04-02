@@ -214,9 +214,6 @@ makeCommonInvocationForModuleBuild(CompilerInvocation CI) {
   CI.getDependencyOutputOpts().Targets.clear();
 
   CI.getFrontendOpts().ProgramAction = frontend::GenerateModule;
-  CI.getFrontendOpts().ARCMTAction = FrontendOptions::ARCMT_None;
-  CI.getFrontendOpts().ObjCMTAction = FrontendOptions::ObjCMT_None;
-  CI.getFrontendOpts().MTMigrateDir.clear();
   CI.getLangOpts().ModuleName.clear();
 
   // Remove any macro definitions that are explicitly ignored.

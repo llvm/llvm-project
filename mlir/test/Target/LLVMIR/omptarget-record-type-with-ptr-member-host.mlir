@@ -59,7 +59,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 
 // CHECK: @[[FULL_ARR_GLOB:.*]] = internal global { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } undef
 // CHECK: @[[ARR_SECT_GLOB:.*]] = internal global { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } undef
-// CHECK: @.offload_sizes = private unnamed_addr constant [12 x i64] [i64 0, i64 48, i64 8, i64 0, i64 0, i64 48, i64 8, i64 0, i64 0, i64 24, i64 8, i64 4]
+// CHECK: @.offload_sizes = private unnamed_addr constant [12 x i64] [i64 0, i64 48, i64 8, i64 0, i64 0, i64 48, i64 8, i64 0, i64 0, i64 24, i64 8, i64 0]
 // CHECK: @.offload_maptypes = private unnamed_addr constant [12 x i64] [i64 32, i64 281474976710659, i64 281474976710659, i64 281474976710675, i64 32, i64 1407374883553283, i64 1407374883553283, i64 1407374883553299, i64 32, i64 2533274790395907, i64 2533274790395907, i64 2533274790395923]
 // CHECK: @.offload_mapnames = private constant [12 x ptr] [ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}, ptr @{{.*}}]
 
@@ -86,7 +86,11 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 // CHECK: %[[ARR_SECT_PTR:.*]] = getelementptr inbounds i32, ptr %[[LARR_SECT]], i64 %[[ARR_SECT_OFFSET1]]
 // CHECK: %[[SCALAR_PTR_LOAD:.*]] = load ptr, ptr %[[SCALAR_BASE]], align 8
 // CHECK: %[[FULL_ARR_DESC_SIZE:.*]] = sdiv exact i64 sub (i64 ptrtoint (ptr getelementptr ({ ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr @full_arr, i32 1) to i64), i64 ptrtoint (ptr @full_arr to i64)), ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
+// CHECK: %[[FULL_ARR_SIZE_CMP:.*]] = icmp eq ptr %[[FULL_ARR_PTR]], null
+// CHECK: %[[FULL_ARR_SIZE_SEL:.*]] = select i1 %[[FULL_ARR_SIZE_CMP]], i64 0, i64 %[[FULL_ARR_SIZE]]
 // CHECK: %[[ARR_SECT_DESC_SIZE:.*]] = sdiv exact i64 sub (i64 ptrtoint (ptr getelementptr ({ ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr @sect_arr, i32 1) to i64), i64 ptrtoint (ptr @sect_arr to i64)), ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
+// CHECK: %[[ARR_SECT_SIZE_CMP:.*]] = icmp eq ptr %[[ARR_SECT_PTR]], null
+// CHECK: %[[ARR_SECT_SIZE_SEL:.*]] = select i1 %[[ARR_SECT_SIZE_CMP]], i64 0, i64 %[[ARR_SECT_SIZE]]
 // CHECK: %[[SCALAR_DESC_SZ4:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8 }, ptr %[[SCALAR_ALLOCA]], i32 1
 // CHECK: %[[SCALAR_DESC_SZ3:.*]] = ptrtoint ptr %[[SCALAR_DESC_SZ4]] to i64
 // CHECK: %[[SCALAR_DESC_SZ2:.*]] = ptrtoint ptr %[[SCALAR_ALLOCA]] to i64
@@ -112,7 +116,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 // CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [12 x ptr], ptr %.offload_ptrs, i32 0, i32 3
 // CHECK: store ptr %[[FULL_ARR_PTR]], ptr %[[OFFLOADPTRS]], align 8
 // CHECK: %[[OFFLOADSIZES:.*]] = getelementptr inbounds [12 x i64], ptr %.offload_sizes, i32 0, i32 3
-// CHECK: store i64 %[[FULL_ARR_SIZE]], ptr %[[OFFLOADSIZES]], align 8
+// CHECK: store i64 %[[FULL_ARR_SIZE_SEL]], ptr %[[OFFLOADSIZES]], align 8
 
 // CHECK: %[[OFFLOADBASEPTRS:.*]] = getelementptr inbounds [12 x ptr], ptr %.offload_baseptrs, i32 0, i32 4
 // CHECK: store ptr @sect_arr, ptr %[[OFFLOADBASEPTRS]], align 8
@@ -133,7 +137,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 // CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [12 x ptr], ptr %.offload_ptrs, i32 0, i32 7
 // CHECK: store ptr %[[ARR_SECT_PTR]], ptr %[[OFFLOADPTRS]], align 8
 // CHECK: %[[OFFLOADSIZES:.*]] = getelementptr inbounds [12 x i64], ptr %.offload_sizes, i32 0, i32 7
-// CHECK: store i64 %[[ARR_SECT_SIZE]], ptr %[[OFFLOADSIZES]], align 8
+// CHECK: store i64 %[[ARR_SECT_SIZE_SEL]], ptr %[[OFFLOADSIZES]], align 8
 
 // CHECK: %[[OFFLOADBASEPTRS:.*]] = getelementptr inbounds [12 x ptr], ptr %.offload_baseptrs, i32 0, i32 8
 // CHECK: store ptr %[[SCALAR_ALLOCA]], ptr %[[OFFLOADBASEPTRS]], align 8

@@ -91,6 +91,7 @@ private:
   std::uint64_t lenOffset;
   std::uint64_t rankOffset;
   std::uint64_t rankSize;
+  int32_t derivedTypeDepth;
   llvm::DenseMap<mlir::Type, mlir::LLVM::DITypeAttr> typeCache;
 };
 

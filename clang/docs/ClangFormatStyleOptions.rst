@@ -3441,7 +3441,7 @@ the configuration (without a prefix: ``Auto``).
 .. _BreakBinaryOperations:
 
 **BreakBinaryOperations** (``BreakBinaryOperationsStyle``) :versionbadge:`clang-format 20` :ref:`¶ <BreakBinaryOperations>`
-  The break constructor initializers style to use.
+  The break binary operations style to use.
 
   Possible values:
 
@@ -3764,6 +3764,7 @@ the configuration (without a prefix: ``Auto``).
   lists.
 
   Important differences:
+
   * No spaces inside the braced list.
   * No line break before the closing brace.
   * Indentation with the continuation indent, not with the block indent.
@@ -4211,6 +4212,21 @@ the configuration (without a prefix: ``Auto``).
      default:                                 default:
        plop();                                  plop();
      }                                      }
+
+.. _IndentExportBlock:
+
+**IndentExportBlock** (``Boolean``) :versionbadge:`clang-format 20` :ref:`¶ <IndentExportBlock>`
+  If ``true``, clang-format will indent the body of an ``export { ... }``
+  block. This doesn't affect the formatting of anything else related to
+  exported declarations.
+
+  .. code-block:: c++
+
+     true:                     false:
+     export {          vs.     export {
+       void foo();             void foo();
+       void bar();             void bar();
+     }                         }
 
 .. _IndentExternBlock:
 
@@ -5181,6 +5197,11 @@ the configuration (without a prefix: ``Auto``).
 
 **PenaltyBreakBeforeFirstCallParameter** (``Unsigned``) :versionbadge:`clang-format 3.7` :ref:`¶ <PenaltyBreakBeforeFirstCallParameter>`
   The penalty for breaking a function call after ``call(``.
+
+.. _PenaltyBreakBeforeMemberAccess:
+
+**PenaltyBreakBeforeMemberAccess** (``Unsigned``) :versionbadge:`clang-format 20` :ref:`¶ <PenaltyBreakBeforeMemberAccess>`
+  The penalty for breaking before a member access operator (``.``, ``->``).
 
 .. _PenaltyBreakComment:
 

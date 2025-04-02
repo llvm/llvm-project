@@ -2052,112 +2052,136 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; GFX7-LABEL: name: v_add_co_u32_e64_imm_fi_vop3_literal_error_non_vcc
-    ; GFX7: liveins: $sgpr4
+    ; GFX7: liveins: $sgpr4, $sgpr5
     ; GFX7-NEXT: {{  $}}
     ; GFX7-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX7-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
     ; GFX7-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
+    ; GFX7-NEXT: $sgpr5 = frame-setup COPY $sgpr34
+    ; GFX7-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX7-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 2097152, implicit-def dead $scc
     ; GFX7-NEXT: $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
     ; GFX7-NEXT: $vcc_lo = S_MOV_B32 12288
     ; GFX7-NEXT: $vgpr1, dead $vcc = V_ADD_CO_U32_e64 killed $vcc_lo, killed $vgpr1, 0, implicit $exec
     ; GFX7-NEXT: renamable $vgpr0, dead renamable $sgpr8_sgpr9 = V_ADD_CO_U32_e64 64, killed $vgpr1, 0, implicit $exec
-    ; GFX7-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -2097152, implicit-def dead $scc
+    ; GFX7-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
+    ; GFX7-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX7-NEXT: $sgpr33 = frame-destroy COPY $sgpr4
     ; GFX7-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; GFX8-LABEL: name: v_add_co_u32_e64_imm_fi_vop3_literal_error_non_vcc
-    ; GFX8: liveins: $sgpr4
+    ; GFX8: liveins: $sgpr4, $sgpr5
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX8-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
     ; GFX8-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
+    ; GFX8-NEXT: $sgpr5 = frame-setup COPY $sgpr34
+    ; GFX8-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX8-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 2097152, implicit-def dead $scc
     ; GFX8-NEXT: $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
     ; GFX8-NEXT: $vcc_lo = S_MOV_B32 12288
     ; GFX8-NEXT: $vgpr1, dead $vcc = V_ADD_CO_U32_e64 killed $vcc_lo, killed $vgpr1, 0, implicit $exec
     ; GFX8-NEXT: renamable $vgpr0, dead renamable $sgpr8_sgpr9 = V_ADD_CO_U32_e64 64, killed $vgpr1, 0, implicit $exec
-    ; GFX8-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -2097152, implicit-def dead $scc
+    ; GFX8-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
+    ; GFX8-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX8-NEXT: $sgpr33 = frame-destroy COPY $sgpr4
     ; GFX8-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; GFX900-LABEL: name: v_add_co_u32_e64_imm_fi_vop3_literal_error_non_vcc
-    ; GFX900: liveins: $sgpr4
+    ; GFX900: liveins: $sgpr4, $sgpr5
     ; GFX900-NEXT: {{  $}}
     ; GFX900-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX900-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
     ; GFX900-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
+    ; GFX900-NEXT: $sgpr5 = frame-setup COPY $sgpr34
+    ; GFX900-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX900-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 2097152, implicit-def dead $scc
     ; GFX900-NEXT: $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
     ; GFX900-NEXT: $vgpr1 = V_ADD_U32_e32 12288, killed $vgpr1, implicit $exec
     ; GFX900-NEXT: renamable $vgpr0, dead renamable $sgpr8_sgpr9 = V_ADD_CO_U32_e64 64, killed $vgpr1, 0, implicit $exec
-    ; GFX900-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -2097152, implicit-def dead $scc
+    ; GFX900-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
+    ; GFX900-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX900-NEXT: $sgpr33 = frame-destroy COPY $sgpr4
     ; GFX900-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; GFX90A-LABEL: name: v_add_co_u32_e64_imm_fi_vop3_literal_error_non_vcc
-    ; GFX90A: liveins: $sgpr4
+    ; GFX90A: liveins: $sgpr4, $sgpr5
     ; GFX90A-NEXT: {{  $}}
     ; GFX90A-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX90A-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
     ; GFX90A-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
+    ; GFX90A-NEXT: $sgpr5 = frame-setup COPY $sgpr34
+    ; GFX90A-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX90A-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 2097152, implicit-def dead $scc
     ; GFX90A-NEXT: $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
     ; GFX90A-NEXT: $vgpr1 = V_ADD_U32_e32 12288, killed $vgpr1, implicit $exec
     ; GFX90A-NEXT: renamable $vgpr0, dead renamable $sgpr8_sgpr9 = V_ADD_CO_U32_e64 64, killed $vgpr1, 0, implicit $exec
-    ; GFX90A-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -2097152, implicit-def dead $scc
+    ; GFX90A-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
+    ; GFX90A-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX90A-NEXT: $sgpr33 = frame-destroy COPY $sgpr4
     ; GFX90A-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; GFX10-LABEL: name: v_add_co_u32_e64_imm_fi_vop3_literal_error_non_vcc
-    ; GFX10: liveins: $sgpr4
+    ; GFX10: liveins: $sgpr4, $sgpr5
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX10-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
     ; GFX10-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
+    ; GFX10-NEXT: $sgpr5 = frame-setup COPY $sgpr34
+    ; GFX10-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX10-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 2097152, implicit-def dead $scc
     ; GFX10-NEXT: renamable $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
     ; GFX10-NEXT: renamable $vgpr0, dead renamable $sgpr8_sgpr9 = V_ADD_CO_U32_e64 12352, killed $vgpr1, 0, implicit $exec
-    ; GFX10-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -2097152, implicit-def dead $scc
+    ; GFX10-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
+    ; GFX10-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX10-NEXT: $sgpr33 = frame-destroy COPY $sgpr4
     ; GFX10-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; GFX940-LABEL: name: v_add_co_u32_e64_imm_fi_vop3_literal_error_non_vcc
-    ; GFX940: liveins: $sgpr4
+    ; GFX940: liveins: $sgpr4, $sgpr5
     ; GFX940-NEXT: {{  $}}
     ; GFX940-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX940-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 8191, implicit-def $scc
     ; GFX940-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294959104, implicit-def dead $scc
+    ; GFX940-NEXT: $sgpr5 = frame-setup COPY $sgpr34
+    ; GFX940-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX940-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 32768, implicit-def dead $scc
-    ; GFX940-NEXT: $sgpr5 = S_ADD_I32 $sgpr33, 12288, implicit-def $scc
-    ; GFX940-NEXT: renamable $vgpr0, dead renamable $sgpr8_sgpr9 = V_ADD_CO_U32_e64 64, killed $sgpr5, 0, implicit $exec
-    ; GFX940-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -32768, implicit-def dead $scc
+    ; GFX940-NEXT: $sgpr6 = S_ADD_I32 $sgpr33, 12288, implicit-def $scc
+    ; GFX940-NEXT: renamable $vgpr0, dead renamable $sgpr8_sgpr9 = V_ADD_CO_U32_e64 64, killed $sgpr6, 0, implicit $exec
+    ; GFX940-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
+    ; GFX940-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX940-NEXT: $sgpr33 = frame-destroy COPY $sgpr4
     ; GFX940-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; GFX11-LABEL: name: v_add_co_u32_e64_imm_fi_vop3_literal_error_non_vcc
-    ; GFX11: liveins: $sgpr4
+    ; GFX11: liveins: $sgpr4, $sgpr5
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX11-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 8191, implicit-def $scc
     ; GFX11-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294959104, implicit-def dead $scc
+    ; GFX11-NEXT: $sgpr5 = frame-setup COPY $sgpr34
+    ; GFX11-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX11-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 32768, implicit-def dead $scc
     ; GFX11-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr33, implicit $exec
     ; GFX11-NEXT: renamable $vgpr0, dead renamable $sgpr8_sgpr9 = V_ADD_CO_U32_e64 12352, killed $vgpr1, 0, implicit $exec
-    ; GFX11-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -32768, implicit-def dead $scc
+    ; GFX11-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
+    ; GFX11-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX11-NEXT: $sgpr33 = frame-destroy COPY $sgpr4
     ; GFX11-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; GFX12-LABEL: name: v_add_co_u32_e64_imm_fi_vop3_literal_error_non_vcc
-    ; GFX12: liveins: $sgpr4
+    ; GFX12: liveins: $sgpr4, $sgpr5
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX12-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 8191, implicit-def $scc
     ; GFX12-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294959104, implicit-def dead $scc
+    ; GFX12-NEXT: $sgpr5 = frame-setup COPY $sgpr34
+    ; GFX12-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX12-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 24576, implicit-def dead $scc
     ; GFX12-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr33, implicit $exec
     ; GFX12-NEXT: renamable $vgpr0, dead renamable $sgpr8_sgpr9 = V_ADD_CO_U32_e64 4160, killed $vgpr1, 0, implicit $exec
-    ; GFX12-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -24576, implicit-def dead $scc
+    ; GFX12-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
+    ; GFX12-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX12-NEXT: $sgpr33 = frame-destroy COPY $sgpr4
     ; GFX12-NEXT: SI_RETURN implicit $vgpr0
     renamable $vgpr0,  renamable dead $sgpr8_sgpr9 = V_ADD_CO_U32_e64 64, %stack.1, 0, implicit $exec
@@ -2180,115 +2204,139 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; GFX7-LABEL: name: v_add_co_u32_e64_imm_fi_vop3_literal_error_non_vcc_live
-    ; GFX7: liveins: $sgpr4
+    ; GFX7: liveins: $sgpr4, $sgpr5
     ; GFX7-NEXT: {{  $}}
     ; GFX7-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX7-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
     ; GFX7-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
+    ; GFX7-NEXT: $sgpr5 = frame-setup COPY $sgpr34
+    ; GFX7-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX7-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 2097152, implicit-def dead $scc
     ; GFX7-NEXT: $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
     ; GFX7-NEXT: $vcc_lo = S_MOV_B32 12288
     ; GFX7-NEXT: $vgpr1, dead $vcc = V_ADD_CO_U32_e64 killed $vcc_lo, killed $vgpr1, 0, implicit $exec
     ; GFX7-NEXT: renamable $vgpr0, renamable $sgpr8_sgpr9 = V_ADD_CO_U32_e64 64, killed $vgpr1, 0, implicit $exec
-    ; GFX7-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -2097152, implicit-def dead $scc
+    ; GFX7-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
+    ; GFX7-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX7-NEXT: $sgpr33 = frame-destroy COPY $sgpr4
     ; GFX7-NEXT: SI_RETURN implicit $vgpr0, implicit $sgpr8_sgpr9
     ;
     ; GFX8-LABEL: name: v_add_co_u32_e64_imm_fi_vop3_literal_error_non_vcc_live
-    ; GFX8: liveins: $sgpr4
+    ; GFX8: liveins: $sgpr4, $sgpr5
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX8-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
     ; GFX8-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
+    ; GFX8-NEXT: $sgpr5 = frame-setup COPY $sgpr34
+    ; GFX8-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX8-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 2097152, implicit-def dead $scc
     ; GFX8-NEXT: $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
     ; GFX8-NEXT: $vcc_lo = S_MOV_B32 12288
     ; GFX8-NEXT: $vgpr1, dead $vcc = V_ADD_CO_U32_e64 killed $vcc_lo, killed $vgpr1, 0, implicit $exec
     ; GFX8-NEXT: renamable $vgpr0, renamable $sgpr8_sgpr9 = V_ADD_CO_U32_e64 64, killed $vgpr1, 0, implicit $exec
-    ; GFX8-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -2097152, implicit-def dead $scc
+    ; GFX8-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
+    ; GFX8-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX8-NEXT: $sgpr33 = frame-destroy COPY $sgpr4
     ; GFX8-NEXT: SI_RETURN implicit $vgpr0, implicit $sgpr8_sgpr9
     ;
     ; GFX900-LABEL: name: v_add_co_u32_e64_imm_fi_vop3_literal_error_non_vcc_live
-    ; GFX900: liveins: $sgpr4
+    ; GFX900: liveins: $sgpr4, $sgpr5
     ; GFX900-NEXT: {{  $}}
     ; GFX900-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX900-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
     ; GFX900-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
+    ; GFX900-NEXT: $sgpr5 = frame-setup COPY $sgpr34
+    ; GFX900-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX900-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 2097152, implicit-def dead $scc
     ; GFX900-NEXT: $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
     ; GFX900-NEXT: $vgpr1 = V_ADD_U32_e32 12288, killed $vgpr1, implicit $exec
     ; GFX900-NEXT: renamable $vgpr0, renamable $sgpr8_sgpr9 = V_ADD_CO_U32_e64 64, killed $vgpr1, 0, implicit $exec
-    ; GFX900-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -2097152, implicit-def dead $scc
+    ; GFX900-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
+    ; GFX900-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX900-NEXT: $sgpr33 = frame-destroy COPY $sgpr4
     ; GFX900-NEXT: SI_RETURN implicit $vgpr0, implicit $sgpr8_sgpr9
     ;
     ; GFX90A-LABEL: name: v_add_co_u32_e64_imm_fi_vop3_literal_error_non_vcc_live
-    ; GFX90A: liveins: $sgpr4
+    ; GFX90A: liveins: $sgpr4, $sgpr5
     ; GFX90A-NEXT: {{  $}}
     ; GFX90A-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX90A-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
     ; GFX90A-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
+    ; GFX90A-NEXT: $sgpr5 = frame-setup COPY $sgpr34
+    ; GFX90A-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX90A-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 2097152, implicit-def dead $scc
     ; GFX90A-NEXT: $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
     ; GFX90A-NEXT: $vgpr1 = V_ADD_U32_e32 12288, killed $vgpr1, implicit $exec
     ; GFX90A-NEXT: renamable $vgpr0, renamable $sgpr8_sgpr9 = V_ADD_CO_U32_e64 64, killed $vgpr1, 0, implicit $exec
-    ; GFX90A-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -2097152, implicit-def dead $scc
+    ; GFX90A-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
+    ; GFX90A-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX90A-NEXT: $sgpr33 = frame-destroy COPY $sgpr4
     ; GFX90A-NEXT: SI_RETURN implicit $vgpr0, implicit $sgpr8_sgpr9
     ;
     ; GFX10-LABEL: name: v_add_co_u32_e64_imm_fi_vop3_literal_error_non_vcc_live
-    ; GFX10: liveins: $sgpr4
+    ; GFX10: liveins: $sgpr4, $sgpr5
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX10-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
     ; GFX10-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
+    ; GFX10-NEXT: $sgpr5 = frame-setup COPY $sgpr34
+    ; GFX10-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX10-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 2097152, implicit-def dead $scc
     ; GFX10-NEXT: renamable $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
     ; GFX10-NEXT: renamable $vgpr0, renamable $sgpr8_sgpr9 = V_ADD_CO_U32_e64 12352, killed $vgpr1, 0, implicit $exec
     ; GFX10-NEXT: renamable $vgpr0, renamable $sgpr8_sgpr9 = V_ADD_CO_U32_e64 killed $vgpr0, 0, 0, implicit $exec
-    ; GFX10-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -2097152, implicit-def dead $scc
+    ; GFX10-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
+    ; GFX10-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX10-NEXT: $sgpr33 = frame-destroy COPY $sgpr4
     ; GFX10-NEXT: SI_RETURN implicit $vgpr0, implicit $sgpr8_sgpr9
     ;
     ; GFX940-LABEL: name: v_add_co_u32_e64_imm_fi_vop3_literal_error_non_vcc_live
-    ; GFX940: liveins: $sgpr4
+    ; GFX940: liveins: $sgpr4, $sgpr5
     ; GFX940-NEXT: {{  $}}
     ; GFX940-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX940-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 8191, implicit-def $scc
     ; GFX940-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294959104, implicit-def dead $scc
+    ; GFX940-NEXT: $sgpr5 = frame-setup COPY $sgpr34
+    ; GFX940-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX940-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 32768, implicit-def dead $scc
-    ; GFX940-NEXT: $sgpr5 = S_ADD_I32 $sgpr33, 12288, implicit-def $scc
-    ; GFX940-NEXT: renamable $vgpr0, renamable $sgpr8_sgpr9 = V_ADD_CO_U32_e64 64, killed $sgpr5, 0, implicit $exec
-    ; GFX940-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -32768, implicit-def dead $scc
+    ; GFX940-NEXT: $sgpr6 = S_ADD_I32 $sgpr33, 12288, implicit-def $scc
+    ; GFX940-NEXT: renamable $vgpr0, renamable $sgpr8_sgpr9 = V_ADD_CO_U32_e64 64, killed $sgpr6, 0, implicit $exec
+    ; GFX940-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
+    ; GFX940-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX940-NEXT: $sgpr33 = frame-destroy COPY $sgpr4
     ; GFX940-NEXT: SI_RETURN implicit $vgpr0, implicit $sgpr8_sgpr9
     ;
     ; GFX11-LABEL: name: v_add_co_u32_e64_imm_fi_vop3_literal_error_non_vcc_live
-    ; GFX11: liveins: $sgpr4
+    ; GFX11: liveins: $sgpr4, $sgpr5
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX11-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 8191, implicit-def $scc
     ; GFX11-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294959104, implicit-def dead $scc
+    ; GFX11-NEXT: $sgpr5 = frame-setup COPY $sgpr34
+    ; GFX11-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX11-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 32768, implicit-def dead $scc
     ; GFX11-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr33, implicit $exec
     ; GFX11-NEXT: renamable $vgpr0, renamable $sgpr8_sgpr9 = V_ADD_CO_U32_e64 12352, killed $vgpr1, 0, implicit $exec
     ; GFX11-NEXT: renamable $vgpr0, renamable $sgpr8_sgpr9 = V_ADD_CO_U32_e64 killed $vgpr0, 0, 0, implicit $exec
-    ; GFX11-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -32768, implicit-def dead $scc
+    ; GFX11-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
+    ; GFX11-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX11-NEXT: $sgpr33 = frame-destroy COPY $sgpr4
     ; GFX11-NEXT: SI_RETURN implicit $vgpr0, implicit $sgpr8_sgpr9
     ;
     ; GFX12-LABEL: name: v_add_co_u32_e64_imm_fi_vop3_literal_error_non_vcc_live
-    ; GFX12: liveins: $sgpr4
+    ; GFX12: liveins: $sgpr4, $sgpr5
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX12-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 8191, implicit-def $scc
     ; GFX12-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294959104, implicit-def dead $scc
+    ; GFX12-NEXT: $sgpr5 = frame-setup COPY $sgpr34
+    ; GFX12-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX12-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 24576, implicit-def dead $scc
     ; GFX12-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr33, implicit $exec
     ; GFX12-NEXT: renamable $vgpr0, renamable $sgpr8_sgpr9 = V_ADD_CO_U32_e64 4160, killed $vgpr1, 0, implicit $exec
     ; GFX12-NEXT: renamable $vgpr0, renamable $sgpr8_sgpr9 = V_ADD_CO_U32_e64 killed $vgpr0, 0, 0, implicit $exec
-    ; GFX12-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -24576, implicit-def dead $scc
+    ; GFX12-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
+    ; GFX12-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX12-NEXT: $sgpr33 = frame-destroy COPY $sgpr4
     ; GFX12-NEXT: SI_RETURN implicit $vgpr0, implicit $sgpr8_sgpr9
     renamable $vgpr0,  renamable $sgpr8_sgpr9 = V_ADD_CO_U32_e64 64, %stack.1, 0, implicit $exec
@@ -2311,112 +2359,136 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; GFX7-LABEL: name: v_add_co_u32_e64_imm_fi_vop3_literal_error_vcc
-    ; GFX7: liveins: $sgpr4
+    ; GFX7: liveins: $sgpr4, $sgpr5
     ; GFX7-NEXT: {{  $}}
     ; GFX7-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX7-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
     ; GFX7-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
+    ; GFX7-NEXT: $sgpr5 = frame-setup COPY $sgpr34
+    ; GFX7-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX7-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 2097152, implicit-def dead $scc
     ; GFX7-NEXT: $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
     ; GFX7-NEXT: $vcc_lo = S_MOV_B32 12288
     ; GFX7-NEXT: $vgpr1, dead $vcc = V_ADD_CO_U32_e64 killed $vcc_lo, killed $vgpr1, 0, implicit $exec
     ; GFX7-NEXT: renamable $vgpr0, dead renamable $vcc = V_ADD_CO_U32_e64 64, killed $vgpr1, 0, implicit $exec
-    ; GFX7-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -2097152, implicit-def dead $scc
+    ; GFX7-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
+    ; GFX7-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX7-NEXT: $sgpr33 = frame-destroy COPY $sgpr4
     ; GFX7-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; GFX8-LABEL: name: v_add_co_u32_e64_imm_fi_vop3_literal_error_vcc
-    ; GFX8: liveins: $sgpr4
+    ; GFX8: liveins: $sgpr4, $sgpr5
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX8-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
     ; GFX8-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
+    ; GFX8-NEXT: $sgpr5 = frame-setup COPY $sgpr34
+    ; GFX8-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX8-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 2097152, implicit-def dead $scc
     ; GFX8-NEXT: $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
     ; GFX8-NEXT: $vcc_lo = S_MOV_B32 12288
     ; GFX8-NEXT: $vgpr1, dead $vcc = V_ADD_CO_U32_e64 killed $vcc_lo, killed $vgpr1, 0, implicit $exec
     ; GFX8-NEXT: renamable $vgpr0, dead renamable $vcc = V_ADD_CO_U32_e64 64, killed $vgpr1, 0, implicit $exec
-    ; GFX8-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -2097152, implicit-def dead $scc
+    ; GFX8-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
+    ; GFX8-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX8-NEXT: $sgpr33 = frame-destroy COPY $sgpr4
     ; GFX8-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; GFX900-LABEL: name: v_add_co_u32_e64_imm_fi_vop3_literal_error_vcc
-    ; GFX900: liveins: $sgpr4
+    ; GFX900: liveins: $sgpr4, $sgpr5
     ; GFX900-NEXT: {{  $}}
     ; GFX900-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX900-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
     ; GFX900-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
+    ; GFX900-NEXT: $sgpr5 = frame-setup COPY $sgpr34
+    ; GFX900-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX900-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 2097152, implicit-def dead $scc
     ; GFX900-NEXT: $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
     ; GFX900-NEXT: $vgpr1 = V_ADD_U32_e32 12288, killed $vgpr1, implicit $exec
     ; GFX900-NEXT: renamable $vgpr0, dead renamable $vcc = V_ADD_CO_U32_e64 64, killed $vgpr1, 0, implicit $exec
-    ; GFX900-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -2097152, implicit-def dead $scc
+    ; GFX900-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
+    ; GFX900-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX900-NEXT: $sgpr33 = frame-destroy COPY $sgpr4
     ; GFX900-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; GFX90A-LABEL: name: v_add_co_u32_e64_imm_fi_vop3_literal_error_vcc
-    ; GFX90A: liveins: $sgpr4
+    ; GFX90A: liveins: $sgpr4, $sgpr5
     ; GFX90A-NEXT: {{  $}}
     ; GFX90A-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX90A-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
     ; GFX90A-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
+    ; GFX90A-NEXT: $sgpr5 = frame-setup COPY $sgpr34
+    ; GFX90A-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX90A-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 2097152, implicit-def dead $scc
     ; GFX90A-NEXT: $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
     ; GFX90A-NEXT: $vgpr1 = V_ADD_U32_e32 12288, killed $vgpr1, implicit $exec
     ; GFX90A-NEXT: renamable $vgpr0, dead renamable $vcc = V_ADD_CO_U32_e64 64, killed $vgpr1, 0, implicit $exec
-    ; GFX90A-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -2097152, implicit-def dead $scc
+    ; GFX90A-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
+    ; GFX90A-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX90A-NEXT: $sgpr33 = frame-destroy COPY $sgpr4
     ; GFX90A-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; GFX10-LABEL: name: v_add_co_u32_e64_imm_fi_vop3_literal_error_vcc
-    ; GFX10: liveins: $sgpr4
+    ; GFX10: liveins: $sgpr4, $sgpr5
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX10-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
     ; GFX10-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
+    ; GFX10-NEXT: $sgpr5 = frame-setup COPY $sgpr34
+    ; GFX10-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX10-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 2097152, implicit-def dead $scc
     ; GFX10-NEXT: renamable $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
     ; GFX10-NEXT: renamable $vgpr0, dead renamable $vcc = V_ADD_CO_U32_e64 12352, killed $vgpr1, 0, implicit $exec
-    ; GFX10-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -2097152, implicit-def dead $scc
+    ; GFX10-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
+    ; GFX10-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX10-NEXT: $sgpr33 = frame-destroy COPY $sgpr4
     ; GFX10-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; GFX940-LABEL: name: v_add_co_u32_e64_imm_fi_vop3_literal_error_vcc
-    ; GFX940: liveins: $sgpr4
+    ; GFX940: liveins: $sgpr4, $sgpr5
     ; GFX940-NEXT: {{  $}}
     ; GFX940-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX940-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 8191, implicit-def $scc
     ; GFX940-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294959104, implicit-def dead $scc
+    ; GFX940-NEXT: $sgpr5 = frame-setup COPY $sgpr34
+    ; GFX940-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX940-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 32768, implicit-def dead $scc
-    ; GFX940-NEXT: $sgpr5 = S_ADD_I32 $sgpr33, 12288, implicit-def $scc
-    ; GFX940-NEXT: renamable $vgpr0, dead renamable $vcc = V_ADD_CO_U32_e64 64, killed $sgpr5, 0, implicit $exec
-    ; GFX940-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -32768, implicit-def dead $scc
+    ; GFX940-NEXT: $sgpr6 = S_ADD_I32 $sgpr33, 12288, implicit-def $scc
+    ; GFX940-NEXT: renamable $vgpr0, dead renamable $vcc = V_ADD_CO_U32_e64 64, killed $sgpr6, 0, implicit $exec
+    ; GFX940-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
+    ; GFX940-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX940-NEXT: $sgpr33 = frame-destroy COPY $sgpr4
     ; GFX940-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; GFX11-LABEL: name: v_add_co_u32_e64_imm_fi_vop3_literal_error_vcc
-    ; GFX11: liveins: $sgpr4
+    ; GFX11: liveins: $sgpr4, $sgpr5
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX11-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 8191, implicit-def $scc
     ; GFX11-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294959104, implicit-def dead $scc
+    ; GFX11-NEXT: $sgpr5 = frame-setup COPY $sgpr34
+    ; GFX11-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX11-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 32768, implicit-def dead $scc
     ; GFX11-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr33, implicit $exec
     ; GFX11-NEXT: renamable $vgpr0, dead renamable $vcc = V_ADD_CO_U32_e64 12352, killed $vgpr1, 0, implicit $exec
-    ; GFX11-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -32768, implicit-def dead $scc
+    ; GFX11-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
+    ; GFX11-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX11-NEXT: $sgpr33 = frame-destroy COPY $sgpr4
     ; GFX11-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; GFX12-LABEL: name: v_add_co_u32_e64_imm_fi_vop3_literal_error_vcc
-    ; GFX12: liveins: $sgpr4
+    ; GFX12: liveins: $sgpr4, $sgpr5
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX12-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 8191, implicit-def $scc
     ; GFX12-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294959104, implicit-def dead $scc
+    ; GFX12-NEXT: $sgpr5 = frame-setup COPY $sgpr34
+    ; GFX12-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX12-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 24576, implicit-def dead $scc
     ; GFX12-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr33, implicit $exec
     ; GFX12-NEXT: renamable $vgpr0, dead renamable $vcc = V_ADD_CO_U32_e64 4160, killed $vgpr1, 0, implicit $exec
-    ; GFX12-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -24576, implicit-def dead $scc
+    ; GFX12-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
+    ; GFX12-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX12-NEXT: $sgpr33 = frame-destroy COPY $sgpr4
     ; GFX12-NEXT: SI_RETURN implicit $vgpr0
     renamable $vgpr0,  renamable dead $vcc = V_ADD_CO_U32_e64 64, %stack.1, 0, implicit $exec
@@ -2439,115 +2511,139 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; GFX7-LABEL: name: v_add_co_u32_e64_imm_fi_vop3_literal_error_vcc_live
-    ; GFX7: liveins: $sgpr4
+    ; GFX7: liveins: $sgpr4, $sgpr5
     ; GFX7-NEXT: {{  $}}
     ; GFX7-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX7-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
     ; GFX7-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
+    ; GFX7-NEXT: $sgpr5 = frame-setup COPY $sgpr34
+    ; GFX7-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX7-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 2097152, implicit-def dead $scc
     ; GFX7-NEXT: $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
     ; GFX7-NEXT: $sgpr6 = S_MOV_B32 12288
     ; GFX7-NEXT: $vgpr1, dead $sgpr6_sgpr7 = V_ADD_CO_U32_e64 killed $sgpr6, killed $vgpr1, 0, implicit $exec
     ; GFX7-NEXT: renamable $vgpr0, renamable $vcc = V_ADD_CO_U32_e64 64, killed $vgpr1, 0, implicit $exec
-    ; GFX7-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -2097152, implicit-def dead $scc
+    ; GFX7-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
+    ; GFX7-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX7-NEXT: $sgpr33 = frame-destroy COPY $sgpr4
     ; GFX7-NEXT: SI_RETURN implicit $vgpr0, implicit $vcc
     ;
     ; GFX8-LABEL: name: v_add_co_u32_e64_imm_fi_vop3_literal_error_vcc_live
-    ; GFX8: liveins: $sgpr4
+    ; GFX8: liveins: $sgpr4, $sgpr5
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX8-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
     ; GFX8-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
+    ; GFX8-NEXT: $sgpr5 = frame-setup COPY $sgpr34
+    ; GFX8-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX8-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 2097152, implicit-def dead $scc
     ; GFX8-NEXT: $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
     ; GFX8-NEXT: $sgpr6 = S_MOV_B32 12288
     ; GFX8-NEXT: $vgpr1, dead $sgpr6_sgpr7 = V_ADD_CO_U32_e64 killed $sgpr6, killed $vgpr1, 0, implicit $exec
     ; GFX8-NEXT: renamable $vgpr0, renamable $vcc = V_ADD_CO_U32_e64 64, killed $vgpr1, 0, implicit $exec
-    ; GFX8-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -2097152, implicit-def dead $scc
+    ; GFX8-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
+    ; GFX8-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX8-NEXT: $sgpr33 = frame-destroy COPY $sgpr4
     ; GFX8-NEXT: SI_RETURN implicit $vgpr0, implicit $vcc
     ;
     ; GFX900-LABEL: name: v_add_co_u32_e64_imm_fi_vop3_literal_error_vcc_live
-    ; GFX900: liveins: $sgpr4
+    ; GFX900: liveins: $sgpr4, $sgpr5
     ; GFX900-NEXT: {{  $}}
     ; GFX900-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX900-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
     ; GFX900-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
+    ; GFX900-NEXT: $sgpr5 = frame-setup COPY $sgpr34
+    ; GFX900-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX900-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 2097152, implicit-def dead $scc
     ; GFX900-NEXT: $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
     ; GFX900-NEXT: $vgpr1 = V_ADD_U32_e32 12288, killed $vgpr1, implicit $exec
     ; GFX900-NEXT: renamable $vgpr0, renamable $vcc = V_ADD_CO_U32_e64 64, killed $vgpr1, 0, implicit $exec
-    ; GFX900-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -2097152, implicit-def dead $scc
+    ; GFX900-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
+    ; GFX900-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX900-NEXT: $sgpr33 = frame-destroy COPY $sgpr4
     ; GFX900-NEXT: SI_RETURN implicit $vgpr0, implicit $vcc
     ;
     ; GFX90A-LABEL: name: v_add_co_u32_e64_imm_fi_vop3_literal_error_vcc_live
-    ; GFX90A: liveins: $sgpr4
+    ; GFX90A: liveins: $sgpr4, $sgpr5
     ; GFX90A-NEXT: {{  $}}
     ; GFX90A-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX90A-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
     ; GFX90A-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
+    ; GFX90A-NEXT: $sgpr5 = frame-setup COPY $sgpr34
+    ; GFX90A-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX90A-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 2097152, implicit-def dead $scc
     ; GFX90A-NEXT: $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
     ; GFX90A-NEXT: $vgpr1 = V_ADD_U32_e32 12288, killed $vgpr1, implicit $exec
     ; GFX90A-NEXT: renamable $vgpr0, renamable $vcc = V_ADD_CO_U32_e64 64, killed $vgpr1, 0, implicit $exec
-    ; GFX90A-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -2097152, implicit-def dead $scc
+    ; GFX90A-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
+    ; GFX90A-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX90A-NEXT: $sgpr33 = frame-destroy COPY $sgpr4
     ; GFX90A-NEXT: SI_RETURN implicit $vgpr0, implicit $vcc
     ;
     ; GFX10-LABEL: name: v_add_co_u32_e64_imm_fi_vop3_literal_error_vcc_live
-    ; GFX10: liveins: $sgpr4
+    ; GFX10: liveins: $sgpr4, $sgpr5
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX10-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
     ; GFX10-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
+    ; GFX10-NEXT: $sgpr5 = frame-setup COPY $sgpr34
+    ; GFX10-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX10-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 2097152, implicit-def dead $scc
     ; GFX10-NEXT: renamable $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
     ; GFX10-NEXT: renamable $vgpr0, renamable $vcc = V_ADD_CO_U32_e64 12352, killed $vgpr1, 0, implicit $exec
     ; GFX10-NEXT: renamable $vgpr0, renamable $vcc = V_ADD_CO_U32_e64 killed $vgpr0, 0, 0, implicit $exec
-    ; GFX10-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -2097152, implicit-def dead $scc
+    ; GFX10-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
+    ; GFX10-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX10-NEXT: $sgpr33 = frame-destroy COPY $sgpr4
     ; GFX10-NEXT: SI_RETURN implicit $vgpr0, implicit $vcc
     ;
     ; GFX940-LABEL: name: v_add_co_u32_e64_imm_fi_vop3_literal_error_vcc_live
-    ; GFX940: liveins: $sgpr4
+    ; GFX940: liveins: $sgpr4, $sgpr5
     ; GFX940-NEXT: {{  $}}
     ; GFX940-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX940-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 8191, implicit-def $scc
     ; GFX940-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294959104, implicit-def dead $scc
+    ; GFX940-NEXT: $sgpr5 = frame-setup COPY $sgpr34
+    ; GFX940-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX940-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 32768, implicit-def dead $scc
-    ; GFX940-NEXT: $sgpr5 = S_ADD_I32 $sgpr33, 12288, implicit-def $scc
-    ; GFX940-NEXT: renamable $vgpr0, renamable $vcc = V_ADD_CO_U32_e64 64, killed $sgpr5, 0, implicit $exec
-    ; GFX940-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -32768, implicit-def dead $scc
+    ; GFX940-NEXT: $sgpr6 = S_ADD_I32 $sgpr33, 12288, implicit-def $scc
+    ; GFX940-NEXT: renamable $vgpr0, renamable $vcc = V_ADD_CO_U32_e64 64, killed $sgpr6, 0, implicit $exec
+    ; GFX940-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
+    ; GFX940-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX940-NEXT: $sgpr33 = frame-destroy COPY $sgpr4
     ; GFX940-NEXT: SI_RETURN implicit $vgpr0, implicit $vcc
     ;
     ; GFX11-LABEL: name: v_add_co_u32_e64_imm_fi_vop3_literal_error_vcc_live
-    ; GFX11: liveins: $sgpr4
+    ; GFX11: liveins: $sgpr4, $sgpr5
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX11-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 8191, implicit-def $scc
     ; GFX11-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294959104, implicit-def dead $scc
+    ; GFX11-NEXT: $sgpr5 = frame-setup COPY $sgpr34
+    ; GFX11-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX11-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 32768, implicit-def dead $scc
     ; GFX11-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr33, implicit $exec
     ; GFX11-NEXT: renamable $vgpr0, renamable $vcc = V_ADD_CO_U32_e64 12352, killed $vgpr1, 0, implicit $exec
     ; GFX11-NEXT: renamable $vgpr0, renamable $vcc = V_ADD_CO_U32_e64 killed $vgpr0, 0, 0, implicit $exec
-    ; GFX11-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -32768, implicit-def dead $scc
+    ; GFX11-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
+    ; GFX11-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX11-NEXT: $sgpr33 = frame-destroy COPY $sgpr4
     ; GFX11-NEXT: SI_RETURN implicit $vgpr0, implicit $vcc
     ;
     ; GFX12-LABEL: name: v_add_co_u32_e64_imm_fi_vop3_literal_error_vcc_live
-    ; GFX12: liveins: $sgpr4
+    ; GFX12: liveins: $sgpr4, $sgpr5
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX12-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 8191, implicit-def $scc
     ; GFX12-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294959104, implicit-def dead $scc
+    ; GFX12-NEXT: $sgpr5 = frame-setup COPY $sgpr34
+    ; GFX12-NEXT: $sgpr34 = frame-setup COPY $sgpr32
     ; GFX12-NEXT: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 24576, implicit-def dead $scc
     ; GFX12-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr33, implicit $exec
     ; GFX12-NEXT: renamable $vgpr0, renamable $vcc = V_ADD_CO_U32_e64 4160, killed $vgpr1, 0, implicit $exec
     ; GFX12-NEXT: renamable $vgpr0, renamable $vcc = V_ADD_CO_U32_e64 killed $vgpr0, 0, 0, implicit $exec
-    ; GFX12-NEXT: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -24576, implicit-def dead $scc
+    ; GFX12-NEXT: $sgpr32 = frame-destroy COPY $sgpr34
+    ; GFX12-NEXT: $sgpr34 = frame-destroy COPY $sgpr5
     ; GFX12-NEXT: $sgpr33 = frame-destroy COPY $sgpr4
     ; GFX12-NEXT: SI_RETURN implicit $vgpr0, implicit $vcc
     renamable $vgpr0,  renamable $vcc = V_ADD_CO_U32_e64 64, %stack.1, 0, implicit $exec

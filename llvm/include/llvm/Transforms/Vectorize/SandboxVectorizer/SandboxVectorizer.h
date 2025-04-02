@@ -24,10 +24,18 @@ class SandboxVectorizerPass : public PassInfoMixin<SandboxVectorizerPass> {
   TargetTransformInfo *TTI = nullptr;
   AAResults *AA = nullptr;
   ScalarEvolution *SE = nullptr;
-
+  // NOTE: We define the Context as a pass-scope object instead of local object
+  // in runOnFunction() because the passes defined in the pass-manager need
+  // access to it for registering/deregistering callbacks during construction
+  // and destruction.
   std::unique_ptr<sandboxir::Context> Ctx;
 
   // A pipeline of SandboxIR function passes run by the vectorizer.
+  // NOTE: We define this as a pass-scope object to avoid recreating the
+  // pass-pipeline every time in runOnFunction(). The downside is that the
+  // Context also needs to be defined as a pass-scope object because the passes
+  // within FPM may register/unregister callbacks, so they need access to
+  // Context.
   sandboxir::FunctionPassManager FPM;
 
   bool runImpl(Function &F);

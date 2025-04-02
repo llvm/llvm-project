@@ -1147,7 +1147,7 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   //   %new.gep = gep i8, %gep2, %offset
   //   ... %new.gep ...
   Instruction *NewGEP = GEP->clone();
-  NewGEP->insertBefore(GEP);
+  NewGEP->insertBefore(GEP->getIterator());
 
   Type *PtrIdxTy = DL->getIndexType(GEP->getType());
   IRBuilder<> Builder(GEP);

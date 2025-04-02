@@ -295,8 +295,8 @@ let Features = "amx-complex,amx-transpose", Attributes = [NoThrow] in {
 
 let Features = "amx-avx512,avx10.2-512", Attributes = [NoThrow] in {
   def tcvtrowd2ps_internal : X86Builtin<"_Vector<16, float>(unsigned short, unsigned short, _Vector<256, int>, unsigned int)">;
-  def tcvtrowps2pbf16h_internal : X86Builtin<"_Vector<32, __bf16>(unsigned short, unsigned short, _Vector<256, int>, unsigned int)">;
-  def tcvtrowps2pbf16l_internal : X86Builtin<"_Vector<32, __bf16>(unsigned short, unsigned short, _Vector<256, int>, unsigned int)">;
+  def tcvtrowps2bf16h_internal : X86Builtin<"_Vector<32, __bf16>(unsigned short, unsigned short, _Vector<256, int>, unsigned int)">;
+  def tcvtrowps2bf16l_internal : X86Builtin<"_Vector<32, __bf16>(unsigned short, unsigned short, _Vector<256, int>, unsigned int)">;
   def tcvtrowps2phh_internal : X86Builtin<"_Vector<32, _Float16>(unsigned short, unsigned short, _Vector<256, int>, unsigned int)">;
   def tcvtrowps2phl_internal : X86Builtin<"_Vector<32, _Float16>(unsigned short, unsigned short, _Vector<256, int>, unsigned int)">;
   def tilemovrow_internal : X86Builtin<"_Vector<16, int>(unsigned short, unsigned short, _Vector<256, int>, unsigned int)">;
@@ -387,8 +387,8 @@ let Features = "amx-complex,amx-transpose", Attributes = [NoThrow] in {
 
 let Features = "amx-avx512,avx10.2-512", Attributes = [NoThrow] in {
   def tcvtrowd2ps : X86Builtin<"_Vector<16, float>(_Constant unsigned char, unsigned int)">;
-  def tcvtrowps2pbf16h : X86Builtin<"_Vector<32, __bf16>(_Constant unsigned char, unsigned int)">;
-  def tcvtrowps2pbf16l : X86Builtin<"_Vector<32, __bf16>(_Constant unsigned char, unsigned int)">;
+  def tcvtrowps2bf16h : X86Builtin<"_Vector<32, __bf16>(_Constant unsigned char, unsigned int)">;
+  def tcvtrowps2bf16l : X86Builtin<"_Vector<32, __bf16>(_Constant unsigned char, unsigned int)">;
   def tcvtrowps2phh : X86Builtin<"_Vector<32, _Float16>(_Constant unsigned char, unsigned int)">;
   def tcvtrowps2phl : X86Builtin<"_Vector<32, _Float16>(_Constant unsigned char, unsigned int)">;
   def tilemovrow : X86Builtin<"_Vector<16, int>(_Constant unsigned char, unsigned int)">;

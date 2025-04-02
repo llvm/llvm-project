@@ -6,6 +6,16 @@
 
 # CHECK: Found 1 function(s).
 # CHECK: foo: [input.o[0x0-0xe), input.o[0x14-0x1c)]
+# CHECK-NEXT: input.o[0x0]: cmpl   $0x0, %edi
+# CHECK-NEXT: input.o[0x3]: je     0x14
+# CHECK-NEXT: input.o[0x5]: jmp    0x7
+# CHECK-NEXT: input.o[0x7]: callq  0xe
+# CHECK-NEXT: input.o[0xc]: jmp    0x1b
+# CHECK-EMPTY:
+# CHECK-NEXT: input.o[0x14]: callq  0x19
+# CHECK-NEXT: input.o[0x19]: jmp    0x1b
+# CHECK-NEXT: input.o[0x1b]: retq
+
 
 #--- script.py
 import lldb
@@ -17,6 +27,7 @@ def __lldb_init_module(debugger, internal_dict):
   for ctx in sym_ctxs:
     fn = ctx.function
     print(f"{fn.name}: {fn.GetRanges()}")
+    print(fn.GetInstructions(target))
 
 #--- input.s
 # An example of a function which has been split into two parts. Roughly

@@ -161,20 +161,6 @@ static uint64_t getSymSizeForMap(Defined *sym) {
   return sym->size;
 }
 
-// Merges two vectors of input sections in order of their outSecOff values.
-// This approach creates a new (temporary) vector which is not ideal but the
-// ideal approach leads to a lot of code duplication.
-static std::vector<ConcatInputSection *>
-mergeOrderedInputs(ArrayRef<ConcatInputSection *> inputs1,
-                   ArrayRef<ConcatInputSection *> inputs2) {
-  std::vector<ConcatInputSection *> vec(inputs1.size() + inputs2.size());
-  std::merge(inputs1.begin(), inputs1.end(), inputs2.begin(), inputs2.end(),
-             vec.begin(), [](ConcatInputSection *a, ConcatInputSection *b) {
-               return a->outSecOff < b->outSecOff;
-             });
-  return vec;
-}
-
 void macho::writeMapFile() {
   if (config->mapFile.empty())
     return;
@@ -217,15 +203,32 @@ void macho::writeMapFile() {
                    seg->name.str().c_str(), osec->name.str().c_str());
     }
 
-  // Shared function to print an array of symbols.
-  auto printIsecArrSyms = [&](const std::vector<ConcatInputSection *> &arr) {
-    for (const ConcatInputSection *isec : arr) {
-      for (Defined *sym : isec->symbols) {
-        if (!(isPrivateLabel(sym->getName()) && getSymSizeForMap(sym) == 0))
-          os << format("0x%08llX\t0x%08llX\t[%3u] %s\n", sym->getVA(),
-                       getSymSizeForMap(sym),
-                       readerToFileOrdinal[sym->getFile()],
-                       sym->getName().str().data());
+  // Helper lambda that prints all symbols from one ConcatInputSection.
+  auto printOne = [&](const ConcatInputSection *isec) {
+    for (Defined *sym : isec->symbols) {
+      if (!(isPrivateLabel(sym->getName()) && getSymSizeForMap(sym) == 0)) {
+        os << format("0x%08llX\t0x%08llX\t[%3u] %s\n", sym->getVA(),
+                     getSymSizeForMap(sym),
+                     readerToFileOrdinal.lookup(sym->getFile()),
+                     sym->getName().str().data());
+      }
+    }
+  };
+  // Shared function to print one or two arrays of ConcatInputSection in
+  // ascending outSecOff order. The second array is optional; if provided, we
+  // interleave the printing in sorted order without allocating a merged temp
+  // array.
+  auto printIsecArrSyms = [&](ArrayRef<ConcatInputSection *> arr1,
+                              ArrayRef<ConcatInputSection *> arr2 = {}) {
+    // Print both arrays in sorted order, interleaving as necessary.
+    while (!arr1.empty() || !arr2.empty()) {
+      if (!arr1.empty() && (arr2.empty() || arr1.front()->outSecOff <=
+                                                arr2.front()->outSecOff)) {
+        printOne(arr1.front());
+        arr1 = arr1.drop_front();
+      } else if (!arr2.empty()) {
+        printOne(arr2.front());
+        arr2 = arr2.drop_front();
       }
     }
   };
@@ -235,9 +238,7 @@ void macho::writeMapFile() {
   for (const OutputSegment *seg : outputSegments) {
     for (const OutputSection *osec : seg->getSections()) {
       if (auto *textOsec = dyn_cast<TextOutputSection>(osec)) {
-        auto inputsAndThunks =
-            mergeOrderedInputs(textOsec->inputs, textOsec->getThunks());
-        printIsecArrSyms(inputsAndThunks);
+        printIsecArrSyms(textOsec->inputs, textOsec->getThunks());
       } else if (auto *concatOsec = dyn_cast<ConcatOutputSection>(osec)) {
         printIsecArrSyms(concatOsec->inputs);
       } else if (osec == in.cStringSection || osec == in.objcMethnameSection) {

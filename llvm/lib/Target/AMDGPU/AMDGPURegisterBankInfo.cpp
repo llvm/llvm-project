@@ -3304,7 +3304,6 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       constrainOpWithReadfirstlane(B, MI, 1);
       return;
     case Intrinsic::amdgcn_s_barrier_join:
-    case Intrinsic::amdgcn_s_wakeup_barrier:
       constrainOpWithReadfirstlane(B, MI, 1);
       return;
     case Intrinsic::amdgcn_s_barrier_init:
@@ -4676,6 +4675,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_set_inactive:
     case Intrinsic::amdgcn_set_inactive_chain_arg:
     case Intrinsic::amdgcn_permlane64:
+    case Intrinsic::amdgcn_ds_bpermute_fi_b32:
       return getDefaultMappingAllVGPR(MI);
     case Intrinsic::amdgcn_cvt_pkrtz:
       if (Subtarget.hasSALUFloatInsts() && isSALUMapping(MI))
@@ -5272,7 +5272,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
       break;
     case Intrinsic::amdgcn_s_barrier_join:
-    case Intrinsic::amdgcn_s_wakeup_barrier:
       OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
       break;
     case Intrinsic::amdgcn_s_barrier_init:

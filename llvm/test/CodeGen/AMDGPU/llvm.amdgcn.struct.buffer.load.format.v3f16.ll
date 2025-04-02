@@ -122,6 +122,7 @@ define amdgpu_gs void @main(<4 x i32> %arg, i32 %arg1) {
 ; GFX12-NEXT:    v_readfirstlane_b32 s5, v1
 ; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
 ; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX12-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]

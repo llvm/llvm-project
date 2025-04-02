@@ -523,7 +523,7 @@ public:
   }
 
   bool ignoreCSRForAllocationOrder(const MachineFunction &MF,
-                                   unsigned PhysReg) const override;
+                                   MCRegister PhysReg) const override;
   unsigned getGPRAllocationOrder(const MachineFunction &MF) const;
 };
 

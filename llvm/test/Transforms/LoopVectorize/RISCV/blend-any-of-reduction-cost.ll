@@ -58,8 +58,8 @@ exit:
   ret i32 %res
 }
 
-define i32 @any_of_reduction_used_in_blend_with_mutliple_phis(ptr %src, i64 %N, i1 %c.0, i1 %c.1) #0 {
-; CHECK-LABEL: define i32 @any_of_reduction_used_in_blend_with_mutliple_phis(
+define i32 @any_of_reduction_used_in_blend_with_multiple_phis(ptr %src, i64 %N, i1 %c.0, i1 %c.1) #0 {
+; CHECK-LABEL: define i32 @any_of_reduction_used_in_blend_with_multiple_phis(
 ; CHECK-SAME: ptr [[SRC:%.*]], i64 [[N:%.*]], i1 [[C_0:%.*]], i1 [[C_1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()

@@ -153,7 +153,7 @@ for1.loopexit:                                 ; preds = %for1.inc
 ; Check that we do not interchange if reduction is stored in an invariant address inside inner loop
 ; REMARKS: --- !Missed
 ; REMARKS-NEXT: Pass:            loop-interchange
-; REMARKS-NEXT: Name:            UnsupportedPHIOuter
+; REMARKS-NEXT: Name:            Dependence
 ; REMARKS-NEXT: Function:        test4
 
 define i64 @test4(ptr %Arr, ptr %dst) {

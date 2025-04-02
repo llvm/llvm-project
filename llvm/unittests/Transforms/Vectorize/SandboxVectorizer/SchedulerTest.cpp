@@ -51,6 +51,14 @@ struct SchedulerTest : public testing::Test {
   }
 };
 
+static sandboxir::BasicBlock *getBasicBlockByName(sandboxir::Function *F,
+                                                  StringRef Name) {
+  for (sandboxir::BasicBlock &BB : *F)
+    if (BB.getName() == Name)
+      return &BB;
+  llvm_unreachable("Expected to find basic block!");
+}
+
 TEST_F(SchedulerTest, SchedBundle) {
   parseIR(C, R"IR(
 define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
@@ -236,4 +244,48 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1) {
   // Check if rescheduling works.
   EXPECT_TRUE(Sched.trySchedule({Add0, Add1}));
   EXPECT_TRUE(Sched.trySchedule({L0, L1}));
+}
+
+TEST_F(SchedulerTest, DontCrossBBs) {
+  parseIR(C, R"IR(
+define void @foo(ptr noalias %ptr0, ptr noalias %ptr1, i8 %v0, i8 %v1) {
+bb0:
+  %add0 = add i8 %v0, 0
+  %add1 = add i8 %v1, 1
+  br label %bb1
+bb1:
+  store i8 %add0, ptr %ptr0
+  store i8 %add1, ptr %ptr1
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB0 = getBasicBlockByName(F, "bb0");
+  auto *BB1 = getBasicBlockByName(F, "bb1");
+  auto It = BB0->begin();
+  auto *Add0 = &*It++;
+  auto *Add1 = &*It++;
+
+  It = BB1->begin();
+  auto *S0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S1 = cast<sandboxir::StoreInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  {
+    // Schedule bottom-up
+    sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
+    EXPECT_TRUE(Sched.trySchedule({Ret}));
+    EXPECT_TRUE(Sched.trySchedule({S0, S1}));
+    // Scheduling across blocks should fail.
+    EXPECT_FALSE(Sched.trySchedule({Add0, Add1}));
+  }
+  {
+    // Schedule top-down
+    sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
+    EXPECT_TRUE(Sched.trySchedule({Add0, Add1}));
+    // Scheduling across blocks should fail.
+    EXPECT_FALSE(Sched.trySchedule({S0, S1}));
+  }
 }

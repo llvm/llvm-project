@@ -50,15 +50,27 @@ class CollectUnexpandedParameterPacksVisitor
         auto *FTD = FD ? FD->getDescribedFunctionTemplate() : nullptr;
         if (FTD && FTD->getTemplateParameters()->getDepth() >= DepthLimit)
           return;
-      } else if (getDepthAndIndex(ND).first >= DepthLimit)
+      } else if (auto *BD = dyn_cast<BindingDecl>(ND)) {
+        Expr *E = BD->getBinding();
+        if (auto *RP = cast_if_present<ResolvedUnexpandedPackExpr>(E)) {
+          addUnexpanded(RP);
+          return;
+        }
+      } else if (getDepthAndIndex(ND).first >= DepthLimit) {
         return;
+      }
 
       Unexpanded.push_back({ND, Loc});
     }
+
     void addUnexpanded(const TemplateTypeParmType *T,
                        SourceLocation Loc = SourceLocation()) {
       if (T->getDepth() < DepthLimit)
         Unexpanded.push_back({T, Loc});
+    }
+
+    void addUnexpanded(ResolvedUnexpandedPackExpr *E) {
+      Unexpanded.push_back({E, E->getBeginLoc()});
     }
 
   public:
@@ -100,6 +112,12 @@ class CollectUnexpandedParameterPacksVisitor
       if (E->getDecl()->isParameterPack())
         addUnexpanded(E->getDecl(), E->getLocation());
 
+      return true;
+    }
+
+    bool
+    VisitResolvedUnexpandedPackExpr(ResolvedUnexpandedPackExpr *E) override {
+      addUnexpanded(E);
       return true;
     }
 
@@ -422,8 +440,8 @@ Sema::DiagnoseUnexpandedParameterPacks(SourceLocation Loc,
     if (const TemplateTypeParmType *TTP
           = Unexpanded[I].first.dyn_cast<const TemplateTypeParmType *>())
       Name = TTP->getIdentifier();
-    else
-      Name = cast<NamedDecl *>(Unexpanded[I].first)->getIdentifier();
+    else if (NamedDecl *ND = Unexpanded[I].first.dyn_cast<NamedDecl *>())
+      Name = ND->getIdentifier();
 
     if (Name && NamesKnown.insert(Name).second)
       Names.push_back(Name);
@@ -757,23 +775,39 @@ bool Sema::CheckParameterPacksForExpansion(
   bool HaveFirstPack = false;
   std::optional<unsigned> NumPartialExpansions;
   SourceLocation PartiallySubstitutedPackLoc;
+  typedef LocalInstantiationScope::DeclArgumentPack DeclArgumentPack;
 
   for (UnexpandedParameterPack ParmPack : Unexpanded) {
     // Compute the depth and index for this parameter pack.
     unsigned Depth = 0, Index = 0;
     IdentifierInfo *Name;
     bool IsVarDeclPack = false;
+    ResolvedUnexpandedPackExpr *ResolvedPack = nullptr;
 
     if (const TemplateTypeParmType *TTP =
             ParmPack.first.dyn_cast<const TemplateTypeParmType *>()) {
       Depth = TTP->getDepth();
       Index = TTP->getIndex();
       Name = TTP->getIdentifier();
+    } else if (auto *RP =
+                   ParmPack.first.dyn_cast<ResolvedUnexpandedPackExpr *>()) {
+      ResolvedPack = RP;
     } else {
       NamedDecl *ND = cast<NamedDecl *>(ParmPack.first);
       if (isa<VarDecl>(ND))
         IsVarDeclPack = true;
-      else
+      else if (isa<BindingDecl>(ND)) {
+        // Find the instantiated BindingDecl and check it for a resolved pack.
+        llvm::PointerUnion<Decl *, DeclArgumentPack *> *Instantiation =
+            CurrentInstantiationScope->findInstantiationOf(ND);
+        Decl *B = cast<Decl *>(*Instantiation);
+        Expr *BindingExpr = cast<BindingDecl>(B)->getBinding();
+        ResolvedPack = cast_if_present<ResolvedUnexpandedPackExpr>(BindingExpr);
+        if (!ResolvedPack) {
+          ShouldExpand = false;
+          continue;
+        }
+      } else
         std::tie(Depth, Index) = getDepthAndIndex(ND);
 
       Name = ND->getIdentifier();
@@ -783,8 +817,6 @@ bool Sema::CheckParameterPacksForExpansion(
     unsigned NewPackSize, PendingPackExpansionSize = 0;
     if (IsVarDeclPack) {
       // Figure out whether we're instantiating to an argument pack or not.
-      typedef LocalInstantiationScope::DeclArgumentPack DeclArgumentPack;
-
       llvm::PointerUnion<Decl *, DeclArgumentPack *> *Instantiation =
           CurrentInstantiationScope->findInstantiationOf(
               cast<NamedDecl *>(ParmPack.first));
@@ -797,6 +829,8 @@ bool Sema::CheckParameterPacksForExpansion(
         ShouldExpand = false;
         continue;
       }
+    } else if (ResolvedPack) {
+      NewPackSize = ResolvedPack->getNumExprs();
     } else {
       // If we don't have a template argument at this depth/index, then we
       // cannot expand the pack expansion. Make a note of this, but we still
@@ -833,7 +867,7 @@ bool Sema::CheckParameterPacksForExpansion(
     //   Template argument deduction can extend the sequence of template
     //   arguments corresponding to a template parameter pack, even when the
     //   sequence contains explicitly specified template arguments.
-    if (!IsVarDeclPack && CurrentInstantiationScope) {
+    if (!IsVarDeclPack && !ResolvedPack && CurrentInstantiationScope) {
       if (NamedDecl *PartialPack =
               CurrentInstantiationScope->getPartiallySubstitutedPack()) {
         unsigned PartialDepth, PartialIndex;
@@ -939,6 +973,12 @@ std::optional<unsigned> Sema::getNumArgumentsInExpansionFromUnexpanded(
             Unexpanded[I].first.dyn_cast<const TemplateTypeParmType *>()) {
       Depth = TTP->getDepth();
       Index = TTP->getIndex();
+    } else if (auto *PE = Unexpanded[I]
+                              .first.dyn_cast<ResolvedUnexpandedPackExpr *>()) {
+      unsigned Size = PE->getNumExprs();
+      assert((!Result || *Result == Size) && "inconsistent pack sizes");
+      Result = Size;
+      continue;
     } else {
       NamedDecl *ND = cast<NamedDecl *>(Unexpanded[I].first);
       if (isa<VarDecl>(ND)) {
@@ -1167,8 +1207,12 @@ ExprResult Sema::ActOnSizeofParameterPackExpr(Scope *S,
 
   MarkAnyDeclReferenced(OpLoc, ParameterPack, true);
 
+  std::optional<unsigned> Length;
+  if (auto *RP = ResolvedUnexpandedPackExpr::getFromDecl(ParameterPack))
+    Length = RP->getNumExprs();
+
   return SizeOfPackExpr::Create(Context, OpLoc, ParameterPack, NameLoc,
-                                RParenLoc);
+                                RParenLoc, Length);
 }
 
 static bool isParameterPack(Expr *PackExpression) {

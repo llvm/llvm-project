@@ -251,11 +251,11 @@ FunctionSP SymbolFileBreakpad::GetOrCreateFunction(CompileUnit &comp_unit) {
     addr_t address = record->Address + base;
     SectionSP section_sp = list->FindSectionContainingFileAddress(address);
     if (section_sp) {
-      AddressRange func_range(
-          section_sp, address - section_sp->GetFileAddress(), record->Size);
+      Address func_addr(section_sp, address - section_sp->GetFileAddress());
       // Use the CU's id because every CU has only one function inside.
-      func_sp = std::make_shared<Function>(&comp_unit, id, 0, func_name,
-                                           nullptr, AddressRanges{func_range});
+      func_sp = std::make_shared<Function>(
+          &comp_unit, id, 0, func_name, nullptr, func_addr,
+          AddressRanges{AddressRange(func_addr, record->Size)});
       comp_unit.AddFunction(func_sp);
     }
   }
@@ -302,7 +302,7 @@ size_t SymbolFileBreakpad::ParseBlocksRecursive(Function &func) {
   blocks.push_back(&func.GetBlock(false));
 
   size_t blocks_added = 0;
-  addr_t func_base = func.GetAddressRange().GetBaseAddress().GetOffset();
+  addr_t func_base = func.GetAddress().GetOffset();
   CompUnitData &data = m_cu_data->GetEntryRef(comp_unit->GetID()).data;
   LineIterator It(*m_objfile_sp, Record::Func, data.bookmark),
       End(*m_objfile_sp);
@@ -396,7 +396,7 @@ SymbolFileBreakpad::ResolveSymbolContext(const Address &so_addr,
         Block &block = func_sp->GetBlock(true);
         sc.block = block.FindInnermostBlockByOffset(
             so_addr.GetFileAddress() -
-            sc.function->GetAddressRange().GetBaseAddress().GetFileAddress());
+            sc.function->GetAddress().GetFileAddress());
         if (sc.block)
           result |= eSymbolContextBlock;
       }

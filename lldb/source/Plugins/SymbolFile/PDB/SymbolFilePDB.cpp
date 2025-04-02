@@ -296,10 +296,9 @@ SymbolFilePDB::ParseCompileUnitFunctionForPDBFunc(const PDBSymbolFunc &pdb_func,
     return nullptr;
 
   auto func_length = pdb_func.getLength();
-  AddressRange func_range =
-      AddressRange(file_vm_addr, func_length,
-                   GetObjectFile()->GetModule()->GetSectionList());
-  if (!func_range.GetBaseAddress().IsValid())
+  Address func_addr(file_vm_addr,
+                    GetObjectFile()->GetModule()->GetSectionList());
+  if (!func_addr.IsValid())
     return nullptr;
 
   lldb_private::Type *func_type = ResolveTypeUID(pdb_func.getSymIndexId());
@@ -312,7 +311,7 @@ SymbolFilePDB::ParseCompileUnitFunctionForPDBFunc(const PDBSymbolFunc &pdb_func,
 
   FunctionSP func_sp = std::make_shared<Function>(
       &comp_unit, pdb_func.getSymIndexId(), func_type_uid, mangled, func_type,
-      AddressRanges{func_range});
+      func_addr, AddressRanges{AddressRange(func_addr, func_length)});
 
   comp_unit.AddFunction(func_sp);
 

@@ -1919,7 +1919,8 @@ private:
   __copy_non_overlapping_range(_ForwardIter __first, _Sent __last, value_type* __dest) {
 #  ifndef _LIBCPP_CXX03_LANG
     if constexpr (__libcpp_is_contiguous_iterator<_ForwardIter>::value &&
-                  is_same<value_type, __iter_value_type<_ForwardIter>>::value && is_same<_ForwardIter, _Sent>::value) {
+                  is_same<value_type, __remove_cvref_t<decltype(*__first)>>::value &&
+                  is_same<_ForwardIter, _Sent>::value) {
       _LIBCPP_ASSERT_INTERNAL(
           !std::__is_overlapping_range(std::__to_address(__first), std::__to_address(__last), __dest),
           "__copy_non_overlapping_range called with an overlapping range!");
@@ -1952,7 +1953,7 @@ private:
     __sz += __n;
     __set_size(__sz);
     traits_type::assign(__p[__sz], value_type());
-    __copy_non_overlapping_range(__first, __last, __p + __ip);
+    __copy_non_overlapping_range(std::move(__first), std::move(__last), __p + __ip);
 
     return begin() + __ip;
   }
@@ -2488,7 +2489,7 @@ basic_string<_CharT, _Traits, _Allocator>::__init_with_size(_InputIterator __fir
 #  if _LIBCPP_HAS_EXCEPTIONS
   try {
 #  endif // _LIBCPP_HAS_EXCEPTIONS
-    auto __end = __copy_non_overlapping_range(__first, __last, std::__to_address(__p));
+    auto __end = __copy_non_overlapping_range(std::move(__first), std::move(__last), std::__to_address(__p));
     traits_type::assign(*__end, value_type());
 #  if _LIBCPP_HAS_EXCEPTIONS
   } catch (...) {
@@ -3080,9 +3081,9 @@ basic_string<_CharT, _Traits, _Allocator>::__insert_with_size(
     return begin() + __ip;
 
   if (__string_is_trivial_iterator<_Iterator>::value && !__addr_in_range(*__first)) {
-    return __insert_from_safe_copy(__n, __ip, __first, __last);
+    return __insert_from_safe_copy(__n, __ip, std::move(__first), std::move(__last));
   } else {
-    const basic_string __temp(__init_with_sentinel_tag(), __first, __last, __alloc_);
+    const basic_string __temp(__init_with_sentinel_tag(), std::move(__first), std::move(__last), __alloc_);
     return __insert_from_safe_copy(__n, __ip, __temp.begin(), __temp.end());
   }
 }

@@ -90,6 +90,10 @@ void genSignal(fir::FirOpBuilder &builder, mlir::Location loc,
 void genSleep(fir::FirOpBuilder &builder, mlir::Location loc,
               mlir::Value seconds);
 
+/// generate chdir runtime call
+mlir::Value genChdir(fir::FirOpBuilder &builder, mlir::Location loc,
+                     mlir::Value name);
+
 } // namespace runtime
 } // namespace fir
 

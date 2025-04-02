@@ -885,7 +885,7 @@ static bool relax(Ctx &ctx, InputSection &sec) {
   }
   // Inform assignAddresses that the size has changed.
   if (!isUInt<32>(delta))
-    Fatal(ctx) << "section size decrease is too large: " << delta;
+    Err(ctx) << "section size decrease is too large: " << delta;
   sec.bytesDropped = delta;
   return changed;
 }

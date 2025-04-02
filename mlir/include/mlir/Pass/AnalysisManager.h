@@ -262,7 +262,7 @@ struct NestedAnalysisMap {
   PassInstrumentor *getPassInstrumentor() const {
     if (auto *parent = getParent())
       return parent->getPassInstrumentor();
-    return parentOrInstrumentor.get<PassInstrumentor *>();
+    return cast<PassInstrumentor *>(parentOrInstrumentor);
   }
 
   /// The cached analyses for nested operations.

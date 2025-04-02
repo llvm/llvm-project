@@ -273,7 +273,7 @@ define half @fround16(half %f) #0 {
 ; X86-LABEL: fround16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
+; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%esp)
 ; X86-NEXT:    calll roundf

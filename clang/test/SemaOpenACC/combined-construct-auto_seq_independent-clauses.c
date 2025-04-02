@@ -75,7 +75,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'detach' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop auto detach(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device' not yet implemented}}
+  // expected-error@+1{{OpenACC 'device' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop auto device(VarPtr)
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop auto deviceptr(VarPtr)
@@ -85,7 +85,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop auto firstprivate(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'host' not yet implemented}}
+  // expected-error@+1{{OpenACC 'host' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop auto host(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'link' not yet implemented}}
@@ -192,7 +192,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'detach' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop detach(Var) auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device' not yet implemented}}
+  // expected-error@+1{{OpenACC 'device' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop device(VarPtr) auto
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop deviceptr(VarPtr) auto
@@ -202,7 +202,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop firstprivate(Var) auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'host' not yet implemented}}
+  // expected-error@+1{{OpenACC 'host' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop host(Var) auto
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'link' not yet implemented}}
@@ -310,7 +310,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'detach' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop independent detach(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device' not yet implemented}}
+  // expected-error@+1{{OpenACC 'device' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop independent device(VarPtr)
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop independent deviceptr(VarPtr)
@@ -320,7 +320,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop independent firstprivate(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'host' not yet implemented}}
+  // expected-error@+1{{OpenACC 'host' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop independent host(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'link' not yet implemented}}
@@ -427,7 +427,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'detach' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop detach(Var) independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device' not yet implemented}}
+  // expected-error@+1{{OpenACC 'device' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop device(VarPtr) independent
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop deviceptr(VarPtr) independent
@@ -437,7 +437,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop firstprivate(Var) independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'host' not yet implemented}}
+  // expected-error@+1{{OpenACC 'host' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop host(Var) independent
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'link' not yet implemented}}
@@ -553,7 +553,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'detach' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop seq detach(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device' not yet implemented}}
+  // expected-error@+1{{OpenACC 'device' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop seq device(VarPtr)
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop seq deviceptr(VarPtr)
@@ -563,7 +563,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop seq firstprivate(Var)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'host' not yet implemented}}
+  // expected-error@+1{{OpenACC 'host' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop seq host(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'link' not yet implemented}}
@@ -676,7 +676,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'detach' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop detach(Var) seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'device' not yet implemented}}
+  // expected-error@+1{{OpenACC 'device' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop device(VarPtr) seq
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop deviceptr(VarPtr) seq
@@ -686,7 +686,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop firstprivate(Var) seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'host' not yet implemented}}
+  // expected-error@+1{{OpenACC 'host' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop host(Var) seq
   for(unsigned i = 0; i < 5; ++i);
   // expected-warning@+1{{OpenACC clause 'link' not yet implemented}}

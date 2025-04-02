@@ -928,8 +928,8 @@ void WinException::computeIP2StateTable(
       BaseState = NullState;
       StartLabel = Asm->getFunctionBegin();
     } else {
-      auto *FuncletPad =
-          cast<FuncletPadInst>(FuncletStart->getBasicBlock()->getFirstNonPHI());
+      auto *FuncletPad = cast<FuncletPadInst>(
+          FuncletStart->getBasicBlock()->getFirstNonPHIIt());
       assert(FuncInfo.FuncletBaseStateMap.count(FuncletPad) != 0);
       BaseState = FuncInfo.FuncletBaseStateMap.find(FuncletPad)->second;
       StartLabel = getMCSymbolForMBB(Asm, &*FuncletStart);

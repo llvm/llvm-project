@@ -22,7 +22,7 @@ add_libc_fuzzer(
     libc.src.__support.HashTable.table
   COMPILE_OPTIONS
     -D__LIBC_EXPLICIT_SIMD_OPT
-) 
+)
 
 # TODO: FreeListHeap uses the _end symbol which conflicts with the _end symbol
 # defined by GPU start.cpp files so for now we exclude this fuzzer on GPU.

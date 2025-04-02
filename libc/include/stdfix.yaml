@@ -1,7 +1,7 @@
 header: stdfix.h
 header_template: stdfix.h.def
 macros: []
-types: 
+types:
   - type_name: stdfix-types
 enums: []
 objects: []

@@ -674,6 +674,12 @@ public:
     return dyn_cast_if_present<const TargetRegisterClass *>(Val);
   }
 
+  /// Return the register bank of \p Reg.
+  /// This shouldn't be used directly unless \p Reg has a register bank.
+  const RegisterBank *getRegBank(Register Reg) const {
+    return cast<const RegisterBank *>(VRegInfo[Reg.id()].first);
+  }
+
   /// Return the register bank of \p Reg, or null if Reg has not been assigned
   /// a register bank or has been assigned a register class.
   /// \note It is possible to get the register bank from the register class via
@@ -938,7 +944,7 @@ public:
     MCRegAliasIterator R(PhysReg, TRI, true);
 
     for (; R.isValid(); ++R)
-      ReservedRegs.set(*R);
+      ReservedRegs.set((*R).id());
   }
 
   /// reservedRegsFrozen - Returns true after freezeReservedRegs() was called
@@ -951,7 +957,7 @@ public:
   /// register.  Any register can be reserved before freezeReservedRegs() is
   /// called.
   bool canReserveReg(MCRegister PhysReg) const {
-    return !reservedRegsFrozen() || ReservedRegs.test(PhysReg);
+    return !reservedRegsFrozen() || ReservedRegs.test(PhysReg.id());
   }
 
   /// getReservedRegs - Returns a reference to the frozen set of reserved

@@ -10,7 +10,7 @@
 
 // Older versions of clang have a bug with atomic builtins affecting double and long double.
 // Fixed by 5fdd0948.
-// XFAIL: target=powerpc-ibm-{{.*}} && (clang-17 || clang-18)
+// XFAIL: target=powerpc-ibm-{{.*}} && clang-18
 
 // floating-point-type operator+=(floating-point-type) volatile noexcept;
 // floating-point-type operator+=(floating-point-type) noexcept;

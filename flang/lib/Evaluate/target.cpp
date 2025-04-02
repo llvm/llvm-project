@@ -104,6 +104,7 @@ void TargetCharacteristics::set_isBigEndian(bool isBig) {
 }
 
 void TargetCharacteristics::set_isPPC(bool isPowerPC) { isPPC_ = isPowerPC; }
+void TargetCharacteristics::set_isSPARC(bool isSPARC) { isSPARC_ = isSPARC; }
 
 void TargetCharacteristics::set_areSubnormalsFlushedToZero(bool yes) {
   areSubnormalsFlushedToZero_ = yes;

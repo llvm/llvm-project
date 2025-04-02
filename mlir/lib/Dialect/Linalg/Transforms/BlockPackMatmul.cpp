@@ -55,7 +55,7 @@ static bool validateFullTilesOnDims(linalg::LinalgOp linalgOp,
 
   // Skip the batch dimension if present.
   // Offset all dimensions accordingly.
-  SmallVector<int64_t, 3> offsetDims{dims};
+  SmallVector<int64_t, 3> offsetDims(dims);
   for (size_t i = 0; i < offsetDims.size(); i++)
     offsetDims[i] += batchDimsOffset;
 
@@ -111,10 +111,10 @@ transposePackedMatmul(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
 
   // Transpose only the dimensions that need that to conform to the provided
   // transpotion settings.
-  SmallVector<int64_t> innerPerm{0, 1};
+  SmallVector<int64_t> innerPerm = {0, 1};
   if (isInnerTransposed != transposeInnerBlocks)
     innerPerm = {1, 0};
-  SmallVector<int64_t> outerPerm{0, 1};
+  SmallVector<int64_t> outerPerm = {0, 1};
   if (isOuterTransposed != transposeOuterBlocks)
     outerPerm = {1, 0};
 

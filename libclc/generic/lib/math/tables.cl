@@ -22,7 +22,7 @@
 
 #include <clc/clc.h>
 
-#include "tables.h"
+#include <clc/math/tables.h>
 
 DECLARE_TABLE(float2, LOGE_TBL, 129) = {
     (float2)(0x0.000000p+0f, 0x0.000000p+0f),

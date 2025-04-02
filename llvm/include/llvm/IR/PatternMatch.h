@@ -1430,6 +1430,34 @@ m_NUWAddLike(const LHS &L, const RHS &R) {
   return m_CombineOr(m_NUWAdd(L, R), m_DisjointOr(L, R));
 }
 
+template <typename LHS, typename RHS>
+struct XorLike_match {
+  LHS L;
+  RHS R;
+
+  XorLike_match(const LHS &L, const RHS &R) : L(L), R(R) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    if (auto *Op = dyn_cast<BinaryOperator>(V)) {
+      if (Op->getOpcode() == Instruction::Sub && Op->hasNoUnsignedWrap() &&
+          PatternMatch::match(Op->getOperand(0), m_LowBitMask()))
+		  ; // Pass
+      else if (Op->getOpcode() != Instruction::Xor)
+        return false;
+      return (L.match(Op->getOperand(0)) && R.match(Op->getOperand(1))) ||
+             (L.match(Op->getOperand(1)) && R.match(Op->getOperand(0)));
+    }
+    return false;
+  }
+};
+
+/// Match either `(xor L, R)`, `(xor R, L)` or `(sub nuw R, L)` iff `R.isMask()`
+/// Only commutative matcher as the `sub` will need to swap the L and R.
+template <typename LHS, typename RHS>
+inline auto m_c_XorLike(const LHS &L, const RHS &R) {
+  return XorLike_match<LHS, RHS>(L, R);
+}
+
 //===----------------------------------------------------------------------===//
 // Class that matches a group of binary opcodes.
 //

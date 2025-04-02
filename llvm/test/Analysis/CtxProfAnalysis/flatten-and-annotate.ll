@@ -2,7 +2,7 @@
 ;
 ; RUN: rm -rf %t
 ; RUN: split-file %s %t
-; RUN: llvm-ctxprof-util fromJSON --input=%t/profile.json --output=%t/profile.ctxprofdata
+; RUN: llvm-ctxprof-util fromYAML --input=%t/profile.yaml --output=%t/profile.ctxprofdata
 ; RUN: opt -module-summary -passes='thinlto-pre-link<O2>' -use-ctx-profile=%t/profile.ctxprofdata \
 ; RUN:   %t/example.ll -S -o %t/prelink.ll
 ; RUN: FileCheck --input-file %t/prelink.ll %s --check-prefix=PRELINK
@@ -58,27 +58,15 @@
 ; CHECK:       ![[AN_ENTRYPOINT_EP]] = !{!"function_entry_count", i64 100}
 ; CHECK:       ![[AN_ENTRYPOINT_BW]] = !{!"branch_weights", i32 40, i32 60} 
 
-;--- profile.json
-[
-  {
-    "Guid": 4909520559318251808,
-    "Counters": [100, 40],
-    "Callsites": [
-      [
-        {
-          "Guid": 11872291593386833696,
-          "Counters": [ 100, 5 ]
-        }
-      ],
-      [
-        {
-          "Guid": 11872291593386833696,
-          "Counters": [ 40, 10 ]
-        }
-      ]
-    ]
-  }
-]
+;--- profile.yaml
+- Guid: 4909520559318251808
+  Counters: [100, 40]
+  Callsites: -
+              - Guid: 11872291593386833696
+                Counters: [ 100, 5 ]
+             -
+              - Guid: 11872291593386833696
+                Counters: [ 40, 10 ]
 ;--- example.ll
 declare void @bar()
 

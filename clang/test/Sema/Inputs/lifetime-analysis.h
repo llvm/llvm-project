@@ -52,7 +52,7 @@ struct vector {
 
   void push_back(const T&);
   void push_back(T&&);
-  
+  const T& back() const;
   void insert(iterator, T&&);
 };
 

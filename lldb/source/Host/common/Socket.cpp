@@ -40,16 +40,6 @@
 #include "lldb/Host/linux/AbstractSocket.h"
 #endif
 
-#ifdef __ANDROID__
-#include <arpa/inet.h>
-#include <asm-generic/errno-base.h>
-#include <cerrno>
-#include <fcntl.h>
-#include <linux/tcp.h>
-#include <sys/syscall.h>
-#include <unistd.h>
-#endif // __ANDROID__
-
 using namespace lldb;
 using namespace lldb_private;
 
@@ -472,23 +462,7 @@ Status Socket::Accept(const Timeout<std::micro> &timeout, Socket *&socket) {
 NativeSocket Socket::AcceptSocket(NativeSocket sockfd, struct sockaddr *addr,
                                   socklen_t *addrlen, Status &error) {
   error.Clear();
-#if defined(ANDROID_USE_ACCEPT_WORKAROUND)
-  // Hack:
-  // This enables static linking lldb-server to an API 21 libc, but still
-  // having it run on older devices. It is necessary because API 21 libc's
-  // implementation of accept() uses the accept4 syscall(), which is not
-  // available in older kernels. Using an older libc would fix this issue, but
-  // introduce other ones, as the old libraries were quite buggy.
-  int fd = syscall(__NR_accept, sockfd, addr, addrlen);
-  if (fd >= 0) {
-    int flags = ::fcntl(fd, F_GETFD);
-    if (flags != -1 && ::fcntl(fd, F_SETFD, flags | FD_CLOEXEC) != -1)
-      return fd;
-    SetLastError(error);
-    close(fd);
-  }
-  return fd;
-#elif defined(SOCK_CLOEXEC) && defined(HAVE_ACCEPT4)
+#if defined(SOCK_CLOEXEC) && defined(HAVE_ACCEPT4)
   int flags = SOCK_CLOEXEC;
   NativeSocket fd = llvm::sys::RetryAfterSignal(
       static_cast<NativeSocket>(-1), ::accept4, sockfd, addr, addrlen, flags);

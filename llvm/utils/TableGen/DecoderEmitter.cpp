@@ -640,11 +640,11 @@ void Filter::recurse() {
 
     // Delegates to an inferior filter chooser for further processing on this
     // group of instructions whose segment values are variable.
-    FilterChooserMap.insert(std::pair(
+    FilterChooserMap.try_emplace(
         NO_FIXED_SEGMENTS_SENTINEL,
         std::make_unique<FilterChooser>(Owner->AllInstructions,
                                         VariableInstructions, Owner->Operands,
-                                        BitValueArray, *Owner)));
+                                        BitValueArray, *Owner));
   }
 
   // No need to recurse for a singleton filtered instruction.
@@ -667,10 +667,10 @@ void Filter::recurse() {
 
     // Delegates to an inferior filter chooser for further processing on this
     // category of instructions.
-    FilterChooserMap.insert(
-        std::pair(Inst.first, std::make_unique<FilterChooser>(
-                                  Owner->AllInstructions, Inst.second,
-                                  Owner->Operands, BitValueArray, *Owner)));
+    FilterChooserMap.try_emplace(Inst.first,
+                                 std::make_unique<FilterChooser>(
+                                     Owner->AllInstructions, Inst.second,
+                                     Owner->Operands, BitValueArray, *Owner));
   }
 }
 
@@ -1943,7 +1943,7 @@ static void parseVarLenInstOperand(const Record &Def,
       int TiedReg = TiedTo[OpSubOpPair.first];
       if (TiedReg != -1) {
         unsigned OpIdx = CGI.Operands.getFlattenedOperandNumber(
-            std::pair(TiedReg, OpSubOpPair.second));
+            {TiedReg, OpSubOpPair.second});
         Operands[OpIdx].addField(CurrBitPos, EncodingSegment.BitWidth, Offset);
       }
     }
@@ -2039,9 +2039,9 @@ populateInstruction(const CodeGenTarget &Target, const Record &EncodingDef,
   const DagInit *Out = Def.getValueAsDag("OutOperandList");
   const DagInit *In = Def.getValueAsDag("InOperandList");
   for (const auto &[Idx, Arg] : enumerate(Out->getArgs()))
-    InOutOperands.push_back(std::pair(Arg, Out->getArgNameStr(Idx)));
+    InOutOperands.emplace_back(Arg, Out->getArgNameStr(Idx));
   for (const auto &[Idx, Arg] : enumerate(In->getArgs()))
-    InOutOperands.push_back(std::pair(Arg, In->getArgNameStr(Idx)));
+    InOutOperands.emplace_back(Arg, In->getArgNameStr(Idx));
 
   // Search for tied operands, so that we can correctly instantiate
   // operands that are not explicitly represented in the encoding.
@@ -2146,7 +2146,7 @@ populateInstruction(const CodeGenTarget &Target, const Record &EncodingDef,
         InsnOperands.push_back(std::move(OpInfo));
     }
   }
-  Operands[Opc] = InsnOperands;
+  Operands[Opc] = std::move(InsnOperands);
 
 #if 0
   LLVM_DEBUG({
@@ -2587,7 +2587,7 @@ namespace llvm {
       if (!NumberedEncoding.HwModeName.empty())
         DecoderNamespace +=
             std::string("_") + NumberedEncoding.HwModeName.str();
-      OpcMap[std::pair(DecoderNamespace, Size)].emplace_back(
+      OpcMap[{DecoderNamespace, Size}].emplace_back(
           NEI, Target.getInstrIntValue(Def));
     } else {
       NumEncodingsOmitted++;

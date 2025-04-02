@@ -19,11 +19,23 @@
 ; CHECK:      - c: <unknown>
 ;.
 ; CHECK: @globalBytes = internal global [1024 x i8] zeroinitializer
+; CHECK: @globalBytes = internal global [1024 x i8] zeroinitializer
+; CHECK: @globalBytes = internal global [1024 x i8] zeroinitializer
+; CHECK: @globalBytes = internal global [1024 x i8] zeroinitializer
+; CHECK: @globalBytes = internal global [1024 x i8] zeroinitializer
+; CHECK: @globalBytes = internal global [1024 x i8] zeroinitializer
+; CHECK: @globalBytes = internal global [1024 x i8] zeroinitializer
+; CHECK: @globalBytes = internal global [1024 x i8] zeroinitializer
+; CHECK: @globalBytes = internal global [1024 x i8] zeroinitializer
+; CHECK: @globalBytes = internal global [1024 x i8] zeroinitializer
+; CHECK: @globalBytes = internal global [1024 x i8] zeroinitializer
+; CHECK: @globalBytes = internal global [1024 x i8] zeroinitializer
+; CHECK: @globalBytes = internal global [1024 x i8] zeroinitializer
 ;.
 define dso_local i32 @phi_different_offsets(ptr nocapture %val, ptr nocapture %val2, i1 %cmp) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn
 ; CHECK-LABEL: define dso_local i32 @phi_different_offsets
-; CHECK-SAME: (ptr nocapture nofree readonly [[VAL:%.*]], ptr nocapture nofree readonly [[VAL2:%.*]], i1 noundef [[CMP:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr nofree readonly captures(none) [[VAL:%.*]], ptr nofree readonly captures(none) [[VAL2:%.*]], i1 noundef [[CMP:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:

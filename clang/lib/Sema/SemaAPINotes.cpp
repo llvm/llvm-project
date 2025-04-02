@@ -478,7 +478,7 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
                             const api_notes::FunctionInfo &Info,
                             VersionedInfoMetadata Metadata) {
   // Find the declaration itself.
-  FunctionDecl *FD = AnyFunc.dyn_cast<FunctionDecl *>();
+  FunctionDecl *FD = dyn_cast<FunctionDecl *>(AnyFunc);
   Decl *D = FD;
   ObjCMethodDecl *MD = nullptr;
   if (!D) {

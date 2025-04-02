@@ -86,13 +86,6 @@ std::optional<std::string> HostInfoPosix::GetOSBuildString() {
   return std::string(un.release);
 }
 
-#ifdef __ANDROID__
-#include <android/api-level.h>
-#endif
-#if defined(__ANDROID_API__) && __ANDROID_API__ < 21
-#define USE_GETPWUID
-#endif
-
 namespace {
 class PosixUserIDResolver : public UserIDResolver {
 protected:
@@ -107,14 +100,6 @@ struct PasswdEntry {
 };
 
 static std::optional<PasswdEntry> GetPassword(id_t uid) {
-#ifdef USE_GETPWUID
-  // getpwuid_r is missing from android-9
-  // The caller should provide some thread safety by making sure no one calls
-  // this function concurrently, because using getpwuid is ultimately not
-  // thread-safe as we don't know who else might be calling it.
-  if (auto *user_info_ptr = ::getpwuid(uid))
-    return PasswdEntry{user_info_ptr->pw_name, user_info_ptr->pw_shell};
-#else
   struct passwd user_info;
   struct passwd *user_info_ptr = &user_info;
   char user_buffer[PATH_MAX];
@@ -124,7 +109,6 @@ static std::optional<PasswdEntry> GetPassword(id_t uid) {
       user_info_ptr) {
     return PasswdEntry{user_info_ptr->pw_name, user_info_ptr->pw_shell};
   }
-#endif
   return std::nullopt;
 }
 
@@ -135,7 +119,7 @@ std::optional<std::string> PosixUserIDResolver::DoGetUserName(id_t uid) {
 }
 
 std::optional<std::string> PosixUserIDResolver::DoGetGroupName(id_t gid) {
-#ifndef __ANDROID__
+#if !defined(__ANDROID__) || __ANDROID_API__ >= 24
   char group_buffer[PATH_MAX];
   size_t group_buffer_size = sizeof(group_buffer);
   struct group group_info;

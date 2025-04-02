@@ -11,7 +11,7 @@ declare i32 @foo(i32 %x)
 
 define void @sink_store(ptr nocapture %r, i32 %index) {
 ; CHECK-LABEL: define void @sink_store
-; CHECK-SAME: (ptr nocapture [[R:%.*]], i32 [[INDEX:%.*]]) {
+; CHECK-SAME: (ptr captures(none) [[R:%.*]], i32 [[INDEX:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[NODE_0_IN16:%.*]] = getelementptr inbounds [[STRUCT_NODE:%.*]], ptr [[R]], i64 0, i32 2
 ; CHECK-NEXT:    [[NODE_017:%.*]] = load ptr, ptr [[NODE_0_IN16]], align 8

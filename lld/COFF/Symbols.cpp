@@ -100,7 +100,6 @@ bool Symbol::isLive() const {
   return true;
 }
 
-// MinGW specific.
 void Symbol::replaceKeepingName(Symbol *other, size_t size) {
   StringRef origName = getName();
   memcpy(this, other, size);

@@ -196,7 +196,7 @@ define void @mixed_volatile_multi_store_flat_pointer_to_self() {
 
 define amdgpu_kernel void @uselist_regression_skipped_load(ptr nocapture readonly %Arg, i32 %i) {
 ; CHECK-LABEL: define amdgpu_kernel void @uselist_regression_skipped_load(
-; CHECK-SAME: ptr nocapture readonly [[ARG:%.*]], i32 [[I:%.*]]) {
+; CHECK-SAME: ptr readonly captures(none) [[ARG:%.*]], i32 [[I:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ARG_GLOBAL:%.*]] = addrspacecast ptr [[ARG]] to ptr addrspace(1)
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds ptr, ptr addrspace(1) [[ARG_GLOBAL]], i32 [[I]]

@@ -819,7 +819,9 @@ public:
   }
 
   /// Add an attribute with the specified name.
-  void append(StringRef name, Attribute attr);
+  void append(StringRef name, Attribute attr) {
+    append(NamedAttribute(name, attr));
+  }
 
   /// Add an attribute with the specified name.
   void append(StringAttr name, Attribute attr) {

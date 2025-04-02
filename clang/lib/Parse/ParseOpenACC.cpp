@@ -1000,15 +1000,16 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
     }
     case OpenACCClauseKind::Self:
       // The 'self' clause is a var-list instead of a 'condition' in the case of
-      // the 'update' clause, so we have to handle it here.  U se an assert to
+      // the 'update' clause, so we have to handle it here.  Use an assert to
       // make sure we get the right differentiator.
       assert(DirKind == OpenACCDirectiveKind::Update);
+      [[fallthrough]];
+    case OpenACCClauseKind::Device:
+    case OpenACCClauseKind::Host:
       ParsedClause.setVarListDetails(ParseOpenACCVarList(ClauseKind),
                                      /*IsReadOnly=*/false, /*IsZero=*/false);
       break;
-    case OpenACCClauseKind::Device:
     case OpenACCClauseKind::DeviceResident:
-    case OpenACCClauseKind::Host:
     case OpenACCClauseKind::Link:
       ParseOpenACCVarList(ClauseKind);
       break;

@@ -211,7 +211,7 @@ static constexpr Builtin::Info BuiltinInfo[] = {
   {#ID, TYPE, ATTRS, nullptr, HEADER, ALL_LANGUAGES},
 #define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
   {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#include "clang/Basic/BuiltinsHexagon.def"
+#include "clang/Basic/BuiltinsHexagon.inc"
 };
 
 bool HexagonTargetInfo::hasFeature(StringRef Feature) const {

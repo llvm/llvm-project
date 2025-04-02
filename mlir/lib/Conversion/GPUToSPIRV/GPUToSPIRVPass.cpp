@@ -71,7 +71,7 @@ void GPUToSPIRVPass::runOnOperation() {
     // launch op still needs the original GPU kernel module.
     // For Vulkan Shader capabilities, we insert the newly converted SPIR-V
     // module right after the original GPU module, as that's the expectation of
-    // the in-tree Vulkan runner.
+    // the in-tree SPIR-V CPU runner (the Vulkan runner does not use this pass).
     // For OpenCL Kernel capabilities, we insert the newly converted SPIR-V
     // module inside the original GPU module, as that's the expectaion of the
     // normal GPU compilation pipeline.

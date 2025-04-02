@@ -6,4 +6,5 @@ struct Box {
   const T* get_ptr() const { return &value; }
 };
 
+using FloatBox = Box<float>;
 using IntBox = Box<int>;

@@ -33,7 +33,8 @@ static int hasAttributeImpl(AttributeCommonInfo::Syntax Syntax, StringRef Name,
 
 int clang::hasAttribute(AttributeCommonInfo::Syntax Syntax,
                         const IdentifierInfo *Scope, const IdentifierInfo *Attr,
-                        const TargetInfo &Target, const LangOptions &LangOpts) {
+                        const TargetInfo &Target, const LangOptions &LangOpts,
+                        bool CheckPlugins) {
   StringRef Name = Attr->getName();
   // Normalize the attribute name, __foo__ becomes foo.
   if (Name.size() >= 4 && Name.starts_with("__") && Name.ends_with("__"))
@@ -61,12 +62,21 @@ int clang::hasAttribute(AttributeCommonInfo::Syntax Syntax,
   if (res)
     return res;
 
-  // Check if any plugin provides this attribute.
-  for (auto &Ptr : getAttributePluginInstances())
-    if (Ptr->hasSpelling(Syntax, Name))
-      return 1;
+  if (CheckPlugins) {
+    // Check if any plugin provides this attribute.
+    for (auto &Ptr : getAttributePluginInstances())
+      if (Ptr->hasSpelling(Syntax, Name))
+        return 1;
+  }
 
   return 0;
+}
+
+int clang::hasAttribute(AttributeCommonInfo::Syntax Syntax,
+                        const IdentifierInfo *Scope, const IdentifierInfo *Attr,
+                        const TargetInfo &Target, const LangOptions &LangOpts) {
+  return hasAttribute(Syntax, Scope, Attr, Target, LangOpts,
+                      /*CheckPlugins=*/true);
 }
 
 const char *attr::getSubjectMatchRuleSpelling(attr::SubjectMatchRule Rule) {
@@ -149,6 +159,17 @@ AttributeCommonInfo::getParsedKind(const IdentifierInfo *Name,
                                    const IdentifierInfo *ScopeName,
                                    Syntax SyntaxUsed) {
   return ::getAttrKind(normalizeName(Name, ScopeName, SyntaxUsed), SyntaxUsed);
+}
+
+AttributeCommonInfo::AttrArgsInfo
+AttributeCommonInfo::getCXX11AttrArgsInfo(const IdentifierInfo *Name) {
+  StringRef AttrName =
+      normalizeAttrName(Name, /*NormalizedScopeName*/ "", Syntax::AS_CXX11);
+#define CXX11_ATTR_ARGS_INFO
+  return llvm::StringSwitch<AttributeCommonInfo::AttrArgsInfo>(AttrName)
+#include "clang/Basic/CXX11AttributeInfo.inc"
+      .Default(AttributeCommonInfo::AttrArgsInfo::None);
+#undef CXX11_ATTR_ARGS_INFO
 }
 
 std::string AttributeCommonInfo::getNormalizedFullName() const {

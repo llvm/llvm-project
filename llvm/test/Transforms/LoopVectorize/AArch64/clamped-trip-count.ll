@@ -3,7 +3,7 @@
 
 define void @clamped_tc_8(ptr nocapture %dst, i32 %n, i64 %val) vscale_range(1,16) {
 ; CHECK-LABEL: define void @clamped_tc_8(
-; CHECK-SAME: ptr nocapture [[DST:%.*]], i32 [[N:%.*]], i64 [[VAL:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr captures(none) [[DST:%.*]], i32 [[N:%.*]], i64 [[VAL:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -82,7 +82,7 @@ for.cond.cleanup:                                 ; preds = %for.body
 
 define void @clamped_tc_max_8(ptr nocapture %dst, i32 %n, i64 %val) vscale_range(1,16) {
 ; CHECK-LABEL: define void @clamped_tc_max_8(
-; CHECK-SAME: ptr nocapture [[DST:%.*]], i32 [[N:%.*]], i64 [[VAL:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr captures(none) [[DST:%.*]], i32 [[N:%.*]], i64 [[VAL:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[REM:%.*]] = and i32 [[N]], 63
 ; CHECK-NEXT:    [[CMP8_NOT:%.*]] = icmp eq i32 [[REM]], 0

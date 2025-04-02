@@ -19,13 +19,13 @@ define <2 x half> @vfmax_vv_v2f16(<2 x half> %va, <2 x half> %vb, <2 x i1> %m, i
 ;
 ; ZVFHMIN-LABEL: vfmax_vv_v2f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v9
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
-; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v9, v0.t
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8, v0.t
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfmax.vv v9, v9, v10, v0.t
-; ZVFHMIN-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v9
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v9, v0.t
 ; ZVFHMIN-NEXT:    ret
   %v = call <2 x half> @llvm.vp.maxnum.v2f16(<2 x half> %va, <2 x half> %vb, <2 x i1> %m, i32 %evl)
   ret <2 x half> %v
@@ -40,12 +40,12 @@ define <2 x half> @vfmax_vv_v2f16_unmasked(<2 x half> %va, <2 x half> %vb, i32 z
 ;
 ; ZVFHMIN-LABEL: vfmax_vv_v2f16_unmasked:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v9
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
-; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfmax.vv v9, v9, v10
-; ZVFHMIN-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v9
 ; ZVFHMIN-NEXT:    ret
   %v = call <2 x half> @llvm.vp.maxnum.v2f16(<2 x half> %va, <2 x half> %vb, <2 x i1> splat (i1 true), i32 %evl)
@@ -63,13 +63,13 @@ define <4 x half> @vfmax_vv_v4f16(<4 x half> %va, <4 x half> %vb, <4 x i1> %m, i
 ;
 ; ZVFHMIN-LABEL: vfmax_vv_v4f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v9
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
-; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v9, v0.t
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8, v0.t
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfmax.vv v9, v9, v10, v0.t
-; ZVFHMIN-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v9
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v9, v0.t
 ; ZVFHMIN-NEXT:    ret
   %v = call <4 x half> @llvm.vp.maxnum.v4f16(<4 x half> %va, <4 x half> %vb, <4 x i1> %m, i32 %evl)
   ret <4 x half> %v
@@ -84,12 +84,12 @@ define <4 x half> @vfmax_vv_v4f16_unmasked(<4 x half> %va, <4 x half> %vb, i32 z
 ;
 ; ZVFHMIN-LABEL: vfmax_vv_v4f16_unmasked:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v9
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
-; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfmax.vv v9, v9, v10
-; ZVFHMIN-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v9
 ; ZVFHMIN-NEXT:    ret
   %v = call <4 x half> @llvm.vp.maxnum.v4f16(<4 x half> %va, <4 x half> %vb, <4 x i1> splat (i1 true), i32 %evl)
@@ -107,13 +107,13 @@ define <8 x half> @vfmax_vv_v8f16(<8 x half> %va, <8 x half> %vb, <8 x i1> %m, i
 ;
 ; ZVFHMIN-LABEL: vfmax_vv_v8f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v9
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v9, v0.t
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8, v0.t
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfmax.vv v10, v12, v10, v0.t
-; ZVFHMIN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v10
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v10, v0.t
 ; ZVFHMIN-NEXT:    ret
   %v = call <8 x half> @llvm.vp.maxnum.v8f16(<8 x half> %va, <8 x half> %vb, <8 x i1> %m, i32 %evl)
   ret <8 x half> %v
@@ -128,12 +128,12 @@ define <8 x half> @vfmax_vv_v8f16_unmasked(<8 x half> %va, <8 x half> %vb, i32 z
 ;
 ; ZVFHMIN-LABEL: vfmax_vv_v8f16_unmasked:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v9
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfmax.vv v10, v12, v10
-; ZVFHMIN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v10
 ; ZVFHMIN-NEXT:    ret
   %v = call <8 x half> @llvm.vp.maxnum.v8f16(<8 x half> %va, <8 x half> %vb, <8 x i1> splat (i1 true), i32 %evl)
@@ -151,13 +151,13 @@ define <16 x half> @vfmax_vv_v16f16(<16 x half> %va, <16 x half> %vb, <16 x i1> 
 ;
 ; ZVFHMIN-LABEL: vfmax_vv_v16f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v10
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v8
-; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
+; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v10, v0.t
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v8, v0.t
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfmax.vv v12, v16, v12, v0.t
-; ZVFHMIN-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v12
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v12, v0.t
 ; ZVFHMIN-NEXT:    ret
   %v = call <16 x half> @llvm.vp.maxnum.v16f16(<16 x half> %va, <16 x half> %vb, <16 x i1> %m, i32 %evl)
   ret <16 x half> %v
@@ -172,12 +172,12 @@ define <16 x half> @vfmax_vv_v16f16_unmasked(<16 x half> %va, <16 x half> %vb, i
 ;
 ; ZVFHMIN-LABEL: vfmax_vv_v16f16_unmasked:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v10
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v8
-; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfmax.vv v12, v16, v12
-; ZVFHMIN-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v12
 ; ZVFHMIN-NEXT:    ret
   %v = call <16 x half> @llvm.vp.maxnum.v16f16(<16 x half> %va, <16 x half> %vb, <16 x i1> splat (i1 true), i32 %evl)

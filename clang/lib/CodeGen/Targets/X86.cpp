@@ -2130,7 +2130,7 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
       if (BitField) {
         assert(!i->isUnnamedBitField());
         uint64_t Offset = OffsetBase + Layout.getFieldOffset(idx);
-        uint64_t Size = i->getBitWidthValue(getContext());
+        uint64_t Size = i->getBitWidthValue();
 
         uint64_t EB_Lo = Offset / 64;
         uint64_t EB_Hi = (Offset + Size - 1) / 64;

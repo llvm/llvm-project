@@ -45,7 +45,7 @@ extern char **environ;
 #    define SANITIZER_OS_TRACE 0
 #  endif
 
-// import new crash reporting api
+// Integrate with CrashReporter library if available
 #  if defined(__has_include) && __has_include(<CrashReporterClient.h>)
 #    define HAVE_CRASHREPORTERCLIENT_H 1
 #    include <CrashReporterClient.h>
@@ -796,8 +796,13 @@ static char crashreporter_info_buff[__sanitizer::kErrorMessageBufferSize] = {};
 static Mutex crashreporter_info_mutex;
 
 extern "C" {
-// Integrate with crash reporter libraries.
+
 #if HAVE_CRASHREPORTERCLIENT_H
+// Available in CRASHREPORTER_ANNOTATIONS_VERSION 5+
+#    ifdef CRASHREPORTER_ANNOTATIONS_INITIALIZER
+CRASHREPORTER_ANNOTATIONS_INITIALIZER()
+#    else
+// Support for older CrashRerporter annotiations
 CRASH_REPORTER_CLIENT_HIDDEN
 struct crashreporter_annotations_t gCRAnnotations
     __attribute__((section("__DATA," CRASHREPORTER_ANNOTATIONS_SECTION))) = {
@@ -808,17 +813,17 @@ struct crashreporter_annotations_t gCRAnnotations
         0,
         0,
         0,
-#if CRASHREPORTER_ANNOTATIONS_VERSION > 4
+#      if CRASHREPORTER_ANNOTATIONS_VERSION > 4
         0,
-#endif
+#      endif
 };
-
-#else
-// fall back to old crashreporter api
+#    endif
+#  else
+// Revert to previous crash reporter API if client header is not available
 static const char *__crashreporter_info__ __attribute__((__used__)) =
     &crashreporter_info_buff[0];
 asm(".desc ___crashreporter_info__, 0x10");
-#endif
+#endif  // HAVE_CRASHREPORTERCLIENT_H
 
 }  // extern "C"
 

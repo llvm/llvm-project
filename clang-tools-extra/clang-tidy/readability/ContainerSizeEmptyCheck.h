@@ -19,10 +19,10 @@ namespace clang::tidy::readability {
 ///
 /// The emptiness of a container should be checked using the `empty()` method
 /// instead of the `size()`/`length()` method. It shows clearer intent to use
-/// `empty()`. Furthermore some containers may implement the `empty()` method
-/// but not implement the `size()` or `length()` method. Using `empty()`
-/// whenever possible makes it easier to switch to another container in the
-/// future.
+/// `empty()`. Furthermore some containers (for example, a `std::forward_list`)
+/// may implement the `empty()` method but not implement the `size()` or
+/// `length()` method. Using `empty()` whenever possible makes it easier to
+/// switch to another container in the future.
 class ContainerSizeEmptyCheck : public ClangTidyCheck {
 public:
   ContainerSizeEmptyCheck(StringRef Name, ClangTidyContext *Context);

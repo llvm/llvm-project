@@ -439,7 +439,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   if (!UseNewCC1Process && IsCrash) {
     // When crashing in -fintegrated-cc1 mode, bury the timer pointers, because
     // the internal linked list might point to already released stack frames.
-    llvm::BuryPointer(llvm::TimerGroup::aquireDefaultGroup());
+    llvm::BuryPointer(llvm::TimerGroup::acquireTimerGlobals());
   } else {
     // If any timers were active but haven't been destroyed yet, print their
     // results now.  This happens in -disable-free mode.

@@ -503,22 +503,21 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
       return 1;
     }
   }
-  // llvm-lib uses relative paths for both regular and thin archives, unlike
-  // standard GNU ar, which only uses relative paths for thin archives and
-  // basenames for regular archives.
-  for (NewArchiveMember &Member : Members) {
-    if (sys::path::is_relative(Member.MemberName)) {
-      Expected<std::string> PathOrErr =
-          computeArchiveRelativePath(OutputPath, Member.MemberName);
-      if (PathOrErr)
-        Member.MemberName = Saver.save(*PathOrErr);
+
+  bool Thin = Args.hasArg(OPT_llvmlibthin);
+  if (Thin) {
+    for (NewArchiveMember &Member : Members) {
+      if (sys::path::is_relative(Member.MemberName)) {
+        Expected<std::string> PathOrErr =
+            computeArchiveRelativePath(OutputPath, Member.MemberName);
+        if (PathOrErr)
+          Member.MemberName = Saver.save(*PathOrErr);
+      }
     }
   }
 
   // For compatibility with MSVC, reverse member vector after de-duplication.
   std::reverse(Members.begin(), Members.end());
-
-  bool Thin = Args.hasArg(OPT_llvmlibthin);
 
   auto Symtab = Args.hasFlag(OPT_llvmlibindex, OPT_llvmlibindex_no,
                              /*default=*/true)

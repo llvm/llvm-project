@@ -40,7 +40,9 @@ define i64 @select_icmp_const(ptr %a, i64 %n) {
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[RDX_SELECT]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 3, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX1:%.*]] = phi i64 [ [[RDX_SELECT]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 3, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[BC_MERGE_RDX1]], 3
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = select i1 [[TMP14]], i64 -9223372036854775808, i64 [[BC_MERGE_RDX1]]
 ; CHECK-NEXT:    [[N_MOD_VF2:%.*]] = urem i64 [[N]], 4
 ; CHECK-NEXT:    [[N_VEC3:%.*]] = sub i64 [[N]], [[N_MOD_VF2]]
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[BC_RESUME_VAL]], i64 0
@@ -144,7 +146,9 @@ define i64 @select_fcmp_const_fast(ptr %a, i64 %n) {
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[RDX_SELECT]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 2, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX1:%.*]] = phi i64 [ [[RDX_SELECT]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 2, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[BC_MERGE_RDX1]], 2
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = select i1 [[TMP14]], i64 -9223372036854775808, i64 [[BC_MERGE_RDX1]]
 ; CHECK-NEXT:    [[N_MOD_VF2:%.*]] = urem i64 [[N]], 4
 ; CHECK-NEXT:    [[N_VEC3:%.*]] = sub i64 [[N]], [[N_MOD_VF2]]
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[BC_RESUME_VAL]], i64 0

@@ -14,40 +14,40 @@
 #ifndef __AVX10_2MINMAXINTRIN_H
 #define __AVX10_2MINMAXINTRIN_H
 
-#define _mm_minmaxne_pbh(A, B, C)                                              \
-  ((__m128bh)__builtin_ia32_vminmaxnepbf16128(                                 \
-      (__m128bh)(__v8bf)(A), (__m128bh)(__v8bf)(B), (int)(C)))
+#define _mm_minmax_pbh(A, B, C)                                                \
+  ((__m128bh)__builtin_ia32_vminmaxbf16128((__m128bh)(__v8bf)(A),              \
+                                           (__m128bh)(__v8bf)(B), (int)(C)))
 
-#define _mm_mask_minmaxne_pbh(W, U, A, B, C)                                   \
+#define _mm_mask_minmax_pbh(W, U, A, B, C)                                     \
   ((__m128bh)__builtin_ia32_selectpbf_128(                                     \
       (__mmask8)(U),                                                           \
-      (__v8bf)_mm_minmaxne_pbh((__m128bh)(__v8bf)(A), (__m128bh)(__v8bf)(B),   \
-                               (int)(C)),                                      \
+      (__v8bf)_mm_minmax_pbh((__m128bh)(__v8bf)(A), (__m128bh)(__v8bf)(B),     \
+                             (int)(C)),                                        \
       (__v8bf)(W)))
 
-#define _mm_maskz_minmaxne_pbh(U, A, B, C)                                     \
+#define _mm_maskz_minmax_pbh(U, A, B, C)                                       \
   ((__m128bh)__builtin_ia32_selectpbf_128(                                     \
       (__mmask8)(U),                                                           \
-      (__v8bf)_mm_minmaxne_pbh((__m128bh)(__v8bf)(A), (__m128bh)(__v8bf)(B),   \
-                               (int)(C)),                                      \
+      (__v8bf)_mm_minmax_pbh((__m128bh)(__v8bf)(A), (__m128bh)(__v8bf)(B),     \
+                             (int)(C)),                                        \
       (__v8bf) __builtin_bit_cast(__m128bh, _mm_setzero_ps())))
 
-#define _mm256_minmaxne_pbh(A, B, C)                                           \
-  ((__m256bh)__builtin_ia32_vminmaxnepbf16256(                                 \
-      (__m256bh)(__v16bf)(A), (__m256bh)(__v16bf)(B), (int)(C)))
+#define _mm256_minmax_pbh(A, B, C)                                             \
+  ((__m256bh)__builtin_ia32_vminmaxbf16256((__m256bh)(__v16bf)(A),             \
+                                           (__m256bh)(__v16bf)(B), (int)(C)))
 
-#define _mm256_mask_minmaxne_pbh(W, U, A, B, C)                                \
+#define _mm256_mask_minmax_pbh(W, U, A, B, C)                                  \
   ((__m256bh)__builtin_ia32_selectpbf_256(                                     \
       (__mmask16)(U),                                                          \
-      (__v16bf)_mm256_minmaxne_pbh((__m256bh)(__v16bf)(A),                     \
-                                   (__m256bh)(__v16bf)(B), (int)(C)),          \
+      (__v16bf)_mm256_minmax_pbh((__m256bh)(__v16bf)(A),                       \
+                                 (__m256bh)(__v16bf)(B), (int)(C)),            \
       (__v16bf)(W)))
 
-#define _mm256_maskz_minmaxne_pbh(U, A, B, C)                                  \
+#define _mm256_maskz_minmax_pbh(U, A, B, C)                                    \
   ((__m256bh)__builtin_ia32_selectpbf_256(                                     \
       (__mmask16)(U),                                                          \
-      (__v16bf)_mm256_minmaxne_pbh((__m256bh)(__v16bf)(A),                     \
-                                   (__m256bh)(__v16bf)(B), (int)(C)),          \
+      (__v16bf)_mm256_minmax_pbh((__m256bh)(__v16bf)(A),                       \
+                                 (__m256bh)(__v16bf)(B), (int)(C)),            \
       (__v16bf) __builtin_bit_cast(__m256bh, _mm256_setzero_ps())))
 
 #define _mm_minmax_pd(A, B, C)                                                 \

@@ -2498,6 +2498,9 @@ def HasNotMADIntraFwdBug : Predicate<"!Subtarget->hasMADIntraFwdBug()">;
 def HasSALUFloatInsts : Predicate<"Subtarget->hasSALUFloatInsts()">,
   AssemblerPredicate<(all_of FeatureSALUFloatInsts)>;
 
+def NotHasSALUFloatInsts : Predicate<"!Subtarget->hasSALUFloatInsts()">,
+  AssemblerPredicate<(all_of (not FeatureSALUFloatInsts))>;
+
 def HasPseudoScalarTrans : Predicate<"Subtarget->hasPseudoScalarTrans()">,
   AssemblerPredicate<(all_of FeaturePseudoScalarTrans)>;
 

@@ -71,7 +71,7 @@ static Statistic RejectStatistics[] = {
     SCOP_STAT(LoopOnlySomeLatches, "Not all loop latches in scop"),
     SCOP_STAT(FuncCall, "Function call with side effects"),
     SCOP_STAT(NonSimpleMemoryAccess,
-              "Compilated access semantics (volatile or atomic)"),
+              "Complicated access semantics (volatile or atomic)"),
     SCOP_STAT(Alias, "Base address aliasing"),
     SCOP_STAT(Other, ""),
     SCOP_STAT(IntToPtr, "Integer to pointer conversions"),

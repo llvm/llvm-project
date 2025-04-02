@@ -7,6 +7,7 @@
 #else
 
 #include <clc/clcfunc.h>
+#include <clc/clctypes.h>
 
 #define _CLC_ISEQUAL_DECL(TYPE, RETTYPE)                                       \
   _CLC_OVERLOAD _CLC_DECL RETTYPE __clc_isequal(TYPE x, TYPE y);

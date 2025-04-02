@@ -311,6 +311,9 @@ def enable_ptxas(ptxas_executable):
             (12, 2),
             (12, 3),
             (12, 4),
+            (12, 5),
+            (12, 6),
+            (12, 8),
         ]
 
         def version_int(ver):
@@ -596,6 +599,9 @@ if not re.match(
     config.target_triple,
 ) and not re.match(r"^arm64(e)?-apple-(macos|darwin)", config.target_triple):
     config.available_features.add("debug_frame")
+
+if config.enable_backtrace:
+    config.available_features.add("backtrace")
 
 if config.enable_threads:
     config.available_features.add("thread_support")

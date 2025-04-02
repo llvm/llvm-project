@@ -2,7 +2,7 @@
 ; RUN: opt < %s -passes=hwasan -S | FileCheck %s
 ; RUN: opt < %s -passes=hwasan -hwasan-recover=0 -hwasan-mapping-offset=0 -S | FileCheck %s --check-prefixes=ABORT-ZERO-BASED-SHADOW
 
-; This shows that HWASan will emit a memaccess check when dereferencing a null
+; This shows that HWASan omits the memaccess check when dereferencing a null
 ; pointer.
 ; The output is used as the source for llvm/test/CodeGen/AArch64/hwasan-zero-ptr.ll.
 
@@ -15,7 +15,6 @@ define void @test_store_to_zeroptr() sanitize_hwaddress {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr @__hwasan_shadow)
 ; CHECK-NEXT:    [[B:%.*]] = inttoptr i64 0 to ptr
-; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[B]], i32 19)
 ; CHECK-NEXT:    store i64 42, ptr [[B]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -24,7 +23,6 @@ define void @test_store_to_zeroptr() sanitize_hwaddress {
 ; ABORT-ZERO-BASED-SHADOW-NEXT:  entry:
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[B:%.*]] = inttoptr i64 0 to ptr
-; ABORT-ZERO-BASED-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr [[B]], i32 19, i64 0)
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    store i64 42, ptr [[B]], align 8
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    ret void
 ;

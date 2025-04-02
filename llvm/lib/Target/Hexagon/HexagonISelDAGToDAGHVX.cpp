@@ -2269,7 +2269,7 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   // For example, with the inputs as above, the result will be:
   //   0 8  2 A  4 C  6 E
   //   1 9  3 B  5 D  7 F
-  // Now, this result can be tranposed again, but with the group size of 2:
+  // Now, this result can be transposed again, but with the group size of 2:
   //   08 19  4C 5D
   //   2A 3B  6E 7F
   // If we then transpose that result, but with the group size of 4, we get:

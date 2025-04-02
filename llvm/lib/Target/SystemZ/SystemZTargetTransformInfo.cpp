@@ -648,12 +648,16 @@ InstructionCost SystemZTTIImpl::getArithmeticInstrCost(
       return VF * DivMulSeqCost +
              BaseT::getScalarizationOverhead(VTy, Args, Tys, CostKind);
     }
-    if ((SignedDivRem || UnsignedDivRem) && VF > 4)
-      // Temporary hack: disable high vectorization factors with integer
-      // division/remainder, which will get scalarized and handled with
-      // GR128 registers. The mischeduler is not clever enough to avoid
-      // spilling yet.
-      return 1000;
+    if (SignedDivRem || UnsignedDivRem) {
+      if (ST->hasVectorEnhancements3() && ScalarBits >= 32)
+        return NumVectors * DivInstrCost;
+      else if (VF > 4)
+        // Temporary hack: disable high vectorization factors with integer
+        // division/remainder, which will get scalarized and handled with
+        // GR128 registers. The mischeduler is not clever enough to avoid
+        // spilling yet.
+        return 1000;
+    }
 
     // These FP operations are supported with a single vector instruction for
     // double (base implementation assumes float generally costs 2). For
@@ -900,8 +904,11 @@ InstructionCost SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
 
     if ((Opcode == Instruction::ZExt || Opcode == Instruction::SExt)) {
       if (Src->isIntegerTy(1)) {
-        if (DstScalarBits == 128)
+        if (DstScalarBits == 128) {
+          if (Opcode == Instruction::SExt && ST->hasVectorEnhancements3())
+            return 0;/*VCEQQ*/
           return 5 /*branch seq.*/;
+        }
 
         if (ST->hasLoadStoreOnCond2())
           return 2; // li 0; loc 1
@@ -1089,9 +1096,18 @@ InstructionCost SystemZTTIImpl::getCmpSelInstrCost(
       return Cost;
     }
     case Instruction::Select:
-      if (ValTy->isFloatingPointTy() || isInt128InVR(ValTy))
-        return 4; // No LOC for FP / i128 - costs a conditional jump.
-      return 1; // Load On Condition / Select Register.
+      if (ValTy->isFloatingPointTy())
+        return 4; // No LOC for FP - costs a conditional jump.
+
+      // When selecting based on an i128 comparison, LOC / VSEL is possible
+      // if i128 comparisons are directly supported.
+      if (I != nullptr)
+        if (ICmpInst *CI = dyn_cast<ICmpInst>(I->getOperand(0)))
+          if (CI->getOperand(0)->getType()->isIntegerTy(128))
+            return ST->hasVectorEnhancements3() ? 1 : 4;
+
+      // Load On Condition / Select Register available, except for i128.
+      return !isInt128InVR(ValTy) ? 1 : 4;
     }
   }
   else if (ST->hasVector()) {

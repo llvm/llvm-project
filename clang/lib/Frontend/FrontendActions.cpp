@@ -459,6 +459,8 @@ private:
       return "BuildingDeductionGuides";
     case CodeSynthesisContext::TypeAliasTemplateInstantiation:
       return "TypeAliasTemplateInstantiation";
+    case CodeSynthesisContext::PartialOrderingTTP:
+      return "PartialOrderingTTP";
     }
     return "";
   }

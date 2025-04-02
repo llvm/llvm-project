@@ -1,4 +1,3 @@
-import("//clang/lib/ARCMigrate/enable.gni")
 import("//clang/lib/StaticAnalyzer/Frontend/enable.gni")
 import("//llvm/utils/gn/build/toolchain/compiler.gni")
 

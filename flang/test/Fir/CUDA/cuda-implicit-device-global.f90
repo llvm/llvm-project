@@ -308,3 +308,24 @@ fir.global linkonce_odr @_QM__mod1E.n.cptr constant : !fir.char<1,4> {
 // CHECK-DAG: fir.global linkonce_odr @_QM__mod1E.c.__builtin_c_devptr
 // CHECK-DAG: fir.global linkonce_odr @_QM__mod1E.dt.__builtin_c_devptr
 // CHECK-DAG: fir.global linkonce_odr @_QM__mod1E.n.__builtin_c_devptr
+
+// -----
+
+// Variables with initialization are promoted to non constant global.
+// 
+// attributes(global) subroutine kernel4()
+//   integer :: a = 4
+// end subroutine 
+
+func.func @_QPkernel4() attributes {cuf.proc_attr = #cuf.cuda_proc<global>} {
+  %0 = fir.address_of(@_QFkernel4Ea) : !fir.ref<i32>
+  return
+}
+fir.global internal @_QFkernel4Ea : i32 {
+  %c4_i32 = arith.constant 4 : i32
+  fir.has_value %c4_i32 : i32
+}
+
+// CHECK-LABEL: fir.global internal @_QFkernel4Ea : i32
+// CHECK-LABEL: gpu.module @cuda_device_mod
+// CHECK: fir.global internal @_QFkernel4Ea : i32

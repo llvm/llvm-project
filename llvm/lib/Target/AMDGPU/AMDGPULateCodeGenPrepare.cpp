@@ -464,8 +464,11 @@ bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
   NewLd->setMetadata(LLVMContext::MD_range, nullptr);
 
   unsigned ShAmt = Adjust * 8;
-  auto *NewVal = IRB.CreateBitCast(
-      IRB.CreateTrunc(IRB.CreateLShr(NewLd, ShAmt), IntNTy), LI.getType());
+  Value *NewVal = IRB.CreateBitCast(
+      IRB.CreateTrunc(IRB.CreateLShr(NewLd, ShAmt),
+                      DL.typeSizeEqualsStoreSize(LI.getType()) ? IntNTy
+                                                               : LI.getType()),
+      LI.getType());
   LI.replaceAllUsesWith(NewVal);
   DeadInsts.emplace_back(&LI);
 

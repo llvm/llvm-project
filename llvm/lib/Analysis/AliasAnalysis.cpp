@@ -636,9 +636,7 @@ ModRefInfo AAResults::callCapturesBefore(const Instruction *I,
     // Only look at the no-capture or byval pointer arguments.  If this
     // pointer were passed to arguments that were neither of these, then it
     // couldn't be no-capture.
-    if (!(*CI)->getType()->isPointerTy() ||
-        (!Call->doesNotCapture(ArgNo) && ArgNo < Call->arg_size() &&
-         !Call->isByValArgument(ArgNo)))
+    if (!(*CI)->getType()->isPointerTy() || !Call->doesNotCapture(ArgNo))
       continue;
 
     AliasResult AR =

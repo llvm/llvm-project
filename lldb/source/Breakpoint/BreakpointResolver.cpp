@@ -325,7 +325,7 @@ void BreakpointResolver::AddLocation(SearchFilter &filter,
   // If the line number is before the prologue end, move it there...
   bool skipped_prologue = false;
   if (skip_prologue && sc.function) {
-    Address prologue_addr(sc.function->GetAddressRange().GetBaseAddress());
+    Address prologue_addr = sc.function->GetAddress();
     if (prologue_addr.IsValid() && (line_start == prologue_addr)) {
       const uint32_t prologue_byte_size = sc.function->GetPrologueByteSize();
       if (prologue_byte_size) {

@@ -937,7 +937,8 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
     // If From is before wo, its possible that there is a use of From between
     // them.
     if (From->comesBefore(To))
-      const_cast<AllocaInst*>(To)->moveBefore(const_cast<AllocaInst*>(From));
+      const_cast<AllocaInst *>(To)->moveBefore(
+          const_cast<AllocaInst *>(From)->getIterator());
 
     // AA might be used later for instruction scheduling, and we need it to be
     // able to deduce the correct aliasing releationships between pointers
@@ -948,7 +949,7 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
     Instruction *Inst = const_cast<AllocaInst *>(To);
     if (From->getType() != To->getType()) {
       BitCastInst *Cast = new BitCastInst(Inst, From->getType());
-      Cast->insertAfter(Inst);
+      Cast->insertAfter(Inst->getIterator());
       Inst = Cast;
     }
 

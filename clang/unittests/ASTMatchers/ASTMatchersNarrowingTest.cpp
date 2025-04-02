@@ -4329,7 +4329,7 @@ TEST_P(ASTMatchersTest, hasOperator) {
 TEST_P(ASTMatchersTest, IsMain) {
   EXPECT_TRUE(matches("int main() {}", functionDecl(isMain())));
 
-  EXPECT_TRUE(notMatches("int main2() {}", functionDecl(isMain())));
+  EXPECT_TRUE(notMatches("int main2() { return 0; }", functionDecl(isMain())));
 }
 
 TEST_P(ASTMatchersTest, OMPExecutableDirective_IsStandaloneDirective) {

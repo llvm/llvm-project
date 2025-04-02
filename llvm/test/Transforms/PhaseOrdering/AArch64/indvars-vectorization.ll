@@ -6,7 +6,7 @@ target triple = "arm64-apple-macosx14.0.0"
 
 define void @s172(i32 noundef %xa, i32 noundef %xb, ptr noundef %a, ptr noundef %b) {
 ; CHECK-LABEL: define void @s172(
-; CHECK-SAME: i32 noundef [[XA:%.*]], i32 noundef [[XB:%.*]], ptr nocapture noundef [[A:%.*]], ptr nocapture noundef readonly [[B:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: i32 noundef [[XA:%.*]], i32 noundef [[XB:%.*]], ptr noundef captures(none) [[A:%.*]], ptr noundef readonly captures(none) [[B:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[XA]], 32001
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]

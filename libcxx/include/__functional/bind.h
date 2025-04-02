@@ -82,13 +82,13 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp& __mu(reference_w
 }
 
 template <class _Ti, class... _Uj, size_t... _Indx>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __invoke_of<_Ti&, _Uj...>::type
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __invoke_result_t<_Ti&, _Uj...>
 __mu_expand(_Ti& __ti, tuple<_Uj...>& __uj, __tuple_indices<_Indx...>) {
   return __ti(std::forward<_Uj>(std::get<_Indx>(__uj))...);
 }
 
 template <class _Ti, class... _Uj, __enable_if_t<is_bind_expression<_Ti>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __invoke_of<_Ti&, _Uj...>::type
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __invoke_result_t<_Ti&, _Uj...>
 __mu(_Ti& __ti, tuple<_Uj...>& __uj) {
   typedef typename __make_tuple_indices<sizeof...(_Uj)>::type __indices;
   return std::__mu_expand(__ti, __uj, __indices());
@@ -130,12 +130,12 @@ struct __mu_return_invokable // false
 
 template <class _Ti, class... _Uj>
 struct __mu_return_invokable<true, _Ti, _Uj...> {
-  typedef typename __invoke_of<_Ti&, _Uj...>::type type;
+  using type = __invoke_result_t<_Ti&, _Uj...>;
 };
 
 template <class _Ti, class... _Uj>
 struct __mu_return_impl<_Ti, false, true, false, tuple<_Uj...> >
-    : public __mu_return_invokable<__invokable<_Ti&, _Uj...>::value, _Ti, _Uj...> {};
+    : public __mu_return_invokable<__is_invocable_v<_Ti&, _Uj...>, _Ti, _Uj...> {};
 
 template <class _Ti, class _TupleUj>
 struct __mu_return_impl<_Ti, false, false, true, _TupleUj> {
@@ -168,12 +168,12 @@ struct __is_valid_bind_return {
 
 template <class _Fp, class... _BoundArgs, class _TupleUj>
 struct __is_valid_bind_return<_Fp, tuple<_BoundArgs...>, _TupleUj> {
-  static const bool value = __invokable<_Fp, typename __mu_return<_BoundArgs, _TupleUj>::type...>::value;
+  static const bool value = __is_invocable_v<_Fp, typename __mu_return<_BoundArgs, _TupleUj>::type...>;
 };
 
 template <class _Fp, class... _BoundArgs, class _TupleUj>
 struct __is_valid_bind_return<_Fp, const tuple<_BoundArgs...>, _TupleUj> {
-  static const bool value = __invokable<_Fp, typename __mu_return<const _BoundArgs, _TupleUj>::type...>::value;
+  static const bool value = __is_invocable_v<_Fp, typename __mu_return<const _BoundArgs, _TupleUj>::type...>;
 };
 
 template <class _Fp, class _BoundArgs, class _TupleUj, bool = __is_valid_bind_return<_Fp, _BoundArgs, _TupleUj>::value>
@@ -181,12 +181,12 @@ struct __bind_return;
 
 template <class _Fp, class... _BoundArgs, class _TupleUj>
 struct __bind_return<_Fp, tuple<_BoundArgs...>, _TupleUj, true> {
-  typedef typename __invoke_of< _Fp&, typename __mu_return< _BoundArgs, _TupleUj >::type... >::type type;
+  using type = __invoke_result_t< _Fp&, typename __mu_return< _BoundArgs, _TupleUj >::type... >;
 };
 
 template <class _Fp, class... _BoundArgs, class _TupleUj>
 struct __bind_return<_Fp, const tuple<_BoundArgs...>, _TupleUj, true> {
-  typedef typename __invoke_of< _Fp&, typename __mu_return< const _BoundArgs, _TupleUj >::type... >::type type;
+  using type = __invoke_result_t< _Fp&, typename __mu_return< const _BoundArgs, _TupleUj >::type... >;
 };
 
 template <class _Fp, class _BoundArgs, size_t... _Indx, class _Args>
@@ -256,8 +256,7 @@ public:
                         is_void<_Rp>::value,
                     int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 result_type operator()(_Args&&... __args) {
-    typedef __invoke_void_return_wrapper<_Rp> _Invoker;
-    return _Invoker::__call(static_cast<base&>(*this), std::forward<_Args>(__args)...);
+    return std::__invoke_r<_Rp>(static_cast<base&>(*this), std::forward<_Args>(__args)...);
   }
 
   template <class... _Args,
@@ -266,8 +265,7 @@ public:
                               is_void<_Rp>::value,
                           int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 result_type operator()(_Args&&... __args) const {
-    typedef __invoke_void_return_wrapper<_Rp> _Invoker;
-    return _Invoker::__call(static_cast<base const&>(*this), std::forward<_Args>(__args)...);
+    return std::__invoke_r<_Rp>(static_cast<base const&>(*this), std::forward<_Args>(__args)...);
   }
 };
 

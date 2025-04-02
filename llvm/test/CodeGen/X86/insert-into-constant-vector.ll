@@ -436,9 +436,9 @@ define <8 x i64> @elt5_v8i64(i64 %x) {
 ;
 ; X86-AVX512F-LABEL: elt5_v8i64:
 ; X86-AVX512F:       # %bb.0:
-; X86-AVX512F-NEXT:    vmovaps {{.*#+}} ymm0 = [42,0,1,0,2,0,3,0]
+; X86-AVX512F-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [42,1,2,3]
 ; X86-AVX512F-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; X86-AVX512F-NEXT:    vmovss {{.*#+}} xmm2 = [4,0,0,0]
+; X86-AVX512F-NEXT:    vpmovsxbq {{.*#+}} xmm2 = [4,0]
 ; X86-AVX512F-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; X86-AVX512F-NEXT:    vinsertf128 $1, {{\.?LCPI[0-9]+_[0-9]+}}, %ymm1, %ymm1
 ; X86-AVX512F-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0

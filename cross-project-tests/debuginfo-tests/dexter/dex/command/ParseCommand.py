@@ -98,7 +98,7 @@ def _build_command(
 
     def label_to_line(label_name: str) -> int:
         line = labels.get(label_name, None)
-        if line != None:
+        if line is not None:
             return line
         raise format_unresolved_label_err(label_name, raw_text, path.base, lineno)
 
@@ -128,7 +128,7 @@ def _build_command(
 
 
 def _search_line_for_cmd_start(line: str, start: int, valid_commands: dict) -> int:
-    """Scan `line` for a string matching any key in `valid_commands`.
+    r"""Scan `line` for a string matching any key in `valid_commands`.
 
     Start searching from `start`.
     Commands escaped with `\` (E.g. `\DexLabel('a')`) are ignored.
@@ -543,7 +543,7 @@ class TestParseCommand(unittest.TestCase):
     def test_parse_escaped(self):
         """Escaped commands are ignored."""
 
-        lines = ['words \MockCmd("IGNORED") words words words\n']
+        lines = ['words \\MockCmd("IGNORED") words words words\n']
 
         values = self._find_all_mock_values_in_lines(lines)
 

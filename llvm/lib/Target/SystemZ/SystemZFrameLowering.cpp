@@ -457,9 +457,9 @@ void SystemZELFFrameLowering::processFunctionBeforeFrameFinalized(
     // Create 2 for the case where both addresses in an MVC are
     // out of range.
     RS->addScavengingFrameIndex(
-        MFFrame.CreateStackObject(getPointerSize(), Align(8), false));
+        MFFrame.CreateSpillStackObject(getPointerSize(), Align(8)));
     RS->addScavengingFrameIndex(
-        MFFrame.CreateStackObject(getPointerSize(), Align(8), false));
+        MFFrame.CreateSpillStackObject(getPointerSize(), Align(8)));
   }
 
   // If R6 is used as an argument register it is still callee saved. If it in
@@ -1491,8 +1491,8 @@ void SystemZXPLINKFrameLowering::processFunctionBeforeFrameFinalized(
   if (!isUInt<12>(MaxReach)) {
     // We may need register scavenging slots if some parts of the frame
     // are outside the reach of an unsigned 12-bit displacement.
-    RS->addScavengingFrameIndex(MFFrame.CreateStackObject(8, Align(8), false));
-    RS->addScavengingFrameIndex(MFFrame.CreateStackObject(8, Align(8), false));
+    RS->addScavengingFrameIndex(MFFrame.CreateSpillStackObject(8, Align(8)));
+    RS->addScavengingFrameIndex(MFFrame.CreateSpillStackObject(8, Align(8)));
   }
 }
 

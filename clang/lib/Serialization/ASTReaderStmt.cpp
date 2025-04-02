@@ -33,6 +33,7 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtOpenMP.h"
+#include "clang/AST/StmtSYCL.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
@@ -526,6 +527,12 @@ void ASTStmtReader::VisitCapturedStmt(CapturedStmt *S) {
         static_cast<CapturedStmt::VariableCaptureKind>(Record.readInt()));
     I.Loc = readSourceLocation();
   }
+}
+
+void ASTStmtReader::VisitSYCLKernelCallStmt(SYCLKernelCallStmt *S) {
+  VisitStmt(S);
+  S->setOriginalStmt(cast<CompoundStmt>(Record.readSubStmt()));
+  S->setOutlinedFunctionDecl(readDeclAs<OutlinedFunctionDecl>());
 }
 
 void ASTStmtReader::VisitExpr(Expr *E) {
@@ -2201,6 +2208,16 @@ void ASTStmtReader::VisitPackIndexingExpr(PackIndexingExpr *E) {
     Exprs[I] = Record.readExpr();
 }
 
+void ASTStmtReader::VisitResolvedUnexpandedPackExpr(
+    ResolvedUnexpandedPackExpr *E) {
+  VisitExpr(E);
+  E->NumExprs = Record.readInt();
+  E->BeginLoc = readSourceLocation();
+  auto **Exprs = E->getTrailingObjects<Expr *>();
+  for (unsigned I = 0; I < E->NumExprs; ++I)
+    Exprs[I] = Record.readExpr();
+}
+
 void ASTStmtReader::VisitSubstNonTypeTemplateParmExpr(
                                               SubstNonTypeTemplateParmExpr *E) {
   VisitExpr(E);
@@ -3110,6 +3127,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
     case STMT_CAPTURED:
       S = CapturedStmt::CreateDeserialized(
           Context, Record[ASTStmtReader::NumStmtFields]);
+      break;
+
+    case STMT_SYCLKERNELCALL:
+      S = new (Context) SYCLKernelCallStmt(Empty);
       break;
 
     case EXPR_CONSTANT:
@@ -4278,6 +4299,12 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = PackIndexingExpr::CreateDeserialized(
           Context,
           /*TransformedExprs=*/Record[ASTStmtReader::NumExprFields]);
+      break;
+
+    case EXPR_RESOLVED_UNEXPANDED_PACK:
+      S = ResolvedUnexpandedPackExpr::CreateDeserialized(
+          Context,
+          /*NumExprs=*/Record[ASTStmtReader::NumExprFields]);
       break;
 
     case EXPR_SUBST_NON_TYPE_TEMPLATE_PARM:

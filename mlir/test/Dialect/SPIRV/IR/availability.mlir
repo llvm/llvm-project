@@ -233,3 +233,25 @@ func.func @udot_acc_sat_vector_4xi16_i64(%a: vector<4xi16>, %acc: i64) -> i64 {
   %r = spirv.UDotAccSat %a, %a, %acc: vector<4xi16> -> i64
   return %r: i64
 }
+
+//===----------------------------------------------------------------------===//
+// Primitive ops
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: emit_vertex
+func.func @emit_vertex() -> () {
+  // CHECK: min version: v1.0
+  // CHECK: max version: v1.6
+  // CHECK: capabilities: [ [Geometry] ]
+  spirv.EmitVertex
+  return
+}
+
+// CHECK-LABEL: end_primitive
+func.func @end_primitive() -> () {
+  // CHECK: min version: v1.0
+  // CHECK: max version: v1.6
+  // CHECK: capabilities: [ [Geometry] ]
+  spirv.EndPrimitive
+  return
+}

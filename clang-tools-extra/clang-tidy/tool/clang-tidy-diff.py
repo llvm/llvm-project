@@ -35,6 +35,7 @@ import sys
 import tempfile
 import threading
 import traceback
+from pathlib import Path
 
 try:
     import yaml
@@ -122,6 +123,23 @@ def merge_replacement_files(tmpdir, mergefile):
     else:
         # Empty the file:
         open(mergefile, "w").close()
+
+
+def get_compiling_files(args):
+    """Read a compile_commands.json database and return a set of file paths"""
+    current_dir = Path.cwd()
+    compile_commands_json = (
+        (current_dir / args.build_path) if args.build_path else current_dir
+    )
+    compile_commands_json = compile_commands_json / "compile_commands.json"
+    files = set()
+    with open(compile_commands_json) as db_file:
+        db_json = json.load(db_file)
+        for entry in db_json:
+            if "file" not in entry:
+                continue
+            files.add(Path(entry["file"]))
+    return files
 
 
 def main():
@@ -234,6 +252,13 @@ def main():
         action="store_true",
         help="Allow empty enabled checks.",
     )
+    parser.add_argument(
+        "-only-check-in-db",
+        dest="skip_non_compiling",
+        default=False,
+        action="store_true",
+        help="Only check files in the compilation database",
+    )
 
     clang_tidy_args = []
     argv = sys.argv[1:]
@@ -243,11 +268,13 @@ def main():
 
     args = parser.parse_args(argv)
 
+    compiling_files = get_compiling_files(args) if args.skip_non_compiling else None
+
     # Extract changed lines for each file.
     filename = None
     lines_by_file = {}
     for line in sys.stdin:
-        match = re.search('^\\+\\+\\+\\ "?(.*?/){%s}([^ \t\n"]*)' % args.p, line)
+        match = re.search(r'^\+\+\+\ "?(.*?/){%s}([^ \t\n"]*)' % args.p, line)
         if match:
             filename = match.group(2)
         if filename is None:
@@ -259,6 +286,13 @@ def main():
         else:
             if not re.match("^%s$" % args.iregex, filename, re.IGNORECASE):
                 continue
+
+        # Skip any files not in the compiling list
+        if (
+            compiling_files is not None
+            and (Path.cwd() / filename) not in compiling_files
+        ):
+            continue
 
         match = re.search(r"^@@.*\+(\d+)(,(\d+))?", line)
         if match:

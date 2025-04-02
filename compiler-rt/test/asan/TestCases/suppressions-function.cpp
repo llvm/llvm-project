@@ -6,6 +6,7 @@
 // RUN: %clangxx_asan -O0 %s -o %t && %env_asan_opts=suppressions='"%t.supp"' %run %t 2>&1 | FileCheck --check-prefix=CHECK-IGNORE %s
 // RUN: %clangxx_asan -O3 %s -o %t && %env_asan_opts=suppressions='"%t.supp"' %run %t 2>&1 | FileCheck --check-prefix=CHECK-IGNORE %s
 
+// FIXME: Upload suppressions to device.
 // XFAIL: android
 // UNSUPPORTED: ios
 

@@ -114,6 +114,74 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
+// -----
+
+func.func private @make_vector() -> vector<7x9xf32>
+
+// Negative test - low pad is non-zero
+
+// CHECK-LABEL: func @pad_and_transfer_write_static_non_zero_low_pad
+//   CHECK:   tensor.pad
+func.func @pad_and_transfer_write_static_non_zero_low_pad(
+    %arg0: tensor<5x6xf32>) -> tensor<5x6xf32> {
+  %c0 = arith.constant 0 : index
+  %c5 = arith.constant 5.0 : f32
+  %0 = tensor.pad %arg0 low[0, 1] high[5, 6] {
+    ^bb0(%arg2: index, %arg3: index):
+      tensor.yield %c5 : f32
+  } : tensor<5x6xf32> to tensor<10x13xf32>
+  %1 = call @make_vector() : () -> vector<7x9xf32>
+  %2 = vector.transfer_write %1, %0[%c0, %c0]
+      : vector<7x9xf32>, tensor<10x13xf32>
+  %3 = tensor.extract_slice %2[0, 0] [5, 6] [1, 1] : tensor<10x13xf32> to tensor<5x6xf32>
+  return %3 : tensor<5x6xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func_op = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.op<"func.func">
+
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.linalg.pad_vectorization
+    } : !transform.op<"func.func">
+    transform.yield
+  }
+}
+
+// -----
+
+// Negative test - TransferWriteOp result is not _directly_ consumed by an
+// ExtractSliceOp (noet the non-zero offset).
+
+func.func private @make_vector() -> vector<7x9xf32>
+
+// CHECK-LABEL: func @pad_and_transfer_write_static_non_zero_offset
+//   CHECK:   tensor.pad
+func.func @pad_and_transfer_write_static_non_zero_offset(
+    %arg0: tensor<5x6xf32>) -> tensor<5x6xf32> {
+  %c0 = arith.constant 0 : index
+  %c5 = arith.constant 5.0 : f32
+  %0 = tensor.pad %arg0 low[0, 0] high[5, 7] {
+    ^bb0(%arg2: index, %arg3: index):
+      tensor.yield %c5 : f32
+  } : tensor<5x6xf32> to tensor<10x13xf32>
+  %1 = call @make_vector() : () -> vector<7x9xf32>
+  %2 = vector.transfer_write %1, %0[%c0, %c0]
+      : vector<7x9xf32>, tensor<10x13xf32>
+  %3 = tensor.extract_slice %2[0, 1] [5, 6] [1, 1] : tensor<10x13xf32> to tensor<5x6xf32>
+  return %3 : tensor<5x6xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func_op = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.op<"func.func">
+
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.linalg.pad_vectorization
+    } : !transform.op<"func.func">
+    transform.yield
+  }
+}
 
 // -----
 
@@ -195,78 +263,6 @@ func.func @pad_and_insert_slice_dest(
   %1 = call @make_vector() : () -> tensor<12x13xf32>
   %r = tensor.insert_slice %1 into %0[0, 0, 0][1, 12, 13][1, 1, 1] : tensor<12x13xf32> into tensor<1x12x13xf32>
   return %r : tensor<1x12x13xf32>
-}
-
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
-    %func_op = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.op<"func.func">
-
-    transform.apply_patterns to %func_op {
-      // TODO: Split into two tests, one for each pattern
-      transform.apply_patterns.linalg.decompose_pad
-      transform.apply_patterns.linalg.pad_vectorization
-    } : !transform.op<"func.func">
-    transform.yield
-  }
-}
-
-// -----
-func.func private @make_vector() -> vector<7x9xf32>
-
-// Variant of @pad_and_transfer_write_static
-
-// CHECK-LABEL: func @pad_and_transfer_write_static_non_zero_low_pad
-//   CHECK-NOT:   tensor.pad
-//       CHECK:   linalg.fill
-func.func @pad_and_transfer_write_static_non_zero_low_pad(
-    %arg0: tensor<5x6xf32>) -> tensor<5x6xf32> {
-  %c0 = arith.constant 0 : index
-  %c5 = arith.constant 5.0 : f32
-  %0 = tensor.pad %arg0 low[0, 1] high[5, 6] {
-    ^bb0(%arg2: index, %arg3: index):
-      tensor.yield %c5 : f32
-  } : tensor<5x6xf32> to tensor<10x13xf32>
-  %1 = call @make_vector() : () -> vector<7x9xf32>
-  %2 = vector.transfer_write %1, %0[%c0, %c0]
-      : vector<7x9xf32>, tensor<10x13xf32>
-  %3 = tensor.extract_slice %2[0, 0] [5, 6] [1, 1] : tensor<10x13xf32> to tensor<5x6xf32>
-  return %3 : tensor<5x6xf32>
-}
-
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
-    %func_op = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.op<"func.func">
-
-    transform.apply_patterns to %func_op {
-      // TODO: Split into two tests, one for each pattern
-      transform.apply_patterns.linalg.decompose_pad
-      transform.apply_patterns.linalg.pad_vectorization
-    } : !transform.op<"func.func">
-    transform.yield
-  }
-}
-
-// -----
-func.func private @make_vector() -> vector<7x9xf32>
-
-// Variant of @pad_and_transfer_write_static
-
-// CHECK-LABEL: func @pad_and_transfer_write_static_non_zero_offset
-//   CHECK-NOT:   tensor.pad
-//       CHECK:   linalg.fill
-func.func @pad_and_transfer_write_static_non_zero_offset(
-    %arg0: tensor<5x6xf32>) -> tensor<5x6xf32> {
-  %c0 = arith.constant 0 : index
-  %c5 = arith.constant 5.0 : f32
-  %0 = tensor.pad %arg0 low[0, 1] high[5, 6] {
-    ^bb0(%arg2: index, %arg3: index):
-      tensor.yield %c5 : f32
-  } : tensor<5x6xf32> to tensor<10x13xf32>
-  %1 = call @make_vector() : () -> vector<7x9xf32>
-  %2 = vector.transfer_write %1, %0[%c0, %c0]
-      : vector<7x9xf32>, tensor<10x13xf32>
-  %3 = tensor.extract_slice %2[0, 1] [5, 6] [1, 1] : tensor<10x13xf32> to tensor<5x6xf32>
-  return %3 : tensor<5x6xf32>
 }
 
 module attributes {transform.with_named_sequence} {

@@ -13,8 +13,8 @@ let TargetPrefix = "mytarget" in {
 // Check that iPTR in the destination DAG doesn't prevent the pattern from being imported.
 
 // CHECK: GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// CHECK-NEXT: GIM_CheckMemorySizeEqualToLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
 // CHECK-NEXT: GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
+// CHECK-NEXT: GIM_CheckMemorySizeEqualToLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
 // CHECK-NEXT: GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // CHECK-NEXT: // MIs[0] src1
 // CHECK-NEXT: GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/0,

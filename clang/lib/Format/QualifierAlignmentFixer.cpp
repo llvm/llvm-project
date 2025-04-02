@@ -386,7 +386,8 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
   // For left qualifiers preceeded by nothing, a template declaration, or *,&,&&
   // we only perform sorting.
   if (!TypeToken || TypeToken->isPointerOrReference() ||
-      TypeToken->ClosesRequiresClause || TypeToken->ClosesTemplateDeclaration) {
+      TypeToken->ClosesRequiresClause || TypeToken->ClosesTemplateDeclaration ||
+      TypeToken->is(tok::r_square)) {
 
     // Don't sort past a non-configured qualifier token.
     const FormatToken *FirstQual = Tok;

@@ -212,3 +212,19 @@ svfloat64_t test_svtbxq_f64(svfloat64_t passthru, svfloat64_t zn, svuint64_t zm)
 svbfloat16_t test_svtbxq_bf16(svbfloat16_t passthru, svbfloat16_t zn, svuint16_t zm) {
     return SVE_ACLE_FUNC(svtbxq, _bf16,,)(passthru, zn, zm);
 }
+
+// CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svtbxq_mf8
+// CHECK-SAME: (<vscale x 16 x i8> [[PASSTHRU:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.tbxq.nxv16i8(<vscale x 16 x i8> [[PASSTHRU]], <vscale x 16 x i8> [[ZN]], <vscale x 16 x i8> [[ZM]])
+// CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
+//
+// CPP-CHECK-LABEL: define dso_local <vscale x 16 x i8> @_Z15test_svtbxq_mf8u13__SVMfloat8_tS_u11__SVUint8_t
+// CPP-CHECK-SAME: (<vscale x 16 x i8> [[PASSTHRU:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <vscale x 16 x i8> [[ZM:%.*]]) #[[ATTR0]] {
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.tbxq.nxv16i8(<vscale x 16 x i8> [[PASSTHRU]], <vscale x 16 x i8> [[ZN]], <vscale x 16 x i8> [[ZM]])
+// CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
+//
+svmfloat8_t test_svtbxq_mf8(svmfloat8_t passthru, svmfloat8_t zn, svuint8_t zm) {
+    return SVE_ACLE_FUNC(svtbxq, _mf8,,)(passthru, zn, zm);
+}

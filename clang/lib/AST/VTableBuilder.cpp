@@ -3831,8 +3831,8 @@ const VirtualBaseInfo &MicrosoftVTableContext::computeVBTableRelatedInformation(
   unsigned VBTableIndex = 1 + VBI->VBTableIndices.size();
   for (const auto &VB : RD->vbases()) {
     const CXXRecordDecl *CurVBase = VB.getType()->getAsCXXRecordDecl();
-    if (!VBI->VBTableIndices.count(CurVBase))
-      VBI->VBTableIndices[CurVBase] = VBTableIndex++;
+    if (VBI->VBTableIndices.try_emplace(CurVBase, VBTableIndex).second)
+      ++VBTableIndex;
   }
 
   return *VBI;

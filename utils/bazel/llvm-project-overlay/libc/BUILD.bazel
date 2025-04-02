@@ -3652,6 +3652,7 @@ libc_support_library(
         ":__support_macros_optimization",
         ":llvm_libc_types_size_t",
         ":string_memory_utils",
+        ":types_size_t",
     ],
 )
 

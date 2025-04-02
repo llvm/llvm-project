@@ -256,4 +256,142 @@ exit:
   ret i8 %bool
 }
 
+define i8 @knownbits_umax_select_test() {
+; CHECK-LABEL: @knownbits_umax_select_test(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDVAR:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[CONTAIN:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[COND0:%.*]] = call i1 @cond()
+; CHECK-NEXT:    [[CONTAIN]] = call i8 @llvm.umax.i8(i8 [[INDVAR]], i8 1)
+; CHECK-NEXT:    [[COND1:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[COND1]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[BOOL:%.*]] = and i8 [[CONTAIN]], 1
+; CHECK-NEXT:    ret i8 [[BOOL]]
+;
+entry:
+  br label %loop
+
+loop:
+  %indvar = phi i8 [ 0, %entry ], [ %contain, %loop ]
+  %cond0 = call i1 @cond()
+  %contain = call i8 @llvm.umax.i8(i8 1, i8 %indvar)
+  %cond1 = call i1 @cond()
+  br i1 %cond1, label %exit, label %loop
+
+exit:
+  %bool = and i8 %contain, 1
+  ret i8 %bool
+}
+
+define i8 @knownbits_phi_phi_test() {
+; CHECK-LABEL: @knownbits_phi_phi_test(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDVAR:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[CONTAIN:%.*]], [[LOOP_BB1:%.*]] ]
+; CHECK-NEXT:    [[COND0:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[COND0]], label [[LOOP_BB0:%.*]], label [[LOOP_BB1]]
+; CHECK:       loop.bb0:
+; CHECK-NEXT:    call void @side.effect()
+; CHECK-NEXT:    br label [[LOOP_BB1]]
+; CHECK:       loop.bb1:
+; CHECK-NEXT:    [[CONTAIN]] = phi i8 [ 1, [[LOOP_BB0]] ], [ [[INDVAR]], [[LOOP]] ]
+; CHECK-NEXT:    [[COND1:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[COND1]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i8 [[CONTAIN]]
+;
+entry:
+  br label %loop
+
+loop:
+  %indvar = phi i8 [ 0, %entry ], [ %contain, %loop.bb1 ]
+  %cond0 = call i1 @cond()
+  br i1 %cond0, label %loop.bb0, label %loop.bb1
+loop.bb0:
+  call void @side.effect()
+  br label %loop.bb1
+loop.bb1:
+  %contain = phi i8 [ 1, %loop.bb0 ], [ %indvar, %loop ]
+  %cond1 = call i1 @cond()
+  br i1 %cond1, label %exit, label %loop
+
+exit:
+  %bool = and i8 %contain, 1
+  ret i8 %bool
+}
+
+
+define i1 @known_non_zero_phi_phi_test() {
+; CHECK-LABEL: @known_non_zero_phi_phi_test(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDVAR:%.*]] = phi i8 [ 2, [[ENTRY:%.*]] ], [ [[CONTAIN:%.*]], [[LOOP_BB1:%.*]] ]
+; CHECK-NEXT:    [[COND0:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[COND0]], label [[LOOP_BB0:%.*]], label [[LOOP_BB1]]
+; CHECK:       loop.bb0:
+; CHECK-NEXT:    call void @side.effect()
+; CHECK-NEXT:    br label [[LOOP_BB1]]
+; CHECK:       loop.bb1:
+; CHECK-NEXT:    [[CONTAIN]] = phi i8 [ 1, [[LOOP_BB0]] ], [ [[INDVAR]], [[LOOP]] ]
+; CHECK-NEXT:    [[COND1:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[COND1]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[BOOL:%.*]] = icmp eq i8 [[CONTAIN]], 0
+; CHECK-NEXT:    ret i1 [[BOOL]]
+;
+entry:
+  br label %loop
+
+loop:
+  %indvar = phi i8 [ 2, %entry ], [ %contain, %loop.bb1 ]
+  %cond0 = call i1 @cond()
+  br i1 %cond0, label %loop.bb0, label %loop.bb1
+loop.bb0:
+  call void @side.effect()
+  br label %loop.bb1
+loop.bb1:
+  %contain = phi i8 [ 1, %loop.bb0 ], [ %indvar, %loop ]
+  %cond1 = call i1 @cond()
+  br i1 %cond1, label %exit, label %loop
+
+exit:
+  %bool = icmp eq i8 %contain, 0
+  ret i1 %bool
+}
+
+define i1 @known_non_zero_phi_select_test() {
+; CHECK-LABEL: @known_non_zero_phi_select_test(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDVAR:%.*]] = phi i8 [ 2, [[ENTRY:%.*]] ], [ [[CONTAIN:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[COND0:%.*]] = call i1 @cond()
+; CHECK-NEXT:    [[CONTAIN]] = select i1 [[COND0]], i8 1, i8 [[INDVAR]]
+; CHECK-NEXT:    [[COND1:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[COND1]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[BOOL:%.*]] = icmp eq i8 [[CONTAIN]], 0
+; CHECK-NEXT:    ret i1 [[BOOL]]
+;
+entry:
+  br label %loop
+
+loop:
+  %indvar = phi i8 [ 2, %entry ], [ %contain, %loop ]
+  %cond0 = call i1 @cond()
+  %contain = select i1 %cond0, i8 1, i8 %indvar
+  %cond1 = call i1 @cond()
+  br i1 %cond1, label %exit, label %loop
+
+exit:
+  %bool = icmp eq i8 %contain, 0
+  ret i1 %bool
+}
+
 declare i1 @cond()
+declare void @side.effect()
+

@@ -10,7 +10,6 @@
 #include "FindSymbols.h"
 #include "FindTarget.h"
 #include "Headers.h"
-#include "HeuristicResolver.h"
 #include "IncludeCleaner.h"
 #include "ParsedAST.h"
 #include "Protocol.h"
@@ -53,6 +52,7 @@
 #include "clang/Index/IndexingOptions.h"
 #include "clang/Index/USRGeneration.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Sema/HeuristicResolver.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -2034,9 +2034,10 @@ static void unwrapFindType(
 
   // For smart pointer types, add the underlying type
   if (H)
-    if (const auto* PointeeType = H->getPointeeType(T.getNonReferenceType().getTypePtr())) {
-        unwrapFindType(QualType(PointeeType, 0), H, Out);
-        return Out.push_back(T);
+    if (auto PointeeType = H->getPointeeType(T.getNonReferenceType());
+        !PointeeType.isNull()) {
+      unwrapFindType(PointeeType, H, Out);
+      return Out.push_back(T);
     }
 
   return Out.push_back(T);

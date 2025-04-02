@@ -451,6 +451,7 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
         /* private_vars = */ ValueRange(),
         /* private_syms = */ nullptr,
         /* proc_bind_kind = */ omp::ClauseProcBindKindAttr{},
+        /* reduction_mod = */ nullptr,
         /* reduction_vars = */ llvm::SmallVector<Value>{},
         /* reduction_byref = */ DenseBoolArrayAttr{},
         /* reduction_syms = */ ArrayAttr{});

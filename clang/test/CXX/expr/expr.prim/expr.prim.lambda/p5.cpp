@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -std=c++11 %s -Winvalid-noreturn -verify
+// RUN: %clang_cc1 -Werror=return-type -std=c++11 %s -Winvalid-noreturn -verify
 
 // An attribute-specifier-seq in a lambda-declarator appertains to the
 // type of the corresponding function call operator.
 void test_attributes() {
-  auto nrl = [](int x) -> int { if (x > 0) return x; }; // expected-warning{{on-void lambda does not return a value in all control paths}}
+  auto nrl = [](int x) -> int { if (x > 0) return x; }; // expected-error{{non-void lambda does not return a value in all control paths}}
 
   // FIXME: GCC accepts the [[gnu::noreturn]] attribute here.
   auto nrl2 = []() [[gnu::noreturn]] { return; }; // expected-warning{{attribute 'noreturn' ignored}}

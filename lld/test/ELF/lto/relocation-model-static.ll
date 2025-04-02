@@ -13,7 +13,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-unknown-linux-gnu"
 
 @foo = external dso_local global i32
-define i32 @main() {
+define i32 @_start() {
   %t = load i32, ptr @foo
   ret i32 %t
 }

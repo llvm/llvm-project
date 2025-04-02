@@ -208,6 +208,8 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
 
   // OpenCL and HLSL have half keyword
   Opts.Half = Opts.OpenCL || Opts.HLSL;
+
+  Opts.PreserveVec3Type = Opts.HLSL;
 }
 
 FPOptions FPOptions::defaultWithoutTrailingStorage(const LangOptions &LO) {

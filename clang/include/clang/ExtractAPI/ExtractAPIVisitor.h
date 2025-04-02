@@ -252,6 +252,11 @@ protected:
     if (!NewRecordContext)
       return;
     auto *Tag = D.getType()->getAsTagDecl();
+    if (!Tag) {
+      if (const auto *AT = D.getASTContext().getAsArrayType(D.getType())) {
+        Tag = AT->getElementType()->getAsTagDecl();
+      }
+    }
     SmallString<128> TagUSR;
     clang::index::generateUSRForDecl(Tag, TagUSR);
     if (auto *Record = llvm::dyn_cast_if_present<TagRecord>(

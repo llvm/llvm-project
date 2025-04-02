@@ -368,7 +368,7 @@ bool DynamicLoaderMacOS::NotifyBreakpointHit(void *baton,
               dyld_instance->UnloadAllImages();
               dyld_instance->ClearDYLDModule();
               process->GetTarget().GetImages().Clear();
-              process->GetTarget().GetSectionLoadList().Clear();
+              process->GetTarget().ClearSectionLoadList();
 
               addr_t all_image_infos = process->GetImageInfoAddress();
               int addr_size =

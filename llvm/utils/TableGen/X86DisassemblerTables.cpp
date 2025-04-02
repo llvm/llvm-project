@@ -874,7 +874,7 @@ void DisassemblerTables::emitInstructionInfo(raw_ostream &o,
     for (auto Operand : InstructionSpecifiers[Index].operands) {
       OperandEncoding Encoding = (OperandEncoding)Operand.encoding;
       OperandType Type = (OperandType)Operand.type;
-      OperandList.push_back(std::pair(Encoding, Type));
+      OperandList.emplace_back(Encoding, Type);
     }
     unsigned &N = OperandSets[OperandList];
     if (N != 0)
@@ -906,7 +906,7 @@ void DisassemblerTables::emitInstructionInfo(raw_ostream &o,
     for (auto Operand : InstructionSpecifiers[index].operands) {
       OperandEncoding Encoding = (OperandEncoding)Operand.encoding;
       OperandType Type = (OperandType)Operand.type;
-      OperandList.push_back(std::pair(Encoding, Type));
+      OperandList.emplace_back(Encoding, Type);
     }
     o.indent(i * 2) << (OperandSets[OperandList] - 1) << ",\n";
 

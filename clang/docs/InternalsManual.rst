@@ -276,6 +276,21 @@ Description:
   diagnostic instead of having to do things textually.  The selected string
   does undergo formatting.
 
+**"enum_select format**
+
+Example:
+  ``unknown frobbling of a %enum_select<FrobbleKind>{%VarDecl{variable declaration}|%FuncDecl{function declaration}}0 when blarging``
+Class:
+  Integers
+Description:
+  This format specifier is used exactly like a ``select`` specifier, except it
+  additionally generates a namespace, enumeration, and enumerator list based on
+  the format string given. In the above case, a namespace is generated named
+  ``FrobbleKind`` that has an unscoped enumeration with the enumerators
+  ``VarDecl`` and ``FuncDecl`` which correspond to the values 0 and 1. This
+  permits a clearer use of the ``Diag`` in source code, as the above could be
+  called as: ``Diag(Loc, diag::frobble) << diag::FrobbleKind::VarDecl``.
+
 **"plural" format**
 
 Example:
