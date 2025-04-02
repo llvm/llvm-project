@@ -867,7 +867,7 @@ struct immconstant_ty {
         return true;
 
       if (CV->getType()->isVectorTy()) {
-        if (auto *Splat = CV->getSplatValue(/* AllowPoison */ true)) {
+        if (auto *Splat = CV->getSplatValue(/*AllowPoison=*/true)) {
           if (!isa<ConstantExpr>(Splat) &&
               !Splat->containsConstantExpression()) {
             return true;
