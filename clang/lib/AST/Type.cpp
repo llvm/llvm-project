@@ -2334,6 +2334,19 @@ bool Type::isArithmeticType() const {
   return isa<ComplexType>(CanonicalType) || isBitIntType();
 }
 
+bool Type::hasBooleanRepresentation() const {
+  if (isBooleanType())
+    return true;
+
+  if (const EnumType *ET = getAs<EnumType>())
+    return ET->getDecl()->getIntegerType()->isBooleanType();
+
+  if (const AtomicType *AT = getAs<AtomicType>())
+    return AT->getValueType()->hasBooleanRepresentation();
+
+  return false;
+}
+
 Type::ScalarTypeKind Type::getScalarTypeKind() const {
   assert(isScalarType());
 
