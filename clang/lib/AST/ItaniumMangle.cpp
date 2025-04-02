@@ -1327,7 +1327,7 @@ void CXXNameMangler::manglePrefix(QualType type) {
                  type->getAs<DependentTemplateSpecializationType>()) {
     if (!mangleSubstitution(QualType(DTST, 0))) {
       TemplateName Template = getASTContext().getDependentTemplateName(
-          DTST->getQualifier(), DTST->getIdentifier());
+          DTST->getDependentTemplateName());
       mangleTemplatePrefix(Template);
 
       // FIXME: GCC does not appear to mangle the template arguments when
@@ -1395,8 +1395,7 @@ void CXXNameMangler::mangleUnresolvedPrefix(NestedNameSpecifier *qualifier,
     mangleSourceNameWithAbiTags(qualifier->getAsNamespaceAlias());
     break;
 
-  case NestedNameSpecifier::TypeSpec:
-  case NestedNameSpecifier::TypeSpecWithTemplate: {
+  case NestedNameSpecifier::TypeSpec: {
     const Type *type = qualifier->getAsType();
 
     // We only want to use an unresolved-type encoding if this is one of:
@@ -2181,7 +2180,17 @@ void CXXNameMangler::manglePrefix(NestedNameSpecifier *qualifier) {
     return;
 
   case NestedNameSpecifier::TypeSpec:
-  case NestedNameSpecifier::TypeSpecWithTemplate:
+    if (NestedNameSpecifier *Prefix = qualifier->getPrefix()) {
+      const auto *DTST =
+          cast<DependentTemplateSpecializationType>(qualifier->getAsType());
+      QualType NewT = getASTContext().getDependentTemplateSpecializationType(
+          DTST->getKeyword(),
+          {Prefix, DTST->getDependentTemplateName().getName(),
+           /*HasTemplateKeyword=*/true},
+          DTST->template_arguments(), /*IsCanonical=*/true);
+      manglePrefix(NewT);
+      return;
+    }
     manglePrefix(QualType(qualifier->getAsType(), 0));
     return;
 
@@ -2265,10 +2274,11 @@ void CXXNameMangler::mangleTemplatePrefix(TemplateName Template) {
   if (Clang11Compat && mangleSubstitution(Template))
     return;
 
-  if (const IdentifierInfo *Id = Dependent->getIdentifier())
+  if (IdentifierOrOverloadedOperator Name = Dependent->getName();
+      const IdentifierInfo *Id = Name.getIdentifier())
     mangleSourceName(Id);
   else
-    mangleOperatorName(Dependent->getOperator(), UnknownArity);
+    mangleOperatorName(Name.getOperator(), UnknownArity);
 
   addSubstitution(Template);
 }
@@ -2376,12 +2386,13 @@ void CXXNameMangler::mangleType(TemplateName TN) {
 
   case TemplateName::DependentTemplate: {
     const DependentTemplateName *Dependent = TN.getAsDependentTemplateName();
-    assert(Dependent->isIdentifier());
+    const IdentifierInfo *II = Dependent->getName().getIdentifier();
+    assert(II);
 
     // <class-enum-type> ::= <name>
     // <name> ::= <nested-name>
     mangleUnresolvedPrefix(Dependent->getQualifier());
-    mangleSourceName(Dependent->getIdentifier());
+    mangleSourceName(II);
     break;
   }
 
@@ -2572,8 +2583,8 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
     const DependentTemplateSpecializationType *DTST =
         cast<DependentTemplateSpecializationType>(Ty);
     TemplateName Template = getASTContext().getDependentTemplateName(
-        DTST->getQualifier(), DTST->getIdentifier());
-    mangleSourceName(DTST->getIdentifier());
+        DTST->getDependentTemplateName());
+    mangleTemplatePrefix(Template);
     mangleTemplateArgs(Template, DTST->template_arguments());
     break;
   }
@@ -3828,7 +3839,16 @@ void CXXNameMangler::mangleType(const IncompleteArrayType *T) {
 // <pointer-to-member-type> ::= M <class type> <member type>
 void CXXNameMangler::mangleType(const MemberPointerType *T) {
   Out << 'M';
-  mangleType(QualType(T->getClass(), 0));
+  if (auto *RD = T->getMostRecentCXXRecordDecl()) {
+    mangleCXXRecordDecl(RD);
+  } else {
+    NestedNameSpecifier *NNS = T->getQualifier();
+    if (auto *II = NNS->getAsIdentifier())
+      mangleType(getASTContext().getDependentNameType(
+          ElaboratedTypeKeyword::None, NNS->getPrefix(), II));
+    else
+      manglePrefix(NNS);
+  }
   QualType PointeeType = T->getPointeeType();
   if (const FunctionProtoType *FPT = dyn_cast<FunctionProtoType>(PointeeType)) {
     mangleType(FPT);
@@ -4472,10 +4492,8 @@ void CXXNameMangler::mangleType(const DependentTemplateSpecializationType *T) {
   // Dependently-scoped template types are nested if they have a prefix.
   Out << 'N';
 
-  // TODO: avoid making this TemplateName.
   TemplateName Prefix =
-    getASTContext().getDependentTemplateName(T->getQualifier(),
-                                             T->getIdentifier());
+      getASTContext().getDependentTemplateName(T->getDependentTemplateName());
   mangleTemplatePrefix(Prefix);
 
   // FIXME: GCC does not appear to mangle the template arguments when
@@ -5327,7 +5345,19 @@ recurse:
       }
     };
 
-    switch(SAE->getKind()) {
+    auto MangleExtensionBuiltin = [&](const UnaryExprOrTypeTraitExpr *E,
+                                      StringRef Name = {}) {
+      if (Name.empty())
+        Name = getTraitSpelling(E->getKind());
+      mangleVendorType(Name);
+      if (SAE->isArgumentType())
+        mangleType(SAE->getArgumentType());
+      else
+        mangleTemplateArgExpr(SAE->getArgumentExpr());
+      Out << 'E';
+    };
+
+    switch (SAE->getKind()) {
     case UETT_SizeOf:
       Out << 's';
       MangleAlignofSizeofArg();
@@ -5337,12 +5367,7 @@ recurse:
       // have acted differently since Clang 8, but were previously mangled the
       // same.)
       if (!isCompatibleWith(LangOptions::ClangABI::Ver11)) {
-        Out << "u11__alignof__";
-        if (SAE->isArgumentType())
-          mangleType(SAE->getArgumentType());
-        else
-          mangleTemplateArgExpr(SAE->getArgumentExpr());
-        Out << 'E';
+        MangleExtensionBuiltin(SAE, "__alignof__");
         break;
       }
       [[fallthrough]];
@@ -5350,43 +5375,17 @@ recurse:
       Out << 'a';
       MangleAlignofSizeofArg();
       break;
+
+    case UETT_CountOf:
+    case UETT_VectorElements:
+    case UETT_OpenMPRequiredSimdAlign:
+    case UETT_VecStep:
+    case UETT_PtrAuthTypeDiscriminator:
     case UETT_DataSizeOf: {
       DiagnosticsEngine &Diags = Context.getDiags();
-      unsigned DiagID =
-          Diags.getCustomDiagID(DiagnosticsEngine::Error,
-                                "cannot yet mangle __datasizeof expression");
-      Diags.Report(DiagID);
-      return;
-    }
-    case UETT_PtrAuthTypeDiscriminator: {
-      DiagnosticsEngine &Diags = Context.getDiags();
       unsigned DiagID = Diags.getCustomDiagID(
-          DiagnosticsEngine::Error,
-          "cannot yet mangle __builtin_ptrauth_type_discriminator expression");
-      Diags.Report(E->getExprLoc(), DiagID);
-      return;
-    }
-    case UETT_VecStep: {
-      DiagnosticsEngine &Diags = Context.getDiags();
-      unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-                                     "cannot yet mangle vec_step expression");
-      Diags.Report(DiagID);
-      return;
-    }
-    case UETT_OpenMPRequiredSimdAlign: {
-      DiagnosticsEngine &Diags = Context.getDiags();
-      unsigned DiagID = Diags.getCustomDiagID(
-          DiagnosticsEngine::Error,
-          "cannot yet mangle __builtin_omp_required_simd_align expression");
-      Diags.Report(DiagID);
-      return;
-    }
-    case UETT_VectorElements: {
-      DiagnosticsEngine &Diags = Context.getDiags();
-      unsigned DiagID = Diags.getCustomDiagID(
-          DiagnosticsEngine::Error,
-          "cannot yet mangle __builtin_vectorelements expression");
-      Diags.Report(DiagID);
+          DiagnosticsEngine::Error, "cannot yet mangle %0 expression");
+      Diags.Report(E->getExprLoc(), DiagID) << getTraitSpelling(SAE->getKind());
       return;
     }
     }
@@ -6014,6 +6013,8 @@ void CXXNameMangler::mangleCXXDtorType(CXXDtorType T) {
   case Dtor_Comdat:
     Out << "D5";
     break;
+  case Dtor_VectorDeleting:
+    llvm_unreachable("Itanium ABI does not use vector deleting dtors");
   }
 }
 

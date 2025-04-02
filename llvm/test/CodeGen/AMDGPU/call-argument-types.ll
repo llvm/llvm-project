@@ -3959,7 +3959,7 @@ define amdgpu_kernel void @test_call_external_void_func_v8i32() #0 {
 ; HSA-NEXT:    s_mov_b32 s32, 0
 ; HSA-NEXT:    s_swappc_b64 s[30:31], s[8:9]
 ; HSA-NEXT:    s_endpgm
-  %ptr = load ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load ptr addrspace(1), ptr addrspace(4) poison
   %val = load <8 x i32>, ptr addrspace(1) %ptr
   call void @external_void_func_v8i32(<8 x i32> %val)
   ret void
@@ -4204,7 +4204,7 @@ define amdgpu_kernel void @test_call_external_void_func_v16i32() #0 {
 ; HSA-NEXT:    s_mov_b32 s32, 0
 ; HSA-NEXT:    s_swappc_b64 s[30:31], s[8:9]
 ; HSA-NEXT:    s_endpgm
-  %ptr = load ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load ptr addrspace(1), ptr addrspace(4) poison
   %val = load <16 x i32>, ptr addrspace(1) %ptr
   call void @external_void_func_v16i32(<16 x i32> %val)
   ret void
@@ -4360,7 +4360,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32() #0 {
 ; HSA-NEXT:    buffer_store_dword v31, off, s[0:3], s32
 ; HSA-NEXT:    s_swappc_b64 s[30:31], s[12:13]
 ; HSA-NEXT:    s_endpgm
-  %ptr = load ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load ptr addrspace(1), ptr addrspace(4) poison
   %val = load <32 x i32>, ptr addrspace(1) %ptr
   call void @external_void_func_v32i32(<32 x i32> %val)
   ret void
@@ -4532,7 +4532,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i32(i32) #0 {
 ; HSA-NEXT:    buffer_store_dword v31, off, s[0:3], s32
 ; HSA-NEXT:    s_swappc_b64 s[30:31], s[8:9]
 ; HSA-NEXT:    s_endpgm
-  %ptr0 = load ptr addrspace(1), ptr addrspace(4) undef
+  %ptr0 = load ptr addrspace(1), ptr addrspace(4) poison
   %val0 = load <32 x i32>, ptr addrspace(1) %ptr0
   %val1 = load i32, ptr addrspace(1) poison
   call void @external_void_func_v32i32_i32(<32 x i32> %val0, i32 %val1)
@@ -4763,7 +4763,7 @@ define amdgpu_kernel void @test_call_external_void_func_struct_i8_i32() #0 {
 ; HSA-NEXT:    s_mov_b32 s32, 0
 ; HSA-NEXT:    s_swappc_b64 s[30:31], s[8:9]
 ; HSA-NEXT:    s_endpgm
-  %ptr0 = load ptr addrspace(1), ptr addrspace(4) undef
+  %ptr0 = load ptr addrspace(1), ptr addrspace(4) poison
   %val = load { i8, i32 }, ptr addrspace(1) %ptr0
   call void @external_void_func_struct_i8_i32({ i8, i32 } %val)
   ret void
@@ -5300,7 +5300,7 @@ define amdgpu_kernel void @test_call_external_void_func_v16i8() #0 {
 ; HSA-NEXT:    v_mov_b32_e32 v3, v18
 ; HSA-NEXT:    s_swappc_b64 s[30:31], s[8:9]
 ; HSA-NEXT:    s_endpgm
-  %ptr = load ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load ptr addrspace(1), ptr addrspace(4) poison
   %val = load <16 x i8>, ptr addrspace(1) %ptr
   call void @external_void_func_v16i8(<16 x i8> %val)
   ret void

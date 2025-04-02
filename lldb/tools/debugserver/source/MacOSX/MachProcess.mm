@@ -528,7 +528,7 @@ MachProcess::MachProcess()
       m_profile_data_mutex(PTHREAD_MUTEX_RECURSIVE), m_profile_data(),
       m_profile_events(0, eMachProcessProfileCancel), m_thread_actions(),
       m_exception_messages(),
-      m_exception_messages_mutex(PTHREAD_MUTEX_RECURSIVE), m_thread_list(),
+      m_exception_and_signal_mutex(PTHREAD_MUTEX_RECURSIVE), m_thread_list(),
       m_activities(), m_state(eStateUnloaded),
       m_state_mutex(PTHREAD_MUTEX_RECURSIVE), m_events(0, kAllEventsMask),
       m_private_events(0, kAllEventsMask), m_breakpoints(), m_watchpoints(),
@@ -1338,8 +1338,11 @@ void MachProcess::Clear(bool detaching) {
   m_stop_count = 0;
   m_thread_list.Clear();
   {
-    PTHREAD_MUTEX_LOCKER(locker, m_exception_messages_mutex);
+    PTHREAD_MUTEX_LOCKER(locker, m_exception_and_signal_mutex);
     m_exception_messages.clear();
+    m_sent_interrupt_signo = 0;
+    m_auto_resume_signo = 0;
+
   }
   m_activities.Clear();
   StopProfileThread();
@@ -1575,6 +1578,7 @@ bool MachProcess::Kill(const struct timespec *timeout_abstime) {
 bool MachProcess::Interrupt() {
   nub_state_t state = GetState();
   if (IsRunning(state)) {
+    PTHREAD_MUTEX_LOCKER(locker, m_exception_and_signal_mutex);
     if (m_sent_interrupt_signo == 0) {
       m_sent_interrupt_signo = SIGSTOP;
       if (Signal(m_sent_interrupt_signo)) {
@@ -1590,6 +1594,10 @@ bool MachProcess::Interrupt() {
                          m_sent_interrupt_signo);
       }
     } else {
+      // We've requested that the process stop anew; if we had recorded this
+      // requested stop as being in place when we resumed (& therefore would
+      // throw it away), clear that.
+      m_auto_resume_signo = 0;
       DNBLogThreadedIf(LOG_PROCESS, "MachProcess::Interrupt() - previously "
                                     "sent an interrupt signal %i that hasn't "
                                     "been received yet, interrupt aborted",
@@ -1728,7 +1736,7 @@ bool MachProcess::Detach() {
     m_thread_actions.Append(thread_action);
     m_thread_actions.SetDefaultThreadActionIfNeeded(eStateRunning, 0);
 
-    PTHREAD_MUTEX_LOCKER(locker, m_exception_messages_mutex);
+    PTHREAD_MUTEX_LOCKER(locker, m_exception_and_signal_mutex);
 
     ReplyToAllExceptions();
   }
@@ -1854,7 +1862,7 @@ nub_size_t MachProcess::WriteMemory(nub_addr_t addr, nub_size_t size,
 }
 
 void MachProcess::ReplyToAllExceptions() {
-  PTHREAD_MUTEX_LOCKER(locker, m_exception_messages_mutex);
+  PTHREAD_MUTEX_LOCKER(locker, m_exception_and_signal_mutex);
   if (!m_exception_messages.empty()) {
     MachException::Message::iterator pos;
     MachException::Message::iterator begin = m_exception_messages.begin();
@@ -1888,7 +1896,7 @@ void MachProcess::ReplyToAllExceptions() {
   }
 }
 void MachProcess::PrivateResume() {
-  PTHREAD_MUTEX_LOCKER(locker, m_exception_messages_mutex);
+  PTHREAD_MUTEX_LOCKER(locker, m_exception_and_signal_mutex);
 
   m_auto_resume_signo = m_sent_interrupt_signo;
   if (m_auto_resume_signo)
@@ -2290,7 +2298,7 @@ bool MachProcess::EnableWatchpoint(nub_addr_t addr) {
 // data has already been copied.
 void MachProcess::ExceptionMessageReceived(
     const MachException::Message &exceptionMessage) {
-  PTHREAD_MUTEX_LOCKER(locker, m_exception_messages_mutex);
+  PTHREAD_MUTEX_LOCKER(locker, m_exception_and_signal_mutex);
 
   if (m_exception_messages.empty())
     m_task.Suspend();
@@ -2304,7 +2312,7 @@ void MachProcess::ExceptionMessageReceived(
 
 task_t MachProcess::ExceptionMessageBundleComplete() {
   // We have a complete bundle of exceptions for our child process.
-  PTHREAD_MUTEX_LOCKER(locker, m_exception_messages_mutex);
+  PTHREAD_MUTEX_LOCKER(locker, m_exception_and_signal_mutex);
   DNBLogThreadedIf(LOG_EXCEPTIONS, "%s: %llu exception messages.",
                    __PRETTY_FUNCTION__, (uint64_t)m_exception_messages.size());
   bool auto_resume = false;

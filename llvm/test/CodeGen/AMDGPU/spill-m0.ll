@@ -169,7 +169,7 @@ endif:
 ; TOSMEM: s_endpgm
 define amdgpu_kernel void @restore_m0_lds(i32 %arg) {
   %m0 = call i32 asm sideeffect "s_mov_b32 m0, 0", "={m0}"() #0
-  %sval = load volatile i64, ptr addrspace(4) undef
+  %sval = load volatile i64, ptr addrspace(4) poison
   %cmp = icmp eq i32 %arg, 0
   br i1 %cmp, label %ret, label %bb
 

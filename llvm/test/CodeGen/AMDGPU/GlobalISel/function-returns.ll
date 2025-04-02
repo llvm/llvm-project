@@ -439,7 +439,7 @@ define <8 x i32> @v8i32_func_void() #0 {
   ; CHECK-LABEL: name: v8i32_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) undef`, addrspace 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<8 x s32>) = G_LOAD [[LOAD]](p1) :: (load (<8 x s32>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<8 x s32>)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
@@ -451,7 +451,7 @@ define <8 x i32> @v8i32_func_void() #0 {
   ; CHECK-NEXT:   $vgpr6 = COPY [[UV6]](s32)
   ; CHECK-NEXT:   $vgpr7 = COPY [[UV7]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7
-  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load <8 x i32>, ptr addrspace(1) %ptr
   ret <8 x i32> %val
 }
@@ -460,7 +460,7 @@ define <16 x i32> @v16i32_func_void() #0 {
   ; CHECK-LABEL: name: v16i32_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) undef`, addrspace 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[LOAD]](p1) :: (load (<16 x s32>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<16 x s32>)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
@@ -480,7 +480,7 @@ define <16 x i32> @v16i32_func_void() #0 {
   ; CHECK-NEXT:   $vgpr14 = COPY [[UV14]](s32)
   ; CHECK-NEXT:   $vgpr15 = COPY [[UV15]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15
-  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load <16 x i32>, ptr addrspace(1) %ptr
   ret <16 x i32> %val
 }
@@ -489,7 +489,7 @@ define <32 x i32> @v32i32_func_void() #0 {
   ; CHECK-LABEL: name: v32i32_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) undef`, addrspace 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[LOAD]](p1) :: (load (<32 x s32>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<32 x s32>)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
@@ -525,7 +525,7 @@ define <32 x i32> @v32i32_func_void() #0 {
   ; CHECK-NEXT:   $vgpr30 = COPY [[UV30]](s32)
   ; CHECK-NEXT:   $vgpr31 = COPY [[UV31]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $vgpr31
-  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load <32 x i32>, ptr addrspace(1) %ptr
   ret <32 x i32> %val
 }
@@ -549,7 +549,7 @@ define <3 x i64> @v3i64_func_void() #0 {
   ; CHECK-LABEL: name: v3i64_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) undef`, addrspace 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<3 x s64>) = G_LOAD [[LOAD]](p1) :: (load (<3 x s64>) from %ir.ptr, align 32, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<3 x s64>)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
@@ -559,7 +559,7 @@ define <3 x i64> @v3i64_func_void() #0 {
   ; CHECK-NEXT:   $vgpr4 = COPY [[UV4]](s32)
   ; CHECK-NEXT:   $vgpr5 = COPY [[UV5]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5
-  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load <3 x i64>, ptr addrspace(1) %ptr
   ret <3 x i64> %val
 }
@@ -568,7 +568,7 @@ define <4 x i64> @v4i64_func_void() #0 {
   ; CHECK-LABEL: name: v4i64_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) undef`, addrspace 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<4 x s64>) = G_LOAD [[LOAD]](p1) :: (load (<4 x s64>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<4 x s64>)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
@@ -580,7 +580,7 @@ define <4 x i64> @v4i64_func_void() #0 {
   ; CHECK-NEXT:   $vgpr6 = COPY [[UV6]](s32)
   ; CHECK-NEXT:   $vgpr7 = COPY [[UV7]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7
-  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load <4 x i64>, ptr addrspace(1) %ptr
   ret <4 x i64> %val
 }
@@ -589,7 +589,7 @@ define <5 x i64> @v5i64_func_void() #0 {
   ; CHECK-LABEL: name: v5i64_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) undef`, addrspace 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<5 x s64>) = G_LOAD [[LOAD]](p1) :: (load (<5 x s64>) from %ir.ptr, align 64, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<5 x s64>)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
@@ -603,7 +603,7 @@ define <5 x i64> @v5i64_func_void() #0 {
   ; CHECK-NEXT:   $vgpr8 = COPY [[UV8]](s32)
   ; CHECK-NEXT:   $vgpr9 = COPY [[UV9]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9
-  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load <5 x i64>, ptr addrspace(1) %ptr
   ret <5 x i64> %val
 }
@@ -612,7 +612,7 @@ define <8 x i64> @v8i64_func_void() #0 {
   ; CHECK-LABEL: name: v8i64_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) undef`, addrspace 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<8 x s64>) = G_LOAD [[LOAD]](p1) :: (load (<8 x s64>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<8 x s64>)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
@@ -632,7 +632,7 @@ define <8 x i64> @v8i64_func_void() #0 {
   ; CHECK-NEXT:   $vgpr14 = COPY [[UV14]](s32)
   ; CHECK-NEXT:   $vgpr15 = COPY [[UV15]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15
-  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load <8 x i64>, ptr addrspace(1) %ptr
   ret <8 x i64> %val
 }
@@ -641,7 +641,7 @@ define <16 x i64> @v16i64_func_void() #0 {
   ; CHECK-LABEL: name: v16i64_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) undef`, addrspace 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<16 x s64>) = G_LOAD [[LOAD]](p1) :: (load (<16 x s64>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<16 x s64>)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
@@ -677,7 +677,7 @@ define <16 x i64> @v16i64_func_void() #0 {
   ; CHECK-NEXT:   $vgpr30 = COPY [[UV30]](s32)
   ; CHECK-NEXT:   $vgpr31 = COPY [[UV31]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $vgpr31
-  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load <16 x i64>, ptr addrspace(1) %ptr
   ret <16 x i64> %val
 }
@@ -750,7 +750,7 @@ define <5 x i16> @v5i16_func_void() #0 {
   ; CHECK-LABEL: name: v5i16_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) undef`, addrspace 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<5 x s16>) = G_LOAD [[LOAD]](p1) :: (load (<5 x s16>) from %ir.ptr, align 16, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16), [[UV4:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[LOAD1]](<5 x s16>)
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
@@ -760,7 +760,7 @@ define <5 x i16> @v5i16_func_void() #0 {
   ; CHECK-NEXT:   $vgpr1 = COPY [[UV6]](<2 x s16>)
   ; CHECK-NEXT:   $vgpr2 = COPY [[UV7]](<2 x s16>)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
-  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load <5 x i16>, ptr addrspace(1) %ptr
   ret <5 x i16> %val
 }
@@ -769,7 +769,7 @@ define <8 x i16> @v8i16_func_void() #0 {
   ; CHECK-LABEL: name: v8i16_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) undef`, addrspace 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<8 x s16>) = G_LOAD [[LOAD]](p1) :: (load (<8 x s16>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[LOAD1]](<8 x s16>)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](<2 x s16>)
@@ -777,7 +777,7 @@ define <8 x i16> @v8i16_func_void() #0 {
   ; CHECK-NEXT:   $vgpr2 = COPY [[UV2]](<2 x s16>)
   ; CHECK-NEXT:   $vgpr3 = COPY [[UV3]](<2 x s16>)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
-  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load <8 x i16>, ptr addrspace(1) %ptr
   ret <8 x i16> %val
 }
@@ -786,7 +786,7 @@ define <16 x i16> @v16i16_func_void() #0 {
   ; CHECK-LABEL: name: v16i16_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) undef`, addrspace 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<16 x s16>) = G_LOAD [[LOAD]](p1) :: (load (<16 x s16>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>), [[UV4:%[0-9]+]]:_(<2 x s16>), [[UV5:%[0-9]+]]:_(<2 x s16>), [[UV6:%[0-9]+]]:_(<2 x s16>), [[UV7:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[LOAD1]](<16 x s16>)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](<2 x s16>)
@@ -798,7 +798,7 @@ define <16 x i16> @v16i16_func_void() #0 {
   ; CHECK-NEXT:   $vgpr6 = COPY [[UV6]](<2 x s16>)
   ; CHECK-NEXT:   $vgpr7 = COPY [[UV7]](<2 x s16>)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7
-  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load <16 x i16>, ptr addrspace(1) %ptr
   ret <16 x i16> %val
 }
@@ -807,7 +807,7 @@ define <16 x i8> @v16i8_func_void() #0 {
   ; CHECK-LABEL: name: v16i8_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) undef`, addrspace 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<16 x s8>) = G_LOAD [[LOAD]](p1) :: (load (<16 x s8>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8), [[UV4:%[0-9]+]]:_(s8), [[UV5:%[0-9]+]]:_(s8), [[UV6:%[0-9]+]]:_(s8), [[UV7:%[0-9]+]]:_(s8), [[UV8:%[0-9]+]]:_(s8), [[UV9:%[0-9]+]]:_(s8), [[UV10:%[0-9]+]]:_(s8), [[UV11:%[0-9]+]]:_(s8), [[UV12:%[0-9]+]]:_(s8), [[UV13:%[0-9]+]]:_(s8), [[UV14:%[0-9]+]]:_(s8), [[UV15:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[LOAD1]](<16 x s8>)
   ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s16) = G_ANYEXT [[UV]](s8)
@@ -859,7 +859,7 @@ define <16 x i8> @v16i8_func_void() #0 {
   ; CHECK-NEXT:   [[ANYEXT31:%[0-9]+]]:_(s32) = G_ANYEXT [[ANYEXT15]](s16)
   ; CHECK-NEXT:   $vgpr15 = COPY [[ANYEXT31]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15
-  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load <16 x i8>, ptr addrspace(1) %ptr
   ret <16 x i8> %val
 }
@@ -905,7 +905,7 @@ define <4  x i8> @v4i8_func_void() #0 {
   ; CHECK-LABEL: name: v4i8_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) undef`, addrspace 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<4 x s8>) = G_LOAD [[LOAD]](p1) :: (load (<4 x s8>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[LOAD1]](<4 x s8>)
   ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s16) = G_ANYEXT [[UV]](s8)
@@ -921,7 +921,7 @@ define <4  x i8> @v4i8_func_void() #0 {
   ; CHECK-NEXT:   [[ANYEXT7:%[0-9]+]]:_(s32) = G_ANYEXT [[ANYEXT3]](s16)
   ; CHECK-NEXT:   $vgpr3 = COPY [[ANYEXT7]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
-  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load <4  x i8>, ptr addrspace(1) %ptr
   ret <4  x i8> %val
 }
@@ -976,11 +976,11 @@ define <33 x i32> @v33i32_func_void() #0 {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) undef`, addrspace 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<33 x s32>) = G_LOAD [[LOAD]](p1) :: (load (<33 x s32>) from %ir.ptr, align 256, addrspace 1)
   ; CHECK-NEXT:   G_STORE [[LOAD1]](<33 x s32>), [[COPY]](p5) :: (store (<33 x s32>), align 256, addrspace 5)
   ; CHECK-NEXT:   SI_RETURN
-  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load <33 x i32>, ptr addrspace(1) %ptr
   ret <33 x i32> %val
 }
@@ -1015,7 +1015,7 @@ define { <32 x i32>, i32 } @struct_v32i32_i32_func_void() #0 {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) undef`, addrspace 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[LOAD]](p1) :: (load (<32 x s32>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 128
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[LOAD]], [[C]](s64)
@@ -1025,7 +1025,7 @@ define { <32 x i32>, i32 } @struct_v32i32_i32_func_void() #0 {
   ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY]], [[C1]](s32)
   ; CHECK-NEXT:   G_STORE [[LOAD2]](s32), [[PTR_ADD1]](p5) :: (store (s32), align 128, addrspace 5)
   ; CHECK-NEXT:   SI_RETURN
-  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load { <32 x i32>, i32 }, ptr addrspace(1) %ptr
   ret { <32 x i32>, i32 }%val
 }
@@ -1037,7 +1037,7 @@ define { i32, <32 x i32> } @struct_i32_v32i32_func_void() #0 {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) undef`, addrspace 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[LOAD]](p1) :: (load (s32) from %ir.ptr, align 128, addrspace 1)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 128
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[LOAD]], [[C]](s64)
@@ -1047,7 +1047,7 @@ define { i32, <32 x i32> } @struct_i32_v32i32_func_void() #0 {
   ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY]], [[C1]](s32)
   ; CHECK-NEXT:   G_STORE [[LOAD2]](<32 x s32>), [[PTR_ADD1]](p5) :: (store (<32 x s32>), addrspace 5)
   ; CHECK-NEXT:   SI_RETURN
-  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load { i32, <32 x i32> }, ptr addrspace(1) %ptr
   ret { i32, <32 x i32> }%val
 }

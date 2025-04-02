@@ -252,8 +252,8 @@ static ParsedType recoverFromTypeInKnownDependentBase(Sema &S,
   S.Diag(NameLoc, diag::ext_found_in_dependent_base) << &II;
 
   ASTContext &Context = S.Context;
-  auto *NNS = NestedNameSpecifier::Create(Context, nullptr, false,
-                                          cast<Type>(Context.getRecordType(RD)));
+  auto *NNS = NestedNameSpecifier::Create(
+      Context, nullptr, cast<Type>(Context.getRecordType(RD)));
   QualType T =
       Context.getDependentNameType(ElaboratedTypeKeyword::Typename, NNS, &II);
 
@@ -580,10 +580,10 @@ synthesizeCurrentNestedNameSpecifier(ASTContext &Context, DeclContext *DC) {
     auto *ND = dyn_cast<NamespaceDecl>(DC);
     if (ND && !ND->isInline() && !ND->isAnonymousNamespace())
       return NestedNameSpecifier::Create(Context, nullptr, ND);
-    else if (auto *RD = dyn_cast<CXXRecordDecl>(DC))
-      return NestedNameSpecifier::Create(Context, nullptr, RD->isTemplateDecl(),
+    if (auto *RD = dyn_cast<CXXRecordDecl>(DC))
+      return NestedNameSpecifier::Create(Context, nullptr,
                                          RD->getTypeForDecl());
-    else if (isa<TranslationUnitDecl>(DC))
+    if (isa<TranslationUnitDecl>(DC))
       return NestedNameSpecifier::GlobalSpecifier(Context);
   }
   llvm_unreachable("something isn't in TU scope?");
@@ -624,8 +624,7 @@ ParsedType Sema::ActOnMSVCUnknownTypeName(const IdentifierInfo &II,
                  findRecordWithDependentBasesOfEnclosingMethod(CurContext)) {
     // Build a DependentNameType that will perform lookup into RD at
     // instantiation time.
-    NNS = NestedNameSpecifier::Create(Context, nullptr, RD->isTemplateDecl(),
-                                      RD->getTypeForDecl());
+    NNS = NestedNameSpecifier::Create(Context, nullptr, RD->getTypeForDecl());
 
     // Diagnose that this identifier was undeclared, and retry the lookup during
     // template instantiation.
@@ -1934,13 +1933,14 @@ static bool ShouldDiagnoseUnusedDecl(const LangOptions &LangOpts,
     // For a decomposition declaration, warn if none of the bindings are
     // referenced, instead of if the variable itself is referenced (which
     // it is, by the bindings' expressions).
-    bool IsAllPlaceholders = true;
+    bool IsAllIgnored = true;
     for (const auto *BD : DD->bindings()) {
-      if (BD->isReferenced() || BD->hasAttr<UnusedAttr>())
+      if (BD->isReferenced())
         return false;
-      IsAllPlaceholders = IsAllPlaceholders && BD->isPlaceholderVar(LangOpts);
+      IsAllIgnored = IsAllIgnored && (BD->isPlaceholderVar(LangOpts) ||
+                                      BD->hasAttr<UnusedAttr>());
     }
-    if (IsAllPlaceholders)
+    if (IsAllIgnored)
       return false;
   } else if (!D->getDeclName()) {
     return false;
@@ -2893,6 +2893,8 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
   else if (isa<SuppressAttr>(Attr))
     // Do nothing. Each redeclaration should be suppressed separately.
     NewAttr = nullptr;
+  else if (const auto *RD = dyn_cast<OpenACCRoutineDeclAttr>(Attr))
+    NewAttr = S.OpenACC().mergeRoutineDeclAttr(*RD);
   else if (Attr->shouldInheritEvenIfAlreadyPresent() || !DeclHasAttr(D, Attr))
     NewAttr = cast<InheritableAttr>(Attr->clone(S.Context));
 
@@ -6240,11 +6242,12 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
 
   NestedNameSpecifierLoc SpecLoc(SS.getScopeRep(), SS.location_data());
   do {
-    if (SpecLoc.getNestedNameSpecifier()->getKind() ==
-        NestedNameSpecifier::TypeSpecWithTemplate)
-      Diag(Loc, diag::ext_template_after_declarative_nns)
-          << FixItHint::CreateRemoval(
-                 SpecLoc.getTypeLoc().getTemplateKeywordLoc());
+    if (TypeLoc TL = SpecLoc.getTypeLoc()) {
+      if (SourceLocation TemplateKeywordLoc = TL.getTemplateKeywordLoc();
+          TemplateKeywordLoc.isValid())
+        Diag(Loc, diag::ext_template_after_declarative_nns)
+            << FixItHint::CreateRemoval(TemplateKeywordLoc);
+    }
 
     if (const Type *T = SpecLoc.getNestedNameSpecifier()->getAsType()) {
       if (const auto *TST = T->getAsAdjusted<TemplateSpecializationType>()) {
@@ -7648,8 +7651,8 @@ NamedDecl *Sema::ActOnVariableDeclarator(
           // Only C++1y supports variable templates (N3651).
           Diag(D.getIdentifierLoc(),
                getLangOpts().CPlusPlus14
-                   ? diag::warn_cxx11_compat_variable_template
-                   : diag::ext_variable_template);
+                   ? diag::compat_cxx14_variable_template
+                   : diag::compat_pre_cxx14_variable_template);
         }
       }
     } else {
@@ -7717,8 +7720,8 @@ NamedDecl *Sema::ActOnVariableDeclarator(
             // the program is ill-formed. C++11 drops this restriction.
             Diag(D.getIdentifierLoc(),
                  getLangOpts().CPlusPlus11
-                     ? diag::warn_cxx98_compat_static_data_member_in_union
-                     : diag::ext_static_data_member_in_union)
+                     ? diag::compat_cxx11_static_data_member_in_union
+                     : diag::compat_pre_cxx11_static_data_member_in_union)
                 << Name;
           }
         }
@@ -7821,8 +7824,8 @@ NamedDecl *Sema::ActOnVariableDeclarator(
         << FixItHint::CreateRemoval(D.getDeclSpec().getInlineSpecLoc());
     } else {
       Diag(D.getDeclSpec().getInlineSpecLoc(),
-           getLangOpts().CPlusPlus17 ? diag::warn_cxx14_compat_inline_variable
-                                     : diag::ext_inline_variable);
+           getLangOpts().CPlusPlus17 ? diag::compat_cxx17_inline_variable
+                                     : diag::compat_pre_cxx17_inline_variable);
       NewVD->setInlineSpecified();
     }
   }
@@ -7857,8 +7860,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
            diag::err_thread_non_global)
         << DeclSpec::getSpecifierName(TSCS);
     else if (!Context.getTargetInfo().isTLSSupported()) {
-      if (getLangOpts().CUDA || getLangOpts().OpenMPIsTargetDevice ||
-          getLangOpts().SYCLIsDevice) {
+      if (getLangOpts().CUDA || getLangOpts().isTargetDevice()) {
         // Postpone error emission until we've collected attributes required to
         // figure out whether it's a host or device variable and whether the
         // error should be ignored.
@@ -7991,8 +7993,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     if (const auto *TT = R->getAs<TypedefType>())
       copyAttrFromTypedefToDecl<AllocSizeAttr>(*this, NewVD, TT);
 
-  if (getLangOpts().CUDA || getLangOpts().OpenMPIsTargetDevice ||
-      getLangOpts().SYCLIsDevice) {
+  if (getLangOpts().CUDA || getLangOpts().isTargetDevice()) {
     if (EmitTLSUnsupportedError &&
         ((getLangOpts().CUDA && DeclAttrsMatchCUDAMode(getLangOpts(), NewVD)) ||
          (getLangOpts().OpenMPIsTargetDevice &&
@@ -11027,6 +11028,11 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       D.getFunctionDefinitionKind() == FunctionDefinitionKind::Declaration)
     ExternalDeclarations.push_back(NewFD);
 
+  // Used for a warning on the 'next' declaration when used with a
+  // `routine(name)`.
+  if (getLangOpts().OpenACC)
+    OpenACC().ActOnFunctionDeclarator(NewFD);
+
   return NewFD;
 }
 
@@ -14047,6 +14053,9 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
       VDecl->isFileVarDecl())
     DeclsToCheckForDeferredDiags.insert(VDecl);
   CheckCompleteVariableDeclaration(VDecl);
+
+  if (LangOpts.OpenACC && !InitType.isNull())
+    OpenACC().ActOnVariableInit(VDecl, InitType);
 }
 
 void Sema::ActOnInitializerError(Decl *D) {
@@ -16575,9 +16584,8 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
     DiscardCleanupsInEvaluationContext();
   }
 
-  if (FD && ((LangOpts.OpenMP && (LangOpts.OpenMPIsTargetDevice ||
-                                  !LangOpts.OMPTargetTriples.empty())) ||
-             LangOpts.CUDA || LangOpts.SYCLIsDevice)) {
+  if (FD && (LangOpts.isTargetDevice() || LangOpts.CUDA ||
+             (LangOpts.OpenMP && !LangOpts.OMPTargetTriples.empty()))) {
     auto ES = getEmissionStatus(FD);
     if (ES == Sema::FunctionEmissionStatus::Emitted ||
         ES == Sema::FunctionEmissionStatus::Unknown)
@@ -19122,8 +19130,9 @@ static void SetEligibleMethods(Sema &S, CXXRecordDecl *Record,
         AnotherMethodIsMoreConstrained = true;
         break;
       }
-      if (S.IsAtLeastAsConstrained(OtherMethod, {OtherConstraints}, OrigMethod,
-                                   {Constraints},
+      AssociatedConstraint Other(OtherConstraints);
+      AssociatedConstraint Orig(Constraints);
+      if (S.IsAtLeastAsConstrained(OtherMethod, {Other}, OrigMethod, {Orig},
                                    AnotherMethodIsMoreConstrained)) {
         // There was an error with the constraints comparison. Exit the loop
         // and don't consider this function eligible.

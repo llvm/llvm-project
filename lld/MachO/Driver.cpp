@@ -616,8 +616,7 @@ static bool compileBitcodeFiles() {
         lto->add(*bitcodeFile);
 
   std::vector<ObjFile *> compiled = lto->compile();
-  for (ObjFile *file : compiled)
-    inputFiles.insert(file);
+  inputFiles.insert_range(compiled);
 
   return !compiled.empty();
 }
@@ -1676,6 +1675,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   // Must be set before any InputSections and Symbols are created.
   config->deadStrip = args.hasArg(OPT_dead_strip);
+  config->interposable = args.hasArg(OPT_interposable);
 
   config->systemLibraryRoots = getSystemLibraryRoots(args);
   if (const char *path = getReproduceOption(args)) {
@@ -1832,6 +1832,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       args.hasFlag(OPT_warn_thin_archive_missing_members,
                    OPT_no_warn_thin_archive_missing_members, true);
   config->generateUuid = !args.hasArg(OPT_no_uuid);
+  config->disableVerify = args.hasArg(OPT_disable_verify);
 
   auto IncompatWithCGSort = [&](StringRef firstArgStr) {
     // Throw an error only if --call-graph-profile-sort is explicitly specified

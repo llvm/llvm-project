@@ -83,6 +83,33 @@ using AttrToTargets = std::map<std::string, TargetList>;
 using TargetsToSymbols =
     SmallVector<std::pair<TargetList, std::vector<JSONSymbol>>>;
 
+/// Wrapper over a vector for handling textstub attributes, mapped to target
+/// triples, that require insertion order to be intact in the resulting \c
+/// InterfaceFile.
+class InOrderAttrToTargets {
+  using EntryT = std::pair<std::string, TargetList>;
+
+public:
+  void insert(EntryT &&Entry) {
+    auto &Element = get(Entry.first);
+    Element.second = Entry.second;
+  }
+
+  const EntryT *begin() { return Container.begin(); }
+  const EntryT *end() { return Container.end(); }
+
+private:
+  EntryT &get(std::string &Key) {
+    auto *It = find_if(Container,
+                       [&Key](EntryT &Input) { return Input.first == Key; });
+    if (It != Container.end())
+      return *It;
+    Container.push_back(EntryT(Key, {}));
+    return Container.back();
+  }
+  llvm::SmallVector<EntryT> Container;
+};
+
 enum TBDKey : size_t {
   TBDVersion = 0U,
   MainLibrary,
@@ -437,14 +464,14 @@ Expected<TargetsToSymbols> getSymbolSection(const Object *File, TBDKey Key,
   return std::move(Result);
 }
 
-Expected<AttrToTargets> getLibSection(const Object *File, TBDKey Key,
-                                      TBDKey SubKey,
-                                      const TargetList &Targets) {
+template <typename ReturnT = AttrToTargets>
+Expected<ReturnT> getLibSection(const Object *File, TBDKey Key, TBDKey SubKey,
+                                const TargetList &Targets) {
   auto *Section = File->getArray(Keys[Key]);
   if (!Section)
-    return AttrToTargets();
+    return ReturnT();
 
-  AttrToTargets Result;
+  ReturnT Result;
   TargetList MappedTargets;
   for (auto Val : *Section) {
     auto *Obj = Val.getAsObject();
@@ -460,7 +487,7 @@ Expected<AttrToTargets> getLibSection(const Object *File, TBDKey Key,
     }
     auto Err =
         collectFromArray(SubKey, Obj, [&Result, &MappedTargets](StringRef Key) {
-          Result[Key.str()] = MappedTargets;
+          Result.insert({Key.str(), MappedTargets});
         });
     if (Err)
       return std::move(Err);
@@ -629,10 +656,11 @@ Expected<IFPtr> parseToInterfaceFile(const Object *File) {
     return RLOrErr.takeError();
   AttrToTargets ReexportLibs = std::move(*RLOrErr);
 
-  auto RPathsOrErr = getLibSection(File, TBDKey::RPath, TBDKey::Paths, Targets);
+  auto RPathsOrErr = getLibSection<InOrderAttrToTargets>(
+      File, TBDKey::RPath, TBDKey::Paths, Targets);
   if (!RPathsOrErr)
     return RPathsOrErr.takeError();
-  AttrToTargets RPaths = std::move(*RPathsOrErr);
+  InOrderAttrToTargets RPaths = std::move(*RPathsOrErr);
 
   auto ExportsOrErr = getSymbolSection(File, TBDKey::Exports, Targets);
   if (!ExportsOrErr)
@@ -802,6 +830,8 @@ Array serializeAttrToTargets(AggregateT &Entries, TBDKey Key) {
   return Container;
 }
 
+/// When there is no significance in order, the common case, serialize all
+/// attributes in a stable order.
 template <typename ValueT = std::string,
           typename AggregateT = std::vector<std::pair<MachO::Target, ValueT>>>
 Array serializeField(TBDKey Key, const AggregateT &Values,
@@ -831,6 +861,21 @@ Array serializeField(TBDKey Key, const std::vector<InterfaceFileRef> &Values,
     FinalEntries[serializeTargets(Targets, ActiveTargets)].emplace_back(
         Ref.getInstallName());
   }
+  return serializeAttrToTargets(FinalEntries, Key);
+}
+
+template <
+    typename AggregateT = std::vector<std::pair<MachO::Target, std::string>>>
+Array serializeFieldInInsertionOrder(TBDKey Key, const AggregateT &Values,
+                                     const TargetList &ActiveTargets) {
+  MapVector<StringRef, std::set<MachO::Target>> Entries;
+  for (const auto &[Target, Val] : Values)
+    Entries[Val].insert(Target);
+
+  TargetsToValuesMap FinalEntries;
+  for (const auto &[Val, Targets] : Entries)
+    FinalEntries[serializeTargets(Targets, ActiveTargets)].emplace_back(
+        Val.str());
   return serializeAttrToTargets(FinalEntries, Key);
 }
 
@@ -963,7 +1008,8 @@ Expected<Object> serializeIF(const InterfaceFile *File) {
       TBDKey::ABI, File->getSwiftABIVersion(), 0u);
   insertNonEmptyValues(Library, TBDKey::SwiftABI, std::move(SwiftABI));
 
-  Array RPaths = serializeField(TBDKey::Paths, File->rpaths(), ActiveTargets);
+  Array RPaths = serializeFieldInInsertionOrder(TBDKey::Paths, File->rpaths(),
+                                                ActiveTargets);
   insertNonEmptyValues(Library, TBDKey::RPath, std::move(RPaths));
 
   Array Umbrellas = serializeField(TBDKey::Umbrella, File->umbrellas(),

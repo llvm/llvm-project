@@ -532,8 +532,7 @@ public:
       auto InsertAt = F->getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
       IRBuilder<> Builder(&*InsertAt);
 
-      It->second =
-          Builder.CreateIntrinsic(Intrinsic::amdgcn_lds_kernel_id, {}, {});
+      It->second = Builder.CreateIntrinsic(Intrinsic::amdgcn_lds_kernel_id, {});
     }
 
     return It->second;

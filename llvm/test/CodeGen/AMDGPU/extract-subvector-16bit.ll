@@ -3,13 +3,14 @@
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -verify-machineinstrs -o - %s | FileCheck -check-prefix=GFX9 %s
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1100 -verify-machineinstrs -o - %s | FileCheck -check-prefix=GFX11 %s
 
-define <4 x i16> @vec_8xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1) %p1) {
+define <4 x i16> @vec_8xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1) %p1, i32 inreg %cond.arg) {
 ; SI-LABEL: vec_8xi16_extract_4xi16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    s_cbranch_scc0 .LBB0_2
-; SI-NEXT:  ; %bb.1: ; %F
+; SI-NEXT:    s_cmp_lg_u32 s16, 0
 ; SI-NEXT:    s_mov_b32 s6, 0
+; SI-NEXT:    s_cbranch_scc0 .LBB0_4
+; SI-NEXT:  ; %bb.1: ; %F
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
@@ -34,15 +35,8 @@ define <4 x i16> @vec_8xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1)
 ; SI-NEXT:    v_or_b32_e32 v2, v6, v2
 ; SI-NEXT:    v_or_b32_e32 v3, v5, v3
 ; SI-NEXT:    s_mov_b64 vcc, exec
-; SI-NEXT:    s_cbranch_execz .LBB0_3
-; SI-NEXT:    s_branch .LBB0_4
-; SI-NEXT:  .LBB0_2:
-; SI-NEXT:    ; implicit-def: $vgpr3
-; SI-NEXT:    ; implicit-def: $vgpr4
-; SI-NEXT:    ; implicit-def: $vgpr2
-; SI-NEXT:    s_mov_b64 vcc, 0
-; SI-NEXT:  .LBB0_3: ; %T
-; SI-NEXT:    s_mov_b32 s6, 0
+; SI-NEXT:    s_cbranch_execnz .LBB0_3
+; SI-NEXT:  .LBB0_2: ; %T
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
@@ -66,7 +60,7 @@ define <4 x i16> @vec_8xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1)
 ; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v4
 ; SI-NEXT:    v_or_b32_e32 v2, v2, v0
 ; SI-NEXT:    v_or_b32_e32 v3, v3, v1
-; SI-NEXT:  .LBB0_4: ; %exit
+; SI-NEXT:  .LBB0_3: ; %exit
 ; SI-NEXT:    v_bfe_i32 v0, v3, 0, 16
 ; SI-NEXT:    v_bfe_i32 v1, v4, 0, 16
 ; SI-NEXT:    v_bfe_i32 v2, v2, 0, 16
@@ -87,22 +81,26 @@ define <4 x i16> @vec_8xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1)
 ; SI-NEXT:    v_or_b32_e32 v2, v3, v4
 ; SI-NEXT:    v_alignbit_b32 v1, v2, v1, 16
 ; SI-NEXT:    s_setpc_b64 s[30:31]
+; SI-NEXT:  .LBB0_4:
+; SI-NEXT:    ; implicit-def: $vgpr3
+; SI-NEXT:    ; implicit-def: $vgpr4
+; SI-NEXT:    ; implicit-def: $vgpr2
+; SI-NEXT:    s_mov_b64 vcc, 0
+; SI-NEXT:    s_branch .LBB0_2
 ;
 ; GFX9-LABEL: vec_8xi16_extract_4xi16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_cbranch_scc0 .LBB0_2
+; GFX9-NEXT:    s_cmp_lg_u32 s16, 0
+; GFX9-NEXT:    s_cbranch_scc0 .LBB0_4
 ; GFX9-NEXT:  ; %bb.1: ; %F
 ; GFX9-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    s_cbranch_execz .LBB0_3
-; GFX9-NEXT:    s_branch .LBB0_4
-; GFX9-NEXT:  .LBB0_2:
-; GFX9-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
-; GFX9-NEXT:  .LBB0_3: ; %T
+; GFX9-NEXT:    s_cbranch_execnz .LBB0_3
+; GFX9-NEXT:  .LBB0_2: ; %T
 ; GFX9-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:  .LBB0_4: ; %exit
+; GFX9-NEXT:  .LBB0_3: ; %exit
 ; GFX9-NEXT:    v_pk_ashrrev_i16 v0, 15, v3 op_sel_hi:[0,0]
 ; GFX9-NEXT:    s_movk_i32 s4, 0x8000
 ; GFX9-NEXT:    v_or_b32_e32 v1, 0xffff8000, v0
@@ -114,22 +112,25 @@ define <4 x i16> @vec_8xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1)
 ; GFX9-NEXT:    v_perm_b32 v0, v0, v2, s4
 ; GFX9-NEXT:    v_perm_b32 v1, v3, v1, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-NEXT:  .LBB0_4:
+; GFX9-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
+; GFX9-NEXT:    s_branch .LBB0_2
 ;
 ; GFX11-LABEL: vec_8xi16_extract_4xi16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_cbranch_scc0 .LBB0_2
+; GFX11-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX11-NEXT:    s_mov_b32 s0, 0
+; GFX11-NEXT:    s_cbranch_scc0 .LBB0_4
 ; GFX11-NEXT:  ; %bb.1: ; %F
 ; GFX11-NEXT:    global_load_b128 v[2:5], v[2:3], off glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    s_cbranch_execz .LBB0_3
-; GFX11-NEXT:    s_branch .LBB0_4
-; GFX11-NEXT:  .LBB0_2:
-; GFX11-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
-; GFX11-NEXT:  .LBB0_3: ; %T
+; GFX11-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
+; GFX11-NEXT:    s_cbranch_vccnz .LBB0_3
+; GFX11-NEXT:  .LBB0_2: ; %T
 ; GFX11-NEXT:    global_load_b128 v[2:5], v[0:1], off glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:  .LBB0_4: ; %exit
+; GFX11-NEXT:  .LBB0_3: ; %exit
 ; GFX11-NEXT:    v_pk_ashrrev_i16 v0, 15, v2 op_sel_hi:[0,1]
 ; GFX11-NEXT:    v_pk_ashrrev_i16 v1, 15, v3 op_sel_hi:[0,0]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -144,7 +145,11 @@ define <4 x i16> @vec_8xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1)
 ; GFX11-NEXT:    v_perm_b32 v0, v2, v0, 0x5040100
 ; GFX11-NEXT:    v_perm_b32 v1, v3, v1, 0x5040100
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  br i1 undef, label %T, label %F
+; GFX11-NEXT:  .LBB0_4:
+; GFX11-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
+; GFX11-NEXT:    s_branch .LBB0_2
+  %cond = icmp eq i32 %cond.arg, 0
+  br i1 %cond, label %T, label %F
 
 T:
   %t = load volatile <8 x i16>, ptr addrspace(1) %p0
@@ -162,13 +167,14 @@ exit:
   ret <4 x i16> %r2
 }
 
-define <4 x i16> @vec_8xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace(1) %p1) {
+define <4 x i16> @vec_8xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace(1) %p1, i32 inreg %cond.arg) {
 ; SI-LABEL: vec_8xi16_extract_4xi16_2:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    s_cbranch_scc0 .LBB1_2
-; SI-NEXT:  ; %bb.1: ; %F
+; SI-NEXT:    s_cmp_lg_u32 s16, 0
 ; SI-NEXT:    s_mov_b32 s6, 0
+; SI-NEXT:    s_cbranch_scc0 .LBB1_4
+; SI-NEXT:  ; %bb.1: ; %F
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
@@ -193,16 +199,8 @@ define <4 x i16> @vec_8xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace(
 ; SI-NEXT:    v_or_b32_e32 v3, v6, v3
 ; SI-NEXT:    v_or_b32_e32 v5, v5, v7
 ; SI-NEXT:    s_mov_b64 vcc, exec
-; SI-NEXT:    s_cbranch_execz .LBB1_3
-; SI-NEXT:    s_branch .LBB1_4
-; SI-NEXT:  .LBB1_2:
-; SI-NEXT:    ; implicit-def: $vgpr5
-; SI-NEXT:    ; implicit-def: $vgpr4
-; SI-NEXT:    ; implicit-def: $vgpr3
-; SI-NEXT:    ; implicit-def: $vgpr2
-; SI-NEXT:    s_mov_b64 vcc, 0
-; SI-NEXT:  .LBB1_3: ; %T
-; SI-NEXT:    s_mov_b32 s6, 0
+; SI-NEXT:    s_cbranch_execnz .LBB1_3
+; SI-NEXT:  .LBB1_2: ; %T
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
@@ -226,7 +224,7 @@ define <4 x i16> @vec_8xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace(
 ; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v4
 ; SI-NEXT:    v_or_b32_e32 v3, v3, v0
 ; SI-NEXT:    v_or_b32_e32 v5, v5, v1
-; SI-NEXT:  .LBB1_4: ; %exit
+; SI-NEXT:  .LBB1_3: ; %exit
 ; SI-NEXT:    v_bfe_i32 v0, v5, 0, 16
 ; SI-NEXT:    v_bfe_i32 v1, v4, 0, 16
 ; SI-NEXT:    v_bfe_i32 v3, v3, 0, 16
@@ -248,22 +246,27 @@ define <4 x i16> @vec_8xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace(
 ; SI-NEXT:    v_alignbit_b32 v1, v2, v1, 16
 ; SI-NEXT:    v_lshrrev_b32_e32 v3, 16, v4
 ; SI-NEXT:    s_setpc_b64 s[30:31]
+; SI-NEXT:  .LBB1_4:
+; SI-NEXT:    ; implicit-def: $vgpr5
+; SI-NEXT:    ; implicit-def: $vgpr4
+; SI-NEXT:    ; implicit-def: $vgpr3
+; SI-NEXT:    ; implicit-def: $vgpr2
+; SI-NEXT:    s_mov_b64 vcc, 0
+; SI-NEXT:    s_branch .LBB1_2
 ;
 ; GFX9-LABEL: vec_8xi16_extract_4xi16_2:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_cbranch_scc0 .LBB1_2
+; GFX9-NEXT:    s_cmp_lg_u32 s16, 0
+; GFX9-NEXT:    s_cbranch_scc0 .LBB1_4
 ; GFX9-NEXT:  ; %bb.1: ; %F
 ; GFX9-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    s_cbranch_execz .LBB1_3
-; GFX9-NEXT:    s_branch .LBB1_4
-; GFX9-NEXT:  .LBB1_2:
-; GFX9-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
-; GFX9-NEXT:  .LBB1_3: ; %T
+; GFX9-NEXT:    s_cbranch_execnz .LBB1_3
+; GFX9-NEXT:  .LBB1_2: ; %T
 ; GFX9-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:  .LBB1_4: ; %exit
+; GFX9-NEXT:  .LBB1_3: ; %exit
 ; GFX9-NEXT:    v_pk_ashrrev_i16 v0, 15, v5 op_sel_hi:[0,1]
 ; GFX9-NEXT:    s_movk_i32 s4, 0x8000
 ; GFX9-NEXT:    v_or_b32_e32 v1, 0xffff8000, v0
@@ -275,22 +278,25 @@ define <4 x i16> @vec_8xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace(
 ; GFX9-NEXT:    v_perm_b32 v0, v0, v3, s4
 ; GFX9-NEXT:    v_perm_b32 v1, v2, v1, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-NEXT:  .LBB1_4:
+; GFX9-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
+; GFX9-NEXT:    s_branch .LBB1_2
 ;
 ; GFX11-LABEL: vec_8xi16_extract_4xi16_2:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_cbranch_scc0 .LBB1_2
+; GFX11-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX11-NEXT:    s_mov_b32 s0, 0
+; GFX11-NEXT:    s_cbranch_scc0 .LBB1_4
 ; GFX11-NEXT:  ; %bb.1: ; %F
 ; GFX11-NEXT:    global_load_b128 v[2:5], v[2:3], off glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    s_cbranch_execz .LBB1_3
-; GFX11-NEXT:    s_branch .LBB1_4
-; GFX11-NEXT:  .LBB1_2:
-; GFX11-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
-; GFX11-NEXT:  .LBB1_3: ; %T
+; GFX11-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
+; GFX11-NEXT:    s_cbranch_vccnz .LBB1_3
+; GFX11-NEXT:  .LBB1_2: ; %T
 ; GFX11-NEXT:    global_load_b128 v[2:5], v[0:1], off glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:  .LBB1_4: ; %exit
+; GFX11-NEXT:  .LBB1_3: ; %exit
 ; GFX11-NEXT:    v_pk_ashrrev_i16 v0, 15, v4 op_sel_hi:[0,1]
 ; GFX11-NEXT:    v_pk_ashrrev_i16 v1, 15, v5 op_sel_hi:[0,1]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -305,7 +311,11 @@ define <4 x i16> @vec_8xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace(
 ; GFX11-NEXT:    v_perm_b32 v0, v2, v0, 0x5040100
 ; GFX11-NEXT:    v_perm_b32 v1, v3, v1, 0x5040100
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  br i1 undef, label %T, label %F
+; GFX11-NEXT:  .LBB1_4:
+; GFX11-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
+; GFX11-NEXT:    s_branch .LBB1_2
+  %cond = icmp eq i32 %cond.arg, 0
+  br i1 %cond, label %T, label %F
 
 T:
   %t = load volatile <8 x i16>, ptr addrspace(1) %p0
@@ -323,13 +333,14 @@ exit:
   ret <4 x i16> %r2
 }
 
-define <4 x half> @vec_8xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(1) %p1) {
+define <4 x half> @vec_8xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(1) %p1, i32 inreg %cond.arg) {
 ; SI-LABEL: vec_8xf16_extract_4xf16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    s_cbranch_scc0 .LBB2_2
-; SI-NEXT:  ; %bb.1: ; %F
+; SI-NEXT:    s_cmp_lg_u32 s16, 0
 ; SI-NEXT:    s_mov_b32 s6, 0
+; SI-NEXT:    s_cbranch_scc0 .LBB2_4
+; SI-NEXT:  ; %bb.1: ; %F
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
@@ -357,15 +368,8 @@ define <4 x half> @vec_8xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(1
 ; SI-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; SI-NEXT:    v_cvt_f32_f16_e32 v4, v4
 ; SI-NEXT:    s_mov_b64 vcc, exec
-; SI-NEXT:    s_cbranch_execz .LBB2_3
-; SI-NEXT:    s_branch .LBB2_4
-; SI-NEXT:  .LBB2_2:
-; SI-NEXT:    ; implicit-def: $vgpr4
-; SI-NEXT:    ; implicit-def: $vgpr3
-; SI-NEXT:    ; implicit-def: $vgpr2
-; SI-NEXT:    s_mov_b64 vcc, 0
-; SI-NEXT:  .LBB2_3: ; %T
-; SI-NEXT:    s_mov_b32 s6, 0
+; SI-NEXT:    s_cbranch_execnz .LBB2_3
+; SI-NEXT:  .LBB2_2: ; %T
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
@@ -392,7 +396,7 @@ define <4 x half> @vec_8xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(1
 ; SI-NEXT:    v_cvt_f32_f16_e32 v2, v0
 ; SI-NEXT:    v_cvt_f32_f16_e32 v4, v1
 ; SI-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; SI-NEXT:  .LBB2_4: ; %exit
+; SI-NEXT:  .LBB2_3: ; %exit
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v4
 ; SI-NEXT:    v_cvt_f16_f32_e32 v1, v3
 ; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
@@ -409,22 +413,26 @@ define <4 x half> @vec_8xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(1
 ; SI-NEXT:    v_cndmask_b32_e32 v2, v3, v4, vcc
 ; SI-NEXT:    v_mov_b32_e32 v3, v2
 ; SI-NEXT:    s_setpc_b64 s[30:31]
+; SI-NEXT:  .LBB2_4:
+; SI-NEXT:    ; implicit-def: $vgpr4
+; SI-NEXT:    ; implicit-def: $vgpr3
+; SI-NEXT:    ; implicit-def: $vgpr2
+; SI-NEXT:    s_mov_b64 vcc, 0
+; SI-NEXT:    s_branch .LBB2_2
 ;
 ; GFX9-LABEL: vec_8xf16_extract_4xf16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_cbranch_scc0 .LBB2_2
+; GFX9-NEXT:    s_cmp_lg_u32 s16, 0
+; GFX9-NEXT:    s_cbranch_scc0 .LBB2_4
 ; GFX9-NEXT:  ; %bb.1: ; %F
 ; GFX9-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    s_cbranch_execz .LBB2_3
-; GFX9-NEXT:    s_branch .LBB2_4
-; GFX9-NEXT:  .LBB2_2:
-; GFX9-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
-; GFX9-NEXT:  .LBB2_3: ; %T
+; GFX9-NEXT:    s_cbranch_execnz .LBB2_3
+; GFX9-NEXT:  .LBB2_2: ; %T
 ; GFX9-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:  .LBB2_4: ; %exit
+; GFX9-NEXT:  .LBB2_3: ; %exit
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0x3900
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x3d00
 ; GFX9-NEXT:    v_cmp_ge_f16_e32 vcc, 0.5, v2
@@ -439,22 +447,25 @@ define <4 x half> @vec_8xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX9-NEXT:    v_pack_b32_f16 v1, v0, v5
 ; GFX9-NEXT:    v_pack_b32_f16 v0, v4, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-NEXT:  .LBB2_4:
+; GFX9-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
+; GFX9-NEXT:    s_branch .LBB2_2
 ;
 ; GFX11-LABEL: vec_8xf16_extract_4xf16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_cbranch_scc0 .LBB2_2
+; GFX11-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX11-NEXT:    s_mov_b32 s0, 0
+; GFX11-NEXT:    s_cbranch_scc0 .LBB2_4
 ; GFX11-NEXT:  ; %bb.1: ; %F
 ; GFX11-NEXT:    global_load_b128 v[2:5], v[2:3], off glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    s_cbranch_execz .LBB2_3
-; GFX11-NEXT:    s_branch .LBB2_4
-; GFX11-NEXT:  .LBB2_2:
-; GFX11-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
-; GFX11-NEXT:  .LBB2_3: ; %T
+; GFX11-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
+; GFX11-NEXT:    s_cbranch_vccnz .LBB2_3
+; GFX11-NEXT:  .LBB2_2: ; %T
 ; GFX11-NEXT:    global_load_b128 v[2:5], v[0:1], off glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:  .LBB2_4: ; %exit
+; GFX11-NEXT:  .LBB2_3: ; %exit
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0x3d00
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
 ; GFX11-NEXT:    v_cmp_ge_f16_e32 vcc_lo, 0.5, v2
@@ -470,7 +481,11 @@ define <4 x half> @vec_8xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX11-NEXT:    v_pack_b32_f16 v0, v2, v1
 ; GFX11-NEXT:    v_pack_b32_f16 v1, v3, v4
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  br i1 undef, label %T, label %F
+; GFX11-NEXT:  .LBB2_4:
+; GFX11-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
+; GFX11-NEXT:    s_branch .LBB2_2
+  %cond = icmp eq i32 %cond.arg, 0
+  br i1 %cond, label %T, label %F
 
 T:
   %t = load volatile <8 x half>, ptr addrspace(1) %p0
@@ -488,14 +503,15 @@ exit:
   ret <4 x half> %r2
 }
 
-define <4 x i16> @vec_16xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1) %p1) {
+define <4 x i16> @vec_16xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1) %p1, i32 inreg %cond.arg) {
 ;
 ; SI-LABEL: vec_16xi16_extract_4xi16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    s_cbranch_scc0 .LBB3_2
-; SI-NEXT:  ; %bb.1: ; %F
+; SI-NEXT:    s_cmp_lg_u32 s16, 0
 ; SI-NEXT:    s_mov_b32 s6, 0
+; SI-NEXT:    s_cbranch_scc0 .LBB3_4
+; SI-NEXT:  ; %bb.1: ; %F
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
@@ -536,15 +552,8 @@ define <4 x i16> @vec_16xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1
 ; SI-NEXT:    v_or_b32_e32 v2, v6, v2
 ; SI-NEXT:    v_or_b32_e32 v3, v5, v3
 ; SI-NEXT:    s_mov_b64 vcc, exec
-; SI-NEXT:    s_cbranch_execz .LBB3_3
-; SI-NEXT:    s_branch .LBB3_4
-; SI-NEXT:  .LBB3_2:
-; SI-NEXT:    ; implicit-def: $vgpr3
-; SI-NEXT:    ; implicit-def: $vgpr4
-; SI-NEXT:    ; implicit-def: $vgpr2
-; SI-NEXT:    s_mov_b64 vcc, 0
-; SI-NEXT:  .LBB3_3: ; %T
-; SI-NEXT:    s_mov_b32 s6, 0
+; SI-NEXT:    s_cbranch_execnz .LBB3_3
+; SI-NEXT:  .LBB3_2: ; %T
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
@@ -584,7 +593,7 @@ define <4 x i16> @vec_16xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1
 ; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v4
 ; SI-NEXT:    v_or_b32_e32 v2, v2, v0
 ; SI-NEXT:    v_or_b32_e32 v3, v3, v1
-; SI-NEXT:  .LBB3_4: ; %exit
+; SI-NEXT:  .LBB3_3: ; %exit
 ; SI-NEXT:    v_bfe_i32 v0, v3, 0, 16
 ; SI-NEXT:    v_bfe_i32 v1, v4, 0, 16
 ; SI-NEXT:    v_bfe_i32 v2, v2, 0, 16
@@ -605,28 +614,32 @@ define <4 x i16> @vec_16xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1
 ; SI-NEXT:    v_or_b32_e32 v2, v3, v4
 ; SI-NEXT:    v_alignbit_b32 v1, v2, v1, 16
 ; SI-NEXT:    s_setpc_b64 s[30:31]
+; SI-NEXT:  .LBB3_4:
+; SI-NEXT:    ; implicit-def: $vgpr3
+; SI-NEXT:    ; implicit-def: $vgpr4
+; SI-NEXT:    ; implicit-def: $vgpr2
+; SI-NEXT:    s_mov_b64 vcc, 0
+; SI-NEXT:    s_branch .LBB3_2
 ;
 ; GFX9-LABEL: vec_16xi16_extract_4xi16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_cbranch_scc0 .LBB3_2
+; GFX9-NEXT:    s_cmp_lg_u32 s16, 0
+; GFX9-NEXT:    s_cbranch_scc0 .LBB3_4
 ; GFX9-NEXT:  ; %bb.1: ; %F
 ; GFX9-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off offset:16 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; kill: killed $vgpr2 killed $vgpr3
-; GFX9-NEXT:    s_cbranch_execz .LBB3_3
-; GFX9-NEXT:    s_branch .LBB3_4
-; GFX9-NEXT:  .LBB3_2:
-; GFX9-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
-; GFX9-NEXT:  .LBB3_3: ; %T
+; GFX9-NEXT:    s_cbranch_execnz .LBB3_3
+; GFX9-NEXT:  .LBB3_2: ; %T
 ; GFX9-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off offset:16 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
-; GFX9-NEXT:  .LBB3_4: ; %exit
+; GFX9-NEXT:  .LBB3_3: ; %exit
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_pk_ashrrev_i16 v0, 15, v5 op_sel_hi:[0,0]
 ; GFX9-NEXT:    s_movk_i32 s4, 0x8000
@@ -639,26 +652,29 @@ define <4 x i16> @vec_16xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX9-NEXT:    v_perm_b32 v0, v0, v3, s4
 ; GFX9-NEXT:    v_perm_b32 v1, v2, v1, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-NEXT:  .LBB3_4:
+; GFX9-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
+; GFX9-NEXT:    s_branch .LBB3_2
 ;
 ; GFX11-LABEL: vec_16xi16_extract_4xi16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_cbranch_scc0 .LBB3_2
+; GFX11-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX11-NEXT:    s_mov_b32 s0, 0
+; GFX11-NEXT:    s_cbranch_scc0 .LBB3_4
 ; GFX11-NEXT:  ; %bb.1: ; %F
 ; GFX11-NEXT:    global_load_b128 v[4:7], v[2:3], off offset:16 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_load_b128 v[2:5], v[2:3], off glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    s_cbranch_execz .LBB3_3
-; GFX11-NEXT:    s_branch .LBB3_4
-; GFX11-NEXT:  .LBB3_2:
-; GFX11-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9
-; GFX11-NEXT:  .LBB3_3: ; %T
+; GFX11-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
+; GFX11-NEXT:    s_cbranch_vccnz .LBB3_3
+; GFX11-NEXT:  .LBB3_2: ; %T
 ; GFX11-NEXT:    global_load_b128 v[2:5], v[0:1], off offset:16 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_load_b128 v[2:5], v[0:1], off glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:  .LBB3_4: ; %exit
+; GFX11-NEXT:  .LBB3_3: ; %exit
 ; GFX11-NEXT:    v_pk_ashrrev_i16 v0, 15, v2 op_sel_hi:[0,1]
 ; GFX11-NEXT:    v_pk_ashrrev_i16 v1, 15, v3 op_sel_hi:[0,0]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -673,7 +689,11 @@ define <4 x i16> @vec_16xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX11-NEXT:    v_perm_b32 v0, v2, v0, 0x5040100
 ; GFX11-NEXT:    v_perm_b32 v1, v3, v1, 0x5040100
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  br i1 undef, label %T, label %F
+; GFX11-NEXT:  .LBB3_4:
+; GFX11-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9
+; GFX11-NEXT:    s_branch .LBB3_2
+  %cond = icmp eq i32 %cond.arg, 0
+  br i1 %cond, label %T, label %F
 
 T:
   %t = load volatile <16 x i16>, ptr addrspace(1) %p0
@@ -691,14 +711,15 @@ exit:
   ret <4 x i16> %r2
 }
 
-define <4 x i16> @vec_16xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace(1) %p1) {
+define <4 x i16> @vec_16xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace(1) %p1, i32 inreg %cond.arg) {
 ;
 ; SI-LABEL: vec_16xi16_extract_4xi16_2:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    s_cbranch_scc0 .LBB4_2
-; SI-NEXT:  ; %bb.1: ; %F
+; SI-NEXT:    s_cmp_lg_u32 s16, 0
 ; SI-NEXT:    s_mov_b32 s6, 0
+; SI-NEXT:    s_cbranch_scc0 .LBB4_4
+; SI-NEXT:  ; %bb.1: ; %F
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
@@ -739,16 +760,8 @@ define <4 x i16> @vec_16xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace
 ; SI-NEXT:    v_or_b32_e32 v2, v7, v2
 ; SI-NEXT:    v_or_b32_e32 v3, v6, v3
 ; SI-NEXT:    s_mov_b64 vcc, exec
-; SI-NEXT:    s_cbranch_execz .LBB4_3
-; SI-NEXT:    s_branch .LBB4_4
-; SI-NEXT:  .LBB4_2:
-; SI-NEXT:    ; implicit-def: $vgpr3
-; SI-NEXT:    ; implicit-def: $vgpr4
-; SI-NEXT:    ; implicit-def: $vgpr2
-; SI-NEXT:    ; implicit-def: $vgpr5
-; SI-NEXT:    s_mov_b64 vcc, 0
-; SI-NEXT:  .LBB4_3: ; %T
-; SI-NEXT:    s_mov_b32 s6, 0
+; SI-NEXT:    s_cbranch_execnz .LBB4_3
+; SI-NEXT:  .LBB4_2: ; %T
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
@@ -788,7 +801,7 @@ define <4 x i16> @vec_16xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace
 ; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v4
 ; SI-NEXT:    v_or_b32_e32 v2, v2, v0
 ; SI-NEXT:    v_or_b32_e32 v3, v3, v1
-; SI-NEXT:  .LBB4_4: ; %exit
+; SI-NEXT:  .LBB4_3: ; %exit
 ; SI-NEXT:    v_bfe_i32 v0, v3, 0, 16
 ; SI-NEXT:    v_bfe_i32 v1, v4, 0, 16
 ; SI-NEXT:    v_bfe_i32 v2, v2, 0, 16
@@ -810,28 +823,33 @@ define <4 x i16> @vec_16xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace
 ; SI-NEXT:    v_alignbit_b32 v1, v2, v1, 16
 ; SI-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
 ; SI-NEXT:    s_setpc_b64 s[30:31]
+; SI-NEXT:  .LBB4_4:
+; SI-NEXT:    ; implicit-def: $vgpr3
+; SI-NEXT:    ; implicit-def: $vgpr4
+; SI-NEXT:    ; implicit-def: $vgpr2
+; SI-NEXT:    ; implicit-def: $vgpr5
+; SI-NEXT:    s_mov_b64 vcc, 0
+; SI-NEXT:    s_branch .LBB4_2
 ;
 ; GFX9-LABEL: vec_16xi16_extract_4xi16_2:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_cbranch_scc0 .LBB4_2
+; GFX9-NEXT:    s_cmp_lg_u32 s16, 0
+; GFX9-NEXT:    s_cbranch_scc0 .LBB4_4
 ; GFX9-NEXT:  ; %bb.1: ; %F
 ; GFX9-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off offset:16 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; kill: killed $vgpr2 killed $vgpr3
-; GFX9-NEXT:    s_cbranch_execz .LBB4_3
-; GFX9-NEXT:    s_branch .LBB4_4
-; GFX9-NEXT:  .LBB4_2:
-; GFX9-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
-; GFX9-NEXT:  .LBB4_3: ; %T
+; GFX9-NEXT:    s_cbranch_execnz .LBB4_3
+; GFX9-NEXT:  .LBB4_2: ; %T
 ; GFX9-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off offset:16 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
-; GFX9-NEXT:  .LBB4_4: ; %exit
+; GFX9-NEXT:  .LBB4_3: ; %exit
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_pk_ashrrev_i16 v0, 15, v7 op_sel_hi:[0,1]
 ; GFX9-NEXT:    s_movk_i32 s4, 0x8000
@@ -844,26 +862,29 @@ define <4 x i16> @vec_16xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace
 ; GFX9-NEXT:    v_perm_b32 v0, v0, v3, s4
 ; GFX9-NEXT:    v_perm_b32 v1, v2, v1, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-NEXT:  .LBB4_4:
+; GFX9-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
+; GFX9-NEXT:    s_branch .LBB4_2
 ;
 ; GFX11-LABEL: vec_16xi16_extract_4xi16_2:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_cbranch_scc0 .LBB4_2
+; GFX11-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX11-NEXT:    s_mov_b32 s0, 0
+; GFX11-NEXT:    s_cbranch_scc0 .LBB4_4
 ; GFX11-NEXT:  ; %bb.1: ; %F
 ; GFX11-NEXT:    global_load_b128 v[4:7], v[2:3], off offset:16 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_load_b128 v[2:5], v[2:3], off glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    s_cbranch_execz .LBB4_3
-; GFX11-NEXT:    s_branch .LBB4_4
-; GFX11-NEXT:  .LBB4_2:
-; GFX11-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9
-; GFX11-NEXT:  .LBB4_3: ; %T
+; GFX11-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
+; GFX11-NEXT:    s_cbranch_vccnz .LBB4_3
+; GFX11-NEXT:  .LBB4_2: ; %T
 ; GFX11-NEXT:    global_load_b128 v[2:5], v[0:1], off offset:16 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_load_b128 v[2:5], v[0:1], off glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:  .LBB4_4: ; %exit
+; GFX11-NEXT:  .LBB4_3: ; %exit
 ; GFX11-NEXT:    v_pk_ashrrev_i16 v0, 15, v4 op_sel_hi:[0,1]
 ; GFX11-NEXT:    v_pk_ashrrev_i16 v1, 15, v5 op_sel_hi:[0,1]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -878,7 +899,11 @@ define <4 x i16> @vec_16xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace
 ; GFX11-NEXT:    v_perm_b32 v0, v2, v0, 0x5040100
 ; GFX11-NEXT:    v_perm_b32 v1, v3, v1, 0x5040100
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  br i1 undef, label %T, label %F
+; GFX11-NEXT:  .LBB4_4:
+; GFX11-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9
+; GFX11-NEXT:    s_branch .LBB4_2
+  %cond = icmp eq i32 %cond.arg, 0
+  br i1 %cond, label %T, label %F
 
 T:
   %t = load volatile <16 x i16>, ptr addrspace(1) %p0
@@ -896,14 +921,15 @@ exit:
   ret <4 x i16> %r2
 }
 
-define <4 x half> @vec_16xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(1) %p1) {
+define <4 x half> @vec_16xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(1) %p1, i32 inreg %cond.arg) {
 ;
 ; SI-LABEL: vec_16xf16_extract_4xf16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    s_cbranch_scc0 .LBB5_2
-; SI-NEXT:  ; %bb.1: ; %F
+; SI-NEXT:    s_cmp_lg_u32 s16, 0
 ; SI-NEXT:    s_mov_b32 s6, 0
+; SI-NEXT:    s_cbranch_scc0 .LBB5_4
+; SI-NEXT:  ; %bb.1: ; %F
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
@@ -947,15 +973,8 @@ define <4 x half> @vec_16xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(
 ; SI-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; SI-NEXT:    v_cvt_f32_f16_e32 v4, v4
 ; SI-NEXT:    s_mov_b64 vcc, exec
-; SI-NEXT:    s_cbranch_execz .LBB5_3
-; SI-NEXT:    s_branch .LBB5_4
-; SI-NEXT:  .LBB5_2:
-; SI-NEXT:    ; implicit-def: $vgpr4
-; SI-NEXT:    ; implicit-def: $vgpr3
-; SI-NEXT:    ; implicit-def: $vgpr2
-; SI-NEXT:    s_mov_b64 vcc, 0
-; SI-NEXT:  .LBB5_3: ; %T
-; SI-NEXT:    s_mov_b32 s6, 0
+; SI-NEXT:    s_cbranch_execnz .LBB5_3
+; SI-NEXT:  .LBB5_2: ; %T
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
@@ -998,7 +1017,7 @@ define <4 x half> @vec_16xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(
 ; SI-NEXT:    v_cvt_f32_f16_e32 v2, v0
 ; SI-NEXT:    v_cvt_f32_f16_e32 v4, v1
 ; SI-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; SI-NEXT:  .LBB5_4: ; %exit
+; SI-NEXT:  .LBB5_3: ; %exit
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v4
 ; SI-NEXT:    v_cvt_f16_f32_e32 v1, v3
 ; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
@@ -1015,28 +1034,32 @@ define <4 x half> @vec_16xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(
 ; SI-NEXT:    v_cndmask_b32_e32 v2, v3, v4, vcc
 ; SI-NEXT:    v_mov_b32_e32 v3, v2
 ; SI-NEXT:    s_setpc_b64 s[30:31]
+; SI-NEXT:  .LBB5_4:
+; SI-NEXT:    ; implicit-def: $vgpr4
+; SI-NEXT:    ; implicit-def: $vgpr3
+; SI-NEXT:    ; implicit-def: $vgpr2
+; SI-NEXT:    s_mov_b64 vcc, 0
+; SI-NEXT:    s_branch .LBB5_2
 ;
 ; GFX9-LABEL: vec_16xf16_extract_4xf16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_cbranch_scc0 .LBB5_2
+; GFX9-NEXT:    s_cmp_lg_u32 s16, 0
+; GFX9-NEXT:    s_cbranch_scc0 .LBB5_4
 ; GFX9-NEXT:  ; %bb.1: ; %F
 ; GFX9-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off offset:16 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; kill: killed $vgpr2 killed $vgpr3
-; GFX9-NEXT:    s_cbranch_execz .LBB5_3
-; GFX9-NEXT:    s_branch .LBB5_4
-; GFX9-NEXT:  .LBB5_2:
-; GFX9-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
-; GFX9-NEXT:  .LBB5_3: ; %T
+; GFX9-NEXT:    s_cbranch_execnz .LBB5_3
+; GFX9-NEXT:  .LBB5_2: ; %T
 ; GFX9-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off offset:16 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
-; GFX9-NEXT:  .LBB5_4: ; %exit
+; GFX9-NEXT:  .LBB5_3: ; %exit
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0x3900
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x3d00
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
@@ -1052,26 +1075,29 @@ define <4 x half> @vec_16xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(
 ; GFX9-NEXT:    v_pack_b32_f16 v1, v0, v4
 ; GFX9-NEXT:    v_pack_b32_f16 v0, v2, v3
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-NEXT:  .LBB5_4:
+; GFX9-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
+; GFX9-NEXT:    s_branch .LBB5_2
 ;
 ; GFX11-LABEL: vec_16xf16_extract_4xf16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_cbranch_scc0 .LBB5_2
+; GFX11-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX11-NEXT:    s_mov_b32 s0, 0
+; GFX11-NEXT:    s_cbranch_scc0 .LBB5_4
 ; GFX11-NEXT:  ; %bb.1: ; %F
 ; GFX11-NEXT:    global_load_b128 v[4:7], v[2:3], off offset:16 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_load_b128 v[2:5], v[2:3], off glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    s_cbranch_execz .LBB5_3
-; GFX11-NEXT:    s_branch .LBB5_4
-; GFX11-NEXT:  .LBB5_2:
-; GFX11-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9
-; GFX11-NEXT:  .LBB5_3: ; %T
+; GFX11-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
+; GFX11-NEXT:    s_cbranch_vccnz .LBB5_3
+; GFX11-NEXT:  .LBB5_2: ; %T
 ; GFX11-NEXT:    global_load_b128 v[2:5], v[0:1], off offset:16 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_load_b128 v[2:5], v[0:1], off glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:  .LBB5_4: ; %exit
+; GFX11-NEXT:  .LBB5_3: ; %exit
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0x3d00
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
 ; GFX11-NEXT:    v_cmp_ge_f16_e32 vcc_lo, 0.5, v2
@@ -1087,7 +1113,11 @@ define <4 x half> @vec_16xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(
 ; GFX11-NEXT:    v_pack_b32_f16 v0, v2, v1
 ; GFX11-NEXT:    v_pack_b32_f16 v1, v3, v4
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  br i1 undef, label %T, label %F
+; GFX11-NEXT:  .LBB5_4:
+; GFX11-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9
+; GFX11-NEXT:    s_branch .LBB5_2
+  %cond = icmp eq i32 %cond.arg, 0
+  br i1 %cond, label %T, label %F
 
 T:
   %t = load volatile <16 x half>, ptr addrspace(1) %p0

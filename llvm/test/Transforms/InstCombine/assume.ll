@@ -2,8 +2,6 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck --check-prefixes=CHECK,DEFAULT %s
 ; RUN: opt < %s -passes=instcombine --enable-knowledge-retention -S | FileCheck --check-prefixes=CHECK,BUNDLES %s
 
-; RUN: opt < %s -passes=instcombine -S --try-experimental-debuginfo-iterators | FileCheck --check-prefixes=CHECK,DEFAULT %s
-; RUN: opt < %s -passes=instcombine --enable-knowledge-retention -S --try-experimental-debuginfo-iterators | FileCheck --check-prefixes=CHECK,BUNDLES %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

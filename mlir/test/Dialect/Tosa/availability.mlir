@@ -197,7 +197,7 @@ func.func @test_int_div(%arg0: tensor<13x21x1xi32>, %arg1: tensor<13x21x3xi32>) 
 // -----
 // CHECK-LABEL: logical_and
 func.func @test_logical_and(%arg0: tensor<13x21x3xi1>, %arg1: tensor<13x21x1xi1>) -> tensor<13x21x3xi1> {
-  // CHECK: profiles: [ [pro_int] ]
+  // CHECK: profiles: [ [pro_int, pro_fp] ]
   // CHECK: extensions: [ ]
   %0 = tosa.logical_and %arg0, %arg1 : (tensor<13x21x3xi1>, tensor<13x21x1xi1>) -> tensor<13x21x3xi1>
   return %0 : tensor<13x21x3xi1>
@@ -206,7 +206,7 @@ func.func @test_logical_and(%arg0: tensor<13x21x3xi1>, %arg1: tensor<13x21x1xi1>
 // -----
 // CHECK-LABEL: logical_left_shift
 func.func @test_logical_left_shift(%arg0: tensor<13x21x3xi32>, %arg1: tensor<13x21x1xi32>) -> tensor<13x21x3xi32> {
-  // CHECK: profiles: [ [pro_int] ]
+  // CHECK: profiles: [ [pro_int, pro_fp] ]
   // CHECK: extensions: [ ]
   %0 = tosa.logical_left_shift %arg0, %arg1 : (tensor<13x21x3xi32>, tensor<13x21x1xi32>) -> tensor<13x21x3xi32>
   return %0 : tensor<13x21x3xi32>
@@ -215,7 +215,7 @@ func.func @test_logical_left_shift(%arg0: tensor<13x21x3xi32>, %arg1: tensor<13x
 // -----
 // CHECK-LABEL: logical_right_shift
 func.func @test_logical_right_shift(%arg0: tensor<13x21x3xi32>, %arg1: tensor<13x21x1xi32>) -> tensor<13x21x3xi32> {
-  // CHECK: profiles: [ [pro_int] ]
+  // CHECK: profiles: [ [pro_int, pro_fp] ]
   // CHECK: extensions: [ ]
   %0 = tosa.logical_right_shift %arg0, %arg1 : (tensor<13x21x3xi32>, tensor<13x21x1xi32>) -> tensor<13x21x3xi32>
   return %0 : tensor<13x21x3xi32>
@@ -224,7 +224,7 @@ func.func @test_logical_right_shift(%arg0: tensor<13x21x3xi32>, %arg1: tensor<13
 // -----
 // CHECK-LABEL: logical_or
 func.func @test_logical_or(%arg0: tensor<13x1x3xi1>, %arg1: tensor<13x21x3xi1>) -> tensor<13x21x3xi1> {
-  // CHECK: profiles: [ [pro_int] ]
+  // CHECK: profiles: [ [pro_int, pro_fp] ]
   // CHECK: extensions: [ ]
   %0 = tosa.logical_or %arg0, %arg1 : (tensor<13x1x3xi1>, tensor<13x21x3xi1>) -> tensor<13x21x3xi1>
   return %0 : tensor<13x21x3xi1>
@@ -233,7 +233,7 @@ func.func @test_logical_or(%arg0: tensor<13x1x3xi1>, %arg1: tensor<13x21x3xi1>) 
 // -----
 // CHECK-LABEL: logical_xor
 func.func @test_logical_xor(%arg0: tensor<13x1x3xi1>, %arg1: tensor<13x21x3xi1>) -> tensor<13x21x3xi1> {
-  // CHECK: profiles: [ [pro_int] ]
+  // CHECK: profiles: [ [pro_int, pro_fp] ]
   // CHECK: extensions: [ ]
   %0 = tosa.logical_xor %arg0, %arg1 : (tensor<13x1x3xi1>, tensor<13x21x3xi1>) -> tensor<13x21x3xi1>
   return %0 : tensor<13x21x3xi1>
@@ -289,7 +289,7 @@ func.func @test_sub(%arg0: tensor<1x21x3xf32>, %arg1: tensor<13x21x3xf32>) -> te
 // CHECK-LABEL: table
 func.func @test_table(%arg0: tensor<64xi32>, %arg1: tensor<513x!quant.uniform<i16:f32, 1.0:0>>) -> tensor<64x!quant.uniform<i16:f32, 1.0:0>> {
   // CHECK: profiles: [ [pro_int] ]
-  // CHECK: extensions: [ [bf16] ]
+  // CHECK: extensions: [ [int16] ]
   %0 = tosa.table %arg0, %arg1 : (tensor<64xi32>, tensor<513x!quant.uniform<i16:f32, 1.000000e+00>>) -> tensor<64x!quant.uniform<i16:f32, 1.000000e+00>>
   return %0 : tensor<64x!quant.uniform<i16:f32, 1.0:0>>
 }
@@ -507,7 +507,7 @@ func.func @test_reduce_sum(%arg0: tensor<13x21x3xf32>) -> tensor<1x21x3xf32> {
 // CHECK-LABEL: concat
 func.func @test_concat(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x21x3xf32>) -> tensor<26x21x3xf32> {
   // CHECK: profiles: [ [pro_int, pro_fp] ]
-  // CHECK: extensions: [ [fp8e4m3, fp8e5m2, bf16] ]
+  // CHECK: extensions: [ [fp8e4m3, fp8e5m2, bf16, int16] ]
   %0 = tosa.concat %arg0, %arg1 {axis = 0 : i32} : (tensor<13x21x3xf32>, tensor<13x21x3xf32>) -> tensor<26x21x3xf32>
   return %0 : tensor<26x21x3xf32>
 }
@@ -606,7 +606,7 @@ func.func @test_resize(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x64x64x8xf32> {
 // CHECK-LABEL: cast
 func.func @test_cast1(%arg0: tensor<13x21x3xi32>) -> tensor<13x21x3xf32> {
   // CHECK: profiles: [ [pro_int, pro_fp] ]
-  // CHECK: extensions: [ [int16, fp8e4m3, fp8e5m2, bf16] ]
+  // CHECK: extensions: [ [fp8e4m3, fp8e5m2, bf16] ]
   %0 = tosa.cast %arg0 : (tensor<13x21x3xi32>) -> tensor<13x21x3xf32>
   return %0 : tensor<13x21x3xf32>
 }

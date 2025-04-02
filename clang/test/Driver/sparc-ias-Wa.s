@@ -58,3 +58,12 @@
 // V9D: "-target-feature" "+vis"
 // V9D: "-target-feature" "+vis2"
 // V9D: "-target-feature" "+vis3"
+
+// RUN: %clang --target=sparc64-linux-gnu -### -fintegrated-as -c %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=VIS-DEFAULT %s
+// RUN: %clang --target=sparc64-freebsd -### -fintegrated-as -c %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=VIS-DEFAULT %s
+// RUN: %clang --target=sparc64-openbsd -### -fintegrated-as -c %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=VIS-DEFAULT %s
+// VIS-DEFAULT: -cc1as
+// VIS-DEFAULT: "-target-feature" "+vis"

@@ -181,10 +181,9 @@ void PadShortFunc::findReturns(MachineBasicBlock *MBB, unsigned int Cycles) {
 bool PadShortFunc::cyclesUntilReturn(MachineBasicBlock *MBB,
                                      unsigned int &Cycles) {
   // Return cached result if BB was previously visited
-  DenseMap<MachineBasicBlock*, VisitedBBInfo>::iterator it
-    = VisitedBBs.find(MBB);
-  if (it != VisitedBBs.end()) {
-    VisitedBBInfo BBInfo = it->second;
+  auto [It, Inserted] = VisitedBBs.try_emplace(MBB);
+  if (!Inserted) {
+    VisitedBBInfo BBInfo = It->second;
     Cycles += BBInfo.Cycles;
     return BBInfo.HasReturn;
   }
@@ -196,7 +195,7 @@ bool PadShortFunc::cyclesUntilReturn(MachineBasicBlock *MBB,
     // functions do not count because the called function will be padded,
     // if necessary.
     if (MI.isReturn() && !MI.isCall()) {
-      VisitedBBs[MBB] = VisitedBBInfo(true, CyclesToEnd);
+      It->second = VisitedBBInfo(true, CyclesToEnd);
       Cycles += CyclesToEnd;
       return true;
     }
@@ -204,7 +203,7 @@ bool PadShortFunc::cyclesUntilReturn(MachineBasicBlock *MBB,
     CyclesToEnd += TSM.computeInstrLatency(&MI);
   }
 
-  VisitedBBs[MBB] = VisitedBBInfo(false, CyclesToEnd);
+  It->second = VisitedBBInfo(false, CyclesToEnd);
   Cycles += CyclesToEnd;
   return false;
 }

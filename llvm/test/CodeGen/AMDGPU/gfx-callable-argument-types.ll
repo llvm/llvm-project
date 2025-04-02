@@ -7625,7 +7625,7 @@ define amdgpu_gfx void @test_call_external_void_func_v8i32() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %ptr = load ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load ptr addrspace(1), ptr addrspace(4) poison
   %val = load <8 x i32>, ptr addrspace(1) %ptr
   call amdgpu_gfx void @external_void_func_v8i32(<8 x i32> %val)
   ret void
@@ -7912,7 +7912,7 @@ define amdgpu_gfx void @test_call_external_void_func_v16i32() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %ptr = load ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load ptr addrspace(1), ptr addrspace(4) poison
   %val = load <16 x i32>, ptr addrspace(1) %ptr
   call amdgpu_gfx void @external_void_func_v16i32(<16 x i32> %val)
   ret void
@@ -8075,7 +8075,7 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %ptr = load ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load ptr addrspace(1), ptr addrspace(4) poison
   %val = load <32 x i32>, ptr addrspace(1) %ptr
   call amdgpu_gfx void @external_void_func_v32i32(<32 x i32> %val)
   ret void
@@ -8249,7 +8249,7 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32_i32(i32) #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %ptr0 = load ptr addrspace(1), ptr addrspace(4) undef
+  %ptr0 = load ptr addrspace(1), ptr addrspace(4) poison
   %val0 = load <32 x i32>, ptr addrspace(1) %ptr0
   %val1 = load i32, ptr addrspace(1) poison
   call amdgpu_gfx void @external_void_func_v32i32_i32(<32 x i32> %val0, i32 %val1)
@@ -8540,7 +8540,7 @@ define amdgpu_gfx void @test_call_external_void_func_struct_i8_i32() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %ptr0 = load ptr addrspace(1), ptr addrspace(4) undef
+  %ptr0 = load ptr addrspace(1), ptr addrspace(4) poison
   %val = load { i8, i32 }, ptr addrspace(1) %ptr0
   call amdgpu_gfx void @external_void_func_struct_i8_i32({ i8, i32 } %val)
   ret void
@@ -9067,7 +9067,7 @@ define amdgpu_gfx void @test_call_external_void_func_v16i8() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %ptr = load ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load ptr addrspace(1), ptr addrspace(4) poison
   %val = load <16 x i8>, ptr addrspace(1) %ptr
   call amdgpu_gfx void @external_void_func_v16i8(<16 x i8> %val)
   ret void
@@ -11961,7 +11961,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2i16_inreg() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <2 x i16>, ptr addrspace(4) undef
+  %val = load <2 x i16>, ptr addrspace(4) poison
   call amdgpu_gfx void @external_void_func_v2i16_inreg(<2 x i16> inreg %val)
   ret void
 }
@@ -12095,7 +12095,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3i16_inreg() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <3 x i16>, ptr addrspace(4) undef
+  %val = load <3 x i16>, ptr addrspace(4) poison
   call amdgpu_gfx void @external_void_func_v3i16_inreg(<3 x i16> inreg %val)
   ret void
 }
@@ -12229,7 +12229,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3f16_inreg() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <3 x half>, ptr addrspace(4) undef
+  %val = load <3 x half>, ptr addrspace(4) poison
   call amdgpu_gfx void @external_void_func_v3f16_inreg(<3 x half> inreg %val)
   ret void
 }
@@ -12637,7 +12637,7 @@ define amdgpu_gfx void @test_call_external_void_func_v4i16_inreg() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <4 x i16>, ptr addrspace(4) undef
+  %val = load <4 x i16>, ptr addrspace(4) poison
   call amdgpu_gfx void @external_void_func_v4i16_inreg(<4 x i16> inreg %val)
   ret void
 }
@@ -12900,7 +12900,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2f16_inreg() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <2 x half>, ptr addrspace(4) undef
+  %val = load <2 x half>, ptr addrspace(4) poison
   call amdgpu_gfx void @external_void_func_v2f16_inreg(<2 x half> inreg %val)
   ret void
 }
@@ -13034,7 +13034,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2i32_inreg() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <2 x i32>, ptr addrspace(4) undef
+  %val = load <2 x i32>, ptr addrspace(4) poison
   call amdgpu_gfx void @external_void_func_v2i32_inreg(<2 x i32> inreg %val)
   ret void
 }
@@ -13631,7 +13631,7 @@ define amdgpu_gfx void @test_call_external_void_func_v4i32_inreg() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <4 x i32>, ptr addrspace(4) undef
+  %val = load <4 x i32>, ptr addrspace(4) poison
   call amdgpu_gfx void @external_void_func_v4i32_inreg(<4 x i32> inreg %val)
   ret void
 }
@@ -14155,7 +14155,7 @@ define amdgpu_gfx void @test_call_external_void_func_v8i32_inreg() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %ptr = load ptr addrspace(4), ptr addrspace(4) undef
+  %ptr = load ptr addrspace(4), ptr addrspace(4) poison
   %val = load <8 x i32>, ptr addrspace(4) %ptr
   call amdgpu_gfx void @external_void_func_v8i32_inreg(<8 x i32> inreg %val)
   ret void
@@ -14619,7 +14619,7 @@ define amdgpu_gfx void @test_call_external_void_func_v16i32_inreg() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %ptr = load ptr addrspace(4), ptr addrspace(4) undef
+  %ptr = load ptr addrspace(4), ptr addrspace(4) poison
   %val = load <16 x i32>, ptr addrspace(4) %ptr
   call amdgpu_gfx void @external_void_func_v16i32_inreg(<16 x i32> inreg %val)
   ret void
@@ -15045,7 +15045,7 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32_inreg() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %ptr = load ptr addrspace(4), ptr addrspace(4) undef
+  %ptr = load ptr addrspace(4), ptr addrspace(4) poison
   %val = load <32 x i32>, ptr addrspace(4) %ptr
   call amdgpu_gfx void @external_void_func_v32i32_inreg(<32 x i32> inreg %val)
   ret void
@@ -15491,9 +15491,9 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32_i32_inreg(i32) #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %ptr0 = load ptr addrspace(4), ptr addrspace(4) undef
+  %ptr0 = load ptr addrspace(4), ptr addrspace(4) poison
   %val0 = load <32 x i32>, ptr addrspace(4) %ptr0
-  %val1 = load i32, ptr addrspace(4) undef
+  %val1 = load i32, ptr addrspace(4) poison
   call amdgpu_gfx void @external_void_func_v32i32_i32_inreg(<32 x i32> inreg %val0, i32 inreg %val1)
   ret void
 }

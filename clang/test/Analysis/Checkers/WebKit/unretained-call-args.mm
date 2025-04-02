@@ -1,3 +1,4 @@
+// UNSUPPORTED: target={{.*}}-zos{{.*}}, target={{.*}}-aix{{.*}}
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.UnretainedCallArgsChecker -verify %s
 
 #include "objc-mock-types.h"
@@ -373,6 +374,33 @@ namespace alloc_class {
     return [obj isKindOfClass:[SomeObj superclass]];
   }
 }
+
+namespace ptr_conversion {
+
+SomeObj *provide_obj();
+
+void dobjc(SomeObj* obj) {
+  [dynamic_objc_cast<OtherObj>(obj) doMoreWork:nil];
+}
+
+void cobjc(SomeObj* obj) {
+  [checked_objc_cast<OtherObj>(obj) doMoreWork:nil];
+}
+
+unsigned dcf(CFTypeRef obj) {
+  return CFArrayGetCount(dynamic_cf_cast<CFArrayRef>(obj));
+}
+
+unsigned ccf(CFTypeRef obj) {
+  return CFArrayGetCount(checked_cf_cast<CFArrayRef>(obj));
+}
+
+void some_function(id);
+void idcf(CFTypeRef obj) {
+  some_function(bridge_id_cast(obj));
+}
+
+} // ptr_conversion
 
 @interface TestObject : NSObject
 - (void)doWork:(NSString *)msg, ...;

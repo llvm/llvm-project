@@ -116,9 +116,9 @@ void SetVariableRequestHandler::operator()(
   // This is a reference to the containing variable/scope
   const auto variablesReference =
       GetInteger<uint64_t>(arguments, "variablesReference").value_or(0);
-  llvm::StringRef name = GetString(arguments, "name");
+  llvm::StringRef name = GetString(arguments, "name").value_or("");
 
-  const auto value = GetString(arguments, "value");
+  const auto value = GetString(arguments, "value").value_or("");
   // Set success to false just in case we don't find the variable by name
   response.try_emplace("success", false);
 
@@ -146,7 +146,7 @@ void SetVariableRequestHandler::operator()(
     bool success = variable.SetValueFromCString(value.data(), error);
     if (success) {
       VariableDescription desc(variable, dap.enable_auto_variable_summaries);
-      EmplaceSafeString(body, "result", desc.display_value);
+      EmplaceSafeString(body, "value", desc.display_value);
       EmplaceSafeString(body, "type", desc.display_type_name);
 
       // We don't know the index of the variable in our dap.variables

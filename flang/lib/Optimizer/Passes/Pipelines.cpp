@@ -198,6 +198,12 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
   pm.addPass(fir::createPolymorphicOpConversion());
   pm.addPass(fir::createAssumedRankOpConversion());
 
+  pm.addPass(fir::createLowerRepackArraysPass());
+  // Expand FIR operations that may use SCF dialect for their
+  // implementation. This is a mandatory pass.
+  pm.addPass(fir::createSimplifyFIROperations(
+      {/*preferInlineImplementation=*/pc.OptLevel.isOptimizingForSpeed()}));
+
   if (pc.AliasAnalysis && !disableFirAliasTags && !useOldAliasTags)
     pm.addPass(fir::createAddAliasTags());
 
