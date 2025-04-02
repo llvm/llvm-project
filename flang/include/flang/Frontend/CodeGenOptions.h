@@ -15,6 +15,7 @@
 #ifndef FORTRAN_FRONTEND_CODEGENOPTIONS_H
 #define FORTRAN_FRONTEND_CODEGENOPTIONS_H
 
+#include "flang/Optimizer/OpenMP/Utils.h"
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
 #include "llvm/Support/CodeGen.h"
@@ -142,6 +143,10 @@ public:
   /// The code model-specific large data threshold to use
   /// (-mlarge-data-threshold).
   uint64_t LargeDataThreshold;
+
+  /// Optionally map `do concurrent` loops to OpenMP. This is only valid of
+  /// OpenMP is enabled.
+  using DoConcurrentMappingKind = flangomp::DoConcurrentMappingKind;
 
   // Define accessors/mutators for code generation options of enumeration type.
 #define CODEGENOPT(Name, Bits, Default)

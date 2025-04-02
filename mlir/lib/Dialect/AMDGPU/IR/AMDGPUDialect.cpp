@@ -341,22 +341,24 @@ LogicalResult MFMAOp::verify() {
   }
 
   Type sourceBType = getSourceB().getType();
-  if (sourceElem.isFloat(8)) {
+  if (sourceElem.isFloat(8) || sourceElem.isFloat(6) || sourceElem.isFloat(4)) {
     int64_t sourceBLen = 1;
     Type sourceBElem = sourceBType;
     if (auto sourceBVector = llvm::dyn_cast<VectorType>(sourceBType)) {
       sourceBLen = sourceBVector.getNumElements();
       sourceBElem = sourceBVector.getElementType();
     }
-    if (!sourceBElem.isFloat(8))
-      return emitOpError("expected both source operands to have f8 elements");
+    if (!sourceBElem.isFloat(8) && !sourceBElem.isFloat(6) &&
+        !sourceBElem.isFloat(4))
+      return emitOpError("expected both source operands to have small-float "
+                         "elements if one does");
     if (sourceLen != sourceBLen)
       return emitOpError(
-          "expected both f8 source vectors to have the same length");
+          "expected both small-float source vectors to have the same length");
   } else {
     if (sourceType != sourceBType)
-      return emitOpError(
-          "expected both non-f8 source operand types to match exactly");
+      return emitOpError("expected both non-small-float source operand types "
+                         "to match exactly");
   }
   // Normalize the wider integer types the compiler expects to i8
   if (sourceElem.isInteger(32)) {

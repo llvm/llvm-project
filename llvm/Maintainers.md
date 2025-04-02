@@ -412,6 +412,11 @@ tejohnson@google.com (email), [teresajohnson](https://github.com/teresajohnson) 
 Aiden Grossman \
 agrossman154@yahoo.com (email), [boomanaiden154](https://github.com/boomanaiden154) (Github)
 
+#### llvm-reduce
+
+Matt Arsenault \
+Matthew.Arsenault@amd.com, arsenm2@gmail.com (email), [arsenm](https://github.com/arsenm) (GitHub)
+
 ### Other
 
 #### Release management
@@ -466,6 +471,8 @@ Some subprojects maintain their own list of per-component maintainers.
 [Flang maintainers](https://github.com/llvm/llvm-project/blob/main/flang/Maintainers.txt)
 
 [libc++ maintainers](https://github.com/llvm/llvm-project/blob/main/libcxx/Maintainers.md)
+
+[Libc maintainers](https://github.com/llvm/llvm-project/blob/main/libc/Maintainers.rst)
 
 [libclc maintainers](https://github.com/llvm/llvm-project/blob/main/libclc/Maintainers.md)
 

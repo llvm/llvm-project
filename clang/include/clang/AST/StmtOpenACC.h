@@ -829,24 +829,42 @@ public:
 
 // This class represents the 'atomic' construct, which has an associated
 // statement, but no clauses.
-class OpenACCAtomicConstruct final : public OpenACCAssociatedStmtConstruct {
+class OpenACCAtomicConstruct final
+    : public OpenACCAssociatedStmtConstruct,
+      private llvm::TrailingObjects<OpenACCAtomicConstruct,
+                                    const OpenACCClause *> {
 
   friend class ASTStmtReader;
+  friend TrailingObjects;
   OpenACCAtomicKind AtomicKind = OpenACCAtomicKind::None;
 
-  OpenACCAtomicConstruct(EmptyShell)
+  OpenACCAtomicConstruct(unsigned NumClauses)
       : OpenACCAssociatedStmtConstruct(
             OpenACCAtomicConstructClass, OpenACCDirectiveKind::Atomic,
             SourceLocation{}, SourceLocation{}, SourceLocation{},
-            /*AssociatedStmt=*/nullptr) {}
+            /*AssociatedStmt=*/nullptr) {
+    std::uninitialized_value_construct(
+        getTrailingObjects<const OpenACCClause *>(),
+        getTrailingObjects<const OpenACCClause *>() + NumClauses);
+    setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
+                                  NumClauses));
+  }
 
   OpenACCAtomicConstruct(SourceLocation Start, SourceLocation DirectiveLoc,
                          OpenACCAtomicKind AtKind, SourceLocation End,
+                         ArrayRef<const OpenACCClause *> Clauses,
                          Stmt *AssociatedStmt)
       : OpenACCAssociatedStmtConstruct(OpenACCAtomicConstructClass,
                                        OpenACCDirectiveKind::Atomic, Start,
                                        DirectiveLoc, End, AssociatedStmt),
-        AtomicKind(AtKind) {}
+        AtomicKind(AtKind) {
+    // Initialize the trailing storage.
+    std::uninitialized_copy(Clauses.begin(), Clauses.end(),
+                            getTrailingObjects<const OpenACCClause *>());
+
+    setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
+                                  Clauses.size()));
+  }
 
   void setAssociatedStmt(Stmt *S) {
     OpenACCAssociatedStmtConstruct::setAssociatedStmt(S);
@@ -857,10 +875,12 @@ public:
     return T->getStmtClass() == OpenACCAtomicConstructClass;
   }
 
-  static OpenACCAtomicConstruct *CreateEmpty(const ASTContext &C);
+  static OpenACCAtomicConstruct *CreateEmpty(const ASTContext &C,
+                                             unsigned NumClauses);
   static OpenACCAtomicConstruct *
   Create(const ASTContext &C, SourceLocation Start, SourceLocation DirectiveLoc,
-         OpenACCAtomicKind AtKind, SourceLocation End, Stmt *AssociatedStmt);
+         OpenACCAtomicKind AtKind, SourceLocation End,
+         ArrayRef<const OpenACCClause *> Clauses, Stmt *AssociatedStmt);
 
   OpenACCAtomicKind getAtomicKind() const { return AtomicKind; }
   const Stmt *getAssociatedStmt() const {

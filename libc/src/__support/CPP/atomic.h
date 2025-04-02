@@ -97,7 +97,7 @@ public:
 
   LIBC_INLINE constexpr Atomic() = default;
 
-  // Intializes the value without using atomic operations.
+  // Initializes the value without using atomic operations.
   LIBC_INLINE constexpr Atomic(value_type v) : val(v) {}
 
   LIBC_INLINE Atomic(const Atomic &) = delete;

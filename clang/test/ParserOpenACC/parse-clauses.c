@@ -1288,3 +1288,27 @@ void BCP1();
 #pragma acc routine seq bind("ReductionClauseParsing")
 
 #pragma acc routine(BCP1) seq bind(unknown_thing)
+
+void AtomicIf() {
+  int i, j;
+  // expected-error@+1{{expected '('}}
+#pragma acc atomic read if
+  i = j;
+#pragma acc atomic read if (0)
+  i = j;
+#pragma acc atomic write if (1)
+  i = j + 1;
+
+#pragma acc atomic update if (i)
+  ++i;
+#pragma acc atomic if (j)
+  ++i;
+
+#pragma acc atomic capture if (0)
+  i = j++;
+#pragma acc atomic capture if (i)
+  {
+    ++j;
+    i = j;
+  }
+}
