@@ -191,11 +191,9 @@ endfunction(get_object_files_for_test)
 #      SRCS  <list of .cpp files for the test>
 #      HDRS  <list of .h files for the test>
 #      DEPENDS <list of dependencies>
-#      ARGS <list of command line arguments to be passed to the test>
 #      ENV <list of environment variables to set before running the test>
 #      COMPILE_OPTIONS <list of special compile options for this target>
 #      LINK_LIBRARIES <list of linking libraries for this target>
-#      LOADER_ARGS <list of special args to loaders (like the GPU loader)>
 #    )
 function(create_libc_unittest fq_target_name)
   if(NOT LLVM_INCLUDE_TESTS)
@@ -206,7 +204,7 @@ function(create_libc_unittest fq_target_name)
     "LIBC_UNITTEST"
     "NO_RUN_POSTBUILD;C_TEST" # Optional arguments
     "SUITE;CXX_STANDARD" # Single value arguments
-    "SRCS;HDRS;DEPENDS;ARGS;ENV;COMPILE_OPTIONS;LINK_LIBRARIES;LOADER_ARGS;FLAGS" # Multi-value arguments
+    "SRCS;HDRS;DEPENDS;ENV;COMPILE_OPTIONS;LINK_LIBRARIES;FLAGS" # Multi-value arguments
     ${ARGN}
   )
   if(NOT LIBC_UNITTEST_SRCS)
@@ -319,15 +317,9 @@ function(create_libc_unittest fq_target_name)
 
   target_link_libraries(${fq_build_target_name} PRIVATE ${link_libraries})
 
-  if(TARGET libc.utils.gpu.loader)
-    add_dependencies(${fq_build_target_name} libc.utils.gpu.loader)
-    get_target_property(gpu_loader_exe libc.utils.gpu.loader "EXECUTABLE")
-  endif()
-
   if(NOT LIBC_UNITTEST_NO_RUN_POSTBUILD)
     set(test_cmd ${LIBC_UNITTEST_ENV}
-        $<$<BOOL:${LIBC_TARGET_OS_IS_GPU}>:${gpu_loader_exe}> ${CMAKE_CROSSCOMPILING_EMULATOR} ${LIBC_UNITTEST_LOADER_ARGS}
-        $<TARGET_FILE:${fq_build_target_name}> ${LIBC_UNITTEST_ARGS})
+        ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:${fq_build_target_name}>)
     add_custom_target(
       ${fq_target_name}
       DEPENDS ${fq_target_name}-cmd
