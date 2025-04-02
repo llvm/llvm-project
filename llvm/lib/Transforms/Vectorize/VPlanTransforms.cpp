@@ -1154,7 +1154,7 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
   Term->eraseFromParent();
 
   Plan.setVF(BestVF);
-  Plan.setUF(BestUF);
+  assert(Plan.getUF() == BestUF && "BestUF must match the Plan's UF");
   // TODO: Further simplifications are possible
   //      1. Replace inductions with constants.
   //      2. Replace vector loop region with VPBasicBlock.
