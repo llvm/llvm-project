@@ -1,5 +1,4 @@
-// RUN: mlir-opt -split-input-file -verify-diagnostics %s
-// RUN: mlir-translate -mlir-to-llvmir -split-input-file -verify-diagnostics %s | FileCheck %s --check-prefix=CHECK-LLVM
+// RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s --check-prefix=CHECK-LLVM
 
 // CHECK-LABEL: @llvm_nvvm_tcgen05_alloc
 llvm.func @llvm_nvvm_tcgen05_alloc(%addr : !llvm.ptr, %ncols : i32) {

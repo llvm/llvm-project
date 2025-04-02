@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86MCAsmInfo.h"
+#include "MCTargetDesc/X86MCExpr.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/CommandLine.h"
@@ -33,6 +34,37 @@ static cl::opt<bool>
 MarkedJTDataRegions("mark-data-regions", cl::init(true),
   cl::desc("Mark code section jump table data regions."),
   cl::Hidden);
+
+const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
+    {X86MCExpr::VK_ABS8, "ABS8"},
+    {X86MCExpr::VK_DTPOFF, "DTPOFF"},
+    {X86MCExpr::VK_DTPREL, "DTPREL"},
+    {X86MCExpr::VK_GOT, "GOT"},
+    {X86MCExpr::VK_GOTENT, "GOTENT"},
+    {X86MCExpr::VK_GOTNTPOFF, "GOTNTPOFF"},
+    {X86MCExpr::VK_GOTOFF, "GOTOFF"},
+    {X86MCExpr::VK_GOTPCREL, "GOTPCREL"},
+    {X86MCExpr::VK_GOTPCREL_NORELAX, "GOTPCREL_NORELAX"},
+    {X86MCExpr::VK_GOTREL, "GOTREL"},
+    {X86MCExpr::VK_GOTTPOFF, "GOTTPOFF"},
+    {X86MCExpr::VK_INDNTPOFF, "INDNTPOFF"},
+    {MCSymbolRefExpr::VK_COFF_IMGREL32, "IMGREL"},
+    {X86MCExpr::VK_NTPOFF, "NTPOFF"},
+    {X86MCExpr::VK_PCREL, "PCREL"},
+    {X86MCExpr::VK_PLT, "PLT"},
+    {X86MCExpr::VK_PLTOFF, "PLTOFF"},
+    {MCSymbolRefExpr::VK_SECREL, "SECREL32"},
+    {X86MCExpr::VK_SIZE, "SIZE"},
+    {X86MCExpr::VK_TLSCALL, "tlscall"},
+    {X86MCExpr::VK_TLSDESC, "tlsdesc"},
+    {X86MCExpr::VK_TLSGD, "TLSGD"},
+    {X86MCExpr::VK_TLSLD, "TLSLD"},
+    {X86MCExpr::VK_TLSLDM, "TLSLDM"},
+    {X86MCExpr::VK_TLVP, "TLVP"},
+    {X86MCExpr::VK_TLVPPAGE, "TLVPPAGE"},
+    {X86MCExpr::VK_TLVPPAGEOFF, "TLVPPAGEOFF"},
+    {X86MCExpr::VK_TPOFF, "TPOFF"},
+};
 
 void X86MCAsmInfoDarwin::anchor() { }
 
@@ -69,6 +101,8 @@ X86MCAsmInfoDarwin::X86MCAsmInfoDarwin(const Triple &T) {
   // (actually, must, since otherwise the non-extern relocations we produce
   // overwhelm ld64's tiny little mind and it fails).
   DwarfFDESymbolsUseAbsDiff = true;
+
+  initializeVariantKinds(variantKindDescs);
 }
 
 X86_64MCAsmInfoDarwin::X86_64MCAsmInfoDarwin(const Triple &Triple)
@@ -96,6 +130,8 @@ X86ELFMCAsmInfo::X86ELFMCAsmInfo(const Triple &T) {
 
   // Exceptions handling
   ExceptionsType = ExceptionHandling::DwarfCFI;
+
+  initializeVariantKinds(variantKindDescs);
 }
 
 const MCExpr *
@@ -104,7 +140,7 @@ X86_64MCAsmInfoDarwin::getExprForPersonalitySymbol(const MCSymbol *Sym,
                                                    MCStreamer &Streamer) const {
   MCContext &Context = Streamer.getContext();
   const MCExpr *Res =
-    MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_GOTPCREL, Context);
+      MCSymbolRefExpr::create(Sym, X86MCExpr::VK_GOTPCREL, Context);
   const MCExpr *Four = MCConstantExpr::create(4, Context);
   return MCBinaryExpr::createAdd(Res, Four, Context);
 }
@@ -129,6 +165,8 @@ X86MCAsmInfoMicrosoft::X86MCAsmInfoMicrosoft(const Triple &Triple) {
   AssemblerDialect = X86AsmSyntax;
 
   AllowAtInName = true;
+
+  initializeVariantKinds(variantKindDescs);
 }
 
 void X86MCAsmInfoMicrosoftMASM::anchor() { }
@@ -162,4 +200,6 @@ X86MCAsmInfoGNUCOFF::X86MCAsmInfoGNUCOFF(const Triple &Triple) {
   AssemblerDialect = X86AsmSyntax;
 
   AllowAtInName = true;
+
+  initializeVariantKinds(variantKindDescs);
 }

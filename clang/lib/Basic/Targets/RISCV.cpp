@@ -238,6 +238,9 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
     else
       Builder.defineMacro("__riscv_32e");
   }
+
+  if (Opts.CFProtectionReturn && ISAInfo->hasExtension("zicfiss"))
+    Builder.defineMacro("__riscv_shadow_stack");
 }
 
 static constexpr int NumRVVBuiltins =
@@ -556,6 +559,18 @@ RISCVTargetInfo::checkCallingConvention(CallingConv CC) const {
     return CCCR_Warning;
   case CC_C:
   case CC_RISCVVectorCall:
+  case CC_RISCVVLSCall_32:
+  case CC_RISCVVLSCall_64:
+  case CC_RISCVVLSCall_128:
+  case CC_RISCVVLSCall_256:
+  case CC_RISCVVLSCall_512:
+  case CC_RISCVVLSCall_1024:
+  case CC_RISCVVLSCall_2048:
+  case CC_RISCVVLSCall_4096:
+  case CC_RISCVVLSCall_8192:
+  case CC_RISCVVLSCall_16384:
+  case CC_RISCVVLSCall_32768:
+  case CC_RISCVVLSCall_65536:
     return CCCR_OK;
   }
 }

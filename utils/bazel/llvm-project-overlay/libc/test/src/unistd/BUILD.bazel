@@ -19,17 +19,10 @@ libc_test(
         "//libc:close",
         "//libc:unlink",
     ],
+    deps = [
+        "//libc/test/UnitTest:errno_test_helpers",
+    ],
 )
-
-# libc_test(
-#     name = "chdir_test",
-#     srcs = ["chdir_test.cpp"],
-#     libc_function_deps = [
-#         "//libc:open",
-#         "//libc:chdir",
-#         "//libc:close",
-#     ],
-# )
 
 libc_test(
     name = "dup_test",
@@ -41,6 +34,9 @@ libc_test(
         "//libc:read",
         "//libc:unlink",
         "//libc:write",
+    ],
+    deps = [
+        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -55,6 +51,9 @@ libc_test(
         "//libc:unlink",
         "//libc:write",
     ],
+    deps = [
+        "//libc/test/UnitTest:errno_test_helpers",
+    ],
 )
 
 libc_test(
@@ -68,17 +67,10 @@ libc_test(
         "//libc:unlink",
         "//libc:write",
     ],
+    deps = [
+        "//libc/test/UnitTest:errno_test_helpers",
+    ],
 )
-
-# libc_test(
-#     name = "fchdir_test",
-#     srcs = ["fchdir_test.cpp"],
-#     libc_function_deps = [
-#         "//libc:open",
-#         "//libc:fchdir",
-#         "//libc:close",
-#     ],
-# )
 
 libc_test(
     name = "ftruncate_test",
@@ -93,6 +85,7 @@ libc_test(
     ],
     deps = [
         "//libc:__support_cpp_string_view",
+        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -108,6 +101,9 @@ libc_test(
         "//libc:unlink",
         "//libc:write",
     ],
+    deps = [
+        "//libc/test/UnitTest:errno_test_helpers",
+    ],
 )
 
 libc_test(
@@ -121,6 +117,9 @@ libc_test(
         "//libc:write",
         "//libc:remove",
     ],
+    deps = [
+        "//libc/test/UnitTest:errno_test_helpers",
+    ],
 )
 
 libc_test(
@@ -132,38 +131,10 @@ libc_test(
         "//libc:link",
         "//libc:unlink",
     ],
+    deps = [
+        "//libc/test/UnitTest:errno_test_helpers",
+    ],
 )
-
-# libc_test(
-#     name = "linkat_test",
-#     srcs = ["linkat_test.cpp"],
-#     libc_function_deps = [
-#         "//libc:open",
-#         "//libc:close",
-#         "//libc:linkat",
-#         "//libc:unlink",
-#     ],
-# )
-
-# libc_test(
-#     name = "lseek_test",
-#     srcs = ["lseek_test.cpp"],
-#     libc_function_deps = [
-#         "//libc:open",
-#         "//libc:close",
-#         "//libc:lseek",
-#         "//libc:read",
-#     ],
-# )
-
-# libc_test(
-#     name = "rmdir_test",
-#     srcs = ["rmdir_test.cpp"],
-#     libc_function_deps = [
-#         "//libc:mkdir",
-#         "//libc:rmdir",
-#     ],
-# )
 
 libc_test(
     name = "swab_test",
@@ -176,32 +147,6 @@ libc_test(
     ],
 )
 
-# libc_test(
-#     name = "readlink_test",
-#     srcs = ["readlink_test.cpp"],
-#     libc_function_deps = [
-#         "//libc:readlink",
-#         "//libc:symlink",
-#         "//libc:unlink",
-#     ],
-#     deps = [
-#         "//libc:__support_cpp_string_view",
-#     ],
-# )
-
-# libc_test(
-#     name = "readlinkat_test",
-#     srcs = ["readlinkat_test.cpp"],
-#     libc_function_deps = [
-#         "//libc:readlinkat",
-#         "//libc:symlink",
-#         "//libc:unlink",
-#     ],
-#     deps = [
-#         "//libc:__support_cpp_string_view",
-#     ],
-# )
-
 libc_test(
     name = "symlink_test",
     srcs = ["symlink_test.cpp"],
@@ -211,18 +156,10 @@ libc_test(
         "//libc:symlink",
         "//libc:unlink",
     ],
+    deps = [
+        "//libc/test/UnitTest:errno_test_helpers",
+    ],
 )
-
-# libc_test(
-#     name = "symlinkat_test",
-#     srcs = ["symlinkat_test.cpp"],
-#     libc_function_deps = [
-#         "//libc:open",
-#         "//libc:close",
-#         "//libc:symlinkat",
-#         "//libc:unlink",
-#     ],
-# )
 
 libc_test(
     name = "truncate_test",
@@ -237,6 +174,7 @@ libc_test(
     ],
     deps = [
         "//libc:__support_cpp_string_view",
+        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -248,19 +186,10 @@ libc_test(
         "//libc:close",
         "//libc:unlink",
     ],
+    deps = [
+        "//libc/test/UnitTest:errno_test_helpers",
+    ],
 )
-
-# libc_test(
-#     name = "unlinkat_test",
-#     srcs = ["unlinkat_test.cpp"],
-#     libc_function_deps = [
-#         "//libc:open",
-#         "//libc:openat",
-#         "//libc:close",
-#         "//libc:unlinkat",
-#     ],
-# )
-
 
 libc_test(
     name = "getppid_test",
@@ -286,6 +215,9 @@ libc_test(
         "//libc:open",
         "//libc:close",
     ],
+    deps = [
+        "//libc/test/UnitTest:errno_test_helpers",
+    ],
 )
 
 libc_test(
@@ -295,6 +227,8 @@ libc_test(
         "//libc:geteuid",
     ],
 )
+
+# TODO: add rules for functions modifying directories.
 
 #TODO: Enable once fullbuild is added to bazel, since this depends on a macro
 # definition in the public header

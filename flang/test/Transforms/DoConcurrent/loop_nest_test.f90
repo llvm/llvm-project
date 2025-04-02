@@ -2,7 +2,7 @@
 
 ! REQUIRES: asserts
 
-! RUN: %flang_fc1 -emit-hlfir  -fopenmp -fdo-concurrent-parallel=host \
+! RUN: %flang_fc1 -emit-hlfir  -fopenmp -fdo-concurrent-to-openmp=host \
 ! RUN:   -mmlir -debug %s -o - 2> %t.log || true
 
 ! RUN: FileCheck %s < %t.log
@@ -67,13 +67,15 @@ subroutine foo(n)
     end do
   end do
 
+  ! Verify the (i,j) and (j,k) pairs of loops are detected as perfectly nested.
+  !
+  ! CHECK: Loop pair starting at location
+  ! CHECK: loc("{{.*}}":[[# @LINE + 3]]:{{.*}}) is perfectly nested
   ! CHECK: Loop pair starting at location
   ! CHECK: loc("{{.*}}":[[# @LINE + 1]]:{{.*}}) is perfectly nested
   do concurrent(i=bar(n, x):n, j=1:bar(n*m, n/m), k=1:bar(n*m, bar(n*m, n/m)))
     a(i) = n
   end do
-
-
 end subroutine
 
 pure function bar(n, m)

@@ -720,7 +720,7 @@ namespace llvm {
     void incrementWeight(float Inc) { Weight += Inc; }
     void setWeight(float Value) { Weight = Value; }
 
-    LiveInterval(unsigned Reg, float Weight) : Reg(Reg), Weight(Weight) {}
+    LiveInterval(Register Reg, float Weight) : Reg(Reg), Weight(Weight) {}
 
     ~LiveInterval() {
       clearSubRanges();

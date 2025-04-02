@@ -546,9 +546,13 @@ static bool lookup(ObjectFile &Obj, DWARFContext &DICtx, uint64_t Address,
 
   // TODO: it is neccessary to set proper SectionIndex here.
   // object::SectionedAddress::UndefSection works for only absolute addresses.
-  if (DILineInfo LineInfo = DICtx.getLineInfoForAddress(
-          {Lookup, object::SectionedAddress::UndefSection}))
+  if (DILineInfo LineInfo =
+          DICtx
+              .getLineInfoForAddress(
+                  {Lookup, object::SectionedAddress::UndefSection})
+              .value_or(DILineInfo())) {
     LineInfo.dump(OS);
+  }
 
   return true;
 }
@@ -640,8 +644,7 @@ getCallbacks(ObjectFile &Obj, const Twine &Filename) {
   const std::string &TripleStr = TT.str();
 
   std::string TargetLookupError;
-  const Target *TheTarget =
-      TargetRegistry::lookupTarget(TripleStr, TargetLookupError);
+  const Target *TheTarget = TargetRegistry::lookupTarget(TT, TargetLookupError);
   if (!TargetLookupError.empty()) {
     logAllUnhandledErrors(
         createStringError(inconvertibleErrorCode(), "Error in creating Target"),

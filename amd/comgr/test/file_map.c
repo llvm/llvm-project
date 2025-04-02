@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
 
   const char *Buffer = "abcdefghi";
   size_t Length = strlen(Buffer);
-  size_t Bytes = WriteFile(FD, Buffer, Length);
+  size_t Bytes = WriteFileCustom(FD, Buffer, Length);
   if (Bytes != Length) {
     fail("Write failed with ret %d", Bytes);
   }

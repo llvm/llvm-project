@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/macros/config.h"
-#include "src/stdlib/qsort.h"
 #include "test/UnitTest/Test.h"
 
 class SortingTest : public LIBC_NAMESPACE::testing::Test {

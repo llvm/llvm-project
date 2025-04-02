@@ -19,6 +19,7 @@ if (NOT DEFINED LLVM_LIT_PATH)
     set(LLVM_LIT_PATH "${LLVM_TOOLS_BINARY_DIR}/llvm-lit")
   endif()
 endif()
+message("-- LLVM_LIT_PATH: ${LLVM_LIT_PATH}")
 
 add_custom_target(test-lit COMMAND "${LLVM_LIT_PATH}"
                   "${CMAKE_CURRENT_BINARY_DIR}" -v)
@@ -39,5 +40,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
 add_comgr_lit_binary(source-to-bc-with-dev-libs c)
 add_comgr_lit_binary(spirv-translator c)
+add_comgr_lit_binary(compile-minimal-test c)
+add_comgr_lit_binary(spirv-to-reloc c)
+add_comgr_lit_binary(unbundle c)
 
 add_dependencies(check-comgr test-lit)

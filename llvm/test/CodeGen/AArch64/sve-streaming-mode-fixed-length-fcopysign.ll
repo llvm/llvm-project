@@ -8,6 +8,186 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
 target triple = "aarch64-unknown-linux-gnu"
 
+define void @test_copysign_f16(ptr %ap, ptr %bp) {
+; SVE-LABEL: test_copysign_f16:
+; SVE:       // %bb.0:
+; SVE-NEXT:    ldr h0, [x1]
+; SVE-NEXT:    ldr h1, [x0]
+; SVE-NEXT:    and z0.h, z0.h, #0x8000
+; SVE-NEXT:    and z1.h, z1.h, #0x7fff
+; SVE-NEXT:    orr z0.d, z1.d, z0.d
+; SVE-NEXT:    str h0, [x0]
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: test_copysign_f16:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    mov z0.h, #32767 // =0x7fff
+; SVE2-NEXT:    ldr h1, [x1]
+; SVE2-NEXT:    ldr h2, [x0]
+; SVE2-NEXT:    bsl z2.d, z2.d, z1.d, z0.d
+; SVE2-NEXT:    str h2, [x0]
+; SVE2-NEXT:    ret
+;
+; NONEON-NOSVE-LABEL: test_copysign_f16:
+; NONEON-NOSVE:       // %bb.0:
+; NONEON-NOSVE-NEXT:    sub sp, sp, #16
+; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
+; NONEON-NOSVE-NEXT:    ldr h0, [x0]
+; NONEON-NOSVE-NEXT:    ldr h1, [x1]
+; NONEON-NOSVE-NEXT:    fcvt s0, h0
+; NONEON-NOSVE-NEXT:    str h1, [sp, #12]
+; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #13]
+; NONEON-NOSVE-NEXT:    tst w8, #0x80
+; NONEON-NOSVE-NEXT:    fabs s0, s0
+; NONEON-NOSVE-NEXT:    fneg s1, s0
+; NONEON-NOSVE-NEXT:    fcsel s0, s1, s0, ne
+; NONEON-NOSVE-NEXT:    fcvt h0, s0
+; NONEON-NOSVE-NEXT:    str h0, [x0]
+; NONEON-NOSVE-NEXT:    add sp, sp, #16
+; NONEON-NOSVE-NEXT:    ret
+  %a = load half, ptr %ap
+  %b = load half, ptr %bp
+  %r = call half @llvm.copysign.f16(half %a, half %b)
+  store half %r, ptr %ap
+  ret void
+}
+
+define void @test_copysign_bf16(ptr %ap, ptr %bp) {
+; SVE-LABEL: test_copysign_bf16:
+; SVE:       // %bb.0:
+; SVE-NEXT:    ldr h0, [x1]
+; SVE-NEXT:    ldr h1, [x0]
+; SVE-NEXT:    and z0.h, z0.h, #0x8000
+; SVE-NEXT:    and z1.h, z1.h, #0x7fff
+; SVE-NEXT:    orr z0.d, z1.d, z0.d
+; SVE-NEXT:    str h0, [x0]
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: test_copysign_bf16:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    mov z0.h, #32767 // =0x7fff
+; SVE2-NEXT:    ldr h1, [x1]
+; SVE2-NEXT:    ldr h2, [x0]
+; SVE2-NEXT:    bsl z2.d, z2.d, z1.d, z0.d
+; SVE2-NEXT:    str h2, [x0]
+; SVE2-NEXT:    ret
+;
+; NONEON-NOSVE-LABEL: test_copysign_bf16:
+; NONEON-NOSVE:       // %bb.0:
+; NONEON-NOSVE-NEXT:    sub sp, sp, #80
+; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 80
+; NONEON-NOSVE-NEXT:    ldr h0, [x0]
+; NONEON-NOSVE-NEXT:    ldr h1, [x1]
+; NONEON-NOSVE-NEXT:    str h0, [sp, #40]
+; NONEON-NOSVE-NEXT:    ldr d0, [sp, #40]
+; NONEON-NOSVE-NEXT:    str h1, [sp, #76]
+; NONEON-NOSVE-NEXT:    ushll v0.4s, v0.4h, #0
+; NONEON-NOSVE-NEXT:    str q0, [sp]
+; NONEON-NOSVE-NEXT:    ldr w8, [sp, #12]
+; NONEON-NOSVE-NEXT:    lsl w9, w8, #16
+; NONEON-NOSVE-NEXT:    ldr w8, [sp, #8]
+; NONEON-NOSVE-NEXT:    lsl w8, w8, #16
+; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #24]
+; NONEON-NOSVE-NEXT:    ldr w8, [sp, #4]
+; NONEON-NOSVE-NEXT:    lsl w9, w8, #16
+; NONEON-NOSVE-NEXT:    ldr w8, [sp]
+; NONEON-NOSVE-NEXT:    lsl w8, w8, #16
+; NONEON-NOSVE-NEXT:    stp w8, w9, [sp, #16]
+; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #77]
+; NONEON-NOSVE-NEXT:    ldr q0, [sp, #16]
+; NONEON-NOSVE-NEXT:    tst w8, #0x80
+; NONEON-NOSVE-NEXT:    str q0, [sp, #48]
+; NONEON-NOSVE-NEXT:    ldr s0, [sp, #48]
+; NONEON-NOSVE-NEXT:    fabs s0, s0
+; NONEON-NOSVE-NEXT:    fneg s1, s0
+; NONEON-NOSVE-NEXT:    fcsel s0, s1, s0, ne
+; NONEON-NOSVE-NEXT:    fmov w8, s0
+; NONEON-NOSVE-NEXT:    lsr w8, w8, #16
+; NONEON-NOSVE-NEXT:    fmov s0, w8
+; NONEON-NOSVE-NEXT:    str h0, [x0]
+; NONEON-NOSVE-NEXT:    add sp, sp, #80
+; NONEON-NOSVE-NEXT:    ret
+  %a = load bfloat, ptr %ap
+  %b = load bfloat, ptr %bp
+  %r = call bfloat @llvm.copysign.bf16(bfloat %a, bfloat %b)
+  store bfloat %r, ptr %ap
+  ret void
+}
+
+define void @test_copysign_f32(ptr %ap, ptr %bp) {
+; SVE-LABEL: test_copysign_f32:
+; SVE:       // %bb.0:
+; SVE-NEXT:    ldr s0, [x1]
+; SVE-NEXT:    ldr s1, [x0]
+; SVE-NEXT:    and z0.s, z0.s, #0x80000000
+; SVE-NEXT:    and z1.s, z1.s, #0x7fffffff
+; SVE-NEXT:    orr z0.d, z1.d, z0.d
+; SVE-NEXT:    str s0, [x0]
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: test_copysign_f32:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    mov z0.s, #0x7fffffff
+; SVE2-NEXT:    ldr s1, [x1]
+; SVE2-NEXT:    ldr s2, [x0]
+; SVE2-NEXT:    bsl z2.d, z2.d, z1.d, z0.d
+; SVE2-NEXT:    str s2, [x0]
+; SVE2-NEXT:    ret
+;
+; NONEON-NOSVE-LABEL: test_copysign_f32:
+; NONEON-NOSVE:       // %bb.0:
+; NONEON-NOSVE-NEXT:    ldr s0, [x0]
+; NONEON-NOSVE-NEXT:    ldr w8, [x1]
+; NONEON-NOSVE-NEXT:    fabs s0, s0
+; NONEON-NOSVE-NEXT:    tst w8, #0x80000000
+; NONEON-NOSVE-NEXT:    fneg s1, s0
+; NONEON-NOSVE-NEXT:    fcsel s0, s1, s0, ne
+; NONEON-NOSVE-NEXT:    str s0, [x0]
+; NONEON-NOSVE-NEXT:    ret
+  %a = load float, ptr %ap
+  %b = load float, ptr %bp
+  %r = call float @llvm.copysign.f32(float %a, float %b)
+  store float %r, ptr %ap
+  ret void
+}
+
+define void @test_copysign_f64(ptr %ap, ptr %bp) {
+; SVE-LABEL: test_copysign_f64:
+; SVE:       // %bb.0:
+; SVE-NEXT:    ldr d0, [x1]
+; SVE-NEXT:    ldr d1, [x0]
+; SVE-NEXT:    and z0.d, z0.d, #0x8000000000000000
+; SVE-NEXT:    and z1.d, z1.d, #0x7fffffffffffffff
+; SVE-NEXT:    orr z0.d, z1.d, z0.d
+; SVE-NEXT:    str d0, [x0]
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: test_copysign_f64:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    mov z0.d, #0x7fffffffffffffff
+; SVE2-NEXT:    ldr d1, [x1]
+; SVE2-NEXT:    ldr d2, [x0]
+; SVE2-NEXT:    bsl z2.d, z2.d, z1.d, z0.d
+; SVE2-NEXT:    str d2, [x0]
+; SVE2-NEXT:    ret
+;
+; NONEON-NOSVE-LABEL: test_copysign_f64:
+; NONEON-NOSVE:       // %bb.0:
+; NONEON-NOSVE-NEXT:    ldr d0, [x0]
+; NONEON-NOSVE-NEXT:    ldr x8, [x1]
+; NONEON-NOSVE-NEXT:    fabs d0, d0
+; NONEON-NOSVE-NEXT:    tst x8, #0x8000000000000000
+; NONEON-NOSVE-NEXT:    fneg d1, d0
+; NONEON-NOSVE-NEXT:    fcsel d0, d1, d0, ne
+; NONEON-NOSVE-NEXT:    str d0, [x0]
+; NONEON-NOSVE-NEXT:    ret
+  %a = load double, ptr %ap
+  %b = load double, ptr %bp
+  %r = call double @llvm.copysign.f64(double %a, double %b)
+  store double %r, ptr %ap
+  ret void
+}
+
 ;============ f16
 
 define void @test_copysign_v4f16_v4f16(ptr %ap, ptr %bp) {

@@ -626,6 +626,8 @@ namespace ThreeWayCmp {
   constexpr int k = (1 <=> 1, 0); // both-warning {{comparison result unused}}
   static_assert(k== 0, "");
 
+  static_assert(__builtin_nanf("") <=> __builtin_nanf("") == -127, "");
+
   /// Pointers.
   constexpr int a[] = {1,2,3};
   constexpr int b[] = {1,2,3};
@@ -961,4 +963,29 @@ namespace PseudoDtor {
   }
   static_assert(f3() == 0);
 #endif
+}
+
+namespace NastyChar {
+  struct nasty_char {
+    template <typename T> friend auto operator<=>(T, T) = delete;
+    template <typename T> friend void operator+(T &&) = delete;
+    template <typename T> friend void operator-(T &&) = delete;
+    template <typename T> friend void operator&(T &&) = delete;
+
+    char c;
+  };
+
+
+  template <unsigned N> struct ToNastyChar {
+    constexpr ToNastyChar(const char (&r)[N]) {
+      for (unsigned I = 0; I != N; ++I)
+        text[I] = nasty_char{r[I]};
+    }
+    nasty_char text[N];
+  };
+
+  template <unsigned N> ToNastyChar(const char (&)[N]) -> ToNastyChar<N>;
+
+  template <ToNastyChar t> constexpr auto to_nasty_char() { return t; }
+  constexpr auto result = to_nasty_char<"12345">();
 }

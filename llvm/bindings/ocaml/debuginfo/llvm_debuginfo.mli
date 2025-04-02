@@ -152,6 +152,11 @@ module MetadataKind : sig
     | DIMacroMetadataKind
     | DIMacroFileMetadataKind
     | DICommonBlockMetadataKind
+    | DIStringTypeMetadataKind
+    | DIGenericSubrangeMetadataKind
+    | DIArgListMetadataKind
+    | DIAssignIDMetadataKind
+    | DISubrangeTypeMetadataKind
 end
 
 (** The amount of debug information to emit. *)

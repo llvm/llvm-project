@@ -57,9 +57,7 @@ struct AMDGPUImplicitArgsTyCOV4 {
 /// Returns the size in bytes of the implicit arguments of AMDGPU kernels.
 /// `Version` is the ELF ABI version, e.g. COV5.
 inline uint32_t getImplicitArgsSize(uint16_t Version) {
-  return Version < ELF::ELFABIVERSION_AMDGPU_HSA_V5
-             ? sizeof(AMDGPUImplicitArgsTyCOV4)
-             : sizeof(AMDGPUImplicitArgsTy);
+  return sizeof(AMDGPUImplicitArgsTy);
 }
 
 // Check target image for XNACK mode (XNACK+, XNACK-ANY, XNACK-)

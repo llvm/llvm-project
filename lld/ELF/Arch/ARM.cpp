@@ -663,12 +663,12 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_ARM_THM_JUMP8:
     // We do a 9 bit check because val is right-shifted by 1 bit.
     checkInt(ctx, loc, val, 9, rel);
-    write16(ctx, loc, (read32(ctx, loc) & 0xff00) | ((val >> 1) & 0x00ff));
+    write16(ctx, loc, (read16(ctx, loc) & 0xff00) | ((val >> 1) & 0x00ff));
     break;
   case R_ARM_THM_JUMP11:
     // We do a 12 bit check because val is right-shifted by 1 bit.
     checkInt(ctx, loc, val, 12, rel);
-    write16(ctx, loc, (read32(ctx, loc) & 0xf800) | ((val >> 1) & 0x07ff));
+    write16(ctx, loc, (read16(ctx, loc) & 0xf800) | ((val >> 1) & 0x07ff));
     break;
   case R_ARM_THM_JUMP19:
     // Encoding T3: Val = S:J2:J1:imm6:imm11:0

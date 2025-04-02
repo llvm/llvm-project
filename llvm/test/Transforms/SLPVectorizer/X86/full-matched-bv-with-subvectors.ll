@@ -7,29 +7,29 @@ define i32 @test(i64 %l.549) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CONV3:%.*]] = sext i32 0 to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i64> poison, i64 [[CONV3]], i32 3
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> poison, i64 0, i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> [[TMP3]], i64 0, i32 1
 ; CHECK-NEXT:    br label %[[IF_THEN19:.*]]
 ; CHECK:       [[P:.*]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i64> [ zeroinitializer, %[[IF_END29:.*]] ], [ [[TMP13:%.*]], %[[IF_END25:.*]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <2 x i64> [ zeroinitializer, %[[IF_END29:.*]] ], [ [[TMP13:%.*]], %[[IF_END25:.*]] ]
+; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <2 x i64> [[TMP5]], <2 x i64> poison, <4 x i32> <i32 1, i32 0, i32 0, i32 1>
 ; CHECK-NEXT:    br i1 false, label %[[S:.*]], label %[[Q:.*]]
 ; CHECK:       [[Q]]:
 ; CHECK-NEXT:    [[XOR39:%.*]] = phi i64 [ 0, %[[P]] ], [ 0, %[[LAND_LHS_TRUE:.*]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = phi <2 x i64> [ zeroinitializer, %[[P]] ], [ zeroinitializer, %[[LAND_LHS_TRUE]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x i64> [ zeroinitializer, %[[P]] ], [ zeroinitializer, %[[LAND_LHS_TRUE]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i64> [[TMP0]], i64 [[XOR39]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i64> @llvm.vector.insert.v4i64.v2i64(<4 x i64> [[TMP4]], <2 x i64> [[TMP3]], i64 0)
+; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x i64> @llvm.vector.insert.v4i64.v2i64(<4 x i64> [[TMP4]], <2 x i64> [[TMP6]], i64 0)
 ; CHECK-NEXT:    br i1 false, label %[[LOR_LHS_FALSE:.*]], label %[[R:.*]]
 ; CHECK:       [[LOR_LHS_FALSE]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i64> [[TMP5]], <4 x i64> poison, <4 x i32> <i32 0, i32 1, i32 3, i32 2>
 ; CHECK-NEXT:    br i1 false, label %[[LAND_LHS_TRUE]], label %[[S]]
 ; CHECK:       [[R]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = phi <4 x i64> [ [[TMP5]], %[[Q]] ], [ [[TMP16:%.*]], %[[IF_THEN19]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i64> [[TMP7]], <4 x i64> poison, <4 x i32> <i32 0, i32 1, i32 3, i32 2>
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <4 x i64> [ [[TMP7]], %[[Q]] ], [ [[TMP16:%.*]], %[[IF_THEN19]] ]
 ; CHECK-NEXT:    br i1 false, label %[[S]], label %[[LAND_LHS_TRUE]]
 ; CHECK:       [[LAND_LHS_TRUE]]:
 ; CHECK-NEXT:    [[TMP9:%.*]] = phi <4 x i64> [ [[TMP8]], %[[R]] ], [ zeroinitializer, %[[LOR_LHS_FALSE]] ]
 ; CHECK-NEXT:    br i1 false, label %[[Q]], label %[[S]]
 ; CHECK:       [[S]]:
-; CHECK-NEXT:    [[TMP10:%.*]] = phi <4 x i64> [ [[TMP9]], %[[LAND_LHS_TRUE]] ], [ [[TMP8]], %[[R]] ], [ [[TMP6]], %[[LOR_LHS_FALSE]] ], [ [[TMP2]], %[[P]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = phi <4 x i64> [ [[TMP9]], %[[LAND_LHS_TRUE]] ], [ [[TMP8]], %[[R]] ], [ [[TMP7]], %[[LOR_LHS_FALSE]] ], [ [[TMP17]], %[[P]] ]
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i64> [[TMP10]], <4 x i64> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    br label %[[IF_THEN19]]
 ; CHECK:       [[IF_THEN19]]:
@@ -37,7 +37,7 @@ define i32 @test(i64 %l.549) {
 ; CHECK-NEXT:    [[TMP13]] = shufflevector <2 x i64> [[TMP12]], <2 x i64> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <2 x i64> [[TMP12]], <2 x i64> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i64> [[TMP14]], i64 [[L_549]], i32 1
-; CHECK-NEXT:    [[TMP16]] = call <4 x i64> @llvm.vector.insert.v4i64.v2i64(<4 x i64> [[TMP15]], <2 x i64> zeroinitializer, i64 2)
+; CHECK-NEXT:    [[TMP16]] = call <4 x i64> @llvm.vector.insert.v4i64.v2i64(<4 x i64> [[TMP15]], <2 x i64> [[TMP2]], i64 2)
 ; CHECK-NEXT:    br i1 false, label %[[R]], label %[[IF_END25]]
 ; CHECK:       [[IF_END25]]:
 ; CHECK-NEXT:    br i1 false, label %[[IF_END29]], label %[[P]]

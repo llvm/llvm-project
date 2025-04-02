@@ -300,6 +300,8 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   bool HasInitWholeWave = false;
   bool WholeWaveCF = true;
 
+  unsigned ScratchReservedForDynamicVGPRs = 0;
+
   SIMachineFunctionInfo() = default;
   SIMachineFunctionInfo(const llvm::SIMachineFunctionInfo &,
                         const TargetRegisterInfo &TRI,
@@ -352,6 +354,8 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
                        StringValue());
     YamlIO.mapOptional("hasInitWholeWave", MFI.HasInitWholeWave, false);
     YamlIO.mapOptional("wholeWaveCF", MFI.WholeWaveCF, true);
+    YamlIO.mapOptional("scratchReservedForDynamicVGPRs",
+                       MFI.ScratchReservedForDynamicVGPRs, 0);
   }
 };
 
@@ -465,6 +469,10 @@ private:
   unsigned NumSpilledSGPRs = 0;
   unsigned NumSpilledVGPRs = 0;
 
+  // The size in bytes of the scratch space reserved for the CWSR trap handler
+  // to spill some of the dynamic VGPRs.
+  unsigned ScratchReservedForDynamicVGPRs = 0;
+
   // Tracks information about user SGPRs that will be setup by hardware which
   // will apply to all wavefronts of the grid.
   GCNUserSGPRUsageInfo UserSGPRInfo;
@@ -503,8 +511,6 @@ private:
   // Maximum number of dwords that can be clusterred during instruction
   // scheduler stage.
   unsigned MaxMemoryClusterDWords = DefaultMemoryClusterDWordsLimit;
-
-  mutable std::optional<bool> UsesAGPRs;
 
   MCPhysReg getNextUserSGPR() const;
 
@@ -800,6 +806,15 @@ public:
 
   void setBytesInStackArgArea(unsigned Bytes) {
     BytesInStackArgArea = Bytes;
+  }
+
+  // This is only used if we need to save any dynamic VGPRs in scratch.
+  unsigned getScratchReservedForDynamicVGPRs() const {
+    return ScratchReservedForDynamicVGPRs;
+  }
+
+  void setScratchReservedForDynamicVGPRs(unsigned SizeInBytes) {
+    ScratchReservedForDynamicVGPRs = SizeInBytes;
   }
 
   // Add user SGPRs.
@@ -1149,9 +1164,6 @@ public:
   // \returns true if a function has a use of AGPRs via inline asm or
   // has a call which may use it.
   bool mayUseAGPRs(const Function &F) const;
-
-  // \returns true if a function needs or may need AGPRs.
-  bool usesAGPRs(const MachineFunction &MF) const;
 
   /// \returns Default/requested number of work groups for this function.
   SmallVector<unsigned> getMaxNumWorkGroups() const { return MaxNumWorkGroups; }

@@ -33,6 +33,24 @@ namespace RISCVInsnOpcode {
 #include "RISCVGenSearchableTables.inc"
 } // namespace RISCVInsnOpcode
 
+namespace RISCVVInversePseudosTable {
+using namespace RISCV;
+#define GET_RISCVVInversePseudosTable_IMPL
+#include "RISCVGenSearchableTables.inc"
+} // namespace RISCVVInversePseudosTable
+
+namespace RISCV {
+#define GET_RISCVVSSEGTable_IMPL
+#define GET_RISCVVLSEGTable_IMPL
+#define GET_RISCVVLXSEGTable_IMPL
+#define GET_RISCVVSXSEGTable_IMPL
+#define GET_RISCVVLETable_IMPL
+#define GET_RISCVVSETable_IMPL
+#define GET_RISCVVLXTable_IMPL
+#define GET_RISCVVSXTable_IMPL
+#include "RISCVGenSearchableTables.inc"
+} // namespace RISCV
+
 namespace RISCVABI {
 ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
                      StringRef ABIName) {
@@ -224,12 +242,12 @@ float RISCVLoadFPImm::getFPImm(unsigned Imm) {
 
 void RISCVZC::printRlist(unsigned SlistEncode, raw_ostream &OS) {
   OS << "{ra";
-  if (SlistEncode > 4) {
+  if (SlistEncode > RISCVZC::RA) {
     OS << ", s0";
-    if (SlistEncode == 15)
+    if (SlistEncode == RISCVZC::RA_S0_S11)
       OS << "-s11";
-    else if (SlistEncode > 5 && SlistEncode <= 14)
-      OS << "-s" << (SlistEncode - 5);
+    else if (SlistEncode > RISCVZC::RA_S0 && SlistEncode <= RISCVZC::RA_S0_S11)
+      OS << "-s" << (SlistEncode - RISCVZC::RA_S0);
   }
   OS << "}";
 }

@@ -646,13 +646,12 @@ void SampleProfileLoaderBaseImpl<BT>::findEquivalenceClasses(FunctionT &F) {
     BasicBlockT *BB1 = &BB;
 
     // Compute BB1's equivalence class once.
-    if (EquivalenceClass.count(BB1)) {
+    // By default, blocks are in their own equivalence class.
+    auto [It, Inserted] = EquivalenceClass.try_emplace(BB1, BB1);
+    if (!Inserted) {
       LLVM_DEBUG(printBlockEquivalence(dbgs(), BB1));
       continue;
     }
-
-    // By default, blocks are in their own equivalence class.
-    EquivalenceClass[BB1] = BB1;
 
     // Traverse all the blocks dominated by BB1. We are looking for
     // every basic block BB2 such that:
@@ -745,8 +744,9 @@ bool SampleProfileLoaderBaseImpl<BT>::propagateThroughEdges(
 
       if (i == 0) {
         // First, visit all predecessor edges.
-        NumTotalEdges = Predecessors[BB].size();
-        for (auto *Pred : Predecessors[BB]) {
+        auto &Preds = Predecessors[BB];
+        NumTotalEdges = Preds.size();
+        for (auto *Pred : Preds) {
           Edge E = std::make_pair(Pred, BB);
           TotalWeight += visitEdge(E, &NumUnknownEdges, &UnknownEdge);
           if (E.first == E.second)
@@ -757,8 +757,9 @@ bool SampleProfileLoaderBaseImpl<BT>::propagateThroughEdges(
         }
       } else {
         // On the second round, visit all successor edges.
-        NumTotalEdges = Successors[BB].size();
-        for (auto *Succ : Successors[BB]) {
+        auto &Succs = Successors[BB];
+        NumTotalEdges = Succs.size();
+        for (auto *Succ : Succs) {
           Edge E = std::make_pair(BB, Succ);
           TotalWeight += visitEdge(E, &NumUnknownEdges, &UnknownEdge);
         }
@@ -881,19 +882,21 @@ void SampleProfileLoaderBaseImpl<BT>::buildEdges(FunctionT &F) {
 
     // Add predecessors for B1.
     SmallPtrSet<BasicBlockT *, 16> Visited;
-    if (!Predecessors[B1].empty())
+    auto &Preds = Predecessors[B1];
+    if (!Preds.empty())
       llvm_unreachable("Found a stale predecessors list in a basic block.");
     for (auto *B2 : getPredecessors(B1))
       if (Visited.insert(B2).second)
-        Predecessors[B1].push_back(B2);
+        Preds.push_back(B2);
 
     // Add successors for B1.
     Visited.clear();
-    if (!Successors[B1].empty())
+    auto &Succs = Successors[B1];
+    if (!Succs.empty())
       llvm_unreachable("Found a stale successors list in a basic block.");
     for (auto *B2 : getSuccessors(B1))
       if (Visited.insert(B2).second)
-        Successors[B1].push_back(B2);
+        Succs.push_back(B2);
   }
 }
 

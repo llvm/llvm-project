@@ -98,7 +98,7 @@ void llvm::dumpOffloadBundleFatBinary(const ObjectFile &O, std::string ArchName)
     // now we have a list of Found Entries .... dump them
     SmallVectorImpl<OffloadBundleEntry>::iterator FoundIter =
         FoundEntries.begin();
-    for (int64_t entry_num = 0; entry_num < FoundEntries.size(); entry_num++) {
+    for (uint64_t entry_num = 0; entry_num < FoundEntries.size(); entry_num++) {
       // create file name for this object file:  <source-filename>:<Bundle
       // Number>.<EntryID>
       std::string str = BundleIter->getFileName().str() + ":" +

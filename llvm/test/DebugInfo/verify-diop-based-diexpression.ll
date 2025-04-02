@@ -26,6 +26,15 @@ entry:
   ; CHECK: #dbg_declare(i8 poison, ![[#]], !DIExpression(DIOpArg(0, i32)), ![[#]])
   call void @llvm.dbg.declare(metadata i8 poison, metadata !24, metadata !DIExpression(DIOpArg(0, i32))), !dbg !22
 
+  ; CHECK: #dbg_declare(ptr %i, ![[#]], !DIExpression(DIOpArg(0, ptr), DIOpDeref(%struct.type), DIOpConstant(i32 64), DIOpBitOffset(ptr)), ![[#]])
+  call void @llvm.dbg.declare(metadata ptr %i, metadata !26, metadata !DIExpression(DIOpArg(0, ptr), DIOpDeref(%struct.type), DIOpConstant(i32 64), DIOpBitOffset(ptr))), !dbg !22
+
+  ; CHECK: #dbg_declare(ptr %i, ![[#]], !DIExpression(DIOpArg(0, ptr), DIOpDeref(%struct.type), DIOpConstant(i32 8), DIOpByteOffset(ptr)), ![[#]])
+  call void @llvm.dbg.declare(metadata ptr %i, metadata !27, metadata !DIExpression(DIOpArg(0, ptr), DIOpDeref(%struct.type), DIOpConstant(i32 8), DIOpByteOffset(ptr))), !dbg !22
+
+  ; CHECK: #dbg_declare(i32 3, ![[#]], !DIExpression(DIOpArg(0, i32), DIOpConstant(<2 x i32> <i32 1, i32 2>), DIOpConstant(<2 x i32> <i32 3, i32 4>), DIOpSelect()), ![[#]])
+  call void @llvm.dbg.declare(metadata i32 3, metadata !28, metadata !DIExpression(DIOpArg(0, i32), DIOpConstant(<2 x i32> <i32 1, i32 2>), DIOpConstant(<2 x i32> <i32 3, i32 4>), DIOpSelect())), !dbg !22
+
   ret void
 }
 
@@ -55,6 +64,10 @@ entry:
 !22 = !DILocation(line: 12, column: 7, scope: !17)
 !23 = !DILocation(line: 13, column: 1, scope: !17)
 !24 = !DILocalVariable(name: "j", scope: !17, file: !1, line: 12, type: !10)
+!25 = !DIBasicType(name: "int64", size: 64, encoding: DW_ATE_unsigned)
+!26 = !DILocalVariable(name: "k", scope: !17, file: !1, line: 12, type: !25)
+!27 = !DILocalVariable(name: "l", scope: !17, file: !1, line: 12, type: !25)
+!28 = !DILocalVariable(name: "m", scope: !17, file: !1, line: 12, type: !25)
 
 ;--- invalid.ll
 ; RUN: opt invalid.ll -S -passes=verify 2>&1 | FileCheck invalid.ll

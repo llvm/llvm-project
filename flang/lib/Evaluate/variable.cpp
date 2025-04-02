@@ -477,8 +477,11 @@ int BaseObject::Corank() const {
 int Component::Corank() const {
   if (int corank{symbol_->Corank()}; corank > 0) {
     return corank;
+  } else if (semantics::IsAllocatableOrObjectPointer(&*symbol_)) {
+    return 0; // coarray subobjects ca%a or ca%p are not coarrays
+  } else {
+    return base().Corank();
   }
-  return base().Corank();
 }
 
 int NamedEntity::Corank() const {
@@ -489,7 +492,14 @@ int NamedEntity::Corank() const {
       u_);
 }
 
-int ArrayRef::Corank() const { return base().Corank(); }
+int ArrayRef::Corank() const {
+  for (const Subscript &subs : subscript_) {
+    if (!std::holds_alternative<Triplet>(subs.u) && subs.Rank() > 0) {
+      return 0; // vector-valued subscript - subobject is not a coarray
+    }
+  }
+  return base().Corank();
+}
 
 int DataRef::Corank() const {
   return common::visit(common::visitors{

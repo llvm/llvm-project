@@ -146,7 +146,7 @@ private:
   Operation *op = nullptr;
 };
 
-inline raw_ostream &operator<<(raw_ostream &os, ProgramPoint point) {
+inline raw_ostream &operator<<(raw_ostream &os, const ProgramPoint &point) {
   point.print(os);
   return os;
 }
@@ -662,7 +662,7 @@ inline raw_ostream &operator<<(raw_ostream &os, const AnalysisState &state) {
   return os;
 }
 
-inline raw_ostream &operator<<(raw_ostream &os, LatticeAnchor anchor) {
+inline raw_ostream &operator<<(raw_ostream &os, const LatticeAnchor &anchor) {
   anchor.print(os);
   return os;
 }

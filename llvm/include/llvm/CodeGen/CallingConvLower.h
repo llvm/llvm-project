@@ -493,7 +493,7 @@ public:
   /// the given value type. This is useful when varargs are passed in the
   /// registers that normal prototyped parameters would be passed in, or for
   /// implementing perfect forwarding.
-  void getRemainingRegParmsForType(SmallVectorImpl<MCPhysReg> &Regs, MVT VT,
+  void getRemainingRegParmsForType(SmallVectorImpl<MCRegister> &Regs, MVT VT,
                                    CCAssignFn Fn);
 
   /// Compute the set of registers that need to be preserved and forwarded to

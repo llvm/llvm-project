@@ -200,23 +200,30 @@ static bool DiagnoseUnusedComparison(Sema &S, const Expr *E) {
   return true;
 }
 
-static bool DiagnoseNoDiscard(Sema &S, const WarnUnusedResultAttr *A,
-                              SourceLocation Loc, SourceRange R1,
-                              SourceRange R2, bool IsCtor) {
+static bool DiagnoseNoDiscard(Sema &S, const NamedDecl *OffendingDecl,
+                              const WarnUnusedResultAttr *A, SourceLocation Loc,
+                              SourceRange R1, SourceRange R2, bool IsCtor) {
   if (!A)
     return false;
   StringRef Msg = A->getMessage();
 
   if (Msg.empty()) {
+    if (OffendingDecl)
+      return S.Diag(Loc, diag::warn_unused_return_type)
+             << IsCtor << A << OffendingDecl << false << R1 << R2;
     if (IsCtor)
-      return S.Diag(Loc, diag::warn_unused_constructor) << A << R1 << R2;
-    return S.Diag(Loc, diag::warn_unused_result) << A << R1 << R2;
+      return S.Diag(Loc, diag::warn_unused_constructor)
+             << A << false << R1 << R2;
+    return S.Diag(Loc, diag::warn_unused_result) << A << false << R1 << R2;
   }
 
+  if (OffendingDecl)
+    return S.Diag(Loc, diag::warn_unused_return_type)
+           << IsCtor << A << OffendingDecl << true << Msg << R1 << R2;
   if (IsCtor)
-    return S.Diag(Loc, diag::warn_unused_constructor_msg) << A << Msg << R1
-                                                          << R2;
-  return S.Diag(Loc, diag::warn_unused_result_msg) << A << Msg << R1 << R2;
+    return S.Diag(Loc, diag::warn_unused_constructor)
+           << A << true << Msg << R1 << R2;
+  return S.Diag(Loc, diag::warn_unused_result) << A << true << Msg << R1 << R2;
 }
 
 namespace {
@@ -288,9 +295,10 @@ void DiagnoseUnused(Sema &S, const Expr *E, std::optional<unsigned> DiagID) {
     if (E->getType()->isVoidType())
       return;
 
-    if (DiagnoseNoDiscard(S, cast_or_null<WarnUnusedResultAttr>(
-                                     CE->getUnusedResultAttr(S.Context)),
-                          Loc, R1, R2, /*isCtor=*/false))
+    auto [OffendingDecl, A] = CE->getUnusedResultAttr(S.Context);
+    if (DiagnoseNoDiscard(S, OffendingDecl,
+                          cast_or_null<WarnUnusedResultAttr>(A), Loc, R1, R2,
+                          /*isCtor=*/false))
       return;
 
     // If the callee has attribute pure, const, or warn_unused_result, warn with
@@ -311,15 +319,20 @@ void DiagnoseUnused(Sema &S, const Expr *E, std::optional<unsigned> DiagID) {
     }
   } else if (const auto *CE = dyn_cast<CXXConstructExpr>(E)) {
     if (const CXXConstructorDecl *Ctor = CE->getConstructor()) {
+      const NamedDecl *OffendingDecl = nullptr;
       const auto *A = Ctor->getAttr<WarnUnusedResultAttr>();
-      A = A ? A : Ctor->getParent()->getAttr<WarnUnusedResultAttr>();
-      if (DiagnoseNoDiscard(S, A, Loc, R1, R2, /*isCtor=*/true))
+      if (!A) {
+        OffendingDecl = Ctor->getParent();
+        A = OffendingDecl->getAttr<WarnUnusedResultAttr>();
+      }
+      if (DiagnoseNoDiscard(S, OffendingDecl, A, Loc, R1, R2,
+                            /*isCtor=*/true))
         return;
     }
   } else if (const auto *ILE = dyn_cast<InitListExpr>(E)) {
     if (const TagDecl *TD = ILE->getType()->getAsTagDecl()) {
 
-      if (DiagnoseNoDiscard(S, TD->getAttr<WarnUnusedResultAttr>(), Loc, R1,
+      if (DiagnoseNoDiscard(S, TD, TD->getAttr<WarnUnusedResultAttr>(), Loc, R1,
                             R2, /*isCtor=*/false))
         return;
     }
@@ -334,8 +347,9 @@ void DiagnoseUnused(Sema &S, const Expr *E, std::optional<unsigned> DiagID) {
     }
     const ObjCMethodDecl *MD = ME->getMethodDecl();
     if (MD) {
-      if (DiagnoseNoDiscard(S, MD->getAttr<WarnUnusedResultAttr>(), Loc, R1,
-                            R2, /*isCtor=*/false))
+      if (DiagnoseNoDiscard(S, nullptr, MD->getAttr<WarnUnusedResultAttr>(),
+                            Loc, R1, R2,
+                            /*isCtor=*/false))
         return;
     }
   } else if (const PseudoObjectExpr *POE = dyn_cast<PseudoObjectExpr>(E)) {
@@ -398,10 +412,6 @@ void DiagnoseUnused(Sema &S, const Expr *E, std::optional<unsigned> DiagID) {
                     S.PDiag(*DiagID) << R1 << R2);
 }
 } // namespace
-
-void Sema::DiagnoseDiscardedExprMarkedNodiscard(const Expr *E) {
-  DiagnoseUnused(*this, E, std::nullopt);
-}
 
 void Sema::DiagnoseUnusedExprResult(const Stmt *S, unsigned DiagID) {
   if (const LabelStmt *Label = dyn_cast_if_present<LabelStmt>(S))
@@ -789,7 +799,8 @@ bool Sema::checkMustTailAttr(const Stmt *St, const Attr &MTA) {
     // Call is: obj->*method_ptr or obj.*method_ptr
     const auto *MPT =
         CalleeBinOp->getRHS()->getType()->castAs<MemberPointerType>();
-    CalleeType.This = QualType(MPT->getClass(), 0);
+    CalleeType.This =
+        Context.getTypeDeclType(MPT->getMostRecentCXXRecordDecl());
     CalleeType.Func = MPT->getPointeeType()->castAs<FunctionProtoType>();
     CalleeType.MemberType = FuncType::ft_pointer_to_member;
   } else if (isa<CXXPseudoDestructorExpr>(CalleeExpr)) {
@@ -2255,10 +2266,11 @@ StmtResult Sema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
       for (auto *DI : DS->decls()) {
         if (VarDecl *VD = dyn_cast<VarDecl>(DI)) {
           VarDeclSeen = true;
-          if (VD->isLocalVarDecl() && !VD->hasLocalStorage()) {
-            Diag(DI->getLocation(), diag::err_non_local_variable_decl_in_for);
-            DI->setInvalidDecl();
-          }
+          if (VD->isLocalVarDecl() && !VD->hasLocalStorage())
+            Diag(DI->getLocation(),
+                 getLangOpts().C23
+                     ? diag::warn_c17_non_local_variable_decl_in_for
+                     : diag::ext_c23_non_local_variable_decl_in_for);
         } else if (!NonVarSeen) {
           // Keep track of the first non-variable declaration we saw so that
           // we can diagnose if we don't see any variable declarations. This
@@ -2270,7 +2282,9 @@ StmtResult Sema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
       // Diagnose if we saw a non-variable declaration but no variable
       // declarations.
       if (NonVarSeen && !VarDeclSeen)
-        Diag(NonVarSeen->getLocation(), diag::err_non_variable_decl_in_for);
+        Diag(NonVarSeen->getLocation(),
+             getLangOpts().C23 ? diag::warn_c17_non_variable_decl_in_for
+                               : diag::ext_c23_non_variable_decl_in_for);
     }
   }
 
@@ -3576,7 +3590,8 @@ StmtResult Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc,
 
   if (auto *CurBlock = dyn_cast<BlockScopeInfo>(CurCap)) {
     if (CurBlock->FunctionType->castAs<FunctionType>()->getNoReturnAttr()) {
-      Diag(ReturnLoc, diag::err_noreturn_block_has_return_expr);
+      Diag(ReturnLoc, diag::err_noreturn_has_return_expr)
+          << diag::FalloffFunctionKind::Block;
       return StmtError();
     }
   } else if (auto *CurRegion = dyn_cast<CapturedRegionScopeInfo>(CurCap)) {
@@ -3587,7 +3602,8 @@ StmtResult Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc,
     if (CurLambda->CallOperator->getType()
             ->castAs<FunctionType>()
             ->getNoReturnAttr()) {
-      Diag(ReturnLoc, diag::err_noreturn_lambda_has_return_expr);
+      Diag(ReturnLoc, diag::err_noreturn_has_return_expr)
+          << diag::FalloffFunctionKind::Lambda;
       return StmtError();
     }
   }
@@ -3896,7 +3912,7 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
     FnRetType = FD->getReturnType();
     if (FD->hasAttrs())
       Attrs = &FD->getAttrs();
-    if (FD->isNoReturn())
+    if (FD->isNoReturn() && !getCurFunction()->isCoroutine())
       Diag(ReturnLoc, diag::warn_noreturn_function_has_return_expr) << FD;
     if (FD->isMain() && RetValExp)
       if (isa<CXXBoolLiteralExpr>(RetValExp))
@@ -4033,9 +4049,9 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
           Diag(ReturnLoc, D) << CurDecl << isa<CXXDestructorDecl>(CurDecl)
                              << RetValExp->getSourceRange();
         }
-        // return (some void expression); is legal in C++.
+        // return (some void expression); is legal in C++ and C2y.
         else if (D != diag::ext_return_has_void_expr ||
-                 !getLangOpts().CPlusPlus) {
+                 (!getLangOpts().CPlusPlus && !getLangOpts().C2y)) {
           NamedDecl *CurDecl = getCurFunctionOrMethodDecl();
 
           int FunctionKind = 0;

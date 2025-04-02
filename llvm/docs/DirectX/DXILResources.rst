@@ -277,7 +277,7 @@ Examples:
 Accessing Resources as Memory
 -----------------------------
 
-*relevant types: Buffers, CBuffer, and Textures*
+*relevant types: Buffers and Textures*
 
 Loading and storing from resources is generally represented in LLVM using
 operations on memory that is only accessible via a handle object. Given a
@@ -321,12 +321,11 @@ Examples:
 Loads, Samples, and Gathers
 ---------------------------
 
-*relevant types: Buffers, CBuffers, and Textures*
+*relevant types: Buffers and Textures*
 
-All load, sample, and gather operations in DXIL return a `ResRet`_ type, and
-CBuffer loads return a similar `CBufRet`_ type. These types are structs
-containing 4 elements of some basic type, and in the case of `ResRet` a 5th
-element that is used by the `CheckAccessFullyMapped`_ operation. Some of these
+All load, sample, and gather operations in DXIL return a `ResRet`_ type. These
+types are structs containing 4 elements of some basic type, and a 5th element
+that is used by the `CheckAccessFullyMapped`_ operation. Some of these
 operations, like `RawBufferLoad`_ include a mask and/or alignment that tell us
 some information about how to interpret those four values.
 
@@ -632,3 +631,118 @@ Examples:
        target("dx.RawBuffer", i8, 1, 0, 0) %buffer,
        i32 %index, i32 0, <4 x double> %data)
 
+Constant Buffer Loads
+---------------------
+
+*relevant types: CBuffers*
+
+The `CBufferLoadLegacy`_ operation, which despite the name is the only
+supported way to load from a cbuffer in any DXIL version, loads a single "row"
+of a cbuffer, which is exactly 16 bytes. The return value of the operation is
+represented by a `CBufRet`_ type, which has variants for 2 64-bit values, 4
+32-bit values, and 8 16-bit values.
+
+We represent these in LLVM IR with 3 separate operations, which return a
+2-element, 4-element, or 8-element struct respectively.
+
+.. _CBufferLoadLegacy: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#cbufferLoadLegacy
+.. _CBufRet: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#cbufferloadlegacy
+
+.. list-table:: ``@llvm.dx.resource.load.cbufferrow.4``
+   :header-rows: 1
+
+   * - Argument
+     -
+     - Type
+     - Description
+   * - Return value
+     -
+     - A struct of 4 32-bit values
+     - A single row of a cbuffer, interpreted as 4 32-bit values
+   * - ``%buffer``
+     - 0
+     - ``target(dx.CBuffer, ...)``
+     - The buffer to load from
+   * - ``%index``
+     - 1
+     - ``i32``
+     - Index into the buffer
+
+Examples:
+
+.. code-block:: llvm
+
+   %ret = call {float, float, float, float}
+       @llvm.dx.resource.load.cbufferrow.4(
+           target("dx.CBuffer", target("dx.Layout", {float}, 4, 0)) %buffer,
+           i32 %index)
+   %ret = call {i32, i32, i32, i32}
+       @llvm.dx.resource.load.cbufferrow.4(
+           target("dx.CBuffer", target("dx.Layout", {i32}, 4, 0)) %buffer,
+           i32 %index)
+
+.. list-table:: ``@llvm.dx.resource.load.cbufferrow.2``
+   :header-rows: 1
+
+   * - Argument
+     -
+     - Type
+     - Description
+   * - Return value
+     -
+     - A struct of 2 64-bit values
+     - A single row of a cbuffer, interpreted as 2 64-bit values
+   * - ``%buffer``
+     - 0
+     - ``target(dx.CBuffer, ...)``
+     - The buffer to load from
+   * - ``%index``
+     - 1
+     - ``i32``
+     - Index into the buffer
+
+Examples:
+
+.. code-block:: llvm
+
+   %ret = call {double, double}
+       @llvm.dx.resource.load.cbufferrow.2(
+           target("dx.CBuffer", target("dx.Layout", {double}, 8, 0)) %buffer,
+           i32 %index)
+   %ret = call {i64, i64}
+       @llvm.dx.resource.load.cbufferrow.2(
+           target("dx.CBuffer", target("dx.Layout", {i64}, 4, 0)) %buffer,
+           i32 %index)
+
+.. list-table:: ``@llvm.dx.resource.load.cbufferrow.8``
+   :header-rows: 1
+
+   * - Argument
+     -
+     - Type
+     - Description
+   * - Return value
+     -
+     - A struct of 8 16-bit values
+     - A single row of a cbuffer, interpreted as 8 16-bit values
+   * - ``%buffer``
+     - 0
+     - ``target(dx.CBuffer, ...)``
+     - The buffer to load from
+   * - ``%index``
+     - 1
+     - ``i32``
+     - Index into the buffer
+
+Examples:
+
+.. code-block:: llvm
+
+   %ret = call {half, half, half, half, half, half, half, half}
+       @llvm.dx.resource.load.cbufferrow.8(
+           target("dx.CBuffer", target("dx.Layout", {half}, 2, 0)) %buffer,
+           i32 %index)
+   %ret = call {i16, i16, i16, i16, i16, i16, i16, i16}
+       @llvm.dx.resource.load.cbufferrow.8(
+           target("dx.CBuffer", target("dx.Layout", {i16}, 2, 0)) %buffer,
+           i32 %index)

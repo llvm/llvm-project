@@ -6,7 +6,6 @@ add_flang_library(CUFDialect
   CUFToLLVMIRTranslation.cpp
 
   DEPENDS
-  MLIRIR
   CUFAttrsIncGen
   CUFOpsIncGen
 
@@ -19,6 +18,9 @@ add_flang_library(CUFDialect
   AsmParser
   AsmPrinter
   Remarks
+
+  MLIR_DEPS
+  MLIRIR
 
   MLIR_LIBS
   MLIRIR

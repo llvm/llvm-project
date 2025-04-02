@@ -55,18 +55,18 @@ body: |
 
 
     ; CHECK: DW_AT_location
-    ; CHECK-NEXT: [0x{{[0-9a-z]+}}, 0x{{[0-9a-z]+}}): DW_OP_piece 0x2, DW_OP_regx VGPR44, DW_OP_piece 0x4, DW_OP_regx VGPR45, DW_OP_piece 0x2
+    ; CHECK-NEXT: [0x{{[0-9a-z]+}}, 0x{{[0-9a-z]+}}): DW_OP_piece 0x2, DW_OP_regx VGPR44, DW_OP_LLVM_user DW_OP_LLVM_push_lane, DW_OP_lit4, DW_OP_mul, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_piece 0x4, DW_OP_regx VGPR45, DW_OP_LLVM_user DW_OP_LLVM_push_lane, DW_OP_lit4, DW_OP_mul, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_piece 0x2
     DBG_VALUE renamable $vgpr43, $noreg, !18, !DIExpression(DW_OP_LLVM_poisoned, DW_OP_LLVM_fragment, 0, 32), debug-location !14
     DBG_VALUE renamable $vgpr44, $noreg, !18, !DIExpression(DIOpArg(0, i32), DIOpFragment(16, 32)), debug-location !14
     DBG_VALUE renamable $vgpr45, $noreg, !18, !DIExpression(DIOpArg(0, i32), DIOpFragment(48, 16)), debug-location !14
     S_NOP 0, debug-location !14
 
-    ; CHECK-NEXT: [0x{{[0-9a-z]+}}, 0x{{[0-9a-z]+}}): DW_OP_regx VGPR46, DW_OP_piece 0x1, DW_OP_piece 0x1, DW_OP_LLVM_user DW_OP_LLVM_undefined, DW_OP_piece 0x2, DW_OP_piece 0x2, DW_OP_regx VGPR45, DW_OP_piece 0x2
+    ; CHECK-NEXT: [0x{{[0-9a-z]+}}, 0x{{[0-9a-z]+}}): DW_OP_regx VGPR46, DW_OP_LLVM_user DW_OP_LLVM_push_lane, DW_OP_lit4, DW_OP_mul, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_piece 0x1, DW_OP_piece 0x1, DW_OP_LLVM_user DW_OP_LLVM_undefined, DW_OP_piece 0x2, DW_OP_piece 0x2, DW_OP_regx VGPR45, DW_OP_LLVM_user DW_OP_LLVM_push_lane, DW_OP_lit4, DW_OP_mul, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_piece 0x2
     DBG_VALUE renamable $vgpr46, $noreg, !18, !DIExpression(DIOpArg(0, i32), DIOpFragment(0, 8)), debug-location !15
     DBG_VALUE renamable $vgpr47, $noreg, !18, !DIExpression(DW_OP_LLVM_poisoned, DW_OP_LLVM_fragment, 16, 16), debug-location !15
     S_NOP 0, debug-location !15
 
-    ; CHECK-NEXT: [0x{{[0-9a-z]+}}, 0x{{[0-9a-z]+}}): DW_OP_regx VGPR46, DW_OP_piece 0x1, DW_OP_LLVM_user DW_OP_LLVM_undefined, DW_OP_piece 0x7
+    ; CHECK-NEXT: [0x{{[0-9a-z]+}}, 0x{{[0-9a-z]+}}): DW_OP_regx VGPR46, DW_OP_LLVM_user DW_OP_LLVM_push_lane, DW_OP_lit4, DW_OP_mul, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_piece 0x1, DW_OP_LLVM_user DW_OP_LLVM_undefined, DW_OP_piece 0x7
     ; CHECK-NEXT: DW_AT_name ("overlaps")
     DBG_VALUE renamable $vgpr48, $noreg, !18, !DIExpression(DW_OP_LLVM_poisoned, DW_OP_LLVM_fragment, 8, 56), debug-location !16
 

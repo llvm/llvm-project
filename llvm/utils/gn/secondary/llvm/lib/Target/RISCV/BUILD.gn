@@ -17,6 +17,7 @@ tablegen("RISCVGenCompressInstEmitter") {
 tablegen("RISCVGenMacroFusion") {
   visibility = [
     ":LLVMRISCVCodeGen",
+    "//llvm/tools/llvm-exegesis/lib/RISCV",
     "//llvm/unittests/Target/RISCV:RISCVTests",
   ]
   args = [ "-gen-macro-fusion-pred" ]
@@ -69,7 +70,11 @@ tablegen("RISCVGenPostLegalizeGICombiner") {
 }
 
 tablegen("RISCVGenRegisterBank") {
-  visibility = [ ":LLVMRISCVCodeGen" ]
+  visibility = [
+    ":LLVMRISCVCodeGen",
+    "MCA",
+    "//llvm/tools/llvm-exegesis/lib/RISCV",
+  ]
   args = [ "-gen-register-bank" ]
   td_file = "RISCV.td"
 }
@@ -118,6 +123,7 @@ static_library("LLVMRISCVCodeGen") {
     "RISCVDeadRegisterDefinitions.cpp",
     "RISCVExpandAtomicPseudoInsts.cpp",
     "RISCVExpandPseudoInsts.cpp",
+    "RISCVFoldMemOffset.cpp",
     "RISCVFrameLowering.cpp",
     "RISCVGatherScatterLowering.cpp",
     "RISCVISelDAGToDAG.cpp",
@@ -128,6 +134,8 @@ static_library("LLVMRISCVCodeGen") {
     "RISCVInsertWriteVXRM.cpp",
     "RISCVInstrInfo.cpp",
     "RISCVLandingPadSetup.cpp",
+    "RISCVLateBranchOpt.cpp",
+    "RISCVLoadStoreOptimizer.cpp",
     "RISCVMachineFunctionInfo.cpp",
     "RISCVMakeCompressible.cpp",
     "RISCVMergeBaseOffset.cpp",
@@ -143,6 +151,7 @@ static_library("LLVMRISCVCodeGen") {
     "RISCVTargetObjectFile.cpp",
     "RISCVTargetTransformInfo.cpp",
     "RISCVVLOptimizer.cpp",
+    "RISCVVMV0Elimination.cpp",
     "RISCVVectorMaskDAGMutation.cpp",
     "RISCVVectorPeephole.cpp",
     "RISCVZacasABIFix.cpp",

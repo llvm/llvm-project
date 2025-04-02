@@ -635,6 +635,11 @@ def FeatureStrictAlign : SubtargetFeature<"strict-align",
                                           "Disallow all unaligned memory "
                                           "access">;
 
+def FeatureExecuteOnly : SubtargetFeature<"execute-only",
+                                          "GenExecuteOnly", "true",
+                                          "Enable the generation of "
+                                          "execute only code.">;
+
 foreach i = {1-7,9-15,18,20-28} in
     def FeatureReserveX#i : SubtargetFeature<"reserve-x"#i, "ReserveXRegister["#i#"]", "true",
                                              "Reserve X"#i#", making it unavailable "

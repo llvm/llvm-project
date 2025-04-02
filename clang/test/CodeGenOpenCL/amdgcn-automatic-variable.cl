@@ -72,7 +72,6 @@ void func1(int *x) {
 void func2(void) {
   int lv1;
   lv1 = 1;
-
   int lv2 = 2;
 
   int la[100];

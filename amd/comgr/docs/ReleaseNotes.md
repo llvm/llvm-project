@@ -218,8 +218,6 @@ now-removed Comgr actions, such as \*COMPILE\_SOURCE\_TO\_FATBIN.
 
 New Targets
 -----------
- - gfx940
- - gfx941
  - gfx942
  - gfx950
  - gfx1036

@@ -54,41 +54,59 @@ void MachineCycleInfoWrapperPass::releaseMemory() {
   F = nullptr;
 }
 
+AnalysisKey MachineCycleAnalysis::Key;
+
+MachineCycleInfo
+MachineCycleAnalysis::run(MachineFunction &MF,
+                          MachineFunctionAnalysisManager &MFAM) {
+  MachineCycleInfo MCI;
+  MCI.compute(MF);
+  return MCI;
+}
+
 namespace {
-class MachineCycleInfoPrinterPass : public MachineFunctionPass {
+class MachineCycleInfoPrinterLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  MachineCycleInfoPrinterPass();
+  MachineCycleInfoPrinterLegacy();
 
   bool runOnMachineFunction(MachineFunction &F) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 };
 } // namespace
 
-char MachineCycleInfoPrinterPass::ID = 0;
+char MachineCycleInfoPrinterLegacy::ID = 0;
 
-MachineCycleInfoPrinterPass::MachineCycleInfoPrinterPass()
+MachineCycleInfoPrinterLegacy::MachineCycleInfoPrinterLegacy()
     : MachineFunctionPass(ID) {
-  initializeMachineCycleInfoPrinterPassPass(*PassRegistry::getPassRegistry());
+  initializeMachineCycleInfoPrinterLegacyPass(*PassRegistry::getPassRegistry());
 }
 
-INITIALIZE_PASS_BEGIN(MachineCycleInfoPrinterPass, "print-machine-cycles",
+INITIALIZE_PASS_BEGIN(MachineCycleInfoPrinterLegacy, "print-machine-cycles",
                       "Print Machine Cycle Info Analysis", true, true)
 INITIALIZE_PASS_DEPENDENCY(MachineCycleInfoWrapperPass)
-INITIALIZE_PASS_END(MachineCycleInfoPrinterPass, "print-machine-cycles",
+INITIALIZE_PASS_END(MachineCycleInfoPrinterLegacy, "print-machine-cycles",
                     "Print Machine Cycle Info Analysis", true, true)
 
-void MachineCycleInfoPrinterPass::getAnalysisUsage(AnalysisUsage &AU) const {
+void MachineCycleInfoPrinterLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<MachineCycleInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-bool MachineCycleInfoPrinterPass::runOnMachineFunction(MachineFunction &F) {
+bool MachineCycleInfoPrinterLegacy::runOnMachineFunction(MachineFunction &F) {
   auto &CI = getAnalysis<MachineCycleInfoWrapperPass>();
   CI.print(errs());
   return false;
+}
+
+PreservedAnalyses
+MachineCycleInfoPrinterPass::run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM) {
+  auto &MCI = MFAM.getResult<MachineCycleAnalysis>(MF);
+  MCI.print(OS);
+  return PreservedAnalyses::all();
 }
 
 bool llvm::isCycleInvariant(const MachineCycle *Cycle, MachineInstr &I) {

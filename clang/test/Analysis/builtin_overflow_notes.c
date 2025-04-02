@@ -23,8 +23,8 @@ void test_overflow_note(int a, int b)
 
    if (__builtin_add_overflow(a, b, &res)) { // expected-note {{Assuming overflow}}
                                              // expected-note@-1 {{Taking true branch}}
-     int var = res; // expected-warning{{Assigned value is garbage or undefined}}
-                    // expected-note@-1 {{Assigned value is garbage or undefined}}
+     int var = res; // expected-warning{{Assigned value is uninitialized}}
+                    // expected-note@-1 {{Assigned value is uninitialized}}
      return;
    }
 }

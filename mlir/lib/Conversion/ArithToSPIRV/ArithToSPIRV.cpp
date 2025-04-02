@@ -27,7 +27,7 @@
 #include <memory>
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTARITHTOSPIRV
+#define GEN_PASS_DEF_CONVERTARITHTOSPIRVPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -834,8 +834,7 @@ struct TypeCastingOpPattern final : public OpConversionPattern<Op> {
   LogicalResult
   matchAndRewrite(Op op, typename Op::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    assert(adaptor.getOperands().size() == 1);
-    Type srcType = adaptor.getOperands().front().getType();
+    Type srcType = llvm::getSingleElement(adaptor.getOperands()).getType();
     Type dstType = this->getTypeConverter()->convertType(op.getType());
     if (!dstType)
       return getTypeConversionFailure(rewriter, op);
@@ -1337,7 +1336,9 @@ void mlir::arith::populateArithToSPIRVPatterns(
 
 namespace {
 struct ConvertArithToSPIRVPass
-    : public impl::ConvertArithToSPIRVBase<ConvertArithToSPIRVPass> {
+    : public impl::ConvertArithToSPIRVPassBase<ConvertArithToSPIRVPass> {
+  using Base::Base;
+
   void runOnOperation() override {
     Operation *op = getOperation();
     spirv::TargetEnvAttr targetAttr = spirv::lookupTargetEnvOrDefault(op);
@@ -1363,7 +1364,3 @@ struct ConvertArithToSPIRVPass
   }
 };
 } // namespace
-
-std::unique_ptr<OperationPass<>> mlir::arith::createConvertArithToSPIRVPass() {
-  return std::make_unique<ConvertArithToSPIRVPass>();
-}

@@ -19,7 +19,6 @@ static_library("Instrumentation") {
     "GCOVProfiling.cpp",
     "HWAddressSanitizer.cpp",
     "IndirectCallPromotion.cpp",
-    "InstrOrderFile.cpp",
     "InstrProfiling.cpp",
     "KCFI.cpp",
     "LowerAllowCheckPass.cpp",

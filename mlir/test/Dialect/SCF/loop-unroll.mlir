@@ -3,9 +3,9 @@
 // RUN: mlir-opt %s -test-loop-unrolling='unroll-factor=2 loop-depth=0' | FileCheck %s --check-prefix UNROLL-OUTER-BY-2
 // RUN: mlir-opt %s -test-loop-unrolling='unroll-factor=2 loop-depth=1' | FileCheck %s --check-prefix UNROLL-INNER-BY-2
 // RUN: mlir-opt %s -test-loop-unrolling='unroll-factor=2 annotate=true' | FileCheck %s --check-prefix UNROLL-BY-2-ANNOTATE
-// RUN: mlir-opt %s --affine-loop-unroll='unroll-factor=6 unroll-up-to-factor=true' | FileCheck %s --check-prefix UNROLL-UP-TO
-// RUN: mlir-opt %s --affine-loop-unroll='unroll-factor=5 cleanup-unroll=true' | FileCheck %s --check-prefix CLEANUP-UNROLL-BY-5
-// RUN: mlir-opt %s --affine-loop-unroll --split-input-file | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(affine-loop-unroll{unroll-factor=6 unroll-up-to-factor=true}))" | FileCheck %s --check-prefix UNROLL-UP-TO
+// RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(affine-loop-unroll{unroll-factor=5 cleanup-unroll=true}))" | FileCheck %s --check-prefix CLEANUP-UNROLL-BY-5
+// RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(affine-loop-unroll))" --split-input-file | FileCheck %s
 
 func.func @dynamic_loop_unroll(%arg0 : index, %arg1 : index, %arg2 : index,
                           %arg3: memref<?xf32>) {

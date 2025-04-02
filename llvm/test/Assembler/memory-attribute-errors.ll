@@ -12,16 +12,16 @@
 ; MISSING-ARGS: error: expected '('
 declare void @fn() memory
 ;--- empty.ll
-; EMPTY: error: expected memory location (argmem, inaccessiblemem) or access kind (none, read, write, readwrite)
+; EMPTY: error: expected memory location (argmem, inaccessiblemem, errnomem) or access kind (none, read, write, readwrite)
 declare void @fn() memory()
 ;--- unterminated.ll
 ; UNTERMINATED: error: unterminated memory attribute
 declare void @fn() memory(read
 ;--- invalid-kind.ll
-; INVALID-KIND: error: expected memory location (argmem, inaccessiblemem) or access kind (none, read, write, readwrite)
+; INVALID-KIND: error: expected memory location (argmem, inaccessiblemem, errnomem) or access kind (none, read, write, readwrite)
 declare void @fn() memory(foo)
 ;--- other.ll
-; OTHER: error: expected memory location (argmem, inaccessiblemem) or access kind (none, read, write, readwrite)
+; OTHER: error: expected memory location (argmem, inaccessiblemem, errnomem) or access kind (none, read, write, readwrite)
 declare void @fn() memory(other: read)
 ;--- missing-colon.ll
 ; MISSING-COLON: error: expected ':' after location

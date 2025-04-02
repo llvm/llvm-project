@@ -1136,10 +1136,9 @@ define i64 @lrd_large_offset(ptr %a, i64 %b) {
 ; RV32XTHEADMEMIDX-NEXT:    slli a1, a1, 3
 ; RV32XTHEADMEMIDX-NEXT:    add a0, a1, a0
 ; RV32XTHEADMEMIDX-NEXT:    lui a1, 23
-; RV32XTHEADMEMIDX-NEXT:    addi a1, a1, 1792
 ; RV32XTHEADMEMIDX-NEXT:    add a1, a0, a1
-; RV32XTHEADMEMIDX-NEXT:    lw a0, 0(a1)
-; RV32XTHEADMEMIDX-NEXT:    lw a1, 4(a1)
+; RV32XTHEADMEMIDX-NEXT:    lw a0, 1792(a1)
+; RV32XTHEADMEMIDX-NEXT:    lw a1, 1796(a1)
 ; RV32XTHEADMEMIDX-NEXT:    ret
 ;
 ; RV64XTHEADMEMIDX-LABEL: lrd_large_offset:

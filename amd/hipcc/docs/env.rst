@@ -8,27 +8,58 @@
 HIPCC environment variables
 ******************************************
 
-The environment variable ``HIP_PLATFORM`` can be used to specify ``amd`` or ``nvidia`` depending on the available backend tool flows:
+This topic provides descriptions of the HIPCC environment
+variables. For more information about other ROCm environment variables, see 
+:ref:`ROCm environment variables page <env-variables-reference>`. 
 
-* ``HIP_PLATFORM`` = ``amd`` or ``HIP_PLATFORM`` = ``nvidia``
+.. list-table::
+    :header-rows: 1
+    :widths: 50,50
 
-.. note:: 
-    If ``HIP_PLATFORM`` is not set, then ``hipcc`` will attempt to auto-detect based on if the ``nvcc`` tool is found.
+    * - Environment variable
+      - Value
 
-Additional environment variable controls:
+    * - | ``HIP_PLATFORM``
+        | The platform targeted by HIP. If ``HIP_PLATFORM`` isn't set, then :doc:`HIPCC <hipcc:index>` attempts to auto-detect the platform based on whether the ``nvcc`` tool is found.
+      - ``amd``, ``nvidia``
 
-* ``CUDA_PATH``       : Path to the CUDA SDK. The default is ``/usr/local/cuda``. This is only used for NVIDIA platforms.
-* ``HIPCC_COMPILE_FLAGS_APPEND``       : Append extra flags as compilation options to ``hipcc``.
-* ``HIPCC_LINK_FLAGS_APPEND``       : Append extra flags as linking options to ``hipcc``.
-* ``HIPCC_VERBOSE``  : Outputs detailed information on subcommands executed during compilation.
+    * - | ``HIP_PATH``
+        | The path of the HIP SDK on Microsoft Windows for AMD platforms.
+      - Default: ``C:/hip``
 
-  - ``HIPCC_VERBOSE = 1``: Displays the command to ``clang++`` or ``nvcc`` with all options (`hipcc-cmd`).
-  - ``HIPCC_VERBOSE = 2``: Displays all relevant environment variables and their values.
-  - ``HIPCC_VERBOSE = 4``: Displays only the arguments passed to the ``hipcc`` command (`hipcc_args`).
-  - ``HIPCC_VERBOSE = 5``: Displays both the command to ``clang++`` or ``nvcc`` and ``hipcc`` arguments (`hipcc-cmd` and `hipcc-args`).
-  - ``HIPCC_VERBOSE = 6``: Displays all relevant environment variables and their values, along with the arguments to the ``hipcc`` command.
-  - ``HIPCC_VERBOSE = 7``: Displays all of the above: `hipcc-cmd`, `hipcc-args`, and environment variables.
- 
-                            
+    * - | ``ROCM_PATH``
+        | The path of the installed ROCm software stack on Linux for AMD platforms.
+      - Default: ``/opt/rocm``
 
+    * - | ``CUDA_PATH``
+        | Path to the CUDA SDK, which is only used for NVIDIA platforms.
+      - Default: ``/usr/local/cuda``
 
+    * - | ``HIP_CLANG_PATH``
+        | Path to the clang, which is only used for AMD platforms.
+      - Default: ``ROCM_PATH/llvm/bin`` or ``HIP_PATH/../llvm/bin"``
+
+    * - | ``HIP_LIB_PATH``
+        | The HIP device library installation path.
+      - Default: ``HIP_PATH/lib``
+
+    * - | ``HIP_DEVICE_LIB_PATH``
+        | The HIP device library installation path.
+      -
+
+    * - | ``HIPCC_COMPILE_FLAGS_APPEND``
+        | Append extra flags as compilation options to ``hipcc``.
+      -
+
+    * - | ``HIPCC_LINK_FLAGS_APPEND``
+        | Append extra flags as compilation options to ``hipcc``.
+      -
+
+    * - | ``HIPCC_VERBOSE``
+        | Outputs detailed information on subcommands executed during compilation.
+      - | 1: Displays the command to ``clang++`` or ``nvcc`` with all options (``hipcc-cmd``).
+        | 2: Displays all relevant environment variables and their values.
+        | 4: Displays only the arguments passed to the ``hipcc`` command (``hipcc_args``).
+        | 5: Displays both the command to ``clang++`` or ``nvcc`` and ``hipcc`` arguments (``hipcc-cmd`` and ``hipcc-args``).
+        | 6: Displays all relevant environment variables and their values, along with the arguments to the ``hipcc`` command.
+        | 7: Displays all of the above: ``hipcc-cmd``, ``hipcc-args``, and environment variables.

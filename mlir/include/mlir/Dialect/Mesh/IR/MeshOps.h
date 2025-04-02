@@ -51,7 +51,7 @@ private:
   SmallVector<Value> dynamic_sharded_dims_offsets;
 
 public:
-  MeshSharding() = default;
+  MeshSharding(::mlir::FlatSymbolRefAttr mesh_ = nullptr);
   MeshSharding(Value rhs);
   static MeshSharding get(::mlir::FlatSymbolRefAttr mesh_,
                           ArrayRef<MeshAxesAttr> split_axes_,
@@ -62,7 +62,7 @@ public:
                           ArrayRef<Value> dynamic_halo_sizes_ = {},
                           ArrayRef<Value> dynamic_sharded_dims_offsets_ = {});
   ::mlir::FlatSymbolRefAttr getMeshAttr() const { return mesh; }
-  ::llvm::StringRef getMesh() const { return mesh.getValue(); }
+  ::llvm::StringRef getMesh() const { return mesh ? mesh.getValue() : ""; }
   ArrayRef<MeshAxesAttr> getSplitAxes() const { return split_axes; }
   ArrayRef<MeshAxis> getPartialAxes() const { return partial_axes; }
   ReductionKind getPartialType() const { return partial_type; }
@@ -119,6 +119,8 @@ inline bool isFullReplication(MeshSharding sharding) {
 inline mesh::MeshOp
 getMeshOrNull(Operation *op, FlatSymbolRefAttr meshSymbol,
               SymbolTableCollection &symbolTableCollection) {
+  if (!meshSymbol)
+    return nullptr;
   return symbolTableCollection.lookupNearestSymbolFrom<mesh::MeshOp>(
       op, meshSymbol);
 }
@@ -201,10 +203,12 @@ ShapedType shardShapedType(ShapedType shape, MeshOp mesh,
 Type shardType(Type type, MeshOp mesh, MeshSharding sharding);
 
 // Insert shard op if there is not one that already has the same sharding.
+// Use newShardOp if it is not null. Otherwise create a new one.
 // May insert resharding if required.
+// Potentially updates newShardOp.
 void maybeInsertTargetShardingAnnotation(MeshSharding sharding,
-                                         OpOperand &operand,
-                                         OpBuilder &builder);
+                                         OpOperand &operand, OpBuilder &builder,
+                                         ShardOp &newShardOp);
 void maybeInsertTargetShardingAnnotation(MeshSharding sharding, OpResult result,
                                          OpBuilder &builder);
 void maybeInsertSourceShardingAnnotation(MeshSharding sharding,

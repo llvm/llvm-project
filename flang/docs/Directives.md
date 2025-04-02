@@ -45,6 +45,11 @@ A list of non-standard directives supported by Flang
   times if possible. When `n` is omitted, the compiler should attempt to fully
   unroll the loop. Some compilers accept an optional `=` before the `n` when `n`
   is present in the directive. Flang does not.
+* `!dir$ unroll_and_jam [N]` control how many times a loop should be unrolled and
+  jammed. It must be placed immediately before a loop that follows. `N` is an optional 
+  integer that specifying the unrolling factor. When `N` is `0` or `1`, the loop 
+  should not be unrolled at all. If `N` is omitted the optimizer will
+  selects the number of times to unroll the loop.
 
 # Directive Details
 

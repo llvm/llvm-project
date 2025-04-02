@@ -58,8 +58,14 @@ void populateByRefInitAndCleanupRegions(
     const Fortran::semantics::Symbol *sym = nullptr);
 
 /// Generate a fir::ShapeShift op describing the provided boxed array.
+/// `cannotHaveNonDefaultLowerBounds` should be set if `box` is known to have
+/// default lower bounds. This can improve code generation.
+/// `useDefaultLowerBounds` can be set to force the returned fir::ShapeShiftOp
+/// to have default lower bounds, which is useful to iterate through array
+/// elements without having to adjust each index.
 fir::ShapeShiftOp getShapeShift(fir::FirOpBuilder &builder, mlir::Location loc,
-                                mlir::Value box);
+                                mlir::Value box,
+                                bool useDefaultLowerBounds = false);
 
 } // namespace omp
 } // namespace lower

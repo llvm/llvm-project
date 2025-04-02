@@ -272,7 +272,8 @@ __attribute__((flatten, always_inline)) void _xteam_reduction(
     T val, T *r_ptr, T *team_vals, uint32_t *teams_done_ptr,
     void (*_rf)(T *, T),
     void (*_rf_lds)(__XTEAM_SHARED_LDS T *, __XTEAM_SHARED_LDS T *),
-    const T rnv, const uint64_t k, const uint32_t NumTeams) {
+    const T rnv, const uint64_t k, const uint32_t NumTeams,
+    ompx::atomic::MemScopeTy Scope) {
 
   // More efficient to derive these constants than get from mapped API
 
@@ -314,7 +315,7 @@ __attribute__((flatten, always_inline)) void _xteam_reduction(
 
   if (_IS_FAST) {
     if (omp_thread_num == 0)
-      ompx::atomic::add(r_ptr, xwave_lds[0], ompx::atomic::seq_cst);
+      ompx::atomic::add(r_ptr, xwave_lds[0], ompx::atomic::seq_cst, Scope);
   } else {
     // No sync needed here from last reduction in LDS loop
     // because we only need xwave_lds[0] correct on thread 0.
@@ -400,17 +401,20 @@ _EXT_ATTR
 __kmpc_xteamr_d_16x64(double v, double *r_p, double *tvs, uint32_t *td,
                       void (*rf)(double *, double),
                       void (*rflds)(_LDS double *, _LDS double *),
-                      const double rnv, const uint64_t k, const uint32_t nt) {
-  _xteam_reduction<double, 16, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+                      const double rnv, const uint64_t k, const uint32_t nt,
+                      ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<double, 16, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt,
+                                   Scope);
 }
 _EXT_ATTR
 __kmpc_xteamr_d_16x64_fast_sum(double v, double *r_p, double *tvs, uint32_t *td,
                                void (*rf)(double *, double),
                                void (*rflds)(_LDS double *, _LDS double *),
                                const double rnv, const uint64_t k,
-                               const uint32_t nt) {
-  _xteam_reduction<double, 16, 64, true>(v, r_p, tvs, td, rf, rflds, rnv, k,
-                                         nt);
+                               const uint32_t nt,
+                               ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<double, 16, 64, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt,
+                                         Scope);
 }
 _EXT_ATTR
 __kmpc_iteamr_d_16x64(double v, double *r_p, void (*rf)(double *, double),
@@ -422,16 +426,20 @@ _EXT_ATTR
 __kmpc_xteamr_f_16x64(float v, float *r_p, float *tvs, uint32_t *td,
                       void (*rf)(float *, float),
                       void (*rflds)(_LDS float *, _LDS float *),
-                      const float rnv, const uint64_t k, const uint32_t nt) {
-  _xteam_reduction<float, 16, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+                      const float rnv, const uint64_t k, const uint32_t nt,
+                      ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<float, 16, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt,
+                                  Scope);
 }
 _EXT_ATTR
 __kmpc_xteamr_f_16x64_fast_sum(float v, float *r_p, float *tvs, uint32_t *td,
                                void (*rf)(float *, float),
                                void (*rflds)(_LDS float *, _LDS float *),
                                const float rnv, const uint64_t k,
-                               const uint32_t nt) {
-  _xteam_reduction<float, 16, 64, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+                               const uint32_t nt,
+                               ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<float, 16, 64, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt,
+                                        Scope);
 }
 _EXT_ATTR
 __kmpc_iteamr_f_16x64(float v, float *r_p, void (*rf)(float *, float),
@@ -443,17 +451,20 @@ _EXT_ATTR
 __kmpc_xteamr_h_16x64(_Float16 v, _Float16 *r_p, _Float16 *tvs, uint32_t *td,
                       void (*rf)(_Float16 *, _Float16),
                       void (*rflds)(_LDS _Float16 *, _LDS _Float16 *),
-                      const _Float16 rnv, const uint64_t k, const uint32_t nt) {
-  _xteam_reduction<_Float16, 16, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+                      const _Float16 rnv, const uint64_t k, const uint32_t nt,
+                      ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<_Float16, 16, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt,
+                                     Scope);
 }
 _EXT_ATTR
 __kmpc_xteamr_h_16x64_fast_sum(_Float16 v, _Float16 *r_p, _Float16 *tvs,
                                uint32_t *td, void (*rf)(_Float16 *, _Float16),
                                void (*rflds)(_LDS _Float16 *, _LDS _Float16 *),
                                const _Float16 rnv, const uint64_t k,
-                               const uint32_t nt) {
+                               const uint32_t nt,
+                               ompx::atomic::MemScopeTy Scope) {
   _xteam_reduction<_Float16, 16, 64, true>(v, r_p, tvs, td, rf, rflds, rnv, k,
-                                           nt);
+                                           nt, Scope);
 }
 _EXT_ATTR
 __kmpc_iteamr_h_16x64(_Float16 v, _Float16 *r_p,
@@ -466,17 +477,20 @@ _EXT_ATTR
 __kmpc_xteamr_bf_16x64(__bf16 v, __bf16 *r_p, __bf16 *tvs, uint32_t *td,
                        void (*rf)(__bf16 *, __bf16),
                        void (*rflds)(_LDS __bf16 *, _LDS __bf16 *),
-                       const __bf16 rnv, const uint64_t k, const uint32_t nt) {
-  _xteam_reduction<__bf16, 16, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+                       const __bf16 rnv, const uint64_t k, const uint32_t nt,
+                       ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<__bf16, 16, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt,
+                                   Scope);
 }
 _EXT_ATTR
 __kmpc_xteamr_bf_16x64_fast_sum(__bf16 v, __bf16 *r_p, __bf16 *tvs,
                                 uint32_t *td, void (*rf)(__bf16 *, __bf16),
                                 void (*rflds)(_LDS __bf16 *, _LDS __bf16 *),
                                 const __bf16 rnv, const uint64_t k,
-                                const uint32_t nt) {
-  _xteam_reduction<__bf16, 16, 64, true>(v, r_p, tvs, td, rf, rflds, rnv, k,
-                                         nt);
+                                const uint32_t nt,
+                                ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<__bf16, 16, 64, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt,
+                                         Scope);
 }
 _EXT_ATTR
 __kmpc_iteamr_bf_16x64(__bf16 v, __bf16 *r_p, void (*rf)(__bf16 *, __bf16),
@@ -488,16 +502,20 @@ _EXT_ATTR
 __kmpc_xteamr_s_16x64(short v, short *r_p, short *tvs, uint32_t *td,
                       void (*rf)(short *, short),
                       void (*rflds)(_LDS short *, _LDS short *),
-                      const short rnv, const uint64_t k, const uint32_t nt) {
-  _xteam_reduction<short, 16, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+                      const short rnv, const uint64_t k, const uint32_t nt,
+                      ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<short, 16, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt,
+                                  Scope);
 }
 _EXT_ATTR
 __kmpc_xteamr_s_16x64_fast_sum(short v, short *r_p, short *tvs, uint32_t *td,
                                void (*rf)(short *, short),
                                void (*rflds)(_LDS short *, _LDS short *),
                                const short rnv, const uint64_t k,
-                               const uint32_t nt) {
-  _xteam_reduction<short, 16, 64, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+                               const uint32_t nt,
+                               ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<short, 16, 64, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt,
+                                        Scope);
 }
 _EXT_ATTR
 __kmpc_iteamr_s_16x64(short v, short *r_p, void (*rf)(short *, short),
@@ -509,16 +527,19 @@ _EXT_ATTR
 __kmpc_xteamr_us_16x64(_US v, _US *r_p, _US *tvs, uint32_t *td,
                        void (*rf)(_US *, _US),
                        void (*rflds)(_LDS _US *, _LDS _US *), const _US rnv,
-                       const uint64_t k, const uint32_t nt) {
-  _xteam_reduction<_US, 16, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+                       const uint64_t k, const uint32_t nt,
+                       ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<_US, 16, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt, Scope);
 }
 _EXT_ATTR
 __kmpc_xteamr_us_16x64_fast_sum(_US v, _US *r_p, _US *tvs, uint32_t *td,
                                 void (*rf)(_US *, _US),
                                 void (*rflds)(_LDS _US *, _LDS _US *),
                                 const _US rnv, const uint64_t k,
-                                const uint32_t nt) {
-  _xteam_reduction<_US, 16, 64, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+                                const uint32_t nt,
+                                ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<_US, 16, 64, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt,
+                                      Scope);
 }
 _EXT_ATTR
 __kmpc_iteamr_us_16x64(_US v, _US *r_p, void (*rf)(_US *, _US),
@@ -530,16 +551,19 @@ _EXT_ATTR
 __kmpc_xteamr_i_16x64(int v, int *r_p, int *tvs, uint32_t *td,
                       void (*rf)(int *, int),
                       void (*rflds)(_LDS int *, _LDS int *), const int rnv,
-                      const uint64_t k, const uint32_t nt) {
-  _xteam_reduction<int, 16, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+                      const uint64_t k, const uint32_t nt,
+                      ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<int, 16, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt, Scope);
 }
 _EXT_ATTR
 __kmpc_xteamr_i_16x64_fast_sum(int v, int *r_p, int *tvs, uint32_t *td,
                                void (*rf)(int *, int),
                                void (*rflds)(_LDS int *, _LDS int *),
                                const int rnv, const uint64_t k,
-                               const uint32_t nt) {
-  _xteam_reduction<int, 16, 64, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+                               const uint32_t nt,
+                               ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<int, 16, 64, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt,
+                                      Scope);
 }
 _EXT_ATTR
 __kmpc_iteamr_i_16x64(int v, int *r_p, void (*rf)(int *, int),
@@ -551,16 +575,19 @@ _EXT_ATTR
 __kmpc_xteamr_ui_16x64(_UI v, _UI *r_p, _UI *tvs, uint32_t *td,
                        void (*rf)(_UI *, _UI),
                        void (*rflds)(_LDS _UI *, _LDS _UI *), const _UI rnv,
-                       const uint64_t k, const uint32_t nt) {
-  _xteam_reduction<_UI, 16, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+                       const uint64_t k, const uint32_t nt,
+                       ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<_UI, 16, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt, Scope);
 }
 _EXT_ATTR
 __kmpc_xteamr_ui_16x64_fast_sum(_UI v, _UI *r_p, _UI *tvs, uint32_t *td,
                                 void (*rf)(_UI *, _UI),
                                 void (*rflds)(_LDS _UI *, _LDS _UI *),
                                 const _UI rnv, const uint64_t k,
-                                const uint32_t nt) {
-  _xteam_reduction<_UI, 16, 64, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+                                const uint32_t nt,
+                                ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<_UI, 16, 64, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt,
+                                      Scope);
 }
 _EXT_ATTR
 __kmpc_iteamr_ui_16x64(_UI v, _UI *r_p, void (*rf)(_UI *, _UI),
@@ -572,16 +599,19 @@ _EXT_ATTR
 __kmpc_xteamr_l_16x64(long v, long *r_p, long *tvs, uint32_t *td,
                       void (*rf)(long *, long),
                       void (*rflds)(_LDS long *, _LDS long *), const long rnv,
-                      const uint64_t k, const uint32_t nt) {
-  _xteam_reduction<long, 16, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+                      const uint64_t k, const uint32_t nt,
+                      ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<long, 16, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt, Scope);
 }
 _EXT_ATTR
 __kmpc_xteamr_l_16x64_fast_sum(long v, long *r_p, long *tvs, uint32_t *td,
                                void (*rf)(long *, long),
                                void (*rflds)(_LDS long *, _LDS long *),
                                const long rnv, const uint64_t k,
-                               const uint32_t nt) {
-  _xteam_reduction<long, 16, 64, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+                               const uint32_t nt,
+                               ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<long, 16, 64, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt,
+                                       Scope);
 }
 _EXT_ATTR
 __kmpc_iteamr_l_16x64(long v, long *r_p, void (*rf)(long *, long),
@@ -593,16 +623,19 @@ _EXT_ATTR
 __kmpc_xteamr_ul_16x64(_UL v, _UL *r_p, _UL *tvs, uint32_t *td,
                        void (*rf)(_UL *, _UL),
                        void (*rflds)(_LDS _UL *, _LDS _UL *), const _UL rnv,
-                       const uint64_t k, const uint32_t nt) {
-  _xteam_reduction<_UL, 16, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+                       const uint64_t k, const uint32_t nt,
+                       ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<_UL, 16, 64>(v, r_p, tvs, td, rf, rflds, rnv, k, nt, Scope);
 }
 _EXT_ATTR
 __kmpc_xteamr_ul_16x64_fast_sum(_UL v, _UL *r_p, _UL *tvs, uint32_t *td,
                                 void (*rf)(_UL *, _UL),
                                 void (*rflds)(_LDS _UL *, _LDS _UL *),
                                 const _UL rnv, const uint64_t k,
-                                const uint32_t nt) {
-  _xteam_reduction<_UL, 16, 64, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+                                const uint32_t nt,
+                                ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<_UL, 16, 64, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt,
+                                      Scope);
 }
 _EXT_ATTR
 __kmpc_iteamr_ul_16x64(_UL v, _UL *r_p, void (*rf)(_UL *, _UL),
@@ -614,17 +647,20 @@ _EXT_ATTR
 __kmpc_xteamr_d_32x32(double v, double *r_p, double *tvs, uint32_t *td,
                       void (*rf)(double *, double),
                       void (*rflds)(_LDS double *, _LDS double *),
-                      const double rnv, const uint64_t k, const uint32_t nt) {
-  _xteam_reduction<double, 32, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+                      const double rnv, const uint64_t k, const uint32_t nt,
+                      ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<double, 32, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt,
+                                   Scope);
 }
 _EXT_ATTR
 __kmpc_xteamr_d_32x32_fast_sum(double v, double *r_p, double *tvs, uint32_t *td,
                                void (*rf)(double *, double),
                                void (*rflds)(_LDS double *, _LDS double *),
                                const double rnv, const uint64_t k,
-                               const uint32_t nt) {
-  _xteam_reduction<double, 32, 32, true>(v, r_p, tvs, td, rf, rflds, rnv, k,
-                                         nt);
+                               const uint32_t nt,
+                               ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<double, 32, 32, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt,
+                                         Scope);
 }
 _EXT_ATTR
 __kmpc_iteamr_d_32x32(double v, double *r_p, void (*rf)(double *, double),
@@ -636,16 +672,20 @@ _EXT_ATTR
 __kmpc_xteamr_f_32x32(float v, float *r_p, float *tvs, uint32_t *td,
                       void (*rf)(float *, float),
                       void (*rflds)(_LDS float *, _LDS float *),
-                      const float rnv, const uint64_t k, const uint32_t nt) {
-  _xteam_reduction<float, 32, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+                      const float rnv, const uint64_t k, const uint32_t nt,
+                      ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<float, 32, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt,
+                                  Scope);
 }
 _EXT_ATTR
 __kmpc_xteamr_f_32x32_fast_sum(float v, float *r_p, float *tvs, uint32_t *td,
                                void (*rf)(float *, float),
                                void (*rflds)(_LDS float *, _LDS float *),
                                const float rnv, const uint64_t k,
-                               const uint32_t nt) {
-  _xteam_reduction<float, 32, 32, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+                               const uint32_t nt,
+                               ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<float, 32, 32, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt,
+                                        Scope);
 }
 _EXT_ATTR
 __kmpc_iteamr_f_32x32(float v, float *r_p, void (*rf)(float *, float),
@@ -657,17 +697,20 @@ _EXT_ATTR
 __kmpc_xteamr_h_32x32(_Float16 v, _Float16 *r_p, _Float16 *tvs, uint32_t *td,
                       void (*rf)(_Float16 *, _Float16),
                       void (*rflds)(_LDS _Float16 *, _LDS _Float16 *),
-                      const _Float16 rnv, const uint64_t k, const uint32_t nt) {
-  _xteam_reduction<_Float16, 32, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+                      const _Float16 rnv, const uint64_t k, const uint32_t nt,
+                      ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<_Float16, 32, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt,
+                                     Scope);
 }
 _EXT_ATTR
 __kmpc_xteamr_h_32x32_fast_sum(_Float16 v, _Float16 *r_p, _Float16 *tvs,
                                uint32_t *td, void (*rf)(_Float16 *, _Float16),
                                void (*rflds)(_LDS _Float16 *, _LDS _Float16 *),
                                const _Float16 rnv, const uint64_t k,
-                               const uint32_t nt) {
+                               const uint32_t nt,
+                               ompx::atomic::MemScopeTy Scope) {
   _xteam_reduction<_Float16, 32, 32, true>(v, r_p, tvs, td, rf, rflds, rnv, k,
-                                           nt);
+                                           nt, Scope);
 }
 _EXT_ATTR
 __kmpc_iteamr_h_32x32(_Float16 v, _Float16 *r_p,
@@ -680,17 +723,20 @@ _EXT_ATTR
 __kmpc_xteamr_bf_32x32(__bf16 v, __bf16 *r_p, __bf16 *tvs, uint32_t *td,
                        void (*rf)(__bf16 *, __bf16),
                        void (*rflds)(_LDS __bf16 *, _LDS __bf16 *),
-                       const __bf16 rnv, const uint64_t k, const uint32_t nt) {
-  _xteam_reduction<__bf16, 32, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+                       const __bf16 rnv, const uint64_t k, const uint32_t nt,
+                       ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<__bf16, 32, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt,
+                                   Scope);
 }
 _EXT_ATTR
 __kmpc_xteamr_bf_32x32_fast_sum(__bf16 v, __bf16 *r_p, __bf16 *tvs,
                                 uint32_t *td, void (*rf)(__bf16 *, __bf16),
                                 void (*rflds)(_LDS __bf16 *, _LDS __bf16 *),
                                 const __bf16 rnv, const uint64_t k,
-                                const uint32_t nt) {
-  _xteam_reduction<__bf16, 32, 32, true>(v, r_p, tvs, td, rf, rflds, rnv, k,
-                                         nt);
+                                const uint32_t nt,
+                                ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<__bf16, 32, 32, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt,
+                                         Scope);
 }
 _EXT_ATTR
 __kmpc_iteamr_bf_32x32(__bf16 v, __bf16 *r_p, void (*rf)(__bf16 *, __bf16),
@@ -702,16 +748,20 @@ _EXT_ATTR
 __kmpc_xteamr_s_32x32(short v, short *r_p, short *tvs, uint32_t *td,
                       void (*rf)(short *, short),
                       void (*rflds)(_LDS short *, _LDS short *),
-                      const short rnv, const uint64_t k, const uint32_t nt) {
-  _xteam_reduction<short, 32, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+                      const short rnv, const uint64_t k, const uint32_t nt,
+                      ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<short, 32, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt,
+                                  Scope);
 }
 _EXT_ATTR
 __kmpc_xteamr_s_32x32_fast_sum(short v, short *r_p, short *tvs, uint32_t *td,
                                void (*rf)(short *, short),
                                void (*rflds)(_LDS short *, _LDS short *),
                                const short rnv, const uint64_t k,
-                               const uint32_t nt) {
-  _xteam_reduction<short, 32, 32, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+                               const uint32_t nt,
+                               ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<short, 32, 32, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt,
+                                        Scope);
 }
 _EXT_ATTR
 __kmpc_iteamr_s_32x32(short v, short *r_p, void (*rf)(short *, short),
@@ -723,16 +773,19 @@ _EXT_ATTR
 __kmpc_xteamr_us_32x32(_US v, _US *r_p, _US *tvs, uint32_t *td,
                        void (*rf)(_US *, _US),
                        void (*rflds)(_LDS _US *, _LDS _US *), const _US rnv,
-                       const uint64_t k, const uint32_t nt) {
-  _xteam_reduction<_US, 32, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+                       const uint64_t k, const uint32_t nt,
+                       ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<_US, 32, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt, Scope);
 }
 _EXT_ATTR
 __kmpc_xteamr_us_32x32_fast_sum(_US v, _US *r_p, _US *tvs, uint32_t *td,
                                 void (*rf)(_US *, _US),
                                 void (*rflds)(_LDS _US *, _LDS _US *),
                                 const _US rnv, const uint64_t k,
-                                const uint32_t nt) {
-  _xteam_reduction<_US, 32, 32, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+                                const uint32_t nt,
+                                ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<_US, 32, 32, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt,
+                                      Scope);
 }
 _EXT_ATTR
 __kmpc_iteamr_us_32x32(_US v, _US *r_p, void (*rf)(_US *, _US),
@@ -744,16 +797,19 @@ _EXT_ATTR
 __kmpc_xteamr_i_32x32(int v, int *r_p, int *tvs, uint32_t *td,
                       void (*rf)(int *, int),
                       void (*rflds)(_LDS int *, _LDS int *), const int rnv,
-                      const uint64_t k, const uint32_t nt) {
-  _xteam_reduction<int, 32, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+                      const uint64_t k, const uint32_t nt,
+                      ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<int, 32, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt, Scope);
 }
 _EXT_ATTR
 __kmpc_xteamr_i_32x32_fast_sum(int v, int *r_p, int *tvs, uint32_t *td,
                                void (*rf)(int *, int),
                                void (*rflds)(_LDS int *, _LDS int *),
                                const int rnv, const uint64_t k,
-                               const uint32_t nt) {
-  _xteam_reduction<int, 32, 32, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+                               const uint32_t nt,
+                               ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<int, 32, 32, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt,
+                                      Scope);
 }
 _EXT_ATTR
 __kmpc_iteamr_i_32x32(int v, int *r_p, void (*rf)(int *, int),
@@ -765,16 +821,19 @@ _EXT_ATTR
 __kmpc_xteamr_ui_32x32(_UI v, _UI *r_p, _UI *tvs, uint32_t *td,
                        void (*rf)(_UI *, _UI),
                        void (*rflds)(_LDS _UI *, _LDS _UI *), const _UI rnv,
-                       const uint64_t k, const uint32_t nt) {
-  _xteam_reduction<_UI, 32, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+                       const uint64_t k, const uint32_t nt,
+                       ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<_UI, 32, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt, Scope);
 }
 _EXT_ATTR
 __kmpc_xteamr_ui_32x32_fast_sum(_UI v, _UI *r_p, _UI *tvs, uint32_t *td,
                                 void (*rf)(_UI *, _UI),
                                 void (*rflds)(_LDS _UI *, _LDS _UI *),
                                 const _UI rnv, const uint64_t k,
-                                const uint32_t nt) {
-  _xteam_reduction<_UI, 32, 32, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+                                const uint32_t nt,
+                                ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<_UI, 32, 32, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt,
+                                      Scope);
 }
 _EXT_ATTR
 __kmpc_iteamr_ui_32x32(_UI v, _UI *r_p, void (*rf)(_UI *, _UI),
@@ -786,16 +845,19 @@ _EXT_ATTR
 __kmpc_xteamr_l_32x32(long v, long *r_p, long *tvs, uint32_t *td,
                       void (*rf)(long *, long),
                       void (*rflds)(_LDS long *, _LDS long *), const long rnv,
-                      const uint64_t k, const uint32_t nt) {
-  _xteam_reduction<long, 32, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+                      const uint64_t k, const uint32_t nt,
+                      ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<long, 32, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt, Scope);
 }
 _EXT_ATTR
 __kmpc_xteamr_l_32x32_fast_sum(long v, long *r_p, long *tvs, uint32_t *td,
                                void (*rf)(long *, long),
                                void (*rflds)(_LDS long *, _LDS long *),
                                const long rnv, const uint64_t k,
-                               const uint32_t nt) {
-  _xteam_reduction<long, 32, 32, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+                               const uint32_t nt,
+                               ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<long, 32, 32, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt,
+                                       Scope);
 }
 _EXT_ATTR
 __kmpc_iteamr_l_32x32(long v, long *r_p, void (*rf)(long *, long),
@@ -807,16 +869,19 @@ _EXT_ATTR
 __kmpc_xteamr_ul_32x32(_UL v, _UL *r_p, _UL *tvs, uint32_t *td,
                        void (*rf)(_UL *, _UL),
                        void (*rflds)(_LDS _UL *, _LDS _UL *), const _UL rnv,
-                       const uint64_t k, const uint32_t nt) {
-  _xteam_reduction<_UL, 32, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+                       const uint64_t k, const uint32_t nt,
+                       ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<_UL, 32, 32>(v, r_p, tvs, td, rf, rflds, rnv, k, nt, Scope);
 }
 _EXT_ATTR
 __kmpc_xteamr_ul_32x32_fast_sum(_UL v, _UL *r_p, _UL *tvs, uint32_t *td,
                                 void (*rf)(_UL *, _UL),
                                 void (*rflds)(_LDS _UL *, _LDS _UL *),
                                 const _UL rnv, const uint64_t k,
-                                const uint32_t nt) {
-  _xteam_reduction<_UL, 32, 32, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt);
+                                const uint32_t nt,
+                                ompx::atomic::MemScopeTy Scope) {
+  _xteam_reduction<_UL, 32, 32, true>(v, r_p, tvs, td, rf, rflds, rnv, k, nt,
+                                      Scope);
 }
 _EXT_ATTR
 __kmpc_iteamr_ul_32x32(_UL v, _UL *r_p, void (*rf)(_UL *, _UL),

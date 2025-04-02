@@ -19,7 +19,7 @@
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTTENSORTOSPIRV
+#define GEN_PASS_DEF_CONVERTTENSORTOSPIRVPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -28,7 +28,9 @@ using namespace mlir;
 namespace {
 /// A pass converting MLIR Tensor operations into the SPIR-V dialect.
 class ConvertTensorToSPIRVPass
-    : public impl::ConvertTensorToSPIRVBase<ConvertTensorToSPIRVPass> {
+    : public impl::ConvertTensorToSPIRVPassBase<ConvertTensorToSPIRVPass> {
+  using Base::Base;
+
   void runOnOperation() override {
     MLIRContext *context = &getContext();
     Operation *op = getOperation();
@@ -53,7 +55,3 @@ class ConvertTensorToSPIRVPass
   }
 };
 } // namespace
-
-std::unique_ptr<OperationPass<>> mlir::createConvertTensorToSPIRVPass() {
-  return std::make_unique<ConvertTensorToSPIRVPass>();
-}

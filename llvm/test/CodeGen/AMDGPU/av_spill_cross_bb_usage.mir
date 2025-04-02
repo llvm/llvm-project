@@ -459,6 +459,38 @@ body:             |
   ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
   ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
   ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr40
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr41
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr44
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr45
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr56
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr57
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr58
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr59
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr60
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr61
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr62
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr63
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr72
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr73
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr74
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr75
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr76
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr77
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr78
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr79
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr88
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr89
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr90
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr91
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr92
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; GCN-NEXT:   $sgpr4_sgpr5 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT:   BUFFER_STORE_DWORD_OFFSET $vgpr40, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 68, 0, 0, implicit $exec :: (store (s32) into %stack.3, addrspace 5)
   ; GCN-NEXT:   frame-setup CFI_INSTRUCTION offset $vgpr40, 4352

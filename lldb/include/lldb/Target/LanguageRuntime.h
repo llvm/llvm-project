@@ -201,6 +201,8 @@ public:
     return false;
   }
 
+  virtual bool IsSymbolARuntimeThunk(const Symbol &symbol) { return false; }
+
   // Given the name of a runtime symbol (e.g. in Objective-C, an ivar offset
   // symbol), try to determine from the runtime what the value of that symbol
   // would be. Useful when the underlying binary is stripped.

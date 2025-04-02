@@ -15,14 +15,11 @@ namespace mlir {
 class Pass;
 class RewritePatternSet;
 
-#define GEN_PASS_DECL_CONVERTARMSMETOSCF
+#define GEN_PASS_DECL_CONVERTARMSMETOSCFPASS
 #include "mlir/Conversion/Passes.h.inc"
 
 /// Collect a set of patterns to convert from the ArmSME dialect to SCF.
 void populateArmSMEToSCFConversionPatterns(RewritePatternSet &patterns);
-
-/// Create a pass to convert a subset of ArmSME ops to SCF.
-std::unique_ptr<Pass> createConvertArmSMEToSCFPass();
 
 } // namespace mlir
 

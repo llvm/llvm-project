@@ -1,9 +1,9 @@
 ! Tests that we can map "unnamed" and non-reference/non-box values to device; for
 ! example, values that result from `fix.box_dims` ops.
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fdo-concurrent-parallel=device %s -o - \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fdo-concurrent-to-openmp=device %s -o - \
 ! RUN:   | FileCheck %s
-! RUN: bbc -emit-hlfir -fopenmp -fdo-concurrent-parallel=device %s -o - \
+! RUN: bbc -emit-hlfir -fopenmp -fdo-concurrent-to-openmp=device %s -o - \
 ! RUN:   | FileCheck %s
 
 subroutine test_non_refernece

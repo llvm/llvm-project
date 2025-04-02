@@ -170,6 +170,14 @@ static bool isBlockValidForExtraction(const BasicBlock &BB,
     }
 
     if (const CallInst *CI = dyn_cast<CallInst>(I)) {
+      // musttail calls have several restrictions, generally enforcing matching
+      // calling conventions between the caller parent and musttail callee.
+      // We can't usually honor them, because the extracted function has a
+      // different signature altogether, taking inputs/outputs and returning
+      // a control-flow identifier rather than the actual return value.
+      if (CI->isMustTailCall())
+        return false;
+
       if (const Function *F = CI->getCalledFunction()) {
         auto IID = F->getIntrinsicID();
         if (IID == Intrinsic::vastart) {

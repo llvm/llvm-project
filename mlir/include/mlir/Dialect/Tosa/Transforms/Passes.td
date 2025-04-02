@@ -71,16 +71,6 @@ def TosaOptionalDecompositions
   let constructor = "tosa::createTosaOptionalDecompositions()";
 }
 
-def TosaProfileType : I32EnumAttr<"TosaProfileEnum", "Tosa profile",
-    [
-      I32EnumAttrCase<"BaseInference", 0, "bi">,
-      I32EnumAttrCase<"MainInference", 1, "mi">,
-      I32EnumAttrCase<"MainTraining", 2, "mt">,
-      I32EnumAttrCase<"Undefined", 3, "none">
-    ]>{
-  let cppNamespace = "mlir::tosa";
-}
-
 def TosaLevelType : I32EnumAttr<"TosaLevelEnum", "Tosa level",
     [
       I32EnumAttrCase<"None", 0, "none">,
@@ -99,9 +89,16 @@ def TosaValidation : Pass<"tosa-validate", "mlir::ModuleOp"> {
   let options = [
       ListOption<"profile", "profile", "std::string",
              "Validate if operations match for the given profile set">,
-      Option<"StrictOperationSpecAlignment", "strict-op-spec-alignment", "bool",
+      ListOption<"extension", "extension", "std::string",
+             "Validate if operations match for the given extension set">,
+      Option<"strictOpSpecAlignment", "strict-op-spec-alignment", "bool",
              /*default=*/"false",
              "Verify if the properties of certain operations align the spec requirement">,
+      Option<"allowInvalidOpDatatypeCombinations", "allow-invalid-op-datatype-combinations", "bool",
+             /*default=*/"false",
+             "Disable checks for operations that are determined to be invalid due to their "
+             "operand/result datatypes not aligning with the 'Supported Data Types' "
+             "sections of the specifciation">,
       Option<"level", "level", "mlir::tosa::TosaLevelEnum",
              /*default=*/"mlir::tosa::TosaLevelEnum::EightK",
              "Validate if operator parameters are within specfication for the given level",

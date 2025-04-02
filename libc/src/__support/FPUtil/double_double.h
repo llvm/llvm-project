@@ -18,43 +18,52 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
-#define DEFAULT_DOUBLE_SPLIT 27
+template <typename T> struct DefaultSplit;
+template <> struct DefaultSplit<float> {
+  static constexpr size_t VALUE = 12;
+};
+template <> struct DefaultSplit<double> {
+  static constexpr size_t VALUE = 27;
+};
 
-using DoubleDouble = LIBC_NAMESPACE::NumberPair<double>;
+using DoubleDouble = NumberPair<double>;
+using FloatFloat = NumberPair<float>;
 
 // The output of Dekker's FastTwoSum algorithm is correct, i.e.:
 //   r.hi + r.lo = a + b exactly
 //   and |r.lo| < eps(r.lo)
 // Assumption: |a| >= |b|, or a = 0.
-template <bool FAST2SUM = true>
-LIBC_INLINE constexpr DoubleDouble exact_add(double a, double b) {
-  DoubleDouble r{0.0, 0.0};
+template <bool FAST2SUM = true, typename T = double>
+LIBC_INLINE constexpr NumberPair<T> exact_add(T a, T b) {
+  NumberPair<T> r{0.0, 0.0};
   if constexpr (FAST2SUM) {
     r.hi = a + b;
-    double t = r.hi - a;
+    T t = r.hi - a;
     r.lo = b - t;
   } else {
     r.hi = a + b;
-    double t1 = r.hi - a;
-    double t2 = r.hi - t1;
-    double t3 = b - t1;
-    double t4 = a - t2;
+    T t1 = r.hi - a;
+    T t2 = r.hi - t1;
+    T t3 = b - t1;
+    T t4 = a - t2;
     r.lo = t3 + t4;
   }
   return r;
 }
 
 // Assumption: |a.hi| >= |b.hi|
-LIBC_INLINE constexpr DoubleDouble add(const DoubleDouble &a,
-                                       const DoubleDouble &b) {
-  DoubleDouble r = exact_add(a.hi, b.hi);
-  double lo = a.lo + b.lo;
+template <typename T>
+LIBC_INLINE constexpr NumberPair<T> add(const NumberPair<T> &a,
+                                        const NumberPair<T> &b) {
+  NumberPair<T> r = exact_add(a.hi, b.hi);
+  T lo = a.lo + b.lo;
   return exact_add(r.hi, r.lo + lo);
 }
 
 // Assumption: |a.hi| >= |b|
-LIBC_INLINE constexpr DoubleDouble add(const DoubleDouble &a, double b) {
-  DoubleDouble r = exact_add<false>(a.hi, b);
+template <typename T>
+LIBC_INLINE constexpr NumberPair<T> add(const NumberPair<T> &a, T b) {
+  NumberPair<T> r = exact_add<false>(a.hi, b);
   return exact_add(r.hi, r.lo + a.lo);
 }
 
@@ -63,12 +72,12 @@ LIBC_INLINE constexpr DoubleDouble add(const DoubleDouble &a, double b) {
 //   Zimmermann, P., "Note on the Veltkamp/Dekker Algorithms with Directed
 //   Roundings," https://inria.hal.science/hal-04480440.
 // Default splitting constant = 2^ceil(prec(double)/2) + 1 = 2^27 + 1.
-template <size_t N = DEFAULT_DOUBLE_SPLIT>
-LIBC_INLINE constexpr DoubleDouble split(double a) {
-  DoubleDouble r{0.0, 0.0};
+template <typename T = double, size_t N = DefaultSplit<T>::VALUE>
+LIBC_INLINE constexpr NumberPair<T> split(T a) {
+  NumberPair<T> r{0.0, 0.0};
   // CN = 2^N.
-  constexpr double CN = static_cast<double>(1 << N);
-  constexpr double C = CN + 1.0;
+  constexpr T CN = static_cast<T>(1 << N);
+  constexpr T C = CN + 1.0;
   double t1 = C * a;
   double t2 = a - t1;
   r.hi = t1 + t2;
@@ -77,20 +86,39 @@ LIBC_INLINE constexpr DoubleDouble split(double a) {
 }
 
 // Helper for non-fma exact mult where the first number is already split.
-template <size_t SPLIT_B = DEFAULT_DOUBLE_SPLIT>
-LIBC_INLINE DoubleDouble exact_mult(const DoubleDouble &as, double a,
-                                    double b) {
-  DoubleDouble bs = split<SPLIT_B>(b);
-  DoubleDouble r{0.0, 0.0};
+template <typename T = double, size_t SPLIT_B = DefaultSplit<T>::VALUE>
+LIBC_INLINE NumberPair<T> exact_mult(const NumberPair<T> &as, T a, T b) {
+  NumberPair<T> bs = split<T, SPLIT_B>(b);
+  NumberPair<T> r{0.0, 0.0};
 
   r.hi = a * b;
-  double t1 = as.hi * bs.hi - r.hi;
-  double t2 = as.hi * bs.lo + t1;
-  double t3 = as.lo * bs.hi + t2;
+  T t1 = as.hi * bs.hi - r.hi;
+  T t2 = as.hi * bs.lo + t1;
+  T t3 = as.lo * bs.hi + t2;
   r.lo = as.lo * bs.lo + t3;
 
   return r;
 }
+
+// The templated exact multiplication needs template version of
+// LIBC_TARGET_CPU_HAS_FMA_* macro to correctly select the implementation.
+// These can be moved to "src/__support/macros/properties/cpu_features.h" if
+// other part of libc needed.
+template <typename T> struct TargetHasFmaInstruction {
+  static constexpr bool VALUE = false;
+};
+
+#ifdef LIBC_TARGET_CPU_HAS_FMA_FLOAT
+template <> struct TargetHasFmaInstruction<float> {
+  static constexpr bool VALUE = true;
+};
+#endif // LIBC_TARGET_CPU_HAS_FMA_FLOAT
+
+#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
+template <> struct TargetHasFmaInstruction<double> {
+  static constexpr bool VALUE = true;
+};
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
 // Note: When FMA instruction is not available, the `exact_mult` function is
 // only correct for round-to-nearest mode.  See:
@@ -99,19 +127,19 @@ LIBC_INLINE DoubleDouble exact_mult(const DoubleDouble &as, double a,
 // Using Theorem 1 in the paper above, without FMA instruction, if we restrict
 // the generated constants to precision <= 51, and splitting it by 2^28 + 1,
 // then a * b = r.hi + r.lo is exact for all rounding modes.
-template <size_t SPLIT_B = 27>
-LIBC_INLINE DoubleDouble exact_mult(double a, double b) {
-  DoubleDouble r{0.0, 0.0};
+template <typename T = double, size_t SPLIT_B = DefaultSplit<T>::VALUE>
+LIBC_INLINE NumberPair<T> exact_mult(T a, T b) {
+  NumberPair<T> r{0.0, 0.0};
 
-#ifdef LIBC_TARGET_CPU_HAS_FMA
-  r.hi = a * b;
-  r.lo = fputil::multiply_add(a, b, -r.hi);
-#else
-  // Dekker's Product.
-  DoubleDouble as = split(a);
+  if constexpr (TargetHasFmaInstruction<T>::VALUE) {
+    r.hi = a * b;
+    r.lo = fputil::multiply_add(a, b, -r.hi);
+  } else {
+    // Dekker's Product.
+    NumberPair<T> as = split(a);
 
-  r = exact_mult<SPLIT_B>(as, a, b);
-#endif // LIBC_TARGET_CPU_HAS_FMA
+    r = exact_mult<T, SPLIT_B>(as, a, b);
+  }
 
   return r;
 }
@@ -125,7 +153,7 @@ LIBC_INLINE DoubleDouble quick_mult(double a, const DoubleDouble &b) {
 template <size_t SPLIT_B = 27>
 LIBC_INLINE DoubleDouble quick_mult(const DoubleDouble &a,
                                     const DoubleDouble &b) {
-  DoubleDouble r = exact_mult<SPLIT_B>(a.hi, b.hi);
+  DoubleDouble r = exact_mult<double, SPLIT_B>(a.hi, b.hi);
   double t1 = multiply_add(a.hi, b.lo, r.lo);
   double t2 = multiply_add(a.lo, b.hi, t1);
   r.lo = t2;
@@ -157,19 +185,20 @@ LIBC_INLINE DoubleDouble multiply_add<DoubleDouble>(const DoubleDouble &a,
 //   rl = q * (ah - bh * rh) + q * (al - bl * rh)
 // as accurate as possible, then the error is bounded by:
 //   |(ah + al) / (bh + bl) - (rh + rl)| < O(bl/bh) * (2^-52 + al/ah + bl/bh)
-LIBC_INLINE DoubleDouble div(const DoubleDouble &a, const DoubleDouble &b) {
-  DoubleDouble r;
-  double q = 1.0 / b.hi;
+template <typename T>
+LIBC_INLINE NumberPair<T> div(const NumberPair<T> &a, const NumberPair<T> &b) {
+  NumberPair<T> r;
+  T q = T(1) / b.hi;
   r.hi = a.hi * q;
 
 #ifdef LIBC_TARGET_CPU_HAS_FMA
-  double e_hi = fputil::multiply_add(b.hi, -r.hi, a.hi);
-  double e_lo = fputil::multiply_add(b.lo, -r.hi, a.lo);
+  T e_hi = fputil::multiply_add(b.hi, -r.hi, a.hi);
+  T e_lo = fputil::multiply_add(b.lo, -r.hi, a.lo);
 #else
-  DoubleDouble b_hi_r_hi = fputil::exact_mult(b.hi, -r.hi);
-  DoubleDouble b_lo_r_hi = fputil::exact_mult(b.lo, -r.hi);
-  double e_hi = (a.hi + b_hi_r_hi.hi) + b_hi_r_hi.lo;
-  double e_lo = (a.lo + b_lo_r_hi.hi) + b_lo_r_hi.lo;
+  NumberPair<T> b_hi_r_hi = fputil::exact_mult(b.hi, -r.hi);
+  NumberPair<T> b_lo_r_hi = fputil::exact_mult(b.lo, -r.hi);
+  T e_hi = (a.hi + b_hi_r_hi.hi) + b_hi_r_hi.lo;
+  T e_lo = (a.lo + b_lo_r_hi.hi) + b_lo_r_hi.lo;
 #endif // LIBC_TARGET_CPU_HAS_FMA
 
   r.lo = q * (e_hi + e_lo);

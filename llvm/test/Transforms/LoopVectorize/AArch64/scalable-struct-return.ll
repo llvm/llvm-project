@@ -1,15 +1,18 @@
-; RUN: opt < %s -mattr=+sve -passes=loop-vectorize -force-vector-interleave=1 -prefer-predicate-over-epilogue=predicate-dont-vectorize -S -pass-remarks-analysis=loop-vectorize 2>%t | FileCheck %s
-; RUN: cat %t | FileCheck --check-prefix=CHECK-REMARKS %s
+; RUN: opt < %s -mattr=+sve -passes=loop-vectorize -force-vector-interleave=1 -prefer-predicate-over-epilogue=predicate-dont-vectorize -S | FileCheck %s
 
 target triple = "aarch64-unknown-linux-gnu"
 
 ; Tests basic vectorization of scalable homogeneous struct literal returns.
 
-; TODO: Support vectorization in this case.
-; CHECK-REMARKS: remark: {{.*}} loop not vectorized: Auto-vectorization of calls that return struct types is not yet supported
 define void @struct_return_f32_widen(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
 ; CHECK-LABEL: define void @struct_return_f32_widen
-; CHECK-NOT:   vector.body:
+; CHECK-SAME:  (ptr noalias [[IN:%.*]], ptr noalias writeonly [[OUT_A:%.*]], ptr noalias writeonly [[OUT_B:%.*]])
+; CHECK:       vector.body:
+; CHECK:         [[WIDE_CALL:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @scalable_vec_masked_foo(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; CHECK:         [[WIDE_A:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[WIDE_CALL]], 0
+; CHECK:         [[WIDE_B:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[WIDE_CALL]], 1
+; CHECK:         call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[WIDE_A]], ptr {{%.*}}, i32 4, <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK:         call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[WIDE_B]], ptr {{%.*}}, i32 4, <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
 entry:
   br label %for.body
 
@@ -32,11 +35,15 @@ exit:
   ret void
 }
 
-; TODO: Support vectorization in this case.
-; CHECK-REMARKS: remark: {{.*}} loop not vectorized: Auto-vectorization of calls that return struct types is not yet supported
 define void @struct_return_f64_widen(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
 ; CHECK-LABEL: define void @struct_return_f64_widen
-; CHECK-NOT:   vector.body:
+; CHECK-SAME:  (ptr noalias [[IN:%.*]], ptr noalias writeonly [[OUT_A:%.*]], ptr noalias writeonly [[OUT_B:%.*]])
+; CHECK:       vector.body:
+; CHECK:         [[WIDE_CALL:%.*]] = call { <vscale x 2 x double>, <vscale x 2 x double> } @scalable_vec_masked_bar(<vscale x 2 x double> [[WIDE_MASKED_LOAD:%.*]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; CHECK:         [[WIDE_A:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[WIDE_CALL]], 0
+; CHECK:         [[WIDE_B:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[WIDE_CALL]], 1
+; CHECK:         call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[WIDE_A]], ptr {{%.*}}, i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK:         call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[WIDE_B]], ptr {{%.*}}, i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 entry:
   br label %for.body
 
@@ -59,11 +66,16 @@ exit:
   ret void
 }
 
-; TODO: Support vectorization in this case.
-; CHECK-REMARKS: remark: {{.*}} loop not vectorized: Auto-vectorization of calls that return struct types is not yet supported
 define void @struct_return_f32_widen_rt_checks(ptr %in, ptr writeonly %out_a, ptr writeonly %out_b) {
 ; CHECK-LABEL: define void @struct_return_f32_widen_rt_checks
-; CHECK-NOT:   vector.body:
+; CHECK-SAME:  (ptr [[IN:%.*]], ptr writeonly [[OUT_A:%.*]], ptr writeonly [[OUT_B:%.*]])
+; CHECK:       entry:
+; CHECK:         br i1 false, label %scalar.ph, label %vector.memcheck
+; CHECK:       vector.memcheck:
+; CHECK:       vector.body:
+; CHECK:         call { <vscale x 4 x float>, <vscale x 4 x float> } @scalable_vec_masked_foo(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; CHECK:       for.body:
+; CHECK:         call { float, float } @foo(float [[LOAD:%.*]])
 entry:
   br label %for.body
 

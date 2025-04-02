@@ -223,7 +223,7 @@ struct OffloadBundleEntry {
        << ", ID Length = " << IDLength << ", ID = " << ID;
   }
   void dumpURI(raw_ostream &OS, StringRef filePath) {
-    OS << ID.data() << "\tfile:\/\/" << filePath << "#offset=" << Offset
+    OS << ID.data() << "\tfile://" << filePath << "#offset=" << Offset
        << "&size=" << Size << "\n";
   }
 };
@@ -309,8 +309,6 @@ struct OffloadBundleURI {
     case MEMORY_URI:
       parseMemoryURI(str);
       break;
-    default:
-      report_fatal_error("Unrecognized URI type.");
     }
   }
 
@@ -329,7 +327,6 @@ struct OffloadBundleURI {
         str = str.drop_front(OffsetStr.size());
 
         if (str.consume_front("&size=")) {
-          Size;
           str.getAsInteger(10, Size);
         } else
           report_fatal_error("Reading 'size' in URI.");

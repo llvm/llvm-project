@@ -250,6 +250,9 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
   EXPECT_THAT(N1->memPreds(), testing::ElementsAre(N0));
   EXPECT_TRUE(N2->preds(DAG).empty());
 
+  // Check memSuccs().
+  EXPECT_THAT(N0->memSuccs(), testing::ElementsAre(N1));
+
   // Check UnscheduledSuccs.
   EXPECT_EQ(N0->getNumUnscheduledSuccs(), 1u); // N1
   EXPECT_EQ(N1->getNumUnscheduledSuccs(), 0u);
@@ -266,6 +269,41 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
   EXPECT_FALSE(N0->scheduled());
   N0->setScheduled(true);
   EXPECT_TRUE(N0->scheduled());
+}
+
+TEST_F(DependencyGraphTest, AddRemoveMemPred) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
+  store i8 %v0, ptr %ptr
+  store i8 %v1, ptr %ptr
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *S0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S1 = cast<sandboxir::StoreInst>(&*It++);
+
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
+  DAG.extend({&*BB->begin(), BB->getTerminator()});
+  auto *N0 = cast<sandboxir::MemDGNode>(DAG.getNode(S0));
+  auto *N1 = cast<sandboxir::MemDGNode>(DAG.getNode(S1));
+
+  // Check removeMemPred().
+  EXPECT_FALSE(N0->memSuccs().empty());
+  EXPECT_EQ(N0->getNumUnscheduledSuccs(), 1u);
+  N1->removeMemPred(N0);
+  EXPECT_TRUE(N1->memPreds().empty());
+  EXPECT_EQ(N0->getNumUnscheduledSuccs(), 0u);
+
+  // Check addMemPred().
+  N1->addMemPred(N0);
+  EXPECT_THAT(N1->memPreds(), testing::UnorderedElementsAre(N0));
+  EXPECT_THAT(N0->memSuccs(), testing::UnorderedElementsAre(N1));
+  EXPECT_THAT(N0->getNumUnscheduledSuccs(), 1u);
 }
 
 TEST_F(DependencyGraphTest, Preds) {
@@ -533,7 +571,7 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1) {
   EXPECT_TRUE(RetN->preds(DAG).empty());
 }
 
-TEST_F(DependencyGraphTest, VolatileSotres) {
+TEST_F(DependencyGraphTest, VolatileStores) {
   parseIR(C, R"IR(
 define void @foo(ptr noalias %ptr0, ptr noalias %ptr1, i8 %v) {
   store volatile i8 %v, ptr %ptr0
@@ -902,10 +940,11 @@ define void @foo(ptr %ptr, i8 %v1, i8 %v2, i8 %v3, i8 %new1, i8 %new2) {
 
 TEST_F(DependencyGraphTest, EraseInstrCallback) {
   parseIR(C, R"IR(
-define void @foo(ptr %ptr, i8 %v1, i8 %v2, i8 %v3, i8 %arg) {
+define void @foo(ptr %ptr, i8 %v1, i8 %v2, i8 %v3, i8 %v4, i8 %arg) {
   store i8 %v1, ptr %ptr
   store i8 %v2, ptr %ptr
   store i8 %v3, ptr %ptr
+  store i8 %v4, ptr %ptr
   ret void
 }
 )IR");
@@ -917,17 +956,27 @@ define void @foo(ptr %ptr, i8 %v1, i8 %v2, i8 %v3, i8 %arg) {
   auto *S1 = cast<sandboxir::StoreInst>(&*It++);
   auto *S2 = cast<sandboxir::StoreInst>(&*It++);
   auto *S3 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S4NotInDAG = cast<sandboxir::StoreInst>(&*It++);
 
   // Check erase instruction callback.
   sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
   DAG.extend({S1, S3});
+  auto *S1MemN = cast<sandboxir::MemDGNode>(DAG.getNode(S1));
+  auto *S2MemN = cast<sandboxir::MemDGNode>(DAG.getNode(S2));
+  auto *S3MemN = cast<sandboxir::MemDGNode>(DAG.getNode(S3));
+  EXPECT_EQ(S1MemN->getNumUnscheduledSuccs(), 2u);
+  EXPECT_EQ(S2MemN->getNumUnscheduledSuccs(), 1u);
+  EXPECT_EQ(S3MemN->getNumUnscheduledSuccs(), 0u);
   S2->eraseFromParent();
-  auto *DeletedN = DAG.getNodeOrNull(S2);
+  // Check that the DAG Node for S2 no longer exists.
+  auto *DeletedN = DAG.getNode(S2);
   EXPECT_TRUE(DeletedN == nullptr);
+  // Check that dependencies are maintained.
+  EXPECT_THAT(S3MemN->preds(DAG), testing::UnorderedElementsAre(S1MemN));
+  // Also check that UnscheduledSuccs was updated for S1.
+  EXPECT_EQ(S1MemN->getNumUnscheduledSuccs(), 1u);
 
   // Check the MemDGNode chain.
-  auto *S1MemN = cast<sandboxir::MemDGNode>(DAG.getNode(S1));
-  auto *S3MemN = cast<sandboxir::MemDGNode>(DAG.getNode(S3));
   EXPECT_EQ(S1MemN->getNextNode(), S3MemN);
   EXPECT_EQ(S3MemN->getPrevNode(), S1MemN);
 
@@ -935,7 +984,39 @@ define void @foo(ptr %ptr, i8 %v1, i8 %v2, i8 %v3, i8 %arg) {
   S1->eraseFromParent();
   EXPECT_EQ(S3MemN->getPrevNode(), nullptr);
 
-  // TODO: Check the dependencies to/from NewSN after they land.
+  // Check that we don't crash if we erase a node not in the DAG.
+  S4NotInDAG->eraseFromParent();
+}
+
+// Same but check that we don't update UnscheduledSuccs when Node is scheduled.
+TEST_F(DependencyGraphTest, EraseInstrCallbackScheduled) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, i8 %v1, i8 %v2, i8 %v3, i8 %v4, i8 %arg) {
+  store i8 %v1, ptr %ptr
+  store i8 %v2, ptr %ptr
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *S1 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S2 = cast<sandboxir::StoreInst>(&*It++);
+
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
+  DAG.extend({S1, S2});
+  auto *S1MemN = cast<sandboxir::MemDGNode>(DAG.getNode(S1));
+  auto *S2MemN = cast<sandboxir::MemDGNode>(DAG.getNode(S2));
+  EXPECT_EQ(S1MemN->getNumUnscheduledSuccs(), 1u);
+  EXPECT_EQ(S2MemN->getNumUnscheduledSuccs(), 0u);
+  // Mark S2 as scheduled and erase it.
+  S2MemN->setScheduled(true);
+  S2->eraseFromParent();
+  EXPECT_EQ(DAG.getNode(S2), nullptr);
+  // Check that we did not update S1's UnscheduledSuccs
+  EXPECT_EQ(S1MemN->getNumUnscheduledSuccs(), 1u);
 }
 
 TEST_F(DependencyGraphTest, MoveInstrCallback) {
@@ -1012,4 +1093,95 @@ define void @foo(ptr %ptr, i8 %v1, i8 %v2, i8 %arg) {
   S1->moveBefore(Ret);
   EXPECT_EQ(S2N->getNextNode(), S1N);
   EXPECT_EQ(S1N->getNextNode(), nullptr);
+}
+
+// Extending an "Old" interval with no mem instructions.
+TEST_F(DependencyGraphTest, ExtendDAGWithNoMem) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, i8 %v, i8 %v0, i8 %v1, i8 %v2, i8 %v3) {
+  store i8 %v0, ptr %ptr
+  store i8 %v1, ptr %ptr
+  %zext1 = zext i8 %v to i32
+  %zext2 = zext i8 %v to i32
+  store i8 %v2, ptr %ptr
+  store i8 %v3, ptr %ptr
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *S0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S1 = cast<sandboxir::StoreInst>(&*It++);
+  auto *Z1 = cast<sandboxir::CastInst>(&*It++);
+  auto *Z2 = cast<sandboxir::CastInst>(&*It++);
+  auto *S2 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S3 = cast<sandboxir::StoreInst>(&*It++);
+
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
+  // Create a non-empty DAG that contains no memory instructions.
+  DAG.extend({Z1, Z2});
+  // Now extend it downwards.
+  DAG.extend({S2, S3});
+  EXPECT_TRUE(memDependency(DAG.getNode(S2), DAG.getNode(S3)));
+
+  // Same but upwards.
+  DAG.clear();
+  DAG.extend({Z1, Z2});
+  DAG.extend({S0, S1});
+  EXPECT_TRUE(memDependency(DAG.getNode(S0), DAG.getNode(S1)));
+}
+
+// Setting a Use with a setOperand(), RUW, RAUW etc. can add/remove use-def
+// edges. This needs to maintain the UnscheduledSuccs counter.
+TEST_F(DependencyGraphTest, MaintainUnscheduledSuccsOnUseSet) {
+  parseIR(C, R"IR(
+define void @foo(i8 %v0, i8 %v1) {
+  %add0 = add i8 %v0, %v1
+  %add1 = add i8 %add0, %v1
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *Arg0 = F->getArg(0);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Add0 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *Add1 = cast<sandboxir::BinaryOperator>(&*It++);
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
+  DAG.extend({Add0, Add1});
+  auto *N0 = DAG.getNode(Add0);
+
+  EXPECT_EQ(N0->getNumUnscheduledSuccs(), 1u);
+  // Now change %add1 operand to not use %add0.
+  Add1->setOperand(0, Arg0);
+  EXPECT_EQ(N0->getNumUnscheduledSuccs(), 0u);
+  // Restore it: %add0 is now used by %add1.
+  Add1->setOperand(0, Add0);
+  EXPECT_EQ(N0->getNumUnscheduledSuccs(), 1u);
+
+  // RAUW
+  Add0->replaceAllUsesWith(Arg0);
+  EXPECT_EQ(N0->getNumUnscheduledSuccs(), 0u);
+  // Restore it: %add0 is now used by %add1.
+  Add1->setOperand(0, Add0);
+  EXPECT_EQ(N0->getNumUnscheduledSuccs(), 1u);
+
+  // RUWIf
+  Add0->replaceUsesWithIf(Arg0, [](const auto &U) { return true; });
+  EXPECT_EQ(N0->getNumUnscheduledSuccs(), 0u);
+  // Restore it: %add0 is now used by %add1.
+  Add1->setOperand(0, Add0);
+  EXPECT_EQ(N0->getNumUnscheduledSuccs(), 1u);
+
+  // RUOW
+  Add1->replaceUsesOfWith(Add0, Arg0);
+  EXPECT_EQ(N0->getNumUnscheduledSuccs(), 0u);
+  // Restore it: %add0 is now used by %add1.
+  Add1->setOperand(0, Add0);
+  EXPECT_EQ(N0->getNumUnscheduledSuccs(), 1u);
 }

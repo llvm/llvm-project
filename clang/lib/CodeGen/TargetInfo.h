@@ -439,7 +439,9 @@ public:
   }
 
   /// Return an LLVM type that corresponds to a HLSL type
-  virtual llvm::Type *getHLSLType(CodeGenModule &CGM, const Type *T) const {
+  virtual llvm::Type *
+  getHLSLType(CodeGenModule &CGM, const Type *T,
+              const SmallVector<int32_t> *Packoffsets = nullptr) const {
     return nullptr;
   }
 

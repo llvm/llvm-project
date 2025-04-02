@@ -53,6 +53,12 @@
 #include <errno.h>
 #include <fcntl.h>
 
+#if defined(_WIN64)
+typedef __int64 ssize_t;
+#elif defined(_WIN32)
+typedef long ssize_t;
+#endif
+
 void fail(const char *format, ...) {
   va_list ap;
   va_start(ap, format);
@@ -327,7 +333,7 @@ void checkCount(const char *id, amd_comgr_data_set_t dataSet,
          dataKindString(dataKind), expected);
 }
 
-size_t WriteFile(int FD, const char *Buffer, size_t Size) {
+size_t WriteFileCustom(int FD, const char *Buffer, size_t Size) {
   size_t BytesWritten = 0;
 
   while (BytesWritten < Size) {

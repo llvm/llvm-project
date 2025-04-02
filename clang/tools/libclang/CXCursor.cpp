@@ -338,7 +338,6 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::EmbedExprClass:
   case Stmt::HLSLOutArgExprClass:
   case Stmt::OpenACCAsteriskSizeExprClass:
-  case Stmt::ResolvedUnexpandedPackExprClass:
     K = CXCursor_UnexposedExpr;
     break;
 
@@ -910,6 +909,9 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
     break;
   case Stmt::OpenACCWaitConstructClass:
     K = CXCursor_OpenACCWaitConstruct;
+    break;
+  case Stmt::OpenACCCacheConstructClass:
+    K = CXCursor_OpenACCCacheConstruct;
     break;
   case Stmt::OpenACCInitConstructClass:
     K = CXCursor_OpenACCInitConstruct;

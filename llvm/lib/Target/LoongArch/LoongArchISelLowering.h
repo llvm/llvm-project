@@ -271,7 +271,14 @@ public:
       unsigned *Fast = nullptr) const override;
 
   bool isShuffleMaskLegal(ArrayRef<int> Mask, EVT VT) const override {
-    return false;
+    if (!VT.isSimple())
+      return false;
+
+    // Not for i1 vectors
+    if (VT.getSimpleVT().getScalarType() == MVT::i1)
+      return false;
+
+    return isTypeLegal(VT.getSimpleVT());
   }
   bool shouldConsiderGEPOffsetSplit() const override { return true; }
   bool shouldSignExtendTypeInLibCall(Type *Ty, bool IsSigned) const override;
@@ -281,6 +288,7 @@ public:
                               Align &PrefAlign) const override;
 
   bool isFPImmVLDILegal(const APFloat &Imm, EVT VT) const;
+  LegalizeTypeAction getPreferredVectorAction(MVT VT) const override;
 
 private:
   /// Target-specific function used to lower LoongArch calling conventions.

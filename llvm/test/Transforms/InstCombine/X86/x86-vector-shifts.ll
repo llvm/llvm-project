@@ -3732,6 +3732,32 @@ define <4 x i64> @test_avx2_psrl_0() {
   ret <4 x i64> %16
 }
 
+; FIXME: Failure to peek through bitcasts to ensure psllq shift amount is within bounds.
+define <2 x i64> @PR125228(<2 x i64> %v, <2 x i64> %s) {
+; CHECK-LABEL: @PR125228(
+; CHECK-NEXT:    [[MASK:%.*]] = and <2 x i64> [[S:%.*]], splat (i64 63)
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i64> [[MASK]], <2 x i64> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[SLL0:%.*]] = shl <2 x i64> [[V:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast <2 x i64> [[MASK]] to <16 x i8>
+; CHECK-NEXT:    [[PSRLDQ:%.*]] = shufflevector <16 x i8> [[CAST]], <16 x i8> poison, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[CAST3:%.*]] = bitcast <16 x i8> [[PSRLDQ]] to <2 x i64>
+; CHECK-NEXT:    [[SLL1:%.*]] = call <2 x i64> @llvm.x86.sse2.psll.q(<2 x i64> [[V]], <2 x i64> [[CAST3]])
+; CHECK-NEXT:    [[SHUFP_UNCASTED:%.*]] = shufflevector <2 x i64> [[SLL0]], <2 x i64> [[SLL1]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    ret <2 x i64> [[SHUFP_UNCASTED]]
+;
+  %mask = and <2 x i64> %s, splat (i64 63)
+  %sll0 = call <2 x i64> @llvm.x86.sse2.psll.q(<2 x i64> %v, <2 x i64> %mask)
+  %cast = bitcast <2 x i64> %mask to <16 x i8>
+  %psrldq = shufflevector <16 x i8> %cast, <16 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
+  %cast3 = bitcast <16 x i8> %psrldq to <2 x i64>
+  %sll1 = call <2 x i64> @llvm.x86.sse2.psll.q(<2 x i64> %v, <2 x i64> %cast3)
+  %cast0 = bitcast <2 x i64> %sll0 to <2 x double>
+  %cast1 = bitcast <2 x i64> %sll1 to <2 x double>
+  %shufp = shufflevector <2 x double> %cast0, <2 x double> %cast1, <2 x i32> <i32 0, i32 3>
+  %res = bitcast <2 x double> %shufp to <2 x i64>
+  ret <2 x i64> %res
+}
+
 declare <8 x i64> @llvm.x86.avx512.pslli.q.512(<8 x i64>, i32) #1
 declare <16 x i32> @llvm.x86.avx512.pslli.d.512(<16 x i32>, i32) #1
 declare <32 x i16> @llvm.x86.avx512.pslli.w.512(<32 x i16>, i32) #1

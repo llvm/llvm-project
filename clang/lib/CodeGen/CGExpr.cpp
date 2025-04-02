@@ -31,6 +31,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -60,7 +61,13 @@ namespace clang {
 llvm::cl::opt<bool> ClSanitizeGuardChecks(
     "ubsan-guard-checks", llvm::cl::Optional,
     llvm::cl::desc("Guard UBSAN checks with `llvm.allow.ubsan.check()`."));
+
 } // namespace clang
+
+static llvm::cl::opt<bool> ClArrayBoundsPseudoFn(
+    "array-bounds-pseudofn", llvm::cl::Hidden, llvm::cl::Optional,
+    llvm::cl::desc("Emit debug info that places array-bounds instrumentation "
+                   "in an inline function called __ubsan_check_array_bounds."));
 
 //===--------------------------------------------------------------------===//
 //                        Defines for metadata
@@ -103,11 +110,15 @@ RawAddress CodeGenFunction::CreateTempAlloca(llvm::Type *Ty, CharUnits Align,
   if (AllocaAddr)
     *AllocaAddr = Alloca;
   llvm::Value *V = Alloca.getPointer();
+  assert((!getLangOpts().OpenCL ||
+          CGM.getTarget().getTargetAddressSpace(getASTAllocaAddressSpace()) ==
+              CGM.getTarget().getTargetAddressSpace(LangAS::opencl_private)) &&
+         "For OpenCL allocas must allocate in the private address space!");
   // Alloca always returns a pointer in alloca address space, which may
   // be different from the type defined by the language. For example,
   // in C++ the auto variables are in the default address space. Therefore
   // cast alloca to the default address space when necessary.
-  if (getASTAllocaAddressSpace() != LangAS::Default) {
+  if (!getLangOpts().OpenCL && getASTAllocaAddressSpace() != LangAS::Default) {
     auto DestAddrSpace = getContext().getTargetAddressSpace(LangAS::Default);
     llvm::IRBuilderBase::InsertPointGuard IPG(Builder);
     // When ArraySize is nullptr, alloca is inserted at AllocaInsertPt,
@@ -1215,6 +1226,13 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
 
   SanitizerScope SanScope(this);
 
+  llvm::DILocation *CheckDI = Builder.getCurrentDebugLocation();
+  if (ClArrayBoundsPseudoFn && CheckDI) {
+    CheckDI = getDebugInfo()->CreateSyntheticInlineAt(
+        Builder.getCurrentDebugLocation(), "__ubsan_check_array_bounds");
+  }
+  ApplyDebugLocation ApplyTrapDI(*this, CheckDI);
+
   bool IndexSigned = IndexType->isSignedIntegerOrEnumerationType();
   llvm::Value *IndexVal = Builder.CreateIntCast(Index, SizeTy, IndexSigned);
   llvm::Value *BoundVal = Builder.CreateIntCast(Bound, SizeTy, false);
@@ -1985,7 +2003,7 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
 
   if (const auto *ClangVecTy = Ty->getAs<VectorType>()) {
     // Boolean vectors use `iN` as storage type.
-    if (ClangVecTy->isExtVectorBoolType()) {
+    if (ClangVecTy->isPackedVectorBoolType(getContext())) {
       llvm::Type *ValTy = ConvertType(Ty);
       unsigned ValNumElems =
           cast<llvm::FixedVectorType>(ValTy)->getNumElements();
@@ -2064,6 +2082,10 @@ llvm::Value *CodeGenFunction::EmitToMemory(llvm::Value *Value, QualType Ty) {
 
   if (Ty->isExtVectorBoolType()) {
     llvm::Type *StoreTy = convertTypeForLoadStore(Ty, Value->getType());
+    if (StoreTy->isVectorTy() && StoreTy->getScalarSizeInBits() >
+                                     Value->getType()->getScalarSizeInBits())
+      return Builder.CreateZExt(Value, StoreTy);
+
     // Expand to the memory bit width.
     unsigned MemNumElems = StoreTy->getPrimitiveSizeInBits();
     // <N x i1> --> <P x i1>.
@@ -2079,8 +2101,9 @@ llvm::Value *CodeGenFunction::EmitToMemory(llvm::Value *Value, QualType Ty) {
 /// by convertTypeForLoadStore) to its primary IR type (as returned
 /// by ConvertType).
 llvm::Value *CodeGenFunction::EmitFromMemory(llvm::Value *Value, QualType Ty) {
-  if (Ty->isExtVectorBoolType()) {
+  if (Ty->isPackedVectorBoolType(getContext())) {
     const auto *RawIntTy = Value->getType();
+
     // Bitcast iP --> <P x i1>.
     auto *PaddedVecTy = llvm::FixedVectorType::get(
         Builder.getInt1Ty(), RawIntTy->getPrimitiveSizeInBits());
@@ -2091,10 +2114,10 @@ llvm::Value *CodeGenFunction::EmitFromMemory(llvm::Value *Value, QualType Ty) {
     return emitBoolVecConversion(V, ValNumElems, "extractvec");
   }
 
-  if (hasBooleanRepresentation(Ty) || Ty->isBitIntType()) {
-    llvm::Type *ResTy = ConvertType(Ty);
+  llvm::Type *ResTy = ConvertType(Ty);
+  if (hasBooleanRepresentation(Ty) || Ty->isBitIntType() ||
+      Ty->isExtVectorBoolType())
     return Builder.CreateTrunc(Value, ResTy, "loadedv");
-  }
 
   return Value;
 }
@@ -2152,7 +2175,8 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
     if (auto *VecTy = dyn_cast<llvm::FixedVectorType>(SrcTy)) {
       auto *NewVecTy =
           CGM.getABIInfo().getOptimalVectorMemoryType(VecTy, getLangOpts());
-      if (!ClangVecTy->isExtVectorBoolType() && VecTy != NewVecTy) {
+      if (!ClangVecTy->isPackedVectorBoolType(getContext()) &&
+          VecTy != NewVecTy) {
         SmallVector<int, 16> Mask(NewVecTy->getNumElements(), -1);
         std::iota(Mask.begin(), Mask.begin() + VecTy->getNumElements(), 0);
         Value = Builder.CreateShuffleVector(Value, Mask, "extractVec");
@@ -2343,7 +2367,15 @@ RValue CodeGenFunction::EmitLoadOfExtVectorElementLValue(LValue LV) {
   if (!ExprVT) {
     unsigned InIdx = getAccessedFieldNo(0, Elts);
     llvm::Value *Elt = llvm::ConstantInt::get(SizeTy, InIdx);
-    return RValue::get(Builder.CreateExtractElement(Vec, Elt));
+
+    llvm::Value *Element = Builder.CreateExtractElement(Vec, Elt);
+
+    llvm::Type *LVTy = ConvertType(LV.getType());
+    if (Element->getType()->getPrimitiveSizeInBits() >
+        LVTy->getPrimitiveSizeInBits())
+      Element = Builder.CreateTrunc(Element, LVTy);
+
+    return RValue::get(Element);
   }
 
   // Always use shuffle vector to try to retain the original program structure
@@ -2354,6 +2386,10 @@ RValue CodeGenFunction::EmitLoadOfExtVectorElementLValue(LValue LV) {
     Mask.push_back(getAccessedFieldNo(i, Elts));
 
   Vec = Builder.CreateShuffleVector(Vec, Mask);
+
+  if (LV.getType()->isExtVectorBoolType())
+    Vec = Builder.CreateTrunc(Vec, ConvertType(LV.getType()), "truncv");
+
   return RValue::get(Vec);
 }
 
@@ -2407,6 +2443,13 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
       // Read/modify/write the vector, inserting the new element.
       llvm::Value *Vec = Builder.CreateLoad(Dst.getVectorAddress(),
                                             Dst.isVolatileQualified());
+      llvm::Type *VecTy = Vec->getType();
+      llvm::Value *SrcVal = Src.getScalarVal();
+
+      if (SrcVal->getType()->getPrimitiveSizeInBits() <
+          VecTy->getScalarSizeInBits())
+        SrcVal = Builder.CreateZExt(SrcVal, VecTy->getScalarType());
+
       auto *IRStoreTy = dyn_cast<llvm::IntegerType>(Vec->getType());
       if (IRStoreTy) {
         auto *IRVecTy = llvm::FixedVectorType::get(
@@ -2414,19 +2457,21 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
         Vec = Builder.CreateBitCast(Vec, IRVecTy);
         // iN --> <N x i1>.
       }
-      llvm::Value *SrcVal = Src.getScalarVal();
+
       // Allow inserting `<1 x T>` into an `<N x T>`. It can happen with scalar
       // types which are mapped to vector LLVM IR types (e.g. for implementing
       // an ABI).
       if (auto *EltTy = dyn_cast<llvm::FixedVectorType>(SrcVal->getType());
           EltTy && EltTy->getNumElements() == 1)
         SrcVal = Builder.CreateBitCast(SrcVal, EltTy->getElementType());
+
       Vec = Builder.CreateInsertElement(Vec, SrcVal, Dst.getVectorIdx(),
                                         "vecins");
       if (IRStoreTy) {
         // <N x i1> --> <iN>.
         Vec = Builder.CreateBitCast(Vec, IRStoreTy);
       }
+
       Builder.CreateStore(Vec, Dst.getVectorAddress(),
                           Dst.isVolatileQualified());
       return;
@@ -2623,14 +2668,12 @@ void CodeGenFunction::EmitStoreThroughExtVectorComponentLValue(RValue Src,
   // This access turns into a read/modify/write of the vector.  Load the input
   // value now.
   llvm::Value *Vec = Builder.CreateLoad(DstAddr, Dst.isVolatileQualified());
+  llvm::Type *VecTy = Vec->getType();
   const llvm::Constant *Elts = Dst.getExtVectorElts();
-
-  llvm::Value *SrcVal = Src.getScalarVal();
 
   if (const VectorType *VTy = Dst.getType()->getAs<VectorType>()) {
     unsigned NumSrcElts = VTy->getNumElements();
-    unsigned NumDstElts =
-        cast<llvm::FixedVectorType>(Vec->getType())->getNumElements();
+    unsigned NumDstElts = cast<llvm::FixedVectorType>(VecTy)->getNumElements();
     if (NumDstElts == NumSrcElts) {
       // Use shuffle vector is the src and destination are the same number of
       // elements and restore the vector mask since it is on the side it will be
@@ -2638,6 +2681,11 @@ void CodeGenFunction::EmitStoreThroughExtVectorComponentLValue(RValue Src,
       SmallVector<int, 4> Mask(NumDstElts);
       for (unsigned i = 0; i != NumSrcElts; ++i)
         Mask[getAccessedFieldNo(i, Elts)] = i;
+
+      llvm::Value *SrcVal = Src.getScalarVal();
+      if (VecTy->getScalarSizeInBits() >
+          SrcVal->getType()->getScalarSizeInBits())
+        SrcVal = Builder.CreateZExt(SrcVal, VecTy);
 
       Vec = Builder.CreateShuffleVector(SrcVal, Mask);
     } else if (NumDstElts > NumSrcElts) {
@@ -2649,7 +2697,8 @@ void CodeGenFunction::EmitStoreThroughExtVectorComponentLValue(RValue Src,
       for (unsigned i = 0; i != NumSrcElts; ++i)
         ExtMask.push_back(i);
       ExtMask.resize(NumDstElts, -1);
-      llvm::Value *ExtSrcVal = Builder.CreateShuffleVector(SrcVal, ExtMask);
+      llvm::Value *ExtSrcVal =
+          Builder.CreateShuffleVector(Src.getScalarVal(), ExtMask);
       // build identity
       SmallVector<int, 4> Mask;
       for (unsigned i = 0; i != NumDstElts; ++i)
@@ -2674,6 +2723,11 @@ void CodeGenFunction::EmitStoreThroughExtVectorComponentLValue(RValue Src,
     // be updating one element.
     unsigned InIdx = getAccessedFieldNo(0, Elts);
     llvm::Value *Elt = llvm::ConstantInt::get(SizeTy, InIdx);
+
+    llvm::Value *SrcVal = Src.getScalarVal();
+    if (VecTy->getScalarSizeInBits() > SrcVal->getType()->getScalarSizeInBits())
+      SrcVal = Builder.CreateZExt(SrcVal, VecTy->getScalarType());
+
     Vec = Builder.CreateInsertElement(Vec, SrcVal, Elt);
   }
 
@@ -4701,9 +4755,13 @@ EmitExtVectorElementExpr(const ExtVectorElementExpr *E) {
 
     // Store the vector to memory (because LValue wants an address).
     Address VecMem = CreateMemTemp(E->getBase()->getType());
+    // need to zero extend an hlsl boolean vector to store it back to memory
+    QualType Ty = E->getBase()->getType();
+    llvm::Type *LTy = convertTypeForLoadStore(Ty, Vec->getType());
+    if (LTy->getScalarSizeInBits() > Vec->getType()->getScalarSizeInBits())
+      Vec = Builder.CreateZExt(Vec, LTy);
     Builder.CreateStore(Vec, VecMem);
-    Base = MakeAddrLValue(VecMem, E->getBase()->getType(),
-                          AlignmentSource::Decl);
+    Base = MakeAddrLValue(VecMem, Ty, AlignmentSource::Decl);
   }
 
   QualType type =
@@ -5339,6 +5397,7 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
   case CK_HLSLVectorTruncation:
   case CK_HLSLArrayRValue:
   case CK_HLSLElementwiseCast:
+  case CK_HLSLAggregateSplatCast:
     return EmitUnsupportedLValue(E, "unexpected cast lvalue");
 
   case CK_Dependent:
@@ -5548,6 +5607,12 @@ CodeGenFunction::getOrCreateOpaqueRValueMapping(const OpaqueValueExpr *e) {
 
   assert(e->isUnique() && "RValue for a nonunique OVE hasn't been emitted");
   return EmitAnyExpr(e->getSourceExpr());
+}
+
+bool CodeGenFunction::isOpaqueValueEmitted(const OpaqueValueExpr *E) {
+  if (OpaqueValueMapping::shouldBindAsLValue(E))
+    return OpaqueLValues.contains(E);
+  return OpaqueRValues.contains(E);
 }
 
 RValue CodeGenFunction::EmitRValueForField(LValue LV,
@@ -6151,17 +6216,20 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
       StaticOperator = true;
   }
 
-  // GPUs can execute hostexec variadic functions, printf, and fprintf on host.
-  if ((CGM.getTriple().isAMDGCN() || CGM.getTriple().isNVPTX()) &&
-      CGM.getLangOpts().OpenMP && FnType &&
+  // Emit __llvm_omp_emissary_rpc for stubs of emissary APIs.
+  if ((CGM.getTriple().isAMDGCN() || CGM.getTriple().isNVPTX()) && FnType &&
       dyn_cast<FunctionProtoType>(FnType) &&
-      dyn_cast<FunctionProtoType>(FnType)->isVariadic() &&
-      (std::find(std::begin(HostexecFns), std::end(HostexecFns),
-                 E->getDirectCallee()->getNameAsString()) !=
-       std::end(HostexecFns)))
-    return EmitHostexecAllocAndExecFns(
-        E, E->getDirectCallee()->getNameAsString().append("_allocate").c_str(),
-        E->getDirectCallee()->getNameAsString().append("_execute").c_str());
+      dyn_cast<FunctionProtoType>(FnType)->isVariadic()) {
+    // This is a variadic function in a device compile
+    // if (emissary_exec || (openmp && (fprintf || printf))
+    if ((E->getDirectCallee()->getNameAsString() == "_emissary_exec") ||
+        // FIXME: do not call for fprintf or printf if device libc is active
+        (CGM.getLangOpts().OpenMP && 
+         ((E->getDirectCallee()->getNameAsString() == "fprintf") ||
+          (E->getDirectCallee()->getNameAsString() == "printf")))) {
+      return EmitEmissaryExec(E);
+    }
+  }
 
   auto Arguments = E->arguments();
   if (StaticOperator) {

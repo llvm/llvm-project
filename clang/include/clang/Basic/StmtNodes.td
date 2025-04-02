@@ -163,7 +163,6 @@ def MaterializeTemporaryExpr : StmtNode<Expr>;
 def LambdaExpr : StmtNode<Expr>;
 def CXXFoldExpr : StmtNode<Expr>;
 def CXXParenListInitExpr: StmtNode<Expr>;
-def ResolvedUnexpandedPackExpr : StmtNode<Expr>;
 
 // C++ Coroutines expressions
 def CoroutineSuspendExpr : StmtNode<Expr, 1>;
@@ -321,6 +320,7 @@ def OpenACCShutdownConstruct : StmtNode<OpenACCConstructStmt>;
 def OpenACCSetConstruct : StmtNode<OpenACCConstructStmt>;
 def OpenACCUpdateConstruct : StmtNode<OpenACCConstructStmt>;
 def OpenACCAtomicConstruct : StmtNode<OpenACCAssociatedStmtConstruct>;
+def OpenACCCacheConstruct : StmtNode<OpenACCConstructStmt>;
 
 // OpenACC Additional Expressions.
 def OpenACCAsteriskSizeExpr : StmtNode<Expr>;

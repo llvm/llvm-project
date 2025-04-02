@@ -308,3 +308,33 @@ pcaddi $t1, %desc_pcrel_20(foo)
 # RELOC: R_LARCH_TLS_DESC_PCREL20_S2 foo 0x0
 # INSTR: pcaddi $t1, %desc_pcrel_20(foo)
 # FIXUP: fixup A - offset: 0, value: %desc_pcrel_20(foo), kind: FK_NONE
+
+fld.s $ft1, $a0, %pc_lo12(foo)
+# RELOC: R_LARCH_PCALA_LO12 foo 0x0
+# INSTR: fld.s $ft1, $a0, %pc_lo12(foo)
+# FIXUP: fixup A - offset: 0, value: %pc_lo12(foo), kind: FK_NONE
+
+fst.d $ft1, $a0, %pc_lo12(foo)
+# RELOC: R_LARCH_PCALA_LO12 foo 0x0
+# INSTR: fst.d $ft1, $a0, %pc_lo12(foo)
+# FIXUP: fixup A - offset: 0, value: %pc_lo12(foo), kind: FK_NONE
+
+vld $vr9, $a0, %pc_lo12(foo)
+# RELOC: R_LARCH_PCALA_LO12 foo 0x0
+# INSTR: vld $vr9, $a0, %pc_lo12(foo)
+# FIXUP: fixup A - offset: 0, value: %pc_lo12(foo), kind: FK_NONE
+
+vst $vr9, $a0, %pc_lo12(foo)
+# RELOC: R_LARCH_PCALA_LO12 foo 0x0
+# INSTR: vst $vr9, $a0, %pc_lo12(foo)
+# FIXUP: fixup A - offset: 0, value: %pc_lo12(foo), kind: FK_NONE
+
+xvld $xr9, $a0, %pc_lo12(foo)
+# RELOC: R_LARCH_PCALA_LO12 foo 0x0
+# INSTR: xvld $xr9, $a0, %pc_lo12(foo)
+# FIXUP: fixup A - offset: 0, value: %pc_lo12(foo), kind: FK_NONE
+
+xvst $xr9, $a0, %pc_lo12(foo)
+# RELOC: R_LARCH_PCALA_LO12 foo 0x0
+# INSTR: xvst $xr9, $a0, %pc_lo12(foo)
+# FIXUP: fixup A - offset: 0, value: %pc_lo12(foo), kind: FK_NONE

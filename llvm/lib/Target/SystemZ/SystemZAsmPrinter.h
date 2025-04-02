@@ -9,9 +9,9 @@
 #ifndef LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZASMPRINTER_H
 #define LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZASMPRINTER_H
 
+#include "MCTargetDesc/SystemZTargetStreamer.h"
 #include "SystemZMCInstLower.h"
 #include "SystemZTargetMachine.h"
-#include "SystemZTargetStreamer.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/MC/MCInstBuilder.h"

@@ -325,7 +325,8 @@ define i16 @mul_add_to_mul_9(i16 %a) {
 
 define i32 @shl_add_to_shl_constexpr() {
 ; CHECK-LABEL: @shl_add_to_shl_constexpr(
-; CHECK-NEXT:    ret i32 mul (i32 ptrtoint (ptr @g to i32), i32 4)
+; CHECK-NEXT:    [[ADD:%.*]] = shl i32 ptrtoint (ptr @g to i32), 2
+; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %shl = shl i32 ptrtoint (ptr @g to i32), 1
   %add = add i32 %shl, %shl

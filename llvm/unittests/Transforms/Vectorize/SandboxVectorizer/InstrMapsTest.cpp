@@ -53,35 +53,67 @@ define void @foo(i8 %v0, i8 %v1, i8 %v2, i8 %v3, <2 x i8> %vec) {
   auto *VAdd0 = cast<sandboxir::BinaryOperator>(&*It++);
   [[maybe_unused]] auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
 
-  sandboxir::InstrMaps IMaps(Ctx);
-  // Check with empty IMaps.
-  EXPECT_EQ(IMaps.getVectorForOrig(Add0), nullptr);
-  EXPECT_EQ(IMaps.getVectorForOrig(Add1), nullptr);
-  EXPECT_FALSE(IMaps.getOrigLane(Add0, Add0));
-  // Check with 1 match.
-  IMaps.registerVector({Add0, Add1}, VAdd0);
-  EXPECT_EQ(IMaps.getVectorForOrig(Add0), VAdd0);
-  EXPECT_EQ(IMaps.getVectorForOrig(Add1), VAdd0);
-  EXPECT_FALSE(IMaps.getOrigLane(VAdd0, VAdd0)); // Bad Orig value
-  EXPECT_FALSE(IMaps.getOrigLane(Add0, Add0));   // Bad Vector value
-  EXPECT_EQ(*IMaps.getOrigLane(VAdd0, Add0), 0U);
-  EXPECT_EQ(*IMaps.getOrigLane(VAdd0, Add1), 1U);
-  // Check when the same vector maps to different original values (which is
-  // common for vector constants).
-  IMaps.registerVector({Add2, Add3}, VAdd0);
-  EXPECT_EQ(*IMaps.getOrigLane(VAdd0, Add2), 0U);
-  EXPECT_EQ(*IMaps.getOrigLane(VAdd0, Add3), 1U);
-  // Check when we register for a second time.
+  sandboxir::InstrMaps IMaps;
+  {
+    // Check with empty IMaps.
+    sandboxir::Action A(nullptr, {Add0}, {}, 0);
+    EXPECT_EQ(IMaps.getVectorForOrig(Add0), nullptr);
+    EXPECT_EQ(IMaps.getVectorForOrig(Add1), nullptr);
+    EXPECT_FALSE(IMaps.getOrigLane(&A, Add0));
+  }
+  {
+    // Check with 1 match.
+    sandboxir::Action A(nullptr, {Add0, Add1}, {}, 0);
+    sandboxir::Action OtherA(nullptr, {}, {}, 0);
+    IMaps.registerVector({Add0, Add1}, &A);
+    EXPECT_EQ(IMaps.getVectorForOrig(Add0), &A);
+    EXPECT_EQ(IMaps.getVectorForOrig(Add1), &A);
+    EXPECT_FALSE(IMaps.getOrigLane(&A, VAdd0));     // Bad Orig value
+    EXPECT_FALSE(IMaps.getOrigLane(&OtherA, Add0)); // Bad Vector value
+    EXPECT_EQ(*IMaps.getOrigLane(&A, Add0), 0U);
+    EXPECT_EQ(*IMaps.getOrigLane(&A, Add1), 1U);
+  }
+  {
+    // Check when the same vector maps to different original values (which is
+    // common for vector constants).
+    sandboxir::Action A(nullptr, {Add2, Add3}, {}, 0);
+    IMaps.registerVector({Add2, Add3}, &A);
+    EXPECT_EQ(*IMaps.getOrigLane(&A, Add2), 0U);
+    EXPECT_EQ(*IMaps.getOrigLane(&A, Add3), 1U);
+  }
+  {
+    // Check when we register for a second time.
+    sandboxir::Action A(nullptr, {Add2, Add3}, {}, 0);
 #ifndef NDEBUG
-  EXPECT_DEATH(IMaps.registerVector({Add1, Add0}, VAdd0), ".*exists.*");
+    EXPECT_DEATH(IMaps.registerVector({Add1, Add0}, &A), ".*exists.*");
 #endif // NDEBUG
-  // Check callbacks: erase original instr.
-  Add0->eraseFromParent();
-  EXPECT_FALSE(IMaps.getOrigLane(VAdd0, Add0));
-  EXPECT_EQ(*IMaps.getOrigLane(VAdd0, Add1), 1U);
-  EXPECT_EQ(IMaps.getVectorForOrig(Add0), nullptr);
-  // Check callbacks: erase vector instr.
-  VAdd0->eraseFromParent();
-  EXPECT_FALSE(IMaps.getOrigLane(VAdd0, Add1));
-  EXPECT_EQ(IMaps.getVectorForOrig(Add1), nullptr);
+  }
+}
+
+TEST_F(InstrMapsTest, VectorLanes) {
+  parseIR(C, R"IR(
+define void @foo(<2 x i8> %v0, <2 x i8> %v1, <4 x i8> %v2, <4 x i8> %v3) {
+  %vadd0 = add <2 x i8> %v0, %v1
+  %vadd1 = add <2 x i8> %v0, %v1
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+
+  auto *VAdd0 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *VAdd1 = cast<sandboxir::BinaryOperator>(&*It++);
+
+  sandboxir::InstrMaps IMaps;
+
+  {
+    // Check that the vector lanes are calculated correctly.
+    sandboxir::Action A(nullptr, {VAdd0, VAdd1}, {}, 0);
+    IMaps.registerVector({VAdd0, VAdd1}, &A);
+    EXPECT_EQ(*IMaps.getOrigLane(&A, VAdd0), 0U);
+    EXPECT_EQ(*IMaps.getOrigLane(&A, VAdd1), 2U);
+  }
 }

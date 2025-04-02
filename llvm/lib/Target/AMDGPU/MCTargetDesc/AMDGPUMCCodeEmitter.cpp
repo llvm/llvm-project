@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/AMDGPUFixupKinds.h"
+#include "MCTargetDesc/AMDGPUMCExpr.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIDefines.h"
 #include "Utils/AMDGPUBaseInfo.h"
@@ -340,14 +341,13 @@ AMDGPUMCCodeEmitter::getLitEncoding(const MCOperand &MO,
 
 uint64_t AMDGPUMCCodeEmitter::getImplicitOpSelHiEncoding(int Opcode) const {
   using namespace AMDGPU::VOP3PEncoding;
-  using namespace AMDGPU::OpName;
 
-  if (AMDGPU::hasNamedOperand(Opcode, op_sel_hi)) {
-    if (AMDGPU::hasNamedOperand(Opcode, src2))
+  if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::op_sel_hi)) {
+    if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src2))
       return 0;
-    if (AMDGPU::hasNamedOperand(Opcode, src1))
+    if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src1))
       return OP_SEL_HI_2;
-    if (AMDGPU::hasNamedOperand(Opcode, src0))
+    if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src0))
       return OP_SEL_HI_1 | OP_SEL_HI_2;
   }
   return OP_SEL_HI_0 | OP_SEL_HI_1 | OP_SEL_HI_2;
@@ -547,9 +547,8 @@ static bool needsPCRel(const MCExpr *Expr) {
   switch (Expr->getKind()) {
   case MCExpr::SymbolRef: {
     auto *SE = cast<MCSymbolRefExpr>(Expr);
-    MCSymbolRefExpr::VariantKind Kind = SE->getKind();
-    return Kind != MCSymbolRefExpr::VK_AMDGPU_ABS32_LO &&
-           Kind != MCSymbolRefExpr::VK_AMDGPU_ABS32_HI;
+    auto Spec = AMDGPU::getSpecifier(SE);
+    return Spec != AMDGPUMCExpr::S_ABS32_LO && Spec != AMDGPUMCExpr::S_ABS32_HI;
   }
   case MCExpr::Binary: {
     auto *BE = cast<MCBinaryExpr>(Expr);

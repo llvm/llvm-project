@@ -39,6 +39,7 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/RelocationResolver.h"
 #include "llvm/Object/StackMapParser.h"
+#include "llvm/Support/AArch64AttributeParser.h"
 #include "llvm/Support/AMDGPUMetadata.h"
 #include "llvm/Support/ARMAttributeParser.h"
 #include "llvm/Support/ARMBuildAttributes.h"
@@ -1337,6 +1338,10 @@ const EnumEntry<unsigned> ElfXCoreSectionFlags[] = {
   ENUM_ENT(XCORE_SHF_DP_SECTION, "")
 };
 
+const EnumEntry<unsigned> ElfAArch64SectionFlags[] = {
+  ENUM_ENT(SHF_AARCH64_PURECODE, "y")
+};
+
 const EnumEntry<unsigned> ElfARMSectionFlags[] = {
   ENUM_ENT(SHF_ARM_PURECODE, "y")
 };
@@ -1375,6 +1380,10 @@ getSectionFlagsForTarget(unsigned EOSAbi, unsigned EMachine) {
     break;
   }
   switch (EMachine) {
+  case EM_AARCH64:
+    Ret.insert(Ret.end(), std::begin(ElfAArch64SectionFlags),
+               std::end(ElfAArch64SectionFlags));
+    break;
   case EM_ARM:
     Ret.insert(Ret.end(), std::begin(ElfARMSectionFlags),
                std::end(ElfARMSectionFlags));
@@ -1616,8 +1625,6 @@ const EnumEntry<unsigned> ElfHeaderMipsFlags[] = {
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX909, "gfx909"),                            \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX90A, "gfx90a"),                            \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX90C, "gfx90c"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX940, "gfx940"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX941, "gfx941"),                            \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX942, "gfx942"),                            \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX950, "gfx950"),                            \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1010, "gfx1010"),                          \
@@ -2872,6 +2879,12 @@ template <class ELFT> void ELFDumper<ELFT>::printArchSpecificInfo() {
         ELF::SHT_ARM_ATTRIBUTES, std::make_unique<ARMAttributeParser>(&W),
         Obj.isLE() ? llvm::endianness::little : llvm::endianness::big);
     break;
+  case EM_AARCH64:
+    printAttributes(ELF::SHT_AARCH64_ATTRIBUTES,
+                    std::make_unique<AArch64AttributeParser>(&W),
+                    Obj.isLE() ? llvm::endianness::little
+                               : llvm::endianness::big);
+    break;
   case EM_RISCV:
     if (Obj.isLE())
       printAttributes(ELF::SHT_RISCV_ATTRIBUTES,
@@ -4104,7 +4117,7 @@ static void printSectionDescription(formatted_raw_ostream &OS,
 
   if (EMachine == EM_X86_64)
     OS << ", l (large)";
-  else if (EMachine == EM_ARM)
+  else if (EMachine == EM_ARM || EMachine == EM_AARCH64)
     OS << ", y (purecode)";
 
   OS << ", p (processor specific)\n";
@@ -7662,7 +7675,7 @@ void LLVMELFDumper<ELFT>::printVersionDefinitionSection(const Elf_Shdr *Sec) {
     W.printFlags("Flags", D.Flags, ArrayRef(SymVersionFlags));
     W.printNumber("Index", D.Ndx);
     W.printNumber("Hash", D.Hash);
-    W.printString("Name", D.Name.c_str());
+    W.printString("Name", D.Name);
     W.printList(
         "Predecessors", D.AuxV,
         [](raw_ostream &OS, const VerdAux &Aux) { OS << Aux.Name.c_str(); });

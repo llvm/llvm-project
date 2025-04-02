@@ -950,6 +950,26 @@ CallInst *IRBuilderBase::CreateConstrainedFPBinOp(
   return C;
 }
 
+CallInst *IRBuilderBase::CreateConstrainedFPIntrinsic(
+    Intrinsic::ID ID, ArrayRef<Type *> Types, ArrayRef<Value *> Args,
+    FMFSource FMFSource, const Twine &Name, MDNode *FPMathTag,
+    std::optional<RoundingMode> Rounding,
+    std::optional<fp::ExceptionBehavior> Except) {
+  Value *RoundingV = getConstrainedFPRounding(Rounding);
+  Value *ExceptV = getConstrainedFPExcept(Except);
+
+  FastMathFlags UseFMF = FMFSource.get(FMF);
+
+  llvm::SmallVector<Value *, 5> ExtArgs(Args);
+  ExtArgs.push_back(RoundingV);
+  ExtArgs.push_back(ExceptV);
+
+  CallInst *C = CreateIntrinsic(ID, Types, ExtArgs, nullptr, Name);
+  setConstrainedFPCallAttr(C);
+  setFPAttrs(C, FPMathTag, UseFMF);
+  return C;
+}
+
 CallInst *IRBuilderBase::CreateConstrainedFPUnroundedBinOp(
     Intrinsic::ID ID, Value *L, Value *R, FMFSource FMFSource,
     const Twine &Name, MDNode *FPMathTag,
@@ -1282,6 +1302,16 @@ CallInst *IRBuilderBase::CreateAlignmentAssumption(const DataLayout &DL,
   assert(isa<PointerType>(PtrValue->getType()) &&
          "trying to create an alignment assumption on a non-pointer?");
   return CreateAlignmentAssumptionHelper(DL, PtrValue, Alignment, OffsetValue);
+}
+
+CallInst *IRBuilderBase::CreateDereferenceableAssumption(Value *PtrValue,
+                                                         Value *SizeValue) {
+  assert(isa<PointerType>(PtrValue->getType()) &&
+         "trying to create an deferenceable assumption on a non-pointer?");
+  SmallVector<Value *, 4> Vals({PtrValue, SizeValue});
+  OperandBundleDefT<Value *> DereferenceableOpB("dereferenceable", Vals);
+  return CreateAssumption(ConstantInt::getTrue(getContext()),
+                          {DereferenceableOpB});
 }
 
 IRBuilderDefaultInserter::~IRBuilderDefaultInserter() = default;

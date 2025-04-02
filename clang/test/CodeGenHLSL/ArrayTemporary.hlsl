@@ -1,3 +1,4 @@
+
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 
 void fn(float x[2]) { }
@@ -27,7 +28,7 @@ void fn2(Obj O[4]) { }
 // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Tmp]], ptr align 4 [[Arr]], i32 32, i1 false)
 // CHECK: call void {{.*}}fn2{{.*}}(ptr noundef byval([4 x %struct.Obj]) align 4 [[Tmp]])
 void call2() {
-  Obj Arr[4] = {};
+  Obj Arr[4] = {{0, 0}, {0, 0}, {0, 0}, {0, 0}};
   fn2(Arr);
 }
 

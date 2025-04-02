@@ -155,6 +155,7 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_reverse_offload:
   case OMPC_dynamic_allocators:
   case OMPC_atomic_default_mem_order:
+  case OMPC_self_maps:
   case OMPC_at:
   case OMPC_severity:
   case OMPC_message:
@@ -259,6 +260,7 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
   case OMPC_reverse_offload:
   case OMPC_dynamic_allocators:
   case OMPC_atomic_default_mem_order:
+  case OMPC_self_maps:
   case OMPC_at:
   case OMPC_severity:
   case OMPC_message:
@@ -797,12 +799,14 @@ OMPReductionClause *OMPReductionClause::Create(
     ArrayRef<Expr *> Privates, ArrayRef<Expr *> LHSExprs,
     ArrayRef<Expr *> RHSExprs, ArrayRef<Expr *> ReductionOps,
     ArrayRef<Expr *> CopyOps, ArrayRef<Expr *> CopyArrayTemps,
-    ArrayRef<Expr *> CopyArrayElems, Stmt *PreInit, Expr *PostUpdate) {
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(
-      (Modifier == OMPC_REDUCTION_inscan ? 8 : 5) * VL.size()));
-  auto *Clause = new (Mem)
-      OMPReductionClause(StartLoc, LParenLoc, ModifierLoc, EndLoc, ColonLoc,
-                         Modifier, VL.size(), QualifierLoc, NameInfo);
+    ArrayRef<Expr *> CopyArrayElems, Stmt *PreInit, Expr *PostUpdate,
+    ArrayRef<bool> IsPrivateVarReduction,
+    OpenMPOriginalSharingModifier OrignalSharingModifier) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *, bool>(
+      (Modifier == OMPC_REDUCTION_inscan ? 8 : 5) * VL.size(), VL.size()));
+  auto *Clause = new (Mem) OMPReductionClause(
+      StartLoc, LParenLoc, ModifierLoc, EndLoc, ColonLoc, Modifier,
+      OrignalSharingModifier, VL.size(), QualifierLoc, NameInfo);
   Clause->setVarRefs(VL);
   Clause->setPrivates(Privates);
   Clause->setLHSExprs(LHSExprs);
@@ -810,6 +814,7 @@ OMPReductionClause *OMPReductionClause::Create(
   Clause->setReductionOps(ReductionOps);
   Clause->setPreInitStmt(PreInit);
   Clause->setPostUpdateExpr(PostUpdate);
+  Clause->setPrivateVariableReductionFlags(IsPrivateVarReduction);
   if (Modifier == OMPC_REDUCTION_inscan) {
     Clause->setInscanCopyOps(CopyOps);
     Clause->setInscanCopyArrayTemps(CopyArrayTemps);
@@ -828,8 +833,8 @@ OMPReductionClause *OMPReductionClause::Create(
 OMPReductionClause *
 OMPReductionClause::CreateEmpty(const ASTContext &C, unsigned N,
                                 OpenMPReductionClauseModifier Modifier) {
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(
-      (Modifier == OMPC_REDUCTION_inscan ? 8 : 5) * N));
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *, bool>(
+      (Modifier == OMPC_REDUCTION_inscan ? 8 : 5) * N, N));
   auto *Clause = new (Mem) OMPReductionClause(N);
   Clause->setModifier(Modifier);
   return Clause;
@@ -1939,6 +1944,10 @@ void OMPClausePrinter::VisitOMPAtomicDefaultMemOrderClause(
      << getOpenMPSimpleClauseTypeName(OMPC_atomic_default_mem_order,
                                       Node->getAtomicDefaultMemOrderKind())
      << ")";
+}
+
+void OMPClausePrinter::VisitOMPSelfMapsClause(OMPSelfMapsClause *) {
+  OS << "self_maps";
 }
 
 void OMPClausePrinter::VisitOMPAtClause(OMPAtClause *Node) {

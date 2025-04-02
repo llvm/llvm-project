@@ -417,6 +417,14 @@ OMPTileDirective::Create(const ASTContext &C, SourceLocation StartLoc,
   return Dir;
 }
 
+OMPTileDirective *OMPTileDirective::CreateEmpty(const ASTContext &C,
+                                                unsigned NumClauses,
+                                                unsigned NumLoops) {
+  return createEmptyDirective<OMPTileDirective>(
+      C, NumClauses, /*HasAssociatedStmt=*/true, TransformedStmtOffset + 1,
+      SourceLocation(), SourceLocation(), NumLoops);
+}
+
 OMPStripeDirective *
 OMPStripeDirective::Create(const ASTContext &C, SourceLocation StartLoc,
                            SourceLocation EndLoc, ArrayRef<OMPClause *> Clauses,
@@ -434,14 +442,6 @@ OMPStripeDirective *OMPStripeDirective::CreateEmpty(const ASTContext &C,
                                                     unsigned NumClauses,
                                                     unsigned NumLoops) {
   return createEmptyDirective<OMPStripeDirective>(
-      C, NumClauses, /*HasAssociatedStmt=*/true, TransformedStmtOffset + 1,
-      SourceLocation(), SourceLocation(), NumLoops);
-}
-
-OMPTileDirective *OMPTileDirective::CreateEmpty(const ASTContext &C,
-                                                unsigned NumClauses,
-                                                unsigned NumLoops) {
-  return createEmptyDirective<OMPTileDirective>(
       C, NumClauses, /*HasAssociatedStmt=*/true, TransformedStmtOffset + 1,
       SourceLocation(), SourceLocation(), NumLoops);
 }

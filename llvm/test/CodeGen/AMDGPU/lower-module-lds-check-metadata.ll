@@ -6,7 +6,7 @@ target triple = "amdgcn-amd-amdhsa"
 ; CHECK:       .amdhsa_group_segment_fixed_size 4
 ; CHECK:       .end_amdhsa_kernel
 
-@global_barrier_state = hidden addrspace(3) global i32 undef, align 4
+@global_barrier_state = hidden addrspace(3) global i32 poison, align 4
 
 define i32 @rw() #0 {
 entry:

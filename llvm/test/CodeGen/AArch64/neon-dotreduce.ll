@@ -87,8 +87,7 @@ define i32 @test_udot_v4i8_nomla(ptr nocapture readonly %a1) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ldr s0, [x0]
 ; CHECK-SD-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-SD-NEXT:    addv s0, v0.4s
+; CHECK-SD-NEXT:    uaddlv s0, v0.4h
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
 ;

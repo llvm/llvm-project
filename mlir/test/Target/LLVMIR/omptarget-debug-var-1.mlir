@@ -26,7 +26,7 @@
 #var_x = #llvm.di_local_variable<scope = #sp,
  name = "x", file = #file, line = 12, type = #real_ty>
 
-module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
+module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true, dlti.dl_spec = #dlti.dl_spec<"dlti.alloca_memory_space" = 5 : ui64>} {
   llvm.func @test() {
     %0 = llvm.mlir.constant(1 : i64) : i64
     %1 = llvm.alloca %0 x f32 : (i64) -> !llvm.ptr
@@ -56,8 +56,23 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_devic
 #loc3 = loc(fused<#sp>[#loc2])
 #loc4 = loc(fused<#g_var>[#loc1])
 
-// CHECK: ![[SP:[0-9]+]] = distinct !DISubprogram(name: "__omp_offloading{{.*}}test{{.*}})
-// CHECK: !DILocalVariable(name: "dyn_ptr", arg: 1, scope: ![[SP]]{{.*}}flags: DIFlagArtificial)
-// CHECK: !DILocalVariable(name: "x", arg: 2, scope: ![[SP]]{{.*}})
-// CHECK: !DILocalVariable(name: "arr", arg: 3, scope: ![[SP]]{{.*}})
-// CHECK: !DILocalVariable(name: "i", arg: 4, scope: ![[SP]]{{.*}})
+// CHECK: define{{.*}}@__omp_offloading{{.*}}test{{.*}}(ptr %0, ptr %[[ARG1:[0-9]+]], ptr  %[[ARG2:[0-9]+]], ptr %[[ARG3:[0-9]+]])
+// CHECK-DAG: store ptr %[[ARG1]], ptr %[[CAST1:[0-9]+]]{{.*}}
+// CHECK-DAG: %[[CAST1]] = addrspacecast ptr addrspace(5) %[[AL1:[0-9]+]]
+// CHECK-DAG: %[[AL1]] = alloca{{.*}}
+// CHECK-DAG: store ptr %[[ARG2]], ptr %[[CAST2:[0-9]+]]{{.*}}
+// CHECK-DAG: %[[CAST2]] = addrspacecast ptr addrspace(5) %[[AL2:[0-9]+]]
+// CHECK-DAG: %[[AL2]] = alloca{{.*}}
+// CHECK-DAG: store ptr %[[ARG3]], ptr %[[CAST3:[0-9]+]]{{.*}}
+// CHECK-DAG: %[[CAST3]] = addrspacecast ptr addrspace(5) %[[AL3:[0-9]+]]
+// CHECK-DAG: %[[AL3]] = alloca{{.*}}
+
+// CHECK-DAG: #dbg_declare(ptr %[[CAST1]], ![[X:[0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(ptr), DIOpDeref(ptr)), {{.*}})
+// CHECK-DAG: #dbg_declare(ptr %[[CAST2]], ![[ARR:[0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(ptr), DIOpDeref(ptr)), {{.*}})
+// CHECK-DAG: #dbg_declare(ptr %[[CAST3]], ![[I:[0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(ptr)), {{.*}})
+
+// CHECK-DAG: ![[SP:[0-9]+]] = distinct !DISubprogram(name: "__omp_offloading{{.*}}test{{.*}})
+// CHECK-DAG: !DILocalVariable(name: "dyn_ptr", arg: 1, scope: ![[SP]]{{.*}}flags: DIFlagArtificial)
+// CHECK-DAG: ![[X:[0-9]+]] = !DILocalVariable(name: "x", arg: 2, scope: ![[SP]]{{.*}})
+// CHECK-DAG: ![[ARR:[0-9]+]] = !DILocalVariable(name: "arr", arg: 3, scope: ![[SP]]{{.*}})
+// CHECK-DAG: ![[I:[0-9]+]] = !DILocalVariable(name: "i", arg: 4, scope: ![[SP]]{{.*}})

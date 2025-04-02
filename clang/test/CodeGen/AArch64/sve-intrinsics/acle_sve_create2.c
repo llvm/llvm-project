@@ -208,3 +208,20 @@ svfloat64x2_t test_svcreate2_f64(svfloat64_t x0, svfloat64_t x1) ATTR
 {
   return SVE_ACLE_FUNC(svcreate2,_f64,,)(x0, x1);
 }
+
+// CHECK-LABEL: @test_svcreate2_mf8(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } poison, <vscale x 16 x i8> [[X0:%.*]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], <vscale x 16 x i8> [[X1:%.*]], 1
+// CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]]
+//
+// CPP-CHECK-LABEL: @_Z18test_svcreate2_mf8u13__SVMfloat8_tS_(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } poison, <vscale x 16 x i8> [[X0:%.*]], 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], <vscale x 16 x i8> [[X1:%.*]], 1
+// CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]]
+//
+svmfloat8x2_t test_svcreate2_mf8(svmfloat8_t x0, svmfloat8_t x1) ATTR
+{
+  return SVE_ACLE_FUNC(svcreate2,_mf8,,)(x0, x1);
+}

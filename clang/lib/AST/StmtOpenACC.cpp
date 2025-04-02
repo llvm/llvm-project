@@ -321,3 +321,21 @@ OpenACCAtomicConstruct *OpenACCAtomicConstruct::Create(
       OpenACCAtomicConstruct(Start, DirectiveLoc, AtKind, End, AssociatedStmt);
   return Inst;
 }
+OpenACCCacheConstruct *OpenACCCacheConstruct::CreateEmpty(const ASTContext &C,
+                                                          unsigned NumVars) {
+  void *Mem =
+      C.Allocate(OpenACCCacheConstruct::totalSizeToAlloc<Expr *>(NumVars));
+  auto *Inst = new (Mem) OpenACCCacheConstruct(NumVars);
+  return Inst;
+}
+
+OpenACCCacheConstruct *OpenACCCacheConstruct::Create(
+    const ASTContext &C, SourceLocation Start, SourceLocation DirectiveLoc,
+    SourceLocation LParenLoc, SourceLocation ReadOnlyLoc,
+    ArrayRef<Expr *> VarList, SourceLocation RParenLoc, SourceLocation End) {
+  void *Mem = C.Allocate(
+      OpenACCCacheConstruct::totalSizeToAlloc<Expr *>(VarList.size()));
+  auto *Inst = new (Mem) OpenACCCacheConstruct(
+      Start, DirectiveLoc, LParenLoc, ReadOnlyLoc, VarList, RParenLoc, End);
+  return Inst;
+}

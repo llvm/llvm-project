@@ -88,7 +88,7 @@ static bool validateFullTilesOnDims(linalg::LinalgOp linalgOp,
 /// Return failure or packed matmul with one of its operands transposed.
 static FailureOr<PackTransposeResult>
 transposePackedMatmul(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
-                      tensor::PackOp packOp, AffineMap operandMap,
+                      linalg::PackOp packOp, AffineMap operandMap,
                       ArrayRef<unsigned> blocksStartDimPos,
                       bool transposeOuterBlocks, bool transposeInnerBlocks) {
   assert(operandMap.getNumDims() >= 4 &&

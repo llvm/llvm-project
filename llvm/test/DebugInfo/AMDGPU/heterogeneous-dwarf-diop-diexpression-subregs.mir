@@ -7,7 +7,7 @@
   define void @kern() #0 !dbg !9 {
     ret void, !dbg !16
   }
-  attributes #0 = { convergent mustprogress noinline nounwind optnone "amdgpu-stack-objects" "frame-pointer"="none" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx900" "target-features"="+16-bit-insts,+ci-insts,+dpp,+flat-address-space,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst" "uniform-work-group-size"="false" }
+  attributes #0 = { noinline optnone }
 
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!2, !3, !4, !5, !6, !7}
@@ -39,6 +39,7 @@
   !23 = !DILocalVariable(name: "with_frags", scope: !9, file: !1, line: 1, type: !15)
   !24 = !DILocalVariable(name: "sgpr", scope: !9, file: !1, line: 1, type: !14)
   !25 = !DILocalVariable(name: "vgpr", scope: !9, file: !1, line: 1, type: !14)
+  !26 = !DILocalVariable(name: "vgpr_frags", scope: !9, file: !1, line: 1, type: !15)
 
 ...
 ---
@@ -58,15 +59,15 @@ body: |
     ; CHECK-NEXT: DW_AT_name ("s_s")
     DBG_VALUE renamable $sgpr42_sgpr43, $noreg, !19, !DIExpression(DIOpArg(0, i64)), debug-location !16
 
-    ; CHECK: DW_AT_location (DW_OP_regx VGPR42)
+    ; CHECK: DW_AT_location (DW_OP_regx VGPR42, DW_OP_LLVM_user DW_OP_LLVM_push_lane, DW_OP_lit4, DW_OP_mul, DW_OP_LLVM_user DW_OP_LLVM_offset)
     ; CHECK-NEXT: DW_AT_name ("v_lo16")
     DBG_VALUE renamable $vgpr42_lo16, $noreg, !20, !DIExpression(DIOpArg(0, i16)), debug-location !16
 
-    ; CHECK: DW_AT_location (DW_OP_regx VGPR42, DW_OP_LLVM_user DW_OP_LLVM_offset_uconst 0x2)
+    ; CHECK: DW_AT_location (DW_OP_regx VGPR42, DW_OP_LLVM_user DW_OP_LLVM_push_lane, DW_OP_lit4, DW_OP_mul, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_LLVM_user DW_OP_LLVM_offset_uconst 0x2)
     ; CHECK-NEXT: DW_AT_name ("v_hi16")
     DBG_VALUE renamable $vgpr42_hi16, $noreg, !21, !DIExpression(DIOpArg(0, i16)), debug-location !16
 
-    ; CHECK: DW_AT_location (DW_OP_regx VGPR42, DW_OP_piece 0x4, DW_OP_regx VGPR43, DW_OP_piece 0x4, DW_OP_LLVM_user DW_OP_LLVM_piece_end)
+    ; CHECK: DW_AT_location (DW_OP_regx VGPR42, DW_OP_LLVM_user DW_OP_LLVM_push_lane, DW_OP_lit4, DW_OP_mul, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_piece 0x4, DW_OP_regx VGPR43, DW_OP_LLVM_user DW_OP_LLVM_push_lane, DW_OP_lit4, DW_OP_mul, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_piece 0x4, DW_OP_LLVM_user DW_OP_LLVM_piece_end)
     ; CHECK-NEXT: DW_AT_name ("v_v")
     DBG_VALUE renamable $vgpr42_vgpr43, $noreg, !22, !DIExpression(DIOpArg(0, i64)), debug-location !16
 
@@ -81,9 +82,16 @@ body: |
     ; CHECK-NEXT: DW_AT_name ("sgpr")
     DBG_VALUE $sgpr100, $noreg, !24, !DIExpression(DIOpArg(0, i32)), debug-location !16
 
-    ; CHECK: DW_AT_location (DW_OP_regx VGPR100)
+    ; CHECK: DW_AT_location (DW_OP_regx VGPR100, DW_OP_LLVM_user DW_OP_LLVM_push_lane, DW_OP_lit4, DW_OP_mul, DW_OP_LLVM_user DW_OP_LLVM_offset)
     ; CHECK-NEXT: ("vgpr")
     DBG_VALUE $vgpr100, $noreg, !25, !DIExpression(DIOpArg(0, i32)), debug-location !16
+
+    ; CHECK: DW_TAG_variable
+    ; CHECK-NEXT: DW_AT_location (indexed ({{.*}}) loclist = {{.*}}:
+    ; CHECK-NEXT:   [{{.*}}): DW_OP_lit0, DW_OP_regx VGPR42, DW_OP_LLVM_user DW_OP_LLVM_push_lane, DW_OP_lit4, DW_OP_mul, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_piece 0x4, DW_OP_regx VGPR43, DW_OP_LLVM_user DW_OP_LLVM_push_lane, DW_OP_lit4, DW_OP_mul, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_piece 0x4, DW_OP_LLVM_user DW_OP_LLVM_piece_end, DW_OP_swap, DW_OP_drop, DW_OP_piece 0x4, DW_OP_lit0, DW_OP_regx VGPR44, DW_OP_LLVM_user DW_OP_LLVM_push_lane, DW_OP_lit4, DW_OP_mul, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_piece 0x4, DW_OP_regx VGPR45, DW_OP_LLVM_user DW_OP_LLVM_push_lane, DW_OP_lit4, DW_OP_mul, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_piece 0x4, DW_OP_LLVM_user DW_OP_LLVM_piece_end, DW_OP_swap, DW_OP_drop, DW_OP_piece 0x4)
+    ; CHECK-NEXT: DW_AT_name    ("vgpr_frags")
+    DBG_VALUE renamable $vgpr42_vgpr43, $noreg, !26, !DIExpression(DIOpArg(0, i64), DIOpFragment(0, 32)), debug-location !16
+    DBG_VALUE renamable $vgpr44_vgpr45, $noreg, !26, !DIExpression(DIOpArg(0, i64), DIOpFragment(32, 32)), debug-location !16
 
     S_ENDPGM 0, debug-location !16
 

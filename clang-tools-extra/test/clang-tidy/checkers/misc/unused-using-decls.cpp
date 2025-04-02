@@ -222,3 +222,19 @@ using gh69714::StructGH69714_1;
 using gh69714::StructGH69714_2;
 struct StructGH69714_1 a;
 struct StructGH69714_2 *b;
+
+namespace gh53444 {
+namespace my_literals {
+  template <char... Ts>
+  int operator""_r() {
+    return {};
+  }
+}
+
+using my_literals::operator"" _r;
+
+int foo() {
+  auto x2 = 123_r;
+}
+
+}

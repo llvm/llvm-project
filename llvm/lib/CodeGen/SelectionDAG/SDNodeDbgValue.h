@@ -65,7 +65,7 @@ public:
   }
 
   /// Returns the Virtual Register for a VReg
-  unsigned getVReg() const {
+  Register getVReg() const {
     assert(kind == VREG);
     return u.VReg;
   }
@@ -76,8 +76,8 @@ public:
   static SDDbgOperand fromFrameIdx(unsigned FrameIdx) {
     return SDDbgOperand(FrameIdx, FRAMEIX);
   }
-  static SDDbgOperand fromVReg(unsigned VReg) {
-    return SDDbgOperand(VReg, VREG);
+  static SDDbgOperand fromVReg(Register VReg) {
+    return SDDbgOperand(VReg.id(), VREG);
   }
   static SDDbgOperand fromConst(const Value *Const) {
     return SDDbgOperand(Const);
@@ -257,8 +257,7 @@ public:
     for (const SDDbgOperand &DbgOp : getLocationOps())
       if (DbgOp.getKind() == SDDbgOperand::SDNODE)
         Dependencies.push_back(DbgOp.getSDNode());
-    for (SDNode *Node : getAdditionalDependencies())
-      Dependencies.push_back(Node);
+    llvm::append_range(Dependencies, getAdditionalDependencies());
     return Dependencies;
   }
 

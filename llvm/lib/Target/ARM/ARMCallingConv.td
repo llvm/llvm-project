@@ -139,7 +139,8 @@ def CC_ARM_AAPCS_Common : CallingConv<[
 
   CCIfType<[i32], CCIfAlign<"8", CCAssignToStackWithShadow<4, 8, [R0, R1, R2, R3]>>>,
   CCIfType<[i32], CCAssignToStackWithShadow<4, 4, [R0, R1, R2, R3]>>,
-  CCIfType<[f16, bf16, f32], CCAssignToStackWithShadow<4, 4, [Q0, Q1, Q2, Q3]>>,
+  CCIfType<[f32], CCAssignToStackWithShadow<4, 4, [Q0, Q1, Q2, Q3]>>,
+  CCIfType<[f16, bf16], CCCustom<"CC_ARM_AAPCS_Common_Custom_f16_Stack">>,
   CCIfType<[f64], CCAssignToStackWithShadow<8, 8, [Q0, Q1, Q2, Q3]>>,
   CCIfType<[v2f64], CCIfAlign<"16",
            CCAssignToStackWithShadow<16, 16, [Q0, Q1, Q2, Q3]>>>,

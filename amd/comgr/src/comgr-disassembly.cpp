@@ -50,7 +50,7 @@ DisassemblyInfo::create(const TargetIdentifier &Ident,
                     "-" + Ident.Environ)
                        .str();
   std::string Isa = TT + Twine("-" + Ident.Processor).str();
-  SmallVector<StringRef, 2> FeaturesVec;
+  SmallVector<std::string, 2> FeaturesVec;
 
   for (auto &Feature : Ident.Features) {
     FeaturesVec.push_back(

@@ -119,7 +119,7 @@ bool LiveRangeShrink::runOnMachineFunction(MachineFunction &MF) {
   // register is used last. When moving instructions up, we need to
   // make sure all its defs (including dead def) will not cross its
   // last use when moving up.
-  DenseMap<unsigned, std::pair<unsigned, MachineInstr *>> UseMap;
+  DenseMap<Register, std::pair<unsigned, MachineInstr *>> UseMap;
 
   for (MachineBasicBlock &MBB : MF) {
     if (MBB.empty())
@@ -153,13 +153,13 @@ bool LiveRangeShrink::runOnMachineFunction(MachineFunction &MF) {
           continue;
         if (MO.isUse())
           UseMap[MO.getReg()] = std::make_pair(CurrentOrder, &MI);
-        else if (MO.isDead() && UseMap.count(MO.getReg()))
+        else if (MO.isDead()) {
           // Barrier is the last instruction where MO get used. MI should not
           // be moved above Barrier.
-          if (Barrier < UseMap[MO.getReg()].first) {
-            Barrier = UseMap[MO.getReg()].first;
-            BarrierMI = UseMap[MO.getReg()].second;
-          }
+          auto It = UseMap.find(MO.getReg());
+          if (It != UseMap.end() && Barrier < It->second.first)
+            std::tie(Barrier, BarrierMI) = It->second;
+        }
       }
 
       if (!MI.isSafeToMove(SawStore)) {

@@ -31,7 +31,7 @@ int main(void) {
 }
 
 
-// CHECK-NOPE-LABEL: define weak_odr protected amdgpu_kernel void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l25(
+// CHECK-NOPE-LABEL: define weak_odr protected amdgpu_kernel void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l25( 
 // CHECK-NOPE-SAME: ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NOPE-NEXT:  entry:
 // CHECK-NOPE-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
@@ -41,27 +41,31 @@ int main(void) {
 // CHECK-NOPE-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK-NOPE-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK-NOPE:       user_code.entry:
-// CHECK-NOPE-NEXT:    [[TMP1:%.*]] = call ptr @printf_allocate(i32 27)
+// CHECK-NOPE-NEXT:    [[TMP1:%.*]] = call ptr @__llvm_omp_emissary_premalloc(i32 39)
 // CHECK-NOPE-NEXT:    [[VARFN_ARGS_STORE_CASTED:%.*]] = addrspacecast ptr [[TMP1]] to ptr addrspace(1)
 // CHECK-NOPE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [[VARFN_ARGS_STORE:%.*]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 0
-// CHECK-NOPE-NEXT:    store i32 16, ptr addrspace(1) [[TMP2]], align 4
+// CHECK-NOPE-NEXT:    store i32 28, ptr addrspace(1) [[TMP2]], align 4
 // CHECK-NOPE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [[VARFN_ARGS_STORE]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 1
-// CHECK-NOPE-NEXT:    store i32 1, ptr addrspace(1) [[TMP3]], align 4
+// CHECK-NOPE-NEXT:    store i32 2, ptr addrspace(1) [[TMP3]], align 4
 // CHECK-NOPE-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[VARFN_ARGS_STORE]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 2
-// CHECK-NOPE-NEXT:    store i32 917505, ptr addrspace(1) [[TMP4]], align 4
+// CHECK-NOPE-NEXT:    store i32 786496, ptr addrspace(1) [[TMP4]], align 4
 // CHECK-NOPE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [[VARFN_ARGS_STORE]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 3
-// CHECK-NOPE-NEXT:    store i32 11, ptr addrspace(1) [[TMP5]], align 4
-// CHECK-NOPE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i64 16
-// CHECK-NOPE-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 1 [[TMP6]], ptr align 1 addrspacecast (ptr addrspace(4) @.str to ptr), i64 11, i1 false)
-// CHECK-NOPE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP6]], i64 11
-// CHECK-NOPE-NEXT:    [[TMP8:%.*]] = call i32 @printf_execute(ptr [[TMP1]], i32 27)
+// CHECK-NOPE-NEXT:    store i32 917505, ptr addrspace(1) [[TMP5]], align 4
+// CHECK-NOPE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [[VARFN_ARGS_STORE]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 4
+// CHECK-NOPE-NEXT:    store i64 8589934593, ptr addrspace(1) [[TMP6:%.*]], align 8
+// CHECK-NOPE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [[VARFN_ARGS_STORE]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 5
+// CHECK-NOPE-NEXT:    store i32 11, ptr addrspace(1) [[TMP7:%.*]], align 4
+// CHECK-NOPE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i64 28
+// CHECK-NOPE-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 1 [[TMP8]], ptr align 1 addrspacecast (ptr addrspace(4) @.str to ptr), i64 11, i1 false)
+// CHECK-NOPE-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP8]], i64 11
+// CHECK-NOPE-NEXT:    [[TMP10:%.*]] = call i64 @__llvm_omp_emissary_rpc(i64 8589934593, ptr [[TMP1]])
 // CHECK-NOPE-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-NOPE-NEXT:    ret void
 // CHECK-NOPE:       worker.exit:
 // CHECK-NOPE-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define weak_odr protected amdgpu_kernel void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l25(
+// CHECK-LABEL: define weak_odr protected amdgpu_kernel void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l25( 
 // CHECK-SAME: ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
@@ -71,20 +75,24 @@ int main(void) {
 // CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK:       user_code.entry:
-// CHECK-NEXT:    [[TMP1:%.*]] = call ptr @printf_allocate(i32 27)
+// CHECK-NEXT:    [[TMP1:%.*]] = call ptr @__llvm_omp_emissary_premalloc(i32 39)
 // CHECK-NEXT:    [[VARFN_ARGS_STORE_CASTED:%.*]] = addrspacecast ptr [[TMP1]] to ptr addrspace(1)
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [[VARFN_ARGS_STORE:%.*]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 0
-// CHECK-NEXT:    store i32 16, ptr addrspace(1) [[TMP2]], align 4
+// CHECK-NEXT:    store i32 28, ptr addrspace(1) [[TMP2]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [[VARFN_ARGS_STORE]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 1
-// CHECK-NEXT:    store i32 1, ptr addrspace(1) [[TMP3]], align 4
+// CHECK-NEXT:    store i32 2, ptr addrspace(1) [[TMP3]], align 4
 // CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[VARFN_ARGS_STORE]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 2
-// CHECK-NEXT:    store i32 917505, ptr addrspace(1) [[TMP4]], align 4
+// CHECK-NEXT:    store i32 786496, ptr addrspace(1) [[TMP4]], align 4
 // CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [[VARFN_ARGS_STORE]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 3
-// CHECK-NEXT:    store i32 11, ptr addrspace(1) [[TMP5]], align 4
-// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i64 16
-// CHECK-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 1 [[TMP6]], ptr align 1 addrspacecast (ptr addrspace(4) @.str to ptr), i64 11, i1 false)
-// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP6]], i64 11
-// CHECK-NEXT:    [[TMP8:%.*]] = call i32 @printf_execute(ptr [[TMP1]], i32 27)
+// CHECK-NEXT:    store i32 917505, ptr addrspace(1) [[TMP5]], align 4
+// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [[VARFN_ARGS_STORE]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 4
+// CHECK-NEXT:    store i64 8589934593, ptr addrspace(1) [[TMP6:%.*]], align 8
+// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [[VARFN_ARGS_STORE]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 5
+// CHECK-NEXT:    store i32 11, ptr addrspace(1) [[TMP7:%.*]], align 4
+// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i64 28
+// CHECK-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 1 [[TMP8]], ptr align 1 addrspacecast (ptr addrspace(4) @.str to ptr), i64 11, i1 false)
+// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP8]], i64 11
+// CHECK-NEXT:    [[TMP10:%.*]] = call i64 @__llvm_omp_emissary_rpc(i64 8589934593, ptr [[TMP1]])
 // CHECK-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-NEXT:    ret void
 // CHECK:       worker.exit:

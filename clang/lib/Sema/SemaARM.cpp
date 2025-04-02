@@ -249,16 +249,16 @@ bool SemaARM::BuiltinARMSpecialReg(unsigned BuiltinID, CallExpr *TheCall,
       }
     }
 
-    SmallVector<int, 5> Ranges;
+    SmallVector<int, 5> FieldBitWidths;
     if (FiveFields)
-      Ranges.append({IsAArch64Builtin ? 1 : 15, 7, 15, 15, 7});
+      FieldBitWidths.append({IsAArch64Builtin ? 2 : 4, 3, 4, 4, 3});
     else
-      Ranges.append({15, 7, 15});
+      FieldBitWidths.append({4, 3, 4});
 
     for (unsigned i = 0; i < Fields.size(); ++i) {
       int IntField;
       ValidString &= !Fields[i].getAsInteger(10, IntField);
-      ValidString &= (IntField >= 0 && IntField <= Ranges[i]);
+      ValidString &= (IntField >= 0 && IntField < (1 << FieldBitWidths[i]));
     }
 
     if (!ValidString)

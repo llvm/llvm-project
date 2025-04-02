@@ -150,6 +150,9 @@ public:
                                               MachineBasicBlock::iterator MBBI,
                                               const DebugLoc &DL, Register Reg,
                                               Register SGPRPair) const;
+  // Returns true if the function may need to reserve space on the stack for the
+  // CWSR trap handler.
+  bool mayReserveScratchForCWSR(const MachineFunction &MF) const;
 };
 
 } // end namespace llvm

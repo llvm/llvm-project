@@ -370,6 +370,10 @@ public:
 
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
+
+  const llvm::omp::GV &getGridValue() const override {
+    return llvm::omp::SPIRVGridValues;
+  }
 };
 
 class LLVM_LIBRARY_VISIBILITY SPIRV64AMDGCNTargetInfo final
@@ -399,6 +403,8 @@ public:
     HasLegalHalfType = true;
     HasFloat16 = true;
     HalfArgsAndReturns = true;
+
+    MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
   }
 
   bool hasBFloat16Type() const override { return true; }

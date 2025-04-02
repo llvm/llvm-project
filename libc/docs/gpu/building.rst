@@ -43,7 +43,7 @@ arguments automatically.
   $> cd build
   $> cmake ../llvm -G Ninja                                                 \
      -DLLVM_ENABLE_PROJECTS="clang;lld"                                     \
-     -DLLVM_ENABLE_RUNTIMES="openmp"                                        \
+     -DLLVM_ENABLE_RUNTIMES="openmp;offload"                                \
      -DCMAKE_BUILD_TYPE=<Debug|Release>   \ # Select build type
      -DCMAKE_INSTALL_PREFIX=<PATH>        \ # Where the libraries will live
      -DRUNTIMES_nvptx64-nvidia-cuda_LLVM_ENABLE_RUNTIMES=libc               \

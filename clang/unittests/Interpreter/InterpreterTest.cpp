@@ -107,6 +107,13 @@ TEST_F(InterpreterTest, Errors) {
 
   auto RecoverErr = Interp->Parse("int var1 = 42;");
   EXPECT_TRUE(!!RecoverErr);
+
+  Err = Interp->Parse("try { throw 1; } catch { 0; }").takeError();
+  EXPECT_THAT(DiagnosticOutput, HasSubstr("error: expected '('"));
+  EXPECT_EQ("Parsing failed.", llvm::toString(std::move(Err)));
+
+  RecoverErr = Interp->Parse("var1 = 424;");
+  EXPECT_TRUE(!!RecoverErr);
 }
 
 // Here we test whether the user can mix declarations and statements. The

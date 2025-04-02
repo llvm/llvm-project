@@ -58,6 +58,9 @@ public:
       __in_stream_ = nullptr;
   }
 
+  // LWG3600 Changed the wording of the copy constructor. In libc++ this constructor
+  // can still be trivial after this change.
+
   _LIBCPP_HIDE_FROM_ABI const _Tp& operator*() const { return __value_; }
   _LIBCPP_HIDE_FROM_ABI const _Tp* operator->() const { return std::addressof((operator*())); }
   _LIBCPP_HIDE_FROM_ABI istream_iterator& operator++() {
