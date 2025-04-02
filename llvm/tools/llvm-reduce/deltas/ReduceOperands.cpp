@@ -26,8 +26,8 @@ extractOperandsFromModule(Oracle &O, ReducerWorkItem &WorkItem,
     for (auto &I : instructions(&F)) {
       if (PHINode *Phi = dyn_cast<PHINode>(&I)) {
         for (auto &Op : Phi->incoming_values()) {
-          if (!O.shouldKeep()) {
-            if (Value *Reduced = ReduceValue(Op))
+          if (Value *Reduced = ReduceValue(Op)) {
+            if (!O.shouldKeep())
               Phi->setIncomingValueForBlock(Phi->getIncomingBlock(Op), Reduced);
           }
         }
@@ -125,6 +125,11 @@ void llvm::reduceOperandsZeroDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
   auto ReduceValue = [](Use &Op) -> Value * {
     if (!shouldReduceOperand(Op))
       return nullptr;
+
+    // Avoid introducing 0-sized allocations.
+    if (isa<AllocaInst>(Op.getUser()))
+      return nullptr;
+
     // Don't duplicate an existing switch case.
     if (auto *IntTy = dyn_cast<IntegerType>(Op->getType()))
       if (switchCaseExists(Op, ConstantInt::get(IntTy, 0)))
