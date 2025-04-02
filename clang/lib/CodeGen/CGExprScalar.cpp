@@ -5067,6 +5067,7 @@ llvm::Value *CodeGenFunction::EmitWithOriginalRHSBitfieldAssignment(
 }
 
 Value *ScalarExprEmitter::VisitBinAssign(const BinaryOperator *E) {
+  ApplyAtomGroup Grp(CGF.getDebugInfo());
   bool Ignore = TestAndClearIgnoreResultAssign();
 
   Value *RHS;
