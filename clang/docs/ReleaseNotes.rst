@@ -371,6 +371,7 @@ Bug Fixes to C++ Support
 - Fixed a Clang regression in C++20 mode where unresolved dependent call expressions were created inside non-dependent contexts (#GH122892)
 - Clang now emits the ``-Wunused-variable`` warning when some structured bindings are unused
   and the ``[[maybe_unused]]`` attribute is not applied. (#GH125810)
+- Fixed a crash caused by invalid declarations of ``std::initializer_list``. (#GH132256)
 - Clang no longer crashes when establishing subsumption between some constraint expressions. (#GH122581)
 - Clang now issues an error when placement new is used to modify a const-qualified variable
   in a ``constexpr`` function. (#GH131432)
