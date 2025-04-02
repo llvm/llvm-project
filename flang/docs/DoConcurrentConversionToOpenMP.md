@@ -173,6 +173,35 @@ omp.parallel {
 
 <!-- TODO -->
 
+### Multi-range loops
+
+The pass currently supports multi-range loops as well. Given the following
+example:
+
+```fortran
+   do concurrent(i=1:n, j=1:m)
+       a(i,j) = i * j
+   end do
+```
+
+The generated `omp.loop_nest` operation look like:
+
+```
+omp.loop_nest (%arg0, %arg1)
+    : index = (%17, %19) to (%18, %20)
+    inclusive step (%c1_2, %c1_4) {
+  fir.store %arg0 to %private_i#1 : !fir.ref<i32>
+  fir.store %arg1 to %private_j#1 : !fir.ref<i32>
+  ...
+  omp.yield
+}
+```
+
+It is worth noting that we have privatized versions for both iteration
+variables: `i` and `j`. These are locally allocated inside the parallel/target
+OpenMP region similar to what the single-range example in previous section
+shows.
+
 <!--
 More details about current status will be added along with relevant parts of the
 implementation in later upstreaming patches.
