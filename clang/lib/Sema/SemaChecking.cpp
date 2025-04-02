@@ -2325,6 +2325,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (BuiltinComplex(TheCall))
       return ExprError();
     break;
+  case Builtin::BI__builtin_is_modifiable_lvalue:
   case Builtin::BI__builtin_constant_p: {
     if (checkArgCount(TheCall, 1))
       return true;
