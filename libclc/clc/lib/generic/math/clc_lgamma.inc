@@ -6,10 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define __CLC_FUNCTION lgamma_r
-#define __CLC_BODY <clc/math/unary_decl_with_int_ptr.inc>
-
-#include <clc/math/gentype.inc>
-
-#undef __CLC_BODY
-#undef __CLC_FUNCTION
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_lgamma(__CLC_GENTYPE x) {
+  __CLC_INTN s;
+  return __clc_lgamma_r(x, &s);
+}
