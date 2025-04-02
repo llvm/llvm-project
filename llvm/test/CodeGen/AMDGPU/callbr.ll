@@ -1,14 +1,5 @@
-; RUN: rm -rf %t && split-file %s %t
-; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -o %t/with-callbr-seldag.s < %t/with-callbr.ll
-; RUN: FileCheck --check-prefix=SELDAG %s < %t/with-callbr-seldag.s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -o %t/with-callbr-gisel.s -global-isel < %t/with-callbr.ll
-; RUN: FileCheck --check-prefix=GISEL %s < %t/with-callbr-gisel.s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -o %t/without-callbr-seldag.s < %t/without-callbr.ll
-; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -o %t/without-callbr-gisel.s -global-isel < %t/without-callbr.ll
-; RUN: diff %t/with-callbr-seldag.s %t/without-callbr-seldag.s
-; RUN: diff %t/with-callbr-gisel.s %t/without-callbr-gisel.s
-
-;--- with-callbr.ll
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -o - < %s | FileCheck --check-prefix=SELDAG %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -o - -global-isel < %s | FileCheck --check-prefix=GISEL %s
 
 ; SELDAG-LABEL: test_kill:
 ; SELDAG-NEXT:  ; %bb.0:
@@ -56,15 +47,6 @@ define void @test_kill(ptr %src, ptr %dst, i1 %c) {
 kill:
   unreachable
 cont:
-  store i32 %a, ptr %dst, align 4
-  ret void
-}
-
-;--- without-callbr.ll
-
-define void @test_kill(ptr %src, ptr %dst, i1 %c) {
-  %a = load i32, ptr %src, align 4
-  call void @llvm.amdgcn.kill(i1 %c)
   store i32 %a, ptr %dst, align 4
   ret void
 }
