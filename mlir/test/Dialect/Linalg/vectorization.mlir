@@ -668,8 +668,8 @@ module attributes {transform.with_named_sequence} {
 // This case is supported because low padding `%l0` is applied on
 // a unit dimension which is supported, non unit result dimension low
 // padding is currently unsupported.
-//  CHECK-LABEL: func @test_masked_vectorize_unit_lowpad
-func.func @test_masked_vectorize_unit_lowpad(
+//  CHECK-LABEL: func @test_masked_vectorize_non_zero_low_pad_unit_res_dim
+func.func @test_masked_vectorize_non_zero_low_pad_unit_res_dim(
   %0 : tensor<?x?xf32>, %h0 : index, %h1 : index, %l0 : index)
     -> tensor<1x4xf32>
 {

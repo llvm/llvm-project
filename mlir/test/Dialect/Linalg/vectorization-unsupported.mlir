@@ -305,10 +305,10 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// Low padding is unsupported with the exception of the special case if the
-// result size of the padded dimension is unit. Here `%l0` being a non-zero
-// padding applied to a non-unit result dimension makes this case unsupported.
-func.func @test_masked_vectorize_lowpad(
+// Padding with non-zero low pad values is not supported, unless the corresponding
+// result dim is 1. Here `%l0` being a non-zero low pad applied to a
+// non-unit result dimension makes this case unsupported.
+func.func @tensor_pad_non_zero_low_pad(
   %0 : tensor<?x?xf32>, %h0 : index, %h1 : index, %l0 : index)
     -> tensor<2x4xf32> {
   // expected-error @+3 {{Attempted to vectorize, but failed}}
