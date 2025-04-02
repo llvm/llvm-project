@@ -2,8 +2,11 @@ RUN: rm -rf %t
 RUN: split-file %s %t
 RUN: %python -c "with open(r'%t/input/large', 'w') as file: file.truncate(100000)"
 RUN: env LLVM_CAS_LOG=2 llvm-cas --cas %t/cas --ingest %t/input
+RUN: env LLVM_CAS_LOG=2 llvm-cas --cas %t/cas --validate-if-needed -check-hash
+RUN: env LLVM_CAS_LOG=2 llvm-cas --cas %t/cas --validate-if-needed -force -allow-recovery
 RUN: FileCheck %s --input-file %t/cas/v1.log
 RUN: FileCheck %s --input-file %t/cas/v1.log --check-prefix=STANDALONE
+
 
 // CHECK: resize mapped file '{{.*}}v8.index'
 // CHECK: mmap '{{.*}}v8.index' [[INDEX:0x[0-9a-f]+]]
@@ -23,6 +26,9 @@ RUN: FileCheck %s --input-file %t/cas/v1.log --check-prefix=STANDALONE
 // CHECK: close mmap '{{.*}}v8.data'
 // CHECK: resize mapped file '{{.*}}v8.index'
 // CHECK: close mmap '{{.*}}v8.index'
+
+// CHECK: validate-if-needed '{{.*}}cas' boot=[[BOOT:[0-9]+]] last-valid=0 check-hash=1 allow-recovery=0 force=0 llvm-cas={{.*}}llvm-cas
+// CHECK: validate-if-needed '{{.*}}cas' boot=[[BOOT]] last-valid=[[BOOT]] check-hash=0 allow-recovery=1 force=1 llvm-cas={{.*}}llvm-cas
 
 // STANDALONE: standalone file create '[[PATH:.*v8.[0-9a-f]*.leaf]].[[SUFFIX:[0-9a-f]*]]'
 // STANDALONE: standalone file rename '[[PATH]].[[SUFFIX]]' to '[[PATH]]'
