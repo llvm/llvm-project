@@ -455,6 +455,7 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
   LLVM_DEBUG({
     llvm::dbgs() << "Tool invocation for module: "
                  << getOperation().getNameAttr() << "\n";
+    llvm::dbgs() << "ptxas executable:" << ptxasCompiler.value() << "\n";
     llvm::interleave(ptxasArgs, llvm::dbgs(), " ");
     llvm::dbgs() << "\n";
     if (createFatbin) {

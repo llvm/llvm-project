@@ -721,13 +721,56 @@ std::optional<DIBasicType::Signedness> DIBasicType::getSignedness() const {
   switch (getEncoding()) {
   case dwarf::DW_ATE_signed:
   case dwarf::DW_ATE_signed_char:
+  case dwarf::DW_ATE_signed_fixed:
     return Signedness::Signed;
   case dwarf::DW_ATE_unsigned:
   case dwarf::DW_ATE_unsigned_char:
+  case dwarf::DW_ATE_unsigned_fixed:
     return Signedness::Unsigned;
   default:
     return std::nullopt;
   }
+}
+
+DIFixedPointType *
+DIFixedPointType::getImpl(LLVMContext &Context, unsigned Tag, MDString *Name,
+                          uint64_t SizeInBits, uint32_t AlignInBits,
+                          unsigned Encoding, DIFlags Flags, unsigned Kind,
+                          int Factor, APInt Numerator, APInt Denominator,
+                          StorageType Storage, bool ShouldCreate) {
+  DEFINE_GETIMPL_LOOKUP(DIFixedPointType,
+                        (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags,
+                         Kind, Factor, Numerator, Denominator));
+  Metadata *Ops[] = {nullptr, nullptr, Name};
+  DEFINE_GETIMPL_STORE(DIFixedPointType,
+                       (Tag, SizeInBits, AlignInBits, Encoding, Flags, Kind,
+                        Factor, Numerator, Denominator),
+                       Ops);
+}
+
+bool DIFixedPointType::isSigned() const {
+  return getEncoding() == dwarf::DW_ATE_signed_fixed;
+}
+
+std::optional<DIFixedPointType::FixedPointKind>
+DIFixedPointType::getFixedPointKind(StringRef Str) {
+  return StringSwitch<std::optional<FixedPointKind>>(Str)
+      .Case("Binary", FixedPointBinary)
+      .Case("Decimal", FixedPointDecimal)
+      .Case("Rational", FixedPointRational)
+      .Default(std::nullopt);
+}
+
+const char *DIFixedPointType::fixedPointKindString(FixedPointKind V) {
+  switch (V) {
+  case FixedPointBinary:
+    return "Binary";
+  case FixedPointDecimal:
+    return "Decimal";
+  case FixedPointRational:
+    return "Rational";
+  }
+  return nullptr;
 }
 
 DIStringType *DIStringType::getImpl(LLVMContext &Context, unsigned Tag,
@@ -813,8 +856,8 @@ DICompositeType *DICompositeType::getImpl(
     Metadata *VTableHolder, Metadata *TemplateParams, MDString *Identifier,
     Metadata *Discriminator, Metadata *DataLocation, Metadata *Associated,
     Metadata *Allocated, Metadata *Rank, Metadata *Annotations,
-    Metadata *Specification, uint32_t NumExtraInhabitants, StorageType Storage,
-    bool ShouldCreate) {
+    Metadata *Specification, uint32_t NumExtraInhabitants, Metadata *BitStride,
+    StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
 
   // Keep this in sync with buildODRType.
@@ -823,11 +866,11 @@ DICompositeType *DICompositeType::getImpl(
       (Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
        OffsetInBits, Flags, Elements, RuntimeLang, VTableHolder, TemplateParams,
        Identifier, Discriminator, DataLocation, Associated, Allocated, Rank,
-       Annotations, Specification, NumExtraInhabitants));
+       Annotations, Specification, NumExtraInhabitants, BitStride));
   Metadata *Ops[] = {File,          Scope,        Name,           BaseType,
                      Elements,      VTableHolder, TemplateParams, Identifier,
                      Discriminator, DataLocation, Associated,     Allocated,
-                     Rank,          Annotations,  Specification};
+                     Rank,          Annotations,  Specification,  BitStride};
   DEFINE_GETIMPL_STORE(DICompositeType,
                        (Tag, Line, RuntimeLang, SizeInBits, AlignInBits,
                         OffsetInBits, NumExtraInhabitants, EnumKind, Flags),
@@ -842,7 +885,7 @@ DICompositeType *DICompositeType::buildODRType(
     Metadata *Elements, unsigned RuntimeLang, std::optional<uint32_t> EnumKind,
     Metadata *VTableHolder, Metadata *TemplateParams, Metadata *Discriminator,
     Metadata *DataLocation, Metadata *Associated, Metadata *Allocated,
-    Metadata *Rank, Metadata *Annotations) {
+    Metadata *Rank, Metadata *Annotations, Metadata *BitStride) {
   assert(!Identifier.getString().empty() && "Expected valid identifier");
   if (!Context.isODRUniquingDebugTypes())
     return nullptr;
@@ -853,7 +896,7 @@ DICompositeType *DICompositeType::buildODRType(
                AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang,
                EnumKind, VTableHolder, TemplateParams, &Identifier,
                Discriminator, DataLocation, Associated, Allocated, Rank,
-               Annotations, Specification, NumExtraInhabitants);
+               Annotations, Specification, NumExtraInhabitants, BitStride);
   if (CT->getTag() != Tag)
     return nullptr;
 
@@ -868,7 +911,7 @@ DICompositeType *DICompositeType::buildODRType(
   Metadata *Ops[] = {File,          Scope,        Name,           BaseType,
                      Elements,      VTableHolder, TemplateParams, &Identifier,
                      Discriminator, DataLocation, Associated,     Allocated,
-                     Rank,          Annotations,  Specification};
+                     Rank,          Annotations,  Specification,  BitStride};
   assert((std::end(Ops) - std::begin(Ops)) == (int)CT->getNumOperands() &&
          "Mismatched number of operands");
   for (unsigned I = 0, E = CT->getNumOperands(); I != E; ++I)
@@ -885,7 +928,7 @@ DICompositeType *DICompositeType::getODRType(
     Metadata *Elements, unsigned RuntimeLang, std::optional<uint32_t> EnumKind,
     Metadata *VTableHolder, Metadata *TemplateParams, Metadata *Discriminator,
     Metadata *DataLocation, Metadata *Associated, Metadata *Allocated,
-    Metadata *Rank, Metadata *Annotations) {
+    Metadata *Rank, Metadata *Annotations, Metadata *BitStride) {
   assert(!Identifier.getString().empty() && "Expected valid identifier");
   if (!Context.isODRUniquingDebugTypes())
     return nullptr;
@@ -896,7 +939,7 @@ DICompositeType *DICompositeType::getODRType(
         AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang, EnumKind,
         VTableHolder, TemplateParams, &Identifier, Discriminator, DataLocation,
         Associated, Allocated, Rank, Annotations, Specification,
-        NumExtraInhabitants);
+        NumExtraInhabitants, BitStride);
   } else {
     if (CT->getTag() != Tag)
       return nullptr;

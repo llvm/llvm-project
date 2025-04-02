@@ -500,7 +500,7 @@ bool ScopDetection::onlyValidRequiredInvariantLoads(
     }
   }
 
-  Context.RequiredILS.insert(RequiredILS.begin(), RequiredILS.end());
+  Context.RequiredILS.insert_range(RequiredILS);
 
   return true;
 }

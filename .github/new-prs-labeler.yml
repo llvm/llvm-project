@@ -637,6 +637,7 @@ hlsl:
   - clang/lib/Sema/HLSLExternalSemaSource.cpp
   - clang/lib/Sema/SemaHLSL.cpp
   - clang/lib/CodeGen/CGHLSLRuntime.*
+  - clang/lib/CodeGen/CGHLSLBuiltins.cpp
   - llvm/include/llvm/Frontend/HLSL/**
   - llvm/lib/Frontend/HLSL/**
 

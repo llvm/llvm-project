@@ -463,7 +463,7 @@ def CUFComputeSharedMemoryOffsetsAndSize
     the global and set it.
   }];
 
-  let dependentDialects = ["fir::FIROpsDialect"];
+  let dependentDialects = ["cuf::CUFDialect", "fir::FIROpsDialect"];
 }
 
 def SetRuntimeCallAttributes

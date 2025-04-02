@@ -17,7 +17,7 @@
 #define LLVM_LIB_TARGET_SPIRV_SPIRVTYPEMANAGER_H
 
 #include "MCTargetDesc/SPIRVBaseInfo.h"
-#include "SPIRVDuplicatesTracker.h"
+#include "SPIRVIRMapping.h"
 #include "SPIRVInstrInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/IR/Constant.h"
@@ -27,7 +27,7 @@ namespace llvm {
 class SPIRVSubtarget;
 using SPIRVType = const MachineInstr;
 
-class SPIRVGlobalRegistry {
+class SPIRVGlobalRegistry : public SPIRVIRMapping {
   // Registers holding values which have types associated with them.
   // Initialized upon VReg definition in IRTranslator.
   // Do not confuse this with DuplicatesTracker as DT maps Type* to <MF, Reg>
@@ -36,9 +36,6 @@ class SPIRVGlobalRegistry {
   // type-declaring ones).
   DenseMap<const MachineFunction *, DenseMap<Register, SPIRVType *>>
       VRegToTypeMap;
-
-  // Map LLVM Type* to <MF, Reg>
-  SPIRVGeneralDuplicatesTracker DT;
 
   DenseMap<SPIRVType *, const Type *> SPIRVToLLVMType;
 
@@ -57,11 +54,6 @@ class SPIRVGlobalRegistry {
   DenseMap<Value *, Type *> MutatedAggRet;
   // map an instruction to its value's attributes (type, name)
   DenseMap<MachineInstr *, std::pair<Type *, std::string>> ValueAttrs;
-
-  // Look for an equivalent of the newType in the map. Return the equivalent
-  // if it's found, otherwise insert newType to the map and return the type.
-  const MachineInstr *checkSpecialInstr(const SPIRV::SpecialTypeDescriptor &TD,
-                                        MachineIRBuilder &MIRBuilder);
 
   SmallPtrSet<const Type *, 4> TypesInProcessing;
   DenseMap<const Type *, SPIRVType *> ForwardPointerTypes;
@@ -118,42 +110,6 @@ public:
   SPIRVGlobalRegistry(unsigned PointerSize);
 
   MachineFunction *CurMF;
-
-  void add(const Constant *C, MachineFunction *MF, Register R) {
-    DT.add(C, MF, R);
-  }
-
-  void add(const GlobalVariable *GV, MachineFunction *MF, Register R) {
-    DT.add(GV, MF, R);
-  }
-
-  void add(const Function *F, MachineFunction *MF, Register R) {
-    DT.add(F, MF, R);
-  }
-
-  void add(const Argument *Arg, MachineFunction *MF, Register R) {
-    DT.add(Arg, MF, R);
-  }
-
-  void add(const MachineInstr *MI, MachineFunction *MF, Register R) {
-    DT.add(MI, MF, R);
-  }
-
-  Register find(const MachineInstr *MI, MachineFunction *MF) {
-    return DT.find(MI, MF);
-  }
-
-  Register find(const Constant *C, MachineFunction *MF) {
-    return DT.find(C, MF);
-  }
-
-  Register find(const GlobalVariable *GV, MachineFunction *MF) {
-    return DT.find(GV, MF);
-  }
-
-  Register find(const Function *F, MachineFunction *MF) {
-    return DT.find(F, MF);
-  }
 
   void setBound(unsigned V) { Bound = V; }
   unsigned getBound() { return Bound; }
@@ -493,12 +449,6 @@ private:
   getOrCreateSpecialType(const Type *Ty, MachineIRBuilder &MIRBuilder,
                          SPIRV::AccessQualifier::AccessQualifier AccQual);
 
-  std::tuple<Register, ConstantInt *, bool, unsigned> getOrCreateConstIntReg(
-      uint64_t Val, SPIRVType *SpvType, MachineIRBuilder *MIRBuilder,
-      MachineInstr *I = nullptr, const SPIRVInstrInfo *TII = nullptr);
-  std::tuple<Register, ConstantFP *, bool, unsigned> getOrCreateConstFloatReg(
-      APFloat Val, SPIRVType *SpvType, MachineIRBuilder *MIRBuilder,
-      MachineInstr *I = nullptr, const SPIRVInstrInfo *TII = nullptr);
   SPIRVType *finishCreatingSPIRVType(const Type *LLVMTy, SPIRVType *SpirvType);
   Register getOrCreateBaseRegister(Constant *Val, MachineInstr &I,
                                    SPIRVType *SpvType,
@@ -523,9 +473,15 @@ public:
   Register getOrCreateConstInt(uint64_t Val, MachineInstr &I,
                                SPIRVType *SpvType, const SPIRVInstrInfo &TII,
                                bool ZeroAsNull = true);
+  Register createConstInt(const ConstantInt *CI, MachineInstr &I,
+                          SPIRVType *SpvType, const SPIRVInstrInfo &TII,
+                          bool ZeroAsNull);
   Register getOrCreateConstFP(APFloat Val, MachineInstr &I, SPIRVType *SpvType,
                               const SPIRVInstrInfo &TII,
                               bool ZeroAsNull = true);
+  Register createConstFP(const ConstantFP *CF, MachineInstr &I,
+                         SPIRVType *SpvType, const SPIRVInstrInfo &TII,
+                         bool ZeroAsNull);
   Register buildConstantFP(APFloat Val, MachineIRBuilder &MIRBuilder,
                            SPIRVType *SpvType = nullptr);
 
@@ -544,8 +500,7 @@ public:
                                    SPIRVType *SpvType);
   Register buildConstantSampler(Register Res, unsigned AddrMode, unsigned Param,
                                 unsigned FilerMode,
-                                MachineIRBuilder &MIRBuilder,
-                                SPIRVType *SpvType);
+                                MachineIRBuilder &MIRBuilder);
   Register getOrCreateUndef(MachineInstr &I, SPIRVType *SpvType,
                             const SPIRVInstrInfo &TII);
   Register buildGlobalVariable(Register Reg, SPIRVType *BaseType,

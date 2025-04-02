@@ -571,9 +571,9 @@ int main(int argc, char *argv[]) {
   }
 
   lldb::IOObjectSP input = std::make_shared<NativeFile>(
-      fileno(stdin), File::eOpenOptionReadOnly, true);
+      fileno(stdin), File::eOpenOptionReadOnly, NativeFile::Unowned);
   lldb::IOObjectSP output = std::make_shared<NativeFile>(
-      stdout_fd, File::eOpenOptionWriteOnly, false);
+      stdout_fd, File::eOpenOptionWriteOnly, NativeFile::Unowned);
 
   constexpr llvm::StringLiteral client_name = "stdin/stdout";
   Transport transport(client_name, log.get(), input, output);

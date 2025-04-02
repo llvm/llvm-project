@@ -78,6 +78,18 @@ class UnresolvedSetImpl;
 class VarTemplateDecl;
 enum class ImplicitParamKind;
 
+// Holds a constraint expression along with a pack expansion index, if
+// expanded.
+struct AssociatedConstraint {
+  const Expr *ConstraintExpr;
+  int ArgumentPackSubstitutionIndex;
+
+  explicit AssociatedConstraint(const Expr *ConstraintExpr,
+                                int ArgumentPackSubstitutionIndex = -1)
+      : ConstraintExpr(ConstraintExpr),
+        ArgumentPackSubstitutionIndex(ArgumentPackSubstitutionIndex) {}
+};
+
 /// The top declaration context.
 class TranslationUnitDecl : public Decl,
                             public DeclContext,
@@ -2631,9 +2643,10 @@ public:
   ///
   /// Use this instead of getTrailingRequiresClause for concepts APIs that
   /// accept an ArrayRef of constraint expressions.
-  void getAssociatedConstraints(SmallVectorImpl<const Expr *> &AC) const {
+  void
+  getAssociatedConstraints(SmallVectorImpl<AssociatedConstraint> &AC) const {
     if (auto *TRC = getTrailingRequiresClause())
-      AC.push_back(TRC);
+      AC.emplace_back(TRC);
   }
 
   /// Get the message that indicates why this function was deleted.

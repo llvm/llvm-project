@@ -10,12 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ABIInfo.h"
 #include "CGHLSLRuntime.h"
 #include "CodeGenFunction.h"
-#include "TargetInfo.h"
 #include "clang/Basic/TargetBuiltins.h"
-#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Intrinsics.h"
 
 using namespace clang;
@@ -60,6 +57,19 @@ Value *CodeGenFunction::EmitSPIRVBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateIntrinsic(
         /*ReturnType=*/I->getType(), Intrinsic::spv_reflect,
         ArrayRef<Value *>{I, N}, nullptr, "spv.reflect");
+  }
+  case SPIRV::BI__builtin_spirv_smoothstep: {
+    Value *Min = EmitScalarExpr(E->getArg(0));
+    Value *Max = EmitScalarExpr(E->getArg(1));
+    Value *X = EmitScalarExpr(E->getArg(2));
+    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
+           E->getArg(1)->getType()->hasFloatingRepresentation() &&
+           E->getArg(2)->getType()->hasFloatingRepresentation() &&
+           "SmoothStep operands must have a float representation");
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/Min->getType(), Intrinsic::spv_smoothstep,
+        ArrayRef<Value *>{Min, Max, X}, /*FMFSource=*/nullptr,
+        "spv.smoothstep");
   }
   }
   return nullptr;

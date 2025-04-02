@@ -464,10 +464,14 @@ protected:
     return __const_reference(&__first_, __storage_type(1) << __pos);
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 __iterator __make_iter(size_t __pos) _NOEXCEPT {
-    return __iterator(&__first_ + __pos / __bits_per_word, __pos % __bits_per_word);
+    // Allow the == case to accommodate the past-the-end iterator.
+    _LIBCPP_ASSERT_INTERNAL(__pos <= __bits_per_word, "Out of bounds access in the single-word bitset implementation.");
+    return __pos != __bits_per_word ? __iterator(&__first_, __pos) : __iterator(&__first_ + 1, 0);
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 __const_iterator __make_iter(size_t __pos) const _NOEXCEPT {
-    return __const_iterator(&__first_ + __pos / __bits_per_word, __pos % __bits_per_word);
+    // Allow the == case to accommodate the past-the-end iterator.
+    _LIBCPP_ASSERT_INTERNAL(__pos <= __bits_per_word, "Out of bounds access in the single-word bitset implementation.");
+    return __pos != __bits_per_word ? __const_iterator(&__first_, __pos) : __const_iterator(&__first_ + 1, 0);
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void operator&=(const __bitset& __v) _NOEXCEPT;
