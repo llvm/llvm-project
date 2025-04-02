@@ -2673,9 +2673,8 @@ ParseStatus RISCVAsmParser::parseRegListCommon(OperandVector &Operands,
 
 ParseStatus RISCVAsmParser::parseZcmpStackAdj(OperandVector &Operands,
                                               bool ExpectNegative) {
-  bool Negative = parseOptionalToken(AsmToken::Minus);
-
   SMLoc S = getLoc();
+  bool Negative = parseOptionalToken(AsmToken::Minus);
 
   if (getTok().isNot(AsmToken::Integer))
     return ParseStatus::NoMatch;
