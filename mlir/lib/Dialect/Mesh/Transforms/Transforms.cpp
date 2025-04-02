@@ -216,7 +216,11 @@ createProcessLinearIndex(StringRef mesh, ValueRange processInGroupMultiIndex,
   OpFoldResult processInGroupLinearIndex = affine::linearizeIndex(
       llvm::to_vector_of<OpFoldResult>(processInGroupMultiIndex),
       llvm::to_vector_of<OpFoldResult>(processGroupShape), builder);
-  return cast<TypedValue<IndexType>>(cast<Value>(processInGroupLinearIndex));
+  Value res = dyn_cast<Value>(processInGroupLinearIndex);
+  if (!res)
+    res = builder.create<arith::ConstantIndexOp>(
+        cast<IntegerAttr>(cast<Attribute>(processInGroupLinearIndex)).getInt());
+  return cast<TypedValue<IndexType>>(res);
 }
 
 TypedValue<IndexType> createProcessLinearIndex(StringRef mesh,

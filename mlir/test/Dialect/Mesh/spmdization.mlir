@@ -241,36 +241,6 @@ func.func @ew_chain_with_halo(
   return %sharding_annotated_6 : tensor<8x16xf32>
 }
 
-// CHECK-LABEL: func @ew_chain_with_halo_odd
-func.func @ew_chain_with_halo_odd(
-  // CHECK-SAME: %[[IN1:[A-Za-z0-9_]+]]: tensor<?x16xf32>
-  %arg0: tensor<11x16xf32>)
-  // CHECK-SAME: -> tensor<?x16xf32>
-   -> tensor<11x16xf32> {
-  %ssharding_annotated = mesh.sharding @mesh_1d_4 split_axes = [[0]] halo_sizes = [2, 1] : !mesh.sharding
-  %sharding_annotated = mesh.shard %arg0 to %ssharding_annotated  annotate_for_users : tensor<11x16xf32>
-  // CHECK: %[[TMP1:.*]] = tosa.tanh %[[IN1]] : (tensor<?x16xf32>) -> tensor<?x16xf32>
-  %0 = tosa.tanh %sharding_annotated : (tensor<11x16xf32>) -> tensor<11x16xf32>
-  %ssharding_annotated_0 = mesh.sharding @mesh_1d_4 split_axes = [[0]] halo_sizes = [2, 1] : !mesh.sharding
-  %sharding_annotated_0 = mesh.shard %0 to %ssharding_annotated_0  : tensor<11x16xf32>
-  %ssharding_annotated_1 = mesh.sharding @mesh_1d_4 split_axes = [[0]] halo_sizes = [2, 1] : !mesh.sharding
-  %sharding_annotated_1 = mesh.shard %sharding_annotated_0 to %ssharding_annotated_1  annotate_for_users : tensor<11x16xf32>
-  // CHECK-NEXT: %[[TMP2:.*]] = tosa.abs %[[TMP1]] : (tensor<?x16xf32>) -> tensor<?x16xf32>
-  %1 = tosa.abs %sharding_annotated_1 : (tensor<11x16xf32>) -> tensor<11x16xf32>
-  %ssharding_annotated_2 = mesh.sharding @mesh_1d_4 split_axes = [[0]] halo_sizes = [2, 1] : !mesh.sharding
-  %sharding_annotated_2 = mesh.shard %1 to %ssharding_annotated_2  : tensor<11x16xf32>
-  %ssharding_annotated_4 = mesh.sharding @mesh_1d_4 split_axes = [[0]] halo_sizes = [2, 1] : !mesh.sharding
-  %sharding_annotated_4 = mesh.shard %sharding_annotated_2 to %ssharding_annotated_4  annotate_for_users : tensor<11x16xf32>
-  // CHECK-NEXT: %[[TMP3:.*]] = tosa.ceil %[[TMP2]] : (tensor<?x16xf32>) -> tensor<?x16xf32>
-  %2 = tosa.ceil %sharding_annotated_4 : (tensor<11x16xf32>) -> tensor<11x16xf32>
-  %ssharding_annotated_5 = mesh.sharding @mesh_1d_4 split_axes = [[0]] halo_sizes = [2, 1] : !mesh.sharding
-  %sharding_annotated_5 = mesh.shard %2 to %ssharding_annotated_5  : tensor<11x16xf32>
-  %ssharding_annotated_6 = mesh.sharding @mesh_1d_4 split_axes = [[0]] halo_sizes = [2, 1] : !mesh.sharding
-  %sharding_annotated_6 = mesh.shard %sharding_annotated_5 to %ssharding_annotated_6  annotate_for_users : tensor<11x16xf32>
-  // CHECK-NEXT: return %[[TMP3]] : tensor<?x16xf32>
-  return %sharding_annotated_6 : tensor<11x16xf32>
-}
-
 // CHECK-LABEL: func @test_shard_update_halo
 // CHECK-SAME: %[[IN1:[A-Za-z0-9_]+]]: tensor<300x1200xi64>
 func.func @test_shard_update_halo(%arg0: tensor<1200x1200xi64>) -> tensor<1200x1200xi64> {

@@ -89,7 +89,7 @@ module attributes { mpi.dlti = #dlti.map<"MPI:comm_world_rank" = 7> } {
     %arg0 : tensor<3x4xf32>) -> tensor<3x4xf32> {
     // CHECK-DAG: [[vc4_i32:%.*]] = arith.constant 4 : i32
     // CHECK-DAG: [[vc2_i32:%.*]] = arith.constant 2 : i32
-    // CHECK: [[v0:%.*]] = bufferization.to_memref [[varg0]] : tensor<3x4xf32> to memref<3x4xf32>
+    // CHECK: [[v0:%.*]] = bufferization.to_buffer [[varg0]] : tensor<3x4xf32> to memref<3x4xf32>
     // CHECK: [[valloc:%.*]] = memref.alloc() : memref<3x4xf32>
     // CHECK: linalg.copy ins([[v0]] : memref<3x4xf32>) outs([[valloc]] : memref<3x4xf32>)
     // CHECK: [[v1:%.*]] = mpi.comm_world : !mpi.comm
@@ -250,7 +250,7 @@ module attributes { mpi.dlti = #dlti.map<"MPI:comm_world_rank" = 24> } {
     // CHECK-DAG: [[vc44_i32:%.*]] = arith.constant 44 : i32
     // CHECK-DAG: [[vc4_i32:%.*]] = arith.constant 4 : i32
     // CHECK-DAG: [[vc91_i32:%.*]] = arith.constant 91 : i32
-    // CHECK: [[v0:%.*]] = bufferization.to_memref [[varg0]] : tensor<120x120x120xi8> to memref<120x120x120xi8>
+    // CHECK: [[v0:%.*]] = bufferization.to_buffer [[varg0]] : tensor<120x120x120xi8> to memref<120x120x120xi8>
     // CHECK: [[v1:%.*]] = mpi.comm_world : !mpi.comm
     // CHECK: [[valloc:%.*]] = memref.alloc() : memref<117x113x5xi8>
     // CHECK: [[vsubview:%.*]] = memref.subview [[v0]][1, 3, 109] [117, 113, 5] [1, 1, 1] : memref<120x120x120xi8> to memref<117x113x5xi8, strided<[14400, 120, 1], offset: 14869>>
