@@ -421,8 +421,8 @@ protected:
     // The sub-registers are also safe-to-dereference now, but not their
     // super-registers (as they retain untrusted register units).
     BitVector NewSafeSubregs(NumRegs);
-    for (MCPhysReg AutReg : NewSafeToDerefRegs)
-      NewSafeSubregs |= BC.MIB->getAliases(AutReg, /*OnlySmaller=*/true);
+    for (MCPhysReg SafeReg : NewSafeToDerefRegs)
+      NewSafeSubregs |= BC.MIB->getAliases(SafeReg, /*OnlySmaller=*/true);
     for (MCPhysReg Reg : NewSafeSubregs.set_bits()) {
       Next.SafeToDerefRegs.set(Reg);
       if (RegsToTrackInstsFor.isTracked(Reg))
