@@ -41,7 +41,7 @@ int i7 = f7(ap);
 int f8(const int* const (&)[]);
 int f8(const volatile int* const (&)[1]);
 int i8 = f8(ap);
-// since-cxx20-error@-1 {{ambiguous}}
+// since-cxx20-error@-1 {{call to 'f8' is ambiguous}}
 //   since-cxx20-note@-4 {{candidate function}}
 //   since-cxx20-note@-4 {{candidate function}}
 
@@ -56,18 +56,18 @@ int i10 = f10(a);
 int f11(int (&)[]);
 int f11(const int (&)[1]);
 int i11 = f11(a);
-// since-cxx20-error@-1 {{ambiguous}}
+// since-cxx20-error@-1 {{call to 'f11' is ambiguous}}
 //   since-cxx20-note@-4 {{candidate function}}
 //   since-cxx20-note@-4 {{candidate function}}
 
 int f12(const int (&)[]);
 int f12(volatile int (&)[1]);
 int i12 = f12(a);
-// since-cxx20-error@-1 {{ambiguous}}
+// since-cxx20-error@-1 {{call to 'f12' is ambiguous}}
 //   since-cxx20-note@-4 {{candidate function}}
 //   since-cxx20-note@-4 {{candidate function}}
 
-#if __cpp_rvalue_references >= 200610
+#if __cplusplus >= 201103L
 void f13(const int* const&&);
 int f13(int* const&);
 int i13 = f13((int*)0);
