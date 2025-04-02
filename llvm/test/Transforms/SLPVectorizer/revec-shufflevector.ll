@@ -330,3 +330,29 @@ entry:
   store <4 x float> %fmul11, ptr %gep14, align 16
   ret void
 }
+
+define i32 @test7() {
+entry:
+  %0 = getelementptr i8, ptr null, i64 16
+  %1 = getelementptr i8, ptr null, i64 32
+  %2 = getelementptr i8, ptr null, i64 48
+  %3 = fadd <8 x float> zeroinitializer, zeroinitializer
+  %4 = fsub <8 x float> zeroinitializer, zeroinitializer
+  %5 = shufflevector <8 x float> %3, <8 x float> zeroinitializer, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %6 = shufflevector <8 x float> %3, <8 x float> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %7 = shufflevector <8 x float> %4, <8 x float> zeroinitializer, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %8 = shufflevector <8 x float> %4, <8 x float> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %9 = fsub <4 x float> zeroinitializer, %5
+  %10 = fsub <4 x float> zeroinitializer, %6
+  %11 = fadd <4 x float> zeroinitializer, %7
+  %12 = fadd <4 x float> zeroinitializer, %8
+  %13 = fadd <4 x float> zeroinitializer, %9
+  %14 = fadd <4 x float> zeroinitializer, %10
+  %15 = fadd <4 x float> zeroinitializer, %11
+  %16 = fadd <4 x float> zeroinitializer, %12
+  store <4 x float> %13, ptr %2, align 16
+  store <4 x float> %14, ptr %1, align 16
+  store <4 x float> %15, ptr %0, align 16
+  store <4 x float> %16, ptr null, align 16
+  ret i32 0
+}
