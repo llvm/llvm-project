@@ -1263,12 +1263,6 @@ public:
     return Diag(Tok, DiagID);
   }
 
-  DiagnosticBuilder DiagCompat(SourceLocation Loc, unsigned CompatDiagId);
-  DiagnosticBuilder DiagCompat(const Token &Tok, unsigned CompatDiagId);
-  DiagnosticBuilder DiagCompat(unsigned CompatDiagId) {
-    return DiagCompat(Tok, CompatDiagId);
-  }
-
 private:
   void SuggestParentheses(SourceLocation Loc, unsigned DK,
                           SourceRange ParenRange);
