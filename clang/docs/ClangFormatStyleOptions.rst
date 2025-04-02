@@ -2182,6 +2182,24 @@ the configuration (without a prefix: ``Auto``).
         aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);
     }
 
+.. _BinPackLongBracedList:
+
+**BinPackLongBracedList** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <BinPackLongBracedList>`
+  If ``BinPackLongBracedList`` is ``true`` it overrides
+  ``BinPackArguments`` if there are 20 or more items in a braced
+  initializer list.
+
+  .. code-block:: c++
+
+     BinPackLongBracedList: false  vs.    BinPackLongBracedList: true
+     vector<int> x{                       vector<int> x{1, 2, ...,
+                                                        20, 21};
+                 1,
+                 2,
+                 ...,
+                 20,
+                 21};
+
 .. _BinPackParameters:
 
 **BinPackParameters** (``BinPackParametersStyle``) :versionbadge:`clang-format 3.7` :ref:`¶ <BinPackParameters>`
@@ -2564,9 +2582,9 @@ the configuration (without a prefix: ``Auto``).
 
 .. _BracedInitializerIndentWidth:
 
-**BracedInitializerIndentWidth** (``Unsigned``) :versionbadge:`clang-format 17` :ref:`¶ <BracedInitializerIndentWidth>`
+**BracedInitializerIndentWidth** (``Integer``) :versionbadge:`clang-format 17` :ref:`¶ <BracedInitializerIndentWidth>`
   The number of columns to use to indent the contents of braced init lists.
-  If unset, ``ContinuationIndentWidth`` is used.
+  If unset or negative, ``ContinuationIndentWidth`` is used.
 
   .. code-block:: c++
 
@@ -3421,6 +3439,35 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+.. _BreakBeforeTemplateCloser:
+
+**BreakBeforeTemplateCloser** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <BreakBeforeTemplateCloser>`
+  If ``true``, break before a template closing bracket (``>``) when there is
+  a line break after the matching opening bracket (``<``).
+
+  .. code-block:: c++
+
+     true:
+     template <typename Foo, typename Bar>
+
+     template <typename Foo,
+               typename Bar>
+
+     template <
+         typename Foo,
+         typename Bar
+     >
+
+     false:
+     template <typename Foo, typename Bar>
+
+     template <typename Foo,
+               typename Bar>
+
+     template <
+         typename Foo,
+         typename Bar>
+
 .. _BreakBeforeTernaryOperators:
 
 **BreakBeforeTernaryOperators** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <BreakBeforeTernaryOperators>`
@@ -3929,6 +3976,47 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+.. _EnumTrailingComma:
+
+**EnumTrailingComma** (``EnumTrailingCommaStyle``) :versionbadge:`clang-format 21` :ref:`¶ <EnumTrailingComma>`
+  Insert a comma (if missing) or remove the comma at the end of an ``enum``
+  enumerator list.
+
+  .. warning::
+
+   Setting this option to any value other than ``Leave`` could lead to
+   incorrect code formatting due to clang-format's lack of complete semantic
+   information. As such, extra care should be taken to review code changes
+   made by this option.
+
+  Possible values:
+
+  * ``ETC_Leave`` (in configuration: ``Leave``)
+    Don't insert or remove trailing commas.
+
+    .. code-block:: c++
+
+      enum { a, b, c, };
+      enum Color { red, green, blue };
+
+  * ``ETC_Insert`` (in configuration: ``Insert``)
+    Insert trailing commas.
+
+    .. code-block:: c++
+
+      enum { a, b, c, };
+      enum Color { red, green, blue, };
+
+  * ``ETC_Remove`` (in configuration: ``Remove``)
+    Remove trailing commas.
+
+    .. code-block:: c++
+
+      enum { a, b, c };
+      enum Color { red, green, blue };
+
+
+
 .. _ExperimentalAutoDetectBinPacking:
 
 **ExperimentalAutoDetectBinPacking** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <ExperimentalAutoDetectBinPacking>`
@@ -3945,21 +4033,6 @@ the configuration (without a prefix: ``Auto``).
 
    This is an experimental flag, that might go away or be renamed. Do
    not use this in config files, etc. Use at your own risk.
-
-.. _ExportBlockIndentation:
-
-**ExportBlockIndentation** (``Boolean``) :versionbadge:`clang-format 20` :ref:`¶ <ExportBlockIndentation>`
-  If ``true``, clang-format will indent the body of an ``export { ... }``
-  block. This doesn't affect the formatting of anything else related to
-  exported declarations.
-
-  .. code-block:: c++
-
-     true:                     false:
-     export {          vs.     export {
-       void foo();             void foo();
-       void bar();             void bar();
-     }                         }
 
 .. _FixNamespaceComments:
 
@@ -4227,6 +4300,21 @@ the configuration (without a prefix: ``Auto``).
      default:                                 default:
        plop();                                  plop();
      }                                      }
+
+.. _IndentExportBlock:
+
+**IndentExportBlock** (``Boolean``) :versionbadge:`clang-format 20` :ref:`¶ <IndentExportBlock>`
+  If ``true``, clang-format will indent the body of an ``export { ... }``
+  block. This doesn't affect the formatting of anything else related to
+  exported declarations.
+
+  .. code-block:: c++
+
+     true:                     false:
+     export {          vs.     export {
+       void foo();             void foo();
+       void bar();             void bar();
+     }                         }
 
 .. _IndentExternBlock:
 
@@ -4735,15 +4823,24 @@ the configuration (without a prefix: ``Auto``).
 .. _Language:
 
 **Language** (``LanguageKind``) :versionbadge:`clang-format 3.5` :ref:`¶ <Language>`
-  Language, this format style is targeted at.
+  The language that this format style targets.
+
+  .. note::
+
+   You can specify the language (``C``, ``Cpp``, or ``ObjC``) for ``.h``
+   files by adding a ``// clang-format Language:`` line before the first
+   non-comment (and non-empty) line, e.g. ``// clang-format Language: Cpp``.
 
   Possible values:
 
   * ``LK_None`` (in configuration: ``None``)
     Do not use.
 
+  * ``LK_C`` (in configuration: ``C``)
+    Should be used for C.
+
   * ``LK_Cpp`` (in configuration: ``Cpp``)
-    Should be used for C, C++.
+    Should be used for C++.
 
   * ``LK_CSharp`` (in configuration: ``CSharp``)
     Should be used for C#.
@@ -5197,6 +5294,11 @@ the configuration (without a prefix: ``Auto``).
 
 **PenaltyBreakBeforeFirstCallParameter** (``Unsigned``) :versionbadge:`clang-format 3.7` :ref:`¶ <PenaltyBreakBeforeFirstCallParameter>`
   The penalty for breaking a function call after ``call(``.
+
+.. _PenaltyBreakBeforeMemberAccess:
+
+**PenaltyBreakBeforeMemberAccess** (``Unsigned``) :versionbadge:`clang-format 20` :ref:`¶ <PenaltyBreakBeforeMemberAccess>`
+  The penalty for breaking before a member access operator (``.``, ``->``).
 
 .. _PenaltyBreakComment:
 

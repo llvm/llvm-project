@@ -41,7 +41,7 @@ namespace ARMRI {
 
 } // end namespace ARMRI
 
-static inline bool isCalleeSavedRegister(unsigned Reg,
+static inline bool isCalleeSavedRegister(MCRegister Reg,
                                          const MCPhysReg *CSRegs) {
   for (unsigned i = 0; CSRegs[i]; ++i)
     if (Reg == CSRegs[i])
@@ -88,7 +88,7 @@ public:
   bool isAsmClobberable(const MachineFunction &MF,
                        MCRegister PhysReg) const override;
   bool isInlineAsmReadOnlyReg(const MachineFunction &MF,
-                              unsigned PhysReg) const override;
+                              MCRegister PhysReg) const override;
 
   const TargetRegisterClass *
   getPointerRegClass(const MachineFunction &MF,

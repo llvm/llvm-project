@@ -15,19 +15,19 @@ const RISCVAttributeParser::DisplayHandler
     RISCVAttributeParser::displayRoutines[] = {
         {
             RISCVAttrs::ARCH,
-            &ELFAttributeParser::stringAttribute,
+            &ELFCompactAttrParser::stringAttribute,
         },
         {
             RISCVAttrs::PRIV_SPEC,
-            &ELFAttributeParser::integerAttribute,
+            &ELFCompactAttrParser::integerAttribute,
         },
         {
             RISCVAttrs::PRIV_SPEC_MINOR,
-            &ELFAttributeParser::integerAttribute,
+            &ELFCompactAttrParser::integerAttribute,
         },
         {
             RISCVAttrs::PRIV_SPEC_REVISION,
-            &ELFAttributeParser::integerAttribute,
+            &ELFCompactAttrParser::integerAttribute,
         },
         {
             RISCVAttrs::STACK_ALIGN,

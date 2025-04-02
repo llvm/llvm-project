@@ -11,7 +11,7 @@
 ; GCN: IMAGE_LOAD_V4_V2
 define amdgpu_cs void @_amdgpu_cs_main(i32 %dummy) local_unnamed_addr #0 {
 .entry:
-  %unused.result = tail call <4 x float> @llvm.amdgcn.image.load.2d.v4f32.i32(i32 15, i32 undef, i32 undef, <8 x i32> undef, i32 0, i32 0) #3
+  %unused.result = tail call <4 x float> @llvm.amdgcn.image.load.2d.v4f32.i32(i32 15, i32 poison, i32 poison, <8 x i32> poison, i32 0, i32 0) #3
   call void asm sideeffect ";", "" () #0
   ret void
 }

@@ -30,7 +30,7 @@ int main(int, char**) {
   test_library_hash_specializations_available();
   test();
 #if TEST_STD_VER > 17
-    static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

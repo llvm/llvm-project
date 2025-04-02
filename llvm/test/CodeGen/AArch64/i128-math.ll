@@ -355,40 +355,32 @@ define i128 @i128_mul(i128 %x, i128 %y) {
 define { i128, i8 } @i128_checked_mul(i128 %x, i128 %y) {
 ; CHECK-LABEL: i128_checked_mul:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    asr x8, x1, #63
-; CHECK-NEXT:    asr x11, x3, #63
-; CHECK-NEXT:    umulh x13, x0, x2
-; CHECK-NEXT:    mul x9, x2, x8
-; CHECK-NEXT:    umulh x10, x2, x8
-; CHECK-NEXT:    umulh x12, x11, x0
-; CHECK-NEXT:    mul x14, x1, x2
-; CHECK-NEXT:    add x10, x10, x9
-; CHECK-NEXT:    madd x8, x3, x8, x10
-; CHECK-NEXT:    madd x10, x11, x1, x12
-; CHECK-NEXT:    mul x11, x11, x0
-; CHECK-NEXT:    umulh x12, x1, x2
-; CHECK-NEXT:    mul x15, x0, x3
-; CHECK-NEXT:    add x10, x10, x11
-; CHECK-NEXT:    adds x9, x11, x9
-; CHECK-NEXT:    umulh x16, x0, x3
-; CHECK-NEXT:    adc x10, x10, x8
-; CHECK-NEXT:    adds x8, x14, x13
-; CHECK-NEXT:    cinc x12, x12, hs
-; CHECK-NEXT:    mul x11, x1, x3
-; CHECK-NEXT:    adds x8, x15, x8
-; CHECK-NEXT:    umulh x13, x1, x3
+; CHECK-NEXT:    asr x9, x1, #63
+; CHECK-NEXT:    umulh x10, x0, x2
+; CHECK-NEXT:    asr x13, x3, #63
+; CHECK-NEXT:    mul x11, x1, x2
+; CHECK-NEXT:    umulh x8, x1, x2
+; CHECK-NEXT:    mul x9, x9, x2
+; CHECK-NEXT:    adds x10, x11, x10
+; CHECK-NEXT:    mul x14, x0, x3
+; CHECK-NEXT:    umulh x12, x0, x3
+; CHECK-NEXT:    adc x9, x8, x9
+; CHECK-NEXT:    mul x13, x0, x13
+; CHECK-NEXT:    adds x8, x14, x10
+; CHECK-NEXT:    mul x15, x1, x3
+; CHECK-NEXT:    smulh x10, x1, x3
 ; CHECK-NEXT:    mov x1, x8
-; CHECK-NEXT:    cinc x14, x16, hs
-; CHECK-NEXT:    adds x12, x12, x14
+; CHECK-NEXT:    adc x11, x12, x13
+; CHECK-NEXT:    asr x12, x9, #63
+; CHECK-NEXT:    asr x13, x11, #63
+; CHECK-NEXT:    adds x9, x9, x11
+; CHECK-NEXT:    asr x11, x8, #63
 ; CHECK-NEXT:    mul x0, x0, x2
-; CHECK-NEXT:    cset w14, hs
-; CHECK-NEXT:    adds x11, x11, x12
-; CHECK-NEXT:    asr x12, x8, #63
-; CHECK-NEXT:    adc x13, x13, x14
-; CHECK-NEXT:    adds x9, x11, x9
-; CHECK-NEXT:    adc x10, x13, x10
-; CHECK-NEXT:    cmp x9, x12
-; CHECK-NEXT:    ccmp x10, x12, #0, eq
+; CHECK-NEXT:    adc x12, x12, x13
+; CHECK-NEXT:    adds x9, x15, x9
+; CHECK-NEXT:    adc x10, x10, x12
+; CHECK-NEXT:    cmp x9, x11
+; CHECK-NEXT:    ccmp x10, x11, #0, eq
 ; CHECK-NEXT:    cset w2, eq
 ; CHECK-NEXT:    ret
   %1 = tail call { i128, i1 } @llvm.smul.with.overflow.i128(i128 %x, i128 %y)
@@ -404,40 +396,32 @@ define { i128, i8 } @i128_checked_mul(i128 %x, i128 %y) {
 define { i128, i8 } @i128_overflowing_mul(i128 %x, i128 %y) {
 ; CHECK-LABEL: i128_overflowing_mul:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    asr x8, x1, #63
-; CHECK-NEXT:    asr x11, x3, #63
-; CHECK-NEXT:    umulh x13, x0, x2
-; CHECK-NEXT:    mul x9, x2, x8
-; CHECK-NEXT:    umulh x10, x2, x8
-; CHECK-NEXT:    umulh x12, x11, x0
-; CHECK-NEXT:    mul x14, x1, x2
-; CHECK-NEXT:    add x10, x10, x9
-; CHECK-NEXT:    madd x8, x3, x8, x10
-; CHECK-NEXT:    madd x10, x11, x1, x12
-; CHECK-NEXT:    mul x11, x11, x0
-; CHECK-NEXT:    umulh x12, x1, x2
-; CHECK-NEXT:    mul x15, x0, x3
-; CHECK-NEXT:    add x10, x10, x11
-; CHECK-NEXT:    adds x9, x11, x9
-; CHECK-NEXT:    umulh x16, x0, x3
-; CHECK-NEXT:    adc x10, x10, x8
-; CHECK-NEXT:    adds x8, x14, x13
-; CHECK-NEXT:    cinc x12, x12, hs
-; CHECK-NEXT:    mul x11, x1, x3
-; CHECK-NEXT:    adds x8, x15, x8
-; CHECK-NEXT:    umulh x13, x1, x3
+; CHECK-NEXT:    asr x9, x1, #63
+; CHECK-NEXT:    umulh x10, x0, x2
+; CHECK-NEXT:    asr x13, x3, #63
+; CHECK-NEXT:    mul x11, x1, x2
+; CHECK-NEXT:    umulh x8, x1, x2
+; CHECK-NEXT:    mul x9, x9, x2
+; CHECK-NEXT:    adds x10, x11, x10
+; CHECK-NEXT:    mul x14, x0, x3
+; CHECK-NEXT:    umulh x12, x0, x3
+; CHECK-NEXT:    adc x9, x8, x9
+; CHECK-NEXT:    mul x13, x0, x13
+; CHECK-NEXT:    adds x8, x14, x10
+; CHECK-NEXT:    mul x15, x1, x3
+; CHECK-NEXT:    smulh x10, x1, x3
 ; CHECK-NEXT:    mov x1, x8
-; CHECK-NEXT:    cinc x14, x16, hs
-; CHECK-NEXT:    adds x12, x12, x14
+; CHECK-NEXT:    adc x11, x12, x13
+; CHECK-NEXT:    asr x12, x9, #63
+; CHECK-NEXT:    asr x13, x11, #63
+; CHECK-NEXT:    adds x9, x9, x11
+; CHECK-NEXT:    asr x11, x8, #63
 ; CHECK-NEXT:    mul x0, x0, x2
-; CHECK-NEXT:    cset w14, hs
-; CHECK-NEXT:    adds x11, x11, x12
-; CHECK-NEXT:    asr x12, x8, #63
-; CHECK-NEXT:    adc x13, x13, x14
-; CHECK-NEXT:    adds x9, x11, x9
-; CHECK-NEXT:    adc x10, x13, x10
-; CHECK-NEXT:    cmp x9, x12
-; CHECK-NEXT:    ccmp x10, x12, #0, eq
+; CHECK-NEXT:    adc x12, x12, x13
+; CHECK-NEXT:    adds x9, x15, x9
+; CHECK-NEXT:    adc x10, x10, x12
+; CHECK-NEXT:    cmp x9, x11
+; CHECK-NEXT:    ccmp x10, x11, #0, eq
 ; CHECK-NEXT:    cset w2, ne
 ; CHECK-NEXT:    ret
   %1 = tail call { i128, i1 } @llvm.smul.with.overflow.i128(i128 %x, i128 %y)
@@ -452,46 +436,38 @@ define { i128, i8 } @i128_overflowing_mul(i128 %x, i128 %y) {
 define i128 @i128_saturating_mul(i128 %x, i128 %y) {
 ; CHECK-LABEL: i128_saturating_mul:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    asr x8, x1, #63
-; CHECK-NEXT:    asr x11, x3, #63
-; CHECK-NEXT:    umulh x13, x0, x2
-; CHECK-NEXT:    mul x9, x2, x8
-; CHECK-NEXT:    umulh x10, x2, x8
-; CHECK-NEXT:    umulh x12, x11, x0
-; CHECK-NEXT:    mul x14, x1, x2
-; CHECK-NEXT:    add x10, x10, x9
-; CHECK-NEXT:    madd x8, x3, x8, x10
-; CHECK-NEXT:    madd x10, x11, x1, x12
-; CHECK-NEXT:    mul x11, x11, x0
-; CHECK-NEXT:    umulh x12, x1, x2
-; CHECK-NEXT:    mul x16, x0, x3
-; CHECK-NEXT:    add x10, x10, x11
-; CHECK-NEXT:    adds x9, x11, x9
-; CHECK-NEXT:    umulh x15, x0, x3
-; CHECK-NEXT:    adc x8, x10, x8
-; CHECK-NEXT:    adds x10, x14, x13
-; CHECK-NEXT:    cinc x12, x12, hs
-; CHECK-NEXT:    mul x17, x1, x3
-; CHECK-NEXT:    adds x10, x16, x10
-; CHECK-NEXT:    umulh x11, x1, x3
-; CHECK-NEXT:    cinc x13, x15, hs
-; CHECK-NEXT:    adds x12, x12, x13
-; CHECK-NEXT:    cset w13, hs
-; CHECK-NEXT:    adds x12, x17, x12
-; CHECK-NEXT:    adc x11, x11, x13
-; CHECK-NEXT:    adds x9, x12, x9
-; CHECK-NEXT:    asr x12, x10, #63
+; CHECK-NEXT:    asr x9, x1, #63
+; CHECK-NEXT:    umulh x10, x0, x2
+; CHECK-NEXT:    asr x13, x3, #63
+; CHECK-NEXT:    mul x11, x1, x2
+; CHECK-NEXT:    umulh x8, x1, x2
+; CHECK-NEXT:    mul x9, x9, x2
+; CHECK-NEXT:    adds x10, x11, x10
+; CHECK-NEXT:    mul x14, x0, x3
+; CHECK-NEXT:    umulh x12, x0, x3
+; CHECK-NEXT:    adc x8, x8, x9
+; CHECK-NEXT:    mul x13, x0, x13
+; CHECK-NEXT:    adds x9, x14, x10
+; CHECK-NEXT:    mul x11, x1, x3
+; CHECK-NEXT:    adc x10, x12, x13
+; CHECK-NEXT:    smulh x12, x1, x3
+; CHECK-NEXT:    asr x13, x8, #63
+; CHECK-NEXT:    asr x14, x10, #63
+; CHECK-NEXT:    adds x8, x8, x10
+; CHECK-NEXT:    adc x10, x13, x14
+; CHECK-NEXT:    adds x8, x11, x8
+; CHECK-NEXT:    asr x11, x9, #63
 ; CHECK-NEXT:    mul x13, x0, x2
-; CHECK-NEXT:    adc x8, x11, x8
-; CHECK-NEXT:    eor x11, x3, x1
-; CHECK-NEXT:    eor x8, x8, x12
-; CHECK-NEXT:    eor x9, x9, x12
-; CHECK-NEXT:    asr x11, x11, #63
-; CHECK-NEXT:    orr x8, x9, x8
-; CHECK-NEXT:    eor x9, x11, #0x7fffffffffffffff
+; CHECK-NEXT:    adc x10, x12, x10
+; CHECK-NEXT:    eor x12, x3, x1
+; CHECK-NEXT:    eor x8, x8, x11
+; CHECK-NEXT:    eor x10, x10, x11
+; CHECK-NEXT:    asr x11, x12, #63
+; CHECK-NEXT:    orr x8, x8, x10
+; CHECK-NEXT:    eor x10, x11, #0x7fffffffffffffff
 ; CHECK-NEXT:    cmp x8, #0
-; CHECK-NEXT:    csel x1, x9, x10, ne
 ; CHECK-NEXT:    csinv x0, x13, x11, eq
+; CHECK-NEXT:    csel x1, x10, x9, ne
 ; CHECK-NEXT:    ret
   %1 = tail call { i128, i1 } @llvm.smul.with.overflow.i128(i128 %x, i128 %y)
   %2 = extractvalue { i128, i1 } %1, 0

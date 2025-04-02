@@ -54,14 +54,8 @@
    don't. */
 #cmakedefine01 HAVE_DECL_STRERROR_S
 
-/* Define to 1 if you have the <dlfcn.h> header file. */
-#cmakedefine HAVE_DLFCN_H ${HAVE_DLFCN_H}
-
 /* Define if dlopen() is available on this platform. */
 #cmakedefine HAVE_DLOPEN ${HAVE_DLOPEN}
-
-/* Define if dladdr() is available on this platform. */
-#cmakedefine HAVE_DLADDR ${HAVE_DLADDR}
 
 /* Define to 1 if we can register EH frames on this platform. */
 #cmakedefine HAVE_REGISTER_FRAME ${HAVE_REGISTER_FRAME}
@@ -300,5 +294,7 @@
 #cmakedefine HAVE_PROC_PID_RUSAGE 1
 
 #cmakedefine HAVE_BUILTIN_THREAD_POINTER ${HAVE_BUILTIN_THREAD_POINTER}
+
+#cmakedefine HAVE_GETAUXVAL ${HAVE_GETAUXVAL}
 
 #endif

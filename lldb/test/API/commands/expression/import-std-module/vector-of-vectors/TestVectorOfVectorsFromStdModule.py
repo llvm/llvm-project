@@ -17,26 +17,42 @@ class TestVectorOfVectors(TestBase):
             self, "// Set break point at this line.", lldb.SBFileSpec("main.cpp")
         )
 
+        if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(
+            [">", "16.0"]
+        ):
+            vector_type = "std::vector<int>"
+            vector_of_vector_type = "std::vector<std::vector<int> >"
+        else:
+            vector_type = "std::vector<int>"
+            vector_of_vector_type = (
+                "std::vector<std::vector<int>, std::allocator<std::vector<int> > >"
+            )
+
         size_type = "size_type"
         value_type = "value_type"
 
         self.runCmd("settings set target.import-std-module true")
 
-        self.expect(
-            "expr a",
-            patterns=[
-                """\(std::vector<std::vector<int>(, std::allocator<std::vector<int> )* >\) \$0 = size=2 \{
-  \[0\] = size=3 \{
-    \[0\] = 1
-    \[1\] = 2
-    \[2\] = 3
-  \}
-  \[1\] = size=3 \{
-    \[0\] = 3
-    \[1\] = 2
-    \[2\] = 1
-  \}
-\}"""
+        self.expect_expr(
+            "a",
+            result_type=vector_of_vector_type,
+            result_children=[
+                ValueCheck(
+                    type=vector_type,
+                    children=[
+                        ValueCheck(value="1"),
+                        ValueCheck(value="2"),
+                        ValueCheck(value="3"),
+                    ],
+                ),
+                ValueCheck(
+                    type=vector_type,
+                    children=[
+                        ValueCheck(value="3"),
+                        ValueCheck(value="2"),
+                        ValueCheck(value="1"),
+                    ],
+                ),
             ],
         )
         self.expect_expr("a.size()", result_type=size_type, result_value="2")

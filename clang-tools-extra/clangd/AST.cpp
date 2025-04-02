@@ -119,8 +119,7 @@ getQualification(ASTContext &Context, const DeclContext *DestContext,
       // There can't be any more tag parents after hitting a namespace.
       assert(!ReachedNS);
       (void)ReachedNS;
-      NNS = NestedNameSpecifier::Create(Context, nullptr, false,
-                                        TD->getTypeForDecl());
+      NNS = NestedNameSpecifier::Create(Context, nullptr, TD->getTypeForDecl());
     } else if (auto *NSD = llvm::dyn_cast<NamespaceDecl>(CurContext)) {
       ReachedNS = true;
       NNS = NestedNameSpecifier::Create(Context, nullptr, NSD);

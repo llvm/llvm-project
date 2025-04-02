@@ -36,7 +36,7 @@ class IsPointerType<string Type> {
   bit ret = !ne(!find(Type, "*", !sub(!size(Type), 1)), -1);
 }
 
-// Describes the valid range of a pointer parameter that reperesents an array
+// Describes the valid range of a pointer parameter that represents an array
 class Range<string Begin, string End> {
   string begin = Begin;
   string end = End;

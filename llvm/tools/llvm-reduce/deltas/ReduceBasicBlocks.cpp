@@ -23,8 +23,8 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
-
 #include <vector>
 
 #define DEBUG_TYPE "llvm-reduce"
@@ -52,7 +52,7 @@ static void replaceBranchTerminator(BasicBlock &BB,
   bool IsBranch = isa<BranchInst>(Term);
   if (InvokeInst *Invoke = dyn_cast<InvokeInst>(Term)) {
     BasicBlock *UnwindDest = Invoke->getUnwindDest();
-    Instruction *LP = UnwindDest->getFirstNonPHI();
+    BasicBlock::iterator LP = UnwindDest->getFirstNonPHIIt();
 
     // Remove landingpad instruction if the containing block isn't used by other
     // invokes.
@@ -141,7 +141,7 @@ removeUninterestingBBsFromSwitch(SwitchInst &SwInst,
 
 /// Removes out-of-chunk arguments from functions, and modifies their calls
 /// accordingly. It also removes allocations of out-of-chunk arguments.
-static void extractBasicBlocksFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
+void llvm::reduceBasicBlocksDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
   DenseSet<BasicBlock *> BBsToDelete;
   df_iterator_default_set<BasicBlock *> Reachable;
 
@@ -188,12 +188,8 @@ static void extractBasicBlocksFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
   }
 }
 
-void llvm::reduceBasicBlocksDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, extractBasicBlocksFromModule, "Reducing Basic Blocks");
-}
-
-static void removeUnreachableBasicBlocksFromModule(Oracle &O,
-                                                   ReducerWorkItem &WorkItem) {
+void llvm::reduceUnreachableBasicBlocksDeltaPass(Oracle &O,
+                                                 ReducerWorkItem &WorkItem) {
   std::vector<BasicBlock *> DeadBlocks;
   df_iterator_default_set<BasicBlock *> Reachable;
 
@@ -218,9 +214,4 @@ static void removeUnreachableBasicBlocksFromModule(Oracle &O,
 
     Reachable.clear();
   }
-}
-
-void llvm::reduceUnreachableBasicBlocksDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, removeUnreachableBasicBlocksFromModule,
-               "Removing Unreachable Basic Blocks");
 }

@@ -128,12 +128,12 @@ define half @ldexp_f16(half %arg0, i32 %arg1) {
 ; SOFT-NEXT:    .cfi_offset 31, -4
 ; SOFT-NEXT:    .cfi_offset 16, -8
 ; SOFT-NEXT:    move $16, $5
-; SOFT-NEXT:    jal __gnu_h2f_ieee
+; SOFT-NEXT:    jal __extendhfsf2
 ; SOFT-NEXT:    andi $4, $4, 65535
 ; SOFT-NEXT:    move $4, $2
 ; SOFT-NEXT:    jal ldexpf
 ; SOFT-NEXT:    move $5, $16
-; SOFT-NEXT:    jal __gnu_f2h_ieee
+; SOFT-NEXT:    jal __truncsfhf2
 ; SOFT-NEXT:    move $4, $2
 ; SOFT-NEXT:    lw $16, 16($sp) # 4-byte Folded Reload
 ; SOFT-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload

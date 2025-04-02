@@ -1,6 +1,10 @@
 set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   BinaryFormat
+  BitWriter
+  Core
+  IRReader
+  Linker
   Option
   Object
   TargetParser

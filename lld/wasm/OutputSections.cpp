@@ -101,7 +101,8 @@ void DataSection::finalizeContents() {
   });
 #ifndef NDEBUG
   unsigned activeCount = llvm::count_if(segments, [](OutputSegment *segment) {
-    return (segment->initFlags & WASM_DATA_SEGMENT_IS_PASSIVE) == 0;
+    return segment->requiredInBinary() &&
+           (segment->initFlags & WASM_DATA_SEGMENT_IS_PASSIVE) == 0;
   });
 #endif
 
@@ -273,7 +274,7 @@ void CustomSection::writeTo(uint8_t *buf) {
 uint32_t CustomSection::getNumRelocations() const {
   uint32_t count = 0;
   for (const InputChunk *inputSect : inputSections)
-    count += inputSect->getNumRelocations();
+    count += inputSect->getNumLiveRelocations();
   return count;
 }
 

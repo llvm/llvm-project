@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/ELFAttributeParser.h"
+#include "llvm/Support/ELFAttrParserCompact.h"
 #include "llvm/Support/ELFAttributes.h"
 #include "gtest/gtest.h"
 #include <string>
@@ -16,7 +16,7 @@ using namespace llvm;
 static const TagNameMap emptyTagNameMap;
 
 // This class is used to test the common part of the ELF attribute section.
-class AttributeHeaderParser : public ELFAttributeParser {
+class AttributeHeaderParser : public ELFCompactAttrParser {
   Error handler(uint64_t tag, bool &handled) override {
     // Treat all attributes as handled.
     handled = true;
@@ -25,8 +25,8 @@ class AttributeHeaderParser : public ELFAttributeParser {
 
 public:
   AttributeHeaderParser(ScopedPrinter *printer)
-      : ELFAttributeParser(printer, emptyTagNameMap, "test") {}
-  AttributeHeaderParser() : ELFAttributeParser(emptyTagNameMap, "test") {}
+      : ELFCompactAttrParser(printer, emptyTagNameMap, "test") {}
+  AttributeHeaderParser() : ELFCompactAttrParser(emptyTagNameMap, "test") {}
 };
 
 static void testParseError(ArrayRef<uint8_t> bytes, const char *msg) {

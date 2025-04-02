@@ -1,7 +1,9 @@
 header: strings.h
 header_template: strings.h.def
 macros: []
-types: []
+types:
+  - type_name: size_t
+  - type_name: locale_t
 enums: []
 objects: []
 functions:
@@ -28,6 +30,24 @@ functions:
     arguments:
       - type: void *
       - type: size_t
+  - name: ffs
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: int
+  - name: ffsl
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: long
+  - name: ffsll
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: long long
   - name: index
     standards:
       - BSDExtensions
@@ -49,6 +69,14 @@ functions:
     arguments:
       - type: const char *
       - type: const char *
+  - name: strcasecmp_l
+    standards:
+      - BSDExtensions
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: const char *
+      - type: locale_t
   - name: strncasecmp
     standards:
       - BSDExtensions
@@ -57,3 +85,12 @@ functions:
       - type: const char *
       - type: const char *
       - type: size_t
+  - name: strncasecmp_l
+    standards:
+      - BSDExtensions
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: const char *
+      - type: size_t
+      - type: locale_t

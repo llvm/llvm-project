@@ -9,9 +9,7 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_FMATEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_FMATEST_H
 
-#include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/cast.h"
-#include "src/__support/macros/properties/types.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -90,14 +88,8 @@ public:
     // Test overflow.
     OutType z = out.max_normal;
     InType in_z = LIBC_NAMESPACE::fputil::cast<InType>(out.max_normal);
-#if defined(LIBC_TYPES_HAS_FLOAT16) && !defined(__LIBC_USE_FLOAT16_CONVERSION)
-    // Rounding modes other than the default might not be usable with float16.
-    if constexpr (LIBC_NAMESPACE::cpp::is_same_v<OutType, float16>)
-      EXPECT_FP_EQ(OutType(0.75) * z, func(InType(1.75), in_z, -in_z));
-    else
-#endif
-      EXPECT_FP_EQ_ALL_ROUNDING(OutType(0.75) * z,
-                                func(InType(1.75), in_z, -in_z));
+    EXPECT_FP_EQ_ALL_ROUNDING(OutType(0.75) * z,
+                              func(InType(1.75), in_z, -in_z));
 
     // Exact cancellation.
     EXPECT_FP_EQ_ROUNDING_NEAREST(

@@ -36,6 +36,18 @@ enum {
 #undef DIAG_ENUM_ITEM
 #undef DIAG_ENUM
 } // end namespace diag
+
+namespace diag_compat {
+#define DIAG_COMPAT_IDS_BEGIN() enum {
+#define DIAG_COMPAT_IDS_END()                                                  \
+  }                                                                            \
+  ;
+#define DIAG_COMPAT_ID(IDX, NAME, ...) NAME = IDX,
+#include "clang/Basic/DiagnosticCrossTUCompatIDs.inc"
+#undef DIAG_COMPAT_ID
+#undef DIAG_COMPAT_IDS_BEGIN
+#undef DIAG_COMPAT_IDS_END
+} // end namespace diag_compat
 } // end namespace clang
 
 #endif // LLVM_CLANG_BASIC_DIAGNOSTICCROSSTU_H

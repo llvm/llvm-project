@@ -78,11 +78,6 @@
 
 using namespace llvm;
 
-static const char LintAbortOnErrorArgName[] = "lint-abort-on-error";
-static cl::opt<bool>
-    LintAbortOnError(LintAbortOnErrorArgName, cl::init(false),
-                     cl::desc("In the Lint pass, abort on errors."));
-
 namespace {
 namespace MemRef {
 static const unsigned Read = 1;
@@ -127,7 +122,7 @@ class Lint : public InstVisitor<Lint> {
 
 public:
   Module *Mod;
-  Triple TT;
+  const Triple &TT;
   const DataLayout *DL;
   AliasAnalysis *AA;
   AssumptionCache *AC;
@@ -139,8 +134,8 @@ public:
 
   Lint(Module *Mod, const DataLayout *DL, AliasAnalysis *AA,
        AssumptionCache *AC, DominatorTree *DT, TargetLibraryInfo *TLI)
-      : Mod(Mod), TT(Triple::normalize(Mod->getTargetTriple())), DL(DL), AA(AA),
-        AC(AC), DT(DT), TLI(TLI), MessagesStr(Messages) {}
+      : Mod(Mod), TT(Mod->getTargetTriple()), DL(DL), AA(AA), AC(AC), DT(DT),
+        TLI(TLI), MessagesStr(Messages) {}
 
   void WriteValues(ArrayRef<const Value *> Vs) {
     for (const Value *V : Vs) {
@@ -757,13 +752,20 @@ PreservedAnalyses LintPass::run(Function &F, FunctionAnalysisManager &AM) {
   return PreservedAnalyses::all();
 }
 
+void LintPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  PassInfoMixin<LintPass>::printPipeline(OS, MapClassName2PassName);
+  if (AbortOnError)
+    OS << "<abort-on-error>";
+}
+
 //===----------------------------------------------------------------------===//
 //  Implement the public interfaces to this file...
 //===----------------------------------------------------------------------===//
 
 /// lintFunction - Check a function for errors, printing messages on stderr.
 ///
-void llvm::lintFunction(const Function &f) {
+void llvm::lintFunction(const Function &f, bool AbortOnError) {
   Function &F = const_cast<Function &>(f);
   assert(!F.isDeclaration() && "Cannot lint external functions");
 
@@ -778,14 +780,14 @@ void llvm::lintFunction(const Function &f) {
     AA.registerFunctionAnalysis<TypeBasedAA>();
     return AA;
   });
-  LintPass().run(F, FAM);
+  LintPass(AbortOnError).run(F, FAM);
 }
 
 /// lintModule - Check a module for errors, printing messages on stderr.
 ///
-void llvm::lintModule(const Module &M) {
+void llvm::lintModule(const Module &M, bool AbortOnError) {
   for (const Function &F : M) {
     if (!F.isDeclaration())
-      lintFunction(F);
+      lintFunction(F, AbortOnError);
   }
 }

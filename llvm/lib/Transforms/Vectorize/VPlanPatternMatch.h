@@ -66,6 +66,24 @@ struct specificval_ty {
 
 inline specificval_ty m_Specific(const VPValue *VPV) { return VPV; }
 
+/// Stores a reference to the VPValue *, not the VPValue * itself,
+/// thus can be used in commutative matchers.
+struct deferredval_ty {
+  VPValue *const &Val;
+
+  deferredval_ty(VPValue *const &V) : Val(V) {}
+
+  bool match(VPValue *const V) const { return V == Val; }
+};
+
+/// Like m_Specific(), but works if the specific value to match is determined
+/// as part of the same match() expression. For example:
+/// m_Mul(m_VPValue(X), m_Specific(X)) is incorrect, because m_Specific() will
+/// bind X before the pattern match starts.
+/// m_Mul(m_VPValue(X), m_Deferred(X)) is correct, and will check against
+/// whichever value m_VPValue(X) populated.
+inline deferredval_ty m_Deferred(VPValue *const &V) { return V; }
+
 /// Match a specified integer value or vector of all elements of that
 /// value. \p BitWidth optionally specifies the bitwidth the matched constant
 /// must have. If it is 0, the matched constant can have any bitwidth.
@@ -126,47 +144,6 @@ inline match_combine_or<LTy, RTy> m_CombineOr(const LTy &L, const RTy &R) {
 /// Match a VPValue, capturing it if we match.
 inline bind_ty<VPValue> m_VPValue(VPValue *&V) { return V; }
 
-namespace detail {
-
-/// A helper to match an opcode against multiple recipe types.
-template <unsigned Opcode, typename...> struct MatchRecipeAndOpcode {};
-
-template <unsigned Opcode, typename RecipeTy>
-struct MatchRecipeAndOpcode<Opcode, RecipeTy> {
-  static bool match(const VPRecipeBase *R) {
-    auto *DefR = dyn_cast<RecipeTy>(R);
-    // Check for recipes that do not have opcodes.
-    if constexpr (std::is_same<RecipeTy, VPScalarIVStepsRecipe>::value ||
-                  std::is_same<RecipeTy, VPCanonicalIVPHIRecipe>::value ||
-                  std::is_same<RecipeTy, VPWidenSelectRecipe>::value ||
-                  std::is_same<RecipeTy, VPDerivedIVRecipe>::value ||
-                  std::is_same<RecipeTy, VPWidenGEPRecipe>::value)
-      return DefR;
-    else
-      return DefR && DefR->getOpcode() == Opcode;
-  }
-};
-
-template <unsigned Opcode, typename RecipeTy, typename... RecipeTys>
-struct MatchRecipeAndOpcode<Opcode, RecipeTy, RecipeTys...> {
-  static bool match(const VPRecipeBase *R) {
-    return MatchRecipeAndOpcode<Opcode, RecipeTy>::match(R) ||
-           MatchRecipeAndOpcode<Opcode, RecipeTys...>::match(R);
-  }
-};
-template <typename TupleTy, typename Fn, std::size_t... Is>
-bool CheckTupleElements(const TupleTy &Ops, Fn P, std::index_sequence<Is...>) {
-  return (P(std::get<Is>(Ops), Is) && ...);
-}
-
-/// Helper to check if predicate \p P holds on all tuple elements in \p Ops
-template <typename TupleTy, typename Fn>
-bool all_of_tuple_elements(const TupleTy &Ops, Fn P) {
-  return CheckTupleElements(
-      Ops, P, std::make_index_sequence<std::tuple_size<TupleTy>::value>{});
-}
-} // namespace detail
-
 template <typename Ops_t, unsigned Opcode, bool Commutative,
           typename... RecipeTys>
 struct Recipe_match {
@@ -193,20 +170,44 @@ struct Recipe_match {
   }
 
   bool match(const VPRecipeBase *R) const {
-    if (!detail::MatchRecipeAndOpcode<Opcode, RecipeTys...>::match(R))
+    if ((!matchRecipeAndOpcode<RecipeTys>(R) && ...))
       return false;
+
     assert(R->getNumOperands() == std::tuple_size<Ops_t>::value &&
            "recipe with matched opcode the expected number of operands");
 
-    if (detail::all_of_tuple_elements(Ops, [R](auto Op, unsigned Idx) {
+    auto IdxSeq = std::make_index_sequence<std::tuple_size<Ops_t>::value>();
+    if (all_of_tuple_elements(IdxSeq, [R](auto Op, unsigned Idx) {
           return Op.match(R->getOperand(Idx));
         }))
       return true;
 
     return Commutative &&
-           detail::all_of_tuple_elements(Ops, [R](auto Op, unsigned Idx) {
+           all_of_tuple_elements(IdxSeq, [R](auto Op, unsigned Idx) {
              return Op.match(R->getOperand(R->getNumOperands() - Idx - 1));
            });
+  }
+
+private:
+  template <typename RecipeTy>
+  static bool matchRecipeAndOpcode(const VPRecipeBase *R) {
+    auto *DefR = dyn_cast<RecipeTy>(R);
+    // Check for recipes that do not have opcodes.
+    if constexpr (std::is_same<RecipeTy, VPScalarIVStepsRecipe>::value ||
+                  std::is_same<RecipeTy, VPCanonicalIVPHIRecipe>::value ||
+                  std::is_same<RecipeTy, VPWidenSelectRecipe>::value ||
+                  std::is_same<RecipeTy, VPDerivedIVRecipe>::value ||
+                  std::is_same<RecipeTy, VPWidenGEPRecipe>::value)
+      return DefR;
+    else
+      return DefR && DefR->getOpcode() == Opcode;
+  }
+
+  /// Helper to check if predicate \p P holds on all tuple elements in Ops using
+  /// the provided index sequence.
+  template <typename Fn, std::size_t... Is>
+  bool all_of_tuple_elements(std::index_sequence<Is...>, Fn P) const {
+    return (P(std::get<Is>(Ops), Is) && ...);
   }
 };
 
@@ -233,6 +234,16 @@ using BinaryVPInstruction_match =
     BinaryRecipe_match<Op0_t, Op1_t, Opcode, /*Commutative*/ false,
                        VPInstruction>;
 
+template <typename Op0_t, typename Op1_t, typename Op2_t, unsigned Opcode,
+          bool Commutative, typename... RecipeTys>
+using TernaryRecipe_match = Recipe_match<std::tuple<Op0_t, Op1_t, Op2_t>,
+                                         Opcode, Commutative, RecipeTys...>;
+
+template <typename Op0_t, typename Op1_t, typename Op2_t, unsigned Opcode>
+using TernaryVPInstruction_match =
+    TernaryRecipe_match<Op0_t, Op1_t, Op2_t, Opcode, /*Commutative*/ false,
+                        VPInstruction>;
+
 template <typename Op0_t, typename Op1_t, unsigned Opcode,
           bool Commutative = false>
 using AllBinaryRecipe_match =
@@ -251,6 +262,13 @@ m_VPInstruction(const Op0_t &Op0, const Op1_t &Op1) {
   return BinaryVPInstruction_match<Op0_t, Op1_t, Opcode>(Op0, Op1);
 }
 
+template <unsigned Opcode, typename Op0_t, typename Op1_t, typename Op2_t>
+inline TernaryVPInstruction_match<Op0_t, Op1_t, Op2_t, Opcode>
+m_VPInstruction(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
+  return TernaryVPInstruction_match<Op0_t, Op1_t, Op2_t, Opcode>(
+      {Op0, Op1, Op2});
+}
+
 template <typename Op0_t>
 inline UnaryVPInstruction_match<Op0_t, VPInstruction::Not>
 m_Not(const Op0_t &Op0) {
@@ -261,6 +279,12 @@ template <typename Op0_t>
 inline UnaryVPInstruction_match<Op0_t, VPInstruction::BranchOnCond>
 m_BranchOnCond(const Op0_t &Op0) {
   return m_VPInstruction<VPInstruction::BranchOnCond>(Op0);
+}
+
+template <typename Op0_t>
+inline UnaryVPInstruction_match<Op0_t, VPInstruction::Broadcast>
+m_Broadcast(const Op0_t &Op0) {
+  return m_VPInstruction<VPInstruction::Broadcast>(Op0);
 }
 
 template <typename Op0_t, typename Op1_t>

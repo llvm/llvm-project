@@ -8,10 +8,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zbkb -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefixes=RV64ZB
 
-; TODO: These tests can be optmised, with x%8 == 0
-;       fold (bswap(srl (bswap c), x)) -> (shl c, x)
-;       fold (bswap(shl (bswap c), x)) -> (srl c, x)
-
 declare i16 @llvm.bswap.i16(i16)
 declare i32 @llvm.bswap.i32(i32)
 declare i64 @llvm.bswap.i64(i64)

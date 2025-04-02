@@ -35,7 +35,7 @@ using namespace mlir::nvgpu;
 void nvgpu::NVGPUDialect::initialize() {
   addTypes<
 #define GET_TYPEDEF_LIST
-#include "mlir/Dialect/NVGPU/IR/NVGPUTypes.cpp.inc"
+#include "mlir/Dialect/NVGPU/IR/NVGPUTypeDefs.cpp.inc"
       >();
   addAttributes<
 #define GET_ATTRDEF_LIST
@@ -43,7 +43,7 @@ void nvgpu::NVGPUDialect::initialize() {
       >();
   addOperations<
 #define GET_OP_LIST
-#include "mlir/Dialect/NVGPU/IR/NVGPU.cpp.inc"
+#include "mlir/Dialect/NVGPU/IR/NVGPUOps.cpp.inc"
       >();
 }
 
@@ -70,9 +70,9 @@ LogicalResult DeviceAsyncCopyOp::verify() {
   auto srcMemref = llvm::cast<MemRefType>(getSrc().getType());
   auto dstMemref = llvm::cast<MemRefType>(getDst().getType());
 
-  if (!isLastMemrefDimUnitStride(srcMemref))
+  if (!srcMemref.isLastDimUnitStride())
     return emitError("source memref most minor dim must have unit stride");
-  if (!isLastMemrefDimUnitStride(dstMemref))
+  if (!dstMemref.isLastDimUnitStride())
     return emitError("destination memref most minor dim must have unit stride");
   if (!NVGPUDialect::hasSharedMemoryAddressSpace(dstMemref))
     return emitError()
@@ -681,7 +681,7 @@ LogicalResult RcpOp::verify() {
 #include "mlir/Dialect/NVGPU/IR/NVGPUEnums.cpp.inc"
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/NVGPU/IR/NVGPU.cpp.inc"
+#include "mlir/Dialect/NVGPU/IR/NVGPUOps.cpp.inc"
 
 #define GET_TYPEDEF_CLASSES
-#include "mlir/Dialect/NVGPU/IR/NVGPUTypes.cpp.inc"
+#include "mlir/Dialect/NVGPU/IR/NVGPUTypeDefs.cpp.inc"

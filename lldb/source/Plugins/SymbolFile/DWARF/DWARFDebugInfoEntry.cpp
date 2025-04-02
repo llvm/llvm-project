@@ -240,7 +240,7 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
                 data = DataExtractor(data, offset, data.GetByteSize() - offset);
                 if (lo_pc != LLDB_INVALID_ADDRESS) {
                   assert(lo_pc >= cu->GetBaseAddress());
-                  DWARFExpression::ParseDWARFLocationList(cu, data, frame_base);
+                  cu->ParseDWARFLocationList(data, *frame_base);
                   frame_base->SetFuncFileAddress(lo_pc);
                 } else
                   set_frame_base_loclist_addr = true;
@@ -263,10 +263,9 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
   }
 
   if (set_frame_base_loclist_addr && !ranges.empty()) {
-    // TODO: Use the first range instead.
-    dw_addr_t lowest_range_pc = llvm::min_element(ranges)->LowPC;
-    assert(lowest_range_pc >= cu->GetBaseAddress());
-    frame_base->SetFuncFileAddress(lowest_range_pc);
+    dw_addr_t file_addr = ranges.begin()->LowPC;
+    assert(file_addr >= cu->GetBaseAddress());
+    frame_base->SetFuncFileAddress(file_addr);
   }
 
   if (ranges.empty() || name == nullptr || mangled == nullptr) {

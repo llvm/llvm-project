@@ -11,6 +11,7 @@
 // template<container-compatible-range<charT> R>
 //   constexpr iterator insert_range(const_iterator p, R&& rg);                                // C++23
 
+#include <sstream>
 #include <string>
 
 #include "../../../../containers/sequences/insert_range_sequence_containers.h"
@@ -27,8 +28,26 @@ constexpr bool test_constexpr() {
         []([[maybe_unused]] auto&& c) { LIBCPP_ASSERT(c.__invariants()); });
   });
 
+  { // Ensure input-only sized ranges are accepted.
+    using input_iter = cpp20_input_iterator<const char*>;
+    const char in[]{'q', 'w', 'e', 'r'};
+    std::string s = "zxcv";
+    s.insert_range(s.begin(), std::views::counted(input_iter{std::ranges::begin(in)}, std::ranges::ssize(in)));
+    assert(s == "qwerzxcv");
+  }
+
   return true;
 }
+
+#ifndef TEST_HAS_NO_LOCALIZATION
+void test_counted_istream_view() {
+  std::istringstream is{"qwert"};
+  auto vals     = std::views::istream<char>(is);
+  std::string s = "zxcv";
+  s.insert_range(s.begin(), std::views::counted(vals.begin(), 3));
+  assert(s == "qwezxcv");
+}
+#endif
 
 int main(int, char**) {
   static_assert(test_constraints_insert_range<std::basic_string, char, int>());
@@ -38,6 +57,10 @@ int main(int, char**) {
         []([[maybe_unused]] auto&& c) { LIBCPP_ASSERT(c.__invariants()); });
   });
   static_assert(test_constexpr());
+
+#ifndef TEST_HAS_NO_LOCALIZATION
+  test_counted_istream_view();
+#endif
 
   // Note: `test_insert_range_exception_safety_throwing_copy` doesn't apply because copying chars cannot throw.
   {

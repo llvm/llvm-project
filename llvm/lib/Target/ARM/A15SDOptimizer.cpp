@@ -142,9 +142,10 @@ bool A15SDOptimizer::usesRegClass(MachineOperand &MO,
 }
 
 unsigned A15SDOptimizer::getDPRLaneFromSPR(unsigned SReg) {
-  unsigned DReg = TRI->getMatchingSuperReg(SReg, ARM::ssub_1,
-                                           &ARM::DPRRegClass);
-  if (DReg != ARM::NoRegister) return ARM::ssub_1;
+  MCRegister DReg =
+      TRI->getMatchingSuperReg(SReg, ARM::ssub_1, &ARM::DPRRegClass);
+  if (DReg)
+    return ARM::ssub_1;
   return ARM::ssub_0;
 }
 

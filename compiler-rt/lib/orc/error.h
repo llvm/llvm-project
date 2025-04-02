@@ -10,7 +10,7 @@
 #define ORC_RT_ERROR_H
 
 #include "compiler.h"
-#include "extensible_rtti.h"
+#include "rtti.h"
 #include "stl_extras.h"
 
 #include <cassert>

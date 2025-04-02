@@ -23,6 +23,11 @@ int hasAttribute(AttributeCommonInfo::Syntax Syntax,
                  const IdentifierInfo *Scope, const IdentifierInfo *Attr,
                  const TargetInfo &Target, const LangOptions &LangOpts);
 
+int hasAttribute(AttributeCommonInfo::Syntax Syntax,
+                 const IdentifierInfo *Scope, const IdentifierInfo *Attr,
+                 const TargetInfo &Target, const LangOptions &LangOpts,
+                 bool CheckPlugins);
+
 } // end namespace clang
 
 #endif // LLVM_CLANG_BASIC_ATTRIBUTES_H

@@ -245,6 +245,36 @@ functions:
     return_type: unsigned int
     arguments:
       - type: unsigned short
+  - name: stdc_first_trailing_zero_uc
+    standards:
+      - stdc
+    return_type: unsigned int
+    arguments:
+      - type: unsigned char
+  - name: stdc_first_trailing_zero_ui
+    standards:
+      - stdc
+    return_type: unsigned int
+    arguments:
+      - type: unsigned int
+  - name: stdc_first_trailing_zero_ul
+    standards:
+      - stdc
+    return_type: unsigned int
+    arguments:
+      - type: unsigned long
+  - name: stdc_first_trailing_zero_ull
+    standards:
+      - stdc
+    return_type: unsigned int
+    arguments:
+      - type: unsigned long long
+  - name: stdc_first_trailing_zero_us
+    standards:
+      - stdc
+    return_type: unsigned int
+    arguments:
+      - type: unsigned short
   - name: stdc_has_single_bit_uc
     standards:
       - stdc

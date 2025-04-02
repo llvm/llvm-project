@@ -370,7 +370,7 @@ Instruction *RandomIRBuilder::newSink(BasicBlock &BB,
       Type *Ty = V->getType();
       Ptr = createStackMemory(BB.getParent(), Ty, PoisonValue::get(Ty));
     } else {
-      Ptr = PoisonValue::get(PointerType::get(V->getType(), 0));
+      Ptr = PoisonValue::get(PointerType::get(V->getContext(), 0));
     }
   }
 

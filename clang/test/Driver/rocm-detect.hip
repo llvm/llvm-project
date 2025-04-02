@@ -94,33 +94,6 @@
 // RUN:   --print-rocm-search-dirs %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=ROCM-REL %s
 
-// Test ROCm installation built by SPACK by invoke clang at %t/rocm-spack/llvm-amdgpu-*
-// directory through a soft link.
-
-// RUN: rm -rf %t/rocm-spack
-// RUN: cp -r %S/Inputs/rocm-spack %t
-// RUN: ln -fs %clang %t/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin/clang
-// RUN: %t/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin/clang -### -no-canonical-prefixes -v \
-// RUN:   -resource-dir=%t/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/lib/clang \
-// RUN:   -target x86_64-linux-gnu --cuda-gpu-arch=gfx900 --print-rocm-search-dirs %s 2>&1 \
-// RUN:   | FileCheck -check-prefixes=SPACK %s
-
-// Test SPACK installation with multiple hip and rocm-device-libs packages of the same
-// ROCm release. --hip-path and --rocm-device-lib-path can be used to specify them.
-
-// RUN: cp -r %t/rocm-spack/hip-* %t/rocm-spack/hip-4.0.0-abcd
-// RUN: %t/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin/clang -### -no-canonical-prefixes -v \
-// RUN:   -target x86_64-linux-gnu --cuda-gpu-arch=gfx900 \
-// RUN:   --hip-path=%t/rocm-spack/hip-4.0.0-abcd \
-// RUN:    %s 2>&1 | FileCheck -check-prefixes=SPACK-SET %s
-
-// Test invalid SPACK ROCm installation missing hip and rocm-device-libs packages.
-
-// RUN: rm -rf %t/rocm-spack/hip-*
-// RUN: rm -rf %t/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/amdgcn
-// RUN: %t/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin/clang --version 2>&1 \
-// RUN:   | FileCheck -check-prefixes=SPACK-MISS-SILENT %s
-
 // GFX902-DEFAULTLIBS: error: cannot find ROCm device library for gfx902; provide its path via '--rocm-path' or '--rocm-device-lib-path', or pass '-nogpulib' to build without ROCm device library
 
 // NODEFAULTLIBS-NOT: error: cannot find
@@ -145,23 +118,3 @@
 
 // ROCM-REL: ROCm installation search path: {{.*}}/opt/rocm
 // ROCM-REL: ROCm installation search path: {{.*}}/opt/rocm-3.10.0
-
-// SPACK: InstalledDir: [[DIR:.*]]/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin
-// SPACK: ROCm installation search path (Spack 4.0.0): [[DIR]]
-// SPACK: ROCm installation search path: [[CLANG:.*]]
-// SPACK: ROCm installation search path: [[DIR]]/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z
-// SPACK: ROCm installation search path: [[DIR]]/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/lib/clang
-// SPACK: ROCm installation search path: /opt/rocm
-// SPACK: Found HIP installation: [[DIR]]/hip-4.0.0-5f63slrursbrvfe2txrrjkynbsywsob5, version 4.0.20214-a2917cd
-// SPACK: "-triple" "amdgcn-amd-amdhsa"
-// SPACK-SAME: "-mlink-builtin-bitcode" "[[DIR]]/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/amdgcn/bitcode/hip.bc"
-// SPACK-SAME: "-idirafter" "[[DIR]]/hip-4.0.0-5f63slrursbrvfe2txrrjkynbsywsob5/include"
-
-// SPACK-SET: InstalledDir: [[DIR:.*]]/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin
-// SPACK-SET: Found HIP installation: [[DIR]]/hip-4.0.0-abcd, version 4.0.20214-a2917cd
-// SPACK-SET: "-triple" "amdgcn-amd-amdhsa"
-// SPACK-SET-SAME: "-mlink-builtin-bitcode" "[[DIR]]/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/amdgcn/bitcode/hip.bc"
-// SPACK-SET-SAME: "-idirafter" "[[DIR]]/hip-4.0.0-abcd/include"
-
-// SPACK-MISS-SILENT-NOT: SPACK package hip-{{.*}} not found at
-// SPACK-MISS-SILENT-NOT: Found HIP installation

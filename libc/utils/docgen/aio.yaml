@@ -15,7 +15,7 @@ macros:
     in-latest-posix: ''
   LIO_WRITE:
     in-latest-posix: ''
-    
+
 functions:
   aio_cancel:
     in-latest-posix: ''

@@ -417,7 +417,7 @@ public:
     return false;
   }
   bool inUnion() const {
-    if (isBlockPointer())
+    if (isBlockPointer() && asBlockPointer().Base >= sizeof(InlineDescriptor))
       return getInlineDesc()->InUnion;
     return false;
   };
@@ -493,9 +493,6 @@ public:
   }
   /// Returns the field information.
   const FieldDecl *getField() const { return getFieldDesc()->asFieldDecl(); }
-
-  /// Checks if the object is a union.
-  bool isUnion() const;
 
   /// Checks if the storage is extern.
   bool isExtern() const {
@@ -630,8 +627,7 @@ public:
     if (isUnknownSizeArray())
       return false;
 
-    return isElementPastEnd() || isPastEnd() ||
-           (getSize() == getOffset() && !isZeroSizeArray());
+    return isPastEnd() || (getSize() == getOffset() && !isZeroSizeArray());
   }
 
   /// Checks if the pointer points past the end of the object.
@@ -688,6 +684,22 @@ public:
   /// Deactivates an entire strurcutre.
   void deactivate() const;
 
+  Lifetime getLifetime() const {
+    if (!isBlockPointer())
+      return Lifetime::Started;
+    if (asBlockPointer().Base < sizeof(InlineDescriptor))
+      return Lifetime::Started;
+    return getInlineDesc()->LifeState;
+  }
+
+  void endLifetime() const {
+    if (!isBlockPointer())
+      return;
+    if (asBlockPointer().Base < sizeof(InlineDescriptor))
+      return;
+    getInlineDesc()->LifeState = Lifetime::Ended;
+  }
+
   /// Compare two pointers.
   ComparisonCategoryResult compare(const Pointer &Other) const {
     if (!hasSameBase(*this, Other))
@@ -714,6 +726,8 @@ public:
 
   /// Prints the pointer.
   void print(llvm::raw_ostream &OS) const;
+
+  size_t computeOffsetForComparison() const;
 
 private:
   friend class Block;

@@ -7,12 +7,12 @@
 define i1 @mul_i1(i1 %a, i1 %b) {
 ; LA32-LABEL: mul_i1:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    mul.w $a0, $a0, $a1
+; LA32-NEXT:    and $a0, $a0, $a1
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: mul_i1:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    mul.d $a0, $a0, $a1
+; LA64-NEXT:    and $a0, $a0, $a1
 ; LA64-NEXT:    ret
 entry:
   %r = mul i1 %a, %b

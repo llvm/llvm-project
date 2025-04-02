@@ -27,6 +27,28 @@
 using namespace llvm;
 using namespace llvm::AMDGPU;
 
+// Return the PAL metadata hardware shader stage name.
+static const char *getStageName(CallingConv::ID CC) {
+  switch (CC) {
+  case CallingConv::AMDGPU_PS:
+    return ".ps";
+  case CallingConv::AMDGPU_VS:
+    return ".vs";
+  case CallingConv::AMDGPU_GS:
+    return ".gs";
+  case CallingConv::AMDGPU_ES:
+    return ".es";
+  case CallingConv::AMDGPU_HS:
+    return ".hs";
+  case CallingConv::AMDGPU_LS:
+    return ".ls";
+  case CallingConv::AMDGPU_Gfx:
+    llvm_unreachable("Callable shader has no hardware stage");
+  default:
+    return ".cs";
+  }
+}
+
 // Read the PAL metadata from IR metadata, where it was put by the frontend.
 void AMDGPUPALMetadata::readFromIR(Module &M) {
   auto *NamedMD = M.getNamedMetadata("amdgpu.pal.metadata.msgpack");
@@ -204,9 +226,9 @@ void AMDGPUPALMetadata::setRegister(unsigned Reg, const MCExpr *Val,
       return;
   }
   auto &N = getRegisters()[MsgPackDoc.getNode(Reg)];
-  auto ExprIt = REM.find(Reg);
+  auto [ExprIt, Inserted] = REM.try_emplace(Reg);
 
-  if (ExprIt != REM.end()) {
+  if (!Inserted) {
     Val = MCBinaryExpr::createOr(Val, ExprIt->getSecond(), Ctx);
     // This conditional may be redundant most of the time, but the alternate
     // setRegister(unsigned, unsigned) could've been called while the
@@ -223,7 +245,7 @@ void AMDGPUPALMetadata::setRegister(unsigned Reg, const MCExpr *Val,
     // propagate ORs.
     N = (uint64_t)0;
   }
-  REM[Reg] = Val;
+  ExprIt->second = Val;
   DelayedExprs.assignDocNode(N, msgpack::Type::UInt, Val);
 }
 
@@ -232,7 +254,18 @@ void AMDGPUPALMetadata::setEntryPoint(unsigned CC, StringRef Name) {
   if (isLegacy())
     return;
   // Msgpack format.
-  getHwStage(CC)[".entry_point"] = MsgPackDoc.getNode(Name, /*Copy=*/true);
+  // Entry point is updated to .entry_point_symbol and is set to the function
+  // name
+  getHwStage(CC)[".entry_point_symbol"] =
+      MsgPackDoc.getNode(Name, /*Copy=*/true);
+
+  // Set .entry_point which is defined
+  // to be _amdgpu_<stage> and _amdgpu_cs for non-shader functions
+  SmallString<16> EPName("_amdgpu_");
+  raw_svector_ostream EPNameOS(EPName);
+  EPNameOS << getStageName(CC) + 1;
+  getHwStage(CC)[".entry_point"] =
+      MsgPackDoc.getNode(EPNameOS.str(), /*Copy=*/true);
 }
 
 // Set the number of used vgprs in the metadata. This is an optional
@@ -940,28 +973,6 @@ msgpack::MapDocNode AMDGPUPALMetadata::getGraphicsRegisters() {
   if (GraphicsRegisters.isEmpty())
     GraphicsRegisters = refGraphicsRegisters();
   return GraphicsRegisters.getMap();
-}
-
-// Return the PAL metadata hardware shader stage name.
-static const char *getStageName(CallingConv::ID CC) {
-  switch (CC) {
-  case CallingConv::AMDGPU_PS:
-    return ".ps";
-  case CallingConv::AMDGPU_VS:
-    return ".vs";
-  case CallingConv::AMDGPU_GS:
-    return ".gs";
-  case CallingConv::AMDGPU_ES:
-    return ".es";
-  case CallingConv::AMDGPU_HS:
-    return ".hs";
-  case CallingConv::AMDGPU_LS:
-    return ".ls";
-  case CallingConv::AMDGPU_Gfx:
-    llvm_unreachable("Callable shader has no hardware stage");
-  default:
-    return ".cs";
-  }
 }
 
 msgpack::DocNode &AMDGPUPALMetadata::refHwStage() {

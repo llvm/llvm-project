@@ -78,7 +78,8 @@ body: |
     EH_LABEL <mcsymbol .Ltmp2>
     CATCHRET %bb.2, %bb.1, implicit-def dead $arguments
 
-  ; CHECK: bb.2
+  ; This BB should remain (it will be renumbered to bb.1)
+  ; CHECK: bb.1
   bb.2:
   ; predecessors: %bb.0, %bb.1
     RETURN implicit-def dead $arguments

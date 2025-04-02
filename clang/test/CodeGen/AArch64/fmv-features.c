@@ -58,9 +58,6 @@ __attribute__((target_version("i8mm"))) int fmv(void) { return 0; }
 // CHECK: define dso_local i32 @fmv._Mjscvt() #[[jscvt:[0-9]+]] {
 __attribute__((target_version("jscvt"))) int fmv(void) { return 0; }
 
-// CHECK: define dso_local i32 @fmv._Mls64() #[[ls64:[0-9]+]] {
-__attribute__((target_version("ls64"))) int fmv(void) { return 0; }
-
 // CHECK: define dso_local i32 @fmv._Mlse() #[[lse:[0-9]+]] {
 __attribute__((target_version("lse"))) int fmv(void) { return 0; }
 
@@ -69,9 +66,6 @@ __attribute__((target_version("memtag"))) int fmv(void) { return 0; }
 
 // CHECK: define dso_local i32 @fmv._Mmops() #[[mops:[0-9]+]] {
 __attribute__((target_version("mops"))) int fmv(void) { return 0; }
-
-// CHECK: define dso_local i32 @fmv._Mpredres() #[[predres:[0-9]+]] {
-__attribute__((target_version("predres"))) int fmv(void) { return 0; }
 
 // CHECK: define dso_local i32 @fmv._Mrcpc() #[[rcpc:[0-9]+]] {
 __attribute__((target_version("rcpc"))) int fmv(void) { return 0; }
@@ -171,11 +165,9 @@ int caller() {
 // CHECK: attributes #[[frintts]] = {{.*}} "fmv-features"="frintts"
 // CHECK: attributes #[[i8mm]] = {{.*}} "fmv-features"="i8mm"
 // CHECK: attributes #[[jscvt]] = {{.*}} "fmv-features"="jscvt"
-// CHECK: attributes #[[ls64]] = {{.*}} "fmv-features"="ls64"
 // CHECK: attributes #[[lse]] = {{.*}} "fmv-features"="lse"
 // CHECK: attributes #[[memtag]] = {{.*}} "fmv-features"="memtag"
 // CHECK: attributes #[[mops]] = {{.*}} "fmv-features"="mops"
-// CHECK: attributes #[[predres]] = {{.*}} "fmv-features"="predres"
 // CHECK: attributes #[[rcpc]] = {{.*}} "fmv-features"="rcpc"
 // CHECK: attributes #[[rcpc2]] = {{.*}} "fmv-features"="rcpc2"
 // CHECK: attributes #[[rcpc3]] = {{.*}} "fmv-features"="rcpc3"

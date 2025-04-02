@@ -2,6 +2,7 @@
 ; RUN: llc < %s -asm-verbose=false -wasm-enable-eh -wasm-use-legacy-eh=false -exception-model=wasm -mattr=+exception-handling -verify-machineinstrs -O0
 ; RUN: llc < %s -wasm-enable-eh -wasm-use-legacy-eh=false -exception-model=wasm -mattr=+exception-handling
 ; RUN: llc < %s -wasm-enable-eh -wasm-use-legacy-eh=false -exception-model=wasm -mattr=+exception-handling -filetype=obj
+; RUN: llc < %s -mtriple=wasm64-unknown-unknown -wasm-enable-eh -wasm-use-legacy-eh=false -exception-model=wasm -mattr=+exception-handling -verify-machineinstrs | FileCheck --implicit-check-not=ehgcr -allow-deprecated-dag-overlap %s --check-prefix=WASM64
 
 target triple = "wasm32-unknown-unknown"
 
@@ -30,14 +31,17 @@ define void @throw(ptr %p) {
 ; }
 
 ; CHECK-LABEL: catch:
+; WASM64-LABEL: catch:
 ; CHECK: global.get  __stack_pointer
 ; CHECK: local.set  0
 ; CHECK: block
 ; CHECK:   block     () -> (i32, exnref)
 ; CHECK:     try_table    (catch_ref __cpp_exception 0)
+; WASM64:  block     () -> (i64, exnref)
 ; CHECK:       call  foo
 ; CHECK:       br        2
 ; CHECK:     end_try_table
+; CHECK:     unreachable
 ; CHECK:   end_block
 ; CHECK:   local.set  2
 ; CHECK:   local.get  0
@@ -137,8 +141,10 @@ ehcleanup:                                        ; preds = %entry
 ; }
 
 ; CHECK-LABEL: terminatepad
+; WASM64-LABEL: terminatepad
 ; CHECK: block
 ; CHECK:   block     i32
+; WASM64:  block     i64
 ; CHECK:     try_table    (catch __cpp_exception 0)
 ; CHECK:       call  foo
 ; CHECK:       br        2
@@ -201,7 +207,7 @@ invoke.cont2:                                     ; preds = %ehcleanup
 
 terminate:                                        ; preds = %ehcleanup
   %6 = cleanuppad within %5 []
-  call void @_ZSt9terminatev() [ "funclet"(token %6) ]
+  call void @_ZSt9terminatev() #2 [ "funclet"(token %6) ]
   unreachable
 }
 
@@ -536,7 +542,7 @@ invoke.cont.i:                                    ; preds = %catch.start.i
 
 terminate.i:                                      ; preds = %catch.start.i, %catch.dispatch.i
   %6 = cleanuppad within %0 []
-  call void @_ZSt9terminatev() [ "funclet"(token %6) ]
+  call void @_ZSt9terminatev() #2 [ "funclet"(token %6) ]
   unreachable
 
 _ZN4TempD2Ev.exit:                                ; preds = %invoke.cont.i
@@ -560,6 +566,82 @@ unreachable:                                      ; preds = %entry
   unreachable
 }
 
+; This tests whether llvm.wasm.throw intrinsic can invoked and iseled correctly.
+
+; CHECK-LABEL: invoke_throw:
+; CHECK: try_table    (catch __cpp_exception 0)
+; CHECK:   local.get  0
+; CHECK:   throw     __cpp_exception
+; CHECK: end_try_table
+define void @invoke_throw(ptr %p) personality ptr @__gxx_wasm_personality_v0 {
+entry:
+  invoke void @llvm.wasm.throw(i32 0, ptr %p)
+          to label %try.cont unwind label %catch.dispatch
+
+catch.dispatch:                                   ; preds = %entry
+  %0 = catchswitch within none [label %catch.start] unwind to caller
+
+catch.start:                                      ; preds = %catch.dispatch
+  %1 = catchpad within %0 [ptr null]
+  %2 = call ptr @llvm.wasm.get.exception(token %1)
+  %3 = call i32 @llvm.wasm.get.ehselector(token %1)
+  %4 = call ptr @__cxa_begin_catch(ptr %2) #4 [ "funclet"(token %1) ]
+  call void @__cxa_end_catch() [ "funclet"(token %1) ]
+  catchret from %1 to label %try.cont
+
+try.cont:                                         ; preds = %catch, %entry
+  ret void
+}
+
+; Regression test for a bug where, when an invoke unwinds to a catchswitch, the
+; catchswitch's unwind destination was not included in the invoke's unwind
+; destination when there was no direct link from catch.start to there.
+
+; CHECK-LABEL: unwind_destinations:
+; CHECK: block
+; CHECK:   block
+; CHECK:     try_table    (catch_all 0)
+; CHECK:       block     i32
+; CHECK:         try_table    (catch __cpp_exception 0)
+; CHECK:           call  foo
+; CHECK:         end_try_table
+; CHECK:         unreachable
+; CHECK:       end_block
+; CHECK:       call  _ZSt9terminatev
+; CHECK:       unreachable
+; CHECK:     end_try_table
+; CHECK:     unreachable
+; CHECK:   end_block
+; Note the below is "terminate" BB and should not be DCE'd
+; CHECK:   call  _ZSt9terminatev
+; CHECK:   unreachable
+; CHECK: end_block
+define void @unwind_destinations() personality ptr @__gxx_wasm_personality_v0 {
+entry:
+  invoke void @foo()
+          to label %try.cont unwind label %catch.dispatch
+
+catch.dispatch:                                   ; preds = %entry
+  %0 = catchswitch within none [label %catch.start] unwind label %terminate
+
+catch.start:                                      ; preds = %catch.dispatch
+  %1 = catchpad within %0 [ptr null]
+  %2 = call ptr @llvm.wasm.get.exception(token %1)
+  %3 = call ptr @__cxa_begin_catch(ptr %2) #5 [ "funclet"(token %1) ]
+  call void @_ZSt9terminatev() #2 [ "funclet"(token %1) ]
+  unreachable
+
+; Even if there is no link from catch.start to this terminate BB, when there is
+; an exception that catch.start does not catch (e.g. a foreign exception), it
+; should end up here, so this BB should NOT be DCE'ed
+terminate:                                        ; preds = %catch.dispatch
+  %4 = cleanuppad within none []
+  call void @_ZSt9terminatev() #2 [ "funclet"(token %4) ]
+  unreachable
+
+try.cont:                                         ; preds = %entry
+  ret void
+}
 
 declare void @foo()
 declare void @bar(ptr)
@@ -586,5 +668,6 @@ declare ptr @_ZN4TempD2Ev(ptr returned)
 
 attributes #0 = { nounwind }
 attributes #1 = { noreturn }
+attributes #2 = { noreturn nounwind }
 
 ; CHECK: __cpp_exception:

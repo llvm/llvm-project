@@ -21,7 +21,7 @@ bb0:
   br i1 %tmp9, label %bb1, label %bb2
 
 bb1:
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %bb2
 
 bb2:
@@ -37,17 +37,18 @@ bb2:
 define amdgpu_kernel void @preserve_condition_undef_flag(float %arg, i32 %arg1, float %arg2) {
 bb0:
   %tmp = icmp sgt i32 %arg1, 4
-  %undef = call i1 @llvm.amdgcn.class.f32(float undef, i32 undef)
-  %tmp4 = select i1 %undef, float %arg, float 1.000000e+00
+  %mask = freeze i32 poison
+  %undef0 = call i1 @llvm.amdgcn.class.f32(float poison, i32 %mask)
+  %tmp4 = select i1 %undef0, float %arg, float 1.000000e+00
   %tmp5 = fcmp ogt float %arg2, 0.000000e+00
   %tmp6 = fcmp olt float %arg2, 1.000000e+00
-  %tmp7 = fcmp olt float %arg, undef
+  %tmp7 = fcmp olt float %arg, poison
   %tmp8 = and i1 %tmp5, %tmp6
   %tmp9 = and i1 %tmp8, %tmp7
   br i1 %tmp9, label %bb1, label %bb2
 
 bb1:
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %bb2
 
 bb2:

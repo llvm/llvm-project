@@ -424,8 +424,10 @@ defm CondStore64 : CondStores<GR64, simple_store,
 //===----------------------------------------------------------------------===//
 
 // Register moves.
-def LR  : UnaryRR <"lr",  0x18,   null_frag, GR32, GR32>;
-def LGR : UnaryRRE<"lgr", 0xB904, null_frag, GR64, GR64>;
+let isMoveReg = 1 in {
+  def LR  : UnaryRR <"lr",  0x18,   null_frag, GR32, GR32>;
+  def LGR : UnaryRRE<"lgr", 0xB904, null_frag, GR64, GR64>;
+}
 
 let Defs = [CC], CCValues = 0xE, CompareZeroCCMask = 0xE in {
   def LTR  : UnaryRR <"ltr",  0x12,   null_frag, GR32, GR32>;
@@ -883,6 +885,39 @@ let isAsCheapAsAMove = 1, isMoveImm = 1, isReMaterializable = 1 in
 // instruction.
 def GOT : Alias<6, (outs GR64:$R1), (ins),
                 [(set GR64:$R1, (global_offset_table))]>;
+
+// Load (logical) indexed address.
+let Predicates = [FeatureMiscellaneousExtensions4] in {
+  defm LXAB  : LoadIndexedAddressRXY<"lxab",  0xE360, sext32>;
+  defm LXAH  : LoadIndexedAddressRXY<"lxah",  0xE362, sext32, shl1>;
+  defm LXAF  : LoadIndexedAddressRXY<"lxaf",  0xE364, sext32, shl2>;
+  defm LXAG  : LoadIndexedAddressRXY<"lxag",  0xE366, sext32, shl3>;
+  defm LXAQ  : LoadIndexedAddressRXY<"lxaq",  0xE368, sext32, shl4>;
+  defm LLXAB : LoadIndexedAddressRXY<"llxab", 0xE361, zext32>;
+  defm LLXAH : LoadIndexedAddressRXY<"llxah", 0xE363, zext32, shl1>;
+  defm LLXAF : LoadIndexedAddressRXY<"llxaf", 0xE365, zext32, shl2>;
+  defm LLXAG : LoadIndexedAddressRXY<"llxag", 0xE367, zext32, shl3>;
+  defm LLXAQ : LoadIndexedAddressRXY<"llxaq", 0xE369, zext32, shl4>;
+
+  // Peepholes to use load (logical) indexed address to implement
+  // add + shift of an already extended value.
+  def : Pat<(add ADDR64:$base, (shl1 (assertsext32 ADDR64:$index))),
+            (LXAH ADDR64:$base, 0, (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add ADDR64:$base, (shl2 (assertsext32 ADDR64:$index))),
+            (LXAF ADDR64:$base, 0, (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add ADDR64:$base, (shl3 (assertsext32 ADDR64:$index))),
+            (LXAG ADDR64:$base, 0, (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add ADDR64:$base, (shl4 (assertsext32 ADDR64:$index))),
+            (LXAQ ADDR64:$base, 0, (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add ADDR64:$base, (shl1 (assertzext32 ADDR64:$index))),
+            (LLXAH ADDR64:$base, 0, (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add ADDR64:$base, (shl2 (assertzext32 ADDR64:$index))),
+            (LLXAF ADDR64:$base, 0, (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add ADDR64:$base, (shl3 (assertzext32 ADDR64:$index))),
+            (LLXAG ADDR64:$base, 0, (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add ADDR64:$base, (shl4 (assertzext32 ADDR64:$index))),
+            (LLXAQ ADDR64:$base, 0, (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+}
 
 //===----------------------------------------------------------------------===//
 // Absolute and Negation
@@ -1523,38 +1558,38 @@ def RLLG : BinaryRSY<"rllg", 0xEB1C, shiftop<rotl>, GR64>;
 // end bits (operands 2 and 3) are in the range [32, 64).
 let Defs = [CC] in {
   let isCodeGenOnly = 1 in
-    def RISBG32 : RotateSelectRIEf<"risbg", 0xEC55, GR32, GR32>;
+    defm RISBG32 : RotateSelectRIEf<"risbg", 0xEC55, GR32, GR32>;
   let CCValues = 0xE, CompareZeroCCMask = 0xE in {
-    def RISBG : RotateSelectRIEf<"risbg", 0xEC55, GR64, GR64>;
-    def RISBGZ : RotateSelectRIEf<"risbgz", 0xEC55, GR64, GR64, 0, 128>;
+    defm RISBG : RotateSelectRIEf<"risbg", 0xEC55, GR64, GR64>;
+    defm RISBGZ : RotateSelectRIEf<"risbgz", 0xEC55, GR64, GR64, 0, 128>;
   }
 }
 
 // On zEC12 we have a variant of RISBG that does not set CC.
 let Predicates = [FeatureMiscellaneousExtensions] in {
-  def RISBGN : RotateSelectRIEf<"risbgn", 0xEC59, GR64, GR64>;
-  def RISBGNZ : RotateSelectRIEf<"risbgnz", 0xEC59, GR64, GR64, 0, 128>;
+  defm RISBGN : RotateSelectRIEf<"risbgn", 0xEC59, GR64, GR64>;
+  defm RISBGNZ : RotateSelectRIEf<"risbgnz", 0xEC59, GR64, GR64, 0, 128>;
 }
 
 // Forms of RISBG that only affect one word of the destination register.
 // They do not set CC.
 let Predicates = [FeatureHighWord] in {
-  def RISBMux : RotateSelectRIEfPseudo<GRX32, GRX32>;
-  def RISBLL  : RotateSelectAliasRIEf<GR32,  GR32>;
-  def RISBLH  : RotateSelectAliasRIEf<GR32,  GRH32>;
-  def RISBHL  : RotateSelectAliasRIEf<GRH32, GR32>;
-  def RISBHH  : RotateSelectAliasRIEf<GRH32, GRH32>;
-  def RISBLG  : RotateSelectRIEf<"risblg", 0xEC51, GR32, GR64>;
-  def RISBHG  : RotateSelectRIEf<"risbhg", 0xEC5D, GRH32, GR64>;
+  def  RISBMux : RotateSelectRIEfPseudo<GRX32, GRX32>;
+  defm RISBLL  : RotateSelectAliasRIEf<GR32,  GR32>;
+  defm RISBLH  : RotateSelectAliasRIEf<GR32,  GRH32>;
+  defm RISBHL  : RotateSelectAliasRIEf<GRH32, GR32>;
+  defm RISBHH  : RotateSelectAliasRIEf<GRH32, GRH32>;
+  defm RISBLG  : RotateSelectRIEf<"risblg", 0xEC51, GR32, GR64>;
+  defm RISBHG  : RotateSelectRIEf<"risbhg", 0xEC5D, GRH32, GR64>;
 }
 
 // Rotate second operand left and perform a logical operation with selected
 // bits of the first operand.  The CC result only describes the selected bits,
 // so isn't useful for a full comparison against zero.
 let Defs = [CC] in {
-  def RNSBG : RotateSelectRIEf<"rnsbg", 0xEC54, GR64, GR64>;
-  def ROSBG : RotateSelectRIEf<"rosbg", 0xEC56, GR64, GR64>;
-  def RXSBG : RotateSelectRIEf<"rxsbg", 0xEC57, GR64, GR64>;
+  defm RNSBG : RotateSelectRIEf<"rnsbg", 0xEC54, GR64, GR64>;
+  defm ROSBG : RotateSelectRIEf<"rosbg", 0xEC56, GR64, GR64>;
+  defm RXSBG : RotateSelectRIEf<"rxsbg", 0xEC57, GR64, GR64>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1821,6 +1856,19 @@ let Predicates = [FeatureInterlockedAccess1], Defs = [CC] in {
   def LPDG : BinarySSF<"lpdg", 0xC85, GR128>;
 }
 
+// Compare and load.
+let Predicates = [FeatureConcurrentFunctions], Defs = [CC] in {
+  def CAL   : BinarySSF<"cal", 0xC86, GR32>;
+  def CALGF : BinarySSF<"calgf", 0xC8F, GR64>;
+  def CALG  : BinarySSF<"calg", 0xC87, GR64>;
+}
+
+// Perform function with concurrent results.
+let Predicates = [FeatureConcurrentFunctions], Uses = [R0D], Defs = [CC],
+    mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
+  def PFCR : BinaryRSY<"pfcr", 0xEB16, null_frag, GR64>;
+}
+
 //===----------------------------------------------------------------------===//
 // Translate and convert
 //===----------------------------------------------------------------------===//
@@ -1910,6 +1958,11 @@ let mayLoad = 1, mayStore = 1, Uses = [R0L, R1D], Defs = [CC] in {
 
   let Predicates = [FeatureMessageSecurityAssist9] in
     def KDSA : SideEffectBinaryMemRRE<"kdsa", 0xB93A, GR64, GR128>;
+
+  let Predicates = [FeatureMessageSecurityAssist12] in {
+    def KIMDOpt : SideEffectTernaryMemMemRRFc<"kimd", 0xB93E, GR64, GR128, imm32zx4>;
+    def KLMDOpt : SideEffectTernaryMemMemRRFc<"klmd", 0xB93F, GR64, GR128, imm32zx4>;
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -2081,6 +2134,12 @@ let Predicates = [FeatureProcessorAssist] in {
 // Miscellaneous Instructions.
 //===----------------------------------------------------------------------===//
 
+// Count leading/trailing zeros.
+let Predicates = [FeatureMiscellaneousExtensions4] in {
+  def CLZG : UnaryRRE<"clzg", 0xB968, ctlz, GR64, GR64>;
+  def CTZG : UnaryRRE<"ctzg", 0xB969, cttz, GR64, GR64>;
+}
+
 // Find leftmost one, AKA count leading zeros.  The instruction actually
 // returns a pair of GR64s, the first giving the number of leading zeros
 // and the second giving a copy of the source with the leftmost one bit
@@ -2098,6 +2157,12 @@ let Predicates = [FeatureMiscellaneousExtensions3] in {
 }
 let Predicates = [FeaturePopulationCount], Defs = [CC] in
   def POPCNT : UnaryRRE<"popcnt", 0xB9E1, z_popcnt, GR64, GR64>;
+
+// Bit deposit and bit extract.
+let Predicates = [FeatureMiscellaneousExtensions4] in {
+  def BDEPG : BinaryRRFa<"bdepg", 0xB96D, int_s390_bdepg, GR64, GR64, GR64>;
+  def BEXTG : BinaryRRFa<"bextg", 0xB96C, int_s390_bextg, GR64, GR64, GR64>;
+}
 
 // Search a block of memory for a character.
 let mayLoad = 1, Defs = [CC] in
@@ -2120,7 +2185,7 @@ let mayLoad = 1, mayStore = 1, Defs = [CC, R0D, R1D, R2D, R3D, R5D],
 
 // Checksum.
 let mayLoad = 1, Defs = [CC] in
-  def CKSM : SideEffectBinaryMemMemRRE<"cksm", 0xB241, GR64, GR128>;
+  def CKSM : SideEffectBinaryMemMemRRE<"cksm", 0xB241, GR32, GR128>;
 
 // Compression call.
 let mayLoad = 1, mayStore = 1, Defs = [CC, R1D], Uses = [R0L, R1D] in

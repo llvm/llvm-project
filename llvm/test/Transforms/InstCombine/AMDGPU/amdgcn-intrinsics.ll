@@ -8,6 +8,14 @@
 declare float @llvm.amdgcn.rcp.f32(float) nounwind readnone
 declare double @llvm.amdgcn.rcp.f64(double) nounwind readnone
 
+define float @test_constant_fold_rcp_f32_poison() nounwind {
+; CHECK-LABEL: @test_constant_fold_rcp_f32_poison(
+; CHECK-NEXT:    ret float poison
+;
+  %val = call float @llvm.amdgcn.rcp.f32(float poison) nounwind readnone
+  ret float %val
+}
+
 define float @test_constant_fold_rcp_f32_undef() nounwind {
 ; CHECK-LABEL: @test_constant_fold_rcp_f32_undef(
 ; CHECK-NEXT:    ret float 0x7FF8000000000000
@@ -66,7 +74,7 @@ define double @test_constant_fold_rcp_f64_43() nounwind {
 
 define float @test_constant_fold_rcp_f32_43_strictfp() nounwind strictfp {
 ; CHECK-LABEL: @test_constant_fold_rcp_f32_43_strictfp(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.rcp.f32(float 4.300000e+01) #[[ATTR14:[0-9]+]]
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.rcp.f32(float 4.300000e+01) #[[ATTR17:[0-9]+]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.amdgcn.rcp.f32(float 4.300000e+01) strictfp nounwind readnone
@@ -81,12 +89,28 @@ declare half @llvm.amdgcn.sqrt.f16(half) nounwind readnone
 declare float @llvm.amdgcn.sqrt.f32(float) nounwind readnone
 declare double @llvm.amdgcn.sqrt.f64(double) nounwind readnone
 
+define half @test_constant_fold_sqrt_f16_poison() nounwind {
+; CHECK-LABEL: @test_constant_fold_sqrt_f16_poison(
+; CHECK-NEXT:    ret half poison
+;
+  %val = call half @llvm.amdgcn.sqrt.f16(half poison) nounwind readnone
+  ret half %val
+}
+
 define half @test_constant_fold_sqrt_f16_undef() nounwind {
 ; CHECK-LABEL: @test_constant_fold_sqrt_f16_undef(
 ; CHECK-NEXT:    ret half 0xH7E00
 ;
   %val = call half @llvm.amdgcn.sqrt.f16(half undef) nounwind readnone
   ret half %val
+}
+
+define float @test_constant_fold_sqrt_f32_poison() nounwind {
+; CHECK-LABEL: @test_constant_fold_sqrt_f32_poison(
+; CHECK-NEXT:    ret float poison
+;
+  %val = call float @llvm.amdgcn.sqrt.f32(float poison) nounwind readnone
+  ret float %val
 }
 
 define float @test_constant_fold_sqrt_f32_undef() nounwind {
@@ -115,7 +139,7 @@ define half @test_constant_fold_sqrt_f16_0() nounwind {
 
 define float @test_constant_fold_sqrt_f32_0() nounwind {
 ; CHECK-LABEL: @test_constant_fold_sqrt_f32_0(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.sqrt.f32(float 0.000000e+00) #[[ATTR15:[0-9]+]]
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.sqrt.f32(float 0.000000e+00) #[[ATTR18:[0-9]+]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.amdgcn.sqrt.f32(float 0.0) nounwind readnone
@@ -124,7 +148,7 @@ define float @test_constant_fold_sqrt_f32_0() nounwind {
 
 define double @test_constant_fold_sqrt_f64_0() nounwind {
 ; CHECK-LABEL: @test_constant_fold_sqrt_f64_0(
-; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.sqrt.f64(double 0.000000e+00) #[[ATTR15]]
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.sqrt.f64(double 0.000000e+00) #[[ATTR18]]
 ; CHECK-NEXT:    ret double [[VAL]]
 ;
   %val = call double @llvm.amdgcn.sqrt.f64(double 0.0) nounwind readnone
@@ -141,7 +165,7 @@ define half @test_constant_fold_sqrt_f16_neg0() nounwind {
 
 define float @test_constant_fold_sqrt_f32_neg0() nounwind {
 ; CHECK-LABEL: @test_constant_fold_sqrt_f32_neg0(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.sqrt.f32(float -0.000000e+00) #[[ATTR15]]
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.sqrt.f32(float -0.000000e+00) #[[ATTR18]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.amdgcn.sqrt.f32(float -0.0) nounwind readnone
@@ -150,7 +174,7 @@ define float @test_constant_fold_sqrt_f32_neg0() nounwind {
 
 define double @test_constant_fold_sqrt_f64_neg0() nounwind {
 ; CHECK-LABEL: @test_constant_fold_sqrt_f64_neg0(
-; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.sqrt.f64(double -0.000000e+00) #[[ATTR15]]
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.sqrt.f64(double -0.000000e+00) #[[ATTR18]]
 ; CHECK-NEXT:    ret double [[VAL]]
 ;
   %val = call double @llvm.amdgcn.sqrt.f64(double -0.0) nounwind readnone
@@ -226,6 +250,14 @@ define double @test_amdgcn_sqrt_f64(double %arg) {
 
 declare float @llvm.amdgcn.rsq.f32(float) nounwind readnone
 
+define float @test_constant_fold_rsq_f32_poison() nounwind {
+; CHECK-LABEL: @test_constant_fold_rsq_f32_poison(
+; CHECK-NEXT:    ret float poison
+;
+  %val = call float @llvm.amdgcn.rsq.f32(float poison) nounwind readnone
+  ret float %val
+}
+
 define float @test_constant_fold_rsq_f32_undef() nounwind {
 ; CHECK-LABEL: @test_constant_fold_rsq_f32_undef(
 ; CHECK-NEXT:    ret float 0x7FF8000000000000
@@ -241,6 +273,14 @@ define float @test_constant_fold_rsq_f32_undef() nounwind {
 declare float @llvm.amdgcn.frexp.mant.f32(float) nounwind readnone
 declare double @llvm.amdgcn.frexp.mant.f64(double) nounwind readnone
 
+
+define float @test_constant_fold_frexp_mant_f32_poison() nounwind {
+; CHECK-LABEL: @test_constant_fold_frexp_mant_f32_poison(
+; CHECK-NEXT:    ret float poison
+;
+  %val = call float @llvm.amdgcn.frexp.mant.f32(float poison)
+  ret float %val
+}
 
 define float @test_constant_fold_frexp_mant_f32_undef() nounwind {
 ; CHECK-LABEL: @test_constant_fold_frexp_mant_f32_undef(
@@ -409,6 +449,14 @@ define double @test_constant_fold_frexp_mant_f64_min_num() nounwind {
 
 declare i32 @llvm.amdgcn.frexp.exp.f32(float) nounwind readnone
 declare i32 @llvm.amdgcn.frexp.exp.f64(double) nounwind readnone
+
+define i32 @test_constant_fold_frexp_exp_f32_poison() nounwind {
+; CHECK-LABEL: @test_constant_fold_frexp_exp_f32_poison(
+; CHECK-NEXT:    ret i32 poison
+;
+  %val = call i32 @llvm.amdgcn.frexp.exp.f32(float poison)
+  ret i32 %val
+}
 
 define i32 @test_constant_fold_frexp_exp_f32_undef() nounwind {
 ; CHECK-LABEL: @test_constant_fold_frexp_exp_f32_undef(
@@ -718,7 +766,7 @@ define i1 @test_class_isnan_f32(float %x) nounwind {
 
 define i1 @test_class_isnan_f32_strict(float %x) nounwind strictfp {
 ; CHECK-LABEL: @test_class_isnan_f32_strict(
-; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 3) #[[ATTR16:[0-9]+]]
+; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 3) #[[ATTR19:[0-9]+]]
 ; CHECK-NEXT:    ret i1 [[VAL]]
 ;
   %val = call i1 @llvm.amdgcn.class.f32(float %x, i32 3) strictfp
@@ -736,7 +784,7 @@ define i1 @test_class_is_p0_n0_f32(float %x) nounwind {
 
 define i1 @test_class_is_p0_n0_f32_strict(float %x) nounwind strictfp {
 ; CHECK-LABEL: @test_class_is_p0_n0_f32_strict(
-; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 96) #[[ATTR16]]
+; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 96) #[[ATTR19]]
 ; CHECK-NEXT:    ret i1 [[VAL]]
 ;
   %val = call i1 @llvm.amdgcn.class.f32(float %x, i32 96) strictfp
@@ -1272,6 +1320,32 @@ define <2 x i16> @undef_cvt_pknorm_i16() {
   ret <2 x i16> %cvt
 }
 
+define <2 x i16> @poison_lhs_cvt_pknorm_i16(float %y) {
+; CHECK-LABEL: @poison_lhs_cvt_pknorm_i16(
+; CHECK-NEXT:    [[CVT:%.*]] = call <2 x i16> @llvm.amdgcn.cvt.pknorm.i16(float poison, float [[Y:%.*]])
+; CHECK-NEXT:    ret <2 x i16> [[CVT]]
+;
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pknorm.i16(float poison, float %y)
+  ret <2 x i16> %cvt
+}
+
+define <2 x i16> @poison_rhs_cvt_pknorm_i16(float %x) {
+; CHECK-LABEL: @poison_rhs_cvt_pknorm_i16(
+; CHECK-NEXT:    [[CVT:%.*]] = call <2 x i16> @llvm.amdgcn.cvt.pknorm.i16(float [[X:%.*]], float poison)
+; CHECK-NEXT:    ret <2 x i16> [[CVT]]
+;
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pknorm.i16(float %x, float poison)
+  ret <2 x i16> %cvt
+}
+
+define <2 x i16> @poison_cvt_pknorm_i16() {
+; CHECK-LABEL: @poison_cvt_pknorm_i16(
+; CHECK-NEXT:    ret <2 x i16> poison
+;
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pknorm.i16(float poison, float poison)
+  ret <2 x i16> %cvt
+}
+
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.cvt.pknorm.u16
 ; --------------------------------------------------------------------
@@ -1301,6 +1375,32 @@ define <2 x i16> @undef_cvt_pknorm_u16() {
 ; CHECK-NEXT:    ret <2 x i16> undef
 ;
   %cvt = call <2 x i16> @llvm.amdgcn.cvt.pknorm.u16(float undef, float undef)
+  ret <2 x i16> %cvt
+}
+
+define <2 x i16> @poison_lhs_cvt_pknorm_u16(float %y) {
+; CHECK-LABEL: @poison_lhs_cvt_pknorm_u16(
+; CHECK-NEXT:    [[CVT:%.*]] = call <2 x i16> @llvm.amdgcn.cvt.pknorm.u16(float poison, float [[Y:%.*]])
+; CHECK-NEXT:    ret <2 x i16> [[CVT]]
+;
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pknorm.u16(float poison, float %y)
+  ret <2 x i16> %cvt
+}
+
+define <2 x i16> @poison_rhs_cvt_pknorm_u16(float %x) {
+; CHECK-LABEL: @poison_rhs_cvt_pknorm_u16(
+; CHECK-NEXT:    [[CVT:%.*]] = call <2 x i16> @llvm.amdgcn.cvt.pknorm.u16(float [[X:%.*]], float poison)
+; CHECK-NEXT:    ret <2 x i16> [[CVT]]
+;
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pknorm.u16(float %x, float poison)
+  ret <2 x i16> %cvt
+}
+
+define <2 x i16> @poison_cvt_pknorm_u16() {
+; CHECK-LABEL: @poison_cvt_pknorm_u16(
+; CHECK-NEXT:    ret <2 x i16> poison
+;
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pknorm.u16(float poison, float poison)
   ret <2 x i16> %cvt
 }
 
@@ -1336,6 +1436,32 @@ define <2 x i16> @undef_cvt_pk_i16() {
   ret <2 x i16> %cvt
 }
 
+define <2 x i16> @poison_lhs_cvt_pk_i16(i32 %y) {
+; CHECK-LABEL: @poison_lhs_cvt_pk_i16(
+; CHECK-NEXT:    [[CVT:%.*]] = call <2 x i16> @llvm.amdgcn.cvt.pk.i16(i32 poison, i32 [[Y:%.*]])
+; CHECK-NEXT:    ret <2 x i16> [[CVT]]
+;
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pk.i16(i32 poison, i32 %y)
+  ret <2 x i16> %cvt
+}
+
+define <2 x i16> @poison_rhs_cvt_pk_i16(i32 %x) {
+; CHECK-LABEL: @poison_rhs_cvt_pk_i16(
+; CHECK-NEXT:    [[CVT:%.*]] = call <2 x i16> @llvm.amdgcn.cvt.pk.i16(i32 [[X:%.*]], i32 poison)
+; CHECK-NEXT:    ret <2 x i16> [[CVT]]
+;
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pk.i16(i32 %x, i32 poison)
+  ret <2 x i16> %cvt
+}
+
+define <2 x i16> @poison_cvt_pk_i16() {
+; CHECK-LABEL: @poison_cvt_pk_i16(
+; CHECK-NEXT:    ret <2 x i16> poison
+;
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pk.i16(i32 poison, i32 poison)
+  ret <2 x i16> %cvt
+}
+
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.cvt.pk.u16
 ; --------------------------------------------------------------------
@@ -1365,6 +1491,32 @@ define <2 x i16> @undef_cvt_pk_u16() {
 ; CHECK-NEXT:    ret <2 x i16> undef
 ;
   %cvt = call <2 x i16> @llvm.amdgcn.cvt.pk.u16(i32 undef, i32 undef)
+  ret <2 x i16> %cvt
+}
+
+define <2 x i16> @poison_lhs_cvt_pk_u16(i32 %y) {
+; CHECK-LABEL: @poison_lhs_cvt_pk_u16(
+; CHECK-NEXT:    [[CVT:%.*]] = call <2 x i16> @llvm.amdgcn.cvt.pk.u16(i32 poison, i32 [[Y:%.*]])
+; CHECK-NEXT:    ret <2 x i16> [[CVT]]
+;
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pk.u16(i32 poison, i32 %y)
+  ret <2 x i16> %cvt
+}
+
+define <2 x i16> @poison_rhs_cvt_pk_u16(i32 %x) {
+; CHECK-LABEL: @poison_rhs_cvt_pk_u16(
+; CHECK-NEXT:    [[CVT:%.*]] = call <2 x i16> @llvm.amdgcn.cvt.pk.u16(i32 [[X:%.*]], i32 poison)
+; CHECK-NEXT:    ret <2 x i16> [[CVT]]
+;
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pk.u16(i32 %x, i32 poison)
+  ret <2 x i16> %cvt
+}
+
+define <2 x i16> @poison_cvt_pk_u16() {
+; CHECK-LABEL: @poison_cvt_pk_u16(
+; CHECK-NEXT:    ret <2 x i16> poison
+;
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pk.u16(i32 poison, i32 poison)
   ret <2 x i16> %cvt
 }
 
@@ -1624,18 +1776,18 @@ declare void @llvm.amdgcn.exp.f32(i32 immarg, i32 immarg, float, float, float, f
 define void @exp_disabled_inputs_to_undef(float %x, float %y, float %z, float %w) {
   ; enable src0..src3 constants
 ; CHECK-LABEL: @exp_disabled_inputs_to_undef(
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 1, float 1.000000e+00, float undef, float undef, float undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 2, float undef, float 2.000000e+00, float undef, float undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 4, float undef, float undef, float 5.000000e-01, float undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 8, float undef, float undef, float undef, float 4.000000e+00, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 1, float [[X:%.*]], float undef, float undef, float undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 2, float undef, float [[Y:%.*]], float undef, float undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 4, float undef, float undef, float [[Z:%.*]], float undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 8, float undef, float undef, float undef, float [[W:%.*]], i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 0, float undef, float undef, float undef, float undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 3, float 1.000000e+00, float 2.000000e+00, float undef, float undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 5, float 1.000000e+00, float undef, float 5.000000e-01, float undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 9, float 1.000000e+00, float undef, float undef, float 4.000000e+00, i1 false, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 1, float 1.000000e+00, float poison, float poison, float poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 2, float poison, float 2.000000e+00, float poison, float poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 4, float poison, float poison, float 5.000000e-01, float poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 8, float poison, float poison, float poison, float 4.000000e+00, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 1, float [[X:%.*]], float poison, float poison, float poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 2, float poison, float [[Y:%.*]], float poison, float poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 4, float poison, float poison, float [[Z:%.*]], float poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 8, float poison, float poison, float poison, float [[W:%.*]], i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 0, float poison, float poison, float poison, float poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 3, float 1.000000e+00, float 2.000000e+00, float poison, float poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 5, float 1.000000e+00, float poison, float 5.000000e-01, float poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 9, float 1.000000e+00, float poison, float poison, float 4.000000e+00, i1 false, i1 false)
 ; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float 1.000000e+00, float 2.000000e+00, float 5.000000e-01, float 4.000000e+00, i1 false, i1 false)
 ; CHECK-NEXT:    ret void
 ;
@@ -1672,15 +1824,15 @@ declare void @llvm.amdgcn.exp.compr.v2f16(i32 immarg, i32 immarg, <2 x half>, <2
 
 define void @exp_compr_disabled_inputs_to_undef(<2 x half> %xy, <2 x half> %zw) {
 ; CHECK-LABEL: @exp_compr_disabled_inputs_to_undef(
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 0, <2 x half> undef, <2 x half> undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 1, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 2, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 3, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 0, <2 x half> undef, <2 x half> undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 1, <2 x half> [[XY:%.*]], <2 x half> undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 2, <2 x half> [[XY]], <2 x half> undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 3, <2 x half> [[XY]], <2 x half> undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 12, <2 x half> undef, <2 x half> [[ZW:%.*]], i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 0, <2 x half> poison, <2 x half> poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 1, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 2, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 3, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 0, <2 x half> poison, <2 x half> poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 1, <2 x half> [[XY:%.*]], <2 x half> poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 2, <2 x half> [[XY]], <2 x half> poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 3, <2 x half> [[XY]], <2 x half> poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 12, <2 x half> poison, <2 x half> [[ZW:%.*]], i1 true, i1 false)
 ; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> [[XY]], <2 x half> [[ZW]], i1 true, i1 false)
 ; CHECK-NEXT:    ret void
 ;
@@ -1969,6 +2121,30 @@ define float @fmed3_0_1_undef_f32() {
   ret float %med
 }
 
+define float @fmed3_poison_x_y_f32(float %x, float %y) {
+; CHECK-LABEL: @fmed3_poison_x_y_f32(
+; CHECK-NEXT:    ret float poison
+;
+  %med3 = call float @llvm.amdgcn.fmed3.f32(float poison, float %x, float %y)
+  ret float %med3
+}
+
+define float @fmed3_x_poison_y_f32(float %x, float %y) {
+; CHECK-LABEL: @fmed3_x_poison_y_f32(
+; CHECK-NEXT:    ret float poison
+;
+  %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float poison, float %y)
+  ret float %med3
+}
+
+define float @fmed3_x_y_poison_f32(float %x, float %y) {
+; CHECK-LABEL: @fmed3_x_y_poison_f32(
+; CHECK-NEXT:    ret float poison
+;
+  %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float %y, float poison)
+  ret float %med3
+}
+
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.icmp
 ; --------------------------------------------------------------------
@@ -2000,7 +2176,7 @@ define i64 @icmp_constant_inputs_false() {
 
 define i64 @icmp_constant_inputs_true() {
 ; CHECK-LABEL: @icmp_constant_inputs_true(
-; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.read_register.i64(metadata [[META0:![0-9]+]]) #[[ATTR17:[0-9]+]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.read_register.i64(metadata [[META0:![0-9]+]]) #[[ATTR20:[0-9]+]]
 ; CHECK-NEXT:    ret i64 [[RESULT]]
 ;
   %result = call i64 @llvm.amdgcn.icmp.i64.i32(i32 9, i32 8, i32 34)
@@ -2707,7 +2883,7 @@ define i64 @fcmp_constant_inputs_false() {
 
 define i64 @fcmp_constant_inputs_true() {
 ; CHECK-LABEL: @fcmp_constant_inputs_true(
-; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.read_register.i64(metadata [[META0]]) #[[ATTR17]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @llvm.read_register.i64(metadata [[META0]]) #[[ATTR20]]
 ; CHECK-NEXT:    ret i64 [[RESULT]]
 ;
   %result = call i64 @llvm.amdgcn.fcmp.i64.f32(float 2.0, float 4.0, i32 4)
@@ -2784,6 +2960,22 @@ define i32 @ballot_one_32() {
   ret i32 %b
 }
 
+define i64 @ballot_poison_64() {
+; CHECK-LABEL: @ballot_poison_64(
+; CHECK-NEXT:    ret i64 poison
+;
+  %b = call i64 @llvm.amdgcn.ballot.i64(i1 poison)
+  ret i64 %b
+}
+
+define i32 @ballot_poison_32() {
+; CHECK-LABEL: @ballot_poison_32(
+; CHECK-NEXT:    ret i32 poison
+;
+  %b = call i32 @llvm.amdgcn.ballot.i32(i1 poison)
+  ret i32 %b
+}
+
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.wqm.vote
 ; --------------------------------------------------------------------
@@ -2845,14 +3037,14 @@ declare i32 @llvm.amdgcn.readfirstlane(i32)
 
 @gv = constant i32 0
 
-define amdgpu_kernel void @readfirstlane_constant(i32 %arg) {
+define amdgpu_kernel void @readfirstlane_constant(i32 %arg, ptr %ptr) {
 ; CHECK-LABEL: @readfirstlane_constant(
 ; CHECK-NEXT:    [[VAR:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[ARG:%.*]])
-; CHECK-NEXT:    store volatile i32 [[VAR]], ptr undef, align 4
-; CHECK-NEXT:    store volatile i32 0, ptr undef, align 4
-; CHECK-NEXT:    store volatile i32 123, ptr undef, align 4
-; CHECK-NEXT:    store volatile i32 ptrtoint (ptr @gv to i32), ptr undef, align 4
-; CHECK-NEXT:    store volatile i32 undef, ptr undef, align 4
+; CHECK-NEXT:    store volatile i32 [[VAR]], ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[PTR]], align 4
+; CHECK-NEXT:    store volatile i32 123, ptr [[PTR]], align 4
+; CHECK-NEXT:    store volatile i32 ptrtoint (ptr @gv to i32), ptr [[PTR]], align 4
+; CHECK-NEXT:    store volatile i32 undef, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %var = call i32 @llvm.amdgcn.readfirstlane(i32 %arg)
@@ -2860,11 +3052,11 @@ define amdgpu_kernel void @readfirstlane_constant(i32 %arg) {
   %imm = call i32 @llvm.amdgcn.readfirstlane(i32 123)
   %constexpr = call i32 @llvm.amdgcn.readfirstlane(i32 ptrtoint (ptr @gv to i32))
   %undef = call i32 @llvm.amdgcn.readfirstlane(i32 undef)
-  store volatile i32 %var, ptr undef
-  store volatile i32 %zero, ptr undef
-  store volatile i32 %imm, ptr undef
-  store volatile i32 %constexpr, ptr undef
-  store volatile i32 %undef, ptr undef
+  store volatile i32 %var, ptr %ptr
+  store volatile i32 %zero, ptr %ptr
+  store volatile i32 %imm, ptr %ptr
+  store volatile i32 %constexpr, ptr %ptr
+  store volatile i32 %undef, ptr %ptr
   ret void
 }
 
@@ -2931,14 +3123,14 @@ bb1:
 
 declare i32 @llvm.amdgcn.readlane(i32, i32)
 
-define amdgpu_kernel void @readlane_constant(i32 %arg, i32 %lane) {
+define amdgpu_kernel void @readlane_constant(i32 %arg, i32 %lane, ptr %ptr) {
 ; CHECK-LABEL: @readlane_constant(
 ; CHECK-NEXT:    [[VAR:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG:%.*]], i32 7)
-; CHECK-NEXT:    store volatile i32 [[VAR]], ptr undef, align 4
-; CHECK-NEXT:    store volatile i32 0, ptr undef, align 4
-; CHECK-NEXT:    store volatile i32 123, ptr undef, align 4
-; CHECK-NEXT:    store volatile i32 ptrtoint (ptr @gv to i32), ptr undef, align 4
-; CHECK-NEXT:    store volatile i32 undef, ptr undef, align 4
+; CHECK-NEXT:    store volatile i32 [[VAR]], ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[PTR]], align 4
+; CHECK-NEXT:    store volatile i32 123, ptr [[PTR]], align 4
+; CHECK-NEXT:    store volatile i32 ptrtoint (ptr @gv to i32), ptr [[PTR]], align 4
+; CHECK-NEXT:    store volatile i32 undef, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %var = call i32 @llvm.amdgcn.readlane(i32 %arg, i32 7)
@@ -2946,11 +3138,11 @@ define amdgpu_kernel void @readlane_constant(i32 %arg, i32 %lane) {
   %imm = call i32 @llvm.amdgcn.readlane(i32 123, i32 %lane)
   %constexpr = call i32 @llvm.amdgcn.readlane(i32 ptrtoint (ptr @gv to i32), i32 %lane)
   %undef = call i32 @llvm.amdgcn.readlane(i32 undef, i32 %lane)
-  store volatile i32 %var, ptr undef
-  store volatile i32 %zero, ptr undef
-  store volatile i32 %imm, ptr undef
-  store volatile i32 %constexpr, ptr undef
-  store volatile i32 %undef, ptr undef
+  store volatile i32 %var, ptr %ptr
+  store volatile i32 %zero, ptr %ptr
+  store volatile i32 %imm, ptr %ptr
+  store volatile i32 %constexpr, ptr %ptr
+  store volatile i32 %undef, ptr %ptr
   ret void
 }
 
@@ -3040,7 +3232,7 @@ define amdgpu_kernel void @update_dpp_no_combine(ptr addrspace(1) %out, i32 %in1
 
 define amdgpu_kernel void @update_dpp_drop_old(ptr addrspace(1) %out, i32 %in1, i32 %in2) {
 ; CHECK-LABEL: @update_dpp_drop_old(
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 undef, i32 [[IN2:%.*]], i32 3, i32 15, i32 15, i1 true)
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[IN2:%.*]], i32 3, i32 15, i32 15, i1 true)
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -3051,7 +3243,7 @@ define amdgpu_kernel void @update_dpp_drop_old(ptr addrspace(1) %out, i32 %in1, 
 
 define amdgpu_kernel void @update_dpp_undef_old(ptr addrspace(1) %out, i32 %in1) {
 ; CHECK-LABEL: @update_dpp_undef_old(
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 undef, i32 [[IN1:%.*]], i32 4, i32 15, i32 15, i1 true)
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[IN1:%.*]], i32 4, i32 15, i32 15, i1 true)
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -3080,7 +3272,7 @@ define amdgpu_kernel void @permlane16(ptr addrspace(1) %out, i32 %src0, i32 %src
 
 define amdgpu_kernel void @permlane16_bound_ctrl(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
 ; CHECK-LABEL: @permlane16_bound_ctrl(
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlane16.i32(i32 undef, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 false, i1 true)
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlane16.i32(i32 poison, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 false, i1 true)
 ; CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -3091,7 +3283,7 @@ define amdgpu_kernel void @permlane16_bound_ctrl(ptr addrspace(1) %out, i32 %src
 
 define amdgpu_kernel void @permlane16_fetch_invalid_bound_ctrl(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
 ; CHECK-LABEL: @permlane16_fetch_invalid_bound_ctrl(
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlane16.i32(i32 undef, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 true, i1 true)
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlane16.i32(i32 poison, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 true, i1 true)
 ; CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -3119,7 +3311,7 @@ define amdgpu_kernel void @permlanex16(ptr addrspace(1) %out, i32 %src0, i32 %sr
 
 define amdgpu_kernel void @permlanex16_bound_ctrl(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
 ; CHECK-LABEL: @permlanex16_bound_ctrl(
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlanex16.i32(i32 undef, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 false, i1 true)
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlanex16.i32(i32 poison, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 false, i1 true)
 ; CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -3130,7 +3322,7 @@ define amdgpu_kernel void @permlanex16_bound_ctrl(ptr addrspace(1) %out, i32 %sr
 
 define amdgpu_kernel void @permlanex16_fetch_invalid_bound_ctrl(ptr addrspace(1) %out, i32 %src0, i32 %src1, i32 %src2) {
 ; CHECK-LABEL: @permlanex16_fetch_invalid_bound_ctrl(
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlanex16.i32(i32 undef, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 true, i1 true)
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlanex16.i32(i32 poison, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 true, i1 true)
 ; CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -5671,6 +5863,14 @@ define i1 @test_is_shared_undef() nounwind {
   ret i1 %val
 }
 
+define i1 @test_is_shared_poison() nounwind {
+; CHECK-LABEL: @test_is_shared_poison(
+; CHECK-NEXT:    ret i1 poison
+;
+  %val = call i1 @llvm.amdgcn.is.shared(ptr poison)
+  ret i1 %val
+}
+
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.is.private
 ; --------------------------------------------------------------------
@@ -5690,6 +5890,14 @@ define i1 @test_is_private_undef() nounwind {
 ; CHECK-NEXT:    ret i1 undef
 ;
   %val = call i1 @llvm.amdgcn.is.private(ptr undef)
+  ret i1 %val
+}
+
+define i1 @test_is_private_poison() nounwind {
+; CHECK-LABEL: @test_is_private_poison(
+; CHECK-NEXT:    ret i1 poison
+;
+  %val = call i1 @llvm.amdgcn.is.private(ptr poison)
   ret i1 %val
 }
 
@@ -5829,7 +6037,7 @@ define double @trig_preop_constfold_neg32_segment() {
 
 define double @trig_preop_constfold_strictfp() strictfp {
 ; CHECK-LABEL: @trig_preop_constfold_strictfp(
-; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double 3.454350e+02, i32 5) #[[ATTR16]]
+; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double 3.454350e+02, i32 5) #[[ATTR19]]
 ; CHECK-NEXT:    ret double [[VAL]]
 ;
   %val = call double @llvm.amdgcn.trig.preop.f64(double 3.454350e+02, i32 5) strictfp
@@ -6198,7 +6406,7 @@ define half @test_constant_fold_log_f16_neg10() {
 
 define float @test_constant_fold_log_f32_qnan_strictfp() strictfp {
 ; CHECK-LABEL: @test_constant_fold_log_f32_qnan_strictfp(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.log.f32(float 0x7FF8000000000000) #[[ATTR16]]
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.log.f32(float 0x7FF8000000000000) #[[ATTR19]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.amdgcn.log.f32(float 0x7FF8000000000000) strictfp
@@ -6207,7 +6415,7 @@ define float @test_constant_fold_log_f32_qnan_strictfp() strictfp {
 
 define float @test_constant_fold_log_f32_0_strictfp() strictfp {
 ; CHECK-LABEL: @test_constant_fold_log_f32_0_strictfp(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.log.f32(float 0.000000e+00) #[[ATTR16]]
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.log.f32(float 0.000000e+00) #[[ATTR19]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.amdgcn.log.f32(float 0.0) strictfp
@@ -6216,7 +6424,7 @@ define float @test_constant_fold_log_f32_0_strictfp() strictfp {
 
 define float @test_constant_fold_log_f32_neg0_strictfp() strictfp {
 ; CHECK-LABEL: @test_constant_fold_log_f32_neg0_strictfp(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.log.f32(float -0.000000e+00) #[[ATTR16]]
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.log.f32(float -0.000000e+00) #[[ATTR19]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.amdgcn.log.f32(float -0.0) strictfp
@@ -6225,7 +6433,7 @@ define float @test_constant_fold_log_f32_neg0_strictfp() strictfp {
 
 define float @test_constant_fold_log_f32_neg_strictfp() strictfp {
 ; CHECK-LABEL: @test_constant_fold_log_f32_neg_strictfp(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.log.f32(float -1.000000e+01) #[[ATTR16]]
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.log.f32(float -1.000000e+01) #[[ATTR19]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.amdgcn.log.f32(float -10.0) strictfp
@@ -6242,7 +6450,7 @@ define float @test_constant_fold_log_f32_pinf_strictfp() strictfp {
 
 define float @test_constant_fold_log_f32_ninf_strictfp() strictfp {
 ; CHECK-LABEL: @test_constant_fold_log_f32_ninf_strictfp(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.log.f32(float 0xFFF0000000000000) #[[ATTR16]]
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.log.f32(float 0xFFF0000000000000) #[[ATTR19]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.amdgcn.log.f32(float 0xFFF0000000000000) strictfp
@@ -6444,7 +6652,7 @@ define half @test_constant_fold_exp2_f16_neg10() {
 
 define float @test_constant_fold_exp2_f32_qnan_strictfp() strictfp {
 ; CHECK-LABEL: @test_constant_fold_exp2_f32_qnan_strictfp(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.exp2.f32(float 0x7FF8000000000000) #[[ATTR16]]
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.exp2.f32(float 0x7FF8000000000000) #[[ATTR19]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.amdgcn.exp2.f32(float 0x7FF8000000000000) strictfp
@@ -6453,7 +6661,7 @@ define float @test_constant_fold_exp2_f32_qnan_strictfp() strictfp {
 
 define float @test_constant_fold_exp2_f32_0_strictfp() strictfp {
 ; CHECK-LABEL: @test_constant_fold_exp2_f32_0_strictfp(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.exp2.f32(float 0.000000e+00) #[[ATTR16]]
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.exp2.f32(float 0.000000e+00) #[[ATTR19]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.amdgcn.exp2.f32(float 0.0) strictfp
@@ -6462,7 +6670,7 @@ define float @test_constant_fold_exp2_f32_0_strictfp() strictfp {
 
 define float @test_constant_fold_exp2_f32_neg0_strictfp() strictfp {
 ; CHECK-LABEL: @test_constant_fold_exp2_f32_neg0_strictfp(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.exp2.f32(float -0.000000e+00) #[[ATTR16]]
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.exp2.f32(float -0.000000e+00) #[[ATTR19]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.amdgcn.exp2.f32(float -0.0) strictfp
@@ -6471,7 +6679,7 @@ define float @test_constant_fold_exp2_f32_neg0_strictfp() strictfp {
 
 define float @test_constant_fold_exp2_f32_1_strictfp() strictfp {
 ; CHECK-LABEL: @test_constant_fold_exp2_f32_1_strictfp(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.exp2.f32(float 1.000000e+00) #[[ATTR16]]
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.exp2.f32(float 1.000000e+00) #[[ATTR19]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.amdgcn.exp2.f32(float 1.0) strictfp
@@ -6480,7 +6688,7 @@ define float @test_constant_fold_exp2_f32_1_strictfp() strictfp {
 
 define float @test_constant_fold_exp2_f32_neg1_strictfp() strictfp {
 ; CHECK-LABEL: @test_constant_fold_exp2_f32_neg1_strictfp(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.exp2.f32(float -1.000000e+00) #[[ATTR16]]
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.exp2.f32(float -1.000000e+00) #[[ATTR19]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.amdgcn.exp2.f32(float -1.0) strictfp
@@ -6489,7 +6697,7 @@ define float @test_constant_fold_exp2_f32_neg1_strictfp() strictfp {
 
 define float @test_constant_fold_exp2_f32_2_strictfp() strictfp {
 ; CHECK-LABEL: @test_constant_fold_exp2_f32_2_strictfp(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.exp2.f32(float 2.000000e+00) #[[ATTR16]]
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.exp2.f32(float 2.000000e+00) #[[ATTR19]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.amdgcn.exp2.f32(float 2.0) strictfp
@@ -6498,7 +6706,7 @@ define float @test_constant_fold_exp2_f32_2_strictfp() strictfp {
 
 define float @test_constant_fold_exp2_f32_neg2_strictfp() strictfp {
 ; CHECK-LABEL: @test_constant_fold_exp2_f32_neg2_strictfp(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.exp2.f32(float -2.000000e+00) #[[ATTR16]]
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.exp2.f32(float -2.000000e+00) #[[ATTR19]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.amdgcn.exp2.f32(float -2.0) strictfp
@@ -6507,7 +6715,7 @@ define float @test_constant_fold_exp2_f32_neg2_strictfp() strictfp {
 
 define float @test_constant_fold_exp2_f32_neg_strictfp() strictfp {
 ; CHECK-LABEL: @test_constant_fold_exp2_f32_neg_strictfp(
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.exp2.f32(float -1.000000e+01) #[[ATTR16]]
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.exp2.f32(float -1.000000e+01) #[[ATTR19]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
   %val = call float @llvm.amdgcn.exp2.f32(float -10.0) strictfp
@@ -6555,6 +6763,7 @@ declare i32 @llvm.amdgcn.prng.b32(i32)
 define i32 @prng_undef_i32() {
 ; CHECK-LABEL: @prng_undef_i32(
 ; CHECK-NEXT:    ret i32 undef
+;
   %prng = call i32 @llvm.amdgcn.prng.b32(i32 undef)
   ret i32 %prng
 }
@@ -6562,6 +6771,7 @@ define i32 @prng_undef_i32() {
 define i32 @prng_poison_i32() {
 ; CHECK-LABEL: @prng_poison_i32(
 ; CHECK-NEXT:    ret i32 poison
+;
   %prng = call i32 @llvm.amdgcn.prng.b32(i32 poison)
   ret i32 %prng
 }

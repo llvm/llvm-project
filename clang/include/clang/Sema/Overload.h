@@ -930,6 +930,11 @@ class Sema;
     LLVM_PREFERRED_TYPE(bool)
     unsigned TookAddressOfOverload : 1;
 
+    /// Have we matched any packs on the parameter side, versus any non-packs on
+    /// the argument side, in a context where the opposite matching is also
+    /// allowed?
+    bool StrictPackMatch : 1;
+
     /// True if the candidate was found using ADL.
     LLVM_PREFERRED_TYPE(CallExpr::ADLCallKind)
     unsigned IsADLCandidate : 1;
@@ -1005,7 +1010,7 @@ class Sema;
     friend class OverloadCandidateSet;
     OverloadCandidate()
         : IsSurrogate(false), IgnoreObjectArgument(false),
-          TookAddressOfOverload(false),
+          TookAddressOfOverload(false), StrictPackMatch(false),
           IsADLCandidate(llvm::to_underlying(CallExpr::NotADL)),
           RewriteKind(CRK_None) {}
   };
@@ -1260,11 +1265,11 @@ class Sema;
 
   };
 
-  bool isBetterOverloadCandidate(Sema &S,
-                                 const OverloadCandidate &Cand1,
+  bool isBetterOverloadCandidate(Sema &S, const OverloadCandidate &Cand1,
                                  const OverloadCandidate &Cand2,
                                  SourceLocation Loc,
-                                 OverloadCandidateSet::CandidateSetKind Kind);
+                                 OverloadCandidateSet::CandidateSetKind Kind,
+                                 bool PartialOverloading = false);
 
   struct ConstructorInfo {
     DeclAccessPair FoundDecl;

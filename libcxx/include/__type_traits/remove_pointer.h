@@ -19,7 +19,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if !defined(_LIBCPP_WORKAROUND_OBJCXX_COMPILER_INTRINSICS) && __has_builtin(__remove_pointer)
 template <class _Tp>
-struct remove_pointer {
+struct _LIBCPP_NO_SPECIALIZATIONS remove_pointer {
   using type _LIBCPP_NODEBUG = __remove_pointer(_Tp);
 };
 

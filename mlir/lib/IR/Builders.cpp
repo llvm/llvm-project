@@ -88,7 +88,7 @@ NoneType Builder::getNoneType() { return NoneType::get(context); }
 //===----------------------------------------------------------------------===//
 
 NamedAttribute Builder::getNamedAttr(StringRef name, Attribute val) {
-  return NamedAttribute(getStringAttr(name), val);
+  return NamedAttribute(name, val);
 }
 
 UnitAttr Builder::getUnitAttr() { return UnitAttr::get(context); }

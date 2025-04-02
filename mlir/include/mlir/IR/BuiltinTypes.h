@@ -409,33 +409,6 @@ inline bool TensorType::classof(Type type) {
 // Type Utilities
 //===----------------------------------------------------------------------===//
 
-/// Returns the strides of the MemRef if the layout map is in strided form.
-/// MemRefs with a layout map in strided form include:
-///   1. empty or identity layout map, in which case the stride information is
-///      the canonical form computed from sizes;
-///   2. a StridedLayoutAttr layout;
-///   3. any other layout that be converted into a single affine map layout of
-///      the form `K + k0 * d0 + ... kn * dn`, where K and ki's are constants or
-///      symbols.
-///
-/// A stride specification is a list of integer values that are either static
-/// or dynamic (encoded with ShapedType::kDynamic). Strides encode
-/// the distance in the number of elements between successive entries along a
-/// particular dimension.
-LogicalResult getStridesAndOffset(MemRefType t,
-                                  SmallVectorImpl<int64_t> &strides,
-                                  int64_t &offset);
-
-/// Wrapper around getStridesAndOffset(MemRefType, SmallVectorImpl<int64_t>,
-/// int64_t) that will assert if the logical result is not succeeded.
-std::pair<SmallVector<int64_t>, int64_t> getStridesAndOffset(MemRefType t);
-
-/// Return a version of `t` with identity layout if it can be determined
-/// statically that the layout is the canonical contiguous strided layout.
-/// Otherwise pass `t`'s layout into `simplifyAffineMap` and return a copy of
-/// `t` with simplified layout.
-MemRefType canonicalizeStridedLayout(MemRefType t);
-
 /// Given MemRef `sizes` that are either static or dynamic, returns the
 /// canonical "contiguous" strides AffineExpr. Strides are multiplicative and
 /// once a dynamic dimension is encountered, all canonical strides become
@@ -458,24 +431,6 @@ AffineExpr makeCanonicalStridedLayoutExpr(ArrayRef<int64_t> sizes,
 /// where `exprs` is {d0, d1, .., d_(sizes.size()-1)}
 AffineExpr makeCanonicalStridedLayoutExpr(ArrayRef<int64_t> sizes,
                                           MLIRContext *context);
-
-/// Return "true" if the layout for `t` is compatible with strided semantics.
-bool isStrided(MemRefType t);
-
-/// Return "true" if the last dimension of the given type has a static unit
-/// stride. Also return "true" for types with no strides.
-bool isLastMemrefDimUnitStride(MemRefType type);
-
-/// Return "true" if the last N dimensions of the given type are contiguous.
-///
-/// Examples:
-///   - memref<5x4x3x2xi8, strided<[24, 6, 2, 1]> is contiguous when
-///   considering both _all_ and _only_ the trailing 3 dims,
-///   - memref<5x4x3x2xi8, strided<[48, 6, 2, 1]> is _only_ contiguous when
-///   considering the trailing 3 dims.
-///
-bool trailingNDimsContiguous(MemRefType type, int64_t n);
-
 } // namespace mlir
 
 #endif // MLIR_IR_BUILTINTYPES_H
