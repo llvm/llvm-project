@@ -6102,7 +6102,7 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
       return BB;
     }
 
-    if (IsAdd && ST.hasLshlAddB64()) {
+    if (IsAdd && ST.hasLshlAddU64Inst()) {
       auto Add = BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_LSHL_ADD_U64_e64),
                          Dest.getReg())
                      .add(Src0)
