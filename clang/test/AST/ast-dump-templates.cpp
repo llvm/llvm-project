@@ -174,7 +174,7 @@ namespace TestDependentMemberPointer {
 // DUMP-NEXT:  |   `-BuiltinType {{.+}} 'int'
 // DUMP-NEXT:  `-TypeAliasDecl {{.+}} Z 'int U::template V<int>::*'{{$}}
 // DUMP-NEXT:    `-MemberPointerType {{.+}} 'int U::template V<int>::*' dependent
-// DUMP-NEXT:      |-DependentTemplateSpecializationType {{.+}} 'U::template V<int>' dependent
+// DUMP-NEXT:      |-DependentTemplateSpecializationType {{.+}} 'template V<int>' dependent
 // DUMP-NEXT:      `-BuiltinType {{.+}} 'int'
 } // namespace TestDependentMemberPointer
 
@@ -6588,7 +6588,7 @@ namespace TestDependentMemberPointer {
 // JSON-NEXT:      "tokLen": 9
 // JSON-NEXT:     },
 // JSON-NEXT:     "end": {
-// JSON-NEXT:      "offset": 6359,
+// JSON-NEXT:      "offset": 6356,
 // JSON-NEXT:      "line": 179,
 // JSON-NEXT:      "col": 1,
 // JSON-NEXT:      "tokLen": 1
@@ -6896,7 +6896,7 @@ namespace TestDependentMemberPointer {
 // JSON-NEXT:              "id": "0x{{.*}}",
 // JSON-NEXT:              "kind": "DependentTemplateSpecializationType",
 // JSON-NEXT:              "type": {
-// JSON-NEXT:               "qualType": "U::template V<int>"
+// JSON-NEXT:               "qualType": "template V<int>"
 // JSON-NEXT:              },
 // JSON-NEXT:              "isDependent": true,
 // JSON-NEXT:              "isInstantiationDependent": true

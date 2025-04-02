@@ -1070,9 +1070,18 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   }
 
   if (Pointer::hasSameBase(LHS, RHS)) {
+    if (LHS.inUnion() && RHS.inUnion()) {
+      // If the pointers point into a union, things are a little more
+      // complicated since the offset we save in interp::Pointer can't be used
+      // to compare the pointers directly.
+      size_t A = LHS.computeOffsetForComparison();
+      size_t B = RHS.computeOffsetForComparison();
+      S.Stk.push<BoolT>(BoolT::from(Fn(Compare(A, B))));
+      return true;
+    }
+
     unsigned VL = LHS.getByteOffset();
     unsigned VR = RHS.getByteOffset();
-
     // In our Pointer class, a pointer to an array and a pointer to the first
     // element in the same array are NOT equal. They have the same Base value,
     // but a different Offset. This is a pretty rare case, so we fix this here

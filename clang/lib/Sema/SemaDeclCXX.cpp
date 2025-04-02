@@ -12299,10 +12299,13 @@ static QualType BuildStdClassTemplate(Sema &S, ClassTemplateDecl *CTD,
   auto TSI = S.Context.getTrivialTypeSourceInfo(TypeParam, Loc);
   Args.addArgument(TemplateArgumentLoc(TemplateArgument(TypeParam), TSI));
 
+  QualType T = S.CheckTemplateIdType(TemplateName(CTD), Loc, Args);
+  if (T.isNull())
+    return QualType();
+
   return S.Context.getElaboratedType(
       ElaboratedTypeKeyword::None,
-      NestedNameSpecifier::Create(S.Context, nullptr, S.getStdNamespace()),
-      S.CheckTemplateIdType(TemplateName(CTD), Loc, Args));
+      NestedNameSpecifier::Create(S.Context, nullptr, S.getStdNamespace()), T);
 }
 
 QualType Sema::BuildStdInitializerList(QualType Element, SourceLocation Loc) {
@@ -14936,8 +14939,7 @@ buildSingleCopyAssignRecursively(Sema &S, SourceLocation Loc, QualType T,
     CXXScopeSpec SS;
     const Type *CanonicalT = S.Context.getCanonicalType(T.getTypePtr());
     SS.MakeTrivial(S.Context,
-                   NestedNameSpecifier::Create(S.Context, nullptr, false,
-                                               CanonicalT),
+                   NestedNameSpecifier::Create(S.Context, nullptr, CanonicalT),
                    Loc);
 
     // Create the reference to operator=.
