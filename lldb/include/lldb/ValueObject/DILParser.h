@@ -56,12 +56,6 @@ public:
   std::string message() const override { return m_detail.rendered; }
 };
 
-// This is needed, at the moment, because the code that calls the 'frame
-// var' implementation from CommandObjectFrame ONLY passes Status in/out
-// as a way to determine if an error occurred. We probably want to change that
-// in the future.
-Status GetStatusError(DILDiagnosticError dil_error);
-
 /// Pure recursive descent parser for C++ like expressions.
 /// EBNF grammar for the parser is described in lldb/docs/dil-expr-lang.ebnf
 class DILParser {
@@ -96,7 +90,7 @@ private:
   std::string ParseIdExpression();
   std::string ParseUnqualifiedId();
 
-  void BailOut(ErrorCode error_code, const std::string &error, uint32_t loc);
+  void BailOut(const std::string &error, uint32_t loc, uint16_t err_len);
 
   void BailOut(Status error);
 

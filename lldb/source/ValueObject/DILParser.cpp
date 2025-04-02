@@ -114,9 +114,8 @@ ASTNodeUP DILParser::ParsePrimaryExpression() {
     return expr;
   }
 
-  BailOut(ErrorCode::kInvalidExpressionSyntax,
-          llvm::formatv("Unexpected token: {0}", CurToken()),
-          CurToken().GetLocation());
+  BailOut(llvm::formatv("Unexpected token: {0}", CurToken()),
+          CurToken().GetLocation(), CurToken().GetSpelling().length());
   return std::make_unique<ErrorNode>();
 }
 
@@ -241,22 +240,15 @@ std::string DILParser::ParseUnqualifiedId() {
   return identifier;
 }
 
-// Must somehow convert the DILDiagnosticError to a lldb::Status, since *that*
-// is was must be returned to the  place where CommandObjectFrame::DoExecute
-// calls GetVariableValueForExpressionPath (at the moment).
-Status GetStatusError(DILDiagnosticError dil_error) {
-  return Status(dil_error.GetDetails()[0].message);
-}
-
-void DILParser::BailOut(ErrorCode code, const std::string &error,
-                        uint32_t loc) {
+void DILParser::BailOut(const std::string &error, uint32_t loc,
+                        uint16_t err_len) {
   if (m_error)
     // If error is already set, then the parser is in the "bail-out" mode. Don't
     // do anything and keep the original error.
     return;
 
-  m_error = llvm::make_error<DILDiagnosticError>(
-      m_input_expr, error, loc, CurToken().GetSpelling().length());
+  m_error =
+      llvm::make_error<DILDiagnosticError>(m_input_expr, error, loc, err_len);
   // Advance the lexer token index to the end of the lexed tokens vector.
   m_dil_lexer.ResetTokenIdx(m_dil_lexer.NumLexedTokens() - 1);
 }
@@ -274,9 +266,8 @@ void DILParser::BailOut(Status error) {
 
 void DILParser::Expect(Token::Kind kind) {
   if (CurToken().IsNot(kind)) {
-    BailOut(ErrorCode::kUnknown,
-            llvm::formatv("expected {0}, got: {1}", kind, CurToken()),
-            CurToken().GetLocation());
+    BailOut(llvm::formatv("expected {0}, got: {1}", kind, CurToken()),
+            CurToken().GetLocation(), CurToken().GetSpelling().length());
   }
 }
 
