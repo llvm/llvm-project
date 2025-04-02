@@ -590,6 +590,8 @@ bool RISCVAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
                                               const MCFixup &Fixup,
                                               const MCValue &Target,
                                               uint64_t &FixedValue) const {
+  assert(Target.getRefKind() == 0 &&
+         "relocatable SymA-SymB cannot have relocation specifier");
   uint64_t FixedValueA, FixedValueB;
   unsigned TA = 0, TB = 0;
   switch (Fixup.getKind()) {
