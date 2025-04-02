@@ -24,7 +24,7 @@
 #define M2(x) do { if (x) {} } while (0)
 // CHECK-NEXT: File 4, [[@LINE+5]]:15 -> [[@LINE+5]]:38 = #0
 // CHECK-NEXT: File 4, [[@LINE+4]]:18 -> [[@LINE+4]]:28 = (#0 + #8)
-// CHECK-NEXT: Expansion,File 4, [[@LINE+3]]:20 -> [[@LINE+3]]:22 = (#0 + #8)
+// CHECK-NEXT: Expansion,File 4, [[@LINE+3]]:20 -> [[@LINE+3]]:22 = 0
 // CHECK-NEXT: File 4, [[@LINE+2]]:36 -> [[@LINE+2]]:37 = (#0 + #8)
 // CHECK-NEXT: Branch,File 4, [[@LINE+1]]:36 -> [[@LINE+1]]:37 = 0, #0
 #define M3(x) do { M2(x); } while (0)

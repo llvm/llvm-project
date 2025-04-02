@@ -437,28 +437,6 @@ Error RawCoverageMappingReader::read() {
       return Err;
   }
 
-  // Set the counters for the expansion regions.
-  // i.e. Counter of expansion region = counter of the first region
-  // from the expanded file.
-  // Perform multiple passes to correctly propagate the counters through
-  // all the nested expansion regions.
-  SmallVector<CounterMappingRegion *, 8> FileIDExpansionRegionMapping;
-  FileIDExpansionRegionMapping.resize(VirtualFileMapping.size(), nullptr);
-  for (unsigned Pass = 1, S = VirtualFileMapping.size(); Pass < S; ++Pass) {
-    for (auto &R : MappingRegions) {
-      if (R.Kind != CounterMappingRegion::ExpansionRegion)
-        continue;
-      assert(!FileIDExpansionRegionMapping[R.ExpandedFileID]);
-      FileIDExpansionRegionMapping[R.ExpandedFileID] = &R;
-    }
-    for (auto &R : MappingRegions) {
-      if (FileIDExpansionRegionMapping[R.FileID]) {
-        FileIDExpansionRegionMapping[R.FileID]->Count = R.Count;
-        FileIDExpansionRegionMapping[R.FileID] = nullptr;
-      }
-    }
-  }
-
   return Error::success();
 }
 

@@ -19,7 +19,7 @@ CATCH(...) {}              // CHECK: [[@LINE]]:12 -> [[@LINE]]:14 = #2
 
 // CHECK: Z3fn4v:
 #define TRY2 try { // CHECK-DAG: File 1, [[@LINE]]:18 -> [[@LINE]]:19 = #1
-void fn4() TRY2 // CHECK-DAG: Expansion,File 0, [[@LINE]]:12 -> [[@LINE]]:16 = #1 (Expanded file = 1)
+void fn4() TRY2 // CHECK-DAG: Expansion,File 0, [[@LINE]]:12 -> [[@LINE]]:16 = 0 (Expanded file = 1)
   for (;;)
     return;
 }
@@ -27,10 +27,10 @@ catch (...) {}
 
 // CHECK: Z3fn5v:
 #define TRY3 try { return; } catch (...) // CHECK-DAG: File 2, [[@LINE]]:18 -> [[@LINE]]:29 = #1
-#define TRY4 try { TRY3 { return; } } catch (...) // CHECK-DAG: Expansion,File 1, [[@LINE]]:20 -> [[@LINE]]:24 = #1 (Expanded file = 2)
+#define TRY4 try { TRY3 { return; } } catch (...) // CHECK-DAG: Expansion,File 1, [[@LINE]]:20 -> [[@LINE]]:24 = 0 (Expanded file = 2)
 void fn5() {
   for (;;) {
-    TRY4 { return; } // CHECK-DAG: Expansion,File 0, [[@LINE]]:5 -> [[@LINE]]:9 = #1 (Expanded file = 1)
+    TRY4 { return; } // CHECK-DAG: Expansion,File 0, [[@LINE]]:5 -> [[@LINE]]:9 = 0 (Expanded file = 1)
   }                  // CHECK-DAG: File 0, [[@LINE-1]]:10 -> [[@LINE-1]]:21 = #5
 }
 

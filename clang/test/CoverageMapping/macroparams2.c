@@ -10,7 +10,7 @@ struct S {
 int main(void) {
   struct S arr[32] = { 0 };
   int n = 0;
-  // CHECK-NEXT: Expansion,File 0, [[@LINE+3]]:7 -> [[@LINE+3]]:12 = #0
+  // CHECK-NEXT: Expansion,File 0, [[@LINE+3]]:7 -> [[@LINE+3]]:12 = 0
   // CHECK-NEXT: Gap,File 0, [[@LINE+2]]:33 -> [[@LINE+2]]:34 = #1
   // CHECK-NEXT: File 0, [[@LINE+1]]:34 -> [[@LINE+3]]:4 = #1
   if (MACRO(arr[n].j, arr[n].i)) {
