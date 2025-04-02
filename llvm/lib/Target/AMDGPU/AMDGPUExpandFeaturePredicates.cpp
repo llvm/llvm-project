@@ -42,8 +42,7 @@
 using namespace llvm;
 
 namespace {
-template <typename C>
-void collectUsers(Value *V, C &Container) {
+template <typename C> void collectUsers(Value *V, C &Container) {
   assert(V && "Must pass an existing Value!");
 
   for (auto &&U : V->users())
@@ -82,8 +81,8 @@ unfoldableFound(Function *Caller, GlobalVariable *P, Instruction *NoFold) {
   std::string W;
   raw_string_ostream OS(W);
 
-  OS << "Impossible to constant fold feature predicate: " << *P
-     << " used by " << *NoFold << ", please simplify.\n";
+  OS << "Impossible to constant fold feature predicate: " << *P  << " used by "
+     << *NoFold << ", please simplify.\n";
 
   Caller->getContext().diagnose(
       DiagnosticInfoUnsupported(*Caller, W, NoFold->getDebugLoc(), DS_Error));
@@ -91,8 +90,8 @@ unfoldableFound(Function *Caller, GlobalVariable *P, Instruction *NoFold) {
   return {PreservedAnalyses::none(), false};
 }
 
-std::pair<PreservedAnalyses, bool>
-handlePredicate(const GCNSubtarget &ST, GlobalVariable *P) {
+std::pair<PreservedAnalyses, bool> handlePredicate(const GCNSubtarget &ST,
+                                                   GlobalVariable *P) {
   setPredicate(ST, P);
 
   SmallPtrSet<Instruction *, 32> ToFold;
