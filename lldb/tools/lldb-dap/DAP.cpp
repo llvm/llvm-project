@@ -711,12 +711,12 @@ bool DAP::HandleObject(const protocol::Message &M) {
                            [](const std::string &message) -> llvm::StringRef {
                              return message;
                            },
-                           [](const protocol::Response::Message &message)
+                           [](const protocol::ResponseMessage &message)
                                -> llvm::StringRef {
                              switch (message) {
-                             case protocol::Response::Message::cancelled:
+                             case protocol::eResponseMessageCancelled:
                                return "cancelled";
-                             case protocol::Response::Message::notStopped:
+                             case protocol::eResponseMessageNotStopped:
                                return "notStopped";
                              }
                            }),
