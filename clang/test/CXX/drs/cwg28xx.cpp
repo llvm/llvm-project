@@ -48,7 +48,7 @@ void f() {
 } // namespace cwg2813
 
 namespace cwg2815 { // cwg2815: 21
-#if __cpp_noexcept_function_type >= 201510
+#if __cplusplus >= 201703L
 int arg() noexcept;
 
 int f(int (&)() noexcept);
