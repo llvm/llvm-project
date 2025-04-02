@@ -426,12 +426,12 @@ SwiftLanguageRuntime::GetConformances(llvm::StringRef mangled_name) {
 }
 
 void SwiftLanguageRuntime::SetupReflection() {
-  LLDB_SCOPED_TIMER();
-
   std::lock_guard<std::recursive_mutex> lock(m_reflection_ctx_mutex);
   if (m_initialized_reflection_ctx)
     return;
 
+  LLDB_SCOPED_TIMER();
+  
   // The global ABI bit is read by the Swift runtime library.
   SetupABIBit();
   SetupExclusivity();
