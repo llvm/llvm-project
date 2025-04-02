@@ -133,8 +133,7 @@ define void @memcpy_known(ptr addrspace(7) inreg %src, ptr addrspace(7) inreg %d
 ; CHECK-NEXT:    [[DOTSLICE_56:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 56, i32 57, i32 58, i32 59>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_56]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_56]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTPART_60:%.*]] = add nuw i32 [[TMP3]], 240
-; CHECK-NEXT:    [[DOTSLICE_60:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_60]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_60]], i32 0, i32 0)
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTOFF_240]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_60]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP4]] = add i32 [[LOOP_INDEX]], 256
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP4]], 8192
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[LOAD_STORE_LOOP]], label %[[MEMCPY_SPLIT:.*]]
@@ -328,8 +327,7 @@ define void @memcpy_known_i64(ptr addrspace(7) inreg %src, ptr addrspace(7) inre
 ; CHECK-NEXT:    [[DOTSLICE_56:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 56, i32 57, i32 58, i32 59>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_56]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_56]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTPART_60:%.*]] = add nuw i32 [[TMP3]], 240
-; CHECK-NEXT:    [[DOTSLICE_60:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_60]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_60]], i32 0, i32 0)
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTOFF_240]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_60]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 256
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 8192
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[LOAD_STORE_LOOP]], label %[[MEMCPY_SPLIT:.*]]
@@ -792,8 +790,7 @@ define void @memcpy.inline_known(ptr addrspace(7) inreg %src, ptr addrspace(7) i
 ; CHECK-NEXT:    [[DOTSLICE_56:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 56, i32 57, i32 58, i32 59>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_56]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_56]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTPART_60:%.*]] = add nuw i32 [[TMP3]], 240
-; CHECK-NEXT:    [[DOTSLICE_60:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_60]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_60]], i32 0, i32 0)
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTOFF_240]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_60]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP4]] = add i32 [[LOOP_INDEX]], 256
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP4]], 8192
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[LOAD_STORE_LOOP]], label %[[MEMCPY_SPLIT:.*]]
@@ -987,8 +984,7 @@ define void @memcpy.inline_known_i64(ptr addrspace(7) inreg %src, ptr addrspace(
 ; CHECK-NEXT:    [[DOTSLICE_56:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 56, i32 57, i32 58, i32 59>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_56]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_56]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTPART_60:%.*]] = add nuw i32 [[TMP3]], 240
-; CHECK-NEXT:    [[DOTSLICE_60:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_60]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_60]], i32 0, i32 0)
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTOFF_240]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_60]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 256
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 8192
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[LOAD_STORE_LOOP]], label %[[MEMCPY_SPLIT:.*]]
