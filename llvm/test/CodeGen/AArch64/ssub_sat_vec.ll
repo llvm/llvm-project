@@ -201,9 +201,9 @@ define void @v2i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-SD-NEXT:    shl v0.2s, v0.2s, #24
 ; CHECK-SD-NEXT:    sqsub v0.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    ushr v0.2s, v0.2s, #24
-; CHECK-SD-NEXT:    mov w8, v0.s[1]
+; CHECK-SD-NEXT:    mov v1.s[0], v0.s[1]
 ; CHECK-SD-NEXT:    str b0, [x2]
-; CHECK-SD-NEXT:    strb w8, [x2, #1]
+; CHECK-SD-NEXT:    stur b1, [x2, #1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v2i8:

@@ -107,94 +107,109 @@ define <16 x i8> @test_compress_v16i8(<16 x i8> %vec, <16 x i1> %mask) {
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    shl.16b v1, v1, #7
-; CHECK-NEXT:    mov x12, sp
-; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    mov.b v2[0], v0[1]
+; CHECK-NEXT:    mov x10, sp
 ; CHECK-NEXT:    str b0, [sp]
-; CHECK-NEXT:    mov x13, sp
-; CHECK-NEXT:    cmlt.16b v1, v1, #0
-; CHECK-NEXT:    umov.b w9, v1[0]
-; CHECK-NEXT:    umov.b w10, v1[1]
-; CHECK-NEXT:    umov.b w11, v1[2]
-; CHECK-NEXT:    umov.b w14, v1[3]
-; CHECK-NEXT:    bfxil x12, x9, #0, #1
-; CHECK-NEXT:    and x10, x10, #0x1
-; CHECK-NEXT:    and x9, x9, #0x1
-; CHECK-NEXT:    add x9, x9, x10
-; CHECK-NEXT:    umov.b w10, v1[4]
-; CHECK-NEXT:    and x11, x11, #0x1
-; CHECK-NEXT:    st1.b { v0 }[1], [x12]
-; CHECK-NEXT:    orr x12, x8, x9
-; CHECK-NEXT:    add x9, x9, x11
-; CHECK-NEXT:    umov.b w11, v1[5]
-; CHECK-NEXT:    and x14, x14, #0x1
-; CHECK-NEXT:    st1.b { v0 }[2], [x12]
-; CHECK-NEXT:    add x14, x9, x14
-; CHECK-NEXT:    umov.b w12, v1[6]
-; CHECK-NEXT:    orr x9, x8, x9
-; CHECK-NEXT:    and x10, x10, #0x1
-; CHECK-NEXT:    st1.b { v0 }[3], [x9]
-; CHECK-NEXT:    orr x9, x8, x14
-; CHECK-NEXT:    add x10, x14, x10
-; CHECK-NEXT:    umov.b w14, v1[7]
-; CHECK-NEXT:    st1.b { v0 }[4], [x9]
-; CHECK-NEXT:    and x11, x11, #0x1
-; CHECK-NEXT:    bfxil x13, x10, #0, #4
+; CHECK-NEXT:    mov.b v3[0], v0[2]
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    mov.b v4[0], v0[3]
 ; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    add x10, x10, x11
-; CHECK-NEXT:    umov.b w11, v1[8]
-; CHECK-NEXT:    and x12, x12, #0x1
-; CHECK-NEXT:    bfxil x9, x10, #0, #4
-; CHECK-NEXT:    st1.b { v0 }[5], [x13]
-; CHECK-NEXT:    umov.b w13, v1[9]
-; CHECK-NEXT:    add x10, x10, x12
-; CHECK-NEXT:    mov x12, sp
-; CHECK-NEXT:    and x14, x14, #0x1
-; CHECK-NEXT:    st1.b { v0 }[6], [x9]
-; CHECK-NEXT:    umov.b w9, v1[10]
-; CHECK-NEXT:    bfxil x12, x10, #0, #4
-; CHECK-NEXT:    add x10, x10, x14
-; CHECK-NEXT:    mov x14, sp
+; CHECK-NEXT:    cmlt.16b v1, v1, #0
+; CHECK-NEXT:    umov.b w11, v1[0]
+; CHECK-NEXT:    umov.b w12, v1[1]
+; CHECK-NEXT:    umov.b w13, v1[2]
+; CHECK-NEXT:    umov.b w14, v1[3]
+; CHECK-NEXT:    bfxil x10, x11, #0, #1
 ; CHECK-NEXT:    and x11, x11, #0x1
-; CHECK-NEXT:    bfxil x14, x10, #0, #4
-; CHECK-NEXT:    add x10, x10, x11
-; CHECK-NEXT:    mov x11, sp
 ; CHECK-NEXT:    and x13, x13, #0x1
-; CHECK-NEXT:    st1.b { v0 }[7], [x12]
-; CHECK-NEXT:    mov x12, sp
-; CHECK-NEXT:    bfxil x11, x10, #0, #4
-; CHECK-NEXT:    add x10, x10, x13
-; CHECK-NEXT:    umov.b w13, v1[11]
-; CHECK-NEXT:    st1.b { v0 }[8], [x14]
-; CHECK-NEXT:    umov.b w14, v1[12]
+; CHECK-NEXT:    and x14, x14, #0x1
+; CHECK-NEXT:    str b2, [x10]
+; CHECK-NEXT:    and x10, x12, #0x1
+; CHECK-NEXT:    umov.b w12, v1[4]
+; CHECK-NEXT:    mov.b v2[0], v0[4]
+; CHECK-NEXT:    add x10, x11, x10
+; CHECK-NEXT:    umov.b w11, v1[5]
+; CHECK-NEXT:    add x13, x10, x13
+; CHECK-NEXT:    orr x10, x8, x10
+; CHECK-NEXT:    str b3, [x10]
+; CHECK-NEXT:    orr x10, x8, x13
+; CHECK-NEXT:    add x13, x13, x14
+; CHECK-NEXT:    and x12, x12, #0x1
+; CHECK-NEXT:    umov.b w14, v1[6]
+; CHECK-NEXT:    str b4, [x10]
+; CHECK-NEXT:    add x12, x13, x12
+; CHECK-NEXT:    orr x13, x8, x13
+; CHECK-NEXT:    mov.b v3[0], v0[5]
+; CHECK-NEXT:    str b2, [x13]
+; CHECK-NEXT:    umov.b w13, v1[7]
+; CHECK-NEXT:    and x11, x11, #0x1
+; CHECK-NEXT:    bfxil x9, x12, #0, #4
+; CHECK-NEXT:    add x11, x12, x11
+; CHECK-NEXT:    umov.b w12, v1[8]
+; CHECK-NEXT:    mov.b v4[0], v0[6]
+; CHECK-NEXT:    mov x10, sp
+; CHECK-NEXT:    and x14, x14, #0x1
+; CHECK-NEXT:    mov.b v2[0], v0[7]
+; CHECK-NEXT:    bfxil x10, x11, #0, #4
+; CHECK-NEXT:    add x11, x11, x14
+; CHECK-NEXT:    mov x14, sp
+; CHECK-NEXT:    str b3, [x9]
+; CHECK-NEXT:    umov.b w9, v1[9]
+; CHECK-NEXT:    and x13, x13, #0x1
+; CHECK-NEXT:    mov.b v3[0], v0[8]
+; CHECK-NEXT:    bfxil x14, x11, #0, #4
+; CHECK-NEXT:    add x11, x11, x13
+; CHECK-NEXT:    mov x13, sp
+; CHECK-NEXT:    and x12, x12, #0x1
+; CHECK-NEXT:    str b4, [x10]
+; CHECK-NEXT:    bfxil x13, x11, #0, #4
+; CHECK-NEXT:    add x10, x11, x12
+; CHECK-NEXT:    umov.b w12, v1[10]
+; CHECK-NEXT:    str b2, [x14]
+; CHECK-NEXT:    mov.b v2[0], v0[9]
+; CHECK-NEXT:    mov x11, sp
 ; CHECK-NEXT:    and x9, x9, #0x1
-; CHECK-NEXT:    bfxil x12, x10, #0, #4
+; CHECK-NEXT:    str b3, [x13]
+; CHECK-NEXT:    mov.b v3[0], v0[10]
+; CHECK-NEXT:    umov.b w13, v1[11]
+; CHECK-NEXT:    bfxil x11, x10, #0, #4
 ; CHECK-NEXT:    add x9, x10, x9
 ; CHECK-NEXT:    mov x10, sp
-; CHECK-NEXT:    st1.b { v0 }[9], [x11]
+; CHECK-NEXT:    mov.b v4[0], v0[11]
+; CHECK-NEXT:    bfxil x10, x9, #0, #4
+; CHECK-NEXT:    and x12, x12, #0x1
+; CHECK-NEXT:    umov.b w14, v1[12]
+; CHECK-NEXT:    add x9, x9, x12
+; CHECK-NEXT:    mov x12, sp
+; CHECK-NEXT:    str b2, [x11]
 ; CHECK-NEXT:    umov.b w11, v1[13]
-; CHECK-NEXT:    bfxil x10, x9, #0, #4
-; CHECK-NEXT:    st1.b { v0 }[10], [x12]
-; CHECK-NEXT:    umov.b w12, v1[14]
-; CHECK-NEXT:    and x13, x13, #0x1
-; CHECK-NEXT:    and x14, x14, #0x1
-; CHECK-NEXT:    add x9, x9, x13
-; CHECK-NEXT:    st1.b { v0 }[11], [x10]
+; CHECK-NEXT:    bfxil x12, x9, #0, #4
+; CHECK-NEXT:    str b3, [x10]
+; CHECK-NEXT:    and x10, x13, #0x1
+; CHECK-NEXT:    umov.b w13, v1[14]
+; CHECK-NEXT:    mov.b v1[0], v0[12]
+; CHECK-NEXT:    str b4, [x12]
+; CHECK-NEXT:    add x9, x9, x10
 ; CHECK-NEXT:    mov x10, sp
-; CHECK-NEXT:    add x13, x9, x14
-; CHECK-NEXT:    mov x14, sp
+; CHECK-NEXT:    and x12, x14, #0x1
 ; CHECK-NEXT:    bfxil x10, x9, #0, #4
-; CHECK-NEXT:    and x9, x11, #0x1
+; CHECK-NEXT:    mov.b v2[0], v0[13]
+; CHECK-NEXT:    add x9, x9, x12
+; CHECK-NEXT:    mov x12, sp
+; CHECK-NEXT:    and x11, x11, #0x1
+; CHECK-NEXT:    bfxil x12, x9, #0, #4
+; CHECK-NEXT:    add x9, x9, x11
+; CHECK-NEXT:    mov.b v3[0], v0[14]
 ; CHECK-NEXT:    mov x11, sp
-; CHECK-NEXT:    add x9, x13, x9
-; CHECK-NEXT:    and w12, w12, #0x1
-; CHECK-NEXT:    bfxil x14, x13, #0, #4
+; CHECK-NEXT:    and w13, w13, #0x1
+; CHECK-NEXT:    mov.b v0[0], v0[15]
 ; CHECK-NEXT:    bfxil x11, x9, #0, #4
-; CHECK-NEXT:    add w9, w9, w12
-; CHECK-NEXT:    st1.b { v0 }[12], [x10]
+; CHECK-NEXT:    add w9, w9, w13
+; CHECK-NEXT:    str b1, [x10]
 ; CHECK-NEXT:    bfxil x8, x9, #0, #4
-; CHECK-NEXT:    st1.b { v0 }[13], [x14]
-; CHECK-NEXT:    st1.b { v0 }[14], [x11]
-; CHECK-NEXT:    st1.b { v0 }[15], [x8]
+; CHECK-NEXT:    str b2, [x12]
+; CHECK-NEXT:    str b3, [x11]
+; CHECK-NEXT:    str b0, [x8]
 ; CHECK-NEXT:    ldr q0, [sp], #16
 ; CHECK-NEXT:    ret
     %out = call <16 x i8> @llvm.experimental.vector.compress(<16 x i8> %vec, <16 x i1> %mask, <16 x i8> undef)

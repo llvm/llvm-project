@@ -249,15 +249,14 @@ define <4 x i32> @uaddo_v4i1(<4 x i1> %a0, <4 x i1> %a1, ptr %p2) nounwind {
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    adrp x8, .LCPI10_0
 ; CHECK-NEXT:    shl v1.4h, v2.4h, #15
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI10_0]
 ; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI10_0]
 ; CHECK-NEXT:    cmlt v1.4h, v1.4h, #0
 ; CHECK-NEXT:    shl v0.4s, v0.4s, #31
 ; CHECK-NEXT:    and v1.8b, v1.8b, v2.8b
 ; CHECK-NEXT:    cmlt v0.4s, v0.4s, #0
 ; CHECK-NEXT:    addv h1, v1.4h
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    strb w8, [x0]
+; CHECK-NEXT:    str b1, [x0]
 ; CHECK-NEXT:    ret
   %t = call {<4 x i1>, <4 x i1>} @llvm.uadd.with.overflow.v4i1(<4 x i1> %a0, <4 x i1> %a1)
   %val = extractvalue {<4 x i1>, <4 x i1>} %t, 0
