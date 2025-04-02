@@ -34,8 +34,10 @@ void MCGOFFStreamer::initSections(bool NoExecStack,
   StringRef FileName = Ctx.getMainFileName();
   RootSDName = Twine(FileName).concat("#C").str();
   ADAPRName = Twine(FileName).concat("#S").str();
-  MCSectionGOFF *TextSection = static_cast<MCSectionGOFF *>(Ctx.getObjectFileInfo()->getTextSection());
-  MCSectionGOFF *ADASection = static_cast<MCSectionGOFF *>(Ctx.getObjectFileInfo()->getADASection());
+  MCSectionGOFF *TextSection =
+      static_cast<MCSectionGOFF *>(Ctx.getObjectFileInfo()->getTextSection());
+  MCSectionGOFF *ADASection =
+      static_cast<MCSectionGOFF *>(Ctx.getObjectFileInfo()->getADASection());
   TextSection->setSDName(RootSDName);
   ADASection->setLDorPRName(ADAPRName);
   ADASection->setADA();
