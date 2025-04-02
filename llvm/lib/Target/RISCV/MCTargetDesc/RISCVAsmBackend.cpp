@@ -560,12 +560,11 @@ bool RISCVAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
   }
   }
 
-  if (!AUIPCTarget.getSymA() || AUIPCTarget.getSubSym())
+  if (!AUIPCTarget.getSymA())
     return false;
 
-  const MCSymbolRefExpr *A = AUIPCTarget.getSymA();
-  const MCSymbolELF &SA = cast<MCSymbolELF>(A->getSymbol());
-  if (getSpecifier(A) != RISCVMCExpr::VK_None || SA.isUndefined())
+  const MCSymbolELF &SA = cast<MCSymbolELF>(*AUIPCTarget.getAddSym());
+  if (SA.isUndefined())
     return false;
 
   bool IsResolved = &SA.getSection() == AUIPCDF->getParent() &&

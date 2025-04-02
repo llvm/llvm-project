@@ -1672,15 +1672,15 @@ static void genSingleClauses(lower::AbstractConverter &converter,
 
 static void genTargetClauses(
     lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
-    lower::StatementContext &stmtCtx, lower::pft::Evaluation &eval,
-    const List<Clause> &clauses, mlir::Location loc,
-    mlir::omp::TargetOperands &clauseOps,
+    lower::SymMap &symTable, lower::StatementContext &stmtCtx,
+    lower::pft::Evaluation &eval, const List<Clause> &clauses,
+    mlir::Location loc, mlir::omp::TargetOperands &clauseOps,
     llvm::SmallVectorImpl<const semantics::Symbol *> &hasDeviceAddrSyms,
     llvm::SmallVectorImpl<const semantics::Symbol *> &isDevicePtrSyms,
     llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms) {
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processBare(clauseOps);
-  cp.processDepend(clauseOps);
+  cp.processDepend(symTable, stmtCtx, clauseOps);
   cp.processDevice(stmtCtx, clauseOps);
   cp.processHasDeviceAddr(stmtCtx, clauseOps, hasDeviceAddrSyms);
   if (!hostEvalInfo.empty()) {
@@ -1731,11 +1731,12 @@ static void genTargetDataClauses(
 
 static void genTargetEnterExitUpdateDataClauses(
     lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
-    lower::StatementContext &stmtCtx, const List<Clause> &clauses,
-    mlir::Location loc, llvm::omp::Directive directive,
+    lower::SymMap &symTable, lower::StatementContext &stmtCtx,
+    const List<Clause> &clauses, mlir::Location loc,
+    llvm::omp::Directive directive,
     mlir::omp::TargetEnterExitUpdateDataOperands &clauseOps) {
   ClauseProcessor cp(converter, semaCtx, clauses);
-  cp.processDepend(clauseOps);
+  cp.processDepend(symTable, stmtCtx, clauseOps);
   cp.processDevice(stmtCtx, clauseOps);
   cp.processIf(directive, clauseOps);
 
@@ -1749,12 +1750,13 @@ static void genTargetEnterExitUpdateDataClauses(
 
 static void genTaskClauses(lower::AbstractConverter &converter,
                            semantics::SemanticsContext &semaCtx,
+                           lower::SymMap &symTable,
                            lower::StatementContext &stmtCtx,
                            const List<Clause> &clauses, mlir::Location loc,
                            mlir::omp::TaskOperands &clauseOps) {
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processAllocate(clauseOps);
-  cp.processDepend(clauseOps);
+  cp.processDepend(symTable, stmtCtx, clauseOps);
   cp.processFinal(stmtCtx, clauseOps);
   cp.processIf(llvm::omp::Directive::OMPD_task, clauseOps);
   cp.processMergeable(clauseOps);
@@ -2197,8 +2199,8 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   mlir::omp::TargetOperands clauseOps;
   llvm::SmallVector<const semantics::Symbol *> mapSyms, isDevicePtrSyms,
       hasDeviceAddrSyms;
-  genTargetClauses(converter, semaCtx, stmtCtx, eval, item->clauses, loc,
-                   clauseOps, hasDeviceAddrSyms, isDevicePtrSyms, mapSyms);
+  genTargetClauses(converter, semaCtx, symTable, stmtCtx, eval, item->clauses,
+                   loc, clauseOps, hasDeviceAddrSyms, isDevicePtrSyms, mapSyms);
 
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/
@@ -2418,7 +2420,7 @@ static OpTy genTargetEnterExitUpdateDataOp(
   }
 
   mlir::omp::TargetEnterExitUpdateDataOperands clauseOps;
-  genTargetEnterExitUpdateDataClauses(converter, semaCtx, stmtCtx,
+  genTargetEnterExitUpdateDataClauses(converter, semaCtx, symTable, stmtCtx,
                                       item->clauses, loc, directive, clauseOps);
 
   return firOpBuilder.create<OpTy>(loc, clauseOps);
@@ -2431,7 +2433,8 @@ genTaskOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
           ConstructQueue::const_iterator item) {
   lower::StatementContext stmtCtx;
   mlir::omp::TaskOperands clauseOps;
-  genTaskClauses(converter, semaCtx, stmtCtx, item->clauses, loc, clauseOps);
+  genTaskClauses(converter, semaCtx, symTable, stmtCtx, item->clauses, loc,
+                 clauseOps);
 
   if (!enableDelayedPrivatization)
     return genOpWithBody<mlir::omp::TaskOp>(

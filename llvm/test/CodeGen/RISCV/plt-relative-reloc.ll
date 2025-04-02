@@ -16,6 +16,6 @@ declare void @fn3()
 ; CHECK-NEXT:         .word   0                               # 0x0
 ; CHECK-NEXT:         .word   %pltpcrel(fn1)
 ; CHECK-NEXT:         .word   %pltpcrel(fn2+4)
-; CHECK-NEXT:         .word   (fn3-vtable)-4
-; CHECK-NEXT:         .word   (global4-vtable)-4
+; CHECK-NEXT:         .word   fn3-vtable-4
+; CHECK-NEXT:         .word   global4-vtable-4
 ; CHECK-NEXT:         .size   vtable, 20
