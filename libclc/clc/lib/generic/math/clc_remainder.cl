@@ -6,19 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
 #include <clc/clc_convert.h>
 #include <clc/clcmacro.h>
 #include <clc/integer/clc_clz.h>
+#include <clc/internal/clc.h>
 #include <clc/math/clc_floor.h>
 #include <clc/math/clc_fma.h>
-#include <clc/math/clc_subnormal_config.h>
+#include <clc/math/clc_ldexp.h>
+#include <clc/math/clc_remainder.h>
 #include <clc/math/clc_trunc.h>
 #include <clc/math/math.h>
 #include <clc/shared/clc_max.h>
-#include <math/clc_remainder.h>
 
-_CLC_DEF _CLC_OVERLOAD float __clc_fmod(float x, float y) {
+_CLC_DEF _CLC_OVERLOAD float __clc_remainder(float x, float y) {
   int ux = __clc_as_int(x);
   int ax = ux & EXSIGNBIT_SP32;
   float xa = __clc_as_float(ax);
@@ -35,20 +35,29 @@ _CLC_DEF _CLC_OVERLOAD float __clc_fmod(float x, float y) {
   int c;
   int k = ex - ey;
 
+  uint q = 0;
+
   while (k > 0) {
     c = xr >= yr;
+    q = (q << 1) | c;
     xr -= c ? yr : 0.0f;
     xr += xr;
     --k;
   }
 
-  c = xr >= yr;
+  c = xr > yr;
+  q = (q << 1) | c;
   xr -= c ? yr : 0.0f;
 
   int lt = ex < ey;
 
+  q = lt ? 0 : q;
   xr = lt ? xa : xr;
   yr = lt ? ya : yr;
+
+  c = (yr < 2.0f * xr) | ((yr == 2.0f * xr) & ((q & 0x1) == 0x1));
+  xr -= c ? yr : 0.0f;
+  q += c;
 
   float s = __clc_as_float(ey << EXPSHIFTBITS_SP32);
   xr *= lt ? 1.0f : s;
@@ -64,10 +73,14 @@ _CLC_DEF _CLC_OVERLOAD float __clc_fmod(float x, float y) {
 
   return xr;
 }
-_CLC_BINARY_VECTORIZE(_CLC_DEF _CLC_OVERLOAD, float, __clc_fmod, float, float);
+_CLC_BINARY_VECTORIZE(_CLC_DEF _CLC_OVERLOAD, float, __clc_remainder, float,
+                      float);
 
 #ifdef cl_khr_fp64
-_CLC_DEF _CLC_OVERLOAD double __clc_fmod(double x, double y) {
+
+#pragma OPENCL EXTENSION cl_khr_fp64 : enable
+
+_CLC_DEF _CLC_OVERLOAD double __clc_remainder(double x, double y) {
   ulong ux = __clc_as_ulong(x);
   ulong ax = ux & ~SIGNBIT_DP64;
   ulong xsgn = ux ^ ax;
@@ -83,6 +96,8 @@ _CLC_DEF _CLC_OVERLOAD double __clc_fmod(double x, double y) {
   int yexp1 = 11 - (int)__clc_clz(ay & MANTBITS_DP64);
   yexp1 = yexp < 1 ? yexp1 : yexp;
 
+  int qsgn = ((ux ^ uy) & SIGNBIT_DP64) == 0UL ? 1 : -1;
+
   // First assume |x| > |y|
 
   // Set ntimes to the number of times we need to do a
@@ -92,7 +107,7 @@ _CLC_DEF _CLC_OVERLOAD double __clc_fmod(double x, double y) {
   // but it doesn't matter - it just means that we'll go round
   // the loop below one extra time.
   int ntimes = __clc_max(0, (xexp1 - yexp1) / 53);
-  double w = ldexp(dy, ntimes * 53);
+  double w = __clc_ldexp(dy, ntimes * 53);
   w = ntimes == 0 ? dy : w;
   double scale = ntimes == 0 ? 1.0 : 0x1.0p-53;
 
@@ -139,6 +154,24 @@ _CLC_DEF _CLC_OVERLOAD double __clc_fmod(double x, double y) {
   dx += i ? w : 0.0;
 
   // At this point, dx lies in the range [0,dy)
+
+  // For the fmod function, we're done apart from setting the correct sign.
+  //
+  // For the remainder function, we need to adjust dx
+  // so that it lies in the range (-y/2, y/2] by carefully
+  // subtracting w (== dy == y) if necessary. The rigmarole
+  // with todd is to get the correct sign of the result
+  // when x/y lies exactly half way between two integers,
+  // when we need to choose the even integer.
+
+  int al = (2.0 * dx > w) | (todd & (2.0 * dx == w));
+  double dxl = dx - (al ? w : 0.0);
+
+  int ag = (dx > 0.5 * w) | (todd & (dx == 0.5 * w));
+  double dxg = dx - (ag ? w : 0.0);
+
+  dx = dy < 0x1.0p+1022 ? dxl : dxg;
+
   double ret = __clc_as_double(xsgn ^ __clc_as_ulong(dx));
   dx = __clc_as_double(ax);
 
@@ -150,6 +183,12 @@ _CLC_DEF _CLC_OVERLOAD double __clc_fmod(double x, double y) {
   // Next, handle |x| < |y|
   c = dx < dy;
   ret = c ? x : ret;
+
+  c &= (yexp<1023 & 2.0 * dx> dy) | (dx > 0.5 * dy);
+  // we could use a conversion here instead since qsgn = +-1
+  p = qsgn == 1 ? -1.0 : 1.0;
+  t = __clc_fma(y, p, x);
+  ret = c ? t : ret;
 
   // We don't need anything special for |x| == 0
 
@@ -168,6 +207,18 @@ _CLC_DEF _CLC_OVERLOAD double __clc_fmod(double x, double y) {
 
   return ret;
 }
-_CLC_BINARY_VECTORIZE(_CLC_DEF _CLC_OVERLOAD, double, __clc_fmod, double,
+_CLC_BINARY_VECTORIZE(_CLC_DEF _CLC_OVERLOAD, double, __clc_remainder, double,
                       double);
+#endif
+
+#ifdef cl_khr_fp16
+
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
+// Forward the half version of this builtin onto the float one
+#define __HALF_ONLY
+#define __CLC_FUNCTION __clc_remainder
+#define __CLC_BODY <clc/math/binary_def_via_fp32.inc>
+#include <clc/math/gentype.inc>
+
 #endif
