@@ -185,14 +185,14 @@ int i2 = f2((int*)0);
 int f3(const int* const*);
 int f3(const volatile int* const (&)[1]);
 int i3 = f3(ap);
-// expected-error@-1 {{ambiguous}}
+// expected-error@-1 {{call to 'f3' is ambiguous}}
 //   expected-note@-4 {{candidate function}}
 //   expected-note@-4 {{candidate function}}
 
 int f4(const volatile int* const*);
 int f4(const int* const (&)[1]);
 int i4 = f4(ap);
-// expected-error@-1 {{ambiguous}}
+// expected-error@-1 {{call to 'f4' is ambiguous}}
 //   expected-note@-4 {{candidate function}}
 //   expected-note@-4 {{candidate function}}
 
