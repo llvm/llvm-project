@@ -1772,6 +1772,16 @@ RISCVInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
         MI.getOperand(1).isReg())
       return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
     break;
+  case RISCV::SH1ADD:
+  case RISCV::SH1ADD_UW:
+  case RISCV::SH2ADD:
+  case RISCV::SH2ADD_UW:
+  case RISCV::SH3ADD:
+  case RISCV::SH3ADD_UW:
+    if (MI.getOperand(1).isReg() && MI.getOperand(1).getReg() == RISCV::X0 &&
+        MI.getOperand(2).isReg())
+      return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
+    break;
   case RISCV::FSGNJ_D:
   case RISCV::FSGNJ_S:
   case RISCV::FSGNJ_H:
