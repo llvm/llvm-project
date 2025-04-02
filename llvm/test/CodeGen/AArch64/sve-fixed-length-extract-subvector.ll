@@ -547,15 +547,13 @@ define void @extract_subvector_legalization_v8i32() vscale_range(2,2) #0 {
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    adrp x8, .LCPI40_0
 ; CHECK-NEXT:    add x8, x8, :lo12:.LCPI40_0
-; CHECK-NEXT:    mov z1.s, #0 // =0x0
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8]
-; CHECK-NEXT:    mov z2.d, z1.d
-; CHECK-NEXT:    mov z3.d, z0.d
-; CHECK-NEXT:    ext z2.b, z2.b, z1.b, #16
-; CHECK-NEXT:    ext z3.b, z3.b, z0.b, #16
-; CHECK-NEXT:    cmeq v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    cmeq v1.4s, v3.4s, v2.4s
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
+; CHECK-NEXT:    cmeq v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    cmeq v1.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    sunpklo z0.d, z0.s
 ; CHECK-NEXT:    sunpklo z1.d, z1.s
 ; CHECK-NEXT:    cmpne p0.d, p1/z, z1.d, #0
