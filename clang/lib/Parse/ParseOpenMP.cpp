@@ -2764,8 +2764,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
         Diag(Tok, diag::err_omp_unknown_clause)
             << PP.getSpelling(Tok) << "metadirective";
       }
-      if (getLangOpts().OpenMP < 52 &&
-          CKind == OMPC_otherwise) {
+      if (getLangOpts().OpenMP < 52 && CKind == OMPC_otherwise) {
         Diag(Tok, diag::err_omp_unexpected_clause)
             << PP.getSpelling(Tok) << "metadirective";
       }
