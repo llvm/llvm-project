@@ -2065,7 +2065,7 @@ LogicalResult ControlFlowStructurizer::structurize() {
     // and remapping we have previously done should be preserved.
     builder.setInsertionPoint(&mergeBlock->front());
     auto selectionOp = builder.create<spirv::SelectionOp>(
-        location, TypeRange(outsideUses),
+        location, TypeRange(ValueRange(outsideUses)),
         static_cast<spirv::SelectionControl>(control));
     selectionOp->getRegion(0).takeBody(body);
 
