@@ -4444,7 +4444,6 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
       !packOrUnPack.hasPureTensorSemantics()) {
     return op->emitError("mixing tensor and buffer semantics is not allowed");
   }
-  bool hasTensorSemantics = packOrUnPack.hasPureTensorSemantics();
 
   // Verify inner_dims_pos and outer_dims_perm.
   ShapedType unpackedType = (std::is_same<OpTy, PackOp>::value)

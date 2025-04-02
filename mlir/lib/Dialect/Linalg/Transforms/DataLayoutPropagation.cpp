@@ -63,14 +63,8 @@ getPackingInfoFromOperand(OpOperand *opOperand, linalg::GenericOp genericOp,
                           OpTy packOrUnPackOp) {
   static_assert(llvm::is_one_of<OpTy, linalg::PackOp, linalg::UnPackOp>::value,
                 "applies to only pack or unpack operations");
-  if constexpr (std::is_same_v<OpTy, linalg::PackOp>) {
-    if (!packOrUnPackOp.hasPureTensorSemantics())
-      return failure();
-  }
-  if constexpr (std::is_same_v<OpTy, linalg::UnPackOp>) {
-    if (!packOrUnPackOp.hasPureTensorSemantics())
-      return failure();
-  }
+  if (!packOrUnPackOp.hasPureTensorSemantics())
+    return failure();
 
   LLVM_DEBUG(
       { llvm::dbgs() << "--- Construct PackInfo From an operand ---\n"; });
