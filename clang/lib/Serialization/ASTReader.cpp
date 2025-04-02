@@ -9661,10 +9661,7 @@ ExternalASTSource::ExtKind ASTReader::hasExternalDefinitions(const Decl *FD) {
 }
 
 bool ASTReader::wasThisDeclarationADefinition(const FunctionDecl *FD) {
-  auto I = ExternalDeclarationBitsMap.find(FD);
-  if (I == ExternalDeclarationBitsMap.end())
-    return false;
-  return I->second.ThisDeclarationWasADefinition;
+  return ThisDeclarationWasADefinitionSet.contains(FD);
 }
 
 Selector ASTReader::getLocalSelector(ModuleFile &M, unsigned LocalID) {

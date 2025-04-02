@@ -1392,19 +1392,8 @@ private:
 
   llvm::DenseMap<const Decl *, bool> DefinitionSource;
 
-  /// The set of extra flags about declarations that we have read from
-  /// the module file.
-  struct ExternalDeclarationBits {
-    /// Indicates if given function declaration was a definition but its body
-    /// was removed due to declaration merging.
-    bool ThisDeclarationWasADefinition : 1;
-
-    ExternalDeclarationBits() : ThisDeclarationWasADefinition(false) {}
-  };
-
-  /// A mapping from declarations to extra bits of information about this decl.
-  llvm::DenseMap<const Decl *, ExternalDeclarationBits>
-      ExternalDeclarationBitsMap;
+  /// Friend functions that were defined but might have had their bodies removed.
+  llvm::DenseSet<const FunctionDecl *> ThisDeclarationWasADefinitionSet;
 
   bool shouldDisableValidationForFile(const serialization::ModuleFile &M) const;
 

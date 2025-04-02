@@ -525,7 +525,7 @@ void ASTDeclReader::ReadFunctionDefinition(FunctionDecl *FD) {
   Reader.PendingBodies[FD] = GetCurrentCursorOffset();
   // For now remember ThisDeclarationWasADefinition only for friend functions.
   if (FD->getFriendObjectKind())
-    Reader.ExternalDeclarationBitsMap[FD].ThisDeclarationWasADefinition = true;
+    Reader.ThisDeclarationWasADefinitionSet.insert(FD);
 }
 
 void ASTDeclReader::Visit(Decl *D) {
