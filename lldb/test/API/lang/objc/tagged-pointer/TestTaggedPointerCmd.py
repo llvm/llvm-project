@@ -13,7 +13,6 @@ class TestTaggedPointerCommand(TestBase):
         )
 
         n1 = thread.GetSelectedFrame().FindVariable("n1")
-        # breakpoint()
         self.expect(
             f"lang objc tagged-pointer info {n1.addr}",
             substrs=[
