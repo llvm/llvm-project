@@ -108,7 +108,7 @@ static void replaceFunctionCalls(Function *OldF, Function *NewF) {
     NewCI->setCallingConv(NewF->getCallingConv());
     NewCI->setAttributes(CI->getAttributes());
 
-    if (auto *FPOp = dyn_cast<FPMathOperator>(NewCI))
+    if (isa<FPMathOperator>(NewCI))
       NewCI->setFastMathFlags(CI->getFastMathFlags());
 
     NewCI->copyMetadata(*CI);
