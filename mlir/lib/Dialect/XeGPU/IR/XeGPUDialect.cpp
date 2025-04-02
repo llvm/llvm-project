@@ -74,42 +74,60 @@ LogicalResult ScatterTensorDescAttr::verify(
 //===----------------------------------------------------------------------===//
 LogicalResult
 LayoutAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-                   ScopeAttr scope, DenseI32ArrayAttr sg_layout,
-                   DenseI32ArrayAttr sg_data, DenseI32ArrayAttr order,
-                   DenseI32ArrayAttr lane_layout, DenseI32ArrayAttr lane_data) {
+                   DenseI32ArrayAttr sg_layout, DenseI32ArrayAttr sg_data,
+                   DenseI32ArrayAttr inst_data, DenseI32ArrayAttr lane_layout,
+                   DenseI32ArrayAttr lane_data, DenseI32ArrayAttr order) {
 
+  // A valid layout must include at least one of sg_layout and lane_layout.
+  // sg_layout is essential for Workgroup layout, while lane_layout is
+  // required for Subgroup layout.
+  if (!sg_layout && !lane_layout) {
+    return emitError() << "expected at least one of sg_layout or lane_layout";
+  }
+
+  if (sg_layout && lane_layout && sg_layout.size() != lane_layout.size()) {
+    return emitError()
+           << "expected sg_layout and lane_layout having the same rank";
+  }
+
+  // sg_data is optional for Workgroup layout, but its presence requires
+  // sg_layout.
   if (sg_data) {
     if (!sg_layout)
-      return emitError() << "expected sg_layout being used with sg_data.";
+      return emitError() << "expected sg_layout being used with sg_data";
     if (sg_data.size() != sg_layout.size())
       return emitError()
+
              << "expected sg_data having the same rank as sg_layout";
   }
 
+  // inst_data is optional for Subgroup layout, but its presence requires
+  // lane_layout.
+  if (inst_data) {
+    if (!lane_layout)
+      return emitError() << "expected lane_layout being used with inst_data";
+    if (inst_data.size() != lane_layout.size())
+      return emitError()
+             << "expected inst_data having the same rank as lane_layout";
+  }
+
+  // lane_data is optional for Subgroup layout, but its presence requires
+  // lane_layout.
+  if (lane_data) {
+    if (!lane_layout)
+      return emitError() << "expected lane_layout being used with lane_data";
+    if (lane_data.size() != lane_layout.size())
+      return emitError()
+             << "expected lane_data having the same rank as lane_layout";
+  }
+
   if (order) {
-    if (!sg_layout)
-      return emitError() << "expected order being used with sg_layout.";
-    if (order.size() != sg_layout.size())
-      return emitError() << "expected order having the same rank as sg_layout";
-  }
-
-  if (sg_layout && sg_layout.size() > 2) {
-    return emitError() << "expected the rank of the layout to be at most 2";
-  }
-
-  if (scope && scope.getValue() != Scope::WG &&
-      (sg_layout || sg_data || order)) {
-    return emitError() << "expected sg_layout, sg_data, or order being only "
-                          "used at workgroup level.";
-  }
-
-  if (scope && scope.getValue() == Scope::WG && !sg_layout) {
-    return emitError() << "expected sg_layout for workgroup level layout";
-  }
-
-  if (lane_layout.size() != lane_data.size() || lane_layout.size() > 2) {
-    return emitError() << "expected lane_layout and lane_data having the same "
-                          "rank, with a maximum rank of 2";
+    if (!sg_layout && !lane_layout)
+      return emitError()
+             << "expected sg_layout/lane_layout being used with order";
+    if (order.size() != sg_layout.size() && order.size() != lane_layout.size())
+      return emitError()
+             << "expected order having the same rank as sg_layout/lane_layout";
   }
 
   return success();
@@ -261,15 +279,12 @@ LogicalResult TensorDescType::verify(
   }
 
   if (auto layoutAttr = llvm::dyn_cast_if_present<LayoutAttr>(layout)) {
+
+    if (rank != (size_t)layoutAttr.getRank())
+      return emitError() << "expected layout rank to match tensor rank";
+
     ArrayRef<int32_t> laneLayout = layoutAttr.getLaneLayout().asArrayRef();
     ArrayRef<int32_t> laneData = layoutAttr.getLaneData().asArrayRef();
-
-    if (rank == 1) {
-      if (laneLayout[0] != 1 || laneData[0] != 1)
-        return emitError()
-               << "outer layout distribution and data mapping must be 1 "
-                  "for 1D tensor";
-    }
 
     if (scatterAttr) {
       // Validate subgroup mapping rules for scattered tensors.
@@ -277,10 +292,11 @@ LogicalResult TensorDescType::verify(
       // [sg_size, chunk_size] will be [1] or [1, 32/element_ty_bit_width]
       // respectively, the mapping should reflect that. This is because each
       // work item access data in 32 bit granularity.
-      if (laneData[0] != 1)
+
+      if (rank > 1 && laneData[0] != 1)
         return emitError()
                << "cannot map over non-contiguous scattered row elements";
-      if (laneData[1] != packingFactor)
+      if (laneData.back() != packingFactor)
         return emitError() << "work item data mapping must match the number of "
                               "contiguous elements";
     }
@@ -288,8 +304,6 @@ LogicalResult TensorDescType::verify(
     // For 1D tensor, pad the shape with an outer unit dimension to allow common
     // validation logic.
     SmallVector<int64_t> tensorShape(shape.begin(), shape.end());
-    if (rank == 1)
-      tensorShape = {1, tensorShape.back()};
 
     size_t dims = tensorShape.size();
     for (size_t i = 0; i < dims; ++i) {
@@ -331,7 +345,7 @@ LogicalResult TensorDescType::verify(
 FailureOr<VectorType> TensorDescType::getDistributedVectorType() {
   auto layout = llvm::dyn_cast_if_present<LayoutAttr>(getLayout());
   // If no layout is provided, tensor desc is not used in SIMT mode.
-  if (!layout || !layout.isForWorkItemLevel())
+  if (!layout)
     return failure();
 
   SmallVector<int64_t> laneData(layout.getLaneData().asArrayRef());
@@ -359,15 +373,6 @@ FailureOr<VectorType> TensorDescType::getDistributedVectorType() {
   }
 
   // Case 2: block loads/stores
-  // Tensor descriptor shape can be 1D. For the 1D case, outer dims of laneData
-  // and laneLayout must be 1.
-  if (tdescShape.size() == 1) {
-    assert(
-        (laneData[0] == 1 && laneLayout[0] == 1) &&
-        "lane_data[0] and lane_layout[0] must be 1 for 1D tensor descriptor");
-    laneData = {laneData[1]};
-    laneLayout = {laneLayout[1]};
-  }
   // Check if the tensor descriptor shape is distributable.
   int64_t tensorSize = 1;
   for (auto [tdescDim, wiDim, laneDataDim] :

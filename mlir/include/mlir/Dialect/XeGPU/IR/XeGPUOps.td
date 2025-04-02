@@ -841,7 +841,7 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>]
     can be represented as `B: vector<8x16x2xf16>`.
 
     In SIMT mode, DpasOp expects layout attributes `a`, `b`, and `c` (only if acc is used)
-    which descibe the data fragment owned by each work-item w.r.t. the tensor descriptor
+    which describe the data fragment owned by each work-item w.r.t. the tensor descriptor
     these data are loaded from.
 
     Note: on PVC, the hardware can perform load with VNNI transformation when data
@@ -988,8 +988,8 @@ def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [Pure, AllTypesMatch<["sou
     let description = [{
       `convert_layout` adjusts the data distribution across subgroups and/or work-items by modifying
       the `LayoutAttr`. Both `srcMap` and `resMap` must correspond to the same programming scope, such
-      as workgroup-level (wg) or subgroup-level (sg) code. This operation is not supported for
-      work-item-level code.
+      as workgroup-level (wg) or subgroup-level (sg) code. This operation is not valid once the IR is
+      lowered to WI level because that is the end result of all distributions.
     }];
     let arguments = (ins XeGPU_Vector2DType: $source,
                          XeGPU_LayoutAttr: $srcMap,

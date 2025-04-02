@@ -82,7 +82,7 @@ isArgShapesValid(TensorDescType tdescTy, VectorType valueTy,
   auto valueShape = valueTy.getShape();
   // layout not present means IR is in SIMD mode. In this case value shape must
   // match adjusted tensor descriptor shape.
-  if (!layout || !layout.isForWorkItemLevel())
+  if (!layout)
     return valueShape == adjustedTdescShape
                ? success()
                : emitError()
@@ -109,14 +109,17 @@ isArgShapesValid(TensorDescType tdescTy, VectorType valueTy,
 
 static bool isEvenDistributed(llvm::ArrayRef<int64_t> shape,
                               xegpu::LayoutAttr attr) {
-  assert(attr && "workgroup map attribute is missing.");
+  assert(attr && "Layout attribute is missing.");
+  llvm::SmallVector<int32_t> defaults(shape.size(), 1);
   llvm::ArrayRef<int32_t> layout, data;
-  if (attr.getSgLayout()) {
-    data = attr.getSgData().asArrayRef();
-    layout = attr.getSgLayout().asArrayRef();
+  if (auto sg_layout = attr.getSgLayout()) {
+    layout = sg_layout.asArrayRef();
+    auto sg_data = attr.getSgData();
+    data = sg_data ? sg_data.asArrayRef() : defaults;
   } else {
-    data = attr.getLaneData().asArrayRef();
     layout = attr.getLaneLayout().asArrayRef();
+    auto lane_data = attr.getLaneData();
+    data = lane_data ? lane_data.asArrayRef() : defaults;
   }
   for (auto [s, d, l] : llvm::zip_equal(shape, data, layout)) {
     // check s % (d * l) != 0
@@ -608,13 +611,6 @@ LogicalResult DpasOp::verify() {
       result |= (aLayout != nullptr) ^ (cLayout != nullptr);
     }
     result = !result;
-
-    if (aLayout) {
-      auto scope = aLayout.getScope();
-      result &= bLayout ? scope == bLayout.getScope() : false;
-      if (hasAcc())
-        result &= cLayout ? scope == cLayout.getScope() : false;
-    }
     return result;
   };
 
@@ -624,7 +620,7 @@ LogicalResult DpasOp::verify() {
         "code) or not set at all (for SIMD code).");
 
   // query the scope from aLayout (a valid setting).
-  if (aLayout && aLayout.isForWorkItemLevel()) {
+  if (aLayout) {
     // In SIMT mode, All data fragments must be 2D
     if (lhsRank != 2 || rhsRank != 2 || resRank != 2)
       return emitOpError("expecting lhs, rhs, and result to be a 2D vector.");
@@ -675,14 +671,14 @@ LogicalResult ConvertLayoutOp::verify() {
   if (!resMap)
     return emitOpError("expected resMap.");
 
-  if (srcMap.getScope() != resMap.getScope())
-    return emitOpError("expected srcMap and resMap be in the same scope.");
-
   if (srcMap == resMap)
     return emitOpError("expected different srcMap and resMap.");
 
-  if (srcMap.isForWorkItemLevel())
-    return emitOpError("doesn't work on SIMT code.");
+  // both srcMap and resMap should be WgLayout or SgLayout at the same time.
+  if ((!srcMap.isWgLayout() || !resMap.isWgLayout()) &&
+      (!srcMap.isSgLayout() || !resMap.isSgLayout()))
+    return emitOpError(
+        "expected srcMap and resMap be WgLayout or SgLayout at the same time.");
 
   auto shape = getSource().getType().getShape();
   if (!isEvenDistributed(shape, srcMap))

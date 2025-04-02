@@ -1224,6 +1224,7 @@ cc_library(
         ":lex",
         ":parse_attr_gen",
         ":sema",
+        "//llvm:FrontendHLSL",
         "//llvm:FrontendOpenMP",
         "//llvm:MC",
         "//llvm:MCParser",

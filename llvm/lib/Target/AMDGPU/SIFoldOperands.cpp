@@ -1453,7 +1453,7 @@ bool SIFoldOperandsImpl::tryFoldZeroHighBits(MachineInstr &MI) const {
     return false;
 
   std::optional<int64_t> Src0Imm = getImmOrMaterializedImm(MI.getOperand(1));
-  if (!Src0Imm || *Src0Imm != 0xffff)
+  if (!Src0Imm || *Src0Imm != 0xffff || !MI.getOperand(2).isReg())
     return false;
 
   Register Src1 = MI.getOperand(2).getReg();

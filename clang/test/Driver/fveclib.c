@@ -116,11 +116,17 @@
 /// Verify that vectorized routines library is being linked in.
 // RUN: %clang -### --target=aarch64-pc-windows-msvc -fveclib=ArmPL %s 2>&1 | FileCheck --check-prefix=CHECK-LINKING-ARMPL-MSVC %s
 // RUN: %clang -### --target=aarch64-linux-gnu -fveclib=ArmPL %s 2>&1 | FileCheck --check-prefix=CHECK-LINKING-ARMPL-LINUX %s
+// RUN: %clang -### --target=aarch64-linux-gnu -fveclib=ArmPL %s -nostdlib 2>&1 | FileCheck --check-prefix=CHECK-LINKING-ARMPL-NOSTDLIB-LINUX %s
 // RUN: %clang -### --target=aarch64-linux-gnu -fveclib=ArmPL %s -lamath 2>&1 | FileCheck --check-prefix=CHECK-LINKING-AMATH-BEFORE-ARMPL-LINUX %s
 // RUN: %clang -### --target=arm64-apple-darwin -fveclib=ArmPL %s 2>&1 | FileCheck --check-prefix=CHECK-LINKING-ARMPL-DARWIN %s
+// RUN: %clang -### --target=arm64-apple-darwin -fveclib=ArmPL -nostdlib %s 2>&1 | FileCheck --check-prefix=CHECK-LINKING-ARMPL-NOSTDLIB-DARWIN %s
 // RUN: %clang -### --target=arm64-apple-darwin -fveclib=ArmPL %s -lamath 2>&1 | FileCheck --check-prefix=CHECK-LINKING-AMATH-BEFORE-ARMPL-DARWIN %s
 // CHECK-LINKING-ARMPL-LINUX: "--push-state" "--as-needed" "-lm" "-lamath" "-lm" "--pop-state"
+// CHECK-LINKING-ARMPL-NOSTDLIB-LINUX: "--push-state" "--as-needed" "-lamath" "--pop-state"
+// CHECK-LINKING-ARMPL-NOSTDLIB-LINUX-NOT: "-lm"
 // CHECK-LINKING-ARMPL-DARWIN: "-lm" "-lamath" "-lm"
+// CHECK-LINKING-ARMPL-NOSTDLIB-DARWIN: "-lamath"
+// CHECK-LINKING-ARMPL-NOSTDLIB-DARWIN-NOT: "-lm"
 // CHECK-LINKING-ARMPL-MSVC: "--dependent-lib=amath"
 // CHECK-LINKING-AMATH-BEFORE-ARMPL-LINUX: "-lamath" {{.*}}"--push-state" "--as-needed" "-lm" "-lamath" "-lm" "--pop-state"
 // CHECK-LINKING-AMATH-BEFORE-ARMPL-DARWIN: "-lamath" {{.*}}"-lm" "-lamath" "-lm"
