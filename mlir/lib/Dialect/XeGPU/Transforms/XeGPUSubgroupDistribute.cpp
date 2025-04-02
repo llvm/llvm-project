@@ -697,13 +697,13 @@ static LogicalResult attachLayoutAttributes(
     auto layout = getPropagatedLayout(r);
     if (!layout.isAssigned())
       return {};
-    SmallVector<int, 2> wiLayout, wiData;
+    SmallVector<int, 2> laneLayout, laneData;
     for (auto [layout, data] : llvm::zip_equal(layout.getLayoutAsArrayRef(),
                                                layout.getDataAsArrayRef())) {
-      wiLayout.push_back(static_cast<int>(layout));
-      wiData.push_back(static_cast<int>(data));
+      laneLayout.push_back(static_cast<int>(layout));
+      laneData.push_back(static_cast<int>(data));
     }
-    return xegpu::LayoutAttr::get(r.getContext(), wiLayout, wiData);
+    return xegpu::LayoutAttr::get(r.getContext(), laneLayout, laneData);
   };
   /// Attach the layout attributes to the results of the operations.
   auto walkResult = top->walk([&](Operation *op) {
@@ -785,22 +785,22 @@ FailureOr<VectorType> getDistVecTypeBasedOnLaneLayout(xegpu::LayoutAttr layout,
   if (!layout)
     return failure();
 
-  auto wiLayout = layout.getLaneLayout();
+  auto laneLayout = layout.getLaneLayout();
   assert((originalType.getRank() == 2 || originalType.getRank() == 3) &&
          "expecting 2D or 3D shape for the original vector type");
-  assert(wiLayout.size() == 2 && "expecting 2D shape for the wi layout");
+  assert(laneLayout.size() == 2 && "expecting 2D shape for the wi layout");
   // Original type can be 2D or 3D (array_length > 1), the last two dims are the
   // block shape.
   auto blockShape = originalType.getShape().take_back(2);
   // Check if the block vector shape can be distributed evenly.
-  if (blockShape[0] % wiLayout[0] != 0 || blockShape[1] % wiLayout[1] != 0)
+  if (blockShape[0] % laneLayout[0] != 0 || blockShape[1] % laneLayout[1] != 0)
     return failure();
 
   if (originalType.getRank() == 3) {
     distributedShape.push_back(originalType.getShape()[0]);
   }
   for (unsigned i = 0; i < 2; ++i) {
-    distributedShape.push_back(blockShape[i] / wiLayout[i]);
+    distributedShape.push_back(blockShape[i] / laneLayout[i]);
   }
   auto newVectorType =
       VectorType::get(distributedShape, originalType.getElementType());
