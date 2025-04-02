@@ -81,12 +81,12 @@ private:
   /// as the infastructure to do so in a declarative way.
   ///
   /// For the example:
-  ///  SmallDenseMap<TokenKind, ParamType> Params = {
-  ///    TokenKind::bReg, &Clause.Register,
-  ///    TokenKind::kw_space, &Clause.Space
+  ///  SmallDenseMap<RootSignatureToken::Kind, ParamType> Params = {
+  ///    RootSignatureToken::Kind::bReg, &Clause.Register,
+  ///    RootSignatureToken::Kind::kw_space, &Clause.Space
   ///  };
-  ///  SmallDenseSet<TokenKind> Mandatory = {
-  ///    TokenKind::bReg
+  ///  SmallDenseSet<RootSignatureToken::Kind> Mandatory = {
+  ///    RootSignatureToken::Kind::bReg
   ///  };
   ///
   /// We can read it is as:
@@ -98,8 +98,8 @@ private:
   ///
   /// and 'bReg' must be specified
   bool parseParams(
-      llvm::SmallDenseMap<TokenKind, llvm::hlsl::rootsig::ParamType> &Params,
-      llvm::SmallDenseSet<TokenKind> &Mandatory);
+      llvm::SmallDenseMap<RootSignatureToken::Kind, llvm::hlsl::rootsig::ParamType> &Params,
+      llvm::SmallDenseSet<RootSignatureToken::Kind> &Mandatory);
 
   /// Parameter parse methods corresponding to a ParamType
   bool parseUIntParam(uint32_t *X);

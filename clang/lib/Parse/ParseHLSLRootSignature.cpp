@@ -147,7 +147,7 @@ bool RootSignatureParser::parseParam(ParamType Ref) {
           [this](uint32_t *X) -> bool {
             return consumeExpectedToken(TokenKind::pu_equal,
                                         diag::err_expected_after,
-                                        CurToken.Kind) ||
+                                        CurToken.TokKind) ||
                    parseUIntParam(X);
           },
       },
@@ -167,14 +167,14 @@ bool RootSignatureParser::parseParams(
   llvm::SmallDenseSet<TokenKind> Seen;
 
   while (tryConsumeExpectedToken(Keywords)) {
-    if (Seen.contains(CurToken.Kind)) {
+    if (Seen.contains(CurToken.TokKind)) {
       getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
-          << CurToken.Kind;
+          << CurToken.TokKind;
       return true;
     }
-    Seen.insert(CurToken.Kind);
+    Seen.insert(CurToken.TokKind);
 
-    if (parseParam(Params[CurToken.Kind]))
+    if (parseParam(Params[CurToken.TokKind]))
       return true;
 
     if (!tryConsumeExpectedToken(TokenKind::pu_comma))
@@ -195,21 +195,21 @@ bool RootSignatureParser::parseParams(
 }
 
 bool RootSignatureParser::parseUIntParam(uint32_t *X) {
-  assert(CurToken.Kind == TokenKind::pu_equal &&
+  assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
   tryConsumeExpectedToken(TokenKind::pu_plus);
   return consumeExpectedToken(TokenKind::int_literal, diag::err_expected_after,
-                              CurToken.Kind) ||
+                              CurToken.TokKind) ||
          handleUIntLiteral(X);
 }
 
 bool RootSignatureParser::parseRegister(Register *Register) {
   assert(
-      (CurToken.Kind == TokenKind::bReg || CurToken.Kind == TokenKind::tReg ||
-       CurToken.Kind == TokenKind::uReg || CurToken.Kind == TokenKind::sReg) &&
+      (CurToken.TokKind == TokenKind::bReg || CurToken.TokKind == TokenKind::tReg ||
+       CurToken.TokKind == TokenKind::uReg || CurToken.TokKind == TokenKind::sReg) &&
       "Expects to only be invoked starting at given keyword");
 
-  switch (CurToken.Kind) {
+  switch (CurToken.TokKind) {
   default:
     llvm_unreachable("Switch for consumed token was not provided");
   case TokenKind::bReg:
