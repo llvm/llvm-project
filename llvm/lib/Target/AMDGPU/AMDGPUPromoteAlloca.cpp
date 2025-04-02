@@ -444,29 +444,30 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
   if (VarOffsets.size() > 1)
     return nullptr;
 
-  APInt Quot;
+  APInt IndexQuot;
   uint64_t Rem;
-  APInt::udivrem(ConstOffset, VecElemSize, Quot, Rem);
+  APInt::udivrem(ConstOffset, VecElemSize, IndexQuot, Rem);
   if (Rem != 0)
     return nullptr;
-
-  ConstantInt *ConstIndex = ConstantInt::get(GEP->getContext(), Quot);
   if (VarOffsets.size() == 0)
-    return ConstIndex;
+    return ConstantInt::get(GEP->getContext(), IndexQuot);
 
   IRBuilder<> Builder(GEP);
 
   const auto &VarOffset = VarOffsets.front();
-  APInt::udivrem(VarOffset.second, VecElemSize, Quot, Rem);
-  if (Rem != 0 || Quot.isZero())
+  APInt OffsetQuot;
+  APInt::udivrem(VarOffset.second, VecElemSize, OffsetQuot, Rem);
+  if (Rem != 0 || OffsetQuot.isZero())
     return nullptr;
 
   Value *Offset = VarOffset.first;
-  if (!Quot.isOne()) {
-    auto *OffsetType = dyn_cast<IntegerType>(Offset->getType());
-    if (!OffsetType)
-      return nullptr;
-    ConstantInt *ConstMul = ConstantInt::get(OffsetType, Quot.getZExtValue());
+  auto *OffsetType = dyn_cast<IntegerType>(Offset->getType());
+  if (!OffsetType)
+    return nullptr;
+
+  if (!OffsetQuot.isOne()) {
+    ConstantInt *ConstMul =
+        ConstantInt::get(OffsetType, OffsetQuot.getZExtValue());
     Offset = Builder.CreateMul(Offset, ConstMul);
     if (Instruction *NewInst = dyn_cast<Instruction>(Offset))
       NewInsts.push_back(NewInst);
@@ -474,6 +475,8 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
   if (ConstOffset.isZero())
     return Offset;
 
+  ConstantInt *ConstIndex =
+      ConstantInt::get(OffsetType, IndexQuot.getZExtValue());
   Value *IndexAdd = Builder.CreateAdd(ConstIndex, Offset);
   if (Instruction *NewInst = dyn_cast<Instruction>(IndexAdd))
     NewInsts.push_back(NewInst);
@@ -1039,7 +1042,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
   // Delete all instructions. On the first pass, new dummy loads may have been
   // added so we need to collect them too.
   DenseSet<Instruction *> InstsToDelete(WorkList.begin(), WorkList.end());
-  InstsToDelete.insert(DeferredLoads.begin(), DeferredLoads.end());
+  InstsToDelete.insert_range(DeferredLoads);
   for (Instruction *I : InstsToDelete) {
     assert(I->use_empty());
     I->eraseFromParent();
@@ -1065,9 +1068,9 @@ AMDGPUPromoteAllocaImpl::getLocalSizeYZ(IRBuilder<> &Builder) {
 
   if (!IsAMDHSA) {
     CallInst *LocalSizeY =
-        Builder.CreateIntrinsic(Intrinsic::r600_read_local_size_y, {}, {});
+        Builder.CreateIntrinsic(Intrinsic::r600_read_local_size_y, {});
     CallInst *LocalSizeZ =
-        Builder.CreateIntrinsic(Intrinsic::r600_read_local_size_z, {}, {});
+        Builder.CreateIntrinsic(Intrinsic::r600_read_local_size_z, {});
 
     ST.makeLIDRangeMetadata(LocalSizeY);
     ST.makeLIDRangeMetadata(LocalSizeZ);
@@ -1110,7 +1113,7 @@ AMDGPUPromoteAllocaImpl::getLocalSizeYZ(IRBuilder<> &Builder) {
   //   } hsa_kernel_dispatch_packet_t
   //
   CallInst *DispatchPtr =
-      Builder.CreateIntrinsic(Intrinsic::amdgcn_dispatch_ptr, {}, {});
+      Builder.CreateIntrinsic(Intrinsic::amdgcn_dispatch_ptr, {});
   DispatchPtr->addRetAttr(Attribute::NoAlias);
   DispatchPtr->addRetAttr(Attribute::NonNull);
   F.removeFnAttr("amdgpu-no-dispatch-ptr");

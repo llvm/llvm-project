@@ -1243,6 +1243,7 @@ struct AdditionalKeywords {
     kw_unique0 = &IdentTable.get("unique0");
     kw_uwire = &IdentTable.get("uwire");
     kw_vectored = &IdentTable.get("vectored");
+    kw_wait = &IdentTable.get("wait");
     kw_wand = &IdentTable.get("wand");
     kw_weak0 = &IdentTable.get("weak0");
     kw_weak1 = &IdentTable.get("weak1");
@@ -1299,70 +1300,49 @@ struct AdditionalKeywords {
     // treatment like `showcancelled` or they should be treated as identifiers
     // like `int` and `logic`.
     VerilogExtraKeywords = std::unordered_set<IdentifierInfo *>(
-        {kw_always,       kw_always_comb,
-         kw_always_ff,    kw_always_latch,
-         kw_assert,       kw_assign,
-         kw_assume,       kw_automatic,
-         kw_before,       kw_begin,
-         kw_bins,         kw_binsof,
-         kw_casex,        kw_casez,
-         kw_celldefine,   kw_checker,
-         kw_clocking,     kw_constraint,
-         kw_cover,        kw_covergroup,
-         kw_coverpoint,   kw_disable,
-         kw_dist,         kw_edge,
-         kw_end,          kw_endcase,
-         kw_endchecker,   kw_endclass,
-         kw_endclocking,  kw_endfunction,
-         kw_endgenerate,  kw_endgroup,
-         kw_endinterface, kw_endmodule,
-         kw_endpackage,   kw_endprimitive,
-         kw_endprogram,   kw_endproperty,
-         kw_endsequence,  kw_endspecify,
-         kw_endtable,     kw_endtask,
-         kw_extends,      kw_final,
-         kw_foreach,      kw_forever,
-         kw_fork,         kw_function,
-         kw_generate,     kw_highz0,
-         kw_highz1,       kw_iff,
-         kw_ifnone,       kw_ignore_bins,
-         kw_illegal_bins, kw_implements,
-         kw_import,       kw_initial,
-         kw_inout,        kw_input,
-         kw_inside,       kw_interconnect,
-         kw_interface,    kw_intersect,
-         kw_join,         kw_join_any,
-         kw_join_none,    kw_large,
-         kw_let,          kw_local,
-         kw_localparam,   kw_macromodule,
-         kw_matches,      kw_medium,
-         kw_negedge,      kw_output,
-         kw_package,      kw_packed,
-         kw_parameter,    kw_posedge,
-         kw_primitive,    kw_priority,
-         kw_program,      kw_property,
-         kw_pull0,        kw_pull1,
-         kw_pure,         kw_rand,
-         kw_randc,        kw_randcase,
-         kw_randsequence, kw_ref,
-         kw_repeat,       kw_sample,
-         kw_scalared,     kw_sequence,
-         kw_small,        kw_soft,
-         kw_solve,        kw_specify,
-         kw_specparam,    kw_strong0,
-         kw_strong1,      kw_supply0,
-         kw_supply1,      kw_table,
-         kw_tagged,       kw_task,
-         kw_tri,          kw_tri0,
-         kw_tri1,         kw_triand,
-         kw_trior,        kw_trireg,
-         kw_unique,       kw_unique0,
-         kw_uwire,        kw_var,
-         kw_vectored,     kw_wand,
-         kw_weak0,        kw_weak1,
-         kw_wildcard,     kw_wire,
-         kw_with,         kw_wor,
-         kw_verilogHash,  kw_verilogHashHash});
+        {kw_always,       kw_always_comb,  kw_always_ff,
+         kw_always_latch, kw_assert,       kw_assign,
+         kw_assume,       kw_automatic,    kw_before,
+         kw_begin,        kw_bins,         kw_binsof,
+         kw_casex,        kw_casez,        kw_celldefine,
+         kw_checker,      kw_clocking,     kw_constraint,
+         kw_cover,        kw_covergroup,   kw_coverpoint,
+         kw_disable,      kw_dist,         kw_edge,
+         kw_end,          kw_endcase,      kw_endchecker,
+         kw_endclass,     kw_endclocking,  kw_endfunction,
+         kw_endgenerate,  kw_endgroup,     kw_endinterface,
+         kw_endmodule,    kw_endpackage,   kw_endprimitive,
+         kw_endprogram,   kw_endproperty,  kw_endsequence,
+         kw_endspecify,   kw_endtable,     kw_endtask,
+         kw_extends,      kw_final,        kw_foreach,
+         kw_forever,      kw_fork,         kw_function,
+         kw_generate,     kw_highz0,       kw_highz1,
+         kw_iff,          kw_ifnone,       kw_ignore_bins,
+         kw_illegal_bins, kw_implements,   kw_import,
+         kw_initial,      kw_inout,        kw_input,
+         kw_inside,       kw_interconnect, kw_interface,
+         kw_intersect,    kw_join,         kw_join_any,
+         kw_join_none,    kw_large,        kw_let,
+         kw_local,        kw_localparam,   kw_macromodule,
+         kw_matches,      kw_medium,       kw_negedge,
+         kw_output,       kw_package,      kw_packed,
+         kw_parameter,    kw_posedge,      kw_primitive,
+         kw_priority,     kw_program,      kw_property,
+         kw_pull0,        kw_pull1,        kw_pure,
+         kw_rand,         kw_randc,        kw_randcase,
+         kw_randsequence, kw_ref,          kw_repeat,
+         kw_sample,       kw_scalared,     kw_sequence,
+         kw_small,        kw_soft,         kw_solve,
+         kw_specify,      kw_specparam,    kw_strong0,
+         kw_strong1,      kw_supply0,      kw_supply1,
+         kw_table,        kw_tagged,       kw_task,
+         kw_tri,          kw_tri0,         kw_tri1,
+         kw_triand,       kw_trior,        kw_trireg,
+         kw_unique,       kw_unique0,      kw_uwire,
+         kw_var,          kw_vectored,     kw_wait,
+         kw_wand,         kw_weak0,        kw_weak1,
+         kw_wildcard,     kw_wire,         kw_with,
+         kw_wor,          kw_verilogHash,  kw_verilogHashHash});
 
     TableGenExtraKeywords = std::unordered_set<IdentifierInfo *>({
         kw_assert,
@@ -1614,6 +1594,7 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_unique0;
   IdentifierInfo *kw_uwire;
   IdentifierInfo *kw_vectored;
+  IdentifierInfo *kw_wait;
   IdentifierInfo *kw_wand;
   IdentifierInfo *kw_weak0;
   IdentifierInfo *kw_weak1;
@@ -1849,8 +1830,12 @@ struct AdditionalKeywords {
   /// Returns whether \p Tok is a Verilog keyword that opens a block.
   bool isVerilogBegin(const FormatToken &Tok) const {
     // `table` is not included since it needs to be treated specially.
-    return !Tok.endsSequence(kw_fork, kw_disable) &&
-           Tok.isOneOf(kw_begin, kw_fork, kw_generate, kw_specify);
+    if (Tok.isOneOf(kw_begin, kw_generate, kw_specify))
+      return true;
+    if (Tok.isNot(kw_fork))
+      return false;
+    const auto *Prev = Tok.getPreviousNonComment();
+    return !(Prev && Prev->isOneOf(kw_disable, kw_wait));
   }
 
   /// Returns whether \p Tok is a Verilog keyword that closes a block.

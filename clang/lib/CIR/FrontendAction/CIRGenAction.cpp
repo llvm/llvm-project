@@ -9,7 +9,9 @@
 #include "clang/CIR/FrontendAction/CIRGenAction.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OwningOpRef.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/CIR/CIRGenerator.h"
+#include "clang/CIR/CIRToCIRPasses.h"
 #include "clang/CIR/LowerToLLVM.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -59,6 +61,7 @@ class CIRGenConsumer : public clang::ASTConsumer {
   ASTContext *Context{nullptr};
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
   std::unique_ptr<CIRGenerator> Gen;
+  const FrontendOptions &FEOptions;
 
 public:
   CIRGenConsumer(CIRGenAction::OutputType Action, CompilerInstance &CI,
@@ -66,7 +69,8 @@ public:
       : Action(Action), CI(CI), OutputStream(std::move(OS)),
         FS(&CI.getVirtualFileSystem()),
         Gen(std::make_unique<CIRGenerator>(CI.getDiagnostics(), std::move(FS),
-                                           CI.getCodeGenOpts())) {}
+                                           CI.getCodeGenOpts())),
+        FEOptions(CI.getFrontendOpts()) {}
 
   void Initialize(ASTContext &Ctx) override {
     assert(!Context && "initialized multiple times");
@@ -81,7 +85,30 @@ public:
 
   void HandleTranslationUnit(ASTContext &C) override {
     Gen->HandleTranslationUnit(C);
+
+    if (!FEOptions.ClangIRDisableCIRVerifier) {
+      if (!Gen->verifyModule()) {
+        CI.getDiagnostics().Report(
+            diag::err_cir_verification_failed_pre_passes);
+        llvm::report_fatal_error(
+            "CIR codegen: module verification error before running CIR passes");
+        return;
+      }
+    }
+
     mlir::ModuleOp MlirModule = Gen->getModule();
+    mlir::MLIRContext &MlirCtx = Gen->getMLIRContext();
+
+    if (!FEOptions.ClangIRDisablePasses) {
+      // Setup and run CIR pipeline.
+      if (runCIRToCIRPasses(MlirModule, MlirCtx, C,
+                            !FEOptions.ClangIRDisableCIRVerifier)
+              .failed()) {
+        CI.getDiagnostics().Report(diag::err_cir_to_cir_transform_failed);
+        return;
+      }
+    }
+
     switch (Action) {
     case CIRGenAction::OutputType::EmitCIR:
       if (OutputStream && MlirModule) {

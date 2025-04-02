@@ -17,6 +17,13 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+#if _LIBCPP_STD_VER >= 14
+template <class _Tp = void>
+#else
+template <class _Tp>
+#endif
+struct _LIBCPP_TEMPLATE_VIS less;
+
 template <class>
 struct _LIBCPP_TEMPLATE_VIS hash;
 

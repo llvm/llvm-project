@@ -1107,6 +1107,7 @@ extern omp_allocator_handle_t __kmp_def_allocator;
 #endif
 
 extern int __kmp_memkind_available;
+extern bool __kmp_hwloc_available;
 
 typedef omp_memspace_handle_t kmp_memspace_t; // placeholder
 
@@ -1119,6 +1120,9 @@ typedef struct kmp_allocator_t {
   kmp_uint64 pool_size;
   kmp_uint64 pool_used;
   bool pinned;
+#if KMP_USE_HWLOC
+  omp_alloctrait_value_t membind;
+#endif
 } kmp_allocator_t;
 
 extern omp_allocator_handle_t __kmpc_init_allocator(int gtid,
@@ -1352,6 +1356,10 @@ extern kmp_uint64 __kmp_now_nsec();
 #define KMP_NEXT_WAIT 512U /* susequent number of spin-tests */
 #elif KMP_OS_OPENBSD
 /* TODO: tune for KMP_OS_OPENBSD */
+#define KMP_INIT_WAIT 1024U /* initial number of spin-tests   */
+#define KMP_NEXT_WAIT 512U /* susequent number of spin-tests */
+#elif KMP_OS_HAIKU
+/* TODO: tune for KMP_OS_HAIKU */
 #define KMP_INIT_WAIT 1024U /* initial number of spin-tests   */
 #define KMP_NEXT_WAIT 512U /* susequent number of spin-tests */
 #elif KMP_OS_HURD
@@ -2606,9 +2614,7 @@ typedef struct {
 typedef struct kmp_taskgraph_flags { /*This needs to be exactly 32 bits */
   unsigned nowait : 1;
   unsigned re_record : 1;
-  unsigned graph_reset : 1; /* 1==discard taskgraph record, 0==use taskgraph
-                               record */
-  unsigned reserved : 29;
+  unsigned reserved : 30;
 } kmp_taskgraph_flags_t;
 
 /// Represents a TDG node
@@ -2652,7 +2658,7 @@ typedef struct kmp_tdg_info {
 extern int __kmp_tdg_dot;
 extern kmp_int32 __kmp_max_tdgs;
 extern kmp_tdg_info_t **__kmp_global_tdgs;
-extern kmp_tdg_info_t *__kmp_curr_tdg;
+extern kmp_int32 __kmp_curr_tdg_idx;
 extern kmp_int32 __kmp_successors_size;
 extern std::atomic<kmp_int32> __kmp_tdg_task_id;
 extern kmp_int32 __kmp_num_tdg;

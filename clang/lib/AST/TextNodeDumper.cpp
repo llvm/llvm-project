@@ -1027,10 +1027,6 @@ void clang::TextNodeDumper::dumpNestedNameSpecifier(const NestedNameSpecifier *N
       OS << " TypeSpec";
       dumpType(QualType(NNS->getAsType(), 0));
       break;
-    case NestedNameSpecifier::TypeSpecWithTemplate:
-      OS << " TypeSpecWithTemplate";
-      dumpType(QualType(NNS->getAsType(), 0));
-      break;
     case NestedNameSpecifier::Global:
       OS << " Global";
       break;
@@ -3090,14 +3086,21 @@ void TextNodeDumper::VisitOpenACCDeclareDecl(const OpenACCDeclareDecl *D) {
 void TextNodeDumper::VisitOpenACCRoutineDecl(const OpenACCRoutineDecl *D) {
   OS << " " << D->getDirectiveKind();
 
-  if (D->hasNameSpecified()) {
-    OS << " name_specified";
-    dumpSourceRange(SourceRange{D->getLParenLoc(), D->getRParenLoc()});
-  }
+  dumpSourceRange(SourceRange{D->getLParenLoc(), D->getRParenLoc()});
 
   AddChild([=] { Visit(D->getFunctionReference()); });
 
   for (const OpenACCClause *C : D->clauses())
+    AddChild([=] {
+      Visit(C);
+      for (const Stmt *S : C->children())
+        AddChild([=] { Visit(S); });
+    });
+}
+
+void TextNodeDumper::VisitOpenACCRoutineDeclAttr(
+    const OpenACCRoutineDeclAttr *A) {
+  for (const OpenACCClause *C : A->Clauses)
     AddChild([=] {
       Visit(C);
       for (const Stmt *S : C->children())

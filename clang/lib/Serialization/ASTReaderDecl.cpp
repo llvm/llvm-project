@@ -2706,8 +2706,10 @@ void ASTDeclReader::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
     if (Record.readBool())
       CR = Record.readConceptReference();
     Expr *ImmediatelyDeclaredConstraint = Record.readExpr();
+    int ArgumentPackSubstitutionIndex = Record.readInt();
 
-    D->setTypeConstraint(CR, ImmediatelyDeclaredConstraint);
+    D->setTypeConstraint(CR, ImmediatelyDeclaredConstraint,
+                         ArgumentPackSubstitutionIndex);
     if ((D->ExpandedParameterPack = Record.readInt()))
       D->NumExpanded = Record.readInt();
   }
@@ -4314,7 +4316,8 @@ void ASTReader::PassInterestingDeclsToConsumer() {
 
   // Guard variable to avoid recursively redoing the process of passing
   // decls to consumer.
-  SaveAndRestore GuardPassingDeclsToConsumer(CanPassDeclsToConsumer, false);
+  SaveAndRestore GuardPassingDeclsToConsumer(CanPassDeclsToConsumer,
+                                             /*NewValue=*/false);
 
   // Ensure that we've loaded all potentially-interesting declarations
   // that need to be eagerly loaded.

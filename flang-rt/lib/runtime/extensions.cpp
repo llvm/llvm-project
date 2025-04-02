@@ -17,9 +17,11 @@
 #include "flang/Runtime/entry-names.h"
 #include "flang/Runtime/io-api.h"
 #include <chrono>
+#include <cstdio>
 #include <cstring>
 #include <ctime>
 #include <signal.h>
+#include <stdlib.h>
 #include <thread>
 
 #ifdef _WIN32
@@ -261,6 +263,14 @@ int RTNAME(Chdir)(const char *name) {
 }
 
 int FORTRAN_PROCEDURE_NAME(ierrno)() { return errno; }
+
+void FORTRAN_PROCEDURE_NAME(qsort)(int *array, int *len, int *isize,
+    int (*compar)(const void *, const void *)) {
+  qsort(array, *len, *isize, compar);
+}
+
+// PERROR(STRING)
+void RTNAME(Perror)(const char *str) { perror(str); }
 
 } // namespace Fortran::runtime
 } // extern "C"

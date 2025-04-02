@@ -149,6 +149,20 @@ static bool retPrimValue(InterpState &S, CodePtr OpPC,
 #undef RET_CASE
 }
 
+static QualType getElemType(const Pointer &P) {
+  const Descriptor *Desc = P.getFieldDesc();
+  QualType T = Desc->getType();
+  if (Desc->isPrimitive())
+    return T;
+  if (T->isPointerType())
+    return T->getAs<PointerType>()->getPointeeType();
+  if (Desc->isArray())
+    return Desc->getElemQualType();
+  if (const auto *AT = T->getAsArrayTypeUnsafe())
+    return AT->getElementType();
+  return T;
+}
+
 static void diagnoseNonConstexprBuiltin(InterpState &S, CodePtr OpPC,
                                         unsigned ID) {
   auto Loc = S.Current->getSource(OpPC);
@@ -198,11 +212,13 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
   const Pointer &A = getParam<Pointer>(Frame, 0);
   const Pointer &B = getParam<Pointer>(Frame, 1);
 
-  if (ID == Builtin::BIstrcmp || ID == Builtin::BIstrncmp)
+  if (ID == Builtin::BIstrcmp || ID == Builtin::BIstrncmp ||
+      ID == Builtin::BIwcscmp || ID == Builtin::BIwcsncmp)
     diagnoseNonConstexprBuiltin(S, OpPC, ID);
 
   uint64_t Limit = ~static_cast<uint64_t>(0);
-  if (ID == Builtin::BIstrncmp || ID == Builtin::BI__builtin_strncmp)
+  if (ID == Builtin::BIstrncmp || ID == Builtin::BI__builtin_strncmp ||
+      ID == Builtin::BIwcsncmp || ID == Builtin::BI__builtin_wcsncmp)
     Limit = peekToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)))
                 .getZExtValue();
 
@@ -217,12 +233,22 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
   if (A.isDummy() || B.isDummy())
     return false;
 
+  bool IsWide = ID == Builtin::BIwcscmp || ID == Builtin::BIwcsncmp ||
+                ID == Builtin::BI__builtin_wcscmp ||
+                ID == Builtin::BI__builtin_wcsncmp;
   assert(A.getFieldDesc()->isPrimitiveArray());
   assert(B.getFieldDesc()->isPrimitiveArray());
 
+  assert(getElemType(A).getTypePtr() == getElemType(B).getTypePtr());
+  PrimType ElemT = *S.getContext().classify(getElemType(A));
+
+  auto returnResult = [&](int V) -> bool {
+    pushInteger(S, V, Call->getType());
+    return true;
+  };
+
   unsigned IndexA = A.getIndex();
   unsigned IndexB = B.getIndex();
-  int32_t Result = 0;
   uint64_t Steps = 0;
   for (;; ++IndexA, ++IndexB, ++Steps) {
 
@@ -234,22 +260,33 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
         !CheckRange(S, OpPC, PB, AK_Read)) {
       return false;
     }
+
+    if (IsWide) {
+      INT_TYPE_SWITCH(ElemT, {
+        T CA = PA.deref<T>();
+        T CB = PB.deref<T>();
+        if (CA > CB)
+          return returnResult(1);
+        else if (CA < CB)
+          return returnResult(-1);
+        else if (CA.isZero() || CB.isZero())
+          return returnResult(0);
+      });
+      continue;
+    }
+
     uint8_t CA = PA.deref<uint8_t>();
     uint8_t CB = PB.deref<uint8_t>();
 
-    if (CA > CB) {
-      Result = 1;
-      break;
-    } else if (CA < CB) {
-      Result = -1;
-      break;
-    }
+    if (CA > CB)
+      return returnResult(1);
+    else if (CA < CB)
+      return returnResult(-1);
     if (CA == 0 || CB == 0)
-      break;
+      return returnResult(0);
   }
 
-  pushInteger(S, Result, Call->getType());
-  return true;
+  return returnResult(0);
 }
 
 static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
@@ -1477,6 +1514,9 @@ static bool interp__builtin_ptrauth_string_discriminator(
   const auto &Ptr = S.Stk.peek<Pointer>();
   assert(Ptr.getFieldDesc()->isPrimitiveArray());
 
+  // This should be created for a StringLiteral, so should alway shold at least
+  // one array element.
+  assert(Ptr.getFieldDesc()->getNumElems() >= 1);
   StringRef R(&Ptr.deref<char>(), Ptr.getFieldDesc()->getNumElems() - 1);
   uint64_t Result = getPointerAuthStableSipHash(R);
   pushInteger(S, Result, Call->getType());
@@ -1572,10 +1612,10 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
       return true;
     }
 
-    const Descriptor *Desc =
-        S.P.createDescriptor(NewCall, *ElemT, Descriptor::InlineDescMD,
-                             /*IsConst=*/false, /*IsTemporary=*/false,
-                             /*IsMutable=*/false);
+    const Descriptor *Desc = S.P.createDescriptor(
+        NewCall, *ElemT, ElemType.getTypePtr(), Descriptor::InlineDescMD,
+        /*IsConst=*/false, /*IsTemporary=*/false,
+        /*IsMutable=*/false);
     Block *B = Allocator.allocate(Desc, S.getContext().getEvalID(),
                                   DynamicAllocator::Form::Operator);
     assert(B);
@@ -1775,19 +1815,28 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
     return false;
   }
 
+  // Diagnose integral src/dest pointers specially.
+  if (SrcPtr.isIntegralPointer() || DestPtr.isIntegralPointer()) {
+    std::string DiagVal = "(void *)";
+    DiagVal += SrcPtr.isIntegralPointer()
+                   ? std::to_string(SrcPtr.getIntegerRepresentation())
+                   : std::to_string(DestPtr.getIntegerRepresentation());
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_memcpy_null)
+        << Move << false << DestPtr.isIntegralPointer() << DiagVal;
+    return false;
+  }
+
   // Can't read from dummy pointers.
   if (DestPtr.isDummy() || SrcPtr.isDummy())
     return false;
 
-  QualType DestElemType;
+  QualType DestElemType = getElemType(DestPtr);
   size_t RemainingDestElems;
   if (DestPtr.getFieldDesc()->isArray()) {
-    DestElemType = DestPtr.getFieldDesc()->getElemQualType();
     RemainingDestElems = DestPtr.isUnknownSizeArray()
                              ? 0
                              : (DestPtr.getNumElems() - DestPtr.getIndex());
   } else {
-    DestElemType = DestPtr.getType();
     RemainingDestElems = 1;
   }
   unsigned DestElemSize = ASTCtx.getTypeSizeInChars(DestElemType).getQuantity();
@@ -1800,15 +1849,13 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
     return false;
   }
 
-  QualType SrcElemType;
+  QualType SrcElemType = getElemType(SrcPtr);
   size_t RemainingSrcElems;
   if (SrcPtr.getFieldDesc()->isArray()) {
-    SrcElemType = SrcPtr.getFieldDesc()->getElemQualType();
     RemainingSrcElems = SrcPtr.isUnknownSizeArray()
                             ? 0
                             : (SrcPtr.getNumElems() - SrcPtr.getIndex());
   } else {
-    SrcElemType = SrcPtr.getType();
     RemainingSrcElems = 1;
   }
   unsigned SrcElemSize = ASTCtx.getTypeSizeInChars(SrcElemType).getQuantity();
@@ -1880,16 +1927,6 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
 
   bool IsWide =
       (ID == Builtin::BIwmemcmp || ID == Builtin::BI__builtin_wmemcmp);
-
-  auto getElemType = [](const Pointer &P) -> QualType {
-    const Descriptor *Desc = P.getFieldDesc();
-    QualType T = Desc->getType();
-    if (T->isPointerType())
-      return T->getAs<PointerType>()->getPointeeType();
-    if (Desc->isArray())
-      return Desc->getElemQualType();
-    return T;
-  };
 
   const ASTContext &ASTCtx = S.getASTContext();
   QualType ElemTypeA = getElemType(PtrA);
@@ -2039,10 +2076,21 @@ static bool interp__builtin_memchr(InterpState &S, CodePtr OpPC,
     }
   }
 
-  uint64_t DesiredVal =
-      Desired.trunc(S.getASTContext().getCharWidth()).getZExtValue();
+  uint64_t DesiredVal;
+  if (ID == Builtin::BIwmemchr || ID == Builtin::BI__builtin_wmemchr ||
+      ID == Builtin::BIwcschr || ID == Builtin::BI__builtin_wcschr) {
+    // wcschr and wmemchr are given a wchar_t to look for. Just use it.
+    DesiredVal = Desired.getZExtValue();
+  } else {
+    DesiredVal = Desired.trunc(S.getASTContext().getCharWidth()).getZExtValue();
+  }
+
   bool StopAtZero =
-      (ID == Builtin::BIstrchr || ID == Builtin::BI__builtin_strchr);
+      (ID == Builtin::BIstrchr || ID == Builtin::BI__builtin_strchr ||
+       ID == Builtin::BIwcschr || ID == Builtin::BI__builtin_wcschr);
+
+  PrimType ElemT =
+      IsRawByte ? PT_Sint8 : *S.getContext().classify(getElemType(Ptr));
 
   size_t Index = Ptr.getIndex();
   size_t Step = 0;
@@ -2053,7 +2101,10 @@ static bool interp__builtin_memchr(InterpState &S, CodePtr OpPC,
     if (!CheckLoad(S, OpPC, ElemPtr))
       return false;
 
-    unsigned char V = static_cast<unsigned char>(ElemPtr.deref<char>());
+    uint64_t V;
+    INT_TYPE_SWITCH_NO_BOOL(
+        ElemT, { V = static_cast<uint64_t>(ElemPtr.deref<T>().toUnsigned()); });
+
     if (V == DesiredVal) {
       S.Stk.push<Pointer>(ElemPtr);
       return true;
@@ -2074,7 +2125,7 @@ static bool interp__builtin_memchr(InterpState &S, CodePtr OpPC,
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call, uint32_t BuiltinID) {
   if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
-    return false;
+    return Invalid(S, OpPC);
 
   const InterpFrame *Frame = S.Current;
 
@@ -2092,6 +2143,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BIstrcmp:
   case Builtin::BI__builtin_strncmp:
   case Builtin::BIstrncmp:
+  case Builtin::BI__builtin_wcsncmp:
+  case Builtin::BIwcsncmp:
+  case Builtin::BI__builtin_wcscmp:
+  case Builtin::BIwcscmp:
     if (!interp__builtin_strcmp(S, OpPC, Frame, F, Call))
       return false;
     break;
@@ -2556,12 +2611,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_memchr:
   case Builtin::BIstrchr:
   case Builtin::BI__builtin_strchr:
-#if 0
+  case Builtin::BIwmemchr:
+  case Builtin::BI__builtin_wmemchr:
   case Builtin::BIwcschr:
   case Builtin::BI__builtin_wcschr:
-  case Builtin::BImemchr:
-  case Builtin::BI__builtin_wmemchr:
-#endif
   case Builtin::BI__builtin_char_memchr:
     if (!interp__builtin_memchr(S, OpPC, Frame, F, Call))
       return false;
@@ -2739,6 +2792,18 @@ static bool copyComposite(InterpState &S, CodePtr OpPC, const Pointer &Src,
         DestElem.deref<T>() = Src.atIndex(I).deref<T>();
         DestElem.initialize();
       });
+    }
+    return true;
+  }
+
+  if (DestDesc->isCompositeArray()) {
+    assert(SrcDesc->isCompositeArray());
+    assert(SrcDesc->getNumElems() == DestDesc->getNumElems());
+    for (unsigned I = 0, N = DestDesc->getNumElems(); I != N; ++I) {
+      const Pointer &SrcElem = Src.atIndex(I).narrow();
+      Pointer DestElem = Dest.atIndex(I).narrow();
+      if (!copyComposite(S, OpPC, SrcElem, DestElem, Activate))
+        return false;
     }
     return true;
   }

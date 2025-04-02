@@ -302,6 +302,11 @@ def GPRX1X5 :  GPRRegisterClass<(add X1, X5)> {
   let DiagnosticString = "register must be ra or t0 (x1 or x5)";
 }
 
+def GPRNoX31 : GPRRegisterClass<(sub GPR, X31)> {
+  let DiagnosticType = "InvalidRegClassGPRX31";
+  let DiagnosticString = "register must be a GPR excluding t6 (x31)";
+}
+
 //===----------------------------------------------------------------------===//
 // Even-Odd GPR Pairs
 //===----------------------------------------------------------------------===//
@@ -720,6 +725,8 @@ class VReg<list<ValueType> regTypes, dag regList, int Vlmul, int nf = 1>
 
   let Size = !mul(VLMul, NF, 64);
   let CopyCost = !mul(VLMul, NF);
+  // Prefer to allocate high LMUL registers first.
+  let AllocationPriority = !if(!gt(Vlmul, 1), Vlmul, 0);
 }
 
 defvar VMaskVTs = [vbool1_t, vbool2_t, vbool4_t, vbool8_t, vbool16_t,

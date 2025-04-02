@@ -47,8 +47,7 @@ lookupSymbolsAsyncHelper(EPCGenericDylibManager &DylibMgr,
                            return Complete(R.takeError());
                          Result.push_back({});
                          Result.back().reserve(R->size());
-                         for (auto Addr : *R)
-                           Result.back().push_back(Addr);
+                         llvm::append_range(Result.back(), *R);
 
                          lookupSymbolsAsyncHelper(
                              DylibMgr, Request.drop_front(), std::move(Result),

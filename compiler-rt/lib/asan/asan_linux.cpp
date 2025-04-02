@@ -41,6 +41,10 @@
 #    include <sys/link_elf.h>
 #  endif
 
+#  if SANITIZER_LINUX
+#    include <sys/personality.h>
+#  endif
+
 #  if SANITIZER_SOLARIS
 #    include <link.h>
 #  endif
@@ -105,6 +109,39 @@ void FlushUnneededASanShadowMemory(uptr p, uptr size) {
   // Since asan's mapping is compacting, the shadow chunk may be
   // not page-aligned, so we only flush the page-aligned portion.
   ReleaseMemoryPagesToOS(MemToShadow(p), MemToShadow(p + size));
+}
+
+void TryReExecWithoutASLR() {
+#    if SANITIZER_LINUX
+  // ASLR personality check.
+  // Caution: 'personality' is sometimes forbidden by sandboxes, so only call
+  // this function as a last resort (when the memory mapping is incompatible
+  // and ASan would fail anyway).
+  int old_personality = personality(0xffffffff);
+  if (old_personality == -1) {
+    VReport(1, "WARNING: unable to run personality check.\n");
+    return;
+  }
+
+  bool aslr_on = (old_personality & ADDR_NO_RANDOMIZE) == 0;
+
+  if (aslr_on) {
+    // Disable ASLR if the memory layout was incompatible.
+    // Alternatively, we could just keep re-execing until we get lucky
+    // with a compatible randomized layout, but the risk is that if it's
+    // not an ASLR-related issue, we will be stuck in an infinite loop of
+    // re-execing (unless we change ReExec to pass a parameter of the
+    // number of retries allowed.)
+    VReport(1,
+            "WARNING: AddressSanitizer: memory layout is incompatible, "
+            "possibly due to high-entropy ASLR.\n"
+            "Re-execing with fixed virtual address space.\n"
+            "N.B. reducing ASLR entropy is preferable.\n");
+    CHECK_NE(personality(old_personality | ADDR_NO_RANDOMIZE), -1);
+
+    ReExec();
+  }
+#    endif
 }
 
 #  if SANITIZER_ANDROID

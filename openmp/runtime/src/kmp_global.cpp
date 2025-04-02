@@ -296,6 +296,7 @@ kmp_int32 __kmp_max_task_priority = 0;
 kmp_uint64 __kmp_taskloop_min_tasks = 0;
 
 int __kmp_memkind_available = 0;
+bool __kmp_hwloc_available = false;
 omp_allocator_handle_t const omp_null_allocator = NULL;
 omp_allocator_handle_t const omp_default_mem_alloc =
     (omp_allocator_handle_t const)1;
@@ -554,7 +555,8 @@ int *__kmp_nesting_nth_level;
 int __kmp_tdg_dot = 0;
 kmp_int32 __kmp_max_tdgs = 100;
 kmp_tdg_info_t **__kmp_global_tdgs = NULL;
-kmp_tdg_info_t *__kmp_curr_tdg = NULL; // Current TDG being recorded or executed
+kmp_int32 __kmp_curr_tdg_idx =
+    0; // Id of the current TDG being recorded or executed
 kmp_int32 __kmp_num_tdg = 0;
 kmp_int32 __kmp_successors_size = 10; // Initial succesor size list for
                                       // recording

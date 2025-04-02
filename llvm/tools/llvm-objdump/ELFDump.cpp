@@ -405,12 +405,6 @@ template <class ELFT> void ELFDumper<ELFT>::printSymbolVersion() {
         Shdr.sh_type != ELF::SHT_GNU_verdef)
       continue;
 
-    ArrayRef<uint8_t> Contents =
-        unwrapOrError(Elf.getSectionContents(Shdr), FileName);
-    const typename ELFT::Shdr *StrTabSec =
-        unwrapOrError(Elf.getSection(Shdr.sh_link), FileName);
-    StringRef StrTab = unwrapOrError(Elf.getStringTable(*StrTabSec), FileName);
-
     if (Shdr.sh_type == ELF::SHT_GNU_verneed) {
       printSymbolVersionDependency(Shdr);
     } else {

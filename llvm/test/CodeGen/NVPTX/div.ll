@@ -11,10 +11,10 @@ define float @div_full(float %a, float %b) {
 ; CHECK-NEXT:    ld.param.f32 %f1, [div_full_param_0];
 ; CHECK-NEXT:    ld.param.f32 %f2, [div_full_param_1];
 ; CHECK-NEXT:    div.full.f32 %f3, %f1, %f2;
-; CHECK-NEXT:    mov.f32 %f4, 0f40400000;
+; CHECK-NEXT:    mov.b32 %f4, 0f40400000;
 ; CHECK-NEXT:    div.full.f32 %f5, %f3, %f4;
 ; CHECK-NEXT:    div.full.ftz.f32 %f6, %f5, %f2;
-; CHECK-NEXT:    mov.f32 %f7, 0f40800000;
+; CHECK-NEXT:    mov.b32 %f7, 0f40800000;
 ; CHECK-NEXT:    div.full.ftz.f32 %f8, %f6, %f7;
 ; CHECK-NEXT:    st.param.f32 [func_retval0], %f8;
 ; CHECK-NEXT:    ret;

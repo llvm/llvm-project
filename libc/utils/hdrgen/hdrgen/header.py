@@ -44,6 +44,7 @@ LIBRARY_DESCRIPTIONS = {
     "gnu": "GNU",
     "linux": "Linux",
     "uefi": "UEFI",
+    "svid": "SVID",
 }
 
 HEADER_TEMPLATE = """\

@@ -14,6 +14,7 @@
 
 #include "llvm/Transforms/Scalar/LoopInterchange.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
@@ -72,6 +73,13 @@ using LoopVector = SmallVector<Loop *, 8>;
 // TODO: Check if we can use a sparse matrix here.
 using CharMatrix = std::vector<std::vector<char>>;
 
+/// Types of rules used in profitability check.
+enum class RuleTy {
+  PerLoopCacheAnalysis,
+  PerInstrOrderCost,
+  ForVectorization,
+};
+
 } // end anonymous namespace
 
 // Minimum loop depth supported.
@@ -84,7 +92,31 @@ static cl::opt<unsigned int> MaxLoopNestDepth(
     "loop-interchange-max-loop-nest-depth", cl::init(10), cl::Hidden,
     cl::desc("Maximum depth of loop nest considered for the transform"));
 
+// We prefer cache cost to vectorization by default.
+static cl::list<RuleTy> Profitabilities(
+    "loop-interchange-profitabilities", cl::ZeroOrMore,
+    cl::MiscFlags::CommaSeparated, cl::Hidden,
+    cl::desc("List of profitability heuristics to be used. They are applied in "
+             "the given order"),
+    cl::list_init<RuleTy>({RuleTy::PerLoopCacheAnalysis,
+                           RuleTy::PerInstrOrderCost,
+                           RuleTy::ForVectorization}),
+    cl::values(clEnumValN(RuleTy::PerLoopCacheAnalysis, "cache",
+                          "Prioritize loop cache cost"),
+               clEnumValN(RuleTy::PerInstrOrderCost, "instorder",
+                          "Prioritize the IVs order of each instruction"),
+               clEnumValN(RuleTy::ForVectorization, "vectorize",
+                          "Prioritize vectorization")));
+
 #ifndef NDEBUG
+static bool noDuplicateRules(ArrayRef<RuleTy> Rules) {
+  SmallSet<RuleTy, 4> Set;
+  for (RuleTy Rule : Rules)
+    if (!Set.insert(Rule).second)
+      return false;
+  return true;
+}
+
 static void printDepMatrix(CharMatrix &DepMatrix) {
   for (auto &Row : DepMatrix) {
     for (auto D : Row)
@@ -1141,17 +1173,15 @@ LoopInterchangeProfitability::isProfitablePerLoopCacheAnalysis(
   if (OuterLoopIt == CostMap.end())
     return std::nullopt;
 
+  if (CC->getLoopCost(*OuterLoop) == CC->getLoopCost(*InnerLoop))
+    return std::nullopt;
   unsigned InnerIndex = InnerLoopIt->second;
   unsigned OuterIndex = OuterLoopIt->second;
   LLVM_DEBUG(dbgs() << "InnerIndex = " << InnerIndex
                     << ", OuterIndex = " << OuterIndex << "\n");
-  if (InnerIndex < OuterIndex)
-    return std::optional<bool>(true);
   assert(InnerIndex != OuterIndex && "CostMap should assign unique "
                                      "numbers to each loop");
-  if (CC->getLoopCost(*OuterLoop) == CC->getLoopCost(*InnerLoop))
-    return std::nullopt;
-  return std::optional<bool>(false);
+  return std::optional<bool>(InnerIndex < OuterIndex);
 }
 
 std::optional<bool>
@@ -1193,22 +1223,36 @@ bool LoopInterchangeProfitability::isProfitable(
     unsigned OuterLoopId, CharMatrix &DepMatrix,
     const DenseMap<const Loop *, unsigned> &CostMap,
     std::unique_ptr<CacheCost> &CC) {
-  // isProfitable() is structured to avoid endless loop interchange.
-  // If loop cache analysis could decide the profitability then,
-  // profitability check will stop and return the analysis result.
-  // If cache analysis failed to analyze the loopnest (e.g.,
-  // due to delinearization issues) then only check whether it is
-  // profitable for InstrOrderCost. Likewise, if InstrOrderCost failed to
-  // analysis the profitability then only, isProfitableForVectorization
-  // will decide.
-  std::optional<bool> shouldInterchange =
-      isProfitablePerLoopCacheAnalysis(CostMap, CC);
-  if (!shouldInterchange.has_value()) {
-    shouldInterchange = isProfitablePerInstrOrderCost();
-    if (!shouldInterchange.has_value())
+  // isProfitable() is structured to avoid endless loop interchange. If the
+  // highest priority rule (isProfitablePerLoopCacheAnalysis by default) could
+  // decide the profitability then, profitability check will stop and return the
+  // analysis result. If it failed to determine it (e.g., cache analysis failed
+  // to analyze the loopnest due to delinearization issues) then go ahead the
+  // second highest priority rule (isProfitablePerInstrOrderCost by default).
+  // Likewise, if it failed to analysis the profitability then only, the last
+  // rule (isProfitableForVectorization by default) will decide.
+  assert(noDuplicateRules(Profitabilities) && "Detect duplicate rules");
+  std::optional<bool> shouldInterchange;
+  for (RuleTy RT : Profitabilities) {
+    switch (RT) {
+    case RuleTy::PerLoopCacheAnalysis:
+      shouldInterchange = isProfitablePerLoopCacheAnalysis(CostMap, CC);
+      break;
+    case RuleTy::PerInstrOrderCost:
+      shouldInterchange = isProfitablePerInstrOrderCost();
+      break;
+    case RuleTy::ForVectorization:
       shouldInterchange =
           isProfitableForVectorization(InnerLoopId, OuterLoopId, DepMatrix);
+      break;
+    }
+
+    // If this rule could determine the profitability, don't call subsequent
+    // rules.
+    if (shouldInterchange.has_value())
+      break;
   }
+
   if (!shouldInterchange.has_value()) {
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "InterchangeNotProfitable",
