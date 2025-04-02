@@ -67,8 +67,33 @@ static void CloseAllExternalUnits(const char *why) {
   Fortran::runtime::io::ExternalFileUnit::CloseAll(handler);
 }
 
-[[noreturn]] void RTNAME(StopStatement)(
+[[noreturn]] RT_API_ATTRS void RTNAME(StopStatement)(
     int code, bool isErrorStop, bool quiet) {
+#if defined(RT_DEVICE_COMPILATION)
+  if (Fortran::runtime::executionEnvironment.noStopMessage && code == 0) {
+    quiet = true;
+  }
+  if (!quiet) {
+    if (isErrorStop) {
+      std::printf("Fortran ERROR STOP");
+    } else {
+      std::printf("Fortran STOP");
+    }
+    if (code != EXIT_SUCCESS) {
+      std::printf(": code %d\n", code);
+    }
+    std::printf("\n");
+  }
+#if defined(__CUDACC__)
+  // NVCC supports __trap().
+  __trap();
+#elif defined(__clang__)
+  // Clang supports __builtin_trap().
+  __builtin_trap();
+#else
+#error "unsupported compiler"
+#endif
+#else
   CloseAllExternalUnits("STOP statement");
   if (Fortran::runtime::executionEnvironment.noStopMessage && code == 0) {
     quiet = true;
@@ -84,10 +109,32 @@ static void CloseAllExternalUnits(const char *why) {
   if (RTNAME(GetMainThreadId)() != std::this_thread::get_id())
     std::abort();
   std::exit(code);
+#endif
 }
 
-[[noreturn]] void RTNAME(StopStatementText)(
+[[noreturn]] RT_API_ATTRS void RTNAME(StopStatementText)(
     const char *code, std::size_t length, bool isErrorStop, bool quiet) {
+#if defined(RT_DEVICE_COMPILATION)
+  if (!quiet) {
+    if (Fortran::runtime::executionEnvironment.noStopMessage && !isErrorStop) {
+      std::printf("%s\n", code);
+    } else {
+      std::printf(
+          "Fortran %s: %s\n", isErrorStop ? "ERROR STOP" : "STOP", code);
+    }
+  }
+  if (isErrorStop) {
+#if defined(__CUDACC__)
+    // NVCC supports __trap().
+    __trap();
+#elif defined(__clang__)
+    // Clang supports __builtin_trap().
+    __builtin_trap();
+#else
+#error "unsupported compiler"
+#endif
+  }
+#else
   CloseAllExternalUnits("STOP statement");
   if (!quiet) {
     if (Fortran::runtime::executionEnvironment.noStopMessage && !isErrorStop) {
@@ -105,6 +152,7 @@ static void CloseAllExternalUnits(const char *why) {
   } else {
     std::exit(EXIT_SUCCESS);
   }
+#endif
 }
 
 static bool StartPause() {
@@ -198,7 +246,7 @@ static RT_NOINLINE_ATTR void PrintBacktrace() {
 
 RT_OPTNONE_ATTR void FORTRAN_PROCEDURE_NAME(backtrace)() { PrintBacktrace(); }
 
-[[noreturn]] void RTNAME(ReportFatalUserError)(
+[[noreturn]] RT_API_ATTRS void RTNAME(ReportFatalUserError)(
     const char *message, const char *source, int line) {
   Fortran::runtime::Terminator{source, line}.Crash(message);
 }
