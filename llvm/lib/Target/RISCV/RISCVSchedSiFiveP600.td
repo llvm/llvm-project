@@ -1003,9 +1003,9 @@ foreach mx = ["M8", "M4", "M2"] in {
   defvar LMulLat = SiFiveP600GetLMulCycles<mx>.c;
   defvar IsWorstCase = SiFiveP600IsWorstCaseMX<mx, SchedMxList>.c;
   let Latency = SiFiveP600VSlideXComplex<mx>.latency in {
-    let ReleaseAtCycles = [SiFiveP600VSlideXComplex<mx, /*isUp=*/true>.cycles] in
+    let ReleaseAtCycles = [SiFiveP600VSlideXComplex<mx, isUp = true>.cycles] in
     defm "" : LMULWriteResMX<"WriteVSlideUpX",   [SiFiveP600VEXQ1], mx, IsWorstCase>;
-    let ReleaseAtCycles = [SiFiveP600VSlideXComplex<mx, /*isUp=*/false>.cycles] in
+    let ReleaseAtCycles = [SiFiveP600VSlideXComplex<mx, isUp = false>.cycles] in
     defm "" : LMULWriteResMX<"WriteVSlideDownX", [SiFiveP600VEXQ1], mx, IsWorstCase>;
   }
 }

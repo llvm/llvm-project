@@ -70,8 +70,8 @@ defm SP : MxAddressRegister<7, "sp", ["usp", "ssp", "isp", "a7"]>;
 
 // Floating Point Registers
 class MxFPRegister<int INDEX, string REG_NAME, list<string> ALTNAMES = []>
-    : MxReg<REG_NAME, INDEX, /*SUBREGS=*/[], /*SUBIDX=*/[],
-            /*DWREGS=*/[!add(18,INDEX)], ALTNAMES>;
+    : MxReg<REG_NAME, INDEX, SUBREGS = [], SUBIDX = [],
+            DWREGS = [!add(18,INDEX)], ALTNAMES>;
 
 foreach i = {0-7} in
   def FP#i : MxFPRegister<i, "fp"#i>;

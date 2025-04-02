@@ -947,10 +947,10 @@ defm BUFFER_LOAD_DWORDX2 : MUBUF_Pseudo_Loads <
   "buffer_load_dwordx2", v2i32
 >;
 defm BUFFER_LOAD_DWORDX3 : MUBUF_Pseudo_Loads_Lds <
-  "buffer_load_dwordx3", v3i32, /*LDSPred=*/HasGFX950Insts
+  "buffer_load_dwordx3", v3i32, LDSPred = HasGFX950Insts
 >;
 defm BUFFER_LOAD_DWORDX4 : MUBUF_Pseudo_Loads_Lds <
-  "buffer_load_dwordx4", v4i32, /*LDSPred=*/HasGFX950Insts
+  "buffer_load_dwordx4", v4i32, LDSPred = HasGFX950Insts
 >;
 
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_UBYTE", i32, atomic_load_8_global>;

@@ -1214,7 +1214,7 @@ def FORMAT : CustomOperand<i8>;
 let PrintInHex = 1 in
 def DMask : NamedIntOperand<"dmask">;
 
-def Dim : CustomOperand<i8, /*optional=*/1>;
+def Dim : CustomOperand<i8, optional = 1>;
 
 def dst_sel : SDWAOperand<"dst_sel", "SDWADstSel">;
 def src0_sel : SDWAOperand<"src0_sel", "SDWASrc0Sel">;
@@ -2061,7 +2061,7 @@ class getInsVOP3OpSel <RegisterOperand Src0RC, RegisterOperand Src1RC,
   dag ret = getInsVOP3Base<Src0RC, Src1RC,
                     Src2RC, NumSrcArgs,
                     HasClamp, 1/*HasModifiers*/, 1/*HasSrc2Mods*/, HasOMod,
-                    Src0Mod, Src1Mod, Src2Mod, /*HasOpSel=*/1>.ret;
+                    Src0Mod, Src1Mod, Src2Mod, HasOpSel = 1>.ret;
 }
 
 class getInsDPPBase <RegisterOperand OldRC, RegisterOperand Src0RC, RegisterOperand Src1RC,
@@ -2798,7 +2798,7 @@ def VOP_F16_F16_F16 : VOPProfile <[f16, f16, f16, untyped]>;
 def VOP_F16_F16_I16 : VOPProfile <[f16, f16, i16, untyped]>;
 def VOP_F16_F16_I32 : VOPProfile <[f16, f16, i32, untyped]>;
 def VOP_I16_I16_I16 : VOPProfile <[i16, i16, i16, untyped]>;
-def VOP_I16_I16_I16_ARITH : VOPProfile <[i16, i16, i16, untyped], /*EnableClamp=*/1>;
+def VOP_I16_I16_I16_ARITH : VOPProfile <[i16, i16, i16, untyped], _EnableClamp = 1>;
 
 def VOP_I16_I16_I16_I16 : VOPProfile <[i16, i16, i16, i16, untyped]>;
 def VOP_F16_F16_F16_F16 : VOPProfile <[f16, f16, f16, f16, untyped]>;
@@ -2846,7 +2846,7 @@ def VOP_F64_F64_I32 : VOPProfile <[f64, f64, i32, untyped]>;
 def VOP_I32_F32_F32 : VOPProfile <[i32, f32, f32, untyped]>;
 def VOP_I32_F32_I32 : VOPProfile <[i32, f32, i32, untyped]>;
 def VOP_I32_I32_I32 : VOPProfile <[i32, i32, i32, untyped]>;
-def VOP_I32_I32_I32_ARITH : VOPProfile <[i32, i32, i32, untyped], /*EnableClamp=*/1>;
+def VOP_I32_I32_I32_ARITH : VOPProfile <[i32, i32, i32, untyped], _EnableClamp = 1>;
 def VOP_V2F16_F32_F32 : VOPProfile <[v2f16, f32, f32, untyped]>;
 def VOP_F32_F16_F16_F16 : VOPProfile <[f32, f16, f16, f16]>;
 def VOP_V2BF16_F32_F32 : VOPProfile <[v2bf16, f32, f32, untyped]>;
