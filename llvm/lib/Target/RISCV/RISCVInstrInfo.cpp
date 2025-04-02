@@ -997,6 +997,25 @@ static RISCVCC::CondCode getCondFromBranchOpc(unsigned Opc) {
   }
 }
 
+static bool evaluateCondBranch(unsigned CC, int64_t C0, int64_t C1) {
+  switch (CC) {
+  default:
+    llvm_unreachable("Unexpected CC");
+  case RISCVCC::COND_EQ:
+    return C0 == C1;
+  case RISCVCC::COND_NE:
+    return C0 != C1;
+  case RISCVCC::COND_LT:
+    return C0 < C1;
+  case RISCVCC::COND_GE:
+    return C0 >= C1;
+  case RISCVCC::COND_LTU:
+    return (uint64_t)C0 < (uint64_t)C1;
+  case RISCVCC::COND_GEU:
+    return (uint64_t)C0 >= (uint64_t)C1;
+  }
+}
+
 // The contents of values added to Cond are not examined outside of
 // RISCVInstrInfo, giving us flexibility in what to push to it. For RISCV, we
 // push BranchOpcode, Reg1, Reg2.
@@ -1294,6 +1313,49 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   RISCVCC::CondCode CC = static_cast<RISCVCC::CondCode>(Cond[0].getImm());
   assert(CC != RISCVCC::COND_INVALID);
 
+  auto modifyBranch = [&]() {
+    // Build the new branch and remove the old one.
+    BuildMI(*MBB, MI, MI.getDebugLoc(),
+            getBrCond(static_cast<RISCVCC::CondCode>(Cond[0].getImm())))
+        .add(Cond[1])
+        .add(Cond[2])
+        .addMBB(TBB);
+    MI.eraseFromParent();
+  };
+
+  // Right now we only care about LI (i.e. ADDI x0, imm)
+  auto isLoadImm = [](const MachineInstr *MI, int64_t &Imm) -> bool {
+    if (MI->getOpcode() == RISCV::ADDI && MI->getOperand(1).isReg() &&
+        MI->getOperand(1).getReg() == RISCV::X0) {
+      Imm = MI->getOperand(2).getImm();
+      return true;
+    }
+    return false;
+  };
+  // Either a load from immediate instruction or X0.
+  auto isFromLoadImm = [&](const MachineOperand &Op, int64_t &Imm) -> bool {
+    if (!Op.isReg())
+      return false;
+    Register Reg = Op.getReg();
+    if (Reg == RISCV::X0) {
+      Imm = 0;
+      return true;
+    }
+    return Reg.isVirtual() && isLoadImm(MRI.getVRegDef(Reg), Imm);
+  };
+
+  // Canonicalize conditional branches which can be constant folded into
+  // beqz or bnez.  We can't modify the CFG here.
+  int64_t C0, C1;
+  if (isFromLoadImm(Cond[1], C0) && isFromLoadImm(Cond[2], C1)) {
+    unsigned NewCC =
+        evaluateCondBranch(CC, C0, C1) ? RISCVCC::COND_EQ : RISCVCC::COND_NE;
+    Cond[0] = MachineOperand::CreateImm(NewCC);
+    Cond[1] = Cond[2] = MachineOperand::CreateReg(RISCV::X0, /*isDef=*/false);
+    modifyBranch();
+    return true;
+  }
+
   if (CC == RISCVCC::COND_EQ || CC == RISCVCC::COND_NE)
     return false;
 
@@ -1314,24 +1376,6 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   //
   // To make sure this optimization is really beneficial, we only
   // optimize for cases where Y had only one use (i.e. only used by the branch).
-
-  // Right now we only care about LI (i.e. ADDI x0, imm)
-  auto isLoadImm = [](const MachineInstr *MI, int64_t &Imm) -> bool {
-    if (MI->getOpcode() == RISCV::ADDI && MI->getOperand(1).isReg() &&
-        MI->getOperand(1).getReg() == RISCV::X0) {
-      Imm = MI->getOperand(2).getImm();
-      return true;
-    }
-    return false;
-  };
-  // Either a load from immediate instruction or X0.
-  auto isFromLoadImm = [&](const MachineOperand &Op, int64_t &Imm) -> bool {
-    if (!Op.isReg())
-      return false;
-    Register Reg = Op.getReg();
-    return Reg.isVirtual() && isLoadImm(MRI.getVRegDef(Reg), Imm);
-  };
-
   MachineOperand &LHS = MI.getOperand(0);
   MachineOperand &RHS = MI.getOperand(1);
   // Try to find the register for constant Z; return
@@ -1349,8 +1393,6 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
     return Register();
   };
 
-  bool Modify = false;
-  int64_t C0;
   if (isFromLoadImm(LHS, C0) && MRI.hasOneUse(LHS.getReg())) {
     // Might be case 1.
     // Signed integer overflow is UB. (UINT64_MAX is bigger so we don't need
@@ -1363,7 +1405,8 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
         // We might extend the live range of Z, clear its kill flag to
         // account for this.
         MRI.clearKillFlags(RegZ);
-        Modify = true;
+        modifyBranch();
+        return true;
       }
   } else if (isFromLoadImm(RHS, C0) && MRI.hasOneUse(RHS.getReg())) {
     // Might be case 2.
@@ -1377,22 +1420,12 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
         // We might extend the live range of Z, clear its kill flag to
         // account for this.
         MRI.clearKillFlags(RegZ);
-        Modify = true;
+        modifyBranch();
+        return true;
       }
   }
 
-  if (!Modify)
-    return false;
-
-  // Build the new branch and remove the old one.
-  BuildMI(*MBB, MI, MI.getDebugLoc(),
-          getBrCond(static_cast<RISCVCC::CondCode>(Cond[0].getImm())))
-      .add(Cond[1])
-      .add(Cond[2])
-      .addMBB(TBB);
-  MI.eraseFromParent();
-
-  return true;
+  return false;
 }
 
 MachineBasicBlock *
