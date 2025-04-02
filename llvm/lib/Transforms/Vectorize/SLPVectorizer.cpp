@@ -3858,6 +3858,14 @@ private:
                                 ArrayRef<Value *> VL) const;
 
   /// Checks if the specified list of the instructions/values can be vectorized
+  /// in general.
+  bool isLegalToVectorizeScalars(ArrayRef<Value *> VL, unsigned Depth,
+                                 const EdgeInfo &UserTreeIdx,
+                                 InstructionsState &S,
+                                 bool &TryToFindDuplicates,
+                                 bool &TrySplitVectorize) const;
+
+  /// Checks if the specified list of the instructions/values can be vectorized
   /// and fills required data before actual scheduling of the instructions.
   TreeEntry::EntryState
   getScalarsVectorizationState(const InstructionsState &S, ArrayRef<Value *> VL,
@@ -8820,6 +8828,272 @@ getMainAltOpsNoStateVL(ArrayRef<Value *> VL) {
   return std::make_pair(MainOp, AltOp);
 }
 
+bool BoUpSLP::isLegalToVectorizeScalars(ArrayRef<Value *> VL, unsigned Depth,
+                                        const EdgeInfo &UserTreeIdx,
+                                        InstructionsState &S,
+                                        bool &TryToFindDuplicates,
+                                        bool &TrySplitVectorize) const {
+  assert((allConstant(VL) || allSameType(VL)) && "Invalid types!");
+
+  S = getSameOpcode(VL, *TLI);
+  TryToFindDuplicates = true;
+  TrySplitVectorize = false;
+
+  // Don't go into catchswitch blocks, which can happen with PHIs.
+  // Such blocks can only have PHIs and the catchswitch.  There is no
+  // place to insert a shuffle if we need to, so just avoid that issue.
+  if (S && isa<CatchSwitchInst>(S.getMainOp()->getParent()->getTerminator())) {
+    LLVM_DEBUG(dbgs() << "SLP: bundle in catchswitch block.\n");
+    // Do not try to pack to avoid extra instructions here.
+    TryToFindDuplicates = false;
+    return false;
+  }
+
+  // Check if this is a duplicate of another entry.
+  if (S) {
+    LLVM_DEBUG(dbgs() << "SLP: \tChecking bundle: " << *S.getMainOp() << ".\n");
+    for (TreeEntry *E : getTreeEntries(S.getMainOp())) {
+      if (E->isSame(VL)) {
+        LLVM_DEBUG(dbgs() << "SLP: Perfect diamond merge at " << *S.getMainOp()
+                          << ".\n");
+        return false;
+      }
+      SmallPtrSet<Value *, 8> Values(llvm::from_range, E->Scalars);
+      if (all_of(VL, [&](Value *V) {
+            return isa<PoisonValue>(V) || Values.contains(V);
+          })) {
+        LLVM_DEBUG(dbgs() << "SLP: Gathering due to full overlap.\n");
+        return false;
+      }
+    }
+  }
+
+  // Gather if we hit the RecursionMaxDepth, unless this is a load (or z/sext of
+  // a load), in which case peek through to include it in the tree, without
+  // ballooning over-budget.
+  if (Depth >= RecursionMaxDepth &&
+      !(S && !S.isAltShuffle() && VL.size() >= 4 &&
+        (match(S.getMainOp(), m_Load(m_Value())) ||
+         all_of(VL, [&S](const Value *I) {
+           return match(I,
+                        m_OneUse(m_ZExtOrSExt(m_OneUse(m_Load(m_Value()))))) &&
+                  cast<Instruction>(I)->getOpcode() == S.getOpcode();
+         })))) {
+    LLVM_DEBUG(dbgs() << "SLP: Gathering due to max recursion depth.\n");
+    return false;
+  }
+
+  // Don't handle scalable vectors
+  if (S && S.getOpcode() == Instruction::ExtractElement &&
+      isa<ScalableVectorType>(
+          cast<ExtractElementInst>(S.getMainOp())->getVectorOperandType())) {
+    LLVM_DEBUG(dbgs() << "SLP: Gathering due to scalable vector type.\n");
+    return false;
+  }
+
+  // Don't handle vectors.
+  if (!SLPReVec && getValueType(VL.front())->isVectorTy()) {
+    LLVM_DEBUG(dbgs() << "SLP: Gathering due to vector type.\n");
+    // Do not try to pack to avoid extra instructions here.
+    TryToFindDuplicates = false;
+    return false;
+  }
+
+  // If all of the operands are identical or constant we have a simple solution.
+  // If we deal with insert/extract instructions, they all must have constant
+  // indices, otherwise we should gather them, not try to vectorize.
+  // If alternate op node with 2 elements with gathered operands - do not
+  // vectorize.
+  auto NotProfitableForVectorization = [&S, this, Depth](ArrayRef<Value *> VL) {
+    if (!S || !S.isAltShuffle() || VL.size() > 2)
+      return false;
+    if (VectorizableTree.size() < MinTreeSize)
+      return false;
+    if (Depth >= RecursionMaxDepth - 1)
+      return true;
+    // Check if all operands are extracts, part of vector node or can build a
+    // regular vectorize node.
+    SmallVector<unsigned, 8> InstsCount;
+    for (Value *V : VL) {
+      auto *I = cast<Instruction>(V);
+      InstsCount.push_back(count_if(I->operand_values(), [](Value *Op) {
+        return isa<Instruction>(Op) || isVectorLikeInstWithConstOps(Op);
+      }));
+    }
+    bool IsCommutative =
+        isCommutative(S.getMainOp()) || isCommutative(S.getAltOp());
+    if ((IsCommutative &&
+         std::accumulate(InstsCount.begin(), InstsCount.end(), 0) < 2) ||
+        (!IsCommutative &&
+         all_of(InstsCount, [](unsigned ICnt) { return ICnt < 2; })))
+      return true;
+    assert(VL.size() == 2 && "Expected only 2 alternate op instructions.");
+    SmallVector<SmallVector<std::pair<Value *, Value *>>> Candidates;
+    auto *I1 = cast<Instruction>(VL.front());
+    auto *I2 = cast<Instruction>(VL.back());
+    for (int Op : seq<int>(S.getMainOp()->getNumOperands()))
+      Candidates.emplace_back().emplace_back(I1->getOperand(Op),
+                                             I2->getOperand(Op));
+    if (static_cast<unsigned>(count_if(
+            Candidates, [this](ArrayRef<std::pair<Value *, Value *>> Cand) {
+              return findBestRootPair(Cand, LookAheadHeuristics::ScoreSplat);
+            })) >= S.getMainOp()->getNumOperands() / 2)
+      return false;
+    if (S.getMainOp()->getNumOperands() > 2)
+      return true;
+    if (IsCommutative) {
+      // Check permuted operands.
+      Candidates.clear();
+      for (int Op = 0, E = S.getMainOp()->getNumOperands(); Op < E; ++Op)
+        Candidates.emplace_back().emplace_back(I1->getOperand(Op),
+                                               I2->getOperand((Op + 1) % E));
+      if (any_of(
+              Candidates, [this](ArrayRef<std::pair<Value *, Value *>> Cand) {
+                return findBestRootPair(Cand, LookAheadHeuristics::ScoreSplat);
+              }))
+        return false;
+    }
+    return true;
+  };
+  SmallVector<unsigned> SortedIndices;
+  BasicBlock *BB = nullptr;
+  bool IsScatterVectorizeUserTE =
+      UserTreeIdx.UserTE &&
+      UserTreeIdx.UserTE->State == TreeEntry::ScatterVectorize;
+  bool AreAllSameBlock = S && allSameBlock(VL);
+  bool AreScatterAllGEPSameBlock =
+      (IsScatterVectorizeUserTE && VL.front()->getType()->isPointerTy() &&
+       VL.size() > 2 &&
+       all_of(VL,
+              [&BB](Value *V) {
+                auto *I = dyn_cast<GetElementPtrInst>(V);
+                if (!I)
+                  return doesNotNeedToBeScheduled(V);
+                if (!BB)
+                  BB = I->getParent();
+                return BB == I->getParent() && I->getNumOperands() == 2;
+              }) &&
+       BB &&
+       sortPtrAccesses(VL, UserTreeIdx.UserTE->getMainOp()->getType(), *DL, *SE,
+                       SortedIndices));
+  bool AreAllSameInsts = AreAllSameBlock || AreScatterAllGEPSameBlock;
+  if (!AreAllSameInsts || (!S && allConstant(VL)) || isSplat(VL) ||
+      (S &&
+       isa<InsertElementInst, ExtractValueInst, ExtractElementInst>(
+           S.getMainOp()) &&
+       !all_of(VL, isVectorLikeInstWithConstOps)) ||
+      NotProfitableForVectorization(VL)) {
+    if (!S) {
+      LLVM_DEBUG(dbgs() << "SLP: Try split and if failed, gathering due to "
+                           "C,S,B,O, small shuffle. \n");
+      TrySplitVectorize = true;
+      return false;
+    }
+    LLVM_DEBUG(dbgs() << "SLP: Gathering due to C,S,B,O, small shuffle. \n");
+    return false;
+  }
+
+  // Don't vectorize ephemeral values.
+  if (S && !EphValues.empty()) {
+    for (Value *V : VL) {
+      if (EphValues.count(V)) {
+        LLVM_DEBUG(dbgs() << "SLP: The instruction (" << *V
+                          << ") is ephemeral.\n");
+        // Do not try to pack to avoid extra instructions here.
+        TryToFindDuplicates = false;
+        return false;
+      }
+    }
+  }
+
+  // We now know that this is a vector of instructions of the same type from
+  // the same block.
+
+  // Check that none of the instructions in the bundle are already in the tree
+  // and the node may be not profitable for the vectorization as the small
+  // alternate node.
+  if (S && S.isAltShuffle()) {
+    auto GetNumVectorizedExtracted = [&]() {
+      APInt Extracted = APInt::getZero(VL.size());
+      APInt Vectorized = APInt::getAllOnes(VL.size());
+      for (auto [Idx, V] : enumerate(VL)) {
+        auto *I = dyn_cast<Instruction>(V);
+        if (!I || doesNotNeedToBeScheduled(I) ||
+            all_of(I->operands(), [&](const Use &U) {
+              return isa<ExtractElementInst>(U.get());
+            }))
+          continue;
+        if (isVectorized(I))
+          Vectorized.clearBit(Idx);
+        else if (!I->hasOneUser() && !areAllUsersVectorized(I, UserIgnoreList))
+          Extracted.setBit(Idx);
+      }
+      return std::make_pair(Vectorized, Extracted);
+    };
+    auto [Vectorized, Extracted] = GetNumVectorizedExtracted();
+    constexpr TTI::TargetCostKind Kind = TTI::TCK_RecipThroughput;
+    bool PreferScalarize = !Vectorized.isAllOnes() && VL.size() == 2;
+    if (!Vectorized.isAllOnes() && !PreferScalarize) {
+      // Rough cost estimation, if the vector code (+ potential extracts) is
+      // more profitable than the scalar + buildvector.
+      Type *ScalarTy = VL.front()->getType();
+      auto *VecTy = getWidenedType(ScalarTy, VL.size());
+      InstructionCost VectorizeCostEstimate =
+          ::getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc, VecTy, {}, Kind) +
+          ::getScalarizationOverhead(*TTI, ScalarTy, VecTy, Extracted,
+                                     /*Insert=*/false, /*Extract=*/true, Kind);
+      InstructionCost ScalarizeCostEstimate =
+          ::getScalarizationOverhead(*TTI, ScalarTy, VecTy, Vectorized,
+                                     /*Insert=*/true, /*Extract=*/false, Kind);
+      PreferScalarize = VectorizeCostEstimate > ScalarizeCostEstimate;
+    }
+    if (PreferScalarize) {
+      LLVM_DEBUG(dbgs() << "SLP: The instructions are in tree and alternate "
+                           "node is not profitable.\n");
+      return false;
+    }
+  }
+
+  // The reduction nodes (stored in UserIgnoreList) also should stay scalar.
+  if (UserIgnoreList && !UserIgnoreList->empty()) {
+    for (Value *V : VL) {
+      if (UserIgnoreList->contains(V)) {
+        LLVM_DEBUG(dbgs() << "SLP: Gathering due to gathered scalar.\n");
+        return false;
+      }
+    }
+  }
+
+  // Special processing for sorted pointers for ScatterVectorize node with
+  // constant indeces only.
+  if (!AreAllSameBlock && AreScatterAllGEPSameBlock) {
+    assert(VL.front()->getType()->isPointerTy() &&
+           count_if(VL, IsaPred<GetElementPtrInst>) >= 2 &&
+           "Expected pointers only.");
+    // Reset S to make it GetElementPtr kind of node.
+    const auto *It = find_if(VL, IsaPred<GetElementPtrInst>);
+    assert(It != VL.end() && "Expected at least one GEP.");
+    S = getSameOpcode(*It, *TLI);
+  }
+
+  // Check that all of the users of the scalars that we want to vectorize are
+  // schedulable.
+  Instruction *VL0 = S.getMainOp();
+  BB = VL0->getParent();
+
+  if (S &&
+      (BB->isEHPad() || isa_and_nonnull<UnreachableInst>(BB->getTerminator()) ||
+       !DT->isReachableFromEntry(BB))) {
+    // Don't go into unreachable blocks. They may contain instructions with
+    // dependency cycles which confuse the final scheduling.
+    // Do not vectorize EH and non-returning blocks, not profitable in most
+    // cases.
+    LLVM_DEBUG(dbgs() << "SLP: bundle in unreachable block.\n");
+    return false;
+  }
+  return true;
+}
+
 void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
                             const EdgeInfo &UserTreeIdx,
                             unsigned InterleaveFactor) {
@@ -8903,88 +9177,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     return true;
   };
 
-  InstructionsState S = getSameOpcode(VL, *TLI);
-
-  // Don't go into catchswitch blocks, which can happen with PHIs.
-  // Such blocks can only have PHIs and the catchswitch.  There is no
-  // place to insert a shuffle if we need to, so just avoid that issue.
-  if (S && isa<CatchSwitchInst>(S.getMainOp()->getParent()->getTerminator())) {
-    LLVM_DEBUG(dbgs() << "SLP: bundle in catchswitch block.\n");
-    auto Invalid = ScheduleBundle::invalid();
-    newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx);
-    return;
-  }
-
-  // Check if this is a duplicate of another entry.
-  if (S) {
-    LLVM_DEBUG(dbgs() << "SLP: \tChecking bundle: " << *S.getMainOp() << ".\n");
-    for (TreeEntry *E : getTreeEntries(S.getMainOp())) {
-      if (E->isSame(VL)) {
-        LLVM_DEBUG(dbgs() << "SLP: Perfect diamond merge at " << *S.getMainOp()
-                          << ".\n");
-        if (TryToFindDuplicates(S)) {
-          auto Invalid = ScheduleBundle::invalid();
-          newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx,
-                       ReuseShuffleIndices);
-        }
-        return;
-      }
-      SmallPtrSet<Value *, 8> Values(llvm::from_range, E->Scalars);
-      if (all_of(VL, [&](Value *V) {
-            return isa<PoisonValue>(V) || Values.contains(V);
-          })) {
-        LLVM_DEBUG(dbgs() << "SLP: Gathering due to full overlap.\n");
-        if (TryToFindDuplicates(S)) {
-          auto Invalid = ScheduleBundle::invalid();
-          newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx,
-                       ReuseShuffleIndices);
-        }
-        return;
-      }
-    }
-  }
-
-  // Gather if we hit the RecursionMaxDepth, unless this is a load (or z/sext of
-  // a load), in which case peek through to include it in the tree, without
-  // ballooning over-budget.
-  if (Depth >= RecursionMaxDepth &&
-      !(S && !S.isAltShuffle() && VL.size() >= 4 &&
-        (match(S.getMainOp(), m_Load(m_Value())) ||
-         all_of(VL, [&S](const Value *I) {
-           return match(I,
-                        m_OneUse(m_ZExtOrSExt(m_OneUse(m_Load(m_Value()))))) &&
-                  cast<Instruction>(I)->getOpcode() == S.getOpcode();
-         })))) {
-    LLVM_DEBUG(dbgs() << "SLP: Gathering due to max recursion depth.\n");
-    if (TryToFindDuplicates(S)) {
-      auto Invalid = ScheduleBundle::invalid();
-      newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx,
-                   ReuseShuffleIndices);
-    }
-    return;
-  }
-
-  // Don't handle scalable vectors
-  if (S && S.getOpcode() == Instruction::ExtractElement &&
-      isa<ScalableVectorType>(
-          cast<ExtractElementInst>(S.getMainOp())->getVectorOperandType())) {
-    LLVM_DEBUG(dbgs() << "SLP: Gathering due to scalable vector type.\n");
-    if (TryToFindDuplicates(S)) {
-      auto Invalid = ScheduleBundle::invalid();
-      newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx,
-                   ReuseShuffleIndices);
-    }
-    return;
-  }
-
-  // Don't handle vectors.
-  if (!SLPReVec && getValueType(VL.front())->isVectorTy()) {
-    LLVM_DEBUG(dbgs() << "SLP: Gathering due to vector type.\n");
-    auto Invalid = ScheduleBundle::invalid();
-    newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx);
-    return;
-  }
-
+  InstructionsState S = InstructionsState::invalid();
   // Tries to build split node.
   constexpr unsigned SmallNodeSize = 4;
   auto TrySplitNode = [&, &TTI = *TTI](unsigned SmallNodeSize,
@@ -9130,215 +9323,22 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     return true;
   };
 
-  // If all of the operands are identical or constant we have a simple solution.
-  // If we deal with insert/extract instructions, they all must have constant
-  // indices, otherwise we should gather them, not try to vectorize.
-  // If alternate op node with 2 elements with gathered operands - do not
-  // vectorize.
-  auto &&NotProfitableForVectorization = [&S, this,
-                                          Depth](ArrayRef<Value *> VL) {
-    if (!S || !S.isAltShuffle() || VL.size() > 2)
-      return false;
-    if (VectorizableTree.size() < MinTreeSize)
-      return false;
-    if (Depth >= RecursionMaxDepth - 1)
-      return true;
-    // Check if all operands are extracts, part of vector node or can build a
-    // regular vectorize node.
-    SmallVector<unsigned, 8> InstsCount;
-    for (Value *V : VL) {
-      auto *I = cast<Instruction>(V);
-      InstsCount.push_back(count_if(I->operand_values(), [](Value *Op) {
-        return isa<Instruction>(Op) || isVectorLikeInstWithConstOps(Op);
-      }));
-    }
-    bool IsCommutative =
-        isCommutative(S.getMainOp()) || isCommutative(S.getAltOp());
-    if ((IsCommutative &&
-         std::accumulate(InstsCount.begin(), InstsCount.end(), 0) < 2) ||
-        (!IsCommutative &&
-         all_of(InstsCount, [](unsigned ICnt) { return ICnt < 2; })))
-      return true;
-    assert(VL.size() == 2 && "Expected only 2 alternate op instructions.");
-    SmallVector<SmallVector<std::pair<Value *, Value *>>> Candidates;
-    auto *I1 = cast<Instruction>(VL.front());
-    auto *I2 = cast<Instruction>(VL.back());
-    for (int Op : seq<int>(S.getMainOp()->getNumOperands()))
-      Candidates.emplace_back().emplace_back(I1->getOperand(Op),
-                                             I2->getOperand(Op));
-    if (static_cast<unsigned>(count_if(
-            Candidates, [this](ArrayRef<std::pair<Value *, Value *>> Cand) {
-              return findBestRootPair(Cand, LookAheadHeuristics::ScoreSplat);
-            })) >= S.getMainOp()->getNumOperands() / 2)
-      return false;
-    if (S.getMainOp()->getNumOperands() > 2)
-      return true;
-    if (IsCommutative) {
-      // Check permuted operands.
-      Candidates.clear();
-      for (int Op = 0, E = S.getMainOp()->getNumOperands(); Op < E; ++Op)
-        Candidates.emplace_back().emplace_back(I1->getOperand(Op),
-                                               I2->getOperand((Op + 1) % E));
-      if (any_of(
-              Candidates, [this](ArrayRef<std::pair<Value *, Value *>> Cand) {
-                return findBestRootPair(Cand, LookAheadHeuristics::ScoreSplat);
-              }))
-        return false;
-    }
-    return true;
-  };
-  SmallVector<unsigned> SortedIndices;
-  BasicBlock *BB = nullptr;
-  bool IsScatterVectorizeUserTE =
-      UserTreeIdx.UserTE &&
-      UserTreeIdx.UserTE->State == TreeEntry::ScatterVectorize;
-  bool AreAllSameBlock = S && allSameBlock(VL);
-  bool AreScatterAllGEPSameBlock =
-      (IsScatterVectorizeUserTE && VL.front()->getType()->isPointerTy() &&
-       VL.size() > 2 &&
-       all_of(VL,
-              [&BB](Value *V) {
-                auto *I = dyn_cast<GetElementPtrInst>(V);
-                if (!I)
-                  return doesNotNeedToBeScheduled(V);
-                if (!BB)
-                  BB = I->getParent();
-                return BB == I->getParent() && I->getNumOperands() == 2;
-              }) &&
-       BB &&
-       sortPtrAccesses(VL, UserTreeIdx.UserTE->getMainOp()->getType(), *DL, *SE,
-                       SortedIndices));
-  bool AreAllSameInsts = AreAllSameBlock || AreScatterAllGEPSameBlock;
-  if (!AreAllSameInsts || (!S && allConstant(VL)) || isSplat(VL) ||
-      (S &&
-       isa<InsertElementInst, ExtractValueInst, ExtractElementInst>(
-           S.getMainOp()) &&
-       !all_of(VL, isVectorLikeInstWithConstOps)) ||
-      NotProfitableForVectorization(VL)) {
-    if (!S) {
+  bool TryToPackDuplicates;
+  bool TrySplitVectorize;
+  if (!isLegalToVectorizeScalars(VL, Depth, UserTreeIdx, S, TryToPackDuplicates,
+                                 TrySplitVectorize)) {
+    if (TrySplitVectorize){
       auto [MainOp, AltOp] = getMainAltOpsNoStateVL(VL);
       // Last chance to try to vectorize alternate node.
       if (MainOp && AltOp &&
           TrySplitNode(SmallNodeSize, InstructionsState(MainOp, AltOp)))
         return;
     }
-    LLVM_DEBUG(dbgs() << "SLP: Gathering due to C,S,B,O, small shuffle. \n");
-    if (TryToFindDuplicates(S)) {
+    if (!TryToPackDuplicates || TryToFindDuplicates(S)) {
       auto Invalid = ScheduleBundle::invalid();
       newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx,
                    ReuseShuffleIndices);
     }
-    return;
-  }
-
-  // Don't vectorize ephemeral values.
-  if (S && !EphValues.empty()) {
-    for (Value *V : VL) {
-      if (EphValues.count(V)) {
-        LLVM_DEBUG(dbgs() << "SLP: The instruction (" << *V
-                          << ") is ephemeral.\n");
-        auto Invalid = ScheduleBundle::invalid();
-        newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx);
-        return;
-      }
-    }
-  }
-
-  // We now know that this is a vector of instructions of the same type from
-  // the same block.
-
-  // Check that none of the instructions in the bundle are already in the tree
-  // and the node may be not profitable for the vectorization as the small
-  // alternate node.
-  if (S && S.isAltShuffle()) {
-    auto GetNumVectorizedExtracted = [&]() {
-      APInt Extracted = APInt::getZero(VL.size());
-      APInt Vectorized = APInt::getAllOnes(VL.size());
-      for (auto [Idx, V] : enumerate(VL)) {
-        auto *I = dyn_cast<Instruction>(V);
-        if (!I || doesNotNeedToBeScheduled(I) ||
-            all_of(I->operands(), [&](const Use &U) {
-              return isa<ExtractElementInst>(U.get());
-            }))
-          continue;
-        if (isVectorized(I))
-          Vectorized.clearBit(Idx);
-        else if (!I->hasOneUser() && !areAllUsersVectorized(I, UserIgnoreList))
-          Extracted.setBit(Idx);
-      }
-      return std::make_pair(Vectorized, Extracted);
-    };
-    auto [Vectorized, Extracted] = GetNumVectorizedExtracted();
-    constexpr TTI::TargetCostKind Kind = TTI::TCK_RecipThroughput;
-    bool PreferScalarize = !Vectorized.isAllOnes() && VL.size() == 2;
-    if (!Vectorized.isAllOnes() && !PreferScalarize) {
-      // Rough cost estimation, if the vector code (+ potential extracts) is
-      // more profitable than the scalar + buildvector.
-      Type *ScalarTy = VL.front()->getType();
-      auto *VecTy = getWidenedType(ScalarTy, VL.size());
-      InstructionCost VectorizeCostEstimate =
-          ::getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc, VecTy, {}, Kind) +
-          ::getScalarizationOverhead(*TTI, ScalarTy, VecTy, Extracted,
-                                     /*Insert=*/false, /*Extract=*/true, Kind);
-      InstructionCost ScalarizeCostEstimate =
-          ::getScalarizationOverhead(*TTI, ScalarTy, VecTy, Vectorized,
-                                     /*Insert=*/true, /*Extract=*/false, Kind);
-      PreferScalarize = VectorizeCostEstimate > ScalarizeCostEstimate;
-    }
-    if (PreferScalarize) {
-      LLVM_DEBUG(dbgs() << "SLP: The instructions are in tree and alternate "
-                           "node is not profitable.\n");
-      if (TryToFindDuplicates(S)) {
-        auto Invalid = ScheduleBundle::invalid();
-        newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx,
-                     ReuseShuffleIndices);
-      }
-      return;
-    }
-  }
-
-  // The reduction nodes (stored in UserIgnoreList) also should stay scalar.
-  if (UserIgnoreList && !UserIgnoreList->empty()) {
-    for (Value *V : VL) {
-      if (UserIgnoreList->contains(V)) {
-        LLVM_DEBUG(dbgs() << "SLP: Gathering due to gathered scalar.\n");
-        if (TryToFindDuplicates(S)) {
-          auto Invalid = ScheduleBundle::invalid();
-          newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx,
-                       ReuseShuffleIndices);
-        }
-        return;
-      }
-    }
-  }
-
-  // Special processing for sorted pointers for ScatterVectorize node with
-  // constant indeces only.
-  if (!AreAllSameBlock && AreScatterAllGEPSameBlock) {
-    assert(VL.front()->getType()->isPointerTy() &&
-           count_if(VL, IsaPred<GetElementPtrInst>) >= 2 &&
-           "Expected pointers only.");
-    // Reset S to make it GetElementPtr kind of node.
-    const auto *It = find_if(VL, IsaPred<GetElementPtrInst>);
-    assert(It != VL.end() && "Expected at least one GEP.");
-    S = getSameOpcode(*It, *TLI);
-  }
-
-  // Check that all of the users of the scalars that we want to vectorize are
-  // schedulable.
-  Instruction *VL0 = S.getMainOp();
-  BB = VL0->getParent();
-
-  if (S &&
-      (BB->isEHPad() || isa_and_nonnull<UnreachableInst>(BB->getTerminator()) ||
-       !DT->isReachableFromEntry(BB))) {
-    // Don't go into unreachable blocks. They may contain instructions with
-    // dependency cycles which confuse the final scheduling.
-    // Do not vectorize EH and non-returning blocks, not profitable in most
-    // cases.
-    LLVM_DEBUG(dbgs() << "SLP: bundle in unreachable block.\n");
-    auto Invalid = ScheduleBundle::invalid();
-    newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx);
     return;
   }
 
@@ -9351,6 +9351,9 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     return;
 
   // Perform specific checks for each particular instruction kind.
+  bool IsScatterVectorizeUserTE =
+      UserTreeIdx.UserTE &&
+      UserTreeIdx.UserTE->State == TreeEntry::ScatterVectorize;
   OrdersType CurrentOrder;
   SmallVector<Value *> PointerOps;
   TreeEntry::EntryState State = getScalarsVectorizationState(
@@ -9362,6 +9365,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     return;
   }
 
+  Instruction *VL0 = S.getMainOp();
+  BasicBlock *BB = VL0->getParent();
   auto &BSRef = BlocksSchedules[BB];
   if (!BSRef)
     BSRef = std::make_unique<BlockScheduling>(BB);
