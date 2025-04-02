@@ -3,8 +3,8 @@
 
 // RUN: mlir-opt %s --convert-vector-to-llvm \
 // RUN:             --convert-func-to-llvm --convert-arith-to-llvm | \
-// RUN:   mlir-runner -e entry -entry-point-result=void \
-// RUN:                   --shared-libs=%mlir_c_runner_utils | \
+// RUN:   mlir-runner -e entry --entry-point-result=void \
+// RUN:               --shared-libs=%mlir_c_runner_utils | \
 // RUN:   FileCheck %s --match-full-lines
 
 func.func @check_ceildivsi(%lhs : i32, %rhs : i32) -> () {
@@ -24,7 +24,7 @@ func.func @entry() {
   %two = arith.constant 2 : i32
   %three = arith.constant 3 : i32 
 
-  // INT_MAX divided by values
+  // INT_MAX divided by values.
   // CHECK: 1
   func.call @check_ceildivsi(%int_max, %int_max) : (i32, i32) -> ()
   // CHECK-NEXT: 0
@@ -38,7 +38,7 @@ func.func @entry() {
   // CHECK-NEXT: 1073741824
   func.call @check_ceildivsi(%int_max, %two) : (i32, i32) -> ()
 
-  // INT_MIN divided by values
+  // INT_MIN divided by values.
   // We do not check the result of INT_MIN divided by -1, as it is UB.
   // CHECK-NEXT: 1
   func.call @check_ceildivsi(%int_min, %int_min) : (i32, i32) -> ()
@@ -51,7 +51,7 @@ func.func @entry() {
   // CHECK-NEXT: -1073741824
   func.call @check_ceildivsi(%int_min, %two) : (i32, i32) -> ()
 
-  // Divide values by INT_MIN
+  // Divide values by INT_MIN.
   // CHECK-NEXT: 0
   func.call @check_ceildivsi(%one, %int_min) : (i32, i32) -> ()
   // CHECK-NEXT: 0
@@ -61,7 +61,7 @@ func.func @entry() {
   // CHECK-NEXT: 1
   func.call @check_ceildivsi(%minus_two, %int_min) : (i32, i32) -> ()
 
-  // Divide values by INT_MAX
+  // Divide values by INT_MAX.
   // CHECK-NEXT: 1
   func.call @check_ceildivsi(%one, %int_max) : (i32, i32) -> ()
   // CHECK-NEXT: 1
@@ -71,7 +71,7 @@ func.func @entry() {
   // CHECK-NEXT: 0
   func.call @check_ceildivsi(%minus_two, %int_max) : (i32, i32) -> ()
 
-  // Check divisions by 2
+  // Check divisions by 2.
   // CHECK-NEXT: -1
   func.call @check_ceildivsi(%minus_three, %two) : (i32, i32) -> ()
   // CHECK-NEXT: -1
@@ -87,7 +87,7 @@ func.func @entry() {
   // CHECK-NEXT: 2
   func.call @check_ceildivsi(%three, %two) : (i32, i32) -> ()
 
-  // Check divisions by -2
+  // Check divisions by -2.
   // CHECK-NEXT: 2
   func.call @check_ceildivsi(%minus_three, %minus_two) : (i32, i32) -> ()
   // CHECK-NEXT: 1
