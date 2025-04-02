@@ -297,10 +297,11 @@ end
 ! CHECK: fir.call @__ldcv_r8x2_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<2xf64>>, !fir.ref<!fir.array<?xf64>>) -> ()
 
 attributes(device) subroutine testVote()
-  integer :: a, ipred, mask, v32
-  a = all_sync(mask, v32)
-  a = any_sync(mask, v32)
-  a = ballot_sync(mask, v32)
+  integer :: a, ipred, mask
+  logical(4) :: pred
+  a = all_sync(mask, pred)
+  a = any_sync(mask, pred)
+  a = ballot_sync(mask, pred)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtestvote()

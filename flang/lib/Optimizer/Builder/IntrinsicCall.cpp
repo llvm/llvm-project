@@ -6508,12 +6508,13 @@ IntrinsicLibrary::genMatchAllSync(mlir::Type resultType,
 }
 
 static mlir::Value genVoteSync(fir::FirOpBuilder &builder, mlir::Location loc,
-                               llvm::StringRef funcName,
+                               llvm::StringRef funcName, mlir::Type resTy,
                                llvm::ArrayRef<mlir::Value> args) {
   mlir::MLIRContext *context = builder.getContext();
   mlir::Type i32Ty = builder.getI32Type();
+  mlir::Type i1Ty = builder.getI1Type();
   mlir::FunctionType ftype =
-      mlir::FunctionType::get(context, {i32Ty, i32Ty}, {i32Ty});
+      mlir::FunctionType::get(context, {i32Ty, i1Ty}, {resTy});
   auto funcOp = builder.createFunction(loc, funcName, ftype);
   llvm::SmallVector<mlir::Value> filteredArgs;
   return builder.create<fir::CallOp>(loc, funcOp, args).getResult(0);
@@ -6523,14 +6524,16 @@ static mlir::Value genVoteSync(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value IntrinsicLibrary::genVoteAllSync(mlir::Type resultType,
                                              llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 2);
-  return genVoteSync(builder, loc, "llvm.nvvm.vote.all.sync", args);
+  return genVoteSync(builder, loc, "llvm.nvvm.vote.all.sync",
+                     builder.getI1Type(), args);
 }
 
 // ANY_SYNC
 mlir::Value IntrinsicLibrary::genVoteAnySync(mlir::Type resultType,
                                              llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 2);
-  return genVoteSync(builder, loc, "llvm.nvvm.vote.any.sync", args);
+  return genVoteSync(builder, loc, "llvm.nvvm.vote.any.sync",
+                     builder.getI1Type(), args);
 }
 
 // BALLOT_SYNC
@@ -6538,7 +6541,8 @@ mlir::Value
 IntrinsicLibrary::genVoteBallotSync(mlir::Type resultType,
                                     llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 2);
-  return genVoteSync(builder, loc, "llvm.nvvm.vote.ballot.sync", args);
+  return genVoteSync(builder, loc, "llvm.nvvm.vote.ballot.sync",
+                     builder.getI32Type(), args);
 }
 
 // MATCH_ANY_SYNC
