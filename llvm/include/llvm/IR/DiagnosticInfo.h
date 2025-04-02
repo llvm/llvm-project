@@ -39,7 +39,7 @@ namespace llvm {
 class DiagnosticPrinter;
 class DIFile;
 class DISubprogram;
-class CallInst;
+class CallBase;
 class Function;
 class Instruction;
 class InstructionCost;

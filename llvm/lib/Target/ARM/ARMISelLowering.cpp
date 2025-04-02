@@ -20879,7 +20879,7 @@ bool ARMTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
 /// MemIntrinsicNodes.  The associated MachineMemOperands record the alignment
 /// specified in the intrinsic calls.
 bool ARMTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                           const CallInst &I,
+                                           const CallBase &I,
                                            MachineFunction &MF,
                                            unsigned Intrinsic) const {
   switch (Intrinsic) {
