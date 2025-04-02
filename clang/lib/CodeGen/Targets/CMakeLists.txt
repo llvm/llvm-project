@@ -1,7 +1,6 @@
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/..)
 
 add_clang_library(clangCodeGenTargets STATIC
-  PARTIAL_SOURCES_INTENDED
   AArch64.cpp
   AMDGPU.cpp
   ARC.cpp
@@ -9,6 +8,8 @@ add_clang_library(clangCodeGenTargets STATIC
   AVR.cpp
   BPF.cpp
   CSKY.cpp
+  DirectX.cpp
+  HLSLBufferLayoutBuilder.cpp
   Hexagon.cpp
   Lanai.cpp
   LoongArch.cpp
