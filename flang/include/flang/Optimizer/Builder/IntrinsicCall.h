@@ -373,6 +373,7 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genNull(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genPack(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genParity(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  void genPerror(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genPopcnt(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genPoppar(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genPresent(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -440,6 +441,7 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genUbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genUnpack(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genVerify(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genVoteAllSync(mlir::Type, llvm::ArrayRef<mlir::Value>);
 
   /// Implement all conversion functions like DBLE, the first argument is
   /// the value to convert. There may be an additional KIND arguments that

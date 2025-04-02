@@ -189,3 +189,79 @@ void l3() {
 // OGCG: [[FOR_COND]]:
 // OGCG:   store i32 0, ptr %[[I]], align 4
 // OGCG:   br label %[[FOR_COND]]
+
+void test_do_while_false() {
+  do {
+  } while (0);
+}
+
+// CIR: cir.func @test_do_while_false()
+// CIR-NEXT:   cir.scope {
+// CIR-NEXT:     cir.do {
+// CIR-NEXT:       cir.yield
+// CIR-NEXT:     } while {
+// CIR-NEXT:       %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+// CIR-NEXT:       %[[FALSE:.*]] = cir.cast(int_to_bool, %[[ZERO]] : !s32i), !cir.bool
+// CIR-NEXT:       cir.condition(%[[FALSE]])
+
+// LLVM: define void @test_do_while_false()
+// LLVM:   br label %[[LABEL1:.*]]
+// LLVM: [[LABEL1]]:
+// LLVM:   br label %[[LABEL3:.*]]
+// LLVM: [[LABEL2:.*]]:
+// LLVM:   br i1 false, label %[[LABEL3]], label %[[LABEL4:.*]]
+// LLVM: [[LABEL3]]:
+// LLVM:   br label %[[LABEL2]]
+// LLVM: [[LABEL4]]:
+// LLVM:   br label %[[LABEL5:.*]]
+// LLVM: [[LABEL5]]:
+// LLVM:   ret void
+
+// OGCG: define{{.*}} void @_Z19test_do_while_falsev()
+// OGCG: entry:
+// OGCG:   br label %[[DO_BODY:.*]]
+// OGCG: [[DO_BODY]]:
+// OGCG:   br label %[[DO_END:.*]]
+// OGCG: [[DO_END]]:
+// OGCG:   ret void
+
+void test_empty_while_true() {
+  while (true) {
+    return;
+  }
+}
+
+// CIR: cir.func @test_empty_while_true()
+// CIR-NEXT:   cir.scope {
+// CIR-NEXT:     cir.while {
+// CIR-NEXT:       %[[TRUE:.*]] = cir.const #true
+// CIR-NEXT:       cir.condition(%[[TRUE]])
+// CIR-NEXT:     } do {
+// CIR-NEXT:       cir.scope {
+// CIR-NEXT:         cir.return
+// CIR-NEXT:       }
+// CIR-NEXT:       cir.yield
+
+// LLVM: define void @test_empty_while_true()
+// LLVM:   br label %[[LABEL1:.*]]
+// LLVM: [[LABEL1]]:
+// LLVM:   br label %[[LABEL2:.*]]
+// LLVM: [[LABEL2]]:
+// LLVM:   br i1 true, label %[[LABEL3:.*]], label %[[LABEL6:.*]]
+// LLVM: [[LABEL3]]:
+// LLVM:   br label %[[LABEL4]]
+// LLVM: [[LABEL4]]:
+// LLVM:   ret void
+// LLVM: [[LABEL5:.*]]:
+// LLVM-SAME: ; No predecessors!
+// LLVM:   br label %[[LABEL2:.*]]
+// LLVM: [[LABEL6]]:
+// LLVM:   br label %[[LABEL7:.*]]
+// LLVM: [[LABEL7]]:
+// LLVM:   ret void
+
+// OGCG: define{{.*}} void @_Z21test_empty_while_truev()
+// OGCG: entry:
+// OGCG:   br label %[[WHILE_BODY:.*]]
+// OGCG: [[WHILE_BODY]]:
+// OGCG:   ret void

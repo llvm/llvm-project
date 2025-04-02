@@ -4689,7 +4689,7 @@ def mqdsp6_compat : Flag<["-"], "mqdsp6-compat">, Group<m_Group>,
   HelpText<"Enable hexagon-qdsp6 backward compatibility">,
   MarshallingInfoFlag<LangOpts<"HexagonQdsp6Compat">>;
 def m64 : Flag<["-"], "m64">, Group<m_Group>, Flags<[NoXarchOption]>,
-  Visibility<[ClangOption, CLOption, DXCOption]>;
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>;
 def maix64 : Flag<["-"], "maix64">, Group<m_Group>, Flags<[NoXarchOption]>;
 def mx32 : Flag<["-"], "mx32">, Group<m_Group>, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CLOption, DXCOption]>;
@@ -6409,11 +6409,11 @@ def mavx10_1_256 : Flag<["-"], "mavx10.1-256">, Group<m_x86_AVX10_Features_Group
 def mno_avx10_1_256 : Flag<["-"], "mno-avx10.1-256">, Group<m_x86_AVX10_Features_Group>;
 def mavx10_1_512 : Flag<["-"], "mavx10.1-512">, Group<m_x86_AVX10_Features_Group>;
 def mno_avx10_1_512 : Flag<["-"], "mno-avx10.1-512">, Alias<mno_avx10_1_256>;
-def mavx10_1 : Flag<["-"], "mavx10.1">, Flags<[Unsupported]>;
-def mno_avx10_1 : Flag<["-"], "mno-avx10.1">, Flags<[Unsupported]>;
+def mavx10_1 : Flag<["-"], "mavx10.1">, Group<m_x86_AVX10_Features_Group>;
+def mno_avx10_1 : Flag<["-"], "mno-avx10.1">, Group<m_x86_AVX10_Features_Group>;
 def mavx10_2_256 : Flag<["-"], "mavx10.2-256">, Group<m_x86_AVX10_Features_Group>;
 def mavx10_2_512 : Flag<["-"], "mavx10.2-512">, Group<m_x86_AVX10_Features_Group>;
-def mavx10_2 : Flag<["-"], "mavx10.2">, Alias<mavx10_2_512>;
+def mavx10_2 : Flag<["-"], "mavx10.2">, Group<m_x86_AVX10_Features_Group>;
 def mno_avx10_2 : Flag<["-"], "mno-avx10.2">, Group<m_x86_AVX10_Features_Group>;
 def mavx2 : Flag<["-"], "mavx2">, Group<m_x86_Features_Group>;
 def mno_avx2 : Flag<["-"], "mno-avx2">, Group<m_x86_Features_Group>;

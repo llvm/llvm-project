@@ -5337,6 +5337,29 @@ LogicalResult UnPackOp::canonicalize(UnPackOp unPackOp,
                              [&]() { unPackOp.setDpsInitOperand(0, newDest); });
     return success();
   }
+  /// extract_slice(unpack(x into y)) -> unpack(x into extract_slice(y))
+  if (unPackOp->hasOneUse()) {
+    auto extractSliceUser =
+        dyn_cast<tensor::ExtractSliceOp>(*unPackOp->getUsers().begin());
+    if (extractSliceUser &&
+        areAllConstantIntValue(extractSliceUser.getMixedOffsets(), 0) &&
+        areAllConstantIntValue(extractSliceUser.getMixedStrides(), 1) &&
+        extractSliceUser.getSourceType().getRank() ==
+            extractSliceUser.getResultType().getRank()) {
+      OpBuilder::InsertionGuard g(rewriter);
+      rewriter.setInsertionPoint(unPackOp);
+      auto newDest = rewriter.create<tensor::ExtractSliceOp>(
+          unPackOp->getLoc(), unPackOp.getDest(),
+          extractSliceUser.getMixedOffsets(), extractSliceUser.getMixedSizes(),
+          extractSliceUser.getMixedStrides());
+      rewriter.modifyOpInPlace(unPackOp, [&]() {
+        unPackOp.setDpsInitOperand(0, newDest);
+        unPackOp.getResult().setType(newDest.getType());
+      });
+      rewriter.replaceOp(extractSliceUser, unPackOp);
+      return success();
+    }
+  }
 
   // Insert tensor.cast ops if static shape inference is available..
   SmallVector<int64_t> srcShape, destShape;

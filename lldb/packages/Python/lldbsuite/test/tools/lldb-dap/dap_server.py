@@ -776,7 +776,8 @@ class DebugCommunication(object):
                 "supportsVariablePaging": True,
                 "supportsVariableType": True,
                 "supportsStartDebuggingRequest": True,
-                "sourceInitFile": sourceInitFile,
+                "supportsProgressReporting": True,
+                "$__lldb_sourceInitFile": sourceInitFile,
             },
         }
         response = self.send_recv(command_dict)
@@ -1261,7 +1262,7 @@ class DebugAdapterServer(DebugCommunication):
         expected_prefix = "Listening for: "
         out = process.stdout.readline().decode()
         if not out.startswith(expected_prefix):
-            self.process.kill()
+            process.kill()
             raise ValueError(
                 "lldb-dap failed to print listening address, expected '{}', got '{}'".format(
                     expected_prefix, out

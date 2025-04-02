@@ -17,6 +17,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
@@ -1009,6 +1010,128 @@ struct ConvertUIToFP final : OpConversionPattern<arith::UIToFPOp> {
 };
 
 //===----------------------------------------------------------------------===//
+// ConvertFPToSI
+//===----------------------------------------------------------------------===//
+
+struct ConvertFPToSI final : OpConversionPattern<arith::FPToSIOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::FPToSIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    // Get the input float type.
+    Value inFp = adaptor.getIn();
+    Type fpTy = inFp.getType();
+
+    Type intTy = op.getType();
+
+    auto newTy = getTypeConverter()->convertType<VectorType>(intTy);
+    if (!newTy)
+      return rewriter.notifyMatchFailure(
+          loc, llvm::formatv("unsupported type: {}", intTy));
+
+    // Work on the absolute value and then convert the result to signed integer.
+    // Defer absolute value to fptoui. If minSInt < fp < maxSInt, i.e. if the fp
+    // is representable in signed i2N, emits the correct result. Else, the
+    // result is UB.
+
+    TypedAttr zeroAttr = rewriter.getZeroAttr(fpTy);
+    Value zeroCst = rewriter.create<arith::ConstantOp>(loc, zeroAttr);
+    Value zeroCstInt = createScalarOrSplatConstant(rewriter, loc, intTy, 0);
+
+    // Get the absolute value. One could have used math.absf here, but that
+    // introduces an extra dependency.
+    Value isNeg = rewriter.create<arith::CmpFOp>(loc, arith::CmpFPredicate::OLT,
+                                                 inFp, zeroCst);
+    Value negInFp = rewriter.create<arith::NegFOp>(loc, inFp);
+
+    Value absVal = rewriter.create<arith::SelectOp>(loc, isNeg, negInFp, inFp);
+
+    // Defer the absolute value to fptoui.
+    Value res = rewriter.create<arith::FPToUIOp>(loc, intTy, absVal);
+
+    // Negate the value if < 0 .
+    Value neg = rewriter.create<arith::SubIOp>(loc, zeroCstInt, res);
+
+    rewriter.replaceOpWithNewOp<arith::SelectOp>(op, isNeg, neg, res);
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// ConvertFPToUI
+//===----------------------------------------------------------------------===//
+
+struct ConvertFPToUI final : OpConversionPattern<arith::FPToUIOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::FPToUIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    // Get the input float type.
+    Value inFp = adaptor.getIn();
+    Type fpTy = inFp.getType();
+
+    Type intTy = op.getType();
+    auto newTy = getTypeConverter()->convertType<VectorType>(intTy);
+    if (!newTy)
+      return rewriter.notifyMatchFailure(
+          loc, llvm::formatv("unsupported type: {}", intTy));
+    unsigned newBitWidth = newTy.getElementTypeBitWidth();
+
+    Type newHalfType = IntegerType::get(inFp.getContext(), newBitWidth);
+    if (auto vecType = dyn_cast<VectorType>(fpTy))
+      newHalfType = VectorType::get(vecType.getShape(), newHalfType);
+
+    // The resulting integer has the upper part and the lower part. This would
+    // be interpreted as 2^N * high + low, where N is the bitwidth. Therefore,
+    // to calculate the higher part, we emit resHigh = fptoui(fp/2^N). For the
+    // lower part, we emit fptoui(fp - resHigh * 2^N). The special cases of
+    // overflows including +-inf, NaNs and negative numbers are UB.
+
+    const llvm::fltSemantics &fSemantics =
+        cast<FloatType>(getElementTypeOrSelf(fpTy)).getFloatSemantics();
+
+    auto powBitwidth = llvm::APFloat(fSemantics);
+    // If the integer does not fit the floating point number, we set the
+    // powBitwidth to inf. This ensures that the upper part is set
+    // correctly to 0. The opStatus inexact here only occurs when we have an
+    // overflow, since the number is always a power of two.
+    if (powBitwidth.convertFromAPInt(APInt(newBitWidth * 2, 1).shl(newBitWidth),
+                                     false, llvm::RoundingMode::TowardZero) ==
+        llvm::detail::opStatus::opInexact)
+      powBitwidth = llvm::APFloat::getInf(fSemantics);
+
+    TypedAttr powBitwidthAttr =
+        FloatAttr::get(getElementTypeOrSelf(fpTy), powBitwidth);
+    if (auto vecType = dyn_cast<VectorType>(fpTy))
+      powBitwidthAttr = SplatElementsAttr::get(vecType, powBitwidthAttr);
+    Value powBitwidthFloatCst =
+        rewriter.create<arith::ConstantOp>(loc, powBitwidthAttr);
+
+    Value fpDivPowBitwidth =
+        rewriter.create<arith::DivFOp>(loc, inFp, powBitwidthFloatCst);
+    Value resHigh =
+        rewriter.create<arith::FPToUIOp>(loc, newHalfType, fpDivPowBitwidth);
+    // Calculate fp - resHigh * 2^N by getting the remainder of the division
+    Value remainder =
+        rewriter.create<arith::RemFOp>(loc, inFp, powBitwidthFloatCst);
+    Value resLow =
+        rewriter.create<arith::FPToUIOp>(loc, newHalfType, remainder);
+
+    Value high = appendX1Dim(rewriter, loc, resHigh);
+    Value low = appendX1Dim(rewriter, loc, resLow);
+
+    Value resultVec = constructResultVector(rewriter, loc, newTy, {low, high});
+
+    rewriter.replaceOp(op, resultVec);
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // ConvertTruncI
 //===----------------------------------------------------------------------===//
 
@@ -1184,5 +1307,6 @@ void arith::populateArithWideIntEmulationPatterns(
       ConvertIndexCastIntToIndex<arith::IndexCastUIOp>,
       ConvertIndexCastIndexToInt<arith::IndexCastOp, arith::ExtSIOp>,
       ConvertIndexCastIndexToInt<arith::IndexCastUIOp, arith::ExtUIOp>,
-      ConvertSIToFP, ConvertUIToFP>(typeConverter, patterns.getContext());
+      ConvertSIToFP, ConvertUIToFP, ConvertFPToUI, ConvertFPToSI>(
+      typeConverter, patterns.getContext());
 }

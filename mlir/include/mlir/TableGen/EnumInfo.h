@@ -84,6 +84,9 @@ public:
   // Returns the description of the enum.
   StringRef getDescription() const;
 
+  // Returns the bitwidth of the enum.
+  int64_t getBitwidth() const;
+
   // Returns the underlying type.
   StringRef getUnderlyingType() const;
 
@@ -119,6 +122,7 @@ public:
   // Only applicable for bit enums.
 
   bool printBitEnumPrimaryGroups() const;
+  bool printBitEnumQuoted() const;
 
   // Returns the TableGen definition this EnumAttrCase was constructed from.
   const llvm::Record &getDef() const;

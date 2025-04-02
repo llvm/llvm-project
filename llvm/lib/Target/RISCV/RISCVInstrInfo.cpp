@@ -1752,6 +1752,8 @@ RISCVInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
   default:
     break;
   case RISCV::ADD:
+  case RISCV::OR:
+  case RISCV::XOR:
     if (MI.getOperand(1).isReg() && MI.getOperand(1).getReg() == RISCV::X0 &&
         MI.getOperand(2).isReg())
       return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
@@ -1764,6 +1766,21 @@ RISCVInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
     if (MI.getOperand(1).isReg() && MI.getOperand(2).isImm() &&
         MI.getOperand(2).getImm() == 0)
       return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
+    break;
+  case RISCV::SUB:
+    if (MI.getOperand(2).isReg() && MI.getOperand(2).getReg() == RISCV::X0 &&
+        MI.getOperand(1).isReg())
+      return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
+    break;
+  case RISCV::SH1ADD:
+  case RISCV::SH1ADD_UW:
+  case RISCV::SH2ADD:
+  case RISCV::SH2ADD_UW:
+  case RISCV::SH3ADD:
+  case RISCV::SH3ADD_UW:
+    if (MI.getOperand(1).isReg() && MI.getOperand(1).getReg() == RISCV::X0 &&
+        MI.getOperand(2).isReg())
+      return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
     break;
   case RISCV::FSGNJ_D:
   case RISCV::FSGNJ_S:
@@ -2678,6 +2695,12 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           break;
         case RISCVOp::OPERAND_RVKRNUM_2_14:
           Ok = Imm >= 2 && Imm <= 14;
+          break;
+        case RISCVOp::OPERAND_RLIST:
+          Ok = Imm >= RISCVZC::RA && Imm <= RISCVZC::RA_S0_S11;
+          break;
+        case RISCVOp::OPERAND_RLIST_S0:
+          Ok = Imm >= RISCVZC::RA_S0 && Imm <= RISCVZC::RA_S0_S11;
           break;
         case RISCVOp::OPERAND_SPIMM:
           Ok = (Imm & 0xf) == 0;
