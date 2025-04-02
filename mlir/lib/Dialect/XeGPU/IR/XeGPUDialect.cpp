@@ -133,15 +133,6 @@ LayoutAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
   return success();
 }
 
-LayoutAttr LayoutAttr::get(mlir::MLIRContext *context, ArrayRef<int> laneLayout,
-                           ArrayRef<int> laneData) {
-  return Base::get(context, ScopeAttr::get(context, Scope::Lane),
-                   DenseI32ArrayAttr(), DenseI32ArrayAttr(),
-                   DenseI32ArrayAttr(),
-                   DenseI32ArrayAttr::get(context, laneLayout),
-                   DenseI32ArrayAttr::get(context, laneData));
-}
-
 //===----------------------------------------------------------------------===//
 // XeGPU_TensorDescType
 //===----------------------------------------------------------------------===//
