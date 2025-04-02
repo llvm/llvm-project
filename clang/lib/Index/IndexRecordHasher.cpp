@@ -383,9 +383,6 @@ void IndexRecordHasher::hashNameSpec(const NestedNameSpecifier *nameSpec) {
   case NestedNameSpecifier::Super:
     break;
 
-  case NestedNameSpecifier::TypeSpecWithTemplate:
-    // Fall through to hash the type.
-
   case NestedNameSpecifier::TypeSpec:
     hashType(QualType(nameSpec->getAsType(), 0));
     break;

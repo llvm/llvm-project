@@ -355,7 +355,7 @@ ImplementDeclaredCXXMethodsOperation::runInImplementationAST(
         InsertAfterMethod
             ? InsertAfterMethod->getQualifier()
             : NestedNameSpecifier::Create(
-                  Context, /*Prefix=*/NamePrefix, /*Template=*/false,
+                  Context, /*Prefix=*/NamePrefix,
                   Context.getRecordType(Class).getTypePtr());
     NestedNameSpecifierLoc PrevQualifierInfo = MD->getQualifierLoc();
     const_cast<CXXMethodDecl *>(MD)->setQualifierInfo(

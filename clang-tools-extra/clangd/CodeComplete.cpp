@@ -1468,7 +1468,6 @@ bool allowIndex(CodeCompletionContext &CC) {
     return true;
   case NestedNameSpecifier::Super:
   case NestedNameSpecifier::TypeSpec:
-  case NestedNameSpecifier::TypeSpecWithTemplate:
   // Unresolved inside a template.
   case NestedNameSpecifier::Identifier:
     return false;
