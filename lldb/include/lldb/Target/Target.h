@@ -134,6 +134,8 @@ public:
 
   llvm::StringRef GetLaunchWorkingDirectory() const;
 
+  bool GetParallelModuleLoad() const;
+
   const char *GetDisassemblyFlavor() const;
 
   const char *GetDisassemblyCPU() const;
