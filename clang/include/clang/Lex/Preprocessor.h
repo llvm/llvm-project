@@ -140,7 +140,7 @@ class Preprocessor {
   friend class VariadicMacroScopeGuard;
 
   llvm::unique_function<void(const clang::Token &)> OnToken;
-  std::shared_ptr<PreprocessorOptions> PPOpts;
+  std::shared_ptr<const PreprocessorOptions> PPOpts;
   DiagnosticsEngine        *Diags;
   const LangOptions &LangOpts;
   const TargetInfo *Target = nullptr;
@@ -1165,7 +1165,7 @@ private:
   void updateOutOfDateIdentifier(const IdentifierInfo &II) const;
 
 public:
-  Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
+  Preprocessor(std::shared_ptr<const PreprocessorOptions> PPOpts,
                DiagnosticsEngine &diags, const LangOptions &LangOpts,
                SourceManager &SM, HeaderSearch &Headers,
                ModuleLoader &TheModuleLoader,
@@ -1197,7 +1197,7 @@ public:
 
   /// Retrieve the preprocessor options used to initialize this
   /// preprocessor.
-  PreprocessorOptions &getPreprocessorOpts() const { return *PPOpts; }
+  const PreprocessorOptions &getPreprocessorOpts() const { return *PPOpts; }
 
   DiagnosticsEngine &getDiagnostics() const { return *Diags; }
   void setDiagnostics(DiagnosticsEngine &D) { Diags = &D; }

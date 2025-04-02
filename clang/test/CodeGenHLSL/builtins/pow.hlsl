@@ -38,16 +38,3 @@ float3 test_pow_float3(float3 p0, float3 p1) { return pow(p0, p1); }
 // CHECK-LABEL: define noundef nofpclass(nan inf) <4 x float> @_Z15test_pow_float4
 // CHECK: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.pow.v4f32
 float4 test_pow_float4(float4 p0, float4 p1) { return pow(p0, p1); }
-
-// CHECK-LABEL: define noundef nofpclass(nan inf) float {{.*}}test_pow_double
-// CHECK: call reassoc nnan ninf nsz arcp afn float @llvm.pow.f32(
-float test_pow_double(double p0, double p1) { return pow(p0, p1); }
-// CHECK-LABEL: define noundef nofpclass(nan inf) <2 x float> {{.*}}test_pow_double2
-// CHECK: call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.pow.v2f32
-float2 test_pow_double2(double2 p0, double2 p1) { return pow(p0, p1); }
-// CHECK-LABEL: define noundef nofpclass(nan inf) <3 x float> {{.*}}test_pow_double3
-// CHECK: call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.pow.v3f32
-float3 test_pow_double3(double3 p0, double3 p1) { return pow(p0, p1); }
-// CHECK-LABEL: define noundef nofpclass(nan inf) <4 x float> {{.*}}test_pow_double4
-// CHECK: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.pow.v4f32
-float4 test_pow_double4(double4 p0, double4 p1) { return pow(p0, p1); }

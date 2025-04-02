@@ -464,6 +464,9 @@ createContinuedInstructions(MachineIRBuilder &MIRBuilder, unsigned Opcode,
 const std::set<unsigned> &getTypeFoldingSupportedOpcodes();
 bool isTypeFoldingSupported(unsigned Opcode);
 
+// Get loop controls from llvm.loop. metadata.
+SmallVector<unsigned, 1> getSpirvLoopControlOperandsFromLoopMetadata(Loop *L);
+
 // Traversing [g]MIR accounting for pseudo-instructions.
 MachineInstr *passCopy(MachineInstr *Def, const MachineRegisterInfo *MRI);
 MachineInstr *getDef(const MachineOperand &MO, const MachineRegisterInfo *MRI);

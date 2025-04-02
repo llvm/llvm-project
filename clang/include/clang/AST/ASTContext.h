@@ -1798,9 +1798,7 @@ public:
   QualType
   getSubstTemplateTypeParmType(QualType Replacement, Decl *AssociatedDecl,
                                unsigned Index,
-                               std::optional<unsigned> PackIndex,
-                               SubstTemplateTypeParmTypeFlag Flag =
-                                   SubstTemplateTypeParmTypeFlag::None) const;
+                               std::optional<unsigned> PackIndex) const;
   QualType getSubstTemplateTypeParmPackType(Decl *AssociatedDecl,
                                             unsigned Index, bool Final,
                                             const TemplateArgument &ArgPack);
@@ -1837,15 +1835,14 @@ public:
                              TagDecl *OwnedTagDecl = nullptr) const;
   QualType getDependentNameType(ElaboratedTypeKeyword Keyword,
                                 NestedNameSpecifier *NNS,
-                                const IdentifierInfo *Name,
-                                QualType Canon = QualType()) const;
+                                const IdentifierInfo *Name) const;
 
   QualType getDependentTemplateSpecializationType(
-      ElaboratedTypeKeyword Keyword, NestedNameSpecifier *NNS,
-      const IdentifierInfo *Name, ArrayRef<TemplateArgumentLoc> Args) const;
+      ElaboratedTypeKeyword Keyword, const DependentTemplateStorage &Name,
+      ArrayRef<TemplateArgumentLoc> Args) const;
   QualType getDependentTemplateSpecializationType(
-      ElaboratedTypeKeyword Keyword, NestedNameSpecifier *NNS,
-      const IdentifierInfo *Name, ArrayRef<TemplateArgument> Args) const;
+      ElaboratedTypeKeyword Keyword, const DependentTemplateStorage &Name,
+      ArrayRef<TemplateArgument> Args, bool IsCanonical = false) const;
 
   TemplateArgument getInjectedTemplateArg(NamedDecl *ParamDecl) const;
 
@@ -2393,11 +2390,9 @@ public:
   TemplateName getQualifiedTemplateName(NestedNameSpecifier *NNS,
                                         bool TemplateKeyword,
                                         TemplateName Template) const;
+  TemplateName
+  getDependentTemplateName(const DependentTemplateStorage &Name) const;
 
-  TemplateName getDependentTemplateName(NestedNameSpecifier *NNS,
-                                        const IdentifierInfo *Name) const;
-  TemplateName getDependentTemplateName(NestedNameSpecifier *NNS,
-                                        OverloadedOperatorKind Operator) const;
   TemplateName
   getSubstTemplateTemplateParm(TemplateName replacement, Decl *AssociatedDecl,
                                unsigned Index,
