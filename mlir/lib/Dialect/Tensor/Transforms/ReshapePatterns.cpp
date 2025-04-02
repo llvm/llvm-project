@@ -510,10 +510,11 @@ struct BubbleUpCollapseShapeThroughExtractSlice
                                 PatternRewriter &rewriter) const override {
     auto collapseShapeOp =
         sliceOp.getSource().getDefiningOp<tensor::CollapseShapeOp>();
-    if (!collapseShapeOp)
+    if (!collapseShapeOp) {
       return rewriter.notifyMatchFailure(
           sliceOp,
           "tensor.extract_slice source not produced by tensor.collapse_shape");
+    }
 
     if (!sliceOp.hasUnitStride()) {
       return rewriter.notifyMatchFailure(
@@ -530,9 +531,10 @@ struct BubbleUpCollapseShapeThroughExtractSlice
     SmallVector<OpFoldResult> collapsedSizes = sliceOp.getMixedSizes();
 
     if (static_cast<size_t>(sliceOp.getResultType().getRank()) !=
-        collapsedSizes.size())
+        collapsedSizes.size()) {
       return rewriter.notifyMatchFailure(sliceOp,
                                          "unimplemented: rank reducing slice");
+    }
 
     ArrayRef<int64_t> srcShape = collapseShapeOp.getSrcType().getShape();
     SmallVector<ReassociationIndices, 4> reassociationIndices =
@@ -546,10 +548,9 @@ struct BubbleUpCollapseShapeThroughExtractSlice
     SmallVector<OpFoldResult> expandedStrides(srcShape.size(),
                                               rewriter.getIndexAttr(1));
 
-    for (auto [groupIdx, reassocIndices] :
-         enumerate(collapseShapeOp.getReassociationIndices())) {
-      OpFoldResult collapsedSize = collapsedSizes[groupIdx];
-      OpFoldResult collapsedOffset = collapsedOffsets[groupIdx];
+    for (auto [collapsedSize, collapsedOffset, reassocIndices] :
+         llvm::zip_equal(collapsedSizes, collapsedOffsets,
+                         collapseShapeOp.getReassociationIndices())) {
       // CASE #1 - size and/or offset are dynamic.
       // In this case, the slice can be represented as a contiguous slice only
       // if there is a single dimension in the reassociation group that has a
@@ -614,10 +615,11 @@ struct BubbleUpCollapseShapeThroughExtractSlice
         // We need to make sure that the slice size can be set to the shape size
         // and the offset to 0.
         if ((currentCollapsedsize % expandedShapeSize) != 0 ||
-            (currentCollapsedOffset % expandedShapeSize) != 0)
+            (currentCollapsedOffset % expandedShapeSize) != 0) {
           return rewriter.notifyMatchFailure(
               sliceOp, "unsupported: cannot be extracted as a contiguous slice "
                        "of the src of the collapse_shape");
+        }
 
         groupExpandedSizes.push_back(rewriter.getIndexAttr(expandedShapeSize));
         groupExpandedOffsets.push_back(rewriter.getIndexAttr(0));
@@ -632,10 +634,11 @@ struct BubbleUpCollapseShapeThroughExtractSlice
         int64_t offsetInDim = currentCollapsedOffset % expandedShapeSize;
         // We need to make sure that the slice size in this dim + offset will
         // not exceed the shape size.
-        if ((currentCollapsedsize + offsetInDim) >= expandedShapeSize)
+        if ((currentCollapsedsize + offsetInDim) >= expandedShapeSize) {
           return rewriter.notifyMatchFailure(
               sliceOp, "unsupported: slice cannot be extracted as a contiguous "
                        "slice of the src of the collapse_shape");
+        }
 
         groupExpandedSizes.push_back(
             rewriter.getIndexAttr(currentCollapsedsize));
