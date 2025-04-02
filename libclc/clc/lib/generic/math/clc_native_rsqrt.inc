@@ -6,11 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
-#include <clc/math/clc_native_cos.h>
-
-#define __FLOAT_ONLY
-#define FUNCTION native_cos
-#define __CLC_BODY <clc/shared/unary_def.inc>
-
-#include <clc/math/gentype.inc>
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_native_rsqrt(__CLC_GENTYPE val) {
+  return 1.0f / __clc_native_sqrt(val);
+}

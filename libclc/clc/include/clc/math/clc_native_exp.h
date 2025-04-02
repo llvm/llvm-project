@@ -6,6 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE native_exp(__CLC_GENTYPE val) {
-  return native_exp2(val * M_LOG2E_F);
-}
+#ifndef __CLC_MATH_CLC_NATIVE_EXP_H__
+#define __CLC_MATH_CLC_NATIVE_EXP_H__
+
+#define __FLOAT_ONLY
+#define __CLC_FUNCTION __clc_native_exp
+#define __CLC_BODY <clc/shared/unary_decl.inc>
+
+#include <clc/math/gentype.inc>
+
+#undef __CLC_BODY
+#undef __CLC_FUNCTION
+#undef __FLOAT_ONLY
+
+#endif // __CLC_MATH_CLC_NATIVE_EXP_H__
