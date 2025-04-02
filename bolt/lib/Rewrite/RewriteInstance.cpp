@@ -599,12 +599,6 @@ Error RewriteInstance::discoverStorage() {
   // weird ASLR mapping addresses (4KB aligned)
   if (opts::Hugify && !BC->HasFixedLoadAddress) {
     NextAvailableAddress += BC->PageAlign;
-    if (opts::Verbosity >= 1) {
-      BC->outs()
-          << "BOLT-INFO: Hugify, Additional huge page from left side due to"
-          << "weird ASLR mapping addresses(4KB aligned): "
-          << NextAvailableAddress << '\n';
-    }
   }
 
   if (!opts::UseGnuStack && !BC->IsLinuxKernel) {
