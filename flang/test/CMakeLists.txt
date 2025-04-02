@@ -59,10 +59,6 @@ set(FLANG_TEST_PARAMS
 
 set(FLANG_TEST_DEPENDS
   flang
-  llvm-config
-  FileCheck
-  count
-  not
   module_files
   fir-opt
   tco

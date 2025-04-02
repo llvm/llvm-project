@@ -27,7 +27,7 @@ set(FLANG_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../flang")
 # LLVM's requirement is only CMake 3.20, teach CMake 3.20-3.23 how to use Flang.
 if (CMAKE_VERSION VERSION_LESS "3.24")
   cmake_path(GET CMAKE_Fortran_COMPILER STEM _Fortran_COMPILER_STEM)
-  if (_Fortran_COMPILER_STEM STREQUAL "flang" OR _Fortran_COMPILER_STEM STREQUAL "flang")
+  if (_Fortran_COMPILER_STEM STREQUAL "flang")
     include(CMakeForceCompiler)
     CMAKE_FORCE_Fortran_COMPILER("${CMAKE_Fortran_COMPILER}" "LLVMFlang")
 

@@ -66,7 +66,7 @@ struct AliasAnalysis {
   //    a(1) = 1
   //  end subroutine
   //  -------------------------------------------------
-  // 
+  //
   //  flang -fc1 -emit-fir test.f90 -o test.fir
   //
   //  ------------------- test.fir --------------------
