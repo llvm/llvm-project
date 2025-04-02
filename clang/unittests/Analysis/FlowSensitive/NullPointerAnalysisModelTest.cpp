@@ -87,18 +87,12 @@ std::string checkNullabilityState(BoolValue *value, const Environment &Env) {
   }
 }
 
-// We are binding to the address of the Decl here, as the Expr has a different
-// address than the one stored in the framework.
-auto nameToVar(llvm::StringRef name) {
-  return declRefExpr(hasType(isAnyPointer()),
-                     hasDeclaration(namedDecl(hasName(name)).bind(kVar)));
-}
-
-using ::clang::dataflow::test::AnalysisInputs;
-using ::clang::dataflow::test::AnalysisOutputs;
-using ::clang::dataflow::test::checkDataflow;
+using namespace test;
 using ::llvm::IsStringMapEntry;
+using ::testing::AllOf;
 using ::testing::Args;
+using ::testing::IsSupersetOf;
+using ::testing::NotNull;
 using ::testing::Pair;
 using ::testing::UnorderedElementsAre;
 
@@ -119,8 +113,9 @@ MATCHER_P3(HoldsVariable, name, output, checks,
             ::testing::DescribeMatcher<std::pair<Value *, Environment *>>(
                 checks, negation))
                .str()) {
-  auto MatchResults = match(functionDecl(hasDescendant(nameToVar(name))),
-                            *output.Target, output.ASTCtx);
+  auto MatchResults =
+      match(functionDecl(hasDescendant(namedDecl(hasName(name)).bind(kVar))),
+            *output.Target, output.ASTCtx);
   assert(!MatchResults.empty());
 
   const auto *pointerExpr = MatchResults[0].template getNodeAs<ValueDecl>(kVar);
@@ -136,49 +131,57 @@ MATCHER_P3(HoldsVariable, name, output, checks,
                             result_listener);
 }
 
-template <typename MatcherFactory>
-void ExpectDataflowResult(llvm::StringRef Code, MatcherFactory Expectations) {
-  ASSERT_THAT_ERROR(
-      checkDataflow<NullPointerAnalysisModel>(
-          AnalysisInputs<NullPointerAnalysisModel>(
-              Code, hasName("fun"),
-              [](ASTContext &C, Environment &Env) {
-                return NullPointerAnalysisModel(C);
-              })
-              .withASTBuildArgs({"-fsyntax-only", "-std=c++17"}),
-          /*VerifyResults=*/
-          [&Expectations](const llvm::StringMap<DataflowAnalysisState<
-                              NullPointerAnalysisModel::Lattice>> &Results,
-                          const AnalysisOutputs &Output) {
-            EXPECT_THAT(Results, Expectations(Output));
-          }),
-      llvm::Succeeded());
+void RunDataflowAnalysis(
+    llvm::StringRef Code,
+    std::function<void(const llvm::StringMap<DataflowAnalysisState<
+                           NullPointerAnalysisModel::Lattice>> &,
+                       const AnalysisOutputs &)>
+        VerifyResults) {
+  ASSERT_THAT_ERROR(checkDataflow<NullPointerAnalysisModel>(
+                        AnalysisInputs<NullPointerAnalysisModel>(
+                            Code, hasName("fun"),
+                            [](ASTContext &C, Environment &Env) {
+                              return NullPointerAnalysisModel(C);
+                            })
+                            .withASTBuildArgs({"-fsyntax-only", "-std=c++17"}),
+                        VerifyResults),
+                    llvm::Succeeded());
 }
 
-TEST(NullCheckAfterDereferenceTest, DereferenceTypes) {
+template <typename MatcherFactory>
+void ExpectDataflowResult(llvm::StringRef Code, MatcherFactory Expectations) {
+  RunDataflowAnalysis(
+      Code,
+      /*VerifyResults=*/
+      [&Expectations](const llvm::StringMap<DataflowAnalysisState<
+                          NullPointerAnalysisModel::Lattice>> &Results,
+                      const AnalysisOutputs &Output) {
+        EXPECT_THAT(Results, Expectations(Output));
+      });
+}
+
+TEST(NullCheckAfterDereferenceTest, Operations) {
   std::string Code = R"(
     struct S {
       int a;
     };
 
-    void fun(int *p, S *q) {
-      *p = 0; // [[p]]
-
-      q->a = 20; // [[q]]
+    void fun(int *Deref, S *Arrow) {
+      *Deref = 0;
+      Arrow->a = 20;
+      // [[p]]
     }
   )";
   ExpectDataflowResult(Code, [](const AnalysisOutputs &Output) -> auto {
-    return UnorderedElementsAre(
-        IsStringMapEntry(
-            "p", HoldsVariable("p", Output,
-                               HasNullabilityState(kBoolFalse, kBoolTrue))),
-        IsStringMapEntry(
-            "q", HoldsVariable("q", Output,
-                               HasNullabilityState(kBoolFalse, kBoolTrue))));
+    return UnorderedElementsAre(IsStringMapEntry(
+        "p", AllOf(HoldsVariable("Deref", Output,
+                                 HasNullabilityState(kBoolFalse, kBoolTrue)),
+                   HoldsVariable("Arrow", Output,
+                                 HasNullabilityState(kBoolFalse, kBoolTrue)))));
   });
 }
 
-TEST(NullCheckAfterDereferenceTest, ConditionalTypes) {
+TEST(NullCheckAfterDereferenceTest, Conditional) {
   std::string Code = R"(
     void fun(int *p) {
       if (p) {
@@ -187,101 +190,11 @@ TEST(NullCheckAfterDereferenceTest, ConditionalTypes) {
         (void)0; // [[p_false]]
       }
 
-      // FIXME: Test ternary op
-    }
-  )";
-  ExpectDataflowResult(Code, [](const AnalysisOutputs &Output) -> auto {
-    return UnorderedElementsAre(
-        IsStringMapEntry("p_true", HoldsVariable("p", Output,
-                                                 HasNullabilityState(
-                                                     kBoolFalse, kBoolTrue))),
-        IsStringMapEntry("p_false", HoldsVariable("p", Output,
-                                                  HasNullabilityState(
-                                                      kBoolTrue, kBoolFalse))));
-  });
-}
-
-TEST(NullCheckAfterDereferenceTest, UnrelatedCondition) {
-  std::string Code = R"(
-    void fun(int *p, bool b) {
-      if (b) {
-        *p = 42;
-        (void)0; // [[p_b_true]]
-      } else {
-        (void)0; // [[p_b_false]]
-      }
-
-      (void)0; // [[p_merged]]
-
-      if (b) {
-        (void)0; // [[b_true]]
-
-        if (p) {
-          (void)0; // [[b_p_true]]
-        } else {
-          (void)0; // [[b_p_false]]
-        }
-      }
-    }
-  )";
-  ExpectDataflowResult(Code, [](const AnalysisOutputs &Output) -> auto {
-    return UnorderedElementsAre(
-        IsStringMapEntry("p_b_true", HoldsVariable("p", Output,
-                                                   HasNullabilityState(
-                                                       kBoolFalse, kBoolTrue))),
-        IsStringMapEntry(
-            "p_b_false",
-            HoldsVariable("p", Output,
-                          HasNullabilityState(kBoolUnknown, kBoolUnknown))),
-        IsStringMapEntry(
-            "p_merged",
-            HoldsVariable("p", Output,
-                          HasNullabilityState(kBoolUnknown, kBoolUnknown))),
-        IsStringMapEntry("b_true", HoldsVariable("p", Output,
-                                                 HasNullabilityState(
-                                                     kBoolFalse, kBoolTrue))),
-        IsStringMapEntry("b_p_true", HoldsVariable("p", Output,
-                                                   HasNullabilityState(
-                                                       kBoolFalse, kBoolTrue))),
-        // FIXME: Flow condition is false in this last entry,
-        // should test that instead of an invalid state
-        IsStringMapEntry(
-            "b_p_false",
-            HoldsVariable("p", Output,
-                          HasNullabilityState(kBoolInvalid, kBoolInvalid))));
-  });
-}
-
-TEST(NullCheckAfterDereferenceTest, AssignmentOfCommonValues) {
-  std::string Code = R"(
-    using size_t = decltype(sizeof(void*));
-    extern void *malloc(size_t);
-    extern int *ext();
-
-    void fun() {
-      int *p = (int*)malloc(sizeof(int));
-      (void)0; // [[p_malloc]]
-
-      if (p) {
-        *p = 42; // [[p_true]]
-      } else {
-        (void)0; // [[p_false]]
-      }
-
       (void)0; // [[p_merge]]
-
-      p = nullptr; // [[p_nullptr]]
-
-      p = ext(); // [[p_extern]]
     }
   )";
   ExpectDataflowResult(Code, [](const AnalysisOutputs &Output) -> auto {
     return UnorderedElementsAre(
-        // FIXME: Recognize that malloc (and other functions) are nullable
-        IsStringMapEntry(
-            "p_malloc",
-            HoldsVariable("p", Output,
-                          HasNullabilityState(kBoolUnknown, kBoolUnknown))),
         IsStringMapEntry("p_true", HoldsVariable("p", Output,
                                                  HasNullabilityState(
                                                      kBoolFalse, kBoolTrue))),
@@ -291,40 +204,85 @@ TEST(NullCheckAfterDereferenceTest, AssignmentOfCommonValues) {
         IsStringMapEntry(
             "p_merge",
             HoldsVariable("p", Output,
-                          HasNullabilityState(kBoolUnknown, kBoolUnknown))),
-        IsStringMapEntry(
-            "p_nullptr",
-            HoldsVariable("p", Output,
-                          HasNullabilityState(kBoolTrue, kBoolFalse))),
-        IsStringMapEntry(
-            "p_extern",
-            HoldsVariable("p", Output,
                           HasNullabilityState(kBoolUnknown, kBoolUnknown))));
   });
 }
 
-TEST(NullCheckAfterDereferenceTest, MergeValues) {
+TEST(NullCheckAfterDereferenceTest, ValueAssignment) {
   std::string Code = R"(
     using size_t = decltype(sizeof(void*));
     extern void *malloc(size_t);
+    extern int *ext();
 
-    void fun(int *p, bool b) {
-      if (p) {
-        *p = 10;
-      } else {
-        p = (int*)malloc(sizeof(int));
-      }
+    void fun(int arg) {
+      int *Addressof = &arg;
+      int *Nullptr = nullptr;
+      int *Nullptr2 = 0;
 
-      (void)0; // [[p_merge]]
+      int *MallocExpr = (int *)malloc(sizeof(int));
+      int *NewExpr = new int(3);
+
+      int *ExternalFn = ext();
+
+      (void)0; // [[p]]
     }
   )";
   ExpectDataflowResult(Code, [](const AnalysisOutputs &Output) -> auto {
     return UnorderedElementsAre(IsStringMapEntry(
-        "p_merge",
-        // Even if a pointer was nonnull on a branch, it is worth keeping the
-        // more complex formula for more precise analysis.
-        HoldsVariable("p", Output,
-                      HasNullabilityState(kBoolUnknown, kBoolUnknown))));
+        "p",
+        AllOf(HoldsVariable("Addressof", Output,
+                            HasNullabilityState(kBoolFalse, kBoolTrue)),
+              HoldsVariable("Nullptr", Output,
+                            HasNullabilityState(kBoolTrue, kBoolFalse)),
+              HoldsVariable("Nullptr", Output,
+                            HasNullabilityState(kBoolTrue, kBoolFalse)),
+              HoldsVariable("MallocExpr", Output,
+                            HasNullabilityState(kBoolNullptr, kBoolNullptr)),
+              // HoldsVariable("NewExpr", Output,
+              // HasNullabilityState(kBoolFalse, kBoolTrue)),
+              HoldsVariable("ExternalFn", Output,
+                            HasNullabilityState(kBoolNullptr, kBoolNullptr)))));
+  });
+}
+
+TEST(NullCheckAfterDereferenceTest, BooleanDependence) {
+  std::string Code = R"(
+    void fun(int *ptr, bool b) {
+      if (b) {
+        *ptr = 10;
+      } else {
+        ptr = nullptr;
+      }
+        
+      (void)0; // [[p]]
+    }
+  )";
+  RunDataflowAnalysis(Code, [](const llvm::StringMap<DataflowAnalysisState<
+                                   NullPointerAnalysisModel::Lattice>> &Results,
+                               const AnalysisOutputs &Outputs) {
+    ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+    const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+    auto &BoolVal = getValueForDecl<BoolValue>(Outputs.ASTCtx, Env, "b");
+    auto &PtrVal = getValueForDecl<PointerValue>(Outputs.ASTCtx, Env, "ptr");
+
+    auto *IsNull = cast_or_null<BoolValue>(PtrVal.getProperty(kIsNull));
+    auto *IsNonnull = cast_or_null<BoolValue>(PtrVal.getProperty(kIsNonnull));
+    ASSERT_THAT(IsNull, NotNull());
+    ASSERT_THAT(IsNonnull, NotNull());
+
+    ASSERT_EQ(checkNullabilityState(
+                  &Env.makeImplication(BoolVal, Env.makeNot(*IsNull)), Env),
+              kBoolTrue);
+    ASSERT_EQ(checkNullabilityState(
+                  &Env.makeImplication(Env.makeNot(BoolVal), *IsNull), Env),
+              kBoolTrue);
+    ASSERT_EQ(
+        checkNullabilityState(&Env.makeImplication(BoolVal, *IsNonnull), Env),
+        kBoolTrue);
+    ASSERT_EQ(
+        checkNullabilityState(&Env.makeImplication(*IsNonnull, BoolVal), Env),
+        kBoolTrue);
   });
 }
 

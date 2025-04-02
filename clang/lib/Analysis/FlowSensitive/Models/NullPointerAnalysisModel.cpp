@@ -592,37 +592,55 @@ void NullPointerAnalysisModel::join(QualType Type, const Value &Val1,
     auto *LHSVar = cast_or_null<BoolValue>(Val1.getProperty(Name));
     auto *RHSVar = cast_or_null<BoolValue>(Val2.getProperty(Name));
 
-    if (LHSVar == RHSVar)
-      return LHSVar ? *LHSVar : MergedEnv.makeAtomicBoolValue();
+    const auto SimplifyVar = [&](BoolValue *VarToSimplify,
+                                 const Environment &Env) -> BoolValue * {
+      SatisfiabilityResult SatResult =
+          computeSatisfiability(VarToSimplify, Env);
+      switch (SatResult) {
+      case SR::Nullptr:
+        return nullptr;
+      case SR::Top:
+        return &MergedEnv.makeTopBoolValue();
+      case SR::True:
+        return &MergedEnv.getBoolLiteralValue(true);
+      case SR::False:
+        return &MergedEnv.getBoolLiteralValue(false);
+      case SR::Unknown:
+        return VarToSimplify;
+      }
+    };
 
-    SatisfiabilityResult LHSResult = computeSatisfiability(LHSVar, Env1);
-    SatisfiabilityResult RHSResult = computeSatisfiability(RHSVar, Env2);
+    LHSVar = SimplifyVar(LHSVar, Env1);
+    LHSVar = SimplifyVar(RHSVar, Env2);
 
     // Handle special cases.
-    if (LHSResult == SR::Top || RHSResult == SR::Top) {
+    if (LHSVar == RHSVar)
+      return LHSVar ? *LHSVar : MergedEnv.makeAtomicBoolValue();
+    else if (isa<TopBoolValue>(LHSVar) || isa<TopBoolValue>(RHSVar))
       return MergedEnv.makeTopBoolValue();
-    } else if (LHSResult == RHSResult) {
-      switch (LHSResult) {
-      case SR::Nullptr:
-        return MergedEnv.makeAtomicBoolValue();
-      case SR::Top:
-        return *LHSVar;
-      case SR::True:
-        return MergedEnv.getBoolLiteralValue(true);
-      case SR::False:
-        return MergedEnv.getBoolLiteralValue(false);
-      case SR::Unknown:
-        break;
-      }
-    }
 
-    if (LHSVar && RHSVar &&
-        MergedEnv.proves(MergedEnv.arena().makeEquals(LHSVar->formula(),
-                                                      RHSVar->formula()))) {
+    if (!LHSVar)
+      LHSVar = &MergedEnv.makeAtomicBoolValue();
+
+    if (!RHSVar)
+      RHSVar = &MergedEnv.makeAtomicBoolValue();
+
+    assert(LHSVar != nullptr && RHSVar != nullptr);
+
+    if (MergedEnv.proves(
+            MergedEnv.arena().makeEquals(LHSVar->formula(), RHSVar->formula())))
       return *LHSVar;
-    }
 
-    return MergedEnv.makeTopBoolValue();
+    BoolValue &ReturnVar = MergedEnv.makeAtomicBoolValue();
+    Arena &A = MergedEnv.arena();
+
+    MergedEnv.assume(A.makeOr(
+        A.makeAnd(A.makeAtomRef(Env1.getFlowConditionToken()),
+                  A.makeEquals(ReturnVar.formula(), LHSVar->formula())),
+        A.makeAnd(A.makeAtomRef(Env2.getFlowConditionToken()),
+                  A.makeEquals(ReturnVar.formula(), RHSVar->formula()))));
+
+    return ReturnVar;
   };
 
   BoolValue &NonnullValue = MergeValues(kIsNonnull);
