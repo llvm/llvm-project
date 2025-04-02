@@ -27,6 +27,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/AttributeCommonInfo.h"
+#include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetInfo.h"
@@ -12075,23 +12076,23 @@ NamespaceDecl *Sema::getOrCreateStdNamespace() {
 /// a declaration of 'std::initializer_list', and optionally diagnose if
 /// it is not.
 /// \returns true if any issues were found.
-static bool CheckStdInitializerList(Sema &S, ClassTemplateDecl *Template,
+static bool CheckStdInitializerList(Sema &S, const ClassTemplateDecl *Template,
                                     bool Diagnose) {
-  TemplateParameterList *Params = Template->getTemplateParameters();
+  const TemplateParameterList *Params = Template->getTemplateParameters();
   int ErrorKind = -1;
 
   if (Params->size() != 1)
-    ErrorKind = 0; // must have exactly one template parameter
+    ErrorKind = diag::MalformedStdInitializerList::TooManyParams;
   else if (Template->hasAssociatedConstraints())
-    ErrorKind = 1; // cannot have associated constraints
+    ErrorKind = diag::MalformedStdInitializerList::Constrained;
   else {
-    auto *Param = dyn_cast<TemplateTypeParmDecl>(Params->getParam(0));
+    const auto *Param = dyn_cast<TemplateTypeParmDecl>(Params->getParam(0));
     if (!Param)
-      ErrorKind = 2; // must have a type template parameter
+      ErrorKind = diag::MalformedStdInitializerList::BadParamKind;
     else if (Param->hasDefaultArgument())
-      ErrorKind = 3; // cannot have default template arguments
+      ErrorKind = diag::MalformedStdInitializerList::DefaultArg;
     else if (Param->isTemplateParameterPack())
-      ErrorKind = 4; // cannot be a variadic template
+      ErrorKind = diag::MalformedStdInitializerList::ParamPack;
     else
       return false;
   }
@@ -12185,7 +12186,7 @@ static ClassTemplateDecl *LookupStdInitializerList(Sema &S,
     // We found something weird. Complain about the first thing we found.
     NamedDecl *Found = *Result.begin();
     S.Diag(Found->getLocation(), diag::err_malformed_std_initializer_list)
-        << 5 /* must be a class template */;
+        << diag::MalformedStdInitializerList::BadEntityKind;
     S.Diag(Loc, diag::note_used_here);
     return nullptr;
   }
