@@ -9,12 +9,14 @@
 #include "DAP.h"
 #include "EventHelper.h"
 #include "JSONUtils.h"
+#include "Protocol/ProtocolRequests.h"
 #include "RequestHandler.h"
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBStream.h"
 
 using namespace lldb;
+using namespace lldb_dap::protocol;
 
 namespace lldb_dap {
 
@@ -229,118 +231,31 @@ static void EventThreadFunction(DAP &dap) {
   }
 }
 
-// "InitializeRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//     "type": "object",
-//     "description": "Initialize request; value of command field is
-//                     'initialize'.",
-//     "properties": {
-//       "command": {
-//         "type": "string",
-//         "enum": [ "initialize" ]
-//       },
-//       "arguments": {
-//         "$ref": "#/definitions/InitializeRequestArguments"
-//       }
-//     },
-//     "required": [ "command", "arguments" ]
-//   }]
-// },
-// "InitializeRequestArguments": {
-//   "type": "object",
-//   "description": "Arguments for 'initialize' request.",
-//   "properties": {
-//     "clientID": {
-//       "type": "string",
-//       "description": "The ID of the (frontend) client using this adapter."
-//     },
-//     "adapterID": {
-//       "type": "string",
-//       "description": "The ID of the debug adapter."
-//     },
-//     "locale": {
-//       "type": "string",
-//       "description": "The ISO-639 locale of the (frontend) client using
-//                       this adapter, e.g. en-US or de-CH."
-//     },
-//     "linesStartAt1": {
-//       "type": "boolean",
-//       "description": "If true all line numbers are 1-based (default)."
-//     },
-//     "columnsStartAt1": {
-//       "type": "boolean",
-//       "description": "If true all column numbers are 1-based (default)."
-//     },
-//     "pathFormat": {
-//       "type": "string",
-//       "_enum": [ "path", "uri" ],
-//       "description": "Determines in what format paths are specified. The
-//                       default is 'path', which is the native format."
-//     },
-//     "supportsVariableType": {
-//       "type": "boolean",
-//       "description": "Client supports the optional type attribute for
-//                       variables."
-//     },
-//     "supportsVariablePaging": {
-//       "type": "boolean",
-//       "description": "Client supports the paging of variables."
-//     },
-//     "supportsRunInTerminalRequest": {
-//       "type": "boolean",
-//       "description": "Client supports the runInTerminal request."
-//     }
-//   },
-//   "required": [ "adapterID" ]
-// },
-// "InitializeResponse": {
-//   "allOf": [ { "$ref": "#/definitions/Response" }, {
-//     "type": "object",
-//     "description": "Response to 'initialize' request.",
-//     "properties": {
-//       "body": {
-//         "$ref": "#/definitions/Capabilities",
-//         "description": "The capabilities of this debug adapter."
-//       }
-//     }
-//   }]
-// }
-void InitializeRequestHandler::operator()(
-    const llvm::json::Object &request) const {
-  llvm::json::Object response;
-  FillResponse(request, response);
-  llvm::json::Object body;
-
-  const auto *arguments = request.getObject("arguments");
-  // sourceInitFile option is not from formal DAP specification. It is only
-  // used by unit tests to prevent sourcing .lldbinit files from environment
-  // which may affect the outcome of tests.
-  bool source_init_file =
-      GetBoolean(arguments, "sourceInitFile").value_or(true);
+/// Initialize request; value of command field is 'initialize'.
+llvm::Expected<InitializeResponseBody> InitializeRequestHandler::Run(
+    const InitializeRequestArguments &arguments) const {
+  dap.clientFeatures = arguments.supportedFeatures;
 
   // Do not source init files until in/out/err are configured.
   dap.debugger = lldb::SBDebugger::Create(false);
   dap.debugger.SetInputFile(dap.in);
-  auto out_fd = dap.out.GetWriteFileDescriptor();
-  if (llvm::Error err = out_fd.takeError()) {
-    response["success"] = false;
-    EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
-    dap.SendJSON(llvm::json::Value(std::move(response)));
-    return;
-  }
+
+  llvm::Expected<int> out_fd = dap.out.GetWriteFileDescriptor();
+  if (!out_fd)
+    return out_fd.takeError();
   dap.debugger.SetOutputFile(lldb::SBFile(*out_fd, "w", false));
-  auto err_fd = dap.err.GetWriteFileDescriptor();
-  if (llvm::Error err = err_fd.takeError()) {
-    response["success"] = false;
-    EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
-    dap.SendJSON(llvm::json::Value(std::move(response)));
-    return;
-  }
+
+  llvm::Expected<int> err_fd = dap.err.GetWriteFileDescriptor();
+  if (!err_fd)
+    return err_fd.takeError();
   dap.debugger.SetErrorFile(lldb::SBFile(*err_fd, "w", false));
 
   auto interp = dap.debugger.GetCommandInterpreter();
 
-  if (source_init_file) {
+  // The sourceInitFile option is not part of the DAP specification. It is an
+  // extension used by the test suite to prevent sourcing `.lldbinit` and
+  // changing its behavior.
+  if (arguments.lldbExtSourceInitFile.value_or(true)) {
     dap.debugger.SkipLLDBInitFiles(false);
     dap.debugger.SkipAppInitFiles(false);
     lldb::SBCommandReturnObject init;
@@ -348,17 +263,14 @@ void InitializeRequestHandler::operator()(
     interp.SourceInitFileInHomeDirectory(init);
   }
 
-  if (llvm::Error err = dap.RunPreInitCommands()) {
-    response["success"] = false;
-    EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
-    dap.SendJSON(llvm::json::Value(std::move(response)));
-    return;
-  }
+  if (llvm::Error err = dap.RunPreInitCommands())
+    return err;
 
   dap.PopulateExceptionBreakpoints();
   auto cmd = dap.debugger.GetCommandInterpreter().AddMultiwordCommand(
       "lldb-dap", "Commands for managing lldb-dap.");
-  if (GetBoolean(arguments, "supportsStartDebuggingRequest").value_or(false)) {
+  if (arguments.supportedFeatures.contains(
+          eClientFeatureStartDebuggingRequest)) {
     cmd.AddCommand(
         "start-debugging", new StartDebuggingRequestHandler(dap),
         "Sends a startDebugging request from the debug adapter to the client "
@@ -370,37 +282,15 @@ void InitializeRequestHandler::operator()(
   cmd.AddCommand("send-event", new SendEventRequestHandler(dap),
                  "Sends an DAP event to the client.");
 
-  dap.progress_event_thread =
-      std::thread(ProgressEventThreadFunction, std::ref(dap));
+  if (arguments.supportedFeatures.contains(eClientFeatureProgressReporting))
+    dap.progress_event_thread =
+        std::thread(ProgressEventThreadFunction, std::ref(dap));
 
   // Start our event thread so we can receive events from the debugger, target,
   // process and more.
   dap.event_thread = std::thread(EventThreadFunction, std::ref(dap));
 
-  llvm::StringMap<bool> capabilities = dap.GetCapabilities();
-  for (auto &kv : capabilities)
-    body.try_emplace(kv.getKey(), kv.getValue());
-
-  // Available filters or options for the setExceptionBreakpoints request.
-  llvm::json::Array filters;
-  for (const auto &exc_bp : *dap.exception_breakpoints)
-    filters.emplace_back(CreateExceptionBreakpointFilter(exc_bp));
-  body.try_emplace("exceptionBreakpointFilters", std::move(filters));
-
-  llvm::json::Array completion_characters;
-  completion_characters.emplace_back(".");
-  completion_characters.emplace_back(" ");
-  completion_characters.emplace_back("\t");
-  body.try_emplace("completionTriggerCharacters",
-                   std::move(completion_characters));
-
-  // Put in non-DAP specification lldb specific information.
-  llvm::json::Object lldb_json;
-  lldb_json.try_emplace("version", dap.debugger.GetVersionString());
-  body.try_emplace("__lldb", std::move(lldb_json));
-
-  response.try_emplace("body", std::move(body));
-  dap.SendJSON(llvm::json::Value(std::move(response)));
+  return dap.GetCapabilities();
 }
 
 } // namespace lldb_dap
