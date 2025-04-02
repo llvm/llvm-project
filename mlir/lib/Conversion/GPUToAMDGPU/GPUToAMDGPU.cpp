@@ -82,26 +82,31 @@ Value createSubgroupDPPReduction(OpBuilder &b, Location loc, Value input,
   }
 
   if (ci.clusterSize >= 8) {
-    Value dppResult = b.create<amdgpu::DPPOp>(
-        loc, result.getType(), result, result, amdgpu::DPPPerm::row_half_mirror,
-        b.getUnitAttr());
+    auto permArg = b.getIntegerAttr(b.getIntegerType(32), 4);
+    Value dppResult =
+        b.create<amdgpu::DPPOp>(loc, result.getType(), result, result,
+                                amdgpu::DPPPerm::row_shr, permArg);
     result = vector::makeArithReduction(b, loc, gpu::convertReductionKind(mode),
                                         result, dppResult);
   }
 
   if (ci.clusterSize >= 16) {
+    auto permArg = b.getIntegerAttr(b.getIntegerType(32), 8);
     Value dppResult =
         b.create<amdgpu::DPPOp>(loc, result.getType(), result, result,
-                                amdgpu::DPPPerm::row_mirror, b.getUnitAttr());
+                                amdgpu::DPPPerm::row_shr, permArg);
     result = vector::makeArithReduction(b, loc, gpu::convertReductionKind(mode),
                                         result, dppResult);
   }
+
+  const int allRows = 0xf;
+  const int allBanks = 0xf;
 
   if (ci.clusterSize >= 32) {
     auto permArg = b.getIntegerAttr(b.getIntegerType(32), 15);
     Value dppResult = b.create<amdgpu::DPPOp>(
         loc, result.getType(), result, result, amdgpu::DPPPerm::row_bcast_15,
-        b.getUnitAttr(), 10, 15, false);
+        b.getUnitAttr(), 0xa, allBanks, false);
     result = vector::makeArithReduction(b, loc, gpu::convertReductionKind(mode),
                                         result, dppResult);
   }
@@ -110,7 +115,7 @@ Value createSubgroupDPPReduction(OpBuilder &b, Location loc, Value input,
     auto permArg = b.getIntegerAttr(b.getIntegerType(32), 31);
     Value dppResult = b.create<amdgpu::DPPOp>(
         loc, result.getType(), result, result, amdgpu::DPPPerm::row_bcast_31,
-        b.getUnitAttr(), 12, 15, false);
+        b.getUnitAttr(), allRows, allBanks, false);
     result = vector::makeArithReduction(b, loc, gpu::convertReductionKind(mode),
                                         result, dppResult);
   }
