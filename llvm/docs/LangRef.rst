@@ -2747,6 +2747,23 @@ For example:
     all arguments are not undef and not poison. Otherwise, it is undefined
     behavior.
 
+``"modular_format"="<string_idx>,<first_idx_to_check>,<modular_impl_fn>,<impl_name>,<aspects...>"``
+    This attribute indicates that the implementation is modular on a particular
+    format string argument . When the argument for a given call is constant, the
+    compiler may redirect the call to a modular implementation function
+    instead.
+
+    The compiler also emits relocations to report various aspects of the format
+    string and arguments that were present. The compiler reports an aspect by
+    issing a relocation for the symbol `<impl_name>_<aspect>``. This arranges
+    for code and data needed to support the aspect of the implementation to be
+    brought into the link to satisfy weak references in the modular
+    implemenation function.
+
+    The following aspects are currently supported:
+
+    - ``float``: The call has a floating point argument
+
 Call Site Attributes
 ----------------------
 

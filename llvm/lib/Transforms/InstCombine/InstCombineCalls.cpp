@@ -19,6 +19,7 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -4091,6 +4092,63 @@ Instruction *InstCombinerImpl::visitCallBrInst(CallBrInst &CBI) {
   return visitCallBase(CBI);
 }
 
+static Value *optimizeModularFormat(CallInst *CI, IRBuilderBase &B) {
+  if (!CI->hasFnAttr("modular-format"))
+    return nullptr;
+
+  SmallVector<StringRef> Args(
+      llvm::split(CI->getFnAttr("modular-format").getValueAsString(), ','));
+  // TODO: Examine the format argument in Args[0].
+  // TODO: Error handling
+  unsigned FirstArgIdx;
+  if (!llvm::to_integer(Args[1], FirstArgIdx))
+    return nullptr;
+  if (FirstArgIdx == 0)
+    return nullptr;
+  --FirstArgIdx;
+  StringRef FnName = Args[2];
+  StringRef ImplName = Args[3];
+  DenseSet<StringRef> Aspects(llvm::from_range,
+                              ArrayRef<StringRef>(Args).drop_front(4));
+  Module *M = CI->getModule();
+  Function *Callee = CI->getCalledFunction();
+  FunctionCallee ModularFn =
+      M->getOrInsertFunction(FnName, Callee->getFunctionType(),
+                             Callee->getAttributes().removeFnAttribute(
+                                 M->getContext(), "modular-format"));
+  CallInst *New = cast<CallInst>(CI->clone());
+  New->setCalledFunction(ModularFn);
+  New->removeFnAttr("modular-format");
+  B.Insert(New);
+
+  const auto ReferenceAspect = [&](StringRef Aspect) {
+    SmallString<20> Name = ImplName;
+    Name += '_';
+    Name += Aspect;
+    Constant *Sym =
+        M->getOrInsertGlobal(Name, Type::getInt8Ty(M->getContext()));
+    Function *RelocNoneFn =
+        Intrinsic::getOrInsertDeclaration(M, Intrinsic::reloc_none);
+    B.CreateCall(RelocNoneFn, {Sym});
+  };
+
+  if (Aspects.contains("float")) {
+    Aspects.erase("float");
+    if (llvm::any_of(
+            llvm::make_range(std::next(CI->arg_begin(), FirstArgIdx),
+                             CI->arg_end()),
+            [](Value *V) { return V->getType()->isFloatingPointTy(); }))
+      ReferenceAspect("float");
+  }
+
+  SmallVector<StringRef> UnknownAspects(Aspects.begin(), Aspects.end());
+  llvm::sort(UnknownAspects);
+  for (StringRef Request : UnknownAspects)
+    ReferenceAspect(Request);
+
+  return New;
+}
+
 Instruction *InstCombinerImpl::tryOptimizeCall(CallInst *CI) {
   if (!CI->getCalledFunction()) return nullptr;
 
@@ -4109,6 +4167,10 @@ Instruction *InstCombinerImpl::tryOptimizeCall(CallInst *CI) {
   LibCallSimplifier Simplifier(DL, &TLI, &DT, &DC, &AC, ORE, BFI, PSI,
                                InstCombineRAUW, InstCombineErase);
   if (Value *With = Simplifier.optimizeCall(CI, Builder)) {
+    ++NumSimplified;
+    return CI->use_empty() ? CI : replaceInstUsesWith(*CI, With);
+  }
+  if (Value *With = optimizeModularFormat(CI, Builder)) {
     ++NumSimplified;
     return CI->use_empty() ? CI : replaceInstUsesWith(*CI, With);
   }
