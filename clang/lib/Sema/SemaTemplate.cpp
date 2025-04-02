@@ -1133,8 +1133,7 @@ bool Sema::BuildTypeConstraint(const CXXScopeSpec &SS,
       SS.isSet() ? SS.getWithLocInContext(Context) : NestedNameSpecifierLoc(),
       ConceptName, CD, /*FoundDecl=*/USD ? cast<NamedDecl>(USD) : CD,
       TypeConstr->LAngleLoc.isValid() ? &TemplateArgs : nullptr,
-      ConstrainedParameter, Context.getTypeDeclType(ConstrainedParameter),
-      EllipsisLoc);
+      ConstrainedParameter, EllipsisLoc);
 }
 
 template <typename ArgumentLocAppender>
@@ -1191,7 +1190,6 @@ bool Sema::AttachTypeConstraint(NestedNameSpecifierLoc NS,
                                 ConceptDecl *NamedConcept, NamedDecl *FoundDecl,
                                 const TemplateArgumentListInfo *TemplateArgs,
                                 TemplateTypeParmDecl *ConstrainedParameter,
-                                QualType ConstrainedType,
                                 SourceLocation EllipsisLoc) {
   // C++2a [temp.param]p4:
   //     [...] If Q is of the form C<A1, ..., An>, then let E' be
@@ -1200,7 +1198,7 @@ bool Sema::AttachTypeConstraint(NestedNameSpecifierLoc NS,
     TemplateArgs ? ASTTemplateArgumentListInfo::Create(Context,
                                                        *TemplateArgs) : nullptr;
 
-  QualType ParamAsArgument = ConstrainedType;
+  QualType ParamAsArgument(ConstrainedParameter->getTypeForDecl(), 0);
 
   ExprResult ImmediatelyDeclaredConstraint = formImmediatelyDeclaredConstraint(
       *this, NS, NameInfo, NamedConcept, FoundDecl,
@@ -1223,7 +1221,8 @@ bool Sema::AttachTypeConstraint(NestedNameSpecifierLoc NS,
                                       /*NamedConcept=*/NamedConcept,
                                       /*ArgsWritten=*/ArgsAsWritten);
   ConstrainedParameter->setTypeConstraint(CL,
-                                          ImmediatelyDeclaredConstraint.get());
+                                          ImmediatelyDeclaredConstraint.get(),
+                                          /*ArgumentPackSubstitutionIndex=*/-1);
   return false;
 }
 
@@ -2235,10 +2234,7 @@ static bool DiagnoseDefaultTemplateArgument(Sema &S,
     //   template-argument, that declaration shall be a definition and shall be
     //   the only declaration of the function template in the translation unit.
     // (C++98/03 doesn't have this wording; see DR226).
-    S.Diag(ParamLoc,
-           S.getLangOpts().CPlusPlus11
-               ? diag::compat_cxx11_templ_default_in_function_templ
-               : diag::compat_pre_cxx11_templ_default_in_function_templ)
+    S.DiagCompat(ParamLoc, diag_compat::templ_default_in_function_templ)
         << DefArgRange;
     return false;
 
@@ -4062,7 +4058,7 @@ static void checkMoreSpecializedThanPrimary(Sema &S, PartialSpecDecl *Partial) {
   }
 
   S.NoteTemplateLocation(*Template);
-  SmallVector<const Expr *, 3> PartialAC, TemplateAC;
+  SmallVector<AssociatedConstraint, 3> PartialAC, TemplateAC;
   Template->getAssociatedConstraints(TemplateAC);
   Partial->getAssociatedConstraints(PartialAC);
   S.MaybeEmitAmbiguousAtomicConstraintsDiagnostic(Partial, PartialAC, Template,
@@ -4604,7 +4600,8 @@ Sema::CheckConceptTemplateId(const CXXScopeSpec &SS,
 
   if (!AreArgsDependent &&
       CheckConstraintSatisfaction(
-          NamedConcept, {NamedConcept->getConstraintExpr()}, MLTAL,
+          NamedConcept, AssociatedConstraint(NamedConcept->getConstraintExpr()),
+          MLTAL,
           SourceRange(SS.isSet() ? SS.getBeginLoc() : ConceptNameInfo.getLoc(),
                       TemplateArgs->getRAngleLoc()),
           Satisfaction))
@@ -6432,10 +6429,7 @@ static bool CheckTemplateArgumentAddressOfObjectOrFunction(
     bool ExtraParens = false;
     while (ParenExpr *Parens = dyn_cast<ParenExpr>(Arg)) {
       if (!Invalid && !ExtraParens) {
-        S.Diag(Arg->getBeginLoc(),
-               S.getLangOpts().CPlusPlus11
-                   ? diag::compat_cxx11_template_arg_extra_parens
-                   : diag::compat_pre_cxx11_template_arg_extra_parens)
+        S.DiagCompat(Arg->getBeginLoc(), diag_compat::template_arg_extra_parens)
             << Arg->getSourceRange();
         ExtraParens = true;
       }
@@ -6655,10 +6649,7 @@ CheckTemplateArgumentPointerToMember(Sema &S, NonTypeTemplateParmDecl *Param,
   bool ExtraParens = false;
   while (ParenExpr *Parens = dyn_cast<ParenExpr>(Arg)) {
     if (!Invalid && !ExtraParens) {
-      S.Diag(Arg->getBeginLoc(),
-             S.getLangOpts().CPlusPlus11
-                 ? diag::compat_cxx11_template_arg_extra_parens
-                 : diag::compat_pre_cxx11_template_arg_extra_parens)
+      S.DiagCompat(Arg->getBeginLoc(), diag_compat::template_arg_extra_parens)
           << Arg->getSourceRange();
       ExtraParens = true;
     }
@@ -7432,7 +7423,7 @@ bool Sema::CheckTemplateTemplateArgument(TemplateTemplateParmDecl *Param,
   // C++20[temp.func.order]p2
   //   [...] If both deductions succeed, the partial ordering selects the
   // more constrained template (if one exists) as determined below.
-  SmallVector<const Expr *, 3> ParamsAC, TemplateAC;
+  SmallVector<AssociatedConstraint, 3> ParamsAC, TemplateAC;
   Params->getAssociatedConstraints(ParamsAC);
   // C++20[temp.arg.template]p3
   //   [...] In this comparison, if P is unconstrained, the constraints on A
@@ -10639,9 +10630,7 @@ TypeResult Sema::ActOnTypenameType(Scope *S, SourceLocation TypenameLoc,
     return true;
 
   if (TypenameLoc.isValid() && S && !S->getTemplateParamParent())
-    Diag(TypenameLoc, getLangOpts().CPlusPlus11
-                          ? diag::compat_cxx11_typename_outside_of_template
-                          : diag::compat_pre_cxx11_typename_outside_of_template)
+    DiagCompat(TypenameLoc, diag_compat::typename_outside_of_template)
         << FixItHint::CreateRemoval(TypenameLoc);
 
   NestedNameSpecifierLoc QualifierLoc = SS.getWithLocInContext(Context);
