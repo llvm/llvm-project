@@ -966,7 +966,7 @@ Expected<MetaRenamerOptions> parseMetaRenamerPassOptions(StringRef Params) {
       Result.RenameExcludeFunctionPrefixes = ParamName;
     } else {
       return make_error<StringError>(
-        formatv("invalid MetaRenamer pass parameter '{0}' ", ParamName)
+        formatv("invalid metarenamer pass parameter '{0}' ", ParamName)
             .str(),
         inconvertibleErrorCode());
     }

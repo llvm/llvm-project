@@ -100,7 +100,7 @@ void MetaRename(Function &F) {
 
 void MetaRename(Module &M,
                 function_ref<TargetLibraryInfo &(Function &)> GetTLI,
-                MetaRenamerOptions const& Options) {
+                const MetaRenamerOptions &Options) {
   // Seed our PRNG with simple additive sum of ModuleID. We're looking to
   // simply avoid always having the same function names, and we need to
   // remain deterministic.
