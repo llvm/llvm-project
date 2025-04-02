@@ -815,8 +815,8 @@ void PromoteMem2Reg::run() {
     AllocaLookup[Allocas[AllocaNum]] = AllocaNum;
 
     // Unique the set of defining blocks for efficient lookup.
-    SmallPtrSet<BasicBlock *, 32> DefBlocks(Info.DefiningBlocks.begin(),
-                                            Info.DefiningBlocks.end());
+    SmallPtrSet<BasicBlock *, 32> DefBlocks(llvm::from_range,
+                                            Info.DefiningBlocks);
 
     // Determine which blocks the value is live in.  These are blocks which lead
     // to uses.
