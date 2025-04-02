@@ -564,7 +564,7 @@ struct ConvertAllReduceOp : public OpConversionPattern<AllReduceOp> {
     if (isa<RankedTensorType>(input.getType())) {
       auto memrefType = MemRefType::get(
           inputShape, cast<ShapedType>(input.getType()).getElementType());
-      input = iBuilder.create<bufferization::ToMemrefOp>(memrefType, input);
+      input = iBuilder.create<bufferization::ToBufferOp>(memrefType, input);
     }
     MemRefType inType = cast<MemRefType>(input.getType());
 
@@ -614,11 +614,14 @@ struct ConvertAllReduceOp : public OpConversionPattern<AllReduceOp> {
         iBuilder.create<mpi::CommSplitOp>(commType, commWorld, color, key)
             .getNewcomm();
 
-    // collapse shape to 1d
-    ReassociationIndices reassociation(inType.getRank());
-    std::iota(reassociation.begin(), reassociation.end(), 0);
-    Value buffer1d = iBuilder.create<memref::CollapseShapeOp>(
-        buffer, ArrayRef<ReassociationIndices>(reassociation));
+    Value buffer1d = buffer;
+    // Collapse shape to 1d if needed
+    if (inType.getRank() > 1) {
+      ReassociationIndices reassociation(inType.getRank());
+      std::iota(reassociation.begin(), reassociation.end(), 0);
+      buffer1d = iBuilder.create<memref::CollapseShapeOp>(
+          buffer, ArrayRef<ReassociationIndices>(reassociation));
+    }
 
     // Create the MPI AllReduce operation.
     iBuilder.create<mpi::AllReduceOp>(
@@ -681,7 +684,7 @@ struct ConvertUpdateHaloOp : public OpConversionPattern<UpdateHaloOp> {
       auto mmemrefType = MemRefType::get(
           dstShape, cast<ShapedType>(array.getType()).getElementType());
       array =
-          rewriter.create<bufferization::ToMemrefOp>(loc, mmemrefType, array);
+          rewriter.create<bufferization::ToBufferOp>(loc, mmemrefType, array);
     }
     auto rank = cast<ShapedType>(array.getType()).getRank();
     auto opSplitAxes = adaptor.getSplitAxes().getAxes();
