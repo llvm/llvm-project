@@ -716,7 +716,6 @@ ResultBuilder::ShadowMapEntry::end() const {
   return iterator(cast<DeclIndexPairVector *>(DeclOrVector)->end());
 }
 
-
 // Some declarations have reserved names that we don't want to ever show.
 // Filter out names reserved for the implementation if they come from a
 // system header.
@@ -1173,7 +1172,7 @@ void ResultBuilder::MaybeAddResult(Result R, DeclContext *CurContext) {
           NestedNameSpecifier::Create(SemaRef.Context, nullptr, Namespace);
     else if (const TagDecl *Tag = dyn_cast<TagDecl>(Ctx))
       R.Qualifier = NestedNameSpecifier::Create(
-          SemaRef.Context, nullptr, false,
+          SemaRef.Context, nullptr,
           SemaRef.Context.getTypeDeclType(Tag).getTypePtr());
     else
       R.QualifierIsInformative = false;
@@ -1362,7 +1361,7 @@ void ResultBuilder::AddResult(Result R, DeclContext *CurContext,
           NestedNameSpecifier::Create(SemaRef.Context, nullptr, Namespace);
     else if (const auto *Tag = dyn_cast<TagDecl>(Ctx))
       R.Qualifier = NestedNameSpecifier::Create(
-          SemaRef.Context, nullptr, false,
+          SemaRef.Context, nullptr,
           SemaRef.Context.getTypeDeclType(Tag).getTypePtr());
     else
       R.QualifierIsInformative = false;

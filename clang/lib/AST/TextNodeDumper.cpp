@@ -1027,10 +1027,6 @@ void clang::TextNodeDumper::dumpNestedNameSpecifier(const NestedNameSpecifier *N
       OS << " TypeSpec";
       dumpType(QualType(NNS->getAsType(), 0));
       break;
-    case NestedNameSpecifier::TypeSpecWithTemplate:
-      OS << " TypeSpecWithTemplate";
-      dumpType(QualType(NNS->getAsType(), 0));
-      break;
     case NestedNameSpecifier::Global:
       OS << " Global";
       break;
