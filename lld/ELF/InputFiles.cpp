@@ -712,12 +712,11 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
         StringRef name = check(obj.getSectionName(sec, shstrtab));
         ArrayRef<uint8_t> contents = check(obj.getSectionContents(sec));
         AArch64AttributeParser attributes;
+        InputSection isec(*this, sec, name);
         if (Error e = attributes.parse(contents, ELFT::Endianness)) {
-          InputSection isec(*this, sec, name);
           Warn(ctx) << &isec << ": " << std::move(e);
         } else {
           // For functions that has to warn/err/report.
-          InputSection isec(*this, sec, name);
           KnownAArch64BuildAttrSubsections subSections =
               extractBuildAttributesSubsections(ctx, attributes, isec);
           if (!hasGnuProperties) {
