@@ -244,6 +244,39 @@ ContextNode *getFlatProfile(FunctionData &Data, GUID Guid,
   return Data.FlatCtx;
 }
 
+// This should be called once for a Root. Allocate the first arena, set up the
+// first context.
+void setupContext(ContextRoot *Root, GUID Guid, uint32_t NumCounters,
+                  uint32_t NumCallsites) {
+  __sanitizer::GenericScopedLock<__sanitizer::SpinMutex> Lock(
+      &AllContextsMutex);
+  // Re-check - we got here without having had taken a lock.
+  if (Root->FirstMemBlock)
+    return;
+  const auto Needed = ContextNode::getAllocSize(NumCounters, NumCallsites);
+  auto *M = Arena::allocateNewArena(getArenaAllocSize(Needed));
+  Root->FirstMemBlock = M;
+  Root->CurrentMem = M;
+  Root->FirstNode = allocContextNode(M->tryBumpAllocate(Needed), Guid,
+                                     NumCounters, NumCallsites);
+  AllContextRoots.PushBack(Root);
+}
+
+ContextRoot *FunctionData::getOrAllocateContextRoot() {
+  auto *Root = CtxRoot;
+  if (Root)
+    return Root;
+  __sanitizer::GenericScopedLock<__sanitizer::StaticSpinMutex> L(&Mutex);
+  Root = CtxRoot;
+  if (!Root) {
+    Root = new (__sanitizer::InternalAlloc(sizeof(ContextRoot))) ContextRoot();
+    CtxRoot = Root;
+  }
+
+  assert(Root);
+  return Root;
+}
+
 ContextNode *getUnhandledContext(FunctionData &Data, GUID Guid,
                                  uint32_t NumCounters) {
 
@@ -331,39 +364,6 @@ ContextNode *__llvm_ctx_profile_get_context(FunctionData *Data, void *Callee,
                         Ret->counters_size());
   onContextEnter(*Ret);
   return Ret;
-}
-
-// This should be called once for a Root. Allocate the first arena, set up the
-// first context.
-void setupContext(ContextRoot *Root, GUID Guid, uint32_t NumCounters,
-                  uint32_t NumCallsites) {
-  __sanitizer::GenericScopedLock<__sanitizer::SpinMutex> Lock(
-      &AllContextsMutex);
-  // Re-check - we got here without having had taken a lock.
-  if (Root->FirstMemBlock)
-    return;
-  const auto Needed = ContextNode::getAllocSize(NumCounters, NumCallsites);
-  auto *M = Arena::allocateNewArena(getArenaAllocSize(Needed));
-  Root->FirstMemBlock = M;
-  Root->CurrentMem = M;
-  Root->FirstNode = allocContextNode(M->tryBumpAllocate(Needed), Guid,
-                                     NumCounters, NumCallsites);
-  AllContextRoots.PushBack(Root);
-}
-
-ContextRoot *FunctionData::getOrAllocateContextRoot() {
-  auto *Root = CtxRoot;
-  if (Root)
-    return Root;
-  __sanitizer::GenericScopedLock<__sanitizer::StaticSpinMutex> L(&Mutex);
-  Root = CtxRoot;
-  if (!Root) {
-    Root = new (__sanitizer::InternalAlloc(sizeof(ContextRoot))) ContextRoot();
-    CtxRoot = Root;
-  }
-
-  assert(Root);
-  return Root;
 }
 
 ContextNode *__llvm_ctx_profile_start_context(
