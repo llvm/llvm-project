@@ -8703,13 +8703,19 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
       return false;
 
     // On Windows, "inreg" attributes signify non-aggregate indirect returns.
-    // In this case, it is necessary to save/restore X0 in the callee. Tail
-    // call opt interferes with this. So we disable tail call opt when the
-    // caller has an argument with "inreg" attribute.
-
-    // FIXME: Check whether the callee also has an "inreg" argument.
-    if (i->hasInRegAttr())
-      return false;
+    // In this case, it is necessary to save X0/X1 in the callee and return it
+    // in X0. Tail call opt may interfere with this, so we disable tail call
+    // opt when the caller has an "inreg" attribute -- except if the callee
+    // also has that attribute on the same argument, and the same value is
+    // passed.
+    if (i->hasInRegAttr()) {
+      unsigned ArgNum = i - CallerF.arg_begin();
+      if (!CLI.CB || CLI.CB->arg_size() <= ArgNum ||
+          !CLI.CB->getParamAttr(ArgNum, Attribute::InReg).isValid() ||
+          CLI.CB->getArgOperand(ArgNum) != i) {
+        return false;
+      }
+    }
   }
 
   if (canGuaranteeTCO(CalleeCC, getTargetMachine().Options.GuaranteedTailCallOpt))
