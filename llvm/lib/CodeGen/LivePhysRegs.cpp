@@ -339,7 +339,9 @@ void llvm::computeAndAddLiveIns(LivePhysRegs &LiveRegs,
   addLiveIns(MBB, LiveRegs);
 }
 
-bool llvm::isPhysRegLiveAfter(Register Reg, MachineBasicBlock::iterator MBI) {
+// Returns true if `Reg` is used after this iterator in the rest of the
+// basic block or any successors of the basic block.
+bool llvm::isPhysRegUsedAfter(Register Reg, MachineBasicBlock::iterator MBI) {
   assert(Reg.isPhysical() && "Apply to physical register only");
 
   MachineBasicBlock *MBB = MBI->getParent();

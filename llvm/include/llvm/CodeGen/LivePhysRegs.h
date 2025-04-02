@@ -195,8 +195,8 @@ void addLiveIns(MachineBasicBlock &MBB, const LivePhysRegs &LiveRegs);
 void computeAndAddLiveIns(LivePhysRegs &LiveRegs,
                           MachineBasicBlock &MBB);
 
-/// Check if physical register \p Reg is alive after \p MBI.
-bool isPhysRegLiveAfter(Register Reg, MachineBasicBlock::iterator MBI);
+/// Check if physical register \p Reg is used after \p MBI.
+bool isPhysRegUsedAfter(Register Reg, MachineBasicBlock::iterator MBI);
 
 /// Convenience function for recomputing live-in's for a MBB. Returns true if
 /// any changes were made.
