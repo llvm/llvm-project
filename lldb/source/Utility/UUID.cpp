@@ -18,6 +18,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <climits>
 #include <random>
 
 using namespace lldb_private;
