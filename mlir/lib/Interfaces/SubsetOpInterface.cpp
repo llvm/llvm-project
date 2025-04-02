@@ -9,6 +9,9 @@
 #include "mlir/Interfaces/SubsetOpInterface.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
+#include "mlir/IR/Matchers.h"
+
+#include "llvm/ADT/APSInt.h"
 
 #include "mlir/Interfaces/SubsetOpInterface.cpp.inc"
 
@@ -30,14 +33,68 @@ OpResult detail::defaultGetUpdatedDestination(Operation *op) {
   return dstOp.getTiedOpResult(&insertionOp.getDestinationOperand());
 }
 
+// === Copied from DialectUtils ===
+/// If ofr is a constant integer or an IntegerAttr, return the integer.
+static std::optional<int64_t> getConstantIntValue(OpFoldResult ofr) {
+  // Case 1: Check for Constant integer.
+  if (auto val = llvm::dyn_cast_if_present<Value>(ofr)) {
+    APSInt intVal;
+    if (matchPattern(val, m_ConstantInt(&intVal)))
+      return intVal.getSExtValue();
+    return std::nullopt;
+  }
+  // Case 2: Check for IntegerAttr.
+  Attribute attr = llvm::dyn_cast_if_present<Attribute>(ofr);
+  if (auto intAttr = dyn_cast_or_null<IntegerAttr>(attr))
+    return intAttr.getValue().getSExtValue();
+  return std::nullopt;
+}
+
+static bool isConstantIntValue(OpFoldResult ofr, int64_t value) {
+  auto val = getConstantIntValue(ofr);
+  return val && *val == value;
+}
+
+static bool areAllConstantIntValue(ArrayRef<OpFoldResult> ofrs, int64_t value) {
+  return llvm::all_of(
+      ofrs, [&](OpFoldResult ofr) { return isConstantIntValue(ofr, value); });
+}
+// === End Copied from DialectUtils ===
+
 bool detail::defaultIsEquivalentSubset(
     Operation *op, Value candidate,
     function_ref<bool(Value, Value)> equivalenceFn) {
   assert(isa<SubsetInsertionOpInterface>(op) &&
          "expected SubsetInsertionOpInterface");
+  auto subsetOp = cast<SubsetOpInterface>(op);
+
+  // Check if the insertion subset matches the candidate directly.
+  FailureOr<HyperrectangularSlice> slice = subsetOp.getAccessedHyperrectangularSlice();
+  if (succeeded(slice)) {
+    bool allStridesOne =
+      areAllConstantIntValue(slice->getMixedStrides(), 1);
+    bool allOffsetsZero =
+      areAllConstantIntValue(slice->getMixedOffsets(), 0);
+    if (equivalenceFn(subsetOp.getTensorContainer(), candidate) && allOffsetsZero && allStridesOne) {
+      bool isEquivalentSlice = true;
+      auto candidateTensorType = dyn_cast<RankedTensorType>(candidate.getType());
+      assert(slice->getMixedSizes().size() == candidateTensorType.getRank() && "rank mismatch");
+      for (int64_t i = 0, e = candidateTensorType.getRank(); i < e; ++i) {
+        ValueBoundsConstraintSet::Variable var1(candidate, i);
+        ValueBoundsConstraintSet::Variable var2(slice->getMixedSizes()[i]);
+        if (!ValueBoundsConstraintSet::compare(var1, ValueBoundsConstraintSet::ComparisonOperator::EQ, var2)) {
+          isEquivalentSlice = false;
+          break;
+        }
+      }
+      if (isEquivalentSlice)
+        return true;
+    }
+  }
+
   if (!candidate.getDefiningOp<SubsetExtractionOpInterface>())
     return false;
-  return cast<SubsetOpInterface>(op).operatesOnEquivalentSubset(
+  return subsetOp.operatesOnEquivalentSubset(
       candidate.getDefiningOp<SubsetOpInterface>(), equivalenceFn);
 }
 
