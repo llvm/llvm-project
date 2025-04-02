@@ -18945,8 +18945,8 @@ void SITargetLowering::emitExpandAtomicAddrSpacePredicate(
 
   Value *LoadedShared = nullptr;
   if (FullFlatEmulation) {
-    CallInst *IsShared = Builder.CreateIntrinsic(
-        Intrinsic::amdgcn_is_shared, {}, {Addr}, nullptr, "is.shared");
+    CallInst *IsShared = Builder.CreateIntrinsic(Intrinsic::amdgcn_is_shared,
+                                                 {Addr}, nullptr, "is.shared");
     Builder.CreateCondBr(IsShared, SharedBB, CheckPrivateBB);
     Builder.SetInsertPoint(SharedBB);
     Value *CastToLocal = Builder.CreateAddrSpaceCast(
@@ -18961,8 +18961,8 @@ void SITargetLowering::emitExpandAtomicAddrSpacePredicate(
     Builder.SetInsertPoint(CheckPrivateBB);
   }
 
-  CallInst *IsPrivate = Builder.CreateIntrinsic(
-      Intrinsic::amdgcn_is_private, {}, {Addr}, nullptr, "is.private");
+  CallInst *IsPrivate = Builder.CreateIntrinsic(Intrinsic::amdgcn_is_private,
+                                                {Addr}, nullptr, "is.private");
   Builder.CreateCondBr(IsPrivate, PrivateBB, GlobalBB);
 
   Builder.SetInsertPoint(PrivateBB);
