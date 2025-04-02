@@ -38,7 +38,7 @@ guarded by something of the form:
 
 .. code-block:: cpp
 
-   #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+   #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 23
    #  include <algorithm>
    #  include <iterator>
    #  include <utility>
@@ -48,6 +48,9 @@ When users define ``_LIBCPP_REMOVE_TRANSITIVE_INCLUDES``, libc++ will not
 include transitive headers, regardless of the language version. This can be
 useful for users to aid the transition to a newer language version, or by users
 who simply want to make sure they include what they use in their code.
+
+We currently provide transitive inclusions for backwards compatibility in all
+Standard modes older than C++26.
 
 
 Rationale
