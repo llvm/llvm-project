@@ -32,7 +32,7 @@ class MCSectionGOFF;
 // location of data. For example, the equivalent of the ELF .text section is
 // made up of a Section Definition (SD) and a class (Element Definition; ED).
 // The name of the SD symbol depends on the application, while the class has the
-// predefined name C_CODE64.
+// predefined name C_CODE/C_CODE64 in AMODE31 and AMODE64 respectively.
 //
 // Data can be placed into this structure in 2 ways. First, the data (in a text
 // record) can be associated with an ED symbol. To refer to data, a Label

@@ -174,7 +174,7 @@ enum SubsectionKind : uint8_t {
 // in a byte as bit zero. The Flags type helps to set bits in byte according
 // to this numeration order.
 class Flags {
-  uint8_t Val;
+  uint8_t Val = 0;
 
   constexpr static uint8_t bits(uint8_t BitIndex, uint8_t Length, uint8_t Value,
                                 uint8_t OldValue) {
@@ -185,7 +185,7 @@ class Flags {
   }
 
 public:
-  constexpr Flags() : Val(0) {}
+  constexpr Flags() = default;
   constexpr Flags(uint8_t BitIndex, uint8_t Length, uint8_t Value)
       : Val(bits(BitIndex, Length, Value, 0)) {}
 
@@ -204,7 +204,7 @@ public:
 };
 
 // Structure for the flag field of a symbol. See
-// https://www.ibm.com/docs/en/zos/3.1.0?topic=formats-external-symbol-definition-record,
+// https://www.ibm.com/docs/en/zos/3.1.0?topic=formats-external-symbol-definition-record ,
 // offset 41, for the definition.
 struct SymbolFlags {
   Flags SymFlags;
@@ -221,7 +221,7 @@ struct SymbolFlags {
 
 #undef GOFF_SYMBOL_FLAG
 
-constexpr operator uint8_t() const { return static_cast<uint8_t>(SymFlags); }
+  constexpr operator uint8_t() const { return static_cast<uint8_t>(SymFlags); }
 };
 
 // Structure for the behavioral attributes. See
