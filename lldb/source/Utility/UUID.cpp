@@ -15,10 +15,10 @@
 
 #include <cctype>
 #include <chrono>
+#include <climits>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
-#include <climits>
 #include <random>
 
 using namespace lldb_private;
