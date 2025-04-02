@@ -769,9 +769,10 @@ def AMDGPU_GatherToLDSOp :
     AMDGPU_Op<"gather_to_lds", [SameVariadicOperandSize]>,
     Arguments<(ins
                    Arg<AnyMemRef, "buffer to gather from", [MemRead]>:$src,
-                   Variadic<I32>:$srcIndices,
+                   Variadic<Index>:$srcIndices,
                    Arg<AnyMemRef, "buffer to write to", [MemWrite]>:$dst,
-                   Variadic<I32>:$dstIndices
+                   Variadic<Index>:$dstIndices,
+                   TypeAttr:$transferType
                    )>,
     Results<(outs)> {
   let summary = "MLIR wrapper for CDNA mfma instructions";
@@ -784,7 +785,10 @@ def AMDGPU_GatherToLDSOp :
     * `$dst`: LDS memory memref to write to.
     * `$dstIndices`: base indices into `$dst` to write to for the subgroup of this thread.
       number of subgroup size of elements will be written contiguously to `$dst[$dstIndices]`.
-    
+    * `$transferType`: type of the data to be transferred by each thread. This is used to determine
+      the size of the data to be transferred and the number of threads in the subgroup.
+      The transfer type must be a scalar type or a vector type with a single element type.
+
     The `$dst`, along with its indices, points to the memory location the subgroup of this thread
     will write to.
   

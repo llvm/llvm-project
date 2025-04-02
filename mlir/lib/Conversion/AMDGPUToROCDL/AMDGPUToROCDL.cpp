@@ -913,60 +913,49 @@ struct GatherToLDSOpLowering
   LogicalResult
   matchAndRewrite(GatherToLDSOp op, GatherToLDSOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    if (chipset < kGfx942)
+      return op.emitOpError("chipset not supported");
+
     Location loc = op.getLoc();
 
-    auto elemType = cast<MemRefType>(op.getDst().getType()).getElementType();
-    size_t elemSizeInBits = elemType.getIntOrFloatBitWidth();
-    if (elemSizeInBits % 8 != 0)
-      return op.emitOpError("element size must be a multiple of 8");
+    auto srcMemRefType = cast<MemRefType>(op.getSrc().getType());
+    auto dstMemRefType = cast<MemRefType>(op.getSrc().getType());
 
     // TODO: instead of only transfering one element per thread, we could
     // augment it to transfer multiple elements per thread by issuing multiple
     // `global_load_lds` instructions.
-    auto loadWidth = elemSizeInBits / 8;
-
-    if (chipset < kGfx942)
-      return op.emitOpError("chipset not supported");
+    size_t loadWidth;
+    Type transferType = op.getTransferType();
+    if (auto transferVectorType = dyn_cast<VectorType>(transferType))
+      loadWidth = transferVectorType.getNumElements() *
+                  transferVectorType.getElementTypeBitWidth() / 8;
+    else
+      loadWidth = transferType.getIntOrFloatBitWidth() / 8;
 
     // Currently only 1, 2, and 4 byte loads are supported.
-    if (!(loadWidth == 1 || loadWidth == 2 || loadWidth == 4))
+    if (loadWidth != 1 && loadWidth != 2 && loadWidth != 4)
       return op.emitOpError("chipset unsupported element size");
 
-    // Return pair of {base pointer, linearized index}.
-    auto getBasePtrAndLinearizedIndex =
-        [&](Value memref, MemRefType memrefType,
-            ValueRange indices) -> std::optional<std::pair<Value, Value>> {
-      MemRefDescriptor memRefDescriptor(memref);
-      int64_t offset = 0;
-      SmallVector<int64_t, 5> strides;
-      if (failed(memrefType.getStridesAndOffset(strides, offset)))
-        return {};
-      return std::make_pair(
-          memRefDescriptor.bufferPtr(rewriter, loc, *getTypeConverter(),
-                                     memrefType),
-          getLinearIndexI32(rewriter, loc, memRefDescriptor, indices, strides));
+    auto convertIndices =
+        [&](ValueRange indices) -> SmallVector<Value, 4> {
+      SmallVector<Value, 4> convertedIndices;
+      
+      for (Value index : indices) {
+        Type convertedType = getTypeConverter()->convertType(index.getType());
+        auto convertedIndex = rewriter.create<LLVM::ConstantOp>(
+            loc, convertedType,
+            rewriter.getIntegerAttr(convertedType, 0));
+        convertedIndices.push_back(convertedIndex);
+      }
+      return convertedIndices;
     };
 
-    auto optSrcBuffer = getBasePtrAndLinearizedIndex(
-        adaptor.getSrc(), cast<MemRefType>(op.getSrc().getType()),
-        op.getSrcIndices());
-    if (!optSrcBuffer)
-      return op.emitOpError("failed to flatten source memref indices");
-    auto optDstBuffer = getBasePtrAndLinearizedIndex(
-        adaptor.getDst(), cast<MemRefType>(op.getDst().getType()),
-        op.getDstIndices());
-    if (!optDstBuffer)
-      return op.emitOpError("failed to flatten destination memref indices");
-
-    Type srcPtrType = LLVM::LLVMPointerType::get(rewriter.getContext(), 1);
-    Type dstPtrType = LLVM::LLVMPointerType::get(rewriter.getContext(), 3);
-    Value srcPtr = rewriter.create<LLVM::GEPOp>(
-        loc, srcPtrType, elemType, optSrcBuffer->first,
-        ArrayRef<Value>({optSrcBuffer->second}));
-
-    Value dstPtr = rewriter.create<LLVM::GEPOp>(
-        loc, dstPtrType, elemType, optDstBuffer->first,
-        ArrayRef<Value>({optDstBuffer->second}));
+    Value srcPtr =
+        getStridedElementPtr(loc, srcMemRefType, adaptor.getSrc(),
+                             convertIndices(op.getSrcIndices()), rewriter);
+    Value dstPtr =
+        getStridedElementPtr(loc, dstMemRefType, adaptor.getDst(),
+                             convertIndices(op.getDstIndices()), rewriter);
 
     rewriter.replaceOpWithNewOp<ROCDL::GlobalLoadLDSOp>(
         op, srcPtr, dstPtr, createI32Constant(rewriter, loc, loadWidth),

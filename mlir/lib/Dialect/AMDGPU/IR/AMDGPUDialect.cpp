@@ -25,6 +25,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/IR/DerivedTypes.h"
 
 #include <limits>
 #include <optional>
@@ -113,21 +114,30 @@ LogicalResult FatRawBufferCastOp::verify() {
   return success();
 }
 
+static bool hasGlobalMemorySpace(Attribute memorySpace) {
+  if (!memorySpace)
+    return true;
+  else if (auto intMemorySpace = llvm::dyn_cast<IntegerAttr>(memorySpace))
+    return intMemorySpace.getInt() == 0 || intMemorySpace.getInt() == 1;
+  else if (auto gpuMemorySpace =
+          llvm::dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
+    return gpuMemorySpace.getValue() == gpu::AddressSpace::Global;
+  return false;
+}
+
+static bool hasWorkgroupMemorySpace(Attribute memorySpace) {
+  if (auto intMemorySpace = llvm::dyn_cast<IntegerAttr>(memorySpace))
+    return intMemorySpace.getInt() == 3;
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 // RawBuffer*Op
 //===----------------------------------------------------------------------===//
 template <typename T>
 static LogicalResult verifyRawBufferOp(T &op) {
   MemRefType bufferType = llvm::cast<MemRefType>(op.getMemref().getType());
-  Attribute memorySpace = bufferType.getMemorySpace();
-  bool isGlobal = false;
-  if (!memorySpace)
-    isGlobal = true;
-  else if (auto intMemorySpace = llvm::dyn_cast<IntegerAttr>(memorySpace))
-    isGlobal = intMemorySpace.getInt() == 0 || intMemorySpace.getInt() == 1;
-  else if (auto gpuMemorySpace =
-               llvm::dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
-    isGlobal = gpuMemorySpace.getValue() == gpu::AddressSpace::Global;
+  bool isGlobal = hasGlobalMemorySpace(bufferType.getMemorySpace());
 
   if (!isGlobal)
     return op.emitOpError(
@@ -473,13 +483,22 @@ LogicalResult GatherToLDSOp::verify() {
   if (elemType != dstType.getElementType())
     return emitOpError("source and destination element types must match");
 
-  // Element type sizes should be 1, 2, or 4 bytes.
-  auto elemSize = elemType.getIntOrFloatBitWidth();
-  if (elemSize != 8 && elemSize != 16 && elemSize != 32)
-    return emitOpError("source and destination element types must be 8, 16, "
-                       "or 32 bits");
+  // copy type sizes should be 1, 2, or 4 bytes.
+  auto transferType = getTransferType();
+  size_t transferSize;
+  if (auto vectorTransfer = dyn_cast<VectorType>(transferType)) {
+    transferSize = vectorTransfer.getNumElements() *
+                   vectorTransfer.getElementTypeBitWidth();
+  } else {
+    transferSize = transferType.getIntOrFloatBitWidth();
+  }
+  if (transferSize != 8 && transferSize != 16 && transferSize != 32)
+    return emitOpError("Transfering type size must be 8, 16, or 32 bits");
 
-  if (!gpu::GPUDialect::hasWorkgroupMemoryAddressSpace(dstType))
+  if (!hasGlobalMemorySpace(srcType.getMemorySpace()))
+    return emitOpError("source memory address space must be Global");
+
+  if (!hasWorkgroupMemorySpace(dstType.getMemorySpace()))
     return emitOpError("destination memory address space must be Workgroup");
 
   return success();
