@@ -1,4 +1,7 @@
 !! Testing ld command with flang on POWERPC.
+!! TODO: The AIX test case is meant to test the behavior of linking the static
+!!       libflang_rt.runtime.a, which will be enabled by a new compiler option
+!!       -static-libflang_rt in the future. Need to add that option here.
 
 !! Because flang-rt currently only supports
 !! LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON, use 
