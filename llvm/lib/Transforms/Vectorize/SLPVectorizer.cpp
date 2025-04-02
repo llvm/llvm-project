@@ -9327,7 +9327,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   bool TrySplitVectorize;
   if (!isLegalToVectorizeScalars(VL, Depth, UserTreeIdx, S, TryToPackDuplicates,
                                  TrySplitVectorize)) {
-    if (TrySplitVectorize){
+    if (TrySplitVectorize) {
       auto [MainOp, AltOp] = getMainAltOpsNoStateVL(VL);
       // Last chance to try to vectorize alternate node.
       if (MainOp && AltOp &&
