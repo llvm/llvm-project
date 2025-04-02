@@ -121,8 +121,9 @@ define void @store_nxv6f32(ptr %out) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov z0.s, #1.00000000
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    st1w { z0.d }, p0, [x0, #2, mul vl]
+; CHECK-NEXT:    uunpklo z1.d, z0.s
 ; CHECK-NEXT:    str z0, [x0]
+; CHECK-NEXT:    st1w { z1.d }, p0, [x0, #2, mul vl]
 ; CHECK-NEXT:    ret
   store <vscale x 6 x float> splat(float 1.0), ptr %out
   ret void
@@ -133,8 +134,9 @@ define void @store_nxv12f16(ptr %out) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov z0.h, #1.00000000
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    st1h { z0.s }, p0, [x0, #2, mul vl]
+; CHECK-NEXT:    uunpklo z1.s, z0.h
 ; CHECK-NEXT:    str z0, [x0]
+; CHECK-NEXT:    st1h { z1.s }, p0, [x0, #2, mul vl]
 ; CHECK-NEXT:    ret
   store <vscale x 12 x half> splat(half 1.0), ptr %out
   ret void

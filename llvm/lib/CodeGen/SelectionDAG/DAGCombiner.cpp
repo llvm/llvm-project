@@ -25383,8 +25383,10 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
   // ty1 extract_vector(ty2 splat(V))) -> ty1 splat(V)
   if (V.getOpcode() == ISD::SPLAT_VECTOR)
     if (DAG.isConstantValueOfAnyType(V.getOperand(0)) || V.hasOneUse())
-      if (!LegalOperations || TLI.isOperationLegal(ISD::SPLAT_VECTOR, NVT))
-        return DAG.getSplatVector(NVT, DL, V.getOperand(0));
+      if (!TLI.isExtractSubvectorCheap(NVT, V.getValueType(), ExtIdx) ||
+          V.hasOneUse())
+        if (!LegalOperations || TLI.isOperationLegal(ISD::SPLAT_VECTOR, NVT))
+          return DAG.getSplatVector(NVT, DL, V.getOperand(0));
 
   // extract_subvector(insert_subvector(x,y,c1),c2)
   //  --> extract_subvector(y,c2-c1)
