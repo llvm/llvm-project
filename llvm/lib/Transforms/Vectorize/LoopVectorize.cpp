@@ -1255,16 +1255,18 @@ public:
 
   /// Returns true if the target machine supports masked store operation
   /// for the given \p DataType and kind of access to \p Ptr.
-  bool isLegalMaskedStore(Type *DataType, Value *Ptr, Align Alignment) const {
+  bool isLegalMaskedStore(Type *DataType, Value *Ptr, Align Alignment,
+                          unsigned AddressSpace) const {
     return Legal->isConsecutivePtr(DataType, Ptr) &&
-           TTI.isLegalMaskedStore(DataType, Alignment);
+           TTI.isLegalMaskedStore(DataType, Alignment, AddressSpace);
   }
 
   /// Returns true if the target machine supports masked load operation
   /// for the given \p DataType and kind of access to \p Ptr.
-  bool isLegalMaskedLoad(Type *DataType, Value *Ptr, Align Alignment) const {
+  bool isLegalMaskedLoad(Type *DataType, Value *Ptr, Align Alignment,
+                         unsigned AddressSpace) const {
     return Legal->isConsecutivePtr(DataType, Ptr) &&
-           TTI.isLegalMaskedLoad(DataType, Alignment);
+           TTI.isLegalMaskedLoad(DataType, Alignment, AddressSpace);
   }
 
   /// Returns true if the target machine can represent \p V as a masked gather
@@ -3220,13 +3222,14 @@ bool LoopVectorizationCostModel::isScalarWithPredication(
   case Instruction::Store: {
     auto *Ptr = getLoadStorePointerOperand(I);
     auto *Ty = getLoadStoreType(I);
+    unsigned AS = getLoadStoreAddressSpace(I);
     Type *VTy = Ty;
     if (VF.isVector())
       VTy = VectorType::get(Ty, VF);
     const Align Alignment = getLoadStoreAlignment(I);
-    return isa<LoadInst>(I) ? !(isLegalMaskedLoad(Ty, Ptr, Alignment) ||
+    return isa<LoadInst>(I) ? !(isLegalMaskedLoad(Ty, Ptr, Alignment, AS) ||
                                 TTI.isLegalMaskedGather(VTy, Alignment))
-                            : !(isLegalMaskedStore(Ty, Ptr, Alignment) ||
+                            : !(isLegalMaskedStore(Ty, Ptr, Alignment, AS) ||
                                 TTI.isLegalMaskedScatter(VTy, Alignment));
   }
   case Instruction::UDiv:
@@ -3427,8 +3430,9 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
 
   auto *Ty = getLoadStoreType(I);
   const Align Alignment = getLoadStoreAlignment(I);
-  return isa<LoadInst>(I) ? TTI.isLegalMaskedLoad(Ty, Alignment)
-                          : TTI.isLegalMaskedStore(Ty, Alignment);
+  unsigned AS = getLoadStoreAddressSpace(I);
+  return isa<LoadInst>(I) ? TTI.isLegalMaskedLoad(Ty, Alignment, AS)
+                          : TTI.isLegalMaskedStore(Ty, Alignment, AS);
 }
 
 bool LoopVectorizationCostModel::memoryInstructionCanBeWidened(
