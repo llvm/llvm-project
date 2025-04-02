@@ -14799,8 +14799,7 @@ buildSingleCopyAssignRecursively(Sema &S, SourceLocation Loc, QualType T,
     CXXScopeSpec SS;
     const Type *CanonicalT = S.Context.getCanonicalType(T.getTypePtr());
     SS.MakeTrivial(S.Context,
-                   NestedNameSpecifier::Create(S.Context, nullptr, false,
-                                               CanonicalT),
+                   NestedNameSpecifier::Create(S.Context, nullptr, CanonicalT),
                    Loc);
 
     // Create the reference to operator=.
