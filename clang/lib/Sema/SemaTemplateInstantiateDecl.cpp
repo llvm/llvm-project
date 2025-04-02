@@ -5590,6 +5590,62 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
   Function->setLocation(PatternDecl->getLocation());
   Function->setInnerLocStart(PatternDecl->getInnerLocStart());
   Function->setRangeEnd(PatternDecl->getEndLoc());
+  // Let the instantiation use the Pattern's DeclarationNameLoc, due to the
+  // following awkwardness:
+  //   1. There are out-of-tree users of getNameInfo().getSourceRange(), who
+  //   expect the source range of the instantiated declaration to be set to
+  //   point the definition.
+  //
+  //   2. That getNameInfo().getSourceRange() might return the TypeLocInfo's
+  //   location it tracked.
+  //
+  //   3. Function might come from an (implicit) declaration, while the pattern
+  //   comes from a definition. In these cases, we need the PatternDecl's source
+  //   location.
+  //
+  // To that end, we need to more or less tweak the DeclarationNameLoc. However,
+  // we can't blindly copy the DeclarationNameLoc from the PatternDecl to the
+  // function, since it contains associated TypeLocs that should have already
+  // been transformed. So, we rebuild the TypeLoc for that purpose. Technically,
+  // we should create a new function declaration and assign everything we need,
+  // but InstantiateFunctionDefinition updates the declaration in place.
+  auto CorrectNameLoc = [&] {
+    DeclarationNameInfo PatternName = PatternDecl->getNameInfo();
+    DeclarationNameLoc PatternNameLoc = PatternName.getInfo();
+    switch (PatternName.getName().getNameKind()) {
+    case DeclarationName::CXXConstructorName:
+    case DeclarationName::CXXDestructorName:
+    case DeclarationName::CXXConversionFunctionName:
+      break;
+    default:
+      // Cases where DeclarationNameLoc doesn't matter, as it merely contains a
+      // source range.
+      Function->setDeclarationNameLoc(PatternNameLoc);
+      return;
+    }
+
+    TypeSourceInfo *TSI = Function->getNameInfo().getNamedTypeInfo();
+    // !!! When could TSI be null?
+    if (!TSI) {
+      // We don't care about the DeclarationName of the instantiated function,
+      // but only the DeclarationNameLoc. So if the TypeLoc is absent, we do
+      // nothing.
+      Function->setDeclarationNameLoc(PatternNameLoc);
+      return;
+    }
+
+    QualType InstT = TSI->getType();
+    // We want to use a TypeLoc that reflects the transformed type while
+    // preserving the source location from the pattern.
+    TypeLocBuilder TLB;
+    TLB.pushTrivial(
+        Context, InstT,
+        PatternNameLoc.getNamedTypeInfo()->getTypeLoc().getBeginLoc());
+    Function->setDeclarationNameLoc(DeclarationNameLoc::makeNamedTypeLoc(
+        TLB.getTypeSourceInfo(Context, InstT)));
+  };
+
+  CorrectNameLoc();
 
   EnterExpressionEvaluationContext EvalContext(
       *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
@@ -5711,23 +5767,6 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     }
     MultiLevelTemplateArgumentList TemplateArgs = getTemplateInstantiationArgs(
         Function, DC, /*Final=*/false, Innermost, false, PatternDecl);
-
-    // Let the instantiation use the Pattern's DeclarationNameInfo, due to the
-    // following awkwards:
-    // 1. The function we're instantiating might come from an (implicit)
-    // declaration, while the pattern comes from a definition.
-    // 2. We want the instantiated definition to have a source range pointing to
-    // the definition. Note that we can't set the pattern's DeclarationNameInfo
-    // blindly, as it might contain associated TypeLocs that should have
-    // already been transformed. So we transform the Pattern's DNI for that
-    // purpose. Technically, we should create a new function declaration and
-    // give it everything we want, but InstantiateFunctionDefinition does update
-    // the declaration in place.
-    DeclarationNameInfo DN =
-        SubstDeclarationNameInfo(PatternDecl->getNameInfo(), TemplateArgs);
-    if (!DN.getName())
-      return;
-    Function->setDeclarationNameLoc(DN.getInfo());
 
     // Substitute into the qualifier; we can get a substitution failure here
     // through evil use of alias templates.
