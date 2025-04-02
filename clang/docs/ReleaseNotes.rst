@@ -346,6 +346,9 @@ Bug Fixes in This Version
   ``<stdint.h>`` in a freestanding build no longer causes invalid token pasting
   when using the ``INTn_C`` macros. (#GH85995)
 
+- cv- and ref- qualified function types no longer silently produce invalid pointer to
+  qualified function types when they implicitly decay in some places. Fixes (#GH27059).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
