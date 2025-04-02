@@ -2396,6 +2396,36 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         if (!value.getAsInteger(0, addressing_bits)) {
           addressable_bits.SetHighmemAddressableBits(addressing_bits);
         }
+      } else if (key.compare("gpu-url") == 0) {
+        Log *log = GetLog(GDBRLog::Plugin);
+        LLDB_LOG(log, "gpu-url: url = \"{0}\"", value); 
+        auto &debugger = GetTarget().GetDebugger();
+        TargetSP gpu_target_sp;
+        // Create an empty target for our GPU.
+        Status error(debugger.GetTargetList().CreateTarget(
+          debugger, llvm::StringRef(), llvm::StringRef(), eLoadDependentsNo, 
+          nullptr, gpu_target_sp));
+        if (error.Fail()) {
+          LLDB_LOG(log, "gpu-url: error creating target: \"{0}\"", error); 
+        } else if (gpu_target_sp) {
+          PlatformSP platform_sp = gpu_target_sp->GetPlatform();
+          if (platform_sp) {
+            ProcessSP process_sp = platform_sp->ConnectProcess(
+                        value, GetPluginNameStatic(), debugger,
+                        gpu_target_sp.get(), error);
+            if (error.Fail()) {
+              LLDB_LOG(log, "gpu-url: error connecting to process: \"{0}\"", error); 
+            } else if (!process_sp) {
+              LLDB_LOG(log, "gpu-url: invalid process"); 
+            } else {
+              LLDB_LOG(log, "gpu-url: successfully created process!!!");
+            }
+          } else {
+            LLDB_LOG(log, "gpu-url: invalid platform");
+          }
+        } else {
+          LLDB_LOG(log, "gpu-url: invalid target");
+        }
       } else if (key.size() == 2 && ::isxdigit(key[0]) && ::isxdigit(key[1])) {
         uint32_t reg = UINT32_MAX;
         if (!key.getAsInteger(16, reg))

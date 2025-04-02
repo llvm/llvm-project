@@ -9,46 +9,60 @@
 #ifndef LLDB_TOOLS_LLDB_SERVER_LLDBSERVERPLUGIN_H
 #define LLDB_TOOLS_LLDB_SERVER_LLDBSERVERPLUGIN_H
 
+#include "Plugins/Process/gdb-remote/GDBRemoteCommunicationServerLLGS.h"
+#include "lldb/Host/MainLoop.h"
+#include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/lldb-types.h"
+
 #include <functional>
+#include <optional>
 #include <stdint.h>
 #include <string>
 namespace lldb_private {
+
+namespace process_gdb_remote {
+  class GDBRemoteCommunicationServerLLGS;
+}
+  
 namespace lldb_server {
+
 
 class LLDBServerNativeProcess;
 
-typedef std::function<std::string(const char *)>
-    CStrArgWithReturnStringCallback;
-typedef std::function<std::string()> NoArgsReturnStringCallback;
-
-// lldb-server will decode all packets and any packets and for any packets that
-// have handlers in this structure, the functions will be called. This removes
-// the need for plug-ins to have to parse the packets and args.
-struct GDBRemotePacketCallbacks {
-  // Handle any "general query packets" here.
-  // Handle the "qSupported" query.
-
-  CStrArgWithReturnStringCallback qSupported = nullptr;
-  NoArgsReturnStringCallback qHostInfo = nullptr;
-  NoArgsReturnStringCallback qProcessInfo = nullptr;
-  CStrArgWithReturnStringCallback qXfer = nullptr;
-
-  // Handle "vCont?" packet
-  NoArgsReturnStringCallback vContQuery = nullptr;
-};
-
 class LLDBServerPlugin {
+protected:
   // Add a version field to allow the APIs to change over time.
-  const uint32_t m_version = 1;
-  LLDBServerNativeProcess &m_process;
+  using GDBServer = process_gdb_remote::GDBRemoteCommunicationServerLLGS;
+  using Manager = NativeProcessProtocol::Manager;
+  GDBServer &m_native_process;
+  MainLoop m_main_loop;
+  std::unique_ptr<Manager> m_process_manager_up;
+  std::unique_ptr<GDBServer> m_gdb_server;
+  bool m_is_connected = false;
 
 public:
-  LLDBServerPlugin(LLDBServerNativeProcess &process) : m_process(process) {}
+  using CreateCallback = llvm::function_ref<LLDBServerPlugin *()>;
+  static void RegisterCreatePlugin(CreateCallback callback);
+  static size_t GetNumCreateCallbacks();
+  static CreateCallback GetCreateCallbackAtIndex(size_t i);
+  LLDBServerPlugin(GDBServer &native_process) : 
+      m_native_process(native_process) {}
 
-  virtual LLDBServerPlugin() = default;
+  virtual ~LLDBServerPlugin();
 
-  virtual void GetCallbacks(GDBRemotePacketCallbacks &callbacks);
+  /// Check if we are already connected.
+  bool IsConnected() const { return m_is_connected; }
+  /// Get an connection URL to connect to this plug-in.
+  ///
+  /// This function will get called each time native process stops if this
+  /// object is not connected already. If the plug-in is ready to be activated,
+  /// return a valid URL to use with "process connect" that can connect to this
+  /// plug-in. Execution should wait for a connection to be made before trying
+  /// to do any blocking code. The plug-in should assume the users do not want
+  /// to use any features unless a connection is made.
+  virtual std::optional<std::string> GetConnectionURL() {
+    return std::nullopt;
+  };
 
   /// Get a file descriptor to listen for in the ptrace epoll loop.
   ///
@@ -68,16 +82,6 @@ public:
   ///
   /// \param fd The file descriptor event to handle.
   virtual bool HandleEventFileDescriptorEvent(int fd) { return false; }
-
-  /// Handle a received a GDB remote packet that doesn't have a callback
-  /// specified in the GDBRemotePacketCallbacks structure after a call to
-  /// LLDBServerPlugin::GetCallbacks(...).
-  ///
-  /// \return
-  ///   The resonse packet to send. If the empty string is returned, this will
-  ///   cause an unimplemented packet ($#00) to be sent signaling this packet
-  ///   is not supported.
-  virtual std::string HandlePacket(const uint8_t *payload, size_t payload_size);
 
   /// Called when a breakpoint is hit in the native process.
   ///

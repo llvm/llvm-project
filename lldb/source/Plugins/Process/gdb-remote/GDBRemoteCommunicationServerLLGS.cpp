@@ -292,9 +292,6 @@ Status GDBRemoteCommunicationServerLLGS::LaunchProcess() {
     if (!process_or)
       return Status::FromError(process_or.takeError());
     m_continue_process = m_current_process = process_or->get();
-    // Notify anyone wanting to know when a NativeProcessProtocol is created.
-    if (m_process_created_callback)
-      m_process_created_callback(process_or->get());
     m_debugged_processes.emplace(
         m_current_process->GetID(),
         DebuggedProcess{std::move(*process_or), DebuggedProcess::Flag{}});
@@ -368,9 +365,6 @@ Status GDBRemoteCommunicationServerLLGS::AttachToProcess(lldb::pid_t pid) {
     return status;
   }
   m_continue_process = m_current_process = process_or->get();
-  // Notify anyone wanting to know when a NativeProcessProtocol is created.
-  if (m_process_created_callback)
-    m_process_created_callback(process_or->get());
   m_debugged_processes.emplace(
       m_current_process->GetID(),
       DebuggedProcess{std::move(*process_or), DebuggedProcess::Flag{}});
@@ -1008,7 +1002,8 @@ StreamString GDBRemoteCommunicationServerLLGS::PrepareStopReplyPacketForThread(
 
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
-    NativeProcessProtocol &process, lldb::tid_t tid, bool force_synchronous) {
+    NativeProcessProtocol &process, lldb::tid_t tid, bool force_synchronous,
+    llvm::StringRef extra_stop_reply_args) {
   // Ensure we can get info on the given thread.
   NativeThreadProtocol *thread = process.GetThreadByID(tid);
   if (!thread)
@@ -1017,6 +1012,9 @@ GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
   StreamString response = PrepareStopReplyPacketForThread(*thread);
   if (response.Empty())
     return SendErrorResponse(42);
+
+  if (!extra_stop_reply_args.empty())
+    response.PutCString(extra_stop_reply_args);
 
   if (m_non_stop && !force_synchronous) {
     PacketResult ret = SendNotificationPacketNoLock(
@@ -1092,8 +1090,17 @@ void GDBRemoteCommunicationServerLLGS::HandleInferiorState_Stopped(
   Log *log = GetLog(LLDBLog::Process);
   LLDB_LOGF(log, "GDBRemoteCommunicationServerLLGS::%s called", __FUNCTION__);
 
+  std::string extra_stop_reply_args;
+  // Call the state changed callback
+  if (m_process_stopped_callback) {
+    extra_stop_reply_args = m_process_stopped_callback(*this, process);
+    // LLDB_LOGF(log, "GDBRemoteCommunicationServerLLGS::%s called, m_process_stopped_callback returned \"%s\"", __FUNCTION__, extra_stop_reply_args.str().c_str());
+
+  }
+
   PacketResult result = SendStopReasonForState(
-      *process, StateType::eStateStopped, /*force_synchronous=*/false);
+      *process, StateType::eStateStopped, /*force_synchronous=*/false, 
+      extra_stop_reply_args);
   if (result != PacketResult::Success) {
     LLDB_LOGF(log,
               "GDBRemoteCommunicationServerLLGS::%s failed to send stop "
@@ -1112,6 +1119,7 @@ void GDBRemoteCommunicationServerLLGS::ProcessStateChanged(
               "NativeProcessProtocol pid %" PRIu64 ", state: %s",
               __FUNCTION__, process->GetID(), StateAsCString(state));
   }
+
 
   switch (state) {
   case StateType::eStateRunning:
@@ -1405,31 +1413,13 @@ GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::Handle_qProcessInfo(
     StringExtractorGDBRemote &packet) {
   // Fail if we don't have a current process.
-  static std::once_flag OnceFlag;
-
-  std::call_once(OnceFlag, []() {
-    const char *plugin_path =
-        "/data/users/gclayton/github/Debug/lib/liblldbServerPluginMockGPU.so";
-    std::string error;
-    g_gpu_plugin =
-        sys::DynamicLibrary::getPermanentLibrary(plugin_path, &error);
-    LLDBServerPluginInitialize plugin_initialize =
-        FuncPtr<LLDBServerPluginInitialize>(
-            g_gpu_plugin.getAddressOfSymbol("LLDBServerPluginInitialize"));
-    plugin_initialize();
-  });
 
   if (!m_current_process ||
       (m_current_process->GetID() == LLDB_INVALID_PROCESS_ID))
     return SendErrorResponse(68);
 
-  lldb::pid_t pid = m_current_process->GetID();
-
-  if (pid == LLDB_INVALID_PROCESS_ID)
-    return SendErrorResponse(1);
-
   ProcessInstanceInfo proc_info;
-  if (!Host::GetProcessInfo(pid, proc_info))
+  if (!m_current_process->GetProcessInfo(proc_info))
     return SendErrorResponse(1);
 
   StreamString response;
@@ -1923,7 +1913,6 @@ GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::Handle_stop_reason(
     StringExtractorGDBRemote &packet) {
   // Handle the $? gdbremote command.
-
   if (m_non_stop) {
     // Clear the notification queue first, except for pending exit
     // notifications.
@@ -1965,7 +1954,7 @@ GDBRemoteCommunicationServerLLGS::Handle_stop_reason(
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::SendStopReasonForState(
     NativeProcessProtocol &process, lldb::StateType process_state,
-    bool force_synchronous) {
+    bool force_synchronous, llvm::StringRef extra_stop_reply_args) {
   Log *log = GetLog(LLDBLog::Process);
 
   if (m_disabling_non_stop) {
@@ -1999,7 +1988,8 @@ GDBRemoteCommunicationServerLLGS::SendStopReasonForState(
     // Make sure we set the current thread so g and p packets return the data
     // the gdb will expect.
     SetCurrentThreadID(tid);
-    return SendStopReplyPacketForThread(process, tid, force_synchronous);
+    return SendStopReplyPacketForThread(process, tid, force_synchronous, 
+                                        extra_stop_reply_args);
   }
 
   case eStateInvalid:
@@ -3656,7 +3646,8 @@ GDBRemoteCommunicationServerLLGS::Handle_qThreadStopInfo(
     return SendErrorResponse(0x15);
   }
   return SendStopReplyPacketForThread(*m_current_process, tid,
-                                      /*force_synchronous=*/true);
+                                      /*force_synchronous=*/true, 
+                                      llvm::StringRef());
 }
 
 GDBRemoteCommunication::PacketResult

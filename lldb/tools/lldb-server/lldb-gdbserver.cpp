@@ -19,6 +19,7 @@
 
 #include "LLDBServerUtilities.h"
 #include "Plugins/PluginInterface/LLDBServerNativeProcess.h"
+#include "Plugins/MockGPU/LLDBServerPluginMockGPU.h"
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationServerLLGS.h"
 #include "Plugins/Process/gdb-remote/ProcessGDBRemoteLog.h"
 #include "lldb/Host/Config.h"
@@ -47,6 +48,8 @@
 #elif defined(_WIN32)
 #include "Plugins/Process/Windows/Common/NativeProcessWindows.h"
 #endif
+
+#include "Plugins/MockGPU/ProcessMockGPU.h"
 
 #ifndef LLGS_PROGRAM_NAME
 #define LLGS_PROGRAM_NAME "lldb-server"
@@ -90,35 +93,6 @@ public:
   }
 };
 #endif
-
-class LLDBServerNativeProcessImpl : public LLDBServerNativeProcess {
-  NativeProcessProtocol *m_native_process = nullptr;
-
-public:
-  LLDBServerNativeProcessImpl(NativeProcessProtocol *native_process)
-      : m_native_process(native_process) {}
-
-  ~LLDBServerNativeProcessImpl() override {}
-  /// Set a breakpoint in the native process.
-  ///
-  /// When the breakpoints gets hit, lldb-server will call
-  /// LLDBServerPlugin::BreakpointWasHit with this address. This will allow
-  /// LLDBServerPlugin plugins to synchronously handle a breakpoint hit in the
-  /// native process.
-  lldb::user_id_t SetBreakpoint(lldb::addr_t address) override {
-    return LLDB_INVALID_BREAK_ID;
-  }
-
-  Status RegisterSignalCatcher(int signo) override {
-    return Status::FromErrorString("unimplemented");
-  }
-
-  Status HaltProcess() override { return m_native_process->Halt(); }
-  Status ContinueProcess() override {
-    ResumeActionList resume_actions;
-    return m_native_process->Resume(resume_actions);
-  }
-};
 
 } // namespace
 
@@ -465,7 +439,7 @@ int main_gdbserver(int argc, char *argv[]) {
   if (!LLDBServerUtilities::SetupLogging(
           log_file, log_channels,
           LLDB_LOG_OPTION_PREPEND_TIMESTAMP |
-              LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION))
+          LLDB_LOG_OPTION_PREPEND_PROC_AND_THREAD))
     return -1;
 
   std::vector<llvm::StringRef> Inputs;
@@ -482,11 +456,24 @@ int main_gdbserver(int argc, char *argv[]) {
 
   NativeProcessManager manager(mainloop);
   GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
-  gdb_server.SetProcessCreatedCallback([](NativeProcessProtocol *process) {
-    assert(process);
-    LLDBServerNativeProcess::SetNativeProcess(
-        new LLDBServerNativeProcessImpl(process));
+
+
+  LLDBServerPluginMockGPU mockGPUPlugin(gdb_server);
+
+  gdb_server.SetProcessStoppedCallback([&](
+      GDBRemoteCommunicationServerLLGS &gdb_server,
+      NativeProcessProtocol *native_process) -> std::string {
+    if (!mockGPUPlugin.IsConnected()) {
+      if (std::optional<std::string> opt_url = mockGPUPlugin.GetConnectionURL())
+        return opt_url.value();
+    } 
+    return "";
   });
+
+  // MockGPUProcessManager manager(mainloop);
+  // GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
+
+
   llvm::StringRef host_and_port;
   if (!Inputs.empty() && connection_fd == SharedSocket::kInvalidFD) {
     host_and_port = Inputs.front();
