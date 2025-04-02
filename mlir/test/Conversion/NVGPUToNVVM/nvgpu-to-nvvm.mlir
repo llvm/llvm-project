@@ -532,6 +532,28 @@ func.func @mbarrier_nocomplete() {
   func.return
 }
 
+// CHECK-LABEL: func @mbarrier_get
+//  CHECK-SAME:     %[[ARG0:.*]]: !nvgpu.mbarrier.group{{.*}}
+func.func @mbarrier_get(%barriers : !nvgpu.mbarrier.group<memorySpace = #gpu.address_space<workgroup>, num_barriers = 5>) {
+  // CHECK: %[[S0:.+]] = builtin.unrealized_conversion_cast %[[ARG0]] : !nvgpu.mbarrier.group<memorySpace = #gpu.address_space<workgroup>, num_barriers = 5> to !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+  // CHECK: %[[c2:.+]] = arith.constant 2 : index
+  // CHECK: %[[S1:.+]] = builtin.unrealized_conversion_cast %[[c2]] : index to i64
+  // CHECK: %[[S2:.+]] = llvm.extractvalue %[[S0]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)> 
+  // CHECK: %[[S3:.+]] = llvm.getelementptr %[[S2]][%[[S1]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i64
+  // CHECK: %[[S4:.+]] = llvm.ptrtoint %[[S3]] : !llvm.ptr<3> to i32
+  %c2 = arith.constant 2 : index
+  nvgpu.mbarrier.get %barriers[%c2] : !nvgpu.mbarrier.group<memorySpace = #gpu.address_space<workgroup>, num_barriers = 5> -> i32
+
+  // CHECK: %[[c4:.+]] = arith.constant 4 : index
+  // CHECK: %[[S5:.+]] = builtin.unrealized_conversion_cast %[[c4]] : index to i64
+  // CHECK: %[[S6:.+]] = llvm.extractvalue %[[S0]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)> 
+  // CHECK: %[[S7:.+]] = llvm.getelementptr %[[S6]][%[[S5]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i64
+  // CHECK: %[[S8:.+]] = llvm.ptrtoint %[[S7]] : !llvm.ptr<3> to i64
+  %c4 = arith.constant 4 : index
+  nvgpu.mbarrier.get %barriers[%c4] : !nvgpu.mbarrier.group<memorySpace = #gpu.address_space<workgroup>, num_barriers = 5> -> i64
+  func.return
+}
+
 // CHECK-LABEL: func @mbarrier_wait(
 //  CHECK-SAME:     %[[ARG0:.*]]: !nvgpu.mbarrier.group{{.*}}, %[[ARG1:.*]]: !nvgpu.mbarrier.token)
 func.func @mbarrier_wait(%barriers : !nvgpu.mbarrier.group<memorySpace = #gpu.address_space<workgroup>, num_barriers = 5>, %token : !tokenType) {
