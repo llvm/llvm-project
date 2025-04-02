@@ -2268,17 +2268,15 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     // handling here.
     if (ToType->isArrayParameterType()) {
       FromType = S.Context.getArrayParameterType(FromType);
-      SCS.First = ICK_HLSL_Array_RValue;
     } else if (FromType->isArrayParameterType()) {
       const ArrayParameterType *APT = cast<ArrayParameterType>(FromType);
       FromType = APT->getConstantArrayType(S.Context);
-      SCS.First = ICK_HLSL_Array_RValue;
-    } else {
-      SCS.First = ICK_Identity;
     }
 
-    if (S.Context.getCanonicalType(FromType) !=
-        S.Context.getCanonicalType(ToType))
+    SCS.First = ICK_HLSL_Array_RValue;
+
+    if (FromType.getCanonicalType().getUnqualifiedType() !=
+        ToType.getCanonicalType().getUnqualifiedType())
       return false;
 
     SCS.setAllToTypes(ToType);
