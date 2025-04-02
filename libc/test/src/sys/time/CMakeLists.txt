@@ -13,7 +13,7 @@ add_libc_unittest(
     libc.include.sys_stat
     libc.src.errno.errno
     libc.src.fcntl.open
-    libc.src.sys.sendfile.sendfile
+    libc.src.sys.time.utimes
     libc.src.unistd.close
     libc.src.unistd.read
     libc.src.unistd.unlink
