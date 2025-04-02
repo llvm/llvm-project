@@ -51,7 +51,7 @@ namespace RISCV {
 #include "RISCVGenSearchableTables.inc"
 } // namespace RISCV
 
-// Report an error but don't perform ask the user to report a bug.
+// Report an error but don't ask the user to report a bug.
 [[noreturn]] static void reportError(const char *Reason) {
   report_fatal_error(Reason, false);
 }
