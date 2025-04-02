@@ -61,7 +61,7 @@ defm decomp_decl_cond : CXX26Compat<"structured binding declaration in a conditi
 
 // Compatibility warnings duplicated across multiple language versions.
 foreach std = [14, 20, 23] in {
-  defm constexpr_body_invalid_stmt : CXXCompat<
+  defm cxx#std#_constexpr_body_invalid_stmt : CXXCompat<
     "use of this statement in a constexpr %select{function|constructor}0 is", std>;
 }
 
@@ -545,7 +545,7 @@ def warn_qual_return_type : Warning<
   InGroup<IgnoredQualifiers>, DefaultIgnore;
 def warn_qual_base_type : Warning<
   "'%0' qualifier%s1 on base class type %2 %plural{1:has|:have}1 no effect">,
-  InGroup<IgnoredQualifiers>, DefaultIgnore;
+  InGroup<IgnoredBaseClassQualifiers>, DefaultIgnore;
 
 def warn_deprecated_redundant_constexpr_static_def : Warning<
   "out-of-line definition of constexpr static data member is redundant "
@@ -2733,7 +2733,7 @@ def note_final_dtor_non_final_class_silence : Note<
   "mark %0 as '%select{final|sealed}1' to silence this warning">;
 def warn_unnecessary_virtual_specifier : Warning<
   "virtual method %0 is inside a 'final' class and can never be overridden">,
-  InGroup<WarnUnnecessaryVirtualSpecifier>;
+  InGroup<WarnUnnecessaryVirtualSpecifier>, DefaultIgnore;
 
 // C++11 attributes
 def err_repeat_attribute : Error<"%0 attribute cannot be repeated">;

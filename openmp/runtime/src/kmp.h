@@ -1119,6 +1119,7 @@ extern omp_allocator_handle_t __kmp_def_allocator;
 #endif
 
 extern int __kmp_memkind_available;
+extern bool __kmp_hwloc_available;
 
 /// Memory space informaition is shared with offload runtime.
 typedef struct kmp_memspace_t {
@@ -1144,6 +1145,9 @@ typedef struct kmp_allocator_t {
   omp_alloctrait_value_t target_access;
   omp_alloctrait_value_t atomic_scope;
   size_t part_size;
+#if KMP_USE_HWLOC
+  omp_alloctrait_value_t membind;
+#endif
 } kmp_allocator_t;
 
 extern omp_allocator_handle_t __kmpc_init_allocator(int gtid,

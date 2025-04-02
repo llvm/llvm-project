@@ -1659,7 +1659,7 @@ ParseStatus RISCVAsmParser::parseRegister(OperandVector &Operands,
     if (HadParens)
       Operands.push_back(RISCVOperand::createToken("(", FirstS));
     SMLoc S = getLoc();
-    SMLoc E = SMLoc::getFromPointer(S.getPointer() + Name.size());
+    SMLoc E = getTok().getEndLoc();
     getLexer().Lex();
     Operands.push_back(RISCVOperand::createReg(Reg, S, E));
   }
@@ -2272,7 +2272,7 @@ ParseStatus RISCVAsmParser::parseMaskReg(OperandVector &Operands) {
   if (Reg != RISCV::V0)
     return ParseStatus::NoMatch;
   SMLoc S = getLoc();
-  SMLoc E = SMLoc::getFromPointer(S.getPointer() + Name.size());
+  SMLoc E = getTok().getEndLoc();
   getLexer().Lex();
   Operands.push_back(RISCVOperand::createReg(Reg, S, E));
   return ParseStatus::Success;
@@ -2295,7 +2295,7 @@ ParseStatus RISCVAsmParser::parseGPRAsFPR(OperandVector &Operands) {
   if (!Reg)
     return ParseStatus::NoMatch;
   SMLoc S = getLoc();
-  SMLoc E = SMLoc::getFromPointer(S.getPointer() + Name.size());
+  SMLoc E = getTok().getEndLoc();
   getLexer().Lex();
   Operands.push_back(RISCVOperand::createReg(
       Reg, S, E, !getSTI().hasFeature(RISCV::FeatureStdExtF)));
@@ -2328,7 +2328,7 @@ ParseStatus RISCVAsmParser::parseGPRPairAsFPR64(OperandVector &Operands) {
   }
 
   SMLoc S = getLoc();
-  SMLoc E = SMLoc::getFromPointer(S.getPointer() + Name.size());
+  SMLoc E = getTok().getEndLoc();
   getLexer().Lex();
 
   const MCRegisterInfo *RI = getContext().getRegisterInfo();
@@ -2370,7 +2370,7 @@ ParseStatus RISCVAsmParser::parseGPRPair(OperandVector &Operands,
     return TokError("register must be even");
 
   SMLoc S = getLoc();
-  SMLoc E = SMLoc::getFromPointer(S.getPointer() + Name.size());
+  SMLoc E = getTok().getEndLoc();
   getLexer().Lex();
 
   const MCRegisterInfo *RI = getContext().getRegisterInfo();
