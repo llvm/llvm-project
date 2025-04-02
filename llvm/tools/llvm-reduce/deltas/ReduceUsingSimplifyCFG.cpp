@@ -37,17 +37,18 @@ static void reduceConditionals(Oracle &O, ReducerWorkItem &WorkItem,
   Module &M = WorkItem.getModule();
   SmallVector<BasicBlock *, 16> ToSimplify;
 
+  LLVMContext &Ctx = M.getContext();
+  ConstantInt *ConstValToSet =
+      Direction ? ConstantInt::getTrue(Ctx) : ConstantInt::getFalse(Ctx);
+
   for (auto &F : M) {
     for (auto &BB : F) {
       auto *BR = dyn_cast<BranchInst>(BB.getTerminator());
-      if (!BR || !BR->isConditional() || O.shouldKeep())
+      if (!BR || !BR->isConditional() || BR->getCondition() == ConstValToSet ||
+          O.shouldKeep())
         continue;
 
-      if (Direction)
-        BR->setCondition(ConstantInt::getTrue(BR->getContext()));
-      else
-        BR->setCondition(ConstantInt::getFalse(BR->getContext()));
-
+      BR->setCondition(ConstValToSet);
       ToSimplify.push_back(&BB);
     }
   }
