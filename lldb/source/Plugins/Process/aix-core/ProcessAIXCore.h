@@ -85,10 +85,21 @@ public:
 
   void ParseAIXCoreFile();
 
+  lldb::addr_t AddAddressRanges(AIXCORE::AIXCore64Header header); 
 
 private:
   lldb::ModuleSP m_core_module_sp;
   std::string m_dyld_plugin_name;
+
+  typedef lldb_private::Range<lldb::addr_t, lldb::addr_t> FileRange;
+  typedef lldb_private::RangeDataVector<lldb::addr_t, lldb::addr_t, FileRange>
+      VMRangeToFileOffset;
+  typedef lldb_private::RangeDataVector<lldb::addr_t, lldb::addr_t, uint32_t>
+      VMRangeToPermissions;
+
+  // Address ranges found in the core
+  VMRangeToFileOffset m_core_aranges;
+  VMRangeToPermissions m_core_range_infos;
 
   // True if m_thread_contexts contains valid entries
   bool m_thread_data_valid = false;

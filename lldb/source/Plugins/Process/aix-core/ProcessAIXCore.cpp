@@ -94,6 +94,33 @@ ProcessAIXCore::~ProcessAIXCore() {
   Finalize(true /* destructing */);
 }
 
+lldb::addr_t ProcessAIXCore::AddAddressRanges(AIXCORE::AIXCore64Header header) {
+  const lldb::addr_t addr = header.StackBaseAddr;
+  FileRange file_range(header.StackOffset, header.StackSize);
+  VMRangeToFileOffset::Entry range_entry(addr, header.StackSize, file_range);
+
+  if (header.StackSize > 0) {
+    VMRangeToFileOffset::Entry *last_entry = m_core_aranges.Back();
+    if (last_entry &&
+        last_entry->GetRangeEnd() == range_entry.GetRangeBase() &&
+        last_entry->data.GetRangeEnd() == range_entry.data.GetRangeBase() &&
+        last_entry->GetByteSize() == last_entry->data.GetByteSize()) {
+        last_entry->SetRangeEnd(range_entry.GetRangeEnd());
+        last_entry->data.SetRangeEnd(range_entry.data.GetRangeEnd());
+    } else {
+        m_core_aranges.Append(range_entry);
+    }
+  }
+
+  const uint32_t permissions = lldb::ePermissionsReadable |
+      lldb::ePermissionsWritable;
+
+  m_core_range_infos.Append(
+      VMRangeToPermissions::Entry(addr, header.StackSize, permissions));
+
+  return addr;
+}
+
 bool ProcessAIXCore::CanDebug(lldb::TargetSP target_sp,
                                 bool plugin_specified_by_name) {
 
@@ -170,6 +197,7 @@ Status ProcessAIXCore::DoLoadCore() {
     }
 
     FileSpec file = m_core_module_sp->GetObjectFile()->GetFileSpec();
+    Log *log = GetLog(LLDBLog::Process);
     
     if (file) {
         const size_t header_size = sizeof(AIXCORE::AIXCore64Header);
@@ -180,6 +208,9 @@ Status ProcessAIXCore::DoLoadCore() {
             DataExtractor data(data_sp, lldb::eByteOrderBig, 4);
             lldb::offset_t data_offset = 0;
             m_aixcore_header.ParseCoreHeader(data, &data_offset);
+            lldb::addr_t addr = AddAddressRanges(m_aixcore_header);
+            if (addr == LLDB_INVALID_ADDRESS)
+                LLDB_LOGF(log, "ProcessAIXCore: Invalid base address. Stack information will be limited");
             auto dyld = static_cast<DynamicLoaderAIXDYLD *>(GetDynamicLoader());
             dyld->FillCoreLoaderData(data, m_aixcore_header.LoaderOffset,
                     m_aixcore_header.LoaderSize);
@@ -246,7 +277,48 @@ size_t ProcessAIXCore::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
 }
 
 size_t ProcessAIXCore::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                                    Status &error) { return 0; }
+                                    Status &error) {
+    ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
+    if (core_objfile == nullptr)
+        return 0;
+    // Get the address range
+    const VMRangeToFileOffset::Entry *address_range =
+        m_core_aranges.FindEntryThatContains(addr);
+    if (address_range == nullptr || address_range->GetRangeEnd() < addr) {
+        error = Status::FromErrorStringWithFormat(
+                "core file does not contain 0x%" PRIx64, addr);
+        return 0;
+    }
+
+    // Convert the address into core file offset
+    const lldb::addr_t offset = addr - address_range->GetRangeBase();
+    const lldb::addr_t file_start = address_range->data.GetRangeBase();
+    const lldb::addr_t file_end = address_range->data.GetRangeEnd();
+    size_t bytes_to_read = size; // Number of bytes to read from the core file
+    size_t bytes_copied = 0;   // Number of bytes actually read from the core file
+    // Number of bytes available in the core file from the given address
+    lldb::addr_t bytes_left = 0;
+
+    // Don't proceed if core file doesn't contain the actual data for this
+    // address range.
+    if (file_start == file_end)
+        return 0;
+
+    // Figure out how many on-disk bytes remain in this segment starting at the
+    // given offset
+    if (file_end > file_start + offset)
+        bytes_left = file_end - (file_start + offset);
+
+    if (bytes_to_read > bytes_left)
+        bytes_to_read = bytes_left;
+
+  // If there is data available on the core file read it
+  if (bytes_to_read)
+    bytes_copied =
+        core_objfile->CopyData(offset + file_start, bytes_to_read, buf);
+
+  return bytes_copied;
+}
 
 Status ProcessAIXCore::DoGetMemoryRegionInfo(lldb::addr_t load_addr,
                                               MemoryRegionInfo &region_info) {
