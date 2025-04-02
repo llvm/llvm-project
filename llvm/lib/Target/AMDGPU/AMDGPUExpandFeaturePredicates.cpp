@@ -81,7 +81,7 @@ unfoldableFound(Function *Caller, GlobalVariable *P, Instruction *NoFold) {
   std::string W;
   raw_string_ostream OS(W);
 
-  OS << "Impossible to constant fold feature predicate: " << *P  << " used by "
+  OS << "Impossible to constant fold feature predicate: " << *P << " used by "
      << *NoFold << ", please simplify.\n";
 
   Caller->getContext().diagnose(
