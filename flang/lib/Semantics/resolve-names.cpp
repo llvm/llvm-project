@@ -9573,7 +9573,10 @@ void ResolveNamesVisitor::Post(const parser::AssignedGotoStmt &x) {
 void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
   if (std::holds_alternative<parser::CompilerDirective::VectorAlways>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::Unroll>(x.u) ||
-      std::holds_alternative<parser::CompilerDirective::UnrollAndJam>(x.u)) {
+      std::holds_alternative<parser::CompilerDirective::UnrollAndJam>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::NoVector>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::NoUnroll>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::NoUnrollAndJam>(x.u)) {
     return;
   }
   if (const auto *tkr{

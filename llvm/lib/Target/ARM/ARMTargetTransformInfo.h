@@ -184,10 +184,11 @@ public:
 
   bool isProfitableLSRChainElement(Instruction *I);
 
-  bool isLegalMaskedLoad(Type *DataTy, Align Alignment);
+  bool isLegalMaskedLoad(Type *DataTy, Align Alignment, unsigned AddressSpace);
 
-  bool isLegalMaskedStore(Type *DataTy, Align Alignment) {
-    return isLegalMaskedLoad(DataTy, Alignment);
+  bool isLegalMaskedStore(Type *DataTy, Align Alignment,
+                          unsigned AddressSpace) {
+    return isLegalMaskedLoad(DataTy, Alignment, AddressSpace);
   }
 
   bool forceScalarizeMaskedGather(VectorType *VTy, Align Alignment) {

@@ -4263,7 +4263,7 @@ static const TemplateTypeParmDecl *getReplacedParameter(Decl *D,
 
 SubstTemplateTypeParmType::SubstTemplateTypeParmType(
     QualType Replacement, Decl *AssociatedDecl, unsigned Index,
-    std::optional<unsigned> PackIndex, SubstTemplateTypeParmTypeFlag Flag)
+    std::optional<unsigned> PackIndex)
     : Type(SubstTemplateTypeParm, Replacement.getCanonicalType(),
            Replacement->getDependence()),
       AssociatedDecl(AssociatedDecl) {
@@ -4274,10 +4274,6 @@ SubstTemplateTypeParmType::SubstTemplateTypeParmType(
 
   SubstTemplateTypeParmTypeBits.Index = Index;
   SubstTemplateTypeParmTypeBits.PackIndex = PackIndex ? *PackIndex + 1 : 0;
-  SubstTemplateTypeParmTypeBits.SubstitutionFlag = llvm::to_underlying(Flag);
-  assert((Flag != SubstTemplateTypeParmTypeFlag::ExpandPacksInPlace ||
-          PackIndex) &&
-         "ExpandPacksInPlace needs a valid PackIndex");
   assert(AssociatedDecl != nullptr);
 }
 

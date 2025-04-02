@@ -3265,9 +3265,8 @@ FunctionDecl *Sema::FindUsualDeallocationFunction(SourceLocation StartLoc,
   return Result.FD;
 }
 
-FunctionDecl *Sema::FindDeallocationFunctionForDestructor(SourceLocation Loc,
-                                                          CXXRecordDecl *RD) {
-  DeclarationName Name = Context.DeclarationNames.getCXXOperatorName(OO_Delete);
+FunctionDecl *Sema::FindDeallocationFunctionForDestructor(
+    SourceLocation Loc, CXXRecordDecl *RD, DeclarationName Name) {
 
   FunctionDecl *OperatorDelete = nullptr;
   if (FindDeallocationFunction(Loc, RD, Name, OperatorDelete))
@@ -3275,8 +3274,7 @@ FunctionDecl *Sema::FindDeallocationFunctionForDestructor(SourceLocation Loc,
   if (OperatorDelete)
     return OperatorDelete;
 
-  // If there's no class-specific operator delete, look up the global
-  // non-array delete.
+  // If there's no class-specific operator delete, look up the global delete.
   return FindUsualDeallocationFunction(
       Loc, true, hasNewExtendedAlignment(*this, Context.getRecordType(RD)),
       Name);
@@ -9551,7 +9549,8 @@ concepts::NestedRequirement *
 Sema::BuildNestedRequirement(Expr *Constraint) {
   ConstraintSatisfaction Satisfaction;
   if (!Constraint->isInstantiationDependent() &&
-      CheckConstraintSatisfaction(nullptr, {Constraint}, /*TemplateArgs=*/{},
+      CheckConstraintSatisfaction(nullptr, AssociatedConstraint(Constraint),
+                                  /*TemplateArgs=*/{},
                                   Constraint->getSourceRange(), Satisfaction))
     return nullptr;
   return new (Context) concepts::NestedRequirement(Context, Constraint,
