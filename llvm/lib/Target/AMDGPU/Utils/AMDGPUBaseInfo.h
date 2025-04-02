@@ -794,8 +794,8 @@ private:
   // instruction layout, add 1 for COMPONENT_X or COMPONENT_Y. For the second
   // component add OpX.MCSrcNum + OpX.VOPD3ModsNum.
   // For VOPD1/VOPD2 use column with zero modifiers.
-  static constexpr unsigned SINGLE_MC_SRC_IDX[4][3] =
-      {{1, 2, 3}, {2, 3, 4}, {2, 4, 5}, {2, 4, 6}};
+  static constexpr unsigned SINGLE_MC_SRC_IDX[4][3] = {
+      {1, 2, 3}, {2, 3, 4}, {2, 4, 5}, {2, 4, 6}};
 
   // Parsed operands of regular instructions are ordered as follows:
   //   Mnemo dst src0 [vsrc1 ...]
@@ -922,12 +922,11 @@ public:
   // If \p VOPD3 is set to true both dst registers allowed to be either odd
   // or even and instruction may have real src2 as opposed to tied accumulator.
   bool hasInvalidOperand(std::function<unsigned(unsigned, unsigned)> GetRegIdx,
-                         const MCRegisterInfo &MRI,
-                         bool SkipSrc = false,
-                         bool AllowSameVGPR = false,
-                         bool VOPD3 = false) const {
+                         const MCRegisterInfo &MRI, bool SkipSrc = false,
+                         bool AllowSameVGPR = false, bool VOPD3 = false) const {
     return getInvalidCompOperandIndex(GetRegIdx, MRI, SkipSrc, AllowSameVGPR,
-                                      VOPD3).has_value();
+                                      VOPD3)
+        .has_value();
   }
 
   // Check VOPD operands constraints.
@@ -940,10 +939,8 @@ public:
   // or even and instruction may have real src2 as opposed to tied accumulator.
   std::optional<unsigned> getInvalidCompOperandIndex(
       std::function<unsigned(unsigned, unsigned)> GetRegIdx,
-      const MCRegisterInfo &MRI,
-      bool SkipSrc = false,
-      bool AllowSameVGPR = false,
-      bool VOPD3 = false) const;
+      const MCRegisterInfo &MRI, bool SkipSrc = false,
+      bool AllowSameVGPR = false, bool VOPD3 = false) const;
 
 private:
   RegIndices

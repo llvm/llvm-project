@@ -641,7 +641,7 @@ unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
 }
 
 CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily, bool VOPD3) {
-  bool IsConvertibleToBitOp  = VOPD3 ? getBitOp2(Opc) : 0;
+  bool IsConvertibleToBitOp = VOPD3 ? getBitOp2(Opc) : 0;
   Opc = IsConvertibleToBitOp ? AMDGPU::V_BITOP3_B32_e64 : Opc;
   const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
   if (Info) {
@@ -659,7 +659,7 @@ CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily, bool VOPD3) {
 }
 
 unsigned getVOPDOpcode(unsigned Opc, bool VOPD3) {
-  bool IsConvertibleToBitOp  = VOPD3 ? getBitOp2(Opc) : 0;
+  bool IsConvertibleToBitOp = VOPD3 ? getBitOp2(Opc) : 0;
   Opc = IsConvertibleToBitOp ? AMDGPU::V_BITOP3_B32_e64 : Opc;
   const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
   return Info ? Info->VOPDOp : ~0u;
@@ -774,8 +774,8 @@ unsigned getTemporalHintType(const MCInstrDesc TID) {
     return CPol::TH_TYPE_ATOMIC;
   unsigned Opc = TID.getOpcode();
   // Async and Tensor store should have the temporal hint type of TH_TYPE_STORE
-  if (TID.mayStore() && (isAsyncStore(Opc) || isTensorStore(Opc) ||
-                         !TID.mayLoad()))
+  if (TID.mayStore() &&
+      (isAsyncStore(Opc) || isTensorStore(Opc) || !TID.mayLoad()))
     return CPol::TH_TYPE_STORE;
 
   // This will default to returning TH_TYPE_LOAD when neither MayStore nor
@@ -850,7 +850,7 @@ unsigned getBitOp2(unsigned Opc) {
 
 int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily,
                 bool VOPD3) {
-  bool IsConvertibleToBitOp  = VOPD3 ? getBitOp2(OpY) : 0;
+  bool IsConvertibleToBitOp = VOPD3 ? getBitOp2(OpY) : 0;
   OpY = IsConvertibleToBitOp ? AMDGPU::V_BITOP3_B32_e64 : OpY;
   const VOPDInfo *Info =
       getVOPDInfoFromComponentOpcodes(OpX, OpY, EncodingFamily, VOPD3);
@@ -879,10 +879,10 @@ ComponentProps::ComponentProps(const MCInstrDesc &OpDesc, bool VOP3Layout) {
   Opcode = OpDesc.getOpcode();
 
   IsVOP3 = VOP3Layout || (OpDesc.TSFlags & SIInstrFlags::VOP3);
-  SrcOperandsNum = AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src2) ? 3 :
-                   AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::imm)  ? 3 :
-                   AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src1) ? 2 :
-                                                                           1;
+  SrcOperandsNum = AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src2)   ? 3
+                   : AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::imm)  ? 3
+                   : AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src1) ? 2
+                                                                           : 1;
   assert(SrcOperandsNum <= Component::MAX_SRC_NUM);
 
   if (Opcode == AMDGPU::V_CNDMASK_B32_e32 ||
@@ -892,7 +892,8 @@ ComponentProps::ComponentProps(const MCInstrDesc &OpDesc, bool VOP3Layout) {
     NumVOPD3Mods = 2;
     if (IsVOP3)
       SrcOperandsNum = 3;
-  } else if (isSISrcFPOperand(OpDesc, getNamedOperandIdx(Opcode, OpName::src0))) {
+  } else if (isSISrcFPOperand(OpDesc,
+                              getNamedOperandIdx(Opcode, OpName::src0))) {
     // All FP VOPD instructions have Neg modifiers for all operands except
     // for tied src2.
     NumVOPD3Mods = SrcOperandsNum;
@@ -954,8 +955,7 @@ std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
     if (BaseX != X /* This is 64-bit register */ &&
         ((BaseX + 1) & BanksMask) == (BaseY & BanksMask))
       return true;
-    if (BaseY != Y &&
-        (BaseX & BanksMask) == ((BaseY + 1) & BanksMask))
+    if (BaseY != Y && (BaseX & BanksMask) == ((BaseY + 1) & BanksMask))
       return true;
 
     // If both are 64-bit bank conflict will be detected yet while checking
@@ -1002,9 +1002,10 @@ std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
 // GetRegIdx(Component, MCOperandIdx) must return a VGPR register index
 // for the specified component and MC operand. The callback must return 0
 // if the operand is not a register or not a VGPR.
-InstInfo::RegIndices InstInfo::getRegIndices(
-    unsigned CompIdx,
-    std::function<unsigned(unsigned, unsigned)> GetRegIdx, bool VOPD3) const {
+InstInfo::RegIndices
+InstInfo::getRegIndices(unsigned CompIdx,
+                        std::function<unsigned(unsigned, unsigned)> GetRegIdx,
+                        bool VOPD3) const {
   assert(CompIdx < COMPONENTS_NUM);
 
   const auto &Comp = CompInfo[CompIdx];
@@ -1573,8 +1574,8 @@ void initDefaultAMDKernelCodeT(AMDGPUMCKernelCodeT &KernelCode,
   }
 }
 
-amdhsa::kernel_descriptor_t getDefaultAmdhsaKernelDescriptor(
-    const MCSubtargetInfo *STI) {
+amdhsa::kernel_descriptor_t
+getDefaultAmdhsaKernelDescriptor(const MCSubtargetInfo *STI) {
   IsaVersion Version = getIsaVersion(STI->getCPU());
 
   amdhsa::kernel_descriptor_t KD;
@@ -3527,22 +3528,14 @@ const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t Format,
 const MCRegisterClass *getVGPRPhysRegClass(MCPhysReg Reg,
                                            const MCRegisterInfo &MRI) {
   const unsigned VGPRClasses[] = {
-    AMDGPU::VGPR_16RegClassID,
-    AMDGPU::VGPR_32RegClassID,
-    AMDGPU::VReg_64RegClassID,
-    AMDGPU::VReg_96RegClassID,
-    AMDGPU::VReg_128RegClassID,
-    AMDGPU::VReg_160RegClassID,
-    AMDGPU::VReg_192RegClassID,
-    AMDGPU::VReg_224RegClassID,
-    AMDGPU::VReg_256RegClassID,
-    AMDGPU::VReg_288RegClassID,
-    AMDGPU::VReg_320RegClassID,
-    AMDGPU::VReg_352RegClassID,
-    AMDGPU::VReg_384RegClassID,
-    AMDGPU::VReg_512RegClassID,
-    AMDGPU::VReg_1024RegClassID
-  };
+      AMDGPU::VGPR_16RegClassID,  AMDGPU::VGPR_32RegClassID,
+      AMDGPU::VReg_64RegClassID,  AMDGPU::VReg_96RegClassID,
+      AMDGPU::VReg_128RegClassID, AMDGPU::VReg_160RegClassID,
+      AMDGPU::VReg_192RegClassID, AMDGPU::VReg_224RegClassID,
+      AMDGPU::VReg_256RegClassID, AMDGPU::VReg_288RegClassID,
+      AMDGPU::VReg_320RegClassID, AMDGPU::VReg_352RegClassID,
+      AMDGPU::VReg_384RegClassID, AMDGPU::VReg_512RegClassID,
+      AMDGPU::VReg_1024RegClassID};
 
   for (unsigned RCID : VGPRClasses) {
     const MCRegisterClass &RC = MRI.getRegClass(RCID);
@@ -3637,26 +3630,26 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
         Desc.getOpcode() == AMDGPU::V_WMMA_LD_SCALE16_PAIRED_B64 ||
         Desc.getOpcode() == AMDGPU::V_WMMA_LD_SCALE16_PAIRED_B64_gfx1250)
       return {};
-    return { VOPOps, nullptr };
+    return {VOPOps, nullptr};
   }
 
   if (TSFlags & SIInstrFlags::DS)
-    return { VDSOps, nullptr };
+    return {VDSOps, nullptr};
 
   if (TSFlags & SIInstrFlags::FLAT)
-    return { FLATOps, nullptr };
+    return {FLATOps, nullptr};
 
   if (TSFlags & (SIInstrFlags::MUBUF | SIInstrFlags::MTBUF))
-    return { BUFOps, nullptr };
+    return {BUFOps, nullptr};
 
   if (TSFlags & (SIInstrFlags::VIMAGE | SIInstrFlags::VSAMPLE))
-    return { VIMGOps, nullptr };
+    return {VIMGOps, nullptr};
 
   if (TSFlags & SIInstrFlags::EXP)
     return {VEXPOps, nullptr};
 
   if (AMDGPU::isVOPD(Desc.getOpcode()))
-    return { VOPDOpsX, VOPDOpsY };
+    return {VOPDOpsX, VOPDOpsY};
 
   assert(!(TSFlags & SIInstrFlags::MIMG));
 
@@ -3769,19 +3762,20 @@ bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCSubtargetInfo &ST) {
 }
 
 unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {
-  return ST.hasFeature(AMDGPU::FeatureAddressableLocalMemorySize327680) ? 256 : 128;
+  return ST.hasFeature(AMDGPU::FeatureAddressableLocalMemorySize327680) ? 256
+                                                                        : 128;
 }
 
 bool isPackedFP32Inst(unsigned Opc) {
   switch (Opc) {
-    case AMDGPU::V_PK_ADD_F32:
-    case AMDGPU::V_PK_ADD_F32_gfx12:
-    case AMDGPU::V_PK_MUL_F32:
-    case AMDGPU::V_PK_MUL_F32_gfx12:
-    case AMDGPU::V_PK_FMA_F32:
-    case AMDGPU::V_PK_FMA_F32_gfx12:
-      return true;
-    default:
+  case AMDGPU::V_PK_ADD_F32:
+  case AMDGPU::V_PK_ADD_F32_gfx12:
+  case AMDGPU::V_PK_MUL_F32:
+  case AMDGPU::V_PK_MUL_F32_gfx12:
+  case AMDGPU::V_PK_FMA_F32:
+  case AMDGPU::V_PK_FMA_F32_gfx12:
+    return true;
+  default:
     return false;
   }
 }
