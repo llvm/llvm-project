@@ -153,7 +153,7 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
   // If this is a scalar -> vector cast, convert the input into a <1 x scalar>
   // vector so the code below can handle it uniformly.
   if (!isa<VectorType>(C->getType()) &&
-      (isa<ConstantFP>(C) || isa<ConstantInt>(C))) {
+      (isa<ConstantFP>(C) || isa<ConstantInt>(C) || isa<ConstantByte>(C))) {
     Constant *Ops = C; // don't take the address of C!
     return FoldBitCast(ConstantVector::get(Ops), DestTy, DL);
   }
@@ -165,7 +165,7 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
 
   // If this is a bitcast from constant vector -> vector, fold it.
   if (!isa<ConstantDataVector>(C) && !isa<ConstantVector>(C) &&
-      !isa<ConstantInt>(C) && !isa<ConstantFP>(C))
+      !isa<ConstantInt>(C) && !isa<ConstantFP>(C) && !isa<ConstantByte>(C))
     return ConstantExpr::getBitCast(C, DestTy);
 
   // If the element types match, IR can fold it.
@@ -199,6 +199,19 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
     return ConstantExpr::getBitCast(C, DestTy);
   }
 
+  // Handle byte destination type by folding through integers.
+  if (DstEltTy->isByteTy()) {
+    // Fold to a vector of integers with same size as the byte type.
+    unsigned ByteWidth = DstEltTy->getPrimitiveSizeInBits();
+    auto *DestIVTy = FixedVectorType::get(
+        IntegerType::get(C->getContext(), ByteWidth), NumDstElt);
+    // Recursively handle this integer conversion, if possible.
+    C = FoldBitCast(C, DestIVTy, DL);
+
+    // Finally, IR can handle this now that #elts line up.
+    return ConstantExpr::getBitCast(C, DestTy);
+  }
+
   // Okay, we know the destination is integer, if the input is FP, convert
   // it to integer first.
   if (SrcEltTy->isFloatingPointTy()) {
@@ -210,6 +223,18 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
     assert((isa<ConstantVector>(C) || // FIXME: Remove ConstantVector.
             isa<ConstantDataVector>(C) || isa<ConstantInt>(C)) &&
            "Constant folding cannot fail for plain fp->int bitcast!");
+  }
+
+  // Handle byte source type by folding through integers.
+  if (SrcEltTy->isByteTy()) {
+    unsigned ByteWidth = SrcEltTy->getPrimitiveSizeInBits();
+    auto *SrcIVTy = FixedVectorType::get(
+        IntegerType::get(C->getContext(), ByteWidth), NumSrcElt);
+    // Ask IR to do the conversion now that #elts line up.
+    C = ConstantExpr::getBitCast(C, SrcIVTy);
+    assert((isa<ConstantVector>(C) || // FIXME: Remove ConstantVector.
+            isa<ConstantDataVector>(C) || isa<ConstantInt>(C)) &&
+           "Constant folding cannot fail for plain byte->int bitcast!");
   }
 
   // Now we know that the input and output vectors are both integer vectors
