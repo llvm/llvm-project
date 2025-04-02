@@ -5,7 +5,7 @@
 ;
 ; CHECK: ; Shader Flags Value: [[WAVE_FLAG:0x00080000]]
 ; CHECK: ; Note: shader requires additional functionality:
-; CHECK-NEXT: ;       Wave-level operations
+; CHECK-NEXT: ;       Wave level operations
 ; CHECK-NEXT: ; Note: extra DXIL module flags:
 
 target triple = "dxil-pc-shadermodel6.7-library"
