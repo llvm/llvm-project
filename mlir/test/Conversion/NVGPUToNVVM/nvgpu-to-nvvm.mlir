@@ -824,6 +824,17 @@ func.func @tma_prefetch(%tensorMap1d: !tensorMap1d, %p : i1) {
   func.return
 }
 
+
+// CHECK-LABEL: @tma_fence(
+// CHECK-SAME: %[[arg0:[a-zA-Z0-9_]+]]: !nvgpu.tensormap.descriptor<tensor = memref<128xf32, 3>, swizzle = none, l2promo = none, oob = nan, interleave = none>
+func.func @tma_fence(%tensorMap1d: !tensorMap1d) {
+  // CHECK: %[[S0:.+]] = builtin.unrealized_conversion_cast %[[arg0]] : !nvgpu.tensormap.descriptor<tensor = memref<128xf32, 3>, swizzle = none, l2promo = none, oob = nan, interleave = none> to !llvm.ptr
+  // CHECK: %[[S1:.+]] = llvm.mlir.constant(128 : i32) : i32
+  // CHECK: nvvm.fence.proxy.acquire <sys> %[[S0]], %[[S1]]
+  nvgpu.tma.fence.descriptor %tensorMap1d: !tensorMap1d
+  func.return
+}
+
 !lhsTensorMap = !nvgpu.tensormap.descriptor<tensor = memref<128x64xf16, 3>, swizzle = swizzle_128b, l2promo = none, oob = zero, interleave = none>
 !rhsTensorMap = !nvgpu.tensormap.descriptor<tensor = memref<64x64xf16, strided<[64, 1], offset: 8192>, 3>, swizzle = swizzle_128b, l2promo = none, oob = zero, interleave = none>
 
