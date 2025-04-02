@@ -34,7 +34,7 @@ let Namespace = "Test" in {
 def Inst0 : TestInst<0>;
 def Inst1 : TestInst<1>;
 let isCommutable = true in
-def Inst2 : TestInst<1>;
+def Inst2 : TestInst<2>;
 
 def BothFusionPredicate: BothFusionPredicateWithMCInstPredicate<CheckRegOperand<0, X0>>;
 def TestBothFusionPredicate: Fusion<"test-both-fusion-predicate", "HasBothFusionPredicate",
