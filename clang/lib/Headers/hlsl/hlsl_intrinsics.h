@@ -180,24 +180,24 @@ const inline float distance(__detail::HLSL_FIXED_VECTOR<float, N> X,
 
 /// \fn fvector dst( fvector, fvector)
 /// \brief Returns the length of a vector
-/// \param src0 [in] The first vector contain {_, d*d, d*d, _}
-/// \param src1 [in] The second vector contain {_, 1/d, _, 1/d}
+/// \param Src0 [in] The first vector contain {_, d*d, d*d, _}
+/// \param Src1 [in] The second vector contain {_, 1/d, _, 1/d}
 ///
 /// Return the computed distance vector contain {1, d, d*d, 1/d}
 
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-const inline vector<half, 4> dst(vector<half, 4> src0, vector<half, 4> src1) {
-  return __detail::dst_impl(src0, src1);
+const inline vector<half, 4> dst(vector<half, 4> Src0, vector<half, 4> Src1) {
+  return __detail::dst_impl(Src0, Src1);
 }
 
-const inline vector<float, 4> dst(vector<float, 4> src0,
-                                  vector<float, 4> src1) {
-  return __detail::dst_impl(src0, src1);
+const inline vector<float, 4> dst(vector<float, 4> Src0,
+                                  vector<float, 4> Src1) {
+  return __detail::dst_impl(Src0, Src1);
 }
 
-const inline vector<double, 4> dst(vector<double, 4> src0,
-                                   vector<double, 4> src1) {
-  return __detail::dst_impl(src0, src1);
+const inline vector<double, 4> dst(vector<double, 4> Src0,
+                                   vector<double, 4> Src1) {
+  return __detail::dst_impl(Src0, Src1);
 }
 
 //===----------------------------------------------------------------------===//
