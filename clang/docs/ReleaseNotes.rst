@@ -342,6 +342,7 @@ Bug Fixes to Attribute Support
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Clang Now Supports Implicitly-Defined Comparison Operators for Friend-Declarations
 - Clang now diagnoses copy constructors taking the class by value in template instantiations. (#GH130866)
 - Clang is now better at keeping track of friend function template instance contexts. (#GH55509)
 - Clang now prints the correct instantiation context for diagnostics suppressed
