@@ -40,10 +40,7 @@ Error VeneerElimination::runOnFunctions(BinaryContext &BC) {
   std::unordered_map<const MCSymbol *, const MCSymbol *> VeneerDestinations;
   uint64_t NumEliminatedVeneers = 0;
   for (BinaryFunction &BF : llvm::make_second_range(BC.getBinaryFunctions())) {
-    if (!isPossibleVeneer(BF))
-      continue;
-
-    if (BF.isIgnored())
+    if (BF.isIgnored() || !isPossibleVeneer(BF))
       continue;
 
     MCInst &FirstInstruction = *(BF.begin()->begin());
@@ -84,6 +81,8 @@ Error VeneerElimination::runOnFunctions(BinaryContext &BC) {
 
   uint64_t VeneerCallers = 0;
   for (BinaryFunction &BF : llvm::make_second_range(BC.getBinaryFunctions())) {
+    if (BF.isIgnored())
+      continue;
     for (BinaryBasicBlock &BB : BF) {
       for (MCInst &Instr : BB) {
         if (!BC.MIB->isCall(Instr) || BC.MIB->isIndirectCall(Instr))

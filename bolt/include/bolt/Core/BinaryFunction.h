@@ -453,7 +453,7 @@ private:
   /// Annotate each basic block entry with its current CFI state. This is
   /// run right after the construction of CFG while basic blocks are in their
   /// original order.
-  void annotateCFIState();
+  bool annotateCFIState();
 
   /// Associate DW_CFA_GNU_args_size info with invoke instructions
   /// (call instructions with non-empty landing pad).

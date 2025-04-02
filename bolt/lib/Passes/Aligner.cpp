@@ -62,6 +62,8 @@ namespace bolt {
 // Align function to the specified byte-boundary (typically, 64) offsetting
 // the fuction by not more than the corresponding value
 static void alignMaxBytes(BinaryFunction &Function) {
+  if (Function.isIgnored())
+    return;
   Function.setAlignment(opts::AlignFunctions);
   Function.setMaxAlignmentBytes(opts::AlignFunctionsMaxBytes);
   Function.setMaxColdAlignmentBytes(opts::AlignFunctionsMaxBytes);
@@ -73,6 +75,9 @@ static void alignMaxBytes(BinaryFunction &Function) {
 // -- the specified number of bytes
 static void alignCompact(BinaryFunction &Function,
                          const MCCodeEmitter *Emitter) {
+
+  if (Function.isIgnored())
+    return;
   const BinaryContext &BC = Function.getBinaryContext();
   size_t HotSize = 0;
   size_t ColdSize = 0;
@@ -97,7 +102,8 @@ static void alignCompact(BinaryFunction &Function,
 
 void AlignerPass::alignBlocks(BinaryFunction &Function,
                               const MCCodeEmitter *Emitter) {
-  if (!Function.hasValidProfile() || !Function.isSimple())
+  if (Function.isIgnored() || !Function.hasValidProfile() ||
+      !Function.isSimple())
     return;
 
   const BinaryContext &BC = Function.getBinaryContext();

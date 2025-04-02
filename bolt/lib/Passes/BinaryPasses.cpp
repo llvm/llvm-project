@@ -1810,10 +1810,14 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
 }
 
 Error InstructionLowering::runOnFunctions(BinaryContext &BC) {
-  for (auto &BFI : BC.getBinaryFunctions())
-    for (BinaryBasicBlock &BB : BFI.second)
+  for (auto &BFI : BC.getBinaryFunctions()) {
+    BinaryFunction &BF = BFI.second;
+    if (BF.isIgnored())
+      continue;
+    for (BinaryBasicBlock &BB : BF)
       for (MCInst &Instruction : BB)
         BC.MIB->lowerTailCall(Instruction);
+  }
   return Error::success();
 }
 
@@ -2029,6 +2033,8 @@ Error SpecializeMemcpy1::runOnFunctions(BinaryContext &BC) {
 }
 
 void RemoveNops::runOnFunction(BinaryFunction &BF) {
+  if (BF.isIgnored())
+    return;
   const BinaryContext &BC = BF.getBinaryContext();
   for (BinaryBasicBlock &BB : BF) {
     for (int64_t I = BB.size() - 1; I >= 0; --I) {
