@@ -314,7 +314,7 @@ class QCIRVInst16CI_RS1<bits<5> funct5, string OpcodeStr>
 
 class QCIBranchInst_rii<bits<3> funct3, DAGOperand InTyImm5, string opcodestr>
     : RVInstB<funct3, OPC_CUSTOM_3, (outs),
-              (ins GPRNoX0:$rs1, InTyImm5:$rs2, simm13_lsb0:$imm12),
+              (ins GPRNoX0:$rs1, InTyImm5:$rs2, bare_simm13_lsb0:$imm12),
               opcodestr, "$rs1, $rs2, $imm12"> {
   let isBranch = 1;
   let isTerminator = 1;
@@ -324,7 +324,8 @@ class QCIBranchInst_rii<bits<3> funct3, DAGOperand InTyImm5, string opcodestr>
 }
 
 class QCIBranchInst48_rii<bits<5> funct5, DAGOperand InTyImm16, string opcodestr>
-    : RVInst48<(outs), (ins GPRNoX0:$rs1, InTyImm16:$imm16, simm13_lsb0:$imm12),
+    : RVInst48<(outs),
+               (ins GPRNoX0:$rs1, InTyImm16:$imm16, bare_simm13_lsb0:$imm12),
                opcodestr, "$rs1, $imm16, $imm12", [], InstFormatOther> {
   bits<5> rs1;
   bits<16> imm16;
