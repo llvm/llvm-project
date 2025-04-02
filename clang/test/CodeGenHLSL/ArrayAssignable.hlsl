@@ -1,5 +1,13 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --enable-var-scope
 
+
+//CHECK-DAG: [[CBLayout:%.*]] = type <{ [2 x float] }>
+//CHECK-DAG: @CBArrays.cb = global target("dx.CBuffer", target("dx.Layout", [[CBLayout]], 20, 0)) poison
+//CHECK-DAG: @c1 = external addrspace(2) global [2 x float], align 4
+cbuffer CBArrays {
+  float c1[2];
+}
+
 // CHECK-LABEL: define void {{.*}}arr_assign1
 // CHECK: [[Arr:%.*]] = alloca [2 x i32], align 4
 // CHECK-NEXT: [[Arr2:%.*]] = alloca [2 x i32], align 4
@@ -115,4 +123,16 @@ void arr_assign7() {
   int Arr[2][2] = {{0, 1}, {2, 3}};
   int Arr2[2][2] = {{0, 0}, {1, 1}};
   (Arr = Arr2)[0] = {6, 6};
+}
+
+// Verify you can assign from a cbuffer array
+
+// CHECK-LABEL: define void {{.*}}arr_assign8
+// CHECK: [[C:%.*]] = alloca [2 x float], align 4
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[C]], ptr align 4 {{.*}}, i32 8, i1 false)
+// CHECK-NEXT: call void @llvm.memcpy.p0.p2.i32(ptr align 4 [[C]], ptr addrspace(2) align 4 @c1, i32 8, i1 false)
+// CHECK-NEXT: ret void
+void arr_assign8() {
+  float C[2] = {1.0, 2.0};
+  C = c1;
 }
