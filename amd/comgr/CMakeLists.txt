@@ -36,7 +36,6 @@ endif(EXISTS "${CMAKE_SOURCE_DIR}/../../.git")
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
-option(FILE_REORG_BACKWARD_COMPATIBILITY "Enable File Reorg with backward compatibility" OFF)
 # Optionally, build Compiler Support with ccache.
 set(ROCM_CCACHE_BUILD OFF CACHE BOOL "Set to ON for a ccache enabled build")
 if (ROCM_CCACHE_BUILD)
@@ -324,26 +323,6 @@ install(FILES
   "${CMAKE_CURRENT_BINARY_DIR}/include/amd_comgr.h"
   COMPONENT amd-comgr
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${amd_comgr_NAME})
-
-#File reorg Backward compatibility function
-if(FILE_REORG_BACKWARD_COMPATIBILITY)
-# To enable/disable #error in wrapper header files
- if(NOT DEFINED ROCM_HEADER_WRAPPER_WERROR)
-      if(DEFINED ENV{ROCM_HEADER_WRAPPER_WERROR})
-          set(ROCM_HEADER_WRAPPER_WERROR "$ENV{ROCM_HEADER_WRAPPER_WERROR}"
-                  CACHE STRING "Header wrapper warnings as errors.")
-      else()
-          set(ROCM_HEADER_WRAPPER_WERROR "OFF" CACHE STRING "Header wrapper warnings as errors.")
-      endif()
-  endif()
-  if(ROCM_HEADER_WRAPPER_WERROR)
-      set(deprecated_error 1)
-  else()
-      set(deprecated_error 0)
-  endif()
-
-  include(comgr-backward-compat.cmake)
-endif()
 
 if(ENABLE_ASAN_PACKAGING)
   install(FILES
