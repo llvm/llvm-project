@@ -128,7 +128,8 @@ bool RootSignatureParser::parseDescriptorTableClause() {
   if (parseParams(Params, Mandatory))
     return true;
 
-  if (consumeExpectedToken(TokenKind::pu_r_paren, diag::err_hlsl_unexpected_end_of_params,
+  if (consumeExpectedToken(TokenKind::pu_r_paren,
+                           diag::err_hlsl_unexpected_end_of_params,
                            /*param of=*/ParamKind))
     return true;
 
@@ -204,10 +205,11 @@ bool RootSignatureParser::parseUIntParam(uint32_t *X) {
 }
 
 bool RootSignatureParser::parseRegister(Register *Register) {
-  assert(
-      (CurToken.TokKind == TokenKind::bReg || CurToken.TokKind == TokenKind::tReg ||
-       CurToken.TokKind == TokenKind::uReg || CurToken.TokKind == TokenKind::sReg) &&
-      "Expects to only be invoked starting at given keyword");
+  assert((CurToken.TokKind == TokenKind::bReg ||
+          CurToken.TokKind == TokenKind::tReg ||
+          CurToken.TokKind == TokenKind::uReg ||
+          CurToken.TokKind == TokenKind::sReg) &&
+         "Expects to only be invoked starting at given keyword");
 
   switch (CurToken.TokKind) {
   default:

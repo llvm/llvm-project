@@ -97,9 +97,9 @@ private:
   ///   of &Clause.Space (uint32_t *) and update the parameter
   ///
   /// and 'bReg' must be specified
-  bool parseParams(
-      llvm::SmallDenseMap<RootSignatureToken::Kind, llvm::hlsl::rootsig::ParamType> &Params,
-      llvm::SmallDenseSet<RootSignatureToken::Kind> &Mandatory);
+  bool parseParams(llvm::SmallDenseMap<RootSignatureToken::Kind,
+                                       llvm::hlsl::rootsig::ParamType> &Params,
+                   llvm::SmallDenseSet<RootSignatureToken::Kind> &Mandatory);
 
   /// Parameter parse methods corresponding to a ParamType
   bool parseUIntParam(uint32_t *X);
