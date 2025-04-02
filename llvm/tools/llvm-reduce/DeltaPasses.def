@@ -45,6 +45,7 @@ DELTA_PASS_IR("operands-to-args", reduceOperandsToArgsDeltaPass, "Converting ope
 DELTA_PASS_IR("operands-skip", reduceOperandsSkipDeltaPass, "Reducing operands by skipping over instructions")
 DELTA_PASS_IR("operand-bundles", reduceOperandBundesDeltaPass, "Reducing Operand Bundles")
 DELTA_PASS_IR("attributes", reduceAttributesDeltaPass, "Reducing Attributes")
+DELTA_PASS_IR("target-features-attr", reduceTargetFeaturesAttrDeltaPass, "Reducing target-features")
 DELTA_PASS_IR("module-data", reduceModuleDataDeltaPass, "Reducing Module Data")
 DELTA_PASS_IR("opcodes", reduceOpcodesDeltaPass, "Reducing Opcodes")
 DELTA_PASS_IR("volatile", reduceVolatileInstructionsDeltaPass, "Reducing Volatile Instructions")
