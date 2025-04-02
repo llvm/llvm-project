@@ -807,7 +807,7 @@ void BinaryEmitter::emitJumpTable(const JumpTable &JT, MCSection *HotSection,
     LabelCounts[CurrentLabel] = CurrentLabelCount;
   } else {
     Streamer.switchSection(JT.Count > 0 ? HotSection : ColdSection);
-    Streamer.emitValueToAlignment(Align(JT.getEntrySize()));
+    Streamer.emitValueToAlignment(Align(JT.getOutputEntrySize()));
   }
   MCSymbol *JTLabel = nullptr;
   uint64_t Offset = 0;
@@ -826,7 +826,7 @@ void BinaryEmitter::emitJumpTable(const JumpTable &JT, MCSection *HotSection,
       const uint64_t JTCount = LabelCounts[JTLabel];
       LLVM_DEBUG(dbgs() << "BOLT-DEBUG: jump table count: " << JTCount << '\n');
       Streamer.switchSection(JTCount ? HotSection : ColdSection);
-      Streamer.emitValueToAlignment(Align(JT.EntrySize));
+      Streamer.emitValueToAlignment(Align(JT.getOutputEntrySize()));
     }
     // Emit all labels registered at the address of this jump table
     // to sync with our global symbol table.  We may have two labels
@@ -857,9 +857,9 @@ void BinaryEmitter::emitJumpTable(const JumpTable &JT, MCSection *HotSection,
           MCSymbolRefExpr::create(Entry, Streamer.getContext());
       const MCBinaryExpr *Value =
           MCBinaryExpr::createSub(E, JTExpr, Streamer.getContext());
-      Streamer.emitValue(Value, JT.getEntrySize());
+      Streamer.emitValue(Value, JT.getOutputEntrySize());
     }
-    Offset += JT.getEntrySize();
+    Offset += JT.getOutputEntrySize();
   }
 }
 
