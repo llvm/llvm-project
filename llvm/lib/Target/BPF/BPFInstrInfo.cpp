@@ -181,6 +181,10 @@ bool BPFInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
     if (!isUnpredicatedTerminator(*I))
       break;
 
+    // If a JX insn, we're done.
+    if (I->getOpcode() == BPF::JX)
+      break;
+
     // A terminator that isn't a branch can't easily be handled
     // by this analysis.
     if (!I->isBranch())
