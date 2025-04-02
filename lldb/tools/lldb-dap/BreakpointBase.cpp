@@ -13,16 +13,18 @@
 using namespace lldb_dap;
 
 BreakpointBase::BreakpointBase(DAP &d, const llvm::json::Object &obj)
-    : dap(d), condition(std::string(GetString(obj, "condition").value_or(""))),
-      hitCondition(std::string(GetString(obj, "hitCondition").value_or(""))) {}
+    : m_dap(d),
+      m_condition(std::string(GetString(obj, "condition").value_or(""))),
+      m_hit_condition(
+          std::string(GetString(obj, "hitCondition").value_or(""))) {}
 
 void BreakpointBase::UpdateBreakpoint(const BreakpointBase &request_bp) {
-  if (condition != request_bp.condition) {
-    condition = request_bp.condition;
+  if (m_condition != request_bp.m_condition) {
+    m_condition = request_bp.m_condition;
     SetCondition();
   }
-  if (hitCondition != request_bp.hitCondition) {
-    hitCondition = request_bp.hitCondition;
+  if (m_hit_condition != request_bp.m_hit_condition) {
+    m_hit_condition = request_bp.m_hit_condition;
     SetHitCondition();
   }
 }

@@ -14,20 +14,20 @@
 namespace lldb_dap {
 
 void ExceptionBreakpoint::SetBreakpoint() {
-  if (bp.IsValid())
+  if (m_bp.IsValid())
     return;
-  bool catch_value = filter.find("_catch") != std::string::npos;
-  bool throw_value = filter.find("_throw") != std::string::npos;
-  bp = dap.target.BreakpointCreateForException(language, catch_value,
-                                               throw_value);
-  bp.AddName(BreakpointBase::kDAPBreakpointLabel);
+  bool catch_value = m_filter.find("_catch") != std::string::npos;
+  bool throw_value = m_filter.find("_throw") != std::string::npos;
+  m_bp = m_dap.target.BreakpointCreateForException(m_language, catch_value,
+                                                   throw_value);
+  m_bp.AddName(BreakpointBase::kDAPBreakpointLabel);
 }
 
 void ExceptionBreakpoint::ClearBreakpoint() {
-  if (!bp.IsValid())
+  if (!m_bp.IsValid())
     return;
-  dap.target.BreakpointDelete(bp.GetID());
-  bp = lldb::SBBreakpoint();
+  m_dap.target.BreakpointDelete(m_bp.GetID());
+  m_bp = lldb::SBBreakpoint();
 }
 
 } // namespace lldb_dap
