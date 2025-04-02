@@ -1331,8 +1331,8 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateVulkanBufferType(
   if (const MachineInstr *MI = findMI(Key, &MIRBuilder.getMF()))
     return MI;
 
-  // TODO: The SPIRVType for `ElemType` will not have an explicit layout.
-  // This generates invalid SPIR-V.
+  // TODO(134119): The SPIRVType for `ElemType` will not have an explicit
+  // layout. This generates invalid SPIR-V.
   auto *T = StructType::create(ElemType);
   auto *BlockType =
       getOrCreateSPIRVType(T, MIRBuilder, SPIRV::AccessQualifier::None, EmitIr);

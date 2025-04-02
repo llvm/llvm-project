@@ -214,10 +214,6 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
   }
 }
 
-static InstrSignature instrToSignature(const MachineInstr &MI,
-                                       SPIRV::ModuleAnalysisInfo &MAI,
-                                       bool UseDefReg);
-
 // Appends the signature of the decoration instructions that decorate R to
 // Signature.
 static void appendDecorationsForReg(const MachineRegisterInfo &MRI, Register R,

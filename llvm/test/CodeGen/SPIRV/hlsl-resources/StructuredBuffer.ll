@@ -28,6 +28,7 @@ declare target("spirv.VulkanBuffer", [0 x i32], 12, 1) @llvm.spv.resource.handle
 ; CHECK: [[BufferPtrType:%.+]] = OpTypePointer StorageBuffer [[BufferType]]
 ; CHECK-DAG: [[zero:%[0-9]+]] = OpConstant [[int]] 0
 ; CHECK-DAG: [[one:%[0-9]+]] = OpConstant [[int]] 1
+; CHECK-DAG: [[two:%[0-9]+]] = OpConstant [[int]] 2
 ; CHECK-DAG: [[BufferVar]] = OpVariable [[BufferPtrType]] StorageBuffer
 ; CHECK-DAG: [[RWBufferVar]] = OpVariable [[RWBufferPtrType]] StorageBuffer
 
@@ -36,22 +37,35 @@ define void @main() local_unnamed_addr #1 {
 entry:
 
 ; CHECK-DAG: [[BufferHandle:%.+]] = OpCopyObject [[BufferPtrType]] [[BufferVar]]
+; CHECK-DAG: [[BufferHandle2:%.+]] = OpCopyObject [[BufferPtrType]] [[BufferVar]]
 ; CHECK-DAG: [[RWBufferHandle:%.+]] = OpCopyObject [[RWBufferPtrType]] [[RWBufferVar]]
-  %_ZL1i_h.i.i = tail call target("spirv.VulkanBuffer", [0 x i32], 12, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0i32_12_0t(i32 0, i32 0, i32 1, i32 0, i1 false)
-
-  %_ZL1o_h.i.i = tail call target("spirv.VulkanBuffer", [0 x i32], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0i32_12_1t(i32 0, i32 1, i32 1, i32 0, i1 false)
+  %BufferHandle = tail call target("spirv.VulkanBuffer", [0 x i32], 12, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0i32_12_0t(i32 0, i32 0, i32 1, i32 0, i1 false)
+  %BufferHandle2 = tail call target("spirv.VulkanBuffer", [0 x i32], 12, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0i32_12_0t(i32 0, i32 0, i32 1, i32 0, i1 false)
+  %RWBufferHandle = tail call target("spirv.VulkanBuffer", [0 x i32], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0i32_12_1t(i32 0, i32 1, i32 1, i32 0, i1 false)
 
 ; CHECK: [[AC:%.+]] = OpAccessChain {{.*}} [[BufferHandle]] [[zero]] [[one]]
-  %0 = tail call noundef nonnull align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_0t(target("spirv.VulkanBuffer", [0 x i32], 12, 0) %_ZL1i_h.i.i, i32 1)
+  %0 = tail call noundef nonnull align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_0t(target("spirv.VulkanBuffer", [0 x i32], 12, 0) %BufferHandle,  i32 1)
 
 ; CHECK: [[LD:%.+]] = OpLoad [[int]] [[AC]] Aligned 4
   %1 = load i32, ptr addrspace(11) %0, align 4, !tbaa !3
 
 ; CHECK: [[AC:%.+]] = OpAccessChain {{.*}} [[RWBufferHandle]] [[zero]] [[zero]]
-  %2 = tail call noundef nonnull align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_1t(target("spirv.VulkanBuffer", [0 x i32], 12, 1) %_ZL1o_h.i.i, i32 0)
+  %2 = tail call noundef nonnull align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_1t(target("spirv.VulkanBuffer", [0 x i32], 12, 1) %RWBufferHandle, i32 0)
 
 ; CHECK: OpStore [[AC]] [[LD]]
   store i32 %1, ptr addrspace(11) %2, align 4, !tbaa !3
+
+; CHECK: [[AC:%.+]] = OpAccessChain {{.*}} [[BufferHandle2]] [[zero]] [[two]]
+  %3 = tail call noundef nonnull align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_0t(target("spirv.VulkanBuffer", [0 x i32], 12, 0) %BufferHandle2,  i32 2)
+
+; CHECK: [[LD:%.+]] = OpLoad [[int]] [[AC]] Aligned 4
+  %4 = load i32, ptr addrspace(11) %3, align 4, !tbaa !3
+
+; CHECK: [[AC:%.+]] = OpAccessChain {{.*}} [[RWBufferHandle]] [[zero]] [[zero]]
+  %5 = tail call noundef nonnull align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_1t(target("spirv.VulkanBuffer", [0 x i32], 12, 1) %RWBufferHandle, i32 0)
+
+; CHECK: OpStore [[AC]] [[LD]]
+  store i32 %4, ptr addrspace(11) %5, align 4, !tbaa !3
   ret void
 }
 
