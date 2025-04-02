@@ -1,7 +1,5 @@
 // Tests the clang-sycl-linker tool.
 //
-// REQUIRES: spirv-registered-target
-//
 // Test the dry run of a simple case to link two input files.
 // RUN: %clangxx -emit-llvm -c -target spirv64 %s -o %t_1.bc
 // RUN: %clangxx -emit-llvm -c -target spirv64 %s -o %t_2.bc
