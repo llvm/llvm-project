@@ -305,7 +305,7 @@ IncludeInserter::calculateIncludePath(const HeaderFile &InsertedHeader,
   if (llvm::sys::path::is_absolute(Suggested))
     return std::nullopt;
   bool IsAngled = false;
-  for (auto Filter : AngledHeaders) {
+  for (auto &Filter : AngledHeaders) {
     if (Filter(Suggested)) {
       IsAngled = true;
       break;
