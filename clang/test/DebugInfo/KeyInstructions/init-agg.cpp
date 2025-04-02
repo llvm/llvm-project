@@ -1,5 +1,5 @@
 
-// RUN: %clang -gkey-instructions %s -gmlt -gno-column-info -S -emit-llvm -o - \
+// RUN: %clang -gkey-instructions %s -gmlt -gno-column-info -S -emit-llvm -o - -ftrivial-auto-var-init=pattern \
 // RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank
 
 // The implicit-check-not is important; we don't want the GEPs created for the
@@ -26,6 +26,9 @@ void a() {
 
 // CHECK: call void @llvm.memset{{.*}}, !dbg [[G4R1:!.*]]
     char arr[] = { 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, };
+
+// CHECK: store i8 -86, ptr %uninit{{.*}}, !dbg [[G5R1:!.*]], !annotation
+    char uninit; // -ftrivial-auto-var-init=pattern
 }
 
 // CHECK: [[G1R1]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 1)
@@ -33,3 +36,4 @@ void a() {
 // CHECK: [[G2R2]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 2)
 // CHECK: [[G3R1]] = !DILocation({{.*}}, atomGroup: 3, atomRank: 1)
 // CHECK: [[G4R1]] = !DILocation({{.*}}, atomGroup: 4, atomRank: 1)
+// CHECK: [[G5R1]] = !DILocation({{.*}}, atomGroup: 5, atomRank: 1)
