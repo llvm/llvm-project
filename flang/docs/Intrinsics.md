@@ -1091,6 +1091,48 @@ end program rename_proc
 This intrinsic is an alias for `CPU_TIME`: supporting both a subroutine and a
 function form.
 
+### Non-Standard Intrinsics: UNLINK
+
+#### Description
+`UNLINK(PATH [, STATUS])` deletes a link to a file.
+
+This intrinsic is provided in both subroutine and function forms; however, only
+one form can be used in any given program unit.
+
+| ARGUMENT | INTENT | TYPE        |  KIND   | Description                     |
+|----------|--------|-------------|---------|---------------------------------|
+| `PATH`   | `IN`   | `CHARACTER` | default | The path of the file to unlink. |
+| `STATUS` | `OUT`  | `INTEGER`   | default | Optional. Returns 0 on success, C's `errno` on failure. |
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine, function
+- **Syntax:** `CALL UNLINK(PATH [, STATUS])`, `STATUS = UNLINK(PATH)`
+
+#### Example
+The following example just prints "hello.txt doesn't exist".
+```Fortran
+SUBROUTINE try_unlink_hello_again()
+  INTEGER :: status
+  CALL UNLINK("hello.txt", status)
+  IF (status .NE. 0) PRINT *, "hello.txt doesn't exist"
+END SUBROUTINE
+
+PROGRAM example_unlink
+  INTEGER :: hello
+  ! Create ./hello.txt
+  OPEN(newunit=hello, file="hello.txt")
+  WRITE (hello, *), "Hello!"
+  CLOSE(hello)
+
+  ! Delete ./hello.txt
+  IF (UNLINK("hello.txt") .NE. 0) PRINT *, "didn't create a file"
+
+  CALL try_unlink_hello_again()
+END PROGRAM
+```
+
 ### Non-standard Intrinsics: LNBLNK
 This intrinsic is an alias for `LEN_TRIM`, without the optional KIND argument.
 
