@@ -6000,6 +6000,7 @@ bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
     // TODO: Handle more intrinsics
     switch (IntrinsicID) {
     case Intrinsic::amdgcn_cubeid:
+    case Intrinsic::amdgcn_cvt_off_f32_i4:
       return true;
 
     case Intrinsic::amdgcn_frexp_mant: {
