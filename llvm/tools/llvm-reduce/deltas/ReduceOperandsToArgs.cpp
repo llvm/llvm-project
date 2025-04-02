@@ -14,6 +14,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
@@ -106,6 +107,9 @@ static void replaceFunctionCalls(Function *OldF, Function *NewF) {
     }
     NewCI->setCallingConv(NewF->getCallingConv());
     NewCI->setAttributes(CI->getAttributes());
+
+    if (auto *FPOp = dyn_cast<FPMathOperator>(NewCI))
+      NewCI->setFastMathFlags(CI->getFastMathFlags());
 
     // Do the replacement for this use.
     if (!CI->use_empty())
