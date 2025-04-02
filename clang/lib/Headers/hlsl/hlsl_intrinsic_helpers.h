@@ -36,9 +36,9 @@ length_vec_impl(vector<T, N> X) {
 }
 
 template <typename T>
-constexpr vector<T, 4> dst_impl(vector<T, 4> src0, vector<T, 4> src1) {
-  vector<T, 4> dest = {1, src0[1] * src1[1], src0[2], src1[3]};
-  return dest;
+constexpr vector<T, 4> dst_impl(vector<T, 4> Src0, vector<T, 4> Src1) {
+  vector<T, 4> Dest = {1, Src0[1] * Src1[1], Src0[2], Src1[3]};
+  return Dest;
 }
 
 template <typename T> constexpr T distance_impl(T X, T Y) {
