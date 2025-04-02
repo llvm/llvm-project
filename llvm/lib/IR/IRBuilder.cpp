@@ -80,34 +80,34 @@ Value *IRBuilderBase::CreateAggregateCast(Value *V, Type *DestTy) {
   Type *SrcTy = V->getType();
   if (SrcTy == DestTy)
     return V;
-  if (auto *SrcST = dyn_cast<StructType>(SrcTy)) {
-    assert(DestTy->isStructTy() && "Expected StructType");
-    auto *DestST = cast<StructType>(DestTy);
-    assert(SrcST->getNumElements() == DestST->getNumElements());
+
+  if (SrcTy->isAggregateType()) {
+    unsigned NumElements;
+    if (SrcTy->isStructTy()) {
+      assert(DestTy->isStructTy() && "Expected StructType");
+      assert(SrcTy->getStructNumElements() == DestTy->getStructNumElements() &&
+             "Expected StructTypes with equal number of elements");
+      NumElements = SrcTy->getStructNumElements();
+    } else {
+      assert(SrcTy->isArrayTy());
+      assert(DestTy->isArrayTy() && "Expected ArrayType");
+      assert(SrcTy->getArrayNumElements() == DestTy->getArrayNumElements() &&
+             "Expected ArrayTypes with equal number of elements");
+      NumElements = SrcTy->getArrayNumElements();
+    }
+
     Value *Result = PoisonValue::get(DestTy);
-    for (unsigned int I = 0, E = SrcST->getNumElements(); I < E; ++I) {
-      Value *Element = CreateAggregateCast(CreateExtractValue(V, ArrayRef(I)),
-                                           DestST->getElementType(I));
+    for (unsigned I = 0; I < NumElements; ++I) {
+      Type *ElementTy = SrcTy->isStructTy() ? DestTy->getStructElementType(I)
+                                            : DestTy->getArrayElementType();
+      Value *Element =
+          CreateAggregateCast(CreateExtractValue(V, ArrayRef(I)), ElementTy);
 
       Result = CreateInsertValue(Result, Element, ArrayRef(I));
     }
     return Result;
   }
-  if (auto *SrcAT = dyn_cast<ArrayType>(SrcTy)) {
-    assert(DestTy->isArrayTy() && "Expected ArrayType");
-    auto *DestAT = cast<ArrayType>(DestTy);
-    assert(SrcAT->getNumElements() == DestAT->getNumElements());
-    Value *Result = PoisonValue::get(DestTy);
-    for (unsigned int I = 0, E = SrcAT->getNumElements(); I < E; ++I) {
-      Value *Element = CreateAggregateCast(CreateExtractValue(V, ArrayRef(I)),
-                                           DestAT->getElementType());
 
-      Result = CreateInsertValue(Result, Element, ArrayRef(I));
-    }
-    return Result;
-  }
-
-  assert(!DestTy->isAggregateType());
   return CreateBitOrPointerCast(V, DestTy);
 }
 
