@@ -1827,16 +1827,17 @@ public:
   ~CommandObjectMultiwordProcessTrace() override = default;
 };
 
-// CommandObjectProcessDumpModId
-class CommandObjectProcessDumpModId : public CommandObjectParsed {
+// CommandObjectProcessDumpModificationId
+class CommandObjectProcessDumpModificationId : public CommandObjectParsed {
 public:
-  CommandObjectProcessDumpModId(CommandInterpreter &interpreter)
-      : CommandObjectParsed(interpreter, "process dump-mod-id",
+  CommandObjectProcessDumpModificationId(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "process dump-modification-id",
                             "Dump the state of the ProcessModID. Intended to "
                             "be used for debugging LLDB itself.",
-                            "process dump-mod-id", eCommandRequiresProcess) {}
+                            "process dump-modification-id",
+                            eCommandRequiresProcess) {}
 
-  ~CommandObjectProcessDumpModId() override = default;
+  ~CommandObjectProcessDumpModificationId() override = default;
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
@@ -1893,8 +1894,8 @@ CommandObjectMultiwordProcess::CommandObjectMultiwordProcess(
       "trace",
       CommandObjectSP(new CommandObjectMultiwordProcessTrace(interpreter)));
   LoadSubCommand(
-      "dump-mod-id",
-      CommandObjectSP(new CommandObjectProcessDumpModId(interpreter)));
+      "dump-modification-id",
+      CommandObjectSP(new CommandObjectProcessDumpModificationId(interpreter)));
 }
 
 CommandObjectMultiwordProcess::~CommandObjectMultiwordProcess() = default;
