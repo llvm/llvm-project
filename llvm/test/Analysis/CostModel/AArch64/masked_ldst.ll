@@ -15,14 +15,14 @@ define void @fixed() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:12 Lat:12 SizeLat:12 for: %v2i32 = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr undef, i32 8, <2 x i1> undef, <2 x i32> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:24 Lat:24 SizeLat:24 for: %v4i32 = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr undef, i32 8, <4 x i1> undef, <4 x i32> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:12 Lat:12 SizeLat:12 for: %v2i64 = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr undef, i32 8, <2 x i1> undef, <2 x i64> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:10 Lat:10 SizeLat:10 for: %v2f16 = call <2 x half> @llvm.masked.load.v2f16.p0(ptr undef, i32 8, <2 x i1> undef, <2 x half> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:22 Lat:22 SizeLat:22 for: %v4f16 = call <4 x half> @llvm.masked.load.v4f16.p0(ptr undef, i32 8, <4 x i1> undef, <4 x half> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:46 Lat:46 SizeLat:46 for: %v8f16 = call <8 x half> @llvm.masked.load.v8f16.p0(ptr undef, i32 8, <8 x i1> undef, <8 x half> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:10 Lat:10 SizeLat:10 for: %v2f32 = call <2 x float> @llvm.masked.load.v2f32.p0(ptr undef, i32 8, <2 x i1> undef, <2 x float> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:22 Lat:22 SizeLat:22 for: %v4f32 = call <4 x float> @llvm.masked.load.v4f32.p0(ptr undef, i32 8, <4 x i1> undef, <4 x float> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:10 Lat:10 SizeLat:10 for: %v2f64 = call <2 x double> @llvm.masked.load.v2f64.p0(ptr undef, i32 8, <2 x i1> undef, <2 x double> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:9 Lat:10 SizeLat:10 for: %v2f16 = call <2 x half> @llvm.masked.load.v2f16.p0(ptr undef, i32 8, <2 x i1> undef, <2 x half> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:19 Lat:22 SizeLat:22 for: %v4f16 = call <4 x half> @llvm.masked.load.v4f16.p0(ptr undef, i32 8, <4 x i1> undef, <4 x half> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:39 Lat:46 SizeLat:46 for: %v8f16 = call <8 x half> @llvm.masked.load.v8f16.p0(ptr undef, i32 8, <8 x i1> undef, <8 x half> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:9 Lat:10 SizeLat:10 for: %v2f32 = call <2 x float> @llvm.masked.load.v2f32.p0(ptr undef, i32 8, <2 x i1> undef, <2 x float> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:19 Lat:22 SizeLat:22 for: %v4f32 = call <4 x float> @llvm.masked.load.v4f32.p0(ptr undef, i32 8, <4 x i1> undef, <4 x float> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:9 Lat:10 SizeLat:10 for: %v2f64 = call <2 x double> @llvm.masked.load.v2f64.p0(ptr undef, i32 8, <2 x i1> undef, <2 x double> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:24 Lat:24 SizeLat:24 for: %v4i64 = call <4 x i64> @llvm.masked.load.v4i64.p0(ptr undef, i32 8, <4 x i1> undef, <4 x i64> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:152 CodeSize:184 Lat:184 SizeLat:184 for: %v32f16 = call <32 x half> @llvm.masked.load.v32f16.p0(ptr undef, i32 8, <32 x i1> undef, <32 x half> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:152 CodeSize:156 Lat:184 SizeLat:184 for: %v32f16 = call <32 x half> @llvm.masked.load.v32f16.p0(ptr undef, i32 8, <32 x i1> undef, <32 x half> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 entry:
