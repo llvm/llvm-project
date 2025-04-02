@@ -25557,31 +25557,8 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
   if (SDValue NarrowBOp = narrowExtractedVectorBinOp(N, DAG, LegalOperations))
     return NarrowBOp;
 
-  // If only EXTRACT_SUBVECTOR nodes use the source vector we can
-  // simplify it based on the (valid) extractions.
-  if (!V.getValueType().isScalableVector() &&
-      llvm::all_of(V->users(), [&](SDNode *Use) {
-        return Use->getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-               Use->getOperand(0) == V;
-      })) {
-    unsigned NumElts = V.getValueType().getVectorNumElements();
-    APInt DemandedElts = APInt::getZero(NumElts);
-    for (SDNode *User : V->users()) {
-      unsigned ExtIdx = User->getConstantOperandVal(1);
-      unsigned NumSubElts = User->getValueType(0).getVectorNumElements();
-      DemandedElts.setBits(ExtIdx, ExtIdx + NumSubElts);
-    }
-    if (SimplifyDemandedVectorElts(V, DemandedElts, /*AssumeSingleUse=*/true)) {
-      // We simplified the vector operand of this extract subvector. If this
-      // extract is not dead, visit it again so it is folded properly.
-      if (N->getOpcode() != ISD::DELETED_NODE)
-        AddToWorklist(N);
-      return SDValue(N, 0);
-    }
-  } else {
-    if (SimplifyDemandedVectorElts(SDValue(N, 0)))
-      return SDValue(N, 0);
-  }
+  if (SimplifyDemandedVectorElts(SDValue(N, 0)))
+    return SDValue(N, 0);
 
   return SDValue();
 }
