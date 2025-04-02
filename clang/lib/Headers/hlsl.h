@@ -27,6 +27,10 @@
 #endif
 #include "hlsl/hlsl_intrinsics.h"
 
+#ifdef __spirv__
+#include "hlsl/hlsl_spirv.h"
+#endif // __spirv__
+
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #endif

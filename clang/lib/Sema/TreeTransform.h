@@ -7652,6 +7652,13 @@ QualType TreeTransform<Derived>::TransformHLSLAttributedResourceType(
   return Result;
 }
 
+template <typename Derived>
+QualType TreeTransform<Derived>::TransformHLSLInlineSpirvType(
+    TypeLocBuilder &TLB, HLSLInlineSpirvTypeLoc TL) {
+  // No transformations needed.
+  return TL.getType();
+}
+
 template<typename Derived>
 QualType
 TreeTransform<Derived>::TransformParenType(TypeLocBuilder &TLB,

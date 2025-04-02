@@ -2453,6 +2453,7 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   case Type::Attributed:
   case Type::BTFTagAttributed:
   case Type::HLSLAttributedResource:
+  case Type::HLSLInlineSpirv:
   case Type::Auto:
   case Type::DeducedTemplateSpecialization:
   case Type::PackExpansion:
@@ -4654,6 +4655,44 @@ void CXXNameMangler::mangleType(const HLSLAttributedResourceType *T) {
   mangleType(T->getWrappedType());
 }
 
+void CXXNameMangler::mangleType(const HLSLInlineSpirvType *T) {
+  SmallString<20> TypeNameStr;
+  llvm::raw_svector_ostream TypeNameOS(TypeNameStr);
+
+  TypeNameOS << "spirv_type";
+
+  TypeNameOS << "_" << T->getOpcode();
+  TypeNameOS << "_" << T->getSize();
+  TypeNameOS << "_" << T->getAlignment();
+
+  mangleVendorType(TypeNameStr);
+
+  for (auto &Operand : T->getOperands()) {
+    using SpirvOperandKind = SpirvOperand::SpirvOperandKind;
+
+    switch (Operand.getKind()) {
+    case SpirvOperandKind::kConstantId:
+      mangleVendorQualifier("_Const");
+      mangleIntegerLiteral(Operand.getResultType(),
+                           llvm::APSInt(Operand.getValue()));
+      break;
+    case SpirvOperandKind::kLiteral:
+      mangleVendorQualifier("_Lit");
+      mangleIntegerLiteral(Context.getASTContext().IntTy,
+                           llvm::APSInt(Operand.getValue()));
+      break;
+    case SpirvOperandKind::kTypeId:
+      mangleVendorQualifier("_Type");
+      mangleType(Operand.getResultType());
+      break;
+    default:
+      llvm_unreachable("Invalid SpirvOperand kind");
+      break;
+    }
+    TypeNameOS << Operand.getKind();
+  }
+}
+
 void CXXNameMangler::mangleIntegerLiteral(QualType T,
                                           const llvm::APSInt &Value) {
   //  <expr-primary> ::= L <type> <value number> E # integer literal
@@ -4667,7 +4706,6 @@ void CXXNameMangler::mangleIntegerLiteral(QualType T,
     mangleNumber(Value);
   }
   Out << 'E';
-
 }
 
 void CXXNameMangler::mangleMemberExprBase(const Expr *Base, bool IsArrow) {

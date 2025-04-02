@@ -604,6 +604,10 @@ void TypeLocWriter::VisitHLSLAttributedResourceTypeLoc(
   // Nothing to do.
 }
 
+void TypeLocWriter::VisitHLSLInlineSpirvTypeLoc(HLSLInlineSpirvTypeLoc TL) {
+  // Nothing to do.
+}
+
 void TypeLocWriter::VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc TL) {
   addSourceLocation(TL.getNameLoc());
 }
