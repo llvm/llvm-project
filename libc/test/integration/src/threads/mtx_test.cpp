@@ -23,7 +23,7 @@ constexpr int MAX = 10000;
 mtx_t mutex;
 static int shared_int = START;
 
-int counter(void *arg) {
+int counter(void * /*arg*/) {
   int last_count = START;
   while (true) {
     LIBC_NAMESPACE::mtx_lock(&mutex);
