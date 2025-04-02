@@ -36,7 +36,7 @@ float4 test_3_components(float3 p0, float3 p1)
   // expected-note@hlsl/hlsl_intrinsics.h:* {{candidate function not viable: no known conversion from 'vector<float, 3>' to 'vector<double, 4>' for 1st argument}}
 }
 
-float4 test_float2(double4 p0, float4 p1)
+float4 test_with_ambiguous_inp(double4 p0, float4 p1)
 {
     return dst(p0, p1);
   // expected-error@-1 {{call to 'dst' is ambiguous}}
@@ -44,7 +44,7 @@ float4 test_float2(double4 p0, float4 p1)
   // expected-note@hlsl/hlsl_intrinsics.h:* {{candidate function}}
 }
 
-float2 test_float2(float4 p0, float4 p1)
+float2 test_with_return_float2(float4 p0, float4 p1)
 {
     return dst(p0, p1);
   // expected-warning@-1 {{implicit conversion truncates vector: 'vector<float, 4>' (vector of 4 'float' values) to 'vector<float, 2>' (vector of 2 'float' values)}}
