@@ -2684,7 +2684,7 @@ recoverFromMSUnqualifiedLookup(Sema &S, ASTContext &Context,
   // perform name lookup during template instantiation.
   CXXScopeSpec SS;
   auto *NNS =
-      NestedNameSpecifier::Create(Context, nullptr, true, RD->getTypeForDecl());
+      NestedNameSpecifier::Create(Context, nullptr, RD->getTypeForDecl());
   SS.MakeTrivial(Context, NNS, SourceRange(Loc, Loc));
   return DependentScopeDeclRefExpr::Create(
       Context, SS.getWithLocInContext(Context), TemplateKWLoc, NameInfo,
@@ -15329,8 +15329,10 @@ static void DetectPrecisionLossInComplexDivision(Sema &S, SourceLocation OpLoc,
           Ctx.getFloatTypeSemantics(ElementType);
       const llvm::fltSemantics &HigherElementTypeSemantics =
           Ctx.getFloatTypeSemantics(HigherElementType);
-      if (llvm::APFloat::semanticsMaxExponent(ElementTypeSemantics) * 2 + 1 >
-          llvm::APFloat::semanticsMaxExponent(HigherElementTypeSemantics)) {
+      if ((llvm::APFloat::semanticsMaxExponent(ElementTypeSemantics) * 2 + 1 >
+           llvm::APFloat::semanticsMaxExponent(HigherElementTypeSemantics)) ||
+          (HigherElementType == Ctx.LongDoubleTy &&
+           !Ctx.getTargetInfo().hasLongDoubleType())) {
         // Retain the location of the first use of higher precision type.
         if (!S.LocationOfExcessPrecisionNotSatisfied.isValid())
           S.LocationOfExcessPrecisionNotSatisfied = OpLoc;
