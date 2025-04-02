@@ -6,10 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define __CLC_BODY <clc/shared/binary_decl.inc>
-#define __CLC_FUNCTION native_powr
-
-#include <clc/math/gentype.inc>
-
-#undef __CLC_BODY
-#undef __CLC_FUNCTION
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_native_tan(__CLC_GENTYPE val) {
+  return __clc_native_sin(val) / __clc_native_cos(val);
+}
