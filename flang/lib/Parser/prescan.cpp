@@ -1325,7 +1325,7 @@ const char *Prescanner::FreeFormContinuationLine(bool ampersand) {
   if (p >= limit_) {
     return nullptr;
   }
-  p = SkipWhiteSpace(p);
+  p = SkipWhiteSpaceIncludingEmptyMacros(p);
   if (*p == '!') {
     ++p;
     if (InCompilerDirective()) {
