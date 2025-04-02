@@ -15,7 +15,7 @@
 
 # RUN: yaml2obj %s -DGPU=GFX90A -DKD=00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006000000000000 \
 # RUN:   | llvm-objdump --disassemble-symbols=test.kd - | FileCheck %s --check-prefix=RES_457
-# RES_457: ; error decoding test.kd: kernel descriptor reserved bits in range (457:455) set
+# RES_457: ; error decoding test.kd: kernel descriptor reserved bits in range (457:456) set
 # RES_457-NEXT: ; decoding failed region as bytes
 
 # RUN: yaml2obj %s -DGPU=GFX90A -DKD=0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c000000000000 \
