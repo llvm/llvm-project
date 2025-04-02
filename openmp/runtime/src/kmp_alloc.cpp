@@ -14,6 +14,20 @@
 #include "kmp_io.h"
 #include "kmp_wrapper_malloc.h"
 
+#if KMP_USE_HWLOC
+#if HWLOC_API_VERSION > 0x00020300
+#define KMP_HWLOC_LOCATION_TYPE_CPUSET HWLOC_LOCATION_TYPE_CPUSET
+#elif HWLOC_API_VERSION == 0x00020300
+#define KMP_HWLOC_LOCATION_TYPE_CPUSET                                         \
+  hwloc_location::HWLOC_LOCATION_TYPE_CPUSET
+#else
+enum hwloc_memattr_id_e {
+  HWLOC_MEMATTR_ID_BANDWIDTH,
+  HWLOC_MEMATTR_ID_CAPACITY
+};
+#endif
+#endif // KMP_USE_HWLOC
+
 // Disable bget when it is not used
 #if KMP_USE_BGET
 
@@ -1358,6 +1372,74 @@ void __kmp_fini_memkind() {
 #endif
 }
 
+#if KMP_USE_HWLOC
+static bool __kmp_is_hwloc_membind_supported(hwloc_membind_policy_t policy) {
+#if HWLOC_API_VERSION >= 0x00020300
+  const hwloc_topology_support *support;
+  support = hwloc_topology_get_support(__kmp_hwloc_topology);
+  if (support) {
+    if (policy == HWLOC_MEMBIND_BIND)
+      return (support->membind->alloc_membind &&
+              support->membind->bind_membind);
+    if (policy == HWLOC_MEMBIND_INTERLEAVE)
+      return (support->membind->alloc_membind &&
+              support->membind->interleave_membind);
+  }
+  return false;
+#else
+  return false;
+#endif
+}
+
+void *__kmp_hwloc_alloc_membind(hwloc_memattr_id_e attr, size_t size,
+                                hwloc_membind_policy_t policy) {
+#if HWLOC_API_VERSION >= 0x00020300
+  void *ptr = NULL;
+  hwloc_obj_t node;
+  struct hwloc_location initiator;
+  int ret;
+  // TODO: We should make this more efficient by getting rid of the OS syscall
+  // 'hwloc_bitmap_alloc' and 'hwloc_get_cpubind' to get affinity and instead
+  // use th_affin_mask field when it's capable of getting the underlying
+  // mask implementation.
+  hwloc_cpuset_t mask = hwloc_bitmap_alloc();
+  ret = hwloc_get_cpubind(__kmp_hwloc_topology, mask, HWLOC_CPUBIND_THREAD);
+  if (ret < 0) {
+    hwloc_bitmap_free(mask);
+    return ptr;
+  }
+  initiator.type = KMP_HWLOC_LOCATION_TYPE_CPUSET;
+  initiator.location.cpuset = mask;
+  ret = hwloc_memattr_get_best_target(__kmp_hwloc_topology, attr, &initiator, 0,
+                                      &node, NULL);
+  if (ret < 0) {
+    return ptr;
+  }
+  return hwloc_alloc_membind(__kmp_hwloc_topology, size, node->nodeset, policy,
+                             HWLOC_MEMBIND_BYNODESET);
+#else
+  return NULL;
+#endif
+}
+
+void *__kmp_hwloc_membind_policy(omp_memspace_handle_t ms, size_t size,
+                                 hwloc_membind_policy_t policy) {
+#if HWLOC_API_VERSION >= 0x00020300
+  void *ptr = NULL;
+  if (ms == omp_high_bw_mem_space) {
+    ptr = __kmp_hwloc_alloc_membind(HWLOC_MEMATTR_ID_BANDWIDTH, size, policy);
+  } else if (ms == omp_large_cap_mem_space) {
+    ptr = __kmp_hwloc_alloc_membind(HWLOC_MEMATTR_ID_CAPACITY, size, policy);
+  } else {
+    ptr = hwloc_alloc(__kmp_hwloc_topology, size);
+  }
+  return ptr;
+#else
+  return NULL;
+#endif
+}
+#endif // KMP_USE_HWLOC
+
 void __kmp_init_target_mem() {
   *(void **)(&kmp_target_alloc_host) = KMP_DLSYM("llvm_omp_target_alloc_host");
   *(void **)(&kmp_target_alloc_shared) =
@@ -1470,6 +1552,13 @@ omp_allocator_handle_t __kmpc_init_allocator(int gtid, omp_memspace_handle_t ms,
       al->fb_data = RCAST(kmp_allocator_t *, traits[i].value);
       break;
     case omp_atk_partition:
+#if KMP_USE_HWLOC
+      al->membind = (omp_alloctrait_value_t)traits[i].value;
+      KMP_DEBUG_ASSERT(al->membind == omp_atv_environment ||
+                       al->membind == omp_atv_nearest ||
+                       al->membind == omp_atv_blocked ||
+                       al->membind == omp_atv_interleaved);
+#endif
       al->memkind = RCAST(void **, traits[i].value);
       break;
     default:
@@ -1524,7 +1613,8 @@ omp_allocator_handle_t __kmpc_init_allocator(int gtid, omp_memspace_handle_t ms,
     __kmp_free(al);
     return omp_null_allocator;
   } else {
-    if (ms == omp_high_bw_mem_space) {
+    if (!__kmp_hwloc_available &&
+        (ms == omp_high_bw_mem_space || ms == omp_large_cap_mem_space)) {
       // cannot detect HBW memory presence without memkind library
       __kmp_free(al);
       return omp_null_allocator;
@@ -1634,8 +1724,9 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
   else if (allocator == ompx_pinned_mem_alloc)
     is_pinned = true;
 
-  // Use default allocator if libmemkind is not available
-  int use_default_allocator = (__kmp_memkind_available) ? false : true;
+  // Use default allocator if hwloc and libmemkind are not available
+  int use_default_allocator =
+      (!__kmp_hwloc_available && !__kmp_memkind_available);
 
   if (KMP_IS_TARGET_MEM_ALLOC(allocator)) {
     // Use size input directly as the memory may not be accessible on host.
@@ -1740,24 +1831,6 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
       }
     }
   } else if (allocator < kmp_max_mem_alloc) {
-    if (KMP_IS_TARGET_MEM_ALLOC(allocator)) {
-      // Use size input directly as the memory may not be accessible on host.
-      // Use default device for now.
-      if (__kmp_target_mem_available) {
-        kmp_int32 device =
-            __kmp_threads[gtid]->th.th_current_task->td_icvs.default_device;
-        if (allocator == llvm_omp_target_host_mem_alloc)
-          ptr = kmp_target_alloc_host(size, device);
-        else if (allocator == llvm_omp_target_shared_mem_alloc)
-          ptr = kmp_target_alloc_shared(size, device);
-        else // allocator == llvm_omp_target_device_mem_alloc
-          ptr = kmp_target_alloc_device(size, device);
-        if (is_pinned && kmp_target_lock_mem)
-          kmp_target_lock_mem(ptr, size, device);
-      }
-      return ptr;
-    }
-
     // pre-defined allocator
     if (allocator == omp_high_bw_mem_alloc) {
       KMP_WARNING(OmpNoAllocator, "omp_high_bw_mem_alloc");
@@ -1953,34 +2026,48 @@ void ___kmpc_free(int gtid, void *ptr, omp_allocator_handle_t allocator) {
     kmp_target_unlock_mem(desc.ptr_alloc, device);
   }
 
-  if (__kmp_memkind_available) {
-    if (oal < kmp_max_mem_alloc) {
-      // pre-defined allocator
-      if (oal == omp_high_bw_mem_alloc && mk_hbw_preferred) {
-        kmp_mk_free(*mk_hbw_preferred, desc.ptr_alloc);
-      } else if (oal == omp_large_cap_mem_alloc && mk_dax_kmem_all) {
-        kmp_mk_free(*mk_dax_kmem_all, desc.ptr_alloc);
-      } else {
-        kmp_mk_free(*mk_default, desc.ptr_alloc);
-      }
-    } else {
-      if (al->pool_size > 0) { // custom allocator with pool size requested
-        kmp_uint64 used =
-            KMP_TEST_THEN_ADD64((kmp_int64 *)&al->pool_used, -desc.size_a);
-        (void)used; // to suppress compiler warning
-        KMP_DEBUG_ASSERT(used >= desc.size_a);
-      }
-      kmp_mk_free(*al->memkind, desc.ptr_alloc);
-    }
-  } else {
+#if KMP_USE_HWLOC
+  if (__kmp_hwloc_available) {
     if (oal > kmp_max_mem_alloc && al->pool_size > 0) {
       kmp_uint64 used =
           KMP_TEST_THEN_ADD64((kmp_int64 *)&al->pool_used, -desc.size_a);
       (void)used; // to suppress compiler warning
       KMP_DEBUG_ASSERT(used >= desc.size_a);
     }
-    __kmp_thread_free(__kmp_thread_from_gtid(gtid), desc.ptr_alloc);
+    hwloc_free(__kmp_hwloc_topology, desc.ptr_alloc, desc.size_a);
+  } else {
+#endif
+    if (__kmp_memkind_available) {
+      if (oal < kmp_max_mem_alloc) {
+        // pre-defined allocator
+        if (oal == omp_high_bw_mem_alloc && mk_hbw_preferred) {
+          kmp_mk_free(*mk_hbw_preferred, desc.ptr_alloc);
+        } else if (oal == omp_large_cap_mem_alloc && mk_dax_kmem_all) {
+          kmp_mk_free(*mk_dax_kmem_all, desc.ptr_alloc);
+        } else {
+          kmp_mk_free(*mk_default, desc.ptr_alloc);
+        }
+      } else {
+        if (al->pool_size > 0) { // custom allocator with pool size requested
+          kmp_uint64 used =
+              KMP_TEST_THEN_ADD64((kmp_int64 *)&al->pool_used, -desc.size_a);
+          (void)used; // to suppress compiler warning
+          KMP_DEBUG_ASSERT(used >= desc.size_a);
+        }
+        kmp_mk_free(*al->memkind, desc.ptr_alloc);
+      }
+    } else {
+      if (oal > kmp_max_mem_alloc && al->pool_size > 0) {
+        kmp_uint64 used =
+            KMP_TEST_THEN_ADD64((kmp_int64 *)&al->pool_used, -desc.size_a);
+        (void)used; // to suppress compiler warning
+        KMP_DEBUG_ASSERT(used >= desc.size_a);
+      }
+      __kmp_thread_free(__kmp_thread_from_gtid(gtid), desc.ptr_alloc);
+    }
+#if KMP_USE_HWLOC
   }
+#endif
 }
 
 /* If LEAK_MEMORY is defined, __kmp_free() will *not* free memory. It causes
