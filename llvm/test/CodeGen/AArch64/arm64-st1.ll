@@ -5,10 +5,17 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -verify-machineinstrs -mcpu=exynos-m3 | FileCheck --check-prefixes=CHECK,EXYNOS %s
 
 define void @st1lane_16b(<16 x i8> %A, ptr %D) {
-; CHECK-LABEL: st1lane_16b:
-; CHECK:    add x8, x0, #1
-; CHECK:    st1.b { v0 }[1], [x8]
-
+; SD-CHECK-LABEL: st1lane_16b:
+; SD-CHECK:    mov.b v0[0], v0[1]
+; SD-CHECK:    stur b0, [x0, #1]
+;
+; GI-CHECK-LABEL: st1lane_16b:
+; GI-CHECK:    add x8, x0, #1
+; GI-CHECK:    st1.b { v0 }[1], [x8]
+;
+; EXYNOS-LABEL: st1lane_16b:
+; EXYNOS:    mov.b v0[0], v0[1]
+; EXYNOS:    stur b0, [x0, #1]
   %ptr = getelementptr i8, ptr %D, i64 1
   %tmp = extractelement <16 x i8> %A, i32 1
   store i8 %tmp, ptr %ptr
@@ -17,14 +24,14 @@ define void @st1lane_16b(<16 x i8> %A, ptr %D) {
 
 define void @st1lane0_16b(<16 x i8> %A, ptr %D) {
 ; SD-CHECK-LABEL: st1lane0_16b:
-; SD-CHECK:    str b0, [x0, #1]
+; SD-CHECK:    stur b0, [x0, #1]
 ;
 ; GI-CHECK-LABEL: st1lane0_16b:
 ; GI-CHECK:    add x8, x0, #1
 ; GI-CHECK:    st1.b { v0 }[0], [x8]
 ;
 ; EXYNOS-LABEL: st1lane0_16b:
-; EXYNOS:    str b0, [x0, #1]
+; EXYNOS:    stur b0, [x0, #1]
 
   %ptr = getelementptr i8, ptr %D, i64 1
   %tmp = extractelement <16 x i8> %A, i32 0
@@ -49,10 +56,17 @@ define void @st1lane0u_16b(<16 x i8> %A, ptr %D) {
 }
 
 define void @st1lane_ro_16b(<16 x i8> %A, ptr %D, i64 %offset) {
-; CHECK-LABEL: st1lane_ro_16b:
-; CHECK:    add x8, x0, x1
-; CHECK:    st1.b { v0 }[1], [x8]
-
+; SD-CHECK-LABEL: st1lane_ro_16b:
+; SD-CHECK:    mov.b v0[0], v0[1]
+; SD-CHECK:    str b0, [x0, x1]
+;
+; GI-CHECK-LABEL: st1lane_ro_16b:
+; GI-CHECK:    add x8, x0, x1
+; GI-CHECK:    st1.b { v0 }[1], [x8]
+;
+; EXYNOS-LABEL: st1lane_ro_16b:
+; EXYNOS:    mov.b v0[0], v0[1]
+; EXYNOS:    str b0, [x0, x1]
   %ptr = getelementptr i8, ptr %D, i64 %offset
   %tmp = extractelement <16 x i8> %A, i32 1
   store i8 %tmp, ptr %ptr
@@ -311,10 +325,17 @@ define void @st1lane0_ro_2d_double(<2 x double> %A, ptr %D, i64 %offset) {
 }
 
 define void @st1lane_8b(<8 x i8> %A, ptr %D) {
-; CHECK-LABEL: st1lane_8b:
-; CHECK:    add x8, x0, #1
-; CHECK:    st1.b { v0 }[1], [x8]
-
+; SD-CHECK-LABEL: st1lane_8b:
+; SD-CHECK:    mov.b v0[0], v0[1]
+; SD-CHECK:    stur b0, [x0, #1]
+;
+; GI-CHECK-LABEL: st1lane_8b:
+; GI-CHECK:    add x8, x0, #1
+; GI-CHECK:    st1.b { v0 }[1], [x8]
+;
+; EXYNOS-LABEL: st1lane_8b:
+; EXYNOS:    mov.b v0[0], v0[1]
+; EXYNOS:    stur b0, [x0, #1]
   %ptr = getelementptr i8, ptr %D, i64 1
   %tmp = extractelement <8 x i8> %A, i32 1
   store i8 %tmp, ptr %ptr
@@ -322,10 +343,17 @@ define void @st1lane_8b(<8 x i8> %A, ptr %D) {
 }
 
 define void @st1lane_ro_8b(<8 x i8> %A, ptr %D, i64 %offset) {
-; CHECK-LABEL: st1lane_ro_8b:
-; CHECK:    add x8, x0, x1
-; CHECK:    st1.b { v0 }[1], [x8]
-
+; SD-CHECK-LABEL: st1lane_ro_8b:
+; SD-CHECK:    mov.b v0[0], v0[1]
+; SD-CHECK:    str b0, [x0, x1]
+;
+; GI-CHECK-LABEL: st1lane_ro_8b:
+; GI-CHECK:    add x8, x0, x1
+; GI-CHECK:    st1.b { v0 }[1], [x8]
+;
+; EXYNOS-LABEL: st1lane_ro_8b:
+; EXYNOS:    mov.b v0[0], v0[1]
+; EXYNOS:    str b0, [x0, x1]
   %ptr = getelementptr i8, ptr %D, i64 %offset
   %tmp = extractelement <8 x i8> %A, i32 1
   store i8 %tmp, ptr %ptr
