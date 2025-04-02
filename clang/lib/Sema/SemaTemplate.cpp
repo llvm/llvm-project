@@ -2234,7 +2234,10 @@ static bool DiagnoseDefaultTemplateArgument(Sema &S,
     //   template-argument, that declaration shall be a definition and shall be
     //   the only declaration of the function template in the translation unit.
     // (C++98/03 doesn't have this wording; see DR226).
-    S.DiagCompat(ParamLoc, diag_compat::templ_default_in_function_templ)
+    S.Diag(ParamLoc,
+           S.getLangOpts().CPlusPlus11
+               ? diag::compat_cxx11_templ_default_in_function_templ
+               : diag::compat_pre_cxx11_templ_default_in_function_templ)
         << DefArgRange;
     return false;
 
@@ -6429,7 +6432,10 @@ static bool CheckTemplateArgumentAddressOfObjectOrFunction(
     bool ExtraParens = false;
     while (ParenExpr *Parens = dyn_cast<ParenExpr>(Arg)) {
       if (!Invalid && !ExtraParens) {
-        S.DiagCompat(Arg->getBeginLoc(), diag_compat::template_arg_extra_parens)
+        S.Diag(Arg->getBeginLoc(),
+               S.getLangOpts().CPlusPlus11
+                   ? diag::compat_cxx11_template_arg_extra_parens
+                   : diag::compat_pre_cxx11_template_arg_extra_parens)
             << Arg->getSourceRange();
         ExtraParens = true;
       }
@@ -6649,7 +6655,10 @@ CheckTemplateArgumentPointerToMember(Sema &S, NonTypeTemplateParmDecl *Param,
   bool ExtraParens = false;
   while (ParenExpr *Parens = dyn_cast<ParenExpr>(Arg)) {
     if (!Invalid && !ExtraParens) {
-      S.DiagCompat(Arg->getBeginLoc(), diag_compat::template_arg_extra_parens)
+      S.Diag(Arg->getBeginLoc(),
+             S.getLangOpts().CPlusPlus11
+                 ? diag::compat_cxx11_template_arg_extra_parens
+                 : diag::compat_pre_cxx11_template_arg_extra_parens)
           << Arg->getSourceRange();
       ExtraParens = true;
     }
@@ -10630,7 +10639,9 @@ TypeResult Sema::ActOnTypenameType(Scope *S, SourceLocation TypenameLoc,
     return true;
 
   if (TypenameLoc.isValid() && S && !S->getTemplateParamParent())
-    DiagCompat(TypenameLoc, diag_compat::typename_outside_of_template)
+    Diag(TypenameLoc, getLangOpts().CPlusPlus11
+                          ? diag::compat_cxx11_typename_outside_of_template
+                          : diag::compat_pre_cxx11_typename_outside_of_template)
         << FixItHint::CreateRemoval(TypenameLoc);
 
   NestedNameSpecifierLoc QualifierLoc = SS.getWithLocInContext(Context);

@@ -25,7 +25,6 @@
 namespace clang {
   class DiagnosticsEngine;
   class DiagnosticBuilder;
-  class LangOptions;
   class SourceLocation;
 
   // Import the diagnostic enums themselves.
@@ -104,18 +103,6 @@ namespace clang {
                       ///< compilation.
     };
   }
-
-  namespace diag_compat {
-#define DIAG_COMPAT_IDS_BEGIN() enum {
-#define DIAG_COMPAT_IDS_END()                                                \
-    }                                                                          \
-    ;
-#define DIAG_COMPAT_ID(IDX, NAME, ...) NAME = IDX,
-#include "clang/Basic/DiagnosticCommonCompatIDs.inc"
-#undef DIAG_COMPAT_ID
-#undef DIAG_COMPAT_IDS_BEGIN
-#undef DIAG_COMPAT_IDS_END
-  } // end namespace diag_compat
 
 class DiagnosticMapping {
   LLVM_PREFERRED_TYPE(diag::Severity)
@@ -476,11 +463,6 @@ public:
   /// Get the diagnostic option with the closest edit distance to the
   /// given group name.
   static StringRef getNearestOption(diag::Flavor Flavor, StringRef Group);
-
-  /// Get the appropriate diagnostic Id to use for issuing a compatibility
-  /// diagnostic. For use by the various DiagCompat() helpers.
-  static unsigned getCXXCompatDiagId(const LangOptions &LangOpts,
-                                     unsigned CompatDiagId);
 
 private:
   /// Classify the specified diagnostic ID into a Level, consumable by
