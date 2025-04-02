@@ -260,6 +260,10 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genAll,
      {{{"mask", asAddr}, {"dim", asValue}}},
      /*isElemental=*/false},
+    {"all_sync",
+     &I::genVoteAllSync,
+     {{{"mask", asValue}, {"pred", asValue}}},
+     /*isElemental=*/false},
     {"allocated",
      &I::genAllocated,
      {{{"array", asInquired}, {"scalar", asInquired}}},
@@ -6493,6 +6497,21 @@ IntrinsicLibrary::genMatchAllSync(mlir::Type resultType,
   auto conv = builder.create<mlir::LLVM::ZExtOp>(loc, resultType, pred);
   builder.create<fir::StoreOp>(loc, conv, args[2]);
   return value;
+}
+
+// ALL_SYNC
+mlir::Value IntrinsicLibrary::genVoteAllSync(mlir::Type resultType,
+                                             llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+
+  llvm::StringRef funcName = "llvm.nvvm.vote.all.sync";
+  mlir::MLIRContext *context = builder.getContext();
+  mlir::Type i32Ty = builder.getI32Type();
+  mlir::FunctionType ftype =
+      mlir::FunctionType::get(context, {i32Ty, i32Ty}, {i32Ty});
+  auto funcOp = builder.createFunction(loc, funcName, ftype);
+  llvm::SmallVector<mlir::Value> filteredArgs;
+  return builder.create<fir::CallOp>(loc, funcOp, args).getResult(0);
 }
 
 // MATCH_ANY_SYNC
