@@ -229,12 +229,15 @@ class TypeConstraint {
   /// type-constraint.
   Expr *ImmediatelyDeclaredConstraint = nullptr;
   ConceptReference *ConceptRef;
+  int ArgumentPackSubstitutionIndex;
 
 public:
   TypeConstraint(ConceptReference *ConceptRef,
-                 Expr *ImmediatelyDeclaredConstraint)
+                 Expr *ImmediatelyDeclaredConstraint,
+                 int ArgumentPackSubstitutionIndex)
       : ImmediatelyDeclaredConstraint(ImmediatelyDeclaredConstraint),
-        ConceptRef(ConceptRef) {}
+        ConceptRef(ConceptRef),
+        ArgumentPackSubstitutionIndex(ArgumentPackSubstitutionIndex) {}
 
   /// \brief Get the immediately-declared constraint expression introduced by
   /// this type-constraint, that is - the constraint expression that is added to
@@ -244,6 +247,10 @@ public:
   }
 
   ConceptReference *getConceptReference() const { return ConceptRef; }
+
+  int getArgumentPackSubstitutionIndex() const {
+    return ArgumentPackSubstitutionIndex;
+  }
 
   // FIXME: Instead of using these concept related functions the callers should
   // directly work with the corresponding ConceptReference.
