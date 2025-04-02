@@ -690,12 +690,6 @@ endif( LLVM_COMPILER_IS_GCC_COMPATIBLE OR CMAKE_CXX_COMPILER_ID MATCHES "XL" )
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   append("-Werror=unguarded-availability-new" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-  if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 21.0)
-    # LLVM has a policy of including virtual "anchor" functions to control
-    # where the vtable is emitted. In `final` classes, these are exactly what
-    # this warning detects: unnecessary virtual methods.
-    append("-Wno-unnecessary-virtual-specifier" CMAKE_CXX_FLAGS)
-  endif()
 endif()
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND LLVM_ENABLE_LTO)
@@ -780,10 +774,10 @@ if (MSVC)
       # any code that uses the LLVM_ALIGNAS macro), so this is must be disabled to
       # avoid unwanted alignment warnings.
       -wd4324 # Suppress 'structure was padded due to __declspec(align())'
-      # This is triggered for every variable that is a template type of a class even 
+      # This is triggered for every variable that is a template type of a class even
       # if there private when the class is dllexport'ed
       -wd4251 # Suppress 'needs to have dll-interface to be used by clients'
-      # We only putting dll export on classes with out of line members so this 
+      # We only putting dll export on classes with out of line members so this
       # warning gets triggered a lot for bases we haven't exported'
       -wd4275 # non dll-interface class used as base for dll-interface class
 
