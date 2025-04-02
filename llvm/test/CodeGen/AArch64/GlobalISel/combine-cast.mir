@@ -135,20 +135,13 @@ name:            test_combine_trunc_build_vector
 legalized: true
 body:             |
   bb.1:
-    ; CHECK-PRE-LABEL: name: test_combine_trunc_build_vector
-    ; CHECK-PRE: %arg1:_(s64) = COPY $x0
-    ; CHECK-PRE-NEXT: %arg2:_(s64) = COPY $x0
-    ; CHECK-PRE-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC %arg1(s64)
-    ; CHECK-PRE-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC %arg2(s64)
-    ; CHECK-PRE-NEXT: %small:_(<2 x s32>) = G_BUILD_VECTOR [[TRUNC]](s32), [[TRUNC1]](s32)
-    ; CHECK-PRE-NEXT: $x0 = COPY %small(<2 x s32>)
-    ;
-    ; CHECK-POST-LABEL: name: test_combine_trunc_build_vector
-    ; CHECK-POST: %arg1:_(s64) = COPY $x0
-    ; CHECK-POST-NEXT: %arg2:_(s64) = COPY $x0
-    ; CHECK-POST-NEXT: %bv:_(<2 x s64>) = G_BUILD_VECTOR %arg1(s64), %arg2(s64)
-    ; CHECK-POST-NEXT: %small:_(<2 x s32>) = G_TRUNC %bv(<2 x s64>)
-    ; CHECK-POST-NEXT: $x0 = COPY %small(<2 x s32>)
+    ; CHECK-LABEL: name: test_combine_trunc_build_vector
+    ; CHECK: %arg1:_(s64) = COPY $x0
+    ; CHECK-NEXT: %arg2:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC %arg1(s64)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC %arg2(s64)
+    ; CHECK-NEXT: %small:_(<2 x s32>) = G_BUILD_VECTOR [[TRUNC]](s32), [[TRUNC1]](s32)
+    ; CHECK-NEXT: $x0 = COPY %small(<2 x s32>)
     %arg1:_(s64) = COPY $x0
     %arg2:_(s64) = COPY $x0
     %bv:_(<2 x s64>) = G_BUILD_VECTOR %arg1(s64), %arg2(s64)
@@ -224,3 +217,27 @@ body:             |
     %large:_(<2 x s64>) = G_ANYEXT %bv(<2 x s32>)
     $q0 = COPY %large(<2 x s64>)
     $d0 = COPY %bv(<2 x s32>)
+...
+---
+name:            test_undef_ptrtoint
+legalized: true
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_undef_ptrtoint
+    ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $q0 = COPY [[DEF]](<2 x s64>)
+    %0:_(<2 x p0>) = G_IMPLICIT_DEF
+    %1:_(<2 x s64>) = G_PTRTOINT %0(<2 x p0>)
+    $q0 = COPY %1(<2 x s64>)
+...
+---
+name:            test_undef_inttoptr
+legalized: true
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_undef_inttoptr
+    ; CHECK: [[DEF:%[0-9]+]]:_(<2 x p0>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $q0 = COPY [[DEF]](<2 x p0>)
+    %0:_(<2 x s64>) = G_IMPLICIT_DEF
+    %1:_(<2 x p0>) = G_INTTOPTR %0(<2 x s64>)
+    $q0 = COPY %1(<2 x p0>)

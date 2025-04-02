@@ -82,11 +82,11 @@ define void @call_external_sym(ptr %dst) {
 ; LARGE-NEXT:    .cfi_offset 1, -8
 ; LARGE-NEXT:    ori $a2, $zero, 1000
 ; LARGE-NEXT:    move $a1, $zero
-; LARGE-NEXT:    pcalau12i $a3, %pc_hi20(memset)
-; LARGE-NEXT:    addi.d $ra, $zero, %pc_lo12(memset)
-; LARGE-NEXT:    lu32i.d $ra, %pc64_lo20(memset)
-; LARGE-NEXT:    lu52i.d $ra, $ra, %pc64_hi12(memset)
-; LARGE-NEXT:    add.d $ra, $ra, $a3
+; LARGE-NEXT:    pcalau12i $a3, %got_pc_hi20(memset)
+; LARGE-NEXT:    addi.d $ra, $zero, %got_pc_lo12(memset)
+; LARGE-NEXT:    lu32i.d $ra, %got64_pc_lo20(memset)
+; LARGE-NEXT:    lu52i.d $ra, $ra, %got64_pc_hi12(memset)
+; LARGE-NEXT:    ldx.d $ra, $ra, $a3
 ; LARGE-NEXT:    jirl $ra, $ra, 0
 ; LARGE-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LARGE-NEXT:    addi.d $sp, $sp, 16
@@ -105,8 +105,8 @@ define i32 @caller_tail(i32 %i) nounwind {
 ;
 ; MEDIUM-LABEL: caller_tail:
 ; MEDIUM:       # %bb.0: # %entry
-; MEDIUM-NEXT:    pcaddu18i $a1, %call36(callee_tail)
-; MEDIUM-NEXT:    jr $a1
+; MEDIUM-NEXT:    pcaddu18i $t8, %call36(callee_tail)
+; MEDIUM-NEXT:    jr $t8
 ;
 ; LARGE-LABEL: caller_tail:
 ; LARGE:       # %bb.0: # %entry

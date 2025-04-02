@@ -57,12 +57,13 @@ enum ID {
 };
 
 namespace rc_opt {
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Opts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Opts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr opt::OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
@@ -73,7 +74,10 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class RcOptTable : public opt::GenericOptTable {
 public:
-  RcOptTable() : GenericOptTable(rc_opt::InfoTable, /* IgnoreCase = */ true) {}
+  RcOptTable()
+      : GenericOptTable(rc_opt::OptionStrTable, rc_opt::OptionPrefixesTable,
+                        rc_opt::InfoTable,
+                        /* IgnoreCase = */ true) {}
 };
 
 enum Windres_ID {
@@ -84,12 +88,13 @@ enum Windres_ID {
 };
 
 namespace windres_opt {
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "WindresOpts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "WindresOpts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr opt::OptTable::Info InfoTable[] = {
 #define OPTION(...)                                                            \
@@ -102,7 +107,10 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 class WindresOptTable : public opt::GenericOptTable {
 public:
   WindresOptTable()
-      : GenericOptTable(windres_opt::InfoTable, /* IgnoreCase = */ false) {}
+      : GenericOptTable(windres_opt::OptionStrTable,
+                        windres_opt::OptionPrefixesTable,
+                        windres_opt::InfoTable,
+                        /* IgnoreCase = */ false) {}
 };
 
 static ExitOnError ExitOnErr;
@@ -603,7 +611,7 @@ void doRc(std::string Src, std::string Dest, RcOptions &Opts,
 
   // Read and tokenize the input file.
   ErrorOr<std::unique_ptr<MemoryBuffer>> File =
-      MemoryBuffer::getFile(PreprocessedFile);
+      MemoryBuffer::getFile(PreprocessedFile, /*IsText=*/true);
   if (!File) {
     fatalError("Error opening file '" + Twine(PreprocessedFile) +
                "': " + File.getError().message());
@@ -682,7 +690,7 @@ void doCvtres(std::string Src, std::string Dest, std::string TargetTriple) {
   object::WindowsResourceParser Parser;
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
-      MemoryBuffer::getFile(Src);
+      MemoryBuffer::getFile(Src, /*IsText=*/true);
   if (!BufferOrErr)
     fatalError("Error opening file '" + Twine(Src) +
                "': " + BufferOrErr.getError().message());

@@ -81,6 +81,18 @@ constexpr int b() {
 }
 static_assert(b() == 11);
 
+namespace cwg1872 {
+  template<typename T> struct A : T {
+    constexpr int f() const { return 0; }
+  };
+  struct X {};
+  struct Y { virtual int f() const; };
+  struct Z : virtual X {};
+
+  constexpr int z = A<Z>().f(); // both-error {{must be initialized by a constant expression}} \
+                                // both-note {{non-literal type 'A<Z>' cannot be used in a constant expression}}
+}
+
 /// The diagnostics between the two interpreters used to be different here.
 struct S { int a; };
 constexpr S getS() { // both-error {{constexpr function never produces a constant expression}}
@@ -93,3 +105,23 @@ constexpr S s = getS(); // both-error {{must be initialized by a constant expres
                         // both-note {{declared here}}
 static_assert(s.a == 12, ""); // both-error {{not an integral constant expression}} \
                               // both-note {{initializer of 's' is not a constant expression}}
+
+using size_t = decltype(sizeof(0));
+namespace std { template<typename T> struct tuple_size; }
+namespace std { template<size_t, typename> struct tuple_element; }
+
+namespace constant {
+  struct Q {};
+  template<int N> constexpr int get(Q &&) { return N * N; }
+}
+template<> struct std::tuple_size<constant::Q> { static const int value = 3; };
+template<int N> struct std::tuple_element<N, constant::Q> { typedef int type; };
+
+namespace constant {
+  Q q;
+  constexpr bool f() {
+    auto [a, b, c] = q;
+    return a == 0 && b == 1 && c == 4;
+  }
+  static_assert(f());
+}

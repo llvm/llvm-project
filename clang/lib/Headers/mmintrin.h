@@ -49,6 +49,12 @@ typedef char __v16qi __attribute__((__vector_size__(16)));
                  __min_vector_width__(128)))
 #endif
 
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR __DEFAULT_FN_ATTRS_SSE2 constexpr
+#else
+#define __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR __DEFAULT_FN_ATTRS_SSE2
+#endif
+
 #define __trunc64(x)                                                           \
   (__m64) __builtin_shufflevector((__v2di)(x), __extension__(__v2di){}, 0)
 #define __anyext128(x)                                                         \
@@ -1332,10 +1338,9 @@ _mm_cmpgt_pi32(__m64 __m1, __m64 __m2)
 /// This intrinsic corresponds to the <c> PXOR </c> instruction.
 ///
 /// \returns An initialized 64-bit integer vector with all elements set to zero.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_setzero_si64(void)
-{
-    return __extension__ (__m64){ 0LL };
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_setzero_si64(void) {
+  return __extension__(__m64){0LL};
 }
 
 /// Constructs a 64-bit integer vector initialized with the specified
@@ -1353,10 +1358,9 @@ _mm_setzero_si64(void)
 ///    A 32-bit integer value used to initialize the lower 32 bits of the
 ///    result.
 /// \returns An initialized 64-bit integer vector.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_set_pi32(int __i1, int __i0)
-{
-    return __extension__ (__m64)(__v2si){__i0, __i1};
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_set_pi32(int __i1, int __i0) {
+  return __extension__(__m64)(__v2si){__i0, __i1};
 }
 
 /// Constructs a 64-bit integer vector initialized with the specified
@@ -1376,10 +1380,9 @@ _mm_set_pi32(int __i1, int __i0)
 /// \param __s0
 ///    A 16-bit integer value used to initialize bits [15:0] of the result.
 /// \returns An initialized 64-bit integer vector.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_set_pi16(short __s3, short __s2, short __s1, short __s0)
-{
-    return __extension__ (__m64)(__v4hi){__s0, __s1, __s2, __s3};
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_set_pi16(short __s3, short __s2, short __s1, short __s0) {
+  return __extension__(__m64)(__v4hi){__s0, __s1, __s2, __s3};
 }
 
 /// Constructs a 64-bit integer vector initialized with the specified
@@ -1407,12 +1410,11 @@ _mm_set_pi16(short __s3, short __s2, short __s1, short __s0)
 /// \param __b0
 ///    An 8-bit integer value used to initialize bits [7:0] of the result.
 /// \returns An initialized 64-bit integer vector.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_set_pi8(char __b7, char __b6, char __b5, char __b4, char __b3, char __b2,
-            char __b1, char __b0)
-{
-    return __extension__ (__m64)(__v8qi){__b0, __b1, __b2, __b3,
-                                         __b4, __b5, __b6, __b7};
+            char __b1, char __b0) {
+  return __extension__(__m64)(__v8qi){__b0, __b1, __b2, __b3,
+                                      __b4, __b5, __b6, __b7};
 }
 
 /// Constructs a 64-bit integer vector of [2 x i32], with each of the
@@ -1428,10 +1430,9 @@ _mm_set_pi8(char __b7, char __b6, char __b5, char __b4, char __b3, char __b2,
 ///    A 32-bit integer value used to initialize each vector element of the
 ///    result.
 /// \returns An initialized 64-bit integer vector of [2 x i32].
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_set1_pi32(int __i)
-{
-    return _mm_set_pi32(__i, __i);
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_set1_pi32(int __i) {
+  return _mm_set_pi32(__i, __i);
 }
 
 /// Constructs a 64-bit integer vector of [4 x i16], with each of the
@@ -1447,10 +1448,9 @@ _mm_set1_pi32(int __i)
 ///    A 16-bit integer value used to initialize each vector element of the
 ///    result.
 /// \returns An initialized 64-bit integer vector of [4 x i16].
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_set1_pi16(short __w)
-{
-    return _mm_set_pi16(__w, __w, __w, __w);
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_set1_pi16(short __w) {
+  return _mm_set_pi16(__w, __w, __w, __w);
 }
 
 /// Constructs a 64-bit integer vector of [8 x i8], with each of the
@@ -1465,10 +1465,9 @@ _mm_set1_pi16(short __w)
 ///    An 8-bit integer value used to initialize each vector element of the
 ///    result.
 /// \returns An initialized 64-bit integer vector of [8 x i8].
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_set1_pi8(char __b)
-{
-    return _mm_set_pi8(__b, __b, __b, __b, __b, __b, __b, __b);
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_set1_pi8(char __b) {
+  return _mm_set_pi8(__b, __b, __b, __b, __b, __b, __b, __b);
 }
 
 /// Constructs a 64-bit integer vector, initialized in reverse order with
@@ -1486,10 +1485,9 @@ _mm_set1_pi8(char __b)
 ///    A 32-bit integer value used to initialize the upper 32 bits of the
 ///    result.
 /// \returns An initialized 64-bit integer vector.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_setr_pi32(int __i0, int __i1)
-{
-    return _mm_set_pi32(__i1, __i0);
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_setr_pi32(int __i0, int __i1) {
+  return _mm_set_pi32(__i1, __i0);
 }
 
 /// Constructs a 64-bit integer vector, initialized in reverse order with
@@ -1509,10 +1507,9 @@ _mm_setr_pi32(int __i0, int __i1)
 /// \param __w3
 ///    A 16-bit integer value used to initialize bits [63:48] of the result.
 /// \returns An initialized 64-bit integer vector.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_setr_pi16(short __w0, short __w1, short __w2, short __w3)
-{
-    return _mm_set_pi16(__w3, __w2, __w1, __w0);
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_setr_pi16(short __w0, short __w1, short __w2, short __w3) {
+  return _mm_set_pi16(__w3, __w2, __w1, __w0);
 }
 
 /// Constructs a 64-bit integer vector, initialized in reverse order with
@@ -1540,11 +1537,10 @@ _mm_setr_pi16(short __w0, short __w1, short __w2, short __w3)
 /// \param __b7
 ///    An 8-bit integer value used to initialize bits [63:56] of the result.
 /// \returns An initialized 64-bit integer vector.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_setr_pi8(char __b0, char __b1, char __b2, char __b3, char __b4, char __b5,
-             char __b6, char __b7)
-{
-    return _mm_set_pi8(__b7, __b6, __b5, __b4, __b3, __b2, __b1, __b0);
+             char __b6, char __b7) {
+  return _mm_set_pi8(__b7, __b6, __b5, __b4, __b3, __b2, __b1, __b0);
 }
 
 #undef __anyext128

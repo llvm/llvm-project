@@ -1,6 +1,6 @@
-; RUN: llc -march=mipsel -mcpu=mips32r2 -mattr=+micromips \
+; RUN: llc -mtriple=mipsel -mcpu=mips32r2 -mattr=+micromips \
 ; RUN:   -relocation-model=pic -O3 < %s | FileCheck %s
-; RUN: llc -O0 -march=mips -mcpu=mips32r2 -mattr=+micromips \
+; RUN: llc -O0 -mtriple=mips -mcpu=mips32r2 -mattr=+micromips \
 ; RUN:   -asm-show-inst < %s | FileCheck %s
 
 ; Branch instruction added to enable FastISel::selectOperator

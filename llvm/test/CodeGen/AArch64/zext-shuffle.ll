@@ -472,59 +472,61 @@ define <8 x double> @uitofp_fadd(<32 x i16> %l) {
 define <8 x double> @uitofp_load_fadd(ptr %p) {
 ; CHECK-LABEL: uitofp_load_fadd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld4 { v0.8h, v1.8h, v2.8h, v3.8h }, [x0]
-; CHECK-NEXT:    ushll2 v4.4s, v0.8h, #0
-; CHECK-NEXT:    ushll v5.4s, v0.4h, #0
-; CHECK-NEXT:    ushll2 v6.4s, v1.8h, #0
-; CHECK-NEXT:    ushll v7.4s, v1.4h, #0
-; CHECK-NEXT:    ushll2 v16.4s, v2.8h, #0
-; CHECK-NEXT:    ushll v17.4s, v2.4h, #0
-; CHECK-NEXT:    ushll2 v18.4s, v3.8h, #0
-; CHECK-NEXT:    ushll v0.4s, v3.4h, #0
-; CHECK-NEXT:    ushll2 v1.2d, v4.4s, #0
-; CHECK-NEXT:    ushll2 v2.2d, v5.4s, #0
-; CHECK-NEXT:    ushll v3.2d, v4.2s, #0
-; CHECK-NEXT:    ushll v4.2d, v5.2s, #0
-; CHECK-NEXT:    ushll2 v5.2d, v6.4s, #0
-; CHECK-NEXT:    ushll2 v19.2d, v7.4s, #0
-; CHECK-NEXT:    ushll v6.2d, v6.2s, #0
-; CHECK-NEXT:    ushll v7.2d, v7.2s, #0
-; CHECK-NEXT:    ushll2 v20.2d, v16.4s, #0
-; CHECK-NEXT:    ushll2 v21.2d, v17.4s, #0
-; CHECK-NEXT:    ushll v16.2d, v16.2s, #0
-; CHECK-NEXT:    ushll v17.2d, v17.2s, #0
-; CHECK-NEXT:    ushll v22.2d, v0.2s, #0
-; CHECK-NEXT:    ushll2 v23.2d, v18.4s, #0
-; CHECK-NEXT:    ushll2 v0.2d, v0.4s, #0
-; CHECK-NEXT:    ushll v18.2d, v18.2s, #0
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    movi v0.2d, #0x0000000000ffff
+; CHECK-NEXT:    ldp q3, q4, [x0, #32]
+; CHECK-NEXT:    ushr v5.2d, v1.2d, #16
+; CHECK-NEXT:    ushr v6.2d, v2.2d, #16
+; CHECK-NEXT:    ushr v20.2d, v1.2d, #32
+; CHECK-NEXT:    ushr v7.2d, v3.2d, #16
+; CHECK-NEXT:    ushr v17.2d, v4.2d, #16
+; CHECK-NEXT:    ushr v22.2d, v2.2d, #32
+; CHECK-NEXT:    ushr v23.2d, v3.2d, #32
+; CHECK-NEXT:    ushr v24.2d, v4.2d, #32
+; CHECK-NEXT:    and v16.16b, v1.16b, v0.16b
+; CHECK-NEXT:    and v18.16b, v2.16b, v0.16b
+; CHECK-NEXT:    and v19.16b, v3.16b, v0.16b
+; CHECK-NEXT:    and v21.16b, v4.16b, v0.16b
+; CHECK-NEXT:    and v5.16b, v5.16b, v0.16b
+; CHECK-NEXT:    and v6.16b, v6.16b, v0.16b
+; CHECK-NEXT:    and v7.16b, v7.16b, v0.16b
+; CHECK-NEXT:    and v17.16b, v17.16b, v0.16b
+; CHECK-NEXT:    and v20.16b, v20.16b, v0.16b
+; CHECK-NEXT:    and v22.16b, v22.16b, v0.16b
+; CHECK-NEXT:    and v23.16b, v23.16b, v0.16b
+; CHECK-NEXT:    and v0.16b, v24.16b, v0.16b
+; CHECK-NEXT:    ushr v1.2d, v1.2d, #48
+; CHECK-NEXT:    ushr v2.2d, v2.2d, #48
+; CHECK-NEXT:    ushr v3.2d, v3.2d, #48
+; CHECK-NEXT:    ushr v4.2d, v4.2d, #48
+; CHECK-NEXT:    ucvtf v16.2d, v16.2d
+; CHECK-NEXT:    ucvtf v18.2d, v18.2d
+; CHECK-NEXT:    ucvtf v19.2d, v19.2d
+; CHECK-NEXT:    ucvtf v21.2d, v21.2d
+; CHECK-NEXT:    ucvtf v5.2d, v5.2d
+; CHECK-NEXT:    ucvtf v6.2d, v6.2d
+; CHECK-NEXT:    ucvtf v7.2d, v7.2d
+; CHECK-NEXT:    ucvtf v17.2d, v17.2d
+; CHECK-NEXT:    ucvtf v20.2d, v20.2d
+; CHECK-NEXT:    ucvtf v22.2d, v22.2d
+; CHECK-NEXT:    ucvtf v23.2d, v23.2d
+; CHECK-NEXT:    ucvtf v0.2d, v0.2d
 ; CHECK-NEXT:    ucvtf v1.2d, v1.2d
 ; CHECK-NEXT:    ucvtf v2.2d, v2.2d
 ; CHECK-NEXT:    ucvtf v3.2d, v3.2d
 ; CHECK-NEXT:    ucvtf v4.2d, v4.2d
-; CHECK-NEXT:    ucvtf v5.2d, v5.2d
-; CHECK-NEXT:    ucvtf v19.2d, v19.2d
-; CHECK-NEXT:    ucvtf v6.2d, v6.2d
-; CHECK-NEXT:    ucvtf v7.2d, v7.2d
-; CHECK-NEXT:    ucvtf v20.2d, v20.2d
-; CHECK-NEXT:    ucvtf v21.2d, v21.2d
-; CHECK-NEXT:    ucvtf v16.2d, v16.2d
-; CHECK-NEXT:    ucvtf v17.2d, v17.2d
-; CHECK-NEXT:    ucvtf v22.2d, v22.2d
-; CHECK-NEXT:    ucvtf v23.2d, v23.2d
-; CHECK-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-NEXT:    ucvtf v18.2d, v18.2d
-; CHECK-NEXT:    fadd v1.2d, v1.2d, v5.2d
-; CHECK-NEXT:    fadd v4.2d, v4.2d, v7.2d
-; CHECK-NEXT:    fadd v6.2d, v3.2d, v6.2d
-; CHECK-NEXT:    fadd v2.2d, v2.2d, v19.2d
-; CHECK-NEXT:    fadd v3.2d, v17.2d, v22.2d
-; CHECK-NEXT:    fadd v5.2d, v16.2d, v18.2d
-; CHECK-NEXT:    fadd v7.2d, v21.2d, v0.2d
-; CHECK-NEXT:    fadd v16.2d, v20.2d, v23.2d
-; CHECK-NEXT:    fadd v0.2d, v4.2d, v3.2d
-; CHECK-NEXT:    fadd v3.2d, v1.2d, v16.2d
-; CHECK-NEXT:    fadd v1.2d, v2.2d, v7.2d
-; CHECK-NEXT:    fadd v2.2d, v6.2d, v5.2d
+; CHECK-NEXT:    fadd v6.2d, v18.2d, v6.2d
+; CHECK-NEXT:    fadd v5.2d, v16.2d, v5.2d
+; CHECK-NEXT:    fadd v17.2d, v21.2d, v17.2d
+; CHECK-NEXT:    fadd v7.2d, v19.2d, v7.2d
+; CHECK-NEXT:    fadd v1.2d, v20.2d, v1.2d
+; CHECK-NEXT:    fadd v3.2d, v23.2d, v3.2d
+; CHECK-NEXT:    fadd v2.2d, v22.2d, v2.2d
+; CHECK-NEXT:    fadd v4.2d, v0.2d, v4.2d
+; CHECK-NEXT:    fadd v0.2d, v5.2d, v1.2d
+; CHECK-NEXT:    fadd v1.2d, v6.2d, v2.2d
+; CHECK-NEXT:    fadd v2.2d, v7.2d, v3.2d
+; CHECK-NEXT:    fadd v3.2d, v17.2d, v4.2d
 ; CHECK-NEXT:    ret
     %l = load <32 x i16>, ptr %p
     %s1 = shufflevector <32 x i16> %l, <32 x i16> undef, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
@@ -541,3 +543,146 @@ define <8 x double> @uitofp_load_fadd(ptr %p) {
     ret <8 x double> %c
 }
 
+define <4 x i32> @isUndefDeInterleave_b0(<8 x i16> %a, <8 x i16> %b) {
+; CHECK-LABEL: isUndefDeInterleave_b0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
+; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ret
+  %2 = shufflevector <8 x i16> %a, <8 x i16> poison, <8 x i32> <i32 poison, i32 poison, i32 0, i32 4, i32 poison, i32 poison, i32 poison, i32 poison>
+  %s2 = shufflevector <8 x i16> %2, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %3 = zext <4 x i16> %s2 to <4 x i32>
+  ret <4 x i32> %3
+}
+
+define <4 x i32> @isUndefDeInterleave_b1(<8 x i16> %a) {
+; CHECK-LABEL: isUndefDeInterleave_b1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    ushr v0.4s, v0.4s, #16
+; CHECK-NEXT:    ret
+  %2 = shufflevector <8 x i16> %a, <8 x i16> poison, <8 x i32> <i32 poison, i32 poison, i32 1, i32 5, i32 poison, i32 poison, i32 poison, i32 poison>
+  %s2 = shufflevector <8 x i16> %2, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %3 = zext <4 x i16> %s2 to <4 x i32>
+  ret <4 x i32> %3
+}
+
+define <4 x i32> @isUndefDeInterleave_b2(<8 x i16> %a) {
+; CHECK-LABEL: isUndefDeInterleave_b2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
+; CHECK-NEXT:    uzp2 v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ret
+  %2 = shufflevector <8 x i16> %a, <8 x i16> poison, <8 x i32> <i32 poison, i32 poison, i32 2, i32 6, i32 poison, i32 poison, i32 poison, i32 poison>
+  %s2 = shufflevector <8 x i16> %2, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %3 = zext <4 x i16> %s2 to <4 x i32>
+  ret <4 x i32> %3
+}
+
+define <4 x i32> @isUndefDeInterleave_b3(<8 x i16> %a) {
+; CHECK-LABEL: isUndefDeInterleave_b3:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp2 v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    ushr v0.4s, v0.4s, #16
+; CHECK-NEXT:    ret
+  %2 = shufflevector <8 x i16> %a, <8 x i16> poison, <8 x i32> <i32 poison, i32 poison, i32 3, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
+  %s2 = shufflevector <8 x i16> %2, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %3 = zext <4 x i16> %s2 to <4 x i32>
+  ret <4 x i32> %3
+}
+
+define <4 x i32> @isUndefDeInterleave_t0(<8 x i16> %a, <8 x i16> %b) {
+; CHECK-LABEL: isUndefDeInterleave_t0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
+; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ret
+  %2 = shufflevector <8 x i16> %a, <8 x i16> poison, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 0, i32 4>
+  %s2 = shufflevector <8 x i16> %2, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %3 = zext <4 x i16> %s2 to <4 x i32>
+  ret <4 x i32> %3
+}
+
+define <4 x i32> @isUndefDeInterleave_t1(<8 x i16> %a) {
+; CHECK-LABEL: isUndefDeInterleave_t1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    ushr v0.4s, v0.4s, #16
+; CHECK-NEXT:    ret
+  %2 = shufflevector <8 x i16> %a, <8 x i16> poison, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 1, i32 5>
+  %s2 = shufflevector <8 x i16> %2, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %3 = zext <4 x i16> %s2 to <4 x i32>
+  ret <4 x i32> %3
+}
+
+define <4 x i32> @isUndefDeInterleave_t2(<8 x i16> %a) {
+; CHECK-LABEL: isUndefDeInterleave_t2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
+; CHECK-NEXT:    uzp2 v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ret
+  %2 = shufflevector <8 x i16> %a, <8 x i16> poison, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 2, i32 6>
+  %s2 = shufflevector <8 x i16> %2, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %3 = zext <4 x i16> %s2 to <4 x i32>
+  ret <4 x i32> %3
+}
+
+define <4 x i32> @isUndefDeInterleave_t3(<8 x i16> %a) {
+; CHECK-LABEL: isUndefDeInterleave_t3:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp2 v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    ushr v0.4s, v0.4s, #16
+; CHECK-NEXT:    ret
+  %2 = shufflevector <8 x i16> %a, <8 x i16> poison, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 3, i32 7>
+  %s2 = shufflevector <8 x i16> %2, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %3 = zext <4 x i16> %s2 to <4 x i32>
+  ret <4 x i32> %3
+}
+
+define <4 x i32> @isUndefDeInterleave_b0_bad(<8 x i16> %a, <8 x i16> %b) {
+; CHECK-LABEL: isUndefDeInterleave_b0_bad:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI40_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI40_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    ret
+  %2 = shufflevector <8 x i16> %a, <8 x i16> poison, <8 x i32> <i32 4, i32 4, i32 0, i32 4, i32 poison, i32 poison, i32 poison, i32 poison>
+  %s2 = shufflevector <8 x i16> %2, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %3 = zext <4 x i16> %s2 to <4 x i32>
+  ret <4 x i32> %3
+}
+
+define <4 x i32> @isUndefDeInterleave_t1_bad(<8 x i16> %a) {
+; CHECK-LABEL: isUndefDeInterleave_t1_bad:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI41_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI41_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-NEXT:    ushll2 v0.4s, v0.8h, #0
+; CHECK-NEXT:    ret
+  %2 = shufflevector <8 x i16> %a, <8 x i16> poison, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 4, i32 4, i32 1, i32 5>
+  %s2 = shufflevector <8 x i16> %2, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %3 = zext <4 x i16> %s2 to <4 x i32>
+  ret <4 x i32> %3
+}
+
+define i16 @undeftop(<8 x i16> %0) {
+; CHECK-LABEL: undeftop:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dup v0.8h, v0.h[4]
+; CHECK-NEXT:    uaddl v0.4s, v0.4h, v0.4h
+; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    umov w0, v0.h[0]
+; CHECK-NEXT:    ret
+  %2 = shufflevector <8 x i16> %0, <8 x i16> zeroinitializer, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 9, i32 7, i32 5, i32 3>
+  %3 = zext <8 x i16> %2 to <8 x i64>
+  %new0 = add <8 x i64> %3, %3
+  %last = trunc <8 x i64> %new0 to <8 x i16>
+  %4 = extractelement <8 x i16> %last, i32 0
+  ret i16 %4
+}

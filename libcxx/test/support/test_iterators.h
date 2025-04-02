@@ -1208,6 +1208,10 @@ struct Proxy {
 
   constexpr const T&& getData() const&& { return static_cast<const T&&>(data); }
 
+  // Explicitly declare the copy constructor as defaulted to avoid deprecation of the implicitly declared one
+  // because of the user-provided copy assignment operator.
+  Proxy(const Proxy&) = default;
+
   template <class U>
     requires std::constructible_from<T, U&&>
   constexpr Proxy(U&& u) : data{std::forward<U>(u)} {}

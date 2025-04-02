@@ -178,8 +178,6 @@ struct MoveInitOperandsToInput : public OpRewritePattern<GenericOp> {
 /// ]
 ///
 /// #trait = {
-///   args_in = 2,
-///   args_out = 1,
 ///   indexing_maps = #accesses,
 ///   iterator_types = ["parallel", "parallel"],
 ///   library_call = "some_external_fn"
@@ -210,8 +208,6 @@ struct MoveInitOperandsToInput : public OpRewritePattern<GenericOp> {
 /// ]
 ///
 /// #trait = {
-///   args_in = 2,
-///   args_out = 1,
 ///   indexing_maps = #accesses,
 ///   iterator_types = ["parallel", "parallel"],
 ///   library_call = "some_external_fn"
@@ -396,7 +392,8 @@ linalg::dropUnitDims(RewriterBase &rewriter, GenericOp genericOp,
   // 1. Check if any of the iteration dimensions are unit-trip count. They will
   //    end up being unit-trip count if they are used to index into a unit-dim
   //    tensor/memref.
-  AffineMap invertedMap = inversePermutation(concatAffineMaps(indexingMaps));
+  AffineMap invertedMap =
+      inversePermutation(concatAffineMaps(indexingMaps, rewriter.getContext()));
   if (!invertedMap) {
     return rewriter.notifyMatchFailure(genericOp,
                                        "invalid indexing maps for operation");
@@ -490,7 +487,8 @@ linalg::dropUnitDims(RewriterBase &rewriter, GenericOp genericOp,
   // Abort if the indexing maps of the result operation are not invertible
   // (i.e. not legal) or if no dimension was reduced.
   if (newIndexingMaps == indexingMaps ||
-      !inversePermutation(concatAffineMaps(newIndexingMaps)))
+      !inversePermutation(
+          concatAffineMaps(newIndexingMaps, rewriter.getContext())))
     return failure();
 
   Location loc = genericOp.getLoc();
@@ -526,12 +524,11 @@ linalg::dropUnitDims(RewriterBase &rewriter, GenericOp genericOp,
   rewriter.inlineRegionBefore(genericOp.getRegion(), replacementOp.getRegion(),
                               replacementOp.getRegion().begin());
   // 5a. Replace `linalg.index` operations that refer to the dropped unit
-  // dimensions.
+  //     dimensions.
   replaceUnitDimIndexOps(replacementOp, unitDims, rewriter);
 
   // 6. If any result type changes, insert a reshape/slice to convert from the
-  // original
-  //    type to the new type.
+  //    original type to the new type.
   SmallVector<Value> resultReplacements;
   for (auto [index, result] : llvm::enumerate(replacementOp.getResults())) {
     unsigned opOperandIndex = index + replacementOp.getNumDpsInputs();
@@ -789,8 +786,6 @@ static void
 populateFoldUnitExtentDimsViaSlicesPatterns(RewritePatternSet &patterns,
                                             ControlDropUnitDims &options) {
   auto *context = patterns.getContext();
-  options.rankReductionStrategy =
-      ControlDropUnitDims::RankReductionStrategy::ExtractInsertSlice;
   patterns.add<DropUnitDims>(context, options);
   patterns.add<DropPadUnitDims>(context, options);
   // TODO: Patterns unrelated to unit dim folding should be factored out.
@@ -836,7 +831,7 @@ struct LinalgFoldUnitExtentDimsPass
     }
     linalg::populateFoldUnitExtentDimsPatterns(patterns, options);
     populateMoveInitOperandsToInputPattern(patterns);
-    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+    (void)applyPatternsGreedily(op, std::move(patterns));
   }
 };
 
@@ -911,6 +906,10 @@ struct RankReduceContractionOps : OpRewritePattern<FromOpTy> {
 
   LogicalResult matchAndRewrite(FromOpTy contractionOp,
                                 PatternRewriter &rewriter) const override {
+    if (contractionOp.hasUserDefinedMaps()) {
+      return rewriter.notifyMatchFailure(
+          contractionOp, "ops with user-defined maps are not supported");
+    }
 
     auto loc = contractionOp.getLoc();
     auto inputs = contractionOp.getDpsInputs();
@@ -940,7 +939,8 @@ struct RankReduceContractionOps : OpRewritePattern<FromOpTy> {
         loc, collapsedResultTy, ValueRange{collapsedLhs, collapsedRhs},
         ValueRange{collapsedInit});
     for (auto attr : contractionOp->getAttrs()) {
-      if (attr.getName() == LinalgDialect::kMemoizedIndexingMapsAttrName)
+      if (attr.getName() == LinalgDialect::kMemoizedIndexingMapsAttrName ||
+          attr.getName() == "indexing_maps")
         continue;
       collapsedOp->setAttr(attr.getName(), attr.getValue());
     }

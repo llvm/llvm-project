@@ -12,7 +12,7 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_GENERIC_BYTE_PER_BYTE_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_GENERIC_BYTE_PER_BYTE_H
 
-#include "src/__support/macros/config.h"       // LIBC_INLINE
+#include "src/__support/macros/attributes.h"   // LIBC_INLINE
 #include "src/__support/macros/optimization.h" // LIBC_LOOP_NOUNROLL
 #include "src/string/memory_utils/utils.h"     // Ptr, CPtr
 
@@ -38,7 +38,8 @@ inline_memmove_byte_per_byte(Ptr dst, CPtr src, size_t count) {
       dst[offset] = src[offset];
   } else {
     LIBC_LOOP_NOUNROLL
-    for (ptrdiff_t offset = count - 1; offset >= 0; --offset)
+    for (ptrdiff_t offset = static_cast<ptrdiff_t>(count - 1); offset >= 0;
+         --offset)
       dst[offset] = src[offset];
   }
 }

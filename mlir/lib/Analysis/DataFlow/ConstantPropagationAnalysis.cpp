@@ -103,9 +103,9 @@ LogicalResult SparseConstantPropagation::visitOperation(
                          lattice->join(ConstantValue(attr, op->getDialect())));
     } else {
       LLVM_DEBUG(llvm::dbgs()
-                 << "Folded to value: " << foldResult.get<Value>() << "\n");
+                 << "Folded to value: " << cast<Value>(foldResult) << "\n");
       AbstractSparseForwardDataFlowAnalysis::join(
-          lattice, *getLatticeElement(foldResult.get<Value>()));
+          lattice, *getLatticeElement(cast<Value>(foldResult)));
     }
   }
   return success();

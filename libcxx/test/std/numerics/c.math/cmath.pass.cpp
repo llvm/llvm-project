@@ -8,15 +8,16 @@
 
 // This test fails because Clang no longer enables -fdelayed-template-parsing
 // by default on Windows with C++20 (#69431).
-// XFAIL: msvc && (clang-18 || clang-19 || clang-20)
+// XFAIL: msvc && (clang-18 || clang-19 || clang-20 || clang-21)
 
 // <cmath>
 
-#include <array>
 #include <cmath>
+#include <array>
+#include <cassert>
 #include <limits>
 #include <type_traits>
-#include <cassert>
+#include <utility>
 
 #include "fp_compare.h"
 #include "test_macros.h"

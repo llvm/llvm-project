@@ -15,12 +15,9 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCELFExtras.h"
 #include "llvm/MC/MCTargetOptions.h"
-#include "llvm/Object/ELF.h"
-#include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/Path.h"
 #include <algorithm>
 #include <cstddef>
@@ -2157,35 +2154,44 @@ ELFWriter<ELFT>::ELFWriter(Object &Obj, raw_ostream &Buf, bool WSH,
     : Writer(Obj, Buf), WriteSectionHeaders(WSH && Obj.HadShdrs),
       OnlyKeepDebug(OnlyKeepDebug) {}
 
+Error Object::updateSectionData(SecPtr &Sec, ArrayRef<uint8_t> Data) {
+  if (!Sec->hasContents())
+    return createStringError(
+        errc::invalid_argument,
+        "section '%s' cannot be updated because it does not have contents",
+        Sec->Name.c_str());
+
+  if (Data.size() > Sec->Size && Sec->ParentSegment)
+    return createStringError(errc::invalid_argument,
+                             "cannot fit data of size %zu into section '%s' "
+                             "with size %" PRIu64 " that is part of a segment",
+                             Data.size(), Sec->Name.c_str(), Sec->Size);
+
+  if (!Sec->ParentSegment) {
+    Sec = std::make_unique<OwnedDataSection>(*Sec, Data);
+  } else {
+    // The segment writer will be in charge of updating these contents.
+    Sec->Size = Data.size();
+    UpdatedSections[Sec.get()] = Data;
+  }
+
+  return Error::success();
+}
+
 Error Object::updateSection(StringRef Name, ArrayRef<uint8_t> Data) {
   auto It = llvm::find_if(Sections,
                           [&](const SecPtr &Sec) { return Sec->Name == Name; });
   if (It == Sections.end())
     return createStringError(errc::invalid_argument, "section '%s' not found",
                              Name.str().c_str());
+  return updateSectionData(*It, Data);
+}
 
-  auto *OldSec = It->get();
-  if (!OldSec->hasContents())
-    return createStringError(
-        errc::invalid_argument,
-        "section '%s' cannot be updated because it does not have contents",
-        Name.str().c_str());
-
-  if (Data.size() > OldSec->Size && OldSec->ParentSegment)
-    return createStringError(errc::invalid_argument,
-                             "cannot fit data of size %zu into section '%s' "
-                             "with size %" PRIu64 " that is part of a segment",
-                             Data.size(), Name.str().c_str(), OldSec->Size);
-
-  if (!OldSec->ParentSegment) {
-    *It = std::make_unique<OwnedDataSection>(*OldSec, Data);
-  } else {
-    // The segment writer will be in charge of updating these contents.
-    OldSec->Size = Data.size();
-    UpdatedSections[OldSec] = Data;
-  }
-
-  return Error::success();
+Error Object::updateSectionData(SectionBase &S, ArrayRef<uint8_t> Data) {
+  auto It = llvm::find_if(Sections,
+                          [&](const SecPtr &Sec) { return Sec.get() == &S; });
+  assert(It != Sections.end() && "The section should belong to the object");
+  return updateSectionData(*It, Data);
 }
 
 Error Object::removeSections(

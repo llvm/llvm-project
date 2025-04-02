@@ -4,7 +4,6 @@ include "mlir/IR/OpBase.td"
 
 def TestDialect : Dialect {
   let name = "test";
-  let usePropertiesForAttributes = 0;
 }
 class TestFormat_Op<string fmt, list<Trait> traits = []>
     : Op<TestDialect, "format_op", traits> {
@@ -70,7 +69,7 @@ def OptionalGroupA : TestFormat_Op<[{
 // CHECK-LABEL: OptionalGroupB::parse
 // CHECK: if (::mlir::succeeded(parser.parseOptionalKeyword("foo")))
 // CHECK-NEXT: else
-// CHECK-NEXT: result.addAttribute("a", parser.getBuilder().getUnitAttr())
+// CHECK-NEXT: result.getOrAddProperties<OptionalGroupB::Properties>().a = parser.getBuilder().getUnitAttr()
 // CHECK: parser.parseKeyword("bar")
 // CHECK-LABEL: OptionalGroupB::print
 // CHECK: if (!(getAAttr() && getAAttr() != ((false) ? ::mlir::OpBuilder((*this)->getContext()).getUnitAttr() : nullptr)))

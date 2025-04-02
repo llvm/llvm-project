@@ -43,7 +43,6 @@
 #include <cassert>
 #include <cstdint>
 #include <functional>
-#include <type_traits>
 #include <utility>
 
 using namespace llvm;
@@ -334,6 +333,17 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
       NewSelect->swapValues();
       // Don't swap prof metadata, we didn't change the branch behavior.
       NewSelect->setName(I->getName() + ".neg");
+      // Poison-generating flags should be dropped
+      Value *TV = NewSelect->getTrueValue();
+      Value *FV = NewSelect->getFalseValue();
+      if (match(TV, m_Neg(m_Specific(FV))))
+        cast<Instruction>(TV)->dropPoisonGeneratingFlags();
+      else if (match(FV, m_Neg(m_Specific(TV))))
+        cast<Instruction>(FV)->dropPoisonGeneratingFlags();
+      else {
+        cast<Instruction>(TV)->dropPoisonGeneratingFlags();
+        cast<Instruction>(FV)->dropPoisonGeneratingFlags();
+      }
       Builder.Insert(NewSelect);
       return NewSelect;
     }

@@ -44,10 +44,8 @@ struct DynamicScheduleTracker {
 #define NOT_FINISHED 1
 #define LAST_CHUNK 2
 
-#pragma omp begin declare target device_type(nohost)
-
 // TODO: This variable is a hack inherited from the old runtime.
-static uint64_t SHARED(Cnt);
+[[clang::loader_uninitialized]] static Local<uint64_t> Cnt;
 
 template <typename T, typename ST> struct omptarget_nvptx_LoopSupport {
   ////////////////////////////////////////////////////////////////////////////////
@@ -79,7 +77,7 @@ template <typename T, typename ST> struct omptarget_nvptx_LoopSupport {
     lb = lb + entityId * chunk;
     T inputUb = ub;
     ub = lb + chunk - 1; // Clang uses i <= ub
-    // Say ub' is the begining of the last chunk. Then who ever has a
+    // Say ub' is the beginning of the last chunk. Then who ever has a
     // lower bound plus a multiple of the increment equal to ub' is
     // the last one.
     T beginingLastChunk = inputUb - (inputUb % chunk);
@@ -459,7 +457,8 @@ template <typename T, typename ST> struct omptarget_nvptx_LoopSupport {
 //
 //  __kmpc_dispatch_deinit
 //
-static DynamicScheduleTracker **SHARED(ThreadDST);
+[[clang::loader_uninitialized]] static Local<DynamicScheduleTracker **>
+    ThreadDST;
 
 // Create a new DST, link the current one, and define the new as current.
 static DynamicScheduleTracker *pushDST() {
@@ -806,7 +805,7 @@ public:
                                 NumIters, OneIterationPerThread);
   }
 
-  /// Worksharing `distrbute`-loop.
+  /// Worksharing `distribute`-loop.
   static void Distribute(IdentTy *Loc, void (*LoopBody)(Ty, void *), void *Arg,
                          Ty NumIters, Ty BlockChunk) {
     ASSERT(icv::Level == 0, "Bad distribute");
@@ -853,7 +852,7 @@ public:
     ASSERT(state::ParallelTeamSize == 1, "Bad distribute");
   }
 
-  /// Worksharing `distrbute parallel for`-loop.
+  /// Worksharing `distribute parallel for`-loop.
   static void DistributeFor(IdentTy *Loc, void (*LoopBody)(Ty, void *),
                             void *Arg, Ty NumIters, Ty NumThreads,
                             Ty BlockChunk, Ty ThreadChunk) {
@@ -935,5 +934,3 @@ OMP_LOOP_ENTRY(_4u, uint32_t)
 OMP_LOOP_ENTRY(_8, int64_t)
 OMP_LOOP_ENTRY(_8u, uint64_t)
 }
-
-#pragma omp end declare target

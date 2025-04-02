@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass amode-opt -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass amode-opt -verify-machineinstrs %s -o - | FileCheck %s
 # REQUIRES: asserts
 
 # Check that this doesn't crash.

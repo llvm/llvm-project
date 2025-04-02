@@ -64,3 +64,7 @@ ProgramHeaders:
 # RUN: not llvm-objcopy --dump-section .text= %t /dev/null 2>&1 | FileCheck %s --check-prefix=ERR2
 
 # ERR2: error: bad format for --dump-section, expected section=file
+
+# RUN: not llvm-objcopy --dump-section .text=not_exists/text-section %t 2>&1 \
+# RUN:   | FileCheck -DMSG=%errc_ENOENT %s -DINPUT=%t --check-prefix=NO-SUCH-PATH
+# NO-SUCH-PATH: error: 'not_exists/text-section': [[MSG]]

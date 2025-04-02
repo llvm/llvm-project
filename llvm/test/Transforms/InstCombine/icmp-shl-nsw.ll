@@ -194,7 +194,7 @@ define i1 @icmp_sgt11(i8 %x) {
 
 define <2 x i1> @icmp_sgt11_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @icmp_sgt11_vec(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i8> [[X:%.*]], splat (i8 -1)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %shl = shl nsw <2 x i8> %x, <i8 7, i8 7>

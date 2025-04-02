@@ -119,11 +119,10 @@ void RvalueReferenceParamNotMovedCheck::check(
 RvalueReferenceParamNotMovedCheck::RvalueReferenceParamNotMovedCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      AllowPartialMove(Options.getLocalOrGlobal("AllowPartialMove", false)),
-      IgnoreUnnamedParams(
-          Options.getLocalOrGlobal("IgnoreUnnamedParams", false)),
+      AllowPartialMove(Options.get("AllowPartialMove", false)),
+      IgnoreUnnamedParams(Options.get("IgnoreUnnamedParams", false)),
       IgnoreNonDeducedTemplateTypes(
-          Options.getLocalOrGlobal("IgnoreNonDeducedTemplateTypes", false)) {}
+          Options.get("IgnoreNonDeducedTemplateTypes", false)) {}
 
 void RvalueReferenceParamNotMovedCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {

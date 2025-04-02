@@ -1,8 +1,8 @@
 ; Test the MSA ctcmsa and cfcmsa intrinsics (which are encoded with the ELM
 ; instruction format).
 
-; RUN: llc -march=mips -mattr=+msa,+fp64,+mips32r2 -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -march=mipsel -mattr=+msa,+fp64,+mips32r2 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=mips-elf -mattr=+msa,+fp64,+mips32r2 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=mipsel-elf -mattr=+msa,+fp64,+mips32r2 -verify-machineinstrs < %s | FileCheck %s
 
 define i32 @msa_ir_cfcmsa_test() nounwind {
 entry:

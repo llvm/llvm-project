@@ -93,19 +93,38 @@ static void markSymbols(const CommonConfig &, Object &Obj) {
 static void updateAndRemoveSymbols(const CommonConfig &Config,
                                    const MachOConfig &MachOConfig,
                                    Object &Obj) {
-  for (SymbolEntry &Sym : Obj.SymTable) {
-    // Weaken symbols first to match ELFObjcopy behavior.
-    bool IsExportedAndDefined =
-        (Sym.n_type & llvm::MachO::N_EXT) &&
-        (Sym.n_type & llvm::MachO::N_TYPE) != llvm::MachO::N_UNDF;
-    if (IsExportedAndDefined &&
+  Obj.SymTable.updateSymbols([&](SymbolEntry &Sym) {
+    if (Config.SymbolsToSkip.matches(Sym.Name))
+      return;
+
+    if (!Sym.isUndefinedSymbol() && Config.SymbolsToLocalize.matches(Sym.Name))
+      Sym.n_type &= ~MachO::N_EXT;
+
+    // Note: these two globalize flags have very similar names but different
+    // meanings:
+    //
+    // --globalize-symbol: promote a symbol to global
+    // --keep-global-symbol: all symbols except for these should be made local
+    //
+    // If --globalize-symbol is specified for a given symbol, it will be
+    // global in the output file even if it is not included via
+    // --keep-global-symbol. Because of that, make sure to check
+    // --globalize-symbol second.
+    if (!Sym.isUndefinedSymbol() && !Config.SymbolsToKeepGlobal.empty() &&
+        !Config.SymbolsToKeepGlobal.matches(Sym.Name))
+      Sym.n_type &= ~MachO::N_EXT;
+
+    if (!Sym.isUndefinedSymbol() && Config.SymbolsToGlobalize.matches(Sym.Name))
+      Sym.n_type |= MachO::N_EXT;
+
+    if (Sym.isExternalSymbol() && !Sym.isUndefinedSymbol() &&
         (Config.Weaken || Config.SymbolsToWeaken.matches(Sym.Name)))
-      Sym.n_desc |= llvm::MachO::N_WEAK_DEF;
+      Sym.n_desc |= MachO::N_WEAK_DEF;
 
     auto I = Config.SymbolsToRename.find(Sym.Name);
     if (I != Config.SymbolsToRename.end())
       Sym.Name = std::string(I->getValue());
-  }
+  });
 
   auto RemovePred = [&Config, &MachOConfig,
                      &Obj](const std::unique_ptr<SymbolEntry> &N) {
@@ -287,25 +306,25 @@ static Error processLoadCommands(const MachOConfig &MachOConfig, Object &Obj) {
 }
 
 static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
-                               Object &Obj) {
+                               StringRef InputFilename, Object &Obj) {
   for (LoadCommand &LC : Obj.LoadCommands)
     for (const std::unique_ptr<Section> &Sec : LC.Sections) {
       if (Sec->CanonicalName == SecName) {
         Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
             FileOutputBuffer::create(Filename, Sec->Content.size());
         if (!BufferOrErr)
-          return BufferOrErr.takeError();
+          return createFileError(Filename, BufferOrErr.takeError());
         std::unique_ptr<FileOutputBuffer> Buf = std::move(*BufferOrErr);
         llvm::copy(Sec->Content, Buf->getBufferStart());
 
         if (Error E = Buf->commit())
-          return E;
+          return createFileError(Filename, std::move(E));
         return Error::success();
       }
     }
 
-  return createStringError(object_error::parse_failed, "section '%s' not found",
-                           SecName.str().c_str());
+  return createFileError(InputFilename, object_error::parse_failed,
+                         "section '%s' not found", SecName.str().c_str());
 }
 
 static Error addSection(const NewSectionInfo &NewSection, Object &Obj) {
@@ -341,6 +360,24 @@ static Error addSection(const NewSectionInfo &NewSection, Object &Obj) {
 static Expected<Section &> findSection(StringRef SecName, Object &O) {
   StringRef SegName;
   std::tie(SegName, SecName) = SecName.split(",");
+  // For compactness, intermediate object files (MH_OBJECT) contain
+  // only one segment in which all sections are placed.
+  // The static linker places each section in the named segment when building
+  // the final product (any file that is not of type MH_OBJECT).
+  //
+  // Source:
+  // https://math-atlas.sourceforge.net/devel/assembly/MachORuntime.pdf
+  // page 57
+  if (O.Header.FileType == MachO::HeaderFileType::MH_OBJECT) {
+    for (const auto& LC : O.LoadCommands)
+      for (const auto& Sec : LC.Sections)
+        if (Sec->Segname == SegName && Sec->Sectname == SecName)
+          return *Sec;
+
+    StringRef ErrMsg = "could not find section with name '%s' in '%s' segment";
+    return createStringError(errc::invalid_argument, ErrMsg.str().c_str(),
+                             SecName.str().c_str(), SegName.str().c_str());
+  }
   auto FoundSeg =
       llvm::find_if(O.LoadCommands, [SegName](const LoadCommand &LC) {
         return LC.getSegmentName() == SegName;
@@ -407,12 +444,13 @@ static Error handleArgs(const CommonConfig &Config,
     StringRef SectionName;
     StringRef FileName;
     std::tie(SectionName, FileName) = Flag.split('=');
-    if (Error E = dumpSectionToFile(SectionName, FileName, Obj))
+    if (Error E =
+            dumpSectionToFile(SectionName, FileName, Config.InputFilename, Obj))
       return E;
   }
 
   if (Error E = removeSections(Config, Obj))
-    return E;
+    return createFileError(Config.InputFilename, std::move(E));
 
   // Mark symbols to determine which symbols are still needed.
   if (Config.StripAll)
@@ -427,20 +465,20 @@ static Error handleArgs(const CommonConfig &Config,
 
   for (const NewSectionInfo &NewSection : Config.AddSection) {
     if (Error E = isValidMachOCannonicalName(NewSection.SectionName))
-      return E;
+      return createFileError(Config.InputFilename, std::move(E));
     if (Error E = addSection(NewSection, Obj))
-      return E;
+      return createFileError(Config.InputFilename, std::move(E));
   }
 
   for (const NewSectionInfo &NewSection : Config.UpdateSection) {
     if (Error E = isValidMachOCannonicalName(NewSection.SectionName))
-      return E;
+      return createFileError(Config.InputFilename, std::move(E));
     if (Error E = updateSection(NewSection, Obj))
-      return E;
+      return createFileError(Config.InputFilename, std::move(E));
   }
 
   if (Error E = processLoadCommands(MachOConfig, Obj))
-    return E;
+    return createFileError(Config.InputFilename, std::move(E));
 
   return Error::success();
 }
@@ -460,7 +498,7 @@ Error objcopy::macho::executeObjcopyOnBinary(const CommonConfig &Config,
                              Config.InputFilename.str().c_str());
 
   if (Error E = handleArgs(Config, MachOConfig, **O))
-    return createFileError(Config.InputFilename, std::move(E));
+    return E;
 
   // Page size used for alignment of segment sizes in Mach-O executables and
   // dynamic libraries.

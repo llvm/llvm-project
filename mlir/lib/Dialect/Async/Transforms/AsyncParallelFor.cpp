@@ -141,7 +141,6 @@ struct ParallelComputeFunctionArgs {
   BlockArgument blockSize();
   ArrayRef<BlockArgument> tripCounts();
   ArrayRef<BlockArgument> lowerBounds();
-  ArrayRef<BlockArgument> upperBounds();
   ArrayRef<BlockArgument> steps();
   ArrayRef<BlockArgument> captures();
 
@@ -173,10 +172,6 @@ ArrayRef<BlockArgument> ParallelComputeFunctionArgs::tripCounts() {
 
 ArrayRef<BlockArgument> ParallelComputeFunctionArgs::lowerBounds() {
   return args.drop_front(2 + 1 * numLoops).take_front(numLoops);
-}
-
-ArrayRef<BlockArgument> ParallelComputeFunctionArgs::upperBounds() {
-  return args.drop_front(2 + 2 * numLoops).take_front(numLoops);
 }
 
 ArrayRef<BlockArgument> ParallelComputeFunctionArgs::steps() {
@@ -936,7 +931,7 @@ void AsyncParallelForPass::runOnOperation() {
       [&](ImplicitLocOpBuilder builder, scf::ParallelOp op) {
         return builder.create<arith::ConstantIndexOp>(minTaskSize);
       });
-  if (failed(applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
+  if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
     signalPassFailure();
 }
 

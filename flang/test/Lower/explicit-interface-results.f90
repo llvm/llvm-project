@@ -195,8 +195,8 @@ subroutine dyn_array(m, n)
   ! CHECK-DAG: %[[ncast2:.*]] = fir.convert %[[nadd]] : (i64) -> index
   ! CHECK-DAG: %[[ncmpi:.*]] = arith.cmpi sgt, %[[ncast2]], %{{.*}} : index
   ! CHECK-DAG: %[[nselect:.*]] = arith.select %[[ncmpi]], %[[ncast2]], %{{.*}} : index
-  ! CHECK: %[[tmp:.*]] = fir.alloca !fir.array<?x?xf32>, %[[mselect]], %[[nselect]]
   ! CHECK: %[[shape:.*]] = fir.shape %[[mselect]], %[[nselect]] : (index, index) -> !fir.shape<2>
+  ! CHECK: %[[tmp:.*]] = fir.alloca !fir.array<?x?xf32>, %[[mselect]], %[[nselect]]
   ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_dyn_array(%[[m]], %[[n]]) {{.*}}: (!fir.ref<i32>, !fir.ref<i32>) -> !fir.array<?x?xf32>
   ! CHECK: fir.save_result %[[res]] to %[[tmp]](%[[shape]]) : !fir.array<?x?xf32>, !fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>
   print *, return_dyn_array(m, n)
@@ -211,8 +211,8 @@ subroutine dyn_char_cst_array(l)
   ! CHECK: %[[lcast2:.*]] = fir.convert %[[lcast]] : (i64) -> index
   ! CHECK: %[[cmpi:.*]] = arith.cmpi sgt, %[[lcast2]], %{{.*}} : index
   ! CHECK: %[[select:.*]] = arith.select %[[cmpi]], %[[lcast2]], %{{.*}} : index
-  ! CHECK: %[[tmp:.*]] = fir.alloca !fir.array<20x30x!fir.char<1,?>>(%[[select]] : index)
   ! CHECK: %[[shape:.*]] = fir.shape %{{.*}}, %{{.*}} : (index, index) -> !fir.shape<2>
+  ! CHECK: %[[tmp:.*]] = fir.alloca !fir.array<20x30x!fir.char<1,?>>(%[[select]] : index)
   ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_dyn_char_cst_array(%[[l]]) {{.*}}: (!fir.ref<i32>) -> !fir.array<20x30x!fir.char<1,?>>
   ! CHECK: fir.save_result %[[res]] to %[[tmp]](%[[shape]]) typeparams %[[select]] : !fir.array<20x30x!fir.char<1,?>>, !fir.ref<!fir.array<20x30x!fir.char<1,?>>>, !fir.shape<2>, index
   print *, return_dyn_char_cst_array(l)
@@ -236,8 +236,8 @@ subroutine cst_char_dyn_array(m, n)
   ! CHECK-DAG: %[[ncast2:.*]] = fir.convert %[[nadd]] : (i64) -> index
   ! CHECK-DAG: %[[ncmpi:.*]] = arith.cmpi sgt, %[[ncast2]], %{{.*}} : index
   ! CHECK-DAG: %[[nselect:.*]] = arith.select %[[ncmpi]], %[[ncast2]], %{{.*}} : index
-  ! CHECK: %[[tmp:.*]] = fir.alloca !fir.array<?x?x!fir.char<1,10>>, %[[mselect]], %[[nselect]]
   ! CHECK: %[[shape:.*]] = fir.shape %[[mselect]], %[[nselect]] : (index, index) -> !fir.shape<2>
+  ! CHECK: %[[tmp:.*]] = fir.alloca !fir.array<?x?x!fir.char<1,10>>, %[[mselect]], %[[nselect]]
   ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_cst_char_dyn_array(%[[m]], %[[n]]) {{.*}}: (!fir.ref<i32>, !fir.ref<i32>) -> !fir.array<?x?x!fir.char<1,10>>
   ! CHECK: fir.save_result %[[res]] to %[[tmp]](%[[shape]]) typeparams {{.*}} : !fir.array<?x?x!fir.char<1,10>>, !fir.ref<!fir.array<?x?x!fir.char<1,10>>>, !fir.shape<2>, index
   print *, return_cst_char_dyn_array(m, n)
@@ -267,8 +267,8 @@ subroutine dyn_char_dyn_array(l, m, n)
   ! CHECK-DAG: %[[lcast2:.*]] = fir.convert %[[lcast]] : (i64) -> index
   ! CHECK-DAG: %[[lcmpi:.*]] = arith.cmpi sgt, %[[lcast2]], %{{.*}} : index
   ! CHECK-DAG: %[[lselect:.*]] = arith.select %[[lcmpi]], %[[lcast2]], %{{.*}} : index
-  ! CHECK: %[[tmp:.*]] = fir.alloca !fir.array<?x?x!fir.char<1,?>>(%[[lselect]] : index), %[[mselect]], %[[nselect]]
   ! CHECK: %[[shape:.*]] = fir.shape %[[mselect]], %[[nselect]] : (index, index) -> !fir.shape<2>
+  ! CHECK: %[[tmp:.*]] = fir.alloca !fir.array<?x?x!fir.char<1,?>>(%[[lselect]] : index), %[[mselect]], %[[nselect]]
   ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_dyn_char_dyn_array(%[[l]], %[[m]], %[[n]]) {{.*}}: (!fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>) -> !fir.array<?x?x!fir.char<1,?>>
   ! CHECK: fir.save_result %[[res]] to %[[tmp]](%[[shape]]) typeparams {{.*}} : !fir.array<?x?x!fir.char<1,?>>, !fir.ref<!fir.array<?x?x!fir.char<1,?>>>, !fir.shape<2>, index
   integer :: l, m, n

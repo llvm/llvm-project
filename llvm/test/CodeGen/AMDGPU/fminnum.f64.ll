@@ -18,7 +18,7 @@ declare <16 x double> @llvm.minnum.v16f64(<16 x double>, <16 x double>) #0
 ; GCN: v_min_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[QUIETB]], [[QUIETA]]
 define amdgpu_kernel void @test_fmin_f64_ieee_noflush([8 x i32], double %a, [8 x i32], double %b) #1 {
   %val = call double @llvm.minnum.f64(double %a, double %b) #0
-  store double %val, ptr addrspace(1) undef, align 8
+  store double %val, ptr addrspace(1) poison, align 8
   ret void
 }
 
@@ -34,7 +34,7 @@ define amdgpu_kernel void @test_fmin_f64_ieee_noflush([8 x i32], double %a, [8 x
 ; GCN: v_min_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[QUIETB]], [[QUIETA]]
 define amdgpu_kernel void @test_fmin_f64_ieee_flush([8 x i32], double %a, [8 x i32], double %b) #2 {
   %val = call double @llvm.minnum.f64(double %a, double %b) #0
-  store double %val, ptr addrspace(1) undef, align 8
+  store double %val, ptr addrspace(1) poison, align 8
   ret void
 }
 
@@ -47,10 +47,10 @@ define amdgpu_kernel void @test_fmin_f64_ieee_flush([8 x i32], double %a, [8 x i
 ; GCN-NOT: [[RESULT]]
 ; GCN: ds_write_b64 v{{[0-9]+}}, [[RESULT]]
 define amdgpu_ps void @test_fmin_f64_no_ieee() nounwind {
-  %a = load volatile double, ptr addrspace(3) undef
-  %b = load volatile double, ptr addrspace(3) undef
+  %a = load volatile double, ptr addrspace(3) poison
+  %b = load volatile double, ptr addrspace(3) poison
   %val = call double @llvm.minnum.f64(double %a, double %b) #0
-  store volatile double %val, ptr addrspace(3) undef
+  store volatile double %val, ptr addrspace(3) poison
   ret void
 }
 

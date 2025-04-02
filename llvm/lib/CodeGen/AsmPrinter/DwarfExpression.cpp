@@ -40,7 +40,7 @@ void DwarfExpression::emitConstu(uint64_t Value) {
   }
 }
 
-void DwarfExpression::addReg(int DwarfReg, const char *Comment) {
+void DwarfExpression::addReg(int64_t DwarfReg, const char *Comment) {
   assert(DwarfReg >= 0 && "invalid negative dwarf register number");
   assert((isUnknownLocation() || isRegisterLocation()) &&
          "location description already locked down");
@@ -53,7 +53,7 @@ void DwarfExpression::addReg(int DwarfReg, const char *Comment) {
   }
 }
 
-void DwarfExpression::addBReg(int DwarfReg, int Offset) {
+void DwarfExpression::addBReg(int64_t DwarfReg, int64_t Offset) {
   assert(DwarfReg >= 0 && "invalid negative dwarf register number");
   assert(!isRegisterLocation() && "location description already locked down");
   if (DwarfReg < 32) {
@@ -65,7 +65,7 @@ void DwarfExpression::addBReg(int DwarfReg, int Offset) {
   emitSigned(Offset);
 }
 
-void DwarfExpression::addFBReg(int Offset) {
+void DwarfExpression::addFBReg(int64_t Offset) {
   emitOp(dwarf::DW_OP_fbreg);
   emitSigned(Offset);
 }
@@ -105,10 +105,16 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
       DwarfRegs.push_back(Register::createRegister(-1, nullptr));
       return true;
     }
+    // Try getting dwarf register for virtual register anyway, eg. for NVPTX.
+    int64_t Reg = TRI.getDwarfRegNumForVirtReg(MachineReg, false);
+    if (Reg > 0) {
+      DwarfRegs.push_back(Register::createRegister(Reg, nullptr));
+      return true;
+    }
     return false;
   }
 
-  int Reg = TRI.getDwarfRegNum(MachineReg, false);
+  int64_t Reg = TRI.getDwarfRegNum(MachineReg, false);
 
   // If this is a valid register number, emit it.
   if (Reg >= 0) {

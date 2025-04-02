@@ -16,41 +16,46 @@ TEST(ChipsetTest, Parsing) {
   FailureOr<Chipset> chipset = Chipset::parse("gfx90a");
   ASSERT_TRUE(succeeded(chipset));
   EXPECT_EQ(chipset->majorVersion, 9u);
-  EXPECT_EQ(chipset->minorVersion, 0x0au);
+  EXPECT_EQ(chipset->minorVersion, 0u);
+  EXPECT_EQ(chipset->steppingVersion, 0xau);
 
-  chipset = Chipset::parse("gfx940");
+  chipset = Chipset::parse("gfx942");
   ASSERT_TRUE(succeeded(chipset));
   EXPECT_EQ(chipset->majorVersion, 9u);
-  EXPECT_EQ(chipset->minorVersion, 0x40u);
+  EXPECT_EQ(chipset->minorVersion, 4u);
+  EXPECT_EQ(chipset->steppingVersion, 2u);
 
   chipset = Chipset::parse("gfx1103");
   ASSERT_TRUE(succeeded(chipset));
   EXPECT_EQ(chipset->majorVersion, 11u);
-  EXPECT_EQ(chipset->minorVersion, 0x03u);
+  EXPECT_EQ(chipset->minorVersion, 0u);
+  EXPECT_EQ(chipset->steppingVersion, 3u);
 }
 
 TEST(ChipsetTest, ParsingInvalid) {
   EXPECT_TRUE(failed(Chipset::parse("navi33")));
   EXPECT_TRUE(failed(Chipset::parse("rdna2")));
   EXPECT_TRUE(failed(Chipset::parse("sm_80")));
-  EXPECT_TRUE(failed(Chipset::parse("GFX940")));
-  EXPECT_TRUE(failed(Chipset::parse("Gfx940")));
+  EXPECT_TRUE(failed(Chipset::parse("GFX942")));
+  EXPECT_TRUE(failed(Chipset::parse("Gfx942")));
   EXPECT_TRUE(failed(Chipset::parse("gfx9")));
-  EXPECT_TRUE(failed(Chipset::parse("gfx_940")));
-  EXPECT_TRUE(failed(Chipset::parse("gfx940_")));
+  EXPECT_TRUE(failed(Chipset::parse("gfx_942")));
+  EXPECT_TRUE(failed(Chipset::parse("gfx942_")));
   EXPECT_TRUE(failed(Chipset::parse("gfxmeow")));
   EXPECT_TRUE(failed(Chipset::parse("gfx1fff")));
 }
 
 TEST(ChipsetTest, Comparison) {
-  EXPECT_EQ(Chipset(9, 0x40), Chipset(9, 0x40));
-  EXPECT_NE(Chipset(9, 0x40), Chipset(9, 0x42));
-  EXPECT_NE(Chipset(9, 0x00), Chipset(10, 0x00));
+  EXPECT_EQ(Chipset(9, 4, 2), Chipset(9, 4, 2));
+  EXPECT_NE(Chipset(9, 0, 0), Chipset(10, 0, 0));
 
-  EXPECT_LT(Chipset(9, 0x00), Chipset(10, 0x00));
-  EXPECT_LT(Chipset(9, 0x0a), Chipset(9, 0x42));
-  EXPECT_FALSE(Chipset(9, 0x42) < Chipset(9, 0x42));
-  EXPECT_FALSE(Chipset(9, 0x42) < Chipset(9, 0x40));
+  EXPECT_LT(Chipset(9, 0, 0), Chipset(10, 0, 0));
+  EXPECT_LT(Chipset(9, 0, 0), Chipset(9, 4, 2));
+  EXPECT_FALSE(Chipset(9, 4, 2) < Chipset(9, 4, 2));
+
+  EXPECT_GT(Chipset(9, 0, 0xa), Chipset(9, 0, 8));
+  EXPECT_GE(Chipset(9, 0, 0xa), Chipset(9, 0, 0xa));
+  EXPECT_FALSE(Chipset(9, 0, 0xa) >= Chipset(9, 4, 2));
 }
 
 } // namespace

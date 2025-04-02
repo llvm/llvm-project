@@ -1,9 +1,9 @@
 # RUN: llc -O0 -mtriple arm-linux-gnueabihf -mattr=+vfp2 -float-abi=hard -run-pass=legalizer %s -o - | FileCheck %s -check-prefix CHECK -check-prefix HARD
-# RUN: llc -O0 -mtriple arm-linux-gnueabi -mattr=+vfp2,+soft-float -float-abi=soft -run-pass=legalizer %s -o - | FileCheck %s -check-prefix CHECK -check-prefix SOFT -check-prefix SOFT-AEABI
-# RUN: llc -O0 -mtriple arm-linux-gnu -mattr=+soft-float -float-abi=soft -run-pass=legalizer %s -o - | FileCheck %s  -check-prefix CHECK -check-prefix SOFT -check-prefix SOFT-DEFAULT
+# RUN: llc -O0 -mtriple arm-linux-gnueabi -mattr=+vfp2,+soft-float -float-abi=soft -run-pass=legalizer %s -o - | FileCheck %s -check-prefix CHECK -check-prefix SOFT -check-prefix SOFT-AEABI -check-prefix SOFT_POOL
+# RUN: llc -O0 -mtriple arm-linux-gnu -mattr=+soft-float -float-abi=soft -run-pass=legalizer %s -o - | FileCheck %s  -check-prefix CHECK -check-prefix SOFT -check-prefix SOFT-DEFAULT -check-prefix SOFT_POOL
 # RUN: llc -O0 -mtriple thumb-linux-gnueabihf -mattr=+v6t2,+vfp2 -float-abi=hard -run-pass=legalizer %s -o - | FileCheck %s -check-prefix CHECK -check-prefix HARD
-# RUN: llc -O0 -mtriple thumb-linux-gnueabi -mattr=+v6t2,+vfp2,+soft-float -float-abi=soft -run-pass=legalizer %s -o - | FileCheck %s -check-prefix CHECK -check-prefix SOFT -check-prefix SOFT-AEABI
-# RUN: llc -O0 -mtriple thumb-linux-gnu -mattr=+v6t2,+soft-float -float-abi=soft -run-pass=legalizer %s -o - | FileCheck %s  -check-prefix CHECK -check-prefix SOFT -check-prefix SOFT-DEFAULT
+# RUN: llc -O0 -mtriple thumb-linux-gnueabi -mattr=+v6t2,+vfp2,+soft-float -float-abi=soft -run-pass=legalizer %s -o - | FileCheck %s -check-prefix CHECK -check-prefix SOFT -check-prefix=SOFT-AEABI -check-prefix SOFT_CONST
+# RUN: llc -O0 -mtriple thumb-linux-gnu -mattr=+v6t2,+soft-float -float-abi=soft -run-pass=legalizer %s -o - | FileCheck %s  -check-prefix CHECK -check-prefix SOFT -check-prefix SOFT-DEFAULT -check-prefix SOFT_CONST
 --- |
   define void @test_frem_float() { ret void }
   define void @test_frem_double() { ret void }
@@ -657,10 +657,20 @@ body:             |
   bb.0:
     liveins:
 
+    ; SOFT_POOL: constants:
+    ; SOFT_POOL: id: 0
+    ; SOFT_POOL: value: i32 -1073532109
+    ; SOFT_POOL: id: 1
+    ; SOFT_POOL: value: i32 858993459
+
     ; HARD: [[R:%[0-9]+]]:_(s64) = G_FCONSTANT double -2.4
     ; SOFT-NOT: G_FCONSTANT
-    ; SOFT-DAG: [[HI:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1073532109
-    ; SOFT-DAG: [[LO:%[0-9]+]]:_(s32) = G_CONSTANT i32 858993459
+    ; SOFT_CONST-DAG: [[HI:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1073532109
+    ; SOFT_CONST-DAG: [[LO:%[0-9]+]]:_(s32) = G_CONSTANT i32 858993459
+    ; SOFT_POOL-DAG: [[HIPTR:%[0-9]+]]:_(p0) = G_CONSTANT_POOL %const.0
+    ; SOFT_POOL-DAG: [[HI:%[0-9]+]]:_(s32) = G_LOAD [[HIPTR]]
+    ; SOFT_POOL-DAG: [[LOPTR:%[0-9]+]]:_(p0) = G_CONSTANT_POOL %const.1
+    ; SOFT_POOL-DAG: [[LO:%[0-9]+]]:_(s32) = G_LOAD [[LOPTR]]
     ; SOFT-NOT: G_FCONSTANT
     %0(s64) = G_FCONSTANT double -2.4
     ; HARD-DAG: G_UNMERGE_VALUES [[R]](s64)

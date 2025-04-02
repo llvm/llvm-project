@@ -1,7 +1,7 @@
-// RUN: mlir-opt %s -test-affine-reify-value-bounds -verify-diagnostics \
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(test-affine-reify-value-bounds))' -verify-diagnostics \
 // RUN:     -verify-diagnostics -split-input-file | FileCheck %s
 
-// RUN: mlir-opt %s -test-affine-reify-value-bounds="use-arith-ops" \
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(test-affine-reify-value-bounds{use-arith-ops}))' \
 // RUN:     -verify-diagnostics -split-input-file | \
 // RUN: FileCheck %s --check-prefix=CHECK-ARITH
 

@@ -16,7 +16,7 @@ define i1 @vec_reduce_umax_non_zero(<4 x i8> %xx) {
 
 define i1 @vec_reduce_umax_non_zero_fail(<4 x i8> %xx) {
 ; CHECK-LABEL: @vec_reduce_umax_non_zero_fail(
-; CHECK-NEXT:    [[X:%.*]] = add nsw <4 x i8> [[XX:%.*]], <i8 1, i8 1, i8 1, i8 1>
+; CHECK-NEXT:    [[X:%.*]] = add nsw <4 x i8> [[XX:%.*]], splat (i8 1)
 ; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.umax.v4i8(<4 x i8> [[X]])
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[V]], 0
 ; CHECK-NEXT:    ret i1 [[R]]

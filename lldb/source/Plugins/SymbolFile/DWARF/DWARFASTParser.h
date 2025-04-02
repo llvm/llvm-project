@@ -42,7 +42,7 @@ public:
 
   virtual Function *ParseFunctionFromDWARF(CompileUnit &comp_unit,
                                            const DWARFDIE &die,
-                                           const AddressRange &range) = 0;
+                                           AddressRanges ranges) = 0;
 
   virtual bool CompleteTypeFromDWARF(const DWARFDIE &die, Type *type,
                                      const CompilerType &compiler_type) = 0;

@@ -22,6 +22,7 @@
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/STLExtras.h"
@@ -32,6 +33,11 @@
 
 namespace clang::include_cleaner {
 namespace {
+bool isOperatorNewDelete(OverloadedOperatorKind OpKind) {
+  return OpKind == OO_New || OpKind == OO_Delete || OpKind == OO_Array_New ||
+         OpKind == OO_Array_Delete;
+}
+
 using DeclCallback =
     llvm::function_ref<void(SourceLocation, NamedDecl &, RefType)>;
 
@@ -158,7 +164,15 @@ public:
     // the container decl instead, which is preferred as it'll handle
     // aliases/exports properly.
     if (!FD->isCXXClassMember() && !llvm::isa<EnumConstantDecl>(FD)) {
-      report(DRE->getLocation(), FD);
+      // Global operator new/delete [] is available implicitly in every
+      // translation unit, even without including any explicit headers. So treat
+      // those as ambigious to not force inclusion in TUs that transitively
+      // depend on those.
+      RefType RT =
+          isOperatorNewDelete(FD->getDeclName().getCXXOverloadedOperator())
+              ? RefType::Ambiguous
+              : RefType::Explicit;
+      report(DRE->getLocation(), FD, RT);
       return true;
     }
     // If the ref is without a qualifier, and is a member, ignore it. As it is

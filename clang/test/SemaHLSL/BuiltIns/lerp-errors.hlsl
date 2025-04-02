@@ -20,13 +20,35 @@ float2 test_lerp_no_second_arg(float2 p0) {
   // expected-error@-1 {{no matching function for call to 'lerp'}}
 }
 
-float2 test_lerp_vector_size_mismatch(float3 p0, float2 p1) {
-  return lerp(p0, p0, p1);
+float2 test_lerp_vector_trunc_warn1(float3 p0) {
+  return lerp(p0, p0, p0);
   // expected-warning@-1 {{implicit conversion truncates vector: 'float3' (aka 'vector<float, 3>') to 'vector<float, 2>' (vector of 2 'float' values)}}
 }
 
-float2 test_lerp_builtin_vector_size_mismatch(float3 p0, float2 p1) {
+float2 test_lerp_vector_trunc_warn2(float3 p0, float2 p1) {
+  return lerp(p0, p0, p1);
+  // expected-warning@-1 {{implicit conversion truncates vector: 'float3' (aka 'vector<float, 3>') to 'vector<float, 2>' (vector of 2 'float' values)}}
+  // expected-warning@-2 {{implicit conversion truncates vector: 'float3' (aka 'vector<float, 3>') to 'vector<float, 2>' (vector of 2 'float' values)}}
+}
+
+float2 test_lerp_vector_trunc_warn3(float3 p0, float2 p1) {
+  return lerp(p0, p1, p0);
+  // expected-warning@-1 {{implicit conversion truncates vector: 'float3' (aka 'vector<float, 3>') to 'vector<float, 2>' (vector of 2 'float' values)}}
+  // expected-warning@-2 {{implicit conversion truncates vector: 'float3' (aka 'vector<float, 3>') to 'vector<float, 2>' (vector of 2 'float' values)}}
+}
+
+float2 test_lerp_builtin_vector_size_mismatch_Arg1(float3 p0, float2 p1) {
   return __builtin_hlsl_lerp(p0, p1, p1);
+  // expected-error@-1 {{all arguments to '__builtin_hlsl_lerp' must have the same type}}
+}
+
+float2 test_lerp_builtin_vector_size_mismatch_Arg2(float3 p0, float2 p1) {
+  return __builtin_hlsl_lerp(p1, p0, p1);
+  // expected-error@-1 {{all arguments to '__builtin_hlsl_lerp' must have the same type}}
+}
+
+float2 test_lerp_builtin_vector_size_mismatch_Arg3(float3 p0, float2 p1) {
+  return __builtin_hlsl_lerp(p1, p1, p0);
   // expected-error@-1 {{all arguments to '__builtin_hlsl_lerp' must have the same type}}
 }
 
@@ -42,6 +64,16 @@ float2 test_lerp_element_type_mismatch(half2 p0, float2 p1) {
 
 float2 test_builtin_lerp_float2_splat(float p0, float2 p1) {
   return __builtin_hlsl_lerp(p0, p1, p1);
+  // expected-error@-1 {{all arguments to '__builtin_hlsl_lerp' must be vectors}}
+}
+
+float2 test_builtin_lerp_float2_splat2(double p0, double2 p1) {
+  return __builtin_hlsl_lerp(p1, p0, p1);
+  // expected-error@-1 {{all arguments to '__builtin_hlsl_lerp' must be vectors}}
+}
+
+float2 test_builtin_lerp_float2_splat3(double p0, double2 p1) {
+  return __builtin_hlsl_lerp(p1, p1, p0);
   // expected-error@-1 {{all arguments to '__builtin_hlsl_lerp' must be vectors}}
 }
 
@@ -72,27 +104,27 @@ float2 test_builtin_lerp_int_vect_to_float_vec_promotion(int2 p0, float p1) {
 
 float test_builtin_lerp_bool_type_promotion(bool p0) {
   return __builtin_hlsl_lerp(p0, p0, p0);
-  // expected-error@-1 {{1st argument must be a floating point type (was 'bool')}}
+  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'bool')}}
 }
 
 float builtin_bool_to_float_type_promotion(float p0, bool p1) {
   return __builtin_hlsl_lerp(p0, p0, p1);
-  // expected-error@-1 {{3rd argument must be a floating point type (was 'bool')}}
+  // expected-error@-1 {{3rd argument must be a scalar or vector of floating-point types (was 'bool')}}
 }
 
 float builtin_bool_to_float_type_promotion2(bool p0, float p1) {
   return __builtin_hlsl_lerp(p1, p0, p1);
-  // expected-error@-1 {{2nd argument must be a floating point type (was 'bool')}}
+  // expected-error@-1 {{2nd argument must be a scalar or vector of floating-point types (was 'bool')}}
 }
 
 float builtin_lerp_int_to_float_promotion(float p0, int p1) {
   return __builtin_hlsl_lerp(p0, p0, p1);
-  // expected-error@-1 {{3rd argument must be a floating point type (was 'int')}}
+  // expected-error@-1 {{3rd argument must be a scalar or vector of floating-point types (was 'int')}}
 }
 
 float4 test_lerp_int4(int4 p0, int4 p1, int4 p2) {
   return __builtin_hlsl_lerp(p0, p1, p2);
-  // expected-error@-1 {{1st argument must be a floating point type (was 'int4' (aka 'vector<int, 4>'))}}
+  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'int4' (aka 'vector<int, 4>'))}}
 }
 
 // note: DefaultVariadicArgumentPromotion --> DefaultArgumentPromotion has already promoted to double

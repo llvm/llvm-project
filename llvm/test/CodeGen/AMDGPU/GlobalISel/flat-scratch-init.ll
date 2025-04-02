@@ -1,6 +1,6 @@
 ; RUN: opt -passes=amdgpu-attributor -mcpu=gfx900 < %s | llc -mcpu=gfx900 | FileCheck -check-prefixes=GCN,RW-FLAT %s
 ; RUN: opt -passes=amdgpu-attributor -mcpu=gfx900 -mattr=+architected-flat-scratch < %s | llc | FileCheck -check-prefixes=GCN,RO-FLAT %s
-; RUN: opt -passes=amdgpu-attributor -mcpu=gfx940 < %s | llc | FileCheck -check-prefixes=GCN,RO-FLAT %s
+; RUN: opt -passes=amdgpu-attributor -mcpu=gfx942 < %s | llc | FileCheck -check-prefixes=GCN,RO-FLAT %s
 
 target triple = "amdgcn-amd-amdhsa"
 

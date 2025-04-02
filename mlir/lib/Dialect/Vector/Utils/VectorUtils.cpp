@@ -261,7 +261,7 @@ bool vector::isContiguousSlice(MemRefType memrefType, VectorType vectorType) {
   ArrayRef<int64_t> vectorShape = vectorType.getShape();
   auto vecRank = vectorType.getRank();
 
-  if (!trailingNDimsContiguous(memrefType, vecRank))
+  if (!memrefType.areTrailingDimsContiguous(vecRank))
     return false;
 
   // Extract the trailing dims and strides of the input memref

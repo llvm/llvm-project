@@ -23,7 +23,7 @@
 ; ELF: Section: .text (0x2)
 ; ELF: }
 
-; GFX10: NumSGPRsForWavesPerEU: 4
+; GFX10: NumSGPRsForWavesPerEU: 6
 ; GFX10: NumVGPRsForWavesPerEU: 1
 
 define amdgpu_kernel void @simple(ptr addrspace(1) %out) {

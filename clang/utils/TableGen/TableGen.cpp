@@ -1,4 +1,4 @@
-//===- TableGen.cpp - Top-Level TableGen implementation for Clang ---------===//
+//===-- TableGen.cpp - Top-Level TableGen implementation for Clang --------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,13 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TableGenBackends.h" // Declares all backends.
 #include "ASTTableGen.h"
+#include "TableGenBackends.h" // Declares all backends.
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
-#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Main.h"
 #include "llvm/TableGen/Record.h"
 
@@ -48,7 +47,9 @@ enum ActionType {
   GenClangBasicReader,
   GenClangBasicWriter,
   GenClangBuiltins,
+  GenClangBuiltinTemplates,
   GenClangDiagsDefs,
+  GenClangDiagsEnums,
   GenClangDiagGroups,
   GenClangDiagsIndexName,
   GenClangCommentNodes,
@@ -69,6 +70,7 @@ enum ActionType {
   GenClangOpenCLBuiltins,
   GenClangOpenCLBuiltinHeader,
   GenClangOpenCLBuiltinTests,
+  GenCXX11AttributeInfo,
   GenArmNeon,
   GenArmFP16,
   GenArmBF16,
@@ -172,8 +174,12 @@ cl::opt<ActionType> Action(
                    "Generate clang attribute traverser"),
         clEnumValN(GenClangBuiltins, "gen-clang-builtins",
                    "Generate clang builtins list"),
+        clEnumValN(GenClangBuiltinTemplates, "gen-clang-builtin-templates",
+                   "Generate clang builtins list"),
         clEnumValN(GenClangDiagsDefs, "gen-clang-diags-defs",
                    "Generate Clang diagnostics definitions"),
+        clEnumValN(GenClangDiagsEnums, "gen-clang-diags-enums",
+                   "Generate Clang diagnostic enums for selects"),
         clEnumValN(GenClangDiagGroups, "gen-clang-diag-groups",
                    "Generate Clang diagnostic groups"),
         clEnumValN(GenClangDiagsIndexName, "gen-clang-diags-index-name",
@@ -226,6 +232,8 @@ cl::opt<ActionType> Action(
                    "Generate OpenCL builtin header"),
         clEnumValN(GenClangOpenCLBuiltinTests, "gen-clang-opencl-builtin-tests",
                    "Generate OpenCL builtin declaration tests"),
+        clEnumValN(GenCXX11AttributeInfo, "gen-cxx11-attribute-info",
+                   "Generate CXX11 attributes info"),
         clEnumValN(GenArmNeon, "gen-arm-neon", "Generate arm_neon.h for clang"),
         clEnumValN(GenArmFP16, "gen-arm-fp16", "Generate arm_fp16.h for clang"),
         clEnumValN(GenArmBF16, "gen-arm-bf16", "Generate arm_bf16.h for clang"),
@@ -317,7 +325,7 @@ ClangComponent("clang-component",
                cl::desc("Only use warnings from specified component"),
                cl::value_desc("component"), cl::Hidden);
 
-bool ClangTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
+bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
   switch (Action) {
   case PrintRecords:
     OS << Records;           // No argument, dump all contents
@@ -333,6 +341,9 @@ bool ClangTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
     break;
   case GenClangAttrSubjectMatchRulesParserStringSwitches:
     EmitClangAttrSubjectMatchRulesParserStringSwitches(Records, OS);
+    break;
+  case GenCXX11AttributeInfo:
+    EmitCXX11AttributeInfo(Records, OS);
     break;
   case GenClangAttrImpl:
     EmitClangAttrImpl(Records, OS);
@@ -385,8 +396,14 @@ bool ClangTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
   case GenClangBuiltins:
     EmitClangBuiltins(Records, OS);
     break;
+  case GenClangBuiltinTemplates:
+    EmitClangBuiltinTemplates(Records, OS);
+    break;
   case GenClangDiagsDefs:
     EmitClangDiagsDefs(Records, OS, ClangComponent);
+    break;
+  case GenClangDiagsEnums:
+    EmitClangDiagsEnums(Records, OS, ClangComponent);
     break;
   case GenClangDiagGroups:
     EmitClangDiagGroups(Records, OS);

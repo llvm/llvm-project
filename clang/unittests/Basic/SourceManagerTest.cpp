@@ -135,9 +135,9 @@ TEST_F(SourceManagerTest, isBeforeInTranslationUnit) {
   FileID mainFileID = SourceMgr.createFileID(std::move(Buf));
   SourceMgr.setMainFileID(mainFileID);
 
+  HeaderSearchOptions HSOpts;
   TrivialModuleLoader ModLoader;
-  HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
-                          Diags, LangOpts, &*Target);
+  HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, &*Target);
   Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
                   SourceMgr, HeaderInfo, ModLoader,
                   /*IILookup =*/nullptr,
@@ -185,9 +185,9 @@ TEST_F(SourceManagerTest, isBeforeInTranslationUnitWithTokenSplit) {
   SourceMgr.setMainFileID(
       SourceMgr.createFileID(llvm::MemoryBuffer::getMemBuffer(main)));
 
+  HeaderSearchOptions HSOpts;
   TrivialModuleLoader ModLoader;
-  HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
-                          Diags, LangOpts, &*Target);
+  HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, &*Target);
   Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
                   SourceMgr, HeaderInfo, ModLoader,
                   /*IILookup =*/nullptr,
@@ -461,8 +461,8 @@ TEST_F(SourceManagerTest, loadedSLocEntryIsInTheSameTranslationUnit) {
 TEST_F(SourceManagerTest, ResetsIncludeLocMap) {
   auto ParseFile = [&] {
     TrivialModuleLoader ModLoader;
-    HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
-                            Diags, LangOpts, &*Target);
+    HeaderSearchOptions HSOpts;
+    HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, &*Target);
     Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
                     SourceMgr, HeaderInfo, ModLoader,
                     /*IILookup =*/nullptr,
@@ -537,9 +537,9 @@ TEST_F(SourceManagerTest, getMacroArgExpandedLocation) {
       "/test-header.h", HeaderBuf->getBufferSize(), 0);
   SourceMgr.overrideFileContents(headerFile, std::move(HeaderBuf));
 
+  HeaderSearchOptions HSOpts;
   TrivialModuleLoader ModLoader;
-  HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
-                          Diags, LangOpts, &*Target);
+  HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, &*Target);
 
   Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
                   SourceMgr, HeaderInfo, ModLoader,
@@ -549,7 +549,7 @@ TEST_F(SourceManagerTest, getMacroArgExpandedLocation) {
   // These are different than normal includes since predefines buffer doesn't
   // have a valid insertion location.
   PP.setPredefines("#include \"/implicit-header.h\"");
-  FileMgr.getVirtualFile("/implicit-header.h", 0, 0);
+  FileMgr.getVirtualFileRef("/implicit-header.h", 0, 0);
   PP.Initialize(*Target);
   PP.EnterMainSourceFile();
 
@@ -656,9 +656,9 @@ TEST_F(SourceManagerTest, isBeforeInTranslationUnitWithMacroInInclude) {
       "/test-header.h", HeaderBuf->getBufferSize(), 0);
   SourceMgr.overrideFileContents(headerFile, std::move(HeaderBuf));
 
+  HeaderSearchOptions HSOpts;
   TrivialModuleLoader ModLoader;
-  HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
-                          Diags, LangOpts, &*Target);
+  HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, &*Target);
   Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
                   SourceMgr, HeaderInfo, ModLoader,
                   /*IILookup =*/nullptr,

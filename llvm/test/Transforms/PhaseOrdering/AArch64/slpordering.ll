@@ -12,24 +12,24 @@ target triple = "aarch64"
 ; Function Attrs: nounwind uwtable
 define i32 @slpordering(ptr noundef %p1, i32 noundef %ip1, ptr noundef %p2, i32 noundef %ip2) #0 {
 ; CHECK-LABEL: define range(i32 0, 65536) i32 @slpordering
-; CHECK-SAME: (ptr nocapture noundef readonly [[P1:%.*]], i32 noundef [[IP1:%.*]], ptr nocapture noundef readonly [[P2:%.*]], i32 noundef [[IP2:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr noundef readonly captures(none) [[P1:%.*]], i32 noundef [[IP1:%.*]], ptr noundef readonly captures(none) [[P2:%.*]], i32 noundef [[IP2:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[IP1]] to i64
 ; CHECK-NEXT:    [[IDX_EXT63:%.*]] = sext i32 [[IP2]] to i64
-; CHECK-NEXT:    [[RRRAYIDX3:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 4
-; CHECK-NEXT:    [[RRRAYIDX5:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 4
+; CHECK-NEXT:    [[RRRAYIDX3:%.*]] = getelementptr inbounds nuw i8, ptr [[P1]], i64 4
+; CHECK-NEXT:    [[RRRAYIDX5:%.*]] = getelementptr inbounds nuw i8, ptr [[P2]], i64 4
 ; CHECK-NEXT:    [[RDD_PTR:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[IDX_EXT]]
 ; CHECK-NEXT:    [[RDD_PTR64:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[IDX_EXT63]]
-; CHECK-NEXT:    [[RRRAYIDX3_1:%.*]] = getelementptr inbounds i8, ptr [[RDD_PTR]], i64 4
-; CHECK-NEXT:    [[RRRAYIDX5_1:%.*]] = getelementptr inbounds i8, ptr [[RDD_PTR64]], i64 4
+; CHECK-NEXT:    [[RRRAYIDX3_1:%.*]] = getelementptr inbounds nuw i8, ptr [[RDD_PTR]], i64 4
+; CHECK-NEXT:    [[RRRAYIDX5_1:%.*]] = getelementptr inbounds nuw i8, ptr [[RDD_PTR64]], i64 4
 ; CHECK-NEXT:    [[RDD_PTR_1:%.*]] = getelementptr inbounds i8, ptr [[RDD_PTR]], i64 [[IDX_EXT]]
 ; CHECK-NEXT:    [[RDD_PTR64_1:%.*]] = getelementptr inbounds i8, ptr [[RDD_PTR64]], i64 [[IDX_EXT63]]
-; CHECK-NEXT:    [[RRRAYIDX3_2:%.*]] = getelementptr inbounds i8, ptr [[RDD_PTR_1]], i64 4
-; CHECK-NEXT:    [[RRRAYIDX5_2:%.*]] = getelementptr inbounds i8, ptr [[RDD_PTR64_1]], i64 4
+; CHECK-NEXT:    [[RRRAYIDX3_2:%.*]] = getelementptr inbounds nuw i8, ptr [[RDD_PTR_1]], i64 4
+; CHECK-NEXT:    [[RRRAYIDX5_2:%.*]] = getelementptr inbounds nuw i8, ptr [[RDD_PTR64_1]], i64 4
 ; CHECK-NEXT:    [[RDD_PTR_2:%.*]] = getelementptr inbounds i8, ptr [[RDD_PTR_1]], i64 [[IDX_EXT]]
 ; CHECK-NEXT:    [[RDD_PTR64_2:%.*]] = getelementptr inbounds i8, ptr [[RDD_PTR64_1]], i64 [[IDX_EXT63]]
-; CHECK-NEXT:    [[RRRAYIDX3_3:%.*]] = getelementptr inbounds i8, ptr [[RDD_PTR_2]], i64 4
-; CHECK-NEXT:    [[RRRAYIDX5_3:%.*]] = getelementptr inbounds i8, ptr [[RDD_PTR64_2]], i64 4
+; CHECK-NEXT:    [[RRRAYIDX3_3:%.*]] = getelementptr inbounds nuw i8, ptr [[RDD_PTR_2]], i64 4
+; CHECK-NEXT:    [[RRRAYIDX5_3:%.*]] = getelementptr inbounds nuw i8, ptr [[RDD_PTR64_2]], i64 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[P1]], align 1, !tbaa [[TBAA0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[P2]], align 1, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i8>, ptr [[RRRAYIDX3]], align 1, !tbaa [[TBAA0]]
@@ -72,7 +72,7 @@ define i32 @slpordering(ptr noundef %p1, i32 noundef %ip1, ptr noundef %p2, i32 
 ; CHECK-NEXT:    [[TMP39:%.*]] = shufflevector <16 x i8> [[TMP37]], <16 x i8> [[TMP38]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 16, i32 17, i32 18, i32 19>
 ; CHECK-NEXT:    [[TMP40:%.*]] = zext <16 x i8> [[TMP39]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP41:%.*]] = sub nsw <16 x i32> [[TMP33]], [[TMP40]]
-; CHECK-NEXT:    [[TMP42:%.*]] = shl nsw <16 x i32> [[TMP41]], <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+; CHECK-NEXT:    [[TMP42:%.*]] = shl nsw <16 x i32> [[TMP41]], splat (i32 16)
 ; CHECK-NEXT:    [[TMP43:%.*]] = add nsw <16 x i32> [[TMP42]], [[TMP26]]
 ; CHECK-NEXT:    [[TMP44:%.*]] = shufflevector <16 x i32> [[TMP43]], <16 x i32> poison, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP45:%.*]] = shufflevector <16 x i32> [[TMP43]], <16 x i32> poison, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
@@ -99,9 +99,9 @@ define i32 @slpordering(ptr noundef %p1, i32 noundef %ip1, ptr noundef %p2, i32 
 ; CHECK-NEXT:    [[TMP66:%.*]] = add nsw <16 x i32> [[TMP63]], [[TMP65]]
 ; CHECK-NEXT:    [[TMP67:%.*]] = sub nsw <16 x i32> [[TMP62]], [[TMP64]]
 ; CHECK-NEXT:    [[TMP68:%.*]] = shufflevector <16 x i32> [[TMP66]], <16 x i32> [[TMP67]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
-; CHECK-NEXT:    [[TMP69:%.*]] = lshr <16 x i32> [[TMP68]], <i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15>
-; CHECK-NEXT:    [[TMP70:%.*]] = and <16 x i32> [[TMP69]], <i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537>
-; CHECK-NEXT:    [[TMP71:%.*]] = mul nuw <16 x i32> [[TMP70]], <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>
+; CHECK-NEXT:    [[TMP69:%.*]] = lshr <16 x i32> [[TMP68]], splat (i32 15)
+; CHECK-NEXT:    [[TMP70:%.*]] = and <16 x i32> [[TMP69]], splat (i32 65537)
+; CHECK-NEXT:    [[TMP71:%.*]] = mul nuw <16 x i32> [[TMP70]], splat (i32 65535)
 ; CHECK-NEXT:    [[TMP72:%.*]] = add <16 x i32> [[TMP71]], [[TMP68]]
 ; CHECK-NEXT:    [[TMP73:%.*]] = xor <16 x i32> [[TMP72]], [[TMP71]]
 ; CHECK-NEXT:    [[TMP74:%.*]] = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP73]])

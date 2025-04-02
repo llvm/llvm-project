@@ -148,6 +148,77 @@ def testValueReplaceAllUsesWith():
         print(f"Use operand_number: {use.operand_number}")
 
 
+# CHECK-LABEL: TEST: testValueReplaceAllUsesWithExcept
+@run
+def testValueReplaceAllUsesWithExcept():
+    ctx = Context()
+    ctx.allow_unregistered_dialects = True
+    with Location.unknown(ctx):
+        i32 = IntegerType.get_signless(32)
+        module = Module.create()
+        with InsertionPoint(module.body):
+            value = Operation.create("custom.op1", results=[i32]).results[0]
+            op1 = Operation.create("custom.op1", operands=[value])
+            op2 = Operation.create("custom.op2", operands=[value])
+            value2 = Operation.create("custom.op3", results=[i32]).results[0]
+            value.replace_all_uses_except(value2, op1)
+
+    assert len(list(value.uses)) == 1
+
+    # CHECK: Use owner: "custom.op2"
+    # CHECK: Use operand_number: 0
+    for use in value2.uses:
+        assert use.owner in [op2]
+        print(f"Use owner: {use.owner}")
+        print(f"Use operand_number: {use.operand_number}")
+
+    # CHECK: Use owner: "custom.op1"
+    # CHECK: Use operand_number: 0
+    for use in value.uses:
+        assert use.owner in [op1]
+        print(f"Use owner: {use.owner}")
+        print(f"Use operand_number: {use.operand_number}")
+
+
+# CHECK-LABEL: TEST: testValueReplaceAllUsesWithMultipleExceptions
+@run
+def testValueReplaceAllUsesWithMultipleExceptions():
+    ctx = Context()
+    ctx.allow_unregistered_dialects = True
+    with Location.unknown(ctx):
+        i32 = IntegerType.get_signless(32)
+        module = Module.create()
+        with InsertionPoint(module.body):
+            value = Operation.create("custom.op1", results=[i32]).results[0]
+            op1 = Operation.create("custom.op1", operands=[value])
+            op2 = Operation.create("custom.op2", operands=[value])
+            op3 = Operation.create("custom.op3", operands=[value])
+            value2 = Operation.create("custom.op4", results=[i32]).results[0]
+
+            # Replace all uses of `value` with `value2`, except for `op1` and `op2`.
+            value.replace_all_uses_except(value2, [op1, op2])
+
+    # After replacement, only `op3` should use `value2`, while `op1` and `op2` should still use `value`.
+    assert len(list(value.uses)) == 2
+    assert len(list(value2.uses)) == 1
+
+    # CHECK: Use owner: "custom.op3"
+    # CHECK: Use operand_number: 0
+    for use in value2.uses:
+        assert use.owner in [op3]
+        print(f"Use owner: {use.owner}")
+        print(f"Use operand_number: {use.operand_number}")
+
+    # CHECK: Use owner: "custom.op2"
+    # CHECK: Use operand_number: 0
+    # CHECK: Use owner: "custom.op1"
+    # CHECK: Use operand_number: 0
+    for use in value.uses:
+        assert use.owner in [op1, op2]
+        print(f"Use owner: {use.owner}")
+        print(f"Use operand_number: {use.operand_number}")
+
+
 # CHECK-LABEL: TEST: testValuePrintAsOperand
 @run
 def testValuePrintAsOperand():

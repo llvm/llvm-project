@@ -134,8 +134,8 @@ define <2 x float> @return_param_add_return_float_vector(<2 x float> %a) sanitiz
 ; CHECK-NEXT:    [[TMP3:%.*]] = fpext <2 x float> [[A:%.*]] to <2 x double>
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP1]], <2 x double> [[TMP2]], <2 x double> [[TMP3]]
 ; CHECK-NEXT:    store i64 0, ptr @__nsan_shadow_args_tag, align 8
-; CHECK-NEXT:    [[B:%.*]] = fadd <2 x float> [[A]], <float 1.000000e+00, float 1.000000e+00>
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[TMP4]], <double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    [[B:%.*]] = fadd <2 x float> [[A]], splat (float 1.000000e+00)
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[TMP4]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x float> [[B]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP5]], i64 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @__nsan_internal_check_float_d(float [[TMP6]], double [[TMP7]], i32 1, i64 0)
@@ -396,8 +396,8 @@ define void @load_add_store_vector(<2 x float>* %a) sanitize_numerical_stability
 ; CHECK-NEXT:    br label [[TMP6]]
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP7:%.*]] = phi <2 x double> [ [[TMP3]], [[TMP2]] ], [ [[TMP5]], [[TMP4]] ]
-; CHECK-NEXT:    [[C:%.*]] = fadd <2 x float> [[B]], <float 1.000000e+00, float 1.000000e+00>
-; CHECK-NEXT:    [[TMP8:%.*]] = fadd <2 x double> [[TMP7]], <double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    [[C:%.*]] = fadd <2 x float> [[B]], splat (float 1.000000e+00)
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd <2 x double> [[TMP7]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[TMP9:%.*]] = call ptr @__nsan_get_shadow_ptr_for_float_store(ptr [[A]], i64 2)
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x float> [[C]], i64 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x double> [[TMP8]], i64 0
@@ -772,8 +772,8 @@ define void @vector_shuffle(<2 x float> %0) sanitize_numerical_stability {
 ; CHECK-NEXT:    [[TMP4:%.*]] = fpext <2 x float> [[TMP0:%.*]] to <2 x double>
 ; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP2]], <2 x double> [[TMP3]], <2 x double> [[TMP4]]
 ; CHECK-NEXT:    store i64 0, ptr @__nsan_shadow_args_tag, align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP0]], <2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x i32> <i32 1, i32 3>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> <double 1.000000e+00, double 1.000000e+00>, <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP0]], <2 x float> splat (float 1.000000e+00), <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> splat (double 1.000000e+00), <2 x i32> <i32 1, i32 3>
 ; CHECK-NEXT:    ret void
 ;
 entry:

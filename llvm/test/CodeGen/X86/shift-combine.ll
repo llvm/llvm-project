@@ -408,7 +408,7 @@ define dso_local void @PR42880(i32 %t0) {
   %x = ptrtoint ptr %add.ptr.i94 to i32
   %sub2 = sub i32 %x, 0
   %div = sdiv exact i32 %sub2, 24
-  br i1 undef, label %if, label %then
+  br i1 poison, label %if, label %then
 
 then:
   %t1 = xor i32 %div, -1

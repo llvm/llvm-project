@@ -159,25 +159,13 @@ body: |
     ; CHECK-LABEL: name: test_freeze_v3s8
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[DEF]](<4 x s16>)
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[UV]](s16)
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[UV1]](s16)
-    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:_(s8) = G_TRUNC [[UV2]](s16)
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s8>) = G_BUILD_VECTOR [[TRUNC]](s8), [[TRUNC1]](s8), [[TRUNC2]](s8), [[DEF1]](s8), [[DEF1]](s8), [[DEF1]](s8), [[DEF1]](s8), [[DEF1]](s8)
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(<8 x s16>) = G_ANYEXT [[BUILD_VECTOR]](<8 x s8>)
-    ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(<4 x s16>), [[UV5:%[0-9]+]]:_(<4 x s16>) = G_UNMERGE_VALUES [[ANYEXT]](<8 x s16>)
-    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(<4 x s16>) = G_FREEZE [[UV4]]
-    ; CHECK-NEXT: [[UV6:%[0-9]+]]:_(s16), [[UV7:%[0-9]+]]:_(s16), [[UV8:%[0-9]+]]:_(s16), [[UV9:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[FREEZE]](<4 x s16>)
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<4 x s8>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(<4 x s8>) = G_FREEZE [[DEF]]
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[FREEZE]](<4 x s8>)
     ; CHECK-NEXT: %undef:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV6]](s16)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; CHECK-NEXT: %ext0:_(s32) = G_AND [[ANYEXT1]], [[C]]
-    ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV7]](s16)
-    ; CHECK-NEXT: %ext1:_(s32) = G_AND [[ANYEXT2]], [[C]]
-    ; CHECK-NEXT: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV8]](s16)
-    ; CHECK-NEXT: %ext2:_(s32) = G_AND [[ANYEXT3]], [[C]]
+    ; CHECK-NEXT: %ext0:_(s32) = G_ZEXT [[UV]](s8)
+    ; CHECK-NEXT: %ext1:_(s32) = G_ZEXT [[UV1]](s8)
+    ; CHECK-NEXT: %ext2:_(s32) = G_ZEXT [[UV2]](s8)
     ; CHECK-NEXT: %res:_(<4 x s32>) = G_BUILD_VECTOR %ext0(s32), %ext1(s32), %ext2(s32), %undef(s32)
     ; CHECK-NEXT: $q0 = COPY %res(<4 x s32>)
     %x:_(<3 x s8>) = G_IMPLICIT_DEF

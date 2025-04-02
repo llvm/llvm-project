@@ -95,6 +95,7 @@ class LLDB_API SBPlatformShellCommand;
 class LLDB_API SBProcess;
 class LLDB_API SBProcessInfo;
 class LLDB_API SBProcessInfoList;
+class LLDB_API SBProgress;
 class LLDB_API SBQueue;
 class LLDB_API SBQueueItem;
 class LLDB_API SBReplayOptions;
@@ -124,6 +125,7 @@ class LLDB_API SBTypeFormat;
 class LLDB_API SBTypeMember;
 class LLDB_API SBTypeMemberFunction;
 class LLDB_API SBTypeNameSpecifier;
+class LLDB_API SBTypeStaticField;
 class LLDB_API SBTypeSummary;
 class LLDB_API SBTypeSummaryOptions;
 class LLDB_API SBTypeSynthetic;
@@ -141,6 +143,9 @@ typedef bool (*SBBreakpointHitCallback)(void *baton, lldb::SBProcess &process,
 
 typedef void (*SBDebuggerDestroyCallback)(lldb::user_id_t debugger_id,
                                           void *baton);
+
+typedef lldb::CommandReturnObjectCallbackResult (*SBCommandPrintCallback)(
+    lldb::SBCommandReturnObject &result, void *baton);
 
 typedef lldb::SBError (*SBPlatformLocateModuleCallback)(
     void *baton, const lldb::SBModuleSpec &module_spec,

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Object/Minidump.h"
-#include "llvm/Object/Error.h"
 #include "llvm/Support/ConvertUTF.h"
 
 using namespace llvm;
@@ -78,33 +77,6 @@ MinidumpFile::getMemoryInfoList() const {
                     MemoryInfoIterator({}, H.SizeOfEntry));
 }
 
-template <typename T>
-Expected<ArrayRef<T>> MinidumpFile::getListStream(StreamType Type) const {
-  std::optional<ArrayRef<uint8_t>> Stream = getRawStream(Type);
-  if (!Stream)
-    return createError("No such stream");
-  auto ExpectedSize = getDataSliceAs<support::ulittle32_t>(*Stream, 0, 1);
-  if (!ExpectedSize)
-    return ExpectedSize.takeError();
-
-  size_t ListSize = ExpectedSize.get()[0];
-
-  size_t ListOffset = 4;
-  // Some producers insert additional padding bytes to align the list to an
-  // 8-byte boundary. Check for that by comparing the list size with the overall
-  // stream size.
-  if (ListOffset + sizeof(T) * ListSize < Stream->size())
-    ListOffset = 8;
-
-  return getDataSliceAs<T>(*Stream, ListOffset, ListSize);
-}
-template Expected<ArrayRef<Module>>
-    MinidumpFile::getListStream(StreamType) const;
-template Expected<ArrayRef<Thread>>
-    MinidumpFile::getListStream(StreamType) const;
-template Expected<ArrayRef<MemoryDescriptor>>
-    MinidumpFile::getListStream(StreamType) const;
-
 Expected<ArrayRef<uint8_t>> MinidumpFile::getDataSlice(ArrayRef<uint8_t> Data,
                                                        uint64_t Offset,
                                                        uint64_t Size) {
@@ -173,7 +145,7 @@ MinidumpFile::create(MemoryBufferRef Source) {
 
 iterator_range<MinidumpFile::FallibleMemory64Iterator>
 MinidumpFile::getMemory64List(Error &Err) const {
-  ErrorAsOutParameter ErrAsOutParam(&Err);
+  ErrorAsOutParameter ErrAsOutParam(Err);
   auto end = FallibleMemory64Iterator::end(Memory64Iterator::end());
   Expected<minidump::Memory64ListHeader> ListHeader = getMemoryList64Header();
   if (!ListHeader) {

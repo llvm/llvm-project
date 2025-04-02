@@ -927,14 +927,17 @@ private:
 
 public:
   ELFLinkGraphBuilder_riscv(StringRef FileName,
-                            const object::ELFFile<ELFT> &Obj, Triple TT,
-                            SubtargetFeatures Features)
-      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(TT), std::move(Features),
-                                  FileName, riscv::getEdgeKindName) {}
+                            const object::ELFFile<ELFT> &Obj,
+                            std::shared_ptr<orc::SymbolStringPool> SSP,
+                            Triple TT, SubtargetFeatures Features)
+      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(SSP), std::move(TT),
+                                  std::move(Features), FileName,
+                                  riscv::getEdgeKindName) {}
 };
 
 Expected<std::unique_ptr<LinkGraph>>
-createLinkGraphFromELFObject_riscv(MemoryBufferRef ObjectBuffer) {
+createLinkGraphFromELFObject_riscv(MemoryBufferRef ObjectBuffer,
+                                   std::shared_ptr<orc::SymbolStringPool> SSP) {
   LLVM_DEBUG({
     dbgs() << "Building jitlink graph for new input "
            << ObjectBuffer.getBufferIdentifier() << "...\n";
@@ -952,7 +955,7 @@ createLinkGraphFromELFObject_riscv(MemoryBufferRef ObjectBuffer) {
     auto &ELFObjFile = cast<object::ELFObjectFile<object::ELF64LE>>(**ELFObj);
     return ELFLinkGraphBuilder_riscv<object::ELF64LE>(
                (*ELFObj)->getFileName(), ELFObjFile.getELFFile(),
-               (*ELFObj)->makeTriple(), std::move(*Features))
+               std::move(SSP), (*ELFObj)->makeTriple(), std::move(*Features))
         .buildGraph();
   } else {
     assert((*ELFObj)->getArch() == Triple::riscv32 &&
@@ -960,7 +963,7 @@ createLinkGraphFromELFObject_riscv(MemoryBufferRef ObjectBuffer) {
     auto &ELFObjFile = cast<object::ELFObjectFile<object::ELF32LE>>(**ELFObj);
     return ELFLinkGraphBuilder_riscv<object::ELF32LE>(
                (*ELFObj)->getFileName(), ELFObjFile.getELFFile(),
-               (*ELFObj)->makeTriple(), std::move(*Features))
+               std::move(SSP), (*ELFObj)->makeTriple(), std::move(*Features))
         .buildGraph();
   }
 }

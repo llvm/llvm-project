@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Bitset.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/VersionTuple.h"
@@ -35,6 +36,7 @@ struct ArchInfo;
 struct CpuInfo;
 
 #include "llvm/TargetParser/AArch64CPUFeatures.inc"
+#include "llvm/TargetParser/AArch64FeatPriorities.inc"
 
 static_assert(FEAT_MAX < 62,
               "Number of features in CPUFeatures are limited to 62 entries");
@@ -68,19 +70,13 @@ struct ExtensionInfo {
 #include "llvm/TargetParser/AArch64TargetParserDef.inc"
 
 struct FMVInfo {
-  StringRef Name;     // The target_version/target_clones spelling.
-  CPUFeatures Bit;    // Index of the bit in the FMV feature bitset.
-  StringRef Features; // List of SubtargetFeatures to enable.
-  unsigned Priority;  // FMV priority.
-  FMVInfo(StringRef Name, CPUFeatures Bit, StringRef Features,
-          unsigned Priority)
-      : Name(Name), Bit(Bit), Features(Features), Priority(Priority){};
-
-  SmallVector<StringRef, 8> getImpliedFeatures() {
-    SmallVector<StringRef, 8> Feats;
-    Features.split(Feats, ',', -1, false); // discard empty strings
-    return Feats;
-  }
+  StringRef Name;                // The target_version/target_clones spelling.
+  CPUFeatures FeatureBit;        // Index of the bit in the FMV feature bitset.
+  FeatPriorities PriorityBit;    // Index of the bit in the FMV priority bitset.
+  std::optional<ArchExtKind> ID; // The architecture extension to enable.
+  FMVInfo(StringRef Name, CPUFeatures FeatureBit, FeatPriorities PriorityBit,
+          std::optional<ArchExtKind> ID)
+      : Name(Name), FeatureBit(FeatureBit), PriorityBit(PriorityBit), ID(ID) {};
 };
 
 const std::vector<FMVInfo> &getFMVInfo();
@@ -118,9 +114,9 @@ struct ArchInfo {
   // Defines the following partial order, indicating when an architecture is
   // a superset of another:
   //
-  //   v9.5a > v9.4a > v9.3a > v9.2a > v9.1a > v9a;
-  //             v       v       v       v       v
-  //           v8.9a > v8.8a > v8.7a > v8.6a > v8.5a > v8.4a > ... > v8a;
+  // v9.6a > v9.5a > v9.4a > v9.3a > v9.2a > v9.1a > v9a;
+  //                   v       v       v       v       v
+  //                 v8.9a > v8.8a > v8.7a > v8.6a > v8.5a > v8.4a > ... > v8a;
   //
   // v8r has no relation to anything. This is used to determine which
   // features to enable for a given architecture. See
@@ -274,10 +270,17 @@ void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values);
 
 bool isX18ReservedByDefault(const Triple &TT);
 
-// For given feature names, return a bitmask corresponding to the entries of
-// AArch64::CPUFeatures. The values in CPUFeatures are not bitmasks
-// themselves, they are sequential (0, 1, 2, 3, ...).
-uint64_t getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs);
+// For a given set of feature names, which can be either target-features, or
+// fmv-features metadata, expand their dependencies and then return a bitmask
+// corresponding to the entries of AArch64::FeatPriorities.
+uint64_t getFMVPriority(ArrayRef<StringRef> Features);
+
+// For a given set of FMV feature names, expand their dependencies and then
+// return a bitmask corresponding to the entries of AArch64::CPUFeatures.
+// The values in CPUFeatures are not bitmasks themselves, they are sequential
+// (0, 1, 2, 3, ...). The resulting bitmask is used at runtime to test whether
+// a certain FMV feature is available on the host.
+uint64_t getCpuSupportsMask(ArrayRef<StringRef> Features);
 
 void PrintSupportedExtensions();
 

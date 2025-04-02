@@ -39,7 +39,7 @@ define void @caller1() {
 
 define internal void @argument_dead_callback_callee(ptr %c) {
 ; CHECK-LABEL: define {{[^@]+}}@argument_dead_callback_callee
-; CHECK-SAME: (ptr noalias nocapture nofree readnone align 4294967296 [[C:%.*]]) {
+; CHECK-SAME: (ptr noalias nofree readnone align 4294967296 captures(none) [[C:%.*]]) {
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    ret void
 ;

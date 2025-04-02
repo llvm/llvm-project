@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-pipeliner -stats -o /dev/null < %s 2>&1 -pipeliner-experimental-cg=true | FileCheck %s --check-prefix=STATS
+; RUN: llc -mtriple=hexagon -enable-pipeliner -stats -o /dev/null < %s 2>&1 -pipeliner-experimental-cg=true | FileCheck %s --check-prefix=STATS
 ; REQUIRES: asserts
 
 ; We're unable to pipeline a loop with a subreg as an operand of a Phi.

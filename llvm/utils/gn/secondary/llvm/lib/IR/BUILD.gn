@@ -21,6 +21,7 @@ static_library("IR") {
     "BasicBlock.cpp",
     "BuiltinGCs.cpp",
     "Comdat.cpp",
+    "ConstantFPRange.cpp",
     "ConstantFold.cpp",
     "ConstantRange.cpp",
     "ConstantRangeList.cpp",
@@ -39,6 +40,8 @@ static_library("IR") {
     "DiagnosticInfo.cpp",
     "DiagnosticPrinter.cpp",
     "Dominators.cpp",
+    "DroppedVariableStats.cpp",
+    "DroppedVariableStatsIR.cpp",
     "EHPersonalities.cpp",
     "FPEnv.cpp",
     "Function.cpp",
@@ -51,6 +54,7 @@ static_library("IR") {
     "Instruction.cpp",
     "Instructions.cpp",
     "IntrinsicInst.cpp",
+    "Intrinsics.cpp",
     "LLVMContext.cpp",
     "LLVMContextImpl.cpp",
     "LLVMRemarkStreamer.cpp",
@@ -87,6 +91,7 @@ static_library("IR") {
     "Value.cpp",
     "ValueSymbolTable.cpp",
     "VectorBuilder.cpp",
+    "VectorTypeUtils.cpp",
     "Verifier.cpp",
   ]
 }

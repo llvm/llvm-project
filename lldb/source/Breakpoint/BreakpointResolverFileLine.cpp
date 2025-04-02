@@ -139,21 +139,23 @@ void BreakpointResolverFileLine::FilterContexts(SymbolContextList &sc_list) {
     if (!sc.block)
       continue;
 
-    FileSpec file;
+    SupportFileSP file_sp;
     uint32_t line;
     const Block *inline_block = sc.block->GetContainingInlinedBlock();
     if (inline_block) {
       const Declaration &inline_declaration = inline_block->GetInlinedFunctionInfo()->GetDeclaration();
       if (!inline_declaration.IsValid())
         continue;
-      file = inline_declaration.GetFile();
+      file_sp = std::make_shared<SupportFile>(inline_declaration.GetFile());
       line = inline_declaration.GetLine();
     } else if (sc.function)
-      sc.function->GetStartLineSourceInfo(file, line);
+      sc.function->GetStartLineSourceInfo(file_sp, line);
     else
       continue;
 
-    if (file != sc.line_entry.GetFile()) {
+    if (!file_sp ||
+        !file_sp->Equal(*sc.line_entry.file_sp,
+                        SupportFile::eEqualFileSpecAndChecksumIfSet)) {
       LLDB_LOG(log, "unexpected symbol context file {0}",
                sc.line_entry.GetFile());
       continue;
@@ -190,7 +192,8 @@ void BreakpointResolverFileLine::FilterContexts(SymbolContextList &sc_list) {
     const int decl_line_is_too_late_fudge = 1;
     if (line &&
         m_location_spec.GetLine() < line - decl_line_is_too_late_fudge) {
-      LLDB_LOG(log, "removing symbol context at {0}:{1}", file, line);
+      LLDB_LOG(log, "removing symbol context at {0}:{1}",
+               file_sp->GetSpecOnly(), line);
       sc_list.RemoveContextAtIndex(i);
       --i;
     }

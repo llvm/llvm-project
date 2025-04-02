@@ -66,8 +66,7 @@ define i32 @reduce_uaddv_v16i8(<32 x i8> %a) {
 ; STREAMING-SVE-NEXT:    add z0.s, z2.s, z0.s
 ; STREAMING-SVE-NEXT:    add z0.s, z1.s, z0.s
 ; STREAMING-SVE-NEXT:    uaddv d0, p0, z0.s
-; STREAMING-SVE-NEXT:    fmov x0, d0
-; STREAMING-SVE-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; STREAMING-SVE-NEXT:    fmov w0, s0
 ; STREAMING-SVE-NEXT:    ret
   %1 = zext <32 x i8> %a to <32 x i32>
   %2 = call i32 @llvm.vector.reduce.add.v32i32(<32 x i32> %1)
@@ -134,8 +133,7 @@ define i32 @reduce_saddv_v16i8(<32 x i8> %a) {
 ; STREAMING-SVE-NEXT:    add z0.s, z2.s, z0.s
 ; STREAMING-SVE-NEXT:    add z0.s, z1.s, z0.s
 ; STREAMING-SVE-NEXT:    uaddv d0, p0, z0.s
-; STREAMING-SVE-NEXT:    fmov x0, d0
-; STREAMING-SVE-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; STREAMING-SVE-NEXT:    fmov w0, s0
 ; STREAMING-SVE-NEXT:    ret
   %1 = sext <32 x i8> %a to <32 x i32>
   %2 = call i32 @llvm.vector.reduce.add.v32i32(<32 x i32> %1)

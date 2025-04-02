@@ -475,7 +475,7 @@ void SLSHardeningInserter::convertBLRToBL(
   BL->removeOperand(SecondOpIdxToRemove);
   // Now copy over the implicit operands from the original BLR
   BL->copyImplicitOps(MF, BLR);
-  MF.moveCallSiteInfo(&BLR, BL);
+  MF.moveAdditionalCallInfo(&BLR, BL);
   // Also add the register operands of the original BLR* instruction
   // as being used in the called thunk.
   for (unsigned OpIdx = 0; OpIdx < NumRegOperands; ++OpIdx) {

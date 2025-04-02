@@ -29,8 +29,8 @@ define void @foo_i32() nounwind #0 {
 ; CHECK-RV32-NEXT:    sw a0, 12(sp) # 4-byte Folded Spill
 ; CHECK-RV32-NEXT:    sw a1, 8(sp) # 4-byte Folded Spill
 ; CHECK-RV32-NEXT:    lui a0, %hi(a)
-; CHECK-RV32-NEXT:    lw a0, %lo(a)(a0)
 ; CHECK-RV32-NEXT:    lui a1, %hi(b)
+; CHECK-RV32-NEXT:    lw a0, %lo(a)(a0)
 ; CHECK-RV32-NEXT:    lw a1, %lo(b)(a1)
 ; CHECK-RV32-NEXT:    add a0, a1, a0
 ; CHECK-RV32-NEXT:    lui a1, %hi(c)
@@ -46,8 +46,8 @@ define void @foo_i32() nounwind #0 {
 ; CHECK-RV32IF-NEXT:    sw a0, 12(sp) # 4-byte Folded Spill
 ; CHECK-RV32IF-NEXT:    sw a1, 8(sp) # 4-byte Folded Spill
 ; CHECK-RV32IF-NEXT:    lui a0, %hi(a)
-; CHECK-RV32IF-NEXT:    lw a0, %lo(a)(a0)
 ; CHECK-RV32IF-NEXT:    lui a1, %hi(b)
+; CHECK-RV32IF-NEXT:    lw a0, %lo(a)(a0)
 ; CHECK-RV32IF-NEXT:    lw a1, %lo(b)(a1)
 ; CHECK-RV32IF-NEXT:    add a0, a1, a0
 ; CHECK-RV32IF-NEXT:    lui a1, %hi(c)
@@ -63,8 +63,8 @@ define void @foo_i32() nounwind #0 {
 ; CHECK-RV32IFD-NEXT:    sw a0, 12(sp) # 4-byte Folded Spill
 ; CHECK-RV32IFD-NEXT:    sw a1, 8(sp) # 4-byte Folded Spill
 ; CHECK-RV32IFD-NEXT:    lui a0, %hi(a)
-; CHECK-RV32IFD-NEXT:    lw a0, %lo(a)(a0)
 ; CHECK-RV32IFD-NEXT:    lui a1, %hi(b)
+; CHECK-RV32IFD-NEXT:    lw a0, %lo(a)(a0)
 ; CHECK-RV32IFD-NEXT:    lw a1, %lo(b)(a1)
 ; CHECK-RV32IFD-NEXT:    add a0, a1, a0
 ; CHECK-RV32IFD-NEXT:    lui a1, %hi(c)
@@ -94,8 +94,8 @@ define void @foo_fp_i32() nounwind #1 {
 ; CHECK-RV32-NEXT:    sw a1, 0(sp) # 4-byte Folded Spill
 ; CHECK-RV32-NEXT:    addi s0, sp, 16
 ; CHECK-RV32-NEXT:    lui a0, %hi(a)
-; CHECK-RV32-NEXT:    lw a0, %lo(a)(a0)
 ; CHECK-RV32-NEXT:    lui a1, %hi(b)
+; CHECK-RV32-NEXT:    lw a0, %lo(a)(a0)
 ; CHECK-RV32-NEXT:    lw a1, %lo(b)(a1)
 ; CHECK-RV32-NEXT:    add a0, a1, a0
 ; CHECK-RV32-NEXT:    lui a1, %hi(c)
@@ -116,8 +116,8 @@ define void @foo_fp_i32() nounwind #1 {
 ; CHECK-RV32IF-NEXT:    sw a1, 0(sp) # 4-byte Folded Spill
 ; CHECK-RV32IF-NEXT:    addi s0, sp, 16
 ; CHECK-RV32IF-NEXT:    lui a0, %hi(a)
-; CHECK-RV32IF-NEXT:    lw a0, %lo(a)(a0)
 ; CHECK-RV32IF-NEXT:    lui a1, %hi(b)
+; CHECK-RV32IF-NEXT:    lw a0, %lo(a)(a0)
 ; CHECK-RV32IF-NEXT:    lw a1, %lo(b)(a1)
 ; CHECK-RV32IF-NEXT:    add a0, a1, a0
 ; CHECK-RV32IF-NEXT:    lui a1, %hi(c)
@@ -138,8 +138,8 @@ define void @foo_fp_i32() nounwind #1 {
 ; CHECK-RV32IFD-NEXT:    sw a1, 0(sp) # 4-byte Folded Spill
 ; CHECK-RV32IFD-NEXT:    addi s0, sp, 16
 ; CHECK-RV32IFD-NEXT:    lui a0, %hi(a)
-; CHECK-RV32IFD-NEXT:    lw a0, %lo(a)(a0)
 ; CHECK-RV32IFD-NEXT:    lui a1, %hi(b)
+; CHECK-RV32IFD-NEXT:    lw a0, %lo(a)(a0)
 ; CHECK-RV32IFD-NEXT:    lw a1, %lo(b)(a1)
 ; CHECK-RV32IFD-NEXT:    add a0, a1, a0
 ; CHECK-RV32IFD-NEXT:    lui a1, %hi(c)
@@ -182,8 +182,8 @@ define void @foo_float() nounwind #0 {
 ; CHECK-RV32-NEXT:    sw t5, 4(sp) # 4-byte Folded Spill
 ; CHECK-RV32-NEXT:    sw t6, 0(sp) # 4-byte Folded Spill
 ; CHECK-RV32-NEXT:    lui a0, %hi(e)
-; CHECK-RV32-NEXT:    lw a0, %lo(e)(a0)
 ; CHECK-RV32-NEXT:    lui a1, %hi(f)
+; CHECK-RV32-NEXT:    lw a0, %lo(e)(a0)
 ; CHECK-RV32-NEXT:    lw a1, %lo(f)(a1)
 ; CHECK-RV32-NEXT:    call __addsf3
 ; CHECK-RV32-NEXT:    lui a1, %hi(d)
@@ -277,8 +277,8 @@ define void @foo_fp_float() nounwind #1 {
 ; CHECK-RV32-NEXT:    sw t6, 12(sp) # 4-byte Folded Spill
 ; CHECK-RV32-NEXT:    addi s0, sp, 80
 ; CHECK-RV32-NEXT:    lui a0, %hi(e)
-; CHECK-RV32-NEXT:    lw a0, %lo(e)(a0)
 ; CHECK-RV32-NEXT:    lui a1, %hi(f)
+; CHECK-RV32-NEXT:    lw a0, %lo(e)(a0)
 ; CHECK-RV32-NEXT:    lw a1, %lo(f)(a1)
 ; CHECK-RV32-NEXT:    call __addsf3
 ; CHECK-RV32-NEXT:    lui a1, %hi(d)
@@ -382,9 +382,9 @@ define void @foo_double() nounwind #0 {
 ; CHECK-RV32-NEXT:    sw t5, 4(sp) # 4-byte Folded Spill
 ; CHECK-RV32-NEXT:    sw t6, 0(sp) # 4-byte Folded Spill
 ; CHECK-RV32-NEXT:    lui a1, %hi(h)
+; CHECK-RV32-NEXT:    lui a3, %hi(i)
 ; CHECK-RV32-NEXT:    lw a0, %lo(h)(a1)
 ; CHECK-RV32-NEXT:    lw a1, %lo(h+4)(a1)
-; CHECK-RV32-NEXT:    lui a3, %hi(i)
 ; CHECK-RV32-NEXT:    lw a2, %lo(i)(a3)
 ; CHECK-RV32-NEXT:    lw a3, %lo(i+4)(a3)
 ; CHECK-RV32-NEXT:    call __adddf3
@@ -450,9 +450,9 @@ define void @foo_double() nounwind #0 {
 ; CHECK-RV32IF-NEXT:    fsw ft10, 4(sp) # 4-byte Folded Spill
 ; CHECK-RV32IF-NEXT:    fsw ft11, 0(sp) # 4-byte Folded Spill
 ; CHECK-RV32IF-NEXT:    lui a1, %hi(h)
+; CHECK-RV32IF-NEXT:    lui a3, %hi(i)
 ; CHECK-RV32IF-NEXT:    lw a0, %lo(h)(a1)
 ; CHECK-RV32IF-NEXT:    lw a1, %lo(h+4)(a1)
-; CHECK-RV32IF-NEXT:    lui a3, %hi(i)
 ; CHECK-RV32IF-NEXT:    lw a2, %lo(i)(a3)
 ; CHECK-RV32IF-NEXT:    lw a3, %lo(i+4)(a3)
 ; CHECK-RV32IF-NEXT:    call __adddf3
@@ -549,9 +549,9 @@ define void @foo_fp_double() nounwind #1 {
 ; CHECK-RV32-NEXT:    sw t6, 12(sp) # 4-byte Folded Spill
 ; CHECK-RV32-NEXT:    addi s0, sp, 80
 ; CHECK-RV32-NEXT:    lui a1, %hi(h)
+; CHECK-RV32-NEXT:    lui a3, %hi(i)
 ; CHECK-RV32-NEXT:    lw a0, %lo(h)(a1)
 ; CHECK-RV32-NEXT:    lw a1, %lo(h+4)(a1)
-; CHECK-RV32-NEXT:    lui a3, %hi(i)
 ; CHECK-RV32-NEXT:    lw a2, %lo(i)(a3)
 ; CHECK-RV32-NEXT:    lw a3, %lo(i+4)(a3)
 ; CHECK-RV32-NEXT:    call __adddf3
@@ -620,9 +620,9 @@ define void @foo_fp_double() nounwind #1 {
 ; CHECK-RV32IF-NEXT:    fsw ft11, 12(sp) # 4-byte Folded Spill
 ; CHECK-RV32IF-NEXT:    addi s0, sp, 160
 ; CHECK-RV32IF-NEXT:    lui a1, %hi(h)
+; CHECK-RV32IF-NEXT:    lui a3, %hi(i)
 ; CHECK-RV32IF-NEXT:    lw a0, %lo(h)(a1)
 ; CHECK-RV32IF-NEXT:    lw a1, %lo(h+4)(a1)
-; CHECK-RV32IF-NEXT:    lui a3, %hi(i)
 ; CHECK-RV32IF-NEXT:    lw a2, %lo(i)(a3)
 ; CHECK-RV32IF-NEXT:    lw a3, %lo(i+4)(a3)
 ; CHECK-RV32IF-NEXT:    call __adddf3

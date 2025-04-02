@@ -12,6 +12,7 @@
 
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
+#include "lldb/Target/Thread.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;
@@ -87,6 +88,23 @@ void BreakpointSite::GetDescription(Stream *s, lldb::DescriptionLevel level) {
   m_constituents.GetDescription(s, level);
 }
 
+std::optional<uint32_t> BreakpointSite::GetSuggestedStackFrameIndex() {
+
+  std::optional<uint32_t> result;
+  std::lock_guard<std::recursive_mutex> guard(m_constituents_mutex);
+  for (BreakpointLocationSP loc_sp : m_constituents.BreakpointLocations()) {
+    std::optional<uint32_t> loc_frame_index =
+        loc_sp->GetSuggestedStackFrameIndex();
+    if (loc_frame_index) {
+      if (result)
+        result = std::max(*loc_frame_index, *result);
+      else
+        result = loc_frame_index;
+    }
+  }
+  return result;
+}
+
 bool BreakpointSite::IsInternal() const { return m_constituents.IsInternal(); }
 
 uint8_t *BreakpointSite::GetTrapOpcodeBytes() { return &m_trap_opcode[0]; }
@@ -144,6 +162,8 @@ BreakpointLocationSP BreakpointSite::GetConstituentAtIndex(size_t index) {
 
 bool BreakpointSite::ValidForThisThread(Thread &thread) {
   std::lock_guard<std::recursive_mutex> guard(m_constituents_mutex);
+  if (ThreadSP backed_thread = thread.GetBackedThread())
+    return m_constituents.ValidForThisThread(*backed_thread);
   return m_constituents.ValidForThisThread(thread);
 }
 

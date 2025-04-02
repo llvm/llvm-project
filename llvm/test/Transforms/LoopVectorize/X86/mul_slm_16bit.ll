@@ -32,38 +32,38 @@ for.body:                                         ; preds = %for.body.preheader,
   %conv3 = sext i8 %1 to i32
 ; sources of the mul is sext\sext from i8
 ; use pmullw\sext seq.
-; SLM:  cost of 3 for VF 2 {{.*}} mul nsw i32 %conv3, %conv
+; SLM: Cost of 3 for VF 2: WIDEN ir<%mul> = mul nsw ir<%conv3>, ir<%conv>
   %mul = mul nsw i32 %conv3, %conv
 ; sources of the mul is zext\sext from i8
 ; use pmulhw\pmullw\pshuf
-; SLM:  cost of 2 for VF 2 {{.*}} mul nsw i32 %conv4, %conv
+; SLM: Cost of 2 for VF 2: WIDEN ir<%mul2> = mul nsw ir<%conv4>, ir<%conv>
   %conv4 = zext i8 %1 to i32
   %mul2 = mul nsw i32 %conv4, %conv
   %sum0 = add i32 %mul, %mul2
 ; sources of the mul is zext\zext from i8
 ; use pmullw\zext
-; SLM:  cost of 2 for VF 2 {{.*}} mul nsw i32 %conv5, %conv4
+; SLM: Cost of 2 for VF 2: WIDEN ir<%mul3> = mul nsw ir<%conv5>, ir<%conv4>
   %conv5 = zext i8 %0 to i32
   %mul3 = mul nsw i32 %conv5, %conv4
   %sum1 = add i32 %sum0, %mul3
 ; sources of the mul is sext\-120
 ; use pmullw\sext
-; SLM:  cost of 3 for VF 2 {{.*}} mul nsw i32 -120, %conv3
+; SLM: Cost of 3 for VF 2: WIDEN ir<%mul4> = mul nsw ir<-120>, ir<%conv3>
   %mul4 = mul nsw i32 -120, %conv3
   %sum2 = add i32 %sum1, %mul4
 ; sources of the mul is sext\250
 ; use pmulhw\pmullw\pshuf
-; SLM:  cost of 2 for VF 2 {{.*}} mul nsw i32 250, %conv3
+; SLM: Cost of 2 for VF 2: WIDEN ir<%mul5> = mul nsw ir<250>, ir<%conv3>
   %mul5 = mul nsw i32 250, %conv3
   %sum3 = add i32 %sum2, %mul5
 ; sources of the mul is zext\-120
 ; use pmulhw\pmullw\pshuf
-; SLM:  cost of 2 for VF 2 {{.*}} mul nsw i32 -120, %conv4
+; SLM: Cost of 2 for VF 2: WIDEN ir<%mul6> = mul nsw ir<-120>, ir<%conv4>
   %mul6 = mul nsw i32 -120, %conv4
   %sum4 = add i32 %sum3, %mul6
 ; sources of the mul is zext\250
 ; use pmullw\zext
-; SLM:  cost of 2 for VF 2 {{.*}} mul nsw i32 250, %conv4
+; SLM: Cost of 2 for VF 2: WIDEN ir<%mul7> = mul nsw ir<250>, ir<%conv4>
   %mul7 = mul nsw i32 250, %conv4
   %sum5 = add i32 %sum4, %mul7
   %add = add i32 %acc.013, 5
@@ -101,38 +101,38 @@ for.body:                                         ; preds = %for.body.preheader,
   %conv3 = sext i16 %1 to i32
 ; sources of the mul is sext\sext from i16
 ; use pmulhw\pmullw\pshuf seq.
-; SLM:  cost of 3 for VF 4 {{.*}} mul nsw i32 %conv3, %conv
+; SLM: Cost of 2 for VF 4: WIDEN ir<%mul> = mul nsw ir<%conv3>, ir<%conv>
   %mul = mul nsw i32 %conv3, %conv
 ; sources of the mul is zext\sext from i16
 ; use pmulld
-; SLM:  cost of 2 for VF 4 {{.*}} mul nsw i32 %conv4, %conv
+; SLM: Cost of 11 for VF 4: WIDEN ir<%mul2> = mul nsw ir<%conv4>, ir<%conv>
   %conv4 = zext i16 %1 to i32
   %mul2 = mul nsw i32 %conv4, %conv
   %sum0 = add i32 %mul, %mul2
 ; sources of the mul is zext\zext from i16
 ; use pmulhw\pmullw\zext
-; SLM:  cost of 2 for VF 4 {{.*}} mul nsw i32 %conv5, %conv4
+; SLM: Cost of 5 for VF 4: WIDEN ir<%mul3> = mul nsw ir<%conv5>, ir<%conv4>
   %conv5 = zext i16 %0 to i32
   %mul3 = mul nsw i32 %conv5, %conv4
   %sum1 = add i32 %sum0, %mul3
 ; sources of the mul is sext\-32000
 ; use pmulhw\pmullw\sext
-; SLM:  cost of 2 for VF 4 {{.*}} mul nsw i32 -32000, %conv3
+; SLM: Cost of 2 for VF 4: WIDEN ir<%mul4> = mul nsw ir<-32000>, ir<%conv3>
   %mul4 = mul nsw i32 -32000, %conv3
   %sum2 = add i32 %sum1, %mul4
 ; sources of the mul is sext\64000
 ; use pmulld
-; SLM:  cost of 11 for VF 4 {{.*}} mul nsw i32 64000, %conv3
+; SLM: Cost of 11 for VF 4: WIDEN ir<%mul5> = mul nsw ir<64000>, ir<%conv3>
   %mul5 = mul nsw i32 64000, %conv3
   %sum3 = add i32 %sum2, %mul5
 ; sources of the mul is zext\-32000
 ; use pmulld
-; SLM:  cost of 11 for VF 4 {{.*}} mul nsw i32 -32000, %conv4
+; SLM: Cost of 11 for VF 4: WIDEN ir<%mul6> = mul nsw ir<-32000>, ir<%conv4>
   %mul6 = mul nsw i32 -32000, %conv4
   %sum4 = add i32 %sum3, %mul6
 ; sources of the mul is zext\64000
 ; use pmulhw\pmullw\zext
-; SLM:  cost of 5 for VF 4 {{.*}} mul nsw i32 250, %conv4
+; SLM: Cost of 5 for VF 4: WIDEN ir<%mul7> = mul nsw ir<250>, ir<%conv4>
   %mul7 = mul nsw i32 250, %conv4
   %sum5 = add i32 %sum4, %mul7
   %add = add i32 %acc.013, 5

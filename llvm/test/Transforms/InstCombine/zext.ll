@@ -20,7 +20,7 @@ define i64 @test_sext_zext(i16 %A) {
 
 define <2 x i64> @test2(<2 x i1> %A) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i1> [[A:%.*]], splat (i1 true)
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i1> [[XOR]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[ZEXT]]
 ;
@@ -67,7 +67,7 @@ define i64 @fold_xor_zext_sandwich(i1 %a) {
 
 define <2 x i64> @fold_xor_zext_sandwich_vec(<2 x i1> %a) {
 ; CHECK-LABEL: @fold_xor_zext_sandwich_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i1> [[A:%.*]], splat (i1 true)
 ; CHECK-NEXT:    [[ZEXT2:%.*]] = zext <2 x i1> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[ZEXT2]]
 ;
@@ -194,9 +194,9 @@ define i32 @masked_bit_set(i32 %x, i32 %y) {
 
 define <2 x i32> @masked_bit_clear(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @masked_bit_clear(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[X:%.*]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[X:%.*]], splat (i32 -1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr <2 x i32> [[TMP1]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[TMP2]], <i32 1, i32 1>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[TMP2]], splat (i32 1)
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %sh1 = shl <2 x i32> <i32 1, i32 1>, %y
@@ -210,7 +210,7 @@ define <2 x i32> @masked_bit_set_commute(<2 x i32> %px, <2 x i32> %y) {
 ; CHECK-LABEL: @masked_bit_set_commute(
 ; CHECK-NEXT:    [[X:%.*]] = srem <2 x i32> <i32 42, i32 3>, [[PX:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[TMP1]], <i32 1, i32 1>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[TMP1]], splat (i32 1)
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %x = srem <2 x i32> <i32 42, i32 3>, %px ; thwart complexity-based canonicalization
@@ -471,10 +471,10 @@ define i16 @zext_masked_bit_zero_to_smaller_bitwidth(i32 %a, i32 %b) {
 
 define <4 x i16> @zext_masked_bit_zero_to_smaller_bitwidth_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @zext_masked_bit_zero_to_smaller_bitwidth_v4i32(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i32> [[A:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i32> [[A:%.*]], splat (i32 -1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr <4 x i32> [[TMP1]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc <4 x i32> [[TMP2]] to <4 x i16>
-; CHECK-NEXT:    [[Z:%.*]] = and <4 x i16> [[TMP3]], <i16 1, i16 1, i16 1, i16 1>
+; CHECK-NEXT:    [[Z:%.*]] = and <4 x i16> [[TMP3]], splat (i16 1)
 ; CHECK-NEXT:    ret <4 x i16> [[Z]]
 ;
   %shl = shl <4 x i32> <i32 1, i32 1, i32 1, i32 1>, %b
@@ -550,9 +550,9 @@ define i64 @zext_masked_bit_zero_to_larger_bitwidth(i32 %a, i32 %b) {
 
 define <4 x i64> @zext_masked_bit_zero_to_larger_bitwidth_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @zext_masked_bit_zero_to_larger_bitwidth_v4i32(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i32> [[A:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i32> [[A:%.*]], splat (i32 -1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr <4 x i32> [[TMP1]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and <4 x i32> [[TMP2]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = and <4 x i32> [[TMP2]], splat (i32 1)
 ; CHECK-NEXT:    [[Z:%.*]] = zext nneg <4 x i32> [[TMP3]] to <4 x i64>
 ; CHECK-NEXT:    ret <4 x i64> [[Z]]
 ;
@@ -576,7 +576,7 @@ define i32 @notneg_zext_wider(i8 %x) {
 
 define <2 x i8> @notneg_zext_narrower(<2 x i32> %x) {
 ; CHECK-LABEL: @notneg_zext_narrower(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> [[X:%.*]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> [[X:%.*]], splat (i32 -1)
 ; CHECK-NEXT:    [[R:%.*]] = zext <2 x i1> [[CMP]] to <2 x i8>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;

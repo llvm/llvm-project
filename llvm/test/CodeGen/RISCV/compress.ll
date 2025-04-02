@@ -32,9 +32,9 @@
 define i32 @simple_arith(i32 %a, i32 %b) #0 {
 ; RV32IC-LABEL: <simple_arith>:
 ; RV32IC:         addi a2, a0, 0x1
+; RV32IC-NEXT:    c.srai a1, 0x9
 ; RV32IC-NEXT:    c.andi a2, 0xb
 ; RV32IC-NEXT:    c.slli a2, 0x7
-; RV32IC-NEXT:    c.srai a1, 0x9
 ; RV32IC-NEXT:    sub a0, a1, a0
 ; RV32IC-NEXT:    c.add a0, a2
 ; RV32IC-NEXT:    c.jr ra

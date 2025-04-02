@@ -830,7 +830,7 @@ define float @ldexp_127(float %x) {
 define <2 x float> @ldexp_3_vector(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @ldexp_3_vector
 ; CHECK-SAME: (<2 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[LDEXP:%.*]] = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> [[X]], <2 x i32> <i32 3, i32 3>)
+; CHECK-NEXT:    [[LDEXP:%.*]] = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> [[X]], <2 x i32> splat (i32 3))
 ; CHECK-NEXT:    ret <2 x float> [[LDEXP]]
 ;
   %ldexp = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> %x, <2 x i32> <i32 3, i32 3>)

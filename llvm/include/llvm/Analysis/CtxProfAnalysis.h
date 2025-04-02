@@ -9,7 +9,7 @@
 #ifndef LLVM_ANALYSIS_CTXPROFANALYSIS_H
 #define LLVM_ANALYSIS_CTXPROFANALYSIS_H
 
-#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -21,12 +21,6 @@ namespace llvm {
 
 class CtxProfAnalysis;
 
-// Setting initial capacity to 1 because all contexts must have at least 1
-// counter, and then, because all contexts belonging to a function have the same
-// size, there'll be at most one other heap allocation.
-using CtxProfFlatProfile =
-    DenseMap<GlobalValue::GUID, SmallVector<uint64_t, 1>>;
-
 /// The instrumented contextual profile, produced by the CtxProfAnalysis.
 class PGOContextualProfile {
   friend class CtxProfAnalysis;
@@ -35,13 +29,13 @@ class PGOContextualProfile {
     uint32_t NextCounterIndex = 0;
     uint32_t NextCallsiteIndex = 0;
     const std::string Name;
-
+    PGOCtxProfContext Index;
     FunctionInfo(StringRef Name) : Name(Name) {}
   };
-  std::optional<PGOCtxProfContext::CallTargetMapTy> Profiles;
+  PGOCtxProfile Profiles;
   // For the GUIDs in this module, associate metadata about each function which
   // we'll need when we maintain the profiles during IPO transformations.
-  DenseMap<GlobalValue::GUID, FunctionInfo> FuncInfo;
+  std::map<GlobalValue::GUID, FunctionInfo> FuncInfo;
 
   /// Get the GUID of this Function if it's defined in this module.
   GlobalValue::GUID getDefinedFunctionGUID(const Function &F) const;
@@ -50,18 +44,27 @@ class PGOContextualProfile {
   // its state piecemeal.
   PGOContextualProfile() = default;
 
+  void initIndex();
+
 public:
   PGOContextualProfile(const PGOContextualProfile &) = delete;
   PGOContextualProfile(PGOContextualProfile &&) = default;
 
-  operator bool() const { return Profiles.has_value(); }
-
-  const PGOCtxProfContext::CallTargetMapTy &profiles() const {
-    return *Profiles;
+  const CtxProfContextualProfiles &contexts() const {
+    return Profiles.Contexts;
   }
+
+  const PGOCtxProfile &profiles() const { return Profiles; }
 
   bool isFunctionKnown(const Function &F) const {
     return getDefinedFunctionGUID(F) != 0;
+  }
+
+  StringRef getFunctionName(GlobalValue::GUID GUID) const {
+    auto It = FuncInfo.find(GUID);
+    if (It == FuncInfo.end())
+      return "";
+    return It->second.Name;
   }
 
   uint32_t getNumCounters(const Function &F) const {
@@ -87,7 +90,7 @@ public:
   using ConstVisitor = function_ref<void(const PGOCtxProfContext &)>;
   using Visitor = function_ref<void(PGOCtxProfContext &)>;
 
-  void update(Visitor, const Function *F = nullptr);
+  void update(Visitor, const Function &F);
   void visit(ConstVisitor, const Function *F = nullptr) const;
 
   const CtxProfFlatProfile flatten() const;
@@ -118,12 +121,20 @@ public:
 
   /// Get the instruction instrumenting a BB, or nullptr if not present.
   static InstrProfIncrementInst *getBBInstrumentation(BasicBlock &BB);
+
+  /// Get the step instrumentation associated with a `select`
+  static InstrProfIncrementInstStep *getSelectInstrumentation(SelectInst &SI);
+
+  // FIXME: refactor to an advisor model, and separate
+  static void collectIndirectCallPromotionList(
+      CallBase &IC, Result &Profile,
+      SetVector<std::pair<CallBase *, Function *>> &Candidates);
 };
 
 class CtxProfAnalysisPrinterPass
     : public PassInfoMixin<CtxProfAnalysisPrinterPass> {
 public:
-  enum class PrintMode { Everything, JSON };
+  enum class PrintMode { Everything, YAML };
   explicit CtxProfAnalysisPrinterPass(raw_ostream &OS);
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);

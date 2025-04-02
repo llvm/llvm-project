@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5  -O3 -disable-hsdr < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv5 -O3 -disable-hsdr < %s | FileCheck %s
 
 ; Check that we combine TFRs and TFRIs into COMBINEs.
 

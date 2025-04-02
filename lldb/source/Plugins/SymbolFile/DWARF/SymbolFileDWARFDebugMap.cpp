@@ -248,9 +248,8 @@ SymbolFile *SymbolFileDWARFDebugMap::CreateInstance(ObjectFileSP objfile_sp) {
 }
 
 SymbolFileDWARFDebugMap::SymbolFileDWARFDebugMap(ObjectFileSP objfile_sp)
-    : SymbolFileCommon(std::move(objfile_sp)), m_flags(), m_compile_unit_infos(),
-      m_func_indexes(), m_glob_indexes(),
-      m_supports_DW_AT_APPLE_objc_complete_type(eLazyBoolCalculate) {}
+    : SymbolFileCommon(std::move(objfile_sp)), m_flags(),
+      m_compile_unit_infos(), m_func_indexes(), m_glob_indexes() {}
 
 SymbolFileDWARFDebugMap::~SymbolFileDWARFDebugMap() = default;
 
@@ -1062,8 +1061,7 @@ static void RemoveFunctionsWithModuleNotEqualTo(const ModuleSP &module_sp,
     SymbolContext sc;
     sc_list.GetContextAtIndex(i, sc);
     if (sc.function) {
-      const SectionSP section_sp(
-          sc.function->GetAddressRange().GetBaseAddress().GetSection());
+      const SectionSP section_sp = sc.function->GetAddress().GetSection();
       if (section_sp->GetModule() != module_sp) {
         sc_list.RemoveContextAtIndex(i);
         continue;
@@ -1155,22 +1153,6 @@ DWARFDIE SymbolFileDWARFDebugMap::FindDefinitionDIE(const DWARFDIE &die) {
     return result ? IterationAction::Stop : IterationAction::Continue;
   });
   return result;
-}
-
-bool SymbolFileDWARFDebugMap::Supports_DW_AT_APPLE_objc_complete_type(
-    SymbolFileDWARF *skip_dwarf_oso) {
-  if (m_supports_DW_AT_APPLE_objc_complete_type == eLazyBoolCalculate) {
-    m_supports_DW_AT_APPLE_objc_complete_type = eLazyBoolNo;
-    ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) {
-      if (skip_dwarf_oso != oso_dwarf &&
-          oso_dwarf->Supports_DW_AT_APPLE_objc_complete_type(nullptr)) {
-        m_supports_DW_AT_APPLE_objc_complete_type = eLazyBoolYes;
-        return IterationAction::Stop;
-      }
-      return IterationAction::Continue;
-    });
-  }
-  return m_supports_DW_AT_APPLE_objc_complete_type == eLazyBoolYes;
 }
 
 TypeSP SymbolFileDWARFDebugMap::FindCompleteObjCDefinitionTypeForDIE(

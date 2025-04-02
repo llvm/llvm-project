@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/GPU/utils.h"
 #include "src/__support/RPC/rpc_client.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
@@ -16,9 +17,10 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void, abort, ()) {
   // We want to first make sure the server is listening before we abort.
-  rpc::Client::Port port = rpc::client.open<RPC_ABORT>();
-  port.send_and_recv([](rpc::Buffer *) {}, [](rpc::Buffer *) {});
-  port.send([&](rpc::Buffer *) {});
+  rpc::Client::Port port = rpc::client.open<LIBC_ABORT>();
+  port.send_and_recv([](rpc::Buffer *, uint32_t) {},
+                     [](rpc::Buffer *, uint32_t) {});
+  port.send([&](rpc::Buffer *, uint32_t) {});
   port.close();
 
   gpu::end_program();

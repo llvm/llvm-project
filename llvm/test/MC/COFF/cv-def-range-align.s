@@ -48,7 +48,9 @@ max:                                    # @max
 .LBB0_2:                                # %cond.false
 	movl	4(%rsp), %eax
 .LBB0_3:                                # %cond.end
+	.seh_startepilogue
 	popq	%rcx
+	.seh_endepilogue
 	retq
 .Ltmp1:
 .Lfunc_end0:

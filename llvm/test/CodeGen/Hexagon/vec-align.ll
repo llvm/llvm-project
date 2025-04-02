@@ -1,4 +1,4 @@
-; RUN: llc -O0 -march=hexagon < %s | FileCheck %s
+; RUN: llc -O0 -mtriple=hexagon < %s | FileCheck %s
 
 ; Make sure we generate stack alignment.
 ; CHECK: [[REG1:r[0-9]*]] = and(r29,#-64)

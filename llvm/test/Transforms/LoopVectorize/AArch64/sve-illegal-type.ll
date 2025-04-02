@@ -83,7 +83,7 @@ for.end:
 define dso_local void @loop_fixed_width_i128(ptr nocapture %ptr, i64 %N) {
 ; CHECK-LABEL: @loop_fixed_width_i128
 ; CHECK: load <4 x i128>, ptr
-; CHECK: add nsw <4 x i128> {{.*}}, <i128 42, i128 42, i128 42, i128 42>
+; CHECK: add nsw <4 x i128> {{.*}}, splat (i128 42)
 ; CHECK: store <4 x i128> {{.*}} ptr
 ; CHECK-NOT: vscale
 entry:

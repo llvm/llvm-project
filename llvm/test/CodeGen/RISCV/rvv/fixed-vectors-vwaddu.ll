@@ -773,8 +773,8 @@ define <2 x i64> @vwaddu_vx_v2i64_i8(ptr %x, ptr %y) nounwind {
 ; RV32-NEXT:    lbu a1, 0(a1)
 ; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV32-NEXT:    vle32.v v9, (a0)
-; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vlse64.v v8, (a0), zero
 ; RV32-NEXT:    vwaddu.wv v8, v8, v9
@@ -805,8 +805,8 @@ define <2 x i64> @vwaddu_vx_v2i64_i16(ptr %x, ptr %y) nounwind {
 ; RV32-NEXT:    lhu a1, 0(a1)
 ; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV32-NEXT:    vle32.v v9, (a0)
-; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vlse64.v v8, (a0), zero
 ; RV32-NEXT:    vwaddu.wv v8, v8, v9
@@ -837,8 +837,8 @@ define <2 x i64> @vwaddu_vx_v2i64_i32(ptr %x, ptr %y) nounwind {
 ; RV32-NEXT:    lw a1, 0(a1)
 ; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV32-NEXT:    vle32.v v9, (a0)
-; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    sw zero, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vlse64.v v8, (a0), zero
 ; RV32-NEXT:    vwaddu.wv v8, v8, v9
@@ -866,12 +866,12 @@ define <2 x i64> @vwaddu_vx_v2i64_i64(ptr %x, ptr %y) nounwind {
 ; RV32-LABEL: vwaddu_vx_v2i64_i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    lw a2, 4(a1)
-; RV32-NEXT:    lw a1, 0(a1)
+; RV32-NEXT:    lw a2, 0(a1)
+; RV32-NEXT:    lw a1, 4(a1)
 ; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV32-NEXT:    vle32.v v9, (a0)
-; RV32-NEXT:    sw a2, 12(sp)
-; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    sw a2, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vlse64.v v8, (a0), zero
 ; RV32-NEXT:    vwaddu.wv v8, v8, v9
@@ -900,11 +900,12 @@ define <4 x i64> @crash(<4 x i16> %x, <4 x i16> %y) {
 ; CHECK-LABEL: crash:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vsext.vf4 v10, v8
+; CHECK-NEXT:    vmv1r.v v10, v9
+; CHECK-NEXT:    vmv1r.v v11, v8
+; CHECK-NEXT:    vsext.vf4 v8, v11
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vzext.vf2 v8, v9
-; CHECK-NEXT:    vwaddu.wv v10, v10, v8
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vzext.vf2 v11, v10
+; CHECK-NEXT:    vwaddu.wv v8, v8, v11
 ; CHECK-NEXT:    ret
   %a = sext <4 x i16> %x to <4 x i64>
   %b = zext <4 x i16> %y to <4 x i64>

@@ -100,6 +100,8 @@ set(LLVM_ENABLE_PIC @LLVM_ENABLE_PIC@)
 
 set(LLVM_BUILD_32_BITS @LLVM_BUILD_32_BITS@)
 
+set(LLVM_ENABLE_TELEMETRY @LLVM_ENABLE_TELEMETRY@)
+
 if (NOT "@LLVM_PTHREAD_LIB@" STREQUAL "")
   set(LLVM_PTHREAD_LIB "@LLVM_PTHREAD_LIB@")
 endif()
@@ -150,6 +152,9 @@ endif()
 # whether building in-tree with LLVM or not.
 if(NOT TARGET intrinsics_gen)
   add_custom_target(intrinsics_gen)
+endif()
+if(NOT TARGET vt_gen)
+  add_custom_target(vt_gen)
 endif()
 if(NOT TARGET omp_gen)
   add_custom_target(omp_gen)

@@ -9,6 +9,8 @@
 #ifndef LLDB_UTILITY_STATUS_H
 #define LLDB_UTILITY_STATUS_H
 
+#include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/StringRef.h"
@@ -26,7 +28,58 @@ class raw_ostream;
 
 namespace lldb_private {
 
-const char *ExpressionResultAsCString(lldb::ExpressionResults result);
+/// Going a bit against the spirit of llvm::Error,
+/// lldb_private::Status need to store errors long-term and sometimes
+/// copy them. This base class defines an interface for this
+/// operation.
+class CloneableError
+    : public llvm::ErrorInfo<CloneableError, llvm::ErrorInfoBase> {
+public:
+  using llvm::ErrorInfo<CloneableError, llvm::ErrorInfoBase>::ErrorInfo;
+  CloneableError() : ErrorInfo() {}
+  virtual std::unique_ptr<CloneableError> Clone() const = 0;
+  virtual lldb::ErrorType GetErrorType() const = 0;
+  virtual StructuredData::ObjectSP GetAsStructuredData() const = 0;
+  static char ID;
+};
+
+/// Common base class for all error-code errors.
+class CloneableECError
+    : public llvm::ErrorInfo<CloneableECError, CloneableError> {
+public:
+  using llvm::ErrorInfo<CloneableECError, CloneableError>::ErrorInfo;
+  std::error_code convertToErrorCode() const override { return EC; }
+  void log(llvm::raw_ostream &OS) const override { OS << EC.message(); }
+  lldb::ErrorType GetErrorType() const override;
+  virtual StructuredData::ObjectSP GetAsStructuredData() const override;
+  static char ID;
+
+protected:
+  CloneableECError() = delete;
+  CloneableECError(std::error_code ec) : ErrorInfo(), EC(ec) {}
+  std::error_code EC;
+};
+/// FIXME: Move these declarations closer to where they're used.
+class MachKernelError
+    : public llvm::ErrorInfo<MachKernelError, CloneableECError> {
+public:
+  using llvm::ErrorInfo<MachKernelError, CloneableECError>::ErrorInfo;
+  MachKernelError(std::error_code ec) : ErrorInfo(ec) {}
+  std::string message() const override;
+  std::unique_ptr<CloneableError> Clone() const override;
+  lldb::ErrorType GetErrorType() const override;
+  static char ID;
+};
+
+class Win32Error : public llvm::ErrorInfo<Win32Error, CloneableECError> {
+public:
+  using llvm::ErrorInfo<Win32Error, CloneableECError>::ErrorInfo;
+  Win32Error(std::error_code ec, const llvm::Twine &msg = {}) : ErrorInfo(ec) {}
+  std::string message() const override;
+  std::unique_ptr<CloneableError> Clone() const override;
+  lldb::ErrorType GetErrorType() const override;
+  static char ID;
+};
 
 /// \class Status Status.h "lldb/Utility/Status.h" An error handling class.
 ///
@@ -99,11 +152,6 @@ public:
     return Status(llvm::formatv(format, std::forward<Args>(args)...));
   }
 
-  static Status FromExpressionError(lldb::ExpressionResults result,
-                                    std::string msg) {
-    return Status(result, lldb::eErrorTypeExpression, msg);
-  }
-
   /// Set the current error to errno.
   ///
   /// Update the error value to be \c errno and update the type to be \c
@@ -115,8 +163,12 @@ public:
   const Status &operator=(Status &&);
   /// Avoid using this in new code. Migrate APIs to llvm::Expected instead.
   static Status FromError(llvm::Error error);
-  /// FIXME: Replace this with a takeError() method.
+
+  /// FIXME: Replace all uses with takeError() instead.
   llvm::Error ToError() const;
+
+  llvm::Error takeError() { return std::move(m_error); }
+
   /// Don't call this function in new code. Instead, redesign the API
   /// to use llvm::Expected instead of Status.
   Status Clone() const { return Status(ToError()); }
@@ -134,6 +186,9 @@ public:
   ///     NULL otherwise.
   const char *AsCString(const char *default_error_str = "unknown error") const;
 
+  /// Get the error in machine-readable form.
+  StructuredData::ObjectSP GetAsStructuredData() const;
+
   /// Clear the object state.
   ///
   /// Reverts the state of this object to contain a generic success value and
@@ -149,11 +204,19 @@ public:
 
   /// Access the error value.
   ///
+  /// If the internally stored \ref llvm::Error is an \ref
+  /// llvm::ErrorList then this returns the error value of the first
+  /// error.
+  ///
   /// \return
   ///     The error value.
   ValueType GetError() const;
 
   /// Access the error type.
+  ///
+  /// If the internally stored \ref llvm::Error is an \ref
+  /// llvm::ErrorList then this returns the error value of the first
+  /// error.
   ///
   /// \return
   ///     The error type enumeration value.
@@ -170,12 +233,9 @@ public:
   bool Success() const;
 
 protected:
-  Status(llvm::Error error);
-  /// Status code as an integer value.
-  ValueType m_code = 0;
-  /// The type of the above error code.
-  lldb::ErrorType m_type = lldb::eErrorTypeInvalid;
-  /// A string representation of the error code.
+  Status(llvm::Error error) : m_error(std::move(error)) {}
+  llvm::Error m_error;
+  /// TODO: Replace this with just calling toString(m_error).
   mutable std::string m_string;
 };
 

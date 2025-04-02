@@ -114,13 +114,17 @@ define void @f_non_leaf(i32 %x, i32 %y) !prof !14 {
 ; WIN64-NEXT:    jne .LBB1_2 # encoding: [0x75,A]
 ; WIN64-NEXT:    # fixup A - offset: 1, value: .LBB1_2-1, kind: FK_PCRel_1
 ; WIN64-NEXT:  # %bb.1: # %bb1
+; WIN64-NEXT:    .seh_startepilogue
 ; WIN64-NEXT:    popq %rbx # encoding: [0x5b]
+; WIN64-NEXT:    .seh_endepilogue
 ; WIN64-NEXT:    jmp foo # TAILCALL
 ; WIN64-NEXT:    # encoding: [0xeb,A]
 ; WIN64-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
 ; WIN64-NEXT:  .LBB1_2: # %bb2
 ; WIN64-NEXT:    nop # encoding: [0x90]
+; WIN64-NEXT:    .seh_startepilogue
 ; WIN64-NEXT:    popq %rbx # encoding: [0x5b]
+; WIN64-NEXT:    .seh_endepilogue
 ; WIN64-NEXT:    jmp bar # TAILCALL
 ; WIN64-NEXT:    # encoding: [0xeb,A]
 ; WIN64-NEXT:    # fixup A - offset: 1, value: bar-1, kind: FK_PCRel_1

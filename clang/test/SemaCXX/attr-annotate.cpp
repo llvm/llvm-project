@@ -134,3 +134,7 @@ constexpr int foldable_but_invalid() {
 template <typename T> [[clang::annotate()]] void f2() {}
 // expected-error@-1 {{'annotate' attribute takes at least 1 argument}}
 }
+
+namespace test5 {
+  void bir [[clang::annotate("B", (void)1)]] ();
+}

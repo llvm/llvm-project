@@ -138,9 +138,8 @@ static bool ReadAddress(ExecutionContextScope *exe_scope,
     // If we have any sections that are loaded, try and resolve using the
     // section load list
     Target *target = exe_ctx.GetTargetPtr();
-    if (target && !target->GetSectionLoadList().IsEmpty()) {
-      if (target->GetSectionLoadList().ResolveLoadAddress(deref_addr,
-                                                          deref_so_addr))
+    if (target && target->HasLoadedSections()) {
+      if (target->ResolveLoadAddress(deref_addr, deref_so_addr))
         return true;
     } else {
       // If we were not running, yet able to read an integer, we must have a
@@ -1046,8 +1045,9 @@ AddressClass Address::GetAddressClass() const {
 
 bool Address::SetLoadAddress(lldb::addr_t load_addr, Target *target,
                              bool allow_section_end) {
-  if (target && target->GetSectionLoadList().ResolveLoadAddress(
-                    load_addr, *this, allow_section_end))
+  if (target && target->ResolveLoadAddress(load_addr, *this,
+                                           SectionLoadHistory::eStopIDNow,
+                                           allow_section_end))
     return true;
   m_section_wp.reset();
   m_offset = load_addr;

@@ -97,7 +97,12 @@ DiagnosticPrinter &DiagnosticPrinterRawOStream::operator<<(const Twine &Str) {
 
 // IR related types.
 DiagnosticPrinter &DiagnosticPrinterRawOStream::operator<<(const Value &V) {
-  Stream << V.getName();
+  // Avoid printing '@' prefix for named functions.
+  if (V.hasName())
+    Stream << V.getName();
+  else
+    V.printAsOperand(Stream, /*PrintType=*/false);
+
   return *this;
 }
 

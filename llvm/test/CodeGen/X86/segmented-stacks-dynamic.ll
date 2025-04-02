@@ -24,9 +24,9 @@ define i32 @test_basic(i32 %l) #0 {
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    .cfi_offset %esi, -12
 ; X86-NEXT:    movl 8(%ebp), %esi
+; X86-NEXT:    movl %esp, %eax
 ; X86-NEXT:    leal 15(,%esi,4), %ecx
 ; X86-NEXT:    andl $-16, %ecx
-; X86-NEXT:    movl %esp, %eax
 ; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    cmpl %eax, %gs:48
 ; X86-NEXT:    jg .LBB0_4
@@ -39,17 +39,17 @@ define i32 @test_basic(i32 %l) #0 {
 ; X86-NEXT:    calll __morestack_allocate_stack_space
 ; X86-NEXT:    addl $16, %esp
 ; X86-NEXT:  .LBB0_5:
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    pushl %eax
+; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    calll dummy_use@PLT
 ; X86-NEXT:    addl $16, %esp
 ; X86-NEXT:    testl %esi, %esi
 ; X86-NEXT:    je .LBB0_6
 ; X86-NEXT:  # %bb.8: # %false
 ; X86-NEXT:    decl %esi
-; X86-NEXT:    subl $12, %esp
-; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    movl %esi, (%esp)
 ; X86-NEXT:    calll test_basic@PLT
 ; X86-NEXT:    jmp .LBB0_7
 ; X86-NEXT:  .LBB0_6: # %true
@@ -83,10 +83,10 @@ define i32 @test_basic(i32 %l) #0 {
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    .cfi_offset %rbx, -24
 ; X64-NEXT:    movl %edi, %ebx
-; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movq %rsp, %rdi
+; X64-NEXT:    movl %ebx, %eax
 ; X64-NEXT:    leaq 15(,%rax,4), %rax
 ; X64-NEXT:    andq $-16, %rax
-; X64-NEXT:    movq %rsp, %rdi
 ; X64-NEXT:    subq %rax, %rdi
 ; X64-NEXT:    cmpq %rdi, %fs:112
 ; X64-NEXT:    jg .LBB0_4

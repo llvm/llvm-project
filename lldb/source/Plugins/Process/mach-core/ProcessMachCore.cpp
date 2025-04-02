@@ -114,6 +114,7 @@ ProcessMachCore::ProcessMachCore(lldb::TargetSP target_sp,
     : PostMortemProcess(target_sp, listener_sp, core_file), m_core_aranges(),
       m_core_range_infos(), m_core_module_sp(),
       m_dyld_addr(LLDB_INVALID_ADDRESS),
+      m_dyld_all_image_infos_addr(LLDB_INVALID_ADDRESS),
       m_mach_kernel_addr(LLDB_INVALID_ADDRESS) {}
 
 // Destructor
@@ -320,6 +321,9 @@ bool ProcessMachCore::LoadBinariesViaMetadata() {
     } else if (type == ObjectFile::eBinaryTypeUser) {
       m_dyld_addr = objfile_binary_value;
       m_dyld_plugin_name = DynamicLoaderMacOSXDYLD::GetPluginNameStatic();
+    } else if (type == ObjectFile::eBinaryTypeUserAllImageInfos) {
+      m_dyld_all_image_infos_addr = objfile_binary_value;
+      m_dyld_plugin_name = DynamicLoaderMacOSXDYLD::GetPluginNameStatic();
     } else {
       const bool force_symbol_search = true;
       const bool notify = true;
@@ -466,6 +470,7 @@ void ProcessMachCore::LoadBinariesViaExhaustiveSearch() {
   addr_t saved_user_dyld_addr = m_dyld_addr;
   m_mach_kernel_addr = LLDB_INVALID_ADDRESS;
   m_dyld_addr = LLDB_INVALID_ADDRESS;
+  m_dyld_all_image_infos_addr = LLDB_INVALID_ADDRESS;
 
   addr_t better_kernel_address =
       DynamicLoaderDarwinKernel::SearchForDarwinKernel(this);
@@ -507,6 +512,12 @@ void ProcessMachCore::LoadBinariesAndSetDYLD() {
                   "image at 0x%" PRIx64,
                   __FUNCTION__, m_dyld_addr);
         m_dyld_plugin_name = DynamicLoaderMacOSXDYLD::GetPluginNameStatic();
+      } else if (m_dyld_all_image_infos_addr != LLDB_INVALID_ADDRESS) {
+        LLDB_LOGF(log,
+                  "ProcessMachCore::%s: Using user process dyld "
+                  "dyld_all_image_infos at 0x%" PRIx64,
+                  __FUNCTION__, m_dyld_all_image_infos_addr);
+        m_dyld_plugin_name = DynamicLoaderMacOSXDYLD::GetPluginNameStatic();
       }
     } else {
       if (m_dyld_addr != LLDB_INVALID_ADDRESS) {
@@ -515,6 +526,11 @@ void ProcessMachCore::LoadBinariesAndSetDYLD() {
                   "image at 0x%" PRIx64,
                   __FUNCTION__, m_dyld_addr);
         m_dyld_plugin_name = DynamicLoaderMacOSXDYLD::GetPluginNameStatic();
+      } else if (m_dyld_all_image_infos_addr != LLDB_INVALID_ADDRESS) {
+        LLDB_LOGF(log,
+                  "ProcessMachCore::%s: Using user process dyld "
+                  "dyld_all_image_infos at 0x%" PRIx64,
+                  __FUNCTION__, m_dyld_all_image_infos_addr);
       } else if (m_mach_kernel_addr != LLDB_INVALID_ADDRESS) {
         LLDB_LOGF(log,
                   "ProcessMachCore::%s: Using kernel "
@@ -763,19 +779,32 @@ void ProcessMachCore::Initialize() {
 }
 
 addr_t ProcessMachCore::GetImageInfoAddress() {
-  // If we found both a user-process dyld and a kernel binary, we need to
-  // decide which to prefer.
+  // The DynamicLoader plugin will call back in to this Process
+  // method to find the virtual address of one of these:
+  //   1. The xnu mach kernel binary Mach-O header
+  //   2. The dyld binary Mach-O header
+  //   3. dyld's dyld_all_image_infos object
+  //
+  //  DynamicLoaderMacOSX will accept either the dyld Mach-O header
+  //  address or the dyld_all_image_infos interchangably, no need
+  //  to distinguish between them.  It disambiguates by the Mach-O
+  //  file magic number at the start.
   if (GetCorefilePreference() == eKernelCorefile) {
-    if (m_mach_kernel_addr != LLDB_INVALID_ADDRESS) {
+    if (m_mach_kernel_addr != LLDB_INVALID_ADDRESS)
       return m_mach_kernel_addr;
-    }
-    return m_dyld_addr;
-  } else {
-    if (m_dyld_addr != LLDB_INVALID_ADDRESS) {
+    if (m_dyld_addr != LLDB_INVALID_ADDRESS)
       return m_dyld_addr;
-    }
-    return m_mach_kernel_addr;
+  } else {
+    if (m_dyld_addr != LLDB_INVALID_ADDRESS)
+      return m_dyld_addr;
+    if (m_mach_kernel_addr != LLDB_INVALID_ADDRESS)
+      return m_mach_kernel_addr;
   }
+
+  // m_dyld_addr and m_mach_kernel_addr both
+  // invalid, return m_dyld_all_image_infos_addr
+  // in case it has a useful value.
+  return m_dyld_all_image_infos_addr;
 }
 
 lldb_private::ObjectFile *ProcessMachCore::GetCoreObjectFile() {

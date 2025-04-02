@@ -40,10 +40,10 @@ body:             |
   
   bb.5:
     successors: %bb.6(0x04000000), %bb.2(0x7c000000)
-    ; CHECK: DIVERGENT: %{{[0-9]}}: %{{[0-9]}}:_(s32) = G_PHI
-    ; CHECK: DIVERGENT: %{{[0-9]}}: %{{[0-9]}}:_(s32) = G_PHI
-    ; CHECK: DIVERGENT: %{{[0-9]}}: %{{[0-9]}}:_(s32) = G_PHI
-    ; CHECK-NOT: DIVERGENT: %{{[0-9]}}: %{{[0-9]}}:sreg_32_xm0_xexec(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break)
+    ; CHECK-NOT: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_PHI
+    ; CHECK-NOT: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_PHI
+    ; CHECK:     DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1) = G_PHI
+    ; CHECK-NOT: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:sreg_32_xm0_xexec(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break)
     %19:_(s32) = G_PHI %18(s32), %bb.7, %25(s32), %bb.4
     %20:_(s32) = G_PHI %6(s32), %bb.7, %25(s32), %bb.4
     %21:_(s1) = G_PHI %34(s1), %bb.7, %33(s1), %bb.4

@@ -24,7 +24,7 @@ define i64 @test1(i64 %a) {
 define <2 x i64> @test1_vec(<2 x i64> %a) {
 ; CHECK-LABEL: @test1_vec(
 ; CHECK-NEXT:    [[B:%.*]] = trunc <2 x i64> [[A:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[D:%.*]] = and <2 x i64> [[A]], <i64 15, i64 15>
+; CHECK-NEXT:    [[D:%.*]] = and <2 x i64> [[A]], splat (i64 15)
 ; CHECK-NEXT:    call void @use_vec(<2 x i32> [[B]])
 ; CHECK-NEXT:    ret <2 x i64> [[D]]
 ;
@@ -82,8 +82,8 @@ define i64 @test2(i64 %a) {
 define <2 x i64> @test2_vec(<2 x i64> %a) {
 ; CHECK-LABEL: @test2_vec(
 ; CHECK-NEXT:    [[B:%.*]] = trunc <2 x i64> [[A:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[D1:%.*]] = shl <2 x i64> [[A]], <i64 36, i64 36>
-; CHECK-NEXT:    [[D:%.*]] = ashr exact <2 x i64> [[D1]], <i64 36, i64 36>
+; CHECK-NEXT:    [[D1:%.*]] = shl <2 x i64> [[A]], splat (i64 36)
+; CHECK-NEXT:    [[D:%.*]] = ashr exact <2 x i64> [[D1]], splat (i64 36)
 ; CHECK-NEXT:    call void @use_vec(<2 x i32> [[B]])
 ; CHECK-NEXT:    ret <2 x i64> [[D]]
 ;
@@ -229,8 +229,8 @@ define i32 @trunc_ashr(i32 %X) {
 
 define <2 x i32> @trunc_ashr_vec(<2 x i32> %X) {
 ; CHECK-LABEL: @trunc_ashr_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 8, i32 8>
-; CHECK-NEXT:    [[C:%.*]] = or <2 x i32> [[TMP1]], <i32 -8388608, i32 -8388608>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X:%.*]], splat (i32 8)
+; CHECK-NEXT:    [[C:%.*]] = or <2 x i32> [[TMP1]], splat (i32 -8388608)
 ; CHECK-NEXT:    ret <2 x i32> [[C]]
 ;
   %A = zext <2 x i32> %X to <2 x i36>
@@ -272,7 +272,7 @@ define <2 x i64> @test8_vec(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-LABEL: @test8_vec(
 ; CHECK-NEXT:    [[C:%.*]] = zext <2 x i32> [[A:%.*]] to <2 x i64>
 ; CHECK-NEXT:    [[D:%.*]] = zext <2 x i32> [[B:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[E:%.*]] = shl nuw <2 x i64> [[D]], <i64 32, i64 32>
+; CHECK-NEXT:    [[E:%.*]] = shl nuw <2 x i64> [[D]], splat (i64 32)
 ; CHECK-NEXT:    [[F:%.*]] = or disjoint <2 x i64> [[E]], [[C]]
 ; CHECK-NEXT:    ret <2 x i64> [[F]]
 ;
@@ -358,7 +358,7 @@ define i64 @test11(i32 %A, i32 %B) {
 define <2 x i64> @test11_vec(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-LABEL: @test11_vec(
 ; CHECK-NEXT:    [[C:%.*]] = zext <2 x i32> [[A:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[B:%.*]], <i32 31, i32 31>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[B:%.*]], splat (i32 31)
 ; CHECK-NEXT:    [[E:%.*]] = zext nneg <2 x i32> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    [[F:%.*]] = shl nuw nsw <2 x i64> [[C]], [[E]]
 ; CHECK-NEXT:    ret <2 x i64> [[F]]
@@ -422,7 +422,7 @@ define i64 @test12(i32 %A, i32 %B) {
 define <2 x i64> @test12_vec(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-LABEL: @test12_vec(
 ; CHECK-NEXT:    [[C:%.*]] = zext <2 x i32> [[A:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[B:%.*]], <i32 31, i32 31>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[B:%.*]], splat (i32 31)
 ; CHECK-NEXT:    [[E:%.*]] = zext nneg <2 x i32> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    [[F:%.*]] = lshr <2 x i64> [[C]], [[E]]
 ; CHECK-NEXT:    ret <2 x i64> [[F]]
@@ -486,7 +486,7 @@ define i64 @test13(i32 %A, i32 %B) {
 define <2 x i64> @test13_vec(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-LABEL: @test13_vec(
 ; CHECK-NEXT:    [[C:%.*]] = sext <2 x i32> [[A:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[B:%.*]], <i32 31, i32 31>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[B:%.*]], splat (i32 31)
 ; CHECK-NEXT:    [[E:%.*]] = zext nneg <2 x i32> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    [[F:%.*]] = ashr <2 x i64> [[C]], [[E]]
 ; CHECK-NEXT:    ret <2 x i64> [[F]]
@@ -704,7 +704,7 @@ define i32 @trunc_shl_32_i32_i64(i64 %val) {
 define <2 x i32> @trunc_shl_16_v2i32_v2i64(<2 x i64> %val) {
 ; CHECK-LABEL: @trunc_shl_16_v2i32_v2i64(
 ; CHECK-NEXT:    [[VAL_TR:%.*]] = trunc <2 x i64> [[VAL:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[TRUNC:%.*]] = shl <2 x i32> [[VAL_TR]], <i32 16, i32 16>
+; CHECK-NEXT:    [[TRUNC:%.*]] = shl <2 x i32> [[VAL_TR]], splat (i32 16)
 ; CHECK-NEXT:    ret <2 x i32> [[TRUNC]]
 ;
   %shl = shl <2 x i64> %val, <i64 16, i64 16>
@@ -754,7 +754,7 @@ define i32 @trunc_shl_lshr_infloop(i64 %arg) {
 define <2 x i32> @trunc_shl_v2i32_v2i64_uniform(<2 x i64> %val) {
 ; CHECK-LABEL: @trunc_shl_v2i32_v2i64_uniform(
 ; CHECK-NEXT:    [[VAL_TR:%.*]] = trunc <2 x i64> [[VAL:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[TRUNC:%.*]] = shl <2 x i32> [[VAL_TR]], <i32 31, i32 31>
+; CHECK-NEXT:    [[TRUNC:%.*]] = shl <2 x i32> [[VAL_TR]], splat (i32 31)
 ; CHECK-NEXT:    ret <2 x i32> [[TRUNC]]
 ;
   %shl = shl <2 x i64> %val, <i64 31, i64 31>
@@ -862,7 +862,7 @@ define i32 @trunc_shl_shl_var(i64 %arg, i64 %val) {
 define <8 x i16> @trunc_shl_v8i15_v8i32_15(<8 x i32> %a) {
 ; CHECK-LABEL: @trunc_shl_v8i15_v8i32_15(
 ; CHECK-NEXT:    [[A_TR:%.*]] = trunc <8 x i32> [[A:%.*]] to <8 x i16>
-; CHECK-NEXT:    [[CONV:%.*]] = shl <8 x i16> [[A_TR]], <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+; CHECK-NEXT:    [[CONV:%.*]] = shl <8 x i16> [[A_TR]], splat (i16 15)
 ; CHECK-NEXT:    ret <8 x i16> [[CONV]]
 ;
   %shl = shl <8 x i32> %a, <i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15>
@@ -891,7 +891,7 @@ define <8 x i16> @trunc_shl_v8i16_v8i32_17(<8 x i32> %a) {
 define <8 x i16> @trunc_shl_v8i16_v8i32_4(<8 x i32> %a) {
 ; CHECK-LABEL: @trunc_shl_v8i16_v8i32_4(
 ; CHECK-NEXT:    [[A_TR:%.*]] = trunc <8 x i32> [[A:%.*]] to <8 x i16>
-; CHECK-NEXT:    [[CONV:%.*]] = shl <8 x i16> [[A_TR]], <i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4>
+; CHECK-NEXT:    [[CONV:%.*]] = shl <8 x i16> [[A_TR]], splat (i16 4)
 ; CHECK-NEXT:    ret <8 x i16> [[CONV]]
 ;
   %shl = shl <8 x i32> %a, <i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>

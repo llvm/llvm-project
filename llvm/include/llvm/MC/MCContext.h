@@ -527,13 +527,6 @@ public:
   /// \name Section Management
   /// @{
 
-  enum : unsigned {
-    /// Pass this value as the UniqueID during section creation to get the
-    /// generic section with the given name and characteristics. The usual
-    /// sections such as .text use this ID.
-    GenericSectionID = ~0U
-  };
-
   /// Return the MCSection for the specified mach-o section.  This requires
   /// the operands to be valid.
   MCSectionMachO *getMachOSection(StringRef Segment, StringRef Section,
@@ -611,7 +604,7 @@ public:
 
   MCSectionCOFF *getCOFFSection(StringRef Section, unsigned Characteristics,
                                 StringRef COMDATSymName, int Selection,
-                                unsigned UniqueID = GenericSectionID);
+                                unsigned UniqueID = MCSection::NonUniqueID);
 
   MCSectionCOFF *getCOFFSection(StringRef Section, unsigned Characteristics);
 
@@ -621,7 +614,7 @@ public:
   /// as Sec and the function symbol as KeySym.
   MCSectionCOFF *
   getAssociativeCOFFSection(MCSectionCOFF *Sec, const MCSymbol *KeySym,
-                            unsigned UniqueID = GenericSectionID);
+                            unsigned UniqueID = MCSection::NonUniqueID);
 
   MCSectionSPIRV *getSPIRVSection();
 

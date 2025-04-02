@@ -14,7 +14,7 @@ define void @foo1 (ptr noalias %x, ptr noalias %y) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds { ptr, ptr }, ptr [[Y:%.*]], i64 0, i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds { ptr, ptr }, ptr [[X:%.*]], i64 0, i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x ptr>, ptr [[TMP1]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, <2 x ptr> [[TMP4]], <2 x i64> <i64 16, i64 16>
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, <2 x ptr> [[TMP4]], <2 x i64> splat (i64 16)
 ; CHECK-NEXT:    store <2 x ptr> [[TMP5]], ptr [[TMP2]], align 8
 ; CHECK-NEXT:    ret void
 ;

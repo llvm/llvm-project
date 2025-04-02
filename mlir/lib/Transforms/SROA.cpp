@@ -100,10 +100,11 @@ computeDestructuringInfo(DestructurableMemorySlot &slot,
   mlir::getForwardSlice(slot.ptr, &forwardSlice);
   for (Operation *user : forwardSlice) {
     // If the next operation has no blocking uses, everything is fine.
-    if (!info.userToBlockingUses.contains(user))
+    auto it = info.userToBlockingUses.find(user);
+    if (it == info.userToBlockingUses.end())
       continue;
 
-    SmallPtrSet<OpOperand *, 4> &blockingUses = info.userToBlockingUses[user];
+    SmallPtrSet<OpOperand *, 4> &blockingUses = it->second;
     auto promotable = dyn_cast<PromotableOpInterface>(user);
 
     // An operation that has blocking uses must be promoted. If it is not
@@ -153,10 +154,8 @@ static void destructureSlot(
     statistics.maxSubelementAmount->updateMax(slot.subelementTypes.size());
 
   SetVector<Operation *> usersToRewire;
-  for (Operation *user : llvm::make_first_range(info.userToBlockingUses))
-    usersToRewire.insert(user);
-  for (DestructurableAccessorOpInterface accessor : info.accessors)
-    usersToRewire.insert(accessor);
+  usersToRewire.insert_range(llvm::make_first_range(info.userToBlockingUses));
+  usersToRewire.insert_range(info.accessors);
   usersToRewire = mlir::topologicalSort(usersToRewire);
 
   llvm::SmallVector<Operation *> toErase;

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Expression/DWARFExpressionList.h"
-#include "Plugins/SymbolFile/DWARF/DWARFUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
@@ -126,8 +125,7 @@ bool DWARFExpressionList::MatchesOperand(
     if (!sc.function)
       return false;
 
-    addr_t load_function_start =
-        sc.function->GetAddressRange().GetBaseAddress().GetFileAddress();
+    addr_t load_function_start = sc.function->GetAddress().GetFileAddress();
     if (load_function_start == LLDB_INVALID_ADDRESS)
       return false;
 

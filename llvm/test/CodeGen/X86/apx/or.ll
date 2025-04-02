@@ -906,13 +906,13 @@ entry:
 define void @or64mi_legacy(ptr %a) {
 ; CHECK-LABEL: or64mi_legacy:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    orq $123456, (%rdi) # encoding: [0x48,0x81,0x0f,0x40,0xe2,0x01,0x00]
+; CHECK-NEXT:    orl $123456, (%rdi) # encoding: [0x81,0x0f,0x40,0xe2,0x01,0x00]
 ; CHECK-NEXT:    # imm = 0x1E240
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: or64mi_legacy:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    orq $123456, (%rdi) # encoding: [0x48,0x81,0x0f,0x40,0xe2,0x01,0x00]
+; NF-NEXT:    orl $123456, (%rdi) # encoding: [0x81,0x0f,0x40,0xe2,0x01,0x00]
 ; NF-NEXT:    # imm = 0x1E240
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:

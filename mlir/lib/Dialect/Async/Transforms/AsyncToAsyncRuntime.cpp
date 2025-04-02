@@ -306,8 +306,7 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
   // Collect all outlined function inputs.
   SetVector<mlir::Value> functionInputs(execute.getDependencies().begin(),
                                         execute.getDependencies().end());
-  functionInputs.insert(execute.getBodyOperands().begin(),
-                        execute.getBodyOperands().end());
+  functionInputs.insert_range(execute.getBodyOperands());
   getUsedValuesDefinedAbove(execute.getBodyRegion(), functionInputs);
 
   // Collect types for the outlined function inputs and outputs.

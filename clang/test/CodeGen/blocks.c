@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple i386-unknown-unknown %s -emit-llvm -Wno-strict-prototypes -o - -fblocks | FileCheck --check-prefix=CHECK --check-prefix=SIG_STR %s
 // RUN: %clang_cc1 -triple i386-unknown-unknown %s -emit-llvm -Wno-strict-prototypes -o - -fblocks -fdisable-block-signature-string | FileCheck --check-prefix=CHECK --check-prefix=NO_SIG_STR %s
+// RUN: %clang_cc1 -triple s390x-unknown-unknown %s -emit-llvm -Wno-strict-prototypes -o - -fblocks | FileCheck --check-prefix=SYSTEMZ %s
 
 // SIG_STR: @[[STR:.*]] = private unnamed_addr constant [6 x i8] c"v4@?0\00", align 1
 // SIG_STR: @{{.*}} = internal constant { ptr, i32, i32, ptr, ptr } { ptr @_NSConcreteGlobalBlock, i32 1342177280, i32 0, ptr @f_block_invoke, ptr @{{.*}} }, align 4
@@ -50,6 +51,8 @@ void (^test1)(void) = ^(void) {
 // CHECK-NEXT: call void @_Block_object_assign(ptr %[[V5]], ptr %[[BLOCKCOPY_SRC]], i32 8)
 // CHECK-NEXT: ret void
 
+// SYSTEMZ: declare void @_Block_object_assign(ptr noundef, ptr noundef, i32 noundef signext)
+
 // CHECK-LABEL: define linkonce_odr hidden void @__destroy_helper_block_4_20r(ptr noundef %0) unnamed_addr
 // CHECK: %[[_ADDR:.*]] = alloca ptr, align 4
 // CHECK-NEXT: store ptr %0, ptr %[[_ADDR]], align 4
@@ -58,6 +61,8 @@ void (^test1)(void) = ^(void) {
 // CHECK-NEXT: %[[V3:.*]] = load ptr, ptr %[[V2]], align 4
 // CHECK-NEXT: call void @_Block_object_dispose(ptr %[[V3]], i32 8)
 // CHECK-NEXT: ret void
+
+// SYSTEMZ: declare void @_Block_object_dispose(ptr noundef, i32 noundef signext)
 
 typedef double ftype(double);
 // It's not clear that we *should* support this syntax, but until that decision

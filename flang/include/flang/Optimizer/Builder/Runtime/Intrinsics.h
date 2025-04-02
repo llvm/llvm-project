@@ -47,6 +47,14 @@ void genDateAndTime(fir::FirOpBuilder &, mlir::Location,
 void genEtime(fir::FirOpBuilder &builder, mlir::Location loc,
               mlir::Value values, mlir::Value time);
 
+void genFree(fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value ptr);
+
+mlir::Value genGetUID(fir::FirOpBuilder &, mlir::Location);
+mlir::Value genGetGID(fir::FirOpBuilder &, mlir::Location);
+
+mlir::Value genMalloc(fir::FirOpBuilder &builder, mlir::Location loc,
+                      mlir::Value size);
+
 void genRandomInit(fir::FirOpBuilder &, mlir::Location, mlir::Value repeatable,
                    mlir::Value imageDistinct);
 void genRandomNumber(fir::FirOpBuilder &, mlir::Location, mlir::Value harvest);
@@ -81,6 +89,10 @@ void genSignal(fir::FirOpBuilder &builder, mlir::Location loc,
 /// generate sleep runtime call
 void genSleep(fir::FirOpBuilder &builder, mlir::Location loc,
               mlir::Value seconds);
+
+/// generate chdir runtime call
+mlir::Value genChdir(fir::FirOpBuilder &builder, mlir::Location loc,
+                     mlir::Value name);
 
 } // namespace runtime
 } // namespace fir

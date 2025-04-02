@@ -31,10 +31,6 @@ using namespace llvm;
 
 namespace {
 
-static const char *const NameTable1[] = {
-    "llvm.foo", "llvm.foo.a", "llvm.foo.b", "llvm.foo.b.a", "llvm.foo.c",
-};
-
 class IntrinsicsTest : public ::testing::Test {
   LLVMContext Context;
   std::unique_ptr<Module> M;
@@ -54,7 +50,7 @@ public:
   Instruction *makeIntrinsic(Intrinsic::ID ID) const {
     IRBuilder<> Builder(BB);
     SmallVector<Value *, 4> ProcessedArgs;
-    auto *Decl = Intrinsic::getDeclaration(M.get(), ID);
+    auto *Decl = Intrinsic::getOrInsertDeclaration(M.get(), ID);
     for (auto *Ty : Decl->getFunctionType()->params()) {
       auto *Val = Constant::getNullValue(Ty);
       ProcessedArgs.push_back(Val);
@@ -67,18 +63,21 @@ public:
 };
 
 TEST(IntrinsicNameLookup, Basic) {
-  int I = Intrinsic::lookupLLVMIntrinsicByName(NameTable1, "llvm.foo");
-  EXPECT_EQ(0, I);
-  I = Intrinsic::lookupLLVMIntrinsicByName(NameTable1, "llvm.foo.f64");
-  EXPECT_EQ(0, I);
-  I = Intrinsic::lookupLLVMIntrinsicByName(NameTable1, "llvm.foo.b");
-  EXPECT_EQ(2, I);
-  I = Intrinsic::lookupLLVMIntrinsicByName(NameTable1, "llvm.foo.b.a");
-  EXPECT_EQ(3, I);
-  I = Intrinsic::lookupLLVMIntrinsicByName(NameTable1, "llvm.foo.c");
-  EXPECT_EQ(4, I);
-  I = Intrinsic::lookupLLVMIntrinsicByName(NameTable1, "llvm.foo.c.f64");
-  EXPECT_EQ(4, I);
+  using namespace Intrinsic;
+  EXPECT_EQ(Intrinsic::memcpy, lookupIntrinsicID("llvm.memcpy"));
+
+  // Partial, either between dots or not the last dot are not intrinsics.
+  EXPECT_EQ(not_intrinsic, lookupIntrinsicID("llvm.mem"));
+  EXPECT_EQ(not_intrinsic, lookupIntrinsicID("llvm.gc"));
+
+  // Look through intrinsic names with internal dots.
+  EXPECT_EQ(memcpy_inline, lookupIntrinsicID("llvm.memcpy.inline"));
+
+  // Check that overloaded names are mapped to the underlying ID.
+  EXPECT_EQ(memcpy_inline, lookupIntrinsicID("llvm.memcpy.inline.p0.p0.i8"));
+  EXPECT_EQ(memcpy_inline, lookupIntrinsicID("llvm.memcpy.inline.p0.p0.i32"));
+  EXPECT_EQ(memcpy_inline, lookupIntrinsicID("llvm.memcpy.inline.p0.p0.i64"));
+  EXPECT_EQ(memcpy_inline, lookupIntrinsicID("llvm.memcpy.inline.p0.p0.i1024"));
 }
 
 // Tests to verify getIntrinsicForClangBuiltin.
@@ -92,7 +91,6 @@ TEST(IntrinsicNameLookup, ClangBuiltinLookup) {
       {"__builtin_amdgcn_workgroup_id_z", "amdgcn", amdgcn_workgroup_id_z},
       {"__builtin_arm_cdp", "arm", arm_cdp},
       {"__builtin_bpf_preserve_type_info", "bpf", bpf_preserve_type_info},
-      {"__builtin_hlsl_create_handle", "dx", dx_create_handle},
       {"__builtin_HEXAGON_A2_tfr", "hexagon", hexagon_A2_tfr},
       {"__builtin_lasx_xbz_w", "loongarch", loongarch_lasx_xbz_w},
       {"__builtin_mips_bitrev", "mips", mips_bitrev},

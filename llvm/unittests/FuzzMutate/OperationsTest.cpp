@@ -93,8 +93,7 @@ TEST(OperationsTest, SourcePreds) {
   Constant *v8i1 = ConstantVector::getSplat(ElementCount::getFixed(8), i1);
   Constant *v8i8 = ConstantVector::getSplat(ElementCount::getFixed(8), i8);
   Constant *v4f16 = ConstantVector::getSplat(ElementCount::getFixed(4), f16);
-  Constant *p0i32 =
-      ConstantPointerNull::get(PointerType::get(i32->getType(), 0));
+  Constant *p0i32 = ConstantPointerNull::get(PointerType::get(Ctx, 0));
   Constant *v8p0i32 =
       ConstantVector::getSplat(ElementCount::getFixed(8), p0i32);
   Constant *vni32 = ConstantVector::getSplat(ElementCount::getScalable(8), i32);
@@ -261,7 +260,7 @@ TEST(OperationsTest, SplitBlock) {
   // Create a block with only a return and split it on the return.
   auto *BB = BasicBlock::Create(Ctx, "BB", F);
   auto *RI = ReturnInst::Create(Ctx, BB);
-  SBOp.BuilderFunc({UndefValue::get(Type::getInt1Ty(Ctx))}, RI->getIterator());
+  SBOp.BuilderFunc({PoisonValue::get(Type::getInt1Ty(Ctx))}, RI->getIterator());
 
   // We should end up with an unconditional branch from BB to BB1, and the
   // return ends up in BB1.
@@ -368,11 +367,11 @@ TEST(OperationsTest, GEP) {
   auto *RI = ReturnInst::Create(Ctx, BB);
 
   auto GEPOp = fuzzerop::gepDescriptor(1);
-  EXPECT_TRUE(GEPOp.SourcePreds[0].matches({}, UndefValue::get(Int8PtrTy)));
-  EXPECT_TRUE(GEPOp.SourcePreds[1].matches({UndefValue::get(Int8PtrTy)},
+  EXPECT_TRUE(GEPOp.SourcePreds[0].matches({}, PoisonValue::get(Int8PtrTy)));
+  EXPECT_TRUE(GEPOp.SourcePreds[1].matches({PoisonValue::get(Int8PtrTy)},
                                            ConstantInt::get(Int32Ty, 0)));
 
-  GEPOp.BuilderFunc({UndefValue::get(Int8PtrTy), ConstantInt::get(Int32Ty, 0)},
+  GEPOp.BuilderFunc({PoisonValue::get(Int8PtrTy), ConstantInt::get(Int32Ty, 0)},
                     RI->getIterator());
   EXPECT_FALSE(verifyModule(M, &errs()));
 }
@@ -419,11 +418,11 @@ TEST(OperationsTest, ExtractAndInsertValue) {
   auto IVOp = fuzzerop::insertValueDescriptor(1);
 
   // Sanity check the source preds.
-  Constant *SVal = UndefValue::get(StructTy);
-  Constant *OVal = UndefValue::get(OpaqueTy);
-  Constant *AVal = UndefValue::get(ArrayTy);
-  Constant *ZAVal = UndefValue::get(ZeroSizedArrayTy);
-  Constant *VVal = UndefValue::get(VectorTy);
+  Constant *SVal = PoisonValue::get(StructTy);
+  Constant *OVal = PoisonValue::get(OpaqueTy);
+  Constant *AVal = PoisonValue::get(ArrayTy);
+  Constant *ZAVal = PoisonValue::get(ZeroSizedArrayTy);
+  Constant *VVal = PoisonValue::get(VectorTy);
 
   EXPECT_TRUE(EVOp.SourcePreds[0].matches({}, SVal));
   EXPECT_FALSE(EVOp.SourcePreds[0].matches({}, OVal));
@@ -462,12 +461,12 @@ TEST(OperationsTest, ExtractAndInsertValue) {
 
   // InsertValue should accept any type in the struct, but only in positions
   // where it makes sense.
-  EXPECT_TRUE(IVOp.SourcePreds[1].matches({SVal}, UndefValue::get(Int8PtrTy)));
-  EXPECT_TRUE(IVOp.SourcePreds[1].matches({SVal}, UndefValue::get(Int32Ty)));
-  EXPECT_FALSE(IVOp.SourcePreds[1].matches({SVal}, UndefValue::get(Int64Ty)));
-  EXPECT_FALSE(IVOp.SourcePreds[2].matches({SVal, UndefValue::get(Int32Ty)},
+  EXPECT_TRUE(IVOp.SourcePreds[1].matches({SVal}, PoisonValue::get(Int8PtrTy)));
+  EXPECT_TRUE(IVOp.SourcePreds[1].matches({SVal}, PoisonValue::get(Int32Ty)));
+  EXPECT_FALSE(IVOp.SourcePreds[1].matches({SVal}, PoisonValue::get(Int64Ty)));
+  EXPECT_FALSE(IVOp.SourcePreds[2].matches({SVal, PoisonValue::get(Int32Ty)},
                                            ConstantInt::get(Int32Ty, 0)));
-  EXPECT_TRUE(IVOp.SourcePreds[2].matches({SVal, UndefValue::get(Int32Ty)},
+  EXPECT_TRUE(IVOp.SourcePreds[2].matches({SVal, PoisonValue::get(Int32Ty)},
                                           ConstantInt::get(Int32Ty, 1)));
 
   EXPECT_THAT(IVOp.SourcePreds[1].generate({SVal}, {}),

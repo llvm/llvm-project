@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; CHECK-LABEL: test_00
 ; CHECK: [[P00:p[0-9]+]] = vcmpb.eq(r1:0,r3:2)

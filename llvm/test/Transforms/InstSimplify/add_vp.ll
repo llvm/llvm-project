@@ -10,7 +10,7 @@ declare <2 x i8> @llvm.vp.sub.v2i8(<2 x i8>, <2 x i8>, <2 x i1>, i32)
 ; Constant folding should just work.
 define <2 x i32> @constant_vp_add(<2 x i1> %mask, i32 %evl) {
 ; CHECK-LABEL: @constant_vp_add(
-; CHECK-NEXT:    [[Q:%.*]] = call <2 x i32> @llvm.vp.add.v2i32(<2 x i32> <i32 3, i32 3>, <2 x i32> <i32 7, i32 7>, <2 x i1> [[MASK:%.*]], i32 [[EVL:%.*]])
+; CHECK-NEXT:    [[Q:%.*]] = call <2 x i32> @llvm.vp.add.v2i32(<2 x i32> splat (i32 3), <2 x i32> splat (i32 7), <2 x i1> [[MASK:%.*]], i32 [[EVL:%.*]])
 ; CHECK-NEXT:    ret <2 x i32> [[Q]]
 ;
   %Q = call <2 x i32> @llvm.vp.add.v2i32(<2 x i32> <i32 3, i32 3>, <2 x i32> <i32 7, i32 7>, <2 x i1> %mask, i32 %evl)

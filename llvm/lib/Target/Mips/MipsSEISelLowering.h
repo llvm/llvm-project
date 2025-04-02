@@ -45,6 +45,9 @@ class TargetRegisterClass;
         MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
         unsigned *Fast = nullptr) const override;
 
+    TargetLoweringBase::LegalizeTypeAction
+    getPreferredVectorAction(MVT VT) const override;
+
     SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 
     SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;

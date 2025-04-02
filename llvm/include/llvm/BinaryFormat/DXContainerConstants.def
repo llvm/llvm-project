@@ -4,6 +4,7 @@ CONTAINER_PART(DXIL)
 CONTAINER_PART(SFI0)
 CONTAINER_PART(HASH)
 CONTAINER_PART(PSV0)
+CONTAINER_PART(RTS0)
 CONTAINER_PART(ISG1)
 CONTAINER_PART(OSG1)
 CONTAINER_PART(PSG1)
@@ -52,13 +53,33 @@ SHADER_FEATURE_FLAG(31, 36, NextUnusedBit, "Next reserved shader flag bit (not a
 #undef SHADER_FEATURE_FLAG
 #endif // SHADER_FEATURE_FLAG
 
+
+// ROOT_ELEMENT_FLAG(bit offset for the flag, name).
+#ifdef ROOT_ELEMENT_FLAG
+
+ROOT_ELEMENT_FLAG(0, AllowInputAssemblerInputLayout)
+ROOT_ELEMENT_FLAG(1, DenyVertexShaderRootAccess)
+ROOT_ELEMENT_FLAG(2, DenyHullShaderRootAccess)
+ROOT_ELEMENT_FLAG(3, DenyDomainShaderRootAccess)
+ROOT_ELEMENT_FLAG(4, DenyGeometryShaderRootAccess)
+ROOT_ELEMENT_FLAG(5, DenyPixelShaderRootAccess)
+ROOT_ELEMENT_FLAG(6, AllowStreamOutput)
+ROOT_ELEMENT_FLAG(7, LocalRootSignature)
+ROOT_ELEMENT_FLAG(8, DenyAmplificationShaderRootAccess)
+ROOT_ELEMENT_FLAG(9, DenyMeshShaderRootAccess)
+ROOT_ELEMENT_FLAG(10, CBVSRVUAVHeapDirectlyIndexed)
+ROOT_ELEMENT_FLAG(11, SamplerHeapDirectlyIndexed)
+#undef ROOT_ELEMENT_FLAG
+#endif // ROOT_ELEMENT_FLAG
+
+
 #ifdef DXIL_MODULE_FLAG
 
 // Only save DXIL module flags which not map to feature flags here.
 DXIL_MODULE_FLAG( 0,  DisableOptimizations,   "D3D11_1_SB_GLOBAL_FLAG_SKIP_OPTIMIZATION")
 DXIL_MODULE_FLAG( 1,  DisableMathRefactoring, "D3D10_SB_GLOBAL_FLAG_REFACTORING_ALLOWED")
 DXIL_MODULE_FLAG( 3,  ForceEarlyDepthStencil, "D3D11_SB_GLOBAL_FLAG_FORCE_EARLY_DEPTH_STENCIL")
-DXIL_MODULE_FLAG( 4,  EnableRawAndStructuredBuffers, "D3D11_SB_GLOBAL_FLAG_ENABLE_RAW_AND_STRUCTURED_BUFFERS")
+DXIL_MODULE_FLAG( 4,  EnableRawAndStructuredBuffers, "Raw and Structured buffers")
 DXIL_MODULE_FLAG( 5,  LowPrecisionPresent, "D3D11_1_SB_GLOBAL_FLAG_ENABLE_MINIMUM_PRECISION")
 DXIL_MODULE_FLAG( 8,  AllResourcesBound, "D3D12_SB_GLOBAL_FLAG_ALL_RESOURCES_BOUND")
 DXIL_MODULE_FLAG(23,  UseNativeLowPrecision, "Native 16bit types enabled")

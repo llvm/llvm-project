@@ -81,11 +81,9 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
 #include <cassert>
-#include <memory>
 
 using namespace llvm;
 
@@ -97,7 +95,7 @@ static const char *LICMVersioningMetaData = "llvm.loop.licm_versioning.disable";
 /// invariant instructions in a loop.
 static cl::opt<float>
     LVInvarThreshold("licm-versioning-invariant-threshold",
-                     cl::desc("LoopVersioningLICM's minimum allowed percentage"
+                     cl::desc("LoopVersioningLICM's minimum allowed percentage "
                               "of possible invariant instructions per loop"),
                      cl::init(25), cl::Hidden);
 
@@ -209,14 +207,14 @@ bool LoopVersioningLICM::legalLoopStructure() {
   }
   // Loop depth more then LoopDepthThreshold are not allowed
   if (CurLoop->getLoopDepth() > LoopDepthThreshold) {
-    LLVM_DEBUG(dbgs() << "    loop depth is more then threshold\n");
+    LLVM_DEBUG(dbgs() << "    loop depth is more than threshold\n");
     return false;
   }
   // We need to be able to compute the loop trip count in order
   // to generate the bound checks.
   const SCEV *ExitCount = SE->getBackedgeTakenCount(CurLoop);
   if (isa<SCEVCouldNotCompute>(ExitCount)) {
-    LLVM_DEBUG(dbgs() << "    loop does not has trip count\n");
+    LLVM_DEBUG(dbgs() << "    loop does not have trip count\n");
     return false;
   }
   return true;

@@ -111,5 +111,5 @@ void SimplifyAffineStructures::runOnOperation() {
   });
   GreedyRewriteConfig config;
   config.strictMode = GreedyRewriteStrictness::ExistingAndNewOps;
-  (void)applyOpPatternsAndFold(opsToSimplify, frozenPatterns, config);
+  (void)applyOpPatternsGreedily(opsToSimplify, frozenPatterns, config);
 }

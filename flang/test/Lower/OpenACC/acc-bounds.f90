@@ -1,6 +1,6 @@
 ! This test checks lowering of OpenACC data bounds operation.
 
-! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
+! RUN: bbc -fopenacc -emit-hlfir --openacc-unwrap-fir-box=true --openacc-generate-default-bounds=true %s -o - | FileCheck %s
 
 module openacc_bounds
 

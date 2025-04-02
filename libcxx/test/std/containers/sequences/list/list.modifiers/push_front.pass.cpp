@@ -16,23 +16,22 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
+int main(int, char**) {
+  {
     std::list<int> c;
     for (int i = 0; i < 5; ++i)
-        c.push_front(i);
+      c.push_front(i);
     int a[] = {4, 3, 2, 1, 0};
-    assert(c == std::list<int>(a, a+5));
-    }
+    assert(c == std::list<int>(a, a + 5));
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     std::list<int, min_allocator<int>> c;
     for (int i = 0; i < 5; ++i)
-        c.push_front(i);
+      c.push_front(i);
     int a[] = {4, 3, 2, 1, 0};
-    assert((c == std::list<int, min_allocator<int>>(a, a+5)));
-    }
+    assert((c == std::list<int, min_allocator<int>>(a, a + 5)));
+  }
 #endif
 
   return 0;

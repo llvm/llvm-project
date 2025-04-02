@@ -7,10 +7,9 @@
 # to receive an approval from a "code owner" in particular -- any LLVM project
 # member can approve pull requests.
 #
-# Note that GitHub's concept of "code owner" is independent from LLVM's own
-# "code owner" concept, they merely happen to share terminology. See
-# https://llvm.org/docs/DeveloperPolicy.html#code-owners, as well as the
-# CODE_OWNERS.txt files in the respective subproject directories.
+# This is independent of LLVM's own "maintainer" concept.
+# See https://llvm.org/docs/DeveloperPolicy.html#maintainers as well as the
+# Maintainers.* files in the the respective subproject directories.
 
 /libcxx/ @llvm/reviewers-libcxx
 /libcxxabi/ @llvm/reviewers-libcxxabi
@@ -28,7 +27,6 @@
 /llvm/lib/Transforms/Scalar/MemCpyOptimizer.cpp @nikic
 /llvm/lib/Transforms/InstCombine/ @nikic
 
-/clang/include/clang/Sema/Sema.h @Endilll
 /clang/test/CXX/drs/ @Endilll
 /clang/www/cxx_dr_status.html @Endilll
 /clang/www/make_cxx_dr_status @Endilll
@@ -68,7 +66,7 @@
 /mlir/lib/Dialect/Linalg/Transforms/ElementwiseOpFusion.cpp @MaheshRavishankar @nicolasvasilache
 /mlir/lib/Dialect/Linalg/Transforms/DataLayoutPropagation.cpp @hanhanW @nicolasvasilache
 /mlir/lib/Dialect/Linalg/Transforms/Transforms.cpp @dcaballe @hanhanW @nicolasvasilache
-/mlir/lib/Dialect/Linalg/Transforms/Vectorization.cpp @banach-space @dcaballe @hanhanW @nicolasvasilache
+/mlir/lib/Dialect/Linalg/Transforms/Vectorization.cpp @banach-space @dcaballe @hanhanW @nicolasvasilache @Groverkss
 
 # MemRef Dialect in MLIR.
 /mlir/lib/Dialect/MemRef/Transforms/EmulateNarrowType.cpp @MaheshRavishankar @nicolasvasilache
@@ -82,9 +80,9 @@
 /mlir/**/*VectorToSCF* @banach-space @dcaballe @matthias-springer @nicolasvasilache
 /mlir/**/*VectorToLLVM* @banach-space @dcaballe @nicolasvasilache
 /mlir/**/*X86Vector* @aartbik @dcaballe @nicolasvasilache
-/mlir/include/mlir/Dialect/Vector @banach-space @dcaballe @nicolasvasilache
+/mlir/include/mlir/Dialect/Vector @banach-space @dcaballe @nicolasvasilache @Groverkss
 /mlir/include/mlir/Dialect/Vector/IR @kuhar
-/mlir/lib/Dialect/Vector @banach-space @dcaballe @nicolasvasilache
+/mlir/lib/Dialect/Vector @banach-space @dcaballe @nicolasvasilache @Groverkss
 /mlir/lib/Dialect/Vector/Transforms/* @banach-space @dcaballe @hanhanW @nicolasvasilache
 /mlir/lib/Dialect/Vector/Transforms/VectorEmulateNarrowType.cpp @banach-space @dcaballe @MaheshRavishankar @nicolasvasilache
 /mlir/**/*EmulateNarrowType* @dcaballe @hanhanW
@@ -130,10 +128,10 @@
 /mlir/**/Transforms/SROA.* @moxinilian
 
 # BOLT
-/bolt/ @aaupov @maksfb @rafaelauler @ayermolo @dcci
+/bolt/ @aaupov @maksfb @rafaelauler @ayermolo @dcci @yota9
 
 # Bazel build system.
-/utils/bazel/ @rupprecht @keith
+/utils/bazel/ @rupprecht @keith @aaronmondal
 
 # InstallAPI and TextAPI
 /llvm/**/TextAPI/ @cyndyishida
@@ -141,7 +139,7 @@
 /clang/tools/clang-installapi/ @cyndyishida
 
 # ExtractAPI
-/clang/**/ExtractAPI @daniel-grumberg
+/clang/**/ExtractAPI @daniel-grumberg @QuietMisdreavus
 
 # DWARFLinker, dwarfutil, dsymutil
 /llvm/**/DWARFLinker/ @JDevlieghere

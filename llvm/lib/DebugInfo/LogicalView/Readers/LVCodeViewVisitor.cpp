@@ -21,18 +21,13 @@
 #include "llvm/DebugInfo/LogicalView/Core/LVSymbol.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVType.h"
 #include "llvm/DebugInfo/LogicalView/Readers/LVCodeViewReader.h"
-#include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/InputFile.h"
-#include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/PDBStringTable.h"
-#include "llvm/DebugInfo/PDB/Native/RawError.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
-#include "llvm/DebugInfo/PDB/PDB.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -160,28 +155,23 @@ class LVForwardReferences {
   }
 
   void add(StringRef Name, TypeIndex TIForward) {
-    if (ForwardTypesNames.find(Name) == ForwardTypesNames.end()) {
-      ForwardTypesNames.emplace(
-          std::piecewise_construct, std::forward_as_tuple(Name),
-          std::forward_as_tuple(TIForward, TypeIndex::None()));
-    } else {
+    auto [It, Inserted] =
+        ForwardTypesNames.try_emplace(Name, TIForward, TypeIndex::None());
+    if (!Inserted) {
       // Update a recorded definition with its reference.
-      ForwardTypesNames[Name].first = TIForward;
-      add(TIForward, ForwardTypesNames[Name].second);
+      It->second.first = TIForward;
+      add(TIForward, It->second.second);
     }
   }
 
   // Update a previously recorded forward reference with its definition.
   void update(StringRef Name, TypeIndex TIReference) {
-    if (ForwardTypesNames.find(Name) != ForwardTypesNames.end()) {
+    auto [It, Inserted] =
+        ForwardTypesNames.try_emplace(Name, TypeIndex::None(), TIReference);
+    if (!Inserted) {
       // Update the recorded forward reference with its definition.
-      ForwardTypesNames[Name].second = TIReference;
-      add(ForwardTypesNames[Name].first, TIReference);
-    } else {
-      // We have not seen the forward reference. Insert the definition.
-      ForwardTypesNames.emplace(
-          std::piecewise_construct, std::forward_as_tuple(Name),
-          std::forward_as_tuple(TypeIndex::None(), TIReference));
+      It->second.second = TIReference;
+      add(It->second.first, TIReference);
     }
   }
 
@@ -196,15 +186,14 @@ public:
   }
 
   TypeIndex find(TypeIndex TIForward) {
-    return (ForwardTypes.find(TIForward) != ForwardTypes.end())
-               ? ForwardTypes[TIForward]
-               : TypeIndex::None();
+    auto It = ForwardTypes.find(TIForward);
+    return It != ForwardTypes.end() ? It->second : TypeIndex::None();
   }
 
   TypeIndex find(StringRef Name) {
-    return (ForwardTypesNames.find(Name) != ForwardTypesNames.end())
-               ? ForwardTypesNames[Name].second
-               : TypeIndex::None();
+    auto It = ForwardTypesNames.find(Name);
+    return It != ForwardTypesNames.end() ? It->second.second
+                                         : TypeIndex::None();
   }
 
   // If the given TI corresponds to a reference, return the reference.
@@ -242,9 +231,8 @@ public:
 
   // Find the logical namespace for the 'Name' component.
   LVScope *find(StringRef Name) {
-    LVScope *Namespace = (NamespaceNames.find(Name) != NamespaceNames.end())
-                             ? NamespaceNames[Name]
-                             : nullptr;
+    auto It = NamespaceNames.find(Name);
+    LVScope *Namespace = It != NamespaceNames.end() ? It->second : nullptr;
     return Namespace;
   }
 
@@ -280,10 +268,9 @@ public:
 
   void add(TypeIndex TI, StringRef String) {
     static uint32_t Index = 0;
-    if (Strings.find(TI) == Strings.end())
-      Strings.emplace(
-          std::piecewise_construct, std::forward_as_tuple(TI),
-          std::forward_as_tuple(++Index, std::string(String), nullptr));
+    auto [It, Inserted] = Strings.try_emplace(TI);
+    if (Inserted)
+      It->second = std::make_tuple(++Index, std::string(String), nullptr);
   }
 
   StringRef find(TypeIndex TI) {

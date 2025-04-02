@@ -91,11 +91,13 @@ applyTileAndFuseToAll(RewriterBase &rewriter, Operation *transformOp,
 
     scf::SCFTileAndFuseOptions::ControlFnTy controlFn =
         [&](tensor::ExtractSliceOp candidateSliceOp, OpResult originalProducer,
-            bool isDestinationOperand) {
-          Operation *owner = originalProducer.getOwner();
-          bool yieldProducerReplacement = yieldReplacementsFor.contains(owner);
-          return std::make_tuple(true, yieldProducerReplacement);
-        };
+            bool isDestinationOperand)
+        -> std::optional<scf::SCFTileAndFuseOptions::ControlFnResult> {
+      Operation *owner = originalProducer.getOwner();
+      bool yieldProducerReplacement = yieldReplacementsFor.contains(owner);
+      return scf::SCFTileAndFuseOptions::ControlFnResult{
+          yieldProducerReplacement};
+    };
     tileAndFuseOptions.setFusionControlFn(controlFn);
 
     rewriter.setInsertionPoint(target);
@@ -167,26 +169,29 @@ transform::TestFuseAndYieldOp::apply(TransformRewriter &rewriter,
 /// Apply fusing of consumer transformation to all payload ops and store both
 /// the original consumer operation as well as the fused consumer operation.
 template <typename Range>
-static LogicalResult
-applyFuseConsumer(RewriterBase &rewriter, Operation *transformOp,
-                  Range &&payloadOps, TransformResults &transformResults) {
+static LogicalResult applyFuseConsumer(
+    RewriterBase &rewriter, Operation *transformOp, Range &&payloadOps,
+    MutableArrayRef<LoopLikeOpInterface> loops, uint32_t numConsumerToFuse,
+    TransformResults &transformResults) {
   SmallVector<Operation *> originalConsumerOps;
   SmallVector<Operation *> fusedConsumerOps;
 
   for (Operation *target : payloadOps) {
     rewriter.setInsertionPoint(target);
 
-    FailureOr<scf::SCFFuseConsumerOfSliceResult> fuseConsumerResults =
-        scf::tileAndFuseConsumerOfSlice(rewriter, target);
+    while (numConsumerToFuse--) {
+      FailureOr<scf::SCFFuseConsumerOfSliceResult> fuseConsumerResults =
+          scf::tileAndFuseConsumerOfSlice(rewriter, target, loops);
 
-    if (failed(fuseConsumerResults))
-      return failure();
+      if (failed(fuseConsumerResults))
+        return failure();
 
-    // Report back the relevant handles to the transform op.
-    originalConsumerOps.push_back(
-        fuseConsumerResults->origConsumerOperand->getOwner());
-    fusedConsumerOps.push_back(
-        fuseConsumerResults->tiledAndFusedConsumerOperand->getOwner());
+      // Report back the relevant handles to the transform op.
+      originalConsumerOps.push_back(
+          fuseConsumerResults->origConsumerOperand->getOwner());
+      fusedConsumerOps.push_back(
+          fuseConsumerResults->tiledAndFusedConsumerOperand->getOwner());
+    }
   }
 
   transformResults.set(transformOp->getOpResult(0), originalConsumerOps);
@@ -198,9 +203,18 @@ DiagnosedSilenceableFailure
 transform::TestFuseConsumerOp::apply(TransformRewriter &rewriter,
                                      TransformResults &transformResults,
                                      TransformState &state) {
-  LogicalResult result =
-      applyFuseConsumer(rewriter, getOperation(),
-                        state.getPayloadOps(getTarget()), transformResults);
+  SmallVector<LoopLikeOpInterface> loops;
+  for (auto op : llvm::reverse(getLoops())) {
+    auto loopLikeOp =
+        dyn_cast<LoopLikeOpInterface>(*state.getPayloadOps(op).begin());
+    if (!loopLikeOp) {
+      return DiagnosedSilenceableFailure::definiteFailure();
+    }
+    loops.push_back(loopLikeOp);
+  }
+  LogicalResult result = applyFuseConsumer(
+      rewriter, getOperation(), state.getPayloadOps(getTarget()), loops,
+      getNumConsumerToFuse(), transformResults);
   return failed(result) ? DiagnosedSilenceableFailure::definiteFailure()
                         : DiagnosedSilenceableFailure::success();
 }
@@ -208,6 +222,7 @@ transform::TestFuseConsumerOp::apply(TransformRewriter &rewriter,
 void transform::TestFuseConsumerOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   consumesHandle(getTargetMutable(), effects);
+  consumesHandle(getLoopsMutable(), effects);
   producesHandle(getOperation()->getOpResults(), effects);
   modifiesPayload(effects);
 }
@@ -245,7 +260,8 @@ applyTileToAll(RewriterBase &rewriter, Operation *transformOp,
       return failure();
 
     // Perform the replacement of tiled and fused values.
-    rewriter.replaceOp(tilingInterfaceOp, tiledResults->replacements);
+    rewriter.replaceOp(tilingInterfaceOp,
+                       tiledResults->mergeResult.replacements);
 
     // Report back the relevant handles to the transform op.
     tiledOps.push_back(tiledResults->tiledOps.front());

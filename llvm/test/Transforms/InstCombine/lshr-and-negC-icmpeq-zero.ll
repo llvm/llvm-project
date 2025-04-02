@@ -72,7 +72,7 @@ define i1 @scalar_i32_lshr_and_negC_ne(i32 %x, i32 %y) {
 define <4 x i1> @vec_4xi32_lshr_and_negC_eq(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @vec_4xi32_lshr_and_negC_eq(
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr <4 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult <4 x i32> [[LSHR]], <i32 8, i32 8, i32 8, i32 8>
+; CHECK-NEXT:    [[R:%.*]] = icmp ult <4 x i32> [[LSHR]], splat (i32 8)
 ; CHECK-NEXT:    ret <4 x i1> [[R]]
 ;
   %lshr = lshr <4 x i32> %x, %y
@@ -84,7 +84,7 @@ define <4 x i1> @vec_4xi32_lshr_and_negC_eq(<4 x i32> %x, <4 x i32> %y) {
 define <4 x i1> @vec_lshr_and_negC_eq_poison1(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @vec_lshr_and_negC_eq_poison1(
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr <4 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult <4 x i32> [[LSHR]], <i32 8, i32 8, i32 8, i32 8>
+; CHECK-NEXT:    [[R:%.*]] = icmp ult <4 x i32> [[LSHR]], splat (i32 8)
 ; CHECK-NEXT:    ret <4 x i1> [[R]]
 ;
   %lshr = lshr <4 x i32> %x, %y
@@ -96,7 +96,7 @@ define <4 x i1> @vec_lshr_and_negC_eq_poison1(<4 x i32> %x, <4 x i32> %y) {
 define <4 x i1> @vec_lshr_and_negC_eq_poison2(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @vec_lshr_and_negC_eq_poison2(
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr <4 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult <4 x i32> [[LSHR]], <i32 8, i32 8, i32 8, i32 8>
+; CHECK-NEXT:    [[R:%.*]] = icmp ult <4 x i32> [[LSHR]], splat (i32 8)
 ; CHECK-NEXT:    ret <4 x i1> [[R]]
 ;
   %lshr = lshr <4 x i32> %x, %y
@@ -108,7 +108,7 @@ define <4 x i1> @vec_lshr_and_negC_eq_poison2(<4 x i32> %x, <4 x i32> %y) {
 define <4 x i1> @vec_lshr_and_negC_eq_poison3(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @vec_lshr_and_negC_eq_poison3(
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr <4 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult <4 x i32> [[LSHR]], <i32 8, i32 8, i32 8, i32 8>
+; CHECK-NEXT:    [[R:%.*]] = icmp ult <4 x i32> [[LSHR]], splat (i32 8)
 ; CHECK-NEXT:    ret <4 x i1> [[R]]
 ;
   %lshr = lshr <4 x i32> %x, %y
@@ -177,7 +177,7 @@ define i1 @scalar_lshr_and_negC_eq_extra_use_lshr_and(i32 %x, i32 %y, i32 %z, pt
 define i1 @scalar_i32_lshr_and_negC_eq_X_is_constant1(i32 %y) {
 ; CHECK-LABEL: @scalar_i32_lshr_and_negC_eq_X_is_constant1(
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 12345, [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i32 [[LSHR]], 8
+; CHECK-NEXT:    [[R:%.*]] = icmp samesign ult i32 [[LSHR]], 8
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %lshr = lshr i32 12345, %y

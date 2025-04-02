@@ -38,5 +38,5 @@ void uses() {
 
   // expected-error@+1{{OpenACC 'wait' clause is not valid on 'loop' directive}}
 #pragma acc loop wait
-  for(;;);
+  for(int i = 5; i < 10;++i);
 }

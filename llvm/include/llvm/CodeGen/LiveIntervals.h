@@ -47,6 +47,7 @@ class MachineDominatorTree;
 class MachineFunction;
 class MachineInstr;
 class MachineRegisterInfo;
+class ProfileSummaryInfo;
 class raw_ostream;
 class TargetInstrInfo;
 class VirtRegMap;
@@ -112,15 +113,22 @@ public:
   LiveIntervals(LiveIntervals &&) = default;
   ~LiveIntervals();
 
-  /// Calculate the spill weight to assign to a single instruction.
-  static float getSpillWeight(bool isDef, bool isUse,
-                              const MachineBlockFrequencyInfo *MBFI,
-                              const MachineInstr &MI);
+  bool invalidate(MachineFunction &MF, const PreservedAnalyses &PA,
+                  MachineFunctionAnalysisManager::Invalidator &Inv);
 
   /// Calculate the spill weight to assign to a single instruction.
+  /// If \p PSI is provided the calculation is altered for optsize functions.
   static float getSpillWeight(bool isDef, bool isUse,
                               const MachineBlockFrequencyInfo *MBFI,
-                              const MachineBasicBlock *MBB);
+                              const MachineInstr &MI,
+                              ProfileSummaryInfo *PSI = nullptr);
+
+  /// Calculate the spill weight to assign to a single instruction.
+  /// If \p PSI is provided the calculation is altered for optsize functions.
+  static float getSpillWeight(bool isDef, bool isUse,
+                              const MachineBlockFrequencyInfo *MBFI,
+                              const MachineBasicBlock *MBB,
+                              ProfileSummaryInfo *PSI = nullptr);
 
   LiveInterval &getInterval(Register Reg) {
     if (hasInterval(Reg))
@@ -141,8 +149,9 @@ public:
   LiveInterval &createEmptyInterval(Register Reg) {
     assert(!hasInterval(Reg) && "Interval already exists!");
     VirtRegIntervals.grow(Reg.id());
-    VirtRegIntervals[Reg.id()] = createInterval(Reg);
-    return *VirtRegIntervals[Reg.id()];
+    auto &Interval = VirtRegIntervals[Reg.id()];
+    Interval = createInterval(Reg);
+    return *Interval;
   }
 
   LiveInterval &createAndComputeVirtRegInterval(Register Reg) {
@@ -160,8 +169,9 @@ public:
 
   /// Interval removal.
   void removeInterval(Register Reg) {
-    delete VirtRegIntervals[Reg];
-    VirtRegIntervals[Reg] = nullptr;
+    auto &Interval = VirtRegIntervals[Reg];
+    delete Interval;
+    Interval = nullptr;
   }
 
   /// Given a register and an instruction, adds a live segment from that

@@ -136,6 +136,8 @@ bool getEmitCallSiteInfo();
 
 bool getEnableMachineFunctionSplitter();
 
+bool getEnableStaticDataPartitioning();
+
 bool getEnableDebugEntryValues();
 
 bool getValueTrackingVariableLocations();

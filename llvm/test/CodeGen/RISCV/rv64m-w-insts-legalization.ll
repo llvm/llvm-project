@@ -5,15 +5,13 @@ define signext i32 @mulw(i32 signext %s, i32 signext %n, i32 signext %k) nounwin
 ; CHECK-LABEL: mulw:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a2, 1
-; CHECK-NEXT:    bge a0, a1, .LBB0_3
-; CHECK-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-NEXT:    li a2, 1
-; CHECK-NEXT:  .LBB0_2: # %for.body
+; CHECK-NEXT:    bge a0, a1, .LBB0_2
+; CHECK-NEXT:  .LBB0_1: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    mulw a2, a0, a2
 ; CHECK-NEXT:    addiw a0, a0, 1
-; CHECK-NEXT:    blt a0, a1, .LBB0_2
-; CHECK-NEXT:  .LBB0_3: # %for.cond.cleanup
+; CHECK-NEXT:    blt a0, a1, .LBB0_1
+; CHECK-NEXT:  .LBB0_2: # %for.cond.cleanup
 ; CHECK-NEXT:    mv a0, a2
 ; CHECK-NEXT:    ret
 entry:

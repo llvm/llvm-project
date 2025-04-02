@@ -17,12 +17,21 @@
 
 import sys
 sys.path.append(sys.argv[1])
-from libcxx.header_information import lit_header_restrictions, public_headers
+from libcxx.header_information import (
+    lit_header_restrictions,
+    lit_header_undeprecations,
+    public_headers,
+)
 
 for header in public_headers:
-  print(f"""\
+    print(
+        f"""\
 //--- {header}.compile.pass.cpp
 // RUN: %{{cxx}} %s %{{flags}} %{{compile_flags}} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only
+
+// Older macOS SDKs were not properly modularized, which causes issues with localization.
+// This feature should instead be based on the SDK version.
+// UNSUPPORTED: stdlib=system && target={{{{.+}}}}-apple-macosx13{{{{.*}}}}
 
 // GCC doesn't support -fcxx-modules
 // UNSUPPORTED: gcc
@@ -37,17 +46,32 @@ for header in public_headers:
 // TODO: Investigate this failure
 // UNSUPPORTED: LIBCXX-FREEBSD-FIXME
 
+// TODO: Investigate why this doesn't work on Picolibc once the locale base API is refactored
+// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
+
+// TODO: Fix seemingly circular inclusion or <wchar.h> on AIX
+// UNSUPPORTED: LIBCXX-AIX-FIXME
+
+// UNSUPPORTED: FROZEN-CXX03-HEADERS-FIXME
+
 {lit_header_restrictions.get(header, '')}
+{lit_header_undeprecations.get(header, '')}
 
 #include <{header}>
-""")
+"""
+    )
 
-print(f"""\
-//--- __std_clang_module.compile.pass.mm
+print(
+    f"""\
+//--- import_std.compile.pass.mm
 // RUN: %{{cxx}} %s %{{flags}} %{{compile_flags}} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only
 
 // REQUIRES: clang-modules-build
 
+// Older macOS SDKs were not properly modularized, which causes issues with localization.
+// This feature should instead be based on the SDK version.
+// UNSUPPORTED: stdlib=system && target={{{{.+}}}}-apple-macosx13{{{{.*}}}}
+
 // GCC doesn't support -fcxx-modules
 // UNSUPPORTED: gcc
 
@@ -61,6 +85,13 @@ print(f"""\
 // TODO: Investigate this failure
 // UNSUPPORTED: LIBCXX-FREEBSD-FIXME
 
+// TODO: Investigate why this doesn't work on Picolibc once the locale base API is refactored
+// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
+
+// TODO: Fix seemingly circular inclusion or <wchar.h> on AIX
+// UNSUPPORTED: LIBCXX-AIX-FIXME
+
 @import std;
 
-""")
+"""
+)

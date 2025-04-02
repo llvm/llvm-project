@@ -42,7 +42,7 @@ define void @pr66984(ptr %arg) personality ptr @__CxxFrameHandler3 {
 ; I686-NEXT:    .scl 3;
 ; I686-NEXT:    .type 32;
 ; I686-NEXT:    .endef
-; I686-NEXT:    .p2align 4, 0x90
+; I686-NEXT:    .p2align 4
 ; I686-NEXT:  "?catch$2@?0?pr66984@4HA":
 ; I686-NEXT:  LBB0_2: # %bb17
 ; I686-NEXT:    pushl %ebp
@@ -58,7 +58,7 @@ define void @pr66984(ptr %arg) personality ptr @__CxxFrameHandler3 {
 ; I686-NEXT:    .scl 3;
 ; I686-NEXT:    .type 32;
 ; I686-NEXT:    .endef
-; I686-NEXT:    .p2align 4, 0x90
+; I686-NEXT:    .p2align 4
 ; I686-NEXT:  "?dtor$5@?0?pr66984@4HA":
 ; I686-NEXT:  LBB0_5: # %bb8
 ; I686-NEXT:    pushl %ebp
@@ -90,8 +90,10 @@ define void @pr66984(ptr %arg) personality ptr @__CxxFrameHandler3 {
 ; X86_64-NEXT:    # %exit
 ; X86_64-NEXT:  $ehgcr_0_3:
 ; X86_64-NEXT:    nop
+; X86_64-NEXT:    .seh_startepilogue
 ; X86_64-NEXT:    addq $64, %rsp
 ; X86_64-NEXT:    popq %rbp
+; X86_64-NEXT:    .seh_endepilogue
 ; X86_64-NEXT:    retq
 ; X86_64-NEXT:    .seh_handlerdata
 ; X86_64-NEXT:    .long ($cppxdata$pr66984)@IMGREL
@@ -101,7 +103,7 @@ define void @pr66984(ptr %arg) personality ptr @__CxxFrameHandler3 {
 ; X86_64-NEXT:    .scl 3;
 ; X86_64-NEXT:    .type 32;
 ; X86_64-NEXT:    .endef
-; X86_64-NEXT:    .p2align 4, 0x90
+; X86_64-NEXT:    .p2align 4
 ; X86_64-NEXT:  "?catch$2@?0?pr66984@4HA":
 ; X86_64-NEXT:  .seh_proc "?catch$2@?0?pr66984@4HA"
 ; X86_64-NEXT:    .seh_handler __CxxFrameHandler3, @unwind, @except
@@ -116,8 +118,10 @@ define void @pr66984(ptr %arg) personality ptr @__CxxFrameHandler3 {
 ; X86_64-NEXT:    movq -8(%rbp), %rcx
 ; X86_64-NEXT:    callq cleanup
 ; X86_64-NEXT:    leaq .LBB0_3(%rip), %rax
+; X86_64-NEXT:    .seh_startepilogue
 ; X86_64-NEXT:    addq $32, %rsp
 ; X86_64-NEXT:    popq %rbp
+; X86_64-NEXT:    .seh_endepilogue
 ; X86_64-NEXT:    retq # CATCHRET
 ; X86_64-NEXT:    .seh_handlerdata
 ; X86_64-NEXT:    .long ($cppxdata$pr66984)@IMGREL
@@ -127,7 +131,7 @@ define void @pr66984(ptr %arg) personality ptr @__CxxFrameHandler3 {
 ; X86_64-NEXT:    .scl 3;
 ; X86_64-NEXT:    .type 32;
 ; X86_64-NEXT:    .endef
-; X86_64-NEXT:    .p2align 4, 0x90
+; X86_64-NEXT:    .p2align 4
 ; X86_64-NEXT:  "?dtor$4@?0?pr66984@4HA":
 ; X86_64-NEXT:  .seh_proc "?dtor$4@?0?pr66984@4HA"
 ; X86_64-NEXT:  .LBB0_4: # %bb8
@@ -143,8 +147,10 @@ define void @pr66984(ptr %arg) personality ptr @__CxxFrameHandler3 {
 ; X86_64-NEXT:    leaq -32(%rbp), %rcx
 ; X86_64-NEXT:    callq foo
 ; X86_64-NEXT:    nop
+; X86_64-NEXT:    .seh_startepilogue
 ; X86_64-NEXT:    addq $32, %rsp
 ; X86_64-NEXT:    popq %rbp
+; X86_64-NEXT:    .seh_endepilogue
 ; X86_64-NEXT:    retq # CLEANUPRET
 ; X86_64-NEXT:  .Lfunc_end0:
 ; X86_64-NEXT:    .seh_handlerdata

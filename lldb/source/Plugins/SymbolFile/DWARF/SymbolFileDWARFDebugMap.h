@@ -279,8 +279,6 @@ protected:
 
   DWARFDIE FindDefinitionDIE(const DWARFDIE &die);
 
-  bool Supports_DW_AT_APPLE_objc_complete_type(SymbolFileDWARF *skip_dwarf_oso);
-
   lldb::TypeSP FindCompleteObjCDefinitionTypeForDIE(
       const DWARFDIE &die, ConstString type_name, bool must_be_implementation);
 
@@ -291,6 +289,10 @@ protected:
 
   UniqueDWARFASTTypeMap &GetUniqueDWARFASTTypeMap() {
     return m_unique_ast_type_map;
+  }
+
+  llvm::DenseMap<const DWARFDebugInfoEntry *, Type *> &GetDIEToType() {
+    return m_die_to_type;
   }
 
   // OSOEntry
@@ -331,7 +333,8 @@ protected:
   llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef>
       m_forward_decl_compiler_type_to_die;
   UniqueDWARFASTTypeMap m_unique_ast_type_map;
-  LazyBool m_supports_DW_AT_APPLE_objc_complete_type;
+  llvm::DenseMap<const DWARFDebugInfoEntry *, Type *> m_die_to_type;
+
   DebugMap m_debug_map;
 
   // When an object file from the debug map gets parsed in

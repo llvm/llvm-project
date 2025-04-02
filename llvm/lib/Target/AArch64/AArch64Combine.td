@@ -131,6 +131,15 @@ def ext: GICombineRule <
   (apply [{ applyEXT(*${root}, ${matchinfo}); }])
 >;
 
+def fullrev: GICombineRule <
+  (defs root:$root, shuffle_matchdata:$matchinfo),
+  (match (G_IMPLICIT_DEF $src2),
+         (G_SHUFFLE_VECTOR $src, $src1, $src2, $mask):$root,
+         [{ return ShuffleVectorInst::isReverseMask(${mask}.getShuffleMask(),
+                                                    ${mask}.getShuffleMask().size()); }]),
+  (apply [{ applyFullRev(*${root}, MRI); }])
+>;
+
 def insertelt_nonconst: GICombineRule <
   (defs root:$root, shuffle_matchdata:$matchinfo),
   (match (wip_match_opcode G_INSERT_VECTOR_ELT):$root,
@@ -163,7 +172,7 @@ def form_duplane : GICombineRule <
   (apply [{ applyDupLane(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
-def shuffle_vector_lowering : GICombineGroup<[dup, rev, ext, zip, uzp, trn,
+def shuffle_vector_lowering : GICombineGroup<[dup, rev, ext, zip, uzp, trn, fullrev,
                                               form_duplane, shuf_to_ins]>;
 
 // Turn G_UNMERGE_VALUES -> G_EXTRACT_VECTOR_ELT's
@@ -314,21 +323,21 @@ def AArch64PostLegalizerLowering
 // Post-legalization combines which are primarily optimizations.
 def AArch64PostLegalizerCombiner
     : GICombiner<"AArch64PostLegalizerCombinerImpl",
-                       [copy_prop, combines_for_extload,
-                        combine_indexed_load_store,
-                        sext_trunc_sextload, mutate_anyext_to_zext,
+                       [copy_prop, cast_of_cast_combines, buildvector_of_truncate,
+                        integer_of_truncate, mutate_anyext_to_zext,
+                        combines_for_extload, combine_indexed_load_store, sext_trunc_sextload,
                         hoist_logic_op_with_same_opcode_hands,
                         redundant_and, xor_of_and_with_same_reg,
                         extractvecelt_pairwise_add, redundant_or,
                         mul_const, redundant_sext_inreg,
                         form_bitfield_extract, rotate_out_of_range,
-                        icmp_to_true_false_known_bits, merge_unmerge,
-                        select_combines, fold_merge_to_zext,
+                        icmp_to_true_false_known_bits, overflow_combines,
+                        select_combines, fold_merge_to_zext, merge_combines,
                         constant_fold_binops, identity_combines,
                         ptr_add_immed_chain, overlapping_and,
                         split_store_zero_128, undef_combines,
                         select_to_minmax, or_to_bsp, combine_concat_vector,
                         commute_constant_to_rhs,
                         push_freeze_to_prevent_poison_from_propagating,
-                        combine_mul_cmlt]> {
+                        combine_mul_cmlt, combine_use_vector_truncate]> {
 }

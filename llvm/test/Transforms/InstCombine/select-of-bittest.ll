@@ -22,7 +22,7 @@ define i32 @and_lshr_and(i32 %arg) {
 
 define <2 x i32> @and_lshr_and_splatvec(<2 x i32> %arg) {
 ; CHECK-LABEL: @and_lshr_and_splatvec(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[ARG:%.*]], <i32 3, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[ARG:%.*]], splat (i32 3)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    [[T4:%.*]] = zext <2 x i1> [[TMP2]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[T4]]
@@ -111,7 +111,7 @@ define i32 @and_and(i32 %arg) {
 
 define <2 x i32> @and_and_splatvec(<2 x i32> %arg) {
 ; CHECK-LABEL: @and_and_splatvec(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[ARG:%.*]], <i32 3, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[ARG:%.*]], splat (i32 3)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    [[T3:%.*]] = zext <2 x i1> [[TMP2]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[T3]]
@@ -190,7 +190,7 @@ define i32 @f_var0_commutative_and(i32 %arg, i32 %arg1) {
 
 define <2 x i32> @f_var0_splatvec(<2 x i32> %arg, <2 x i32> %arg1) {
 ; CHECK-LABEL: @f_var0_splatvec(
-; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[ARG1:%.*]], <i32 2, i32 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[ARG1:%.*]], splat (i32 2)
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[ARG:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <2 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[T5:%.*]] = zext <2 x i1> [[TMP3]] to <2 x i32>
@@ -270,7 +270,7 @@ define i32 @f_var1_commutative_and(i32 %arg, i32 %arg1) {
 
 define <2 x i32> @f_var1_vec(<2 x i32> %arg, <2 x i32> %arg1) {
 ; CHECK-LABEL: @f_var1_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[ARG1:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[ARG1:%.*]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[ARG:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <2 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[T4:%.*]] = zext <2 x i1> [[TMP3]] to <2 x i32>
@@ -285,7 +285,7 @@ define <2 x i32> @f_var1_vec(<2 x i32> %arg, <2 x i32> %arg1) {
 
 define <3 x i32> @f_var1_vec_poison(<3 x i32> %arg, <3 x i32> %arg1) {
 ; CHECK-LABEL: @f_var1_vec_poison(
-; CHECK-NEXT:    [[TMP1:%.*]] = or <3 x i32> [[ARG1:%.*]], <i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = or <3 x i32> [[ARG1:%.*]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <3 x i32> [[ARG:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <3 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[T4:%.*]] = zext <3 x i1> [[TMP3]] to <3 x i32>
@@ -321,11 +321,11 @@ define i32 @f_var2(i32 %arg, i32 %arg1) {
 
 define <2 x i32> @f_var2_splatvec(<2 x i32> %arg, <2 x i32> %arg1) {
 ; CHECK-LABEL: @f_var2_splatvec(
-; CHECK-NEXT:    [[T:%.*]] = and <2 x i32> [[ARG:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[T:%.*]] = and <2 x i32> [[ARG:%.*]], splat (i32 1)
 ; CHECK-NEXT:    [[T2:%.*]] = icmp eq <2 x i32> [[T]], zeroinitializer
 ; CHECK-NEXT:    [[T3:%.*]] = lshr <2 x i32> [[ARG]], [[ARG1:%.*]]
-; CHECK-NEXT:    [[T4:%.*]] = and <2 x i32> [[T3]], <i32 1, i32 1>
-; CHECK-NEXT:    [[T5:%.*]] = select <2 x i1> [[T2]], <2 x i32> [[T4]], <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[T4:%.*]] = and <2 x i32> [[T3]], splat (i32 1)
+; CHECK-NEXT:    [[T5:%.*]] = select <2 x i1> [[T2]], <2 x i32> [[T4]], <2 x i32> splat (i32 1)
 ; CHECK-NEXT:    ret <2 x i32> [[T5]]
 ;
   %t = and <2 x i32> %arg, <i32 1, i32 1>
@@ -341,8 +341,8 @@ define <2 x i32> @f_var2_vec(<2 x i32> %arg, <2 x i32> %arg1) {
 ; CHECK-NEXT:    [[T:%.*]] = and <2 x i32> [[ARG:%.*]], <i32 2, i32 1>
 ; CHECK-NEXT:    [[T2:%.*]] = icmp eq <2 x i32> [[T]], zeroinitializer
 ; CHECK-NEXT:    [[T3:%.*]] = lshr <2 x i32> [[ARG]], [[ARG1:%.*]]
-; CHECK-NEXT:    [[T4:%.*]] = and <2 x i32> [[T3]], <i32 1, i32 1>
-; CHECK-NEXT:    [[T5:%.*]] = select <2 x i1> [[T2]], <2 x i32> [[T4]], <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[T4:%.*]] = and <2 x i32> [[T3]], splat (i32 1)
+; CHECK-NEXT:    [[T5:%.*]] = select <2 x i1> [[T2]], <2 x i32> [[T4]], <2 x i32> splat (i32 1)
 ; CHECK-NEXT:    ret <2 x i32> [[T5]]
 ;
   %t = and <2 x i32> %arg, <i32 2, i32 1>; mask is not splat
@@ -414,8 +414,8 @@ define <2 x i32> @f_var3_splatvec(<2 x i32> %arg, <2 x i32> %arg1, <2 x i32> %ar
 ; CHECK-NEXT:    [[T:%.*]] = and <2 x i32> [[ARG:%.*]], [[ARG1:%.*]]
 ; CHECK-NEXT:    [[T3:%.*]] = icmp eq <2 x i32> [[T]], zeroinitializer
 ; CHECK-NEXT:    [[T4:%.*]] = lshr <2 x i32> [[ARG]], [[ARG2:%.*]]
-; CHECK-NEXT:    [[T5:%.*]] = and <2 x i32> [[T4]], <i32 1, i32 1>
-; CHECK-NEXT:    [[T6:%.*]] = select <2 x i1> [[T3]], <2 x i32> [[T5]], <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[T5:%.*]] = and <2 x i32> [[T4]], splat (i32 1)
+; CHECK-NEXT:    [[T6:%.*]] = select <2 x i1> [[T3]], <2 x i32> [[T5]], <2 x i32> splat (i32 1)
 ; CHECK-NEXT:    ret <2 x i32> [[T6]]
 ;
   %t = and <2 x i32> %arg, %arg1

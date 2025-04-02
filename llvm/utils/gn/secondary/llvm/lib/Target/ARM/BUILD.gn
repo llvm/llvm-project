@@ -84,6 +84,7 @@ static_library("LLVMARMCodeGen") {
     "ARMISelLowering.cpp",
     "ARMInstrInfo.cpp",
     "ARMInstructionSelector.cpp",
+    "ARMLatencyMutations.cpp",
     "ARMLegalizerInfo.cpp",
     "ARMLoadStoreOptimizer.cpp",
     "ARMLowOverheadLoops.cpp",

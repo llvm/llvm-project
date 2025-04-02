@@ -21,6 +21,19 @@ enum {
 #undef DIAG
   NUM_BUILTIN_INSTALLAPI_DIAGNOSTICS
 };
+
+#define DIAG_ENUM(ENUM_NAME)                                                   \
+  namespace ENUM_NAME {                                                        \
+  enum {
+#define DIAG_ENUM_ITEM(IDX, NAME) NAME = IDX,
+#define DIAG_ENUM_END()                                                        \
+  }                                                                            \
+  ;                                                                            \
+  }
+#include "clang/Basic/DiagnosticInstallAPIEnums.inc"
+#undef DIAG_ENUM_END
+#undef DIAG_ENUM_ITEM
+#undef DIAG_ENUM
 } // namespace diag
 } // namespace clang
 #endif // LLVM_CLANG_BASIC_DIAGNOSTICINSTALLAPI_H

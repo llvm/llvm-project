@@ -2,6 +2,10 @@
 // http://code.google.com/p/address-sanitizer/issues/detail?id=147 (not fixed).
 // BROKEN: %clangxx_asan %s -o %t -static-libstdc++ && %run %t
 
+// MSVC doesn't support GCC style inline ASM
+// UNSUPPORTED: msvc
+
+#include "defines.h"
 #include <stdio.h>
 static volatile int zero = 0;
 inline void pretend_to_do_something(void *x) {
@@ -15,7 +19,7 @@ void ReallyThrow() {
     throw 42;
 }
 
-__attribute__((noinline))
+ATTRIBUTE_NOINLINE
 void Throw() {
   int a, b, c, d, e, f, g, h;
   pretend_to_do_something(&a);
@@ -30,7 +34,7 @@ void Throw() {
   ReallyThrow();
 }
 
-__attribute__((noinline))
+ATTRIBUTE_NOINLINE
 void CheckStack() {
   int ar[100];
   pretend_to_do_something(ar);

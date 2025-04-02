@@ -81,7 +81,7 @@ RandomIRBuilder::findOrCreateGlobalVariable(Module *M, ArrayRef<Value *> Srcs,
   auto MatchesPred = [&Srcs, &Pred](GlobalVariable *GV) {
     // Can't directly compare GV's type, as it would be a pointer to the actual
     // type.
-    return Pred.matches(Srcs, UndefValue::get(GV->getValueType()));
+    return Pred.matches(Srcs, PoisonValue::get(GV->getValueType()));
   };
   bool DidCreate = false;
   SmallVector<GlobalVariable *, 4> GlobalVars;
@@ -368,9 +368,9 @@ Instruction *RandomIRBuilder::newSink(BasicBlock &BB,
   if (!Ptr) {
     if (uniform(Rand, 0, 1)) {
       Type *Ty = V->getType();
-      Ptr = createStackMemory(BB.getParent(), Ty, UndefValue::get(Ty));
+      Ptr = createStackMemory(BB.getParent(), Ty, PoisonValue::get(Ty));
     } else {
-      Ptr = UndefValue::get(PointerType::get(V->getType(), 0));
+      Ptr = PoisonValue::get(PointerType::get(V->getContext(), 0));
     }
   }
 

@@ -170,7 +170,7 @@ namespace cwg1512 { // cwg1512: 4
     //   since-cxx11-note@#cwg1512-Wrap {{second operand was implicitly converted to type 'int *'}}
   }
 #endif
-}
+} // namespace cwg1512
 
 namespace cwg1514 { // cwg1514: 11
 #if __cplusplus >= 201103L
@@ -184,7 +184,7 @@ namespace cwg1514 { // cwg1514: 11
 
   // The behavior in other contexts is superseded by CWG1966.
 #endif
-}
+} // namespace cwg1514
 
 namespace cwg1518 { // cwg1518: 4
 #if __cplusplus >= 201103L
@@ -321,13 +321,13 @@ namespace std_example {
   }
 }
 #endif // __cplusplus >= 201103L
-}
+} // namespace cwg1518
 
 namespace cwg1550 { // cwg1550: 3.4
   int f(bool b, int n) {
     return (b ? (throw 0) : n) + (b ? n : (throw 0));
   }
-}
+} // namespace cwg1550
 
 namespace cwg1558 { // cwg1558: 12
 #if __cplusplus >= 201103L
@@ -344,7 +344,7 @@ namespace cwg1558 { // cwg1558: 12
     //   since-cxx11-note@#cwg1558-f {{candidate template ignored: substitution failure [with T = int]: type 'int' cannot be used prior to '::' because it has no members}}
   }
 #endif
-}
+} // namespace cwg1558
 
 namespace cwg1560 { // cwg1560: 3.5
   void f(bool b, int n) {
@@ -353,9 +353,9 @@ namespace cwg1560 { // cwg1560: 3.5
   class X { X(const X&); };
   const X &get();
   const X &x = true ? get() : throw 0;
-}
+} // namespace cwg1560
 
-namespace cwg1563 { // cwg1563: yes
+namespace cwg1563 { // cwg1563: 3.1
 #if __cplusplus >= 201103L
   double bar(double) { return 0.0; }
   float bar(float) { return 0.0f; }
@@ -363,7 +363,7 @@ namespace cwg1563 { // cwg1563: yes
   using fun = double(double);
   fun &foo{bar}; // ok
 #endif
-}
+} // namespace cwg1563
 
 namespace cwg1567 { // cwg1567: 3.3
 #if __cplusplus >= 201103L
@@ -402,7 +402,7 @@ B b5{A{0}};
 //   since-cxx11-note@#cwg1567-B {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'A' to 'B' for 1st argument}}
 //   since-cxx11-note@#cwg1567-B-double {{candidate constructor not viable: no known conversion from 'A' to 'double' for 1st argument}}
 #endif
-}
+} // namespace cwg1567
 
 namespace cwg1573 { // cwg1573: 3.9
 #if __cplusplus >= 201103L
@@ -445,7 +445,7 @@ namespace cwg1573 { // cwg1573: 3.9
   // since-cxx11-error@-1 {{call to deleted constructor of 'J'}}
   //   since-cxx11-note@#cwg1573-I {{'I' has been explicitly marked deleted here}}
 #endif
-}
+} // namespace cwg1573
 
 #if __cplusplus >= 201103L
 namespace std {
@@ -485,7 +485,7 @@ namespace std {
   };
   typedef basic_string<char> string;
 
-} // std
+} // namespace std
 #endif
 
 namespace cwg1579 { // cwg1579: 3.9
@@ -558,7 +558,7 @@ auto CWG1579_lambda_invalid = []() -> GenericMoveOnly<char> {
   //   since-cxx11-note@#cwg1579-deleted-U {{'GenericMoveOnly<float>' has been explicitly marked deleted here}}
 };
 #endif
-} // end namespace cwg1579
+} // namespace cwg1579
 
 namespace cwg1584 { // cwg1584: 7 drafting 2015-05
 // Deducing function types from cv-qualified types
@@ -633,7 +633,7 @@ namespace cwg1589 {   // cwg1589: 3.7 c++11
     //   since-cxx11-note@#cwg1589-f2-ilist-int {{candidate function}}
   }
 #endif
-} // cwg1589
+} // namespace cwg1589
 
 namespace cwg1591 {  //cwg1591. Deducing array bound and element type from initializer list
 #if __cplusplus >= 201103L
@@ -718,4 +718,4 @@ namespace cwg1591 {  //cwg1591. Deducing array bound and element type from initi
     short *ps = i(Arr<int>{1, 2});  // OK #5
   }
 #endif
-} // cwg1591
+} // namespace cwg1591

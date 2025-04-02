@@ -13,16 +13,16 @@ void InitBuf(RWBuffer<int> buf) {
 }
 
 // CHECK-NOT: _Init_thread_epoch
-// CHECK: define internal void @"?main@@YAXXZ"
+// CHECK: define internal void @_Z4mainv
 // CHECK-NEXT: entry:
 // CHECK-NEXT: [[Tmp1:%.*]] = alloca %"class.hlsl::RWBuffer"
-// CHECK-NEXT: [[Tmp2:%.*]] = load i32, ptr
-// CHECK-NEXT: [[Tmp3:%.*]] = and i32 [[Tmp2]], 1
-// CHECK-NEXT: [[Tmp4:%.*]] = icmp eq i32 [[Tmp3]], 0
-// CHECK-NEXT: br i1 [[Tmp4]]
+// CHECK-NEXT: [[Tmp2:%.*]] = load i8, ptr @_ZGVZ4mainvE5mybuf
+// CHECK-NEXT: [[Tmp3:%.*]] = icmp eq i8 [[Tmp2]], 0
+// CHECK-NEXT: br i1 [[Tmp3]]
 // CHECK-NOT: _Init_thread_header
-// CHECK: init:
-// CHECK-NEXT: = or i32 [[Tmp2]], 1
+// CHECK: init.check:
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIiEC1Ev
+// CHECK-NEXT: store i8 1, ptr @_ZGVZ4mainvE5mybuf
 // CHECK-NOT: _Init_thread_footer
 
 

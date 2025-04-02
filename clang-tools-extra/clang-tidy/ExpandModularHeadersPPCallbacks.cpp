@@ -73,7 +73,7 @@ ExpandModularHeadersPPCallbacks::ExpandModularHeadersPPCallbacks(
       // Forward the new diagnostics to the original DiagnosticConsumer.
       Diags(new DiagnosticIDs, new DiagnosticOptions,
             new ForwardingDiagnosticConsumer(Compiler.getDiagnosticClient())),
-      LangOpts(Compiler.getLangOpts()) {
+      LangOpts(Compiler.getLangOpts()), HSOpts(Compiler.getHeaderSearchOpts()) {
   // Add a FileSystem containing the extra files needed in place of modular
   // headers.
   OverlayFS->pushOverlay(InMemoryFs);
@@ -81,15 +81,13 @@ ExpandModularHeadersPPCallbacks::ExpandModularHeadersPPCallbacks(
   Diags.setSourceManager(&Sources);
   // FIXME: Investigate whatever is there better way to initialize DiagEngine
   // or whatever DiagEngine can be shared by multiple preprocessors
-  ProcessWarningOptions(Diags, Compiler.getDiagnosticOpts());
+  ProcessWarningOptions(Diags, Compiler.getDiagnosticOpts(),
+                        Compiler.getVirtualFileSystem());
 
   LangOpts.Modules = false;
 
-  auto HSO = std::make_shared<HeaderSearchOptions>();
-  *HSO = Compiler.getHeaderSearchOpts();
-
-  HeaderInfo = std::make_unique<HeaderSearch>(HSO, Sources, Diags, LangOpts,
-                                               &Compiler.getTarget());
+  HeaderInfo = std::make_unique<HeaderSearch>(HSOpts, Sources, Diags, LangOpts,
+                                              &Compiler.getTarget());
 
   auto PO = std::make_shared<PreprocessorOptions>();
   *PO = Compiler.getPreprocessorOpts();
@@ -101,7 +99,7 @@ ExpandModularHeadersPPCallbacks::ExpandModularHeadersPPCallbacks(
   PP->Initialize(Compiler.getTarget(), Compiler.getAuxTarget());
   InitializePreprocessor(*PP, *PO, Compiler.getPCHContainerReader(),
                          Compiler.getFrontendOpts(), Compiler.getCodeGenOpts());
-  ApplyHeaderSearchOptions(*HeaderInfo, *HSO, LangOpts,
+  ApplyHeaderSearchOptions(*HeaderInfo, HSOpts, LangOpts,
                            Compiler.getTarget().getTriple());
 }
 
@@ -116,9 +114,8 @@ void ExpandModularHeadersPPCallbacks::handleModuleFile(
   if (!MF)
     return;
   // Avoid processing a ModuleFile more than once.
-  if (VisitedModules.count(MF))
+  if (!VisitedModules.insert(MF).second)
     return;
-  VisitedModules.insert(MF);
 
   // Visit all the input files of this module and mark them to record their
   // contents later.

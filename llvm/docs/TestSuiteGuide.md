@@ -9,10 +9,10 @@ Quickstart
 
    ```bash
    % <path to llvm build>/bin/llvm-lit --version
-   lit 0.8.0dev
+   lit 20.0.0dev
    ```
 
-   An alternative is installing it as a python package in a python virtual
+   An alternative is installing it as a Python package in a Python virtual
    environment:
 
    ```bash
@@ -20,8 +20,23 @@ Quickstart
    % . .venv/bin/activate
    % pip install git+https://github.com/llvm/llvm-project.git#subdirectory=llvm/utils/lit
    % lit --version
-   lit 0.8.0dev
+   lit 20.0.0dev
    ```
+
+   Installing the official Python release of lit in a Python virtual
+   environment could also work. This will install the most recent 
+   release of lit:
+
+   ```bash
+   % python3 -m venv .venv
+   % . .venv/bin/activate
+   % pip install lit
+   % lit --version
+   lit 18.1.8
+   ```
+
+   Please note that recent tests may rely on features not in the latest released lit. 
+   If in doubt, try one of the previous methods.
 
 2. Check out the `test-suite` module with:
 
@@ -351,6 +366,19 @@ You can find further information in the respective README files such as
 For the SPEC benchmarks you can switch between the `test`, `train` and
 `ref` input datasets via the `TEST_SUITE_RUN_TYPE` configuration option.
 The `train` dataset is used by default.
+
+In addition to SPEC, the multimedia frameworks ffmpeg and dav1d can also
+be hooked up as external projects in the same way. By including them in
+llvm-test-suite, a lot more of potentially vectorizable code gets compiled
+- which can catch compiler bugs merely by triggering code generation asserts.
+Including them also adds small code correctness tests, that compare the
+output of the compiler generated functions against handwritten assembly
+functions. (On x86, building the assembly requires having the nasm tool
+available.) The integration into llvm-test-suite doesn't run the projects'
+full testsuites though. The projects also contain microbenchmarks for
+measuring the performance of some functions. See the `README.md` files in
+the respective `ffmpeg` and `dav1d` directories under
+`llvm-test-suite/External` for further details.
 
 
 Custom Suites

@@ -30,12 +30,12 @@
 ; ONE: %add2 = add i32 1, 0
 ; ONE: %add3 = add i32 1, 1
 ; ONE: %add4 = add i32 1, 1
-; ONE: %add5 = add <2 x i32> %arg2, <i32 1, i32 1>
-; ONE: %add6 = add <2 x i32> <i32 1, i32 1>, <i32 1, i32 1>
-; ONE: %add7 = add <2 x i32> <i32 1, i32 1>, zeroinitializer
-; ONE: %add8 = add <2 x i32> <i32 1, i32 1>, <i32 1, i32 1>
-; ONE: %add9 = add <2 x i32> <i32 1, i32 1>, <i32 1, i32 1>
-; ONE: %add10 = add <2 x i32> <i32 1, i32 1>, <i32 1, i32 1>
+; ONE: %add5 = add <2 x i32> %arg2, splat (i32 1)
+; ONE: %add6 = add <2 x i32> splat (i32 1), splat (i32 1)
+; ONE: %add7 = add <2 x i32> splat (i32 1), zeroinitializer
+; ONE: %add8 = add <2 x i32> splat (i32 1), splat (i32 1)
+; ONE: %add9 = add <2 x i32> splat (i32 1), splat (i32 1)
+; ONE: %add10 = add <2 x i32> splat (i32 1), splat (i32 1)
 
 
 ; ZERO: %add0 = add i32 %arg0, 0

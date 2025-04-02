@@ -17,7 +17,6 @@ CodeGenOptions::CodeGenOptions() {
 #include "clang/Basic/CodeGenOptions.def"
 
   RelocationModel = llvm::Reloc::PIC_;
-  memcpy(CoverageVersion, "408*", 4);
 }
 
 void CodeGenOptions::resetNonModularOptions(StringRef ModuleFormat) {
@@ -54,7 +53,6 @@ void CodeGenOptions::resetNonModularOptions(StringRef ModuleFormat) {
   }
 
   RelocationModel = llvm::Reloc::PIC_;
-  memcpy(CoverageVersion, "408*", 4);
 }
 
 }  // end namespace clang

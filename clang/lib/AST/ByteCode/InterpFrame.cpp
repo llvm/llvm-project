@@ -23,11 +23,15 @@
 using namespace clang;
 using namespace clang::interp;
 
+InterpFrame::InterpFrame(InterpState &S)
+    : Caller(nullptr), S(S), Depth(0), Func(nullptr), RetPC(CodePtr()),
+      ArgSize(0), Args(nullptr), FrameOffset(0), IsBottom(true) {}
+
 InterpFrame::InterpFrame(InterpState &S, const Function *Func,
                          InterpFrame *Caller, CodePtr RetPC, unsigned ArgSize)
     : Caller(Caller), S(S), Depth(Caller ? Caller->Depth + 1 : 0), Func(Func),
       RetPC(RetPC), ArgSize(ArgSize), Args(static_cast<char *>(S.Stk.top())),
-      FrameOffset(S.Stk.size()) {
+      FrameOffset(S.Stk.size()), IsBottom(!Caller) {
   if (!Func)
     return;
 
@@ -73,11 +77,15 @@ InterpFrame::~InterpFrame() {
   // When destroying the InterpFrame, call the Dtor for all block
   // that haven't been destroyed via a destroy() op yet.
   // This happens when the execution is interruped midway-through.
-  if (Func) {
-    for (auto &Scope : Func->scopes()) {
-      for (auto &Local : Scope.locals()) {
-        S.deallocate(localBlock(Local.Offset));
-      }
+  destroyScopes();
+}
+
+void InterpFrame::destroyScopes() {
+  if (!Func)
+    return;
+  for (auto &Scope : Func->scopes()) {
+    for (auto &Local : Scope.locals()) {
+      S.deallocate(localBlock(Local.Offset));
     }
   }
 }
@@ -91,14 +99,9 @@ void InterpFrame::initScope(unsigned Idx) {
 }
 
 void InterpFrame::destroy(unsigned Idx) {
-  for (auto &Local : Func->getScope(Idx).locals()) {
+  for (auto &Local : Func->getScope(Idx).locals_reverse()) {
     S.deallocate(localBlock(Local.Offset));
   }
-}
-
-void InterpFrame::popArgs() {
-  for (PrimType Ty : Func->args_reverse())
-    TYPE_SWITCH(Ty, S.Stk.discard<T>());
 }
 
 template <typename T>
@@ -107,14 +110,26 @@ static void print(llvm::raw_ostream &OS, const T &V, ASTContext &ASTCtx,
   V.toAPValue(ASTCtx).printPretty(OS, ASTCtx, Ty);
 }
 
+static bool shouldSkipInBacktrace(const Function *F) {
+  if (F->isBuiltin())
+    return true;
+  if (F->isLambdaStaticInvoker())
+    return true;
+
+  const FunctionDecl *FD = F->getDecl();
+  if (FD->getDeclName().getCXXOverloadedOperator() == OO_New ||
+      FD->getDeclName().getCXXOverloadedOperator() == OO_Array_New)
+    return true;
+  return false;
+}
+
 void InterpFrame::describe(llvm::raw_ostream &OS) const {
   // We create frames for builtin functions as well, but we can't reliably
   // diagnose them. The 'in call to' diagnostics for them add no value to the
   // user _and_ it doesn't generally work since the argument types don't always
   // match the function prototype. Just ignore them.
   // Similarly, for lambda static invokers, we would just print __invoke().
-  if (const auto *F = getFunction();
-      F && (F->isBuiltin() || F->isLambdaStaticInvoker()))
+  if (const auto *F = getFunction(); F && shouldSkipInBacktrace(F))
     return;
 
   const Expr *CallExpr = Caller->getExpr(getRetPC());
@@ -212,32 +227,56 @@ Pointer InterpFrame::getParamPointer(unsigned Off) {
   return Pointer(B);
 }
 
+static bool funcHasUsableBody(const Function *F) {
+  assert(F);
+
+  if (F->isConstructor() || F->isDestructor())
+    return true;
+
+  return !F->getDecl()->isImplicit();
+}
+
 SourceInfo InterpFrame::getSource(CodePtr PC) const {
   // Implicitly created functions don't have any code we could point at,
   // so return the call site.
-  if (Func && (!Func->hasBody() || Func->getDecl()->isImplicit()) && Caller)
+  if (Func && !funcHasUsableBody(Func) && Caller)
     return Caller->getSource(RetPC);
 
-  return S.getSource(Func, PC);
+  // Similarly, if the resulting source location is invalid anyway,
+  // point to the caller instead.
+  SourceInfo Result = S.getSource(Func, PC);
+  if (Result.getLoc().isInvalid() && Caller)
+    return Caller->getSource(RetPC);
+  return Result;
 }
 
 const Expr *InterpFrame::getExpr(CodePtr PC) const {
-  if (Func && (!Func->hasBody() || Func->getDecl()->isImplicit()) && Caller)
+  if (Func && !funcHasUsableBody(Func) && Caller)
     return Caller->getExpr(RetPC);
 
   return S.getExpr(Func, PC);
 }
 
 SourceLocation InterpFrame::getLocation(CodePtr PC) const {
-  if (Func && (!Func->hasBody() || Func->getDecl()->isImplicit()) && Caller)
+  if (Func && !funcHasUsableBody(Func) && Caller)
     return Caller->getLocation(RetPC);
 
   return S.getLocation(Func, PC);
 }
 
 SourceRange InterpFrame::getRange(CodePtr PC) const {
-  if (Func && (!Func->hasBody() || Func->getDecl()->isImplicit()) && Caller)
+  if (Func && !funcHasUsableBody(Func) && Caller)
     return Caller->getRange(RetPC);
 
   return S.getRange(Func, PC);
+}
+
+bool InterpFrame::isStdFunction() const {
+  if (!Func)
+    return false;
+  for (const DeclContext *DC = Func->getDecl(); DC; DC = DC->getParent())
+    if (DC->isStdNamespace())
+      return true;
+
+  return false;
 }

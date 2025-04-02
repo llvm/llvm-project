@@ -28,15 +28,16 @@ AllocationType getAllocType(uint64_t TotalLifetimeAccessDensity,
 /// the resulting metadata node.
 MDNode *buildCallstackMetadata(ArrayRef<uint64_t> CallStack, LLVMContext &Ctx);
 
+/// Build metadata from the provided list of full stack id and profiled size, to
+/// use when reporting of hinted sizes is enabled.
+MDNode *buildContextSizeMetadata(ArrayRef<ContextTotalSize> ContextSizeInfo,
+                                 LLVMContext &Ctx);
+
 /// Returns the stack node from an MIB metadata node.
 MDNode *getMIBStackNode(const MDNode *MIB);
 
 /// Returns the allocation type from an MIB metadata node.
 AllocationType getMIBAllocType(const MDNode *MIB);
-
-/// Returns the total size from an MIB metadata node, or 0 if it was not
-/// recorded.
-uint64_t getMIBTotalSize(const MDNode *MIB);
 
 /// Returns the string to use in attributes with the given type.
 std::string getAllocTypeAttributeString(AllocationType Type);
@@ -55,11 +56,55 @@ private:
     // Allocation types for call context sharing the context prefix at this
     // node.
     uint8_t AllocTypes;
-    uint64_t TotalSize;
+    // Updated as we add allocations to note if this is the deepest point in the
+    // trie that has an ambiguous allocation type (both Cold and NotCold). It is
+    // used to prune unneeded NotCold contexts, taking advantage of the fact
+    // that we later will only clone Cold contexts, as NotCold is the allocation
+    // default. We only need to keep as metadata the NotCold contexts that
+    // overlap the longest with Cold allocations, so that we know how deeply we
+    // need to clone. For example, assume we add the following contexts to the
+    // trie:
+    //    1 3 (notcold)
+    //    1 2 4 (cold)
+    //    1 2 5 (notcold)
+    //    1 2 6 (notcold)
+    // the trie looks like:
+    //         1
+    //        / \
+    //       2   3
+    //      /|\
+    //     4 5 6
+    //
+    // It is sufficient to prune all but one not cold contexts (either 1,2,5 or
+    // 1,2,6, we arbitrarily keep the first one we encounter which will be
+    // 1,2,5). We'll initially have DeepestAmbiguousAllocType set false for trie
+    // node 1 after the trie is built, and true for node 2. This indicates that
+    // the not cold context ending in 3 is not needed (its immediate callee has
+    // this value set false). The first notcold context we encounter when
+    // iterating the callers of node 2 will be the context ending in 5 (since
+    // std::map iteration is in sorted order of key), which will see that this
+    // field is true for its callee, so we will keep it. But at that point we
+    // set the callee's flag to false which prevents adding the not cold context
+    // ending in 6 unnecessarily.
+    bool DeepestAmbiguousAllocType = true;
+    // If the user has requested reporting of hinted sizes, keep track of the
+    // associated full stack id and profiled sizes. Can have more than one
+    // after trimming (e.g. when building from metadata). This is only placed on
+    // the last (root-most) trie node for each allocation context.
+    std::vector<ContextTotalSize> ContextSizeInfo;
     // Map of caller stack id to the corresponding child Trie node.
     std::map<uint64_t, CallStackTrieNode *> Callers;
-    CallStackTrieNode(AllocationType Type, uint64_t TotalSize)
-        : AllocTypes(static_cast<uint8_t>(Type)), TotalSize(TotalSize) {}
+    CallStackTrieNode(AllocationType Type)
+        : AllocTypes(static_cast<uint8_t>(Type)) {}
+    void addAllocType(AllocationType AllocType) {
+      AllocTypes |= static_cast<uint8_t>(AllocType);
+    }
+    void removeAllocType(AllocationType AllocType) {
+      AllocTypes &= ~static_cast<uint8_t>(AllocType);
+    }
+    bool hasAllocType(AllocationType AllocType) const {
+      return AllocTypes & static_cast<uint8_t>(AllocType);
+    }
   };
 
   // The node for the allocation at the root.
@@ -75,11 +120,22 @@ private:
     delete Node;
   }
 
+  // Recursively build up a complete list of context size information from the
+  // trie nodes reached form the given Node, for hint size reporting.
+  void collectContextSizeInfo(CallStackTrieNode *Node,
+                              std::vector<ContextTotalSize> &ContextSizeInfo);
+
+  // Recursively convert hot allocation types to notcold, since we don't
+  // actually do any cloning for hot contexts, to facilitate more aggressive
+  // pruning of contexts.
+  void convertHotToNotCold(CallStackTrieNode *Node);
+
   // Recursive helper to trim contexts and create metadata nodes.
   bool buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
                      std::vector<uint64_t> &MIBCallStack,
                      std::vector<Metadata *> &MIBNodes,
-                     bool CalleeHasAmbiguousCallerContext);
+                     bool CalleeHasAmbiguousCallerContext,
+                     bool &CalleeDeepestAmbiguousAllocType);
 
 public:
   CallStackTrie() = default;
@@ -93,7 +149,7 @@ public:
   /// allocation call down to the bottom of the call stack (i.e. callee to
   /// caller order).
   void addCallStack(AllocationType AllocType, ArrayRef<uint64_t> StackIds,
-                    uint64_t TotalSize = 0);
+                    std::vector<ContextTotalSize> ContextSizeInfo = {});
 
   /// Add the call stack context along with its allocation type from the MIB
   /// metadata to the Trie.
@@ -107,6 +163,12 @@ public:
   /// which is lower overhead and more direct than maintaining this metadata.
   /// Returns true if memprof metadata attached, false if not (attribute added).
   bool buildAndAttachMIBMetadata(CallBase *CI);
+
+  /// Add an attribute for the given allocation type to the call instruction.
+  /// If hinted by reporting is enabled, a message is emitted with the given
+  /// descriptor used to identify the category of single allocation type.
+  void addSingleAllocTypeAttribute(CallBase *CI, AllocationType AT,
+                                   StringRef Descriptor);
 };
 
 /// Helper class to iterate through stack ids in both metadata (memprof MIB and

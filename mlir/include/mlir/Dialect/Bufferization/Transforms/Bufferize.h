@@ -38,30 +38,6 @@ struct BufferizationStatistics {
   int64_t numTensorOutOfPlace = 0;
 };
 
-/// A helper type converter class that automatically populates the relevant
-/// materializations and type conversions for bufferization.
-class BufferizeTypeConverter : public TypeConverter {
-public:
-  BufferizeTypeConverter();
-};
-
-/// Marks ops used by bufferization for type conversion materializations as
-/// "legal" in the given ConversionTarget.
-///
-/// This function should be called by all bufferization passes using
-/// BufferizeTypeConverter so that materializations work properly. One exception
-/// is bufferization passes doing "full" conversions, where it can be desirable
-/// for even the materializations to remain illegal so that they are eliminated,
-/// such as via the patterns in
-/// populateEliminateBufferizeMaterializationsPatterns.
-void populateBufferizeMaterializationLegality(ConversionTarget &target);
-
-/// Populate patterns to eliminate bufferize materializations.
-///
-/// In particular, these are the tensor_load/buffer_cast ops.
-void populateEliminateBufferizeMaterializationsPatterns(
-    BufferizeTypeConverter &typeConverter, RewritePatternSet &patterns);
-
 /// Bufferize `op` and its nested ops that implement `BufferizableOpInterface`.
 ///
 /// Note: This function does not resolve read-after-write conflicts. Use this
@@ -86,11 +62,6 @@ LogicalResult bufferizeOp(Operation *op, const BufferizationOptions &options,
 /// computed with `BufferizableOpIntercace::getBufferType`.
 LogicalResult bufferizeBlockSignature(Block *block, RewriterBase &rewriter,
                                       const BufferizationOptions &options);
-
-/// Return `BufferizationOptions` such that the `bufferizeOp` behaves like the
-/// old (deprecated) partial, dialect conversion-based bufferization passes. A
-/// copy will be inserted before every buffer write.
-BufferizationOptions getPartialBufferizationOptions();
 
 } // namespace bufferization
 } // namespace mlir

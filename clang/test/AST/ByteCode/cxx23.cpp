@@ -158,6 +158,21 @@ namespace VirtualBases {
     /// Calls the constructor of D.
     D d;
   }
+
+#if __cplusplus >= 202302L
+  struct VBase {};
+  struct HasVBase : virtual VBase {}; // all23-note 1{{virtual base class declared here}}
+  struct Derived : HasVBase {
+    constexpr Derived() {} // all23-error {{constexpr constructor not allowed in struct with virtual base class}}
+  };
+  template<typename T> struct DerivedFromVBase : T {
+    constexpr DerivedFromVBase();
+  };
+  constexpr int f(DerivedFromVBase<HasVBase>) {}
+  template<typename T> constexpr DerivedFromVBase<T>::DerivedFromVBase() : T() {}
+  constexpr int nVBase = (DerivedFromVBase<HasVBase>(), 0); // all23-error {{constant expression}} \
+                                                            // all23-note {{cannot construct object of type 'DerivedFromVBase<VirtualBases::HasVBase>' with virtual base class in a constant expression}}
+#endif
 }
 
 namespace LabelGoto {
@@ -237,4 +252,55 @@ namespace TwosComplementShifts {
   static_assert(-2 >> 1 == -1);
   static_assert(-3 >> 1 == -2);
   static_assert(-7 >> 1 == -4);
+}
+
+namespace AnonUnionDtor {
+  struct A {
+    A ();
+    ~A();
+  };
+
+  template <class T>
+  struct opt
+  {
+    union {
+      char c;
+      T data;
+    };
+
+    constexpr opt() {}
+
+    constexpr ~opt()  {
+     if (engaged)
+       data.~T();
+   }
+
+    bool engaged = false;
+  };
+
+  consteval void foo() {
+    opt<A> a;
+  }
+
+  void bar() { foo(); }
+}
+
+/// FIXME: The two interpreters disagree about there to diagnose the non-constexpr destructor call.
+namespace NonLiteralDtorInParam {
+  class NonLiteral { // all20-note {{is not an aggregate and has no constexpr constructors other than copy or move constructors}}
+  public:
+    NonLiteral() {}
+    ~NonLiteral() {} // all23-note {{declared here}}
+  };
+  constexpr int F2(NonLiteral N) { // all20-error {{constexpr function's 1st parameter type 'NonLiteral' is not a literal type}} \
+                                   // ref23-note {{non-constexpr function '~NonLiteral' cannot be used in a constant expression}}
+    return 8;
+  }
+
+
+  void test() {
+    NonLiteral L;
+    constexpr auto D = F2(L); // all23-error {{must be initialized by a constant expression}} \
+                              // expected23-note {{non-constexpr function '~NonLiteral' cannot be used in a constant expression}}
+  }
 }

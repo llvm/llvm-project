@@ -4,7 +4,7 @@
 ; ERR: LLVM ERROR: unable to legalize instruction: %{{[0-9]+}}:_(p5) = G_GLOBAL_VALUE @external_private (in function: fn_external_private)
 
 @external_private = external addrspace(5) global i32, align 4
-@internal_private = internal addrspace(5) global i32 undef, align 4
+@internal_private = internal addrspace(5) global i32 poison, align 4
 
 define ptr addrspace(5) @fn_external_private() {
   ret ptr addrspace(5) @external_private

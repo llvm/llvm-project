@@ -1362,7 +1362,7 @@ void DWARFRewriter::updateDWARFObjectAddressRanges(
                Die.getTag() == dwarf::DW_TAG_compile_unit)) {
     if (opts::Verbosity >= 1)
       errs() << "BOLT-WARNING: cannot update ranges for DIE in Unit offset 0x"
-             << Unit.getOffset() << '\n';
+             << Twine::utohexstr(Unit.getOffset()) << '\n';
   }
 }
 
@@ -1691,7 +1691,8 @@ namespace {
 std::unique_ptr<BinaryContext>
 createDwarfOnlyBC(const object::ObjectFile &File) {
   return cantFail(BinaryContext::createBinaryContext(
-      File.makeTriple(), File.getFileName(), nullptr, false,
+      File.makeTriple(), std::make_shared<orc::SymbolStringPool>(),
+      File.getFileName(), nullptr, false,
       DWARFContext::create(File, DWARFContext::ProcessDebugRelocations::Ignore,
                            nullptr, "", WithColor::defaultErrorHandler,
                            WithColor::defaultWarningHandler),

@@ -7,7 +7,7 @@
 ; so the second reload is not necessary. Check that it can be eliminated.
 define void @test1(ptr nocapture readonly %p, i32 %v) #0 {
 ; CHECK-LABEL: define void @test1(
-; CHECK-SAME: ptr nocapture readonly [[P:%.*]], i32 [[V:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr readonly captures(none) [[P:%.*]], i32 [[V:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P]], align 4, !tbaa [[TBAA0:![0-9]+]]
 ; CHECK-NEXT:    store volatile i32 [[V]], ptr [[TMP0]], align 4, !tbaa [[TBAA5:![0-9]+]]
@@ -26,7 +26,7 @@ entry:
 ; Make sure that both loads remain.
 define void @test2(ptr nocapture readonly %p, i32 %v) #0 {
 ; CHECK-LABEL: define void @test2(
-; CHECK-SAME: ptr nocapture readonly [[P:%.*]], i32 [[V:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr readonly captures(none) [[P:%.*]], i32 [[V:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P]], align 4, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    store volatile i32 [[V]], ptr [[TMP0]], align 4, !tbaa [[TBAA0]]
@@ -46,7 +46,7 @@ entry:
 ; the stores, make sure both are preserved.
 define void @test3(ptr nocapture readonly %p, i32 %v) #0 {
 ; CHECK-LABEL: define void @test3(
-; CHECK-SAME: ptr nocapture readonly [[P:%.*]], i32 [[V:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr readonly captures(none) [[P:%.*]], i32 [[V:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load atomic ptr, ptr [[P]] acquire, align 4, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    store volatile i32 [[V]], ptr [[TMP0]], align 4, !tbaa [[TBAA5]]

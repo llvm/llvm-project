@@ -43,6 +43,8 @@ static const CudaVersionMapEntry CudaNameVersionMap[] = {
     CUDA_ENTRY(12, 3),
     CUDA_ENTRY(12, 4),
     CUDA_ENTRY(12, 5),
+    CUDA_ENTRY(12, 6),
+    CUDA_ENTRY(12, 8),
     {"", CudaVersion::NEW, llvm::VersionTuple(std::numeric_limits<int>::max())},
     {"unknown", CudaVersion::UNKNOWN, {}} // End of list tombstone.
 };
@@ -96,6 +98,12 @@ static const OffloadArchToStringMap arch_names[] = {
     SM(89),                          // Ada Lovelace
     SM(90),                          // Hopper
     SM(90a),                         // Hopper
+    SM(100),                         // Blackwell
+    SM(100a),                        // Blackwell
+    SM(101),                         // Blackwell
+    SM(101a),                        // Blackwell
+    SM(120),                         // Blackwell
+    SM(120a),                        // Blackwell
     GFX(600),  // gfx600
     GFX(601),  // gfx601
     GFX(602),  // gfx602
@@ -119,9 +127,9 @@ static const OffloadArchToStringMap arch_names[] = {
     GFX(909),  // gfx909
     GFX(90a),  // gfx90a
     GFX(90c),  // gfx90c
-    GFX(940),  // gfx940
-    GFX(941),  // gfx941
+    {OffloadArch::GFX9_4_GENERIC, "gfx9-4-generic", "compute_amdgcn"},
     GFX(942),  // gfx942
+    GFX(950),  // gfx950
     {OffloadArch::GFX10_1_GENERIC, "gfx10-1-generic", "compute_amdgcn"},
     GFX(1010), // gfx1010
     GFX(1011), // gfx1011
@@ -143,6 +151,7 @@ static const OffloadArchToStringMap arch_names[] = {
     GFX(1150), // gfx1150
     GFX(1151), // gfx1151
     GFX(1152), // gfx1152
+    GFX(1153), // gfx1153
     {OffloadArch::GFX12_GENERIC, "gfx12-generic", "compute_amdgcn"},
     GFX(1200), // gfx1200
     GFX(1201), // gfx1201
@@ -221,6 +230,13 @@ CudaVersion MinVersionForOffloadArch(OffloadArch A) {
     return CudaVersion::CUDA_118;
   case OffloadArch::SM_90a:
     return CudaVersion::CUDA_120;
+  case OffloadArch::SM_100:
+  case OffloadArch::SM_100a:
+  case OffloadArch::SM_101:
+  case OffloadArch::SM_101a:
+  case OffloadArch::SM_120:
+  case OffloadArch::SM_120a:
+    return CudaVersion::CUDA_128;
   default:
     llvm_unreachable("invalid enum");
   }

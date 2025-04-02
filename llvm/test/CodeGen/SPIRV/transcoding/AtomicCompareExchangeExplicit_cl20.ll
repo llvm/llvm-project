@@ -29,11 +29,11 @@
 
 ; CHECK-SPIRV: %[[#int:]] = OpTypeInt 32 0
 ;; Constants below correspond to the SPIR-V spec
-; CHECK-SPIRV-DAG: %[[#DeviceScope:]] = OpConstant %[[#int]] 1
-; CHECK-SPIRV-DAG: %[[#WorkgroupScope:]] = OpConstant %[[#int]] 2
-; CHECK-SPIRV-DAG: %[[#ReleaseMemSem:]] = OpConstant %[[#int]] 4
-; CHECK-SPIRV-DAG: %[[#RelaxedMemSem:]] = OpConstant %[[#int]] 0
-; CHECK-SPIRV-DAG: %[[#AcqRelMemSem:]] = OpConstant %[[#int]] 8
+; CHECK-SPIRV-DAG: %[[#DeviceScope:]] = OpConstant %[[#int]] 1{{$}}
+; CHECK-SPIRV-DAG: %[[#WorkgroupScope:]] = OpConstant %[[#int]] 2{{$}}
+; CHECK-SPIRV-DAG: %[[#ReleaseMemSem:]] = OpConstant %[[#int]] 4{{$}}
+; CHECK-SPIRV-DAG: %[[#RelaxedMemSem:]] = OpConstantNull %[[#int]]
+; CHECK-SPIRV-DAG: %[[#AcqRelMemSem:]] = OpConstant %[[#int]] 8{{$}}
 
 ; CHECK-SPIRV: %[[#]] = OpAtomicCompareExchange %[[#]] %[[#]] %[[#DeviceScope]] %[[#ReleaseMemSem]] %[[#RelaxedMemSem]]
 ; CHECK-SPIRV: %[[#]] = OpAtomicCompareExchange %[[#]] %[[#]] %[[#WorkgroupScope]] %[[#AcqRelMemSem]] %[[#RelaxedMemSem]]

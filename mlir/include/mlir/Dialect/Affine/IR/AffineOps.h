@@ -16,11 +16,11 @@
 
 #include "mlir/Dialect/Affine/IR/AffineMemoryOpInterfaces.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
-
 namespace mlir {
 namespace affine {
 
@@ -45,6 +45,13 @@ bool isTopLevelValue(Value value, Region *region);
 /// Returns the closest region enclosing `op` that is held by an operation with
 /// trait `AffineScope`; `nullptr` if there is no such region.
 Region *getAffineScope(Operation *op);
+
+/// Returns the closest region enclosing `op` that is held by a non-affine
+/// operation; `nullptr` if there is no such region. This method is meant to
+/// be used by affine analysis methods (e.g. dependence analysis) which are
+/// only meaningful when performed among/between operations from the same
+/// analysis scope.
+Region *getAffineAnalysisScope(Operation *op);
 
 /// AffineDmaStartOp starts a non-blocking DMA operation that transfers data
 /// from a source memref to a destination memref. The source and destination

@@ -20,6 +20,7 @@
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/sign.h"
 
 // This file has 5 compile-time flags to allow the user to configure the float
 // to string behavior. These were used to explore tradeoffs during the design
@@ -232,7 +233,7 @@ LIBC_INLINE UInt<MID_INT_SIZE> get_table_positive_df(int exponent, size_t i) {
   if (shift_amount < 0) {
     return 1;
   }
-  fputil::DyadicFloat<INT_SIZE> num(false, 0, 1);
+  fputil::DyadicFloat<INT_SIZE> num(Sign::POS, 0, 1);
   constexpr UInt<INT_SIZE> MOD_SIZE =
       (UInt<INT_SIZE>(EXP10_9)
        << (CALC_SHIFT_CONST + (IDX_SIZE > 1 ? IDX_SIZE : 0)));
@@ -242,16 +243,17 @@ LIBC_INLINE UInt<MID_INT_SIZE> get_table_positive_df(int exponent, size_t i) {
        0x89705f4136b4a597}};
 
   static const fputil::DyadicFloat<INT_SIZE> FIVE_EXP_MINUS_NINE(
-      false, -276, FIVE_EXP_MINUS_NINE_MANT);
+      Sign::POS, -276, FIVE_EXP_MINUS_NINE_MANT);
 
   if (i > 0) {
-    fputil::DyadicFloat<INT_SIZE> fives = fputil::pow_n(FIVE_EXP_MINUS_NINE, i);
+    fputil::DyadicFloat<INT_SIZE> fives =
+        fputil::pow_n(FIVE_EXP_MINUS_NINE, static_cast<uint32_t>(i));
     num = fives;
   }
   num = mul_pow_2(num, shift_amount);
 
   // Adding one is part of the formula.
-  UInt<INT_SIZE> int_num = static_cast<UInt<INT_SIZE>>(num) + 1;
+  UInt<INT_SIZE> int_num = num.as_mantissa_type() + 1;
   if (int_num > MOD_SIZE) {
     auto rem =
         int_num
@@ -285,7 +287,7 @@ LIBC_INLINE UInt<MID_INT_SIZE> get_table_negative(int exponent, size_t i) {
   size_t ten_blocks = i;
   size_t five_blocks = 0;
   if (shift_amount < 0) {
-    int block_shifts = (-shift_amount) / BLOCK_SIZE;
+    int block_shifts = (-shift_amount) / static_cast<int>(BLOCK_SIZE);
     if (block_shifts < static_cast<int>(ten_blocks)) {
       ten_blocks = ten_blocks - block_shifts;
       five_blocks = block_shifts;
@@ -339,23 +341,24 @@ LIBC_INLINE UInt<MID_INT_SIZE> get_table_negative_df(int exponent, size_t i) {
 
   int shift_amount = CALC_SHIFT_CONST - exponent;
 
-  fputil::DyadicFloat<INT_SIZE> num(false, 0, 1);
+  fputil::DyadicFloat<INT_SIZE> num(Sign::POS, 0, 1);
   constexpr UInt<INT_SIZE> MOD_SIZE =
       (UInt<INT_SIZE>(EXP10_9)
        << (CALC_SHIFT_CONST + (IDX_SIZE > 1 ? IDX_SIZE : 0)));
 
   constexpr UInt<INT_SIZE> TEN_EXP_NINE_MANT(EXP10_9);
 
-  static const fputil::DyadicFloat<INT_SIZE> TEN_EXP_NINE(false, 0,
+  static const fputil::DyadicFloat<INT_SIZE> TEN_EXP_NINE(Sign::POS, 0,
                                                           TEN_EXP_NINE_MANT);
 
   if (i > 0) {
-    fputil::DyadicFloat<INT_SIZE> tens = fputil::pow_n(TEN_EXP_NINE, i);
+    fputil::DyadicFloat<INT_SIZE> tens =
+        fputil::pow_n(TEN_EXP_NINE, static_cast<uint32_t>(i));
     num = tens;
   }
   num = mul_pow_2(num, shift_amount);
 
-  UInt<INT_SIZE> int_num = static_cast<UInt<INT_SIZE>>(num);
+  UInt<INT_SIZE> int_num = num.as_mantissa_type();
   if (int_num > MOD_SIZE) {
     auto rem =
         int_num
@@ -370,23 +373,12 @@ LIBC_INLINE UInt<MID_INT_SIZE> get_table_negative_df(int exponent, size_t i) {
   return result;
 }
 
-LIBC_INLINE uint32_t fast_uint_mod_1e9(const UInt<MID_INT_SIZE> &val) {
-  // The formula for mult_const is:
-  //  1 + floor((2^(bits in target integer size + log_2(divider))) / divider)
-  // Where divider is 10^9 and target integer size is 128.
-  const UInt<MID_INT_SIZE> mult_const(
-      {0x31680A88F8953031u, 0x89705F4136B4A597u, 0});
-  const auto middle = (mult_const * val);
-  const uint64_t result = static_cast<uint64_t>(middle[2]);
-  const uint64_t shifted = result >> 29;
-  return static_cast<uint32_t>(static_cast<uint32_t>(val) -
-                               (EXP10_9 * shifted));
-}
-
 LIBC_INLINE uint32_t mul_shift_mod_1e9(const FPBits::StorageType mantissa,
                                        const UInt<MID_INT_SIZE> &large,
                                        const int32_t shift_amount) {
-  UInt<MID_INT_SIZE + FPBits::STORAGE_LEN> val(large);
+  // make sure the number of bits is always divisible by 64
+  UInt<internal::div_ceil(MID_INT_SIZE + FPBits::STORAGE_LEN, 64) * 64> val(
+      large);
   val = (val * mantissa) >> shift_amount;
   return static_cast<uint32_t>(
       val.div_uint_half_times_pow_2(static_cast<uint32_t>(EXP10_9), 0).value());
@@ -499,7 +491,7 @@ public:
 
   LIBC_INLINE constexpr BlockInt get_negative_block(int block_index) {
     if (exponent < 0) {
-      const int32_t idx = -exponent / IDX_SIZE;
+      const int32_t idx = -exponent / static_cast<int32_t>(IDX_SIZE);
 
       UInt<MID_INT_SIZE> val;
 
@@ -587,7 +579,7 @@ public:
 
     return num_requested_digits > -exponent;
 #else
-    const int32_t idx = -exponent / IDX_SIZE;
+    const int32_t idx = -exponent / static_cast<int32_t>(IDX_SIZE);
     const size_t p =
         POW10_OFFSET_2[idx] + negative_block_index - MIN_BLOCK_2[idx];
     // If the remaining digits are all 0, then this is the lowest block.
@@ -609,7 +601,7 @@ public:
     }
     return 0;
 #else
-    return MIN_BLOCK_2[-exponent / IDX_SIZE];
+    return MIN_BLOCK_2[-exponent / static_cast<int32_t>(IDX_SIZE)];
 #endif
   }
 };

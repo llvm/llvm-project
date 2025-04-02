@@ -80,20 +80,20 @@ public:
   bool empty() const { return LiveRegs.empty(); }
 
   /// Adds a physical register and all its sub-registers to the set.
-  void addReg(MCPhysReg Reg) {
+  void addReg(MCRegister Reg) {
     assert(TRI && "LivePhysRegs is not initialized.");
-    assert(Reg <= TRI->getNumRegs() && "Expected a physical register.");
+    assert(Reg < TRI->getNumRegs() && "Expected a physical register.");
     for (MCPhysReg SubReg : TRI->subregs_inclusive(Reg))
       LiveRegs.insert(SubReg);
   }
 
   /// Removes a physical register, all its sub-registers, and all its
   /// super-registers from the set.
-  void removeReg(MCPhysReg Reg) {
+  void removeReg(MCRegister Reg) {
     assert(TRI && "LivePhysRegs is not initialized.");
-    assert(Reg <= TRI->getNumRegs() && "Expected a physical register.");
+    assert(Reg < TRI->getNumRegs() && "Expected a physical register.");
     for (MCRegAliasIterator R(Reg, TRI, true); R.isValid(); ++R)
-      LiveRegs.erase(*R);
+      LiveRegs.erase((*R).id());
   }
 
   /// Removes physical registers clobbered by the regmask operand \p MO.
@@ -106,10 +106,10 @@ public:
   /// addReg() always adds all sub-registers to the set as well.
   /// Note: Returns false if just some sub registers are live, use available()
   /// when searching a free register.
-  bool contains(MCPhysReg Reg) const { return LiveRegs.count(Reg); }
+  bool contains(MCRegister Reg) const { return LiveRegs.count(Reg.id()); }
 
   /// Returns true if register \p Reg and no aliasing register is in the set.
-  bool available(const MachineRegisterInfo &MRI, MCPhysReg Reg) const;
+  bool available(const MachineRegisterInfo &MRI, MCRegister Reg) const;
 
   /// Remove defined registers and regmask kills from the set.
   void removeDefs(const MachineInstr &MI);

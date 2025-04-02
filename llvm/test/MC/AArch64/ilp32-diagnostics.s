@@ -69,6 +69,12 @@ ldr x10, [x0, #:gottprel_lo12:var]
 ldr x24, [x23, #:got_lo12:sym]
 // ERROR: [[#@LINE-1]]:1: error: ILP32 64-bit load/store relocation not supported (LP64 eqv: LD64_GOT_LO12_NC)
 
+ldr x24, [x23, #:got_auth_lo12:sym]
+// ERROR: [[#@LINE-1]]:1: error: ILP32 64-bit load/store relocation not supported (LP64 eqv: AUTH_GOT_LO12_NC)
+
+add x24, x23, #:got_auth_lo12:sym
+// ERROR: [[#@LINE-1]]:1: error: ILP32 ADD AUTH relocation not supported (LP64 eqv: AUTH_GOT_ADD_LO12_NC)
+
 ldr x24, [x23, :gottprel_lo12:sym]
 // ERROR: [[#@LINE-1]]:1: error: ILP32 64-bit load/store relocation not supported (LP64 eqv: TLSIE_LD64_GOTTPREL_LO12_NC)
 
@@ -81,3 +87,18 @@ ldr x24, [x23, #:got_lo12:sym]
 
 ldr x24, [x23, :gottprel_lo12:sym]
 // ERROR: [[#@LINE-1]]:1: error: ILP32 64-bit load/store relocation not supported (LP64 eqv: TLSIE_LD64_GOTTPREL_LO12_NC)
+
+ldr x24, :got_auth:sym
+// ERROR: [[#@LINE-1]]:1: error: ILP32 LDR AUTH relocation not supported (LP64 eqv: AUTH_GOT_LD_PREL19)
+
+adr x24, :got_auth:sym
+// ERROR: [[#@LINE-1]]:1: error: ILP32 ADR AUTH relocation not supported (LP64 eqv: AUTH_GOT_ADR_PREL_LO21)
+
+adrp x24, :tlsdesc_auth:sym
+// ERROR: [[#@LINE-1]]:1: error: ILP32 ADRP AUTH relocation not supported (LP64 eqv: AUTH_TLSDESC_ADR_PAGE21)
+
+ldr x24, [x23, :tlsdesc_auth_lo12:sym]
+// ERROR: [[#@LINE-1]]:1: error: ILP32 64-bit load/store AUTH relocation not supported (LP64 eqv: AUTH_TLSDESC_LD64_LO12)
+
+add x24, x23, :tlsdesc_auth_lo12:sym
+// ERROR: [[#@LINE-1]]:1: error: ILP32 ADD AUTH relocation not supported (LP64 eqv: AUTH_TLSDESC_ADD_LO12)

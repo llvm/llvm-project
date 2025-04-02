@@ -36,11 +36,9 @@ Expected<const COFFConfig &> ConfigManager::getCOFFConfig() const {
 
 Expected<const MachOConfig &> ConfigManager::getMachOConfig() const {
   if (!Common.SplitDWO.empty() || !Common.SymbolsPrefix.empty() ||
-      !Common.SymbolsPrefixRemove.empty() || !Common.SymbolsToSkip.empty() ||
+      !Common.SymbolsPrefixRemove.empty() ||
       !Common.AllocSectionsPrefix.empty() || !Common.KeepSection.empty() ||
-      !Common.SymbolsToGlobalize.empty() || !Common.SymbolsToKeep.empty() ||
-      !Common.SymbolsToLocalize.empty() ||
-      !Common.SymbolsToKeepGlobal.empty() || !Common.SectionsToRename.empty() ||
+      !Common.SymbolsToKeep.empty() || !Common.SectionsToRename.empty() ||
       !Common.UnneededSymbolsToRemove.empty() ||
       !Common.SetSectionAlignment.empty() || !Common.SetSectionFlags.empty() ||
       !Common.SetSectionType.empty() || Common.ExtractDWO ||

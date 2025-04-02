@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; Check that all the offsets in the .cfi_offset instructions are negative.
 ; They are all based on R30+8 which points to the pair FP/LR stored by an
 ; allocframe. Since the stack grows towards negative addresses, anything

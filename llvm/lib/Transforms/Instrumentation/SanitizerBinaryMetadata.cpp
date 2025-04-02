@@ -36,7 +36,6 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/SpecialCaseList.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -258,6 +257,9 @@ bool SanitizerBinaryMetadata::run() {
 void SanitizerBinaryMetadata::runOn(Function &F, MetadataInfoSet &MIS) {
   if (F.empty())
     return;
+  // Do not apply any instrumentation for naked functions.
+  if (F.hasFnAttribute(Attribute::Naked))
+    return;
   if (F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
     return;
   if (Ignorelist && Ignorelist->inSection("metadata", "fun", F.getName()))
@@ -372,7 +374,7 @@ bool SanitizerBinaryMetadata::pretendAtomicAccess(const Value *Addr) {
   // Some compiler-generated accesses are known racy, to avoid false positives
   // in data-race analysis pretend they're atomic.
   if (GV->hasSection()) {
-    const auto OF = Triple(Mod.getTargetTriple()).getObjectFormat();
+    const auto OF = Mod.getTargetTriple().getObjectFormat();
     const auto ProfSec =
         getInstrProfSectionName(IPSK_cnts, OF, /*AddSegmentInfo=*/false);
     if (GV->getSection().ends_with(ProfSec))
@@ -392,7 +394,7 @@ bool maybeSharedMutable(const Value *Addr) {
     return true;
 
   if (isa<AllocaInst>(getUnderlyingObject(Addr)) &&
-      !PointerMayBeCaptured(Addr, true, true))
+      !PointerMayBeCaptured(Addr, /*ReturnCaptures=*/true))
     return false; // Object is on stack but does not escape.
 
   Addr = Addr->stripInBoundsOffsets();
@@ -438,7 +440,7 @@ bool SanitizerBinaryMetadata::runOn(Instruction &I, MetadataInfoSet &MIS,
 
   // Attach MD_pcsections to instruction.
   if (!InstMetadata.empty()) {
-    MIS.insert(InstMetadata.begin(), InstMetadata.end());
+    MIS.insert_range(InstMetadata);
     SmallVector<MDBuilder::PCSection, 1> Sections;
     for (const auto &MI : InstMetadata)
       Sections.push_back({getSectionName(MI->SectionSuffix), {}});

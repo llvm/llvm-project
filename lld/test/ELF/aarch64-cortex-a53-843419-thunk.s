@@ -1,5 +1,5 @@
 // REQUIRES: aarch64
-// RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux %s -o %t.o
+// RUN: llvm-mc -filetype=obj -triple=aarch64 %s -o %t.o
 // RUN: echo "SECTIONS { \
 // RUN:          .text1 0x10000 : { *(.text.01) *(.text.02) *(.text.03) } \
 // RUN:          .text2 0x10010000 : { *(.text.04) } } " > %t.script

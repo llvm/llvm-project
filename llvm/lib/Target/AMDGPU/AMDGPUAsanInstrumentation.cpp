@@ -161,7 +161,7 @@ static void instrumentAddressImpl(Module &M, IRBuilder<> &IRB,
   size_t AccessSizeIndex = TypeStoreSizeToSizeIndex(TypeStoreSize);
   Type *ShadowTy = IntegerType::get(M.getContext(),
                                     std::max(8U, TypeStoreSize >> AsanScale));
-  Type *ShadowPtrTy = PointerType::get(ShadowTy, 0);
+  Type *ShadowPtrTy = PointerType::get(M.getContext(), 0);
   Value *AddrLong = IRB.CreatePtrToInt(Addr, IntptrTy);
   Value *ShadowPtr =
       memToShadow(M, IRB, IntptrTy, AddrLong, AsanScale, AsanOffset);
@@ -178,7 +178,6 @@ static void instrumentAddressImpl(Module &M, IRBuilder<> &IRB,
       generateCrashCode(M, IRB, IntptrTy, CrashTerm, AddrLong, IsWrite,
                         AccessSizeIndex, SizeArgument, Recover);
   Crash->setDebugLoc(OrigIns->getDebugLoc());
-  return;
 }
 
 void instrumentAddress(Module &M, IRBuilder<> &IRB, Instruction *OrigIns,
@@ -235,7 +234,7 @@ void getInterestingMemoryOperands(
     Interesting.emplace_back(I, XCHG->getPointerOperandIndex(), true,
                              XCHG->getCompareOperand()->getType(),
                              std::nullopt);
-  } else if (auto CI = dyn_cast<CallInst>(I)) {
+  } else if (auto *CI = dyn_cast<CallInst>(I)) {
     switch (CI->getIntrinsicID()) {
     case Intrinsic::masked_load:
     case Intrinsic::masked_store:
@@ -257,7 +256,7 @@ void getInterestingMemoryOperands(
     case Intrinsic::masked_compressstore: {
       bool IsWrite = CI->getIntrinsicID() == Intrinsic::masked_compressstore;
       unsigned OpOffset = IsWrite ? 1 : 0;
-      auto BasePtr = CI->getOperand(OpOffset);
+      auto *BasePtr = CI->getOperand(OpOffset);
       MaybeAlign Alignment = BasePtr->getPointerAlignment(DL);
       Type *Ty = IsWrite ? CI->getArgOperand(0)->getType() : CI->getType();
       IRBuilder<> IB(I);

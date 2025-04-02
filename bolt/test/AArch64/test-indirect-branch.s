@@ -3,10 +3,11 @@
 
 // clang-format off
 
-// REQUIRES: system-linux
-// RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown %s -o %t.o
+// REQUIRES: system-linux, asserts
+
+// RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown -mattr=+pauth %s -o %t.o
 // RUN: %clang %cflags --target=aarch64-unknown-linux %t.o -o %t.exe -Wl,-q
-// RUN: llvm-bolt %t.exe -o %t.bolt --print-cfg --strict\
+// RUN: llvm-bolt %t.exe -o %t.bolt --print-cfg --strict --debug-only=mcplus \
 // RUN:  -v=1 2>&1 | FileCheck %s
 
 // Pattern 1: there is no shift amount after the 'add' instruction.
@@ -39,7 +40,7 @@ _start:
 // svc #0
 
 // Pattern 1
-// CHECK: BOLT-WARNING: Failed to match indirect branch: ShiftVAL != 2
+// CHECK: BOLT-DEBUG: failed to match indirect branch: ShiftVAL != 2
   .globl test1
   .type  test1, %function
 test1:
@@ -57,7 +58,7 @@ test1_2:
    ret
 
 // Pattern 2
-// CHECK: BOLT-WARNING: Failed to match indirect branch: nop/adr instead of adrp/add
+// CHECK: BOLT-DEBUG: failed to match indirect branch: nop/adr instead of adrp/add
   .globl test2
   .type  test2, %function
 test2:
@@ -71,6 +72,27 @@ test2_0:
   ret
 test2_1:
   ret
+
+// Make sure BOLT does not crash trying to disassemble BRA* instructions.
+  .globl test_braa
+  .type  test_braa, %function
+test_braa:
+  braa x0, x1
+
+  .globl test_brab
+  .type  test_brab, %function
+test_brab:
+  brab x0, x1
+
+  .globl test_braaz
+  .type  test_braaz, %function
+test_braaz:
+  braaz x0
+
+  .globl test_brabz
+  .type  test_brabz, %function
+test_brabz:
+  brabz x0
 
   .section .rodata,"a",@progbits
 datatable:

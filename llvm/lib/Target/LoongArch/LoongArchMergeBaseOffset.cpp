@@ -37,6 +37,8 @@ public:
   bool detectFoldable(MachineInstr &Hi20, MachineInstr *&Lo12,
                       MachineInstr *&Lo20, MachineInstr *&Hi12,
                       MachineInstr *&Last);
+  bool detectFoldable(MachineInstr &Hi20, MachineInstr *&Add,
+                      MachineInstr *&Lo12);
 
   bool detectAndFoldOffset(MachineInstr &Hi20, MachineInstr &Lo12,
                            MachineInstr *&Lo20, MachineInstr *&Hi12,
@@ -105,7 +107,7 @@ bool LoongArchMergeBaseOffsetOpt::detectFoldable(MachineInstr &Hi20,
     return false;
 
   const MachineOperand &Hi20Op1 = Hi20.getOperand(1);
-  if (Hi20Op1.getTargetFlags() != LoongArchII::MO_PCREL_HI)
+  if (LoongArchII::getDirectFlags(Hi20Op1) != LoongArchII::MO_PCREL_HI)
     return false;
 
   auto isGlobalOrCPIOrBlockAddress = [](const MachineOperand &Op) {
@@ -157,7 +159,7 @@ bool LoongArchMergeBaseOffsetOpt::detectFoldable(MachineInstr &Hi20,
 
   const MachineOperand &Lo12Op2 = Lo12->getOperand(2);
   assert(Hi20.getOpcode() == LoongArch::PCALAU12I);
-  if (Lo12Op2.getTargetFlags() != LoongArchII::MO_PCREL_LO ||
+  if (LoongArchII::getDirectFlags(Lo12Op2) != LoongArchII::MO_PCREL_LO ||
       !(isGlobalOrCPIOrBlockAddress(Lo12Op2) || Lo12Op2.isMCSymbol()) ||
       Lo12Op2.getOffset() != 0)
     return false;
@@ -176,14 +178,86 @@ bool LoongArchMergeBaseOffsetOpt::detectFoldable(MachineInstr &Hi20,
   return true;
 }
 
-// Update the offset in Hi20, Lo12, Lo20 and Hi12 instructions.
+// Detect the pattern:
+//
+// (small/medium):
+//   lu12i.w  vreg1, %le_hi20_r(s)
+//   add.w/d  vreg2, vreg1, r2, %le_add_r(s)
+//   addi.w/d vreg3, vreg2, %le_lo12_r(s)
+
+// The pattern is only accepted if:
+//    1) The first instruction has only one use, which is the PseudoAddTPRel.
+//       The second instruction has only one use, which is the ADDI. The
+//       second instruction's last operand is the tp register.
+//    2) The address operands have the appropriate type, reflecting the
+//       lowering of a thread_local global address using the pattern.
+//    3) The offset value in the ThreadLocal Global Address is 0.
+bool LoongArchMergeBaseOffsetOpt::detectFoldable(MachineInstr &Hi20,
+                                                 MachineInstr *&Add,
+                                                 MachineInstr *&Lo12) {
+  if (Hi20.getOpcode() != LoongArch::LU12I_W)
+    return false;
+
+  auto isGlobalOrCPI = [](const MachineOperand &Op) {
+    return Op.isGlobal() || Op.isCPI();
+  };
+
+  const MachineOperand &Hi20Op1 = Hi20.getOperand(1);
+  if (LoongArchII::getDirectFlags(Hi20Op1) != LoongArchII::MO_LE_HI_R ||
+      !isGlobalOrCPI(Hi20Op1) || Hi20Op1.getOffset() != 0)
+    return false;
+
+  Register HiDestReg = Hi20.getOperand(0).getReg();
+  if (!MRI->hasOneUse(HiDestReg))
+    return false;
+
+  Add = &*MRI->use_instr_begin(HiDestReg);
+  if ((ST->is64Bit() && Add->getOpcode() != LoongArch::PseudoAddTPRel_D) ||
+      (!ST->is64Bit() && Add->getOpcode() != LoongArch::PseudoAddTPRel_W))
+    return false;
+
+  if (Add->getOperand(2).getReg() != LoongArch::R2)
+    return false;
+
+  const MachineOperand &AddOp3 = Add->getOperand(3);
+  if (LoongArchII::getDirectFlags(AddOp3) != LoongArchII::MO_LE_ADD_R ||
+      !(isGlobalOrCPI(AddOp3) || AddOp3.isMCSymbol()) ||
+      AddOp3.getOffset() != 0)
+    return false;
+
+  Register AddDestReg = Add->getOperand(0).getReg();
+  if (!MRI->hasOneUse(AddDestReg))
+    return false;
+
+  Lo12 = &*MRI->use_instr_begin(AddDestReg);
+  if ((ST->is64Bit() && Lo12->getOpcode() != LoongArch::ADDI_D) ||
+      (!ST->is64Bit() && Lo12->getOpcode() != LoongArch::ADDI_W))
+    return false;
+
+  const MachineOperand &Lo12Op2 = Lo12->getOperand(2);
+  if (LoongArchII::getDirectFlags(Lo12Op2) != LoongArchII::MO_LE_LO_R ||
+      !(isGlobalOrCPI(Lo12Op2) || Lo12Op2.isMCSymbol()) ||
+      Lo12Op2.getOffset() != 0)
+    return false;
+
+  if (Hi20Op1.isGlobal()) {
+    LLVM_DEBUG(dbgs() << "  Found lowered global address: "
+                      << *Hi20Op1.getGlobal() << "\n");
+  } else if (Hi20Op1.isCPI()) {
+    LLVM_DEBUG(dbgs() << "  Found lowered constant pool: " << Hi20Op1.getIndex()
+                      << "\n");
+  }
+
+  return true;
+}
+
+// Update the offset in Hi20, (Add), Lo12, (Lo20 and Hi12) instructions.
 // Delete the tail instruction and update all the uses to use the
 // output from Last.
 void LoongArchMergeBaseOffsetOpt::foldOffset(
     MachineInstr &Hi20, MachineInstr &Lo12, MachineInstr *&Lo20,
     MachineInstr *&Hi12, MachineInstr *&Last, MachineInstr &Tail,
     int64_t Offset) {
-  assert(isInt<32>(Offset) && "Unexpected offset");
   // Put the offset back in Hi and the Lo
   Hi20.getOperand(1).setOffset(Offset);
   Lo12.getOperand(2).setOffset(Offset);
@@ -191,40 +265,71 @@ void LoongArchMergeBaseOffsetOpt::foldOffset(
     Lo20->getOperand(2).setOffset(Offset);
     Hi12->getOperand(2).setOffset(Offset);
   }
+
+  // For tls-le, offset of the second PseudoAddTPRel instr should also be
+  // updated.
+  MachineInstr *Add = &*MRI->use_instr_begin(Hi20.getOperand(0).getReg());
+  if (Hi20.getOpcode() == LoongArch::LU12I_W)
+    Add->getOperand(3).setOffset(Offset);
+
   // Delete the tail instruction.
   MachineInstr *Def = Last ? Last : &Lo12;
   MRI->constrainRegClass(Def->getOperand(0).getReg(),
                          MRI->getRegClass(Tail.getOperand(0).getReg()));
   MRI->replaceRegWith(Tail.getOperand(0).getReg(), Def->getOperand(0).getReg());
   Tail.eraseFromParent();
+
   LLVM_DEBUG(dbgs() << "  Merged offset " << Offset << " into base.\n"
-                    << "     " << Hi20 << "     " << Lo12;);
+                    << "     " << Hi20;);
+  if (Hi20.getOpcode() == LoongArch::LU12I_W) {
+    LLVM_DEBUG(dbgs() << "     " << *Add;);
+  }
+  LLVM_DEBUG(dbgs() << "     " << Lo12;);
   if (Lo20 && Hi12) {
     LLVM_DEBUG(dbgs() << "     " << *Lo20 << "     " << *Hi12;);
   }
 }
 
 // Detect patterns for large offsets that are passed into an ADD instruction.
-// If the pattern is found, updates the offset in Hi20, Lo12, Lo20 and Hi12
-// instructions and deletes TailAdd and the instructions that produced the
-// offset.
+// If the pattern is found, updates the offset in Hi20, (Add), Lo12,
+// (Lo20 and Hi12) instructions and deletes TailAdd and the instructions that
+// produced the offset.
 //
-//                     Base address lowering is of the form:
-//                       Hi20:  pcalau12i vreg1, %pc_hi20(s)
-//                       Lo12:  addi.d vreg2, vreg1, %pc_lo12(s)
-//                       /                                  \
-//                      /                                    \
-//                     /                                      \
-//                    /  The large offset can be of two forms: \
-//  1) Offset that has non zero bits in lower      2) Offset that has non zero
-//     12 bits and upper 20 bits                      bits in upper 20 bits only
-//   OffsetHi: lu12i.w vreg3, 4
-//   OffsetLo: ori voff, vreg3, 188                 OffsetHi: lu12i.w voff, 128
-//                    \                                        /
-//                     \                                      /
-//                      \                                    /
-//                       \                                  /
-//                        TailAdd: add.d  vreg4, vreg2, voff
+//   (The instructions marked with "!" are not necessarily present)
+//
+//        Base address lowering is of the form:
+//           1) pcala:
+//             Hi20:  pcalau12i vreg1, %pc_hi20(s)
+//        +--- Lo12:  addi.d vreg2, vreg1, %pc_lo12(s)
+//        |    Lo20:  lu32i.d vreg2, %pc64_lo20(s) !
+//        +--- Hi12:  lu52i.d vreg2, vreg2, %pc64_hi12(s) !
+//        |
+//        |  2) tls-le:
+//        |    Hi20:  lu12i.w vreg1, %le_hi20_r(s)
+//        |    Add:   add.w/d vreg1, vreg1, r2, %le_add_r(s)
+//        +--- Lo12:  addi.w/d vreg2, vreg1, %le_lo12_r(s)
+//        |
+//        | The large offset can be one of the forms:
+//        |
+//        +-> 1) Offset that has non zero bits in Hi20 and Lo12 bits:
+//        |     OffsetHi20: lu12i.w vreg3, 4
+//        |     OffsetLo12: ori voff, vreg3, 188    ------------------+
+//        |                                                           |
+//        +-> 2) Offset that has non zero bits in Hi20 bits only:     |
+//        |     OffsetHi20: lu12i.w voff, 128       ------------------+
+//        |                                                           |
+//        +-> 3) Offset that has non zero bits in Lo20 bits:          |
+//        |     OffsetHi20: lu12i.w vreg3, 121 !                      |
+//        |     OffsetLo12: ori voff, vreg3, 122 !                    |
+//        |     OffsetLo20: lu32i.d voff, 123       ------------------+
+//        +-> 4) Offset that has non zero bits in Hi12 bits:          |
+//              OffsetHi20: lu12i.w vreg3, 121 !                      |
+//              OffsetLo12: ori voff, vreg3, 122 !                    |
+//              OffsetLo20: lu32i.d vreg3, 123 !                      |
+//              OffsetHi12: lu52i.d voff, vrg3, 124 ------------------+
+//                                                                    |
+//        TailAdd: add.d  vreg4, vreg2, voff       <------------------+
+//
 bool LoongArchMergeBaseOffsetOpt::foldLargeOffset(
     MachineInstr &Hi20, MachineInstr &Lo12, MachineInstr *&Lo20,
     MachineInstr *&Hi12, MachineInstr *&Last, MachineInstr &TailAdd,
@@ -235,55 +340,81 @@ bool LoongArchMergeBaseOffsetOpt::foldLargeOffset(
   Register Rs = TailAdd.getOperand(1).getReg();
   Register Rt = TailAdd.getOperand(2).getReg();
   Register Reg = Rs == GAReg ? Rt : Rs;
+  SmallVector<MachineInstr *, 4> Instrs;
+  int64_t Offset = 0;
+  int64_t Mask = -1;
 
-  // Can't fold if the register has more than one use.
-  if (!Reg.isVirtual() || !MRI->hasOneUse(Reg))
-    return false;
-  // This can point to an ORI or a LU12I.W:
-  MachineInstr &OffsetTail = *MRI->getVRegDef(Reg);
-  if (OffsetTail.getOpcode() == LoongArch::ORI) {
-    // The offset value has non zero bits in both %hi and %lo parts.
-    // Detect an ORI that feeds from a LU12I.W instruction.
-    MachineOperand &OriImmOp = OffsetTail.getOperand(2);
-    if (OriImmOp.getTargetFlags() != LoongArchII::MO_None)
+  // This can point to one of [ORI, LU12I.W, LU32I.D, LU52I.D]:
+  for (int i = 0; i < 4; i++) {
+    // Handle Reg is R0.
+    if (Reg == LoongArch::R0)
+      break;
+
+    // Can't fold if the register has more than one use.
+    if (!Reg.isVirtual() || !MRI->hasOneUse(Reg))
       return false;
-    Register OriReg = OffsetTail.getOperand(1).getReg();
-    int64_t OffLo = OriImmOp.getImm();
 
-    // Handle rs1 of ORI is R0.
-    if (OriReg == LoongArch::R0) {
-      LLVM_DEBUG(dbgs() << "  Offset Instrs: " << OffsetTail);
-      foldOffset(Hi20, Lo12, Lo20, Hi12, Last, TailAdd, OffLo);
-      OffsetTail.eraseFromParent();
-      return true;
+    MachineInstr *Curr = MRI->getVRegDef(Reg);
+    if (!Curr)
+      break;
+
+    switch (Curr->getOpcode()) {
+    default:
+      // Can't fold if the instruction opcode is unexpected.
+      return false;
+    case LoongArch::ORI: {
+      MachineOperand ImmOp = Curr->getOperand(2);
+      if (ImmOp.getTargetFlags() != LoongArchII::MO_None)
+        return false;
+      Offset += ImmOp.getImm();
+      Reg = Curr->getOperand(1).getReg();
+      Instrs.push_back(Curr);
+      break;
     }
-
-    MachineInstr &OffsetLu12i = *MRI->getVRegDef(OriReg);
-    MachineOperand &Lu12iImmOp = OffsetLu12i.getOperand(1);
-    if (OffsetLu12i.getOpcode() != LoongArch::LU12I_W ||
-        Lu12iImmOp.getTargetFlags() != LoongArchII::MO_None ||
-        !MRI->hasOneUse(OffsetLu12i.getOperand(0).getReg()))
-      return false;
-    int64_t Offset = SignExtend64<32>(Lu12iImmOp.getImm() << 12);
-    Offset += OffLo;
-    // LU12I.W+ORI sign extends the result.
-    Offset = SignExtend64<32>(Offset);
-    LLVM_DEBUG(dbgs() << "  Offset Instrs: " << OffsetTail
-                      << "                 " << OffsetLu12i);
-    foldOffset(Hi20, Lo12, Lo20, Hi12, Last, TailAdd, Offset);
-    OffsetTail.eraseFromParent();
-    OffsetLu12i.eraseFromParent();
-    return true;
-  } else if (OffsetTail.getOpcode() == LoongArch::LU12I_W) {
-    // The offset value has all zero bits in the lower 12 bits. Only LU12I.W
-    // exists.
-    LLVM_DEBUG(dbgs() << "  Offset Instr: " << OffsetTail);
-    int64_t Offset = SignExtend64<32>(OffsetTail.getOperand(1).getImm() << 12);
-    foldOffset(Hi20, Lo12, Lo20, Hi12, Last, TailAdd, Offset);
-    OffsetTail.eraseFromParent();
-    return true;
+    case LoongArch::LU12I_W: {
+      MachineOperand ImmOp = Curr->getOperand(1);
+      if (ImmOp.getTargetFlags() != LoongArchII::MO_None)
+        return false;
+      Offset += SignExtend64<32>(ImmOp.getImm() << 12) & Mask;
+      Reg = LoongArch::R0;
+      Instrs.push_back(Curr);
+      break;
+    }
+    case LoongArch::LU32I_D: {
+      MachineOperand ImmOp = Curr->getOperand(2);
+      if (ImmOp.getTargetFlags() != LoongArchII::MO_None || !Lo20)
+        return false;
+      Offset += SignExtend64<52>(ImmOp.getImm() << 32) & Mask;
+      Mask ^= 0x000FFFFF00000000ULL;
+      Reg = Curr->getOperand(1).getReg();
+      Instrs.push_back(Curr);
+      break;
+    }
+    case LoongArch::LU52I_D: {
+      MachineOperand ImmOp = Curr->getOperand(2);
+      if (ImmOp.getTargetFlags() != LoongArchII::MO_None || !Hi12)
+        return false;
+      Offset += ImmOp.getImm() << 52;
+      Mask ^= 0xFFF0000000000000ULL;
+      Reg = Curr->getOperand(1).getReg();
+      Instrs.push_back(Curr);
+      break;
+    }
+    }
   }
-  return false;
+
+  // Can't fold if the offset is not extracted.
+  if (!Offset)
+    return false;
+
+  foldOffset(Hi20, Lo12, Lo20, Hi12, Last, TailAdd, Offset);
+  LLVM_DEBUG(dbgs() << "  Offset Instrs:\n");
+  for (auto I : Instrs) {
+    LLVM_DEBUG(dbgs() << "                 " << *I);
+    I->eraseFromParent();
+  }
+
+  return true;
 }
 
 bool LoongArchMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &Hi20,
@@ -296,7 +427,8 @@ bool LoongArchMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &Hi20,
 
   // Look for arithmetic instructions we can get an offset from.
   // We might be able to remove the arithmetic instructions by folding the
-  // offset into the PCALAU12I+(ADDI/ADDI+LU32I+LU52I).
+  // offset into the PCALAU12I+(ADDI/ADDI+LU32I+LU52I) or
+  // LU12I_W+PseudoAddTPRel+ADDI.
   if (!MRI->hasOneUse(DestReg))
     return false;
 
@@ -344,13 +476,6 @@ bool LoongArchMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &Hi20,
     [[fallthrough]];
   case LoongArch::ADD_D:
     // The offset is too large to fit in the immediate field of ADDI.
-    // This can be in two forms:
-    // 1) LU12I.W hi_offset followed by:
-    //    ORI lo_offset
-    //    This happens in case the offset has non zero bits in
-    //    both hi 20 and lo 12 bits.
-    // 2) LU12I.W (offset20)
-    //    This happens in case the lower 12 bits of the offset are zeros.
     return foldLargeOffset(Hi20, Lo12, Lo20, Hi12, Last, Tail, DestReg);
     break;
   }
@@ -423,6 +548,7 @@ bool LoongArchMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi20,
   // If all the uses are memory ops with the same offset, we can transform:
   //
   // 1. (small/medium):
+  //  1.1. pcala
   //   pcalau12i vreg1, %pc_hi20(s)
   //   addi.d    vreg2, vreg1, %pc_lo12(s)
   //   ld.w      vreg3, 8(vreg2)
@@ -431,6 +557,18 @@ bool LoongArchMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi20,
   //
   //   pcalau12i vreg1, %pc_hi20(s+8)
   //   ld.w      vreg3, vreg1, %pc_lo12(s+8)(vreg1)
+  //
+  //  1.2. tls-le
+  //   lu12i.w  vreg1, %le_hi20_r(s)
+  //   add.w/d  vreg2, vreg1, r2, %le_add_r(s)
+  //   addi.w/d vreg3, vreg2, %le_lo12_r(s)
+  //   ld.w     vreg4, 8(vreg3)
+  //
+  //   =>
+  //
+  //   lu12i.w vreg1, %le_hi20_r(s+8)
+  //   add.w/d vreg2, vreg1, r2, %le_add_r(s+8)
+  //   ld.w    vreg4, vreg2, %le_lo12_r(s+8)(vreg2)
   //
   // 2. (large):
   //   pcalau12i vreg1, %pc_hi20(s)
@@ -566,12 +704,37 @@ bool LoongArchMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi20,
   if (!isInt<32>(NewOffset))
     return false;
 
+  // If optimized by this pass successfully, MO_RELAX bitmask target-flag should
+  // be removed from the pcala code sequence. Code sequence of tls-le can still
+  // be relaxed after being optimized.
+  //
+  // For example:
+  //   pcalau12i $a0, %pc_hi20(symbol)
+  //   addi.d $a0, $a0, %pc_lo12(symbol)
+  //   ld.w $a0, $a0, 0
+  //
+  //   =>
+  //
+  //   pcalau12i $a0, %pc_hi20(symbol)
+  //   ld.w $a0, $a0, %pc_lo12(symbol)
+  //
+  // Code sequence optimized before can be relax by linker. But after being
+  // optimized, it cannot be relaxed any more. So MO_RELAX flag should not be
+  // carried by them.
   Hi20.getOperand(1).setOffset(NewOffset);
   MachineOperand &ImmOp = Lo12.getOperand(2);
   ImmOp.setOffset(NewOffset);
   if (Lo20 && Hi12) {
     Lo20->getOperand(2).setOffset(NewOffset);
     Hi12->getOperand(2).setOffset(NewOffset);
+  }
+  if (Hi20.getOpcode() == LoongArch::PCALAU12I) {
+    Hi20.getOperand(1).setTargetFlags(
+        LoongArchII::getDirectFlags(Hi20.getOperand(1)));
+    ImmOp.setTargetFlags(LoongArchII::getDirectFlags(ImmOp));
+  } else if (Hi20.getOpcode() == LoongArch::LU12I_W) {
+    MachineInstr *Add = &*MRI->use_instr_begin(Hi20.getOperand(0).getReg());
+    Add->getOperand(3).setOffset(NewOffset);
   }
 
   // Update the immediate in the load/store instructions to add the offset.
@@ -586,15 +749,16 @@ bool LoongArchMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi20,
         switch (ImmOp.getType()) {
         case MachineOperand::MO_GlobalAddress:
           MO.ChangeToGA(ImmOp.getGlobal(), ImmOp.getOffset(),
-                        ImmOp.getTargetFlags());
+                        LoongArchII::getDirectFlags(ImmOp));
           break;
         case MachineOperand::MO_MCSymbol:
-          MO.ChangeToMCSymbol(ImmOp.getMCSymbol(), ImmOp.getTargetFlags());
+          MO.ChangeToMCSymbol(ImmOp.getMCSymbol(),
+                              LoongArchII::getDirectFlags(ImmOp));
           MO.setOffset(ImmOp.getOffset());
           break;
         case MachineOperand::MO_BlockAddress:
           MO.ChangeToBA(ImmOp.getBlockAddress(), ImmOp.getOffset(),
-                        ImmOp.getTargetFlags());
+                        LoongArchII::getDirectFlags(ImmOp));
           break;
         default:
           report_fatal_error("unsupported machine operand type");
@@ -622,7 +786,14 @@ bool LoongArchMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi20,
     return true;
   }
 
-  MRI->replaceRegWith(Lo12.getOperand(0).getReg(), Hi20.getOperand(0).getReg());
+  if (Hi20.getOpcode() == LoongArch::PCALAU12I) {
+    MRI->replaceRegWith(Lo12.getOperand(0).getReg(),
+                        Hi20.getOperand(0).getReg());
+  } else if (Hi20.getOpcode() == LoongArch::LU12I_W) {
+    MachineInstr *Add = &*MRI->use_instr_begin(Hi20.getOperand(0).getReg());
+    MRI->replaceRegWith(Lo12.getOperand(0).getReg(),
+                        Add->getOperand(0).getReg());
+  }
   Lo12.eraseFromParent();
   return true;
 }
@@ -642,8 +813,21 @@ bool LoongArchMergeBaseOffsetOpt::runOnMachineFunction(MachineFunction &Fn) {
       MachineInstr *Lo20 = nullptr;
       MachineInstr *Hi12 = nullptr;
       MachineInstr *Last = nullptr;
-      if (!detectFoldable(Hi20, Lo12, Lo20, Hi12, Last))
+      if (Hi20.getOpcode() == LoongArch::PCALAU12I) {
+        // Detect foldable pcala code sequence in small/medium/large code model.
+        if (!detectFoldable(Hi20, Lo12, Lo20, Hi12, Last))
+          continue;
+      } else if (Hi20.getOpcode() == LoongArch::LU12I_W) {
+        MachineInstr *Add = nullptr;
+        // Detect foldable tls-le code sequence in small/medium code model.
+        if (!detectFoldable(Hi20, Add, Lo12))
+          continue;
+      } else {
         continue;
+      }
+      // For tls-le, we do not pass the second PseudoAddTPRel instr in order to
+      // reuse the existing hooks and the last three paramaters should always be
+      // nullptr.
       MadeChange |= detectAndFoldOffset(Hi20, *Lo12, Lo20, Hi12, Last);
       MadeChange |= foldIntoMemoryOps(Hi20, *Lo12, Lo20, Hi12, Last);
     }

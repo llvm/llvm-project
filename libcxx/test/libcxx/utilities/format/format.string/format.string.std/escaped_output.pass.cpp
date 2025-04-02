@@ -18,9 +18,10 @@
 // assumptions of the size and speed optimizations are still valid.
 
 #include <algorithm>
-#include <numeric>
-#include <format>
 #include <cassert>
+#include <format>
+#include <functional>
+#include <numeric>
 
 // Contains the entries for [format.string.escaped]/2.2.1.2.1
 //   CE is a Unicode encoding and C corresponds to a UCS scalar value whose
@@ -47,7 +48,7 @@ inline constexpr int Cc = 65;
 inline constexpr int Cf = 170;
 inline constexpr int Cs = 2'048;
 inline constexpr int Co = 137'468;
-inline constexpr int Cn = 824'718;
+inline constexpr int Cn = 819'533;
 inline constexpr int C  = Cc + Cf + Cs + Co + Cn;
 
 // This is the final part of the Unicode properties table:

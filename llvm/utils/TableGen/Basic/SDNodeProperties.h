@@ -28,8 +28,6 @@ enum SDNP {
   SDNPSideEffect,
   SDNPMemOperand,
   SDNPVariadic,
-  SDNPWantRoot,
-  SDNPWantParent
 };
 
 unsigned parseSDPatternOperatorProperties(const Record *R);

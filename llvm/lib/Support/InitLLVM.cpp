@@ -12,9 +12,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
-#include "llvm/Support/SwapByteOrder.h"
 
 #ifdef _WIN32
 #include "llvm/Support/Windows/WindowsSupport.h"

@@ -17,16 +17,16 @@
 ; RUN: ld.lld %t.o %tbar.so -o %t.so -shared --version-script %t/ver
 ; RUN: llvm-readelf --dyn-syms %t.so | FileCheck %s
 
-; CHECK:      UND       bar@VER1
-; CHECK-NEXT: {{[1-9]}} foo@@VER1
+; CHECK:      UND       bar@VER1{{$}}
+; CHECK-NEXT: {{[1-9]}} foo@@VER1{{$}}
 
 ;; For relocatable output, @ should be retained in the symbol name.
 ;; Don't parse and drop `@VER1`. Also check that --version-script is ignored.
 ; RUN: ld.lld %t.o -o %t.ro -r --version-script %t/ver
 ; RUN: llvm-readelf -s %t.ro | FileCheck %s --check-prefix=RELOCATABLE
 
-; RELOCATABLE:      {{[1-9]}} foo@@VER1
-; RELOCATABLE-NEXT: UND       bar@VER1
+; RELOCATABLE:      {{[1-9]}} foo@@VER1{{$}}
+; RELOCATABLE-NEXT: UND       bar@VER1{{$}}
 
 ;--- ver
 VER1 {};

@@ -57,11 +57,10 @@ public:
       GTEST_SKIP();
     TargetOptions Options;
     TM = std::unique_ptr<TargetMachine>(
-        T->createTargetMachine("X86", "", "", Options, std::nullopt));
+        T->createTargetMachine(TargetTriple, "", "", Options, std::nullopt));
     if (!TM)
       GTEST_SKIP();
-    MMI = std::make_unique<MachineModuleInfo>(
-        static_cast<LLVMTargetMachine *>(TM.get()));
+    MMI = std::make_unique<MachineModuleInfo>(TM.get());
 
     PassBuilder PB(TM.get());
     PB.registerModuleAnalyses(MAM);
@@ -117,7 +116,7 @@ body:             |
     successors: %bb.2, %bb.4
     liveins: $rdi, $rsi
 
-    %1:gr32 = COPY $rsi
+    %1:gr64 = COPY $rsi
     %0:gr64 = COPY $rdi
     MOV64mr %1, 1, $noreg, 0, $noreg, %0 :: (store (s64) into %ir.p)
     %2:gr64 = SUB64ri32 %0, 1, implicit-def $eflags
@@ -207,7 +206,7 @@ body:             |
     successors: %bb.2, %bb.4
     liveins: $rdi, $rsi
 
-    %1:gr32 = COPY $rsi
+    %1:gr64 = COPY $rsi
     %0:gr64 = COPY $rdi
     MOV64mr %1, 1, $noreg, 0, $noreg, %0 :: (store (s64) into %ir.p)
     %2:gr64 = SUB64ri32 %0, 1, implicit-def $eflags

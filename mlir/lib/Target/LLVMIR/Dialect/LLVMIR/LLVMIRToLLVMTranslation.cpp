@@ -68,6 +68,12 @@ static LogicalResult convertIntrinsicImpl(OpBuilder &odsBuilder,
   if (isConvertibleIntrinsic(intrinsicID)) {
     SmallVector<llvm::Value *> args(inst->args());
     ArrayRef<llvm::Value *> llvmOperands(args);
+
+    SmallVector<llvm::OperandBundleUse> llvmOpBundles;
+    llvmOpBundles.reserve(inst->getNumOperandBundles());
+    for (unsigned i = 0; i < inst->getNumOperandBundles(); ++i)
+      llvmOpBundles.push_back(inst->getOperandBundleAt(i));
+
 #include "mlir/Dialect/LLVMIR/LLVMIntrinsicFromLLVMIRConversions.inc"
   }
 
@@ -84,6 +90,8 @@ static ArrayRef<unsigned> getSupportedMetadataImpl(llvm::LLVMContext &context) {
       llvm::LLVMContext::MD_loop,
       llvm::LLVMContext::MD_noalias,
       llvm::LLVMContext::MD_alias_scope,
+      llvm::LLVMContext::MD_dereferenceable,
+      llvm::LLVMContext::MD_dereferenceable_or_null,
       context.getMDKindID(vecTypeHintMDName),
       context.getMDKindID(workGroupSizeHintMDName),
       context.getMDKindID(reqdWorkGroupSizeMDName),
@@ -179,6 +187,25 @@ static LogicalResult setAccessGroupsAttr(const llvm::MDNode *node,
 
   iface.setAccessGroups(ArrayAttr::get(
       iface.getContext(), llvm::to_vector_of<Attribute>(*accessGroups)));
+  return success();
+}
+
+/// Converts the given dereferenceable metadata node to a dereferenceable
+/// attribute, and attaches it to the imported operation if the translation
+/// succeeds. Returns failure if the LLVM IR metadata node is ill-formed.
+static LogicalResult setDereferenceableAttr(const llvm::MDNode *node,
+                                            unsigned kindID, Operation *op,
+                                            LLVM::ModuleImport &moduleImport) {
+  auto dereferenceable =
+      moduleImport.translateDereferenceableAttr(node, kindID);
+  if (failed(dereferenceable))
+    return failure();
+
+  auto iface = dyn_cast<DereferenceableOpInterface>(op);
+  if (!iface)
+    return failure();
+
+  iface.setDereferenceable(*dereferenceable);
   return success();
 }
 
@@ -395,6 +422,13 @@ public:
       return setAliasScopesAttr(node, op, moduleImport);
     if (kind == llvm::LLVMContext::MD_noalias)
       return setNoaliasScopesAttr(node, op, moduleImport);
+    if (kind == llvm::LLVMContext::MD_dereferenceable)
+      return setDereferenceableAttr(node, llvm::LLVMContext::MD_dereferenceable,
+                                    op, moduleImport);
+    if (kind == llvm::LLVMContext::MD_dereferenceable_or_null)
+      return setDereferenceableAttr(
+          node, llvm::LLVMContext::MD_dereferenceable_or_null, op,
+          moduleImport);
 
     llvm::LLVMContext &context = node->getContext();
     if (kind == context.getMDKindID(vecTypeHintMDName))

@@ -287,6 +287,8 @@ protected:
   }
 
   DominatorTreeBase &operator=(DominatorTreeBase &&RHS) {
+    if (this == &RHS)
+      return *this;
     Roots = std::move(RHS.Roots);
     DomTreeNodes = std::move(RHS.DomTreeNodes);
     NodeNumberMap = std::move(RHS.NodeNumberMap);
@@ -454,7 +456,7 @@ public:
   bool isReachableFromEntry(const NodeT *A) const {
     assert(!this->isPostDominator() &&
            "This is not implemented for post dominators");
-    return isReachableFromEntry(getNode(const_cast<NodeT *>(A)));
+    return isReachableFromEntry(getNode(A));
   }
 
   bool isReachableFromEntry(const DomTreeNodeBase<NodeT> *A) const { return A; }
@@ -554,6 +556,22 @@ public:
 
   bool isVirtualRoot(const DomTreeNodeBase<NodeT> *A) const {
     return isPostDominator() && !A->getBlock();
+  }
+
+  template <typename IteratorTy>
+  NodeT *findNearestCommonDominator(iterator_range<IteratorTy> Nodes) const {
+    assert(!Nodes.empty() && "Nodes list is empty!");
+
+    NodeT *NCD = *Nodes.begin();
+    for (NodeT *Node : llvm::drop_begin(Nodes)) {
+      NCD = findNearestCommonDominator(NCD, Node);
+
+      // Stop when the root is reached.
+      if (isVirtualRoot(getNode(NCD)))
+        return nullptr;
+    }
+
+    return NCD;
   }
 
   //===--------------------------------------------------------------------===//
@@ -1012,11 +1030,7 @@ bool DominatorTreeBase<NodeT, IsPostDom>::dominates(const NodeT *A,
   if (A == B)
     return true;
 
-  // Cast away the const qualifiers here. This is ok since
-  // this function doesn't actually return the values returned
-  // from getNode.
-  return dominates(getNode(const_cast<NodeT *>(A)),
-                   getNode(const_cast<NodeT *>(B)));
+  return dominates(getNode(A), getNode(B));
 }
 template <typename NodeT, bool IsPostDom>
 bool DominatorTreeBase<NodeT, IsPostDom>::properlyDominates(
@@ -1024,11 +1038,7 @@ bool DominatorTreeBase<NodeT, IsPostDom>::properlyDominates(
   if (A == B)
     return false;
 
-  // Cast away the const qualifiers here. This is ok since
-  // this function doesn't actually return the values returned
-  // from getNode.
-  return dominates(getNode(const_cast<NodeT *>(A)),
-                   getNode(const_cast<NodeT *>(B)));
+  return dominates(getNode(A), getNode(B));
 }
 
 } // end namespace llvm

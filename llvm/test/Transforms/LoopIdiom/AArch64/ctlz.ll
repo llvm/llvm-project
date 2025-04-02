@@ -20,7 +20,7 @@
 ; Function Attrs: norecurse nounwind uwtable
 define i32 @ctlz_and_other(i32 %n, ptr nocapture %a) {
 ; CHECK-LABEL: define i32 @ctlz_and_other(
-; CHECK-SAME: i32 [[N:%.*]], ptr nocapture [[A:%.*]]) {
+; CHECK-SAME: i32 [[N:%.*]], ptr captures(none) [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ABS_N:%.*]] = call i32 @llvm.abs.i32(i32 [[N]], i1 true)
 ; CHECK-NEXT:    [[SHR8:%.*]] = lshr i32 [[ABS_N]], 1

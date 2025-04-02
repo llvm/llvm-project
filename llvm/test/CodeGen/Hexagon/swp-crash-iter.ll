@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc -march=hexagon -enable-pipeliner -o /dev/null < %s
+; RUN: llc -mtriple=hexagon -enable-pipeliner -o /dev/null < %s
 ; Test that we do not crash when running CopyToPhi DAG mutation due to
 ; iterator invalidation.
 

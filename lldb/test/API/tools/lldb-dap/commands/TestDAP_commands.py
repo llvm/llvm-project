@@ -75,7 +75,7 @@ class TestDAP_commands(lldbdap_testcase.DAPTestCaseBase):
             "settings set target.show-hex-variable-values-with-leading-zeroes false"
         )
         command_abort_on_error = "settings set foo bar"
-        self.build_and_create_debug_adaptor()
+        self.build_and_create_debug_adapter()
         self.attach(
             program,
             attachCommands=["?!" + command_quiet, "!" + command_abort_on_error],
