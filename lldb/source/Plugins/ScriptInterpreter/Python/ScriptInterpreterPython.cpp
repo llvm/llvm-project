@@ -2316,7 +2316,7 @@ uint64_t replace_all(std::string &str, const std::string &oldStr,
 bool ScriptInterpreterPythonImpl::LoadScriptingModule(
     const char *pathname, const LoadScriptOptions &options,
     lldb_private::Status &error, StructuredData::ObjectSP *module_sp,
-    FileSpec extra_search_dir) {
+    FileSpec extra_search_dir, lldb::TargetSP target_sp) {
   namespace fs = llvm::sys::fs;
   namespace path = llvm::sys::path;
 
@@ -2494,6 +2494,12 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
       *module_sp = std::make_shared<StructuredPythonObject>(PythonObject(
           PyRefType::Owned, static_cast<PyObject *>(module_pyobj)));
   }
+
+  // Finally, if we got a target passed in, then we should tell the new module
+  // about this target:
+  if (target_sp)
+    return SWIGBridge::LLDBSwigPythonCallModuleNewTarget(
+        module_name.c_str(), m_dictionary_name.c_str(), target_sp);
 
   return true;
 }
