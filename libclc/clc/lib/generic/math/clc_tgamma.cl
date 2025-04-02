@@ -7,25 +7,26 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/clcmacro.h>
+#include <clc/float/definitions.h>
 #include <clc/internal/clc.h>
+#include <clc/math/clc_exp.h>
 #include <clc/math/clc_fabs.h>
 #include <clc/math/clc_lgamma.h>
 #include <clc/math/clc_sinpi.h>
-#include <clc/math/clc_exp.h>
 #include <clc/math/math.h>
 
 _CLC_OVERLOAD _CLC_DEF float __clc_tgamma(float x) {
   const float pi = 3.1415926535897932384626433832795f;
-  float ax = __clc_fabs(x);
-  float lg = __clc_lgamma(ax);
+  float absx = __clc_fabs(x);
+  float lg = __clc_lgamma(absx);
   float g = __clc_exp(lg);
 
   if (x < 0.0f) {
     float z = __clc_sinpi(x);
-    g = g * ax * z;
+    g = g * absx * z;
     g = pi / g;
-    g = g == 0 ? __clc_as_float(PINFBITPATT_SP32) : g;
-    g = z == 0 ? __clc_as_float(QNANBITPATT_SP32) : g;
+    g = g == 0 ? INFINITY : g;
+    g = z == 0 ? FLT_NAN : g;
   }
 
   return g;
@@ -39,16 +40,16 @@ _CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, float, __clc_tgamma, float);
 
 _CLC_OVERLOAD _CLC_DEF double __clc_tgamma(double x) {
   const double pi = 3.1415926535897932384626433832795;
-  double ax = __clc_fabs(x);
-  double lg = __clc_lgamma(ax);
+  double absx = __clc_fabs(x);
+  double lg = __clc_lgamma(absx);
   double g = __clc_exp(lg);
 
   if (x < 0.0) {
     double z = __clc_sinpi(x);
-    g = g * ax * z;
+    g = g * absx * z;
     g = pi / g;
-    g = g == 0 ? __clc_as_double(PINFBITPATT_DP64) : g;
-    g = z == 0 ? __clc_as_double(QNANBITPATT_DP64) : g;
+    g = g == 0 ? INFINITY : g;
+    g = z == 0 ? DBL_NAN : g;
   }
 
   return g;

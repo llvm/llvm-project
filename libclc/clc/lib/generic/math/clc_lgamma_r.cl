@@ -100,8 +100,8 @@
 
 _CLC_OVERLOAD _CLC_DEF float __clc_lgamma_r(float x, private int *signp) {
   int hx = __clc_as_int(x);
-  int ix = hx & 0x7fffffff;
-  float absx = __clc_as_float(ix);
+  float absx = __clc_fabs(x);
+  int ix = __clc_as_int(absx);
 
   if (ix >= 0x7f800000) {
     *signp = 1;
@@ -271,7 +271,7 @@ _CLC_OVERLOAD _CLC_DEF float __clc_lgamma_r(float x, private int *signp) {
   if (x < 0.0f) {
     float t = __clc_sinpi(x);
     r = __clc_log(pi_f / __clc_fabs(t * x)) - r;
-    r = t == 0.0f ? __clc_as_float(PINFBITPATT_SP32) : r;
+    r = t == 0.0f ? INFINITY : r;
     s = t < 0.0f ? -1 : s;
   }
 
@@ -431,8 +431,8 @@ _CLC_V_V_VP_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, float, __clc_lgamma_r, float,
 
 _CLC_OVERLOAD _CLC_DEF double __clc_lgamma_r(double x, private int *ip) {
   ulong ux = __clc_as_ulong(x);
-  ulong ax = ux & EXSIGNBIT_DP64;
-  double absx = __clc_as_double(ax);
+  double absx = __clc_fabs(x);
+  ulong ax = __clc_as_ulong(absx);
 
   if (ax >= 0x7ff0000000000000UL) {
     // +-Inf, NaN
@@ -575,7 +575,7 @@ _CLC_OVERLOAD _CLC_DEF double __clc_lgamma_r(double x, private int *ip) {
   if (x < 0.0) {
     double t = __clc_sinpi(x);
     r = __clc_log(pi / __clc_fabs(t * x)) - r;
-    r = t == 0.0 ? __clc_as_double(PINFBITPATT_DP64) : r;
+    r = t == 0.0 ? INFINITY : r;
     *ip = t < 0.0 ? -1 : 1;
   } else
     *ip = 1;
