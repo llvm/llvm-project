@@ -1,4 +1,4 @@
-! Test forwarding just the forwarding of -f[no-]repack-arrays options:
+! Test forwarding of -f[no-]repack-arrays options:
 ! RUN: %flang -frepack-arrays %s -### -fsyntax-only 2>&1 | FileCheck --check-prefix=REPACKCMD %s
 ! RUN: %flang -fno-repack-arrays %s -### -fsyntax-only 2>&1 | FileCheck --check-prefix=NOREPACKCMD %s
 ! RUN: %flang -frepack-arrays -fno-repack-arrays %s -### -fsyntax-only 2>&1 | FileCheck --check-prefix=NOREPACKCMD %s

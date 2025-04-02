@@ -1,4 +1,4 @@
-! Test forwarding just the forwarding of -f[no-]stack-repack-arrays options:
+! Test forwarding of -f[no-]stack-repack-arrays options:
 ! RUN: %flang -fstack-repack-arrays %s -### -fsyntax-only 2>&1 | FileCheck --check-prefix=STACKCMD %s
 ! RUN: %flang -fno-stack-repack-arrays %s -### -fsyntax-only 2>&1 | FileCheck --check-prefix=HEAPCMD %s
 ! RUN: %flang -fstack-repack-arrays -fno-stack-repack-arrays %s -### -fsyntax-only 2>&1 | FileCheck --check-prefix=HEAPCMD %s

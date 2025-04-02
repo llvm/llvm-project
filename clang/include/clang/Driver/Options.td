@@ -6974,7 +6974,7 @@ defm repack_arrays
                     " non-contiguous assumed shape dummy arrays into "
                     "contiguous memory">>,
       DocBrief<[{Create temporary copies of non-contiguous assumed shape dummy
-arrays in subprogram prologues, and destroy them in subprotram epilogues.
+arrays in subprogram prologues, and destroy them in subprogram epilogues.
 The temporary copy is initialized with values from the original array
 in the prologue, if needed. In the epilogue, the current values
 in the temporary array are copied into the original array, if needed.
@@ -7037,7 +7037,7 @@ defm stack_repack_arrays
       DocBrief<[{Controls whether the array temporaries created under
 **-frepack-arrays** are allocated on the stack or on the heap.
 
-By default, the heap is used. Allocations of the polymorphic types
+By default, the heap is used. Allocations of polymorphic types
 are always done on the heap, though this may change in future releases.
   }]>;
 

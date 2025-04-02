@@ -251,14 +251,6 @@ static llvm::cl::opt<bool>
                                  "the LHS of the intrinsic assignment"),
                   llvm::cl::init(true));
 
-// TODO: -fstack-arrays is currently unused, but it should probably be used
-// for deciding how arrays/temporaries are allocated during lowering.
-static llvm::cl::opt<bool>
-    stackArrays("fstack-arrays",
-                llvm::cl::desc("Allocate all arrays of unknown size and "
-                               "temporary arrays in stack memory"),
-                llvm::cl::init(false));
-
 static llvm::cl::opt<bool> stackRepackArrays(
     "fstack-repack-arrays",
     llvm::cl::desc("Allocate temporary arrays for -frepack-arrays "
@@ -434,7 +426,6 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   loweringOptions.setIntegerWrapAround(integerWrapAround);
   loweringOptions.setInitGlobalZero(initGlobalZero);
   loweringOptions.setReallocateLHS(reallocateLHS);
-  loweringOptions.setStackArrays(stackArrays);
   loweringOptions.setStackRepackArrays(stackRepackArrays);
   loweringOptions.setRepackArrays(repackArrays);
   loweringOptions.setRepackArraysWhole(repackArraysWhole);
