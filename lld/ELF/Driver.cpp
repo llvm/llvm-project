@@ -1467,8 +1467,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
 
   if (args.hasArg(OPT_save_temps)) {
     // --save-temps implies saving all temps.
-    for (const char *s : saveTempsValues)
-      ctx.arg.saveTempsArgs.insert(s);
+    ctx.arg.saveTempsArgs.insert_range(saveTempsValues);
   } else {
     for (auto *arg : args.filtered(OPT_save_temps_eq)) {
       StringRef s = arg->getValue();
