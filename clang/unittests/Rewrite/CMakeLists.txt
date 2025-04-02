@@ -1,10 +1,14 @@
+set(LLVM_LINK_COMPONENTS
+  Support
+  )
+
 add_clang_unittest(RewriteTests
   RewriterTest.cpp
-  CLANG_LIBS
+  )
+clang_target_link_libraries(RewriteTests
+  PRIVATE
   clangFrontend
   clangRewrite
   clangSerialization
   clangTooling
-  LLVM_COMPONENTS
-  Support
   )
