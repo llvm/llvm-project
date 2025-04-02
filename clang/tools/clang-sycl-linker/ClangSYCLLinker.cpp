@@ -288,6 +288,9 @@ static Expected<StringRef> runSPIRVCodeGen(StringRef File, const ArgList &Args,
   if (!M)
     return createStringError(Err.getMessage());
 
+  if (Error Err = M->materializeAll())
+    return std::move(Err);
+
   Triple TargetTriple(Args.getLastArgValue(OPT_triple_EQ));
   M->setTargetTriple(TargetTriple);
 
