@@ -56,13 +56,13 @@ end
 ! CHECK-SAME:     step (%[[STEP_I]], %[[STEP_J]], %[[STEP_K]]) {
 
 ! CHECK-NEXT: %[[IV_IDX_I:.*]] = fir.convert %[[ARG0]]
-! CHECK-NEXT: fir.store %[[IV_IDX_I]] to %[[BINDING_I]]#1
+! CHECK-NEXT: fir.store %[[IV_IDX_I]] to %[[BINDING_I]]#0
 
 ! CHECK-NEXT: %[[IV_IDX_J:.*]] = fir.convert %[[ARG1]]
-! CHECK-NEXT: fir.store %[[IV_IDX_J]] to %[[BINDING_J]]#1
+! CHECK-NEXT: fir.store %[[IV_IDX_J]] to %[[BINDING_J]]#0
 
 ! CHECK-NEXT: %[[IV_IDX_K:.*]] = fir.convert %[[ARG2]]
-! CHECK-NEXT: fir.store %[[IV_IDX_K]] to %[[BINDING_K]]#1
+! CHECK-NEXT: fir.store %[[IV_IDX_K]] to %[[BINDING_K]]#0
 
 ! CHECK:      omp.yield
 ! CHECK-NEXT: }
