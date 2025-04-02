@@ -2,6 +2,40 @@
 ; RUN: opt -mtriple=x86_64-unknown-linux-gnu -mattr=+avx2 -passes=slp-vectorizer -S -slp-revec < %s | FileCheck %s
 
 define i32 @test1(<4 x float> %0, <4 x float> %1) {
+; CHECK-LABEL: @test1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr null, i64 288
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr null, i64 304
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr null, i64 416
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr null, i64 432
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr null, i64 256
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr null, i64 272
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr null, i64 288
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr null, i64 304
+; CHECK-NEXT:    [[TMP10:%.*]] = load <4 x float>, ptr [[TMP2]], align 16
+; CHECK-NEXT:    [[TMP11:%.*]] = load <4 x float>, ptr [[TMP3]], align 16
+; CHECK-NEXT:    [[TMP12:%.*]] = load <4 x float>, ptr [[TMP4]], align 16
+; CHECK-NEXT:    [[TMP13:%.*]] = load <4 x float>, ptr [[TMP5]], align 16
+; CHECK-NEXT:    [[TMP14:%.*]] = fmul <4 x float> [[TMP10]], [[TMP0:%.*]]
+; CHECK-NEXT:    [[TMP15:%.*]] = fmul <4 x float> [[TMP11]], [[TMP0]]
+; CHECK-NEXT:    [[TMP16:%.*]] = fmul <4 x float> [[TMP12]], [[TMP0]]
+; CHECK-NEXT:    [[TMP17:%.*]] = fmul <4 x float> [[TMP13]], [[TMP0]]
+; CHECK-NEXT:    [[TMP18:%.*]] = fsub <4 x float> [[TMP14]], [[TMP1:%.*]]
+; CHECK-NEXT:    [[TMP19:%.*]] = fsub <4 x float> [[TMP15]], zeroinitializer
+; CHECK-NEXT:    [[TMP20:%.*]] = fsub <4 x float> [[TMP16]], [[TMP1]]
+; CHECK-NEXT:    [[TMP21:%.*]] = fsub <4 x float> [[TMP17]], zeroinitializer
+; CHECK-NEXT:    [[TMP22:%.*]] = fmul <4 x float> [[TMP11]], zeroinitializer
+; CHECK-NEXT:    [[TMP23:%.*]] = fmul <4 x float> [[TMP13]], zeroinitializer
+; CHECK-NEXT:    [[TMP24:%.*]] = fadd <4 x float> [[TMP18]], [[TMP0]]
+; CHECK-NEXT:    [[TMP25:%.*]] = fadd <4 x float> [[TMP19]], zeroinitializer
+; CHECK-NEXT:    [[TMP26:%.*]] = fadd <4 x float> [[TMP20]], [[TMP0]]
+; CHECK-NEXT:    [[TMP27:%.*]] = fadd <4 x float> [[TMP21]], zeroinitializer
+; CHECK-NEXT:    store <4 x float> [[TMP24]], ptr [[TMP6]], align 16
+; CHECK-NEXT:    store <4 x float> [[TMP25]], ptr [[TMP7]], align 16
+; CHECK-NEXT:    store <4 x float> [[TMP26]], ptr [[TMP8]], align 16
+; CHECK-NEXT:    store <4 x float> [[TMP27]], ptr [[TMP9]], align 16
+; CHECK-NEXT:    ret i32 0
+;
 entry:
   %2 = getelementptr i8, ptr null, i64 288
   %3 = getelementptr i8, ptr null, i64 304
