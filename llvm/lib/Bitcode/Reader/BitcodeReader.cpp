@@ -102,18 +102,8 @@ static cl::opt<bool> ExpandConstantExprs(
     cl::desc(
         "Expand constant expressions to instructions for testing purposes"));
 
-/// Load bitcode directly into RemoveDIs format (use debug records instead
-/// of debug intrinsics). UNSET is treated as FALSE, so the default action
-/// is to do nothing. Individual tools can override this to incrementally add
-/// support for the RemoveDIs format.
-cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInfoFormat(
-    "load-bitcode-into-experimental-debuginfo-iterators", cl::Hidden,
-    cl::desc("Load bitcode directly into the new debug info format (regardless "
-             "of input format)"));
 extern cl::opt<bool> UseNewDbgInfoFormat;
 extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
-extern bool WriteNewDbgInfoFormatToBitcode;
-extern cl::opt<bool> WriteNewDbgInfoFormat;
 
 namespace {
 
@@ -4492,14 +4482,9 @@ Error BitcodeReader::parseGlobalIndirectSymbolRecord(
 Error BitcodeReader::parseModule(uint64_t ResumeBit,
                                  bool ShouldLazyLoadMetadata,
                                  ParserCallbacks Callbacks) {
-  // Load directly into RemoveDIs format if LoadBitcodeIntoNewDbgInfoFormat
-  // has been set to true and we aren't attempting to preserve the existing
-  // format in the bitcode (default action: load into the old debug format).
-  if (PreserveInputDbgFormat != cl::boolOrDefault::BOU_TRUE) {
-    TheModule->IsNewDbgInfoFormat =
-        UseNewDbgInfoFormat &&
-        LoadBitcodeIntoNewDbgInfoFormat != cl::boolOrDefault::BOU_FALSE;
-  }
+  // In preparation for the deletion of debug-intrinsics, don't allow module
+  // loading to escape intrinsics being autoupgraded to debug records.
+  TheModule->IsNewDbgInfoFormat = UseNewDbgInfoFormat;
 
   this->ValueTypeCallback = std::move(Callbacks.ValueType);
   if (ResumeBit) {
@@ -7026,8 +7011,6 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
         SeenAnyDebugInfo ? SeenDebugRecord : F->getParent()->IsNewDbgInfoFormat;
     if (SeenAnyDebugInfo) {
       UseNewDbgInfoFormat = SeenDebugRecord;
-      WriteNewDbgInfoFormatToBitcode = SeenDebugRecord;
-      WriteNewDbgInfoFormat = SeenDebugRecord;
     }
     // If the module's debug info format doesn't match the observed input
     // format, then set its format now; we don't need to call the conversion
