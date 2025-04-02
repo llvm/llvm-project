@@ -3069,20 +3069,20 @@ public:
 /// A recipe for handling phi nodes of integer and floating-point inductions,
 /// producing their scalar values.
 class VPScalarIVStepsRecipe : public VPRecipeWithIRFlags,
-                              public VPUnrollPartAccessor<2> {
+                              public VPUnrollPartAccessor<3> {
   Instruction::BinaryOps InductionOpcode;
 
 public:
-  VPScalarIVStepsRecipe(VPValue *IV, VPValue *Step,
+  VPScalarIVStepsRecipe(VPValue *IV, VPValue *Step, VPValue *VF,
                         Instruction::BinaryOps Opcode, FastMathFlags FMFs)
       : VPRecipeWithIRFlags(VPDef::VPScalarIVStepsSC,
-                            ArrayRef<VPValue *>({IV, Step}), FMFs),
+                            ArrayRef<VPValue *>({IV, Step, VF}), FMFs),
         InductionOpcode(Opcode) {}
 
   VPScalarIVStepsRecipe(const InductionDescriptor &IndDesc, VPValue *IV,
-                        VPValue *Step)
+                        VPValue *Step, VPValue *VF)
       : VPScalarIVStepsRecipe(
-            IV, Step, IndDesc.getInductionOpcode(),
+            IV, Step, VF, IndDesc.getInductionOpcode(),
             dyn_cast_or_null<FPMathOperator>(IndDesc.getInductionBinOp())
                 ? IndDesc.getInductionBinOp()->getFastMathFlags()
                 : FastMathFlags()) {}
@@ -3091,7 +3091,7 @@ public:
 
   VPScalarIVStepsRecipe *clone() override {
     return new VPScalarIVStepsRecipe(
-        getOperand(0), getOperand(1), InductionOpcode,
+        getOperand(0), getOperand(1), getOperand(2), InductionOpcode,
         hasFastMathFlags() ? getFastMathFlags() : FastMathFlags());
   }
 
