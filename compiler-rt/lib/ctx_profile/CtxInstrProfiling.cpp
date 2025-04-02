@@ -385,9 +385,9 @@ ContextNode *__llvm_ctx_profile_get_context(FunctionData *Data, void *Callee,
   return Ret;
 }
 
-ContextNode *__llvm_ctx_profile_start_context(
-    FunctionData *FData, GUID Guid, uint32_t Counters,
-    uint32_t Callsites) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
+ContextNode *__llvm_ctx_profile_start_context(FunctionData *FData, GUID Guid,
+                                              uint32_t Counters,
+                                              uint32_t Callsites) {
   return tryStartContextGivenRoot(FData->getOrAllocateContextRoot(), Guid,
                                   Counters, Callsites);
 }
