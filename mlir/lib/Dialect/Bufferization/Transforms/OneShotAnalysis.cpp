@@ -486,6 +486,20 @@ static bool hasEquivalentValueInReverseUseDefChain(AnalysisState &state,
 static bool matchesInsertDestination(const AnalysisState &state,
                                      OpOperand *opOperand,
                                      SubsetInsertionOpInterface subsetOp) {
+  // Follow only equivalent aliasing opoperands and look for the insertion
+  // tensor operand.
+  auto matchingSubset2 = [&](Value val) {
+      if (state.areEquivalentBufferizedValues(val, subsetOp.getDestinationOperand().get()))
+        return true;
+    return false;
+  };
+  TraversalConfig config;
+  config.followEquivalentOnly = true;
+  SetVector<Value> backwardSlice2 =
+      state.findValueInReverseUseDefChain(opOperand, matchingSubset2, config);
+  if (static_cast<bool>(llvm::all_of(backwardSlice2, matchingSubset2)))
+    return true;
+
   auto matchingSubset = [&](Value val) {
     if (auto opResult = dyn_cast<OpResult>(val))
       if (subsetOp.isEquivalentSubset(opResult, [&](Value v1, Value v2) {
