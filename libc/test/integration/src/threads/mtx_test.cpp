@@ -74,7 +74,7 @@ void relay_counter() {
 mtx_t start_lock, step_lock;
 bool started, step;
 
-int stepper(void *arg) {
+int stepper(void * /*arg*/) {
   LIBC_NAMESPACE::mtx_lock(&start_lock);
   started = true;
   LIBC_NAMESPACE::mtx_unlock(&start_lock);
