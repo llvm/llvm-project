@@ -4084,7 +4084,7 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
     }
   }
 
-  if (VT != MVT::i64)
+  if (VT.getScalarType() != MVT::i64)
     return SDValue();
 
   // i64 (shl x, C) -> (build_pair 0, (shl x, C -32))
@@ -4092,21 +4092,24 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
   // On some subtargets, 64-bit shift is a quarter rate instruction. In the
   // common case, splitting this into a move and a 32-bit shift is faster and
   // the same code size.
-  EVT TargetType = VT.getHalfSizedIntegerVT(*DAG.getContext());
-  EVT TargetVecPairType = EVT::getVectorVT(*DAG.getContext(), TargetType, 2);
   KnownBits Known = DAG.computeKnownBits(RHS);
 
-  if (Known.getMinValue().getZExtValue() < TargetType.getSizeInBits())
+  EVT ElementType = VT.getScalarType();
+  EVT TargetScalarType = ElementType.getHalfSizedIntegerVT(*DAG.getContext());
+  EVT TargetType = VT.isVector() ? VT.changeVectorElementType(TargetScalarType)
+                                 : TargetScalarType;
+
+  if (Known.getMinValue().getZExtValue() < TargetScalarType.getSizeInBits())
     return SDValue();
   SDValue ShiftAmt;
 
   if (CRHS) {
-    ShiftAmt =
-        DAG.getConstant(RHSVal - TargetType.getSizeInBits(), SL, TargetType);
+    ShiftAmt = DAG.getConstant(RHSVal - TargetScalarType.getSizeInBits(), SL,
+                               TargetType);
   } else {
     SDValue truncShiftAmt = DAG.getNode(ISD::TRUNCATE, SL, TargetType, RHS);
     const SDValue ShiftMask =
-        DAG.getConstant(TargetType.getSizeInBits() - 1, SL, TargetType);
+        DAG.getConstant(TargetScalarType.getSizeInBits() - 1, SL, TargetType);
     // This AND instruction will clamp out of bounds shift values.
     // It will also be removed during later instruction selection.
     ShiftAmt = DAG.getNode(ISD::AND, SL, TargetType, truncShiftAmt, ShiftMask);
@@ -4116,9 +4119,23 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
   SDValue NewShift =
       DAG.getNode(ISD::SHL, SL, TargetType, Lo, ShiftAmt, N->getFlags());
 
-  const SDValue Zero = DAG.getConstant(0, SL, TargetType);
+  const SDValue Zero = DAG.getConstant(0, SL, TargetScalarType);
+  SDValue Vec;
 
-  SDValue Vec = DAG.getBuildVector(TargetVecPairType, SL, {Zero, NewShift});
+  if (VT.isVector()) {
+    EVT ConcatType = TargetType.getDoubleNumVectorElementsVT(*DAG.getContext());
+    unsigned NElts = TargetType.getVectorNumElements();
+    SmallVector<SDValue, 8> HiOps;
+    SmallVector<SDValue, 16> HiAndLoOps(NElts * 2, Zero);
+
+    DAG.ExtractVectorElements(NewShift, HiOps, 0, NElts);
+    for (unsigned I = 0; I != NElts; ++I)
+      HiAndLoOps[2 * I + 1] = HiOps[I];
+    Vec = DAG.getNode(ISD::BUILD_VECTOR, SL, ConcatType, HiAndLoOps);
+  } else {
+    EVT ConcatType = EVT::getVectorVT(*DAG.getContext(), TargetType, 2);
+    Vec = DAG.getBuildVector(ConcatType, SL, {Zero, NewShift});
+  }
   return DAG.getNode(ISD::BITCAST, SL, VT, Vec);
 }
 
@@ -5182,9 +5199,14 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
     break;
   }
   case ISD::SHL: {
-    if (DCI.getDAGCombineLevel() < AfterLegalizeDAG)
+    // Range metadata can be invalidated when loads are converted to legal types
+    // (e.g. v2i64 -> v4i32).
+    // Try to convert vector shl before type legalization so that range metadata
+    // can be utilized.
+    if (!(N->getValueType(0).isVector() &&
+          DCI.getDAGCombineLevel() == BeforeLegalizeTypes) &&
+        DCI.getDAGCombineLevel() < AfterLegalizeDAG)
       break;
-
     return performShlCombine(N, DCI);
   }
   case ISD::SRL: {
