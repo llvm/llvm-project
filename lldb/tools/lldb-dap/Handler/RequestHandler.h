@@ -481,8 +481,8 @@ class WriteMemoryRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "writeMemory"; }
-  llvm::StringMap<bool> GetCapabilities() const override {
-    return {{"supportsWriteMemoryRequest", true}};
+  FeatureSet GetSupportedFeatures() const override {
+    return {protocol::eAdapterFeatureWriteMemoryRequest};
   }
   void operator()(const llvm::json::Object &request) const override;
 };
