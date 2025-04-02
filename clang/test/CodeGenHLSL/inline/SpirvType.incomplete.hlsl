@@ -3,7 +3,7 @@
 
 struct S; // expected-note {{forward declaration of 'S'}}
 
-// expected-error@hlsl/hlsl_spirv.h:26 {{argument type 'S' is incomplete}}
+// expected-error@hlsl/hlsl_spirv.h:24 {{argument type 'S' is incomplete}}
 
 typedef vk::SpirvOpaqueType</* OpTypeArray */ 28, S, vk::integral_constant<uint, 4>> ArrayOfS; // #1
 // expected-note@#1 {{in instantiation of template type alias 'SpirvOpaqueType' requested here}}
