@@ -2661,7 +2661,8 @@ void InnerLoopVectorizer::createVectorLoopSkeleton(StringRef Prefix) {
                  LI, nullptr, Twine(Prefix) + "scalar.ph");
   // NOTE: The Plan's scalar preheader isn't replaced with a VPIRBasicBlock
   // wrapping LoopScalarPreHeader here at the moment, because the Plan's scalar
-  // preheader may be unreachable at this point.
+  // preheader may be unreachable at this point. Instead it is replaced in
+  // createVectorizedLoopSkeleton.
 }
 
 /// Return the expanded step for \p ID using \p ExpandedSCEVs to look up SCEV
@@ -7578,10 +7579,10 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   // Set PlanForEarlyExitLoop to true if the BestPlan has been built from a
   // loop with an uncountable early exit. The legacy cost model doesn't
   // properly model costs for such loops.
-  auto ExitBlocks = BestPlan.getExitBlocks();
   bool PlanForEarlyExitLoop =
-      ExitBlocks.size() > 1 ||
-      (ExitBlocks.size() == 1 && ExitBlocks[0]->getNumPredecessors() > 1);
+      BestPlan.getVectorLoopRegion() &&
+      BestPlan.getVectorLoopRegion()->getSingleSuccessor() !=
+          BestPlan.getMiddleBlock();
   assert((BestFactor.Width == LegacyVF.Width || PlanForEarlyExitLoop ||
           planContainsAdditionalSimplifications(getPlanFor(BestFactor.Width),
                                                 CostCtx, OrigLoop) ||
