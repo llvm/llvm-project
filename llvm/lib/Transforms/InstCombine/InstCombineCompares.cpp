@@ -5808,6 +5808,63 @@ static Instruction *foldICmpPow2Test(ICmpInst &I,
   return nullptr;
 }
 
+/// Find all possible pairs (BinOp, RHS) that BinOp V, RHS can be simplified.
+using OffsetOp = std::pair<Instruction::BinaryOps, Value *>;
+static void collectOffsetOp(Value *V, SmallVectorImpl<OffsetOp> &Offsets) {
+  Instruction *Inst = dyn_cast<Instruction>(V);
+  if (!Inst)
+    return;
+  Constant *C;
+
+  switch (Inst->getOpcode()) {
+  case Instruction::Add:
+    if (match(Inst->getOperand(1), m_ImmConstant(C)))
+      if (Constant *NegC = ConstantExpr::getNeg(C))
+        Offsets.emplace_back(Instruction::Add, NegC);
+    break;
+  case Instruction::Xor:
+    Offsets.emplace_back(Instruction::Xor, Inst->getOperand(1));
+    Offsets.emplace_back(Instruction::Xor, Inst->getOperand(0));
+    break;
+  default:
+    break;
+  }
+}
+
+/// Offset both sides of an equality icmp to see if we can save some
+/// instructions. icmp eq/ne X, Y -> icmp eq/ne X op C, Y op C Note: This
+/// operation should not introduce poison.
+static Instruction *foldICmpEqualityWithOffset(ICmpInst &I,
+                                               InstCombiner::BuilderTy &Builder,
+                                               const SimplifyQuery &SQ) {
+  assert(I.isEquality() && "Expected an equality icmp");
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+  if (!Op0->getType()->isIntOrIntVectorTy())
+    return nullptr;
+
+  SmallVector<OffsetOp, 4> OffsetOps;
+  if (Op0->hasOneUse())
+    collectOffsetOp(Op0, OffsetOps);
+  if (Op1->hasOneUse())
+    collectOffsetOp(Op1, OffsetOps);
+  for (auto [BinOp, RHS] : OffsetOps) {
+    auto BinOpc = static_cast<unsigned>(BinOp);
+
+    Value *Simplified0 = simplifyBinOp(BinOpc, Op0, RHS, SQ);
+    if (!Simplified0 || Simplified0 == Op0)
+      continue;
+
+    Value *Simplified1 = simplifyBinOp(BinOpc, Op1, RHS, SQ);
+    if (!Simplified1 || Simplified1 == Op1)
+      continue;
+
+    return new ICmpInst(static_cast<ICmpInst::Predicate>(I.getPredicate()),
+                        Simplified0, Simplified1);
+  }
+
+  return nullptr;
+}
+
 Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
   if (!I.isEquality())
     return nullptr;
@@ -6053,6 +6110,10 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
                           *IsZero ? A
                                   : ConstantInt::getNullValue(A->getType()));
   }
+
+  if (auto *Res = foldICmpEqualityWithOffset(
+          I, Builder, getSimplifyQuery().getWithInstruction(&I)))
+    return Res;
 
   return nullptr;
 }
