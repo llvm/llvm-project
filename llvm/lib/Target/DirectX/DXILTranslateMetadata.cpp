@@ -76,18 +76,18 @@ static NamedMDNode *emitResourceMetadata(Module &M, DXILBindingMap &DBM,
                                          DXILResourceTypeMap &DRTM) {
   LLVMContext &Context = M.getContext();
 
-  for (ResourceBindingInfo &RI : DBM)
+  for (ResourceInfo &RI : DBM)
     if (!RI.hasSymbol())
       RI.createSymbol(M, DRTM[RI.getHandleTy()].createElementStruct());
 
   SmallVector<Metadata *> SRVs, UAVs, CBufs, Smps;
-  for (const ResourceBindingInfo &RI : DBM.srvs())
+  for (const ResourceInfo &RI : DBM.srvs())
     SRVs.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
-  for (const ResourceBindingInfo &RI : DBM.uavs())
+  for (const ResourceInfo &RI : DBM.uavs())
     UAVs.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
-  for (const ResourceBindingInfo &RI : DBM.cbuffers())
+  for (const ResourceInfo &RI : DBM.cbuffers())
     CBufs.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
-  for (const ResourceBindingInfo &RI : DBM.samplers())
+  for (const ResourceInfo &RI : DBM.samplers())
     Smps.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
 
   Metadata *SRVMD = SRVs.empty() ? nullptr : MDNode::get(Context, SRVs);
@@ -381,7 +381,7 @@ static void translateMetadata(Module &M, DXILBindingMap &DBM,
 
 PreservedAnalyses DXILTranslateMetadata::run(Module &M,
                                              ModuleAnalysisManager &MAM) {
-  DXILBindingMap &DBM = MAM.getResult<DXILResourceBindingAnalysis>(M);
+  DXILBindingMap &DBM = MAM.getResult<DXILResourceAnalysis>(M);
   DXILResourceTypeMap &DRTM = MAM.getResult<DXILResourceTypeAnalysis>(M);
   const ModuleShaderFlags &ShaderFlags = MAM.getResult<ShaderFlagsAnalysis>(M);
   const dxil::ModuleMetadataInfo MMDI = MAM.getResult<DXILMetadataAnalysis>(M);

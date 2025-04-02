@@ -326,7 +326,7 @@ public:
 
 //===----------------------------------------------------------------------===//
 
-class ResourceBindingInfo {
+class ResourceInfo {
 public:
   struct ResourceBinding {
     uint32_t RecordID;
@@ -353,9 +353,9 @@ private:
   GlobalVariable *Symbol = nullptr;
 
 public:
-  ResourceBindingInfo(uint32_t RecordID, uint32_t Space, uint32_t LowerBound,
-                      uint32_t Size, TargetExtType *HandleTy,
-                      GlobalVariable *Symbol = nullptr)
+  ResourceInfo(uint32_t RecordID, uint32_t Space, uint32_t LowerBound,
+               uint32_t Size, TargetExtType *HandleTy,
+               GlobalVariable *Symbol = nullptr)
       : Binding{RecordID, Space, LowerBound, Size}, HandleTy(HandleTy),
         Symbol(Symbol) {}
 
@@ -372,14 +372,12 @@ public:
   std::pair<uint32_t, uint32_t>
   getAnnotateProps(Module &M, dxil::ResourceTypeInfo &RTI) const;
 
-  bool operator==(const ResourceBindingInfo &RHS) const {
+  bool operator==(const ResourceInfo &RHS) const {
     return std::tie(Binding, HandleTy, Symbol) ==
            std::tie(RHS.Binding, RHS.HandleTy, RHS.Symbol);
   }
-  bool operator!=(const ResourceBindingInfo &RHS) const {
-    return !(*this == RHS);
-  }
-  bool operator<(const ResourceBindingInfo &RHS) const {
+  bool operator!=(const ResourceInfo &RHS) const { return !(*this == RHS); }
+  bool operator<(const ResourceInfo &RHS) const {
     return Binding < RHS.Binding;
   }
 
@@ -441,7 +439,7 @@ ModulePass *createDXILResourceTypeWrapperPassPass();
 //===----------------------------------------------------------------------===//
 
 class DXILBindingMap {
-  SmallVector<dxil::ResourceBindingInfo> Infos;
+  SmallVector<dxil::ResourceInfo> Infos;
   DenseMap<CallInst *, unsigned> CallMap;
   unsigned FirstUAV = 0;
   unsigned FirstCBuffer = 0;
@@ -451,8 +449,8 @@ class DXILBindingMap {
   void populate(Module &M, DXILResourceTypeMap &DRTM);
 
 public:
-  using iterator = SmallVector<dxil::ResourceBindingInfo>::iterator;
-  using const_iterator = SmallVector<dxil::ResourceBindingInfo>::const_iterator;
+  using iterator = SmallVector<dxil::ResourceInfo>::iterator;
+  using const_iterator = SmallVector<dxil::ResourceInfo>::const_iterator;
 
   iterator begin() { return Infos.begin(); }
   const_iterator begin() const { return Infos.begin(); }
@@ -466,12 +464,12 @@ public:
     return Pos == CallMap.end() ? Infos.end() : (Infos.begin() + Pos->second);
   }
 
-  /// Resolves a resource handle into a vector of ResourceBindingInfos that
+  /// Resolves a resource handle into a vector of ResourceInfos that
   /// represent the possible unique creations of the handle. Certain cases are
   /// ambiguous so multiple creation instructions may be returned. The resulting
-  /// ResourceBindingInfo can be used to depuplicate unique handles that
+  /// ResourceInfo can be used to depuplicate unique handles that
   /// reference the same resource
-  SmallVector<dxil::ResourceBindingInfo> findByUse(const Value *Key) const;
+  SmallVector<dxil::ResourceInfo> findByUse(const Value *Key) const;
 
   const_iterator find(const CallInst *Key) const {
     auto Pos = CallMap.find(Key);
@@ -521,13 +519,12 @@ public:
   void print(raw_ostream &OS, DXILResourceTypeMap &DRTM,
              const DataLayout &DL) const;
 
-  friend class DXILResourceBindingAnalysis;
+  friend class DXILResourceAnalysis;
   friend class DXILResourceBindingWrapperPass;
 };
 
-class DXILResourceBindingAnalysis
-    : public AnalysisInfoMixin<DXILResourceBindingAnalysis> {
-  friend AnalysisInfoMixin<DXILResourceBindingAnalysis>;
+class DXILResourceAnalysis : public AnalysisInfoMixin<DXILResourceAnalysis> {
+  friend AnalysisInfoMixin<DXILResourceAnalysis>;
 
   static AnalysisKey Key;
 
@@ -538,13 +535,12 @@ public:
   DXILBindingMap run(Module &M, ModuleAnalysisManager &AM);
 };
 
-/// Printer pass for the \c DXILResourceBindingAnalysis results.
-class DXILResourceBindingPrinterPass
-    : public PassInfoMixin<DXILResourceBindingPrinterPass> {
+/// Printer pass for the \c DXILResourceAnalysis results.
+class DXILResourcePrinterPass : public PassInfoMixin<DXILResourcePrinterPass> {
   raw_ostream &OS;
 
 public:
-  explicit DXILResourceBindingPrinterPass(raw_ostream &OS) : OS(OS) {}
+  explicit DXILResourcePrinterPass(raw_ostream &OS) : OS(OS) {}
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 

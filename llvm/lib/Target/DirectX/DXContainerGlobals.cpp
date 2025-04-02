@@ -187,7 +187,7 @@ void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {
       getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
 
   auto MakeBinding =
-      [](const dxil::ResourceBindingInfo::ResourceBinding &Binding,
+      [](const dxil::ResourceInfo::ResourceBinding &Binding,
          const dxbc::PSV::ResourceType Type, const dxil::ResourceKind Kind,
          const dxbc::PSV::ResourceFlags Flags = dxbc::PSV::ResourceFlags()) {
         dxbc::PSV::v2::ResourceBindInfo BindInfo;
@@ -200,24 +200,21 @@ void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {
         return BindInfo;
       };
 
-  for (const dxil::ResourceBindingInfo &RBI : DBM.cbuffers()) {
-    const dxil::ResourceBindingInfo::ResourceBinding &Binding =
-        RBI.getBinding();
+  for (const dxil::ResourceInfo &RI : DBM.cbuffers()) {
+    const dxil::ResourceInfo::ResourceBinding &Binding = RI.getBinding();
     PSV.Resources.push_back(MakeBinding(Binding, dxbc::PSV::ResourceType::CBV,
                                         dxil::ResourceKind::CBuffer));
   }
-  for (const dxil::ResourceBindingInfo &RBI : DBM.samplers()) {
-    const dxil::ResourceBindingInfo::ResourceBinding &Binding =
-        RBI.getBinding();
+  for (const dxil::ResourceInfo &RI : DBM.samplers()) {
+    const dxil::ResourceInfo::ResourceBinding &Binding = RI.getBinding();
     PSV.Resources.push_back(MakeBinding(Binding,
                                         dxbc::PSV::ResourceType::Sampler,
                                         dxil::ResourceKind::Sampler));
   }
-  for (const dxil::ResourceBindingInfo &RBI : DBM.srvs()) {
-    const dxil::ResourceBindingInfo::ResourceBinding &Binding =
-        RBI.getBinding();
+  for (const dxil::ResourceInfo &RI : DBM.srvs()) {
+    const dxil::ResourceInfo::ResourceBinding &Binding = RI.getBinding();
 
-    dxil::ResourceTypeInfo &TypeInfo = DRTM[RBI.getHandleTy()];
+    dxil::ResourceTypeInfo &TypeInfo = DRTM[RI.getHandleTy()];
     dxbc::PSV::ResourceType ResType;
     if (TypeInfo.isStruct())
       ResType = dxbc::PSV::ResourceType::SRVStructured;
@@ -229,11 +226,10 @@ void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {
     PSV.Resources.push_back(
         MakeBinding(Binding, ResType, TypeInfo.getResourceKind()));
   }
-  for (const dxil::ResourceBindingInfo &RBI : DBM.uavs()) {
-    const dxil::ResourceBindingInfo::ResourceBinding &Binding =
-        RBI.getBinding();
+  for (const dxil::ResourceInfo &RI : DBM.uavs()) {
+    const dxil::ResourceInfo::ResourceBinding &Binding = RI.getBinding();
 
-    dxil::ResourceTypeInfo &TypeInfo = DRTM[RBI.getHandleTy()];
+    dxil::ResourceTypeInfo &TypeInfo = DRTM[RI.getHandleTy()];
     dxbc::PSV::ResourceType ResType;
     if (TypeInfo.getUAV().HasCounter)
       ResType = dxbc::PSV::ResourceType::UAVStructuredWithCounter;

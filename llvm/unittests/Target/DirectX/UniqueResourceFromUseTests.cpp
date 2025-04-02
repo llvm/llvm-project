@@ -34,7 +34,7 @@ protected:
     PB = new PassBuilder();
     PB->registerModuleAnalyses(*MAM);
     MAM->registerPass([&] { return DXILResourceTypeAnalysis(); });
-    MAM->registerPass([&] { return DXILResourceBindingAnalysis(); });
+    MAM->registerPass([&] { return DXILResourceAnalysis(); });
   }
 
   virtual void TearDown() {
@@ -62,7 +62,7 @@ declare void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
   auto M = parseAssemblyString(Assembly, Error, Context);
   ASSERT_TRUE(M) << "Bad assembly?";
 
-  const DXILBindingMap &DBM = MAM->getResult<DXILResourceBindingAnalysis>(*M);
+  const DXILBindingMap &DBM = MAM->getResult<DXILResourceAnalysis>(*M);
   for (const Function &F : M->functions()) {
     if (F.getName() != "a.func") {
       continue;
@@ -112,7 +112,7 @@ declare target("dx.RawBuffer", float, 1, 0) @ind.func(target("dx.RawBuffer", flo
   auto M = parseAssemblyString(Assembly, Error, Context);
   ASSERT_TRUE(M) << "Bad assembly?";
 
-  const DXILBindingMap &DBM = MAM->getResult<DXILResourceBindingAnalysis>(*M);
+  const DXILBindingMap &DBM = MAM->getResult<DXILResourceAnalysis>(*M);
   for (const Function &F : M->functions()) {
     if (F.getName() != "a.func") {
       continue;
@@ -165,7 +165,7 @@ declare target("dx.RawBuffer", float, 1, 0) @ind.func(target("dx.RawBuffer", flo
   auto M = parseAssemblyString(Assembly, Error, Context);
   ASSERT_TRUE(M) << "Bad assembly?";
 
-  const DXILBindingMap &DBM = MAM->getResult<DXILResourceBindingAnalysis>(*M);
+  const DXILBindingMap &DBM = MAM->getResult<DXILResourceAnalysis>(*M);
   for (const Function &F : M->functions()) {
     if (F.getName() != "a.func") {
       continue;
@@ -245,7 +245,7 @@ declare target("dx.RawBuffer", float, 1, 0) @ind.func(target("dx.RawBuffer", flo
   auto M = parseAssemblyString(Assembly, Error, Context);
   ASSERT_TRUE(M) << "Bad assembly?";
 
-  const DXILBindingMap &DBM = MAM->getResult<DXILResourceBindingAnalysis>(*M);
+  const DXILBindingMap &DBM = MAM->getResult<DXILResourceAnalysis>(*M);
   for (const Function &F : M->functions()) {
     if (F.getName() != "a.func") {
       continue;

@@ -268,7 +268,7 @@ public:
 
       auto *It = DBM.find(CI);
       assert(It != DBM.end() && "Resource not in map?");
-      dxil::ResourceBindingInfo &RI = *It;
+      dxil::ResourceInfo &RI = *It;
 
       const auto &Binding = RI.getBinding();
       dxil::ResourceClass RC = DRTM[RI.getHandleTy()].getResourceClass();
@@ -306,7 +306,7 @@ public:
 
       auto *It = DBM.find(CI);
       assert(It != DBM.end() && "Resource not in map?");
-      dxil::ResourceBindingInfo &RI = *It;
+      dxil::ResourceInfo &RI = *It;
 
       const auto &Binding = RI.getBinding();
       dxil::ResourceTypeInfo &RTI = DRTM[RI.getHandleTy()];
@@ -355,7 +355,7 @@ public:
 
   /// Lower `dx.resource.handlefrombinding` intrinsics depending on the shader
   /// model and taking into account binding information from
-  /// DXILResourceBindingAnalysis.
+  /// DXILResourceAnalysis.
   bool lowerHandleFromBinding(Function &F) {
     const Triple &TT = M.getTargetTriple();
     if (TT.getDXILVersion() < VersionTuple(1, 6))
@@ -856,14 +856,14 @@ public:
 } // namespace
 
 PreservedAnalyses DXILOpLowering::run(Module &M, ModuleAnalysisManager &MAM) {
-  DXILBindingMap &DBM = MAM.getResult<DXILResourceBindingAnalysis>(M);
+  DXILBindingMap &DBM = MAM.getResult<DXILResourceAnalysis>(M);
   DXILResourceTypeMap &DRTM = MAM.getResult<DXILResourceTypeAnalysis>(M);
 
   bool MadeChanges = OpLowerer(M, DBM, DRTM).lowerIntrinsics();
   if (!MadeChanges)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
-  PA.preserve<DXILResourceBindingAnalysis>();
+  PA.preserve<DXILResourceAnalysis>();
   PA.preserve<DXILMetadataAnalysis>();
   PA.preserve<ShaderFlagsAnalysis>();
   return PA;
