@@ -7166,8 +7166,10 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
 
   // if (and x, c) is known to be zero, return 0
   unsigned BitWidth = VT.getScalarSizeInBits();
-  ConstantSDNode *N1C =
-      isConstOrConstSplat(N1, /*AllowUndef*/ false, /*AllowTrunc*/ true);
+  std::optional<APInt> N1C;
+  if (ConstantSDNode *C1 =
+          isConstOrConstSplat(N1, /*AllowUndef*/ false, /*AllowTrunc*/ true))
+    N1C = C1->getAPIntValue().zextOrTrunc(BitWidth);
   if (N1C && DAG.MaskedValueIsZero(SDValue(N, 0), APInt::getAllOnes(BitWidth)))
     return DAG.getConstant(0, DL, VT);
 
@@ -7198,7 +7200,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     SDValue N0Op0 = N0.getOperand(0);
     EVT SrcVT = N0Op0.getValueType();
     unsigned SrcBitWidth = SrcVT.getScalarSizeInBits();
-    APInt Mask = ~N1C->getAPIntValue();
+    APInt Mask = ~*N1C;
     Mask = Mask.trunc(SrcBitWidth);
 
     // fold (and (any_ext V), c) -> (zero_ext V) if 'and' only clears top bits.
@@ -7206,8 +7208,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
       return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, N0Op0);
 
     // fold (and (any_ext V), c) -> (zero_ext (and (trunc V), c)) if profitable.
-    APInt N1APInt = N1C->getAPIntValue().trunc(VT.getScalarSizeInBits());
-    if (N1APInt.countLeadingZeros() >= (BitWidth - SrcBitWidth) &&
+    if (N1C->countLeadingZeros() >= (BitWidth - SrcBitWidth) &&
         TLI.isTruncateFree(VT, SrcVT) && TLI.isZExtFree(SrcVT, VT) &&
         TLI.isTypeDesirableForOp(ISD::AND, SrcVT) &&
         TLI.isNarrowingProfitable(N, VT, SrcVT))
@@ -7352,7 +7353,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     SDValue Extendee = Ext->getOperand(0);
 
     unsigned ScalarWidth = Extendee.getValueType().getScalarSizeInBits();
-    if (N1C->getAPIntValue().isMask(ScalarWidth) &&
+    if (N1C->isMask(ScalarWidth) &&
         (!LegalOperations || TLI.isOperationLegal(ISD::ZERO_EXTEND, ExtVT))) {
       //    (and (extract_subvector (zext|anyext|sext v) _) iN_mask)
       // => (extract_subvector (iN_zeroext v))
@@ -7490,7 +7491,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   }
 
   // fold (and (or (srl N, 8), (shl N, 8)), 0xffff) -> (srl (bswap N), const)
-  if (N1C && N1C->getAPIntValue() == 0xffff && N0.getOpcode() == ISD::OR) {
+  if (N1C && *N1C == 0xffff && N0.getOpcode() == ISD::OR) {
     if (SDValue BSwap = MatchBSwapHWordLow(N0.getNode(), N0.getOperand(0),
                                            N0.getOperand(1), false))
       return BSwap;
