@@ -255,8 +255,7 @@ static bool hasOneBranchOpTo(Block &srcBlock, Block &dstBlock) {
 
 /// Returns true if the given `block` only contains one `spirv.mlir.merge` op.
 static bool isMergeBlock(Block &block) {
-  return !block.empty() && std::next(block.begin()) == block.end() &&
-         isa<spirv::MergeOp>(block.front());
+  return llvm::hasSingleElement(block) && isa<spirv::MergeOp>(block.front());
 }
 
 /// Returns true if a `spirv.mlir.merge` op outside the merge block.
