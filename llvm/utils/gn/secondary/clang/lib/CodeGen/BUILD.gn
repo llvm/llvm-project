@@ -68,6 +68,7 @@ static_library("CodeGen") {
     "CGExprConstant.cpp",
     "CGExprScalar.cpp",
     "CGGPUBuiltin.cpp",
+    "CGHLSLBuiltins.cpp",
     "CGHLSLRuntime.cpp",
     "CGLoopInfo.cpp",
     "CGNonTrivialStruct.cpp",
