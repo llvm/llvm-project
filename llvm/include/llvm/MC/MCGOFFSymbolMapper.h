@@ -45,7 +45,7 @@ class MCSectionGOFF;
 // referenced PRs is pulled into the resulting binary.
 //
 // Both approaches are used, which means that the equivalent of a section in ELF
-// results in 3 GOFF symbol, either SD/ED/LD or SD/ED/PR. Moreover, certain
+// results in 3 GOFF symbols, either SD/ED/LD or SD/ED/PR. Moreover, certain
 // sections are fine with just defining SD/ED symbols. The SymbolMapper takes
 // care of all those details.
 
