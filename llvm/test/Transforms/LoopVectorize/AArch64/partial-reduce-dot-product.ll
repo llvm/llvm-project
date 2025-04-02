@@ -2,6 +2,7 @@
 ; RUN: opt -passes=loop-vectorize -force-vector-interleave=1 -enable-epilogue-vectorization=false -S < %s | FileCheck %s --check-prefixes=CHECK-INTERLEAVE1
 ; RUN: opt -passes=loop-vectorize -enable-epilogue-vectorization=false -S < %s | FileCheck %s --check-prefixes=CHECK-INTERLEAVED
 ; RUN: opt -passes=loop-vectorize -force-vector-interleave=1 -vectorizer-maximize-bandwidth -enable-epilogue-vectorization=false -S < %s | FileCheck %s --check-prefixes=CHECK-MAXBW
+; RUN: opt -passes=loop-vectorize -debug-only=loop-vectorize --disable-output -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK-REGS
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-none-unknown-elf"
@@ -3420,6 +3421,12 @@ define dso_local void @not_dotp_high_register_pressure(ptr %a, ptr %b, ptr %sum,
 ; CHECK-MAXBW-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_FOR_COND_CLEANUP_CRIT_EDGE:%.*]], label [[SCALAR_PH]]
 ; CHECK-MAXBW:       scalar.ph:
 ;
+; CHECK-REGS-LABEL: LV: Checking a loop in 'dotp_high_register_pressure' from <stdin>
+; CHECK-REGS:       LV(REG): VF = 16
+; CHECK-REGS-NEXT:  LV(REG): Found max usage: 2 item
+; CHECK-REGS-NEXT:  LV(REG): RegisterClass: Generic::ScalarRC, 3 registers
+; CHECK-REGS-NEXT:  LV(REG): RegisterClass: Generic::VectorRC, 24 registers
+; CHECK-REGS-NEXT:  LV(REG): Found invariant usage: 1 item
 entry:
   %cmp100 = icmp sgt i32 %n, 0
   br i1 %cmp100, label %for.body.lr.ph, label %for.cond.cleanup
