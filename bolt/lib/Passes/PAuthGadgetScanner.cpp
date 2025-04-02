@@ -544,8 +544,10 @@ public:
       MCInst &Inst = I.second;
 
       // If there is a label before this instruction, it is possible that it
-      // can be jumped-to, thus conservatively resetting S.
-      if (BF.hasLabelAt(I.first))
+      // can be jumped-to, thus conservatively resetting S. As an exception,
+      // let's ignore any labels at the beginning of the function, as at least
+      // one label is expected there.
+      if (BF.hasLabelAt(I.first) && &Inst != &BF.instrs().begin()->second)
         S = createUnsafeState();
 
       // Check if we need to remove an old annotation (this is the case if
