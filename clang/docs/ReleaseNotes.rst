@@ -275,6 +275,10 @@ Improvements to Clang's diagnostics
 - Diagnostics on chained comparisons (``a < b < c``) are now an error by default. This can be disabled with
   ``-Wno-error=parentheses``.
 - Clang now better preserves the sugared types of pointers to member.
+- Clang now better preserves the presence of the template keyword with dependent
+  prefixes.
+- When printing types for diagnostics, clang now doesn't suppress the scopes of
+  template arguments contained within nested names.
 - The ``-Wshift-bool`` warning has been added to warn about shifting a boolean. (#GH28334)
 - Fixed diagnostics adding a trailing ``::`` when printing some source code
   constructs, like base classes.
@@ -382,6 +386,9 @@ Bug Fixes to C++ Support
 - Clang now uses the parameter location for abbreviated function templates in ``extern "C"``. (#GH46386)
 - Clang will emit an error instead of crash when use co_await or co_yield in
   C++26 braced-init-list template parameter initialization. (#GH78426)
+- Improved fix for an issue with pack expansions of type constraints, where this
+  now also works if the constraint has non-type or template template parameters.
+  (#GH131798)
 - Fixes matching of nested template template parameters. (#GH130362)
 - Correctly diagnoses template template paramters which have a pack parameter
   not in the last position.

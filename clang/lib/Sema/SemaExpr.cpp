@@ -2684,7 +2684,7 @@ recoverFromMSUnqualifiedLookup(Sema &S, ASTContext &Context,
   // perform name lookup during template instantiation.
   CXXScopeSpec SS;
   auto *NNS =
-      NestedNameSpecifier::Create(Context, nullptr, true, RD->getTypeForDecl());
+      NestedNameSpecifier::Create(Context, nullptr, RD->getTypeForDecl());
   SS.MakeTrivial(Context, NNS, SourceRange(Loc, Loc));
   return DependentScopeDeclRefExpr::Create(
       Context, SS.getWithLocInContext(Context), TemplateKWLoc, NameInfo,
