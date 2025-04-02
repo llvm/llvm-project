@@ -950,20 +950,51 @@ parseLowerAllowCheckPassOptions(StringRef Params) {
 
 Expected<MetaRenamerOptions> parseMetaRenamerPassOptions(StringRef Params) {
   MetaRenamerOptions Result;
+  bool InQuotes = false;
+
   while (!Params.empty()) {
     StringRef ParamName;
-    std::tie(ParamName, Params) = Params.split(';');
+    size_t SplitPos = 0;
+
+    for (size_t I = 0; I < Params.size(); ++I) {
+      if (Params[I] == '"') {
+        InQuotes = !InQuotes;
+      } else if (Params[I] == ';' && !InQuotes) {
+        SplitPos = I;
+        break;
+      }
+    }
+
+    if (SplitPos == 0) {
+      ParamName = Params;
+      Params = "";
+    } else {
+      ParamName = Params.substr(0, SplitPos);
+      Params = Params.substr(SplitPos + 1);
+    }
+
     bool Enable = !ParamName.consume_front("no-");
+
+    auto ExtractValue = [](StringRef Str) -> StringRef {
+      if (Str.starts_with("\"")) {
+        Str = Str.drop_front();
+        if (Str.ends_with("\"")) {
+          Str = Str.drop_back();
+        }
+      }
+      return Str;
+    };
+
     if (ParamName == "rename-only-inst") {
       Result.RenameOnlyInst = Enable;
     } else if (ParamName.consume_front("rename-exclude-struct-prefixes=")) {
-      Result.RenameExcludeStructPrefixes = ParamName;
+      Result.RenameExcludeStructPrefixes = ExtractValue(ParamName);
     } else if (ParamName.consume_front("rename-exclude-global-prefixes=")) {
-      Result.RenameExcludeGlobalPrefixes = ParamName;
+      Result.RenameExcludeGlobalPrefixes = ExtractValue(ParamName);
     } else if (ParamName.consume_front("rename-exclude-alias-prefixes=")) {
-      Result.RenameExcludeAliasPrefixes = ParamName;
+      Result.RenameExcludeAliasPrefixes = ExtractValue(ParamName);
     } else if (ParamName.consume_front("rename-exclude-function-prefixes=")) {
-      Result.RenameExcludeFunctionPrefixes = ParamName;
+      Result.RenameExcludeFunctionPrefixes = ExtractValue(ParamName);
     } else {
       return make_error<StringError>(
         formatv("invalid metarenamer pass parameter '{0}' ", ParamName)
@@ -971,8 +1002,10 @@ Expected<MetaRenamerOptions> parseMetaRenamerPassOptions(StringRef Params) {
         inconvertibleErrorCode());
     }
   }
+
   return Result;
 }
+
 
 Expected<MemorySanitizerOptions> parseMSanPassOptions(StringRef Params) {
   MemorySanitizerOptions Result;

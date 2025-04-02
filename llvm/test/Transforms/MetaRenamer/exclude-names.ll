@@ -1,4 +1,5 @@
 ; RUN: opt -passes='metarenamer<rename-exclude-function-prefixes=my_func;rename-exclude-global-prefixes=my_global;rename-exclude-struct-prefixes=my_struct;rename-exclude-alias-prefixes=my_alias>' -S %s | FileCheck %s
+; RUN: opt -passes='metarenamer<rename-exclude-function-prefixes="my_func";rename-exclude-global-prefixes="my_global";rename-exclude-struct-prefixes="my_struct";rename-exclude-alias-prefixes="my_alias">' -S %s | FileCheck %s
 
 ; Check that excluded names don't get renamed while all the other ones do
 
