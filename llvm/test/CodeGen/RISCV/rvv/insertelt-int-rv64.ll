@@ -757,3 +757,18 @@ define <vscale x 8 x i64> @insertelt_nxv8i64_idx(<vscale x 8 x i64> %v, i64 %elt
   %r = insertelement <vscale x 8 x i64> %v, i64 %elt, i32 %idx
   ret <vscale x 8 x i64> %r
 }
+
+define <vscale x 4 x i32> @insertelt_nxv4i32_zeroinitializer_0(i32 %x) {
+; CHECK-LABEL: insertelt_nxv4i32_zeroinitializer_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
+; CHECK-NEXT:    vmv.s.x v10, a0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmv1r.v v8, v10
+; CHECK-NEXT:    ret
+  %v = insertelement <vscale x 4 x i32> zeroinitializer, i32 %x, i64 0
+  ret <vscale x 4 x i32> %v
+}
