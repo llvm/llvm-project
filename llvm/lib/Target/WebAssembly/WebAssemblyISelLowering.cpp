@@ -1034,7 +1034,7 @@ EVT WebAssemblyTargetLowering::getSetCCResultType(const DataLayout &DL,
 }
 
 bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                                   const CallInst &I,
+                                                   const CallBase &I,
                                                    MachineFunction &MF,
                                                    unsigned Intrinsic) const {
   switch (Intrinsic) {
