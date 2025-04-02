@@ -24046,6 +24046,15 @@ static SDValue performSTORECombine(SDNode *N,
       return SDValue();
 
     if (MemVT == MVT::i8) {
+      auto *ExtCst = dyn_cast<ConstantSDNode>(ExtIdx);
+      if (Subtarget->isNeonAvailable() &&
+          (VectorVT == MVT::v8i8 || VectorVT == MVT::v16i8) && ExtCst &&
+          !ExtCst->isZero() && ST->getBasePtr().getOpcode() != ISD::ADD) {
+        // These can lower to st1.b, which is preferable if we're unlikely to
+        // fold the addressing into the store.
+        return SDValue();
+      }
+
       SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
       SDValue Ext = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL,
                                 Value.getValueType(), Vector, ExtIdx);
