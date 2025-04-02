@@ -223,20 +223,21 @@ static bool AdoptTemplateParameterList(TemplateParameterList *Params,
   return Invalid;
 }
 
-void TemplateParameterList::
-getAssociatedConstraints(llvm::SmallVectorImpl<const Expr *> &AC) const {
+void TemplateParameterList::getAssociatedConstraints(
+    llvm::SmallVectorImpl<AssociatedConstraint> &ACs) const {
   if (HasConstrainedParameters)
     for (const NamedDecl *Param : *this) {
       if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(Param)) {
         if (const auto *TC = TTP->getTypeConstraint())
-          AC.push_back(TC->getImmediatelyDeclaredConstraint());
+          ACs.emplace_back(TC->getImmediatelyDeclaredConstraint(),
+                           TC->getArgumentPackSubstitutionIndex());
       } else if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
         if (const Expr *E = NTTP->getPlaceholderTypeConstraint())
-          AC.push_back(E);
+          ACs.emplace_back(E);
       }
     }
   if (HasRequiresClause)
-    AC.push_back(getRequiresClause());
+    ACs.emplace_back(getRequiresClause());
 }
 
 bool TemplateParameterList::hasAssociatedConstraints() const {
@@ -286,12 +287,12 @@ TemplateDecl::TemplateDecl(Kind DK, DeclContext *DC, SourceLocation L,
 
 void TemplateDecl::anchor() {}
 
-void TemplateDecl::
-getAssociatedConstraints(llvm::SmallVectorImpl<const Expr *> &AC) const {
-  TemplateParams->getAssociatedConstraints(AC);
+void TemplateDecl::getAssociatedConstraints(
+    llvm::SmallVectorImpl<AssociatedConstraint> &ACs) const {
+  TemplateParams->getAssociatedConstraints(ACs);
   if (auto *FD = dyn_cast_or_null<FunctionDecl>(getTemplatedDecl()))
     if (const Expr *TRC = FD->getTrailingRequiresClause())
-      AC.push_back(TRC);
+      ACs.emplace_back(TRC);
 }
 
 bool TemplateDecl::hasAssociatedConstraints() const {
@@ -748,14 +749,15 @@ bool TemplateTypeParmDecl::isParameterPack() const {
 }
 
 void TemplateTypeParmDecl::setTypeConstraint(
-    ConceptReference *Loc, Expr *ImmediatelyDeclaredConstraint) {
+    ConceptReference *Loc, Expr *ImmediatelyDeclaredConstraint,
+    int ArgumentPackSubstitutionIndex) {
   assert(HasTypeConstraint &&
          "HasTypeConstraint=true must be passed at construction in order to "
          "call setTypeConstraint");
   assert(!TypeConstraintInitialized &&
          "TypeConstraint was already initialized!");
-  new (getTrailingObjects<TypeConstraint>())
-      TypeConstraint(Loc, ImmediatelyDeclaredConstraint);
+  new (getTrailingObjects<TypeConstraint>()) TypeConstraint(
+      Loc, ImmediatelyDeclaredConstraint, ArgumentPackSubstitutionIndex);
   TypeConstraintInitialized = true;
 }
 
