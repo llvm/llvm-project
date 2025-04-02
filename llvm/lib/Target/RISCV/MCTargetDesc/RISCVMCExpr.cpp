@@ -94,7 +94,7 @@ bool RISCVMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
   Res.setSpecifier(specifier);
 
   // Custom fixup types are not valid with symbol difference expressions.
-  return Res.getSymB() ? getSpecifier() == VK_None : true;
+  return !Res.getSubSym();
 }
 
 void RISCVMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
