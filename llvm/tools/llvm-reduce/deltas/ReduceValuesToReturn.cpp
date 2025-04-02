@@ -56,7 +56,7 @@ static void rewriteFuncWithReturnType(Function &OldF, Value *NewRetValue) {
       NewRetI ? NewRetI->getIterator() : EntryBB.end();
 
   // Hack up any return values in other blocks, we can't leave them as ret void.
-  if (OldFuncTy->getReturnType()->isVoidTy()) {
+  if (OldFuncTy->getReturnType() != NewRetTy) {
     for (BasicBlock &OtherRetBB : OldF) {
       if (&OtherRetBB != NewRetBlock) {
         auto *OrigRI = dyn_cast<ReturnInst>(OtherRetBB.getTerminator());

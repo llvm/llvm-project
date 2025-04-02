@@ -21,11 +21,38 @@ define i64 @inst_to_return_has_different_type_but_no_func_call_use(ptr %arg) {
   ret i64 0
 }
 
-; INTERESTING-LABEL: @callsite_different_type_unused_0(
-; RESULT-LABEL: define i64 @inst_to_return_has_different_type_but_call_result_unused(
-; RESULT-NEXT: %load = load i32, ptr %arg
-; RESULT-NEXT: store i32 %load, ptr @gv
-; RESULT-NEXT: ret i64 0
+; INTERESTING-LABEL: @multiple_returns_wrong_return_type_no_callers(
+; RESULT-LABEL: define i32 @multiple_returns_wrong_return_type_no_callers(
+
+; RESULT: bb0:
+; RESULT-NEXT: %load0 = load i32,
+; RESULT-NEXT: ret i32 %load0
+
+; RESULT: bb1:
+; RESULT-NEXT: store i32 8, ptr null
+; RESULT-NEXT: ret i32 0
+define i64 @multiple_returns_wrong_return_type_no_callers(ptr %arg, i1 %cond, i64 %arg2) {
+entry:
+  br i1 %cond, label %bb0, label %bb1
+
+bb0:
+  %load0 = load i32, ptr %arg
+  store i32 %load0, ptr @gv
+  ret i64 234
+
+bb1:
+  store i32 8, ptr null
+  ret i64 %arg2
+
+bb2:
+  ret i64 34
+}
+
+; INTERESTING-LABEL: define {{.+}} @callsite_different_type_unused_0(
+
+; RESULT-LABEL: define i64 @callsite_different_type_unused_0(ptr %arg) {
+; RESULT-NEXT: %unused0 = call i64 @inst_to_return_has_different_type_but_call_result_unused(ptr %arg)
+; RESULT-NEXT: ret i64 %unused0
 define void @callsite_different_type_unused_0(ptr %arg) {
   %unused0 = call i64 @inst_to_return_has_different_type_but_call_result_unused(ptr %arg)
   %unused1 = call i64 @inst_to_return_has_different_type_but_call_result_unused(ptr null)
@@ -33,8 +60,10 @@ define void @callsite_different_type_unused_0(ptr %arg) {
 }
 
 ; TODO: Could rewrite this return from i64 to i32 since the callsite is unused.
-; INTERESTING-LABEL: @inst_to_return_has_different_type_but_call_result_unused(
+; INTERESTING-LABEL: define {{.+}} @inst_to_return_has_different_type_but_call_result_unused(
 ; RESULT-LABEL: define i64 @inst_to_return_has_different_type_but_call_result_unused(
+; RESULT-NEXT: %load = load i32, ptr %arg
+; RESULT-NEXT: store i32 %load, ptr @gv
 ; RESULT: ret i64 0
 define i64 @inst_to_return_has_different_type_but_call_result_unused(ptr %arg) {
   %load = load i32, ptr %arg
