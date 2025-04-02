@@ -10,10 +10,6 @@
 //    3) for AMDGCNSPIRV we emit llvm.amdgcn.is.gfx900 as a bool global, and
 //       load from it to provide the condition a br (abstract target)
 //.
-// AMDGCN-GFX900: @__oclc_ABI_version = weak_odr hidden local_unnamed_addr addrspace(4) constant i32 600
-//.
-// AMDGCN-GFX1010: @__oclc_ABI_version = weak_odr hidden local_unnamed_addr addrspace(4) constant i32 600
-//.
 // AMDGCNSPIRV: @llvm.amdgcn.is.gfx900 = external addrspace(1) externally_initialized constant i1
 //.
 // AMDGCN-GFX900-LABEL: define dso_local void @foo(
@@ -31,7 +27,8 @@
 // AMDGCNSPIRV-SAME: ) addrspace(4) #[[ATTR0:[0-9]+]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = load i1, ptr addrspace(1) @llvm.amdgcn.is.gfx900, align 1
-// AMDGCNSPIRV-NEXT:    br i1 [[TMP0]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
+// AMDGCNSPIRV-NEXT:    [[TOBOOL:%.*]] = icmp ne i1 [[TMP0]], false
+// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
 // AMDGCNSPIRV:       [[IF_THEN]]:
 // AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.trap()
 // AMDGCNSPIRV-NEXT:    br label %[[IF_END]]
@@ -39,7 +36,7 @@
 // AMDGCNSPIRV-NEXT:    ret void
 //
 void foo() {
-    if (__builtin_cpu_is("gfx900"))
+    if (__builtin_amdgcn_processor_is("gfx900"))
         return __builtin_trap();
 }
 //.
