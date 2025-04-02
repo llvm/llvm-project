@@ -428,6 +428,8 @@ public:
     bool m_unspecified_registers_are_undefined = false;
   }; // class Row
 
+  typedef std::shared_ptr<Row> RowSP;
+
   UnwindPlan(lldb::RegisterKind reg_kind)
       : m_register_kind(reg_kind), m_return_addr_register(LLDB_INVALID_REGNUM),
         m_plan_is_sourced_from_compiler(eLazyBoolCalculate),
@@ -435,10 +437,25 @@ public:
         m_plan_is_for_signal_trap(eLazyBoolCalculate) {}
 
   // Performs a deep copy of the plan, including all the rows (expensive).
-  UnwindPlan(const UnwindPlan &rhs) = default;
-  UnwindPlan &operator=(const UnwindPlan &rhs) = default;
-
+  UnwindPlan(const UnwindPlan &rhs)
+      : m_plan_valid_ranges(rhs.m_plan_valid_ranges),
+        m_register_kind(rhs.m_register_kind),
+        m_return_addr_register(rhs.m_return_addr_register),
+        m_source_name(rhs.m_source_name),
+        m_plan_is_sourced_from_compiler(rhs.m_plan_is_sourced_from_compiler),
+        m_plan_is_valid_at_all_instruction_locations(
+            rhs.m_plan_is_valid_at_all_instruction_locations),
+        m_plan_is_for_signal_trap(rhs.m_plan_is_for_signal_trap),
+        m_lsda_address(rhs.m_lsda_address),
+        m_personality_func_addr(rhs.m_personality_func_addr) {
+    m_row_list.reserve(rhs.m_row_list.size());
+    for (const RowSP &row_sp : rhs.m_row_list)
+      m_row_list.emplace_back(new Row(*row_sp));
+  }
   UnwindPlan(UnwindPlan &&rhs) = default;
+  UnwindPlan &operator=(const UnwindPlan &rhs) {
+    return *this = UnwindPlan(rhs); // NB: moving from a temporary (deep) copy
+  }
   UnwindPlan &operator=(UnwindPlan &&) = default;
 
   ~UnwindPlan() = default;
@@ -469,7 +486,7 @@ public:
   uint32_t GetInitialCFARegister() const {
     if (m_row_list.empty())
       return LLDB_INVALID_REGNUM;
-    return m_row_list.front().GetCFAValue().GetRegisterNumber();
+    return m_row_list.front()->GetCFAValue().GetRegisterNumber();
   }
 
   // This UnwindPlan may not be valid at every address of the function span.
@@ -552,7 +569,7 @@ public:
   }
 
 private:
-  std::vector<Row> m_row_list;
+  std::vector<RowSP> m_row_list;
   std::vector<AddressRange> m_plan_valid_ranges;
   lldb::RegisterKind m_register_kind; // The RegisterKind these register numbers
                                       // are in terms of - will need to be
