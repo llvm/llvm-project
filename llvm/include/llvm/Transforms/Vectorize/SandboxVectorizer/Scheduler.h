@@ -112,9 +112,7 @@ private:
   ContainerTy Nodes;
 
   /// Called by the DGNode destructor to avoid accessing freed memory.
-  void eraseFromBundle(DGNode *N) {
-    Nodes.erase(std::remove(Nodes.begin(), Nodes.end(), N), Nodes.end());
-  }
+  void eraseFromBundle(DGNode *N) { llvm::erase(Nodes, N); }
   friend void DGNode::setSchedBundle(SchedBundle &); // For eraseFromBunde().
   friend DGNode::~DGNode();                          // For eraseFromBundle().
 

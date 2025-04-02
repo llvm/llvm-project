@@ -1299,9 +1299,9 @@ def ext : PatFrags<(ops node:$A), [(sext node:$A), (zext node:$A)]>;
 
 class binop_oneuse<SDPatternOperator operator>
     : PatFrag<(ops node:$A, node:$B),
-              (operator node:$A, node:$B), [{
-  return N->hasOneUse();
-}]>;
+              (operator node:$A, node:$B)> {
+  let HasOneUse = 1;
+}
 
 def and_oneuse : binop_oneuse<and>;
 def mul_oneuse : binop_oneuse<mul>;
@@ -1315,9 +1315,9 @@ def mul_const_oneuse : PatFrag<(ops node:$A, node:$B),
 
 class unop_oneuse<SDPatternOperator operator>
     : PatFrag<(ops node:$A),
-              (operator node:$A), [{
-  return N->hasOneUse();
-}]>;
+              (operator node:$A)> {
+  let HasOneUse = 1;
+}
 
 def sext_oneuse   : unop_oneuse<sext>;
 def zext_oneuse   : unop_oneuse<zext>;

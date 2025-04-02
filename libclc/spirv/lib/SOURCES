@@ -35,7 +35,6 @@ subnormal_config.cl
 ../../generic/lib/math/erf.cl
 ../../generic/lib/math/erfc.cl
 ../../generic/lib/math/exp.cl
-../../generic/lib/math/exp_helper.cl
 ../../generic/lib/math/expm1.cl
 ../../generic/lib/math/exp2.cl
 ../../generic/lib/math/exp10.cl
