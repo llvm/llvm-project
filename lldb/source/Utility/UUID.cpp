@@ -11,10 +11,15 @@
 #include "lldb/Utility/Stream.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/RandomNumberGenerator.h"
 
 #include <cctype>
+#include <chrono>
+#include <climits>
+#include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <random>
 
 using namespace lldb_private;
 
@@ -109,4 +114,19 @@ bool UUID::SetFromStringRef(llvm::StringRef str) {
 
   *this = UUID(bytes);
   return true;
+}
+
+UUID UUID::Generate(uint32_t num_bytes) {
+  llvm::SmallVector<uint8_t, 20> bytes(num_bytes);
+  auto ec = llvm::getRandomBytes(bytes.data(), bytes.size());
+
+  // If getRandomBytes failed, fall back to a lower entropy source.
+  if (ec) {
+    auto seed = std::chrono::steady_clock::now().time_since_epoch().count();
+    std::independent_bits_engine<std::default_random_engine, CHAR_BIT, uint8_t>
+        engine(seed);
+    std::generate(bytes.begin(), bytes.end(), std::ref(engine));
+  }
+
+  return UUID(bytes);
 }
