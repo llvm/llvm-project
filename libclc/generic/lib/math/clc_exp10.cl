@@ -127,8 +127,9 @@ _CLC_DEF _CLC_OVERLOAD double __clc_exp10(double x) {
                         0x1.0000000000000p-1),
               1.0);
 
-  double2 tv = USE_TABLE(two_to_jby64_ep_tbl, j);
-  z2 = __clc_fma(tv.s0 + tv.s1, z2, tv.s1) + tv.s0;
+  double tv0 = USE_TABLE(two_to_jby64_ep_tbl_head, j);
+  double tv1 = USE_TABLE(two_to_jby64_ep_tbl_tail, j);
+  z2 = __clc_fma(tv0 + tv1, z2, tv1) + tv0;
 
   int small_value = (m < -1022) || ((m == -1022) && (z2 < 1.0));
 
