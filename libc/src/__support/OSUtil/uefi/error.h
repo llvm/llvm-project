@@ -11,6 +11,7 @@
 
 #include "include/llvm-libc-types/EFI_STATUS.h"
 #include "src/__support/CPP/array.h"
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include <errno.h>
 #include <limits.h>
@@ -69,7 +70,7 @@ static constexpr cpp::array<UefiStatusErrnoEntry, 43> UEFI_STATUS_ERRNO_MAP = {{
     {EFI_ENCODE_WARNING(EFI_WARN_RESET_REQUIRED), EINTR},
 }};
 
-static inline int uefi_status_to_errno(EFI_STATUS status) {
+LIBC_INLINE int uefi_status_to_errno(EFI_STATUS status) {
   for (auto it = UEFI_STATUS_ERRNO_MAP.begin();
        it != UEFI_STATUS_ERRNO_MAP.end(); it++) {
     const struct UefiStatusErrnoEntry entry = *it;
@@ -81,7 +82,7 @@ static inline int uefi_status_to_errno(EFI_STATUS status) {
   __builtin_unreachable();
 }
 
-static inline EFI_STATUS errno_to_uefi_status(int errno_value) {
+LIBC_INLINE EFI_STATUS errno_to_uefi_status(int errno_value) {
   for (auto it = UEFI_STATUS_ERRNO_MAP.begin();
        it != UEFI_STATUS_ERRNO_MAP.end(); it++) {
     const struct UefiStatusErrnoEntry entry = *it;
