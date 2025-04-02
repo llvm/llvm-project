@@ -152,13 +152,13 @@ void PredicateExpander::expandCheckOpcode(raw_ostream &OS,
   }
 
   if (shouldNegate())
-    OS << "!";
+    OS << '!';
   OS << "llvm::is_contained(";
   ListSeparator Sep;
-  OS << "{";
+  OS << '{';
   for (const Record *Inst : Opcodes)
     OS << Sep << Inst->getValueAsString("Namespace") << "::" << Inst->getName();
-  OS << "}";
+  OS << '}';
   OS << ", MI" << (isByRef() ? "." : "->") << "getOpcode())";
 }
 
