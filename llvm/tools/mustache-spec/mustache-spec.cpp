@@ -76,7 +76,7 @@ void runThroughTest(StringRef InputFile) {
 
     Template T = Template(TemplateStr);
     if (Partials) {
-      for (auto& PartialPairs : *Partials->getAsObject()) {
+      for (auto &PartialPairs : *Partials->getAsObject()) {
         const auto &[Partial, Str] = PartialPairs;
         T.registerPartial((*Str.getAsString()).str(), Partial.str());
       }
