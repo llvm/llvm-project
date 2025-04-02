@@ -1195,12 +1195,15 @@ struct DSEState {
   bool isInvisibleToCallerAfterRet(const Value *V) {
     if (isa<AllocaInst>(V))
       // Defer alloca store elimination, wait for CoroSplit
-      return !F.hasFnAttribute(Attribute::PresplitCoroutine);
+      return !F.isPresplitCoroutine();
 
     auto I = InvisibleToCallerAfterRet.insert({V, false});
     if (I.second) {
-      if (isInvisibleToCallerOnUnwind(V) && isNoAliasCall(V))
+      if (!isInvisibleToCallerOnUnwind(V)) {
+        I.first->second = false;
+      } else if (isNoAliasCall(V)) {
         I.first->second = !PointerMayBeCaptured(V, /*ReturnCaptures=*/true);
+      }
     }
     return I.first->second;
   }
