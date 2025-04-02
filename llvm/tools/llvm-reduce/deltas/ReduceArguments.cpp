@@ -16,8 +16,10 @@
 #include "Utils.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/FMF.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/Operator.h"
 #include <set>
 #include <vector>
 
@@ -59,7 +61,7 @@ static void replaceFunctionCalls(Function &OldF, Function &NewF,
         }
       }
 
-      // FIXME: Losing bundles, fast math flags and metadata
+      // FIXME: Losing bundles and metadata
       CallInst *NewCI = CallInst::Create(&NewF, Args);
       NewCI->setCallingConv(NewF.getCallingConv());
 
@@ -72,6 +74,9 @@ static void replaceFunctionCalls(Function &OldF, Function &NewF,
       for (auto ArgI = NewCI->arg_begin(), E = NewCI->arg_end(); ArgI != E;
            ++ArgI, ++AttrIdx)
         NewCI->addParamAttrs(AttrIdx, ArgAttrs[AttrIdx]);
+
+      if (auto *FPOp = dyn_cast<FPMathOperator>(NewCI))
+        cast<Instruction>(FPOp)->setFastMathFlags(CI->getFastMathFlags());
 
       if (!CI->use_empty())
         CI->replaceAllUsesWith(NewCI);
