@@ -1929,7 +1929,9 @@ bool LoopVectorizationLegality::canFoldTailByMasking() const {
   // that not every instruction executes on the last iteration.  This will
   // require a lane mask which varies through the vector loop body.  (TODO)
   if (TheLoop->getExitingBlock() != TheLoop->getLoopLatch()) {
-    LLVM_DEBUG(dbgs() << "LV: Cannot fold tail by masking. Requires a singe latch exit\n");
+    LLVM_DEBUG(
+        dbgs()
+        << "LV: Cannot fold tail by masking. Requires a singe latch exit\n");
     return false;
   }
   LLVM_DEBUG(dbgs() << "LV: can fold tail by masking.\n");
