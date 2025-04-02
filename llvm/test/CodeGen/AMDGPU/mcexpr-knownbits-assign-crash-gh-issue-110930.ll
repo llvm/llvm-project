@@ -264,7 +264,7 @@ define ptr @P_SaveGameFile() {
 ; CHECK-LABEL: R_FlatNumForName:
 ; CHECK: .set R_FlatNumForName.num_vgpr, max(42, I_Error.num_vgpr)
 ; CHECK: .set R_FlatNumForName.num_agpr, max(0, I_Error.num_agpr)
-; CHECK: .set R_FlatNumForName.numbered_sgpr, max(56, I_Error.numbered_sgpr)
+; CHECK: .set R_FlatNumForName.numbered_sgpr, max(34, I_Error.numbered_sgpr)
 ; CHECK: .set R_FlatNumForName.private_seg_size, 16+(max(I_Error.private_seg_size))
 ; CHECK: .set R_FlatNumForName.uses_vcc, or(1, I_Error.uses_vcc)
 ; CHECK: .set R_FlatNumForName.uses_flat_scratch, or(0, I_Error.uses_flat_scratch)

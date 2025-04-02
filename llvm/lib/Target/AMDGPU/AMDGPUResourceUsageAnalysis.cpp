@@ -156,15 +156,10 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
   int32_t MaxSGPR = -1;
   Info.CalleeSegmentSize = 0;
 
-  bool IsIWWFunction = MFI->hasInitWholeWave();
-
   for (const MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB) {
       if (MI.isImplicitDef())
         continue;
-
-      // At this point, the chain call pseudos are already expanded.
-      bool IsChainCall = MI.getOpcode() == AMDGPU::SI_TCRETURN;
 
       // TODO: Check regmasks? Do they occur anywhere except calls?
       for (const MachineOperand &MO : MI.operands()) {
@@ -172,7 +167,7 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
         bool IsSGPR = false;
         bool IsAGPR = false;
 
-        if (!MO.isReg())
+        if (!MO.isReg() || MO.isUse())
           continue;
 
         Register Reg = MO.getReg();
@@ -246,15 +241,6 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
         default:
           break;
         }
-
-        // For functions that use the llvm.amdgcn.init.whole.wave intrinsic, we
-        // often add artificial VGPR arguments for the purpose of preserving
-        // their inactive lanes. These should not be reported as part of our
-        // VGPR usage. We can identify them easily because they're only used in
-        // the chain call, and possibly in an IMPLICIT_DEF coming from an
-        // llvm.amdgcn.dead intrinsic.
-        if (IsIWWFunction && IsChainCall && TRI.isVectorRegister(MRI, Reg))
-          continue;
 
         if (AMDGPU::SGPR_32RegClass.contains(Reg) ||
             AMDGPU::SGPR_LO16RegClass.contains(Reg) ||
