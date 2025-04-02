@@ -210,6 +210,8 @@ bool RootSignatureParser::parseRegister(Register *Register) {
       "Expects to only be invoked starting at given keyword");
 
   switch (CurToken.Kind) {
+  default:
+    llvm_unreachable("Switch for consumed token was not provided");
   case TokenKind::bReg:
     Register->ViewType = RegisterType::BReg;
     break;
@@ -222,8 +224,6 @@ bool RootSignatureParser::parseRegister(Register *Register) {
   case TokenKind::sReg:
     Register->ViewType = RegisterType::SReg;
     break;
-  default:
-    break; // Unreachable given Try + assert pattern
   }
 
   if (handleUIntLiteral(&Register->Number))

@@ -69,8 +69,8 @@ private:
   bool parseDescriptorTable();
   bool parseDescriptorTableClause();
 
-  /// Each unique ParamType will have a custom parse method defined that we can
-  /// use to invoke the parameters.
+  /// Each unique ParamType will have a custom parse method defined that can be
+  /// invoked to set a value to the referenced paramtype.
   ///
   /// This function will switch on the ParamType using std::visit and dispatch
   /// onto the corresponding parse method
@@ -86,7 +86,7 @@ private:
   ///    TokenKind::kw_space, &Clause.Space
   ///  };
   ///  SmallDenseSet<TokenKind> Mandatory = {
-  ///    TokenKind::kw_numDescriptors
+  ///    TokenKind::bReg
   ///  };
   ///
   /// We can read it is as:
