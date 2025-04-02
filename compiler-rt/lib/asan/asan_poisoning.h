@@ -11,6 +11,9 @@
 // Shadow memory poisoning by ASan RTL and by user application.
 //===----------------------------------------------------------------------===//
 
+#ifndef ASAN_POISONING_H
+#define ASAN_POISONING_H
+
 #include "asan_interceptors.h"
 #include "asan_internal.h"
 #include "asan_mapping.h"
@@ -96,3 +99,5 @@ ALWAYS_INLINE void FastPoisonShadowPartialRightRedzone(
 void FlushUnneededASanShadowMemory(uptr p, uptr size);
 
 }  // namespace __asan
+
+#endif  // ASAN_POISONING_H

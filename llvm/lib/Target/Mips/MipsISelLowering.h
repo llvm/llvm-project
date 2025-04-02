@@ -706,6 +706,9 @@ class TargetRegisterClass;
     bool isFPImmLegal(const APFloat &Imm, EVT VT,
                       bool ForCodeSize) const override;
 
+    bool isLegalICmpImmediate(int64_t Imm) const override;
+    bool isLegalAddImmediate(int64_t Imm) const override;
+
     unsigned getJumpTableEncoding() const override;
     SDValue getPICJumpTableRelocBase(SDValue Table,
                                      SelectionDAG &DAG) const override;

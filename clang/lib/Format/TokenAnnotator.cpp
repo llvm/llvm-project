@@ -253,8 +253,7 @@ private:
       // FIXME: This is getting out of hand, write a decent parser.
       if (MaybeAngles && InExpr && !Line.startsWith(tok::kw_template) &&
           Prev.is(TT_BinaryOperator) &&
-          (Prev.isOneOf(tok::pipepipe, tok::ampamp) ||
-           Prev.getPrecedence() == prec::Equality)) {
+          Prev.isOneOf(tok::pipepipe, tok::ampamp)) {
         MaybeAngles = false;
       }
       if (Prev.isOneOf(tok::question, tok::colon) && !Style.isProto())
@@ -1418,6 +1417,10 @@ private:
         }
       } else if (Contexts.back().ContextType == Context::C11GenericSelection) {
         Tok->setType(TT_GenericSelectionColon);
+        auto *Prev = Tok->getPreviousNonComment();
+        assert(Prev);
+        if (Prev->isPointerOrReference())
+          Prev->setFinalizedType(TT_PointerOrReference);
       } else if (CurrentToken && CurrentToken->is(tok::numeric_constant)) {
         Tok->setType(TT_BitFieldColon);
       } else if (Contexts.size() == 1 &&

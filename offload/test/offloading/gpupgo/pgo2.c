@@ -48,7 +48,7 @@
 // RUN:     %target_triple.%basename_t.hfdi.profraw \
 // RUN:     | %fcheck-generic --check-prefix="LLVM-DEVICE"
 
-// REQUIRES: gpu
+// REQUIRES: amdgpu
 // REQUIRES: pgo
 
 int main() {

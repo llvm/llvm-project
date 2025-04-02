@@ -2127,19 +2127,29 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
               /*DeducedFromArrayBound=*/false, HasDeducedAnyParam);
           Result != TemplateDeductionResult::Success)
         return Result;
-      const Type *QP = MPP->getQualifier()->getAsType(),
-                 *QA = MPA->getQualifier()->getAsType();
-      CXXRecordDecl *ClsP = MPP->getMostRecentCXXRecordDecl(),
-                    *ClsA = MPA->getMostRecentCXXRecordDecl();
-      // FIXME: Don't drop the rest of the prefixes here.
-      QualType P = !ClsP || declaresSameEntity(QP->getAsCXXRecordDecl(), ClsP)
-                       ? QualType(QP, 0)
-                       : S.Context.getTypeDeclType(ClsP);
-      QualType A = !ClsA || declaresSameEntity(QA->getAsCXXRecordDecl(), ClsA)
-                       ? QualType(QA, 0)
-                       : S.Context.getTypeDeclType(ClsA);
+
+      QualType TP;
+      if (MPP->isSugared()) {
+        TP = S.Context.getTypeDeclType(MPP->getMostRecentCXXRecordDecl());
+      } else {
+        NestedNameSpecifier *QP = MPP->getQualifier();
+        if (QP->getKind() == NestedNameSpecifier::Identifier)
+          // Skip translation if it's a non-deduced context anyway.
+          return TemplateDeductionResult::Success;
+        TP = QualType(QP->translateToType(S.Context), 0);
+      }
+      assert(!TP.isNull() && "member pointer with non-type class");
+
+      QualType TA;
+      if (MPA->isSugared()) {
+        TA = S.Context.getTypeDeclType(MPA->getMostRecentCXXRecordDecl());
+      } else {
+        NestedNameSpecifier *QA = MPA->getQualifier();
+        TA = QualType(QA->translateToType(S.Context), 0);
+      }
+      assert(!TA.isNull() && "member pointer with non-type class");
       return DeduceTemplateArgumentsByTypeMatch(
-          S, TemplateParams, P, A, Info, Deduced, SubTDF,
+          S, TemplateParams, TP, TA, Info, Deduced, SubTDF,
           degradeCallPartialOrderingKind(POK),
           /*DeducedFromArrayBound=*/false, HasDeducedAnyParam);
     }
@@ -3245,7 +3255,7 @@ CheckDeducedArgumentConstraints(Sema &S, TemplateDeclT *Template,
                                 ArrayRef<TemplateArgument> SugaredDeducedArgs,
                                 ArrayRef<TemplateArgument> CanonicalDeducedArgs,
                                 TemplateDeductionInfo &Info) {
-  llvm::SmallVector<const Expr *, 3> AssociatedConstraints;
+  llvm::SmallVector<AssociatedConstraint, 3> AssociatedConstraints;
   Template->getAssociatedConstraints(AssociatedConstraints);
 
   std::optional<ArrayRef<TemplateArgument>> Innermost;
@@ -5235,9 +5245,9 @@ static bool CheckDeducedPlaceholderConstraints(Sema &S, const AutoType &Type,
       ImplicitConceptSpecializationDecl::Create(
           S.getASTContext(), Concept->getDeclContext(), Concept->getLocation(),
           CTAI.CanonicalConverted));
-  if (S.CheckConstraintSatisfaction(Concept, {Concept->getConstraintExpr()},
-                                    MLTAL, TypeLoc.getLocalSourceRange(),
-                                    Satisfaction))
+  if (S.CheckConstraintSatisfaction(
+          Concept, AssociatedConstraint(Concept->getConstraintExpr()), MLTAL,
+          TypeLoc.getLocalSourceRange(), Satisfaction))
     return true;
   if (!Satisfaction.IsSatisfied) {
     std::string Buf;
@@ -6111,7 +6121,7 @@ FunctionTemplateDecl *Sema::getMoreSpecializedTemplate(
       !Context.hasSameType(FD1->getReturnType(), FD2->getReturnType()))
     return nullptr;
 
-  llvm::SmallVector<const Expr *, 3> AC1, AC2;
+  llvm::SmallVector<AssociatedConstraint, 3> AC1, AC2;
   FT1->getAssociatedConstraints(AC1);
   FT2->getAssociatedConstraints(AC2);
   bool AtLeastAsConstrained1, AtLeastAsConstrained2;
@@ -6216,7 +6226,7 @@ FunctionDecl *Sema::getMoreConstrainedFunction(FunctionDecl *FD1,
   if (FunctionDecl *P = FD2->getTemplateInstantiationPattern(false))
     F2 = P;
 
-  llvm::SmallVector<const Expr *, 1> AC1, AC2;
+  llvm::SmallVector<AssociatedConstraint, 1> AC1, AC2;
   F1->getAssociatedConstraints(AC1);
   F2->getAssociatedConstraints(AC2);
   bool AtLeastAsConstrained1, AtLeastAsConstrained2;
@@ -6448,7 +6458,7 @@ getMoreSpecialized(Sema &S, QualType T1, QualType T2, TemplateLikeDecl *P1,
   if (!TemplateArgumentListAreEqual(S.getASTContext())(P1, P2))
     return nullptr;
 
-  llvm::SmallVector<const Expr *, 3> AC1, AC2;
+  llvm::SmallVector<AssociatedConstraint, 3> AC1, AC2;
   P1->getAssociatedConstraints(AC1);
   P2->getAssociatedConstraints(AC2);
   bool AtLeastAsConstrained1, AtLeastAsConstrained2;
@@ -7021,7 +7031,8 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
     const DependentTemplateSpecializationType *Spec
       = cast<DependentTemplateSpecializationType>(T);
 
-    MarkUsedTemplateParameters(Ctx, Spec->getQualifier(),
+    MarkUsedTemplateParameters(Ctx,
+                               Spec->getDependentTemplateName().getQualifier(),
                                OnlyDeduced, Depth, Used);
 
     for (const auto &Arg : Spec->template_arguments())

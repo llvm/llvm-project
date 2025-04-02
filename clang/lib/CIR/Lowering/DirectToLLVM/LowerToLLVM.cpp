@@ -126,21 +126,6 @@ static mlir::Value emitToMemory(mlir::ConversionPatternRewriter &rewriter,
   return value;
 }
 
-static mlir::Value
-emitCirAttrToMemory(mlir::Operation *parentOp, mlir::Attribute attr,
-                    mlir::ConversionPatternRewriter &rewriter,
-                    const mlir::TypeConverter *converter,
-                    mlir::DataLayout const &dataLayout) {
-
-  mlir::Value loweredValue =
-      lowerCirAttrAsValue(parentOp, attr, rewriter, converter);
-  if (auto boolAttr = mlir::dyn_cast<cir::BoolAttr>(attr)) {
-    return emitToMemory(rewriter, dataLayout, boolAttr.getType(), loweredValue);
-  }
-
-  return loweredValue;
-}
-
 mlir::LLVM::Linkage convertLinkage(cir::GlobalLinkageKind linkage) {
   using CIR = cir::GlobalLinkageKind;
   using LLVM = mlir::LLVM::Linkage;
@@ -261,7 +246,7 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstArrayAttr attr) {
   mlir::Location loc = parentOp->getLoc();
   mlir::Value result;
 
-  if (auto zeros = attr.getTrailingZerosNum()) {
+  if (attr.hasTrailingZeros()) {
     mlir::Type arrayTy = attr.getType();
     result = rewriter.create<mlir::LLVM::ZeroOp>(
         loc, converter->convertType(arrayTy));
@@ -383,13 +368,13 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
     break;
   }
   case cir::CastKind::int_to_bool: {
-    assert(!cir::MissingFeatures::opCmp());
-    mlir::Type dstType = castOp.getResult().getType();
-    mlir::Type llvmDstType = getTypeConverter()->convertType(dstType);
-    auto zeroBool = rewriter.create<mlir::LLVM::ConstantOp>(
-        castOp.getLoc(), llvmDstType, mlir::BoolAttr::get(getContext(), false));
-    rewriter.replaceOp(castOp, zeroBool);
-    return castOp.emitError() << "NYI int_to_bool cast";
+    mlir::Value llvmSrcVal = adaptor.getOperands().front();
+    mlir::Value zeroInt = rewriter.create<mlir::LLVM::ConstantOp>(
+        castOp.getLoc(), llvmSrcVal.getType(),
+        mlir::IntegerAttr::get(llvmSrcVal.getType(), 0));
+    rewriter.replaceOpWithNewOp<mlir::LLVM::ICmpOp>(
+        castOp, mlir::LLVM::ICmpPredicate::ne, llvmSrcVal, zeroInt);
+    break;
   }
   case cir::CastKind::integral: {
     mlir::Type srcType = castOp.getSrc().getType();
@@ -1251,13 +1236,12 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   patterns.add<CIRToLLVMStoreOpLowering>(converter, patterns.getContext(), dl);
   patterns.add<CIRToLLVMGlobalOpLowering>(converter, patterns.getContext(), dl);
   patterns.add<CIRToLLVMCastOpLowering>(converter, patterns.getContext(), dl);
-  patterns.add<CIRToLLVMConstantOpLowering>(converter, patterns.getContext(),
-                                            dl);
   patterns.add<
       // clang-format off
                CIRToLLVMBinOpLowering,
                CIRToLLVMBrCondOpLowering,
                CIRToLLVMBrOpLowering,
+               CIRToLLVMConstantOpLowering,
                CIRToLLVMFuncOpLowering,
                CIRToLLVMTrapOpLowering,
                CIRToLLVMUnaryOpLowering
