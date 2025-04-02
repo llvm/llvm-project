@@ -45,7 +45,7 @@ template <typename C> void collectUsers(Value *V, C &Container) {
   assert(V && "Must pass an existing Value!");
 
   for (auto &&U : V->users())
-    if (auto I = dyn_cast<Instruction>(U))
+    if (auto *I = dyn_cast<Instruction>(U))
       Container.insert(Container.end(), I);
 }
 
@@ -65,7 +65,7 @@ inline void setPredicate(const GCNSubtarget &ST, GlobalVariable *P) {
     PV.insert(PV.cbegin(), '+');
   }
 
-  auto PTy = P->getValueType();
+  auto *PTy = P->getValueType();
   P->setLinkage(GlobalValue::PrivateLinkage);
   P->setExternallyInitialized(false);
 
@@ -100,10 +100,10 @@ std::pair<PreservedAnalyses, bool> handlePredicate(const GCNSubtarget &ST,
     return {PreservedAnalyses::all(), true};
 
   do {
-    auto I = *ToFold.begin();
+    auto *I = *ToFold.begin();
     ToFold.erase(I);
 
-    if (auto C = ConstantFoldInstruction(I, P->getDataLayout())) {
+    if (auto *C = ConstantFoldInstruction(I, P->getDataLayout())) {
       collectUsers(I, ToFold);
       I->replaceAllUsesWith(C);
       I->eraseFromParent();

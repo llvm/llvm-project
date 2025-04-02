@@ -287,7 +287,7 @@ void CodeGenFunction::AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
 static Value *GetOrInsertAMDGPUPredicate(CodeGenFunction &CGF, Twine Name) {
   auto PTy = IntegerType::getInt1Ty(CGF.getLLVMContext());
 
-  auto P = cast<GlobalVariable>(
+  auto *P = cast<GlobalVariable>(
       CGF.CGM.getModule().getOrInsertGlobal(Name.str(), PTy));
   P->setConstant(true);
   P->setExternallyInitialized(true);
@@ -608,7 +608,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     assert(CGM.getTriple().isSPIRV() &&
            "__builtin_amdgcn_is_invocable should never reach CodeGen for "
            "concrete targets!");
-    auto FD = cast<FunctionDecl>(
+    auto *FD = cast<FunctionDecl>(
         cast<DeclRefExpr>(E->getArg(0))->getReferencedDeclOfCallee());
     StringRef RF =
         getContext().BuiltinInfo.getRequiredFeatures(FD->getBuiltinID());

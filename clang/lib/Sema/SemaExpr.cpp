@@ -6546,11 +6546,11 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
   // without any additional checking.
   if (Fn->getType() == Context.BuiltinFnTy && ArgExprs.size() == 1 &&
       ArgExprs[0]->getType() == Context.BuiltinFnTy) {
-    auto FD = cast<FunctionDecl>(Fn->getReferencedDeclOfCallee());
+    auto *FD = cast<FunctionDecl>(Fn->getReferencedDeclOfCallee());
 
     if (FD->getName() == "__builtin_amdgcn_is_invocable") {
       auto FnPtrTy = Context.getPointerType(FD->getType());
-      auto R = ImpCastExprToType(Fn, FnPtrTy, CK_BuiltinFnToFnPtr).get();
+      auto *R = ImpCastExprToType(Fn, FnPtrTy, CK_BuiltinFnToFnPtr).get();
       return CallExpr::Create(Context, R, ArgExprs, Context.VoidTy,
                               ExprValueKind::VK_PRValue, RParenLoc,
                               FPOptionsOverride());
@@ -13254,8 +13254,8 @@ static inline bool IsAMDGPUPredicateBI(Expr *E) {
   if (!E->getType()->isVoidType())
     return false;
 
-  if (auto CE = dyn_cast<CallExpr>(E)) {
-    if (auto BI = CE->getDirectCallee())
+  if (auto *CE = dyn_cast<CallExpr>(E)) {
+    if (auto *BI = CE->getDirectCallee())
       if (BI->getName() == "__builtin_amdgcn_processor_is" ||
           BI->getName() == "__builtin_amdgcn_is_invocable")
         return true;
@@ -15622,14 +15622,14 @@ static Expr *ExpandAMDGPUPredicateBI(ASTContext &Ctx, CallExpr *CE) {
   auto &TI = Ctx.getTargetInfo();
 
   if (CE->getDirectCallee()->getName() == "__builtin_amdgcn_processor_is") {
-    auto GFX = dyn_cast<StringLiteral>(CE->getArg(0)->IgnoreParenCasts());
+    auto *GFX = dyn_cast<StringLiteral>(CE->getArg(0)->IgnoreParenCasts());
     auto TID = TI.getTargetID();
     if (GFX && TID) {
       auto N = GFX->getString();
       P = TI.isValidCPUName(GFX->getString()) && TID->find(N) == 0;
     }
   } else {
-    auto FD = cast<FunctionDecl>(CE->getArg(0)->getReferencedDeclOfCallee());
+    auto *FD = cast<FunctionDecl>(CE->getArg(0)->getReferencedDeclOfCallee());
 
     StringRef RF = Ctx.BuiltinInfo.getRequiredFeatures(FD->getBuiltinID());
     llvm::StringMap<bool> CF;
@@ -20538,7 +20538,7 @@ void Sema::DiagnoseEqualityWithExtraParens(ParenExpr *ParenE) {
 
 static bool ValidateAMDGPUPredicateBI(Sema &Sema, CallExpr *CE) {
   if (CE->getDirectCallee()->getName() == "__builtin_amdgcn_processor_is") {
-    auto GFX = dyn_cast<StringLiteral>(CE->getArg(0)->IgnoreParenCasts());
+    auto *GFX = dyn_cast<StringLiteral>(CE->getArg(0)->IgnoreParenCasts());
     if (!GFX) {
       Sema.Diag(CE->getExprLoc(),
                 diag::err_amdgcn_processor_is_arg_not_literal);
@@ -20554,7 +20554,7 @@ static bool ValidateAMDGPUPredicateBI(Sema &Sema, CallExpr *CE) {
       return false;
     }
   } else {
-    auto Arg = CE->getArg(0);
+    auto *Arg = CE->getArg(0);
     if (!Arg || Arg->getType() != Sema.getASTContext().BuiltinFnTy) {
       Sema.Diag(CE->getExprLoc(),
                 diag::err_amdgcn_is_invocable_arg_invalid_value)
@@ -20567,8 +20567,8 @@ static bool ValidateAMDGPUPredicateBI(Sema &Sema, CallExpr *CE) {
 }
 
 static Expr *MaybeHandleAMDGPUPredicateBI(Sema &Sema, Expr *E, bool &Invalid) {
-  if (auto UO = dyn_cast<UnaryOperator>(E)) {
-    auto SE = dyn_cast<CallExpr>(UO->getSubExpr());
+  if (auto *UO = dyn_cast<UnaryOperator>(E)) {
+    auto *SE = dyn_cast<CallExpr>(UO->getSubExpr());
     if (IsAMDGPUPredicateBI(SE)) {
       assert(UO->getOpcode() == UnaryOperator::Opcode::UO_LNot &&
              "__builtin_amdgcn_processor_is and __builtin_amdgcn_is_invocable "
@@ -20585,9 +20585,9 @@ static Expr *MaybeHandleAMDGPUPredicateBI(Sema &Sema, Expr *E, bool &Invalid) {
       return UO;
     }
   }
-  if (auto BO = dyn_cast<BinaryOperator>(E)) {
-    auto LHS = dyn_cast<CallExpr>(BO->getLHS());
-    auto RHS = dyn_cast<CallExpr>(BO->getRHS());
+  if (auto *BO = dyn_cast<BinaryOperator>(E)) {
+    auto *LHS = dyn_cast<CallExpr>(BO->getLHS());
+    auto *RHS = dyn_cast<CallExpr>(BO->getRHS());
     if (IsAMDGPUPredicateBI(LHS) && IsAMDGPUPredicateBI(RHS)) {
       assert(BO->isLogicalOp() &&
              "__builtin_amdgcn_processor_is and __builtin_amdgcn_is_invocable "
@@ -20606,7 +20606,7 @@ static Expr *MaybeHandleAMDGPUPredicateBI(Sema &Sema, Expr *E, bool &Invalid) {
       return BO;
     }
   }
-  if (auto CE = dyn_cast<CallExpr>(E))
+  if (auto *CE = dyn_cast<CallExpr>(E))
     if (IsAMDGPUPredicateBI(CE)) {
       if (!ValidateAMDGPUPredicateBI(Sema, CE)) {
         Invalid = true;
@@ -20631,7 +20631,7 @@ ExprResult Sema::CheckBooleanCondition(SourceLocation Loc, Expr *E,
   if (!E->isTypeDependent()) {
     if (E->getType()->isVoidType()) {
       bool IsInvalidPredicate = false;
-      if (auto BIC = MaybeHandleAMDGPUPredicateBI(*this, E, IsInvalidPredicate))
+      if (auto *BIC = MaybeHandleAMDGPUPredicateBI(*this, E, IsInvalidPredicate))
         return BIC;
       else if (IsInvalidPredicate)
         return ExprError();
