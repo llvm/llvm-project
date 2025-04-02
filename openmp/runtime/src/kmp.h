@@ -1107,6 +1107,7 @@ extern omp_allocator_handle_t __kmp_def_allocator;
 #endif
 
 extern int __kmp_memkind_available;
+extern bool __kmp_hwloc_available;
 
 typedef omp_memspace_handle_t kmp_memspace_t; // placeholder
 
@@ -1119,6 +1120,9 @@ typedef struct kmp_allocator_t {
   kmp_uint64 pool_size;
   kmp_uint64 pool_used;
   bool pinned;
+#if KMP_USE_HWLOC
+  omp_alloctrait_value_t membind;
+#endif
 } kmp_allocator_t;
 
 extern omp_allocator_handle_t __kmpc_init_allocator(int gtid,
@@ -1352,6 +1356,10 @@ extern kmp_uint64 __kmp_now_nsec();
 #define KMP_NEXT_WAIT 512U /* susequent number of spin-tests */
 #elif KMP_OS_OPENBSD
 /* TODO: tune for KMP_OS_OPENBSD */
+#define KMP_INIT_WAIT 1024U /* initial number of spin-tests   */
+#define KMP_NEXT_WAIT 512U /* susequent number of spin-tests */
+#elif KMP_OS_HAIKU
+/* TODO: tune for KMP_OS_HAIKU */
 #define KMP_INIT_WAIT 1024U /* initial number of spin-tests   */
 #define KMP_NEXT_WAIT 512U /* susequent number of spin-tests */
 #elif KMP_OS_HURD

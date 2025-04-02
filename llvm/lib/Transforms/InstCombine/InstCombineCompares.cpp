@@ -5641,7 +5641,7 @@ Instruction *InstCombinerImpl::foldICmpWithMinMax(Instruction &I,
   // execute comparisons. For example, `icmp samesign ult umax(X, -46), -32`
   // cannot be decomposed into `(icmp samesign ult X, -46) or (icmp samesign ult
   // -46, -32)`. `X` is allowed to be non-negative here.
-  Pred = static_cast<CmpInst::Predicate>(Pred);
+  Pred = Pred.dropSameSign();
   auto CmpXZ = IsCondKnownTrue(simplifyICmpInst(Pred, X, Z, Q));
   auto CmpYZ = IsCondKnownTrue(simplifyICmpInst(Pred, Y, Z, Q));
   if (!CmpXZ.has_value() && !CmpYZ.has_value())
@@ -7451,6 +7451,9 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     }
   }
 
+  if (Instruction *Res = foldICmpTruncWithTruncOrExt(I, Q))
+    return Res;
+
   if (Op0->getType()->isIntOrIntVectorTy(1))
     if (Instruction *Res = canonicalizeICmpBool(I, Builder))
       return Res;
@@ -7471,9 +7474,6 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     return Res;
 
   if (Instruction *Res = foldICmpUsingKnownBits(I))
-    return Res;
-
-  if (Instruction *Res = foldICmpTruncWithTruncOrExt(I, Q))
     return Res;
 
   // Test if the ICmpInst instruction is used exclusively by a select as

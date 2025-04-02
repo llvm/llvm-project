@@ -154,8 +154,7 @@ define void @vector_reverse_i32(ptr noalias %A, ptr noalias %B) {
 ; RV64-UF2:       [[VECTOR_BODY]]:
 ; RV64-UF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; RV64-UF2-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 1023, [[INDEX]]
-; RV64-UF2-NEXT:    [[TMP8:%.*]] = add i64 [[OFFSET_IDX]], 0
-; RV64-UF2-NEXT:    [[TMP9:%.*]] = add nsw i64 [[TMP8]], -1
+; RV64-UF2-NEXT:    [[TMP9:%.*]] = add nsw i64 [[OFFSET_IDX]], -1
 ; RV64-UF2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP9]]
 ; RV64-UF2-NEXT:    [[TMP11:%.*]] = mul i64 0, [[TMP5]]
 ; RV64-UF2-NEXT:    [[TMP12:%.*]] = sub i64 1, [[TMP5]]
@@ -361,8 +360,7 @@ define void @vector_reverse_f32(ptr noalias %A, ptr noalias %B) {
 ; RV64-UF2:       [[VECTOR_BODY]]:
 ; RV64-UF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; RV64-UF2-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 1023, [[INDEX]]
-; RV64-UF2-NEXT:    [[TMP8:%.*]] = add i64 [[OFFSET_IDX]], 0
-; RV64-UF2-NEXT:    [[TMP9:%.*]] = add nsw i64 [[TMP8]], -1
+; RV64-UF2-NEXT:    [[TMP9:%.*]] = add nsw i64 [[OFFSET_IDX]], -1
 ; RV64-UF2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP9]]
 ; RV64-UF2-NEXT:    [[TMP11:%.*]] = mul i64 0, [[TMP5]]
 ; RV64-UF2-NEXT:    [[TMP12:%.*]] = sub i64 1, [[TMP5]]

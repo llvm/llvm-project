@@ -1,5 +1,4 @@
 # See docs/CMake.html for instructions about how to build LLVM with CMake.
-
 cmake_minimum_required(VERSION 3.20.0)
 
 include(CMakeDependentOption)
@@ -149,12 +148,6 @@ if ("flang" IN_LIST LLVM_ENABLE_PROJECTS)
     message(STATUS "Enabling clang as a dependency to flang")
     list(APPEND LLVM_ENABLE_PROJECTS "clang")
   endif()
-
-  option(FLANG_ENABLE_FLANG_RT "Implicitly add LLVM_ENABLE_RUNTIMES=flang-rt when compiling Flang" ON)
-  if (FLANG_ENABLE_FLANG_RT AND NOT "flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
-    message(STATUS "Enabling Flang-RT as a dependency of Flang")
-    list(APPEND LLVM_ENABLE_RUNTIMES "flang-rt")
-  endif ()
 endif()
 
 if ("libc" IN_LIST LLVM_ENABLE_PROJECTS)

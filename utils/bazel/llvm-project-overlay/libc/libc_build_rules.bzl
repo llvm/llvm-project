@@ -165,6 +165,42 @@ def libc_release_library(
         **kwargs
     )
 
+def libc_header_library(name, hdrs, deps = [], **kwargs):
+    """Creates a header-only library to share libc functionality.
+
+    Args:
+      name: Name of the cc_library target.
+      hdrs: List of headers to be shared.
+      deps: The list of libc_support_library dependencies if any.
+      **kwargs: All other attributes relevant for the cc_library rule.
+    """
+
+    # Combine sources from dependencies to create a single cc_library target.
+    native.filegroup(
+        name = name + "_hdr_deps",
+        srcs = [dep + "_srcs" for dep in deps],
+    )
+    native.cc_library(
+        name = name + "_textual_hdr_library",
+        textual_hdrs = [dep + "_textual_hdrs" for dep in deps],
+    )
+    native.cc_library(
+        name = name,
+        # Technically speaking, we should put _hdr_deps in srcs, as they are
+        # not a part of this cc_library interface. However, we keep it here to
+        # workaround the presence of .cpp files in _hdr_deps - we need to
+        # fix that and enforce their absence, since libc_header_library
+        # should be header-only and not produce any object files.
+        # See PR #133126 which tracks it.
+        hdrs = hdrs + [":" + name + "_hdr_deps"],
+        deps = [":" + name + "_textual_hdr_library"],
+        # copts don't really matter, since it's a header-only library, but we
+        # need proper -I flags for header validation, which are specified in
+        # libc_common_copts().
+        copts = libc_common_copts(),
+        **kwargs
+    )
+
 def libc_math_function(
         name,
         additional_deps = None):
