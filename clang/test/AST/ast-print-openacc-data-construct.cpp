@@ -50,11 +50,11 @@ void foo() {
 #pragma acc exit data copyout(i) async
 
 // CHECK: #pragma acc data default(none) wait
-#pragma acc data default(none) wait()
+#pragma acc data default(none) wait
   ;
 
-// CHECK: #pragma acc enter data copyin(Var) wait()
-#pragma acc enter data copyin(Var) wait()
+// CHECK: #pragma acc enter data copyin(Var) wait
+#pragma acc enter data copyin(Var) wait
 
 // CHECK: #pragma acc exit data copyout(Var) wait(*iPtr, i)
 #pragma acc exit data copyout(Var) wait(*iPtr, i)

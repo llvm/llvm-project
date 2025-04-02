@@ -302,6 +302,17 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC,
     TYPE_SWITCH(Ty, S.Stk.discard<T>());
 }
 
+// FIXME: Instead of using this fairly expensive test, we should
+// just mark constexpr-unknown values when creating them.
+bool isConstexprUnknown(const Pointer &P) {
+  if (!P.isBlockPointer())
+    return false;
+  if (P.isDummy())
+    return false;
+  const VarDecl *VD = P.block()->getDescriptor()->asVarDecl();
+  return VD && VD->hasLocalStorage();
+}
+
 bool CheckBCPResult(InterpState &S, const Pointer &Ptr) {
   if (Ptr.isDummy())
     return false;
@@ -607,11 +618,8 @@ bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     // variables in Compiler.cpp:visitDeclRef. Revisiting a so far
     // unknown variable will get the same EvalID and we end up allowing
     // reads from mutable members of it.
-    if (!S.inConstantContext()) {
-      if (const VarDecl *VD = Ptr.block()->getDescriptor()->asVarDecl();
-          VD && VD->hasLocalStorage())
-        return false;
-    }
+    if (!S.inConstantContext() && isConstexprUnknown(Ptr))
+      return false;
     return true;
   }
 

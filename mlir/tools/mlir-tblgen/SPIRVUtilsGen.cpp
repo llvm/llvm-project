@@ -455,7 +455,7 @@ static bool emitEnumDecls(const RecordKeeper &records, raw_ostream &os) {
   llvm::emitSourceFileHeader("SPIR-V Enum Availability Declarations", os,
                              records);
 
-  auto defs = records.getAllDerivedDefinitions("EnumAttrInfo");
+  auto defs = records.getAllDerivedDefinitions("EnumInfo");
   for (const auto *def : defs)
     emitEnumDecl(*def, os);
 
@@ -487,7 +487,7 @@ static bool emitEnumDefs(const RecordKeeper &records, raw_ostream &os) {
   llvm::emitSourceFileHeader("SPIR-V Enum Availability Definitions", os,
                              records);
 
-  auto defs = records.getAllDerivedDefinitions("EnumAttrInfo");
+  auto defs = records.getAllDerivedDefinitions("EnumInfo");
   for (const auto *def : defs)
     emitEnumDef(*def, os);
 
@@ -1262,7 +1262,7 @@ static void emitEnumGetAttrNameFnDefn(const EnumInfo &enumInfo,
 static bool emitAttrUtils(const RecordKeeper &records, raw_ostream &os) {
   llvm::emitSourceFileHeader("SPIR-V Attribute Utilities", os, records);
 
-  auto defs = records.getAllDerivedDefinitions("EnumAttrInfo");
+  auto defs = records.getAllDerivedDefinitions("EnumInfo");
   os << "#ifndef MLIR_DIALECT_SPIRV_IR_ATTR_UTILS_H_\n";
   os << "#define MLIR_DIALECT_SPIRV_IR_ATTR_UTILS_H_\n";
   emitEnumGetAttrNameFnDecl(os);

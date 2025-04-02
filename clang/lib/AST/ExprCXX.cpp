@@ -1760,10 +1760,12 @@ QualType SubstNonTypeTemplateParmExpr::getParameterType(
 
 SubstNonTypeTemplateParmPackExpr::SubstNonTypeTemplateParmPackExpr(
     QualType T, ExprValueKind ValueKind, SourceLocation NameLoc,
-    const TemplateArgument &ArgPack, Decl *AssociatedDecl, unsigned Index)
+    const TemplateArgument &ArgPack, Decl *AssociatedDecl, unsigned Index,
+    bool Final)
     : Expr(SubstNonTypeTemplateParmPackExprClass, T, ValueKind, OK_Ordinary),
       AssociatedDecl(AssociatedDecl), Arguments(ArgPack.pack_begin()),
-      NumArguments(ArgPack.pack_size()), Index(Index), NameLoc(NameLoc) {
+      NumArguments(ArgPack.pack_size()), Final(Final), Index(Index),
+      NameLoc(NameLoc) {
   assert(AssociatedDecl != nullptr);
   setDependence(ExprDependence::TypeValueInstantiation |
                 ExprDependence::UnexpandedPack);

@@ -1027,10 +1027,6 @@ void clang::TextNodeDumper::dumpNestedNameSpecifier(const NestedNameSpecifier *N
       OS << " TypeSpec";
       dumpType(QualType(NNS->getAsType(), 0));
       break;
-    case NestedNameSpecifier::TypeSpecWithTemplate:
-      OS << " TypeSpecWithTemplate";
-      dumpType(QualType(NNS->getAsType(), 0));
-      break;
     case NestedNameSpecifier::Global:
       OS << " Global";
       break;
@@ -1302,6 +1298,8 @@ void TextNodeDumper::dumpBareTemplateName(TemplateName TN) {
     OS << " index " << STS->getIndex();
     if (std::optional<unsigned int> PackIndex = STS->getPackIndex())
       OS << " pack_index " << *PackIndex;
+    if (STS->getFinal())
+      OS << " final";
     if (const TemplateTemplateParmDecl *P = STS->getParameter())
       AddChild("parameter", [=] { Visit(P); });
     dumpDeclRef(STS->getAssociatedDecl(), "associated");
@@ -2128,6 +2126,8 @@ void TextNodeDumper::VisitSubstTemplateTypeParmType(
   VisitTemplateTypeParmDecl(T->getReplacedParameter());
   if (auto PackIndex = T->getPackIndex())
     OS << " pack_index " << *PackIndex;
+  if (T->getFinal())
+    OS << " final";
 }
 
 void TextNodeDumper::VisitSubstTemplateTypeParmPackType(
