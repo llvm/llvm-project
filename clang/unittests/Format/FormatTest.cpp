@@ -6733,7 +6733,7 @@ TEST_F(FormatTest, LayoutStatementsAroundPreprocessorDirectives) {
                "        withSomeParameters, whichInSequence,\n"
                "        areLongerThanALine(andAnotherCall,\n"
                "#define A B\n"
-               "                           withMoreParamters,\n"
+               "                           withMoreParameters,\n"
                "                           whichStronglyInfluenceTheLayout),\n"
                "        andMoreParameters),\n"
                "    trailing);",
@@ -12304,7 +12304,7 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyIndependentOfContext("f(b * /* confusing comment */ ++c);");
   verifyFormat("f(* /* confusing comment */ foo);");
   verifyFormat("void (* /*deleter*/)(const Slice &key, void *value)");
-  verifyFormat("void foo(int * // this is the first paramters\n"
+  verifyFormat("void foo(int * // this is the first parameters\n"
                "         ,\n"
                "         int second);");
   verifyFormat("double term = a * // first\n"

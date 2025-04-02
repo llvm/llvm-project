@@ -3463,7 +3463,7 @@ struct S22 {
 #else
 S22 s22;
 // expected-error@second.h:* {{'FunctionTemplate::S22' has different definitions in different modules; first difference is definition in module 'SecondModule' found function template 'foo' with 1st template parameter being a type template parameter}}
-// expected-note@first.h:* {{but in 'FirstModule' found function template 'foo' with 1st template paramter being a template template parameter}}
+// expected-note@first.h:* {{but in 'FirstModule' found function template 'foo' with 1st template parameter being a template template parameter}}
 #endif
 
 #if defined(FIRST)
@@ -3481,7 +3481,7 @@ struct S23 {
 #else
 S23 s23;
 // expected-error@second.h:* {{'FunctionTemplate::S23' has different definitions in different modules; first difference is definition in module 'SecondModule' found function template 'foo' with 1st template parameter being a non-type template parameter}}
-// expected-note@first.h:* {{but in 'FirstModule' found function template 'foo' with 1st template paramter being a type template parameter}}
+// expected-note@first.h:* {{but in 'FirstModule' found function template 'foo' with 1st template parameter being a type template parameter}}
 #endif
 
 #if defined(FIRST)
@@ -3499,7 +3499,7 @@ struct S24 {
 #else
 S24 s24;
 // expected-error@second.h:* {{'FunctionTemplate::S24' has different definitions in different modules; first difference is definition in module 'SecondModule' found function template 'foo' with 1st template parameter being a template template parameter}}
-// expected-note@first.h:* {{but in 'FirstModule' found function template 'foo' with 1st template paramter being a non-type template parameter}}
+// expected-note@first.h:* {{but in 'FirstModule' found function template 'foo' with 1st template parameter being a non-type template parameter}}
 #endif
 
 #if defined(FIRST)

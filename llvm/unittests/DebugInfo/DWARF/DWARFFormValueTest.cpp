@@ -186,7 +186,7 @@ const uint8_t IndirectAddr[] = {DW_FORM_addr};
 const uint8_t IndirectIndirectData1[] = {DW_FORM_indirect, DW_FORM_data1};
 const uint8_t IndirectIndirectEnd[] = {DW_FORM_indirect};
 
-// Gtest's paramterised tests only allow a maximum of 50 cases, so split the
+// Gtest's parameterised tests only allow a maximum of 50 cases, so split the
 // test into multiple identical parts to share the cases.
 struct FormSkipValueFixture1 : FormSkipValueFixtureBase {};
 struct FormSkipValueFixture2 : FormSkipValueFixtureBase {};

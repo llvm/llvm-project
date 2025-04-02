@@ -84,7 +84,7 @@ LLVMTypeConverter::LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA,
         &getContext(), kindMapping.getIntegerBitsize(intTy.getFKind()));
   });
   addConversion([&](fir::LenType field) {
-    // Get size of len paramter from the descriptor.
+    // Get size of len parameter from the descriptor.
     return getModel<Fortran::runtime::typeInfo::TypeParameterValue>()(
         &getContext());
   });

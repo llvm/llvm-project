@@ -4935,7 +4935,8 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
     if (!this->visit(Arg))
       return false;
 
-    // If we know the callee already, check the known parametrs for nullability.
+    // If we know the callee already, check the known parameters for
+    // nullability.
     if (FuncDecl && NonNullArgs[ArgIndex]) {
       PrimType ArgT = classify(Arg).value_or(PT_Ptr);
       if (ArgT == PT_Ptr || ArgT == PT_FnPtr) {

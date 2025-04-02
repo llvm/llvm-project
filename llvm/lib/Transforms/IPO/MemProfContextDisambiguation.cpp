@@ -2280,7 +2280,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy,
     // We need to check all of the calls recorded in this Node, because in some
     // cases we may have had multiple calls with the same debug info calling
     // different callees. This can happen, for example, when an object is
-    // constructed in the paramter list - the destructor call of the object has
+    // constructed in the parameter list - the destructor call of the object has
     // the same debug info (line/col) as the call the object was passed to.
     // Here we will prune any that don't match all callee nodes.
     std::vector<CallInfo> AllCalls;

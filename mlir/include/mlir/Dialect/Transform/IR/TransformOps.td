@@ -1068,7 +1068,7 @@ def SplitHandleOp : TransformDialectOp<"split_handle",
   let description = [{
     Splits `handle` into one or multiple handles, as specified by the number
     of results of this operation. `handle` should be mapped to as many payload
-    ops, values or parameteres as there are results. Otherwise, this transform
+    ops, values or parameters as there are results. Otherwise, this transform
     will fail producing a silenceable failure by default. Each result handle
     is mapped to exactly one payload unless specified otherwise by attributes
     described below. The order of the payloads is preserved,  i.e., the i-th

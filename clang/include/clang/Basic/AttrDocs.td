@@ -3418,7 +3418,7 @@ def M68kRTDDocs : Documentation {
   let Content = [{
 On M68k targets, this attribute changes the calling convention of a function
 to clear parameters off the stack on return. In other words, callee is
-responsible for cleaning out the stack space allocated for incoming paramters.
+responsible for cleaning out the stack space allocated for incoming parameters.
 This convention does not support variadic calls or unprototyped functions in C.
 When targeting M68010 or newer CPUs, this calling convention is implemented
 using the `rtd` instruction.

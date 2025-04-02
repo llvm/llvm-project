@@ -876,7 +876,7 @@ public:
 
     if (auto *ProtoType = FD->getType()->getAs<FunctionProtoType>()) {
       // Iterate over the types of the function parameters.
-      // If any of them are non-const reference paramteres, add it as a
+      // If any of them are non-const reference parameteres, add it as a
       // highlighting modifier to the corresponding expression
       for (size_t I = 0;
            I < std::min(size_t(ProtoType->getNumParams()), Args.size()); ++I) {

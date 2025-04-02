@@ -4316,7 +4316,7 @@ Value *CodeGenFunction::EmitSMEReadWrite(const SVETypeFlags &TypeFlags,
 Value *CodeGenFunction::EmitSMEZero(const SVETypeFlags &TypeFlags,
                                     SmallVectorImpl<Value *> &Ops,
                                     unsigned IntID) {
-  // svzero_za() intrinsic zeros the entire za tile and has no paramters.
+  // svzero_za() intrinsic zeros the entire za tile and has no parameters.
   if (Ops.size() == 0)
     Ops.push_back(llvm::ConstantInt::get(Int32Ty, 255));
   Function *F = CGM.getIntrinsic(IntID, {});

@@ -5,7 +5,7 @@
 ; FLOGB
 ;
 
-; NOTE: The %unused paramter ensures z0 is free, leading to a simpler test.
+; NOTE: The %unused parameter ensures z0 is free, leading to a simpler test.
 define <vscale x 8 x i16> @flogb_f16(<vscale x 8 x i16> %unused, <vscale x 8 x i1> %pg, <vscale x 8 x half> %a) {
 ; CHECK-LABEL: flogb_f16:
 ; CHECK:       // %bb.0:

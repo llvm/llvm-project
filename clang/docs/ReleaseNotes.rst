@@ -381,12 +381,12 @@ Bug Fixes to C++ Support
   now also works if the constraint has non-type or template template parameters.
   (#GH131798)
 - Fixes matching of nested template template parameters. (#GH130362)
-- Correctly diagnoses template template paramters which have a pack parameter
+- Correctly diagnoses template template parameters which have a pack parameter
   not in the last position.
 - Clang now correctly parses ``if constexpr`` expressions in immediate function context. (#GH123524)
 - Fixed an assertion failure affecting code that uses C++23 "deducing this". (#GH130272)
 - Clang now properly instantiates destructors for initialized members within non-delegating constructors. (#GH93251)
-- Correctly diagnoses if unresolved using declarations shadows template paramters (#GH129411)
+- Correctly diagnoses if unresolved using declarations shadows template parameters (#GH129411)
 - Fixed C++20 aggregate initialization rules being incorrectly applied in certain contexts. (#GH131320)
 - Clang was previously coalescing volatile writes to members of volatile base class subobjects.
   The issue has been addressed by propagating qualifiers during derived-to-base conversions in the AST. (#GH127824)

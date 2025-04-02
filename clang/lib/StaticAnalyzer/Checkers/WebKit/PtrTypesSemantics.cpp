@@ -620,7 +620,7 @@ public:
 
   bool
   VisitSubstNonTypeTemplateParmExpr(const SubstNonTypeTemplateParmExpr *E) {
-    // Non-type template paramter is compile time constant and trivial.
+    // Non-type template parameter is compile time constant and trivial.
     return true;
   }
 

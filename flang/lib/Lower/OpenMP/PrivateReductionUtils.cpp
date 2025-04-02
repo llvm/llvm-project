@@ -210,7 +210,7 @@ static void getLengthParameters(fir::FirOpBuilder &builder, mlir::Location loc,
                                 mlir::Value moldArg,
                                 llvm::SmallVectorImpl<mlir::Value> &lenParams) {
   // We pass derived types unboxed and so are not self-contained entities.
-  // Assume that unboxed derived types won't need length paramters.
+  // Assume that unboxed derived types won't need length parameters.
   if (!hlfir::isFortranEntity(moldArg))
     return;
 

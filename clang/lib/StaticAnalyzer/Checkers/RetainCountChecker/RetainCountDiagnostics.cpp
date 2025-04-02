@@ -164,7 +164,7 @@ static bool shouldGenerateNote(llvm::raw_string_ostream &os,
   return true;
 }
 
-/// Finds argument index of the out paramter in the call @c S
+/// Finds argument index of the out parameter in the call @c S
 /// corresponding to the symbol @c Sym.
 /// If none found, returns std::nullopt.
 static std::optional<unsigned>

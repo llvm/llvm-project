@@ -143,7 +143,7 @@ public:
 
   /// Determine whether a method with this signature makes a method with
   /// `other` signature redundant. This occurs if the signatures have the same
-  /// name and this signature's parameteres subsume the other's.
+  /// name and this signature's parameters subsume the other's.
   ///
   /// A method that makes another method redundant with a different return type
   /// can replace the other, the assumption being that the subsuming method
@@ -325,7 +325,7 @@ public:
   };
 
   /// Create a method with a return type, a name, method properties, and a some
-  /// parameters. The parameteres may be passed as a list or as a variadic pack.
+  /// parameters. The parameters may be passed as a list or as a variadic pack.
   template <typename RetTypeT, typename NameT, typename... Args>
   Method(RetTypeT &&retType, NameT &&name, Properties properties,
          Args &&...args)

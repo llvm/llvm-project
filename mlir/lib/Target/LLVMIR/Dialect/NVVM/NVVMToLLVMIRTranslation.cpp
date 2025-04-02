@@ -121,7 +121,7 @@ static llvm::Intrinsic::ID getMatchSyncIntrinsicId(Type valType,
   }
 }
 
-/// Return the intrinsic ID associated with ldmatrix for the given paramters.
+/// Return the intrinsic ID associated with ldmatrix for the given parameters.
 static llvm::Intrinsic::ID getLdMatrixIntrinsicId(NVVM::MMALayout layout,
                                                   int32_t num) {
   if (layout == NVVM::MMALayout::row) {

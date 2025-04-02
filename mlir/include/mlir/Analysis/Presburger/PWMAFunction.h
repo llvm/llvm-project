@@ -243,7 +243,7 @@ private:
 
   /// The space of this function. The domain variables are considered as the
   /// input variables of the function. The range variables are considered as
-  /// the outputs. The symbols paramterize the function.
+  /// the outputs. The symbols parameterize the function.
   PresburgerSpace space;
 
   // The pieces of the PWMAFunction.

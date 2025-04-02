@@ -6,7 +6,7 @@
 ; be preferentially issued.
 
 
-; NOTE: The unused paramter ensures z0/z1 is free, avoiding the antidependence for schedule.
+; NOTE: The unused parameter ensures z0/z1 is free, avoiding the antidependence for schedule.
 define <vscale x 2 x i64> @and_i64_zero(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c, ptr %base) {
 ; CHECK-LABEL: and_i64_zero:
 ; CHECK:       // %bb.0:

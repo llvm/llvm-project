@@ -75,7 +75,7 @@ bool PPCFunctionInfo::isLiveInZExt(Register VReg) const {
 
 void PPCFunctionInfo::appendParameterType(ParamType Type) {
 
-  ParamtersType.push_back(Type);
+  ParametersType.push_back(Type);
   switch (Type) {
   case FixedType:
     ++FixedParmsNum;
@@ -103,7 +103,7 @@ uint32_t PPCFunctionInfo::getVecExtParmsType() const {
   if (!hasVectorParms())
     return 0;
 
-  for (const auto &Elt : ParamtersType) {
+  for (const auto &Elt : ParametersType) {
     switch (Elt) {
     case VectorChar:
       VectExtParamInfo <<= XCOFF::TracebackTable::WidthOfParamType;
@@ -145,7 +145,7 @@ uint32_t PPCFunctionInfo::getParmsType() const {
   unsigned ShiftBits = 32 - XCOFF::TracebackTable::WidthOfParamType;
 
   int Bits = 0;
-  for (const auto &Elt : ParamtersType) {
+  for (const auto &Elt : ParametersType) {
 
     if (Bits > 31 || (Bits > 30 && (Elt != FixedType || hasVectorParms())))
       break;

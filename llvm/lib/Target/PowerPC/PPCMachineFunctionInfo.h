@@ -131,9 +131,9 @@ private:
   /// VectorParmsNum - The number of vector parameters.
   unsigned VectorParmsNum = 0;
 
-  /// ParamtersType - Store all the parameter's type that are saved on
+  /// ParametersType - Store all the parameter's type that are saved on
   /// registers.
-  SmallVector<ParamType, 32> ParamtersType;
+  SmallVector<ParamType, 32> ParametersType;
 
   /// CRSpillFrameIndex - FrameIndex for CR spill slot for 32-bit SVR4.
   int CRSpillFrameIndex = 0;

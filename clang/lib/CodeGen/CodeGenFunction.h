@@ -4002,7 +4002,7 @@ public:
       const OMPTargetTeamsDistributeParallelForDirective &S);
 
   /// Emit the Stmt \p S and return its topmost canonical loop, if any.
-  /// TODO: The \p Depth paramter is not yet implemented and must be 1. In the
+  /// TODO: The \p Depth parameter is not yet implemented and must be 1. In the
   /// future it is meant to be the number of loops expected in the loop nests
   /// (usually specified by the "collapse" clause) that are collapsed to a
   /// single loop by this function.

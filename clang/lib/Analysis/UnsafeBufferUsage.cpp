@@ -3601,7 +3601,7 @@ createOverloadsForFixedParams(const FixitStrategy &S, const FunctionDecl *FD,
         // If a parameter of a function definition has no name:
         return std::nullopt;
       if (ParmsMask[i])
-        // This is our spanified paramter!
+        // This is our spanified parameter!
         SS << NewTysTexts[i] << "(" << Parm->getIdentifier()->getName().str()
            << ", " << getUserFillPlaceHolder("size") << ")";
       else

@@ -971,7 +971,7 @@ std::string {0}::getLibraryCallName() {{
       if (arg.kind != LinalgOperandDefKind::IndexAttr)
         continue;
       assert(arg.indexAttrMap);
-      // Verify index attribute. Paramters:
+      // Verify index attribute. Parameters:
       // {0}: Attribute name
       // {1}: Attribute size
       static const char attrFmt[] = R"FMT(

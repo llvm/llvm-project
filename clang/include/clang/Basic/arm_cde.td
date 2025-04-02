@@ -161,7 +161,7 @@ let pnt = PNT_Type, params = T.All, polymorphicOnly = 1 in {
 }
 
 // Reinterpret intrinsics required to implement __arm_vcx*q with 2 or 3
-// polymorphic paramters.
+// polymorphic parameters.
 let params = [/* no u8 */ s8, u16, s16, u32, s32, u64, s64, f16, f32],
     headerOnly = 1, polymorphicOnly = 1 in
 def vreinterpretq_u8 :

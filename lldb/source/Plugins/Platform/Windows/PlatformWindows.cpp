@@ -205,7 +205,7 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
   }
   name.emplace_back(L'\0');
 
-  /* Inject name paramter into inferior */
+  /* Inject name parameter into inferior */
   lldb::addr_t injected_name =
       process->AllocateMemory(name.size() * sizeof(llvm::UTF16),
                               ePermissionsReadable | ePermissionsWritable,
