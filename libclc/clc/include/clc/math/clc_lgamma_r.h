@@ -6,6 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE lgamma_r(__CLC_GENTYPE x, global __CLC_INTN *iptr);
-_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE lgamma_r(__CLC_GENTYPE x, local __CLC_INTN *iptr);
-_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE lgamma_r(__CLC_GENTYPE x, private __CLC_INTN *iptr);
+#ifndef __CLC_MATH_CLC_LGAMMA_R_H__
+#define __CLC_MATH_CLC_LGAMMA_R_H__
+
+#define __CLC_FUNCTION __clc_lgamma_r
+#define __CLC_BODY <clc/math/unary_decl_with_int_ptr.inc>
+
+#include <clc/math/gentype.inc>
+
+#undef __CLC_BODY
+#undef __CLC_FUNCTION
+
+#endif // __CLC_MATH_CLC_LGAMMA_R_H__

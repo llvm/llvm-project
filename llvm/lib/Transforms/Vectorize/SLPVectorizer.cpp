@@ -8873,6 +8873,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
           // Find the number of elements, which forms full vectors.
           unsigned PWSz = getFullVectorNumberOfElements(
               *TTI, UniqueValues.front()->getType(), UniqueValues.size());
+          PWSz = std::min<unsigned>(PWSz, VL.size());
           if (PWSz == VL.size()) {
             ReuseShuffleIndices.clear();
           } else {
