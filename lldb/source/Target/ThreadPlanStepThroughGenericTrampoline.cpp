@@ -35,7 +35,8 @@ ThreadPlanStepThroughGenericTrampoline::ThreadPlanStepThroughGenericTrampoline(
 
   if (!sc.function)
     return;
-  AddRange(sc.function->GetAddressRange());
+  for (AddressRange range : sc.function->GetAddressRanges())
+    AddRange(range);
 }
 
 ThreadPlanStepThroughGenericTrampoline::
