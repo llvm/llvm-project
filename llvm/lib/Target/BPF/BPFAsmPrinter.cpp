@@ -55,6 +55,7 @@ private:
 } // namespace
 
 bool BPFAsmPrinter::doInitialization(Module &M) {
+  EmitJumpTableSizesSection = true;
   AsmPrinter::doInitialization(M);
 
   // Only emit BTF when debuginfo available.
