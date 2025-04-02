@@ -3064,6 +3064,28 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_usmopa_wide : SME_OuterProduct_Intrinsic;
   def int_aarch64_sme_usmops_wide : SME_OuterProduct_Intrinsic;
 
+  class SME_OuterProduct_QuarterTile_Single_Single
+      : DefaultAttrsIntrinsic<[],
+          [llvm_i32_ty,
+          llvm_anyvector_ty,
+          LLVMMatchType<0>], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects]>;
+
+  // 2-way and 4-way multi-vector signed/unsigned Quarter Tile Quarter Product A/S
+  foreach mode = ["s", "a"] in {
+    foreach za = ["", "_za64"] in {
+      foreach ty = ["s", "u", "su", "us"] in {
+        def int_aarch64_sme_ # ty # "mop4" # mode # za # "_wide_1x1" : SME_OuterProduct_QuarterTile_Single_Single;
+      }
+    }
+  }
+
+  // 2-way and 4-way multi-vector floating point Quarter Tile Quarter Product A/S
+  foreach mode = ["s", "a"] in {
+    foreach wide = ["", "_wide"] in {
+      def int_aarch64_sme_mop4 # mode # wide # "_1x1" : SME_OuterProduct_QuarterTile_Single_Single;
+    }
+  }
+
   class SME_AddVectorToTile_Intrinsic
       : DefaultAttrsIntrinsic<[],
           [llvm_i32_ty,
@@ -3835,7 +3857,7 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_luti4_lane_zt_x2
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>], [llvm_i32_ty, llvm_nxv16i8_ty, llvm_i32_ty],
                             [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrReadMem]>;
-                            
+
   //
   // Lookup table expand four registers
   //
