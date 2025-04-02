@@ -665,7 +665,7 @@ function(add_libc_hermetic test_name)
   endif()
   cmake_parse_arguments(
     "HERMETIC_TEST"
-    "IS_GPU_BENCHMARK;NO_RUNPOSTBUILD" # Optional arguments
+    "IS_GPU_BENCHMARK;NO_RUN_POSTBUILD" # Optional arguments
     "SUITE;CXX_STANDARD" # Single value arguments
     "SRCS;HDRS;DEPENDS;ARGS;ENV;COMPILE_OPTIONS;LINK_LIBRARIES;LOADER_ARGS" # Multi-value arguments
     ${ARGN}
