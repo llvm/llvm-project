@@ -352,8 +352,6 @@ typedef __char32_t char32_t;
 
 #  define _LIBCPP_ALWAYS_INLINE __attribute__((__always_inline__))
 
-#  define _LIBCPP_DISABLE_EXTENSION_WARNING __extension__
-
 #  if defined(_LIBCPP_OBJECT_FORMAT_COFF)
 
 #    ifdef _DLL

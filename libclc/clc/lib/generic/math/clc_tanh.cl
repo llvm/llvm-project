@@ -6,10 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define __CLC_FUNCTION lgamma_r
-#define __CLC_BODY <clc/math/unary_decl_with_int_ptr.inc>
+#include <clc/clc_convert.h>
+#include <clc/internal/clc.h>
+#include <clc/math/clc_exp.h>
+#include <clc/math/clc_fma.h>
+#include <clc/math/clc_mad.h>
+#include <clc/math/math.h>
+#include <clc/math/tables.h>
+#include <clc/relational/clc_isinf.h>
+#include <clc/relational/clc_isnan.h>
+#include <clc/shared/clc_min.h>
 
+#define __CLC_BODY <clc_tanh.inc>
 #include <clc/math/gentype.inc>
-
-#undef __CLC_BODY
-#undef __CLC_FUNCTION
