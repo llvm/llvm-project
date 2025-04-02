@@ -43,12 +43,14 @@ SHADER_FEATURE_FLAG(23, 28, AtomicInt64OnGroupShared, "64-bit Atomics on Group S
 SHADER_FEATURE_FLAG(24, 29, DerivativesInMeshAndAmpShaders, "Derivatives in mesh and amplification shaders")
 SHADER_FEATURE_FLAG(25, 30, ResourceDescriptorHeapIndexing, "Resource descriptor heap indexing")
 SHADER_FEATURE_FLAG(26, 31, SamplerDescriptorHeapIndexing, "Sampler descriptor heap indexing")
-SHADER_FEATURE_FLAG(27, 63, RESERVED, "<RESERVED>")
+SHADER_FEATURE_FLAG(27, 36, RESERVED, "<RESERVED>")
 SHADER_FEATURE_FLAG(28, 32, AtomicInt64OnHeapResource, "64-bit Atomics on Heap Resources")
 SHADER_FEATURE_FLAG(29, 34, AdvancedTextureOps, "Advanced Texture Ops")
 SHADER_FEATURE_FLAG(30, 35, WriteableMSAATextures, "Writeable MSAA Textures")
+SHADER_FEATURE_FLAG(31, 37, ExtendedComparisonSampling, "Expanded comparison sampling")
+SHADER_FEATURE_FLAG(32, 38, ExtendedCommandInfo, "Extended command information")
 
-SHADER_FEATURE_FLAG(31, 36, NextUnusedBit, "Next reserved shader flag bit (not a flag)")
+SHADER_FEATURE_FLAG(33, 39, NextUnusedBit, "Next reserved shader flag bit (not a flag)")
 
 #undef SHADER_FEATURE_FLAG
 #endif // SHADER_FEATURE_FLAG
@@ -81,8 +83,8 @@ DXIL_MODULE_FLAG( 1,  DisableMathRefactoring, "Disable math refactoring")
 DXIL_MODULE_FLAG( 3,  ForceEarlyDepthStencil, "Force early depth-stencil test")
 DXIL_MODULE_FLAG( 4,  EnableRawAndStructuredBuffers, "Raw and structured buffers")
 DXIL_MODULE_FLAG( 5,  LowPrecisionPresent, "Low-precision data types")
-DXIL_MODULE_FLAG( 8,  AllResourcesBound, "All resources bound")
-DXIL_MODULE_FLAG(23,  UseNativeLowPrecision, "Native 16-bit types enabled")
+DXIL_MODULE_FLAG( 8,  AllResourcesBound, "All resources bound for the duration of shader execution")
+DXIL_MODULE_FLAG(23,  UseNativeLowPrecision, "Use native low precision")
 DXIL_MODULE_FLAG(33,  ResMayNotAlias, "Any UAV may not alias any other UAV")
 
 #undef DXIL_MODULE_FLAG
