@@ -380,7 +380,7 @@ class C {
 } // namespace cwg2370
 
 namespace cwg2376 { // cwg2376: 21
-#if __cpp_deduction_guides >= 201703
+#if __cplusplus >= 201703L
 template<int = 0> class C {};
 
 C a;
