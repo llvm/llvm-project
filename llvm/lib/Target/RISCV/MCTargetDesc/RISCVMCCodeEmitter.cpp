@@ -557,10 +557,7 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
       FixupKind = RISCV::fixup_riscv_tlsdesc_call;
       break;
     }
-  } else if ((Kind == MCExpr::SymbolRef &&
-              getSpecifier(cast<MCSymbolRefExpr>(Expr)) ==
-                  RISCVMCExpr::VK_None) ||
-             Kind == MCExpr::Binary) {
+  } else if (Kind == MCExpr::SymbolRef || Kind == MCExpr::Binary) {
     // FIXME: Sub kind binary exprs have chance of underflow.
     if (MIFrm == RISCVII::InstFormatJ) {
       FixupKind = RISCV::fixup_riscv_jal;
