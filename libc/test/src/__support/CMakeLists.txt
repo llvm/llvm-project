@@ -249,27 +249,25 @@ add_libc_test(
     libc.src.__support.memory_size
 )
 
-if(NOT LIBC_TARGET_OS_IS_GPU)
-  add_libc_test(
-    str_to_float_comparison_test
-    SUITE
-      libc-support-tests
-    NO_RUN_POSTBUILD
-    ENV "FILES=${CMAKE_CURRENT_SOURCE_DIR}/str_to_float_comparison_data.txt"
-    SRCS
-      str_to_float_comparison_test.cpp
-    DEPENDS
-      libc.src.stdio.printf
-      libc.src.stdio.fopen
-      libc.src.stdio.fclose
-      libc.src.stdio.fgets
-      libc.src.stdlib.strtof
-      libc.src.stdlib.strtod
-      libc.src.stdlib.getenv
-      libc.src.string.strtok
-      libc.src.__support.CPP.bit
-  )
-endif()
+add_libc_test(
+  str_to_float_comparison_test
+  SUITE
+    libc-support-tests
+  NO_RUN_POSTBUILD
+  ENV "FILES=${CMAKE_CURRENT_SOURCE_DIR}/str_to_float_comparison_data.txt"
+  SRCS
+    str_to_float_comparison_test.cpp
+  DEPENDS
+    libc.src.stdio.printf
+    libc.src.stdio.fopen
+    libc.src.stdio.fclose
+    libc.src.stdio.fgets
+    libc.src.stdlib.strtof
+    libc.src.stdlib.strtod
+    libc.src.stdlib.getenv
+    libc.src.string.strtok
+    libc.src.__support.CPP.bit
+)
 
 add_subdirectory(CPP)
 add_subdirectory(File)
