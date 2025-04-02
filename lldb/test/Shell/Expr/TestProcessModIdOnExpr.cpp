@@ -1,5 +1,8 @@
 // Tests that ProcessModID.m_memory_id is not bumped when evaluating expressions without side effects.
 
+// REQUIRES: target-windows
+// Due to different implementations exact numbers (m_stop_id) are different on different OSs. So we lock this test to specific platform.
+
 // RUN: %build %s -o %t
 // RUN: %lldb %t \
 // RUN:   -o "settings set target.process.track-memory-cache-changes false" \
