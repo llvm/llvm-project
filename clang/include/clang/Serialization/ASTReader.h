@@ -1392,7 +1392,8 @@ private:
 
   llvm::DenseMap<const Decl *, bool> DefinitionSource;
 
-  /// Friend functions that were defined but might have had their bodies removed.
+  /// Friend functions that were defined but might have had their bodies
+  /// removed.
   llvm::DenseSet<const FunctionDecl *> ThisDeclarationWasADefinitionSet;
 
   bool shouldDisableValidationForFile(const serialization::ModuleFile &M) const;
