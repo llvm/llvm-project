@@ -153,3 +153,36 @@ define range(i32 8, 256) <2 x i32> @preserve_compatible_return_range(ptr %arg, <
   store i32 %load, ptr @gv
   ret <2 x i32> %arg1
 }
+
+; INTERESTING-LABEL: @drop_incompatible_returned_param_attr_0(
+
+; RESULT-LABEL: define i32 @drop_incompatible_returned_param_attr_0(ptr %arg, ptr %arg1) {
+; RESULT-NEXT: %load = load i32, ptr %arg
+; RESULT-NEXT: ret i32 %load
+define ptr @drop_incompatible_returned_param_attr_0(ptr returned %arg, ptr %arg1) {
+  %load = load i32, ptr %arg
+  store i32 %load, ptr @gv
+  ret ptr %arg
+}
+
+; INTERESTING-LABEL: @drop_incompatible_returned_param_attr_1(
+
+; RESULT-LABEL: define i32 @drop_incompatible_returned_param_attr_1(ptr %arg, ptr %arg1) {
+; RESULT-NEXT: %load = load i32, ptr %arg
+; RESULT-NEXT: ret i32 %load
+define ptr @drop_incompatible_returned_param_attr_1(ptr %arg, ptr returned %arg1) {
+  %load = load i32, ptr %arg
+  store i32 %load, ptr @gv
+  ret ptr %arg
+}
+
+; INTERESTING-LABEL: @drop_incompatible_returned_param_attr_2
+
+; RESULT-LABEL: define ptr @drop_incompatible_returned_param_attr_2(ptr %arg, ptr %arg1) {
+; RESULT-NEXT: %load = load ptr, ptr %arg
+; RESULT-NEXT: ret ptr %load
+define ptr @drop_incompatible_returned_param_attr_2(ptr %arg, ptr returned %arg1) {
+  %load = load ptr, ptr %arg
+  store ptr %load, ptr @gv
+  ret ptr %arg1
+}
