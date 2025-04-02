@@ -4431,8 +4431,7 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
   // Verify that the source and destination are ranked types.
   if (!packOrUnPack.getSourceType().hasRank() ||
       !packOrUnPack.getDestType().hasRank()) {
-    return op->emitError(
-        "expected both source and destination to be shaped types");
+    return op->emitError("expected both source and destination to have rank");
   }
 
   // Verify tiles. Do not allow zero tiles.
@@ -5002,31 +5001,26 @@ LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
     return success();
   }
 
-  // Insert either tensor.cast or memref.cast ops
-  // if static shape inference is available..
+  // Insert tensor.cast if static shape inference is available..
   bool hasTensorSemantics = packOp.hasPureTensorSemantics();
 
+  // TODO: support memref.cast if static shape inference is available.
   SmallVector<int64_t> srcShape, destShape;
   if (inferStaticShape(packOp, srcShape, destShape)) {
     Location loc = packOp.getLoc();
     Value source = packOp.getSource();
     if (srcShape != packOp.getSourceType().getShape()) {
       auto newSrcType = packOp.getSourceType().clone(srcShape);
-      if (hasTensorSemantics)
-        source = rewriter.create<tensor::CastOp>(loc, newSrcType,
-                                                 packOp.getSource());
-      else
-        source = rewriter.create<memref::CastOp>(loc, newSrcType,
-                                                 packOp.getSource());
+      source =
+          rewriter.create<tensor::CastOp>(loc, newSrcType, packOp.getSource());
     }
     Value dest = packOp.getDest();
     ShapedType originalResultType = packOp.getDestType();
     bool needUpdateDestType = (destShape != originalResultType.getShape());
     if (needUpdateDestType) {
       auto newDestType = packOp.getDestType().clone(destShape);
-      if (hasTensorSemantics)
-        dest =
-            rewriter.create<tensor::CastOp>(loc, newDestType, packOp.getDest());
+      dest =
+          rewriter.create<tensor::CastOp>(loc, newDestType, packOp.getDest());
     }
     rewriter.modifyOpInPlace(packOp, [&] {
       packOp.getSourceMutable().assign(source);
@@ -5036,6 +5030,7 @@ LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
     // Insert a cast if needed
     if (needUpdateDestType) {
       rewriter.setInsertionPointAfter(packOp);
+      /// 1
       if (hasTensorSemantics) {
         auto castOp =
             rewriter.create<tensor::CastOp>(loc, originalResultType, packOp);
@@ -5045,6 +5040,16 @@ LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
             rewriter.create<memref::CastOp>(loc, originalResultType, packOp);
         rewriter.replaceAllUsesExcept(packOp, castOp, castOp);
       }
+      /// 2
+      Operation *castOp;
+      if (hasTensorSemantics) {
+        castOp =
+            rewriter.create<tensor::CastOp>(loc, originalResultType, packOp);
+      } else {
+        castOp =
+            rewriter.create<memref::CastOp>(loc, originalResultType, packOp);
+      }
+      rewriter.replaceAllUsesExcept(packOp, castOp->getResult(0), castOp);
     }
     return success();
   }
@@ -5126,6 +5131,7 @@ struct FoldTensorCastPackOp : public OpRewritePattern<PackOp> {
     if (!tensor::hasFoldableTensorCastOperand(op))
       return failure();
 
+    // TODO: Support Memref PackOp. Temporarily return failure.
     if (!op.hasPureTensorSemantics())
       return failure();
 

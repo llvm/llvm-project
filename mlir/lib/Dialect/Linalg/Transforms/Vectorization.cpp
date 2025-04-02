@@ -1588,10 +1588,9 @@ static LogicalResult
 vectorizeAsTensorPackOp(RewriterBase &rewriter, linalg::PackOp packOp,
                         ArrayRef<int64_t> inputVectorSizes,
                         SmallVectorImpl<Value> &newResults) {
-  // TODO(issues/129004): Support MemRef PackOp. Temporarily return failure.
-  if (!packOp.hasPureTensorSemantics()) {
+  // TODO: Support Memref PackOp. Temporarily return failure.
+  if (!packOp.hasPureTensorSemantics())
     return failure();
-  }
 
   // TODO: Introduce a parent class that will handle the insertion point update.
   OpBuilder::InsertionGuard g(rewriter);
@@ -1669,18 +1668,17 @@ static LogicalResult
 vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
                           ArrayRef<int64_t> inputVectorSizes,
                           SmallVectorImpl<Value> &newResults) {
-  // TODO(issues/129004): Support MemRef PackOp. Temporarily return failure.
-  if (!unpackOp.hasPureTensorSemantics()) {
+  // TODO: Support Memref PackOp. Temporarily return failure.
+  if (!unpackOp.hasPureTensorSemantics())
     return failure();
-  }
 
   // TODO: Introduce a parent class that will handle the insertion point update.
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(unpackOp);
 
-  // TODO: support non-ranked tensor types. ShapedType
-  RankedTensorType unpackTensorType =
-      dyn_cast<RankedTensorType>(unpackOp.getSourceType());
+  auto unpackTensorType = dyn_cast<RankedTensorType>(unpackOp.getSourceType());
+  if (!unpackTensorType)
+    return failure();
 
   ArrayRef<int64_t> innerDimPos = unpackOp.getInnerDimsPos();
   ArrayRef<int64_t> innerTiles = unpackOp.getStaticInnerTiles();
@@ -1900,7 +1898,7 @@ vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op,
 static LogicalResult
 vectorizeUnPackOpPrecondition(linalg::UnPackOp unpackOp,
                               ArrayRef<int64_t> inputVectorSizes) {
-  // TODO(issues/129004): Support MemRef PackOp. Temporarily return failure.
+  // TODO: Support Memref PackOp. Temporarily return failure.
   if (!unpackOp.hasPureTensorSemantics()) {
     return failure();
   }
@@ -2149,10 +2147,9 @@ static LogicalResult vectorizeLinalgOpPrecondition(
 static LogicalResult
 vectorizePackOpPrecondition(linalg::PackOp packOp,
                             ArrayRef<int64_t> inputVectorSizes) {
-  // TODO(issues/129004): Support MemRef PackOp. Temporarily return failure.
-  if (!packOp.hasPureTensorSemantics()) {
+  // TODO: Support Memref PackOp. Temporarily return failure.
+  if (!packOp.hasPureTensorSemantics())
     return failure();
-  }
 
   auto padValue = packOp.getPaddingValue();
   Attribute cstAttr;
