@@ -484,9 +484,13 @@ static DecodeStatus decodeRVCInstrRdRs1ImmZero(MCInst &Inst, uint32_t Insn,
                                                uint64_t Address,
                                                const MCDisassembler *Decoder);
 
-static DecodeStatus decodeRVCInstrRdSImm(MCInst &Inst, uint32_t Insn,
-                                         uint64_t Address,
-                                         const MCDisassembler *Decoder);
+static DecodeStatus decodeRVCInstrRdSImm6(MCInst &Inst, uint32_t Insn,
+                                          uint64_t Address,
+                                          const MCDisassembler *Decoder);
+
+static DecodeStatus decodeRVCInstrRdCLUIImm(MCInst &Inst, uint32_t Insn,
+                                            uint64_t Address,
+                                            const MCDisassembler *Decoder);
 
 static DecodeStatus
 decodeRVCInstrRdRs1UImmLog2XLenNonZero(MCInst &Inst, uint32_t Insn,
@@ -544,16 +548,25 @@ static DecodeStatus decodeCSSPushPopchk(MCInst &Inst, uint32_t Insn,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus decodeRVCInstrRdSImm(MCInst &Inst, uint32_t Insn,
-                                         uint64_t Address,
-                                         const MCDisassembler *Decoder) {
+static DecodeStatus decodeRVCInstrRdSImm6(MCInst &Inst, uint32_t Insn,
+                                          uint64_t Address,
+                                          const MCDisassembler *Decoder) {
   Inst.addOperand(MCOperand::createReg(RISCV::X0));
-  uint32_t SImm6 =
+  uint32_t Imm =
       fieldFromInstruction(Insn, 12, 1) << 5 | fieldFromInstruction(Insn, 2, 5);
   [[maybe_unused]] DecodeStatus Result =
-      decodeSImmOperand<6>(Inst, SImm6, Address, Decoder);
+      decodeSImmOperand<6>(Inst, Imm, Address, Decoder);
   assert(Result == MCDisassembler::Success && "Invalid immediate");
   return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeRVCInstrRdCLUIImm(MCInst &Inst, uint32_t Insn,
+                                            uint64_t Address,
+                                            const MCDisassembler *Decoder) {
+  Inst.addOperand(MCOperand::createReg(RISCV::X0));
+  uint32_t Imm =
+      fieldFromInstruction(Insn, 12, 1) << 5 | fieldFromInstruction(Insn, 2, 5);
+  return decodeCLUIImmOperand(Inst, Imm, Address, Decoder);
 }
 
 static DecodeStatus
