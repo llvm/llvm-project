@@ -112,7 +112,7 @@ FakeFrame *FakeStack::Allocate(uptr stack_size_log, uptr class_id,
 
     // Poison the last word of FakeFrame
     u8 *shadow = reinterpret_cast<u8*>(MemToShadow(reinterpret_cast<uptr>(saved_flag_ptr)));
-    *shadow = kMagic1;
+    *shadow = kAsanStackRightRedzoneMagic;
     return res;
   }
   return nullptr; // We are out of fake stack.
