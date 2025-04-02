@@ -41,37 +41,37 @@ class Function;
 
 namespace ir2vec {
 using Embedding = std::vector<double>;
-// ToDo: Current the keys are strings. This can be changed to
+// FIXME: Current the keys are strings. This can be changed to
 // use integers for cheaper lookups.
 using Vocab = std::map<std::string, Embedding>;
 } // namespace ir2vec
 
-class VocabResult;
+class IR2VecVocabResult;
 class IR2VecResult;
 
 /// This analysis provides the vocabulary for IR2Vec. The vocabulary provides a
 /// mapping between an entity of the IR (like opcode, type, argument, etc.) and
 /// its corresponding embedding.
-class VocabAnalysis : public AnalysisInfoMixin<VocabAnalysis> {
+class IR2VecVocabAnalysis : public AnalysisInfoMixin<IR2VecVocabAnalysis> {
   unsigned DIM = 0;
   ir2vec::Vocab Vocabulary;
   Error readVocabulary();
 
 public:
   static AnalysisKey Key;
-  VocabAnalysis() = default;
-  using Result = VocabResult;
+  IR2VecVocabAnalysis() = default;
+  using Result = IR2VecVocabResult;
   Result run(Module &M, ModuleAnalysisManager &MAM);
 };
 
-class VocabResult {
+class IR2VecVocabResult {
   ir2vec::Vocab Vocabulary;
   bool Valid = false;
   unsigned DIM = 0;
 
 public:
-  VocabResult() = default;
-  VocabResult(const ir2vec::Vocab &Vocabulary, unsigned Dim);
+  IR2VecVocabResult() = default;
+  IR2VecVocabResult(ir2vec::Vocab &&Vocabulary, unsigned Dim);
 
   // Helper functions
   bool isValid() const { return Valid; }
@@ -91,9 +91,9 @@ class IR2VecResult {
 public:
   IR2VecResult() = default;
   IR2VecResult(
-      SmallMapVector<const Instruction *, ir2vec::Embedding, 128> InstMap,
-      SmallMapVector<const BasicBlock *, ir2vec::Embedding, 16> BBMap,
-      const ir2vec::Embedding &FuncVector, unsigned Dim);
+      SmallMapVector<const Instruction *, ir2vec::Embedding, 128> &&InstMap,
+      SmallMapVector<const BasicBlock *, ir2vec::Embedding, 16> &&BBMap,
+      ir2vec::Embedding &&FuncVector, unsigned Dim);
   bool isValid() const { return Valid; }
 
   const SmallMapVector<const Instruction *, ir2vec::Embedding, 128> &
@@ -107,9 +107,6 @@ public:
 /// This analysis provides the IR2Vec embeddings for instructions, basic blocks,
 /// and functions.
 class IR2VecAnalysis : public AnalysisInfoMixin<IR2VecAnalysis> {
-  bool Avg;
-  float WO = 1, WT = 0.5, WA = 0.2;
-
 public:
   IR2VecAnalysis() = default;
   static AnalysisKey Key;

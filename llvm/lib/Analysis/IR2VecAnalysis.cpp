@@ -31,35 +31,35 @@ using namespace ir2vec;
 
 #define DEBUG_TYPE "ir2vec"
 
-STATISTIC(dataMissCounter, "Number of data misses in the vocabulary");
+STATISTIC(DataMissCounter, "Number of data misses in the vocabulary");
 
 /// IR2Vec computes two kinds of embeddings: Symbolic and Flow-aware.
 /// Symbolic embeddings capture the "syntactic" and "statistical correlation"
 /// of the IR entities. Flow-aware embeddings build on top of symbolic
 /// embeddings and additionally capture the flow information in the IR.
 /// IR2VecKind is used to specify the type of embeddings to generate.
-// ToDo: Currently we support only Symbolic.
-// We shall add support for Flow-aware in upcoming patches.
-enum IR2VecKind { symbolic, flowaware };
+// FIXME: Currently we support only Symbolic.  Add support for
+// Flow-aware in upcoming patches.
+enum class IR2VecKind { Symbolic, Flowaware };
 
 static cl::OptionCategory IR2VecAnalysisCategory("IR2Vec Analysis Options");
 
 cl::opt<IR2VecKind>
     IR2VecMode("ir2vec-mode",
                cl::desc("Choose type of embeddings to generate:"),
-               cl::values(clEnumValN(symbolic, "symbolic",
+               cl::values(clEnumValN(IR2VecKind::Symbolic, "symbolic",
                                      "Generates symbolic embeddings"),
-                          clEnumValN(flowaware, "flowaware",
+                          clEnumValN(IR2VecKind::Flowaware, "flowaware",
                                      "Generates flow-aware embeddings")),
-               cl::init(symbolic), cl::cat(IR2VecAnalysisCategory));
+               cl::init(IR2VecKind::Symbolic), cl::cat(IR2VecAnalysisCategory));
 
-// ToDo: Use a default vocab when not specified
+// FIXME: Use a default vocab when not specified
 static cl::opt<std::string>
     VocabFile("ir2vec-vocab-path", cl::Optional,
               cl::desc("Path to the vocabulary file for IR2Vec"), cl::init(""),
               cl::cat(IR2VecAnalysisCategory));
 
-AnalysisKey VocabAnalysis::Key;
+AnalysisKey IR2VecVocabAnalysis::Key;
 AnalysisKey IR2VecAnalysis::Key;
 
 // ==----------------------------------------------------------------------===//
@@ -80,7 +80,7 @@ protected:
 
   /// Weights for different entities (like opcode, arguments, types)
   /// in the IR instructions to generate the vector representation.
-  // ToDo: Defaults to the values used in the original algorithm. Can be
+  // FIXME: Defaults to the values used in the original algorithm. Can be
   // parameterized later.
   float WO = 1.0, WT = 0.5, WA = 0.2;
 
@@ -108,9 +108,6 @@ public:
   /// function. Logic of computing the embeddings is specific to the kind of
   /// embeddings being computed.
   virtual void computeEmbeddings() = 0;
-
-  /// Returns the dimension of the embedding vector.
-  unsigned getDimension() const { return DIM; }
 
   /// Returns a map containing instructions and the corresponding vector
   /// representations for a given module corresponding to the IR2Vec
@@ -163,15 +160,15 @@ void addVectors(Embedding &Vec, const Embedding &Vec2) {
                  std::plus<double>());
 }
 
-// ToDo: Currently lookups are string based. Use numeric Keys
+// FIXME: Currently lookups are string based. Use numeric Keys
 // for efficiency.
 Embedding Embeddings::lookupVocab(const std::string &Key) {
   Embedding Vec(DIM, 0);
-  // ToDo: Use zero vectors in vocab and assert failure for
+  // FIXME: Use zero vectors in vocab and assert failure for
   // unknown entities rather than silently returning zeroes here.
   if (Vocabulary.find(Key) == Vocabulary.end()) {
     LLVM_DEBUG(errs() << "cannot find key in map : " << Key << "\n");
-    dataMissCounter++;
+    DataMissCounter++;
   } else {
     Vec = Vocabulary[Key];
   }
@@ -182,16 +179,15 @@ void Symbolic::computeEmbeddings() {
   if (F.isDeclaration())
     return;
   for (auto &BB : F) {
+    auto It = BBVecMap.find(&BB);
+    if (It != BBVecMap.end())
+      continue;
     BBVecMap[&BB] = computeBB2Vec(BB);
     addVectors(FuncVector, BBVecMap[&BB]);
   }
 }
 
 Embedding Symbolic::computeBB2Vec(const BasicBlock &BB) {
-  auto It = BBVecMap.find(&BB);
-  if (It != BBVecMap.end()) {
-    return It->second;
-  }
   Embedding BBVector(DIM, 0);
 
   for (auto &I : BB) {
@@ -245,8 +241,8 @@ Embedding Symbolic::computeBB2Vec(const BasicBlock &BB) {
       }
       scaleVector(Vec, WA);
       addVectors(InstVector, Vec);
-      InstVecMap[&I] = InstVector;
     }
+    InstVecMap[&I] = InstVector;
     addVectors(BBVector, InstVector);
   }
   return BBVector;
@@ -254,27 +250,27 @@ Embedding Symbolic::computeBB2Vec(const BasicBlock &BB) {
 } // namespace
 
 // ==----------------------------------------------------------------------===//
-// VocabResult and VocabAnalysis
+// IR2VecVocabResult and IR2VecVocabAnalysis
 //===----------------------------------------------------------------------===//
 
-VocabResult::VocabResult(const ir2vec::Vocab &Vocabulary, unsigned Dim)
+IR2VecVocabResult::IR2VecVocabResult(ir2vec::Vocab &&Vocabulary, unsigned Dim)
     : Vocabulary(std::move(Vocabulary)), Valid(true), DIM(Dim) {}
 
-const ir2vec::Vocab &VocabResult::getVocabulary() const {
+const ir2vec::Vocab &IR2VecVocabResult::getVocabulary() const {
   assert(Valid);
   return Vocabulary;
 }
 
 // For now, assume vocabulary is stable unless explicitly invalidated.
-bool VocabResult::invalidate(Module &M, const PreservedAnalyses &PA,
-                             ModuleAnalysisManager::Invalidator &Inv) {
-  auto PAC = PA.getChecker<VocabAnalysis>();
+bool IR2VecVocabResult::invalidate(Module &M, const PreservedAnalyses &PA,
+                                   ModuleAnalysisManager::Invalidator &Inv) {
+  auto PAC = PA.getChecker<IR2VecVocabAnalysis>();
   return !(PAC.preservedWhenStateless());
 }
 
-// ToDo: Make this optional. We can avoid file reads
+// FIXME: Make this optional. We can avoid file reads
 // by auto-generating the vocabulary during the build time.
-Error VocabAnalysis::readVocabulary() {
+Error IR2VecVocabAnalysis::readVocabulary() {
   auto BufOrError = MemoryBuffer::getFileOrSTDIN(VocabFile, /*IsText=*/true);
   if (!BufOrError) {
     return createFileError(VocabFile, BufOrError.getError());
@@ -303,17 +299,21 @@ Error VocabAnalysis::readVocabulary() {
   return Error::success();
 }
 
-VocabAnalysis::Result VocabAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
+IR2VecVocabAnalysis::Result
+IR2VecVocabAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
+  auto Ctx = &M.getContext();
   if (VocabFile.empty()) {
-    // ToDo: Use default vocabulary
-    errs() << "Error: IR2Vec vocabulary file path not specified.\n";
-    return VocabResult(); // Return invalid result
+    // FIXME: Use default vocabulary
+    Ctx->emitError("IR2Vec vocabulary file path not specified");
+    return IR2VecVocabResult(); // Return invalid result
   }
-
-  if (auto Err = readVocabulary())
-    return VocabResult();
-
-  return VocabResult(std::move(Vocabulary), DIM);
+  if (auto Err = readVocabulary()) {
+    handleAllErrors(std::move(Err), [&](const ErrorInfoBase &EI) {
+      Ctx->emitError("Error reading vocabulary: " + EI.message());
+    });
+    return IR2VecVocabResult();
+  }
+  return IR2VecVocabResult(std::move(Vocabulary), DIM);
 }
 
 // ==----------------------------------------------------------------------===//
@@ -321,9 +321,9 @@ VocabAnalysis::Result VocabAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
 //===----------------------------------------------------------------------===//
 
 IR2VecResult::IR2VecResult(
-    const SmallMapVector<const Instruction *, Embedding, 128> InstMap,
-    const SmallMapVector<const BasicBlock *, Embedding, 16> BBMap,
-    const Embedding &FuncVector, unsigned Dim)
+    SmallMapVector<const Instruction *, Embedding, 128> &&InstMap,
+    SmallMapVector<const BasicBlock *, Embedding, 16> &&BBMap,
+    Embedding &&FuncVector, unsigned Dim)
     : InstVecMap(std::move(InstMap)), BBVecMap(std::move(BBMap)),
       FuncVector(std::move(FuncVector)), DIM(Dim), Valid(true) {}
 
@@ -342,29 +342,31 @@ const Embedding &IR2VecResult::getFunctionVector() const {
   return FuncVector;
 }
 unsigned IR2VecResult::getDimension() const { return DIM; }
+
 IR2VecAnalysis::Result IR2VecAnalysis::run(Function &F,
                                            FunctionAnalysisManager &FAM) {
   auto *VocabRes = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F)
-                       .getCachedResult<VocabAnalysis>(*F.getParent());
+                       .getCachedResult<IR2VecVocabAnalysis>(*F.getParent());
+  auto Ctx = &F.getContext();
   if (!VocabRes->isValid()) {
-    errs() << "Error: IR2Vec vocabulary is invalid.\n";
+    Ctx->emitError("IR2Vec vocabulary is invalid");
     return IR2VecResult();
   }
 
   auto Dim = VocabRes->getDimension();
   if (Dim <= 0) {
-    errs() << "Error: IR2Vec vocabulary dimension is zero.\n";
+    Ctx->emitError("IR2Vec vocabulary dimension is zero");
     return IR2VecResult();
   }
 
   auto Vocabulary = VocabRes->getVocabulary();
   std::unique_ptr<Embeddings> Emb;
   switch (IR2VecMode) {
-  case IR2VecKind::symbolic:
+  case IR2VecKind::Symbolic:
     Emb = std::make_unique<Symbolic>(F, Vocabulary, Dim);
     break;
-  case flowaware:
-    // ToDo: Add support for flow-aware embeddings
+  case IR2VecKind::Flowaware:
+    // FIXME: Add support for flow-aware embeddings
     llvm_unreachable("Flow-aware embeddings are not supported yet");
     break;
   default:
@@ -391,16 +393,18 @@ void IR2VecPrinterPass::printVector(const Embedding &Vec) const {
 
 PreservedAnalyses IR2VecPrinterPass::run(Module &M,
                                          ModuleAnalysisManager &MAM) {
-  auto VocabResult = MAM.getResult<VocabAnalysis>(M);
-  assert(VocabResult.isValid() && "Vocab is invalid");
+  auto IR2VecVocabResult = MAM.getResult<IR2VecVocabAnalysis>(M);
+  assert(IR2VecVocabResult.isValid() && "Vocab is invalid");
 
   for (Function &F : M) {
     auto &FAM =
         MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
 
     auto IR2VecRes = FAM.getResult<IR2VecAnalysis>(F);
+
     if (!IR2VecRes.isValid()) {
-      errs() << "Error: IR2Vec embeddings are invalid.\n";
+      auto Ctx = &F.getContext();
+      Ctx->emitError("IR2Vec embeddings are invalid");
       return PreservedAnalyses::all();
     }
 
