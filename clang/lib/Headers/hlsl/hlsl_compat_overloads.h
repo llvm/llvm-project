@@ -288,19 +288,19 @@ _DXC_COMPAT_TERNARY_INTEGER_OVERLOADS(lerp)
 
 // Note: calling lit_impl because calling lit directly causes infinite recursion
 constexpr float4 lit(double V1, double V2, double V3) {
-  return __detail::lit_impl((float)V1, (float)V2, (float)V3);
+  return lit((float)V1, (float)V2, (float)V3);
 }
 constexpr float4 lit(int V1, int V2, int V3) {
-  return __detail::lit_impl((float)V1, (float)V2, (float)V3);
+  return lit((float)V1, (float)V2, (float)V3);
 }
 constexpr float4 lit(uint V1, uint V2, uint V3) {
-  return __detail::lit_impl((float)V1, (float)V2, (float)V3);
+  return lit((float)V1, (float)V2, (float)V3);
 }
 constexpr float4 lit(int64_t V1, int64_t V2, int64_t V3) {
-  return __detail::lit_impl((float)V1, (float)V2, (float)V3);
+  return lit((float)V1, (float)V2, (float)V3);
 }
 constexpr float4 lit(uint64_t V1, uint64_t V2, uint64_t V3) {
-  return __detail::lit_impl((float)V1, (float)V2, (float)V3);
+  return lit((float)V1, (float)V2, (float)V3);
 }
 
 //===----------------------------------------------------------------------===//
