@@ -1139,8 +1139,7 @@ private:
   std::optional<int> m_code;
 
   bool IsShouldStopSignal() const {
-    ThreadSP thread_sp(m_thread_wp.lock());
-    if (thread_sp)
+    if (ThreadSP thread_sp = m_thread_wp.lock())
       return thread_sp->GetProcess()->GetUnixSignals()->GetShouldStop(m_value);
     return false;
   }

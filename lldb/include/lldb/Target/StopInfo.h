@@ -119,7 +119,7 @@ public:
   StructuredData::ObjectSP GetExtendedInfo() { return m_extended_info; }
 
   /// Returns true if this is a stop reason that should be shown to a user when
-  /// stopping.
+  /// viewing the thread with this stop info.
   virtual bool ShouldShow() const { return IsValid(); }
 
   /// Returns true if this is a stop reason that should cause a thread to be
