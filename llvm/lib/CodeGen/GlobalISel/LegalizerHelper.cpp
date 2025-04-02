@@ -4906,8 +4906,7 @@ LegalizerHelper::fewerElementsVectorMultiEltType(
       SmallVector<Register, 8> SplitPieces;
       extractVectorParts(MI.getReg(UseIdx), NumElts, SplitPieces, MIRBuilder,
                          MRI);
-      for (auto Reg : SplitPieces)
-        InputOpsPieces[UseNo].push_back(Reg);
+      llvm::append_range(InputOpsPieces[UseNo], SplitPieces);
     }
   }
 
