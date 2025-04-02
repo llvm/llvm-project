@@ -712,8 +712,8 @@ define amdgpu_kernel void @udiv16_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX11-NEXT:    v_fma_f32 v2, -v3, v0, v2
 ; GFX11-NEXT:    v_cvt_u32_f32_e32 v3, v3
 ; GFX11-NEXT:    v_cmp_ge_f32_e64 vcc_lo, |v2|, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-NEXT:    v_add_co_ci_u32_e32 v2, vcc_lo, 0, v3, vcc_lo
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v2, null, 0, v3, vcc_lo
 ; GFX11-NEXT:    global_store_b16 v4, v2, s[0:1]
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB4_1
 ; GFX11-NEXT:  ; %bb.2: ; %bb2
@@ -824,9 +824,9 @@ define amdgpu_kernel void @urem16_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX11-NEXT:    v_trunc_f32_e32 v3, v3
 ; GFX11-NEXT:    v_fma_f32 v2, -v3, v0, v2
 ; GFX11-NEXT:    v_cvt_u32_f32_e32 v3, v3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_cmp_ge_f32_e64 vcc_lo, |v2|, v0
-; GFX11-NEXT:    v_add_co_ci_u32_e32 v2, vcc_lo, 0, v3, vcc_lo
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v2, null, 0, v3, vcc_lo
 ; GFX11-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_mul_lo_u32 v2, v2, s2
