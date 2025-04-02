@@ -4326,6 +4326,18 @@ static std::pair<SDValue, SDValue> splitVector(SDValue Op, SelectionDAG &DAG,
   assert((NumElems % 2) == 0 && (SizeInBits % 2) == 0 &&
          "Can't split odd sized vector");
 
+  if (Op.getOpcode() == ISD::CONCAT_VECTORS) {
+    assert((Op.getNumOperands() % 2) == 0 &&
+           "Can't split odd sized vector concat");
+    unsigned HalfOps = Op.getNumOperands() / 2;
+    EVT HalfVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
+    SmallVector<SDValue, 2> LoOps(Op->op_begin(), Op->op_begin() + HalfOps);
+    SmallVector<SDValue, 2> HiOps(Op->op_begin() + HalfOps, Op->op_end());
+    SDValue Lo = DAG.getNode(ISD::CONCAT_VECTORS, dl, HalfVT, LoOps);
+    SDValue Hi = DAG.getNode(ISD::CONCAT_VECTORS, dl, HalfVT, HiOps);
+    return std::make_pair(Lo, Hi);
+  }
+
   // If this is a splat value (with no-undefs) then use the lower subvector,
   // which should be a free extraction.
   SDValue Lo = extractSubVector(Op, 0, DAG, dl, SizeInBits / 2);
@@ -9330,7 +9342,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
 
   // See if we can use a vector load to get all of the elements.
   {
-    SmallVector<SDValue, 64> Ops(Op->op_begin(), Op->op_begin() + NumElems);
+    SmallVector<SDValue, 64> Ops(Op->ops().take_front(NumElems));
     if (SDValue LD =
             EltsFromConsecutiveLoads(VT, Ops, dl, DAG, Subtarget, false))
       return LD;
@@ -23207,7 +23219,7 @@ static SDValue EmitTest(SDValue Op, X86::CondCode X86CC, const SDLoc &dl,
                        DAG.getConstant(0, dl, Op.getValueType()));
   }
   SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::i32);
-  SmallVector<SDValue, 4> Ops(Op->op_begin(), Op->op_begin() + NumOperands);
+  SmallVector<SDValue, 4> Ops(Op->ops().take_front(NumOperands));
 
   SDValue New = DAG.getNode(Opcode, dl, VTs, Ops);
   DAG.ReplaceAllUsesOfValueWith(SDValue(Op.getNode(), 0), New);
@@ -30365,7 +30377,7 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
     // element to the other.
     // This optimized lowering is only valid if the elements in a pair can
     // be treated identically.
-    SmallVector<SDValue, 32> AmtWideElts(Amt->op_begin(), Amt->op_end());
+    SmallVector<SDValue, 32> AmtWideElts(Amt->ops());
     SmallVector<SDValue, 32> TmpAmtWideElts;
     int WideEltSizeInBits = EltSizeInBits;
     while (WideEltSizeInBits < 32) {
@@ -32896,7 +32908,7 @@ static SDValue ExtendToType(SDValue InOp, MVT NVT, SelectionDAG &DAG,
     EVT EltVT = InOp.getOperand(0).getValueType();
     SDValue FillVal =
         FillWithZeroes ? DAG.getConstant(0, dl, EltVT) : DAG.getUNDEF(EltVT);
-    SmallVector<SDValue, 16> Ops(InOp->op_begin(), InOp->op_end());
+    SmallVector<SDValue, 16> Ops(InOp->ops());
     Ops.append(WidenNumElts - InNumElts, FillVal);
     return DAG.getBuildVector(NVT, dl, Ops);
   }
@@ -39785,7 +39797,8 @@ static SDValue combineX86ShuffleChain(
     // FIXME: Is there a better way to do this? is256BitLaneRepeatedShuffleMask
     // doesn't work because our mask is for 128 bits and we don't have an MVT
     // to match that.
-    bool PreferPERMQ = UnaryShuffle && isUndefOrInRange(ScaledMask[0], 0, 2) &&
+    bool PreferPERMQ = UnaryShuffle && !isFreeToSplitVector(V1, DAG) &&
+                       isUndefOrInRange(ScaledMask[0], 0, 2) &&
                        isUndefOrInRange(ScaledMask[1], 0, 2) &&
                        isUndefOrInRange(ScaledMask[2], 2, 4) &&
                        isUndefOrInRange(ScaledMask[3], 2, 4) &&
@@ -58823,6 +58836,8 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
 
   uint64_t IdxVal = N->getConstantOperandVal(2);
   MVT SubVecVT = SubVec.getSimpleValueType();
+  int VecNumElts = OpVT.getVectorNumElements();
+  int SubVecNumElts = SubVecVT.getVectorNumElements();
 
   if (Vec.isUndef() && SubVec.isUndef())
     return DAG.getUNDEF(OpVT);
@@ -58882,10 +58897,9 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
       SubVec.getOperand(0).getSimpleValueType() == OpVT &&
       (IdxVal != 0 ||
        !(Vec.isUndef() || ISD::isBuildVectorAllZeros(Vec.getNode())))) {
+    SDValue ExtSrc = SubVec.getOperand(0);
     int ExtIdxVal = SubVec.getConstantOperandVal(1);
     if (ExtIdxVal != 0) {
-      int VecNumElts = OpVT.getVectorNumElements();
-      int SubVecNumElts = SubVecVT.getVectorNumElements();
       SmallVector<int, 64> Mask(VecNumElts);
       // First create an identity shuffle mask.
       for (int i = 0; i != VecNumElts; ++i)
@@ -58893,8 +58907,31 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
       // Now insert the extracted portion.
       for (int i = 0; i != SubVecNumElts; ++i)
         Mask[i + IdxVal] = i + ExtIdxVal + VecNumElts;
-
-      return DAG.getVectorShuffle(OpVT, dl, Vec, SubVec.getOperand(0), Mask);
+      return DAG.getVectorShuffle(OpVT, dl, Vec, ExtSrc, Mask);
+    }
+    // If we're broadcasting, see if we can use a blend instead of
+    // extract/insert pair. Ensure that the subvector is aligned with the
+    // insertion/extractions.
+    if ((ExtIdxVal % SubVecNumElts) == 0 && (IdxVal % SubVecNumElts) == 0 &&
+        (ExtSrc.getOpcode() == X86ISD::VBROADCAST ||
+         ExtSrc.getOpcode() == X86ISD::VBROADCAST_LOAD ||
+         (ExtSrc.getOpcode() == X86ISD::SUBV_BROADCAST_LOAD &&
+          cast<MemIntrinsicSDNode>(ExtSrc)->getMemoryVT() == SubVecVT))) {
+      if (OpVT.is256BitVector() && SubVecVT.is128BitVector()) {
+        uint64_t BlendMask = IdxVal == 0 ? 0x0F : 0xF0;
+        SDValue Blend = DAG.getNode(
+            X86ISD::BLENDI, dl, MVT::v8f32, DAG.getBitcast(MVT::v8f32, Vec),
+            DAG.getBitcast(MVT::v8f32, ExtSrc),
+            DAG.getTargetConstant(BlendMask, dl, MVT::i8));
+        return DAG.getBitcast(OpVT, Blend);
+      } else if (OpVT.is512BitVector() && SubVecVT.is256BitVector()) {
+        SDValue Lo = DAG.getBitcast(MVT::v8f64, IdxVal == 0 ? ExtSrc : Vec);
+        SDValue Hi = DAG.getBitcast(MVT::v8f64, IdxVal == 0 ? Vec : ExtSrc);
+        SDValue Shuffle =
+            DAG.getNode(X86ISD::SHUF128, dl, MVT::v8f64, Lo, Hi,
+                        getV4X86ShuffleImm8ForMask({0, 1, 2, 3}, dl, DAG));
+        return DAG.getBitcast(OpVT, Shuffle);
+      }
     }
   }
 
@@ -58942,7 +58979,7 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
   // If we're splatting the lower half subvector of a full vector load into the
   // upper half, attempt to create a subvector broadcast.
   // TODO: Drop hasOneUse checks.
-  if (IdxVal == (OpVT.getVectorNumElements() / 2) &&
+  if ((int)IdxVal == (VecNumElts / 2) &&
       Vec.getValueSizeInBits() == (2 * SubVec.getValueSizeInBits()) &&
       (Vec.hasOneUse() || SubVec.hasOneUse())) {
     auto *VecLd = dyn_cast<LoadSDNode>(Vec);

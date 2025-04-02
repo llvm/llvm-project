@@ -42,9 +42,16 @@ MATH_MANGLE(tgamma)(float x)
             ret = x >  0x1.18521ep+5f ? PINF_F32 : ret;
         } else {
             float s = MATH_MANGLE(sinpi)(x);
-            float p = s*x*t2*t1*t1;
-            ret = MATH_DIV(-sqrtpiby2*d,  MATH_MAD(p, pt, p));
-            ret = x < -42.0f ? 0.0f : ret;
+            if (x > -30.0f) {
+                float p = s*x*t2*t1*t1;
+                ret = MATH_DIV(-sqrtpiby2*d,  MATH_MAD(p, pt, p));
+            } else if (x > -41.0f) {
+                float t3 = t2*t1;
+                float p1 = MATH_MAD(t3, pt, t3);
+                float p2 = s*x*t1;
+                ret = MATH_DIV(MATH_DIV(-sqrtpiby2*d, p1), p2);
+            } else
+                ret = 0.0f;
             ret = BUILTIN_FRACTION_F32(x) == 0.0f ? QNAN_F32 : ret;
         }
     } else {

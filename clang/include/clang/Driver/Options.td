@@ -3822,10 +3822,17 @@ defm openmp_optimistic_collapse : BoolFOption<"openmp-optimistic-collapse",
   NegFlag<SetFalse>, BothFlags<[NoArgumentUnused, HelpHidden], []>>;
 def static_openmp: Flag<["-"], "static-openmp">,
   HelpText<"Use the static host OpenMP runtime while linking.">;
-def opaque_offload_linker : Flag<["--"], "opaque-offload-linker">, Visibility<[ClangOption, CC1Option]>, Group<f_Group>,
-  HelpText<"Build/link omp offload binary, construct opaque cmd list instead of single clang-linker-wrapper cmd.">;
-def no_opaque_offload_linker : Flag<["--"], "no-opaque-offload-linker">, Visibility<[ClangOption, CC1Option]>, Group<f_Group>,
-  HelpText<"Build/link omp offload binary, using single clang-linker-wrapper cmd.">;
+def opaque_offload_linker
+    : Flag<["--"], "opaque-offload-linker">,
+      Visibility<[ClangOption, FlangOption]>,
+      Group<f_Group>,
+      HelpText<"Build/link omp offload binary, construct opaque cmd list "
+               "instead of single clang-linker-wrapper cmd.">;
+def no_opaque_offload_linker : Flag<["--"], "no-opaque-offload-linker">,
+                               Visibility<[ClangOption, FlangOption]>,
+                               Group<f_Group>,
+                               HelpText<"Build/link omp offload binary, using "
+                                        "single clang-linker-wrapper cmd.">;
 def fopenmp_new_driver : Flag<["-"], "fopenmp-new-driver">, Flags<[HelpHidden]>,
   HelpText<"Use the new driver for OpenMP offloading.">;
 def fno_openmp_new_driver : Flag<["-"], "fno-openmp-new-driver">,
@@ -6545,11 +6552,11 @@ def mavx10_1_256 : Flag<["-"], "mavx10.1-256">, Group<m_x86_AVX10_Features_Group
 def mno_avx10_1_256 : Flag<["-"], "mno-avx10.1-256">, Group<m_x86_AVX10_Features_Group>;
 def mavx10_1_512 : Flag<["-"], "mavx10.1-512">, Group<m_x86_AVX10_Features_Group>;
 def mno_avx10_1_512 : Flag<["-"], "mno-avx10.1-512">, Alias<mno_avx10_1_256>;
-def mavx10_1 : Flag<["-"], "mavx10.1">, Flags<[Unsupported]>;
-def mno_avx10_1 : Flag<["-"], "mno-avx10.1">, Flags<[Unsupported]>;
+def mavx10_1 : Flag<["-"], "mavx10.1">, Group<m_x86_AVX10_Features_Group>;
+def mno_avx10_1 : Flag<["-"], "mno-avx10.1">, Group<m_x86_AVX10_Features_Group>;
 def mavx10_2_256 : Flag<["-"], "mavx10.2-256">, Group<m_x86_AVX10_Features_Group>;
 def mavx10_2_512 : Flag<["-"], "mavx10.2-512">, Group<m_x86_AVX10_Features_Group>;
-def mavx10_2 : Flag<["-"], "mavx10.2">, Alias<mavx10_2_512>;
+def mavx10_2 : Flag<["-"], "mavx10.2">, Group<m_x86_AVX10_Features_Group>;
 def mno_avx10_2 : Flag<["-"], "mno-avx10.2">, Group<m_x86_AVX10_Features_Group>;
 def mavx2 : Flag<["-"], "mavx2">, Group<m_x86_Features_Group>;
 def mno_avx2 : Flag<["-"], "mno-avx2">, Group<m_x86_Features_Group>;

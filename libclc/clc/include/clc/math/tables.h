@@ -64,13 +64,13 @@ TABLE_FUNCTION_DECL(float2, log10_tbl);
 TABLE_FUNCTION_DECL(uint4, pibits_tbl);
 TABLE_FUNCTION_DECL(float2, sinhcosh_tbl);
 TABLE_FUNCTION_DECL(float2, cbrt_tbl);
-TABLE_FUNCTION_DECL(float, exp_tbl);
 
 CLC_TABLE_FUNCTION_DECL(float, log_inv_tbl_ep_head);
 CLC_TABLE_FUNCTION_DECL(float, log_inv_tbl_ep_tail);
 CLC_TABLE_FUNCTION_DECL(float, loge_tbl_lo);
 CLC_TABLE_FUNCTION_DECL(float, loge_tbl_hi);
 CLC_TABLE_FUNCTION_DECL(float, log_inv_tbl);
+CLC_TABLE_FUNCTION_DECL(float, exp_tbl);
 CLC_TABLE_FUNCTION_DECL(float, exp_tbl_ep_head);
 CLC_TABLE_FUNCTION_DECL(float, exp_tbl_ep_tail);
 
@@ -78,7 +78,6 @@ CLC_TABLE_FUNCTION_DECL(float, exp_tbl_ep_tail);
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
-TABLE_FUNCTION_DECL(double2, ln_tbl);
 CLC_TABLE_FUNCTION_DECL(double, ln_tbl_lo);
 CLC_TABLE_FUNCTION_DECL(double, ln_tbl_hi);
 CLC_TABLE_FUNCTION_DECL(double, atan_jby256_tbl_head);

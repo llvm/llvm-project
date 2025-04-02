@@ -260,6 +260,10 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genAll,
      {{{"mask", asAddr}, {"dim", asValue}}},
      /*isElemental=*/false},
+    {"all_sync",
+     &I::genVoteAllSync,
+     {{{"mask", asValue}, {"pred", asValue}}},
+     /*isElemental=*/false},
     {"allocated",
      &I::genAllocated,
      {{{"array", asInquired}, {"scalar", asInquired}}},
@@ -752,6 +756,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"parity",
      &I::genParity,
      {{{"mask", asBox}, {"dim", asValue}}},
+     /*isElemental=*/false},
+    {"perror",
+     &I::genPerror,
+     {{{"string", asBox}}},
      /*isElemental=*/false},
     {"popcnt", &I::genPopcnt},
     {"poppar", &I::genPoppar},
@@ -6491,6 +6499,21 @@ IntrinsicLibrary::genMatchAllSync(mlir::Type resultType,
   return value;
 }
 
+// ALL_SYNC
+mlir::Value IntrinsicLibrary::genVoteAllSync(mlir::Type resultType,
+                                             llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+
+  llvm::StringRef funcName = "llvm.nvvm.vote.all.sync";
+  mlir::MLIRContext *context = builder.getContext();
+  mlir::Type i32Ty = builder.getI32Type();
+  mlir::FunctionType ftype =
+      mlir::FunctionType::get(context, {i32Ty, i32Ty}, {i32Ty});
+  auto funcOp = builder.createFunction(loc, funcName, ftype);
+  llvm::SmallVector<mlir::Value> filteredArgs;
+  return builder.create<fir::CallOp>(loc, funcOp, args).getResult(0);
+}
+
 // MATCH_ANY_SYNC
 mlir::Value
 IntrinsicLibrary::genMatchAnySync(mlir::Type resultType,
@@ -7156,6 +7179,17 @@ IntrinsicLibrary::genParity(mlir::Type resultType,
   // Call runtime. The runtime is allocating the result.
   fir::runtime::genParityDescriptor(builder, loc, resultIrBox, mask, dim);
   return readAndAddCleanUp(resultMutableBox, resultType, "PARITY");
+}
+
+// PERROR
+void IntrinsicLibrary::genPerror(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+
+  fir::ExtendedValue str = args[0];
+  const auto *box = str.getBoxOf<fir::BoxValue>();
+  mlir::Value addr =
+      builder.create<fir::BoxAddrOp>(loc, box->getMemTy(), fir::getBase(*box));
+  fir::runtime::genPerror(builder, loc, addr);
 }
 
 // POPCNT

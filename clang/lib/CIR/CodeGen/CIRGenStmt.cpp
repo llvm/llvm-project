@@ -75,6 +75,10 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
 
   case Stmt::ForStmtClass:
     return emitForStmt(cast<ForStmt>(*s));
+  case Stmt::WhileStmtClass:
+    return emitWhileStmt(cast<WhileStmt>(*s));
+  case Stmt::DoStmtClass:
+    return emitDoStmt(cast<DoStmt>(*s));
 
   case Stmt::OMPScopeDirectiveClass:
   case Stmt::OMPErrorDirectiveClass:
@@ -97,8 +101,6 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::SYCLKernelCallStmtClass:
   case Stmt::IfStmtClass:
   case Stmt::SwitchStmtClass:
-  case Stmt::WhileStmtClass:
-  case Stmt::DoStmtClass:
   case Stmt::CoroutineBodyStmtClass:
   case Stmt::CoreturnStmtClass:
   case Stmt::CXXTryStmtClass:
@@ -385,5 +387,112 @@ mlir::LogicalResult CIRGenFunction::emitForStmt(const ForStmt &s) {
     return res;
 
   terminateBody(builder, forOp.getBody(), getLoc(s.getEndLoc()));
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRGenFunction::emitDoStmt(const DoStmt &s) {
+  cir::DoWhileOp doWhileOp;
+
+  // TODO: pass in array of attributes.
+  auto doStmtBuilder = [&]() -> mlir::LogicalResult {
+    mlir::LogicalResult loopRes = mlir::success();
+    assert(!cir::MissingFeatures::loopInfoStack());
+    // From LLVM: if there are any cleanups between here and the loop-exit
+    // scope, create a block to stage a loop exit along.
+    // We probably already do the right thing because of ScopeOp, but make
+    // sure we handle all cases.
+    assert(!cir::MissingFeatures::requiresCleanups());
+
+    doWhileOp = builder.createDoWhile(
+        getLoc(s.getSourceRange()),
+        /*condBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          assert(!cir::MissingFeatures::createProfileWeightsForLoop());
+          assert(!cir::MissingFeatures::emitCondLikelihoodViaExpectIntrinsic());
+          // C99 6.8.5p2/p4: The first substatement is executed if the
+          // expression compares unequal to 0. The condition must be a
+          // scalar type.
+          mlir::Value condVal = evaluateExprAsBool(s.getCond());
+          builder.createCondition(condVal);
+        },
+        /*bodyBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          // The scope of the do-while loop body is a nested scope.
+          if (emitStmt(s.getBody(), /*useCurrentScope=*/false).failed())
+            loopRes = mlir::failure();
+          emitStopPoint(&s);
+        });
+    return loopRes;
+  };
+
+  mlir::LogicalResult res = mlir::success();
+  mlir::Location scopeLoc = getLoc(s.getSourceRange());
+  builder.create<cir::ScopeOp>(scopeLoc, /*scopeBuilder=*/
+                               [&](mlir::OpBuilder &b, mlir::Location loc) {
+                                 LexicalScope lexScope{
+                                     *this, loc, builder.getInsertionBlock()};
+                                 res = doStmtBuilder();
+                               });
+
+  if (res.failed())
+    return res;
+
+  terminateBody(builder, doWhileOp.getBody(), getLoc(s.getEndLoc()));
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRGenFunction::emitWhileStmt(const WhileStmt &s) {
+  cir::WhileOp whileOp;
+
+  // TODO: pass in array of attributes.
+  auto whileStmtBuilder = [&]() -> mlir::LogicalResult {
+    mlir::LogicalResult loopRes = mlir::success();
+    assert(!cir::MissingFeatures::loopInfoStack());
+    // From LLVM: if there are any cleanups between here and the loop-exit
+    // scope, create a block to stage a loop exit along.
+    // We probably already do the right thing because of ScopeOp, but make
+    // sure we handle all cases.
+    assert(!cir::MissingFeatures::requiresCleanups());
+
+    whileOp = builder.createWhile(
+        getLoc(s.getSourceRange()),
+        /*condBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          assert(!cir::MissingFeatures::createProfileWeightsForLoop());
+          assert(!cir::MissingFeatures::emitCondLikelihoodViaExpectIntrinsic());
+          mlir::Value condVal;
+          // If the for statement has a condition scope,
+          // emit the local variable declaration.
+          if (s.getConditionVariable())
+            emitDecl(*s.getConditionVariable());
+          // C99 6.8.5p2/p4: The first substatement is executed if the
+          // expression compares unequal to 0. The condition must be a
+          // scalar type.
+          condVal = evaluateExprAsBool(s.getCond());
+          builder.createCondition(condVal);
+        },
+        /*bodyBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          // The scope of the while loop body is a nested scope.
+          if (emitStmt(s.getBody(), /*useCurrentScope=*/false).failed())
+            loopRes = mlir::failure();
+          emitStopPoint(&s);
+        });
+    return loopRes;
+  };
+
+  mlir::LogicalResult res = mlir::success();
+  mlir::Location scopeLoc = getLoc(s.getSourceRange());
+  builder.create<cir::ScopeOp>(scopeLoc, /*scopeBuilder=*/
+                               [&](mlir::OpBuilder &b, mlir::Location loc) {
+                                 LexicalScope lexScope{
+                                     *this, loc, builder.getInsertionBlock()};
+                                 res = whileStmtBuilder();
+                               });
+
+  if (res.failed())
+    return res;
+
+  terminateBody(builder, whileOp.getBody(), getLoc(s.getEndLoc()));
   return mlir::success();
 }

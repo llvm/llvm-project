@@ -27,33 +27,37 @@
 // ELF-WARNING: is not an ELF image, so notes cannot be added to it.
 // CHECK-IR: target triple = "x86_64-pc-linux-gnu"
 
-// CHECK-IR-DAG: [[ENTTY:%.+]] = type { ptr, ptr, i{{32|64}}, i32, i32 }
+// CHECK-IR-DAG: [[ENTTY:%.+]] = type { i64, i16, i16, i32, ptr, ptr, i64, i64, ptr }
 // CHECK-IR-DAG: [[IMAGETY:%.+]] = type { ptr, ptr, ptr, ptr }
 // CHECK-IR-DAG: [[DESCTY:%.+]] = type { i32, ptr, ptr, ptr }
-
-// CHECK-IR: [[ENTBEGIN:@.+]] = external hidden constant [[ENTTY]]
-// CHECK-IR: [[ENTEND:@.+]] = external hidden constant [[ENTTY]]
-
-// CHECK-IR: [[DUMMY:@.+]] = weak hidden constant [0 x [[ENTTY]]] zeroinitializer, section "omp_offloading_entries"
+//
+// CHECK-IR: [[ENTBEGIN:@.+]] = external hidden constant [0 x [[ENTTY]]]
+// CHECK-IR: [[ENTEND:@.+]] = external hidden constant [0 x [[ENTTY]]]
+// CHECK-IR: [[DUMMY:@.+]] = internal constant [0 x [[ENTTY]]] zeroinitializer, section "llvm_offload_entries", align 8
+// CHECK-IR: @llvm.compiler.used = appending global [1 x ptr] [ptr [[DUMMY]]], section "llvm.metadata"
 
 // CHECK-IR: [[BIN:@.+]] = internal unnamed_addr constant [[[SIZE:[0-9]+]] x i8] c"\10\FF\10\AD{{.*}}"
-
-// CHECK-IR: [[IMAGES:@.+]] = internal unnamed_addr constant [1 x [[IMAGETY]]] [[[IMAGETY]] { ptr [[BIN]], ptr getelementptr ([[[SIZE]] x i8], ptr [[BIN]], i64 0, i64 160), ptr [[ENTBEGIN]], ptr [[ENTEND]] }]
-
+  ffloading.device_image = internal unnamed_addr constant [[[SIZE]] x i8] c"\10\FF\10\AD\01\00\00\0
+// CHECK-IR: [[IMAGES:@.+]] = internal unnamed_addr constant [1 x %__tgt_device_image] [%__tgt_device_image { ptr getelementptr ([[[SIZE]] x i8], ptr [[BIN]], i64 0, i64 136), ptr getelementptr ([[[SIZE]] x i8], ptr [[BIN]], i64 0, i64 159), ptr [[ENTBEGIN]], ptr [[ENTEND]] }]
 // CHECK-IR: [[DESC:@.+]] = internal constant [[DESCTY]] { i32 1, ptr [[IMAGES]], ptr [[ENTBEGIN]], ptr [[ENTEND]] }
+// CHECK-IR: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 101, ptr [[REGFN:@.+]], ptr null }]
 
-// CHECK-IR: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr [[REGFN:@.+]], ptr null }]
-
-// CHECK-IR: define internal void [[REGFN]]()
+// CHECK-IR: define internal void [[REGFN]]() section ".text.startup" {
 // CHECK-IR:   call void @__tgt_register_lib(ptr [[DESC]])
+// CHECK-IR:   %0 = call i32 @atexit(ptr @.omp_offloading.descriptor_unreg)
 // CHECK-IR:   ret void
+// CHECK-IR: }
 
 // CHECK-IR: declare void @__tgt_register_lib(ptr)
 
+// CHECK-IR: declare i32 @atexit(ptr)
+
+// CHECK-IR: define internal void [[DESC]]_unreg() section ".text.startup" {
 // CHECK-IR:   call void @__tgt_unregister_lib(ptr [[DESC]])
 // CHECK-IR:   ret void
+// CHECK-IR: }
 
-// CHECK-IR: declare void @__tgt_unregister_lib(ptr)
+// CHECK_IR: declare void @__tgt_unregister_lib(ptr)
 
 // Check that clang-offload-wrapper adds LLVMOMPOFFLOAD notes
 // into the ELF offload images:

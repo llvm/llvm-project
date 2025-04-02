@@ -435,6 +435,7 @@ ParseResult Parser::parseOptionalKeywordOrString(std::string *result) {
 
 //===----------------------------------------------------------------------===//
 // Resource Parsing
+//===----------------------------------------------------------------------===//
 
 FailureOr<AsmDialectResourceHandle>
 Parser::parseResourceHandle(const OpAsmDialectInterface *dialect,
@@ -478,6 +479,7 @@ Parser::parseResourceHandle(Dialect *dialect) {
 
 //===----------------------------------------------------------------------===//
 // Code Completion
+//===----------------------------------------------------------------------===//
 
 ParseResult Parser::codeCompleteDialectName() {
   state.codeCompleteContext->completeDialectName();
