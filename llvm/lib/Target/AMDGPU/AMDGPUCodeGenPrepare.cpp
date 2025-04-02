@@ -1562,15 +1562,15 @@ void AMDGPUCodeGenPrepareImpl::expandDivRem64(BinaryOperator &I) const {
 }
 
 Type *findSmallestLegalBits(Instruction *I, int OrigBit, int MaxBitsNeeded,
-                            const TargetLowering *TLI, const DataLayout &DL) {
+                            const SITargetLowering *TLI, const DataLayout &DL) {
   if (MaxBitsNeeded >= OrigBit)
     return nullptr;
 
   Type *NewType = I->getType()->getWithNewBitWidth(MaxBitsNeeded);
+  unsigned ISDOpc = TLI->InstructionOpcodeToISD(I->getOpcode());
   while (OrigBit > MaxBitsNeeded) {
-    if (TLI->isOperationLegalOrCustom(
-            TLI->InstructionOpcodeToISD(I->getOpcode()),
-            TLI->getValueType(DL, NewType, true)))
+    if (TLI->isOperationLegalOrCustom(ISDOpc,
+                                      TLI->getValueType(DL, NewType, true)))
       return NewType;
 
     MaxBitsNeeded *= 2;
@@ -1579,7 +1579,8 @@ Type *findSmallestLegalBits(Instruction *I, int OrigBit, int MaxBitsNeeded,
   return nullptr;
 }
 
-static bool tryNarrowMathIfNoOverflow(Instruction *I, const TargetLowering *TLI,
+static bool tryNarrowMathIfNoOverflow(Instruction *I,
+                                      const SITargetLowering *TLI,
                                       const TargetTransformInfo &TTI,
                                       const DataLayout &DL) {
   unsigned Opc = I->getOpcode();
