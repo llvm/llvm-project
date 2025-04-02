@@ -15,17 +15,17 @@
 ;   }
 ; }
 ;
-; FIXME: These loops are not exchanged at this time due to the problem of
-; profitablity heuristic for vectorization.
+; FIXME: These loops are not exchanged at this time due to the problem in
+; profitability heuristic calculation for vectorization.
 
 ; CHECK:      --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
 ; CHECK-NEXT: Name:            InterchangeNotProfitable
-; CHECK-NEXT: Function:        interchange_necesasry_for_vectorization
+; CHECK-NEXT: Function:        interchange_necessary_for_vectorization
 ; CHECK-NEXT: Args:
 ; CHECK-NEXT:   - String:          Interchanging loops is not considered to improve cache locality nor vectorization.
 ; CHECK-NEXT: ...
-define void @interchange_necesasry_for_vectorization() {
+define void @interchange_necessary_for_vectorization() {
 entry:
   br label %for.i.header
 
@@ -61,14 +61,14 @@ exit:
 }
 
 ; Check that the following innermost loop can be vectorized so that
-; interchangig is unnecessary.
+; interchanging is unnecessary.
 ;
 ; for (int i = 0; i < 256; i++)
 ;   for (int j = 1; j < 256; j++)
 ;     A[i][j-1] = A[i][j] + B[i][j];
 ;
-; FIXME: These loops are exchanged at this time due to the problem of
-; profitablity heuristic for vectorization.
+; FIXME: These loops are exchanged at this time due to the problem in
+; profitability heuristic calculation for vectorization.
 
 ; CHECK:      --- !Passed
 ; CHECK-NEXT: Pass:            loop-interchange
