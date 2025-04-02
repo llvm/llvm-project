@@ -89,7 +89,7 @@ public:
 
   virtual void Dump(Stream &s) = 0;
 
-  StatsDuration::Duration GetIndexTime() { return m_index_time; }
+  virtual StatsDuration::Duration GetIndexTime() { return m_index_time; }
 
   void ResetStatistics() { m_index_time.reset(); }
 

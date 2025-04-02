@@ -65,6 +65,10 @@ public:
   void GetFunctions(const RegularExpression &regex,
                     llvm::function_ref<bool(DWARFDIE die)> callback) override;
 
+  StatsDuration::Duration GetIndexTime() override {
+    return m_fallback.GetIndexTime();
+  }
+
   void Dump(Stream &s) override;
 
 private:
