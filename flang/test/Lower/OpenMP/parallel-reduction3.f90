@@ -27,7 +27,8 @@
 ! CHECK:           %[[VAL_3:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.array<?xi32>>>
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_5:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_4]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
-! CHECK:           %[[VAL_6:.*]] = fir.shape_shift %[[VAL_5]]#0, %[[VAL_5]]#1 : (index, index) -> !fir.shapeshift<1>
+! CHECK:           %[[C1:.*]] = arith.constant 1 : index
+! CHECK:           %[[VAL_6:.*]] = fir.shape_shift %[[C1]], %[[VAL_5]]#1 : (index, index) -> !fir.shapeshift<1>
 ! CHECK:           %[[VAL_7:.*]] = arith.constant 1 : index
 ! CHECK:           fir.do_loop %[[VAL_8:.*]] = %[[VAL_7]] to %[[VAL_5]]#1 step %[[VAL_7]] unordered {
 ! CHECK:             %[[VAL_9:.*]] = fir.array_coor %[[VAL_2]](%[[VAL_6]]) %[[VAL_8]] : (!fir.box<!fir.array<?xi32>>, !fir.shapeshift<1>, index) -> !fir.ref<i32>
@@ -78,7 +79,7 @@
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_21:.*]]) : i32 = (%[[VAL_17]]) to (%[[VAL_18]]) inclusive step (%[[VAL_19]]) {
 ! CHECK:                 %[[VAL_16:.*]]:2 = hlfir.declare %[[VAL_15]] {uniq_name = "_QFsEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:                 %[[VAL_22:.*]]:2 = hlfir.declare %[[VAL_20]] {uniq_name = "_QFsEc"} : (!fir.ref<!fir.box<!fir.array<?xi32>>>) -> (!fir.ref<!fir.box<!fir.array<?xi32>>>, !fir.ref<!fir.box<!fir.array<?xi32>>>)
-! CHECK:                 hlfir.assign %[[VAL_21]] to %[[VAL_16]]#1 : i32, !fir.ref<i32>
+! CHECK:                 hlfir.assign %[[VAL_21]] to %[[VAL_16]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 %[[VAL_23:.*]] = fir.load %[[VAL_22]]#0 : !fir.ref<!fir.box<!fir.array<?xi32>>>
 ! CHECK:                 %[[VAL_24:.*]] = fir.load %[[VAL_16]]#0 : !fir.ref<i32>
 ! CHECK:                 %[[VAL_25:.*]] = arith.constant 0 : index

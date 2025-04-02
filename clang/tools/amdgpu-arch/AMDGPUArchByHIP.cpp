@@ -98,7 +98,7 @@ static std::vector<std::string> getSearchPaths() {
 // Custom comparison function for dll name
 static bool compareVersions(StringRef A, StringRef B) {
   auto ParseVersion = [](StringRef S) -> VersionTuple {
-    unsigned Pos = S.find_last_of('_');
+    size_t Pos = S.find_last_of('_');
     StringRef VerStr = (Pos == StringRef::npos) ? S : S.substr(Pos + 1);
     VersionTuple Vt;
     (void)Vt.tryParse(VerStr);

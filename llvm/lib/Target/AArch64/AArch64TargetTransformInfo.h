@@ -73,8 +73,8 @@ class AArch64TTIImpl : public BasicTTIImplBase<AArch64TTIImpl> {
   /// of the extract(nullptr if user is not known before vectorization) and
   /// 'Idx' being the extract lane.
   InstructionCost getVectorInstrCostHelper(
-      unsigned Opcode, Type *Val, unsigned Index, bool HasRealUse,
-      const Instruction *I = nullptr, Value *Scalar = nullptr,
+      unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+      bool HasRealUse, const Instruction *I = nullptr, Value *Scalar = nullptr,
       ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx = {});
 
 public:

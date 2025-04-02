@@ -89,6 +89,16 @@ DiagnosticBuilder Parser::Diag(const Token &Tok, unsigned DiagID) {
   return Diag(Tok.getLocation(), DiagID);
 }
 
+DiagnosticBuilder Parser::DiagCompat(SourceLocation Loc,
+                                     unsigned CompatDiagId) {
+  return Diag(Loc,
+              DiagnosticIDs::getCXXCompatDiagId(getLangOpts(), CompatDiagId));
+}
+
+DiagnosticBuilder Parser::DiagCompat(const Token &Tok, unsigned CompatDiagId) {
+  return DiagCompat(Tok.getLocation(), CompatDiagId);
+}
+
 /// Emits a diagnostic suggesting parentheses surrounding a
 /// given range.
 ///
@@ -867,8 +877,11 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
     AccessSpecifier AS = AS_none;
     return ParseOpenMPDeclarativeDirectiveWithExtDecl(AS, Attrs);
   }
-  case tok::annot_pragma_openacc:
-    return ParseOpenACCDirectiveDecl();
+  case tok::annot_pragma_openacc: {
+    AccessSpecifier AS = AS_none;
+    return ParseOpenACCDirectiveDecl(AS, Attrs, DeclSpec::TST_unspecified,
+                                     /*TagDecl=*/nullptr);
+  }
   case tok::annot_pragma_ms_pointers_to_members:
     HandlePragmaMSPointersToMembers();
     return nullptr;

@@ -398,8 +398,13 @@ public:
 
   bool Pre(const parser::OpenMPDepobjConstruct &x) {
     PushContext(x.source, llvm::omp::Directive::OMPD_depobj);
-    auto &object{std::get<parser::OmpObject>(x.t)};
-    ResolveOmpObject(object, Symbol::Flag::OmpDependObject);
+    for (auto &arg : x.v.Arguments().v) {
+      if (auto *locator{std::get_if<parser::OmpLocator>(&arg.u)}) {
+        if (auto *object{std::get_if<parser::OmpObject>(&locator->u)}) {
+          ResolveOmpObject(*object, Symbol::Flag::OmpDependObject);
+        }
+      }
+    }
     return true;
   }
   void Post(const parser::OpenMPDepobjConstruct &) { PopContext(); }
@@ -2301,7 +2306,7 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
             // the scope of the parallel region, and not in this scope.
             // TODO: check whether this should be caught in IsObjectWithDSA
             !symbol->test(Symbol::Flag::OmpPrivate)) {
-          if (symbol->test(Symbol::Flag::CrayPointee)) {
+          if (symbol->GetUltimate().test(Symbol::Flag::CrayPointee)) {
             std::string crayPtrName{
                 semantics::GetCrayPointer(*symbol).name().ToString()};
             if (!IsObjectWithDSA(*currScope().FindSymbol(crayPtrName)))

@@ -16,16 +16,7 @@ subnormal_config.cl
 ../../generic/lib/math/atanh.cl
 ../../generic/lib/math/atanpi.cl
 ../../generic/lib/math/cbrt.cl
-../../generic/lib/math/clc_exp10.cl
-../../generic/lib/math/clc_fmod.cl
-../../generic/lib/math/clc_pow.cl
-../../generic/lib/math/clc_pown.cl
-../../generic/lib/math/clc_powr.cl
-../../generic/lib/math/clc_remainder.cl
-../../generic/lib/math/clc_remquo.cl
-../../generic/lib/math/clc_rootn.cl
 ../../generic/lib/math/clc_tan.cl
-../../generic/lib/math/clc_tanpi.cl
 ../../generic/lib/math/cos.cl
 ../../generic/lib/math/cosh.cl
 ../../generic/lib/math/cospi.cl
@@ -34,7 +25,6 @@ subnormal_config.cl
 ../../generic/lib/math/exp.cl
 ../../generic/lib/math/exp10.cl
 ../../generic/lib/math/exp2.cl
-../../generic/lib/math/exp_helper.cl
 ../../generic/lib/math/expm1.cl
 ../../generic/lib/math/fdim.cl
 ../../generic/lib/math/fmod.cl

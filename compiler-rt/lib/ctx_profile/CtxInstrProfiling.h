@@ -142,17 +142,19 @@ struct ContextRoot {
 // The current design trades off a bit of overhead at the first time a function
 // is encountered *for flat profiling* for avoiding size penalties.
 struct FunctionData {
+#define _PTRDECL(T, N) T *N = nullptr;
+#define _VOLATILE_PTRDECL(T, N) T *volatile N = nullptr;
+#define _MUTEXDECL(N) ::__sanitizer::SpinMutex N;
+  CTXPROF_FUNCTION_DATA(_PTRDECL, _VOLATILE_PTRDECL, _MUTEXDECL)
+#undef _PTRDECL
+#undef _VOLATILE_PTRDECL
+#undef _MUTEXDECL
+
   // Constructor for test only - since this is expected to be
   // initialized by the compiler.
-  FunctionData() { Mutex.Init(); }
-
-  FunctionData *Next = nullptr;
-  ContextRoot *volatile CtxRoot = nullptr;
-  ContextNode *volatile FlatCtx = nullptr;
-
+  FunctionData() = default;
   ContextRoot *getOrAllocateContextRoot();
 
-  ::__sanitizer::StaticSpinMutex Mutex;
   // If (unlikely) StaticSpinMutex internals change, we need to modify the LLVM
   // instrumentation lowering side because it is responsible for allocating and
   // zero-initializing ContextRoots.

@@ -605,7 +605,7 @@ getOffsetAndDataFragment(const MCSymbol &Symbol, uint32_t &RelocOffset,
       return std::nullopt;
     }
 
-    if (OffsetVal.getSymB())
+    if (OffsetVal.getSubSym())
       return std::make_pair(false,
                             std::string(".reloc symbol offset is not "
                                         "representable"));
@@ -672,7 +672,7 @@ MCObjectStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
         MCFixup::create(OffsetVal.getConstant(), Expr, Kind, Loc));
     return std::nullopt;
   }
-  if (OffsetVal.getSymB())
+  if (OffsetVal.getSubSym())
     return std::make_pair(false,
                           std::string(".reloc offset is not representable"));
 

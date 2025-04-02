@@ -32,6 +32,9 @@ Possible fixes:
     object types.
   - passing ``this`` pointer as parameter 
 
+Options
+-------
+
 .. option:: FunctionWrapperTypes
 
   A semicolon-separated list of names of types. Used to specify function
