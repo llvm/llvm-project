@@ -211,14 +211,14 @@ static void updateSupportedARMFeatures(Ctx &ctx,
 
 struct KnownAArch64BuildAttrSubsections {
   struct PauthSubSection {
-    std::optional<unsigned> tagPlatform = 0;
-    std::optional<unsigned> tagSchema = 0;
+    unsigned tagPlatform = 0;
+    unsigned tagSchema = 0;
     bool ignore = 1;
   } pauth;
   struct FAndBSubSection {
-    std::optional<unsigned> tagBTI = 0;
-    std::optional<unsigned> tagPAC = 0;
-    std::optional<unsigned> tagGCS = 0;
+    unsigned tagBTI = 0;
+    unsigned tagPAC = 0;
+    unsigned tagGCS = 0;
     bool ignore = 1;
   } fAndB;
 };
@@ -726,16 +726,16 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
             this->aarch64PauthAbiCoreInfoStorage =
                 std::make_unique<std::array<uint8_t, 16>>();
             uint64_t values[2] = {
-                static_cast<uint64_t>(*subSections.pauth.tagPlatform),
-                static_cast<uint64_t>(*subSections.pauth.tagSchema)};
+                static_cast<uint64_t>(subSections.pauth.tagPlatform),
+                static_cast<uint64_t>(subSections.pauth.tagSchema)};
             std::memcpy(this->aarch64PauthAbiCoreInfoStorage->data(), values,
                         sizeof(values));
             this->aarch64PauthAbiCoreInfo =
                 *(this->aarch64PauthAbiCoreInfoStorage);
             this->andFeatures = 0;
-            this->andFeatures |= (*subSections.fAndB.tagBTI) << 0;
-            this->andFeatures |= (*subSections.fAndB.tagPAC) << 1;
-            this->andFeatures |= (*subSections.fAndB.tagGCS) << 2;
+            this->andFeatures |= (subSections.fAndB.tagBTI) << 0;
+            this->andFeatures |= (subSections.fAndB.tagPAC) << 1;
+            this->andFeatures |= (subSections.fAndB.tagGCS) << 2;
           } else {
             Warn(ctx) << &isec
                       << ": object file conatains both `.note.gnu.property` "
