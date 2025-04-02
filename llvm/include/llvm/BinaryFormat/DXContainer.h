@@ -320,7 +320,7 @@ ArrayRef<EnumEntry<ResourceKind>> getResourceKinds();
 
 #define RESOURCE_FLAG(Index, Enum) bool Enum = false;
 struct ResourceFlags {
-  ResourceFlags() {};
+  ResourceFlags() : Flags(0U) {};
   struct FlagsBits {
 #include "llvm/BinaryFormat/DXContainerConstants.def"
   };

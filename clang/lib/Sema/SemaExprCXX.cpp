@@ -60,30 +60,10 @@ ParsedType Sema::getInheritingConstructorName(CXXScopeSpec &SS,
                                               SourceLocation NameLoc,
                                               const IdentifierInfo &Name) {
   NestedNameSpecifier *NNS = SS.getScopeRep();
+  if ([[maybe_unused]] const IdentifierInfo *II = NNS->getAsIdentifier())
+    assert(II == &Name && "not a constructor name");
 
-  // Convert the nested-name-specifier into a type.
-  QualType Type;
-  switch (NNS->getKind()) {
-  case NestedNameSpecifier::TypeSpec:
-  case NestedNameSpecifier::TypeSpecWithTemplate:
-    Type = QualType(NNS->getAsType(), 0);
-    break;
-
-  case NestedNameSpecifier::Identifier:
-    // Strip off the last layer of the nested-name-specifier and build a
-    // typename type for it.
-    assert(NNS->getAsIdentifier() == &Name && "not a constructor name");
-    Type = Context.getDependentNameType(
-        ElaboratedTypeKeyword::None, NNS->getPrefix(), NNS->getAsIdentifier());
-    break;
-
-  case NestedNameSpecifier::Global:
-  case NestedNameSpecifier::Super:
-  case NestedNameSpecifier::Namespace:
-  case NestedNameSpecifier::NamespaceAlias:
-    llvm_unreachable("Nested name specifier is not a type for inheriting ctor");
-  }
-
+  QualType Type(NNS->translateToType(Context), 0);
   // This reference to the type is located entirely at the location of the
   // final identifier in the qualified-id.
   return CreateParsedType(Type,
@@ -528,7 +508,6 @@ bool Sema::checkLiteralOperatorId(const CXXScopeSpec &SS,
   switch (SS.getScopeRep()->getKind()) {
   case NestedNameSpecifier::Identifier:
   case NestedNameSpecifier::TypeSpec:
-  case NestedNameSpecifier::TypeSpecWithTemplate:
     // Per C++11 [over.literal]p2, literal operators can only be declared at
     // namespace scope. Therefore, this unqualified-id cannot name anything.
     // Reject it early, because we have no AST representation for this in the
@@ -9572,7 +9551,8 @@ concepts::NestedRequirement *
 Sema::BuildNestedRequirement(Expr *Constraint) {
   ConstraintSatisfaction Satisfaction;
   if (!Constraint->isInstantiationDependent() &&
-      CheckConstraintSatisfaction(nullptr, {Constraint}, /*TemplateArgs=*/{},
+      CheckConstraintSatisfaction(nullptr, AssociatedConstraint(Constraint),
+                                  /*TemplateArgs=*/{},
                                   Constraint->getSourceRange(), Satisfaction))
     return nullptr;
   return new (Context) concepts::NestedRequirement(Context, Constraint,

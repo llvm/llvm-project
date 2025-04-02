@@ -164,8 +164,7 @@ private:
       unfold(&DTU, LI, SIToUnfold, &NewSIsToUnfold, &NewBBs);
 
       // Put newly discovered select instructions into the work list.
-      for (const SelectInstToUnfold &NewSIToUnfold : NewSIsToUnfold)
-        Stack.push_back(NewSIToUnfold);
+      llvm::append_range(Stack, NewSIsToUnfold);
     }
   }
 
@@ -400,7 +399,7 @@ struct ThreadingPath {
   void push_back(BasicBlock *BB) { Path.push_back(BB); }
   void push_front(BasicBlock *BB) { Path.push_front(BB); }
   void appendExcludingFirst(const PathType &OtherPath) {
-    Path.insert(Path.end(), OtherPath.begin() + 1, OtherPath.end());
+    llvm::append_range(Path, llvm::drop_begin(OtherPath));
   }
 
   void print(raw_ostream &OS) const {
@@ -957,8 +956,7 @@ private:
     DefMap NewDefs;
 
     SmallSet<BasicBlock *, 16> BlocksToClean;
-    for (BasicBlock *BB : successors(SwitchBlock))
-      BlocksToClean.insert(BB);
+    BlocksToClean.insert_range(successors(SwitchBlock));
 
     for (ThreadingPath &TPath : SwitchPaths->getThreadingPaths()) {
       createExitPath(NewDefs, TPath, DuplicateMap, BlocksToClean, &DTU);

@@ -43,11 +43,11 @@ public:
   };
 
 private:
-  const Specifier Kind;
+  const Specifier specifier;
   const MCExpr *Expr;
 
-  explicit VEMCExpr(Specifier Kind, const MCExpr *Expr)
-      : Kind(Kind), Expr(Expr) {}
+  explicit VEMCExpr(Specifier S, const MCExpr *Expr)
+      : specifier(S), Expr(Expr) {}
 
 public:
   /// @name Construction
@@ -60,13 +60,13 @@ public:
   /// @{
 
   /// getOpcode - Get the kind of this expression.
-  Specifier getSpecifier() const { return Kind; }
+  Specifier getSpecifier() const { return specifier; }
 
   /// getSubExpr - Get the child of this expression.
   const MCExpr *getSubExpr() const { return Expr; }
 
   /// getFixupKind - Get the fixup kind of this expression.
-  VE::Fixups getFixupKind() const { return getFixupKind(Kind); }
+  VE::Fixups getFixupKind() const { return getFixupKind(specifier); }
 
   /// @}
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;

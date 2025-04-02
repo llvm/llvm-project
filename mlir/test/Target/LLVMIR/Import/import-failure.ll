@@ -64,17 +64,6 @@ define void @unsupported_argument(i64 %arg1) {
 
 ; // -----
 
-; global_dtors with non-null data fields cannot be represented in MLIR.
-; CHECK:      <unknown>
-; CHECK-SAME: error: unhandled global variable: @llvm.global_dtors
-@llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @foo, ptr @foo }]
-
-define void @foo() {
-  ret void
-}
-
-; // -----
-
 ; CHECK:      import-failure.ll
 ; CHECK-SAME: error: unsupported TBAA node format: !{{.*}} = !{!{{.*}}, i64 1, !"omnipotent char"}
 define dso_local void @tbaa(ptr %0) {

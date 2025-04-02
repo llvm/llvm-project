@@ -1,8 +1,8 @@
 ; RUN: llc -verify-machineinstrs < %s | FileCheck %s
 
 ; CHECK-LABEL: "$cppxdata$?crash@@YAXH@Z":
-; CHECK:	.long	("$stateUnwindMap$?crash@@YAXH@Z")
-; CHECK:	.long	("$ip2state$?crash@@YAXH@Z")
+; CHECK:	.long	"$stateUnwindMap$?crash@@YAXH@Z"
+; CHECK:	.long	"$ip2state$?crash@@YAXH@Z"
 
 ; CHECK-LABEL: "$stateUnwindMap$?crash@@YAXH@Z":
 ; CHECK:	.long	-1

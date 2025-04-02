@@ -305,6 +305,8 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
   // since it forwards only to non-live value(s) (%1#1).
   Operation *lastReturnOp = funcOp.back().getTerminator();
   size_t numReturns = lastReturnOp->getNumOperands();
+  if (numReturns == 0)
+    return;
   BitVector nonLiveRets(numReturns, true);
   for (SymbolTable::SymbolUse use : uses) {
     Operation *callOp = use.getUser();

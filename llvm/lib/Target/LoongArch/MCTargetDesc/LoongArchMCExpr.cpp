@@ -49,8 +49,7 @@ bool LoongArchMCExpr::evaluateAsRelocatableImpl(
   if (!getSubExpr()->evaluateAsRelocatable(Res, nullptr))
     return false;
 
-  Res =
-      MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(), specifier);
+  Res.setSpecifier(specifier);
   // Custom fixup types are not valid with symbol difference expressions.
   return Res.getSymB() ? specifier == VK_None : true;
 }

@@ -1786,15 +1786,6 @@ enum class AutoTypeKeyword {
   GNUAutoType
 };
 
-enum class SubstTemplateTypeParmTypeFlag {
-  None,
-
-  /// Whether to expand the pack using the stored PackIndex in place. This is
-  /// useful for e.g. substituting into an atomic constraint expression, where
-  /// that expression is part of an unexpanded pack.
-  ExpandPacksInPlace,
-};
-
 enum class ArraySizeModifier;
 enum class ElaboratedTypeKeyword;
 enum class VectorKind;
@@ -2163,9 +2154,6 @@ protected:
 
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasNonCanonicalUnderlyingType : 1;
-
-    LLVM_PREFERRED_TYPE(SubstTemplateTypeParmTypeFlag)
-    unsigned SubstitutionFlag : 1;
 
     // The index of the template parameter this substitution represents.
     unsigned Index : 15;
@@ -3812,6 +3800,19 @@ public:
 ///   ++x;
 ///   int Z[x];
 /// }
+///
+/// FIXME: Even constant array types might be represented by a
+/// VariableArrayType, as in:
+///
+///   void func(int n) {
+///     int array[7][n];
+///   }
+///
+/// Even though 'array' is a constant-size array of seven elements of type
+/// variable-length array of size 'n', it will be represented as a
+/// VariableArrayType whose 'SizeExpr' is an IntegerLiteral whose value is 7.
+/// Instead, this should be a ConstantArrayType whose element is a
+/// VariableArrayType, which models the type better.
 class VariableArrayType : public ArrayType {
   friend class ASTContext; // ASTContext creates these.
 
@@ -6396,8 +6397,7 @@ class SubstTemplateTypeParmType final
   Decl *AssociatedDecl;
 
   SubstTemplateTypeParmType(QualType Replacement, Decl *AssociatedDecl,
-                            unsigned Index, std::optional<unsigned> PackIndex,
-                            SubstTemplateTypeParmTypeFlag Flag);
+                            unsigned Index, std::optional<unsigned> PackIndex);
 
 public:
   /// Gets the type that was substituted for the template
@@ -6426,31 +6426,21 @@ public:
     return SubstTemplateTypeParmTypeBits.PackIndex - 1;
   }
 
-  SubstTemplateTypeParmTypeFlag getSubstitutionFlag() const {
-    return static_cast<SubstTemplateTypeParmTypeFlag>(
-        SubstTemplateTypeParmTypeBits.SubstitutionFlag);
-  }
-
   bool isSugared() const { return true; }
   QualType desugar() const { return getReplacementType(); }
 
   void Profile(llvm::FoldingSetNodeID &ID) {
     Profile(ID, getReplacementType(), getAssociatedDecl(), getIndex(),
-            getPackIndex(), getSubstitutionFlag());
+            getPackIndex());
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, QualType Replacement,
                       const Decl *AssociatedDecl, unsigned Index,
-                      std::optional<unsigned> PackIndex,
-                      SubstTemplateTypeParmTypeFlag Flag) {
+                      std::optional<unsigned> PackIndex) {
     Replacement.Profile(ID);
     ID.AddPointer(AssociatedDecl);
     ID.AddInteger(Index);
     ID.AddInteger(PackIndex ? *PackIndex - 1 : 0);
-    ID.AddInteger(llvm::to_underlying(Flag));
-    assert((Flag != SubstTemplateTypeParmTypeFlag::ExpandPacksInPlace ||
-            PackIndex) &&
-           "ExpandPacksInPlace needs a valid PackIndex");
   }
 
   static bool classof(const Type *T) {
@@ -7085,21 +7075,17 @@ class DependentTemplateSpecializationType : public TypeWithKeyword,
                                             public llvm::FoldingSetNode {
   friend class ASTContext; // ASTContext creates these
 
-  /// The nested name specifier containing the qualifier.
-  NestedNameSpecifier *NNS;
-
-  /// The identifier of the template.
-  const IdentifierInfo *Name;
+  DependentTemplateStorage Name;
 
   DependentTemplateSpecializationType(ElaboratedTypeKeyword Keyword,
-                                      NestedNameSpecifier *NNS,
-                                      const IdentifierInfo *Name,
+                                      const DependentTemplateStorage &Name,
                                       ArrayRef<TemplateArgument> Args,
                                       QualType Canon);
 
 public:
-  NestedNameSpecifier *getQualifier() const { return NNS; }
-  const IdentifierInfo *getIdentifier() const { return Name; }
+  const DependentTemplateStorage &getDependentTemplateName() const {
+    return Name;
+  }
 
   ArrayRef<TemplateArgument> template_arguments() const {
     return {reinterpret_cast<const TemplateArgument *>(this + 1),
@@ -7110,14 +7096,12 @@ public:
   QualType desugar() const { return QualType(this, 0); }
 
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
-    Profile(ID, Context, getKeyword(), NNS, Name, template_arguments());
+    Profile(ID, Context, getKeyword(), Name, template_arguments());
   }
 
-  static void Profile(llvm::FoldingSetNodeID &ID,
-                      const ASTContext &Context,
+  static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
                       ElaboratedTypeKeyword Keyword,
-                      NestedNameSpecifier *Qualifier,
-                      const IdentifierInfo *Name,
+                      const DependentTemplateStorage &Name,
                       ArrayRef<TemplateArgument> Args);
 
   static bool classof(const Type *T) {

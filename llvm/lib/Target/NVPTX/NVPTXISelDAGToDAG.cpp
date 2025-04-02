@@ -1008,7 +1008,7 @@ void NVPTXDAGToDAGISel::SelectAddrSpaceCast(SDNode *N) {
       Opc = TM.is64Bit() ? NVPTX::cvta_to_local_64 : NVPTX::cvta_to_local;
       break;
     case ADDRESS_SPACE_PARAM:
-      Opc = TM.is64Bit() ? NVPTX::IMOV64rr : NVPTX::IMOV32rr;
+      Opc = TM.is64Bit() ? NVPTX::IMOV64r : NVPTX::IMOV32r;
       break;
     }
 
@@ -2172,10 +2172,10 @@ bool NVPTXDAGToDAGISel::tryBF16ArithToFMA(SDNode *N) {
       auto API = APF.bitcastToAPInt();
       API = API.concat(API);
       auto Const = CurDAG->getTargetConstant(API, DL, MVT::i32);
-      return SDValue(CurDAG->getMachineNode(NVPTX::IMOV32ri, DL, VT, Const), 0);
+      return SDValue(CurDAG->getMachineNode(NVPTX::IMOV32i, DL, VT, Const), 0);
     }
     auto Const = CurDAG->getTargetConstantFP(APF, DL, VT);
-    return SDValue(CurDAG->getMachineNode(NVPTX::BFMOV16ri, DL, VT, Const), 0);
+    return SDValue(CurDAG->getMachineNode(NVPTX::BFMOV16i, DL, VT, Const), 0);
   };
 
   switch (N->getOpcode()) {

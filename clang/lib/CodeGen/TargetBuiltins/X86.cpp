@@ -10,13 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ABIInfo.h"
 #include "CGBuiltin.h"
-#include "CodeGenFunction.h"
-#include "TargetInfo.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/IR/InlineAsm.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/TargetParser/X86TargetParser.h"
 
