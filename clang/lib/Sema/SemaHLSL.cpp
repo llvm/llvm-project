@@ -960,7 +960,7 @@ void SemaHLSL::handleRootSignatureAttr(Decl *D, const ParsedAttr &AL) {
   hlsl::RootSignatureParser Parser(Elements, Lexer, SemaRef.getPreprocessor());
 
   if (Parser.parse())
-   return;
+    return;
 
   // Allocate elements onto AST context
   unsigned N = Elements.size();
