@@ -3355,8 +3355,12 @@ static void combineMetadata(Instruction *K, const Instruction *J,
       case LLVMContext::MD_invariant_group:
         // Preserve !invariant.group in K.
         break;
+      // Keep empty cases for mmra, memprof, and callsite to prevent them from
+      // being removed as unknown metadata. The actual merging is handled
+      // separately below.
       case LLVMContext::MD_mmra:
-        // Combine MMRAs
+      case LLVMContext::MD_memprof:
+      case LLVMContext::MD_callsite:
         break;
       case LLVMContext::MD_align:
         if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
@@ -3368,14 +3372,6 @@ static void combineMetadata(Instruction *K, const Instruction *J,
         if (!AAOnly && DoesKMove)
           K->setMetadata(Kind,
             MDNode::getMostGenericAlignmentOrDereferenceable(JMD, KMD));
-        break;
-      case LLVMContext::MD_memprof:
-        if (!AAOnly)
-          K->setMetadata(Kind, MDNode::getMergedMemProfMetadata(KMD, JMD));
-        break;
-      case LLVMContext::MD_callsite:
-        if (!AAOnly)
-          K->setMetadata(Kind, MDNode::getMergedCallsiteMetadata(KMD, JMD));
         break;
       case LLVMContext::MD_preserve_access_index:
         // Preserve !preserve.access.index in K.
@@ -3419,6 +3415,26 @@ static void combineMetadata(Instruction *K, const Instruction *J,
   if (JMMRA || KMMRA) {
     K->setMetadata(LLVMContext::MD_mmra,
                    MMRAMetadata::combine(K->getContext(), JMMRA, KMMRA));
+  }
+
+  // Merge memprof metadata.
+  // Handle separately to support cases where only one instruction has the
+  // metadata.
+  auto *JMemProf = J->getMetadata(LLVMContext::MD_memprof);
+  auto *KMemProf = K->getMetadata(LLVMContext::MD_memprof);
+  if (!AAOnly && (JMemProf || KMemProf)) {
+    K->setMetadata(LLVMContext::MD_memprof,
+                   MDNode::getMergedMemProfMetadata(KMemProf, JMemProf));
+  }
+
+  // Merge callsite metadata.
+  // Handle separately to support cases where only one instruction has the
+  // metadata.
+  auto *JCallSite = J->getMetadata(LLVMContext::MD_callsite);
+  auto *KCallSite = K->getMetadata(LLVMContext::MD_callsite);
+  if (!AAOnly && (JCallSite || KCallSite)) {
+    K->setMetadata(LLVMContext::MD_callsite,
+                   MDNode::getMergedCallsiteMetadata(KCallSite, JCallSite));
   }
 }
 
