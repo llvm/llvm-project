@@ -642,7 +642,7 @@ function(add_libc_hermetic test_name)
   endif()
   cmake_parse_arguments(
     "HERMETIC_TEST"
-    "IS_GPU_BENCHMARK" # Optional arguments
+    "IS_GPU_BENCHMARK;NO_RUN_POSTBUILD" # Optional arguments
     "SUITE" # Single value arguments
     "SRCS;HDRS;DEPENDS;ARGS;ENV;COMPILE_OPTIONS;LINK_LIBRARIES;LOADER_ARGS" # Multi-value arguments
     ${ARGN}
@@ -701,6 +701,7 @@ function(add_libc_hermetic test_name)
   endif()
   list(REMOVE_DUPLICATES link_object_files)
 
+
   # Make a library of all deps
   add_library(
     ${fq_target_name}.__libc__
@@ -713,7 +714,12 @@ function(add_libc_hermetic test_name)
   set_target_properties(${fq_target_name}.__libc__
       PROPERTIES ARCHIVE_OUTPUT_NAME ${fq_target_name}.libc)
 
-  set(fq_build_target_name ${fq_target_name}.__build__)
+  if(HERMETIC_TEST_NO_RUN_POSTBUILD)
+    set(fq_build_target_name ${fq_target_name})
+  else()
+    set(fq_build_target_name ${fq_target_name}.__build__)
+  endif()
+
   add_executable(
     ${fq_build_target_name}
     EXCLUDE_FROM_ALL
@@ -810,6 +816,14 @@ function(add_libc_hermetic test_name)
     PROPERTIES
       SYMBOLIC "TRUE"
   )
+
+  if(NOT HERMETIC_TEST_NO_RUN_POSTBUILD)
+    add_custom_target(
+      ${fq_target_name}
+      COMMAND ${fq_build_target_name}
+      COMMENT "Running hermetic test ${fq_target_name}"
+    )
+  endif()
 
   add_dependencies(${HERMETIC_TEST_SUITE} ${fq_target_name})
   if(NOT ${HERMETIC_TEST_IS_GPU_BENCHMARK})
