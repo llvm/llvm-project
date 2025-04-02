@@ -232,12 +232,13 @@ MODULE_PASS_WITH_PARAMS(
       return StructuralHashPrinterPass(errs(), Options);
     },
     parseStructuralHashPrinterPassOptions, "detailed;call-target-ignored")
-MODULE_PASS_WITH_PARAMS("metarenamer", "MetaRenamerPass",
-  [](MetaRenamerOptions Options) {
-    return MetaRenamerPass(Options);
-  },
-  parseMetaRenamerPassOptions,
-  "rename-exclude-alias-prefixes=S;rename-exclude-function-prefixes=S;rename-exclude-global-prefixes=S;rename-exclude-struct-prefixes=S;no-rename-only-inst;rename-only-inst")
+MODULE_PASS_WITH_PARAMS(
+    "metarenamer", "MetaRenamerPass",
+    [](MetaRenamerOptions Options) { return MetaRenamerPass(Options); },
+    parseMetaRenamerPassOptions,
+    "rename-exclude-function-prefixes=S;rename-exclude-alias-prefixes=S;rename-"
+    "exclude-global-prefixes=S;rename-exclude-struct-prefixes=S;no-rename-only-"
+    "inst;rename-only-inst")
 #undef MODULE_PASS_WITH_PARAMS
 
 #ifndef CGSCC_ANALYSIS

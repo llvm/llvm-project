@@ -20,18 +20,17 @@
 namespace llvm {
 
 struct MetaRenamerOptions {
-  /// Prefixes for functions that don't need to be renamed, separated by a comma
-  StringRef RenameExcludeFunctionPrefixes;
+  /// Prefixes for functions that don't need to be renamed
+  SmallVector<StringRef> ExcludedFunctionsPrefixes;
 
-  /// Prefixes for aliases that don't need to be renamed, separated by a comma
-  StringRef RenameExcludeAliasPrefixes;
+  /// Prefixes for aliases that don't need to be renamed
+  SmallVector<StringRef> ExcludedAliasesPrefixes;
 
-  /// Prefixes for global values that don't need to be renamed, separated by a
-  /// comma
-  StringRef RenameExcludeGlobalPrefixes;
+  /// Prefixes for global values that don't need to be renamed
+  SmallVector<StringRef> ExcludedGlobalsPrefixes;
 
-  /// Prefixes for structs that don't need to be renamed, separated by a comma
-  StringRef RenameExcludeStructPrefixes;
+  /// Prefixes for structs that don't need to be renamed
+  SmallVector<StringRef> ExcludedStructsPrefixes;
 
   /// Only rename the instructions in the function
   bool RenameOnlyInst = false;

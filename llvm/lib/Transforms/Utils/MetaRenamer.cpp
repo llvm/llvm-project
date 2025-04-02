@@ -66,18 +66,6 @@ struct Renamer {
   PRNG prng;
 };
 
-static void
-parseExcludedPrefixes(StringRef PrefixesStr,
-                      SmallVectorImpl<StringRef> &ExcludedPrefixes) {
-  for (;;) {
-    auto PrefixesSplit = PrefixesStr.split(',');
-    if (PrefixesSplit.first.empty())
-      break;
-    ExcludedPrefixes.push_back(PrefixesSplit.first);
-    PrefixesStr = PrefixesSplit.second;
-  }
-}
-
 void MetaRenameOnlyInstructions(Function &F) {
   for (auto &I : instructions(F))
     if (!I.getType()->isVoidTy() && I.getName().empty())
@@ -110,17 +98,8 @@ void MetaRename(Module &M,
 
   Renamer renamer(randSeed);
 
-  SmallVector<StringRef, 8> ExcludedAliasesPrefixes;
-  SmallVector<StringRef, 8> ExcludedGlobalsPrefixes;
-  SmallVector<StringRef, 8> ExcludedStructsPrefixes;
-  SmallVector<StringRef, 8> ExcludedFuncPrefixes;
-  parseExcludedPrefixes(Options.RenameExcludeAliasPrefixes, ExcludedAliasesPrefixes);
-  parseExcludedPrefixes(Options.RenameExcludeGlobalPrefixes, ExcludedGlobalsPrefixes);
-  parseExcludedPrefixes(Options.RenameExcludeStructPrefixes, ExcludedStructsPrefixes);
-  parseExcludedPrefixes(Options.RenameExcludeFunctionPrefixes, ExcludedFuncPrefixes);
-
   auto IsNameExcluded = [](StringRef &Name,
-                           SmallVectorImpl<StringRef> &ExcludedPrefixes) {
+                           const SmallVectorImpl<StringRef> &ExcludedPrefixes) {
     return any_of(ExcludedPrefixes,
                   [&Name](auto &Prefix) { return Name.starts_with(Prefix); });
   };
@@ -132,7 +111,7 @@ void MetaRename(Module &M,
     StringRef Name = F.getName();
     return Name.starts_with("llvm.") || (!Name.empty() && Name[0] == 1) ||
            GetTLI(F).getLibFunc(F, Tmp) ||
-           IsNameExcluded(Name, ExcludedFuncPrefixes);
+           IsNameExcluded(Name, Options.ExcludedFunctionsPrefixes);
   };
 
   if (Options.RenameOnlyInst) {
@@ -149,7 +128,7 @@ void MetaRename(Module &M,
   for (GlobalAlias &GA : M.aliases()) {
     StringRef Name = GA.getName();
     if (Name.starts_with("llvm.") || (!Name.empty() && Name[0] == 1) ||
-        IsNameExcluded(Name, ExcludedAliasesPrefixes))
+        IsNameExcluded(Name, Options.ExcludedAliasesPrefixes))
       continue;
 
     GA.setName("alias");
@@ -159,7 +138,7 @@ void MetaRename(Module &M,
   for (GlobalVariable &GV : M.globals()) {
     StringRef Name = GV.getName();
     if (Name.starts_with("llvm.") || (!Name.empty() && Name[0] == 1) ||
-        IsNameExcluded(Name, ExcludedGlobalsPrefixes))
+        IsNameExcluded(Name, Options.ExcludedGlobalsPrefixes))
       continue;
 
     GV.setName("global");
@@ -171,7 +150,7 @@ void MetaRename(Module &M,
   for (StructType *STy : StructTypes) {
     StringRef Name = STy->getName();
     if (STy->isLiteral() || Name.empty() ||
-        IsNameExcluded(Name, ExcludedStructsPrefixes))
+        IsNameExcluded(Name, Options.ExcludedStructsPrefixes))
       continue;
 
     SmallString<128> NameStorage;
