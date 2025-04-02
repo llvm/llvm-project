@@ -8335,7 +8335,8 @@ public:
                                               bool Overaligned,
                                               DeclarationName Name);
   FunctionDecl *FindDeallocationFunctionForDestructor(SourceLocation StartLoc,
-                                                      CXXRecordDecl *RD);
+                                                      CXXRecordDecl *RD,
+                                                      DeclarationName Name);
 
   /// ActOnCXXDelete - Parsed a C++ 'delete' expression (C++ 5.3.5), as in:
   /// @code ::delete ptr; @endcode
@@ -11351,7 +11352,6 @@ public:
                             ConceptDecl *NamedConcept, NamedDecl *FoundDecl,
                             const TemplateArgumentListInfo *TemplateArgs,
                             TemplateTypeParmDecl *ConstrainedParameter,
-                            QualType ConstrainedType,
                             SourceLocation EllipsisLoc);
 
   bool AttachTypeConstraint(AutoTypeLoc TL,
@@ -14552,13 +14552,14 @@ public:
   /// \returns true if an error occurred and satisfaction could not be checked,
   /// false otherwise.
   bool CheckConstraintSatisfaction(
-      const NamedDecl *Template, ArrayRef<const Expr *> ConstraintExprs,
+      const NamedDecl *Template,
+      ArrayRef<AssociatedConstraint> AssociatedConstraints,
       const MultiLevelTemplateArgumentList &TemplateArgLists,
       SourceRange TemplateIDRange, ConstraintSatisfaction &Satisfaction) {
     llvm::SmallVector<Expr *, 4> Converted;
-    return CheckConstraintSatisfaction(Template, ConstraintExprs, Converted,
-                                       TemplateArgLists, TemplateIDRange,
-                                       Satisfaction);
+    return CheckConstraintSatisfaction(Template, AssociatedConstraints,
+                                       Converted, TemplateArgLists,
+                                       TemplateIDRange, Satisfaction);
   }
 
   /// \brief Check whether the given list of constraint expressions are
@@ -14584,7 +14585,8 @@ public:
   /// \returns true if an error occurred and satisfaction could not be checked,
   /// false otherwise.
   bool CheckConstraintSatisfaction(
-      const NamedDecl *Template, ArrayRef<const Expr *> ConstraintExprs,
+      const NamedDecl *Template,
+      ArrayRef<AssociatedConstraint> AssociatedConstraints,
       llvm::SmallVectorImpl<Expr *> &ConvertedConstraints,
       const MultiLevelTemplateArgumentList &TemplateArgList,
       SourceRange TemplateIDRange, ConstraintSatisfaction &Satisfaction);
@@ -14662,7 +14664,7 @@ public:
 
   const NormalizedConstraint *getNormalizedAssociatedConstraints(
       const NamedDecl *ConstrainedDecl,
-      ArrayRef<const Expr *> AssociatedConstraints);
+      ArrayRef<AssociatedConstraint> AssociatedConstraints);
 
   /// \brief Check whether the given declaration's associated constraints are
   /// at least as constrained than another declaration's according to the
@@ -14673,17 +14675,18 @@ public:
   ///
   /// \returns true if an error occurred, false otherwise.
   bool IsAtLeastAsConstrained(const NamedDecl *D1,
-                              MutableArrayRef<const Expr *> AC1,
+                              MutableArrayRef<AssociatedConstraint> AC1,
                               const NamedDecl *D2,
-                              MutableArrayRef<const Expr *> AC2, bool &Result);
+                              MutableArrayRef<AssociatedConstraint> AC2,
+                              bool &Result);
 
   /// If D1 was not at least as constrained as D2, but would've been if a pair
   /// of atomic constraints involved had been declared in a concept and not
   /// repeated in two separate places in code.
   /// \returns true if such a diagnostic was emitted, false otherwise.
   bool MaybeEmitAmbiguousAtomicConstraintsDiagnostic(
-      const NamedDecl *D1, ArrayRef<const Expr *> AC1, const NamedDecl *D2,
-      ArrayRef<const Expr *> AC2);
+      const NamedDecl *D1, ArrayRef<AssociatedConstraint> AC1,
+      const NamedDecl *D2, ArrayRef<AssociatedConstraint> AC2);
 
 private:
   /// Caches pairs of template-like decls whose associated constraints were
