@@ -1000,9 +1000,9 @@ TEST_F(DILocationTest, Merge) {
     auto *A = DILocation::get(Context, 1, 6, LBF);
     auto *B = DILocation::get(Context, 2, 7, LBF);
     auto *M = DILocation::getMergedLocation(A, B);
-    EXPECT_EQ(3u, M->getLine());
-    EXPECT_EQ(4u, M->getColumn());
-    EXPECT_EQ(S, M->getScope());
+    EXPECT_EQ(0u, M->getLine());
+    EXPECT_EQ(0u, M->getColumn());
+    EXPECT_EQ(LBF, M->getScope());
   }
 
   {
@@ -1084,10 +1084,15 @@ TEST_F(DILocationTest, Merge) {
     auto *LBF2 = DILexicalBlockFile::get(Context, LB2, F2, 0);
     auto *A = DILocation::get(Context, 1, 6, LBF1);
     auto *B = DILocation::get(Context, 1, 6, LBF2);
+    llvm::errs() << "Check\n";
     auto *M = DILocation::getMergedLocation(A, B);
+    M->dump();
+    M->getScope()->dump();
+    LBF1->dump();
     EXPECT_EQ(1u, M->getLine());
     EXPECT_EQ(6u, M->getColumn());
-    EXPECT_EQ(LBF1, M->getScope());
+    EXPECT_EQ(LBF1->getFile(), M->getScope()->getFile());
+    EXPECT_EQ(N, M->getScope()->getScope());
   }
 
   {
@@ -1167,9 +1172,13 @@ TEST_F(DILocationTest, Merge) {
     auto *A = DILocation::get(Context, 41, 7, Block2[0]);
     auto *B = DILocation::get(Context, 51, 8, Block2[1]);
     auto *M = DILocation::getMergedLocation(A, B);
+    auto *MScope = dyn_cast<DILexicalBlock>(M->getScope());
     EXPECT_EQ(30u, M->getLine());
     EXPECT_EQ(4u, M->getColumn());
-    EXPECT_EQ(Block1[0], M->getScope());
+    EXPECT_EQ(Block1[0]->getFile(), MScope->getFile());
+    EXPECT_EQ(Block1[0]->getLine(), MScope->getLine());
+    EXPECT_EQ(Block1[0]->getColumn(), MScope->getColumn());
+    EXPECT_EQ(LBCommon, MScope->getScope());
   }
 
   {

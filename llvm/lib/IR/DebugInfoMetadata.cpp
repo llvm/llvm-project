@@ -125,6 +125,14 @@ DILocation *DILocation::getMergedLocations(ArrayRef<DILocation *> Locs) {
   return Merged;
 }
 
+static DILexicalBlockBase *cloneAndReplaceParentScope(DILexicalBlockBase *LBB,
+                                                      DIScope *NewParent) {
+  TempMDNode ClonedScope = LBB->clone();
+  cast<DILexicalBlockBase>(*ClonedScope).replaceScope(NewParent);
+  return cast<DILexicalBlockBase>(
+      MDNode::replaceWithUniqued(std::move(ClonedScope)));
+}
+
 using LineColumn = std::pair<unsigned /* Line */, unsigned /* Column */>;
 
 /// Returns the location of DILocalScope, if present, or a default value.
@@ -140,6 +148,82 @@ static LineColumn getLocalScopeLocationOr(DIScope *S, LineColumn Default) {
 
   llvm_unreachable("Unhandled type of DILocalScope.");
 }
+
+// Returns the nearest matching scope inside a subprogram.
+template <typename MatcherT>
+static std::pair<DIScope *, LineColumn>
+getNearestMatchingScope(const DILocation *L1, const DILocation *L2) {
+  MatcherT Matcher;
+
+  DIScope *S1 = L1->getScope();
+  DIScope *S2 = L2->getScope();
+
+  // When matching DILexicalBlockFile's, ignore column numbers, so that
+  // DILocation's having different columns within the same
+  // DILexicalBlockFile will match.
+  auto GetLocForBlockFile = [](LineColumn L) {
+    L.second = 0;
+    return L;
+  };
+
+  LineColumn Loc1(L1->getLine(), L1->getColumn());
+  for (; S1; S1 = S1->getScope()) {
+    Loc1 = getLocalScopeLocationOr(S1, GetLocForBlockFile(Loc1));
+    Matcher.insert(S1, Loc1);
+    if (isa<DISubprogram>(S1))
+      break;
+  }
+
+  LineColumn Loc2(L2->getLine(), L2->getColumn());
+  for (; S2; S2 = S2->getScope()) {
+    Loc2 = getLocalScopeLocationOr(S2, GetLocForBlockFile(Loc2));
+
+    if (DIScope *S = Matcher.match(S2, Loc2))
+      return std::make_pair(S, Loc2);
+
+    if (isa<DISubprogram>(S2))
+      break;
+  }
+  return std::make_pair(nullptr, LineColumn(L2->getLine(), L2->getColumn()));
+}
+
+// Matches equal scopes.
+struct EqualScopesMatcher {
+  SmallPtrSet<DIScope *, 8> Scopes;
+
+  void insert(DIScope *S, LineColumn Loc) { Scopes.insert(S); }
+
+  DIScope *match(DIScope *S, LineColumn Loc) {
+    return Scopes.contains(S) ? S : nullptr;
+  }
+};
+
+// Matches scopes with the same location.
+struct ScopeLocationsMatcher {
+  SmallMapVector<std::pair<DIFile *, LineColumn>, SmallSetVector<DIScope *, 8>,
+                 8>
+      Scopes;
+
+  void insert(DIScope *S, LineColumn Loc) {
+    Scopes[{S->getFile(), Loc}].insert(S);
+  }
+
+  DIScope *match(DIScope *S, LineColumn Loc) {
+    auto ScopesAtLoc = Scopes.find({S->getFile(), Loc});
+    // No scope found with the given location.
+    if (ScopesAtLoc == Scopes.end())
+      return nullptr;
+
+    // Prefer S over other scopes with the same location.
+    if (ScopesAtLoc->second.contains(S))
+      return S;
+
+    if (!ScopesAtLoc->second.empty())
+      return *ScopesAtLoc->second.begin();
+
+    llvm_unreachable("Scopes must not have empty entries.");
+  }
+};
 
 DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
   if (!LocA || !LocB)
@@ -224,66 +308,29 @@ DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
     if (L1->getScope()->getSubprogram() != L2->getScope()->getSubprogram())
       return nullptr;
 
-    // Return the nearest common scope inside a subprogram.
-    auto GetNearestCommonScope =
-        [](const DILocation *L1,
-           const DILocation *L2) -> std::pair<DIScope *, LineColumn> {
-      DIScope *S1 = L1->getScope();
-      DIScope *S2 = L2->getScope();
-
-      SmallMapVector<std::pair<DIFile *, LineColumn>,
-                     SmallSetVector<DIScope *, 8>, 8>
-          Scopes;
-
-      // When matching DILexicalBlockFile's, ignore column numbers, so that
-      // DILocation's having different columns within the same
-      // DILexicalBlockFile will match.
-      auto getLocForBlockFile = [](LineColumn L) {
-        L.second = 0;
-        return L;
-      };
-
-      LineColumn Loc1(L1->getLine(), L1->getColumn());
-      for (; S1; S1 = S1->getScope()) {
-        Loc1 = getLocalScopeLocationOr(S1, getLocForBlockFile(Loc1));
-        Scopes[{S1->getFile(), Loc1}].insert(S1);
-
-        if (isa<DISubprogram>(S1))
-          break;
-      }
-
-      LineColumn Loc2(L2->getLine(), L2->getColumn());
-      for (; S2; S2 = S2->getScope()) {
-        Loc2 = getLocalScopeLocationOr(S2, getLocForBlockFile(Loc2));
-
-        auto ScopesAtLoc = Scopes.find({S2->getFile(), Loc2});
-        // No scope found with the same file, line and column as S2.
-        if (ScopesAtLoc == Scopes.end())
-          continue;
-
-        // Return S2 if it is L1's parent.
-        if (ScopesAtLoc->second.contains(S2))
-          return std::make_pair(S2, Loc2);
-
-        // Return any L1's parent with the same file, line and column as S2.
-        if (!ScopesAtLoc->second.empty())
-          return std::make_pair(*ScopesAtLoc->second.begin(), Loc2);
-
-        if (isa<DISubprogram>(S2))
-          break;
-      }
-
-      return std::make_pair(nullptr,
-                            LineColumn(L2->getLine(), L2->getColumn()));
-    };
-
-    auto [Scope, ScopeLoc] = GetNearestCommonScope(L1, L2);
+    // Find nearest common scope inside subprogram.
+    DIScope *Scope = getNearestMatchingScope<EqualScopesMatcher>(L1, L2).first;
     assert(Scope && "No common scope in the same subprogram?");
 
-    // Use inclusion location if files are different.
+    // Try using the nearest scope with common location if files are different.
     if (Scope->getFile() != L1->getFile() || L1->getFile() != L2->getFile()) {
-      return DILocation::get(C, ScopeLoc.first, ScopeLoc.second, Scope,
-                             InlinedAt);
+      auto [CommonLocScope, CommonLoc] =
+          getNearestMatchingScope<ScopeLocationsMatcher>(L1, L2);
+
+      // If CommonLocScope is a DILexicalBlockBase, clone it and locate
+      // a new scope inside the nearest common scope to preserve
+      // lexical blocks structure.
+      if (auto *LBB = dyn_cast<DILexicalBlockBase>(CommonLocScope);
+          LBB && LBB != Scope)
+        CommonLocScope = cloneAndReplaceParentScope(LBB, Scope);
+
+      Scope = CommonLocScope;
+
+      // If files are still different, assume that L1 and L2 were "included"
+      // from CommonLoc. Use it as merged location.
+      if (Scope->getFile() != L1->getFile() || L1->getFile() != L2->getFile())
+        return DILocation::get(C, CommonLoc.first, CommonLoc.second,
+                               CommonLocScope, InlinedAt);
     }
 
     bool SameLine = L1->getLine() == L2->getLine();
@@ -1243,10 +1290,8 @@ DILocalScope *DILocalScope::cloneScopeForSubprogram(
   // cached result).
   DIScope *UpdatedScope = CachedResult ? CachedResult : &NewSP;
   for (DIScope *ScopeToUpdate : reverse(ScopeChain)) {
-    TempMDNode ClonedScope = ScopeToUpdate->clone();
-    cast<DILexicalBlockBase>(*ClonedScope).replaceScope(UpdatedScope);
-    UpdatedScope =
-        cast<DIScope>(MDNode::replaceWithUniqued(std::move(ClonedScope)));
+    UpdatedScope = cloneAndReplaceParentScope(
+        cast<DILexicalBlockBase>(ScopeToUpdate), UpdatedScope);
     Cache[ScopeToUpdate] = UpdatedScope;
   }
 
