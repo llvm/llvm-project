@@ -7,7 +7,6 @@ from lldbsuite.test import lldbutil
 class ExprFromNonZeroFrame(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipIf(archs=no_match(["arm64e"]))
     def test(self):
         """
         Tests that we can use SBFrame::EvaluateExpression on a frame
