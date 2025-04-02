@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type -emit-llvm -o - %s | FileCheck %s
 
 // CHECK: %"class.hlsl::StructuredBuffer" = type { target("dx.RawBuffer", i16, 0, 0) }
 // CHECK: %"class.hlsl::StructuredBuffer.0" = type { target("dx.RawBuffer", i16, 0, 0) }

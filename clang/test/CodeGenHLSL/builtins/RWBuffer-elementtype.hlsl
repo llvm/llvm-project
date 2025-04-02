@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type -emit-llvm -o - %s | FileCheck %s -check-prefixes=DXIL
-// RUN: %clang_cc1 -triple spirv-pc-vulkan-compute -finclude-default-header -fnative-half-type -emit-llvm -o - %s | FileCheck %s -check-prefixes=SPIRV
+// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type -emit-llvm -o - %s | FileCheck %s -check-prefixes=DXIL
+// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple spirv-pc-vulkan-compute -finclude-default-header -fnative-half-type -emit-llvm -o - %s | FileCheck %s -check-prefixes=SPIRV
 
 // DXIL: %"class.hlsl::RWBuffer" = type { target("dx.TypedBuffer", i16, 1, 0, 1) }
 // DXIL: %"class.hlsl::RWBuffer.0" = type { target("dx.TypedBuffer", i16, 1, 0, 0) }

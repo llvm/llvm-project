@@ -1612,6 +1612,9 @@ def HLSLExtension : DiagGroup<"hlsl-extensions", [HLSL202y]>;
 // Warning for mix packoffset and non-packoffset.
 def HLSLMixPackOffset : DiagGroup<"mix-packoffset">;
 
+// Warning for implicit resource bindings.
+def HLSLImplicitBinding : DiagGroup<"hlsl-implicit-binding">;
+
 // Warnings for DXIL validation
 def DXILValidation : DiagGroup<"dxil-validation">;
 
