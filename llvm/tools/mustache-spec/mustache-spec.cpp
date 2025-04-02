@@ -1,5 +1,5 @@
 //===- mustache.cpp - The LLVM Modular Optimizer
-//-------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -77,8 +77,9 @@ void runThroughTest(StringRef InputFile) {
     Template T = Template(TemplateStr);
     if (Partials) {
       for (auto PartialPairs : *Partials->getAsObject()) {
-        StringRef Partial = PartialPairs.getSecond().getAsString().value();
-        StringRef Str = llvm::StringRef(PartialPairs.getFirst());
+        const auto& [First, Second] = Partials->getAsObject();
+        StringRef Partial = First.getAsString().value();
+        StringRef Str = llvm::StringRef(Second);
         T.registerPartial(Str, Partial);
       }
     }
@@ -95,6 +96,7 @@ void runThroughTest(StringRef InputFile) {
 
   llvm::outs() << "Result " << Success << "/" << Total << " succeeded\n";
 }
+
 int main(int argc, char **argv) {
   llvm::cl::ParseCommandLineOptions(argc, argv);
   for (const auto &FileName : InputFiles) {
