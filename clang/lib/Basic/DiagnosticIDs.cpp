@@ -770,8 +770,8 @@ StringRef DiagnosticIDs::getNearestOption(diag::Flavor Flavor,
   return Best;
 }
 
-unsigned DiagnosticIDs::getCompatDiagId(const LangOptions &LangOpts,
-                                        unsigned CompatDiagId) {
+unsigned DiagnosticIDs::getCXXCompatDiagId(const LangOptions &LangOpts,
+                                           unsigned CompatDiagId) {
   struct CompatDiag {
     unsigned StdVer;
     unsigned DiagId;

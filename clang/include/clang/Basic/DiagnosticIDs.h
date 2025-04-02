@@ -479,8 +479,8 @@ public:
 
   /// Get the appropriate diagnostic Id to use for issuing a compatibility
   /// diagnostic. For use by the various DiagCompat() helpers.
-  static unsigned getCompatDiagId(const LangOptions &LangOpts,
-                                  unsigned CompatDiagId);
+  static unsigned getCXXCompatDiagId(const LangOptions &LangOpts,
+                                     unsigned CompatDiagId);
 
 private:
   /// Classify the specified diagnostic ID into a Level, consumable by
