@@ -97,10 +97,8 @@ math/cospi.cl
 math/erf.cl
 math/erfc.cl
 math/exp.cl
-math/exp_helper.cl
 math/expm1.cl
 math/exp2.cl
-math/clc_exp10.cl
 math/exp10.cl
 math/fabs.cl
 math/fdim.cl
@@ -162,7 +160,6 @@ math/powr.cl
 math/remainder.cl
 math/remquo.cl
 math/rint.cl
-math/clc_rootn.cl
 math/rootn.cl
 math/round.cl
 math/rsqrt.cl
@@ -175,7 +172,6 @@ math/sqrt.cl
 math/clc_tan.cl
 math/tan.cl
 math/tanh.cl
-math/clc_tanpi.cl
 math/tanpi.cl
 math/tgamma.cl
 math/trunc.cl

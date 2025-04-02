@@ -74,6 +74,25 @@ _CLC_DEF _CLC_OVERLOAD __CLC_FLOATN __clc_cosf_piby4(__CLC_FLOATN x,
   return ret;
 }
 
+_CLC_DECL _CLC_OVERLOAD __CLC_FLOATN __clc_tanf_piby4(__CLC_FLOATN x,
+                                                      __CLC_INTN regn) {
+  // Core Remez [1,2] approximation to tan(x) on the interval [0,pi/4].
+  __CLC_FLOATN r = x * x;
+
+  __CLC_FLOATN a =
+      __clc_mad(r, -0.0172032480471481694693109f, 0.385296071263995406715129f);
+
+  __CLC_FLOATN b = __clc_mad(
+      r,
+      __clc_mad(r, 0.01844239256901656082986661f, -0.51396505478854532132342f),
+      1.15588821434688393452299f);
+
+  __CLC_FLOATN t = __clc_mad(x * r, __clc_native_divide(a, b), x);
+  __CLC_FLOATN tr = -MATH_RECIP(t);
+
+  return regn & 1 ? tr : t;
+}
+
 _CLC_DEF _CLC_OVERLOAD void __clc_fullMulS(private __CLC_FLOATN *hi,
                                            private __CLC_FLOATN *lo,
                                            __CLC_FLOATN a, __CLC_FLOATN b,

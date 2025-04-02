@@ -629,7 +629,7 @@ def C_LI_HINT : RVInst16CI<0b010, 0b01, (outs GPRX0:$rd), (ins simm6:$imm),
                            "c.li", "$rd, $imm">,
                 Sched<[WriteIALU]> {
   let Inst{11-7} = 0;
-  let DecoderMethod = "decodeRVCInstrRdSImm";
+  let DecoderMethod = "decodeRVCInstrRdSImm6";
 }
 
 def C_LUI_HINT : RVInst16CI<0b011, 0b01, (outs GPRX0:$rd),
@@ -637,7 +637,7 @@ def C_LUI_HINT : RVInst16CI<0b011, 0b01, (outs GPRX0:$rd),
                             "c.lui", "$rd, $imm">,
                  Sched<[WriteIALU]> {
   let Inst{11-7} = 0;
-  let DecoderMethod = "decodeRVCInstrRdSImm";
+  let DecoderMethod = "decodeRVCInstrRdCLUIImm";
 }
 
 def C_MV_HINT : RVInst16CR<0b1000, 0b10, (outs GPRX0:$rs1), (ins GPRNoX0:$rs2),
