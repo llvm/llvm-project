@@ -173,8 +173,8 @@ B b;
 struct X {
   X(float); // #cwg2273-X
   X(void*, int = 0) = delete;
-  X(int, const int*) = delete;
-  X(unsigned, int()) = delete;
+  X(int, const int*, int = 1) = delete;
+  X(unsigned, int(), int = 2) = delete;
 };
 
 struct Y : X {

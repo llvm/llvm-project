@@ -163,3 +163,57 @@ namespace PR48545 {
       D z(0, 0);
   }
 }
+
+namespace gh121331 {
+
+template<int> class tag {};
+
+struct Base {
+    Base();
+
+    Base(tag<0>, int) = delete;
+    Base(tag<1>, const int) = delete;
+    Base(tag<2>, int*) = delete;
+    Base(tag<3>, int (*)()) = delete;
+    Base(tag<4>, int, int*) = delete;
+
+    Base(tag<5>, long);        // expected-note {{candidate inherited constructor}}
+    Base(tag<6>, const int*);  // expected-note {{candidate inherited constructor}}
+    Base(tag<7>, int());       // expected-note {{candidate inherited constructor}}
+    Base(tag<8>, _Atomic int); // expected-note {{candidate inherited constructor}}
+};
+
+struct Derived : Base {
+    using Base::Base; // expected-note 4 {{inherited here}}
+
+    Derived(int = -1);
+
+    Derived(tag<0>, int, int = 0);
+    Derived(tag<1>, int, int = 1);
+    Derived(tag<2>, int[], int = 2);
+    Derived(tag<3>, int(), int = 3);
+    Derived(tag<4>, int n, int[n], int = 4);
+    // expected-warning@-1 {{variable length arrays in C++ are a Clang extension}}
+    // expected-note@-2 {{function parameter 'n' with unknown value cannot be used in a constant expression}}
+    // expected-note@-3 {{declared here}}
+
+    Derived(tag<5>, long long);     // expected-note {{candidate constructor}}
+    Derived(tag<6>, volatile int*); // expected-note {{candidate constructor}}
+    Derived(tag<7>, const int());   // expected-note {{candidate constructor}}
+    Derived(tag<8>, int);           // expected-note {{candidate constructor}}
+};
+
+Derived d;
+
+Derived d0(tag<0>(), 0);
+Derived d1(tag<1>(), 2);
+Derived d2(tag<2>(), nullptr);
+Derived d3(tag<3>(), nullptr);
+Derived d4(tag<4>(), 5, nullptr);
+
+Derived d5(tag<5>(), 6);       // expected-error {{call to constructor of 'Derived' is ambiguous}}
+Derived d6(tag<6>(), nullptr); // expected-error {{call to constructor of 'Derived' is ambiguous}}
+Derived d7(tag<7>(), nullptr); // expected-error {{call to constructor of 'Derived' is ambiguous}}
+Derived d8(tag<8>(), 9);       // expected-error {{call to constructor of 'Derived' is ambiguous}}
+
+} // namespace gh121331

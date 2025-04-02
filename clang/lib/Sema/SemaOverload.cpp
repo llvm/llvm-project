@@ -10729,6 +10729,8 @@ bool clang::isBetterOverloadCandidate(
       llvm::equal(Cand1.Function->parameters().take_front(NumArgs),
                   Cand2.Function->parameters().take_front(NumArgs),
                   [&](ParmVarDecl *P1, ParmVarDecl *P2) {
+                    // Top-level cv-qualifiers on function parameter
+                    // types are not part of the function type.
                     return S.Context.hasSameUnqualifiedType(P1->getType(),
                                                             P2->getType());
                   })) {
