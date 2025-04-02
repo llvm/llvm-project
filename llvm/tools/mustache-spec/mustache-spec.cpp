@@ -1,4 +1,4 @@
-//===- mustache.cpp - The LLVM Modular Optimizer
+//===- mustache-spec.cpp - The LLVM Modular Optimizer
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
