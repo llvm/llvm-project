@@ -4487,17 +4487,13 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
   // Verify result shape is greater than the minimum expected
   // by the pack operation, and that the output shape
   // represents full tiles.
-  if (hasTensorSemantics) {
-    RankedTensorType expectedPackedType = PackOp::inferPackedTensorType(
-        cast<RankedTensorType>(unpackedType), packOrUnPack.getStaticTiles(),
-        innerDimsPos, outerDimPerm);
-    if (!areAllInBound(expectedPackedType.getShape(), packedType.getShape())) {
-      return op->emitError(
-                 "the shape of output is not large enough to hold the "
-                 "packed data. Expected at least ")
-             << expectedPackedType << ", got " << packedType;
-    }
-  } else {
+  auto expectedPackedShape = PackOp::inferPackedShape(
+      unpackedType.getShape(), packOrUnPack.getStaticTiles(),
+      packOrUnPack.getInnerDimsPos(), packOrUnPack.getOuterDimsPerm());
+  if (!areAllInBound(expectedPackedShape, packedType.getShape())) {
+    return op->emitError("the shape of output is not large enough to hold the "
+                         "packed data. Expected at least ")
+           << expectedPackedShape << ", got " << packedType.getShape();
   }
   if (!llvm::all_of(
           llvm::zip(packedType.getShape().take_back(mixedTiles.size()),
@@ -4784,6 +4780,14 @@ MemRefType PackOp::inferPackedMemRefType(MemRefType sourceType,
   return MemRefType::get(resultShape, sourceType.getElementType());
 }
 
+SmallVector<int64_t> PackOp::inferPackedShape(ArrayRef<int64_t> inputShape,
+                                              ArrayRef<int64_t> innerTileSizes,
+                                              ArrayRef<int64_t> innerDimsPos,
+                                              ArrayRef<int64_t> outerDimsPerm) {
+  return getPackOpResultTypeShape(inputShape, innerTileSizes, innerDimsPos,
+                                  outerDimsPerm);
+}
+
 Value PackOp::createDestinationTensor(OpBuilder &b, Location loc, Value source,
                                       ArrayRef<OpFoldResult> innerTileSizes,
                                       ArrayRef<int64_t> innerDimsPos,
@@ -5030,7 +5034,6 @@ LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
     // Insert a cast if needed
     if (needUpdateDestType) {
       rewriter.setInsertionPointAfter(packOp);
-      /// 1
       if (hasTensorSemantics) {
         auto castOp =
             rewriter.create<tensor::CastOp>(loc, originalResultType, packOp);
@@ -5040,16 +5043,6 @@ LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
             rewriter.create<memref::CastOp>(loc, originalResultType, packOp);
         rewriter.replaceAllUsesExcept(packOp, castOp, castOp);
       }
-      /// 2
-      Operation *castOp;
-      if (hasTensorSemantics) {
-        castOp =
-            rewriter.create<tensor::CastOp>(loc, originalResultType, packOp);
-      } else {
-        castOp =
-            rewriter.create<memref::CastOp>(loc, originalResultType, packOp);
-      }
-      rewriter.replaceAllUsesExcept(packOp, castOp->getResult(0), castOp);
     }
     return success();
   }
