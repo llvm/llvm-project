@@ -569,7 +569,9 @@ struct LoopInterchange {
     MDNode *LoopID = OuterLoop->getLoopID();
     LLVM_DEBUG(dbgs() << "Processing InnerLoopId = " << InnerLoopId
                       << " and OuterLoopId = " << OuterLoopId << "\n");
-    if (findMetadata(OuterLoop) == false || findMetadata(InnerLoop) == false) {
+    std::optional<bool> OuterLoopEnabled = findMetadata(OuterLoop);
+    std::optional<bool> InnerLoopEnabled = findMetadata(InnerLoop);
+    if (OuterLoopEnabled == false || InnerLoopEnabled == false) {
       LLVM_DEBUG(dbgs() << "Not interchanging loops. It is disabled.\n");
       return false;
     }
@@ -579,11 +581,15 @@ struct LoopInterchange {
       return false;
     }
     LLVM_DEBUG(dbgs() << "Loops are legal to interchange\n");
-    LoopInterchangeProfitability LIP(OuterLoop, InnerLoop, SE, ORE);
-    if (!LIP.isProfitable(InnerLoop, OuterLoop, InnerLoopId, OuterLoopId,
-                          DependencyMatrix, CostMap, CC)) {
-      LLVM_DEBUG(dbgs() << "Interchanging loops not profitable.\n");
-      return false;
+
+    // If the interchange is explicitly enabled, skip the profitability check.
+    if (OuterLoopEnabled != true) {
+      LoopInterchangeProfitability LIP(OuterLoop, InnerLoop, SE, ORE);
+      if (!LIP.isProfitable(InnerLoop, OuterLoop, InnerLoopId, OuterLoopId,
+                            DependencyMatrix, CostMap, CC)) {
+        LLVM_DEBUG(dbgs() << "Interchanging loops not profitable.\n");
+        return false;
+      }
     }
 
     ORE->emit([&]() {
