@@ -31,9 +31,9 @@
 //  mustache path/to/test/file/test.json path/to/test/file/test2.json ...
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/Mustache.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Mustache.h"
 #include <string>
 
 using namespace llvm;
