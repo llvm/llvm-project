@@ -2051,6 +2051,7 @@ void ASTDeclWriter::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
     if (CR)
       Record.AddConceptReference(CR);
     Record.AddStmt(TC->getImmediatelyDeclaredConstraint());
+    Record.push_back(TC->getArgumentPackSubstitutionIndex());
     Record.push_back(D->isExpandedParameterPack());
     if (D->isExpandedParameterPack())
       Record.push_back(D->getNumExpansionParameters());

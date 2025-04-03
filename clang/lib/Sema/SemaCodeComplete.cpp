@@ -5420,8 +5420,9 @@ public:
   // that T is attached to in order to gather the relevant constraints.
   ConceptInfo(const TemplateTypeParmType &BaseType, Scope *S) {
     auto *TemplatedEntity = getTemplatedEntity(BaseType.getDecl(), S);
-    for (const Expr *E : constraintsForTemplatedEntity(TemplatedEntity))
-      believe(E, &BaseType);
+    for (const AssociatedConstraint &AC :
+         constraintsForTemplatedEntity(TemplatedEntity))
+      believe(AC.ConstraintExpr, &BaseType);
   }
 
   std::vector<Member> members() {
@@ -5653,9 +5654,9 @@ private:
 
   // Gets all the type constraint expressions that might apply to the type
   // variables associated with DC (as returned by getTemplatedEntity()).
-  static SmallVector<const Expr *, 1>
+  static SmallVector<AssociatedConstraint, 1>
   constraintsForTemplatedEntity(DeclContext *DC) {
-    SmallVector<const Expr *, 1> Result;
+    SmallVector<AssociatedConstraint, 1> Result;
     if (DC == nullptr)
       return Result;
     // Primary templates can have constraints.

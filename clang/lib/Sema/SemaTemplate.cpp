@@ -1133,8 +1133,7 @@ bool Sema::BuildTypeConstraint(const CXXScopeSpec &SS,
       SS.isSet() ? SS.getWithLocInContext(Context) : NestedNameSpecifierLoc(),
       ConceptName, CD, /*FoundDecl=*/USD ? cast<NamedDecl>(USD) : CD,
       TypeConstr->LAngleLoc.isValid() ? &TemplateArgs : nullptr,
-      ConstrainedParameter, Context.getTypeDeclType(ConstrainedParameter),
-      EllipsisLoc);
+      ConstrainedParameter, EllipsisLoc);
 }
 
 template <typename ArgumentLocAppender>
@@ -1191,7 +1190,6 @@ bool Sema::AttachTypeConstraint(NestedNameSpecifierLoc NS,
                                 ConceptDecl *NamedConcept, NamedDecl *FoundDecl,
                                 const TemplateArgumentListInfo *TemplateArgs,
                                 TemplateTypeParmDecl *ConstrainedParameter,
-                                QualType ConstrainedType,
                                 SourceLocation EllipsisLoc) {
   // C++2a [temp.param]p4:
   //     [...] If Q is of the form C<A1, ..., An>, then let E' be
@@ -1200,7 +1198,7 @@ bool Sema::AttachTypeConstraint(NestedNameSpecifierLoc NS,
     TemplateArgs ? ASTTemplateArgumentListInfo::Create(Context,
                                                        *TemplateArgs) : nullptr;
 
-  QualType ParamAsArgument = ConstrainedType;
+  QualType ParamAsArgument(ConstrainedParameter->getTypeForDecl(), 0);
 
   ExprResult ImmediatelyDeclaredConstraint = formImmediatelyDeclaredConstraint(
       *this, NS, NameInfo, NamedConcept, FoundDecl,
@@ -1223,7 +1221,8 @@ bool Sema::AttachTypeConstraint(NestedNameSpecifierLoc NS,
                                       /*NamedConcept=*/NamedConcept,
                                       /*ArgsWritten=*/ArgsAsWritten);
   ConstrainedParameter->setTypeConstraint(CL,
-                                          ImmediatelyDeclaredConstraint.get());
+                                          ImmediatelyDeclaredConstraint.get(),
+                                          /*ArgumentPackSubstitutionIndex=*/-1);
   return false;
 }
 
@@ -4062,7 +4061,7 @@ static void checkMoreSpecializedThanPrimary(Sema &S, PartialSpecDecl *Partial) {
   }
 
   S.NoteTemplateLocation(*Template);
-  SmallVector<const Expr *, 3> PartialAC, TemplateAC;
+  SmallVector<AssociatedConstraint, 3> PartialAC, TemplateAC;
   Template->getAssociatedConstraints(TemplateAC);
   Partial->getAssociatedConstraints(PartialAC);
   S.MaybeEmitAmbiguousAtomicConstraintsDiagnostic(Partial, PartialAC, Template,
@@ -4604,7 +4603,8 @@ Sema::CheckConceptTemplateId(const CXXScopeSpec &SS,
 
   if (!AreArgsDependent &&
       CheckConstraintSatisfaction(
-          NamedConcept, {NamedConcept->getConstraintExpr()}, MLTAL,
+          NamedConcept, AssociatedConstraint(NamedConcept->getConstraintExpr()),
+          MLTAL,
           SourceRange(SS.isSet() ? SS.getBeginLoc() : ConceptNameInfo.getLoc(),
                       TemplateArgs->getRAngleLoc()),
           Satisfaction))
@@ -7432,7 +7432,7 @@ bool Sema::CheckTemplateTemplateArgument(TemplateTemplateParmDecl *Param,
   // C++20[temp.func.order]p2
   //   [...] If both deductions succeed, the partial ordering selects the
   // more constrained template (if one exists) as determined below.
-  SmallVector<const Expr *, 3> ParamsAC, TemplateAC;
+  SmallVector<AssociatedConstraint, 3> ParamsAC, TemplateAC;
   Params->getAssociatedConstraints(ParamsAC);
   // C++20[temp.arg.template]p3
   //   [...] In this comparison, if P is unconstrained, the constraints on A
