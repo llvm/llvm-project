@@ -158,13 +158,16 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
 
   for (const MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB) {
+      if (MI.isImplicitDef())
+        continue;
+
       // TODO: Check regmasks? Do they occur anywhere except calls?
       for (const MachineOperand &MO : MI.operands()) {
         unsigned Width = 0;
         bool IsSGPR = false;
         bool IsAGPR = false;
 
-        if (!MO.isReg())
+        if (!MO.isReg() || MO.isUse())
           continue;
 
         Register Reg = MO.getReg();
