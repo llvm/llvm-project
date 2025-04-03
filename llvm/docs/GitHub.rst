@@ -4,6 +4,9 @@
 LLVM GitHub User Guide
 ======================
 
+.. contents::
+   :local:
+
 Introduction
 ============
 The LLVM Project uses `GitHub <https://github.com/>`_ for
@@ -119,6 +122,97 @@ you won't encounter merge conflicts when landing the PR.
   collaborating with others on a single branch, be careful how and when you push
   changes. ``--force-with-lease`` may be useful in this situation.
 
+Approvals
+---------
+
+Before merging a PR you must have the required approvals. See
+:ref:`lgtm_how_a_patch_is_accepted` for more details.
+
+Landing your change
+-------------------
+
+After your PR is approved, ensure that:
+
+  * The PR title and description describe the final changes. These will be used
+    as the title and message of the final squashed commit. The titles and
+    messages of commits in the PR will **not** be used.
+  * You have set a valid email address in your GitHub account, see :ref:`github-email-address`.
+
+.. note::
+   The LLVM Project monorepo on GitHub is configured to always use "Squash
+   and Merge" as the pull request merge option when using the web interface.
+   With this option, GitHub uses the PR summary as the default commit
+   message.
+
+   Users with write access who can merge PRs have a final opportunity to edit
+   the commit title and message before merging. However, this option is not
+   available to contributors without write access.
+
+At this point, you can merge your changes. If you do not have write permissions
+for the repository, the merge button in GitHub's web interface will be
+disabled. If this is the case, continue following the steps here but ask one of
+your reviewers to click the merge button on your behalf.
+
+If the PR is a single commit, all you need to do is click the merge button in
+GitHub's web interface.
+
+If your PR contains multiple commits, you need to consolidate those commits into
+one commit. There are three different ways to do this, shown here with the most
+commonly used first:
+
+* Use the button `Squash and merge` in GitHub's web interface, if you do this
+  remember to review the commit message when prompted.
+
+  Afterwards you can select the option `Delete branch` to delete the branch
+  from your fork.
+
+* `Interactive rebase <https://git-scm.com/docs/git-rebase#_interactive_mode>`_
+  with fixups. This is the recommended method since you can control the final
+  commit message and check that the final commit looks as you expect. When
+  your local state is correct, remember to force-push to your branch and press
+  the merge button in GitHub's web interface afterwards.
+
+* Merge using the GitHub command line interface. Switch to your branch locally
+  and run:
+
+  ::
+
+    gh pr merge --squash --delete-branch
+
+  If you observe an error message from the above informing you that your pull
+  request is not mergeable, then that is likely because upstream has been
+  modified since your pull request was authored in a way that now results in a
+  merge conflict. You must first resolve this merge conflict in order to merge
+  your pull request. In order to do that:
+
+  ::
+
+    git fetch upstream
+    git rebase upstream/main
+
+  Then fix the source files causing merge conflicts and make sure to rebuild and
+  retest the result. Then:
+
+  ::
+
+    git add <files with resolved merge conflicts>
+    git rebase --continue
+
+  Finally, you'll need to force push to your branch one more time before you can
+  merge:
+
+  ::
+
+    git push --force
+    gh pr merge --squash --delete-branch
+
+  This force push may ask if you intend to push hundreds, or potentially
+  thousands of patches (depending on how long it's been since your pull request
+  was initially authored vs. when you intended to merge it). Since you're pushing
+  to a branch in your fork, this is ok and expected. Github's UI for the pull
+  request will understand that you're rebasing just your patches, and display
+  this result correctly with a note that a force push did occur.
+
 .. _github_branches:
 
 Branches
@@ -217,99 +311,6 @@ Include the last ``/``.
 If you didn't do the above and Graphite created non-prefixed branches, a simple way to
 unblock is to rename (``git -m <old name> <new name>``), and then checkout the branch
 and ``gt track``.
-
-
-Approvals
----------
-
-Before merging a PR you must have the required approvals. See
-:ref:`lgtm_how_a_patch_is_accepted` for more details.
-
-
-Landing your change
--------------------
-
-After your PR is approved, ensure that:
-
-  * The PR title and description describe the final changes. These will be used
-    as the title and message of the final squashed commit. The titles and
-    messages of commits in the PR will **not** be used.
-  * You have set a valid email address in your GitHub account, see :ref:`github-email-address`.
-
-.. note::
-   The LLVM Project monorepo on GitHub is configured to always use "Squash
-   and Merge" as the pull request merge option when using the web interface.
-   With this option, GitHub uses the PR summary as the default commit
-   message.
-
-   Users with write access who can merge PRs have a final opportunity to edit
-   the commit title and message before merging. However, this option is not
-   available to contributors without write access.
-
-At this point, you can merge your changes. If you do not have write permissions
-for the repository, the merge button in GitHub's web interface will be
-disabled. If this is the case, continue following the steps here but ask one of
-your reviewers to click the merge button on your behalf.
-
-If the PR is a single commit, all you need to do is click the merge button in
-GitHub's web interface.
-
-If your PR contains multiple commits, you need to consolidate those commits into
-one commit. There are three different ways to do this, shown here with the most
-commonly used first:
-
-* Use the button `Squash and merge` in GitHub's web interface, if you do this
-  remember to review the commit message when prompted.
-
-  Afterwards you can select the option `Delete branch` to delete the branch
-  from your fork.
-
-* `Interactive rebase <https://git-scm.com/docs/git-rebase#_interactive_mode>`_
-  with fixups. This is the recommended method since you can control the final
-  commit message and check that the final commit looks as you expect. When
-  your local state is correct, remember to force-push to your branch and press
-  the merge button in GitHub's web interface afterwards.
-
-* Merge using the GitHub command line interface. Switch to your branch locally
-  and run:
-
-  ::
-
-    gh pr merge --squash --delete-branch
-
-  If you observe an error message from the above informing you that your pull
-  request is not mergeable, then that is likely because upstream has been
-  modified since your pull request was authored in a way that now results in a
-  merge conflict. You must first resolve this merge conflict in order to merge
-  your pull request. In order to do that:
-
-  ::
-
-    git fetch upstream
-    git rebase upstream/main
-
-  Then fix the source files causing merge conflicts and make sure to rebuild and
-  retest the result. Then:
-
-  ::
-
-    git add <files with resolved merge conflicts>
-    git rebase --continue
-
-  Finally, you'll need to force push to your branch one more time before you can
-  merge:
-
-  ::
-
-    git push --force
-    gh pr merge --squash --delete-branch
-
-  This force push may ask if you intend to push hundreds, or potentially
-  thousands of patches (depending on how long it's been since your pull request
-  was initially authored vs. when you intended to merge it). Since you're pushing
-  to a branch in your fork, this is ok and expected. Github's UI for the pull
-  request will understand that you're rebasing just your patches, and display
-  this result correctly with a note that a force push did occur.
 
 Pre-merge Continuous Integration (CI)
 -------------------------------------
