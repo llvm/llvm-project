@@ -417,7 +417,7 @@ QualType getFullyQualifiedType(QualType QT, const ASTContext &Ctx,
     return QT;
   }
 
-  // Handle types that have attributes attached such as `unique_ptr<int> _Nonnull`.
+  // Handle types with attributes such as `unique_ptr<int> _Nonnull`.
   if (auto *AT = dyn_cast<AttributedType>(QT.getTypePtr())) {
     QualType NewModified =
         getFullyQualifiedType(AT->getModifiedType(), Ctx, WithGlobalNsPrefix);
