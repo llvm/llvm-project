@@ -6,10 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
-#include <clc/math/clc_sinpi.h>
+#include <clc/internal/clc.h>
 
-#define FUNCTION sinpi
-#define __CLC_BODY <clc/shared/unary_def.inc>
+#define __FLOAT_ONLY
+#define __CLC_BODY <clc_native_recip.inc>
 
 #include <clc/math/gentype.inc>
