@@ -23,6 +23,19 @@
 
 using namespace llvm;
 
+static bool callingConvRequiresArgument(const Function &F,
+                                        const Argument &Arg) {
+  switch (F.getCallingConv()) {
+  case CallingConv::X86_INTR:
+    // If there are any arguments, the first one must by byval.
+    return Arg.getArgNo() == 0 && F.arg_size() != 1;
+  default:
+    return false;
+  }
+
+  llvm_unreachable("covered calling conv switch");
+}
+
 /// Goes over OldF calls and replaces them with a call to NewF
 static void replaceFunctionCalls(Function &OldF, Function &NewF,
                                  const std::set<int> &ArgIndexesToKeep) {
@@ -60,14 +73,18 @@ static void extractArgumentsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
   Module &Program = WorkItem.getModule();
   std::vector<Argument *> InitArgsToKeep;
   std::vector<Function *> Funcs;
+
   // Get inside-chunk arguments, as well as their parent function
-  for (auto &F : Program)
-    if (shouldRemoveArguments(F)) {
-      Funcs.push_back(&F);
-      for (auto &A : F.args())
-        if (O.shouldKeep())
-          InitArgsToKeep.push_back(&A);
+  for (auto &F : Program) {
+    if (!shouldRemoveArguments(F))
+      continue;
+
+    Funcs.push_back(&F);
+    for (auto &A : F.args()) {
+      if (callingConvRequiresArgument(F, A) || O.shouldKeep())
+        InitArgsToKeep.push_back(&A);
     }
+  }
 
   // We create a vector first, then convert it to a set, so that we don't have
   // to pay the cost of rebalancing the set frequently if the order we insert
