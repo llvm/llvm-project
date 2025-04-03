@@ -453,4 +453,47 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
   }
 }
 
+void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
+                                            QualType ty) {
+  // Ignore empty classes in C++.
+  if (getLangOpts().CPlusPlus) {
+    if (const RecordType *rt = ty->getAs<RecordType>()) {
+      if (cast<CXXRecordDecl>(rt->getDecl())->isEmpty())
+        return;
+    }
+  }
+
+  // Cast the dest ptr to the appropriate i8 pointer type.
+  if (builder.isInt8Ty(destPtr.getElementType())) {
+    cgm.errorNYI(loc, "Cast the dest ptr to the appropriate i8 pointer type");
+  }
+
+  // Get size and alignment info for this aggregate.
+  const CharUnits size = getContext().getTypeSizeInChars(ty);
+  if (size.isZero()) {
+    // But note that getTypeInfo returns 0 for a VLA.
+    if (isa<VariableArrayType>(getContext().getAsArrayType(ty))) {
+      cgm.errorNYI(loc,
+                   "emitNullInitialization for zero size VariableArrayType");
+    } else {
+      return;
+    }
+  }
+
+  // If the type contains a pointer to data member we can't memset it to zero.
+  // Instead, create a null constant and copy it to the destination.
+  // TODO: there are other patterns besides zero that we can usefully memset,
+  // like -1, which happens to be the pattern used by member-pointers.
+  if (!cgm.getTypes().isZeroInitializable(ty)) {
+    cgm.errorNYI(loc, "type is not zero initializable");
+  }
+
+  // In LLVM Codegen: otherwise, just memset the whole thing to zero using
+  // Builder.CreateMemSet. In CIR just emit a store of #cir.zero to the
+  // respective address.
+  // Builder.CreateMemSet(DestPtr, Builder.getInt8(0), SizeVal, false);
+  const mlir::Value zeroValue = builder.getNullValue(convertType(ty), loc);
+  builder.createStore(loc, zeroValue, destPtr.getPointer());
+}
+
 } // namespace clang::CIRGen
