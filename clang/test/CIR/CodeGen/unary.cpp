@@ -424,3 +424,45 @@ void chars(char c) {
   c++; // CHECK: cir.unary(inc, %{{.+}}) : !s8i, !s8i
   c--; // CHECK: cir.unary(dec, %{{.+}}) : !s8i, !s8i
 }
+
+_Float16 fp16UPlus(_Float16 f) {
+  return +f;
+}
+
+// CHECK: cir.func @fp16UPlus({{.*}}) -> !cir.f16
+// CHECK:   %[[INPUT:.*]] = cir.load %[[F:.*]]
+// CHECK:   %[[PROMOTED:.*]] = cir.cast(floating, %[[INPUT]] : !cir.f16), !cir.float
+// CHECK:   %[[RESULT:.*]] = cir.unary(plus, %[[PROMOTED]])
+// CHECK:   %[[UNPROMOTED:.*]] = cir.cast(floating, %[[RESULT]] : !cir.float), !cir.f16
+
+// LLVM: define half @fp16UPlus({{.*}})
+// LLVM:   %[[F_LOAD:.*]] = load half, ptr %{{.*}}, align 2
+// LLVM:   %[[PROMOTED:.*]] = fpext half %[[F_LOAD]] to float
+// LLVM:   %[[UNPROMOTED:.*]] = fptrunc float %[[PROMOTED]] to half
+
+// OGCG: define{{.*}} half @_Z9fp16UPlusDF16_({{.*}})
+// OGCG:   %[[F_LOAD:.*]] = load half, ptr %{{.*}}, align 2
+// OGCG:   %[[PROMOTED:.*]] = fpext half %[[F_LOAD]] to float
+// OGCG:   %[[UNPROMOTED:.*]] = fptrunc float %[[PROMOTED]] to half
+
+_Float16 fp16UMinus(_Float16 f) {
+  return -f;
+}
+
+// CHECK: cir.func @fp16UMinus({{.*}}) -> !cir.f16
+// CHECK:   %[[INPUT:.*]] = cir.load %[[F:.*]]
+// CHECK:   %[[PROMOTED:.*]] = cir.cast(floating, %[[INPUT]] : !cir.f16), !cir.float
+// CHECK:   %[[RESULT:.*]] = cir.unary(minus, %[[PROMOTED]])
+// CHECK:   %[[UNPROMOTED:.*]] = cir.cast(floating, %[[RESULT]] : !cir.float), !cir.f16
+
+// LLVM: define half @fp16UMinus({{.*}})
+// LLVM:   %[[F_LOAD:.*]] = load half, ptr %{{.*}}, align 2
+// LLVM:   %[[PROMOTED:.*]] = fpext half %[[F_LOAD]] to float
+// LLVM:   %[[RESULT:.*]] = fneg float %[[PROMOTED]]
+// LLVM:   %[[UNPROMOTED:.*]] = fptrunc float %[[RESULT]] to half
+
+// OGCG: define{{.*}} half @_Z10fp16UMinusDF16_({{.*}})
+// OGCG:   %[[F_LOAD:.*]] = load half, ptr %{{.*}}, align 2
+// OGCG:   %[[PROMOTED:.*]] = fpext half %[[F_LOAD]] to float
+// OGCG:   %[[RESULT:.*]] = fneg float %[[PROMOTED]]
+// OGCG:   %[[UNPROMOTED:.*]] = fptrunc float %[[RESULT]] to half
