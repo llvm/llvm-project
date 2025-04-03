@@ -1741,8 +1741,8 @@ struct ShapeOfFromReshape : public OpRewritePattern<shape::ShapeOfOp> {
     // Note: 'shape.shape_of' op result must be shape or extent tensor.
     Value shape = tensorReshapeOp.getShape();
 
-    auto opTensorTy = llvm::cast<RankedTensorType>(op.getType());
-    auto shapeTensorTy = llvm::cast<RankedTensorType>(shape.getType());
+    auto opTensorTy = cast<RankedTensorType>(op.getType());
+    auto shapeTensorTy = cast<RankedTensorType>(shape.getType());
 
     if (op.getType() != shape.getType()) {
         if (opTensorTy.getElementType() == shapeTensorTy.getElementType())
