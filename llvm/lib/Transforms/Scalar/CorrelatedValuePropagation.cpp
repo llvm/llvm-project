@@ -410,7 +410,7 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
       ++ReachableCaseCount;
     }
 
-    if (ReachableCaseCount > 1 && !SI->defaultDestUndefined()) {
+    if (ReachableCaseCount > 1 && !SI->defaultDestUnreachable()) {
       BasicBlock *DefaultDest = SI->getDefaultDest();
       ConstantRange CR = LVI->getConstantRangeAtUse(I->getOperandUse(0),
                                                     /*UndefAllowed*/ false);

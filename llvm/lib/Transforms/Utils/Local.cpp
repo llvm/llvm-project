@@ -203,7 +203,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
     BasicBlock *TheOnlyDest = DefaultDest;
 
     // If the default is unreachable, ignore it when searching for TheOnlyDest.
-    if (SI->defaultDestUndefined() && SI->getNumCases() > 0)
+    if (SI->defaultDestUnreachable() && SI->getNumCases() > 0)
       TheOnlyDest = SI->case_begin()->getCaseSuccessor();
 
     bool Changed = false;
