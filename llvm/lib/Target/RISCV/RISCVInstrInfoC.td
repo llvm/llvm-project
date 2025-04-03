@@ -799,12 +799,6 @@ def InsnCJ : DirectiveInsnCJ<(outs), (ins uimm2_opcode:$opcode,
                                           uimm3:$funct3,
                                           bare_simm12_lsb0:$imm11),
                              "$opcode, $funct3, $imm11">;
-def Insn16 : RVInst16<(outs), (ins uimm16:$value), "", "", [], InstFormatOther> {
-  bits<16> value;
-
-  let Inst{15-0} = value;
-  let AsmString = ".insn 0x2, $value";
-}
 }
 
 // Use InstAliases to match these so that we can combine the insn and format
