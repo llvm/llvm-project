@@ -49,10 +49,6 @@ struct AvoidCapabilitiesSet {
 
 char llvm::SPIRVModuleAnalysis::ID = 0;
 
-namespace llvm {
-void initializeSPIRVModuleAnalysisPass(PassRegistry &);
-} // namespace llvm
-
 INITIALIZE_PASS(SPIRVModuleAnalysis, DEBUG_TYPE, "SPIRV module analysis", true,
                 true)
 

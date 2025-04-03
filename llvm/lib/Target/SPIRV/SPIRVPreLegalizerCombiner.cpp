@@ -197,8 +197,6 @@ void SPIRVPreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
 
 SPIRVPreLegalizerCombiner::SPIRVPreLegalizerCombiner()
     : MachineFunctionPass(ID) {
-  initializeSPIRVPreLegalizerCombinerPass(*PassRegistry::getPassRegistry());
-
   if (!RuleConfig.parseCommandLineOption())
     report_fatal_error("Invalid rule identifier");
 }

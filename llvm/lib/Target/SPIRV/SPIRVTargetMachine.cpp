@@ -49,6 +49,15 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVConvergenceRegionAnalysisWrapperPassPass(PR);
   initializeSPIRVStructurizerPass(PR);
   initializeSPIRVPreLegalizerCombinerPass(PR);
+  initializeSPIRVLegalizePointerCastPass(PR);
+  initializeSPIRVRegularizerPass(PR);
+  initializeSPIRVPreLegalizerPass(PR);
+  initializeSPIRVPostLegalizerPass(PR);
+  initializeSPIRVMergeRegionExitTargetsPass(PR);
+  initializeSPIRVEmitIntrinsicsPass(PR);
+  initializeSPIRVEmitNonSemanticDIPass(PR);
+  initializeSPIRVPrepareFunctionsPass(PR);
+  initializeSPIRVStripConvergentIntrinsicsPass(PR);
 }
 
 static std::string computeDataLayout(const Triple &TT) {
