@@ -12,8 +12,7 @@
 namespace clang {
 namespace doc {
 
-llvm::Error
-copyFile(llvm::StringRef FilePath, llvm::StringRef OutDirectory) {
+llvm::Error copyFile(llvm::StringRef FilePath, llvm::StringRef OutDirectory) {
   llvm::SmallString<128> PathWrite;
   llvm::sys::path::native(OutDirectory, PathWrite);
   llvm::sys::path::append(PathWrite, llvm::sys::path::filename(FilePath));
@@ -30,13 +29,13 @@ copyFile(llvm::StringRef FilePath, llvm::StringRef OutDirectory) {
 }
 
 
-llvm::SmallString<128> computeRelativePath(llvm::StringRef Destination,
-                                           llvm::StringRef Origin) {
+llvm::SmallString<128> 
+computeRelativePath(llvm::StringRef Destination, llvm::StringRef Origin) {
   // If Origin is empty, the relative path to the Destination is its complete
   // path.
   if (Origin.empty())
     return Destination;
-  
+
   // The relative path is an empty path if both directories are the same.
   if (Destination == Origin)
     return {};
