@@ -30,7 +30,7 @@ test_failures = 0
 # we exit.
 has_run_tests = False
 
-has_execute_mi = tuple(map(int, gdb.VERSION.split("."))) >= (14, 2)
+has_execute_mi = 'execute_mi' in gdb.__dict__
 
 class CheckResult(gdb.Command):
     def __init__(self):
