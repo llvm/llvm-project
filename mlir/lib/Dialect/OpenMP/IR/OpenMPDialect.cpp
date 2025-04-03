@@ -3101,46 +3101,6 @@ void CancelOp::build(OpBuilder &builder, OperationState &state,
   CancelOp::build(builder, state, clauses.cancelDirective, clauses.ifExpr);
 }
 
-LogicalResult CancelOp::verify() {
-  ClauseCancellationConstructType cct = getCancelDirective();
-  Operation *thisOp = (*this).getOperation();
-
-  if ((cct == ClauseCancellationConstructType::Parallel) &&
-      !thisOp->getParentOfType<ParallelOp>()) {
-    return emitOpError() << "cancel parallel must appear "
-                         << "inside a parallel region";
-  }
-  if (cct == ClauseCancellationConstructType::Loop) {
-    auto wsloopOp = thisOp->getParentOfType<WsloopOp>();
-
-    if (!wsloopOp) {
-      return emitOpError()
-             << "cancel loop must appear inside a worksharing-loop region";
-    }
-    if (wsloopOp.getNowaitAttr()) {
-      return emitError() << "A worksharing construct that is canceled "
-                         << "must not have a nowait clause";
-    }
-    if (wsloopOp.getOrderedAttr()) {
-      return emitError() << "A worksharing construct that is canceled "
-                         << "must not have an ordered clause";
-    }
-
-  } else if (cct == ClauseCancellationConstructType::Sections) {
-    auto sectionsOp = thisOp->getParentOfType<SectionsOp>();
-    if (!sectionsOp) {
-      return emitOpError() << "cancel sections must appear "
-                           << "inside a sections region";
-    }
-    if (sectionsOp.getNowait()) {
-      return emitError() << "A sections construct that is canceled "
-                         << "must not have a nowait clause";
-    }
-  }
-  // TODO : Add more when we support taskgroup.
-  return success();
-}
-
 //===----------------------------------------------------------------------===//
 // CancellationPointOp
 //===----------------------------------------------------------------------===//
@@ -3148,29 +3108,6 @@ LogicalResult CancelOp::verify() {
 void CancellationPointOp::build(OpBuilder &builder, OperationState &state,
                                 const CancellationPointOperands &clauses) {
   CancellationPointOp::build(builder, state, clauses.cancelDirective);
-}
-
-LogicalResult CancellationPointOp::verify() {
-  ClauseCancellationConstructType cct = getCancelDirective();
-  Operation *thisOp = (*this).getOperation();
-
-  if ((cct == ClauseCancellationConstructType::Parallel) &&
-      !thisOp->getParentOfType<ParallelOp>()) {
-    return emitOpError() << "cancellation point parallel must appear "
-                         << "inside a parallel region";
-  }
-  if ((cct == ClauseCancellationConstructType::Loop) &&
-      !thisOp->getParentOfType<WsloopOp>()) {
-    return emitOpError() << "cancellation point loop must appear "
-                         << "inside a worksharing-loop region";
-  }
-  if ((cct == ClauseCancellationConstructType::Sections) &&
-      !thisOp->getParentOfType<SectionsOp>()) {
-    return emitOpError() << "cancellation point sections must appear "
-                         << "inside a sections region";
-  }
-  // TODO : Add more when we support taskgroup.
-  return success();
 }
 
 //===----------------------------------------------------------------------===//
