@@ -10,7 +10,13 @@
 #define _LIBCPP___ALGORITHM_FOR_EACH_N_SEGMENT_H
 
 #include <__config>
+<<<<<<< HEAD
 #include <__iterator/iterator_traits.h>
+=======
+#include <__iterator/distance.h>
+#include <__iterator/iterator_traits.h>
+#include <__iterator/next.h>
+>>>>>>> 4a86118918e8 (Fix review comments)
 #include <__iterator/segmented_iterator.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
