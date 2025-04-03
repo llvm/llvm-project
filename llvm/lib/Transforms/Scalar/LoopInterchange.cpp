@@ -19,6 +19,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/LoopCacheAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -80,21 +81,6 @@ enum class RuleTy {
   ForVectorization,
 };
 
-/// Store the information about if corresponding direction vector was negated
-/// by normalization or not. This is necessary to restore the original one from
-/// a row of a dependency matrix, because we only manage normalized direction
-/// vectors and duplicate vectors are eliminated. So there may be both original
-/// and negated vectors for a single entry (a row of dependency matrix). E.g.,
-/// if there are two direction vectors `[< =]` and `[> =]`, the later one will
-/// be converted to the same as former one by normalization, so only `[< =]`
-/// would be retained in the final result.
-struct NegatedStatus {
-  bool Original = false;
-  bool Negated = false;
-
-  bool isNonNegativeDir(char Dir) const;
-};
-
 } // end anonymous namespace
 
 // Minimum loop depth supported.
@@ -142,9 +128,9 @@ static void printDepMatrix(CharMatrix &DepMatrix) {
 #endif
 
 static bool populateDependencyMatrix(CharMatrix &DepMatrix,
-                                     std::vector<NegatedStatus> &NegStatusVec,
-                                     unsigned Level, Loop *L,
-                                     DependenceInfo *DI, ScalarEvolution *SE,
+                                     BitVector &IsNegatedVec, unsigned Level,
+                                     Loop *L, DependenceInfo *DI,
+                                     ScalarEvolution *SE,
                                      OptimizationRemarkEmitter *ORE) {
   using ValueVector = SmallVector<Value *, 16>;
 
@@ -184,8 +170,8 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix,
   }
   ValueVector::iterator I, IE, J, JE;
 
-  // Manage all found direction vectors. and map it to the index of DepMatrix.
-  StringMap<unsigned> Seen;
+  // Manage all found direction vectors, negated and not negated, separately.
+  StringSet<> Seen[2];
 
   for (I = MemInstr.begin(), IE = MemInstr.end(); I != IE; ++I) {
     for (J = I, JE = MemInstr.end(); J != JE; ++J) {
@@ -233,17 +219,12 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix,
         }
 
         // Make sure we only add unique entries to the dependency matrix.
-        unsigned Index = DepMatrix.size();
-        auto [Ite, Inserted] =
-            Seen.try_emplace(StringRef(Dep.data(), Dep.size()), Index);
-        if (Inserted) {
+        // Negated vectors (due to normalization) are treated as separate from
+        // non negated ones.
+        if (Seen[Normalized].insert(StringRef(Dep.data(), Dep.size())).second) {
           DepMatrix.push_back(Dep);
-          NegStatusVec.push_back(NegatedStatus{});
-        } else
-          Index = Ite->second;
-
-        NegatedStatus &Status = NegStatusVec[Index];
-        (Normalized ? Status.Negated : Status.Original) = true;
+          IsNegatedVec.push_back(Normalized);
+        }
       }
     }
   }
@@ -427,8 +408,7 @@ public:
   /// Check if the loop interchange is profitable.
   bool isProfitable(const Loop *InnerLoop, const Loop *OuterLoop,
                     unsigned InnerLoopId, unsigned OuterLoopId,
-                    CharMatrix &DepMatrix,
-                    const std::vector<NegatedStatus> &NegStatusVec,
+                    CharMatrix &DepMatrix, const BitVector &IsNegatedVec,
                     const DenseMap<const Loop *, unsigned> &CostMap,
                     std::unique_ptr<CacheCost> &CC);
 
@@ -441,7 +421,7 @@ private:
   std::optional<bool>
   isProfitableForVectorization(unsigned InnerLoopId, unsigned OuterLoopId,
                                CharMatrix &DepMatrix,
-                               const std::vector<NegatedStatus> &NegStatusVec);
+                               const BitVector &IsNegatedVec);
   Loop *OuterLoop;
   Loop *InnerLoop;
 
@@ -533,9 +513,9 @@ struct LoopInterchange {
                       << "\n");
 
     CharMatrix DependencyMatrix;
-    std::vector<NegatedStatus> NegStatusVec;
+    BitVector IsNegatedVec;
     Loop *OuterMostLoop = *(LoopList.begin());
-    if (!populateDependencyMatrix(DependencyMatrix, NegStatusVec, LoopNestDepth,
+    if (!populateDependencyMatrix(DependencyMatrix, IsNegatedVec, LoopNestDepth,
                                   OuterMostLoop, DI, SE, ORE)) {
       LLVM_DEBUG(dbgs() << "Populating dependency matrix failed\n");
       return false;
@@ -575,7 +555,7 @@ struct LoopInterchange {
       bool ChangedPerIter = false;
       for (unsigned i = SelecLoopId; i > SelecLoopId - j; i--) {
         bool Interchanged = processLoop(LoopList, i, i - 1, DependencyMatrix,
-                                        NegStatusVec, CostMap);
+                                        IsNegatedVec, CostMap);
         ChangedPerIter |= Interchanged;
         Changed |= Interchanged;
       }
@@ -590,8 +570,7 @@ struct LoopInterchange {
   bool processLoop(SmallVectorImpl<Loop *> &LoopList, unsigned InnerLoopId,
                    unsigned OuterLoopId,
                    std::vector<std::vector<char>> &DependencyMatrix,
-
-                   const std::vector<NegatedStatus> &NegStatusVec,
+                   BitVector &IsNegatedVec,
                    const DenseMap<const Loop *, unsigned> &CostMap) {
     Loop *OuterLoop = LoopList[OuterLoopId];
     Loop *InnerLoop = LoopList[InnerLoopId];
@@ -605,7 +584,7 @@ struct LoopInterchange {
     LLVM_DEBUG(dbgs() << "Loops are legal to interchange\n");
     LoopInterchangeProfitability LIP(OuterLoop, InnerLoop, SE, ORE);
     if (!LIP.isProfitable(InnerLoop, OuterLoop, InnerLoopId, OuterLoopId,
-                          DependencyMatrix, NegStatusVec, CostMap, CC)) {
+                          DependencyMatrix, IsNegatedVec, CostMap, CC)) {
       LLVM_DEBUG(dbgs() << "Interchanging loops not profitable.\n");
       return false;
     }
@@ -1245,25 +1224,9 @@ static char flipDirection(char Dir) {
   }
 }
 
-/// Ensure that there are no negative direction dependencies corresponding to \p
-/// Dir.
-bool NegatedStatus::isNonNegativeDir(char Dir) const {
-  assert((Original || Negated) && "Cannot restore the original direction");
-
-  // If both flag is true, it means that there is both as-is and negated
-  // direction. In this case only `=` or `I` don't have negative direction
-  // dependency.
-  if (Original && Negated)
-    return Dir == '=' || Dir == 'I';
-
-  char Restored = Negated ? flipDirection(Dir) : Dir;
-  return Restored == '=' || Restored == 'I' || Restored == '<';
-}
-
 /// Return true if we can vectorize the loop specified by \p LoopId.
 static bool canVectorize(const CharMatrix &DepMatrix,
-                         const std::vector<NegatedStatus> &NegStatusVec,
-                         unsigned LoopId) {
+                         const BitVector &IsNegatedVec, unsigned LoopId) {
   // The loop can be vectorized if there are no negative dependencies. Consider
   // the dependency of `j` in the following example.
   //
@@ -1278,7 +1241,9 @@ static bool canVectorize(const CharMatrix &DepMatrix,
   // the vector width is less than or equal to 4 x sizeof(A[0][0]).
   for (unsigned I = 0; I != DepMatrix.size(); I++) {
     char Dir = DepMatrix[I][LoopId];
-    if (!NegStatusVec[I].isNonNegativeDir(Dir))
+    if (IsNegatedVec[I])
+      Dir = flipDirection(Dir);
+    if (Dir != '=' && Dir != 'I' && Dir != '<')
       return false;
   }
   return true;
@@ -1286,15 +1251,15 @@ static bool canVectorize(const CharMatrix &DepMatrix,
 
 std::optional<bool> LoopInterchangeProfitability::isProfitableForVectorization(
     unsigned InnerLoopId, unsigned OuterLoopId, CharMatrix &DepMatrix,
-    const std::vector<NegatedStatus> &NegStatusVec) {
+    const BitVector &IsNegatedVec) {
   // If the outer loop cannot be vectorized, it is not profitable to move this
   // to inner position.
-  if (!canVectorize(DepMatrix, NegStatusVec, OuterLoopId))
+  if (!canVectorize(DepMatrix, IsNegatedVec, OuterLoopId))
     return false;
 
   // If inner loop cannot be vectorized and outer loop can be then it is
   // profitable to interchange to enable inner loop parallelism.
-  if (!canVectorize(DepMatrix, NegStatusVec, InnerLoopId))
+  if (!canVectorize(DepMatrix, IsNegatedVec, InnerLoopId))
     return true;
 
   // If both the inner and the outer loop can be vectorized, it is necessary to
@@ -1307,8 +1272,7 @@ std::optional<bool> LoopInterchangeProfitability::isProfitableForVectorization(
 
 bool LoopInterchangeProfitability::isProfitable(
     const Loop *InnerLoop, const Loop *OuterLoop, unsigned InnerLoopId,
-    unsigned OuterLoopId, CharMatrix &DepMatrix,
-    const std::vector<NegatedStatus> &NegStatusVec,
+    unsigned OuterLoopId, CharMatrix &DepMatrix, const BitVector &IsNegatedVec,
     const DenseMap<const Loop *, unsigned> &CostMap,
     std::unique_ptr<CacheCost> &CC) {
   // isProfitable() is structured to avoid endless loop interchange. If the
@@ -1331,7 +1295,7 @@ bool LoopInterchangeProfitability::isProfitable(
       break;
     case RuleTy::ForVectorization:
       shouldInterchange = isProfitableForVectorization(InnerLoopId, OuterLoopId,
-                                                       DepMatrix, NegStatusVec);
+                                                       DepMatrix, IsNegatedVec);
       break;
     }
 
