@@ -842,10 +842,14 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
     }
     Out << Proto;
 
-    if (Expr *TrailingRequiresClause = D->getTrailingRequiresClause()) {
+    if (const AssociatedConstraint &TrailingRequiresClause =
+            D->getTrailingRequiresClause()) {
       Out << " requires ";
-      TrailingRequiresClause->printPretty(Out, nullptr, SubPolicy, Indentation,
-                                          "\n", &Context);
+      // FIXME: The printer could support printing expressions and types as if
+      // expanded by an index. Pass in the ArgumentPackSubstitutionIndex when
+      // that's supported.
+      TrailingRequiresClause.ConstraintExpr->printPretty(
+          Out, nullptr, SubPolicy, Indentation, "\n", &Context);
     }
   } else {
     Ty.print(Out, Policy, Proto);
