@@ -51,6 +51,7 @@
 #include <optional>
 #include <string>
 #include <utility>
+#include <variant>
 
 #if defined(_WIN32)
 #define NOMINMAX
@@ -700,7 +701,7 @@ void DAP::SetTarget(const lldb::SBTarget target) {
 bool DAP::HandleObject(const Message &M) {
   if (const auto *req = std::get_if<Request>(&M)) {
     {
-      std::lock_guard<std::mutex> lock(m_active_request_mutex);
+      std::lock_guard<std::mutex> guard(m_active_request_mutex);
       m_active_request = req;
 
       // Clear the interrupt request prior to invoking a handler.
@@ -727,7 +728,7 @@ bool DAP::HandleObject(const Message &M) {
   if (const auto *resp = std::get_if<Response>(&M)) {
     std::unique_ptr<ResponseHandler> response_handler;
     {
-      std::lock_guard<std::mutex> locker(call_mutex);
+      std::lock_guard<std::mutex> guard(call_mutex);
       auto inflight = inflight_reverse_requests.find(resp->request_seq);
       if (inflight != inflight_reverse_requests.end()) {
         response_handler = std::move(inflight->second);
@@ -818,13 +819,12 @@ llvm::Error DAP::Disconnect(bool terminateDebuggee) {
 }
 
 bool DAP::IsCancelled(const protocol::Request &req) {
-  std::lock_guard<std::mutex> lock(m_cancelled_requests_mutex);
+  std::lock_guard<std::mutex> guard(m_cancelled_requests_mutex);
   return m_cancelled_requests.contains(req.seq);
 }
 
 void DAP::ClearCancelRequest(const CancelArguments &args) {
-  std::lock_guard<std::mutex> cancalled_requests_lock(
-      m_cancelled_requests_mutex);
+  std::lock_guard<std::mutex> guard(m_cancelled_requests_mutex);
   if (args.requestId)
     m_cancelled_requests.erase(*args.requestId);
 }
@@ -846,69 +846,67 @@ static std::optional<T> getArgumentsIfRequest(const Message &pm,
 }
 
 llvm::Error DAP::Loop() {
-  std::future<llvm::Error> queue_reader = std::async([&]() -> llvm::Error {
-    llvm::set_thread_name(transport.GetClientName() + ".transport_handler");
-    auto cleanup = llvm::make_scope_exit([&]() {
-      // Ensure we're marked as disconnecting when the reader exits.
-      disconnecting = true;
-      m_queue_cv.notify_all();
-    });
+  std::future<llvm::Error> queue_reader =
+      std::async(std::launch::async, [&]() -> llvm::Error {
+        llvm::set_thread_name(transport.GetClientName() + ".transport_handler");
+        auto cleanup = llvm::make_scope_exit([&]() {
+          // Ensure we're marked as disconnecting when the reader exits.
+          disconnecting = true;
+          m_queue_cv.notify_all();
+        });
 
-    while (!disconnecting) {
-      llvm::Expected<Message> next = transport.Read(std::chrono::seconds(1));
-      bool timeout = false;
-      bool eof = false;
-      if (llvm::Error Err = llvm::handleErrors(
-              next.takeError(),
-              [&](const EndOfFileError &E) -> llvm::Error {
-                eof = true;
-                return llvm::Error::success();
-              },
-              [&](const TimeoutError &) -> llvm::Error {
-                timeout = true;
-                return llvm::Error::success();
-              }))
-        return Err;
+        while (!disconnecting) {
+          llvm::Expected<Message> next =
+              transport.Read(std::chrono::seconds(1));
+          if (next.errorIsA<EndOfFileError>()) {
+            consumeError(next.takeError());
+            break;
+          }
 
-      if (eof)
-        break;
+          // If the read timed out, continue to check if we should disconnect.
+          if (next.errorIsA<TimeoutError>()) {
+            consumeError(next.takeError());
+            continue;
+          }
 
-      // If the read timed out, continue to check if we should disconnect.
-      if (timeout)
-        continue;
+          if (const protocol::Request *req =
+                  std::get_if<protocol::Request>(&*next);
+              req && req->command == "disconnect") {
+            disconnecting = true;
+          }
 
-      const std::optional<CancelArguments> cancel_args =
-          getArgumentsIfRequest<CancelArguments>(*next, "cancel");
-      if (cancel_args) {
-        {
-          std::lock_guard<std::mutex> cancalled_requests_lock(
-              m_cancelled_requests_mutex);
-          if (cancel_args->requestId)
-            m_cancelled_requests.insert(*cancel_args->requestId);
-        }
+          const std::optional<CancelArguments> cancel_args =
+              getArgumentsIfRequest<CancelArguments>(*next, "cancel");
+          if (cancel_args) {
+            {
+              std::lock_guard<std::mutex> guard(m_cancelled_requests_mutex);
+              if (cancel_args->requestId)
+                m_cancelled_requests.insert(*cancel_args->requestId);
+            }
 
-        // If a cancel is requested for the active request, make a best
-        // effort attempt to interrupt.
-        std::lock_guard<std::mutex> active_request_lock(m_active_request_mutex);
-        if (m_active_request &&
-            cancel_args->requestId == m_active_request->seq) {
-          DAP_LOG(log,
+            // If a cancel is requested for the active request, make a best
+            // effort attempt to interrupt.
+            std::lock_guard<std::mutex> guard(m_active_request_mutex);
+            if (m_active_request &&
+                cancel_args->requestId == m_active_request->seq) {
+              DAP_LOG(
+                  log,
                   "({0}) interrupting inflight request (command={1} seq={2})",
                   transport.GetClientName(), m_active_request->command,
                   m_active_request->seq);
-          debugger.RequestInterrupt();
+              debugger.RequestInterrupt();
+            }
+          }
+
+          {
+            std::lock_guard<std::mutex> guard(m_queue_mutex);
+            m_queue.push_back(std::move(*next));
+          }
+          m_queue_cv.notify_one();
         }
-      }
 
-      {
-        std::lock_guard<std::mutex> queue_lock(m_queue_mutex);
-        m_queue.push_back(std::move(*next));
-      }
-      m_queue_cv.notify_one();
-    }
-
-    return llvm::Error::success();
-  });
+        return llvm::Error::success();
+      });
 
   auto cleanup = llvm::make_scope_exit([&]() {
     out.Stop();
