@@ -994,10 +994,10 @@ struct DSEState {
       PostOrderNumbers[BB] = PO++;
       for (Instruction &I : *BB) {
         if (auto* II = dyn_cast<IntrinsicInst>(&I)) {
-            const auto ID = II->getIntrinsicID();
-            if (ID == Intrinsic::coro_begin ||
-                ID == Intrinsic::coro_begin_custom_abi)
-              CoroId = cast<CoroIdInst>(cast<CoroBeginInst>(II)->getId());
+          const auto ID = II->getIntrinsicID();
+          if (ID == Intrinsic::coro_begin ||
+              ID == Intrinsic::coro_begin_custom_abi)
+            CoroId = cast<CoroIdInst>(cast<CoroBeginInst>(II)->getId());
         }
 
         MemoryAccess *MA = MSSA.getMemoryAccess(&I);
