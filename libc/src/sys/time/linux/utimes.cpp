@@ -8,8 +8,8 @@
 
 #include "src/sys/time/utimes.h"
 
-#include "hdr/types/struct_timeval.h"
 #include "hdr/fcntl_macros.h"
+#include "hdr/types/struct_timeval.h"
 
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/common.h"
@@ -22,11 +22,11 @@ namespace LIBC_NAMESPACE_DECL {
   
   LLVM_LIBC_FUNCTION(int, utimes, (const char *path, const struct timeval times[2])) {
     int ret;
-  
-  #ifdef SYS_utimes
+
+#ifdef SYS_utimes
     // No need to define a timespec struct, use the syscall directly.
     ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_utimes, path, times);
-  #elif defined(SYS_utimensat)
+#elif defined(SYS_utimensat)
     //the utimensat syscall requires a timespec struct, not timeval.
     struct timespec ts[2];
     struct timespec *ts_ptr = nullptr; // default value if times is NULL
@@ -60,10 +60,10 @@ namespace LIBC_NAMESPACE_DECL {
     // flags=0 means don't follow symlinks (like utimes)
     ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_utimensat, AT_FDCWD, path,
                                              ts_ptr, 0);
-  
-  #else
-  #error "utimensat and utimes syscalls not available."
-  #endif // SYS_utimensat
+
+#else
+#error "utimensat and utimes syscalls not available."
+#endif // SYS_utimensat
   
     if (ret < 0) {
       libc_errno = -ret;
