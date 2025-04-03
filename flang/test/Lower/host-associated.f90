@@ -487,7 +487,7 @@ end subroutine test_proc_dummy_other
 ! CHECK:           %[[VAL_13:.*]] = fir.coordinate_of %[[VAL_12]], %[[VAL_8]] : (!fir.ref<tuple<!fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
 ! CHECK:           %[[VAL_14:.*]] = fir.emboxchar %[[VAL_11]], %[[VAL_9]] : (!fir.ref<!fir.char<1,10>>, index) -> !fir.boxchar<1>
 ! CHECK:           fir.store %[[VAL_14]] to %[[VAL_13]] : !fir.ref<!fir.boxchar<1>>
-! CHECK:           %[[VAL_15:.*]] = fir.address_of(@{{.*}}) : !fir.ref<!fir.char<1,9>>
+! CHECK:           %[[VAL_15:.*]] = fir.address_of(@{{.*}}) : !fir.ref<!fir.char<1,{{.+}}>>
 ! CHECK:           %[[VAL_16:.*]] = fir.convert %[[VAL_7]] : (index) -> i64
 ! CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_11]] : (!fir.ref<!fir.char<1,10>>) -> !llvm.ptr
 ! CHECK:           %[[VAL_18:.*]] = fir.convert %[[VAL_15]] : (!fir.ref<!fir.char<1,9>>) -> !llvm.ptr
@@ -506,8 +506,8 @@ end subroutine test_proc_dummy_other
 ! CHECK:           %[[VAL_27:.*]] = arith.subi %[[VAL_22]], %[[VAL_6]] : index
 ! CHECK:           cf.br ^bb1(%[[VAL_26]], %[[VAL_27]] : index, index)
 ! CHECK:         ^bb3:
-! CHECK:           %[[VAL_28:.*]] = fir.address_of(@{{.*}}) : !fir.ref<!fir.char<1,85>>
-! CHECK:           %[[VAL_29:.*]] = fir.convert %[[VAL_28]] : (!fir.ref<!fir.char<1,85>>) -> !fir.ref<i8>
+! CHECK:           %[[VAL_28:.*]] = fir.address_of(@{{.*}}) : !fir.ref<!fir.char<1,{{.+}}>>
+! CHECK:           %[[VAL_29:.*]] = fir.convert %[[VAL_28]] : (!fir.ref<!fir.char<1,{{.+}}>>) -> !fir.ref<i8>
 ! CHECK:           %[[VAL_30:.*]] = fir.call @_FortranAioBeginExternalListOutput
 ! CHECK:           %[[VAL_31:.*]] = fir.address_of(@_QFtest_proc_dummy_charPgen_message) : (!fir.ref<!fir.char<1,10>>, index, !fir.ref<tuple<!fir.boxchar<1>>>) -> !fir.boxchar<1>
 ! CHECK:           %[[VAL_32:.*]] = fir.emboxproc %[[VAL_31]], %[[VAL_12]] : ((!fir.ref<!fir.char<1,10>>, index, !fir.ref<tuple<!fir.boxchar<1>>>) -> !fir.boxchar<1>, !fir.ref<tuple<!fir.boxchar<1>>>) -> !fir.boxproc<() -> ()>
