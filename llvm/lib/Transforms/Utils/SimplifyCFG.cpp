@@ -7164,9 +7164,7 @@ static bool
 reduceSwitchRangeWithUnreachableDefault(SwitchInst *SI,
                                         const SmallVectorImpl<int64_t> &Values,
                                         uint64_t Base, IRBuilder<> &Builder) {
-  bool HasDefault =
-      !isa<UnreachableInst>(SI->getDefaultDest()->getFirstNonPHIOrDbg());
-  if (HasDefault)
+  if (!SI->defaultDestUndefined())
     return false;
 
   // Try reducing the range to (idx + offset) & mask
@@ -7177,30 +7175,30 @@ reduceSwitchRangeWithUnreachableDefault(SwitchInst *SI,
     CommonOnes &= (uint64_t)V;
     CommonZeros &= ~(uint64_t)V;
   }
-  uint64_t CommonBits = countl_one(CommonOnes | CommonZeros);
-  unsigned LowBits = 64 - CommonBits;
-  uint64_t Mask = (1ULL << LowBits) - 1;
-  if (Mask == std::numeric_limits<uint64_t>::max())
+  unsigned CommonPrefixLen = countl_one(CommonOnes | CommonZeros);
+  if (CommonPrefixLen == 64 || CommonPrefixLen == 0)
     return false;
+  uint64_t Mask = std::numeric_limits<uint64_t>::max() >> CommonPrefixLen;
   // Now we have some case values in the additive group Z/(2**k)Z.
   // Find the largest hole in the group and move it to back.
   uint64_t MaxHole = 0;
   uint64_t BestOffset = 0;
   for (unsigned I = 0; I < Values.size(); ++I) {
-    uint64_t Hole = ((uint64_t)Values[I] -
-                     (uint64_t)(I == 0 ? Values.back() : Values[I - 1])) &
-                    Mask;
+    uint64_t LastVal =
+        static_cast<uint64_t>(I == 0 ? Values.back() : Values[I - 1]);
+    uint64_t Hole = (static_cast<uint64_t>(Values[I]) - LastVal) & Mask;
     if (Hole > MaxHole) {
       MaxHole = Hole;
-      BestOffset = Mask - (uint64_t)Values[I] + 1;
+      BestOffset = (-static_cast<uint64_t>(Values[I])) & Mask;
     }
   }
 
   SmallVector<int64_t, 4> NewValues;
   for (auto &V : Values)
     NewValues.push_back(
-        (((int64_t)(((uint64_t)V + BestOffset) & Mask)) << CommonBits) >>
-        CommonBits);
+        ((static_cast<int64_t>((static_cast<uint64_t>(V) + BestOffset) & Mask))
+         << CommonPrefixLen) >>
+        CommonPrefixLen);
 
   llvm::sort(NewValues);
   if (!isSwitchDense(NewValues)) {
@@ -7211,15 +7209,16 @@ reduceSwitchRangeWithUnreachableDefault(SwitchInst *SI,
   auto *Ty = cast<IntegerType>(SI->getCondition()->getType());
   APInt Offset(Ty->getBitWidth(), BestOffset - Base, /*isSigned=*/true,
                /*implicitTrunc=*/true);
-  auto *Index = Builder.CreateAnd(
+  Value *Index = Builder.CreateAnd(
       Builder.CreateAdd(SI->getCondition(), ConstantInt::get(Ty, Offset)),
       Mask);
   SI->replaceUsesOfWith(SI->getCondition(), Index);
 
   for (auto Case : SI->cases()) {
     auto *Orig = Case.getCaseValue();
-    auto CaseVal =
-        (Orig->getValue() + Offset).trunc(LowBits).sext(Ty->getBitWidth());
+    APInt CaseVal = (Orig->getValue() + Offset)
+                        .trunc(64 - CommonPrefixLen)
+                        .sext(Ty->getBitWidth());
     Case.setValue(cast<ConstantInt>(ConstantInt::get(Ty, CaseVal)));
   }
 
