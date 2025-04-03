@@ -25,4 +25,6 @@ class ExprFromNonZeroFrame(TestBase):
         # expression. The thread-plan that runs for this static
         # initializer should save/restore the current execution context
         # frame (which in this test is frame #1).
-        frame.EvaluateExpression("void (*fptr)() = &func; fptr()")
+        result = frame.EvaluateExpression("int (*fptr)() = &func; fptr()")
+        self.assertTrue(result.GetError().Success())
+        self.assertEqual(result.GetValueAsSigned(), 5)
