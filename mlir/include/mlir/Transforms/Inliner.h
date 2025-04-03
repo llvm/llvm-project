@@ -91,7 +91,7 @@ private:
   };
   /// Determine if the inliner can inline a function containing multiple
   /// blocks into a region that requires a single block. By default, it is
-  /// not allowed. If it is true, cloneCallback shuold perform the extra
+  /// not allowed. If it is true, cloneCallback should perform the extra
   /// transformation. see the example in
   /// mlir/test/lib/Transforms/TestInliningCallback.cpp
   bool canHandleMultipleBlocks{false};
