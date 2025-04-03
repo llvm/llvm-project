@@ -89,38 +89,24 @@ struct PRAttr {
 };
 
 // Class names and other values depending on AMODE64 or AMODE31, and other
-// environment properties.
-template <bool Is64Bit>
-constexpr StringLiteral CODE =
-    Is64Bit ? StringLiteral("C_CODE64") : StringLiteral("C_CODE");
+// environment properties. For now, only the 64 bit XPLINK case is defined.
 
-template <bool Is64Bit>
-constexpr StringLiteral WSA =
-    Is64Bit ? StringLiteral("C_WSA64") : StringLiteral("C_WSA");
+// GOFF classes.
+constexpr StringLiteral CLASS_CODE = "C_CODE64";
+constexpr StringLiteral CLASS_WSA = "C_WSA64";
+constexpr StringLiteral CLASS_DATA = "C_DATA64";
+constexpr StringLiteral CLASS_PPA2 = "C_@@QPPA2";
 
-template <bool Is64Bit>
-constexpr StringLiteral DATA =
-    Is64Bit ? StringLiteral("C_DATA64") : StringLiteral("C_DATA");
+// Addres and residency mode.
+constexpr GOFF::ESDAmode AMODE = GOFF::ESD_AMODE_64;
+constexpr GOFF::ESDRmode RMODE = GOFF::ESD_RMODE_64;
 
-template <bool Is64Bit>
-constexpr StringLiteral PPA2 =
-    Is64Bit ? StringLiteral("C_@@QPPA2") : StringLiteral("C_@@PPA2");
+// Linkage.
+constexpr GOFF::ESDLinkageType LINKAGE = GOFF::ESD_LT_XPLink;
 
-template <bool Is64Bit>
-constexpr GOFF::ESDAmode AMODE =
-    Is64Bit ? GOFF::ESD_AMODE_64 : GOFF::ESD_AMODE_ANY;
+// Loadding behavior.
+constexpr GOFF::ESDLoadingBehavior LOADBEHAVIOR = GOFF::ESD_LB_Initial;
 
-template <bool Is64Bit>
-constexpr GOFF::ESDRmode RMODE =
-    Is64Bit ? GOFF::ESD_RMODE_64 : GOFF::ESD_RMODE_31;
-
-template <bool IsXPLINK>
-constexpr GOFF::ESDLinkageType LINKAGE =
-    IsXPLINK ? GOFF::ESD_LT_XPLink : GOFF::ESD_LT_OS;
-
-template <bool IsXPLINK>
-constexpr GOFF::ESDLoadingBehavior LOADBEHAVIOR =
-    IsXPLINK ? GOFF::ESD_LB_Initial : GOFF::ESD_LB_Deferred;
 } // namespace GOFF
 } // namespace llvm
 

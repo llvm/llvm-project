@@ -771,12 +771,11 @@ MCSectionGOFF *MCContext::getGOFFSection(SectionKind Kind, StringRef SDName,
 
 MCSectionGOFF *MCContext::getGOFFSection(SectionKind Kind, StringRef EDName,
                                          GOFF::EDAttr EDAttributes,
+                                         StringRef LDorPRName,
                                          GOFF::LDAttr LDAttributes) {
-  return getGOFFSection(Kind, "", GOFF::SDAttr{}, EDName, EDAttributes, "",
-                        LDAttributes, GOFF::PRAttr{},
-                        MCSectionGOFF::UsesRootSD |
-                            MCSectionGOFF::LDorPRNameIsSD |
-                            MCSectionGOFF::HasLD);
+  return getGOFFSection(Kind, "", GOFF::SDAttr{}, EDName, EDAttributes,
+                        LDorPRName, LDAttributes, GOFF::PRAttr{},
+                        MCSectionGOFF::UsesRootSD | MCSectionGOFF::HasLD);
 }
 
 MCSectionGOFF *MCContext::getGOFFSection(SectionKind Kind, StringRef EDName,
@@ -792,8 +791,7 @@ MCSectionGOFF *MCContext::getGOFFSection(SectionKind Kind, StringRef EDName,
                                          GOFF::EDAttr EDAttributes) {
   return getGOFFSection(Kind, "", GOFF::SDAttr{}, EDName, EDAttributes, "",
                         GOFF::LDAttr{}, GOFF::PRAttr{},
-                        MCSectionGOFF::UsesRootSD |
-                            MCSectionGOFF::LDorPRNameIsSD);
+                        MCSectionGOFF::UsesRootSD);
 }
 
 MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,

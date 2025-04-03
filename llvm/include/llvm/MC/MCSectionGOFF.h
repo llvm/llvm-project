@@ -49,7 +49,6 @@ public:
 
 private:
   SectionFlags Flags;
-  bool IsADA;
 
   friend class MCContext;
   MCSectionGOFF(StringRef SynName, SectionKind K, SectionFlags Flags,
@@ -78,7 +77,10 @@ public:
   };
 
   // Setters for the SD and LD/PR symbol names.
-  void setSDName(StringRef Name) { SDName = Name; }
+  void setSDName(StringRef Name) {
+    assert(!(Flags & UsesRootSD) && "Uses root SD");
+    SDName = Name;
+  }
   void setLDorPRName(StringRef Name) { LDorPRName = Name; }
 
   // Accessors to the various attributes.
@@ -98,9 +100,6 @@ public:
   bool hasLD() const { return Flags & HasLD; }
   bool hasPR() const { return Flags & HasPR; }
   bool isLDorPRNameTheSD() const { return Flags & LDorPRNameIsSD; }
-
-  bool isADA() const { return IsADA; }
-  void setADA() { IsADA = true; }
 
   static bool classof(const MCSection *S) { return S->getVariant() == SV_GOFF; }
 };

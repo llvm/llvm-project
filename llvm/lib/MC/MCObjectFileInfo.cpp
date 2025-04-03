@@ -547,51 +547,45 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
 }
 
 void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
-  // Some values depend on AMODE31 or AMODE64, or other properties.
-  constexpr bool Is64Bit = true;
-  constexpr bool UsesXPLINK = true;
-
   TextSection = Ctx->getGOFFSection(
-      SectionKind::getText(), GOFF::CODE<Is64Bit>,
-      GOFF::EDAttr{true, GOFF::ESD_EXE_CODE, GOFF::AMODE<Is64Bit>,
-                   GOFF::RMODE<Is64Bit>, GOFF::ESD_NS_NormalName,
-                   GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Concatenate,
-                   GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0,
-                   GOFF::ESD_ALIGN_Doubleword},
+      SectionKind::getText(), GOFF::CLASS_CODE,
+      GOFF::EDAttr{true, GOFF::ESD_EXE_CODE, GOFF::AMODE, GOFF::RMODE,
+                   GOFF::ESD_NS_NormalName, GOFF::ESD_TS_ByteOriented,
+                   GOFF::ESD_BA_Concatenate, GOFF::ESD_LB_Initial,
+                   GOFF::ESD_RQ_0, GOFF::ESD_ALIGN_Doubleword}, "",
       GOFF::LDAttr{false, GOFF::ESD_EXE_CODE, GOFF::ESD_NS_NormalName,
-                   GOFF::ESD_BST_Strong, GOFF::LINKAGE<UsesXPLINK>,
-                   GOFF::AMODE<Is64Bit>, GOFF::ESD_BSC_Section});
+                   GOFF::ESD_BST_Strong, GOFF::LINKAGE, GOFF::AMODE,
+                   GOFF::ESD_BSC_Section});
 
   PPA2ListSection = Ctx->getGOFFSection(
-      SectionKind::getData(), GOFF::PPA2<Is64Bit>,
-      GOFF::EDAttr{
-          true, GOFF::ESD_EXE_DATA, GOFF::AMODE<Is64Bit>, GOFF::RMODE<Is64Bit>,
-          GOFF::ESD_NS_Parts, GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Merge,
-          GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0, GOFF::ESD_ALIGN_Doubleword},
+      SectionKind::getData(), GOFF::CLASS_PPA2,
+      GOFF::EDAttr{true, GOFF::ESD_EXE_DATA, GOFF::AMODE, GOFF::RMODE,
+                   GOFF::ESD_NS_Parts, GOFF::ESD_TS_ByteOriented,
+                   GOFF::ESD_BA_Merge, GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0,
+                   GOFF::ESD_ALIGN_Doubleword},
       ".&ppa2",
       GOFF::PRAttr{true, false, GOFF::ESD_EXE_Unspecified, GOFF::ESD_NS_Parts,
-                   GOFF::ESD_LT_OS, GOFF::AMODE<Is64Bit>, GOFF::ESD_BSC_Section,
+                   GOFF::ESD_LT_OS, GOFF::AMODE, GOFF::ESD_BSC_Section,
                    GOFF::ESD_DSS_NoWarning, GOFF::ESD_ALIGN_Doubleword, 0});
 
   ADASection = Ctx->getGOFFSection(
-      SectionKind::getData(), GOFF::WSA<Is64Bit>,
-      GOFF::EDAttr{
-          false, GOFF::ESD_EXE_DATA, GOFF::AMODE<Is64Bit>, GOFF::RMODE<Is64Bit>,
-          GOFF::ESD_NS_Parts, GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Merge,
-          GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_1, GOFF::ESD_ALIGN_Quadword},
+      SectionKind::getData(), "",
+      GOFF::SDAttr{GOFF::ESD_TA_Rent, GOFF::ESD_BSC_Section}, GOFF::CLASS_WSA,
+      GOFF::EDAttr{false, GOFF::ESD_EXE_DATA, GOFF::AMODE, GOFF::RMODE,
+                   GOFF::ESD_NS_Parts, GOFF::ESD_TS_ByteOriented,
+                   GOFF::ESD_BA_Merge, GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_1,
+                   GOFF::ESD_ALIGN_Quadword},
       "",
       GOFF::PRAttr{false, false, GOFF::ESD_EXE_DATA, GOFF::ESD_NS_Parts,
-                   GOFF::ESD_LT_XPLink, GOFF::AMODE<Is64Bit>,
-                   GOFF::ESD_BSC_Section, GOFF::ESD_DSS_NoWarning,
-                   GOFF::ESD_ALIGN_Quadword, 0});
+                   GOFF::ESD_LT_XPLink, GOFF::AMODE, GOFF::ESD_BSC_Section,
+                   GOFF::ESD_DSS_NoWarning, GOFF::ESD_ALIGN_Quadword, 0});
 
   IDRLSection = Ctx->getGOFFSection(
       SectionKind::getData(), "B_IDRL",
-      GOFF::EDAttr{true, GOFF::ESD_EXE_Unspecified, GOFF::AMODE<Is64Bit>,
-                   GOFF::RMODE<Is64Bit>, GOFF::ESD_NS_NormalName,
-                   GOFF::ESD_TS_Structured, GOFF::ESD_BA_Concatenate,
-                   GOFF::ESD_LB_NoLoad, GOFF::ESD_RQ_0,
-                   GOFF::ESD_ALIGN_Doubleword});
+      GOFF::EDAttr{true, GOFF::ESD_EXE_Unspecified, GOFF::AMODE, GOFF::RMODE,
+                   GOFF::ESD_NS_NormalName, GOFF::ESD_TS_Structured,
+                   GOFF::ESD_BA_Concatenate, GOFF::ESD_LB_NoLoad,
+                   GOFF::ESD_RQ_0, GOFF::ESD_ALIGN_Doubleword});
 }
 
 void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {

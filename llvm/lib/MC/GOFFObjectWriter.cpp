@@ -284,6 +284,8 @@ class GOFFWriter {
   uint32_t RootSDEsdId = 0;
   uint32_t ADAEsdId = 0;
 
+  MCSectionGOFF *ADA = nullptr;
+
   void writeHeader();
   void writeSymbol(const GOFFSymbol &Symbol);
   void writeEnd();
@@ -296,7 +298,6 @@ class GOFFWriter {
   GOFFSymbol createGOFFSymbol(StringRef Name, const GOFF::PRAttr &Attr,
                               uint32_t ParentEsdId);
 
-  void defineRootSymbol(const MCSectionGOFF *Text);
   void defineSectionSymbols(const MCSectionGOFF &Section);
   void defineSymbols();
 
@@ -327,22 +328,14 @@ GOFFSymbol GOFFWriter::createGOFFSymbol(StringRef Name, const GOFF::PRAttr &Attr
   return GOFFSymbol(Name, ++EsdIdCounter, ParentEsdId, Attr);
 }
 
-void GOFFWriter::defineRootSymbol(const MCSectionGOFF *Text) {
-  // There is always a text section except for DWARF unit tests, so be lenient.
-  GOFFSymbol RootSD =
-      Text ? createGOFFSymbol(Text->getSDName(), Text->getSDAttributes())
-           : createGOFFSymbol("", GOFF::SDAttr{GOFF::ESD_TA_Unspecified,
-                                               GOFF::ESD_BSC_Unspecified});
-  writeSymbol(RootSD);
-  RootSDEsdId = RootSD.EsdId;
-}
-
 void GOFFWriter::defineSectionSymbols(const MCSectionGOFF &Section) {
     uint32_t SDEsdId = RootSDEsdId;
     if (!Section.usesRootSD()) {
       GOFFSymbol SD =
           createGOFFSymbol(Section.getSDName(), Section.getSDAttributes());
       SDEsdId = SD.EsdId;
+      if (RootSDEsdId == 0)
+        RootSDEsdId = SDEsdId;
       writeSymbol(SD);
     }
 
@@ -365,7 +358,7 @@ void GOFFWriter::defineSectionSymbols(const MCSectionGOFF &Section) {
       GOFFSymbol PR = createGOFFSymbol(Section.getLDorPRName(),
                                        Section.getPRAttributes(), ED.EsdId);
       PR.SectionLength = Asm.getSectionAddressSize(Section);
-      if (Section.getName() == ".ada") {
+      if (&Section == ADA) {
         // We cannot have a zero-length section for data.  If we do,
         // artificially inflate it. Use 2 bytes to avoid odd alignments. Note:
         // if this is ever changed, you will need to update the code in
@@ -380,27 +373,12 @@ void GOFFWriter::defineSectionSymbols(const MCSectionGOFF &Section) {
 }
 
 void GOFFWriter::defineSymbols() {
-  // Search for .text and .ada sections.
-  MCSectionGOFF *Text = nullptr;
-  MCSectionGOFF *ADA = nullptr;
+  // Process all sections.
   for (MCSection &S : Asm) {
     auto &Section = cast<MCSectionGOFF>(S);
-    if (Section.isText())
-      Text = &Section;
-    if (Section.isADA())
+    if (!ADA)
       ADA = &Section;
-  }
-  defineRootSymbol(Text);
-  if (ADA)
-    defineSectionSymbols(*ADA);
-  if (Text)
-    defineSectionSymbols(*Text);
-
-  // Process the other sections.
-  for (MCSection &S : Asm) {
-    auto &Section = cast<MCSectionGOFF>(S);
-    if (Text != &Section && ADA != &Section)
-      defineSectionSymbols(Section);
+    defineSectionSymbols(Section);
   }
 }
 

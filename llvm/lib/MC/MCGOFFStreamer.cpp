@@ -17,6 +17,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCGOFFObjectWriter.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Path.h"
 
 using namespace llvm;
 
@@ -31,18 +32,19 @@ void MCGOFFStreamer::initSections(bool NoExecStack,
   MCContext &Ctx = getContext();
 
   // Initialize the special names for the code and ada section.
-  StringRef FileName = Ctx.getMainFileName();
+  StringRef FileName = sys::path::stem(Ctx.getMainFileName());
   RootSDName = Twine(FileName).concat("#C").str();
   ADAPRName = Twine(FileName).concat("#S").str();
   MCSectionGOFF *TextSection =
       static_cast<MCSectionGOFF *>(Ctx.getObjectFileInfo()->getTextSection());
   MCSectionGOFF *ADASection =
       static_cast<MCSectionGOFF *>(Ctx.getObjectFileInfo()->getADASection());
-  TextSection->setSDName(RootSDName);
+  ADASection->setSDName(RootSDName);
   ADASection->setLDorPRName(ADAPRName);
-  ADASection->setADA();
+  TextSection->setLDorPRName(RootSDName);
 
-  // Switch to the code section.
+  // Switch to the ADA section first, then code section.
+  switchSection(ADASection);
   switchSection(TextSection);
 }
 
