@@ -234,13 +234,6 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
     }
   }
 
-  // A linker relaxation target may emit ADD/SUB relocations for A-B+C. Let
-  // recordRelocation handle non-VK_None cases like A@plt-B+C.
-  if (!IsResolved && Target.getSymA() && Target.getSubSym() &&
-      Target.getRefKind() == 0 &&
-      getBackend().handleAddSubRelocations(*this, *DF, Fixup, Target, Value))
-    return true;
-
   return IsResolved;
 }
 
