@@ -15,10 +15,8 @@ entry:
 ; CHECK-NEXT:     mov     x0, x30
 ; CHECK-NEXT:     ldr     x30, [sp], #16
 ; CHECK-NEXT:     ret
-; CHECKV83:       str     x30, [sp, #-16]!
-; CHECKV83-NEXT:  xpaci   x30
-; CHECKV83-NEXT:  mov     x0, x30
-; CHECKV83-NEXT:  ldr     x30, [sp], #16
+; CHECKV83:       mov     x0, x30
+; CHECKV83-NEXT:  xpaci   x0
 ; CHECKV83-NEXT:  ret
   %0 = tail call ptr @llvm.returnaddress(i32 0)
   ret ptr %0
@@ -35,10 +33,8 @@ entry:
 ; CHECK-NEXT:     hint    #29
 ; CHECK-NEXT:     ret
 ; CHECKV83:       paciasp
-; CHECKV83-NEXT:  str     x30, [sp, #-16]!
-; CHECKV83-NEXT:  xpaci   x30
 ; CHECKV83-NEXT:  mov     x0, x30
-; CHECKV83-NEXT:  ldr     x30, [sp], #16
+; CHECKV83-NEXT:  xpaci   x0
 ; CHECKV83-NEXT:  retaa
   %0 = tail call ptr @llvm.returnaddress(i32 0)
   ret ptr %0
