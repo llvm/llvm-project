@@ -24,7 +24,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIterator, class _OutputIterator>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
+_LIBCPP_HIDE_FROM_ABI _OutputIterator
 adjacent_difference(_InputIterator __first, _InputIterator __last, _OutputIterator __result) {
   if (__first != __last) {
     typename iterator_traits<_InputIterator>::value_type __acc(*__first);
@@ -32,14 +32,14 @@ adjacent_difference(_InputIterator __first, _InputIterator __last, _OutputIterat
     for (++__first, (void)++__result; __first != __last; ++__first, (void)++__result) {
       typename iterator_traits<_InputIterator>::value_type __val(*__first);
       *__result = __val - __acc;
-      __acc = std::move(__val);
+      __acc     = std::move(__val);
     }
   }
   return __result;
 }
 
 template <class _InputIterator, class _OutputIterator, class _BinaryOperation>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator adjacent_difference(
+_LIBCPP_HIDE_FROM_ABI _OutputIterator adjacent_difference(
     _InputIterator __first, _InputIterator __last, _OutputIterator __result, _BinaryOperation __binary_op) {
   if (__first != __last) {
     typename iterator_traits<_InputIterator>::value_type __acc(*__first);
@@ -47,7 +47,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator adjacent_dif
     for (++__first, (void)++__result; __first != __last; ++__first, (void)++__result) {
       typename iterator_traits<_InputIterator>::value_type __val(*__first);
       *__result = __binary_op(__val, __acc);
-      __acc = std::move(__val);
+      __acc     = std::move(__val);
     }
   }
   return __result;
