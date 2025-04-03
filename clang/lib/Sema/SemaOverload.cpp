@@ -1002,7 +1002,7 @@ const TemplateArgument *DeductionFailureInfo::getSecondArg() {
   return nullptr;
 }
 
-std::optional<unsigned> DeductionFailureInfo::getCallArgIndex() {
+UnsignedOrNone DeductionFailureInfo::getCallArgIndex() {
   switch (static_cast<TemplateDeductionResult>(Result)) {
   case TemplateDeductionResult::DeducedMismatch:
   case TemplateDeductionResult::DeducedMismatchNested:
@@ -1555,8 +1555,7 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
                          OldRC = Old->getTrailingRequiresClause();
     if (!NewRC != !OldRC)
       return true;
-    if (NewRC.ArgumentPackSubstitutionIndex !=
-        OldRC.ArgumentPackSubstitutionIndex)
+    if (NewRC.ArgPackSubstIndex != OldRC.ArgPackSubstIndex)
       return true;
     if (NewRC &&
         !SemaRef.AreConstraintExpressionsEqual(OldDecl, OldRC.ConstraintExpr,
