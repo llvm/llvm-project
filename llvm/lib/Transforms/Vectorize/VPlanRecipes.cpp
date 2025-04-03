@@ -1693,6 +1693,15 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
     if (RHS->isLiveIn())
       RHSInfo = Ctx.TTI.getOperandInfo(RHS->getLiveInIRValue());
 
+    // The mul is folded into another target instruction when participating
+    // in scaled reductions.
+    if (Opcode == Instruction::Mul && !hasMoreThanOneUniqueUser()) {
+      if (all_of(users(), [](const VPUser *U) {
+            return isa_and_present<VPPartialReductionRecipe>(U);
+          }))
+        return TTI::TCC_Free;
+    }
+
     if (RHSInfo.Kind == TargetTransformInfo::OK_AnyValue &&
         getOperand(1)->isDefinedOutsideLoopRegions())
       RHSInfo.Kind = TargetTransformInfo::OK_UniformValue;
@@ -1757,6 +1766,43 @@ void VPWidenCastRecipe::execute(VPTransformState &State) {
     setFlags(CastOp);
 }
 
+// Detects whether the extension should be folded away into a combined
+// target instruction, and therefore given a cost of 0.
+// Handles patterns similar to the following:
+//   * partial_reduce(ext, phi)
+//   * partial_reduce(mul(ext, ext), phi)
+//   * partial_reduce(sub(0, mul(ext, ext)), phi)
+static bool isScaledReductionExtension(const VPWidenCastRecipe *Extend) {
+  unsigned Opcode = Extend->getOpcode();
+  if (Opcode != Instruction::SExt && Opcode != Instruction::ZExt)
+    return false;
+
+  // Check that all users are either a partial reduction, or a multiply
+  // (and possibly subtract) used by a partial reduction.
+  return all_of(Extend->users(), [](const VPUser *U) {
+    // Look through a (possible) multiply.
+    if (const VPWidenRecipe *I = dyn_cast_if_present<VPWidenRecipe>(U)) {
+      if (I->getOpcode() == Instruction::Mul) {
+        if (I->hasMoreThanOneUniqueUser())
+          return false;
+        U = *(I->user_begin());
+      }
+    }
+
+    // Look through a (possible) sub.
+    if (const VPWidenRecipe *I = dyn_cast_if_present<VPWidenRecipe>(U)) {
+      if (I->getOpcode() == Instruction::Sub) {
+        if (I->hasMoreThanOneUniqueUser())
+          return false;
+        U = *(I->user_begin());
+      }
+    }
+
+    // Final check that we end up contributing to a partial reduction.
+    return isa_and_present<VPPartialReductionRecipe>(U);
+  });
+}
+
 InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
                                                VPCostContext &Ctx) const {
   // TODO: In some cases, VPWidenCastRecipes are created but not considered in
@@ -1798,8 +1844,7 @@ InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
            Opcode == Instruction::FPExt) {
     // If the extend is performed as part of another operation, it can be
     // considered 'free'.
-    const VPlan *Plan = getParent()->getPlan();
-    if (Plan->isScaledReductionExtension(getUnderlyingInstr()))
+    if (isScaledReductionExtension(this))
       return TargetTransformInfo::TCC_Free;
     if (Operand->isLiveIn())
       CCH = TTI::CastContextHint::Normal;
