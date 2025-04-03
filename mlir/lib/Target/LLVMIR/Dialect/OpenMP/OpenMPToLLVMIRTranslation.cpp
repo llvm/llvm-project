@@ -3824,9 +3824,14 @@ mapParentWithMembers(LLVM::ModuleTranslation &moduleTranslation,
     bool hasMapClose = (llvm::omp::OpenMPOffloadMappingFlags(mapFlag) &
                         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE) ==
                        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE;
+    bool hasMapDescriptor =
+        (llvm::omp::OpenMPOffloadMappingFlags(mapFlag) &
+         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DESCRIPTOR) ==
+        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DESCRIPTOR;
     ompBuilder.setCorrectMemberOfFlag(mapFlag, memberOfFlag);
 
-    if (targetDirective == TargetDirective::TargetUpdate || hasMapClose) {
+    if (targetDirective == TargetDirective::TargetUpdate || hasMapClose ||
+        hasMapDescriptor) {
       combinedInfo.Types.emplace_back(mapFlag);
       combinedInfo.DevicePointers.emplace_back(
           mapData.DevicePointers[mapDataIndex]);
@@ -3929,6 +3934,12 @@ static void processMapMembersWithParent(
     if (checkIfPointerMap(memberClause)) {
       auto mapFlag =
           llvm::omp::OpenMPOffloadMappingFlags(memberClause.getMapType());
+      // We wish to remove user specified always, as the pointer is a
+      // seperate implementation detail/entity. And tagging it with
+      // always can cause the data to be overwritten. It is likely
+      // debateable if we should carry over any user speicifed map types
+      // to the pointer, but we can evaluate on a case by case basis.
+      mapFlag &= ~llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
       mapFlag &= ~llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM;
       mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF;
       ompBuilder.setCorrectMemberOfFlag(mapFlag, memberOfFlag);
