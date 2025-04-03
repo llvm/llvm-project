@@ -1394,6 +1394,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       }
     }
 
+    // v1i64 -> v1i8 truncstore represents a bsub FPR8 store.
     setTruncStoreAction(MVT::v1i64, MVT::v1i8, Legal);
 
     for (auto Op :
