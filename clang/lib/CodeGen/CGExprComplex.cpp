@@ -1491,7 +1491,7 @@ void CodeGenFunction::EmitComplexExprIntoLValue(const Expr *E, LValue dest,
          "Invalid complex expression to emit");
   ComplexExprEmitter Emitter(*this);
   ComplexPairTy Val = Emitter.Visit(const_cast<Expr*>(E));
-  // The insert point may be empty if we have just emmited a 
+  // The insert point may be empty if we have just emmited a
   // musttail call.
   if (HaveInsertPoint())
     Emitter.EmitStoreOfComplex(Val, dest, isInit);
