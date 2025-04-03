@@ -233,7 +233,7 @@ struct __atomic_waitable_traits<__atomic_base<_Tp, _IsIntegral> > {
 
 template <typename _Tp>
 struct __check_atomic_mandates {
-  using type = _Tp;
+  using type _LIBCPP_NODEBUG = _Tp;
   static_assert(is_trivially_copyable<_Tp>::value, "std::atomic<T> requires that 'T' be a trivially copyable type");
 };
 
