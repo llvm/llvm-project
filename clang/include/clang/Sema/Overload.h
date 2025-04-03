@@ -408,8 +408,15 @@ class Sema;
     }
 
     bool isPerfect(const ASTContext &C) const {
-      return isIdentityConversion() &&
-             (!ReferenceBinding || C.hasSameType(getFromType(), getToType(2)));
+      if(!isIdentityConversion())
+        return false;
+      if(!ReferenceBinding)
+        return true;
+      if(!C.hasSameType(getFromType(), getToType(2)))
+        return false;
+      if(BindsToRvalue && IsLvalueReference)
+        return false;
+      return true;
     }
 
     ImplicitConversionRank getRank() const;
