@@ -546,9 +546,9 @@ define <vscale x 1 x i8> @reverse_zexticmp_i16(<vscale x 1 x i16> %x) {
 define <vscale x 1 x i8> @reverse_zexticmp_i32(<vscale x 1 x i32> %x) {
 ; CHECK-LABEL: define <vscale x 1 x i8> @reverse_zexticmp_i32(
 ; CHECK-SAME: <vscale x 1 x i32> [[X:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc <vscale x 1 x i32> [[X]] to <vscale x 1 x i8>
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr <vscale x 1 x i8> [[TMP1]], splat (i8 2)
-; CHECK-NEXT:    [[TMP3:%.*]] = and <vscale x 1 x i8> [[TMP2]], splat (i8 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = and <vscale x 1 x i32> [[X]], splat (i32 4)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 1 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <vscale x 1 x i1> [[TMP2]] to <vscale x 1 x i8>
 ; CHECK-NEXT:    ret <vscale x 1 x i8> [[TMP3]]
 ;
   %1 = trunc <vscale x 1 x i32> %x to <vscale x 1 x i8>
@@ -560,10 +560,9 @@ define <vscale x 1 x i8> @reverse_zexticmp_i32(<vscale x 1 x i32> %x) {
 define <vscale x 1 x i8> @reverse_zexticmp_neg_i32(<vscale x 1 x i32> %x) {
 ; CHECK-LABEL: define <vscale x 1 x i8> @reverse_zexticmp_neg_i32(
 ; CHECK-SAME: <vscale x 1 x i32> [[X:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc <vscale x 1 x i32> [[X]] to <vscale x 1 x i8>
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <vscale x 1 x i8> [[TMP1]], splat (i8 -1)
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr <vscale x 1 x i8> [[TMP2]], splat (i8 2)
-; CHECK-NEXT:    [[TMP4:%.*]] = and <vscale x 1 x i8> [[TMP3]], splat (i8 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = and <vscale x 1 x i32> [[X]], splat (i32 4)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <vscale x 1 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <vscale x 1 x i1> [[TMP2]] to <vscale x 1 x i8>
 ; CHECK-NEXT:    ret <vscale x 1 x i8> [[TMP4]]
 ;
   %1 = trunc <vscale x 1 x i32> %x to <vscale x 1 x i8>
@@ -576,9 +575,9 @@ define <vscale x 1 x i8> @reverse_zexticmp_neg_i32(<vscale x 1 x i32> %x) {
 define <vscale x 1 x i8> @reverse_zexticmp_i64(<vscale x 1 x i64> %x) {
 ; CHECK-LABEL: define <vscale x 1 x i8> @reverse_zexticmp_i64(
 ; CHECK-SAME: <vscale x 1 x i64> [[X:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc <vscale x 1 x i64> [[X]] to <vscale x 1 x i8>
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr <vscale x 1 x i8> [[TMP1]], splat (i8 2)
-; CHECK-NEXT:    [[TMP3:%.*]] = and <vscale x 1 x i8> [[TMP2]], splat (i8 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = and <vscale x 1 x i64> [[X]], splat (i64 4)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <vscale x 1 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <vscale x 1 x i1> [[TMP2]] to <vscale x 1 x i8>
 ; CHECK-NEXT:    ret <vscale x 1 x i8> [[TMP3]]
 ;
   %1 = trunc <vscale x 1 x i64> %x to <vscale x 1 x i8>
@@ -590,10 +589,9 @@ define <vscale x 1 x i8> @reverse_zexticmp_i64(<vscale x 1 x i64> %x) {
 define <vscale x 1 x i8> @reverse_zexticmp_neg_i64(<vscale x 1 x i64> %x) {
 ; CHECK-LABEL: define <vscale x 1 x i8> @reverse_zexticmp_neg_i64(
 ; CHECK-SAME: <vscale x 1 x i64> [[X:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc <vscale x 1 x i64> [[X]] to <vscale x 1 x i8>
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <vscale x 1 x i8> [[TMP1]], splat (i8 -1)
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr <vscale x 1 x i8> [[TMP2]], splat (i8 2)
-; CHECK-NEXT:    [[TMP4:%.*]] = and <vscale x 1 x i8> [[TMP3]], splat (i8 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = and <vscale x 1 x i64> [[X]], splat (i64 4)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <vscale x 1 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <vscale x 1 x i1> [[TMP2]] to <vscale x 1 x i8>
 ; CHECK-NEXT:    ret <vscale x 1 x i8> [[TMP4]]
 ;
   %1 = trunc <vscale x 1 x i64> %x to <vscale x 1 x i8>

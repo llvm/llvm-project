@@ -516,12 +516,12 @@ define <vscale x 1 x i8> @reverse_zexticmp_i16(<vscale x 1 x i16> %x) {
 define <vscale x 1 x i8> @reverse_zexticmp_i32(<vscale x 1 x i32> %x) {
 ; CHECK-LABEL: reverse_zexticmp_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v8, 0
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vand.vi v8, v8, 4
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v8, 0
-; CHECK-NEXT:    vsrl.vi v8, v8, 2
-; CHECK-NEXT:    vand.vi v8, v8, 1
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    ret
   %1 = trunc <vscale x 1 x i32> %x to <vscale x 1 x i8>
   %2 = lshr <vscale x 1 x i8> %1, splat (i8 2)
@@ -532,13 +532,12 @@ define <vscale x 1 x i8> @reverse_zexticmp_i32(<vscale x 1 x i32> %x) {
 define <vscale x 1 x i8> @reverse_zexticmp_neg_i32(<vscale x 1 x i32> %x) {
 ; CHECK-LABEL: reverse_zexticmp_neg_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v8, 0
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vand.vi v8, v8, 4
+; CHECK-NEXT:    vmseq.vi v0, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v8, 0
-; CHECK-NEXT:    vnot.v v8, v8
-; CHECK-NEXT:    vsrl.vi v8, v8, 2
-; CHECK-NEXT:    vand.vi v8, v8, 1
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    ret
   %1 = trunc <vscale x 1 x i32> %x to <vscale x 1 x i8>
   %2 = xor <vscale x 1 x i8> %1, splat (i8 -1)
@@ -550,14 +549,12 @@ define <vscale x 1 x i8> @reverse_zexticmp_neg_i32(<vscale x 1 x i32> %x) {
 define <vscale x 1 x i8> @reverse_zexticmp_i64(<vscale x 1 x i64> %x) {
 ; CHECK-LABEL: reverse_zexticmp_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v8, 0
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vand.vi v8, v8, 4
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v8, 0
-; CHECK-NEXT:    vsrl.vi v8, v8, 2
-; CHECK-NEXT:    vand.vi v8, v8, 1
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    ret
   %1 = trunc <vscale x 1 x i64> %x to <vscale x 1 x i8>
   %2 = lshr <vscale x 1 x i8> %1, splat (i8 2)
@@ -568,15 +565,12 @@ define <vscale x 1 x i8> @reverse_zexticmp_i64(<vscale x 1 x i64> %x) {
 define <vscale x 1 x i8> @reverse_zexticmp_neg_i64(<vscale x 1 x i64> %x) {
 ; CHECK-LABEL: reverse_zexticmp_neg_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v8, 0
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vand.vi v8, v8, 4
+; CHECK-NEXT:    vmseq.vi v0, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v8, 0
-; CHECK-NEXT:    vnot.v v8, v8
-; CHECK-NEXT:    vsrl.vi v8, v8, 2
-; CHECK-NEXT:    vand.vi v8, v8, 1
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    ret
   %1 = trunc <vscale x 1 x i64> %x to <vscale x 1 x i8>
   %2 = xor <vscale x 1 x i8> %1, splat (i8 -1)

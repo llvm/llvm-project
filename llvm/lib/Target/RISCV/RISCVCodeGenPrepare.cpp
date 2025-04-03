@@ -25,6 +25,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
 
@@ -62,10 +63,74 @@ public:
 
 } // end anonymous namespace
 
-// Try to optimize (i64 (and (zext/sext (i32 X), C1))) if C1 has bit 31 set,
-// but bits 63:32 are zero. If we know that bit 31 of X is 0, we can fill
-// the upper 32 bits with ones.
+// InstCombinerImpl::transformZExtICmp will narrow a zext of an icmp with a
+// truncation. But RVV doesn't have truncation instructions for more than twice
+// the bitwidth.
+//
+// E.g. trunc <vscale x 1 x i64> %x to <vscale x 1 x i8> will generate:
+//
+//     vsetvli a0, zero, e32, m2, ta, ma
+//     vnsrl.wi v12, v8, 0
+//     vsetvli zero, zero, e16, m1, ta, ma
+//     vnsrl.wi v8, v12, 0
+//     vsetvli zero, zero, e8, mf2, ta, ma
+//     vnsrl.wi v8, v8, 0
+//
+// So reverse the combine so we generate an vmseq/vmsne again:
+//
+// and (lshr (trunc X), ShAmt), 1
+// -->
+// zext (icmp ne (and X, (1 << ShAmt)), 0)
+//
+// and (lshr (not (trunc X)), ShAmt), 1
+// -->
+// zext (icmp eq (and X, (1 << ShAmt)), 0)
+static bool reverseZExtICmpCombine(BinaryOperator &BO) {
+  using namespace PatternMatch;
+
+  assert(BO.getOpcode() == BinaryOperator::And);
+
+  if (!BO.getType()->isVectorTy())
+    return false;
+  const APInt *ShAmt;
+  Value *Inner;
+  if (!match(&BO,
+             m_And(m_OneUse(m_LShr(m_OneUse(m_Value(Inner)), m_APInt(ShAmt))),
+                   m_One())))
+    return false;
+
+  Value *X;
+  bool IsNot;
+  if (match(Inner, m_Not(m_Trunc(m_Value(X)))))
+    IsNot = true;
+  else if (match(Inner, m_Trunc(m_Value(X))))
+    IsNot = false;
+  else
+    return false;
+
+  if (BO.getType()->getScalarSizeInBits() >=
+      X->getType()->getScalarSizeInBits() / 2)
+    return false;
+
+  IRBuilder<> Builder(&BO);
+  Value *Res = Builder.CreateAnd(
+      X, ConstantInt::get(X->getType(), 1 << ShAmt->getZExtValue()));
+  Res = Builder.CreateICmp(IsNot ? CmpInst::Predicate::ICMP_EQ
+                                 : CmpInst::Predicate::ICMP_NE,
+                           Res, ConstantInt::get(X->getType(), 0));
+  Res = Builder.CreateZExt(Res, BO.getType());
+  BO.replaceAllUsesWith(Res);
+  RecursivelyDeleteTriviallyDeadInstructions(&BO);
+  return true;
+}
+
 bool RISCVCodeGenPrepare::visitAnd(BinaryOperator &BO) {
+  if (reverseZExtICmpCombine(BO))
+    return true;
+
+  // Try to optimize (i64 (and (zext/sext (i32 X), C1))) if C1 has bit 31 set,
+  // but bits 63:32 are zero. If we know that bit 31 of X is 0, we can fill
+  // the upper 32 bits with ones.
   if (!ST->is64Bit())
     return false;
 
