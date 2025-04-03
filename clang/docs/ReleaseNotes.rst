@@ -159,12 +159,15 @@ C23 Feature Support
   which clarified that a compound literal used within a function prototype is
   treated as if the compound literal were within the body rather than at file
   scope.
+- Fixed a bug where you could not cast a null pointer constant to type
+  ``nullptr_t``. Fixes #GH133644.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
 - Support parsing the `cc` operand modifier and alias it to the `c` modifier (#GH127719).
 - Added `__builtin_elementwise_exp10`.
+- For AMDPGU targets, added `__builtin_v_cvt_off_f32_i4` that maps to the `v_cvt_off_f32_i4` instruction.
 
 New Compiler Flags
 ------------------
@@ -186,6 +189,8 @@ Modified Compiler Flags
   Programs that use ``__aeabi_read_tp`` but do not use the ``TPIDRURO`` register must use ``-mtp=soft``. Fixes #123864
 
 - The compiler flag `-fbracket-depth` default value is increased from 256 to 2048. (#GH94728)
+
+- `-Wpadded` option implemented for the `x86_64-windows-msvc` target. Fixes #61702
 
 Removed Compiler Flags
 -------------------------
@@ -311,6 +316,8 @@ Improvements to Clang's diagnostics
 
   Fixes #GH61635
 
+- Split diagnosing base class qualifiers from the ``-Wignored-Qualifiers`` diagnostic group into a new ``-Wignored-base-class-qualifiers`` diagnostic group (which is grouped under ``-Wignored-qualifiers``). Fixes #GH131935.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -337,6 +344,9 @@ Bug Fixes in This Version
 - Fixed a problematic case with recursive deserialization within ``FinishedDeserializing()`` where
   ``PassInterestingDeclsToConsumer()`` was called before the declarations were safe to be passed. (#GH129982)
 - Fixed a modules crash where an explicit Constructor was deserialized. (#GH132794)
+- Defining an integer literal suffix (e.g., ``LL``) before including
+  ``<stdint.h>`` in a freestanding build no longer causes invalid token pasting
+  when using the ``INTn_C`` macros. (#GH85995)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -355,6 +365,7 @@ Bug Fixes to Attribute Support
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Clang now supports implicitly defined comparison operators for friend declarations. (#GH132249)
 - Clang now diagnoses copy constructors taking the class by value in template instantiations. (#GH130866)
 - Clang is now better at keeping track of friend function template instance contexts. (#GH55509)
 - Clang now prints the correct instantiation context for diagnostics suppressed

@@ -3110,7 +3110,7 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
     ResAddr = State.Builder.CreateGEP(ScalarTy, ResAddr, Index, "", InBounds);
   }
 
-  State.setDebugLocFrom(Instr->getDebugLoc());
+  State.setDebugLocFrom(getDebugLoc());
   Value *PoisonVec = PoisonValue::get(VecTy);
 
   auto CreateGroupMask = [&BlockInMask, &State,

@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE lgamma_r(__CLC_GENTYPE x, __CLC_ADDRSPACE __CLC_INTN *iptr) {
-    __CLC_INTN private_iptr;
-    __CLC_GENTYPE ret = lgamma_r(x, &private_iptr);
-    *iptr = private_iptr;
-    return ret;
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_native_powr(__CLC_GENTYPE x,
+                                                       __CLC_GENTYPE y) {
+  // x^y == 2^{log2 x^y} == 2^{y * log2 x}
+  // for x < 0 propagate nan created by log2
+  return __clc_native_exp2(y * __clc_native_log2(x));
 }
