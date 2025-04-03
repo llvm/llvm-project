@@ -1638,6 +1638,23 @@ and
 
   !0 = !{}
 
+'``amdgpu.cfs``' Metadata
+--------------------------
+
+Set the cache fill size (CFS) field in VMEM instructions for architectures
+that support it. Can be used on memory instructions (e.g. load) and memory
+intrinsics (e.g. llvm.amdgcn.image.load.1d).
+
+The default value for the CFS field is 0 (256 bytes).
+
+Valid arguments for CFS Metadata are:
+  !{i32 1}  :  CFS_128B
+  !{i32 2}  :  CFS_64B
+  !{i32 3}  :  CFS_32B
+
+The field indicates how much data is fetched on a cache miss. It is only supported
+on GFX13. GFX13 only honors it for load and atomic operations. GFX13 does not
+support a 32-byte fetch size so it treats CFS_32B the same as CFS_64B.
 
 LLVM IR Attributes
 ==================

@@ -18792,6 +18792,14 @@ SITargetLowering::getTargetMMOFlags(const Instruction &I) const {
     Flags |= MONoClobber;
   if (I.getMetadata("amdgpu.last.use"))
     Flags |= MOLastUse;
+  if (MDNode *N = I.getMetadata("amdgpu.cfs")) {
+    const ConstantAsMetadata *CAM = cast<ConstantAsMetadata>(N->getOperand(0));
+    ConstantInt *CI = cast<ConstantInt>(CAM->getValue());
+    unsigned CFS = CI->getZExtValue() & 0x3;
+    static_assert((MOCFSB0 << 1) == MOCFSB1,
+                  "MOCFSB0 and MOCFSB1 are not adjacent bits");
+    Flags |= static_cast<MachineMemOperand::Flags>(CFS * MOCFSB0);
+  }
   return Flags;
 }
 
