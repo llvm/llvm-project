@@ -7,7 +7,6 @@ add_lldb_unittest(LLDBCoreTests
   FormatEntityTest.cpp
   MangledTest.cpp
   ModuleSpecTest.cpp
-  PluginManagerTest.cpp
   ProgressReportTest.cpp
   RichManglingContextTest.cpp
   SourceLocationSpecTest.cpp
