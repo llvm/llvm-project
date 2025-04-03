@@ -523,13 +523,13 @@ static DecodeStatus decodeCSSPushPopchk(MCInst &Inst, uint32_t Insn,
 static DecodeStatus decodeRVCInstrRdRs1ImmZero(MCInst &Inst, uint32_t Insn,
                                                uint64_t Address,
                                                const MCDisassembler *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
   uint32_t Rd = fieldFromInstruction(Insn, 7, 5);
-  [[maybe_unused]] DecodeStatus Result =
-      DecodeGPRNoX0RegisterClass(Inst, Rd, Address, Decoder);
-  assert(Result == MCDisassembler::Success && "Invalid register");
+  if (!Check(S, DecodeGPRNoX0RegisterClass(Inst, Rd, Address, Decoder)))
+    return MCDisassembler::Fail;
   Inst.addOperand(Inst.getOperand(0));
   Inst.addOperand(MCOperand::createImm(0));
-  return MCDisassembler::Success;
+  return S;
 }
 
 static DecodeStatus decodeCSSPushPopchk(MCInst &Inst, uint32_t Insn,
@@ -569,34 +569,44 @@ decodeRVCInstrRdRs1UImmLog2XLenNonZero(MCInst &Inst, uint32_t Insn,
 static DecodeStatus decodeRVCInstrRdRs2(MCInst &Inst, uint32_t Insn,
                                         uint64_t Address,
                                         const MCDisassembler *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
   uint32_t Rd = fieldFromInstruction(Insn, 7, 5);
   uint32_t Rs2 = fieldFromInstruction(Insn, 2, 5);
-  DecodeGPRRegisterClass(Inst, Rd, Address, Decoder);
-  DecodeGPRRegisterClass(Inst, Rs2, Address, Decoder);
-  return MCDisassembler::Success;
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rd, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rs2, Address, Decoder)))
+    return MCDisassembler::Fail;
+  return S;
 }
 
 static DecodeStatus decodeRVCInstrRdRs1Rs2(MCInst &Inst, uint32_t Insn,
                                            uint64_t Address,
                                            const MCDisassembler *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
   uint32_t Rd = fieldFromInstruction(Insn, 7, 5);
   uint32_t Rs2 = fieldFromInstruction(Insn, 2, 5);
-  DecodeGPRRegisterClass(Inst, Rd, Address, Decoder);
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rd, Address, Decoder)))
+    return MCDisassembler::Fail;
   Inst.addOperand(Inst.getOperand(0));
-  DecodeGPRRegisterClass(Inst, Rs2, Address, Decoder);
-  return MCDisassembler::Success;
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rs2, Address, Decoder)))
+    return MCDisassembler::Fail;
+  return S;
 }
 
 static DecodeStatus decodeXTHeadMemPair(MCInst &Inst, uint32_t Insn,
                                         uint64_t Address,
                                         const MCDisassembler *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
   uint32_t Rd1 = fieldFromInstruction(Insn, 7, 5);
   uint32_t Rs1 = fieldFromInstruction(Insn, 15, 5);
   uint32_t Rd2 = fieldFromInstruction(Insn, 20, 5);
   uint32_t UImm2 = fieldFromInstruction(Insn, 25, 2);
-  DecodeGPRRegisterClass(Inst, Rd1, Address, Decoder);
-  DecodeGPRRegisterClass(Inst, Rd2, Address, Decoder);
-  DecodeGPRRegisterClass(Inst, Rs1, Address, Decoder);
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rd1, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rd2, Address, Decoder)))
+    return MCDisassembler::Fail;
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rs1, Address, Decoder)))
+    return MCDisassembler::Fail;
   [[maybe_unused]] DecodeStatus Result =
       decodeUImmOperand<2>(Inst, UImm2, Address, Decoder);
   assert(Result == MCDisassembler::Success && "Invalid immediate");
@@ -610,7 +620,7 @@ static DecodeStatus decodeXTHeadMemPair(MCInst &Inst, uint32_t Insn,
   else
     Inst.addOperand(MCOperand::createImm(4));
 
-  return MCDisassembler::Success;
+  return S;
 }
 
 static DecodeStatus decodeZcmpRlist(MCInst &Inst, uint32_t Imm,
