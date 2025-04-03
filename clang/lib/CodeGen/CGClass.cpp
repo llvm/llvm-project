@@ -1338,6 +1338,7 @@ void CodeGenFunction::EmitCtorPrologue(const CXXConstructorDecl *CD,
     assert(!Member->isBaseInitializer());
     assert(Member->isAnyMemberInitializer() &&
            "Delegating initializer on non-delegating constructor");
+    ApplyAtomGroup Grp(getDebugInfo());
     CM.addMemberInitializer(Member);
   }
   CM.finish();
