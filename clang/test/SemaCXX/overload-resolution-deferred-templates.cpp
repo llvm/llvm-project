@@ -150,6 +150,13 @@ struct StringRef {
 
 }
 
+template <class> struct tuple {};
+struct BonkersBananas {
+  template <class T> operator T();
+  template <class = void> explicit operator tuple<int>() = delete;
+};
+static_assert(!__is_constructible(tuple<int>, BonkersBananas));
+
 namespace GH62096 {
 template <typename T>
 struct Oops {

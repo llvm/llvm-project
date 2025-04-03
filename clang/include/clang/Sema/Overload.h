@@ -1206,9 +1206,11 @@ class Sema;
     llvm::SmallPtrSet<uintptr_t, 16> Functions;
 
     DeferredTemplateOverloadCandidate *FirstDeferredCandidate;
-    unsigned DeferredCandidatesCount : 8 * sizeof(unsigned) - 1;
+    unsigned DeferredCandidatesCount : 8 * sizeof(unsigned) - 2;
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasDeferredTemplateConstructors : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned ResolutionByPerfectCandidateIsDisabled : 1;
 
     // Allocator for ConversionSequenceLists and deferred candidate args.
     // We store the first few of these
@@ -1274,7 +1276,8 @@ class Sema;
     OverloadCandidateSet(SourceLocation Loc, CandidateSetKind CSK,
                          OperatorRewriteInfo RewriteInfo = {})
         : FirstDeferredCandidate(nullptr), DeferredCandidatesCount(0),
-          HasDeferredTemplateConstructors(false), Loc(Loc), Kind(CSK),
+          HasDeferredTemplateConstructors(false),
+          ResolutionByPerfectCandidateIsDisabled(false), Loc(Loc), Kind(CSK),
           RewriteInfo(RewriteInfo) {}
     OverloadCandidateSet(const OverloadCandidateSet &) = delete;
     OverloadCandidateSet &operator=(const OverloadCandidateSet &) = delete;
@@ -1386,6 +1389,10 @@ class Sema;
         bool AllowResultConversion);
 
     void InjectNonDeducedTemplateCandidates(Sema &S);
+
+    void DisableResolutionByPerfectCandidate() {
+      ResolutionByPerfectCandidateIsDisabled = true;
+    }
 
     /// Find the best viable function on this overload set, if it exists.
     OverloadingResult BestViableFunction(Sema &S, SourceLocation Loc,
