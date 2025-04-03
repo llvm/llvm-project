@@ -1814,22 +1814,20 @@ define i128 @sub_if_uge_i128(i128 %x, i128 %y) {
 ;
 ; RV64ZBB-LABEL: sub_if_uge_i128:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    sltu a4, a0, a2
-; RV64ZBB-NEXT:    sub a3, a1, a3
-; RV64ZBB-NEXT:    sub a3, a3, a4
-; RV64ZBB-NEXT:    sub a2, a0, a2
 ; RV64ZBB-NEXT:    beq a1, a3, .LBB66_2
 ; RV64ZBB-NEXT:  # %bb.1:
 ; RV64ZBB-NEXT:    sltu a4, a1, a3
-; RV64ZBB-NEXT:    beqz a4, .LBB66_3
-; RV64ZBB-NEXT:    j .LBB66_4
+; RV64ZBB-NEXT:    j .LBB66_3
 ; RV64ZBB-NEXT:  .LBB66_2:
 ; RV64ZBB-NEXT:    sltu a4, a0, a2
-; RV64ZBB-NEXT:    bnez a4, .LBB66_4
 ; RV64ZBB-NEXT:  .LBB66_3:
-; RV64ZBB-NEXT:    mv a0, a2
-; RV64ZBB-NEXT:    mv a1, a3
-; RV64ZBB-NEXT:  .LBB66_4:
+; RV64ZBB-NEXT:    addi a4, a4, -1
+; RV64ZBB-NEXT:    and a3, a4, a3
+; RV64ZBB-NEXT:    and a2, a4, a2
+; RV64ZBB-NEXT:    sltu a4, a0, a2
+; RV64ZBB-NEXT:    sub a1, a1, a3
+; RV64ZBB-NEXT:    sub a1, a1, a4
+; RV64ZBB-NEXT:    sub a0, a0, a2
 ; RV64ZBB-NEXT:    ret
   %cmp = icmp ult i128 %x, %y
   %select = select i1 %cmp, i128 0, i128 %y
