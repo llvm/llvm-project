@@ -1,16 +1,24 @@
+//===--- emupac.cpp - Emulated PAC implementation -------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+//  This file implements Emulated PAC using SipHash_2_4 as the IMPDEF hashing
+//  scheme.
+//
+//===----------------------------------------------------------------------===//
+
 #include <stdint.h>
 
-#define XXH_INLINE_ALL
-#define XXH_NO_STDLIB
-#define XXH_memcpy __builtin_memcpy
-#define XXH_memset __builtin_memset
-#define XXH_memcmp __builtin_memcmp
-#include "../xxhash.h"
+#include "siphash/SipHash.h"
 
 // EmuPAC implements runtime emulation of PAC instructions. If the current
 // CPU supports PAC, EmuPAC uses real PAC instructions. Otherwise, it uses the
 // emulation, which is effectively an implementation of PAC with an IMPDEF
-// hashing scheme based on XXH128.
+// hashing scheme based on SipHash_2_4.
 //
 // The purpose of the emulation is to allow programs to be built to be portable
 // to machines without PAC support, with some performance loss and increased
@@ -36,7 +44,7 @@ const uint64_t kTTBR1Mask = 1ULL << 55;
 // Determine whether PAC is supported without accessing memory. This utilizes
 // the XPACLRI instruction which will copy bit 55 of x30 into at least bit 54 if
 // PAC is supported and acts as a NOP if PAC is not supported.
-static _Bool pac_supported() {
+static bool pac_supported() {
   register uintptr_t x30 __asm__("x30") = 1ULL << 55;
   __asm__ __volatile__("xpaclri" : "+r"(x30));
   return x30 & (1ULL << 54);
@@ -70,7 +78,11 @@ static _Bool pac_supported() {
   "ret"
 #endif
 
-uint64_t __emupac_pacda_impl(uint64_t ptr, uint64_t disc) {
+static const uint8_t K[16] = {0xb5, 0xd4, 0xc9, 0xeb, 0x79, 0x10, 0x4a, 0x79,
+                              0x6f, 0xec, 0x8b, 0x1b, 0x42, 0x87, 0x81, 0xd4};
+
+__attribute__((flatten))
+extern "C" uint64_t __emupac_pacda_impl(uint64_t ptr, uint64_t disc) {
   if (pac_supported()) {
     __asm__ __volatile__(".arch_extension pauth\npacda %0, %1"
                          : "+r"(ptr)
@@ -86,15 +98,18 @@ uint64_t __emupac_pacda_impl(uint64_t ptr, uint64_t disc) {
       return ptr & ~kPACMask;
     }
   }
-  uint64_t hash = XXH3_64bits_withSeed(&ptr, 8, disc);
+  uint64_t hash;
+  siphash<2, 4>(reinterpret_cast<uint8_t *>(&ptr), 8, K,
+                *reinterpret_cast<uint8_t (*)[8]>(&hash));
   return (ptr & ~kPACMask) | (hash & kPACMask);
 }
 
-__attribute__((naked)) uint64_t __emupac_pacda(uint64_t ptr, uint64_t disc) {
+extern "C" __attribute__((naked)) uint64_t __emupac_pacda(uint64_t ptr, uint64_t disc) {
   __asm__(frame_pointer_wrap(__emupac_pacda_impl));
 }
 
-uint64_t __emupac_autda_impl(uint64_t ptr, uint64_t disc) {
+__attribute__((flatten))
+extern "C" uint64_t __emupac_autda_impl(uint64_t ptr, uint64_t disc) {
   if (pac_supported()) {
     __asm__ __volatile__(".arch_extension pauth\nautda %0, %1"
                          : "+r"(ptr)
@@ -103,13 +118,15 @@ uint64_t __emupac_autda_impl(uint64_t ptr, uint64_t disc) {
   }
   uint64_t ptr_without_pac =
       (ptr & kTTBR1Mask) ? (ptr | kPACMask) : (ptr & ~kPACMask);
-  uint64_t hash = XXH3_64bits_withSeed(&ptr_without_pac, 8, disc);
+  uint64_t hash;
+  siphash<2, 4>(reinterpret_cast<uint8_t *>(&ptr_without_pac), 8, K,
+                *reinterpret_cast<uint8_t (*)[8]>(&hash));
   if (((ptr & ~kPACMask) | (hash & kPACMask)) != ptr) {
     __builtin_trap();
   }
   return ptr_without_pac;
 }
 
-__attribute__((naked)) uint64_t __emupac_autda(uint64_t ptr, uint64_t disc) {
+extern "C" __attribute__((naked)) uint64_t __emupac_autda(uint64_t ptr, uint64_t disc) {
   __asm__(frame_pointer_wrap(__emupac_autda_impl));
 }
