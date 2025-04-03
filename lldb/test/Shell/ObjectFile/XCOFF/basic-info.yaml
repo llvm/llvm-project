@@ -7,6 +7,9 @@
 # CHECK: Stripped: false
 # CHECK: Type: executable
 # CHECK: Strata: unknown
+# CHECK: Name: .text
+# CHECK-NEXT: code
+# CHECK-NEXT: r-x
 
 --- !XCOFF
 FileHeader:

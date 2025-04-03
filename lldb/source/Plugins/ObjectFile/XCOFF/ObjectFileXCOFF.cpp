@@ -200,6 +200,7 @@ void ObjectFileXCOFF::CreateSections(SectionList &unified_section_list) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
 
     ModuleSP module_sp(GetModule());
+    int idx = 0;
     for (auto sIdx = m_binary->section_begin(); sIdx != m_binary->section_end();
          ++sIdx) {
       llvm::Expected<llvm::StringRef> name =
@@ -209,7 +210,7 @@ void ObjectFileXCOFF::CreateSections(SectionList &unified_section_list) {
       }
       llvm::StringRef sect_name = *name;
       ConstString const_sect_name(sect_name);
-      int sect_index = sIdx->getIndex(), idx = 1;
+      int sect_index = sIdx->getIndex();
       llvm::Expected<llvm::object::DataRefImpl> section =
           m_binary->getSectionByNum(sect_index);
       if (!section) {
@@ -241,7 +242,7 @@ void ObjectFileXCOFF::CreateSections(SectionList &unified_section_list) {
       SectionSP section_sp(new Section(
           module_sp,       // Module to which this section belongs
           this,            // Object file to which this section belongs
-          idx++,           // Section ID is the 1 based section index.
+          ++idx,           // Section ID is the 1 based section index.
           const_sect_name, // Name of this section
           section_type,
           sectionPtr->VirtualAddress,      // File VM address == addresses as
