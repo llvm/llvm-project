@@ -13,6 +13,7 @@
 // We might split this into multiple files if it gets too unwieldy
 
 #include "CGCXXABI.h"
+#include "CGVTables.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "clang/AST/ASTContext.h"

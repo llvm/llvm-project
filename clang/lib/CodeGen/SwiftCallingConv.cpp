@@ -14,6 +14,7 @@
 #include "ABIInfo.h"
 #include "CodeGenModule.h"
 #include "TargetInfo.h"
+#include "clang/AST/RecordLayout.h"
 #include "clang/Basic/TargetInfo.h"
 
 using namespace clang;

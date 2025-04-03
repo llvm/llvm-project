@@ -13,7 +13,6 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CODEGENMODULE_H
 #define LLVM_CLANG_LIB_CODEGEN_CODEGENMODULE_H
 
-#include "CGVTables.h"
 #include "CodeGenTypeCache.h"
 #include "CodeGenTypes.h"
 #include "SanitizerMetadata.h"
@@ -22,6 +21,7 @@
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/Mangle.h"
+#include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/ABI.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/NoSanitizeList.h"
@@ -61,6 +61,7 @@ class ASTContext;
 class AtomicType;
 class FunctionDecl;
 class IdentifierInfo;
+class ItaniumVTableContext;
 class ObjCImplementationDecl;
 class ObjCEncodeExpr;
 class BlockExpr;
@@ -69,10 +70,12 @@ class Decl;
 class Expr;
 class Stmt;
 class StringLiteral;
+class MicrosoftVTableContext;
 class NamedDecl;
 class PointerAuthSchema;
 class ValueDecl;
 class VarDecl;
+class VTableLayout;
 class LangOptions;
 class CodeGenOptions;
 class HeaderSearchOptions;
@@ -87,6 +90,7 @@ namespace CodeGen {
 
 class CodeGenFunction;
 class CodeGenTBAA;
+class CodeGenVTables;
 class CGCXXABI;
 class CGDebugInfo;
 class CGObjCRuntime;
@@ -368,7 +372,7 @@ private:
   std::unique_ptr<CodeGenTypes> Types;
 
   /// Holds information about C++ vtables.
-  CodeGenVTables VTables;
+  std::unique_ptr<CodeGenVTables> VTables;
 
   std::unique_ptr<CGObjCRuntime> ObjCRuntime;
   std::unique_ptr<CGOpenCLRuntime> OpenCLRuntime;
@@ -845,19 +849,11 @@ public:
 
   CodeGenTypes &getTypes() { return *Types; }
 
-  CodeGenVTables &getVTables() { return VTables; }
+  CodeGenVTables &getVTables() { return *VTables; }
 
-  ItaniumVTableContext &getItaniumVTableContext() {
-    return VTables.getItaniumVTableContext();
-  }
-
-  const ItaniumVTableContext &getItaniumVTableContext() const {
-    return VTables.getItaniumVTableContext();
-  }
-
-  MicrosoftVTableContext &getMicrosoftVTableContext() {
-    return VTables.getMicrosoftVTableContext();
-  }
+  ItaniumVTableContext &getItaniumVTableContext();
+  const ItaniumVTableContext &getItaniumVTableContext() const;
+  MicrosoftVTableContext &getMicrosoftVTableContext();
 
   CtorList &getGlobalCtors() { return GlobalCtors; }
   CtorList &getGlobalDtors() { return GlobalDtors; }

@@ -25,6 +25,7 @@
 #include "PatternInit.h"
 #include "TargetInfo.h"
 #include "clang/AST/OSLog.h"
+#include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"

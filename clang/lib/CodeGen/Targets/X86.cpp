@@ -8,6 +8,7 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
+#include "clang/AST/RecordLayout.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "llvm/ADT/SmallBitVector.h"
 
