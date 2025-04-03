@@ -1147,6 +1147,33 @@ def AnyReg : Operand<XLenVT> {
 // isCodeGenOnly = 1 to hide them from the tablegened assembly parser.
 let isCodeGenOnly = 1, hasSideEffects = 1, mayLoad = 1, mayStore = 1,
     hasNoSchedulingInfo = 1 in {
+def Insn16 : RVInst16<(outs), (ins uimm16:$value), "", "", [], InstFormatOther> {
+  bits<16> value;
+
+  let Inst{15-0} = value;
+  let AsmString = ".insn 0x2, $value";
+}
+def Insn32 : RVInst<(outs), (ins uimm32:$value), "", "", [], InstFormatOther> {
+  bits<32> value;
+
+  let Inst{31-0} = value;
+  let AsmString = ".insn 0x4, $value";
+}
+def Insn48 : RVInst48<(outs), (ins uimm48:$value), "", "", [], InstFormatOther> {
+  bits<48> value;
+  let Inst{47-0} = value;
+  let AsmString = ".insn 0x6, $value";
+}
+def Insn64 : RVInst64<(outs), (ins uimm64:$value), "", "", [], InstFormatOther> {
+  bits<64> value;
+  let Inst{63-0} = value;
+  let AsmString = ".insn 0x8, $value";
+}
+} // isCodeGenOnly, hasSideEffects, mayLoad, mayStore, hasNoSchedulingInfo
+
+// isCodeGenOnly = 1 to hide them from the tablegened assembly parser.
+let isCodeGenOnly = 1, hasSideEffects = 1, mayLoad = 1, mayStore = 1,
+    hasNoSchedulingInfo = 1 in {
 def InsnR : DirectiveInsnR<(outs AnyReg:$rd), (ins uimm7_opcode:$opcode, uimm3:$funct3,
                                                    uimm7:$funct7, AnyReg:$rs1,
                                                    AnyReg:$rs2),
@@ -1179,23 +1206,7 @@ def InsnS : DirectiveInsnS<(outs), (ins uimm7_opcode:$opcode, uimm3:$funct3,
                                         AnyReg:$rs2, AnyReg:$rs1,
                                         simm12:$imm12),
                            "$opcode, $funct3, $rs2, ${imm12}(${rs1})">;
-def Insn32 : RVInst<(outs), (ins uimm32:$value), "", "", [], InstFormatOther> {
-  bits<32> value;
-
-  let Inst{31-0} = value;
-  let AsmString = ".insn 0x4, $value";
-}
-def Insn48 : RVInst48<(outs), (ins uimm48:$value), "", "", [], InstFormatOther> {
-  bits<48> value;
-  let Inst{47-0} = value;
-  let AsmString = ".insn 0x6, $value";
-}
-def Insn64 : RVInst64<(outs), (ins uimm64:$value), "", "", [], InstFormatOther> {
-  bits<64> value;
-  let Inst{63-0} = value;
-  let AsmString = ".insn 0x8, $value";
-}
-}
+} // isCodeGenOnly, hasSideEffects, mayLoad, mayStore, hasNoSchedulingInfo
 
 // Use InstAliases to match these so that we can combine the insn and format
 // into a mnemonic to use as the key for the tablegened asm matcher table. The
