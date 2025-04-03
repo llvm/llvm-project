@@ -15,6 +15,7 @@
 #ifndef LLVM_ADT_EQUIVALENCECLASSES_H
 #define LLVM_ADT_EQUIVALENCECLASSES_H
 
+#include "llvm/ADT/SmallVector.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -138,6 +139,9 @@ class EquivalenceClasses {
   /// ECValues, it just keeps the key as part of the value.
   std::set<ECValue, ECValueComparator> TheMapping;
 
+  /// List of all members, used to provide a determinstic iteration order.
+  SmallVector<const ECValue *> Members;
+
 public:
   EquivalenceClasses() = default;
   EquivalenceClasses(const EquivalenceClasses &RHS) {
@@ -146,9 +150,10 @@ public:
 
   EquivalenceClasses &operator=(const EquivalenceClasses &RHS) {
     TheMapping.clear();
+    Members.clear();
     for (const auto &E : RHS)
-      if (E.isLeader()) {
-        member_iterator MI = RHS.member_begin(E);
+      if (E->isLeader()) {
+        member_iterator MI = RHS.member_begin(*E);
         member_iterator LeaderIt = member_begin(insert(*MI));
         for (++MI; MI != member_end(); ++MI)
           unionSets(LeaderIt, member_begin(insert(*MI)));
@@ -161,11 +166,10 @@ public:
   //
 
   /// iterator* - Provides a way to iterate over all values in the set.
-  using iterator =
-      typename std::set<ECValue, ECValueComparator>::const_iterator;
+  using iterator = typename SmallVector<const ECValue *>::const_iterator;
 
-  iterator begin() const { return TheMapping.begin(); }
-  iterator end() const { return TheMapping.end(); }
+  iterator begin() const { return Members.begin(); }
+  iterator end() const { return Members.end(); }
 
   bool empty() const { return TheMapping.empty(); }
 
@@ -173,7 +177,7 @@ public:
   class member_iterator;
   member_iterator member_begin(const ECValue &ECV) const {
     // Only leaders provide anything to iterate over.
-    return member_iterator(ECV.isLeader() ? ECV.getLeader() : nullptr);
+    return member_iterator(ECV.isLeader() ? &ECV : nullptr);
   }
 
   member_iterator member_end() const {
@@ -208,7 +212,7 @@ public:
   unsigned getNumClasses() const {
     unsigned NC = 0;
     for (const auto &E : *this)
-      if (E.isLeader())
+      if (E->isLeader())
         ++NC;
     return NC;
   }
@@ -219,7 +223,10 @@ public:
   /// insert - Insert a new value into the union/find set, ignoring the request
   /// if the value already exists.
   const ECValue &insert(const ElemTy &Data) {
-    return *TheMapping.insert(ECValue(Data)).first;
+    auto I = TheMapping.insert(ECValue(Data));
+    if (I.second)
+      Members.push_back(&*I.first);
+    return *I.first;
   }
 
   /// findLeader - Given a value in the set, return a member iterator for the

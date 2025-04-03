@@ -411,6 +411,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
     Features["prng-inst"] = true;
     Features["wavefrontsize32"] = true;
     Features["wavefrontsize64"] = true;
+    Features["vmem-to-lds-load-insts"] = true;
   } else if (T.isAMDGCN()) {
     AMDGPU::GPUKind Kind = parseArchAMDGCN(GPU);
     switch (Kind) {
@@ -548,6 +549,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["s-memrealtime"] = true;
       Features["s-memtime-inst"] = true;
       Features["gws"] = true;
+      Features["vmem-to-lds-load-insts"] = true;
       break;
     case GK_GFX1012:
     case GK_GFX1011:
@@ -572,6 +574,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["s-memrealtime"] = true;
       Features["s-memtime-inst"] = true;
       Features["gws"] = true;
+      Features["vmem-to-lds-load-insts"] = true;
       break;
     case GK_GFX950:
       Features["bitop3-insts"] = true;
@@ -622,6 +625,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["ci-insts"] = true;
       Features["s-memtime-inst"] = true;
       Features["gws"] = true;
+      Features["vmem-to-lds-load-insts"] = true;
       break;
     case GK_GFX90A:
       Features["gfx90a-insts"] = true;
@@ -674,6 +678,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["image-insts"] = true;
       Features["s-memtime-inst"] = true;
       Features["gws"] = true;
+      Features["vmem-to-lds-load-insts"] = true;
       break;
     case GK_NONE:
       break;
