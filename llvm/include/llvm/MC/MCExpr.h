@@ -81,8 +81,7 @@ public:
   /// \name Utility Methods
   /// @{
 
-  void print(raw_ostream &OS, const MCAsmInfo *MAI,
-             bool InParens = false) const;
+  void print(raw_ostream &OS, const MCAsmInfo *MAI) const;
   void dump() const;
 
   /// Returns whether the given symbol is used anywhere in the expression or
