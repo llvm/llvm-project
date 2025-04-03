@@ -288,7 +288,8 @@ void CGHLSLRuntime::finishCodeGen() {
   if (T.getArch() == Triple::ArchType::dxil)
     addDxilValVersion(TargetOpts.DxilValidatorVersion, M);
   if (LangOpts.NativeHalfType)
-    M.setModuleFlag(llvm::Module::ModFlagBehavior::Error, "dx.nativelowprec", 1);
+    M.setModuleFlag(llvm::Module::ModFlagBehavior::Error, "dx.nativelowprec",
+                    1);
 
   generateGlobalCtorDtorCalls();
 }
