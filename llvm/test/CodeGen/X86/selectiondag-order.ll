@@ -55,8 +55,9 @@ end:                                        ; preds = %body
 
 define i64 @simulateWithDbgDeclare(<2 x i32> %a) local_unnamed_addr  {
 entry:
+  %ptr = alloca i32
   %rand = tail call i64 @lrand48() #3
-  tail call void @llvm.dbg.declare(metadata i64 %rand, metadata !6, metadata !7), !dbg !8
+  tail call void @llvm.dbg.declare(metadata ptr %ptr, metadata !6, metadata !7), !dbg !8
   br label %body
 
 body:                                        ; preds = %body, %entry
