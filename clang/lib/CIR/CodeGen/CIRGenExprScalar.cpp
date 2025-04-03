@@ -374,7 +374,7 @@ public:
         cir::UnaryOpKind kind =
             e->isIncrementOp() ? cir::UnaryOpKind::Inc : cir::UnaryOpKind::Dec;
         // NOTE(CIR): clang calls CreateAdd but folds this to a unary op
-        value = emitUnaryOp(e, kind, input);
+        value = emitUnaryOp(e, kind, input, /*nsw=*/false);
       }
     } else if (isa<PointerType>(type)) {
       cgf.cgm.errorNYI(e->getSourceRange(), "Unary inc/dec pointer");
@@ -429,19 +429,17 @@ public:
   mlir::Value emitIncDecConsiderOverflowBehavior(const UnaryOperator *e,
                                                  mlir::Value inVal,
                                                  bool isInc) {
-    assert(!cir::MissingFeatures::opUnarySignedOverflow());
     cir::UnaryOpKind kind =
         e->isIncrementOp() ? cir::UnaryOpKind::Inc : cir::UnaryOpKind::Dec;
     switch (cgf.getLangOpts().getSignedOverflowBehavior()) {
     case LangOptions::SOB_Defined:
-      return emitUnaryOp(e, kind, inVal);
+      return emitUnaryOp(e, kind, inVal, /*nsw=*/false);
     case LangOptions::SOB_Undefined:
       assert(!cir::MissingFeatures::sanitizers());
-      return emitUnaryOp(e, kind, inVal);
-      break;
+      return emitUnaryOp(e, kind, inVal, /*nsw=*/true);
     case LangOptions::SOB_Trapping:
       if (!e->canOverflow())
-        return emitUnaryOp(e, kind, inVal);
+        return emitUnaryOp(e, kind, inVal, /*nsw=*/true);
       cgf.cgm.errorNYI(e->getSourceRange(), "inc/def overflow SOB_Trapping");
       return {};
     }
@@ -473,18 +471,19 @@ public:
     assert(!cir::MissingFeatures::opUnaryPromotionType());
     mlir::Value operand = Visit(e->getSubExpr());
 
-    assert(!cir::MissingFeatures::opUnarySignedOverflow());
+    bool nsw =
+        kind == cir::UnaryOpKind::Minus && e->getType()->isSignedIntegerType();
 
     // NOTE: LLVM codegen will lower this directly to either a FNeg
     // or a Sub instruction.  In CIR this will be handled later in LowerToLLVM.
-    return emitUnaryOp(e, kind, operand);
+    return emitUnaryOp(e, kind, operand, nsw);
   }
 
   mlir::Value emitUnaryOp(const UnaryOperator *e, cir::UnaryOpKind kind,
-                          mlir::Value input) {
+                          mlir::Value input, bool nsw = false) {
     return builder.create<cir::UnaryOp>(
         cgf.getLoc(e->getSourceRange().getBegin()), input.getType(), kind,
-        input);
+        input, nsw);
   }
 
   mlir::Value VisitUnaryNot(const UnaryOperator *e) {

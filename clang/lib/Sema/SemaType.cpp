@@ -3052,9 +3052,7 @@ InventTemplateParameter(TypeProcessingState &state, QualType T,
             AutoLoc.getNestedNameSpecifierLoc(), AutoLoc.getConceptNameInfo(),
             AutoLoc.getNamedConcept(), /*FoundDecl=*/AutoLoc.getFoundDecl(),
             AutoLoc.hasExplicitTemplateArgs() ? &TAL : nullptr,
-            InventedTemplateParam,
-            S.Context.getTypeDeclType(InventedTemplateParam),
-            D.getEllipsisLoc());
+            InventedTemplateParam, D.getEllipsisLoc());
       }
     } else {
       // The 'auto' appears in the decl-specifiers; we've not finished forming
@@ -3091,9 +3089,7 @@ InventTemplateParameter(TypeProcessingState &state, QualType T,
             /*FoundDecl=*/
             USD ? cast<NamedDecl>(USD) : CD,
             TemplateId->LAngleLoc.isValid() ? &TemplateArgsInfo : nullptr,
-            InventedTemplateParam,
-            S.Context.getTypeDeclType(InventedTemplateParam),
-            D.getEllipsisLoc());
+            InventedTemplateParam, D.getEllipsisLoc());
       }
     }
   }
@@ -3380,13 +3376,18 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
     } else if (Auto && D.getContext() != DeclaratorContext::LambdaExpr) {
       // If there was a trailing return type, we already got
       // warn_cxx98_compat_trailing_return_type in the parser.
-      SemaRef.Diag(AutoRange.getBegin(),
-                   D.getContext() == DeclaratorContext::LambdaExprParameter
-                       ? diag::warn_cxx11_compat_generic_lambda
-                   : IsDeducedReturnType
-                       ? diag::warn_cxx11_compat_deduced_return_type
-                       : diag::warn_cxx98_compat_auto_type_specifier)
-          << AutoRange;
+      // If there was a decltype(auto), we already got
+      // warn_cxx11_compat_decltype_auto_type_specifier.
+      unsigned DiagId = 0;
+      if (D.getContext() == DeclaratorContext::LambdaExprParameter)
+        DiagId = diag::warn_cxx11_compat_generic_lambda;
+      else if (IsDeducedReturnType)
+        DiagId = diag::warn_cxx11_compat_deduced_return_type;
+      else if (Auto->getKeyword() == AutoTypeKeyword::Auto)
+        DiagId = diag::warn_cxx98_compat_auto_type_specifier;
+
+      if (DiagId)
+        SemaRef.Diag(AutoRange.getBegin(), DiagId) << AutoRange;
     }
   }
 

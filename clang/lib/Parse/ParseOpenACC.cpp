@@ -1274,19 +1274,32 @@ Parser::ParseOpenACCWaitArgument(SourceLocation Loc, bool IsDirective) {
     ConsumeToken();
   }
 
+
+
   // OpenACC 3.3, section 2.16:
   // the term 'async-argument' means a nonnegative scalar integer expression, or
   // one of the special values 'acc_async_noval' or 'acc_async_sync', as defined
   // in the C header file and the Fortran opacc module.
-  bool FirstArg = true;
+  OpenACCIntExprParseResult Res = ParseOpenACCAsyncArgument(
+      IsDirective ? OpenACCDirectiveKind::Wait
+                  : OpenACCDirectiveKind::Invalid,
+      IsDirective ? OpenACCClauseKind::Invalid : OpenACCClauseKind::Wait,
+      Loc);
+
+  if (Res.first.isInvalid() &&
+      Res.second == OpenACCParseCanContinue::Cannot) {
+    Result.Failed = true;
+    return Result;
+  }
+
+  if (Res.first.isUsable())
+    Result.QueueIdExprs.push_back(Res.first.get());
+
   while (!getCurToken().isOneOf(tok::r_paren, tok::annot_pragma_openacc_end)) {
-    if (!FirstArg) {
-      if (ExpectAndConsume(tok::comma)) {
-        Result.Failed = true;
-        return Result;
-      }
+    if (ExpectAndConsume(tok::comma)) {
+      Result.Failed = true;
+      return Result;
     }
-    FirstArg = false;
 
     OpenACCIntExprParseResult Res = ParseOpenACCAsyncArgument(
         IsDirective ? OpenACCDirectiveKind::Wait

@@ -262,10 +262,12 @@ public:
     return TLI->isLegalElementTypeForRVV(ElemType);
   }
 
-  bool isLegalMaskedLoad(Type *DataType, Align Alignment) {
+  bool isLegalMaskedLoad(Type *DataType, Align Alignment,
+                         unsigned /*AddressSpace*/) {
     return isLegalMaskedLoadStore(DataType, Alignment);
   }
-  bool isLegalMaskedStore(Type *DataType, Align Alignment) {
+  bool isLegalMaskedStore(Type *DataType, Align Alignment,
+                          unsigned /*AddressSpace*/) {
     return isLegalMaskedLoadStore(DataType, Alignment);
   }
 
