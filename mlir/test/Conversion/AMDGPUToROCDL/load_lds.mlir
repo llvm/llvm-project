@@ -39,8 +39,8 @@ func.func @global_load_to_rocdl_f32(%global : memref<128x72xf32, #gpu_global_add
   // CHECK: %[[C0:.*]] = llvm.mlir.constant(0 : i32) : i32
   // CHECK: %[[C0_2:.*]] = llvm.mlir.constant(0 : i32) : i32
   // CHECK: rocdl.global.load.lds %[[GLOBAL_PTR]], %[[LDS_PTR]], %[[C4]], %[[C0]], %[[C0_2]]
-  amdgpu.gather_to_lds %global[%c12, %c0], %alloc[%c32, %c0] {transferType = f32}
-    : memref<128x72xf32, #gpu_global_addrspace>, memref<64x64xf32, #gpu_lds_addrspace>
+  amdgpu.gather_to_lds %global[%c12, %c0], %alloc[%c32, %c0]
+    : f32, memref<128x72xf32, #gpu_global_addrspace>, memref<64x64xf32, #gpu_lds_addrspace>
   func.return
 }
 
@@ -80,8 +80,8 @@ func.func @global_load_to_rocdl_i8(%global : memref<128x72xi8, #gpu_global_addrs
   %c12 = arith.constant 12 : index
   %c32 = arith.constant 32 : index
   %alloc = memref.alloc() : memref<64x64xi8, #gpu_lds_addrspace>
-  amdgpu.gather_to_lds %global[%c12, %c0], %alloc[%c32, %c0] {transferType = i8}
-    : memref<128x72xi8, #gpu_global_addrspace>, memref<64x64xi8, #gpu_lds_addrspace>
+  amdgpu.gather_to_lds %global[%c12, %c0], %alloc[%c32, %c0]
+    : i8, memref<128x72xi8, #gpu_global_addrspace>, memref<64x64xi8, #gpu_lds_addrspace>
   func.return
 }
 
@@ -121,8 +121,8 @@ func.func @global_load_to_rocdl_vec(%global : memref<128x72xi16, #gpu_global_add
   %c12 = arith.constant 12 : index
   %c32 = arith.constant 32 : index
   %alloc = memref.alloc() : memref<64x128xi16, #gpu_lds_addrspace>
-  amdgpu.gather_to_lds %global[%c12, %c0], %alloc[%c32, %c0] {transferType = vector<2 x i16>}
-    : memref<128x72xi16, #gpu_global_addrspace>, memref<64x128xi16, #gpu_lds_addrspace>
+  amdgpu.gather_to_lds %global[%c12, %c0], %alloc[%c32, %c0]
+    : vector<2 x i16>, memref<128x72xi16, #gpu_global_addrspace>, memref<64x128xi16, #gpu_lds_addrspace>
   func.return
 }
 
@@ -145,7 +145,7 @@ func.func @global_load_to_rocdl_dynamic_indices(%global : memref<512xi32, #gpu_g
   // CHECK: rocdl.global.load.lds %[[GLOBAL_PTR]], %[[LDS_PTR]], %[[C4]], %[[C0]], %[[C0_2]]
   %alloc = memref.alloc() : memref<4x64xi32, #gpu_lds_addrspace>
   %c0 = arith.constant 0 : index
-  amdgpu.gather_to_lds %global[%src_idx], %alloc[%dst_idx, %c0] {transferType = i32}
-    : memref<512xi32, #gpu_global_addrspace>, memref<4x64xi32, #gpu_lds_addrspace>
+  amdgpu.gather_to_lds %global[%src_idx], %alloc[%dst_idx, %c0]
+    : i32, memref<512xi32, #gpu_global_addrspace>, memref<4x64xi32, #gpu_lds_addrspace>
   func.return
 }
