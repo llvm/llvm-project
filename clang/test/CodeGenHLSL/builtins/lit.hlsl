@@ -15,7 +15,6 @@
 // CHECK-NEXT:    [[HLSL_SELECT7_I:%.*]] = select reassoc nnan ninf nsz arcp afn i1 [[HLSL_OR_I]], half 0xH0000, half [[ELT_EXP_I]]
 // CHECK-NEXT:    [[VECINS_I:%.*]] = insertelement <4 x half> [[VECINIT2_I]], half [[HLSL_SELECT7_I]], i64 2
 // CHECK-NEXT:    ret <4 x half> [[VECINS_I]]
-//
 half4 test_lit_half(half NDotL, half NDotH, half M) { return lit(NDotL, NDotH, M); }
 
 // CHECK-LABEL: test_lit_float
@@ -32,5 +31,4 @@ half4 test_lit_half(half NDotL, half NDotH, half M) { return lit(NDotL, NDotH, M
 // CHECK-NEXT:    [[HLSL_SELECT7_I:%.*]] = select reassoc nnan ninf nsz arcp afn i1 [[HLSL_OR_I]], float 0.000000e+00, float [[ELT_EXP_I]]
 // CHECK-NEXT:    [[VECINS_I:%.*]] = insertelement <4 x float> [[VECINIT2_I]], float [[HLSL_SELECT7_I]], i64 2
 // CHECK-NEXT:    ret <4 x float> [[VECINS_I]]
-//
 float4 test_lit_float(float NDotL, float NDotH, float M) { return lit(NDotL, NDotH, M); }

@@ -113,7 +113,7 @@ template <typename T> constexpr vector<T, 4> lit_impl(T NDotL, T NDotH, T M) {
   bool DiffuseCond = NDotL < 0;
   T Diffuse = select<T>(DiffuseCond, 0, NDotL);
   vector<T, 4> Result = {1, Diffuse, 0, 1};
-  bool SpecularCond = or (DiffuseCond, (NDotH < 0));
+  bool SpecularCond = or(DiffuseCond, (NDotH < 0));
   T SpecularExp = exp(log(NDotH) * M);
   Result[2] = select<T>(SpecularCond, 0, SpecularExp);
   return Result;
