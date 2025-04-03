@@ -1,7 +1,7 @@
 # RUN: not llc -mtriple=aarch64-- -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
 # When a low-level type vector has 0 elements
 ---
-name: test_vector_0_elements
+name: test_vector_0_elements_s
 body: |
   bb.0:
     liveins: $x0
