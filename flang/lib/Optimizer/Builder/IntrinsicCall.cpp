@@ -6534,8 +6534,11 @@ mlir::Value
 IntrinsicLibrary::genVoteBallotSync(mlir::Type resultType,
                                     llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 2);
-  return genVoteSync(builder, loc, "llvm.nvvm.vote.ballot.sync",
-                     builder.getI32Type(), args);
+  mlir::Value arg1 =
+      builder.create<fir::ConvertOp>(loc, builder.getI1Type(), args[1]);
+  return builder
+      .create<mlir::NVVM::VoteBallotOp>(loc, resultType, args[0], arg1)
+      .getResult();
 }
 
 // MATCH_ANY_SYNC
