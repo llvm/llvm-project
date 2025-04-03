@@ -14255,6 +14255,7 @@ cc_library(
     hdrs = ["include/mlir/Conversion/MPIToLLVM/MPIToLLVM.h"],
     includes = ["include"],
     deps = [
+        ":ArithDialect",
         ":ConvertToLLVMInterface",
         ":DLTIDialect",
         ":IR",
