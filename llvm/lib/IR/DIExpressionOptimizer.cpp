@@ -286,6 +286,9 @@ static bool tryFoldCommutativeMathWithArgInBetween(
 }
 
 DIExpression *DIExpression::foldConstantMath() {
+  if (holdsNewElements())
+    return this;
+  auto Elements = getElements();
 
   SmallVector<uint64_t, 8> WorkingOps(Elements.begin(), Elements.end());
   uint64_t Loc = 0;

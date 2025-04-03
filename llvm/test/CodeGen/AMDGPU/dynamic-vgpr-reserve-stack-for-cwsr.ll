@@ -201,21 +201,20 @@ define amdgpu_gfx void @amdgpu_gfx() #0 {
 ; CHECK-NEXT:    s_wait_alu 0xfffe
 ; CHECK-NEXT:    s_mov_b32 exec_lo, s1
 ; CHECK-NEXT:    v_writelane_b32 v40, s0, 2
+; CHECK-NEXT:    v_writelane_b32 v40, s30, 0
+; CHECK-NEXT:    s_add_co_i32 s32, s32, 16
+; CHECK-NEXT:    v_writelane_b32 v40, s31, 1
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 15
 ; CHECK-NEXT:    s_mov_b32 s1, callee@abs32@hi
 ; CHECK-NEXT:    s_mov_b32 s0, callee@abs32@lo
-; CHECK-NEXT:    s_add_co_i32 s32, s32, 16
-; CHECK-NEXT:    v_writelane_b32 v40, s30, 0
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    scratch_store_b8 off, v0, s33 scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0x47
-; CHECK-NEXT:    v_writelane_b32 v40, s31, 1
 ; CHECK-NEXT:    s_wait_alu 0xfffe
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; CHECK-NEXT:    v_readlane_b32 s31, v40, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v40, 0
+; CHECK-NEXT:    v_readlane_b32 s31, v40, 1
 ; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    v_readlane_b32 s0, v40, 2
 ; CHECK-NEXT:    s_or_saveexec_b32 s1, -1

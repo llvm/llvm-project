@@ -131,6 +131,23 @@ static std::vector<Desc> getSubOpDescriptions() {
   std::vector<Desc> Descriptions;
   Descriptions.resize(LlvmUserDescriptionsSize);
   Descriptions[DW_OP_LLVM_nop] = Desc(Op::Dwarf5, Op::SizeSubOpLEB);
+  Descriptions[DW_OP_LLVM_form_aspace_address] =
+      Desc(Op::Dwarf5, Op::SizeSubOpLEB);
+  Descriptions[DW_OP_LLVM_push_lane] = Desc(Op::Dwarf5, Op::SizeSubOpLEB);
+  Descriptions[DW_OP_LLVM_offset] = Desc(Op::Dwarf5, Op::SizeSubOpLEB);
+  Descriptions[DW_OP_LLVM_offset_uconst] =
+      Desc(Op::Dwarf5, Op::SizeSubOpLEB, Op::SizeLEB);
+  Descriptions[DW_OP_LLVM_bit_offset] = Desc(Op::Dwarf5, Op::SizeSubOpLEB);
+  Descriptions[DW_OP_LLVM_call_frame_entry_reg] =
+      Desc(Op::Dwarf5, Op::SizeSubOpLEB, Op::SizeLEB);
+  Descriptions[DW_OP_LLVM_undefined] = Desc(Op::Dwarf5, Op::SizeSubOpLEB);
+  Descriptions[DW_OP_LLVM_aspace_bregx] =
+      Desc(Op::Dwarf5, Op::SizeSubOpLEB, Op::SizeLEB, Op::SizeLEB);
+  Descriptions[DW_OP_LLVM_piece_end] = Desc(Op::Dwarf5, Op::SizeSubOpLEB);
+  Descriptions[DW_OP_LLVM_extend] =
+      Desc(Op::Dwarf5, Op::SizeSubOpLEB, Op::SizeLEB, Op::SizeLEB);
+  Descriptions[DW_OP_LLVM_select_bit_piece] =
+      Desc(Op::Dwarf5, Op::SizeSubOpLEB, Op::SizeLEB, Op::SizeLEB);
   return Descriptions;
 }
 
@@ -165,6 +182,8 @@ bool DWARFExpression::Operation::extract(DataExtractor Data,
         return false;
       assert(Desc.Op[Operand] == Operation::SizeSubOpLEB &&
              "SizeSubOpLEB Description must begin with SizeSubOpLEB operand");
+      Operands.resize(Desc.Op.size());
+      OperandEndOffsets.resize(Desc.Op.size());
       break;
     case Operation::Size1:
       Operands[Operand] = Data.getU8(&Offset);
@@ -269,9 +288,17 @@ bool DWARFExpression::prettyPrintRegisterOp(DWARFUnit *U, raw_ostream &OS,
   uint64_t DwarfRegNum;
   unsigned OpNum = 0;
 
+  std::optional<unsigned> SubOpcode;
+  if (Opcode == DW_OP_LLVM_user)
+    SubOpcode = Operands[OpNum++];
+
   if (Opcode == DW_OP_bregx || Opcode == DW_OP_regx ||
-      Opcode == DW_OP_regval_type)
+      Opcode == DW_OP_regval_type ||
+      (SubOpcode && *SubOpcode == DW_OP_LLVM_aspace_bregx))
     DwarfRegNum = Operands[OpNum++];
+  else if (Opcode == DW_OP_LLVM_call_frame_entry_reg ||
+           (SubOpcode && *SubOpcode == DW_OP_LLVM_call_frame_entry_reg))
+    DwarfRegNum = Operands[OpNum];
   else if (Opcode >= DW_OP_breg0 && Opcode < DW_OP_bregx)
     DwarfRegNum = Opcode - DW_OP_breg0;
   else
@@ -280,7 +307,9 @@ bool DWARFExpression::prettyPrintRegisterOp(DWARFUnit *U, raw_ostream &OS,
   auto RegName = DumpOpts.GetNameForDWARFReg(DwarfRegNum, DumpOpts.IsEH);
   if (!RegName.empty()) {
     if ((Opcode >= DW_OP_breg0 && Opcode <= DW_OP_breg31) ||
-        Opcode == DW_OP_bregx)
+        Opcode == DW_OP_bregx ||
+        (Opcode == DW_OP_LLVM_aspace_bregx ||
+         (SubOpcode && *SubOpcode == DW_OP_LLVM_aspace_bregx)))
       OS << ' ' << RegName << format("%+" PRId64, Operands[OpNum]);
     else
       OS << ' ' << RegName.data();
@@ -311,10 +340,21 @@ bool DWARFExpression::Operation::print(raw_ostream &OS, DIDumpOptions DumpOpts,
   assert(!Name.empty() && "DW_OP has no name!");
   OS << Name;
 
+  std::optional<unsigned> SubOpcode = getSubCode();
+  if (SubOpcode) {
+    StringRef SubName = SubOperationEncodingString(Opcode, *SubOpcode);
+    assert(!SubName.empty() && "DW_OP SubOp has no name!");
+    OS << " " << SubName;
+  }
+
   if ((Opcode >= DW_OP_breg0 && Opcode <= DW_OP_breg31) ||
       (Opcode >= DW_OP_reg0 && Opcode <= DW_OP_reg31) ||
       Opcode == DW_OP_bregx || Opcode == DW_OP_regx ||
-      Opcode == DW_OP_regval_type)
+      Opcode == DW_OP_regval_type ||
+      Opcode == DW_OP_LLVM_call_frame_entry_reg ||
+      Opcode == DW_OP_LLVM_aspace_bregx ||
+      (SubOpcode && (*SubOpcode == DW_OP_LLVM_call_frame_entry_reg ||
+                     *SubOpcode == DW_OP_LLVM_aspace_bregx)))
     if (prettyPrintRegisterOp(U, OS, DumpOpts, Opcode, Operands))
       return true;
 
@@ -323,9 +363,8 @@ bool DWARFExpression::Operation::print(raw_ostream &OS, DIDumpOptions DumpOpts,
     unsigned Signed = Size & Operation::SignBit;
 
     if (Size == Operation::SizeSubOpLEB) {
-      StringRef SubName = SubOperationEncodingString(Opcode, Operands[Operand]);
-      assert(!SubName.empty() && "DW_OP SubOp has no name!");
-      OS << " " << SubName;
+      assert(Operand == 0);
+      assert(SubOpcode);
     } else if (Size == Operation::BaseTypeRef && U) {
       // For DW_OP_convert the operand may be 0 to indicate that conversion to
       // the generic type should be done. The same holds for DW_OP_reinterpret,
@@ -497,7 +536,7 @@ static bool printCompactDWARFExpr(
       break;
     }
     case dwarf::DW_OP_LLVM_user: {
-      assert(Op.getSubCode() && *Op.getSubCode() == dwarf::DW_OP_LLVM_nop);
+      assert(Op.getSubCode());
       break;
     }
     default:

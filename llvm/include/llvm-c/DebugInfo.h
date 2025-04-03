@@ -146,6 +146,8 @@ typedef enum {
   LLVMDWARFSourceLanguageBORLAND_Delphi
 } LLVMDWARFSourceLanguage;
 
+typedef unsigned LLVMDWARFMemorySpace;
+
 /**
  * The amount of debug information to emit.
  */
@@ -736,12 +738,13 @@ LLVMDIBuilderCreateBasicType(LLVMDIBuilderRef Builder, const char *Name,
  * \param SizeInBits        Size.
  * \param AlignInBits       Alignment. (optional, pass 0 to ignore)
  * \param AddressSpace      DWARF address space. (optional, pass 0 to ignore)
+ * \param MemorySpace       DWARF memory space (optional, pass 0 for none).
  * \param Name              Pointer type name. (optional)
  * \param NameLen           Length of pointer type name. (optional)
  */
 LLVMMetadataRef LLVMDIBuilderCreatePointerType(
-    LLVMDIBuilderRef Builder, LLVMMetadataRef PointeeTy,
-    uint64_t SizeInBits, uint32_t AlignInBits, unsigned AddressSpace,
+    LLVMDIBuilderRef Builder, LLVMMetadataRef PointeeTy, uint64_t SizeInBits,
+    uint32_t AlignInBits, unsigned AddressSpace, LLVMDWARFMemorySpace MS,
     const char *Name, size_t NameLen);
 
 /**
@@ -902,10 +905,13 @@ LLVMDIBuilderCreateQualifiedType(LLVMDIBuilderRef Builder, unsigned Tag,
  * \param Builder   The DIBuilder.
  * \param Tag       Tag identifying type,
  * \param Type      Base Type.
+ * \param AddressSpace      DWARF address space. (optional, pass 0 to ignore)
+ * \param MemorySpace       DWARF memory space (optional, pass 0 for none).
  */
 LLVMMetadataRef
 LLVMDIBuilderCreateReferenceType(LLVMDIBuilderRef Builder, unsigned Tag,
-                                 LLVMMetadataRef Type);
+                                 LLVMMetadataRef Type, unsigned AddressSpace,
+                                 LLVMDWARFMemorySpace MemorySpace);
 
 /**
  * Create C++11 nullptr type.
@@ -1168,8 +1174,8 @@ LLVMMetadataRef LLVMDIBuilderCreateGlobalVariableExpression(
     LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
     size_t NameLen, const char *Linkage, size_t LinkLen, LLVMMetadataRef File,
     unsigned LineNo, LLVMMetadataRef Ty, LLVMBool LocalToUnit,
-    LLVMMetadataRef Expr, LLVMMetadataRef Decl, uint32_t AlignInBits);
-
+    LLVMMetadataRef Expr, LLVMMetadataRef Decl, LLVMDWARFMemorySpace MS,
+    uint32_t AlignInBits);
 
 /**
  * Get the dwarf::Tag of a DINode
@@ -1364,7 +1370,8 @@ LLVMDbgRecordRef LLVMDIBuilderInsertDbgValueRecordAtEnd(
 LLVMMetadataRef LLVMDIBuilderCreateAutoVariable(
     LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
     size_t NameLen, LLVMMetadataRef File, unsigned LineNo, LLVMMetadataRef Ty,
-    LLVMBool AlwaysPreserve, LLVMDIFlags Flags, uint32_t AlignInBits);
+    LLVMBool AlwaysPreserve, LLVMDIFlags Flags, LLVMDWARFMemorySpace MS,
+    uint32_t AlignInBits);
 
 /**
  * Create a new descriptor for a function parameter variable.

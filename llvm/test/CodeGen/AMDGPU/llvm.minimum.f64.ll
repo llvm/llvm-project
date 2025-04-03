@@ -2375,6 +2375,12 @@ define <16 x double> @v_minimum_v16f64(<16 x double> %src0, <16 x double> %src1)
 ; GFX950-NEXT:    v_accvgpr_write_b32 a8, v47 ; Reload Reuse
 ; GFX950-NEXT:    v_accvgpr_write_b32 a9, v56 ; Reload Reuse
 ; GFX950-NEXT:    v_accvgpr_write_b32 a10, v57 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a11, v58 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a12, v59 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a13, v60 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a14, v61 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a15, v62 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a16, v63 ; Reload Reuse
 ; GFX950-NEXT:    scratch_load_dword v37, off, s32 offset:16
 ; GFX950-NEXT:    scratch_load_dword v36, off, s32 offset:12
 ; GFX950-NEXT:    scratch_load_dword v39, off, s32 offset:24
@@ -2402,12 +2408,6 @@ define <16 x double> @v_minimum_v16f64(<16 x double> %src0, <16 x double> %src1)
 ; GFX950-NEXT:    scratch_load_dword v31, off, s32
 ; GFX950-NEXT:    scratch_load_dword v33, off, s32 offset:104
 ; GFX950-NEXT:    scratch_load_dword v32, off, s32 offset:100
-; GFX950-NEXT:    v_accvgpr_write_b32 a11, v58 ; Reload Reuse
-; GFX950-NEXT:    v_accvgpr_write_b32 a12, v59 ; Reload Reuse
-; GFX950-NEXT:    v_accvgpr_write_b32 a13, v60 ; Reload Reuse
-; GFX950-NEXT:    v_accvgpr_write_b32 a14, v61 ; Reload Reuse
-; GFX950-NEXT:    v_accvgpr_write_b32 a15, v62 ; Reload Reuse
-; GFX950-NEXT:    v_accvgpr_write_b32 a16, v63 ; Reload Reuse
 ; GFX950-NEXT:    s_waitcnt vmcnt(25)
 ; GFX950-NEXT:    v_min_f64 v[58:59], v[2:3], v[36:37]
 ; GFX950-NEXT:    v_cmp_u_f64_e32 vcc, v[2:3], v[36:37]

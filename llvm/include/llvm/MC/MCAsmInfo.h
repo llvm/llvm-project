@@ -389,6 +389,11 @@ protected:
   /// location is allowed.
   bool SupportsExtendedDwarfLocDirective = true;
 
+  /// True if the target supports the extensions defined at
+  /// https://llvm.org/docs/AMDGPUDwarfProposalForHeterogeneousDebugging.html.
+  /// Defaults to false.
+  bool SupportsHeterogeneousDebuggingExtensions = false;
+
   //===--- Prologue State ----------------------------------------------===//
 
   std::vector<MCCFIInstruction> InitialFrameState;
@@ -618,6 +623,10 @@ public:
 
   bool doesSupportDebugInformation() const { return SupportsDebugInformation; }
 
+  bool doesSupportExceptionHandling() const {
+    return ExceptionsType != ExceptionHandling::None;
+  }
+
   ExceptionHandling getExceptionHandlingType() const { return ExceptionsType; }
   WinEH::EncodingType getWinEHEncodingType() const { return WinEHEncodingType; }
 
@@ -655,6 +664,9 @@ public:
   }
   bool supportsExtendedDwarfLocDirective() const {
     return SupportsExtendedDwarfLocDirective;
+  }
+  bool supportsHeterogeneousDebuggingExtensions() const {
+    return SupportsHeterogeneousDebuggingExtensions;
   }
 
   bool usesDwarfFileAndLocDirectives() const { return !IsAIX; }

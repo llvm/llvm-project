@@ -22,6 +22,7 @@
 namespace llvm {
   class BitVector;
   class CalleeSavedInfo;
+  class DIExpression;
   class MachineFunction;
   class RegScavenger;
 
@@ -323,6 +324,11 @@ public:
   /// returned directly, and the base register is returned via FrameReg.
   virtual StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
                                              Register &FrameReg) const;
+
+  virtual DIExpression *lowerFIArgToFPArg(const MachineFunction &MF,
+                                          const DIExpression *Expr,
+                                          uint64_t ArgIndex,
+                                          StackOffset Offset) const;
 
   /// Same as \c getFrameIndexReference, except that the stack pointer (as
   /// opposed to the frame pointer) will be the preferred value for \p

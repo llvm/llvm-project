@@ -908,6 +908,14 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
   SmallVector<MDNode *, 1> MDs;
   GV.getMetadata(LLVMContext::MD_dbg, MDs);
   for (auto *MD : MDs) {
+    if (auto *GVE = dyn_cast<DIGlobalVariableExpression>(MD)) {
+      if (auto *E = dyn_cast_or_null<DIExpression>(GVE->getRawExpression())) {
+        SmallVector<const Value *> Arguments{&GV};
+        DIExpressionEnv Env{GVE->getVariable(), Arguments, DL};
+        CheckDI(E->isValid(Env, dbgs()),
+                "invalid DIExpression in DIGlobalVariableExpression", &GV);
+      }
+    }
     if (auto *GVE = dyn_cast<DIGlobalVariableExpression>(MD))
       visitDIGlobalVariableExpression(*GVE);
     else
@@ -1296,6 +1304,14 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
                 N.getTag() == dwarf::DW_TAG_reference_type ||
                 N.getTag() == dwarf::DW_TAG_rvalue_reference_type,
             "DWARF address space only applies to pointer or reference types",
+            &N);
+  }
+
+  if (N.getDWARFMemorySpace() != dwarf::DW_MSPACE_LLVM_none) {
+    CheckDI(N.getTag() == dwarf::DW_TAG_pointer_type ||
+                N.getTag() == dwarf::DW_TAG_reference_type ||
+                N.getTag() == dwarf::DW_TAG_rvalue_reference_type,
+            "DWARF memory space only applies to pointer or reference types",
             &N);
   }
 }
@@ -6955,6 +6971,14 @@ void Verifier::visitDbgIntrinsic(StringRef Kind, DbgVariableIntrinsic &DII) {
           "invalid llvm.dbg." + Kind + " intrinsic expression", &DII,
           DII.getRawExpression());
 
+  // This is redundant with the preprocessor-generated check, but here we
+  // can include arguments for DIOp-based expression checking.
+  SmallVector<const Value *> Arguments{DII.location_ops()};
+  DIExpressionEnv Env{DII.getVariable(), Arguments, DL};
+  CheckDI(DII.getExpression()->isValid(Env, dbgs()),
+          "invalid DIExpression in llvm.dbg." + Kind + " intrinsic", &DII,
+          DII.getRawExpression());
+
   if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(&DII)) {
     CheckDI(isa<DIAssignID>(DAI->getRawAssignID()),
             "invalid llvm.dbg.assign intrinsic DIAssignID", &DII,
@@ -7100,6 +7124,9 @@ void Verifier::verifyFragmentExpression(const DIVariable &V,
   CheckDI(FragSize + FragOffset <= *VarSize,
           "fragment is larger than or outside of variable", Desc, &V);
   CheckDI(FragSize != *VarSize, "fragment covers entire variable", Desc, &V);
+
+  auto MSpace = V.getDWARFMemorySpace();
+  CheckDI(MSpace <= dwarf::DW_MSPACE_LLVM_hi_user, "invalid memory space", &V);
 }
 
 void Verifier::verifyFnArgs(const DbgVariableIntrinsic &I) {

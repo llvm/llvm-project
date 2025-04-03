@@ -58,6 +58,8 @@ body:             |
     ; GCN64-MUBUF-LABEL: name: check_spill
     ; GCN64-MUBUF: liveins: $sgpr8, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr11
     ; GCN64-MUBUF-NEXT: {{  $}}
+    ; GCN64-MUBUF-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+    ; GCN64-MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; GCN64-MUBUF-NEXT: $sgpr33 = S_MOV_B32 0
     ; GCN64-MUBUF-NEXT: $sgpr28 = S_MOV_B32 &SCRATCH_RSRC_DWORD0, implicit-def $sgpr28_sgpr29_sgpr30_sgpr31
     ; GCN64-MUBUF-NEXT: $sgpr29 = S_MOV_B32 &SCRATCH_RSRC_DWORD1, implicit-def $sgpr28_sgpr29_sgpr30_sgpr31
@@ -222,6 +224,8 @@ body:             |
     ; GCN32-MUBUF-LABEL: name: check_spill
     ; GCN32-MUBUF: liveins: $sgpr8, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr11
     ; GCN32-MUBUF-NEXT: {{  $}}
+    ; GCN32-MUBUF-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+    ; GCN32-MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; GCN32-MUBUF-NEXT: $sgpr33 = S_MOV_B32 0
     ; GCN32-MUBUF-NEXT: $sgpr96 = S_MOV_B32 &SCRATCH_RSRC_DWORD0, implicit-def $sgpr96_sgpr97_sgpr98_sgpr99
     ; GCN32-MUBUF-NEXT: $sgpr97 = S_MOV_B32 &SCRATCH_RSRC_DWORD1, implicit-def $sgpr96_sgpr97_sgpr98_sgpr99
@@ -386,6 +390,8 @@ body:             |
     ; GCN64-FLATSCR-LABEL: name: check_spill
     ; GCN64-FLATSCR: liveins: $sgpr8, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr11, $sgpr0_sgpr1
     ; GCN64-FLATSCR-NEXT: {{  $}}
+    ; GCN64-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+    ; GCN64-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; GCN64-FLATSCR-NEXT: $sgpr33 = S_MOV_B32 0
     ; GCN64-FLATSCR-NEXT: $flat_scr_lo = S_ADD_U32 $sgpr0, $sgpr11, implicit-def $scc
     ; GCN64-FLATSCR-NEXT: $flat_scr_hi = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc
@@ -617,6 +623,8 @@ body:             |
     ; GCN64-MUBUF-LABEL: name: check_reload
     ; GCN64-MUBUF: liveins: $sgpr8, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr11
     ; GCN64-MUBUF-NEXT: {{  $}}
+    ; GCN64-MUBUF-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+    ; GCN64-MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; GCN64-MUBUF-NEXT: $sgpr33 = S_MOV_B32 0
     ; GCN64-MUBUF-NEXT: $sgpr28 = S_MOV_B32 &SCRATCH_RSRC_DWORD0, implicit-def $sgpr28_sgpr29_sgpr30_sgpr31
     ; GCN64-MUBUF-NEXT: $sgpr29 = S_MOV_B32 &SCRATCH_RSRC_DWORD1, implicit-def $sgpr28_sgpr29_sgpr30_sgpr31
@@ -755,6 +763,8 @@ body:             |
     ; GCN32-MUBUF-LABEL: name: check_reload
     ; GCN32-MUBUF: liveins: $sgpr8, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr11
     ; GCN32-MUBUF-NEXT: {{  $}}
+    ; GCN32-MUBUF-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+    ; GCN32-MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; GCN32-MUBUF-NEXT: $sgpr33 = S_MOV_B32 0
     ; GCN32-MUBUF-NEXT: $sgpr96 = S_MOV_B32 &SCRATCH_RSRC_DWORD0, implicit-def $sgpr96_sgpr97_sgpr98_sgpr99
     ; GCN32-MUBUF-NEXT: $sgpr97 = S_MOV_B32 &SCRATCH_RSRC_DWORD1, implicit-def $sgpr96_sgpr97_sgpr98_sgpr99
@@ -893,6 +903,8 @@ body:             |
     ; GCN64-FLATSCR-LABEL: name: check_reload
     ; GCN64-FLATSCR: liveins: $sgpr8, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr11, $sgpr0_sgpr1
     ; GCN64-FLATSCR-NEXT: {{  $}}
+    ; GCN64-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+    ; GCN64-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; GCN64-FLATSCR-NEXT: $sgpr33 = S_MOV_B32 0
     ; GCN64-FLATSCR-NEXT: $flat_scr_lo = S_ADD_U32 $sgpr0, $sgpr11, implicit-def $scc
     ; GCN64-FLATSCR-NEXT: $flat_scr_hi = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc

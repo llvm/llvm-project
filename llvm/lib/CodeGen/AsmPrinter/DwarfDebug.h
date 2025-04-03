@@ -472,6 +472,9 @@ private:
   AccelTableKind TheAccelTableKind;
   bool HasAppleExtensionAttributes;
   bool HasSplitDwarf;
+  // Enables extensions defined at
+  // https://llvm.org/docs/AMDGPUDwarfProposalForHeterogeneousDebugging.html
+  bool HasHeterogeneousExtensionAttributes;
 
   /// Whether to generate the DWARF v5 string offsets table.
   /// It consists of a series of contributions, each preceded by a header.
@@ -808,6 +811,13 @@ public:
 
   bool useAppleExtensionAttributes() const {
     return HasAppleExtensionAttributes;
+  }
+
+  /// Returns whether extensions defined at
+  /// https://llvm.org/docs/AMDGPUDwarfProposalForHeterogeneousDebugging.html
+  /// are enabled.
+  bool useHeterogeneousExtensionAttributes() const {
+    return HasHeterogeneousExtensionAttributes;
   }
 
   /// Returns whether or not to change the current debug info for the
