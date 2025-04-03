@@ -1301,6 +1301,9 @@ def MatrixBFMT : CustomOperand<i32, 1, "MatrixBFMT">;
 def MatrixAScale : CustomOperand<i32, 1, "MatrixAScale">;
 def MatrixBScale : CustomOperand<i32, 1, "MatrixBScale">;
 
+def MatrixAScaleFmt : CustomOperand<i32, 1, "MatrixAScaleFmt">;
+def MatrixBScaleFmt : CustomOperand<i32, 1, "MatrixBScaleFmt">;
+
 def MatrixAReuse : NamedBitOperand<"matrix_a_reuse">;
 def MatrixBReuse : NamedBitOperand<"matrix_b_reuse">;
 
@@ -2753,7 +2756,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
                                isModifierType<Src2VT>.ret,
                                HasOMod);
   field bit HasNeg = HasModifiers;
-  field bit HasMaxtrixScale = 0;
+  field bit HasMatrixScale = 0;
 
   field bit HasSrc0Mods = HasModifiers;
   field bit HasSrc1Mods = !if(HasModifiers, !or(HasSrc1FloatMods, HasSrc1IntMods), 0);

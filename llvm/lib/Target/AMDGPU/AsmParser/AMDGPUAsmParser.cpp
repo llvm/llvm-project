@@ -177,6 +177,8 @@ public:
     ImmTyMatrixBFMT,
     ImmTyMatrixAScale,
     ImmTyMatrixBScale,
+    ImmTyMatrixAScaleFmt,
+    ImmTyMatrixBScaleFmt,
     ImmTyMatrixAReuse,
     ImmTyMatrixBReuse,
     ImmTyScaleSel,
@@ -434,6 +436,8 @@ public:
   bool isMatrixBFMT() const { return isImmTy(ImmTyMatrixBFMT); }
   bool isMatrixAScale() const { return isImmTy(ImmTyMatrixAScale); }
   bool isMatrixBScale() const { return isImmTy(ImmTyMatrixBScale); }
+  bool isMatrixAScaleFmt() const { return isImmTy(ImmTyMatrixAScaleFmt); }
+  bool isMatrixBScaleFmt() const { return isImmTy(ImmTyMatrixBScaleFmt); }
   bool isMatrixAReuse() const { return isImmTy(ImmTyMatrixAReuse); }
   bool isMatrixBReuse() const { return isImmTy(ImmTyMatrixBReuse); }
   bool isTFE() const { return isImmTy(ImmTyTFE); }
@@ -1206,6 +1210,8 @@ public:
     case ImmTyMatrixBFMT: OS << "ImmTyMatrixBFMT"; break;
     case ImmTyMatrixAScale: OS << "ImmTyMatrixAScale"; break;
     case ImmTyMatrixBScale: OS << "ImmTyMatrixBScale"; break;
+    case ImmTyMatrixAScaleFmt: OS << "ImmTyMatrixAScaleFmt"; break;
+    case ImmTyMatrixBScaleFmt: OS << "ImmTyMatrixBScaleFmt"; break;
     case ImmTyMatrixAReuse: OS << "ImmTyMatrixAReuse"; break;
     case ImmTyMatrixBReuse: OS << "ImmTyMatrixBReuse"; break;
     case ImmTyScaleSel: OS << "ScaleSel" ; break;
@@ -1756,6 +1762,10 @@ public:
                                   AMDGPUOperand::ImmTy Type);
   ParseStatus parseMatrixAScale(OperandVector &Operands);
   ParseStatus parseMatrixBScale(OperandVector &Operands);
+  ParseStatus tryParseMatrixScaleFmt(OperandVector &Operands, StringRef Name,
+                                     AMDGPUOperand::ImmTy Type);
+  ParseStatus parseMatrixAScaleFmt(OperandVector &Operands);
+  ParseStatus parseMatrixBScaleFmt(OperandVector &Operands);
 
   ParseStatus parseDfmtNfmt(int64_t &Format);
   ParseStatus parseUfmt(int64_t &Format);
@@ -7434,6 +7444,25 @@ ParseStatus AMDGPUAsmParser::parseMatrixBScale(OperandVector &Operands) {
                              AMDGPUOperand::ImmTyMatrixBScale);
 }
 
+ParseStatus AMDGPUAsmParser::tryParseMatrixScaleFmt(OperandVector &Operands,
+                                                    StringRef Name,
+                                                    AMDGPUOperand::ImmTy Type) {
+  return parseStringOrIntWithPrefix(
+      Operands, Name,
+      {"MATRIX_SCALE_FMT_E8", "MATRIX_SCALE_FMT_E5M3", "MATRIX_SCALE_FMT_E4M3"},
+      Type);
+}
+
+ParseStatus AMDGPUAsmParser::parseMatrixAScaleFmt(OperandVector &Operands) {
+  return tryParseMatrixScaleFmt(Operands, "matrix_a_scale_fmt",
+                                AMDGPUOperand::ImmTyMatrixAScaleFmt);
+}
+
+ParseStatus AMDGPUAsmParser::parseMatrixBScaleFmt(OperandVector &Operands) {
+  return tryParseMatrixScaleFmt(Operands, "matrix_b_scale_fmt",
+                                AMDGPUOperand::ImmTyMatrixBScaleFmt);
+}
+
 // dfmt and nfmt (in a tbuffer instruction) are parsed as one to allow their
 // values to live in a joint format operand in the MCInst encoding.
 ParseStatus AMDGPUAsmParser::parseDfmtNfmt(int64_t &Format) {
@@ -9490,6 +9519,20 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
   if (MatrixBScaleIdx != -1) {
     addOptionalImmOperand(Inst, Operands, OptIdx,
                           AMDGPUOperand::ImmTyMatrixBScale, 0);
+  }
+
+  int MatrixAScaleFmtIdx =
+      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::matrix_a_scale_fmt);
+  if (MatrixAScaleFmtIdx != -1) {
+    addOptionalImmOperand(Inst, Operands, OptIdx,
+                          AMDGPUOperand::ImmTyMatrixAScaleFmt, 0);
+  }
+
+  int MatrixBScaleFmtIdx =
+      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::matrix_b_scale_fmt);
+  if (MatrixBScaleFmtIdx != -1) {
+    addOptionalImmOperand(Inst, Operands, OptIdx,
+                          AMDGPUOperand::ImmTyMatrixBScaleFmt, 0);
   }
 
   if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::matrix_a_reuse))
