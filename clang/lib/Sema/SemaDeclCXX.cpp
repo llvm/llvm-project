@@ -1140,7 +1140,8 @@ static bool lookupStdTypeTraitMember(Sema &S, LookupResult &TraitMemberLookup,
   }
 
   // Build the template-id.
-  QualType TraitTy = S.CheckTemplateIdType(TemplateName(TraitTD), Loc, Args);
+  QualType TraitTy =
+      S.CheckTemplateIdType(nullptr, TemplateName(TraitTD), Loc, Args);
   if (TraitTy.isNull())
     return true;
   if (!S.isCompleteType(Loc, TraitTy)) {
@@ -12162,7 +12163,8 @@ QualType Sema::BuildStdInitializerList(QualType Element, SourceLocation Loc) {
                                        Context.getTrivialTypeSourceInfo(Element,
                                                                         Loc)));
 
-  QualType T = CheckTemplateIdType(TemplateName(StdInitializerList), Loc, Args);
+  QualType T =
+      CheckTemplateIdType(nullptr, TemplateName(StdInitializerList), Loc, Args);
   if (T.isNull())
     return QualType();
 

@@ -11512,7 +11512,8 @@ public:
 
   void NoteAllFoundTemplates(TemplateName Name);
 
-  QualType CheckTemplateIdType(TemplateName Template,
+  QualType CheckTemplateIdType(const NestedNameSpecifier *NNS,
+                               TemplateName Template,
                                SourceLocation TemplateLoc,
                                TemplateArgumentListInfo &TemplateArgs);
 
