@@ -9,6 +9,8 @@
 // store locations to be included in the atom group.
 
 int g;
+typedef struct { int a, b, c; } Struct;
+Struct g2;
 void a() {
 // CHECK: call void @llvm.memcpy{{.*}}, !dbg [[G1R1:!.*]]
     int A[] = { 1, 2, 3 };
