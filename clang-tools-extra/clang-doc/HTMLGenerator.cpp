@@ -8,6 +8,7 @@
 
 #include "Generators.h"
 #include "Representation.h"
+#include "support/File.h"
 #include "clang/Basic/Version.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -1143,23 +1144,6 @@ static llvm::Error genIndex(const ClangDocContext &CDCtx) {
 
   F.render(IndexOS);
 
-  return llvm::Error::success();
-}
-
-static llvm::Error copyFile(StringRef FilePath, StringRef OutDirectory) {
-  llvm::SmallString<128> PathWrite;
-  llvm::sys::path::native(OutDirectory, PathWrite);
-  llvm::sys::path::append(PathWrite, llvm::sys::path::filename(FilePath));
-  llvm::SmallString<128> PathRead;
-  llvm::sys::path::native(FilePath, PathRead);
-  std::error_code OK;
-  std::error_code FileErr = llvm::sys::fs::copy_file(PathRead, PathWrite);
-  if (FileErr != OK) {
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "error creating file " +
-                                       llvm::sys::path::filename(FilePath) +
-                                       ": " + FileErr.message() + "\n");
-  }
   return llvm::Error::success();
 }
 
