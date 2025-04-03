@@ -867,6 +867,46 @@ struct ConvertShRSI final : OpConversionPattern<arith::ShRSIOp> {
 };
 
 //===----------------------------------------------------------------------===//
+// ConvertSubI
+//===----------------------------------------------------------------------===//
+
+struct ConvertSubI final : OpConversionPattern<arith::SubIOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::SubIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op->getLoc();
+    auto newTy = getTypeConverter()->convertType<VectorType>(op.getType());
+    if (!newTy)
+      return rewriter.notifyMatchFailure(
+          loc, llvm::formatv("unsupported type: {}", op.getType()));
+
+    Type newElemTy = reduceInnermostDim(newTy);
+
+    auto [lhsElem0, lhsElem1] =
+        extractLastDimHalves(rewriter, loc, adaptor.getLhs());
+    auto [rhsElem0, rhsElem1] =
+        extractLastDimHalves(rewriter, loc, adaptor.getRhs());
+
+    // Emulates LHS - RHS by [LHS0 - RHS0, LHS1 - RHS1 - CARRY] where
+    // CARRY is 1 or 0.
+    Value low = rewriter.create<arith::SubIOp>(loc, lhsElem0, rhsElem0);
+    // We have a carry if lhsElem0 < rhsElem0.
+    Value carry0 = rewriter.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::ult, lhsElem0, rhsElem0);
+    Value carryVal = rewriter.create<arith::ExtUIOp>(loc, newElemTy, carry0);
+
+    Value high0 = rewriter.create<arith::SubIOp>(loc, lhsElem1, carryVal);
+    Value high = rewriter.create<arith::SubIOp>(loc, high0, rhsElem1);
+
+    Value resultVec = constructResultVector(rewriter, loc, newTy, {low, high});
+    rewriter.replaceOp(op, resultVec);
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // ConvertSIToFP
 //===----------------------------------------------------------------------===//
 
@@ -885,22 +925,16 @@ struct ConvertSIToFP final : OpConversionPattern<arith::SIToFPOp> {
       return rewriter.notifyMatchFailure(
           loc, llvm::formatv("unsupported type: {0}", oldTy));
 
-    unsigned oldBitWidth = getElementTypeOrSelf(oldTy).getIntOrFloatBitWidth();
     Value zeroCst = createScalarOrSplatConstant(rewriter, loc, oldTy, 0);
-    Value oneCst = createScalarOrSplatConstant(rewriter, loc, oldTy, 1);
-    Value allOnesCst = createScalarOrSplatConstant(
-        rewriter, loc, oldTy, APInt::getAllOnes(oldBitWidth));
 
     // To avoid operating on very large unsigned numbers, perform the
     // conversion on the absolute value. Then, decide whether to negate the
-    // result or not based on that sign bit. We assume two's complement and
-    // implement negation by flipping all bits and adding 1.
-    // Note that this relies on the the other conversion patterns to legalize
-    // created ops and narrow the bit widths.
+    // result or not based on that sign bit. We implement negation by
+    // subtracting from zero. Note that this relies on the the other conversion
+    // patterns to legalize created ops and narrow the bit widths.
     Value isNeg = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt,
                                                  in, zeroCst);
-    Value bitwiseNeg = rewriter.create<arith::XOrIOp>(loc, in, allOnesCst);
-    Value neg = rewriter.create<arith::AddIOp>(loc, bitwiseNeg, oneCst);
+    Value neg = rewriter.create<arith::SubIOp>(loc, zeroCst, in);
     Value abs = rewriter.create<arith::SelectOp>(loc, isNeg, neg, in);
 
     Value absResult = rewriter.create<arith::UIToFPOp>(loc, op.getType(), abs);
@@ -1139,7 +1173,7 @@ void arith::populateArithWideIntEmulationPatterns(
       ConvertMaxMin<arith::MaxUIOp, arith::CmpIPredicate::ugt>,
       ConvertMaxMin<arith::MaxSIOp, arith::CmpIPredicate::sgt>,
       ConvertMaxMin<arith::MinUIOp, arith::CmpIPredicate::ult>,
-      ConvertMaxMin<arith::MinSIOp, arith::CmpIPredicate::slt>,
+      ConvertMaxMin<arith::MinSIOp, arith::CmpIPredicate::slt>, ConvertSubI,
       // Bitwise binary ops.
       ConvertBitwiseBinary<arith::AndIOp>, ConvertBitwiseBinary<arith::OrIOp>,
       ConvertBitwiseBinary<arith::XOrIOp>,
