@@ -1402,7 +1402,7 @@ ArrayRef<NamedDecl *> LambdaExpr::getExplicitTemplateParameters() const {
   return Record->getLambdaExplicitTemplateParameters();
 }
 
-Expr *LambdaExpr::getTrailingRequiresClause() const {
+const AssociatedConstraint &LambdaExpr::getTrailingRequiresClause() const {
   return getCallOperator()->getTrailingRequiresClause();
 }
 

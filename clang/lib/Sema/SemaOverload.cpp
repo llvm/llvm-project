@@ -1551,12 +1551,16 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
 
   if (!UseOverrideRules &&
       New->getTemplateSpecializationKind() != TSK_ExplicitSpecialization) {
-    Expr *NewRC = New->getTrailingRequiresClause(),
-         *OldRC = Old->getTrailingRequiresClause();
-    if ((NewRC != nullptr) != (OldRC != nullptr))
+    AssociatedConstraint NewRC = New->getTrailingRequiresClause(),
+                         OldRC = Old->getTrailingRequiresClause();
+    if (!NewRC != !OldRC)
+      return true;
+    if (NewRC.ArgumentPackSubstitutionIndex !=
+        OldRC.ArgumentPackSubstitutionIndex)
       return true;
     if (NewRC &&
-        !SemaRef.AreConstraintExpressionsEqual(OldDecl, OldRC, NewDecl, NewRC))
+        !SemaRef.AreConstraintExpressionsEqual(OldDecl, OldRC.ConstraintExpr,
+                                               NewDecl, NewRC.ConstraintExpr))
       return true;
   }
 
