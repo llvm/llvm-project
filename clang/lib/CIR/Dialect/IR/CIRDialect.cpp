@@ -246,8 +246,8 @@ OpFoldResult cir::ConstantOp::fold(FoldAdaptor /*adaptor*/) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult cir::CastOp::verify() {
-  auto resType = getResult().getType();
-  auto srcType = getSrc().getType();
+  const mlir::Type resType = getResult().getType();
+  const mlir::Type srcType = getSrc().getType();
 
   switch (getKind()) {
   case cir::CastKind::int_to_bool: {
@@ -269,6 +269,15 @@ LogicalResult cir::CastOp::verify() {
       return emitOpError() << "requires !cir.int type for result";
     if (!mlir::isa<cir::IntType>(srcType))
       return emitOpError() << "requires !cir.int type for source";
+    return success();
+  }
+  case cir::CastKind::array_to_ptrdecay: {
+    const auto arrayPtrTy = mlir::dyn_cast<cir::PointerType>(srcType);
+    const auto flatPtrTy = mlir::dyn_cast<cir::PointerType>(resType);
+    if (!arrayPtrTy || !flatPtrTy)
+      return emitOpError() << "requires !cir.ptr type for source and result";
+
+    // TODO(CIR): Make sure the AddrSpace of both types are equals
     return success();
   }
   case cir::CastKind::bitcast: {
@@ -453,9 +462,9 @@ mlir::LogicalResult cir::ReturnOp::verify() {
 
 /// Given the region at `index`, or the parent operation if `index` is None,
 /// return the successor regions. These are the regions that may be selected
-/// during the flow of control. `operands` is a set of optional attributes that
-/// correspond to a constant value for each operand, or null if that operand is
-/// not a constant.
+/// during the flow of control. `operands` is a set of optional attributes
+/// that correspond to a constant value for each operand, or null if that
+/// operand is not a constant.
 void cir::ScopeOp::getSuccessorRegions(
     mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   // The only region always branch back to the parent operation.
@@ -683,8 +692,8 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
 }
 
 bool cir::FuncOp::isDeclaration() {
-  // TODO(CIR): This function will actually do something once external function
-  // declarations and aliases are upstreamed.
+  // TODO(CIR): This function will actually do something once external
+  // function declarations and aliases are upstreamed.
   return false;
 }
 
@@ -708,6 +717,25 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
     p.printRegion(body, /*printEntryBlockArgs=*/false,
                   /*printBlockTerminators=*/true);
   }
+}
+
+//===----------------------------------------------------------------------===//
+// CIR defined traits
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+mlir::OpTrait::impl::verifySameFirstOperandAndResultType(Operation *op) {
+  if (failed(verifyAtLeastNOperands(op, 1)) || failed(verifyOneResult(op)))
+    return failure();
+
+  const Type type = op->getResult(0).getType();
+  const Type opType = op->getOperand(0).getType();
+
+  if (type != opType)
+    return op->emitOpError()
+           << "requires the same type for first operand and result";
+
+  return success();
 }
 
 // TODO(CIR): The properties of functions that require verification haven't
