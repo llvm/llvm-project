@@ -130,7 +130,7 @@ static void instantiateDependentAlignedAttr(
 
   // Determine whether we can expand this attribute pack yet.
   bool Expand = true, RetainExpansion = false;
-  std::optional<unsigned> NumExpansions;
+  UnsignedOrNone NumExpansions = std::nullopt;
   // FIXME: Use the actual location of the ellipsis.
   SourceLocation EllipsisLoc = Aligned->getLocation();
   if (S.CheckParameterPacksForExpansion(EllipsisLoc, Aligned->getRange(),
@@ -139,11 +139,11 @@ static void instantiateDependentAlignedAttr(
     return;
 
   if (!Expand) {
-    Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(S, -1);
+    Sema::ArgPackSubstIndexRAII SubstIndex(S, std::nullopt);
     instantiateDependentAlignedAttr(S, TemplateArgs, Aligned, New, true);
   } else {
     for (unsigned I = 0; I != *NumExpansions; ++I) {
-      Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(S, I);
+      Sema::ArgPackSubstIndexRAII SubstIndex(S, I);
       instantiateDependentAlignedAttr(S, TemplateArgs, Aligned, New, false);
     }
   }
@@ -1888,7 +1888,7 @@ Decl *TemplateDeclInstantiator::VisitFriendDecl(FriendDecl *D) {
 
         bool ShouldExpand = true;
         bool RetainExpansion = false;
-        std::optional<unsigned> NumExpansions;
+        UnsignedOrNone NumExpansions = std::nullopt;
         if (SemaRef.CheckParameterPacksForExpansion(
                 D->getEllipsisLoc(), D->getSourceRange(), Unexpanded,
                 TemplateArgs, ShouldExpand, RetainExpansion, NumExpansions))
@@ -1900,7 +1900,7 @@ Decl *TemplateDeclInstantiator::VisitFriendDecl(FriendDecl *D) {
         if (ShouldExpand) {
           SmallVector<FriendDecl *> Decls;
           for (unsigned I = 0; I != *NumExpansions; I++) {
-            Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(SemaRef, I);
+            Sema::ArgPackSubstIndexRAII SubstIndex(SemaRef, I);
             TypeSourceInfo *TSI = SemaRef.SubstType(
                 Ty, TemplateArgs, D->getEllipsisLoc(), DeclarationName());
             if (!TSI)
@@ -3418,10 +3418,10 @@ Decl *TemplateDeclInstantiator::VisitTemplateTypeParmDecl(
                                                     TemplateTypeParmDecl *D) {
   assert(D->getTypeForDecl()->isTemplateTypeParmType());
 
-  std::optional<unsigned> NumExpanded;
+  UnsignedOrNone NumExpanded = std::nullopt;
 
   if (const TypeConstraint *TC = D->getTypeConstraint()) {
-    if (D->isPackExpansion() && !D->isExpandedParameterPack()) {
+    if (D->isPackExpansion() && !D->getNumExpansionParameters()) {
       assert(TC->getTemplateArgsAsWritten() &&
              "type parameter can only be an expansion when explicit arguments "
              "are specified");
@@ -3528,9 +3528,9 @@ Decl *TemplateDeclInstantiator::VisitNonTypeTemplateParmDecl(
     // be expanded.
     bool Expand = true;
     bool RetainExpansion = false;
-    std::optional<unsigned> OrigNumExpansions =
+    UnsignedOrNone OrigNumExpansions =
         Expansion.getTypePtr()->getNumExpansions();
-    std::optional<unsigned> NumExpansions = OrigNumExpansions;
+    UnsignedOrNone NumExpansions = OrigNumExpansions;
     if (SemaRef.CheckParameterPacksForExpansion(Expansion.getEllipsisLoc(),
                                                 Pattern.getSourceRange(),
                                                 Unexpanded,
@@ -3541,7 +3541,7 @@ Decl *TemplateDeclInstantiator::VisitNonTypeTemplateParmDecl(
 
     if (Expand) {
       for (unsigned I = 0; I != *NumExpansions; ++I) {
-        Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(SemaRef, I);
+        Sema::ArgPackSubstIndexRAII SubstIndex(SemaRef, I);
         TypeSourceInfo *NewDI = SemaRef.SubstType(Pattern, TemplateArgs,
                                                   D->getLocation(),
                                                   D->getDeclName());
@@ -3566,7 +3566,7 @@ Decl *TemplateDeclInstantiator::VisitNonTypeTemplateParmDecl(
     } else {
       // We cannot fully expand the pack expansion now, so substitute into the
       // pattern and create a new pack expansion type.
-      Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(SemaRef, -1);
+      Sema::ArgPackSubstIndexRAII SubstIndex(SemaRef, std::nullopt);
       TypeSourceInfo *NewPattern = SemaRef.SubstType(Pattern, TemplateArgs,
                                                      D->getLocation(),
                                                      D->getDeclName());
@@ -3701,7 +3701,7 @@ TemplateDeclInstantiator::VisitTemplateTemplateParmDecl(
     // be expanded.
     bool Expand = true;
     bool RetainExpansion = false;
-    std::optional<unsigned> NumExpansions;
+    UnsignedOrNone NumExpansions = std::nullopt;
     if (SemaRef.CheckParameterPacksForExpansion(D->getLocation(),
                                                 TempParams->getSourceRange(),
                                                 Unexpanded,
@@ -3712,7 +3712,7 @@ TemplateDeclInstantiator::VisitTemplateTemplateParmDecl(
 
     if (Expand) {
       for (unsigned I = 0; I != *NumExpansions; ++I) {
-        Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(SemaRef, I);
+        Sema::ArgPackSubstIndexRAII SubstIndex(SemaRef, I);
         LocalInstantiationScope Scope(SemaRef);
         TemplateParameterList *Expansion = SubstTemplateParams(TempParams);
         if (!Expansion)
@@ -3728,7 +3728,7 @@ TemplateDeclInstantiator::VisitTemplateTemplateParmDecl(
     } else {
       // We cannot fully expand the pack expansion now, so just substitute
       // into the pattern.
-      Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(SemaRef, -1);
+      Sema::ArgPackSubstIndexRAII SubstIndex(SemaRef, std::nullopt);
 
       LocalInstantiationScope Scope(SemaRef);
       InstParams = SubstTemplateParams(TempParams);
@@ -3978,7 +3978,7 @@ Decl *TemplateDeclInstantiator::instantiateUnresolvedUsingDecl(
     // be expanded.
     bool Expand = true;
     bool RetainExpansion = false;
-    std::optional<unsigned> NumExpansions;
+    UnsignedOrNone NumExpansions = std::nullopt;
     if (SemaRef.CheckParameterPacksForExpansion(
           D->getEllipsisLoc(), D->getSourceRange(), Unexpanded, TemplateArgs,
             Expand, RetainExpansion, NumExpansions))
@@ -3992,7 +3992,7 @@ Decl *TemplateDeclInstantiator::instantiateUnresolvedUsingDecl(
     if (!Expand) {
       // We cannot fully expand the pack expansion now, so substitute into the
       // pattern and create a new pack expansion.
-      Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(SemaRef, -1);
+      Sema::ArgPackSubstIndexRAII SubstIndex(SemaRef, std::nullopt);
       return instantiateUnresolvedUsingDecl(D, true);
     }
 
@@ -4012,7 +4012,7 @@ Decl *TemplateDeclInstantiator::instantiateUnresolvedUsingDecl(
     // Instantiate the slices of this pack and build a UsingPackDecl.
     SmallVector<NamedDecl*, 8> Expansions;
     for (unsigned I = 0; I != *NumExpansions; ++I) {
-      Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(SemaRef, I);
+      Sema::ArgPackSubstIndexRAII SubstIndex(SemaRef, I);
       Decl *Slice = instantiateUnresolvedUsingDecl(D, true);
       if (!Slice)
         return nullptr;
@@ -4046,8 +4046,8 @@ Decl *TemplateDeclInstantiator::instantiateUnresolvedUsingDecl(
 
   // Produce a pack expansion only if we're not instantiating a particular
   // slice of a pack expansion.
-  bool InstantiatingSlice = D->getEllipsisLoc().isValid() &&
-                            SemaRef.ArgumentPackSubstitutionIndex != -1;
+  bool InstantiatingSlice =
+      D->getEllipsisLoc().isValid() && SemaRef.ArgPackSubstIndex;
   SourceLocation EllipsisLoc =
       InstantiatingSlice ? SourceLocation() : D->getEllipsisLoc();
 
@@ -4998,7 +4998,7 @@ TemplateDeclInstantiator::SubstFunctionType(FunctionDecl *D,
 
         LocalInstantiationScope *Scope = SemaRef.CurrentInstantiationScope;
 
-        std::optional<unsigned> NumArgumentsInExpansion;
+        UnsignedOrNone NumArgumentsInExpansion = std::nullopt;
         if (OldParam->isParameterPack())
           NumArgumentsInExpansion =
               SemaRef.getNumArgumentsInExpansion(OldParam->getType(),
@@ -5125,7 +5125,7 @@ bool Sema::addInstantiatedParametersToScope(
 
     // Expand the parameter pack.
     Scope.MakeInstantiatedLocalArgPack(PatternParam);
-    std::optional<unsigned> NumArgumentsInExpansion =
+    UnsignedOrNone NumArgumentsInExpansion =
         getNumArgumentsInExpansion(PatternParam->getType(), TemplateArgs);
     if (NumArgumentsInExpansion) {
       QualType PatternType =
@@ -5134,7 +5134,7 @@ bool Sema::addInstantiatedParametersToScope(
         ParmVarDecl *FunctionParam = Function->getParamDecl(FParamIdx);
         FunctionParam->setDeclName(PatternParam->getDeclName());
         if (!PatternDecl->getType()->isDependentType()) {
-          Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(*this, Arg);
+          Sema::ArgPackSubstIndexRAII SubstIndex(*this, Arg);
           QualType T =
               SubstType(PatternType, TemplateArgs, FunctionParam->getLocation(),
                         FunctionParam->getDeclName());
@@ -6306,7 +6306,7 @@ Sema::InstantiateMemInitializers(CXXConstructorDecl *New,
       collectUnexpandedParameterPacks(Init->getInit(), Unexpanded);
       bool ShouldExpand = false;
       bool RetainExpansion = false;
-      std::optional<unsigned> NumExpansions;
+      UnsignedOrNone NumExpansions = std::nullopt;
       if (CheckParameterPacksForExpansion(Init->getEllipsisLoc(),
                                           BaseTL.getSourceRange(),
                                           Unexpanded,
@@ -6321,7 +6321,7 @@ Sema::InstantiateMemInitializers(CXXConstructorDecl *New,
 
       // Loop over all of the arguments in the argument pack(s),
       for (unsigned I = 0; I != *NumExpansions; ++I) {
-        Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(*this, I);
+        Sema::ArgPackSubstIndexRAII SubstIndex(*this, I);
 
         // Instantiate the initializer.
         ExprResult TempInit = SubstInitializer(Init->getInit(), TemplateArgs,
@@ -6694,18 +6694,17 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
       if (auto Found = CurrentInstantiationScope->findInstantiationOf(D)) {
         if (Decl *FD = Found->dyn_cast<Decl *>()) {
           if (auto *BD = dyn_cast<BindingDecl>(FD);
-              BD && BD->isParameterPack() &&
-              ArgumentPackSubstitutionIndex != -1) {
-            return BD->getBindingPackDecls()[ArgumentPackSubstitutionIndex];
+              BD && BD->isParameterPack() && ArgPackSubstIndex) {
+            return BD->getBindingPackDecls()[*ArgPackSubstIndex];
           }
           return cast<NamedDecl>(FD);
         }
 
-        int PackIdx = ArgumentPackSubstitutionIndex;
-        assert(PackIdx != -1 &&
+        assert(ArgPackSubstIndex &&
                "found declaration pack but not pack expanding");
         typedef LocalInstantiationScope::DeclArgumentPack DeclArgumentPack;
-        return cast<NamedDecl>((*cast<DeclArgumentPack *>(*Found))[PackIdx]);
+        return cast<NamedDecl>(
+            (*cast<DeclArgumentPack *>(*Found))[*ArgPackSubstIndex]);
       }
     }
 
