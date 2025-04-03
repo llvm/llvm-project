@@ -10,6 +10,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Mangle.h"
+#include "clang/AST/Type.h"
 
 namespace clang {
 
@@ -423,7 +424,10 @@ QualType getFullyQualifiedType(QualType QT, const ASTContext &Ctx,
         getFullyQualifiedType(AT->getModifiedType(), Ctx, WithGlobalNsPrefix);
     QualType NewEquivalent =
         getFullyQualifiedType(AT->getEquivalentType(), Ctx, WithGlobalNsPrefix);
-    return Ctx.getAttributedType(AT->getAttrKind(), NewModified, NewEquivalent);
+    Qualifiers Qualifiers = QT.getLocalQualifiers();
+    return Ctx.getQualifiedType(
+        Ctx.getAttributedType(AT->getAttrKind(), NewModified, NewEquivalent),
+        Qualifiers);
   }
 
   // Remove the part of the type related to the type being a template
