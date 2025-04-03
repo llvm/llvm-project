@@ -977,6 +977,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         DefaultInt, Rank::vector, IntrinsicClass::transformationalFunction},
     {"this_image", {OptionalTEAM}, DefaultInt, Rank::scalar,
         IntrinsicClass::transformationalFunction},
+    {"time", {}, TypePattern{IntType, KindCode::exactKind, 8}, Rank::scalar,
+        IntrinsicClass::transformationalFunction},
     {"tiny",
         {{"x", SameReal, Rank::anyOrAssumedRank, Optionality::required,
             common::Intent::In, {ArgFlag::canBeMoldNull}}},
