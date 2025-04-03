@@ -312,7 +312,7 @@ IncludeInserter::calculateIncludePath(const HeaderFile &InsertedHeader,
     }
   }
   bool IsQuoted = false;
-  for (auto Filter : QuotedHeaders) {
+  for (auto &Filter : QuotedHeaders) {
     if (Filter(Suggested)) {
       IsQuoted = true;
       break;
