@@ -3295,9 +3295,12 @@ InlineCostAnnotationPrinterPass::run(Function &F,
       [&](Function &F) -> AssumptionCache & {
     return FAM.getResult<AssumptionAnalysis>(F);
   };
-  Module *M = F.getParent();
-  ProfileSummaryInfo PSI(*M);
-  TargetTransformInfo TTI(M->getDataLayout());
+
+  auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+  ProfileSummaryInfo *PSI =
+      MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+  const TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(F);
+
   // FIXME: Redesign the usage of InlineParams to expand the scope of this pass.
   // In the current implementation, the type of InlineParams doesn't matter as
   // the pass serves only for verification of inliner's decisions.
@@ -3312,7 +3315,7 @@ InlineCostAnnotationPrinterPass::run(Function &F,
           continue;
         OptimizationRemarkEmitter ORE(CalledFunction);
         InlineCostCallAnalyzer ICCA(*CalledFunction, *CB, Params, TTI,
-                                    GetAssumptionCache, nullptr, nullptr, &PSI,
+                                    GetAssumptionCache, nullptr, nullptr, PSI,
                                     &ORE);
         ICCA.analyze();
         OS << "      Analyzing call of " << CalledFunction->getName()
