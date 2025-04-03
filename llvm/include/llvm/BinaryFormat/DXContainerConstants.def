@@ -47,7 +47,7 @@ SHADER_FEATURE_FLAG(27, 36, RESERVED, "<RESERVED>")
 SHADER_FEATURE_FLAG(28, 32, AtomicInt64OnHeapResource, "64-bit Atomics on Heap Resources")
 SHADER_FEATURE_FLAG(29, 34, AdvancedTextureOps, "Advanced Texture Ops")
 SHADER_FEATURE_FLAG(30, 35, WriteableMSAATextures, "Writeable MSAA Textures")
-SHADER_FEATURE_FLAG(31, 37, ExtendedComparisonSampling, "Expanded comparison sampling")
+SHADER_FEATURE_FLAG(31, 37, SampleCmpWithGradientOrBias, "SampleCmp with gradient or bias")
 SHADER_FEATURE_FLAG(32, 38, ExtendedCommandInfo, "Extended command information")
 
 SHADER_FEATURE_FLAG(33, 39, NextUnusedBit, "Next reserved shader flag bit (not a flag)")
