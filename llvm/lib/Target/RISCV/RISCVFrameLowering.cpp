@@ -1322,8 +1322,8 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
       // Update CFA Offset. If this is a QCI interrupt function, there will be a
       // leftover offset which is deallocated by `QC.C.MILEAVERET`, otherwise
       // getQCIInterruptStackSize() will be 0.
-      unsigned CFIIndex =
-          MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, RVFI->getQCIInterruptStackSize()));
+      unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(
+          nullptr, RVFI->getQCIInterruptStackSize()));
       BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex)
           .setMIFlag(MachineInstr::FrameDestroy);
@@ -1334,7 +1334,8 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   // function, there will be a leftover offset which is deallocated by
   // `QC.C.MILEAVERET`, otherwise getQCIInterruptStackSize() will be 0.
   if (StackSize != 0)
-    deallocateStack(MF, MBB, MBBI, DL, StackSize, RVFI->getQCIInterruptStackSize());
+    deallocateStack(MF, MBB, MBBI, DL, StackSize,
+                    RVFI->getQCIInterruptStackSize());
 
   // Emit epilogue for shadow call stack.
   emitSCSEpilogue(MF, MBB, MBBI, DL);
