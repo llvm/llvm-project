@@ -5384,6 +5384,11 @@ LangAS CodeGenModule::GetGlobalVarAddressSpace(const VarDecl *D) {
     LangAS AS;
     if (OpenMPRuntime->hasAllocateAttributeForGlobalVar(D, AS))
       return AS;
+    if (LangOpts.OpenMPIsTargetDevice && getTriple().isSPIRV())
+      // SPIR-V globals should map to CrossWorkGroup instead of default
+      // AS, as generic/no address space is invalid. This is similar
+      // to what is done for HIPSPV.
+      return LangAS::opencl_global;
   }
   return getTargetCodeGenInfo().getGlobalVarAddressSpace(*this, D);
 }
@@ -5402,6 +5407,10 @@ LangAS CodeGenModule::GetGlobalConstantAddressSpace() const {
     // UniformConstant storage class is not viable as pointers to it may not be
     // casted to Generic pointers which are used to model HIP's "flat" pointers.
     return LangAS::cuda_device;
+  if (LangOpts.OpenMPIsTargetDevice && getTriple().isSPIRV())
+    // OpenMP SPIR-V global constants should map to UniformConstant, different
+    // from the HIPSPV case above.
+    return LangAS::opencl_constant;
   if (auto AS = getTarget().getConstantAddressSpace())
     return *AS;
   return LangAS::Default;
