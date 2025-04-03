@@ -11,12 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 let Component = "Parse" in {
-let CategoryName = "Parse Issue" in {
-// C++11 compatibility with C++98.
-defm enum_fixed_underlying_type : CXX11Compat<
-  "enumeration types with a fixed underlying type are",
-  /*ext_warn=*/false>;
-}
 
 def err_asm_qualifier_ignored : Error<
   "expected 'volatile', 'inline', 'goto', or '('">, CatInlineAsm;
@@ -113,6 +107,9 @@ def err_enumerator_list_missing_comma : Error<
   "missing ',' between enumerators">;
 def err_enumerator_unnamed_no_def : Error<
   "unnamed enumeration must be a definition">;
+def ext_cxx11_enum_fixed_underlying_type : Extension<
+  "enumeration types with a fixed underlying type are a C++11 extension">,
+  InGroup<CXX11>;
 def ext_ms_c_enum_fixed_underlying_type : Extension<
   "enumeration types with a fixed underlying type are a Microsoft extension">,
   InGroup<MicrosoftFixedEnum>;
@@ -122,6 +119,9 @@ def ext_c23_enum_fixed_underlying_type : Extension<
 def warn_c17_compat_enum_fixed_underlying_type : Warning<
   "enumeration types with a fixed underlying type are incompatible with C standards before C23">,
   DefaultIgnore, InGroup<CPre23Compat>;
+def warn_cxx98_compat_enum_fixed_underlying_type : Warning<
+  "enumeration types with a fixed underlying type are incompatible with C++98">,
+  InGroup<CXX98Compat>, DefaultIgnore;
 def ext_enum_base_in_type_specifier : ExtWarn<
   "non-defining declaration of enumeration with a fixed underlying type is "
   "only permitted as a standalone declaration"
