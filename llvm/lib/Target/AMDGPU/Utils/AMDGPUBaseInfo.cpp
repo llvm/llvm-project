@@ -1155,12 +1155,12 @@ unsigned getNumSGPRBlocks(const MCSubtargetInfo *STI, unsigned NumSGPRs) {
          1;
 }
 
-unsigned getVGPRAllocGranule(const MCSubtargetInfo *STI,
+unsigned getVGPRAllocGranule(const MCSubtargetInfo *STI, bool IsDynamicVGPR,
                              std::optional<bool> EnableWavefrontSize32) {
   if (STI->getFeatureBits().test(FeatureGFX90AInsts))
     return 8;
 
-  if (STI->getFeatureBits().test(FeatureDynamicVGPR))
+  if (IsDynamicVGPR)
     return STI->getFeatureBits().test(FeatureDynamicVGPRBlockSize32) ? 32 : 16;
 
   bool IsWave32 = EnableWavefrontSize32
@@ -1201,20 +1201,21 @@ unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI) {
 
 unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo *STI) { return 256; }
 
-unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI) {
+unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI,
+                                bool IsDynamicVGPR) {
   if (STI->getFeatureBits().test(FeatureGFX90AInsts))
     return 512;
-  if (STI->getFeatureBits().test(FeatureDynamicVGPR))
+  if (IsDynamicVGPR)
     // On GFX12 we can allocate at most 8 blocks of VGPRs.
-    return 8 * getVGPRAllocGranule(STI);
+    return 8 * getVGPRAllocGranule(STI, IsDynamicVGPR);
   return getAddressableNumArchVGPRs(STI);
 }
 
 unsigned getNumWavesPerEUWithNumVGPRs(const MCSubtargetInfo *STI,
-                                      unsigned NumVGPRs) {
-  return getNumWavesPerEUWithNumVGPRs(NumVGPRs, getVGPRAllocGranule(STI),
-                                      getMaxWavesPerEU(STI),
-                                      getTotalNumVGPRs(STI));
+                                      unsigned NumVGPRs, bool IsDynamicVGPR) {
+  return getNumWavesPerEUWithNumVGPRs(
+      NumVGPRs, getVGPRAllocGranule(STI, IsDynamicVGPR), getMaxWavesPerEU(STI),
+      getTotalNumVGPRs(STI));
 }
 
 unsigned getNumWavesPerEUWithNumVGPRs(unsigned NumVGPRs, unsigned Granule,
@@ -1253,7 +1254,8 @@ unsigned getOccupancyWithNumSGPRs(unsigned SGPRs, unsigned MaxWaves,
   return 5;
 }
 
-unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU) {
+unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU,
+                        bool IsDynamicVGPR) {
   assert(WavesPerEU != 0);
 
   unsigned MaxWavesPerEU = getMaxWavesPerEU(STI);
@@ -1261,28 +1263,30 @@ unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU) {
     return 0;
 
   unsigned TotNumVGPRs = getTotalNumVGPRs(STI);
-  unsigned AddrsableNumVGPRs = getAddressableNumVGPRs(STI);
-  unsigned Granule = getVGPRAllocGranule(STI);
+  unsigned AddrsableNumVGPRs = getAddressableNumVGPRs(STI, IsDynamicVGPR);
+  unsigned Granule = getVGPRAllocGranule(STI, IsDynamicVGPR);
   unsigned MaxNumVGPRs = alignDown(TotNumVGPRs / WavesPerEU, Granule);
 
   if (MaxNumVGPRs == alignDown(TotNumVGPRs / MaxWavesPerEU, Granule))
     return 0;
 
-  unsigned MinWavesPerEU = getNumWavesPerEUWithNumVGPRs(STI, AddrsableNumVGPRs);
+  unsigned MinWavesPerEU =
+      getNumWavesPerEUWithNumVGPRs(STI, AddrsableNumVGPRs, IsDynamicVGPR);
   if (WavesPerEU < MinWavesPerEU)
-    return getMinNumVGPRs(STI, MinWavesPerEU);
+    return getMinNumVGPRs(STI, MinWavesPerEU, IsDynamicVGPR);
 
   unsigned MaxNumVGPRsNext = alignDown(TotNumVGPRs / (WavesPerEU + 1), Granule);
   unsigned MinNumVGPRs = 1 + std::min(MaxNumVGPRs - Granule, MaxNumVGPRsNext);
   return std::min(MinNumVGPRs, AddrsableNumVGPRs);
 }
 
-unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU) {
+unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU,
+                        bool IsDynamicVGPR) {
   assert(WavesPerEU != 0);
 
-  unsigned MaxNumVGPRs =
-      alignDown(getTotalNumVGPRs(STI) / WavesPerEU, getVGPRAllocGranule(STI));
-  unsigned AddressableNumVGPRs = getAddressableNumVGPRs(STI);
+  unsigned MaxNumVGPRs = alignDown(getTotalNumVGPRs(STI) / WavesPerEU,
+                                   getVGPRAllocGranule(STI, IsDynamicVGPR));
+  unsigned AddressableNumVGPRs = getAddressableNumVGPRs(STI, IsDynamicVGPR);
   return std::min(MaxNumVGPRs, AddressableNumVGPRs);
 }
 
@@ -1294,10 +1298,10 @@ unsigned getEncodedNumVGPRBlocks(const MCSubtargetInfo *STI, unsigned NumVGPRs,
 }
 
 unsigned getAllocatedNumVGPRBlocks(const MCSubtargetInfo *STI,
-                                   unsigned NumVGPRs,
+                                   unsigned NumVGPRs, bool IsDynamicVGPR,
                                    std::optional<bool> EnableWavefrontSize32) {
   return getGranulatedNumRegisterBlocks(
-      NumVGPRs, getVGPRAllocGranule(STI, EnableWavefrontSize32));
+      NumVGPRs, getVGPRAllocGranule(STI, IsDynamicVGPR, EnableWavefrontSize32));
 }
 } // end namespace IsaInfo
 
