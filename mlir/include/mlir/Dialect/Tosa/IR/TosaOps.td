@@ -499,6 +499,35 @@ def Tosa_ClampOp : Tosa_ElementwiseUnaryOp<"clamp"> {
 }
 
 //===----------------------------------------------------------------------===//
+// Operator: erf
+//===----------------------------------------------------------------------===//
+def Tosa_ErfOp : Tosa_ElementwiseUnaryOp<"erf"> {
+  let summary = "Computes gauss error function of input.";
+
+  let description = [{
+    Gauss error function: $ erf(x) = \frac{2}{\sqrt{\pi}} \int_{0}^{x} e^{-t^2} dt $
+    For quantized integer data types, the TABLE operator should be used instead
+    with the following definition. The ERF table has 513 entries each of
+    16-bit precision and covering the input range -4.0 to +4.0 in steps of 1/64.
+  }];
+
+  let arguments = (ins
+    Tosa_Tensor:$input
+  );
+
+  let results = (outs
+    Tosa_Tensor:$output
+  );
+
+  list<Availability> availability = [
+    Profile<[Tosa_PRO_FP]>,
+    Extension<[Tosa_EXT_BF16]>,
+  ];
+
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
+}
+
+//===----------------------------------------------------------------------===//
 // Operator: sigmoid
 //===----------------------------------------------------------------------===//
 def Tosa_SigmoidOp : Tosa_ElementwiseUnaryOp<"sigmoid"> {
@@ -557,35 +586,6 @@ def Tosa_TanhOp : Tosa_ElementwiseUnaryOp<"tanh"> {
     Profile<[Tosa_PRO_FP]>,
     Extension<[Tosa_EXT_BF16]>,
   ];
-}
-
-//===----------------------------------------------------------------------===//
-// Operator: erf
-//===----------------------------------------------------------------------===//
-def Tosa_ErfOp : Tosa_ElementwiseUnaryOp<"erf"> {
-  let summary = "Computes gauss error function of input.";
-
-  let description = [{
-    Gauss error function: $ erf(x) = \frac{2}{\sqrt{\pi}} \int_{0}^{x} e^{-t^2} dt $
-    For quantized integer data types, the TABLE operator should be used instead
-    with the following definition. The ERF table has 513 entries each of
-    16-bit precision and covering the input range -4.0 to +4.0 in steps of 1/64.
-  }];
-
-  let arguments = (ins
-    Tosa_Tensor:$input
-  );
-
-  let results = (outs
-    Tosa_Tensor:$output
-  );
-
-  list<Availability> availability = [
-    Profile<[Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_BF16]>,
-  ];
-
-  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1906,7 +1906,7 @@ def Tosa_PadOp : Tosa_InferShapedTypeOp<"pad"> {
 
     ```mlir
     %pad_const = "tosa.const"() {values = dense<3.14> : tensor<1xf32>} : () -> tensor<1xf32>
-    %padding = tosa.const_shape {values = dense<[1, 2, 3, 4]> : tensor<4xindex> } : () -> !tosa.shape<4>
+    %padding = tosa.const_shape {values = dense<[1, 2, 3, 4]> : tensor<4xindex>} : () -> !tosa.shape<4>
     tosa.pad %arg0, %padding, %pad_const: (tensor<1x2xf32>, !tosa.shape<4>, tensor<1xf32>)  -> (tensor<4x9xf32>)
     ```
 
@@ -1914,7 +1914,7 @@ def Tosa_PadOp : Tosa_InferShapedTypeOp<"pad"> {
 
     ```mlir
     %pad_const = "tosa.const"() {values = dense<3.14> : tensor<1xf32>} : () -> tensor<1xf32>
-    %padding = tosa.const_shape {values = dense<[-1, 2, 3, 4]> : tensor<4xindex> } : () -> !tosa.shape<4>
+    %padding = tosa.const_shape {values = dense<[-1, 2, 3, 4]> : tensor<4xindex>} : () -> !tosa.shape<4>
     tosa.pad %arg0, %padding, %pad_const : (tensor<1x2xf32>, !tosa.shape<4>, tensor<1xf32>)  -> (tensor<?x9xf32>)
     ```
   }];

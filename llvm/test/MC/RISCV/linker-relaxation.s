@@ -137,6 +137,7 @@ sb t1, %pcrel_lo(2b)(a2)
 # RELAX-FIXUP: fixup A - offset: 0, value: %pcrel_lo(.Ltmp1), kind: fixup_riscv_pcrel_lo12_s
 # RELAX-FIXUP: fixup B - offset: 0, value: 0, kind: fixup_riscv_relax
 
+## %hi/%lo on an absolute symbol (not yet defined) leads to relocations when relaxation is enabled.
 lui t2, %hi(abs)
 # NORELAX-RELOC-NOT: R_RISCV_
 # RELAX-RELOC:      R_RISCV_HI20 - 0x12345
@@ -144,11 +145,20 @@ lui t2, %hi(abs)
 # RELAX-FIXUP:      fixup A - offset: 0, value: %hi(abs), kind: fixup_riscv_hi20
 # RELAX-FIXUP:      fixup B - offset: 0, value: 0, kind: fixup_riscv_relax
 
+addi t2, t2, %lo(abs)
+# NORELAX-RELOC-NOT: R_RISCV_
+# RELAX-RELOC:      R_RISCV_LO12_I - 0x12345
+# RELAX-RELOC-NEXT: R_RISCV_RELAX - 0x0
+# RELAX-FIXUP:      fixup A - offset: 0, value: %lo(abs), kind: fixup_riscv_lo12_i
+# RELAX-FIXUP:      fixup B - offset: 0, value: 0, kind: fixup_riscv_relax
+
 .set abs, 0x12345
 
 lui t3, %hi(abs)
-# RELAX-RELOC-NOT:  R_RISCV_
-# RELAX-FIXUP-NOT:  fixup
+# RELAX-RELOC:      R_RISCV_HI20 - 0x12345
+# RELAX-RELOC-NEXT: R_RISCV_RELAX - 0x0
+# RELAX-FIXUP:      fixup A - offset: 0, value: %hi(74565), kind: fixup_riscv_hi20
+# RELAX-FIXUP:      fixup B - offset: 0, value: 0, kind: fixup_riscv_relax
 
 # Check that a relocation is not emitted for a symbol difference which has
 # been folded to a fixup with an absolute value. This can happen when a

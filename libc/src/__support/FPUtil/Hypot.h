@@ -30,7 +30,7 @@ LIBC_INLINE T find_leading_one(T mant, int &shift_length) {
   if (mant > 0) {
     shift_length = (sizeof(mant) * 8) - 1 - cpp::countl_zero(mant);
   }
-  return T(1) << shift_length;
+  return static_cast<T>((T(1) << shift_length));
 }
 
 } // namespace internal
@@ -207,8 +207,10 @@ LIBC_INLINE T hypot(T x, T y) {
 
   for (StorageType current_bit = leading_one >> 1; current_bit;
        current_bit >>= 1) {
-    r = (r << 1) + ((tail_bits & current_bit) ? 1 : 0);
-    StorageType tmp = (y_new << 1) + current_bit; // 2*y_new(n - 1) + 2^(-n)
+    r = static_cast<StorageType>((r << 1)) +
+        ((tail_bits & current_bit) ? 1 : 0);
+    StorageType tmp = static_cast<StorageType>((y_new << 1)) +
+                      current_bit; // 2*y_new(n - 1) + 2^(-n)
     if (r >= tmp) {
       r -= tmp;
       y_new += current_bit;

@@ -5582,6 +5582,12 @@ binary_alias(
     binary = ":llvm-readobj",
 )
 
+# Workaround inability to put `.def` files into `srcs`.
+cc_library(
+    name = "llvm-reduce-defs-lib",
+    textual_hdrs = glob(["tools/llvm-reduce/*.def"]),
+)
+
 cc_binary(
     name = "llvm-reduce",
     srcs = glob([
@@ -5609,6 +5615,7 @@ cc_binary(
         ":TargetParser",
         ":TransformUtils",
         ":config",
+        ":llvm-reduce-defs-lib",
     ],
 )
 

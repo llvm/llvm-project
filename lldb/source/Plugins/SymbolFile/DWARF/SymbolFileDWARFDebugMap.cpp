@@ -724,7 +724,7 @@ void SymbolFileDWARFDebugMap::ForEachSymbolFile(
   const size_t num_oso_idxs = m_compile_unit_infos.size();
   Progress progress(std::move(description), "", num_oso_idxs,
                     /*debugger=*/nullptr,
-                    /*minimum_report_time=*/std::chrono::milliseconds(20));
+                    Progress::kDefaultHighFrequencyReportTime);
   for (uint32_t oso_idx = 0; oso_idx < num_oso_idxs; ++oso_idx) {
     if (SymbolFileDWARF *oso_dwarf = GetSymbolFileByOSOIndex(oso_idx)) {
       progress.Increment(oso_idx, oso_dwarf->GetObjectFile()

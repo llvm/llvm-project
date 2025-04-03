@@ -791,9 +791,11 @@ public:
                                                 ScalarEvolution *SE) const;
 
   /// Return true if the target supports masked store.
-  bool isLegalMaskedStore(Type *DataType, Align Alignment) const;
+  bool isLegalMaskedStore(Type *DataType, Align Alignment,
+                          unsigned AddressSpace) const;
   /// Return true if the target supports masked load.
-  bool isLegalMaskedLoad(Type *DataType, Align Alignment) const;
+  bool isLegalMaskedLoad(Type *DataType, Align Alignment,
+                         unsigned AddressSpace) const;
 
   /// Return true if the target supports nontemporal store.
   bool isLegalNTStore(Type *DataType, Align Alignment) const;
@@ -2015,8 +2017,10 @@ public:
                           TargetLibraryInfo *LibInfo) = 0;
   virtual AddressingModeKind
     getPreferredAddressingMode(const Loop *L, ScalarEvolution *SE) const = 0;
-  virtual bool isLegalMaskedStore(Type *DataType, Align Alignment) = 0;
-  virtual bool isLegalMaskedLoad(Type *DataType, Align Alignment) = 0;
+  virtual bool isLegalMaskedStore(Type *DataType, Align Alignment,
+                                  unsigned AddressSpace) = 0;
+  virtual bool isLegalMaskedLoad(Type *DataType, Align Alignment,
+                                 unsigned AddressSpace) = 0;
   virtual bool isLegalNTStore(Type *DataType, Align Alignment) = 0;
   virtual bool isLegalNTLoad(Type *DataType, Align Alignment) = 0;
   virtual bool isLegalBroadcastLoad(Type *ElementTy,
@@ -2562,11 +2566,13 @@ public:
                                ScalarEvolution *SE) const override {
     return Impl.getPreferredAddressingMode(L, SE);
   }
-  bool isLegalMaskedStore(Type *DataType, Align Alignment) override {
-    return Impl.isLegalMaskedStore(DataType, Alignment);
+  bool isLegalMaskedStore(Type *DataType, Align Alignment,
+                          unsigned AddressSpace) override {
+    return Impl.isLegalMaskedStore(DataType, Alignment, AddressSpace);
   }
-  bool isLegalMaskedLoad(Type *DataType, Align Alignment) override {
-    return Impl.isLegalMaskedLoad(DataType, Alignment);
+  bool isLegalMaskedLoad(Type *DataType, Align Alignment,
+                         unsigned AddressSpace) override {
+    return Impl.isLegalMaskedLoad(DataType, Alignment, AddressSpace);
   }
   bool isLegalNTStore(Type *DataType, Align Alignment) override {
     return Impl.isLegalNTStore(DataType, Alignment);

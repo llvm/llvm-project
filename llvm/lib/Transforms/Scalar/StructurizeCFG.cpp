@@ -737,12 +737,10 @@ void StructurizeCFG::findUndefBlocks(
     if (!VisitedBlock.insert(Current).second)
       continue;
 
-    if (FlowSet.contains(Current)) {
-      for (auto P : predecessors(Current))
-        Stack.push_back(P);
-    } else if (!Incomings.contains(Current)) {
+    if (FlowSet.contains(Current))
+      llvm::append_range(Stack, predecessors(Current));
+    else if (!Incomings.contains(Current))
       UndefBlks.push_back(Current);
-    }
   }
 }
 
