@@ -56,7 +56,7 @@ public:
   void setCloneCallback(CloneCallbackTy callback) {
     cloneCallback = std::move(callback);
   }
-  void setCanHandleMultipleBlocks(bool value) {
+  void setCanHandleMultipleBlocks(bool value = true) {
     canHandleMultipleBlocks = value;
   }
 
