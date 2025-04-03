@@ -3385,7 +3385,8 @@ bool AMDGPUInstructionSelector::selectG_INSERT_VECTOR_ELT(
 }
 
 bool AMDGPUInstructionSelector::selectBufferLoadLds(MachineInstr &MI) const {
-  assert(!AMDGPU::isGFX12Plus(STI));
+  if (!Subtarget->hasVMemToLDSLoad())
+    return false;
   unsigned Opc;
   unsigned Size = MI.getOperand(3).getImm();
 
@@ -3570,6 +3571,9 @@ AMDGPUInstructionSelector::matchExtendFromS32OrS32(Register Reg,
 }
 
 bool AMDGPUInstructionSelector::selectGlobalLoadLds(MachineInstr &MI) const{
+  if (!Subtarget->hasVMemToLDSLoad())
+    return false;
+
   unsigned Opc;
   unsigned Size = MI.getOperand(3).getImm();
 
