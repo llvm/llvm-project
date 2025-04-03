@@ -615,6 +615,9 @@ FunctionPass *createSelectOptimizePass();
 
 FunctionPass *createCallBrPass();
 
+/// Creates Windows Hot Patch pass. \see WindowsHotPatch.cpp
+ModulePass *createWindowsSecureHotPatching();
+
 /// Lowers KCFI operand bundles for indirect calls.
 FunctionPass *createKCFIPass();
 } // namespace llvm

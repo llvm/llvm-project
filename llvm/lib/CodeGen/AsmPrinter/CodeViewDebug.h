@@ -333,6 +333,8 @@ private:
 
   void emitCompilerInformation();
 
+  void emitHotPatchInformation();
+
   void emitBuildInfo();
 
   void emitInlineeLinesSubsection();
