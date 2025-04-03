@@ -1744,11 +1744,11 @@ struct ShapeOfFromReshape : public OpRewritePattern<shape::ShapeOfOp> {
     auto opTensorTy = cast<RankedTensorType>(op.getType());
     auto shapeTensorTy = cast<RankedTensorType>(shape.getType());
 
-    if (op.getType() != shape.getType()) {
+    if (opTensorTy != shapeTensorTy) {
         if (opTensorTy.getElementType() == shapeTensorTy.getElementType())
-          shape = rewriter.create<tensor::CastOp>(op.getLoc(), op.getType(), shape);        
-        else if (!isExtentTensorType(shape.getType()))
-          shape = rewriter.create<arith::IndexCastOp>(op.getLoc(), op.getType(), shape);        
+          shape = rewriter.create<tensor::CastOp>(op.getLoc(), opTensorTy, shape);        
+        else if (!isExtentTensorType(shapeTensorTy))
+          shape = rewriter.create<arith::IndexCastOp>(op.getLoc(), opTensorTy, shape);        
     }
 
     rewriter.replaceOp(op, shape);
