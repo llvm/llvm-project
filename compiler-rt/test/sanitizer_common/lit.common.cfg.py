@@ -109,3 +109,6 @@ if config.tool_name == "lsan" and config.host_os == "Darwin":
 
 if config.host_os == "NetBSD":
     config.substitutions.insert(0, ("%run", config.netbsd_noaslr_prefix))
+
+if os.path.exists("/etc/services"):
+    config.available_features.add("netbase")
