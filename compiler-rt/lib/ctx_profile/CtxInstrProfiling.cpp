@@ -244,24 +244,91 @@ ContextNode *getFlatProfile(FunctionData &Data, GUID Guid,
   return Data.FlatCtx;
 }
 
+// This should be called once for a Root. Allocate the first arena, set up the
+// first context.
+void setupContext(ContextRoot *Root, GUID Guid, uint32_t NumCounters,
+                  uint32_t NumCallsites) {
+  __sanitizer::GenericScopedLock<__sanitizer::SpinMutex> Lock(
+      &AllContextsMutex);
+  // Re-check - we got here without having had taken a lock.
+  if (Root->FirstMemBlock)
+    return;
+  const auto Needed = ContextNode::getAllocSize(NumCounters, NumCallsites);
+  auto *M = Arena::allocateNewArena(getArenaAllocSize(Needed));
+  Root->FirstMemBlock = M;
+  Root->CurrentMem = M;
+  Root->FirstNode = allocContextNode(M->tryBumpAllocate(Needed), Guid,
+                                     NumCounters, NumCallsites);
+  AllContextRoots.PushBack(Root);
+}
+
+ContextRoot *FunctionData::getOrAllocateContextRoot() {
+  auto *Root = CtxRoot;
+  if (Root)
+    return Root;
+  __sanitizer::GenericScopedLock<__sanitizer::StaticSpinMutex> L(&Mutex);
+  Root = CtxRoot;
+  if (!Root) {
+    Root = new (__sanitizer::InternalAlloc(sizeof(ContextRoot))) ContextRoot();
+    CtxRoot = Root;
+  }
+
+  assert(Root);
+  return Root;
+}
+
+ContextNode *tryStartContextGivenRoot(ContextRoot *Root, GUID Guid,
+                                      uint32_t Counters, uint32_t Callsites)
+    SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
+  IsUnderContext = true;
+  __sanitizer::atomic_fetch_add(&Root->TotalEntries, 1,
+                                __sanitizer::memory_order_relaxed);
+  if (!Root->FirstMemBlock) {
+    setupContext(Root, Guid, Counters, Callsites);
+  }
+  if (Root->Taken.TryLock()) {
+    __llvm_ctx_profile_current_context_root = Root;
+    onContextEnter(*Root->FirstNode);
+    return Root->FirstNode;
+  }
+  // If this thread couldn't take the lock, return scratch context.
+  __llvm_ctx_profile_current_context_root = nullptr;
+  return TheScratchContext;
+}
+
 ContextNode *getUnhandledContext(FunctionData &Data, GUID Guid,
                                  uint32_t NumCounters) {
-  // 1) if we are under a root (regardless if this thread is collecting or not a
+
+  // 1) if we are currently collecting a contextual profile, fetch a ContextNode
+  // in the `Unhandled` set. We want to do this regardless of `ProfilingStarted`
+  // to (hopefully) offset the penalty of creating these contexts to before
+  // profiling.
+  //
+  // 2) if we are under a root (regardless if this thread is collecting or not a
   // contextual profile for that root), do not collect a flat profile. We want
   // to keep flat profiles only for activations that can't happen under a root,
   // to avoid confusing profiles. We can, for example, combine flattened and
   // flat profiles meaningfully, as we wouldn't double-count anything.
   //
-  // 2) to avoid lengthy startup, don't bother with flat profiles until the
-  // profiling started. We would reset them anyway when profiling starts.
+  // 3) to avoid lengthy startup, don't bother with flat profiles until the
+  // profiling has started. We would reset them anyway when profiling starts.
   // HOWEVER. This does lose profiling for message pumps: those functions are
   // entered once and never exit. They should be assumed to be entered before
   // profiling starts - because profiling should start after the server is up
   // and running (which is equivalent to "message pumps are set up").
-  if (IsUnderContext || !__sanitizer::atomic_load_relaxed(&ProfilingStarted))
-    return TheScratchContext;
-  return markAsScratch(
-      onContextEnter(*getFlatProfile(Data, Guid, NumCounters)));
+  ContextRoot *R = __llvm_ctx_profile_current_context_root;
+  if (!R) {
+    if (IsUnderContext || !__sanitizer::atomic_load_relaxed(&ProfilingStarted))
+      return TheScratchContext;
+    else
+      return markAsScratch(
+          onContextEnter(*getFlatProfile(Data, Guid, NumCounters)));
+  }
+  auto [Iter, Ins] = R->Unhandled.insert({Guid, nullptr});
+  if (Ins)
+    Iter->second =
+        getCallsiteSlow(Guid, &R->FirstUnhandledCalleeNode, NumCounters, 0);
+  return markAsScratch(onContextEnter(*Iter->second));
 }
 
 ContextNode *__llvm_ctx_profile_get_context(FunctionData *Data, void *Callee,
@@ -318,50 +385,20 @@ ContextNode *__llvm_ctx_profile_get_context(FunctionData *Data, void *Callee,
   return Ret;
 }
 
-// This should be called once for a Root. Allocate the first arena, set up the
-// first context.
-void setupContext(ContextRoot *Root, GUID Guid, uint32_t NumCounters,
-                  uint32_t NumCallsites) {
-  __sanitizer::GenericScopedLock<__sanitizer::SpinMutex> Lock(
-      &AllContextsMutex);
-  // Re-check - we got here without having had taken a lock.
-  if (Root->FirstMemBlock)
-    return;
-  const auto Needed = ContextNode::getAllocSize(NumCounters, NumCallsites);
-  auto *M = Arena::allocateNewArena(getArenaAllocSize(Needed));
-  Root->FirstMemBlock = M;
-  Root->CurrentMem = M;
-  Root->FirstNode = allocContextNode(M->tryBumpAllocate(Needed), Guid,
-                                     NumCounters, NumCallsites);
-  AllContextRoots.PushBack(Root);
+ContextNode *__llvm_ctx_profile_start_context(FunctionData *FData, GUID Guid,
+                                              uint32_t Counters,
+                                              uint32_t Callsites) {
+  return tryStartContextGivenRoot(FData->getOrAllocateContextRoot(), Guid,
+                                  Counters, Callsites);
 }
 
-ContextNode *__llvm_ctx_profile_start_context(
-    ContextRoot *Root, GUID Guid, uint32_t Counters,
-    uint32_t Callsites) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
-  IsUnderContext = true;
-  __sanitizer::atomic_fetch_add(&Root->TotalEntries, 1,
-                                __sanitizer::memory_order_relaxed);
-
-  if (!Root->FirstMemBlock) {
-    setupContext(Root, Guid, Counters, Callsites);
-  }
-  if (Root->Taken.TryLock()) {
-    __llvm_ctx_profile_current_context_root = Root;
-    onContextEnter(*Root->FirstNode);
-    return Root->FirstNode;
-  }
-  // If this thread couldn't take the lock, return scratch context.
-  __llvm_ctx_profile_current_context_root = nullptr;
-  return TheScratchContext;
-}
-
-void __llvm_ctx_profile_release_context(ContextRoot *Root)
+void __llvm_ctx_profile_release_context(FunctionData *FData)
     SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   IsUnderContext = false;
   if (__llvm_ctx_profile_current_context_root) {
     __llvm_ctx_profile_current_context_root = nullptr;
-    Root->Taken.Unlock();
+    assert(FData->CtxRoot);
+    FData->CtxRoot->Taken.Unlock();
   }
 }
 
@@ -377,6 +414,8 @@ void __llvm_ctx_profile_start_collection() {
       ++NumMemUnits;
 
     resetContextNode(*Root->FirstNode);
+    if (Root->FirstUnhandledCalleeNode)
+      resetContextNode(*Root->FirstUnhandledCalleeNode);
     __sanitizer::atomic_store_relaxed(&Root->TotalEntries, 0);
   }
   __sanitizer::atomic_store_relaxed(&ProfilingStarted, true);
@@ -397,8 +436,9 @@ bool __llvm_ctx_profile_fetch(ProfileWriter &Writer) {
       __sanitizer::Printf("[ctxprof] Contextual Profile is %s\n", "invalid");
       return false;
     }
-    Writer.writeContextual(*Root->FirstNode, __sanitizer::atomic_load_relaxed(
-                                                 &Root->TotalEntries));
+    Writer.writeContextual(
+        *Root->FirstNode, Root->FirstUnhandledCalleeNode,
+        __sanitizer::atomic_load_relaxed(&Root->TotalEntries));
   }
   Writer.endContextSection();
   Writer.startFlatSection();

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
 #include "src/unistd/syscall.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
@@ -17,6 +17,7 @@
 #include <unistd.h>
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
+using LlvmLibcSyscallTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 // We only do a smoke test here. Actual functionality tests are
 // done by the unit tests of the syscall wrappers like mmap.
@@ -26,14 +27,12 @@ using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 // set up the arguments properly. We still need to specify the namespace though
 // because the macro generates a call to the actual internal function
 // (__llvm_libc_syscall) which is inside the namespace.
-TEST(LlvmLibcSyscallTest, TrivialCall) {
-  LIBC_NAMESPACE::libc_errno = 0;
-
+TEST_F(LlvmLibcSyscallTest, TrivialCall) {
   ASSERT_GE(LIBC_NAMESPACE::syscall(SYS_gettid), 0l);
   ASSERT_ERRNO_SUCCESS();
 }
 
-TEST(LlvmLibcSyscallTest, SymlinkCreateDestroy) {
+TEST_F(LlvmLibcSyscallTest, SymlinkCreateDestroy) {
   constexpr const char LINK_VAL[] = "syscall_readlink_test_value";
   constexpr const char LINK[] = "testdata/syscall_readlink.test.link";
 
@@ -68,7 +67,7 @@ TEST(LlvmLibcSyscallTest, SymlinkCreateDestroy) {
   ASSERT_ERRNO_SUCCESS();
 }
 
-TEST(LlvmLibcSyscallTest, FileReadWrite) {
+TEST_F(LlvmLibcSyscallTest, FileReadWrite) {
   constexpr const char HELLO[] = "hello";
   constexpr int HELLO_SIZE = sizeof(HELLO);
 
@@ -97,7 +96,7 @@ TEST(LlvmLibcSyscallTest, FileReadWrite) {
   ASSERT_ERRNO_SUCCESS();
 }
 
-TEST(LlvmLibcSyscallTest, FileLinkCreateDestroy) {
+TEST_F(LlvmLibcSyscallTest, FileLinkCreateDestroy) {
   constexpr const char *TEST_DIR = "testdata";
   constexpr const char *TEST_FILE = "syscall_linkat.test";
   constexpr const char *TEST_FILE_PATH = "testdata/syscall_linkat.test";

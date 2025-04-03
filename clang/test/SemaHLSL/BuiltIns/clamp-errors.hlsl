@@ -35,9 +35,9 @@ float2 test_scalar_first_arg3(float p0, float2 p1) {
   // expected-error@-1 {{call to 'clamp' is ambiguous}}
 }
 
-float3 test_thing(float3 p0, float2 p1) {
+float3 test_clamp_vector_size_last_arg_mismatch(float3 p0, float2 p1) {
   return clamp(p0, p0, p1);
-  // expected-error@-1 {{cannot initialize return object of type 'float3' (aka 'vector<float, 3>') with an rvalue of type 'vector<float, 2>' (vector of 2 'float' values)}}
+  // expected-error@-1 {{all arguments to 'clamp' must have the same type}}
 }
 
 typedef float float5 __attribute__((ext_vector_type(5)));
@@ -48,27 +48,24 @@ float5 vec_too_big(float5 p0) {
   // expected-error@-1 {{call to 'clamp' is ambiguous}}
 }
 
-float2 test_clamp_vector_size_mismatch(float3 p0, float2 p1) {
+float2 test_clamp_vector_size_ret_mismatch(float3 p0, float3 p1) {
   return clamp(p0, p0, p1);
   // expected-warning@-1 {{implicit conversion truncates vector: 'float3' (aka 'vector<float, 3>') to 'vector<float, 2>' (vector of 2 'float' values)}}
-  // expected-warning@-2 {{implicit conversion truncates vector: 'float3' (aka 'vector<float, 3>') to 'vector<float, 2>' (vector of 2 'float' values)}}
 }
 
-float2 test_clamp_builtin_vector_size_mismatch(float3 p0, float2 p1) {
+float2 test_clamp_builtin_vector_size_first_arg_mismatch(float3 p0, float2 p1) {
   return __builtin_hlsl_elementwise_clamp(p0, p1, p1);
   // expected-error@-1 {{all arguments to '__builtin_hlsl_elementwise_clamp' must have the same type}}
 }
 
-// allowed by the overloads in hlsl_compat_overloads.h
-// support for this overload might be removed in a future version of hlsl
 float test_clamp_scalar_mismatch(float p0, half p1) {
   return clamp(p1, p0, p1);
+  // expected-error@-1 {{call to 'clamp' is ambiguous}}
 }
 
-// allowed by the overloads in hlsl_compat_overloads.h
-// support for this overload might be removed in a future version of hlsl
 float2 test_clamp_element_type_mismatch(half2 p0, float2 p1) {
   return clamp(p1, p0, p1);
+  // expected-error@-1 {{call to 'clamp' is ambiguous}}
 }
 
 float2 test_builtin_clamp_float2_splat(float p0, float2 p1) {
@@ -103,7 +100,7 @@ float2 test_builtin_clamp_int_vect_to_float_vec_promotion(int2 p0, float p1) {
 
 float test_builtin_clamp_bool_type_promotion(bool p0) {
   return __builtin_hlsl_elementwise_clamp(p0, p0, p0);
-  // expected-error@-1 {{1st argument must be a vector, integer or floating point type (was 'bool')}}
+  // expected-error@-1 {{1st argument must be a vector, integer or floating-point type (was 'bool')}}
 }
 
 float builtin_bool_to_float_type_promotion(float p0, bool p1) {

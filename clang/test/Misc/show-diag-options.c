@@ -18,7 +18,7 @@ void test(int x, int y) {
   // BASE: {{.*}}: warning: {{[a-z ]+$}}
   // OPTION: {{.*}}: warning: {{[a-z ]+}} [-Wparentheses]
   // OPTION_ERROR: {{.*}}: error: {{[a-z ]+}} [-Werror,-Wparentheses]
-  // CATEGORY_ID: {{.*}}: warning: {{[a-z ]+}} [2]
+  // CATEGORY_ID: {{.*}}: warning: {{[a-z ]+}} [{{[0-9]+}}]
   // CATEGORY_NAME: {{.*}}: warning: {{[a-z ]+}} [Semantic Issue]
   // OPTION_ERROR_CATEGORY: {{.*}}: error: {{[a-z ]+}} [-Werror,-Wparentheses,Semantic Issue]
 

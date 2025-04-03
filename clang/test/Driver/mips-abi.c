@@ -121,6 +121,54 @@
 // MIPS-ARCH-P5600-N64: error: ABI 'n64' is not supported on CPU 'p5600'
 //
 // RUN: %clang --target=mips-linux-gnu -### -c %s \
+// RUN:        -march=i6400 2>&1 \
+// RUN:   | FileCheck -check-prefix=MIPS-ARCH-I6400 %s
+// MIPS-ARCH-I6400: "-target-cpu" "i6400"
+// MIPS-ARCH-I6400: "-target-abi" "o32"
+//
+// RUN: %clang --target=mips-linux-gnu -### -c %s \
+// RUN:        -march=i6400 -mabi=64 2>&1 \
+// RUN:   | FileCheck -check-prefix=MIPS-ARCH-I6400-N64 %s
+// MIPS-ARCH-I6400-N64: "-target-cpu" "i6400"
+// MIPS-ARCH-I6400-N64: "-target-abi" "n64"
+//
+// RUN: %clang --target=mips64-linux-gnu -### -c %s \
+// RUN:        -march=i6400 2>&1 \
+// RUN:   | FileCheck -check-prefix=MIPS64-ARCH-I6400 %s
+// MIPS64-ARCH-I6400: "-target-cpu" "i6400"
+// MIPS64-ARCH-I6400: "-target-abi" "n64"
+//
+// RUN: %clang --target=mips64-linux-gnu -### -c %s \
+// RUN:        -march=i6400 -mabi=32 2>&1 \
+// RUN:   | FileCheck -check-prefix=MIPS64-ARCH-I6400-O32 %s
+// MIPS64-ARCH-I6400-O32: "-target-cpu" "i6400"
+// MIPS64-ARCH-I6400-O32: "-target-abi" "o32"
+//
+// RUN: %clang --target=mips-linux-gnu -### -c %s \
+// RUN:        -march=i6500 2>&1 \
+// RUN:   | FileCheck -check-prefix=MIPS-ARCH-I6500 %s
+// MIPS-ARCH-I6500: "-target-cpu" "i6500"
+// MIPS-ARCH-I6500: "-target-abi" "o32"
+//
+// RUN: %clang --target=mips-linux-gnu -### -c %s \
+// RUN:        -march=i6500 -mabi=64 2>&1 \
+// RUN:   | FileCheck -check-prefix=MIPS-ARCH-I6500-N64 %s
+// MIPS-ARCH-I6500-N64: "-target-cpu" "i6500"
+// MIPS-ARCH-I6500-N64: "-target-abi" "n64"
+//
+// RUN: %clang --target=mips64-linux-gnu -### -c %s \
+// RUN:        -march=i6500 2>&1 \
+// RUN:   | FileCheck -check-prefix=MIPS64-ARCH-I6500 %s
+// MIPS64-ARCH-I6500: "-target-cpu" "i6500"
+// MIPS64-ARCH-I6500: "-target-abi" "n64"
+//
+// RUN: %clang --target=mips64-linux-gnu -### -c %s \
+// RUN:        -march=i6500 -mabi=32 2>&1 \
+// RUN:   | FileCheck -check-prefix=MIPS64-ARCH-I6500-O32 %s
+// MIPS64-ARCH-I6500-O32: "-target-cpu" "i6500"
+// MIPS54-ARCH-I6500-O32: "-target-abi" "o32"
+//
+// RUN: %clang --target=mips-linux-gnu -### -c %s \
 // RUN:        -march=mips64 2>&1 \
 // RUN:   | FileCheck -check-prefix=MIPS-ARCH-3264 %s
 // MIPS-ARCH-3264: "-target-cpu" "mips64"

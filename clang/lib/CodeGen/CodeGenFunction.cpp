@@ -649,18 +649,24 @@ void CodeGenFunction::EmitKernelMetadata(const FunctionDecl *FD,
   }
 
   if (const WorkGroupSizeHintAttr *A = FD->getAttr<WorkGroupSizeHintAttr>()) {
+    auto Eval = [&](Expr *E) {
+      return E->EvaluateKnownConstInt(FD->getASTContext()).getExtValue();
+    };
     llvm::Metadata *AttrMDArgs[] = {
-        llvm::ConstantAsMetadata::get(Builder.getInt32(A->getXDim())),
-        llvm::ConstantAsMetadata::get(Builder.getInt32(A->getYDim())),
-        llvm::ConstantAsMetadata::get(Builder.getInt32(A->getZDim()))};
+        llvm::ConstantAsMetadata::get(Builder.getInt32(Eval(A->getXDim()))),
+        llvm::ConstantAsMetadata::get(Builder.getInt32(Eval(A->getYDim()))),
+        llvm::ConstantAsMetadata::get(Builder.getInt32(Eval(A->getZDim())))};
     Fn->setMetadata("work_group_size_hint", llvm::MDNode::get(Context, AttrMDArgs));
   }
 
   if (const ReqdWorkGroupSizeAttr *A = FD->getAttr<ReqdWorkGroupSizeAttr>()) {
+    auto Eval = [&](Expr *E) {
+      return E->EvaluateKnownConstInt(FD->getASTContext()).getExtValue();
+    };
     llvm::Metadata *AttrMDArgs[] = {
-        llvm::ConstantAsMetadata::get(Builder.getInt32(A->getXDim())),
-        llvm::ConstantAsMetadata::get(Builder.getInt32(A->getYDim())),
-        llvm::ConstantAsMetadata::get(Builder.getInt32(A->getZDim()))};
+        llvm::ConstantAsMetadata::get(Builder.getInt32(Eval(A->getXDim()))),
+        llvm::ConstantAsMetadata::get(Builder.getInt32(Eval(A->getYDim()))),
+        llvm::ConstantAsMetadata::get(Builder.getInt32(Eval(A->getZDim())))};
     Fn->setMetadata("reqd_work_group_size", llvm::MDNode::get(Context, AttrMDArgs));
   }
 
@@ -959,18 +965,24 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   }
 
   unsigned Count, Offset;
+  StringRef Section;
   if (const auto *Attr =
           D ? D->getAttr<PatchableFunctionEntryAttr>() : nullptr) {
     Count = Attr->getCount();
     Offset = Attr->getOffset();
+    Section = Attr->getSection();
   } else {
     Count = CGM.getCodeGenOpts().PatchableFunctionEntryCount;
     Offset = CGM.getCodeGenOpts().PatchableFunctionEntryOffset;
   }
+  if (Section.empty())
+    Section = CGM.getCodeGenOpts().PatchableFunctionEntrySection;
   if (Count && Offset <= Count) {
     Fn->addFnAttr("patchable-function-entry", std::to_string(Count - Offset));
     if (Offset)
       Fn->addFnAttr("patchable-function-prefix", std::to_string(Offset));
+    if (!Section.empty())
+      Fn->addFnAttr("patchable-function-entry-section", Section);
   }
   // Instruct that functions for COFF/CodeView targets should start with a
   // patchable instruction, but only on x86/x64. Don't forward this to ARM/ARM64

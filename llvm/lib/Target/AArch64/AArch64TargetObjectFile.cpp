@@ -16,6 +16,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCValue.h"
 using namespace llvm;
@@ -27,6 +28,14 @@ void AArch64_ELFTargetObjectFile::Initialize(MCContext &Ctx,
   // AARCH64 ELF ABI does not define static relocation type for TLS offset
   // within a module.  Do not generate AT_location for TLS variables.
   SupportDebugThreadLocalLocation = false;
+
+  // Make sure the implicitly created empty .text section has the
+  // SHF_AARCH64_PURECODE flag set if the "+execute-only" target feature is
+  // present.
+  if (TM.getMCSubtargetInfo()->hasFeature(AArch64::FeatureExecuteOnly)) {
+    auto *Text = cast<MCSectionELF>(TextSection);
+    Text->setFlags(Text->getFlags() | ELF::SHF_AARCH64_PURECODE);
+  }
 }
 
 void AArch64_ELFTargetObjectFile::emitPersonalityValueImpl(

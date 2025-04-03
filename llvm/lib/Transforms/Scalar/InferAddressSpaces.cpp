@@ -895,7 +895,7 @@ void InferAddressSpacesImpl::inferAddressSpaces(
     ArrayRef<WeakTrackingVH> Postorder,
     ValueToAddrSpaceMapTy &InferredAddrSpace,
     PredicatedAddrSpaceMapTy &PredicatedAS) const {
-  SetVector<Value *> Worklist(Postorder.begin(), Postorder.end());
+  SetVector<Value *> Worklist(llvm::from_range, Postorder);
   // Initially, all expressions are in the uninitialized address space.
   for (Value *V : Postorder)
     InferredAddrSpace[V] = UninitializedAddressSpace;

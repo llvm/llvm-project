@@ -257,10 +257,9 @@ define void @v2i16(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-SD-NEXT:    shl v0.2s, v0.2s, #16
 ; CHECK-SD-NEXT:    sqsub v0.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    ushr v0.2s, v0.2s, #16
-; CHECK-SD-NEXT:    mov w8, v0.s[1]
-; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    strh w9, [x2]
-; CHECK-SD-NEXT:    strh w8, [x2, #2]
+; CHECK-SD-NEXT:    mov s1, v0.s[1]
+; CHECK-SD-NEXT:    str h0, [x2]
+; CHECK-SD-NEXT:    str h1, [x2, #2]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v2i16:

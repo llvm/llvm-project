@@ -19,12 +19,10 @@ namespace llvm {
 class AVRMCExpr : public MCTargetExpr {
 public:
   /// Specifies the type of an expression.
-  enum VariantKind {
+  enum Specifier {
     VK_None,
 
-    // While not strictly necessary, start at a larger number to avoid confusion
-    // with MCSymbolRefExpr::VariantKind.
-    VK_AVR_NONE = 100,
+    VK_AVR_NONE = MCSymbolRefExpr::FirstTargetSpecifier,
 
     VK_HI8,  ///< Corresponds to `hi8()`.
     VK_LO8,  ///< Corresponds to `lo8()`.
@@ -47,11 +45,11 @@ public:
 
 public:
   /// Creates an AVR machine code expression.
-  static const AVRMCExpr *create(VariantKind Kind, const MCExpr *Expr,
+  static const AVRMCExpr *create(Specifier S, const MCExpr *Expr,
                                  bool isNegated, MCContext &Ctx);
 
   /// Gets the type of the expression.
-  VariantKind getKind() const { return Kind; }
+  Specifier getSpecifier() const { return specifier; }
   /// Gets the name of the expression.
   const char *getName() const;
   const MCExpr *getSubExpr() const { return SubExpr; }
@@ -77,18 +75,18 @@ public:
   }
 
 public:
-  static VariantKind getKindByName(StringRef Name);
+  static Specifier parseSpecifier(StringRef Name);
 
 private:
   int64_t evaluateAsInt64(int64_t Value) const;
 
-  const VariantKind Kind;
+  const Specifier specifier;
   const MCExpr *SubExpr;
   bool Negated;
 
 private:
-  explicit AVRMCExpr(VariantKind Kind, const MCExpr *Expr, bool Negated)
-      : Kind(Kind), SubExpr(Expr), Negated(Negated) {}
+  explicit AVRMCExpr(Specifier S, const MCExpr *Expr, bool Negated)
+      : specifier(S), SubExpr(Expr), Negated(Negated) {}
   ~AVRMCExpr() = default;
 };
 

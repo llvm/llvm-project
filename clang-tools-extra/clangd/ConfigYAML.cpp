@@ -245,6 +245,10 @@ private:
       if (auto ArgumentLists = scalarValue(N, "ArgumentLists"))
         F.ArgumentLists = *ArgumentLists;
     });
+    Dict.handle("HeaderInsertion", [&](Node &N) {
+      if (auto HeaderInsertion = scalarValue(N, "HeaderInsertion"))
+        F.HeaderInsertion = *HeaderInsertion;
+    });
     Dict.parse(N);
   }
 

@@ -15,6 +15,7 @@
 #include <cassert>
 #include <cstddef>
 #include <string>
+#include <utility>
 
 namespace llvm {
 

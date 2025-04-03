@@ -36,7 +36,8 @@ enum PGOCtxProfileBlockIDs {
   ContextNodeBlockID = ContextRootBlockID + 1,
   FlatProfilesSectionBlockID = ContextNodeBlockID + 1,
   FlatProfileBlockID = FlatProfilesSectionBlockID + 1,
-  LAST_VALID = FlatProfileBlockID
+  UnhandledBlockID = FlatProfileBlockID + 1,
+  LAST_VALID = UnhandledBlockID
 };
 
 /// Write one or more ContextNodes to the provided raw_fd_stream.
@@ -94,6 +95,7 @@ public:
 
   void startContextSection() override;
   void writeContextual(const ctx_profile::ContextNode &RootNode,
+                       const ctx_profile::ContextNode *Unhandled,
                        uint64_t TotalRootEntryCount) override;
   void endContextSection() override;
 
@@ -104,7 +106,7 @@ public:
 
   // constants used in writing which a reader may find useful.
   static constexpr unsigned CodeLen = 2;
-  static constexpr uint32_t CurrentVersion = 3;
+  static constexpr uint32_t CurrentVersion = 4;
   static constexpr unsigned VBREncodingBits = 6;
   static constexpr StringRef ContainerMagic = "CTXP";
 };
