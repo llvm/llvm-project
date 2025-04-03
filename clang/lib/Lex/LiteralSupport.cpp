@@ -974,7 +974,6 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
   bool isFPConstant = isFloatingLiteral();
   bool HasSize = false;
   bool DoubleUnderscore = false;
-  bool isBF16 = false;
 
   // Loop over all of the characters of the suffix.  If we see something bad,
   // we break out of the loop.
@@ -982,15 +981,25 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
     switch (*s) {
     case 'b':
     case 'B':
+      if (!isFPConstant) break;  // Error for integer constant.
       if (isBFloat16)
         break;
-      if (isBF16)
+      if (!Target.hasBFloat16Type())
         break;
       if (HasSize)
         break;
+      HasSize = true;
 
-      isBF16 = true;
-      continue;
+      if ((Target.hasBFloat16Type() || LangOpts.CUDA ||
+           (LangOpts.OpenMPIsTargetDevice && Target.getTriple().isNVPTX())) &&
+          s + 2 < ThisTokEnd &&
+          ((s[0] == 'b' && s[1] == 'f') || (s[0] == 'B' && s[1] == 'F')) &&
+          s[2] == '1' && s[3] == '6') {
+        s += 3; // success, eat up 3 characters.
+        isBFloat16 = true;
+        continue;
+      }
+      break;
     case 'R':
     case 'r':
       if (!LangOpts.FixedPoint)
@@ -1035,10 +1044,7 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
            (LangOpts.OpenMPIsTargetDevice && Target.getTriple().isNVPTX())) &&
           s + 2 < ThisTokEnd && s[1] == '1' && s[2] == '6') {
         s += 2; // success, eat up 2 characters.
-        if (isBF16)
-          isBFloat16 = true;
-        else
-          isFloat16 = true;
+        isFloat16 = true;
         continue;
       }
 
