@@ -292,6 +292,9 @@ public:
 
   lldb::SBError IsTypeSystemCompatible(lldb::LanguageType language);
 
+  /// Get if the symbol file for this module is loaded.
+  bool IsDebugInfoLoaded() const;
+
   /// Get the number of global modules.
   static uint32_t GetNumberAllocatedModules();
 
