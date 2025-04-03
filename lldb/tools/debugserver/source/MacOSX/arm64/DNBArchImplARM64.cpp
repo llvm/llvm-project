@@ -2954,7 +2954,8 @@ kern_return_t DNBArchMachARM64::SetRegisterState(int set) {
   switch (set) {
   case e_regSetALL:
   {
-    kern_return_t ret = SetGPRState() | SetVFPState() | SetEXCState() | SetDBGState(false);
+    kern_return_t ret =
+        SetGPRState() | SetVFPState() | SetEXCState() | SetDBGState(false);
     if (CPUHasSME()) {
       ret |= SetSVEState();
       ret |= SetSMEState();
@@ -3126,17 +3127,19 @@ uint32_t DNBArchMachARM64::SaveRegisterState() {
                                  "error: GPR regs failed to read: %u ",
                      kret);
   } else if ((kret = GetVFPState(force)) != KERN_SUCCESS) {
-    DNBLogThreadedIf(LOG_THREAD, "DNBArchMachARM64::SaveRegisterState () "
-                                 "error: %s regs failed to read: %u",
+    DNBLogThreadedIf(LOG_THREAD,
+                     "DNBArchMachARM64::SaveRegisterState () "
+                     "error: %s regs failed to read: %u",
                      "VFP", kret);
   } else if (CPUHasSME() && (kret = SetSVEState() != KERN_SUCCESS)) {
-    DNBLogThreadedIf(LOG_THREAD, "DNBArchMachARM64::SaveRegisterState () "
-                                 "error: %s regs failed to read: %u",
+    DNBLogThreadedIf(LOG_THREAD,
+                     "DNBArchMachARM64::SaveRegisterState () "
+                     "error: %s regs failed to read: %u",
                      "SVE", kret);
-  }
-  else if (CPUHasSME() && (kret = SetSMEState() != KERN_SUCCESS)) {
-    DNBLogThreadedIf(LOG_THREAD, "DNBArchMachARM64::SaveRegisterState () "
-                                 "error: %s regs failed to read: %u",
+  } else if (CPUHasSME() && (kret = SetSMEState() != KERN_SUCCESS)) {
+    DNBLogThreadedIf(LOG_THREAD,
+                     "DNBArchMachARM64::SaveRegisterState () "
+                     "error: %s regs failed to read: %u",
                      "SME", kret);
   } else {
     const uint32_t save_id = GetNextRegisterStateSaveID();
@@ -3160,21 +3163,24 @@ bool DNBArchMachARM64::RestoreRegisterState(uint32_t save_id) {
                        save_id, kret);
       success = false;
     } else if ((kret = SetVFPState()) != KERN_SUCCESS) {
-      DNBLogThreadedIf(LOG_THREAD, "DNBArchMachARM64::RestoreRegisterState "
-                                   "(save_id = %u) error: %s regs failed to "
-                                   "write: %u",
+      DNBLogThreadedIf(LOG_THREAD,
+                       "DNBArchMachARM64::RestoreRegisterState "
+                       "(save_id = %u) error: %s regs failed to "
+                       "write: %u",
                        save_id, "VFP", kret);
       success = false;
     } else if ((kret = SetSVEState()) != KERN_SUCCESS) {
-      DNBLogThreadedIf(LOG_THREAD, "DNBArchMachARM64::RestoreRegisterState "
-                                   "(save_id = %u) error: %s regs failed to "
-                                   "write: %u",
+      DNBLogThreadedIf(LOG_THREAD,
+                       "DNBArchMachARM64::RestoreRegisterState "
+                       "(save_id = %u) error: %s regs failed to "
+                       "write: %u",
                        save_id, "SVE", kret);
       success = false;
     } else if ((kret = SetSMEState()) != KERN_SUCCESS) {
-      DNBLogThreadedIf(LOG_THREAD, "DNBArchMachARM64::RestoreRegisterState "
-                                   "(save_id = %u) error: %s regs failed to "
-                                   "write: %u",
+      DNBLogThreadedIf(LOG_THREAD,
+                       "DNBArchMachARM64::RestoreRegisterState "
+                       "(save_id = %u) error: %s regs failed to "
+                       "write: %u",
                        save_id, "SME", kret);
       success = false;
     }
