@@ -1124,6 +1124,8 @@ void OverloadCandidateSet::clear(CandidateSetKind CSK) {
   Candidates.clear();
   Functions.clear();
   Kind = CSK;
+  FirstDeferredCandidate = nullptr;
+  DeferredCandidatesCount = 0;
   HasDeferredTemplateConstructors = false;
 }
 
@@ -11004,16 +11006,20 @@ void OverloadCandidateSet::AddDeferredTemplateCandidate(
     bool PartialOverloading, bool AllowExplicit,
     CallExpr::ADLCallKind IsADLCandidate, OverloadCandidateParamOrder PO,
     bool AggregateCandidateDeduction) {
-  DeferredFunctionTemplateOverloadCandidate C{FunctionTemplate,
-                                              FoundDecl,
-                                              Args,
-                                              IsADLCandidate,
-                                              PO,
-                                              SuppressUserConversions,
-                                              PartialOverloading,
-                                              AllowExplicit,
-                                              AggregateCandidateDeduction};
-  DeferredCandidates.emplace_back(std::move(C));
+
+  auto *C =
+      allocateDeferredCandidate<DeferredFunctionTemplateOverloadCandidate>();
+
+  C = new (C) DeferredFunctionTemplateOverloadCandidate{
+      {nullptr, DeferredFunctionTemplateOverloadCandidate::Function,
+       /*AllowObjCConversionOnExplicit=*/false,
+       /*AllowResultConversion=*/false, AllowExplicit, SuppressUserConversions,
+       PartialOverloading, AggregateCandidateDeduction},
+      FunctionTemplate,
+      FoundDecl,
+      Args,
+      IsADLCandidate,
+      PO};
   HasDeferredTemplateConstructors |=
       isa<CXXConstructorDecl>(FunctionTemplate->getTemplatedDecl());
 }
@@ -11024,11 +11030,23 @@ void OverloadCandidateSet::AddDeferredMethodTemplateCandidate(
     Expr::Classification ObjectClassification, ArrayRef<Expr *> Args,
     bool SuppressUserConversions, bool PartialOverloading,
     OverloadCandidateParamOrder PO) {
-  DeferredMethodTemplateOverloadCandidate C{
-      MethodTmpl,           FoundDecl,  Args, ActingContext,
-      ObjectClassification, ObjectType, PO,   SuppressUserConversions,
-      PartialOverloading};
-  DeferredCandidates.emplace_back(std::move(C));
+
+  auto *C =
+      allocateDeferredCandidate<DeferredMethodTemplateOverloadCandidate>();
+
+  C = new (C) DeferredMethodTemplateOverloadCandidate{
+      {nullptr, DeferredFunctionTemplateOverloadCandidate::Method,
+       /*AllowObjCConversionOnExplicit=*/false,
+       /*AllowResultConversion=*/false,
+       /*AllowExplicit=*/false, SuppressUserConversions, PartialOverloading,
+       /*AggregateCandidateDeduction=*/false},
+      MethodTmpl,
+      FoundDecl,
+      Args,
+      ActingContext,
+      ObjectClassification,
+      ObjectType,
+      PO};
 }
 
 void OverloadCandidateSet::AddDeferredConversionTemplateCandidate(
@@ -11037,18 +11055,26 @@ void OverloadCandidateSet::AddDeferredConversionTemplateCandidate(
     bool AllowObjCConversionOnExplicit, bool AllowExplicit,
     bool AllowResultConversion) {
 
-  DeferredConversionTemplateOverloadCandidate C{
-      FunctionTemplate, FoundDecl,
-      ActingContext,    From,
-      ToType,           AllowObjCConversionOnExplicit,
-      AllowExplicit,    AllowResultConversion};
+  auto *C =
+      allocateDeferredCandidate<DeferredConversionTemplateOverloadCandidate>();
 
-  DeferredCandidates.emplace_back(std::move(C));
+  C = new (C) DeferredConversionTemplateOverloadCandidate{
+      {nullptr, DeferredFunctionTemplateOverloadCandidate::Conversion,
+       AllowObjCConversionOnExplicit, AllowResultConversion,
+       /*AllowExplicit=*/false,
+       /*SuppressUserConversions=*/false,
+       /*PartialOverloading*/ false,
+       /*AggregateCandidateDeduction=*/false},
+      FunctionTemplate,
+      FoundDecl,
+      ActingContext,
+      From,
+      ToType};
 }
 
 static void
 AddTemplateOverloadCandidate(Sema &S, OverloadCandidateSet &CandidateSet,
-                             DeferredMethodTemplateOverloadCandidate &&C) {
+                             DeferredMethodTemplateOverloadCandidate &C) {
 
   AddMethodTemplateCandidateImmediately(
       S, CandidateSet, C.FunctionTemplate, C.FoundDecl, C.ActingContext,
@@ -11058,7 +11084,7 @@ AddTemplateOverloadCandidate(Sema &S, OverloadCandidateSet &CandidateSet,
 
 static void
 AddTemplateOverloadCandidate(Sema &S, OverloadCandidateSet &CandidateSet,
-                             DeferredFunctionTemplateOverloadCandidate &&C) {
+                             DeferredFunctionTemplateOverloadCandidate &C) {
   AddTemplateOverloadCandidateImmediately(
       S, CandidateSet, C.FunctionTemplate, C.FoundDecl,
       /*ExplicitTemplateArgs=*/nullptr, C.Args, C.SuppressUserConversions,
@@ -11068,7 +11094,7 @@ AddTemplateOverloadCandidate(Sema &S, OverloadCandidateSet &CandidateSet,
 
 static void
 AddTemplateOverloadCandidate(Sema &S, OverloadCandidateSet &CandidateSet,
-                             DeferredConversionTemplateOverloadCandidate &&C) {
+                             DeferredConversionTemplateOverloadCandidate &C) {
   return AddTemplateConversionCandidateImmediately(
       S, CandidateSet, C.FunctionTemplate, C.FoundDecl, C.ActingContext, C.From,
       C.ToType, C.AllowObjCConversionOnExplicit, C.AllowExplicit,
@@ -11076,15 +11102,30 @@ AddTemplateOverloadCandidate(Sema &S, OverloadCandidateSet &CandidateSet,
 }
 
 void OverloadCandidateSet::InjectNonDeducedTemplateCandidates(Sema &S) {
-  Candidates.reserve(Candidates.size() + DeferredCandidates.size());
-  for (auto &&Elem : DeferredCandidates) {
-    std::visit(
-        [&](auto &&Cand) {
-          AddTemplateOverloadCandidate(S, *this, std::move(Cand));
-        },
-        Elem);
+  Candidates.reserve(Candidates.size() + DeferredCandidatesCount);
+  DeferredTemplateOverloadCandidate *Cand = FirstDeferredCandidate;
+  while (Cand) {
+    switch (Cand->Kind) {
+    case DeferredTemplateOverloadCandidate::Function:
+      AddTemplateOverloadCandidate(
+          S, *this,
+          *static_cast<DeferredFunctionTemplateOverloadCandidate *>(Cand));
+      break;
+    case DeferredTemplateOverloadCandidate::Method:
+      AddTemplateOverloadCandidate(
+          S, *this,
+          *static_cast<DeferredMethodTemplateOverloadCandidate *>(Cand));
+      break;
+    case DeferredTemplateOverloadCandidate::Conversion:
+      AddTemplateOverloadCandidate(
+          S, *this,
+          *static_cast<DeferredConversionTemplateOverloadCandidate *>(Cand));
+      break;
+    }
+    Cand = Cand->Next;
   }
-  DeferredCandidates.clear();
+  FirstDeferredCandidate = nullptr;
+  DeferredCandidatesCount = 0;
 }
 
 OverloadingResult
@@ -11147,10 +11188,10 @@ OverloadingResult OverloadCandidateSet::BestViableFunction(Sema &S,
                                                            iterator &Best) {
 
   assert(shouldDeferTemplateArgumentDeduction(S.getLangOpts()) ||
-         DeferredCandidates.empty() &&
+         DeferredCandidatesCount == 0 &&
              "Unexpected deferred template candidate");
 
-  bool TwoPhaseResolution = !DeferredCandidates.empty();
+  bool TwoPhaseResolution = DeferredCandidatesCount != 0;
 
   if (TwoPhaseResolution) {
 
@@ -11261,7 +11302,7 @@ OverloadingResult OverloadCandidateSet::BestViableFunctionImpl(
 
   OverloadingResult R = ResultForBestCandidate(Best);
 
-  if (DeferredCandidates.empty() && !EquivalentCands.empty())
+  if (!EquivalentCands.empty())
     S.diagnoseEquivalentInternalLinkageDeclarations(Loc, Best->Function,
                                                     EquivalentCands);
   return R;
