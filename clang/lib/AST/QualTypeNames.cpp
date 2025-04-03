@@ -417,6 +417,15 @@ QualType getFullyQualifiedType(QualType QT, const ASTContext &Ctx,
     return QT;
   }
 
+  // Handle types that have attributes attached such as `unique_ptr<int> _Nonnull`.
+  if (auto *AT = dyn_cast<AttributedType>(QT.getTypePtr())) {
+    QualType NewModified =
+        getFullyQualifiedType(AT->getModifiedType(), Ctx, WithGlobalNsPrefix);
+    QualType NewEquivalent =
+        getFullyQualifiedType(AT->getEquivalentType(), Ctx, WithGlobalNsPrefix);
+    return Ctx.getAttributedType(AT->getAttrKind(), NewModified, NewEquivalent);
+  }
+
   // Remove the part of the type related to the type being a template
   // parameter (we won't report it as part of the 'type name' and it
   // is actually make the code below to be more complex (to handle
