@@ -4,5 +4,5 @@
 # CHECK: --help
 # CHECK: -h
 # CHECK: --repl-mode
+# CHECK: --version
 # CHECK: --wait-for-debugger
-
