@@ -14,11 +14,10 @@
 namespace clang {
 namespace doc {
 
-llvm::Error 
-copyFile(llvm::StringRef FilePath, llvm::StringRef OutDirectory);
+llvm::Error copyFile(llvm::StringRef FilePath, llvm::StringRef OutDirectory);
 
-llvm::SmallString<128> 
-computeRelativePath(llvm::StringRef Destination,llvm::StringRef Origin);
+llvm::SmallString<128> computeRelativePath(llvm::StringRef Destination,
+                                           llvm::StringRef Origin);
 
 } // namespace doc
 } // namespace clang
