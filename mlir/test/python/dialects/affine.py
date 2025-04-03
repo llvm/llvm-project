@@ -333,3 +333,8 @@ def testAffineIfWithElse():
             affine.AffineYieldOp([x_false, y_false])
         add = arith.AddIOp(if_op.results[0], if_op.results[1])
         return
+
+
+@constructAndPrintInModule
+def test_double_AtomicRMWKindAttr_registration():
+    from mlir.dialects import _affine_enum_gen
