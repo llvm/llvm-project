@@ -97,7 +97,6 @@ math/cospi.cl
 math/erf.cl
 math/erfc.cl
 math/exp.cl
-math/exp_helper.cl
 math/expm1.cl
 math/exp2.cl
 math/exp10.cl

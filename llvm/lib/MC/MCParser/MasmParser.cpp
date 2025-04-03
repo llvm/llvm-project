@@ -375,11 +375,6 @@ FieldInitializer &FieldInitializer::operator=(FieldInitializer &&Initializer) {
 // It's a peer of AsmParser, not of COFFAsmParser, WasmAsmParser, etc.
 class MasmParser : public MCAsmParser {
 private:
-  AsmLexer Lexer;
-  MCContext &Ctx;
-  MCStreamer &Out;
-  const MCAsmInfo &MAI;
-  SourceMgr &SrcMgr;
   SourceMgr::DiagHandlerTy SavedDiagHandler;
   void *SavedDiagContext;
   std::unique_ptr<MCAsmParserExtension> PlatformParser;
@@ -480,11 +475,6 @@ public:
 
   /// @name MCAsmParser Interface
   /// {
-
-  SourceMgr &getSourceManager() override { return SrcMgr; }
-  MCAsmLexer &getLexer() override { return Lexer; }
-  MCContext &getContext() override { return Ctx; }
-  MCStreamer &getStreamer() override { return Out; }
 
   unsigned getAssemblerDialect() override {
     if (AssemblerDialect == ~0U)
@@ -973,8 +963,8 @@ enum { DEFAULT_ADDRSPACE = 0 };
 
 MasmParser::MasmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
                        const MCAsmInfo &MAI, struct tm TM, unsigned CB)
-    : Lexer(MAI), Ctx(Ctx), Out(Out), MAI(MAI), SrcMgr(SM),
-      CurBuffer(CB ? CB : SM.getMainFileID()), TM(TM) {
+    : MCAsmParser(Ctx, Out, SM, MAI), CurBuffer(CB ? CB : SM.getMainFileID()),
+      TM(TM) {
   HadError = false;
   // Save the old handler.
   SavedDiagHandler = SrcMgr.getDiagHandler();
