@@ -89,8 +89,7 @@ Value *IRBuilderBase::CreateAggregateCast(Value *V, Type *DestTy) {
              "Expected StructTypes with equal number of elements");
       NumElements = SrcTy->getStructNumElements();
     } else {
-      assert(SrcTy->isArrayTy());
-      assert(DestTy->isArrayTy() && "Expected ArrayType");
+      assert(SrcTy->isArrayTy() && DestTy->isArrayTy() && "Expected ArrayType");
       assert(SrcTy->getArrayNumElements() == DestTy->getArrayNumElements() &&
              "Expected ArrayTypes with equal number of elements");
       NumElements = SrcTy->getArrayNumElements();
