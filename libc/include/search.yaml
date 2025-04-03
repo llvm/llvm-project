@@ -5,7 +5,7 @@ types:
   - type_name: ACTION
   - type_name: ENTRY
   - type_name: VISIT
-  - type_name: __lsearchcompare_t
+  - type_name: __search_compare_t
   - type_name: struct_hsearch_data
 enums: []
 objects: []
