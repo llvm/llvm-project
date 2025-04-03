@@ -24,6 +24,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  cospi_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    cospi_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.cospi
+    libc.src.__support.CPP.array
+    libc.src.__support.FPUtil.fp_bits
+)
+add_fp_unittest(
   cospif_test
   SUITE
     libc-math-smoke-tests
