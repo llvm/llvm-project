@@ -1124,7 +1124,7 @@ OpFoldResult DivOp::fold(FoldAdaptor adaptor) {
   if (!lhs)
     return nullptr;
   auto rhs = llvm::dyn_cast_if_present<IntegerAttr>(adaptor.getRhs());
-  if (!rhs)
+  if (!rhs || rhs.getValue().isZero())
     return nullptr;
 
   // Division in APInt does not follow floor(lhs, rhs) when the result is
