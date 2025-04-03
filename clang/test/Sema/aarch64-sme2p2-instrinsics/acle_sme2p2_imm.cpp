@@ -6,19 +6,19 @@
 
 #include <arm_sme.h>
 
-void tests_mop4_imm_s8_s8(svint8_t zn, svint8_t zm) __arm_streaming __arm_inout("za") {
+void tests_mop4_imm_s8_s8_1x1(svint8_t zn, svint8_t zm) __arm_streaming __arm_inout("za") {
   svmop4a_1x1_za32_s8_s8(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
   svmop4s_1x1_za32_s8_s8(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
   return;
 }
 
-void tests_mop4_imm_u8_u8(svuint8_t zn, svuint8_t zm) __arm_streaming __arm_inout("za") {
+void tests_mop4_imm_u8_u8_1x1(svuint8_t zn, svuint8_t zm) __arm_streaming __arm_inout("za") {
   svmop4a_1x1_za32_u8_u8(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
   svmop4s_1x1_za32_u8_u8(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
   return;
 }
 
-void tests_mop4_imm_s8_u8(svint8_t zn, svuint8_t zm) __arm_streaming __arm_inout("za") {
+void tests_mop4_imm_s8_u8_1x1(svint8_t zn, svuint8_t zm) __arm_streaming __arm_inout("za") {
   svmop4a_1x1_za32_s8_u8(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
   svmop4s_1x1_za32_s8_u8(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
   svmop4a_1x1_za32_u8_s8(-1, zm, zn); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
@@ -26,7 +26,7 @@ void tests_mop4_imm_s8_u8(svint8_t zn, svuint8_t zm) __arm_streaming __arm_inout
   return;
 }
 
-void tests_mop4_imm_s16_s16(svint16_t zn, svint16_t zm) __arm_streaming __arm_inout("za") {
+void tests_mop4_imm_s16_s16_1x1(svint16_t zn, svint16_t zm) __arm_streaming __arm_inout("za") {
   svmop4a_1x1_za32_s16_s16(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
   svmop4s_1x1_za32_s16_s16(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
 
@@ -35,7 +35,7 @@ void tests_mop4_imm_s16_s16(svint16_t zn, svint16_t zm) __arm_streaming __arm_in
   return;
 }
 
-void tests_mop4_imm_u16_u16(svuint16_t zn, svuint16_t zm) __arm_streaming __arm_inout("za") {
+void tests_mop4_imm_u16_u16_1x1(svuint16_t zn, svuint16_t zm) __arm_streaming __arm_inout("za") {
   svmop4a_1x1_za32_u16_u16(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
   svmop4s_1x1_za32_u16_u16(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
 
@@ -44,7 +44,7 @@ void tests_mop4_imm_u16_u16(svuint16_t zn, svuint16_t zm) __arm_streaming __arm_
   return;
 }
 
-void tests_mop4_imm_s16_u16(svint16_t zn, svuint16_t zm) __arm_streaming __arm_inout("za") {
+void tests_mop4_imm_s16_u16_1x1(svint16_t zn, svuint16_t zm) __arm_streaming __arm_inout("za") {
   svmop4a_1x1_za64_s16_u16(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 7]}}
   svmop4s_1x1_za64_s16_u16(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 7]}}
   svmop4a_1x1_za64_u16_s16(-1, zm, zn); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 7]}}
@@ -52,7 +52,7 @@ void tests_mop4_imm_s16_u16(svint16_t zn, svuint16_t zm) __arm_streaming __arm_i
   return;
 }
 
-void tests_mop4_imm_f16_f16(svfloat16_t zn, svfloat16_t zm) __arm_streaming __arm_inout("za") {
+void tests_mop4_imm_f16_f16_1x1(svfloat16_t zn, svfloat16_t zm) __arm_streaming __arm_inout("za") {
   svmop4a_1x1_za32_f16_f16(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
   svmop4s_1x1_za32_f16_f16(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
 
@@ -61,7 +61,7 @@ void tests_mop4_imm_f16_f16(svfloat16_t zn, svfloat16_t zm) __arm_streaming __ar
   return;
 }
 
-void tests_mop4_imm_bf16_bf16(svbfloat16_t zn, svbfloat16_t zm) __arm_streaming __arm_inout("za") {
+void tests_mop4_imm_bf16_bf16_1x1(svbfloat16_t zn, svbfloat16_t zm) __arm_streaming __arm_inout("za") {
   svmop4a_1x1_za32_bf16_bf16(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
   svmop4s_1x1_za32_bf16_bf16(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
 
@@ -71,14 +71,98 @@ void tests_mop4_imm_bf16_bf16(svbfloat16_t zn, svbfloat16_t zm) __arm_streaming 
 
 }
 
-void tests_mop4_imm_f32_f32(svfloat32_t zn, svfloat32_t zm) __arm_streaming __arm_inout("za") {
+void tests_mop4_imm_f32_f32_1x1(svfloat32_t zn, svfloat32_t zm) __arm_streaming __arm_inout("za") {
   svmop4a_1x1_za32_f32_f32(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
   svmop4s_1x1_za32_f32_f32(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
   return;
 }
 
-void tests_mop4_imm_f64_f64(svfloat64_t zn, svfloat64_t zm) __arm_streaming __arm_inout("za") {
+void tests_mop4_imm_f64_f64_1x1(svfloat64_t zn, svfloat64_t zm) __arm_streaming __arm_inout("za") {
   svmop4a_1x1_za64_f64_f64(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 7]}}
   svmop4s_1x1_za64_f64_f64(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 7]}}
+  return;
+}
+
+void tests_mop4_imm_s8_s8_1x2(svint8_t zn, svint8x2_t zm) __arm_streaming __arm_inout("za") {
+  svmop4a_1x2_za32_s8_s8(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+  svmop4s_1x2_za32_s8_s8(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+  return;
+}
+
+void tests_mop4_imm_u8_u8_1x2(svuint8_t zn, svuint8x2_t zm) __arm_streaming __arm_inout("za") {
+  svmop4a_1x2_za32_u8_u8(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+  svmop4s_1x2_za32_u8_u8(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+  return;
+}
+
+void tests_mop4_imm_s8_u8_1x2(svint8_t zn, svuint8x2_t zm) __arm_streaming __arm_inout("za") {
+  svmop4a_1x2_za32_s8_u8(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+  svmop4s_1x2_za32_s8_u8(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+  return;
+}
+
+void tests_mop4_imm_u8_s8_1x2(svuint8_t zn, svint8x2_t zm) __arm_streaming __arm_inout("za") {
+  svmop4a_1x2_za32_u8_s8(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+  svmop4s_1x2_za32_u8_s8(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+  return;
+}
+
+void tests_mop4_imm_s16_s16_1x2(svint16_t zn, svint16x2_t zm) __arm_streaming __arm_inout("za") {
+  svmop4a_1x2_za32_s16_s16(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+  svmop4s_1x2_za32_s16_s16(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+
+  svmop4a_1x2_za64_s16_s16(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 7]}}
+  svmop4s_1x2_za64_s16_s16(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 7]}}
+  return;
+}
+
+void tests_mop4_imm_u16_u16_1x2(svuint16_t zn, svuint16x2_t zm) __arm_streaming __arm_inout("za") {
+  svmop4a_1x2_za32_u16_u16(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+  svmop4s_1x2_za32_u16_u16(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+
+  svmop4a_1x2_za64_u16_u16(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 7]}}
+  svmop4s_1x2_za64_u16_u16(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 7]}}
+  return;
+}
+
+void tests_mop4_imm_s16_u16_1x2(svint16_t zn, svuint16x2_t zm) __arm_streaming __arm_inout("za") {
+  svmop4a_1x2_za64_s16_u16(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 7]}}
+  svmop4s_1x2_za64_s16_u16(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 7]}}
+  return;
+}
+
+void tests_mop4_imm_u16_s16_1x2(svuint16_t zn, svint16x2_t zm) __arm_streaming __arm_inout("za") {
+  svmop4a_1x2_za64_u16_s16(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 7]}}
+  svmop4s_1x2_za64_u16_s16(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 7]}}
+  return;
+}
+
+void tests_mop4_imm_f16_f16_1x2(svfloat16_t zn, svfloat16x2_t zm) __arm_streaming __arm_inout("za") {
+  svmop4a_1x2_za32_f16_f16(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+  svmop4s_1x2_za32_f16_f16(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+
+  svmop4a_1x2_za16_f16_f16(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 1]}}
+  svmop4s_1x2_za16_f16_f16(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 1]}}
+  return;
+}
+
+void tests_mop4_imm_bf16_bf16_1x2(svbfloat16_t zn, svbfloat16x2_t zm) __arm_streaming __arm_inout("za") {
+  svmop4a_1x2_za32_bf16_bf16(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+  svmop4s_1x2_za32_bf16_bf16(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+
+  svmop4a_1x2_za16_bf16_bf16(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 1]}}
+  svmop4s_1x2_za16_bf16_bf16(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 1]}}
+  return;
+}
+
+void tests_mop4_imm_f32_f32_1x2(svfloat32_t zn, svfloat32x2_t zm) __arm_streaming __arm_inout("za") {
+  svmop4a_1x2_za32_f32_f32(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+  svmop4s_1x2_za32_f32_f32(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+  return;
+}
+
+void tests_mop4_imm_f64_f64_1x2(svfloat64_t zn, svfloat64x2_t zm) __arm_streaming __arm_inout("za") {
+  svmop4a_1x2_za64_f64_f64(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 7]}}
+  svmop4s_1x2_za64_f64_f64(-1, zn, zm); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 7]}}
   return;
 }
