@@ -1762,6 +1762,11 @@ public:
   void addInstToSpecificSourceAtom(llvm::Instruction *KeyInstruction,
                                    llvm::Value *Backup, uint64_t Atom);
 
+  /// Add \p KeyInstruction and an optional \p Backup instruction to a new atom
+  /// group (See ApplyAtomGroup for more info).
+  void addInstToNewSourceAtom(llvm::Instruction *KeyInstruction,
+                              llvm::Value *Backup);
+
 private:
   /// SwitchInsn - This is nearest current switch instruction. It is null if
   /// current context is not in a switch.
