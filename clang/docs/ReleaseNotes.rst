@@ -1065,6 +1065,7 @@ Bug Fixes to C++ Support
 - Fixed an incorrect pointer access when checking access-control on concepts. (#GH131530)
 - Fixed various alias CTAD bugs involving variadic template arguments. (#GH123591), (#GH127539), (#GH129077),
   (#GH129620), and (#GH129998).
+- Fixed the false compilation error "redefinition of default argument" for friend functions with default parameters. (#GH130917)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
