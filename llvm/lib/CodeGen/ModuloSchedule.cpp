@@ -181,10 +181,6 @@ void ModuloScheduleExpander::generatePipelinedLoop() {
   // Add branches between prolog and epilog blocks.
   addBranches(*Preheader, PrologBBs, KernelBB, EpilogBBs, VRMap);
 
-  // The intervals of newly created virtual registers are calculated after the
-  // kernel expansion.
-  calculateIntervals();
-
   delete[] VRMap;
   delete[] VRMapPhi;
 }
@@ -549,10 +545,8 @@ void ModuloScheduleExpander::generateExistingPhis(
               if (VRMap[LastStageNum - np - 1].count(LoopVal))
                 PhiOp2 = VRMap[LastStageNum - np - 1][LoopVal];
 
-              if (IsLast && np == NumPhis - 1) {
+              if (IsLast && np == NumPhis - 1)
                 replaceRegUsesAfterLoop(Def, NewReg, BB, MRI);
-                NoIntervalRegs.push_back(NewReg);
-              }
               continue;
             }
           }
@@ -592,10 +586,8 @@ void ModuloScheduleExpander::generateExistingPhis(
       // Check if we need to rename any uses that occurs after the loop. The
       // register to replace depends on whether the Phi is scheduled in the
       // epilog.
-      if (IsLast && np == NumPhis - 1) {
+      if (IsLast && np == NumPhis - 1)
         replaceRegUsesAfterLoop(Def, NewReg, BB, MRI);
-        NoIntervalRegs.push_back(NewReg);
-      }
 
       // In the kernel, a dependent Phi uses the value from this Phi.
       if (InKernel)
@@ -615,10 +607,8 @@ void ModuloScheduleExpander::generateExistingPhis(
     if (NumStages == 0 && IsLast) {
       auto &CurStageMap = VRMap[CurStageNum];
       auto It = CurStageMap.find(LoopVal);
-      if (It != CurStageMap.end()) {
+      if (It != CurStageMap.end())
         replaceRegUsesAfterLoop(Def, It->second, BB, MRI);
-        NoIntervalRegs.push_back(It->second);
-      }
     }
   }
 }
@@ -738,10 +728,8 @@ void ModuloScheduleExpander::generatePhis(
             rewriteScheduledInstr(NewBB, InstrMap, CurStageNum, np, &*BBI, Def,
                                   NewReg);
         }
-        if (IsLast && np == NumPhis - 1) {
+        if (IsLast && np == NumPhis - 1)
           replaceRegUsesAfterLoop(Def, NewReg, BB, MRI);
-          NoIntervalRegs.push_back(NewReg);
-        }
       }
     }
   }
@@ -953,14 +941,6 @@ void ModuloScheduleExpander::addBranches(MachineBasicBlock &PreheaderBB,
   }
 }
 
-/// Some registers are generated during the kernel expansion. We calculate the
-/// live intervals of these registers after the expansion.
-void ModuloScheduleExpander::calculateIntervals() {
-  for (Register Reg : NoIntervalRegs)
-    LIS.createAndComputeVirtRegInterval(Reg);
-  NoIntervalRegs.clear();
-}
-
 /// Return true if we can compute the amount the instruction changes
 /// during each iteration. Set Delta to the amount of the change.
 bool ModuloScheduleExpander::computeDelta(MachineInstr &MI, unsigned &Delta) {
@@ -1081,10 +1061,8 @@ void ModuloScheduleExpander::updateInstruction(MachineInstr *NewMI,
       Register NewReg = MRI.createVirtualRegister(RC);
       MO.setReg(NewReg);
       VRMap[CurStageNum][reg] = NewReg;
-      if (LastDef) {
+      if (LastDef)
         replaceRegUsesAfterLoop(reg, NewReg, BB, MRI);
-        NoIntervalRegs.push_back(NewReg);
-      }
     } else if (MO.isUse()) {
       MachineInstr *Def = MRI.getVRegDef(reg);
       // Compute the stage that contains the last definition for instruction.
