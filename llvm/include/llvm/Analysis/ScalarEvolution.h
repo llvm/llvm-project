@@ -1044,6 +1044,13 @@ public:
   bool isKnownToBeAPowerOfTwo(const SCEV *S, bool OrZero = false,
                               bool OrNegative = false);
 
+  /// Check that memory access offsets in V are multiples of array element size
+  /// EltSize. Param records the first parametric expression. If the scalar
+  /// evolution V contains two or more parameters, we check that the subsequent
+  /// parametric expressions are multiples of the first parametric expression
+  /// Param.
+  bool isKnownMultipleOf(const SCEV *V, const SCEV *&Param, uint64_t EltSize);
+
   /// Splits SCEV expression \p S into two SCEVs. One of them is obtained from
   /// \p S by substitution of all AddRec sub-expression related to loop \p L
   /// with initial value of that SCEV. The second is obtained from \p S by
