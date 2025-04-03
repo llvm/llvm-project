@@ -808,35 +808,30 @@ def NVVM_ShflOp :
    let hasVerifier = 1;
 }
 
-def NVVM_VoteBallotOp :
-  NVVM_Op<"vote.ballot.sync">,
-  Results<(outs LLVM_Type:$res)>,
-  Arguments<(ins LLVM_Type:$mask, LLVM_Type:$pred)> {
-  string llvmBuilder = [{
-      $res = createIntrinsicCall(builder,
-            llvm::Intrinsic::nvvm_vote_ballot_sync, {$mask, $pred});
-  }];
-  let hasCustomAssemblyFormat = 1;
+def VoteSyncKindAny : I32EnumAttrCase<"any", 0>;
+def VoteSyncKindAll : I32EnumAttrCase<"all", 1>;
+def VoteSyncKindBallot : I32EnumAttrCase<"ballot", 2>;
+def VoteSyncKindUni : I32EnumAttrCase<"uni", 3>;
+
+def VoteSyncKind : I32EnumAttr<"VoteSyncKind", "NVVM vote sync kind",
+                               [VoteSyncKindAny, VoteSyncKindAll,
+                                VoteSyncKindBallot, VoteSyncKindUni]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::NVVM";
 }
 
-def NVVM_VoteAllSyncOp : NVVM_Op<"vote.all.sync">,
-                         Results<(outs LLVM_Type:$res)>,
-                         Arguments<(ins LLVM_Type:$mask, LLVM_Type:$pred)> {
-  string llvmBuilder = [{
-      $res = createIntrinsicCall(builder,
-            llvm::Intrinsic::nvvm_vote_all_sync, {$mask, $pred});
-  }];
-  let hasCustomAssemblyFormat = 1;
-}
+def VoteSyncKindAttr : EnumAttr<NVVM_Dialect, VoteSyncKind, "vote_sync_kind">;
 
-def NVVM_VoteAnySyncOp : NVVM_Op<"vote.any.sync">,
-                         Results<(outs LLVM_Type:$res)>,
-                         Arguments<(ins LLVM_Type:$mask, LLVM_Type:$pred)> {
+def NVVM_VoteSyncOp
+    : NVVM_Op<"vote.sync">,
+      Results<(outs AnyTypeOf<[I32, I1]>:$res)>,
+      Arguments<(ins I32:$mask, I1:$pred, VoteSyncKindAttr:$kind)> {
   string llvmBuilder = [{
-      $res = createIntrinsicCall(builder,
-            llvm::Intrinsic::nvvm_vote_all_sync, {$mask, $pred});
+    auto intId = getVoteSyncIntrinsicId($kind);
+    $res = createIntrinsicCall(builder, intId, {$mask, $pred});
   }];
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = "$kind $mask `,` $pred attr-dict `->` type($res)";
+  let hasVerifier = 1;
 }
 
 def NVVM_SyncWarpOp :
