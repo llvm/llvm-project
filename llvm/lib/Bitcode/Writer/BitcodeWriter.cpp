@@ -940,6 +940,10 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_NO_EXT;
   case Attribute::Captures:
     return bitc::ATTR_KIND_CAPTURES;
+  case Attribute::AllowDirectAccessInHotPatchFunction:
+    return bitc::ATTR_KIND_ALLOW_DIRECT_ACCESS_IN_HOT_PATCH_FUNCTION;
+  case Attribute::MarkedForWindowsHotPatching:
+    return bitc::ATTR_KIND_MARKED_FOR_WINDOWS_HOT_PATCHING;
   case Attribute::EndAttrKinds:
     llvm_unreachable("Can not encode end-attribute kinds marker.");
   case Attribute::None:

@@ -496,6 +496,13 @@ Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR,
   return Error::success();
 }
 
+Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR,
+                                            HotPatchFuncSym &HotPatchFunc) {
+  error(IO.mapInteger(HotPatchFunc.Function));
+  error(IO.mapStringZ(HotPatchFunc.Name));
+  return Error::success();
+}
+
 RegisterId codeview::decodeFramePtrReg(EncodedFramePtrReg EncodedReg,
                                        CPUType CPU) {
   assert(unsigned(EncodedReg) < 4);
