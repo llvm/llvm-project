@@ -189,6 +189,8 @@ std::int32_t ExecutionEnvironment::SetEnv(
 
   RUNTIME_CHECK(terminator, name && name_length && value && value_length);
 
+  std::printf("EE: %s: name = \"%.*s\", name_lengh = %zu, value = \"%.*s\", value_lengh = %zu\n", __func__, int{name_length}, name, int{value_length}, value);
+
   OwningPtr<char> cStyleName{
       SaveDefaultCharacter(name, name_length, terminator)};
   RUNTIME_CHECK(terminator, cStyleName);
@@ -219,10 +221,12 @@ std::int32_t ExecutionEnvironment::SetEnv(
 }
 
 std::int32_t ExecutionEnvironment::UnsetEnv(
-  const char *name, std::size_t name_length,
-  const Terminator &terminator) {
+    const char *name, std::size_t name_length,
+    const Terminator &terminator) {
 
   RUNTIME_CHECK(terminator, name && name_length);
+
+  std::printf("EE: %s: name = \"%.*s\", name_lengh = %zu\n", __func__, int{name_length}, name);
 
   OwningPtr<char> cStyleName{
       SaveDefaultCharacter(name, name_length, terminator)};
