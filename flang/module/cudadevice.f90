@@ -1022,6 +1022,20 @@ implicit none
     end function
   end interface
 
+  interface any_sync
+    attributes(device) integer function any_sync(mask, pred)
+      !dir$ ignore_tkr(d) mask, (td) pred
+      integer, value :: mask, pred
+    end function
+  end interface
+
+  interface ballot_sync
+    attributes(device) integer function ballot_sync(mask, pred)
+      !dir$ ignore_tkr(d) mask, (td) pred
+      integer, value :: mask, pred
+    end function
+  end interface
+
   ! LDCG
   interface __ldcg
     attributes(device) pure integer(4) function __ldcg_i4(x) bind(c)

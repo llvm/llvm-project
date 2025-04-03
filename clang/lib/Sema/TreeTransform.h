@@ -4222,10 +4222,11 @@ public:
                                            SourceLocation DirLoc,
                                            OpenACCAtomicKind AtKind,
                                            SourceLocation EndLoc,
+                                           ArrayRef<OpenACCClause *> Clauses,
                                            StmtResult AssociatedStmt) {
     return getSema().OpenACC().ActOnEndStmtDirective(
         OpenACCDirectiveKind::Atomic, BeginLoc, DirLoc, SourceLocation{},
-        SourceLocation{}, {}, AtKind, SourceLocation{}, EndLoc, {},
+        SourceLocation{}, {}, AtKind, SourceLocation{}, EndLoc, Clauses,
         AssociatedStmt);
   }
 
@@ -7076,7 +7077,8 @@ QualType TreeTransform<Derived>::TransformSubstTemplateTypeParmType(
     return QualType();
 
   QualType Result = SemaRef.Context.getSubstTemplateTypeParmType(
-      Replacement, NewReplaced, T->getIndex(), T->getPackIndex());
+      Replacement, NewReplaced, T->getIndex(), T->getPackIndex(),
+      T->getFinal());
 
   // Propagate type-source information.
   SubstTemplateTypeParmTypeLoc NewTL
@@ -11963,10 +11965,10 @@ void OpenACCClauseTransform<Derived>::VisitAttachClause(
   llvm::SmallVector<Expr *> VarList = VisitVarList(C.getVarList());
 
   // Ensure each var is a pointer type.
-  VarList.erase(std::remove_if(VarList.begin(), VarList.end(), [&](Expr *E) {
+  llvm::erase_if(VarList, [&](Expr *E) {
     return Self.getSema().OpenACC().CheckVarIsPointerType(
         OpenACCClauseKind::Attach, E);
-  }), VarList.end());
+  });
 
   ParsedClause.setVarListDetails(VarList,
                                  /*IsReadOnly=*/false, /*IsZero=*/false);
@@ -12026,10 +12028,10 @@ void OpenACCClauseTransform<Derived>::VisitDevicePtrClause(
   llvm::SmallVector<Expr *> VarList = VisitVarList(C.getVarList());
 
   // Ensure each var is a pointer type.
-  VarList.erase(std::remove_if(VarList.begin(), VarList.end(), [&](Expr *E) {
+  llvm::erase_if(VarList, [&](Expr *E) {
     return Self.getSema().OpenACC().CheckVarIsPointerType(
         OpenACCClauseKind::DevicePtr, E);
-  }), VarList.end());
+  });
 
   ParsedClause.setVarListDetails(VarList,
                                  /*IsReadOnly=*/false, /*IsZero=*/false);
@@ -12744,6 +12746,10 @@ StmtResult TreeTransform<Derived>::TransformOpenACCAtomicConstruct(
     OpenACCAtomicConstruct *C) {
   getSema().OpenACC().ActOnConstruct(C->getDirectiveKind(), C->getBeginLoc());
 
+  llvm::SmallVector<OpenACCClause *> TransformedClauses =
+      getDerived().TransformOpenACCClauseList(C->getDirectiveKind(),
+                                              C->clauses());
+
   if (getSema().OpenACC().ActOnStartStmtDirective(C->getDirectiveKind(),
                                                   C->getBeginLoc(), {}))
     return StmtError();
@@ -12759,7 +12765,7 @@ StmtResult TreeTransform<Derived>::TransformOpenACCAtomicConstruct(
 
   return getDerived().RebuildOpenACCAtomicConstruct(
       C->getBeginLoc(), C->getDirectiveLoc(), C->getAtomicKind(),
-      C->getEndLoc(), AssocStmt);
+      C->getEndLoc(), TransformedClauses, AssocStmt);
 }
 
 template <typename Derived>
