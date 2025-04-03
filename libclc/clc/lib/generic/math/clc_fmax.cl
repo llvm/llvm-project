@@ -6,11 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
-#include <clc/clcmacro.h>
-#include <clc/math/clc_fmax.h>
+#include <clc/internal/clc.h>
 
-#define FUNCTION fmax
-#define __CLC_BODY <clc/shared/binary_def_with_scalar_second_arg.inc>
+#define FUNCTION __clc_fmax
+#define __CLC_FUNCTION(x) __builtin_elementwise_max
+#define __CLC_BODY <clc/shared/binary_def.inc>
 
 #include <clc/math/gentype.inc>
