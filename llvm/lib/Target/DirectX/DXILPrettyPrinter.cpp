@@ -220,7 +220,7 @@ struct FormatBindingSize
 
 } // namespace
 
-static void prettyPrintResources(raw_ostream &OS, const DXILBindingMap &DBM,
+static void prettyPrintResources(raw_ostream &OS, const DXILResourceMap &DRM,
                                  DXILResourceTypeMap &DRTM) {
   // Column widths are arbitrary but match the widths DXC uses.
   OS << ";\n; Resource Bindings:\n;\n";
@@ -231,7 +231,7 @@ static void prettyPrintResources(raw_ostream &OS, const DXILBindingMap &DBM,
       "", "", "", "", "");
 
   // TODO: Do we want to sort these by binding or something like that?
-  for (const dxil::ResourceInfo &RI : DBM) {
+  for (const dxil::ResourceInfo &RI : DRM) {
     const dxil::ResourceTypeInfo &RTI = DRTM[RI.getHandleTy()];
 
     dxil::ResourceClass RC = RTI.getResourceClass();
@@ -250,9 +250,9 @@ static void prettyPrintResources(raw_ostream &OS, const DXILBindingMap &DBM,
 
 PreservedAnalyses DXILPrettyPrinterPass::run(Module &M,
                                              ModuleAnalysisManager &MAM) {
-  const DXILBindingMap &DBM = MAM.getResult<DXILResourceAnalysis>(M);
+  const DXILResourceMap &DRM = MAM.getResult<DXILResourceAnalysis>(M);
   DXILResourceTypeMap &DRTM = MAM.getResult<DXILResourceTypeAnalysis>(M);
-  prettyPrintResources(OS, DBM, DRTM);
+  prettyPrintResources(OS, DRM, DRTM);
   return PreservedAnalyses::all();
 }
 
@@ -278,7 +278,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
     AU.addRequired<DXILResourceTypeWrapperPass>();
-    AU.addRequired<DXILResourceBindingWrapperPass>();
+    AU.addRequired<DXILResourceWrapperPass>();
   }
 };
 } // namespace
@@ -287,16 +287,16 @@ char DXILPrettyPrinterLegacy::ID = 0;
 INITIALIZE_PASS_BEGIN(DXILPrettyPrinterLegacy, "dxil-pretty-printer",
                       "DXIL Metadata Pretty Printer", true, true)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceTypeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DXILResourceBindingWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DXILResourceWrapperPass)
 INITIALIZE_PASS_END(DXILPrettyPrinterLegacy, "dxil-pretty-printer",
                     "DXIL Metadata Pretty Printer", true, true)
 
 bool DXILPrettyPrinterLegacy::runOnModule(Module &M) {
-  const DXILBindingMap &DBM =
-      getAnalysis<DXILResourceBindingWrapperPass>().getBindingMap();
+  const DXILResourceMap &DRM =
+      getAnalysis<DXILResourceWrapperPass>().getBindingMap();
   DXILResourceTypeMap &DRTM =
       getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
-  prettyPrintResources(OS, DBM, DRTM);
+  prettyPrintResources(OS, DRM, DRTM);
   return false;
 }
 

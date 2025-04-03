@@ -685,7 +685,7 @@ bool DXILResourceTypeMap::invalidate(Module &M, const PreservedAnalyses &PA,
 
 //===----------------------------------------------------------------------===//
 
-void DXILBindingMap::populate(Module &M, DXILResourceTypeMap &DRTM) {
+void DXILResourceMap::populate(Module &M, DXILResourceTypeMap &DRTM) {
   SmallVector<std::tuple<CallInst *, ResourceInfo, ResourceTypeInfo>> CIToInfos;
 
   for (Function &F : M.functions()) {
@@ -764,8 +764,8 @@ void DXILBindingMap::populate(Module &M, DXILResourceTypeMap &DRTM) {
   }
 }
 
-void DXILBindingMap::print(raw_ostream &OS, DXILResourceTypeMap &DRTM,
-                           const DataLayout &DL) const {
+void DXILResourceMap::print(raw_ostream &OS, DXILResourceTypeMap &DRTM,
+                            const DataLayout &DL) const {
   for (unsigned I = 0, E = Infos.size(); I != E; ++I) {
     OS << "Binding " << I << ":\n";
     const dxil::ResourceInfo &RI = Infos[I];
@@ -781,7 +781,7 @@ void DXILBindingMap::print(raw_ostream &OS, DXILResourceTypeMap &DRTM,
 }
 
 SmallVector<dxil::ResourceInfo>
-DXILBindingMap::findByUse(const Value *Key) const {
+DXILResourceMap::findByUse(const Value *Key) const {
   if (const PHINode *Phi = dyn_cast<PHINode>(Key)) {
     SmallVector<dxil::ResourceInfo> Children;
     for (const Value *V : Phi->operands()) {
@@ -824,8 +824,9 @@ DXILBindingMap::findByUse(const Value *Key) const {
 AnalysisKey DXILResourceTypeAnalysis::Key;
 AnalysisKey DXILResourceAnalysis::Key;
 
-DXILBindingMap DXILResourceAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
-  DXILBindingMap Data;
+DXILResourceMap DXILResourceAnalysis::run(Module &M,
+                                          ModuleAnalysisManager &AM) {
+  DXILResourceMap Data;
   DXILResourceTypeMap &DRTM = AM.getResult<DXILResourceTypeAnalysis>(M);
   Data.populate(M, DRTM);
   return Data;
@@ -833,10 +834,10 @@ DXILBindingMap DXILResourceAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
 
 PreservedAnalyses DXILResourcePrinterPass::run(Module &M,
                                                ModuleAnalysisManager &AM) {
-  DXILBindingMap &DBM = AM.getResult<DXILResourceAnalysis>(M);
+  DXILResourceMap &DRM = AM.getResult<DXILResourceAnalysis>(M);
   DXILResourceTypeMap &DRTM = AM.getResult<DXILResourceTypeAnalysis>(M);
 
-  DBM.print(OS, DRTM, M.getDataLayout());
+  DRM.print(OS, DRTM, M.getDataLayout());
   return PreservedAnalyses::all();
 }
 
@@ -854,21 +855,19 @@ ModulePass *llvm::createDXILResourceTypeWrapperPassPass() {
   return new DXILResourceTypeWrapperPass();
 }
 
-DXILResourceBindingWrapperPass::DXILResourceBindingWrapperPass()
-    : ModulePass(ID) {
-  initializeDXILResourceBindingWrapperPassPass(
-      *PassRegistry::getPassRegistry());
+DXILResourceWrapperPass::DXILResourceWrapperPass() : ModulePass(ID) {
+  initializeDXILResourceWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
-DXILResourceBindingWrapperPass::~DXILResourceBindingWrapperPass() = default;
+DXILResourceWrapperPass::~DXILResourceWrapperPass() = default;
 
-void DXILResourceBindingWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
+void DXILResourceWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequiredTransitive<DXILResourceTypeWrapperPass>();
   AU.setPreservesAll();
 }
 
-bool DXILResourceBindingWrapperPass::runOnModule(Module &M) {
-  Map.reset(new DXILBindingMap());
+bool DXILResourceWrapperPass::runOnModule(Module &M) {
+  Map.reset(new DXILResourceMap());
 
   DRTM = &getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
   Map->populate(M, *DRTM);
@@ -876,10 +875,9 @@ bool DXILResourceBindingWrapperPass::runOnModule(Module &M) {
   return false;
 }
 
-void DXILResourceBindingWrapperPass::releaseMemory() { Map.reset(); }
+void DXILResourceWrapperPass::releaseMemory() { Map.reset(); }
 
-void DXILResourceBindingWrapperPass::print(raw_ostream &OS,
-                                           const Module *M) const {
+void DXILResourceWrapperPass::print(raw_ostream &OS, const Module *M) const {
   if (!Map) {
     OS << "No resource map has been built!\n";
     return;
@@ -889,13 +887,13 @@ void DXILResourceBindingWrapperPass::print(raw_ostream &OS,
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD
-void DXILResourceBindingWrapperPass::dump() const { print(dbgs(), nullptr); }
+void DXILResourceWrapperPass::dump() const { print(dbgs(), nullptr); }
 #endif
 
-INITIALIZE_PASS(DXILResourceBindingWrapperPass, "dxil-resource",
+INITIALIZE_PASS(DXILResourceWrapperPass, "dxil-resource",
                 "DXIL Resource Binding Analysis", false, true)
-char DXILResourceBindingWrapperPass::ID = 0;
+char DXILResourceWrapperPass::ID = 0;
 
-ModulePass *llvm::createDXILResourceBindingWrapperPassPass() {
-  return new DXILResourceBindingWrapperPass();
+ModulePass *llvm::createDXILResourceWrapperPassPass() {
+  return new DXILResourceWrapperPass();
 }

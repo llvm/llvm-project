@@ -438,7 +438,7 @@ ModulePass *createDXILResourceTypeWrapperPassPass();
 
 //===----------------------------------------------------------------------===//
 
-class DXILBindingMap {
+class DXILResourceMap {
   SmallVector<dxil::ResourceInfo> Infos;
   DenseMap<CallInst *, unsigned> CallMap;
   unsigned FirstUAV = 0;
@@ -520,7 +520,7 @@ public:
              const DataLayout &DL) const;
 
   friend class DXILResourceAnalysis;
-  friend class DXILResourceBindingWrapperPass;
+  friend class DXILResourceWrapperPass;
 };
 
 class DXILResourceAnalysis : public AnalysisInfoMixin<DXILResourceAnalysis> {
@@ -529,10 +529,10 @@ class DXILResourceAnalysis : public AnalysisInfoMixin<DXILResourceAnalysis> {
   static AnalysisKey Key;
 
 public:
-  using Result = DXILBindingMap;
+  using Result = DXILResourceMap;
 
   /// Gather resource info for the module \c M.
-  DXILBindingMap run(Module &M, ModuleAnalysisManager &AM);
+  DXILResourceMap run(Module &M, ModuleAnalysisManager &AM);
 };
 
 /// Printer pass for the \c DXILResourceAnalysis results.
@@ -547,18 +547,18 @@ public:
   static bool isRequired() { return true; }
 };
 
-class DXILResourceBindingWrapperPass : public ModulePass {
-  std::unique_ptr<DXILBindingMap> Map;
+class DXILResourceWrapperPass : public ModulePass {
+  std::unique_ptr<DXILResourceMap> Map;
   DXILResourceTypeMap *DRTM;
 
 public:
   static char ID; // Class identification, replacement for typeinfo
 
-  DXILResourceBindingWrapperPass();
-  ~DXILResourceBindingWrapperPass() override;
+  DXILResourceWrapperPass();
+  ~DXILResourceWrapperPass() override;
 
-  const DXILBindingMap &getBindingMap() const { return *Map; }
-  DXILBindingMap &getBindingMap() { return *Map; }
+  const DXILResourceMap &getBindingMap() const { return *Map; }
+  DXILResourceMap &getBindingMap() { return *Map; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnModule(Module &M) override;
@@ -568,7 +568,7 @@ public:
   void dump() const;
 };
 
-ModulePass *createDXILResourceBindingWrapperPassPass();
+ModulePass *createDXILResourceWrapperPassPass();
 
 } // namespace llvm
 

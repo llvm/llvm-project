@@ -79,13 +79,13 @@ namespace {
 class OpLowerer {
   Module &M;
   DXILOpBuilder OpBuilder;
-  DXILBindingMap &DBM;
+  DXILResourceMap &DRM;
   DXILResourceTypeMap &DRTM;
   SmallVector<CallInst *> CleanupCasts;
 
 public:
-  OpLowerer(Module &M, DXILBindingMap &DBM, DXILResourceTypeMap &DRTM)
-      : M(M), OpBuilder(M), DBM(DBM), DRTM(DRTM) {}
+  OpLowerer(Module &M, DXILResourceMap &DRM, DXILResourceTypeMap &DRTM)
+      : M(M), OpBuilder(M), DRM(DRM), DRTM(DRTM) {}
 
   /// Replace every call to \c F using \c ReplaceCall, and then erase \c F. If
   /// there is an error replacing a call, we emit a diagnostic and return true.
@@ -266,8 +266,8 @@ public:
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
 
-      auto *It = DBM.find(CI);
-      assert(It != DBM.end() && "Resource not in map?");
+      auto *It = DRM.find(CI);
+      assert(It != DRM.end() && "Resource not in map?");
       dxil::ResourceInfo &RI = *It;
 
       const auto &Binding = RI.getBinding();
@@ -304,8 +304,8 @@ public:
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
 
-      auto *It = DBM.find(CI);
-      assert(It != DBM.end() && "Resource not in map?");
+      auto *It = DRM.find(CI);
+      assert(It != DRM.end() && "Resource not in map?");
       dxil::ResourceInfo &RI = *It;
 
       const auto &Binding = RI.getBinding();
@@ -856,10 +856,10 @@ public:
 } // namespace
 
 PreservedAnalyses DXILOpLowering::run(Module &M, ModuleAnalysisManager &MAM) {
-  DXILBindingMap &DBM = MAM.getResult<DXILResourceAnalysis>(M);
+  DXILResourceMap &DRM = MAM.getResult<DXILResourceAnalysis>(M);
   DXILResourceTypeMap &DRTM = MAM.getResult<DXILResourceTypeAnalysis>(M);
 
-  bool MadeChanges = OpLowerer(M, DBM, DRTM).lowerIntrinsics();
+  bool MadeChanges = OpLowerer(M, DRM, DRTM).lowerIntrinsics();
   if (!MadeChanges)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
@@ -873,12 +873,12 @@ namespace {
 class DXILOpLoweringLegacy : public ModulePass {
 public:
   bool runOnModule(Module &M) override {
-    DXILBindingMap &DBM =
-        getAnalysis<DXILResourceBindingWrapperPass>().getBindingMap();
+    DXILResourceMap &DRM =
+        getAnalysis<DXILResourceWrapperPass>().getBindingMap();
     DXILResourceTypeMap &DRTM =
         getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
 
-    return OpLowerer(M, DBM, DRTM).lowerIntrinsics();
+    return OpLowerer(M, DRM, DRTM).lowerIntrinsics();
   }
   StringRef getPassName() const override { return "DXIL Op Lowering"; }
   DXILOpLoweringLegacy() : ModulePass(ID) {}
@@ -886,8 +886,8 @@ public:
   static char ID; // Pass identification.
   void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
     AU.addRequired<DXILResourceTypeWrapperPass>();
-    AU.addRequired<DXILResourceBindingWrapperPass>();
-    AU.addPreserved<DXILResourceBindingWrapperPass>();
+    AU.addRequired<DXILResourceWrapperPass>();
+    AU.addPreserved<DXILResourceWrapperPass>();
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
     AU.addPreserved<ShaderFlagsAnalysisWrapper>();
   }
@@ -898,7 +898,7 @@ char DXILOpLoweringLegacy::ID = 0;
 INITIALIZE_PASS_BEGIN(DXILOpLoweringLegacy, DEBUG_TYPE, "DXIL Op Lowering",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceTypeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DXILResourceBindingWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DXILResourceWrapperPass)
 INITIALIZE_PASS_END(DXILOpLoweringLegacy, DEBUG_TYPE, "DXIL Op Lowering", false,
                     false)
 

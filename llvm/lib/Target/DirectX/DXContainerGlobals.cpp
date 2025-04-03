@@ -67,7 +67,7 @@ public:
     AU.addRequired<RootSignatureAnalysisWrapper>();
     AU.addRequired<DXILMetadataAnalysisWrapperPass>();
     AU.addRequired<DXILResourceTypeWrapperPass>();
-    AU.addRequired<DXILResourceBindingWrapperPass>();
+    AU.addRequired<DXILResourceWrapperPass>();
   }
 };
 
@@ -181,8 +181,8 @@ void DXContainerGlobals::addRootSignature(Module &M,
 }
 
 void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {
-  const DXILBindingMap &DBM =
-      getAnalysis<DXILResourceBindingWrapperPass>().getBindingMap();
+  const DXILResourceMap &DRM =
+      getAnalysis<DXILResourceWrapperPass>().getBindingMap();
   DXILResourceTypeMap &DRTM =
       getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
 
@@ -200,18 +200,18 @@ void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {
         return BindInfo;
       };
 
-  for (const dxil::ResourceInfo &RI : DBM.cbuffers()) {
+  for (const dxil::ResourceInfo &RI : DRM.cbuffers()) {
     const dxil::ResourceInfo::ResourceBinding &Binding = RI.getBinding();
     PSV.Resources.push_back(MakeBinding(Binding, dxbc::PSV::ResourceType::CBV,
                                         dxil::ResourceKind::CBuffer));
   }
-  for (const dxil::ResourceInfo &RI : DBM.samplers()) {
+  for (const dxil::ResourceInfo &RI : DRM.samplers()) {
     const dxil::ResourceInfo::ResourceBinding &Binding = RI.getBinding();
     PSV.Resources.push_back(MakeBinding(Binding,
                                         dxbc::PSV::ResourceType::Sampler,
                                         dxil::ResourceKind::Sampler));
   }
-  for (const dxil::ResourceInfo &RI : DBM.srvs()) {
+  for (const dxil::ResourceInfo &RI : DRM.srvs()) {
     const dxil::ResourceInfo::ResourceBinding &Binding = RI.getBinding();
 
     dxil::ResourceTypeInfo &TypeInfo = DRTM[RI.getHandleTy()];
@@ -226,7 +226,7 @@ void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {
     PSV.Resources.push_back(
         MakeBinding(Binding, ResType, TypeInfo.getResourceKind()));
   }
-  for (const dxil::ResourceInfo &RI : DBM.uavs()) {
+  for (const dxil::ResourceInfo &RI : DRM.uavs()) {
     const dxil::ResourceInfo::ResourceBinding &Binding = RI.getBinding();
 
     dxil::ResourceTypeInfo &TypeInfo = DRTM[RI.getHandleTy()];
@@ -298,7 +298,7 @@ INITIALIZE_PASS_BEGIN(DXContainerGlobals, "dxil-globals",
 INITIALIZE_PASS_DEPENDENCY(ShaderFlagsAnalysisWrapper)
 INITIALIZE_PASS_DEPENDENCY(DXILMetadataAnalysisWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceTypeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DXILResourceBindingWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DXILResourceWrapperPass)
 INITIALIZE_PASS_END(DXContainerGlobals, "dxil-globals",
                     "DXContainer Global Emitter", false, true)
 
