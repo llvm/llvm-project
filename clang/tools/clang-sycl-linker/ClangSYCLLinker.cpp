@@ -282,6 +282,9 @@ static Expected<StringRef> runSPIRVCodeGen(StringRef File, const ArgList &Args,
                                            LLVMContext &C) {
   llvm::TimeTraceScope TimeScope("SPIR-V code generation");
 
+  if (Error Err = M->materializeAll())
+    return std::move(Err);
+
   // Parse input module.
   SMDiagnostic Err;
   std::unique_ptr<Module> M = parseIRFile(File, Err, C);
