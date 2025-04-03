@@ -200,7 +200,7 @@ buildDeductionGuide(Sema &SemaRef, TemplateDecl *OriginalTemplate,
                     TypeSourceInfo *TInfo, SourceLocation LocStart,
                     SourceLocation Loc, SourceLocation LocEnd, bool IsImplicit,
                     llvm::ArrayRef<TypedefNameDecl *> MaterializedTypedefs = {},
-                    Expr *FunctionTrailingRC = nullptr) {
+                    const AssociatedConstraint &FunctionTrailingRC = {}) {
   DeclContext *DC = OriginalTemplate->getDeclContext();
   auto DeductionGuideName =
       SemaRef.Context.DeclarationNames.getCXXDeductionGuideName(
@@ -356,7 +356,8 @@ struct ConvertConstructorToDeductionGuideTransform {
     TemplateParameterList *TemplateParams =
         SemaRef.GetTemplateParameterList(Template);
     SmallVector<TemplateArgument, 16> Depth1Args;
-    Expr *OuterRC = TemplateParams->getRequiresClause();
+    AssociatedConstraint OuterRC(TemplateParams->getRequiresClause(),
+                                 /*ArgumentPackSubstitutionIndex=*/-1);
     if (FTD) {
       TemplateParameterList *InnerParams = FTD->getTemplateParameters();
       SmallVector<NamedDecl *, 16> AllParams;
@@ -456,18 +457,20 @@ struct ConvertConstructorToDeductionGuideTransform {
     // At this point, the function parameters are already 'instantiated' in the
     // current scope. Substitute into the constructor's trailing
     // requires-clause, if any.
-    Expr *FunctionTrailingRC = nullptr;
-    if (Expr *RC = CD->getTrailingRequiresClause()) {
+    AssociatedConstraint FunctionTrailingRC;
+    if (const AssociatedConstraint &RC = CD->getTrailingRequiresClause()) {
       MultiLevelTemplateArgumentList Args;
       Args.setKind(TemplateSubstitutionKind::Rewrite);
       Args.addOuterTemplateArguments(Depth1Args);
       Args.addOuterRetainedLevel();
       if (NestedPattern)
         Args.addOuterRetainedLevels(NestedPattern->getTemplateDepth());
-      ExprResult E = SemaRef.SubstConstraintExprWithoutSatisfaction(RC, Args);
+      ExprResult E = SemaRef.SubstConstraintExprWithoutSatisfaction(
+          const_cast<Expr *>(RC.ConstraintExpr), Args);
       if (!E.isUsable())
         return nullptr;
-      FunctionTrailingRC = E.get();
+      FunctionTrailingRC =
+          AssociatedConstraint(E.get(), RC.ArgumentPackSubstitutionIndex);
     }
 
     // C++ [over.match.class.deduct]p1:
@@ -480,13 +483,19 @@ struct ConvertConstructorToDeductionGuideTransform {
     if (OuterRC) {
       // The outer template parameters are not transformed, so their
       // associated constraints don't need substitution.
+      // FIXME: Should simply add another field for the OuterRC, instead of
+      // combining them like this.
       if (!FunctionTrailingRC)
         FunctionTrailingRC = OuterRC;
       else
-        FunctionTrailingRC = BinaryOperator::Create(
-            SemaRef.Context, /*lhs=*/OuterRC, /*rhs=*/FunctionTrailingRC,
-            BO_LAnd, SemaRef.Context.BoolTy, VK_PRValue, OK_Ordinary,
-            TemplateParams->getTemplateLoc(), FPOptionsOverride());
+        FunctionTrailingRC = AssociatedConstraint(
+            BinaryOperator::Create(
+                SemaRef.Context,
+                /*lhs=*/const_cast<Expr *>(OuterRC.ConstraintExpr),
+                /*rhs=*/const_cast<Expr *>(FunctionTrailingRC.ConstraintExpr),
+                BO_LAnd, SemaRef.Context.BoolTy, VK_PRValue, OK_Ordinary,
+                TemplateParams->getTemplateLoc(), FPOptionsOverride()),
+            FunctionTrailingRC.ArgumentPackSubstitutionIndex);
     }
 
     return buildDeductionGuide(
@@ -1238,14 +1247,20 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
       // FIXME: Here the synthesized deduction guide is not a templated
       // function. Per [dcl.decl]p4, the requires-clause shall be present only
       // if the declarator declares a templated function, a bug in standard?
-      auto *Constraint = buildIsDeducibleConstraint(
-          SemaRef, AliasTemplate, Transformed->getReturnType(), {});
-      if (auto *RC = DG->getTrailingRequiresClause()) {
-        auto Conjunction =
-            SemaRef.BuildBinOp(SemaRef.getCurScope(), SourceLocation{},
-                               BinaryOperatorKind::BO_LAnd, RC, Constraint);
-        if (!Conjunction.isInvalid())
-          Constraint = Conjunction.getAs<Expr>();
+      AssociatedConstraint Constraint(
+          buildIsDeducibleConstraint(SemaRef, AliasTemplate,
+                                     Transformed->getReturnType(), {}),
+          /*ArgumentPackSubstitutionIndex=*/-1);
+      if (const AssociatedConstraint &RC = DG->getTrailingRequiresClause()) {
+        auto Conjunction = SemaRef.BuildBinOp(
+            SemaRef.getCurScope(), SourceLocation{},
+            BinaryOperatorKind::BO_LAnd, const_cast<Expr *>(RC.ConstraintExpr),
+            const_cast<Expr *>(Constraint.ConstraintExpr));
+        if (!Conjunction.isInvalid()) {
+          Constraint.ConstraintExpr = Conjunction.getAs<Expr>();
+          Constraint.ArgumentPackSubstitutionIndex =
+              RC.ArgumentPackSubstitutionIndex;
+        }
       }
       Transformed->setTrailingRequiresClause(Constraint);
       continue;

@@ -339,6 +339,37 @@ DECLARE_TABLE(float, CBRT_TBL_TAIL, 129) = {
 
 CLC_TABLE_FUNCTION(float, CBRT_TBL_TAIL, cbrt_tbl_tail);
 
+// Tabulated values of sinh(i) and cosh(i) for i = 0,...,36.
+DECLARE_TABLE(float, SINHCOSH_TBL_HEAD, 37) = {
+    0x0.000000p+0f,  0x1.2cd9fcp+0f,  0x1.d03cf6p+1f,  0x1.40926ep+3f,
+    0x1.b4a380p+4f,  0x1.28d016p+6f,  0x1.936d22p+7f,  0x1.122876p+9f,
+    0x1.749ea6p+10f, 0x1.fa7158p+11f, 0x1.5829dcp+13f, 0x1.d3c448p+14f,
+    0x1.3de166p+16f, 0x1.b00b5ap+17f, 0x1.259ac4p+19f, 0x1.8f0ccap+20f,
+    0x1.0f2ebep+22f, 0x1.709348p+23f, 0x1.f4f220p+24f, 0x1.546d90p+26f,
+    0x1.ceb088p+27f, 0x1.3a6e20p+29f, 0x1.ab5adcp+30f, 0x1.226af4p+32f,
+    0x1.8ab7fcp+33f, 0x1.0c3d3ap+35f, 0x1.6c9326p+36f, 0x1.ef8230p+37f,
+    0x1.50bba4p+39f, 0x1.c9aae4p+40f, 0x1.370470p+42f, 0x1.a6b766p+43f,
+    0x1.1f43fcp+45f, 0x1.866f34p+46f, 0x1.0953e2p+48f, 0x1.689e22p+49f,
+    0x1.ea215ap+50f,
+};
+
+CLC_TABLE_FUNCTION(float, SINHCOSH_TBL_HEAD, sinhcosh_tbl_head);
+
+DECLARE_TABLE(float, SINHCOSH_TBL_TAIL, 37) = {
+    0x1.000000p+0f,  0x1.8b0756p+0f,  0x1.e18fa0p+1f,  0x1.422a4ap+3f,
+    0x1.b4ee86p+4f,  0x1.28d6fcp+6f,  0x1.936e68p+7f,  0x1.122894p+9f,
+    0x1.749eaap+10f, 0x1.fa7158p+11f, 0x1.5829dep+13f, 0x1.d3c448p+14f,
+    0x1.3de166p+16f, 0x1.b00b5ap+17f, 0x1.259ac4p+19f, 0x1.8f0ccap+20f,
+    0x1.0f2ebep+22f, 0x1.709348p+23f, 0x1.f4f220p+24f, 0x1.546d90p+26f,
+    0x1.ceb088p+27f, 0x1.3a6e20p+29f, 0x1.ab5adcp+30f, 0x1.226af4p+32f,
+    0x1.8ab7fcp+33f, 0x1.0c3d3ap+35f, 0x1.6c9326p+36f, 0x1.ef8230p+37f,
+    0x1.50bba4p+39f, 0x1.c9aae4p+40f, 0x1.370470p+42f, 0x1.a6b766p+43f,
+    0x1.1f43fcp+45f, 0x1.866f34p+46f, 0x1.0953e2p+48f, 0x1.689e22p+49f,
+    0x1.ea215ap+50f,
+};
+
+CLC_TABLE_FUNCTION(float, SINHCOSH_TBL_TAIL, sinhcosh_tbl_tail);
+
 #ifdef cl_khr_fp64
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
@@ -1278,5 +1309,74 @@ DECLARE_TABLE(double, CBRT_REM_TBL_TAIL, 5) = {
 };
 
 CLC_TABLE_FUNCTION(double, CBRT_REM_TBL_TAIL, cbrt_rem_tbl_tail);
+
+DECLARE_TABLE(double, SINH_TBL_HEAD, 37) = {
+    0x0.0000000000000p+0,  0x1.2cd9fc0000000p+0,  0x1.d03cf60000000p+1,
+    0x1.40926e0000000p+3,  0x1.b4a3800000000p+4,  0x1.28d0160000000p+6,
+    0x1.936d228000000p+7,  0x1.1228768000000p+9,  0x1.749ea50000000p+10,
+    0x1.fa71570000000p+11, 0x1.5829dc8000000p+13, 0x1.d3c4488000000p+14,
+    0x1.3de1650000000p+16, 0x1.b00b590000000p+17, 0x1.259ac48000000p+19,
+    0x1.8f0cca8000000p+20, 0x1.0f2ebd0000000p+22, 0x1.7093488000000p+23,
+    0x1.f4f2208000000p+24, 0x1.546d8f8000000p+26, 0x1.ceb0888000000p+27,
+    0x1.3a6e1f8000000p+29, 0x1.ab5adb8000000p+30, 0x1.226af30000000p+32,
+    0x1.8ab7fb0000000p+33, 0x1.0c3d390000000p+35, 0x1.6c93268000000p+36,
+    0x1.ef822f0000000p+37, 0x1.50bba30000000p+39, 0x1.c9aae40000000p+40,
+    0x1.3704708000000p+42, 0x1.a6b7658000000p+43, 0x1.1f43fc8000000p+45,
+    0x1.866f348000000p+46, 0x1.0953e28000000p+48, 0x1.689e220000000p+49,
+    0x1.ea215a0000000p+50,
+};
+
+DECLARE_TABLE(double, SINH_TBL_TAIL, 37) = {
+    0x0.0000000000000p+0,  0x1.13ae6096a0092p-26, 0x1.db70cfb79a640p-26,
+    0x1.c2526b66dc067p-23, 0x1.b81b18647f380p-23, 0x1.bc1cdd1e1eb08p-20,
+    0x1.d9f201534fb09p-19, 0x1.d1c064a4e9954p-18, 0x1.4eca65d06ea74p-18,
+    0x1.0c259bcc0ecc5p-15, 0x1.b5a6647cf9016p-13, 0x1.9691adefb0870p-15,
+    0x1.3410fc29cde38p-10, 0x1.6a31a50b6fb3cp-11, 0x1.7defc71805c40p-10,
+    0x1.eb49fd80e0babp-6,  0x1.4fffc7bcd5920p-7,  0x1.03a93b6c63435p-3,
+    0x1.1940bb255fd1cp-4,  0x1.ed26e14260b50p-2,  0x1.b47401fc9f2a2p+0,
+    0x1.67bb3f55634f1p+3,  0x1.c435ff8194ddcp+2,  0x1.d8fee052ba63ap+5,
+    0x1.51d7edccde3f6p+7,  0x1.04b1644557d1ap+8,  0x1.6a6b5ca0a9dc4p+8,
+    0x1.fd9cc72249abap+11, 0x1.e58de693edab5p+13, 0x1.8c70158ac6363p+14,
+    0x1.7614764f43e20p+15, 0x1.6337db36fc718p+17, 0x1.12d98b1f611e2p+19,
+    0x1.392bc108b37ccp+19, 0x1.ce87bdc3473dcp+22, 0x1.bc8d5ae99ad14p+21,
+    0x1.d20d76744835cp+22,
+};
+
+DECLARE_TABLE(double, COSH_TBL_HEAD, 37) = {
+    0x1.0000000000000p+0,  0x1.8b07550000000p+0,  0x1.e18fa08000000p+1,
+    0x1.422a490000000p+3,  0x1.b4ee858000000p+4,  0x1.28d6fc8000000p+6,
+    0x1.936e678000000p+7,  0x1.1228948000000p+9,  0x1.749eaa8000000p+10,
+    0x1.fa71580000000p+11, 0x1.5829dd0000000p+13, 0x1.d3c4488000000p+14,
+    0x1.3de1650000000p+16, 0x1.b00b590000000p+17, 0x1.259ac48000000p+19,
+    0x1.8f0cca8000000p+20, 0x1.0f2ebd0000000p+22, 0x1.7093488000000p+23,
+    0x1.f4f2208000000p+24, 0x1.546d8f8000000p+26, 0x1.ceb0888000000p+27,
+    0x1.3a6e1f8000000p+29, 0x1.ab5adb8000000p+30, 0x1.226af30000000p+32,
+    0x1.8ab7fb0000000p+33, 0x1.0c3d390000000p+35, 0x1.6c93268000000p+36,
+    0x1.ef822f0000000p+37, 0x1.50bba30000000p+39, 0x1.c9aae40000000p+40,
+    0x1.3704708000000p+42, 0x1.a6b7658000000p+43, 0x1.1f43fc8000000p+45,
+    0x1.866f348000000p+46, 0x1.0953e28000000p+48, 0x1.689e220000000p+49,
+    0x1.ea215a0000000p+50,
+};
+
+DECLARE_TABLE(double, COSH_TBL_TAIL, 37) = {
+    0x0.0000000000000p+0,  0x1.d9f5504c2bd28p-28, 0x1.7cb66f0a4c9fdp-25,
+    0x1.f58617928e588p-23, 0x1.bc7d000c38d48p-25, 0x1.f7f9d4e329998p-21,
+    0x1.6e6e464885269p-19, 0x1.ba3a8b946c154p-19, 0x1.3f4e76110d5a4p-18,
+    0x1.17622515a3e2bp-15, 0x1.4dc4b528af3d0p-17, 0x1.1156278615e10p-14,
+    0x1.35ad50ed821f5p-10, 0x1.6b61055f2935cp-11, 0x1.7e2794a601240p-10,
+    0x1.eb4b45f6aadd3p-6,  0x1.5000b967b3698p-7,  0x1.03a940fadc092p-3,
+    0x1.1940bf3bf874cp-4,  0x1.ed26e1a2a2110p-2,  0x1.b4740205796d6p+0,
+    0x1.67bb3f55cb85dp+3,  0x1.c435ff81e18acp+2,  0x1.d8fee052bdea4p+5,
+    0x1.51d7edccde926p+7,  0x1.04b1644557e0ep+8,  0x1.6a6b5ca0a9e1cp+8,
+    0x1.fd9cc72249abep+11, 0x1.e58de693edab5p+13, 0x1.8c70158ac6364p+14,
+    0x1.7614764f43e20p+15, 0x1.6337db36fc718p+17, 0x1.12d98b1f611e2p+19,
+    0x1.392bc108b37ccp+19, 0x1.ce87bdc3473dcp+22, 0x1.bc8d5ae99ad14p+21,
+    0x1.d20d76744835cp+22,
+};
+
+CLC_TABLE_FUNCTION(double, SINH_TBL_HEAD, sinh_tbl_head);
+CLC_TABLE_FUNCTION(double, SINH_TBL_TAIL, sinh_tbl_tail);
+CLC_TABLE_FUNCTION(double, COSH_TBL_HEAD, cosh_tbl_head);
+CLC_TABLE_FUNCTION(double, COSH_TBL_TAIL, cosh_tbl_tail);
 
 #endif // cl_khr_fp64

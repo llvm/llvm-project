@@ -5447,10 +5447,10 @@ QualType ASTContext::getHLSLAttributedResourceType(
 /// Retrieve a substitution-result type.
 QualType ASTContext::getSubstTemplateTypeParmType(
     QualType Replacement, Decl *AssociatedDecl, unsigned Index,
-    std::optional<unsigned> PackIndex) const {
+    std::optional<unsigned> PackIndex, bool Final) const {
   llvm::FoldingSetNodeID ID;
   SubstTemplateTypeParmType::Profile(ID, Replacement, AssociatedDecl, Index,
-                                     PackIndex);
+                                     PackIndex, Final);
   void *InsertPos = nullptr;
   SubstTemplateTypeParmType *SubstParm =
       SubstTemplateTypeParmTypes.FindNodeOrInsertPos(ID, InsertPos);
@@ -5460,7 +5460,7 @@ QualType ASTContext::getSubstTemplateTypeParmType(
                              !Replacement.isCanonical()),
                          alignof(SubstTemplateTypeParmType));
     SubstParm = new (Mem) SubstTemplateTypeParmType(Replacement, AssociatedDecl,
-                                                    Index, PackIndex);
+                                                    Index, PackIndex, Final);
     Types.push_back(SubstParm);
     SubstTemplateTypeParmTypes.InsertNode(SubstParm, InsertPos);
   }
@@ -7070,6 +7070,15 @@ bool ASTContext::hasSameTemplateName(const TemplateName &X,
          getCanonicalTemplateName(Y, IgnoreDeduced);
 }
 
+bool ASTContext::isSameAssociatedConstraint(
+    const AssociatedConstraint &ACX, const AssociatedConstraint &ACY) const {
+  if (ACX.ArgumentPackSubstitutionIndex != ACY.ArgumentPackSubstitutionIndex)
+    return false;
+  if (!isSameConstraintExpr(ACX.ConstraintExpr, ACY.ConstraintExpr))
+    return false;
+  return true;
+}
+
 bool ASTContext::isSameConstraintExpr(const Expr *XCE, const Expr *YCE) const {
   if (!XCE != !YCE)
     return false;
@@ -7386,8 +7395,8 @@ bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
       return false;
     }
 
-    if (!isSameConstraintExpr(FuncX->getTrailingRequiresClause(),
-                              FuncY->getTrailingRequiresClause()))
+    if (!isSameAssociatedConstraint(FuncX->getTrailingRequiresClause(),
+                                    FuncY->getTrailingRequiresClause()))
       return false;
 
     auto GetTypeAsWritten = [](const FunctionDecl *FD) {
@@ -10090,10 +10099,10 @@ ASTContext::getDependentTemplateName(const DependentTemplateStorage &S) const {
 
 TemplateName ASTContext::getSubstTemplateTemplateParm(
     TemplateName Replacement, Decl *AssociatedDecl, unsigned Index,
-    std::optional<unsigned> PackIndex) const {
+    std::optional<unsigned> PackIndex, bool Final) const {
   llvm::FoldingSetNodeID ID;
   SubstTemplateTemplateParmStorage::Profile(ID, Replacement, AssociatedDecl,
-                                            Index, PackIndex);
+                                            Index, PackIndex, Final);
 
   void *insertPos = nullptr;
   SubstTemplateTemplateParmStorage *subst
@@ -10101,7 +10110,7 @@ TemplateName ASTContext::getSubstTemplateTemplateParm(
 
   if (!subst) {
     subst = new (*this) SubstTemplateTemplateParmStorage(
-        Replacement, AssociatedDecl, Index, PackIndex);
+        Replacement, AssociatedDecl, Index, PackIndex, Final);
     SubstTemplateTemplateParms.InsertNode(subst, insertPos);
   }
 
@@ -14202,7 +14211,8 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
     if (PackIndex != SY->getPackIndex())
       return QualType();
     return Ctx.getSubstTemplateTypeParmType(Ctx.getQualifiedType(Underlying),
-                                            CD, Index, PackIndex);
+                                            CD, Index, PackIndex,
+                                            SX->getFinal() && SY->getFinal());
   }
   case Type::ObjCTypeParam:
     // FIXME: Try to merge these.

@@ -5833,9 +5833,10 @@ static void handlePatchableFunctionEntryAttr(Sema &S, Decl *D,
     return;
   }
   uint32_t Count = 0, Offset = 0;
+  StringRef Section;
   if (!S.checkUInt32Argument(AL, AL.getArgAsExpr(0), Count, 0, true))
     return;
-  if (AL.getNumArgs() == 2) {
+  if (AL.getNumArgs() >= 2) {
     Expr *Arg = AL.getArgAsExpr(1);
     if (!S.checkUInt32Argument(AL, Arg, Offset, 1, true))
       return;
@@ -5845,8 +5846,25 @@ static void handlePatchableFunctionEntryAttr(Sema &S, Decl *D,
       return;
     }
   }
-  D->addAttr(::new (S.Context)
-                 PatchableFunctionEntryAttr(S.Context, AL, Count, Offset));
+  if (AL.getNumArgs() == 3) {
+    SourceLocation LiteralLoc;
+    if (!S.checkStringLiteralArgumentAttr(AL, 2, Section, &LiteralLoc))
+      return;
+    if (llvm::Error E = S.isValidSectionSpecifier(Section)) {
+      S.Diag(LiteralLoc,
+             diag::err_attribute_patchable_function_entry_invalid_section)
+          << toString(std::move(E));
+      return;
+    }
+    if (Section.empty()) {
+      S.Diag(LiteralLoc,
+             diag::err_attribute_patchable_function_entry_invalid_section)
+          << "section must not be empty";
+      return;
+    }
+  }
+  D->addAttr(::new (S.Context) PatchableFunctionEntryAttr(S.Context, AL, Count,
+                                                          Offset, Section));
 }
 
 static void handleBuiltinAliasAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
