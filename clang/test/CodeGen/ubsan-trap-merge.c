@@ -731,3 +731,7 @@ int m(int x, int y) {
 // TRAP-NOMERGE: attributes #[[ATTR4]] = { nomerge noreturn nounwind }
 // HANDLER-NOMERGE: attributes #[[ATTR4]] = { nomerge noreturn nounwind }
 // MINRT-NOMERGE: attributes #[[ATTR4]] = { nomerge noreturn nounwind }
+
+// TRAP-NOMERGE: [[PROF3]] = !{!"branch_weights", i32 1, i32 1048575}
+// HANDLER-NOMERGE: [[PROF3]] = !{!"branch_weights", i32 1, i32 1048575}
+// MINRT-NOMERGE: [[PROF3]] = !{!"branch_weights", i32 1, i32 1048575}
