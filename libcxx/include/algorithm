@@ -1937,9 +1937,9 @@ template <class BidirectionalIterator, class Compare>
 #    include <__algorithm/in_in_result.h>
 #    include <__algorithm/in_out_out_result.h>
 #    include <__algorithm/in_out_result.h>
-#    include <__algorithm/out_value_result.h>
 #    include <__algorithm/lexicographical_compare_three_way.h>
 #    include <__algorithm/min_max_result.h>
+#    include <__algorithm/out_value_result.h>
 #    include <__algorithm/ranges_adjacent_find.h>
 #    include <__algorithm/ranges_all_of.h>
 #    include <__algorithm/ranges_any_of.h>
