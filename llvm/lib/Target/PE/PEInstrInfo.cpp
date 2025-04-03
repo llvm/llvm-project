@@ -1,8 +1,22 @@
-#include "PE.h"
+/* --- PEInstrInfo.cpp --- */
+
+/* ------------------------------------------
+author: 高宇翔
+date: 4/1/2025
+------------------------------------------ */
+
+#include "PEInstrInfo.h"
+#include "MCTargetDesc/PEMCTargetDesc.h"
 
 using namespace llvm;
 
-PEInstrInfo::PEInstrInfo()
-    : TargetInstrInfo() {}
+#define GET_INSTRINFO_CTOR_DTOR
+#include "PEGenInstrInfo.inc"
 
-// ...existing code...
+PEInstrInfo::PEInstrInfo() : PEGenInstrInfo(){
+    // Constructor
+}
+
+PEInstrInfo::~PEInstrInfo() {
+    // Destructor
+}
