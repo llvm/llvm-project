@@ -7,13 +7,10 @@ add_clang_unittest(ParseTests
 clang_target_link_libraries(ParseTests
   PRIVATE
   clangAST
-  clangASTMatchers
   clangBasic
-  clangFrontend
+  clangLex
   clangParse
   clangSema
-  clangSerialization
-  clangTooling
   )
 target_link_libraries(ParseTests
   PRIVATE

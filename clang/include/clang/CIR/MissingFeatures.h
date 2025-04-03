@@ -76,7 +76,6 @@ struct MissingFeatures {
   static bool opScopeCleanupRegion() { return false; }
 
   // Unary operator handling
-  static bool opUnarySignedOverflow() { return false; }
   static bool opUnaryPromotionType() { return false; }
 
   // Clang early optimizations or things defered to LLVM lowering.

@@ -10330,6 +10330,7 @@ cc_library(
         ":mlir_float16_utils",
         "//llvm:Support",
     ],
+    alwayslink = True,
 )
 
 # Indirection to avoid 'libmlir_c_runner_utils.so' filename clash.
@@ -10359,6 +10360,7 @@ cc_library(
         ":mlir_c_runner_utils",
         ":mlir_float16_utils",
     ],
+    alwayslink = True,
 )
 
 # Indirection to avoid 'libmlir_runner_utils.so' filename clash.

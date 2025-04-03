@@ -386,36 +386,28 @@ define <32 x i1> @invert_i32_mask_extract_32(i32 %mask) {
 define <32 x i1> @i64_mask_extract_32(i64 %mask) {
 ; X64-AVX512-LABEL: i64_mask_extract_32:
 ; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    movq %rdi, %rax
-; X64-AVX512-NEXT:    kmovd %eax, %k0
-; X64-AVX512-NEXT:    movzbl %ah, %ecx
-; X64-AVX512-NEXT:    kmovd %ecx, %k1
-; X64-AVX512-NEXT:    kunpckbw %k0, %k1, %k0
-; X64-AVX512-NEXT:    movl %eax, %ecx
-; X64-AVX512-NEXT:    shrl $24, %ecx
-; X64-AVX512-NEXT:    kmovd %ecx, %k1
-; X64-AVX512-NEXT:    shrl $16, %eax
-; X64-AVX512-NEXT:    movzbl %al, %eax
-; X64-AVX512-NEXT:    kmovd %eax, %k2
-; X64-AVX512-NEXT:    kunpckbw %k2, %k1, %k1
-; X64-AVX512-NEXT:    kunpckwd %k0, %k1, %k0
+; X64-AVX512-NEXT:    kmovq %rdi, %k0
+; X64-AVX512-NEXT:    kshiftrd $8, %k0, %k1
+; X64-AVX512-NEXT:    kunpckbw %k0, %k1, %k1
+; X64-AVX512-NEXT:    kshiftrd $16, %k0, %k2
+; X64-AVX512-NEXT:    kshiftrd $24, %k0, %k0
+; X64-AVX512-NEXT:    kunpckbw %k2, %k0, %k0
+; X64-AVX512-NEXT:    kunpckwd %k1, %k0, %k0
 ; X64-AVX512-NEXT:    vpmovm2b %k0, %ymm0
 ; X64-AVX512-NEXT:    retq
 ;
 ; X64-KNL-LABEL: i64_mask_extract_32:
 ; X64-KNL:       # %bb.0:
-; X64-KNL-NEXT:    movq %rdi, %rax
-; X64-KNL-NEXT:    movl %eax, %ecx
+; X64-KNL-NEXT:    movl %edi, %eax
+; X64-KNL-NEXT:    shrl $16, %eax
 ; X64-KNL-NEXT:    kmovw %eax, %k0
-; X64-KNL-NEXT:    movzbl %ah, %edx
-; X64-KNL-NEXT:    # kill: def $eax killed $eax killed $rax
+; X64-KNL-NEXT:    movl %edi, %eax
 ; X64-KNL-NEXT:    shrl $24, %eax
 ; X64-KNL-NEXT:    kmovw %eax, %k1
-; X64-KNL-NEXT:    shrl $16, %ecx
-; X64-KNL-NEXT:    movzbl %cl, %eax
-; X64-KNL-NEXT:    kmovw %eax, %k2
-; X64-KNL-NEXT:    kunpckbw %k2, %k1, %k1
-; X64-KNL-NEXT:    kmovw %edx, %k2
+; X64-KNL-NEXT:    kunpckbw %k0, %k1, %k1
+; X64-KNL-NEXT:    kmovw %edi, %k0
+; X64-KNL-NEXT:    shrl $8, %edi
+; X64-KNL-NEXT:    kmovw %edi, %k2
 ; X64-KNL-NEXT:    kunpckbw %k0, %k2, %k2
 ; X64-KNL-NEXT:    vpternlogd {{.*#+}} zmm0 {%k2} {z} = -1
 ; X64-KNL-NEXT:    vpmovdb %zmm0, %xmm0
@@ -480,82 +472,56 @@ define <32 x i1> @invert_i64_mask_extract_32(i64 %mask) {
 define <64 x i1> @i64_mask_extract_64(i64 %mask) {
 ; X64-AVX512-LABEL: i64_mask_extract_64:
 ; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    movq %rdi, %rax
-; X64-AVX512-NEXT:    kmovd %eax, %k0
-; X64-AVX512-NEXT:    movzbl %ah, %ecx
-; X64-AVX512-NEXT:    kmovd %ecx, %k1
-; X64-AVX512-NEXT:    kunpckbw %k0, %k1, %k0
-; X64-AVX512-NEXT:    movl %eax, %ecx
-; X64-AVX512-NEXT:    shrl $24, %ecx
-; X64-AVX512-NEXT:    kmovd %ecx, %k1
-; X64-AVX512-NEXT:    movl %eax, %ecx
-; X64-AVX512-NEXT:    shrl $16, %ecx
-; X64-AVX512-NEXT:    movzbl %cl, %ecx
-; X64-AVX512-NEXT:    kmovd %ecx, %k2
-; X64-AVX512-NEXT:    kunpckbw %k2, %k1, %k1
-; X64-AVX512-NEXT:    kunpckwd %k0, %k1, %k0
-; X64-AVX512-NEXT:    movq %rdi, %rcx
-; X64-AVX512-NEXT:    shrq $32, %rcx
-; X64-AVX512-NEXT:    movzbl %cl, %ecx
-; X64-AVX512-NEXT:    kmovd %ecx, %k1
-; X64-AVX512-NEXT:    movq %rdi, %rcx
-; X64-AVX512-NEXT:    shrq $40, %rcx
-; X64-AVX512-NEXT:    movzbl %cl, %ecx
-; X64-AVX512-NEXT:    kmovd %ecx, %k2
+; X64-AVX512-NEXT:    kmovq %rdi, %k0
+; X64-AVX512-NEXT:    kshiftrq $32, %k0, %k1
+; X64-AVX512-NEXT:    kshiftrq $40, %k0, %k2
 ; X64-AVX512-NEXT:    kunpckbw %k1, %k2, %k1
-; X64-AVX512-NEXT:    movq %rdi, %rcx
-; X64-AVX512-NEXT:    shrq $56, %rcx
-; X64-AVX512-NEXT:    kmovd %ecx, %k2
-; X64-AVX512-NEXT:    shrq $48, %rax
-; X64-AVX512-NEXT:    movzbl %al, %eax
-; X64-AVX512-NEXT:    kmovd %eax, %k3
-; X64-AVX512-NEXT:    kunpckbw %k3, %k2, %k2
+; X64-AVX512-NEXT:    kshiftrq $48, %k0, %k2
+; X64-AVX512-NEXT:    kshiftrq $56, %k0, %k3
+; X64-AVX512-NEXT:    kunpckbw %k2, %k3, %k2
 ; X64-AVX512-NEXT:    kunpckwd %k1, %k2, %k1
+; X64-AVX512-NEXT:    kshiftrd $8, %k0, %k2
+; X64-AVX512-NEXT:    kunpckbw %k0, %k2, %k2
+; X64-AVX512-NEXT:    kshiftrd $16, %k0, %k3
+; X64-AVX512-NEXT:    kshiftrd $24, %k0, %k0
+; X64-AVX512-NEXT:    kunpckbw %k3, %k0, %k0
+; X64-AVX512-NEXT:    kunpckwd %k2, %k0, %k0
 ; X64-AVX512-NEXT:    kunpckdq %k0, %k1, %k0
 ; X64-AVX512-NEXT:    vpmovm2b %k0, %zmm0
 ; X64-AVX512-NEXT:    retq
 ;
 ; X64-KNL-LABEL: i64_mask_extract_64:
 ; X64-KNL:       # %bb.0:
-; X64-KNL-NEXT:    pushq %rbx
-; X64-KNL-NEXT:    .cfi_def_cfa_offset 16
-; X64-KNL-NEXT:    .cfi_offset %rbx, -16
-; X64-KNL-NEXT:    movq %rsi, %rcx
 ; X64-KNL-NEXT:    movq %rdi, %rax
-; X64-KNL-NEXT:    movl %ecx, %edx
-; X64-KNL-NEXT:    movq %rsi, %rdi
-; X64-KNL-NEXT:    movq %rsi, %r8
-; X64-KNL-NEXT:    movq %rsi, %r9
-; X64-KNL-NEXT:    kmovw %ecx, %k0
-; X64-KNL-NEXT:    movzbl %ch, %ebx
-; X64-KNL-NEXT:    # kill: def $ecx killed $ecx killed $rcx
-; X64-KNL-NEXT:    shrl $24, %ecx
+; X64-KNL-NEXT:    kmovw %esi, %k0
+; X64-KNL-NEXT:    movl %esi, %ecx
+; X64-KNL-NEXT:    shrl $8, %ecx
 ; X64-KNL-NEXT:    kmovw %ecx, %k1
-; X64-KNL-NEXT:    shrl $16, %edx
-; X64-KNL-NEXT:    movzbl %dl, %ecx
+; X64-KNL-NEXT:    kunpckbw %k0, %k1, %k0
+; X64-KNL-NEXT:    movl %esi, %ecx
+; X64-KNL-NEXT:    shrl $16, %ecx
+; X64-KNL-NEXT:    kmovw %ecx, %k1
+; X64-KNL-NEXT:    movl %esi, %ecx
+; X64-KNL-NEXT:    shrl $24, %ecx
 ; X64-KNL-NEXT:    kmovw %ecx, %k2
-; X64-KNL-NEXT:    shrq $32, %rsi
-; X64-KNL-NEXT:    movzbl %sil, %ecx
+; X64-KNL-NEXT:    kunpckbw %k1, %k2, %k1
+; X64-KNL-NEXT:    movq %rsi, %rcx
+; X64-KNL-NEXT:    shrq $32, %rcx
+; X64-KNL-NEXT:    kmovw %ecx, %k2
+; X64-KNL-NEXT:    movq %rsi, %rcx
+; X64-KNL-NEXT:    shrq $40, %rcx
 ; X64-KNL-NEXT:    kmovw %ecx, %k3
-; X64-KNL-NEXT:    shrq $40, %rdi
-; X64-KNL-NEXT:    movzbl %dil, %ecx
-; X64-KNL-NEXT:    kmovw %ecx, %k4
-; X64-KNL-NEXT:    kunpckbw %k2, %k1, %k1
-; X64-KNL-NEXT:    shrq $56, %r8
-; X64-KNL-NEXT:    kmovw %r8d, %k2
+; X64-KNL-NEXT:    kunpckbw %k2, %k3, %k2
+; X64-KNL-NEXT:    movq %rsi, %rcx
+; X64-KNL-NEXT:    shrq $48, %rcx
+; X64-KNL-NEXT:    kmovw %ecx, %k3
+; X64-KNL-NEXT:    shrq $56, %rsi
+; X64-KNL-NEXT:    kmovw %esi, %k4
 ; X64-KNL-NEXT:    kunpckbw %k3, %k4, %k3
-; X64-KNL-NEXT:    shrq $48, %r9
-; X64-KNL-NEXT:    movzbl %r9b, %ecx
-; X64-KNL-NEXT:    kmovw %ecx, %k4
-; X64-KNL-NEXT:    kunpckbw %k4, %k2, %k2
-; X64-KNL-NEXT:    kmovw %ebx, %k4
-; X64-KNL-NEXT:    kunpckbw %k0, %k4, %k0
-; X64-KNL-NEXT:    kmovw %k0, (%rax)
-; X64-KNL-NEXT:    kmovw %k2, 6(%rax)
-; X64-KNL-NEXT:    kmovw %k3, 4(%rax)
-; X64-KNL-NEXT:    kmovw %k1, 2(%rax)
-; X64-KNL-NEXT:    popq %rbx
-; X64-KNL-NEXT:    .cfi_def_cfa_offset 8
+; X64-KNL-NEXT:    kmovw %k3, 6(%rdi)
+; X64-KNL-NEXT:    kmovw %k2, 4(%rdi)
+; X64-KNL-NEXT:    kmovw %k1, 2(%rdi)
+; X64-KNL-NEXT:    kmovw %k0, (%rdi)
 ; X64-KNL-NEXT:    retq
   %.splatinsert = insertelement <64 x i64> poison, i64 %mask, i64 0
   %.splat = shufflevector <64 x i64> %.splatinsert, <64 x i64> poison, <64 x i32> zeroinitializer

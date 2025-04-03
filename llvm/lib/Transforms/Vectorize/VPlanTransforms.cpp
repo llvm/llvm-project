@@ -1053,15 +1053,17 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   // TODO: Split up into simpler, modular combines: (X && Y) || (X && Z) into X
   // && (Y || Z) and (X || !X) into true. This requires queuing newly created
   // recipes to be visited during simplification.
-  VPValue *X, *Y, *X1, *Y1;
+  VPValue *X, *Y;
   if (match(&R,
             m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
-                         m_LogicalAnd(m_VPValue(X1), m_Not(m_VPValue(Y1))))) &&
-      X == X1 && Y == Y1) {
+                         m_LogicalAnd(m_Deferred(X), m_Not(m_Deferred(Y)))))) {
     R.getVPSingleValue()->replaceAllUsesWith(X);
     R.eraseFromParent();
     return;
   }
+
+  if (match(&R, m_Select(m_VPValue(), m_VPValue(X), m_Deferred(X))))
+    return R.getVPSingleValue()->replaceAllUsesWith(X);
 
   if (match(&R, m_c_Mul(m_VPValue(A), m_SpecificInt(1))))
     return R.getVPSingleValue()->replaceAllUsesWith(A);
@@ -1896,6 +1898,10 @@ static VPRecipeBase *createEVLRecipe(VPValue *HeaderMask,
   using namespace llvm::VPlanPatternMatch;
   auto GetNewMask = [&](VPValue *OrigMask) -> VPValue * {
     assert(OrigMask && "Unmasked recipe when folding tail");
+    // HeaderMask will be handled using EVL.
+    VPValue *Mask;
+    if (match(OrigMask, m_LogicalAnd(m_Specific(HeaderMask), m_VPValue(Mask))))
+      return Mask;
     return HeaderMask == OrigMask ? nullptr : OrigMask;
   };
 
@@ -2277,7 +2283,7 @@ void VPlanTransforms::createInterleaveGroups(
                       : B.createPtrAdd(InsertPos->getAddr(), OffsetVPV);
     }
     auto *VPIG = new VPInterleaveRecipe(IG, Addr, StoredValues,
-                                        InsertPos->getMask(), NeedsMaskForGaps);
+                                        InsertPos->getMask(), NeedsMaskForGaps, InsertPos->getDebugLoc());
     VPIG->insertBefore(InsertPos);
 
     unsigned J = 0;

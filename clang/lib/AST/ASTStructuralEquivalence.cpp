@@ -566,7 +566,6 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     return IsStructurallyEquivalent(Context, NNS1->getAsNamespaceAlias(),
                                     NNS2->getAsNamespaceAlias());
   case NestedNameSpecifier::TypeSpec:
-  case NestedNameSpecifier::TypeSpecWithTemplate:
     return IsStructurallyEquivalent(Context, QualType(NNS1->getAsType(), 0),
                                     QualType(NNS2->getAsType(), 0));
   case NestedNameSpecifier::Global:
@@ -576,6 +575,19 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                     NNS2->getAsRecordDecl());
   }
   return false;
+}
+
+static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                                     const DependentTemplateStorage &S1,
+                                     const DependentTemplateStorage &S2) {
+  if (!IsStructurallyEquivalent(Context, S1.getQualifier(), S2.getQualifier()))
+    return false;
+
+  IdentifierOrOverloadedOperator IO1 = S1.getName(), IO2 = S2.getName();
+  const IdentifierInfo *II1 = IO1.getIdentifier(), *II2 = IO2.getIdentifier();
+  if (!II1 || !II2)
+    return IO1.getOperator() == IO2.getOperator();
+  return IsStructurallyEquivalent(II1, II2);
 }
 
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
@@ -614,19 +626,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     return TN1->getDeclName() == TN2->getDeclName();
   }
 
-  case TemplateName::DependentTemplate: {
-    DependentTemplateName *DN1 = N1.getAsDependentTemplateName(),
-                          *DN2 = N2.getAsDependentTemplateName();
-    if (!IsStructurallyEquivalent(Context, DN1->getQualifier(),
-                                  DN2->getQualifier()))
-      return false;
-    if (DN1->isIdentifier() && DN2->isIdentifier())
-      return IsStructurallyEquivalent(DN1->getIdentifier(),
-                                      DN2->getIdentifier());
-    else if (DN1->isOverloadedOperator() && DN2->isOverloadedOperator())
-      return DN1->getOperator() == DN2->getOperator();
-    return false;
-  }
+  case TemplateName::DependentTemplate:
+    return IsStructurallyEquivalent(Context, *N1.getAsDependentTemplateName(),
+                                    *N2.getAsDependentTemplateName());
 
   case TemplateName::SubstTemplateTemplateParmPack: {
     SubstTemplateTemplateParmPackStorage
@@ -1315,11 +1317,10 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   case Type::DependentTemplateSpecialization: {
     const auto *Spec1 = cast<DependentTemplateSpecializationType>(T1);
     const auto *Spec2 = cast<DependentTemplateSpecializationType>(T2);
-    if (!IsStructurallyEquivalent(Context, Spec1->getQualifier(),
-                                  Spec2->getQualifier()))
+    if (Spec1->getKeyword() != Spec2->getKeyword())
       return false;
-    if (!IsStructurallyEquivalent(Spec1->getIdentifier(),
-                                  Spec2->getIdentifier()))
+    if (!IsStructurallyEquivalent(Context, Spec1->getDependentTemplateName(),
+                                  Spec2->getDependentTemplateName()))
       return false;
     if (!IsStructurallyEquivalent(Context, Spec1->template_arguments(),
                                   Spec2->template_arguments()))

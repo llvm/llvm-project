@@ -293,8 +293,7 @@ static void setInsertPointAfterDef(IRBuilder<> &B, Instruction *I) {
 }
 
 static bool requireAssignType(Instruction *I) {
-  IntrinsicInst *Intr = dyn_cast<IntrinsicInst>(I);
-  if (Intr) {
+  if (const auto *Intr = dyn_cast<IntrinsicInst>(I)) {
     switch (Intr->getIntrinsicID()) {
     case Intrinsic::invariant_start:
     case Intrinsic::invariant_end:
@@ -725,7 +724,7 @@ Type *SPIRVEmitIntrinsics::deduceNestedTypeHelper(
   if (!Visited.insert(U).second)
     return OrigTy;
 
-  if (dyn_cast<StructType>(OrigTy)) {
+  if (isa<StructType>(OrigTy)) {
     SmallVector<Type *> Tys;
     bool Change = false;
     for (unsigned i = 0; i < U->getNumOperands(); ++i) {

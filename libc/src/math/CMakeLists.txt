@@ -62,6 +62,7 @@ add_math_entrypoint_object(atanf)
 add_math_entrypoint_object(atan2)
 add_math_entrypoint_object(atan2f)
 add_math_entrypoint_object(atan2l)
+add_math_entrypoint_object(atan2f128)
 
 add_math_entrypoint_object(atanh)
 add_math_entrypoint_object(atanhf)
