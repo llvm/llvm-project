@@ -79,7 +79,7 @@ public:
   SPIRVInstructionSelector(const SPIRVTargetMachine &TM,
                            const SPIRVSubtarget &ST,
                            const RegisterBankInfo &RBI);
-  void setupMF(MachineFunction &MF, GISelKnownBits *KB,
+  void setupMF(MachineFunction &MF, GISelValueTracking *VT,
                CodeGenCoverage *CoverageInfo, ProfileSummaryInfo *PSI,
                BlockFrequencyInfo *BFI) override;
   // Common selection code. Instruction-specific selection occurs in spvSelect.
@@ -363,13 +363,14 @@ SPIRVInstructionSelector::SPIRVInstructionSelector(const SPIRVTargetMachine &TM,
 {
 }
 
-void SPIRVInstructionSelector::setupMF(MachineFunction &MF, GISelKnownBits *KB,
+void SPIRVInstructionSelector::setupMF(MachineFunction &MF,
+                                       GISelValueTracking *VT,
                                        CodeGenCoverage *CoverageInfo,
                                        ProfileSummaryInfo *PSI,
                                        BlockFrequencyInfo *BFI) {
   MRI = &MF.getRegInfo();
   GR.setCurrentFunc(MF);
-  InstructionSelector::setupMF(MF, KB, CoverageInfo, PSI, BFI);
+  InstructionSelector::setupMF(MF, VT, CoverageInfo, PSI, BFI);
 }
 
 // Ensure that register classes correspond to pattern matching rules.
