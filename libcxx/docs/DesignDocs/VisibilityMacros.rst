@@ -75,36 +75,6 @@ Visibility Macros
   **Windows Behavior**: DLLs do not support dllimport/export on class templates.
   The macro has an empty definition on this platform.
 
-**_LIBCPP_EXTERN_TEMPLATE_TYPE_VIS**
-  Mark the member functions, typeinfo, and vtable of the type named in
-  an extern template declaration as being exported by the libc++ library.
-  This attribute must be specified on all extern class template declarations.
-
-  This macro is used to override the `_LIBCPP_TEMPLATE_VIS` attribute
-  specified on the primary template and to export the member functions produced
-  by the explicit instantiation in the dylib.
-
-  **Windows Behavior**: `extern template` and `dllexport` are fundamentally
-  incompatible *on a class template* on Windows; the former suppresses
-  instantiation, while the latter forces it. Specifying both on the same
-  declaration makes the class template be instantiated, which is not desirable
-  inside headers. This macro therefore expands to `dllimport` outside of libc++
-  but nothing inside of it (rather than expanding to `dllexport`); instead, the
-  explicit instantiations themselves are marked as exported. Note that this
-  applies *only* to extern *class* templates. Extern *function* templates obey
-  regular import/export semantics, and applying `dllexport` directly to the
-  extern template declaration (i.e. using `_LIBCPP_FUNC_VIS`) is the correct
-  thing to do for them.
-
-**_LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS**
-  Mark the member functions, typeinfo, and vtable of an explicit instantiation
-  of a class template as being exported by the libc++ library. This attribute
-  must be specified on all class template explicit instantiations.
-
-  It is only necessary to mark the explicit instantiation itself (as opposed to
-  the extern template declaration) as exported on Windows, as discussed above.
-  On all other platforms, this macro has an empty definition.
-
 **_LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS**
   Mark a symbol as hidden so it will not be exported from shared libraries. This
   is intended specifically for method templates of either classes marked with
