@@ -872,6 +872,9 @@ llvm::Error DAP::Loop() {
             continue;
           }
 
+          if (llvm::Error err = next.takeError())
+            return err;
+
           if (const protocol::Request *req =
                   std::get_if<protocol::Request>(&*next);
               req && req->command == "disconnect") {
