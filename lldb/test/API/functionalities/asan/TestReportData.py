@@ -20,7 +20,7 @@ class AsanTestReportDataCase(TestBase):
         self.asan_tests()
 
     @skipIf(oslist=no_match(["macosx"]))
-    @skipIf(bugnumber="rdar://144997976")
+    @skipIf(bugnumber="rdar://109913184&143590169")
     def test_libsanitizers_asan(self):
         try:
             self.build(make_targets=["libsanitizers"])
@@ -42,9 +42,7 @@ class AsanTestReportDataCase(TestBase):
         target = self.createTestTarget()
 
         if libsanitizers:
-            self.runCmd(
-                "env SanitizersAddress=1 MallocSanitizerZone=1 MallocSecureAllocator=0"
-            )
+            self.runCmd("env SanitizersAddress=1 MallocSanitizerZone=1")
         else:
             self.registerSanitizerLibrariesWithTarget(target)
 
