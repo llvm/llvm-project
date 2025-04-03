@@ -420,9 +420,7 @@ public:
 
   /// Returns true if vector representation of the instruction \p I
   /// requires mask.
-  bool isMaskRequired(const Instruction *I) const {
-    return MaskedOp.contains(I);
-  }
+  bool isMaskRequired(Instruction *I, bool FoldTailByMasking) const;
 
   /// Returns true if there is at least one function call in the loop which
   /// has a vectorized variant available.
