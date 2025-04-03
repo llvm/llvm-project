@@ -41,7 +41,6 @@ subnormal_config.cl
 ../../generic/lib/math/clc_exp10.cl
 ../../generic/lib/math/exp10.cl
 math/fma.cl
-../../generic/lib/math/clc_fmod.cl
 ../../generic/lib/math/fmod.cl
 ../../generic/lib/math/fract.cl
 ../../generic/lib/math/frexp.cl
@@ -65,9 +64,7 @@ math/fma.cl
 ../../generic/lib/math/pown.cl
 ../../generic/lib/math/clc_powr.cl
 ../../generic/lib/math/powr.cl
-../../generic/lib/math/clc_remainder.cl
 ../../generic/lib/math/remainder.cl
-../../generic/lib/math/clc_remquo.cl
 ../../generic/lib/math/remquo.cl
 ../../generic/lib/math/clc_rootn.cl
 ../../generic/lib/math/rootn.cl
