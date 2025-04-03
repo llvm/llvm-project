@@ -2069,24 +2069,16 @@ TargetRegionFlags TargetOp::getKernelExecFlags(Operation *capturedOp) {
   if (!isa_and_present<LoopNestOp>(capturedOp))
     return TargetRegionFlags::generic;
 
-  auto getInnermostWrapper = [](LoopNestOp loopOp, int &numWrappers) {
-    SmallVector<LoopWrapperInterface> wrappers;
-    loopOp.gatherWrappers(wrappers);
-    assert(!wrappers.empty());
+  // Get the innermost non-simd loop wrapper.
+  SmallVector<LoopWrapperInterface> loopWrappers;
+  cast<LoopNestOp>(capturedOp).gatherWrappers(loopWrappers);
+  assert(!loopWrappers.empty());
 
-    // Ignore optional SIMD leaf construct.
-    auto *wrapper = wrappers.begin();
-    if (isa<SimdOp>(wrapper))
-      wrapper = std::next(wrapper);
+  LoopWrapperInterface *innermostWrapper = loopWrappers.begin();
+  if (isa<SimdOp>(innermostWrapper))
+    innermostWrapper = std::next(innermostWrapper);
 
-    numWrappers = static_cast<int>(std::distance(wrapper, wrappers.end()));
-    return wrapper;
-  };
-
-  int numWrappers;
-  LoopWrapperInterface *innermostWrapper =
-      getInnermostWrapper(cast<LoopNestOp>(capturedOp), numWrappers);
-
+  auto numWrappers = std::distance(innermostWrapper, loopWrappers.end());
   if (numWrappers != 1 && numWrappers != 2)
     return TargetRegionFlags::generic;
 
