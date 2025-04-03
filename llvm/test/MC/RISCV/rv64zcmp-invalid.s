@@ -48,3 +48,9 @@ cm.pop {ra, x8-x9, x18-x17}, -40
 
 # CHECK-ERROR: :[[@LINE+1]]:16: error: invalid register
 cm.pop {ra, x8-f8, x18-x17}, -40
+
+# CHECK-ERROR: :[[@LINE+1]]:15: error: stack adjustment is invalid for this instruction and register list
+cm.pop {ra}, -x1
+
+# CHECK-ERROR: :[[@LINE+1]]:15: error: stack adjustment is invalid for this instruction and register list
+cm.push {ra}, x1
