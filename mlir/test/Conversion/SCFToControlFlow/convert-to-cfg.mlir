@@ -1,4 +1,9 @@
-// RUN: mlir-opt -allow-unregistered-dialect -convert-scf-to-cf -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -convert-scf-to-cf -split-input-file %s | FileCheck %s --check-prefixes=CHECK,NO-VEC
+// RUN: mlir-opt -allow-unregistered-dialect -convert-scf-to-cf="enable-vectorize-hits=true" \
+// RUN:          -split-input-file %s | FileCheck %s --check-prefixes=CHECK,VEC
+
+// VEC: #loop_vectorize = #llvm.loop_vectorize<disable = false>
+// VEC-NEXT: #[[$VEC_ATTR:.+]] = #llvm.loop_annotation<vectorize = #loop_vectorize>
 
 // CHECK-LABEL: func @simple_std_for_loop(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
 //  CHECK-NEXT:  cf.br ^bb1(%{{.*}} : index)
@@ -332,7 +337,8 @@ func.func @simple_parallel_reduce_loop(%arg0: index, %arg1: index,
   // variable and the current partially reduced value.
   // CHECK: ^[[COND]](%[[ITER:.*]]: index, %[[ITER_ARG:.*]]: f32
   // CHECK:   %[[COMP:.*]] = arith.cmpi slt, %[[ITER]], %[[UB]]
-  // CHECK:   cf.cond_br %[[COMP]], ^[[BODY:.*]], ^[[CONTINUE:.*]]
+  // NO-VEC:   cf.cond_br %[[COMP]], ^[[BODY:.*]], ^[[CONTINUE:.*]]
+  // VEC:   cf.cond_br %[[COMP]], ^[[BODY:.*]], ^[[CONTINUE:.*]] {loop_annotation = #[[$VEC_ATTR]]}
 
   // Bodies of scf.reduce operations are folded into the main loop body. The
   // result of this partial reduction is passed as argument to the condition
@@ -366,11 +372,13 @@ func.func @parallel_reduce_loop(%arg0 : index, %arg1 : index, %arg2 : index,
   // CHECK:   %[[INIT2:.*]] = arith.constant 42
   // CHECK:   cf.br ^[[COND_OUT:.*]](%{{.*}}, %[[INIT1]], %[[INIT2]]
   // CHECK: ^[[COND_OUT]](%{{.*}}: index, %[[ITER_ARG1_OUT:.*]]: f32, %[[ITER_ARG2_OUT:.*]]: i64
-  // CHECK:   cf.cond_br %{{.*}}, ^[[BODY_OUT:.*]], ^[[CONT_OUT:.*]]
+  // NO-VEC:   cf.cond_br %{{.*}}, ^[[BODY_OUT:.*]], ^[[CONT_OUT:.*]]
+  // VEC:   cf.cond_br %{{.*}}, ^[[BODY_OUT:.*]], ^[[CONT_OUT:.*]] {loop_annotation = #[[$VEC_ATTR]]}
   // CHECK: ^[[BODY_OUT]]:
   // CHECK:   cf.br ^[[COND_IN:.*]](%{{.*}}, %[[ITER_ARG1_OUT]], %[[ITER_ARG2_OUT]]
   // CHECK: ^[[COND_IN]](%{{.*}}: index, %[[ITER_ARG1_IN:.*]]: f32, %[[ITER_ARG2_IN:.*]]: i64
-  // CHECK:   cf.cond_br %{{.*}}, ^[[BODY_IN:.*]], ^[[CONT_IN:.*]]
+  // NO-VEC:   cf.cond_br %{{.*}}, ^[[BODY_IN:.*]], ^[[CONT_IN:.*]]
+  // VEC:   cf.cond_br %{{.*}}, ^[[BODY_IN:.*]], ^[[CONT_IN:.*]] {loop_annotation = #[[$VEC_ATTR]]}
   // CHECK: ^[[BODY_IN]]:
   // CHECK:   %[[REDUCE1:.*]] = arith.addf %[[ITER_ARG1_IN]], %{{.*}}
   // CHECK:   %[[REDUCE2:.*]] = arith.ori %[[ITER_ARG2_IN]], %{{.*}}
@@ -551,7 +559,8 @@ func.func @ifs_in_parallel(%arg1: index, %arg2: index, %arg3: index, %arg4: i1, 
   // CHECK:   cf.br ^[[LOOP_LATCH:.*]](%[[ARG0]] : index)
   // CHECK: ^[[LOOP_LATCH]](%[[LOOP_IV:.*]]: index):
   // CHECK:   %[[LOOP_COND:.*]] = arith.cmpi slt, %[[LOOP_IV]], %[[ARG1]] : index
-  // CHECK:   cf.cond_br %[[LOOP_COND]], ^[[LOOP_BODY:.*]], ^[[LOOP_CONT:.*]]
+  // NO-VEC:   cf.cond_br %[[LOOP_COND]], ^[[LOOP_BODY:.*]], ^[[LOOP_CONT:.*]]
+  // VEC:   cf.cond_br %[[LOOP_COND]], ^[[LOOP_BODY:.*]], ^[[LOOP_CONT:.*]] {loop_annotation = #[[$VEC_ATTR]]}
   // CHECK: ^[[LOOP_BODY]]:
   // CHECK:   cf.cond_br %[[ARG3]], ^[[IF1_THEN:.*]], ^[[IF1_CONT:.*]]
   // CHECK: ^[[IF1_THEN]]:
@@ -660,7 +669,8 @@ func.func @index_switch(%i: index, %a: i32, %b: i32, %c: i32) -> i32 {
 //       CHECK:   cf.br ^[[bb1:.*]](%[[c0]] : index)
 //       CHECK: ^[[bb1]](%[[arg0:.*]]: index):
 //       CHECK:   %[[cmpi:.*]] = arith.cmpi slt, %[[arg0]], %[[num_threads]]
-//       CHECK:   cf.cond_br %[[cmpi]], ^[[bb2:.*]], ^[[bb3:.*]]
+//       NO-VEC:   cf.cond_br %[[cmpi]], ^[[bb2:.*]], ^[[bb3:.*]]
+//       VEC:   cf.cond_br %[[cmpi]], ^[[bb2:.*]], ^[[bb3:.*]] {loop_annotation = #[[$VEC_ATTR]]}
 //       CHECK: ^[[bb2]]:
 //       CHECK:   "test.foo"(%[[arg0]])
 //       CHECK:   %[[addi:.*]] = arith.addi %[[arg0]], %[[c1]]

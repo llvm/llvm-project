@@ -38,6 +38,7 @@ namespace {
 
 struct SCFToControlFlowPass
     : public impl::SCFToControlFlowPassBase<SCFToControlFlowPass> {
+  using Base::Base;
   void runOnOperation() override;
 };
 
@@ -211,6 +212,11 @@ struct ExecuteRegionLowering : public OpRewritePattern<ExecuteRegionOp> {
 
 struct ParallelLowering : public OpRewritePattern<mlir::scf::ParallelOp> {
   using OpRewritePattern<mlir::scf::ParallelOp>::OpRewritePattern;
+
+  bool enableVectorizeHits;
+
+  ParallelLowering(mlir::MLIRContext *ctx, bool enableVectorizeHits)
+      : OpRewritePattern(ctx), enableVectorizeHits(enableVectorizeHits) {}
 
   LogicalResult matchAndRewrite(mlir::scf::ParallelOp parallelOp,
                                 PatternRewriter &rewriter) const override;
@@ -487,6 +493,13 @@ ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
     return failure();
   }
 
+  auto vecAttr = LLVM::LoopVectorizeAttr::get(
+      rewriter.getContext(),
+      /* disable */ rewriter.getBoolAttr(false), {}, {}, {}, {}, {}, {});
+  auto loopAnnotation = LLVM::LoopAnnotationAttr::get(
+      rewriter.getContext(), {}, /*vectorize=*/vecAttr, {}, {}, {}, {}, {}, {},
+      {}, {}, {}, {}, {}, {}, {});
+
   // For a parallel loop, we essentially need to create an n-dimensional loop
   // nest. We do this by translating to scf.for ops and have those lowered in
   // a further rewrite. If a parallel loop contains reductions (and thus returns
@@ -516,6 +529,11 @@ ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
       rewriter.setInsertionPointToEnd(rewriter.getInsertionBlock());
       rewriter.create<scf::YieldOp>(loc, forOp.getResults());
     }
+
+    if (enableVectorizeHits)
+      forOp->setAttr(LLVM::BrOp::getLoopAnnotationAttrName(OperationName(
+                         LLVM::BrOp::getOperationName(), getContext())),
+                     loopAnnotation);
 
     rewriter.setInsertionPointToStart(forOp.getBody());
   }
@@ -706,16 +724,18 @@ LogicalResult ForallLowering::matchAndRewrite(ForallOp forallOp,
 }
 
 void mlir::populateSCFToControlFlowConversionPatterns(
-    RewritePatternSet &patterns) {
-  patterns.add<ForallLowering, ForLowering, IfLowering, ParallelLowering,
-               WhileLowering, ExecuteRegionLowering, IndexSwitchLowering>(
+    RewritePatternSet &patterns, bool enableVectorizeHits) {
+  patterns.add<ForallLowering, ForLowering, IfLowering, WhileLowering,
+               ExecuteRegionLowering, IndexSwitchLowering>(
       patterns.getContext());
+  patterns.add<ParallelLowering>(patterns.getContext(), enableVectorizeHits);
   patterns.add<DoWhileLowering>(patterns.getContext(), /*benefit=*/2);
 }
 
 void SCFToControlFlowPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
-  populateSCFToControlFlowConversionPatterns(patterns);
+  populateSCFToControlFlowConversionPatterns(patterns,
+                                             enableVectorizeHits.getValue());
 
   // Configure conversion to lower out SCF operations.
   ConversionTarget target(getContext());

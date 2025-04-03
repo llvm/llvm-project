@@ -984,7 +984,12 @@ def ReconcileUnrealizedCastsPass : Pass<"reconcile-unrealized-casts"> {
 def SCFToControlFlowPass : Pass<"convert-scf-to-cf"> {
   let summary = "Convert SCF dialect to ControlFlow dialect, replacing structured"
                 " control flow with a CFG";
-  let dependentDialects = ["cf::ControlFlowDialect"];
+  let dependentDialects = ["cf::ControlFlowDialect", "LLVM::LLVMDialect"];
+
+  let options = [Option<"enableVectorizeHits", "enable-vectorize-hits", "bool",
+                        /*default=*/"false",
+                        "Add vectorization hints when convert SCF parallel "
+                        "loop to ControlFlow dialect">];
 }
 
 //===----------------------------------------------------------------------===//
