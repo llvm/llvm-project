@@ -1025,7 +1025,9 @@ func.func @noninteger_operation_result(%lb: index, %ub: index, %step: index, %co
     scf.yield %1, %0 : i32, f32
   }
 
+  // CHECK: [[RESULT:%.*]] = arith.select %{{.*}}, %c1_i32, [[OUTS]]#0
   %result = arith.select %cond, %c1_i32, %outs#0 : i32
+  // CHECK: "use"([[RESULT]])
   "use"(%result) : (i32) -> ()
   return
 }
