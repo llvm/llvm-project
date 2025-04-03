@@ -1457,7 +1457,6 @@ bool CursorVisitor::VisitNestedNameSpecifier(NestedNameSpecifier *NNS,
     break;
   }
 
-  case NestedNameSpecifier::TypeSpecWithTemplate:
   case NestedNameSpecifier::Global:
   case NestedNameSpecifier::Identifier:
   case NestedNameSpecifier::Super:
@@ -1492,7 +1491,6 @@ bool CursorVisitor::VisitNestedNameSpecifierLoc(
       break;
 
     case NestedNameSpecifier::TypeSpec:
-    case NestedNameSpecifier::TypeSpecWithTemplate:
       if (Visit(Q.getTypeLoc()))
         return true;
 
