@@ -56,6 +56,13 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
     return mlir::success();
 
   switch (s->getStmtClass()) {
+  case Stmt::BreakStmtClass:
+  case Stmt::CompoundStmtClass:
+  case Stmt::ContinueStmtClass:
+  case Stmt::DeclStmtClass:
+  case Stmt::ReturnStmtClass:
+    llvm_unreachable("should have emitted these statements as simple");
+
 
 #define STMT(Type, Base)
 #define ABSTRACT_STMT(Op)
@@ -88,13 +95,9 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::SEHFinallyStmtClass:
   case Stmt::MSDependentExistsStmtClass:
   case Stmt::NullStmtClass:
-  case Stmt::CompoundStmtClass:
-  case Stmt::DeclStmtClass:
   case Stmt::LabelStmtClass:
   case Stmt::AttributedStmtClass:
   case Stmt::GotoStmtClass:
-  case Stmt::BreakStmtClass:
-  case Stmt::ContinueStmtClass:
   case Stmt::DefaultStmtClass:
   case Stmt::CaseStmtClass:
   case Stmt::SEHLeaveStmtClass:
@@ -106,7 +109,6 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::CXXTryStmtClass:
   case Stmt::CXXForRangeStmtClass:
   case Stmt::IndirectGotoStmtClass:
-  case Stmt::ReturnStmtClass:
   case Stmt::GCCAsmStmtClass:
   case Stmt::MSAsmStmtClass:
   case Stmt::OMPParallelDirectiveClass:
@@ -219,7 +221,6 @@ mlir::LogicalResult CIRGenFunction::emitSimpleStmt(const Stmt *s,
                                                    bool useCurrentScope) {
   switch (s->getStmtClass()) {
   default:
-    // Only compound and return statements are supported right now.
     return mlir::failure();
   case Stmt::DeclStmtClass:
     return emitDeclStmt(cast<DeclStmt>(*s));
