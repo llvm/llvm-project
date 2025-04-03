@@ -844,6 +844,8 @@ public:
 
   bool isUImm9Lsb000() const { return isUImmShifted<6, 3>(); }
 
+  bool isUImm14Lsb00() const { return isUImmShifted<12, 2>(); }
+
   bool isUImm10Lsb00NonZero() const {
     return isUImmPred(
         [](int64_t Imm) { return isShiftedUInt<8, 2>(Imm) && (Imm != 0); });
@@ -1521,6 +1523,10 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 10) - 1);
   case Match_InvalidUImm11:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 11) - 1);
+  case Match_InvalidUImm14Lsb00:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, 0, (1 << 14) - 4,
+        "immediate must be a multiple of 4 bytes in the range");
   case Match_InvalidUImm16NonZero:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 1, (1 << 16) - 1);
   case Match_InvalidSImm12:
