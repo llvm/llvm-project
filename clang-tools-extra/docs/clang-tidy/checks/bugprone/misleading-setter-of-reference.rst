@@ -6,7 +6,7 @@ bugprone-misleading-setter-of-reference
 Finds setter-like member functions that take a pointer parameter and set a
 (non-const) reference member of the same class with the pointed value.
 
-The factthat a setter function takes a pointer might cause the belief that an
+The fact that a setter function takes a pointer might cause the belief that an
 internal reference (if it would be a pointer) is changed instead of the
 pointed-to (or referenced) value.
 
