@@ -3,7 +3,7 @@
 ; DeadArgumentElimination should respect the function address space
 ; in the data layout.
 
-target datalayout = "e-P1-p:16:8-i8:8-i16:8-i32:8-i64:8-f32:8-f64:8-n8-a:8"
+target datalayout = "e-P1-p0:16:8-p1:16:8-i8:8-i16:8-i32:8-i64:8-f32:8-f64:8-n8-a:8"
 
 ; CHECK: define internal i32 @foo() addrspace(1)
 define internal i32 @foo(i32 %x) #0 {

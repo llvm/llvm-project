@@ -11,7 +11,7 @@
 ; This would cause a load of uninitialized memory, not even
 ; touching the program's machine code as otherwise desired.
 
-target datalayout = "e-P1-p:16:8-i8:8-i16:8-i32:8-i64:8-f32:8-f64:8-n8-a:8"
+target datalayout = "e-P1-p0:16:8-p1:16:8-i8:8-i16:8-i32:8-i64:8-f32:8-f64:8-n8-a:8"
 
 ; CHECK-LABEL: load_with_no_forward_reference
 define i8 @load_with_no_forward_reference(i8 %a, i8 %b) {
