@@ -306,6 +306,7 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
     return true;
   };
   IndexOpts.CollectMainFileRefs = true;
+  IndexOpts.StoreAllDocumentation = false;
 
   IndexFileIn Index;
   auto Action = createStaticIndexingAction(
