@@ -401,11 +401,11 @@ protected:
 
 public:
   std::vector<MCInstReference>
-  getLastClobberingInsts(const MCInst Ret, BinaryFunction &BF,
-                         const ArrayRef<MCPhysReg> UsedDirtyRegs) const {
+  getLastClobberingInsts(const MCInst &Inst, BinaryFunction &BF,
+                         const ArrayRef<MCPhysReg> UsedDirtyRegs) {
     if (RegsToTrackInstsFor.empty())
       return {};
-    auto MaybeState = getStateAt(Ret);
+    auto MaybeState = getStateBefore(Inst);
     if (!MaybeState)
       llvm_unreachable("Expected State to be present");
     const State &S = *MaybeState;
@@ -453,6 +453,29 @@ shouldReportReturnGadget(const BinaryContext &BC, const MCInstReference &Inst,
   return std::make_shared<GadgetReport>(RetKind, Inst, RetReg);
 }
 
+static std::shared_ptr<Report>
+shouldReportCallGadget(const BinaryContext &BC, const MCInstReference &Inst,
+                       const State &S) {
+  static const GadgetKind CallKind("non-protected call found");
+  if (!BC.MIB->isCall(Inst) && !BC.MIB->isBranch(Inst))
+    return nullptr;
+
+  bool IsAuthenticated = false;
+  MCPhysReg DestReg = BC.MIB->getRegUsedAsCallDest(Inst, IsAuthenticated);
+  if (IsAuthenticated || DestReg == BC.MIB->getNoRegister())
+    return nullptr;
+
+  LLVM_DEBUG({
+    traceInst(BC, "Found call inst", Inst);
+    traceReg(BC, "Call destination reg", DestReg);
+    traceRegMask(BC, "SafeToDerefRegs", S.SafeToDerefRegs);
+  });
+  if (S.SafeToDerefRegs[DestReg])
+    return nullptr;
+
+  return std::make_shared<GadgetReport>(CallKind, Inst, DestReg);
+}
+
 FunctionAnalysisResult
 Analysis::findGadgets(BinaryFunction &BF,
                       MCPlusBuilder::AllocatorIdTy AllocatorId) {
@@ -469,7 +492,7 @@ Analysis::findGadgets(BinaryFunction &BF,
   for (BinaryBasicBlock &BB : BF) {
     for (int64_t I = 0, E = BB.size(); I < E; ++I) {
       MCInstReference Inst(&BB, I);
-      const State &S = *PRA.getStateAt(Inst);
+      const State &S = *PRA.getStateBefore(Inst);
 
       // If non-empty state was never propagated from the entry basic block
       // to Inst, assume it to be unreachable and report a warning.
@@ -480,6 +503,12 @@ Analysis::findGadgets(BinaryFunction &BF,
       }
 
       if (auto Report = shouldReportReturnGadget(BC, Inst, S))
+        Result.Diagnostics.push_back(Report);
+
+      if (PacRetGadgetsOnly)
+        continue;
+
+      if (auto Report = shouldReportCallGadget(BC, Inst, S))
         Result.Diagnostics.push_back(Report);
     }
   }
