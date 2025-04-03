@@ -33,8 +33,8 @@ namespace {
 struct SPIRVEmitNonSemanticDI : public MachineFunctionPass {
   static char ID;
   SPIRVTargetMachine *TM;
-  SPIRVEmitNonSemanticDI(SPIRVTargetMachine *TM);
-  SPIRVEmitNonSemanticDI();
+  SPIRVEmitNonSemanticDI(SPIRVTargetMachine *TM = nullptr)
+      : MachineFunctionPass(ID), TM(TM) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -52,15 +52,6 @@ char SPIRVEmitNonSemanticDI::ID = 0;
 MachineFunctionPass *
 llvm::createSPIRVEmitNonSemanticDIPass(SPIRVTargetMachine *TM) {
   return new SPIRVEmitNonSemanticDI(TM);
-}
-
-SPIRVEmitNonSemanticDI::SPIRVEmitNonSemanticDI(SPIRVTargetMachine *TM)
-    : MachineFunctionPass(ID), TM(TM) {
-  initializeSPIRVEmitNonSemanticDIPass(*PassRegistry::getPassRegistry());
-}
-
-SPIRVEmitNonSemanticDI::SPIRVEmitNonSemanticDI() : MachineFunctionPass(ID) {
-  initializeSPIRVEmitNonSemanticDIPass(*PassRegistry::getPassRegistry());
 }
 
 enum BaseTypeAttributeEncoding {

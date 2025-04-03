@@ -15659,10 +15659,13 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   auto FPTL = NewCallOpTSI->getTypeLoc().getAsAdjusted<FunctionProtoTypeLoc>();
   assert(FPTL && "Not a FunctionProtoType?");
 
+  AssociatedConstraint TRC = E->getCallOperator()->getTrailingRequiresClause();
+  if (TRC.ArgumentPackSubstitutionIndex == -1)
+    TRC.ArgumentPackSubstitutionIndex = SemaRef.ArgumentPackSubstitutionIndex;
+
   getSema().CompleteLambdaCallOperator(
       NewCallOperator, E->getCallOperator()->getLocation(),
-      E->getCallOperator()->getInnerLocStart(),
-      E->getCallOperator()->getTrailingRequiresClause(), NewCallOpTSI,
+      E->getCallOperator()->getInnerLocStart(), TRC, NewCallOpTSI,
       E->getCallOperator()->getConstexprKind(),
       E->getCallOperator()->getStorageClass(), FPTL.getParams(),
       E->hasExplicitResultType());

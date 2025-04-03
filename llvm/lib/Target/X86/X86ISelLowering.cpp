@@ -43827,69 +43827,6 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
       }
       break;
     }
-    case X86ISD::VPERMV: {
-      SmallVector<int, 16> Mask;
-      SmallVector<SDValue, 2> Ops;
-      if ((VT.is256BitVector() || Subtarget.hasVLX()) &&
-          getTargetShuffleMask(Op, /*AllowSentinelZero=*/false, Ops, Mask)) {
-        // For lane-crossing shuffles, only split in half in case we're still
-        // referencing higher elements.
-        unsigned HalfElts = NumElts / 2;
-        unsigned HalfSize = SizeInBits / 2;
-        Mask.resize(HalfElts);
-        if (all_of(Mask,
-                   [&](int M) { return isUndefOrInRange(M, 0, HalfElts); })) {
-          MVT HalfVT = VT.getSimpleVT().getHalfNumVectorElementsVT();
-          SDLoc DL(Op);
-          SDValue Ext;
-          SDValue M =
-              extractSubVector(Op.getOperand(0), 0, TLO.DAG, DL, HalfSize);
-          SDValue V =
-              extractSubVector(Op.getOperand(1), 0, TLO.DAG, DL, HalfSize);
-          // For 128-bit v2X64/v4X32 instructions, use VPERMILPD/VPERMILPS.
-          if (VT.is512BitVector() || VT.getScalarSizeInBits() <= 16)
-            Ext = TLO.DAG.getNode(Opc, DL, HalfVT, M, V);
-          else
-            Ext = TLO.DAG.getNode(X86ISD::VPERMILPV, DL, HalfVT, V, M);
-          SDValue Insert = widenSubVector(Ext, /*ZeroNewElements=*/false,
-                                          Subtarget, TLO.DAG, DL, SizeInBits);
-          return TLO.CombineTo(Op, Insert);
-        }
-      }
-      break;
-    }
-    case X86ISD::VPERMV3: {
-      SmallVector<int, 16> Mask;
-      SmallVector<SDValue, 2> Ops;
-      if (Subtarget.hasVLX() &&
-          getTargetShuffleMask(Op, /*AllowSentinelZero=*/false, Ops, Mask)) {
-        // For lane-crossing shuffles, only split in half in case we're still
-        // referencing higher elements.
-        unsigned HalfElts = NumElts / 2;
-        unsigned HalfSize = SizeInBits / 2;
-        Mask.resize(HalfElts);
-        if (all_of(Mask, [&](int M) {
-              return isUndefOrInRange(M, 0, HalfElts) ||
-                     isUndefOrInRange(M, NumElts, NumElts + HalfElts);
-            })) {
-          // Adjust mask elements for 2nd operand to point to half width.
-          for (int &M : Mask)
-            M = M <= NumElts ? M : (M - HalfElts);
-          MVT HalfVT = VT.getSimpleVT().getHalfNumVectorElementsVT();
-          MVT HalfIntVT = HalfVT.changeVectorElementTypeToInteger();
-          SDLoc DL(Op);
-          SDValue Ext = TLO.DAG.getNode(
-              Opc, DL, HalfVT,
-              extractSubVector(Op.getOperand(0), 0, TLO.DAG, DL, HalfSize),
-              getConstVector(Mask, HalfIntVT, TLO.DAG, DL, /*IsMask=*/true),
-              extractSubVector(Op.getOperand(2), 0, TLO.DAG, DL, HalfSize));
-          SDValue Insert = widenSubVector(Ext, /*ZeroNewElements=*/false,
-                                          Subtarget, TLO.DAG, DL, SizeInBits);
-          return TLO.CombineTo(Op, Insert);
-        }
-      }
-      break;
-    }
     case X86ISD::VPERM2X128: {
       // Simplify VPERM2F128/VPERM2I128 to extract_subvector.
       SDLoc DL(Op);

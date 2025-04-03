@@ -2912,6 +2912,14 @@ public:
   ///
   /// Use of 'requires' isn't mandatory, works with constraints expressed in
   /// other ways too.
+  bool isSameAssociatedConstraint(const AssociatedConstraint &ACX,
+                                  const AssociatedConstraint &ACY) const;
+
+  /// Determine whether two 'requires' expressions are similar enough that they
+  /// may be used in re-declarations.
+  ///
+  /// Use of 'requires' isn't mandatory, works with constraints expressed in
+  /// other ways too.
   bool isSameConstraintExpr(const Expr *XCE, const Expr *YCE) const;
 
   /// Determine whether two type contraint are similar enough that they could

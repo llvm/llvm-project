@@ -385,6 +385,8 @@ Bug Fixes to C++ Support
 - Improved fix for an issue with pack expansions of type constraints, where this
   now also works if the constraint has non-type or template template parameters.
   (#GH131798)
+- Fix crash when evaluating the trailing requires clause of generic lambdas which are part of
+  a pack expansion.
 - Fixes matching of nested template template parameters. (#GH130362)
 - Correctly diagnoses template template paramters which have a pack parameter
   not in the last position.
