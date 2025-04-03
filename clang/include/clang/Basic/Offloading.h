@@ -173,13 +173,16 @@ static inline bool IsAMDOffloadArch(OffloadArch A) {
   return A >= OffloadArch::GFX600 && A < OffloadArch::Generic;
 }
 
+static inline bool IsIntelOffloadArch(OffloadArch Arch) {
+  return Arch >= OffloadArch::SKYLAKEAVX512 && Arch < OffloadArch::LAST;
+}
+
 static inline bool IsIntelCPUArch(OffloadArch Arch) {
-  return Arch >= OffloadArch::SKYLAKEAVX512 &&
-         Arch <= OffloadArch::GRANITERAPIDS;
+  return Arch >= OffloadArch::SKYLAKEAVX512 && Arch < OffloadArch::BDW;
 }
 
 static inline bool IsIntelGPUArch(OffloadArch Arch) {
-  return Arch >= OffloadArch::BDW && Arch <= OffloadArch::LNL_M;
+  return Arch >= OffloadArch::BDW && Arch < OffloadArch::LAST;
 }
 
 const char *OffloadArchToString(OffloadArch A);
