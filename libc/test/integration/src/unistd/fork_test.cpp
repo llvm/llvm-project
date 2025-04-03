@@ -159,7 +159,7 @@ void gettid_test() {
   ASSERT_EQ(WEXITSTATUS(status), 0);
 }
 
-TEST_MAIN(int argc, char **argv, char **envp) {
+TEST_MAIN(int /*argc*/, char ** /*argv*/, char ** /*envp*/) {
   gettid_test();
   fork_and_wait_normal_exit();
   fork_and_wait4_normal_exit();
