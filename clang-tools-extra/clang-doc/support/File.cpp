@@ -28,9 +28,8 @@ llvm::Error copyFile(llvm::StringRef FilePath, llvm::StringRef OutDirectory) {
   return llvm::Error::success();
 }
 
-
-llvm::SmallString<128> 
-computeRelativePath(llvm::StringRef Destination, llvm::StringRef Origin) {
+llvm::SmallString<128> computeRelativePath(llvm::StringRef Destination,
+                                           llvm::StringRef Origin) {
   // If Origin is empty, the relative path to the Destination is its complete
   // path.
   if (Origin.empty())
