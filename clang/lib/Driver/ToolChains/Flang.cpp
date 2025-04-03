@@ -158,7 +158,8 @@ void Flang::addCodegenOptions(const ArgList &Args,
     CmdArgs.push_back("-fversion-loops-for-stride");
 
   Args.addAllArgs(CmdArgs,
-                  {options::OPT_flang_experimental_hlfir,
+                  {options::OPT_fdo_concurrent_to_openmp_EQ,
+                   options::OPT_flang_experimental_hlfir,
                    options::OPT_flang_deprecated_no_hlfir,
                    options::OPT_fno_ppc_native_vec_elem_order,
                    options::OPT_fppc_native_vec_elem_order,

@@ -936,7 +936,8 @@ def PatchableFunctionEntry
            "riscv64", "x86", "x86_64", "ppc", "ppc64"]>> {
   let Spellings = [GCC<"patchable_function_entry">];
   let Subjects = SubjectList<[Function, ObjCMethod]>;
-  let Args = [UnsignedArgument<"Count">, DefaultIntArgument<"Offset", 0>];
+  let Args = [UnsignedArgument<"Count">, DefaultIntArgument<"Offset", 0>,
+              StringArgument<"Section", /* optional */ 1>];
   let Documentation = [PatchableFunctionEntryDocs];
 }
 
@@ -4707,6 +4708,25 @@ def Error : InheritableAttr {
   let Args = [StringArgument<"UserDiagnostic">];
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let Documentation = [ErrorAttrDocs];
+}
+
+def HLSLRootSignature : Attr {
+  /// [RootSignature(Signature)]
+  let Spellings = [Microsoft<"RootSignature">];
+  let Args = [StringArgument<"Signature">];
+  let Subjects = SubjectList<[Function],
+                             ErrorDiag, "'function'">;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLRootSignatureDocs];
+  let AdditionalMembers = [{
+private:
+  ArrayRef<llvm::hlsl::rootsig::RootElement> RootElements;
+public:
+  void setElements(ArrayRef<llvm::hlsl::rootsig::RootElement> Elements) {
+    RootElements = Elements;
+  }
+  auto getElements() const { return RootElements; }
+}];
 }
 
 def HLSLNumThreads: InheritableAttr {

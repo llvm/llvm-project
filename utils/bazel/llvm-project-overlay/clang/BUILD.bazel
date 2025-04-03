@@ -72,6 +72,13 @@ gentbl_cc_library(
             ],
             "include/clang/Basic/Diagnostic%sEnums.inc" % c,
         ),
+        (
+            [
+                "-gen-clang-diags-compat-ids",
+                "-clang-component=%s" % c,
+            ],
+            "include/clang/Basic/Diagnostic%sCompatIDs.inc" % c,
+        ),
     ]] + [
         (
             ["-gen-clang-diag-groups"],
@@ -80,6 +87,10 @@ gentbl_cc_library(
         (
             ["-gen-clang-diags-index-name"],
             "include/clang/Basic/DiagnosticIndexName.inc",
+        ),
+        (
+            ["-gen-clang-diags-compat-ids"],
+            "include/clang/Basic/DiagnosticAllCompatIDs.inc",
         ),
     ],
     tblgen = ":clang-tblgen",
