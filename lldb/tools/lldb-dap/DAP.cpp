@@ -162,7 +162,7 @@ void DAP::PopulateExceptionBreakpoints() {
   });
 }
 
-ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const std::string &filter) {
+ExceptionBreakpoint *DAP::GetExceptionBreakpoint(llvm::StringRef filter) {
   // PopulateExceptionBreakpoints() is called after g_dap.debugger is created
   // in a request-initialize.
   //
@@ -181,7 +181,7 @@ ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const std::string &filter) {
   PopulateExceptionBreakpoints();
 
   for (auto &bp : *exception_breakpoints) {
-    if (bp.filter == filter)
+    if (bp.GetFilter() == filter)
       return &bp;
   }
   return nullptr;
@@ -192,7 +192,7 @@ ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const lldb::break_id_t bp_id) {
   PopulateExceptionBreakpoints();
 
   for (auto &bp : *exception_breakpoints) {
-    if (bp.bp.GetID() == bp_id)
+    if (bp.GetID() == bp_id)
       return &bp;
   }
   return nullptr;
@@ -1066,7 +1066,7 @@ void DAP::SetThreadFormat(llvm::StringRef format) {
 InstructionBreakpoint *
 DAP::GetInstructionBreakpoint(const lldb::break_id_t bp_id) {
   for (auto &bp : instruction_breakpoints) {
-    if (bp.second.bp.GetID() == bp_id)
+    if (bp.second.GetID() == bp_id)
       return &bp.second;
   }
   return nullptr;

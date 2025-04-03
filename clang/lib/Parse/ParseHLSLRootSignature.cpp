@@ -15,6 +15,8 @@ using namespace llvm::hlsl::rootsig;
 namespace clang {
 namespace hlsl {
 
+using TokenKind = RootSignatureToken::Kind;
+
 RootSignatureParser::RootSignatureParser(SmallVector<RootElement> &Elements,
                                          RootSignatureLexer &Lexer,
                                          Preprocessor &PP)
@@ -26,7 +28,7 @@ bool RootSignatureParser::parse() {
     // Dispatch onto parser method.
     // We guard against the unreachable here as we just ensured that CurToken
     // will be one of the kinds in the while condition
-    switch (CurToken.Kind) {
+    switch (CurToken.TokKind) {
     case TokenKind::kw_DescriptorTable:
       if (parseDescriptorTable())
         return true;
@@ -49,13 +51,13 @@ bool RootSignatureParser::parse() {
 }
 
 bool RootSignatureParser::parseDescriptorTable() {
-  assert(CurToken.Kind == TokenKind::kw_DescriptorTable &&
+  assert(CurToken.TokKind == TokenKind::kw_DescriptorTable &&
          "Expects to only be invoked starting at given keyword");
 
   DescriptorTable Table;
 
   if (consumeExpectedToken(TokenKind::pu_l_paren, diag::err_expected_after,
-                           CurToken.Kind))
+                           CurToken.TokKind))
     return true;
 
   // Iterate as many Clauses as possible
@@ -82,14 +84,14 @@ bool RootSignatureParser::parseDescriptorTable() {
 }
 
 bool RootSignatureParser::parseDescriptorTableClause() {
-  assert((CurToken.Kind == TokenKind::kw_CBV ||
-          CurToken.Kind == TokenKind::kw_SRV ||
-          CurToken.Kind == TokenKind::kw_UAV ||
-          CurToken.Kind == TokenKind::kw_Sampler) &&
+  assert((CurToken.TokKind == TokenKind::kw_CBV ||
+          CurToken.TokKind == TokenKind::kw_SRV ||
+          CurToken.TokKind == TokenKind::kw_UAV ||
+          CurToken.TokKind == TokenKind::kw_Sampler) &&
          "Expects to only be invoked starting at given keyword");
 
   DescriptorTableClause Clause;
-  switch (CurToken.Kind) {
+  switch (CurToken.TokKind) {
   default:
     llvm_unreachable("Switch for consumed token was not provided");
   case TokenKind::kw_CBV:
@@ -107,11 +109,11 @@ bool RootSignatureParser::parseDescriptorTableClause() {
   }
 
   if (consumeExpectedToken(TokenKind::pu_l_paren, diag::err_expected_after,
-                           CurToken.Kind))
+                           CurToken.TokKind))
     return true;
 
   if (consumeExpectedToken(TokenKind::pu_r_paren, diag::err_expected_after,
-                           CurToken.Kind))
+                           CurToken.TokKind))
     return true;
 
   Elements.push_back(Clause);
@@ -124,7 +126,7 @@ bool RootSignatureParser::peekExpectedToken(TokenKind Expected) {
 
 bool RootSignatureParser::peekExpectedToken(ArrayRef<TokenKind> AnyExpected) {
   RootSignatureToken Result = Lexer.PeekNextToken();
-  return llvm::is_contained(AnyExpected, Result.Kind);
+  return llvm::is_contained(AnyExpected, Result.TokKind);
 }
 
 bool RootSignatureParser::consumeExpectedToken(TokenKind Expected,

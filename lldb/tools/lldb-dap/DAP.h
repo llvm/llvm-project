@@ -236,7 +236,7 @@ struct DAP {
   void operator=(const DAP &rhs) = delete;
   /// @}
 
-  ExceptionBreakpoint *GetExceptionBreakpoint(const std::string &filter);
+  ExceptionBreakpoint *GetExceptionBreakpoint(llvm::StringRef filter);
   ExceptionBreakpoint *GetExceptionBreakpoint(const lldb::break_id_t bp_id);
 
   /// Redirect stdout and stderr fo the IDE's console output.

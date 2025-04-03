@@ -49,4 +49,9 @@ UEFI
 | Tristan Ross
 | tristan.ross\@midstall.com (email), `RossComputerGuy <https://github.com/RossComputerGuy>`_ (github)
 
+RISC-V
+------
+| Mikhail R. Gadelha
+| mikhail\@igalia.com (email), `mikhailramalho <https://github.com/mikhailramalho>`_ (github)
+
 .. TODO: add "Inactive Maintainers" section when needed.

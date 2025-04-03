@@ -3048,7 +3048,7 @@ static SPIRVType *getInlineSpirvType(const TargetExtType *ExtensionType,
   auto Opcode = ExtensionType->getIntParameter(0);
 
   SmallVector<MCOperand> Operands;
-  for (llvm::Type *Param : ExtensionType->type_params()) {
+  for (Type *Param : ExtensionType->type_params()) {
     if (const TargetExtType *ParamEType = dyn_cast<TargetExtType>(Param)) {
       if (ParamEType->getName() == "spirv.IntegralConstant") {
         assert(ParamEType->getNumTypeParameters() == 1 &&
