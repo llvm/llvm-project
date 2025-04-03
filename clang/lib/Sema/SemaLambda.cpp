@@ -292,7 +292,8 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     DataMember,
     InlineVariable,
     TemplatedVariable,
-    Concept
+    Concept,
+    NonInlineInModulePurview
   } Kind = Normal;
 
   bool IsInNonspecializedTemplate =
@@ -301,29 +302,50 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
   // Default arguments of member function parameters that appear in a class
   // definition, as well as the initializers of data members, receive special
   // treatment. Identify them.
-  if (ManglingContextDecl) {
+  Kind = [&]() {
+    if (!ManglingContextDecl)
+      return Normal;
+
+    if (auto *ND = dyn_cast<NamedDecl>(ManglingContextDecl)) {
+      // See discussion in https://github.com/itanium-cxx-abi/cxx-abi/issues/186
+      //
+      // zygoloid:
+      //    Yeah, I think the only cases left where lambdas don't need a
+      //    mangling are when they have (effectively) internal linkage or appear
+      //    in a non-inline function in a non-module translation unit.
+      Module *M = ManglingContextDecl->getOwningModule();
+      if (M && M->getTopLevelModule()->isNamedModuleUnit() &&
+          ND->isExternallyVisible())
+        return NonInlineInModulePurview;
+    }
+
     if (ParmVarDecl *Param = dyn_cast<ParmVarDecl>(ManglingContextDecl)) {
       if (const DeclContext *LexicalDC
           = Param->getDeclContext()->getLexicalParent())
         if (LexicalDC->isRecord())
-          Kind = DefaultArgument;
+          return DefaultArgument;
     } else if (VarDecl *Var = dyn_cast<VarDecl>(ManglingContextDecl)) {
       if (Var->getMostRecentDecl()->isInline())
-        Kind = InlineVariable;
-      else if (Var->getDeclContext()->isRecord() && IsInNonspecializedTemplate)
-        Kind = TemplatedVariable;
-      else if (Var->getDescribedVarTemplate())
-        Kind = TemplatedVariable;
-      else if (auto *VTS = dyn_cast<VarTemplateSpecializationDecl>(Var)) {
+        return InlineVariable;
+
+      if (Var->getDeclContext()->isRecord() && IsInNonspecializedTemplate)
+        return TemplatedVariable;
+
+      if (Var->getDescribedVarTemplate())
+        return TemplatedVariable;
+
+      if (auto *VTS = dyn_cast<VarTemplateSpecializationDecl>(Var)) {
         if (!VTS->isExplicitSpecialization())
-          Kind = TemplatedVariable;
+          return TemplatedVariable;
       }
     } else if (isa<FieldDecl>(ManglingContextDecl)) {
-      Kind = DataMember;
+      return DataMember;
     } else if (isa<ImplicitConceptSpecializationDecl>(ManglingContextDecl)) {
-      Kind = Concept;
+      return Concept;
     }
-  }
+
+    return Normal;
+  }();
 
   // Itanium ABI [5.1.7]:
   //   In the following contexts [...] the one-definition rule requires closure
@@ -342,6 +364,7 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     return std::make_tuple(nullptr, nullptr);
   }
 
+  case NonInlineInModulePurview:
   case Concept:
     // Concept definitions aren't code generated and thus aren't mangled,
     // however the ManglingContextDecl is important for the purposes of
@@ -2387,6 +2410,74 @@ static FunctionDecl *getPatternFunctionDecl(FunctionDecl *FD) {
     FTD = FTD->getInstantiatedFromMemberTemplate();
 
   return FTD->getTemplatedDecl();
+}
+
+bool Sema::addInstantiatedCapturesToScope(
+    FunctionDecl *Function, const FunctionDecl *PatternDecl,
+    LocalInstantiationScope &Scope,
+    const MultiLevelTemplateArgumentList &TemplateArgs) {
+  const auto *LambdaClass = cast<CXXMethodDecl>(Function)->getParent();
+  const auto *LambdaPattern = cast<CXXMethodDecl>(PatternDecl)->getParent();
+
+  unsigned Instantiated = 0;
+
+  // FIXME: This is a workaround for not having deferred lambda body
+  // instantiation.
+  // When transforming a lambda's body, if we encounter another call to a
+  // nested lambda that contains a constraint expression, we add all of the
+  // outer lambda's instantiated captures to the current instantiation scope to
+  // facilitate constraint evaluation. However, these captures don't appear in
+  // the CXXRecordDecl until after the lambda expression is rebuilt, so we
+  // pull them out from the corresponding LSI.
+  LambdaScopeInfo *InstantiatingScope = nullptr;
+  if (LambdaPattern->capture_size() && !LambdaClass->capture_size()) {
+    for (FunctionScopeInfo *Scope : llvm::reverse(FunctionScopes)) {
+      auto *LSI = dyn_cast<LambdaScopeInfo>(Scope);
+      if (!LSI || getPatternFunctionDecl(LSI->CallOperator) != PatternDecl)
+        continue;
+      InstantiatingScope = LSI;
+      break;
+    }
+    assert(InstantiatingScope);
+  }
+
+  auto AddSingleCapture = [&](const ValueDecl *CapturedPattern,
+                              unsigned Index) {
+    ValueDecl *CapturedVar =
+        InstantiatingScope ? InstantiatingScope->Captures[Index].getVariable()
+                           : LambdaClass->getCapture(Index)->getCapturedVar();
+    assert(CapturedVar->isInitCapture());
+    Scope.InstantiatedLocal(CapturedPattern, CapturedVar);
+  };
+
+  for (const LambdaCapture &CapturePattern : LambdaPattern->captures()) {
+    if (!CapturePattern.capturesVariable()) {
+      Instantiated++;
+      continue;
+    }
+    ValueDecl *CapturedPattern = CapturePattern.getCapturedVar();
+
+    if (!CapturedPattern->isInitCapture()) {
+      Instantiated++;
+      continue;
+    }
+
+    if (!CapturedPattern->isParameterPack()) {
+      AddSingleCapture(CapturedPattern, Instantiated++);
+    } else {
+      Scope.MakeInstantiatedLocalArgPack(CapturedPattern);
+      SmallVector<UnexpandedParameterPack, 2> Unexpanded;
+      SemaRef.collectUnexpandedParameterPacks(
+          dyn_cast<VarDecl>(CapturedPattern)->getInit(), Unexpanded);
+      auto NumArgumentsInExpansion =
+          getNumArgumentsInExpansionFromUnexpanded(Unexpanded, TemplateArgs);
+      if (!NumArgumentsInExpansion)
+        continue;
+      for (unsigned Arg = 0; Arg < *NumArgumentsInExpansion; ++Arg)
+        AddSingleCapture(CapturedPattern, Instantiated++);
+    }
+  }
+  return false;
 }
 
 Sema::LambdaScopeForCallOperatorInstantiationRAII::

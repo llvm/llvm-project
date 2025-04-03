@@ -133,6 +133,12 @@ functions:
     arguments:
       - type: long long
       - type: long long
+  - name: memalignment
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: const void *
   - name: posix_memalign
     standards:
       - posix

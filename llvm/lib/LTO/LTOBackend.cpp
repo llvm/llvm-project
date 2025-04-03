@@ -227,7 +227,7 @@ createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
   }
 
   std::unique_ptr<TargetMachine> TM(TheTarget->createTargetMachine(
-      TheTriple.str(), Conf.CPU, Features.getString(), TargetOpts, RelocModel,
+      TheTriple, Conf.CPU, Features.getString(), TargetOpts, RelocModel,
       CodeModel, Conf.CGOptLevel));
 
   assert(TM && "Failed to create target machine");

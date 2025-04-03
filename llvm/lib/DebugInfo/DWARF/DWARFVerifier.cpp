@@ -2194,7 +2194,7 @@ void OutputCategoryAggregator::EnumerateResults(
 }
 void OutputCategoryAggregator::EnumerateDetailedResultsFor(
     StringRef category, std::function<void(StringRef, unsigned)> handleCounts) {
-  const auto Agg = Aggregation.find(std::string(category));
+  const auto Agg = Aggregation.find(category);
   if (Agg != Aggregation.end()) {
     for (const auto &[name, aggData] : Agg->second.DetailedCounts) {
       handleCounts(name, aggData);

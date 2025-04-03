@@ -226,15 +226,16 @@ void RetainTypeChecker::visitTypedef(const TypedefDecl *TD) {
     return;
 
   for (auto *Redecl : RT->getDecl()->getMostRecentDecl()->redecls()) {
-    if (Redecl->getAttr<ObjCBridgeAttr>()) {
+    if (Redecl->getAttr<ObjCBridgeAttr>() ||
+        Redecl->getAttr<ObjCBridgeMutableAttr>()) {
       CFPointees.insert(RT);
       return;
     }
   }
 }
 
-bool RetainTypeChecker::isUnretained(const QualType QT) {
-  if (ento::cocoa::isCocoaObjectRef(QT) && !IsARCEnabled)
+bool RetainTypeChecker::isUnretained(const QualType QT, bool ignoreARC) {
+  if (ento::cocoa::isCocoaObjectRef(QT) && (!IsARCEnabled || ignoreARC))
     return true;
   auto CanonicalType = QT.getCanonicalType();
   auto PointeeType = CanonicalType->getPointeeType();
@@ -372,7 +373,8 @@ std::optional<bool> isGetterOfSafePtr(const CXXMethodDecl *M) {
       if (auto *maybeRefToRawOperator = dyn_cast<CXXConversionDecl>(M)) {
         auto QT = maybeRefToRawOperator->getConversionType();
         auto *T = QT.getTypePtrOrNull();
-        return T && (T->isPointerType() || T->isReferenceType());
+        return T && (T->isPointerType() || T->isReferenceType() ||
+                     T->isObjCObjectPointerType());
       }
     }
   }
@@ -415,10 +417,22 @@ bool isPtrConversion(const FunctionDecl *F) {
   if (FunctionName == "getPtr" || FunctionName == "WeakPtr" ||
       FunctionName == "dynamicDowncast" || FunctionName == "downcast" ||
       FunctionName == "checkedDowncast" ||
-      FunctionName == "uncheckedDowncast" || FunctionName == "bitwise_cast")
+      FunctionName == "uncheckedDowncast" || FunctionName == "bitwise_cast" ||
+      FunctionName == "bridge_cast" || FunctionName == "bridge_id_cast" ||
+      FunctionName == "dynamic_cf_cast" || FunctionName == "checked_cf_cast" ||
+      FunctionName == "dynamic_objc_cast" ||
+      FunctionName == "checked_objc_cast")
     return true;
 
   return false;
+}
+
+bool isTrivialBuiltinFunction(const FunctionDecl *F) {
+  if (!F || !F->getDeclName().isIdentifier())
+    return false;
+  auto Name = F->getName();
+  return Name.starts_with("__builtin") || Name == "__libcpp_verbose_abort" ||
+         Name.starts_with("os_log") || Name.starts_with("_os_log");
 }
 
 bool isSingleton(const FunctionDecl *F) {
@@ -598,8 +612,7 @@ public:
         Name == "isMainThreadOrGCThread" || Name == "isMainRunLoop" ||
         Name == "isWebThread" || Name == "isUIThread" ||
         Name == "mayBeGCThread" || Name == "compilerFenceForCrash" ||
-        Name == "bitwise_cast" || Name.find("__builtin") == 0 ||
-        Name == "__libcpp_verbose_abort")
+        Name == "bitwise_cast" || isTrivialBuiltinFunction(Callee))
       return true;
 
     return IsFunctionTrivial(Callee);

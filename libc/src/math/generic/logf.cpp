@@ -66,6 +66,7 @@ LLVM_LIBC_FUNCTION(float, logf, (float x)) {
 
   // Small inputs
   if (x_u < 0x4c5d65a5U) {
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
     // Hard-to-round cases.
     switch (x_u) {
     case 0x3f7f4d6fU: // x = 0x1.fe9adep-1f
@@ -80,6 +81,7 @@ LLVM_LIBC_FUNCTION(float, logf, (float x)) {
       return round_result_slightly_up(-0x1.6d7b18p+5f);
 #endif // LIBC_TARGET_CPU_HAS_FMA
     }
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
     // Subnormal inputs.
     if (LIBC_UNLIKELY(x_u < FPBits::min_normal().uintval())) {
       if (x == 0.0f) {
@@ -94,6 +96,7 @@ LLVM_LIBC_FUNCTION(float, logf, (float x)) {
       x_u = xbits.uintval();
     }
   } else {
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
     // Hard-to-round cases.
     switch (x_u) {
     case 0x4c5d65a5U: // x = 0x1.bacb4ap+25f
@@ -113,6 +116,7 @@ LLVM_LIBC_FUNCTION(float, logf, (float x)) {
       return round_result_slightly_up(0x1.5c9442p+5f);
 #endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
     }
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
     // Exceptional inputs.
     if (LIBC_UNLIKELY(x_u > FPBits::max_normal().uintval())) {
       if (x_u == 0x8000'0000U) {

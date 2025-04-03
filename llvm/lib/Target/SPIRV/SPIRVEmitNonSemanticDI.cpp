@@ -27,7 +27,9 @@
 
 #define DEBUG_TYPE "spirv-nonsemantic-debug-info"
 
-namespace llvm {
+using namespace llvm;
+
+namespace {
 struct SPIRVEmitNonSemanticDI : public MachineFunctionPass {
   static char ID;
   SPIRVTargetMachine *TM;
@@ -40,9 +42,7 @@ private:
   bool IsGlobalDIEmitted = false;
   bool emitGlobalDI(MachineFunction &MF);
 };
-} // namespace llvm
-
-using namespace llvm;
+} // anonymous namespace
 
 INITIALIZE_PASS(SPIRVEmitNonSemanticDI, DEBUG_TYPE,
                 "SPIRV NonSemantic.Shader.DebugInfo.100 emitter", false, false)

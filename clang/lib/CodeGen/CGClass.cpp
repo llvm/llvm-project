@@ -161,10 +161,9 @@ CodeGenFunction::EmitCXXMemberDataPointerAddress(const Expr *E, Address base,
   QualType memberType = memberPtrType->getPointeeType();
   CharUnits memberAlign =
       CGM.getNaturalTypeAlignment(memberType, BaseInfo, TBAAInfo);
-  memberAlign =
-    CGM.getDynamicOffsetAlignment(base.getAlignment(),
-                            memberPtrType->getClass()->getAsCXXRecordDecl(),
-                                  memberAlign);
+  memberAlign = CGM.getDynamicOffsetAlignment(
+      base.getAlignment(), memberPtrType->getMostRecentCXXRecordDecl(),
+      memberAlign);
   return Address(ptr, ConvertTypeForMem(memberPtrType->getPointeeType()),
                  memberAlign);
 }
@@ -1490,7 +1489,7 @@ static void EmitConditionalArrayDtorCall(const CXXDestructorDecl *DD,
   CGF.EmitBlock(callDeleteBB);
   const CXXDestructorDecl *Dtor = cast<CXXDestructorDecl>(CGF.CurCodeDecl);
   const CXXRecordDecl *ClassDecl = Dtor->getParent();
-  CGF.EmitDeleteCall(Dtor->getOperatorDelete(), allocatedPtr,
+  CGF.EmitDeleteCall(Dtor->getArrayOperatorDelete(), allocatedPtr,
                      CGF.getContext().getTagDeclType(ClassDecl));
 
   CGF.EmitBranchThroughCleanup(CGF.ReturnBlock);
