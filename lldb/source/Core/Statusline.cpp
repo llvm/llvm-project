@@ -27,6 +27,7 @@
 #define ANSI_CLEAR_LINE ESCAPE "[2K"
 #define ANSI_SET_SCROLL_ROWS ESCAPE "[0;%ur"
 #define ANSI_TO_START_OF_ROW ESCAPE "[%u;0f"
+#define ANSI_REVERSE_VIDEO ESCAPE "[7m"
 #define ANSI_UP_ROWS ESCAPE "[%dA"
 
 using namespace lldb;
@@ -74,6 +75,12 @@ void Statusline::Draw(std::string str) {
   locked_stream << ANSI_SAVE_CURSOR;
   locked_stream.Printf(ANSI_TO_START_OF_ROW,
                        static_cast<unsigned>(m_terminal_height));
+
+  // Use "reverse video" to make sure the statusline has a background. Only do
+  // this when colors are disabled, and rely on the statusline format otherwise.
+  if (!m_debugger.GetUseColor())
+    locked_stream << ANSI_REVERSE_VIDEO;
+
   locked_stream << str;
   locked_stream << ANSI_NORMAL;
   locked_stream << ANSI_RESTORE_CURSOR;
