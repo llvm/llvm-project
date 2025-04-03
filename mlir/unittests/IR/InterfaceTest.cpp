@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizationTypeInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -83,4 +85,79 @@ TEST(InterfaceTest, TestImplicitConversion) {
   typeB = TestType::get(&context);
   typeA = typeB;
   EXPECT_EQ(typeA, typeB);
+}
+
+TEST(InterfaceTest, TestBuiltinTensorIsTensorLikeType) {
+  MLIRContext context;
+  // Note: attaches external model to builtins
+  context.loadDialect<bufferization::BufferizationDialect>();
+
+  auto builtinRankedTensor = mlir::RankedTensorType::get(
+      {1, 2, 3}, mlir::IntegerType::get(&context, 32));
+  EXPECT_TRUE(mlir::isa<bufferization::TensorLikeType>(builtinRankedTensor));
+  EXPECT_FALSE(mlir::isa<bufferization::MemRefLikeType>(builtinRankedTensor));
+
+  auto builtinUnrankedTensor =
+      mlir::UnrankedTensorType::get(mlir::IntegerType::get(&context, 32));
+  EXPECT_TRUE(mlir::isa<bufferization::TensorLikeType>(builtinUnrankedTensor));
+  EXPECT_FALSE(mlir::isa<bufferization::MemRefLikeType>(builtinUnrankedTensor));
+}
+
+TEST(InterfaceTest, TestCustomTensorIsTensorLikeType) {
+  MLIRContext context;
+  context.loadDialect<test::TestDialect>();
+
+  auto customTensorType = test::TestTensorType::get(
+      &context, {1, 2, 3}, mlir::IntegerType::get(&context, 32));
+  EXPECT_TRUE(mlir::isa<bufferization::TensorLikeType>(customTensorType));
+
+  auto customCloneType = customTensorType.cloneWith(
+      ArrayRef<int64_t>{3, 4, 5}, customTensorType.getElementType());
+  EXPECT_EQ(customTensorType.getElementType(),
+            customCloneType.getElementType());
+  EXPECT_TRUE(mlir::isa<bufferization::TensorLikeType>(customCloneType));
+  EXPECT_TRUE(mlir::isa<test::TestTensorType>(customCloneType));
+
+  // user-specified conversions
+  bufferization::TensorLikeType baseCopy = customTensorType;
+  std::ignore = baseCopy;
+}
+
+TEST(InterfaceTest, TestBuiltinMemrefIsMemRefLikeType) {
+  MLIRContext context;
+  // Note: attaches external model to builtins
+  context.loadDialect<bufferization::BufferizationDialect>();
+
+  auto builtinRankedMemref =
+      mlir::MemRefType::get({1, 2, 3}, mlir::IntegerType::get(&context, 32));
+  EXPECT_TRUE(mlir::isa<bufferization::MemRefLikeType>(builtinRankedMemref));
+  EXPECT_FALSE(mlir::isa<bufferization::TensorLikeType>(builtinRankedMemref));
+
+  auto builtinUnrankedMemref = mlir::UnrankedMemRefType::get(
+      mlir::IntegerType::get(&context, 32), nullptr);
+  EXPECT_TRUE(mlir::isa<bufferization::MemRefLikeType>(builtinUnrankedMemref));
+  EXPECT_FALSE(mlir::isa<bufferization::TensorLikeType>(builtinUnrankedMemref));
+}
+
+TEST(InterfaceTest, TestCustomMemrefIsMemRefLikeType) {
+  MLIRContext context;
+  context.loadDialect<test::TestDialect>();
+
+  auto customMemrefType = test::TestMemrefType::get(
+      &context, {1, 2, 3}, mlir::IntegerType::get(&context, 32),
+      mlir::StringAttr::get(&context, "some_memspace"));
+  EXPECT_TRUE(mlir::isa<bufferization::MemRefLikeType>(customMemrefType));
+
+  auto customCloneType = customMemrefType.cloneWith(
+      ArrayRef<int64_t>{3, 4, 5}, customMemrefType.getElementType());
+  EXPECT_EQ(customMemrefType.getElementType(),
+            customCloneType.getElementType());
+  EXPECT_TRUE(mlir::isa<bufferization::MemRefLikeType>(customCloneType));
+  EXPECT_TRUE(mlir::isa<test::TestMemrefType>(customCloneType));
+  EXPECT_EQ(customMemrefType.getMemSpace(),
+            mlir::cast<test::TestMemrefType>(customCloneType).getMemSpace());
+
+  // user-specified conversions
+  bufferization::MemRefLikeType baseCopy = customMemrefType;
+  std::ignore = baseCopy;
 }
