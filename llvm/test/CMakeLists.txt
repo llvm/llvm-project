@@ -111,6 +111,7 @@ set(LLVM_TEST_DEPENDS
           llvm-ml
           llvm-ml64
           llvm-modextract
+          llvm-module-splitter
           llvm-mt
           llvm-nm
           llvm-objcopy
