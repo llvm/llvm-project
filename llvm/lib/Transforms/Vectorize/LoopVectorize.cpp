@@ -10368,22 +10368,6 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
   VPlanTransforms::runPass(VPlanTransforms::removeDeadRecipes, MainPlan);
 
   using namespace VPlanPatternMatch;
-  VPBasicBlock *MainScalarPH = MainPlan.getScalarPreheader();
-  VPValue *VectorTC = &MainPlan.getVectorTripCount();
-  // If there is a suitable resume value for the canonical induction in the
-  // scalar (which will become vector) epilogue loop we are done. Otherwise
-  // create it below.
-  if (any_of(*MainScalarPH, [VectorTC](VPRecipeBase &R) {
-        return match(&R, m_VPInstruction<VPInstruction::ResumePhi>(
-                             m_Specific(VectorTC), m_SpecificInt(0)));
-      }))
-    return;
-  VPBuilder ScalarPHBuilder(MainScalarPH, MainScalarPH->begin());
-  ScalarPHBuilder.createNaryOp(
-      VPInstruction::ResumePhi,
-      {VectorTC, MainPlan.getCanonicalIV()->getStartValue()}, {},
-      "vec.epilog.resume.val");
-
   // When vectorizing the epilogue, FindLastIV reductions can introduce multiple
   // uses of undef/poison. If the reduction start value may be undef or poison
   // it needs to be frozen and the frozen start has to be used when computing
@@ -10413,6 +10397,22 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
   };
   AddFreezeForFindLastIVReductions(MainPlan, true);
   AddFreezeForFindLastIVReductions(EpiPlan, false);
+
+  VPBasicBlock *MainScalarPH = MainPlan.getScalarPreheader();
+  VPValue *VectorTC = &MainPlan.getVectorTripCount();
+  // If there is a suitable resume value for the canonical induction in the
+  // scalar (which will become vector) epilogue loop we are done. Otherwise
+  // create it below.
+  if (any_of(*MainScalarPH, [VectorTC](VPRecipeBase &R) {
+        return match(&R, m_VPInstruction<VPInstruction::ResumePhi>(
+                             m_Specific(VectorTC), m_SpecificInt(0)));
+      }))
+    return;
+  VPBuilder ScalarPHBuilder(MainScalarPH, MainScalarPH->begin());
+  ScalarPHBuilder.createNaryOp(
+      VPInstruction::ResumePhi,
+      {VectorTC, MainPlan.getCanonicalIV()->getStartValue()}, {},
+      "vec.epilog.resume.val");
 }
 
 /// Prepare \p Plan for vectorizing the epilogue loop. That is, re-use expanded
@@ -10521,13 +10521,14 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
     cast<VPHeaderPHIRecipe>(&R)->setStartValue(StartVal);
   }
 
-  // Re-use the trip count and steps expanded for the main loop, as
-  // skeleton creation needs it as a value that dominates both the scalar
-  // and vector epilogue loops
+  // For some VPValues in the epilogue plan we must re-use the generated IR
+  // values from the main plan. Replace them with live-in VPValues.
   // TODO: This is a workaround needed for epilogue vectorization and it
   // should be removed once induction resume value creation is done
   // directly in VPlan.
   for (auto &R : make_early_inc_range(*Plan.getEntry())) {
+    // Re-use frozen values from the main plan for Freeze VPInstructions in the
+    // epilogue plan. This ensures all users use the same frozen value.
     auto *VPI = dyn_cast<VPInstruction>(&R);
     if (VPI && VPI->getOpcode() == Instruction::Freeze) {
       VPI->replaceAllUsesWith(Plan.getOrAddLiveIn(
@@ -10535,6 +10536,9 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
       continue;
     }
 
+    // Re-use the trip count and steps expanded for the main loop, as
+    // skeleton creation needs it as a value that dominates both the scalar
+    // and vector epilogue loops
     auto *ExpandR = dyn_cast<VPExpandSCEVRecipe>(&R);
     if (!ExpandR)
       continue;

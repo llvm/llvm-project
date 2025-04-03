@@ -129,6 +129,7 @@ define i32 @select_icmp_var_start_iv_trunc(i32 %N, i32 %start) #0 {
 ; CHECK-NEXT:    [[N_POS:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[N_POS]])
 ; CHECK-NEXT:    [[N_EXT:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    [[FR:%.*]] = freeze i32 [[START]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nuw nsw i64 [[N_EXT]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
@@ -167,7 +168,7 @@ define i32 @select_icmp_var_start_iv_trunc(i32 %N, i32 %start) #0 {
 ; CHECK-NEXT:    [[RDX_MINMAX6:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[RDX_MINMAX5]], <4 x i32> [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> [[RDX_MINMAX6]])
 ; CHECK-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i32 [[TMP8]], -2147483648
-; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i32 [[TMP8]], i32 [[START]]
+; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i32 [[TMP8]], i32 [[FR]]
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
@@ -176,8 +177,8 @@ define i32 @select_icmp_var_start_iv_trunc(i32 %N, i32 %start) #0 {
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[RDX_SELECT]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[START]], %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[BC_MERGE_RDX]], [[START]]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[RDX_SELECT]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[FR]], %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[BC_MERGE_RDX]], [[FR]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 -2147483648, i32 [[BC_MERGE_RDX]]
 ; CHECK-NEXT:    [[N_MOD_VF7:%.*]] = urem i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[N_VEC8:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF7]]
@@ -204,7 +205,7 @@ define i32 @select_icmp_var_start_iv_trunc(i32 %N, i32 %start) #0 {
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP16:%.*]] = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> [[TMP14]])
 ; CHECK-NEXT:    [[RDX_SELECT_CMP18:%.*]] = icmp ne i32 [[TMP16]], -2147483648
-; CHECK-NEXT:    [[RDX_SELECT19:%.*]] = select i1 [[RDX_SELECT_CMP18]], i32 [[TMP16]], i32 [[START]]
+; CHECK-NEXT:    [[RDX_SELECT19:%.*]] = select i1 [[RDX_SELECT_CMP18]], i32 [[TMP16]], i32 [[FR]]
 ; CHECK-NEXT:    [[CMP_N20:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC8]]
 ; CHECK-NEXT:    br i1 [[CMP_N20]], label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
