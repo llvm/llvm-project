@@ -518,3 +518,16 @@ func.func @test_multiple_1_to_n_replacement() {
   %0 = "test.multiple_1_to_n_replacement"() : () -> (f16)
   "test.invalid"(%0) : (f16) -> ()
 }
+
+// -----
+
+func.func @test_duplicate_block_arg() {
+  %p = "some_producer"() : () -> (i64)
+  //"some_user"(%p) : (i64) -> ()
+  %0 = "test.replace_with_different_converter"(%p) : (i64) -> (i64)
+  //"some_user2"(%0) : (i64) -> (i64)
+  "test.invalid"(%p) : (i64) -> ()
+  //"test.return"() : () -> ()
+}
+
+// replace i64 with f64

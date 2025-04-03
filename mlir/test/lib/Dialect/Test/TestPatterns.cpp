@@ -1245,6 +1245,22 @@ public:
   }
 };
 
+class TestReplaceWithDifferentConverter : public ConversionPattern {
+public:
+  TestReplaceWithDifferentConverter(MLIRContext *ctx, const TypeConverter &converter)
+      : ConversionPattern(converter, "test.replace_with_different_converter", 1, ctx) {}
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    // A single operand is expected.
+    if (op->getNumOperands() != 1)
+      return failure();
+    rewriter.replaceOp(op, {operands.front()});
+    return success();
+  }
+};
+
+
 /// A pattern that tests two back-to-back 1 -> 2 op replacements.
 class TestMultiple1ToNReplacement : public ConversionPattern {
 public:
@@ -1311,6 +1327,7 @@ struct TestTypeConverter : public TypeConverter {
   TestTypeConverter() {
     addConversion(convertType);
     addSourceMaterialization(materializeCast);
+    addTargetMaterialization(materializeCast);
   }
 
   static LogicalResult convertType(Type t, SmallVectorImpl<Type> &results) {
@@ -1389,6 +1406,22 @@ struct TestLegalizePatternDriver
     patterns.add<TestDropOpSignatureConversion, TestDropAndReplaceInvalidOp,
                  TestPassthroughInvalidOp, TestMultiple1ToNReplacement>(
         &getContext(), converter);
+    TypeConverter differentConverter;
+    differentConverter.addConversion(
+        [](Type type) { return IntegerType::get(type.getContext(), 7); });
+    differentConverter.addTargetMaterialization(
+        [](OpBuilder &builder, Type type, ValueRange inputs, Location loc) {
+          Operation *castOp = builder.create<TestCastOp>(loc, type, inputs);
+          castOp->setAttr("different_type_converter", builder.getUnitAttr());
+          return castOp->getResult(0);
+        });
+    differentConverter.addSourceMaterialization(
+        [](OpBuilder &builder, Type type, ValueRange inputs, Location loc) {
+          Operation *castOp = builder.create<TestCastOp>(loc, type, inputs);
+          castOp->setAttr("different_type_converter", builder.getUnitAttr());
+          return castOp->getResult(0);
+        });
+    patterns.add<TestReplaceWithDifferentConverter>(&getContext(), differentConverter);
     patterns.add<TestConvertBlockArgs>(converter, &getContext());
     mlir::populateAnyFunctionOpInterfaceTypeConversionPattern(patterns,
                                                               converter);
