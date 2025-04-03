@@ -1127,6 +1127,7 @@ void OverloadCandidateSet::clear(CandidateSetKind CSK) {
   FirstDeferredCandidate = nullptr;
   DeferredCandidatesCount = 0;
   HasDeferredTemplateConstructors = false;
+  ResolutionByPerfectCandidateIsDisabled = false;
 }
 
 namespace {
@@ -7989,15 +7990,20 @@ void Sema::AddTemplateOverloadCandidate(
   if (!CandidateSet.isNewCandidate(FunctionTemplate, PO))
     return;
 
+  bool DependentExplicitSpecifier = hasDependentExplicit(FunctionTemplate);
+
   if (ExplicitTemplateArgs ||
       !CandidateSet.shouldDeferTemplateArgumentDeduction(getLangOpts()) ||
       (isa<CXXConstructorDecl>(FunctionTemplate->getTemplatedDecl()) &&
-       hasDependentExplicit(FunctionTemplate))) {
+       DependentExplicitSpecifier)) {
 
     AddTemplateOverloadCandidateImmediately(
         *this, CandidateSet, FunctionTemplate, FoundDecl, ExplicitTemplateArgs,
         Args, SuppressUserConversions, PartialOverloading, AllowExplicit,
         IsADLCandidate, PO, AggregateCandidateDeduction);
+
+    if (DependentExplicitSpecifier)
+      CandidateSet.DisableResolutionByPerfectCandidate();
     return;
   }
 
@@ -8382,13 +8388,15 @@ void Sema::AddTemplateConversionCandidate(
     return;
 
   if (!CandidateSet.shouldDeferTemplateArgumentDeduction(getLangOpts()) ||
-      hasDependentExplicit(FunctionTemplate)) {
-
+      CandidateSet.getKind() ==
+          OverloadCandidateSet::CSK_InitByUserDefinedConversion ||
+      CandidateSet.getKind() == OverloadCandidateSet::CSK_InitByConstructor) {
     AddTemplateConversionCandidateImmediately(
         *this, CandidateSet, FunctionTemplate, FoundDecl, ActingDC, From,
         ToType, AllowObjCConversionOnExplicit, AllowExplicit,
         AllowResultConversion);
 
+    CandidateSet.DisableResolutionByPerfectCandidate();
     return;
   }
 
@@ -11028,6 +11036,7 @@ void OverloadCandidateSet::AddDeferredTemplateCandidate(
       Args,
       IsADLCandidate,
       PO};
+
   HasDeferredTemplateConstructors |=
       isa<CXXConstructorDecl>(FunctionTemplate->getTemplatedDecl());
 }
@@ -11199,19 +11208,19 @@ OverloadingResult OverloadCandidateSet::BestViableFunction(Sema &S,
 
   assert(shouldDeferTemplateArgumentDeduction(S.getLangOpts()) ||
          DeferredCandidatesCount == 0 &&
-             "Unexpected deferred template candidate");
+             "Unexpected deferred template candidates");
 
-  bool TwoPhaseResolution = DeferredCandidatesCount != 0;
+  bool TwoPhaseResolution =
+      DeferredCandidatesCount != 0 && !ResolutionByPerfectCandidateIsDisabled;
 
   if (TwoPhaseResolution) {
 
     PerfectViableFunction(S, Loc, Best);
     if (Best != end())
       return ResultForBestCandidate(Best);
-
-    InjectNonDeducedTemplateCandidates(S);
   }
 
+  InjectNonDeducedTemplateCandidates(S);
   return BestViableFunctionImpl(S, Loc, Best);
 }
 
@@ -11220,8 +11229,10 @@ void OverloadCandidateSet::PerfectViableFunction(
 
   Best = end();
   for (auto It = begin(); It != end(); ++It) {
+
     if (!It->isPerfectMatch(S.getASTContext()))
       continue;
+
     // We found a suitable conversion function
     // but if there is a template constructor in the target class
     // we might prefer that instead.
@@ -11246,6 +11257,7 @@ void OverloadCandidateSet::PerfectViableFunction(
         Best = It;
       continue;
     }
+    // ambiguous
     Best = end();
     break;
   }
