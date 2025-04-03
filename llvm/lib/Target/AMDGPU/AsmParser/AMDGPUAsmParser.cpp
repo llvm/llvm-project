@@ -10127,6 +10127,10 @@ void AMDGPUAsmParser::cvtVOP3(MCInst &Inst, const OperandVector &Operands,
     addOptionalImmOperand(Inst, Operands, OptionalIdx,
                           AMDGPUOperand::ImmTyScaleSel);
 
+  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::clamp))
+    addOptionalImmOperand(Inst, Operands, OptionalIdx,
+                          AMDGPUOperand::ImmTyClamp);
+
 #endif /* LLPC_BUILD_NPI */
   if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::byte_sel)) {
     if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vdst_in))
@@ -10135,10 +10139,13 @@ void AMDGPUAsmParser::cvtVOP3(MCInst &Inst, const OperandVector &Operands,
                           AMDGPUOperand::ImmTyByteSel);
   }
 
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
   if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::clamp))
     addOptionalImmOperand(Inst, Operands, OptionalIdx,
                           AMDGPUOperand::ImmTyClamp);
 
+#endif /* LLPC_BUILD_NPI */
   if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::omod))
     addOptionalImmOperand(Inst, Operands, OptionalIdx,
                           AMDGPUOperand::ImmTyOModSI);
@@ -10177,7 +10184,8 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
 #if LLPC_BUILD_NPI
       Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_gfx13 ||
       Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_gfx12 ||
-      Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_gfx13) {
+      Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_gfx13 ||
+      Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx1250_e64_gfx1250) {
 #else /* LLPC_BUILD_NPI */
       Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_gfx12) {
 #endif /* LLPC_BUILD_NPI */
@@ -10211,6 +10219,8 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
         Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_dpp8_gfx12 ||
 #if LLPC_BUILD_NPI
         Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_dpp8_gfx13 ||
+        Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx1250_e64_dpp_gfx1250 ||
+        Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx1250_e64_dpp8_gfx1250 ||
 #endif /* LLPC_BUILD_NPI */
         Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp_gfx12 ||
 #if LLPC_BUILD_NPI
@@ -10783,7 +10793,7 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
   int VdstInIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst_in);
   bool IsVOP3CvtSrDpp = Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp8_gfx12 ||
 #if LLPC_BUILD_NPI
-                        Opc == AMDGPU::V_CVT_SR_BF8_F32_e64_dpp8_gfx13 ||
+                        Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp8_gfx13 ||
 #endif /* LLPC_BUILD_NPI */
                         Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_dpp8_gfx12 ||
 #if LLPC_BUILD_NPI
@@ -10791,7 +10801,7 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
 #endif /* LLPC_BUILD_NPI */
                         Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp_gfx12 ||
 #if LLPC_BUILD_NPI
-                        Opc == AMDGPU::V_CVT_SR_BF8_F32_e64_dpp_gfx13 ||
+                        Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp_gfx13 ||
                         Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_dpp_gfx12 ||
                         Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_dpp_gfx13;
 #else /* LLPC_BUILD_NPI */
@@ -10849,13 +10859,32 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
     }
   }
 
+#if LLPC_BUILD_NPI
+  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::clamp) && !IsVOP3CvtSrDpp)
+#else /* LLPC_BUILD_NPI */
   if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::byte_sel))
+#endif /* LLPC_BUILD_NPI */
     addOptionalImmOperand(Inst, Operands, OptionalIdx,
-                          AMDGPUOperand::ImmTyByteSel);
-
-  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::clamp))
-    addOptionalImmOperand(Inst, Operands, OptionalIdx,
+#if LLPC_BUILD_NPI
                           AMDGPUOperand::ImmTyClamp);
+#else /* LLPC_BUILD_NPI */
+                          AMDGPUOperand::ImmTyByteSel);
+#endif /* LLPC_BUILD_NPI */
+
+#if LLPC_BUILD_NPI
+  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::byte_sel)) {
+    if (VdstInIdx == static_cast<int>(Inst.getNumOperands()))
+      Inst.addOperand(Inst.getOperand(0));
+#else /* LLPC_BUILD_NPI */
+  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::clamp))
+#endif /* LLPC_BUILD_NPI */
+    addOptionalImmOperand(Inst, Operands, OptionalIdx,
+#if LLPC_BUILD_NPI
+                          AMDGPUOperand::ImmTyByteSel);
+  }
+#else /* LLPC_BUILD_NPI */
+                          AMDGPUOperand::ImmTyClamp);
+#endif /* LLPC_BUILD_NPI */
 
   if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::omod))
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyOModSI);

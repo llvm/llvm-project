@@ -1998,6 +1998,7 @@ let SubtargetPredicate = isGFX13Plus, hasSideEffects = 1 in {
   def S_SEMA_WAIT         : SOPP_Pseudo<"s_sema_wait", (ins i16imm:$simm16), "$simm16", [(int_amdgcn_s_sema_wait s_sema_wait_imm:$simm16)]>;
   def S_SEMA_SET_LIMIT    : SOPP_Pseudo<"s_sema_set_limit", (ins i16imm:$simm16), "$simm16">;
   def S_SEMA_SIGNAL_AFTER : SOPP_Pseudo<"s_sema_signal_after", (ins i16imm:$simm16), "$simm16">;
+  def S_INST_AUTO_PREFETCH_MODE : SOPP_Pseudo<"s_inst_auto_prefetch_mode", (ins s16imm:$simm16), "$simm16", [(int_amdgcn_s_inst_auto_prefetch_mode timm:$simm16)]>;
 }
 
 def s_sema_set_state_imm : ImmLeaf<
@@ -3301,6 +3302,7 @@ defm S_SEMA_SIGNAL_AFTER : SOPP_Real_32_gfx13<0x35>;
 //             conflicts)
 defm S_WAIT_BVHCNT       : SOPP_Real_32_gfx13<0x4c, "s_wait_rtscnt", 0>;
 defm S_WAIT_SWCCNT       : SOPP_Real_32_gfx13<0x4d>;
+defm S_INST_AUTO_PREFETCH_MODE : SOPP_Real_32_gfx13<0x60>;
 #else /* LLPC_BUILD_NPI */
 defm S_ADDK_I32         : SOPK_Real32_gfx6_gfx7_gfx10_gfx11_Renamed_gfx12<0x00f, "s_addk_co_i32">;
 defm S_MULK_I32         : SOPK_Real32_gfx6_gfx7_gfx10_gfx11_gfx12<0x010>;

@@ -1374,6 +1374,9 @@ def WaitVMVSrc : NamedIntOperand<"wait_vm_vsrc"> {
 def ByteSel : NamedIntOperand<"byte_sel"> {
   let Validator = "isUInt<2>";
 }
+#ifdef LLPC_BUILD_NPI
+def ByteSel0 : DefaultOperand<ByteSel, 0>;
+#endif /* LLPC_BUILD_NPI */
 
 let PrintMethod = "printBitOp3" in
 def BitOp3 : NamedIntOperand<"bitop3">;

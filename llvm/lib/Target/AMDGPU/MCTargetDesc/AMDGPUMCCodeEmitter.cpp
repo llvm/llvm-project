@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/AMDGPUFixupKinds.h"
+#include "MCTargetDesc/AMDGPUMCExpr.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIDefines.h"
 #include "Utils/AMDGPUBaseInfo.h"
@@ -660,13 +661,13 @@ static bool needsPCRel(const MCExpr *Expr) {
   switch (Expr->getKind()) {
   case MCExpr::SymbolRef: {
     auto *SE = cast<MCSymbolRefExpr>(Expr);
-    MCSymbolRefExpr::VariantKind Kind = SE->getKind();
-    return Kind != MCSymbolRefExpr::VK_AMDGPU_ABS32_LO &&
+    auto Spec = AMDGPU::getSpecifier(SE);
 #if LLPC_BUILD_NPI
-           Kind != MCSymbolRefExpr::VK_AMDGPU_ABS32_HI &&
-           Kind != MCSymbolRefExpr::VK_AMDGPU_ABS64;
+    return Spec != AMDGPUMCExpr::S_ABS32_LO &&
+           Spec != AMDGPUMCExpr::S_ABS32_HI &&
+           Spec != AMDGPUMCExpr::S_ABS64;
 #else /* LLPC_BUILD_NPI */
-           Kind != MCSymbolRefExpr::VK_AMDGPU_ABS32_HI;
+    return Spec != AMDGPUMCExpr::S_ABS32_LO && Spec != AMDGPUMCExpr::S_ABS32_HI;
 #endif /* LLPC_BUILD_NPI */
   }
   case MCExpr::Binary: {

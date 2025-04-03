@@ -171,6 +171,9 @@ protected:
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
   bool HasFP8ConversionInsts = false;
+#if LLPC_BUILD_NPI
+  bool HasFP8E5M3Insts = false;
+#endif /* LLPC_BUILD_NPI */
   bool HasCvtFP8Vop1Bug = false;
   bool HasPkFmacF16Inst = false;
   bool HasAtomicFMinFMaxF32GlobalInsts = false;
@@ -305,13 +308,19 @@ protected:
 #endif /* LLPC_BUILD_NPI */
   bool HasMinimum3Maximum3PKF16 = false;
 #if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
+  bool HasPointSampleAccel = false;
+#endif /* LLPC_BUILD_NPI */
+  bool HasLshlAddU64Inst = false;
+#if LLPC_BUILD_NPI
+  bool HasAddSubU64Insts = false;
   bool HasVNBREncoding = false;
   bool HasSWC = false;
   bool HasIndexedResources = false;
   bool HasSGPRVMEM = false;
   bool HasParallelBitInsts = false;
-#endif /* LLPC_BUILD_NPI */
   bool HasPointSampleAccel = false;
+#endif /* LLPC_BUILD_NPI */
 
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
@@ -947,6 +956,10 @@ public:
 
   bool hasFP8ConversionInsts() const { return HasFP8ConversionInsts; }
 
+#if LLPC_BUILD_NPI
+  bool hasFP8E5M3Insts() const { return HasFP8E5M3Insts; }
+
+#endif /* LLPC_BUILD_NPI */
   bool hasPkFmacF16Inst() const {
     return HasPkFmacF16Inst;
   }
@@ -1275,24 +1288,22 @@ public:
 
 #if LLPC_BUILD_NPI
   bool hasMovB64() const { return GFX940Insts || (GFX1250Insts && !GFX13Insts); }
-
-  bool hasLshlAddB64() const { return GFX940Insts || GFX1250Insts; }
-
-  // Scalar and global loads support scale_offset bit.
-  bool hasScaleOffset() const { return GFX1250Insts; }
-
-  bool hasFlatGVSMode() const { return FlatGVSMode; }
 #else /* LLPC_BUILD_NPI */
   bool hasMovB64() const { return GFX940Insts; }
 #endif /* LLPC_BUILD_NPI */
 
+  bool hasLshlAddU64Inst() const { return HasLshlAddU64Inst; }
+
 #if LLPC_BUILD_NPI
+  // Scalar and global loads support scale_offset bit.
+  bool hasScaleOffset() const { return GFX1250Insts; }
+
+  bool hasFlatGVSMode() const { return FlatGVSMode; }
+
   // FLAT GLOBAL VOffset is signed
   bool hasSignedGVSOffset() const { return GFX1250Insts; }
-#else /* LLPC_BUILD_NPI */
-  bool hasLshlAddB64() const { return GFX940Insts; }
-#endif /* LLPC_BUILD_NPI */
 
+#endif /* LLPC_BUILD_NPI */
   bool enableSIScheduler() const {
     return EnableSIScheduler;
   }
@@ -1673,7 +1684,7 @@ public:
   bool hasVOPD3() const { return GFX1250Insts; }
 
   // \returns true if the target has V_ADD_U64/V_SUB_U64 instructions.
-  bool hasAddU64SubU64() const { return GFX1250Insts; }
+  bool hasAddSubU64Insts() const { return HasAddSubU64Insts; }
 
   // \returns true if the target has V_MUL_U64/V_MUL_I64 instructions.
   bool hasVectorMulU64() const { return GFX1250Insts && !GFX13Insts; }

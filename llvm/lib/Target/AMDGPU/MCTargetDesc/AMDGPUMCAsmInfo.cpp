@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUMCAsmInfo.h"
+#include "MCTargetDesc/AMDGPUMCExpr.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -16,16 +17,16 @@
 using namespace llvm;
 
 const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
-    {MCSymbolRefExpr::VK_GOTPCREL, "gotpcrel"},
-    {MCSymbolRefExpr::VK_AMDGPU_GOTPCREL32_LO, "gotpcrel32@lo"},
-    {MCSymbolRefExpr::VK_AMDGPU_GOTPCREL32_HI, "gotpcrel32@hi"},
-    {MCSymbolRefExpr::VK_AMDGPU_REL32_LO, "rel32@lo"},
-    {MCSymbolRefExpr::VK_AMDGPU_REL32_HI, "rel32@hi"},
-    {MCSymbolRefExpr::VK_AMDGPU_REL64, "rel64"},
-    {MCSymbolRefExpr::VK_AMDGPU_ABS32_LO, "abs32@lo"},
-    {MCSymbolRefExpr::VK_AMDGPU_ABS32_HI, "abs32@hi"},
+    {AMDGPUMCExpr::S_GOTPCREL, "gotpcrel"},
+    {AMDGPUMCExpr::S_GOTPCREL32_LO, "gotpcrel32@lo"},
+    {AMDGPUMCExpr::S_GOTPCREL32_HI, "gotpcrel32@hi"},
+    {AMDGPUMCExpr::S_REL32_LO, "rel32@lo"},
+    {AMDGPUMCExpr::S_REL32_HI, "rel32@hi"},
+    {AMDGPUMCExpr::S_REL64, "rel64"},
+    {AMDGPUMCExpr::S_ABS32_LO, "abs32@lo"},
+    {AMDGPUMCExpr::S_ABS32_HI, "abs32@hi"},
 #if LLPC_BUILD_NPI
-    {MCSymbolRefExpr::VK_AMDGPU_ABS64, "abs64"},
+    {AMDGPUMCExpr::S_ABS64, "abs64"},
 #endif /* LLPC_BUILD_NPI */
 };
 

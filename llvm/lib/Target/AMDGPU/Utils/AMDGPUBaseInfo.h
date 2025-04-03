@@ -153,12 +153,7 @@ enum {
   TRAP_NUM_SGPRS = 16
 };
 
-enum class TargetIDSetting {
-  Unsupported,
-  Any,
-  Off,
-  On
-};
+enum class TargetIDSetting { Unsupported, Any, Off, On };
 
 class AMDGPUTargetID {
 private:
@@ -178,21 +173,19 @@ public:
   /// \returns True if the current xnack setting is "On" or "Any".
   bool isXnackOnOrAny() const {
     return XnackSetting == TargetIDSetting::On ||
-        XnackSetting == TargetIDSetting::Any;
+           XnackSetting == TargetIDSetting::Any;
   }
 
   /// \returns True if current xnack setting is "On" or "Off",
   /// false otherwise.
   bool isXnackOnOrOff() const {
     return getXnackSetting() == TargetIDSetting::On ||
-        getXnackSetting() == TargetIDSetting::Off;
+           getXnackSetting() == TargetIDSetting::Off;
   }
 
   /// \returns The current xnack TargetIDSetting, possible options are
   /// "Unsupported", "Any", "Off", and "On".
-  TargetIDSetting getXnackSetting() const {
-    return XnackSetting;
-  }
+  TargetIDSetting getXnackSetting() const { return XnackSetting; }
 
   /// Sets xnack setting to \p NewXnackSetting.
   void setXnackSetting(TargetIDSetting NewXnackSetting) {
@@ -206,22 +199,20 @@ public:
 
   /// \returns True if the current sramecc setting is "On" or "Any".
   bool isSramEccOnOrAny() const {
-  return SramEccSetting == TargetIDSetting::On ||
-      SramEccSetting == TargetIDSetting::Any;
+    return SramEccSetting == TargetIDSetting::On ||
+           SramEccSetting == TargetIDSetting::Any;
   }
 
   /// \returns True if current sramecc setting is "On" or "Off",
   /// false otherwise.
   bool isSramEccOnOrOff() const {
     return getSramEccSetting() == TargetIDSetting::On ||
-        getSramEccSetting() == TargetIDSetting::Off;
+           getSramEccSetting() == TargetIDSetting::Off;
   }
 
   /// \returns The current sramecc TargetIDSetting, possible options are
   /// "Unsupported", "Any", "Off", and "On".
-  TargetIDSetting getSramEccSetting() const {
-    return SramEccSetting;
-  }
+  TargetIDSetting getSramEccSetting() const { return SramEccSetting; }
 
   /// Sets sramecc setting to \p NewSramEccSetting.
   void setSramEccSetting(TargetIDSetting NewSramEccSetting) {
@@ -841,8 +832,8 @@ private:
   // instruction layout, add 1 for COMPONENT_X or COMPONENT_Y. For the second
   // component add OpX.MCSrcNum + OpX.VOPD3ModsNum.
   // For VOPD1/VOPD2 use column with zero modifiers.
-  static constexpr unsigned SINGLE_MC_SRC_IDX[4][3] =
-      {{1, 2, 3}, {2, 3, 4}, {2, 4, 5}, {2, 4, 6}};
+  static constexpr unsigned SINGLE_MC_SRC_IDX[4][3] = {
+      {1, 2, 3}, {2, 3, 4}, {2, 4, 5}, {2, 4, 6}};
 #else /* LLPC_BUILD_NPI */
   static constexpr unsigned FIRST_MC_SRC_IDX[] = {1, 2, 2 /* + OpX.MCSrcNum */};
 #endif /* LLPC_BUILD_NPI */
@@ -1010,12 +1001,11 @@ public:
 #endif /* LLPC_BUILD_NPI */
   bool hasInvalidOperand(std::function<unsigned(unsigned, unsigned)> GetRegIdx,
 #if LLPC_BUILD_NPI
-                         const MCRegisterInfo &MRI,
-                         bool SkipSrc = false,
-                         bool AllowSameVGPR = false,
-                         bool VOPD3 = false) const {
+                         const MCRegisterInfo &MRI, bool SkipSrc = false,
+                         bool AllowSameVGPR = false, bool VOPD3 = false) const {
     return getInvalidCompOperandIndex(GetRegIdx, MRI, SkipSrc, AllowSameVGPR,
-                                      VOPD3).has_value();
+                                      VOPD3)
+        .has_value();
 #else /* LLPC_BUILD_NPI */
                          bool SkipSrc = false) const {
     return getInvalidCompOperandIndex(GetRegIdx, SkipSrc).has_value();
@@ -1037,10 +1027,8 @@ public:
   std::optional<unsigned> getInvalidCompOperandIndex(
       std::function<unsigned(unsigned, unsigned)> GetRegIdx,
 #if LLPC_BUILD_NPI
-      const MCRegisterInfo &MRI,
-      bool SkipSrc = false,
-      bool AllowSameVGPR = false,
-      bool VOPD3 = false) const;
+      const MCRegisterInfo &MRI, bool SkipSrc = false,
+      bool AllowSameVGPR = false, bool VOPD3 = false) const;
 #else /* LLPC_BUILD_NPI */
       bool SkipSrc = false) const;
 #endif /* LLPC_BUILD_NPI */
@@ -1068,8 +1056,8 @@ VOPD::InstInfo getVOPDInstInfo(const MCInstrDesc &OpX, const MCInstrDesc &OpY);
 
 LLVM_READONLY
 // Get properties of VOPD X and Y components.
-VOPD::InstInfo
-getVOPDInstInfo(unsigned VOPDOpcode, const MCInstrInfo *InstrInfo);
+VOPD::InstInfo getVOPDInstInfo(unsigned VOPDOpcode,
+                               const MCInstrInfo *InstrInfo);
 
 LLVM_READONLY
 #if LLPC_BUILD_NPI
@@ -1271,8 +1259,8 @@ unsigned decodeLgkmcnt(const IsaVersion &Version, unsigned Waitcnt);
 ///     \p Lgkmcnt = \p Waitcnt[13:8]     (gfx10)
 ///     \p Lgkmcnt = \p Waitcnt[9:4]      (gfx11)
 ///
-void decodeWaitcnt(const IsaVersion &Version, unsigned Waitcnt,
-                   unsigned &Vmcnt, unsigned &Expcnt, unsigned &Lgkmcnt);
+void decodeWaitcnt(const IsaVersion &Version, unsigned Waitcnt, unsigned &Vmcnt,
+                   unsigned &Expcnt, unsigned &Lgkmcnt);
 
 Waitcnt decodeWaitcnt(const IsaVersion &Version, unsigned Encoded);
 
@@ -1306,8 +1294,8 @@ unsigned encodeLgkmcnt(const IsaVersion &Version, unsigned Waitcnt,
 /// \returns Waitcnt with encoded \p Vmcnt, \p Expcnt and \p Lgkmcnt for given
 /// isa \p Version.
 ///
-unsigned encodeWaitcnt(const IsaVersion &Version,
-                       unsigned Vmcnt, unsigned Expcnt, unsigned Lgkmcnt);
+unsigned encodeWaitcnt(const IsaVersion &Version, unsigned Vmcnt,
+                       unsigned Expcnt, unsigned Lgkmcnt);
 
 unsigned encodeWaitcnt(const IsaVersion &Version, const Waitcnt &Decoded);
 
@@ -1538,12 +1526,9 @@ void decodeMsg(unsigned Val, uint16_t &MsgId, uint16_t &OpId,
                uint16_t &StreamId, const MCSubtargetInfo &STI);
 
 LLVM_READNONE
-uint64_t encodeMsg(uint64_t MsgId,
-                   uint64_t OpId,
-                   uint64_t StreamId);
+uint64_t encodeMsg(uint64_t MsgId, uint64_t OpId, uint64_t StreamId);
 
 } // namespace SendMsg
-
 
 unsigned getInitialPSInputAddr(const Function &F);
 
@@ -1822,8 +1807,7 @@ bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
 
 LLVM_READONLY
 bool isLegalSMRDEncodedSignedOffset(const MCSubtargetInfo &ST,
-                                    int64_t EncodedOffset,
-                                    bool IsBuffer);
+                                    int64_t EncodedOffset, bool IsBuffer);
 
 /// Convert \p ByteOffset to dwords if the subtarget uses dword SMRD immediate
 /// offsets.

@@ -39,6 +39,22 @@ public:
     AGVK_Occupancy
   };
 
+  // Relocation specifiers.
+  enum Specifier {
+    S_None,
+    S_GOTPCREL,      // symbol@gotpcrel
+    S_GOTPCREL32_LO, // symbol@gotpcrel32@lo
+    S_GOTPCREL32_HI, // symbol@gotpcrel32@hi
+    S_REL32_LO,      // symbol@rel32@lo
+    S_REL32_HI,      // symbol@rel32@hi
+    S_REL64,         // symbol@rel64
+    S_ABS32_LO,      // symbol@abs32@lo
+    S_ABS32_HI,      // symbol@abs32@hi
+#if LLPC_BUILD_NPI
+    S_ABS64,         // symbol@abs64
+#endif /* LLPC_BUILD_NPI */
+  };
+
 private:
   VariantKind Kind;
   MCContext &Ctx;
@@ -113,6 +129,9 @@ void printAMDGPUMCExpr(const MCExpr *Expr, raw_ostream &OS,
 
 const MCExpr *foldAMDGPUMCExpr(const MCExpr *Expr, MCContext &Ctx);
 
+static inline AMDGPUMCExpr::Specifier getSpecifier(const MCSymbolRefExpr *SRE) {
+  return AMDGPUMCExpr::Specifier(SRE->getKind());
+}
 } // end namespace AMDGPU
 } // end namespace llvm
 

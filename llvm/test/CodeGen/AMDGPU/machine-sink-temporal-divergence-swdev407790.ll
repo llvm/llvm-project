@@ -392,6 +392,7 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    s_mov_b32 s14, s33
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_add_co_u32 v41, vcc_lo, v0, v41
+; CHECK-NEXT:    v_add_co_ci_u32_e64 v0, null, 0, v1, vcc_lo
 ; CHECK-NEXT:    v_cmp_le_u32_e32 vcc_lo, v47, v41
 ; CHECK-NEXT:    s_or_b32 s52, vcc_lo, s52
 ; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s52
@@ -410,9 +411,9 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    v_add_co_u32 v2, s4, s64, v1
 ; CHECK-NEXT:    v_add_co_ci_u32_e64 v3, null, s65, 0, s4
 ; CHECK-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
-; CHECK-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v3, vcc_lo
+; CHECK-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v3, vcc_lo
 ; CHECK-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
-; CHECK-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
+; CHECK-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
 ; CHECK-NEXT:    s_clause 0x1
 ; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off offset:8
 ; CHECK-NEXT:    global_load_dwordx4 v[8:11], v[2:3], off offset:8
@@ -480,7 +481,7 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    v_lshrrev_b64 v[0:1], 16, v[45:46]
 ; CHECK-NEXT:    v_add_co_u32 v6, vcc_lo, v6, v10
 ; CHECK-NEXT:    v_or3_b32 v8, v8, v9, v62
-; CHECK-NEXT:    v_add_co_ci_u32_e32 v7, vcc_lo, 0, v7, vcc_lo
+; CHECK-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v7, vcc_lo
 ; CHECK-NEXT:    v_lshrrev_b64 v[4:5], 16, v[4:5]
 ; CHECK-NEXT:    v_or_b32_e32 v1, v11, v1
 ; CHECK-NEXT:    ; implicit-def: $vgpr42
