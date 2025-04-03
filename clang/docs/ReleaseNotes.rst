@@ -167,6 +167,7 @@ Non-comprehensive list of changes in this release
 
 - Support parsing the `cc` operand modifier and alias it to the `c` modifier (#GH127719).
 - Added `__builtin_elementwise_exp10`.
+- For AMDPGU targets, added `__builtin_v_cvt_off_f32_i4` that maps to the `v_cvt_off_f32_i4` instruction.
 
 New Compiler Flags
 ------------------
@@ -188,6 +189,8 @@ Modified Compiler Flags
   Programs that use ``__aeabi_read_tp`` but do not use the ``TPIDRURO`` register must use ``-mtp=soft``. Fixes #123864
 
 - The compiler flag `-fbracket-depth` default value is increased from 256 to 2048. (#GH94728)
+
+- `-Wpadded` option implemented for the `x86_64-windows-msvc` target. Fixes #61702
 
 Removed Compiler Flags
 -------------------------
@@ -362,6 +365,7 @@ Bug Fixes to Attribute Support
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Clang now supports implicitly defined comparison operators for friend declarations. (#GH132249)
 - Clang now diagnoses copy constructors taking the class by value in template instantiations. (#GH130866)
 - Clang is now better at keeping track of friend function template instance contexts. (#GH55509)
 - Clang now prints the correct instantiation context for diagnostics suppressed

@@ -14335,7 +14335,7 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
   // single vector. If we have 2 different sets, we're in situation where we
   // have a permutation of 2 input vectors.
   SmallVector<SmallPtrSet<const TreeEntry *, 4>> UsedTEs;
-  DenseMap<Value *, int> UsedValuesEntry;
+  SmallDenseMap<Value *, int> UsedValuesEntry;
   SmallPtrSet<const Value *, 16> VisitedValue;
   auto CheckAndUseSameNode = [&](const TreeEntry *TEPtr) {
     // The node is reused - exit.
@@ -14552,6 +14552,8 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     // No perfect match, just shuffle, so choose the first tree node from the
     // tree.
     Entries.push_back(FirstEntries.front());
+    // Update mapping between values and corresponding tree entries.
+    for_each(UsedValuesEntry, [&](auto &P) { P.second = 0; });
     VF = FirstEntries.front()->getVectorFactor();
   } else {
     // Try to find nodes with the same vector factor.
@@ -14596,6 +14598,18 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     } else {
       VF = Entries.front()->getVectorFactor();
     }
+    SmallVector<SmallPtrSet<Value *, 8>> ValuesToEntries;
+    for (const TreeEntry *E : Entries)
+      ValuesToEntries.emplace_back().insert(E->Scalars.begin(),
+                                            E->Scalars.end());
+    // Update mapping between values and corresponding tree entries.
+    for_each(UsedValuesEntry, [&](auto &P) {
+      for (unsigned Idx : seq<unsigned>(ValuesToEntries.size()))
+        if (ValuesToEntries[Idx].contains(P.first)) {
+          P.second = Idx;
+          break;
+        }
+    });
   }
 
   bool IsSplatOrUndefs = isSplat(VL) || all_of(VL, IsaPred<UndefValue>);

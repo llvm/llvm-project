@@ -15,16 +15,13 @@
 ;   }
 ; }
 ;
-; FIXME: These loops are not exchanged at this time due to the problem in
-; profitability heuristic calculation for vectorization.
 
-; CHECK:      --- !Missed
+; CHECK:      --- !Passed
 ; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            InterchangeNotProfitable
+; CHECK-NEXT: Name:            Interchanged
 ; CHECK-NEXT: Function:        interchange_necessary_for_vectorization
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          Interchanging loops is not considered to improve cache locality nor vectorization.
-; CHECK-NEXT: ...
+; CHECK-NEXT:   - String:          Loop interchanged with enclosing loop.
 define void @interchange_necessary_for_vectorization() {
 entry:
   br label %for.i.header

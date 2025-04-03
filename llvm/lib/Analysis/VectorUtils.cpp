@@ -844,10 +844,10 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
         DBits[ECs.getOrInsertLeaderValue(I.first)] |= ~0ULL;
 
   for (const auto &E : ECs) {
-    if (!E.isLeader())
+    if (!E->isLeader())
       continue;
     uint64_t LeaderDemandedBits = 0;
-    for (Value *M : make_range(ECs.member_begin(E), ECs.member_end()))
+    for (Value *M : make_range(ECs.member_begin(*E), ECs.member_end()))
       LeaderDemandedBits |= DBits[M];
 
     uint64_t MinBW = llvm::bit_width(LeaderDemandedBits);
@@ -859,7 +859,7 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
     // indvars.
     // If we are required to shrink a PHI, abandon this entire equivalence class.
     bool Abort = false;
-    for (Value *M : make_range(ECs.member_begin(E), ECs.member_end()))
+    for (Value *M : make_range(ECs.member_begin(*E), ECs.member_end()))
       if (isa<PHINode>(M) && MinBW < M->getType()->getScalarSizeInBits()) {
         Abort = true;
         break;
@@ -867,7 +867,7 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
     if (Abort)
       continue;
 
-    for (Value *M : make_range(ECs.member_begin(E), ECs.member_end())) {
+    for (Value *M : make_range(ECs.member_begin(*E), ECs.member_end())) {
       auto *MI = dyn_cast<Instruction>(M);
       if (!MI)
         continue;
