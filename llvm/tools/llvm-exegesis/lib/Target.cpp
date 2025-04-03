@@ -16,9 +16,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 
-#include <linux/prctl.h> // For PR_PAC_* constants
-#include <sys/prctl.h>
-
 namespace llvm {
 namespace exegesis {
 
@@ -54,14 +51,6 @@ ExegesisTarget::getIgnoredOpcodeReasonOrNull(const LLVMState &State,
     return "Unsupported opcode: isCall";
   if (InstrDesc.isReturn())
     return "Unsupported opcode: isReturn";
-  if (isPointerAuth(Opcode))
-    prctl(PR_PAC_SET_ENABLED_KEYS,
-          PR_PAC_APIAKEY | PR_PAC_APIBKEY | PR_PAC_APDAKEY |
-              PR_PAC_APDBKEY, // all keys
-          0,                  // disable all
-          0, 0);
-  if (isLoadTagMultiple(Opcode))
-    return "Unsupported opcode: load tag multiple";
   return nullptr;
 }
 

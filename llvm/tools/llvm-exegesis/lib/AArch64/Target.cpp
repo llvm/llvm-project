@@ -9,11 +9,53 @@
 #include "AArch64.h"
 #include "AArch64RegisterInfo.h"
 
+#include <linux/prctl.h> // For PR_PAC_* constants
+#include <sys/prctl.h>
+
 #define GET_AVAILABLE_OPCODE_CHECKER
 #include "AArch64GenInstrInfo.inc"
 
 namespace llvm {
 namespace exegesis {
+
+bool isPointerAuth(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    return false;
+
+  // FIXME: Pointer Authentication instructions.
+  // We would like to measure these instructions, but they can behave
+  // differently on different platforms, and maybe the snippets need to look
+  // different for these instructions, so we disable PAC keys via prctl to allow
+  // measuring them without authentication failures.
+  case AArch64::AUTDA:
+  case AArch64::AUTDB:
+  case AArch64::AUTDZA:
+  case AArch64::AUTDZB:
+  case AArch64::AUTIA:
+  case AArch64::AUTIA1716:
+  case AArch64::AUTIASP:
+  case AArch64::AUTIAZ:
+  case AArch64::AUTIB:
+  case AArch64::AUTIB1716:
+  case AArch64::AUTIBSP:
+  case AArch64::AUTIBZ:
+  case AArch64::AUTIZA:
+  case AArch64::AUTIZB:
+    return true;
+  }
+}
+
+bool isLoadTagMultiple(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    return false;
+
+  // Load tag multiple instruction
+  case AArch64::LDGM:
+    return true;
+  }
+}
 
 static unsigned getLoadImmediateOpcode(unsigned RegBitWidth) {
   switch (RegBitWidth) {
@@ -134,6 +176,27 @@ private:
     // Function return is a pseudo-instruction that needs to be expanded
     PM.add(createAArch64ExpandPseudoPass());
   }
+
+  const char *getIgnoredOpcodeReasonOrNull(const LLVMState &State,
+                                           unsigned Opcode) const override {
+    if (const char *Reason =
+            ExegesisTarget::getIgnoredOpcodeReasonOrNull(State, Opcode))
+      return Reason;
+
+    if (isPointerAuth(Opcode)) {
+      // Disable all PAC keys
+      prctl(PR_PAC_SET_ENABLED_KEYS,
+            PR_PAC_APIAKEY | PR_PAC_APIBKEY | PR_PAC_APDAKEY |
+                PR_PAC_APDBKEY, // all keys
+            0,                  // disable all
+            0, 0);
+    }
+
+    if (isLoadTagMultiple(Opcode))
+      return "Unsupported opcode: load tag multiple";
+
+    return nullptr;
+  }
 };
 
 } // namespace
@@ -145,44 +208,6 @@ static ExegesisTarget *getTheExegesisAArch64Target() {
 
 void InitializeAArch64ExegesisTarget() {
   ExegesisTarget::registerTarget(getTheExegesisAArch64Target());
-}
-
-bool isPointerAuth(unsigned Opcode) {
-  switch (Opcode) {
-  default:
-    return false;
-
-  // FIXME: Pointer Authentication instructions.
-  // We would like to measure these instructions, but they can behave
-  // differently on different platforms, and maybe the snippets need to look
-  // different for these instructions, so let's disable this for now.
-  case AArch64::AUTDA:
-  case AArch64::AUTDB:
-  case AArch64::AUTDZA:
-  case AArch64::AUTDZB:
-  case AArch64::AUTIA:
-  case AArch64::AUTIA1716:
-  case AArch64::AUTIASP:
-  case AArch64::AUTIAZ:
-  case AArch64::AUTIB:
-  case AArch64::AUTIB1716:
-  case AArch64::AUTIBSP:
-  case AArch64::AUTIBZ:
-  case AArch64::AUTIZA:
-  case AArch64::AUTIZB:
-    return true;
-  }
-}
-
-bool isLoadTagMultiple(unsigned Opcode) {
-  switch (Opcode) {
-  default:
-    return false;
-
-  // Load tag multiple instruction
-  case AArch64::LDGM:
-    return true;
-  }
 }
 
 } // namespace exegesis

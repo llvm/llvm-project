@@ -334,9 +334,6 @@ private:
   const OpcodeAvailabilityChecker IsOpcodeAvailable;
 };
 
-bool isPointerAuth(unsigned Opcode);
-bool isLoadTagMultiple(unsigned Opcode);
-
 } // namespace exegesis
 } // namespace llvm
 
