@@ -1,8 +1,16 @@
+set(LLVM_LINK_COMPONENTS
+  FrontendOpenMP
+  Support
+  )
+
 add_clang_unittest(DynamicASTMatchersTests
   VariantValueTest.cpp
   ParserTest.cpp
   RegistryTest.cpp
-  CLANG_LIBS
+  )
+
+clang_target_link_libraries(DynamicASTMatchersTests
+  PRIVATE
   clangAST
   clangASTMatchers
   clangBasic
@@ -10,9 +18,9 @@ add_clang_unittest(DynamicASTMatchersTests
   clangFrontend
   clangSerialization
   clangTooling
-  LINK_LIBS
+  )
+
+target_link_libraries(DynamicASTMatchersTests
+  PRIVATE
   clangTesting
-  LLVM_COMPONENTS
-  FrontendOpenMP
-  Support
   )
