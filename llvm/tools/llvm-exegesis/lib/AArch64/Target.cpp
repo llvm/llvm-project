@@ -9,8 +9,10 @@
 #include "AArch64.h"
 #include "AArch64RegisterInfo.h"
 
+#ifdef __linux__
 #include <linux/prctl.h> // For PR_PAC_* constants
 #include <sys/prctl.h>
+#endif
 
 #define GET_AVAILABLE_OPCODE_CHECKER
 #include "AArch64GenInstrInfo.inc"
@@ -26,8 +28,10 @@ bool isPointerAuth(unsigned Opcode) {
   // FIXME: Pointer Authentication instructions.
   // We would like to measure these instructions, but they can behave
   // differently on different platforms, and maybe the snippets need to look
-  // different for these instructions, so we disable PAC keys via prctl to allow
-  // measuring them without authentication failures.
+  // different for these instructions,
+  // Platform-specific handling:  On Linux, we disable authentication, may
+  // interfere with measurements. On non-Linux platforms, disable opcodes for
+  // now.
   case AArch64::AUTDA:
   case AArch64::AUTDB:
   case AArch64::AUTDZA:
@@ -184,12 +188,20 @@ private:
       return Reason;
 
     if (isPointerAuth(Opcode)) {
-      // Disable all PAC keys
-      prctl(PR_PAC_SET_ENABLED_KEYS,
-            PR_PAC_APIAKEY | PR_PAC_APIBKEY | PR_PAC_APDAKEY |
-                PR_PAC_APDBKEY, // all keys
-            0,                  // disable all
-            0, 0);
+#ifdef __linux__
+      // Disable all PAC keys. Note that while we expect the measurements to
+      // be the same with PAC keys disabled, they could potentially be lower
+      // since authentication checks are bypassed.
+      if (prctl(PR_PAC_SET_ENABLED_KEYS,
+                PR_PAC_APIAKEY | PR_PAC_APIBKEY | PR_PAC_APDAKEY |
+                    PR_PAC_APDBKEY, // all keys
+                0,                  // disable all
+                0, 0) < 0) {
+        return "Failed to disable PAC keys";
+      }
+#else
+      return "Unsupported opcode: isPointerAuth";
+#endif
     }
 
     if (isLoadTagMultiple(Opcode))
