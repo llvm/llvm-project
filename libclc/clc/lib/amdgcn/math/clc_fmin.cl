@@ -11,9 +11,9 @@
 #include <clc/relational/clc_isnan.h>
 
 _CLC_DEF _CLC_OVERLOAD float __clc_fmin(float x, float y) {
-  /* fcanonicalize removes sNaNs and flushes denormals if not enabled.
-   * Otherwise fmin instruction flushes the values for comparison,
-   * but outputs original denormal */
+  // fcanonicalize removes sNaNs and flushes denormals if not enabled. Otherwise
+  // fmin instruction flushes the values for comparison, but outputs original
+  // denormal
   x = __builtin_canonicalizef(x);
   y = __builtin_canonicalizef(y);
   return __builtin_fminf(x, y);
