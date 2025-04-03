@@ -19,7 +19,7 @@ class TestDAP_progress(lldbdap_testcase.DAPTestCaseBase):
         expected_not_in_message=None,
         only_verify_first_update=False,
     ):
-        self.dap_server.wait_for_event("progressEnd", 15)
+        self.dap_server.wait_for_event("progressEnd")
         self.assertTrue(len(self.dap_server.progress_events) > 0)
         start_found = False
         update_found = False
@@ -45,20 +45,18 @@ class TestDAP_progress(lldbdap_testcase.DAPTestCaseBase):
         self.assertTrue(start_found)
         self.assertTrue(update_found)
         self.assertTrue(end_found)
+        self.dap_server.progress_events.clear()
 
     @skipIfWindows
-    def test_output(self):
+    def test(self):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)
         progress_emitter = os.path.join(os.getcwd(), "Progress_emitter.py")
-        source = "main.cpp"
-        breakpoint_ids = self.set_source_breakpoints(
-            source, [line_number(source, "// break here")]
-        )
-        self.continue_to_breakpoints(breakpoint_ids)
         self.dap_server.request_evaluate(
             f"`command script import {progress_emitter}", context="repl"
         )
+
+        # Test details.
         self.dap_server.request_evaluate(
             "`test-progress --total 3 --seconds 1", context="repl"
         )
@@ -68,19 +66,7 @@ class TestDAP_progress(lldbdap_testcase.DAPTestCaseBase):
             expected_not_in_message="Progress tester",
         )
 
-    @skipIfWindows
-    def test_output_nodetails(self):
-        program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
-        progress_emitter = os.path.join(os.getcwd(), "Progress_emitter.py")
-        source = "main.cpp"
-        breakpoint_ids = self.set_source_breakpoints(
-            source, [line_number(source, "// break here")]
-        )
-        self.continue_to_breakpoints(breakpoint_ids)
-        self.dap_server.request_evaluate(
-            f"`command script import {progress_emitter}", context="repl"
-        )
+        # Test no details.
         self.dap_server.request_evaluate(
             "`test-progress --total 3 --seconds 1 --no-details", context="repl"
         )
@@ -90,19 +76,7 @@ class TestDAP_progress(lldbdap_testcase.DAPTestCaseBase):
             expected_message="Initial Detail",
         )
 
-    @skipIfWindows
-    def test_output_indeterminate(self):
-        program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
-        progress_emitter = os.path.join(os.getcwd(), "Progress_emitter.py")
-        source = "main.cpp"
-        breakpoint_ids = self.set_source_breakpoints(
-            source, [line_number(source, "// break here")]
-        )
-        self.continue_to_breakpoints(breakpoint_ids)
-        self.dap_server.request_evaluate(
-            f"`command script import {progress_emitter}", context="repl"
-        )
+        # Test details indeterminate.
         self.dap_server.request_evaluate("`test-progress --seconds 1", context="repl")
 
         self.verify_progress_events(
@@ -111,19 +85,7 @@ class TestDAP_progress(lldbdap_testcase.DAPTestCaseBase):
             only_verify_first_update=True,
         )
 
-    @skipIfWindows
-    def test_output_nodetails_indeterminate(self):
-        program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
-        progress_emitter = os.path.join(os.getcwd(), "Progress_emitter.py")
-        source = "main.cpp"
-        breakpoint_ids = self.set_source_breakpoints(
-            source, [line_number(source, "// break here")]
-        )
-        self.dap_server.request_evaluate(
-            f"`command script import {progress_emitter}", context="repl"
-        )
-
+        # Test no details indeterminate.
         self.dap_server.request_evaluate(
             "`test-progress --seconds 1 --no-details", context="repl"
         )
