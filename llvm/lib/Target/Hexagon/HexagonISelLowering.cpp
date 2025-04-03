@@ -2083,7 +2083,7 @@ static Value *getUnderLyingObjectForBrevLdIntr(Value *V) {
 /// true and store the intrinsic information into the IntrinsicInfo that was
 /// passed to the function.
 bool HexagonTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                               const CallBase &I,
+                                               const CallInst &I,
                                                MachineFunction &MF,
                                                unsigned Intrinsic) const {
   switch (Intrinsic) {

@@ -134,14 +134,8 @@ public:
       return CF->isIntrinsic();
     return false;
   }
-  static bool classof(const CallBase *I) {
-    if (const Function *CF = I->getCalledFunction())
-      return CF->isIntrinsic();
-    return false;
-  }
   static bool classof(const Value *V) {
-    return (isa<CallInst>(V) && classof(cast<CallInst>(V))) ||
-           (isa<CallBase>(V) && classof(cast<CallBase>(V)));
+    return isa<CallInst>(V) && classof(cast<CallInst>(V));
   }
 };
 

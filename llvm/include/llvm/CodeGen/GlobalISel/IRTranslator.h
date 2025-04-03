@@ -235,26 +235,26 @@ private:
   bool translateStore(const User &U, MachineIRBuilder &MIRBuilder);
 
   /// Translate an LLVM string intrinsic (memcpy, memset, ...).
-  bool translateMemFunc(const CallBase &CI, MachineIRBuilder &MIRBuilder,
+  bool translateMemFunc(const CallInst &CI, MachineIRBuilder &MIRBuilder,
                         unsigned Opcode);
 
   /// Translate an LLVM trap intrinsic (trap, debugtrap, ubsantrap).
-  bool translateTrap(const CallBase &U, MachineIRBuilder &MIRBuilder,
+  bool translateTrap(const CallInst &U, MachineIRBuilder &MIRBuilder,
                      unsigned Opcode);
 
   // Translate @llvm.vector.interleave2 and
   // @llvm.vector.deinterleave2 intrinsics for fixed-width vector
   // types into vector shuffles.
-  bool translateVectorInterleave2Intrinsic(const CallBase &CI,
+  bool translateVectorInterleave2Intrinsic(const CallInst &CI,
                                            MachineIRBuilder &MIRBuilder);
-  bool translateVectorDeinterleave2Intrinsic(const CallBase &CI,
+  bool translateVectorDeinterleave2Intrinsic(const CallInst &CI,
                                              MachineIRBuilder &MIRBuilder);
 
   void getStackGuard(Register DstReg, MachineIRBuilder &MIRBuilder);
 
-  bool translateOverflowIntrinsic(const CallBase &CI, unsigned Op,
+  bool translateOverflowIntrinsic(const CallInst &CI, unsigned Op,
                                   MachineIRBuilder &MIRBuilder);
-  bool translateFixedPointIntrinsic(unsigned Op, const CallBase &CI,
+  bool translateFixedPointIntrinsic(unsigned Op, const CallInst &CI,
                                     MachineIRBuilder &MIRBuilder);
 
   /// Helper function for translateSimpleIntrinsic.
@@ -265,13 +265,13 @@ private:
 
   /// Translates the intrinsics defined in getSimpleIntrinsicOpcode.
   /// \return true if the translation succeeded.
-  bool translateSimpleIntrinsic(const CallBase &CI, Intrinsic::ID ID,
+  bool translateSimpleIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                                 MachineIRBuilder &MIRBuilder);
 
   bool translateConstrainedFPIntrinsic(const ConstrainedFPIntrinsic &FPI,
                                        MachineIRBuilder &MIRBuilder);
 
-  bool translateKnownIntrinsic(const CallBase &CI, Intrinsic::ID ID,
+  bool translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                                MachineIRBuilder &MIRBuilder);
 
   /// Returns the single livein physical register Arg was lowered to, if
@@ -588,7 +588,7 @@ private:
     return false;
   }
 
-  bool translateConvergenceControlIntrinsic(const CallBase &CI,
+  bool translateConvergenceControlIntrinsic(const CallInst &CI,
                                             Intrinsic::ID ID,
                                             MachineIRBuilder &MIRBuilder);
 

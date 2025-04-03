@@ -91,7 +91,7 @@ MVT SPIRVTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
 }
 
 bool SPIRVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                             const Callase &I,
+                                             const CallInst &I,
                                              MachineFunction &MF,
                                              unsigned Intrinsic) const {
   unsigned AlignIdx = 3;
