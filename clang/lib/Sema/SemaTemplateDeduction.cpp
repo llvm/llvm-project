@@ -2091,11 +2091,13 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
       QualType PPT = MPP->getPointeeType();
       if (PPT->isFunctionType())
         S.adjustMemberFunctionCC(PPT, /*HasThisPointer=*/false,
-                                 /*IsCtorOrDtor=*/false, Info.getLocation());
+                                 /*IsCtorOrDtor=*/false, /*IsDeduced=*/true,
+                                 Info.getLocation());
       QualType APT = MPA->getPointeeType();
       if (APT->isFunctionType())
         S.adjustMemberFunctionCC(APT, /*HasThisPointer=*/false,
-                                 /*IsCtorOrDtor=*/false, Info.getLocation());
+                                 /*IsCtorOrDtor=*/false, /*IsDeduced=*/true,
+                                 Info.getLocation());
 
       unsigned SubTDF = TDF & TDF_IgnoreQualifiers;
       if (auto Result = DeduceTemplateArgumentsByTypeMatch(

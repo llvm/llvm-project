@@ -126,7 +126,7 @@ void QualifiedAutoCheck::registerMatchers(MatchFinder *Finder) {
   auto UnlessFunctionType = unless(hasUnqualifiedDesugaredType(functionType()));
   auto IsAutoDeducedToPointer = [](const auto &...InnerMatchers) {
     return autoType(hasDeducedType(
-        hasUnqualifiedDesugaredType(pointerType(pointee(InnerMatchers...)))));
+        hasCanonicalType(pointerType(pointee(InnerMatchers...)))));
   };
 
   Finder->addMatcher(

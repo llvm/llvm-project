@@ -53,8 +53,8 @@ namespace subst {
 // CHECK-NEXT:       `-TemplateSpecializationType
 // CHECK-NEXT:         |-name: 'C':'subst::B<subst::A>::C' qualified
 // CHECK-NEXT:         | `-ClassTemplateDecl {{.+}} C
-// CHECK-NEXT:         |-TemplateArgument template 'subst::A' subst index 0
-// CHECK-NEXT:         | |-parameter: TemplateTemplateParmDecl {{.+}} depth 0 index 0 TT{{$}}
-// CHECK-NEXT:         | |-associated ClassTemplateSpecialization {{.+}} 'B'{{$}}
-// CHECK-NEXT:         | `-replacement:
+// CHECK-NEXT:         |-TemplateArgument template 'A':'subst::A' subst index 0 final
+// CHECK-NEXT:         | |-parameter: TemplateTemplateParmDecl {{.+}} col:36 depth 0 index 0 TT
+// CHECK-NEXT:         | |-associated ClassTemplateSpecialization {{.+}} 'B'
+// CHECK-NEXT:         | `-replacement: 'A':'subst::A' qualified
 // CHECK-NEXT:         |   `-ClassTemplateDecl {{.+}} A{{$}}
