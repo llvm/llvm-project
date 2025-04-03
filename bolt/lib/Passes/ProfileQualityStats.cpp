@@ -347,20 +347,20 @@ void printCFGFlowConservationStats(const BinaryContext &BC, raw_ostream &OS,
       }
     }
     double WeightedGap = WeightedGapSum;
-    if (WeightSum > 0) 
+    if (WeightSum > 0)
       WeightedGap /= WeightSum;
     if (opts::Verbosity >= 2 && WorstGap >= 0.9) {
       OS << "Nontrivial CFG gap observed in function "
-          << Function->getPrintName() << "\n"
-          << "Weighted gap: " << formatv("{0:P}", WeightedGap) << "\n";
+         << Function->getPrintName() << "\n"
+         << "Weighted gap: " << formatv("{0:P}", WeightedGap) << "\n";
       if (BBWorstGap)
         OS << "Worst gap: " << formatv("{0:P}", WorstGap)
-            << " at BB with input offset: 0x"
-            << Twine::utohexstr(BBWorstGap->getInputOffset()) << "\n";
+           << " at BB with input offset: 0x"
+           << Twine::utohexstr(BBWorstGap->getInputOffset()) << "\n";
       if (BBWorstGapAbs)
         OS << "Worst gap (absolute value): " << WorstGapAbs << " at BB with "
-            << "input offset 0x"
-            << Twine::utohexstr(BBWorstGapAbs->getInputOffset()) << "\n";
+           << "input offset 0x"
+           << Twine::utohexstr(BBWorstGapAbs->getInputOffset()) << "\n";
       if (opts::Verbosity >= 3)
         Function->dump();
     }
