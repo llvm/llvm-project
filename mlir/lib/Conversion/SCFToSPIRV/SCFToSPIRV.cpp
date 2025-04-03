@@ -225,7 +225,7 @@ struct IfOpConversion : SCFToSPIRVPattern<scf::IfOp> {
     // subsequently converges.
     auto loc = ifOp.getLoc();
 
-    // Compute return types.
+    // Compute new return types.
     SmallVector<Type, 8> returnTypes;
     for (auto result : ifOp.getResults()) {
       auto convertedType = typeConverter.convertType(result.getType());

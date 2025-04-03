@@ -305,7 +305,7 @@ public:
   virtual ~IRRewrite() = default;
 
   /// Roll back the rewrite. Operations may be erased during rollback.
-  virtual void rollback() = 0;
+  virtual void rollback() {}
 
   /// Commit the rewrite. At this point, it is certain that the dialect
   /// conversion will succeed. All IR modifications, except for operation/block
@@ -375,19 +375,6 @@ public:
     if (auto *listener = rewriter.getListener())
       listener->notifyBlockInserted(block, /*previous=*/{}, /*previousIt=*/{});
   }
-
-  void rollback() override {
-    // Unlink all of the operations within this block, they will be deleted
-    // separately.
-    auto &blockOps = block->getOperations();
-    while (!blockOps.empty())
-      blockOps.remove(blockOps.begin());
-    block->dropAllUses();
-    if (block->getParent())
-      block->erase();
-    else
-      delete block;
-  }
 };
 
 /// Erasure of a block. Block erasures are partially reflected in the IR. Erased
@@ -407,18 +394,6 @@ public:
   ~EraseBlockRewrite() override {
     assert(!block &&
            "rewrite was neither rolled back nor committed/cleaned up");
-  }
-
-  void rollback() override {
-    // The block (owned by this rewrite) was not actually erased yet. It was
-    // just unlinked. Put it back into its original position.
-    assert(block && "expected block");
-    auto &blockList = region->getBlocks();
-    Region::iterator before = insertBeforeBlock
-                                  ? Region::iterator(insertBeforeBlock)
-                                  : blockList.end();
-    blockList.insert(before, block);
-    block = nullptr;
   }
 
   void commit(RewriterBase &rewriter) override {
@@ -473,18 +448,6 @@ public:
     return rewrite->getKind() == Kind::InlineBlock;
   }
 
-  void rollback() override {
-    // Put the operations from the destination block (owned by the rewrite)
-    // back into the source block.
-    if (firstInlinedInst) {
-      assert(lastInlinedInst && "expected operation");
-      sourceBlock->getOperations().splice(sourceBlock->begin(),
-                                          block->getOperations(),
-                                          Block::iterator(firstInlinedInst),
-                                          ++Block::iterator(lastInlinedInst));
-    }
-  }
-
 private:
   // The block that originally contained the operations.
   Block *sourceBlock;
@@ -518,13 +481,6 @@ public:
     }
   }
 
-  void rollback() override {
-    // Move the block back to its original position.
-    Region::iterator before =
-        insertBeforeBlock ? Region::iterator(insertBeforeBlock) : region->end();
-    region->getBlocks().splice(before, block->getParent()->getBlocks(), block);
-  }
-
 private:
   // The region in which this block was previously contained.
   Region *region;
@@ -552,8 +508,6 @@ public:
 
   void commit(RewriterBase &rewriter) override;
 
-  void rollback() override;
-
 private:
   /// The new block that was created as part of this signature conversion.
   Block *newBlock;
@@ -575,8 +529,6 @@ public:
   }
 
   void commit(RewriterBase &rewriter) override;
-
-  void rollback() override;
 
 private:
   BlockArgument arg;
@@ -626,13 +578,6 @@ public:
           op, /*previous=*/OpBuilder::InsertPoint(/*insertBlock=*/block,
                                                   /*insertPt=*/{}));
     }
-  }
-
-  void rollback() override {
-    // Move the operation back to its original position.
-    Block::iterator before =
-        insertBeforeOp ? Block::iterator(insertBeforeOp) : block->end();
-    block->getOperations().splice(before, op->getBlock()->getOperations(), op);
   }
 
 private:
@@ -728,8 +673,6 @@ public:
 
   void commit(RewriterBase &rewriter) override;
 
-  void rollback() override;
-
   void cleanup(RewriterBase &rewriter) override;
 
 private:
@@ -753,8 +696,6 @@ public:
     if (auto *listener = rewriter.getListener())
       listener->notifyOperationInserted(op, /*previous=*/{});
   }
-
-  void rollback() override;
 };
 
 /// The type of materialization.
@@ -862,7 +803,7 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   void applyRewrites();
 
   /// Reset the state of the rewriter to a previously saved point.
-  void resetState(RewriterState state);
+  void resetState(RewriterState state, StringRef patternName);
 
   /// Append a rewrite. Rewrites are committed upon success and rolled back upon
   /// failure.
@@ -871,10 +812,6 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
     rewrites.push_back(
         std::make_unique<RewriteTy>(*this, std::forward<Args>(args)...));
   }
-
-  /// Undo the rewrites (motions, splits) one by one in reverse order until
-  /// "numRewritesToKeep" rewrites remains.
-  void undoRewrites(unsigned numRewritesToKeep = 0);
 
   /// Remap the given values to those with potentially different types. Returns
   /// success if the values could be remapped, failure otherwise. `valueDiagTag`
@@ -1082,10 +1019,6 @@ void BlockTypeConversionRewrite::commit(RewriterBase &rewriter) {
       listener->notifyOperationModified(op);
 }
 
-void BlockTypeConversionRewrite::rollback() {
-  getNewBlock()->replaceAllUsesWith(getOrigBlock());
-}
-
 void ReplaceBlockArgRewrite::commit(RewriterBase &rewriter) {
   Value repl = rewriterImpl.findOrBuildReplacementValue(arg, converter);
   if (!repl)
@@ -1106,8 +1039,6 @@ void ReplaceBlockArgRewrite::commit(RewriterBase &rewriter) {
     return user->getBlock() != replBlock || replOp->isBeforeInBlock(user);
   });
 }
-
-void ReplaceBlockArgRewrite::rollback() { rewriterImpl.mapping.erase({arg}); }
 
 void ReplaceOperationRewrite::commit(RewriterBase &rewriter) {
   auto *listener =
@@ -1146,22 +1077,8 @@ void ReplaceOperationRewrite::commit(RewriterBase &rewriter) {
   op->getBlock()->getOperations().remove(op);
 }
 
-void ReplaceOperationRewrite::rollback() {
-  for (auto result : op->getResults())
-    rewriterImpl.mapping.erase({result});
-}
-
 void ReplaceOperationRewrite::cleanup(RewriterBase &rewriter) {
   rewriter.eraseOp(op);
-}
-
-void CreateOperationRewrite::rollback() {
-  for (Region &region : op->getRegions()) {
-    while (!region.getBlocks().empty())
-      region.getBlocks().remove(region.getBlocks().begin());
-  }
-  op->dropAllUses();
-  op->erase();
 }
 
 UnresolvedMaterializationRewrite::UnresolvedMaterializationRewrite(
@@ -1204,9 +1121,19 @@ RewriterState ConversionPatternRewriterImpl::getCurrentState() {
   return RewriterState(rewrites.size(), ignoredOps.size(), replacedOps.size());
 }
 
-void ConversionPatternRewriterImpl::resetState(RewriterState state) {
+void ConversionPatternRewriterImpl::resetState(RewriterState state, StringRef patternName) {
   // Undo any rewrites.
-  undoRewrites(state.numRewrites);
+  unsigned numRewritesToKeep = state.numRewrites;
+  for (auto &rewrite :
+       llvm::reverse(llvm::drop_begin(rewrites, numRewritesToKeep))) {
+    if (!isa<UnresolvedMaterializationRewrite>(rewrite)) {
+      std::string errorMessage =
+          "pattern '" + std::string(patternName) + "' failed after modifying IR";
+      llvm_unreachable(errorMessage.c_str());
+    }
+    rewrite->rollback();
+  }
+  rewrites.resize(numRewritesToKeep);
 
   // Pop all of the recorded ignored operations that are no longer valid.
   while (ignoredOps.size() != state.numIgnoredOperations)
@@ -1214,13 +1141,6 @@ void ConversionPatternRewriterImpl::resetState(RewriterState state) {
 
   while (replacedOps.size() != state.numReplacedOps)
     replacedOps.pop_back();
-}
-
-void ConversionPatternRewriterImpl::undoRewrites(unsigned numRewritesToKeep) {
-  for (auto &rewrite :
-       llvm::reverse(llvm::drop_begin(rewrites, numRewritesToKeep)))
-    rewrite->rollback();
-  rewrites.resize(numRewritesToKeep);
 }
 
 LogicalResult ConversionPatternRewriterImpl::remapValues(
@@ -2120,7 +2040,7 @@ OperationLegalizer::legalizeWithFold(Operation *op,
       LLVM_DEBUG(logFailure(rewriterImpl.logger,
                             "failed to legalize generated constant '{0}'",
                             createOp->getOperation()->getName()));
-      rewriterImpl.resetState(curState);
+      //rewriterImpl.resetState(curState);
       return failure();
     }
   }
@@ -2161,7 +2081,7 @@ OperationLegalizer::legalizeWithPattern(Operation *op,
     });
     if (config.listener)
       config.listener->notifyPatternEnd(pattern, failure());
-    rewriterImpl.resetState(curState);
+    rewriterImpl.resetState(curState, pattern.getDebugName());
     appliedPatterns.erase(&pattern);
   };
 
@@ -2172,7 +2092,8 @@ OperationLegalizer::legalizeWithPattern(Operation *op,
     auto result = legalizePatternResult(op, pattern, rewriter, curState);
     appliedPatterns.erase(&pattern);
     if (failed(result))
-      rewriterImpl.resetState(curState);
+      op->emitError("pattern '") << pattern.getDebugName()
+                                 << "' produced IR that could not be legalized";
     if (config.listener)
       config.listener->notifyPatternEnd(pattern, result);
     return result;
@@ -2679,7 +2600,7 @@ LogicalResult OperationConverter::convertOperations(ArrayRef<Operation *> ops) {
 
   for (auto *op : toConvert)
     if (failed(convert(rewriter, op)))
-      return rewriterImpl.undoRewrites(), failure();
+      return rewriterImpl.applyRewrites(), failure();
 
   // After a successful conversion, apply rewrites.
   rewriterImpl.applyRewrites();
