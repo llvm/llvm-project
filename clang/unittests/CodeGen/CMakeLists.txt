@@ -1,9 +1,18 @@
+set(LLVM_LINK_COMPONENTS
+  Core
+  Support
+  TargetParser
+  )
+
 add_clang_unittest(ClangCodeGenTests
   BufferSourceTest.cpp
   CodeGenExternalTest.cpp
   TBAAMetadataTest.cpp
   CheckTargetFeaturesTest.cpp
-  CLANG_LIBS
+  )
+
+clang_target_link_libraries(ClangCodeGenTests
+  PRIVATE
   clangAST
   clangBasic
   clangCodeGen
@@ -11,8 +20,4 @@ add_clang_unittest(ClangCodeGenTests
   clangLex
   clangParse
   clangSerialization
-  LLVM_COMPONENTS
-  Core
-  Support
-  TargetParser
   )
