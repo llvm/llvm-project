@@ -6551,9 +6551,13 @@ IntrinsicLibrary::genMatchAnySync(mlir::Type resultType,
 
   mlir::Value arg1 = args[1];
   if (arg1.getType().isF32() || arg1.getType().isF64())
-    arg1 = builder.create<fir::ConvertOp>(loc, is32 ? builder.getI32Type() : builder.getI64Type(), arg1);
+    arg1 = builder.create<fir::ConvertOp>(
+        loc, is32 ? builder.getI32Type() : builder.getI64Type(), arg1);
 
-  return builder.create<mlir::NVVM::MatchSyncOp>(loc, resultType, args[0], arg1, mlir::NVVM::MatchSyncKind::any).getResult();
+  return builder
+      .create<mlir::NVVM::MatchSyncOp>(loc, resultType, args[0], arg1,
+                                       mlir::NVVM::MatchSyncKind::any)
+      .getResult();
 }
 
 // MATMUL
