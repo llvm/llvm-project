@@ -62,6 +62,13 @@ void populateGpuLowerSubgroupReduceToShufflePatterns(
     RewritePatternSet &patterns, unsigned subgroupSize,
     unsigned shuffleBitwidth = 32, PatternBenefit benefit = 1);
 
+/// Collect a set of patterns to lower `gpu.subgroup_reduce` into `amdgpu.dpp`
+/// ops over scalar types. Assumes that the subgroup has
+/// `subgroupSize` lanes. Applicable only to AMD GPUs.
+void populateGpuLowerSubgroupReduceToDPPPatterns(RewritePatternSet &patterns,
+                                                 unsigned subgroupSize,
+                                                 PatternBenefit benefit = 1);
+
 /// Disjoint counterpart of `populateGpuLowerSubgroupReduceToShufflePatterns`
 /// that only matches `gpu.subgroup_reduce` ops with a `cluster_size`.
 void populateGpuLowerClusteredSubgroupReduceToShufflePatterns(
