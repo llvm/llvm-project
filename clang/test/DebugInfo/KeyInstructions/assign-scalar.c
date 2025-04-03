@@ -24,6 +24,16 @@ void fun() {
 // CHECK: %add = add i64 %1, 50, !dbg [[G4R2:!.*]]
 // CHECK: store i64 %add, ptr @g{{.*}}, !dbg [[G4R1:!.*]]
     g += 50;
+
+// Pre/Post Inc/Dec.
+// CHECK: %2 = load i64, ptr @g
+// CHECK: %inc = add i64 %2, 1, !dbg [[G5R2:!.*]]
+// CHECK: store i64 %inc, ptr @g{{.*}}, !dbg [[G5R1:!.*]]
+    ++g;
+// CHECK: %3 = load i64, ptr @g
+// CHECK: %dec = add i64 %3, -1, !dbg [[G6R2:!.*]]
+// CHECK: store i64 %dec, ptr @g{{.*}}, !dbg [[G6R1:!.*]]
+    g--;
 }
 
 // CHECK: [[G1R1]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 1)
@@ -32,3 +42,7 @@ void fun() {
 // CHECK: [[G2R1]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 1)
 // CHECK: [[G4R2]] = !DILocation({{.*}}, atomGroup: 4, atomRank: 2)
 // CHECK: [[G4R1]] = !DILocation({{.*}}, atomGroup: 4, atomRank: 1)
+// CHECK: [[G5R2]] = !DILocation({{.*}}, atomGroup: 5, atomRank: 2)
+// CHECK: [[G5R1]] = !DILocation({{.*}}, atomGroup: 5, atomRank: 1)
+// CHECK: [[G6R2]] = !DILocation({{.*}}, atomGroup: 6, atomRank: 2)
+// CHECK: [[G6R1]] = !DILocation({{.*}}, atomGroup: 6, atomRank: 1)
