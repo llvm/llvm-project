@@ -719,19 +719,34 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
         } else {
           if (!hasGnuProperties) {
             KnownAArch64BuildAttrSubsections subSections =
-            extractBuildAttributesSubsections(ctx, attributes, isec);
+                extractBuildAttributesSubsections(ctx, attributes, isec);
             if (ELFT::Endianness == llvm::endianness::big) {
               for (size_t i = 0; i < 8; ++i) {
-                this->aarch64PauthAbiCoreInfoStorage[i] = static_cast<uint8_t>((static_cast<uint64_t>(subSections.pauth.tagPlatform) >> (8 * (7 - i))) & 0xFF);
-                this->aarch64PauthAbiCoreInfoStorage[i + 8] = static_cast<uint8_t>((static_cast<uint64_t>(subSections.pauth.tagSchema) >> (8 * (7 - i))) & 0xFF);
+                this->aarch64PauthAbiCoreInfoStorage[i] = static_cast<uint8_t>(
+                    (static_cast<uint64_t>(subSections.pauth.tagPlatform) >>
+                     (8 * (7 - i))) &
+                    0xFF);
+                this->aarch64PauthAbiCoreInfoStorage[i + 8] =
+                    static_cast<uint8_t>(
+                        (static_cast<uint64_t>(subSections.pauth.tagSchema) >>
+                         (8 * (7 - i))) &
+                        0xFF);
               }
             } else {
               for (size_t i = 0; i < 8; ++i) {
-                this->aarch64PauthAbiCoreInfoStorage[i] = static_cast<uint8_t>((static_cast<uint64_t>(subSections.pauth.tagPlatform) >> (8 * i)) & 0xFF);
-                this->aarch64PauthAbiCoreInfoStorage[i + 8] = static_cast<uint8_t>((static_cast<uint64_t>(subSections.pauth.tagSchema) >> (8 * i)) & 0xFF);
+                this->aarch64PauthAbiCoreInfoStorage[i] = static_cast<uint8_t>(
+                    (static_cast<uint64_t>(subSections.pauth.tagPlatform) >>
+                     (8 * i)) &
+                    0xFF);
+                this->aarch64PauthAbiCoreInfoStorage[i + 8] =
+                    static_cast<uint8_t>(
+                        (static_cast<uint64_t>(subSections.pauth.tagSchema) >>
+                         (8 * i)) &
+                        0xFF);
               }
             }
-            this->aarch64PauthAbiCoreInfo = this->aarch64PauthAbiCoreInfoStorage;
+            this->aarch64PauthAbiCoreInfo =
+                this->aarch64PauthAbiCoreInfoStorage;
             this->andFeatures = 0;
             this->andFeatures |= (subSections.fAndB.tagBTI) << 0;
             this->andFeatures |= (subSections.fAndB.tagPAC) << 1;
