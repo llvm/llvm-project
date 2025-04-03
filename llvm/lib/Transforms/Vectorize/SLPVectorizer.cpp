@@ -12938,8 +12938,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         assert(IsVectorized && "Expected to be vectorized");
         Align CommonAlignment;
         if (IsMasked)
-          CommonAlignment =
-              computeCommonAlignment<LoadInst>(UniqueValues.getArrayRef());
+          CommonAlignment = computeCommonAlignment<LoadInst>(VL);
         else
           CommonAlignment = LI0->getAlign();
         if (InterleaveFactor) {
