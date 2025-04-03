@@ -28,6 +28,7 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -35463,28 +35464,6 @@ MVT X86TargetLowering::getPreferredSwitchConditionType(LLVMContext &Context,
 //                           X86 Scheduler Hooks
 //===----------------------------------------------------------------------===//
 
-// Returns true if EFLAG is consumed after this iterator in the rest of the
-// basic block or any successors of the basic block.
-static bool isEFLAGSLiveAfter(MachineBasicBlock::iterator Itr,
-                              MachineBasicBlock *BB) {
-  // Scan forward through BB for a use/def of EFLAGS.
-  for (const MachineInstr &mi : llvm::make_range(std::next(Itr), BB->end())) {
-    if (mi.readsRegister(X86::EFLAGS, /*TRI=*/nullptr))
-      return true;
-    // If we found a def, we can stop searching.
-    if (mi.definesRegister(X86::EFLAGS, /*TRI=*/nullptr))
-      return false;
-  }
-
-  // If we hit the end of the block, check whether EFLAGS is live into a
-  // successor.
-  for (MachineBasicBlock *Succ : BB->successors())
-    if (Succ->isLiveIn(X86::EFLAGS))
-      return true;
-
-  return false;
-}
-
 /// Utility function to emit xbegin specifying the start of an RTM region.
 static MachineBasicBlock *emitXBegin(MachineInstr &MI, MachineBasicBlock *MBB,
                                      const TargetInstrInfo *TII) {
@@ -35517,7 +35496,7 @@ static MachineBasicBlock *emitXBegin(MachineInstr &MI, MachineBasicBlock *MBB,
   MF->insert(I, fallMBB);
   MF->insert(I, sinkMBB);
 
-  if (isEFLAGSLiveAfter(MI, MBB)) {
+  if (isPhysRegUsedAfter(X86::EFLAGS, MI)) {
     mainMBB->addLiveIn(X86::EFLAGS);
     fallMBB->addLiveIn(X86::EFLAGS);
     sinkMBB->addLiveIn(X86::EFLAGS);
@@ -35856,7 +35835,7 @@ X86TargetLowering::EmitVAARGWithCustomInserter(MachineInstr &MI,
 static bool checkAndUpdateEFLAGSKill(MachineBasicBlock::iterator SelectItr,
                                      MachineBasicBlock* BB,
                                      const TargetRegisterInfo* TRI) {
-  if (isEFLAGSLiveAfter(SelectItr, BB))
+  if (isPhysRegUsedAfter(X86::EFLAGS, SelectItr))
     return false;
 
   // We found a def, or hit the end of the basic block and EFLAGS wasn't live
