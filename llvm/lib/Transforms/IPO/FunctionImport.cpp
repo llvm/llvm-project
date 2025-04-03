@@ -497,6 +497,13 @@ static const char *getFailureName(FunctionImporter::ImportFailureReason Reason);
 
 /// Determine the list of imports and exports for each module.
 class ModuleImportsManager {
+  void computeImportForFunction(
+      const FunctionSummary &Summary, unsigned Threshold,
+      const GVSummaryMapTy &DefinedGVSummaries,
+      SmallVectorImpl<EdgeInfo> &Worklist, GlobalsImporter &GVImporter,
+      FunctionImporter::ImportMapTy &ImportList,
+      FunctionImporter::ImportThresholdsTy &ImportThresholds);
+
 protected:
   function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
       IsPrevailing;
@@ -852,14 +859,11 @@ getFailureName(FunctionImporter::ImportFailureReason Reason) {
 /// Compute the list of functions to import for a given caller. Mark these
 /// imported functions and the symbols they reference in their source module as
 /// exported from their source module.
-static void computeImportForFunction(
-    const FunctionSummary &Summary, const ModuleSummaryIndex &Index,
-    const unsigned Threshold, const GVSummaryMapTy &DefinedGVSummaries,
-    function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
-        isPrevailing,
+void ModuleImportsManager::computeImportForFunction(
+    const FunctionSummary &Summary, const unsigned Threshold,
+    const GVSummaryMapTy &DefinedGVSummaries,
     SmallVectorImpl<EdgeInfo> &Worklist, GlobalsImporter &GVImporter,
     FunctionImporter::ImportMapTy &ImportList,
-    DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists,
     FunctionImporter::ImportThresholdsTy &ImportThresholds) {
   GVImporter.onImportingSummary(Summary);
   static int ImportCount = 0;
@@ -1064,9 +1068,8 @@ void ModuleImportsManager::computeImportForModule(
       // Skip import for global variables
       continue;
     LLVM_DEBUG(dbgs() << "Initialize import for " << VI << "\n");
-    computeImportForFunction(*FuncSummary, Index, ImportInstrLimit,
-                             DefinedGVSummaries, IsPrevailing, Worklist, GVI,
-                             ImportList, ExportLists, ImportThresholds);
+    computeImportForFunction(*FuncSummary, ImportInstrLimit, DefinedGVSummaries,
+                             Worklist, GVI, ImportList, ImportThresholds);
   }
 
   // Process the newly imported functions and add callees to the worklist.
@@ -1076,9 +1079,8 @@ void ModuleImportsManager::computeImportForModule(
     auto Threshold = std::get<1>(GVInfo);
 
     if (auto *FS = dyn_cast<FunctionSummary>(Summary))
-      computeImportForFunction(*FS, Index, Threshold, DefinedGVSummaries,
-                               IsPrevailing, Worklist, GVI, ImportList,
-                               ExportLists, ImportThresholds);
+      computeImportForFunction(*FS, Threshold, DefinedGVSummaries, Worklist,
+                               GVI, ImportList, ImportThresholds);
   }
 
   // Print stats about functions considered but rejected for importing
