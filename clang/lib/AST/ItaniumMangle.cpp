@@ -6288,7 +6288,9 @@ void CXXNameMangler::mangleTemplateArg(TemplateArgument A, bool NeedExactType) {
 
     ASTContext &Ctx = Context.getASTContext();
     APValue Value;
-    if (D->isCXXInstanceMember())
+    if (auto *Method = dyn_cast<CXXMethodDecl>(D);
+        Method ? Method->isImplicitObjectMemberFunction()
+               : D->isCXXInstanceMember())
       // Simple pointer-to-member with no conversion.
       Value = APValue(D, /*IsDerivedMember=*/false, /*Path=*/{});
     else if (D->getType()->isArrayType() &&

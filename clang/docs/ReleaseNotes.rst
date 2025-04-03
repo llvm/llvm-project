@@ -401,6 +401,7 @@ Bug Fixes to C++ Support
 - Clang no longer crashes when establishing subsumption between some constraint expressions. (#GH122581)
 - Clang now issues an error when placement new is used to modify a const-qualified variable
   in a ``constexpr`` function. (#GH131432)
+- Fixed some issues related to the use of (pointers to) explicit object member functions as template arguments. (#GH106660)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

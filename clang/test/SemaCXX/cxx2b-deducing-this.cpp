@@ -1118,6 +1118,45 @@ struct C4 {
 };
 }
 
+namespace GH106660 {
+
+template<auto X> constexpr int A = X(1);
+template<auto& X> constexpr int Ar = X(2);
+template<int (*X)(int)> constexpr int B = X(3);
+template<int (&X)(int)> constexpr int Br = X(4);
+template<auto X> using C = decltype(X(1));
+template<auto& X> using Cr = decltype(X(2));
+template<int (*X)(int)> using D = decltype(X(3));
+template<int (&X)(int)> using Dr = decltype(X(4));
+template<auto X> using E = decltype((X));
+template<auto& X> using Er = decltype((X));
+template<int (*X)(int)> using F = decltype((X));
+template<int (&X)(int)> using Fr = decltype((X));
+
+struct S {
+  constexpr int f(this int i) noexcept {
+    return i * 2;
+  }
+};
+
+static_assert(A<&S::f> == 2);
+static_assert(Ar<*&S::f> == 4);
+static_assert(B<&S::f> == 6);
+static_assert(Br<*&S::f> == 8);
+
+using W = C<&S::f>;
+using X = Cr<*&S::f>;
+using Y = D<&S::f>;
+using Z = Dr<*&S::f>;
+
+template<class> class R {};
+R<int (*)(int) noexcept> w = R<E<&S::f>>();
+R<int (&)(int) noexcept> x = R<Er<*&S::f>>();
+R<int (*)(int)> y = R<F<&S::f>>();
+R<int (&)(int)> z = R<Fr<*&S::f>>();
+
+
+} // namespace GH106660
 
 namespace GH112559 {
 struct Wrap  {};
