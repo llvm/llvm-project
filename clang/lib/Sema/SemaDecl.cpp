@@ -13122,6 +13122,7 @@ bool Sema::DeduceVariableDeclarationType(VarDecl *VDecl, bool DirectInit,
     return true;
   }
 
+  // FIXME: Set TypeSourceInfo?
   VDecl->setType(DeducedType);
   assert(VDecl->isLinkageValid());
 

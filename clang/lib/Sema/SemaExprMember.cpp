@@ -836,18 +836,14 @@ ExprResult Sema::BuildMemberReferenceExpr(
                                   false, ExtraArgs);
 }
 
-ExprResult
-Sema::BuildAnonymousStructUnionMemberReference(const CXXScopeSpec &SS,
-                                               SourceLocation loc,
-                                               IndirectFieldDecl *indirectField,
-                                               DeclAccessPair foundDecl,
-                                               Expr *baseObjectExpr,
-                                               SourceLocation opLoc) {
+ExprResult Sema::BuildAnonymousStructUnionMemberReference(
+    const CXXScopeSpec &SS, SourceLocation loc,
+    IndirectFieldDecl *indirectField, DeclAccessPair foundDecl,
+    Expr *baseObjectExpr, const Type *BaseType, SourceLocation opLoc) {
   // First, build the expression that refers to the base object.
 
   // Case 1:  the base of the indirect field is not a field.
   VarDecl *baseVariable = indirectField->getVarDecl();
-  CXXScopeSpec EmptySS;
   if (baseVariable) {
     assert(baseVariable->getType()->isRecordType());
 
@@ -860,6 +856,7 @@ Sema::BuildAnonymousStructUnionMemberReference(const CXXScopeSpec &SS,
 
     DeclarationNameInfo baseNameInfo(DeclarationName(), loc);
 
+    CXXScopeSpec EmptySS;
     ExprResult result
       = BuildDeclarationNameExpr(EmptySS, baseNameInfo, baseVariable);
     if (result.isInvalid()) return ExprError();
@@ -877,6 +874,8 @@ Sema::BuildAnonymousStructUnionMemberReference(const CXXScopeSpec &SS,
   IndirectFieldDecl::chain_iterator
   FI = indirectField->chain_begin(), FEnd = indirectField->chain_end();
 
+  NestedNameSpecifierLoc NNS = SS.getWithLocInContext(Context);
+
   // Case 2: the base of the indirect field is a field and the user
   // wrote a member expression.
   if (!baseVariable) {
@@ -887,11 +886,16 @@ Sema::BuildAnonymousStructUnionMemberReference(const CXXScopeSpec &SS,
     // Make a nameInfo that properly uses the anonymous name.
     DeclarationNameInfo memberNameInfo(field->getDeclName(), loc);
 
+    // FIXME: Avoid redundant setting of the naming scope with the loop below.
+    QualType FieldType =
+        BaseType ? resugar(BaseType, SS.getScopeRep(), field->getType())
+                 : field->getType();
+
     // Build the first member access in the chain with full information.
-    result =
-        BuildFieldReferenceExpr(result, baseObjectIsPointer, SourceLocation(),
-                                SS, field, foundDecl, memberNameInfo)
-            .get();
+    result = BuildFieldReferenceExpr(result, baseObjectIsPointer,
+                                     SourceLocation(), NNS, field, FieldType,
+                                     foundDecl, memberNameInfo)
+                 .get();
     if (!result)
       return ExprError();
   }
@@ -907,10 +911,15 @@ Sema::BuildAnonymousStructUnionMemberReference(const CXXScopeSpec &SS,
     DeclAccessPair fakeFoundDecl =
         DeclAccessPair::make(field, field->getAccess());
 
+    QualType FieldType =
+        BaseType && FI == FEnd
+            ? resugar(BaseType, SS.getScopeRep(), field->getType())
+            : field->getType();
+
     result =
         BuildFieldReferenceExpr(result, /*isarrow*/ false, SourceLocation(),
-                                (FI == FEnd ? SS : EmptySS), field,
-                                fakeFoundDecl, memberNameInfo)
+                                (FI == FEnd ? NNS : NestedNameSpecifierLoc()),
+                                field, FieldType, fakeFoundDecl, memberNameInfo)
             .get();
   }
 
@@ -1154,10 +1163,14 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
     return ExprError();
 
   if (FieldDecl *FD = dyn_cast<FieldDecl>(MemberDecl)) {
+    assert(!TemplateArgs);
     if (ConvertBaseExprToGLValue())
       return ExprError();
-    return BuildFieldReferenceExpr(BaseExpr, IsArrow, OpLoc, SS, FD, FoundDecl,
-                                   MemberNameInfo);
+    NestedNameSpecifierLoc NNS = SS.getWithLocInContext(Context);
+    QualType FieldType =
+        resugar(BaseType.getTypePtr(), SS.getScopeRep(), FD->getType());
+    return BuildFieldReferenceExpr(BaseExpr, IsArrow, OpLoc, NNS, FD, FieldType,
+                                   FoundDecl, MemberNameInfo);
   }
 
   if (MSPropertyDecl *PD = dyn_cast<MSPropertyDecl>(MemberDecl)) {
@@ -1166,6 +1179,7 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
     // Note that this is slightly different behaviour from MSVC which doesn't
     // implement CWG2813 yet: MSVC might materialize an extra temporary if the
     // getter or setter function is an explicit object member function.
+    // FIXME: resugar these.
     return BuildMSPropertyRefExpr(*this, BaseExpr, IsArrow, SS, PD,
                                   MemberNameInfo);
   }
@@ -1175,23 +1189,28 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
       return ExprError();
     // We may have found a field within an anonymous union or struct
     // (C++ [class.union]).
-    return BuildAnonymousStructUnionMemberReference(SS, MemberLoc, FD,
-                                                    FoundDecl, BaseExpr,
-                                                    OpLoc);
+    return BuildAnonymousStructUnionMemberReference(
+        SS, MemberLoc, FD, FoundDecl, BaseExpr, BaseType.getTypePtr(), OpLoc);
   }
 
   // Static data member
   if (VarDecl *Var = dyn_cast<VarDecl>(MemberDecl)) {
+    assert(!TemplateArgs);
     if (ConvertBaseExprToDiscardedValue())
       return ExprError();
-    return BuildMemberExpr(BaseExpr, IsArrow, OpLoc,
-                           SS.getWithLocInContext(Context), TemplateKWLoc, Var,
+    NestedNameSpecifierLoc NNS = SS.getWithLocInContext(Context);
+    QualType VarType =
+        resugar(BaseType.getTypePtr(), SS.getScopeRep(), Var->getType());
+    return BuildMemberExpr(BaseExpr, IsArrow, OpLoc, NNS, TemplateKWLoc, Var,
                            FoundDecl, /*HadMultipleCandidates=*/false,
-                           MemberNameInfo, Var->getType().getNonReferenceType(),
+                           MemberNameInfo, VarType.getNonReferenceType(),
                            VK_LValue, OK_Ordinary);
   }
 
   if (CXXMethodDecl *MemberFn = dyn_cast<CXXMethodDecl>(MemberDecl)) {
+    assert(!TemplateArgs);
+    NestedNameSpecifierLoc NNS = SS.getWithLocInContext(Context);
+
     ExprValueKind valueKind;
     QualType type;
     if (MemberFn->isInstance()) {
@@ -1205,23 +1224,27 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
       if (ConvertBaseExprToDiscardedValue())
         return ExprError();
       valueKind = VK_LValue;
-      type = MemberFn->getType();
+      type =
+          resugar(BaseType.getTypePtr(), SS.getScopeRep(), MemberFn->getType());
     }
 
-    return BuildMemberExpr(BaseExpr, IsArrow, OpLoc,
-                           SS.getWithLocInContext(Context), TemplateKWLoc,
+    return BuildMemberExpr(BaseExpr, IsArrow, OpLoc, NNS, TemplateKWLoc,
                            MemberFn, FoundDecl, /*HadMultipleCandidates=*/false,
                            MemberNameInfo, type, valueKind, OK_Ordinary);
   }
   assert(!isa<FunctionDecl>(MemberDecl) && "member function not C++ method?");
 
   if (EnumConstantDecl *Enum = dyn_cast<EnumConstantDecl>(MemberDecl)) {
+    assert(!TemplateArgs);
     if (ConvertBaseExprToDiscardedValue())
       return ExprError();
-    return BuildMemberExpr(
-        BaseExpr, IsArrow, OpLoc, SS.getWithLocInContext(Context),
-        TemplateKWLoc, Enum, FoundDecl, /*HadMultipleCandidates=*/false,
-        MemberNameInfo, Enum->getType(), VK_PRValue, OK_Ordinary);
+    NestedNameSpecifierLoc NNS = SS.getWithLocInContext(Context);
+    // FIXME: EnumType resugaring not implemented.
+    QualType EnumType =
+        resugar(BaseType.getTypePtr(), SS.getScopeRep(), Enum->getType());
+    return BuildMemberExpr(BaseExpr, IsArrow, OpLoc, NNS, TemplateKWLoc, Enum,
+                           FoundDecl, /*HadMultipleCandidates=*/false,
+                           MemberNameInfo, EnumType, VK_PRValue, OK_Ordinary);
   }
 
   if (VarTemplateDecl *VarTempl = dyn_cast<VarTemplateDecl>(MemberDecl)) {
@@ -1250,10 +1273,12 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
     if (!Var->getTemplateSpecializationKind())
       Var->setTemplateSpecializationKind(TSK_ImplicitInstantiation, MemberLoc);
 
-    return BuildMemberExpr(BaseExpr, IsArrow, OpLoc,
-                           SS.getWithLocInContext(Context), TemplateKWLoc, Var,
+    NestedNameSpecifierLoc NNS = SS.getWithLocInContext(Context);
+    QualType VarType = resugar(BaseType.getTypePtr(), SS.getScopeRep(), Var,
+                               ConvertedArgs->asArray(), Var->getType());
+    return BuildMemberExpr(BaseExpr, IsArrow, OpLoc, NNS, TemplateKWLoc, Var,
                            FoundDecl, /*HadMultipleCandidates=*/false,
-                           MemberNameInfo, Var->getType().getNonReferenceType(),
+                           MemberNameInfo, VarType.getNonReferenceType(),
                            VK_LValue, OK_Ordinary, TemplateArgs, ConvertedArgs);
   }
 
@@ -1866,11 +1891,10 @@ void Sema::CheckMemberAccessOfNoDeref(const MemberExpr *E) {
   }
 }
 
-ExprResult
-Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
-                              SourceLocation OpLoc, const CXXScopeSpec &SS,
-                              FieldDecl *Field, DeclAccessPair FoundDecl,
-                              const DeclarationNameInfo &MemberNameInfo) {
+ExprResult Sema::BuildFieldReferenceExpr(
+    Expr *BaseExpr, bool IsArrow, SourceLocation OpLoc,
+    const NestedNameSpecifierLoc &NNS, FieldDecl *Field, QualType FieldType,
+    DeclAccessPair FoundDecl, const DeclarationNameInfo &MemberNameInfo) {
   // x.a is an l-value if 'a' has a reference type. Otherwise:
   // x.a is an l-value/x-value/pr-value if the base is (and note
   //   that *x is always an l-value), except that if the base isn't
@@ -1887,9 +1911,8 @@ Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
     OK = OK_BitField;
 
   // Figure out the type of the member; see C99 6.5.2.3p3, C++ [expr.ref]
-  QualType MemberType = Field->getType();
-  if (const ReferenceType *Ref = MemberType->getAs<ReferenceType>()) {
-    MemberType = Ref->getPointeeType();
+  if (const ReferenceType *Ref = FieldType->getAs<ReferenceType>()) {
+    FieldType = Ref->getPointeeType();
     VK = VK_LValue;
   } else {
     QualType BaseType = BaseExpr->getType();
@@ -1904,22 +1927,21 @@ Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
     // except that 'mutable' members don't pick up 'const'.
     if (Field->isMutable()) BaseQuals.removeConst();
 
-    Qualifiers MemberQuals =
-        Context.getCanonicalType(MemberType).getQualifiers();
+    Qualifiers FieldQuals = Context.getCanonicalType(FieldType).getQualifiers();
 
-    assert(!MemberQuals.hasAddressSpace());
+    assert(!FieldQuals.hasAddressSpace());
 
-    Qualifiers Combined = BaseQuals + MemberQuals;
-    if (Combined != MemberQuals)
-      MemberType = Context.getQualifiedType(MemberType, Combined);
+    Qualifiers Combined = BaseQuals + FieldQuals;
+    if (Combined != FieldQuals)
+      FieldType = Context.getQualifiedType(FieldType, Combined);
 
     // Pick up NoDeref from the base in case we end up using AddrOf on the
     // result. E.g. the expression
     //     &someNoDerefPtr->pointerMember
     // should be a noderef pointer again.
     if (BaseType->hasAttr(attr::NoDeref))
-      MemberType =
-          Context.getAttributedType(attr::NoDeref, MemberType, MemberType);
+      FieldType =
+          Context.getAttributedType(attr::NoDeref, FieldType, FieldType);
   }
 
   auto isDefaultedSpecialMember = [this](const DeclContext *Ctx) {
@@ -1934,8 +1956,8 @@ Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
   if (!isDefaultedSpecialMember(CurContext))
     UnusedPrivateFields.remove(Field);
 
-  ExprResult Base = PerformObjectMemberConversion(BaseExpr, SS.getScopeRep(),
-                                                  FoundDecl, Field);
+  ExprResult Base = PerformObjectMemberConversion(
+      BaseExpr, NNS.getNestedNameSpecifier(), FoundDecl, Field);
   if (Base.isInvalid())
     return ExprError();
 
@@ -1950,10 +1972,10 @@ Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
     }
   }
 
-  return BuildMemberExpr(
-      Base.get(), IsArrow, OpLoc, SS.getWithLocInContext(Context),
-      /*TemplateKWLoc=*/SourceLocation(), Field, FoundDecl,
-      /*HadMultipleCandidates=*/false, MemberNameInfo, MemberType, VK, OK);
+  return BuildMemberExpr(Base.get(), IsArrow, OpLoc, NNS,
+                         /*TemplateKWLoc=*/SourceLocation(), Field, FoundDecl,
+                         /*HadMultipleCandidates=*/false, MemberNameInfo,
+                         FieldType, VK, OK);
 }
 
 ExprResult

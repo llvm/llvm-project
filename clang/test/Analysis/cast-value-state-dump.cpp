@@ -18,12 +18,12 @@ using namespace clang;
 
 void evalNonNullParamNonNullReturn(const Shape *S) {
   const auto *C = dyn_cast_or_null<Circle>(S);
-  // expected-note@-1 {{Assuming 'S' is a 'const class clang::Circle *'}}
+  // expected-note@-1 {{Assuming 'S' is a 'const Circle *'}}
   // expected-note@-2 {{'C' initialized here}}
 
   // FIXME: We assumed that 'S' is a 'Circle' therefore it is not a 'Square'.
   if (dyn_cast_or_null<Square>(S)) {
-    // expected-note@-1 {{Assuming 'S' is not a 'const class clang::Square *'}}
+    // expected-note@-1 {{Assuming 'S' is not a 'const Square *'}}
     // expected-note@-2 {{Taking false branch}}
     return;
   }
@@ -31,7 +31,7 @@ void evalNonNullParamNonNullReturn(const Shape *S) {
   clang_analyzer_printState();
 
   // CHECK:      "dynamic_types": [
-  // CHECK-NEXT:   { "region": "SymRegion{reg_$0<const Shape * S>}", "dyn_type": "const class clang::Circle", "sub_classable": true }
+  // CHECK-NEXT:   { "region": "SymRegion{reg_$0<const Shape * S>}", "dyn_type": "const Circle", "sub_classable": true }
   // CHECK-NEXT: ],
   // CHECK-NEXT: "dynamic_casts": [
   // CHECK:        { "region": "SymRegion{reg_$0<const Shape * S>}", "casts": [

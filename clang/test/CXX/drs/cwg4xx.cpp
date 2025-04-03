@@ -565,16 +565,16 @@ namespace cwg428 { // cwg428: 2.7
     // expected-error@-1 {{cannot throw object of incomplete type 'struct X'}}
     //   expected-note@#cwg428-X {{forward declaration of 'cwg428::X'}}
     throw make<X&>();
-    // expected-error@-1 {{cannot throw object of incomplete type 'cwg428::X'}}
+    // expected-error@-1 {{cannot throw object of incomplete type 'X'}}
     //   expected-note@#cwg428-X {{forward declaration of 'cwg428::X'}}
     throw make<X*>();
-    // expected-error@-1 {{cannot throw pointer to object of incomplete type 'cwg428::X'}}
+    // expected-error@-1 {{cannot throw pointer to object of incomplete type 'X'}}
     //   expected-note@#cwg428-X {{forward declaration of 'cwg428::X'}}
     throw make<const volatile X&>();
-    // expected-error@-1 {{cannot throw object of incomplete type 'cwg428::X'}}
+    // expected-error@-1 {{cannot throw object of incomplete type 'X'}}
     //   expected-note@#cwg428-X {{forward declaration of 'cwg428::X'}}
     throw make<const volatile X*>();
-    // expected-error@-1 {{cannot throw pointer to object of incomplete type 'const volatile cwg428::X'}}
+    // expected-error@-1 {{cannot throw pointer to object of incomplete type 'const volatile X'}}
     //   expected-note@#cwg428-X {{forward declaration of 'cwg428::X'}}
   }
 } // namespace cwg428
