@@ -10,7 +10,7 @@ cm.mvsa01 s0, s0
 # CHECK-ERROR: :[[@LINE+1]]:11: error: invalid operand for instruction
 cm.mva01s a1, a2
 
-# CHECK-ERROR: :[[@LINE+1]]:23: error: invalid register list, {ra, s0-s10} or {x1, x8-x9, x18-x26} is not supported
+# CHECK-ERROR: :[[@LINE+1]]:12: error: invalid register list, {ra, s0-s10} or {x1, x8-x9, x18-x26} is not supported
 cm.popretz {ra, s0-s10}, 112
 
 # CHECK-ERROR: :[[@LINE+1]]:25: error: stack adjustment for register list must be a multiple of 16 bytes in the range [32, 80]
@@ -19,13 +19,13 @@ cm.popretz {ra, s0-s1}, 112
 # CHECK-ERROR: :[[@LINE+1]]:15: error: stack adjustment for register list must be a multiple of 16 bytes in the range [-64, -16]
 cm.push {ra}, 16
 
-# CHECK-ERROR: :[[@LINE+1]]:22: error: stack adjustment for register list must be a multiple of 16 bytes in the range [32, 80]
+# CHECK-ERROR: :[[@LINE+1]]:21: error: stack adjustment for register list must be a multiple of 16 bytes in the range [32, 80]
 cm.pop {ra, s0-s1}, -32
 
-# CHECK-ERROR: :[[@LINE+1]]:16: error: stack adjustment for register list must be a multiple of 16 bytes in the range [-64, -16]
+# CHECK-ERROR: :[[@LINE+1]]:15: error: stack adjustment for register list must be a multiple of 16 bytes in the range [-64, -16]
 cm.push {ra}, -15
 
-# CHECK-ERROR: :[[@LINE+1]]:22: error: stack adjustment for register list must be a multiple of 16 bytes in the range [32, 80]
+# CHECK-ERROR: :[[@LINE+1]]:21: error: stack adjustment for register list must be a multiple of 16 bytes in the range [32, 80]
 cm.pop {ra, s0-s1}, -33
 
 # CHECK-ERROR: :[[@LINE+1]]:9: error: register list must start from 'ra' or 'x1'
@@ -48,3 +48,9 @@ cm.pop {ra, x8-x9, x18-x17}, -40
 
 # CHECK-ERROR: :[[@LINE+1]]:16: error: invalid register
 cm.pop {ra, x8-f8, x18-x17}, -40
+
+# CHECK-ERROR: :[[@LINE+1]]:15: error: stack adjustment is invalid for this instruction and register list
+cm.pop {ra}, -x1
+
+# CHECK-ERROR: :[[@LINE+1]]:15: error: stack adjustment is invalid for this instruction and register list
+cm.push {ra}, x1
