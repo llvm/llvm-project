@@ -187,6 +187,9 @@ Improvements to clang-tidy
   :doc:`readability-redundant-access-specifiers <clang-tidy/checks/readability/redundant-access-specifiers>`, CheckFirstDeclaration
   :doc:`readability-redundant-casting <clang-tidy/checks/readability/redundant-casting>`, IgnoreTypeAliases
 
+- Fixed bug in :program:`clang-tidy` by which `HeaderFilterRegex` did not take
+  effect when passed via the `.clang-tidy` file.
+
 New checks
 ^^^^^^^^^^
 
