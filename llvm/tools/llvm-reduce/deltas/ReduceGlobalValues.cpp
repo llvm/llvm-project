@@ -64,5 +64,13 @@ void llvm::reduceGlobalValuesDeltaPass(Oracle &O, ReducerWorkItem &Program) {
       if (IsImplicitDSOLocal)
         GV.setDSOLocal(false);
     }
+
+    // TODO: Should this go in a separate reduction?
+    if (auto *GVar = dyn_cast<GlobalVariable>(&GV)) {
+      if (GVar->isExternallyInitialized() && !O.shouldKeep())
+        GVar->setExternallyInitialized(false);
+
+      // TODO: Reduce code model
+    }
   }
 }
