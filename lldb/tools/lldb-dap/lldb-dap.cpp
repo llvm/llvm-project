@@ -31,6 +31,7 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
@@ -175,6 +176,12 @@ EXAMPLES:
 
     lldb-dap -g
 )___";
+}
+
+static void PrintVersion() {
+  llvm::outs() << "lldb-dap: ";
+  llvm::cl::PrintVersionMessage();
+  llvm::outs() << "liblldb: " << lldb::SBDebugger::GetVersionString() << '\n';
 }
 
 // If --launch-target is provided, this instance of lldb-dap becomes a
@@ -418,6 +425,11 @@ int main(int argc, char *argv[]) {
 
   if (input_args.hasArg(OPT_help)) {
     PrintHelp(T, llvm::sys::path::filename(argv[0]));
+    return EXIT_SUCCESS;
+  }
+
+  if (input_args.hasArg(OPT_version)) {
+    PrintVersion();
     return EXIT_SUCCESS;
   }
 

@@ -2283,7 +2283,7 @@ void VPlanTransforms::createInterleaveGroups(
                       : B.createPtrAdd(InsertPos->getAddr(), OffsetVPV);
     }
     auto *VPIG = new VPInterleaveRecipe(IG, Addr, StoredValues,
-                                        InsertPos->getMask(), NeedsMaskForGaps);
+                                        InsertPos->getMask(), NeedsMaskForGaps, InsertPos->getDebugLoc());
     VPIG->insertBefore(InsertPos);
 
     unsigned J = 0;
