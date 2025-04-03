@@ -1091,6 +1091,27 @@ end program rename_proc
 This intrinsic is an alias for `CPU_TIME`: supporting both a subroutine and a
 function form.
 
+### Non-Standard Intrinsics: TIME
+
+#### Description
+`TIME()` returns the current time of the system as a INTEGER(8). 
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** function
+- **Syntax:** `RESULT = TIME()`
+
+#### Example
+```Fortran
+PROGRAM example_time
+  print *, TIME()
+  print *, TIME()
+  call SLEEP(10)
+  print *, TIME()
+END PROGRAM
+```
+
 ### Non-Standard Intrinsics: UNLINK
 
 #### Description
