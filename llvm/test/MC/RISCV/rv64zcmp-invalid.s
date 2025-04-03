@@ -19,13 +19,13 @@ cm.popretz {ra, s0-s1}, 112
 # CHECK-ERROR: :[[@LINE+1]]:15: error: stack adjustment for register list must be a multiple of 16 bytes in the range [-64, -16]
 cm.push {ra}, 16
 
-# CHECK-ERROR: :[[@LINE+1]]:22: error: stack adjustment for register list must be a multiple of 16 bytes in the range [32, 80]
+# CHECK-ERROR: :[[@LINE+1]]:21: error: stack adjustment for register list must be a multiple of 16 bytes in the range [32, 80]
 cm.pop {ra, s0-s1}, -32
 
-# CHECK-ERROR: :[[@LINE+1]]:16: error: stack adjustment for register list must be a multiple of 16 bytes in the range [-64, -16]
+# CHECK-ERROR: :[[@LINE+1]]:15: error: stack adjustment for register list must be a multiple of 16 bytes in the range [-64, -16]
 cm.push {ra}, -15
 
-# CHECK-ERROR: :[[@LINE+1]]:22: error: stack adjustment for register list must be a multiple of 16 bytes in the range [32, 80]
+# CHECK-ERROR: :[[@LINE+1]]:21: error: stack adjustment for register list must be a multiple of 16 bytes in the range [32, 80]
 cm.pop {ra, s0-s1}, -33
 
 # CHECK-ERROR: :[[@LINE+1]]:9: error: register list must start from 'ra' or 'x1'
