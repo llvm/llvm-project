@@ -447,7 +447,7 @@ static lldb_private::LineEntry FindEntryPoint(Module *exe_module) {
       sc_list.GetContextAtIndex(idx, sc);
       if (sc.function) {
         lldb_private::LineEntry line_entry;
-        Address base_address = sc.function->GetAddressRange().GetBaseAddress();
+        Address base_address = sc.function->GetAddress();
         if (skip_prologue)
           base_address.SetOffset(sc.function->GetPrologueByteSize() +
                                  base_address.GetOffset());
