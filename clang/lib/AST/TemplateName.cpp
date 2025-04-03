@@ -83,11 +83,11 @@ void SubstTemplateTemplateParmStorage::Profile(llvm::FoldingSetNodeID &ID) {
 
 void SubstTemplateTemplateParmStorage::Profile(
     llvm::FoldingSetNodeID &ID, TemplateName Replacement, Decl *AssociatedDecl,
-    unsigned Index, std::optional<unsigned> PackIndex, bool Final) {
+    unsigned Index, UnsignedOrNone PackIndex, bool Final) {
   Replacement.Profile(ID);
   ID.AddPointer(AssociatedDecl);
   ID.AddInteger(Index);
-  ID.AddInteger(PackIndex ? *PackIndex + 1 : 0);
+  ID.AddInteger(PackIndex.toInternalRepresentation());
   ID.AddBoolean(Final);
 }
 
