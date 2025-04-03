@@ -10672,7 +10672,8 @@ SemaOpenMP::ActOnOpenMPDispatchDirective(ArrayRef<OMPClause *> Clauses,
     return StmtError();
 
   Stmt *S = cast<CapturedStmt>(AStmt)->getCapturedStmt();
-  if (isa<CapturedStmt>(S)) S = cast<CapturedStmt>(S)->getCapturedStmt();
+  if (isa<CapturedStmt>(S))
+    S = cast<CapturedStmt>(S)->getCapturedStmt();
 
   // 5.1 OpenMP
   // expression-stmt : an expression statement with one of the following forms:
