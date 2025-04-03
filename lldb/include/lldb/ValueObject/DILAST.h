@@ -64,9 +64,7 @@ public:
 
 class IdentifierNode : public ASTNode {
 public:
-  IdentifierNode(uint32_t location, std::string name,
-                 lldb::DynamicValueType use_dynamic,
-                 std::shared_ptr<ExecutionContextScope> exe_ctx_scope)
+  IdentifierNode(uint32_t location, std::string name)
       : ASTNode(location, NodeKind::eIdentifierNode), m_name(std::move(name)) {}
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;

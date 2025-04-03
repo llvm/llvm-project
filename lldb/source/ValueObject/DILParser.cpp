@@ -98,8 +98,7 @@ ASTNodeUP DILParser::ParsePrimaryExpression() {
     uint32_t loc = CurToken().GetLocation();
     auto identifier = ParseIdExpression();
 
-    return std::make_unique<IdentifierNode>(loc, identifier, m_use_dynamic,
-                                            m_ctx_scope);
+    return std::make_unique<IdentifierNode>(loc, identifier);
   }
 
   if (CurToken().Is(Token::l_paren)) {
