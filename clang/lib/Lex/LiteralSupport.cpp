@@ -917,6 +917,7 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
   isFloat = false;
   isImaginary = false;
   isFloat16 = false;
+  isBFloat16 = false;
   isFloat128 = false;
   MicrosoftInteger = 0;
   isFract = false;
@@ -973,11 +974,20 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
   bool isFPConstant = isFloatingLiteral();
   bool HasSize = false;
   bool DoubleUnderscore = false;
+  bool isBF16 = false;
 
   // Loop over all of the characters of the suffix.  If we see something bad,
   // we break out of the loop.
   for (; s != ThisTokEnd; ++s) {
     switch (*s) {
+    case 'b':
+    case 'B':
+      if (isBFloat16) break;
+      if (isBF16) break;
+      if (HasSize) break;
+
+      isBF16 = true;
+      continue;
     case 'R':
     case 'r':
       if (!LangOpts.FixedPoint)
@@ -1022,7 +1032,11 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
            (LangOpts.OpenMPIsTargetDevice && Target.getTriple().isNVPTX())) &&
           s + 2 < ThisTokEnd && s[1] == '1' && s[2] == '6') {
         s += 2; // success, eat up 2 characters.
-        isFloat16 = true;
+        if (isBF16) {
+          isBFloat16 = true;
+        } else {
+          isFloat16 = true;
+        }
         continue;
       }
 
@@ -1183,6 +1197,7 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
         isSizeT = false;
         isFloat = false;
         isFloat16 = false;
+        isBFloat16 = false;
         isHalf = false;
         isImaginary = false;
         isBitInt = false;

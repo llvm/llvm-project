@@ -77,6 +77,7 @@ public:
   bool isFloat : 1;         // 1.0f
   bool isImaginary : 1;     // 1.0i
   bool isFloat16 : 1;       // 1.0f16
+  bool isBFloat16 : 1;      // 1.0bf16
   bool isFloat128 : 1;      // 1.0q
   bool isFract : 1;         // 1.0hr/r/lr/uhr/ur/ulr
   bool isAccum : 1;         // 1.0hk/k/lk/uhk/uk/ulk
