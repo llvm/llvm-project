@@ -36,11 +36,11 @@ TEST(LlvmLibcUtimesTest, ChangeTimesSpecific) {
   times[1].tv_usec = 23456;
 
   // ensure utimes succeeds
-  ASSERT_THAT(LIBC_NAMESPACE::utimes(FILE_PATH, times), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::utimes(TEST_FILE, times), Succeeds(0));
 
   // verify the times values against stat of the TEST_FILE
   struct stat statbuf;
-  ASSERT_EQ(LIBC_NAMESPACE::stat(FILE_PATH, &statbuf), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::stat(TEST_FILE, &statbuf), 0);
 
   // seconds
   ASSERT_EQ(statbuf.st_atim.tv_sec, times[0].tv_sec);
@@ -76,7 +76,7 @@ TEST(LlvmLibcUtimesTest, InvalidMicroseconds) {
   times[1].tv_usec = 1000000; // invalid
 
   // ensure utimes fails
-  ASSERT_THAT(LIBC_NAMESPACE::utimes(FILE_PATH, times), Fails(EINVAL));
+  ASSERT_THAT(LIBC_NAMESPACE::utimes(TEST_FILE, times), Fails(EINVAL));
 
   // check for failure on
   // the other possible bad values
@@ -87,6 +87,6 @@ TEST(LlvmLibcUtimesTest, InvalidMicroseconds) {
   times[1].tv_usec = 1000;
 
   // ensure utimes fails once more
-  ASSERT_THAT(LIBC_NAMESPACE::utimes(FILE_PATH, times), Fails(EINVAL));
+  ASSERT_THAT(LIBC_NAMESPACE::utimes(TEST_FILE, times), Fails(EINVAL));
   ASSERT_THAT(LIBC_NAMESPACE::remove(TEST_FILE), Succeeds(0));
 }
