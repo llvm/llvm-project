@@ -4222,8 +4222,9 @@ define void @foo(i32 %cond0, i32 %cond1) {
   EXPECT_EQ(Switch->getDefaultDest(),
             Ctx.getValue(LLVMSwitch->getDefaultDest()));
   EXPECT_EQ(Switch->getDefaultDest(), Default);
-  // Check defaultDestUndefined().
-  EXPECT_EQ(Switch->defaultDestUndefined(), LLVMSwitch->defaultDestUndefined());
+  // Check defaultDestUnreachable().
+  EXPECT_EQ(Switch->defaultDestUnreachable(),
+            LLVMSwitch->defaultDestUnreachable());
   // Check setDefaultDest().
   auto *OrigDefaultDest = Switch->getDefaultDest();
   auto *NewDefaultDest = Entry;

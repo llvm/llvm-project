@@ -19,6 +19,7 @@
 
 #include "CGCXXABI.h"
 #include "CGCleanup.h"
+#include "CGDebugInfo.h"
 #include "CGRecordLayout.h"
 #include "CGVTables.h"
 #include "CodeGenFunction.h"
