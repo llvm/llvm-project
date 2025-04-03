@@ -16,7 +16,3 @@ breaks aompSmoke:
 [Clang][AMDGPU] Remove special handling for COV4 libraries 
 huber,saiyed
 ---
-needs merge help: ranap
-[OpenMP] Add memory allocation using hwloc (#132843)
-[OpenMP] 6.0 (TR11) Memory Management Update (#97106) 
----
