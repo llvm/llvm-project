@@ -344,28 +344,6 @@ static void collectCallOps(iterator_range<Region::iterator> blocks,
     }
   }
 }
-//===----------------------------------------------------------------------===//
-// Inliner
-//===----------------------------------------------------------------------===//
-// Initialize doClone function with the default implementation
-Inliner::CloneCallbackTy &Inliner::doClone() {
-  static Inliner::CloneCallbackTy doWork =
-      [](OpBuilder &builder, Region *src, Block *inlineBlock,
-         Block *postInsertBlock, IRMapping &mapper,
-         bool shouldCloneInlinedRegion) {
-        // Check to see if the region is being cloned, or moved inline. In
-        // either case, move the new blocks after the 'insertBlock' to improve
-        // IR readability.
-        Region *insertRegion = inlineBlock->getParent();
-        if (shouldCloneInlinedRegion)
-          src->cloneInto(insertRegion, postInsertBlock->getIterator(), mapper);
-        else
-          insertRegion->getBlocks().splice(postInsertBlock->getIterator(),
-                                           src->getBlocks(), src->begin(),
-                                           src->end());
-      };
-  return doWork;
-}
 
 //===----------------------------------------------------------------------===//
 // InlinerInterfaceImpl
@@ -673,7 +651,7 @@ Inliner::Impl::inlineCallsInSCC(InlinerInterfaceImpl &inlinerIface,
     bool inlineInPlace = useList.hasOneUseAndDiscardable(it.targetNode);
 
     LogicalResult inlineResult =
-        inlineCall(inlinerIface, call,
+        inlineCall(inlinerIface, inliner.config, call,
                    cast<CallableOpInterface>(targetRegion->getParentOp()),
                    targetRegion, /*shouldCloneInlinedRegion=*/!inlineInPlace);
     if (failed(inlineResult)) {
@@ -751,7 +729,7 @@ bool Inliner::Impl::shouldInline(ResolvedCall &resolvedCall) {
 
   // Don't allow inlining if the callee has multiple blocks (unstructured
   // control flow) but we cannot be sure that the caller region supports that.
-  if (!inliner.canHandleMultipleBlocks()) {
+  if (!inliner.config.getCanHandleMultipleBlocks()) {
     bool calleeHasMultipleBlocks =
         llvm::hasNItemsOrMore(*callableRegion, /*N=*/2);
     // If both parent ops have the same type, it is safe to inline. Otherwise,

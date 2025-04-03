@@ -95,22 +95,21 @@ struct InlinerCallback
       return true;
     };
 
-    // This customized inliner can turn multiple blocks into a single block.
-    auto canHandleMultipleBlocksCb = [&]() { return true; };
-
-    // Get an instance of the inliner.
-    Inliner inliner(function, cg, *this, getAnalysisManager(),
-                    runPipelineHelper, config, profitabilityCb,
-                    canHandleMultipleBlocksCb);
-
-    // Customize the implementation of Inliner::doClone
-    inliner.setCloneCallback([](OpBuilder &builder, Region *src,
-                                Block *inlineBlock, Block *postInsertBlock,
-                                IRMapping &mapper,
-                                bool shouldCloneInlinedRegion) {
+    // Set the clone callback in the config
+    config.setCloneCallback([](OpBuilder &builder, Region *src,
+                               Block *inlineBlock, Block *postInsertBlock,
+                               IRMapping &mapper,
+                               bool shouldCloneInlinedRegion) {
       return testDoClone(builder, src, inlineBlock, postInsertBlock, mapper,
                          shouldCloneInlinedRegion);
     });
+
+    // Set canHandleMultipleBlocks to true in the config
+    config.setCanHandleMultipleBlocks(true);
+
+    // Get an instance of the inliner.
+    Inliner inliner(function, cg, *this, getAnalysisManager(),
+                    runPipelineHelper, config, profitabilityCb);
 
     // Collect each of the direct function calls within the module.
     SmallVector<func::CallIndirectOp, 16> callers;
@@ -130,8 +129,8 @@ struct InlinerCallback
       // Inline the functional region operation, but only clone the internal
       // region if there is more than one use.
       if (failed(inlineRegion(
-              interface, &callee.getBody(), caller, caller.getArgOperands(),
-              caller.getResults(), caller.getLoc(),
+              interface, config, &callee.getBody(), caller,
+              caller.getArgOperands(), caller.getResults(), caller.getLoc(),
               /*shouldCloneInlinedRegion=*/!callee.getResult().hasOneUse())))
         continue;
 

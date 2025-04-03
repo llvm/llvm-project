@@ -142,13 +142,9 @@ void InlinerPass::runOnOperation() {
     return isProfitableToInline(call, inliningThreshold);
   };
 
-  // By default, prevent inlining a function containing multiple blocks into a
-  // region that requires a single block.
-  auto canHandleMultipleBlocksCb = [=]() { return false; };
-
   // Get an instance of the inliner.
   Inliner inliner(op, cg, *this, getAnalysisManager(), runPipelineHelper,
-                  config, profitabilityCb, canHandleMultipleBlocksCb);
+                  config, profitabilityCb);
 
   // Run the inlining.
   if (failed(inliner.doInlining()))

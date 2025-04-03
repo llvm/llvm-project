@@ -27,6 +27,10 @@ class InlinerConfig {
 public:
   using DefaultPipelineTy = std::function<void(OpPassManager &)>;
   using OpPipelinesTy = llvm::StringMap<OpPassManager>;
+  using CloneCallbackTy =
+      std::function<void(OpBuilder &builder, Region *src, Block *inlineBlock,
+                         Block *postInsertBlock, IRMapping &mapper,
+                         bool shouldCloneInlinedRegion)>;
 
   InlinerConfig() = default;
   InlinerConfig(DefaultPipelineTy defaultPipeline,
@@ -39,6 +43,9 @@ public:
   }
   const OpPipelinesTy &getOpPipelines() const { return opPipelines; }
   unsigned getMaxInliningIterations() const { return maxInliningIterations; }
+  const CloneCallbackTy &getCloneCallback() const { return cloneCallback; }
+  bool getCanHandleMultipleBlocks() const { return canHandleMultipleBlocks; }
+
   void setDefaultPipeline(DefaultPipelineTy pipeline) {
     defaultPipeline = std::move(pipeline);
   }
@@ -46,6 +53,12 @@ public:
     opPipelines = std::move(pipelines);
   }
   void setMaxInliningIterations(unsigned max) { maxInliningIterations = max; }
+  void setCloneCallback(CloneCallbackTy callback) {
+    cloneCallback = std::move(callback);
+  }
+  void setCanHandleMultipleBlocks(bool value) {
+    canHandleMultipleBlocks = value;
+  }
 
 private:
   /// An optional function that constructs an optimization pipeline for
@@ -60,6 +73,24 @@ private:
   /// For SCC-based inlining algorithms, specifies maximum number of iterations
   /// when inlining within an SCC.
   unsigned maxInliningIterations{0};
+  /// Callback for cloning operations during inlining
+  CloneCallbackTy cloneCallback = [](OpBuilder &builder, Region *src,
+                                     Block *inlineBlock, Block *postInsertBlock,
+                                     IRMapping &mapper,
+                                     bool shouldCloneInlinedRegion) {
+    // Check to see if the region is being cloned, or moved inline. In
+    // either case, move the new blocks after the 'insertBlock' to improve
+    // IR readability.
+    Region *insertRegion = inlineBlock->getParent();
+    if (shouldCloneInlinedRegion)
+      src->cloneInto(insertRegion, postInsertBlock->getIterator(), mapper);
+    else
+      insertRegion->getBlocks().splice(postInsertBlock->getIterator(),
+                                       src->getBlocks(), src->begin(),
+                                       src->end());
+  };
+  /// Determining if multiple blocks can be handled
+  bool canHandleMultipleBlocks{false};
 };
 
 /// This is an implementation of the inliner
@@ -104,12 +135,10 @@ public:
 
   Inliner(Operation *op, CallGraph &cg, Pass &pass, AnalysisManager am,
           RunPipelineHelperTy runPipelineHelper, const InlinerConfig &config,
-          ProfitabilityCallbackTy isProfitableToInline,
-          canHandleMultipleBlocksCbTy canHandleMultipleBlocks)
+          ProfitabilityCallbackTy isProfitableToInline)
       : op(op), cg(cg), pass(pass), am(am),
         runPipelineHelper(std::move(runPipelineHelper)), config(config),
-        isProfitableToInline(std::move(isProfitableToInline)),
-        canHandleMultipleBlocks(std::move(canHandleMultipleBlocks)) {}
+        isProfitableToInline(std::move(isProfitableToInline)) {}
   Inliner(Inliner &) = delete;
   void operator=(const Inliner &) = delete;
 
@@ -141,9 +170,6 @@ private:
   /// Returns true, if it is profitable to inline the callable operation
   /// at the call site.
   ProfitabilityCallbackTy isProfitableToInline;
-  /// Return true, if functions with multiple blocks can be inlined
-  /// into a region with the SingleBlock trait.
-  canHandleMultipleBlocksCbTy canHandleMultipleBlocks;
 
   /// Forward declaration of the class providing the actual implementation.
   class Impl;
