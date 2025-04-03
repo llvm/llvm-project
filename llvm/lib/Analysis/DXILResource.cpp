@@ -890,7 +890,7 @@ LLVM_DUMP_METHOD
 void DXILResourceWrapperPass::dump() const { print(dbgs(), nullptr); }
 #endif
 
-INITIALIZE_PASS(DXILResourceWrapperPass, "dxil-resource",
+INITIALIZE_PASS(DXILResourceWrapperPass, "dxil-resources",
                 "DXIL Resource Binding Analysis", false, true)
 char DXILResourceWrapperPass::ID = 0;
 
