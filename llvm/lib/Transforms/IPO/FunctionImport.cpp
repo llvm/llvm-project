@@ -38,6 +38,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/Internalize.h"
@@ -174,6 +175,12 @@ static cl::opt<std::string> WorkloadDefinitions(
     cl::Hidden);
 
 extern cl::opt<std::string> UseCtxProfile;
+
+static cl::opt<bool> CtxprofMoveRootsToOwnModule(
+    "thinlto-move-ctxprof-trees",
+    cl::desc("Move contextual profiling roots and the graphs under them in "
+             "their own module."),
+    cl::Hidden, cl::init(false));
 
 namespace llvm {
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
@@ -535,7 +542,14 @@ class WorkloadImportsManager : public ModuleImportsManager {
   computeImportForModule(const GVSummaryMapTy &DefinedGVSummaries,
                          StringRef ModName,
                          FunctionImporter::ImportMapTy &ImportList) override {
-    auto SetIter = Workloads.find(ModName);
+    StringRef Filename = ModName;
+    if (CtxprofMoveRootsToOwnModule) {
+      Filename = sys::path::filename(ModName);
+      // Drop the file extension.
+      Filename = Filename.substr(0, Filename.find_last_of('.'));
+    }
+    auto SetIter = Workloads.find(Filename);
+
     if (SetIter == Workloads.end()) {
       LLVM_DEBUG(dbgs() << "[Workload] " << ModName
                         << " does not contain the root of any context.\n");
@@ -748,10 +762,18 @@ class WorkloadImportsManager : public ModuleImportsManager {
                           << RootVI.getSummaryList().size() << ". Skipping.\n");
         continue;
       }
-      StringRef RootDefiningModule =
-          RootVI.getSummaryList().front()->modulePath();
-      LLVM_DEBUG(dbgs() << "[Workload] Root defining module for " << RootGuid
-                        << " is : " << RootDefiningModule << "\n");
+      std::string RootDefiningModule =
+          RootVI.getSummaryList().front()->modulePath().str();
+      if (CtxprofMoveRootsToOwnModule) {
+        RootDefiningModule = std::to_string(RootGuid);
+        LLVM_DEBUG(
+            dbgs() << "[Workload] Moving " << RootGuid
+                   << " to a module with the filename without extension : "
+                   << RootDefiningModule << "\n");
+      } else {
+        LLVM_DEBUG(dbgs() << "[Workload] Root defining module for " << RootGuid
+                          << " is : " << RootDefiningModule << "\n");
+      }
       auto &Set = Workloads[RootDefiningModule];
       Root.getContainedGuids(ContainedGUIDs);
       for (auto Guid : ContainedGUIDs)
