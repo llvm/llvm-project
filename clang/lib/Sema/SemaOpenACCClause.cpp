@@ -55,6 +55,8 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
     case OpenACCDirectiveKind::ParallelLoop:
     case OpenACCDirectiveKind::SerialLoop:
     case OpenACCDirectiveKind::KernelsLoop:
+      // OpenACC 3.4(prerelease) PR #511 adds 'if' to atomic.
+    case OpenACCDirectiveKind::Atomic:
       return true;
     default:
       return false;

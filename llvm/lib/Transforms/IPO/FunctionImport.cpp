@@ -38,6 +38,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/Internalize.h"
@@ -174,6 +175,12 @@ static cl::opt<std::string> WorkloadDefinitions(
     cl::Hidden);
 
 extern cl::opt<std::string> UseCtxProfile;
+
+static cl::opt<bool> CtxprofMoveRootsToOwnModule(
+    "thinlto-move-ctxprof-trees",
+    cl::desc("Move contextual profiling roots and the graphs under them in "
+             "their own module."),
+    cl::Hidden, cl::init(false));
 
 namespace llvm {
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
@@ -490,6 +497,13 @@ static const char *getFailureName(FunctionImporter::ImportFailureReason Reason);
 
 /// Determine the list of imports and exports for each module.
 class ModuleImportsManager {
+  void computeImportForFunction(
+      const FunctionSummary &Summary, unsigned Threshold,
+      const GVSummaryMapTy &DefinedGVSummaries,
+      SmallVectorImpl<EdgeInfo> &Worklist, GlobalsImporter &GVImporter,
+      FunctionImporter::ImportMapTy &ImportList,
+      FunctionImporter::ImportThresholdsTy &ImportThresholds);
+
 protected:
   function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
       IsPrevailing;
@@ -535,7 +549,14 @@ class WorkloadImportsManager : public ModuleImportsManager {
   computeImportForModule(const GVSummaryMapTy &DefinedGVSummaries,
                          StringRef ModName,
                          FunctionImporter::ImportMapTy &ImportList) override {
-    auto SetIter = Workloads.find(ModName);
+    StringRef Filename = ModName;
+    if (CtxprofMoveRootsToOwnModule) {
+      Filename = sys::path::filename(ModName);
+      // Drop the file extension.
+      Filename = Filename.substr(0, Filename.find_last_of('.'));
+    }
+    auto SetIter = Workloads.find(Filename);
+
     if (SetIter == Workloads.end()) {
       LLVM_DEBUG(dbgs() << "[Workload] " << ModName
                         << " does not contain the root of any context.\n");
@@ -748,10 +769,18 @@ class WorkloadImportsManager : public ModuleImportsManager {
                           << RootVI.getSummaryList().size() << ". Skipping.\n");
         continue;
       }
-      StringRef RootDefiningModule =
-          RootVI.getSummaryList().front()->modulePath();
-      LLVM_DEBUG(dbgs() << "[Workload] Root defining module for " << RootGuid
-                        << " is : " << RootDefiningModule << "\n");
+      std::string RootDefiningModule =
+          RootVI.getSummaryList().front()->modulePath().str();
+      if (CtxprofMoveRootsToOwnModule) {
+        RootDefiningModule = std::to_string(RootGuid);
+        LLVM_DEBUG(
+            dbgs() << "[Workload] Moving " << RootGuid
+                   << " to a module with the filename without extension : "
+                   << RootDefiningModule << "\n");
+      } else {
+        LLVM_DEBUG(dbgs() << "[Workload] Root defining module for " << RootGuid
+                          << " is : " << RootDefiningModule << "\n");
+      }
       auto &Set = Workloads[RootDefiningModule];
       Root.getContainedGuids(ContainedGUIDs);
       for (auto Guid : ContainedGUIDs)
@@ -830,14 +859,11 @@ getFailureName(FunctionImporter::ImportFailureReason Reason) {
 /// Compute the list of functions to import for a given caller. Mark these
 /// imported functions and the symbols they reference in their source module as
 /// exported from their source module.
-static void computeImportForFunction(
-    const FunctionSummary &Summary, const ModuleSummaryIndex &Index,
-    const unsigned Threshold, const GVSummaryMapTy &DefinedGVSummaries,
-    function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
-        isPrevailing,
+void ModuleImportsManager::computeImportForFunction(
+    const FunctionSummary &Summary, const unsigned Threshold,
+    const GVSummaryMapTy &DefinedGVSummaries,
     SmallVectorImpl<EdgeInfo> &Worklist, GlobalsImporter &GVImporter,
     FunctionImporter::ImportMapTy &ImportList,
-    DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists,
     FunctionImporter::ImportThresholdsTy &ImportThresholds) {
   GVImporter.onImportingSummary(Summary);
   static int ImportCount = 0;
@@ -1042,9 +1068,8 @@ void ModuleImportsManager::computeImportForModule(
       // Skip import for global variables
       continue;
     LLVM_DEBUG(dbgs() << "Initialize import for " << VI << "\n");
-    computeImportForFunction(*FuncSummary, Index, ImportInstrLimit,
-                             DefinedGVSummaries, IsPrevailing, Worklist, GVI,
-                             ImportList, ExportLists, ImportThresholds);
+    computeImportForFunction(*FuncSummary, ImportInstrLimit, DefinedGVSummaries,
+                             Worklist, GVI, ImportList, ImportThresholds);
   }
 
   // Process the newly imported functions and add callees to the worklist.
@@ -1054,9 +1079,8 @@ void ModuleImportsManager::computeImportForModule(
     auto Threshold = std::get<1>(GVInfo);
 
     if (auto *FS = dyn_cast<FunctionSummary>(Summary))
-      computeImportForFunction(*FS, Index, Threshold, DefinedGVSummaries,
-                               IsPrevailing, Worklist, GVI, ImportList,
-                               ExportLists, ImportThresholds);
+      computeImportForFunction(*FS, Threshold, DefinedGVSummaries, Worklist,
+                               GVI, ImportList, ImportThresholds);
   }
 
   // Print stats about functions considered but rejected for importing
