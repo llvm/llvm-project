@@ -124,12 +124,6 @@ const OptTable &getOptTable() {
   exit(EXIT_FAILURE);
 }
 
-std::string getMainExecutable(const char *Name) {
-  void *Ptr = (void *)(intptr_t)&getMainExecutable;
-  auto COWPath = sys::fs::getMainExecutable(Name, Ptr);
-  return sys::path::parent_path(COWPath).str();
-}
-
 Expected<StringRef> createTempFile(const ArgList &Args, const Twine &Prefix,
                                    StringRef Extension) {
   SmallString<128> OutputFile;
