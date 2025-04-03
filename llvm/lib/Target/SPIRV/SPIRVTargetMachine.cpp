@@ -31,6 +31,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/Reg2Mem.h"
 #include "llvm/Transforms/Utils.h"
 #include <optional>
@@ -191,6 +192,14 @@ void SPIRVPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
 
   if (TM.getSubtargetImpl()->isVulkanEnv()) {
+    // The frontend has a tendency to quickly addrspacecast pointers to the
+    // default address space, and relies on addrspacecast instructions at the
+    // boundaries. Vulkan does not allow such things, and we must keep the
+    // pointer address space stable.
+    // This pass will determine real address space of a pointer, and patch
+    // instructions removing Addrspacecasts.
+    addPass(createInferAddressSpacesPass(/* AddressSpace= */ 0));
+
     // 1.  Simplify loop for subsequent transformations. After this steps, loops
     // have the following properties:
     //  - loops have a single entry edge (pre-header to loop header).
