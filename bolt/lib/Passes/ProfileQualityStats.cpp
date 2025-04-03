@@ -202,7 +202,8 @@ void printCallGraphFlowConservationStats(
         TotalFlowMap.CallGraphIncomingFlows;
 
     // Only consider functions that are not a program entry.
-    if (CallGraphIncomingFlows.find(FunctionNum) == CallGraphIncomingFlows.end()) {
+    if (CallGraphIncomingFlows.find(FunctionNum) ==
+        CallGraphIncomingFlows.end()) {
       CallGraphGaps.push_back(0.0);
       continue;
     }
@@ -212,8 +213,7 @@ void printCallGraphFlowConservationStats(
     uint32_t NumConsideredEntryBlocks = 0;
 
     Function->forEachEntryPoint([&](uint64_t Offset, const MCSymbol *Label) {
-      const BinaryBasicBlock *EntryBB =
-          Function->getBasicBlockAtOffset(Offset);
+      const BinaryBasicBlock *EntryBB = Function->getBasicBlockAtOffset(Offset);
       if (!EntryBB || EntryBB->succ_size() == 0)
         return true;
       NumConsideredEntryBlocks++;
@@ -230,7 +230,7 @@ void printCallGraphFlowConservationStats(
         // warning if requested.
         OS << "BOLT WARNING: unexpected entry block CFG outflow < inflow "
               "in function "
-            << Function->getPrintName() << "\n";
+           << Function->getPrintName() << "\n";
         if (opts::Verbosity >= 3)
           Function->dump();
       }
@@ -246,8 +246,8 @@ void printCallGraphFlowConservationStats(
 
       if (opts::Verbosity >= 2 && CallGraphGap >= 0.5) {
         OS << "Nontrivial call graph gap of size "
-            << formatv("{0:P}", CallGraphGap) << " observed in function "
-            << Function->getPrintName() << "\n";
+           << formatv("{0:P}", CallGraphGap) << " observed in function "
+           << Function->getPrintName() << "\n";
         if (opts::Verbosity >= 3)
           Function->dump();
       }
