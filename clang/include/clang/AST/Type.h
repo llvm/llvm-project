@@ -2760,6 +2760,10 @@ public:
   /// of some sort, e.g., it is a floating-point type or a vector thereof.
   bool hasFloatingRepresentation() const;
 
+  /// Determine whether this type has a boolean representation
+  /// of some sort.
+  bool hasBooleanRepresentation() const;
+
   // Type Checking Functions: Check to see if this type is structurally the
   // specified type, ignoring typedefs and qualifiers, and return a pointer to
   // the best type we can.
