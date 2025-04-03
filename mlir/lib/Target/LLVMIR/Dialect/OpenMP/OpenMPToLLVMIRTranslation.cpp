@@ -1018,7 +1018,7 @@ allocReductionVars(T loop, ArrayRef<BlockArgument> reductionArgs,
       llvm::Value *var = builder.CreateAlloca(
           moduleTranslation.convertType(reductionDecls[i].getType()));
 
-      llvm::Type *ptrTy = llvm::PointerType::getUnqual(builder.getContext());
+      llvm::Type *ptrTy = builder.getPtrTy();
       llvm::Value *castVar =
           builder.CreatePointerBitCastOrAddrSpaceCast(var, ptrTy);
       llvm::Value *castPhi =
@@ -1035,7 +1035,7 @@ allocReductionVars(T loop, ArrayRef<BlockArgument> reductionArgs,
       llvm::Value *var = builder.CreateAlloca(
           moduleTranslation.convertType(reductionDecls[i].getType()));
 
-      llvm::Type *ptrTy = llvm::PointerType::getUnqual(builder.getContext());
+      llvm::Type *ptrTy = builder.getPtrTy();
       llvm::Value *castVar =
           builder.CreatePointerBitCastOrAddrSpaceCast(var, ptrTy);
 
@@ -1738,8 +1738,7 @@ static bool teamsReductionContainedInDistribute(omp::TeamsOp teamsOp) {
     for (auto &use : ra.getUses()) {
       auto *useOp = use.getOwner();
       // Ignore debug uses.
-      if (mlir::isa<LLVM::DbgDeclareOp>(useOp) ||
-          mlir::isa<LLVM::DbgValueOp>(useOp)) {
+      if (mlir::isa<LLVM::DbgDeclareOp, LLVM::DbgValueOp>(useOp)) {
         debugUses.push_back(useOp);
         continue;
       }
@@ -2463,8 +2462,9 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
       builder.SetInsertPoint(tempTerminator);
 
       llvm::OpenMPIRBuilder::InsertPointOrErrorTy contInsertPoint =
-          ompBuilder->createReductions(builder.saveIP(), allocaIP,
-                                       reductionInfos, isByRef, false, false);
+          ompBuilder->createReductions(
+              builder.saveIP(), allocaIP, reductionInfos, isByRef,
+              /*IsNoWait=*/false, /*IsTeamsReduction=*/false);
       if (!contInsertPoint)
         return contInsertPoint.takeError();
 
@@ -4688,7 +4688,7 @@ static uint64_t getTypeByteSize(mlir::Type type, const DataLayout &dl) {
 template <typename OpTy>
 static uint64_t getReductionDataSize(OpTy &op) {
   if (op.getNumReductionVars() > 0) {
-    assert(op.getNumReductionVars() &&
+    assert(op.getNumReductionVars() == 1 &&
            "Only 1 reduction variable currently supported");
     mlir::Type reductionVarTy = op.getReductionVars()[0].getType();
     Operation *opp = op.getOperation();
@@ -4814,6 +4814,8 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
   attrs.MinThreads = 1;
   attrs.MaxThreads.front() = combinedMaxThreadsVal;
   attrs.ReductionDataSize = reductionDataSize;
+  // TODO: Allow modified buffer length similar to
+  // fopenmp-cuda-teams-reduction-recs-num flag in clang.
   if (attrs.ReductionDataSize != 0)
     attrs.ReductionBufferLength = 1024;
 }
