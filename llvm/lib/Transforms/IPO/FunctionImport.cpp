@@ -516,6 +516,7 @@ protected:
       const ModuleSummaryIndex &Index,
       DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists = nullptr)
       : IsPrevailing(IsPrevailing), Index(Index), ExportLists(ExportLists) {}
+  virtual bool canImport(ValueInfo VI) { return true; }
 
 public:
   virtual ~ModuleImportsManager() = default;
@@ -544,6 +545,11 @@ class WorkloadImportsManager : public ModuleImportsManager {
   // determine if a module's import list should be done by the base
   // ModuleImportsManager or by us.
   StringMap<DenseSet<ValueInfo>> Workloads;
+  // Track the roots to avoid importing them due to other callers. We want there
+  // to be only one variant), for which we optimize according to the contextual
+  // profile. "Variants" refers to copies due to importing - we want there to be
+  // just one instance of this function.
+  DenseSet<ValueInfo> Roots;
 
   void
   computeImportForModule(const GVSummaryMapTy &DefinedGVSummaries,
@@ -783,11 +789,14 @@ class WorkloadImportsManager : public ModuleImportsManager {
       }
       auto &Set = Workloads[RootDefiningModule];
       Root.getContainedGuids(ContainedGUIDs);
+      Roots.insert(RootVI);
       for (auto Guid : ContainedGUIDs)
         if (auto VI = Index.getValueInfo(Guid))
           Set.insert(VI);
     }
   }
+
+  bool canImport(ValueInfo VI) override { return !Roots.contains(VI); }
 
 public:
   WorkloadImportsManager(
@@ -883,6 +892,15 @@ void ModuleImportsManager::computeImportForFunction(
       // a non-prevailing def with interposable linkage. The prevailing copy
       // can safely be imported (see shouldImportGlobal()).
       LLVM_DEBUG(dbgs() << "ignored! Target already in destination module.\n");
+      continue;
+    }
+
+    if (!canImport(VI)) {
+      LLVM_DEBUG(
+          dbgs() << "Skipping over " << VI.getGUID()
+                 << " because its import is handled in a different module.");
+      assert(VI.getSummaryList().size() == 1 &&
+             "The root was expected to be an external symbol");
       continue;
     }
 
