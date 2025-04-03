@@ -1634,16 +1634,21 @@ def VOP3_V3I32_I32_I64_V2I32 : VOP3_Profile<VOPProfile<[v3i32, i32, i64, v2i32]>
 def VOP3_V4I32_I64_I64_V2I32 : VOP3_Profile<VOPProfile<[v4i32, i64, i64, v2i32]>>;
 }
 
+class VOP3_CVT_PK_F8_F16_Profile<RegisterOperand RC> : VOP3_Profile<VOP_I16_V2F16, VOP3_OPSEL> {
+  let Src0RC64 = RC;
+}
+
+let ReadsModeReg = 0, IsPacked = 0, SubtargetPredicate = isGFX125xOnly in {
+  defm V_CVT_PK_FP8_F16_gfx1250 : VOP3Inst<"v_cvt_pk_fp8_f16_gfx1250",
+                                           VOP3_CVT_PK_F8_F16_Profile<VSrc_NoInline_v2f16>,
+                                           int_amdgcn_cvt_pk_fp8_f16>;
+  defm V_CVT_PK_BF8_F16_gfx1250 : VOP3Inst<"v_cvt_pk_bf8_f16_gfx1250",
+                                           VOP3_CVT_PK_F8_F16_Profile<VSrc_NoInline_v2f16>,
+                                           int_amdgcn_cvt_pk_bf8_f16>;
+}
+
 let SubtargetPredicate = isGFX1250Plus in {
   let ReadsModeReg = 0 in {
-    let IsPacked = 0 in {
-      defm V_CVT_PK_FP8_F16 : VOP3Inst<"v_cvt_pk_fp8_f16",
-                                       VOP3_Profile<VOP_I16_V2F16, VOP3_OPSEL>,
-                                       int_amdgcn_cvt_pk_fp8_f16>;
-      defm V_CVT_PK_BF8_F16 : VOP3Inst<"v_cvt_pk_bf8_f16",
-                                       VOP3_Profile<VOP_I16_V2F16, VOP3_OPSEL>,
-                                       int_amdgcn_cvt_pk_bf8_f16>;
-    }
     defm V_CVT_SR_PK_F16_F32 : VOP3Inst<"v_cvt_sr_pk_f16_f32", VOP3_Profile<VOP_V2F16_F32_F32_I32>, int_amdgcn_cvt_sr_pk_f16_f32>;
 
     // These instructions have non-standard use of op_sel. They are using bits 2 and 3 of opsel
@@ -2188,8 +2193,8 @@ defm V_CVT_PK_BF16_F32               : VOP3Only_Realtriple_gfx1250<0x36d>;
 defm V_CVT_SR_PK_BF16_F32            : VOP3Only_Realtriple_gfx1250<0x36e>;
 defm V_CVT_PK_F16_F32                : VOP3Only_Realtriple_gfx1250<0x36f>;
 defm V_CVT_SR_PK_F16_F32             : VOP3Only_Realtriple_gfx1250<0x370>;
-defm V_CVT_PK_FP8_F16                : VOP3Only_Realtriple_gfx1250<0x372>;
-defm V_CVT_PK_BF8_F16                : VOP3Only_Realtriple_gfx1250<0x373>;
+defm V_CVT_PK_FP8_F16_gfx1250        : VOP3Only_Realtriple_with_name<GFX1250Gen, 0x372, "V_CVT_PK_FP8_F16_gfx1250", "v_cvt_pk_fp8_f16">;
+defm V_CVT_PK_BF8_F16_gfx1250        : VOP3Only_Realtriple_with_name<GFX1250Gen, 0x373, "V_CVT_PK_BF8_F16_gfx1250", "v_cvt_pk_bf8_f16">;
 defm V_CVT_SR_FP8_F16                : VOP3Only_Realtriple_t16_gfx1250<0x374>;
 defm V_CVT_SR_BF8_F16                : VOP3Only_Realtriple_t16_gfx1250<0x375>;
 
