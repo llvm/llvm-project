@@ -369,9 +369,9 @@ define i8 @reduce_masked_common_high_bits_fail(i32 %0) {
 ; CHECK-LABEL: @reduce_masked_common_high_bits_fail(
 ; CHECK-NEXT:  start:
 ; CHECK-NEXT:    switch i32 [[TMP0:%.*]], label [[BB2:%.*]] [
-; CHECK-NEXT:    i32 128, label [[BB5:%.*]]
-; CHECK-NEXT:    i32 129, label [[BB4:%.*]]
-; CHECK-NEXT:    i32 511, label [[BB1:%.*]]
+; CHECK-NEXT:      i32 128, label [[BB5:%.*]]
+; CHECK-NEXT:      i32 129, label [[BB4:%.*]]
+; CHECK-NEXT:      i32 511, label [[BB1:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    unreachable
@@ -409,19 +409,18 @@ define i8 @reduce_masked_default_reachable(i32 %0) {
 ; CHECK-LABEL: @reduce_masked_default_reachable(
 ; CHECK-NEXT:  start:
 ; CHECK-NEXT:    switch i32 [[TMP0:%.*]], label [[COMMON_RET:%.*]] [
-; CHECK-NEXT:    i32 0, label [[BB5:%.*]]
-; CHECK-NEXT:    i32 1, label [[BB4:%.*]]
-; CHECK-NEXT:    i32 255, label [[BB1:%.*]]
+; CHECK-NEXT:      i32 0, label [[BB5:%.*]]
+; CHECK-NEXT:      i32 1, label [[BB4:%.*]]
+; CHECK-NEXT:      i32 255, label [[BB1:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i8 [ [[DOT0:%.*]], [[BB5]] ], [ 24, [[START:%.*]] ]
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i8 [ 24, [[START:%.*]] ], [ -1, [[BB1]] ], [ 1, [[BB4]] ], [ 0, [[BB5]] ]
 ; CHECK-NEXT:    ret i8 [[COMMON_RET_OP]]
 ; CHECK:       bb4:
-; CHECK-NEXT:    br label [[BB5]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    br label [[BB5]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       bb5:
-; CHECK-NEXT:    [[DOT0]] = phi i8 [ -1, [[BB1]] ], [ 1, [[BB4]] ], [ 0, [[START]] ]
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 start:

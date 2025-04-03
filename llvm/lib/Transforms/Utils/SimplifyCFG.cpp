@@ -7161,7 +7161,7 @@ static bool switchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
 
 /// Try to reduce the range of cases with an unreachable default.
 static bool
-ReduceSwitchRangeWithUnreachableDefault(SwitchInst *SI,
+reduceSwitchRangeWithUnreachableDefault(SwitchInst *SI,
                                         const SmallVectorImpl<int64_t> &Values,
                                         uint64_t Base, IRBuilder<> &Builder) {
   bool HasDefault =
@@ -7203,12 +7203,14 @@ ReduceSwitchRangeWithUnreachableDefault(SwitchInst *SI,
         CommonBits);
 
   llvm::sort(NewValues);
-  if (!isSwitchDense(NewValues))
+  if (!isSwitchDense(NewValues)) {
     // Transform didn't create a dense switch.
     return false;
+  }
 
   auto *Ty = cast<IntegerType>(SI->getCondition()->getType());
-  APInt Offset(Ty->getBitWidth(), BestOffset - Base);
+  APInt Offset(Ty->getBitWidth(), BestOffset - Base, /*isSigned=*/true,
+               /*implicitTrunc=*/true);
   auto *Index = Builder.CreateAnd(
       Builder.CreateAdd(SI->getCondition(), ConstantInt::get(Ty, Offset)),
       Mask);
@@ -7261,7 +7263,7 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
   for (auto &V : Values)
     V -= (uint64_t)(Base);
 
-  if (ReduceSwitchRangeWithUnreachableDefault(SI, Values, Base, Builder))
+  if (reduceSwitchRangeWithUnreachableDefault(SI, Values, Base, Builder))
     return true;
 
   // Now we have signed numbers that have been shifted so that, given enough
