@@ -749,35 +749,48 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
     }
     preventHollerith_ = false;
   } else if (IsLegalInIdentifier(*at_)) {
-    int parts{1};
-    const char *afterLast{nullptr};
+    std::size_t parts{1};
+    bool anyDefined{false};
+    bool hadContinuation{false};
+    // Subtlety: When an identifier is split across continuation lines,
+    // its parts are kept as distinct pp-tokens if that macro replacement
+    // should operate on them independently.  This trick accommodates the
+    // historic practice of using line continuation for token pasting after
+    // replacement.
+    // In free form, the macro to be replaced must have been preceded
+    // by '&' and followed by either '&' or, if last, the end of a line.
+    //   call &                call foo&        call foo&
+    //     &MACRO&      OR       &MACRO&   OR     &MACRO
+    //     &foo(...)             &(...)
     do {
       EmitChar(tokens, *at_);
       ++at_, ++column_;
-      afterLast = at_;
-      if (SkipToNextSignificantCharacter() && IsLegalIdentifierStart(*at_)) {
+      hadContinuation = SkipToNextSignificantCharacter();
+      if (hadContinuation && IsLegalIdentifierStart(*at_)) {
+        // Continued identifier
         tokens.CloseToken();
         ++parts;
+        if (!anyDefined &&
+            (parts > 2 || inFixedForm_ ||
+                (start > start_ && start[-1] == '&')) &&
+            preprocessor_.IsNameDefined(
+                tokens.TokenAt(tokens.SizeInTokens() - 1))) {
+          anyDefined = true;
+        }
       }
     } while (IsLegalInIdentifier(*at_));
-    if (parts >= 3) {
-      // Subtlety: When an identifier is split across three or more continuation
-      // lines (or two continuation lines, immediately preceded or followed
-      // by '&' free form continuation line markers, its parts are kept as
-      // distinct pp-tokens so that macro replacement operates on them
-      // independently.  This trick accommodates the historic practice of
-      // using line continuation for token pasting after replacement.
-    } else if (parts == 2) {
-      if (afterLast && afterLast < limit_) {
-        afterLast = SkipWhiteSpace(afterLast);
-      }
-      if ((start > start_ && start[-1] == '&') ||
-          (afterLast && afterLast < limit_ &&
-              (*afterLast == '&' || *afterLast == '\n'))) {
-        // call &                call foo&        call foo&
-        //   &MACRO&      OR       &MACRO&   OR     &MACRO
-        //   &foo(...)             &(...)
-      } else {
+    if (!anyDefined && parts > 1) {
+      tokens.CloseToken();
+      char after{*SkipWhiteSpace(at_)};
+      anyDefined = (hadContinuation || after == '\n' || after == '&') &&
+          preprocessor_.IsNameDefined(
+              tokens.TokenAt(tokens.SizeInTokens() - 1));
+      tokens.ReopenLastToken();
+    }
+    if (!anyDefined) {
+      // If no part was a defined macro, combine the parts into one so that
+      // the combination itself can be subject to macro replacement.
+      while (parts-- > 1) {
         tokens.ReopenLastToken();
       }
     }
