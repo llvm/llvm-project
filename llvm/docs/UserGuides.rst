@@ -78,7 +78,6 @@ intermediate LLVM representation.
    WritingAnLLVMNewPMPass
    WritingAnLLVMBackend
    yaml2obj
-   mustache-spec
 
 Clang
 -----
