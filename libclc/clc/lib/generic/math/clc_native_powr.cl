@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define __CLC_BODY <clc/shared/binary_decl.inc>
-#define __CLC_FUNCTION native_powr
+#include <clc/internal/clc.h>
+#include <clc/math/clc_native_exp2.h>
+#include <clc/math/clc_native_log2.h>
+
+#define __FLOAT_ONLY
+#define __CLC_BODY <clc_native_powr.inc>
 
 #include <clc/math/gentype.inc>
-
-#undef __CLC_BODY
-#undef __CLC_FUNCTION
