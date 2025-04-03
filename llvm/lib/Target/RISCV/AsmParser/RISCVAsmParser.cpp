@@ -2583,9 +2583,8 @@ ParseStatus RISCVAsmParser::parseRegListCommon(OperandVector &Operands,
     return Error(getLoc(), "register list must start from 'ra' or 'x1'");
 
   StringRef RegName = getLexer().getTok().getIdentifier();
-  MCRegister RegStart = matchRegisterNameHelper(RegName);
-  MCRegister RegEnd;
-  if (RegStart != RISCV::X1)
+  MCRegister RegEnd = matchRegisterNameHelper(RegName);
+  if (RegEnd != RISCV::X1)
     return Error(getLoc(), "register list must start from 'ra' or 'x1'");
   getLexer().Lex();
 
@@ -2606,10 +2605,10 @@ ParseStatus RISCVAsmParser::parseRegListCommon(OperandVector &Operands,
     if (getLexer().isNot(AsmToken::Identifier))
       return Error(getLoc(), "invalid register");
     StringRef RegName = getLexer().getTok().getIdentifier();
-    RegStart = matchRegisterNameHelper(RegName);
-    if (!RegStart)
+    RegEnd = matchRegisterNameHelper(RegName);
+    if (!RegEnd)
       return Error(getLoc(), "invalid register");
-    if (RegStart != RISCV::X8)
+    if (RegEnd != RISCV::X8)
       return Error(getLoc(),
                    "continuous register list must start from 's0' or 'x8'");
     getLexer().Lex(); // eat reg
@@ -2667,9 +2666,6 @@ ParseStatus RISCVAsmParser::parseRegListCommon(OperandVector &Operands,
 
   if (parseToken(AsmToken::RCurly, "register list must end with '}'"))
     return ParseStatus::Failure;
-
-  if (!RegEnd)
-    RegEnd = RegStart;
 
   auto Encode = RISCVZC::encodeRlist(RegEnd, IsEABI);
   assert(Encode != RISCVZC::INVALID_RLIST);
