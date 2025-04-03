@@ -6,6 +6,7 @@ add_entrypoint_object(
     ../utimes.h
   DEPENDS
     libc.hdr.types.struct_timeval
+    libc.hdr.fcntl_macros
     libc.src.__support.OSUtil.osutil
     libc.include.sys_stat
     libc.include.sys_syscall
