@@ -828,8 +828,9 @@ bool Process::HandleProcessStateChangedEvent(
             if (thread_stop_reason == eStopReasonPlanComplete) {
               if (!plan_thread)
                 plan_thread = thread;
-            } else if (!other_thread)
+            } else if (!other_thread) {
               other_thread = thread;
+            }
           }
           if (plan_thread)
             thread_list.SetSelectedThreadByID(plan_thread->GetID());
