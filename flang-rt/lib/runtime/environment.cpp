@@ -218,4 +218,35 @@ std::int32_t ExecutionEnvironment::SetEnv(
   return status;
 }
 
+std::int32_t ExecutionEnvironment::UnsetEnv(
+  const char *name, std::size_t name_length,
+  const Terminator &terminator) {
+
+  RUNTIME_CHECK(terminator, name && name_length);
+
+  OwningPtr<char> cStyleName{
+      SaveDefaultCharacter(name, name_length, terminator)};
+  RUNTIME_CHECK(terminator, cStyleName);
+
+  std::int32_t status{0};
+
+#ifdef _WIN32
+
+  // Passing empty string as value will unset the variable
+  status = _putenv_s(cStyleName.get(), "");
+
+#else
+
+  status = unsetenv(cStyleName.get());
+
+#endif
+
+  if (status != 0)
+  {
+    status = errno;
+  }
+
+  return status;
+}
+
 } // namespace Fortran::runtime
