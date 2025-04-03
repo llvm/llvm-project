@@ -6,8 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
+#include <clc/internal/clc.h>
 
-#define __CLC_BODY <native_log10.inc>
 #define __FLOAT_ONLY
+#define FUNCTION __clc_native_log2
+#define __CLC_FUNCTION(x) __builtin_elementwise_log2
+#define __CLC_BODY <clc/shared/unary_def.inc>
+
 #include <clc/math/gentype.inc>
