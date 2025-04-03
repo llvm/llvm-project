@@ -283,7 +283,11 @@ def process_rst(name):
                 file=sys.stderr,
             )
         # Split the name out of the title.
-        name, description = title.split(" - ", 1)
+        try:
+            name, description = title.split(" - ", 1)
+        except:
+            raise ValueError(title)
+        
         man_pages.append(
             (file_subpath.replace(".rst", ""), name, description, man_page_authors, 1)
         )
