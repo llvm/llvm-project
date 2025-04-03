@@ -25211,6 +25211,8 @@ static SDValue performSETCCCombine(SDNode *N,
 
   EVT CmpVT = LHS.getValueType();
 
+  // NOTE: This exists as a combine only because it proved too awkward to match
+  // splat(1) across all the NEON types during isel.
   APInt SplatLHSVal;
   if (CmpVT.isInteger() && Cond == ISD::SETGT &&
       ISD::isConstantSplatVector(LHS.getNode(), SplatLHSVal) &&
