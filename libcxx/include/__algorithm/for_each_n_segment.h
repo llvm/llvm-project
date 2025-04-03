@@ -11,6 +11,7 @@
 
 #include <__config>
 #include <__iterator/distance.h>
+#include <__iterator/iterator_traits.h>
 #include <__iterator/next.h>
 #include <__iterator/segmented_iterator.h>
 #include <__utility/convert_to_integral.h>
@@ -22,14 +23,18 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 // __for_each_n_segment optimizes linear iteration over segmented iterators. It processes a segmented
-// input range defined by (__first, __orig_n), where __first is the starting segmented iterator and
-// __orig_n is the number of elements to process. The functor __func is applied to each segment using
+// input range defined by [__first, __first + __n), where __first is the starting segmented iterator
+// and __n is the number of elements to process. The functor __func is applied to each segment using
 // local iterator pairs for that segment. The return value of __func is ignored, and the function
 // returns an iterator pointing to one past the last processed element in the input range.
 
 template <class _SegmentedIterator, class _Size, class _Functor>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _SegmentedIterator
 __for_each_n_segment(_SegmentedIterator __first, _Size __orig_n, _Functor __func) {
+  static_assert(__is_segmented_iterator<_SegmentedIterator>::value &&
+                    __has_random_access_iterator_category<
+                        typename __segmented_iterator_traits<_SegmentedIterator>::__local_iterator>::value,
+                "__for_each_n_segment only works with segmented iterators with random-access local iterators");
   if (__orig_n == 0)
     return __first;
 

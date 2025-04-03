@@ -61,8 +61,8 @@ Improvements and New Features
 - Updated formatting library to Unicode 16.0.0.
 
 - The ``std::ranges::for_each`` and ``std::ranges::for_each_n`` algorithms have been optimized for segmented iterators,
-  resulting in performance improvements of up to 21.3x for ``std::deque::iterator`` segmented inputs and 24.9x for
-  ``join_view`` of ``vector<vector<T>>``.
+  resulting in performance improvements of up to 21.3x for ``std::deque::iterator`` and 24.9x for ``join_view`` of
+  ``vector<vector<char>>``.
 
 Deprecations and Removals
 -------------------------

@@ -65,7 +65,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
 
     {
       unsigned count = 0;
-      Iter it        = std::for_each_n(Iter(ia), 0, [&count](int& i) mutable {
+      Iter it        = std::for_each_n(Iter(ia), 0, [&count](int& i) {
         ++i;
         ++count;
       });
@@ -75,7 +75,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
 
     {
       unsigned count = 0;
-      Iter it        = std::for_each_n(Iter(ia), s, [&count](int& i) mutable {
+      Iter it        = std::for_each_n(Iter(ia), s, [&count](int& i) {
         ++i;
         ++count;
       });
@@ -87,7 +87,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
 
     {
       unsigned count = 0;
-      Iter it        = std::for_each_n(Iter(ia), 1, [&count](int& i) mutable {
+      Iter it        = std::for_each_n(Iter(ia), 1, [&count](int& i) {
         ++i;
         ++count;
       });
@@ -111,7 +111,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
     test_segmented_deque_iterator();
 
 #if TEST_STD_VER >= 20
-  { // Make sure that the segmented iterator optimization works during constant evaluation
+  {
     std::vector<std::vector<int>> vec = {{0}, {1, 2}, {3, 4, 5}, {6, 7, 8, 9}, {10}, {11, 12, 13}};
     auto v                            = vec | std::views::join;
     std::for_each_n(v.begin(), std::ranges::distance(v), [i = 0](int& a) mutable { assert(a == i++); });
