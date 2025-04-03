@@ -4283,6 +4283,18 @@ getTargetRegionParams(Sema &SemaRef) {
 }
 
 static SmallVector<SemaOpenMP::CapturedParamNameType>
+getDispatchRegionParams(Sema &SemaRef) {
+  ASTContext &Context = SemaRef.getASTContext();
+  SmallVector<SemaOpenMP::CapturedParamNameType> Params;
+
+  //  QualType VoidPtrTy = Context.VoidPtrTy.withConst().withRestrict();
+  //  Params.push_back(std::make_pair(StringRef(), VoidPtrTy));
+
+  Params.push_back(std::make_pair(StringRef(), QualType()));
+  return Params;
+}
+
+static SmallVector<SemaOpenMP::CapturedParamNameType>
 getUnknownRegionParams(Sema &SemaRef) {
   SmallVector<SemaOpenMP::CapturedParamNameType> Params{
       std::make_pair(StringRef(), QualType()) // __context with shared vars
@@ -4366,6 +4378,10 @@ static void processCapturedRegions(Sema &SemaRef, OpenMPDirectiveKind DKind,
     case OMPD_target:
       SemaRef.ActOnCapturedRegionStart(Loc, CurScope, CR_OpenMP,
                                        getTargetRegionParams(SemaRef), Level);
+      break;
+    case OMPD_dispatch:
+      SemaRef.ActOnCapturedRegionStart(Loc, CurScope, CR_OpenMP,
+                                       getDispatchRegionParams(SemaRef), Level);
       break;
     case OMPD_unknown:
       SemaRef.ActOnCapturedRegionStart(Loc, CurScope, CR_OpenMP,
@@ -6028,8 +6044,13 @@ void SemaOpenMP::annotateAStmt(const ASTContext &Context, Stmt *StmtP,
                                ArrayRef<OMPClause *> &Clauses,
                                SourceLocation StartLoc) {
   if (auto *AssocStmt = dyn_cast<CapturedStmt>(StmtP)) {
-    CapturedDecl *CDecl = AssocStmt->getCapturedDecl();
+    if (auto *InnerAssocStmt =
+            dyn_cast<CapturedStmt>(AssocStmt->getCapturedStmt())) {
+      // Additional CapturedStmt for Virtual taskwait region
+      AssocStmt = InnerAssocStmt;
+    }
     Stmt *AssocExprStmt = AssocStmt->getCapturedStmt();
+    CapturedDecl *CDecl = AssocStmt->getCapturedDecl();
     auto *AssocExpr = dyn_cast<Expr>(AssocExprStmt);
     bool NoContext = false;
 
@@ -10651,6 +10672,7 @@ SemaOpenMP::ActOnOpenMPDispatchDirective(ArrayRef<OMPClause *> Clauses,
     return StmtError();
 
   Stmt *S = cast<CapturedStmt>(AStmt)->getCapturedStmt();
+  if (isa<CapturedStmt>(S) S = cast<CapturedStmt>(S)->getCapturedStmt();
 
   // 5.1 OpenMP
   // expression-stmt : an expression statement with one of the following forms:
