@@ -935,24 +935,10 @@ struct GatherToLDSOpLowering : public ConvertOpToLLVMPattern<GatherToLDSOp> {
     if (loadWidth != 1 && loadWidth != 2 && loadWidth != 4)
       return op.emitOpError("chipset unsupported element size");
 
-    auto convertIndices = [&](ValueRange indices) -> SmallVector<Value, 4> {
-      SmallVector<Value, 4> convertedIndices;
-
-      for (Value index : indices) {
-        Type convertedType = getTypeConverter()->convertType(index.getType());
-        auto convertedIndex = rewriter.create<LLVM::ConstantOp>(
-            loc, convertedType, rewriter.getIntegerAttr(convertedType, 0));
-        convertedIndices.push_back(convertedIndex);
-      }
-      return convertedIndices;
-    };
-
-    Value srcPtr =
-        getStridedElementPtr(loc, srcMemRefType, adaptor.getSrc(),
-                             convertIndices(op.getSrcIndices()), rewriter);
-    Value dstPtr =
-        getStridedElementPtr(loc, dstMemRefType, adaptor.getDst(),
-                             convertIndices(op.getDstIndices()), rewriter);
+    Value srcPtr = getStridedElementPtr(loc, srcMemRefType, adaptor.getSrc(),
+                                        (adaptor.getSrcIndices()), rewriter);
+    Value dstPtr = getStridedElementPtr(loc, dstMemRefType, adaptor.getDst(),
+                                        (adaptor.getDstIndices()), rewriter);
 
     rewriter.replaceOpWithNewOp<ROCDL::GlobalLoadLDSOp>(
         op, srcPtr, dstPtr, createI32Constant(rewriter, loc, loadWidth),

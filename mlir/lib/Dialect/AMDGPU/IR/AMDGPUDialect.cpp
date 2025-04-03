@@ -117,10 +117,9 @@ LogicalResult FatRawBufferCastOp::verify() {
 static bool hasGlobalMemorySpace(Attribute memorySpace) {
   if (!memorySpace)
     return true;
-  else if (auto intMemorySpace = llvm::dyn_cast<IntegerAttr>(memorySpace))
+  if (auto intMemorySpace = llvm::dyn_cast<IntegerAttr>(memorySpace))
     return intMemorySpace.getInt() == 0 || intMemorySpace.getInt() == 1;
-  else if (auto gpuMemorySpace =
-               llvm::dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
+  if (auto gpuMemorySpace = llvm::dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
     return gpuMemorySpace.getValue() == gpu::AddressSpace::Global;
   return false;
 }
@@ -128,6 +127,8 @@ static bool hasGlobalMemorySpace(Attribute memorySpace) {
 static bool hasWorkgroupMemorySpace(Attribute memorySpace) {
   if (auto intMemorySpace = llvm::dyn_cast<IntegerAttr>(memorySpace))
     return intMemorySpace.getInt() == 3;
+  if (auto gpuMemorySpace = llvm::dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
+    return gpuMemorySpace.getValue() == gpu::AddressSpace::Workgroup;
   return false;
 }
 
