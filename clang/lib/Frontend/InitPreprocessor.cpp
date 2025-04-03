@@ -107,7 +107,7 @@ static T PickFP(const llvm::fltSemantics *Sem, T IEEEHalfVal, T IEEESingleVal,
     return X87DoubleExtendedVal;
   if (Sem == (const llvm::fltSemantics*)&llvm::APFloat::PPCDoubleDouble())
     return PPCDoubleDoubleVal;
-  if (Sem == (const llvm::fltSemantics*)&llvm::APFloat::BFloat())
+  if (Sem == (const llvm::fltSemantics *)&llvm::APFloat::BFloat())
     return BFloatVal;
   assert(Sem == (const llvm::fltSemantics*)&llvm::APFloat::IEEEquad());
   return IEEEQuadVal;
@@ -138,8 +138,8 @@ static void DefineFloatMacros(MacroBuilder &Builder, StringRef Prefix,
   int Max10Exp = PickFP(Sem, 4, 38, 308, 4932, 308, 38, 4932);
   int MinExp = PickFP(Sem, -13, -125, -1021, -16381, -968, -125, -16381);
   int MaxExp = PickFP(Sem, 16, 128, 1024, 16384, 1024, 128, 16384);
-  Min = PickFP(Sem, "6.103515625e-5", "1.17549435e-38", "2.2250738585072014e-308",
-               "3.36210314311209350626e-4932",
+  Min = PickFP(Sem, "6.103515625e-5", "1.17549435e-38",
+               "2.2250738585072014e-308", "3.36210314311209350626e-4932",
                "2.00416836000897277799610805135016e-292",
                "1.17549435082228750796873653722224568e-38",
                "3.36210314311209350626267781732175260e-4932");

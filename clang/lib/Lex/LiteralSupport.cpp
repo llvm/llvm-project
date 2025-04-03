@@ -982,9 +982,12 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
     switch (*s) {
     case 'b':
     case 'B':
-      if (isBFloat16) break;
-      if (isBF16) break;
-      if (HasSize) break;
+      if (isBFloat16)
+        break;
+      if (isBF16)
+        break;
+      if (HasSize)
+        break;
 
       isBF16 = true;
       continue;
