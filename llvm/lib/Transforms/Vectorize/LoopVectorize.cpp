@@ -7786,7 +7786,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   BestVPlan.execute(&State);
 
-  auto *MiddleVPBB = BestVPlan.getMiddleBlock();
   // 2.5 When vectorizing the epilogue, fix reduction resume values from the
   // additional bypass block.
   if (VectorizingEpilogue) {
@@ -7801,10 +7800,20 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
         Phi.addIncoming(Phi.getIncomingValueForBlock(BypassBlock), Pred);
       }
     }
-
-    for (VPRecipeBase &R : *MiddleVPBB) {
-      fixReductionScalarResumeWhenVectorizingEpilog(
-          &R, State, State.CFG.VPBB2IRBB[MiddleVPBB], BypassBlock);
+    VPBasicBlock *ScalarPH = BestVPlan.getScalarPreheader();
+    ArrayRef<VPBlockBase *> ScalarPreds = ScalarPH->getPredecessors();
+    if (!ScalarPreds.empty()) {
+      // If ScalarPH has predecessors, we may need to update its reduction
+      // resume values. If there is a middle block, it must be the first
+      // predecessor. Note that the first predecessor may not be the middle
+      // block, if the middle block doesn't branch to the scalar preheader. In
+      // that case, fixReductionScalarResumeWhenVectorizingEpilog will be a
+      // no-op.
+      auto *MiddleVPBB = cast<VPBasicBlock>(ScalarPreds[0]);
+      for (VPRecipeBase &R : *MiddleVPBB) {
+        fixReductionScalarResumeWhenVectorizingEpilog(
+            &R, State, State.CFG.VPBB2IRBB[MiddleVPBB], BypassBlock);
+      }
     }
   }
 
