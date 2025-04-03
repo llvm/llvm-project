@@ -105,7 +105,7 @@ struct InlinerCallback
     });
 
     // Set canHandleMultipleBlocks to true in the config
-    config.setCanHandleMultipleBlocks(true);
+    config.setCanHandleMultipleBlocks();
 
     // Get an instance of the inliner.
     Inliner inliner(function, cg, *this, getAnalysisManager(),
