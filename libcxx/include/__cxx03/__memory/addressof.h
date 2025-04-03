@@ -51,11 +51,6 @@ inline _LIBCPP_HIDE_FROM_ABI __unsafe_unretained _Tp* addressof(__unsafe_unretai
 }
 #endif
 
-#if !defined(_LIBCPP_CXX03_LANG)
-template <class _Tp>
-_Tp* addressof(const _Tp&&) noexcept = delete;
-#endif
-
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___CXX03___MEMORY_ADDRESSOF_H
