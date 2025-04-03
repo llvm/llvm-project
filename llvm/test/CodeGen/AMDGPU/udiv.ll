@@ -256,8 +256,8 @@ define amdgpu_kernel void @s_udiv_i32(ptr addrspace(1) %out, i32 %a, i32 %b) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GCN-NEXT:    s_add_i32 s12, s12, s17
-; GCN-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GCN-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GCN-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_cvt_f32_u32_e32 v0, s3
 ; GCN-NEXT:    s_sub_i32 s4, 0, s3

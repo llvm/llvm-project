@@ -11,7 +11,7 @@ define amdgpu_kernel void @partial_copy(<4 x i32> %arg) #0 {
   ; REGALLOC-GFX908-NEXT:   liveins: $sgpr4_sgpr5
   ; REGALLOC-GFX908-NEXT: {{  $}}
   ; REGALLOC-GFX908-NEXT:   INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2162697 /* reguse:AGPR_32 */, undef %6:agpr_32
-  ; REGALLOC-GFX908-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 6291466 /* regdef:VReg_128 */, def %7
+  ; REGALLOC-GFX908-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 6094858 /* regdef:VReg_128 */, def %7
   ; REGALLOC-GFX908-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 3538954 /* regdef:VReg_64 */, def %8
 
   ; REGALLOC-GFX908-NEXT:   GLOBAL_STORE_DWORDX4 undef %15:vreg_64, %7, 0, 0, implicit $exec :: (volatile store (s128) into `ptr addrspace(1) poison`, addrspace 1)
@@ -57,7 +57,7 @@ define amdgpu_kernel void @partial_copy(<4 x i32> %arg) #0 {
   ; REGALLOC-GFX90A-NEXT:   liveins: $sgpr4_sgpr5
   ; REGALLOC-GFX90A-NEXT: {{  $}}
   ; REGALLOC-GFX90A-NEXT:   INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2162697 /* reguse:AGPR_32 */, undef %6:agpr_32
-  ; REGALLOC-GFX90A-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 6619146 /* regdef:VReg_128_Align2 */, def %7
+  ; REGALLOC-GFX90A-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 6422538 /* regdef:VReg_128_Align2 */, def %7
   ; REGALLOC-GFX90A-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 3866634 /* regdef:VReg_64_Align2 */, def %8
   ; REGALLOC-GFX90A-NEXT:   GLOBAL_STORE_DWORDX4 undef %15:vreg_64_align2, %7, 0, 0, implicit $exec :: (volatile store (s128) into `ptr addrspace(1) poison`, addrspace 1)
   ; REGALLOC-GFX90A-NEXT:   renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM killed renamable $sgpr4_sgpr5, 0, 0 :: (dereferenceable invariant load (s128) from %ir.arg.kernarg.offset1, addrspace 4)

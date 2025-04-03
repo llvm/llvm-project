@@ -628,9 +628,9 @@ GCNUserSGPRUsageInfo::GCNUserSGPRUsageInfo(const Function &F,
 
   if (ST.hasFlatAddressSpace() && AMDGPU::isEntryFunctionCC(CC) &&
       (IsAmdHsaOrMesa || ST.enableFlatScratch()) &&
-      // FlatScratchInit cannot be true for graphics CC.
+      // FlatScratchInit cannot be true for graphics CC if enableFlatScratch() is false.
       (ST.enableFlatScratch() ||
-       (!IsNoFlatScratchInitSet && !AMDGPU::isGraphics(CC))) &&
+       (!AMDGPU::isGraphics(CC) && !F.hasFnAttribute("amdgpu-no-flat-scratch-init"))) &&
       !ST.flatScratchIsArchitected()) {
     FlatScratchInit = true;
   }
