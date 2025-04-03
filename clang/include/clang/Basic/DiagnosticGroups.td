@@ -496,6 +496,7 @@ def GNUImaginaryConstant : DiagGroup<"gnu-imaginary-constant">;
 def IgnoredGCH : DiagGroup<"ignored-gch">;
 def IgnoredReferenceQualifiers : DiagGroup<"ignored-reference-qualifiers">;
 def IgnoredQualifiers : DiagGroup<"ignored-qualifiers", [IgnoredReferenceQualifiers]>;
+def IgnoredBaseClassQualifiers : DiagGroup<"ignored-base-class-qualifiers", [IgnoredQualifiers]>;
 def : DiagGroup<"import">;
 def GNUIncludeNext : DiagGroup<"gnu-include-next">;
 def IncompatibleMSStruct : DiagGroup<"incompatible-ms-struct">;

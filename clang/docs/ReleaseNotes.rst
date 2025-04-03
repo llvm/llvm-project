@@ -313,6 +313,8 @@ Improvements to Clang's diagnostics
 
   Fixes #GH61635
 
+- Split diagnosing base class qualifiers from the ``-Wignored-Qualifiers`` diagnostic group into a new ``-Wignored-base-class-qualifiers`` diagnostic group (which is grouped under ``-Wignored-qualifiers``). Fixes #GH131935.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
