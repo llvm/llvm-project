@@ -857,7 +857,9 @@ else ()
       # CMAKE_REQUIRED_FLAGS must be a space separated string
       # Join BUILTIN_CFLAGS_${arch} and TARGET_${arch}_CFLAGS as a
       # space-separated string.
-      set(CMAKE_REQUIRED_FLAGS ${BUILTIN_CFLAGS_${arch}} ${TARGET_${arch}_CFLAGS})
+      list(APPEND CMAKE_REQUIRED_FLAGS
+        ${BUILTIN_CFLAGS_${arch}}
+        ${TARGET_${arch}_CFLAGS})
       list(JOIN CMAKE_REQUIRED_FLAGS " " CMAKE_REQUIRED_FLAGS)
       message(STATUS "Performing additional configure checks with target flags: ${CMAKE_REQUIRED_FLAGS}")
       # For ARM archs, exclude any VFP builtins if VFP is not supported
