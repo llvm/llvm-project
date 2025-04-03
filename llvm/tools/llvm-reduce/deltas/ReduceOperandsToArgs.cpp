@@ -155,8 +155,8 @@ static void substituteOperandWithArgument(Function *OldF,
     Argument &OldArg = std::get<0>(Z);
     Argument &NewArg = std::get<1>(Z);
 
-    NewArg.setName(OldArg.getName()); // Copy the name over...
-    VMap[&OldArg] = &NewArg;          // Add mapping to VMap
+    NewArg.takeName(&OldArg); // Copy the name over...
+    VMap[&OldArg] = &NewArg;  // Add mapping to VMap
   }
 
   LLVMContext &Ctx = OldF->getContext();
