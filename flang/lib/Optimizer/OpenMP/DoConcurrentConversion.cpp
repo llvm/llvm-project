@@ -313,6 +313,64 @@ void sinkLoopIVArgs(mlir::ConversionPatternRewriter &rewriter,
     ++idx;
   }
 }
+
+/// Collects values that are local to a loop: "loop-local values". A loop-local
+/// value is one that is used exclusively inside the loop but allocated outside
+/// of it. This usually corresponds to temporary values that are used inside the
+/// loop body for initialzing other variables for example.
+///
+/// See `flang/test/Transforms/DoConcurrent/locally_destroyed_temp.f90` for an
+/// example of why we need this.
+///
+/// \param [in] doLoop - the loop within which the function searches for values
+/// used exclusively inside.
+///
+/// \param [out] locals - the list of loop-local values detected for \p doLoop.
+void collectLoopLocalValues(fir::DoLoopOp doLoop,
+                            llvm::SetVector<mlir::Value> &locals) {
+  doLoop.walk([&](mlir::Operation *op) {
+    for (mlir::Value operand : op->getOperands()) {
+      if (locals.contains(operand))
+        continue;
+
+      bool isLocal = true;
+
+      if (!mlir::isa_and_present<fir::AllocaOp>(operand.getDefiningOp()))
+        continue;
+
+      // Values defined inside the loop are not interesting since they do not
+      // need to be localized.
+      if (doLoop->isAncestor(operand.getDefiningOp()))
+        continue;
+
+      for (auto *user : operand.getUsers()) {
+        if (!doLoop->isAncestor(user)) {
+          isLocal = false;
+          break;
+        }
+      }
+
+      if (isLocal)
+        locals.insert(operand);
+    }
+  });
+}
+
+/// For a "loop-local" value \p local within a loop's scope, localizes that
+/// value within the scope of the parallel region the loop maps to. Towards that
+/// end, this function moves the allocation of \p local within \p allocRegion.
+///
+/// \param local - the value used exclusively within a loop's scope (see
+/// collectLoopLocalValues).
+///
+/// \param allocRegion - the parallel region where \p local's allocation will be
+/// privatized.
+///
+/// \param rewriter - builder used for updating \p allocRegion.
+static void localizeLoopLocalValue(mlir::Value local, mlir::Region &allocRegion,
+                                   mlir::ConversionPatternRewriter &rewriter) {
+  rewriter.moveOpBefore(local.getDefiningOp(), &allocRegion.front().front());
+}
 } // namespace looputils
 
 class DoConcurrentConversion : public mlir::OpConversionPattern<fir::DoLoopOp> {
@@ -339,12 +397,20 @@ public:
                         "Some `do concurent` loops are not perfectly-nested. "
                         "These will be serialized.");
 
+    llvm::SetVector<mlir::Value> locals;
+    looputils::collectLoopLocalValues(loopNest.back().first, locals);
     looputils::sinkLoopIVArgs(rewriter, loopNest);
+
     mlir::IRMapping mapper;
-    genParallelOp(doLoop.getLoc(), rewriter, loopNest, mapper);
+    mlir::omp::ParallelOp parallelOp =
+        genParallelOp(doLoop.getLoc(), rewriter, loopNest, mapper);
     mlir::omp::LoopNestOperands loopNestClauseOps;
     genLoopNestClauseOps(doLoop.getLoc(), rewriter, loopNest, mapper,
                          loopNestClauseOps);
+
+    for (mlir::Value local : locals)
+      looputils::localizeLoopLocalValue(local, parallelOp.getRegion(),
+                                        rewriter);
 
     mlir::omp::LoopNestOp ompLoopNest =
         genWsLoopOp(rewriter, loopNest.back().first, mapper, loopNestClauseOps,
