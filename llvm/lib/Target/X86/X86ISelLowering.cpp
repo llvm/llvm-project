@@ -6198,12 +6198,13 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
         SubSrc.getOperand(0).getValueSizeInBits() == NumSizeInBits) {
       uint64_t ExtractIdx = SubSrc.getConstantOperandVal(1);
       SDValue SubSrcSrc = SubSrc.getOperand(0);
-      unsigned NumSubSrcBCElts = SubSrcSrc.getValueType().getVectorNumElements();
-      unsigned MaxElts = std::max(NumElts, NumSubSrcBCElts);
-      assert((MaxElts % NumElts) == 0 && (MaxElts % NumSubSrcBCElts) == 0 &&
+      unsigned NumSubSrcSrcElts =
+          SubSrcSrc.getValueType().getVectorNumElements();
+      unsigned MaxElts = std::max(NumElts, NumSubSrcSrcElts);
+      assert((MaxElts % NumElts) == 0 && (MaxElts % NumSubSrcSrcElts) == 0 &&
              "Subvector valuetype mismatch");
       InsertIdx *= (MaxElts / NumElts);
-      ExtractIdx *= (MaxElts / NumSubSrcBCElts);
+      ExtractIdx *= (MaxElts / NumSubSrcSrcElts);
       NumSubElts *= (MaxElts / NumElts);
       bool SrcIsUndef = Src.isUndef();
       for (int i = 0; i != (int)MaxElts; ++i)
@@ -6231,10 +6232,11 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
 
     if (SubMask.size() != NumSubElts) {
       assert(((SubMask.size() % NumSubElts) == 0 ||
-              (NumSubElts % SubMask.size()) == 0) && "Illegal submask scale");
+              (NumSubElts % SubMask.size()) == 0) &&
+             "Illegal submask scale");
       if ((NumSubElts % SubMask.size()) == 0) {
         int Scale = NumSubElts / SubMask.size();
-        SmallVector<int,64> ScaledSubMask;
+        SmallVector<int, 64> ScaledSubMask;
         narrowShuffleMaskElts(Scale, SubMask, ScaledSubMask);
         SubMask = ScaledSubMask;
       } else {
