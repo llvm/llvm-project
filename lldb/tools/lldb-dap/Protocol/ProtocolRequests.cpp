@@ -138,7 +138,7 @@ parseSourceMap(const json::Value &Params,
   return false;
 }
 
-bool fromJSON(const json::Value &Params, DAPConfiguration &C, json::Path P) {
+bool fromJSON(const json::Value &Params, Configuration &C, json::Path P) {
   json::ObjectMapper O(Params, P);
   return O.mapOptional("debuggerRoot", C.debuggerRoot) &&
          O.mapOptional("enableAutoVariableSummaries",

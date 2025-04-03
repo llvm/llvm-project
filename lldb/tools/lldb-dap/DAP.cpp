@@ -76,7 +76,7 @@ DAP::DAP(Log *log, const ReplMode default_repl_mode,
          std::vector<std::string> pre_init_commands, Transport &transport)
     : log(log), transport(transport), broadcaster("lldb-dap"),
       exception_breakpoints(), focus_tid(LLDB_INVALID_THREAD_ID),
-      stop_at_entry(false), is_attach(false),
+      is_attach(false), stop_at_entry(false),
       restarting_process_id(LLDB_INVALID_PROCESS_ID),
       configuration_done_sent(false), waiting_for_run_in_terminal(false),
       progress_event_reporter(
@@ -1054,7 +1054,7 @@ void DAP::ConfigureSourceMaps() {
   RunLLDBCommands("Setting source map:", {sourceMapCommand});
 }
 
-void DAP::SetConfiguration(const protocol::DAPConfiguration &config,
+void DAP::SetConfiguration(const protocol::Configuration &config,
                            bool is_attach) {
   configuration = config;
   this->is_attach = is_attach;

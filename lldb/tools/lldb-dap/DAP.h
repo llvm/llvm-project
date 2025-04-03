@@ -242,8 +242,7 @@ struct DAP {
   void StopEventHandlers();
 
   /// Configures the debug adapter for launching/attaching.
-  void SetConfiguration(const protocol::DAPConfiguration &confing,
-                        bool is_attach);
+  void SetConfiguration(const protocol::Configuration &confing, bool is_attach);
 
   /// Configure source maps based on the current `DAPConfiguration`.
   void ConfigureSourceMaps();

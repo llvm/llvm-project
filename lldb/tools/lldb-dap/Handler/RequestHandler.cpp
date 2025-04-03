@@ -123,8 +123,7 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
 
   llvm::json::Object reverse_request = CreateRunInTerminalReverseRequest(
       *arguments.program, arguments.args, arguments.env,
-      arguments.cwd.value_or(""), dap.debug_adapter_path, comm_file.m_path,
-      debugger_pid);
+      arguments.cwd.value_or(""), comm_file.m_path, debugger_pid);
   dap.SendReverseRequest<LogFailureResponseHandler>("runInTerminal",
                                                     std::move(reverse_request));
 

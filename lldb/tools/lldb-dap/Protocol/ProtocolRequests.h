@@ -22,8 +22,8 @@
 
 #include "Protocol/ProtocolBase.h"
 #include "Protocol/ProtocolTypes.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/JSON.h"
 #include <chrono>
 #include <cstdint>
@@ -198,7 +198,7 @@ struct Configuration {
 /// lldb-dap specific launch arguments.
 struct LaunchRequestArguments {
   /// Common lldb-dap configuration values for launching/attaching operations.
-  DAPConfiguration configuration;
+  Configuration configuration;
 
   /// If true, the launch request should launch the program without enabling
   /// debugging.

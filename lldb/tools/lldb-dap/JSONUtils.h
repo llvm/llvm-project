@@ -562,9 +562,17 @@ llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit);
 
 /// Create a runInTerminal reverse request object
 ///
-/// \param[in] launch_request
-///     The original launch_request object whose fields are used to construct
-///     the reverse request object.
+/// \param[in] program
+///     Path to the program to run in the terminal.
+///
+/// \param[in] args
+///     The arguments for the program.
+///
+/// \param[in] env
+///     The environment variables to set in the terminal.
+///
+/// \param[in] cwd
+///     The working directory for the run in terminal request.
 ///
 /// \param[in] comm_file
 ///     The fifo file used to communicate the with the target launcher.
@@ -580,8 +588,7 @@ llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit);
 llvm::json::Object CreateRunInTerminalReverseRequest(
     llvm::StringRef program, const std::vector<std::string> &args,
     const llvm::StringMap<std::string> env, llvm::StringRef cwd,
-    llvm::StringRef debug_adapter_path, llvm::StringRef comm_file,
-    lldb::pid_t debugger_pid);
+    llvm::StringRef comm_file, lldb::pid_t debugger_pid);
 
 /// Create a "Terminated" JSON object that contains statistics
 ///
