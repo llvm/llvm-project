@@ -16,11 +16,10 @@ using namespace llvm;
 
 
 PESubtarget::PESubtarget(const Triple &TT, StringRef CPU,
-    StringRef FS, const TargetMachine &TM) : PEGenSubtargetInfo(TT,CPU, CPU,FS),FrameLowering(*this){
-}
-
-PESubtarget::~PESubtarget() {
-    // Destructor
+    StringRef FS, const TargetMachine &TM) 
+    : PEGenSubtargetInfo(TT,CPU,CPU,FS),
+    FrameLowering(*this),
+    TLI(TM,*this){
 }
 
 PESubtarget &PESubtarget::initializeSubtargetDependencies(

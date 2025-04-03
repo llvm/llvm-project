@@ -10,6 +10,7 @@ Date: 4/2/2025
 #include "PEInstrInfo.h"
 #include "PERegisterInfo.h"
 #include "PEFrameLowering.h"
+#include "PEISelLowering.h"
 
 #define GET_SUBTARGETINFO_HEADER
 #include "PEGenSubtargetInfo.inc"
@@ -21,11 +22,10 @@ private:
     PEInstrInfo InstrInfo;
     PERegisterInfo RegInfo;
     PEFrameLowering FrameLowering;
+    PETargetLowering TLI;
 public:
     PESubtarget(const Triple &TT, StringRef CPU,
         StringRef Features, const TargetMachine &TM);
-    ~PESubtarget();
-
    PESubtarget &initializeSubtargetDependencies(const Triple &TT,
         StringRef CPU,
         StringRef TuneCPU,
@@ -44,7 +44,10 @@ public:
 
     const PEFrameLowering *getFrameLowering() const override {
         return &FrameLowering;
-      }
+    }
+    const PETargetLowering *getTargetLowering() const override{
+        return &TLI;
+    }
 
 private:
 
