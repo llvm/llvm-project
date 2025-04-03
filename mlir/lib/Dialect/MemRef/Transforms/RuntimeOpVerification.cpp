@@ -370,7 +370,7 @@ struct SubViewOpInterface
       builder.create<cf::AssertOp>(
           loc, lastPosInBounds,
           RuntimeVerifiableOpInterface::generateErrorMessage(
-              op, "Subview runs out-of-bounds along dimension" +
+              op, "subview runs out-of-bounds along dimension " +
                       std::to_string(i)));
     }
   }
