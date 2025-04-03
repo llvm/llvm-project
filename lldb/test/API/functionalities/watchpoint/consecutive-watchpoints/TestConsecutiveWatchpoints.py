@@ -1,6 +1,6 @@
 """
-Watch larger-than-8-bytes regions of memory, confirm that
-writes to those regions are detected.
+Watch contiguous memory regions with separate watchpoints, check that lldb
+correctly detect which watchpoint was hit for each one.
 """
 
 import lldb
@@ -47,10 +47,16 @@ class ConsecutiveWatchpointsTestCase(TestBase):
             .GetChildMemberWithName("field4")
             .Watch(True, False, True)
         )
+        field5_wp = (
+            frame.locals["var"][0]
+            .GetChildMemberWithName("field5")
+            .Watch(True, False, True)
+        )
 
         self.assertTrue(field2_wp.IsValid())
         self.assertTrue(field3_wp.IsValid())
         self.assertTrue(field4_wp.IsValid())
+        self.assertTrue(field5_wp.IsValid())
 
         reason = self.continue_and_report_stop_reason(process, "continue to field2 wp")
         self.assertEqual(reason, lldb.eStopReasonWatchpoint)
@@ -72,3 +78,10 @@ class ConsecutiveWatchpointsTestCase(TestBase):
             process.GetSelectedThread().GetStopReasonDataAtIndex(0)
         )
         self.assertEqual(stop_reason_watchpoint_id, field4_wp.GetID())
+
+        reason = self.continue_and_report_stop_reason(process, "continue to field5 wp")
+        self.assertEqual(reason, lldb.eStopReasonWatchpoint)
+        stop_reason_watchpoint_id = (
+            process.GetSelectedThread().GetStopReasonDataAtIndex(0)
+        )
+        self.assertEqual(stop_reason_watchpoint_id, field5_wp.GetID())
