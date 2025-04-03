@@ -2158,12 +2158,15 @@ protected:
     // The index of the template parameter this substitution represents.
     unsigned Index : 15;
 
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned Final : 1;
+
     /// Represents the index within a pack if this represents a substitution
     /// from a pack expansion. This index starts at the end of the pack and
     /// increments towards the beginning.
     /// Positive non-zero number represents the index + 1.
     /// Zero means this is not substituted from an expansion.
-    unsigned PackIndex : 16;
+    unsigned PackIndex : 15;
   };
 
   class SubstTemplateTypeParmPackTypeBitfields {
@@ -6397,7 +6400,8 @@ class SubstTemplateTypeParmType final
   Decl *AssociatedDecl;
 
   SubstTemplateTypeParmType(QualType Replacement, Decl *AssociatedDecl,
-                            unsigned Index, std::optional<unsigned> PackIndex);
+                            unsigned Index, std::optional<unsigned> PackIndex,
+                            bool Final);
 
 public:
   /// Gets the type that was substituted for the template
@@ -6420,6 +6424,10 @@ public:
   /// This should match the result of `getReplacedParameter()->getIndex()`.
   unsigned getIndex() const { return SubstTemplateTypeParmTypeBits.Index; }
 
+  // This substitution is Final, which means the substitution is fully
+  // sugared: it doesn't need to be resugared later.
+  unsigned getFinal() const { return SubstTemplateTypeParmTypeBits.Final; }
+
   std::optional<unsigned> getPackIndex() const {
     if (SubstTemplateTypeParmTypeBits.PackIndex == 0)
       return std::nullopt;
@@ -6431,17 +6439,12 @@ public:
 
   void Profile(llvm::FoldingSetNodeID &ID) {
     Profile(ID, getReplacementType(), getAssociatedDecl(), getIndex(),
-            getPackIndex());
+            getPackIndex(), getFinal());
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, QualType Replacement,
                       const Decl *AssociatedDecl, unsigned Index,
-                      std::optional<unsigned> PackIndex) {
-    Replacement.Profile(ID);
-    ID.AddPointer(AssociatedDecl);
-    ID.AddInteger(Index);
-    ID.AddInteger(PackIndex ? *PackIndex - 1 : 0);
-  }
+                      std::optional<unsigned> PackIndex, bool Final);
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == SubstTemplateTypeParm;
@@ -6488,7 +6491,8 @@ public:
   /// This should match the result of `getReplacedParameter()->getIndex()`.
   unsigned getIndex() const { return SubstTemplateTypeParmPackTypeBits.Index; }
 
-  // When true the substitution will be 'Final' (subst node won't be placed).
+  // This substitution will be Final, which means the substitution will be fully
+  // sugared: it doesn't need to be resugared later.
   bool getFinal() const;
 
   unsigned getNumArgs() const {

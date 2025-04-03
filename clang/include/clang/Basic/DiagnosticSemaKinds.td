@@ -2733,7 +2733,7 @@ def note_final_dtor_non_final_class_silence : Note<
   "mark %0 as '%select{final|sealed}1' to silence this warning">;
 def warn_unnecessary_virtual_specifier : Warning<
   "virtual method %0 is inside a 'final' class and can never be overridden">,
-  InGroup<WarnUnnecessaryVirtualSpecifier>;
+  InGroup<WarnUnnecessaryVirtualSpecifier>, DefaultIgnore;
 
 // C++11 attributes
 def err_repeat_attribute : Error<"%0 attribute cannot be repeated">;
@@ -3549,6 +3549,10 @@ def err_conflicting_codeseg_attribute : Error<
   "conflicting code segment specifiers">;
 def warn_duplicate_codeseg_attribute : Warning<
   "duplicate code segment specifiers">, InGroup<Section>;
+
+def err_attribute_patchable_function_entry_invalid_section
+    : Error<"section argument to 'patchable_function_entry' attribute is not "
+            "valid for this target: %0">;
 
 def err_anonymous_property: Error<
   "anonymous property is not supported">;
@@ -13060,8 +13064,8 @@ def err_acc_decl_for_routine
     : Error<"expected function or lambda declaration for 'routine' construct">;
 
 // AMDGCN builtins diagnostics
-def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;
-def note_amdgcn_global_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
+def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;
+def note_amdgcn_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
 def err_amdgcn_num_wavegroups_value : Error<"number of wavegroups must be 4">;
 def err_amdgcn_wave_size_value : Error<"wave size must be 32">;
 def err_amdgcn_block_dim_invalid_value : Error<"invalid block dimensions">;
