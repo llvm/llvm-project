@@ -188,6 +188,12 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
         continue;
       }
 
+      // Set UseNativeLowPrecision using dx.nativelowprec module metadata
+      if (auto *NativeLowPrec = mdconst::extract_or_null<ConstantInt>(
+              M.getModuleFlag("dx.nativelowprec")))
+        if (NativeLowPrec->getValue() != 0)
+          SCCSF.UseNativeLowPrecision = true;
+
       ComputedShaderFlags CSF;
       for (const auto &BB : *F)
         for (const auto &I : BB)

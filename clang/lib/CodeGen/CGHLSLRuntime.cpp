@@ -282,10 +282,13 @@ void CGHLSLRuntime::addHLSLBufferLayoutType(const RecordType *StructType,
 
 void CGHLSLRuntime::finishCodeGen() {
   auto &TargetOpts = CGM.getTarget().getTargetOpts();
+  auto &LangOpts = CGM.getLangOpts();
   llvm::Module &M = CGM.getModule();
   Triple T(M.getTargetTriple());
   if (T.getArch() == Triple::ArchType::dxil)
     addDxilValVersion(TargetOpts.DxilValidatorVersion, M);
+  if (LangOpts.NativeHalfType)
+    M.setModuleFlag(llvm::Module::ModFlagBehavior::Error, "dx.nativelowprec", 1);
 
   generateGlobalCtorDtorCalls();
 }
