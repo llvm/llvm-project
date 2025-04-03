@@ -30,11 +30,12 @@
 #include "llvm/CodeGen/DetectDeadLanes.h"
 #include "llvm/CodeGen/DwarfEHPrepare.h"
 #include "llvm/CodeGen/EarlyIfConversion.h"
+#include "llvm/CodeGen/ExpandFp.h"
 #include "llvm/CodeGen/ExpandLargeDivRem.h"
-#include "llvm/CodeGen/ExpandLargeFpConvert.h"
 #include "llvm/CodeGen/ExpandMemCmp.h"
 #include "llvm/CodeGen/ExpandPostRAPseudos.h"
 #include "llvm/CodeGen/ExpandReductions.h"
+#include "llvm/CodeGen/FEntryInserter.h"
 #include "llvm/CodeGen/FinalizeISel.h"
 #include "llvm/CodeGen/FixupStatepointCallerSaved.h"
 #include "llvm/CodeGen/GCMetadata.h"
@@ -44,6 +45,7 @@
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
+#include "llvm/CodeGen/LiveDebugValuesPass.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LocalStackSlotAllocation.h"
 #include "llvm/CodeGen/LowerEmuTLS.h"
@@ -88,6 +90,7 @@
 #include "llvm/CodeGen/UnreachableBlockElim.h"
 #include "llvm/CodeGen/WasmEHPrepare.h"
 #include "llvm/CodeGen/WinEHPrepare.h"
+#include "llvm/CodeGen/XRayInstrumentation.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRPrinter/IRPrintingPasses.h"
@@ -663,7 +666,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addISelPasses(
 
   addPass(PreISelIntrinsicLoweringPass(&TM));
   addPass(ExpandLargeDivRemPass(&TM));
-  addPass(ExpandLargeFpConvertPass(&TM));
+  addPass(ExpandFpPass(&TM));
 
   derived().addIRPasses(addPass);
   derived().addCodeGenPrepare(addPass);
@@ -1001,7 +1004,8 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
   addPass(FuncletLayoutPass());
 
   addPass(StackMapLivenessPass());
-  addPass(LiveDebugValuesPass());
+  addPass(LiveDebugValuesPass(
+      getTM<TargetMachine>().Options.ShouldEmitDebugEntryValues()));
   addPass(MachineSanitizerBinaryMetadata());
 
   if (TM.Options.EnableMachineOutliner &&

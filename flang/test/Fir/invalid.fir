@@ -1146,3 +1146,114 @@ func.func @bad_unpack_array4(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box
   fir.unpack_array %arg0 to %arg1 stack : !fir.box<!fir.array<?xi32>>
   return
 }
+
+// -----
+
+func.func @bad_is_contiguous_box(%arg0: !fir.ref<!fir.box<!fir.array<?xi32>>>) -> i1 {
+  // expected-error@+1{{op operand #0 must be any box, but got '!fir.ref<!fir.box<!fir.array<?xi32>>>'}}
+  %0 = fir.is_contiguous_box %arg0 whole : (!fir.ref<!fir.box<!fir.array<?xi32>>>) -> i1
+  return %0 : i1
+}
+
+// -----
+
+func.func @bad_box_total_elements(%arg0: !fir.ref<!fir.box<!fir.array<?xi32>>>) -> i32 {
+  // expected-error@+1{{op operand #0 must be any box, but got '!fir.ref<!fir.box<!fir.array<?xi32>>>'}}
+  %0 = fir.box_total_elements %arg0 : (!fir.ref<!fir.box<!fir.array<?xi32>>>) -> i32
+  return %0 : i32
+}
+
+// -----
+
+func.func @empty_dc_wrapper_body() {
+  // expected-error@+1 {{'fir.do_concurrent' op expects a non-empty block}}
+  fir.do_concurrent {
+  }
+  return
+}
+
+// -----
+
+func.func @dc_wrong_terminator() {
+  // expected-error@+1 {{'fir.do_concurrent' op must be terminated by 'fir.do_concurrent.loop'}}
+  fir.do_concurrent {
+    llvm.return
+  }
+  return
+}
+
+// -----
+
+func.func @dc_0d() {
+   // expected-error@+2 {{'fir.do_concurrent.loop' op needs at least one tuple element for lowerBound, upperBound and step}}
+  fir.do_concurrent {
+    fir.do_concurrent.loop () = () to () step () {
+      %tmp = fir.alloca i32
+    }
+  }
+  return
+}
+
+// -----
+
+func.func @dc_invalid_parent(%arg0: index, %arg1: index) {
+  // expected-error@+1 {{'fir.do_concurrent.loop' op expects parent op 'fir.do_concurrent'}}
+  "fir.do_concurrent.loop"(%arg0, %arg1) <{operandSegmentSizes = array<i32: 1, 1, 0, 0>}> ({
+  ^bb0(%arg2: index):
+     %tmp = "fir.alloca"() <{in_type = i32, operandSegmentSizes = array<i32: 0, 0>}> : () -> !fir.ref<i32>
+  }) : (index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @dc_invalid_control(%arg0: index, %arg1: index) {
+  // expected-error@+2 {{'fir.do_concurrent.loop' op different number of tuple elements for lowerBound, upperBound or step}}
+  fir.do_concurrent {
+    "fir.do_concurrent.loop"(%arg0, %arg1) <{operandSegmentSizes = array<i32: 1, 1, 0, 0>}> ({
+    ^bb0(%arg2: index):
+      %tmp = "fir.alloca"() <{in_type = i32, operandSegmentSizes = array<i32: 0, 0>}> : () -> !fir.ref<i32>
+    }) : (index, index) -> ()
+  }
+  return
+}
+
+// -----
+
+func.func @dc_invalid_ind_var(%arg0: index, %arg1: index) {
+  // expected-error@+2 {{'fir.do_concurrent.loop' op expects the same number of induction variables: 2 as bound and step values: 1}}
+  fir.do_concurrent {
+    "fir.do_concurrent.loop"(%arg0, %arg1, %arg0) <{operandSegmentSizes = array<i32: 1, 1, 1, 0>}> ({
+    ^bb0(%arg3: index, %arg4: index):
+      %tmp = "fir.alloca"() <{in_type = i32, operandSegmentSizes = array<i32: 0, 0>}> : () -> !fir.ref<i32>
+    }) : (index, index, index) -> ()
+  }
+  return
+}
+
+// -----
+
+func.func @dc_invalid_ind_var_type(%arg0: index, %arg1: index) {
+  // expected-error@+2 {{'fir.do_concurrent.loop' op expects arguments for the induction variable to be of index type}}
+  fir.do_concurrent {
+    "fir.do_concurrent.loop"(%arg0, %arg1, %arg0) <{operandSegmentSizes = array<i32: 1, 1, 1, 0>}> ({
+    ^bb0(%arg3: i32):
+      %tmp = "fir.alloca"() <{in_type = i32, operandSegmentSizes = array<i32: 0, 0>}> : () -> !fir.ref<i32>
+    }) : (index, index, index) -> ()
+  }
+  return
+}
+
+// -----
+
+func.func @dc_invalid_reduction(%arg0: index, %arg1: index) {
+  %sum = fir.alloca i32
+  // expected-error@+2 {{'fir.do_concurrent.loop' op mismatch in number of reduction variables and reduction attributes}}
+  fir.do_concurrent {
+    "fir.do_concurrent.loop"(%arg0, %arg1, %arg0, %sum) <{operandSegmentSizes = array<i32: 1, 1, 1, 1>}> ({
+    ^bb0(%arg3: index):
+      %tmp = "fir.alloca"() <{in_type = i32, operandSegmentSizes = array<i32: 0, 0>}> : () -> !fir.ref<i32>
+    }) : (index, index, index, !fir.ref<i32>) -> ()
+  }
+  return
+}

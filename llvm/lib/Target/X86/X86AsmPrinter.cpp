@@ -20,6 +20,7 @@
 #include "X86InstrInfo.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86Subtarget.h"
+#include "llvm/Analysis/StaticDataProfileInfo.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
@@ -61,6 +62,11 @@ X86AsmPrinter::X86AsmPrinter(TargetMachine &TM,
 /// runOnMachineFunction - Emit the function body.
 ///
 bool X86AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
+  if (auto *PSIW = getAnalysisIfAvailable<ProfileSummaryInfoWrapperPass>())
+    PSI = &PSIW->getPSI();
+  if (auto *SDPIW = getAnalysisIfAvailable<StaticDataProfileInfoWrapperPass>())
+    SDPI = &SDPIW->getStaticDataProfileInfo();
+
   Subtarget = &MF.getSubtarget<X86Subtarget>();
 
   SMShadowTracker.startFunction(MF);

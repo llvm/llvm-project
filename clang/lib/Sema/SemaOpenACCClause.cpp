@@ -55,6 +55,8 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
     case OpenACCDirectiveKind::ParallelLoop:
     case OpenACCDirectiveKind::SerialLoop:
     case OpenACCDirectiveKind::KernelsLoop:
+      // OpenACC 3.4(prerelease) PR #511 adds 'if' to atomic.
+    case OpenACCDirectiveKind::Atomic:
       return true;
     default:
       return false;
@@ -1991,6 +1993,9 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitCollapseClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitBindClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
+  if (checkAlreadyHasClauseOfKind(SemaRef, ExistingClauses, Clause))
+    return nullptr;
+
   if (std::holds_alternative<StringLiteral *>(Clause.getBindDetails()))
     return OpenACCBindClause::Create(
         Ctx, Clause.getBeginLoc(), Clause.getLParenLoc(),

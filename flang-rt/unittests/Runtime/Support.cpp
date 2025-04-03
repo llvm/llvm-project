@@ -78,3 +78,23 @@ TEST(DescriptorBytesFor, Basic) {
     EXPECT_GT(b, 0U);
   }
 }
+
+TEST(IsContiguous, Basic) {
+  // ARRAY  1 3 5
+  //        2 4 6
+  auto array{MakeArray<TypeCategory::Integer, 4>(
+      std::vector<int>{2, 3}, std::vector<std::int32_t>{1, 2, 3, 4, 5, 6})};
+  StaticDescriptor<2> sectionStaticDesc;
+  Descriptor &section{sectionStaticDesc.descriptor()};
+  section.Establish(array->type(), array->ElementBytes(),
+      /*p=*/nullptr, /*rank=*/2);
+  static const SubscriptValue lbs[]{1, 1}, ubs[]{2, 3}, strides[]{1, 2};
+  const auto error{
+      CFI_section(&section.raw(), &array->raw(), lbs, ubs, strides)};
+  ASSERT_EQ(error, 0) << "CFI_section failed for array: " << error;
+
+  EXPECT_TRUE(RTNAME(IsContiguous)(*array));
+  EXPECT_FALSE(RTNAME(IsContiguous)(section));
+  EXPECT_TRUE(RTNAME(IsContiguousUpTo)(section, 1));
+  EXPECT_FALSE(RTNAME(IsContiguousUpTo)(section, 2));
+}

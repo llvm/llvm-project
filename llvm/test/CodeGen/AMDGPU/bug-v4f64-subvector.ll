@@ -7,12 +7,12 @@
 ; CHECK: GLOBAL_LOAD_DWORDX4
 ; CHECK: GLOBAL_LOAD_DWORDX4
 ; CHECK: GLOBAL_STORE_DWORDX4
-define protected amdgpu_kernel void @test1() local_unnamed_addr !kernel_arg_addr_space !0 !kernel_arg_access_qual !1 !kernel_arg_type !2 !kernel_arg_base_type !2 !kernel_arg_type_qual !3 !kernel_arg_name !4 {
+define protected amdgpu_kernel void @test1(ptr addrspace(4) %ptr) local_unnamed_addr !kernel_arg_addr_space !0 !kernel_arg_access_qual !1 !kernel_arg_type !2 !kernel_arg_base_type !2 !kernel_arg_type_qual !3 !kernel_arg_name !4 {
 entry:
-  %tmp = load <3 x i64>, ptr addrspace(4) poison, align 16, !invariant.load !5
+  %tmp = load <3 x i64>, ptr addrspace(4) %ptr, align 16, !invariant.load !5
   %srcA.load2 = extractelement <3 x i64> %tmp, i32 0
   %tmp1 = inttoptr i64 %srcA.load2 to ptr addrspace(1)
-  %tmp2 = getelementptr inbounds double, ptr addrspace(1) %tmp1, i64 undef
+  %tmp2 = getelementptr inbounds double, ptr addrspace(1) %tmp1, i64 0
   %tmp4 = load <3 x double>, ptr addrspace(1) %tmp2, align 8, !tbaa !6
   %tmp5 = extractelement <3 x double> %tmp4, i32 1
   %tmp6 = insertelement <3 x double> poison, double %tmp5, i32 1
@@ -34,12 +34,12 @@ entry:
 ; CHECK: GLOBAL_LOAD_DWORDX2
 ; CHECK: GLOBAL_LOAD_DWORDX2
 ; CHECK: GLOBAL_STORE_DWORDX2
-define protected amdgpu_kernel void @test2() local_unnamed_addr !kernel_arg_addr_space !0 !kernel_arg_access_qual !1 !kernel_arg_type !2 !kernel_arg_base_type !2 !kernel_arg_type_qual !3 !kernel_arg_name !4 {
+define protected amdgpu_kernel void @test2(ptr addrspace(4) %ptr) local_unnamed_addr !kernel_arg_addr_space !0 !kernel_arg_access_qual !1 !kernel_arg_type !2 !kernel_arg_base_type !2 !kernel_arg_type_qual !3 !kernel_arg_name !4 {
 entry:
-  %tmp = load <3 x i64>, ptr addrspace(4) poison, align 16, !invariant.load !5
+  %tmp = load <3 x i64>, ptr addrspace(4) %ptr, align 16, !invariant.load !5
   %srcA.load2 = extractelement <3 x i64> %tmp, i32 0
   %tmp1 = inttoptr i64 %srcA.load2 to ptr addrspace(1)
-  %tmp2 = getelementptr inbounds double, ptr addrspace(1) %tmp1, i64 undef
+  %tmp2 = getelementptr inbounds double, ptr addrspace(1) %tmp1, i64 0
   %tmp4 = load <3 x double>, ptr addrspace(1) %tmp2, align 8, !tbaa !6
   %tmp5 = extractelement <3 x double> %tmp4, i32 1
   %tmp6 = insertelement <3 x double> poison, double %tmp5, i32 1

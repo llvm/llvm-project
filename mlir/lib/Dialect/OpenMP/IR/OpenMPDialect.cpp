@@ -1684,17 +1684,11 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars) {
 
   for (auto mapOp : mapVars) {
     if (!mapOp.getDefiningOp())
-      emitError(op->getLoc(), "missing map operation");
+      return emitError(op->getLoc(), "missing map operation");
 
     if (auto mapInfoOp =
             mlir::dyn_cast<mlir::omp::MapInfoOp>(mapOp.getDefiningOp())) {
-      if (!mapInfoOp.getMapType().has_value())
-        emitError(op->getLoc(), "missing map type for map operand");
-
-      if (!mapInfoOp.getMapCaptureType().has_value())
-        emitError(op->getLoc(), "missing map capture type for map operand");
-
-      uint64_t mapTypeBits = mapInfoOp.getMapType().value();
+      uint64_t mapTypeBits = mapInfoOp.getMapType();
 
       bool to = mapTypeToBitFlag(
           mapTypeBits, llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO);
@@ -1751,14 +1745,9 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars) {
 
         to ? updateToVars.insert(updateVar) : updateFromVars.insert(updateVar);
       }
-
-      if (mapInfoOp.getMapperId() &&
-          !SymbolTable::lookupNearestSymbolFrom<omp::DeclareMapperOp>(
-              mapInfoOp, mapInfoOp.getMapperIdAttr())) {
-        return emitError(op->getLoc(), "invalid mapper id");
-      }
     } else if (!isa<DeclareMapperInfoOp>(op)) {
-      emitError(op->getLoc(), "map argument is not a map entry operation");
+      return emitError(op->getLoc(),
+                       "map argument is not a map entry operation");
     }
   }
 
@@ -1779,6 +1768,20 @@ static LogicalResult verifyPrivateVarsMapping(TargetOp targetOp) {
       static_cast<int64_t>(privateVars.size()))
     return emitError(targetOp.getLoc(), "sizes of `private` operand range and "
                                         "`private_maps` attribute mismatch");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// MapInfoOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult MapInfoOp::verify() {
+  if (getMapperId() &&
+      !SymbolTable::lookupNearestSymbolFrom<omp::DeclareMapperOp>(
+          *this, getMapperIdAttr())) {
+    return emitError("invalid mapper id");
+  }
 
   return success();
 }
@@ -1905,7 +1908,8 @@ LogicalResult TargetOp::verifyRegions() {
     return emitError("target containing multiple 'omp.teams' nested ops");
 
   // Check that host_eval values are only used in legal ways.
-  llvm::omp::OMPTgtExecModeFlags execFlags = getKernelExecFlags();
+  llvm::omp::OMPTgtExecModeFlags execFlags =
+      getKernelExecFlags(getInnermostCapturedOmpOp());
   for (Value hostEvalArg :
        cast<BlockArgOpenMPOpInterface>(getOperation()).getHostEvalBlockArgs()) {
     for (Operation *user : hostEvalArg.getUsers()) {
@@ -2025,12 +2029,20 @@ Operation *TargetOp::getInnermostCapturedOmpOp() {
   return capturedOp;
 }
 
-llvm::omp::OMPTgtExecModeFlags TargetOp::getKernelExecFlags() {
+llvm::omp::OMPTgtExecModeFlags
+TargetOp::getKernelExecFlags(Operation *capturedOp) {
   using namespace llvm::omp;
+
+  // A non-null captured op is only valid if it resides inside of a TargetOp
+  // and is the result of calling getInnermostCapturedOmpOp() on it.
+  TargetOp targetOp =
+      capturedOp ? capturedOp->getParentOfType<TargetOp>() : nullptr;
+  assert((!capturedOp ||
+          (targetOp && targetOp.getInnermostCapturedOmpOp() == capturedOp)) &&
+         "unexpected captured op");
 
   // Make sure this region is capturing a loop. Otherwise, it's a generic
   // kernel.
-  Operation *capturedOp = getInnermostCapturedOmpOp();
   if (!isa_and_present<LoopNestOp>(capturedOp))
     return OMP_TGT_EXEC_MODE_GENERIC;
 
@@ -2054,7 +2066,7 @@ llvm::omp::OMPTgtExecModeFlags TargetOp::getKernelExecFlags() {
     if (!isa_and_present<TeamsOp>(teamsOp))
       return OMP_TGT_EXEC_MODE_GENERIC;
 
-    if (teamsOp->getParentOp() == *this)
+    if (teamsOp->getParentOp() == targetOp.getOperation())
       return OMP_TGT_EXEC_MODE_GENERIC_SPMD;
   }
 
@@ -2075,7 +2087,7 @@ llvm::omp::OMPTgtExecModeFlags TargetOp::getKernelExecFlags() {
     if (!isa_and_present<TeamsOp>(teamsOp))
       return OMP_TGT_EXEC_MODE_GENERIC;
 
-    if (teamsOp->getParentOp() == *this)
+    if (teamsOp->getParentOp() == targetOp.getOperation())
       return OMP_TGT_EXEC_MODE_SPMD;
   }
 

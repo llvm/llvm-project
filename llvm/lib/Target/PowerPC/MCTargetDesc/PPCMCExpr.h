@@ -17,12 +17,10 @@ namespace llvm {
 
 class PPCMCExpr : public MCTargetExpr {
 public:
-  enum VariantKind {
+  enum Specifier : uint8_t {
     VK_None,
 
-    // We currently use both MCSymbolRefExpr::VariantKind and
-    // PPCMCExpr::VariantKind. Start at a larger number to avoid conflicts.
-    VK_LO = 200,
+    VK_LO = MCSymbolRefExpr::FirstTargetSpecifier,
     VK_HI,
     VK_HA,
     VK_HIGH,
@@ -102,19 +100,19 @@ public:
   };
 
 private:
-  const VariantKind Kind;
+  const Specifier specifier;
   const MCExpr *Expr;
 
   std::optional<int64_t> evaluateAsInt64(int64_t Value) const;
 
-  explicit PPCMCExpr(VariantKind Kind, const MCExpr *Expr)
-      : Kind(Kind), Expr(Expr) {}
+  explicit PPCMCExpr(Specifier S, const MCExpr *Expr)
+      : specifier(S), Expr(Expr) {}
 
 public:
   /// @name Construction
   /// @{
 
-  static const PPCMCExpr *create(VariantKind Kind, const MCExpr *Expr,
+  static const PPCMCExpr *create(Specifier S, const MCExpr *Expr,
                                  MCContext &Ctx);
 
   static const PPCMCExpr *createLo(const MCExpr *Expr, MCContext &Ctx) {
@@ -133,24 +131,18 @@ public:
   /// @name Accessors
   /// @{
 
-  /// getOpcode - Get the kind of this expression.
-  VariantKind getKind() const { return Kind; }
-
-  /// getSubExpr - Get the child of this expression.
+  Specifier getSpecifier() const { return specifier; }
   const MCExpr *getSubExpr() const { return Expr; }
 
   /// @}
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
-  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                 const MCFixup *Fixup) const override;
+  bool evaluateAsRelocatableImpl(MCValue &Res,
+                                 const MCAssembler *Asm) const override;
   void visitUsedExpr(MCStreamer &Streamer) const override;
   MCFragment *findAssociatedFragment() const override {
     return getSubExpr()->findAssociatedFragment();
   }
-
-  // There are no TLS PPCMCExprs at the moment.
-  void fixELFSymbolsInTLSFixups(MCAssembler &Asm) const override {}
 
   bool evaluateAsConstant(int64_t &Res) const;
 
@@ -159,9 +151,8 @@ public:
   }
 };
 
-static inline PPCMCExpr::VariantKind
-getVariantKind(const MCSymbolRefExpr *SRE) {
-  return PPCMCExpr::VariantKind(SRE->getKind());
+static inline PPCMCExpr::Specifier getSpecifier(const MCSymbolRefExpr *SRE) {
+  return PPCMCExpr::Specifier(SRE->getKind());
 }
 
 } // end namespace llvm

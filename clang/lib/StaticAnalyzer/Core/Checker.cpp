@@ -18,9 +18,8 @@ using namespace ento;
 
 int ImplicitNullDerefEvent::Tag;
 
-StringRef CheckerBase::getTagDescription() const { return getName(); }
-
-CheckerNameRef CheckerBase::getName() const { return Name; }
+void CheckerBase::printState(raw_ostream &Out, ProgramStateRef State,
+                             const char *NL, const char *Sep) const {}
 
 CheckerProgramPointTag::CheckerProgramPointTag(StringRef CheckerName,
                                                StringRef Msg)

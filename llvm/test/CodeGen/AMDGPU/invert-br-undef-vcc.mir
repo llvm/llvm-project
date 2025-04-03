@@ -3,7 +3,7 @@
 
   define amdgpu_kernel void @invert_br_undef_vcc(float %cond, ptr addrspace(1) %out) #0 {
   entry:
-    br i1 undef, label %if, label %else, !structurizecfg.uniform !0, !amdgpu.uniform !0
+    br i1 poison, label %if, label %else, !structurizecfg.uniform !0, !amdgpu.uniform !0
 
   else:                                             ; preds = %entry
     store volatile i32 100, ptr addrspace(1) poison

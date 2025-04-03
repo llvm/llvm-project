@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 %s -ast-print | FileCheck %s
-// RUN: %clang -emit-ast -o %t.ast %s
+// RUN: %clang_cc1 -emit-pch -o %t.ast %s
 // RUN: %clang_cc1 %t.ast -ast-print | FileCheck %s
 
 // CHECK: void *aa() __attribute__((assume_aligned(64)));

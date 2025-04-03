@@ -54,8 +54,8 @@ void _lldb_assert(bool expression, const char *expr_text, const char *func,
                     expr_text, func, file, line)
           .str(),
       buffer,
-      "Please file a bug report against lldb reporting this failure log, and "
-      "as many details as possible");
+      "Please file a bug report against lldb and include the backtrace, the "
+      "version and as many details as possible.");
 }
 
 void SetLLDBAssertCallback(LLDBAssertCallback callback) {

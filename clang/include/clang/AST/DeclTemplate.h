@@ -195,7 +195,8 @@ public:
   ///
   /// The constraints in the resulting list are to be treated as if in a
   /// conjunction ("and").
-  void getAssociatedConstraints(llvm::SmallVectorImpl<const Expr *> &AC) const;
+  void getAssociatedConstraints(
+      llvm::SmallVectorImpl<AssociatedConstraint> &AC) const;
 
   bool hasAssociatedConstraints() const;
 
@@ -422,7 +423,8 @@ public:
   /// including constraint-expressions derived from the requires-clause,
   /// trailing requires-clause (for functions and methods) and constrained
   /// template parameters.
-  void getAssociatedConstraints(llvm::SmallVectorImpl<const Expr *> &AC) const;
+  void getAssociatedConstraints(
+      llvm::SmallVectorImpl<AssociatedConstraint> &AC) const;
 
   bool hasAssociatedConstraints() const;
 
@@ -1341,7 +1343,8 @@ public:
   }
 
   void setTypeConstraint(ConceptReference *CR,
-                         Expr *ImmediatelyDeclaredConstraint);
+                         Expr *ImmediatelyDeclaredConstraint,
+                         int ArgumentPackSubstitutionIndex);
 
   /// Determine whether this template parameter has a type-constraint.
   bool hasTypeConstraint() const {
@@ -1353,9 +1356,11 @@ public:
   ///
   /// Use this instead of getTypeConstraint for concepts APIs that
   /// accept an ArrayRef of constraint expressions.
-  void getAssociatedConstraints(llvm::SmallVectorImpl<const Expr *> &AC) const {
+  void getAssociatedConstraints(
+      llvm::SmallVectorImpl<AssociatedConstraint> &AC) const {
     if (HasTypeConstraint)
-      AC.push_back(getTypeConstraint()->getImmediatelyDeclaredConstraint());
+      AC.emplace_back(getTypeConstraint()->getImmediatelyDeclaredConstraint(),
+                      getTypeConstraint()->getArgumentPackSubstitutionIndex());
   }
 
   SourceRange getSourceRange() const override LLVM_READONLY;
@@ -1574,9 +1579,10 @@ public:
   ///
   /// Use this instead of getPlaceholderImmediatelyDeclaredConstraint for
   /// concepts APIs that accept an ArrayRef of constraint expressions.
-  void getAssociatedConstraints(llvm::SmallVectorImpl<const Expr *> &AC) const {
+  void getAssociatedConstraints(
+      llvm::SmallVectorImpl<AssociatedConstraint> &AC) const {
     if (Expr *E = getPlaceholderTypeConstraint())
-      AC.push_back(E);
+      AC.emplace_back(E);
   }
 
   // Implement isa/cast/dyncast/etc.
@@ -2169,7 +2175,8 @@ public:
   ///
   /// The constraints in the resulting list are to be treated as if in a
   /// conjunction ("and").
-  void getAssociatedConstraints(llvm::SmallVectorImpl<const Expr *> &AC) const {
+  void getAssociatedConstraints(
+      llvm::SmallVectorImpl<AssociatedConstraint> &AC) const {
     TemplateParams->getAssociatedConstraints(AC);
   }
 
@@ -2943,7 +2950,8 @@ public:
   ///
   /// The constraints in the resulting list are to be treated as if in a
   /// conjunction ("and").
-  void getAssociatedConstraints(llvm::SmallVectorImpl<const Expr *> &AC) const {
+  void getAssociatedConstraints(
+      llvm::SmallVectorImpl<AssociatedConstraint> &AC) const {
     TemplateParams->getAssociatedConstraints(AC);
   }
 

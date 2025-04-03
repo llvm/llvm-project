@@ -12,7 +12,7 @@
 define amdgpu_hs void @_amdgpu_hs_main(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, i32 inreg %arg3, i32 inreg %arg4, i32 inreg %arg5, i32 inreg %arg6, i32 inreg %arg7, <6 x i32> inreg %arg8) {
 .entry:
   %__llpc_global_proxy_7.i = alloca [3 x <4 x float>], align 16, addrspace(5)
-  %tmp = icmp ult i32 undef, undef
+  %tmp = icmp ult i32 %arg, 0
   br i1 %tmp, label %.beginls, label %.endls
 
 .beginls:                                         ; preds = %.entry

@@ -68,12 +68,13 @@ struct VPlanTransforms {
       bool RequiresScalarEpilogueCheck, bool TailFolded, Loop *TheLoop);
 
   /// Replaces the VPInstructions in \p Plan with corresponding
-  /// widen recipes.
-  static void
-  VPInstructionsToVPRecipes(VPlanPtr &Plan,
-                            function_ref<const InductionDescriptor *(PHINode *)>
-                                GetIntOrFpInductionDescriptor,
-                            ScalarEvolution &SE, const TargetLibraryInfo &TLI);
+  /// widen recipes. Returns false if any VPInstructions could not be converted
+  /// to a wide recipe if needed.
+  static bool tryToConvertVPInstructionsToVPRecipes(
+      VPlanPtr &Plan,
+      function_ref<const InductionDescriptor *(PHINode *)>
+          GetIntOrFpInductionDescriptor,
+      ScalarEvolution &SE, const TargetLibraryInfo &TLI);
 
   /// Try to have all users of fixed-order recurrences appear after the recipe
   /// defining their previous value, by either sinking users or hoisting recipes
@@ -191,6 +192,15 @@ struct VPlanTransforms {
 
   /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
   static void materializeBroadcasts(VPlan &Plan);
+
+  /// Try to convert a plan with interleave groups with VF elements to a plan
+  /// with the interleave groups replaced by wide loads and stores processing VF
+  /// elements, if all transformed interleave groups access the full vector
+  /// width (checked via \o VectorRegWidth). This effectively is a very simple
+  /// form of loop-aware SLP, where we use interleave groups to identify
+  /// candidates.
+  static void narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
+                                     unsigned VectorRegWidth);
 };
 
 } // namespace llvm
