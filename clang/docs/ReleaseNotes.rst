@@ -295,6 +295,8 @@ Improvements to Clang's diagnostics
 - The ``-Wsign-compare`` warning now treats expressions with bitwise not(~) and minus(-) as signed integers
   except for the case where the operand is an unsigned integer
   and throws warning if they are compared with unsigned integers (##18878).
+- When diagnosing multi-level pack expansions of mismatched lengths, Clang will
+  now, in most cases, be able to point to the relevant outer parameter.
 - The ``-Wunnecessary-virtual-specifier`` warning has been added to warn about
   methods which are marked as virtual inside a ``final`` class, and hence can
   never be overridden.
@@ -392,6 +394,7 @@ Bug Fixes to C++ Support
   not in the last position.
 - Clang now correctly parses ``if constexpr`` expressions in immediate function context. (#GH123524)
 - Fixed an assertion failure affecting code that uses C++23 "deducing this". (#GH130272)
+- Fixed multi-level pack expansion of undeclared function parameters. (#GH56094)
 - Clang now properly instantiates destructors for initialized members within non-delegating constructors. (#GH93251)
 - Correctly diagnoses if unresolved using declarations shadows template paramters (#GH129411)
 - Fixed C++20 aggregate initialization rules being incorrectly applied in certain contexts. (#GH131320)

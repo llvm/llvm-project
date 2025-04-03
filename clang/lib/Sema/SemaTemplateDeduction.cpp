@@ -874,8 +874,14 @@ private:
       SmallVector<UnexpandedParameterPack, 2> Unexpanded;
       S.collectUnexpandedParameterPacks(Pattern, Unexpanded);
       for (unsigned I = 0, N = Unexpanded.size(); I != N; ++I) {
-        unsigned Depth, Index;
-        std::tie(Depth, Index) = getDepthAndIndex(Unexpanded[I]);
+        UnexpandedParameterPack U = Unexpanded[I];
+        // We're only interested in undeduced packs during argument deduction.
+        // However, collectUnexpandedParameterPacks() may collect Subst* nodes,
+        // so we ignore those.
+        if (isa<const SubstTemplateTypeParmPackType *,
+                const SubstNonTypeTemplateParmPackExpr *>(U.first))
+          continue;
+        auto [Depth, Index] = getDepthAndIndex(U);
         if (Depth == Info.getDeducedDepth())
           AddPack(Index);
       }

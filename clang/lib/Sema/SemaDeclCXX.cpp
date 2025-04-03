@@ -17693,8 +17693,11 @@ DeclResult Sema::ActOnTemplatedFriendTag(
   collectUnexpandedParameterPacks(QualifierLoc, Unexpanded);
   unsigned FriendDeclDepth = TempParamLists.front()->getDepth();
   for (UnexpandedParameterPack &U : Unexpanded) {
+    assert(!(isa<const SubstTemplateTypeParmPackType *,
+                 const SubstNonTypeTemplateParmPackExpr *>(U.first)) &&
+           "Shouldn't see Subst* nodes from the parser");
     if (getDepthAndIndex(U).first >= FriendDeclDepth) {
-      auto *ND = dyn_cast<NamedDecl *>(U.first);
+      auto *ND = dyn_cast<const NamedDecl *>(U.first);
       if (!ND)
         ND = cast<const TemplateTypeParmType *>(U.first)->getDecl();
       Diag(U.second, diag::friend_template_decl_malformed_pack_expansion)
