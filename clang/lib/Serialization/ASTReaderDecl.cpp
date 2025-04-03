@@ -904,8 +904,9 @@ void ASTDeclReader::VisitDeclaratorDecl(DeclaratorDecl *DD) {
   if (Record.readInt()) { // hasExtInfo
     auto *Info = new (Reader.getContext()) DeclaratorDecl::ExtInfo();
     Record.readQualifierInfo(*Info);
-    Info->TrailingRequiresClause =
-        AssociatedConstraint(Record.readExpr(), int(Record.readInt()));
+    Info->TrailingRequiresClause = AssociatedConstraint(
+        Record.readExpr(),
+        UnsignedOrNone::fromInternalRepresentation(Record.readUInt32()));
     DD->DeclInfo = Info;
   }
   QualType TSIType = Record.readType();
@@ -2710,12 +2711,10 @@ void ASTDeclReader::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
     if (Record.readBool())
       CR = Record.readConceptReference();
     Expr *ImmediatelyDeclaredConstraint = Record.readExpr();
-    int ArgumentPackSubstitutionIndex = Record.readInt();
+    UnsignedOrNone ArgPackSubstIndex = Record.readUnsignedOrNone();
 
-    D->setTypeConstraint(CR, ImmediatelyDeclaredConstraint,
-                         ArgumentPackSubstitutionIndex);
-    if ((D->ExpandedParameterPack = Record.readInt()))
-      D->NumExpanded = Record.readInt();
+    D->setTypeConstraint(CR, ImmediatelyDeclaredConstraint, ArgPackSubstIndex);
+    D->NumExpanded = Record.readUnsignedOrNone();
   }
 
   if (Record.readInt())

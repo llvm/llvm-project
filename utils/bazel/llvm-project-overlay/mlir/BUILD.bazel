@@ -128,16 +128,10 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "TensorEncodingIncGen",
-    tbl_outs = [
-        (
-            ["-gen-attr-interface-decls"],
-            "include/mlir/IR/TensorEncInterfaces.h.inc",
-        ),
-        (
-            ["-gen-attr-interface-defs"],
-            "include/mlir/IR/TensorEncInterfaces.cpp.inc",
-        ),
-    ],
+    tbl_outs = {
+        "include/mlir/IR/TensorEncInterfaces.h.inc": ["-gen-attr-interface-decls"],
+        "include/mlir/IR/TensorEncInterfaces.cpp.inc": ["-gen-attr-interface-defs"],
+    },
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/IR/TensorEncoding.td",
     deps = [":TensorOpsTdFiles"],

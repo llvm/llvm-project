@@ -4267,7 +4267,7 @@ public:
       auto ID = Writer.GetDeclRef(DeclForLocalLookup);
 
       if (isModuleLocalDecl(D)) {
-        if (std::optional<unsigned> PrimaryModuleHash =
+        if (UnsignedOrNone PrimaryModuleHash =
                 getPrimaryModuleHash(D->getOwningModule())) {
           auto Key = std::make_pair(D->getDeclName(), *PrimaryModuleHash);
           auto Iter = ModuleLocalDeclsMap.find(Key);

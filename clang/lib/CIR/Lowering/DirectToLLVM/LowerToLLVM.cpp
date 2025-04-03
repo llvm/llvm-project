@@ -13,6 +13,7 @@
 #include "LowerToLLVM.h"
 
 #include <deque>
+#include <optional>
 
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
@@ -28,6 +29,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
+#include "clang/CIR/LoweringHelpers.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CIR/Passes.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -523,6 +525,66 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMPtrStrideOpLowering::matchAndRewrite(
+    cir::PtrStrideOp ptrStrideOp, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+
+  const mlir::TypeConverter *tc = getTypeConverter();
+  const mlir::Type resultTy = tc->convertType(ptrStrideOp.getType());
+
+  mlir::Type elementTy =
+      convertTypeForMemory(*tc, dataLayout, ptrStrideOp.getElementTy());
+  mlir::MLIRContext *ctx = elementTy.getContext();
+
+  // void and function types doesn't really have a layout to use in GEPs,
+  // make it i8 instead.
+  if (mlir::isa<mlir::LLVM::LLVMVoidType>(elementTy) ||
+      mlir::isa<mlir::LLVM::LLVMFunctionType>(elementTy))
+    elementTy = mlir::IntegerType::get(elementTy.getContext(), 8,
+                                       mlir::IntegerType::Signless);
+  // Zero-extend, sign-extend or trunc the pointer value.
+  mlir::Value index = adaptor.getStride();
+  const unsigned width =
+      mlir::cast<mlir::IntegerType>(index.getType()).getWidth();
+  const std::optional<std::uint64_t> layoutWidth =
+      dataLayout.getTypeIndexBitwidth(adaptor.getBase().getType());
+
+  mlir::Operation *indexOp = index.getDefiningOp();
+  if (indexOp && layoutWidth && width != *layoutWidth) {
+    // If the index comes from a subtraction, make sure the extension happens
+    // before it. To achieve that, look at unary minus, which already got
+    // lowered to "sub 0, x".
+    const auto sub = dyn_cast<mlir::LLVM::SubOp>(indexOp);
+    auto unary = dyn_cast_if_present<cir::UnaryOp>(
+        ptrStrideOp.getStride().getDefiningOp());
+    bool rewriteSub =
+        unary && unary.getKind() == cir::UnaryOpKind::Minus && sub;
+    if (rewriteSub)
+      index = indexOp->getOperand(1);
+
+    // Handle the cast
+    const auto llvmDstType = mlir::IntegerType::get(ctx, *layoutWidth);
+    index = getLLVMIntCast(rewriter, index, llvmDstType,
+                           ptrStrideOp.getStride().getType().isUnsigned(),
+                           width, *layoutWidth);
+
+    // Rewrite the sub in front of extensions/trunc
+    if (rewriteSub) {
+      index = rewriter.create<mlir::LLVM::SubOp>(
+          index.getLoc(), index.getType(),
+          rewriter.create<mlir::LLVM::ConstantOp>(
+              index.getLoc(), index.getType(),
+              mlir::IntegerAttr::get(index.getType(), 0)),
+          index);
+      rewriter.eraseOp(sub);
+    }
+  }
+
+  rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
+      ptrStrideOp, resultTy, elementTy, adaptor.getBase(), index);
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMAllocaOpLowering::matchAndRewrite(
     cir::AllocaOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -603,6 +665,15 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
   return mlir::LogicalResult::success();
 }
 
+bool hasTrailingZeros(cir::ConstArrayAttr attr) {
+  auto array = mlir::dyn_cast<mlir::ArrayAttr>(attr.getElts());
+  return attr.hasTrailingZeros() ||
+         (array && std::count_if(array.begin(), array.end(), [](auto elt) {
+            auto ar = dyn_cast<cir::ConstArrayAttr>(elt);
+            return ar && hasTrailingZeros(ar);
+          }));
+}
+
 mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     cir::ConstantOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -641,6 +712,27 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     }
     assert(!cir::MissingFeatures::opGlobalViewAttr());
     attr = op.getValue();
+  } else if (const auto arrTy = mlir::dyn_cast<cir::ArrayType>(op.getType())) {
+    const auto constArr = mlir::dyn_cast<cir::ConstArrayAttr>(op.getValue());
+    if (!constArr && !isa<cir::ZeroAttr, cir::UndefAttr>(op.getValue()))
+      return op.emitError() << "array does not have a constant initializer";
+
+    std::optional<mlir::Attribute> denseAttr;
+    if (constArr && hasTrailingZeros(constArr)) {
+      const mlir::Value newOp =
+          lowerCirAttrAsValue(op, constArr, rewriter, getTypeConverter());
+      rewriter.replaceOp(op, newOp);
+      return mlir::success();
+    } else if (constArr &&
+               (denseAttr = lowerConstArrayAttr(constArr, typeConverter))) {
+      attr = denseAttr.value();
+    } else {
+      const mlir::Value initVal =
+          lowerCirAttrAsValue(op, op.getValue(), rewriter, typeConverter);
+      rewriter.replaceAllUsesWith(op, initVal);
+      rewriter.eraseOp(op);
+      return mlir::success();
+    }
   } else {
     return op.emitError() << "unsupported constant type " << op.getType();
   }
@@ -1230,6 +1322,8 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   patterns.add<CIRToLLVMStoreOpLowering>(converter, patterns.getContext(), dl);
   patterns.add<CIRToLLVMGlobalOpLowering>(converter, patterns.getContext(), dl);
   patterns.add<CIRToLLVMCastOpLowering>(converter, patterns.getContext(), dl);
+  patterns.add<CIRToLLVMPtrStrideOpLowering>(converter, patterns.getContext(),
+                                             dl);
   patterns.add<
       // clang-format off
                CIRToLLVMBinOpLowering,
