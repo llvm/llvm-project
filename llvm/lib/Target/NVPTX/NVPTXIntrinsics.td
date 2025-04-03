@@ -7354,3 +7354,84 @@ def INT_NVVM_ST_BULK_SHARED_CTA:
             "st.bulk.shared::cta [$dest_addr], $size, 0;",
             [(int_nvvm_st_bulk_shared_cta addr:$dest_addr, i64:$size, (i64 0))]>,
             Requires<[hasSM<100>, hasPTX<86>]>;
+
+//
+// clusterlaunchcontorl Instructions
+//
+
+def CLUSTERLAUNCHCONTRL_TRY_CANCEL:
+      NVPTXInst<(outs), (ins ADDR:$addr, ADDR:$mbar),
+                "clusterlaunchcontrol.try_cancel.async.shared::cta.mbarrier::complete_tx::bytes.b128 " #
+                "[$addr], [$mbar];",
+                [(int_nvvm_clusterlaunchcontrol_try_cancel_async_shared addr:$addr, addr:$mbar)]>,
+      Requires<[hasSM<100>, hasPTX<86>]>;
+
+def CLUSTERLAUNCHCONTRL_TRY_CANCEL_MULTICAST:
+      NVPTXInst<(outs), (ins ADDR:$addr, ADDR:$mbar),
+                "clusterlaunchcontrol.try_cancel.async.shared::cta.mbarrier::complete_tx::bytes" #
+                ".multicast::cluster::all.b128 " #
+                "[$addr], [$mbar];",
+                [(int_nvvm_clusterlaunchcontrol_try_cancel_async_multicast_shared addr:$addr, addr:$mbar)]>,
+      Requires<[hasSM<100>, hasArchAccelFeatures, hasPTX<86>]>;
+
+def SDTClusterLaunchControlQueryCancelIsCanceled: SDTypeProfile<1, 2, []>;
+def clusterlaunchcontrol_query_cancel_is_canceled:
+      SDNode<"NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_IS_CANCELED",
+             SDTClusterLaunchControlQueryCancelIsCanceled, [SDNPHasChain, SDNPSideEffect]>;
+
+def CLUSTERLAUNCHCONTROL_QUERY_CANCEL_IS_CANCELED:
+  NVPTXInst<(outs Int1Regs:$pred), (ins Int64Regs:$try_cancel_response0, Int64Regs:$try_cancel_response1),
+            "{{\n\t" #
+               ".reg .b128 %handle;\n\t" #
+               "mov.b128 %handle, {$try_cancel_response0, $try_cancel_response1};\n\t" #
+               "clusterlaunchcontrol.query_cancel.is_canceled.pred.b128 $pred, %handle;\n\t" #
+            "}}", [(set i1:$pred,
+                        (clusterlaunchcontrol_query_cancel_is_canceled i64:$try_cancel_response0, i64:$try_cancel_response1))]>,
+            Requires<[hasSM<100>, hasPTX<86>]>;
+
+def SDTClusterLaunchControlQueryCancelGetFirstCtaId: SDTypeProfile<3, 2, []>;
+def clusterlaunchcontrol_query_cancel_first_cta_id:
+      SDNode<"NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID",
+             SDTClusterLaunchControlQueryCancelGetFirstCtaId, [SDNPHasChain, SDNPSideEffect]>;
+
+def CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID:
+  NVPTXInst<(outs Int32Regs:$r1, Int32Regs:$r2, Int32Regs:$r3),
+            (ins Int64Regs:$try_cancel_response0, Int64Regs:$try_cancel_response1),
+            "{{\n\t" #
+               ".reg .b128 %handle;\n\t" #
+               "mov.b128 %handle, {$try_cancel_response0, $try_cancel_response1};\n\t" #
+               "clusterlaunchcontrol.query_cancel.get_first_ctaid.v4.b32.b128 {$r1, $r2, $r3, _}, %handle;\n\t" #
+            "}}", [(set i32:$r1, i32:$r2, i32:$r3,
+                        (clusterlaunchcontrol_query_cancel_first_cta_id i64:$try_cancel_response0, i64:$try_cancel_response1))]>,
+            Requires<[hasSM<100>, hasPTX<86>]>;
+
+def SDTClusterLaunchControlQueryCancelGetFirstCtaIdX: SDTypeProfile<1, 2, []>;
+def clusterlaunchcontrol_query_cancel_first_cta_id_x :
+      SDNode<"NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_X",
+             SDTClusterLaunchControlQueryCancelGetFirstCtaIdX, [SDNPHasChain, SDNPSideEffect]>;
+
+def SDTClusterLaunchControlQueryCancelGetFirstCtaIdY: SDTypeProfile<1, 2, []>;
+def clusterlaunchcontrol_query_cancel_first_cta_id_y:
+      SDNode<"NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_Y",
+             SDTClusterLaunchControlQueryCancelGetFirstCtaIdY, [SDNPHasChain, SDNPSideEffect]>;
+
+def SDTClusterLaunchControlQueryCancelGetFirstCtaIdZ: SDTypeProfile<1, 2, []>;
+def clusterlaunchcontrol_query_cancel_first_cta_id_z:
+      SDNode<"NVPTXISD::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_Z",
+             SDTClusterLaunchControlQueryCancelGetFirstCtaIdZ, [SDNPHasChain, SDNPSideEffect]>;
+
+class CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID<string Dim>:
+  NVPTXInst<(outs Int32Regs:$reg), (ins Int64Regs:$try_cancel_response0, Int64Regs:$try_cancel_response1),
+            "{{\n\t" #
+               ".reg .b128 %handle;\n\t" #
+               "mov.b128 %handle, {$try_cancel_response0, $try_cancel_response1};\n\t" #
+               "clusterlaunchcontrol.query_cancel.get_first_ctaid::" # Dim # ".b32.b128 $reg, %handle;\n\t" #
+            "}}", [(set i32:$reg,
+                        (!cast<SDNode>("clusterlaunchcontrol_query_cancel_first_cta_id_" # Dim)
+                          i64:$try_cancel_response0, i64:$try_cancel_response1))]>,
+            Requires<[hasSM<100>, hasPTX<86>]>;
+
+foreach dim = ["x", "y", "z"] in {
+  def CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_ # dim:
+        CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID<dim>;
+}
