@@ -163,3 +163,31 @@ if.end100:                                        ; preds = %if.else79, %if.then
   %cmp181 = fcmp olt double %mul155, 0.000000e+00
   br label %common.ret
 }
+
+; Check that the inlining threshold is incremented for a function that is
+; accessing an alloca (used for addressing) of the caller by making a simple
+; IV update.
+;
+; CHECK: Inlining calls in: Caller3
+; CHECK: ++ SZTTI Adding inlining bonus: 1000
+
+define dso_local void @Caller3(ptr %Dst) {
+  %A = alloca i32
+  store i32 0, ptr %A
+  br label %loop
+
+loop:
+  %L = load i32, ptr %A
+  %SE = sext i32 %L to i64
+  %GEP = getelementptr  [240 x i32], ptr %Dst, i64 0, i64 %SE
+  store i64 0, ptr %GEP
+  call void @Callee3(ptr %A)
+  br label %loop
+}
+
+define void @Callee3(ptr %0) {
+  %L = load i32, ptr %0
+  %A = add nsw i32 %L, 1
+  store i32 %A, ptr %0
+  ret void
+}
