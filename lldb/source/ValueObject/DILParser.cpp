@@ -49,11 +49,7 @@ DILParser::Parse(llvm::StringRef dil_input_expr, DILLexer lexer,
                  std::shared_ptr<StackFrame> frame_sp,
                  lldb::DynamicValueType use_dynamic, bool use_synthetic,
                  bool fragile_ivar, bool check_ptr_vs_member) {
-  Status lldb_error;
-  // Cannot declare an llvm::Error without initializing it to something, because
-  // llvm::Error::Error() constructor is protected. If there's a better way to
-  // handle this, please let me know.
-  llvm::Error error(lldb_error.takeError());
+  llvm::Error error = llvm::Error::success();
   DILParser parser(dil_input_expr, lexer, frame_sp, use_dynamic, use_synthetic,
                    fragile_ivar, check_ptr_vs_member, error);
 
