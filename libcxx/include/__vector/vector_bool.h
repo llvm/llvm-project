@@ -19,7 +19,7 @@
 #include <__bit_reference>
 #include <__config>
 #include <__functional/unary_function.h>
-#include <__fwd/bit_reference.h>
+#include <__fwd/bit_reference.h> // TODO: This is a workaround for https://github.com/llvm/llvm-project/issues/131814
 #include <__fwd/functional.h>
 #include <__fwd/vector.h>
 #include <__iterator/distance.h>
@@ -549,7 +549,7 @@ vector<bool, _Allocator>::__recommend(size_type __new_size) const {
   const size_type __cap = capacity();
   if (__cap >= __ms / 2)
     return __ms;
-  return std::max(2 * __cap, __align_it(__new_size));
+  return std::max<size_type>(2 * __cap, __align_it(__new_size));
 }
 
 //  Default constructs __n objects starting at __end_

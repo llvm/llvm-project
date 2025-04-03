@@ -47,9 +47,8 @@ define float @pr70988() {
 ; CHECK-ALM:       vector.body:
 ; CHECK-ALM-NEXT:    [[INDEX1:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT3:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-ALM-NEXT:    [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
-; CHECK-ALM-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX1]], 0
 ; CHECK-ALM-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX1]], 1
-; CHECK-ALM-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = icmp ult i32 [[TMP0]], 1021
+; CHECK-ALM-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = icmp ult i32 [[INDEX1]], 1021
 ; CHECK-ALM-NEXT:    [[ACTIVE_LANE_MASK2:%.*]] = icmp ult i32 [[TMP1]], 1021
 ; CHECK-ALM-NEXT:    [[TMP2:%.*]] = select contract i1 [[ACTIVE_LANE_MASK]], float 1.000000e+00, float -0.000000e+00
 ; CHECK-ALM-NEXT:    [[TMP3:%.*]] = fadd contract float [[VEC_PHI]], [[TMP2]]
@@ -107,8 +106,7 @@ define float @pr72720reduction_using_active_lane_mask(ptr %src) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i32 [[VEC_IV1]], 14
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; CHECK:       pred.load.if:
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr float, ptr [[SRC]], i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr float, ptr [[SRC]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE]]
 ; CHECK:       pred.load.continue:
@@ -156,13 +154,12 @@ define float @pr72720reduction_using_active_lane_mask(ptr %src) {
 ; CHECK-ALM:       vector.body:
 ; CHECK-ALM-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_LOAD_CONTINUE3:%.*]] ]
 ; CHECK-ALM-NEXT:    [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, [[VECTOR_PH]] ], [ [[TMP11:%.*]], [[PRED_LOAD_CONTINUE3]] ]
-; CHECK-ALM-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
 ; CHECK-ALM-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 1
-; CHECK-ALM-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = icmp ult i32 [[TMP0]], 15
+; CHECK-ALM-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = icmp ult i32 [[INDEX]], 15
 ; CHECK-ALM-NEXT:    [[ACTIVE_LANE_MASK1:%.*]] = icmp ult i32 [[TMP1]], 15
 ; CHECK-ALM-NEXT:    br i1 [[ACTIVE_LANE_MASK]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; CHECK-ALM:       pred.load.if:
-; CHECK-ALM-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[SRC]], i32 [[TMP0]]
+; CHECK-ALM-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[SRC]], i32 [[INDEX]]
 ; CHECK-ALM-NEXT:    [[TMP3:%.*]] = load float, ptr [[TMP2]], align 4
 ; CHECK-ALM-NEXT:    br label [[PRED_LOAD_CONTINUE]]
 ; CHECK-ALM:       pred.load.continue:
@@ -265,9 +262,8 @@ define float @fadd_reduction_with_live_in(float %inc) {
 ; CHECK-ALM:       vector.body:
 ; CHECK-ALM-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-ALM-NEXT:    [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
-; CHECK-ALM-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
 ; CHECK-ALM-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 1
-; CHECK-ALM-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = icmp ult i32 [[TMP0]], 1001
+; CHECK-ALM-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = icmp ult i32 [[INDEX]], 1001
 ; CHECK-ALM-NEXT:    [[ACTIVE_LANE_MASK1:%.*]] = icmp ult i32 [[TMP1]], 1001
 ; CHECK-ALM-NEXT:    [[TMP2:%.*]] = select i1 [[ACTIVE_LANE_MASK]], float [[INC]], float -0.000000e+00
 ; CHECK-ALM-NEXT:    [[TMP3:%.*]] = fadd float [[VEC_PHI]], [[TMP2]]

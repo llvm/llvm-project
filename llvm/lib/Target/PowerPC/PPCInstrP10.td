@@ -1139,17 +1139,11 @@ class MMIRR_XX3Form_XYP4_XAB6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
   let Inst{63} = 0;
 }
 
-
-
 def Concats {
   dag VecsToVecPair0 =
-    (v256i1 (INSERT_SUBREG
-      (INSERT_SUBREG (IMPLICIT_DEF), $vs0, sub_vsx1),
-      $vs1, sub_vsx0));
+    (v256i1 (REG_SEQUENCE VSRpRC, $vs0, sub_vsx1, $vs1, sub_vsx0));
   dag VecsToVecPair1 =
-    (v256i1 (INSERT_SUBREG
-      (INSERT_SUBREG (IMPLICIT_DEF), $vs2, sub_vsx1),
-      $vs3, sub_vsx0));
+    (v256i1 (REG_SEQUENCE VSRpRC, $vs2, sub_vsx1, $vs3, sub_vsx0));
 }
 
 let Predicates = [PairedVectorMemops] in {

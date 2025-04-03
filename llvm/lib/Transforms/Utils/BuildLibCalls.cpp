@@ -1582,6 +1582,15 @@ Value *llvm::emitStrLen(Value *Ptr, IRBuilderBase &B, const DataLayout &DL,
   return emitLibCall(LibFunc_strlen, SizeTTy, CharPtrTy, Ptr, B, TLI);
 }
 
+Value *llvm::emitWcsLen(Value *Ptr, IRBuilderBase &B, const DataLayout &DL,
+                        const TargetLibraryInfo *TLI) {
+  assert(Ptr && Ptr->getType()->isPointerTy() &&
+         "Argument to wcslen intrinsic must be a pointer.");
+  Type *PtrTy = B.getPtrTy();
+  Type *SizeTTy = getSizeTTy(B, TLI);
+  return emitLibCall(LibFunc_wcslen, SizeTTy, PtrTy, Ptr, B, TLI);
+}
+
 Value *llvm::emitStrDup(Value *Ptr, IRBuilderBase &B,
                         const TargetLibraryInfo *TLI) {
   Type *CharPtrTy = B.getPtrTy();

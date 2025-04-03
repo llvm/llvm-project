@@ -125,7 +125,7 @@ static cl::opt<bool>
 static cl::opt<bool> EnableHexagonCabac
   ("mcabac", cl::desc("tbd"), cl::init(false));
 
-static StringRef DefaultArch = "hexagonv60";
+static constexpr StringRef DefaultArch = "hexagonv68";
 
 static StringRef HexagonGetArchVariant() {
   if (MV5)
@@ -749,7 +749,7 @@ public:
 
   std::vector<std::pair<uint64_t, uint64_t>>
   findPltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
-                 const Triple &TargetTriple) const override {
+                 const MCSubtargetInfo &STI) const override {
     // Do a lightweight parsing of PLT entries.
     std::vector<std::pair<uint64_t, uint64_t>> Result;
     for (uint64_t Byte = 0x0, End = PltContents.size(); Byte < End; Byte += 4) {

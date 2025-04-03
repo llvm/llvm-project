@@ -847,14 +847,14 @@ MemoryEffects BasicAAResult::getMemoryEffects(const Function *F) {
 
 ModRefInfo BasicAAResult::getArgModRefInfo(const CallBase *Call,
                                            unsigned ArgIdx) {
-  if (Call->paramHasAttr(ArgIdx, Attribute::WriteOnly))
+  if (Call->doesNotAccessMemory(ArgIdx))
+    return ModRefInfo::NoModRef;
+
+  if (Call->onlyWritesMemory(ArgIdx))
     return ModRefInfo::Mod;
 
-  if (Call->paramHasAttr(ArgIdx, Attribute::ReadOnly))
+  if (Call->onlyReadsMemory(ArgIdx))
     return ModRefInfo::Ref;
-
-  if (Call->paramHasAttr(ArgIdx, Attribute::ReadNone))
-    return ModRefInfo::NoModRef;
 
   return ModRefInfo::ModRef;
 }
@@ -921,65 +921,57 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
     if (!AI->isStaticAlloca() && isIntrinsicCall(Call, Intrinsic::stackrestore))
       return ModRefInfo::Mod;
 
-  // A call can access a locally allocated object either because it is passed as
-  // an argument to the call, or because it has escaped prior to the call.
-  //
-  // Make sure the object has not escaped here, and then check that none of the
-  // call arguments alias the object below.
+  // We can completely ignore inaccessible memory here, because MemoryLocations
+  // can only reference accessible memory.
+  auto ME = AAQI.AAR.getMemoryEffects(Call, AAQI)
+                .getWithoutLoc(IRMemLocation::InaccessibleMem);
+  if (ME.doesNotAccessMemory())
+    return ModRefInfo::NoModRef;
+
+  ModRefInfo ArgMR = ME.getModRef(IRMemLocation::ArgMem);
+  ModRefInfo OtherMR = ME.getWithoutLoc(IRMemLocation::ArgMem).getModRef();
+
+  // An identified function-local object that does not escape can only be
+  // accessed via call arguments. Reduce OtherMR (which includes accesses to
+  // escaped memory) based on that.
   //
   // We model calls that can return twice (setjmp) as clobbering non-escaping
   // objects, to model any accesses that may occur prior to the second return.
   // As an exception, ignore allocas, as setjmp is not required to preserve
   // non-volatile stores for them.
-  if (!isa<Constant>(Object) && Call != Object &&
-      AAQI.CA->isNotCapturedBefore(Object, Call, /*OrAt*/ false) &&
-      (isa<AllocaInst>(Object) || !Call->hasFnAttr(Attribute::ReturnsTwice))) {
+  if (isModOrRefSet(OtherMR) && !isa<Constant>(Object) && Call != Object &&
+      AAQI.CA->isNotCapturedBefore(Object, Call, /*OrAt=*/false) &&
+      (isa<AllocaInst>(Object) || !Call->hasFnAttr(Attribute::ReturnsTwice)))
+    OtherMR = ModRefInfo::NoModRef;
 
-    // Optimistically assume that call doesn't touch Object and check this
-    // assumption in the following loop.
-    ModRefInfo Result = ModRefInfo::NoModRef;
+  // Refine the modref info for argument memory. We only bother to do this
+  // if ArgMR is not a subset of OtherMR, otherwise this won't have an impact
+  // on the final result.
+  if ((ArgMR | OtherMR) != OtherMR) {
+    ModRefInfo NewArgMR = ModRefInfo::NoModRef;
+    for (const Use &U : Call->data_ops()) {
+      const Value *Arg = U;
+      if (!Arg->getType()->isPointerTy())
+        continue;
+      unsigned ArgIdx = Call->getDataOperandNo(&U);
+      MemoryLocation ArgLoc =
+          Call->isArgOperand(&U)
+              ? MemoryLocation::getForArgument(Call, ArgIdx, TLI)
+              : MemoryLocation::getBeforeOrAfter(Arg);
+      AliasResult ArgAlias = AAQI.AAR.alias(ArgLoc, Loc, AAQI, Call);
+      if (ArgAlias != AliasResult::NoAlias)
+        NewArgMR |= ArgMR & AAQI.AAR.getArgModRefInfo(Call, ArgIdx);
 
-    unsigned OperandNo = 0;
-    for (auto CI = Call->data_operands_begin(), CE = Call->data_operands_end();
-         CI != CE; ++CI, ++OperandNo) {
-      if (!(*CI)->getType()->isPointerTy())
-        continue;
-
-      // Call doesn't access memory through this operand, so we don't care
-      // if it aliases with Object.
-      if (Call->doesNotAccessMemory(OperandNo))
-        continue;
-
-      // If this is a no-capture pointer argument, see if we can tell that it
-      // is impossible to alias the pointer we're checking.
-      AliasResult AR =
-          AAQI.AAR.alias(MemoryLocation::getBeforeOrAfter(*CI),
-                         MemoryLocation::getBeforeOrAfter(Object), AAQI);
-      // Operand doesn't alias 'Object', continue looking for other aliases
-      if (AR == AliasResult::NoAlias)
-        continue;
-      // Operand aliases 'Object', but call doesn't modify it. Strengthen
-      // initial assumption and keep looking in case if there are more aliases.
-      if (Call->onlyReadsMemory(OperandNo)) {
-        Result |= ModRefInfo::Ref;
-        continue;
-      }
-      // Operand aliases 'Object' but call only writes into it.
-      if (Call->onlyWritesMemory(OperandNo)) {
-        Result |= ModRefInfo::Mod;
-        continue;
-      }
-      // This operand aliases 'Object' and call reads and writes into it.
-      // Setting ModRef will not yield an early return below, MustAlias is not
-      // used further.
-      Result = ModRefInfo::ModRef;
-      break;
+      // Exit early if we cannot improve over the original ArgMR.
+      if (NewArgMR == ArgMR)
+        break;
     }
-
-    // Early return if we improved mod ref information
-    if (!isModAndRefSet(Result))
-      return Result;
+    ArgMR = NewArgMR;
   }
+
+  ModRefInfo Result = ArgMR | OtherMR;
+  if (!isModAndRefSet(Result))
+    return Result;
 
   // If the call is malloc/calloc like, we can assume that it doesn't
   // modify any IR visible value.  This is only valid because we assume these

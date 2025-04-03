@@ -412,6 +412,14 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned UseClangIRPipeline : 1;
 
+  /// Disable Clang IR specific (CIR) passes
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ClangIRDisablePasses : 1;
+
+  /// Disable Clang IR (CIR) verifier
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ClangIRDisableCIRVerifier : 1;
+
   CodeCompleteOptions CodeCompleteOpts;
 
   /// Specifies the output format of the AST.
@@ -488,6 +496,10 @@ public:
   /// should only be used for debugging and experimental features.
   std::vector<std::string> LLVMArgs;
 
+  /// A list of arguments to forward to MLIR's option processing; this
+  /// should only be used for debugging and experimental features.
+  std::vector<std::string> MLIRArgs;
+
   /// File name of the file that will provide record layouts
   /// (in the format produced by -fdump-record-layouts).
   std::string OverrideRecordLayoutsFile;
@@ -533,7 +545,8 @@ public:
         EmitExtensionSymbolGraphs(false),
         EmitSymbolGraphSymbolLabelsForTesting(false),
         EmitPrettySymbolGraphs(false), GenReducedBMI(false),
-        UseClangIRPipeline(false), TimeTraceGranularity(500),
+        UseClangIRPipeline(false), ClangIRDisablePasses(false),
+        ClangIRDisableCIRVerifier(false), TimeTraceGranularity(500),
         TimeTraceVerbose(false) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file

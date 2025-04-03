@@ -50,11 +50,11 @@ bool CheckerManager::hasPathSensitiveCheckers() const {
 }
 
 void CheckerManager::reportInvalidCheckerOptionValue(
-    const CheckerBase *C, StringRef OptionName,
+    const CheckerBase *C, CheckerPartIdx Idx, StringRef OptionName,
     StringRef ExpectedValueDesc) const {
 
   getDiagnostics().Report(diag::err_analyzer_checker_option_invalid_input)
-      << (llvm::Twine() + C->getTagDescription() + ":" + OptionName).str()
+      << (llvm::Twine(C->getName(Idx)) + ":" + OptionName).str()
       << ExpectedValueDesc;
 }
 

@@ -197,8 +197,7 @@ public:
     for (const SDDbgOperand &DbgOp : getLocationOps())
       if (DbgOp.getKind() == SDDbgOperand::SDNODE)
         Dependencies.push_back(DbgOp.getSDNode());
-    for (SDNode *Node : getAdditionalDependencies())
-      Dependencies.push_back(Node);
+    llvm::append_range(Dependencies, getAdditionalDependencies());
     return Dependencies;
   }
 

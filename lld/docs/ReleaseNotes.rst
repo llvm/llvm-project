@@ -30,6 +30,18 @@ ELF Improvements
   from ``-zgcs-report`` (capped at ``warning`` level) unless user-defined,
   ensuring compatibility with GNU ld linker.
 
+* The default Hexagon architecture version in ELF object files produced by
+  lld is changed to v68. This change is only effective when the version is
+  not provided in the command line by the user and cannot be inferred from
+  inputs.
+
+* ``--why-live=<glob>`` prints for each symbol matching ``<glob>`` a chain of
+  items that kept it live during garbage collection. This is inspired by the
+  Mach-O LLD feature of the same name.
+
+* Linker script ``OVERLAY`` descriptions now support virtual memory regions
+  (e.g. ``>region``) and ``NOCROSSREFS``.
+
 Breaking changes
 ----------------
 
