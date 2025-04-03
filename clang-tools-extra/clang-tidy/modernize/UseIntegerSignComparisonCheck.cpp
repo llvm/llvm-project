@@ -39,21 +39,23 @@ intCastExpression(bool IsSigned,
   // std::cmp_{} functions trigger a compile-time error if either LHS or RHS
   // is a non-integer type, char, enum or bool
   // (unsigned char/ signed char are Ok and can be used).
-  auto IntTypeExpr = expr(hasType(hasCanonicalType(qualType(
+  const auto HasIntegerType = hasType(hasCanonicalType(qualType(
       isInteger(), IsSigned ? isSignedInteger() : isUnsignedInteger(),
-      unless(isActualChar()), unless(booleanType()), unless(enumType())))));
+      unless(isActualChar()), unless(booleanType()), unless(enumType()))));
+
+  const auto IntTypeExpr = expr(HasIntegerType);
 
   const auto ImplicitCastExpr =
-      CastBindName.empty() ? implicitCastExpr(hasSourceExpression(IntTypeExpr))
-                           : implicitCastExpr(hasSourceExpression(IntTypeExpr))
-                                 .bind(CastBindName);
+      implicitCastExpr(hasSourceExpression(IntTypeExpr)).bind(CastBindName);
 
-  const auto CStyleCastExpr = cStyleCastExpr(has(ImplicitCastExpr));
-  const auto StaticCastExpr = cxxStaticCastExpr(has(ImplicitCastExpr));
-  const auto FunctionalCastExpr = cxxFunctionalCastExpr(has(ImplicitCastExpr));
+  const auto ExplicitCastExpr =
+      anyOf(explicitCastExpr(has(ImplicitCastExpr)),
+            ignoringImpCasts(explicitCastExpr(has(ImplicitCastExpr))));
 
-  return expr(anyOf(ImplicitCastExpr, CStyleCastExpr, StaticCastExpr,
-                    FunctionalCastExpr));
+  // Match function calls not directly wrapped by an implicit cast
+  const auto CallIntExpr = callExpr(HasIntegerType).bind(CastBindName);
+
+  return expr(anyOf(ImplicitCastExpr, ExplicitCastExpr, CallIntExpr));
 }
 
 static StringRef parseOpCode(BinaryOperator::Opcode Code) {
@@ -91,7 +93,8 @@ void UseIntegerSignComparisonCheck::storeOptions(
 
 void UseIntegerSignComparisonCheck::registerMatchers(MatchFinder *Finder) {
   const auto SignedIntCastExpr = intCastExpression(true, "sIntCastExpression");
-  const auto UnSignedIntCastExpr = intCastExpression(false);
+  const auto UnSignedIntCastExpr =
+      intCastExpression(false, "uIntCastExpression");
 
   // Flag all operators "==", "<=", ">=", "<", ">", "!="
   // that are used between signed/unsigned
@@ -112,14 +115,17 @@ void UseIntegerSignComparisonCheck::registerPPCallbacks(
 void UseIntegerSignComparisonCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *SignedCastExpression =
-      Result.Nodes.getNodeAs<ImplicitCastExpr>("sIntCastExpression");
-  assert(SignedCastExpression);
+      Result.Nodes.getNodeAs<CastExpr>("sIntCastExpression");
+  const auto *UnsignedCastExpression =
+      Result.Nodes.getNodeAs<CastExpr>("uIntCastExpression");
+  const auto *CastExpression =
+      SignedCastExpression ? SignedCastExpression : UnsignedCastExpression;
+  assert(CastExpression);
 
   // Ignore the match if we know that the signed int value is not negative.
   Expr::EvalResult EVResult;
-  if (!SignedCastExpression->isValueDependent() &&
-      SignedCastExpression->getSubExpr()->EvaluateAsInt(EVResult,
-                                                        *Result.Context)) {
+  if (!CastExpression->isValueDependent() &&
+      CastExpression->getSubExpr()->EvaluateAsInt(EVResult, *Result.Context)) {
     const llvm::APSInt SValue = EVResult.Val.getInt();
     if (SValue.isNonNegative())
       return;
