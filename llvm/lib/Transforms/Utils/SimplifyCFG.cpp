@@ -6228,7 +6228,6 @@ static bool initializeUniqueCases(SwitchInst *SI, PHINode *&PHI,
   }
   // Find the default result value.
   SmallVector<std::pair<PHINode *, Constant *>, 1> DefaultResults;
-  BasicBlock *DefaultDest = SI->getDefaultDest();
   getCaseResults(SI, nullptr, SI->getDefaultDest(), &CommonDest, DefaultResults,
                  DL, TTI);
   // If the default value is not found abort unless the default destination
