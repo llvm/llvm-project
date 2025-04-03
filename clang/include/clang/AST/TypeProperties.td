@@ -839,7 +839,7 @@ let Class = SubstTemplateTypeParmType in {
   def : Property<"Index", UInt32> {
     let Read = [{ node->getIndex() }];
   }
-  def : Property<"PackIndex", Optional<UInt32>> {
+  def : Property<"PackIndex", UnsignedOrNone> {
     let Read = [{ node->getPackIndex() }];
   }
   def : Property<"Final", Bool> { let Read = [{ node->getFinal() }]; }
@@ -854,7 +854,7 @@ let Class = PackExpansionType in {
   def : Property<"pattern", QualType> {
     let Read = [{ node->getPattern() }];
   }
-  def : Property<"numExpansions", Optional<UInt32>> {
+  def : Property<"numExpansions", UnsignedOrNone> {
     let Read = [{ node->getNumExpansions() }];
   }
 
