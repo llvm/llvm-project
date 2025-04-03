@@ -968,10 +968,7 @@ public:
 bool ReduceCrashingNamedMDOps::TestNamedMDOps(
     std::vector<const MDNode *> &NamedMDOps) {
   // Convert list to set for fast lookup...
-  SmallPtrSet<const MDNode *, 32> OldMDNodeOps;
-  for (unsigned i = 0, e = NamedMDOps.size(); i != e; ++i) {
-    OldMDNodeOps.insert(NamedMDOps[i]);
-  }
+  SmallPtrSet<const MDNode *, 32> OldMDNodeOps(llvm::from_range, NamedMDOps);
 
   outs() << "Checking for crash with only " << OldMDNodeOps.size();
   if (OldMDNodeOps.size() == 1)
