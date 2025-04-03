@@ -3641,70 +3641,77 @@ protected:
 
       result.GetOutputStream().Printf("\n");
 
-      if (std::shared_ptr<const UnwindPlan> plan_sp =
-              func_unwinders_sp->GetUnwindPlanAtNonCallSite(*target, *thread)) {
+      UnwindPlanSP non_callsite_unwind_plan =
+          func_unwinders_sp->GetUnwindPlanAtNonCallSite(*target, *thread);
+      if (non_callsite_unwind_plan) {
         result.GetOutputStream().Printf(
             "Asynchronous (not restricted to call-sites) UnwindPlan is '%s'\n",
-            plan_sp->GetSourceName().AsCString());
+            non_callsite_unwind_plan->GetSourceName().AsCString());
       }
-      if (std::shared_ptr<const UnwindPlan> plan_sp =
-              func_unwinders_sp->GetUnwindPlanAtCallSite(*target, *thread)) {
+      UnwindPlanSP callsite_unwind_plan =
+          func_unwinders_sp->GetUnwindPlanAtCallSite(*target, *thread);
+      if (callsite_unwind_plan) {
         result.GetOutputStream().Printf(
             "Synchronous (restricted to call-sites) UnwindPlan is '%s'\n",
-            plan_sp->GetSourceName().AsCString());
+            callsite_unwind_plan->GetSourceName().AsCString());
       }
-      if (std::shared_ptr<const UnwindPlan> plan_sp =
-              func_unwinders_sp->GetUnwindPlanFastUnwind(*target, *thread)) {
-        result.GetOutputStream().Printf("Fast UnwindPlan is '%s'\n",
-                                        plan_sp->GetSourceName().AsCString());
+      UnwindPlanSP fast_unwind_plan =
+          func_unwinders_sp->GetUnwindPlanFastUnwind(*target, *thread);
+      if (fast_unwind_plan) {
+        result.GetOutputStream().Printf(
+            "Fast UnwindPlan is '%s'\n",
+            fast_unwind_plan->GetSourceName().AsCString());
       }
 
       result.GetOutputStream().Printf("\n");
 
-      if (std::shared_ptr<const UnwindPlan> plan_sp =
-              func_unwinders_sp->GetAssemblyUnwindPlan(*target, *thread)) {
+      UnwindPlanSP assembly_sp =
+          func_unwinders_sp->GetAssemblyUnwindPlan(*target, *thread);
+      if (assembly_sp) {
         result.GetOutputStream().Printf(
             "Assembly language inspection UnwindPlan:\n");
-        plan_sp->Dump(result.GetOutputStream(), thread.get(),
-                      LLDB_INVALID_ADDRESS);
+        assembly_sp->Dump(result.GetOutputStream(), thread.get(),
+                          LLDB_INVALID_ADDRESS);
         result.GetOutputStream().Printf("\n");
       }
 
-      if (std::shared_ptr<const UnwindPlan> plan_sp =
-              func_unwinders_sp->GetObjectFileUnwindPlan(*target)) {
+      UnwindPlanSP of_unwind_sp =
+          func_unwinders_sp->GetObjectFileUnwindPlan(*target);
+      if (of_unwind_sp) {
         result.GetOutputStream().Printf("object file UnwindPlan:\n");
-        plan_sp->Dump(result.GetOutputStream(), thread.get(),
-                      LLDB_INVALID_ADDRESS);
+        of_unwind_sp->Dump(result.GetOutputStream(), thread.get(),
+                           LLDB_INVALID_ADDRESS);
         result.GetOutputStream().Printf("\n");
       }
 
-      if (std::shared_ptr<const UnwindPlan> plan_sp =
-              func_unwinders_sp->GetObjectFileAugmentedUnwindPlan(*target,
-                                                                  *thread)) {
+      UnwindPlanSP of_unwind_augmented_sp =
+          func_unwinders_sp->GetObjectFileAugmentedUnwindPlan(*target, *thread);
+      if (of_unwind_augmented_sp) {
         result.GetOutputStream().Printf("object file augmented UnwindPlan:\n");
-        plan_sp->Dump(result.GetOutputStream(), thread.get(),
-                      LLDB_INVALID_ADDRESS);
+        of_unwind_augmented_sp->Dump(result.GetOutputStream(), thread.get(),
+                                     LLDB_INVALID_ADDRESS);
         result.GetOutputStream().Printf("\n");
       }
 
-      if (std::shared_ptr<const UnwindPlan> plan_sp =
-              func_unwinders_sp->GetEHFrameUnwindPlan(*target)) {
+      UnwindPlanSP ehframe_sp =
+          func_unwinders_sp->GetEHFrameUnwindPlan(*target);
+      if (ehframe_sp) {
         result.GetOutputStream().Printf("eh_frame UnwindPlan:\n");
-        plan_sp->Dump(result.GetOutputStream(), thread.get(),
-                      LLDB_INVALID_ADDRESS);
+        ehframe_sp->Dump(result.GetOutputStream(), thread.get(),
+                         LLDB_INVALID_ADDRESS);
         result.GetOutputStream().Printf("\n");
       }
 
-      if (std::shared_ptr<const UnwindPlan> plan_sp =
-              func_unwinders_sp->GetEHFrameAugmentedUnwindPlan(*target,
-                                                               *thread)) {
+      UnwindPlanSP ehframe_augmented_sp =
+          func_unwinders_sp->GetEHFrameAugmentedUnwindPlan(*target, *thread);
+      if (ehframe_augmented_sp) {
         result.GetOutputStream().Printf("eh_frame augmented UnwindPlan:\n");
-        plan_sp->Dump(result.GetOutputStream(), thread.get(),
-                      LLDB_INVALID_ADDRESS);
+        ehframe_augmented_sp->Dump(result.GetOutputStream(), thread.get(),
+                                   LLDB_INVALID_ADDRESS);
         result.GetOutputStream().Printf("\n");
       }
 
-      if (std::shared_ptr<const UnwindPlan> plan_sp =
+      if (UnwindPlanSP plan_sp =
               func_unwinders_sp->GetDebugFrameUnwindPlan(*target)) {
         result.GetOutputStream().Printf("debug_frame UnwindPlan:\n");
         plan_sp->Dump(result.GetOutputStream(), thread.get(),
@@ -3712,7 +3719,7 @@ protected:
         result.GetOutputStream().Printf("\n");
       }
 
-      if (std::shared_ptr<const UnwindPlan> plan_sp =
+      if (UnwindPlanSP plan_sp =
               func_unwinders_sp->GetDebugFrameAugmentedUnwindPlan(*target,
                                                                   *thread)) {
         result.GetOutputStream().Printf("debug_frame augmented UnwindPlan:\n");
@@ -3721,35 +3728,36 @@ protected:
         result.GetOutputStream().Printf("\n");
       }
 
-      if (std::shared_ptr<const UnwindPlan> plan_sp =
-              func_unwinders_sp->GetArmUnwindUnwindPlan(*target)) {
+      UnwindPlanSP arm_unwind_sp =
+          func_unwinders_sp->GetArmUnwindUnwindPlan(*target);
+      if (arm_unwind_sp) {
         result.GetOutputStream().Printf("ARM.exidx unwind UnwindPlan:\n");
-        plan_sp->Dump(result.GetOutputStream(), thread.get(),
-                      LLDB_INVALID_ADDRESS);
+        arm_unwind_sp->Dump(result.GetOutputStream(), thread.get(),
+                            LLDB_INVALID_ADDRESS);
         result.GetOutputStream().Printf("\n");
       }
 
-      if (std::shared_ptr<const UnwindPlan> plan_sp =
+      if (UnwindPlanSP symfile_plan_sp =
               func_unwinders_sp->GetSymbolFileUnwindPlan(*thread)) {
         result.GetOutputStream().Printf("Symbol file UnwindPlan:\n");
-        plan_sp->Dump(result.GetOutputStream(), thread.get(),
-                      LLDB_INVALID_ADDRESS);
+        symfile_plan_sp->Dump(result.GetOutputStream(), thread.get(),
+                              LLDB_INVALID_ADDRESS);
         result.GetOutputStream().Printf("\n");
       }
 
-      if (std::shared_ptr<const UnwindPlan> plan_sp =
-              func_unwinders_sp->GetCompactUnwindUnwindPlan(*target)) {
+      UnwindPlanSP compact_unwind_sp =
+          func_unwinders_sp->GetCompactUnwindUnwindPlan(*target);
+      if (compact_unwind_sp) {
         result.GetOutputStream().Printf("Compact unwind UnwindPlan:\n");
-        plan_sp->Dump(result.GetOutputStream(), thread.get(),
-                      LLDB_INVALID_ADDRESS);
+        compact_unwind_sp->Dump(result.GetOutputStream(), thread.get(),
+                                LLDB_INVALID_ADDRESS);
         result.GetOutputStream().Printf("\n");
       }
 
-      if (std::shared_ptr<const UnwindPlan> plan_sp =
-              func_unwinders_sp->GetUnwindPlanFastUnwind(*target, *thread)) {
+      if (fast_unwind_plan) {
         result.GetOutputStream().Printf("Fast UnwindPlan:\n");
-        plan_sp->Dump(result.GetOutputStream(), thread.get(),
-                      LLDB_INVALID_ADDRESS);
+        fast_unwind_plan->Dump(result.GetOutputStream(), thread.get(),
+                               LLDB_INVALID_ADDRESS);
         result.GetOutputStream().Printf("\n");
       }
 

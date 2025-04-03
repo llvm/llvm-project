@@ -299,12 +299,14 @@ end
 attributes(device) subroutine testVote()
   integer :: a, ipred, mask, v32
   a = all_sync(mask, v32)
-  
+  a = any_sync(mask, v32)
+  a = ballot_sync(mask, v32)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtestvote()
 ! CHECK: fir.call @llvm.nvvm.vote.all.sync
-
+! CHECK: fir.call @llvm.nvvm.vote.any.sync
+! CHECK: fir.call @llvm.nvvm.vote.ballot.sync
 
 ! CHECK-DAG: func.func private @__ldca_i4x4_(!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<4xi32>>)
 ! CHECK-DAG: func.func private @__ldcg_i4x4_(!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<4xi32>>)
