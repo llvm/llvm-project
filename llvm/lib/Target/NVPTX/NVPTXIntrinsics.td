@@ -7301,3 +7301,67 @@ def INT_NVVM_ST_BULK_SHARED_CTA:
             "st.bulk.shared::cta [$dest_addr], $size, 0;",
             [(int_nvvm_st_bulk_shared_cta addr:$dest_addr, i64:$size, (i64 0))]>,
             Requires<[hasSM<100>, hasPTX<86>]>;
+
+// clusterlaunchcontrol Instructions
+
+multiclass CLUSTERLAUNCHCONTROL_TRY_CANCEL<Intrinsic Intrin, bit Multicast, list<Predicate> Pred> {
+  defvar Intrinsic = !cast<Intrinsic>(Intrin # !if(!eq(Multicast, 1), "_multicast", ""));
+  defvar IntrinsicShared = !cast<Intrinsic>(Intrin # !if(!eq(Multicast, 1), "_multicast", "") # "_shared");
+  defvar MulticastMod = ".multicast::cluster::all";
+
+  def _gen: NVPTXInst<(outs), (ins Int64Regs:$addr, Int64Regs:$mbar),
+                      "clusterlaunchcontrol.try_cancel.async.mbarrier::complete_tx::bytes" #
+                      !if(!eq(Multicast, 1), MulticastMod, "") #
+                      ".b128 [$addr], [$mbar];",
+                      [(Intrinsic Int64Regs:$addr, Int64Regs:$mbar)]>, Requires<Pred>;
+
+  def _shared: NVPTXInst<(outs), (ins Int64Regs:$addr, Int64Regs:$mbar),
+                         "clusterlaunchcontrol.try_cancel.async.shared::cta.mbarrier::complete_tx::bytes" #
+                         !if(!eq(Multicast, 1), MulticastMod, "") #
+                         ".b128 [$addr], [$mbar];",
+                         [(IntrinsicShared Int64Regs:$addr, Int64Regs:$mbar)]>, Requires<Pred>;
+
+  def _shared32: NVPTXInst<(outs), (ins Int32Regs:$addr, Int32Regs:$mbar),
+                           "clusterlaunchcontrol.try_cancel.async.shared::cta.mbarrier::complete_tx::bytes" #
+                           !if(!eq(Multicast, 1), MulticastMod, "") #
+                           ".b128 [$addr], [$mbar];",
+                           [(IntrinsicShared Int32Regs:$addr, Int32Regs:$mbar)]>, Requires<Pred>;
+}
+
+defm CLUSTERLAUNCHCONTRL_TRY_CANCEL :
+      CLUSTERLAUNCHCONTROL_TRY_CANCEL<
+        int_nvvm_clusterlaunchcontrol_try_cancel_async, 0, [hasSM<100>, hasPTX<86>]>;
+
+defm CLUSTERLAUNCHCONTRL_TRY_CANCEL_MULTICAST :
+      CLUSTERLAUNCHCONTROL_TRY_CANCEL<
+        int_nvvm_clusterlaunchcontrol_try_cancel_async, 1, [isBlackwellArchAccelerated]>;
+
+def CLUSTERLAUNCHCONTROL_QUERY_CANCEL_IS_CANCELED :
+  NVPTXInst<(outs Int1Regs:$pred), (ins Int64Regs:$try_cancel_response0, Int64Regs:$try_cancel_response1),
+            !strconcat("{{\n\t",
+            !strconcat(".reg .b128 %handle;\n\t",
+            !strconcat("mov.b128 %handle, {$try_cancel_response0, $try_cancel_response1};\n\t",
+            !strconcat("clusterlaunchcontrol.query_cancel.is_canceled.pred.b128 $pred, %handle;\n\t", "}}")))), []>,
+            Requires<[hasSM<100>, hasPTX<86>]>;
+
+def CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID :
+  NVPTXInst<(outs Int32Regs:$r1, Int32Regs:$r2, Int32Regs:$r3, Int32Regs:$r4),
+            (ins Int64Regs:$try_cancel_response0, Int64Regs:$try_cancel_response1),
+            !strconcat("{{\n\t",
+            !strconcat(".reg .b128 %handle;\n\t",
+            !strconcat("mov.b128 %handle, {$try_cancel_response0, $try_cancel_response1};\n\t",
+            !strconcat("clusterlaunchcontrol.query_cancel.get_first_ctaid.v4.b32.b128 {$r1, $r2, $r3, $r4}, %handle;\n\t", "}}")))), []>,
+            Requires<[hasSM<100>, hasPTX<86>]>;
+
+class CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID<string Dim> :
+  NVPTXInst<(outs Int32Regs:$reg), (ins Int64Regs:$try_cancel_response0, Int64Regs:$try_cancel_response1),
+            !strconcat("{{\n\t",
+            !strconcat(".reg .b128 %handle;\n\t",
+            !strconcat("mov.b128 %handle, {$try_cancel_response0, $try_cancel_response1};\n\t",
+            !strconcat("clusterlaunchcontrol.query_cancel.get_first_ctaid::" # Dim # ".b32.b128 $reg, %handle;\n\t", "}}")))), []>,
+            Requires<[hasSM<100>, hasPTX<86>]>;
+
+foreach dim = ["x", "y", "z"] in {
+  def CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_ # dim :
+        CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID<dim>;
+}

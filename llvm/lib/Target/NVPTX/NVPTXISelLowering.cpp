@@ -1017,6 +1017,9 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                      {MVT::v2i32, MVT::v4i32, MVT::v8i32, MVT::v16i32,
                       MVT::v32i32, MVT::v64i32, MVT::v128i32},
                      Custom);
+
+  // Enable custom lowering for i128 bit type supported in PTX
+  setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i128, Custom);
 }
 
 const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
@@ -1163,6 +1166,54 @@ NVPTXTargetLowering::LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const {
   auto PtrVT = getPointerTy(DAG.getDataLayout(), GAN->getAddressSpace());
   Op = DAG.getTargetGlobalAddress(GAN->getGlobal(), dl, PtrVT);
   return DAG.getNode(NVPTXISD::Wrapper, dl, PtrVT, Op);
+}
+
+SDValue NVPTXTargetLowering::LowerIntrinsicWChain(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+  SDNode *N = Op.getNode();
+  SDValue Intrin = N->getOperand(1);
+  SDLoc DL(N);
+
+  // Get the intrinsic ID
+  unsigned IntrinNo = cast<ConstantSDNode>(Intrin.getNode())->getZExtValue();
+  switch (IntrinNo) {
+  default:
+    break;
+  case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_is_canceled:
+  case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_x:
+  case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_y:
+  case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_z: {
+
+    if (N->getOperand(2).getValueType() != MVT::i128) {
+      // return, if the operand is already lowered
+      return SDValue();
+    }
+
+    SDLoc DL(N);
+    SmallVector<SDValue, 8> Ops;
+
+    Ops.push_back(N->getOperand(0)); // Chain
+    Ops.push_back(N->getOperand(1)); // Intrinsic
+
+    SDValue TryCancelResponse = N->getOperand(2);
+    SDValue Cast = DAG.getNode(ISD::BITCAST, DL, MVT::v2i64, TryCancelResponse);
+    SDValue TryCancelResponse0 =
+        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Cast,
+                    DAG.getIntPtrConstant(0, DL));
+    SDValue TryCancelResponse1 =
+        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Cast,
+                    DAG.getIntPtrConstant(1, DL));
+
+    Ops.push_back(TryCancelResponse0);
+    Ops.push_back(TryCancelResponse1);
+
+    MemIntrinsicSDNode *MemSD = cast<MemIntrinsicSDNode>(N);
+    return DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, N->getVTList(),
+                                   Ops, MemSD->getMemoryVT(),
+                                   MemSD->getMemOperand());
+  }
+  }
+  return Op;
 }
 
 static bool IsTypePassedAsArray(const Type *Ty) {
@@ -2862,7 +2913,7 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::GlobalAddress:
     return LowerGlobalAddress(Op, DAG);
   case ISD::INTRINSIC_W_CHAIN:
-    return Op;
+    return LowerIntrinsicWChain(Op, DAG);
   case ISD::INTRINSIC_VOID:
     return LowerIntrinsicVoid(Op, DAG);
   case ISD::BUILD_VECTOR:
@@ -4724,6 +4775,21 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.align.reset();
     return true;
   }
+
+  case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_is_canceled:
+  case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid:
+  case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_x:
+  case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_y:
+  case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_z: {
+    auto &DL = I.getModule()->getDataLayout();
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = getValueType(DL, I.getType());
+    Info.ptrVal = nullptr;
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    return true;
+  }
   }
   return false;
 }
@@ -6036,6 +6102,60 @@ static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
   case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x64:
   case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x128:
     return ReplaceTcgen05Ld(N, DAG, Results, /* Offset */ true);
+
+  case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid: {
+    // The intrinsic returns the CTAID of x, y and z dimension as a v4i32 value
+    EVT ResVT = N->getValueType(0);
+    if (!ResVT.isVector())
+      return; // already legalized.
+
+    const unsigned NumElts = ResVT.getVectorNumElements(); // v4i32
+
+    // Create the return type of the instructions
+    SmallVector<EVT, 5> ListVTs;
+    for (unsigned i = 0; i < NumElts; ++i)
+      ListVTs.push_back(MVT::i32);
+    ListVTs.push_back(MVT::Other);
+
+    SDVTList ResVTs = DAG.getVTList(ListVTs);
+
+    SmallVector<SDValue, 8> Ops;
+    // Add Chain and Intrinsic ID
+    Ops.push_back(N->getOperand(0)); // Chain
+    Ops.push_back(N->getOperand(1)); // Intrinsic ID
+
+    SDValue TryCancelResponse = N->getOperand(2); // i128 operand
+    // Cast i128 to v2i64 and split into two i64
+    SDValue Cast = DAG.getNode(ISD::BITCAST, DL, MVT::v2i64, TryCancelResponse);
+    SDValue TryCancelResponse_0 =
+        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Cast,
+                    DAG.getIntPtrConstant(0, DL));
+    SDValue TryCancelResponse_1 =
+        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Cast,
+                    DAG.getIntPtrConstant(1, DL));
+
+    Ops.push_back(TryCancelResponse_0);
+    Ops.push_back(TryCancelResponse_1);
+
+    MemIntrinsicSDNode *MemSD = cast<MemIntrinsicSDNode>(N);
+    // Create a new Intrinsic Node with 2 x i64 operands
+    SDValue NewNode =
+        DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, ResVTs, Ops,
+                                MemSD->getMemoryVT(), MemSD->getMemOperand());
+
+    // Scalarize the vector results
+    SmallVector<SDValue, 4> ScalarRes;
+    for (unsigned i = 0; i < NumElts; ++i) {
+      SDValue Res = NewNode.getValue(i);
+      ScalarRes.push_back(Res);
+    }
+
+    SDValue Chain = NewNode.getValue(NumElts); // v4i32 value
+    SDValue BuildVector = DAG.getNode(ISD::BUILD_VECTOR, DL, ResVT, ScalarRes);
+    Results.push_back(BuildVector); // Build Vector
+    Results.push_back(Chain);       // Chain
+    return;
+  }
   }
 }
 

@@ -329,6 +329,9 @@ private:
   SDValue LowerVASTART(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerCopyToReg_128(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerIntrinsicWChain(SDValue Op, SelectionDAG &DAG) const;
+
   unsigned getNumRegisters(LLVMContext &Context, EVT VT,
                            std::optional<MVT> RegisterVT) const override;
   bool

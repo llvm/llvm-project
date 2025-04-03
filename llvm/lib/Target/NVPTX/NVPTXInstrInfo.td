@@ -160,6 +160,7 @@ def hasHWROT32 : Predicate<"Subtarget->hasHWROT32()">;
 def noHWROT32 : Predicate<"!Subtarget->hasHWROT32()">;
 def hasDotInstructions : Predicate<"Subtarget->hasDotInstructions()">;
 def hasTcgen05Instructions : Predicate<"Subtarget->hasTcgen05Instructions()">;
+def isBlackwellArchAccelerated : Predicate<"Subtarget->isBlackwellArchAccelerated()">;
 
 def True : Predicate<"true">;
 def False : Predicate<"false">;
