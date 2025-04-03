@@ -1332,6 +1332,7 @@ static bool isBlockVarRef(const Expr *E) {
 }
 
 void AggExprEmitter::VisitBinAssign(const BinaryOperator *E) {
+  ApplyAtomGroup Grp(CGF.getDebugInfo());
   // For an assignment to work, the value on the right has
   // to be compatible with the value on the left.
   assert(CGF.getContext().hasSameUnqualifiedType(E->getLHS()->getType(),
