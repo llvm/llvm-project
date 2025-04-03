@@ -575,7 +575,8 @@ createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
     Builder.setInsertPoint(VecPreheader);
     Step = Builder.createScalarCast(Instruction::Trunc, Step, ResultTy, DL);
   }
-  return Builder.createScalarIVSteps(InductionOpcode, FPBinOp, BaseIV, Step);
+  return Builder.createScalarIVSteps(InductionOpcode, FPBinOp, BaseIV, Step,
+                                     &Plan.getVF());
 }
 
 static SmallVector<VPUser *> collectUsersRecursively(VPValue *V) {
