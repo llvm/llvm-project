@@ -160,8 +160,7 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
   // If the cast operand is a constant vector, perform the cast by
   // operating on each element. In the cast of bitcasts, the element
   // count may be mismatched; don't attempt to handle that here.
-  if ((isa<ConstantVector, ConstantDataVector, ConstantExpr>(V)) &&
-      DestTy->isVectorTy() && V->getType()->isVectorTy() &&
+  if (DestTy->isVectorTy() && V->getType()->isVectorTy() &&
       cast<VectorType>(DestTy)->getElementCount() ==
           cast<VectorType>(V->getType())->getElementCount()) {
     VectorType *DestVecTy = cast<VectorType>(DestTy);
