@@ -2952,8 +2952,7 @@ kern_return_t DNBArchMachARM64::SetRegisterState(int set) {
     return err;
 
   switch (set) {
-  case e_regSetALL:
-  {
+  case e_regSetALL: {
     kern_return_t ret =
         SetGPRState() | SetVFPState() | SetEXCState() | SetDBGState(false);
     if (CPUHasSME()) {
