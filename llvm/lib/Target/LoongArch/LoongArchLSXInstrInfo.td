@@ -58,6 +58,12 @@ def loongarch_vreplgr2vr: SDNode<"LoongArchISD::VREPLGR2VR", SDT_LoongArchVreplg
 def loongarch_vfrecipe: SDNode<"LoongArchISD::FRECIPE", SDT_LoongArchVFRECIPE>;
 def loongarch_vfrsqrte: SDNode<"LoongArchISD::FRSQRTE", SDT_LoongArchVFRSQRTE>;
 
+def loongarch_vslli : SDNode<"LoongArchISD::VSLLI", SDT_LoongArchV1RUimm>;
+def loongarch_vsrli : SDNode<"LoongArchISD::VSRLI", SDT_LoongArchV1RUimm>;
+
+def loongarch_vbsll : SDNode<"LoongArchISD::VBSLL", SDT_LoongArchV1RUimm>;
+def loongarch_vbsrl : SDNode<"LoongArchISD::VBSRL", SDT_LoongArchV1RUimm>;
+
 def immZExt1 : ImmLeaf<i64, [{return isUInt<1>(Imm);}]>;
 def immZExt2 : ImmLeaf<i64, [{return isUInt<2>(Imm);}]>;
 def immZExt3 : ImmLeaf<i64, [{return isUInt<3>(Imm);}]>;
@@ -1346,7 +1352,7 @@ multiclass PatShiftVrVr<SDPatternOperator OpNode, string Inst> {
             (!cast<LAInst>(Inst#"_D") LSX128:$vj, LSX128:$vk)>;
 }
 
-multiclass PatShiftVrUimm<SDPatternOperator OpNode, string Inst> {
+multiclass PatShiftVrSplatUimm<SDPatternOperator OpNode, string Inst> {
   def : Pat<(OpNode (v16i8 LSX128:$vj), (v16i8 (SplatPat_uimm3 uimm3:$imm))),
             (!cast<LAInst>(Inst#"_B") LSX128:$vj, uimm3:$imm)>;
   def : Pat<(OpNode (v8i16 LSX128:$vj), (v8i16 (SplatPat_uimm4 uimm4:$imm))),
@@ -1354,6 +1360,17 @@ multiclass PatShiftVrUimm<SDPatternOperator OpNode, string Inst> {
   def : Pat<(OpNode (v4i32 LSX128:$vj), (v4i32 (SplatPat_uimm5 uimm5:$imm))),
             (!cast<LAInst>(Inst#"_W") LSX128:$vj, uimm5:$imm)>;
   def : Pat<(OpNode (v2i64 LSX128:$vj), (v2i64 (SplatPat_uimm6 uimm6:$imm))),
+            (!cast<LAInst>(Inst#"_D") LSX128:$vj, uimm6:$imm)>;
+}
+
+multiclass PatShiftVrUimm<SDPatternOperator OpNode, string Inst> {
+  def : Pat<(OpNode(v16i8 LSX128:$vj), uimm3:$imm),
+            (!cast<LAInst>(Inst#"_B") LSX128:$vj, uimm3:$imm)>;
+  def : Pat<(OpNode(v8i16 LSX128:$vj), uimm4:$imm),
+            (!cast<LAInst>(Inst#"_H") LSX128:$vj, uimm4:$imm)>;
+  def : Pat<(OpNode(v4i32 LSX128:$vj), uimm5:$imm),
+            (!cast<LAInst>(Inst#"_W") LSX128:$vj, uimm5:$imm)>;
+  def : Pat<(OpNode(v2i64 LSX128:$vj), uimm6:$imm),
             (!cast<LAInst>(Inst#"_D") LSX128:$vj, uimm6:$imm)>;
 }
 
@@ -1494,20 +1511,32 @@ def : Pat<(or (v16i8 LSX128:$vj), (v16i8 (SplatPat_uimm8 uimm8:$imm))),
 def : Pat<(xor (v16i8 LSX128:$vj), (v16i8 (SplatPat_uimm8 uimm8:$imm))),
           (VXORI_B LSX128:$vj, uimm8:$imm)>;
 
+// VBSLL_V
+foreach vt = [v16i8, v8i16, v4i32, v2i64, v4f32,
+              v2f64] in def : Pat<(loongarch_vbsll(vt LSX128:$vj), uimm5:$imm),
+                                  (VBSLL_V LSX128:$vj, uimm5:$imm)>;
+
+// VBSRL_V
+foreach vt = [v16i8, v8i16, v4i32, v2i64, v4f32,
+              v2f64] in def : Pat<(loongarch_vbsrl(vt LSX128:$vj), uimm5:$imm),
+                                  (VBSRL_V LSX128:$vj, uimm5:$imm)>;
+
 // VSLL[I]_{B/H/W/D}
 defm : PatVrVr<shl, "VSLL">;
 defm : PatShiftVrVr<shl, "VSLL">;
-defm : PatShiftVrUimm<shl, "VSLLI">;
+defm : PatShiftVrSplatUimm<shl, "VSLLI">;
+defm : PatShiftVrUimm<loongarch_vslli, "VSLLI">;
 
 // VSRL[I]_{B/H/W/D}
 defm : PatVrVr<srl, "VSRL">;
 defm : PatShiftVrVr<srl, "VSRL">;
-defm : PatShiftVrUimm<srl, "VSRLI">;
+defm : PatShiftVrSplatUimm<srl, "VSRLI">;
+defm : PatShiftVrUimm<loongarch_vsrli, "VSRLI">;
 
 // VSRA[I]_{B/H/W/D}
 defm : PatVrVr<sra, "VSRA">;
 defm : PatShiftVrVr<sra, "VSRA">;
-defm : PatShiftVrUimm<sra, "VSRAI">;
+defm : PatShiftVrSplatUimm<sra, "VSRAI">;
 
 // VCLZ_{B/H/W/D}
 defm : PatVr<ctlz, "VCLZ">;
