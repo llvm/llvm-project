@@ -38,7 +38,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <utility>
-#include <variant>
 
 namespace clang {
 
@@ -1039,60 +1038,61 @@ class Sema;
           RewriteKind(CRK_None) {}
   };
 
-  struct DeferredConversionTemplateOverloadCandidate {
-    FunctionTemplateDecl *FunctionTemplate;
-    DeclAccessPair FoundDecl;
-    CXXRecordDecl *ActingContext;
-    Expr *From;
-    QualType ToType;
+  struct DeferredTemplateOverloadCandidate {
+    DeferredTemplateOverloadCandidate *Next = nullptr;
+    enum Kind { Function, Method, Conversion };
 
+    LLVM_PREFERRED_TYPE(Kind)
+    unsigned Kind : 2;
     LLVM_PREFERRED_TYPE(bool)
     unsigned AllowObjCConversionOnExplicit : 1;
     LLVM_PREFERRED_TYPE(bool)
+    unsigned AllowResultConversion : 1;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned AllowExplicit : 1;
     LLVM_PREFERRED_TYPE(bool)
-    unsigned AllowResultConversion : 1;
+    unsigned SuppressUserConversions : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned PartialOverloading : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned AggregateCandidateDeduction : 1;
   };
 
-  struct DeferredMethodTemplateOverloadCandidate {
+  struct DeferredFunctionTemplateOverloadCandidate
+      : public DeferredTemplateOverloadCandidate {
+    FunctionTemplateDecl *FunctionTemplate;
+    DeclAccessPair FoundDecl;
+    ArrayRef<Expr *> Args;
+    CallExpr::ADLCallKind IsADLCandidate;
+    OverloadCandidateParamOrder PO;
+  };
+  static_assert(std::is_trivially_destructible_v<
+                DeferredFunctionTemplateOverloadCandidate>);
+
+  struct DeferredMethodTemplateOverloadCandidate
+      : public DeferredTemplateOverloadCandidate {
     FunctionTemplateDecl *FunctionTemplate;
     DeclAccessPair FoundDecl;
     ArrayRef<Expr *> Args;
     CXXRecordDecl *ActingContext;
     Expr::Classification ObjectClassification;
     QualType ObjectType;
-
     OverloadCandidateParamOrder PO;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned SuppressUserConversions : 1;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned PartialOverloading : 1;
   };
+  static_assert(std::is_trivially_destructible_v<
+                DeferredMethodTemplateOverloadCandidate>);
 
-  struct DeferredFunctionTemplateOverloadCandidate {
+  struct DeferredConversionTemplateOverloadCandidate
+      : public DeferredTemplateOverloadCandidate {
     FunctionTemplateDecl *FunctionTemplate;
     DeclAccessPair FoundDecl;
-    ArrayRef<Expr *> Args;
-
-    CallExpr::ADLCallKind IsADLCandidate;
-    OverloadCandidateParamOrder PO;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned SuppressUserConversions : 1;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned PartialOverloading : 1;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned AllowExplicit : 1;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned AggregateCandidateDeduction : 1;
+    CXXRecordDecl *ActingContext;
+    Expr *From;
+    QualType ToType;
   };
 
-  using DeferredTemplateOverloadCandidate =
-      std::variant<DeferredConversionTemplateOverloadCandidate,
-                   DeferredMethodTemplateOverloadCandidate,
-                   DeferredFunctionTemplateOverloadCandidate>;
-
-  static_assert(
-      std::is_trivially_destructible_v<DeferredTemplateOverloadCandidate>);
+  static_assert(std::is_trivially_destructible_v<
+                DeferredConversionTemplateOverloadCandidate>);
 
   /// OverloadCandidateSet - A set of overload candidates, used in C++
   /// overload resolution (C++ 13.3).
@@ -1197,8 +1197,9 @@ class Sema;
   private:
     SmallVector<OverloadCandidate, 16> Candidates;
     llvm::SmallPtrSet<uintptr_t, 16> Functions;
-    SmallVector<DeferredTemplateOverloadCandidate, 8> DeferredCandidates;
 
+    DeferredTemplateOverloadCandidate *FirstDeferredCandidate;
+    unsigned DeferredCandidatesCount : 8 * sizeof(unsigned) - 1;
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasDeferredTemplateConstructors : 1;
 
@@ -1246,12 +1247,27 @@ class Sema;
       return reinterpret_cast<T *>(FreeSpaceStart);
     }
 
+    template <typename T> T *allocateDeferredCandidate() {
+      T *C = slabAllocate<T>(1);
+      if (!FirstDeferredCandidate)
+        FirstDeferredCandidate = C;
+      else {
+        auto *F = FirstDeferredCandidate;
+        while (F->Next)
+          F = F->Next;
+        F->Next = C;
+      }
+      DeferredCandidatesCount++;
+      return C;
+    }
+
     void destroyCandidates();
 
   public:
     OverloadCandidateSet(SourceLocation Loc, CandidateSetKind CSK,
                          OperatorRewriteInfo RewriteInfo = {})
-        : HasDeferredTemplateConstructors(false), Loc(Loc), Kind(CSK),
+        : FirstDeferredCandidate(nullptr), DeferredCandidatesCount(0),
+          HasDeferredTemplateConstructors(false), Loc(Loc), Kind(CSK),
           RewriteInfo(RewriteInfo) {}
     OverloadCandidateSet(const OverloadCandidateSet &) = delete;
     OverloadCandidateSet &operator=(const OverloadCandidateSet &) = delete;
@@ -1290,11 +1306,9 @@ class Sema;
     iterator begin() { return Candidates.begin(); }
     iterator end() { return Candidates.end(); }
 
-    size_t size() const {
-      return Candidates.size() + DeferredCandidates.size();
-    }
+    size_t size() const { return Candidates.size() + DeferredCandidatesCount; }
     bool empty() const {
-      return Candidates.empty() && DeferredCandidates.empty();
+      return Candidates.empty() && DeferredCandidatesCount == 0;
     }
 
     /// Allocate storage for conversion sequences for NumConversions
