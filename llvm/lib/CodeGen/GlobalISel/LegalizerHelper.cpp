@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
+#include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
@@ -9100,8 +9101,12 @@ LegalizerHelper::lowerISFPCLASS(MachineInstr &MI) {
     return Legalized;
   }
 
-  // TODO: Try inverting the test with getInvertedFPClassTest like the DAG
-  // version
+  bool isInverted = false;
+  FPClassTest InvertedTest = llvm::invertFPClassTestIfSimpler(Mask, false);
+  if (InvertedTest != fcNone) {
+    Mask = InvertedTest;
+    isInverted = true;
+  }
 
   unsigned BitSize = SrcTy.getScalarSizeInBits();
   const fltSemantics &Semantics = getFltSemanticForLLT(SrcTy.getScalarType());
@@ -9252,7 +9257,9 @@ LegalizerHelper::lowerISFPCLASS(MachineInstr &MI) {
     }
     appendToRes(NormalRes);
   }
-
+  if (isInverted) {
+    Res = MIRBuilder.buildNot(DstTy, Res);
+  }
   MIRBuilder.buildCopy(DstReg, Res);
   MI.eraseFromParent();
   return Legalized;
