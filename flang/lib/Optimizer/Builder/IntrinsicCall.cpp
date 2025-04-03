@@ -937,6 +937,10 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"umaskl", &I::genMask<mlir::arith::ShLIOp>},
     {"umaskr", &I::genMask<mlir::arith::ShRUIOp>},
+    {"unlink",
+     &I::genUnlink,
+     {{{"path", asAddr}, {"status", asAddr, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"unpack",
      &I::genUnpack,
      {{{"vector", asBox}, {"mask", asBox}, {"field", asBox}}},
@@ -8511,6 +8515,39 @@ static mlir::Value createExtremumCompare(mlir::Location loc,
   }
   assert(result && "result must be defined");
   return result;
+}
+
+// UNLINK
+fir::ExtendedValue
+IntrinsicLibrary::genUnlink(std::optional<mlir::Type> resultType,
+                            llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert((resultType.has_value() && args.size() == 1) ||
+         (!resultType.has_value() && args.size() >= 1 && args.size() <= 2));
+
+  mlir::Value path = fir::getBase(args[0]);
+  mlir::Value pathLength = fir::getLen(args[0]);
+  mlir::Value statusValue =
+      fir::runtime::genUnlink(builder, loc, path, pathLength);
+
+  if (resultType.has_value()) {
+    // Function form, return status.
+    return builder.createConvert(loc, *resultType, statusValue);
+  }
+
+  // Subroutine form, store status and return none.
+  const fir::ExtendedValue &status = args[1];
+  if (!isStaticallyAbsent(status)) {
+    mlir::Value statusAddr = fir::getBase(status);
+    mlir::Value statusIsPresentAtRuntime =
+        builder.genIsNotNullAddr(loc, statusAddr);
+    builder.genIfThen(loc, statusIsPresentAtRuntime)
+        .genThen([&]() {
+          builder.createStoreWithConvert(loc, statusValue, statusAddr);
+        })
+        .end();
+  }
+
+  return {};
 }
 
 // UNPACK
