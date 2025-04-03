@@ -201,6 +201,8 @@ LLVM-libc specific rules
 
    * There are some files where this is impossible due to ``libc_assert.h``
      depending on that file. These just can't use assertions.
+   * The ``LIBC_ASSERT`` interface allow using assertions without calling the
+     public ``assert`` function.
      .. TODO: list which files can't use assertions. Also see if we can fix this.
 
 #. Avoid allocating memory where possible.
@@ -209,6 +211,12 @@ LLVM-libc specific rules
      must be large.
    * Some functions require allocation, such as ``strdup``, these should
      allocate as defined by the standard.
+   * This is more of an opinion than a hard rule. In general, libc functions can
+     be implemented without allocation. Doing so makes them behave more
+     predictably in unusual situations, such as on memory constrained systems or
+     during a program crash. For functions like printf this can be very
+     important, consider the importance of logging before a crashing program
+     exits.
 
 
 #. Avoid calling the public name of libc functions from unit tests.
@@ -218,3 +226,6 @@ LLVM-libc specific rules
    * For tests of public header macros or integration tests, it may be necessary
      to call the public name of the function. These should be in the
      ``test/include`` directory or the ``test/integration`` directory.
+   * This ensures that the function being tested is always the one provided by
+     LLVM-libc. It's less useful for the test to confirm that the system's libc
+     is functional.
