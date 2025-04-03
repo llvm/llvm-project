@@ -52,6 +52,7 @@ math/clc_powr.cl
 math/clc_remainder.cl
 math/clc_remquo.cl
 math/clc_rint.cl
+math/clc_rootn.cl
 math/clc_round.cl
 math/clc_rsqrt.cl
 math/clc_sincos_helpers.cl
