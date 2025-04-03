@@ -202,55 +202,59 @@ void printCallGraphFlowConservationStats(
         TotalFlowMap.CallGraphIncomingFlows;
 
     // Only consider functions that are not a program entry.
-    if (CallGraphIncomingFlows.find(FunctionNum) !=
-        CallGraphIncomingFlows.end()) {
-      uint64_t EntryInflow = 0;
-      uint64_t EntryOutflow = 0;
-      uint32_t NumConsideredEntryBlocks = 0;
+    if (CallGraphIncomingFlows.find(FunctionNum) == CallGraphIncomingFlows.end()) {
+      CallGraphGaps.push_back(0.0);
+      continue;
+    }
 
-      Function->forEachEntryPoint([&](uint64_t Offset, const MCSymbol *Label) {
-        const BinaryBasicBlock *EntryBB =
-            Function->getBasicBlockAtOffset(Offset);
-        if (!EntryBB || EntryBB->succ_size() == 0)
-          return true;
-        NumConsideredEntryBlocks++;
-        EntryInflow += IncomingFlows[EntryBB->getLayoutIndex()];
-        EntryOutflow += OutgoingFlows[EntryBB->getLayoutIndex()];
+    uint64_t EntryInflow = 0;
+    uint64_t EntryOutflow = 0;
+    uint32_t NumConsideredEntryBlocks = 0;
+
+    Function->forEachEntryPoint([&](uint64_t Offset, const MCSymbol *Label) {
+      const BinaryBasicBlock *EntryBB =
+          Function->getBasicBlockAtOffset(Offset);
+      if (!EntryBB || EntryBB->succ_size() == 0)
         return true;
-      });
+      NumConsideredEntryBlocks++;
+      EntryInflow += IncomingFlows[EntryBB->getLayoutIndex()];
+      EntryOutflow += OutgoingFlows[EntryBB->getLayoutIndex()];
+      return true;
+    });
 
-      uint64_t NetEntryOutflow = 0;
-      if (EntryOutflow < EntryInflow) {
-        if (opts::Verbosity >= 2) {
-          // We expect entry blocks' CFG outflow >= inflow, i.e., it has a
-          // non-negative net outflow. If this is not the case, then raise a
-          // warning if requested.
-          OS << "BOLT WARNING: unexpected entry block CFG outflow < inflow "
-                "in function "
-             << Function->getPrintName() << "\n";
-          if (opts::Verbosity >= 3)
-            Function->dump();
-        }
-      } else {
-        NetEntryOutflow = EntryOutflow - EntryInflow;
+    uint64_t NetEntryOutflow = 0;
+    if (EntryOutflow < EntryInflow) {
+      if (opts::Verbosity >= 2) {
+        // We expect entry blocks' CFG outflow >= inflow, i.e., it has a
+        // non-negative net outflow. If this is not the case, then raise a
+        // warning if requested.
+        OS << "BOLT WARNING: unexpected entry block CFG outflow < inflow "
+              "in function "
+            << Function->getPrintName() << "\n";
+        if (opts::Verbosity >= 3)
+          Function->dump();
       }
-      if (NumConsideredEntryBlocks > 0) {
-        const uint64_t CallGraphInflow =
-            TotalFlowMap.CallGraphIncomingFlows[Function->getFunctionNumber()];
-        const uint64_t Min = std::min(NetEntryOutflow, CallGraphInflow);
-        const uint64_t Max = std::max(NetEntryOutflow, CallGraphInflow);
-        const double CallGraphGap = 1 - (double)Min / Max;
+    } else {
+      NetEntryOutflow = EntryOutflow - EntryInflow;
+    }
+    if (NumConsideredEntryBlocks > 0) {
+      const uint64_t CallGraphInflow =
+          TotalFlowMap.CallGraphIncomingFlows[Function->getFunctionNumber()];
+      const uint64_t Min = std::min(NetEntryOutflow, CallGraphInflow);
+      const uint64_t Max = std::max(NetEntryOutflow, CallGraphInflow);
+      const double CallGraphGap = 1 - (double)Min / Max;
 
-        if (opts::Verbosity >= 2 && CallGraphGap >= 0.5) {
-          OS << "Nontrivial call graph gap of size "
-             << formatv("{0:P}", CallGraphGap) << " observed in function "
-             << Function->getPrintName() << "\n";
-          if (opts::Verbosity >= 3)
-            Function->dump();
-        }
-
-        CallGraphGaps.push_back(CallGraphGap);
+      if (opts::Verbosity >= 2 && CallGraphGap >= 0.5) {
+        OS << "Nontrivial call graph gap of size "
+            << formatv("{0:P}", CallGraphGap) << " observed in function "
+            << Function->getPrintName() << "\n";
+        if (opts::Verbosity >= 3)
+          Function->dump();
       }
+
+      CallGraphGaps.push_back(CallGraphGap);
+    } else {
+      CallGraphGaps.push_back(0.0);
     }
   }
 
