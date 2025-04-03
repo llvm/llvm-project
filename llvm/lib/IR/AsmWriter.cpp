@@ -125,11 +125,15 @@ static void orderValue(const Value *V, OrderMap &OM) {
   if (OM.lookup(V))
     return;
 
-  if (const Constant *C = dyn_cast<Constant>(V))
+  if (const Constant *C = dyn_cast<Constant>(V)) {
+    if (isa<ConstantData>(C))
+      return;
+
     if (C->getNumOperands() && !isa<GlobalValue>(C))
       for (const Value *Op : C->operands())
         if (!isa<BasicBlock>(Op) && !isa<GlobalValue>(Op))
           orderValue(Op, OM);
+  }
 
   // Note: we cannot cache this lookup above, since inserting into the map
   // changes the map's size, and thus affects the other IDs.
@@ -275,7 +279,8 @@ static UseListOrderMap predictUseListOrder(const Module *M) {
   UseListOrderMap ULOM;
   for (const auto &Pair : OM) {
     const Value *V = Pair.first;
-    if (V->use_empty() || std::next(V->use_begin()) == V->use_end())
+    if (!V->hasUseList() || V->use_empty() ||
+        std::next(V->use_begin()) == V->use_end())
       continue;
 
     std::vector<unsigned> Shuffle =
