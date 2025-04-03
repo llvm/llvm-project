@@ -1105,9 +1105,13 @@ void Sema::ActOnStartOfTranslationUnit() {
 }
 
 void Sema::ActOnEndOfTranslationUnitFragment(TUFragmentKind Kind) {
-  // No explicit actions are required at the end of the global module fragment.
-  if (Kind == TUFragmentKind::Global)
+  if (Kind == TUFragmentKind::Global) {
+    // Perform Pending Instantiations at the end of global module fragment so
+    // that the module ownership of TU-level decls won't get messed.
+    llvm::TimeTraceScope TimeScope("PerformPendingInstantiations");
+    PerformPendingInstantiations();
     return;
+  }
 
   // Transfer late parsed template instantiations over to the pending template
   // instantiation list. During normal compilation, the late template parser
@@ -1798,6 +1802,47 @@ public:
       Inherited::visitUsedDecl(Loc, D);
   }
 
+  // Visitor member and parent dtors called by this dtor.
+  void VisitCalledDestructors(CXXDestructorDecl *DD) {
+    const CXXRecordDecl *RD = DD->getParent();
+
+    // Visit the dtors of all members
+    for (const FieldDecl *FD : RD->fields()) {
+      QualType FT = FD->getType();
+      if (const auto *RT = FT->getAs<RecordType>())
+        if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl()))
+          if (ClassDecl->hasDefinition())
+            if (CXXDestructorDecl *MemberDtor = ClassDecl->getDestructor())
+              asImpl().visitUsedDecl(MemberDtor->getLocation(), MemberDtor);
+    }
+
+    // Also visit base class dtors
+    for (const auto &Base : RD->bases()) {
+      QualType BaseType = Base.getType();
+      if (const auto *RT = BaseType->getAs<RecordType>())
+        if (const auto *BaseDecl = dyn_cast<CXXRecordDecl>(RT->getDecl()))
+          if (BaseDecl->hasDefinition())
+            if (CXXDestructorDecl *BaseDtor = BaseDecl->getDestructor())
+              asImpl().visitUsedDecl(BaseDtor->getLocation(), BaseDtor);
+    }
+  }
+
+  void VisitDeclStmt(DeclStmt *DS) {
+    // Visit dtors called by variables that need destruction
+    for (auto *D : DS->decls())
+      if (auto *VD = dyn_cast<VarDecl>(D))
+        if (VD->isThisDeclarationADefinition() &&
+            VD->needsDestruction(S.Context)) {
+          QualType VT = VD->getType();
+          if (const auto *RT = VT->getAs<RecordType>())
+            if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl()))
+              if (ClassDecl->hasDefinition())
+                if (CXXDestructorDecl *Dtor = ClassDecl->getDestructor())
+                  asImpl().visitUsedDecl(Dtor->getLocation(), Dtor);
+        }
+
+    Inherited::VisitDeclStmt(DS);
+  }
   void checkVar(VarDecl *VD) {
     assert(VD->isFileVarDecl() &&
            "Should only check file-scope variables");
@@ -1839,6 +1884,8 @@ public:
     if (auto *S = FD->getBody()) {
       this->Visit(S);
     }
+    if (CXXDestructorDecl *Dtor = dyn_cast<CXXDestructorDecl>(FD))
+      asImpl().VisitCalledDestructors(Dtor);
     UsePath.pop_back();
     InUsePath.erase(FD);
   }

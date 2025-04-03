@@ -383,6 +383,7 @@ MutableArrayRef<OpOperand> detail::OperandStorage::resize(Operation *owner,
 
 //===----------------------------------------------------------------------===//
 // OperandRange
+//===----------------------------------------------------------------------===//
 
 unsigned OperandRange::getBeginOperandIndex() const {
   assert(!empty() && "range must not be empty");
@@ -395,6 +396,7 @@ OperandRangeRange OperandRange::split(DenseI32ArrayAttr segmentSizes) const {
 
 //===----------------------------------------------------------------------===//
 // OperandRangeRange
+//===----------------------------------------------------------------------===//
 
 OperandRangeRange::OperandRangeRange(OperandRange operands,
                                      Attribute operandSegments)
@@ -419,6 +421,7 @@ OperandRange OperandRangeRange::dereference(const OwnerT &object,
 
 //===----------------------------------------------------------------------===//
 // MutableOperandRange
+//===----------------------------------------------------------------------===//
 
 /// Construct a new mutable range from the given operand, operand start index,
 /// and range length.
@@ -542,6 +545,7 @@ MutableArrayRef<OpOperand>::iterator MutableOperandRange::end() const {
 
 //===----------------------------------------------------------------------===//
 // MutableOperandRangeRange
+//===----------------------------------------------------------------------===//
 
 MutableOperandRangeRange::MutableOperandRangeRange(
     const MutableOperandRange &operands, NamedAttribute operandSegmentAttr)
@@ -571,6 +575,7 @@ MutableOperandRange MutableOperandRangeRange::dereference(const OwnerT &object,
 
 //===----------------------------------------------------------------------===//
 // ResultRange
+//===----------------------------------------------------------------------===//
 
 ResultRange::ResultRange(OpResult result)
     : ResultRange(static_cast<detail::OpResultImpl *>(Value(result).getImpl()),
@@ -637,6 +642,7 @@ void ResultRange::replaceUsesWithIf(
 
 //===----------------------------------------------------------------------===//
 // ValueRange
+//===----------------------------------------------------------------------===//
 
 ValueRange::ValueRange(ArrayRef<Value> values)
     : ValueRange(values.data(), values.size()) {}

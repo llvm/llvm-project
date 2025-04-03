@@ -314,7 +314,7 @@ will not be instrumented.
   void __sanitizer_cov_trace_div4(uint32_t Val);
   void __sanitizer_cov_trace_div8(uint64_t Val);
 
-  // Called before a GetElemementPtr (GEP) instruction
+  // Called before a GetElementPtr (GEP) instruction
   // for every non-constant array index.
   void __sanitizer_cov_trace_gep(uintptr_t Idx);
 

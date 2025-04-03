@@ -333,13 +333,10 @@ SignalHandlerCheck::SignalHandlerCheck(StringRef Name,
     : ClangTidyCheck(Name, Context),
       AsyncSafeFunctionSet(Options.get("AsyncSafeFunctionSet",
                                        AsyncSafeFunctionSetKind::POSIX)) {
-  if (AsyncSafeFunctionSet == AsyncSafeFunctionSetKind::Minimal) {
-    for (StringRef v : MinimalConformingFunctions)
-      ConformingFunctions.insert(v);
-  } else {
-    for (StringRef v : POSIXConformingFunctions)
-      ConformingFunctions.insert(v);
-  }
+  if (AsyncSafeFunctionSet == AsyncSafeFunctionSetKind::Minimal)
+    ConformingFunctions.insert_range(MinimalConformingFunctions);
+  else
+    ConformingFunctions.insert_range(POSIXConformingFunctions);
 }
 
 void SignalHandlerCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {

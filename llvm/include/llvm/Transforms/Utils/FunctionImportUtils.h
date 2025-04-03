@@ -116,7 +116,7 @@ public:
     collectUsedGlobalVariables(M, Vec, /*CompilerUsed=*/false);
     // Next collect those in the llvm.compiler.used set.
     collectUsedGlobalVariables(M, Vec, /*CompilerUsed=*/true);
-    Used = {Vec.begin(), Vec.end()};
+    Used = {llvm::from_range, Vec};
 #endif
   }
 

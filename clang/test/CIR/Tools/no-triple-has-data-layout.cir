@@ -1,0 +1,18 @@
+// RUN: cir-translate --cir-to-llvmir --target x86_64-unknown-linux-gnu --disable-cc-lowering %s -o %t.x86.ll
+// RUN: FileCheck %s -input-file %t.x86.ll -check-prefix=X86
+// RUN: cir-translate --cir-to-llvmir --target spirv64-unknown-unknown --disable-cc-lowering %s -o %t.spirv64.ll
+// RUN: FileCheck %s -input-file %t.spirv64.ll -check-prefix=SPIRV64
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<"dlti.global_memory_space" = 7 : ui64>
+} {
+  cir.func @foo() {
+    cir.return
+  }
+}
+
+// X86-NOT: target datalayout = "G7"
+// X86-DAG: target triple = "x86_64-unknown-linux-gnu"
+
+// SPIRV64-NOT: target datalayout = "G7"
+// SPIRV64-DAG: target triple = "spirv64-unknown-unknown"

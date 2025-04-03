@@ -524,6 +524,18 @@ define void @foo() {
   auto *StructTy2Packed = sandboxir::ConstantStruct::getTypeForElements(
       Ctx, {ZeroI42, OneI42}, /*Packed=*/true);
   EXPECT_EQ(StructTy2Packed, StructTyPacked);
+
+  // Check ConstantVector::get().
+  auto *NewCV = sandboxir::ConstantVector::get({ZeroI42, OneI42});
+  EXPECT_EQ(NewCV, Vector);
+  // Check ConstantVector::getSplat(), getType().
+  auto *SplatRaw =
+      sandboxir::ConstantVector::getSplat(ElementCount::getFixed(2), OneI42);
+  auto *Splat = cast<sandboxir::ConstantVector>(SplatRaw);
+  EXPECT_EQ(Splat->getType()->getNumElements(), 2u);
+  EXPECT_THAT(Splat->operands(), testing::ElementsAre(OneI42, OneI42));
+  // Check ConstantVector::getSplatValue().
+  EXPECT_EQ(Splat->getSplatValue(), OneI42);
 }
 
 TEST_F(SandboxIRTest, ConstantAggregateZero) {
@@ -4210,8 +4222,9 @@ define void @foo(i32 %cond0, i32 %cond1) {
   EXPECT_EQ(Switch->getDefaultDest(),
             Ctx.getValue(LLVMSwitch->getDefaultDest()));
   EXPECT_EQ(Switch->getDefaultDest(), Default);
-  // Check defaultDestUndefined().
-  EXPECT_EQ(Switch->defaultDestUndefined(), LLVMSwitch->defaultDestUndefined());
+  // Check defaultDestUnreachable().
+  EXPECT_EQ(Switch->defaultDestUnreachable(),
+            LLVMSwitch->defaultDestUnreachable());
   // Check setDefaultDest().
   auto *OrigDefaultDest = Switch->getDefaultDest();
   auto *NewDefaultDest = Entry;

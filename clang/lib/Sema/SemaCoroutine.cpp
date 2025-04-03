@@ -116,8 +116,7 @@ static QualType lookupPromiseType(Sema &S, const FunctionDecl *FD,
 
   auto buildElaboratedType = [&]() {
     auto *NNS = NestedNameSpecifier::Create(S.Context, nullptr, S.getStdNamespace());
-    NNS = NestedNameSpecifier::Create(S.Context, NNS, false,
-                                      CoroTrait.getTypePtr());
+    NNS = NestedNameSpecifier::Create(S.Context, NNS, CoroTrait.getTypePtr());
     return S.Context.getElaboratedType(ElaboratedTypeKeyword::None, NNS,
                                        PromiseType);
   };
@@ -788,7 +787,11 @@ static bool checkSuspensionContext(Sema &S, SourceLocation Loc,
   // First emphasis of [expr.await]p2: must be a potentially evaluated context.
   // That is, 'co_await' and 'co_yield' cannot appear in subexpressions of
   // \c sizeof.
-  if (S.isUnevaluatedContext()) {
+  const auto ExprContext = S.currentEvaluationContext().ExprContext;
+  const bool BadContext =
+      S.isUnevaluatedContext() ||
+      ExprContext != Sema::ExpressionEvaluationContextRecord::EK_Other;
+  if (BadContext) {
     S.Diag(Loc, diag::err_coroutine_unevaluated_context) << Keyword;
     return false;
   }
@@ -798,7 +801,6 @@ static bool checkSuspensionContext(Sema &S, SourceLocation Loc,
     S.Diag(Loc, diag::err_coroutine_within_handler) << Keyword;
     return false;
   }
-
   return true;
 }
 

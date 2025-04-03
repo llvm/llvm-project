@@ -414,6 +414,9 @@ public:
   void VisitEmptyDecl(EmptyDecl *D);
   void VisitLifetimeExtendedTemporaryDecl(LifetimeExtendedTemporaryDecl *D);
 
+  void VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D);
+  void VisitOpenACCRoutineDecl(OpenACCRoutineDecl *D);
+
   void VisitDeclContext(DeclContext *DC, uint64_t &LexicalOffset,
                         uint64_t &VisibleOffset, uint64_t &ModuleLocalOffset,
                         uint64_t &TULocalOffset);
@@ -520,6 +523,9 @@ void ASTDeclReader::ReadFunctionDefinition(FunctionDecl *FD) {
   }
   // Store the offset of the body so we can lazily load it later.
   Reader.PendingBodies[FD] = GetCurrentCursorOffset();
+  // For now remember ThisDeclarationWasADefinition only for friend functions.
+  if (FD->getFriendObjectKind())
+    Reader.ThisDeclarationWasADefinitionSet.insert(FD);
 }
 
 void ASTDeclReader::Visit(Decl *D) {
@@ -2703,8 +2709,10 @@ void ASTDeclReader::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
     if (Record.readBool())
       CR = Record.readConceptReference();
     Expr *ImmediatelyDeclaredConstraint = Record.readExpr();
+    int ArgumentPackSubstitutionIndex = Record.readInt();
 
-    D->setTypeConstraint(CR, ImmediatelyDeclaredConstraint);
+    D->setTypeConstraint(CR, ImmediatelyDeclaredConstraint,
+                         ArgumentPackSubstitutionIndex);
     if ((D->ExpandedParameterPack = Record.readInt()))
       D->NumExpanded = Record.readInt();
   }
@@ -3097,6 +3105,23 @@ void ASTDeclReader::VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D) {
 
 void ASTDeclReader::VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D) {
   VisitVarDecl(D);
+}
+
+void ASTDeclReader::VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D) {
+  VisitDecl(D);
+  D->DirKind = Record.readEnum<OpenACCDirectiveKind>();
+  D->DirectiveLoc = Record.readSourceLocation();
+  D->EndLoc = Record.readSourceLocation();
+  Record.readOpenACCClauseList(D->Clauses);
+}
+void ASTDeclReader::VisitOpenACCRoutineDecl(OpenACCRoutineDecl *D) {
+  VisitDecl(D);
+  D->DirKind = Record.readEnum<OpenACCDirectiveKind>();
+  D->DirectiveLoc = Record.readSourceLocation();
+  D->EndLoc = Record.readSourceLocation();
+  D->ParensLoc = Record.readSourceRange();
+  D->FuncRef = Record.readExpr();
+  Record.readOpenACCClauseList(D->Clauses);
 }
 
 //===----------------------------------------------------------------------===//
@@ -4204,6 +4229,12 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
     D = ImplicitConceptSpecializationDecl::CreateDeserialized(Context, ID,
                                                               Record.readInt());
     break;
+  case DECL_OPENACC_DECLARE:
+    D = OpenACCDeclareDecl::CreateDeserialized(Context, ID, Record.readInt());
+    break;
+  case DECL_OPENACC_ROUTINE:
+    D = OpenACCRoutineDecl::CreateDeserialized(Context, ID, Record.readInt());
+    break;
   }
 
   assert(D && "Unknown declaration reading AST file");
@@ -4283,12 +4314,13 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
 void ASTReader::PassInterestingDeclsToConsumer() {
   assert(Consumer);
 
-  if (PassingDeclsToConsumer)
+  if (!CanPassDeclsToConsumer)
     return;
 
   // Guard variable to avoid recursively redoing the process of passing
   // decls to consumer.
-  SaveAndRestore GuardPassingDeclsToConsumer(PassingDeclsToConsumer, true);
+  SaveAndRestore GuardPassingDeclsToConsumer(CanPassDeclsToConsumer,
+                                             /*NewValue=*/false);
 
   // Ensure that we've loaded all potentially-interesting declarations
   // that need to be eagerly loaded.

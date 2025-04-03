@@ -79,6 +79,23 @@ bool IoStatementBase::Inquire(InquiryKeywordHash, std::int64_t &) {
   return false;
 }
 
+RT_API_ATTRS static const char *InquiryKeywordHashDecode(
+    char *buffer, std::size_t n, InquiryKeywordHash hash) {
+  if (n < 1) {
+    return nullptr;
+  }
+  char *p{buffer + n};
+  *--p = '\0';
+  while (hash > 1) {
+    if (p < buffer) {
+      return nullptr;
+    }
+    *--p = 'A' + (hash % 26);
+    hash /= 26;
+  }
+  return hash == 1 ? p : nullptr;
+}
+
 void IoStatementBase::BadInquiryKeywordHashCrash(InquiryKeywordHash inquiry) {
   char buffer[16];
   const char *decode{InquiryKeywordHashDecode(buffer, sizeof buffer, inquiry)};

@@ -178,7 +178,7 @@ static RelType getMipsPairType(RelType type, bool isLocal) {
 // True if non-preemptable symbol always has the same value regardless of where
 // the DSO is loaded.
 static bool isAbsolute(const Symbol &sym) {
-  if (sym.isUndefWeak())
+  if (sym.isUndefined())
     return true;
   if (const auto *dr = dyn_cast<Defined>(&sym))
     return dr->section == nullptr; // Absolute symbol.
@@ -1005,7 +1005,7 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
 
   // For the target and the relocation, we want to know if they are
   // absolute or relative.
-  bool absVal = isAbsoluteValue(sym);
+  bool absVal = isAbsoluteValue(sym) && e != RE_PPC64_TOCBASE;
   bool relE = isRelExpr(e);
   if (absVal && !relE)
     return true;
@@ -1021,7 +1021,7 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
   // calls to such symbols (e.g. glibc/stdlib/exit.c:__run_exit_handlers).
   // Normally such a call will be guarded with a comparison, which will load a
   // zero from the GOT.
-  if (sym.isUndefWeak())
+  if (sym.isUndefined())
     return true;
 
   // We set the final symbols values for linker script defined symbols later.
@@ -1066,7 +1066,8 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
              type == R_HEX_GD_PLT_B22_PCREL_X ||
              type == R_HEX_GD_PLT_B32_PCREL_X)))
         expr = fromPlt(expr);
-    } else if (!isAbsoluteValue(sym)) {
+    } else if (!isAbsoluteValue(sym) ||
+               (type == R_PPC64_PCREL_OPT && ctx.arg.emachine == EM_PPC64)) {
       expr = ctx.target->adjustGotPcExpr(type, addend,
                                          sec->content().data() + offset);
       // If the target adjusted the expression to R_RELAX_GOT_PC, we may end up

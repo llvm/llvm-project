@@ -13,6 +13,7 @@
 #include <__cstddef/nullptr_t.h>
 #include <__functional/unary_function.h>
 #include <__fwd/functional.h>
+#include <__memory/addressof.h>
 #include <__type_traits/conjunction.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
@@ -33,7 +34,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Size>
 inline _LIBCPP_HIDE_FROM_ABI _Size __loadword(const void* __p) {
   _Size __r;
-  std::memcpy(&__r, __p, sizeof(__r));
+  std::memcpy(std::addressof(__r), __p, sizeof(__r));
   return __r;
 }
 
@@ -237,6 +238,14 @@ private:
   }
 };
 
+#if _LIBCPP_AVAILABILITY_HAS_HASH_MEMORY
+[[__gnu__::__pure__]] _LIBCPP_EXPORTED_FROM_ABI size_t __hash_memory(_LIBCPP_NOESCAPE const void*, size_t) _NOEXCEPT;
+#else
+_LIBCPP_HIDE_FROM_ABI inline size_t __hash_memory(const void* __ptr, size_t __size) _NOEXCEPT {
+  return __murmur2_or_cityhash<size_t>()(__ptr, __size);
+}
+#endif
+
 template <class _Tp, size_t = sizeof(_Tp) / sizeof(size_t)>
 struct __scalar_hash;
 
@@ -276,7 +285,7 @@ struct __scalar_hash<_Tp, 2> : public __unary_function<_Tp, size_t> {
       } __s;
     } __u;
     __u.__t = __v;
-    return __murmur2_or_cityhash<size_t>()(&__u, sizeof(__u));
+    return std::__hash_memory(std::addressof(__u), sizeof(__u));
   }
 };
 
@@ -292,7 +301,7 @@ struct __scalar_hash<_Tp, 3> : public __unary_function<_Tp, size_t> {
       } __s;
     } __u;
     __u.__t = __v;
-    return __murmur2_or_cityhash<size_t>()(&__u, sizeof(__u));
+    return std::__hash_memory(std::addressof(__u), sizeof(__u));
   }
 };
 
@@ -309,7 +318,7 @@ struct __scalar_hash<_Tp, 4> : public __unary_function<_Tp, size_t> {
       } __s;
     } __u;
     __u.__t = __v;
-    return __murmur2_or_cityhash<size_t>()(&__u, sizeof(__u));
+    return std::__hash_memory(std::addressof(__u), sizeof(__u));
   }
 };
 
@@ -332,7 +341,7 @@ struct _LIBCPP_TEMPLATE_VIS hash<_Tp*> : public __unary_function<_Tp*, size_t> {
       size_t __a;
     } __u;
     __u.__t = __v;
-    return __murmur2_or_cityhash<size_t>()(&__u, sizeof(__u));
+    return std::__hash_memory(std::addressof(__u), sizeof(__u));
   }
 };
 

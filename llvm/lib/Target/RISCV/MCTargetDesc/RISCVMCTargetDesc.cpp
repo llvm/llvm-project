@@ -41,15 +41,6 @@
 #define GET_SUBTARGETINFO_MC_DESC
 #include "RISCVGenSubtargetInfo.inc"
 
-namespace llvm::RISCVVInversePseudosTable {
-
-using namespace RISCV;
-
-#define GET_RISCVVInversePseudosTable_IMPL
-#include "RISCVGenSearchableTables.inc"
-
-} // namespace llvm::RISCVVInversePseudosTable
-
 using namespace llvm;
 
 static MCInstrInfo *createRISCVMCInstrInfo() {
@@ -204,7 +195,7 @@ public:
     }
     case RISCV::AUIPC:
       setGPRState(Inst.getOperand(0).getReg(),
-                  Addr + (Inst.getOperand(1).getImm() << 12));
+                  Addr + SignExtend64<32>(Inst.getOperand(1).getImm() << 12));
       break;
     }
   }

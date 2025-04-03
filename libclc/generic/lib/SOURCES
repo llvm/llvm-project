@@ -94,14 +94,11 @@ math/copysign.cl
 math/cos.cl
 math/cosh.cl
 math/cospi.cl
-math/ep_log.cl
 math/erf.cl
 math/erfc.cl
 math/exp.cl
-math/exp_helper.cl
 math/expm1.cl
 math/exp2.cl
-math/clc_exp10.cl
 math/exp10.cl
 math/fabs.cl
 math/fdim.cl
@@ -109,7 +106,6 @@ math/floor.cl
 math/fma.cl
 math/fmax.cl
 math/fmin.cl
-math/clc_fmod.cl
 math/fmod.cl
 math/fract.cl
 math/frexp.cl
@@ -127,7 +123,6 @@ math/half_rsqrt.cl
 math/half_sin.cl
 math/half_sqrt.cl
 math/half_tan.cl
-math/clc_hypot.cl
 math/hypot.cl
 math/ilogb.cl
 math/ldexp.cl
@@ -159,18 +154,12 @@ math/native_sqrt.cl
 math/native_tan.cl
 math/tables.cl
 math/nextafter.cl
-math/clc_pow.cl
 math/pow.cl
-math/clc_pown.cl
 math/pown.cl
-math/clc_powr.cl
 math/powr.cl
-math/clc_remainder.cl
 math/remainder.cl
-math/clc_remquo.cl
 math/remquo.cl
 math/rint.cl
-math/clc_rootn.cl
 math/rootn.cl
 math/round.cl
 math/rsqrt.cl
@@ -183,7 +172,6 @@ math/sqrt.cl
 math/clc_tan.cl
 math/tan.cl
 math/tanh.cl
-math/clc_tanpi.cl
 math/tanpi.cl
 math/tgamma.cl
 math/trunc.cl

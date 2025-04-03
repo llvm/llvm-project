@@ -17,13 +17,16 @@
 #include "CIRGenTypeCache.h"
 #include "CIRGenTypes.h"
 
+#include "clang/AST/CharUnits.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
+#include "clang/AST/Decl.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -61,6 +64,8 @@ private:
 
   const clang::LangOptions &langOpts;
 
+  const clang::CodeGenOptions &codeGenOpts;
+
   /// A "module" matches a c/cpp source file: containing a list of functions.
   mlir::ModuleOp theModule;
 
@@ -74,6 +79,7 @@ public:
   mlir::ModuleOp getModule() const { return theModule; }
   CIRGenBuilderTy &getBuilder() { return builder; }
   clang::ASTContext &getASTContext() const { return astContext; }
+  const clang::CodeGenOptions &getCodeGenOpts() const { return codeGenOpts; }
   CIRGenTypes &getTypes() { return genTypes; }
   const clang::LangOptions &getLangOpts() const { return langOpts; }
   mlir::MLIRContext &getMLIRContext() { return *builder.getContext(); }
@@ -84,6 +90,8 @@ public:
   mlir::Location getLoc(clang::SourceRange cRange);
 
   void emitTopLevelDecl(clang::Decl *decl);
+
+  bool verifyModule() const;
 
   /// Return the address of the given function. If funcType is non-null, then
   /// this function will use the specified type if it has to create it.
@@ -116,7 +124,18 @@ public:
                                 cir::FuncType funcType,
                                 const clang::FunctionDecl *funcDecl);
 
+  mlir::IntegerAttr getSize(CharUnits size) {
+    return builder.getSizeFromCharUnits(&getMLIRContext(), size);
+  }
+
   const llvm::Triple &getTriple() const { return target.getTriple(); }
+
+  cir::GlobalLinkageKind getCIRLinkageForDeclarator(const DeclaratorDecl *dd,
+                                                    GVALinkage linkage,
+                                                    bool isConstantVariable);
+
+  cir::GlobalLinkageKind getCIRLinkageVarDefinition(const VarDecl *vd,
+                                                    bool isConstant);
 
   /// Helpers to emit "not yet implemented" error diagnostics
   DiagnosticBuilder errorNYI(SourceLocation, llvm::StringRef);
@@ -128,6 +147,20 @@ public:
         diags.getCustomDiagID(DiagnosticsEngine::Error,
                               "ClangIR code gen Not Yet Implemented: %0: %1");
     return diags.Report(loc, diagID) << feature << name;
+  }
+
+  DiagnosticBuilder errorNYI(mlir::Location loc, llvm::StringRef feature) {
+    // TODO: Convert the location to a SourceLocation
+    unsigned diagID = diags.getCustomDiagID(
+        DiagnosticsEngine::Error, "ClangIR code gen Not Yet Implemented: %0");
+    return diags.Report(diagID) << feature;
+  }
+
+  DiagnosticBuilder errorNYI(llvm::StringRef feature) {
+    // TODO: Make a default location? currSrcLoc?
+    unsigned diagID = diags.getCustomDiagID(
+        DiagnosticsEngine::Error, "ClangIR code gen Not Yet Implemented: %0");
+    return diags.Report(diagID) << feature;
   }
 
   DiagnosticBuilder errorNYI(SourceRange, llvm::StringRef);

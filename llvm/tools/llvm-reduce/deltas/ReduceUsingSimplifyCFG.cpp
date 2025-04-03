@@ -19,7 +19,8 @@
 
 using namespace llvm;
 
-static void reduceUsingSimplifyCFG(Oracle &O, ReducerWorkItem &WorkItem) {
+void llvm::reduceUsingSimplifyCFGDeltaPass(Oracle &O,
+                                           ReducerWorkItem &WorkItem) {
   Module &Program = WorkItem.getModule();
   SmallVector<BasicBlock *, 16> ToSimplify;
   for (auto &F : Program)
@@ -31,25 +32,23 @@ static void reduceUsingSimplifyCFG(Oracle &O, ReducerWorkItem &WorkItem) {
     simplifyCFG(BB, TTI);
 }
 
-void llvm::reduceUsingSimplifyCFGDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, reduceUsingSimplifyCFG, "Reducing using SimplifyCFG");
-}
 static void reduceConditionals(Oracle &O, ReducerWorkItem &WorkItem,
                                bool Direction) {
   Module &M = WorkItem.getModule();
   SmallVector<BasicBlock *, 16> ToSimplify;
 
+  LLVMContext &Ctx = M.getContext();
+  ConstantInt *ConstValToSet =
+      Direction ? ConstantInt::getTrue(Ctx) : ConstantInt::getFalse(Ctx);
+
   for (auto &F : M) {
     for (auto &BB : F) {
       auto *BR = dyn_cast<BranchInst>(BB.getTerminator());
-      if (!BR || !BR->isConditional() || O.shouldKeep())
+      if (!BR || !BR->isConditional() || BR->getCondition() == ConstValToSet ||
+          O.shouldKeep())
         continue;
 
-      if (Direction)
-        BR->setCondition(ConstantInt::getTrue(BR->getContext()));
-      else
-        BR->setCondition(ConstantInt::getFalse(BR->getContext()));
-
+      BR->setCondition(ConstValToSet);
       ToSimplify.push_back(&BB);
     }
   }
@@ -59,20 +58,12 @@ static void reduceConditionals(Oracle &O, ReducerWorkItem &WorkItem,
     simplifyCFG(BB, TTI);
 }
 
-void llvm::reduceConditionalsTrueDeltaPass(TestRunner &Test) {
-  runDeltaPass(
-      Test,
-      [](Oracle &O, ReducerWorkItem &WorkItem) {
-        reduceConditionals(O, WorkItem, true);
-      },
-      "Reducing conditional branches to true");
+void llvm::reduceConditionalsTrueDeltaPass(Oracle &O,
+                                           ReducerWorkItem &WorkItem) {
+  reduceConditionals(O, WorkItem, true);
 }
 
-void llvm::reduceConditionalsFalseDeltaPass(TestRunner &Test) {
-  runDeltaPass(
-      Test,
-      [](Oracle &O, ReducerWorkItem &WorkItem) {
-        reduceConditionals(O, WorkItem, false);
-      },
-      "Reducing conditional branches to false");
+void llvm::reduceConditionalsFalseDeltaPass(Oracle &O,
+                                            ReducerWorkItem &WorkItem) {
+  reduceConditionals(O, WorkItem, false);
 }

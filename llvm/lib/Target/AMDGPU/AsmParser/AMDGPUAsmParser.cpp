@@ -5463,7 +5463,7 @@ bool AMDGPUAsmParser::ParseAsAbsoluteExpression(uint32_t &Ret) {
 }
 
 bool AMDGPUAsmParser::ParseDirectiveAMDGCNTarget() {
-  if (getSTI().getTargetTriple().getArch() != Triple::amdgcn)
+  if (!getSTI().getTargetTriple().isAMDGCN())
     return TokError("directive only supported for amdgcn architecture");
 
   std::string TargetIDDirective;
@@ -5550,7 +5550,7 @@ bool AMDGPUAsmParser::calculateGPRBlocks(
 }
 
 bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
-  if (getSTI().getTargetTriple().getArch() != Triple::amdgcn)
+  if (!getSTI().getTargetTriple().isAMDGCN())
     return TokError("directive only supported for amdgcn architecture");
 
   if (!isHsaAbi(getSTI()))
@@ -6142,7 +6142,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGPUHsaKernel() {
 }
 
 bool AMDGPUAsmParser::ParseDirectiveISAVersion() {
-  if (getSTI().getTargetTriple().getArch() != Triple::amdgcn) {
+  if (!getSTI().getTargetTriple().isAMDGCN()) {
     return Error(getLoc(),
                  ".amd_amdgpu_isa directive is not available on non-amdgcn "
                  "architectures");
@@ -9428,6 +9428,12 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
   }
 
   int Fi = 0;
+  int VdstInIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst_in);
+  bool IsVOP3CvtSrDpp = Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp8_gfx12 ||
+                        Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_dpp8_gfx12 ||
+                        Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp_gfx12 ||
+                        Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_dpp_gfx12;
+
   for (unsigned E = Operands.size(); I != E; ++I) {
 
     if (IsMAC) {
@@ -9442,16 +9448,10 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
       }
     }
 
-    int VdstInIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst_in);
     if (VdstInIdx == static_cast<int>(Inst.getNumOperands())) {
       Inst.addOperand(Inst.getOperand(0));
     }
 
-    bool IsVOP3CvtSrDpp =
-        Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp8_gfx12 ||
-        Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_dpp8_gfx12 ||
-        Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp_gfx12 ||
-        Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_dpp_gfx12;
     if (IsVOP3CvtSrDpp) {
       if (Src2ModIdx == static_cast<int>(Inst.getNumOperands())) {
         Inst.addOperand(MCOperand::createImm(0));

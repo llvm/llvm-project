@@ -319,8 +319,9 @@ static FunctionSummary *calculatePrevailingSummary(
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         IsPrevailing) {
 
-  if (CachedPrevailingSummary.count(VI))
-    return CachedPrevailingSummary[VI];
+  auto [It, Inserted] = CachedPrevailingSummary.try_emplace(VI);
+  if (!Inserted)
+    return It->second;
 
   /// At this point, prevailing symbols have been resolved. The following leads
   /// to returning a conservative result:
@@ -362,7 +363,6 @@ static FunctionSummary *calculatePrevailingSummary(
   ///      future this can be revisited.
   ///   5. Otherwise, go conservative.
 
-  CachedPrevailingSummary[VI] = nullptr;
   FunctionSummary *Local = nullptr;
   FunctionSummary *Prevailing = nullptr;
 
@@ -405,15 +405,16 @@ static FunctionSummary *calculatePrevailingSummary(
     }
   }
 
+  auto &CPS = CachedPrevailingSummary[VI];
   if (Local) {
     assert(!Prevailing);
-    CachedPrevailingSummary[VI] = Local;
+    CPS = Local;
   } else if (Prevailing) {
     assert(!Local);
-    CachedPrevailingSummary[VI] = Prevailing;
+    CPS = Prevailing;
   }
 
-  return CachedPrevailingSummary[VI];
+  return CPS;
 }
 
 bool llvm::thinLTOPropagateFunctionAttrs(
@@ -762,12 +763,12 @@ ArgumentUsesSummary collectArgumentUsesPerBlock(Argument &A, Function &F) {
   auto UpdateUseInfo = [&Result](Instruction *I, ArgumentAccessInfo Info) {
     auto *BB = I->getParent();
     auto &BBInfo = Result.UsesPerBlock[BB];
-    bool AlreadyVisitedInst = BBInfo.Insts.contains(I);
-    auto &IInfo = BBInfo.Insts[I];
+    auto [It, Inserted] = BBInfo.Insts.try_emplace(I);
+    auto &IInfo = It->second;
 
     // Instructions that have more than one use of the argument are considered
     // as clobbers.
-    if (AlreadyVisitedInst) {
+    if (!Inserted) {
       IInfo = {ArgumentAccessInfo::AccessType::Unknown, {}};
       BBInfo.HasUnknownAccess = true;
       return false;
@@ -1249,7 +1250,7 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
 
     // Functions that are readonly (or readnone) and nounwind and don't return
     // a value can't capture arguments. Don't analyze them.
-    if (F->onlyReadsMemory() && F->doesNotThrow() &&
+    if (F->onlyReadsMemory() && F->doesNotThrow() && F->willReturn() &&
         F->getReturnType()->isVoidTy()) {
       for (Argument &A : F->args()) {
         if (A.getType()->isPointerTy() && !A.hasNoCaptureAttr()) {
@@ -1466,8 +1467,7 @@ static bool isFunctionMallocLike(Function *F, const SCCNodeSet &SCCNodes) {
       }
       case Instruction::PHI: {
         PHINode *PN = cast<PHINode>(RVI);
-        for (Value *IncValue : PN->incoming_values())
-          FlowsToReturn.insert(IncValue);
+        FlowsToReturn.insert_range(PN->incoming_values());
         continue;
       }
 

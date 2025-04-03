@@ -14,14 +14,15 @@
 #ifndef LLVM_FRONTEND_OPENMP_OMPIRBUILDER_H
 #define LLVM_FRONTEND_OPENMP_OMPIRBUILDER_H
 
-#include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Frontend/Atomic/Atomic.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ValueMap.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Triple.h"
 #include <forward_list>
 #include <map>
@@ -479,7 +480,7 @@ public:
   /// not have an effect on \p M (see initialize)
   OpenMPIRBuilder(Module &M)
       : M(M), Builder(M.getContext()), OffloadInfoManager(this),
-        T(Triple(M.getTargetTriple())) {}
+        T(M.getTargetTriple()) {}
   ~OpenMPIRBuilder();
 
   class AtomicInfo : public llvm::AtomicInfo {
@@ -1093,7 +1094,8 @@ private:
   ///                   original and copied loop values and loop blocks.
   /// \param NamePrefix Optional name prefix for if.then if.else blocks.
   void createIfVersion(CanonicalLoopInfo *Loop, Value *IfCond,
-                       ValueToValueMapTy &VMap, const Twine &NamePrefix = "");
+                       ValueMap<const Value *, WeakTrackingVH> &VMap,
+                       const Twine &NamePrefix = "");
 
 public:
   /// Modifies the canonical loop to be a workshare loop.

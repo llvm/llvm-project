@@ -20,7 +20,7 @@ end
 !PARSE-TREE: | | | OmpTraitSelector
 !PARSE-TREE: | | | | OmpTraitSelectorName -> llvm::omp::Directive = parallel
 !PARSE-TREE: | | OmpDirectiveSpecification
-!PARSE-TREE: | | | llvm::omp::Directive = nothing
+!PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = nothing
 !PARSE-TREE: | | | OmpClauseList ->
 
 subroutine f01
@@ -47,7 +47,7 @@ end
 !PARSE-TREE: | | | | | OmpTraitProperty -> Scalar -> Expr = '1_4'
 !PARSE-TREE: | | | | | | LiteralConstant -> IntLiteralConstant = '1'
 !PARSE-TREE: | | OmpDirectiveSpecification
-!PARSE-TREE: | | | llvm::omp::Directive = nothing
+!PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = nothing
 !PARSE-TREE: | | | OmpClauseList ->
 
 subroutine f02
@@ -74,7 +74,7 @@ end
 !PARSE-TREE: | | | | | OmpTraitProperty -> Scalar -> Expr = '7_4'
 !PARSE-TREE: | | | | | | LiteralConstant -> IntLiteralConstant = '7'
 !PARSE-TREE: | | OmpDirectiveSpecification
-!PARSE-TREE: | | | llvm::omp::Directive = nothing
+!PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = nothing
 !PARSE-TREE: | | | OmpClauseList ->
 
 subroutine f03
@@ -98,7 +98,7 @@ end
 !PARSE-TREE: | | | | Properties
 !PARSE-TREE: | | | | | OmpTraitProperty -> OmpClause -> AcqRel
 !PARSE-TREE: | | OmpDirectiveSpecification
-!PARSE-TREE: | | | llvm::omp::Directive = nothing
+!PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = nothing
 !PARSE-TREE: | | | OmpClauseList ->
 
 subroutine f04
@@ -132,7 +132,7 @@ end
 !PARSE-TREE: | | | | | | | OmpTraitPropertyExtension -> Scalar -> Expr = '1_4'
 !PARSE-TREE: | | | | | | | | LiteralConstant -> IntLiteralConstant = '1'
 !PARSE-TREE: | | OmpDirectiveSpecification
-!PARSE-TREE: | | | llvm::omp::Directive = nothing
+!PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = nothing
 !PARSE-TREE: | | | OmpClauseList ->
 
 subroutine f05(x)
@@ -168,12 +168,12 @@ end
 !PARSE-TREE: | | | | | | LiteralConstant -> LogicalLiteralConstant
 !PARSE-TREE: | | | | | | | bool = 'true'
 !PARSE-TREE: | | OmpDirectiveSpecification
-!PARSE-TREE: | | | llvm::omp::Directive = parallel do
+!PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = parallel do
 !PARSE-TREE: | | | OmpClauseList -> OmpClause -> Reduction -> OmpReductionClause
 !PARSE-TREE: | | | | Modifier -> OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Add
 !PARSE-TREE: | | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | OmpClause -> Otherwise -> OmpOtherwiseClause -> OmpDirectiveSpecification
-!PARSE-TREE: | | llvm::omp::Directive = nothing
+!PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = nothing
 !PARSE-TREE: | | OmpClauseList ->
 
 subroutine f06
@@ -207,7 +207,7 @@ end
 !PARSE-TREE: | | | | | | LiteralConstant -> LogicalLiteralConstant
 !PARSE-TREE: | | | | | | | bool = 'true'
 !PARSE-TREE: | | OmpDirectiveSpecification
-!PARSE-TREE: | | | llvm::omp::Directive = nothing
+!PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = nothing
 !PARSE-TREE: | | | OmpClauseList ->
 
 subroutine f07
@@ -232,7 +232,7 @@ end
 !PARSE-TREE: | | | | Properties
 !PARSE-TREE: | | | | | OmpTraitProperty -> OmpTraitPropertyName -> string = 'amd'
 !PARSE-TREE: | | OmpDirectiveSpecification
-!PARSE-TREE: | | | llvm::omp::Directive = declare simd
+!PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = declare simd
 !PARSE-TREE: | | | OmpClauseList ->
 !PARSE-TREE: | OmpClause -> When -> OmpWhenClause
 !PARSE-TREE: | | Modifier -> OmpContextSelectorSpecification -> OmpTraitSetSelector
@@ -244,8 +244,8 @@ end
 !PARSE-TREE: | | | | | | LiteralConstant -> LogicalLiteralConstant
 !PARSE-TREE: | | | | | | | bool = 'true'
 !PARSE-TREE: | | OmpDirectiveSpecification
-!PARSE-TREE: | | | llvm::omp::Directive = declare target
+!PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = declare target
 !PARSE-TREE: | | | OmpClauseList ->
 !PARSE-TREE: | OmpClause -> Otherwise -> OmpOtherwiseClause -> OmpDirectiveSpecification
-!PARSE-TREE: | | llvm::omp::Directive = nothing
+!PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = nothing
 !PARSE-TREE: | | OmpClauseList ->

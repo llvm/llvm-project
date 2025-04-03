@@ -31,15 +31,29 @@
 using namespace lldb;
 using namespace lldb_private;
 
-/// constructor
+static AddressRange CollapseRanges(llvm::ArrayRef<AddressRange> ranges) {
+  if (ranges.empty())
+    return AddressRange();
+  if (ranges.size() == 1)
+    return ranges[0];
 
-FuncUnwinders::FuncUnwinders(UnwindTable &unwind_table, AddressRange range)
-    : m_unwind_table(unwind_table), m_range(range), m_mutex(),
-      m_unwind_plan_assembly_sp(), m_unwind_plan_eh_frame_sp(),
-      m_unwind_plan_eh_frame_augmented_sp(), m_unwind_plan_compact_unwind(),
-      m_unwind_plan_arm_unwind_sp(), m_unwind_plan_fast_sp(),
-      m_unwind_plan_arch_default_sp(),
-      m_unwind_plan_arch_default_at_func_entry_sp(),
+  Address lowest_addr = ranges[0].GetBaseAddress();
+  addr_t highest_addr = lowest_addr.GetFileAddress() + ranges[0].GetByteSize();
+  for (const AddressRange &range : ranges.drop_front()) {
+    Address range_begin = range.GetBaseAddress();
+    addr_t range_end = range_begin.GetFileAddress() + range.GetByteSize();
+    if (range_begin.GetFileAddress() < lowest_addr.GetFileAddress())
+      lowest_addr = range_begin;
+    if (range_end > highest_addr)
+      highest_addr = range_end;
+  }
+  return AddressRange(lowest_addr, highest_addr - lowest_addr.GetFileAddress());
+}
+
+FuncUnwinders::FuncUnwinders(UnwindTable &unwind_table, Address addr,
+                             AddressRanges ranges)
+    : m_unwind_table(unwind_table), m_addr(std::move(addr)),
+      m_ranges(std::move(ranges)), m_range(CollapseRanges(m_ranges)),
       m_tried_unwind_plan_assembly(false), m_tried_unwind_plan_eh_frame(false),
       m_tried_unwind_plan_object_file(false),
       m_tried_unwind_plan_debug_frame(false),
@@ -511,9 +525,7 @@ Address &FuncUnwinders::GetFirstNonPrologueInsn(Target &target) {
   return m_first_non_prologue_insn;
 }
 
-const Address &FuncUnwinders::GetFunctionStartAddress() const {
-  return m_range.GetBaseAddress();
-}
+const Address &FuncUnwinders::GetFunctionStartAddress() const { return m_addr; }
 
 lldb::UnwindAssemblySP
 FuncUnwinders::GetUnwindAssemblyProfiler(Target &target) {

@@ -102,6 +102,8 @@ using SuggestionCallbackType =
 
 using CompleteCallbackType = llvm::unique_function<void(CompletionRequest &)>;
 
+using RedrawCallbackType = llvm::unique_function<void()>;
+
 /// Status used to decide when and how to start editing another line in
 /// multi-line sessions.
 enum class EditorStatus {
@@ -192,6 +194,11 @@ public:
   /// Register a callback for autosuggestion.
   void SetSuggestionCallback(SuggestionCallbackType callback) {
     m_suggestion_callback = std::move(callback);
+  }
+
+  /// Register a callback for redrawing the statusline.
+  void SetRedrawCallback(RedrawCallbackType callback) {
+    m_redraw_callback = std::move(callback);
   }
 
   /// Register a callback for the tab key
@@ -409,6 +416,7 @@ private:
 
   CompleteCallbackType m_completion_callback;
   SuggestionCallbackType m_suggestion_callback;
+  RedrawCallbackType m_redraw_callback;
 
   bool m_color;
   std::string m_prompt_ansi_prefix;

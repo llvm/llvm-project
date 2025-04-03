@@ -38,7 +38,8 @@ define void @caller32() {
 ; LA64-NEXT:    .cfi_def_cfa 22, 0
 ; LA64-NEXT:    bstrins.d $sp, $zero, 4, 0
 ; LA64-NEXT:    addi.d $a0, $sp, 0
-; LA64-NEXT:    bl %plt(callee)
+; LA64-NEXT:    pcaddu18i $ra, %call36(callee)
+; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    addi.d $sp, $fp, -32
 ; LA64-NEXT:    ld.d $fp, $sp, 16 # 8-byte Folded Reload
 ; LA64-NEXT:    ld.d $ra, $sp, 24 # 8-byte Folded Reload
@@ -69,7 +70,8 @@ define void @caller_no_realign32() "no-realign-stack" {
 ; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; LA64-NEXT:    .cfi_offset 1, -8
 ; LA64-NEXT:    addi.d $a0, $sp, 0
-; LA64-NEXT:    bl %plt(callee)
+; LA64-NEXT:    pcaddu18i $ra, %call36(callee)
+; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NEXT:    ret
@@ -110,7 +112,8 @@ define void @caller64() {
 ; LA64-NEXT:    .cfi_def_cfa 22, 0
 ; LA64-NEXT:    bstrins.d $sp, $zero, 5, 0
 ; LA64-NEXT:    addi.d $a0, $sp, 0
-; LA64-NEXT:    bl %plt(callee)
+; LA64-NEXT:    pcaddu18i $ra, %call36(callee)
+; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    addi.d $sp, $fp, -64
 ; LA64-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
 ; LA64-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
@@ -141,7 +144,8 @@ define void @caller_no_realign64() "no-realign-stack" {
 ; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; LA64-NEXT:    .cfi_offset 1, -8
 ; LA64-NEXT:    addi.d $a0, $sp, 0
-; LA64-NEXT:    bl %plt(callee)
+; LA64-NEXT:    pcaddu18i $ra, %call36(callee)
+; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NEXT:    ret
@@ -182,7 +186,8 @@ define void @caller128() {
 ; LA64-NEXT:    .cfi_def_cfa 22, 0
 ; LA64-NEXT:    bstrins.d $sp, $zero, 6, 0
 ; LA64-NEXT:    addi.d $a0, $sp, 0
-; LA64-NEXT:    bl %plt(callee)
+; LA64-NEXT:    pcaddu18i $ra, %call36(callee)
+; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    addi.d $sp, $fp, -128
 ; LA64-NEXT:    ld.d $fp, $sp, 112 # 8-byte Folded Reload
 ; LA64-NEXT:    ld.d $ra, $sp, 120 # 8-byte Folded Reload
@@ -213,7 +218,8 @@ define void @caller_no_realign128() "no-realign-stack" {
 ; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; LA64-NEXT:    .cfi_offset 1, -8
 ; LA64-NEXT:    addi.d $a0, $sp, 0
-; LA64-NEXT:    bl %plt(callee)
+; LA64-NEXT:    pcaddu18i $ra, %call36(callee)
+; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NEXT:    ret
@@ -254,7 +260,8 @@ define void @caller256() {
 ; LA64-NEXT:    .cfi_def_cfa 22, 0
 ; LA64-NEXT:    bstrins.d $sp, $zero, 7, 0
 ; LA64-NEXT:    addi.d $a0, $sp, 0
-; LA64-NEXT:    bl %plt(callee)
+; LA64-NEXT:    pcaddu18i $ra, %call36(callee)
+; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    addi.d $sp, $fp, -256
 ; LA64-NEXT:    ld.d $fp, $sp, 240 # 8-byte Folded Reload
 ; LA64-NEXT:    ld.d $ra, $sp, 248 # 8-byte Folded Reload
@@ -285,7 +292,8 @@ define void @caller_no_realign256() "no-realign-stack" {
 ; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; LA64-NEXT:    .cfi_offset 1, -8
 ; LA64-NEXT:    addi.d $a0, $sp, 0
-; LA64-NEXT:    bl %plt(callee)
+; LA64-NEXT:    pcaddu18i $ra, %call36(callee)
+; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NEXT:    ret
@@ -326,7 +334,8 @@ define void @caller512() {
 ; LA64-NEXT:    .cfi_def_cfa 22, 0
 ; LA64-NEXT:    bstrins.d $sp, $zero, 8, 0
 ; LA64-NEXT:    addi.d $a0, $sp, 512
-; LA64-NEXT:    bl %plt(callee)
+; LA64-NEXT:    pcaddu18i $ra, %call36(callee)
+; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    addi.d $sp, $fp, -1024
 ; LA64-NEXT:    ld.d $fp, $sp, 1008 # 8-byte Folded Reload
 ; LA64-NEXT:    ld.d $ra, $sp, 1016 # 8-byte Folded Reload
@@ -357,7 +366,8 @@ define void @caller_no_realign512() "no-realign-stack" {
 ; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; LA64-NEXT:    .cfi_offset 1, -8
 ; LA64-NEXT:    addi.d $a0, $sp, 0
-; LA64-NEXT:    bl %plt(callee)
+; LA64-NEXT:    pcaddu18i $ra, %call36(callee)
+; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NEXT:    ret
@@ -401,7 +411,8 @@ define void @caller1024() {
 ; LA64-NEXT:    addi.d $sp, $sp, -16
 ; LA64-NEXT:    bstrins.d $sp, $zero, 9, 0
 ; LA64-NEXT:    addi.d $a0, $sp, 1024
-; LA64-NEXT:    bl %plt(callee)
+; LA64-NEXT:    pcaddu18i $ra, %call36(callee)
+; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    addi.d $sp, $fp, -2048
 ; LA64-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NEXT:    ld.d $fp, $sp, 2016 # 8-byte Folded Reload
@@ -433,7 +444,8 @@ define void @caller_no_realign1024() "no-realign-stack" {
 ; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; LA64-NEXT:    .cfi_offset 1, -8
 ; LA64-NEXT:    addi.d $a0, $sp, 0
-; LA64-NEXT:    bl %plt(callee)
+; LA64-NEXT:    pcaddu18i $ra, %call36(callee)
+; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NEXT:    ret
@@ -483,7 +495,8 @@ define void @caller2048() {
 ; LA64-NEXT:    bstrins.d $sp, $zero, 10, 0
 ; LA64-NEXT:    ori $a0, $zero, 2048
 ; LA64-NEXT:    add.d $a0, $sp, $a0
-; LA64-NEXT:    bl %plt(callee)
+; LA64-NEXT:    pcaddu18i $ra, %call36(callee)
+; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    lu12i.w $a0, 1
 ; LA64-NEXT:    sub.d $sp, $fp, $a0
 ; LA64-NEXT:    addi.d $sp, $sp, 2032
@@ -517,7 +530,8 @@ define void @caller_no_realign2048() "no-realign-stack" {
 ; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; LA64-NEXT:    .cfi_offset 1, -8
 ; LA64-NEXT:    addi.d $a0, $sp, 0
-; LA64-NEXT:    bl %plt(callee)
+; LA64-NEXT:    pcaddu18i $ra, %call36(callee)
+; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NEXT:    ret
@@ -570,7 +584,8 @@ define void @caller4096() {
 ; LA64-NEXT:    bstrins.d $sp, $zero, 11, 0
 ; LA64-NEXT:    lu12i.w $a0, 1
 ; LA64-NEXT:    add.d $a0, $sp, $a0
-; LA64-NEXT:    bl %plt(callee)
+; LA64-NEXT:    pcaddu18i $ra, %call36(callee)
+; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    lu12i.w $a0, 2
 ; LA64-NEXT:    sub.d $sp, $fp, $a0
 ; LA64-NEXT:    lu12i.w $a0, 1
@@ -605,7 +620,8 @@ define void @caller_no_realign4096() "no-realign-stack" {
 ; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; LA64-NEXT:    .cfi_offset 1, -8
 ; LA64-NEXT:    addi.d $a0, $sp, 0
-; LA64-NEXT:    bl %plt(callee)
+; LA64-NEXT:    pcaddu18i $ra, %call36(callee)
+; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NEXT:    ret

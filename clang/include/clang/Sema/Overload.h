@@ -1265,11 +1265,11 @@ class Sema;
 
   };
 
-  bool isBetterOverloadCandidate(Sema &S,
-                                 const OverloadCandidate &Cand1,
+  bool isBetterOverloadCandidate(Sema &S, const OverloadCandidate &Cand1,
                                  const OverloadCandidate &Cand2,
                                  SourceLocation Loc,
-                                 OverloadCandidateSet::CandidateSetKind Kind);
+                                 OverloadCandidateSet::CandidateSetKind Kind,
+                                 bool PartialOverloading = false);
 
   struct ConstructorInfo {
     DeclAccessPair FoundDecl;

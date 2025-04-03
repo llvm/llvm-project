@@ -351,7 +351,7 @@ define hidden void @func_indirect_use_workgroup_id_z() #1 {
 ; GCN: ; use s12
 define hidden void @other_arg_use_workgroup_id_x(i32 %arg0) #1 {
   %val = call i32 @llvm.amdgcn.workgroup.id.x()
-  store volatile i32 %arg0, ptr addrspace(1) undef
+  store volatile i32 %arg0, ptr addrspace(1) poison
   call void asm sideeffect "; use $0", "s"(i32 %val)
   ret void
 }
@@ -362,7 +362,7 @@ define hidden void @other_arg_use_workgroup_id_x(i32 %arg0) #1 {
 ; GCN: ; use s13
 define hidden void @other_arg_use_workgroup_id_y(i32 %arg0) #1 {
   %val = call i32 @llvm.amdgcn.workgroup.id.y()
-  store volatile i32 %arg0, ptr addrspace(1) undef
+  store volatile i32 %arg0, ptr addrspace(1) poison
   call void asm sideeffect "; use $0", "s"(i32 %val)
   ret void
 }
@@ -373,7 +373,7 @@ define hidden void @other_arg_use_workgroup_id_y(i32 %arg0) #1 {
 ; GCN: ; use s14
 define hidden void @other_arg_use_workgroup_id_z(i32 %arg0) #1 {
   %val = call i32 @llvm.amdgcn.workgroup.id.z()
-  store volatile i32 %arg0, ptr addrspace(1) undef
+  store volatile i32 %arg0, ptr addrspace(1) poison
   call void asm sideeffect "; use $0", "s"(i32 %val)
   ret void
 }

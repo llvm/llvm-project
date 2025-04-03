@@ -1767,7 +1767,7 @@ public:
 
   /// Creates a VReg SDDbgValue node.
   SDDbgValue *getVRegDbgValue(DIVariable *Var, DIExpression *Expr,
-                              unsigned VReg, bool IsIndirect,
+                              Register VReg, bool IsIndirect,
                               const DebugLoc &DL, unsigned O);
 
   /// Creates a SDDbgValue node from a list of locations.

@@ -111,10 +111,10 @@ static Value *getBoundsCheckCond(Value *Ptr, Value *InstVal,
 static CallInst *InsertTrap(BuilderTy &IRB, bool DebugTrapBB,
                             std::optional<int8_t> GuardKind) {
   if (!DebugTrapBB)
-    return IRB.CreateIntrinsic(Intrinsic::trap, {}, {});
+    return IRB.CreateIntrinsic(Intrinsic::trap, {});
 
   return IRB.CreateIntrinsic(
-      Intrinsic::ubsantrap, {},
+      Intrinsic::ubsantrap,
       ConstantInt::get(IRB.getInt8Ty(),
                        GuardKind.has_value()
                            ? GuardKind.value()

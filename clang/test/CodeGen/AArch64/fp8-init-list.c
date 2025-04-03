@@ -12,14 +12,14 @@
 // CHECK-LABEL: define dso_local <8 x i8> @vector_init_test(
 // CHECK-SAME: <1 x i8> [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VECINIT14:%.*]] = shufflevector <1 x i8> [[X]], <1 x i8> poison, <8 x i32> zeroinitializer
-// CHECK-NEXT:    ret <8 x i8> [[VECINIT14]]
+// CHECK-NEXT:    [[VECINIT7:%.*]] = shufflevector <1 x i8> [[X]], <1 x i8> poison, <8 x i32> zeroinitializer
+// CHECK-NEXT:    ret <8 x i8> [[VECINIT7]]
 //
 // CHECK-CXX-LABEL: define dso_local <8 x i8> @_Z16vector_init_testu6__mfp8(
 // CHECK-CXX-SAME: <1 x i8> [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-CXX-NEXT:  [[ENTRY:.*:]]
-// CHECK-CXX-NEXT:    [[VECINIT14:%.*]] = shufflevector <1 x i8> [[X]], <1 x i8> poison, <8 x i32> zeroinitializer
-// CHECK-CXX-NEXT:    ret <8 x i8> [[VECINIT14]]
+// CHECK-CXX-NEXT:    [[VECINIT7:%.*]] = shufflevector <1 x i8> [[X]], <1 x i8> poison, <8 x i32> zeroinitializer
+// CHECK-CXX-NEXT:    ret <8 x i8> [[VECINIT7]]
 //
 mfloat8x8_t vector_init_test(__mfp8 x) {
    return (mfloat8x8_t) {x, x, x, x, x, x, x, x};
@@ -34,13 +34,15 @@ struct S s;
 // CHECK-LABEL: define dso_local void @f(
 // CHECK-SAME: <1 x i8> [[X:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    store <1 x i8> [[X]], ptr @s, align 1, !tbaa [[TBAA2:![0-9]+]]
+// CHECK-NEXT:    [[TMP0:%.*]] = extractelement <1 x i8> [[X]], i64 0
+// CHECK-NEXT:    store i8 [[TMP0]], ptr @s, align 1, !tbaa [[TBAA2:![0-9]+]]
 // CHECK-NEXT:    ret void
 //
 // CHECK-CXX-LABEL: define dso_local void @_Z1fu6__mfp8(
 // CHECK-CXX-SAME: <1 x i8> [[X:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 // CHECK-CXX-NEXT:  [[ENTRY:.*:]]
-// CHECK-CXX-NEXT:    store <1 x i8> [[X]], ptr @s, align 1, !tbaa [[TBAA2:![0-9]+]]
+// CHECK-CXX-NEXT:    [[TMP0:%.*]] = extractelement <1 x i8> [[X]], i64 0
+// CHECK-CXX-NEXT:    store i8 [[TMP0]], ptr @s, align 1, !tbaa [[TBAA2:![0-9]+]]
 // CHECK-CXX-NEXT:    ret void
 //
 void f(__mfp8 x) {

@@ -465,7 +465,18 @@ def MyOp : ... {
 The following builders are generated:
 
 ```c++
+// All result-types/operands/properties/discardable attributes have one
+// aggregate parameter. `Properties` is the properties structure of
+// `MyOp`.
+static void build(OpBuilder &odsBuilder, OperationState &odsState,
+                  TypeRange resultTypes,
+                  ValueRange operands,
+                  Properties properties,
+                  ArrayRef<NamedAttribute> discardableAttributes = {});
+
 // All result-types/operands/attributes have one aggregate parameter.
+// Inherent properties and discardable attributes are mixed together in the
+//  `attributes` dictionary.
 static void build(OpBuilder &odsBuilder, OperationState &odsState,
                   TypeRange resultTypes,
                   ValueRange operands,
@@ -499,19 +510,27 @@ static void build(OpBuilder &odsBuilder, OperationState &odsState,
 // All operands/attributes have aggregate parameters.
 // Generated if return type can be inferred.
 static void build(OpBuilder &odsBuilder, OperationState &odsState,
+                  ValueRange operands,
+                  Properties properties,
+                  ArrayRef<NamedAttribute> discardableAttributes);
+
+// All operands/attributes have aggregate parameters.
+// Generated if return type can be inferred. Uses the legacy merged attribute
+// dictionary.
+static void build(OpBuilder &odsBuilder, OperationState &odsState,
                   ValueRange operands, ArrayRef<NamedAttribute> attributes);
 
 // (And manually specified builders depending on the specific op.)
 ```
 
-The first form provides basic uniformity so that we can create ops using the
-same form regardless of the exact op. This is particularly useful for
+The first two forms provide basic uniformity so that we can create ops using
+the same form regardless of the exact op. This is particularly useful for
 implementing declarative pattern rewrites.
 
-The second and third forms are good for use in manually written code, given that
+The third and fourth forms are good for use in manually written code, given that
 they provide better guarantee via signatures.
 
-The third form will be generated if any of the op's attribute has different
+The fourth form will be generated if any of the op's attribute has different
 `Attr.returnType` from `Attr.storageType` and we know how to build an attribute
 from an unwrapped value (i.e., `Attr.constBuilderCall` is defined.)
 Additionally, for the third form, if an attribute appearing later in the
@@ -1479,22 +1498,17 @@ optionality, default values, etc.:
 *   `AllAttrOf`: adapts an attribute with
     [multiple constraints](#combining-constraints).
 
-### Enum attributes
+## Enum definition
 
-Some attributes can only take values from a predefined enum, e.g., the
-comparison kind of a comparison op. To define such attributes, ODS provides
-several mechanisms: `IntEnumAttr`, and `BitEnumAttr`.
+MLIR is capabable of generating C++ enums, both those that represent a set
+of values drawn from a list or that can hold a combination of flags
+using the `IntEnum` and `BitEnum` classes, respectively.
 
-*   `IntEnumAttr`: each enum case is an integer, the attribute is stored as a
-    [`IntegerAttr`][IntegerAttr] in the op.
-*   `BitEnumAttr`: each enum case is a either the empty case, a single bit,
-    or a group of single bits, and the attribute is stored as a
-    [`IntegerAttr`][IntegerAttr] in the op.
-
-All these `*EnumAttr` attributes require fully specifying all of the allowed
-cases via their corresponding `*EnumAttrCase`. With this, ODS is able to
+All these `IntEnum` and `BitEnum` classes require fully specifying all of the allowed
+cases via a `EnumCase` or `BitEnumCase` subclass, respectively. With this, ODS is able to
 generate additional verification to only accept allowed cases. To facilitate the
-interaction between `*EnumAttr`s and their C++ consumers, the
+interaction between tablegen enums and the attributes or properties that wrap them and
+to make them easier to use in C++, the
 [`EnumsGen`][EnumsGen] TableGen backend can generate a few common utilities: a
 C++ enum class, `llvm::DenseMapInfo` for the enum class, conversion functions
 from/to strings. This is controlled via the `-gen-enum-decls` and
@@ -1503,10 +1517,10 @@ from/to strings. This is controlled via the `-gen-enum-decls` and
 For example, given the following `EnumAttr`:
 
 ```tablegen
-def Case15: I32EnumAttrCase<"Case15", 15>;
-def Case20: I32EnumAttrCase<"Case20", 20>;
+def Case15: I32EnumCase<"Case15", 15>;
+def Case20: I32EnumCase<"Case20", 20>;
 
-def MyIntEnum: I32EnumAttr<"MyIntEnum", "An example int enum",
+def MyIntEnum: I32Enum<"MyIntEnum", "An example int enum",
                            [Case15, Case20]> {
   let cppNamespace = "Outer::Inner";
   let stringToSymbolFnName = "ConvertToEnum";
@@ -1592,14 +1606,17 @@ std::optional<MyIntEnum> symbolizeMyIntEnum(uint32_t value) {
 Similarly for the following `BitEnumAttr` definition:
 
 ```tablegen
-def None: I32BitEnumAttrCaseNone<"None">;
-def Bit0: I32BitEnumAttrCaseBit<"Bit0", 0, "tagged">;
-def Bit1: I32BitEnumAttrCaseBit<"Bit1", 1>;
-def Bit2: I32BitEnumAttrCaseBit<"Bit2", 2>;
-def Bit3: I32BitEnumAttrCaseBit<"Bit3", 3>;
+def None: I32BitEnumCaseNone<"None">;
+def Bit0: I32BitEnumCaseBit<"Bit0", 0, "tagged">;
+def Bit1: I32BitEnumCaseBit<"Bit1", 1>;
+def Bit2: I32BitEnumCaseBit<"Bit2", 2>;
+def Bit3: I32BitEnumCaseBit<"Bit3", 3>;
 
-def MyBitEnum: BitEnumAttr<"MyBitEnum", "An example bit enum",
-                           [None, Bit0, Bit1, Bit2, Bit3]>;
+def MyBitEnum: I32BitEnum<"MyBitEnum", "An example bit enum",
+                           [None, Bit0, Bit1, Bit2, Bit3]> {
+  // Note: this is the default value, and is listed for illustrative purposes.
+  let separator = "|";
+}
 ```
 
 We can have:
@@ -1718,6 +1735,26 @@ std::optional<MyBitEnum> symbolizeMyBitEnum(uint32_t value) {
   return static_cast<MyBitEnum>(value);
 }
 ```
+
+### Wrapping enums in attributes
+
+There are several mechanisms for creating an `Attribute` whose values are
+taken from a `*Enum`.
+
+The most common of these is to use the `EnumAttr` class, which takes
+an `EnumInfo` (either a `IntEnum` or `BitEnum`) as a parameter and constructs
+an attribute that holds one argument - value of the enum. This attribute
+is defined within a dialect and can have its assembly format customized to,
+for example, print angle brackets around the enum value or assign a mnemonic.
+
+An older form involves using the `*IntEnumAttr` and `*BitEnumATtr` classes
+and their corresponding `*EnumAttrCase` classes (which can be used
+anywhere a `*EnumCase` is needed). These classes store their values
+as a `SignlessIntegerAttr` of their bitwidth, imposing the constraint on it
+that it has a value within the valid range of the enum. If their
+`genSpecializedAttr` parameter is set, they will also generate a
+wrapper attribute instead of using a bare signless integer attribute
+for storage.
 
 ## Debugging Tips
 

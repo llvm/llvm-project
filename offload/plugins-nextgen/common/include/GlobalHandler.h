@@ -67,15 +67,16 @@ extern "C" {
 extern int __attribute__((weak)) __llvm_write_custom_profile(
     const char *Target, const __llvm_profile_data *DataBegin,
     const __llvm_profile_data *DataEnd, const char *CountersBegin,
-    const char *CountersEnd, const char *NamesBegin, const char *NamesEnd);
+    const char *CountersEnd, const char *NamesBegin, const char *NamesEnd,
+    const uint64_t *VersionOverride);
 }
-
 /// PGO profiling data extracted from a GPU device
 struct GPUProfGlobals {
   SmallVector<int64_t> Counts;
   SmallVector<__llvm_profile_data> Data;
   SmallVector<uint8_t> NamesData;
   Triple TargetTriple;
+  uint64_t Version = INSTR_PROF_RAW_VERSION;
 
   void dump() const;
   Error write() const;

@@ -1030,9 +1030,7 @@ def add_and_or_is_add : PatFrags<(ops node:$lhs, node:$rhs),
    return CurDAG->isADDLike(SDValue(N,0));
 }]> {
   let GISelPredicateCode = [{
-     return MI.getOpcode() == TargetOpcode::G_ADD ||
-            (MI.getOpcode() == TargetOpcode::G_OR &&
-             MI.getFlag(MachineInstr::MIFlag::Disjoint));
+     return mi_match(MI, MRI, m_GAddLike(m_Reg(), m_Reg()));
   }];
 }
 
@@ -6753,6 +6751,23 @@ def : Pat<(v4i32 (concat_vectors
                  (v2i32 (trunc (AArch64vlshr (v2i64 V128:$Vm), (i32 32)))))),
           (UZP2v4i32 V128:$Vn, V128:$Vm)>;
 
+// extract_subvec(anyext) can use zip. Check for one use on the anyext, otherwise
+// the extract_subvector can be free.
+let HasOneUse = 1 in
+def anyext_oneuse: PatFrag<(ops node:$src0), (anyext $src0)>;
+def : Pat<(v4i16 (extract_subvector (v8i16 (anyext_oneuse (v8i8 V64:$Vn))), (i64 0))),
+          (ZIP1v8i8 V64:$Vn, V64:$Vn)>;
+def : Pat<(v2i32 (extract_subvector (v4i32 (anyext_oneuse (v4i16 V64:$Vn))), (i64 0))),
+          (ZIP1v4i16 V64:$Vn, V64:$Vn)>;
+def : Pat<(v1i64 (extract_subvector (v2i64 (anyext_oneuse (v2i32 V64:$Vn))), (i64 0))),
+          (ZIP1v2i32 V64:$Vn, V64:$Vn)>;
+def : Pat<(v4i16 (extract_subvector (v8i16 (anyext_oneuse (v8i8 V64:$Vn))), (i64 4))),
+          (ZIP2v8i8 V64:$Vn, V64:$Vn)>;
+def : Pat<(v2i32 (extract_subvector (v4i32 (anyext_oneuse (v4i16 V64:$Vn))), (i64 2))),
+          (ZIP2v4i16 V64:$Vn, V64:$Vn)>;
+def : Pat<(v1i64 (extract_subvector (v2i64 (anyext_oneuse (v2i32 V64:$Vn))), (i64 1))),
+          (ZIP2v2i32 V64:$Vn, V64:$Vn)>;
+
 //----------------------------------------------------------------------------
 // AdvSIMD TBL/TBX instructions
 //----------------------------------------------------------------------------
@@ -7716,6 +7731,7 @@ def MOVIv2d_ns   : SIMDModifiedImmVectorNoShift<1, 1, 0, 0b1110, V128,
                                                 "movi", ".2d",
                    [(set (v2i64 V128:$Rd), (AArch64movi_edit imm0_255:$imm8))]>;
 
+let Predicates = [HasNEON] in {
 def : Pat<(v2i64 immAllZerosV), (MOVIv2d_ns (i32 0))>;
 def : Pat<(v4i32 immAllZerosV), (MOVIv2d_ns (i32 0))>;
 def : Pat<(v8i16 immAllZerosV), (MOVIv2d_ns (i32 0))>;
@@ -7724,6 +7740,23 @@ def : Pat<(v2f64 immAllZerosV), (MOVIv2d_ns (i32 0))>;
 def : Pat<(v4f32 immAllZerosV), (MOVIv2d_ns (i32 0))>;
 def : Pat<(v8f16 immAllZerosV), (MOVIv2d_ns (i32 0))>;
 def : Pat<(v8bf16 immAllZerosV), (MOVIv2d_ns (i32 0))>;
+
+// Prefer NEON instructions when zeroing ZPRs because they are potentially zero-latency.
+let AddedComplexity = 5 in {
+def : Pat<(nxv2i64 (splat_vector (i64 0))), (SUBREG_TO_REG (i32 0), (MOVIv2d_ns (i32 0)), zsub)>;
+def : Pat<(nxv4i32 (splat_vector (i32 0))), (SUBREG_TO_REG (i32 0), (MOVIv2d_ns (i32 0)), zsub)>;
+def : Pat<(nxv8i16 (splat_vector (i32 0))), (SUBREG_TO_REG (i32 0), (MOVIv2d_ns (i32 0)), zsub)>;
+def : Pat<(nxv16i8 (splat_vector (i32 0))), (SUBREG_TO_REG (i32 0), (MOVIv2d_ns (i32 0)), zsub)>;
+def : Pat<(nxv2f64 (splat_vector (f64 fpimm0))), (SUBREG_TO_REG (i32 0), (MOVIv2d_ns (i32 0)), zsub)>;
+def : Pat<(nxv2f32 (splat_vector (f32 fpimm0))), (SUBREG_TO_REG (i32 0), (MOVIv2d_ns (i32 0)), zsub)>;
+def : Pat<(nxv4f32 (splat_vector (f32 fpimm0))), (SUBREG_TO_REG (i32 0), (MOVIv2d_ns (i32 0)), zsub)>;
+def : Pat<(nxv2f16 (splat_vector (f16 fpimm0))), (SUBREG_TO_REG (i32 0), (MOVIv2d_ns (i32 0)), zsub)>;
+def : Pat<(nxv4f16 (splat_vector (f16 fpimm0))), (SUBREG_TO_REG (i32 0), (MOVIv2d_ns (i32 0)), zsub)>;
+def : Pat<(nxv8f16 (splat_vector (f16 fpimm0))), (SUBREG_TO_REG (i32 0), (MOVIv2d_ns (i32 0)), zsub)>;
+def : Pat<(nxv2bf16 (splat_vector (bf16 fpimm0))), (SUBREG_TO_REG (i32 0), (MOVIv2d_ns (i32 0)), zsub)>;
+def : Pat<(nxv4bf16 (splat_vector (bf16 fpimm0))), (SUBREG_TO_REG (i32 0), (MOVIv2d_ns (i32 0)), zsub)>;
+def : Pat<(nxv8bf16 (splat_vector (bf16 fpimm0))), (SUBREG_TO_REG (i32 0), (MOVIv2d_ns (i32 0)), zsub)>;
+}
 
 def : Pat<(v2i64 immAllOnesV), (MOVIv2d_ns (i32 255))>;
 def : Pat<(v4i32 immAllOnesV), (MOVIv2d_ns (i32 255))>;
@@ -7745,6 +7778,7 @@ def : Pat<(v1i64 immAllOnesV), (EXTRACT_SUBREG (MOVIv2d_ns (i32 255)), dsub)>;
 def : Pat<(v2i32 immAllOnesV), (EXTRACT_SUBREG (MOVIv2d_ns (i32 255)), dsub)>;
 def : Pat<(v4i16 immAllOnesV), (EXTRACT_SUBREG (MOVIv2d_ns (i32 255)), dsub)>;
 def : Pat<(v8i8  immAllOnesV), (EXTRACT_SUBREG (MOVIv2d_ns (i32 255)), dsub)>;
+}
 
 // EDIT per word & halfword: 2s, 4h, 4s, & 8h
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in
@@ -10564,7 +10598,7 @@ let Predicates = [HasLSFE] in {
   defm LDFMAXNML  : AtomicFPLoad<0b01, 0b110, "ldfmaxnml">;
   defm LDFMINNMA  : AtomicFPLoad<0b10, 0b111, "ldfminnma">;
   defm LDFMINNMAL : AtomicFPLoad<0b11, 0b111, "ldfminnmal">;
-  defm LDFMINMN   : AtomicFPLoad<0b00, 0b111, "ldfminnm">;
+  defm LDFMINNM   : AtomicFPLoad<0b00, 0b111, "ldfminnm">;
   defm LDFMINNML  : AtomicFPLoad<0b01, 0b111, "ldfminnml">;
   // BFloat16
   def LDBFADDA    : BaseAtomicFPLoad<FPR16, 0b00, 0b10, 0b000, "ldbfadda">;

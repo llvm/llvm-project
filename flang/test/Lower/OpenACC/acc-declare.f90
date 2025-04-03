@@ -200,7 +200,7 @@ module acc_declare
 ! CHECK-LABEL: func.func @_QMacc_declarePacc_declare_in_func() -> f32 {
 ! CHECK: %[[DEVICE_RESIDENT:.*]] = acc.declare_device_resident varPtr(%{{.*}}#0 : !fir.ref<!fir.array<1024xf32>>) -> !fir.ref<!fir.array<1024xf32>> {name = "a"}
 ! CHECK: %[[TOKEN:.*]] = acc.declare_enter dataOperands(%[[DEVICE_RESIDENT]] : !fir.ref<!fir.array<1024xf32>>)
-! CHECK: %[[LOAD:.*]] = fir.load %{{.*}}#1 : !fir.ref<f32>
+! CHECK: %[[LOAD:.*]] = fir.load %{{.*}}#0 : !fir.ref<f32>
 ! CHECK: acc.declare_exit token(%[[TOKEN]]) dataOperands(%[[DEVICE_RESIDENT]] : !fir.ref<!fir.array<1024xf32>>)
 ! CHECK: acc.delete accPtr(%[[DEVICE_RESIDENT]] : !fir.ref<!fir.array<1024xf32>>) {dataClause = #acc<data_clause acc_declare_device_resident>, name = "a"}
 ! CHECK: return %[[LOAD]] : f32
@@ -243,7 +243,7 @@ module acc_declare
 
 ! CHECK: fir.if
 ! CHECK: fir.freemem %{{.*}} : !fir.heap<!fir.array<?xi32>>
-! CHECK: fir.store %{{.*}} to %{{.*}}#1 {acc.declare_action = #acc.declare_action<postDealloc = @_QMacc_declareFacc_declare_allocateEa_acc_declare_update_desc_post_dealloc>} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK: fir.store %{{.*}} to %{{.*}}#0 {acc.declare_action = #acc.declare_action<postDealloc = @_QMacc_declareFacc_declare_allocateEa_acc_declare_update_desc_post_dealloc>} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK: }
 
   end subroutine

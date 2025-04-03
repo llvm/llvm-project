@@ -1518,6 +1518,50 @@ static void verifyDiagnosticWording(const Record &Diag) {
   // runs into odd situations like [[clang::warn_unused_result]],
   // #pragma clang, or --unwindlib=libgcc.
 }
+
+/// ClangDiagsCompatIDsEmitter - Emit a set of 'compatibility diagnostic ids'
+/// that map to a set of 2 regular diagnostic ids each and which are used to
+/// simplify emitting compatibility warnings.
+void clang::EmitClangDiagsCompatIDs(const llvm::RecordKeeper &Records,
+                                    llvm::raw_ostream &OS,
+                                    const std::string &Component) {
+  ArrayRef<const Record *> Ids =
+      Records.getAllDerivedDefinitions("CompatWarningId");
+
+  StringRef PrevComponent = "";
+  for (auto [I, R] : enumerate(make_pointee_range(Ids))) {
+    StringRef DiagComponent = R.getValueAsString("Component");
+    if (!Component.empty() && Component != DiagComponent)
+      continue;
+
+    StringRef CompatDiagName = R.getValueAsString("Name");
+    StringRef Diag = R.getValueAsString("Diag");
+    StringRef DiagPre = R.getValueAsString("DiagPre");
+    int64_t CXXStdVer = R.getValueAsInt("Std");
+
+    // We don't want to create empty enums since some compilers (including
+    // Clang) warn about that, so these macros are used to avoid having to
+    // unconditionally write 'enum {' and '};' in the headers.
+    if (PrevComponent != DiagComponent) {
+      if (!PrevComponent.empty())
+        OS << "DIAG_COMPAT_IDS_END()\n";
+      OS << "DIAG_COMPAT_IDS_BEGIN()\n";
+      PrevComponent = DiagComponent;
+    }
+
+    // FIXME: We sometimes define multiple compat diagnostics with the same
+    // name, e.g. 'constexpr_body_invalid_stmt' exists for C++14/20/23. It would
+    // be nice if we could combine all of them into a single compatibility diag
+    // id.
+    OS << "DIAG_COMPAT_ID(" << I << ",";
+    OS << CompatDiagName << "," << CXXStdVer << "," << Diag << "," << DiagPre;
+    OS << ")\n";
+  }
+
+  if (!PrevComponent.empty())
+    OS << "DIAG_COMPAT_IDS_END()\n";
+}
+
 /// ClangDiagsEnumsEmitter - The top-level class emits .def files containing
 /// declarations of Clang diagnostic enums for selects.
 void clang::EmitClangDiagsEnums(const RecordKeeper &Records, raw_ostream &OS,

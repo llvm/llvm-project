@@ -279,13 +279,22 @@ void RawBufferAtomicCmpswapOp::getCanonicalizationPatterns(
 //===----------------------------------------------------------------------===//
 LogicalResult WMMAOp::verify() {
   Type sourceAType = getSourceA().getType();
+  Type sourceBType = getSourceB().getType();
   Type destType = getDestC().getType();
 
   VectorType sourceVectorAType = dyn_cast<VectorType>(sourceAType);
+  VectorType sourceVectorBType = dyn_cast<VectorType>(sourceBType);
   VectorType destVectorType = dyn_cast<VectorType>(destType);
 
   Type sourceAElemType = sourceVectorAType.getElementType();
+  Type sourceBElemType = sourceVectorBType.getElementType();
   Type destElemType = destVectorType.getElementType();
+
+  if (sourceVectorAType.getNumElements() !=
+      sourceVectorBType.getNumElements()) {
+    return emitOpError("source vectors have different lengths: ")
+           << sourceVectorAType << " vs. " << sourceVectorBType;
+  }
 
   bool isDestFloat = isa<Float32Type, Float16Type, BFloat16Type>(destElemType);
   bool isSrcFloat =
@@ -300,6 +309,13 @@ LogicalResult WMMAOp::verify() {
     return emitOpError("Expected int sources with int destination");
   }
 
+  if (sourceAElemType != sourceBElemType &&
+      !(isa<Float8E5M2Type, Float8E4M3FNType>(sourceAElemType) &&
+        isa<Float8E5M2Type, Float8E4M3FNType>(sourceBElemType))) {
+    return emitOpError(
+               "source element types much match (except for fp8) but have ")
+           << sourceAType << " and " << sourceBType;
+  }
   return success();
 }
 
@@ -325,22 +341,24 @@ LogicalResult MFMAOp::verify() {
   }
 
   Type sourceBType = getSourceB().getType();
-  if (isa<Float8E5M2FNUZType, Float8E4M3FNUZType>(sourceElem)) {
+  if (sourceElem.isFloat(8) || sourceElem.isFloat(6) || sourceElem.isFloat(4)) {
     int64_t sourceBLen = 1;
     Type sourceBElem = sourceBType;
     if (auto sourceBVector = llvm::dyn_cast<VectorType>(sourceBType)) {
       sourceBLen = sourceBVector.getNumElements();
       sourceBElem = sourceBVector.getElementType();
     }
-    if (!isa<Float8E5M2FNUZType, Float8E4M3FNUZType>(sourceBElem))
-      return emitOpError("expected both source operands to have f8 elements");
+    if (!sourceBElem.isFloat(8) && !sourceBElem.isFloat(6) &&
+        !sourceBElem.isFloat(4))
+      return emitOpError("expected both source operands to have small-float "
+                         "elements if one does");
     if (sourceLen != sourceBLen)
       return emitOpError(
-          "expected both f8 source vectors to have the same length");
+          "expected both small-float source vectors to have the same length");
   } else {
     if (sourceType != sourceBType)
-      return emitOpError(
-          "expected both non-f8 source operand types to match exactly");
+      return emitOpError("expected both non-small-float source operand types "
+                         "to match exactly");
   }
   // Normalize the wider integer types the compiler expects to i8
   if (sourceElem.isInteger(32)) {

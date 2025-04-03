@@ -448,6 +448,23 @@ class LLVM_OneResultIntrOp<string mnem, list<int> overloadedResults = [],
                   requiresFastmath, /*requiresOpBundles=*/0, immArgPositions,
                   immArgAttrNames>;
 
+// Base class for LLVM intrinsic operations returning two results. Places the
+// intrinsic into the LLVM dialect and prefixes its name with "intr.". This is
+// similar to LLVM_ZeroResultIntrOp but allows one to define Ops returning two
+// results. Additionally, the overloadedResults list should contain "0", "1"
+// if the result must be used to resolve overloaded intrinsics, or remain
+// empty otherwise.
+class LLVM_TwoResultIntrOp<string mnem, list<int> overloadedResults = [],
+                           list<int> overloadedOperands = [],
+                           list<Trait> traits = [],
+                           bit requiresFastmath = 0,
+                           list<int> immArgPositions = [],
+                           list<string> immArgAttrNames = []>
+    : LLVM_IntrOp<mnem, overloadedResults, overloadedOperands, traits, 2,
+                  /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
+                  requiresFastmath, /*requiresOpBundles=*/0, immArgPositions,
+                  immArgAttrNames>;
+
 def LLVM_OneResultOpBuilder :
   OpBuilder<(ins "Type":$resultType, "ValueRange":$operands,
     CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),

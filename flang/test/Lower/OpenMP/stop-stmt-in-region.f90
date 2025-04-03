@@ -87,7 +87,7 @@ end
 ! CHECK:         omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[VAL_0:.*]] : !fir.ref<i32>) {
 ! CHECK-NEXT:      omp.loop_nest (%[[VAL_6:.*]]) : i32 = (%[[VAL_3]]) to (%[[VAL_4]]) inclusive step (%[[VAL_5]]) {
 ! CHECK:             %[[VAL_0_DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest_stop_in_region4Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:             fir.store %[[VAL_6]] to %[[VAL_0_DECL]]#1 : !fir.ref<i32>
+! CHECK:             hlfir.assign %[[VAL_6]] to %[[VAL_0_DECL]]#0 : i32, !fir.ref<i32>
 ! CHECK:             cf.br ^bb1
 ! CHECK:           ^bb1:
 ! CHECK:             %[[VAL_7:.*]] = arith.constant 3 : i32

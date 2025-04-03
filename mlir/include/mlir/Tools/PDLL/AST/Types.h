@@ -198,6 +198,7 @@ public:
 
 //===----------------------------------------------------------------------===//
 // TypeRangeType
+//===----------------------------------------------------------------------===//
 
 /// This class represents a PDLL type that corresponds to an mlir::TypeRange.
 class TypeRangeType : public RangeType {
@@ -213,6 +214,7 @@ public:
 
 //===----------------------------------------------------------------------===//
 // ValueRangeType
+//===----------------------------------------------------------------------===//
 
 /// This class represents a PDLL type that corresponds to an mlir::ValueRange.
 class ValueRangeType : public RangeType {

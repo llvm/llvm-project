@@ -1289,7 +1289,7 @@ struct FormatStyle {
   BitFieldColonSpacingStyle BitFieldColonSpacing;
 
   /// The number of columns to use to indent the contents of braced init lists.
-  /// If unset, ``ContinuationIndentWidth`` is used.
+  /// If unset or negative, ``ContinuationIndentWidth`` is used.
   /// \code
   ///   AlignAfterOpenBracket: AlwaysBreak
   ///   BracedInitializerIndentWidth: 2
@@ -1319,7 +1319,7 @@ struct FormatStyle {
   ///   }
   /// \endcode
   /// \version 17
-  std::optional<unsigned> BracedInitializerIndentWidth;
+  int BracedInitializerIndentWidth;
 
   /// Different ways to wrap braces after control statements.
   enum BraceWrappingAfterControlStatementStyle : int8_t {
@@ -2703,6 +2703,39 @@ struct FormatStyle {
   /// Defines in which cases to put empty line before access modifiers.
   /// \version 12
   EmptyLineBeforeAccessModifierStyle EmptyLineBeforeAccessModifier;
+
+  /// Styles for ``enum`` trailing commas.
+  enum EnumTrailingCommaStyle : int8_t {
+    /// Don't insert or remove trailing commas.
+    /// \code
+    ///   enum { a, b, c, };
+    ///   enum Color { red, green, blue };
+    /// \endcode
+    ETC_Leave,
+    /// Insert trailing commas.
+    /// \code
+    ///   enum { a, b, c, };
+    ///   enum Color { red, green, blue, };
+    /// \endcode
+    ETC_Insert,
+    /// Remove trailing commas.
+    /// \code
+    ///   enum { a, b, c };
+    ///   enum Color { red, green, blue };
+    /// \endcode
+    ETC_Remove,
+  };
+
+  /// Insert a comma (if missing) or remove the comma at the end of an ``enum``
+  /// enumerator list.
+  /// \warning
+  ///  Setting this option to any value other than ``Leave`` could lead to
+  ///  incorrect code formatting due to clang-format's lack of complete semantic
+  ///  information. As such, extra care should be taken to review code changes
+  ///  made by this option.
+  /// \endwarning
+  /// \version 21
+  EnumTrailingCommaStyle EnumTrailingComma;
 
   /// If ``true``, clang-format detects whether function calls and
   /// definitions are formatted with one parameter per line.
@@ -5323,6 +5356,7 @@ struct FormatStyle {
            DisableFormat == R.DisableFormat &&
            EmptyLineAfterAccessModifier == R.EmptyLineAfterAccessModifier &&
            EmptyLineBeforeAccessModifier == R.EmptyLineBeforeAccessModifier &&
+           EnumTrailingComma == R.EnumTrailingComma &&
            ExperimentalAutoDetectBinPacking ==
                R.ExperimentalAutoDetectBinPacking &&
            FixNamespaceComments == R.FixNamespaceComments &&

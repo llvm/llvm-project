@@ -104,7 +104,7 @@ template <size_t Bits> struct DyadicFloat {
     normalize();
   }
 
-  LIBC_INLINE constexpr DyadicFloat(Sign s, int e, MantissaType m)
+  LIBC_INLINE constexpr DyadicFloat(Sign s, int e, const MantissaType &m)
       : sign(s), exponent(e), mantissa(m) {
     normalize();
   }
@@ -335,7 +335,7 @@ template <size_t Bits> struct DyadicFloat {
                  .get_val();
 
     MantissaType round_mask =
-        shift > MantissaType::BITS ? 0 : MantissaType(1) << (shift - 1);
+        shift - 1 >= MantissaType::BITS ? 0 : MantissaType(1) << (shift - 1);
     MantissaType sticky_mask = round_mask - MantissaType(1);
 
     bool round_bit = !(mantissa & round_mask).is_zero();
@@ -434,7 +434,12 @@ template <size_t Bits> struct DyadicFloat {
     if (exponent > 0) {
       new_mant <<= exponent;
     } else {
-      new_mant >>= (-exponent);
+      // Cast the exponent to size_t before negating it, rather than after,
+      // to avoid undefined behavior negating INT_MIN as an integer (although
+      // exponents coming in to this function _shouldn't_ be that large). The
+      // result should always end up as a positive size_t.
+      size_t shift = -static_cast<size_t>(exponent);
+      new_mant >>= shift;
     }
 
     if (sign.is_neg()) {
@@ -455,7 +460,11 @@ template <size_t Bits> struct DyadicFloat {
       if (exponent > 0) {
         new_mant <<= exponent;
       } else if (exponent < 0) {
-        size_t shift = -exponent;
+        // Cast the exponent to size_t before negating it, rather than after,
+        // to avoid undefined behavior negating INT_MIN as an integer (although
+        // exponents coming in to this function _shouldn't_ be that large). The
+        // result should always end up as a positive size_t.
+        size_t shift = -static_cast<size_t>(exponent);
         new_mant >>= shift;
         round_dir = rounding_direction(mantissa, shift, sign);
         if (round_dir > 0)

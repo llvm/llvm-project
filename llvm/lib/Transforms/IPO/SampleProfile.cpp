@@ -562,12 +562,6 @@ protected:
   /// used to generate the current profile.
   std::shared_ptr<ProfileSymbolList> PSL;
 
-  /// Total number of samples collected in this profile.
-  ///
-  /// This is the sum of all the samples collected in all the functions executed
-  /// at runtime.
-  uint64_t TotalCollectedSamples = 0;
-
   // Information recorded when we declined to inline a call site
   // because we have determined it is too cold is accumulated for
   // each callee function. Initially this is just the entry count.
@@ -629,7 +623,8 @@ inline void SampleProfileInference<Function>::findUnlikelyJumps(
     const Instruction *TI = BB->getTerminator();
     // Check if a block ends with InvokeInst and mark non-taken branch unlikely.
     // In that case block Succ should be a landing pad
-    if (Successors[BB].size() == 2 && Successors[BB].back() == Succ) {
+    const auto &Succs = Successors[BB];
+    if (Succs.size() == 2 && Succs.back() == Succ) {
       if (isa<InvokeInst>(TI)) {
         Jump.IsUnlikely = true;
       }
@@ -1272,8 +1267,7 @@ bool SampleProfileLoader::tryInlineCandidate(
   // Now populate the list of newly exposed call sites.
   if (InlinedCallSites) {
     InlinedCallSites->clear();
-    for (auto &I : IFI.InlinedCallSites)
-      InlinedCallSites->push_back(I);
+    llvm::append_range(*InlinedCallSites, IFI.InlinedCallSites);
   }
 
   if (FunctionSamples::ProfileIsCS)
@@ -2181,10 +2175,6 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
   if (FunctionSamples::ProfileIsProbeBased &&
       rejectHighStalenessProfile(M, PSI, Reader->getProfiles()))
     return false;
-
-  // Compute the total number of samples collected in this profile.
-  for (const auto &I : Reader->getProfiles())
-    TotalCollectedSamples += I.second.getTotalSamples();
 
   auto Remapper = Reader->getRemapper();
   // Populate the symbol map.

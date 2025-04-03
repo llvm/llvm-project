@@ -6,17 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/unistd/close.h"
 #include "src/unistd/link.h"
 #include "src/unistd/unlink.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 #include <sys/stat.h>
 
-TEST(LlvmLibcLinkTest, CreateAndUnlink) {
+using LlvmLibcLinkTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+
+TEST_F(LlvmLibcLinkTest, CreateAndUnlink) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   constexpr const char *FILENAME = "link.test";
   auto TEST_FILE = libc_make_test_file_path(FILENAME);
@@ -28,7 +30,6 @@ TEST(LlvmLibcLinkTest, CreateAndUnlink) {
   //   2. Create a link to that file.
   //   3. Open the link to check that the link was created.
   //   4. Cleanup the file and its link.
-  LIBC_NAMESPACE::libc_errno = 0;
   int write_fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
   ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(write_fd, 0);
@@ -44,7 +45,7 @@ TEST(LlvmLibcLinkTest, CreateAndUnlink) {
   ASSERT_THAT(LIBC_NAMESPACE::unlink(TEST_FILE_LINK), Succeeds(0));
 }
 
-TEST(LlvmLibcLinkTest, LinkToNonExistentFile) {
+TEST_F(LlvmLibcLinkTest, LinkToNonExistentFile) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
   ASSERT_THAT(LIBC_NAMESPACE::link("non-existent-file", "bad-link"),
               Fails(ENOENT));

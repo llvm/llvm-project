@@ -303,7 +303,7 @@ define <3 x i32> @load_v3i8_zext_to_3xi32(ptr %src) {
 ; BE-NEXT:    add x8, x0, #2
 ; BE-NEXT:    ldr s0, [sp, #12]
 ; BE-NEXT:    rev32 v0.8b, v0.8b
-; BE-NEXT:    ushll v0.8h, v0.8b, #0
+; BE-NEXT:    zip1 v0.8b, v0.8b, v0.8b
 ; BE-NEXT:    ld1 { v0.b }[4], [x8]
 ; BE-NEXT:    ushll v0.4s, v0.4h, #0
 ; BE-NEXT:    and v0.16b, v0.16b, v1.16b

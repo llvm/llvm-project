@@ -360,7 +360,7 @@ static bool shouldInstrumentReadWriteFromAddress(const Module *M, Value *Addr) {
     if (GV->hasSection()) {
       StringRef SectionName = GV->getSection();
       // Check if the global is in the PGO counters section.
-      auto OF = Triple(M->getTargetTriple()).getObjectFormat();
+      auto OF = M->getTargetTriple().getObjectFormat();
       if (SectionName.ends_with(
               getInstrProfSectionName(IPSK_cnts, OF, /*AddSegmentInfo=*/false)))
         return false;
@@ -573,7 +573,7 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
     InstrumentationIRBuilder IRB(&F.getEntryBlock(),
                                  F.getEntryBlock().getFirstNonPHIIt());
     Value *ReturnAddress =
-        IRB.CreateIntrinsic(Intrinsic::returnaddress, {}, IRB.getInt32(0));
+        IRB.CreateIntrinsic(Intrinsic::returnaddress, IRB.getInt32(0));
     IRB.CreateCall(TsanFuncEntry, ReturnAddress);
 
     EscapeEnumerator EE(F, "tsan_cleanup", ClHandleCxxExceptions);

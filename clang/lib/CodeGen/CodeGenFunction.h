@@ -14,7 +14,6 @@
 #define LLVM_CLANG_LIB_CODEGEN_CODEGENFUNCTION_H
 
 #include "CGBuilder.h"
-#include "CGDebugInfo.h"
 #include "CGLoopInfo.h"
 #include "CGValue.h"
 #include "CodeGenModule.h"
@@ -48,6 +47,7 @@
 
 namespace llvm {
 class BasicBlock;
+class ConvergenceControlInst;
 class LLVMContext;
 class MDNode;
 class SwitchInst;
@@ -834,6 +834,48 @@ public:
   };
   FPOptions CurFPFeatures;
 
+  class CGAtomicOptionsRAII {
+  public:
+    CGAtomicOptionsRAII(CodeGenModule &CGM_, AtomicOptions AO)
+        : CGM(CGM_), SavedAtomicOpts(CGM.getAtomicOpts()) {
+      CGM.setAtomicOpts(AO);
+    }
+    CGAtomicOptionsRAII(CodeGenModule &CGM_, const AtomicAttr *AA)
+        : CGM(CGM_), SavedAtomicOpts(CGM.getAtomicOpts()) {
+      if (!AA)
+        return;
+      AtomicOptions AO = SavedAtomicOpts;
+      for (auto Option : AA->atomicOptions()) {
+        switch (Option) {
+        case AtomicAttr::remote_memory:
+          AO.remote_memory = true;
+          break;
+        case AtomicAttr::no_remote_memory:
+          AO.remote_memory = false;
+          break;
+        case AtomicAttr::fine_grained_memory:
+          AO.fine_grained_memory = true;
+          break;
+        case AtomicAttr::no_fine_grained_memory:
+          AO.fine_grained_memory = false;
+          break;
+        case AtomicAttr::ignore_denormal_mode:
+          AO.ignore_denormal_mode = true;
+          break;
+        case AtomicAttr::no_ignore_denormal_mode:
+          AO.ignore_denormal_mode = false;
+          break;
+        }
+      }
+      CGM.setAtomicOpts(AO);
+    }
+    ~CGAtomicOptionsRAII() { CGM.setAtomicOpts(SavedAtomicOpts); }
+
+  private:
+    CodeGenModule &CGM;
+    AtomicOptions SavedAtomicOpts;
+  };
+
 public:
   /// ObjCEHValueStack - Stack of Objective-C exception values, used for
   /// rethrows.
@@ -1063,13 +1105,7 @@ public:
 
   public:
     /// Enter a new cleanup scope.
-    explicit LexicalScope(CodeGenFunction &CGF, SourceRange Range)
-        : RunCleanupsScope(CGF), Range(Range),
-          ParentScope(CGF.CurLexicalScope) {
-      CGF.CurLexicalScope = this;
-      if (CGDebugInfo *DI = CGF.getDebugInfo())
-        DI->EmitLexicalBlockStart(CGF.Builder, Range.getBegin());
-    }
+    explicit LexicalScope(CodeGenFunction &CGF, SourceRange Range);
 
     void addLabel(const LabelDecl *label) {
       assert(PerformCleanup && "adding label to dead scope?");
@@ -1078,17 +1114,7 @@ public:
 
     /// Exit this cleanup scope, emitting any accumulated
     /// cleanups.
-    ~LexicalScope() {
-      if (CGDebugInfo *DI = CGF.getDebugInfo())
-        DI->EmitLexicalBlockEnd(CGF.Builder, Range.getEnd());
-
-      // If we should perform a cleanup, force them now.  Note that
-      // this ends the cleanup scope before rescoping any labels.
-      if (PerformCleanup) {
-        ApplyDebugLocation DL(CGF, Range.getEnd());
-        ForceCleanup();
-      }
-    }
+    ~LexicalScope();
 
     /// Force the emission of cleanups now, instead of waiting
     /// until this object is destroyed.
@@ -1649,15 +1675,7 @@ public:
 
   /// Increment the profiler's counter for the given statement by \p StepV.
   /// If \p StepV is null, the default increment is 1.
-  void incrementProfileCounter(const Stmt *S, llvm::Value *StepV = nullptr) {
-    if (CGM.getCodeGenOpts().hasProfileClangInstr() &&
-        !CurFn->hasFnAttribute(llvm::Attribute::NoProfile) &&
-        !CurFn->hasFnAttribute(llvm::Attribute::SkipProfile)) {
-      auto AL = ApplyDebugLocation::CreateArtificial(*this);
-      PGO.emitCounterSetOrIncrement(Builder, S, StepV);
-    }
-    PGO.setCurrentStmt(S);
-  }
+  void incrementProfileCounter(const Stmt *S, llvm::Value *StepV = nullptr);
 
   bool isMCDCCoverageEnabled() const {
     return (CGM.getCodeGenOpts().hasProfileClangInstr() &&
@@ -3335,7 +3353,7 @@ public:
   /// EmitDecl - Emit a declaration.
   ///
   /// This function can be called with a null (unreachable) insert point.
-  void EmitDecl(const Decl &D);
+  void EmitDecl(const Decl &D, bool EvaluateConditionDecl = false);
 
   /// EmitVarDecl - Emit a local variable declaration.
   ///
@@ -3431,6 +3449,8 @@ public:
   void EmitAutoVarCleanups(const AutoVarEmission &emission);
   void emitAutoVarTypeCleanup(const AutoVarEmission &emission,
                               QualType::DestructionKind dtorKind);
+
+  void MaybeEmitDeferredVarDeclInit(const VarDecl *var);
 
   /// Emits the alloca and debug information for the size expressions for each
   /// dimension of an array. It registers the association of its (1-dimensional)
@@ -4150,6 +4170,10 @@ public:
     // some sort of IR.
     EmitStmt(S.getAssociatedStmt());
   }
+  void EmitOpenACCCacheConstruct(const OpenACCCacheConstruct &S) {
+    // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
+    // but in the future we will implement some sort of IR.
+  }
 
   //===--------------------------------------------------------------------===//
   //                         LValue Expression Emission
@@ -4646,10 +4670,10 @@ public:
   llvm::Value *EmitTargetBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
                                      ReturnValueSlot ReturnValue);
 
-  llvm::Value *EmitAArch64CompareBuiltinExpr(llvm::Value *Op, llvm::Type *Ty,
-                                             const llvm::CmpInst::Predicate Fp,
-                                             const llvm::CmpInst::Predicate Ip,
-                                             const llvm::Twine &Name = "");
+  llvm::Value *
+  EmitAArch64CompareBuiltinExpr(llvm::Value *Op, llvm::Type *Ty,
+                                const llvm::CmpInst::Predicate Pred,
+                                const llvm::Twine &Name = "");
   llvm::Value *EmitARMBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
                                   ReturnValueSlot ReturnValue,
                                   llvm::Triple::ArchType Arch);
@@ -5134,7 +5158,8 @@ public:
   void EmitBranchOnBoolExpr(const Expr *Cond, llvm::BasicBlock *TrueBlock,
                             llvm::BasicBlock *FalseBlock, uint64_t TrueCount,
                             Stmt::Likelihood LH = Stmt::LH_None,
-                            const Expr *ConditionalOp = nullptr);
+                            const Expr *ConditionalOp = nullptr,
+                            const VarDecl *ConditionalDecl = nullptr);
 
   /// Given an assignment `*LHS = RHS`, emit a test that checks if \p RHS is
   /// nonnull, if \p LHS is marked _Nonnull.

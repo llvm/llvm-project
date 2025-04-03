@@ -349,4 +349,33 @@ def cuf_DeviceAddressOp : cuf_Op<"device_address", []> {
   let results = (outs fir_ReferenceType:$addr);
 }
 
+def cuf_SharedMemoryOp
+    : cuf_Op<"shared_memory", [AttrSizedOperandSegments, Pure]> {
+  let summary = "Get the pointer to the kernel shared memory";
+
+  let description = [{
+    Return the pointer in the shared memory relative to the specified offset.
+  }];
+
+  let arguments = (ins TypeAttr:$in_type, OptionalAttr<StrAttr>:$uniq_name,
+      OptionalAttr<StrAttr>:$bindc_name, Variadic<AnyIntegerType>:$typeparams,
+      Variadic<AnyIntegerType>:$shape,
+      Optional<AnyIntegerType>:$offset // offset in bytes from the shared memory
+                                       // base address.
+  );
+
+  let results = (outs fir_ReferenceType:$ptr);
+
+  let assemblyFormat = [{
+      (`[` $offset^ `:` type($offset) `]`)? $in_type (`(` $typeparams^ `:` type($typeparams) `)`)?
+        (`,` $shape^ `:` type($shape) )?  attr-dict `->` qualified(type($ptr))
+  }];
+
+  let builders = [OpBuilder<(ins "mlir::Type":$inType,
+      "llvm::StringRef":$uniqName, "llvm::StringRef":$bindcName,
+      CArg<"mlir::ValueRange", "{}">:$typeparams,
+      CArg<"mlir::ValueRange", "{}">:$shape,
+      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
+}
+
 #endif // FORTRAN_DIALECT_CUF_CUF_OPS
