@@ -1202,7 +1202,7 @@ public:
   CallWideningDecision getCallWideningDecision(CallInst *CI,
                                                ElementCount VF) const {
     assert(!VF.isScalar() && "Expected vector VF");
-    return CallWideningDecisions.at(std::make_pair(CI, VF));
+    return CallWideningDecisions.at({CI, VF});
   }
 
   /// Return True if instruction \p I is an optimizable truncate whose operand
@@ -2817,7 +2817,7 @@ LoopVectorizationCostModel::getVectorCallCost(CallInst *CI,
   // We only need to calculate a cost if the VF is scalar; for actual vectors
   // we should already have a pre-calculated cost at each VF.
   if (!VF.isScalar())
-    return CallWideningDecisions.at(std::make_pair(CI, VF)).Cost;
+    return getCallWideningDecision(CI, VF).Cost;
 
   Type *RetTy = CI->getType();
   if (RecurrenceDescriptor::isFMulAddIntrinsic(CI))
@@ -3216,8 +3216,7 @@ bool LoopVectorizationCostModel::isScalarWithPredication(
   case Instruction::Call:
     if (VF.isScalar())
       return true;
-    return CallWideningDecisions.at(std::make_pair(cast<CallInst>(I), VF))
-               .Kind == CM_Scalarize;
+    return getCallWideningDecision(cast<CallInst>(I), VF).Kind == CM_Scalarize;
   case Instruction::Load:
   case Instruction::Store: {
     auto *Ptr = getLoadStorePointerOperand(I);

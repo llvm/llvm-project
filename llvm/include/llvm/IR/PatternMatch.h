@@ -858,51 +858,18 @@ inline bind_ty<const BasicBlock> m_BasicBlock(const BasicBlock *&V) {
   return V;
 }
 
-// TODO: Remove once UseConstant{Int,FP}ForScalableSplat is enabled by default,
-// and use m_Unless(m_ConstantExpr).
-struct immconstant_ty {
-  template <typename ITy> static bool isImmConstant(ITy *V) {
-    if (auto *CV = dyn_cast<Constant>(V)) {
-      if (!isa<ConstantExpr>(CV) && !CV->containsConstantExpression())
-        return true;
-
-      if (CV->getType()->isVectorTy()) {
-        if (auto *Splat = CV->getSplatValue(/*AllowPoison=*/true)) {
-          if (!isa<ConstantExpr>(Splat) &&
-              !Splat->containsConstantExpression()) {
-            return true;
-          }
-        }
-      }
-    }
-    return false;
-  }
-};
-
-struct match_immconstant_ty : immconstant_ty {
-  template <typename ITy> bool match(ITy *V) { return isImmConstant(V); }
-};
-
 /// Match an arbitrary immediate Constant and ignore it.
-inline match_immconstant_ty m_ImmConstant() { return match_immconstant_ty(); }
-
-struct bind_immconstant_ty : immconstant_ty {
-  Constant *&VR;
-
-  bind_immconstant_ty(Constant *&V) : VR(V) {}
-
-  template <typename ITy> bool match(ITy *V) {
-    if (isImmConstant(V)) {
-      VR = cast<Constant>(V);
-      return true;
-    }
-    return false;
-  }
-};
+inline match_combine_and<class_match<Constant>,
+                         match_unless<constantexpr_match>>
+m_ImmConstant() {
+  return m_CombineAnd(m_Constant(), m_Unless(m_ConstantExpr()));
+}
 
 /// Match an immediate Constant, capturing the value if we match.
-inline bind_immconstant_ty m_ImmConstant(Constant *&C) {
-  return bind_immconstant_ty(C);
+inline match_combine_and<bind_ty<Constant>,
+                         match_unless<constantexpr_match>>
+m_ImmConstant(Constant *&C) {
+  return m_CombineAnd(m_Constant(C), m_Unless(m_ConstantExpr()));
 }
 
 /// Match a specified Value*.
