@@ -233,6 +233,7 @@ tools.extend(
         "llvm-c-test",
         "llvm-cxxfilt",
         "llvm-xray",
+        "llvm-mustachespec"
         "yaml2obj",
         "obj2yaml",
         "yaml-bench",
