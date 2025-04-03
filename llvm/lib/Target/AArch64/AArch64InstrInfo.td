@@ -66,6 +66,14 @@ def HasLOR           : Predicate<"Subtarget->hasLOR()">,
 def HasPAuth         : Predicate<"Subtarget->hasPAuth()">,
                        AssemblerPredicateWithAll<(all_of FeaturePAuth), "pauth">;
 
+// On most operating systems, the x16 and x17 registers are not special, so
+// there is no benefit, and only a code size cost, to constraining PAC
+// instructions to only using them. This predicate may be used to guard patterns
+// that allow PAC instructions to be used with any register.
+let RecomputePerFunction = 1 in {
+  def X16X17NotSafer   : Predicate<"!Subtarget->isX16X17Safer(*MF)">;
+}
+
 def HasPAuthLR       : Predicate<"Subtarget->hasPAuthLR()">,
                        AssemblerPredicateWithAll<(all_of FeaturePAuthLR), "pauth-lr">;
 
@@ -1820,7 +1828,9 @@ let Predicates = [HasPAuth] in {
   }
 
   defm PAC : SignAuth<0b000, 0b010, "pac", int_ptrauth_sign>;
-  defm AUT : SignAuth<0b001, 0b011, "aut", null_frag>;
+  let Predicates = [HasPAuth, X16X17NotSafer] in {
+    defm AUT : SignAuth<0b001, 0b011, "aut", int_ptrauth_auth>;
+  }
 
   def XPACI : ClearAuth<0, "xpaci">;
   def : Pat<(int_ptrauth_strip GPR64:$Rd, 0), (XPACI GPR64:$Rd)>;
@@ -1912,10 +1922,11 @@ let Predicates = [HasPAuth] in {
   defm LDRAB  : AuthLoad<1, "ldrab", simm10Scaled>;
 
   // AUT pseudo.
-  // This directly manipulates x16/x17, which are the only registers the OS
-  // guarantees are safe to use for sensitive operations.
-  def AUT : Pseudo<(outs), (ins i32imm:$Key, i64imm:$Disc, GPR64noip:$AddrDisc),
-                   []>, Sched<[WriteI, ReadI]> {
+  // This directly manipulates x16/x17, which are the only registers that
+  // certain OSs guarantee are safe to use for sensitive operations.
+  def AUTx16x17 : Pseudo<(outs), (ins i32imm:$Key, i64imm:$Disc,
+                                      GPR64noip:$AddrDisc),
+                      []>, Sched<[WriteI, ReadI]> {
     let isCodeGenOnly = 1;
     let hasSideEffects = 1;
     let mayStore = 0;
@@ -1926,8 +1937,8 @@ let Predicates = [HasPAuth] in {
   }
 
   // AUT and re-PAC a value, using different keys/data.
-  // This directly manipulates x16/x17, which are the only registers the OS
-  // guarantees are safe to use for sensitive operations.
+  // This directly manipulates x16/x17, which are the only registers that
+  // certain OSs guarantee are safe to use for sensitive operations.
   def AUTPAC
       : Pseudo<(outs),
                (ins i32imm:$AUTKey, i64imm:$AUTDisc, GPR64noip:$AUTAddrDisc,
