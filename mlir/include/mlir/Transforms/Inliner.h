@@ -89,7 +89,7 @@ private:
                                        src->getBlocks(), src->begin(),
                                        src->end());
   };
-  /// Determining if the inliner can inline a function containing multiple
+  /// Determine if the inliner can inline a function containing multiple
   /// blocks into a region that requires a single block. By default, it is
   /// not allowed. If it is true, cloneCallback shuold perform the extra
   /// transformation. see the example in
