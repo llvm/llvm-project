@@ -14,7 +14,7 @@
 // target-specific device code.
 //===---------------------------------------------------------------------===//
 
-#include "clang/Basic/SYCL.h"
+#include "clang/Basic/Cuda.h"
 #include "clang/Basic/Version.h"
 
 #include "llvm/ADT/StringExtras.h"
@@ -455,10 +455,10 @@ static Error runAOTCompileIntelGPU(StringRef InputFile, const ArgList &Args) {
 /// SYCL AOT compilation step.
 static Error runAOTCompile(StringRef InputFile, const ArgList &Args) {
   StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
-  SYCLSupportedIntelArchs OffloadArch = StringToOffloadArchSYCL(Arch);
-  if (IsSYCLSupportedIntelGPUArch(OffloadArch))
+  OffloadArch OffloadArch = StringToOffloadArch(Arch);
+  if (IsIntelGPUArch(OffloadArch))
     return runAOTCompileIntelGPU(InputFile, Args);
-  if (IsSYCLSupportedIntelCPUArch(OffloadArch))
+  if (IsIntelCPUArch(OffloadArch))
     return runAOTCompileIntelCPU(InputFile, Args);
 
   return createStringError(inconvertibleErrorCode(), "Unsupported arch");

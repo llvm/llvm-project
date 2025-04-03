@@ -140,6 +140,63 @@ enum class OffloadArch {
   AMDGCNSPIRV,
   Generic, // A processor model named 'generic' if the target backend defines a
            // public one.
+  // Intel CPUs
+  SKYLAKEAVX512,
+  COREAVX2,
+  COREI7AVX,
+  COREI7,
+  WESTMERE,
+  SANDYBRIDGE,
+  IVYBRIDGE,
+  BROADWELL,
+  COFFEELAKE,
+  ALDERLAKE,
+  SKYLAKE,
+  SKX,
+  CASCADELAKE,
+  ICELAKECLIENT,
+  ICELAKESERVER,
+  SAPPHIRERAPIDS,
+  GRANITERAPIDS,
+  // Intel GPUs
+  BDW,
+  SKL,
+  KBL,
+  CFL,
+  APL,
+  BXT,
+  GLK,
+  WHL,
+  AML,
+  CML,
+  ICLLP,
+  ICL,
+  EHL,
+  JSL,
+  TGLLP,
+  TGL,
+  RKL,
+  ADL_S,
+  RPL_S,
+  ADL_P,
+  ADL_N,
+  DG1,
+  ACM_G10,
+  DG2_G10,
+  ACM_G11,
+  DG2_G11,
+  ACM_G12,
+  DG2_G12,
+  PVC,
+  PVC_VG,
+  MTL_U,
+  MTL_S,
+  ARL_U,
+  ARL_S,
+  MTL_H,
+  ARL_H,
+  BMG_G21,
+  LNL_M,
   LAST,
 
   CudaDefault = OffloadArch::SM_52,
@@ -161,6 +218,15 @@ static inline bool IsNVIDIAOffloadArch(OffloadArch A) {
 static inline bool IsAMDOffloadArch(OffloadArch A) {
   // Generic processor model is for testing only.
   return A >= OffloadArch::GFX600 && A < OffloadArch::Generic;
+}
+
+static inline bool IsIntelCPUArch(OffloadArch Arch) {
+  return Arch >= OffloadArch::SKYLAKEAVX512 &&
+         Arch <= OffloadArch::GRANITERAPIDS;
+}
+
+static inline bool IsIntelGPUArch(OffloadArch Arch) {
+  return Arch >= OffloadArch::BDW && Arch <= OffloadArch::LNL_M;
 }
 
 const char *OffloadArchToString(OffloadArch A);

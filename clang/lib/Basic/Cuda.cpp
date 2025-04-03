@@ -84,6 +84,7 @@ struct OffloadArchToStringMap {
 #define SM2(sm, ca) {OffloadArch::SM_##sm, "sm_" #sm, ca}
 #define SM(sm) SM2(sm, "compute_" #sm)
 #define GFX(gpu) {OffloadArch::GFX##gpu, "gfx" #gpu, "compute_amdgcn"}
+#define INTEL(name, value) {OffloadArch::value, #name, ""}
 static const OffloadArchToStringMap arch_names[] = {
     // clang-format off
     {OffloadArch::UNUSED, "", ""},
@@ -156,12 +157,70 @@ static const OffloadArchToStringMap arch_names[] = {
     GFX(1200), // gfx1200
     GFX(1201), // gfx1201
     {OffloadArch::AMDGCNSPIRV, "amdgcnspirv", "compute_amdgcn"},
+    // Intel CPUs
+    INTEL(skylake-avx512, SKYLAKEAVX512),
+    INTEL(core-avx2, COREAVX2),
+    INTEL(corei7-avx, COREI7AVX),
+    INTEL(corei7, COREI7),
+    INTEL(westmere, WESTMERE),
+    INTEL(sandybridge, SANDYBRIDGE),
+    INTEL(ivybridge, IVYBRIDGE),
+    INTEL(broadwell, BROADWELL),
+    INTEL(coffeelake, COFFEELAKE),
+    INTEL(alderlake, ALDERLAKE),
+    INTEL(skylake, SKYLAKE),
+    INTEL(skx, SKX),
+    INTEL(cascadelake, CASCADELAKE),
+    INTEL(icelake-client, ICELAKECLIENT),
+    INTEL(icelakeserver, ICELAKESERVER),
+    INTEL(sapphirerapids, SAPPHIRERAPIDS),
+    INTEL(graniterapids, GRANITERAPIDS),
+    // Intel GPUs
+    INTEL(bdw, BDW),
+    INTEL(skl, SKL),
+    INTEL(kbl, KBL),
+    INTEL(cfl, CFL),
+    INTEL(apl, APL),
+    INTEL(bxt, BXT),
+    INTEL(glk, GLK),
+    INTEL(whl, WHL),
+    INTEL(aml, AML),
+    INTEL(cml, CML),
+    INTEL(icllp, ICLLP),
+    INTEL(icl, ICL),
+    INTEL(ehl, EHL),
+    INTEL(jsl, JSL),
+    INTEL(tgllp, TGLLP),
+    INTEL(tgl, TGL),
+    INTEL(rkl, RKL),
+    INTEL(adl_s, ADL_S),
+    INTEL(rpl_s, RPL_S),
+    INTEL(adl_p, ADL_P),
+    INTEL(adl_n, ADL_N),
+    INTEL(dg1, DG1),
+    INTEL(acm_g10, ACM_G10),
+    INTEL(dg2_g10, DG2_G10),
+    INTEL(acm_g11, ACM_G11),
+    INTEL(dg2_g11, DG2_G11),
+    INTEL(acm_g12, ACM_G12),
+    INTEL(dg2_g12, DG2_G12),
+    INTEL(pvc, PVC),
+    INTEL(pvc_vg, PVC_VG),
+    INTEL(mtl_u, MTL_U),
+    INTEL(mtl_s, MTL_S),
+    INTEL(arl_u, ARL_U),
+    INTEL(arl_s, ARL_S),
+    INTEL(mtl_h, MTL_H),
+    INTEL(arl_h, ARL_H),
+    INTEL(bmg_g21, BMG_G21),
+    INTEL(lnl_m, LNL_M),
     {OffloadArch::Generic, "generic", ""},
     // clang-format on
 };
 #undef SM
 #undef SM2
 #undef GFX
+#undef INTEL
 
 const char *OffloadArchToString(OffloadArch A) {
   auto result = std::find_if(
