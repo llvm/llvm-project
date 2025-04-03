@@ -479,7 +479,7 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
     case RISCVMCExpr::VK_None:
     case RISCVMCExpr::VK_32_PCREL:
     case RISCVMCExpr::VK_GOTPCREL:
-    case RISCVMCExpr::VK_PLT:
+    case RISCVMCExpr::VK_PLTPCREL:
       llvm_unreachable("unhandled specifier");
     case RISCVMCExpr::VK_TPREL_ADD:
       // tprel_add is only used to indicate that a relocation should be emitted
@@ -557,10 +557,7 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
       FixupKind = RISCV::fixup_riscv_tlsdesc_call;
       break;
     }
-  } else if ((Kind == MCExpr::SymbolRef &&
-              getSpecifier(cast<MCSymbolRefExpr>(Expr)) ==
-                  RISCVMCExpr::VK_None) ||
-             Kind == MCExpr::Binary) {
+  } else if (Kind == MCExpr::SymbolRef || Kind == MCExpr::Binary) {
     // FIXME: Sub kind binary exprs have chance of underflow.
     if (MIFrm == RISCVII::InstFormatJ) {
       FixupKind = RISCV::fixup_riscv_jal;

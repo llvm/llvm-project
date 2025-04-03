@@ -96,12 +96,11 @@ define void @interleave(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 8
+; NO-VP-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP4]], 4
+; NO-VP-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP8]], 2
 ; NO-VP-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; NO-VP:       vector.body:
 ; NO-VP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; NO-VP-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 4
 ; NO-VP-NEXT:    [[TMP9:%.*]] = add i64 [[TMP8]], 0
 ; NO-VP-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP9]], 1
 ; NO-VP-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], [[TMP10]]

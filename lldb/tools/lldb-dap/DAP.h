@@ -27,11 +27,11 @@
 #include "lldb/API/SBFile.h"
 #include "lldb/API/SBFormat.h"
 #include "lldb/API/SBFrame.h"
+#include "lldb/API/SBMutex.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/API/SBValueList.h"
-#include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -149,12 +149,16 @@ struct SendEventRequestHandler : public lldb::SBCommandPluginInterface {
 };
 
 struct DAP {
-  llvm::StringRef debug_adapter_path;
+  /// Path to the lldb-dap binary itself.
+  static llvm::StringRef debug_adapter_path;
+
   Log *log;
   Transport &transport;
   lldb::SBFile in;
   OutputRedirector out;
   OutputRedirector err;
+  /// Configuration specified by the launch or attach commands.
+  protocol::Configuration configuration;
   lldb::SBDebugger debugger;
   lldb::SBTarget target;
   Variables variables;
@@ -166,7 +170,6 @@ struct DAP {
   InstructionBreakpointMap instruction_breakpoints;
   std::optional<std::vector<ExceptionBreakpoint>> exception_breakpoints;
   llvm::once_flag init_exception_breakpoints_flag;
-
   // Map step in target id to list of function targets that user can choose.
   llvm::DenseMap<lldb::addr_t, std::string> step_in_targets;
   // A copy of the last LaunchRequest so we can reuse its arguments if we get a
@@ -177,10 +180,6 @@ struct DAP {
   llvm::once_flag terminated_event_flag;
   bool is_attach;
   bool stop_at_entry;
-  /// pre_init_commands are configured by a CLI flag and are not part of the
-  /// common launching/attaching definition.
-  std::vector<std::string> pre_init_commands;
-  protocol::DAPConfiguration configuration;
   // The process event thread normally responds to process exited events by
   // shutting down the entire adapter. When we're restarting, we keep the id of
   // the old process here so we can detect this case and keep running.
@@ -210,8 +209,6 @@ struct DAP {
 
   /// Creates a new DAP sessions.
   ///
-  /// \param[in] path
-  ///     Path to the lldb-dap binary.
   /// \param[in] log
   ///     Log stream, if configured.
   /// \param[in] default_repl_mode
@@ -220,7 +217,7 @@ struct DAP {
   ///     LLDB commands to execute as soon as the debugger instance is allocaed.
   /// \param[in] transport
   ///     Transport for this debug session.
-  DAP(llvm::StringRef path, Log *log, const ReplMode default_repl_mode,
+  DAP(Log *log, const ReplMode default_repl_mode,
       std::vector<std::string> pre_init_commands, Transport &transport);
 
   ~DAP();
@@ -231,7 +228,7 @@ struct DAP {
   void operator=(const DAP &rhs) = delete;
   /// @}
 
-  ExceptionBreakpoint *GetExceptionBreakpoint(const std::string &filter);
+  ExceptionBreakpoint *GetExceptionBreakpoint(llvm::StringRef filter);
   ExceptionBreakpoint *GetExceptionBreakpoint(const lldb::break_id_t bp_id);
 
   /// Redirect stdout and stderr fo the IDE's console output.
@@ -408,6 +405,8 @@ struct DAP {
   InstructionBreakpoint *GetInstructionBreakpoint(const lldb::break_id_t bp_id);
 
   InstructionBreakpoint *GetInstructionBPFromStopReason(lldb::SBThread &thread);
+
+  lldb::SBMutex GetAPIMutex() const { return target.GetAPIMutex(); }
 };
 
 } // namespace lldb_dap

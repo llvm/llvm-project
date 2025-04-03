@@ -11,10 +11,10 @@ foo:
 
 bar:
 
-; CHECK: brts (.Ltmp0+18)+2  ; encoding: [0bAAAAA110,0b111100AA]
-; CHECK-NEXT:                ;   fixup A - offset: 0, value: (.Ltmp0+18)+2, kind: fixup_7_pcrel
-; CHECK: brts (.Ltmp1+22)+2  ; encoding: [0bAAAAA110,0b111100AA]
-; CHECK-NEXT:                ;   fixup A - offset: 0, value: (.Ltmp1+22)+2, kind: fixup_7_pcrel
+; CHECK: brts .Ltmp0+18+2  ; encoding: [0bAAAAA110,0b111100AA]
+; CHECK-NEXT:                ;   fixup A - offset: 0, value: .Ltmp0+18+2, kind: fixup_7_pcrel
+; CHECK: brts .Ltmp1+22+2  ; encoding: [0bAAAAA110,0b111100AA]
+; CHECK-NEXT:                ;   fixup A - offset: 0, value: .Ltmp1+22+2, kind: fixup_7_pcrel
 ; CHECK: brts bar            ; encoding: [0bAAAAA110,0b111100AA]
 ; CHECK-NEXT:                ;   fixup A - offset: 0, value: bar, kind: fixup_7_pcrel
 

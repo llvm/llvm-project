@@ -23,6 +23,7 @@
 #include "Protocol/ProtocolBase.h"
 #include "Protocol/ProtocolTypes.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/JSON.h"
 #include <chrono>
 #include <cstdint>
@@ -57,7 +58,7 @@ bool fromJSON(const llvm::json::Value &, DisconnectArguments &,
 using DisconnectResponse = VoidResponse;
 
 /// Features supported by DAP clients.
-enum ClientFeature {
+enum ClientFeature : unsigned {
   eClientFeatureVariableType,
   eClientFeatureVariablePaging,
   eClientFeatureRunInTerminalRequest,
@@ -76,7 +77,7 @@ enum ClientFeature {
 };
 
 /// Format of paths reported by the debug adapter.
-enum PathFormat { ePatFormatPath, ePathFormatURI };
+enum PathFormat : unsigned { ePatFormatPath, ePathFormatURI };
 
 /// Arguments for `initialize` request.
 struct InitializeRequestArguments {
@@ -120,7 +121,7 @@ bool fromJSON(const llvm::json::Value &, InitializeRequestArguments &,
 using InitializeResponseBody = std::optional<Capabilities>;
 
 /// DAP Launch and Attach common configurations.
-struct DAPConfiguration {
+struct Configuration {
   /// Specify a working directory to use when launching `lldb-dap`. If the debug
   /// information in your executable contains relative paths, this option can be
   /// used so that `lldb-dap` can find source files and object files that have
@@ -167,6 +168,10 @@ struct DAPConfiguration {
   /// two element array containing a source and destination pathname. Overrides
   /// sourcePath.
   std::vector<std::pair<std::string, std::string>> sourceMap;
+
+  /// LLDB commands executed upon debugger startup prior to creating the LLDB
+  /// target.
+  std::vector<std::string> preInitCommands;
 
   /// LLDB commands executed upon debugger startup prior to creating the LLDB
   /// target.

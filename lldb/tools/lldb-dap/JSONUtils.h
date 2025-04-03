@@ -566,10 +566,6 @@ llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit);
 ///     The original launch_request object whose fields are used to construct
 ///     the reverse request object.
 ///
-/// \param[in] debug_adapter_path
-///     Path to the current debug adapter. It will be used to delegate the
-///     launch of the target.
-///
 /// \param[in] comm_file
 ///     The fifo file used to communicate the with the target launcher.
 ///

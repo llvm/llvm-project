@@ -105,6 +105,11 @@ URL of repository that hosts code.
 Used for links to definition locations.)"),
                   llvm::cl::cat(ClangDocCategory));
 
+static llvm::cl::opt<std::string> RepositoryCodeLinePrefix(
+    "repository-line-prefix",
+    llvm::cl::desc("Prefix of line code for repository."),
+    llvm::cl::cat(ClangDocCategory));
+
 enum OutputFormatTy {
   md,
   yaml,
@@ -273,6 +278,7 @@ Example usage for a project using a compile commands database:
       OutDirectory,
       SourceRoot,
       RepositoryUrl,
+      RepositoryCodeLinePrefix,
       BaseDirectory,
       {UserStylesheets.begin(), UserStylesheets.end()}};
 
