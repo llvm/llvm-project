@@ -10,5 +10,5 @@ functions:
   - name: utimes
     return_type: int
     arguments:
-      - type: ptr<const char>
-      - type: ptr<const struct timeval>
+      - type: const char*
+      - type: const struct timeval*

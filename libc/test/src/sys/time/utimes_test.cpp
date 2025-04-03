@@ -24,8 +24,6 @@ constexpr const char *FILE_PATH = "utimes.test";
 TEST(LlvmLibcUtimesTest, ChangeTimesSpecific) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
-  // const char* FILE_PATH = "testdata/__utimes_changetimes.test";
-
   auto TEST_FILE = libc_make_test_file_path(FILE_PATH);
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT);
   ASSERT_GT(fd, 0);
@@ -50,8 +48,10 @@ TEST(LlvmLibcUtimesTest, ChangeTimesSpecific) {
   ASSERT_EQ(statbuf.st_mtim.tv_sec, times[1].tv_sec);
 
   // microseconds
-  ASSERT_EQ(statbuf.st_atim.tv_nsec, times[0].tv_usec * 1000);
-  ASSERT_EQ(statbuf.st_mtim.tv_nsec, times[1].tv_usec * 1000);
+  ASSERT_EQ(statbuf.st_atim.tv_nsec,
+            static_cast<long>(times[0].tv_usec * 1000));
+  ASSERT_EQ(statbuf.st_mtim.tv_nsec,
+            static_cast<long>(times[1].tv_usec * 1000));
 
   ASSERT_THAT(LIBC_NAMESPACE::remove(TEST_FILE), Succeeds(0));
 }
@@ -61,8 +61,6 @@ TEST(LlvmLibcUtimesTest, ChangeTimesSpecific) {
 TEST(LlvmLibcUtimesTest, InvalidMicroseconds) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-
-  // const char* FILE_PATH = "testdata/__utimes_invalidmicroseconds.test";
 
   auto TEST_FILE = libc_make_test_file_path(FILE_PATH);
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT);

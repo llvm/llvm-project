@@ -13,7 +13,6 @@ add_libc_unittest(
     libc.src.sys.time.utimes
     libc.src.unistd.close
     libc.src.unistd.read
-    libc.src.unistd.unlink
     libc.src.unistd.write
     libc.src.stdio.remove
     libc.src.sys.stat.stat
