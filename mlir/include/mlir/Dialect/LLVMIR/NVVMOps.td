@@ -819,6 +819,26 @@ def NVVM_VoteBallotOp :
   let hasCustomAssemblyFormat = 1;
 }
 
+def NVVM_VoteAllSyncOp : NVVM_Op<"vote.all.sync">,
+                         Results<(outs LLVM_Type:$res)>,
+                         Arguments<(ins LLVM_Type:$mask, LLVM_Type:$pred)> {
+  string llvmBuilder = [{
+      $res = createIntrinsicCall(builder,
+            llvm::Intrinsic::nvvm_vote_all_sync, {$mask, $pred});
+  }];
+  let hasCustomAssemblyFormat = 1;
+}
+
+def NVVM_VoteAnySyncOp : NVVM_Op<"vote.any.sync">,
+                         Results<(outs LLVM_Type:$res)>,
+                         Arguments<(ins LLVM_Type:$mask, LLVM_Type:$pred)> {
+  string llvmBuilder = [{
+      $res = createIntrinsicCall(builder,
+            llvm::Intrinsic::nvvm_vote_all_sync, {$mask, $pred});
+  }];
+  let hasCustomAssemblyFormat = 1;
+}
+
 def NVVM_SyncWarpOp :
   NVVM_Op<"bar.warp.sync">,
   Arguments<(ins LLVM_Type:$mask)> {

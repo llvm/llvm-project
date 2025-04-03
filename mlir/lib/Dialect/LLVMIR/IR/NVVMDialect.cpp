@@ -58,8 +58,7 @@ static void printNVVMIntrinsicOp(OpAsmPrinter &p, Operation *op) {
     p << " : " << op->getResultTypes();
 }
 
-// <operation> ::= `llvm.nvvm.vote.ballot.sync %mask, %pred` : result_type
-ParseResult VoteBallotOp::parse(OpAsmParser &parser, OperationState &result) {
+static ParseResult parseVoteOps(OpAsmParser &parser, OperationState &result) {
   MLIRContext *context = parser.getContext();
   auto int32Ty = IntegerType::get(context, 32);
   auto int1Ty = IntegerType::get(context, 1);
@@ -74,7 +73,26 @@ ParseResult VoteBallotOp::parse(OpAsmParser &parser, OperationState &result) {
                                         parser.getNameLoc(), result.operands));
 }
 
+// <operation> ::= `llvm.nvvm.vote.ballot.sync %mask, %pred` : result_type
+ParseResult VoteBallotOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseVoteOps(parser, result);
+}
+
 void VoteBallotOp::print(OpAsmPrinter &p) { printNVVMIntrinsicOp(p, *this); }
+
+// <operation> ::= `llvm.nvvm.vote.all.sync %mask, %pred` : result_type
+ParseResult VoteAllSyncOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseVoteOps(parser, result);
+}
+
+void VoteAllSyncOp::print(OpAsmPrinter &p) { printNVVMIntrinsicOp(p, *this); }
+
+// <operation> ::= `llvm.nvvm.vote.any.sync %mask, %pred` : result_type
+ParseResult VoteAnySyncOp::parse(OpAsmParser &parser, OperationState &result) {
+  return parseVoteOps(parser, result);
+}
+
+void VoteAnySyncOp::print(OpAsmPrinter &p) { printNVVMIntrinsicOp(p, *this); }
 
 //===----------------------------------------------------------------------===//
 // Verifier methods

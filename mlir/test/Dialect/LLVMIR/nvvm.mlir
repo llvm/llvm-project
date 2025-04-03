@@ -131,6 +131,10 @@ func.func @nvvm_shfl_pred(
 func.func @nvvm_vote(%arg0 : i32, %arg1 : i1) -> i32 {
   // CHECK: nvvm.vote.ballot.sync %{{.*}}, %{{.*}} : i32
   %0 = nvvm.vote.ballot.sync %arg0, %arg1 : i32
+  // CHECK: nvvm.vote.all.sync %{{.*}}, %{{.*}} : i32
+  %1 = nvvm.vote.all.sync %arg0, %arg1 : i32
+  // CHECK: nvvm.vote.any.sync %{{.*}}, %{{.*}} : i32
+  %2 = nvvm.vote.any.sync %arg0, %arg1 : i32
   llvm.return %0 : i32
 }
 
