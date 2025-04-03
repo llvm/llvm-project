@@ -241,10 +241,8 @@ static void getAArch64MultilibFlags(const Driver &D,
 
   if (FeatureSet.contains("+strict-align")) {
     Result.push_back("-mno-unaligned-access");
-    Result.push_back("-mstrict-align");
   } else {
     Result.push_back("-munaligned-access");
-    Result.push_back("-mno-strict-align");
   }
 
   if (Arg *Endian = Args.getLastArg(options::OPT_mbig_endian,
@@ -315,10 +313,8 @@ static void getARMMultilibFlags(const Driver &D,
 
   if (FeatureSet.contains("+strict-align")) {
     Result.push_back("-mno-unaligned-access");
-    Result.push_back("-mstrict-align");
   } else {
     Result.push_back("-munaligned-access");
-    Result.push_back("-mno-strict-align");
   }
 
   if (Arg *Endian = Args.getLastArg(options::OPT_mbig_endian,
