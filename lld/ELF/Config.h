@@ -132,7 +132,7 @@ enum class SeparateSegmentKind { None, Code, Loadable };
 enum class GnuStackKind { None, Exec, NoExec };
 
 // For --lto=
-enum LtoKind : uint8_t { UnifiedThin, UnifiedRegular, Default };
+enum LtoKind : uint8_t {UnifiedThin, UnifiedRegular, Default};
 
 // For -z gcs=
 enum class GcsPolicy { Implicit, Never, Always };

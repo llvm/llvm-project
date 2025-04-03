@@ -199,7 +199,7 @@ public:
   }
   MutableArrayRef<Symbol *> getMutableGlobalSymbols() {
     return llvm::MutableArrayRef(symbols.get() + firstGlobal,
-                                 numSymbols - firstGlobal);
+                                     numSymbols - firstGlobal);
   }
 
   template <typename ELFT> typename ELFT::ShdrRange getELFShdrs() const {

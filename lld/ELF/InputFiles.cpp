@@ -632,10 +632,9 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
                            .try_emplace(CachedHashStringRef(signature), this)
                            .second;
       if (keepGroup) {
-        if (!ctx.arg.resolveGroups) {
+        if (!ctx.arg.resolveGroups)
           sections[i] = createInputSection(
               i, sec, check(obj.getSectionName(sec, shstrtab)));
-        }
       } else {
         // Otherwise, discard group members.
         for (uint32_t secIndex : entries.slice(1)) {
