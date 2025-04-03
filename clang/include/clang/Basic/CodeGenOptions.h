@@ -317,6 +317,10 @@ public:
   /// CUDA runtime back-end for incorporating them into host-side object file.
   std::string CudaGpuBinaryFileName;
 
+  /// Whether a precise or approximate square root should be used for CUDA
+  /// device code.
+  bool CudaPreciseSqrt;
+
   /// List of filenames passed in using the -fembed-offload-object option. These
   /// are offloading binaries containing device images and metadata.
   std::vector<std::string> OffloadObjects;

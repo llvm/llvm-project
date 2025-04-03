@@ -1279,6 +1279,11 @@ def fcuda_flush_denormals_to_zero : Flag<["-"], "fcuda-flush-denormals-to-zero">
   Alias<fgpu_flush_denormals_to_zero>;
 def fno_cuda_flush_denormals_to_zero : Flag<["-"], "fno-cuda-flush-denormals-to-zero">,
   Alias<fno_gpu_flush_denormals_to_zero>;
+defm cuda_prec_sqrt : BoolFOption<"cuda-prec-sqrt",
+  CodeGenOpts<"CudaPreciseSqrt">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption], "Disable">,
+  BothFlags<[], [ClangOption], " precise square root for CUDA device code.">>;
 def : Flag<["-"], "fcuda-rdc">, Alias<fgpu_rdc>;
 def : Flag<["-"], "fno-cuda-rdc">, Alias<fno_gpu_rdc>;
 defm cuda_short_ptr : BoolFOption<"cuda-short-ptr",
