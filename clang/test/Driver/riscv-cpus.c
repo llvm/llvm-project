@@ -115,6 +115,20 @@
 // MCPU-MIPS-P8700-SAME: "-target-feature" "+zba"
 // MCPU-MIPS-P8700-SAME: "-target-feature" "+zbb"
 
+// RUN: %clang --target=riscv64-mti-linux-gnu -### -c %s 2>&1| FileCheck -check-prefix=MCPU-MTI-P8700 %s
+// MCPU-MTI-P8700: "-target-cpu" "mips-p8700"
+// MCPU-MTI-P8700-SAME: "-target-feature" "+m"
+// MCPU-MTI-P8700-SAME: "-target-feature" "+a"
+// MCPU-MTI-P8700-SAME: "-target-feature" "+f"
+// MCPU-MTI-P8700-SAME: "-target-feature" "+d"
+// MCPU-MTI-P8700-SAME: "-target-feature" "+c"
+// MCPU-MTI-P8700-SAME: "-target-feature" "+zicsr"
+// MCPU-MTI-P8700-SAME: "-target-feature" "+zifencei"
+// MCPU-MTI-P8700-SAME: "-target-feature" "+zaamo"
+// MCPU-MTI-P8700-SAME: "-target-feature" "+zalrsc"
+// MCPU-MTI-P8700-SAME: "-target-feature" "+zba"
+// MCPU-MTI-P8700-SAME: "-target-feature" "+zbb"
+
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=syntacore-scr1-base | FileCheck -check-prefix=MTUNE-SYNTACORE-SCR1-BASE %s
 // MTUNE-SYNTACORE-SCR1-BASE: "-tune-cpu" "syntacore-scr1-base"
 

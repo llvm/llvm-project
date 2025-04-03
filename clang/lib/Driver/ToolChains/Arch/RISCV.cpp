@@ -346,6 +346,8 @@ std::string riscv::getRISCVArch(const llvm::opt::ArgList &Args,
   if (Triple.getOS() == llvm::Triple::UnknownOS &&
       Triple.getVendor() != llvm::Triple::MipsTechnologies)
     return "rv64imac";
+  if (Triple.getVendor() == llvm::Triple::MipsTechnologies)
+    return "rv64imafdc_zba_zbb_zicsr_zifencei";
   if (Triple.isAndroid())
     return "rv64imafdcv_zba_zbb_zbs";
   if (Triple.isOSFuchsia())
@@ -369,7 +371,7 @@ std::string riscv::getRISCVTargetCPU(const llvm::opt::ArgList &Args,
 
   if (Triple.getVendor() == llvm::Triple::MipsTechnologies &&
       Triple.isRISCV64())
-    return "p8700";
+    return "mips-p8700";
 
   return Triple.isRISCV64() ? "generic-rv64" : "generic-rv32";
 }
