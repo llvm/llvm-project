@@ -88,7 +88,7 @@ struct InlinerCallback
     InlinerConfig config;
     CallGraph &cg = getAnalysis<CallGraph>();
 
-    auto function = getOperation();
+    func::FuncOp function = getOperation();
 
     // By default, assume that any inlining is profitable.
     auto profitabilityCb = [&](const mlir::Inliner::ResolvedCall &call) {
