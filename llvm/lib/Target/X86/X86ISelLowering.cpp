@@ -6413,9 +6413,7 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
   case X86ISD::VTRUNC: {
     SDValue Src = N.getOperand(0);
     EVT SrcVT = Src.getValueType();
-    // Truncated source must be a simple vector.
-    if (!SrcVT.isSimple() || (SrcVT.getSizeInBits() % 128) != 0 ||
-        (SrcVT.getScalarSizeInBits() % 8) != 0)
+    if (SrcVT.getSizeInBits() != NumSizeInBits)
       return false;
     unsigned NumSrcElts = SrcVT.getVectorNumElements();
     unsigned NumBitsPerSrcElt = SrcVT.getScalarSizeInBits();
