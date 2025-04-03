@@ -260,7 +260,7 @@ static IntegerRange createFromType(const ASTContext &Context,
     llvm::APSInt LowerValue(PrecisionBits + 2, /*isUnsigned*/ false);
     LowerValue.setBit(PrecisionBits);
     LowerValue.setSignBit();
-    return {std::move(LowerValue), UpperValue};
+    return {LowerValue, UpperValue};
   }
   assert(T.isInteger() && "Unexpected builtin type");
   uint64_t TypeSize = Context.getTypeSize(&T);
