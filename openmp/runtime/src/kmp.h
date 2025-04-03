@@ -1107,6 +1107,7 @@ extern omp_allocator_handle_t __kmp_def_allocator;
 #endif
 
 extern int __kmp_memkind_available;
+extern bool __kmp_hwloc_available;
 
 typedef omp_memspace_handle_t kmp_memspace_t; // placeholder
 
@@ -1119,6 +1120,9 @@ typedef struct kmp_allocator_t {
   kmp_uint64 pool_size;
   kmp_uint64 pool_used;
   bool pinned;
+#if KMP_USE_HWLOC
+  omp_alloctrait_value_t membind;
+#endif
 } kmp_allocator_t;
 
 extern omp_allocator_handle_t __kmpc_init_allocator(int gtid,
