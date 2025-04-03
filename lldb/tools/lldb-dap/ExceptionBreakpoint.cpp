@@ -20,9 +20,7 @@ void ExceptionBreakpoint::SetBreakpoint() {
   bool throw_value = filter.find("_throw") != std::string::npos;
   bp = dap.target.BreakpointCreateForException(language, catch_value,
                                                throw_value);
-  // See comments in BreakpointBase::GetBreakpointLabel() for details of why
-  // we add a label to our breakpoints.
-  bp.AddName(BreakpointBase::GetBreakpointLabel());
+  bp.AddName(BreakpointBase::kDAPBreakpointLabel);
 }
 
 void ExceptionBreakpoint::ClearBreakpoint() {
