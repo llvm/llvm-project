@@ -1,5 +1,5 @@
 ! Test lowering of Cray pointee references.
-! RUN: flang-new -fc1 -emit-hlfir -fopenmp %s -o - 2>&1 | FileCheck %s
+! RUN: flang -fc1 -emit-hlfir -fopenmp %s -o - 2>&1 | FileCheck %s
 
 ! CHECK-LABEL: func.func @_QQmain() attributes {fir.bindc_name = "test_cray_pointers_02"}
 program test_cray_pointers_02

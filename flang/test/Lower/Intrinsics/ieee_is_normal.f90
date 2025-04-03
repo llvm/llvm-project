@@ -1,4 +1,5 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s --check-prefixes=CHECK%if target=x86_64{{.*}} %{,CHECK-KIND10%}%if flang-supports-f128-math %{,CHECK-KIND16%}
+! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: flang -fc1 -emit-fir %s -o - | FileCheck %s
 
 ! CHECK-LABEL: ieee_is_normal_f16
 subroutine ieee_is_normal_f16(r)
