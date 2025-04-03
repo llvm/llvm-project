@@ -640,8 +640,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
           !canProfitablyRuntimeUnrollMultiExitLoop(L, OtherExits, LatchExit,
                                                    UseEpilogRemainder)) {
         LLVM_DEBUG(dbgs() << "Multiple exit/exiting blocks in loop and "
-                             "multi-exit unrolling not "
-                             "enabled!\n");
+                             "multi-exit unrolling not enabled!\n");
         return false;
       }
     }
