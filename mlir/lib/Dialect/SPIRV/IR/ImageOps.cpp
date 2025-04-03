@@ -50,7 +50,7 @@ static LogicalResult verifyImageOperands(Operation *imageOp,
     if (index + 1 > operands.size())
       return imageOp->emitError("Bias operand requires 1 argument");
 
-    if (!isa<mlir::FloatType>(operands[index].getType()))
+    if (!isa<FloatType>(operands[index].getType()))
       return imageOp->emitError("Bias must be a floating-point type scalar");
 
     auto samplingOp = cast<spirv::SamplingOpInterface>(imageOp);
