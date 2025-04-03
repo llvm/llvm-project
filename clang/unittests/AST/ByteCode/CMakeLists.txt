@@ -2,13 +2,19 @@ add_clang_unittest(InterpTests
   BitcastBuffer.cpp
   Descriptor.cpp
   toAPValue.cpp
-  CLANG_LIBS
+  )
+
+clang_target_link_libraries(InterpTests
+  PRIVATE
   clangAST
   clangASTMatchers
   clangBasic
   clangFrontend
   clangSerialization
   clangTooling
-  LINK_LIBS
-  clangTesting
   )
+
+  target_link_libraries(InterpTests
+  PRIVATE
+  clangTesting
+)
