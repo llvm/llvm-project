@@ -1,28 +1,29 @@
-//===-------- SYCLSplitModule.h - module split ------------------*- C++ -*-===//
+//===------------ Utils.h - SYCL utility functions ------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// Functionality to split a module into callgraphs. A callgraph here is a set
-// of entry points with all functions reachable from them via a call. The result
-// of the split is new modules containing corresponding callgraph.
+// Utility functions for SYCL.
 //===----------------------------------------------------------------------===//
+#ifndef LLVM_TRANSFORMS_UTILS_SYCLUTILS_H
+#define LLVM_TRANSFORMS_UTILS_SYCLUTILS_H
 
-#ifndef LLVM_TRANSFORMS_UTILS_SYCLSPLITMODULE_H
-#define LLVM_TRANSFORMS_UTILS_SYCLSPLITMODULE_H
-
-#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 
-#include <memory>
-#include <optional>
 #include <string>
 
 namespace llvm {
 
 class Module;
+class Function;
+class raw_ostream;
+
+namespace sycl {
 
 enum class IRSplitMode {
   IRSM_PER_TU,     // one module per translation unit
@@ -34,31 +35,33 @@ enum class IRSplitMode {
 /// returned.
 std::optional<IRSplitMode> convertStringToSplitMode(StringRef S);
 
-/// The structure represents a split LLVM Module accompanied by additional
+/// The structure represents a LLVM Module accompanied by additional
 /// information. Split Modules are being stored at disk due to the high RAM
 /// consumption during the whole splitting process.
 struct ModuleAndSYCLMetadata {
   std::string ModuleFilePath;
   std::string Symbols;
 
-  ModuleAndSYCLMetadata() = default;
+  ModuleAndSYCLMetadata() = delete;
   ModuleAndSYCLMetadata(const ModuleAndSYCLMetadata &) = default;
   ModuleAndSYCLMetadata &operator=(const ModuleAndSYCLMetadata &) = default;
   ModuleAndSYCLMetadata(ModuleAndSYCLMetadata &&) = default;
   ModuleAndSYCLMetadata &operator=(ModuleAndSYCLMetadata &&) = default;
 
-  ModuleAndSYCLMetadata(std::string_view File, std::string Symbols)
-      : ModuleFilePath(File), Symbols(std::move(Symbols)) {}
+  ModuleAndSYCLMetadata(const Twine &File, std::string Symbols)
+      : ModuleFilePath(File.str()), Symbols(std::move(Symbols)) {}
 };
 
-using PostSYCLSplitCallbackType =
-    function_ref<void(std::unique_ptr<Module> Part, std::string Symbols)>;
+/// Checks whether the function is a SYCL entry point.
+bool isEntryPoint(const Function &F);
 
-/// Splits the given module \p M according to the given \p Settings.
-/// Every split image is being passed to \p Callback.
-void SYCLSplitModule(std::unique_ptr<Module> M, IRSplitMode Mode,
-                     PostSYCLSplitCallbackType Callback);
+std::string makeSymbolTable(const Module &M);
 
+using StringTable = SmallVector<SmallVector<SmallString<64>>>;
+
+void writeStringTable(const StringTable &Table, raw_ostream &OS);
+
+} // namespace sycl
 } // namespace llvm
 
-#endif // LLVM_TRANSFORMS_UTILS_SYCLSPLITMODULE_H
+#endif // LLVM_TRANSFORMS_UTILS_SYCLUTILS_H

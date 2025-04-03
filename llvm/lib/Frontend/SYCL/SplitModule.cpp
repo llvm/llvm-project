@@ -1,4 +1,4 @@
-//===-------- SYCLSplitModule.cpp - Split a module into call graphs -------===//
+//===-------- SplitModule.cpp - split a module by categories --------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,10 +8,11 @@
 // See comments in the header.
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Utils/SYCLSplitModule.h"
+#include "llvm/Frontend/SYCL/SplitModule.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Frontend/SYCL/Utils.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
@@ -19,39 +20,30 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/Cloning.h"
-#include "llvm/Transforms/Utils/SYCLUtils.h"
 
 #include <map>
 #include <utility>
+#include <string>
 
 using namespace llvm;
+using namespace llvm::sycl;
 
 #define DEBUG_TYPE "sycl-split-module"
 
-static bool isKernel(const Function &F) {
-  return F.getCallingConv() == CallingConv::SPIR_KERNEL ||
-         F.getCallingConv() == CallingConv::AMDGPU_KERNEL;
-}
-
-static bool isEntryPoint(const Function &F) {
-  // Skip declarations, if any: they should not be included into a vector of
-  // entry points groups or otherwise we will end up with incorrectly generated
-  // list of symbols.
-  if (F.isDeclaration())
-    return false;
-
-  // Kernels are always considered to be entry points
-  return isKernel(F);
-}
-
 namespace {
 
-// A vector that contains all entry point functions in a split module.
+bool isKernel(const Function &F) {
+  return F.getCallingConv() == CallingConv::SPIR_KERNEL ||
+         F.getCallingConv() == CallingConv::AMDGPU_KERNEL ||
+         F.getCallingConv() == CallingConv::PTX_Kernel; // TODO: add test.
+}
+
+// A vector that contains a group of function with the same category.
 using EntryPointSet = SetVector<const Function *>;
 
-/// Represents a named group entry points.
+/// Represents a group of functions with one category.
 struct EntryPointGroup {
-  std::string GroupName;
+  std::string GroupId;
   EntryPointSet Functions;
 
   EntryPointGroup() = default;
@@ -60,20 +52,16 @@ struct EntryPointGroup {
   EntryPointGroup(EntryPointGroup &&) = default;
   EntryPointGroup &operator=(EntryPointGroup &&) = default;
 
-  EntryPointGroup(StringRef GroupName,
-                  EntryPointSet Functions = EntryPointSet())
-      : GroupName(GroupName), Functions(std::move(Functions)) {}
+  EntryPointGroup(std::string GroupId, EntryPointSet Functions = EntryPointSet())
+      : GroupId(GroupId), Functions(std::move(Functions)) {}
 
-  void clear() {
-    GroupName.clear();
-    Functions.clear();
-  }
+  void clear() { Functions.clear(); }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const {
     constexpr size_t INDENT = 4;
     dbgs().indent(INDENT) << "ENTRY POINTS"
-                          << " " << GroupName << " {\n";
+                          << " " << GroupId << " {\n";
     for (const Function *F : Functions)
       dbgs().indent(INDENT) << "  " << F->getName() << "\n";
 
@@ -83,7 +71,7 @@ struct EntryPointGroup {
 };
 
 /// Annotates an llvm::Module with information necessary to perform and track
-/// the result of device code (llvm::Module instances) splitting:
+/// the result of code (llvm::Module instances) splitting:
 /// - entry points group from the module.
 class ModuleDesc {
   std::unique_ptr<Module> M;
@@ -108,15 +96,6 @@ public:
   std::unique_ptr<Module> releaseModule() {
     EntryPoints.clear();
     return std::move(M);
-  }
-
-  std::string makeSymbolTable() const {
-    SmallString<0> Data;
-    raw_svector_ostream OS(Data);
-    for (const Function *F : EntryPoints.Functions)
-      OS << F->getName() << '\n';
-
-    return std::string(OS.str());
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -159,7 +138,7 @@ public:
     DenseMap<const FunctionType *, DependencyGraph::GlobalSet>
         FuncTypeToFuncsMap;
     for (const auto &F : M.functions()) {
-      // Kernels can't be called (either directly or indirectly) in SYCL
+      // Kernels can't be called (either directly or indirectly).
       if (isKernel(F))
         continue;
 
@@ -284,7 +263,7 @@ ModuleDesc extractCallGraph(const Module &M, EntryPointGroup ModuleEntryPoints,
   return SplitM;
 }
 
-using EntryPointGroupVec = SmallVector<EntryPointGroup, 0>;
+using EntryPointGroupVec = SmallVector<EntryPointGroup>;
 
 /// Module Splitter.
 /// It gets a module (in a form of module descriptor, to get additional info)
@@ -321,10 +300,7 @@ public:
   bool hasMoreSplits() const { return Groups.size() > 0; }
 };
 
-} // namespace
-
-static EntryPointGroupVec selectEntryPointGroups(const Module &M,
-                                                 IRSplitMode Mode) {
+EntryPointGroupVec selectEntryPointGroups(const Module &M, IRSplitMode Mode) {
   // std::map is used here to ensure stable ordering of entry point groups,
   // which is based on their contents, this greatly helps LIT tests
   std::map<std::string, EntryPointSet> EntryPointsMap;
@@ -353,38 +329,23 @@ static EntryPointGroupVec selectEntryPointGroups(const Module &M,
   if (EntryPointsMap.empty()) {
     // No entry points met, record this.
     Groups.emplace_back("-", EntryPointSet());
-  } else {
-    Groups.reserve(EntryPointsMap.size());
-    // Start with properties of a source module
-    for (auto &[Key, EntryPoints] : EntryPointsMap)
-      Groups.emplace_back(Key, std::move(EntryPoints));
+    return Groups;
   }
+
+  Groups.reserve(EntryPointsMap.size());
+  // Start with properties of a source module
+  for (auto &[Key, EntryPoints] : EntryPointsMap)
+    Groups.emplace_back(Key, std::move(EntryPoints));
 
   return Groups;
 }
 
-namespace llvm {
+} // namespace
 
-std::optional<IRSplitMode> convertStringToSplitMode(StringRef S) {
-  static const StringMap<IRSplitMode> Values = {
-      {"source", IRSplitMode::IRSM_PER_TU},
-      {"kernel", IRSplitMode::IRSM_PER_KERNEL},
-      {"none", IRSplitMode::IRSM_NONE}};
-
-  auto It = Values.find(S);
-  if (It == Values.end())
-    return std::nullopt;
-
-  return It->second;
-}
-
-void SYCLSplitModule(std::unique_ptr<Module> M, IRSplitMode Mode,
-                     PostSYCLSplitCallbackType Callback) {
-  SmallVector<ModuleAndSYCLMetadata, 0> OutputImages;
+void llvm::sycl::splitModule(std::unique_ptr<Module> M, IRSplitMode Mode,
+                           PostSplitCallbackType Callback) {
   if (Mode == IRSplitMode::IRSM_NONE) {
-    auto MD = ModuleDesc(std::move(M));
-    auto Symbols = MD.makeSymbolTable();
-    Callback(std::move(MD.releaseModule()), std::move(Symbols));
+    Callback(std::move(M));
     return;
   }
 
@@ -393,9 +354,6 @@ void SYCLSplitModule(std::unique_ptr<Module> M, IRSplitMode Mode,
   ModuleSplitter Splitter(std::move(MD), std::move(Groups));
   while (Splitter.hasMoreSplits()) {
     ModuleDesc MD = Splitter.getNextSplit();
-    auto Symbols = MD.makeSymbolTable();
-    Callback(std::move(MD.releaseModule()), std::move(Symbols));
+    Callback(std::move(MD.releaseModule()));
   }
 }
-
-} // namespace llvm

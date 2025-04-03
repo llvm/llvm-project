@@ -33,9 +33,9 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/IPO/GlobalDCE.h"
-#include "llvm/Transforms/Utils/SYCLSplitModule.h"
-#include "llvm/Transforms/Utils/SYCLUtils.h"
+#include "llvm/Frontend/SYCL/Utils.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
+#include "llvm/Frontend/SYCL/SplitModule.h"
 
 using namespace llvm;
 
@@ -78,14 +78,14 @@ static cl::opt<std::string>
     MCPU("mcpu", cl::desc("Target CPU, ignored if --mtriple is not used"),
          cl::value_desc("cpu"), cl::cat(SplitCategory));
 
-static cl::opt<IRSplitMode> SYCLSplitMode(
+static cl::opt<sycl::IRSplitMode> SYCLSplitMode(
     "sycl-split",
     cl::desc("SYCL Split Mode. If present, SYCL splitting algorithm is used "
              "with the specified mode."),
-    cl::Optional, cl::init(IRSplitMode::IRSM_NONE),
-    cl::values(clEnumValN(IRSplitMode::IRSM_PER_TU, "source",
+    cl::Optional, cl::init(sycl::IRSplitMode::IRSM_NONE),
+    cl::values(clEnumValN(sycl::IRSplitMode::IRSM_PER_TU, "source",
                           "1 ouptput module per translation unit"),
-               clEnumValN(IRSplitMode::IRSM_PER_KERNEL, "kernel",
+               clEnumValN(sycl::IRSplitMode::IRSM_PER_KERNEL, "kernel",
                           "1 output module per kernel")),
     cl::cat(SplitCategory));
 
@@ -119,13 +119,13 @@ void writeModuleToFile(const Module &M, StringRef Path, bool OutputAssembly) {
     WriteBitcodeToFile(M, OS);
 }
 
-void writeSplitModulesAsTable(ArrayRef<ModuleAndSYCLMetadata> Modules,
+void writeSplitModulesAsTable(ArrayRef<sycl::ModuleAndSYCLMetadata> Modules,
                               StringRef Path) {
   SmallVector<SmallString<64>> Columns;
   Columns.emplace_back("Code");
   Columns.emplace_back("Symbols");
 
-  SYCLStringTable Table;
+  sycl::StringTable Table;
   Table.emplace_back(std::move(Columns));
   for (const auto &[I, SM] : enumerate(Modules)) {
     SmallString<128> SymbolsFile;
@@ -144,7 +144,7 @@ void writeSplitModulesAsTable(ArrayRef<ModuleAndSYCLMetadata> Modules,
     exit(1);
   }
 
-  writeSYCLStringTable(Table, OS);
+  sycl::writeStringTable(Table, OS);
 }
 
 void cleanupModule(Module &M) {
@@ -156,9 +156,8 @@ void cleanupModule(Module &M) {
 }
 
 Error runSYCLSplitModule(std::unique_ptr<Module> M) {
-  SmallVector<ModuleAndSYCLMetadata> SplitModules;
-  auto PostSYCLSplitCallback = [&](std::unique_ptr<Module> MPart,
-                                   std::string Symbols) {
+  SmallVector<sycl::ModuleAndSYCLMetadata> SplitModules;
+  auto PostSplitCallback = [&](std::unique_ptr<Module> MPart) {
     if (verifyModule(*MPart)) {
       errs() << "Broken Module!\n";
       exit(1);
@@ -172,10 +171,11 @@ Error runSYCLSplitModule(std::unique_ptr<Module> M) {
     std::string ModulePath =
         (Twine(OutputFilename) + "_" + Twine(ID) + ModuleSuffix).str();
     writeModuleToFile(*MPart, ModulePath, OutputAssembly);
+    auto Symbols = sycl::makeSymbolTable(*MPart);
     SplitModules.emplace_back(std::move(ModulePath), std::move(Symbols));
   };
 
-  SYCLSplitModule(std::move(M), SYCLSplitMode, PostSYCLSplitCallback);
+  sycl::splitModule(std::move(M), SYCLSplitMode, PostSplitCallback);
   writeSplitModulesAsTable(SplitModules, OutputFilename);
   return Error::success();
 }
@@ -233,7 +233,7 @@ int main(int argc, char **argv) {
     Out->keep();
   };
 
-  if (SYCLSplitMode != IRSplitMode::IRSM_NONE) {
+  if (SYCLSplitMode != sycl::IRSplitMode::IRSM_NONE) {
     auto E = runSYCLSplitModule(std::move(M));
     if (E) {
       errs() << E << "\n";
