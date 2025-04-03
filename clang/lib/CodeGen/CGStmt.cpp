@@ -1326,6 +1326,7 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     Continue = getJumpDestInCurrentScope("for.inc");
   BreakContinueStack.push_back(BreakContinue(LoopExit, Continue));
 
+  llvm::BasicBlock *ForBody = nullptr;
   if (S.getCond()) {
     // If the for statement has a condition scope, emit the local variable
     // declaration.
@@ -1350,7 +1351,7 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
       ExitBlock = createBasicBlock("for.cond.cleanup");
 
     // As long as the condition is true, iterate the loop.
-    llvm::BasicBlock *ForBody = createBasicBlock("for.body");
+    ForBody = createBasicBlock("for.body");
 
     // C99 6.8.5p2/p4: The first substatement is executed if the expression
     // compares unequal to 0.  The condition must be a scalar type.
@@ -1364,7 +1365,14 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
       BoolCondVal = emitCondLikelihoodViaExpectIntrinsic(
           BoolCondVal, Stmt::getLikelihood(S.getBody()));
 
-    Builder.CreateCondBr(BoolCondVal, ForBody, ExitBlock, Weights);
+    auto *I = Builder.CreateCondBr(BoolCondVal, ForBody, ExitBlock, Weights);
+    // Key Instructions: Emit the condition and branch as separate atoms to
+    // match existing loop stepping behaviour. FIXME: We could have the branch
+    // as the backup location for the condition, which would probably be a
+    // better experience (no jumping to the brace).
+    if (auto *I = dyn_cast<llvm::Instruction>(BoolCondVal))
+      addInstToNewSourceAtom(I, nullptr);
+    addInstToNewSourceAtom(I, nullptr);
 
     if (ExitBlock != LoopExit.getBlock()) {
       EmitBlock(ExitBlock);
@@ -1418,6 +1426,12 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
 
   if (CGM.shouldEmitConvergenceTokens())
     ConvergenceTokenStack.pop_back();
+
+  if (ForBody) {
+    // Key Instructions: We want the for closing brace to be step-able on to
+    // match existing behaviour.
+    addInstToNewSourceAtom(ForBody->getTerminator(), nullptr);
+  }
 }
 
 void
