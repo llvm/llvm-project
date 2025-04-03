@@ -7498,9 +7498,6 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
 
   // HLSL attributes:
-  case ParsedAttr::AT_HLSLRootSignature:
-    S.HLSL().handleRootSignatureAttr(D, AL);
-    break;
   case ParsedAttr::AT_HLSLNumThreads:
     S.HLSL().handleNumThreadsAttr(D, AL);
     break;

@@ -28,7 +28,6 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetInfo.h"
-#include "clang/Parse/ParseHLSLRootSignature.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
@@ -940,40 +939,6 @@ void SemaHLSL::emitLogicalOperatorFixIt(Expr *LHS, Expr *RHS,
   SourceRange FullRange = SourceRange(LHS->getBeginLoc(), RHS->getEndLoc());
   SemaRef.Diag(LHS->getBeginLoc(), diag::note_function_suggestion)
       << NewFnName << FixItHint::CreateReplacement(FullRange, OS.str());
-}
-
-void SemaHLSL::handleRootSignatureAttr(Decl *D, const ParsedAttr &AL) {
-  if (AL.getNumArgs() != 1) {
-    Diag(AL.getLoc(), diag::err_attribute_wrong_number_arguments) << AL << 1;
-    return;
-  }
-
-  StringRef Signature;
-  if (!SemaRef.checkStringLiteralArgumentAttr(AL, 0, Signature))
-    return;
-
-  SourceLocation Loc = AL.getArgAsExpr(0)->getExprLoc();
-  // TODO(#126565): pass down below to lexer when fp is supported
-  // llvm::RoundingMode RM = SemaRef.CurFPFeatures.getRoundingMode();
-  hlsl::RootSignatureLexer Lexer(Signature, Loc);
-  SmallVector<llvm::hlsl::rootsig::RootElement> Elements;
-  hlsl::RootSignatureParser Parser(Elements, Lexer, SemaRef.getPreprocessor());
-
-  if (Parser.parse())
-    return;
-
-  // Allocate elements onto AST context
-  unsigned N = Elements.size();
-  auto RootElements = MutableArrayRef<llvm::hlsl::rootsig::RootElement>(
-      ::new (getASTContext()) llvm::hlsl::rootsig::RootElement[N], N);
-  for (unsigned I = 0; I < N; ++I)
-    RootElements[I] = Elements[I];
-
-  // Set elements
-  auto *Result = ::new (getASTContext())
-      HLSLRootSignatureAttr(getASTContext(), AL, Signature);
-  Result->setElements(ArrayRef<llvm::hlsl::rootsig::RootElement>(RootElements));
-  D->addAttr(Result);
 }
 
 void SemaHLSL::handleNumThreadsAttr(Decl *D, const ParsedAttr &AL) {
