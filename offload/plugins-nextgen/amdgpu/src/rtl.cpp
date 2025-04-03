@@ -138,7 +138,7 @@ namespace plugin {
 struct AMDGPUSignalTy;
 /// Use to transport information to OMPT timing functions.
 struct OmptKernelTimingArgsAsyncTy {
-  hsa_agent_t Agent;
+  GenericDeviceTy *Device;
   AMDGPUSignalTy *Signal;
   double TicksToTime;
   std::unique_ptr<ompt::OmptEventInfoTy> OmptEventInfo;
@@ -1773,21 +1773,22 @@ private:
 #ifdef OMPT_SUPPORT
     /// Schedule OMPT kernel timing on the slot.
     Error schedOmptAsyncKernelTiming(
-        hsa_agent_t Agent, AMDGPUSignalTy *OutputSignal, double TicksToTime,
-        std::unique_ptr<ompt::OmptEventInfoTy> OMPTData) {
+        GenericDeviceTy *Device, AMDGPUSignalTy *OutputSignal,
+        double TicksToTime, std::unique_ptr<ompt::OmptEventInfoTy> OMPTData) {
       OmptActionFunction = timeKernelInNsAsync;
       OmptKernelTimingArgsAsync = OmptKernelTimingArgsAsyncTy{
-          Agent, OutputSignal, TicksToTime, std::move(OMPTData)};
+          Device, OutputSignal, TicksToTime, std::move(OMPTData)};
       return Plugin::success();
     }
 
     /// Schedule OMPT data transfer timing on the slot
     Error schedOmptAsyncD2HTransferTiming(
-        hsa_agent_t Agent, AMDGPUSignalTy *OutputSignal, double TicksToTime,
+        GenericDeviceTy *Device, AMDGPUSignalTy *OutputSignal,
+        double TicksToTime,
         std::unique_ptr<ompt::OmptEventInfoTy> OmptInfoData) {
       OmptActionFunction = timeDataTransferInNsAsync;
       OmptKernelTimingArgsAsync = OmptKernelTimingArgsAsyncTy{
-          Agent, OutputSignal, TicksToTime, std::move(OmptInfoData)};
+          Device, OutputSignal, TicksToTime, std::move(OmptInfoData)};
       return Plugin::success();
     }
 #endif
@@ -2158,7 +2159,7 @@ public:
       // OmptInfo holds function pointer to finish trace record once the kernel
       // completed.
       if (auto Err = Slots[Curr].schedOmptAsyncKernelTiming(
-              Agent, OutputSignal, TicksToTime, std::move(OmptInfo)))
+              &Device, OutputSignal, TicksToTime, std::move(OmptInfo)))
         return Err;
     }
 #endif
@@ -2235,7 +2236,7 @@ public:
       DP("OMPT-Async: Registering data timing in pushPinnedMemoryCopyAsync\n");
       // Capture the time the data transfer required for the d2h transfer.
       if (auto Err = Slots[Curr].schedOmptAsyncD2HTransferTiming(
-              Agent, OutputSignal, TicksToTime, std::move(OmptInfo)))
+              &Device, OutputSignal, TicksToTime, std::move(OmptInfo)))
         return Err;
     }
 #endif
@@ -2291,7 +2292,7 @@ public:
       DP("OMPT-Async: Registering data timing in pushMemoryCopyD2HAsync\n");
       // Capture the time the data transfer required for the d2h transfer.
       if (auto Err = Slots[Curr].schedOmptAsyncD2HTransferTiming(
-              Agent, OutputSignals[0], TicksToTime, std::move(OmptInfo)))
+              &Device, OutputSignals[0], TicksToTime, std::move(OmptInfo)))
         return Err;
     }
 #endif
@@ -2408,7 +2409,7 @@ public:
       DP("OMPT-Async: Registering data timing in pushMemoryCopyH2DAsync\n");
       // Capture the time the data transfer required for the d2h transfer.
       if (auto Err = Slots[Curr].schedOmptAsyncD2HTransferTiming(
-              Agent, OutputSignals[0], TicksToTime, std::move(OmptInfo)))
+              &Device, OutputSignals[0], TicksToTime, std::move(OmptInfo)))
         return Err;
     }
 #endif
@@ -2447,7 +2448,7 @@ public:
       DP("OMPT-Async: Registering data timing in pushMemoryCopyD2DAsync\n");
       // Capture the time the data transfer required for the d2h transfer.
       if (auto Err = Slots[Curr].schedOmptAsyncD2HTransferTiming(
-              Agent, OutputSignal, TicksToTime, std::move(OmptInfo)))
+              &Device, OutputSignal, TicksToTime, std::move(OmptInfo)))
         return Err;
     }
 #endif
@@ -3605,7 +3606,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 #ifdef OMPT_SUPPORT
       if (LocalOmptEventInfo) {
         OmptKernelTimingArgsAsyncTy OmptKernelTimingArgsAsync{
-            Agent, &Signal, TicksToTime, std::move(LocalOmptEventInfo)};
+            this, &Signal, TicksToTime, std::move(LocalOmptEventInfo)};
         if (auto Err = timeDataTransferInNsAsync(&OmptKernelTimingArgsAsync))
           return Err;
       }
@@ -3691,7 +3692,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 #ifdef OMPT_SUPPORT
       if (LocalOmptEventInfo) {
         OmptKernelTimingArgsAsyncTy OmptKernelTimingArgsAsync{
-            Agent, &Signal, TicksToTime, std::move(LocalOmptEventInfo)};
+            this, &Signal, TicksToTime, std::move(LocalOmptEventInfo)};
         if (auto Err = timeDataTransferInNsAsync(&OmptKernelTimingArgsAsync))
           return Err;
       }
@@ -3749,7 +3750,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 #ifdef OMPT_SUPPORT
       if (LocalOmptEventInfo) {
         OmptKernelTimingArgsAsyncTy OmptKernelTimingArgsAsync{
-            Agent, &Signal, TicksToTime, std::move(LocalOmptEventInfo)};
+            this, &Signal, TicksToTime, std::move(LocalOmptEventInfo)};
         if (auto Err = timeDataTransferInNsAsync(&OmptKernelTimingArgsAsync))
           return Err;
       }
@@ -4267,6 +4268,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   bool useSharedMemForDescriptor(int64_t Size) override {
     return Size <= OMPX_SharedDescriptorMaxSize;
   }
+
+  bool useStrictSanityChecks() const { return OMPX_StrictSanityChecks; }
 
 private:
   using AMDGPUEventRef = AMDGPUResourceRef<AMDGPUEventTy>;
@@ -5346,6 +5349,7 @@ static OmptKernelTimingArgsAsyncTy *getOmptTimingsArgs(void *Data) {
   OmptKernelTimingArgsAsyncTy *Args =
       reinterpret_cast<OmptKernelTimingArgsAsyncTy *>(Data);
   assert(Args && "Invalid argument pointer");
+  assert(Args->Device && "Invalid device");
   assert(Args->Signal && "Invalid signal");
   assert(Args->OmptEventInfo && "Invalid OMPT Async data (nullptr)");
   assert(Args->OmptEventInfo->TraceRecord && "Invalid Trace Record Pointer");
@@ -5354,17 +5358,17 @@ static OmptKernelTimingArgsAsyncTy *getOmptTimingsArgs(void *Data) {
 
 static std::pair<uint64_t, uint64_t>
 getKernelStartAndEndTime(const OmptKernelTimingArgsAsyncTy *Args) {
+  assert(Args->Device && "Invalid GenericDevice Pointer in OMPT profiling");
   assert(Args->Signal && "Invalid AMDGPUSignal Pointer in OMPT profiling");
+  auto *AMDGPUDevice = reinterpret_cast<AMDGPUDeviceTy *>(Args->Device);
   hsa_amd_profiling_dispatch_time_t TimeRec{0, 0};
   hsa_status_t Status = hsa_amd_profiling_get_dispatch_time(
-      Args->Agent, Args->Signal->get(), &TimeRec);
+      AMDGPUDevice->getAgent(), Args->Signal->get(), &TimeRec);
   if (auto Err = Plugin::check(
           Status,
           "WARNING Could not retrieve kernel dispatch timestamps: %s")) {
     MESSAGE0(toString(std::move(Err)).data());
-    static BoolEnvar OMPX_StrictSanityChecks{"OMPX_STRICT_SANITY_CHECKS",
-                                             false};
-    if (OMPX_StrictSanityChecks)
+    if (AMDGPUDevice->useStrictSanityChecks())
       llvm_unreachable("User-requested hard stop on sanity check errors.");
   }
 
@@ -5376,6 +5380,7 @@ getKernelStartAndEndTime(const OmptKernelTimingArgsAsyncTy *Args) {
 
 static std::pair<uint64_t, uint64_t>
 getCopyStartAndEndTime(const OmptKernelTimingArgsAsyncTy *Args) {
+  assert(Args->Device && "Invalid GenericDevice Pointer in OMPT profiling");
   assert(Args->Signal && "Invalid AMDGPUSignal Pointer in OMPT profiling");
   hsa_amd_profiling_async_copy_time_t TimeRec{0, 0};
   hsa_status_t Status =
@@ -5383,9 +5388,8 @@ getCopyStartAndEndTime(const OmptKernelTimingArgsAsyncTy *Args) {
   if (auto Err = Plugin::check(
           Status, "WARNING Could not retrieve data-copy timestamps: %s")) {
     MESSAGE0(toString(std::move(Err)).data());
-    static BoolEnvar OMPX_StrictSanityChecks{"OMPX_STRICT_SANITY_CHECKS",
-                                             false};
-    if (OMPX_StrictSanityChecks)
+    auto *AMDGPUDevice = reinterpret_cast<AMDGPUDeviceTy *>(Args->Device);
+    if (AMDGPUDevice->useStrictSanityChecks())
       llvm_unreachable("User-requested hard stop on sanity check errors.");
   }
 
