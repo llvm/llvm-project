@@ -3447,7 +3447,8 @@ static StringRef getAllocaName(AllocaInst *AI) {
       if (!isa<MDTuple>(Annotation))
         continue;
       auto AnnotationTuple = cast<MDTuple>(Annotation);
-      for (int Index = 0; Index < AnnotationTuple->getNumOperands(); Index++) {
+      for (unsigned Index = 0; Index < AnnotationTuple->getNumOperands();
+           Index++) {
         // All annotations are strings
         auto MetadataString =
             cast<MDString>(AnnotationTuple->getOperand(Index));
