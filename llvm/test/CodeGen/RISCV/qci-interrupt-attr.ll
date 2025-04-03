@@ -1414,7 +1414,7 @@ define void @test_spill_nest() "interrupt"="qci-nest" {
 ; QCI-PUSH-POP-NEXT:    .cfi_restore s9
 ; QCI-PUSH-POP-NEXT:    .cfi_restore s10
 ; QCI-PUSH-POP-NEXT:    .cfi_restore s11
-; QCI-PUSH-POP-NEXT:    .cfi_def_cfa_offset 0
+; QCI-PUSH-POP-NEXT:    .cfi_def_cfa_offset 96
 ; QCI-PUSH-POP-NEXT:    qc.c.mileaveret
 ;
 ; QCI-QCCMP-PUSH-POP-LABEL: test_spill_nest:
@@ -1541,7 +1541,7 @@ define void @test_spill_nest() "interrupt"="qci-nest" {
 ; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_restore s9
 ; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_restore s10
 ; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_restore s11
-; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_def_cfa_offset 0
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_def_cfa_offset 96
 ; QCI-QCCMP-PUSH-POP-NEXT:    qc.c.mileaveret
 ;
 ; QCI-QCCMP-PUSH-POP-FP-LABEL: test_spill_nest:
@@ -1672,7 +1672,7 @@ define void @test_spill_nest() "interrupt"="qci-nest" {
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_restore s9
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_restore s10
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_restore s11
-; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa_offset 0
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa_offset 96
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    qc.c.mileaveret
   %1 = load [32 x i32], ptr @var
   store volatile [32 x i32] %1, ptr @var
@@ -2106,7 +2106,7 @@ define void @test_spill_nonest() "interrupt"="qci-nonest" {
 ; QCI-PUSH-POP-NEXT:    .cfi_restore s9
 ; QCI-PUSH-POP-NEXT:    .cfi_restore s10
 ; QCI-PUSH-POP-NEXT:    .cfi_restore s11
-; QCI-PUSH-POP-NEXT:    .cfi_def_cfa_offset 0
+; QCI-PUSH-POP-NEXT:    .cfi_def_cfa_offset 96
 ; QCI-PUSH-POP-NEXT:    qc.c.mileaveret
 ;
 ; QCI-QCCMP-PUSH-POP-LABEL: test_spill_nonest:
@@ -2233,7 +2233,7 @@ define void @test_spill_nonest() "interrupt"="qci-nonest" {
 ; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_restore s9
 ; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_restore s10
 ; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_restore s11
-; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_def_cfa_offset 0
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_def_cfa_offset 96
 ; QCI-QCCMP-PUSH-POP-NEXT:    qc.c.mileaveret
 ;
 ; QCI-QCCMP-PUSH-POP-FP-LABEL: test_spill_nonest:
@@ -2364,7 +2364,7 @@ define void @test_spill_nonest() "interrupt"="qci-nonest" {
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_restore s9
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_restore s10
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_restore s11
-; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa_offset 0
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa_offset 96
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    qc.c.mileaveret
   %1 = load [32 x i32], ptr @var
   store volatile [32 x i32] %1, ptr @var
@@ -2934,7 +2934,7 @@ define void @test_spill_call_nest() "interrupt"="qci-nest" {
 ; QCI-PUSH-POP-NEXT:    .cfi_restore s9
 ; QCI-PUSH-POP-NEXT:    .cfi_restore s10
 ; QCI-PUSH-POP-NEXT:    .cfi_restore s11
-; QCI-PUSH-POP-NEXT:    .cfi_def_cfa_offset 0
+; QCI-PUSH-POP-NEXT:    .cfi_def_cfa_offset 96
 ; QCI-PUSH-POP-NEXT:    qc.c.mileaveret
 ;
 ; QCI-QCCMP-PUSH-POP-LABEL: test_spill_call_nest:
@@ -3109,7 +3109,7 @@ define void @test_spill_call_nest() "interrupt"="qci-nest" {
 ; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_restore s9
 ; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_restore s10
 ; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_restore s11
-; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_def_cfa_offset 0
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_def_cfa_offset 96
 ; QCI-QCCMP-PUSH-POP-NEXT:    qc.c.mileaveret
 ;
 ; QCI-QCCMP-PUSH-POP-FP-LABEL: test_spill_call_nest:
@@ -3288,7 +3288,7 @@ define void @test_spill_call_nest() "interrupt"="qci-nest" {
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_restore s9
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_restore s10
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_restore s11
-; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa_offset 0
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa_offset 96
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    qc.c.mileaveret
   %1 = load [32 x i32], ptr @var
   %2 = call i64 @function_with_one_stack_arg(i64 0, i64 1, i64 2, i64 3, i32 4)
@@ -3860,7 +3860,7 @@ define void @test_spill_call_nonest() "interrupt"="qci-nonest" {
 ; QCI-PUSH-POP-NEXT:    .cfi_restore s9
 ; QCI-PUSH-POP-NEXT:    .cfi_restore s10
 ; QCI-PUSH-POP-NEXT:    .cfi_restore s11
-; QCI-PUSH-POP-NEXT:    .cfi_def_cfa_offset 0
+; QCI-PUSH-POP-NEXT:    .cfi_def_cfa_offset 96
 ; QCI-PUSH-POP-NEXT:    qc.c.mileaveret
 ;
 ; QCI-QCCMP-PUSH-POP-LABEL: test_spill_call_nonest:
@@ -4035,7 +4035,7 @@ define void @test_spill_call_nonest() "interrupt"="qci-nonest" {
 ; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_restore s9
 ; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_restore s10
 ; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_restore s11
-; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_def_cfa_offset 0
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_def_cfa_offset 96
 ; QCI-QCCMP-PUSH-POP-NEXT:    qc.c.mileaveret
 ;
 ; QCI-QCCMP-PUSH-POP-FP-LABEL: test_spill_call_nonest:
@@ -4214,7 +4214,7 @@ define void @test_spill_call_nonest() "interrupt"="qci-nonest" {
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_restore s9
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_restore s10
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_restore s11
-; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa_offset 0
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa_offset 96
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    qc.c.mileaveret
   %1 = load [32 x i32], ptr @var
   %2 = call i64 @function_with_one_stack_arg(i64 0, i64 1, i64 2, i64 3, i32 4)
@@ -4323,7 +4323,7 @@ define void @test_nest_explicit_s11() "interrupt"="qci-nest" {
 ; QCI-PUSH-POP-NEXT:    #NO_APP
 ; QCI-PUSH-POP-NEXT:    cm.pop {ra, s0-s11}, 64
 ; QCI-PUSH-POP-NEXT:    .cfi_restore s11
-; QCI-PUSH-POP-NEXT:    .cfi_def_cfa_offset 0
+; QCI-PUSH-POP-NEXT:    .cfi_def_cfa_offset 96
 ; QCI-PUSH-POP-NEXT:    qc.c.mileaveret
 ;
 ; QCI-QCCMP-PUSH-POP-LABEL: test_nest_explicit_s11:
@@ -4355,7 +4355,7 @@ define void @test_nest_explicit_s11() "interrupt"="qci-nest" {
 ; QCI-QCCMP-PUSH-POP-NEXT:    #NO_APP
 ; QCI-QCCMP-PUSH-POP-NEXT:    qc.cm.pop {ra, s0-s11}, 64
 ; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_restore s11
-; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_def_cfa_offset 0
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_def_cfa_offset 96
 ; QCI-QCCMP-PUSH-POP-NEXT:    qc.c.mileaveret
 ;
 ; QCI-QCCMP-PUSH-POP-FP-LABEL: test_nest_explicit_s11:
@@ -4389,7 +4389,7 @@ define void @test_nest_explicit_s11() "interrupt"="qci-nest" {
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa sp, 160
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    qc.cm.pop {ra, s0-s11}, 64
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_restore s11
-; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa_offset 0
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa_offset 96
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    qc.c.mileaveret
   tail call void asm sideeffect "li s4, 0", "~{s11}"()
   ret void
@@ -4495,7 +4495,7 @@ define void @test_nonest_explicit_s11() "interrupt"="qci-nonest" {
 ; QCI-PUSH-POP-NEXT:    #NO_APP
 ; QCI-PUSH-POP-NEXT:    cm.pop {ra, s0-s11}, 64
 ; QCI-PUSH-POP-NEXT:    .cfi_restore s11
-; QCI-PUSH-POP-NEXT:    .cfi_def_cfa_offset 0
+; QCI-PUSH-POP-NEXT:    .cfi_def_cfa_offset 96
 ; QCI-PUSH-POP-NEXT:    qc.c.mileaveret
 ;
 ; QCI-QCCMP-PUSH-POP-LABEL: test_nonest_explicit_s11:
@@ -4527,7 +4527,7 @@ define void @test_nonest_explicit_s11() "interrupt"="qci-nonest" {
 ; QCI-QCCMP-PUSH-POP-NEXT:    #NO_APP
 ; QCI-QCCMP-PUSH-POP-NEXT:    qc.cm.pop {ra, s0-s11}, 64
 ; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_restore s11
-; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_def_cfa_offset 0
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_def_cfa_offset 96
 ; QCI-QCCMP-PUSH-POP-NEXT:    qc.c.mileaveret
 ;
 ; QCI-QCCMP-PUSH-POP-FP-LABEL: test_nonest_explicit_s11:
@@ -4561,8 +4561,629 @@ define void @test_nonest_explicit_s11() "interrupt"="qci-nonest" {
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa sp, 160
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    qc.cm.pop {ra, s0-s11}, 64
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_restore s11
-; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa_offset 0
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa_offset 96
 ; QCI-QCCMP-PUSH-POP-FP-NEXT:    qc.c.mileaveret
   tail call void asm sideeffect "li s11, 0", "~{s11}"()
+  ret void
+}
+
+define void @test_nest_explicit_ra_s0() "interrupt"="qci-nest" {
+; QCI-LABEL: test_nest_explicit_ra_s0:
+; QCI:       # %bb.0:
+; QCI-NEXT:    qc.c.mienter.nest
+; QCI-NEXT:    .cfi_def_cfa_offset 96
+; QCI-NEXT:    .cfi_offset ra, -16
+; QCI-NEXT:    .cfi_offset t0, -24
+; QCI-NEXT:    .cfi_offset t1, -28
+; QCI-NEXT:    .cfi_offset t2, -32
+; QCI-NEXT:    .cfi_offset s0, -8
+; QCI-NEXT:    .cfi_offset a0, -36
+; QCI-NEXT:    .cfi_offset a1, -40
+; QCI-NEXT:    .cfi_offset a2, -44
+; QCI-NEXT:    .cfi_offset a3, -48
+; QCI-NEXT:    .cfi_offset a4, -52
+; QCI-NEXT:    .cfi_offset a5, -56
+; QCI-NEXT:    .cfi_offset a6, -60
+; QCI-NEXT:    .cfi_offset a7, -64
+; QCI-NEXT:    .cfi_offset t3, -68
+; QCI-NEXT:    .cfi_offset t4, -72
+; QCI-NEXT:    .cfi_offset t5, -76
+; QCI-NEXT:    .cfi_offset t6, -80
+; QCI-NEXT:    #APP
+; QCI-NEXT:    li s4, 0
+; QCI-NEXT:    #NO_APP
+; QCI-NEXT:    qc.c.mileaveret
+;
+; QCI-FP-LABEL: test_nest_explicit_ra_s0:
+; QCI-FP:       # %bb.0:
+; QCI-FP-NEXT:    qc.c.mienter.nest
+; QCI-FP-NEXT:    .cfi_def_cfa_offset 96
+; QCI-FP-NEXT:    .cfi_offset ra, -16
+; QCI-FP-NEXT:    .cfi_offset t0, -24
+; QCI-FP-NEXT:    .cfi_offset t1, -28
+; QCI-FP-NEXT:    .cfi_offset t2, -32
+; QCI-FP-NEXT:    .cfi_offset s0, -8
+; QCI-FP-NEXT:    .cfi_offset a0, -36
+; QCI-FP-NEXT:    .cfi_offset a1, -40
+; QCI-FP-NEXT:    .cfi_offset a2, -44
+; QCI-FP-NEXT:    .cfi_offset a3, -48
+; QCI-FP-NEXT:    .cfi_offset a4, -52
+; QCI-FP-NEXT:    .cfi_offset a5, -56
+; QCI-FP-NEXT:    .cfi_offset a6, -60
+; QCI-FP-NEXT:    .cfi_offset a7, -64
+; QCI-FP-NEXT:    .cfi_offset t3, -68
+; QCI-FP-NEXT:    .cfi_offset t4, -72
+; QCI-FP-NEXT:    .cfi_offset t5, -76
+; QCI-FP-NEXT:    .cfi_offset t6, -80
+; QCI-FP-NEXT:    .cfi_def_cfa s0, 0
+; QCI-FP-NEXT:    #APP
+; QCI-FP-NEXT:    li s4, 0
+; QCI-FP-NEXT:    #NO_APP
+; QCI-FP-NEXT:    .cfi_def_cfa sp, 96
+; QCI-FP-NEXT:    qc.c.mileaveret
+;
+; QCI-PUSH-POP-LABEL: test_nest_explicit_ra_s0:
+; QCI-PUSH-POP:       # %bb.0:
+; QCI-PUSH-POP-NEXT:    qc.c.mienter.nest
+; QCI-PUSH-POP-NEXT:    .cfi_def_cfa_offset 96
+; QCI-PUSH-POP-NEXT:    .cfi_offset ra, -16
+; QCI-PUSH-POP-NEXT:    .cfi_offset t0, -24
+; QCI-PUSH-POP-NEXT:    .cfi_offset t1, -28
+; QCI-PUSH-POP-NEXT:    .cfi_offset t2, -32
+; QCI-PUSH-POP-NEXT:    .cfi_offset s0, -8
+; QCI-PUSH-POP-NEXT:    .cfi_offset a0, -36
+; QCI-PUSH-POP-NEXT:    .cfi_offset a1, -40
+; QCI-PUSH-POP-NEXT:    .cfi_offset a2, -44
+; QCI-PUSH-POP-NEXT:    .cfi_offset a3, -48
+; QCI-PUSH-POP-NEXT:    .cfi_offset a4, -52
+; QCI-PUSH-POP-NEXT:    .cfi_offset a5, -56
+; QCI-PUSH-POP-NEXT:    .cfi_offset a6, -60
+; QCI-PUSH-POP-NEXT:    .cfi_offset a7, -64
+; QCI-PUSH-POP-NEXT:    .cfi_offset t3, -68
+; QCI-PUSH-POP-NEXT:    .cfi_offset t4, -72
+; QCI-PUSH-POP-NEXT:    .cfi_offset t5, -76
+; QCI-PUSH-POP-NEXT:    .cfi_offset t6, -80
+; QCI-PUSH-POP-NEXT:    #APP
+; QCI-PUSH-POP-NEXT:    li s4, 0
+; QCI-PUSH-POP-NEXT:    #NO_APP
+; QCI-PUSH-POP-NEXT:    qc.c.mileaveret
+;
+; QCI-QCCMP-PUSH-POP-LABEL: test_nest_explicit_ra_s0:
+; QCI-QCCMP-PUSH-POP:       # %bb.0:
+; QCI-QCCMP-PUSH-POP-NEXT:    qc.c.mienter.nest
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_def_cfa_offset 96
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset ra, -16
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset t0, -24
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset t1, -28
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset t2, -32
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset s0, -8
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset a0, -36
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset a1, -40
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset a2, -44
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset a3, -48
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset a4, -52
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset a5, -56
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset a6, -60
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset a7, -64
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset t3, -68
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset t4, -72
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset t5, -76
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset t6, -80
+; QCI-QCCMP-PUSH-POP-NEXT:    #APP
+; QCI-QCCMP-PUSH-POP-NEXT:    li s4, 0
+; QCI-QCCMP-PUSH-POP-NEXT:    #NO_APP
+; QCI-QCCMP-PUSH-POP-NEXT:    qc.c.mileaveret
+;
+; QCI-QCCMP-PUSH-POP-FP-LABEL: test_nest_explicit_ra_s0:
+; QCI-QCCMP-PUSH-POP-FP:       # %bb.0:
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    qc.c.mienter.nest
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa_offset 96
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset ra, -16
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset t0, -24
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset t1, -28
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset t2, -32
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset s0, -8
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset a0, -36
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset a1, -40
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset a2, -44
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset a3, -48
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset a4, -52
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset a5, -56
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset a6, -60
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset a7, -64
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset t3, -68
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset t4, -72
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset t5, -76
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset t6, -80
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa s0, 0
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    #APP
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    li s4, 0
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    #NO_APP
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa sp, 96
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    qc.c.mileaveret
+  tail call void asm sideeffect "li s4, 0", "~{ra},~{s0}"()
+  ret void
+}
+
+define void @test_nonest_explicit_ra_s0() "interrupt"="qci-nonest" {
+; QCI-LABEL: test_nonest_explicit_ra_s0:
+; QCI:       # %bb.0:
+; QCI-NEXT:    qc.c.mienter
+; QCI-NEXT:    .cfi_def_cfa_offset 96
+; QCI-NEXT:    .cfi_offset ra, -16
+; QCI-NEXT:    .cfi_offset t0, -24
+; QCI-NEXT:    .cfi_offset t1, -28
+; QCI-NEXT:    .cfi_offset t2, -32
+; QCI-NEXT:    .cfi_offset s0, -8
+; QCI-NEXT:    .cfi_offset a0, -36
+; QCI-NEXT:    .cfi_offset a1, -40
+; QCI-NEXT:    .cfi_offset a2, -44
+; QCI-NEXT:    .cfi_offset a3, -48
+; QCI-NEXT:    .cfi_offset a4, -52
+; QCI-NEXT:    .cfi_offset a5, -56
+; QCI-NEXT:    .cfi_offset a6, -60
+; QCI-NEXT:    .cfi_offset a7, -64
+; QCI-NEXT:    .cfi_offset t3, -68
+; QCI-NEXT:    .cfi_offset t4, -72
+; QCI-NEXT:    .cfi_offset t5, -76
+; QCI-NEXT:    .cfi_offset t6, -80
+; QCI-NEXT:    #APP
+; QCI-NEXT:    li s11, 0
+; QCI-NEXT:    #NO_APP
+; QCI-NEXT:    qc.c.mileaveret
+;
+; QCI-FP-LABEL: test_nonest_explicit_ra_s0:
+; QCI-FP:       # %bb.0:
+; QCI-FP-NEXT:    qc.c.mienter
+; QCI-FP-NEXT:    .cfi_def_cfa_offset 96
+; QCI-FP-NEXT:    .cfi_offset ra, -16
+; QCI-FP-NEXT:    .cfi_offset t0, -24
+; QCI-FP-NEXT:    .cfi_offset t1, -28
+; QCI-FP-NEXT:    .cfi_offset t2, -32
+; QCI-FP-NEXT:    .cfi_offset s0, -8
+; QCI-FP-NEXT:    .cfi_offset a0, -36
+; QCI-FP-NEXT:    .cfi_offset a1, -40
+; QCI-FP-NEXT:    .cfi_offset a2, -44
+; QCI-FP-NEXT:    .cfi_offset a3, -48
+; QCI-FP-NEXT:    .cfi_offset a4, -52
+; QCI-FP-NEXT:    .cfi_offset a5, -56
+; QCI-FP-NEXT:    .cfi_offset a6, -60
+; QCI-FP-NEXT:    .cfi_offset a7, -64
+; QCI-FP-NEXT:    .cfi_offset t3, -68
+; QCI-FP-NEXT:    .cfi_offset t4, -72
+; QCI-FP-NEXT:    .cfi_offset t5, -76
+; QCI-FP-NEXT:    .cfi_offset t6, -80
+; QCI-FP-NEXT:    .cfi_def_cfa s0, 0
+; QCI-FP-NEXT:    #APP
+; QCI-FP-NEXT:    li s11, 0
+; QCI-FP-NEXT:    #NO_APP
+; QCI-FP-NEXT:    .cfi_def_cfa sp, 96
+; QCI-FP-NEXT:    qc.c.mileaveret
+;
+; QCI-PUSH-POP-LABEL: test_nonest_explicit_ra_s0:
+; QCI-PUSH-POP:       # %bb.0:
+; QCI-PUSH-POP-NEXT:    qc.c.mienter
+; QCI-PUSH-POP-NEXT:    .cfi_def_cfa_offset 96
+; QCI-PUSH-POP-NEXT:    .cfi_offset ra, -16
+; QCI-PUSH-POP-NEXT:    .cfi_offset t0, -24
+; QCI-PUSH-POP-NEXT:    .cfi_offset t1, -28
+; QCI-PUSH-POP-NEXT:    .cfi_offset t2, -32
+; QCI-PUSH-POP-NEXT:    .cfi_offset s0, -8
+; QCI-PUSH-POP-NEXT:    .cfi_offset a0, -36
+; QCI-PUSH-POP-NEXT:    .cfi_offset a1, -40
+; QCI-PUSH-POP-NEXT:    .cfi_offset a2, -44
+; QCI-PUSH-POP-NEXT:    .cfi_offset a3, -48
+; QCI-PUSH-POP-NEXT:    .cfi_offset a4, -52
+; QCI-PUSH-POP-NEXT:    .cfi_offset a5, -56
+; QCI-PUSH-POP-NEXT:    .cfi_offset a6, -60
+; QCI-PUSH-POP-NEXT:    .cfi_offset a7, -64
+; QCI-PUSH-POP-NEXT:    .cfi_offset t3, -68
+; QCI-PUSH-POP-NEXT:    .cfi_offset t4, -72
+; QCI-PUSH-POP-NEXT:    .cfi_offset t5, -76
+; QCI-PUSH-POP-NEXT:    .cfi_offset t6, -80
+; QCI-PUSH-POP-NEXT:    #APP
+; QCI-PUSH-POP-NEXT:    li s11, 0
+; QCI-PUSH-POP-NEXT:    #NO_APP
+; QCI-PUSH-POP-NEXT:    qc.c.mileaveret
+;
+; QCI-QCCMP-PUSH-POP-LABEL: test_nonest_explicit_ra_s0:
+; QCI-QCCMP-PUSH-POP:       # %bb.0:
+; QCI-QCCMP-PUSH-POP-NEXT:    qc.c.mienter
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_def_cfa_offset 96
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset ra, -16
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset t0, -24
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset t1, -28
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset t2, -32
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset s0, -8
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset a0, -36
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset a1, -40
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset a2, -44
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset a3, -48
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset a4, -52
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset a5, -56
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset a6, -60
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset a7, -64
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset t3, -68
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset t4, -72
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset t5, -76
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset t6, -80
+; QCI-QCCMP-PUSH-POP-NEXT:    #APP
+; QCI-QCCMP-PUSH-POP-NEXT:    li s11, 0
+; QCI-QCCMP-PUSH-POP-NEXT:    #NO_APP
+; QCI-QCCMP-PUSH-POP-NEXT:    qc.c.mileaveret
+;
+; QCI-QCCMP-PUSH-POP-FP-LABEL: test_nonest_explicit_ra_s0:
+; QCI-QCCMP-PUSH-POP-FP:       # %bb.0:
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    qc.c.mienter
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa_offset 96
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset ra, -16
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset t0, -24
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset t1, -28
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset t2, -32
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset s0, -8
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset a0, -36
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset a1, -40
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset a2, -44
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset a3, -48
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset a4, -52
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset a5, -56
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset a6, -60
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset a7, -64
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset t3, -68
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset t4, -72
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset t5, -76
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset t6, -80
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa s0, 0
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    #APP
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    li s11, 0
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    #NO_APP
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa sp, 96
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    qc.c.mileaveret
+  tail call void asm sideeffect "li s11, 0", "~{ra},~{s0}"()
+  ret void
+}
+
+
+define void @test_nest_explicit_s1() "interrupt"="qci-nest" {
+; QCI-LABEL: test_nest_explicit_s1:
+; QCI:       # %bb.0:
+; QCI-NEXT:    qc.c.mienter.nest
+; QCI-NEXT:    .cfi_def_cfa_offset 96
+; QCI-NEXT:    .cfi_offset ra, -16
+; QCI-NEXT:    .cfi_offset t0, -24
+; QCI-NEXT:    .cfi_offset t1, -28
+; QCI-NEXT:    .cfi_offset t2, -32
+; QCI-NEXT:    .cfi_offset s0, -8
+; QCI-NEXT:    .cfi_offset a0, -36
+; QCI-NEXT:    .cfi_offset a1, -40
+; QCI-NEXT:    .cfi_offset a2, -44
+; QCI-NEXT:    .cfi_offset a3, -48
+; QCI-NEXT:    .cfi_offset a4, -52
+; QCI-NEXT:    .cfi_offset a5, -56
+; QCI-NEXT:    .cfi_offset a6, -60
+; QCI-NEXT:    .cfi_offset a7, -64
+; QCI-NEXT:    .cfi_offset t3, -68
+; QCI-NEXT:    .cfi_offset t4, -72
+; QCI-NEXT:    .cfi_offset t5, -76
+; QCI-NEXT:    .cfi_offset t6, -80
+; QCI-NEXT:    addi sp, sp, -16
+; QCI-NEXT:    .cfi_def_cfa_offset 112
+; QCI-NEXT:    sw s1, 12(sp) # 4-byte Folded Spill
+; QCI-NEXT:    .cfi_offset s1, -100
+; QCI-NEXT:    #APP
+; QCI-NEXT:    li s4, 0
+; QCI-NEXT:    #NO_APP
+; QCI-NEXT:    lw s1, 12(sp) # 4-byte Folded Reload
+; QCI-NEXT:    .cfi_restore s1
+; QCI-NEXT:    addi sp, sp, 16
+; QCI-NEXT:    .cfi_def_cfa_offset 96
+; QCI-NEXT:    qc.c.mileaveret
+;
+; QCI-FP-LABEL: test_nest_explicit_s1:
+; QCI-FP:       # %bb.0:
+; QCI-FP-NEXT:    qc.c.mienter.nest
+; QCI-FP-NEXT:    .cfi_def_cfa_offset 96
+; QCI-FP-NEXT:    .cfi_offset ra, -16
+; QCI-FP-NEXT:    .cfi_offset t0, -24
+; QCI-FP-NEXT:    .cfi_offset t1, -28
+; QCI-FP-NEXT:    .cfi_offset t2, -32
+; QCI-FP-NEXT:    .cfi_offset s0, -8
+; QCI-FP-NEXT:    .cfi_offset a0, -36
+; QCI-FP-NEXT:    .cfi_offset a1, -40
+; QCI-FP-NEXT:    .cfi_offset a2, -44
+; QCI-FP-NEXT:    .cfi_offset a3, -48
+; QCI-FP-NEXT:    .cfi_offset a4, -52
+; QCI-FP-NEXT:    .cfi_offset a5, -56
+; QCI-FP-NEXT:    .cfi_offset a6, -60
+; QCI-FP-NEXT:    .cfi_offset a7, -64
+; QCI-FP-NEXT:    .cfi_offset t3, -68
+; QCI-FP-NEXT:    .cfi_offset t4, -72
+; QCI-FP-NEXT:    .cfi_offset t5, -76
+; QCI-FP-NEXT:    .cfi_offset t6, -80
+; QCI-FP-NEXT:    addi sp, sp, -16
+; QCI-FP-NEXT:    .cfi_def_cfa_offset 112
+; QCI-FP-NEXT:    sw s1, 12(sp) # 4-byte Folded Spill
+; QCI-FP-NEXT:    .cfi_offset s1, -100
+; QCI-FP-NEXT:    .cfi_def_cfa s0, 0
+; QCI-FP-NEXT:    #APP
+; QCI-FP-NEXT:    li s4, 0
+; QCI-FP-NEXT:    #NO_APP
+; QCI-FP-NEXT:    .cfi_def_cfa sp, 112
+; QCI-FP-NEXT:    lw s1, 12(sp) # 4-byte Folded Reload
+; QCI-FP-NEXT:    .cfi_restore s1
+; QCI-FP-NEXT:    addi sp, sp, 16
+; QCI-FP-NEXT:    .cfi_def_cfa_offset 96
+; QCI-FP-NEXT:    qc.c.mileaveret
+;
+; QCI-PUSH-POP-LABEL: test_nest_explicit_s1:
+; QCI-PUSH-POP:       # %bb.0:
+; QCI-PUSH-POP-NEXT:    qc.c.mienter.nest
+; QCI-PUSH-POP-NEXT:    .cfi_def_cfa_offset 96
+; QCI-PUSH-POP-NEXT:    .cfi_offset ra, -16
+; QCI-PUSH-POP-NEXT:    .cfi_offset t0, -24
+; QCI-PUSH-POP-NEXT:    .cfi_offset t1, -28
+; QCI-PUSH-POP-NEXT:    .cfi_offset t2, -32
+; QCI-PUSH-POP-NEXT:    .cfi_offset s0, -8
+; QCI-PUSH-POP-NEXT:    .cfi_offset a0, -36
+; QCI-PUSH-POP-NEXT:    .cfi_offset a1, -40
+; QCI-PUSH-POP-NEXT:    .cfi_offset a2, -44
+; QCI-PUSH-POP-NEXT:    .cfi_offset a3, -48
+; QCI-PUSH-POP-NEXT:    .cfi_offset a4, -52
+; QCI-PUSH-POP-NEXT:    .cfi_offset a5, -56
+; QCI-PUSH-POP-NEXT:    .cfi_offset a6, -60
+; QCI-PUSH-POP-NEXT:    .cfi_offset a7, -64
+; QCI-PUSH-POP-NEXT:    .cfi_offset t3, -68
+; QCI-PUSH-POP-NEXT:    .cfi_offset t4, -72
+; QCI-PUSH-POP-NEXT:    .cfi_offset t5, -76
+; QCI-PUSH-POP-NEXT:    .cfi_offset t6, -80
+; QCI-PUSH-POP-NEXT:    cm.push {ra, s0-s1}, -16
+; QCI-PUSH-POP-NEXT:    .cfi_def_cfa_offset 112
+; QCI-PUSH-POP-NEXT:    .cfi_offset s1, -100
+; QCI-PUSH-POP-NEXT:    #APP
+; QCI-PUSH-POP-NEXT:    li s4, 0
+; QCI-PUSH-POP-NEXT:    #NO_APP
+; QCI-PUSH-POP-NEXT:    cm.pop {ra, s0-s1}, 16
+; QCI-PUSH-POP-NEXT:    .cfi_restore s1
+; QCI-PUSH-POP-NEXT:    .cfi_def_cfa_offset 96
+; QCI-PUSH-POP-NEXT:    qc.c.mileaveret
+;
+; QCI-QCCMP-PUSH-POP-LABEL: test_nest_explicit_s1:
+; QCI-QCCMP-PUSH-POP:       # %bb.0:
+; QCI-QCCMP-PUSH-POP-NEXT:    qc.c.mienter.nest
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_def_cfa_offset 96
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset ra, -16
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset t0, -24
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset t1, -28
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset t2, -32
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset s0, -8
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset a0, -36
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset a1, -40
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset a2, -44
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset a3, -48
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset a4, -52
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset a5, -56
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset a6, -60
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset a7, -64
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset t3, -68
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset t4, -72
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset t5, -76
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset t6, -80
+; QCI-QCCMP-PUSH-POP-NEXT:    qc.cm.push {ra, s0-s1}, -16
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_def_cfa_offset 112
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset s1, -108
+; QCI-QCCMP-PUSH-POP-NEXT:    #APP
+; QCI-QCCMP-PUSH-POP-NEXT:    li s4, 0
+; QCI-QCCMP-PUSH-POP-NEXT:    #NO_APP
+; QCI-QCCMP-PUSH-POP-NEXT:    qc.cm.pop {ra, s0-s1}, 16
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_restore s1
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_def_cfa_offset 96
+; QCI-QCCMP-PUSH-POP-NEXT:    qc.c.mileaveret
+;
+; QCI-QCCMP-PUSH-POP-FP-LABEL: test_nest_explicit_s1:
+; QCI-QCCMP-PUSH-POP-FP:       # %bb.0:
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    qc.c.mienter.nest
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa_offset 96
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset ra, -16
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset t0, -24
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset t1, -28
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset t2, -32
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset s0, -8
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset a0, -36
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset a1, -40
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset a2, -44
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset a3, -48
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset a4, -52
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset a5, -56
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset a6, -60
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset a7, -64
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset t3, -68
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset t4, -72
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset t5, -76
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset t6, -80
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    qc.cm.push {ra, s0-s1}, -16
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa_offset 112
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset s1, -108
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa s0, 0
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    #APP
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    li s4, 0
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    #NO_APP
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa sp, 112
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    qc.cm.pop {ra, s0-s1}, 16
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_restore s1
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa_offset 96
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    qc.c.mileaveret
+  tail call void asm sideeffect "li s4, 0", "~{s1}"()
+  ret void
+}
+
+define void @test_nonest_explicit_s1() "interrupt"="qci-nonest" {
+; QCI-LABEL: test_nonest_explicit_s1:
+; QCI:       # %bb.0:
+; QCI-NEXT:    qc.c.mienter
+; QCI-NEXT:    .cfi_def_cfa_offset 96
+; QCI-NEXT:    .cfi_offset ra, -16
+; QCI-NEXT:    .cfi_offset t0, -24
+; QCI-NEXT:    .cfi_offset t1, -28
+; QCI-NEXT:    .cfi_offset t2, -32
+; QCI-NEXT:    .cfi_offset s0, -8
+; QCI-NEXT:    .cfi_offset a0, -36
+; QCI-NEXT:    .cfi_offset a1, -40
+; QCI-NEXT:    .cfi_offset a2, -44
+; QCI-NEXT:    .cfi_offset a3, -48
+; QCI-NEXT:    .cfi_offset a4, -52
+; QCI-NEXT:    .cfi_offset a5, -56
+; QCI-NEXT:    .cfi_offset a6, -60
+; QCI-NEXT:    .cfi_offset a7, -64
+; QCI-NEXT:    .cfi_offset t3, -68
+; QCI-NEXT:    .cfi_offset t4, -72
+; QCI-NEXT:    .cfi_offset t5, -76
+; QCI-NEXT:    .cfi_offset t6, -80
+; QCI-NEXT:    addi sp, sp, -16
+; QCI-NEXT:    .cfi_def_cfa_offset 112
+; QCI-NEXT:    sw s1, 12(sp) # 4-byte Folded Spill
+; QCI-NEXT:    .cfi_offset s1, -100
+; QCI-NEXT:    #APP
+; QCI-NEXT:    li s11, 0
+; QCI-NEXT:    #NO_APP
+; QCI-NEXT:    lw s1, 12(sp) # 4-byte Folded Reload
+; QCI-NEXT:    .cfi_restore s1
+; QCI-NEXT:    addi sp, sp, 16
+; QCI-NEXT:    .cfi_def_cfa_offset 96
+; QCI-NEXT:    qc.c.mileaveret
+;
+; QCI-FP-LABEL: test_nonest_explicit_s1:
+; QCI-FP:       # %bb.0:
+; QCI-FP-NEXT:    qc.c.mienter
+; QCI-FP-NEXT:    .cfi_def_cfa_offset 96
+; QCI-FP-NEXT:    .cfi_offset ra, -16
+; QCI-FP-NEXT:    .cfi_offset t0, -24
+; QCI-FP-NEXT:    .cfi_offset t1, -28
+; QCI-FP-NEXT:    .cfi_offset t2, -32
+; QCI-FP-NEXT:    .cfi_offset s0, -8
+; QCI-FP-NEXT:    .cfi_offset a0, -36
+; QCI-FP-NEXT:    .cfi_offset a1, -40
+; QCI-FP-NEXT:    .cfi_offset a2, -44
+; QCI-FP-NEXT:    .cfi_offset a3, -48
+; QCI-FP-NEXT:    .cfi_offset a4, -52
+; QCI-FP-NEXT:    .cfi_offset a5, -56
+; QCI-FP-NEXT:    .cfi_offset a6, -60
+; QCI-FP-NEXT:    .cfi_offset a7, -64
+; QCI-FP-NEXT:    .cfi_offset t3, -68
+; QCI-FP-NEXT:    .cfi_offset t4, -72
+; QCI-FP-NEXT:    .cfi_offset t5, -76
+; QCI-FP-NEXT:    .cfi_offset t6, -80
+; QCI-FP-NEXT:    addi sp, sp, -16
+; QCI-FP-NEXT:    .cfi_def_cfa_offset 112
+; QCI-FP-NEXT:    sw s1, 12(sp) # 4-byte Folded Spill
+; QCI-FP-NEXT:    .cfi_offset s1, -100
+; QCI-FP-NEXT:    .cfi_def_cfa s0, 0
+; QCI-FP-NEXT:    #APP
+; QCI-FP-NEXT:    li s11, 0
+; QCI-FP-NEXT:    #NO_APP
+; QCI-FP-NEXT:    .cfi_def_cfa sp, 112
+; QCI-FP-NEXT:    lw s1, 12(sp) # 4-byte Folded Reload
+; QCI-FP-NEXT:    .cfi_restore s1
+; QCI-FP-NEXT:    addi sp, sp, 16
+; QCI-FP-NEXT:    .cfi_def_cfa_offset 96
+; QCI-FP-NEXT:    qc.c.mileaveret
+;
+; QCI-PUSH-POP-LABEL: test_nonest_explicit_s1:
+; QCI-PUSH-POP:       # %bb.0:
+; QCI-PUSH-POP-NEXT:    qc.c.mienter
+; QCI-PUSH-POP-NEXT:    .cfi_def_cfa_offset 96
+; QCI-PUSH-POP-NEXT:    .cfi_offset ra, -16
+; QCI-PUSH-POP-NEXT:    .cfi_offset t0, -24
+; QCI-PUSH-POP-NEXT:    .cfi_offset t1, -28
+; QCI-PUSH-POP-NEXT:    .cfi_offset t2, -32
+; QCI-PUSH-POP-NEXT:    .cfi_offset s0, -8
+; QCI-PUSH-POP-NEXT:    .cfi_offset a0, -36
+; QCI-PUSH-POP-NEXT:    .cfi_offset a1, -40
+; QCI-PUSH-POP-NEXT:    .cfi_offset a2, -44
+; QCI-PUSH-POP-NEXT:    .cfi_offset a3, -48
+; QCI-PUSH-POP-NEXT:    .cfi_offset a4, -52
+; QCI-PUSH-POP-NEXT:    .cfi_offset a5, -56
+; QCI-PUSH-POP-NEXT:    .cfi_offset a6, -60
+; QCI-PUSH-POP-NEXT:    .cfi_offset a7, -64
+; QCI-PUSH-POP-NEXT:    .cfi_offset t3, -68
+; QCI-PUSH-POP-NEXT:    .cfi_offset t4, -72
+; QCI-PUSH-POP-NEXT:    .cfi_offset t5, -76
+; QCI-PUSH-POP-NEXT:    .cfi_offset t6, -80
+; QCI-PUSH-POP-NEXT:    cm.push {ra, s0-s1}, -16
+; QCI-PUSH-POP-NEXT:    .cfi_def_cfa_offset 112
+; QCI-PUSH-POP-NEXT:    .cfi_offset s1, -100
+; QCI-PUSH-POP-NEXT:    #APP
+; QCI-PUSH-POP-NEXT:    li s11, 0
+; QCI-PUSH-POP-NEXT:    #NO_APP
+; QCI-PUSH-POP-NEXT:    cm.pop {ra, s0-s1}, 16
+; QCI-PUSH-POP-NEXT:    .cfi_restore s1
+; QCI-PUSH-POP-NEXT:    .cfi_def_cfa_offset 96
+; QCI-PUSH-POP-NEXT:    qc.c.mileaveret
+;
+; QCI-QCCMP-PUSH-POP-LABEL: test_nonest_explicit_s1:
+; QCI-QCCMP-PUSH-POP:       # %bb.0:
+; QCI-QCCMP-PUSH-POP-NEXT:    qc.c.mienter
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_def_cfa_offset 96
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset ra, -16
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset t0, -24
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset t1, -28
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset t2, -32
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset s0, -8
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset a0, -36
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset a1, -40
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset a2, -44
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset a3, -48
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset a4, -52
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset a5, -56
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset a6, -60
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset a7, -64
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset t3, -68
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset t4, -72
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset t5, -76
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset t6, -80
+; QCI-QCCMP-PUSH-POP-NEXT:    qc.cm.push {ra, s0-s1}, -16
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_def_cfa_offset 112
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_offset s1, -108
+; QCI-QCCMP-PUSH-POP-NEXT:    #APP
+; QCI-QCCMP-PUSH-POP-NEXT:    li s11, 0
+; QCI-QCCMP-PUSH-POP-NEXT:    #NO_APP
+; QCI-QCCMP-PUSH-POP-NEXT:    qc.cm.pop {ra, s0-s1}, 16
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_restore s1
+; QCI-QCCMP-PUSH-POP-NEXT:    .cfi_def_cfa_offset 96
+; QCI-QCCMP-PUSH-POP-NEXT:    qc.c.mileaveret
+;
+; QCI-QCCMP-PUSH-POP-FP-LABEL: test_nonest_explicit_s1:
+; QCI-QCCMP-PUSH-POP-FP:       # %bb.0:
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    qc.c.mienter
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa_offset 96
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset ra, -16
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset t0, -24
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset t1, -28
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset t2, -32
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset s0, -8
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset a0, -36
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset a1, -40
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset a2, -44
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset a3, -48
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset a4, -52
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset a5, -56
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset a6, -60
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset a7, -64
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset t3, -68
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset t4, -72
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset t5, -76
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset t6, -80
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    qc.cm.push {ra, s0-s1}, -16
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa_offset 112
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_offset s1, -108
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa s0, 0
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    #APP
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    li s11, 0
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    #NO_APP
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa sp, 112
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    qc.cm.pop {ra, s0-s1}, 16
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_restore s1
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    .cfi_def_cfa_offset 96
+; QCI-QCCMP-PUSH-POP-FP-NEXT:    qc.c.mileaveret
+  tail call void asm sideeffect "li s11, 0", "~{s1}"()
   ret void
 }

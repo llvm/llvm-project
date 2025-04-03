@@ -1319,19 +1319,22 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
       emitCFIForCSI<CFIRestoreRegisterEmitter>(
           MBB, MBBI, getPushOrLibCallsSavedInfo(MF, CSI));
 
-      // Update CFA offset. After CM_POP SP should be equal to CFA, so CFA
-      // offset should be a zero.
+      // Update CFA Offset. If this is a QCI interrupt function, there will be a
+      // leftover offset which is deallocated by `QC.C.MILEAVERET`, otherwise
+      // getQCIInterruptStackSize() will be 0.
       unsigned CFIIndex =
-          MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, 0));
+          MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, RVFI->getQCIInterruptStackSize()));
       BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex)
           .setMIFlag(MachineInstr::FrameDestroy);
     }
   }
 
-  // Deallocate stack if StackSize isn't a zero yet
+  // Deallocate stack if StackSize isn't a zero yet. If this is a QCI interrupt
+  // function, there will be a leftover offset which is deallocated by
+  // `QC.C.MILEAVERET`, otherwise getQCIInterruptStackSize() will be 0.
   if (StackSize != 0)
-    deallocateStack(MF, MBB, MBBI, DL, StackSize, RealStackSize - StackSize);
+    deallocateStack(MF, MBB, MBBI, DL, StackSize, RVFI->getQCIInterruptStackSize());
 
   // Emit epilogue for shadow call stack.
   emitSCSEpilogue(MF, MBB, MBBI, DL);
@@ -1898,8 +1901,12 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
   if (RVFI->isPushable(MF)) {
     // Determine how many GPRs we need to push and save it to RVFI.
     unsigned PushedRegNum = getNumPushPopRegs(CSI);
-    unsigned PushMoreThan = RVFI->useQCIInterrupt(MF) ? 2 : 0;
-    if (PushedRegNum > PushMoreThan) {
+
+    // `QC.C.MIENTER(.NEST)` will save `ra` and `s0`, so we should only push if
+    // we want to push more than 2 registers. Otherwise, we should push if we
+    // want to push more than 0 registers.
+    unsigned OnlyPushIfMoreThan = RVFI->useQCIInterrupt(MF) ? 2 : 0;
+    if (PushedRegNum > OnlyPushIfMoreThan) {
       RVFI->setRVPushRegs(PushedRegNum);
       RVFI->setRVPushStackSize(alignTo((STI.getXLen() / 8) * PushedRegNum, 16));
     }
