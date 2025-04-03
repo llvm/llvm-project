@@ -127,8 +127,7 @@ private:
 
   /// Check if the given unwind plan indicates a signal trap handler, and
   /// update frame type and symbol context if so.
-  void PropagateTrapHandlerFlagFromUnwindPlan(
-      std::shared_ptr<const UnwindPlan> unwind_plan);
+  void PropagateTrapHandlerFlagFromUnwindPlan(lldb::UnwindPlanSP unwind_plan);
 
   // Provide a location for where THIS function saved the CALLER's register
   // value
@@ -195,17 +194,16 @@ private:
                         const UnwindPlan::Row::FAValue &fa,
                         lldb::addr_t &address);
 
-  std::shared_ptr<const UnwindPlan> GetFastUnwindPlanForFrame();
+  lldb::UnwindPlanSP GetFastUnwindPlanForFrame();
 
-  std::shared_ptr<const UnwindPlan> GetFullUnwindPlanForFrame();
+  lldb::UnwindPlanSP GetFullUnwindPlanForFrame();
 
   void UnwindLogMsg(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 
   void UnwindLogMsgVerbose(const char *fmt, ...)
       __attribute__((format(printf, 2, 3)));
 
-  bool IsUnwindPlanValidForCurrentPC(
-      std::shared_ptr<const UnwindPlan> unwind_plan_sp);
+  bool IsUnwindPlanValidForCurrentPC(lldb::UnwindPlanSP unwind_plan_sp);
 
   lldb::addr_t GetReturnAddressHint(int32_t plan_offset);
 
@@ -217,9 +215,9 @@ private:
   // i.e. where THIS frame saved them
   ///
 
-  std::shared_ptr<const UnwindPlan> m_fast_unwind_plan_sp; // may be NULL
-  std::shared_ptr<const UnwindPlan> m_full_unwind_plan_sp;
-  std::shared_ptr<const UnwindPlan> m_fallback_unwind_plan_sp; // may be NULL
+  lldb::UnwindPlanSP m_fast_unwind_plan_sp; // may be NULL
+  lldb::UnwindPlanSP m_full_unwind_plan_sp;
+  lldb::UnwindPlanSP m_fallback_unwind_plan_sp; // may be NULL
 
   bool m_all_registers_available; // Can we retrieve all regs or just
                                   // nonvolatile regs?
