@@ -4,16 +4,16 @@
 // used and tested for VFP and NEON Support
 
 // RUN: %clang -target arm-none-eabi -mcpu=cortex-r52 -c %s -o /dev/null | count 0
-// RUN: %clang -target arm-none-eabi -mcpu=cortex-r52 -c %s -o /dev/null -### 2> %t | FileCheck --check-prefix=CHECK-TARGET-FEATURES < %t %s
+// RUN: %clang -target arm-none-eabi -mcpu=cortex-r52 -c %s -o /dev/null -### 2>&1 | FileCheck --check-prefix=CHECK-TARGET-FEATURES %s
 
 // Check that NEON and VFPV5 have been activated when using Cortex-R52 when using cc1as
-// CHECK-TARGET-FEATURES: "-target-feature" "+neon"
-// CHECK-TARGET-FEATURES: "-target-feature" "+fp-armv8"
 // CHECK-TARGET-FEATURES: "-target-feature" "+vfp2sp"
 // CHECK-TARGET-FEATURES: "-target-feature" "+vfp3"
+// CHECK-TARGET-FEATURES: "-target-feature" "+fp-armv8"
 // CHECK-TARGET-FEATURES: "-target-feature" "+fp-armv8d16"
 // CHECK-TARGET-FEATURES: "-target-feature" "+fp-armv8d16sp"
 // CHECK-TARGET-FEATURES: "-target-feature" "+fp-armv8sp"
+// CHECK-TARGET-FEATURES: "-target-feature" "+neon"
 
   vadd.f32 s0, s1, s2
   vadd.f64 d0, d1, d2

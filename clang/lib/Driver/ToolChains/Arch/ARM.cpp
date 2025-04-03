@@ -685,8 +685,7 @@ llvm::ARM::FPUKind arm::getARMTargetFeatures(const Driver &D,
         getARMSubArchVersionNumber(Triple) >= 7) {
       FPUKind = llvm::ARM::parseFPU("neon");
       (void)llvm::ARM::getFPUFeatures(FPUKind, Features);
-    } else if ((!Generic) ||
-               (Generic && getARMSubArchVersionNumber(Triple) >= 7)) {
+    } else {
       llvm::ARM::ArchKind ArchKind =
           arm::getLLVMArchKindForARM(CPU, ArchName, Triple);
       FPUKind = llvm::ARM::getDefaultFPU(CPU, ArchKind);
