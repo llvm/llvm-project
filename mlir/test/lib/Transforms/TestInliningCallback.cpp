@@ -112,7 +112,7 @@ struct InlinerCallback
                     runPipelineHelper, config, profitabilityCb);
 
     // Collect each of the direct function calls within the module.
-    SmallVector<func::CallIndirectOp, 16> callers;
+    SmallVector<func::CallIndirectOp> callers;
     function.walk(
         [&](func::CallIndirectOp caller) { callers.push_back(caller); });
 
