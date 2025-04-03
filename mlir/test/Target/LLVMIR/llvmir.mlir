@@ -2842,3 +2842,27 @@ llvm.func @call_alias_func() {
 
 // CHECK-LABEL: @call_alias_func
 // CHECK: call void dso_local_equivalent @alias_func()
+
+// -----
+
+llvm.func local_unnamed_addr @testfn(!llvm.array<2 x f32> {llvm.alignstack = 8 : i64})
+llvm.func internal @g(%arg0: !llvm.array<2 x f32>) attributes {dso_local} {
+  // CHECK-LABEL: @g
+  // CHECK: call void @testfn([2 x float] alignstack(8) %0)
+  llvm.call @testfn(%arg0) : (!llvm.array<2 x f32> {llvm.alignstack = 8 : i64}) -> ()
+  llvm.return
+}
+llvm.func local_unnamed_addr @testfn2(!llvm.struct<(i8, i8)> {llvm.alignstack = 8 : i64})
+llvm.func internal @h(%arg0: !llvm.struct<(i8, i8)>) attributes {dso_local} {
+  // CHECK-LABEL: @h
+  // CHECK: call void @testfn2({ i8, i8 } alignstack(8) %0)
+  llvm.call @testfn2(%arg0) : (!llvm.struct<(i8, i8)> {llvm.alignstack = 8 : i64}) -> ()
+  llvm.return
+}
+llvm.func local_unnamed_addr @testfn3(i32 {llvm.alignstack = 8 : i64})
+llvm.func internal @i(%arg0: i32) attributes {dso_local} {
+  // CHECK-LABEL: @i
+  // CHECK: call void @testfn3(i32 alignstack(8) %0)
+  llvm.call @testfn3(%arg0) : (i32 {llvm.alignstack = 8 : i64}) -> ()
+  llvm.return
+}
