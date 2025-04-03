@@ -54,3 +54,6 @@ cm.pop {ra}, -x1
 
 # CHECK-ERROR: :[[@LINE+1]]:15: error: stack adjustment is invalid for this instruction and register list
 cm.push {ra}, x1
+
+# CHECK-ERROR: :[[@LINE+1]]:12: error: register list must end with '}'
+cm.push {x1-x9}, -32

@@ -6413,9 +6413,7 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
   case X86ISD::VTRUNC: {
     SDValue Src = N.getOperand(0);
     EVT SrcVT = Src.getValueType();
-    // Truncated source must be a simple vector.
-    if (!SrcVT.isSimple() || (SrcVT.getSizeInBits() % 128) != 0 ||
-        (SrcVT.getScalarSizeInBits() % 8) != 0)
+    if (SrcVT.getSizeInBits() != NumSizeInBits)
       return false;
     unsigned NumSrcElts = SrcVT.getVectorNumElements();
     unsigned NumBitsPerSrcElt = SrcVT.getScalarSizeInBits();
@@ -42675,40 +42673,13 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
     return SDValue();
   }
   case X86ISD::VPERMV3: {
-    // Combine VPERMV3 to widened VPERMV if the two source operands can be
-    // freely concatenated.
     MVT WideVT = VT.getDoubleNumVectorElementsVT();
     bool CanConcat = VT.is128BitVector() ||
                      (VT.is256BitVector() && Subtarget.useAVX512Regs());
-    if (CanConcat) {
-      SDValue Ops[] = {N.getOperand(0), N.getOperand(2)};
-      if (SDValue ConcatSrc =
-              combineConcatVectorOps(DL, WideVT, Ops, DAG, Subtarget)) {
-        SDValue Mask = widenSubVector(N.getOperand(1), false, Subtarget, DAG,
-                                      DL, WideVT.getSizeInBits());
-        SDValue Perm = DAG.getNode(X86ISD::VPERMV, DL, WideVT, Mask, ConcatSrc);
-        return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Perm,
-                           DAG.getVectorIdxConstant(0, DL));
-      }
-    }
     SmallVector<SDValue, 2> SrcOps;
     SmallVector<int, 32> Mask;
     if (getTargetShuffleMask(N, /*AllowSentinelZero=*/false, SrcOps, Mask)) {
       assert(Mask.size() == NumElts && "Unexpected shuffle mask size");
-      // See if we can concatenate the commuted operands.
-      if (CanConcat) {
-        if (SDValue ConcatSrc = combineConcatVectorOps(
-                DL, WideVT, {N.getOperand(2), N.getOperand(0)}, DAG,
-                Subtarget)) {
-          ShuffleVectorSDNode::commuteMask(Mask);
-          Mask.append(NumElts, SM_SentinelUndef);
-          SDValue Perm =
-              lowerShuffleWithPERMV(DL, WideVT, Mask, ConcatSrc,
-                                    DAG.getUNDEF(WideVT), Subtarget, DAG);
-          return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Perm,
-                             DAG.getVectorIdxConstant(0, DL));
-        }
-      }
       SDValue V1 = peekThroughBitcasts(N.getOperand(0));
       SDValue V2 = peekThroughBitcasts(N.getOperand(2));
       // Canonicalize to VPERMV if both sources are the same.
@@ -42741,6 +42712,33 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
         ShuffleVectorSDNode::commuteMask(Mask);
         return lowerShuffleWithPERMV(DL, VT, Mask, N.getOperand(2),
                                      N.getOperand(0), Subtarget, DAG);
+      }
+      // Combine VPERMV3 to widened VPERMV if the two source operands can be
+      // freely concatenated, with a commuted shuffle mask.
+      if (CanConcat) {
+        if (SDValue ConcatSrc = combineConcatVectorOps(
+                DL, WideVT, {N.getOperand(2), N.getOperand(0)}, DAG,
+                Subtarget)) {
+          ShuffleVectorSDNode::commuteMask(Mask);
+          Mask.append(NumElts, SM_SentinelUndef);
+          SDValue Perm =
+              lowerShuffleWithPERMV(DL, WideVT, Mask, ConcatSrc,
+                                    DAG.getUNDEF(WideVT), Subtarget, DAG);
+          return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Perm,
+                             DAG.getVectorIdxConstant(0, DL));
+        }
+      }
+    }
+    // Combine VPERMV3 to widened VPERMV if the two source operands can be
+    // freely concatenated.
+    if (CanConcat) {
+      if (SDValue ConcatSrc = combineConcatVectorOps(
+              DL, WideVT, {N.getOperand(0), N.getOperand(2)}, DAG, Subtarget)) {
+        SDValue Mask = widenSubVector(N.getOperand(1), false, Subtarget, DAG,
+                                      DL, WideVT.getSizeInBits());
+        SDValue Perm = DAG.getNode(X86ISD::VPERMV, DL, WideVT, Mask, ConcatSrc);
+        return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Perm,
+                           DAG.getVectorIdxConstant(0, DL));
       }
     }
     return SDValue();
@@ -43809,6 +43807,69 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
           SDValue Ext = extractSubVector(Op.getOperand(0), 2, TLO.DAG, DL, 128);
           SDValue UndefVec = TLO.DAG.getUNDEF(VT);
           SDValue Insert = insertSubVector(UndefVec, Ext, 0, TLO.DAG, DL, 128);
+          return TLO.CombineTo(Op, Insert);
+        }
+      }
+      break;
+    }
+    case X86ISD::VPERMV: {
+      SmallVector<int, 16> Mask;
+      SmallVector<SDValue, 2> Ops;
+      if ((VT.is256BitVector() || Subtarget.hasVLX()) &&
+          getTargetShuffleMask(Op, /*AllowSentinelZero=*/false, Ops, Mask)) {
+        // For lane-crossing shuffles, only split in half in case we're still
+        // referencing higher elements.
+        unsigned HalfElts = NumElts / 2;
+        unsigned HalfSize = SizeInBits / 2;
+        Mask.resize(HalfElts);
+        if (all_of(Mask,
+                   [&](int M) { return isUndefOrInRange(M, 0, HalfElts); })) {
+          MVT HalfVT = VT.getSimpleVT().getHalfNumVectorElementsVT();
+          SDLoc DL(Op);
+          SDValue Ext;
+          SDValue M =
+              extractSubVector(Op.getOperand(0), 0, TLO.DAG, DL, HalfSize);
+          SDValue V =
+              extractSubVector(Op.getOperand(1), 0, TLO.DAG, DL, HalfSize);
+          // For 128-bit v2X64/v4X32 instructions, use VPERMILPD/VPERMILPS.
+          if (VT.is512BitVector() || VT.getScalarSizeInBits() <= 16)
+            Ext = TLO.DAG.getNode(Opc, DL, HalfVT, M, V);
+          else
+            Ext = TLO.DAG.getNode(X86ISD::VPERMILPV, DL, HalfVT, V, M);
+          SDValue Insert = widenSubVector(Ext, /*ZeroNewElements=*/false,
+                                          Subtarget, TLO.DAG, DL, SizeInBits);
+          return TLO.CombineTo(Op, Insert);
+        }
+      }
+      break;
+    }
+    case X86ISD::VPERMV3: {
+      SmallVector<int, 16> Mask;
+      SmallVector<SDValue, 2> Ops;
+      if (Subtarget.hasVLX() &&
+          getTargetShuffleMask(Op, /*AllowSentinelZero=*/false, Ops, Mask)) {
+        // For lane-crossing shuffles, only split in half in case we're still
+        // referencing higher elements.
+        unsigned HalfElts = NumElts / 2;
+        unsigned HalfSize = SizeInBits / 2;
+        Mask.resize(HalfElts);
+        if (all_of(Mask, [&](int M) {
+              return isUndefOrInRange(M, 0, HalfElts) ||
+                     isUndefOrInRange(M, NumElts, NumElts + HalfElts);
+            })) {
+          // Adjust mask elements for 2nd operand to point to half width.
+          for (int &M : Mask)
+            M = M <= NumElts ? M : (M - HalfElts);
+          MVT HalfVT = VT.getSimpleVT().getHalfNumVectorElementsVT();
+          MVT HalfIntVT = HalfVT.changeVectorElementTypeToInteger();
+          SDLoc DL(Op);
+          SDValue Ext = TLO.DAG.getNode(
+              Opc, DL, HalfVT,
+              extractSubVector(Op.getOperand(0), 0, TLO.DAG, DL, HalfSize),
+              getConstVector(Mask, HalfIntVT, TLO.DAG, DL, /*IsMask=*/true),
+              extractSubVector(Op.getOperand(2), 0, TLO.DAG, DL, HalfSize));
+          SDValue Insert = widenSubVector(Ext, /*ZeroNewElements=*/false,
+                                          Subtarget, TLO.DAG, DL, SizeInBits);
           return TLO.CombineTo(Op, Insert);
         }
       }

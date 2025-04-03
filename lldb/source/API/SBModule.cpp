@@ -659,6 +659,18 @@ lldb::SBAddress SBModule::GetObjectFileEntryPointAddress() const {
   return sb_addr;
 }
 
+bool SBModule::IsDebugInfoLoaded() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  ModuleSP module_sp(GetSP());
+  if (module_sp) {
+    SymbolFile *sym_file = module_sp->GetSymbolFile(/*create=*/false);
+    return sym_file && sym_file->GetLoadDebugInfoEnabled();
+  }
+
+  return false;
+}
+
 uint32_t SBModule::GetNumberAllocatedModules() {
   LLDB_INSTRUMENT();
 
