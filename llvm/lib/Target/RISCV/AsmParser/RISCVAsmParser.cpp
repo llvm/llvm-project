@@ -793,6 +793,7 @@ public:
   bool isSImm5() const { return isSImm<5>(); }
   bool isSImm6() const { return isSImm<6>(); }
   bool isSImm11() const { return isSImm<11>(); }
+  bool isSImm16() const { return isSImm<16>(); }
   bool isSImm20() const { return isSImm<20>(); }
   bool isSImm26() const { return isSImm<26>(); }
   bool isSImm32() const { return isSImm<32>(); }
@@ -1511,6 +1512,9 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, -(1 << 12), (1 << 12) - 2,
         "immediate must be a multiple of 2 bytes in the range");
+  case Match_InvalidSImm16:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 15),
+                                      (1 << 15) - 1);
   case Match_InvalidSImm16NonZero:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, -(1 << 15), (1 << 15) - 1,
@@ -3153,10 +3157,13 @@ bool RISCVAsmParser::parseDirectiveAttribute() {
   return false;
 }
 
-bool isValidInsnFormat(StringRef Format, bool AllowC) {
+bool isValidInsnFormat(StringRef Format, const MCSubtargetInfo &STI) {
   return StringSwitch<bool>(Format)
       .Cases("r", "r4", "i", "b", "sb", "u", "j", "uj", "s", true)
-      .Cases("cr", "ci", "ciw", "css", "cl", "cs", "ca", "cb", "cj", AllowC)
+      .Cases("cr", "ci", "ciw", "css", "cl", "cs", "ca", "cb", "cj",
+             STI.hasFeature(RISCV::FeatureStdExtZca))
+      .Cases("qc.eai", "qc.ei", "qc.eb", "qc.ej", "qc.es",
+             !STI.hasFeature(RISCV::Feature64Bit))
       .Default(false);
 }
 
@@ -3246,7 +3253,7 @@ bool RISCVAsmParser::parseDirectiveInsn(SMLoc L) {
     return false;
   }
 
-  if (!isValidInsnFormat(Format, AllowC))
+  if (!isValidInsnFormat(Format, getSTI()))
     return Error(ErrorLoc, "invalid instruction format");
 
   std::string FormatName = (".insn_" + Format).str();
