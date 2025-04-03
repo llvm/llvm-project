@@ -874,6 +874,12 @@ def FeatureFP8ConversionInsts : SubtargetFeature<"fp8-conversion-insts",
   "Has fp8 and bf8 conversion instructions"
 >;
 
+def FeatureFP8E5M3Insts : SubtargetFeature<"fp8e5m3-insts",
+  "HasFP8E5M3Insts",
+  "true",
+  "Has fp8 e5m3 format support"
+>;
+
 def FeatureCvtFP8VOP1Bug : SubtargetFeature<"cvt-fp8-vop1-bug",
   "HasCvtFP8Vop1Bug",
   "true",
@@ -1455,6 +1461,14 @@ def FeatureDynamicVGPRBlockSize32 : SubtargetFeature<"dynamic-vgpr-block-size-32
   "Use a block size of 32 for dynamic VGPR allocation (default is 16)"
 >;
 
+def FeatureLshlAddU64Inst
+    : SubtargetFeature<"lshl-add-u64-inst", "HasLshlAddU64Inst", "true",
+                       "Has v_lshl_add_u64 instruction">;
+
+def FeatureAddSubU64Insts
+    : SubtargetFeature<"add-sub-u64-insts", "HasAddSubU64Insts", "true",
+                       "Has v_add_u64 and v_sub_u64 instructions">;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
@@ -1831,7 +1845,8 @@ def FeatureISAVersion9_4_Common : FeatureSet<
    FeatureAtomicFMinFMaxF64FlatInsts,
    FeatureAgentScopeFineGrainedRemoteMemoryAtomics,
    FeatureMemoryAtomicFAddF32DenormalSupport,
-   FeatureFlatBufferGlobalAtomicFaddF64Inst
+   FeatureFlatBufferGlobalAtomicFaddF64Inst,
+   FeatureLshlAddU64Inst,
    ]>;
 
 def FeatureISAVersion9_5_Common : FeatureSet<
@@ -2099,6 +2114,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureAtomicBufferPkAddBF16Inst,
    FeatureFlatAtomicFaddF32Inst,
    FeatureFP8ConversionInsts,
+   FeatureFP8E5M3Insts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
    FeatureSALUFloatInsts,
@@ -2131,6 +2147,8 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureGloballyAddressableScratch,
    FeatureKernargPreload,
    FeatureVmemPrefInsts,
+   FeatureLshlAddU64Inst,
+   FeatureAddSubU64Insts,
 ]>;
 
 def FeatureISAVersion12_51 : FeatureSet<
@@ -2208,7 +2226,9 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureVmemPrefInsts,
    FeatureCvtPkF16F32Inst,
    FeatureF16BF16ToFP6BF6ConversionScaleInsts,
-   FeatureBVHDualAndBVH8Insts
+   FeatureBVHDualAndBVH8Insts,
+   FeatureLshlAddU64Inst,
+   FeatureAddSubU64Insts,
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -2879,6 +2899,12 @@ def HasFP8Insts : Predicate<"Subtarget->hasFP8Insts()">,
 def HasFP8ConversionInsts : Predicate<"Subtarget->hasFP8ConversionInsts()">,
   AssemblerPredicate<(all_of FeatureFP8ConversionInsts)>;
 
+def HasFP8E5M3Insts : Predicate<"Subtarget->hasFP8E5M3Insts()">,
+  AssemblerPredicate<(all_of FeatureFP8E5M3Insts)>;
+
+def NotHasFP8E5M3Insts : Predicate<"!Subtarget->hasFP8E5M3Insts()">,
+  AssemblerPredicate<(all_of (not FeatureFP8E5M3Insts))>;
+
 def HasPkFmacF16Inst : Predicate<"Subtarget->hasPkFmacF16Inst()">,
   AssemblerPredicate<(all_of FeaturePkFmacF16Inst)>;
 
@@ -3024,6 +3050,12 @@ def HasVmemPrefInsts : Predicate<"Subtarget->hasVmemPrefInsts()">,
 
 def HasAshrPkInsts : Predicate<"Subtarget->hasAshrPkInsts()">,
   AssemblerPredicate<(all_of FeatureAshrPkInsts)>;
+
+def HasLshlAddU64Inst : Predicate<"Subtarget->hasLshlAddU64Inst()">,
+                        AssemblerPredicate<(all_of FeatureLshlAddU64Inst)>;
+
+def HasAddSubU64Insts : Predicate<"Subtarget->hasAddSubU64Insts()">,
+                        AssemblerPredicate<(all_of FeatureAddSubU64Insts)>;
 
 def HasExclusiveScanInsts : Predicate<"Subtarget->hasExclusiveScanInsts()">,
   AssemblerPredicate<(all_of FeatureExclusiveScanInsts)>;

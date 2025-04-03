@@ -18,7 +18,7 @@ namespace llvm {
 class AllocaInst;
 class MachineRegisterInfo;
 class GCNSubtarget;
-class GISelKnownBits;
+class GISelValueTracking;
 class LLT;
 class MachineFunction;
 class MachineIRBuilder;
@@ -30,7 +30,7 @@ namespace AMDGPU {
 /// Returns base register and constant offset.
 std::pair<Register, unsigned>
 getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
-                          GISelKnownBits *KnownBits = nullptr,
+                          GISelValueTracking *ValueTracking = nullptr,
                           bool CheckNUW = false);
 
 bool IsLaneSharedInVGPR(const MachineMemOperand *MemOpnd);

@@ -116,8 +116,8 @@ define amdgpu_ps void @test_waterfall_readlane(i32 addrspace(1)* inreg %out, <2 
 ; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1150-NEXT:    v_lshlrev_b64 v[0:1], 3, v[0:1]
 ; GFX1150-NEXT:    v_add_co_u32 v0, vcc, s2, v0
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1150-NEXT:    v_add_co_ci_u32_e32 v1, vcc, s3, v1, vcc
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1150-NEXT:    v_add_co_ci_u32_e64 v1, null, s3, v1, vcc
 ; GFX1150-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX1150-NEXT:    global_load_b64 v[0:1], v[0:1], off
 ; GFX1150-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
@@ -486,8 +486,8 @@ define amdgpu_ps <4 x float> @test_waterfall_non_uniform_img_single_read(<8 x i3
 ; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1150-NEXT:    v_lshlrev_b64 v[0:1], 5, v[4:5]
 ; GFX1150-NEXT:    v_add_co_u32 v0, vcc, s0, v0
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1150-NEXT:    v_add_co_ci_u32_e32 v1, vcc, s1, v1, vcc
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1150-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, v1, vcc
 ; GFX1150-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX1150-NEXT:    s_clause 0x1
 ; GFX1150-NEXT:    global_load_b128 v[11:14], v[0:1], off offset:16
@@ -1283,8 +1283,8 @@ define amdgpu_ps void @test_waterfall_non_uniform_img_single_store(<8 x i32> add
 ; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1150-NEXT:    v_lshlrev_b64 v[7:8], 5, v[0:1]
 ; GFX1150-NEXT:    v_add_co_u32 v7, vcc, s0, v7
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1150-NEXT:    v_add_co_ci_u32_e32 v8, vcc, s1, v8, vcc
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1150-NEXT:    v_add_co_ci_u32_e64 v8, null, s1, v8, vcc
 ; GFX1150-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX1150-NEXT:    s_clause 0x1
 ; GFX1150-NEXT:    global_load_b128 v[11:14], v[7:8], off offset:16
@@ -2189,10 +2189,11 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin(<8 x i32> addrspace(4)*
 ; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1150-NEXT:    v_lshlrev_b64 v[0:1], 5, v[7:8]
 ; GFX1150-NEXT:    v_add_co_u32 v0, vcc, s0, v0
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX1150-NEXT:    v_add_co_ci_u32_e32 v1, vcc, s1, v1, vcc
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1150-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, v1, vcc
 ; GFX1150-NEXT:    v_add_co_u32 v2, vcc, s2, v2
-; GFX1150-NEXT:    v_add_co_ci_u32_e32 v3, vcc, s3, v3, vcc
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1150-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, v3, vcc
 ; GFX1150-NEXT:    s_clause 0x1
 ; GFX1150-NEXT:    global_load_b128 v[11:14], v[0:1], off offset:16
 ; GFX1150-NEXT:    global_load_b128 v[7:10], v[0:1], off
@@ -2549,10 +2550,11 @@ define amdgpu_ps <4 x float> @test_waterfall_full_idx_multi_begin(<8 x i32> addr
 ; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1150-NEXT:    v_lshlrev_b64 v[3:4], 5, v[3:4]
 ; GFX1150-NEXT:    v_add_co_u32 v2, vcc, s0, v3
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX1150-NEXT:    v_add_co_ci_u32_e32 v3, vcc, s1, v4, vcc
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1150-NEXT:    v_add_co_ci_u32_e64 v3, null, s1, v4, vcc
 ; GFX1150-NEXT:    v_add_co_u32 v0, vcc, s2, v0
-; GFX1150-NEXT:    v_add_co_ci_u32_e32 v1, vcc, s3, v1, vcc
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1150-NEXT:    v_add_co_ci_u32_e64 v1, null, s3, v1, vcc
 ; GFX1150-NEXT:    s_clause 0x1
 ; GFX1150-NEXT:    global_load_b128 v[8:11], v[2:3], off offset:16
 ; GFX1150-NEXT:    global_load_b128 v[4:7], v[2:3], off
@@ -2803,9 +2805,9 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_1(<8 x i32>
 ; GFX1150-NEXT:    s_ashr_i32 s5, s5, 31
 ; GFX1150-NEXT:    s_mov_b64 s[10:11], exec
 ; GFX1150-NEXT:    v_lshlrev_b64 v[0:1], 4, v[1:2]
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1150-NEXT:    v_add_co_u32 v0, vcc, s2, v0
-; GFX1150-NEXT:    v_add_co_ci_u32_e32 v1, vcc, s3, v1, vcc
+; GFX1150-NEXT:    v_add_co_ci_u32_e64 v1, null, s3, v1, vcc
 ; GFX1150-NEXT:    s_lshl_b64 s[2:3], s[4:5], 5
 ; GFX1150-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1150-NEXT:    s_add_u32 s0, s0, s2
@@ -3053,8 +3055,8 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_2(<8 x i32>
 ; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1150-NEXT:    v_lshlrev_b64 v[0:1], 5, v[1:2]
 ; GFX1150-NEXT:    v_add_co_u32 v0, vcc, s0, v0
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1150-NEXT:    v_add_co_ci_u32_e32 v1, vcc, s1, v1, vcc
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1150-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, v1, vcc
 ; GFX1150-NEXT:    s_lshl_b64 s[0:1], s[4:5], 4
 ; GFX1150-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX1150-NEXT:    s_add_u32 s0, s2, s0
@@ -3332,10 +3334,11 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_3(<8 x i32>
 ; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1150-NEXT:    v_lshlrev_b64 v[0:1], 5, v[5:6]
 ; GFX1150-NEXT:    v_add_co_u32 v0, vcc, s0, v0
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX1150-NEXT:    v_add_co_ci_u32_e32 v1, vcc, s1, v1, vcc
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1150-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, v1, vcc
 ; GFX1150-NEXT:    v_add_co_u32 v2, vcc, s2, v2
-; GFX1150-NEXT:    v_add_co_ci_u32_e32 v3, vcc, s3, v3, vcc
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1150-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, v3, vcc
 ; GFX1150-NEXT:    s_clause 0x1
 ; GFX1150-NEXT:    global_load_b128 v[9:12], v[0:1], off offset:16
 ; GFX1150-NEXT:    global_load_b128 v[5:8], v[0:1], off
@@ -3615,10 +3618,11 @@ define amdgpu_ps <4 x float> @test_waterfall_multi_begin_uniform_idx_4(<8 x i32>
 ; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1150-NEXT:    v_lshlrev_b64 v[0:1], 5, v[5:6]
 ; GFX1150-NEXT:    v_add_co_u32 v0, vcc, s0, v0
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX1150-NEXT:    v_add_co_ci_u32_e32 v1, vcc, s1, v1, vcc
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1150-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, v1, vcc
 ; GFX1150-NEXT:    v_add_co_u32 v2, vcc, s2, v2
-; GFX1150-NEXT:    v_add_co_ci_u32_e32 v3, vcc, s3, v3, vcc
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1150-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, v3, vcc
 ; GFX1150-NEXT:    s_clause 0x1
 ; GFX1150-NEXT:    global_load_b128 v[9:12], v[0:1], off offset:16
 ; GFX1150-NEXT:    global_load_b128 v[5:8], v[0:1], off
@@ -3962,10 +3966,11 @@ define amdgpu_ps {<4 x float>,<4 x float>} @test_waterfall_multi_begin_uniform_i
 ; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1150-NEXT:    v_lshlrev_b64 v[0:1], 5, v[7:8]
 ; GFX1150-NEXT:    v_add_co_u32 v0, vcc, s0, v0
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX1150-NEXT:    v_add_co_ci_u32_e32 v1, vcc, s1, v1, vcc
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1150-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, v1, vcc
 ; GFX1150-NEXT:    v_add_co_u32 v2, vcc, s2, v2
-; GFX1150-NEXT:    v_add_co_ci_u32_e32 v3, vcc, s3, v3, vcc
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1150-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, v3, vcc
 ; GFX1150-NEXT:    s_clause 0x1
 ; GFX1150-NEXT:    global_load_b128 v[11:14], v[0:1], off offset:16
 ; GFX1150-NEXT:    global_load_b128 v[15:18], v[0:1], off
@@ -4604,10 +4609,11 @@ define amdgpu_ps {<4 x float>,<4 x float>} @test_waterfall_multi_end_1loop(
 ; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1150-NEXT:    v_lshlrev_b64 v[0:1], 5, v[5:6]
 ; GFX1150-NEXT:    v_add_co_u32 v0, vcc, s0, v0
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX1150-NEXT:    v_add_co_ci_u32_e32 v1, vcc, s1, v1, vcc
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1150-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, v1, vcc
 ; GFX1150-NEXT:    v_add_co_u32 v2, vcc, s2, v2
-; GFX1150-NEXT:    v_add_co_ci_u32_e32 v3, vcc, s3, v3, vcc
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1150-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, v3, vcc
 ; GFX1150-NEXT:    s_clause 0x1
 ; GFX1150-NEXT:    global_load_b128 v[14:17], v[0:1], off offset:16
 ; GFX1150-NEXT:    global_load_b128 v[10:13], v[0:1], off

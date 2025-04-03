@@ -159,6 +159,8 @@ C23 Feature Support
   which clarified that a compound literal used within a function prototype is
   treated as if the compound literal were within the body rather than at file
   scope.
+- Fixed a bug where you could not cast a null pointer constant to type
+  ``nullptr_t``. Fixes #GH133644.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -275,6 +277,10 @@ Improvements to Clang's diagnostics
 - Diagnostics on chained comparisons (``a < b < c``) are now an error by default. This can be disabled with
   ``-Wno-error=parentheses``.
 - Clang now better preserves the sugared types of pointers to member.
+- Clang now better preserves the presence of the template keyword with dependent
+  prefixes.
+- When printing types for diagnostics, clang now doesn't suppress the scopes of
+  template arguments contained within nested names.
 - The ``-Wshift-bool`` warning has been added to warn about shifting a boolean. (#GH28334)
 - Fixed diagnostics adding a trailing ``::`` when printing some source code
   constructs, like base classes.
@@ -297,6 +303,17 @@ Improvements to Clang's diagnostics
 - Improve the diagnostics for shadows template parameter to report correct location (#GH129060).
 
 - Improve the ``-Wundefined-func-template`` warning when a function template is not instantiated due to being unreachable in modules.
+
+- Fixed an assertion when referencing an out-of-bounds parameter via a function
+  attribute whose argument list refers to parameters by index and the function
+  is variadic. e.g.,
+  .. code-block:: c
+
+    __attribute__ ((__format_arg__(2))) void test (int i, ...) { }
+
+  Fixes #GH61635
+
+- Split diagnosing base class qualifiers from the ``-Wignored-Qualifiers`` diagnostic group into a new ``-Wignored-base-class-qualifiers`` diagnostic group (which is grouped under ``-Wignored-qualifiers``). Fixes #GH131935.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -324,6 +341,9 @@ Bug Fixes in This Version
 - Fixed a problematic case with recursive deserialization within ``FinishedDeserializing()`` where
   ``PassInterestingDeclsToConsumer()`` was called before the declarations were safe to be passed. (#GH129982)
 - Fixed a modules crash where an explicit Constructor was deserialized. (#GH132794)
+- Defining an integer literal suffix (e.g., ``LL``) before including
+  ``<stdint.h>`` in a freestanding build no longer causes invalid token pasting
+  when using the ``INTn_C`` macros. (#GH85995)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -357,6 +377,9 @@ Bug Fixes to C++ Support
 - Clang now uses the parameter location for abbreviated function templates in ``extern "C"``. (#GH46386)
 - Clang will emit an error instead of crash when use co_await or co_yield in
   C++26 braced-init-list template parameter initialization. (#GH78426)
+- Improved fix for an issue with pack expansions of type constraints, where this
+  now also works if the constraint has non-type or template template parameters.
+  (#GH131798)
 - Fixes matching of nested template template parameters. (#GH130362)
 - Correctly diagnoses template template paramters which have a pack parameter
   not in the last position.
@@ -371,6 +394,7 @@ Bug Fixes to C++ Support
 - Fixed a Clang regression in C++20 mode where unresolved dependent call expressions were created inside non-dependent contexts (#GH122892)
 - Clang now emits the ``-Wunused-variable`` warning when some structured bindings are unused
   and the ``[[maybe_unused]]`` attribute is not applied. (#GH125810)
+- Fixed a crash caused by invalid declarations of ``std::initializer_list``. (#GH132256)
 - Clang no longer crashes when establishing subsumption between some constraint expressions. (#GH122581)
 - Clang now issues an error when placement new is used to modify a const-qualified variable
   in a ``constexpr`` function. (#GH131432)
@@ -388,6 +412,8 @@ Miscellaneous Bug Fixes
 
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fixed crash when ``-print-stats`` is enabled in compiling IR files. (#GH131608)
 
 OpenACC Specific Changes
 ------------------------
@@ -411,10 +437,13 @@ Hexagon Support
 X86 Support
 ^^^^^^^^^^^
 
-- Disable ``-m[no-]avx10.1`` and switch ``-m[no-]avx10.2`` to alias of 512 bit
-  options.
-- Change ``-mno-avx10.1-512`` to alias of ``-mno-avx10.1-256`` to disable both
-  256 and 512 bit instructions.
+- The 256-bit maximum vector register size control was removed from
+  `AVX10 whitepaper <https://cdrdv2.intel.com/v1/dl/getContent/784343>_`.
+  * Re-target ``m[no-]avx10.1`` to enable AVX10.1 with 512-bit maximum vector register size.
+  * Emit warning for ``mavx10.x-256``, noting AVX10/256 is not supported.
+  * Emit warning for ``mavx10.x-512``, noting to use ``m[no-]avx10.x`` instead.
+  * Emit warning for ``m[no-]evex512``, noting AVX10/256 is not supported.
+  * The features avx10.x-256/512 keep unchanged and will be removed in the next release.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -432,6 +461,7 @@ Windows Support
 - Clang now can process the `i128` and `ui128` integeral suffixes when MSVC
   extensions are enabled. This allows for properly processing ``intsafe.h`` in
   the Windows SDK.
+- Clang now supports MSVC vector deleting destructors (GH19772).
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
@@ -490,6 +520,8 @@ clang-format
 - Allow specifying the language (C, C++, or Objective-C) for a ``.h`` file by
   adding a special comment (e.g. ``// clang-format Language: ObjC``) near the
   top of the file.
+- Add ``EnumTrailingComma`` option for inserting/removing commas at the end of
+  ``enum`` enumerator lists.
 
 libclang
 --------

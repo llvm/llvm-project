@@ -34,7 +34,7 @@ define ptr @laneshared_to_flat(ptr addrspace(10) %ptr) {
 ; GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v0, v2
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v1, 20, v1
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v3, vcc_lo
+; GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
 ; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc_lo, -1, v0
 ; GISEL-NEXT:    v_dual_cndmask_b32 v0, 0, v2 :: v_dual_cndmask_b32 v1, 0, v1
 ; GISEL-NEXT:    s_set_pc_i64 s[30:31]

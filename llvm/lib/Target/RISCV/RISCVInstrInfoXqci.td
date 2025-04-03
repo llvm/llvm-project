@@ -69,6 +69,15 @@ def uimm10 : RISCVUImmLeafOp<10>;
 
 def uimm11 : RISCVUImmLeafOp<11>;
 
+// A 14-bit unsigned immediate where the least significant two bits are zero.
+def uimm14lsb00 : RISCVOp,
+                  ImmLeaf<XLenVT, [{return isShiftedUInt<12, 2>(Imm);}]> {
+  let ParserMatchClass = UImmAsmOperand<14, "Lsb00">;
+  let EncoderMethod = "getImmOpValue";
+  let DecoderMethod = "decodeUImmOperand<14>";
+  let OperandType = "OPERAND_UIMM14_LSB00";
+}
+
 def uimm16nonzero : RISCVOp<XLenVT>,
                     ImmLeaf<XLenVT, [{return (Imm != 0) && isUInt<16>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<16, "NonZero">;
@@ -314,7 +323,7 @@ class QCIRVInst16CI_RS1<bits<5> funct5, string OpcodeStr>
 
 class QCIBranchInst_rii<bits<3> funct3, DAGOperand InTyImm5, string opcodestr>
     : RVInstB<funct3, OPC_CUSTOM_3, (outs),
-              (ins GPRNoX0:$rs1, InTyImm5:$rs2, simm13_lsb0:$imm12),
+              (ins GPRNoX0:$rs1, InTyImm5:$rs2, bare_simm13_lsb0:$imm12),
               opcodestr, "$rs1, $rs2, $imm12"> {
   let isBranch = 1;
   let isTerminator = 1;
@@ -324,7 +333,8 @@ class QCIBranchInst_rii<bits<3> funct3, DAGOperand InTyImm5, string opcodestr>
 }
 
 class QCIBranchInst48_rii<bits<5> funct5, DAGOperand InTyImm16, string opcodestr>
-    : RVInst48<(outs), (ins GPRNoX0:$rs1, InTyImm16:$imm16, simm13_lsb0:$imm12),
+    : RVInst48<(outs),
+               (ins GPRNoX0:$rs1, InTyImm16:$imm16, bare_simm13_lsb0:$imm12),
                opcodestr, "$rs1, $imm16, $imm12", [], InstFormatOther> {
   bits<5> rs1;
   bits<16> imm16;
@@ -574,15 +584,15 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def QC_INSBPR : QCIRVInstRR<0b00010, GPR, "qc.insbpr">;
   def QC_INSBPRH : QCIRVInstRR<0b00011, GPR, "qc.insbprh">;
   def QC_EXTU : QCIBitManipRII<0b010, 0b00, GPRNoX0, "qc.extu">;
-  def QC_EXTDU : QCIBitManipRII<0b010, 0b10, GPR, "qc.extdu">;
-  def QC_EXTDUR : QCIRVInstRR<0b00100, GPR, "qc.extdur">;
-  def QC_EXTDUPR : QCIRVInstRR<0b00110, GPR, "qc.extdupr">;
-  def QC_EXTDUPRH : QCIRVInstRR<0b00111, GPR, "qc.extduprh">;
+  def QC_EXTDU : QCIBitManipRII<0b010, 0b10, GPRNoX31, "qc.extdu">;
+  def QC_EXTDUR : QCIRVInstRR<0b00100, GPRNoX31, "qc.extdur">;
+  def QC_EXTDUPR : QCIRVInstRR<0b00110, GPRNoX31, "qc.extdupr">;
+  def QC_EXTDUPRH : QCIRVInstRR<0b00111, GPRNoX31, "qc.extduprh">;
   def QC_EXT : QCIBitManipRII<0b010, 0b01, GPRNoX0, "qc.ext">;
-  def QC_EXTD : QCIBitManipRII<0b010, 0b11, GPR, "qc.extd">;
-  def QC_EXTDR : QCIRVInstRR<0b00101, GPR, "qc.extdr">;
-  def QC_EXTDPR : QCIRVInstRR<0b01000, GPR, "qc.extdpr">;
-  def QC_EXTDPRH : QCIRVInstRR<0b01001, GPR, "qc.extdprh">;
+  def QC_EXTD : QCIBitManipRII<0b010, 0b11, GPRNoX31, "qc.extd">;
+  def QC_EXTDR : QCIRVInstRR<0b00101, GPRNoX31, "qc.extdr">;
+  def QC_EXTDPR : QCIRVInstRR<0b01000, GPRNoX31, "qc.extdpr">;
+  def QC_EXTDPRH : QCIRVInstRR<0b01001, GPRNoX31, "qc.extdprh">;
   def QC_COMPRESS2 : QCIRVInstI<0b0000, "qc.compress2">;
   def QC_COMPRESS3 : QCIRVInstI<0b0001, "qc.compress3">;
   def QC_EXPAND2 : QCIRVInstI<0b0010, "qc.expand2">;
@@ -741,6 +751,28 @@ def QC_C_MILEAVERET   : QCIRVInst16CI_NONE<0b10100, "qc.c.mileaveret">;
 
 } // Predicates = [HasVendorXqciint, IsRV32], hasSideEffects = 1
 
+let Predicates = [HasVendorXqciio, IsRV32] in {
+let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in {
+  def QC_OUTW : RVInstI<0b100, OPC_CUSTOM_0, (outs),
+                        (ins GPR:$rs2, GPR:$rs1, uimm14lsb00:$imm14),
+                        "qc.outw", "$rs2, ${imm14}(${rs1})"> {
+    bits<5> rs2;
+    bits<14> imm14;
+
+    let rd = rs2;
+    let imm12 = imm14{13-2};
+  }
+
+  def QC_INW : RVInstI<0b101, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
+                       (ins GPR:$rs1, uimm14lsb00:$imm14),
+                       "qc.inw", "$rd, ${imm14}(${rs1})"> {
+    bits<14> imm14;
+
+    let imm12 = imm14{13-2};
+  }
+} // hasSideEffects = 1, mayLoad = 0, mayStore = 0
+} // Predicates = [HasVendorXqciio, IsRV32]
+
 let Predicates = [HasVendorXqcilo, IsRV32] in {
   def QC_E_LB    : QCIRVInstEILoad<0b101, 0b00, "qc.e.lb">;
   def QC_E_LBU   : QCIRVInstEILoad<0b101, 0b01, "qc.e.lbu">;
@@ -857,6 +889,15 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 1 in {
 //===----------------------------------------------------------------------===//
 // Aliases
 //===----------------------------------------------------------------------===//
+
+let Predicates = [HasVendorXqciio, IsRV32] in {
+let EmitPriority = 0 in {
+  def : InstAlias<"qc.outw $rs2, (${rs1})",
+                  (QC_OUTW GPR:$rs2, GPR:$rs1, 0)>;
+  def : InstAlias<"qc.inw $rd, (${rs1})",
+                  (QC_INW GPRNoX0:$rd, GPR:$rs1, 0)>;
+} // EmitPriority = 0
+} // Predicates = [HasVendorXqciio, IsRV32]
 
 let Predicates = [HasVendorXqcilsm, IsRV32] in {
 let EmitPriority = 0 in {

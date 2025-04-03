@@ -7,8 +7,8 @@ define amdgpu_ps <2 x float> @test_add_u64_vv(i64 %a, i64 %b) {
 ; GFX12-LABEL: test_add_u64_vv:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
-; GFX12-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v3, vcc_lo
-; GFX12-NEXT:    s_wait_alu 0xfffd
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
 ; GFX_LIT64-LABEL: test_add_u64_vv:
@@ -24,8 +24,8 @@ define amdgpu_ps <2 x float> @test_add_u64_vs(i64 %a, i64 inreg %b) {
 ; GFX12-LABEL: test_add_u64_vs:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, s0
-; GFX12-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, s1, v1, vcc_lo
-; GFX12-NEXT:    s_wait_alu 0xfffd
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, v1, vcc_lo
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
 ; GFX_LIT64-LABEL: test_add_u64_vs:
@@ -41,8 +41,8 @@ define amdgpu_ps <2 x float> @test_add_u64_sv(i64 inreg %a, i64 %b) {
 ; GFX12-LABEL: test_add_u64_sv:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, s0, v0
-; GFX12-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, s1, v1, vcc_lo
-; GFX12-NEXT:    s_wait_alu 0xfffd
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, v1, vcc_lo
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
 ; GFX_LIT64-LABEL: test_add_u64_sv:
@@ -70,8 +70,8 @@ define amdgpu_ps <2 x float> @test_add_u64_v_inline_lit(i64 %a) {
 ; GFX12-LABEL: test_add_u64_v_inline_lit:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 5
-; GFX12-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
-; GFX12-NEXT:    s_wait_alu 0xfffd
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
 ; GFX_LIT64-LABEL: test_add_u64_v_inline_lit:
@@ -87,8 +87,8 @@ define amdgpu_ps <2 x float> @test_add_u64_v_small_imm(i64 %a) {
 ; GFX12-LABEL: test_add_u64_v_small_imm:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1f4, v0
-; GFX12-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
-; GFX12-NEXT:    s_wait_alu 0xfffd
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
 ; GFX_LIT64-LABEL: test_add_u64_v_small_imm:
@@ -104,8 +104,8 @@ define amdgpu_ps <2 x float> @test_add_u64_v_64bit_imm(i64 %a) {
 ; GFX12-LABEL: test_add_u64_v_64bit_imm:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, 0x3b9ac9ff, v0
-; GFX12-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 1, v1, vcc_lo
-; GFX12-NEXT:    s_wait_alu 0xfffd
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, 1, v1, vcc_lo
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
 ; GFX_LIT64-LABEL: test_add_u64_v_64bit_imm:

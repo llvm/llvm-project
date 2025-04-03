@@ -681,3 +681,12 @@ void test_cvt_scalef32_pk32_fp6_f32(global uint6 *out, float32 srcf32, float src
 {
   *out = __builtin_amdgcn_cvt_scalef32_pk32_fp6_f32(srcf32, src);
 }
+
+// CHECK-LABEL: @test_s_inst_auto_prefetch_mode(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    call void @llvm.amdgcn.s.inst.auto.prefetch.mode(i16 10)
+// CHECK-NEXT:    ret void
+//
+void test_s_inst_auto_prefetch_mode() {
+  __builtin_amdgcn_s_inst_auto_prefetch_mode(10);
+}

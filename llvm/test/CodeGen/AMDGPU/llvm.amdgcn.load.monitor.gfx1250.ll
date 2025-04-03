@@ -186,8 +186,8 @@ define amdgpu_ps void @global_load_monitor_b64_saddr_no_scale_offset(ptr addrspa
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_lshlrev_b64_e32 v[2:3], 2, v[2:3]
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v4, v2
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, v5, v3, vcc_lo
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, v5, v3, vcc_lo
 ; GFX1250-GISEL-NEXT:    global_load_monitor_b64 v[2:3], v[2:3], off th:TH_LOAD_NT
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-GISEL-NEXT:    global_store_b64 v[0:1], v[2:3], off

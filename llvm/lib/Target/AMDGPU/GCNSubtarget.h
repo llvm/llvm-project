@@ -167,6 +167,7 @@ protected:
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
   bool HasFP8ConversionInsts = false;
+  bool HasFP8E5M3Insts = false;
   bool HasCvtFP8Vop1Bug = false;
   bool HasPkFmacF16Inst = false;
   bool HasAtomicFMinFMaxF32GlobalInsts = false;
@@ -276,6 +277,8 @@ protected:
   bool HasMinimum3Maximum3F16 = false;
   bool HasMin3Max3PKF16 = false;
   bool HasMinimum3Maximum3PKF16 = false;
+  bool HasLshlAddU64Inst = false;
+  bool HasAddSubU64Insts = false;
   bool HasVNBREncoding = false;
   bool HasSWC = false;
   bool HasIndexedResources = false;
@@ -893,6 +896,8 @@ public:
 
   bool hasFP8ConversionInsts() const { return HasFP8ConversionInsts; }
 
+  bool hasFP8E5M3Insts() const { return HasFP8E5M3Insts; }
+
   bool hasPkFmacF16Inst() const {
     return HasPkFmacF16Inst;
   }
@@ -1203,7 +1208,7 @@ public:
 
   bool hasMovB64() const { return GFX940Insts || (GFX1250Insts && !GFX13Insts); }
 
-  bool hasLshlAddB64() const { return GFX940Insts || GFX1250Insts; }
+  bool hasLshlAddU64Inst() const { return HasLshlAddU64Inst; }
 
   // Scalar and global loads support scale_offset bit.
   bool hasScaleOffset() const { return GFX1250Insts; }
@@ -1576,7 +1581,7 @@ public:
   bool hasVOPD3() const { return GFX1250Insts; }
 
   // \returns true if the target has V_ADD_U64/V_SUB_U64 instructions.
-  bool hasAddU64SubU64() const { return GFX1250Insts; }
+  bool hasAddSubU64Insts() const { return HasAddSubU64Insts; }
 
   // \returns true if the target has V_MUL_U64/V_MUL_I64 instructions.
   bool hasVectorMulU64() const { return GFX1250Insts && !GFX13Insts; }

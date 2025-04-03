@@ -11,16 +11,16 @@
 #define _LIBCPP___FLAT_SET_FLAT_SET_H
 
 #include <__algorithm/lexicographical_compare_three_way.h>
+#include <__algorithm/lower_bound.h>
 #include <__algorithm/min.h>
 #include <__algorithm/ranges_adjacent_find.h>
 #include <__algorithm/ranges_equal.h>
 #include <__algorithm/ranges_inplace_merge.h>
-#include <__algorithm/ranges_lower_bound.h>
 #include <__algorithm/ranges_partition_point.h>
 #include <__algorithm/ranges_sort.h>
 #include <__algorithm/ranges_unique.h>
-#include <__algorithm/ranges_upper_bound.h>
 #include <__algorithm/remove_if.h>
+#include <__algorithm/upper_bound.h>
 #include <__assert>
 #include <__compare/synth_three_way.h>
 #include <__concepts/swappable.h>
@@ -382,7 +382,7 @@ public:
   template <class _Kp>
     requires(__is_transparent_v<_Compare> && is_constructible_v<value_type, _Kp>)
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(_Kp&& __x) {
-    return emplace(std::forward<_Kp>(__x));
+    return __emplace(std::forward<_Kp>(__x));
   }
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __hint, const value_type& __x) {
     return emplace_hint(__hint, __x);
@@ -395,7 +395,7 @@ public:
   template <class _Kp>
     requires(__is_transparent_v<_Compare> && is_constructible_v<value_type, _Kp>)
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __hint, _Kp&& __x) {
-    return emplace_hint(__hint, std::forward<_Kp>(__x));
+    return __emplace_hint(__hint, std::forward<_Kp>(__x));
   }
 
   template <class _InputIterator>
@@ -531,43 +531,47 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const key_type& __x) {
-    return iterator(ranges::lower_bound(std::as_const(__keys_), __x, __compare_));
+    const auto& __keys = __keys_;
+    return iterator(std::lower_bound(__keys.begin(), __keys.end(), __x, __compare_));
   }
 
   _LIBCPP_HIDE_FROM_ABI const_iterator lower_bound(const key_type& __x) const {
-    return const_iterator(ranges::lower_bound(__keys_, __x, __compare_));
+    return const_iterator(std::lower_bound(__keys_.begin(), __keys_.end(), __x, __compare_));
   }
 
   template <class _Kp>
     requires __is_transparent_v<_Compare>
   _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const _Kp& __x) {
-    return iterator(ranges::lower_bound(std::as_const(__keys_), __x, __compare_));
+    const auto& __keys = __keys_;
+    return iterator(std::lower_bound(__keys.begin(), __keys.end(), __x, __compare_));
   }
 
   template <class _Kp>
     requires __is_transparent_v<_Compare>
   _LIBCPP_HIDE_FROM_ABI const_iterator lower_bound(const _Kp& __x) const {
-    return const_iterator(ranges::lower_bound(__keys_, __x, __compare_));
+    return const_iterator(std::lower_bound(__keys_.begin(), __keys_.end(), __x, __compare_));
   }
 
   _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const key_type& __x) {
-    return iterator(ranges::upper_bound(std::as_const(__keys_), __x, __compare_));
+    const auto& __keys = __keys_;
+    return iterator(std::upper_bound(__keys.begin(), __keys.end(), __x, __compare_));
   }
 
   _LIBCPP_HIDE_FROM_ABI const_iterator upper_bound(const key_type& __x) const {
-    return const_iterator(ranges::upper_bound(__keys_, __x, __compare_));
+    return const_iterator(std::upper_bound(__keys_.begin(), __keys_.end(), __x, __compare_));
   }
 
   template <class _Kp>
     requires __is_transparent_v<_Compare>
   _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const _Kp& __x) {
-    return iterator(ranges::upper_bound(std::as_const(__keys_), __x, __compare_));
+    const auto& __keys = __keys_;
+    return iterator(std::upper_bound(__keys.begin(), __keys.end(), __x, __compare_));
   }
 
   template <class _Kp>
     requires __is_transparent_v<_Compare>
   _LIBCPP_HIDE_FROM_ABI const_iterator upper_bound(const _Kp& __x) const {
-    return const_iterator(ranges::upper_bound(__keys_, __x, __compare_));
+    return const_iterator(std::upper_bound(__keys_.begin(), __keys_.end(), __x, __compare_));
   }
 
   _LIBCPP_HIDE_FROM_ABI pair<iterator, iterator> equal_range(const key_type& __x) {
@@ -668,7 +672,7 @@ private:
   template <class _Self, class _Kp>
   _LIBCPP_HIDE_FROM_ABI static auto __equal_range_impl(_Self&& __self, const _Kp& __key) {
     using __iter = _If<is_const_v<__libcpp_remove_reference_t<_Self>>, const_iterator, iterator>;
-    auto __it    = ranges::lower_bound(__self.__keys_, __key, __self.__compare_);
+    auto __it    = std::lower_bound(__self.__keys_.begin(), __self.__keys_.end(), __key, __self.__compare_);
     auto __last  = __self.__keys_.end();
     if (__it == __last || __self.__compare_(__key, *__it)) {
       return std::make_pair(__iter(__it), __iter(__it));

@@ -44,8 +44,8 @@ define amdgpu_ps float @flat_load_b32_idxprom_wrong_stride(ptr align 4 inreg %p,
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GISEL-NEXT:    v_lshlrev_b64_e32 v[0:1], 3, v[0:1]
 ; GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v3, v1, vcc_lo
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, v3, v1, vcc_lo
 ; GISEL-NEXT:    flat_load_b32 v0, v[0:1]
 ; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GISEL-NEXT:    ; return to shader part epilog
@@ -382,9 +382,9 @@ define amdgpu_ps <2 x float> @flat_atomicrmw_b64_rtn_idxprom(ptr align 8 inreg %
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GISEL-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
 ; GISEL-NEXT:    v_lshlrev_b64_e32 v[0:1], 3, v[2:3]
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GISEL-NEXT:    v_add_co_u32 v4, vcc_lo, v4, v0
-; GISEL-NEXT:    v_add_co_ci_u32_e32 v5, vcc_lo, v5, v1, vcc_lo
+; GISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, v5, v1, vcc_lo
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GISEL-NEXT:    v_xor_b32_e32 v0, src_flat_scratch_base_hi, v5
 ; GISEL-NEXT:    v_cmp_le_u32_e32 vcc_lo, 0x4000000, v0

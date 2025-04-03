@@ -153,7 +153,7 @@ void initializeLazyValueInfoWrapperPassPass(PassRegistry &);
 void initializeLegacyLICMPassPass(PassRegistry &);
 void initializeLegalizerPass(PassRegistry &);
 void initializeGISelCSEAnalysisWrapperPassPass(PassRegistry &);
-void initializeGISelKnownBitsAnalysisPass(PassRegistry &);
+void initializeGISelValueTrackingAnalysisPass(PassRegistry &);
 void initializeLiveDebugValuesLegacyPass(PassRegistry &);
 void initializeLiveDebugVariablesWrapperLegacyPass(PassRegistry &);
 void initializeLiveIntervalsWrapperPassPass(PassRegistry &);
@@ -204,6 +204,8 @@ void initializeMachineLoopInfoWrapperPassPass(PassRegistry &);
 void initializeMachineModuleInfoWrapperPassPass(PassRegistry &);
 void initializeMachineOptimizationRemarkEmitterPassPass(PassRegistry &);
 void initializeMachineOutlinerPass(PassRegistry &);
+void initializeStaticDataProfileInfoWrapperPassPass(PassRegistry &);
+void initializeStaticDataAnnotatorPass(PassRegistry &);
 void initializeMachinePipelinerPass(PassRegistry &);
 void initializeMachinePostDominatorTreeWrapperPassPass(PassRegistry &);
 void initializeMachineRegionInfoPassPass(PassRegistry &);
@@ -321,7 +323,7 @@ void initializeVirtRegRewriterPass(PassRegistry &);
 void initializeWasmEHPreparePass(PassRegistry &);
 void initializeWinEHPreparePass(PassRegistry &);
 void initializeWriteBitcodePassPass(PassRegistry &);
-void initializeXRayInstrumentationPass(PassRegistry &);
+void initializeXRayInstrumentationLegacyPass(PassRegistry &);
 
 } // end namespace llvm
 
