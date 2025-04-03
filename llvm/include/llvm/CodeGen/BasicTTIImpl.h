@@ -2778,7 +2778,19 @@ public:
     }
     case Intrinsic::maximumnum:
     case Intrinsic::minimumnum: {
-      if (TLI->isOperationLegalOrPromote(llvm::ISD::FMAXNUM_IEEE, LT.second))
+      // On platform that support FMAXNUM_IEEE/FMINNUM_IEEE, we expand
+      // maximumnum/minimumnum to
+      //    ARG0 = fcanonicalize ARG0, ARG0  // to quiet ARG0
+      //    ARG1 = fcanonicalize ARG1, ARG1  // to quiet ARG1
+      //    RESULT = MAXNUM_IEEE ARG0, ARG1  // or MINNUM_IEEE
+      // Here fcanonicalize may be FMAXNUM_IEEE or FMINNUM_IEEE varies by
+      // architecture.
+      // FIXME: In LangRef, we claimed FMAXNUM has the same behaviour of
+      //        FMAXNUM_IEEE, while the backend hasn't migrated the code yet.
+      //        Finally, we will remove FMAXNUM_IEEE and FMINNUM_IEEE.
+      // All known platforms have both FMAXNUM_IEEE and FMINNUM_IEEE, so we
+      // check MAX only.
+      if (TLI->isOperationLegalOrPromote(ISD::FMAXNUM_IEEE, LT.second))
         return LT.first * 3;
       break;
     }
