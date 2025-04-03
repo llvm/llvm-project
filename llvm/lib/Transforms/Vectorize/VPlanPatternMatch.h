@@ -66,6 +66,24 @@ struct specificval_ty {
 
 inline specificval_ty m_Specific(const VPValue *VPV) { return VPV; }
 
+/// Stores a reference to the VPValue *, not the VPValue * itself,
+/// thus can be used in commutative matchers.
+struct deferredval_ty {
+  VPValue *const &Val;
+
+  deferredval_ty(VPValue *const &V) : Val(V) {}
+
+  bool match(VPValue *const V) const { return V == Val; }
+};
+
+/// Like m_Specific(), but works if the specific value to match is determined
+/// as part of the same match() expression. For example:
+/// m_Mul(m_VPValue(X), m_Specific(X)) is incorrect, because m_Specific() will
+/// bind X before the pattern match starts.
+/// m_Mul(m_VPValue(X), m_Deferred(X)) is correct, and will check against
+/// whichever value m_VPValue(X) populated.
+inline deferredval_ty m_Deferred(VPValue *const &V) { return V; }
+
 /// Match a specified integer value or vector of all elements of that
 /// value. \p BitWidth optionally specifies the bitwidth the matched constant
 /// must have. If it is 0, the matched constant can have any bitwidth.
