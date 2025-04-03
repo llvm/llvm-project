@@ -89,7 +89,11 @@ private:
                                        src->getBlocks(), src->begin(),
                                        src->end());
   };
-  /// Determining if multiple blocks can be handled
+  /// Determining if the inliner can inline a function containing multiple
+  /// blocks into a region that requires a single block. By default, it is
+  /// not allowed. If it is true, cloneCallback shuold perform the extra
+  /// transformation. see the example in
+  /// mlir/test/lib/Transforms/TestInliningCallback.cpp
   bool canHandleMultipleBlocks{false};
 };
 
@@ -121,18 +125,6 @@ public:
   /// this hook's interface might need to be extended in future.
   using ProfitabilityCallbackTy = std::function<bool(const ResolvedCall &)>;
 
-  /// Type of the callback that determines if the inliner can inline a function
-  /// containing multiple blocks into a region that requires a single block. By
-  /// default, it is not allowed.
-  /// If this function return true, the static member function doClone()
-  /// should perform the actual transformation with its support.
-  using canHandleMultipleBlocksCbTy = std::function<bool()>;
-
-  using CloneCallbackTy =
-      std::function<void(OpBuilder &builder, Region *src, Block *inlineBlock,
-                         Block *postInsertBlock, IRMapping &mapper,
-                         bool shouldCloneInlinedRegion)>;
-
   Inliner(Operation *op, CallGraph &cg, Pass &pass, AnalysisManager am,
           RunPipelineHelperTy runPipelineHelper, const InlinerConfig &config,
           ProfitabilityCallbackTy isProfitableToInline)
@@ -144,14 +136,6 @@ public:
 
   /// Perform inlining on a OpTrait::SymbolTable operation.
   LogicalResult doInlining();
-
-  /// This function provides a callback mechanism to clone the instructions and
-  /// other information from the callee function into the caller function.
-  static CloneCallbackTy &doClone();
-
-  /// Set the clone callback function.
-  /// The provided function "func" will be invoked by Inliner::doClone().
-  void setCloneCallback(CloneCallbackTy func) { doClone() = func; }
 
 private:
   /// An OpTrait::SymbolTable operation to run the inlining on.
@@ -174,7 +158,6 @@ private:
   /// Forward declaration of the class providing the actual implementation.
   class Impl;
 };
-
 } // namespace mlir
 
 #endif // MLIR_TRANSFORMS_INLINER_H

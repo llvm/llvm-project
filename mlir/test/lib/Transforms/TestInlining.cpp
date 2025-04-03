@@ -37,7 +37,6 @@ struct InlinerTest
 
   void runOnOperation() override {
     InlinerConfig config;
-    config.setCanHandleMultipleBlocks(false);
 
     auto function = getOperation();
 
