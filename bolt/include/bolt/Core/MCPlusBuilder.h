@@ -587,12 +587,19 @@ public:
     return getNoRegister();
   }
 
-  /// Returns the register containing an address which is safely materialized
-  /// under Pointer Authentication threat model, or NoRegister otherwise.
+  /// Returns the register containing an address safely materialized by `Inst`
+  /// under the Pointer Authentication threat model.
   ///
-  /// The produced address should not be attacker-controlled, assuming an
-  /// attacker is able to modify any writable memory, but not executable code
-  /// (as it should be W^X).
+  /// Returns the register `Inst` writes to if:
+  /// 1. the register is a materialized address, and
+  /// 2. the register has been materialized safely, i.e. cannot be attacker-
+  ///    controlled, under the Pointer Authentication threat model.
+  ///
+  /// If the instruction does not write to any register satisfying the above
+  /// two conditions, NoRegister is returned.
+  ///
+  /// The Pointer Authentication threat model assumes an attacker is able to
+  /// modify any writable memory, but not executable code (due to W^X).
   virtual MCPhysReg
   getMaterializedAddressRegForPtrAuth(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
