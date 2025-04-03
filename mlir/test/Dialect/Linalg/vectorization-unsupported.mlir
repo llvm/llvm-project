@@ -305,6 +305,33 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// Padding with non-zero low pad values is not supported, unless the corresponding
+// result dim is 1. Here `%l0` being a non-zero low pad applied to a
+// non-unit result dimension makes this case unsupported.
+func.func @tensor_pad_non_zero_low_pad(
+  %0 : tensor<?x?xf32>, %h0 : index, %h1 : index, %l0 : index)
+    -> tensor<2x4xf32> {
+  // expected-error @+3 {{Attempted to vectorize, but failed}}
+  %cst = arith.constant 42.43 : f32
+  %c0 = arith.constant 0 : index
+  %1 = tensor.pad %0 low[%l0, %c0] high[%h0, %h1]  {
+    ^bb0(%hh1: index, %hh2: index):
+      tensor.yield %cst : f32
+    } : tensor<?x?xf32> to tensor<2x4xf32>
+  return %1: tensor<2x4xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.pad"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [2, 4] : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 // With dynamically shaped source, the vectorizer infers the vector size for
 // xfer Ops from the destination tensor and, conservatively, assumes
 // out-of-bounds accesses. Out-of-bounds accesses require a pad value, but

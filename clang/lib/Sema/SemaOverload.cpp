@@ -11280,12 +11280,12 @@ MaybeDiagnoseAmbiguousConstraints(Sema &S, ArrayRef<OverloadCandidate> Cands) {
   // source-level construct. This behavior is quite confusing and we should try
   // to help the user figure out what happened.
 
-  SmallVector<const Expr *, 3> FirstAC, SecondAC;
+  SmallVector<AssociatedConstraint, 3> FirstAC, SecondAC;
   FunctionDecl *FirstCand = nullptr, *SecondCand = nullptr;
   for (auto I = Cands.begin(), E = Cands.end(); I != E; ++I) {
     if (!I->Function)
       continue;
-    SmallVector<const Expr *, 3> AC;
+    SmallVector<AssociatedConstraint, 3> AC;
     if (auto *Template = I->Function->getPrimaryTemplate())
       Template->getAssociatedConstraints(AC);
     else

@@ -113,13 +113,10 @@ public:
 
 class CIRToLLVMConstantOpLowering
     : public mlir::OpConversionPattern<cir::ConstantOp> {
-  mlir::DataLayout const &dataLayout;
-
 public:
   CIRToLLVMConstantOpLowering(const mlir::TypeConverter &typeConverter,
-                              mlir::MLIRContext *context,
-                              mlir::DataLayout const &dataLayout)
-      : OpConversionPattern(typeConverter, context), dataLayout(dataLayout) {
+                              mlir::MLIRContext *context)
+      : OpConversionPattern(typeConverter, context) {
     setHasBoundedRewriteRecursion();
   }
 
@@ -175,6 +172,17 @@ public:
 
   mlir::LogicalResult
   matchAndRewrite(cir::UnaryOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMBinOpLowering : public mlir::OpConversionPattern<cir::BinOp> {
+  mlir::LLVM::IntegerOverflowFlags getIntOverflowFlag(cir::BinOp op) const;
+
+public:
+  using mlir::OpConversionPattern<cir::BinOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::BinOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &) const override;
 };
 

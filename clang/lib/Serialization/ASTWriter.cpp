@@ -4438,7 +4438,7 @@ void ASTWriter::GenerateSpecializationInfoLookupTable(
       Generator;
   LazySpecializationInfoLookupTrait Trait(*this);
 
-  llvm::DenseMap<unsigned, llvm::SmallVector<const NamedDecl *, 4>>
+  llvm::MapVector<unsigned, llvm::SmallVector<const NamedDecl *, 4>>
       SpecializationMaps;
 
   for (auto *Specialization : Specializations) {
@@ -7022,8 +7022,6 @@ void ASTRecordWriter::AddNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) {
       break;
 
     case NestedNameSpecifier::TypeSpec:
-    case NestedNameSpecifier::TypeSpecWithTemplate:
-      Record->push_back(Kind == NestedNameSpecifier::TypeSpecWithTemplate);
       AddTypeRef(NNS.getTypeLoc().getType());
       AddTypeLoc(NNS.getTypeLoc());
       AddSourceLocation(NNS.getLocalSourceRange().getEnd());

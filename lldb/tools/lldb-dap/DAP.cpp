@@ -14,6 +14,7 @@
 #include "LLDBUtils.h"
 #include "OutputRedirector.h"
 #include "Protocol/ProtocolBase.h"
+#include "Protocol/ProtocolTypes.h"
 #include "Transport.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBCommandInterpreter.h"
@@ -161,7 +162,7 @@ void DAP::PopulateExceptionBreakpoints() {
   });
 }
 
-ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const std::string &filter) {
+ExceptionBreakpoint *DAP::GetExceptionBreakpoint(llvm::StringRef filter) {
   // PopulateExceptionBreakpoints() is called after g_dap.debugger is created
   // in a request-initialize.
   //
@@ -180,7 +181,7 @@ ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const std::string &filter) {
   PopulateExceptionBreakpoints();
 
   for (auto &bp : *exception_breakpoints) {
-    if (bp.filter == filter)
+    if (bp.GetFilter() == filter)
       return &bp;
   }
   return nullptr;
@@ -191,7 +192,7 @@ ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const lldb::break_id_t bp_id) {
   PopulateExceptionBreakpoints();
 
   for (auto &bp : *exception_breakpoints) {
-    if (bp.bp.GetID() == bp_id)
+    if (bp.GetID() == bp_id)
       return &bp;
   }
   return nullptr;
@@ -710,12 +711,12 @@ bool DAP::HandleObject(const protocol::Message &M) {
                            [](const std::string &message) -> llvm::StringRef {
                              return message;
                            },
-                           [](const protocol::Response::Message &message)
+                           [](const protocol::ResponseMessage &message)
                                -> llvm::StringRef {
                              switch (message) {
-                             case protocol::Response::Message::cancelled:
+                             case protocol::eResponseMessageCancelled:
                                return "cancelled";
-                             case protocol::Response::Message::notStopped:
+                             case protocol::eResponseMessageNotStopped:
                                return "notStopped";
                              }
                            }),
@@ -1065,7 +1066,7 @@ void DAP::SetThreadFormat(llvm::StringRef format) {
 InstructionBreakpoint *
 DAP::GetInstructionBreakpoint(const lldb::break_id_t bp_id) {
   for (auto &bp : instruction_breakpoints) {
-    if (bp.second.bp.GetID() == bp_id)
+    if (bp.second.GetID() == bp_id)
       return &bp.second;
   }
   return nullptr;
@@ -1144,31 +1145,40 @@ lldb::SBValue Variables::FindVariable(uint64_t variablesReference,
   return variable;
 }
 
-llvm::StringMap<bool> DAP::GetCapabilities() {
-  llvm::StringMap<bool> capabilities;
+protocol::Capabilities DAP::GetCapabilities() {
+  protocol::Capabilities capabilities;
 
-  // Supported capabilities.
-  capabilities["supportTerminateDebuggee"] = true;
-  capabilities["supportsDataBreakpoints"] = true;
-  capabilities["supportsDelayedStackTraceLoading"] = true;
-  capabilities["supportsEvaluateForHovers"] = true;
-  capabilities["supportsExceptionOptions"] = true;
-  capabilities["supportsLogPoints"] = true;
-  capabilities["supportsProgressReporting"] = true;
-  capabilities["supportsSteppingGranularity"] = true;
-  capabilities["supportsValueFormattingOptions"] = true;
-
-  // Unsupported capabilities.
-  capabilities["supportsGotoTargetsRequest"] = false;
-  capabilities["supportsLoadedSourcesRequest"] = false;
-  capabilities["supportsRestartFrame"] = false;
-  capabilities["supportsStepBack"] = false;
+  // Supported capabilities that are not specific to a single request.
+  capabilities.supportedFeatures = {
+      protocol::eAdapterFeatureLogPoints,
+      protocol::eAdapterFeatureSteppingGranularity,
+      protocol::eAdapterFeatureValueFormattingOptions,
+  };
 
   // Capabilities associated with specific requests.
   for (auto &kv : request_handlers) {
-    for (auto &request_kv : kv.second->GetCapabilities())
-      capabilities[request_kv.getKey()] = request_kv.getValue();
+    llvm::SmallDenseSet<AdapterFeature, 1> features =
+        kv.second->GetSupportedFeatures();
+    capabilities.supportedFeatures.insert(features.begin(), features.end());
   }
+
+  // Available filters or options for the setExceptionBreakpoints request.
+  std::vector<protocol::ExceptionBreakpointsFilter> filters;
+  for (const auto &exc_bp : *exception_breakpoints)
+    filters.emplace_back(CreateExceptionBreakpointFilter(exc_bp));
+  capabilities.exceptionBreakpointFilters = std::move(filters);
+
+  // FIXME: This should be registered based on the supported languages?
+  std::vector<std::string> completion_characters;
+  completion_characters.emplace_back(".");
+  // FIXME: I wonder if we should remove this key... its very aggressive
+  // triggering and accepting completions.
+  completion_characters.emplace_back(" ");
+  completion_characters.emplace_back("\t");
+  capabilities.completionTriggerCharacters = std::move(completion_characters);
+
+  // Put in non-DAP specification lldb specific information.
+  capabilities.lldbExtVersion = debugger.GetVersionString();
 
   return capabilities;
 }

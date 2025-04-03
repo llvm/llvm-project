@@ -239,13 +239,10 @@ static void getAArch64MultilibFlags(const Driver &D,
     Result.push_back(BranchProtectionArg->getAsString(Args));
   }
 
-  if (Arg *AlignArg = Args.getLastArg(
-          options::OPT_mstrict_align, options::OPT_mno_strict_align,
-          options::OPT_mno_unaligned_access, options::OPT_munaligned_access)) {
-    if (AlignArg->getOption().matches(options::OPT_mstrict_align) ||
-        AlignArg->getOption().matches(options::OPT_mno_unaligned_access))
-      Result.push_back(AlignArg->getAsString(Args));
-  }
+  if (FeatureSet.contains("+strict-align"))
+    Result.push_back("-mno-unaligned-access");
+  else
+    Result.push_back("-munaligned-access");
 
   if (Arg *Endian = Args.getLastArg(options::OPT_mbig_endian,
                                     options::OPT_mlittle_endian)) {
@@ -313,13 +310,10 @@ static void getARMMultilibFlags(const Driver &D,
     Result.push_back(BranchProtectionArg->getAsString(Args));
   }
 
-  if (Arg *AlignArg = Args.getLastArg(
-          options::OPT_mstrict_align, options::OPT_mno_strict_align,
-          options::OPT_mno_unaligned_access, options::OPT_munaligned_access)) {
-    if (AlignArg->getOption().matches(options::OPT_mstrict_align) ||
-        AlignArg->getOption().matches(options::OPT_mno_unaligned_access))
-      Result.push_back(AlignArg->getAsString(Args));
-  }
+  if (FeatureSet.contains("+strict-align"))
+    Result.push_back("-mno-unaligned-access");
+  else
+    Result.push_back("-munaligned-access");
 
   if (Arg *Endian = Args.getLastArg(options::OPT_mbig_endian,
                                     options::OPT_mlittle_endian)) {
@@ -779,8 +773,6 @@ std::string ToolChain::getCompilerRT(const ArgList &Args, StringRef Component,
     if (Path.empty())
       Path = P;
   }
-  if (getTriple().isOSAIX())
-    Path.clear();
 
   // Check the filename for the old layout if the new one does not exist.
   CRTBasename =
@@ -846,6 +838,16 @@ ToolChain::getFallbackAndroidTargetPath(StringRef BaseDir) const {
   return std::string(P);
 }
 
+llvm::Triple ToolChain::getTripleWithoutOSVersion() const {
+  return (Triple.hasEnvironment()
+              ? llvm::Triple(Triple.getArchName(), Triple.getVendorName(),
+                             llvm::Triple::getOSTypeName(Triple.getOS()),
+                             llvm::Triple::getEnvironmentTypeName(
+                                 Triple.getEnvironment()))
+              : llvm::Triple(Triple.getArchName(), Triple.getVendorName(),
+                             llvm::Triple::getOSTypeName(Triple.getOS())));
+}
+
 std::optional<std::string>
 ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
   auto getPathForTriple =
@@ -864,14 +866,7 @@ ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
   if (T.isOSzOS() &&
       (!T.getOSVersion().empty() || !T.getEnvironmentVersion().empty())) {
     // Build the triple without version information
-    const llvm::Triple &TripleWithoutVersion =
-        (T.hasEnvironment()
-             ? llvm::Triple(
-                   T.getArchName(), T.getVendorName(),
-                   llvm::Triple::getOSTypeName(T.getOS()),
-                   llvm::Triple::getEnvironmentTypeName(T.getEnvironment()))
-             : llvm::Triple(T.getArchName(), T.getVendorName(),
-                            llvm::Triple::getOSTypeName(T.getOS())));
+    const llvm::Triple &TripleWithoutVersion = getTripleWithoutOSVersion();
     if (auto Path = getPathForTriple(TripleWithoutVersion))
       return *Path;
   }
@@ -909,9 +904,18 @@ std::optional<std::string> ToolChain::getRuntimePath() const {
   llvm::sys::path::append(P, "lib");
   if (auto Ret = getTargetSubDirPath(P))
     return Ret;
-  // Darwin and AIX does not use per-target runtime directory.
-  if (Triple.isOSDarwin() || Triple.isOSAIX())
+  // Darwin does not use per-target runtime directory.
+  if (Triple.isOSDarwin())
     return {};
+
+  // For AIX, get the triple without the OS version.
+  if (Triple.isOSAIX()) {
+    const llvm::Triple &TripleWithoutVersion = getTripleWithoutOSVersion();
+    llvm::sys::path::append(P, TripleWithoutVersion.str());
+    if (getVFS().exists(P))
+      return std::string(P);
+    return {};
+  }
   llvm::sys::path::append(P, Triple.str());
   return std::string(P);
 }

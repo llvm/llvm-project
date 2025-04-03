@@ -6751,6 +6751,23 @@ def : Pat<(v4i32 (concat_vectors
                  (v2i32 (trunc (AArch64vlshr (v2i64 V128:$Vm), (i32 32)))))),
           (UZP2v4i32 V128:$Vn, V128:$Vm)>;
 
+// extract_subvec(anyext) can use zip. Check for one use on the anyext, otherwise
+// the extract_subvector can be free.
+let HasOneUse = 1 in
+def anyext_oneuse: PatFrag<(ops node:$src0), (anyext $src0)>;
+def : Pat<(v4i16 (extract_subvector (v8i16 (anyext_oneuse (v8i8 V64:$Vn))), (i64 0))),
+          (ZIP1v8i8 V64:$Vn, V64:$Vn)>;
+def : Pat<(v2i32 (extract_subvector (v4i32 (anyext_oneuse (v4i16 V64:$Vn))), (i64 0))),
+          (ZIP1v4i16 V64:$Vn, V64:$Vn)>;
+def : Pat<(v1i64 (extract_subvector (v2i64 (anyext_oneuse (v2i32 V64:$Vn))), (i64 0))),
+          (ZIP1v2i32 V64:$Vn, V64:$Vn)>;
+def : Pat<(v4i16 (extract_subvector (v8i16 (anyext_oneuse (v8i8 V64:$Vn))), (i64 4))),
+          (ZIP2v8i8 V64:$Vn, V64:$Vn)>;
+def : Pat<(v2i32 (extract_subvector (v4i32 (anyext_oneuse (v4i16 V64:$Vn))), (i64 2))),
+          (ZIP2v4i16 V64:$Vn, V64:$Vn)>;
+def : Pat<(v1i64 (extract_subvector (v2i64 (anyext_oneuse (v2i32 V64:$Vn))), (i64 1))),
+          (ZIP2v2i32 V64:$Vn, V64:$Vn)>;
+
 //----------------------------------------------------------------------------
 // AdvSIMD TBL/TBX instructions
 //----------------------------------------------------------------------------

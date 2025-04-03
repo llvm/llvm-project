@@ -69,8 +69,7 @@ define i32 @main(ptr %ptr) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 [[DOTPROMOTED]], [[INDEX]]
-; CHECK-NEXT:    [[TMP18:%.*]] = add i32 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP20:%.*]] = add i32 [[TMP18]], 1
+; CHECK-NEXT:    [[TMP20:%.*]] = add i32 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i32, ptr [[PTR:%.*]], i32 [[TMP20]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i32, ptr [[TMP22]], i32 0
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i32, ptr [[TMP22]], i32 4

@@ -4514,7 +4514,9 @@ class SubstNonTypeTemplateParmExpr : public Expr {
   llvm::PointerIntPair<Decl *, 1, bool> AssociatedDeclAndRef;
 
   unsigned Index : 15;
-  unsigned PackIndex : 16;
+  unsigned PackIndex : 15;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned Final : 1;
 
   explicit SubstNonTypeTemplateParmExpr(EmptyShell Empty)
       : Expr(SubstNonTypeTemplateParmExprClass, Empty) {}
@@ -4523,11 +4525,12 @@ public:
   SubstNonTypeTemplateParmExpr(QualType Ty, ExprValueKind ValueKind,
                                SourceLocation Loc, Expr *Replacement,
                                Decl *AssociatedDecl, unsigned Index,
-                               std::optional<unsigned> PackIndex, bool RefParam)
+                               std::optional<unsigned> PackIndex, bool RefParam,
+                               bool Final)
       : Expr(SubstNonTypeTemplateParmExprClass, Ty, ValueKind, OK_Ordinary),
         Replacement(Replacement),
         AssociatedDeclAndRef(AssociatedDecl, RefParam), Index(Index),
-        PackIndex(PackIndex ? *PackIndex + 1 : 0) {
+        PackIndex(PackIndex ? *PackIndex + 1 : 0), Final(Final) {
     assert(AssociatedDecl != nullptr);
     SubstNonTypeTemplateParmExprBits.NameLoc = Loc;
     setDependence(computeDependence(this));
@@ -4554,6 +4557,10 @@ public:
       return std::nullopt;
     return PackIndex - 1;
   }
+
+  // This substitution is Final, which means the substitution is fully
+  // sugared: it doesn't need to be resugared later.
+  bool getFinal() const { return Final; }
 
   NonTypeTemplateParmDecl *getParameter() const;
 
@@ -4598,7 +4605,10 @@ class SubstNonTypeTemplateParmPackExpr : public Expr {
   const TemplateArgument *Arguments;
 
   /// The number of template arguments in \c Arguments.
-  unsigned NumArguments : 16;
+  unsigned NumArguments : 15;
+
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned Final : 1;
 
   unsigned Index : 16;
 
@@ -4612,7 +4622,8 @@ public:
   SubstNonTypeTemplateParmPackExpr(QualType T, ExprValueKind ValueKind,
                                    SourceLocation NameLoc,
                                    const TemplateArgument &ArgPack,
-                                   Decl *AssociatedDecl, unsigned Index);
+                                   Decl *AssociatedDecl, unsigned Index,
+                                   bool Final);
 
   /// A template-like entity which owns the whole pattern being substituted.
   /// This will own a set of template parameters.
@@ -4621,6 +4632,10 @@ public:
   /// Returns the index of the replaced parameter in the associated declaration.
   /// This should match the result of `getParameterPack()->getIndex()`.
   unsigned getIndex() const { return Index; }
+
+  // This substitution will be Final, which means the substitution will be fully
+  // sugared: it doesn't need to be resugared later.
+  bool getFinal() const { return Final; }
 
   /// Retrieve the non-type template parameter pack being substituted.
   NonTypeTemplateParmDecl *getParameterPack() const;

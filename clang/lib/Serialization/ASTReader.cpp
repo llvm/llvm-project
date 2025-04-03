@@ -9613,9 +9613,9 @@ ModuleFile *ASTReader::getLocalModuleFile(ModuleFile &M, unsigned ID) const {
     return I == GlobalSubmoduleMap.end() ? nullptr : I->second;
   } else {
     // It's a prefix (preamble, PCH, ...). Look it up by index.
-    unsigned IndexFromEnd = ID >> 1;
+   int IndexFromEnd = static_cast<int>(ID >> 1);
     assert(IndexFromEnd && "got reference to unknown module file");
-    return getModuleManager().pch_modules().end()[-IndexFromEnd];
+    return getModuleManager().pch_modules().end()[-static_cast<int>(IndexFromEnd)];
   }
 }
 
@@ -9633,7 +9633,7 @@ unsigned ASTReader::getModuleFileID(ModuleFile *M) {
   auto PCHModules = getModuleManager().pch_modules();
   auto I = llvm::find(PCHModules, M);
   assert(I != PCHModules.end() && "emitting reference to unknown file");
-  return (I - PCHModules.end()) << 1;
+  return std::distance(I, PCHModules.end()) << 1;
 }
 
 std::optional<ASTSourceDescriptor> ASTReader::getSourceDescriptor(unsigned ID) {
@@ -9659,6 +9659,10 @@ ExternalASTSource::ExtKind ASTReader::hasExternalDefinitions(const Decl *FD) {
   if (I == DefinitionSource.end())
     return EK_ReplyHazy;
   return I->second ? EK_Never : EK_Always;
+}
+
+bool ASTReader::wasThisDeclarationADefinition(const FunctionDecl *FD) {
+  return ThisDeclarationWasADefinitionSet.contains(FD);
 }
 
 Selector ASTReader::getLocalSelector(ModuleFile &M, unsigned LocalID) {
@@ -9914,18 +9918,12 @@ ASTRecordReader::readNestedNameSpecifierLoc() {
       break;
     }
 
-    case NestedNameSpecifier::TypeSpec:
-    case NestedNameSpecifier::TypeSpecWithTemplate: {
-      bool Template = readBool();
+    case NestedNameSpecifier::TypeSpec: {
       TypeSourceInfo *T = readTypeSourceInfo();
       if (!T)
         return NestedNameSpecifierLoc();
       SourceLocation ColonColonLoc = readSourceLocation();
-
-      // FIXME: 'template' keyword location not saved anywhere, so we fake it.
-      Builder.Extend(Context,
-                     Template? T->getTypeLoc().getBeginLoc() : SourceLocation(),
-                     T->getTypeLoc(), ColonColonLoc);
+      Builder.Extend(Context, T->getTypeLoc(), ColonColonLoc);
       break;
     }
 

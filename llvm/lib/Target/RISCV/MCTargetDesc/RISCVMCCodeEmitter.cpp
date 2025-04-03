@@ -104,9 +104,9 @@ public:
                            SmallVectorImpl<MCFixup> &Fixups,
                            const MCSubtargetInfo &STI) const;
 
-  unsigned getRegReg(const MCInst &MI, unsigned OpNo,
-                     SmallVectorImpl<MCFixup> &Fixups,
-                     const MCSubtargetInfo &STI) const;
+  unsigned getRlistS0OpValue(const MCInst &MI, unsigned OpNo,
+                             SmallVectorImpl<MCFixup> &Fixups,
+                             const MCSubtargetInfo &STI) const;
 };
 } // end anonymous namespace
 
@@ -479,7 +479,7 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
     case RISCVMCExpr::VK_None:
     case RISCVMCExpr::VK_32_PCREL:
     case RISCVMCExpr::VK_GOTPCREL:
-    case RISCVMCExpr::VK_PLT:
+    case RISCVMCExpr::VK_PLTPCREL:
       llvm_unreachable("unhandled specifier");
     case RISCVMCExpr::VK_TPREL_ADD:
       // tprel_add is only used to indicate that a relocation should be emitted
@@ -557,10 +557,7 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
       FixupKind = RISCV::fixup_riscv_tlsdesc_call;
       break;
     }
-  } else if ((Kind == MCExpr::SymbolRef &&
-              getSpecifier(cast<MCSymbolRefExpr>(Expr)) ==
-                  RISCVMCExpr::VK_None) ||
-             Kind == MCExpr::Binary) {
+  } else if (Kind == MCExpr::SymbolRef || Kind == MCExpr::Binary) {
     // FIXME: Sub kind binary exprs have chance of underflow.
     if (MIFrm == RISCVII::InstFormatJ) {
       FixupKind = RISCV::fixup_riscv_jal;
@@ -620,18 +617,16 @@ unsigned RISCVMCCodeEmitter::getRlistOpValue(const MCInst &MI, unsigned OpNo,
   assert(Imm >= 4 && "EABI is currently not implemented");
   return Imm;
 }
-
-unsigned RISCVMCCodeEmitter::getRegReg(const MCInst &MI, unsigned OpNo,
-                                       SmallVectorImpl<MCFixup> &Fixups,
-                                       const MCSubtargetInfo &STI) const {
+unsigned
+RISCVMCCodeEmitter::getRlistS0OpValue(const MCInst &MI, unsigned OpNo,
+                                      SmallVectorImpl<MCFixup> &Fixups,
+                                      const MCSubtargetInfo &STI) const {
   const MCOperand &MO = MI.getOperand(OpNo);
-  const MCOperand &MO1 = MI.getOperand(OpNo + 1);
-  assert(MO.isReg() && MO1.isReg() && "Expected registers.");
-
-  unsigned Op = Ctx.getRegisterInfo()->getEncodingValue(MO.getReg());
-  unsigned Op1 = Ctx.getRegisterInfo()->getEncodingValue(MO1.getReg());
-
-  return Op | Op1 << 5;
+  assert(MO.isImm() && "Rlist operand must be immediate");
+  auto Imm = MO.getImm();
+  assert(Imm >= 4 && "EABI is currently not implemented");
+  assert(Imm != RISCVZC::RA && "Rlist operand must include s0");
+  return Imm;
 }
 
 #include "RISCVGenMCCodeEmitter.inc"

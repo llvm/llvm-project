@@ -532,7 +532,6 @@ public:
     case VPRecipeBase::VPWidenPointerInductionSC:
     case VPRecipeBase::VPReductionPHISC:
     case VPRecipeBase::VPScalarCastSC:
-    case VPRecipeBase::VPScalarPHISC:
     case VPRecipeBase::VPPartialReductionSC:
       return true;
     case VPRecipeBase::VPBranchOnMaskSC:
@@ -866,6 +865,7 @@ public:
     BranchOnCount,
     BranchOnCond,
     Broadcast,
+    ComputeFindLastIVResult,
     ComputeReductionResult,
     // Takes the VPValue to extract from as first operand and the lane or part
     // to extract as second operand, counting from the end starting with 1 for
@@ -1026,22 +1026,28 @@ public:
 };
 
 /// A recipe to wrap on original IR instruction not to be modified during
-/// execution, execept for PHIs. For PHIs, a single VPValue operand is allowed,
-/// and it is used to add a new incoming value for the single predecessor VPBB.
+/// execution, except for PHIs. PHIs are modeled via the VPIRPhi subclass.
 /// Expect PHIs, VPIRInstructions cannot have any operands.
 class VPIRInstruction : public VPRecipeBase {
   Instruction &I;
 
-public:
+protected:
+  /// VPIRInstruction::create() should be used to create VPIRInstructions, as
+  /// subclasses may need to be created, e.g. VPIRPhi.
   VPIRInstruction(Instruction &I)
       : VPRecipeBase(VPDef::VPIRInstructionSC, ArrayRef<VPValue *>()), I(I) {}
 
+public:
   ~VPIRInstruction() override = default;
+
+  /// Create a new VPIRPhi for \p \I, if it is a PHINode, otherwise create a
+  /// VPIRInstruction.
+  static VPIRInstruction *create(Instruction &I);
 
   VP_CLASSOF_IMPL(VPDef::VPIRInstructionSC)
 
   VPIRInstruction *clone() override {
-    auto *R = new VPIRInstruction(I);
+    auto *R = create(I);
     for (auto *Op : operands())
       R->addOperand(Op);
     return R;
@@ -1083,6 +1089,29 @@ public:
   /// Builder. Must only be used for single operand VPIRInstructions wrapping a
   /// PHINode.
   void extractLastLaneOfOperand(VPBuilder &Builder);
+};
+
+/// An overlay for VPIRInstructions wrapping PHI nodes enabling convenient use
+/// cast/dyn_cast/isa and execute() implementation. A single VPValue operand is
+/// allowed, and it is used to add a new incoming value for the single
+/// predecessor VPBB.
+struct VPIRPhi : public VPIRInstruction {
+  VPIRPhi(PHINode &PN) : VPIRInstruction(PN) {}
+
+  static inline bool classof(const VPRecipeBase *U) {
+    auto *R = dyn_cast<VPIRInstruction>(U);
+    return R && isa<PHINode>(R->getInstruction());
+  }
+
+  PHINode &getIRPhi() { return cast<PHINode>(getInstruction()); }
+
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
 };
 
 /// VPWidenRecipe is a recipe for producing a widened instruction using the
@@ -1728,6 +1757,9 @@ public:
   VPValue *getStepValue() { return getOperand(1); }
   const VPValue *getStepValue() const { return getOperand(1); }
 
+  /// Update the step value of the recipe.
+  void setStepValue(VPValue *V) { setOperand(1, V); }
+
   PHINode *getPHINode() const { return cast<PHINode>(getUnderlyingValue()); }
 
   /// Returns the induction descriptor for the recipe.
@@ -2157,9 +2189,11 @@ class VPInterleaveRecipe : public VPRecipeBase {
 public:
   VPInterleaveRecipe(const InterleaveGroup<Instruction> *IG, VPValue *Addr,
                      ArrayRef<VPValue *> StoredValues, VPValue *Mask,
-                     bool NeedsMaskForGaps)
-      : VPRecipeBase(VPDef::VPInterleaveSC, {Addr}), IG(IG),
-        NeedsMaskForGaps(NeedsMaskForGaps) {
+                     bool NeedsMaskForGaps, DebugLoc DL)
+      : VPRecipeBase(VPDef::VPInterleaveSC, {Addr},
+                     DL),
+
+        IG(IG), NeedsMaskForGaps(NeedsMaskForGaps) {
     for (unsigned i = 0; i < IG->getFactor(); ++i)
       if (Instruction *I = IG->getMember(i)) {
         if (I->getType()->isVoidTy())
@@ -2178,7 +2212,7 @@ public:
 
   VPInterleaveRecipe *clone() override {
     return new VPInterleaveRecipe(IG, getAddr(), getStoredValues(), getMask(),
-                                  NeedsMaskForGaps);
+                                  NeedsMaskForGaps, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPInterleaveSC)
@@ -2819,8 +2853,8 @@ public:
   VP_CLASSOF_IMPL(VPDef::VPCanonicalIVPHISC)
 
   void execute(VPTransformState &State) override {
-    llvm_unreachable(
-        "cannot execute this recipe, should be replaced by VPScalarPHIRecipe");
+    llvm_unreachable("cannot execute this recipe, should be replaced by a "
+                     "scalar phi recipe");
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2905,8 +2939,8 @@ public:
   VP_CLASSOF_IMPL(VPDef::VPEVLBasedIVPHISC)
 
   void execute(VPTransformState &State) override {
-    llvm_unreachable(
-        "cannot execute this recipe, should be replaced by VPScalarPHIRecipe");
+    llvm_unreachable("cannot execute this recipe, should be replaced by a "
+                     "scalar phi recipe");
   }
 
   /// Return the cost of this VPEVLBasedIVPHIRecipe.
@@ -3037,20 +3071,20 @@ public:
 /// A recipe for handling phi nodes of integer and floating-point inductions,
 /// producing their scalar values.
 class VPScalarIVStepsRecipe : public VPRecipeWithIRFlags,
-                              public VPUnrollPartAccessor<2> {
+                              public VPUnrollPartAccessor<3> {
   Instruction::BinaryOps InductionOpcode;
 
 public:
-  VPScalarIVStepsRecipe(VPValue *IV, VPValue *Step,
+  VPScalarIVStepsRecipe(VPValue *IV, VPValue *Step, VPValue *VF,
                         Instruction::BinaryOps Opcode, FastMathFlags FMFs)
       : VPRecipeWithIRFlags(VPDef::VPScalarIVStepsSC,
-                            ArrayRef<VPValue *>({IV, Step}), FMFs),
+                            ArrayRef<VPValue *>({IV, Step, VF}), FMFs),
         InductionOpcode(Opcode) {}
 
   VPScalarIVStepsRecipe(const InductionDescriptor &IndDesc, VPValue *IV,
-                        VPValue *Step)
+                        VPValue *Step, VPValue *VF)
       : VPScalarIVStepsRecipe(
-            IV, Step, IndDesc.getInductionOpcode(),
+            IV, Step, VF, IndDesc.getInductionOpcode(),
             dyn_cast_or_null<FPMathOperator>(IndDesc.getInductionBinOp())
                 ? IndDesc.getInductionBinOp()->getFastMathFlags()
                 : FastMathFlags()) {}
@@ -3059,9 +3093,13 @@ public:
 
   VPScalarIVStepsRecipe *clone() override {
     return new VPScalarIVStepsRecipe(
-        getOperand(0), getOperand(1), InductionOpcode,
+        getOperand(0), getOperand(1), getOperand(2), InductionOpcode,
         hasFastMathFlags() ? getFastMathFlags() : FastMathFlags());
   }
+
+  /// Return true if this VPScalarIVStepsRecipe corresponds to part 0. Note that
+  /// this is only accurate after the VPlan has been unrolled.
+  bool isPart0() { return getUnrollPart(*this) == 0; }
 
   VP_CLASSOF_IMPL(VPDef::VPScalarIVStepsSC)
 
@@ -3593,6 +3631,10 @@ public:
     UFs.clear();
     UFs.insert(UF);
   }
+
+  /// Returns true if the VPlan already has been unrolled, i.e. it has a single
+  /// concrete UF.
+  bool isUnrolled() const { return UFs.size() == 1; }
 
   /// Return a string with the name of the plan and the applicable VFs and UFs.
   std::string getName() const;

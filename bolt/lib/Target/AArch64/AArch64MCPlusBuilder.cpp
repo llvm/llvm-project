@@ -191,6 +191,10 @@ public:
     return false;
   }
 
+  SmallVector<MCPhysReg> getTrustedLiveInRegs() const override {
+    return {AArch64::LR};
+  }
+
   ErrorOr<MCPhysReg> getAuthenticatedReg(const MCInst &Inst) const override {
     switch (Inst.getOpcode()) {
     case AArch64::AUTIAZ:
@@ -858,20 +862,12 @@ public:
     if (AArchExpr && AArchExpr->getSubExpr())
       return getTargetSymbol(AArchExpr->getSubExpr());
 
-    auto *BinExpr = dyn_cast<MCBinaryExpr>(Expr);
-    if (BinExpr)
-      return getTargetSymbol(BinExpr->getLHS());
-
-    auto *SymExpr = dyn_cast<MCSymbolRefExpr>(Expr);
-    if (SymExpr && SymExpr->getKind() == MCSymbolRefExpr::VK_None)
-      return &SymExpr->getSymbol();
-
-    return nullptr;
+    return MCPlusBuilder::getTargetSymbol(Expr);
   }
 
   const MCSymbol *getTargetSymbol(const MCInst &Inst,
                                   unsigned OpNum = 0) const override {
-    if (!getSymbolRefOperandNum(Inst, OpNum))
+    if (!OpNum && !getSymbolRefOperandNum(Inst, OpNum))
       return nullptr;
 
     const MCOperand &Op = Inst.getOperand(OpNum);
