@@ -1741,11 +1741,13 @@ struct ShapeOfFromReshape : public OpRewritePattern<shape::ShapeOfOp> {
     // Note: 'shape.shape_of' op result must be shape or extent tensor.
     Value shape = tensorReshapeOp.getShape();
 
-    auto opTensorType = llvm::dyn_cast<RankedTensorType>(op.getType());
-    auto shapeTensorType = llvm::dyn_cast<RankedTensorType>(shape.getType());
+    auto opTensorTy = llvm::dyn_cast<RankedTensorType>(op.getType());
+    auto shapeTensorTy = llvm::dyn_cast<RankedTensorType>(shape.getType());
+    if (!opTensorTy || !shapeTensorTy)
+      return failure();
 
     if (op.getType() != shape.getType()) {
-        if (opTensorType.getElementType() == shapeTensorType.getElementType())
+        if (opTensorTy.getElementType() == shapeTensorTy.getElementType())
           shape = rewriter.create<tensor::CastOp>(op.getLoc(), op.getType(), shape);        
         else if (!isExtentTensorType(shape.getType()))
           shape = rewriter.create<arith::IndexCastOp>(op.getLoc(), op.getType(), shape);        
