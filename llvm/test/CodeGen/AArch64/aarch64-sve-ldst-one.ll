@@ -124,16 +124,10 @@ entry:
 }
 
 define void @test_str_lane0_s8(ptr %a, <vscale x 16 x i8> %b) {
-; CHECK-NONSTREAMING-LABEL: test_str_lane0_s8:
-; CHECK-NONSTREAMING:       // %bb.0: // %entry
-; CHECK-NONSTREAMING-NEXT:    mov v0.b[0], v0.b[0]
-; CHECK-NONSTREAMING-NEXT:    str b0, [x0]
-; CHECK-NONSTREAMING-NEXT:    ret
-;
-; STREAMING-COMPAT-LABEL: test_str_lane0_s8:
-; STREAMING-COMPAT:       // %bb.0: // %entry
-; STREAMING-COMPAT-NEXT:    str b0, [x0]
-; STREAMING-COMPAT-NEXT:    ret
+; CHECK-LABEL: test_str_lane0_s8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str b0, [x0]
+; CHECK-NEXT:    ret
 entry:
   %0 = extractelement <vscale x 16 x i8> %b, i32 0
   store i8 %0, ptr %a, align 1
@@ -204,18 +198,11 @@ define void @test_str_reduction_i32_to_i16(ptr %ptr, <vscale x 4 x i1> %p0, <vsc
 }
 
 define void @test_str_reduction_i32_to_i8(ptr %ptr, <vscale x 4 x i1> %p0, <vscale x 4 x i32> %v) {
-; CHECK-NONSTREAMING-LABEL: test_str_reduction_i32_to_i8:
-; CHECK-NONSTREAMING:       // %bb.0:
-; CHECK-NONSTREAMING-NEXT:    uaddv d0, p0, z0.s
-; CHECK-NONSTREAMING-NEXT:    mov v0.d[0], v0.d[0]
-; CHECK-NONSTREAMING-NEXT:    str b0, [x0]
-; CHECK-NONSTREAMING-NEXT:    ret
-;
-; STREAMING-COMPAT-LABEL: test_str_reduction_i32_to_i8:
-; STREAMING-COMPAT:       // %bb.0:
-; STREAMING-COMPAT-NEXT:    uaddv d0, p0, z0.s
-; STREAMING-COMPAT-NEXT:    str b0, [x0]
-; STREAMING-COMPAT-NEXT:    ret
+; CHECK-LABEL: test_str_reduction_i32_to_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uaddv d0, p0, z0.s
+; CHECK-NEXT:    str b0, [x0]
+; CHECK-NEXT:    ret
 
   %reduce = tail call i64 @llvm.aarch64.sve.uaddv.nxv4i32(<vscale x 4 x i1> %p0, <vscale x 4 x i32> %v)
   %trunc = trunc i64 %reduce to i8
@@ -265,18 +252,11 @@ define void @test_str_reduction_i32_to_i16_negative_offset(ptr %ptr, <vscale x 4
 }
 
 define void @test_str_reduction_i32_to_i8_negative_offset(ptr %ptr, <vscale x 4 x i1> %p0, <vscale x 4 x i32> %v) {
-; CHECK-NONSTREAMING-LABEL: test_str_reduction_i32_to_i8_negative_offset:
-; CHECK-NONSTREAMING:       // %bb.0:
-; CHECK-NONSTREAMING-NEXT:    uaddv d0, p0, z0.s
-; CHECK-NONSTREAMING-NEXT:    mov v0.d[0], v0.d[0]
-; CHECK-NONSTREAMING-NEXT:    stur b0, [x0, #-8]
-; CHECK-NONSTREAMING-NEXT:    ret
-;
-; STREAMING-COMPAT-LABEL: test_str_reduction_i32_to_i8_negative_offset:
-; STREAMING-COMPAT:       // %bb.0:
-; STREAMING-COMPAT-NEXT:    uaddv d0, p0, z0.s
-; STREAMING-COMPAT-NEXT:    stur b0, [x0, #-8]
-; STREAMING-COMPAT-NEXT:    ret
+; CHECK-LABEL: test_str_reduction_i32_to_i8_negative_offset:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uaddv d0, p0, z0.s
+; CHECK-NEXT:    stur b0, [x0, #-8]
+; CHECK-NEXT:    ret
 
   %reduce = tail call i64 @llvm.aarch64.sve.uaddv.nxv4i32(<vscale x 4 x i1> %p0, <vscale x 4 x i32> %v)
   %trunc = trunc i64 %reduce to i8
@@ -359,16 +339,10 @@ entry:
 }
 
 define void @test_str_lane0_s8_negative_offset(ptr %a, <vscale x 16 x i8> %b) {
-; CHECK-NONSTREAMING-LABEL: test_str_lane0_s8_negative_offset:
-; CHECK-NONSTREAMING:       // %bb.0: // %entry
-; CHECK-NONSTREAMING-NEXT:    mov v0.b[0], v0.b[0]
-; CHECK-NONSTREAMING-NEXT:    stur b0, [x0, #-8]
-; CHECK-NONSTREAMING-NEXT:    ret
-;
-; STREAMING-COMPAT-LABEL: test_str_lane0_s8_negative_offset:
-; STREAMING-COMPAT:       // %bb.0: // %entry
-; STREAMING-COMPAT-NEXT:    stur b0, [x0, #-8]
-; STREAMING-COMPAT-NEXT:    ret
+; CHECK-LABEL: test_str_lane0_s8_negative_offset:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    stur b0, [x0, #-8]
+; CHECK-NEXT:    ret
 entry:
   %0 = extractelement <vscale x 16 x i8> %b, i32 0
   %out_ptr = getelementptr inbounds i8, ptr %a, i64 -8
@@ -451,16 +425,10 @@ entry:
 }
 
 define void @test_str_trunc_lane0_s32_to_s8(ptr %a, <vscale x 4 x i32> %b) {
-; CHECK-NONSTREAMING-LABEL: test_str_trunc_lane0_s32_to_s8:
-; CHECK-NONSTREAMING:       // %bb.0: // %entry
-; CHECK-NONSTREAMING-NEXT:    mov v0.s[0], v0.s[0]
-; CHECK-NONSTREAMING-NEXT:    str b0, [x0]
-; CHECK-NONSTREAMING-NEXT:    ret
-;
-; STREAMING-COMPAT-LABEL: test_str_trunc_lane0_s32_to_s8:
-; STREAMING-COMPAT:       // %bb.0: // %entry
-; STREAMING-COMPAT-NEXT:    str b0, [x0]
-; STREAMING-COMPAT-NEXT:    ret
+; CHECK-LABEL: test_str_trunc_lane0_s32_to_s8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str b0, [x0]
+; CHECK-NEXT:    ret
 
 entry:
   %0 = extractelement <vscale x 4 x i32> %b, i32 0
@@ -533,16 +501,10 @@ entry:
 }
 
 define void @test_str_trunc_lane0_s32_to_s8_negative_offset(ptr %a, <vscale x 4 x i32> %b) {
-; CHECK-NONSTREAMING-LABEL: test_str_trunc_lane0_s32_to_s8_negative_offset:
-; CHECK-NONSTREAMING:       // %bb.0: // %entry
-; CHECK-NONSTREAMING-NEXT:    mov v0.s[0], v0.s[0]
-; CHECK-NONSTREAMING-NEXT:    stur b0, [x0, #-8]
-; CHECK-NONSTREAMING-NEXT:    ret
-;
-; STREAMING-COMPAT-LABEL: test_str_trunc_lane0_s32_to_s8_negative_offset:
-; STREAMING-COMPAT:       // %bb.0: // %entry
-; STREAMING-COMPAT-NEXT:    stur b0, [x0, #-8]
-; STREAMING-COMPAT-NEXT:    ret
+; CHECK-LABEL: test_str_trunc_lane0_s32_to_s8_negative_offset:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    stur b0, [x0, #-8]
+; CHECK-NEXT:    ret
 
 entry:
   %0 = extractelement <vscale x 4 x i32> %b, i32 0

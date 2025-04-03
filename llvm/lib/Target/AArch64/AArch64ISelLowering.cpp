@@ -24055,12 +24055,20 @@ static SDValue performSTORECombine(SDNode *N,
         return SDValue();
       }
 
+      // Lower as truncstore of v1i64 -> v1i8 (which can lower to a bsub store).
       SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
-      SDValue Ext = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL,
-                                Value.getValueType(), Vector, ExtIdx);
+      SDValue ExtVector;
       EVT VecVT64 = get64BitVector(ElemVT);
-      SDValue ExtVector = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VecVT64,
-                                      DAG.getUNDEF(VecVT64), Ext, Zero);
+      if (ExtCst && ExtCst->isZero()) {
+        ExtVector =
+            DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VecVT64, Vector, Zero);
+      } else {
+        SDValue Ext = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL,
+                                  Value.getValueType(), Vector, ExtIdx);
+        ExtVector = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VecVT64,
+                                DAG.getUNDEF(VecVT64), Ext, Zero);
+      }
+
       SDValue Cast = DAG.getNode(AArch64ISD::NVCAST, DL, MVT::v1i64, ExtVector);
       return DAG.getTruncStore(ST->getChain(), DL, Cast, ST->getBasePtr(),
                                MVT::v1i8, ST->getMemOperand());

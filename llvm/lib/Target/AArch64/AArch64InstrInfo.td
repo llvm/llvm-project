@@ -7280,11 +7280,6 @@ multiclass Neon_INS_elt_pattern<ValueType VT128, ValueType VT64, ValueType VTSVE
             (INS V128:$src, imm:$Immd,
                  (SUBREG_TO_REG (i64 0), V64:$Rn, dsub), imm:$Immn)>;
 
-  def : Pat<(VT64 (vector_insert (VT64 (undef)),
-                        (VTScal (vector_extract (VT128 V128:$Rn), (i64 0))),
-                        (i64 0))),
-            (EXTRACT_SUBREG $Rn, dsub)>;
-
   def : Pat<(VT64 (vector_insert V64:$src,
                         (VTScal (vector_extract (VT128 V128:$Rn), (i64 imm:$Immn))),
                         (i64 imm:$Immd))),
