@@ -1035,11 +1035,10 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
            (LangOpts.OpenMPIsTargetDevice && Target.getTriple().isNVPTX())) &&
           s + 2 < ThisTokEnd && s[1] == '1' && s[2] == '6') {
         s += 2; // success, eat up 2 characters.
-        if (isBF16) {
+        if (isBF16)
           isBFloat16 = true;
-        } else {
+        else
           isFloat16 = true;
-        }
         continue;
       }
 
