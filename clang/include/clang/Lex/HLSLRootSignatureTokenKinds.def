@@ -14,16 +14,16 @@
 //===----------------------------------------------------------------------===//
 
 #ifndef TOK
-#define TOK(X, SPELLING)
+#define TOK(X)
 #endif
 #ifndef PUNCTUATOR
-#define PUNCTUATOR(X,Y) TOK(pu_ ## X, Y)
+#define PUNCTUATOR(X,Y) TOK(pu_ ## X)
 #endif
 #ifndef KEYWORD
-#define KEYWORD(X) TOK(kw_ ## X, #X)
+#define KEYWORD(X) TOK(kw_ ## X)
 #endif
 #ifndef ENUM
-#define ENUM(NAME, LIT) TOK(en_ ## NAME, LIT)
+#define ENUM(NAME, LIT) TOK(en_ ## NAME)
 #endif
 
 // Defines the various types of enum
@@ -49,15 +49,15 @@
 #endif
 
 // General Tokens:
-TOK(invalid, "invalid identifier")
-TOK(end_of_stream, "end of stream")
-TOK(int_literal, "integer literal")
+TOK(invalid)
+TOK(end_of_stream)
+TOK(int_literal)
 
 // Register Tokens:
-TOK(bReg, "b register")
-TOK(tReg, "t register")
-TOK(uReg, "u register")
-TOK(sReg, "s register")
+TOK(bReg)
+TOK(tReg)
+TOK(uReg)
+TOK(sReg)
 
 // Punctuators:
 PUNCTUATOR(l_paren, '(')
@@ -69,7 +69,6 @@ PUNCTUATOR(plus,    '+')
 PUNCTUATOR(minus,   '-')
 
 // RootElement Keywords:
-KEYWORD(RootSignature) // used only for diagnostic messaging
 KEYWORD(DescriptorTable)
 
 // DescriptorTable Keywords:
