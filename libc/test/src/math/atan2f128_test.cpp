@@ -18,13 +18,15 @@ namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 TEST_F(LlvmLibcAtan2f128Test, InQuadRange) {
   constexpr StorageType X_COUNT = 123;
-  constexpr StorageType X_START = FPBits(0.25q).uintval();
-  constexpr StorageType X_STOP = FPBits(4.0q).uintval();
+  constexpr StorageType X_START =
+      FPBits(static_cast<float128>(0.25q)).uintval();
+  constexpr StorageType X_STOP = FPBits(static_cast<float128>(4.0q)).uintval();
   constexpr StorageType X_STEP = (X_STOP - X_START) / X_COUNT;
 
   constexpr StorageType Y_COUNT = 137;
-  constexpr StorageType Y_START = FPBits(0.25q).uintval();
-  constexpr StorageType Y_STOP = FPBits(4.0q).uintval();
+  constexpr StorageType Y_START =
+      FPBits(static_cast<float128>(0.25q)).uintval();
+  constexpr StorageType Y_STOP = FPBits(static_cast<float128>(4.0q)).uintval();
   constexpr StorageType Y_STEP = (Y_STOP - Y_START) / Y_COUNT;
 
   auto test = [&](mpfr::RoundingMode rounding_mode) {
