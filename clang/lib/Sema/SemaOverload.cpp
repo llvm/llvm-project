@@ -11039,6 +11039,8 @@ void OverloadCandidateSet::AddDeferredMethodTemplateCandidate(
     bool SuppressUserConversions, bool PartialOverloading,
     OverloadCandidateParamOrder PO) {
 
+  assert(!isa<CXXConstructorDecl>(MethodTmpl->getTemplatedDecl()));
+
   auto *C =
       allocateDeferredCandidate<DeferredMethodTemplateOverloadCandidate>();
 

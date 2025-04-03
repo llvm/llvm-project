@@ -128,6 +128,27 @@ struct Test {
 static_assert(__is_constructible(S, Test));
 }
 
+namespace RefBinding {
+
+template <typename> struct remove_reference;
+template <typename _Tp> struct remove_reference<_Tp &> {
+  using type = _Tp;
+};
+template <typename _Tp> remove_reference<_Tp>::type move(_Tp &&);
+template <typename _Head> struct _Head_base {
+  _Head_base(_Head &__h) : _M_head_impl(__h) {}
+  template <typename _UHead> _Head_base(_UHead &&);
+  _Head _M_head_impl;
+};
+
+template <typename _Elements> void forward_as_tuple(_Elements &&) {
+  _Head_base<_Elements &&>(_Elements{});
+}
+struct StringRef {
+  void operator[](const StringRef __k) { forward_as_tuple((move)(__k)); }
+};
+
+}
 
 namespace GH62096 {
 template <typename T>
