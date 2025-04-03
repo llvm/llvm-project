@@ -1037,7 +1037,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
-        /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
+        /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
+        /*no_inline=*/nullptr, /*always_inline=*/nullptr);
 }
 
 void CallOp::build(OpBuilder &builder, OperationState &state,
@@ -1065,7 +1066,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr,
-        /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
+        /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
+        /*no_inline=*/nullptr, /*always_inline=*/nullptr);
 }
 
 void CallOp::build(OpBuilder &builder, OperationState &state,
@@ -1079,7 +1081,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
-        /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
+        /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
+        /*no_inline=*/nullptr, /*always_inline=*/nullptr);
 }
 
 void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
@@ -1093,7 +1096,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
-        /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
+        /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
+        /*no_inline=*/nullptr, /*always_inline=*/nullptr);
 }
 
 CallInterfaceCallable CallOp::getCallableForCallee() {

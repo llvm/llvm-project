@@ -111,8 +111,8 @@ void simplifyConstraints(llvm::SetVector<const Formula *> &Constraints,
     FalseAtoms = projectToLeaders(FalseAtoms, EquivalentAtoms);
 
     llvm::DenseMap<Atom, const Formula *> Substitutions;
-    for (auto It = EquivalentAtoms.begin(); It != EquivalentAtoms.end(); ++It) {
-      Atom TheAtom = It->getData();
+    for (const auto &E : EquivalentAtoms) {
+      Atom TheAtom = E->getData();
       Atom Leader = EquivalentAtoms.getLeaderValue(TheAtom);
       if (TrueAtoms.contains(Leader)) {
         if (FalseAtoms.contains(Leader)) {
@@ -151,11 +151,10 @@ void simplifyConstraints(llvm::SetVector<const Formula *> &Constraints,
   }
 
   if (Info) {
-    for (auto It = EquivalentAtoms.begin(), End = EquivalentAtoms.end();
-         It != End; ++It) {
-      if (!It->isLeader())
+    for (const auto &E : EquivalentAtoms) {
+      if (!E->isLeader())
         continue;
-      Atom At = *EquivalentAtoms.findLeader(It);
+      Atom At = *EquivalentAtoms.findLeader(*E);
       if (TrueAtoms.contains(At) || FalseAtoms.contains(At))
         continue;
       llvm::SmallVector<Atom> Atoms =

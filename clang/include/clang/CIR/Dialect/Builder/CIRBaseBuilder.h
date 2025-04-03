@@ -111,6 +111,22 @@ public:
     return cir::BoolAttr::get(getContext(), getBoolTy(), state);
   }
 
+  /// Create a do-while operation.
+  cir::DoWhileOp createDoWhile(
+      mlir::Location loc,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> condBuilder,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> bodyBuilder) {
+    return create<cir::DoWhileOp>(loc, condBuilder, bodyBuilder);
+  }
+
+  /// Create a while operation.
+  cir::WhileOp createWhile(
+      mlir::Location loc,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> condBuilder,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> bodyBuilder) {
+    return create<cir::WhileOp>(loc, condBuilder, bodyBuilder);
+  }
+
   /// Create a for operation.
   cir::ForOp createFor(
       mlir::Location loc,

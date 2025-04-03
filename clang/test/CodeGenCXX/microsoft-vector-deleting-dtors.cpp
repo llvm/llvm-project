@@ -28,6 +28,13 @@ struct JustAWeirdBird {
   }
 };
 
+int i = 0;
+struct HasOperatorDelete : public Bird{
+~HasOperatorDelete() { }
+void operator delete(void *p) { i-=2; }
+void operator delete[](void *p) { i--; }
+};
+
 // Vector deleting dtor for Bird is an alias because no new Bird[] expressions
 // in the TU.
 // X64: @"??_EBird@@UEAAPEAXI@Z" = weak dso_local unnamed_addr alias ptr (ptr, i32), ptr @"??_GBird@@UEAAPEAXI@Z"
@@ -53,6 +60,9 @@ void bar() {
 
   JustAWeirdBird B;
   B.doSmth(38);
+
+  Bird *p = new HasOperatorDelete[2];
+  dealloc(p);
 }
 
 // CHECK-LABEL: define dso_local void @{{.*}}dealloc{{.*}}(
@@ -129,8 +139,8 @@ void bar() {
 // CHECK-NEXT:   %[[ISFIRSTBITZERO:.*]] = icmp eq i32 %[[FIRSTBIT]], 0
 // CHECK-NEXT:   br i1 %[[ISFIRSTBITZERO]], label %dtor.continue, label %dtor.call_delete_after_array_destroy
 // CHECK: dtor.call_delete_after_array_destroy:
-// X64-NEXT:     call void @"??3@YAXPEAX_K@Z"(ptr noundef %[[COOKIEGEP]], i64 noundef 8)
-// X86-NEXT:     call void @"??3@YAXPAXI@Z"(ptr noundef %[[COOKIEGEP]], i32 noundef 4)
+// X64-NEXT:     call void @"??_V@YAXPEAX_K@Z"(ptr noundef %[[COOKIEGEP]], i64 noundef 8)
+// X86-NEXT:     call void @"??_V@YAXPAXI@Z"(ptr noundef %[[COOKIEGEP]], i32 noundef 4)
 // CHECK-NEXT:   br label %dtor.continue
 // CHECK: dtor.scalar:
 // X64-NEXT:   call void @"??1Parrot@@UEAA@XZ"(ptr noundef nonnull align 8 dereferenceable(8) %[[LTHIS]])
@@ -150,3 +160,12 @@ void bar() {
 // X64-SAME: ptr noundef nonnull align 8 dereferenceable(8) %this, i32 noundef %should_call_delete)
 // X86: define weak dso_local x86_thiscallcc noundef ptr @"??_EJustAWeirdBird@@UAEPAXI@Z"(
 // X86-SAME: ptr noundef nonnull align 4 dereferenceable(4) %this, i32 noundef %should_call_delete) unnamed_addr
+
+// X64-LABEL: define weak dso_local noundef ptr @"??_EHasOperatorDelete@@UEAAPEAXI@Z"
+// X86-LABEL: define weak dso_local x86_thiscallcc noundef ptr @"??_EHasOperatorDelete@@UAEPAXI@Z"
+// CHECK: dtor.call_delete_after_array_destroy:
+// X64-NEXT: call void @"??_VHasOperatorDelete@@SAXPEAX@Z"
+// X86-NEXT: call void @"??_VHasOperatorDelete@@SAXPAX@Z"
+// CHECK: dtor.call_delete:
+// X64-NEXT: call void @"??3HasOperatorDelete@@SAXPEAX@Z"
+// X86-NEXT: call void @"??3HasOperatorDelete@@SAXPAX@Z"

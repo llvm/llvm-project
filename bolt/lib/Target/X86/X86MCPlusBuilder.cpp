@@ -1796,11 +1796,7 @@ public:
     if (!Op.isExpr())
       return nullptr;
 
-    auto *SymExpr = dyn_cast<MCSymbolRefExpr>(Op.getExpr());
-    if (!SymExpr || SymExpr->getKind() != MCSymbolRefExpr::VK_None)
-      return nullptr;
-
-    return &SymExpr->getSymbol();
+    return MCPlusBuilder::getTargetSymbol(Op.getExpr());
   }
 
   bool analyzeBranch(InstructionIterator Begin, InstructionIterator End,

@@ -629,7 +629,7 @@ def C_LI_HINT : RVInst16CI<0b010, 0b01, (outs GPRX0:$rd), (ins simm6:$imm),
                            "c.li", "$rd, $imm">,
                 Sched<[WriteIALU]> {
   let Inst{11-7} = 0;
-  let DecoderMethod = "decodeRVCInstrRdSImm";
+  let DecoderMethod = "decodeRVCInstrRdSImm6";
 }
 
 def C_LUI_HINT : RVInst16CI<0b011, 0b01, (outs GPRX0:$rd),
@@ -637,7 +637,7 @@ def C_LUI_HINT : RVInst16CI<0b011, 0b01, (outs GPRX0:$rd),
                             "c.lui", "$rd, $imm">,
                  Sched<[WriteIALU]> {
   let Inst{11-7} = 0;
-  let DecoderMethod = "decodeRVCInstrRdSImm";
+  let DecoderMethod = "decodeRVCInstrRdCLUIImm";
 }
 
 def C_MV_HINT : RVInst16CR<0b1000, 0b10, (outs GPRX0:$rs1), (ins GPRNoX0:$rs2),
@@ -661,7 +661,7 @@ def C_SLLI_HINT : RVInst16CI<0b000, 0b10, (outs GPRX0:$rd_wb),
                   Sched<[WriteShiftImm, ReadShiftImm]> {
   let Constraints = "$rd = $rd_wb";
   let Inst{11-7} = 0;
-  let DecoderMethod = "decodeRVCInstrRdRs1UImm";
+  let DecoderMethod = "decodeRVCInstrRdRs1UImmLog2XLenNonZero";
 }
 
 def C_SLLI64_HINT : RVInst16CI<0b000, 0b10, (outs GPR:$rd_wb), (ins GPR:$rd),
@@ -799,12 +799,6 @@ def InsnCJ : DirectiveInsnCJ<(outs), (ins uimm2_opcode:$opcode,
                                           uimm3:$funct3,
                                           bare_simm12_lsb0:$imm11),
                              "$opcode, $funct3, $imm11">;
-def Insn16 : RVInst16<(outs), (ins uimm16:$value), "", "", [], InstFormatOther> {
-  bits<16> value;
-
-  let Inst{15-0} = value;
-  let AsmString = ".insn 0x2, $value";
-}
 }
 
 // Use InstAliases to match these so that we can combine the insn and format

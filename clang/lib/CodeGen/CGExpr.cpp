@@ -143,6 +143,9 @@ llvm::AllocaInst *CodeGenFunction::CreateTempAlloca(llvm::Type *Ty,
     Alloca =
         new llvm::AllocaInst(Ty, CGM.getDataLayout().getAllocaAddrSpace(),
                              ArraySize, Name, AllocaInsertPt->getIterator());
+  if (SanOpts.Mask & SanitizerKind::Address) {
+    Alloca->addAnnotationMetadata({"alloca_name_altered", Name.str()});
+  }
   if (Allocas) {
     Allocas->Add(Alloca);
   }

@@ -422,7 +422,6 @@ FUNCTION_PASS("move-auto-init", MoveAutoInitPass())
 FUNCTION_PASS("nary-reassociate", NaryReassociatePass())
 FUNCTION_PASS("newgvn", NewGVNPass())
 FUNCTION_PASS("no-op-function", NoOpFunctionPass())
-FUNCTION_PASS("normalize", IRNormalizerPass())
 FUNCTION_PASS("objc-arc", ObjCARCOptPass())
 FUNCTION_PASS("objc-arc-contract", ObjCARCContractPass())
 FUNCTION_PASS("objc-arc-expand", ObjCARCExpandPass())
@@ -568,6 +567,11 @@ FUNCTION_PASS_WITH_PARAMS(
     "lower-matrix-intrinsics", "LowerMatrixIntrinsicsPass",
     [](bool Minimal) { return LowerMatrixIntrinsicsPass(Minimal); },
     parseLowerMatrixIntrinsicsPassOptions, "minimal")
+FUNCTION_PASS_WITH_PARAMS(
+    "normalize", "IRNormalizerPass",
+    [](IRNormalizerOptions Options) { return IRNormalizerPass(Options); },
+    parseIRNormalizerPassOptions,
+    "no-preserve-order;preserve-order;no-rename-all;rename-all;no-fold-all;fold-all;no-reorder-operands;reorder-operands")
 FUNCTION_PASS_WITH_PARAMS(
     "mldst-motion", "MergedLoadStoreMotionPass",
     [](MergedLoadStoreMotionOptions Opts) {

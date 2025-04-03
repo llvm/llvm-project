@@ -255,8 +255,6 @@ class DebugCommunication(object):
                 # and 'progressEnd' events. Keep these around in case test
                 # cases want to verify them.
                 self.progress_events.append(packet)
-                # No need to add 'progress' event packets to our packets list.
-                return keepGoing
 
         elif packet_type == "response":
             if packet["command"] == "disconnect":
