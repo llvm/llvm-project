@@ -1230,7 +1230,7 @@ bool AccessAnalysis::canCheckPtrAtRT(
                      [this](const Value *Ptr) {
                        MemAccessInfo AccessWrite(const_cast<Value *>(Ptr),
                                                  true);
-                       return !DepCands.contains(AccessWrite);
+                       return DepCands.findValue(AccessWrite) == DepCands.end();
                      })) &&
              "Can only skip updating CanDoRT below, if all entries in AS "
              "are reads or there is at most 1 entry");
