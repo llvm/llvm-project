@@ -5715,8 +5715,7 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
                                              IRBuilder<> &Builder) {
   assert(SI->getNumCases() > 1 && "Degenerate switch?");
 
-  bool HasDefault =
-      !isa<UnreachableInst>(SI->getDefaultDest()->getFirstNonPHIOrDbg());
+  bool HasDefault = !SI->defaultDestUnreachable();
 
   auto *BB = SI->getParent();
 
@@ -5879,8 +5878,7 @@ static bool eliminateDeadSwitchCases(SwitchInst *SI, DomTreeUpdater *DTU,
   // default destination becomes dead and we can remove it.  If we know some
   // of the bits in the value, we can use that to more precisely compute the
   // number of possible unique case values.
-  bool HasDefault =
-      !isa<UnreachableInst>(SI->getDefaultDest()->getFirstNonPHIOrDbg());
+  bool HasDefault = !SI->defaultDestUnreachable();
   const unsigned NumUnknownBits =
       Known.getBitWidth() - (Known.Zero | Known.One).popcount();
   assert(NumUnknownBits <= Known.getBitWidth());
@@ -6237,11 +6235,8 @@ static bool initializeUniqueCases(SwitchInst *SI, PHINode *&PHI,
   // is unreachable.
   DefaultResult =
       DefaultResults.size() == 1 ? DefaultResults.begin()->second : nullptr;
-  if ((!DefaultResult &&
-       !isa<UnreachableInst>(DefaultDest->getFirstNonPHIOrDbg())))
-    return false;
 
-  return true;
+  return DefaultResult || SI->defaultDestUnreachable();
 }
 
 // Helper function that checks if it is possible to transform a switch with only
@@ -6948,7 +6943,7 @@ static bool switchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   // If the default destination is unreachable, or if the lookup table covers
   // all values of the conditional variable, branch directly to the lookup table
   // BB. Otherwise, check that the condition is within the case range.
-  bool DefaultIsReachable = !SI->defaultDestUndefined();
+  bool DefaultIsReachable = !SI->defaultDestUnreachable();
 
   bool TableHasHoles = (NumResults < TableSize);
 
@@ -7281,7 +7276,7 @@ static bool simplifySwitchOfPowersOfTwo(SwitchInst *SI, IRBuilder<> &Builder,
   // We perform this optimization only for switches with
   // unreachable default case.
   // This assumtion will save us from checking if `Condition` is a power of two.
-  if (!isa<UnreachableInst>(SI->getDefaultDest()->getFirstNonPHIOrDbg()))
+  if (!SI->defaultDestUnreachable())
     return false;
 
   // Check that switch cases are powers of two.
@@ -7363,7 +7358,7 @@ static bool simplifySwitchOfCmpIntrinsic(SwitchInst *SI, IRBuilderBase &Builder,
 
     assert(Missing.size() == 1 && "Should have one case left");
     Res = *Missing.begin();
-  } else if (SI->getNumCases() == 3 && SI->defaultDestUndefined()) {
+  } else if (SI->getNumCases() == 3 && SI->defaultDestUnreachable()) {
     // Normalize so that Succ is taken once and OtherSucc twice.
     Unreachable = SI->getDefaultDest();
     Succ = OtherSucc = nullptr;
