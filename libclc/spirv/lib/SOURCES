@@ -38,7 +38,6 @@ subnormal_config.cl
 ../../generic/lib/math/exp_helper.cl
 ../../generic/lib/math/expm1.cl
 ../../generic/lib/math/exp2.cl
-../../generic/lib/math/clc_exp10.cl
 ../../generic/lib/math/exp10.cl
 math/fma.cl
 ../../generic/lib/math/fmod.cl
