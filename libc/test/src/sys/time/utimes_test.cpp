@@ -1,11 +1,10 @@
-//===-- Unittests for utimes
-//-----------------------------------------------===//
+//===-- Unittests for utimes ----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===-----------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 #include "hdr/fcntl_macros.h"
 #include "hdr/types/struct_timeval.h"
@@ -15,15 +14,14 @@
 #include "src/sys/stat/stat.h"
 #include "src/sys/time/utimes.h"
 #include "src/unistd/close.h"
-#include "src/unistd/unlink.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <fcntl.h>
+
 constexpr const char *FILE_PATH = "utimes.test";
 
-// SUCCESS: Takes a file and successfully updates 
+// SUCCESS: Takes a file and successfully updates
 // its last access and modified times.
-TEST(LlvmLibcUtimesTest, ChangeTimesSpecific){
+TEST(LlvmLibcUtimesTest, ChangeTimesSpecific) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
   // const char* FILE_PATH = "testdata/__utimes_changetimes.test";
@@ -39,7 +37,7 @@ TEST(LlvmLibcUtimesTest, ChangeTimesSpecific){
   times[0].tv_usec = 12345;
   times[1].tv_sec = 43210;
   times[1].tv_usec = 23456;
-  
+
   // ensure utimes succeeds
   ASSERT_THAT(LIBC_NAMESPACE::utimes(FILE_PATH, times), Succeeds(0));
 
@@ -51,7 +49,7 @@ TEST(LlvmLibcUtimesTest, ChangeTimesSpecific){
   ASSERT_EQ(statbuf.st_atim.tv_sec, times[0].tv_sec);
   ASSERT_EQ(statbuf.st_mtim.tv_sec, times[1].tv_sec);
 
-  //microseconds
+  // microseconds
   ASSERT_EQ(statbuf.st_atim.tv_nsec, times[0].tv_usec * 1000);
   ASSERT_EQ(statbuf.st_mtim.tv_nsec, times[1].tv_usec * 1000);
 
@@ -60,7 +58,7 @@ TEST(LlvmLibcUtimesTest, ChangeTimesSpecific){
 
 // FAILURE: Invalid values in the timeval struct
 // to check that utimes rejects it.
-TEST(LlvmLibcUtimesTest, InvalidMicroseconds){
+TEST(LlvmLibcUtimesTest, InvalidMicroseconds) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
@@ -71,25 +69,25 @@ TEST(LlvmLibcUtimesTest, InvalidMicroseconds){
   ASSERT_GT(fd, 0);
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 
-  // make a dummy timeval struct 
+  // make a dummy timeval struct
   // populated with bad usec values
   struct timeval times[2];
   times[0].tv_sec = 54321;
   times[0].tv_usec = 4567;
   times[1].tv_sec = 43210;
-  times[1].tv_usec = 1000000; //invalid
-  
+  times[1].tv_usec = 1000000; // invalid
+
   // ensure utimes fails
   ASSERT_THAT(LIBC_NAMESPACE::utimes(FILE_PATH, times), Fails(EINVAL));
 
-  // check for failure on 
+  // check for failure on
   // the other possible bad values
 
   times[0].tv_sec = 54321;
-  times[0].tv_usec = -4567; //invalid
+  times[0].tv_usec = -4567; // invalid
   times[1].tv_sec = 43210;
   times[1].tv_usec = 1000;
-  
+
   // ensure utimes fails once more
   ASSERT_THAT(LIBC_NAMESPACE::utimes(FILE_PATH, times), Fails(EINVAL));
   ASSERT_THAT(LIBC_NAMESPACE::remove(TEST_FILE), Succeeds(0));
