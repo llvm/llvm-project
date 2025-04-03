@@ -203,7 +203,7 @@ static void findPartitions(Module &M, ClusterIDMapType &ClusterIDMap,
                       << "\n");
 
     for (ClusterMapType::member_iterator MI =
-             GVtoClusterMap.findLeader(I.second);
+             GVtoClusterMap.findLeader(*I.second);
          MI != GVtoClusterMap.member_end(); ++MI) {
       if (!Visited.insert(*MI).second)
         continue;
