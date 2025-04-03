@@ -7,7 +7,8 @@ target triple = "nvptx64-nvidia-cuda"
 define ptx_kernel i32 @test_kernel(ptr %a, ptr byval(i32) %b) {
 ; CHECK-LABEL: define ptx_kernel i32 @test_kernel(
 ; CHECK-SAME: ptr [[A:%.*]], ptr byval(i32) [[B:%.*]]) {
-; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[A]] to ptr addrspace(1)
+; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr addrspace(1) [[TMP1]], align 4
 ; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[B]], align 4
 ; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[V1]], [[V2]]
 ; CHECK-NEXT:    ret i32 [[SUM]]
@@ -21,8 +22,9 @@ define ptx_kernel i32 @test_kernel(ptr %a, ptr byval(i32) %b) {
 define i32 @test_device(ptr %a, ptr byval(i32) %b) {
 ; CHECK-LABEL: define i32 @test_device(
 ; CHECK-SAME: ptr [[A:%.*]], ptr byval(i32) [[B:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[B]] to ptr addrspace(5)
 ; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[A]], align 4
-; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[B]], align 4
+; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr addrspace(5) [[TMP1]], align 4
 ; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[V1]], [[V2]]
 ; CHECK-NEXT:    ret i32 [[SUM]]
 ;
