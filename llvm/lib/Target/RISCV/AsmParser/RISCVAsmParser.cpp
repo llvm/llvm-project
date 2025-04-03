@@ -2655,12 +2655,12 @@ ParseStatus RISCVAsmParser::parseRegListCommon(OperandVector &Operands,
     }
   }
 
-  if (RegEnd == RISCV::X26)
-    return Error(getLoc(), "invalid register list, {ra, s0-s10} or {x1, x8-x9, "
-                           "x18-x26} is not supported");
-
   if (parseToken(AsmToken::RCurly, "register list must end with '}'"))
     return ParseStatus::Failure;
+
+  if (RegEnd == RISCV::X26)
+    return Error(S, "invalid register list, {ra, s0-s10} or {x1, x8-x9, "
+                    "x18-x26} is not supported");
 
   auto Encode = RISCVZC::encodeRlist(RegEnd, IsRVE);
   assert(Encode != RISCVZC::INVALID_RLIST);
@@ -2673,10 +2673,13 @@ ParseStatus RISCVAsmParser::parseRegListCommon(OperandVector &Operands,
 
 ParseStatus RISCVAsmParser::parseZcmpStackAdj(OperandVector &Operands,
                                               bool ExpectNegative) {
+  SMLoc S = getLoc();
   bool Negative = parseOptionalToken(AsmToken::Minus);
 
-  SMLoc S = getLoc();
-  int64_t StackAdjustment = getLexer().getTok().getIntVal();
+  if (getTok().isNot(AsmToken::Integer))
+    return ParseStatus::NoMatch;
+
+  int64_t StackAdjustment = getTok().getIntVal();
   unsigned RlistVal = static_cast<RISCVOperand *>(Operands[1].get())->Rlist.Val;
 
   assert(RlistVal != RISCVZC::INVALID_RLIST);
@@ -2697,7 +2700,7 @@ ParseStatus RISCVAsmParser::parseZcmpStackAdj(OperandVector &Operands,
 
   unsigned Spimm = (StackAdjustment - StackAdjBase) / 16;
   Operands.push_back(RISCVOperand::createSpimm(Spimm << 4, S));
-  getLexer().Lex();
+  Lex();
   return ParseStatus::Success;
 }
 

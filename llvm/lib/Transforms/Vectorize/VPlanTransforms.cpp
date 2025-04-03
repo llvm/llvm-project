@@ -1062,6 +1062,9 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
+  if (match(&R, m_Select(m_VPValue(), m_VPValue(X), m_Deferred(X))))
+    return R.getVPSingleValue()->replaceAllUsesWith(X);
+
   if (match(&R, m_c_Mul(m_VPValue(A), m_SpecificInt(1))))
     return R.getVPSingleValue()->replaceAllUsesWith(A);
 
@@ -2280,7 +2283,7 @@ void VPlanTransforms::createInterleaveGroups(
                       : B.createPtrAdd(InsertPos->getAddr(), OffsetVPV);
     }
     auto *VPIG = new VPInterleaveRecipe(IG, Addr, StoredValues,
-                                        InsertPos->getMask(), NeedsMaskForGaps);
+                                        InsertPos->getMask(), NeedsMaskForGaps, InsertPos->getDebugLoc());
     VPIG->insertBefore(InsertPos);
 
     unsigned J = 0;

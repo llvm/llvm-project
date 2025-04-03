@@ -765,6 +765,46 @@ func.func @missing_entry_block() -> () {
 
 // -----
 
+func.func @selection_yield(%cond: i1) -> () {
+  %zero = spirv.Constant 0: i32
+  %var1 = spirv.Variable init(%zero) : !spirv.ptr<i32, Function>
+  %var2 = spirv.Variable init(%zero) : !spirv.ptr<i32, Function>
+
+  // CHECK: {{%.*}}:2 = spirv.mlir.selection -> i32, i32 {
+  %yield:2 = spirv.mlir.selection -> i32, i32 {
+    // CHECK-NEXT: spirv.BranchConditional {{%.*}}, ^bb1, ^bb2
+    spirv.BranchConditional %cond, ^then, ^else
+
+  // CHECK: ^bb1
+  ^then:
+    %one = spirv.Constant 1: i32
+    %three = spirv.Constant 3: i32
+    // CHECK: spirv.Branch ^bb3({{%.*}}, {{%.*}} : i32, i32)
+    spirv.Branch ^merge(%one, %three : i32, i32)
+
+  // CHECK: ^bb2
+  ^else:
+    %two = spirv.Constant 2: i32
+    %four = spirv.Constant 4 : i32
+    // CHECK: spirv.Branch ^bb3({{%.*}}, {{%.*}} : i32, i32)
+    spirv.Branch ^merge(%two, %four : i32, i32)
+
+  // CHECK: ^bb3({{%.*}}: i32, {{%.*}}: i32)
+  ^merge(%merged_1_2: i32, %merged_3_4: i32):
+    // CHECK-NEXT: spirv.mlir.merge {{%.*}}, {{%.*}} : i32, i32
+    spirv.mlir.merge %merged_1_2, %merged_3_4 : i32, i32
+  }
+
+  // CHECK: spirv.Store "Function" {{%.*}}, {{%.*}}#0 : i32
+  spirv.Store "Function" %var1, %yield#0 : i32
+  // CHECK: spirv.Store "Function" {{%.*}}, {{%.*}}#1 : i32
+  spirv.Store "Function" %var2, %yield#1 : i32
+
+  spirv.Return
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spirv.Unreachable
 //===----------------------------------------------------------------------===//

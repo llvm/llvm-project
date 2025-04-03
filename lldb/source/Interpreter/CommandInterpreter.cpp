@@ -1886,6 +1886,13 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
                                        LazyBool lazy_add_to_history,
                                        CommandReturnObject &result,
                                        bool force_repeat_command) {
+  // These are assigned later in the function but they must be declared before
+  // the ScopedDispatcher object because we need their destructions to occur
+  // after the dispatcher's dtor call, which may reference them.
+  // TODO: This function could be refactored?
+  std::string parsed_command_args;
+  CommandObject *cmd_obj = nullptr;
+
   telemetry::ScopedDispatcher<telemetry::CommandInfo> helper(&m_debugger);
   const bool detailed_command_telemetry =
       telemetry::TelemetryManager::GetInstance()
@@ -1896,8 +1903,6 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   std::string command_string(command_line);
   std::string original_command_string(command_string);
   std::string real_original_command_string(command_string);
-  std::string parsed_command_args;
-  CommandObject *cmd_obj = nullptr;
 
   helper.DispatchNow([&](lldb_private::telemetry::CommandInfo *info) {
     info->command_id = command_id;
