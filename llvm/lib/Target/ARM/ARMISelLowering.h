@@ -616,7 +616,8 @@ class VectorType;
     bool isFPImmLegal(const APFloat &Imm, EVT VT,
                       bool ForCodeSize = false) const override;
 
-    bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallBase &I,
+    bool getTgtMemIntrinsic(IntrinsicInfo &Info,
+                            const CallInst &I,
                             MachineFunction &MF,
                             unsigned Intrinsic) const override;
 

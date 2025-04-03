@@ -1008,9 +1008,9 @@ namespace llvm {
       return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
     }
 
-    void CollectTargetIntrinsicOperands(const CallBase &I,
-                                        SmallVectorImpl<SDValue> &Ops,
-                                        SelectionDAG &DAG) const override;
+    void CollectTargetIntrinsicOperands(const CallInst &I,
+                                 SmallVectorImpl<SDValue> &Ops,
+                                 SelectionDAG &DAG) const override;
 
     /// isLegalAddressingMode - Return true if the addressing mode represented
     /// by AM is legal for this target, for a load/store of the specified type.
@@ -1069,7 +1069,8 @@ namespace llvm {
 
     bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
-    bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallBase &I,
+    bool getTgtMemIntrinsic(IntrinsicInfo &Info,
+                            const CallInst &I,
                             MachineFunction &MF,
                             unsigned Intrinsic) const override;
 

@@ -310,11 +310,11 @@ public:
   MVT getPointerTy(const DataLayout &DL, unsigned AS) const override;
   MVT getPointerMemTy(const DataLayout &DL, unsigned AS) const override;
 
-  bool getTgtMemIntrinsic(IntrinsicInfo &, const CallBase &,
+  bool getTgtMemIntrinsic(IntrinsicInfo &, const CallInst &,
                           MachineFunction &MF,
                           unsigned IntrinsicID) const override;
 
-  void CollectTargetIntrinsicOperands(const CallBase &I,
+  void CollectTargetIntrinsicOperands(const CallInst &I,
                                       SmallVectorImpl<SDValue> &Ops,
                                       SelectionDAG &DAG) const override;
 

@@ -1467,7 +1467,7 @@ namespace llvm {
     /// to a MemIntrinsicNode (touches memory). If this is the case, it returns
     /// true and stores the intrinsic information into the IntrinsicInfo that was
     /// passed to the function.
-    bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallBase &I,
+    bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallInst &I,
                             MachineFunction &MF,
                             unsigned Intrinsic) const override;
 

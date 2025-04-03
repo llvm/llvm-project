@@ -8518,7 +8518,7 @@ static void checkAddrSpaceIsValidForLibcall(const TargetLowering *TLI,
 
 SDValue SelectionDAG::getMemcpy(
     SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src, SDValue Size,
-    Align Alignment, bool isVol, bool AlwaysInline, const CallBase *CI,
+    Align Alignment, bool isVol, bool AlwaysInline, const CallInst *CI,
     std::optional<bool> OverrideTailCall, MachinePointerInfo DstPtrInfo,
     MachinePointerInfo SrcPtrInfo, const AAMDNodes &AAInfo,
     BatchAAResults *BatchAA) {
@@ -8644,7 +8644,7 @@ SDValue SelectionDAG::getAtomicMemcpy(SDValue Chain, const SDLoc &dl,
 
 SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
                                  SDValue Src, SDValue Size, Align Alignment,
-                                 bool isVol, const CallBase *CI,
+                                 bool isVol, const CallInst *CI,
                                  std::optional<bool> OverrideTailCall,
                                  MachinePointerInfo DstPtrInfo,
                                  MachinePointerInfo SrcPtrInfo,
@@ -8762,7 +8762,7 @@ SDValue SelectionDAG::getAtomicMemmove(SDValue Chain, const SDLoc &dl,
 SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
                                 SDValue Src, SDValue Size, Align Alignment,
                                 bool isVol, bool AlwaysInline,
-                                const CallBase *CI,
+                                const CallInst *CI,
                                 MachinePointerInfo DstPtrInfo,
                                 const AAMDNodes &AAInfo) {
   // Check to see if we should lower the memset to stores first.

@@ -1303,7 +1303,7 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
   setValue(&Relocate, SD);
 }
 
-void SelectionDAGBuilder::LowerDeoptimizeCall(const CallBase *CI) {
+void SelectionDAGBuilder::LowerDeoptimizeCall(const CallInst *CI) {
   const auto &TLI = DAG.getTargetLoweringInfo();
   SDValue Callee = DAG.getExternalSymbol(TLI.getLibcallName(RTLIB::DEOPTIMIZE),
                                          TLI.getPointerTy(DAG.getDataLayout()));

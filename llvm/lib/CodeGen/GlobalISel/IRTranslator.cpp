@@ -1694,7 +1694,7 @@ bool IRTranslator::translateGetElementPtr(const User &U,
   return true;
 }
 
-bool IRTranslator::translateMemFunc(const CallBase &CI,
+bool IRTranslator::translateMemFunc(const CallInst &CI,
                                     MachineIRBuilder &MIRBuilder,
                                     unsigned Opcode) {
   const Value *SrcPtr = CI.getArgOperand(1);
@@ -1785,7 +1785,7 @@ bool IRTranslator::translateMemFunc(const CallBase &CI,
   return true;
 }
 
-bool IRTranslator::translateTrap(const CallBase &CI,
+bool IRTranslator::translateTrap(const CallInst &CI,
                                  MachineIRBuilder &MIRBuilder,
                                  unsigned Opcode) {
   StringRef TrapFuncName =
@@ -1812,7 +1812,7 @@ bool IRTranslator::translateTrap(const CallBase &CI,
 }
 
 bool IRTranslator::translateVectorInterleave2Intrinsic(
-    const CallBase &CI, MachineIRBuilder &MIRBuilder) {
+    const CallInst &CI, MachineIRBuilder &MIRBuilder) {
   assert(CI.getIntrinsicID() == Intrinsic::vector_interleave2 &&
          "This function can only be called on the interleave2 intrinsic!");
   // Canonicalize interleave2 to G_SHUFFLE_VECTOR (similar to SelectionDAG).
@@ -1828,7 +1828,7 @@ bool IRTranslator::translateVectorInterleave2Intrinsic(
 }
 
 bool IRTranslator::translateVectorDeinterleave2Intrinsic(
-    const CallBase &CI, MachineIRBuilder &MIRBuilder) {
+    const CallInst &CI, MachineIRBuilder &MIRBuilder) {
   assert(CI.getIntrinsicID() == Intrinsic::vector_deinterleave2 &&
          "This function can only be called on the deinterleave2 intrinsic!");
   // Canonicalize deinterleave2 to shuffles that extract sub-vectors (similar to
@@ -1868,7 +1868,7 @@ void IRTranslator::getStackGuard(Register DstReg,
   MIB.setMemRefs({MemRef});
 }
 
-bool IRTranslator::translateOverflowIntrinsic(const CallBase &CI, unsigned Op,
+bool IRTranslator::translateOverflowIntrinsic(const CallInst &CI, unsigned Op,
                                               MachineIRBuilder &MIRBuilder) {
   ArrayRef<Register> ResRegs = getOrCreateVRegs(CI);
   MIRBuilder.buildInstr(
@@ -1878,7 +1878,7 @@ bool IRTranslator::translateOverflowIntrinsic(const CallBase &CI, unsigned Op,
   return true;
 }
 
-bool IRTranslator::translateFixedPointIntrinsic(unsigned Op, const CallBase &CI,
+bool IRTranslator::translateFixedPointIntrinsic(unsigned Op, const CallInst &CI,
                                                 MachineIRBuilder &MIRBuilder) {
   Register Dst = getOrCreateVReg(CI);
   Register Src0 = getOrCreateVReg(*CI.getOperand(0));
@@ -2023,7 +2023,7 @@ unsigned IRTranslator::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
   return Intrinsic::not_intrinsic;
 }
 
-bool IRTranslator::translateSimpleIntrinsic(const CallBase &CI,
+bool IRTranslator::translateSimpleIntrinsic(const CallInst &CI,
                                             Intrinsic::ID ID,
                                             MachineIRBuilder &MIRBuilder) {
 
@@ -2145,7 +2145,7 @@ static unsigned getConvOpcode(Intrinsic::ID ID) {
 }
 
 bool IRTranslator::translateConvergenceControlIntrinsic(
-    const CallBase &CI, Intrinsic::ID ID, MachineIRBuilder &MIRBuilder) {
+    const CallInst &CI, Intrinsic::ID ID, MachineIRBuilder &MIRBuilder) {
   MachineInstrBuilder MIB = MIRBuilder.buildInstr(getConvOpcode(ID));
   Register OutputReg = getOrCreateConvergenceTokenVReg(CI);
   MIB.addDef(OutputReg);
@@ -2161,7 +2161,7 @@ bool IRTranslator::translateConvergenceControlIntrinsic(
   return true;
 }
 
-bool IRTranslator::translateKnownIntrinsic(const CallBase &CI, Intrinsic::ID ID,
+bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                                            MachineIRBuilder &MIRBuilder) {
   if (auto *MI = dyn_cast<AnyMemIntrinsic>(&CI)) {
     if (ORE->enabled()) {
@@ -2756,7 +2756,7 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
   if (containsBF16Type(U))
     return false;
 
-  const CallBase &CI = cast<CallBase>(U);
+  const CallInst &CI = cast<CallInst>(U);
   const Function *F = CI.getCalledFunction();
 
   // FIXME: support Windows dllimport function calls and calls through
@@ -3023,14 +3023,22 @@ bool IRTranslator::translateCallBr(const User &U,
   } else if (I.getIntrinsicID() != Intrinsic::not_intrinsic) {
     switch (I.getIntrinsicID()) {
     default:
-      return false;
+      report_fatal_error("Unsupported intrinsic for callbr");
     case Intrinsic::amdgcn_kill:
-      if (!translateCall(I, MIRBuilder))
+      if (I.getNumIndirectDests() != 1)
+        report_fatal_error(
+            "amdgcn.kill supportes exactly one indirect destination");
+      CallInst *CI =
+          CallInst::Create(I.getFunctionType(), I.getCalledFunction(),
+                           SmallVector<Value *, 1>(I.args()));
+      bool Success = translateCall(*CI, MIRBuilder);
+      CI->deleteValue();
+      if (!Success)
         return false;
       break;
     }
   } else {
-    return false;
+    report_fatal_error("Only know how to handle inlineasm/intrinsic callbr");
   }
 
   // Retrieve successors.
