@@ -381,9 +381,9 @@ static Expected<StringRef> runSPIRVCodeGen(StringRef File, const ArgList &Args,
 
   if (Verbose)
     errs() << formatv("SPIR-V Backend: input: {0}, output: {1}\n", File,
-                      OutputFile);
+                      *OutFileOrErr);
 
-  return OutputFile;
+  return *OutFileOrErr;
 }
 
 /// Run AOT compilation for Intel CPU.
@@ -531,8 +531,11 @@ int main(int argc, char **argv) {
   IsAOTCompileNeeded = Args.hasArg(OPT_arch_EQ);
 
   if (!Args.hasArg(OPT_o))
-    reportError(createStringError("Output file is not specified"));
+    reportError(createStringError("Output file must be specified"));
   OutputFile = Args.getLastArgValue(OPT_o);
+
+  if (!Args.hasArg(OPT_triple_EQ))
+    reportError(createStringError("Target triple must be specified"));
 
   if (Args.hasArg(OPT_spirv_dump_device_code_EQ)) {
     Arg *A = Args.getLastArg(OPT_spirv_dump_device_code_EQ);
