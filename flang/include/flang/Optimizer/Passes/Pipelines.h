@@ -128,9 +128,6 @@ void createHLFIRToFIRPassPipeline(
     mlir::PassManager &pm, bool enableOpenMP,
     llvm::OptimizationLevel optLevel = defaultOptLevel);
 
-using DoConcurrentMappingKind =
-    Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind;
-
 struct OpenMPFIRPassPipelineOpts {
   /// Whether code is being generated for a target device rather than the host
   /// device

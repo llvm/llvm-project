@@ -166,10 +166,9 @@ struct InductionVariableInfo {
 
   /// The operation allocating memory for iteration variable.
   mlir::Operation *iterVarMemDef;
-
   /// the operation(s) updating the iteration variable with the current
   /// iteration number.
-  llvm::SmallVector<mlir::Operation *> indVarUpdateOps;
+  llvm::SmallVector<mlir::Operation *, 2> indVarUpdateOps;
 
 private:
   /// For the \p doLoop parameter, find the following:
@@ -540,16 +539,6 @@ public:
   mlir::LogicalResult
   matchAndRewrite(fir::DoLoopOp doLoop, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    mlir::Operation *lbOp = doLoop.getLowerBound().getDefiningOp();
-    mlir::Operation *ubOp = doLoop.getUpperBound().getDefiningOp();
-    mlir::Operation *stepOp = doLoop.getStep().getDefiningOp();
-
-    if (lbOp == nullptr || ubOp == nullptr || stepOp == nullptr) {
-      return rewriter.notifyMatchFailure(
-          doLoop, "At least one of the loop's LB, UB, or step doesn't have a "
-                  "defining operation.");
-    }
-
     looputils::LoopNestToIndVarMap loopNest;
     bool hasRemainingNestedLoops =
         failed(looputils::collectLoopNest(doLoop, loopNest));
@@ -1050,11 +1039,10 @@ public:
   void runOnOperation() override {
     mlir::func::FuncOp func = getOperation();
 
-    if (func.isDeclaration()) {
+    if (func.isDeclaration())
       return;
-    }
 
-    auto *context = &getContext();
+    mlir::MLIRContext *context = &getContext();
 
     if (mapTo != flangomp::DoConcurrentMappingKind::DCMK_Host &&
         mapTo != flangomp::DoConcurrentMappingKind::DCMK_Device) {
@@ -1063,21 +1051,22 @@ public:
                         "Valid values are: `host` or `device`");
       return;
     }
+
     llvm::DenseSet<fir::DoLoopOp> concurrentLoopsToSkip;
     mlir::RewritePatternSet patterns(context);
     patterns.insert<DoConcurrentConversion>(
         context, mapTo == flangomp::DoConcurrentMappingKind::DCMK_Device,
         concurrentLoopsToSkip);
     mlir::ConversionTarget target(*context);
-    target
-        .addLegalDialect<fir::FIROpsDialect, hlfir::hlfirDialect,
-                         mlir::arith::ArithDialect, mlir::func::FuncDialect,
-                         mlir::omp::OpenMPDialect, mlir::cf::ControlFlowDialect,
-                         mlir::math::MathDialect, mlir::LLVM::LLVMDialect>();
-
     target.addDynamicallyLegalOp<fir::DoLoopOp>([&](fir::DoLoopOp op) {
+      // The goal is to handle constructs that eventually get lowered to
+      // `fir.do_loop` with the `unordered` attribute (e.g. array expressions).
+      // Currently, this is only enabled for the `do concurrent` construct since
+      // the pass runs early in the pipeline.
       return !op.getUnordered() || concurrentLoopsToSkip.contains(op);
     });
+    target.markUnknownOpDynamicallyLegal(
+        [](mlir::Operation *) { return true; });
 
     if (mlir::failed(mlir::applyFullConversion(getOperation(), target,
                                                std::move(patterns)))) {
