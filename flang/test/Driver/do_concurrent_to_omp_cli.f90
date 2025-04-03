@@ -1,4 +1,4 @@
-! UNSUPPORTED: system-windows
+! UNSUPPORTED: target=powerpc{{.*}}, system-windows
 
 ! RUN: %flang --help | FileCheck %s --check-prefix=FLANG
 
