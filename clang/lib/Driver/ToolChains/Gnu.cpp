@@ -3439,3 +3439,18 @@ void Generic_ELF::addClangTargetOptions(const ArgList &DriverArgs,
                           options::OPT_fno_use_init_array, true))
     CC1Args.push_back("-fno-use-init-array");
 }
+
+void Generic_ELF::addFortranRuntimeLibs(
+    const ArgList &Args, llvm::opt::ArgStringList &CmdArgs) const {
+  // Link static flang_rt.runtime.a or shared flang_rt.runtime.so
+  const char *Path;
+  if (getVFS().exists(Twine(Path = getCompilerRTArgString(
+                                Args, "runtime", ToolChain::FT_Static, true))))
+    CmdArgs.push_back(Path);
+  else if (getVFS().exists(
+               Twine(Path = getCompilerRTArgString(
+                         Args, "runtime", ToolChain::FT_Shared, true))))
+    CmdArgs.push_back(Path);
+  else
+    CmdArgs.push_back("-lflang_rt.runtime");
+}

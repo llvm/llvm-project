@@ -376,6 +376,8 @@ public:
   void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                              llvm::opt::ArgStringList &CC1Args,
                              Action::OffloadKind DeviceOffloadKind) const override;
+  void addFortranRuntimeLibs(const llvm::opt::ArgList &Args,
+                             llvm::opt::ArgStringList &CmdArgs) const override;
 
   virtual std::string getDynamicLinker(const llvm::opt::ArgList &Args) const {
     return {};
