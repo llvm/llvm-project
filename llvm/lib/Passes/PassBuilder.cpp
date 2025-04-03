@@ -977,7 +977,6 @@ Expected<MetaRenamerOptions> parseMetaRenamerPassOptions(StringRef Params) {
   return Result;
 }
 
-
 Expected<MemorySanitizerOptions> parseMSanPassOptions(StringRef Params) {
   MemorySanitizerOptions Result;
   while (!Params.empty()) {
