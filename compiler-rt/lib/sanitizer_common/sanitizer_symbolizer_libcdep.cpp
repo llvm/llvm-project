@@ -278,13 +278,16 @@ class LLVMSymbolizerProcess final : public SymbolizerProcess {
     const char* const kSymbolizerArch = "--default-arch=powerpc64";
 #elif defined(__powerpc64__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     const char* const kSymbolizerArch = "--default-arch=powerpc64le";
-#elif defined(__s390x__)
+#  elif defined(__powerpc__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+    // Must check __powerpc__ after __powerpc64__ because both can be set.
+    const char *const kSymbolizerArch = "--default-arch=powerpc";
+#  elif defined(__s390x__)
     const char* const kSymbolizerArch = "--default-arch=s390x";
-#elif defined(__s390__)
+#  elif defined(__s390__)
     const char* const kSymbolizerArch = "--default-arch=s390";
-#else
+#  else
     const char* const kSymbolizerArch = "--default-arch=unknown";
-#endif
+#  endif
 
     const char *const demangle_flag =
         common_flags()->demangle ? "--demangle" : "--no-demangle";
