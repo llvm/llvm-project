@@ -664,10 +664,10 @@ cc_library(
         "//mlir:SPIRVDialect",
         "//mlir:SideEffectInterfaces",
         "//mlir:Support",
-        "//mlir:TransformUtils",
-        "//mlir:Transforms",
         "//mlir:TransformDialect",
         "//mlir:TransformDialectInterfaces",
+        "//mlir:TransformUtils",
+        "//mlir:Transforms",
     ],
 )
 
