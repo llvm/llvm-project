@@ -33,6 +33,7 @@
 #include "lldb/lldb-enumerations.h"
 #include "swift/ABI/Task.h"
 #include "swift/AST/Types.h"
+#include "swift/Concurrency/Actor.h"
 #include "swift/Demangling/Demangle.h"
 #include "swift/Demangling/ManglingMacros.h"
 #include "llvm/ADT/STLExtras.h"
@@ -1321,6 +1322,25 @@ private:
   std::vector<ValueObjectSP> m_children;
 };
 
+/// Offset of ActiveActorStatus from _$defaultActor_.
+///
+/// DefaultActorImpl has the following (labeled) layout.
+///
+/// DefaultActorImpl:
+///   0: HeapObject
+/// $defaultActor:
+///   16/0: isDistributedRemoteActor
+///   17/1: <alignment padding>
+///   32/16: StatusStorage
+///
+/// As shown, the $defaultActor field does not point to the start of the
+/// DefaultActorImpl.
+///
+/// The StatusStorage is at offset of +32 from the start of DefaultActorImpl, or
+/// at +16 relative to $defaultActor. The formatters are based on $defaultActor,
+/// and as such use the relative offset.
+static constexpr offset_t ActiveActorStatusOffset = 16;
+
 class ActorSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   ActorSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
@@ -1458,20 +1478,6 @@ private:
     ProcessSP process_sp;
     addr_t addr;
 
-    // `$defaultActor`'s offset within the actor object.
-    //
-    // The $defaultActor field does not point to the start of DefaultActorImpl,
-    // it has as an address that points past the HeapObject layout.
-    static constexpr offset_t DefaultActorFieldOffset = 16;
-    // ActiveActorStatus's offset within DefaultActorImpl.
-    //
-    // ActiveActorStatus is declared alignas(2*sizeof(void*)). The layout of
-    // DefaultActorImpl puts the status record after HeapObject (size 16), and
-    // its first field (bool size 1), an offset of +32 from the start of the
-    // actor. This offset is relative to DefaultActorImpl, but this code needs
-    // an offset relative to the $defaultActor field, and is adjusted as such.
-    static constexpr offset_t ActiveActorStatusOffset =
-        32 - DefaultActorFieldOffset;
     // FirstJob's offset within ActiveActorStatus.
     static constexpr offset_t FirstJobOffset = ActiveActorStatusOffset + 8;
 
@@ -1862,6 +1868,37 @@ bool lldb_private::formatters::swift::Task_SummaryProvider(
     // by swift-inspect dump-concurrency.
     stream.Format(" flags:{0:$[|]}", iterator_range(flags));
 
+  return true;
+}
+
+bool lldb_private::formatters::swift::Actor_SummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  static constexpr offset_t FlagsOffset = ActiveActorStatusOffset;
+  auto addr = valobj.GetLoadAddress();
+  if (addr == LLDB_INVALID_ADDRESS)
+    return false;
+
+  auto flags_addr = addr + FlagsOffset;
+  Status status;
+  uint64_t flags = 0;
+  if (auto process_sp = valobj.GetProcessSP())
+    flags = process_sp->ReadUnsignedIntegerFromMemory(flags_addr, 4, 0, status);
+
+  if (status.Fail()) {
+    stream.PutCString("<could not read actor state>");
+    return true;
+  }
+
+  using namespace ::swift::concurrency::ActorFlagConstants;
+  uint8_t state = flags & ActorStateMask;
+  static_assert(Zombie_ReadyForDeallocation == 3);
+  if (state > Zombie_ReadyForDeallocation) {
+    stream << "<unknown actor state: " << Twine(state).str() << ">";
+    return true;
+  }
+
+  static const StringRef states[] = {"idle", "scheduled", "running", "zombie"};
+  stream.PutCString(states[state]);
   return true;
 }
 

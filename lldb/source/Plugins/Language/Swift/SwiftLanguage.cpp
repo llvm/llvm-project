@@ -508,6 +508,10 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
                   lldb_private::formatters::swift::Task_SummaryProvider,
                   "Swift UnsafeCurrentTask summary provider",
                   "Swift.UnsafeCurrentTask", task_summary_flags);
+    AddCXXSummary(swift_category_sp,
+                  lldb_private::formatters::swift::Actor_SummaryProvider,
+                  "Swift Actor summary provider", "Builtin.DefaultActorStorage",
+                  task_summary_flags);
   }
 
   summary_flags.SetSkipPointers(false);

@@ -120,6 +120,9 @@ bool TaskPriority_SummaryProvider(ValueObject &valobj, Stream &stream,
 bool Task_SummaryProvider(ValueObject &valobj, Stream &stream,
                           const TypeSummaryOptions &options);
 
+bool Actor_SummaryProvider(ValueObject &valobj, Stream &stream,
+                           const TypeSummaryOptions &options);
+
 SyntheticChildrenFrontEnd *EnumSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                                         lldb::ValueObjectSP);
 
