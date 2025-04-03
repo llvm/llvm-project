@@ -143,12 +143,10 @@ attributes(device) subroutine testMatchAny()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtestmatchany()
-! CHECK: fir.call @llvm.nvvm.match.any.sync.i32p
-! CHECK: fir.call @llvm.nvvm.match.any.sync.i64p
-! CHECK: fir.convert %{{.*}} : (f32) -> i32
-! CHECK: fir.call @llvm.nvvm.match.any.sync.i32p
-! CHECK: fir.convert %{{.*}} : (f64) -> i64
-! CHECK: fir.call @llvm.nvvm.match.any.sync.i64p
+! CHECK: %{{.*}} = nvvm.match.sync  any %{{.*}}, %{{.*}} : i32 -> i32
+! CHECK: %{{.*}} = nvvm.match.sync  any %{{.*}}, %{{.*}} : i64 -> i32
+! CHECK: %{{.*}} = nvvm.match.sync  any %{{.*}}, %{{.*}} : i32 -> i32  
+! CHECK: %{{.*}} = nvvm.match.sync  any %{{.*}}, %{{.*}} : i64 -> i32
 
 attributes(device) subroutine testAtomic(aa, n)
   integer :: aa(*)
