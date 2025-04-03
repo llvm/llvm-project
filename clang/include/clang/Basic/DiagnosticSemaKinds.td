@@ -13055,6 +13055,8 @@ def warn_acc_confusing_routine_name
       InGroup<DiagGroup<"openacc-confusing-routine-name">>;
 def err_acc_decl_for_routine
     : Error<"expected function or lambda declaration for 'routine' construct">;
+def err_acc_invalid_modifier
+    : Error<"OpenACC '%0' modifier not valid on '%1' clause">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;

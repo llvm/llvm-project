@@ -56,12 +56,16 @@ void foo() {
 #pragma acc parallel no_create(i, array[1], array, array[1:2]) present(i, array[1], array, array[1:2])
   while(true);
 
-// CHECK: #pragma acc parallel copyin(i, array[1], array, array[1:2]) pcopyin(readonly: i, array[1], array, array[1:2]) present_or_copyin(i, array[1], array, array[1:2])
-#pragma acc parallel copyin(i, array[1], array, array[1:2]) pcopyin(readonly:i, array[1], array, array[1:2]) present_or_copyin(i, array[1], array, array[1:2])
+// CHECK: #pragma acc parallel copy(i, array[1], array, array[1:2]) pcopy(alwaysin: i, array[1], array, array[1:2]) present_or_copy(always, alwaysout: i, array[1], array, array[1:2])
+#pragma acc parallel copy(i, array[1], array, array[1:2]) pcopy(alwaysin:i, array[1], array, array[1:2]) present_or_copy(always, alwaysout: i, array[1], array, array[1:2])
   while(true);
 
-// CHECK: #pragma acc parallel copyout(i, array[1], array, array[1:2]) pcopyout(zero: i, array[1], array, array[1:2]) present_or_copyout(i, array[1], array, array[1:2])
-#pragma acc parallel copyout(i, array[1], array, array[1:2]) pcopyout(zero: i, array[1], array, array[1:2]) present_or_copyout(i, array[1], array, array[1:2])
+// CHECK: #pragma acc parallel copyin(i, array[1], array, array[1:2]) pcopyin(readonly: i, array[1], array, array[1:2]) present_or_copyin(always, readonly: i, array[1], array, array[1:2])
+#pragma acc parallel copyin(i, array[1], array, array[1:2]) pcopyin(readonly:i, array[1], array, array[1:2]) present_or_copyin(readonly, always: i, array[1], array, array[1:2])
+  while(true);
+
+// CHECK: #pragma acc parallel copyout(i, array[1], array, array[1:2]) pcopyout(zero: i, array[1], array, array[1:2]) present_or_copyout(always, zero: i, array[1], array, array[1:2])
+#pragma acc parallel copyout(i, array[1], array, array[1:2]) pcopyout(zero: i, array[1], array, array[1:2]) present_or_copyout(always, zero: i, array[1], array, array[1:2])
   while(true);
 
 // CHECK: #pragma acc parallel create(i, array[1], array, array[1:2]) pcreate(zero: i, array[1], array, array[1:2]) present_or_create(i, array[1], array, array[1:2])
