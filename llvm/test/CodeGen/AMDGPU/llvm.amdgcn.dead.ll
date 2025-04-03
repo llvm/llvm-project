@@ -3,8 +3,8 @@
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck -check-prefix=ASM-GISEL %s
 
 ; Test that we can use v0 for temporaries in the if.then block.
-define i32 @dead(i1 %cond, i32 %x, ptr addrspace(1) %ptr1, ptr addrspace(1) %ptr2) #0 {
-; ASM-DAG-LABEL: dead:
+define i32 @dead_i32(i1 %cond, i32 %x, ptr addrspace(1) %ptr1) #0 {
+; ASM-DAG-LABEL: dead_i32:
 ; ASM-DAG:       ; %bb.0: ; %entry
 ; ASM-DAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; ASM-DAG-NEXT:    s_wait_expcnt 0x0
@@ -27,7 +27,7 @@ define i32 @dead(i1 %cond, i32 %x, ptr addrspace(1) %ptr1, ptr addrspace(1) %ptr
 ; ASM-DAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; ASM-DAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; ASM-GISEL-LABEL: dead:
+; ASM-GISEL-LABEL: dead_i32:
 ; ASM-GISEL:       ; %bb.0: ; %entry
 ; ASM-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; ASM-GISEL-NEXT:    s_wait_expcnt 0x0
@@ -61,4 +61,382 @@ if.then:                                          ; preds = %entry
 if.end:
   %res = phi i32 [ %x, %entry ], [ %dead, %if.then ]
   ret i32 %res
+}
+
+%trivial_types = type { i32, float, <3 x i32>, i64, ptr addrspace(5), ptr addrspace(1), <4 x float>, { float, <2 x i16> } }
+
+define %trivial_types @dead_struct(i1 %cond, %trivial_types %x, ptr addrspace(1) %ptr1, i32 %v) #0 {
+; ASM-DAG-LABEL: dead_struct:
+; ASM-DAG:       ; %bb.0: ; %entry
+; ASM-DAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; ASM-DAG-NEXT:    s_wait_expcnt 0x0
+; ASM-DAG-NEXT:    s_wait_samplecnt 0x0
+; ASM-DAG-NEXT:    s_wait_bvhcnt 0x0
+; ASM-DAG-NEXT:    s_wait_kmcnt 0x0
+; ASM-DAG-NEXT:    v_mov_b32_e32 v20, v0
+; ASM-DAG-NEXT:    v_mov_b32_e32 v0, v1
+; ASM-DAG-NEXT:    s_mov_b32 s0, exec_lo
+; ASM-DAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; ASM-DAG-NEXT:    v_and_b32_e32 v1, 1, v20
+; ASM-DAG-NEXT:    v_cmpx_eq_u32_e32 1, v1
+; ASM-DAG-NEXT:    s_cbranch_execz .LBB1_2
+; ASM-DAG-NEXT:  ; %bb.1: ; %if.then
+; ASM-DAG-NEXT:    v_dual_mov_b32 v11, 0 :: v_dual_add_nc_u32 v0, 15, v19
+; ASM-DAG-NEXT:    v_mov_b32_e32 v2, 0x3fc00000
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr3_vgpr4_vgpr5
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr8
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr9_vgpr10
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr15
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr16
+; ASM-DAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; ASM-DAG-NEXT:    v_dual_mov_b32 v12, v11 :: v_dual_mov_b32 v13, v11
+; ASM-DAG-NEXT:    v_mov_b32_e32 v14, v11
+; ASM-DAG-NEXT:    global_store_b32 v[17:18], v0, off
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr0
+; ASM-DAG-NEXT:  .LBB1_2: ; %if.end
+; ASM-DAG-NEXT:    s_wait_alu 0xfffe
+; ASM-DAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; ASM-DAG-NEXT:    v_dual_mov_b32 v1, v2 :: v_dual_mov_b32 v2, v3
+; ASM-DAG-NEXT:    v_dual_mov_b32 v3, v4 :: v_dual_mov_b32 v4, v5
+; ASM-DAG-NEXT:    v_dual_mov_b32 v5, v6 :: v_dual_mov_b32 v6, v7
+; ASM-DAG-NEXT:    v_dual_mov_b32 v7, v8 :: v_dual_mov_b32 v8, v9
+; ASM-DAG-NEXT:    v_dual_mov_b32 v9, v10 :: v_dual_mov_b32 v10, v11
+; ASM-DAG-NEXT:    v_dual_mov_b32 v11, v12 :: v_dual_mov_b32 v12, v13
+; ASM-DAG-NEXT:    v_dual_mov_b32 v13, v14 :: v_dual_mov_b32 v14, v15
+; ASM-DAG-NEXT:    v_mov_b32_e32 v15, v16
+; ASM-DAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; ASM-GISEL-LABEL: dead_struct:
+; ASM-GISEL:       ; %bb.0: ; %entry
+; ASM-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; ASM-GISEL-NEXT:    s_wait_expcnt 0x0
+; ASM-GISEL-NEXT:    s_wait_samplecnt 0x0
+; ASM-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; ASM-GISEL-NEXT:    s_wait_kmcnt 0x0
+; ASM-GISEL-NEXT:    v_mov_b32_e32 v20, v0
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v0, v1 :: v_dual_mov_b32 v1, v2
+; ASM-GISEL-NEXT:    s_mov_b32 s0, exec_lo
+; ASM-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; ASM-GISEL-NEXT:    v_and_b32_e32 v2, 1, v20
+; ASM-GISEL-NEXT:    v_cmpx_ne_u32_e32 0, v2
+; ASM-GISEL-NEXT:    s_cbranch_execz .LBB1_2
+; ASM-GISEL-NEXT:  ; %bb.1: ; %if.then
+; ASM-GISEL-NEXT:    s_mov_b32 s4, 0
+; ASM-GISEL-NEXT:    s_mov_b32 s1, 0x3fc00000
+; ASM-GISEL-NEXT:    s_wait_alu 0xfffe
+; ASM-GISEL-NEXT:    s_mov_b32 s7, s4
+; ASM-GISEL-NEXT:    s_mov_b32 s5, s4
+; ASM-GISEL-NEXT:    s_mov_b32 s6, s4
+; ASM-GISEL-NEXT:    s_wait_alu 0xfffe
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v14, s7 :: v_dual_mov_b32 v13, s6
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v1, s1 :: v_dual_add_nc_u32 v0, 15, v19
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v12, s5 :: v_dual_mov_b32 v11, s4
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr3_vgpr4_vgpr5
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr8
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr9_vgpr10
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr15
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr16
+; ASM-GISEL-NEXT:    global_store_b32 v[17:18], v0, off
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr0
+; ASM-GISEL-NEXT:  .LBB1_2: ; %if.end
+; ASM-GISEL-NEXT:    s_wait_alu 0xfffe
+; ASM-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v2, v3 :: v_dual_mov_b32 v3, v4
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v4, v5 :: v_dual_mov_b32 v5, v6
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v6, v7 :: v_dual_mov_b32 v7, v8
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v8, v9 :: v_dual_mov_b32 v9, v10
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v10, v11 :: v_dual_mov_b32 v11, v12
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v12, v13 :: v_dual_mov_b32 v13, v14
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v14, v15 :: v_dual_mov_b32 v15, v16
+; ASM-GISEL-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  br i1 %cond, label %if.then, label %if.end
+
+if.then:
+  %dead = call %trivial_types @llvm.amdgcn.dead.s_trivial_typess()
+  %dead_insert_1 = insertvalue %trivial_types %dead, float 1.5, 1
+  %dead_insert_3 = insertvalue %trivial_types %dead_insert_1, <4 x float> zeroinitializer, 6
+
+  %vgpr_use = add i32 %v, 15 ; may use v0 or one of the other implicit_defs
+  store i32 %vgpr_use, ptr addrspace(1) %ptr1
+
+  br label %if.end
+
+if.end:
+  %res = phi %trivial_types [ %x, %entry ], [ %dead_insert_3, %if.then ]
+  ret %trivial_types %res
+}
+
+define [32 x i32] @dead_array(i1 %cond, [32 x i32] %x, ptr addrspace(1) %ptr1, i32 %v) #0 {
+; ASM-DAG-LABEL: dead_array:
+; ASM-DAG:       ; %bb.0: ; %entry
+; ASM-DAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; ASM-DAG-NEXT:    s_wait_expcnt 0x0
+; ASM-DAG-NEXT:    s_wait_samplecnt 0x0
+; ASM-DAG-NEXT:    s_wait_bvhcnt 0x0
+; ASM-DAG-NEXT:    s_wait_kmcnt 0x0
+; ASM-DAG-NEXT:    v_dual_mov_b32 v32, v30 :: v_dual_mov_b32 v33, v0
+; ASM-DAG-NEXT:    v_mov_b32_e32 v0, v1
+; ASM-DAG-NEXT:    s_clause 0x4
+; ASM-DAG-NEXT:    scratch_load_b32 v35, off, s32 offset:12
+; ASM-DAG-NEXT:    scratch_load_b32 v34, off, s32 offset:8
+; ASM-DAG-NEXT:    scratch_load_b32 v31, off, s32 offset:4
+; ASM-DAG-NEXT:    scratch_load_b32 v30, off, s32
+; ASM-DAG-NEXT:    scratch_load_b32 v1, off, s32 offset:16
+; ASM-DAG-NEXT:    s_mov_b32 s0, exec_lo
+; ASM-DAG-NEXT:    v_and_b32_e32 v33, 1, v33
+; ASM-DAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; ASM-DAG-NEXT:    v_cmpx_eq_u32_e32 1, v33
+; ASM-DAG-NEXT:    s_cbranch_execz .LBB2_2
+; ASM-DAG-NEXT:  ; %bb.1: ; %if.then
+; ASM-DAG-NEXT:    v_dual_mov_b32 v8, 15 :: v_dual_mov_b32 v7, 13
+; ASM-DAG-NEXT:    s_wait_loadcnt 0x0
+; ASM-DAG-NEXT:    v_add_nc_u32_e32 v0, 15, v1
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr2
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr3
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr4
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr5
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr6
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr9
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr10
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr11
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr12
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr13
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr14
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr15
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr16
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr17
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr18
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr19
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr20
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr21
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr22
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr23
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr24
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr25
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr26
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr27
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr28
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr29
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr32
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr30
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr31
+; ASM-DAG-NEXT:    global_store_b32 v[34:35], v0, off
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr0
+; ASM-DAG-NEXT:  .LBB2_2: ; %if.end
+; ASM-DAG-NEXT:    s_wait_alu 0xfffe
+; ASM-DAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; ASM-DAG-NEXT:    s_wait_loadcnt 0x0
+; ASM-DAG-NEXT:    v_dual_mov_b32 v1, v2 :: v_dual_mov_b32 v2, v3
+; ASM-DAG-NEXT:    v_dual_mov_b32 v3, v4 :: v_dual_mov_b32 v4, v5
+; ASM-DAG-NEXT:    v_dual_mov_b32 v5, v6 :: v_dual_mov_b32 v6, v7
+; ASM-DAG-NEXT:    v_dual_mov_b32 v7, v8 :: v_dual_mov_b32 v8, v9
+; ASM-DAG-NEXT:    v_dual_mov_b32 v9, v10 :: v_dual_mov_b32 v10, v11
+; ASM-DAG-NEXT:    v_dual_mov_b32 v11, v12 :: v_dual_mov_b32 v12, v13
+; ASM-DAG-NEXT:    v_dual_mov_b32 v13, v14 :: v_dual_mov_b32 v14, v15
+; ASM-DAG-NEXT:    v_dual_mov_b32 v15, v16 :: v_dual_mov_b32 v16, v17
+; ASM-DAG-NEXT:    v_dual_mov_b32 v17, v18 :: v_dual_mov_b32 v18, v19
+; ASM-DAG-NEXT:    v_dual_mov_b32 v19, v20 :: v_dual_mov_b32 v20, v21
+; ASM-DAG-NEXT:    v_dual_mov_b32 v21, v22 :: v_dual_mov_b32 v22, v23
+; ASM-DAG-NEXT:    v_dual_mov_b32 v23, v24 :: v_dual_mov_b32 v24, v25
+; ASM-DAG-NEXT:    v_dual_mov_b32 v25, v26 :: v_dual_mov_b32 v26, v27
+; ASM-DAG-NEXT:    v_dual_mov_b32 v27, v28 :: v_dual_mov_b32 v28, v29
+; ASM-DAG-NEXT:    v_mov_b32_e32 v29, v32
+; ASM-DAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; ASM-GISEL-LABEL: dead_array:
+; ASM-GISEL:       ; %bb.0: ; %entry
+; ASM-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; ASM-GISEL-NEXT:    s_wait_expcnt 0x0
+; ASM-GISEL-NEXT:    s_wait_samplecnt 0x0
+; ASM-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; ASM-GISEL-NEXT:    s_wait_kmcnt 0x0
+; ASM-GISEL-NEXT:    v_mov_b32_e32 v32, v0
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v0, v1 :: v_dual_mov_b32 v1, v2
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v2, v3 :: v_dual_mov_b32 v3, v4
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v4, v5 :: v_dual_mov_b32 v5, v6
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v6, v7 :: v_dual_mov_b32 v7, v8
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v8, v9 :: v_dual_mov_b32 v9, v10
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v10, v11 :: v_dual_mov_b32 v11, v12
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v12, v13 :: v_dual_mov_b32 v13, v14
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v14, v15 :: v_dual_mov_b32 v15, v16
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v16, v17 :: v_dual_mov_b32 v17, v18
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v18, v19 :: v_dual_mov_b32 v19, v20
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v20, v21 :: v_dual_mov_b32 v21, v22
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v22, v23 :: v_dual_mov_b32 v23, v24
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v24, v25 :: v_dual_mov_b32 v25, v26
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v26, v27 :: v_dual_mov_b32 v27, v28
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v28, v29 :: v_dual_mov_b32 v29, v30
+; ASM-GISEL-NEXT:    s_clause 0x4
+; ASM-GISEL-NEXT:    scratch_load_b32 v30, off, s32
+; ASM-GISEL-NEXT:    scratch_load_b32 v31, off, s32 offset:4
+; ASM-GISEL-NEXT:    scratch_load_b32 v33, off, s32 offset:8
+; ASM-GISEL-NEXT:    scratch_load_b32 v34, off, s32 offset:12
+; ASM-GISEL-NEXT:    scratch_load_b32 v35, off, s32 offset:16
+; ASM-GISEL-NEXT:    v_and_b32_e32 v32, 1, v32
+; ASM-GISEL-NEXT:    s_mov_b32 s0, exec_lo
+; ASM-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; ASM-GISEL-NEXT:    v_cmpx_ne_u32_e32 0, v32
+; ASM-GISEL-NEXT:    s_cbranch_execz .LBB2_2
+; ASM-GISEL-NEXT:  ; %bb.1: ; %if.then
+; ASM-GISEL-NEXT:    s_mov_b32 s1, 15
+; ASM-GISEL-NEXT:    s_mov_b32 s2, 13
+; ASM-GISEL-NEXT:    s_wait_loadcnt 0x0
+; ASM-GISEL-NEXT:    s_wait_alu 0xfffe
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v7, s1 :: v_dual_add_nc_u32 v0, 15, v35
+; ASM-GISEL-NEXT:    v_mov_b32_e32 v6, s2
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr1
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr2
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr3
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr4
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr5
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr8
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr9
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr10
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr11
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr12
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr13
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr14
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr15
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr16
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr17
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr18
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr19
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr20
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr21
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr22
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr23
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr24
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr25
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr26
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr27
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr28
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr29
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr30
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr31
+; ASM-GISEL-NEXT:    global_store_b32 v[33:34], v0, off
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr0
+; ASM-GISEL-NEXT:  .LBB2_2: ; %if.end
+; ASM-GISEL-NEXT:    s_wait_alu 0xfffe
+; ASM-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; ASM-GISEL-NEXT:    s_wait_loadcnt 0x0
+; ASM-GISEL-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  br i1 %cond, label %if.then, label %if.end
+
+if.then:
+  %dead = call [32 x i32] @llvm.amdgcn.dead()
+  %dead_insert_1 = insertvalue [32 x i32] %dead, i32 15, 7
+  %dead_insert_3 = insertvalue [32 x i32] %dead_insert_1, i32 13, 6
+
+  %vgpr_use = add i32 %v, 15 ; may use v0 or one of the other implicit_defs
+  store i32 %vgpr_use, ptr addrspace(1) %ptr1
+
+  br label %if.end
+
+if.end:
+  %res = phi [32 x i32] [ %x, %entry ], [ %dead_insert_3, %if.then ]
+  ret [32 x i32] %res
+}
+
+%non_trivial_types = type { i8, i16, half, bfloat, <2 x i16>, <2 x half>, <2 x bfloat>, <5 x i32>, i128}
+
+define %non_trivial_types @dead_non_trivial(i1 %cond, %non_trivial_types %x, ptr addrspace(1) %ptr1, i32 %v) #0 {
+; ASM-DAG-LABEL: dead_non_trivial:
+; ASM-DAG:       ; %bb.0: ; %entry
+; ASM-DAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; ASM-DAG-NEXT:    s_wait_expcnt 0x0
+; ASM-DAG-NEXT:    s_wait_samplecnt 0x0
+; ASM-DAG-NEXT:    s_wait_bvhcnt 0x0
+; ASM-DAG-NEXT:    s_wait_kmcnt 0x0
+; ASM-DAG-NEXT:    v_mov_b32_e32 v20, v0
+; ASM-DAG-NEXT:    v_mov_b32_e32 v0, v1
+; ASM-DAG-NEXT:    s_mov_b32 s0, exec_lo
+; ASM-DAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; ASM-DAG-NEXT:    v_and_b32_e32 v1, 1, v20
+; ASM-DAG-NEXT:    v_cmpx_eq_u32_e32 1, v1
+; ASM-DAG-NEXT:    s_cbranch_execz .LBB3_2
+; ASM-DAG-NEXT:  ; %bb.1: ; %if.then
+; ASM-DAG-NEXT:    v_dual_mov_b32 v7, 0 :: v_dual_add_nc_u32 v0, 15, v19
+; ASM-DAG-NEXT:    v_mov_b32_e32 v3, 0x3e00
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr2
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr4
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr5
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr6
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr13_vgpr14
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr15_vgpr16
+; ASM-DAG-NEXT:    global_store_b32 v[17:18], v0, off
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr0
+; ASM-DAG-NEXT:  .LBB3_2: ; %if.end
+; ASM-DAG-NEXT:    s_wait_alu 0xfffe
+; ASM-DAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; ASM-DAG-NEXT:    v_dual_mov_b32 v1, v2 :: v_dual_mov_b32 v2, v3
+; ASM-DAG-NEXT:    v_dual_mov_b32 v3, v4 :: v_dual_mov_b32 v4, v5
+; ASM-DAG-NEXT:    v_dual_mov_b32 v5, v6 :: v_dual_mov_b32 v6, v7
+; ASM-DAG-NEXT:    v_dual_mov_b32 v7, v8 :: v_dual_mov_b32 v8, v9
+; ASM-DAG-NEXT:    v_dual_mov_b32 v9, v10 :: v_dual_mov_b32 v10, v11
+; ASM-DAG-NEXT:    v_dual_mov_b32 v11, v12 :: v_dual_mov_b32 v12, v13
+; ASM-DAG-NEXT:    v_dual_mov_b32 v13, v14 :: v_dual_mov_b32 v14, v15
+; ASM-DAG-NEXT:    v_mov_b32_e32 v15, v16
+; ASM-DAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; ASM-GISEL-LABEL: dead_non_trivial:
+; ASM-GISEL:       ; %bb.0: ; %entry
+; ASM-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; ASM-GISEL-NEXT:    s_wait_expcnt 0x0
+; ASM-GISEL-NEXT:    s_wait_samplecnt 0x0
+; ASM-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; ASM-GISEL-NEXT:    s_wait_kmcnt 0x0
+; ASM-GISEL-NEXT:    v_mov_b32_e32 v20, v0
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v0, v1 :: v_dual_mov_b32 v1, v2
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v2, v3 :: v_dual_mov_b32 v3, v4
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v4, v5 :: v_dual_mov_b32 v5, v6
+; ASM-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v6, v7 :: v_dual_and_b32 v7, 1, v20
+; ASM-GISEL-NEXT:    s_mov_b32 s0, exec_lo
+; ASM-GISEL-NEXT:    v_cmpx_ne_u32_e32 0, v7
+; ASM-GISEL-NEXT:    s_cbranch_execz .LBB3_2
+; ASM-GISEL-NEXT:  ; %bb.1: ; %if.then
+; ASM-GISEL-NEXT:    s_movk_i32 s1, 0x3e00
+; ASM-GISEL-NEXT:    s_mov_b32 s2, 0
+; ASM-GISEL-NEXT:    v_add_nc_u32_e32 v0, 15, v19
+; ASM-GISEL-NEXT:    s_wait_alu 0xfffe
+; ASM-GISEL-NEXT:    v_mov_b32_e32 v2, s1
+; ASM-GISEL-NEXT:    v_mov_b32_e32 v6, s2
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr1
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr3
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr4
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr5
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr13_vgpr14_vgpr15_vgpr16
+; ASM-GISEL-NEXT:    global_store_b32 v[17:18], v0, off
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr0
+; ASM-GISEL-NEXT:  .LBB3_2: ; %if.end
+; ASM-GISEL-NEXT:    s_wait_alu 0xfffe
+; ASM-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v7, v8 :: v_dual_mov_b32 v8, v9
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v9, v10 :: v_dual_mov_b32 v10, v11
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v11, v12 :: v_dual_mov_b32 v12, v13
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v13, v14 :: v_dual_mov_b32 v14, v15
+; ASM-GISEL-NEXT:    v_mov_b32_e32 v15, v16
+; ASM-GISEL-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  br i1 %cond, label %if.then, label %if.end
+
+if.then:
+  %dead = call %non_trivial_types @llvm.amdgcn.dead.s_non_trivial_typess()
+  %dead_insert_1 = insertvalue %non_trivial_types %dead, half 1.5, 2
+  %dead_insert_3 = insertvalue %non_trivial_types %dead_insert_1, <2 x bfloat> zeroinitializer, 6
+
+  %vgpr_use = add i32 %v, 15 ; may use v0 or one of the other implicit_defs
+  store i32 %vgpr_use, ptr addrspace(1) %ptr1
+
+  br label %if.end
+
+if.end:
+  %res = phi %non_trivial_types [ %x, %entry ], [ %dead_insert_3, %if.then ]
+  ret %non_trivial_types %res
 }
