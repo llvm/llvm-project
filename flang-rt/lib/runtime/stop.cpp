@@ -240,7 +240,7 @@ static RT_NOINLINE_ATTR void PrintBacktrace() {
 
 RT_OPTNONE_ATTR void FORTRAN_PROCEDURE_NAME(backtrace)() { PrintBacktrace(); }
 
-[[noreturn]] void RTNAME(ReportFatalUserError)(
+[[noreturn]] RT_API_ATTRS void RTNAME(ReportFatalUserError)(
     const char *message, const char *source, int line) {
   Fortran::runtime::Terminator{source, line}.Crash(message);
 }

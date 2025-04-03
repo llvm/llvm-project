@@ -260,6 +260,10 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genAll,
      {{{"mask", asAddr}, {"dim", asValue}}},
      /*isElemental=*/false},
+    {"all_sync",
+     &I::genVoteAllSync,
+     {{{"mask", asValue}, {"pred", asValue}}},
+     /*isElemental=*/false},
     {"allocated",
      &I::genAllocated,
      {{{"array", asInquired}, {"scalar", asInquired}}},
@@ -268,6 +272,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"any",
      &I::genAny,
      {{{"mask", asAddr}, {"dim", asValue}}},
+     /*isElemental=*/false},
+    {"any_sync",
+     &I::genVoteAnySync,
+     {{{"mask", asValue}, {"pred", asValue}}},
      /*isElemental=*/false},
     {"asind", &I::genAsind},
     {"associated",
@@ -331,6 +339,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"atomicsubi", &I::genAtomicSub, {{{"a", asAddr}, {"v", asValue}}}, false},
     {"atomicsubl", &I::genAtomicSub, {{{"a", asAddr}, {"v", asValue}}}, false},
     {"atomicxori", &I::genAtomicXor, {{{"a", asAddr}, {"v", asValue}}}, false},
+    {"ballot_sync",
+     &I::genVoteBallotSync,
+     {{{"mask", asValue}, {"pred", asValue}}},
+     /*isElemental=*/false},
     {"bessel_jn",
      &I::genBesselJn,
      {{{"n1", asValue}, {"n2", asValue}, {"x", asValue}}},
@@ -756,7 +768,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"perror",
      &I::genPerror,
      {{{"string", asBox}}},
-     /*isElemental*/ false},
+     /*isElemental=*/false},
     {"popcnt", &I::genPopcnt},
     {"poppar", &I::genPoppar},
     {"present",
@@ -6493,6 +6505,40 @@ IntrinsicLibrary::genMatchAllSync(mlir::Type resultType,
   auto conv = builder.create<mlir::LLVM::ZExtOp>(loc, resultType, pred);
   builder.create<fir::StoreOp>(loc, conv, args[2]);
   return value;
+}
+
+static mlir::Value genVoteSync(fir::FirOpBuilder &builder, mlir::Location loc,
+                               llvm::StringRef funcName,
+                               llvm::ArrayRef<mlir::Value> args) {
+  mlir::MLIRContext *context = builder.getContext();
+  mlir::Type i32Ty = builder.getI32Type();
+  mlir::FunctionType ftype =
+      mlir::FunctionType::get(context, {i32Ty, i32Ty}, {i32Ty});
+  auto funcOp = builder.createFunction(loc, funcName, ftype);
+  llvm::SmallVector<mlir::Value> filteredArgs;
+  return builder.create<fir::CallOp>(loc, funcOp, args).getResult(0);
+}
+
+// ALL_SYNC
+mlir::Value IntrinsicLibrary::genVoteAllSync(mlir::Type resultType,
+                                             llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+  return genVoteSync(builder, loc, "llvm.nvvm.vote.all.sync", args);
+}
+
+// ANY_SYNC
+mlir::Value IntrinsicLibrary::genVoteAnySync(mlir::Type resultType,
+                                             llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+  return genVoteSync(builder, loc, "llvm.nvvm.vote.any.sync", args);
+}
+
+// BALLOT_SYNC
+mlir::Value
+IntrinsicLibrary::genVoteBallotSync(mlir::Type resultType,
+                                    llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+  return genVoteSync(builder, loc, "llvm.nvvm.vote.ballot.sync", args);
 }
 
 // MATCH_ANY_SYNC

@@ -15,6 +15,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_STR_TO_FLOAT_H
 #define LLVM_LIBC_SRC___SUPPORT_STR_TO_FLOAT_H
 
+#include "hdr/errno_macros.h" // For ERANGE
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/optional.h"
@@ -31,7 +32,6 @@
 #include "src/__support/str_to_integer.h"
 #include "src/__support/str_to_num_result.h"
 #include "src/__support/uint128.h"
-#include "src/errno/libc_errno.h" // For ERANGE
 
 #include <stdint.h>
 

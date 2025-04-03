@@ -12,6 +12,7 @@
 
 #include "CGCXXABI.h"
 #include "CGCleanup.h"
+#include "CGDebugInfo.h"
 #include "CGObjCRuntime.h"
 #include "CodeGenFunction.h"
 #include "ConstantEmitter.h"

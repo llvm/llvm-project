@@ -1273,6 +1273,12 @@ def FeatureLshlAddU64Inst
     : SubtargetFeature<"lshl-add-u64-inst", "HasLshlAddU64Inst", "true",
                        "Has v_lshl_add_u64 instruction">;
 
+def FeatureMemToLDSLoad : SubtargetFeature<"vmem-to-lds-load-insts",
+  "HasVMemToLDSLoad",
+  "true",
+  "The platform has memory to lds instructions (global_load w/lds bit set, buffer_load w/lds bit set or global_load_lds. This does not include scratch_load_lds."
+>;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
@@ -1343,7 +1349,7 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
    FeatureA16, FeatureSMemTimeInst, FeatureFastDenormalF32, FeatureSupportsXNACK,
    FeatureUnalignedBufferAccess, FeatureUnalignedScratchAccess,
    FeatureUnalignedDSAccess, FeatureNegativeScratchOffsetBug, FeatureGWS,
-   FeatureDefaultComponentZero,FeatureVmemWriteVgprInOrder
+   FeatureDefaultComponentZero,FeatureVmemWriteVgprInOrder, FeatureMemToLDSLoad
   ]
 >;
 
@@ -1367,7 +1373,7 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureDefaultComponentZero, FeatureMaxHardClauseLength63,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF64GlobalInsts,
    FeatureAtomicFMinFMaxF32FlatInsts, FeatureAtomicFMinFMaxF64FlatInsts,
-   FeatureVmemWriteVgprInOrder
+   FeatureVmemWriteVgprInOrder, FeatureMemToLDSLoad
   ]
 >;
 
