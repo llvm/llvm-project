@@ -475,12 +475,12 @@ void GVNPass::ValueTable::add(Value *V, uint32_t Num) {
     NumberingPhi[Num] = PN;
 }
 
-// Include the incoming memory state into the hash of the expression for the
-// given instruction. If the incoming memory state is:
-// * LiveOnEntry, add the value number of the entry block,
-// * a MemoryPhi, add the value number of the basic block corresponding to that
-// MemoryPhi,
-// * a MemoryDef, add the value number of the memory setting instruction.
+/// Include the incoming memory state into the hash of the expression for the
+/// given instruction. If the incoming memory state is:
+/// * LiveOnEntry, add the value number of the entry block,
+/// * a MemoryPhi, add the value number of the basic block corresponding to that
+/// MemoryPhi,
+/// * a MemoryDef, add the value number of the memory setting instruction.
 void GVNPass::ValueTable::addMemoryStateToExp(Instruction *I, Expression &Exp) {
   assert(MSSA && "addMemoryStateToExp should not be called without MemorySSA");
   assert(MSSA->getMemoryAccess(I) && "Instruction does not access memory");
