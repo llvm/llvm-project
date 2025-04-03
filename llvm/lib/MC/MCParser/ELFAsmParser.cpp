@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -740,6 +741,13 @@ bool ELFAsmParser::parseDirectiveType(StringRef, SMLoc) {
 
   // Handle the identifier as the key symbol.
   MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
+
+  bool AllowAt = getLexer().getAllowAtInIdentifier();
+  if (!AllowAt &&
+      !getContext().getAsmInfo()->getCommentString().starts_with("@"))
+    getLexer().setAllowAtInIdentifier(true);
+  auto _ =
+      make_scope_exit([&]() { getLexer().setAllowAtInIdentifier(AllowAt); });
 
   // NOTE the comma is optional in all cases.  It is only documented as being
   // optional in the first case, however, GAS will silently treat the comma as

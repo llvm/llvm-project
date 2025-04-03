@@ -277,6 +277,33 @@ public:
     }
   }
 
+  MCPhysReg
+  getRegUsedAsCallDest(const MCInst &Inst,
+                       bool &IsAuthenticatedInternally) const override {
+    assert(isCall(Inst) || isBranch(Inst));
+    IsAuthenticatedInternally = false;
+
+    switch (Inst.getOpcode()) {
+    case AArch64::BR:
+    case AArch64::BLR:
+      return Inst.getOperand(0).getReg();
+    case AArch64::BRAA:
+    case AArch64::BRAB:
+    case AArch64::BRAAZ:
+    case AArch64::BRABZ:
+    case AArch64::BLRAA:
+    case AArch64::BLRAB:
+    case AArch64::BLRAAZ:
+    case AArch64::BLRABZ:
+      IsAuthenticatedInternally = true;
+      return Inst.getOperand(0).getReg();
+    default:
+      if (isIndirectCall(Inst) || isIndirectBranch(Inst))
+        llvm_unreachable("Unhandled indirect branch");
+      return getNoRegister();
+    }
+  }
+
   bool isADRP(const MCInst &Inst) const override {
     return Inst.getOpcode() == AArch64::ADRP;
   }
@@ -862,20 +889,12 @@ public:
     if (AArchExpr && AArchExpr->getSubExpr())
       return getTargetSymbol(AArchExpr->getSubExpr());
 
-    auto *BinExpr = dyn_cast<MCBinaryExpr>(Expr);
-    if (BinExpr)
-      return getTargetSymbol(BinExpr->getLHS());
-
-    auto *SymExpr = dyn_cast<MCSymbolRefExpr>(Expr);
-    if (SymExpr && SymExpr->getKind() == MCSymbolRefExpr::VK_None)
-      return &SymExpr->getSymbol();
-
-    return nullptr;
+    return MCPlusBuilder::getTargetSymbol(Expr);
   }
 
   const MCSymbol *getTargetSymbol(const MCInst &Inst,
                                   unsigned OpNum = 0) const override {
-    if (!getSymbolRefOperandNum(Inst, OpNum))
+    if (!OpNum && !getSymbolRefOperandNum(Inst, OpNum))
       return nullptr;
 
     const MCOperand &Op = Inst.getOperand(OpNum);

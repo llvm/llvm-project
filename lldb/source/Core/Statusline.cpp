@@ -23,7 +23,8 @@
 #define ANSI_SAVE_CURSOR ESCAPE "7"
 #define ANSI_RESTORE_CURSOR ESCAPE "8"
 #define ANSI_CLEAR_BELOW ESCAPE "[J"
-#define ANSI_CLEAR_LINE "\r\x1B[2K"
+#define ANSI_CURSOR_DOWN ESCAPE "[B"
+#define ANSI_CLEAR_LINE ESCAPE "[2K"
 #define ANSI_SET_SCROLL_ROWS ESCAPE "[0;%ur"
 #define ANSI_TO_START_OF_ROW ESCAPE "[%u;0f"
 #define ANSI_UP_ROWS ESCAPE "[%dA"
@@ -31,12 +32,16 @@
 using namespace lldb;
 using namespace lldb_private;
 
-Statusline::Statusline(Debugger &debugger) : m_debugger(debugger) { Enable(); }
+Statusline::Statusline(Debugger &debugger)
+    : m_debugger(debugger), m_terminal_width(m_debugger.GetTerminalWidth()),
+      m_terminal_height(m_debugger.GetTerminalHeight()) {
+  Enable();
+}
 
 Statusline::~Statusline() { Disable(); }
 
 void Statusline::TerminalSizeChanged() {
-  m_terminal_size_has_changed = 1;
+  UpdateTerminalProperties();
 
   // This definitely isn't signal safe, but the best we can do, until we
   // have proper signal-catching thread.
@@ -44,28 +49,22 @@ void Statusline::TerminalSizeChanged() {
 }
 
 void Statusline::Enable() {
-  UpdateTerminalProperties();
-
   // Reduce the scroll window to make space for the status bar below.
-  UpdateScrollWindow(ScrollWindowShrink);
+  UpdateScrollWindow(EnableStatusline);
 
   // Draw the statusline.
-  Redraw();
+  Redraw(/*update=*/true);
 }
 
 void Statusline::Disable() {
-  UpdateTerminalProperties();
-
   // Extend the scroll window to cover the status bar.
-  UpdateScrollWindow(ScrollWindowExtend);
+  UpdateScrollWindow(DisableStatusline);
 }
 
 void Statusline::Draw(std::string str) {
   lldb::LockableStreamFileSP stream_sp = m_debugger.GetOutputStreamSP();
   if (!stream_sp)
     return;
-
-  UpdateTerminalProperties();
 
   m_last_str = str;
 
@@ -80,57 +79,36 @@ void Statusline::Draw(std::string str) {
   locked_stream << ANSI_RESTORE_CURSOR;
 }
 
-void Statusline::Reset() {
-  lldb::LockableStreamFileSP stream_sp = m_debugger.GetOutputStreamSP();
-  if (!stream_sp)
-    return;
-
-  LockedStreamFile locked_stream = stream_sp->Lock();
-  locked_stream << ANSI_SAVE_CURSOR;
-  locked_stream.Printf(ANSI_TO_START_OF_ROW,
-                       static_cast<unsigned>(m_terminal_height));
-  locked_stream << ANSI_CLEAR_LINE;
-  locked_stream << ANSI_RESTORE_CURSOR;
-}
-
 void Statusline::UpdateTerminalProperties() {
-  if (m_terminal_size_has_changed == 0)
-    return;
-
-  // Clear the previous statusline using the previous dimensions.
-  Reset();
-
+  UpdateScrollWindow(DisableStatusline);
   m_terminal_width = m_debugger.GetTerminalWidth();
   m_terminal_height = m_debugger.GetTerminalHeight();
-
-  // Set the scroll window based on the new terminal height.
-  UpdateScrollWindow(ScrollWindowShrink);
-
-  // Clear the flag.
-  m_terminal_size_has_changed = 0;
+  UpdateScrollWindow(EnableStatusline);
 }
 
 void Statusline::UpdateScrollWindow(ScrollWindowMode mode) {
+  assert(m_terminal_width != 0 && m_terminal_height != 0);
+
   lldb::LockableStreamFileSP stream_sp = m_debugger.GetOutputStreamSP();
   if (!stream_sp)
     return;
 
   const unsigned scroll_height =
-      (mode == ScrollWindowExtend) ? m_terminal_height : m_terminal_height - 1;
+      (mode == DisableStatusline) ? m_terminal_height : m_terminal_height - 1;
 
   LockedStreamFile locked_stream = stream_sp->Lock();
   locked_stream << ANSI_SAVE_CURSOR;
   locked_stream.Printf(ANSI_SET_SCROLL_ROWS, scroll_height);
   locked_stream << ANSI_RESTORE_CURSOR;
   switch (mode) {
-  case ScrollWindowExtend:
-    // Clear the screen below to hide the old statusline.
-    locked_stream << ANSI_CLEAR_BELOW;
-    break;
-  case ScrollWindowShrink:
+  case EnableStatusline:
     // Move everything on the screen up.
     locked_stream.Printf(ANSI_UP_ROWS, 1);
     locked_stream << '\n';
+    break;
+  case DisableStatusline:
+    // Clear the screen below to hide the old statusline.
+    locked_stream << ANSI_CLEAR_BELOW;
     break;
   }
 }

@@ -3971,8 +3971,9 @@ output, given the original flags.
    for places where this can apply to LLVM's intrinsic math functions.
 
 ``reassoc``
-   Allow reassociation transformations for floating-point instructions.
-   This may dramatically change results in floating-point.
+   Allow algebraically equivalent transformations for floating-point
+   instructions such as reassociation transformations. This may dramatically
+   change results in floating-point.
 
 .. _uselistorder:
 
@@ -13447,7 +13448,7 @@ an extra level of indentation. As an example:
   %inst2 = op2 %inst1, %c
 
 These debug records replace the prior :ref:`debug intrinsics<dbg_intrinsics>`.
-Debug records will be disabled if ``--write-experimental-debuginfo=false`` is
+Debug records will be disabled if ``--experimental-debuginfo-iterators=false`` is
 passed to LLVM; it is an error for both records and intrinsics to appear in the
 same module. More information about debug records can be found in the `LLVM
 Source Level Debugging <SourceLevelDebugging.html#format-common-intrinsics>`_

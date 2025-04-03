@@ -10,6 +10,7 @@
 #include "gtest/gtest.h"
 
 using namespace clang;
+using TokenKind = hlsl::RootSignatureToken::Kind;
 
 namespace {
 
@@ -20,18 +21,18 @@ protected:
 
   void CheckTokens(hlsl::RootSignatureLexer &Lexer,
                    SmallVector<hlsl::RootSignatureToken> &Computed,
-                   SmallVector<hlsl::TokenKind> &Expected) {
+                   SmallVector<TokenKind> &Expected) {
     for (unsigned I = 0, E = Expected.size(); I != E; ++I) {
       // Skip these to help with the macro generated test
-      if (Expected[I] == hlsl::TokenKind::invalid ||
-          Expected[I] == hlsl::TokenKind::end_of_stream)
+      if (Expected[I] == TokenKind::invalid ||
+          Expected[I] == TokenKind::end_of_stream)
         continue;
       hlsl::RootSignatureToken Result = Lexer.ConsumeToken();
-      ASSERT_EQ(Result.Kind, Expected[I]);
+      ASSERT_EQ(Result.TokKind, Expected[I]);
       Computed.push_back(Result);
     }
     hlsl::RootSignatureToken EndOfStream = Lexer.ConsumeToken();
-    ASSERT_EQ(EndOfStream.Kind, hlsl::TokenKind::end_of_stream);
+    ASSERT_EQ(EndOfStream.TokKind, TokenKind::end_of_stream);
     ASSERT_TRUE(Lexer.EndOfBuffer());
   }
 };
@@ -49,11 +50,10 @@ TEST_F(LexHLSLRootSignatureTest, ValidLexNumbersTest) {
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
 
   SmallVector<hlsl::RootSignatureToken> Tokens;
-  SmallVector<hlsl::TokenKind> Expected = {
-      hlsl::TokenKind::pu_minus,    hlsl::TokenKind::int_literal,
-      hlsl::TokenKind::int_literal, hlsl::TokenKind::pu_plus,
-      hlsl::TokenKind::int_literal, hlsl::TokenKind::pu_plus,
-      hlsl::TokenKind::int_literal,
+  SmallVector<TokenKind> Expected = {
+      TokenKind::pu_minus,    TokenKind::int_literal, TokenKind::int_literal,
+      TokenKind::pu_plus,     TokenKind::int_literal, TokenKind::pu_plus,
+      TokenKind::int_literal,
   };
   CheckTokens(Lexer, Tokens, Expected);
 
@@ -85,6 +85,8 @@ TEST_F(LexHLSLRootSignatureTest, ValidLexAllTokensTest) {
 
     (),|=+-
 
+    RootSignature
+
     DescriptorTable
 
     CBV SRV UAV Sampler
@@ -112,8 +114,8 @@ TEST_F(LexHLSLRootSignatureTest, ValidLexAllTokensTest) {
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
 
   SmallVector<hlsl::RootSignatureToken> Tokens;
-  SmallVector<hlsl::TokenKind> Expected = {
-#define TOK(NAME) hlsl::TokenKind::NAME,
+  SmallVector<TokenKind> Expected = {
+#define TOK(NAME, SPELLING) TokenKind::NAME,
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   };
 
@@ -134,17 +136,17 @@ TEST_F(LexHLSLRootSignatureTest, ValidCaseInsensitiveKeywordsTest) {
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
 
   SmallVector<hlsl::RootSignatureToken> Tokens;
-  SmallVector<hlsl::TokenKind> Expected = {
-      hlsl::TokenKind::kw_DescriptorTable,
-      hlsl::TokenKind::kw_CBV,
-      hlsl::TokenKind::kw_SRV,
-      hlsl::TokenKind::kw_UAV,
-      hlsl::TokenKind::kw_Sampler,
-      hlsl::TokenKind::kw_space,
-      hlsl::TokenKind::kw_visibility,
-      hlsl::TokenKind::kw_flags,
-      hlsl::TokenKind::kw_numDescriptors,
-      hlsl::TokenKind::kw_offset,
+  SmallVector<TokenKind> Expected = {
+      TokenKind::kw_DescriptorTable,
+      TokenKind::kw_CBV,
+      TokenKind::kw_SRV,
+      TokenKind::kw_UAV,
+      TokenKind::kw_Sampler,
+      TokenKind::kw_space,
+      TokenKind::kw_visibility,
+      TokenKind::kw_flags,
+      TokenKind::kw_numDescriptors,
+      TokenKind::kw_offset,
   };
 
   CheckTokens(Lexer, Tokens, Expected);
@@ -160,26 +162,26 @@ TEST_F(LexHLSLRootSignatureTest, ValidLexPeekTest) {
 
   // Test basic peek
   hlsl::RootSignatureToken Res = Lexer.PeekNextToken();
-  ASSERT_EQ(Res.Kind, hlsl::TokenKind::pu_r_paren);
+  ASSERT_EQ(Res.TokKind, TokenKind::pu_r_paren);
 
   // Ensure it doesn't peek past one element
   Res = Lexer.PeekNextToken();
-  ASSERT_EQ(Res.Kind, hlsl::TokenKind::pu_r_paren);
+  ASSERT_EQ(Res.TokKind, TokenKind::pu_r_paren);
 
   Res = Lexer.ConsumeToken();
-  ASSERT_EQ(Res.Kind, hlsl::TokenKind::pu_r_paren);
+  ASSERT_EQ(Res.TokKind, TokenKind::pu_r_paren);
 
   // Invoke after reseting the NextToken
   Res = Lexer.PeekNextToken();
-  ASSERT_EQ(Res.Kind, hlsl::TokenKind::int_literal);
+  ASSERT_EQ(Res.TokKind, TokenKind::int_literal);
 
   // Ensure we can still consume the second token
   Res = Lexer.ConsumeToken();
-  ASSERT_EQ(Res.Kind, hlsl::TokenKind::int_literal);
+  ASSERT_EQ(Res.TokKind, TokenKind::int_literal);
 
   // Ensure end of stream token
   Res = Lexer.PeekNextToken();
-  ASSERT_EQ(Res.Kind, hlsl::TokenKind::end_of_stream);
+  ASSERT_EQ(Res.TokKind, TokenKind::end_of_stream);
 }
 
 } // anonymous namespace

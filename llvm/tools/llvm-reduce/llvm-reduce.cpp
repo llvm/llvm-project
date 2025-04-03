@@ -203,7 +203,7 @@ int main(int Argc, char **Argv) {
   // interestingness checks.
   if (!Tester.getProgram().isReduced(Tester)) {
     errs() << "\nInput isn't interesting! Verify interesting-ness test\n";
-    return 1;
+    return 2;
   }
 
   // Try to reduce code

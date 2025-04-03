@@ -32,10 +32,9 @@ protected:
 
 TEST_F(SBMutexTest, LockTest) {
   lldb::SBTarget target = debugger.GetDummyTarget();
-
+  std::atomic<bool> locked = false;
   std::future<void> f;
   {
-    std::atomic<bool> locked = false;
     lldb::SBMutex lock = target.GetAPIMutex();
     std::lock_guard<lldb::SBMutex> lock_guard(lock);
     ASSERT_FALSE(locked.exchange(true));

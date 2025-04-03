@@ -88,8 +88,8 @@ void foo() {
 #pragma acc parallel wait
   while(true);
 
-// CHECK: #pragma acc parallel wait()
-#pragma acc parallel wait()
+// CHECK: #pragma acc parallel wait
+#pragma acc parallel wait
   while(true);
 
 // CHECK: #pragma acc parallel wait(*iPtr, i)

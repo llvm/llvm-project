@@ -208,7 +208,7 @@ void RegisterContextUnwind::InitializeZerothFrame() {
   m_fast_unwind_plan_sp = GetFastUnwindPlanForFrame();
   m_full_unwind_plan_sp = GetFullUnwindPlanForFrame();
 
-  const UnwindPlan::Row *active_row;
+  const UnwindPlan::Row *active_row = nullptr;
   lldb::RegisterKind row_register_kind = eRegisterKindGeneric;
 
   // If we have LanguageRuntime UnwindPlan for this unwind, use those

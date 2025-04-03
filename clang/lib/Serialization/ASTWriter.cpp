@@ -4267,7 +4267,7 @@ public:
       auto ID = Writer.GetDeclRef(DeclForLocalLookup);
 
       if (isModuleLocalDecl(D)) {
-        if (std::optional<unsigned> PrimaryModuleHash =
+        if (UnsignedOrNone PrimaryModuleHash =
                 getPrimaryModuleHash(D->getOwningModule())) {
           auto Key = std::make_pair(D->getDeclName(), *PrimaryModuleHash);
           auto Iter = ModuleLocalDeclsMap.find(Key);
@@ -7022,8 +7022,6 @@ void ASTRecordWriter::AddNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) {
       break;
 
     case NestedNameSpecifier::TypeSpec:
-    case NestedNameSpecifier::TypeSpecWithTemplate:
-      Record->push_back(Kind == NestedNameSpecifier::TypeSpecWithTemplate);
       AddTypeRef(NNS.getTypeLoc().getType());
       AddTypeLoc(NNS.getTypeLoc());
       AddSourceLocation(NNS.getLocalSourceRange().getEnd());
