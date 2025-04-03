@@ -23678,6 +23678,29 @@ static SDValue combineV3I8LoadExt(LoadSDNode *LD, SelectionDAG &DAG) {
   return DAG.getMergeValues({Extract, TokenFactor}, DL);
 }
 
+// Replace packed scalable loads with fixed loads when vscale_range(1, 1).
+// This enables further optimisations such as LDP folds.
+static SDValue combineVScale1Load(LoadSDNode *LD, SelectionDAG &DAG,
+                                  TargetLowering::DAGCombinerInfo &DCI,
+                                  const AArch64Subtarget *Subtarget) {
+  EVT MemVT = LD->getMemoryVT();
+  if (!DCI.isBeforeLegalize() || !Subtarget->isLittleEndian() ||
+      !Subtarget->hasNEON() || !MemVT.isScalableVector() ||
+      LD->getExtensionType() != ISD::NON_EXTLOAD ||
+      MemVT.getSizeInBits().getKnownMinValue() != 128 ||
+      Subtarget->getMaxSVEVectorSizeInBits() != 128)
+    return SDValue();
+
+  SDLoc DL(LD);
+  EVT NewVT = EVT::getVectorVT(*DAG.getContext(), MemVT.getVectorElementType(),
+                               MemVT.getVectorMinNumElements());
+  SDValue NewLoad = DAG.getLoad(
+      NewVT, DL, LD->getChain(), LD->getBasePtr(), LD->getPointerInfo(),
+      LD->getOriginalAlign(), LD->getMemOperand()->getFlags(), LD->getAAInfo());
+  SDValue Insert = convertToScalableVector(DAG, MemVT, NewLoad);
+  return DAG.getMergeValues({Insert, NewLoad.getValue(1)}, DL);
+}
+
 // Perform TBI simplification if supported by the target and try to break up
 // nontemporal loads larger than 256-bits loads for odd types so LDNPQ 256-bit
 // load instructions can be selected.
@@ -23713,6 +23736,9 @@ static SDValue performLOADCombine(SDNode *N,
     return SDValue(N, 0);
 
   if (SDValue Res = combineV3I8LoadExt(LD, DAG))
+    return Res;
+
+  if (SDValue Res = combineVScale1Load(LD, DAG, DCI, Subtarget))
     return Res;
 
   if (!LD->isNonTemporal())
@@ -23973,6 +23999,29 @@ static SDValue combineI8TruncStore(StoreSDNode *ST, SelectionDAG &DAG,
   return Chain;
 }
 
+// Replace packed scalable stores with fixed stores when vscale_range(1, 1).
+static SDValue combineVScale1Store(StoreSDNode *ST, SelectionDAG &DAG,
+                                   TargetLowering::DAGCombinerInfo &DCI,
+                                   const AArch64Subtarget *Subtarget) {
+  SDValue Value = ST->getValue();
+  EVT ValueVT = Value.getValueType();
+  if (!DCI.isBeforeLegalize() || !Subtarget->isLittleEndian() ||
+      !Subtarget->hasNEON() || !ValueVT.isScalableVector() ||
+      ST->isTruncatingStore() ||
+      ValueVT.getSizeInBits().getKnownMinValue() != 128 ||
+      Subtarget->getMaxSVEVectorSizeInBits() != 128)
+    return SDValue();
+
+  SDLoc DL(ST);
+  EVT NewVT =
+      EVT::getVectorVT(*DAG.getContext(), ValueVT.getVectorElementType(),
+                       ValueVT.getVectorMinNumElements());
+  SDValue NewValue = convertFromScalableVector(DAG, NewVT, Value);
+  return DAG.getStore(ST->getChain(), DL, NewValue, ST->getBasePtr(),
+                      ST->getPointerInfo(), ST->getOriginalAlign(),
+                      ST->getMemOperand()->getFlags(), ST->getAAInfo());
+}
+
 static unsigned getFPSubregForVT(EVT VT) {
   assert(VT.isSimple() && "Expected simple VT");
   switch (VT.getSimpleVT().SimpleTy) {
@@ -24019,6 +24068,9 @@ static SDValue performSTORECombine(SDNode *N,
   }
 
   if (SDValue Res = combineI8TruncStore(ST, DAG, Subtarget))
+    return Res;
+
+  if (SDValue Res = combineVScale1Store(ST, DAG, DCI, Subtarget))
     return Res;
 
   // If this is an FP_ROUND followed by a store, fold this into a truncating
