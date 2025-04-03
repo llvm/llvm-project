@@ -181,7 +181,11 @@ class MapInfoFinalizationPass
     return builder.create<mlir::omp::MapInfoOp>(
         loc, baseAddrAddr.getType(), descriptor,
         mlir::TypeAttr::get(underlyingVarType),
-        builder.getIntegerAttr(builder.getIntegerType(64, false), mapType),
+        builder.getIntegerAttr(
+            builder.getIntegerType(64, false),
+            llvm::to_underlying(llvm::omp::OpenMPOffloadMappingFlags(mapType) |
+                                llvm::omp::OpenMPOffloadMappingFlags::
+                                    OMP_MAP_DESCRIPTOR_BASE_ADDR)),
         builder.getAttr<mlir::omp::VariableCaptureKindAttr>(
             mlir::omp::VariableCaptureKind::ByRef),
         baseAddrAddr, /*members=*/mlir::SmallVector<mlir::Value>{},
@@ -246,7 +250,10 @@ class MapInfoFinalizationPass
     using mapFlags = llvm::omp::OpenMPOffloadMappingFlags;
     if (llvm::isa_and_nonnull<mlir::omp::TargetExitDataOp,
                               mlir::omp::TargetUpdateOp>(target))
-      return mapTypeFlag;
+      return llvm::to_underlying(
+          mapFlags(mapTypeFlag) |
+          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DESCRIPTOR);
+
     mapFlags flags = mapFlags::OMP_MAP_TO |
                      (mapFlags(mapTypeFlag) & mapFlags::OMP_MAP_IMPLICIT);
     // Descriptors for objects will always be copied. This is because the

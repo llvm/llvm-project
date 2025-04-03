@@ -104,7 +104,8 @@ public:
   bool processCopyin() const;
   bool processCopyprivate(mlir::Location currentLocation,
                           mlir::omp::CopyprivateClauseOps &result) const;
-  bool processDepend(mlir::omp::DependClauseOps &result) const;
+  bool processDepend(lower::SymMap &symMap, lower::StatementContext &stmtCtx,
+                     mlir::omp::DependClauseOps &result) const;
   bool
   processEnter(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
   bool processIf(omp::clause::If::DirectiveNameModifier directiveName,
@@ -174,7 +175,8 @@ private:
       std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
       llvm::SmallVectorImpl<mlir::Value> &mapVars,
       llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,
-      llvm::StringRef mapperIdNameRef = "") const;
+      llvm::StringRef mapperIdNameRef = "",
+      bool isMotionModifier = false) const;
 
   lower::AbstractConverter &converter;
   semantics::SemanticsContext &semaCtx;

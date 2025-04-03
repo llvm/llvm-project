@@ -1,4 +1,4 @@
-! Test -flang-deprecated-hlfir, -flang-experimental-hlfir (flang-new), and
+! Test -flang-deprecated-hlfir, -flang-experimental-hlfir (flang), and
 ! -hlfir (bbc), -emit-hlfir, -emit-fir flags
 ! RUN: %flang_fc1 -emit-hlfir -o - %s | FileCheck --check-prefix HLFIR --check-prefix ALL %s
 ! RUN: bbc -emit-hlfir -o - %s | FileCheck --check-prefix HLFIR --check-prefix ALL %s

@@ -1,15 +1,12 @@
-! Tests that locally destroyed values in a `do concurrent` loop are properly
-! handled. Locally destroyed values are those values for which the Fortran runtime
-! calls `@_FortranADestroy` inside the loops body. If these values are allocated
-! outside the loop, and the loop is mapped to OpenMP, then a runtime error would
-! occur due to multiple teams trying to access the same allocation.
+! Tests that "loop-local values" are properly handled by localizing them to the
+! body of the loop nest. See `collectLoopLocalValues` and `localizeLoopLocalValue`
+! for a definition of "loop-local values" and how they are handled.
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fdo-concurrent-parallel=host %s -o - \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fdo-concurrent-to-openmp=host %s -o - \
 ! RUN:   | FileCheck %s --check-prefixes=COMMON
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fdo-concurrent-parallel=device %s -o - \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fdo-concurrent-to-openmp=device %s -o - \
 ! RUN:   | FileCheck %s --check-prefixes=COMMON,DEVICE
-
 module struct_mod
     type test_struct
         integer, allocatable :: x_

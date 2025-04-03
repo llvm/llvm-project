@@ -2,7 +2,7 @@
 ! Tests mapping of a basic `do concurrent` loop to
 ! `!$omp target teams distribute parallel do`.
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fdo-concurrent-parallel=device %s -o - \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fdo-concurrent-to-openmp=device %s -o - \
 ! RUN:   | FileCheck %s
 
 program do_concurrent_shape

@@ -49,6 +49,8 @@ defm constexpr_ctor_missing_init : CXX20Compat<
 defm adl_only_template_id : CXX20Compat<
   "use of function template name with no prior declaration in function call "
   "with explicit template arguments is">;
+defm ctad_for_alias_templates
+    : CXX20Compat<"class template argument deduction for alias templates is">;
 
 // C++23 compatibility with C++20 and earlier.
 defm constexpr_static_var : CXX23Compat<
@@ -61,7 +63,7 @@ defm decomp_decl_cond : CXX26Compat<"structured binding declaration in a conditi
 
 // Compatibility warnings duplicated across multiple language versions.
 foreach std = [14, 20, 23] in {
-  defm constexpr_body_invalid_stmt : CXXCompat<
+  defm cxx#std#_constexpr_body_invalid_stmt : CXXCompat<
     "use of this statement in a constexpr %select{function|constructor}0 is", std>;
 }
 
@@ -545,7 +547,7 @@ def warn_qual_return_type : Warning<
   InGroup<IgnoredQualifiers>, DefaultIgnore;
 def warn_qual_base_type : Warning<
   "'%0' qualifier%s1 on base class type %2 %plural{1:has|:have}1 no effect">,
-  InGroup<IgnoredQualifiers>, DefaultIgnore;
+  InGroup<IgnoredBaseClassQualifiers>, DefaultIgnore;
 
 def warn_deprecated_redundant_constexpr_static_def : Warning<
   "out-of-line definition of constexpr static data member is redundant "
@@ -3549,6 +3551,10 @@ def err_conflicting_codeseg_attribute : Error<
   "conflicting code segment specifiers">;
 def warn_duplicate_codeseg_attribute : Warning<
   "duplicate code segment specifiers">, InGroup<Section>;
+
+def err_attribute_patchable_function_entry_invalid_section
+    : Error<"section argument to 'patchable_function_entry' attribute is not "
+            "valid for this target: %0">;
 
 def err_anonymous_property: Error<
   "anonymous property is not supported">;
@@ -7022,6 +7028,8 @@ def err_sizeof_alignof_typeof_bitfield : Error<
   "bit-field">;
 def err_alignof_member_of_incomplete_type : Error<
   "invalid application of 'alignof' to a field of a class still being defined">;
+def err_countof_arg_not_array_type : Error<
+  "'_Countof' requires an argument of array type; %0 invalid">;
 def err_vecstep_non_scalar_vector_type : Error<
   "'vec_step' requires built-in scalar or vector type, %0 invalid">;
 def err_offsetof_incomplete_type : Error<
@@ -7029,10 +7037,10 @@ def err_offsetof_incomplete_type : Error<
 def err_offsetof_record_type : Error<
   "offsetof requires struct, union, or class type, %0 invalid">;
 def err_offsetof_array_type : Error<"offsetof requires array type, %0 invalid">;
-def ext_offsetof_non_pod_type : ExtWarn<"offset of on non-POD type %0">,
+def ext_offsetof_non_pod_type : ExtWarn<"'offsetof' on non-POD type %0">,
   InGroup<InvalidOffsetof>;
 def ext_offsetof_non_standardlayout_type : ExtWarn<
-  "offset of on non-standard-layout type %0">, InGroup<InvalidOffsetof>;
+  "'offsetof' on non-standard-layout type %0">, InGroup<InvalidOffsetof>;
 def err_offsetof_bitfield : Error<"cannot compute offset of bit-field %0">;
 def err_offsetof_field_of_virtual_base : Error<
   "invalid application of 'offsetof' to a field of a virtual base">;
@@ -8442,11 +8450,6 @@ let CategoryName = "Lambda Issue" in {
   def warn_cxx17_compat_lambda_def_ctor_assign : Warning<
     "%select{default construction|assignment}0 of lambda is incompatible with "
     "C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
-
-  // C++20 class template argument deduction for alias templates.
-  def warn_cxx17_compat_ctad_for_alias_templates : Warning<
-  "class template argument deduction for alias templates is incompatible with "
-  "C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
 }
 
 def err_return_in_captured_stmt : Error<
@@ -9346,11 +9349,11 @@ def warn_unused_container_subscript_expr : Warning<
 def warn_unused_call : Warning<
   "ignoring return value of function declared with %0 attribute">,
   InGroup<UnusedValue>;
-def warn_unused_constructor : Warning<
-  "ignoring temporary created by a constructor declared with %0 attribute">,
+def warn_unused_return_type : Warning<
+  "ignoring %select{return value|temporary}0 of type %2 declared with %1 attribute%select{|: %4}3">,
   InGroup<UnusedValue>;
-def warn_unused_constructor_msg : Warning<
-  "ignoring temporary created by a constructor declared with %0 attribute: %1">,
+def warn_unused_constructor : Warning<
+  "ignoring temporary created by a constructor declared with %0 attribute%select{|: %2}1">,
   InGroup<UnusedValue>;
 def warn_side_effects_unevaluated_context : Warning<
   "expression with side effects has no effect in an unevaluated context">,
@@ -9359,10 +9362,7 @@ def warn_side_effects_typeid : Warning<
   "expression with side effects will be evaluated despite being used as an "
   "operand to 'typeid'">, InGroup<PotentiallyEvaluatedExpression>;
 def warn_unused_result : Warning<
-  "ignoring return value of function declared with %0 attribute">,
-  InGroup<UnusedResult>;
-def warn_unused_result_msg : Warning<
-  "ignoring return value of function declared with %0 attribute: %1">,
+  "ignoring return value of function declared with %0 attribute%select{|: %2}1">,
   InGroup<UnusedResult>;
 def warn_unused_result_typedef_unsupported_spelling : Warning<
   "'[[%select{nodiscard|gnu::warn_unused_result}0]]' attribute ignored when "
@@ -13057,6 +13057,6 @@ def err_acc_decl_for_routine
     : Error<"expected function or lambda declaration for 'routine' construct">;
 
 // AMDGCN builtins diagnostics
-def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;
-def note_amdgcn_global_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
+def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;
+def note_amdgcn_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
 } // end of sema component.

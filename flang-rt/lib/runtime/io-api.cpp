@@ -31,24 +31,9 @@
 #include <memory>
 
 namespace Fortran::runtime::io {
+#ifdef RT_OFFLOAD_IO
 RT_EXT_API_GROUP_BEGIN
-
-RT_API_ATTRS const char *InquiryKeywordHashDecode(
-    char *buffer, std::size_t n, InquiryKeywordHash hash) {
-  if (n < 1) {
-    return nullptr;
-  }
-  char *p{buffer + n};
-  *--p = '\0';
-  while (hash > 1) {
-    if (p < buffer) {
-      return nullptr;
-    }
-    *--p = 'A' + (hash % 26);
-    hash /= 26;
-  }
-  return hash == 1 ? p : nullptr;
-}
+#endif
 
 template <Direction DIR>
 RT_API_ATTRS Cookie BeginInternalArrayListIO(const Descriptor &descriptor,
@@ -1315,5 +1300,7 @@ enum Iostat IODEF(CheckUnitNumberInRange128)(common::int128_t unit,
 }
 #endif
 
+#ifdef RT_OFFLOAD_IO
 RT_EXT_API_GROUP_END
+#endif
 } // namespace Fortran::runtime::io

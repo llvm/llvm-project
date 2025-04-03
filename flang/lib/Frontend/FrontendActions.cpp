@@ -243,7 +243,7 @@ bool CodeGenAction::beginSourceFileAction() {
     llvm::SMDiagnostic err;
     llvmModule = llvm::parseIRFile(getCurrentInput().getFile(), err, *llvmCtx);
     if (!llvmModule || llvm::verifyModule(*llvmModule, &llvm::errs())) {
-      err.print("flang-new", llvm::errs());
+      err.print("flang", llvm::errs());
       unsigned diagID = ci.getDiagnostics().getCustomDiagID(
           clang::DiagnosticsEngine::Error, "Could not parse IR");
       ci.getDiagnostics().Report(diagID);
@@ -361,8 +361,17 @@ bool CodeGenAction::beginSourceFileAction() {
       !isOpenMPEnabled) {
     unsigned diagID = ci.getDiagnostics().getCustomDiagID(
         clang::DiagnosticsEngine::Warning,
-        "lowering `do concurrent` loops to OpenMP is only supported if "
-        "OpenMP is enabled");
+        "OpenMP is required for lowering `do concurrent` loops to OpenMP."
+        "Enable OpenMP using `-fopenmp`."
+        "`do concurrent` loops will be serialized.");
+    ci.getDiagnostics().Report(diagID);
+    opts.doConcurrentMappingKind = DoConcurrentMappingKind::DCMK_None;
+  }
+
+  if (opts.doConcurrentMappingKind != DoConcurrentMappingKind::DCMK_None) {
+    unsigned diagID = ci.getDiagnostics().getCustomDiagID(
+        clang::DiagnosticsEngine::Warning,
+        "Mapping `do concurrent` to OpenMP is still experimental.");
     ci.getDiagnostics().Report(diagID);
   }
 
@@ -955,6 +964,7 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   pto.LoopUnrolling = opts.UnrollLoops;
   pto.LoopInterleaving = opts.UnrollLoops;
   pto.LoopVectorization = opts.VectorizeLoop;
+  pto.SLPVectorization = opts.VectorizeSLP;
 
   llvm::PassBuilder pb(targetMachine, pto, pgoOpt, &pic);
 

@@ -14,6 +14,7 @@
 #include "OpenMP/OMPT/Callback.h"
 #include "OpenMP/OMPT/OmptCommonDefs.h"
 #include "OpenMP/OMPT/OmptTracing.h"
+#include "OffloadPolicy.h"
 #include "Shared/Debug.h"
 #include "Shared/Profile.h"
 #include "device.h"
@@ -33,6 +34,11 @@ PluginManager *PM = nullptr;
 
 void PluginManager::init() {
   TIMESCOPE();
+  if (OffloadPolicy::isOffloadDisabled()) {
+    DP("Offload is disabled. Skipping plugin initialization\n");
+    return;
+  }
+
   DP("Loading RTLs...\n");
 
   // Attempt to create an instance of each supported plugin.
@@ -57,6 +63,10 @@ void PluginManager::init() {
 
 void PluginManager::deinit() {
   TIMESCOPE();
+  if (OffloadPolicy::isOffloadDisabled()) {
+    DP("Offload is disabled. Skipping plugin deinitialization\n");
+    return;
+  }
   DP("Unloading RTLs...\n");
 
 #ifdef OMPT_SUPPORT

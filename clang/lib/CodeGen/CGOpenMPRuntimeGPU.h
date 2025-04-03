@@ -169,15 +169,17 @@ public:
   llvm::Value *initSpecializedKernel(CodeGenFunction &CGF);
 
   std::pair<llvm::Value *, llvm::Value *>
-  getXteamRedFunctionPtrs(CodeGenFunction &CGF, llvm::Type *RedVarType);
+  getXteamRedFunctionPtrs(CodeGenFunction &CGF, llvm::Type *RedVarType,
+                          CodeGenModule::XteamRedOpKind Opcode);
 
-  /// Call cross-team sum
-  llvm::Value *getXteamRedSum(CodeGenFunction &CGF, llvm::Value *Val,
-                              llvm::Value *SumPtr, llvm::Value *DTeamVals,
-                              llvm::Value *DTeamsDonePtr,
-                              llvm::Value *ThreadStartIndex,
-                              llvm::Value *NumTeams, int BlockSize,
-                              bool IsFast);
+  /// Generate a call to cross-team operation.
+  llvm::Value *getXteamRedOperation(CodeGenFunction &CGF, llvm::Value *Val,
+                                    llvm::Value *OrigVarPtr,
+                                    llvm::Value *DTeamVals,
+                                    llvm::Value *DTeamsDonePtr,
+                                    llvm::Value *ThreadStartIndex,
+                                    llvm::Value *NumTeams, int BlockSize,
+                                    CodeGenModule::XteamRedOpKind, bool IsFast);
 
   /// Emit call to Cross-team scan entry points
   llvm::Value *

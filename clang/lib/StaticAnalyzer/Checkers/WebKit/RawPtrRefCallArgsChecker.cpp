@@ -286,15 +286,12 @@ public:
         overloadedOperatorType == OO_PipePipe)
       return true;
 
-    if (isCtorOfSafePtr(Callee))
+    if (isCtorOfSafePtr(Callee) || isPtrConversion(Callee))
       return true;
 
     auto name = safeGetName(Callee);
     if (name == "adoptRef" || name == "getPtr" || name == "WeakPtr" ||
-        name == "dynamicDowncast" || name == "downcast" ||
-        name == "checkedDowncast" || name == "uncheckedDowncast" ||
-        name == "bitwise_cast" || name == "is" || name == "equal" ||
-        name == "hash" || name == "isType" ||
+        name == "is" || name == "equal" || name == "hash" || name == "isType" ||
         // FIXME: Most/all of these should be implemented via attributes.
         name == "equalIgnoringASCIICase" ||
         name == "equalIgnoringASCIICaseCommon" ||

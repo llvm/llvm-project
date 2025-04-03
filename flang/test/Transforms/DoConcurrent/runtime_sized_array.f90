@@ -3,7 +3,7 @@
 ! to be handled by localizing these region outsiders by either cloning them in
 ! the region or in case we cannot do that, map them and use the mapped values.
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fdo-concurrent-parallel=device %s -o - \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fdo-concurrent-to-openmp=device %s -o - \
 ! RUN:   | FileCheck %s
 
 subroutine foo(n)

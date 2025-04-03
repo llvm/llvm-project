@@ -1331,7 +1331,7 @@ bool PolynomialMultiplyRecognize::convertShiftsToLeft(BasicBlock *LoopB,
 
   // Find the set of all values affected by the shift cycles, i.e. all
   // cycled values, and (recursively) all their users.
-  ValueSeq Users(Cycled.begin(), Cycled.end());
+  ValueSeq Users(llvm::from_range, Cycled);
   for (unsigned i = 0; i < Users.size(); ++i) {
     Value *V = Users[i];
     if (!isa<IntegerType>(V->getType()))
@@ -1359,7 +1359,7 @@ bool PolynomialMultiplyRecognize::convertShiftsToLeft(BasicBlock *LoopB,
     return false;
 
   // Verify that high bits remain zero.
-  ValueSeq Internal(Users.begin(), Users.end());
+  ValueSeq Internal(llvm::from_range, Users);
   ValueSeq Inputs;
   for (unsigned i = 0; i < Internal.size(); ++i) {
     auto *R = dyn_cast<Instruction>(Internal[i]);
@@ -2303,10 +2303,9 @@ CleanupAndExit:
 bool HexagonLoopIdiomRecognize::coverLoop(Loop *L,
       SmallVectorImpl<Instruction*> &Insts) const {
   SmallSet<BasicBlock*,8> LoopBlocks;
-  for (auto *B : L->blocks())
-    LoopBlocks.insert(B);
+  LoopBlocks.insert_range(L->blocks());
 
-  SetVector<Instruction*> Worklist(Insts.begin(), Insts.end());
+  SetVector<Instruction *> Worklist(llvm::from_range, Insts);
 
   // Collect all instructions from the loop that the instructions in Insts
   // depend on (plus their dependencies, etc.).  These instructions will

@@ -313,13 +313,13 @@ static int prepareAndSubmitData(DeviceTy &Device, void *HstPtrBegin,
                                 TargetPointerResultTy &PointerTpr,
                                 void *PointerHstPtrBegin,
                                 void *PointerTgtPtrBegin,
-                                AsyncInfoTy &AsyncInfo) {
+                                AsyncInfoTy &AsyncInfo, bool IsDescBaseAddr) {
   uint64_t Delta = (uint64_t)HstPtrBegin - (uint64_t)HstPtrBase;
   void *ExpectedTgtPtrBase = (void *)((uint64_t)LocalTgtPtrBegin - Delta);
 
-  if (PointerTpr.getEntry()->addShadowPointer(
-          ShadowPtrInfoTy{(void **)PointerHstPtrBegin, HstPtrBase,
-                          (void **)PointerTgtPtrBegin, ExpectedTgtPtrBase})) {
+  if (PointerTpr.getEntry()->addShadowPointer(ShadowPtrInfoTy{
+          (void **)PointerHstPtrBegin, HstPtrBase, (void **)PointerTgtPtrBegin,
+          ExpectedTgtPtrBase, IsDescBaseAddr})) {
     DP("USM_SPECIAL: Update pointer (" DPxMOD ") -> [" DPxMOD "]\n",
        DPxPTR(PointerTgtPtrBegin), DPxPTR(LocalTgtPtrBegin));
 
@@ -498,10 +498,10 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     if ((ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ) &&
         (!IsHostPtr || (PointerTpr.getEntry() != nullptr &&
                         PointerHstPtrBegin != PointerTgtPtrBegin)))
-      if (prepareAndSubmitData(Device, HstPtrBegin, HstPtrBase, TgtPtrBegin,
-                               PointerTpr, PointerHstPtrBegin,
-                               PointerTgtPtrBegin,
-                               AsyncInfo) != OFFLOAD_SUCCESS)
+      if (prepareAndSubmitData(
+              Device, HstPtrBegin, HstPtrBase, TgtPtrBegin, PointerTpr,
+              PointerHstPtrBegin, PointerTgtPtrBegin, AsyncInfo,
+              ArgTypes[I] & OMP_MAP_DESCRIPTOR_BASE_ADDR) != OFFLOAD_SUCCESS)
         return OFFLOAD_FAIL;
 
     // Check if variable can be used on the device:
@@ -593,6 +593,15 @@ postProcessingTargetDataEnd(DeviceTy *Device,
     const bool HasFrom = ArgType & OMP_TGT_MAPTYPE_FROM;
     if (HasFrom) {
       Entry->foreachShadowPointerInfo([&](const ShadowPtrInfoTy &ShadowPtr) {
+        // For Fortran descriptors/dope vectors, it is possible, we have
+        // deallocated the data on host and the descriptor persists as it is
+        // a separate entity, and we do not want to map back the data to host
+        // in these cases when releasing the dope vector.
+        // TODO/FIXME: Look into a better longterm solution, such as a different
+        // mapping combination for descriptors or performing a similar base
+        // address skip that we've done elsewhere in the omptarget runtime.
+        if (*ShadowPtr.HstPtrAddr == nullptr && ShadowPtr.IsDescriptorBaseAddr)
+          return OFFLOAD_SUCCESS;
         *ShadowPtr.HstPtrAddr = ShadowPtr.HstPtrVal;
         DP("Restoring original host pointer value " DPxMOD " for host "
            "pointer " DPxMOD "\n",
@@ -835,6 +844,17 @@ static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
       AsyncInfo.addPostProcessingFunction([=]() -> int {
         int Ret = Entry->foreachShadowPointerInfo(
             [&](const ShadowPtrInfoTy &ShadowPtr) {
+              // For Fortran descriptors/dope vectors, it is possible, we have
+              // deallocated the data on host and the descriptor persists as it
+              // is a separate entity, and we do not want to map back the data
+              // to host in these cases when releasing the dope vector.
+              // TODO/FIXME: Look into a better longterm solution, such as a
+              // different mapping combination for descriptors or performing a
+              // similar base address skip that we've done elsewhere in the
+              // omptarget runtime.
+              if (*ShadowPtr.HstPtrAddr == nullptr &&
+                  ShadowPtr.IsDescriptorBaseAddr)
+                return OFFLOAD_SUCCESS;
               *ShadowPtr.HstPtrAddr = ShadowPtr.HstPtrVal;
               DP("Restoring original host pointer value " DPxMOD
                  " for host pointer " DPxMOD "\n",

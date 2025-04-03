@@ -571,11 +571,6 @@ public:
                             Register SrcReg2, int64_t CmpMask, int64_t CmpValue,
                             const MachineRegisterInfo *MRI) const override;
 
-  MachineInstr *optimizeLoadInstr(MachineInstr &MI,
-                                  const MachineRegisterInfo *MRI,
-                                  Register &FoldAsLoadDefReg,
-                                  MachineInstr *&DefMI) const override;
-
   bool foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
                      MachineRegisterInfo *MRI) const override;
 

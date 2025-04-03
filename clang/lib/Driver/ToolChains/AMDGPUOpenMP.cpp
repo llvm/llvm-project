@@ -269,10 +269,11 @@ const char *amdgpu::dlr::getLinkCommandArgs(
           << "libomptarget-amdgpu.bc";
     }
 
-    // Add the generic set of libraries, OpenMP subset only
-    BCLibs.append(amdgpu::dlr::getCommonDeviceLibNames(
-        C.getArgs(), TC.getSanitizerArgs(C.getArgs()), C.getDriver(),
-        GPUArch.str(), /* isOpenMP=*/true, RocmInstallation));
+    if (!Args.hasArg(options::OPT_no_offloadlib))
+      // Add the generic set of libraries, OpenMP subset only
+      BCLibs.append(amdgpu::dlr::getCommonDeviceLibNames(
+          C.getArgs(), TC.getSanitizerArgs(C.getArgs()), C.getDriver(),
+          GPUArch.str(), /* isOpenMP=*/true, RocmInstallation));
   }
 
   llvm::for_each(BCLibs, [&](auto BCLib) {

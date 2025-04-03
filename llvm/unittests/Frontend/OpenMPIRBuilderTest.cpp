@@ -2426,7 +2426,7 @@ TEST_F(OpenMPIRBuilderTest, StaticWorkshareLoopTarget) {
   ConstantInt *WorkshareLoopRuntimeCallTripCount =
       dyn_cast<ConstantInt>(WorkshareLoopRuntimeCall->getArgOperand(3));
   EXPECT_NE(WorkshareLoopRuntimeCallTripCount, nullptr);
-  EXPECT_EQ(WorkshareLoopRuntimeCallTripCount->getSExtValue() + 1,
+  EXPECT_EQ(WorkshareLoopRuntimeCallTripCount->getSExtValue(),
             TripCountConstInt->getSExtValue());
 }
 

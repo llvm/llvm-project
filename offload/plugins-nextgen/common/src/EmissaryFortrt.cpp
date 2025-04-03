@@ -52,6 +52,7 @@ bool _FortranAioOutputComplex64(void *cookie, double re, double im);
 bool _FortranAioOutputLogical(void *cookie, bool truth);
 void _FortranAAbort();
 void _FortranAStopStatementText(char *errmsg, int64_t a1, bool a2, bool a3);
+void _FortranAStopStatement(int32_t a1, bool a2, bool a3);
 
 //  Save the cookie because deferred functions have execution reordered.
 static void *_list_started_cookie = nullptr;
@@ -212,6 +213,17 @@ extern void V_FortranAStopStatementText(void *fnptr, ...) {
   bool b3 = (bool)a3;
   _FortranAStopStatementText(errmsg, a1, b2, b3);
 }
+extern void V_FortranAStopStatement(void *fnptr, ...) {
+  va_list args;
+  va_start(args, fnptr);
+  int32_t a1 = va_arg(args, int32_t);
+  uint32_t a2 = va_arg(args, uint32_t);
+  uint32_t a3 = va_arg(args, uint32_t);
+  va_end(args);
+  bool b2 = (bool)a2;
+  bool b3 = (bool)a3;
+  _FortranAStopStatement(a1, b2, b3);
+}
 } // end extern "C"
 
 // Static vars used to defer functions to reorder execution by thread and team.
@@ -365,6 +377,11 @@ extern "C" emis_return_t EmissaryFortrt(char *data, emisArgBuf_t *ab) {
   case _FortranAStopStatementText_idx: {
     defer_for_reorder = false;
     fnptr = (void *)V_FortranAStopStatementText;
+    break;
+  }
+  case _FortranAStopStatement_idx: {
+    defer_for_reorder = false;
+    fnptr = (void *)V_FortranAStopStatement;
     break;
   }
   case _FortranAio_INVALID:

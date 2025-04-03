@@ -1312,6 +1312,16 @@ PreservedAnalyses AddressSanitizerPass::run(Module &M,
   const StackSafetyGlobalInfo *const SSGI =
       ClUseStackSafety ? &MAM.getResult<StackSafetyGlobalAnalysis>(M) : nullptr;
   for (Function &F : M) {
+    if (F.empty())
+      continue;
+    if (F.getLinkage() == GlobalValue::AvailableExternallyLinkage)
+      continue;
+    if (!ClDebugFunc.empty() && ClDebugFunc == F.getName())
+      continue;
+    if (F.getName().starts_with("__asan_"))
+      continue;
+    if (F.isPresplitCoroutine())
+      continue;
     AddressSanitizer FunctionSanitizer(
         M, SSGI, Options.InstrumentationWithCallsThreshold,
         Options.MaxInlinePoisoningSize, Options.CompileKernel, Options.Recover,
@@ -2992,14 +3002,6 @@ bool AddressSanitizer::suppressInstrumentationSiteForDebug(int &Instrumented) {
 
 bool AddressSanitizer::instrumentFunction(Function &F,
                                           const TargetLibraryInfo *TLI) {
-  if (F.empty())
-    return false;
-  if (F.getLinkage() == GlobalValue::AvailableExternallyLinkage) return false;
-  if (!ClDebugFunc.empty() && ClDebugFunc == F.getName()) return false;
-  if (F.getName().starts_with("__asan_")) return false;
-  if (F.isPresplitCoroutine())
-    return false;
-
   bool FunctionModified = false;
 
   // Do not apply any instrumentation for naked functions.
@@ -3438,6 +3440,30 @@ static void findStoresToUninstrumentedArgAllocas(
   }
 }
 
+static StringRef getAllocaName(AllocaInst *AI) {
+  // Alloca could have been renamed for uniqueness. Its true name will have been
+  // recorded as an annotation.
+  if (AI->hasMetadata(LLVMContext::MD_annotation)) {
+    MDTuple *AllocaAnnotations =
+        cast<MDTuple>(AI->getMetadata(LLVMContext::MD_annotation));
+    for (auto &Annotation : AllocaAnnotations->operands()) {
+      if (!isa<MDTuple>(Annotation))
+        continue;
+      auto AnnotationTuple = cast<MDTuple>(Annotation);
+      for (unsigned Index = 0; Index < AnnotationTuple->getNumOperands();
+           Index++) {
+        // All annotations are strings
+        auto MetadataString =
+            cast<MDString>(AnnotationTuple->getOperand(Index));
+        if (MetadataString->getString() == "alloca_name_altered")
+          return cast<MDString>(AnnotationTuple->getOperand(Index + 1))
+              ->getString();
+      }
+    }
+  }
+  return AI->getName();
+}
+
 void FunctionStackPoisoner::processStaticAllocas() {
   if (AllocaVec.empty()) {
     assert(StaticAllocaPoisonCallVec.empty());
@@ -3478,7 +3504,8 @@ void FunctionStackPoisoner::processStaticAllocas() {
   SmallVector<ASanStackVariableDescription, 16> SVD;
   SVD.reserve(AllocaVec.size());
   for (AllocaInst *AI : AllocaVec) {
-    ASanStackVariableDescription D = {AI->getName().data(),
+    StringRef Name = getAllocaName(AI);
+    ASanStackVariableDescription D = {Name.data(),
                                       ASan.getAllocaSizeInBytes(*AI),
                                       0,
                                       AI->getAlign().value(),

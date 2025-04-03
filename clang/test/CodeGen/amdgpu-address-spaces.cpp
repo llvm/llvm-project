@@ -60,10 +60,3 @@ extern "C" [[clang::amdgpu_kernel]] void foo() {
   aaa = 0;
   bbb = 0;
 }
-//.
-// CHECK: attributes #[[ATTR0]] = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-//.
-// CHECK: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
-// CHECK: [[META1:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// CHECK: [[META2:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
-//.

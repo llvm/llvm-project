@@ -23,7 +23,7 @@ printf_*
 f90print*
 fprintf_*
 
-_FortranAio*
+_FortranA*
 __ockl_dm_alloc
 __ockl_dm_dealloc
 __asan*

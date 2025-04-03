@@ -67,8 +67,8 @@ CompilerInvocationBase::~CompilerInvocationBase() = default;
 static bool parseShowColorsArgs(const llvm::opt::ArgList &args,
                                 bool defaultColor = true) {
   // Color diagnostics default to auto ("on" if terminal supports) in the
-  // compiler driver `flang-new` but default to off in the frontend driver
-  // `flang-new -fc1`, needing an explicit OPT_fdiagnostics_color.
+  // compiler driver `flang` but default to off in the frontend driver
+  // `flang -fc1`, needing an explicit OPT_fdiagnostics_color.
   // Support both clang's -f[no-]color-diagnostics and gcc's
   // -f[no-]diagnostics-colors[=never|always|auto].
   enum {
@@ -158,15 +158,16 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
   return true;
 }
 
-static bool parseDoConcurrentMapping(Fortran::frontend::CodeGenOptions &opts,
+static void parseDoConcurrentMapping(Fortran::frontend::CodeGenOptions &opts,
                                      llvm::opt::ArgList &args,
                                      clang::DiagnosticsEngine &diags) {
   llvm::opt::Arg *arg =
-      args.getLastArg(clang::driver::options::OPT_do_concurrent_parallel_EQ);
+      args.getLastArg(clang::driver::options::OPT_fdo_concurrent_to_openmp_EQ);
   if (!arg)
-    return true;
+    return;
 
-  using DoConcurrentMappingKind = Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind;
+  using DoConcurrentMappingKind =
+      Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind;
   std::optional<DoConcurrentMappingKind> val =
       llvm::StringSwitch<std::optional<DoConcurrentMappingKind>>(
           arg->getValue())
@@ -178,10 +179,9 @@ static bool parseDoConcurrentMapping(Fortran::frontend::CodeGenOptions &opts,
   if (!val.has_value()) {
     diags.Report(clang::diag::err_drv_invalid_value)
         << arg->getAsString(args) << arg->getValue();
-    return false;
   }
+
   opts.setDoConcurrentMapping(val.value());
-  return true;
 }
 
 static bool parseVectorLibArg(Fortran::frontend::CodeGenOptions &opts,
@@ -271,6 +271,9 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
 
   if (args.getLastArg(clang::driver::options::OPT_vectorize_loops))
     opts.VectorizeLoop = 1;
+
+  if (args.getLastArg(clang::driver::options::OPT_vectorize_slp))
+    opts.VectorizeSLP = 1;
 
   if (args.hasFlag(clang::driver::options::OPT_floop_versioning,
                    clang::driver::options::OPT_fno_loop_versioning, false))
@@ -989,7 +992,7 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     }
   }
 
-  // Default to off for `flang-new -fc1`.
+  // Default to off for `flang -fc1`.
   res.getFrontendOpts().showColors =
       parseShowColorsArgs(args, /*defaultDiagColor=*/false);
 
@@ -1170,22 +1173,16 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     if (args.hasArg(clang::driver::options::OPT_no_offloadlib))
       res.getLangOpts().NoGPULib = 1;
   }
-
-  switch (llvm::Triple(res.getTargetOpts().triple).getArch()) {
-  case llvm::Triple::nvptx:
-  case llvm::Triple::nvptx64:
-  case llvm::Triple::amdgcn:
+  if (llvm::Triple(res.getTargetOpts().triple).isGPU()) {
     if (!res.getLangOpts().OpenMPIsTargetDevice) {
       const unsigned diagID = diags.getCustomDiagID(
           clang::DiagnosticsEngine::Error,
-          "OpenMP AMDGPU/NVPTX is only prepared to deal with device code.");
+          "OpenMP GPU is only prepared to deal with device code.");
       diags.Report(diagID);
     }
     res.getLangOpts().OpenMPIsGPU = 1;
-    break;
-  default:
+  } else {
     res.getLangOpts().OpenMPIsGPU = 0;
-    break;
   }
 
   // Get the OpenMP target triples if any.
@@ -1207,10 +1204,8 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
       if (tt.getArch() == llvm::Triple::UnknownArch ||
           !(tt.getArch() == llvm::Triple::aarch64 || tt.isPPC() ||
             tt.getArch() == llvm::Triple::systemz ||
-            tt.getArch() == llvm::Triple::nvptx ||
-            tt.getArch() == llvm::Triple::nvptx64 || tt.isAMDGCN() ||
             tt.getArch() == llvm::Triple::x86 ||
-            tt.getArch() == llvm::Triple::x86_64))
+            tt.getArch() == llvm::Triple::x86_64 || tt.isGPU()))
         diags.Report(clang::diag::err_drv_invalid_omp_target)
             << arg->getValue(i);
       else if (getArchPtrSize(t) != getArchPtrSize(tt))

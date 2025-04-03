@@ -2314,7 +2314,7 @@ func.func @omp_target_host_eval_parallel(%x : i32) {
 // -----
 
 func.func @omp_target_host_eval_loop1(%x : i32) {
-  // expected-error @below {{op host_eval argument only legal as loop bounds and steps in 'omp.loop_nest' when representing target SPMD or Generic-SPMD}}
+  // expected-error @below {{op host_eval argument only legal as loop bounds and steps in 'omp.loop_nest' when trip count must be evaluated in the host}}
   omp.target host_eval(%x -> %arg0 : i32) {
     omp.wsloop {
       omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
@@ -2329,7 +2329,7 @@ func.func @omp_target_host_eval_loop1(%x : i32) {
 // -----
 
 func.func @omp_target_host_eval_loop2(%x : i32) {
-  // expected-error @below {{op host_eval argument only legal as loop bounds and steps in 'omp.loop_nest' when representing target SPMD or Generic-SPMD}}
+  // expected-error @below {{op host_eval argument only legal as loop bounds and steps in 'omp.loop_nest' when trip count must be evaluated in the host}}
   omp.target host_eval(%x -> %arg0 : i32) {
     omp.teams {
     ^bb0:

@@ -31,9 +31,12 @@
 #include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/TargetParser/Triple.h"
@@ -3821,9 +3824,14 @@ mapParentWithMembers(LLVM::ModuleTranslation &moduleTranslation,
     bool hasMapClose = (llvm::omp::OpenMPOffloadMappingFlags(mapFlag) &
                         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE) ==
                        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE;
+    bool hasMapDescriptor =
+        (llvm::omp::OpenMPOffloadMappingFlags(mapFlag) &
+         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DESCRIPTOR) ==
+        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DESCRIPTOR;
     ompBuilder.setCorrectMemberOfFlag(mapFlag, memberOfFlag);
 
-    if (targetDirective == TargetDirective::TargetUpdate || hasMapClose) {
+    if (targetDirective == TargetDirective::TargetUpdate || hasMapClose ||
+        hasMapDescriptor) {
       combinedInfo.Types.emplace_back(mapFlag);
       combinedInfo.DevicePointers.emplace_back(
           mapData.DevicePointers[mapDataIndex]);
@@ -3926,6 +3934,12 @@ static void processMapMembersWithParent(
     if (checkIfPointerMap(memberClause)) {
       auto mapFlag =
           llvm::omp::OpenMPOffloadMappingFlags(memberClause.getMapType());
+      // We wish to remove user specified always, as the pointer is a
+      // seperate implementation detail/entity. And tagging it with
+      // always can cause the data to be overwritten. It is likely
+      // debateable if we should carry over any user speicifed map types
+      // to the pointer, but we can evaluate on a case by case basis.
+      mapFlag &= ~llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
       mapFlag &= ~llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM;
       mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF;
       ompBuilder.setCorrectMemberOfFlag(mapFlag, memberOfFlag);
@@ -5064,7 +5078,17 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
   }
 
   // Update kernel bounds structure for the `OpenMPIRBuilder` to use.
-  attrs.ExecFlags = targetOp.getKernelExecFlags(capturedOp);
+  omp::TargetRegionFlags kernelFlags = targetOp.getKernelExecFlags(capturedOp);
+  assert(
+      omp::bitEnumContainsAny(kernelFlags, omp::TargetRegionFlags::generic |
+                                               omp::TargetRegionFlags::spmd) &&
+      "invalid kernel flags");
+  attrs.ExecFlags =
+      omp::bitEnumContainsAny(kernelFlags, omp::TargetRegionFlags::generic)
+          ? omp::bitEnumContainsAny(kernelFlags, omp::TargetRegionFlags::spmd)
+                ? llvm::omp::OMP_TGT_EXEC_MODE_GENERIC_SPMD
+                : llvm::omp::OMP_TGT_EXEC_MODE_GENERIC
+          : llvm::omp::OMP_TGT_EXEC_MODE_SPMD;
   attrs.MinTeams = minTeamsVal;
   attrs.MaxTeams.front() = maxTeamsVal;
   attrs.MinThreads = 1;
@@ -5112,8 +5136,8 @@ initTargetRuntimeAttrs(llvm::IRBuilderBase &builder,
   if (numThreads)
     attrs.MaxThreads = moduleTranslation.lookupValue(numThreads);
 
-  if (targetOp.getKernelExecFlags(capturedOp) !=
-      llvm::omp::OMP_TGT_EXEC_MODE_GENERIC) {
+  if (omp::bitEnumContainsAny(targetOp.getKernelExecFlags(capturedOp),
+                              omp::TargetRegionFlags::trip_count)) {
     llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
     attrs.LoopTripCount = nullptr;
 
@@ -5462,6 +5486,106 @@ static void updateDebugInfoForDeclareTargetVariables(
   }
 }
 
+static void addAllocasForDeclareTargetFunctionPointerArgs(
+    llvm::Function *Fn, LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  llvm::Module &M = ompBuilder->M;
+
+  if (!llvm::Triple(M.getTargetTriple()).isAMDGPU())
+    return;
+
+  if (Fn->empty())
+    return;
+
+  llvm::IRBuilderBase &builder = ompBuilder->Builder;
+  llvm::OpenMPIRBuilder::InsertPointTy curInsert = builder.saveIP();
+  unsigned int allocaAS = M.getDataLayout().getAllocaAddrSpace();
+  unsigned int defaultAS = M.getDataLayout().getProgramAddressSpace();
+
+  builder.SetInsertPoint(Fn->getEntryBlock().getFirstInsertionPt());
+
+  llvm::Type *PtrTy = builder.getPtrTy(defaultAS);
+  llvm::Type *AllocaPtrTy = builder.getPtrTy(allocaAS);
+  llvm::DIExprBuilder EB(Fn->getContext());
+  EB.append<llvm::DIOp::Arg>(0u, AllocaPtrTy);
+  EB.append<llvm::DIOp::Deref>(PtrTy);
+  EB.append<llvm::DIOp::Deref>(PtrTy);
+  llvm::DIExpression *Expr = EB.intoExpression();
+
+  // flang does not generate allocas for the arguments that are passed by ref.
+  // When the Argument is the location, the quality of the debug information is
+  // poor. The variables are defines on very few addresses and show up as
+  // optimized in most places. One of the reason is the interaction of DI-Op
+  // based ops and regular ones.
+  // Generating alloca seems like the best thing which is done in the loop
+  // below. The users are updated accordingly.
+  for (auto &Arg : Fn->args()) {
+    if (Arg.getType()->isPointerTy()) {
+      llvm::Value *V = builder.CreateAlloca(Arg.getType(), allocaAS, nullptr);
+      if (allocaAS != defaultAS)
+        V = ompBuilder->Builder.CreateAddrSpaceCast(
+            V, builder.getPtrTy(defaultAS));
+      llvm::StoreInst *Store = builder.CreateStore(&Arg, V);
+      llvm::Value *Load = builder.CreateLoad(Arg.getType(), V);
+      llvm::SmallVector<llvm::DbgVariableIntrinsic *> DbgUsers;
+      llvm::SmallVector<llvm::DbgVariableRecord *> DPUsers;
+      llvm::findDbgUsers(DbgUsers, &Arg, &DPUsers);
+      for (auto *DVI : DbgUsers) {
+        DVI->replaceVariableLocationOp(&Arg, V);
+        DVI->setExpression(Expr);
+      }
+      for (auto *DVR : DPUsers) {
+        DVR->replaceVariableLocationOp(&Arg, V);
+        DVR->setExpression(Expr);
+      }
+      Arg.replaceUsesWithIf(Load, [&](const llvm::Use &U) -> bool {
+        // We dont want to replace Arg from the store we created above.
+        if (const auto *SI = dyn_cast<llvm::StoreInst>(U.getUser()))
+          return SI != Store;
+        return true;
+      });
+    }
+  }
+  builder.restoreIP(curInsert);
+}
+
+// This function Add DIOp based expressions to the debug records in the
+// declare target functions.
+
+static void updateDebugInfoForDeclareTargetFunctions(
+    llvm::Function *Fn, LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  llvm::Module &M = ompBuilder->M;
+
+  if (!llvm::Triple(M.getTargetTriple()).isAMDGPU())
+    return;
+
+  auto AddExpression = [&](auto *DR) {
+    llvm::DIExpression *Old = DR->getExpression();
+    // Skip if an expression is already present.
+    if ((Old != nullptr) && (Old->getNumElements() != 0))
+      return;
+    for (auto Loc : DR->location_ops()) {
+      llvm::Type *Ty = Loc->getType();
+      if (auto *Ref = dyn_cast<llvm::AddrSpaceCastInst>(Loc))
+        Ty = Ref->getPointerOperand()->getType();
+      llvm::DIExprBuilder EB(Fn->getContext());
+      EB.append<llvm::DIOp::Arg>(0u, Ty);
+      EB.append<llvm::DIOp::Deref>(Loc->getType());
+      DR->setExpression(EB.intoExpression());
+      break;
+    }
+  };
+
+  for (llvm::Instruction &I : instructions(Fn)) {
+    if (auto *DDI = dyn_cast<llvm::DbgVariableIntrinsic>(&I))
+      AddExpression(DDI);
+
+    for (llvm::DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
+      AddExpression(&DVR);
+  }
+}
+
 static LogicalResult
 convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
                          LLVM::ModuleTranslation &moduleTranslation) {
@@ -5481,11 +5605,15 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
       omp::DeclareTargetDeviceType declareType =
           attribute.getDeviceType().getValue();
 
+      llvm::Function *llvmFunc =
+          moduleTranslation.lookupFunction(funcOp.getName());
       if (declareType == omp::DeclareTargetDeviceType::host) {
-        llvm::Function *llvmFunc =
-            moduleTranslation.lookupFunction(funcOp.getName());
         llvmFunc->dropAllReferences();
         llvmFunc->eraseFromParent();
+      } else {
+        addAllocasForDeclareTargetFunctionPointerArgs(llvmFunc,
+                                                      moduleTranslation);
+        updateDebugInfoForDeclareTargetFunctions(llvmFunc, moduleTranslation);
       }
     }
     return success();

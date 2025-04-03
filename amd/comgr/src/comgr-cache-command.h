@@ -69,6 +69,12 @@ public:
   static void addString(HashAlgorithm &H, llvm::StringRef S);
   static std::optional<size_t> searchComgrTmpModel(llvm::StringRef S);
 
+  // helper since several command types just write to a single output file
+  static llvm::Error writeSingleOutputFile(llvm::StringRef OutputFilename,
+                                           llvm::StringRef CachedBuffer);
+  static llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
+  readSingleOutputFile(llvm::StringRef OutputFilename);
+
 protected:
   virtual ActionClass getClass() const = 0;
   virtual void addOptionsIdentifier(HashAlgorithm &) const = 0;

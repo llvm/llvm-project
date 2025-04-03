@@ -257,6 +257,7 @@ public:
 
   // Builds a typed Designator from an untyped DataRef
   MaybeExpr Designate(DataRef &&);
+  void CheckForWholeAssumedSizeArray(parser::CharBlock, const Symbol *);
 
   // Allows a whole assumed-size array to appear for the lifetime of
   // the returned value.

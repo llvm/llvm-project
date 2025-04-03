@@ -1636,9 +1636,9 @@ int main()
 // CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds i32, ptr [[TMP8]], i64 [[IDXPROM8]]
 // CHECK-NEXT:    [[TMP33:%.*]] = load i32, ptr [[ARRAYIDX9]], align 4
 // CHECK-NEXT:    [[ADD10:%.*]] = add i32 [[TMP31]], [[TMP33]]
-// CHECK-NEXT:    [[TMP34:%.*]] = zext i32 [[ADD10]] to i64
-// CHECK-NEXT:    [[TMP35:%.*]] = load i64, ptr addrspace(5) [[TMP9]], align 8
-// CHECK-NEXT:    [[TMP36:%.*]] = add i64 [[TMP35]], [[TMP34]]
+// CHECK-NEXT:    [[TMP34:%.*]] = load i64, ptr addrspace(5) [[TMP9]], align 8
+// CHECK-NEXT:    [[TMP35:%.*]] = zext i32 [[ADD10]] to i64
+// CHECK-NEXT:    [[TMP36:%.*]] = add i64 [[TMP34]], [[TMP35]]
 // CHECK-NEXT:    store i64 [[TMP36]], ptr addrspace(5) [[TMP9]], align 8
 // CHECK-NEXT:    br label [[FOR_INC:%.*]]
 // CHECK:       for.inc:
@@ -1766,9 +1766,9 @@ int main()
 // CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds i32, ptr [[TMP8]], i64 [[IDXPROM8]]
 // CHECK-NEXT:    [[TMP33:%.*]] = load i32, ptr [[ARRAYIDX9]], align 4
 // CHECK-NEXT:    [[ADD10:%.*]] = add i32 [[TMP31]], [[TMP33]]
-// CHECK-NEXT:    [[TMP34:%.*]] = zext i32 [[ADD10]] to i64
-// CHECK-NEXT:    [[TMP35:%.*]] = load i64, ptr addrspace(5) [[TMP9]], align 8
-// CHECK-NEXT:    [[TMP36:%.*]] = add i64 [[TMP35]], [[TMP34]]
+// CHECK-NEXT:    [[TMP34:%.*]] = load i64, ptr addrspace(5) [[TMP9]], align 8
+// CHECK-NEXT:    [[TMP35:%.*]] = zext i32 [[ADD10]] to i64
+// CHECK-NEXT:    [[TMP36:%.*]] = add i64 [[TMP34]], [[TMP35]]
 // CHECK-NEXT:    store i64 [[TMP36]], ptr addrspace(5) [[TMP9]], align 8
 // CHECK-NEXT:    br label [[FOR_INC:%.*]]
 // CHECK:       for.inc:

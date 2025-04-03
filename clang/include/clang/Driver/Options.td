@@ -879,7 +879,7 @@ def Wa_COMMA : CommaJoined<["-"], "Wa,">,
 def warning_suppression_mappings_EQ : Joined<["--"],
   "warning-suppression-mappings=">, Group<Diag_Group>,
   HelpText<"File containing diagnostic suppression mappings. See user manual "
-  "for file format.">, Visibility<[ClangOption, CC1Option]>;
+  "for file format.">, Visibility<[ClangOption, CLOption, CC1Option]>;
 def Wall : Flag<["-"], "Wall">, Group<W_Group>, Flags<[HelpHidden]>,
   Visibility<[ClangOption, CC1Option, FlangOption]>;
 def WCL4 : Flag<["-"], "WCL4">, Group<W_Group>, Flags<[HelpHidden]>,
@@ -3046,6 +3046,8 @@ defm fat_lto_objects : BoolFOption<"fat-lto-objects",
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
   NegFlag<SetFalse, [], [ClangOption, CC1Option], "Disable">,
   BothFlags<[], [ClangOption, CC1Option], " fat LTO object support">>;
+def flto_partitions_EQ : Joined<["-"], "flto-partitions=">, Group<f_Group>,
+  HelpText<"Number of partitions to use for parallel full LTO codegen, ld.lld only.">;
 def fmacro_backtrace_limit_EQ : Joined<["-"], "fmacro-backtrace-limit=">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Set the maximum number of entries to print in a macro expansion backtrace (0 = no limit)">,
@@ -3594,7 +3596,7 @@ def fopenmp_version_EQ : Joined<["-"], "fopenmp-version=">, Group<f_Group>,
   Flags<[NoArgumentUnused]>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<OpenMPVersionHelp<"Clang", "51">.str>,
-  HelpTextForVariants<[FlangOption, FC1Option], OpenMPVersionHelp<"Flang", "11">.str>;
+  HelpTextForVariants<[FlangOption, FC1Option], OpenMPVersionHelp<"Flang", "31">.str>;
 defm openmp_extensions: BoolFOption<"openmp-extensions",
   LangOpts<"OpenMPExtensions">, DefaultTrue,
   PosFlag<SetTrue, [NoArgumentUnused], [ClangOption, CC1Option],
@@ -3820,10 +3822,17 @@ defm openmp_optimistic_collapse : BoolFOption<"openmp-optimistic-collapse",
   NegFlag<SetFalse>, BothFlags<[NoArgumentUnused, HelpHidden], []>>;
 def static_openmp: Flag<["-"], "static-openmp">,
   HelpText<"Use the static host OpenMP runtime while linking.">;
-def opaque_offload_linker : Flag<["--"], "opaque-offload-linker">, Visibility<[ClangOption, CC1Option]>, Group<f_Group>,
-  HelpText<"Build/link omp offload binary, construct opaque cmd list instead of single clang-linker-wrapper cmd.">;
-def no_opaque_offload_linker : Flag<["--"], "no-opaque-offload-linker">, Visibility<[ClangOption, CC1Option]>, Group<f_Group>,
-  HelpText<"Build/link omp offload binary, using single clang-linker-wrapper cmd.">;
+def opaque_offload_linker
+    : Flag<["--"], "opaque-offload-linker">,
+      Visibility<[ClangOption, FlangOption]>,
+      Group<f_Group>,
+      HelpText<"Build/link omp offload binary, construct opaque cmd list "
+               "instead of single clang-linker-wrapper cmd.">;
+def no_opaque_offload_linker : Flag<["--"], "no-opaque-offload-linker">,
+                               Visibility<[ClangOption, FlangOption]>,
+                               Group<f_Group>,
+                               HelpText<"Build/link omp offload binary, using "
+                                        "single clang-linker-wrapper cmd.">;
 def fopenmp_new_driver : Flag<["-"], "fopenmp-new-driver">, Flags<[HelpHidden]>,
   HelpText<"Use the new driver for OpenMP offloading.">;
 def fno_openmp_new_driver : Flag<["-"], "fno-openmp-new-driver">,
@@ -3862,10 +3871,16 @@ defm pascal_strings : BoolFOption<"pascal-strings",
 // Note: This flag has different semantics in the driver and in -cc1. The driver accepts -fpatchable-function-entry=M,N
 // and forwards it to -cc1 as -fpatchable-function-entry=M and -fpatchable-function-entry-offset=N. In -cc1, both flags
 // are treated as a single integer.
-def fpatchable_function_entry_EQ : Joined<["-"], "fpatchable-function-entry=">, Group<f_Group>,
-  Visibility<[ClangOption, CC1Option]>,
-  MetaVarName<"<N,M>">, HelpText<"Generate M NOPs before function entry and N-M NOPs after function entry">,
-  MarshallingInfoInt<CodeGenOpts<"PatchableFunctionEntryCount">>;
+def fpatchable_function_entry_EQ
+    : Joined<["-"], "fpatchable-function-entry=">,
+      Group<f_Group>,
+      Visibility<[ClangOption, CC1Option]>,
+      MetaVarName<"<N,M,Section>">,
+      HelpText<"Generate M NOPs before function entry and N-M NOPs after "
+               "function entry. "
+               "If section is specified, use it instead of "
+               "__patchable_function_entries.">,
+      MarshallingInfoInt<CodeGenOpts<"PatchableFunctionEntryCount">>;
 def fms_hotpatch : Flag<["-"], "fms-hotpatch">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Ensure that all functions can be hotpatched at runtime">,
@@ -4133,13 +4148,14 @@ def fvectorize : Flag<["-"], "fvectorize">, Group<f_Group>,
 def fno_vectorize : Flag<["-"], "fno-vectorize">, Group<f_Group>;
 def : Flag<["-"], "ftree-vectorize">, Alias<fvectorize>;
 def : Flag<["-"], "fno-tree-vectorize">, Alias<fno_vectorize>;
-}
 
 def fslp_vectorize : Flag<["-"], "fslp-vectorize">, Group<f_Group>,
   HelpText<"Enable the superword-level parallelism vectorization passes">;
 def fno_slp_vectorize : Flag<["-"], "fno-slp-vectorize">, Group<f_Group>;
 def : Flag<["-"], "ftree-slp-vectorize">, Alias<fslp_vectorize>;
 def : Flag<["-"], "fno-tree-slp-vectorize">, Alias<fno_slp_vectorize>;
+}
+
 def Wlarge_by_value_copy_def : Flag<["-"], "Wlarge-by-value-copy">,
   HelpText<"Warn if a function definition returns or accepts an object larger "
            "in bytes than a given value">, Flags<[HelpHidden]>;
@@ -4808,7 +4824,7 @@ def mqdsp6_compat : Flag<["-"], "mqdsp6-compat">, Group<m_Group>,
   HelpText<"Enable hexagon-qdsp6 backward compatibility">,
   MarshallingInfoFlag<LangOpts<"HexagonQdsp6Compat">>;
 def m64 : Flag<["-"], "m64">, Group<m_Group>, Flags<[NoXarchOption]>,
-  Visibility<[ClangOption, CLOption, DXCOption]>;
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>;
 def maix64 : Flag<["-"], "maix64">, Group<m_Group>, Flags<[NoXarchOption]>;
 def mx32 : Flag<["-"], "mx32">, Group<m_Group>, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CLOption, DXCOption]>;
@@ -6310,7 +6326,7 @@ def _sysroot_EQ : Joined<["--"], "sysroot=">, Visibility<[ClangOption, FlangOpti
 def _sysroot : Separate<["--"], "sysroot">, Alias<_sysroot_EQ>;
 
 //===----------------------------------------------------------------------===//
-// pie/pic options (clang + flang-new)
+// pie/pic options (clang + flang)
 //===----------------------------------------------------------------------===//
 let Visibility = [ClangOption, FlangOption] in {
 
@@ -6326,7 +6342,7 @@ def fno_pie : Flag<["-"], "fno-pie">, Group<f_Group>;
 } // let Vis = [Default, FlangOption]
 
 //===----------------------------------------------------------------------===//
-// Target Options (clang + flang-new)
+// Target Options (clang + flang)
 //===----------------------------------------------------------------------===//
 let Flags = [TargetSpecific] in {
 let Visibility = [ClangOption, FlangOption] in {
@@ -6542,11 +6558,11 @@ def mavx10_1_256 : Flag<["-"], "mavx10.1-256">, Group<m_x86_AVX10_Features_Group
 def mno_avx10_1_256 : Flag<["-"], "mno-avx10.1-256">, Group<m_x86_AVX10_Features_Group>;
 def mavx10_1_512 : Flag<["-"], "mavx10.1-512">, Group<m_x86_AVX10_Features_Group>;
 def mno_avx10_1_512 : Flag<["-"], "mno-avx10.1-512">, Alias<mno_avx10_1_256>;
-def mavx10_1 : Flag<["-"], "mavx10.1">, Flags<[Unsupported]>;
-def mno_avx10_1 : Flag<["-"], "mno-avx10.1">, Flags<[Unsupported]>;
+def mavx10_1 : Flag<["-"], "mavx10.1">, Group<m_x86_AVX10_Features_Group>;
+def mno_avx10_1 : Flag<["-"], "mno-avx10.1">, Group<m_x86_AVX10_Features_Group>;
 def mavx10_2_256 : Flag<["-"], "mavx10.2-256">, Group<m_x86_AVX10_Features_Group>;
 def mavx10_2_512 : Flag<["-"], "mavx10.2-512">, Group<m_x86_AVX10_Features_Group>;
-def mavx10_2 : Flag<["-"], "mavx10.2">, Alias<mavx10_2_512>;
+def mavx10_2 : Flag<["-"], "mavx10.2">, Group<m_x86_AVX10_Features_Group>;
 def mno_avx10_2 : Flag<["-"], "mno-avx10.2">, Group<m_x86_AVX10_Features_Group>;
 def mavx2 : Flag<["-"], "mavx2">, Group<m_x86_Features_Group>;
 def mno_avx2 : Flag<["-"], "mno-avx2">, Group<m_x86_Features_Group>;
@@ -7127,9 +7143,9 @@ defm loop_versioning : BoolOptionWithoutMarshalling<"f", "version-loops-for-stri
 def fhermetic_module_files : Flag<["-"], "fhermetic-module-files">, Group<f_Group>,
   HelpText<"Emit hermetic module files (no nested USE association)">;
 
-def do_concurrent_parallel_EQ : Joined<["-"], "fdo-concurrent-parallel=">,
-  HelpText<"Try to map `do concurrent` loops to OpenMP (on host or device)">,
-      Values<"none,host,device">;
+def fdo_concurrent_to_openmp_EQ : Joined<["-"], "fdo-concurrent-to-openmp=">,
+  HelpText<"Try to map `do concurrent` loops to OpenMP [none|host|device]">,
+      Values<"none, host, device">;
 } // let Visibility = [FC1Option, FlangOption]
 
 def J : JoinedOrSeparate<["-"], "J">,
@@ -7539,6 +7555,9 @@ def mlink_bitcode_file
 def vectorize_loops : Flag<["-"], "vectorize-loops">,
   HelpText<"Run the Loop vectorization passes">,
   MarshallingInfoFlag<CodeGenOpts<"VectorizeLoop">>;
+def vectorize_slp : Flag<["-"], "vectorize-slp">,
+  HelpText<"Run the SLP vectorization passes">,
+  MarshallingInfoFlag<CodeGenOpts<"VectorizeSLP">>;
 } // let Visibility = [CC1Option, FC1Option]
 
 let Visibility = [CC1Option] in {
@@ -7654,9 +7673,6 @@ defm link_builtin_bitcode_postopt: BoolMOption<"link-builtin-bitcode-postopt",
   PosFlag<SetTrue, [], [ClangOption], "Link builtin bitcodes after the "
   "optimization pipeline">,
   NegFlag<SetFalse, [], [ClangOption]>>;
-def vectorize_slp : Flag<["-"], "vectorize-slp">,
-  HelpText<"Run the SLP vectorization passes">,
-  MarshallingInfoFlag<CodeGenOpts<"VectorizeSLP">>;
 def linker_option : Joined<["--"], "linker-option=">,
   HelpText<"Add linker option">,
   MarshallingInfoStringVector<CodeGenOpts<"LinkerOptions">>;
@@ -7743,6 +7759,11 @@ def fpatchable_function_entry_offset_EQ
     : Joined<["-"], "fpatchable-function-entry-offset=">, MetaVarName<"<M>">,
       HelpText<"Generate M NOPs before function entry">,
       MarshallingInfoInt<CodeGenOpts<"PatchableFunctionEntryOffset">>;
+def fpatchable_function_entry_section_EQ
+    : Joined<["-"], "fpatchable-function-entry-section=">,
+      MetaVarName<"<Section>">,
+      HelpText<"Use Section instead of __patchable_function_entries">,
+      MarshallingInfoString<CodeGenOpts<"PatchableFunctionEntrySection">>;
 def fprofile_instrument_EQ : Joined<["-"], "fprofile-instrument=">,
     HelpText<"Enable PGO instrumentation">, Values<"none,clang,llvm,csllvm">,
     NormalizedValuesScope<"CodeGenOptions">,

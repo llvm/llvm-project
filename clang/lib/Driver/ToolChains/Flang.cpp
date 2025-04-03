@@ -158,21 +158,14 @@ void Flang::addCodegenOptions(const ArgList &Args,
       !stackArrays->getOption().matches(options::OPT_fno_stack_arrays))
     CmdArgs.push_back("-fstack-arrays");
 
-  // Enable vectorization per default according to the optimization level
-  // selected. For optimization levels that want vectorization we use the alias
-  // option to simplify the hasFlag logic.
-  bool enableVec = shouldEnableVectorizerAtOLevel(Args, false);
-  OptSpecifier vectorizeAliasOption =
-      enableVec ? options::OPT_O_Group : options::OPT_fvectorize;
-  if (Args.hasFlag(options::OPT_fvectorize, vectorizeAliasOption,
-                   options::OPT_fno_vectorize, enableVec))
-    CmdArgs.push_back("-vectorize-loops");
+  handleVectorizeLoopsArgs(Args, CmdArgs);
+  handleVectorizeSLPArgs(Args, CmdArgs);
 
   if (shouldLoopVersion(Args))
     CmdArgs.push_back("-fversion-loops-for-stride");
 
   Args.addAllArgs(CmdArgs,
-                  {options::OPT_do_concurrent_parallel_EQ,
+                  {options::OPT_fdo_concurrent_to_openmp_EQ,
                    options::OPT_flang_experimental_hlfir,
                    options::OPT_flang_deprecated_no_hlfir,
                    options::OPT_fno_ppc_native_vec_elem_order,
@@ -1021,14 +1014,12 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   checkForAMDProprietaryOptOptions(TC, D, Args, CmdArgs, false /*isLLD*/,
                                    false /*checkOnly*/);
 
-  // TODO: Replace flang-new with flang once the new driver replaces the
-  // throwaway driver
-  const char *Exec = Args.MakeArgString(D.GetProgramPath("flang-new", TC));
+  const char *Exec = Args.MakeArgString(D.GetProgramPath("flang", TC));
   C.addCommand(std::make_unique<Command>(JA, *this,
                                          ResponseFileSupport::AtFileUTF8(),
                                          Exec, CmdArgs, Inputs, Output));
 }
 
-Flang::Flang(const ToolChain &TC) : Tool("flang-new", "flang frontend", TC) {}
+Flang::Flang(const ToolChain &TC) : Tool("flang", "flang frontend", TC) {}
 
 Flang::~Flang() {}

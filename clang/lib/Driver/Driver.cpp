@@ -2289,7 +2289,7 @@ void Driver::PrintHelp(bool ShowHidden) const {
 
 void Driver::PrintVersion(const Compilation &C, raw_ostream &OS) const {
   if (IsFlangMode()) {
-    OS << getClangToolFullVersion("flang-new") << '\n';
+    OS << getClangToolFullVersion("flang") << '\n';
   } else {
     // FIXME: The following handlers should use a callback mechanism, we don't
     // know what the client would like to do.
@@ -3759,9 +3759,12 @@ class OffloadingActionBuilder final {
             // compiler phases, including backend and assemble phases.
             ActionList AL;
             Action *BackendAction = nullptr;
-            if (ToolChains.front()->getTriple().isSPIRV()) {
+            if (ToolChains.front()->getTriple().isSPIRV() ||
+                (ToolChains.front()->getTriple().isAMDGCN() &&
+                 GpuArchList[I] == StringRef("amdgcnspirv"))) {
               // Emit LLVM bitcode for SPIR-V targets. SPIR-V device tool chain
-              // (HIPSPVToolChain) runs post-link LLVM IR passes.
+              // (HIPSPVToolChain or HIPAMDToolChain) runs post-link LLVM IR
+              // passes.
               types::ID Output = Args.hasArg(options::OPT_S)
                                      ? types::TY_LLVM_IR
                                      : types::TY_LLVM_BC;

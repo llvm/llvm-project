@@ -78,6 +78,24 @@ class UnresolvedSetImpl;
 class VarTemplateDecl;
 enum class ImplicitParamKind;
 
+// Holds a constraint expression along with a pack expansion index, if
+// expanded.
+struct AssociatedConstraint {
+  const Expr *ConstraintExpr = nullptr;
+  int ArgumentPackSubstitutionIndex = -1;
+
+  constexpr AssociatedConstraint() = default;
+
+  explicit AssociatedConstraint(const Expr *ConstraintExpr,
+                                int ArgumentPackSubstitutionIndex = -1)
+      : ConstraintExpr(ConstraintExpr),
+        ArgumentPackSubstitutionIndex(ArgumentPackSubstitutionIndex) {}
+
+  explicit operator bool() const { return ConstraintExpr != nullptr; }
+
+  bool isNull() const { return !operator bool(); }
+};
+
 /// The top declaration context.
 class TranslationUnitDecl : public Decl,
                             public DeclContext,
@@ -742,7 +760,7 @@ class DeclaratorDecl : public ValueDecl {
   // and constrained function decls.
   struct ExtInfo : public QualifierInfo {
     TypeSourceInfo *TInfo = nullptr;
-    Expr *TrailingRequiresClause = nullptr;
+    AssociatedConstraint TrailingRequiresClause;
   };
 
   llvm::PointerUnion<TypeSourceInfo *, ExtInfo *> DeclInfo;
@@ -811,17 +829,12 @@ public:
   /// \brief Get the constraint-expression introduced by the trailing
   /// requires-clause in the function/member declaration, or null if no
   /// requires-clause was provided.
-  Expr *getTrailingRequiresClause() {
-    return hasExtInfo() ? getExtInfo()->TrailingRequiresClause
-                        : nullptr;
+  const AssociatedConstraint &getTrailingRequiresClause() const {
+    static constexpr AssociatedConstraint Null;
+    return hasExtInfo() ? getExtInfo()->TrailingRequiresClause : Null;
   }
 
-  const Expr *getTrailingRequiresClause() const {
-    return hasExtInfo() ? getExtInfo()->TrailingRequiresClause
-                        : nullptr;
-  }
-
-  void setTrailingRequiresClause(Expr *TrailingRequiresClause);
+  void setTrailingRequiresClause(const AssociatedConstraint &AC);
 
   unsigned getNumTemplateParameterLists() const {
     return hasExtInfo() ? getExtInfo()->NumTemplParamLists : 0;
@@ -2090,7 +2103,7 @@ protected:
                const DeclarationNameInfo &NameInfo, QualType T,
                TypeSourceInfo *TInfo, StorageClass S, bool UsesFPIntrin,
                bool isInlineSpecified, ConstexprSpecKind ConstexprKind,
-               Expr *TrailingRequiresClause = nullptr);
+               const AssociatedConstraint &TrailingRequiresClause);
 
   using redeclarable_base = Redeclarable<FunctionDecl>;
 
@@ -2126,7 +2139,7 @@ public:
          TypeSourceInfo *TInfo, StorageClass SC, bool UsesFPIntrin = false,
          bool isInlineSpecified = false, bool hasWrittenPrototype = true,
          ConstexprSpecKind ConstexprKind = ConstexprSpecKind::Unspecified,
-         Expr *TrailingRequiresClause = nullptr) {
+         const AssociatedConstraint &TrailingRequiresClause = {}) {
     DeclarationNameInfo NameInfo(N, NLoc);
     return FunctionDecl::Create(C, DC, StartLoc, NameInfo, T, TInfo, SC,
                                 UsesFPIntrin, isInlineSpecified,
@@ -2139,7 +2152,7 @@ public:
          const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
          StorageClass SC, bool UsesFPIntrin, bool isInlineSpecified,
          bool hasWrittenPrototype, ConstexprSpecKind ConstexprKind,
-         Expr *TrailingRequiresClause);
+         const AssociatedConstraint &TrailingRequiresClause);
 
   static FunctionDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
@@ -2631,9 +2644,10 @@ public:
   ///
   /// Use this instead of getTrailingRequiresClause for concepts APIs that
   /// accept an ArrayRef of constraint expressions.
-  void getAssociatedConstraints(SmallVectorImpl<const Expr *> &AC) const {
-    if (auto *TRC = getTrailingRequiresClause())
-      AC.push_back(TRC);
+  void
+  getAssociatedConstraints(SmallVectorImpl<AssociatedConstraint> &ACs) const {
+    if (const AssociatedConstraint &AC = getTrailingRequiresClause())
+      ACs.emplace_back(AC);
   }
 
   /// Get the message that indicates why this function was deleted.

@@ -143,7 +143,7 @@ static llvm::cl::opt<bool>
                        llvm::cl::init(false));
 
 static llvm::cl::opt<std::string> enableDoConcurrentToOpenMPConversion(
-    "fdo-concurrent-parallel",
+    "fdo-concurrent-to-openmp",
     llvm::cl::desc(
         "Try to map `do concurrent` loops to OpenMP [none|host|device]"),
     llvm::cl::init("none"));

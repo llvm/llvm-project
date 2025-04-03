@@ -14,7 +14,6 @@
 #define LLVM_CLANG_LIB_CODEGEN_CODEGENFUNCTION_H
 
 #include "CGBuilder.h"
-#include "CGDebugInfo.h"
 #include "CGLoopInfo.h"
 #include "CGValue.h"
 #include "CodeGenModule.h"
@@ -46,8 +45,11 @@
 #include "llvm/Transforms/Utils/SanitizerStats.h"
 #include <optional>
 
+#define NO_LOOP_XTEAM_RED "no-loop-xteam-red"
+
 namespace llvm {
 class BasicBlock;
+class ConvergenceControlInst;
 class LLVMContext;
 class MDNode;
 class SwitchInst;
@@ -1105,13 +1107,7 @@ public:
 
   public:
     /// Enter a new cleanup scope.
-    explicit LexicalScope(CodeGenFunction &CGF, SourceRange Range)
-        : RunCleanupsScope(CGF), Range(Range),
-          ParentScope(CGF.CurLexicalScope) {
-      CGF.CurLexicalScope = this;
-      if (CGDebugInfo *DI = CGF.getDebugInfo())
-        DI->EmitLexicalBlockStart(CGF.Builder, Range.getBegin());
-    }
+    explicit LexicalScope(CodeGenFunction &CGF, SourceRange Range);
 
     void addLabel(const LabelDecl *label) {
       assert(PerformCleanup && "adding label to dead scope?");
@@ -1120,17 +1116,7 @@ public:
 
     /// Exit this cleanup scope, emitting any accumulated
     /// cleanups.
-    ~LexicalScope() {
-      if (CGDebugInfo *DI = CGF.getDebugInfo())
-        DI->EmitLexicalBlockEnd(CGF.Builder, Range.getEnd());
-
-      // If we should perform a cleanup, force them now.  Note that
-      // this ends the cleanup scope before rescoping any labels.
-      if (PerformCleanup) {
-        ApplyDebugLocation DL(CGF, Range.getEnd());
-        ForceCleanup();
-      }
-    }
+    ~LexicalScope();
 
     /// Force the emission of cleanups now, instead of waiting
     /// until this object is destroyed.
@@ -1691,15 +1677,7 @@ public:
 
   /// Increment the profiler's counter for the given statement by \p StepV.
   /// If \p StepV is null, the default increment is 1.
-  void incrementProfileCounter(const Stmt *S, llvm::Value *StepV = nullptr) {
-    if (CGM.getCodeGenOpts().hasProfileClangInstr() &&
-        !CurFn->hasFnAttribute(llvm::Attribute::NoProfile) &&
-        !CurFn->hasFnAttribute(llvm::Attribute::SkipProfile)) {
-      auto AL = ApplyDebugLocation::CreateArtificial(*this);
-      PGO.emitCounterSetOrIncrement(Builder, S, StepV);
-    }
-    PGO.setCurrentStmt(S);
-  }
+  void incrementProfileCounter(const Stmt *S, llvm::Value *StepV = nullptr);
 
   bool isMCDCCoverageEnabled() const {
     return (CGM.getCodeGenOpts().hasProfileClangInstr() &&
@@ -3773,6 +3751,10 @@ public:
   void
   InitializeXteamRedCapturedVars(SmallVectorImpl<llvm::Value *> &CapturedVars,
                                  QualType RedVarQualType);
+  /// Generate the sentinel (referred to as the reduction null value in
+  /// DeviceRTL) based on the reduction opcode.
+  llvm::Value *getXteamRedSentinel(llvm::Type *RedVarType,
+                                   CodeGenModule::XteamRedOpKind Opcode);
   void emitOMPSimpleStore(LValue LVal, RValue RVal, QualType RValTy,
                           SourceLocation Loc);
   /// Perform element by element copying of arrays with type \a
@@ -4796,10 +4778,10 @@ public:
   llvm::Value *EmitTargetBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
                                      ReturnValueSlot ReturnValue);
 
-  llvm::Value *EmitAArch64CompareBuiltinExpr(llvm::Value *Op, llvm::Type *Ty,
-                                             const llvm::CmpInst::Predicate Fp,
-                                             const llvm::CmpInst::Predicate Ip,
-                                             const llvm::Twine &Name = "");
+  llvm::Value *
+  EmitAArch64CompareBuiltinExpr(llvm::Value *Op, llvm::Type *Ty,
+                                const llvm::CmpInst::Predicate Pred,
+                                const llvm::Twine &Name = "");
   llvm::Value *EmitARMBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
                                   ReturnValueSlot ReturnValue,
                                   llvm::Triple::ArchType Arch);
@@ -5599,16 +5581,36 @@ private:
   /// and Xteam reduction kernels.
   void EmitBigJumpLoopInc(const ForStmt &FStmt, const VarDecl *LoopVar,
                           const Address &NoLoopIvAddr);
+  /// For every reduction variable, emit the corresponding locally introducted
+  /// variable and initialize it.
   void EmitXteamLocalAggregator(const ForStmt *FStmt);
-  void EmitXteamRedSum(const ForStmt *FStmt, const FunctionArgList &Args,
-                       int BlockSize);
+  /// For every sum/min/max reduction variable, emit a call to the DeviceRTL
+  /// API.
+  void EmitXteamRedOperation(const ForStmt *FStmt, const FunctionArgList &Args,
+                             int BlockSize);
+  /// For every scan reduction variable, emit a call to the DeviceRTL API.
   void EmitXteamScanSum(const ForStmt *FStmt, const FunctionArgList &Args,
                         int BlockSize);
+  /// For every scan reduction variable, emit a call to the DeviceRTL API
+  /// required for phase 2 kernel.
   void EmitXteamScanPhaseTwo(const ForStmt *FStmt, llvm::Value *SegmentSize,
                              const FunctionArgList &Args, int BlockSize,
                              bool IsInclusiveScan);
+  /// Emit reduction into local variable for a statement within the BigJumpLoop.
   bool EmitXteamRedStmt(const Stmt *S);
-
+  /// Emit reduction into local variable for a statement within the BigJumpLoop.
+  void EmitLocalReductionStmt(const Expr *E, const VarDecl *RedVarDecl,
+                              const CodeGenModule::XteamRedVarMap &RedVarMap,
+                              CodeGenModule::XteamRedOpKind OpKind);
+  /// Helper function that extracts the other operand of the reduction
+  /// operation.
+  std::pair<const Expr *, CodeGenModule::XteamRedOpKind>
+  ExtractXteamRedRhsExpr(const CallExpr *Call, const VarDecl *RedVarDecl);
+  /// Emitter for reduction builtins recognized by Xteam reduction, currently
+  /// min/max.
+  void EmitXteamRedStmtForBuiltinCall(
+      const CallExpr *Call, const VarDecl *RedVarDecl,
+      const CodeGenModule::XteamRedVarMap &RedVarMap);
   llvm::Value *FormX86ResolverCondition(const FMVResolverOption &RO);
   llvm::Value *EmitAArch64CpuInit();
   llvm::Value *FormAArch64ResolverCondition(const FMVResolverOption &RO);

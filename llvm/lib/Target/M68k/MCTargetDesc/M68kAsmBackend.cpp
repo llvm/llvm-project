@@ -52,36 +52,18 @@ public:
                               .CasesLower("m68020", "m68030", "m68040", true)
                               .Default(false)) {}
 
-
-  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                  const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved,
+  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup, const MCValue &,
+                  MutableArrayRef<char> Data, uint64_t Value, bool,
                   const MCSubtargetInfo *STI) const override {
     unsigned Size = 1 << getFixupKindLog2Size(Fixup.getKind());
 
-    if (Fixup.getOffset() + Size > Data.size()) {
-      LLVM_DEBUG(dbgs() << "Fixup.getOffset(): " << Fixup.getOffset() << '\n');
-      LLVM_DEBUG(dbgs() << "Size: " << Size << '\n');
-      LLVM_DEBUG(dbgs() << "Data.size(): " << Data.size() << '\n');
-      assert(Fixup.getOffset() + Size <= Data.size() &&
-             "Invalid fixup offset!");
-    }
-
+    assert(Fixup.getOffset() + Size <= Data.size() && "Invalid fixup offset!");
     // Check that uppper bits are either all zeros or all ones.
     // Specifically ignore overflow/underflow as long as the leakage is
     // limited to the lower bits. This is to remain compatible with
     // other assemblers.
-    if (!(isIntN(Size * 8 + 1, static_cast<int64_t>(Value)) || IsResolved)) {
-      LLVM_DEBUG(dbgs() << "Fixup.getOffset(): " << Fixup.getOffset() << '\n');
-      LLVM_DEBUG(dbgs() << "Size: " << Size << '\n');
-      LLVM_DEBUG(dbgs() << "Data.size(): " << Data.size() << '\n');
-      LLVM_DEBUG(dbgs() << "Value: " << Value << '\n');
-      LLVM_DEBUG(dbgs() << "Target: ");
-      LLVM_DEBUG(Target.print(dbgs()));
-      LLVM_DEBUG(dbgs() << '\n');
-      assert(isIntN(Size * 8 + 1, static_cast<int64_t>(Value)) &&
-             "Value does not fit in the Fixup field");
-    }
+    assert(isIntN(Size * 8 + 1, static_cast<int64_t>(Value)) &&
+           "Value does not fit in the Fixup field");
 
     // Write in Big Endian
     for (unsigned i = 0; i != Size; ++i)

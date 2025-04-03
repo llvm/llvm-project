@@ -12,6 +12,7 @@
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
 #include "RunInTerminal.h"
+#include "llvm/Support/Error.h"
 
 #if !defined(_WIN32)
 #include <unistd.h>
@@ -97,6 +98,11 @@ void BaseRequestHandler::SetSourceMapFromArguments(
 static llvm::Error RunInTerminal(DAP &dap,
                                  const llvm::json::Object &launch_request,
                                  const uint64_t timeout_seconds) {
+  if (!dap.clientFeatures.contains(
+          protocol::eClientFeatureRunInTerminalRequest))
+    return llvm::make_error<DAPError>("Cannot use runInTerminal, feature is "
+                                      "not supported by the connected client");
+
   dap.is_attach = true;
   lldb::SBAttachInfo attach_info;
 

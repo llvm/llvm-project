@@ -173,20 +173,83 @@ func.func @test_transpose_conv2d(%arg0: tensor<1x32x32x8xi8>, %arg1: tensor<16x1
 }
 
 // -----
+
+func.func @test_transpose_conv2d_invalid_padding_top(%arg0: tensor<1x32x32x8xf32>, %arg1: tensor<16x1x1x8xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x32x32x16xf32> {
+  // expected-error@+1 {{'tosa.transpose_conv2d' op expected out_pad_top > -KH, but got: out_pad_top=-3 and KH=1}}
+  %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, out_pad = array<i64: -3, 0, 0, 0>, out_shape = array<i64: 1, 32, 32, 16>, stride = array<i64: 1, 1>} : (tensor<1x32x32x8xf32>, tensor<16x1x1x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x32x32x16xf32>
+  return %0 : tensor<1x32x32x16xf32>
+}
+
+// -----
+
+func.func @test_transpose_conv2d_invalid_padding_bottom(%arg0: tensor<1x32x32x8xf32>, %arg1: tensor<16x1x1x8xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x32x32x16xf32> {
+  // expected-error@+1 {{'tosa.transpose_conv2d' op expected out_pad_bottom > -KH, but got: out_pad_bottom=-1 and KH=1}}
+  %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, out_pad = array<i64: 0, -1, 0, 0>, out_shape = array<i64: 1, 32, 32, 16>, stride = array<i64: 1, 1>} : (tensor<1x32x32x8xf32>, tensor<16x1x1x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x32x32x16xf32>
+  return %0 : tensor<1x32x32x16xf32>
+}
+
+// -----
+
+func.func @test_transpose_conv2d_invalid_padding_left(%arg0: tensor<1x32x32x8xf32>, %arg1: tensor<16x1x1x8xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x32x32x16xf32> {
+  // expected-error@+1 {{'tosa.transpose_conv2d' op expected out_pad_left > -KW, but got: out_pad_left=-8 and KW=1}}
+  %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, out_pad = array<i64: 0, 0, -8, 0>, out_shape = array<i64: 1, 32, 32, 16>, stride = array<i64: 1, 1>} : (tensor<1x32x32x8xf32>, tensor<16x1x1x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x32x32x16xf32>
+  return %0 : tensor<1x32x32x16xf32>
+}
+
+// -----
+
+func.func @test_transpose_conv2d_invalid_padding_right(%arg0: tensor<1x32x32x8xf32>, %arg1: tensor<16x1x1x8xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x32x32x16xf32> {
+  // expected-error@+1 {{'tosa.transpose_conv2d' op expected out_pad_right > -KW, but got: out_pad_right=-9 and KW=1}}
+  %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, out_pad = array<i64: 0, 0, 0, -9>, out_shape = array<i64: 1, 32, 32, 16>, stride = array<i64: 1, 1>} : (tensor<1x32x32x8xf32>, tensor<16x1x1x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x32x32x16xf32>
+  return %0 : tensor<1x32x32x16xf32>
+}
+
+// -----
+
+func.func @test_transpose_conv2d_invalid_stride_y(%arg0: tensor<1x32x32x8xf32>, %arg1: tensor<16x1x1x8xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x32x32x16xf32> {
+  // expected-error@+1 {{'tosa.transpose_conv2d' op expect all stride values to be >= 1, got [0, 1]}}
+  %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, out_pad = array<i64: 0, 0, 0, 0>, out_shape = array<i64: 1, 32, 32, 16>, stride = array<i64: 0, 1>} : (tensor<1x32x32x8xf32>, tensor<16x1x1x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x32x32x16xf32>
+  return %0 : tensor<1x32x32x16xf32>
+}
+
+// -----
+
+func.func @test_transpose_conv2d_invalid_stride_x(%arg0: tensor<1x32x32x8xf32>, %arg1: tensor<16x1x1x8xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x32x32x16xf32> {
+  // expected-error@+1 {{'tosa.transpose_conv2d' op expect all stride values to be >= 1, got [1, 0]}}
+  %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, out_pad = array<i64: 0, 0, 0, 0>, out_shape = array<i64: 1, 32, 32, 16>, stride = array<i64: 1, 0>} : (tensor<1x32x32x8xf32>, tensor<16x1x1x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x32x32x16xf32>
+  return %0 : tensor<1x32x32x16xf32>
+}
+
+// -----
+
+func.func @test_transpose_conv2d_invalid_output_height(%arg0: tensor<1x32x32x8xf32>, %arg1: tensor<16x1x1x8xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x33x32x16xf32> {
+  // expected-error@+1 {{'tosa.transpose_conv2d' op dimension mismatch: expected OH == (IH - 1) * stride_y + out_pad_top + out_pad_bottom + KH, but got 33 != (32 - 1) * 1 + 0 + 0 + 1}}
+  %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, out_pad = array<i64: 0, 0, 0, 0>, out_shape = array<i64: 1, 33, 32, 16>, stride = array<i64: 1, 1>} : (tensor<1x32x32x8xf32>, tensor<16x1x1x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x33x32x16xf32>
+  return %0 : tensor<1x33x32x16xf32>
+}
+
+// -----
+
+func.func @test_transpose_conv2d_invalid_output_width(%arg0: tensor<1x32x32x8xf32>, %arg1: tensor<16x1x1x8xf32>, %arg2: tensor<16xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x32x40x16xf32> {
+  // expected-error@+1 {{'tosa.transpose_conv2d' op dimension mismatch: expected OW == (IW - 1) * stride_x + out_pad_left + out_pad_right + KW, but got 40 != (32 - 1) * 1 + 0 + 0 + 1}}
+  %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, out_pad = array<i64: 0, 0, 0, 0>, out_shape = array<i64: 1, 32, 40, 16>, stride = array<i64: 1, 1>} : (tensor<1x32x32x8xf32>, tensor<16x1x1x8xf32>, tensor<16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x32x40x16xf32>
+  return %0 : tensor<1x32x40x16xf32>
+}
+
+// -----
+
+func.func @test_transpose_conv2d_invalid_bias(%arg0: tensor<1x32x32x8xf32>, %arg1: tensor<16x1x1x8xf32>, %arg2: tensor<5xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x32x32x16xf32> {
+  // expected-error@+1 {{'tosa.transpose_conv2d' op bias channels expected to be equal to output channels (16) or 1, got 5}}
+  %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, out_pad = array<i64: 0, 0, 0, 0>, out_shape = array<i64: 1, 32, 32, 16>, stride = array<i64: 1, 1>} : (tensor<1x32x32x8xf32>, tensor<16x1x1x8xf32>, tensor<5xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x32x32x16xf32>
+  return %0 : tensor<1x32x32x16xf32>
+}
+
+// -----
 // CHECK-LABEL: conv2d_quant_any_acc
 func.func @test_conv2d_quant_any_acc(%arg0: tensor<1x4x4x4x!quant.any<i8<-8:7>>>, %arg1: tensor<8x1x1x4x!quant.any<i8<-8:7>>>, %arg2: tensor<8x!quant.any<i8<-8:7>>>) -> tensor<1x4x4x8x!quant.any<i8<-8:7>>> {
   %zp = "tosa.const" () { values = dense<0> : tensor<1xi8> } : () -> tensor<1xi8>
   // expected-error@+1 {{'tosa.conv2d' op accumulator type for i8 tensor is not i32}}
   %0 = tosa.conv2d %arg0, %arg1, %arg2, %zp, %zp {acc_type = f32, dilation = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>, local_bound = true} : (tensor<1x4x4x4x!quant.any<i8<-8:7>>>, tensor<8x1x1x4x!quant.any<i8<-8:7>>>, tensor<8x!quant.any<i8<-8:7>>>, tensor<1xi8>, tensor<1xi8>) -> tensor<1x4x4x8x!quant.any<i8<-8:7>>>
-  return %0 : tensor<1x4x4x8x!quant.any<i8<-8:7>>>
-}
-
-// -----
-// CHECK-LABEL: conv2d_quant_any_result
-func.func @test_conv2d_quant_any_result(%arg0: tensor<1x4x4x4x!quant.any<i8<-8:7>>>, %arg1: tensor<8x1x1x4x!quant.any<i8<-8:7>>>, %arg2: tensor<8x!quant.any<i8<-8:7>>>) -> tensor<1x4x4x8x!quant.any<i8<-8:7>>> {
-  %zp = "tosa.const" () { values = dense<0> : tensor<1xi8> } : () -> tensor<1xi8>
-  // expected-error@+1 {{'tosa.conv2d' op input/output element types are incompatible}}
-  %0 = tosa.conv2d %arg0, %arg1, %arg2, %zp, %zp {acc_type = i32, dilation = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>, local_bound = true} : (tensor<1x4x4x4x!quant.any<i8<-8:7>>>, tensor<8x1x1x4x!quant.any<i8<-8:7>>>, tensor<8x!quant.any<i8<-8:7>>>, tensor<1xi8>, tensor<1xi8>) -> tensor<1x4x4x8x!quant.any<i8<-8:7>>>
   return %0 : tensor<1x4x4x8x!quant.any<i8<-8:7>>>
 }
 
@@ -616,17 +679,17 @@ func.func @test_avg_pool2d_zero_dim_input(%arg0: tensor<1x0x?x9xf32>, %arg1: ten
 
 // -----
 
-func.func @test_variable_duplicates(%arg0: tensor<2x4x8xi32>) -> () {
-  tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi32>
+func.func @test_variable_duplicates(%arg0: tensor<2x4x8xi8>) -> () {
+  tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi8>
   // expected-error@+1 {{'tosa.variable' op name has already been declared}}
-  tosa.variable @stored_var = dense<3> : tensor<1x4x8xi32>
+  tosa.variable @stored_var = dense<3> : tensor<1x4x8xi8>
   return
 }
 
 // -----
 
-func.func @test_variable_read_type(%arg0: tensor<2x4x8xi32>) -> () {
-  tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi32>
+func.func @test_variable_read_type(%arg0: tensor<2x4x8xi8>) -> () {
+  tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi8>
   // expected-error@+1 {{'tosa.variable.read' op result type does not equal variable type}}
   %0 = tosa.variable.read @stored_var : tensor<2x4x8xi16>
   return
@@ -634,8 +697,8 @@ func.func @test_variable_read_type(%arg0: tensor<2x4x8xi32>) -> () {
 
 // -----
 
-func.func @test_variable_read_shape(%arg0: tensor<2x4x8xi32>) -> () {
-  tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi32>
+func.func @test_variable_read_shape(%arg0: tensor<2x4x8xi8>) -> () {
+  tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi8>
   // expected-error@+1 {{'tosa.variable.read' op result type does not equal variable type}}
   %0 = tosa.variable.read @stored_var : tensor<1x4x8xi32>
   return
@@ -644,7 +707,7 @@ func.func @test_variable_read_shape(%arg0: tensor<2x4x8xi32>) -> () {
 // -----
 
 func.func @test_variable_write_type(%arg0: tensor<2x4x8xi16>) -> () {
-  tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi32>
+  tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi8>
   // expected-error@+1 {{'tosa.variable.write' op operand type does not equal variable type}}
   tosa.variable.write @stored_var, %arg0 : tensor<2x4x8xi16>
   return
@@ -652,10 +715,10 @@ func.func @test_variable_write_type(%arg0: tensor<2x4x8xi16>) -> () {
 
 // -----
 
-func.func @test_variable_write_shape(%arg0: tensor<1x4x8xi32>) -> () {
-  tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi32>
+func.func @test_variable_write_shape(%arg0: tensor<1x4x8xi8>) -> () {
+  tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi8>
   // expected-error@+1 {{'tosa.variable.write' op operand type does not equal variable type}}
-  tosa.variable.write @stored_var, %arg0 : tensor<1x4x8xi32>
+  tosa.variable.write @stored_var, %arg0 : tensor<1x4x8xi8>
   return
 }
 
@@ -1920,4 +1983,22 @@ func.func @test_scalar_output_transpose(%arg0: tensor<*xf32>) -> tensor<f32> {
   // expected-error@+1 {{'tosa.transpose' op result #0 must be tosa-conformant tensor of at least rank 1, but got 'tensor<f32>'}}
   %1 = tosa.transpose %arg0 {perms = array<i32: 2, 0, 1>} : (tensor<*xf32>) -> tensor<f32>
   return %1 : tensor<f32>
+}
+
+// -----
+
+// CHECK-LABEL: test_add_i1
+func.func @test_add_i1(%arg0: tensor<13x21x1xi1>, %arg1: tensor<13x21x3xi1>) -> tensor<13x21x3xi1> {
+  // expected-error@+1 {{'tosa.add' op illegal: operand/result data types not supported}}
+  %0 = tosa.add %arg0, %arg1 : (tensor<13x21x1xi1>, tensor<13x21x3xi1>) -> tensor<13x21x3xi1>
+  return %0 : tensor<13x21x3xi1>
+}
+
+// -----
+
+// CHECK-LABEL: test_mul_out_i16
+func.func @test_mul_out_i16(%arg0: tensor<13x21x3xi8>, %arg1: tensor<13x1x3xi8>, %shift: tensor<1xi8>) -> tensor<13x21x3xi16> {
+  // expected-error@+1 {{'tosa.mul' op illegal: operand/result data types not supported}}
+  %0 = tosa.mul %arg0, %arg1, %shift : (tensor<13x21x3xi8>, tensor<13x1x3xi8>, tensor<1xi8>) -> tensor<13x21x3xi16>
+  return %0 : tensor<13x21x3xi16>
 }

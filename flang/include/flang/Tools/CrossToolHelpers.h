@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 // A header file for containing functionallity that is used across Flang tools,
 // such as helper functions which apply or generate information needed accross
-// tools like bbc and flang-new.
+// tools like bbc and flang.
 //===----------------------------------------------------------------------===//
 
 #ifndef FORTRAN_TOOLS_CROSS_TOOL_HELPERS_H

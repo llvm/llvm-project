@@ -198,6 +198,7 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
   pm.addPass(fir::createPolymorphicOpConversion());
   pm.addPass(fir::createAssumedRankOpConversion());
 
+  pm.addPass(fir::createLowerRepackArraysPass());
   // Expand FIR operations that may use SCF dialect for their
   // implementation. This is a mandatory pass.
   pm.addPass(fir::createSimplifyFIROperations(
@@ -288,6 +289,9 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm, bool enableOpenMP,
 /// rather than the host device.
 void createOpenMPFIRPassPipeline(mlir::PassManager &pm,
                                  OpenMPFIRPassPipelineOpts opts) {
+  using DoConcurrentMappingKind =
+      Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind;
+
   if (opts.doConcurrentMappingKind != DoConcurrentMappingKind::DCMK_None)
     pm.addPass(flangomp::createDoConcurrentConversionPass(
         opts.doConcurrentMappingKind == DoConcurrentMappingKind::DCMK_Device));

@@ -9,6 +9,7 @@
 #include "copy.h"
 #include "stack.h"
 #include "flang-rt/runtime/descriptor.h"
+#include "flang-rt/runtime/tools.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/type-info.h"
 #include "flang/Runtime/allocatable.h"
@@ -101,7 +102,7 @@ RT_API_ATTRS void CopyElement(const Descriptor &to, const SubscriptValue toAt[],
     char *toPtr{to.Element<char>(toAt)};
     char *fromPtr{from.Element<char>(fromAt)};
     RUNTIME_CHECK(terminator, to.ElementBytes() == from.ElementBytes());
-    std::memcpy(toPtr, fromPtr, to.ElementBytes());
+    Fortran::runtime::memcpy(toPtr, fromPtr, to.ElementBytes());
     return;
   }
 
@@ -148,7 +149,7 @@ RT_API_ATTRS void CopyElement(const Descriptor &to, const SubscriptValue toAt[],
     // Moreover, if we came here from an Component::Genre::Data component,
     // all the per-element copies are redundant, because the parent
     // has already been copied as a whole.
-    std::memcpy(toPtr, fromPtr, curTo.ElementBytes());
+    Fortran::runtime::memcpy(toPtr, fromPtr, curTo.ElementBytes());
     --elements;
     if (elements != 0) {
       currentCopy.IncrementSubscripts(terminator);

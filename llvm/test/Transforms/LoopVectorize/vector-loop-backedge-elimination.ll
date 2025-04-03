@@ -21,14 +21,13 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; VF8UF1-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[N_VEC]]
 ; VF8UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF8UF1:       [[VECTOR_BODY]]:
-; VF8UF1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF8UF1-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 0
+; VF8UF1-NEXT:    [[TMP2:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF8UF1-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP2]]
 ; VF8UF1-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 0
 ; VF8UF1-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[TMP3]], align 1
 ; VF8UF1-NEXT:    [[TMP4:%.*]] = add nsw <8 x i8> [[WIDE_LOAD]], splat (i8 10)
 ; VF8UF1-NEXT:    store <8 x i8> [[TMP4]], ptr [[TMP3]], align 1
-; VF8UF1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; VF8UF1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP2]], 8
 ; VF8UF1-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VF8UF1-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF8UF1:       [[MIDDLE_BLOCK]]:
@@ -561,15 +560,14 @@ define void @remove_loop_region_outer_loop(i64 range(i64 8, 17) %N, ptr noalias 
 ; VF8UF1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; VF8UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF8UF1:       [[VECTOR_BODY]]:
-; VF8UF1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF8UF1-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; VF8UF1-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF8UF1-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[OUTER_IV]], i64 [[TMP0]]
 ; VF8UF1-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i32 0
 ; VF8UF1-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[TMP2]], align 1
 ; VF8UF1-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP0]]
 ; VF8UF1-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP3]], i32 0
 ; VF8UF1-NEXT:    store <8 x i8> [[WIDE_LOAD]], ptr [[TMP4]], align 1
-; VF8UF1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; VF8UF1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 8
 ; VF8UF1-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VF8UF1-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; VF8UF1:       [[MIDDLE_BLOCK]]:

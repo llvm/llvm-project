@@ -1,6 +1,6 @@
 // Tests mapping of a basic `do concurrent` loop to `!$omp parallel do`.
 
-// RUN: fir-opt --fopenmp-do-concurrent-conversion="map-to=host" %s | FileCheck %s
+// RUN: fir-opt --omp-do-concurrent-conversion="map-to=host" %s | FileCheck %s
 
 // CHECK-LABEL: func.func @do_concurrent_basic
 func.func @do_concurrent_basic() attributes {fir.bindc_name = "do_concurrent_basic"} {
@@ -20,16 +20,16 @@ func.func @do_concurrent_basic() attributes {fir.bindc_name = "do_concurrent_bas
 
     // CHECK-NOT: fir.do_loop
 
-    // CHECK: omp.parallel {
-
-    // CHECK-NEXT: %[[ITER_VAR:.*]] = fir.alloca i32 {bindc_name = "i"}
-    // CHECK-NEXT: %[[BINDING:.*]]:2 = hlfir.declare %[[ITER_VAR]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-
     // CHECK: %[[C1:.*]] = arith.constant 1 : i32
     // CHECK: %[[LB:.*]] = fir.convert %[[C1]] : (i32) -> index
     // CHECK: %[[C10:.*]] = arith.constant 10 : i32
     // CHECK: %[[UB:.*]] = fir.convert %[[C10]] : (i32) -> index
     // CHECK: %[[STEP:.*]] = arith.constant 1 : index
+
+    // CHECK: omp.parallel {
+
+    // CHECK-NEXT: %[[ITER_VAR:.*]] = fir.alloca i32 {bindc_name = "i"}
+    // CHECK-NEXT: %[[BINDING:.*]]:2 = hlfir.declare %[[ITER_VAR]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
     // CHECK: omp.wsloop {
     // CHECK-NEXT: omp.loop_nest (%[[ARG0:.*]]) : index = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
