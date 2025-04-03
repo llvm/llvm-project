@@ -3529,18 +3529,25 @@ public:
 
   /// Returns the 'middle' block of the plan, that is the block that selects
   /// whether to execute the scalar tail loop or the exit block from the loop
-  /// latch. If the scalar tail loop or exit block are known to always execute,
-  /// the middle block may branch directly to the block.
+  /// latch. If there is an early exit from the vector loop, the middle block
+  /// conceptully has the early exit block as third successor, split accross 2
+  /// VPBBs. In that case, the second VPBB selects whether to execute the scalar
+  /// tail loop or the exit bock. If the scalar tail loop or exit block are
+  /// known to always execute, the middle block may branch directly to that
+  /// block. If there is no loop region, the middle block cannot be identified
+  /// and nullptr is returned.
   VPBasicBlock *getMiddleBlock() {
     VPRegionBlock *LoopRegion = getVectorLoopRegion();
     if (!LoopRegion)
       return nullptr;
-    auto *RegionSucc = LoopRegion->getSingleSuccessor();
+    auto *RegionSucc = cast<VPBasicBlock>(LoopRegion->getSingleSuccessor());
     if (RegionSucc->getSingleSuccessor() ||
         is_contained(RegionSucc->getSuccessors(), getScalarPreheader()))
-      return cast<VPBasicBlock>(RegionSucc);
+      return RegionSucc;
+    // There is an early exit. The successor of RegionSucc is the middle block.
     return cast<VPBasicBlock>(RegionSucc->getSuccessors()[1]);
   }
+
   const VPBasicBlock *getMiddleBlock() const {
     return const_cast<VPlan *>(this)->getMiddleBlock();
   }

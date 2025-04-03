@@ -1684,7 +1684,7 @@ void VPlanTransforms::truncateToMinimalBitwidths(
 
 /// Remove BranchOnCond recipes with true conditions together with removing
 /// dead edges to their successors.
-static void simplifyBranchOnCondTrue(VPlan &Plan) {
+static void removeBranchOnCondTrue(VPlan &Plan) {
   using namespace llvm::VPlanPatternMatch;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getEntry()))) {
@@ -1737,7 +1737,7 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   runPass(legalizeAndOptimizeInductions, Plan);
   runPass(removeRedundantExpandSCEVRecipes, Plan);
   runPass(simplifyRecipes, Plan, *Plan.getCanonicalIV()->getScalarType());
-  runPass(simplifyBranchOnCondTrue, Plan);
+  runPass(removeBranchOnCondTrue, Plan);
   runPass(removeDeadRecipes, Plan);
 
   runPass(createAndOptimizeReplicateRegions, Plan);

@@ -2486,7 +2486,7 @@ void InnerLoopVectorizer::introduceCheckBlockInVPlan(BasicBlock *CheckIRBB) {
   PreVectorPH->swapSuccessors();
 
   // We just connected a new block to the scalar preheader. Update all
-  // ResumePhis by adding an incoming value for it, replacing the last value.
+  // ResumePhis by adding an incoming value for it, replicating the last value.
   for (VPRecipeBase &R : *cast<VPBasicBlock>(ScalarPH)) {
     auto *ResumePhi = dyn_cast<VPInstruction>(&R);
     if (!ResumePhi || ResumePhi->getOpcode() != VPInstruction::ResumePhi)
@@ -2661,7 +2661,7 @@ void InnerLoopVectorizer::createVectorLoopSkeleton(StringRef Prefix) {
   LoopScalarPreHeader =
       SplitBlock(LoopVectorPreHeader, LoopVectorPreHeader->getTerminator(), DT,
                  LI, nullptr, Twine(Prefix) + "scalar.ph");
-  // NOTE: The Plan's scalar preheader isn't replaced with a VPIRBasicBlock
+  // NOTE: The Plan's scalar preheader VPBB isn't replaced with a VPIRBasicBlock
   // wrapping LoopScalarPreHeader here at the moment, because the Plan's scalar
   // preheader may be unreachable at this point. Instead it is replaced in
   // createVectorizedLoopSkeleton.
