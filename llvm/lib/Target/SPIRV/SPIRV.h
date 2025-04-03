@@ -24,6 +24,7 @@ FunctionPass *createSPIRVStructurizerPass();
 FunctionPass *createSPIRVMergeRegionExitTargetsPass();
 FunctionPass *createSPIRVStripConvergenceIntrinsicsPass();
 FunctionPass *createSPIRVLegalizePointerCastPass(SPIRVTargetMachine *TM);
+FunctionPass *createSPIRVLegalizeAddrspaceCastPass(SPIRVTargetMachine *TM);
 FunctionPass *createSPIRVRegularizerPass();
 FunctionPass *createSPIRVPreLegalizerCombiner();
 FunctionPass *createSPIRVPreLegalizerPass();
