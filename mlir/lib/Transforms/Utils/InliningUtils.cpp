@@ -32,11 +32,11 @@ static void
 remapInlinedLocations(iterator_range<Region::iterator> inlinedBlocks,
                       Location callerLoc) {
   DenseMap<Location, LocationAttr> mappedLocations;
-    LocationAttr newLoc = stackLocations(loc, callerLoc);
+  auto remapLoc = [&](Location loc) {
     auto [it, inserted] = mappedLocations.try_emplace(loc);
     // Only query the attribute uniquer once per callsite attribute.
     if (inserted) {
-      LocationAttr newLoc = stackLocations(loc, callerLoc);
+      auto newLoc = CallSiteLoc::get(loc, callerLoc);
       it->getSecond() = newLoc;
     }
     return it->second;
