@@ -58,8 +58,8 @@ define float @test_powi_f32_i32(float %Val, i32 %x) nounwind {
   ret float %res
 }
 
-define double @test_powi_f64_i132(double %Val, i32 %x) nounwind {
-; FAST-X86-LABEL: test_powi_f64_i132:
+define double @test_powi_f64_i32(double %Val, i32 %x) nounwind {
+; FAST-X86-LABEL: test_powi_f64_i32:
 ; FAST-X86:       # %bb.0:
 ; FAST-X86-NEXT:    subl $12, %esp
 ; FAST-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -70,7 +70,7 @@ define double @test_powi_f64_i132(double %Val, i32 %x) nounwind {
 ; FAST-X86-NEXT:    addl $12, %esp
 ; FAST-X86-NEXT:    retl
 ;
-; SDAG-X86-LABEL: test_powi_f64_i132:
+; SDAG-X86-LABEL: test_powi_f64_i32:
 ; SDAG-X86:       # %bb.0:
 ; SDAG-X86-NEXT:    subl $12, %esp
 ; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
@@ -81,7 +81,7 @@ define double @test_powi_f64_i132(double %Val, i32 %x) nounwind {
 ; SDAG-X86-NEXT:    addl $12, %esp
 ; SDAG-X86-NEXT:    retl
 ;
-; GISEL-X86-LABEL: test_powi_f64_i132:
+; GISEL-X86-LABEL: test_powi_f64_i32:
 ; GISEL-X86:       # %bb.0:
 ; GISEL-X86-NEXT:    subl $12, %esp
 ; GISEL-X86-NEXT:    fldl {{[0-9]+}}(%esp)
@@ -92,18 +92,18 @@ define double @test_powi_f64_i132(double %Val, i32 %x) nounwind {
 ; GISEL-X86-NEXT:    addl $12, %esp
 ; GISEL-X86-NEXT:    retl
 ;
-; FAST-X64-LABEL: test_powi_f64_i132:
+; FAST-X64-LABEL: test_powi_f64_i32:
 ; FAST-X64:       # %bb.0:
 ; FAST-X64-NEXT:    pushq %rax
 ; FAST-X64-NEXT:    callq __powidf2@PLT
 ; FAST-X64-NEXT:    popq %rax
 ; FAST-X64-NEXT:    retq
 ;
-; SDAG-X64-LABEL: test_powi_f64_i132:
+; SDAG-X64-LABEL: test_powi_f64_i32:
 ; SDAG-X64:       # %bb.0:
 ; SDAG-X64-NEXT:    jmp __powidf2@PLT # TAILCALL
 ;
-; GISEL-X64-LABEL: test_powi_f64_i132:
+; GISEL-X64-LABEL: test_powi_f64_i32:
 ; GISEL-X64:       # %bb.0:
 ; GISEL-X64-NEXT:    jmp __powidf2@PLT # TAILCALL
   %res = call double @llvm.powi.f64.i32(double %Val, i32 %x)
