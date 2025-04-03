@@ -350,6 +350,8 @@ KEYWORD(__objc_yes                  , KEYALL)
 KEYWORD(__objc_no                   , KEYALL)
 KEYWORD(__ptrauth                   , KEYALL)
 
+// C2y
+UNARY_EXPR_OR_TYPE_TRAIT(_Countof, CountOf, KEYNOCXX)
 
 // C++ 2.11p1: Keywords.
 KEYWORD(asm                         , KEYCXX|KEYGNU)
