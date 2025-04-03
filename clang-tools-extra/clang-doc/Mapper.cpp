@@ -28,6 +28,21 @@ template <typename T> bool isTypedefAnonRecord(const T *D) {
   return false;
 }
 
+Location MapASTVisitor::getDeclLocation(const NamedDecl *D) const {
+  bool IsFileInRootDir;
+  llvm::SmallString<128> File =
+      getFile(D, D->getASTContext(), CDCtx.SourceRoot, IsFileInRootDir);
+  ASTContext &Context = D->getASTContext();
+  int Start = Context.getSourceManager()
+                  .getPresumedLoc(D->getBeginLoc())
+                  .getLine();
+  int End = Context.getSourceManager()
+                .getPresumedLoc(D->getEndLoc())
+                .getLine();
+  
+  return Location(Start, End, File, IsFileInRootDir);
+}
+
 void MapASTVisitor::HandleTranslationUnit(ASTContext &Context) {
   TraverseDecl(Context.getTranslationUnitDecl());
 }
@@ -60,7 +75,7 @@ bool MapASTVisitor::mapDecl(const T *D, bool IsDefinition) {
   llvm::SmallString<128> File =
       getFile(D, D->getASTContext(), CDCtx.SourceRoot, IsFileInRootDir);
   auto I = serialize::emitInfo(D, getComment(D, D->getASTContext()),
-                               getLine(D, D->getASTContext()), File,
+                               getDeclLocation(D), File,
                                IsFileInRootDir, CDCtx.PublicOnly);
 
   // A null in place of I indicates that the serializer is skipping this decl
