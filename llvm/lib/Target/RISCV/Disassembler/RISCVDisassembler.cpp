@@ -506,10 +506,12 @@ static DecodeStatus decodeXTHeadMemPair(MCInst &Inst, uint32_t Insn,
                                         const MCDisassembler *Decoder);
 
 static DecodeStatus decodeZcmpRlist(MCInst &Inst, uint32_t Imm,
-                                    uint64_t Address, const void *Decoder);
+                                    uint64_t Address,
+                                    const MCDisassembler *Decoder);
 
 static DecodeStatus decodeXqccmpRlistS0(MCInst &Inst, uint32_t Imm,
-                                        uint64_t Address, const void *Decoder);
+                                        uint64_t Address,
+                                        const MCDisassembler *Decoder);
 
 static DecodeStatus decodeZcmpSpimm(MCInst &Inst, uint32_t Imm,
                                     uint64_t Address, const void *Decoder);
@@ -624,16 +626,20 @@ static DecodeStatus decodeXTHeadMemPair(MCInst &Inst, uint32_t Insn,
 }
 
 static DecodeStatus decodeZcmpRlist(MCInst &Inst, uint32_t Imm,
-                                    uint64_t Address, const void *Decoder) {
-  if (Imm < RISCVZC::RA)
+                                    uint64_t Address,
+                                    const MCDisassembler *Decoder) {
+  bool IsRVE = Decoder->getSubtargetInfo().hasFeature(RISCV::FeatureStdExtE);
+  if (Imm < RISCVZC::RA || (IsRVE && Imm >= RISCVZC::RA_S0_S2))
     return MCDisassembler::Fail;
   Inst.addOperand(MCOperand::createImm(Imm));
   return MCDisassembler::Success;
 }
 
 static DecodeStatus decodeXqccmpRlistS0(MCInst &Inst, uint32_t Imm,
-                                        uint64_t Address, const void *Decoder) {
-  if (Imm < RISCVZC::RA_S0)
+                                        uint64_t Address,
+                                        const MCDisassembler *Decoder) {
+  bool IsRVE = Decoder->getSubtargetInfo().hasFeature(RISCV::FeatureStdExtE);
+  if (Imm < RISCVZC::RA_S0 || (IsRVE && Imm >= RISCVZC::RA_S0_S2))
     return MCDisassembler::Fail;
   Inst.addOperand(MCOperand::createImm(Imm));
   return MCDisassembler::Success;
