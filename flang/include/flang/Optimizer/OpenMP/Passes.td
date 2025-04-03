@@ -50,6 +50,36 @@ def FunctionFilteringPass : Pass<"omp-function-filtering"> {
   ];
 }
 
+def DoConcurrentConversionPass : Pass<"omp-do-concurrent-conversion", "mlir::func::FuncOp"> {
+  let summary = "Map `DO CONCURRENT` loops to OpenMP worksharing loops.";
+
+  let description = [{ This is an experimental pass to map `DO CONCURRENT` loops
+     to their correspnding equivalent OpenMP worksharing constructs.
+
+     For now the following is supported:
+       - Mapping simple loops to `parallel do`.
+
+     Still TODO:
+       - More extensive testing.
+  }];
+
+  let dependentDialects = ["mlir::omp::OpenMPDialect"];
+
+  let options = [
+    Option<"mapTo", "map-to",
+           "flangomp::DoConcurrentMappingKind",
+           /*default=*/"flangomp::DoConcurrentMappingKind::DCMK_None",
+           "Try to map `do concurrent` loops to OpenMP [none|host|device]",
+           [{::llvm::cl::values(
+               clEnumValN(flangomp::DoConcurrentMappingKind::DCMK_None,
+                          "none", "Do not lower `do concurrent` to OpenMP"),
+               clEnumValN(flangomp::DoConcurrentMappingKind::DCMK_Host,
+                          "host", "Lower to run in parallel on the CPU"),
+               clEnumValN(flangomp::DoConcurrentMappingKind::DCMK_Device,
+                          "device", "Lower to run in parallel on the GPU")
+           )}]>,
+  ];
+}
 
 // Needs to be scheduled on Module as we create functions in it
 def LowerWorkshare : Pass<"lower-workshare", "::mlir::ModuleOp"> {

@@ -51,7 +51,12 @@ enum {
   InstFormatCLH = 19,
   InstFormatCSB = 20,
   InstFormatCSH = 21,
-  InstFormatOther = 22,
+  InstFormatQC_EAI = 22,
+  InstFormatQC_EI = 23,
+  InstFormatQC_EB = 24,
+  InstFormatQC_EJ = 25,
+  InstFormatQC_ES = 26,
+  InstFormatOther = 31,
 
   InstFormatMask = 31,
   InstFormatShift = 0,
@@ -314,6 +319,7 @@ enum OperandType : unsigned {
   OPERAND_UIMM10_LSB00_NONZERO,
   OPERAND_UIMM11,
   OPERAND_UIMM12,
+  OPERAND_UIMM14_LSB00,
   OPERAND_UIMM16,
   OPERAND_UIMM16_NONZERO,
   OPERAND_UIMM20,
@@ -332,6 +338,7 @@ enum OperandType : unsigned {
   OPERAND_SIMM11,
   OPERAND_SIMM12,
   OPERAND_SIMM12_LSB00000,
+  OPERAND_SIMM16,
   OPERAND_SIMM16_NONZERO,
   OPERAND_SIMM20,
   OPERAND_SIMM26,
@@ -602,8 +609,8 @@ enum RLISTENCODE {
   INVALID_RLIST,
 };
 
-inline unsigned encodeRlist(MCRegister EndReg, bool IsRV32E = false) {
-  assert((!IsRV32E || EndReg <= RISCV::X9) && "Invalid Rlist for RV32E");
+inline unsigned encodeRlist(MCRegister EndReg, bool IsRVE = false) {
+  assert((!IsRVE || EndReg <= RISCV::X9) && "Invalid Rlist for RV32E");
   switch (EndReg) {
   case RISCV::X1:
     return RLISTENCODE::RA;

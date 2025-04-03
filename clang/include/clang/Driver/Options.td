@@ -3591,7 +3591,7 @@ def fopenmp_version_EQ : Joined<["-"], "fopenmp-version=">, Group<f_Group>,
   Flags<[NoArgumentUnused]>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<OpenMPVersionHelp<"Clang", "51">.str>,
-  HelpTextForVariants<[FlangOption, FC1Option], OpenMPVersionHelp<"Flang", "11">.str>;
+  HelpTextForVariants<[FlangOption, FC1Option], OpenMPVersionHelp<"Flang", "31">.str>;
 defm openmp_extensions: BoolFOption<"openmp-extensions",
   LangOpts<"OpenMPExtensions">, DefaultTrue,
   PosFlag<SetTrue, [NoArgumentUnused], [ClangOption, CC1Option],
@@ -3759,10 +3759,16 @@ defm pascal_strings : BoolFOption<"pascal-strings",
 // Note: This flag has different semantics in the driver and in -cc1. The driver accepts -fpatchable-function-entry=M,N
 // and forwards it to -cc1 as -fpatchable-function-entry=M and -fpatchable-function-entry-offset=N. In -cc1, both flags
 // are treated as a single integer.
-def fpatchable_function_entry_EQ : Joined<["-"], "fpatchable-function-entry=">, Group<f_Group>,
-  Visibility<[ClangOption, CC1Option]>,
-  MetaVarName<"<N,M>">, HelpText<"Generate M NOPs before function entry and N-M NOPs after function entry">,
-  MarshallingInfoInt<CodeGenOpts<"PatchableFunctionEntryCount">>;
+def fpatchable_function_entry_EQ
+    : Joined<["-"], "fpatchable-function-entry=">,
+      Group<f_Group>,
+      Visibility<[ClangOption, CC1Option]>,
+      MetaVarName<"<N,M,Section>">,
+      HelpText<"Generate M NOPs before function entry and N-M NOPs after "
+               "function entry. "
+               "If section is specified, use it instead of "
+               "__patchable_function_entries.">,
+      MarshallingInfoInt<CodeGenOpts<"PatchableFunctionEntryCount">>;
 def fms_hotpatch : Flag<["-"], "fms-hotpatch">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Ensure that all functions can be hotpatched at runtime">,
@@ -6409,11 +6415,11 @@ def mavx10_1_256 : Flag<["-"], "mavx10.1-256">, Group<m_x86_AVX10_Features_Group
 def mno_avx10_1_256 : Flag<["-"], "mno-avx10.1-256">, Group<m_x86_AVX10_Features_Group>;
 def mavx10_1_512 : Flag<["-"], "mavx10.1-512">, Group<m_x86_AVX10_Features_Group>;
 def mno_avx10_1_512 : Flag<["-"], "mno-avx10.1-512">, Alias<mno_avx10_1_256>;
-def mavx10_1 : Flag<["-"], "mavx10.1">, Flags<[Unsupported]>;
-def mno_avx10_1 : Flag<["-"], "mno-avx10.1">, Flags<[Unsupported]>;
+def mavx10_1 : Flag<["-"], "mavx10.1">, Group<m_x86_AVX10_Features_Group>;
+def mno_avx10_1 : Flag<["-"], "mno-avx10.1">, Group<m_x86_AVX10_Features_Group>;
 def mavx10_2_256 : Flag<["-"], "mavx10.2-256">, Group<m_x86_AVX10_Features_Group>;
 def mavx10_2_512 : Flag<["-"], "mavx10.2-512">, Group<m_x86_AVX10_Features_Group>;
-def mavx10_2 : Flag<["-"], "mavx10.2">, Alias<mavx10_2_512>;
+def mavx10_2 : Flag<["-"], "mavx10.2">, Group<m_x86_AVX10_Features_Group>;
 def mno_avx10_2 : Flag<["-"], "mno-avx10.2">, Group<m_x86_AVX10_Features_Group>;
 def mavx2 : Flag<["-"], "mavx2">, Group<m_x86_Features_Group>;
 def mno_avx2 : Flag<["-"], "mno-avx2">, Group<m_x86_Features_Group>;
@@ -6976,6 +6982,10 @@ defm loop_versioning : BoolOptionWithoutMarshalling<"f", "version-loops-for-stri
 
 def fhermetic_module_files : Flag<["-"], "fhermetic-module-files">, Group<f_Group>,
   HelpText<"Emit hermetic module files (no nested USE association)">;
+
+def fdo_concurrent_to_openmp_EQ : Joined<["-"], "fdo-concurrent-to-openmp=">,
+  HelpText<"Try to map `do concurrent` loops to OpenMP [none|host|device]">,
+      Values<"none, host, device">;
 } // let Visibility = [FC1Option, FlangOption]
 
 def J : JoinedOrSeparate<["-"], "J">,
@@ -7589,6 +7599,11 @@ def fpatchable_function_entry_offset_EQ
     : Joined<["-"], "fpatchable-function-entry-offset=">, MetaVarName<"<M>">,
       HelpText<"Generate M NOPs before function entry">,
       MarshallingInfoInt<CodeGenOpts<"PatchableFunctionEntryOffset">>;
+def fpatchable_function_entry_section_EQ
+    : Joined<["-"], "fpatchable-function-entry-section=">,
+      MetaVarName<"<Section>">,
+      HelpText<"Use Section instead of __patchable_function_entries">,
+      MarshallingInfoString<CodeGenOpts<"PatchableFunctionEntrySection">>;
 def fprofile_instrument_EQ : Joined<["-"], "fprofile-instrument=">,
     HelpText<"Enable PGO instrumentation">, Values<"none,clang,llvm,csllvm">,
     NormalizedValuesScope<"CodeGenOptions">,

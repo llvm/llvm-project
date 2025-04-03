@@ -193,6 +193,7 @@ protected:
   bool SupportsSRAMECC = false;
   bool DynamicVGPR = false;
   bool DynamicVGPRBlockSize32 = false;
+  bool HasVMemToLDSLoad = false;
 
   // This should not be used directly. 'TargetID' tracks the dynamic settings
   // for SRAMECC.
@@ -257,6 +258,7 @@ protected:
   bool HasMinimum3Maximum3F32 = false;
   bool HasMinimum3Maximum3F16 = false;
   bool HasMinimum3Maximum3PKF16 = false;
+  bool HasLshlAddU64Inst = false;
 
   bool RequiresCOV6 = false;
 
@@ -1140,7 +1142,7 @@ public:
 
   bool hasMovB64() const { return GFX940Insts; }
 
-  bool hasLshlAddB64() const { return GFX940Insts; }
+  bool hasLshlAddU64Inst() const { return HasLshlAddU64Inst; }
 
   bool enableSIScheduler() const {
     return EnableSIScheduler;
@@ -1317,6 +1319,8 @@ public:
   bool hasLDSLoadB96_B128() const {
     return hasGFX950Insts();
   }
+
+  bool hasVMemToLDSLoad() const { return HasVMemToLDSLoad; }
 
   bool hasSALUFloatInsts() const { return HasSALUFloatInsts; }
 

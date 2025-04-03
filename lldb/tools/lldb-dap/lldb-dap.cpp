@@ -31,6 +31,7 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
@@ -175,6 +176,12 @@ EXAMPLES:
 
     lldb-dap -g
 )___";
+}
+
+static void PrintVersion() {
+  llvm::outs() << "lldb-dap: ";
+  llvm::cl::PrintVersionMessage();
+  llvm::outs() << "liblldb: " << lldb::SBDebugger::GetVersionString() << '\n';
 }
 
 // If --launch-target is provided, this instance of lldb-dap becomes a
@@ -421,6 +428,11 @@ int main(int argc, char *argv[]) {
     return EXIT_SUCCESS;
   }
 
+  if (input_args.hasArg(OPT_version)) {
+    PrintVersion();
+    return EXIT_SUCCESS;
+  }
+
   ReplMode default_repl_mode = ReplMode::Auto;
   if (input_args.hasArg(OPT_repl_mode)) {
     llvm::opt::Arg *repl_mode = input_args.getLastArg(OPT_repl_mode);
@@ -571,9 +583,9 @@ int main(int argc, char *argv[]) {
   }
 
   lldb::IOObjectSP input = std::make_shared<NativeFile>(
-      fileno(stdin), File::eOpenOptionReadOnly, true);
+      fileno(stdin), File::eOpenOptionReadOnly, NativeFile::Unowned);
   lldb::IOObjectSP output = std::make_shared<NativeFile>(
-      stdout_fd, File::eOpenOptionWriteOnly, false);
+      stdout_fd, File::eOpenOptionWriteOnly, NativeFile::Unowned);
 
   constexpr llvm::StringLiteral client_name = "stdin/stdout";
   Transport transport(client_name, log.get(), input, output);

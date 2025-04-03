@@ -501,7 +501,7 @@ define i32 @tc4(ptr noundef readonly captures(none) %tmp) vscale_range(1,16) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw [4 x i32], ptr [[TMP]], i64 0, i64 [[INDEX]]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAYIDX1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3]] = add <4 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
@@ -509,40 +509,40 @@ define i32 @tc4(ptr noundef readonly captures(none) %tmp) vscale_range(1,16) {
 ; CHECK-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP3]])
-; CHECK-NEXT:    br i1 true, label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 4, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP4]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_COND_CLEANUP]]:
-; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD:%.*]], %[[FOR_BODY]] ], [ [[TMP4]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i32 [[ADD_LCSSA]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_0179:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[ADD]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4 x i32], ptr [[TMP]], i64 0, i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[SUM_0179:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[ADD]] = add i32 [[SUM_0179]], [[TMP5]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 4
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], %[[FOR_BODY]] ], [ [[TMP4]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i32 [[ADD_LCSSA]]
 ;
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
-  %add.lcssa = phi i32 [ %add, %for.body ]
-  ret i32 %add.lcssa
-
 for.body:                                         ; preds = %entry, %for.body
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %sum.0179 = phi i32 [ 0, %entry ], [ %add, %for.body ]
-  %arrayidx1 = getelementptr inbounds nuw [4 x i32], ptr %tmp, i64 0, i64 %indvars.iv
+  %arrayidx1 = getelementptr inbounds nuw i32, ptr %tmp, i64 %iv
   %0 = load i32, ptr %arrayidx1, align 4
   %add = add i32 %sum.0179, %0
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, 4
-  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 4
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:                                 ; preds = %for.body
+  %add.lcssa = phi i32 [ %add, %for.body ]
+  ret i32 %add.lcssa
 }
 
 ; This has a trip-count of 4 from a profile.
@@ -551,35 +551,35 @@ define i32 @tc4_from_profile(ptr noundef readonly captures(none) %tmp, i64 %N) v
 ; CHECK-SAME: ptr noundef readonly captures(none) [[TMP:%.*]], i64 [[N:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_COND_CLEANUP:.*]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ [[ADD:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    ret i32 [[TMP4]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_0179:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[ADD]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw [4 x i32], ptr [[TMP]], i64 0, i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[SUM_0179:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[ADD:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    [[ADD]] = add i32 [[SUM_0179]], [[TMP0]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !prof [[PROF9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[FOR_BODY]], !prof [[PROF9:![0-9]+]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    ret i32 [[ADD_LCSSA]]
 ;
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
-  %add.lcssa = phi i32 [ %add, %for.body ]
-  ret i32 %add.lcssa
-
 for.body:                                         ; preds = %entry, %for.body
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %sum.0179 = phi i32 [ 0, %entry ], [ %add, %for.body ]
-  %arrayidx1 = getelementptr inbounds nuw [4 x i32], ptr %tmp, i64 0, i64 %indvars.iv
+  %arrayidx1 = getelementptr inbounds nuw i32, ptr %tmp, i64 %iv
   %0 = load i32, ptr %arrayidx1, align 4
   %add = add i32 %sum.0179, %0
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, %N
-  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !prof !2
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %N
+  br i1 %exitcond.not, label %exit, label %for.body, !prof !2
+
+exit:                                 ; preds = %for.body
+  %add.lcssa = phi i32 [ %add, %for.body ]
+  ret i32 %add.lcssa
 }
 
 

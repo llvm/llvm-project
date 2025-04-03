@@ -2412,6 +2412,74 @@ static FunctionDecl *getPatternFunctionDecl(FunctionDecl *FD) {
   return FTD->getTemplatedDecl();
 }
 
+bool Sema::addInstantiatedCapturesToScope(
+    FunctionDecl *Function, const FunctionDecl *PatternDecl,
+    LocalInstantiationScope &Scope,
+    const MultiLevelTemplateArgumentList &TemplateArgs) {
+  const auto *LambdaClass = cast<CXXMethodDecl>(Function)->getParent();
+  const auto *LambdaPattern = cast<CXXMethodDecl>(PatternDecl)->getParent();
+
+  unsigned Instantiated = 0;
+
+  // FIXME: This is a workaround for not having deferred lambda body
+  // instantiation.
+  // When transforming a lambda's body, if we encounter another call to a
+  // nested lambda that contains a constraint expression, we add all of the
+  // outer lambda's instantiated captures to the current instantiation scope to
+  // facilitate constraint evaluation. However, these captures don't appear in
+  // the CXXRecordDecl until after the lambda expression is rebuilt, so we
+  // pull them out from the corresponding LSI.
+  LambdaScopeInfo *InstantiatingScope = nullptr;
+  if (LambdaPattern->capture_size() && !LambdaClass->capture_size()) {
+    for (FunctionScopeInfo *Scope : llvm::reverse(FunctionScopes)) {
+      auto *LSI = dyn_cast<LambdaScopeInfo>(Scope);
+      if (!LSI || getPatternFunctionDecl(LSI->CallOperator) != PatternDecl)
+        continue;
+      InstantiatingScope = LSI;
+      break;
+    }
+    assert(InstantiatingScope);
+  }
+
+  auto AddSingleCapture = [&](const ValueDecl *CapturedPattern,
+                              unsigned Index) {
+    ValueDecl *CapturedVar =
+        InstantiatingScope ? InstantiatingScope->Captures[Index].getVariable()
+                           : LambdaClass->getCapture(Index)->getCapturedVar();
+    assert(CapturedVar->isInitCapture());
+    Scope.InstantiatedLocal(CapturedPattern, CapturedVar);
+  };
+
+  for (const LambdaCapture &CapturePattern : LambdaPattern->captures()) {
+    if (!CapturePattern.capturesVariable()) {
+      Instantiated++;
+      continue;
+    }
+    ValueDecl *CapturedPattern = CapturePattern.getCapturedVar();
+
+    if (!CapturedPattern->isInitCapture()) {
+      Instantiated++;
+      continue;
+    }
+
+    if (!CapturedPattern->isParameterPack()) {
+      AddSingleCapture(CapturedPattern, Instantiated++);
+    } else {
+      Scope.MakeInstantiatedLocalArgPack(CapturedPattern);
+      SmallVector<UnexpandedParameterPack, 2> Unexpanded;
+      SemaRef.collectUnexpandedParameterPacks(
+          dyn_cast<VarDecl>(CapturedPattern)->getInit(), Unexpanded);
+      auto NumArgumentsInExpansion =
+          getNumArgumentsInExpansionFromUnexpanded(Unexpanded, TemplateArgs);
+      if (!NumArgumentsInExpansion)
+        continue;
+      for (unsigned Arg = 0; Arg < *NumArgumentsInExpansion; ++Arg)
+        AddSingleCapture(CapturedPattern, Instantiated++);
+    }
+  }
+  return false;
+}
+
 Sema::LambdaScopeForCallOperatorInstantiationRAII::
     LambdaScopeForCallOperatorInstantiationRAII(
         Sema &SemaRef, FunctionDecl *FD, MultiLevelTemplateArgumentList MLTAL,

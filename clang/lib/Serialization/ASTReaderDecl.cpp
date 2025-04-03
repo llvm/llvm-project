@@ -523,6 +523,9 @@ void ASTDeclReader::ReadFunctionDefinition(FunctionDecl *FD) {
   }
   // Store the offset of the body so we can lazily load it later.
   Reader.PendingBodies[FD] = GetCurrentCursorOffset();
+  // For now remember ThisDeclarationWasADefinition only for friend functions.
+  if (FD->getFriendObjectKind())
+    Reader.ThisDeclarationWasADefinitionSet.insert(FD);
 }
 
 void ASTDeclReader::Visit(Decl *D) {
@@ -2706,8 +2709,10 @@ void ASTDeclReader::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
     if (Record.readBool())
       CR = Record.readConceptReference();
     Expr *ImmediatelyDeclaredConstraint = Record.readExpr();
+    int ArgumentPackSubstitutionIndex = Record.readInt();
 
-    D->setTypeConstraint(CR, ImmediatelyDeclaredConstraint);
+    D->setTypeConstraint(CR, ImmediatelyDeclaredConstraint,
+                         ArgumentPackSubstitutionIndex);
     if ((D->ExpandedParameterPack = Record.readInt()))
       D->NumExpanded = Record.readInt();
   }

@@ -1757,6 +1757,9 @@ public:
   VPValue *getStepValue() { return getOperand(1); }
   const VPValue *getStepValue() const { return getOperand(1); }
 
+  /// Update the step value of the recipe.
+  void setStepValue(VPValue *V) { setOperand(1, V); }
+
   PHINode *getPHINode() const { return cast<PHINode>(getUnderlyingValue()); }
 
   /// Returns the induction descriptor for the recipe.
@@ -2186,9 +2189,11 @@ class VPInterleaveRecipe : public VPRecipeBase {
 public:
   VPInterleaveRecipe(const InterleaveGroup<Instruction> *IG, VPValue *Addr,
                      ArrayRef<VPValue *> StoredValues, VPValue *Mask,
-                     bool NeedsMaskForGaps)
-      : VPRecipeBase(VPDef::VPInterleaveSC, {Addr}), IG(IG),
-        NeedsMaskForGaps(NeedsMaskForGaps) {
+                     bool NeedsMaskForGaps, DebugLoc DL)
+      : VPRecipeBase(VPDef::VPInterleaveSC, {Addr},
+                     DL),
+
+        IG(IG), NeedsMaskForGaps(NeedsMaskForGaps) {
     for (unsigned i = 0; i < IG->getFactor(); ++i)
       if (Instruction *I = IG->getMember(i)) {
         if (I->getType()->isVoidTy())
@@ -2207,7 +2212,7 @@ public:
 
   VPInterleaveRecipe *clone() override {
     return new VPInterleaveRecipe(IG, getAddr(), getStoredValues(), getMask(),
-                                  NeedsMaskForGaps);
+                                  NeedsMaskForGaps, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPInterleaveSC)
@@ -3066,20 +3071,20 @@ public:
 /// A recipe for handling phi nodes of integer and floating-point inductions,
 /// producing their scalar values.
 class VPScalarIVStepsRecipe : public VPRecipeWithIRFlags,
-                              public VPUnrollPartAccessor<2> {
+                              public VPUnrollPartAccessor<3> {
   Instruction::BinaryOps InductionOpcode;
 
 public:
-  VPScalarIVStepsRecipe(VPValue *IV, VPValue *Step,
+  VPScalarIVStepsRecipe(VPValue *IV, VPValue *Step, VPValue *VF,
                         Instruction::BinaryOps Opcode, FastMathFlags FMFs)
       : VPRecipeWithIRFlags(VPDef::VPScalarIVStepsSC,
-                            ArrayRef<VPValue *>({IV, Step}), FMFs),
+                            ArrayRef<VPValue *>({IV, Step, VF}), FMFs),
         InductionOpcode(Opcode) {}
 
   VPScalarIVStepsRecipe(const InductionDescriptor &IndDesc, VPValue *IV,
-                        VPValue *Step)
+                        VPValue *Step, VPValue *VF)
       : VPScalarIVStepsRecipe(
-            IV, Step, IndDesc.getInductionOpcode(),
+            IV, Step, VF, IndDesc.getInductionOpcode(),
             dyn_cast_or_null<FPMathOperator>(IndDesc.getInductionBinOp())
                 ? IndDesc.getInductionBinOp()->getFastMathFlags()
                 : FastMathFlags()) {}
@@ -3088,7 +3093,7 @@ public:
 
   VPScalarIVStepsRecipe *clone() override {
     return new VPScalarIVStepsRecipe(
-        getOperand(0), getOperand(1), InductionOpcode,
+        getOperand(0), getOperand(1), getOperand(2), InductionOpcode,
         hasFastMathFlags() ? getFastMathFlags() : FastMathFlags());
   }
 

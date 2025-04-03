@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CGCXXABI.h"
+#include "CGDebugInfo.h"
 #include "CGHLSLRuntime.h"
 #include "CGObjCRuntime.h"
 #include "CGOpenMPRuntime.h"
@@ -1150,7 +1151,7 @@ void CodeGenFunction::GenerateCXXGlobalCleanUpFunc(
       llvm::Constant *Arg;
       std::tie(CalleeTy, Callee, Arg) = DtorsOrStermFinalizers[e - i - 1];
 
-      llvm::CallInst *CI = nullptr;
+      llvm::CallBase *CI = nullptr;
       if (Arg == nullptr) {
         assert(
             CGM.getCXXABI().useSinitAndSterm() &&
@@ -1162,6 +1163,9 @@ void CodeGenFunction::GenerateCXXGlobalCleanUpFunc(
       // Make sure the call and the callee agree on calling convention.
       if (llvm::Function *F = dyn_cast<llvm::Function>(Callee))
         CI->setCallingConv(F->getCallingConv());
+
+      if (CGM.shouldEmitConvergenceTokens() && CI->isConvergent())
+        CI = addConvergenceControlToken(CI);
     }
   }
 
