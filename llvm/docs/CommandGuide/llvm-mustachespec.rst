@@ -1,12 +1,12 @@
-llvm-mustache-spec
+llvm-mustachespec
 ==================
 
-llvm-mustache-spec test the mustache spec conformance of the LLVM
+llvm-mustachespec test the mustache spec conformance of the LLVM
 mustache library. The spec can be found here https://github.com/mustache/spec
 
-    $ llvm-mustache-spec input-file
+    $ llvm-mustachespec input-file
 
-.. program:: llvm-mustache-spec
+.. program:: llvm-mustachespec
 
 Outputs the number of tests failures and success in the spec
 
