@@ -3921,7 +3921,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductions(
   // function. Partial values are extracted from the type-erased array of
   // pointers to private variables.
   Error Err = populateReductionFunction(ReductionFunc, ReductionInfos, Builder,
-                                        IsByRef, false);
+                                        IsByRef, /*isGPU=*/false);
   if (Err)
     return Err;
 
