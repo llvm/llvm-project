@@ -15867,15 +15867,8 @@ SDValue AArch64TargetLowering::LowerVSETCC(SDValue Op,
   EVT CmpVT = LHS.getValueType().changeVectorElementTypeToInteger();
   SDLoc dl(Op);
 
-  if (LHS.getValueType().getVectorElementType().isInteger()) {
-    assert(LHS.getValueType() == RHS.getValueType());
-    AArch64CC::CondCode AArch64CC = changeIntCCToAArch64CC(CC);
-    if (SDValue Cmp =
-            EmitVectorComparison(LHS, RHS, AArch64CC, false, CmpVT, dl, DAG))
-      return DAG.getSExtOrTrunc(Cmp, dl, Op.getValueType());
-
+  if (LHS.getValueType().getVectorElementType().isInteger())
     return Op;
-  }
 
   // Lower isnan(x) | isnan(never-nan) to x != x.
   // Lower !isnan(x) & !isnan(never-nan) to x == x.
