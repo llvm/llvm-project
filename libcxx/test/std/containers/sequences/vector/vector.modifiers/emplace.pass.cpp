@@ -290,7 +290,13 @@ TEST_CONSTEXPR_CXX20 void test() {
   // change in the future.
 #if defined(_LIBCPP_VERSION) && !defined(TEST_HAS_NO_EXCEPTIONS)
   {
-    std::vector<ThrowingMove, Allocator<ThrowingMove> > v;
+    // This ensures that we test what we intend to test: the Standard requires the strong exception safety
+    // guarantee for types that are nothrow move constructible or copy insertable, but that's not what we're
+    // trying to test. We're trying to test the stronger libc++ guarantee.
+    static_assert(!std::is_nothrow_move_constructible<ThrowingMoveOnly>::value, "");
+    static_assert(!std::is_copy_constructible<ThrowingMoveOnly>::value, "");
+
+    std::vector<ThrowingMoveOnly, Allocator<ThrowingMoveOnly> > v;
     v.emplace_back(0, /* do throw */ false);
     v.emplace_back(1, /* do throw */ false);
 
@@ -302,9 +308,9 @@ TEST_CONSTEXPR_CXX20 void test() {
     v.emplace(v.cend(), 3, /* do throw */ true); // this shouldn't throw since we shouldn't move this element at all
 
     assert(v.size() >= 3);
-    assert(v[0] == ThrowingMove(0));
-    assert(v[1] == ThrowingMove(1));
-    assert(v.back() == ThrowingMove(3));
+    assert(v[0] == ThrowingMoveOnly(0));
+    assert(v[1] == ThrowingMoveOnly(1));
+    assert(v.back() == ThrowingMoveOnly(3));
     assert(is_contiguous_container_asan_correct(v));
   }
 #endif // defined(_LIBCPP_VERSION) && !defined(TEST_HAS_NO_EXCEPTIONS)

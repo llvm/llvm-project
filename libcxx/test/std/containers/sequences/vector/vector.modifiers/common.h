@@ -39,19 +39,19 @@ struct Throws {
 
 bool Throws::sThrows = false;
 
-struct ThrowingMove {
-  TEST_CONSTEXPR ThrowingMove() : value(0), do_throw(false) {}
-  TEST_CONSTEXPR explicit ThrowingMove(int v) : value(v), do_throw(false) {}
-  TEST_CONSTEXPR explicit ThrowingMove(int v, bool throw_) : value(v), do_throw(throw_) {}
+struct ThrowingMoveOnly {
+  TEST_CONSTEXPR ThrowingMoveOnly() : value(0), do_throw(false) {}
+  TEST_CONSTEXPR explicit ThrowingMoveOnly(int v) : value(v), do_throw(false) {}
+  TEST_CONSTEXPR explicit ThrowingMoveOnly(int v, bool throw_) : value(v), do_throw(throw_) {}
 
-  ThrowingMove(const ThrowingMove& rhs)        = default;
-  ThrowingMove& operator=(const ThrowingMove&) = default;
+  ThrowingMoveOnly(const ThrowingMoveOnly& rhs)        = delete;
+  ThrowingMoveOnly& operator=(const ThrowingMoveOnly&) = delete;
 
-  TEST_CONSTEXPR_CXX14 ThrowingMove(ThrowingMove&& rhs) : value(rhs.value), do_throw(rhs.do_throw) {
+  TEST_CONSTEXPR_CXX14 ThrowingMoveOnly(ThrowingMoveOnly&& rhs) : value(rhs.value), do_throw(rhs.do_throw) {
     if (do_throw)
       throw 1;
   }
-  TEST_CONSTEXPR_CXX14 ThrowingMove& operator=(ThrowingMove&& rhs) {
+  TEST_CONSTEXPR_CXX14 ThrowingMoveOnly& operator=(ThrowingMoveOnly&& rhs) {
     value    = rhs.value;
     do_throw = rhs.do_throw;
     if (do_throw)
@@ -59,7 +59,7 @@ struct ThrowingMove {
     return *this;
   }
 
-  TEST_CONSTEXPR_CXX14 friend bool operator==(ThrowingMove const& lhs, ThrowingMove const& rhs) {
+  TEST_CONSTEXPR_CXX14 friend bool operator==(ThrowingMoveOnly const& lhs, ThrowingMoveOnly const& rhs) {
     return lhs.value == rhs.value;
   }
 
