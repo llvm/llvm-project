@@ -483,7 +483,7 @@ public:
   void LowerCallSiteWithDeoptBundle(const CallBase *Call, SDValue Callee,
                                     const BasicBlock *EHPadBB);
 
-  void LowerDeoptimizeCall(const CallBase *CI);
+  void LowerDeoptimizeCall(const CallInst *CI);
   void LowerDeoptimizingReturn();
 
   void LowerCallSiteWithDeoptBundleImpl(const CallBase *Call, SDValue Callee,
@@ -537,7 +537,7 @@ private:
   // These all get lowered before this pass.
   void visitInvoke(const InvokeInst &I);
   void visitCallBr(const CallBrInst &I);
-  void visitCallBrLandingPad(const CallBase &I);
+  void visitCallBrLandingPad(const CallInst &I);
   void visitResume(const ResumeInst &I);
 
   void visitUnary(const User &I, unsigned Opcode);
@@ -594,25 +594,24 @@ private:
   void visitAlloca(const AllocaInst &I);
   void visitLoad(const LoadInst &I);
   void visitStore(const StoreInst &I);
-  void visitMaskedLoad(const CallBase &I, bool IsExpanding = false);
-  void visitMaskedStore(const CallBase &I, bool IsCompressing = false);
-  void visitMaskedGather(const CallBase &I);
-  void visitMaskedScatter(const CallBase &I);
+  void visitMaskedLoad(const CallInst &I, bool IsExpanding = false);
+  void visitMaskedStore(const CallInst &I, bool IsCompressing = false);
+  void visitMaskedGather(const CallInst &I);
+  void visitMaskedScatter(const CallInst &I);
   void visitAtomicCmpXchg(const AtomicCmpXchgInst &I);
   void visitAtomicRMW(const AtomicRMWInst &I);
   void visitFence(const FenceInst &I);
   void visitPHI(const PHINode &I);
   void visitCall(const CallInst &I);
-  void visitCallBase(const CallBase &I);
-  bool visitMemCmpBCmpCall(const CallBase &I);
-  bool visitMemPCpyCall(const CallBase &I);
-  bool visitMemChrCall(const CallBase &I);
-  bool visitStrCpyCall(const CallBase &I, bool isStpcpy);
-  bool visitStrCmpCall(const CallBase &I);
-  bool visitStrLenCall(const CallBase &I);
-  bool visitStrNLenCall(const CallBase &I);
-  bool visitUnaryFloatCall(const CallBase &I, unsigned Opcode);
-  bool visitBinaryFloatCall(const CallBase &I, unsigned Opcode);
+  bool visitMemCmpBCmpCall(const CallInst &I);
+  bool visitMemPCpyCall(const CallInst &I);
+  bool visitMemChrCall(const CallInst &I);
+  bool visitStrCpyCall(const CallInst &I, bool isStpcpy);
+  bool visitStrCmpCall(const CallInst &I);
+  bool visitStrLenCall(const CallInst &I);
+  bool visitStrNLenCall(const CallInst &I);
+  bool visitUnaryFloatCall(const CallInst &I, unsigned Opcode);
+  bool visitBinaryFloatCall(const CallInst &I, unsigned Opcode);
   void visitAtomicLoad(const LoadInst &I);
   void visitAtomicStore(const StoreInst &I);
   void visitLoadFromSwiftError(const LoadInst &I);
@@ -625,12 +624,12 @@ private:
   bool visitEntryValueDbgValue(ArrayRef<const Value *> Values,
                                DILocalVariable *Variable, DIExpression *Expr,
                                DebugLoc DbgLoc);
-  void visitIntrinsicCall(const CallBase &I, unsigned Intrinsic);
-  void visitTargetIntrinsic(const CallBase &I, unsigned Intrinsic);
+  void visitIntrinsicCall(const CallInst &I, unsigned Intrinsic);
+  void visitTargetIntrinsic(const CallInst &I, unsigned Intrinsic);
   void visitConstrainedFPIntrinsic(const ConstrainedFPIntrinsic &FPI);
-  void visitConvergenceControl(const CallBase &I, unsigned Intrinsic);
-  void visitVectorHistogram(const CallBase &I, unsigned IntrinsicID);
-  void visitVectorExtractLastActive(const CallBase &I, unsigned Intrinsic);
+  void visitConvergenceControl(const CallInst &I, unsigned Intrinsic);
+  void visitVectorHistogram(const CallInst &I, unsigned IntrinsicID);
+  void visitVectorExtractLastActive(const CallInst &I, unsigned Intrinsic);
   void visitVPLoad(const VPIntrinsic &VPIntrin, EVT VT,
                    const SmallVectorImpl<SDValue> &OpValues);
   void visitVPStore(const VPIntrinsic &VPIntrin,
@@ -646,23 +645,23 @@ private:
   void visitVPCmp(const VPCmpIntrinsic &VPIntrin);
   void visitVectorPredicationIntrinsic(const VPIntrinsic &VPIntrin);
 
-  void visitVAStart(const CallBase &I);
+  void visitVAStart(const CallInst &I);
   void visitVAArg(const VAArgInst &I);
-  void visitVAEnd(const CallBase &I);
-  void visitVACopy(const CallBase &I);
-  void visitStackmap(const CallBase &I);
+  void visitVAEnd(const CallInst &I);
+  void visitVACopy(const CallInst &I);
+  void visitStackmap(const CallInst &I);
   void visitPatchpoint(const CallBase &CB, const BasicBlock *EHPadBB = nullptr);
 
   // These two are implemented in StatepointLowering.cpp
   void visitGCRelocate(const GCRelocateInst &Relocate);
   void visitGCResult(const GCResultInst &I);
 
-  void visitVectorReduce(const CallBase &I, unsigned Intrinsic);
-  void visitVectorReverse(const CallBase &I);
-  void visitVectorSplice(const CallBase &I);
-  void visitVectorInterleave(const CallBase &I, unsigned Factor);
-  void visitVectorDeinterleave(const CallBase &I, unsigned Factor);
-  void visitStepVector(const CallBase &I);
+  void visitVectorReduce(const CallInst &I, unsigned Intrinsic);
+  void visitVectorReverse(const CallInst &I);
+  void visitVectorSplice(const CallInst &I);
+  void visitVectorInterleave(const CallInst &I, unsigned Factor);
+  void visitVectorDeinterleave(const CallInst &I, unsigned Factor);
+  void visitStepVector(const CallInst &I);
 
   void visitUserOp1(const Instruction &I) {
     llvm_unreachable("UserOp1 should not exist at instruction selection time!");

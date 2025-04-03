@@ -1715,7 +1715,7 @@ bool RISCVTargetLowering::shouldExpandCttzElements(EVT VT) const {
 }
 
 bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                             const CallBase &I,
+                                             const CallInst &I,
                                              MachineFunction &MF,
                                              unsigned Intrinsic) const {
   auto &DL = I.getDataLayout();

@@ -3454,7 +3454,14 @@ void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
     default:
       report_fatal_error("Unsupported intrinsic for callbr");
     case Intrinsic::amdgcn_kill:
-      visitCallBase(I);
+      if (I.getNumIndirectDests() != 1)
+        report_fatal_error(
+            "amdgcn.kill supportes exactly one indirect destination");
+      CallInst *CI =
+          CallInst::Create(I.getFunctionType(), I.getCalledFunction(),
+                           SmallVector<Value *, 1>(I.args()));
+      visitCall(*CI);
+      CI->deleteValue();
       break;
     }
   } else {
@@ -4807,7 +4814,7 @@ void SelectionDAGBuilder::visitStore(const StoreInst &I) {
   DAG.setRoot(StoreNode);
 }
 
-void SelectionDAGBuilder::visitMaskedStore(const CallBase &I,
+void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,
                                            bool IsCompressing) {
   SDLoc sdl = getCurSDLoc();
 
@@ -4938,7 +4945,7 @@ static bool getUniformBase(const Value *Ptr, SDValue &Base, SDValue &Index,
   return true;
 }
 
-void SelectionDAGBuilder::visitMaskedScatter(const CallBase &I) {
+void SelectionDAGBuilder::visitMaskedScatter(const CallInst &I) {
   SDLoc sdl = getCurSDLoc();
 
   // llvm.masked.scatter.*(Src0, Ptrs, alignment, Mask)
@@ -4983,7 +4990,7 @@ void SelectionDAGBuilder::visitMaskedScatter(const CallBase &I) {
   setValue(&I, Scatter);
 }
 
-void SelectionDAGBuilder::visitMaskedLoad(const CallBase &I, bool IsExpanding) {
+void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
   SDLoc sdl = getCurSDLoc();
 
   auto getMaskedLoadOps = [&](Value *&Ptr, Value *&Mask, Value *&Src0,
@@ -5052,7 +5059,7 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallBase &I, bool IsExpanding) {
   setValue(&I, Res);
 }
 
-void SelectionDAGBuilder::visitMaskedGather(const CallBase &I) {
+void SelectionDAGBuilder::visitMaskedGather(const CallInst &I) {
   SDLoc sdl = getCurSDLoc();
 
   // @llvm.masked.gather.*(Ptrs, alignment, Mask, Src0)
@@ -5286,7 +5293,7 @@ void SelectionDAGBuilder::visitAtomicStore(const StoreInst &I) {
 
 /// visitTargetIntrinsic - Lower a call of a target intrinsic to an INTRINSIC
 /// node.
-void SelectionDAGBuilder::visitTargetIntrinsic(const CallBase &I,
+void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
                                                unsigned Intrinsic) {
   // Ignore the callsite's attributes. A specific call site may be marked with
   // readnone, but the lowering code will expect the chain based on the
@@ -6369,7 +6376,7 @@ bool SelectionDAGBuilder::visitEntryValueDbgValue(
 }
 
 /// Lower the call to the specified intrinsic function.
-void SelectionDAGBuilder::visitConvergenceControl(const CallBase &I,
+void SelectionDAGBuilder::visitConvergenceControl(const CallInst &I,
                                                   unsigned Intrinsic) {
   SDLoc sdl = getCurSDLoc();
   switch (Intrinsic) {
@@ -6389,7 +6396,7 @@ void SelectionDAGBuilder::visitConvergenceControl(const CallBase &I,
   }
 }
 
-void SelectionDAGBuilder::visitVectorHistogram(const CallBase &I,
+void SelectionDAGBuilder::visitVectorHistogram(const CallInst &I,
                                                unsigned IntrinsicID) {
   // For now, we're only lowering an 'add' histogram.
   // We can add others later, e.g. saturating adds, min/max.
@@ -6447,7 +6454,7 @@ void SelectionDAGBuilder::visitVectorHistogram(const CallBase &I,
   DAG.setRoot(Histogram);
 }
 
-void SelectionDAGBuilder::visitVectorExtractLastActive(const CallBase &I,
+void SelectionDAGBuilder::visitVectorExtractLastActive(const CallInst &I,
                                                        unsigned Intrinsic) {
   assert(Intrinsic == Intrinsic::experimental_vector_extract_last_active &&
          "Tried lowering invalid vector extract last");
@@ -6475,7 +6482,7 @@ void SelectionDAGBuilder::visitVectorExtractLastActive(const CallBase &I,
 }
 
 /// Lower the call to the specified intrinsic function.
-void SelectionDAGBuilder::visitIntrinsicCall(const CallBase &I,
+void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                                              unsigned Intrinsic) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDLoc sdl = getCurSDLoc();
@@ -9108,7 +9115,7 @@ void SelectionDAGBuilder::processIntegerCallValue(const Instruction &I,
 /// normal call.
 /// The caller already checked that \p I calls the appropriate LibFunc with a
 /// correct prototype.
-bool SelectionDAGBuilder::visitMemCmpBCmpCall(const CallBase &I) {
+bool SelectionDAGBuilder::visitMemCmpBCmpCall(const CallInst &I) {
   const Value *LHS = I.getArgOperand(0), *RHS = I.getArgOperand(1);
   const Value *Size = I.getArgOperand(2);
   const ConstantSDNode *CSize = dyn_cast<ConstantSDNode>(getValue(Size));
@@ -9200,7 +9207,7 @@ bool SelectionDAGBuilder::visitMemCmpBCmpCall(const CallBase &I) {
 /// normal call.
 /// The caller already checked that \p I calls the appropriate LibFunc with a
 /// correct prototype.
-bool SelectionDAGBuilder::visitMemChrCall(const CallBase &I) {
+bool SelectionDAGBuilder::visitMemChrCall(const CallInst &I) {
   const Value *Src = I.getArgOperand(0);
   const Value *Char = I.getArgOperand(1);
   const Value *Length = I.getArgOperand(2);
@@ -9224,7 +9231,7 @@ bool SelectionDAGBuilder::visitMemChrCall(const CallBase &I) {
 /// normal call.
 /// The caller already checked that \p I calls the appropriate LibFunc with a
 /// correct prototype.
-bool SelectionDAGBuilder::visitMemPCpyCall(const CallBase &I) {
+bool SelectionDAGBuilder::visitMemPCpyCall(const CallInst &I) {
   SDValue Dst = getValue(I.getArgOperand(0));
   SDValue Src = getValue(I.getArgOperand(1));
   SDValue Size = getValue(I.getArgOperand(2));
@@ -9262,7 +9269,7 @@ bool SelectionDAGBuilder::visitMemPCpyCall(const CallBase &I) {
 /// normal call.
 /// The caller already checked that \p I calls the appropriate LibFunc with a
 /// correct prototype.
-bool SelectionDAGBuilder::visitStrCpyCall(const CallBase &I, bool isStpcpy) {
+bool SelectionDAGBuilder::visitStrCpyCall(const CallInst &I, bool isStpcpy) {
   const Value *Arg0 = I.getArgOperand(0), *Arg1 = I.getArgOperand(1);
 
   const SelectionDAGTargetInfo &TSI = DAG.getSelectionDAGInfo();
@@ -9285,7 +9292,7 @@ bool SelectionDAGBuilder::visitStrCpyCall(const CallBase &I, bool isStpcpy) {
 /// normal call.
 /// The caller already checked that \p I calls the appropriate LibFunc with a
 /// correct prototype.
-bool SelectionDAGBuilder::visitStrCmpCall(const CallBase &I) {
+bool SelectionDAGBuilder::visitStrCmpCall(const CallInst &I) {
   const Value *Arg0 = I.getArgOperand(0), *Arg1 = I.getArgOperand(1);
 
   const SelectionDAGTargetInfo &TSI = DAG.getSelectionDAGInfo();
@@ -9308,7 +9315,7 @@ bool SelectionDAGBuilder::visitStrCmpCall(const CallBase &I) {
 /// normal call.
 /// The caller already checked that \p I calls the appropriate LibFunc with a
 /// correct prototype.
-bool SelectionDAGBuilder::visitStrLenCall(const CallBase &I) {
+bool SelectionDAGBuilder::visitStrLenCall(const CallInst &I) {
   const Value *Arg0 = I.getArgOperand(0);
 
   const SelectionDAGTargetInfo &TSI = DAG.getSelectionDAGInfo();
@@ -9329,7 +9336,7 @@ bool SelectionDAGBuilder::visitStrLenCall(const CallBase &I) {
 /// normal call.
 /// The caller already checked that \p I calls the appropriate LibFunc with a
 /// correct prototype.
-bool SelectionDAGBuilder::visitStrNLenCall(const CallBase &I) {
+bool SelectionDAGBuilder::visitStrNLenCall(const CallInst &I) {
   const Value *Arg0 = I.getArgOperand(0), *Arg1 = I.getArgOperand(1);
 
   const SelectionDAGTargetInfo &TSI = DAG.getSelectionDAGInfo();
@@ -9351,7 +9358,7 @@ bool SelectionDAGBuilder::visitStrNLenCall(const CallBase &I) {
 /// false and it will be lowered like a normal call.
 /// The caller already checked that \p I calls the appropriate LibFunc with a
 /// correct prototype.
-bool SelectionDAGBuilder::visitUnaryFloatCall(const CallBase &I,
+bool SelectionDAGBuilder::visitUnaryFloatCall(const CallInst &I,
                                               unsigned Opcode) {
   // We already checked this call's prototype; verify it doesn't modify errno.
   if (!I.onlyReadsMemory())
@@ -9371,7 +9378,7 @@ bool SelectionDAGBuilder::visitUnaryFloatCall(const CallBase &I,
 /// false, and it will be lowered like a normal call.
 /// The caller already checked that \p I calls the appropriate LibFunc with a
 /// correct prototype.
-bool SelectionDAGBuilder::visitBinaryFloatCall(const CallBase &I,
+bool SelectionDAGBuilder::visitBinaryFloatCall(const CallInst &I,
                                                unsigned Opcode) {
   // We already checked this call's prototype; verify it doesn't modify errno.
   if (!I.onlyReadsMemory())
@@ -9387,9 +9394,7 @@ bool SelectionDAGBuilder::visitBinaryFloatCall(const CallBase &I,
   return true;
 }
 
-void SelectionDAGBuilder::visitCall(const CallInst &I) { visitCallBase(I); }
-
-void SelectionDAGBuilder::visitCallBase(const CallBase &I) {
+void SelectionDAGBuilder::visitCall(const CallInst &I) {
   // Handle inline assembly differently.
   if (I.isInlineAsm()) {
     visitInlineAsm(I);
@@ -10552,7 +10557,7 @@ void SelectionDAGBuilder::emitInlineAsmError(const CallBase &Call,
   setValue(&Call, DAG.getMergeValues(Ops, getCurSDLoc()));
 }
 
-void SelectionDAGBuilder::visitVAStart(const CallBase &I) {
+void SelectionDAGBuilder::visitVAStart(const CallInst &I) {
   DAG.setRoot(DAG.getNode(ISD::VASTART, getCurSDLoc(),
                           MVT::Other, getRoot(),
                           getValue(I.getArgOperand(0)),
@@ -10574,14 +10579,14 @@ void SelectionDAGBuilder::visitVAArg(const VAArgInst &I) {
   setValue(&I, V);
 }
 
-void SelectionDAGBuilder::visitVAEnd(const CallBase &I) {
+void SelectionDAGBuilder::visitVAEnd(const CallInst &I) {
   DAG.setRoot(DAG.getNode(ISD::VAEND, getCurSDLoc(),
                           MVT::Other, getRoot(),
                           getValue(I.getArgOperand(0)),
                           DAG.getSrcValue(I.getArgOperand(0))));
 }
 
-void SelectionDAGBuilder::visitVACopy(const CallBase &I) {
+void SelectionDAGBuilder::visitVACopy(const CallInst &I) {
   DAG.setRoot(DAG.getNode(ISD::VACOPY, getCurSDLoc(),
                           MVT::Other, getRoot(),
                           getValue(I.getArgOperand(0)),
@@ -10699,7 +10704,7 @@ static void addStackMapLiveVars(const CallBase &Call, unsigned StartIdx,
 }
 
 /// Lower llvm.experimental.stackmap.
-void SelectionDAGBuilder::visitStackmap(const CallBase &CI) {
+void SelectionDAGBuilder::visitStackmap(const CallInst &CI) {
   // void @llvm.experimental.stackmap(i64 <id>, i32 <numShadowBytes>,
   //                                  [live variables...])
 
@@ -10911,7 +10916,7 @@ void SelectionDAGBuilder::visitPatchpoint(const CallBase &CB,
   FuncInfo.MF->getFrameInfo().setHasPatchPoint();
 }
 
-void SelectionDAGBuilder::visitVectorReduce(const CallBase &I,
+void SelectionDAGBuilder::visitVectorReduce(const CallInst &I,
                                             unsigned Intrinsic) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDValue Op1 = getValue(I.getArgOperand(0));
@@ -12594,14 +12599,14 @@ void SelectionDAGBuilder::visitSwitch(const SwitchInst &SI) {
   }
 }
 
-void SelectionDAGBuilder::visitStepVector(const CallBase &I) {
+void SelectionDAGBuilder::visitStepVector(const CallInst &I) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   auto DL = getCurSDLoc();
   EVT ResultVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
   setValue(&I, DAG.getStepVector(DL, ResultVT));
 }
 
-void SelectionDAGBuilder::visitVectorReverse(const CallBase &I) {
+void SelectionDAGBuilder::visitVectorReverse(const CallInst &I) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
 
@@ -12624,7 +12629,7 @@ void SelectionDAGBuilder::visitVectorReverse(const CallBase &I) {
   setValue(&I, DAG.getVectorShuffle(VT, DL, V, DAG.getUNDEF(VT), Mask));
 }
 
-void SelectionDAGBuilder::visitVectorDeinterleave(const CallBase &I,
+void SelectionDAGBuilder::visitVectorDeinterleave(const CallInst &I,
                                                   unsigned Factor) {
   auto DL = getCurSDLoc();
   SDValue InVec = getValue(I.getOperand(0));
@@ -12660,7 +12665,7 @@ void SelectionDAGBuilder::visitVectorDeinterleave(const CallBase &I,
   setValue(&I, Res);
 }
 
-void SelectionDAGBuilder::visitVectorInterleave(const CallBase &I,
+void SelectionDAGBuilder::visitVectorInterleave(const CallInst &I,
                                                 unsigned Factor) {
   auto DL = getCurSDLoc();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
@@ -12714,7 +12719,7 @@ void SelectionDAGBuilder::visitFreeze(const FreezeInst &I) {
                            DAG.getVTList(ValueVTs), Values));
 }
 
-void SelectionDAGBuilder::visitVectorSplice(const CallBase &I) {
+void SelectionDAGBuilder::visitVectorSplice(const CallInst &I) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
 
@@ -12788,7 +12793,7 @@ static Register FollowCopyChain(MachineRegisterInfo &MRI, Register Reg) {
 //   setValue(&I, getCopyFromRegs(CBR, CBR->getType()));
 // otherwise we will end up with copies of virtregs only valid along direct
 // edges.
-void SelectionDAGBuilder::visitCallBrLandingPad(const CallBase &I) {
+void SelectionDAGBuilder::visitCallBrLandingPad(const CallInst &I) {
   SmallVector<EVT, 8> ResultVTs;
   SmallVector<SDValue, 8> ResultValues;
   const auto *CBR =

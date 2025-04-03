@@ -455,7 +455,7 @@ void DiagnosticInfoMisExpect::print(DiagnosticPrinter &DP) const {
 void OptimizationRemarkAnalysisFPCommute::anchor() {}
 void OptimizationRemarkAnalysisAliasing::anchor() {}
 
-void llvm::diagnoseDontCall(const CallBase &CI) {
+void llvm::diagnoseDontCall(const CallInst &CI) {
   const auto *F =
       dyn_cast<Function>(CI.getCalledOperand()->stripPointerCasts());
 

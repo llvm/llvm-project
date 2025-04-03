@@ -150,7 +150,7 @@ bool returnTypeIsEligibleForTailCall(const Function *F, const Instruction *I,
 
 /// Returns true if the parent of \p CI returns CI's first argument after
 /// calling \p CI.
-bool funcReturnsFirstArgOfCall(const CallBase &CI);
+bool funcReturnsFirstArgOfCall(const CallInst &CI);
 
 DenseMap<const MachineBasicBlock *, int>
 getEHScopeMembership(const MachineFunction &MF);
