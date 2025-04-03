@@ -239,11 +239,10 @@ static void getAArch64MultilibFlags(const Driver &D,
     Result.push_back(BranchProtectionArg->getAsString(Args));
   }
 
-  if (FeatureSet.contains("+strict-align")) {
+  if (FeatureSet.contains("+strict-align"))
     Result.push_back("-mno-unaligned-access");
-  } else {
+  else
     Result.push_back("-munaligned-access");
-  }
 
   if (Arg *Endian = Args.getLastArg(options::OPT_mbig_endian,
                                     options::OPT_mlittle_endian)) {
