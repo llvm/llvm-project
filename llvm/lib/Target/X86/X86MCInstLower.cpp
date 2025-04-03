@@ -195,7 +195,14 @@ MCSymbol *X86MCInstLower::GetSymbolFromOperand(const MachineOperand &MO) const {
   if (!Sym) {
     // If new MCSymbol needs to be created for
     // MachineOperand::MO_ExternalSymbol, create it as a symbol
-    // in AsmPrinter's OutContext.
+    // in AsmPrinter's OutContext instead form Ctx which is
+    // the MCContext of the MachineFunction that this MachineFunction
+    // pass is running on.
+    // This is helps to deduplicate global symbols if Ctx is different
+    // from AsmPrinter.OutContext.
+    // This also aligns with how many other backends create MCSymbol
+    // for MachineOperand of type MO_ExternalSymbol such as
+    // in AAarch64MCInstLowering.
     if (MO.isSymbol())
       Sym = AsmPrinter.OutContext.getOrCreateSymbol(Name);
     else
