@@ -56,7 +56,6 @@ class TestStatusline(PExpectTest):
             "set set show-statusline false", ["\x1b[0;{}r".format(terminal_height)]
         )
 
-
     # PExpect uses many timeouts internally and doesn't play well
     # under ASAN on a loaded machine..
     @skipIfAsan
