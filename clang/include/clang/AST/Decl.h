@@ -33,6 +33,7 @@
 #include "clang/Basic/PragmaKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Basic/UnsignedOrNone.h"
 #include "clang/Basic/Visibility.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -82,14 +83,13 @@ enum class ImplicitParamKind;
 // expanded.
 struct AssociatedConstraint {
   const Expr *ConstraintExpr = nullptr;
-  int ArgumentPackSubstitutionIndex = -1;
+  UnsignedOrNone ArgPackSubstIndex = std::nullopt;
 
   constexpr AssociatedConstraint() = default;
 
   explicit AssociatedConstraint(const Expr *ConstraintExpr,
-                                int ArgumentPackSubstitutionIndex = -1)
-      : ConstraintExpr(ConstraintExpr),
-        ArgumentPackSubstitutionIndex(ArgumentPackSubstitutionIndex) {}
+                                UnsignedOrNone ArgPackSubstIndex = std::nullopt)
+      : ConstraintExpr(ConstraintExpr), ArgPackSubstIndex(ArgPackSubstIndex) {}
 
   explicit operator bool() const { return ConstraintExpr != nullptr; }
 
@@ -2540,7 +2540,7 @@ public:
   /// If this function is an allocation/deallocation function that takes
   /// the `std::nothrow_t` tag, return true through IsNothrow,
   bool isReplaceableGlobalAllocationFunction(
-      std::optional<unsigned> *AlignmentParam = nullptr,
+      UnsignedOrNone *AlignmentParam = nullptr,
       bool *IsNothrow = nullptr) const;
 
   /// Determine if this function provides an inline implementation of a builtin.

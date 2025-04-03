@@ -70,7 +70,7 @@ static bool FillStackFrames(DAP &dap, lldb::SBThread &thread,
     stack_frames.emplace_back(CreateStackFrame(frame, dap.frame_format));
   }
 
-  if (dap.display_extended_backtrace && reached_end_of_stack) {
+  if (dap.configuration.displayExtendedBacktrace && reached_end_of_stack) {
     // Check for any extended backtraces.
     for (uint32_t bt = 0;
          bt < thread.GetProcess().GetNumExtendedBacktraceTypes(); bt++) {

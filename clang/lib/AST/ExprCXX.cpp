@@ -1694,7 +1694,7 @@ SizeOfPackExpr *SizeOfPackExpr::Create(ASTContext &Context,
                                        SourceLocation OperatorLoc,
                                        NamedDecl *Pack, SourceLocation PackLoc,
                                        SourceLocation RParenLoc,
-                                       std::optional<unsigned> Length,
+                                       UnsignedOrNone Length,
                                        ArrayRef<TemplateArgument> PartialArgs) {
   void *Storage =
       Context.Allocate(totalSizeToAlloc<TemplateArgument>(PartialArgs.size()));
@@ -1981,14 +1981,13 @@ CXXParenListInitExpr *CXXParenListInitExpr::CreateEmpty(ASTContext &C,
 }
 
 CXXFoldExpr::CXXFoldExpr(QualType T, UnresolvedLookupExpr *Callee,
-                                SourceLocation LParenLoc, Expr *LHS,
-                                BinaryOperatorKind Opcode,
-                                SourceLocation EllipsisLoc, Expr *RHS,
-                                SourceLocation RParenLoc,
-                                std::optional<unsigned> NumExpansions)
+                         SourceLocation LParenLoc, Expr *LHS,
+                         BinaryOperatorKind Opcode, SourceLocation EllipsisLoc,
+                         Expr *RHS, SourceLocation RParenLoc,
+                         UnsignedOrNone NumExpansions)
     : Expr(CXXFoldExprClass, T, VK_PRValue, OK_Ordinary), LParenLoc(LParenLoc),
       EllipsisLoc(EllipsisLoc), RParenLoc(RParenLoc),
-      NumExpansions(NumExpansions ? *NumExpansions + 1 : 0), Opcode(Opcode) {
+      NumExpansions(NumExpansions), Opcode(Opcode) {
   // We rely on asserted invariant to distinguish left and right folds.
   assert(((LHS && LHS->containsUnexpandedParameterPack()) !=
           (RHS && RHS->containsUnexpandedParameterPack())) &&
