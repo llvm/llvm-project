@@ -1,5 +1,3 @@
-# REQUIRES: spirv-registered-target
-
 # RUN: llvm-as %S/Inputs/SYCL/foo.ll -o %t.foo.bc
 # RUN: llvm-as %S/Inputs/SYCL/bar.ll -o %t.bar.bc
 # RUN: llvm-as %S/Inputs/SYCL/baz.ll -o %t.baz.bc
