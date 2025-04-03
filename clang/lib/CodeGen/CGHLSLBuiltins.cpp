@@ -382,8 +382,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   }
   case Builtin::BI__builtin_hlsl_dot2add: {
     llvm::Triple::ArchType Arch = CGM.getTarget().getTriple().getArch();
-    assert(Arch == llvm::Triple::dxil && 
-      "Intrinsic dot2add is only allowed for dxil architecture");
+    assert(Arch == llvm::Triple::dxil &&
+           "Intrinsic dot2add is only allowed for dxil architecture");
     Value *A = EmitScalarExpr(E->getArg(0));
     Value *B = EmitScalarExpr(E->getArg(1));
     Value *C = EmitScalarExpr(E->getArg(2));

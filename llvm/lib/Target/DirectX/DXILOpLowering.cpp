@@ -54,9 +54,8 @@ static SmallVector<Value *> populateOperands(Value *Arg, IRBuilder<> &Builder) {
   return ExtractedElements;
 }
 
-static SmallVector<Value *> argVectorFlatten(CallInst *Orig,
-                                             IRBuilder<> &Builder,
-                                             unsigned NumOperands) {
+static SmallVector<Value *>
+argVectorFlatten(CallInst *Orig, IRBuilder<> &Builder, unsigned NumOperands) {
   assert(NumOperands > 0);
   Value *Arg0 = Orig->getOperand(0);
   [[maybe_unused]] auto *VecArg0 = dyn_cast<FixedVectorType>(Arg0->getType());
@@ -77,7 +76,7 @@ static SmallVector<Value *> argVectorFlatten(CallInst *Orig,
 static SmallVector<Value *> argVectorFlatten(CallInst *Orig,
                                              IRBuilder<> &Builder) {
   // Note: arg[NumOperands-1] is a pointer and is not needed by our flattening.
-    return argVectorFlatten(Orig, Builder, Orig->getNumOperands() - 1);
+  return argVectorFlatten(Orig, Builder, Orig->getNumOperands() - 1);
 }
 
 namespace {
@@ -175,7 +174,8 @@ public:
         Args = argVectorFlatten(CI, OpBuilder.getIRB());
       } else if (F.getIntrinsicID() == Intrinsic::dx_dot2add) {
         // arg[NumOperands-1] is a pointer and is not needed by our flattening.
-        // arg[NumOperands-2] also does not need to be flattened because it is a scalar.
+        // arg[NumOperands-2] also does not need to be flattened because it is a
+        // scalar.
         unsigned NumOperands = CI->getNumOperands() - 2;
         Args.push_back(CI->getArgOperand(NumOperands));
         Args.append(argVectorFlatten(CI, OpBuilder.getIRB(), NumOperands));
