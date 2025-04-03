@@ -241,8 +241,14 @@ BESSEL_Y0(REAL(k) X) -> REAL(k)
 BESSEL_Y1(REAL(k) X) -> REAL(k)
 BESSEL_YN(INTEGER(n) N, REAL(k) X) -> REAL(k)
 ERF(REAL(k) X) -> REAL(k)
+DERF(REAL(8) X) -> REAL(8)
+QERF(REAL(16) X) -> REAL(16)
 ERFC(REAL(k) X) -> REAL(k)
+DERFC(REAL(8) X) -> REAL(8)
+QERFC(REAL(16) X) -> REAL(16)
 ERFC_SCALED(REAL(k) X) -> REAL(k)
+DERFC_SCALED(REAL(8) X) -> REAL(8)
+QERFC_SCALED(REAL(16) X) -> REAL(16)
 FRACTION(REAL(k) X) -> REAL(k)
 GAMMA(REAL(k) X) -> REAL(k)
 HYPOT(REAL(k) X, REAL(k) Y) -> REAL(k) = SQRT(X*X+Y*Y) without spurious overflow
@@ -810,7 +816,7 @@ otherwise an error message will be produced by f18 when attempting to fold relat
 
 | C/C++ Host Type | Intrinsic Functions with Host Standard C++ Library Based Folding Support |
 | --- | --- |
-| float, double and long double | ACOS, ACOSH, ASINH, ATAN, ATAN2, ATANH, COS, COSH, ERF, ERFC, EXP, GAMMA, HYPOT, LOG, LOG10, LOG_GAMMA, MOD, SIN, SQRT, SINH, SQRT, TAN, TANH |
+| float, double and long double | ACOS, ACOSH, ASINH, ATAN, ATAN2, ATANH, COS, COSH, DERF, DERFC, ERF, ERFC, EXP, GAMMA, HYPOT, LOG, LOG10, LOG_GAMMA, MOD, QERF, QERFC, SIN, SQRT, SINH, SQRT, TAN, TANH |
 | std::complex for float, double and long double| ACOS, ACOSH, ASIN, ASINH, ATAN, ATANH, COS, COSH, EXP, LOG, SIN, SINH, SQRT, TAN, TANH |
 
 On top of the default usage of C++ standard library functions for folding described
@@ -829,7 +835,7 @@ types related to host float and double types.
 
 | C/C++ Host Type | Additional Intrinsic Function Folding Support with Libpgmath (Optional) |
 | --- | --- |
-|float and double| BESSEL_J0, BESSEL_J1, BESSEL_JN (elemental only), BESSEL_Y0, BESSEL_Y1, BESSEL_Yn (elemental only), ERFC_SCALED |
+|float and double| BESSEL_J0, BESSEL_J1, BESSEL_JN (elemental only), BESSEL_Y0, BESSEL_Y1, BESSEL_Yn (elemental only), DERFC_SCALED, ERFC_SCALED, QERFC_SCALED |
 
 Libpgmath comes in three variants (precise, relaxed and fast). So far, only the
 precise version is used for intrinsic function folding in f18. It guarantees the greatest numerical precision.
