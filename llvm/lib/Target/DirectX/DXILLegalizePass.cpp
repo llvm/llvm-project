@@ -12,6 +12,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <functional>
@@ -19,6 +20,31 @@
 #define DEBUG_TYPE "dxil-legalize"
 
 using namespace llvm;
+
+static void replaceFrem(Instruction &I,
+                        SmallVectorImpl<Instruction *> &ToRemove,
+                        DenseMap<Value *, Value *> &) {
+  auto *BO = dyn_cast<BinaryOperator>(&I);
+  if (BO == nullptr || BO->getOpcode() != Instruction::FRem)
+    return;
+
+  IRBuilder<> Builder(&I);
+  Value *P0 = BO->getOperand(0);
+  Value *P1 = BO->getOperand(1);
+
+  Value *Div1 = Builder.CreateFDiv(P0, P1);
+  Value *Zero = ConstantFP::get(P0->getType(), 0.0);
+  Value *Cmp = Builder.CreateFCmpOGE(Div1, Zero, "cmp.i");
+  Value *AbsVal =
+      Builder.CreateIntrinsic(Div1->getType(), Intrinsic::fabs, {Div1});
+  Value *FracVal =
+      Builder.CreateIntrinsic(AbsVal->getType(), Intrinsic::dx_frac, {AbsVal});
+  Value *NegFrac = Builder.CreateFNeg(FracVal);
+  Value *SelectVal = Builder.CreateSelect(Cmp, FracVal, NegFrac);
+  Value *MulVal = Builder.CreateFMul(SelectVal, P1);
+  BO->replaceAllUsesWith(MulVal);
+  ToRemove.push_back(BO);
+}
 
 static void fixI8TruncUseChain(Instruction &I,
                                SmallVectorImpl<Instruction *> &ToRemove,
@@ -169,6 +195,7 @@ private:
   void initializeLegalizationPipeline() {
     LegalizationPipeline.push_back(fixI8TruncUseChain);
     LegalizationPipeline.push_back(downcastI64toI32InsertExtractElements);
+    LegalizationPipeline.push_back(replaceFrem);
   }
 };
 
