@@ -727,6 +727,9 @@ int m(int x, int y) {
   return f(x) + g(y);
 }
 
+// TRAP-MERGE: attributes #[[ATTR4]] = { noreturn nounwind }
+// HANDLER-MERGE: attributes #[[ATTR4]] = { noreturn nounwind }
+// MINRT-MERGE: attributes #[[ATTR4]] = { noreturn nounwind }
 
 // TRAP-NOMERGE: attributes #[[ATTR4]] = { nomerge noreturn nounwind }
 // HANDLER-NOMERGE: attributes #[[ATTR4]] = { nomerge noreturn nounwind }
