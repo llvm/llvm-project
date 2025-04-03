@@ -6,9 +6,5 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
-#include <clc/math/clc_fmod.h>
-
-#define FUNCTION fmod
-#define __CLC_BODY <clc/shared/binary_def.inc>
-#include <clc/math/gentype.inc>
+_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE __CLC_FUNCTION(
+    __CLC_GENTYPE x, __CLC_GENTYPE y, __CLC_ADDRESS_SPACE __CLC_INTN *q);
