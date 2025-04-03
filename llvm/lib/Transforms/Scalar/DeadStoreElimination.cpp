@@ -75,6 +75,7 @@
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Coroutines/CoroInstr.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -972,6 +973,8 @@ struct DSEState {
   // no longer be captured.
   bool ShouldIterateEndOfFunctionDSE;
 
+  CoroIdInst *CoroId = nullptr;
+
   /// Dead instructions to be removed at the end of DSE.
   SmallVector<Instruction *> ToRemove;
 
@@ -990,6 +993,13 @@ struct DSEState {
     for (BasicBlock *BB : post_order(&F)) {
       PostOrderNumbers[BB] = PO++;
       for (Instruction &I : *BB) {
+        if (auto* II = dyn_cast<IntrinsicInst>(&I)) {
+            const auto ID = II->getIntrinsicID();
+            if (ID == Intrinsic::coro_begin ||
+                ID == Intrinsic::coro_begin_custom_abi)
+              CoroId = cast<CoroIdInst>(cast<CoroBeginInst>(II)->getId());
+        }
+
         MemoryAccess *MA = MSSA.getMemoryAccess(&I);
         if (I.mayThrow() && !MA)
           ThrowingBlocks.insert(I.getParent());
@@ -1194,8 +1204,7 @@ struct DSEState {
 
   bool isInvisibleToCallerAfterRet(const Value *V) {
     if (isa<AllocaInst>(V))
-      // Defer alloca store elimination, wait for CoroSplit
-      return !F.isPresplitCoroutine();
+      return !(F.isPresplitCoroutine() && V == CoroId->getPromise());
 
     auto I = InvisibleToCallerAfterRet.insert({V, false});
     if (I.second) {
