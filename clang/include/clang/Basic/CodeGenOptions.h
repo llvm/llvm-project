@@ -281,6 +281,10 @@ public:
   /// -fprofile-generate, and -fcs-profile-generate.
   std::string InstrProfileOutput;
 
+  /// Name of the patchable function entry section with
+  /// -fpatchable-function-entry.
+  std::string PatchableFunctionEntrySection;
+
   /// Name of the profile file to use with -fprofile-sample-use.
   std::string SampleProfileFile;
 

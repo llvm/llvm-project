@@ -1,5 +1,8 @@
 add_clang_unittest(libclangCrashTests
   LibclangCrashTest.cpp
-  LINK_LIBS
+  )
+
+target_link_libraries(libclangCrashTests
+  PRIVATE
   libclang
   )

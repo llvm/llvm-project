@@ -2234,10 +2234,7 @@ static bool DiagnoseDefaultTemplateArgument(Sema &S,
     //   template-argument, that declaration shall be a definition and shall be
     //   the only declaration of the function template in the translation unit.
     // (C++98/03 doesn't have this wording; see DR226).
-    S.Diag(ParamLoc,
-           S.getLangOpts().CPlusPlus11
-               ? diag::compat_cxx11_templ_default_in_function_templ
-               : diag::compat_pre_cxx11_templ_default_in_function_templ)
+    S.DiagCompat(ParamLoc, diag_compat::templ_default_in_function_templ)
         << DefArgRange;
     return false;
 
@@ -3531,16 +3528,10 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
     if (Pattern->isInvalidDecl())
       return QualType();
 
-    // Only substitute for the innermost template argument list.  NOTE: Some
-    // external resugarers rely on leaving a Subst* node here.  Make the
-    // substitution non-final in that case.  Note that these external resugarers
-    // will still miss some information in this representation, because we don't
-    // provide enough context in the Subst* nodes in order to tell different
-    // template type alias specializations apart.
+    // Only substitute for the innermost template argument list.
     MultiLevelTemplateArgumentList TemplateArgLists;
-    TemplateArgLists.addOuterTemplateArguments(
-        Template, CTAI.SugaredConverted,
-        /*Final=*/!getLangOpts().RetainSubstTemplateTypeParmTypeAstNodes);
+    TemplateArgLists.addOuterTemplateArguments(Template, CTAI.SugaredConverted,
+                                               /*Final=*/true);
     TemplateArgLists.addOuterRetainedLevels(
         AliasTemplate->getTemplateParameters()->getDepth());
 
@@ -6432,10 +6423,7 @@ static bool CheckTemplateArgumentAddressOfObjectOrFunction(
     bool ExtraParens = false;
     while (ParenExpr *Parens = dyn_cast<ParenExpr>(Arg)) {
       if (!Invalid && !ExtraParens) {
-        S.Diag(Arg->getBeginLoc(),
-               S.getLangOpts().CPlusPlus11
-                   ? diag::compat_cxx11_template_arg_extra_parens
-                   : diag::compat_pre_cxx11_template_arg_extra_parens)
+        S.DiagCompat(Arg->getBeginLoc(), diag_compat::template_arg_extra_parens)
             << Arg->getSourceRange();
         ExtraParens = true;
       }
@@ -6655,10 +6643,7 @@ CheckTemplateArgumentPointerToMember(Sema &S, NonTypeTemplateParmDecl *Param,
   bool ExtraParens = false;
   while (ParenExpr *Parens = dyn_cast<ParenExpr>(Arg)) {
     if (!Invalid && !ExtraParens) {
-      S.Diag(Arg->getBeginLoc(),
-             S.getLangOpts().CPlusPlus11
-                 ? diag::compat_cxx11_template_arg_extra_parens
-                 : diag::compat_pre_cxx11_template_arg_extra_parens)
+      S.DiagCompat(Arg->getBeginLoc(), diag_compat::template_arg_extra_parens)
           << Arg->getSourceRange();
       ExtraParens = true;
     }
@@ -7567,7 +7552,7 @@ ExprResult Sema::BuildExpressionFromDeclTemplateArgument(
             ParamType->getPointeeType(), RefExpr.get()->getValueKind(),
             RefExpr.get()->getExprLoc(), RefExpr.get(), VD, NTTP->getIndex(),
             /*PackIndex=*/std::nullopt,
-            /*RefParam=*/true);
+            /*RefParam=*/true, /*Final=*/true);
       }
     }
   }
@@ -10639,9 +10624,7 @@ TypeResult Sema::ActOnTypenameType(Scope *S, SourceLocation TypenameLoc,
     return true;
 
   if (TypenameLoc.isValid() && S && !S->getTemplateParamParent())
-    Diag(TypenameLoc, getLangOpts().CPlusPlus11
-                          ? diag::compat_cxx11_typename_outside_of_template
-                          : diag::compat_pre_cxx11_typename_outside_of_template)
+    DiagCompat(TypenameLoc, diag_compat::typename_outside_of_template)
         << FixItHint::CreateRemoval(TypenameLoc);
 
   NestedNameSpecifierLoc QualifierLoc = SS.getWithLocInContext(Context);

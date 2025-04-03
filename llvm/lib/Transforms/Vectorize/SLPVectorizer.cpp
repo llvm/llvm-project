@@ -8873,6 +8873,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
           // Find the number of elements, which forms full vectors.
           unsigned PWSz = getFullVectorNumberOfElements(
               *TTI, UniqueValues.front()->getType(), UniqueValues.size());
+          PWSz = std::min<unsigned>(PWSz, VL.size());
           if (PWSz == VL.size()) {
             ReuseShuffleIndices.clear();
           } else {
@@ -11329,8 +11330,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
     if (!E2 && InVectors.size() == 1) {
       unsigned VF = E1.getVectorFactor();
       if (Value *V1 = dyn_cast<Value *>(InVectors.front())) {
-        VF = std::max(VF,
-                      cast<FixedVectorType>(V1->getType())->getNumElements());
+        VF = std::max(VF, getVF(V1));
       } else {
         const auto *E = cast<const TreeEntry *>(InVectors.front());
         VF = std::max(VF, E->getVectorFactor());
@@ -14335,7 +14335,7 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
   // single vector. If we have 2 different sets, we're in situation where we
   // have a permutation of 2 input vectors.
   SmallVector<SmallPtrSet<const TreeEntry *, 4>> UsedTEs;
-  DenseMap<Value *, int> UsedValuesEntry;
+  SmallDenseMap<Value *, int> UsedValuesEntry;
   SmallPtrSet<const Value *, 16> VisitedValue;
   auto CheckAndUseSameNode = [&](const TreeEntry *TEPtr) {
     // The node is reused - exit.
@@ -14552,6 +14552,8 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     // No perfect match, just shuffle, so choose the first tree node from the
     // tree.
     Entries.push_back(FirstEntries.front());
+    // Update mapping between values and corresponding tree entries.
+    for_each(UsedValuesEntry, [&](auto &P) { P.second = 0; });
     VF = FirstEntries.front()->getVectorFactor();
   } else {
     // Try to find nodes with the same vector factor.
@@ -14596,6 +14598,18 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     } else {
       VF = Entries.front()->getVectorFactor();
     }
+    SmallVector<SmallPtrSet<Value *, 8>> ValuesToEntries;
+    for (const TreeEntry *E : Entries)
+      ValuesToEntries.emplace_back().insert(E->Scalars.begin(),
+                                            E->Scalars.end());
+    // Update mapping between values and corresponding tree entries.
+    for_each(UsedValuesEntry, [&](auto &P) {
+      for (unsigned Idx : seq<unsigned>(ValuesToEntries.size()))
+        if (ValuesToEntries[Idx].contains(P.first)) {
+          P.second = Idx;
+          break;
+        }
+    });
   }
 
   bool IsSplatOrUndefs = isSplat(VL) || all_of(VL, IsaPred<UndefValue>);
