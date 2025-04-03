@@ -156,7 +156,7 @@ struct DAP {
   OutputRedirector out;
   OutputRedirector err;
   /// Configuration specified by the launch or attach commands.
-  protocol::DAPConfiguration configuration;
+  protocol::Configuration configuration;
   lldb::SBDebugger debugger;
   lldb::SBTarget target;
   Variables variables;

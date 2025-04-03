@@ -119,7 +119,7 @@ bool fromJSON(const llvm::json::Value &, InitializeRequestArguments &,
 using InitializeResponseBody = std::optional<Capabilities>;
 
 /// DAP Launch and Attach common configurations.
-struct DAPConfiguration {
+struct Configuration {
   /// Specify a working directory to use when launching `lldb-dap`. If the debug
   /// information in your executable contains relative paths, this option can be
   /// used so that `lldb-dap` can find source files and object files that have
