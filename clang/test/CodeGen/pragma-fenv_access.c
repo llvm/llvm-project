@@ -273,17 +273,17 @@ vector16double func_25(vector16uint x) {
 typedef float vector2float __attribute__((__vector_size__(8)));
 typedef char vector2char __attribute__((__vector_size__(2)));
 vector2char func_22(vector2float x) {
-  #pragma STDC FENV_ACCESS ON
+  #pragma float_control(except, off)
   return __builtin_convertvector(x, vector2char);
 }
 // CHECK-LABEL: @func_22
-// STRICT: call <2 x i8> @llvm.experimental.constrained.fptosi.v2i8.v2f32(<2 x float> {{.*}}, metadata !"fpexcept.strict")
+// STRICT: call <2 x i8> @llvm.experimental.constrained.fptosi.v2i8.v2f32(<2 x float> {{.*}}, metadata !"fpexcept.ignore")
 
 typedef float vector3float __attribute__((__vector_size__(12)));
 typedef unsigned long long vector3ulong __attribute__((__vector_size__(24)));
 vector3ulong func_23(vector3float x) {
-  #pragma STDC FENV_ACCESS ON
+  #pragma float_control(except, off)
   return __builtin_convertvector(x, vector3ulong);
 }
 // CHECK-LABEL: @func_23
-// STRICT: call <3 x i64> @llvm.experimental.constrained.fptoui.v3i64.v3f32(<3 x float> {{.*}}, metadata !"fpexcept.strict")
+// STRICT: call <3 x i64> @llvm.experimental.constrained.fptoui.v3i64.v3f32(<3 x float> {{.*}}, metadata !"fpexcept.ignore")
