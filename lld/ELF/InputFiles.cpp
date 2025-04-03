@@ -712,23 +712,26 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
         StringRef name = check(obj.getSectionName(sec, shstrtab));
         ArrayRef<uint8_t> contents = check(obj.getSectionContents(sec));
         AArch64AttributeParser attributes;
+        // For functions that has to warn/err/report.
         InputSection isec(*this, sec, name);
         if (Error e = attributes.parse(contents, ELFT::Endianness)) {
           Warn(ctx) << &isec << ": " << std::move(e);
         } else {
-          // For functions that has to warn/err/report.
-          KnownAArch64BuildAttrSubsections subSections =
-              extractBuildAttributesSubsections(ctx, attributes, isec);
           if (!hasGnuProperties) {
-            this->aarch64PauthAbiCoreInfoStorage =
-                std::make_unique<std::array<uint8_t, 16>>();
-            uint64_t values[2] = {
-                static_cast<uint64_t>(subSections.pauth.tagPlatform),
-                static_cast<uint64_t>(subSections.pauth.tagSchema)};
-            std::memcpy(this->aarch64PauthAbiCoreInfoStorage->data(), values,
-                        sizeof(values));
-            this->aarch64PauthAbiCoreInfo =
-                *(this->aarch64PauthAbiCoreInfoStorage);
+            KnownAArch64BuildAttrSubsections subSections =
+            extractBuildAttributesSubsections(ctx, attributes, isec);
+            if (ELFT::Endianness == llvm::endianness::big) {
+              for (size_t i = 0; i < 8; ++i) {
+                this->aarch64PauthAbiCoreInfoStorage[i] = static_cast<uint8_t>((static_cast<uint64_t>(subSections.pauth.tagPlatform) >> (8 * (7 - i))) & 0xFF);
+                this->aarch64PauthAbiCoreInfoStorage[i + 8] = static_cast<uint8_t>((static_cast<uint64_t>(subSections.pauth.tagSchema) >> (8 * (7 - i))) & 0xFF);
+              }
+            } else {
+              for (size_t i = 0; i < 8; ++i) {
+                this->aarch64PauthAbiCoreInfoStorage[i] = static_cast<uint8_t>((static_cast<uint64_t>(subSections.pauth.tagPlatform) >> (8 * i)) & 0xFF);
+                this->aarch64PauthAbiCoreInfoStorage[i + 8] = static_cast<uint8_t>((static_cast<uint64_t>(subSections.pauth.tagSchema) >> (8 * i)) & 0xFF);
+              }
+            }
+            this->aarch64PauthAbiCoreInfo = this->aarch64PauthAbiCoreInfoStorage;
             this->andFeatures = 0;
             this->andFeatures |= (subSections.fAndB.tagBTI) << 0;
             this->andFeatures |= (subSections.fAndB.tagPAC) << 1;
