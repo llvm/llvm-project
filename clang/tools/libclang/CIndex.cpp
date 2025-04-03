@@ -3730,6 +3730,8 @@ void EnqueueVisitor::VisitOpenACCUpdateConstruct(
 void EnqueueVisitor::VisitOpenACCAtomicConstruct(
     const OpenACCAtomicConstruct *C) {
   EnqueueChildren(C);
+  for (auto *Clause : C->clauses())
+    EnqueueChildren(Clause);
 }
 
 void EnqueueVisitor::VisitAnnotateAttr(const AnnotateAttr *A) {

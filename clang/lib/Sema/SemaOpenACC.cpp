@@ -1832,9 +1832,8 @@ StmtResult SemaOpenACC::ActOnEndStmtDirective(
                                           EndLoc, Clauses);
   }
   case OpenACCDirectiveKind::Atomic: {
-    assert(Clauses.empty() && "Atomic doesn't allow clauses");
     return OpenACCAtomicConstruct::Create(
-        getASTContext(), StartLoc, DirLoc, AtomicKind, EndLoc,
+        getASTContext(), StartLoc, DirLoc, AtomicKind, EndLoc, Clauses,
         AssocStmt.isUsable() ? AssocStmt.get() : nullptr);
   }
   case OpenACCDirectiveKind::Cache: {
