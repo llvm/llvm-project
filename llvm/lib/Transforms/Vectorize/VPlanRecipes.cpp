@@ -391,6 +391,7 @@ unsigned VPUnrollPartAccessor<PartOpIdx>::getUnrollPart(VPUser &U) const {
 
 namespace llvm {
 template class VPUnrollPartAccessor<2>;
+template class VPUnrollPartAccessor<3>;
 }
 
 VPInstruction::VPInstruction(unsigned Opcode, CmpInst::Predicate Pred,
