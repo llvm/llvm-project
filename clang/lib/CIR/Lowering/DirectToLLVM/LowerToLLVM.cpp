@@ -860,14 +860,8 @@ mlir::LogicalResult CIRToLLVMUnaryOpLowering::matchAndRewrite(
   // Integer unary operations: + - ~ ++ --
   if (mlir::isa<cir::IntType>(elementType)) {
     mlir::LLVM::IntegerOverflowFlags maybeNSW =
-        mlir::LLVM::IntegerOverflowFlags::none;
-    if (mlir::dyn_cast<cir::IntType>(elementType).isSigned()) {
-      assert(!cir::MissingFeatures::opUnarySignedOverflow());
-      // TODO: For now, assume signed overflow is undefined. We'll need to add
-      // an attribute to the unary op to control this.
-      maybeNSW = mlir::LLVM::IntegerOverflowFlags::nsw;
-    }
-
+        op.getNoSignedWrap() ? mlir::LLVM::IntegerOverflowFlags::nsw
+                             : mlir::LLVM::IntegerOverflowFlags::none;
     switch (op.getKind()) {
     case cir::UnaryOpKind::Inc: {
       assert(!isVector && "++ not allowed on vector types");

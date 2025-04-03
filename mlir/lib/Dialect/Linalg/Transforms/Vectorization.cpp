@@ -2178,11 +2178,25 @@ vectorizePadOpPrecondition(tensor::PadOp padOp,
                                               inputVectorSizes)))
     return failure();
 
-  if (llvm::any_of(padOp.getLow(), [](Value v) {
-        std::optional<int64_t> res = getConstantIntValue(v);
-        return !res.has_value() || res.value() != 0;
+  // Padding with non-zero low pad values is not supported, unless the
+  // corresponding result dim is 1 as this would require shifting the results to
+  // the right for the low padded dims by the required amount of low padding.
+  // However, we do support low padding if the dims being low padded have result
+  // sizes of 1. The reason is when we have a low pad on a unit result dim, the
+  // input size of that dimension will be dynamically zero (as the sum of the
+  // low pad and input dim size has to be one) and hence we will create a zero
+  // mask as the lowering logic just makes the mask one for the input dim size -
+  // which is zero here. Hence we will load the pad value which is what we want
+  // in this case. If the low pad is dynamically zero then the lowering is
+  // correct as well as no shifts are necessary.
+  if (llvm::any_of(llvm::enumerate(padOp.getLow()), [&](const auto &en) {
+        Value padValue = en.value();
+        unsigned pos = en.index();
+        std::optional<int64_t> pad = getConstantIntValue(padValue);
+        return (!pad.has_value() || pad.value() != 0) &&
+               resultTensorShape[pos] != 1;
       })) {
-    LDBG("low pad must all be zero: " << padOp << "\n");
+    LDBG("low pad must all be zero for all non unit dims: " << padOp << "\n");
     return failure();
   }
 

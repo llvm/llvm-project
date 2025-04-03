@@ -77,16 +77,18 @@ SubstTemplateTemplateParmStorage::getParameter() const {
 }
 
 void SubstTemplateTemplateParmStorage::Profile(llvm::FoldingSetNodeID &ID) {
-  Profile(ID, Replacement, getAssociatedDecl(), getIndex(), getPackIndex());
+  Profile(ID, Replacement, getAssociatedDecl(), getIndex(), getPackIndex(),
+          getFinal());
 }
 
 void SubstTemplateTemplateParmStorage::Profile(
     llvm::FoldingSetNodeID &ID, TemplateName Replacement, Decl *AssociatedDecl,
-    unsigned Index, std::optional<unsigned> PackIndex) {
+    unsigned Index, std::optional<unsigned> PackIndex, bool Final) {
   Replacement.Profile(ID);
   ID.AddPointer(AssociatedDecl);
   ID.AddInteger(Index);
   ID.AddInteger(PackIndex ? *PackIndex + 1 : 0);
+  ID.AddBoolean(Final);
 }
 
 SubstTemplateTemplateParmPackStorage::SubstTemplateTemplateParmPackStorage(

@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=webkit.RefCntblBaseVirtualDtor -verify %s -Wno-unnecessary-virtual-specifier
+// RUN: %clang_analyze_cc1 -analyzer-checker=webkit.RefCntblBaseVirtualDtor -verify %s
 
 #include "mock-types.h"
 
