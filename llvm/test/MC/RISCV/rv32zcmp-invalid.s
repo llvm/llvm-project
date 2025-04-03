@@ -35,13 +35,16 @@ cm.pop {ra, t1}, -40
 cm.pop {ra, s0-t1}, -40
 
 # CHECK-ERROR: :[[@LINE+1]]:20: error: second contiguous registers pair of register list must start from 'x18'
-cm.pop {ra, x8-x9, x28}, -40
+cm.pop {x1, x8-x9, x28}, -40
 
 # CHECK-ERROR: :[[@LINE+1]]:24: error: invalid register
-cm.pop {ra, x8-x9, x18-x28}, -40
+cm.pop {x1, x8-x9, x18-x28}, -40
 
 # CHECK-ERROR: :[[@LINE+1]]:24: error: invalid register
-cm.pop {ra, x8-x9, x18-x17}, -40
+cm.pop {x1, x8-x9, x18-x17}, -40
 
 # CHECK-ERROR: :[[@LINE+1]]:16: error: invalid register
-cm.pop {ra, x8-f8, x18-x17}, -40
+cm.pop {x1, x8-f8, x18-x17}, -40
+
+# CHECK-ERROR: :[[@LINE+1]]:16: error: invalid register
+cm.pop {ra, s0-f8}, -40
