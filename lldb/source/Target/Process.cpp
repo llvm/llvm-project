@@ -1067,6 +1067,20 @@ const char *Process::GetExitDescription() {
 bool Process::SetExitStatus(int status, llvm::StringRef exit_string) {
   // Use a mutex to protect setting the exit status.
   std::lock_guard<std::mutex> guard(m_exit_status_mutex);
+  Log *log(GetLog(LLDBLog::State | LLDBLog::Process));
+  LLDB_LOG(log, "(plugin = {0} status = {1} ({1:x8}), description=\"{2}\")",
+           GetPluginName(), status, exit_string);
+
+  // We were already in the exited state
+  if (m_private_state.GetValue() == eStateExited) {
+    LLDB_LOG(
+        log,
+        "(plugin = {0}) ignoring exit status because state was already set "
+        "to eStateExited",
+        GetPluginName());
+    return false;
+  }
+
   telemetry::ScopedDispatcher<telemetry::ProcessExitInfo> helper;
 
   UUID module_uuid;
@@ -1088,20 +1102,6 @@ bool Process::SetExitStatus(int status, llvm::StringRef exit_string) {
     info->module_uuid = module_uuid;
     info->pid = m_pid;
   });
-
-  Log *log(GetLog(LLDBLog::State | LLDBLog::Process));
-  LLDB_LOG(log, "(plugin = {0} status = {1} ({1:x8}), description=\"{2}\")",
-           GetPluginName(), status, exit_string);
-
-  // We were already in the exited state
-  if (m_private_state.GetValue() == eStateExited) {
-    LLDB_LOG(
-        log,
-        "(plugin = {0}) ignoring exit status because state was already set "
-        "to eStateExited",
-        GetPluginName());
-    return false;
-  }
 
   m_exit_status = status;
   if (!exit_string.empty())
@@ -5080,7 +5080,13 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
     return eExpressionSetupError;
   }
 
-  StackID ctx_frame_id = selected_frame_sp->GetStackID();
+  // If the ExecutionContext has a frame, we want to make sure to save/restore
+  // that frame into exe_ctx. This can happen when we run expressions from a
+  // non-selected SBFrame, in which case we don't want some thread-plan
+  // to overwrite the ExecutionContext frame.
+  StackID ctx_frame_id = exe_ctx.HasFrameScope()
+                             ? exe_ctx.GetFrameRef().GetStackID()
+                             : selected_frame_sp->GetStackID();
 
   // N.B. Running the target may unset the currently selected thread and frame.
   // We don't want to do that either, so we should arrange to reset them as
