@@ -17664,8 +17664,9 @@ void PPCTargetLowering::LowerAsmOperandForConstraint(SDValue Op,
   TargetLowering::LowerAsmOperandForConstraint(Op, Constraint, Ops, DAG);
 }
 
-void PPCTargetLowering::CollectTargetIntrinsicOperands(
-    const CallBase &I, SmallVectorImpl<SDValue> &Ops, SelectionDAG &DAG) const {
+void PPCTargetLowering::CollectTargetIntrinsicOperands(const CallInst &I,
+                                              SmallVectorImpl<SDValue> &Ops,
+                                              SelectionDAG &DAG) const {
   if (I.getNumOperands() <= 1)
     return;
   if (!isa<ConstantSDNode>(Ops[1].getNode()))
@@ -17853,7 +17854,7 @@ PPCTargetLowering::isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const {
 }
 
 bool PPCTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                           const CallBase &I,
+                                           const CallInst &I,
                                            MachineFunction &MF,
                                            unsigned Intrinsic) const {
   switch (Intrinsic) {

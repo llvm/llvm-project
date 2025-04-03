@@ -38,7 +38,7 @@ namespace llvm {
 class DiagnosticPrinter;
 class DIFile;
 class DISubprogram;
-class CallBase;
+class CallInst;
 class Function;
 class Instruction;
 class InstructionCost;
@@ -1151,7 +1151,7 @@ public:
   }
 };
 
-void diagnoseDontCall(const CallBase &CI);
+void diagnoseDontCall(const CallInst &CI);
 
 class DiagnosticInfoDontCall : public DiagnosticInfo {
   StringRef CalleeName;

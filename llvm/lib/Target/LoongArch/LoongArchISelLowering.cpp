@@ -6425,7 +6425,7 @@ bool LoongArchTargetLowering::hasAndNot(SDValue Y) const {
 }
 
 bool LoongArchTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                                 const CallBase &I,
+                                                 const CallInst &I,
                                                  MachineFunction &MF,
                                                  unsigned Intrinsic) const {
   switch (Intrinsic) {

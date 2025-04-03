@@ -712,7 +712,7 @@ bool llvm::returnTypeIsEligibleForTailCall(const Function *F,
   return true;
 }
 
-bool llvm::funcReturnsFirstArgOfCall(const CallBase &CI) {
+bool llvm::funcReturnsFirstArgOfCall(const CallInst &CI) {
   const ReturnInst *Ret = dyn_cast<ReturnInst>(CI.getParent()->getTerminator());
   Value *RetVal = Ret ? Ret->getReturnValue() : nullptr;
   bool ReturnsFirstArg = false;
