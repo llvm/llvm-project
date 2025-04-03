@@ -124,12 +124,10 @@ attributes(device) subroutine testMatch()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtestmatch()
-! CHECK: fir.call @llvm.nvvm.match.all.sync.i32p
-! CHECK: fir.call @llvm.nvvm.match.all.sync.i64p
-! CHECK: fir.convert %{{.*}} : (f32) -> i32
-! CHECK: fir.call @llvm.nvvm.match.all.sync.i32p
-! CHECK: fir.convert %{{.*}} : (f64) -> i64
-! CHECK: fir.call @llvm.nvvm.match.all.sync.i64p
+! CHECK: %{{.*}} = nvvm.match.sync  all %{{.*}}, %{{.*}} : i32 -> !llvm.struct<(i32, i1)>
+! CHECK: %{{.*}} = nvvm.match.sync  all %{{.*}}, %{{.*}} : i64 -> !llvm.struct<(i32, i1)>
+! CHECK: %{{.*}} = nvvm.match.sync  all %{{.*}}, %{{.*}} : i32 -> !llvm.struct<(i32, i1)>
+! CHECK: %{{.*}} = nvvm.match.sync  all %{{.*}}, %{{.*}} : i64 -> !llvm.struct<(i32, i1)>
 
 attributes(device) subroutine testMatchAny()
   integer :: a, mask, v32
