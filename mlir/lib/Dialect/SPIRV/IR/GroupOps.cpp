@@ -313,7 +313,7 @@ LogicalResult GroupNonUniformRotateKHROp::verify() {
   if (scope != spirv::Scope::Workgroup && scope != spirv::Scope::Subgroup)
     return emitOpError("execution scope must be 'Workgroup' or 'Subgroup'");
 
-  if (TypedValue<Type> clusterSizeVal = getClusterSize()) {
+  if (Value clusterSizeVal = getClusterSize()) {
     mlir::Operation *defOp = clusterSizeVal.getDefiningOp();
     int32_t clusterSize = 0;
 
