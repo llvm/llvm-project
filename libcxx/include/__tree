@@ -1225,11 +1225,6 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI __node_holder remove(const_iterator __p) _NOEXCEPT;
 
-private:
-  _LIBCPP_HIDE_FROM_ABI __node_base_pointer& __find_leaf_low(__parent_pointer& __parent, const key_type& __v);
-  _LIBCPP_HIDE_FROM_ABI __node_base_pointer& __find_leaf_high(__parent_pointer& __parent, const key_type& __v);
-  _LIBCPP_HIDE_FROM_ABI __node_base_pointer&
-  __find_leaf(const_iterator __hint, __parent_pointer& __parent, const key_type& __v);
   // FIXME: Make this function const qualified. Unfortunately doing so
   // breaks existing code which uses non-const callable comparators.
   template <class _Key>
@@ -1242,12 +1237,6 @@ private:
   _LIBCPP_HIDE_FROM_ABI __node_base_pointer&
   __find_equal(const_iterator __hint, __parent_pointer& __parent, __node_base_pointer& __dummy, const _Key& __v);
 
-  template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI __node_holder __construct_node(_Args&&... __args);
-
-  // TODO: Make this _LIBCPP_HIDE_FROM_ABI
-  _LIBCPP_HIDDEN void destroy(__node_pointer __nd) _NOEXCEPT;
-
   _LIBCPP_HIDE_FROM_ABI void __copy_assign_alloc(const __tree& __t) {
     __copy_assign_alloc(__t, integral_constant<bool, __node_traits::propagate_on_container_copy_assignment::value>());
   }
@@ -1258,6 +1247,18 @@ private:
     __node_alloc() = __t.__node_alloc();
   }
   _LIBCPP_HIDE_FROM_ABI void __copy_assign_alloc(const __tree&, false_type) {}
+
+private:
+  _LIBCPP_HIDE_FROM_ABI __node_base_pointer& __find_leaf_low(__parent_pointer& __parent, const key_type& __v);
+  _LIBCPP_HIDE_FROM_ABI __node_base_pointer& __find_leaf_high(__parent_pointer& __parent, const key_type& __v);
+  _LIBCPP_HIDE_FROM_ABI __node_base_pointer&
+  __find_leaf(const_iterator __hint, __parent_pointer& __parent, const key_type& __v);
+
+  template <class... _Args>
+  _LIBCPP_HIDE_FROM_ABI __node_holder __construct_node(_Args&&... __args);
+
+  // TODO: Make this _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_HIDDEN void destroy(__node_pointer __nd) _NOEXCEPT;
 
   _LIBCPP_HIDE_FROM_ABI void __move_assign(__tree& __t, false_type);
   _LIBCPP_HIDE_FROM_ABI void __move_assign(__tree& __t, true_type) _NOEXCEPT_(
@@ -1311,11 +1312,6 @@ private:
     __node_pointer __cache_root_;
     __node_pointer __cache_elem_;
   };
-
-  template <class, class, class, class>
-  friend class _LIBCPP_TEMPLATE_VIS map;
-  template <class, class, class, class>
-  friend class _LIBCPP_TEMPLATE_VIS multimap;
 };
 
 template <class _Tp, class _Compare, class _Allocator>
