@@ -1060,7 +1060,7 @@ protected:
         continue;
 
       Status error;
-      lldb::addr_t arg_addr = OptionArgParser::ToAddress(
+      lldb::addr_t arg_addr = OptionArgParser::ToRawAddress(
           &exe_ctx, arg_str, LLDB_INVALID_ADDRESS, &error);
       if (arg_addr == 0 || arg_addr == LLDB_INVALID_ADDRESS || error.Fail()) {
         result.AppendErrorWithFormatv(
