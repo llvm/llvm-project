@@ -653,6 +653,8 @@ void CodeViewDebug::endModule() {
   emitCompilerInformation();
   endCVSubsection(CompilerInfo);
 
+  emitSecureHotPatchInformation();
+
   emitInlineeLinesSubsection();
 
   // Emit per-function debug information.
@@ -805,6 +807,28 @@ void CodeViewDebug::emitObjName() {
   emitNullTerminatedSymbolName(OS, PathRef);
 
   endSymbolRecord(CompilerEnd);
+}
+
+void CodeViewDebug::emitSecureHotPatchInformation() {
+  MCSymbol *hotPatchInfo = nullptr;
+
+  for (const auto &F : MMI->getModule()->functions()) {
+    if (!F.isDeclarationForLinker() &&
+        F.hasFnAttribute(Attribute::MarkedForWindowsHotPatching)) {
+      if (hotPatchInfo == nullptr)
+        hotPatchInfo = beginCVSubsection(DebugSubsectionKind::Symbols);
+      MCSymbol *HotPatchEnd = beginSymbolRecord(SymbolKind::S_HOTPATCHFUNC);
+      auto *SP = F.getSubprogram();
+      OS.AddComment("Function");
+      OS.emitInt32(getFuncIdForSubprogram(SP).getIndex());
+      OS.AddComment("Name");
+      emitNullTerminatedSymbolName(OS, F.getName());
+      endSymbolRecord(HotPatchEnd);
+    }
+  }
+
+  if (hotPatchInfo != nullptr)
+    endCVSubsection(hotPatchInfo);
 }
 
 namespace {
