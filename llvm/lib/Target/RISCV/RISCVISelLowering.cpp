@@ -14917,7 +14917,11 @@ static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG,
   if (SDValue V = combineSubShiftToOrcB(N, DAG, Subtarget))
     return V;
 
-  if (Subtarget.hasStdExtZbb()) {
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  auto LK = TLI.getTypeConversion(*DAG.getContext(), VT);
+  if ((LK.first == TargetLoweringBase::TypeLegal ||
+       LK.first == TargetLoweringBase::TypePromoteInteger) &&
+      TLI.isOperationLegal(ISD::UMIN, LK.second)) {
     // fold (sub x, (select (ult x, y), 0, y)) -> (umin x, (sub x, y))
     using namespace llvm::SDPatternMatch;
     SDValue Y;

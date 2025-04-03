@@ -1775,43 +1775,23 @@ define i64 @sub_if_uge_i64(i64 %x, i64 %y) {
 }
 
 define i128 @sub_if_uge_i128(i128 %x, i128 %y) {
-; RV64I-LABEL: sub_if_uge_i128:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    beq a1, a3, .LBB66_2
-; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    sltu a4, a1, a3
-; RV64I-NEXT:    j .LBB66_3
-; RV64I-NEXT:  .LBB66_2:
-; RV64I-NEXT:    sltu a4, a0, a2
-; RV64I-NEXT:  .LBB66_3:
-; RV64I-NEXT:    addi a4, a4, -1
-; RV64I-NEXT:    and a3, a4, a3
-; RV64I-NEXT:    and a2, a4, a2
-; RV64I-NEXT:    sltu a4, a0, a2
-; RV64I-NEXT:    sub a1, a1, a3
-; RV64I-NEXT:    sub a1, a1, a4
-; RV64I-NEXT:    sub a0, a0, a2
-; RV64I-NEXT:    ret
-;
-; RV64ZBB-LABEL: sub_if_uge_i128:
-; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    sltu a4, a0, a2
-; RV64ZBB-NEXT:    sub a3, a1, a3
-; RV64ZBB-NEXT:    sub a3, a3, a4
-; RV64ZBB-NEXT:    sub a2, a0, a2
-; RV64ZBB-NEXT:    beq a1, a3, .LBB66_2
-; RV64ZBB-NEXT:  # %bb.1:
-; RV64ZBB-NEXT:    sltu a4, a1, a3
-; RV64ZBB-NEXT:    beqz a4, .LBB66_3
-; RV64ZBB-NEXT:    j .LBB66_4
-; RV64ZBB-NEXT:  .LBB66_2:
-; RV64ZBB-NEXT:    sltu a4, a0, a2
-; RV64ZBB-NEXT:    bnez a4, .LBB66_4
-; RV64ZBB-NEXT:  .LBB66_3:
-; RV64ZBB-NEXT:    mv a0, a2
-; RV64ZBB-NEXT:    mv a1, a3
-; RV64ZBB-NEXT:  .LBB66_4:
-; RV64ZBB-NEXT:    ret
+; CHECK-LABEL: sub_if_uge_i128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    beq a1, a3, .LBB66_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    sltu a4, a1, a3
+; CHECK-NEXT:    j .LBB66_3
+; CHECK-NEXT:  .LBB66_2:
+; CHECK-NEXT:    sltu a4, a0, a2
+; CHECK-NEXT:  .LBB66_3:
+; CHECK-NEXT:    addi a4, a4, -1
+; CHECK-NEXT:    and a3, a4, a3
+; CHECK-NEXT:    and a2, a4, a2
+; CHECK-NEXT:    sltu a4, a0, a2
+; CHECK-NEXT:    sub a1, a1, a3
+; CHECK-NEXT:    sub a1, a1, a4
+; CHECK-NEXT:    sub a0, a0, a2
+; CHECK-NEXT:    ret
   %cmp = icmp ult i128 %x, %y
   %select = select i1 %cmp, i128 0, i128 %y
   %sub = sub nuw i128 %x, %select
