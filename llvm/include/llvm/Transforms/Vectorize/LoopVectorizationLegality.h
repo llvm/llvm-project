@@ -426,11 +426,13 @@ public:
     return LAI->getDepChecker().getStoreLoadForwardSafeDistanceInBits();
   }
 
-  /// Returns true if vector representation of the instruction \p I
-  /// requires mask.
-  bool isMaskRequired(const Instruction *I) const {
-    return MaskedOp.contains(I);
-  }
+  /// Returns true if MaskedOp contains \p I.
+  bool isMasked(Instruction *I) const { return MaskedOp.contains(I); }
+
+  /// Returns true if \p I is an instruction that needs to be predicated
+  /// at runtime.  The result is independent of the predication mechanism.
+  /// Superset of instructions that return true for isScalarWithPredication.
+  bool isMaskRequired(Instruction *I, bool FoldTailByMasking) const;
 
   /// Returns true if there is at least one function call in the loop which
   /// has a vectorized variant available.
