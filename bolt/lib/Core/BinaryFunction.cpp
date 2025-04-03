@@ -1795,7 +1795,7 @@ bool BinaryFunction::scanExternalRefs() {
     // Create relocation for every fixup.
     for (const MCFixup &Fixup : Fixups) {
       std::optional<Relocation> Rel = BC.MIB->createRelocation(Fixup, *BC.MAB);
-      // Can be skipped under the right circumstances.
+      // Can be skipped in case of overlow during relocation value encoding.
       Rel->setOptional();
       if (!Rel) {
         Success = false;

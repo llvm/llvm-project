@@ -190,10 +190,9 @@ void BinarySection::flushPendingRelocations(raw_pwrite_stream &OS,
       // relocations are flushed. Otherwise, PatchEntries should run.
       if (!opts::ForcePatch) {
         BC.errs()
-            << "BOLT-ERROR: Cannot fully run scanExternalRefs as pending "
-               "relocation for symbol "
+            << "BOLT-ERROR: Cannot encode relocation for symbol "
             << Reloc.Symbol->getName()
-            << " is out-of-range. Cannot proceed without using -force-patch\n";
+            << " as it is out-of-range. To proceed must use -force-patch\n";
         exit(1);
       }
 
