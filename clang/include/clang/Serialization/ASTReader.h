@@ -1392,6 +1392,10 @@ private:
 
   llvm::DenseMap<const Decl *, bool> DefinitionSource;
 
+  /// Friend functions that were defined but might have had their bodies
+  /// removed.
+  llvm::DenseSet<const FunctionDecl *> ThisDeclarationWasADefinitionSet;
+
   bool shouldDisableValidationForFile(const serialization::ModuleFile &M) const;
 
   /// Reads a statement from the specified cursor.
@@ -2373,6 +2377,8 @@ public:
   std::optional<ASTSourceDescriptor> getSourceDescriptor(unsigned ID) override;
 
   ExtKind hasExternalDefinitions(const Decl *D) override;
+
+  bool wasThisDeclarationADefinition(const FunctionDecl *FD) override;
 
   /// Retrieve a selector from the given module with its local ID
   /// number.
