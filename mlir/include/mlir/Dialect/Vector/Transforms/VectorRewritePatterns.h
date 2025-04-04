@@ -161,6 +161,11 @@ void populateVectorTransferCollapseInnerMostContiguousDimsPatterns(
 void populateSinkVectorOpsPatterns(RewritePatternSet &patterns,
                                    PatternBenefit benefit = 1);
 
+/// Patterns that remove redundant Vector Ops by re-ordering them with
+/// memory Ops:
+void populateSinkVectorMemOpsPatterns(RewritePatternSet &patterns,
+                                      PatternBenefit benefit = 1);
+
 /// Patterns that fold chained vector reductions. These patterns assume that
 /// elementwise operations (e.g., `arith.addf` with vector operands) are
 /// cheaper than vector reduction.
