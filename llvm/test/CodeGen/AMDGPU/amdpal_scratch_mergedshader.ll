@@ -12,13 +12,13 @@
 define amdgpu_hs void @_amdgpu_hs_main(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, i32 inreg %arg3, i32 inreg %arg4, i32 inreg %arg5, i32 inreg %arg6, i32 inreg %arg7, <6 x i32> inreg %arg8) {
 .entry:
   %__llpc_global_proxy_7.i = alloca [3 x <4 x float>], align 16, addrspace(5)
-  %tmp = icmp ult i32 undef, undef
+  %tmp = icmp ult i32 %arg, 0
   br i1 %tmp, label %.beginls, label %.endls
 
 .beginls:                                         ; preds = %.entry
   %tmp15 = extractelement <6 x i32> %arg8, i32 3
-  %.0.vec.insert.i = insertelement <2 x i32> undef, i32 %tmp15, i32 0
-  %.4.vec.insert.i = shufflevector <2 x i32> %.0.vec.insert.i, <2 x i32> undef, <2 x i32> <i32 0, i32 3>
+  %.0.vec.insert.i = insertelement <2 x i32> poison, i32 %tmp15, i32 0
+  %.4.vec.insert.i = shufflevector <2 x i32> %.0.vec.insert.i, <2 x i32> poison, <2 x i32> <i32 0, i32 3>
   %tmp16 = bitcast <2 x i32> %.4.vec.insert.i to i64
   br label %.endls
 

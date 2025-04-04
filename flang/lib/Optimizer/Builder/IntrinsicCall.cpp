@@ -48,6 +48,7 @@
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "llvm/Support/CommandLine.h"
@@ -260,6 +261,10 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genAll,
      {{{"mask", asAddr}, {"dim", asValue}}},
      /*isElemental=*/false},
+    {"all_sync",
+     &I::genVoteAllSync,
+     {{{"mask", asValue}, {"pred", asValue}}},
+     /*isElemental=*/false},
     {"allocated",
      &I::genAllocated,
      {{{"array", asInquired}, {"scalar", asInquired}}},
@@ -268,6 +273,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"any",
      &I::genAny,
      {{{"mask", asAddr}, {"dim", asValue}}},
+     /*isElemental=*/false},
+    {"any_sync",
+     &I::genVoteAnySync,
+     {{{"mask", asValue}, {"pred", asValue}}},
      /*isElemental=*/false},
     {"asind", &I::genAsind},
     {"associated",
@@ -331,6 +340,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"atomicsubi", &I::genAtomicSub, {{{"a", asAddr}, {"v", asValue}}}, false},
     {"atomicsubl", &I::genAtomicSub, {{{"a", asAddr}, {"v", asValue}}}, false},
     {"atomicxori", &I::genAtomicXor, {{{"a", asAddr}, {"v", asValue}}}, false},
+    {"ballot_sync",
+     &I::genVoteBallotSync,
+     {{{"mask", asValue}, {"pred", asValue}}},
+     /*isElemental=*/false},
     {"bessel_jn",
      &I::genBesselJn,
      {{{"n1", asValue}, {"n2", asValue}, {"x", asValue}}},
@@ -480,6 +493,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"getgid", &I::genGetGID},
     {"getpid", &I::genGetPID},
     {"getuid", &I::genGetUID},
+    {"hostnm",
+     &I::genHostnm,
+     {{{"c", asBox}, {"status", asAddr, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"iachar", &I::genIchar},
     {"iall",
      &I::genIall,
@@ -749,6 +766,10 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genParity,
      {{{"mask", asBox}, {"dim", asValue}}},
      /*isElemental=*/false},
+    {"perror",
+     &I::genPerror,
+     {{{"string", asBox}}},
+     /*isElemental*/ false},
     {"popcnt", &I::genPopcnt},
     {"poppar", &I::genPoppar},
     {"present",
@@ -900,6 +921,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"threadfence", &I::genThreadFence, {}, /*isElemental=*/false},
     {"threadfence_block", &I::genThreadFenceBlock, {}, /*isElemental=*/false},
     {"threadfence_system", &I::genThreadFenceSystem, {}, /*isElemental=*/false},
+    {"time", &I::genTime, {}, /*isElemental=*/false},
     {"trailz", &I::genTrailz},
     {"transfer",
      &I::genTransfer,
@@ -916,6 +938,10 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"umaskl", &I::genMask<mlir::arith::ShLIOp>},
     {"umaskr", &I::genMask<mlir::arith::ShRUIOp>},
+    {"unlink",
+     &I::genUnlink,
+     {{{"path", asAddr}, {"status", asAddr, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"unpack",
      &I::genUnpack,
      {{{"vector", asBox}, {"mask", asBox}, {"field", asBox}}},
@@ -4317,6 +4343,37 @@ void IntrinsicLibrary::genGetEnvironmentVariable(
   }
 }
 
+// HOSTNM
+fir::ExtendedValue
+IntrinsicLibrary::genHostnm(std::optional<mlir::Type> resultType,
+                            llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert((args.size() == 1 && resultType.has_value()) ||
+         (args.size() >= 1 && !resultType.has_value()));
+
+  mlir::Value res = fir::getBase(args[0]);
+  mlir::Value statusValue = fir::runtime::genHostnm(builder, loc, res);
+
+  if (resultType.has_value()) {
+    // Function form, return status.
+    return builder.createConvert(loc, *resultType, statusValue);
+  }
+
+  // Subroutine form, store status and return none.
+  const fir::ExtendedValue &status = args[1];
+  if (!isStaticallyAbsent(status)) {
+    mlir::Value statusAddr = fir::getBase(status);
+    mlir::Value statusIsPresentAtRuntime =
+        builder.genIsNotNullAddr(loc, statusAddr);
+    builder.genIfThen(loc, statusIsPresentAtRuntime)
+        .genThen([&]() {
+          builder.createStoreWithConvert(loc, statusValue, statusAddr);
+        })
+        .end();
+  }
+
+  return {};
+}
+
 /// Process calls to Maxval, Minval, Product, Sum intrinsic functions that
 /// take a DIM argument.
 template <typename FD>
@@ -4571,8 +4628,8 @@ void IntrinsicLibrary::genRaiseExcept(int excepts, mlir::Value cond) {
     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
   }
   mlir::Type i32Ty = builder.getIntegerType(32);
-  genRuntimeCall(
-      "feraiseexcept", i32Ty,
+  fir::runtime::genFeraiseexcept(
+      builder, loc,
       fir::runtime::genMapExcept(
           builder, loc, builder.createIntegerConstant(loc, i32Ty, excepts)));
   if (cond)
@@ -4939,8 +4996,8 @@ void IntrinsicLibrary::genIeeeGetFlag(llvm::ArrayRef<fir::ExtendedValue> args) {
   mlir::Value zero = builder.createIntegerConstant(loc, i32Ty, 0);
   auto [fieldRef, ignore] = getFieldRef(builder, loc, flag);
   mlir::Value field = builder.create<fir::LoadOp>(loc, fieldRef);
-  mlir::Value excepts = IntrinsicLibrary::genRuntimeCall(
-      "fetestexcept", i32Ty,
+  mlir::Value excepts = fir::runtime::genFetestexcept(
+      builder, loc,
       fir::runtime::genMapExcept(
           builder, loc, builder.create<fir::ConvertOp>(loc, i32Ty, field)));
   mlir::Value logicalResult = builder.create<fir::ConvertOp>(
@@ -4963,8 +5020,7 @@ void IntrinsicLibrary::genIeeeGetHaltingMode(
   mlir::Value zero = builder.createIntegerConstant(loc, i32Ty, 0);
   auto [fieldRef, ignore] = getFieldRef(builder, loc, flag);
   mlir::Value field = builder.create<fir::LoadOp>(loc, fieldRef);
-  mlir::Value haltSet =
-      IntrinsicLibrary::genRuntimeCall("fegetexcept", i32Ty, {});
+  mlir::Value haltSet = fir::runtime::genFegetexcept(builder, loc);
   mlir::Value intResult = builder.create<mlir::arith::AndIOp>(
       loc, haltSet,
       fir::runtime::genMapExcept(
@@ -5712,9 +5768,11 @@ void IntrinsicLibrary::genIeeeSetFlagOrHaltingMode(
       loc, builder.create<fir::ConvertOp>(loc, i1Ty, getBase(args[1])),
       /*withElseRegion=*/true);
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-  genRuntimeCall(isFlag ? "feraiseexcept" : "feenableexcept", i32Ty, except);
+  (isFlag ? fir::runtime::genFeraiseexcept : fir::runtime::genFeenableexcept)(
+      builder, loc, builder.create<fir::ConvertOp>(loc, i32Ty, except));
   builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-  genRuntimeCall(isFlag ? "feclearexcept" : "fedisableexcept", i32Ty, except);
+  (isFlag ? fir::runtime::genFeclearexcept : fir::runtime::genFedisableexcept)(
+      builder, loc, builder.create<fir::ConvertOp>(loc, i32Ty, except));
   builder.setInsertionPointAfter(ifOp);
 }
 
@@ -5805,24 +5863,61 @@ mlir::Value IntrinsicLibrary::genIeeeSignbit(mlir::Type resultType,
 fir::ExtendedValue
 IntrinsicLibrary::genIeeeSupportFlag(mlir::Type resultType,
                                      llvm::ArrayRef<fir::ExtendedValue> args) {
-  // Check if a floating point exception flag is supported. A flag is
-  // supported either for all type kinds or none. An optional kind argument X
-  // is therefore ignored. Standard flags are all supported. The nonstandard
-  // DENORM extension is not supported, at least for now.
+  // Check if a floating point exception flag is supported.
   assert(args.size() == 1 || args.size() == 2);
+  mlir::Type i1Ty = builder.getI1Type();
+  mlir::Type i32Ty = builder.getIntegerType(32);
   auto [fieldRef, fieldTy] = getFieldRef(builder, loc, getBase(args[0]));
   mlir::Value flag = builder.create<fir::LoadOp>(loc, fieldRef);
-  mlir::Value mask = builder.createIntegerConstant( // values are powers of 2
+  mlir::Value standardFlagMask = builder.createIntegerConstant(
       loc, fieldTy,
       _FORTRAN_RUNTIME_IEEE_INVALID | _FORTRAN_RUNTIME_IEEE_DIVIDE_BY_ZERO |
           _FORTRAN_RUNTIME_IEEE_OVERFLOW | _FORTRAN_RUNTIME_IEEE_UNDERFLOW |
           _FORTRAN_RUNTIME_IEEE_INEXACT);
-  return builder.createConvert(
-      loc, resultType,
-      builder.create<mlir::arith::CmpIOp>(
-          loc, mlir::arith::CmpIPredicate::ne,
-          builder.create<mlir::arith::AndIOp>(loc, flag, mask),
-          builder.createIntegerConstant(loc, fieldTy, 0)));
+  mlir::Value isStandardFlag = builder.create<mlir::arith::CmpIOp>(
+      loc, mlir::arith::CmpIPredicate::ne,
+      builder.create<mlir::arith::AndIOp>(loc, flag, standardFlagMask),
+      builder.createIntegerConstant(loc, fieldTy, 0));
+  fir::IfOp ifOp = builder.create<fir::IfOp>(loc, i1Ty, isStandardFlag,
+                                             /*withElseRegion=*/true);
+  // Standard flags are supported.
+  builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+  builder.create<fir::ResultOp>(loc, builder.createBool(loc, true));
+
+  // TargetCharacteristics information for the nonstandard ieee_denorm flag
+  // is not available here. So use a runtime check restricted to possibly
+  // supported kinds.
+  builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+  bool mayBeSupported = false;
+  if (mlir::Value arg1 = getBase(args[1])) {
+    mlir::Type arg1Ty = arg1.getType();
+    if (fir::ReferenceType refTy = mlir::dyn_cast<fir::ReferenceType>(arg1Ty))
+      arg1Ty = refTy.getEleTy();
+    switch (mlir::dyn_cast<mlir::FloatType>(arg1Ty).getWidth()) {
+    case 16:
+      mayBeSupported = arg1Ty.isBF16(); // kind=3
+      break;
+    case 32: // kind=4
+    case 64: // kind=8
+      mayBeSupported = true;
+      break;
+    }
+  }
+  if (mayBeSupported) {
+    mlir::Value isDenorm = builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::eq, flag,
+        builder.createIntegerConstant(loc, fieldTy,
+                                      _FORTRAN_RUNTIME_IEEE_DENORM));
+    mlir::Value result = builder.create<mlir::arith::AndIOp>(
+        loc, isDenorm,
+        fir::runtime::genSupportHalting(
+            builder, loc, builder.create<fir::ConvertOp>(loc, i32Ty, flag)));
+    builder.create<fir::ResultOp>(loc, result);
+  } else {
+    builder.create<fir::ResultOp>(loc, builder.createBool(loc, false));
+  }
+  builder.setInsertionPointAfter(ifOp);
+  return builder.createConvert(loc, resultType, ifOp.getResult(0));
 }
 
 // IEEE_SUPPORT_HALTING
@@ -5838,7 +5933,7 @@ fir::ExtendedValue IntrinsicLibrary::genIeeeSupportHalting(
   return builder.createConvert(
       loc, resultType,
       fir::runtime::genSupportHalting(
-          builder, loc, {builder.create<fir::ConvertOp>(loc, i32Ty, field)}));
+          builder, loc, builder.create<fir::ConvertOp>(loc, i32Ty, field)));
 }
 
 // IEEE_SUPPORT_ROUNDING
@@ -5874,10 +5969,10 @@ fir::ExtendedValue IntrinsicLibrary::genIeeeSupportStandard(
   // if halting control is supported, as that is the only support component
   // that may not be available.
   assert(args.size() <= 1);
-  mlir::Value nearest = builder.createIntegerConstant(
-      loc, builder.getIntegerType(32), _FORTRAN_RUNTIME_IEEE_NEAREST);
+  mlir::Value overflow = builder.createIntegerConstant(
+      loc, builder.getIntegerType(32), _FORTRAN_RUNTIME_IEEE_OVERFLOW);
   return builder.createConvert(
-      loc, resultType, fir::runtime::genSupportHalting(builder, loc, nearest));
+      loc, resultType, fir::runtime::genSupportHalting(builder, loc, overflow));
 }
 
 // IEEE_UNORDERED
@@ -6388,34 +6483,67 @@ IntrinsicLibrary::genMatchAllSync(mlir::Type resultType,
   assert(args.size() == 3);
   bool is32 = args[1].getType().isInteger(32) || args[1].getType().isF32();
 
-  llvm::StringRef funcName =
-      is32 ? "llvm.nvvm.match.all.sync.i32p" : "llvm.nvvm.match.all.sync.i64p";
-  mlir::MLIRContext *context = builder.getContext();
-  mlir::Type i32Ty = builder.getI32Type();
-  mlir::Type i64Ty = builder.getI64Type();
   mlir::Type i1Ty = builder.getI1Type();
-  mlir::Type retTy = mlir::TupleType::get(context, {resultType, i1Ty});
-  mlir::Type valTy = is32 ? i32Ty : i64Ty;
+  mlir::MLIRContext *context = builder.getContext();
 
-  mlir::FunctionType ftype =
-      mlir::FunctionType::get(context, {i32Ty, valTy}, {retTy});
-  auto funcOp = builder.createFunction(loc, funcName, ftype);
-  llvm::SmallVector<mlir::Value> filteredArgs;
-  filteredArgs.push_back(args[0]);
-  if (args[1].getType().isF32() || args[1].getType().isF64())
-    filteredArgs.push_back(builder.create<fir::ConvertOp>(loc, valTy, args[1]));
-  else
-    filteredArgs.push_back(args[1]);
-  auto call = builder.create<fir::CallOp>(loc, funcOp, filteredArgs);
-  auto zero = builder.getIntegerAttr(builder.getIndexType(), 0);
-  auto value = builder.create<fir::ExtractValueOp>(
-      loc, resultType, call.getResult(0), builder.getArrayAttr(zero));
-  auto one = builder.getIntegerAttr(builder.getIndexType(), 1);
-  auto pred = builder.create<fir::ExtractValueOp>(loc, i1Ty, call.getResult(0),
-                                                  builder.getArrayAttr(one));
+  mlir::Value arg1 = args[1];
+  if (arg1.getType().isF32() || arg1.getType().isF64())
+    arg1 = builder.create<fir::ConvertOp>(
+        loc, is32 ? builder.getI32Type() : builder.getI64Type(), arg1);
+
+  mlir::Type retTy =
+      mlir::LLVM::LLVMStructType::getLiteral(context, {resultType, i1Ty});
+  auto match =
+      builder
+          .create<mlir::NVVM::MatchSyncOp>(loc, retTy, args[0], arg1,
+                                           mlir::NVVM::MatchSyncKind::all)
+          .getResult();
+  auto value = builder.create<mlir::LLVM::ExtractValueOp>(loc, match, 0);
+  auto pred = builder.create<mlir::LLVM::ExtractValueOp>(loc, match, 1);
   auto conv = builder.create<mlir::LLVM::ZExtOp>(loc, resultType, pred);
   builder.create<fir::StoreOp>(loc, conv, args[2]);
   return value;
+}
+
+static mlir::Value genVoteSync(fir::FirOpBuilder &builder, mlir::Location loc,
+                               llvm::StringRef funcName, mlir::Type resTy,
+                               llvm::ArrayRef<mlir::Value> args) {
+  mlir::MLIRContext *context = builder.getContext();
+  mlir::Type i32Ty = builder.getI32Type();
+  mlir::Type i1Ty = builder.getI1Type();
+  mlir::FunctionType ftype =
+      mlir::FunctionType::get(context, {i32Ty, i1Ty}, {resTy});
+  auto funcOp = builder.createFunction(loc, funcName, ftype);
+  llvm::SmallVector<mlir::Value> filteredArgs;
+  return builder.create<fir::CallOp>(loc, funcOp, args).getResult(0);
+}
+
+// ALL_SYNC
+mlir::Value IntrinsicLibrary::genVoteAllSync(mlir::Type resultType,
+                                             llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+  return genVoteSync(builder, loc, "llvm.nvvm.vote.all.sync",
+                     builder.getI1Type(), args);
+}
+
+// ANY_SYNC
+mlir::Value IntrinsicLibrary::genVoteAnySync(mlir::Type resultType,
+                                             llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+  return genVoteSync(builder, loc, "llvm.nvvm.vote.any.sync",
+                     builder.getI1Type(), args);
+}
+
+// BALLOT_SYNC
+mlir::Value
+IntrinsicLibrary::genVoteBallotSync(mlir::Type resultType,
+                                    llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+  mlir::Value arg1 =
+      builder.create<fir::ConvertOp>(loc, builder.getI1Type(), args[1]);
+  return builder
+      .create<mlir::NVVM::VoteBallotOp>(loc, resultType, args[0], arg1)
+      .getResult();
 }
 
 // MATCH_ANY_SYNC
@@ -6425,23 +6553,15 @@ IntrinsicLibrary::genMatchAnySync(mlir::Type resultType,
   assert(args.size() == 2);
   bool is32 = args[1].getType().isInteger(32) || args[1].getType().isF32();
 
-  llvm::StringRef funcName =
-      is32 ? "llvm.nvvm.match.any.sync.i32p" : "llvm.nvvm.match.any.sync.i64p";
-  mlir::MLIRContext *context = builder.getContext();
-  mlir::Type i32Ty = builder.getI32Type();
-  mlir::Type i64Ty = builder.getI64Type();
-  mlir::Type valTy = is32 ? i32Ty : i64Ty;
+  mlir::Value arg1 = args[1];
+  if (arg1.getType().isF32() || arg1.getType().isF64())
+    arg1 = builder.create<fir::ConvertOp>(
+        loc, is32 ? builder.getI32Type() : builder.getI64Type(), arg1);
 
-  mlir::FunctionType ftype =
-      mlir::FunctionType::get(context, {i32Ty, valTy}, {i32Ty});
-  auto funcOp = builder.createFunction(loc, funcName, ftype);
-  llvm::SmallVector<mlir::Value> filteredArgs;
-  filteredArgs.push_back(args[0]);
-  if (args[1].getType().isF32() || args[1].getType().isF64())
-    filteredArgs.push_back(builder.create<fir::ConvertOp>(loc, valTy, args[1]));
-  else
-    filteredArgs.push_back(args[1]);
-  return builder.create<fir::CallOp>(loc, funcOp, filteredArgs).getResult(0);
+  return builder
+      .create<mlir::NVVM::MatchSyncOp>(loc, resultType, args[0], arg1,
+                                       mlir::NVVM::MatchSyncKind::any)
+      .getResult();
 }
 
 // MATMUL
@@ -7083,6 +7203,17 @@ IntrinsicLibrary::genParity(mlir::Type resultType,
   // Call runtime. The runtime is allocating the result.
   fir::runtime::genParityDescriptor(builder, loc, resultIrBox, mask, dim);
   return readAndAddCleanUp(resultMutableBox, resultType, "PARITY");
+}
+
+// PERROR
+void IntrinsicLibrary::genPerror(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+
+  fir::ExtendedValue str = args[0];
+  const auto *box = str.getBoxOf<fir::BoxValue>();
+  mlir::Value addr =
+      builder.create<fir::BoxAddrOp>(loc, box->getMemTy(), fir::getBase(*box));
+  fir::runtime::genPerror(builder, loc, addr);
 }
 
 // POPCNT
@@ -8298,6 +8429,14 @@ void IntrinsicLibrary::genThreadFenceSystem(
   builder.create<fir::CallOp>(loc, funcOp, noArgs);
 }
 
+// TIME
+mlir::Value IntrinsicLibrary::genTime(mlir::Type resultType,
+                                      llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 0);
+  return builder.createConvert(loc, resultType,
+                               fir::runtime::genTime(builder, loc));
+}
+
 // TRIM
 fir::ExtendedValue
 IntrinsicLibrary::genTrim(mlir::Type resultType,
@@ -8385,6 +8524,39 @@ static mlir::Value createExtremumCompare(mlir::Location loc,
   }
   assert(result && "result must be defined");
   return result;
+}
+
+// UNLINK
+fir::ExtendedValue
+IntrinsicLibrary::genUnlink(std::optional<mlir::Type> resultType,
+                            llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert((resultType.has_value() && args.size() == 1) ||
+         (!resultType.has_value() && args.size() >= 1 && args.size() <= 2));
+
+  mlir::Value path = fir::getBase(args[0]);
+  mlir::Value pathLength = fir::getLen(args[0]);
+  mlir::Value statusValue =
+      fir::runtime::genUnlink(builder, loc, path, pathLength);
+
+  if (resultType.has_value()) {
+    // Function form, return status.
+    return builder.createConvert(loc, *resultType, statusValue);
+  }
+
+  // Subroutine form, store status and return none.
+  const fir::ExtendedValue &status = args[1];
+  if (!isStaticallyAbsent(status)) {
+    mlir::Value statusAddr = fir::getBase(status);
+    mlir::Value statusIsPresentAtRuntime =
+        builder.genIsNotNullAddr(loc, statusAddr);
+    builder.genIfThen(loc, statusIsPresentAtRuntime)
+        .genThen([&]() {
+          builder.createStoreWithConvert(loc, statusValue, statusAddr);
+        })
+        .end();
+  }
+
+  return {};
 }
 
 // UNPACK

@@ -87,7 +87,7 @@ public:
         Kind(K), FMF(FMF), ExactFPMathInst(ExactFP), RecurrenceType(RT),
         IsSigned(Signed), IsOrdered(Ordered),
         MinWidthCastToRecurrenceType(MinWidthCastToRecurTy) {
-    CastInsts.insert(CI.begin(), CI.end());
+    CastInsts.insert_range(CI);
   }
 
   /// This POD struct holds information about a potential recurrence operation.

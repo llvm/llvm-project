@@ -73,9 +73,8 @@ llvm::Error WasmIncrementalExecutor::addModule(PartialTranslationUnit &PTU) {
   }
 
   llvm::TargetOptions TO = llvm::TargetOptions();
-  llvm::TargetMachine *TargetMachine =
-      Target->createTargetMachine(PTU.TheModule->getTargetTriple().str(), "",
-                                  "", TO, llvm::Reloc::Model::PIC_);
+  llvm::TargetMachine *TargetMachine = Target->createTargetMachine(
+      PTU.TheModule->getTargetTriple(), "", "", TO, llvm::Reloc::Model::PIC_);
   PTU.TheModule->setDataLayout(TargetMachine->createDataLayout());
   std::string ObjectFileName = PTU.TheModule->getName().str() + ".o";
   std::string BinaryFileName = PTU.TheModule->getName().str() + ".wasm";
@@ -143,6 +142,19 @@ llvm::Error WasmIncrementalExecutor::cleanUp() {
   // Can't call cleanUp through IncrementalExecutor as it
   // tries to deinitialize JIT which hasn't been initialized
   return llvm::Error::success();
+}
+
+llvm::Expected<llvm::orc::ExecutorAddr>
+WasmIncrementalExecutor::getSymbolAddress(llvm::StringRef Name,
+                                          SymbolNameKind NameKind) const {
+  void *Sym = dlsym(RTLD_DEFAULT, Name.str().c_str());
+  if (!Sym) {
+    return llvm::make_error<llvm::StringError>("dlsym failed for symbol: " +
+                                                   Name.str(),
+                                               llvm::inconvertibleErrorCode());
+  }
+
+  return llvm::orc::ExecutorAddr::fromPtr(Sym);
 }
 
 WasmIncrementalExecutor::~WasmIncrementalExecutor() = default;

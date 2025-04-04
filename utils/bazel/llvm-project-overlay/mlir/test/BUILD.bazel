@@ -124,6 +124,7 @@ td_library(
         "//mlir:MemorySlotInterfacesTdFiles",
         "//mlir:OpBaseTdFiles",
         "//mlir:PolynomialTdFiles",
+        "//mlir:PtrTdFiles",
         "//mlir:SideEffectInterfacesTdFiles",
     ],
 )
@@ -430,6 +431,7 @@ cc_library(
         "//mlir:MemorySlotInterfaces",
         "//mlir:Pass",
         "//mlir:PolynomialDialect",
+        "//mlir:PtrDialect",
         "//mlir:Reducer",
         "//mlir:SideEffectInterfaces",
         "//mlir:Support",
@@ -662,10 +664,10 @@ cc_library(
         "//mlir:SPIRVDialect",
         "//mlir:SideEffectInterfaces",
         "//mlir:Support",
-        "//mlir:TransformUtils",
-        "//mlir:Transforms",
         "//mlir:TransformDialect",
         "//mlir:TransformDialectInterfaces",
+        "//mlir:TransformUtils",
+        "//mlir:Transforms",
     ],
 )
 
