@@ -648,6 +648,17 @@ bool VPBasicBlock::isExiting() const {
   return getParent() && getParent()->getExitingBasicBlock() == this;
 }
 
+bool VPBasicBlock::isHeader(const VPDominatorTree &VPDT) const {
+  if (getNumPredecessors() != 2)
+    return false;
+  VPBlockBase *LatchVPBB = getPredecessors()[1];
+  if (!VPDT.dominates(this, LatchVPBB))
+    return false;
+  assert(VPDT.dominates(getPredecessors()[0], this) &&
+         "preheader must dominate header");
+  return true;
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPBlockBase::print(raw_ostream &O) const {
   VPSlotTracker SlotTracker(getPlan());
