@@ -2530,8 +2530,10 @@ BasicBlock *InnerLoopVectorizer::emitMemRuntimeChecks(BasicBlock *Bypass) {
 static void replaceVPBBWithIRVPBB(VPBasicBlock *VPBB, BasicBlock *IRBB) {
   VPIRBasicBlock *IRVPBB = VPBB->getPlan()->createVPIRBasicBlock(IRBB);
   for (auto &R : make_early_inc_range(*VPBB)) {
-    assert(!R.isPhi() && "Tried to move phi recipe to end of block");
-    R.moveBefore(*IRVPBB, IRVPBB->end());
+    if (R.isPhi())
+      R.moveBefore(*IRVPBB, IRVPBB->getFirstNonPhi());
+    else
+      R.moveBefore(*IRVPBB, IRVPBB->end());
   }
 
   VPBlockUtils::reassociateBlocks(VPBB, IRVPBB);
@@ -9100,6 +9102,15 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
         VPlanTransforms::runPass(VPlanTransforms::truncateToMinimalBitwidths,
                                  *Plan, CM.getMinimalBitwidths());
       VPlanTransforms::runPass(VPlanTransforms::optimize, *Plan);
+
+      // See if we can convert an early exit vplan to bail out to a scalar
+      // loop if state-changing operations (like stores) are present and
+      // an exit will be taken in the next vector iteration.
+      // If not, discard the plan.
+      if (Legal->isConditionCopyRequired() && !HasScalarVF &&
+          !VPlanTransforms::runPass(VPlanTransforms::tryEarlyExitConversion,
+                                    *Plan))
+        break;
       // TODO: try to put it close to addActiveLaneMask().
       // Discard the plan if it is not EVL-compatible
       if (CM.foldTailWithEVL() && !HasScalarVF &&
@@ -9380,6 +9391,10 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range,
           Range);
   DenseMap<const VPBlockBase *, BasicBlock *> VPB2IRBB;
   auto Plan = VPlanTransforms::buildPlainCFG(OrigLoop, *LI, VPB2IRBB);
+  // FIXME: Better place to put this? Or maybe an enum for how to handle
+  //        early exits?
+  if (Legal->hasUncountableEarlyExit())
+    Plan->setEarlyExitContinuesInScalarLoop(Legal->isConditionCopyRequired());
   VPlanTransforms::prepareForVectorization(
       *Plan, Legal->getWidestInductionType(), PSE, RequiresScalarEpilogueCheck,
       CM.foldTailByMasking(), OrigLoop,
@@ -9681,6 +9696,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
 
   DenseMap<const VPBlockBase *, BasicBlock *> VPB2IRBB;
   auto Plan = VPlanTransforms::buildPlainCFG(OrigLoop, *LI, VPB2IRBB);
+  // FIXME: Better place to put this? Or maybe an enum for how to handle
+  //        early exits?
+  if (Legal->hasUncountableEarlyExit())
+    Plan->setEarlyExitContinuesInScalarLoop(Legal->isConditionCopyRequired());
   VPlanTransforms::prepareForVectorization(
       *Plan, Legal->getWidestInductionType(), PSE, true, false, OrigLoop,
       getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), false,

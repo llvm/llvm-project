@@ -162,6 +162,8 @@ struct VPlanTransforms {
   tryAddExplicitVectorLength(VPlan &Plan,
                              const std::optional<unsigned> &MaxEVLSafeElements);
 
+  static bool tryEarlyExitConversion(VPlan &Plan);
+
   // For each Interleave Group in \p InterleaveGroups replace the Recipes
   // widening its memory instructions with a single VPInterleaveRecipe at its
   // insertion point.

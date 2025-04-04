@@ -41,6 +41,17 @@ template <typename Class> struct class_match {
 /// Match an arbitrary VPValue and ignore it.
 inline class_match<VPValue> m_VPValue() { return class_match<VPValue>(); }
 
+struct loop_invariant_vpvalue {
+  template <typename ITy> bool match(ITy *V) const {
+    VPValue *Val = dyn_cast<VPValue>(V);
+    return Val && Val->isDefinedOutsideLoopRegions();
+  }
+};
+
+inline loop_invariant_vpvalue m_LoopInvVPValue() {
+  return loop_invariant_vpvalue();
+}
+
 template <typename Class> struct bind_ty {
   Class *&VR;
 
@@ -325,6 +336,12 @@ m_Not(const Op0_t &Op0) {
 }
 
 template <typename Op0_t>
+inline UnaryVPInstruction_match<Op0_t, VPInstruction::AnyOf>
+m_AnyOf(const Op0_t &Op0) {
+  return m_VPInstruction<VPInstruction::AnyOf>(Op0);
+}
+
+template <typename Op0_t>
 inline UnaryVPInstruction_match<Op0_t, VPInstruction::BranchOnCond>
 m_BranchOnCond(const Op0_t &Op0) {
   return m_VPInstruction<VPInstruction::BranchOnCond>(Op0);
@@ -429,6 +446,19 @@ template <typename Op0_t, typename Op1_t>
 inline GEPLikeRecipe_match<Op0_t, Op1_t> m_GetElementPtr(const Op0_t &Op0,
                                                          const Op1_t &Op1) {
   return GEPLikeRecipe_match<Op0_t, Op1_t>(Op0, Op1);
+}
+
+// FIXME: Separate Commutative matcher? Share result type?
+// FIXME: Are there other recipe types for ICmp?
+template <typename Op0_t, typename Op1_t>
+using ICmpRecipe_match =
+    BinaryRecipe_match<Op0_t, Op1_t, Instruction::ICmp, false, VPWidenRecipe,
+                       VPReplicateRecipe>;
+
+template <typename Op0_t, typename Op1_t>
+inline ICmpRecipe_match<Op0_t, Op1_t> m_ICmp(const Op0_t &Op0,
+                                             const Op1_t &Op1) {
+  return ICmpRecipe_match<Op0_t, Op1_t>(Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t, typename Op2_t, unsigned Opcode>
@@ -579,6 +609,20 @@ template <Intrinsic::ID IntrID, typename T0, typename T1, typename T2,
 inline typename m_Intrinsic_Ty<T0, T1, T2, T3>::Ty
 m_Intrinsic(const T0 &Op0, const T1 &Op1, const T2 &Op2, const T3 &Op3) {
   return m_CombineAnd(m_Intrinsic<IntrID>(Op0, Op1, Op2), m_Argument<3>(Op3));
+}
+
+template <typename SubPattern_t> struct OneUse_match {
+  SubPattern_t SubPattern;
+
+  OneUse_match(const SubPattern_t &SP) : SubPattern(SP) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    return V->hasOneUse() && SubPattern.match(V);
+  }
+};
+
+template <typename T> inline OneUse_match<T> m_OneUse(const T &SubPattern) {
+  return SubPattern;
 }
 
 } // namespace VPlanPatternMatch

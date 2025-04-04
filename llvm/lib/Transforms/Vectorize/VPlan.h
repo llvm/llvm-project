@@ -3636,6 +3636,13 @@ class VPlan {
   /// VPlan is destroyed.
   SmallVector<VPBlockBase *> CreatedBlocks;
 
+  /// Indicates that an early exit loop will exit before the condition is
+  /// reached, and that the scalar loop must perform the last few iterations.
+  /// FIXME: Is this the right place? We mainly want to make sure that we
+  ///        know about this for transforming the plan to copy&move the exit
+  ///        condition, but maybe it doesn't need to be in the plan itself.
+  bool EarlyExitContinuesInScalarLoop = false;
+
   /// Construct a VPlan with \p Entry to the plan and with \p ScalarHeader
   /// wrapping the original header of the scalar loop.
   VPlan(VPBasicBlock *Entry, VPIRBasicBlock *ScalarHeader)
@@ -3937,6 +3944,16 @@ public:
   /// via the other early exit).
   bool hasEarlyExit() const {
     return ExitBlocks.size() > 1 || ExitBlocks[0]->getNumPredecessors() > 1;
+  }
+
+  /// Returns true if all exit paths should reach the scalar loop.
+  bool shouldEarlyExitContinueInScalarLoop() const {
+    return EarlyExitContinuesInScalarLoop;
+  }
+
+  /// Set early exit vectorization to always reach the scalar loop.
+  void setEarlyExitContinuesInScalarLoop(bool Continues) {
+    EarlyExitContinuesInScalarLoop = Continues;
   }
 
   /// Returns true if the scalar tail may execute after the vector loop. Note

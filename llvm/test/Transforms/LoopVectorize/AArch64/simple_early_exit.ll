@@ -575,6 +575,82 @@ loop.end:
   ret i64 %retval
 }
 
+define void @loop_contains_store_single_user(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
+; CHECK-LABEL: define void @loop_contains_store_single_user(
+; CHECK-SAME: ptr noalias dereferenceable(40) [[ARRAY:%.*]], ptr readonly align 2 dereferenceable(40) [[PRED:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i16, ptr [[PRED]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i16, ptr [[TMP0]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP1]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <4 x i16> [[WIDE_LOAD]], splat (i16 500)
+; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP2]])
+; CHECK-NEXT:    br i1 [[TMP3]], label [[SCALAR_PH]], label [[VECTOR_PH_SPLIT:%.*]]
+; CHECK:       vector.ph.split:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH_SPLIT]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i16, ptr [[ARRAY]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i16, ptr [[TMP4]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i16>, ptr [[TMP5]], align 2
+; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <4 x i16> [[WIDE_LOAD1]], splat (i16 1)
+; CHECK-NEXT:    store <4 x i16> [[TMP6]], ptr [[TMP5]], align 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i16, ptr [[PRED]], i64 [[INDEX_NEXT]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i16, ptr [[TMP7]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i16>, ptr [[TMP8]], align 2
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp sgt <4 x i16> [[WIDE_LOAD2]], splat (i16 500)
+; CHECK-NEXT:    [[TMP10:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP9]])
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 20
+; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP10]], [[TMP11]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], 20
+; CHECK-NEXT:    br i1 [[TMP13]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[INDEX_NEXT]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_PH]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
+; CHECK-NEXT:    [[ST_ADDR:%.*]] = getelementptr inbounds nuw i16, ptr [[ARRAY]], i64 [[IV]]
+; CHECK-NEXT:    [[DATA:%.*]] = load i16, ptr [[ST_ADDR]], align 2
+; CHECK-NEXT:    [[INC:%.*]] = add nsw i16 [[DATA]], 1
+; CHECK-NEXT:    store i16 [[INC]], ptr [[ST_ADDR]], align 2
+; CHECK-NEXT:    [[EE_ADDR:%.*]] = getelementptr inbounds nuw i16, ptr [[PRED]], i64 [[IV]]
+; CHECK-NEXT:    [[EE_VAL:%.*]] = load i16, ptr [[EE_ADDR]], align 2
+; CHECK-NEXT:    [[EE_COND:%.*]] = icmp sgt i16 [[EE_VAL]], 500
+; CHECK-NEXT:    br i1 [[EE_COND]], label [[EXIT]], label [[FOR_INC]]
+; CHECK:       for.inc:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[COUNTED_COND:%.*]] = icmp eq i64 [[IV_NEXT]], 20
+; CHECK-NEXT:    br i1 [[COUNTED_COND]], label [[EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %st.addr = getelementptr inbounds nuw i16, ptr %array, i64 %iv
+  %data = load i16, ptr %st.addr, align 2
+  %inc = add nsw i16 %data, 1
+  store i16 %inc, ptr %st.addr, align 2
+  %ee.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %iv
+  %ee.val = load i16, ptr %ee.addr, align 2
+  %ee.cond = icmp sgt i16 %ee.val, 500
+  br i1 %ee.cond, label %exit, label %for.inc
+
+for.inc:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, 20
+  br i1 %counted.cond, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
 declare i32 @foo(i32) readonly
 declare <vscale x 4 x i32> @foo_vec(<vscale x 4 x i32>)
 
@@ -595,4 +671,6 @@ attributes #1 = { "target-features"="+sve" vscale_range(1,16) }
 ; CHECK: [[LOOP11]] = distinct !{[[LOOP11]], [[META2]], [[META1]]}
 ; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META1]]}
+; CHECK: [[LOOP14]] = distinct !{[[LOOP14]], [[META1]], [[META2]]}
+; CHECK: [[LOOP15]] = distinct !{[[LOOP15]], [[META2]], [[META1]]}
 ;.

@@ -407,6 +407,15 @@ public:
     return hasUncountableEarlyExit() ? getUncountableEdge()->second : nullptr;
   }
 
+  /// Returns true if this is an early exit loop containing a store.
+  bool isConditionCopyRequired() const {
+    return RequiresEarlyExitConditionCopy;
+  }
+
+  /// Returns the load instruction, if any, nearest to an uncountable early
+  /// exit.
+  std::optional<LoadInst *> getEarlyExitLoad() const { return EarlyExitLoad; }
+
   /// Return true if there is store-load forwarding dependencies.
   bool isSafeForAnyStoreLoadForwardDistances() const {
     return LAI->getDepChecker().isSafeForAnyStoreLoadForwardDistances();
@@ -654,6 +663,16 @@ private:
   /// Keep track of the loop edge to an uncountable exit, comprising a pair
   /// of (Exiting, Exit) blocks, if there is exactly one early exit.
   std::optional<std::pair<BasicBlock *, BasicBlock *>> UncountableEdge;
+
+  /// Indicates that we will need to copy the early exit condition into
+  /// the vector preheader, as we will need to mask some operations in
+  /// the loop (e.g. stores).
+  bool RequiresEarlyExitConditionCopy = false;
+
+  /// The load used to determine an uncountable early-exit condition. This is
+  /// only used to allow further analysis in canVectorizeMemory if we found
+  /// what looks like a valid early exit loop with store beforehand.
+  std::optional<LoadInst *> EarlyExitLoad;
 };
 
 } // namespace llvm

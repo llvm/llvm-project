@@ -17,6 +17,7 @@
 #include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -1209,6 +1210,36 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
     });
   }
 
+  // FIXME: Remove or reduce this restriction. We're in a bit of an odd spot
+  //        since we're (potentially) doing the load out of its normal order
+  //        in the loop and that may throw off dependency checking.
+  //        A forward dependency should be fine, but a backwards dep may not
+  //        be even if LAA thinks it is due to performing the load for the
+  //        vector iteration i+1 in vector iteration i.
+  if (isConditionCopyRequired()) {
+    assert(EarlyExitLoad.has_value() && "EE Store without condition load.");
+
+    if (LAI->canVectorizeMemory()) {
+      const MemoryDepChecker &DepChecker = LAI->getDepChecker();
+      const auto *Deps = DepChecker.getDependences();
+
+      for (const MemoryDepChecker::Dependence &Dep : *Deps) {
+        if (Dep.getDestination(DepChecker) == EarlyExitLoad ||
+            Dep.getSource(DepChecker) == EarlyExitLoad) {
+          // Refine language a little? This currently only applies when a store
+          // is present in the early exit loop.
+          reportVectorizationFailure(
+              "No dependencies allowed for early exit condition load",
+              "Early exit condition loads may not have a dependence with "
+              "another"
+              " memory operation.",
+              "CantVectorizeStoreToLoopInvariantAddress", ORE, TheLoop);
+          return false;
+        }
+      }
+    }
+  }
+
   if (!LAI->canVectorizeMemory())
     return canVectorizeIndirectUnsafeDependences();
 
@@ -1627,6 +1658,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   // Keep a record of all the exiting blocks.
   SmallVector<const SCEVPredicate *, 4> Predicates;
   std::optional<std::pair<BasicBlock *, BasicBlock *>> SingleUncountableEdge;
+  std::optional<LoadInst *> EELoad;
   for (BasicBlock *BB : ExitingBlocks) {
     const SCEV *EC =
         PSE.getSE()->getPredicatedExitCount(TheLoop, BB, &Predicates);
@@ -1654,6 +1686,21 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
             "Cannot vectorize early exit loop with more than one early exit",
             "TooManyUncountableEarlyExits", ORE, TheLoop);
         return false;
+      }
+
+      // For loops with stores.
+      // Record load for analysis by isDereferenceableAndAlignedInLoop
+      // and later by dependence analysis.
+      if (BranchInst *Br = dyn_cast<BranchInst>(BB->getTerminator())) {
+        // FIXME: Handle exit conditions with multiple users, more complex exit
+        //        conditions than br(icmp(load, loop_inv)).
+        ICmpInst *Cmp = dyn_cast<ICmpInst>(Br->getCondition());
+        if (Cmp && Cmp->hasOneUse() &&
+            TheLoop->isLoopInvariant(Cmp->getOperand(1))) {
+          LoadInst *Load = dyn_cast<LoadInst>(Cmp->getOperand(0));
+          if (Load && Load->hasOneUse() && TheLoop->contains(Load))
+            EELoad = Load;
+        }
       }
 
       SingleUncountableEdge = {BB, ExitBlock};
@@ -1708,16 +1755,31 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
     }
   };
 
+  bool HasStore = false;
   for (auto *BB : TheLoop->blocks())
     for (auto &I : *BB) {
+      if (StoreInst *SI = dyn_cast<StoreInst>(&I)) {
+        HasStore = true;
+        if (SI->isSimple())
+          continue;
+
+        reportVectorizationFailure(
+            "Complex writes to memory unsupported in early exit loops",
+            "Cannot vectorize early exit loop with complex writes to memory",
+            "WritesInEarlyExitLoop", ORE, TheLoop);
+        return false;
+      }
+
       if (I.mayWriteToMemory()) {
         // We don't support writes to memory.
         reportVectorizationFailure(
-            "Writes to memory unsupported in early exit loops",
-            "Cannot vectorize early exit loop with writes to memory",
+            "Complex writes to memory unsupported in early exit loops",
+            "Cannot vectorize early exit loop with complex writes to memory",
             "WritesInEarlyExitLoop", ORE, TheLoop);
         return false;
-      } else if (!IsSafeOperation(&I)) {
+      }
+
+      if (!IsSafeOperation(&I)) {
         reportVectorizationFailure("Early exit loop contains operations that "
                                    "cannot be speculatively executed",
                                    "UnsafeOperationsEarlyExitLoop", ORE,
@@ -1732,13 +1794,53 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
 
   // TODO: Handle loops that may fault.
   Predicates.clear();
-  if (!isDereferenceableReadOnlyLoop(TheLoop, PSE.getSE(), DT, AC,
-                                     &Predicates)) {
+
+  if (HasStore && EELoad.has_value()) {
+    LoadInst *LI = *EELoad;
+    if (isDereferenceableAndAlignedInLoop(LI, TheLoop, *PSE.getSE(), *DT, AC,
+                                          &Predicates)) {
+      ICFLoopSafetyInfo SafetyInfo;
+      SafetyInfo.computeLoopSafetyInfo(TheLoop);
+      // FIXME: We may have multiple levels of conditional loads, so will
+      //        need to improve on outright rejection at some point.
+      if (!SafetyInfo.isGuaranteedToExecute(*LI, DT, TheLoop)) {
+        LLVM_DEBUG(
+            dbgs() << "Early exit condition load not guaranteed to execute.\n");
+        reportVectorizationFailure(
+            "Early exit condition load not guaranteed to execute",
+            "Cannot vectorize early exit loop when condition load is not "
+            "guaranteed to execute",
+            "EarlyExitLoadNotGuaranteed", ORE, TheLoop);
+      }
+    } else {
+      LLVM_DEBUG(dbgs() << "Early exit condition load potentially unsafe.\n");
+      reportVectorizationFailure("Uncounted loop condition not known safe",
+                                 "Cannot vectorize early exit loop with "
+                                 "possibly unsafe condition load",
+                                 "PotentiallyFaultingEarlyExitLoop", ORE,
+                                 TheLoop);
+      return false;
+    }
+  } else if (HasStore) {
+    LLVM_DEBUG(dbgs() << "Found early exit store but no condition load.\n");
     reportVectorizationFailure(
-        "Loop may fault",
-        "Cannot vectorize potentially faulting early exit loop",
-        "PotentiallyFaultingEarlyExitLoop", ORE, TheLoop);
+        "Early exit loop with store but no condition load",
+        "Cannot vectorize early exit loop with store but no condition load",
+        "NoConditionLoadForEarlyExitLoop", ORE, TheLoop);
     return false;
+  } else {
+    // Read-only loop.
+    // FIXME: as with the loops with stores, only the loads contributing to
+    //        the loop condition need to be guaranteed dereferenceable and
+    //        aligned.
+    if (!isDereferenceableReadOnlyLoop(TheLoop, PSE.getSE(), DT, AC,
+                                       &Predicates)) {
+      reportVectorizationFailure(
+          "Loop may fault",
+          "Cannot vectorize potentially faulting early exit loop",
+          "PotentiallyFaultingEarlyExitLoop", ORE, TheLoop);
+      return false;
+    }
   }
 
   [[maybe_unused]] const SCEV *SymbolicMaxBTC =
@@ -1751,6 +1853,11 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
                        "backedge taken count: "
                     << *SymbolicMaxBTC << '\n');
   UncountableEdge = SingleUncountableEdge;
+  if (HasStore) {
+    RequiresEarlyExitConditionCopy = true;
+    EarlyExitLoad = EELoad;
+  }
+
   return true;
 }
 
@@ -1823,6 +1930,8 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
     } else {
       if (!isVectorizableEarlyExitLoop()) {
         UncountableEdge = std::nullopt;
+        EarlyExitLoad = std::nullopt;
+        RequiresEarlyExitConditionCopy = false;
         if (DoExtraAnalysis)
           Result = false;
         else
