@@ -29,7 +29,6 @@
 #ifdef __CYGWIN__
 #include <cygwin/version.h>
 #include <sys/cygwin.h>
-#define _WIN32 1
 #endif
 
 #ifdef _WIN32
