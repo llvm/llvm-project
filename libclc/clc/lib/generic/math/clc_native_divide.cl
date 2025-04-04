@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE native_divide(__CLC_GENTYPE x, __CLC_GENTYPE y) {
-  return x / y;
-}
+#include <clc/internal/clc.h>
+
+#define __FLOAT_ONLY
+#define __CLC_BODY <clc_native_divide.inc>
+
+#include <clc/math/gentype.inc>
