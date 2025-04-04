@@ -874,6 +874,8 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
   std::optional<Align> MaxFrameAlignment;
   if (Shape.ABI == coro::ABI::Async)
     MaxFrameAlignment = Shape.AsyncLowering.getContextAlignment();
+  if (Shape.ABI == coro::ABI::RetconOnceDynamic)
+    MaxFrameAlignment = Shape.RetconLowering.getStorageAlignment();
   FrameTypeBuilder B(C, DL, MaxFrameAlignment);
 
   AllocaInst *PromiseAlloca = Shape.getPromiseAlloca();
