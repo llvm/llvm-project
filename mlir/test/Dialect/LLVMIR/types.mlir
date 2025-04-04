@@ -76,8 +76,8 @@ func.func @vec() {
   "some.op"() : () -> !llvm.vec<? x 4 x i32>
   // CHECK: !llvm.vec<? x 8 x f16>
   "some.op"() : () -> !llvm.vec<? x 8 x f16>
-  // CHECK: !llvm.vec<4 x ptr>
-  "some.op"() : () -> !llvm.vec<4 x ptr>
+  // CHECK: vector<4x!llvm.ptr>
+  "some.op"() : () -> vector<4x!llvm.ptr>
   return
 }
 
