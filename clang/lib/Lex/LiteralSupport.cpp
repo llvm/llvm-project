@@ -979,7 +979,7 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
   // we break out of the loop.
   for (; s != ThisTokEnd; ++s) {
     switch (*s) {
-    case 'b':
+    case 'b': // FP Suffix for "__bf16"
     case 'B':
       if (!isFPConstant)
         break; // Error for integer constant.
