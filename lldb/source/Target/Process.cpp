@@ -4246,6 +4246,8 @@ bool Process::ProcessEventData::ShouldStop(Event *event_ptr,
         // appropriately. We also need to stop processing actions, since they
         // aren't expecting the target to be running.
 
+        thread_sp->ResetSuggestedStackFrameIndex();
+
         // FIXME: we might have run.
         if (stop_info_sp->HasTargetRunSinceMe()) {
           SetRestarted(true);
