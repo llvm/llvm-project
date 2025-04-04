@@ -955,9 +955,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
             OutContext),
         MCConstantExpr::create(4, OutContext), OutContext);
 
-    // Emit 'bcl 20,31,.+4' so the link stack is not corrupted.
-    EmitToStreamer(*OutStreamer,
-                   MCInstBuilder(PPC::BCLalways).addExpr(OffsExpr));
+    // Emit the 'bl'.
+    EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::BL).addExpr(OffsExpr));
     return;
   }
   case PPC::MovePCtoLR:
