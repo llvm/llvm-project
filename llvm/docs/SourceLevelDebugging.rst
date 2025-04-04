@@ -208,10 +208,10 @@ comma-separated arguments in parentheses, as with a `call`.
     #dbg_declare([Value|MDNode], DILocalVariable, DIExpression, DILocation)
 
 This record provides information about a local element (e.g., variable).
-The first argument is an SSA value corresponding to a variable address, and is
-typically a static alloca in the function entry block.  The second argument is a
-`local variable <LangRef.html#dilocalvariable>`_ containing a description of
-the variable.  The third argument is a `complex expression
+The first argument is an SSA ``ptr`` value corresponding to a variable address,
+and is typically a static alloca in the function entry block.  The second
+argument is a `local variable <LangRef.html#dilocalvariable>`_ containing a
+description of the variable.  The third argument is a `complex expression
 <LangRef.html#diexpression>`_. The fourth argument is a `source location
 <LangRef.html#dilocation>`_. A ``#dbg_declare`` record describes the
 *address* of a source variable.

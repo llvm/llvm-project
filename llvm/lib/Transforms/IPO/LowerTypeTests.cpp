@@ -2349,14 +2349,13 @@ bool LowerTypeTestsModule::lower() {
     std::vector<Metadata *> TypeIds;
     std::vector<GlobalTypeMember *> Globals;
     std::vector<ICallBranchFunnel *> ICallBranchFunnels;
-    for (GlobalClassesTy::member_iterator MI = GlobalClasses.member_begin(*C);
-         MI != GlobalClasses.member_end(); ++MI) {
-      if (isa<Metadata *>(*MI))
-        TypeIds.push_back(cast<Metadata *>(*MI));
-      else if (isa<GlobalTypeMember *>(*MI))
-        Globals.push_back(cast<GlobalTypeMember *>(*MI));
+    for (auto M : GlobalClasses.members(*C)) {
+      if (isa<Metadata *>(M))
+        TypeIds.push_back(cast<Metadata *>(M));
+      else if (isa<GlobalTypeMember *>(M))
+        Globals.push_back(cast<GlobalTypeMember *>(M));
       else
-        ICallBranchFunnels.push_back(cast<ICallBranchFunnel *>(*MI));
+        ICallBranchFunnels.push_back(cast<ICallBranchFunnel *>(M));
     }
 
     // Order type identifiers by unique ID for determinism. This ordering is
