@@ -2052,6 +2052,9 @@ bool VectorCombine::foldShuffleOfSelects(Instruction &I) {
 
   auto *SrcVecTy = dyn_cast<FixedVectorType>(T1->getType());
   auto *DstVecTy = dyn_cast<FixedVectorType>(I.getType());
+  assert(SrcVecTy && DstVecTy &&
+         "Expected shuffle/select vector types to be defined");
+
   auto SK = TargetTransformInfo::SK_PermuteTwoSrc;
   auto SelOp = Instruction::Select;
   InstructionCost OldCost = TTI.getCmpSelInstrCost(
