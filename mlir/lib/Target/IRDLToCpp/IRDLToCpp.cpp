@@ -1,6 +1,6 @@
 //===- IRDLToCpp.cpp - Converts IRDL definitions to C++ -------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the A0ache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -31,14 +31,14 @@ constexpr char definitionMacroFlag[] = "GEN_DIALECT_DEF";
 namespace {
 
 struct DialectStrings {
-  StringRef dialectName;
-  StringRef dialectCppName;
-  StringRef dialectCppShortName;
-  StringRef dialectBaseTypeName;
+  std::string dialectName;
+  std::string dialectCppName;
+  std::string dialectCppShortName;
+  std::string dialectBaseTypeName;
 
-  StringRef namespaceOpen;
-  StringRef namespaceClose;
-  StringRef namespacePath;
+  std::string namespaceOpen;
+  std::string namespaceClose;
+  std::string namespacePath;
 };
 
 struct TypeStrings {
@@ -248,8 +248,6 @@ static LogicalResult generateInclude(irdl::DialectOp dialect,
   static const auto typeHeaderDeclTemplate = irdl::detail::Template(
 #include "Templates/TypeHeaderDecl.txt"
   );
-  output << "#ifdef " << declarationMacroFlag << "\n#undef "
-         << declarationMacroFlag << "\n";
 
   irdl::detail::dictionary dict;
   fillDict(dict, dialectStrings);
@@ -284,8 +282,6 @@ static LogicalResult generateInclude(irdl::DialectOp dialect,
     if (failed(generateOperationInclude(operationOp, output, dict)))
       return failure();
   }
-
-  output << "#endif // " << declarationMacroFlag << "\n";
 
   return success();
 }
@@ -375,9 +371,6 @@ static LogicalResult generateLib(irdl::DialectOp dialect, raw_ostream &output,
   irdl::detail::dictionary dict;
   fillDict(dict, dialectStrings);
 
-  output << "#ifdef " << definitionMacroFlag << "\n#undef "
-         << definitionMacroFlag << "\n";
-
   typeHeaderDefTemplate.render(output, dict);
 
   SmallVector<std::string> typeNames;
@@ -465,7 +458,6 @@ static LogicalResult generateLib(irdl::DialectOp dialect, raw_ostream &output,
   output << perOpDefinitions;
   dialectDefTemplate.render(output, dict);
 
-  output << "#endif // " << definitionMacroFlag << "\n";
   return success();
 }
 
@@ -517,14 +509,13 @@ irdl::translateIRDLDialectToCpp(llvm::ArrayRef<irdl::DialectOp> dialects,
 #include "Templates/TypeDef.txt"
   );
 
-  llvm::LogicalResult result = success();
+  llvm::SmallMapVector<DialectOp, DialectStrings, 2> dialectStringTable;
 
   for (auto dialect : dialects) {
-    StringRef dialectName = dialect.getSymName();
-
-    if (failed(verifySupported(dialect))) {
+    if (failed(verifySupported(dialect)))
       return failure();
-    }
+
+    StringRef dialectName = dialect.getSymName();
 
     SmallVector<SmallString<8>> namespaceAbsolutePath{{"mlir"}, dialectName};
     std::string namespaceOpen;
@@ -553,18 +544,34 @@ irdl::translateIRDLDialectToCpp(llvm::ArrayRef<irdl::DialectOp> dialects,
     dialectStrings.namespaceClose = namespaceClose;
     dialectStrings.namespacePath = namespacePath;
 
-    output << headerTemplateText;
-
-    if (failed(generateInclude(dialect, output, dialectStrings))) {
-      return dialect->emitError("Error in Dialect " + dialectName +
-                                " while generating headers");
-    }
-
-    if (failed(generateLib(dialect, output, dialectStrings))) {
-      return dialect->emitError("Error in Dialect " + dialectName +
-                                " while generating library");
-    }
+    dialectStringTable[dialect] = std::move(dialectStrings);
   }
 
-  return result;
+  // generate the actual header
+  output << headerTemplateText;
+
+  output << llvm::formatv("#ifdef {0}\n#undef {0}\n", declarationMacroFlag);
+  for (auto dialect : dialects) {
+
+    auto &dialectStrings = dialectStringTable[dialect];
+    auto &dialectName = dialectStrings.dialectName;
+
+    if (failed(generateInclude(dialect, output, dialectStrings)))
+      return dialect->emitError("Error in Dialect " + dialectName +
+                                " while generating headers");
+  }
+  output << llvm::formatv("#endif // #ifdef {}\n", declarationMacroFlag);
+
+  output << llvm::formatv("#ifdef {0}\n#undef {0}\n ", definitionMacroFlag);
+  for (auto &dialect : dialects) {
+    auto &dialectStrings = dialectStringTable[dialect];
+    auto &dialectName = dialectStrings.dialectName;
+
+    if (failed(generateLib(dialect, output, dialectStrings)))
+      return dialect->emitError("Error in Dialect " + dialectName +
+                                " while generating library");
+  }
+  output << llvm::formatv("#endif // #ifdef {}\n", definitionMacroFlag);
+
+  return success();
 }
