@@ -48,6 +48,8 @@ class GlobalVariable : public GlobalObject, public ilist_node<GlobalVariable> {
   // Is this a global whose value can change from its initial value before
   // global initializers are run?
   bool isExternallyInitializedConstant : 1;
+  bool isExecuteGlobal : 1;
+  bool isSharedGlobal : 1;
 
 private:
   static const unsigned CodeModelBits = LastCodeModelBit - LastAlignmentBit;
@@ -60,7 +62,8 @@ public:
   GlobalVariable(Type *Ty, bool isConstant, LinkageTypes Linkage,
                  Constant *Initializer = nullptr, const Twine &Name = "",
                  ThreadLocalMode = NotThreadLocal, unsigned AddressSpace = 0,
-                 bool isExternallyInitialized = false);
+                 bool isExternallyInitialized = false, bool isExecuteGlobal = false,
+                 bool isSharedGlobal = false);
   /// GlobalVariable ctor - This creates a global and inserts it before the
   /// specified other global.
   GlobalVariable(Module &M, Type *Ty, bool isConstant, LinkageTypes Linkage,
@@ -68,7 +71,8 @@ public:
                  GlobalVariable *InsertBefore = nullptr,
                  ThreadLocalMode = NotThreadLocal,
                  std::optional<unsigned> AddressSpace = std::nullopt,
-                 bool isExternallyInitialized = false);
+                 bool isExternallyInitialized = false,
+                 bool isExecuteGlobal = false, bool isSharedGlobal = false);
   GlobalVariable(const GlobalVariable &) = delete;
   GlobalVariable &operator=(const GlobalVariable &) = delete;
 
@@ -179,6 +183,10 @@ public:
   void setExternallyInitialized(bool Val) {
     isExternallyInitializedConstant = Val;
   }
+  bool isExecute() const { return isExecuteGlobal; }
+  bool isShared() const { return isSharedGlobal; }
+  void setExecute(bool Val) { isExecuteGlobal = Val; }
+  void setShared(bool Val) { isSharedGlobal = Val;  }
 
   /// copyAttributesFrom - copy all additional attributes (those not needed to
   /// create a GlobalVariable) from the GlobalVariable Src to this one.
