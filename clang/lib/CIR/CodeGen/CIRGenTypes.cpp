@@ -254,3 +254,30 @@ mlir::Type CIRGenTypes::convertTypeForMem(clang::QualType qualType,
 
   return convertedType;
 }
+
+bool CIRGenTypes::isZeroInitializable(clang::QualType t) {
+  if (t->getAs<PointerType>())
+    return astContext.getTargetNullPointerValue(t) == 0;
+
+  if (const auto *at = astContext.getAsArrayType(t)) {
+    if (isa<IncompleteArrayType>(at))
+      return true;
+
+    if (const auto *cat = dyn_cast<ConstantArrayType>(at))
+      if (astContext.getConstantArrayElementCount(cat) == 0)
+        return true;
+  }
+
+  if (t->getAs<RecordType>()) {
+    cgm.errorNYI(SourceLocation(), "isZeroInitializable for RecordType", t);
+    return false;
+  }
+
+  if (t->getAs<MemberPointerType>()) {
+    cgm.errorNYI(SourceLocation(), "isZeroInitializable for MemberPointerType",
+                 t);
+    return false;
+  }
+
+  return true;
+}
