@@ -78,13 +78,46 @@ void ExceptionEscapeCheck::check(const MatchFinder::MatchResult &Result) {
   if (!MatchedDecl)
     return;
 
-  if (Tracer.analyze(MatchedDecl).getBehaviour() ==
-      utils::ExceptionAnalyzer::State::Throwing)
-    // FIXME: We should provide more information about the exact location where
-    // the exception is thrown, maybe the full path the exception escapes
-    diag(MatchedDecl->getLocation(), "an exception may be thrown in function "
-                                     "%0 which should not throw exceptions")
-        << MatchedDecl;
+  const utils::ExceptionAnalyzer::ExceptionInfo Info =
+      Tracer.analyze(MatchedDecl);
+
+  if (Info.getBehaviour() != utils::ExceptionAnalyzer::State::Throwing) {
+    return;
+  }
+
+  diag(MatchedDecl->getLocation(), "an exception may be thrown in function "
+                                   "%0 which should not throw exceptions")
+      << MatchedDecl;
+
+  const utils::ExceptionAnalyzer::ExceptionInfo::ThrowInfo ThrowInfo =
+      Info.getExceptions().begin()->getSecond();
+
+  if (ThrowInfo.Loc.isInvalid()) {
+    return;
+  }
+
+  // FIXME: We should provide exact position of functions calls, not only call
+  // stack of thrown exception.
+  const utils::ExceptionAnalyzer::CallStack &Stack = ThrowInfo.Stack;
+  diag(Stack.front()->getLocation(),
+       "example of unhandled exception throw stack, starting from function %0",
+       DiagnosticIDs::Note)
+      << Stack.front();
+
+  size_t FrameNo = 0;
+  for (const FunctionDecl *CallNode : Stack) {
+    if (FrameNo != Stack.size() - 1) {
+      diag(CallNode->getLocation(), "frame #%0: function %1",
+           DiagnosticIDs::Note)
+          << FrameNo << CallNode;
+    } else {
+      diag(ThrowInfo.Loc,
+           "frame #%0: function %1 throws unhandled exception here",
+           DiagnosticIDs::Note)
+          << FrameNo << CallNode;
+    }
+    ++FrameNo;
+  }
 }
 
 } // namespace clang::tidy::bugprone
