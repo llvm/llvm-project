@@ -35,7 +35,7 @@ void FORTRAN_PROCEDURE_NAME(backtrace)(NO_ARGUMENTS);
 
 // Crash with an error message when the program dynamically violates a Fortran
 // constraint.
-NORETURN void RTNAME(ReportFatalUserError)(
+NORETURN RT_API_ATTRS void RTNAME(ReportFatalUserError)(
     const char *message, const char *source, int line);
 
 FORTRAN_EXTERN_C_END

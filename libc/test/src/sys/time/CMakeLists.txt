@@ -1,0 +1,19 @@
+add_custom_target(libc_sys_time_unittests)
+
+add_libc_unittest(
+  utimes_test
+  SUITE
+    libc_sys_time_unittests
+  SRCS
+    utimes_test.cpp
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.src.errno.errno
+    libc.src.fcntl.open
+    libc.src.sys.time.utimes
+    libc.src.unistd.close
+    libc.src.unistd.read
+    libc.src.unistd.write
+    libc.src.stdio.remove
+    libc.src.sys.stat.stat
+)
