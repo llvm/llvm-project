@@ -56,7 +56,7 @@ LLVM_LIBC_FUNCTION(double, asin, (double x)) {
 #elif defined(LIBC_TARGET_CPU_HAS_FMA_DOUBLE)
       return fputil::multiply_add(x, 0x1.0p-54, x);
 #else
-      if (x == 0.0)
+      if (xbits.abs().uintval() == 0)
         return x;
       // Get sign(x) * min_normal.
       FPBits eps_bits = FPBits::min_normal();
