@@ -977,6 +977,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         DefaultInt, Rank::vector, IntrinsicClass::transformationalFunction},
     {"this_image", {OptionalTEAM}, DefaultInt, Rank::scalar,
         IntrinsicClass::transformationalFunction},
+    {"time", {}, TypePattern{IntType, KindCode::exactKind, 8}, Rank::scalar,
+        IntrinsicClass::transformationalFunction},
     {"tiny",
         {{"x", SameReal, Rank::anyOrAssumedRank, Optionality::required,
             common::Intent::In, {ArgFlag::canBeMoldNull}}},
@@ -1010,6 +1012,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         KINDUnsigned},
     {"umaskl", {{"i", AnyInt}, DefaultingKIND}, KINDUnsigned},
     {"umaskr", {{"i", AnyInt}, DefaultingKIND}, KINDUnsigned},
+    {"unlink", {{"path", DefaultChar, Rank::scalar}}, DefaultInt, Rank::scalar,
+        IntrinsicClass::transformationalFunction},
     {"unpack",
         {{"vector", SameType, Rank::vector}, {"mask", AnyLogical, Rank::array},
             {"field", SameType, Rank::conformable}},
@@ -1319,6 +1323,8 @@ static const SpecificIntrinsicInterface specificIntrinsicFunction[]{
         "abs"},
 };
 
+// Must be sorted by name. The rank of the return value is ignored since
+// subroutines are do not have a return value.
 static const IntrinsicInterface intrinsicSubroutine[]{
     {"abort", {}, {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"atomic_add",
@@ -1630,6 +1636,12 @@ static const IntrinsicInterface intrinsicSubroutine[]{
     {"sleep",
         {{"seconds", AnyInt, Rank::scalar, Optionality::required,
             common::Intent::In}},
+        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"unlink",
+        {{"path", DefaultChar, Rank::scalar, Optionality::required,
+             common::Intent::In},
+            {"status", DefaultInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
 };
 
@@ -2800,7 +2812,7 @@ bool IntrinsicProcTable::Implementation::IsDualIntrinsic(
   // Collection for some intrinsics with function and subroutine form,
   // in order to pass the semantic check.
   static const std::string dualIntrinsic[]{{"chdir"s}, {"etime"s}, {"getcwd"s},
-      {"hostnm"s}, {"rename"s}, {"second"s}, {"system"s}};
+      {"hostnm"s}, {"rename"s}, {"second"s}, {"system"s}, {"unlink"s}};
 
   return llvm::is_contained(dualIntrinsic, name);
 }

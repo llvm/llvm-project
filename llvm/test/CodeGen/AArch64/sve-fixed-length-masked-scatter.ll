@@ -295,9 +295,8 @@ define void @masked_scatter_v2i32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    cmeq v1.2s, v0.2s, #0
 ; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-NEXT:    sshll v1.2d, v1.2s, #0
+; CHECK-NEXT:    cmeq v1.2d, v0.2d, #0
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z1.d, #0
 ; CHECK-NEXT:    ldr q1, [x1]
 ; CHECK-NEXT:    st1w { z0.d }, p0, [z1.d]
