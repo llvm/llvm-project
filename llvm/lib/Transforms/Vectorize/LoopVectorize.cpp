@@ -9246,6 +9246,15 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
         VPlanTransforms::runPass(VPlanTransforms::truncateToMinimalBitwidths,
                                  *Plan, CM.getMinimalBitwidths());
       VPlanTransforms::optimize(*Plan);
+
+      // See if we can convert an early exit vplan to bail out to a scalar
+      // loop if state-changing operations (like stores) are present and
+      // an exit will be taken in the next vector iteration.
+      // If not, discard the plan.
+      if (Legal->isConditionCopyRequired() && !HasScalarVF &&
+          !VPlanTransforms::runPass(VPlanTransforms::tryEarlyExitConversion,
+                                    *Plan))
+        break;
       // TODO: try to put it close to addActiveLaneMask().
       // Discard the plan if it is not EVL-compatible
       if (CM.foldTailWithEVL() && !HasScalarVF &&
@@ -9570,6 +9579,12 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
           },
           Range);
   auto Plan = std::make_unique<VPlan>(OrigLoop);
+
+  // FIXME: Better place to put this? Or maybe an enum for how to handle
+  //        early exits?
+  if (Legal->hasUncountableEarlyExit())
+    Plan->setEarlyExitContinuesInScalarLoop(Legal->isConditionCopyRequired());
+
   // Build hierarchical CFG.
   // TODO: Convert to VPlan-transform and consolidate all transforms for VPlan
   // creation.
@@ -9876,6 +9891,12 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
 
   // Create new empty VPlan
   auto Plan = std::make_unique<VPlan>(OrigLoop);
+
+  // FIXME: Better place to put this? Or maybe an enum for how to handle
+  //        early exits?
+  if (Legal->hasUncountableEarlyExit())
+    Plan->setEarlyExitContinuesInScalarLoop(Legal->isConditionCopyRequired());
+
   // Build hierarchical CFG
   VPlanHCFGBuilder HCFGBuilder(OrigLoop, LI, *Plan);
   HCFGBuilder.buildPlainCFG();

@@ -2469,61 +2469,63 @@ void VPlanTransforms::handleUncountableEarlyExit(
   // block and have it conditionally branch to the early exit block if
   // EarlyExitTaken.
   auto *EarlyExitingBranch =
-      cast<BranchInst>(UncountableExitingBlock->getTerminator());
+  cast<BranchInst>(UncountableExitingBlock->getTerminator());
   BasicBlock *TrueSucc = EarlyExitingBranch->getSuccessor(0);
   BasicBlock *FalseSucc = EarlyExitingBranch->getSuccessor(1);
   BasicBlock *EarlyExitIRBB =
-      !OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc;
+  !OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc;
   VPIRBasicBlock *VPEarlyExitBlock = Plan.getExitBlock(EarlyExitIRBB);
-
+  
   VPValue *EarlyExitNotTakenCond = RecipeBuilder.getBlockInMask(
-      OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc);
-  auto *EarlyExitTakenCond = Builder.createNot(EarlyExitNotTakenCond);
-  IsEarlyExitTaken =
-      Builder.createNaryOp(VPInstruction::AnyOf, {EarlyExitTakenCond});
+    OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc);
+    auto *EarlyExitTakenCond = Builder.createNot(EarlyExitNotTakenCond);
+    IsEarlyExitTaken =
+    Builder.createNaryOp(VPInstruction::AnyOf, {EarlyExitTakenCond});
 
-  VPBasicBlock *NewMiddle = Plan.createVPBasicBlock("middle.split");
-  VPBasicBlock *VectorEarlyExitVPBB =
-      Plan.createVPBasicBlock("vector.early.exit");
-  VPBlockUtils::insertOnEdge(LoopRegion, MiddleVPBB, NewMiddle);
-  VPBlockUtils::connectBlocks(NewMiddle, VectorEarlyExitVPBB);
-  NewMiddle->swapSuccessors();
+  if (!Plan.shouldEarlyExitContinueInScalarLoop()) {
+    VPBasicBlock *NewMiddle = Plan.createVPBasicBlock("middle.split");
+    VPBasicBlock *VectorEarlyExitVPBB =
+        Plan.createVPBasicBlock("vector.early.exit");
+    VPBlockUtils::insertOnEdge(LoopRegion, MiddleVPBB, NewMiddle);
+    VPBlockUtils::connectBlocks(NewMiddle, VectorEarlyExitVPBB);
+    NewMiddle->swapSuccessors();
 
-  VPBlockUtils::connectBlocks(VectorEarlyExitVPBB, VPEarlyExitBlock);
+    VPBlockUtils::connectBlocks(VectorEarlyExitVPBB, VPEarlyExitBlock);
 
-  // Update the exit phis in the early exit block.
-  VPBuilder MiddleBuilder(NewMiddle);
-  VPBuilder EarlyExitB(VectorEarlyExitVPBB);
-  for (VPRecipeBase &R : *VPEarlyExitBlock) {
-    auto *ExitIRI = dyn_cast<VPIRPhi>(&R);
-    if (!ExitIRI)
-      break;
+    // Update the exit phis in the early exit block.
+    VPBuilder MiddleBuilder(NewMiddle);
+    VPBuilder EarlyExitB(VectorEarlyExitVPBB);
+    for (VPRecipeBase &R : *VPEarlyExitBlock) {
+      auto *ExitIRI = dyn_cast<VPIRPhi>(&R);
+      if (!ExitIRI)
+        break;
 
-    PHINode &ExitPhi = ExitIRI->getIRPhi();
-    VPValue *IncomingFromEarlyExit = RecipeBuilder.getVPValueOrAddLiveIn(
-        ExitPhi.getIncomingValueForBlock(UncountableExitingBlock));
+      PHINode &ExitPhi = ExitIRI->getIRPhi();
+      VPValue *IncomingFromEarlyExit = RecipeBuilder.getVPValueOrAddLiveIn(
+          ExitPhi.getIncomingValueForBlock(UncountableExitingBlock));
 
-    if (OrigLoop->getUniqueExitBlock()) {
-      // If there's a unique exit block, VPEarlyExitBlock has 2 predecessors
-      // (MiddleVPBB and NewMiddle). Add the incoming value from MiddleVPBB
-      // which is coming from the original latch.
-      VPValue *IncomingFromLatch = RecipeBuilder.getVPValueOrAddLiveIn(
-          ExitPhi.getIncomingValueForBlock(OrigLoop->getLoopLatch()));
-      ExitIRI->addOperand(IncomingFromLatch);
-      ExitIRI->extractLastLaneOfOperand(MiddleBuilder);
+      if (OrigLoop->getUniqueExitBlock()) {
+        // If there's a unique exit block, VPEarlyExitBlock has 2 predecessors
+        // (MiddleVPBB and NewMiddle). Add the incoming value from MiddleVPBB
+        // which is coming from the original latch.
+        VPValue *IncomingFromLatch = RecipeBuilder.getVPValueOrAddLiveIn(
+            ExitPhi.getIncomingValueForBlock(OrigLoop->getLoopLatch()));
+        ExitIRI->addOperand(IncomingFromLatch);
+        ExitIRI->extractLastLaneOfOperand(MiddleBuilder);
+      }
+      // Add the incoming value from the early exit.
+      if (!IncomingFromEarlyExit->isLiveIn() && !Plan.hasScalarVFOnly()) {
+        VPValue *FirstActiveLane = EarlyExitB.createNaryOp(
+            VPInstruction::FirstActiveLane, {EarlyExitTakenCond}, nullptr,
+            "first.active.lane");
+        IncomingFromEarlyExit = EarlyExitB.createNaryOp(
+            Instruction::ExtractElement, {IncomingFromEarlyExit, FirstActiveLane},
+            nullptr, "early.exit.value");
+      }
+      ExitIRI->addOperand(IncomingFromEarlyExit);
     }
-    // Add the incoming value from the early exit.
-    if (!IncomingFromEarlyExit->isLiveIn() && !Plan.hasScalarVFOnly()) {
-      VPValue *FirstActiveLane = EarlyExitB.createNaryOp(
-          VPInstruction::FirstActiveLane, {EarlyExitTakenCond}, nullptr,
-          "first.active.lane");
-      IncomingFromEarlyExit = EarlyExitB.createNaryOp(
-          Instruction::ExtractElement, {IncomingFromEarlyExit, FirstActiveLane},
-          nullptr, "early.exit.value");
-    }
-    ExitIRI->addOperand(IncomingFromEarlyExit);
+    MiddleBuilder.createNaryOp(VPInstruction::BranchOnCond, {IsEarlyExitTaken});
   }
-  MiddleBuilder.createNaryOp(VPInstruction::BranchOnCond, {IsEarlyExitTaken});
 
   // Replace the condition controlling the non-early exit from the vector loop
   // with one exiting if either the original condition of the vector latch is
@@ -2538,6 +2540,115 @@ void VPlanTransforms::handleUncountableEarlyExit(
       Instruction::Or, {IsEarlyExitTaken, IsLatchExitTaken});
   Builder.createNaryOp(VPInstruction::BranchOnCond, AnyExitTaken);
   LatchExitingBranch->eraseFromParent();
+
+  // If the counted exit wasn't taken, continue in the scalar loop.
+  if (Plan.shouldEarlyExitContinueInScalarLoop()) {
+    VPRecipeBase *OldTerminator = MiddleVPBB->getTerminator();
+    VPBuilder Builder(OldTerminator);
+    Builder.createNaryOp(VPInstruction::BranchOnCond, IsLatchExitTaken);
+    OldTerminator->eraseFromParent();
+  }
+}
+
+bool VPlanTransforms::tryEarlyExitConversion(VPlan &Plan) {
+  // We can abandon a vplan entirely if we return false here, so we shouldn't
+  // crash if some earlier assumptions on scalar IR don't hold for the vplan
+  // version of the loop.
+  if (Plan.hasScalarVFOnly())
+    return false;
+  auto *Region = Plan.getVectorLoopRegion();
+  auto *Branch = dyn_cast<VPInstruction>(Region->getExitingBasicBlock()->getTerminator());
+  if (Branch->getOpcode() != VPInstruction::BranchOnCond)
+    return false;
+
+  // Extract the IR needed to create the uncountable exit condition.
+  // Looking for br(or(any_of(icmp(load(gep(base, iv)), loop_inv)), counted)
+  // FIXME: Build a list of nodes to copy below instead of matching
+  //        the exact pattern.
+  // FIXME: We should be able to handle multiple users for at least some of
+  //        these nodes; requires creating phis.
+  // FIXME: This does feel a bit fragile; is it better to do this earlier
+  //        when creating the initial recipe based on the scalar IR, instead
+  //        of the vplan equivalent here?
+  // FIXME: New vplan pattern matchers; m_Load, m_ICmp, m_OneUse, etc.
+  VPInstruction *Or = dyn_cast<VPInstruction>(Branch->getOperand(0));
+  if (!Or || Or->Users.size() != 1 || Or->getOpcode() != Instruction::Or)
+    return false;
+  auto *AnyOf = dyn_cast<VPInstruction>(Or->getOperand(0));
+  if (!AnyOf || AnyOf->Users.size() != 1 ||
+      AnyOf->getOpcode() != VPInstruction::AnyOf)
+    return false;
+  auto *Cmp = dyn_cast<VPWidenRecipe>(AnyOf->getOperand(0));
+  if (!Cmp || Cmp->Users.size() != 1 || Cmp->getOpcode() != Instruction::ICmp ||
+      !Cmp->getOperand(1)->isDefinedOutsideLoopRegions())
+    return false;
+  auto *Load = dyn_cast<VPWidenLoadRecipe>(Cmp->getOperand(0));
+  if (!Load || Load->Users.size() != 1)
+    return false;
+  auto *VecPtr = dyn_cast<VPVectorPointerRecipe>(Load->getAddr());
+  if (!VecPtr || VecPtr->Users.size() != 1)
+    return false;
+  auto *GEP = dyn_cast<VPReplicateRecipe>(VecPtr->getOperand(0));
+  if (!GEP || GEP->Users.size() != 1 || GEP->getNumOperands() != 2 ||
+      GEP->getOpcode() != Instruction::GetElementPtr)
+    return false;
+  auto *Base = GEP->getOperand(0);
+  if (!Base->isDefinedOutsideLoopRegions())
+    return false;
+  auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(GEP->getOperand(1));
+  if (!Steps)
+    return false;
+  auto *IV = dyn_cast<VPCanonicalIVPHIRecipe>(Steps->getOperand(0));
+  if (!IV)
+    return false;
+  VPInstruction *IVUpdate = cast<VPInstruction>(IV->getBackedgeValue());
+
+  // Duplicate exit IR and use the starting value for the IV phi.
+  // FIXME: Is making new nodes better than cloning?
+  auto *VectorPH = Plan.getVectorPreheader();
+  VPBuilder PHBuilder(VectorPH, VectorPH->getFirstNonPhi());
+  VPReplicateRecipe *PHGEP = GEP->clone();
+  PHGEP->setOperand(1, IV->getStartValue());
+  PHBuilder.insert(PHGEP);
+  auto *PHVecPtr = VecPtr->clone();
+  PHVecPtr->setOperand(0, PHGEP);
+  PHBuilder.insert(PHVecPtr);
+  VPWidenLoadRecipe *PHLoad = Load->clone();
+  PHLoad->setOperand(0, PHVecPtr);
+  PHBuilder.insert(PHLoad);
+  VPWidenRecipe *PHCmp = Cmp->clone();
+  PHCmp->setOperand(0, PHLoad);
+  PHBuilder.insert(PHCmp);
+
+  // Split vector preheader to form a new bypass block.
+  VPBasicBlock *NewPH = VectorPH->splitAt(PHBuilder.getInsertPoint());
+  VPBasicBlock *ScalarPH = Plan.getScalarPreheader();
+  VPValue *PHAnyOf = PHBuilder.createNaryOp(VPInstruction::AnyOf, {PHCmp});
+  PHBuilder.createNaryOp(VPInstruction::BranchOnCond, {PHAnyOf},
+                         PHCmp->getDebugLoc());
+  VectorPH->clearSuccessors();
+  VectorPH->setTwoSuccessors(ScalarPH, NewPH);
+
+  // Fix up the resume phi in scalar preheader -- we might not have reached
+  // the calculated maximum vector tripcount, so just use the next value of IV.
+  // FIXME: Can we rely on the resume phi being first?
+  auto *ResumePHI = cast<VPInstruction>(&ScalarPH->front());
+  VPBasicBlock *MiddleBlock = Plan.getMiddleBlock();
+  ScalarPH->clearPredecessors();
+  ScalarPH->setPredecessors({MiddleBlock, VectorPH});
+  ResumePHI->addOperand(ResumePHI->getOperand(1));
+  ResumePHI->setOperand(0, IVUpdate);
+
+  // FIXME: May be better to move the IVUpdate before the GEP instead?
+  // FIXME: No domtree available at the recipe level, just for vpbasicblocks.
+  //        Can we find iterator distances in the same block?
+  GEP->moveAfter(IVUpdate);
+  GEP->setOperand(1, IVUpdate);
+  VecPtr->moveAfter(GEP);
+  Load->moveAfter(VecPtr);
+  Cmp->moveAfter(Load);
+
+  return true;
 }
 
 void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
