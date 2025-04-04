@@ -129,7 +129,7 @@ struct InlinerCallback
       // Inline the functional region operation, but only clone the internal
       // region if there is more than one use.
       if (failed(inlineRegion(
-              interface, config, &callee.getBody(), caller,
+              interface, config.getCloneCallback(), &callee.getBody(), caller,
               caller.getArgOperands(), caller.getResults(), caller.getLoc(),
               /*shouldCloneInlinedRegion=*/!callee.getResult().hasOneUse())))
         continue;

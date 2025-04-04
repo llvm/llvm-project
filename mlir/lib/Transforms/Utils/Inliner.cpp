@@ -651,7 +651,7 @@ Inliner::Impl::inlineCallsInSCC(InlinerInterfaceImpl &inlinerIface,
     bool inlineInPlace = useList.hasOneUseAndDiscardable(it.targetNode);
 
     LogicalResult inlineResult =
-        inlineCall(inlinerIface, inliner.config, call,
+        inlineCall(inlinerIface, inliner.config.getCloneCallback(), call,
                    cast<CallableOpInterface>(targetRegion->getParentOp()),
                    targetRegion, /*shouldCloneInlinedRegion=*/!inlineInPlace);
     if (failed(inlineResult)) {
