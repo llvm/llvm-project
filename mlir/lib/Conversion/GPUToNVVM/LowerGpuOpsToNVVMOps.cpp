@@ -540,6 +540,8 @@ void mlir::populateLibDeviceConversionPatterns(
                                    "__nv_cosh");
   populateOpPatterns<math::ErfOp>(converter, patterns, benefit, "__nv_erff",
                                   "__nv_erf");
+  populateOpPatterns<math::ErfcOp>(converter, patterns, benefit, "__nv_erfcf",
+                                   "__nv_erfc");
   populateOpPatterns<math::ExpOp>(converter, patterns, benefit, "__nv_expf",
                                   "__nv_exp", "__nv_fast_expf");
   populateOpPatterns<math::Exp2Op>(converter, patterns, benefit, "__nv_exp2f",
@@ -550,9 +552,9 @@ void mlir::populateLibDeviceConversionPatterns(
                                     "__nv_floor");
   populateOpPatterns<math::FmaOp>(converter, patterns, benefit, "__nv_fmaf",
                                   "__nv_fma");
-  // Note: libdevice does not provide `__nv_isfinitef` as of moment of writing.
-  populateOpPatterns<math::IsFiniteOp>(converter, patterns, benefit, "",
-                                       "__nv_isfinited");
+  // Note: libdevice uses a different name for 32-bit finite checking
+  populateOpPatterns<math::IsFiniteOp>(converter, patterns, benefit,
+                                       "__nv_finitef", "__nv_isfinited");
   populateOpPatterns<math::IsInfOp>(converter, patterns, benefit, "__nv_isinff",
                                     "__nv_isinfd");
   populateOpPatterns<math::IsNaNOp>(converter, patterns, benefit, "__nv_isnanf",

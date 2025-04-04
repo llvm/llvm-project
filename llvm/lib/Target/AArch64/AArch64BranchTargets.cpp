@@ -72,8 +72,7 @@ bool AArch64BranchTargets::runOnMachineFunction(MachineFunction &MF) {
   SmallPtrSet<MachineBasicBlock *, 8> JumpTableTargets;
   if (auto *JTI = MF.getJumpTableInfo())
     for (auto &JTE : JTI->getJumpTables())
-      for (auto *MBB : JTE.MBBs)
-        JumpTableTargets.insert(MBB);
+      JumpTableTargets.insert_range(JTE.MBBs);
 
   bool MadeChange = false;
   bool HasWinCFI = MF.hasWinCFI();

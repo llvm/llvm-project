@@ -72,7 +72,7 @@ class TestSimulatorPlatformLaunching(TestBase):
             self, "break here", lldb.SBFileSpec("hello.c")
         )
         triple_re = "-".join([arch, "apple", os + vers + ".*"] + env_list)
-        self.expect("image list -b -t", patterns=["a\.out " + triple_re])
+        self.expect("image list -b -t", patterns=[r"a\.out " + triple_re])
         self.check_debugserver(log, os + env, vers)
 
     @skipIfAsan

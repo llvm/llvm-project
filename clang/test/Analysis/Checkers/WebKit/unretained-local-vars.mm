@@ -359,6 +359,33 @@ namespace local_var_for_singleton {
   }
 }
 
+namespace ptr_conversion {
+
+SomeObj *provide_obj();
+
+void dobjc(SomeObj* obj) {
+  if (auto *otherObj = dynamic_objc_cast<OtherObj>(obj))
+    [otherObj doMoreWork:nil];
+}
+
+void cobjc(SomeObj* obj) {
+  auto *otherObj = checked_objc_cast<OtherObj>(obj);
+  [otherObj doMoreWork:nil];
+}
+
+unsigned dcf(CFTypeRef obj) {
+  if (CFArrayRef array = dynamic_cf_cast<CFArrayRef>(obj))
+    return CFArrayGetCount(array);
+  return 0;
+}
+
+unsigned ccf(CFTypeRef obj) {
+  CFArrayRef array = checked_cf_cast<CFArrayRef>(obj);
+  return CFArrayGetCount(array);
+}
+
+} // ptr_conversion
+
 bool doMoreWorkOpaque(OtherObj*);
 
 @implementation OtherObj

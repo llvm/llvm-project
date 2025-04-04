@@ -54,6 +54,9 @@ uid_t RTNAME(GetUID)();
 // GNU extension subroutine GETLOG(C).
 void FORTRAN_PROCEDURE_NAME(getlog)(char *name, std::int64_t length);
 
+// GNU extension subroutine HOSTNM(C)
+void FORTRAN_PROCEDURE_NAME(hostnm)(char *name, std::int64_t length);
+
 std::intptr_t RTNAME(Malloc)(std::size_t size);
 
 // GNU extension function STATUS = SIGNAL(number, handler)
@@ -61,6 +64,9 @@ std::int64_t RTNAME(Signal)(std::int64_t number, void (*handler)(int));
 
 // GNU extension subroutine SLEEP(SECONDS)
 void RTNAME(Sleep)(std::int64_t seconds);
+
+// GNU extension function TIME()
+std::int64_t RTNAME(time)();
 
 // GNU extension function ACCESS(NAME, MODE)
 // TODO: not supported on Windows
@@ -74,6 +80,9 @@ int RTNAME(Chdir)(const char *name);
 
 // GNU extension function IERRNO()
 int FORTRAN_PROCEDURE_NAME(ierrno)();
+
+// GNU extension subroutine PERROR(STRING)
+void RTNAME(Perror)(const char *str);
 
 } // extern "C"
 #endif // FORTRAN_RUNTIME_EXTENSIONS_H_

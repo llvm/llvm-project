@@ -60,13 +60,8 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
-#include <cassert>
-#include <cstdint>
-#include <iterator>
 
 using namespace llvm;
 
@@ -947,7 +942,7 @@ void BT::visitBranchesFrom(const MachineInstr &BI) {
         else
           dbgs() << "\n  does not fall through\n";
       }
-      Targets.insert(BTs.begin(), BTs.end());
+      Targets.insert_range(BTs);
     }
     ++It;
   } while (FallsThrough && It != End);
@@ -970,8 +965,7 @@ void BT::visitBranchesFrom(const MachineInstr &BI) {
         Targets.insert(&*Next);
     }
   } else {
-    for (const MachineBasicBlock *SB : B.successors())
-      Targets.insert(SB);
+    Targets.insert_range(B.successors());
   }
 
   for (const MachineBasicBlock *TB : Targets)

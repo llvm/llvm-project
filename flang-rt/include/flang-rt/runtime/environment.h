@@ -59,6 +59,7 @@ struct ExecutionEnvironment {
 
   // CUDA related variables
   std::size_t cudaStackLimit{0}; // ACC_OFFLOAD_STACK_SIZE
+  bool cudaDeviceIsManaged{false}; // NV_CUDAFOR_DEVICE_IS_MANAGED
 };
 
 RT_OFFLOAD_VAR_GROUP_BEGIN

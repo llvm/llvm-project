@@ -69,13 +69,14 @@ public:
   bool operator()(const Component &component) const {
     return (*this)(component.base());
   }
-  // Forbid integer division by zero in constants.
+  // Prevent integer division by known zeroes in constant expressions.
   template <int KIND>
   bool operator()(
       const Divide<Type<TypeCategory::Integer, KIND>> &division) const {
     using T = Type<TypeCategory::Integer, KIND>;
-    if (const auto divisor{GetScalarConstantValue<T>(division.right())}) {
-      return !divisor->IsZero() && (*this)(division.left());
+    if ((*this)(division.left()) && (*this)(division.right())) {
+      const auto divisor{GetScalarConstantValue<T>(division.right())};
+      return !divisor || !divisor->IsZero();
     } else {
       return false;
     }
@@ -100,9 +101,9 @@ template <bool INVARIANT>
 bool IsConstantExprHelper<INVARIANT>::IsConstantStructureConstructorComponent(
     const Symbol &component, const Expr<SomeType> &expr) const {
   if (IsAllocatable(component)) {
-    return IsNullObjectPointer(expr);
+    return IsNullObjectPointer(&expr);
   } else if (IsPointer(component)) {
-    return IsNullPointer(expr) || IsInitialDataTarget(expr) ||
+    return IsNullPointerOrAllocatable(&expr) || IsInitialDataTarget(expr) ||
         IsInitialProcedureTarget(expr);
   } else {
     return (*this)(expr);
@@ -194,7 +195,7 @@ struct IsActuallyConstantHelper {
       const bool compIsConstant{(*this)(y)};
       // If an allocatable component is initialized by a constant,
       // the structure constructor is not a constant.
-      if ((!compIsConstant && !IsNullPointer(y)) ||
+      if ((!compIsConstant && !IsNullPointerOrAllocatable(&y)) ||
           (compIsConstant && IsAllocatable(sym))) {
         return false;
       }
@@ -311,7 +312,9 @@ public:
   bool operator()(const ProcedureRef &x) const {
     if (const SpecificIntrinsic * intrinsic{x.proc().GetSpecificIntrinsic()}) {
       return intrinsic->characteristics.value().attrs.test(
-          characteristics::Procedure::Attr::NullPointer);
+                 characteristics::Procedure::Attr::NullPointer) ||
+          intrinsic->characteristics.value().attrs.test(
+              characteristics::Procedure::Attr::NullAllocatable);
     }
     return false;
   }
@@ -388,7 +391,7 @@ bool IsInitialProcedureTarget(const Expr<SomeType> &expr) {
   if (const auto *proc{std::get_if<ProcedureDesignator>(&expr.u)}) {
     return IsInitialProcedureTarget(*proc);
   } else {
-    return IsNullProcedurePointer(expr);
+    return IsNullProcedurePointer(&expr);
   }
 }
 

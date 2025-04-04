@@ -58,7 +58,7 @@ def ArgRecordField : ArgType { let Name = "const Record::Field *"; }
 def ArgFltSemantics : ArgType { let Name = "const llvm::fltSemantics *"; }
 def ArgRoundingMode : ArgType { let Name = "llvm::RoundingMode"; }
 def ArgLETD: ArgType { let Name = "const LifetimeExtendedTemporaryDecl *"; }
-def ArgCastKind : ArgType { let Name = "CastKind"; }
+def ArgCastKind : ArgType { let Name = "interp::CastKind"; }
 def ArgCallExpr : ArgType { let Name = "const CallExpr *"; }
 def ArgExpr : ArgType { let Name = "const Expr *"; }
 def ArgOffsetOfExpr : ArgType { let Name = "const OffsetOfExpr *"; }
@@ -171,6 +171,14 @@ def Jmp : JumpOpcode;
 def Jt : JumpOpcode;
 // [Bool] -> [], jumps if false.
 def Jf : JumpOpcode;
+
+def StartSpeculation : Opcode;
+def EndSpeculation : Opcode;
+def BCP : Opcode {
+  let ChangesPC = 1;
+  let HasCustomEval = 1;
+  let Args = [ArgSint32, ArgPrimType];
+}
 
 //===----------------------------------------------------------------------===//
 // Returns
@@ -585,10 +593,18 @@ def Shr : Opcode {
 def Inv: Opcode;
 
 // Increment and decrement.
-def Inc: AluOpcode;
-def IncPop : AluOpcode;
-def Dec: AluOpcode;
-def DecPop: AluOpcode;
+class OverflowOpcode : Opcode {
+  let Types = [AluTypeClass];
+  let Args = [ArgBool];
+  let HasGroup = 1;
+}
+
+def Inc : OverflowOpcode;
+def IncPop : OverflowOpcode;
+def PreInc : OverflowOpcode;
+def Dec : OverflowOpcode;
+def DecPop : OverflowOpcode;
+def PreDec : OverflowOpcode;
 
 // Float increment and decrement.
 def Incf: FloatOpcode;
@@ -857,3 +873,5 @@ def BitCast : Opcode;
 def GetTypeid : Opcode { let Args = [ArgTypePtr, ArgTypePtr]; }
 def GetTypeidPtr : Opcode { let Args = [ArgTypePtr]; }
 def DiagTypeid : Opcode;
+
+def CheckDestruction : Opcode;

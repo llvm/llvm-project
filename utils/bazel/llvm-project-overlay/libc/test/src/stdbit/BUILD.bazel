@@ -1,0 +1,50 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Tests for LLVM libc stdbit.h functions.
+
+load("//libc/test:libc_test_rules.bzl", "libc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+bit_suffix_list = [
+    "uc",
+    "us",
+    "ui",
+    "ul",
+    "ull",
+]
+
+bit_prefix_list = [
+    "stdc_leading_zeros_",
+    "stdc_leading_ones_",
+    "stdc_trailing_zeros_",
+    "stdc_trailing_ones_",
+    "stdc_count_ones_",
+    "stdc_has_single_bit_",
+    "stdc_bit_width_",
+    "stdc_bit_floor_",
+    "stdc_bit_ceil_",
+    "stdc_first_leading_zero_",
+    "stdc_first_leading_one_",
+    "stdc_first_trailing_zero_",
+    "stdc_first_trailing_one_",
+    "stdc_count_zeros_",
+]
+
+[
+    libc_test(
+        name = bit_prefix + bit_suffix + "_test",
+        srcs = [bit_prefix + bit_suffix + "_test.cpp"],
+        libc_function_deps = ["//libc:func_name".replace(
+            "func_name",
+            bit_prefix + bit_suffix,
+        )],
+        deps = ["//libc:__support_cpp_limits"],
+    )
+    for bit_prefix in bit_prefix_list
+    for bit_suffix in bit_suffix_list
+]

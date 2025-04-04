@@ -847,6 +847,10 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::IsDOT;
   }
 
+  bool isXDL(const MachineInstr &MI) const;
+
+  static bool isDGEMM(unsigned Opcode) { return AMDGPU::getMAIIsDGEMM(Opcode); }
+
   static bool isLDSDIR(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::LDSDIR;
   }
@@ -955,11 +959,6 @@ public:
 
   bool isBarrier(unsigned Opcode) const {
     return isBarrierStart(Opcode) || Opcode == AMDGPU::S_BARRIER_WAIT ||
-           Opcode == AMDGPU::S_BARRIER_INIT_M0 ||
-           Opcode == AMDGPU::S_BARRIER_INIT_IMM ||
-           Opcode == AMDGPU::S_BARRIER_JOIN_IMM ||
-           Opcode == AMDGPU::S_BARRIER_LEAVE ||
-           Opcode == AMDGPU::S_BARRIER_LEAVE_IMM ||
            Opcode == AMDGPU::DS_GWS_INIT || Opcode == AMDGPU::DS_GWS_BARRIER;
   }
 
@@ -1279,6 +1278,10 @@ public:
   /// Change SADDR form of a FLAT \p Inst to its VADDR form if saddr operand
   /// was moved to VGPR. \returns true if succeeded.
   bool moveFlatAddrToVGPR(MachineInstr &Inst) const;
+
+  /// Fix operands in Inst to fix 16bit SALU to VALU lowering.
+  void legalizeOperandsVALUt16(MachineInstr &Inst,
+                               MachineRegisterInfo &MRI) const;
 
   /// Replace the instructions opcode with the equivalent VALU
   /// opcode.  This function will also move the users of MachineInstruntions

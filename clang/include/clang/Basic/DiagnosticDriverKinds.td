@@ -92,10 +92,6 @@ def err_drv_hipspv_no_hip_path : Error<
   "'--hip-path' must be specified when offloading to SPIR-V unless '-nogpuinc' "
   "is given">;
 
-// TODO: Remove when COV6 is fully supported by ROCm.
-def warn_drv_amdgpu_cov6: Warning<
-  "code object v6 is still in development and not ready for production use yet;"
-  " use at your own risk">;
 def err_drv_undetermined_gpu_arch : Error<
   "cannot determine %0 architecture: %1; consider passing it via '%2'; "
   "environment variable CLANG_TOOLCHAIN_PROGRAM_TIMEOUT specifies the tool "
@@ -562,6 +558,11 @@ def err_test_module_file_extension_format : Error<
 
 def err_drv_module_output_with_multiple_arch : Error<
   "option '-fmodule-output' cannot be used with multiple arch options">;
+
+def err_drv_reduced_module_output_overrided : Warning<
+  "the implicit output of reduced BMI may be overrided by the output file specified by '--precompile'. "
+  "please consider use '-fmodule-output=' to specify the output file for reduced BMI explicitly">,
+  InGroup<DiagGroup<"reduced-bmi-output-overrided">>;
 
 def warn_drv_delayed_template_parsing_after_cxx20 : Warning<
   "-fdelayed-template-parsing is deprecated after C++20">,
