@@ -63,7 +63,12 @@ std::int32_t RTNAME(GetCwd)(
 // Calls hostnm()
 std::int32_t RTNAME(Hostnm)(
     const Descriptor &res, const char *sourceFile, int line);
-}
+
+// Calls unlink()
+std::int32_t RTNAME(Unlink)(
+    const char *path, size_t pathLength, const char *sourceFile, int line);
+
+} // extern "C"
 } // namespace Fortran::runtime
 
 #endif // FORTRAN_RUNTIME_COMMAND_H_
