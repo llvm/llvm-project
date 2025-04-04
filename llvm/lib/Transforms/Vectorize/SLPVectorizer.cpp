@@ -20322,6 +20322,38 @@ static bool checkTreeSizes(ArrayRef<std::pair<unsigned, unsigned>> Sizes,
   return Dev * 96 / (Mean * Mean) == 0;
 }
 
+namespace {
+
+/// A group of stores that we'll try to bundle together using vector ops.
+/// They are ordered using the signed distance of their address operand to the
+/// address of this group's BaseInstr.
+struct RelatedStoreInsts {
+  RelatedStoreInsts(unsigned BaseInstrIdx) { reset(BaseInstrIdx); }
+  void reset(unsigned NewBaseInstr) {
+    BaseInstrIdx = NewBaseInstr;
+    Instrs.clear();
+    insertOrLookup(NewBaseInstr, 0);
+  }
+
+  /// Tries to insert \p InstrIdx as the store with a pointer distance of
+  /// \p PtrDist.
+  /// Does nothing if there is already a store with that \p PtrDist.
+  /// \returns The previously associated Instruction index, or std::nullopt
+  std::optional<unsigned> insertOrLookup(unsigned InstrIdx, int PtrDist) {
+    auto [It, Inserted] = Instrs.emplace(PtrDist, InstrIdx);
+    return Inserted ? std::nullopt : std::optional<unsigned>(It->second);
+  }
+
+  /// The index of the Base instruction, i.e. the one with a 0 pointer distance.
+  unsigned BaseInstrIdx;
+
+  /// Maps a pointer distance from \p BaseInstrIdx to an instruction index.
+  using DistToInstMap = std::map<int, unsigned>;
+  DistToInstMap Instrs;
+};
+
+} // end anonymous namespace
+
 bool SLPVectorizerPass::vectorizeStores(
     ArrayRef<StoreInst *> Stores, BoUpSLP &R,
     DenseSet<std::tuple<Value *, Value *, Value *, Value *, unsigned>>
@@ -20331,31 +20363,22 @@ bool SLPVectorizerPass::vectorizeStores(
   BoUpSLP::ValueSet VectorizedStores;
   bool Changed = false;
 
-  struct StoreDistCompare {
-    bool operator()(const std::pair<unsigned, int> &Op1,
-                    const std::pair<unsigned, int> &Op2) const {
-      return Op1.second < Op2.second;
-    }
-  };
-  // A set of pairs (index of store in Stores array ref, Distance of the store
-  // address relative to base store address in units).
-  using StoreIndexToDistSet =
-      std::set<std::pair<unsigned, int>, StoreDistCompare>;
-  auto TryToVectorize = [&](const StoreIndexToDistSet &Set) {
+  auto TryToVectorize = [&](const RelatedStoreInsts::DistToInstMap &StoreSeq) {
     int PrevDist = -1;
     BoUpSLP::ValueList Operands;
     // Collect the chain into a list.
-    for (auto [Idx, Data] : enumerate(Set)) {
-      if (Operands.empty() || Data.second - PrevDist == 1) {
-        Operands.push_back(Stores[Data.first]);
-        PrevDist = Data.second;
-        if (Idx != Set.size() - 1)
+    for (auto [Idx, Data] : enumerate(StoreSeq)) {
+      auto &[Dist, InstIdx] = Data;
+      if (Operands.empty() || Dist - PrevDist == 1) {
+        Operands.push_back(Stores[InstIdx]);
+        PrevDist = Dist;
+        if (Idx != StoreSeq.size() - 1)
           continue;
       }
-      auto E = make_scope_exit([&, &DataVar = Data]() {
+      auto E = make_scope_exit([&, &Dist = Dist, &InstIdx = InstIdx]() {
         Operands.clear();
-        Operands.push_back(Stores[DataVar.first]);
-        PrevDist = DataVar.second;
+        Operands.push_back(Stores[InstIdx]);
+        PrevDist = Dist;
       });
 
       if (Operands.size() <= 1 ||
@@ -20622,7 +20645,8 @@ bool SLPVectorizerPass::vectorizeStores(
   // Need to store the index of the very first store separately, since the set
   // may be reordered after the insertion and the first store may be moved. This
   // container allows to reduce number of calls of getPointersDiff() function.
-  SmallVector<std::pair<unsigned, StoreIndexToDistSet>> SortedStores;
+  SmallVector<RelatedStoreInsts> SortedStores;
+
   // Inserts the specified store SI with the given index Idx to the set of the
   // stores. If the store with the same distance is found already - stop
   // insertion, try to vectorize already found stores. If some stores from this
@@ -20656,56 +20680,52 @@ bool SLPVectorizerPass::vectorizeStores(
   // dependencies and no need to waste compile time to try to vectorize them.
   // - Try to vectorize the sequence {1, {1, 0}, {3, 2}}.
   auto FillStoresSet = [&](unsigned Idx, StoreInst *SI) {
-    for (std::pair<unsigned, StoreIndexToDistSet> &Set : SortedStores) {
+    for (RelatedStoreInsts &StoreSeq : SortedStores) {
       std::optional<int> Diff = getPointersDiff(
-          Stores[Set.first]->getValueOperand()->getType(),
-          Stores[Set.first]->getPointerOperand(),
+          Stores[StoreSeq.BaseInstrIdx]->getValueOperand()->getType(),
+          Stores[StoreSeq.BaseInstrIdx]->getPointerOperand(),
           SI->getValueOperand()->getType(), SI->getPointerOperand(), *DL, *SE,
           /*StrictCheck=*/true);
       if (!Diff)
         continue;
-      auto It = Set.second.find(std::make_pair(Idx, *Diff));
-      if (It == Set.second.end()) {
-        Set.second.emplace(Idx, *Diff);
+      std::optional<unsigned> PrevInst =
+          StoreSeq.insertOrLookup(/*InstrIdx=*/Idx, /*PtrDist=*/*Diff);
+      if (!PrevInst) {
+        // No store was associated to that distance. Keep collecting.
         return;
       }
       // Try to vectorize the first found set to avoid duplicate analysis.
-      TryToVectorize(Set.second);
-      unsigned ItIdx = It->first;
-      int ItDist = It->second;
-      StoreIndexToDistSet PrevSet;
-      copy_if(Set.second, std::inserter(PrevSet, PrevSet.end()),
-              [&](const std::pair<unsigned, int> &Pair) {
-                return Pair.first > ItIdx;
+      TryToVectorize(StoreSeq.Instrs);
+      RelatedStoreInsts::DistToInstMap PrevSet;
+      copy_if(StoreSeq.Instrs, std::inserter(PrevSet, PrevSet.end()),
+              [&](const std::pair<int, unsigned> &DistAndIdx) {
+                return DistAndIdx.second > *PrevInst;
               });
-      Set.second.clear();
-      Set.first = Idx;
-      Set.second.emplace(Idx, 0);
+      StoreSeq.reset(Idx);
       // Insert stores that followed previous match to try to vectorize them
       // with this store.
-      unsigned StartIdx = ItIdx + 1;
+      unsigned StartIdx = *PrevInst + 1;
       SmallBitVector UsedStores(Idx - StartIdx);
       // Distances to previously found dup store (or this store, since they
       // store to the same addresses).
       SmallVector<int> Dists(Idx - StartIdx, 0);
-      for (const std::pair<unsigned, int> &Pair : reverse(PrevSet)) {
+      for (auto [PtrDist, InstIdx] : reverse(PrevSet)) {
         // Do not try to vectorize sequences, we already tried.
-        if (VectorizedStores.contains(Stores[Pair.first]))
+        if (VectorizedStores.contains(Stores[InstIdx]))
           break;
-        unsigned BI = Pair.first - StartIdx;
+        unsigned BI = InstIdx - StartIdx;
         UsedStores.set(BI);
-        Dists[BI] = Pair.second - ItDist;
+        Dists[BI] = PtrDist - *Diff;
       }
       for (unsigned I = StartIdx; I < Idx; ++I) {
         unsigned BI = I - StartIdx;
         if (UsedStores.test(BI))
-          Set.second.emplace(I, Dists[BI]);
+          StoreSeq.insertOrLookup(I, Dists[BI]);
       }
       return;
     }
-    auto &Res = SortedStores.emplace_back();
-    Res.first = Idx;
-    Res.second.emplace(Idx, 0);
+    // We did not find a comparable store, start a new sequence.
+    SortedStores.emplace_back(Idx);
   };
   Type *PrevValTy = nullptr;
   for (auto [I, SI] : enumerate(Stores)) {
@@ -20715,8 +20735,8 @@ bool SLPVectorizerPass::vectorizeStores(
       PrevValTy = SI->getValueOperand()->getType();
     // Check that we do not try to vectorize stores of different types.
     if (PrevValTy != SI->getValueOperand()->getType()) {
-      for (auto &Set : SortedStores)
-        TryToVectorize(Set.second);
+      for (RelatedStoreInsts &StoreSeq : SortedStores)
+        TryToVectorize(StoreSeq.Instrs);
       SortedStores.clear();
       PrevValTy = SI->getValueOperand()->getType();
     }
@@ -20724,8 +20744,8 @@ bool SLPVectorizerPass::vectorizeStores(
   }
 
   // Final vectorization attempt.
-  for (auto &Set : SortedStores)
-    TryToVectorize(Set.second);
+  for (RelatedStoreInsts &StoreSeq : SortedStores)
+    TryToVectorize(StoreSeq.Instrs);
 
   return Changed;
 }
