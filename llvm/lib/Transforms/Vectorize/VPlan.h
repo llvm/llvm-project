@@ -3534,12 +3534,13 @@ public:
   /// VPBBs. In that case, the second VPBB selects whether to execute the scalar
   /// tail loop or the exit bock. If the scalar tail loop or exit block are
   /// known to always execute, the middle block may branch directly to that
-  /// block. If there is no loop region, the middle block cannot be identified
-  /// and nullptr is returned.
+  /// block. This function cannot be called once the vector loop region has been
+  /// removed.
   VPBasicBlock *getMiddleBlock() {
     VPRegionBlock *LoopRegion = getVectorLoopRegion();
-    if (!LoopRegion)
-      return nullptr;
+    assert(
+        LoopRegion &&
+        "cannot call the function after vector loop region has been removed");
     auto *RegionSucc = cast<VPBasicBlock>(LoopRegion->getSingleSuccessor());
     if (RegionSucc->getSingleSuccessor() ||
         is_contained(RegionSucc->getSuccessors(), getScalarPreheader()))

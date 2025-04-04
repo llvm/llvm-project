@@ -550,7 +550,7 @@ class QCIBranchInst_rii<bits<3> funct3, DAGOperand InTyImm5, string opcodestr>
 class QCIBranchInst48_rii<bits<5> funct5, DAGOperand InTyImm16, string opcodestr>
     : RVInst48<(outs),
                (ins GPRNoX0:$rs1, InTyImm16:$imm16, bare_simm13_lsb0:$imm12),
-               opcodestr, "$rs1, $imm16, $imm12", [], InstFormatOther> {
+               opcodestr, "$rs1, $imm16, $imm12", [], InstFormatQC_EB> {
   bits<5> rs1;
   bits<16> imm16;
   bits<12> imm12;
