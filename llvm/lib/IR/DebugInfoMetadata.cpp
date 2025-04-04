@@ -158,17 +158,9 @@ getNearestMatchingScope(const DILocation *L1, const DILocation *L2) {
   DIScope *S1 = L1->getScope();
   DIScope *S2 = L2->getScope();
 
-  // When matching DILexicalBlockFile's, ignore column numbers, so that
-  // DILocation's having different columns within the same
-  // DILexicalBlockFile will match.
-  auto GetLocForBlockFile = [](LineColumn L) {
-    L.second = 0;
-    return L;
-  };
-
   LineColumn Loc1(L1->getLine(), L1->getColumn());
   for (; S1; S1 = S1->getScope()) {
-    Loc1 = getLocalScopeLocationOr(S1, GetLocForBlockFile(Loc1));
+    Loc1 = getLocalScopeLocationOr(S1, Loc1);
     Matcher.insert(S1, Loc1);
     if (isa<DISubprogram>(S1))
       break;
@@ -176,7 +168,7 @@ getNearestMatchingScope(const DILocation *L1, const DILocation *L2) {
 
   LineColumn Loc2(L2->getLine(), L2->getColumn());
   for (; S2; S2 = S2->getScope()) {
-    Loc2 = getLocalScopeLocationOr(S2, GetLocForBlockFile(Loc2));
+    Loc2 = getLocalScopeLocationOr(S2, Loc2);
 
     if (DIScope *S = Matcher.match(S2, Loc2))
       return std::make_pair(S, Loc2);
