@@ -6616,7 +6616,8 @@ IntrinsicLibrary::genVoteBallotSync(mlir::Type resultType,
   mlir::Value arg1 =
       builder.create<fir::ConvertOp>(loc, builder.getI1Type(), args[1]);
   return builder
-      .create<mlir::NVVM::VoteBallotOp>(loc, resultType, args[0], arg1)
+      .create<mlir::NVVM::VoteSyncOp>(loc, resultType, args[0], arg1,
+                                      mlir::NVVM::VoteSyncKind::ballot)
       .getResult();
 }
 
