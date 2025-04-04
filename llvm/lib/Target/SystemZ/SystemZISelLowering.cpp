@@ -232,9 +232,14 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
       for (auto Op : {ISD::FP_TO_SINT, ISD::STRICT_FP_TO_SINT,
                       ISD::SINT_TO_FP, ISD::STRICT_SINT_TO_FP})
         setOperationAction(Op, VT, Custom);
-      for (auto Op : {ISD::FP_TO_UINT, ISD::STRICT_FP_TO_UINT,
-                      ISD::UINT_TO_FP, ISD::STRICT_UINT_TO_FP})
+      for (auto Op : {ISD::FP_TO_UINT, ISD::STRICT_FP_TO_UINT})
         setOperationAction(Op, VT, Custom);
+      for (auto Op : {ISD::UINT_TO_FP, ISD::STRICT_UINT_TO_FP}) {
+        // Handle unsigned 32-bit input types as signed 64-bit types on z10.
+        auto OpAction =
+            (!Subtarget.hasFPExtension() && VT == MVT::i32) ? Promote : Custom;
+        setOperationAction(Op, VT, OpAction);
+      }
     }
   }
 
@@ -578,7 +583,6 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
 
       // Special treatment.
       setOperationAction(ISD::IS_FPCLASS, VT, Custom);
-      setOperationAction(ISD::FCOPYSIGN, VT, Custom);
 
       // Handle constrained floating-point operations.
       setOperationAction(ISD::STRICT_FADD, VT, Legal);
@@ -6825,22 +6829,18 @@ SDValue SystemZTargetLowering::lower_FP_TO_INT(SDValue Op,
   EVT InVT = InOp.getValueType();
 
   // FP to unsigned is not directly supported on z10.  Promoting an i32
-  // result to i64 doesn't generate an inexact condition for values that are
-  // outside the i32 range but in the i64 range, so use the default
-  // expansion.
+  // result to (signed) i64 doesn't generate an inexact condition (fp
+  // exception) for values that are outside the i32 range but in the i64
+  // range, so use the default expansion.
   if (!Subtarget.hasFPExtension() && !IsSigned)
-    return SDValue(); // Expand (i32 / i64).
+    // Expand i32/i64. F16 values will be recognized to fit and extended.
+    return SDValue();
 
+  // Conversion from f16 is done via f32.
   if (InOp.getSimpleValueType() == MVT::f16) {
-    // f16: Extend to f32 before the conversion.
-    if (!IsStrict) {
-      SDValue InF32 = DAG.getFPExtendOrRound(InOp, SDLoc(InOp), MVT::f32);
-      return DAG.getNode(Op->getOpcode(), DL, Op.getSimpleValueType(), InF32);
-    }
-    SDValue InF32;
-    std::tie(InF32, Chain) =
-        DAG.getStrictFPExtendOrRound(InOp, Chain, DL, MVT::f32);
-    return DAG.getNode(Op->getOpcode(), DL, Op->getVTList(), {Chain, InF32});
+    SmallVector<SDValue, 2> Results;
+    LowerOperationWrapper(Op.getNode(), Results, DAG);
+    return DAG.getMergeValues(Results, DL);
   }
 
   if (VT == MVT::i128) {
@@ -6863,44 +6863,16 @@ SDValue SystemZTargetLowering::lower_INT_TO_FP(SDValue Op,
   SDValue Chain = IsStrict ? Op.getOperand(0) : DAG.getEntryNode();
   EVT InVT = InOp.getValueType();
 
-  auto roundToF16 = [&DAG, &IsStrict, &DL, &Chain](SDValue V) -> SDValue {
-    if (!IsStrict)
-      return DAG.getFPExtendOrRound(V, DL, MVT::f16);
-    SDValue F16Res;
-    std::tie(F16Res, Chain) =
-        DAG.getStrictFPExtendOrRound(V, V.getValue(1), DL, MVT::f16);
-    return DAG.getMergeValues({F16Res, Chain}, DL);
-  };
-
-  // Unsigned to fp is not directly supported on z10.
-  if (!Subtarget.hasFPExtension() && !IsSigned) {
-    if (InVT == MVT::i32) { // Conversion from i32 is promoted to i64 (signed).
-      SDValue I64In = DAG.getZExtOrTrunc(InOp, DL, MVT::i64);
-      SDValue FPRes;
-      MVT ResVT = VT == MVT::f16 ? MVT::f32 : VT;
-      if (!IsStrict)
-        FPRes = DAG.getNode(ISD::SINT_TO_FP, DL, ResVT, I64In);
-      else
-        FPRes = DAG.getNode(ISD::STRICT_SINT_TO_FP, DL,
-                            DAG.getVTList(ResVT, MVT::Other), {Chain, I64In});
-      return VT == MVT::f16 ? roundToF16(FPRes) : FPRes;
-    }
-    assert(InVT == MVT::i64 && "i32 and i64 are the only legal int types.");
-    if (VT != MVT::f16)
-      return SDValue(); // Expand
-  }
-
   // Conversion to f16 is done via f32.
   if (VT == MVT::f16) {
-    SDValue PromotedOp;
-    if (!IsStrict)
-      PromotedOp = DAG.getNode(Op->getOpcode(), DL, MVT::f32, InOp);
-    else
-      PromotedOp =
-          DAG.getNode(Op->getOpcode(), DL, DAG.getVTList(MVT::f32, MVT::Other),
-                      {Chain, InOp});
-    return roundToF16(PromotedOp);
+    SmallVector<SDValue, 2> Results;
+    LowerOperationWrapper(Op.getNode(), Results, DAG);
+    return DAG.getMergeValues(Results, DL);
   }
+
+  // Unsigned to fp is not directly supported on z10.
+  if (!Subtarget.hasFPExtension() && !IsSigned)
+    return SDValue(); // Expand i64.
 
   if (InVT == MVT::i128) {
     RTLIB::Libcall LC =
@@ -7019,23 +6991,17 @@ SDValue SystemZTargetLowering::lowerIS_FPCLASS(SDValue Op,
 
 SDValue SystemZTargetLowering::lowerFCOPYSIGN(SDValue Op,
                                               SelectionDAG &DAG) const {
-  SDValue Op0 = Op.getOperand(0);
-  SDValue Op1 = Op.getOperand(1);
-  MVT Op0VT = Op0.getSimpleValueType();
-  MVT Op1VT = Op1.getSimpleValueType();
-  if (Op0VT != MVT::f16 && Op1VT != MVT::f16)
-    return Op; // Legal
+  MVT VT = Op.getSimpleValueType();
+  SDValue ValOp = Op.getOperand(0);
+  SDValue SignOp = Op.getOperand(1);
 
-  // Perform the copy on to the largest type present, or f32 if it was f16.
-  MVT VT = (Op0VT.getSizeInBits() > Op1VT.getSizeInBits()) ? Op0VT : Op1VT;
-  if (VT == MVT::f16)
-    VT = MVT::f32;
+  // Remove the rounding which would result in a libcall for half.
+  if (VT == MVT::f16 && SignOp.getOpcode() == ISD::FP_ROUND) {
+    SDValue WideOp = SignOp.getOperand(0);
+    return DAG.getNode(ISD::FCOPYSIGN, SDLoc(Op), VT, ValOp, WideOp);
+  }
 
-  SDLoc DL(Op);
-  SDValue Op0Conv = DAG.getFPExtendOrRound(Op0, DL, VT);
-  SDValue Op1Conv = DAG.getFPExtendOrRound(Op1, DL, VT);
-  SDValue ResConv = DAG.getNode(ISD::FCOPYSIGN, DL, VT, {Op0Conv, Op1Conv});
-  return DAG.getFPExtendOrRound(ResConv, DL, Op0VT);
+  return Op; // Legal
 }
 
 SDValue SystemZTargetLowering::lowerREADCYCLECOUNTER(SDValue Op,
@@ -7359,71 +7325,60 @@ SystemZTargetLowering::LowerOperationWrapper(SDNode *N,
     }
     break;
   }
+  case ISD::UINT_TO_FP:
   case ISD::SINT_TO_FP:
-  case ISD::UINT_TO_FP: {
+  case ISD::STRICT_UINT_TO_FP:
+  case ISD::STRICT_SINT_TO_FP: {
     if (useSoftFloat())
       return;
+    bool IsStrict = N->isStrictFPOpcode();
     SDLoc DL(N);
-    SDValue Src = N->getOperand(0);
+    SDValue InOp = N->getOperand(IsStrict ? 1 : 0);
     EVT ResVT = N->getValueType(0);
+    SDValue Chain = IsStrict ? N->getOperand(0) : DAG.getEntryNode();
     if (ResVT == MVT::f16) {
-      SDValue F32Res = DAG.getNode(N->getOpcode(), DL, MVT::f32, Src);
-      Results.push_back(DAG.getFPExtendOrRound(F32Res, DL, MVT::f16));
-    }
-    break;
-  }
-  case ISD::STRICT_SINT_TO_FP:
-  case ISD::STRICT_UINT_TO_FP: {
-    if (useSoftFloat())
-      return;
-    SDLoc DL(N);
-    SDValue Chain = N->getOperand(0);
-    SDValue Src = N->getOperand(1);
-    EVT ResVT = N->getValueType(0);
-    if (ResVT == MVT::f16) {
-      SDValue F32Res =
-          DAG.getNode(N->getOpcode(), DL, DAG.getVTList(MVT::f32, MVT::Other),
-                      {Chain, Src});
-      SDValue F16Res;
-      std::tie(F16Res, Chain) = DAG.getStrictFPExtendOrRound(
-          F32Res, F32Res.getValue(1), DL, MVT::f16);
-      Results.push_back(F16Res);
-      Results.push_back(Chain);
+      if (!IsStrict) {
+        SDValue OpF32 = DAG.getNode(N->getOpcode(), DL, MVT::f32, InOp);
+        Results.push_back(DAG.getFPExtendOrRound(OpF32, DL, MVT::f16));
+      } else {
+        SDValue OpF32 =
+            DAG.getNode(N->getOpcode(), DL, DAG.getVTList(MVT::f32, MVT::Other),
+                        {Chain, InOp});
+        SDValue F16Res;
+        std::tie(F16Res, Chain) = DAG.getStrictFPExtendOrRound(
+            OpF32, OpF32.getValue(1), DL, MVT::f16);
+        Results.push_back(F16Res);
+        Results.push_back(Chain);
+      }
     }
     break;
   }
   case ISD::FP_TO_UINT:
-  case ISD::FP_TO_SINT: {
-    if (useSoftFloat())
-      return;
-    SDLoc DL(N);
-    SDValue Src = N->getOperand(0);
-    EVT SrcVT = Src->getValueType(0);
-    if (SrcVT == MVT::f16) {
-      SDValue SrcF32 = DAG.getFPExtendOrRound(Src, DL, MVT::f32);
-      SDValue OpF32 =
-          DAG.getNode(N->getOpcode(), DL, N->getValueType(0), SrcF32);
-      Results.push_back(OpF32);
-    }
-    break;
-  }
+  case ISD::FP_TO_SINT:
   case ISD::STRICT_FP_TO_UINT:
   case ISD::STRICT_FP_TO_SINT: {
     if (useSoftFloat())
       return;
+    bool IsStrict = N->isStrictFPOpcode();
     SDLoc DL(N);
     EVT ResVT = N->getValueType(0);
-    SDValue Chain = N->getOperand(0);
-    SDValue Src = N->getOperand(1);
-    EVT SrcVT = Src->getValueType(0);
-    if (SrcVT == MVT::f16) {
-      SDValue InF32;
-      std::tie(InF32, Chain) =
-          DAG.getStrictFPExtendOrRound(Src, Chain, DL, MVT::f32);
-      SDValue OpF32 = DAG.getNode(
-          N->getOpcode(), DL, DAG.getVTList(ResVT, MVT::Other), {Chain, InF32});
-      Results.push_back(OpF32);
-      Results.push_back(OpF32.getValue(1));
+    SDValue InOp = N->getOperand(IsStrict ? 1 : 0);
+    EVT InVT = InOp->getValueType(0);
+    SDValue Chain = IsStrict ? N->getOperand(0) : DAG.getEntryNode();
+    if (InVT == MVT::f16) {
+      if (!IsStrict) {
+        SDValue InF32 = DAG.getFPExtendOrRound(InOp, DL, MVT::f32);
+        Results.push_back(DAG.getNode(N->getOpcode(), DL, ResVT, InF32));
+      } else {
+        SDValue InF32;
+        std::tie(InF32, Chain) =
+            DAG.getStrictFPExtendOrRound(InOp, Chain, DL, MVT::f32);
+        SDValue OpF32 =
+            DAG.getNode(N->getOpcode(), DL, DAG.getVTList(ResVT, MVT::Other),
+                        {Chain, InF32});
+        Results.push_back(OpF32);
+        Results.push_back(OpF32.getValue(1));
+      }
     }
     break;
   }

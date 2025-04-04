@@ -719,7 +719,7 @@ def : InstRW<[WLat9, WLat9, FPU, NormalGr], (instregex "LT(E|D)BR$")>;
 def : InstRW<[WLat10, WLat10, FPU4, GroupAlone], (instregex "LTXBR$")>;
 
 // Copy sign
-def : InstRW<[WLat5, FXU2, GroupAlone], (instregex "CPSDR(d|s)(d|s)$")>;
+def : InstRW<[WLat5, FXU2, GroupAlone], (instregex "CPSDR(d|s|h)(d|s|h)$")>;
 
 //===----------------------------------------------------------------------===//
 // FP: Load instructions
