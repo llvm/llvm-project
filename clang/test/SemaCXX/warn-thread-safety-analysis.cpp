@@ -57,6 +57,27 @@ public:
   ~DoubleMutexLock() UNLOCK_FUNCTION();
 };
 
+class DeferTraits {};
+struct SharedTraits {};
+struct ExclusiveTraits {};
+
+class SCOPED_LOCKABLE RelockableMutexLock {
+public:
+  RelockableMutexLock(Mutex *mu, DeferTraits) LOCKS_EXCLUDED(mu);
+  RelockableMutexLock(Mutex *mu, SharedTraits) SHARED_LOCK_FUNCTION(mu);
+  RelockableMutexLock(Mutex *mu, ExclusiveTraits) EXCLUSIVE_LOCK_FUNCTION(mu);
+  ~RelockableMutexLock() UNLOCK_FUNCTION();
+
+  void Lock() EXCLUSIVE_LOCK_FUNCTION();
+  void Unlock() UNLOCK_FUNCTION();
+
+  void ReaderLock() SHARED_LOCK_FUNCTION();
+  void ReaderUnlock() UNLOCK_FUNCTION();
+
+  void PromoteShared() UNLOCK_FUNCTION() EXCLUSIVE_LOCK_FUNCTION();
+  void DemoteExclusive() UNLOCK_FUNCTION() SHARED_LOCK_FUNCTION();
+};
+
 // The universal lock, written "*", allows checking to be selectively turned
 // off for a particular piece of code.
 void beginNoWarnOnReads()  SHARED_LOCK_FUNCTION("*");
@@ -2753,8 +2774,6 @@ void Foo::test6() {
 
 namespace RelockableScopedLock {
 
-class DeferTraits {};
-
 class SCOPED_LOCKABLE RelockableExclusiveMutexLock {
 public:
   RelockableExclusiveMutexLock(Mutex *mu) EXCLUSIVE_LOCK_FUNCTION(mu);
@@ -2763,26 +2782,6 @@ public:
 
   void Lock() EXCLUSIVE_LOCK_FUNCTION();
   void Unlock() UNLOCK_FUNCTION();
-};
-
-struct SharedTraits {};
-struct ExclusiveTraits {};
-
-class SCOPED_LOCKABLE RelockableMutexLock {
-public:
-  RelockableMutexLock(Mutex *mu, DeferTraits) LOCKS_EXCLUDED(mu);
-  RelockableMutexLock(Mutex *mu, SharedTraits) SHARED_LOCK_FUNCTION(mu);
-  RelockableMutexLock(Mutex *mu, ExclusiveTraits) EXCLUSIVE_LOCK_FUNCTION(mu);
-  ~RelockableMutexLock() UNLOCK_FUNCTION();
-
-  void Lock() EXCLUSIVE_LOCK_FUNCTION();
-  void Unlock() UNLOCK_FUNCTION();
-
-  void ReaderLock() SHARED_LOCK_FUNCTION();
-  void ReaderUnlock() UNLOCK_FUNCTION();
-
-  void PromoteShared() UNLOCK_FUNCTION() EXCLUSIVE_LOCK_FUNCTION();
-  void DemoteExclusive() UNLOCK_FUNCTION() SHARED_LOCK_FUNCTION();
 };
 
 Mutex mu;
@@ -3566,6 +3565,38 @@ void releaseMemberCall() {
   ReleasableMutexLock lock(&obj.mu);
   releaseMember(obj, lock);
 }
+#ifdef __cpp_guaranteed_copy_elision
+// expected-note@+2{{mutex acquired here}}
+// expected-note@+1{{see attribute on function here}}
+RelockableScope returnUnmatchTest() EXCLUSIVE_LOCK_FUNCTION(mu){
+  // expected-note@+1{{mutex acquired here}}
+  return RelockableScope(&mu2); // expected-warning{{mutex managed by '<temporary>' is 'mu2' instead of 'mu'}}
+} // expected-warning{{mutex 'mu2' is still held at the end of function}}
+  // expected-warning@-1{{expecting mutex 'mu' to be held at the end of function}}
+
+// expected-note@+2{{mutex acquired here}}
+// expected-note@+1{{see attribute on function here}}
+RelockableScope returnMoreTest() EXCLUSIVE_LOCK_FUNCTION(mu, mu2){
+  return RelockableScope(&mu); // expected-warning{{mutex 'mu2' not managed by '<temporary>'}}
+} // expected-warning{{expecting mutex 'mu2' to be held at the end of function}}
+
+// expected-note@+1{{see attribute on function here}}
+DoubleMutexLock returnFewerTest() EXCLUSIVE_LOCK_FUNCTION(mu){
+  // expected-note@+1{{mutex acquired here}}
+  return DoubleMutexLock(&mu,&mu2); // expected-warning{{did not expect mutex 'mu2' to be managed by '<temporary>'}}
+} // expected-warning{{mutex 'mu2' is still held at the end of function}}
+
+// expected-note@+1{{see attribute on function here}}
+RelockableMutexLock lockTest() EXCLUSIVE_LOCK_FUNCTION(mu) {
+  mu.Lock();
+  return RelockableMutexLock(&mu2, DeferTraits{}); // expected-warning{{mutex managed by '<temporary>' is 'mu2' instead of 'mu'}}
+}
+
+// expected-note@+1{{mutex acquired here}}
+RelockableMutexLock lockTest2() EXCLUSIVE_LOCK_FUNCTION(mu) {
+  return RelockableMutexLock(&mu, DeferTraits{});
+} // expected-warning{{expecting mutex 'mu' to be held at the end of function}}
+#endif
 
 } // end namespace PassingScope
 
