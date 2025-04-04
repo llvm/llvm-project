@@ -87,6 +87,10 @@ static cl::opt<unsigned> LdStConstLimit("aarch64-load-store-const-scan-limit",
 static cl::opt<bool> EnableRenaming("aarch64-load-store-renaming",
                                     cl::init(true), cl::Hidden);
 
+// Enable SVE fill/spill pairing for VLS 128.
+static cl::opt<bool> EnableSVEFillSpillPairing("aarch64-sve-fill-spill-pairing",
+                                               cl::init(true), cl::Hidden);
+
 #define AARCH64_LOAD_STORE_OPT_NAME "AArch64 load / store optimization pass"
 
 namespace {
@@ -96,6 +100,9 @@ using LdStPairFlags = struct LdStPairFlags {
   // merge is to remove the first instruction and replace the second with
   // a pair-wise insn, and false if the reverse is true.
   bool MergeForward = false;
+
+  // Set to true when pairing SVE fill/spill instructions.
+  bool SVEFillSpillPair = false;
 
   // SExtIdx gives the index of the result of the load pair that must be
   // extended. The value of SExtIdx assumes that the paired load produces the
@@ -112,6 +119,9 @@ using LdStPairFlags = struct LdStPairFlags {
 
   void setMergeForward(bool V = true) { MergeForward = V; }
   bool getMergeForward() const { return MergeForward; }
+
+  void setSVEFillSpillPair(bool V = true) { SVEFillSpillPair = V; }
+  bool getSVEFillSpillPair() const { return SVEFillSpillPair; }
 
   void setSExtIdx(int V) { SExtIdx = V; }
   int getSExtIdx() const { return SExtIdx; }
@@ -300,6 +310,7 @@ static unsigned getMatchingNonSExtOpcode(unsigned Opc,
   case AArch64::STRXui:
   case AArch64::STRXpre:
   case AArch64::STURXi:
+  case AArch64::STR_ZXI:
   case AArch64::LDRDui:
   case AArch64::LDURDi:
   case AArch64::LDRDpre:
@@ -318,6 +329,7 @@ static unsigned getMatchingNonSExtOpcode(unsigned Opc,
   case AArch64::LDRSui:
   case AArch64::LDURSi:
   case AArch64::LDRSpre:
+  case AArch64::LDR_ZXI:
     return Opc;
   case AArch64::LDRSWui:
     return AArch64::LDRWui;
@@ -363,6 +375,7 @@ static unsigned getMatchingPairOpcode(unsigned Opc) {
     return AArch64::STPDpre;
   case AArch64::STRQui:
   case AArch64::STURQi:
+  case AArch64::STR_ZXI:
     return AArch64::STPQi;
   case AArch64::STRQpre:
     return AArch64::STPQpre;
@@ -388,6 +401,7 @@ static unsigned getMatchingPairOpcode(unsigned Opc) {
     return AArch64::LDPDpre;
   case AArch64::LDRQui:
   case AArch64::LDURQi:
+  case AArch64::LDR_ZXI:
     return AArch64::LDPQi;
   case AArch64::LDRQpre:
     return AArch64::LDPQpre;
@@ -833,6 +847,12 @@ static bool isMergeableIndexLdSt(MachineInstr &MI, int &Scale) {
   }
 }
 
+// Return true if MI is an SVE fill/spill instruction.
+static bool isPairableFillSpillInst(const MachineInstr &MI) {
+  auto const Opc = MI.getOpcode();
+  return Opc == AArch64::LDR_ZXI || Opc == AArch64::STR_ZXI;
+}
+
 static bool isRewritableImplicitDef(unsigned Opc) {
   switch (Opc) {
   default:
@@ -1227,6 +1247,15 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
     (void)MIBSXTW;
     LLVM_DEBUG(dbgs() << "  Extend operand:\n    ");
     LLVM_DEBUG(((MachineInstr *)MIBSXTW)->print(dbgs()));
+  } else if (Flags.getSVEFillSpillPair()) {
+    // We are combining SVE fill/spill to LDP/STP, so we need to get the Q
+    // variant of the registers.
+    MachineOperand &MOp0 = MIB->getOperand(0);
+    MachineOperand &MOp1 = MIB->getOperand(1);
+    assert(AArch64::ZPRRegClass.contains(MOp0.getReg()) &&
+           AArch64::ZPRRegClass.contains(MOp1.getReg()) && "Invalid register.");
+    MOp0.setReg(AArch64::Q0 + (MOp0.getReg() - AArch64::Z0));
+    MOp1.setReg(AArch64::Q0 + (MOp1.getReg() - AArch64::Z0));
   } else {
     LLVM_DEBUG(((MachineInstr *)MIB)->print(dbgs()));
   }
@@ -1828,6 +1857,9 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
   UsedInBetween.init(*TRI);
 
   Flags.clearRenameReg();
+
+  if (isPairableFillSpillInst(FirstMI))
+    Flags.setSVEFillSpillPair();
 
   // Track which register units have been modified and used between the first
   // insn (inclusive) and the second insn.
@@ -2661,7 +2693,8 @@ bool AArch64LoadStoreOpt::tryToPairLdStInst(MachineBasicBlock::iterator &MBBI) {
       // Get the needed alignments to check them if
       // ldp-aligned-only/stp-aligned-only features are opted.
       uint64_t MemAlignment = MemOp->getAlign().value();
-      uint64_t TypeAlignment = Align(MemOp->getSize().getValue()).value();
+      uint64_t TypeAlignment =
+          Align(MemOp->getSize().getValue().getKnownMinValue()).value();
 
       if (MemAlignment < 2 * TypeAlignment) {
         NumFailedAlignmentCheck++;
@@ -2782,6 +2815,9 @@ bool AArch64LoadStoreOpt::tryToMergeIndexLdSt(MachineBasicBlock::iterator &MBBI,
 bool AArch64LoadStoreOpt::optimizeBlock(MachineBasicBlock &MBB,
                                         bool EnableNarrowZeroStOpt) {
   AArch64FunctionInfo &AFI = *MBB.getParent()->getInfo<AArch64FunctionInfo>();
+  bool const CanPairFillSpill = EnableSVEFillSpillPairing &&
+                                Subtarget->isSVEorStreamingSVEAvailable() &&
+                                Subtarget->getSVEVectorSizeInBits() == 128;
 
   bool Modified = false;
   // Four tranformations to do here:
@@ -2822,11 +2858,18 @@ bool AArch64LoadStoreOpt::optimizeBlock(MachineBasicBlock &MBB,
     }
   // 3) Find loads and stores that can be merged into a single load or store
   //    pair instruction.
+  //    When compiling for SVE 128, also try to combine SVE fill/spill
+  //    instructions into LDP/STP.
   //      e.g.,
   //        ldr x0, [x2]
   //        ldr x1, [x2, #8]
   //        ; becomes
   //        ldp x0, x1, [x2]
+  //      e.g.,
+  //        ldr z0, [x2]
+  //        ldr z1, [x2, #1, mul vl]
+  //        ; becomes
+  //        ldp q0, q1, [x2]
 
   if (MBB.getParent()->getRegInfo().tracksLiveness()) {
     DefinedInBB.clear();
@@ -2839,6 +2882,9 @@ bool AArch64LoadStoreOpt::optimizeBlock(MachineBasicBlock &MBB,
     // searching for a rename register on demand.
     updateDefinedRegisters(*MBBI, DefinedInBB, TRI);
     if (TII->isPairableLdStInst(*MBBI) && tryToPairLdStInst(MBBI))
+      Modified = true;
+    else if (CanPairFillSpill && isPairableFillSpillInst(*MBBI) &&
+             tryToPairLdStInst(MBBI))
       Modified = true;
     else
       ++MBBI;
