@@ -564,7 +564,7 @@ LogicalResult StoreScatterOp::verify() {
                           [&]() { return emitOpError(); });
 }
 
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 // XeGPU_UpdateOffsetOp
 //===----------------------------------------------------------------------===//
 void UpdateOffsetOp::build(OpBuilder &builder, OperationState &state,
