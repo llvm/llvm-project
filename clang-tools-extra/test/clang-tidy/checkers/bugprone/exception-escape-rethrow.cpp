@@ -22,6 +22,8 @@ int throwsAndCallsRethrower() noexcept {
     }
     return 1;
 }
+// CHECK-MESSAGES: :[[@LINE-9]]:5: note: example of unhandled exception throw stack, starting from function 'throwsAndCallsRethrower'
+// CHECK-MESSAGES: :[[@LINE-7]]:9: note: frame #0: function 'throwsAndCallsRethrower' throws unhandled exception here
 
 int throwsAndCallsCallsRethrower() noexcept {
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: an exception may be thrown in function 'throwsAndCallsCallsRethrower' which should not throw exceptions
@@ -32,6 +34,8 @@ int throwsAndCallsCallsRethrower() noexcept {
     }
     return 1;
 }
+// CHECK-MESSAGES: :[[@LINE-9]]:5: note: example of unhandled exception throw stack, starting from function 'throwsAndCallsCallsRethrower'
+// CHECK-MESSAGES: :[[@LINE-7]]:9: note: frame #0: function 'throwsAndCallsCallsRethrower' throws unhandled exception here
 
 void rethrowerNoexcept() noexcept {
     throw;
