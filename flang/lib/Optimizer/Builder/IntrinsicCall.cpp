@@ -769,7 +769,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"perror",
      &I::genPerror,
      {{{"string", asBox}}},
-     /*isElemental=*/false},
+     /*isElemental*/ false},
     {"popcnt", &I::genPopcnt},
     {"poppar", &I::genPoppar},
     {"present",
@@ -921,6 +921,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"threadfence", &I::genThreadFence, {}, /*isElemental=*/false},
     {"threadfence_block", &I::genThreadFenceBlock, {}, /*isElemental=*/false},
     {"threadfence_system", &I::genThreadFenceSystem, {}, /*isElemental=*/false},
+    {"time", &I::genTime, {}, /*isElemental=*/false},
     {"trailz", &I::genTrailz},
     {"transfer",
      &I::genTransfer,
@@ -8426,6 +8427,14 @@ void IntrinsicLibrary::genThreadFenceSystem(
   auto funcOp = builder.createFunction(loc, funcName, funcType);
   llvm::SmallVector<mlir::Value> noArgs;
   builder.create<fir::CallOp>(loc, funcOp, noArgs);
+}
+
+// TIME
+mlir::Value IntrinsicLibrary::genTime(mlir::Type resultType,
+                                      llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 0);
+  return builder.createConvert(loc, resultType,
+                               fir::runtime::genTime(builder, loc));
 }
 
 // TRIM
