@@ -29,10 +29,6 @@ namespace llvm {
 class X86MCInstLowerTest : public testing::Test {
 protected:
   static void SetUpTestCase() {
-    //LLVMInitializeX86TargetInfo();
-    //LLVMInitializeX86TargetMC();
-    //LLVMInitializeX86Target();
-    //LLVMInitializeX86AsmPrinter();
     InitializeAllTargetMCs();
     InitializeAllTargetInfos();
     InitializeAllTargets();
