@@ -172,7 +172,7 @@ unsigned TemplateParameterList::getMinRequiredArguments() const {
   unsigned NumRequiredArgs = 0;
   for (const NamedDecl *P : asArray()) {
     if (P->isTemplateParameterPack()) {
-      if (std::optional<unsigned> Expansions = getExpandedPackSize(P)) {
+      if (UnsignedOrNone Expansions = getExpandedPackSize(P)) {
         NumRequiredArgs += *Expansions;
         continue;
       }
@@ -230,7 +230,7 @@ void TemplateParameterList::getAssociatedConstraints(
       if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(Param)) {
         if (const auto *TC = TTP->getTypeConstraint())
           ACs.emplace_back(TC->getImmediatelyDeclaredConstraint(),
-                           TC->getArgumentPackSubstitutionIndex());
+                           TC->getArgPackSubstIndex());
       } else if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
         if (const Expr *E = NTTP->getPlaceholderTypeConstraint())
           ACs.emplace_back(E);
@@ -684,7 +684,7 @@ TemplateTypeParmDecl *TemplateTypeParmDecl::Create(
     const ASTContext &C, DeclContext *DC, SourceLocation KeyLoc,
     SourceLocation NameLoc, unsigned D, unsigned P, IdentifierInfo *Id,
     bool Typename, bool ParameterPack, bool HasTypeConstraint,
-    std::optional<unsigned> NumExpanded) {
+    UnsignedOrNone NumExpanded) {
   auto *TTPDecl =
       new (C, DC,
            additionalSizeToAlloc<TypeConstraint>(HasTypeConstraint ? 1 : 0))
@@ -750,14 +750,14 @@ bool TemplateTypeParmDecl::isParameterPack() const {
 
 void TemplateTypeParmDecl::setTypeConstraint(
     ConceptReference *Loc, Expr *ImmediatelyDeclaredConstraint,
-    int ArgumentPackSubstitutionIndex) {
+    UnsignedOrNone ArgPackSubstIndex) {
   assert(HasTypeConstraint &&
          "HasTypeConstraint=true must be passed at construction in order to "
          "call setTypeConstraint");
   assert(!TypeConstraintInitialized &&
          "TypeConstraint was already initialized!");
-  new (getTrailingObjects<TypeConstraint>()) TypeConstraint(
-      Loc, ImmediatelyDeclaredConstraint, ArgumentPackSubstitutionIndex);
+  new (getTrailingObjects<TypeConstraint>())
+      TypeConstraint(Loc, ImmediatelyDeclaredConstraint, ArgPackSubstIndex);
   TypeConstraintInitialized = true;
 }
 

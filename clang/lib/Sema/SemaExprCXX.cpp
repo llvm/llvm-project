@@ -1995,7 +1995,7 @@ Sema::isUnavailableAlignedAllocationFunction(const FunctionDecl &FD) const {
     return false;
   if (FD.isDefined())
     return false;
-  std::optional<unsigned> AlignmentParam;
+  UnsignedOrNone AlignmentParam = std::nullopt;
   if (FD.isReplaceableGlobalAllocationFunction(&AlignmentParam) &&
       AlignmentParam)
     return true;
@@ -5818,7 +5818,7 @@ static APValue EvaluateSizeTTypeTrait(Sema &S, TypeTrait Kind,
   case TypeTrait::UTT_StructuredBindingSize: {
     QualType T = Args[0]->getType();
     SourceRange ArgRange = Args[0]->getTypeLoc().getSourceRange();
-    std::optional<unsigned> Size =
+    UnsignedOrNone Size =
         S.GetDecompositionElementCount(T, ArgRange.getBegin());
     if (!Size) {
       S.Diag(KWLoc, diag::err_arg_is_not_destructurable) << T << ArgRange;
@@ -8777,7 +8777,7 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
 
     // If we have a capture-capable lambda for the variable, go ahead and
     // capture the variable in that lambda (and all its enclosing lambdas).
-    if (const std::optional<unsigned> Index =
+    if (const UnsignedOrNone Index =
             getStackIndexOfNearestEnclosingCaptureCapableLambda(
                 S.FunctionScopes, Var, S))
       S.MarkCaptureUsedInEnclosingContext(Var, VarExpr->getExprLoc(), *Index);
@@ -8810,7 +8810,7 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
   if (CurrentLSI->hasPotentialThisCapture()) {
     // If we have a capture-capable lambda for 'this', go ahead and capture
     // 'this' in that lambda (and all its enclosing lambdas).
-    if (const std::optional<unsigned> Index =
+    if (const UnsignedOrNone Index =
             getStackIndexOfNearestEnclosingCaptureCapableLambda(
                 S.FunctionScopes, /*0 is 'this'*/ nullptr, S)) {
       const unsigned FunctionScopeIndexOfCapturableLambda = *Index;

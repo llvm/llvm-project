@@ -596,7 +596,7 @@ std::string SYCLUniqueStableNameExpr::ComputeName(ASTContext &Context) const {
 std::string SYCLUniqueStableNameExpr::ComputeName(ASTContext &Context,
                                                   QualType Ty) {
   auto MangleCallback = [](ASTContext &Ctx,
-                           const NamedDecl *ND) -> std::optional<unsigned> {
+                           const NamedDecl *ND) -> UnsignedOrNone {
     if (const auto *RD = dyn_cast<CXXRecordDecl>(ND))
       return RD->getDeviceLambdaManglingNumber();
     return std::nullopt;
