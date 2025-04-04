@@ -5144,11 +5144,12 @@ public:
 
     Spellings[(size_t)Kind].push_back(Name);
   }
-  
+
   void merge(const SpellingList &Other) {
     for (size_t Kind = 0; Kind < NumSpellingKinds; ++Kind) {
       Spellings[Kind].insert(Spellings[Kind].end(),
-                 Other.Spellings[Kind].begin(), Other.Spellings[Kind].end());
+                             Other.Spellings[Kind].begin(),
+                             Other.Spellings[Kind].end());
     }
   }
 };
@@ -5308,13 +5309,15 @@ void EmitClangAttrDocs(const RecordKeeper &Records, raw_ostream &OS) {
       return L->getValueAsString("Name") < R->getValueAsString("Name");
     }
   };
- 
-  std::map<const Record *, std::map<uint32_t, DocumentationData>, CategoryLess> SplitDocs;
+
+  std::map<const Record *, std::map<uint32_t, DocumentationData>, CategoryLess>
+      SplitDocs;
 
   // Collect documentation data, grouping by category and heading.
   for (const auto *A : Records.getAllDerivedDefinitions("Attr")) {
     const Record &Attr = *A;
-    std::vector<const Record *> Docs = Attr.getValueAsListOfDefs("Documentation");
+    std::vector<const Record *> Docs =
+        Attr.getValueAsListOfDefs("Documentation");
 
     for (const auto *D : Docs) {
       const Record &Doc = *D;
@@ -5332,7 +5335,8 @@ void EmitClangAttrDocs(const RecordKeeper &Records, raw_ostream &OS) {
         continue;
 
       // Generate Heading and Spellings.
-      auto HeadingAndSpellings = GetAttributeHeadingAndSpellings(Doc, Attr, Cat);
+      auto HeadingAndSpellings =
+          GetAttributeHeadingAndSpellings(Doc, Attr, Cat);
 
       auto &CategoryDocs = SplitDocs[Category];
 
@@ -5341,17 +5345,17 @@ void EmitClangAttrDocs(const RecordKeeper &Records, raw_ostream &OS) {
       // If the content already exists, merge the documentation.
       auto It = CategoryDocs.find(keyHash);
       if (It != CategoryDocs.end()) {
-        //Merge heading
+        // Merge heading
         if (It->second.Heading != HeadingAndSpellings.first)
           It->second.Heading += ", " + HeadingAndSpellings.first;
         // Merge spellings
         It->second.SupportedSpellings.merge(HeadingAndSpellings.second);
         // Merge content
         It->second.Documentation = &Doc; // Update reference
-      }
-      else {
-         // Otherwise, add a new entry.
-         CategoryDocs.emplace(keyHash, DocumentationData(Doc, Attr, HeadingAndSpellings));
+      } else {
+        // Otherwise, add a new entry.
+        CategoryDocs.emplace(keyHash,
+                             DocumentationData(Doc, Attr, HeadingAndSpellings));
       }
     }
   }
