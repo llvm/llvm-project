@@ -342,6 +342,15 @@ llvm::DebugLoc CodeGenFunction::EmitReturnBlock() {
       // later by the actual 'ret' instruction.
       llvm::DebugLoc Loc = BI->getDebugLoc();
       Builder.SetInsertPoint(BI->getParent());
+
+      // Key Instructions: If there's only one `ret` then we want to put the
+      // instruction in the same source atom group as the store to the ret-value
+      // alloca and unconditional `br` to the return block that we're about to
+      // delete. It all comes from the same source (`return (value)`).
+      if (auto *DI = getDebugInfo(); DI && BI->getDebugLoc())
+        DI->setRetInstSourceAtomOverride(
+            BI->getDebugLoc().get()->getAtomGroup());
+
       BI->eraseFromParent();
       delete ReturnBlock.getBlock();
       ReturnBlock = JumpDest();
@@ -1549,6 +1558,12 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
     if (ShouldEmitLifetimeMarkers)
       Bypasses.Init(CGM, Body);
   }
+
+  // Finalize function debug info on exit.
+  auto Cleanup = llvm::make_scope_exit([this] {
+    if (CGDebugInfo *DI = getDebugInfo())
+      DI->completeFunction();
+  });
 
   // Emit the standard function prologue.
   StartFunction(GD, ResTy, Fn, FnInfo, Args, Loc, BodyRange.getBegin());
