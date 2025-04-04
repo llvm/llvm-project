@@ -83,7 +83,7 @@ int inc0() {
 // CHECK:   %[[ATMP:.*]] = cir.const #cir.int<1> : !s32i
 // CHECK:   cir.store %[[ATMP]], %[[A]] : !s32i
 // CHECK:   %[[INPUT:.*]] = cir.load %[[A]]
-// CHECK:   %[[INCREMENTED:.*]] = cir.unary(inc, %[[INPUT]])
+// CHECK:   %[[INCREMENTED:.*]] = cir.unary(inc, %[[INPUT]]) nsw
 // CHECK:   cir.store %[[INCREMENTED]], %[[A]]
 // CHECK:   %[[A_TO_OUTPUT:.*]] = cir.load %[[A]]
 
@@ -111,8 +111,8 @@ int dec0() {
 // CHECK:   %[[ATMP:.*]] = cir.const #cir.int<1> : !s32i
 // CHECK:   cir.store %[[ATMP]], %[[A]] : !s32i
 // CHECK:   %[[INPUT:.*]] = cir.load %[[A]]
-// CHECK:   %[[INCREMENTED:.*]] = cir.unary(dec, %[[INPUT]])
-// CHECK:   cir.store %[[INCREMENTED]], %[[A]]
+// CHECK:   %[[DECREMENTED:.*]] = cir.unary(dec, %[[INPUT]]) nsw
+// CHECK:   cir.store %[[DECREMENTED]], %[[A]]
 // CHECK:   %[[A_TO_OUTPUT:.*]] = cir.load %[[A]]
 
 // LLVM: define i32 @dec0()
@@ -139,7 +139,7 @@ int inc1() {
 // CHECK:   %[[ATMP:.*]] = cir.const #cir.int<1> : !s32i
 // CHECK:   cir.store %[[ATMP]], %[[A]] : !s32i
 // CHECK:   %[[INPUT:.*]] = cir.load %[[A]]
-// CHECK:   %[[INCREMENTED:.*]] = cir.unary(inc, %[[INPUT]])
+// CHECK:   %[[INCREMENTED:.*]] = cir.unary(inc, %[[INPUT]]) nsw
 // CHECK:   cir.store %[[INCREMENTED]], %[[A]]
 // CHECK:   %[[A_TO_OUTPUT:.*]] = cir.load %[[A]]
 
@@ -167,8 +167,8 @@ int dec1() {
 // CHECK:   %[[ATMP:.*]] = cir.const #cir.int<1> : !s32i
 // CHECK:   cir.store %[[ATMP]], %[[A]] : !s32i
 // CHECK:   %[[INPUT:.*]] = cir.load %[[A]]
-// CHECK:   %[[INCREMENTED:.*]] = cir.unary(dec, %[[INPUT]])
-// CHECK:   cir.store %[[INCREMENTED]], %[[A]]
+// CHECK:   %[[DECREMENTED:.*]] = cir.unary(dec, %[[INPUT]]) nsw
+// CHECK:   cir.store %[[DECREMENTED]], %[[A]]
 // CHECK:   %[[A_TO_OUTPUT:.*]] = cir.load %[[A]]
 
 // LLVM: define i32 @dec1()
@@ -197,7 +197,7 @@ int inc2() {
 // CHECK:   %[[ATMP:.*]] = cir.const #cir.int<1> : !s32i
 // CHECK:   cir.store %[[ATMP]], %[[A]] : !s32i
 // CHECK:   %[[ATOB:.*]] = cir.load %[[A]]
-// CHECK:   %[[INCREMENTED:.*]] = cir.unary(inc, %[[ATOB]])
+// CHECK:   %[[INCREMENTED:.*]] = cir.unary(inc, %[[ATOB]]) nsw
 // CHECK:   cir.store %[[INCREMENTED]], %[[A]]
 // CHECK:   cir.store %[[ATOB]], %[[B]]
 // CHECK:   %[[B_TO_OUTPUT:.*]] = cir.load %[[B]]
@@ -405,3 +405,64 @@ float fpPostInc2() {
 // OGCG:   store float %[[A_INC]], ptr %[[A]], align 4
 // OGCG:   store float %[[A_LOAD]], ptr %[[B]], align 4
 // OGCG:   %[[B_TO_OUTPUT:.*]] = load float, ptr %[[B]], align 4
+
+void chars(char c) {
+// CHECK: cir.func @chars
+
+  int c1 = +c;
+  // CHECK: %[[PROMO:.*]] = cir.cast(integral, %{{.+}} : !s8i), !s32i
+  // CHECK: cir.unary(plus, %[[PROMO]]) : !s32i, !s32i
+  int c2 = -c;
+  // CHECK: %[[PROMO:.*]] = cir.cast(integral, %{{.+}} : !s8i), !s32i
+  // CHECK: cir.unary(minus, %[[PROMO]]) nsw : !s32i, !s32i
+
+  // Chars can go through some integer promotion codegen paths even when not promoted.
+  // These should not have nsw attributes because the intermediate promotion makes the
+  // overflow defined behavior.
+  ++c; // CHECK: cir.unary(inc, %{{.+}}) : !s8i, !s8i
+  --c; // CHECK: cir.unary(dec, %{{.+}}) : !s8i, !s8i
+  c++; // CHECK: cir.unary(inc, %{{.+}}) : !s8i, !s8i
+  c--; // CHECK: cir.unary(dec, %{{.+}}) : !s8i, !s8i
+}
+
+_Float16 fp16UPlus(_Float16 f) {
+  return +f;
+}
+
+// CHECK: cir.func @fp16UPlus({{.*}}) -> !cir.f16
+// CHECK:   %[[INPUT:.*]] = cir.load %[[F:.*]]
+// CHECK:   %[[PROMOTED:.*]] = cir.cast(floating, %[[INPUT]] : !cir.f16), !cir.float
+// CHECK:   %[[RESULT:.*]] = cir.unary(plus, %[[PROMOTED]])
+// CHECK:   %[[UNPROMOTED:.*]] = cir.cast(floating, %[[RESULT]] : !cir.float), !cir.f16
+
+// LLVM: define half @fp16UPlus({{.*}})
+// LLVM:   %[[F_LOAD:.*]] = load half, ptr %{{.*}}, align 2
+// LLVM:   %[[PROMOTED:.*]] = fpext half %[[F_LOAD]] to float
+// LLVM:   %[[UNPROMOTED:.*]] = fptrunc float %[[PROMOTED]] to half
+
+// OGCG: define{{.*}} half @_Z9fp16UPlusDF16_({{.*}})
+// OGCG:   %[[F_LOAD:.*]] = load half, ptr %{{.*}}, align 2
+// OGCG:   %[[PROMOTED:.*]] = fpext half %[[F_LOAD]] to float
+// OGCG:   %[[UNPROMOTED:.*]] = fptrunc float %[[PROMOTED]] to half
+
+_Float16 fp16UMinus(_Float16 f) {
+  return -f;
+}
+
+// CHECK: cir.func @fp16UMinus({{.*}}) -> !cir.f16
+// CHECK:   %[[INPUT:.*]] = cir.load %[[F:.*]]
+// CHECK:   %[[PROMOTED:.*]] = cir.cast(floating, %[[INPUT]] : !cir.f16), !cir.float
+// CHECK:   %[[RESULT:.*]] = cir.unary(minus, %[[PROMOTED]])
+// CHECK:   %[[UNPROMOTED:.*]] = cir.cast(floating, %[[RESULT]] : !cir.float), !cir.f16
+
+// LLVM: define half @fp16UMinus({{.*}})
+// LLVM:   %[[F_LOAD:.*]] = load half, ptr %{{.*}}, align 2
+// LLVM:   %[[PROMOTED:.*]] = fpext half %[[F_LOAD]] to float
+// LLVM:   %[[RESULT:.*]] = fneg float %[[PROMOTED]]
+// LLVM:   %[[UNPROMOTED:.*]] = fptrunc float %[[RESULT]] to half
+
+// OGCG: define{{.*}} half @_Z10fp16UMinusDF16_({{.*}})
+// OGCG:   %[[F_LOAD:.*]] = load half, ptr %{{.*}}, align 2
+// OGCG:   %[[PROMOTED:.*]] = fpext half %[[F_LOAD]] to float
+// OGCG:   %[[RESULT:.*]] = fneg float %[[PROMOTED]]
+// OGCG:   %[[UNPROMOTED:.*]] = fptrunc float %[[RESULT]] to half

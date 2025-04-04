@@ -368,25 +368,29 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
           "Scalar dot product is only supported on ints and floats.");
     }
     // For vectors, validate types and emit the appropriate intrinsic
-
-    // A VectorSplat should have happened
-    assert(T0->isVectorTy() && T1->isVectorTy() &&
-           "Dot product of vector and scalar is not supported.");
+    assert(CGM.getContext().hasSameUnqualifiedType(E->getArg(0)->getType(),
+                                                   E->getArg(1)->getType()) &&
+           "Dot product operands must have the same type.");
 
     auto *VecTy0 = E->getArg(0)->getType()->castAs<VectorType>();
-    [[maybe_unused]] auto *VecTy1 =
-        E->getArg(1)->getType()->castAs<VectorType>();
-
-    assert(VecTy0->getElementType() == VecTy1->getElementType() &&
-           "Dot product of vectors need the same element types.");
-
-    assert(VecTy0->getNumElements() == VecTy1->getNumElements() &&
-           "Dot product requires vectors to be of the same size.");
+    assert(VecTy0 && "Dot product argument must be a vector.");
 
     return Builder.CreateIntrinsic(
         /*ReturnType=*/T0->getScalarType(),
         getDotProductIntrinsic(CGM.getHLSLRuntime(), VecTy0->getElementType()),
         ArrayRef<Value *>{Op0, Op1}, nullptr, "hlsl.dot");
+  }
+  case Builtin::BI__builtin_hlsl_dot2add: {
+    assert(CGM.getTarget().getTriple().getArch() == llvm::Triple::dxil &&
+           "Intrinsic dot2add is only allowed for dxil architecture");
+    Value *A = EmitScalarExpr(E->getArg(0));
+    Value *B = EmitScalarExpr(E->getArg(1));
+    Value *C = EmitScalarExpr(E->getArg(2));
+
+    Intrinsic::ID ID = llvm ::Intrinsic::dx_dot2add;
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/C->getType(), ID, ArrayRef<Value *>{A, B, C}, nullptr,
+        "dx.dot2add");
   }
   case Builtin::BI__builtin_hlsl_dot4add_i8packed: {
     Value *A = EmitScalarExpr(E->getArg(0));

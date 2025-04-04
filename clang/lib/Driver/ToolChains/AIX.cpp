@@ -358,8 +358,8 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (D.IsFlangMode() &&
       !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
-    addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
-    addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
+    ToolChain.addFortranRuntimeLibraryPath(Args, CmdArgs);
+    ToolChain.addFortranRuntimeLibs(Args, CmdArgs);
     CmdArgs.push_back("-lm");
     CmdArgs.push_back("-lpthread");
   }
@@ -606,6 +606,14 @@ void AIX::addProfileRTLibs(const llvm::opt::ArgList &Args,
   }
 
   ToolChain::addProfileRTLibs(Args, CmdArgs);
+}
+
+void AIX::addFortranRuntimeLibs(const ArgList &Args,
+                                llvm::opt::ArgStringList &CmdArgs) const {
+  // Link flang_rt.runtime.a. On AIX, the static and shared library are all
+  // named .a
+  CmdArgs.push_back(
+      getCompilerRTArgString(Args, "runtime", ToolChain::FT_Static, true));
 }
 
 ToolChain::CXXStdlibType AIX::GetDefaultCXXStdlibType() const {

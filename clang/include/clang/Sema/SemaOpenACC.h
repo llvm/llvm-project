@@ -105,7 +105,7 @@ private:
     /// This is the number of expressions on a 'tile' clause.  This doesn't have
     /// to be an APSInt because it isn't the result of a constexpr, just by our
     /// own counting of elements.
-    std::optional<unsigned> CurTileCount;
+    UnsignedOrNone CurTileCount = std::nullopt;
 
     /// Records whether we've hit a 'CurTileCount' of '0' on the wya down,
     /// which allows us to diagnose if the number of arguments is too large for

@@ -51,7 +51,12 @@ enum {
   InstFormatCLH = 19,
   InstFormatCSB = 20,
   InstFormatCSH = 21,
-  InstFormatOther = 22,
+  InstFormatQC_EAI = 22,
+  InstFormatQC_EI = 23,
+  InstFormatQC_EB = 24,
+  InstFormatQC_EJ = 25,
+  InstFormatQC_ES = 26,
+  InstFormatOther = 31,
 
   InstFormatMask = 31,
   InstFormatShift = 0,
@@ -333,6 +338,7 @@ enum OperandType : unsigned {
   OPERAND_SIMM11,
   OPERAND_SIMM12,
   OPERAND_SIMM12_LSB00000,
+  OPERAND_SIMM16,
   OPERAND_SIMM16_NONZERO,
   OPERAND_SIMM20,
   OPERAND_SIMM26,
@@ -603,7 +609,7 @@ enum RLISTENCODE {
   INVALID_RLIST,
 };
 
-inline unsigned encodeRlist(MCRegister EndReg, bool IsRVE = false) {
+inline unsigned encodeRegList(MCRegister EndReg, bool IsRVE = false) {
   assert((!IsRVE || EndReg <= RISCV::X9) && "Invalid Rlist for RV32E");
   switch (EndReg) {
   case RISCV::X1:
@@ -635,7 +641,7 @@ inline unsigned encodeRlist(MCRegister EndReg, bool IsRVE = false) {
   }
 }
 
-inline static unsigned encodeRlistNumRegs(unsigned NumRegs) {
+inline static unsigned encodeRegListNumRegs(unsigned NumRegs) {
   assert(NumRegs > 0 && NumRegs < 14 && NumRegs != 12 &&
          "Unexpected number of registers");
   if (NumRegs == 13)
@@ -656,7 +662,7 @@ inline static unsigned getStackAdjBase(unsigned RlistVal, bool IsRV64) {
   return alignTo(NumRegs * RegSize, 16);
 }
 
-void printRlist(unsigned SlistEncode, raw_ostream &OS);
+void printRegList(unsigned RlistEncode, raw_ostream &OS);
 } // namespace RISCVZC
 
 namespace RISCVVInversePseudosTable {
