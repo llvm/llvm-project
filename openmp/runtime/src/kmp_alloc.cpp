@@ -1265,14 +1265,189 @@ static void *(*kmp_target_free_host)(void *ptr, int device);
 static void *(*kmp_target_free_shared)(void *ptr, int device);
 static void *(*kmp_target_free_device)(void *ptr, int device);
 static bool __kmp_target_mem_available;
+
 #define KMP_IS_TARGET_MEM_SPACE(MS)                                            \
   (MS == llvm_omp_target_host_mem_space ||                                     \
    MS == llvm_omp_target_shared_mem_space ||                                   \
    MS == llvm_omp_target_device_mem_space)
+
 #define KMP_IS_TARGET_MEM_ALLOC(MA)                                            \
   (MA == llvm_omp_target_host_mem_alloc ||                                     \
    MA == llvm_omp_target_shared_mem_alloc ||                                   \
    MA == llvm_omp_target_device_mem_alloc)
+
+#define KMP_IS_PREDEF_MEM_SPACE(MS)                                            \
+  (MS == omp_null_mem_space || MS == omp_default_mem_space ||                  \
+   MS == omp_large_cap_mem_space || MS == omp_const_mem_space ||               \
+   MS == omp_high_bw_mem_space || MS == omp_low_lat_mem_space ||               \
+   KMP_IS_TARGET_MEM_SPACE(MS))
+
+/// Support OMP 6.0 target memory management
+/// Expected offload runtime entries.
+///
+/// Returns number of resources and list of unique resource IDs in "resouces".
+/// Runtime needs to invoke this twice to get the number of resources, allocate
+/// space for the resource IDs, and finally let offload runtime write resource
+/// IDs in "resources".
+/// int __tgt_get_mem_resources(int num_devices, const int *devices,
+///                             int host_access, omp_memspace_handle_t memspace,
+///                             int *resources);
+///
+/// Redirects omp_alloc call to offload runtime.
+/// void *__tgt_omp_alloc(size_t size, omp_allocator_handle_t allocator);
+///
+/// Redirects omp_free call to offload runtime.
+/// void __tgt_omp_free(void *ptr, omp_allocator_handle_t);
+class kmp_tgt_allocator_t {
+  bool supported = false;
+  using get_mem_resources_t = int (*)(int, const int *, int,
+                                      omp_memspace_handle_t, int *);
+  using omp_alloc_t = void *(*)(size_t, omp_allocator_handle_t);
+  using omp_free_t = void (*)(void *, omp_allocator_handle_t);
+  get_mem_resources_t tgt_get_mem_resources = nullptr;
+  omp_alloc_t tgt_omp_alloc = nullptr;
+  omp_free_t tgt_omp_free = nullptr;
+
+public:
+  /// Initialize interface with offload runtime
+  void init() {
+    tgt_get_mem_resources =
+        (get_mem_resources_t)KMP_DLSYM("__tgt_get_mem_resources");
+    tgt_omp_alloc = (omp_alloc_t)KMP_DLSYM("__tgt_omp_alloc");
+    tgt_omp_free = (omp_free_t)KMP_DLSYM("__tgt_omp_free");
+    supported = tgt_get_mem_resources && tgt_omp_alloc && tgt_omp_free;
+  }
+  /// Obtain resource information from offload runtime. We assume offload
+  /// runtime backends maintain a list of unique resource IDS.
+  int get_mem_resources(int ndevs, const int *devs, int host,
+                        omp_memspace_handle_t memspace, int *resources) {
+    if (supported)
+      return tgt_get_mem_resources(ndevs, devs, host, memspace, resources);
+    return 0;
+  }
+  /// Invoke offload runtime's memory allocation routine
+  void *omp_alloc(size_t size, omp_allocator_handle_t allocator) {
+    if (supported)
+      return tgt_omp_alloc(size, allocator);
+    return nullptr;
+  }
+  /// Invoke offload runtime's memory deallocation routine
+  void omp_free(void *ptr, omp_allocator_handle_t allocator) {
+    if (supported)
+      tgt_omp_free(ptr, allocator);
+  }
+} __kmp_tgt_allocator;
+
+extern "C" int omp_get_num_devices(void);
+
+/// Maintain a list of target memory spaces that are identified with the
+/// requested information. There will be only one unique memory space object
+/// that matches the input.
+class kmp_tgt_memspace_list_t {
+  kmp_memspace_t *memspace_list = nullptr;
+  KMP_LOCK_INIT(mtx);
+  /// Find memory space that matches the provided input
+  kmp_memspace_t *find(int num_resources, const int *resources,
+                       omp_memspace_handle_t memspace) {
+    kmp_memspace_t *ms = memspace_list;
+    while (ms) {
+      if (ms->num_resources == num_resources && ms->memspace == memspace &&
+          !memcmp(ms->resources, resources, sizeof(int) * num_resources))
+        break;
+      ms = ms->next;
+    }
+    return ms;
+  }
+  /// Return memory space for the provided input. It tries to find existing
+  /// memory space that exactly matches the provided input or create one if
+  /// not found.
+  omp_memspace_handle_t get(int num_resources, const int *resources,
+                            omp_memspace_handle_t memspace) {
+    int gtid = __kmp_entry_gtid();
+    __kmp_acquire_lock(&mtx, gtid);
+    // Sort absolute IDs in the resource list
+    int *sorted_resources = (int *)__kmp_allocate(sizeof(int) * num_resources);
+    KMP_MEMCPY(sorted_resources, resources, num_resources * sizeof(int));
+    qsort(sorted_resources, (size_t)num_resources, sizeof(int),
+          [](const void *a, const void *b) {
+            const int val_a = *(const int *)a;
+            const int val_b = *(const int *)b;
+            return (val_a > val_b) ? 1 : ((val_a < val_b) ? -1 : 0);
+          });
+    kmp_memspace_t *ms = find(num_resources, sorted_resources, memspace);
+    if (ms) {
+      __kmp_free(sorted_resources);
+      __kmp_release_lock(&mtx, gtid);
+      return ms;
+    }
+    ms = (kmp_memspace_t *)__kmp_allocate(sizeof(kmp_memspace_t));
+    ms->memspace = memspace;
+    ms->num_resources = num_resources;
+    ms->resources = sorted_resources;
+    ms->next = memspace_list;
+    memspace_list = ms;
+    __kmp_release_lock(&mtx, gtid);
+    return ms;
+  }
+
+public:
+  /// Initialize memory space list
+  void init() { __kmp_init_lock(&mtx); }
+  /// Release resources for the memory space list
+  void fini() {
+    kmp_memspace_t *ms = memspace_list;
+    while (ms) {
+      if (ms->resources)
+        __kmp_free(ms->resources);
+      kmp_memspace_t *tmp = ms;
+      ms = ms->next;
+      __kmp_free(tmp);
+    }
+    __kmp_destroy_lock(&mtx);
+  }
+  /// Return memory space for the provided input
+  omp_memspace_handle_t get_memspace(int num_devices, const int *devices,
+                                     int host_access,
+                                     omp_memspace_handle_t memspace) {
+    int actual_num_devices = num_devices;
+    int *actual_devices = const_cast<int *>(devices);
+    if (actual_num_devices == 0) {
+      actual_num_devices = omp_get_num_devices();
+      if (actual_num_devices <= 0)
+        return omp_null_mem_space;
+    }
+    if (actual_devices == NULL) {
+      // Prepare list of all devices in this case.
+      actual_devices = (int *)__kmp_allocate(sizeof(int) * actual_num_devices);
+      for (int i = 0; i < actual_num_devices; i++)
+        actual_devices[i] = i;
+    }
+    // Get the number of available resources first
+    int num_resources = __kmp_tgt_allocator.get_mem_resources(
+        actual_num_devices, actual_devices, host_access, memspace, NULL);
+    if (num_resources <= 0)
+      return omp_null_mem_space; // No available resources
+
+    omp_memspace_handle_t ms = omp_null_mem_space;
+    if (num_resources > 0) {
+      int *resources = (int *)__kmp_allocate(sizeof(int) * num_resources);
+      // Let offload runtime write the resource IDs
+      num_resources = __kmp_tgt_allocator.get_mem_resources(
+          actual_num_devices, actual_devices, host_access, memspace, resources);
+      ms = get(num_resources, resources, memspace);
+      __kmp_free(resources);
+    }
+    if (!devices && actual_devices)
+      __kmp_free(actual_devices);
+    return ms;
+  }
+  /// Return sub memory space from the parent memory space
+  omp_memspace_handle_t get_memspace(int num_resources, const int *resources,
+                                     omp_memspace_handle_t parent) {
+    kmp_memspace_t *ms = (kmp_memspace_t *)parent;
+    return get(num_resources, resources, ms->memspace);
+  }
+} __kmp_tgt_memspace_list;
 
 #if KMP_OS_UNIX && KMP_DYNAMIC_LIB && !KMP_OS_DARWIN
 static inline void chk_kind(void ***pkind) {
@@ -1456,19 +1631,30 @@ void __kmp_init_target_mem() {
   // lock/pin and unlock/unpin target calls
   *(void **)(&kmp_target_lock_mem) = KMP_DLSYM("llvm_omp_target_lock_mem");
   *(void **)(&kmp_target_unlock_mem) = KMP_DLSYM("llvm_omp_target_unlock_mem");
+  __kmp_tgt_allocator.init();
+  __kmp_tgt_memspace_list.init();
 }
+
+/// Finalize target memory support
+void __kmp_fini_target_mem() { __kmp_tgt_memspace_list.fini(); }
 
 omp_allocator_handle_t __kmpc_init_allocator(int gtid, omp_memspace_handle_t ms,
                                              int ntraits,
                                              omp_alloctrait_t traits[]) {
-  // OpenMP 5.0 only allows predefined memspaces
-  KMP_DEBUG_ASSERT(ms == omp_default_mem_space || ms == omp_low_lat_mem_space ||
-                   ms == omp_large_cap_mem_space || ms == omp_const_mem_space ||
-                   ms == omp_high_bw_mem_space || KMP_IS_TARGET_MEM_SPACE(ms));
   kmp_allocator_t *al;
   int i;
   al = (kmp_allocator_t *)__kmp_allocate(sizeof(kmp_allocator_t)); // zeroed
   al->memspace = ms; // not used currently
+
+  // Assign default values if applicable
+  al->alignment = 1;
+  al->pinned = false;
+  al->partition = omp_atv_environment;
+  al->pin_device = -1;
+  al->preferred_device = -1;
+  al->target_access = omp_atv_single;
+  al->atomic_scope = omp_atv_device;
+
   for (i = 0; i < ntraits; ++i) {
     switch (traits[i].key) {
     case omp_atk_sync_hint:
@@ -1503,10 +1689,33 @@ omp_allocator_handle_t __kmpc_init_allocator(int gtid, omp_memspace_handle_t ms,
 #endif
       al->memkind = RCAST(void **, traits[i].value);
       break;
+    case omp_atk_pin_device:
+      __kmp_type_convert(traits[i].value, &(al->pin_device));
+      break;
+    case omp_atk_preferred_device:
+      __kmp_type_convert(traits[i].value, &(al->preferred_device));
+      break;
+    case omp_atk_target_access:
+      al->target_access = (omp_alloctrait_value_t)traits[i].value;
+      break;
+    case omp_atk_atomic_scope:
+      al->atomic_scope = (omp_alloctrait_value_t)traits[i].value;
+      break;
+    case omp_atk_part_size:
+      __kmp_type_convert(traits[i].value, &(al->part_size));
+      break;
     default:
       KMP_ASSERT2(0, "Unexpected allocator trait");
     }
   }
+
+  if (al->memspace > kmp_max_mem_space) {
+    // Memory space has been allocated for targets.
+    return (omp_allocator_handle_t)al;
+  }
+
+  KMP_DEBUG_ASSERT(KMP_IS_PREDEF_MEM_SPACE(al->memspace));
+
   if (al->fb == 0) {
     // set default allocator
     al->fb = omp_atv_default_mem_fb;
@@ -1578,6 +1787,71 @@ void __kmpc_set_default_allocator(int gtid, omp_allocator_handle_t allocator) {
 
 omp_allocator_handle_t __kmpc_get_default_allocator(int gtid) {
   return __kmp_threads[gtid]->th.th_def_allocator;
+}
+
+omp_memspace_handle_t __kmp_get_devices_memspace(int ndevs, const int *devs,
+                                                 omp_memspace_handle_t memspace,
+                                                 int host) {
+  if (!__kmp_init_serial)
+    __kmp_serial_initialize();
+  // Only accept valid device description and predefined memory space
+  if (ndevs < 0 || (ndevs > 0 && !devs) || memspace > kmp_max_mem_space)
+    return omp_null_mem_space;
+
+  return __kmp_tgt_memspace_list.get_memspace(ndevs, devs, host, memspace);
+}
+
+omp_allocator_handle_t
+__kmp_get_devices_allocator(int ndevs, const int *devs,
+                            omp_memspace_handle_t memspace, int host) {
+  if (!__kmp_init_serial)
+    __kmp_serial_initialize();
+  // Only accept valid device description and predefined memory space
+  if (ndevs < 0 || (ndevs > 0 && !devs) || memspace > kmp_max_mem_space)
+    return omp_null_allocator;
+
+  omp_memspace_handle_t mspace =
+      __kmp_get_devices_memspace(ndevs, devs, memspace, host);
+  if (mspace == omp_null_mem_space)
+    return omp_null_allocator;
+
+  return __kmpc_init_allocator(__kmp_entry_gtid(), mspace, 0, NULL);
+}
+
+int __kmp_get_memspace_num_resources(omp_memspace_handle_t memspace) {
+  if (!__kmp_init_serial)
+    __kmp_serial_initialize();
+  if (memspace == omp_null_mem_space)
+    return 0;
+  if (memspace < kmp_max_mem_space)
+    return 1; // return 1 for predefined memory space
+  kmp_memspace_t *ms = (kmp_memspace_t *)memspace;
+  return ms->num_resources;
+}
+
+omp_memspace_handle_t __kmp_get_submemspace(omp_memspace_handle_t memspace,
+                                            int num_resources, int *resources) {
+  if (!__kmp_init_serial)
+    __kmp_serial_initialize();
+  if (memspace == omp_null_mem_space || memspace < kmp_max_mem_space)
+    return memspace; // return input memory space for predefined memory space
+  kmp_memspace_t *ms = (kmp_memspace_t *)memspace;
+  if (num_resources == 0 || ms->num_resources < num_resources || !resources)
+    return omp_null_mem_space; // input memory space cannot satisfy the request
+
+  // The stored resource ID is an absolute ID only known to the offload backend,
+  // and the returned memory space will still keep the property.
+  int *resources_abs = (int *)__kmp_allocate(sizeof(int) * num_resources);
+
+  // Collect absolute resource ID from the relative ID
+  for (int i = 0; i < num_resources; i++)
+    resources_abs[i] = ms->resources[resources[i]];
+
+  omp_memspace_handle_t submemspace = __kmp_tgt_memspace_list.get_memspace(
+      num_resources, resources_abs, memspace);
+  __kmp_free(resources_abs);
+
+  return submemspace;
 }
 
 typedef struct kmp_mem_desc { // Memory block descriptor
@@ -1666,6 +1940,11 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
   // Use default allocator if hwloc and libmemkind are not available
   int use_default_allocator =
       (!__kmp_hwloc_available && !__kmp_memkind_available);
+
+  if (al > kmp_max_mem_alloc && al->memspace > kmp_max_mem_space) {
+    // Memspace has been allocated for targets.
+    return __kmp_tgt_allocator.omp_alloc(size, allocator);
+  }
 
   if (KMP_IS_TARGET_MEM_ALLOC(allocator)) {
     // Use size input directly as the memory may not be accessible on host.
@@ -2021,6 +2300,12 @@ void ___kmpc_free(int gtid, void *ptr, omp_allocator_handle_t allocator) {
   kmp_mem_desc_t desc;
   kmp_uintptr_t addr_align; // address to return to caller
   kmp_uintptr_t addr_descr; // address of memory block descriptor
+
+  if (al > kmp_max_mem_alloc && al->memspace > kmp_max_mem_space) {
+    __kmp_tgt_allocator.omp_free(ptr, allocator);
+    return;
+  }
+
   if (__kmp_target_mem_available && (KMP_IS_TARGET_MEM_ALLOC(allocator) ||
                                      (allocator > kmp_max_mem_alloc &&
                                       KMP_IS_TARGET_MEM_SPACE(al->memspace)))) {
