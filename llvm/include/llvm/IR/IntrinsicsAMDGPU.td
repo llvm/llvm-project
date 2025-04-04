@@ -1863,7 +1863,9 @@ class AMDGPURawBufferLoadLDS : Intrinsic <
    ImmArg<ArgIndex<6>>, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>, AMDGPURsrcIntrinsic<0>;
 def int_amdgcn_raw_buffer_load_lds : AMDGPURawBufferLoadLDS;
 
-class AMDGPURawPtrBufferLoadLDS : Intrinsic <
+class AMDGPURawPtrBufferLoadLDS :
+  ClangBuiltin<"__builtin_amdgcn_raw_ptr_buffer_load_lds">,
+  Intrinsic <
   [],
   [AMDGPUBufferRsrcTy,        // rsrc(SGPR)
    LLVMQualPointerType<3>,    // LDS base offset
