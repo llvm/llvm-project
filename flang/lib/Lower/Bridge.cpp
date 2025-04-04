@@ -97,8 +97,8 @@ struct IncrementLoopInfo {
                              bool isConcurrent = false)
       : loopVariableSym{&sym}, lowerExpr{Fortran::semantics::GetExpr(lower)},
         upperExpr{Fortran::semantics::GetExpr(upper)},
-        stepExpr{Fortran::semantics::GetExpr(step)}, isConcurrent{
-                                                         isConcurrent} {}
+        stepExpr{Fortran::semantics::GetExpr(step)},
+        isConcurrent{isConcurrent} {}
 
   IncrementLoopInfo(IncrementLoopInfo &&) = default;
   IncrementLoopInfo &operator=(IncrementLoopInfo &&x) = default;
