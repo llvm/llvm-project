@@ -4856,8 +4856,7 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
            FirstNonCommentOnLine) {
       // In Verilog, the backtick is used for macro invocations. In TableGen,
       // the single hash is used for the paste operator.
-      const FormatToken *Next = Tokens->peekNextToken();
-      assert(Next); // There is an EOF token at the end.
+      const auto *Next = Tokens->peekNextToken();
       if ((Style.isVerilog() && !Keywords.isVerilogPPDirective(*Next)) ||
           (Style.isTableGen() &&
            !Next->isOneOf(tok::kw_else, tok::pp_define, tok::pp_ifdef,
