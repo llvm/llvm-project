@@ -22,8 +22,8 @@ qc.e.bgeui x8, 12, foo
 # INSTR: qc.e.bgeui s0, 12, foo
 # FIXUP: fixup A - offset: 0, value: foo, kind: fixup_riscv_qc_e_branch
 
-# Check that a label in a different section is handled similar to an undefined symbol
-# Since foo is undefined, this will be relaxed to (qc.e.bgeui + jal)
+# Check that a label in a different section is handled similar to an undefined
+# symbol and gets relaxed to (qc.e.bgeui + jal)
 qc.e.bltui x4, 9, .bar
 # RELOC: R_RISCV_JAL .bar 0x0
 # INSTR: qc.e.bltui tp, 9, .bar
