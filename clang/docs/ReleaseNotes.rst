@@ -159,6 +159,8 @@ C23 Feature Support
   which clarified that a compound literal used within a function prototype is
   treated as if the compound literal were within the body rather than at file
   scope.
+- Fixed a bug where you could not cast a null pointer constant to type
+  ``nullptr_t``. Fixes #GH133644.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
