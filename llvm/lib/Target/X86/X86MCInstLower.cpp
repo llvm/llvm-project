@@ -142,8 +142,8 @@ void X86AsmPrinter::EmitAndCountInstruction(MCInst &Inst) {
 
 X86MCInstLower::X86MCInstLower(const MachineFunction &mf,
                                X86AsmPrinter &asmprinter)
-    : Ctx(mf.getContext()), MF(mf), TM(mf.getTarget()), MAI(*TM.getMCAsmInfo()),
-      AsmPrinter(asmprinter) {}
+    : Ctx(asmprinter.OutContext), MF(mf), TM(mf.getTarget()),
+      MAI(*TM.getMCAsmInfo()), AsmPrinter(asmprinter) {}
 
 MachineModuleInfoMachO &X86MCInstLower::getMachOMMI() const {
   return AsmPrinter.MMI->getObjFileInfo<MachineModuleInfoMachO>();
@@ -192,22 +192,8 @@ MCSymbol *X86MCInstLower::GetSymbolFromOperand(const MachineOperand &MO) const {
   }
 
   Name += Suffix;
-  if (!Sym) {
-    // If new MCSymbol needs to be created for
-    // MachineOperand::MO_ExternalSymbol, create it as a symbol
-    // in AsmPrinter's OutContext instead form Ctx which is
-    // the MCContext of the MachineFunction that this MachineFunction
-    // pass is running on.
-    // This is helps to deduplicate global symbols if Ctx is different
-    // from AsmPrinter.OutContext.
-    // This also aligns with how many other backends create MCSymbol
-    // for MachineOperand of type MO_ExternalSymbol such as
-    // in AAarch64MCInstLowering.
-    if (MO.isSymbol())
-      Sym = AsmPrinter.OutContext.getOrCreateSymbol(Name);
-    else
-      Sym = Ctx.getOrCreateSymbol(Name);
-  }
+  if (!Sym)
+    Sym = Ctx.getOrCreateSymbol(Name);
 
   // If the target flags on the operand changes the name of the symbol, do that
   // before we return the symbol.
