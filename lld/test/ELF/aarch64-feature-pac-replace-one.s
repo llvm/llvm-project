@@ -1,5 +1,6 @@
 ### This file replace .note.gnu.property with aarch64 build attributes in order to confirm
 ### interoperability.
+### (Still using gnu properties in the helper files)
 
 # REQUIRES: aarch64
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu %s -o %t.o
@@ -16,27 +17,24 @@
 # RUN: llvm-readelf -x .got.plt %tno.so | FileCheck --check-prefix SOGOTPLT %s
 # RUN: llvm-readelf --dynamic-table %tno.so | FileCheck --check-prefix NOPACDYN %s
 
-# NOPAC: Disassembly of section .text:
 # NOPAC: 00000000000102b8 <func2>:
-# NOPAC-NEXT:   102b8:      	bl	0x102f0 <func3@plt>
-# NOPAC-NEXT:   102bc:      	ret
-# NOPAC: 00000000000102c0 <func3>:
-# NOPAC-NEXT:   102c0:      	ret
+# NOPAC-NEXT:    102b8: bl      0x102f0 <func3@plt>
+# NOPAC-NEXT:           ret
 # NOPAC: Disassembly of section .plt:
 # NOPAC: 00000000000102d0 <.plt>:
-# NOPAC-NEXT:   102d0:      	stp	x16, x30, [sp, #-16]!
-# NOPAC-NEXT:   102d4:      	adrp	x16, 0x30000
-# NOPAC-NEXT:   102d8:      	ldr	x17, [x16, #960]
-# NOPAC-NEXT:   102dc:      	add	x16, x16, #960
-# NOPAC-NEXT:   102e0:      	br	x17
-# NOPAC-NEXT:   102e4:      	nop
-# NOPAC-NEXT:   102e8:      	nop
-# NOPAC-NEXT:   102ec:      	nop
+# NOPAC-NEXT:    102d0: stp     x16, x30, [sp, #-16]!
+# NOPAC-NEXT:           adrp    x16, 0x30000
+# NOPAC-NEXT:           ldr     x17, [x16, #960]
+# NOPAC-NEXT:           add     x16, x16, #960
+# NOPAC-NEXT:           br      x17
+# NOPAC-NEXT:           nop
+# NOPAC-NEXT:           nop
+# NOPAC-NEXT:           nop
 # NOPAC: 00000000000102f0 <func3@plt>:
-# NOPAC-NEXT:   102f0:      	adrp	x16, 0x30000
-# NOPAC-NEXT:   102f4:      	ldr	x17, [x16, #968]
-# NOPAC-NEXT:   102f8:      	add	x16, x16, #968
-# NOPAC-NEXT:   102fc:      	br	x17
+# NOPAC-NEXT:    102f0: adrp    x16, 0x30000
+# NOPAC-NEXT:           ldr     x17, [x16, #968]
+# NOPAC-NEXT:           add     x16, x16, #968
+# NOPAC-NEXT:           br      x17
 
 # SOGOTPLT: Hex dump of section '.got.plt':
 # SOGOTPLT-NEXT: 0x000303b0 00000000 00000000 00000000 00000000
@@ -97,28 +95,28 @@
 # PACDYN2:      0x0000000070000003 (AARCH64_PAC_PLT)
 
 # PACPLT: Disassembly of section .text:
-# PACPLT: 0000000000210388 <func1>:
-# PACPLT-NEXT:  210388:      	bl	0x2103c0 <func2@plt>
-# PACPLT-NEXT:  21038c:      	ret
-# PACPLT: 0000000000210390 <func3>:
-# PACPLT-NEXT:  210390:      	ret
+# PACPLT: 0000000000210370 <func1>:
+# PACPLT-NEXT:   210370:        bl      0x2103a0 <func2@plt>
+# PACPLT-NEXT:                  ret
+# PACPLT: 0000000000210378 <func3>:
+# PACPLT-NEXT:   210378:        ret
 # PACPLT: Disassembly of section .plt:
-# PACPLT: 00000000002103a0 <.plt>:
-# PACPLT-NEXT:  2103a0:      	stp	x16, x30, [sp, #-16]!
-# PACPLT-NEXT:  2103a4:      	adrp	x16, 0x230000 <func2+0x230000>
-# PACPLT-NEXT:  2103a8:      	ldr	x17, [x16, #1224]
-# PACPLT-NEXT:  2103ac:      	add	x16, x16, #1224
-# PACPLT-NEXT:  2103b0:      	br	x17
-# PACPLT-NEXT:  2103b4:      	nop
-# PACPLT-NEXT:  2103b8:      	nop
-# PACPLT-NEXT:  2103bc:      	nop
-# PACPLT: 00000000002103c0 <func2@plt>:
-# PACPLT-NEXT:  2103c0:      	adrp	x16, 0x230000 <func2+0x230000>
-# PACPLT-NEXT:  2103c4:      	ldr	x17, [x16, #1232]
-# PACPLT-NEXT:  2103c8:      	add	x16, x16, #1232
-# PACPLT-NEXT:  2103cc:      	autia1716
-# PACPLT-NEXT:  2103d0:      	br	x17
-# PACPLT-NEXT:  2103d4:      	nop
+# PACPLT: 0000000000210380 <.plt>:
+# PACPLT-NEXT:   210380:        stp     x16, x30, [sp, #-16]!
+# PACPLT-NEXT:                  adrp    x16, 0x230000
+# PACPLT-NEXT:                  ldr     x17, [x16, #1192]
+# PACPLT-NEXT:                  add     x16, x16, #1192
+# PACPLT-NEXT:                  br      x17
+# PACPLT-NEXT:                  nop
+# PACPLT-NEXT:                  nop
+# PACPLT-NEXT:                  nop
+# PACPLT: 00000000002103a0 <func2@plt>:
+# PACPLT-NEXT:   2103a0:        adrp    x16, 0x230000
+# PACPLT-NEXT:                  ldr     x17, [x16, #1200]
+# PACPLT-NEXT:                  add     x16, x16, #1200
+# PACPLT-NEXT:                  autia1716
+# PACPLT-NEXT:                  br      x17
+# PACPLT-NEXT:                  nop
 
 
 .aeabi_subsection aeabi_feature_and_bits, optional, uleb128
