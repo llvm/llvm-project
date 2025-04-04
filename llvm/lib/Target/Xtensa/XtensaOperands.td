@@ -222,6 +222,7 @@ def  pcrel32call : Operand<iPTR> {
   let EncoderMethod = "getCallEncoding";
   let DecoderMethod = "decodeCallOperand";
   let ParserMatchClass = XtensaPCRelTargetAsmOperand;
+  let OperandType = "OPERAND_PCREL";
 }
 
 def brtarget : Operand<OtherVT> {
@@ -229,6 +230,7 @@ def brtarget : Operand<OtherVT> {
   let EncoderMethod = "getBranchTargetEncoding";
   let DecoderMethod = "decodeBranchOperand";
   let ParserMatchClass = XtensaPCRelTargetAsmOperand;
+  let OperandType = "OPERAND_PCREL";
 }
 
 def jumptarget : Operand<OtherVT> {
@@ -236,6 +238,7 @@ def jumptarget : Operand<OtherVT> {
   let EncoderMethod = "getJumpTargetEncoding";
   let DecoderMethod = "decodeJumpOperand";
   let ParserMatchClass = XtensaPCRelTargetAsmOperand;
+  let OperandType = "OPERAND_PCREL";
 }
 
 def ltarget : Operand<OtherVT> {
@@ -243,6 +246,7 @@ def ltarget : Operand<OtherVT> {
   let EncoderMethod = "getLoopTargetEncoding";
   let DecoderMethod = "decodeLoopOperand";
   let ParserMatchClass = XtensaPCRelTargetAsmOperand;
+  let OperandType = "OPERAND_PCREL";
 }
 
 def L32Rtarget : Operand<i32> {
@@ -250,4 +254,5 @@ def L32Rtarget : Operand<i32> {
   let EncoderMethod = "getL32RTargetEncoding";
   let DecoderMethod = "decodeL32ROperand";
   let ParserMatchClass = XtensaPCRelTargetAsmOperand;
+  let OperandType = "OPERAND_PCREL";
 }

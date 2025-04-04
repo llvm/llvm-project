@@ -168,7 +168,8 @@ static bool tryAddingSymbolicOperand(int64_t Value, bool isBranch,
 static DecodeStatus decodeCallOperand(MCInst &Inst, uint64_t Imm,
                                       int64_t Address, const void *Decoder) {
   assert(isUInt<18>(Imm) && "Invalid immediate");
-  Inst.addOperand(MCOperand::createImm(SignExtend64<20>(Imm << 2)));
+  Inst.addOperand(
+      MCOperand::createImm(SignExtend64<20>(Imm << 2) + (Address & 0x3)));
   return MCDisassembler::Success;
 }
 
