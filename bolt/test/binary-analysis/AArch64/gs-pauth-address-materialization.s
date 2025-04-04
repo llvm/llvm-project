@@ -152,6 +152,7 @@ good_negative_offset:
 
 // MOV Xd, Xm (which is an alias of ORR Xd, XZR, Xm) is handled as part of
 // support for address arithmetics, but ORR in general is not.
+// This restriction may be relaxed in the future.
 
         .globl  good_mov_reg
         .type   good_mov_reg,@function
@@ -176,6 +177,8 @@ bad_orr_not_xzr:
 // CHECK-NEXT:  {{[0-9a-f]+}}:   orr     x2, x1, x0
 // CHECK-NEXT:  {{[0-9a-f]+}}:   br      x2 # TAILCALL
         adrp    x0, sym
+        // The generic case of "orr Xd, Xn, Xm" is not allowed so far,
+        // even if Xn is known to be safe
         movz    x1, #0
         orr     x2, x1, x0
         br      x2
@@ -193,6 +196,8 @@ bad_orr_not_lsl0:
 // CHECK-NEXT:  {{[0-9a-f]+}}:   orr     x2, xzr, x0, lsl #1
 // CHECK-NEXT:  {{[0-9a-f]+}}:   br      x2 # TAILCALL
         adrp    x0, sym
+        // Currently, the only allowed form of "orr" is that used by "mov Xd, Xn" alias.
+        // This can be relaxed in the future.
         orr     x2, xzr, x0, lsl #1
         br      x2
         .size   bad_orr_not_lsl0, .-bad_orr_not_lsl0
