@@ -323,12 +323,24 @@ void *SharedReAlloc(ReAllocFunction reallocFunc, SizeFunction heapSizeFunc,
     }
 
     if (ownershipState == ASAN && !only_asan_supported_flags) {
+      size_t old_usable_size = asan_malloc_usable_size(lpMem, pc, bp);
+      if (dwFlags & HEAP_REALLOC_IN_PLACE_ONLY) {
+        if (dwBytes >= 1 && dwBytes <= old_usable_size) {
+          if (dwBytes < old_usable_size) {
+            __asan_poison_memory_region((char *)lpMem + dwBytes,
+                                        old_usable_size - dwBytes);
+          }
+          __asan_unpoison_memory_region((char *)lpMem, dwBytes);
+          return lpMem;
+        } else {
+          return nullptr;
+        }
+      }
+
       // Conversion to unsupported flags allocation,
       // transfer this allocation back to the original allocator.
       void *replacement_alloc = allocFunc(hHeap, dwFlags, dwBytes);
-      size_t old_usable_size = 0;
       if (replacement_alloc) {
-        old_usable_size = asan_malloc_usable_size(lpMem, pc, bp);
         REAL(memcpy)(replacement_alloc, lpMem,
                      Min<size_t>(dwBytes, old_usable_size));
         asan_free(lpMem, &stack, FROM_MALLOC);
@@ -348,6 +360,7 @@ void *SharedReAlloc(ReAllocFunction reallocFunc, SizeFunction heapSizeFunc,
   }
   // asan_realloc will never reallocate in place, so for now this flag is
   // unsupported until we figure out a way to fake this.
+  // Small exception when shrinking or staying below the inital size, see above.
   if (dwFlags & HEAP_REALLOC_IN_PLACE_ONLY)
     return nullptr;
 
