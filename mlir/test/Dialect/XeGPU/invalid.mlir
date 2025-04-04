@@ -601,6 +601,16 @@ func.func @tensor_desc_rank_mismatch(%src: ui64, %offsets: vector<16xindex>) {
 }
 
 // -----
+func.func @tensor_desc_rank_mismatch(%src: ui64, %offsets: vector<16xindex>) {
+  %1 = xegpu.create_tdesc %src, %offsets : ui64, vector<16xindex> ->
+      // expected-error@+1 {{expected layout rank to match tensor rank}}
+      !xegpu.tensor_desc<16x2xf32,
+        #xegpu.scatter_tdesc_attr<chunk_size = 2>,
+        #xegpu.layout<sg_layout = [1], sg_data = [32], inst_data = [16]>>
+  return
+}
+
+// -----
 func.func @tensor_desc_invalid_sg_data(%src: ui64, %offsets: vector<16xindex>) {
   %1 = xegpu.create_tdesc %src, %offsets : ui64, vector<16xindex> ->
       !xegpu.tensor_desc<16x2xf32,
