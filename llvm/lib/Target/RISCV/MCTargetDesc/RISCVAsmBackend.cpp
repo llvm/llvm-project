@@ -92,6 +92,7 @@ RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_riscv_tlsdesc_load_lo12", 20, 12, 0},
       {"fixup_riscv_tlsdesc_add_lo12", 20, 12, 0},
       {"fixup_riscv_tlsdesc_call", 0, 0, 0},
+      {"fixup_riscv_qc_e_branch", 0, 48, MCFixupKindInfo::FKF_IsPCRel},
   };
   static_assert((std::size(Infos)) == RISCV::NumTargetFixupKinds,
                 "Not all fixup kinds added to Infos array");
@@ -165,6 +166,7 @@ bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(
     // in the range [-2048, 2046].
     return Offset > 2046 || Offset < -2048;
   case RISCV::fixup_riscv_branch:
+  case RISCV::fixup_riscv_qc_e_branch:
     // For conditional branch instructions the immediate must be
     // in the range [-4096, 4095].
     return !isInt<13>(Offset);
@@ -464,6 +466,7 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     Value = (Sbit << 19) | (Lo10 << 9) | (Mid1 << 8) | Hi8;
     return Value;
   }
+  case RISCV::fixup_riscv_qc_e_branch:
   case RISCV::fixup_riscv_branch: {
     if (!isInt<13>(Value))
       Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
