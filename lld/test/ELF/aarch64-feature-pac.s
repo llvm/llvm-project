@@ -101,13 +101,13 @@
 # PACPLT-NEXT:   210378:        ret
 # PACPLT: Disassembly of section .plt:
 # PACPLT: 0000000000210380 <.plt>:
-# PACPLT-NEXT:   210380:        stp     x16, x30, [sp, #-16]!
+# PACPLT-NEXT:   210380:        pacibsp
+# PACPLT-NEXT:                  stp     x16, x30, [sp, #-16]!
 # PACPLT-NEXT:                  adrp    x16, 0x230000
 # PACPLT-NEXT:                  ldr     x17, [x16, #1192]
 # PACPLT-NEXT:                  add     x16, x16, #1192
+# PACPLT-NEXT:                  autia1716
 # PACPLT-NEXT:                  br      x17
-# PACPLT-NEXT:                  nop
-# PACPLT-NEXT:                  nop
 # PACPLT-NEXT:                  nop
 # PACPLT: 00000000002103a0 <func2@plt>:
 # PACPLT-NEXT:   2103a0:        adrp    x16, 0x230000
