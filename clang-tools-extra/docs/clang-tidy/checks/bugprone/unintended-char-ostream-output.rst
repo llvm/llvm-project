@@ -39,6 +39,9 @@ Or cast to char to explicitly indicate that output should be a character.
 
   std::cout << static_cast<char>(v);
 
+Options
+-------
+
 .. option:: CastTypeName
 
   When `CastTypeName` is specified, the fix-it will use `CastTypeName` as the
