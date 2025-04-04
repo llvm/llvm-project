@@ -16,21 +16,21 @@
 
 define void @p9_setb_spill() {
 ; CHECK-P9-LABEL: p9_setb_spill:
-; CHECK-P9:       # %bb.1: # %if.then
+; CHECK-P9:       .LBB0_2: # %if.then
 ; CHECK-P9-DAG:    crnot 4*cr[[CREG:.*]]+lt, eq
 ; CHECK-P9-DAG:    setb [[REG1:.*]], cr[[CREG]]
 ; CHECK-P9-DAG:    stw [[REG1]]
 ; CHECK-P9:        blr
-; CHECK-P9:        .LBB0_4: # %if.then1
+; CHECK-P9:       .LBB0_5: # %if.then1
 ;
 ; CHECK-P8-LABEL: p9_setb_spill:
-; CHECK-P8:       # %bb.1: # %if.then
+; CHECK-P8:       .LBB0_2: # %if.then
 ; CHECK-P8-DAG:    crnot 4*cr[[CREG2:.*]]+lt, eq
 ; CHECK-P8-DAG:    mfocrf [[REG2:.*]],
 ; CHECK-P8-DAG:    rlwinm [[REG2]], [[REG2]]
 ; CHECK-P8-DAG:    stw [[REG2]]
 ; CHECK-P8:        blr
-; CHECK-P8:        .LBB0_4: # %if.then1
+; CHECK-P8:       .LBB0_5: # %if.then1
 entry:
   br i1 undef, label %if.end, label %if.then
 
