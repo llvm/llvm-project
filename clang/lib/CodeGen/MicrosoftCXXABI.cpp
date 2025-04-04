@@ -3269,9 +3269,13 @@ llvm::Value *MicrosoftCXXABI::EmitMemberDataPointerAddress(
     Addr = Base.emitRawPointer(CGF);
   }
 
-  // Apply the offset, which we assume is non-null.
-  return Builder.CreateInBoundsGEP(CGF.Int8Ty, Addr, FieldOffset,
-                                   "memptr.offset");
+  // Apply the offset.
+  // Specially, we don't add inbounds flags if the base pointer is a constant
+  // null. This is a workaround for old-style container_of macros.
+  return Builder.CreateGEP(CGF.Int8Ty, Addr, FieldOffset, "memptr.offset",
+                           isa<llvm::ConstantPointerNull>(Addr)
+                               ? llvm::GEPNoWrapFlags::none()
+                               : llvm::GEPNoWrapFlags::inBounds());
 }
 
 llvm::Value *
