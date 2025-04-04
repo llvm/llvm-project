@@ -71,6 +71,7 @@ void test() {
 // CHECK-C: store float %mul.rl, ptr @f, align 4, !dbg [[G11R1:!.*]]
   f *= ci;
 #endif
+// CHECK: ret{{.*}}, !dbg [[RET:!.*]]
 }
 
 // CHECK: [[G1R2]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 2)
@@ -95,3 +96,4 @@ void test() {
 // CHECK-C: [[G10R1]] = !DILocation({{.*}}, atomGroup: 10, atomRank: 1)
 // CHECK-C: [[G11R2]] = !DILocation({{.*}}, atomGroup: 11, atomRank: 2)
 // CHECK-C: [[G11R1]] = !DILocation({{.*}}, atomGroup: 11, atomRank: 1)
+// CHECK: [[RET:!.*]] = !DILocation({{.*}}, atomGroup: [[#]], atomRank: [[#]])
