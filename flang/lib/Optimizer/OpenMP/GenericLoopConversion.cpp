@@ -57,9 +57,9 @@ public:
       rewriteToWsloop(loopOp, rewriter);
       break;
     case GenericLoopCombinedInfo::TeamsLoop:
-      if (teamsLoopCanBeParallelFor(loopOp))
+      if (teamsLoopCanBeParallelFor(loopOp)) {
         rewriteToDistributeParallelDo(loopOp, rewriter);
-      else {
+      } else {
         auto teamsOp = llvm::cast<mlir::omp::TeamsOp>(loopOp->getParentOp());
         auto teamsBlockArgIface =
             llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(*teamsOp);

@@ -361,7 +361,7 @@ end subroutine
 
 
 ! Verifies that reductions are hoisted to the parent `teams` directive and removed
-! from the `loop` dreictive when `loop` is mapped to `distribute`.
+! from the `loop` directive when `loop` is mapped to `distribute`.
 
 ! CHECK-LABEL: func.func @_QPteams_loop_cannot_be_parallel_for_with_reductions
 subroutine teams_loop_cannot_be_parallel_for_with_reductions
@@ -388,10 +388,10 @@ subroutine teams_loop_cannot_be_parallel_for_with_reductions
   ! CHECK:       omp.terminator
   ! CHECK: }
   !$omp teams loop reduction(+: x) reduction(*: y) private(p)
-  DO i = 1, 5
+  do i = 1, 5
     call foo()
     x = x + i
     y = y * i
     p = 42
-  END DO
+  end do
 end subroutine
