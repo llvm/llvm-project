@@ -1040,6 +1040,41 @@ PROGRAM example_hostnm
 END PROGRAM
 ```
 
+### Non-Standard Intrinsics: PUTENV
+
+#### Description
+`PUTENV(STR [, STATUS])` sets or deletes environment variable.
+
+This intrinsic is provided in both subroutine and function forms; however, only
+one form can be used in any given program unit.
+
+| ARGUMENT | INTENT | TYPE        |  KIND   | Description                     |
+|----------|--------|-------------|---------|---------------------------------|
+| `STR`    | `IN`   | `CHARACTER` | default | String in the form "name=value" (see below) |
+| `STATUS` | `OUT`  | `INTEGER`   | default | Optional. Returns 0 on success, C's `errno` on failure. |
+
+#### Usage and Info
+
+- **Standard:** extension
+- **Class:** Subroutine, function
+- **Syntax:** `CALL PUTENV(STR [, STATUS])`, `STATUS = PUTENV(STR)`
+
+The passed string can be in the form "name=value" to set environment variable "name" to value "value". It can also be of the form "name=" to delete environment variable "name".
+
+The environment variables set by PUTENV can be read by GET_ENVIRONMENT_VARIABLE.
+
+#### Example
+```Fortran
+  integer :: status
+
+  ! Set variable my_var to value my_value
+  putenv("my_var=my_value", status)
+
+  ! Delete variable my_var
+  putenv("my_var=")
+  end
+```
+
 
 ### Non-standard Intrinsics: RENAME
 `RENAME(OLD, NEW[, STATUS])` renames/moves a file on the filesystem.
@@ -1094,7 +1129,7 @@ function form.
 ### Non-Standard Intrinsics: TIME
 
 #### Description
-`TIME()` returns the current time of the system as a INTEGER(8). 
+`TIME()` returns the current time of the system as a INTEGER(8).
 
 #### Usage and Info
 
@@ -1269,7 +1304,7 @@ by `ISIZE`.
 `COMPAR` function takes the addresses of element `A` and `B` and must return:
 - a negative value if `A` < `B`
 - zero if `A` == `B`
-- a positive value otherwise. 
+- a positive value otherwise.
 
 #### Usage and Info
 

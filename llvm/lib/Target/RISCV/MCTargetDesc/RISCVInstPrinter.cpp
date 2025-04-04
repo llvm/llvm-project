@@ -225,6 +225,10 @@ void RISCVInstPrinter::printVTypeI(const MCInst *MI, unsigned OpNo,
 void RISCVInstPrinter::printRegList(const MCInst *MI, unsigned OpNo,
                                     const MCSubtargetInfo &STI, raw_ostream &O) {
   unsigned Imm = MI->getOperand(OpNo).getImm();
+
+  assert(Imm >= RISCVZC::RLISTENCODE::RA &&
+         Imm <= RISCVZC::RLISTENCODE::RA_S0_S11 && "Invalid Rlist");
+
   O << "{";
   printRegName(O, RISCV::X1);
 
@@ -281,7 +285,6 @@ void RISCVInstPrinter::printStackAdj(const MCInst *MI, unsigned OpNo,
   bool IsRV64 = STI.hasFeature(RISCV::Feature64Bit);
   int64_t StackAdj = 0;
   auto RlistVal = MI->getOperand(0).getImm();
-  assert(RlistVal != 16 && "Incorrect rlist.");
   auto Base = RISCVZC::getStackAdjBase(RlistVal, IsRV64);
   StackAdj = Imm + Base;
   assert((StackAdj >= Base && StackAdj <= Base + 48) &&
