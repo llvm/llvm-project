@@ -39,6 +39,8 @@ static bool callingConvRequiresArgument(const Function &F,
 /// Goes over OldF calls and replaces them with a call to NewF
 static void replaceFunctionCalls(Function &OldF, Function &NewF,
                                  const std::set<int> &ArgIndexesToKeep) {
+  LLVMContext &Ctx = OldF.getContext();
+
   const auto &Users = OldF.users();
   for (auto I = Users.begin(), E = Users.end(); I != E; )
     if (auto *CI = dyn_cast<CallInst>(*I++)) {
@@ -47,12 +49,30 @@ static void replaceFunctionCalls(Function &OldF, Function &NewF,
       if (CI->getCalledFunction() != &OldF)
         continue;
       SmallVector<Value *, 8> Args;
-      for (auto ArgI = CI->arg_begin(), E = CI->arg_end(); ArgI != E; ++ArgI)
-        if (ArgIndexesToKeep.count(ArgI - CI->arg_begin()))
-          Args.push_back(*ArgI);
+      SmallVector<AttrBuilder, 8> ArgAttrs;
 
+      for (auto ArgI = CI->arg_begin(), E = CI->arg_end(); ArgI != E; ++ArgI) {
+        unsigned ArgIdx = ArgI - CI->arg_begin();
+        if (ArgIndexesToKeep.count(ArgIdx)) {
+          Args.push_back(*ArgI);
+          ArgAttrs.emplace_back(Ctx, CI->getParamAttributes(ArgIdx));
+        }
+      }
+
+      // FIXME: Losing bundles, fast math flags and metadata
       CallInst *NewCI = CallInst::Create(&NewF, Args);
       NewCI->setCallingConv(NewF.getCallingConv());
+
+      AttrBuilder CallSiteAttrs(Ctx, CI->getAttributes().getFnAttrs());
+      NewCI->setAttributes(
+          AttributeList::get(Ctx, AttributeList::FunctionIndex, CallSiteAttrs));
+      NewCI->addRetAttrs(AttrBuilder(Ctx, CI->getRetAttributes()));
+
+      unsigned AttrIdx = 0;
+      for (auto ArgI = NewCI->arg_begin(), E = NewCI->arg_end(); ArgI != E;
+           ++ArgI, ++AttrIdx)
+        NewCI->addParamAttrs(AttrIdx, ArgAttrs[AttrIdx]);
+
       if (!CI->use_empty())
         CI->replaceAllUsesWith(NewCI);
       ReplaceInstWithInst(CI, NewCI);
