@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/fcntl_macros.h"
+#include "hdr/sys_stat_macros.h"
 #include "hdr/types/struct_timeval.h"
 #include "src/errno/libc_errno.h"
 #include "src/fcntl/open.h"
@@ -14,14 +15,16 @@
 #include "src/sys/stat/stat.h"
 #include "src/sys/time/utimes.h"
 #include "src/unistd/close.h"
+
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <sys/stat.h>
+using LlvmLibcUtimesTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 // SUCCESS: Takes a file and successfully updates
 // its last access and modified times.
-TEST(LlvmLibcUtimesTest, ChangeTimesSpecific) {
+TEST_F(LlvmLibcUtimesTest, ChangeTimesSpecific) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
   constexpr const char *FILE_PATH = "utimes_pass.test";
@@ -60,7 +63,7 @@ TEST(LlvmLibcUtimesTest, ChangeTimesSpecific) {
 
 // FAILURE: Invalid values in the timeval struct
 // to check that utimes rejects it.
-TEST(LlvmLibcUtimesTest, InvalidMicroseconds) {
+TEST_F(LlvmLibcUtimesTest, InvalidMicroseconds) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
