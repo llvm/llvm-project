@@ -3195,6 +3195,10 @@ def err_attribute_wrong_number_arguments : Error<
 def err_attribute_wrong_number_arguments_for : Error <
   "%0 attribute references function %1, which %plural{0:takes no arguments|1:takes one argument|"
   ":takes exactly %2 arguments}2">;
+def err_callback_attribute_wrong_arg_count : Error<
+  "'callback' attribute references function of type %0 which expects %1 "
+  "%plural{1:argument|:arguments}1 but attribute specifies %2 parameter index "
+  "%plural{1:argument|:arguments}2">;
 def err_attribute_bounds_for_function : Error<
   "%0 attribute references parameter %1, but the function %2 has only %3 parameters">;
 def err_attribute_no_member_function : Error<
