@@ -2246,7 +2246,7 @@ def Tosa_CastOp: Tosa_Op<"cast", [Pure,
   let description = [{
     Casts a tensor from one data type to another.
     * This table is showing the supported conversions from the TOSA Specification.
-    * The MLIR dialect here can be used to represent other conversions. 
+    * The MLIR dialect here can be used to represent other conversions.
 
     | Mode                     | Input   | Output  |
     |--------------------------|---------|---------|
