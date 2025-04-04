@@ -107,6 +107,54 @@ TEST_P(MCPlusBuilderTester, AliasSmallerX0) {
   testRegAliases(Triple::aarch64, AArch64::X0, AliasesX0, AliasesX0Count, true);
 }
 
+TEST_P(MCPlusBuilderTester, AArch64_CmpJE) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+
+  InstructionListType Instrs =
+      BC->MIB->createCmpJE(AArch64::X0, 2, BB->getLabel(), BC->Ctx.get());
+  BB->addInstructions(Instrs.begin(), Instrs.end());
+  BB->addSuccessor(BB.get());
+
+  auto II = BB->begin();
+  ASSERT_EQ(II->getOpcode(), AArch64::SUBSXri);
+  ASSERT_EQ(II->getOperand(0).getReg(), AArch64::XZR);
+  ASSERT_EQ(II->getOperand(1).getReg(), AArch64::X0);
+  ASSERT_EQ(II->getOperand(2).getImm(), 2);
+  ASSERT_EQ(II->getOperand(3).getImm(), 0);
+  II++;
+  ASSERT_EQ(II->getOpcode(), AArch64::Bcc);
+  ASSERT_EQ(II->getOperand(0).getImm(), AArch64CC::EQ);
+  const MCSymbol *Label = BC->MIB->getTargetSymbol(*II, 1);
+  ASSERT_EQ(Label, BB->getLabel());
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_CmpJNE) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+
+  InstructionListType Instrs =
+      BC->MIB->createCmpJNE(AArch64::X0, 2, BB->getLabel(), BC->Ctx.get());
+  BB->addInstructions(Instrs.begin(), Instrs.end());
+  BB->addSuccessor(BB.get());
+
+  auto II = BB->begin();
+  ASSERT_EQ(II->getOpcode(), AArch64::SUBSXri);
+  ASSERT_EQ(II->getOperand(0).getReg(), AArch64::XZR);
+  ASSERT_EQ(II->getOperand(1).getReg(), AArch64::X0);
+  ASSERT_EQ(II->getOperand(2).getImm(), 2);
+  ASSERT_EQ(II->getOperand(3).getImm(), 0);
+  II++;
+  ASSERT_EQ(II->getOpcode(), AArch64::Bcc);
+  ASSERT_EQ(II->getOperand(0).getImm(), AArch64CC::NE);
+  const MCSymbol *Label = BC->MIB->getTargetSymbol(*II, 1);
+  ASSERT_EQ(Label, BB->getLabel());
+}
+
 #endif // AARCH64_AVAILABLE
 
 #ifdef X86_AVAILABLE
@@ -141,6 +189,50 @@ TEST_P(MCPlusBuilderTester, ReplaceRegWithImm) {
   ASSERT_EQ(II->getOpcode(), X86::CMP32ri8);
   ASSERT_EQ(II->getOperand(0).getReg(), X86::EAX);
   ASSERT_EQ(II->getOperand(1).getImm(), 1);
+}
+
+TEST_P(MCPlusBuilderTester, X86_CmpJE) {
+  if (GetParam() != Triple::x86_64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+
+  InstructionListType Instrs =
+      BC->MIB->createCmpJE(X86::EAX, 2, BB->getLabel(), BC->Ctx.get());
+  BB->addInstructions(Instrs.begin(), Instrs.end());
+  BB->addSuccessor(BB.get());
+
+  auto II = BB->begin();
+  ASSERT_EQ(II->getOpcode(), X86::CMP64ri8);
+  ASSERT_EQ(II->getOperand(0).getReg(), X86::EAX);
+  ASSERT_EQ(II->getOperand(1).getImm(), 2);
+  II++;
+  ASSERT_EQ(II->getOpcode(), X86::JCC_1);
+  const MCSymbol *Label = BC->MIB->getTargetSymbol(*II, 0);
+  ASSERT_EQ(Label, BB->getLabel());
+  ASSERT_EQ(II->getOperand(1).getImm(), X86::COND_E);
+}
+
+TEST_P(MCPlusBuilderTester, X86_CmpJNE) {
+  if (GetParam() != Triple::x86_64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+
+  InstructionListType Instrs =
+      BC->MIB->createCmpJNE(X86::EAX, 2, BB->getLabel(), BC->Ctx.get());
+  BB->addInstructions(Instrs.begin(), Instrs.end());
+  BB->addSuccessor(BB.get());
+
+  auto II = BB->begin();
+  ASSERT_EQ(II->getOpcode(), X86::CMP64ri8);
+  ASSERT_EQ(II->getOperand(0).getReg(), X86::EAX);
+  ASSERT_EQ(II->getOperand(1).getImm(), 2);
+  II++;
+  ASSERT_EQ(II->getOpcode(), X86::JCC_1);
+  const MCSymbol *Label = BC->MIB->getTargetSymbol(*II, 0);
+  ASSERT_EQ(Label, BB->getLabel());
+  ASSERT_EQ(II->getOperand(1).getImm(), X86::COND_NE);
 }
 
 #endif // X86_AVAILABLE
