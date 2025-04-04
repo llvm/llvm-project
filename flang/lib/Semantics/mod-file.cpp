@@ -8,6 +8,7 @@
 
 #include "mod-file.h"
 #include "resolve-names.h"
+#include "flang/Common/indirection.h"
 #include "flang/Common/restorer.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/message.h"
@@ -894,6 +895,7 @@ void ModFileWriter::PutEntity(llvm::raw_ostream &os, const Symbol &symbol) {
           [&](const ObjectEntityDetails &) { PutObjectEntity(os, symbol); },
           [&](const ProcEntityDetails &) { PutProcEntity(os, symbol); },
           [&](const TypeParamDetails &) { PutTypeParam(os, symbol); },
+          [&](const UserReductionDetails &) { PutUserReduction(os, symbol); },
           [&](const auto &) {
             common::die("PutEntity: unexpected details: %s",
                 DetailsToString(symbol.details()).c_str());
@@ -1041,6 +1043,25 @@ void ModFileWriter::PutTypeParam(llvm::raw_ostream &os, const Symbol &symbol) {
       symbol.attrs());
   PutInit(os, details.init());
   os << '\n';
+}
+
+void ModFileWriter::PutUserReduction(
+    llvm::raw_ostream &os, const Symbol &symbol) {
+  auto &details{symbol.get<UserReductionDetails>()};
+  // The module content for a OpenMP Declare Reduction is the OpenMP
+  // declaration. There may be multiple declarations.
+  // Decls are pointers, so do not use a referene.
+  for (const auto decl : details.GetDeclList()) {
+    if (auto d = std::get_if<const parser::OpenMPDeclareReductionConstruct *>(
+            &decl)) {
+      Unparse(os, **d, context_.langOptions());
+    } else if (auto s = std::get_if<const parser::OmpDirectiveSpecification *>(
+                   &decl)) {
+      Unparse(os, **s, context_.langOptions());
+    } else {
+      DIE("Unknown OpenMP DECLARE REDUCTION content");
+    }
+  }
 }
 
 void PutInit(llvm::raw_ostream &os, const Symbol &symbol, const MaybeExpr &init,

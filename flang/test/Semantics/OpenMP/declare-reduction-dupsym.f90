@@ -9,7 +9,7 @@ subroutine dup_symbol()
  
   integer :: my_red
 
-!CHECK: error: Duplicate defineition of 'my_red' in !$OMP DECLARE REDUCTION
+!CHECK: error: Duplicate definition of 'my_red' in !$OMP DECLARE REDUCTION
   !$omp declare reduction(my_red : loc :  omp_out%x = omp_out%x + omp_in%x) initializer(omp_priv%x = 0)
   
 end subroutine dup_symbol
