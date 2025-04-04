@@ -119,9 +119,10 @@ static bool isEvenDistributed(llvm::ArrayRef<int64_t> shape,
     auto lane_data = attr.getLaneData();
     data = lane_data ? lane_data.asArrayRef() : defaults;
   }
-  for (auto [s, d, l] : llvm::zip_equal(shape, data, layout)) {
-    // check s % (d * l) != 0
-    if (s % d != 0 || (s / d) % l != 0)
+  for (auto [dimSize, dataFactor, layoutFactor] :
+       llvm::zip_equal(shape, data, layout)) {
+    // check dimSize % (dataFactor * layoutFactor) != 0
+    if (dimSize % dataFactor != 0 || (dimSize / dataFactor) % layoutFactor != 0)
       return false;
   }
   return true;
@@ -602,17 +603,15 @@ LogicalResult DpasOp::verify() {
 
   // make sure the layout attribute is either set for every available
   // operand or simply not set at all. C is special, since ACC is optional.
-  // If they are all set, they also should be in the same scope.
-  auto isValidSet = [&]() {
+  auto hasValidLayoutAttrs = [&]() {
     bool result = (aLayout != nullptr) ^ (bLayout != nullptr);
     if (hasAcc()) {
       result |= (aLayout != nullptr) ^ (cLayout != nullptr);
     }
-    result = !result;
-    return result;
+    return !result;
   };
 
-  if (!isValidSet())
+  if (!hasValidLayoutAttrs())
     return emitOpError(
         "layout attributes should be either set for all operands (for SIMT "
         "code) or not set at all (for SIMD code).");
