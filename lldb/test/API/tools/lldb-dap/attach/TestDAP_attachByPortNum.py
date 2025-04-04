@@ -32,6 +32,9 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(
             len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
         )
+        # Send a configurationDone request when process is ready to continue
+        self.dap_server.request_configurationDone()
+        self.assertTrue(self.verify_stop_exception_info("signal SIGSTOP"))
         self.continue_to_breakpoints(breakpoint_ids)
         if continueToExit:
             self.continue_to_exit()
