@@ -1148,12 +1148,13 @@ void SymbolFileDWARFDebugMap::FindFunctions(const RegularExpression &regex,
 void SymbolFileDWARFDebugMap::FindImportedDeclaration(
     ConstString name, std::vector<ImportedDeclaration> &declarations,
     bool find_one) {
-  ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) {
-    oso_dwarf->FindImportedDeclaration(name, declarations, find_one);
-    if (find_one && !declarations.empty())
-      return IterationAction::Stop;
-    return IterationAction::Continue;
-  });
+  ForEachSymbolFile(
+      "Finding imported declaration", [&](SymbolFileDWARF &oso_dwarf) {
+        oso_dwarf.FindImportedDeclaration(name, declarations, find_one);
+        if (find_one && !declarations.empty())
+          return IterationAction::Stop;
+        return IterationAction::Continue;
+      });
 }
 
 void SymbolFileDWARFDebugMap::GetTypes(SymbolContextScope *sc_scope,
@@ -1297,8 +1298,8 @@ bool SymbolFileDWARFDebugMap::GetCompileOption(const char *option,
                                                std::string &value,
                                                CompileUnit *cu) {
   bool success = false;
-  ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) {
-    success |= oso_dwarf->GetCompileOption(option, value, cu);
+  ForEachSymbolFile("Getting compile option", [&](SymbolFileDWARF &oso_dwarf) {
+    success |= oso_dwarf.GetCompileOption(option, value, cu);
     return success ? IterationAction::Stop
                               : IterationAction::Continue;
   });
