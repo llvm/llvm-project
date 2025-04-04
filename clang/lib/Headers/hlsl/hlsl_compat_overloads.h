@@ -285,12 +285,10 @@ _DXC_COMPAT_TERNARY_INTEGER_OVERLOADS(lerp)
 //===----------------------------------------------------------------------===//
 
 template <typename T>
-constexpr __detail::enable_if_t<__detail::is_arithmetic<T>::Value &&
-                                    !__detail::is_same<half, T>::value &&
-                                    !__detail::is_same<float, T>::value,
-                                vector<T, 4>>
+const inline __detail::enable_if_t<__detail::is_arithmetic<T>::Value,
+                                   vector<T, 4>>
 lit(T NDotL, T NDotH, T M) {
-  return lit((float)NDotL, (float)NDotH, (float)M);
+  return lit<float>((float)NDotL, (float)NDotH, (float)M);
 }
 
 //===----------------------------------------------------------------------===//

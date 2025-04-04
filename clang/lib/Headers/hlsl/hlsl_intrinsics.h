@@ -283,19 +283,14 @@ const inline float length(__detail::HLSL_FIXED_VECTOR<float, N> X) {
 /// This function returns a lighting coefficient vector (ambient, diffuse,
 /// specular, 1).
 
-template <typename T>
+template <>
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-const inline __detail::enable_if_t<__detail::is_arithmetic<T>::Value &&
-                                       __detail::is_same<half, T>::value,
-                                   vector<T, 4>> lit(T NDotL, T NDotH, T M) {
+const inline vector<half, 4> lit<half>(half NDotL, half NDotH, half M) {
   return __detail::lit_impl(NDotL, NDotH, M);
 }
 
-template <typename T>
-const inline __detail::enable_if_t<__detail::is_arithmetic<T>::Value &&
-                                       __detail::is_same<float, T>::value,
-                                   vector<T, 4>>
-lit(T NDotL, T NDotH, T M) {
+template <>
+const inline vector<float, 4> lit<float>(float NDotL, float NDotH, float M) {
   return __detail::lit_impl(NDotL, NDotH, M);
 }
 
