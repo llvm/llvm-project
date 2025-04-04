@@ -2239,7 +2239,9 @@ class LDU_G<string TyStr, NVPTXRegClass regclass>
 def INT_PTX_LDU_GLOBAL_i8  : LDU_G<"u8", Int16Regs>;
 def INT_PTX_LDU_GLOBAL_i16 : LDU_G<"u16", Int16Regs>;
 def INT_PTX_LDU_GLOBAL_i32 : LDU_G<"u32", Int32Regs>;
+def INT_PTX_LDU_GLOBAL_b32 : LDU_G<"b32", Int32Regs>;
 def INT_PTX_LDU_GLOBAL_i64 : LDU_G<"u64", Int64Regs>;
+def INT_PTX_LDU_GLOBAL_b64 : LDU_G<"b64", Int64Regs>;
 def INT_PTX_LDU_GLOBAL_f32 : LDU_G<"f32", Float32Regs>;
 def INT_PTX_LDU_GLOBAL_f64 : LDU_G<"f64", Float64Regs>;
 
@@ -2289,7 +2291,9 @@ class LDG_G<string TyStr, NVPTXRegClass regclass>
 def INT_PTX_LDG_GLOBAL_i8 : LDG_G<"u8", Int16Regs>;
 def INT_PTX_LDG_GLOBAL_i16 : LDG_G<"u16", Int16Regs>;
 def INT_PTX_LDG_GLOBAL_i32 : LDG_G<"u32", Int32Regs>;
+def INT_PTX_LDG_GLOBAL_b32 : LDG_G<"b32", Int32Regs>;
 def INT_PTX_LDG_GLOBAL_i64 : LDG_G<"u64", Int64Regs>;
+def INT_PTX_LDG_GLOBAL_b64 : LDG_G<"b64", Int64Regs>;
 def INT_PTX_LDG_GLOBAL_f32 : LDG_G<"f32", Float32Regs>;
 def INT_PTX_LDG_GLOBAL_f64 : LDG_G<"f64", Float64Regs>;
 
