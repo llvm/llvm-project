@@ -120,7 +120,9 @@
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a+crc -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-CRC32 %s
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8.1-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-CRC32 %s
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8.1-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-CRC32 %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8.1-a+nocrc -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOCRC %s
 // CHECK-CRC32: __ARM_FEATURE_CRC32 1
+// CHECK-NOCRC-NOT: __ARM_FEATURE_CRC32 1
 
 // RUN: %clang -target aarch64-none-linux-gnu -fno-math-errno -fno-signed-zeros\
 // RUN:        -fno-trapping-math -fassociative-math -freciprocal-math -fapprox-func\
