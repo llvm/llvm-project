@@ -443,7 +443,7 @@ protected:
 public:
   std::vector<MCInstReference>
   getLastClobberingInsts(const MCInst &Inst, BinaryFunction &BF,
-                         const ArrayRef<MCPhysReg> UsedDirtyRegs) {
+                         const ArrayRef<MCPhysReg> UsedDirtyRegs) const {
     if (RegsToTrackInstsFor.empty())
       return {};
     auto MaybeState = getStateBefore(Inst);
