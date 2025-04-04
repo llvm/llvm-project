@@ -1197,6 +1197,44 @@ program chdir_func
 end program chdir_func
 ```
 
+### Non-Standard Intrinsics: FSEEK and FTELL
+
+#### Description
+`FSEEK(UNIT, OFFSET, WHENCE)` Sets position in file opened as `UNIT`, returns status.
+
+`CALL FSEEK(UNIT, OFFSET, WHENCE[, STATUS])` Sets position, returns any error in `STATUS` if present.
+
+`FTELL(UNIT)` Returns current absolute byte offset.
+
+`CALL FTELL(UNIT, OFFSET)` Set `OFFSET` to current byte offset in file.
+
+These intrinsic procedures are available as both functions and subroutines,
+but both forms cannot be used in the same scope.
+
+These arguments must all be integers.
+The value returned from the function form of `FTELL` is `INTEGER(8)`.
+
+|            |                                                 |
+|------------|-------------------------------------------------|
+| `UNIT`     | An open unit number                             |
+| `OFFSET`   | A byte offset; set to -1 by `FTELL` on error    |
+| `WHENCE`   | 0: `OFFSET` is an absolute position             |
+|            | 1: `OFFSET` is relative to the current position |
+|            | 2: `OFFSET` is relative to the end of the file  |
+| `STATUS`   | Set to a nonzero value if an error occurs       |
+|------------|-------------------------------------------------|
+
+The aliases `FSEEK64`, `FSEEKO64`, `FSEEKI8`, `FTELL64`, `FTELLO64`, and
+`FTELLI8` are also accepted for further compatibility.
+
+Avoid using these intrinsics in new code when the standard `ACCESS="STREAM"`
+feature meets your needs.
+
+#### Usage and Info
+
+- **Standard:** Extensions to GNU, Intel, and SUN (at least)
+- **Class:** Subroutine, function
+
 ### Non-Standard Intrinsics: IERRNO
 
 #### Description
