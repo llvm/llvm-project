@@ -28,6 +28,7 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -3941,6 +3942,24 @@ static bool canScaleShuffleElements(ArrayRef<int> Mask, unsigned NumDstElts) {
   return scaleShuffleElements(Mask, NumDstElts, ScaledMask);
 }
 
+// Helper to grow the shuffle mask for a larger value type.
+// NOTE: This is different to scaleShuffleElements which is a same size type.
+static void growShuffleMask(ArrayRef<int> SrcMask,
+                            SmallVectorImpl<int> &DstMask,
+                            unsigned SrcSizeInBits, unsigned DstSizeInBits) {
+  assert(DstMask.empty() && "Expected an empty shuffle mas");
+  assert((DstSizeInBits % SrcSizeInBits) == 0 && "Illegal shuffle scale");
+  unsigned Scale = DstSizeInBits / SrcSizeInBits;
+  unsigned NumSrcElts = SrcMask.size();
+  DstMask.assign(SrcMask.begin(), SrcMask.end());
+  for (int &M : DstMask) {
+    if (M < 0)
+      continue;
+    M = (M % NumSrcElts) + ((M / NumSrcElts) * Scale * NumSrcElts);
+  }
+  DstMask.append((Scale - 1) * NumSrcElts, SM_SentinelUndef);
+}
+
 /// Returns true if Elt is a constant zero or a floating point constant +0.0.
 bool X86::isZeroNode(SDValue Elt) {
   return isNullConstant(Elt) || isNullFPConstant(Elt);
@@ -6185,18 +6204,26 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     }
     if (!N->isOnlyUserOf(Sub.getNode()))
       return false;
-    SDValue SubBC = peekThroughBitcasts(Sub);
+
+    SmallVector<int, 64> SubMask;
+    SmallVector<SDValue, 2> SubInputs;
+    SDValue SubSrc = peekThroughOneUseBitcasts(Sub);
+    EVT SubSrcVT = SubSrc.getValueType();
+    if (!SubSrcVT.isVector())
+      return false;
+
     // Handle INSERT_SUBVECTOR(SRC0, EXTRACT_SUBVECTOR(SRC1)).
-    if (SubBC.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-        SubBC.getOperand(0).getValueSizeInBits() == NumSizeInBits) {
-      uint64_t ExtractIdx = SubBC.getConstantOperandVal(1);
-      SDValue SubBCSrc = SubBC.getOperand(0);
-      unsigned NumSubSrcBCElts = SubBCSrc.getValueType().getVectorNumElements();
-      unsigned MaxElts = std::max(NumElts, NumSubSrcBCElts);
-      assert((MaxElts % NumElts) == 0 && (MaxElts % NumSubSrcBCElts) == 0 &&
+    if (SubSrc.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+        SubSrc.getOperand(0).getValueSizeInBits() == NumSizeInBits) {
+      uint64_t ExtractIdx = SubSrc.getConstantOperandVal(1);
+      SDValue SubSrcSrc = SubSrc.getOperand(0);
+      unsigned NumSubSrcSrcElts =
+          SubSrcSrc.getValueType().getVectorNumElements();
+      unsigned MaxElts = std::max(NumElts, NumSubSrcSrcElts);
+      assert((MaxElts % NumElts) == 0 && (MaxElts % NumSubSrcSrcElts) == 0 &&
              "Subvector valuetype mismatch");
       InsertIdx *= (MaxElts / NumElts);
-      ExtractIdx *= (MaxElts / NumSubSrcBCElts);
+      ExtractIdx *= (MaxElts / NumSubSrcSrcElts);
       NumSubElts *= (MaxElts / NumElts);
       bool SrcIsUndef = Src.isUndef();
       for (int i = 0; i != (int)MaxElts; ++i)
@@ -6205,17 +6232,11 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
         Mask[InsertIdx + i] = (SrcIsUndef ? 0 : MaxElts) + ExtractIdx + i;
       if (!SrcIsUndef)
         Ops.push_back(Src);
-      Ops.push_back(SubBCSrc);
+      Ops.push_back(SubSrcSrc);
       return true;
     }
-    // Handle INSERT_SUBVECTOR(SRC0, SHUFFLE(SRC1)).
-    SmallVector<int, 64> SubMask;
-    SmallVector<SDValue, 2> SubInputs;
-    SDValue SubSrc = peekThroughOneUseBitcasts(Sub);
-    EVT SubSrcVT = SubSrc.getValueType();
-    if (!SubSrcVT.isVector())
-      return false;
 
+    // Handle INSERT_SUBVECTOR(SRC0, SHUFFLE(SRC1)).
     APInt SubDemand = APInt::getAllOnes(SubSrcVT.getVectorNumElements());
     if (!getTargetShuffleInputs(SubSrc, SubDemand, SubInputs, SubMask, DAG,
                                 Depth + 1, ResolveKnownElts))
@@ -6230,10 +6251,11 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
 
     if (SubMask.size() != NumSubElts) {
       assert(((SubMask.size() % NumSubElts) == 0 ||
-              (NumSubElts % SubMask.size()) == 0) && "Illegal submask scale");
+              (NumSubElts % SubMask.size()) == 0) &&
+             "Illegal submask scale");
       if ((NumSubElts % SubMask.size()) == 0) {
         int Scale = NumSubElts / SubMask.size();
-        SmallVector<int,64> ScaledSubMask;
+        SmallVector<int, 64> ScaledSubMask;
         narrowShuffleMaskElts(Scale, SubMask, ScaledSubMask);
         SubMask = ScaledSubMask;
       } else {
@@ -6413,9 +6435,7 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
   case X86ISD::VTRUNC: {
     SDValue Src = N.getOperand(0);
     EVT SrcVT = Src.getValueType();
-    // Truncated source must be a simple vector.
-    if (!SrcVT.isSimple() || (SrcVT.getSizeInBits() % 128) != 0 ||
-        (SrcVT.getScalarSizeInBits() % 8) != 0)
+    if (SrcVT.getSizeInBits() != NumSizeInBits)
       return false;
     unsigned NumSrcElts = SrcVT.getVectorNumElements();
     unsigned NumBitsPerSrcElt = SrcVT.getScalarSizeInBits();
@@ -35444,28 +35464,6 @@ MVT X86TargetLowering::getPreferredSwitchConditionType(LLVMContext &Context,
 //                           X86 Scheduler Hooks
 //===----------------------------------------------------------------------===//
 
-// Returns true if EFLAG is consumed after this iterator in the rest of the
-// basic block or any successors of the basic block.
-static bool isEFLAGSLiveAfter(MachineBasicBlock::iterator Itr,
-                              MachineBasicBlock *BB) {
-  // Scan forward through BB for a use/def of EFLAGS.
-  for (const MachineInstr &mi : llvm::make_range(std::next(Itr), BB->end())) {
-    if (mi.readsRegister(X86::EFLAGS, /*TRI=*/nullptr))
-      return true;
-    // If we found a def, we can stop searching.
-    if (mi.definesRegister(X86::EFLAGS, /*TRI=*/nullptr))
-      return false;
-  }
-
-  // If we hit the end of the block, check whether EFLAGS is live into a
-  // successor.
-  for (MachineBasicBlock *Succ : BB->successors())
-    if (Succ->isLiveIn(X86::EFLAGS))
-      return true;
-
-  return false;
-}
-
 /// Utility function to emit xbegin specifying the start of an RTM region.
 static MachineBasicBlock *emitXBegin(MachineInstr &MI, MachineBasicBlock *MBB,
                                      const TargetInstrInfo *TII) {
@@ -35498,7 +35496,7 @@ static MachineBasicBlock *emitXBegin(MachineInstr &MI, MachineBasicBlock *MBB,
   MF->insert(I, fallMBB);
   MF->insert(I, sinkMBB);
 
-  if (isEFLAGSLiveAfter(MI, MBB)) {
+  if (isPhysRegUsedAfter(X86::EFLAGS, MI)) {
     mainMBB->addLiveIn(X86::EFLAGS);
     fallMBB->addLiveIn(X86::EFLAGS);
     sinkMBB->addLiveIn(X86::EFLAGS);
@@ -35837,7 +35835,7 @@ X86TargetLowering::EmitVAARGWithCustomInserter(MachineInstr &MI,
 static bool checkAndUpdateEFLAGSKill(MachineBasicBlock::iterator SelectItr,
                                      MachineBasicBlock* BB,
                                      const TargetRegisterInfo* TRI) {
-  if (isEFLAGSLiveAfter(SelectItr, BB))
+  if (isPhysRegUsedAfter(X86::EFLAGS, SelectItr))
     return false;
 
   // We found a def, or hit the end of the basic block and EFLAGS wasn't live
@@ -40455,19 +40453,13 @@ static SDValue combineX86ShuffleChainWithExtract(
   }
 
   // Bail if we fail to find a source larger than the existing root.
-  unsigned Scale = WideSizeInBits / RootSizeInBits;
   if (WideSizeInBits <= RootSizeInBits ||
       (WideSizeInBits % RootSizeInBits) != 0)
     return SDValue();
 
   // Create new mask for larger type.
-  SmallVector<int, 64> WideMask(BaseMask);
-  for (int &M : WideMask) {
-    if (M < 0)
-      continue;
-    M = (M % NumMaskElts) + ((M / NumMaskElts) * Scale * NumMaskElts);
-  }
-  WideMask.append((Scale - 1) * NumMaskElts, SM_SentinelUndef);
+  SmallVector<int, 64> WideMask;
+  growShuffleMask(BaseMask, WideMask, RootSizeInBits, WideSizeInBits);
 
   // Attempt to peek through inputs and adjust mask when we extract from an
   // upper subvector.
@@ -42675,40 +42667,13 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
     return SDValue();
   }
   case X86ISD::VPERMV3: {
-    // Combine VPERMV3 to widened VPERMV if the two source operands can be
-    // freely concatenated.
     MVT WideVT = VT.getDoubleNumVectorElementsVT();
     bool CanConcat = VT.is128BitVector() ||
                      (VT.is256BitVector() && Subtarget.useAVX512Regs());
-    if (CanConcat) {
-      SDValue Ops[] = {N.getOperand(0), N.getOperand(2)};
-      if (SDValue ConcatSrc =
-              combineConcatVectorOps(DL, WideVT, Ops, DAG, Subtarget)) {
-        SDValue Mask = widenSubVector(N.getOperand(1), false, Subtarget, DAG,
-                                      DL, WideVT.getSizeInBits());
-        SDValue Perm = DAG.getNode(X86ISD::VPERMV, DL, WideVT, Mask, ConcatSrc);
-        return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Perm,
-                           DAG.getVectorIdxConstant(0, DL));
-      }
-    }
     SmallVector<SDValue, 2> SrcOps;
     SmallVector<int, 32> Mask;
     if (getTargetShuffleMask(N, /*AllowSentinelZero=*/false, SrcOps, Mask)) {
       assert(Mask.size() == NumElts && "Unexpected shuffle mask size");
-      // See if we can concatenate the commuted operands.
-      if (CanConcat) {
-        if (SDValue ConcatSrc = combineConcatVectorOps(
-                DL, WideVT, {N.getOperand(2), N.getOperand(0)}, DAG,
-                Subtarget)) {
-          ShuffleVectorSDNode::commuteMask(Mask);
-          Mask.append(NumElts, SM_SentinelUndef);
-          SDValue Perm =
-              lowerShuffleWithPERMV(DL, WideVT, Mask, ConcatSrc,
-                                    DAG.getUNDEF(WideVT), Subtarget, DAG);
-          return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Perm,
-                             DAG.getVectorIdxConstant(0, DL));
-        }
-      }
       SDValue V1 = peekThroughBitcasts(N.getOperand(0));
       SDValue V2 = peekThroughBitcasts(N.getOperand(2));
       // Canonicalize to VPERMV if both sources are the same.
@@ -42741,6 +42706,33 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
         ShuffleVectorSDNode::commuteMask(Mask);
         return lowerShuffleWithPERMV(DL, VT, Mask, N.getOperand(2),
                                      N.getOperand(0), Subtarget, DAG);
+      }
+      // Combine VPERMV3 to widened VPERMV if the two source operands can be
+      // freely concatenated, with a commuted shuffle mask.
+      if (CanConcat) {
+        if (SDValue ConcatSrc = combineConcatVectorOps(
+                DL, WideVT, {N.getOperand(2), N.getOperand(0)}, DAG,
+                Subtarget)) {
+          ShuffleVectorSDNode::commuteMask(Mask);
+          Mask.append(NumElts, SM_SentinelUndef);
+          SDValue Perm =
+              lowerShuffleWithPERMV(DL, WideVT, Mask, ConcatSrc,
+                                    DAG.getUNDEF(WideVT), Subtarget, DAG);
+          return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Perm,
+                             DAG.getVectorIdxConstant(0, DL));
+        }
+      }
+    }
+    // Combine VPERMV3 to widened VPERMV if the two source operands can be
+    // freely concatenated.
+    if (CanConcat) {
+      if (SDValue ConcatSrc = combineConcatVectorOps(
+              DL, WideVT, {N.getOperand(0), N.getOperand(2)}, DAG, Subtarget)) {
+        SDValue Mask = widenSubVector(N.getOperand(1), false, Subtarget, DAG,
+                                      DL, WideVT.getSizeInBits());
+        SDValue Perm = DAG.getNode(X86ISD::VPERMV, DL, WideVT, Mask, ConcatSrc);
+        return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Perm,
+                           DAG.getVectorIdxConstant(0, DL));
       }
     }
     return SDValue();
@@ -43809,6 +43801,69 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
           SDValue Ext = extractSubVector(Op.getOperand(0), 2, TLO.DAG, DL, 128);
           SDValue UndefVec = TLO.DAG.getUNDEF(VT);
           SDValue Insert = insertSubVector(UndefVec, Ext, 0, TLO.DAG, DL, 128);
+          return TLO.CombineTo(Op, Insert);
+        }
+      }
+      break;
+    }
+    case X86ISD::VPERMV: {
+      SmallVector<int, 16> Mask;
+      SmallVector<SDValue, 2> Ops;
+      if ((VT.is256BitVector() || Subtarget.hasVLX()) &&
+          getTargetShuffleMask(Op, /*AllowSentinelZero=*/false, Ops, Mask)) {
+        // For lane-crossing shuffles, only split in half in case we're still
+        // referencing higher elements.
+        unsigned HalfElts = NumElts / 2;
+        unsigned HalfSize = SizeInBits / 2;
+        Mask.resize(HalfElts);
+        if (all_of(Mask,
+                   [&](int M) { return isUndefOrInRange(M, 0, HalfElts); })) {
+          MVT HalfVT = VT.getSimpleVT().getHalfNumVectorElementsVT();
+          SDLoc DL(Op);
+          SDValue Ext;
+          SDValue M =
+              extractSubVector(Op.getOperand(0), 0, TLO.DAG, DL, HalfSize);
+          SDValue V =
+              extractSubVector(Op.getOperand(1), 0, TLO.DAG, DL, HalfSize);
+          // For 128-bit v2X64/v4X32 instructions, use VPERMILPD/VPERMILPS.
+          if (VT.is512BitVector() || VT.getScalarSizeInBits() <= 16)
+            Ext = TLO.DAG.getNode(Opc, DL, HalfVT, M, V);
+          else
+            Ext = TLO.DAG.getNode(X86ISD::VPERMILPV, DL, HalfVT, V, M);
+          SDValue Insert = widenSubVector(Ext, /*ZeroNewElements=*/false,
+                                          Subtarget, TLO.DAG, DL, SizeInBits);
+          return TLO.CombineTo(Op, Insert);
+        }
+      }
+      break;
+    }
+    case X86ISD::VPERMV3: {
+      SmallVector<int, 16> Mask;
+      SmallVector<SDValue, 2> Ops;
+      if (Subtarget.hasVLX() &&
+          getTargetShuffleMask(Op, /*AllowSentinelZero=*/false, Ops, Mask)) {
+        // For lane-crossing shuffles, only split in half in case we're still
+        // referencing higher elements.
+        unsigned HalfElts = NumElts / 2;
+        unsigned HalfSize = SizeInBits / 2;
+        Mask.resize(HalfElts);
+        if (all_of(Mask, [&](int M) {
+              return isUndefOrInRange(M, 0, HalfElts) ||
+                     isUndefOrInRange(M, NumElts, NumElts + HalfElts);
+            })) {
+          // Adjust mask elements for 2nd operand to point to half width.
+          for (int &M : Mask)
+            M = (M < NumElts) ? M : (M - HalfElts);
+          MVT HalfVT = VT.getSimpleVT().getHalfNumVectorElementsVT();
+          MVT HalfIntVT = HalfVT.changeVectorElementTypeToInteger();
+          SDLoc DL(Op);
+          SDValue Ext = TLO.DAG.getNode(
+              Opc, DL, HalfVT,
+              extractSubVector(Op.getOperand(0), 0, TLO.DAG, DL, HalfSize),
+              getConstVector(Mask, HalfIntVT, TLO.DAG, DL, /*IsMask=*/true),
+              extractSubVector(Op.getOperand(2), 0, TLO.DAG, DL, HalfSize));
+          SDValue Insert = widenSubVector(Ext, /*ZeroNewElements=*/false,
+                                          Subtarget, TLO.DAG, DL, SizeInBits);
           return TLO.CombineTo(Op, Insert);
         }
       }

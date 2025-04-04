@@ -182,6 +182,8 @@ static cl::opt<bool> CtxprofMoveRootsToOwnModule(
              "their own module."),
     cl::Hidden, cl::init(false));
 
+extern cl::list<GlobalValue::GUID> MoveSymbolGUID;
+
 namespace llvm {
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
 }
@@ -516,6 +518,7 @@ protected:
       const ModuleSummaryIndex &Index,
       DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists = nullptr)
       : IsPrevailing(IsPrevailing), Index(Index), ExportLists(ExportLists) {}
+  virtual bool canImport(ValueInfo VI) { return true; }
 
 public:
   virtual ~ModuleImportsManager() = default;
@@ -544,6 +547,11 @@ class WorkloadImportsManager : public ModuleImportsManager {
   // determine if a module's import list should be done by the base
   // ModuleImportsManager or by us.
   StringMap<DenseSet<ValueInfo>> Workloads;
+  // Track the roots to avoid importing them due to other callers. We want there
+  // to be only one variant), for which we optimize according to the contextual
+  // profile. "Variants" refers to copies due to importing - we want there to be
+  // just one instance of this function.
+  DenseSet<ValueInfo> Roots;
 
   void
   computeImportForModule(const GVSummaryMapTy &DefinedGVSummaries,
@@ -783,11 +791,14 @@ class WorkloadImportsManager : public ModuleImportsManager {
       }
       auto &Set = Workloads[RootDefiningModule];
       Root.getContainedGuids(ContainedGUIDs);
+      Roots.insert(RootVI);
       for (auto Guid : ContainedGUIDs)
         if (auto VI = Index.getValueInfo(Guid))
           Set.insert(VI);
     }
   }
+
+  bool canImport(ValueInfo VI) override { return !Roots.contains(VI); }
 
 public:
   WorkloadImportsManager(
@@ -883,6 +894,15 @@ void ModuleImportsManager::computeImportForFunction(
       // a non-prevailing def with interposable linkage. The prevailing copy
       // can safely be imported (see shouldImportGlobal()).
       LLVM_DEBUG(dbgs() << "ignored! Target already in destination module.\n");
+      continue;
+    }
+
+    if (!canImport(VI)) {
+      LLVM_DEBUG(
+          dbgs() << "Skipping over " << VI.getGUID()
+                 << " because its import is handled in a different module.");
+      assert(VI.getSummaryList().size() == 1 &&
+             "The root was expected to be an external symbol");
       continue;
     }
 
@@ -1841,6 +1861,15 @@ Expected<bool> FunctionImporter::importFunctions(
   LLVM_DEBUG(dbgs() << "Starting import for Module "
                     << DestModule.getModuleIdentifier() << "\n");
   unsigned ImportedCount = 0, ImportedGVCount = 0;
+  // Before carrying out any imports, see if this module defines functions in
+  // MoveSymbolGUID. If it does, delete them here (but leave the declaration).
+  // The function will be imported elsewhere, as extenal linkage, and the
+  // destination doesn't yet have its definition.
+  DenseSet<GlobalValue::GUID> MoveSymbolGUIDSet;
+  MoveSymbolGUIDSet.insert_range(MoveSymbolGUID);
+  for (auto &F : DestModule)
+    if (!F.isDeclaration() && MoveSymbolGUIDSet.contains(F.getGUID()))
+      F.deleteBody();
 
   IRMover Mover(DestModule);
 

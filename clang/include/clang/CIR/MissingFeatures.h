@@ -118,6 +118,7 @@ struct MissingFeatures {
   static bool vectorType() { return false; }
   static bool complexType() { return false; }
   static bool fixedPointType() { return false; }
+  static bool stringTypeWithDifferentArraySize() { return false; }
 
   // Future CIR operations
   static bool awaitOp() { return false; }

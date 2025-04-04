@@ -49,6 +49,8 @@ defm constexpr_ctor_missing_init : CXX20Compat<
 defm adl_only_template_id : CXX20Compat<
   "use of function template name with no prior declaration in function call "
   "with explicit template arguments is">;
+defm ctad_for_alias_templates
+    : CXX20Compat<"class template argument deduction for alias templates is">;
 
 // C++23 compatibility with C++20 and earlier.
 defm constexpr_static_var : CXX23Compat<
@@ -8448,11 +8450,6 @@ let CategoryName = "Lambda Issue" in {
   def warn_cxx17_compat_lambda_def_ctor_assign : Warning<
     "%select{default construction|assignment}0 of lambda is incompatible with "
     "C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
-
-  // C++20 class template argument deduction for alias templates.
-  def warn_cxx17_compat_ctad_for_alias_templates : Warning<
-  "class template argument deduction for alias templates is incompatible with "
-  "C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
 }
 
 def err_return_in_captured_stmt : Error<
@@ -13056,6 +13053,6 @@ def err_acc_decl_for_routine
     : Error<"expected function or lambda declaration for 'routine' construct">;
 
 // AMDGCN builtins diagnostics
-def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;
-def note_amdgcn_global_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
+def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;
+def note_amdgcn_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
 } // end of sema component.

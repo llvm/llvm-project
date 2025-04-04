@@ -1350,9 +1350,9 @@ std::optional<TemplateDeductionInfo *> Sema::isSFINAEContext() const {
 
 static TemplateArgument
 getPackSubstitutedTemplateArgument(Sema &S, TemplateArgument Arg) {
-  assert(S.ArgumentPackSubstitutionIndex >= 0);
-  assert(S.ArgumentPackSubstitutionIndex < (int)Arg.pack_size());
-  Arg = Arg.pack_begin()[S.ArgumentPackSubstitutionIndex];
+  assert(S.ArgPackSubstIndex);
+  assert(*S.ArgPackSubstIndex < Arg.pack_size());
+  Arg = Arg.pack_begin()[*S.ArgPackSubstIndex];
   if (Arg.isPackExpansion())
     Arg = Arg.getPackExpansionPattern();
   return Arg;
@@ -1418,18 +1418,18 @@ namespace {
       return TemplateArgs.getNewDepth(Depth);
     }
 
-    std::optional<unsigned> getPackIndex(TemplateArgument Pack) {
-      int Index = getSema().ArgumentPackSubstitutionIndex;
-      if (Index == -1)
+    UnsignedOrNone getPackIndex(TemplateArgument Pack) {
+      UnsignedOrNone Index = getSema().ArgPackSubstIndex;
+      if (!Index)
         return std::nullopt;
-      return Pack.pack_size() - 1 - Index;
+      return Pack.pack_size() - 1 - *Index;
     }
 
     bool TryExpandParameterPacks(SourceLocation EllipsisLoc,
                                  SourceRange PatternRange,
                                  ArrayRef<UnexpandedParameterPack> Unexpanded,
                                  bool &ShouldExpand, bool &RetainExpansion,
-                                 std::optional<unsigned> &NumExpansions) {
+                                 UnsignedOrNone &NumExpansions) {
       return getSema().CheckParameterPacksForExpansion(EllipsisLoc,
                                                        PatternRange, Unexpanded,
                                                        TemplateArgs,
@@ -1481,7 +1481,7 @@ namespace {
     getTemplateArgumentPackPatternForRewrite(const TemplateArgument &TA) {
       if (TA.getKind() != TemplateArgument::Pack)
         return TA;
-      if (SemaRef.ArgumentPackSubstitutionIndex != -1)
+      if (SemaRef.ArgPackSubstIndex)
         return getPackSubstitutedTemplateArgument(SemaRef, TA);
       assert(TA.pack_size() == 1 && TA.pack_begin()->isPackExpansion() &&
              "unexpected pack arguments in template rewrite");
@@ -1667,7 +1667,7 @@ namespace {
       return inherited::TransformTemplateArgument(Input, Output, Uneval);
     }
 
-    std::optional<unsigned> ComputeSizeOfPackExprWithoutSubstitution(
+    UnsignedOrNone ComputeSizeOfPackExprWithoutSubstitution(
         ArrayRef<TemplateArgument> PackArgs) {
       // Don't do this when rewriting template parameters for CTAD:
       //   1) The heuristic needs the unpacked Subst* nodes to figure out the
@@ -1691,10 +1691,10 @@ namespace {
                                         Qualifiers ThisTypeQuals,
                                         Fn TransformExceptionSpec);
 
-    ParmVarDecl *
-    TransformFunctionTypeParam(ParmVarDecl *OldParm, int indexAdjustment,
-                               std::optional<unsigned> NumExpansions,
-                               bool ExpectParameterPack);
+    ParmVarDecl *TransformFunctionTypeParam(ParmVarDecl *OldParm,
+                                            int indexAdjustment,
+                                            UnsignedOrNone NumExpansions,
+                                            bool ExpectParameterPack);
 
     using inherited::TransformTemplateTypeParmType;
     /// Transforms a template type parameter type by performing
@@ -1705,7 +1705,7 @@ namespace {
 
     QualType BuildSubstTemplateTypeParmType(
         TypeLocBuilder &TLB, bool SuppressObjCLifetime, bool Final,
-        Decl *AssociatedDecl, unsigned Index, std::optional<unsigned> PackIndex,
+        Decl *AssociatedDecl, unsigned Index, UnsignedOrNone PackIndex,
         TemplateArgument Arg, SourceLocation NameLoc);
 
     /// Transforms an already-substituted template type parameter pack
@@ -1865,10 +1865,11 @@ namespace {
         Sema::ExtParameterInfoBuilder &PInfos);
 
   private:
-    ExprResult transformNonTypeTemplateParmRef(
-        Decl *AssociatedDecl, const NonTypeTemplateParmDecl *parm,
-        SourceLocation loc, TemplateArgument arg,
-        std::optional<unsigned> PackIndex, bool Final);
+    ExprResult
+    transformNonTypeTemplateParmRef(Decl *AssociatedDecl,
+                                    const NonTypeTemplateParmDecl *parm,
+                                    SourceLocation loc, TemplateArgument arg,
+                                    UnsignedOrNone PackIndex, bool Final);
   };
 }
 
@@ -1957,7 +1958,7 @@ TemplateInstantiator::TransformFirstQualifierInScope(NamedDecl *D,
         assert(Arg.getKind() == TemplateArgument::Pack &&
                "Missing argument pack");
 
-        if (getSema().ArgumentPackSubstitutionIndex == -1)
+        if (!getSema().ArgPackSubstIndex)
           return nullptr;
 
         Arg = getPackSubstitutedTemplateArgument(getSema(), Arg);
@@ -2062,12 +2063,12 @@ TemplateName TemplateInstantiator::TransformTemplateName(
 
       auto [AssociatedDecl, Final] =
           TemplateArgs.getAssociatedDecl(TTP->getDepth());
-      std::optional<unsigned> PackIndex;
+      UnsignedOrNone PackIndex = std::nullopt;
       if (TTP->isParameterPack()) {
         assert(Arg.getKind() == TemplateArgument::Pack &&
                "Missing argument pack");
 
-        if (getSema().ArgumentPackSubstitutionIndex == -1) {
+        if (!getSema().ArgPackSubstIndex) {
           // We have the template argument pack to substitute, but we're not
           // actually expanding the enclosing pack expansion yet. So, just
           // keep the entire argument pack.
@@ -2089,7 +2090,7 @@ TemplateName TemplateInstantiator::TransformTemplateName(
 
   if (SubstTemplateTemplateParmPackStorage *SubstPack
       = Name.getAsSubstTemplateTemplateParmPack()) {
-    if (getSema().ArgumentPackSubstitutionIndex == -1)
+    if (!getSema().ArgPackSubstIndex)
       return Name;
 
     TemplateArgument Pack = SubstPack->getArgumentPack();
@@ -2141,12 +2142,12 @@ TemplateInstantiator::TransformTemplateParmRefExpr(DeclRefExpr *E,
 
   auto [AssociatedDecl, Final] =
       TemplateArgs.getAssociatedDecl(NTTP->getDepth());
-  std::optional<unsigned> PackIndex;
+  UnsignedOrNone PackIndex = std::nullopt;
   if (NTTP->isParameterPack()) {
     assert(Arg.getKind() == TemplateArgument::Pack &&
            "Missing argument pack");
 
-    if (getSema().ArgumentPackSubstitutionIndex == -1) {
+    if (!getSema().ArgPackSubstIndex) {
       // We have an argument pack, but we can't select a particular argument
       // out of it yet. Therefore, we'll build an expression to hold on to that
       // argument pack.
@@ -2262,7 +2263,7 @@ TemplateInstantiator::TransformOpenACCRoutineDeclAttr(
 
 ExprResult TemplateInstantiator::transformNonTypeTemplateParmRef(
     Decl *AssociatedDecl, const NonTypeTemplateParmDecl *parm,
-    SourceLocation loc, TemplateArgument arg, std::optional<unsigned> PackIndex,
+    SourceLocation loc, TemplateArgument arg, UnsignedOrNone PackIndex,
     bool Final) {
   ExprResult result;
 
@@ -2271,7 +2272,7 @@ ExprResult TemplateInstantiator::transformNonTypeTemplateParmRef(
   auto SubstParamType = [&] {
     QualType T;
     if (parm->isExpandedParameterPack())
-      T = parm->getExpansionType(SemaRef.ArgumentPackSubstitutionIndex);
+      T = parm->getExpansionType(*SemaRef.ArgPackSubstIndex);
     else
       T = parm->getType();
     if (parm->isParameterPack() && isa<PackExpansionType>(T))
@@ -2337,7 +2338,7 @@ ExprResult TemplateInstantiator::transformNonTypeTemplateParmRef(
 ExprResult
 TemplateInstantiator::TransformSubstNonTypeTemplateParmPackExpr(
                                           SubstNonTypeTemplateParmPackExpr *E) {
-  if (getSema().ArgumentPackSubstitutionIndex == -1) {
+  if (!getSema().ArgPackSubstIndex) {
     // We aren't expanding the parameter pack, so just return ourselves.
     return E;
   }
@@ -2401,9 +2402,9 @@ ExprResult TemplateInstantiator::RebuildVarDeclRefExpr(ValueDecl *PD,
 
 ExprResult
 TemplateInstantiator::TransformFunctionParmPackExpr(FunctionParmPackExpr *E) {
-  if (getSema().ArgumentPackSubstitutionIndex != -1) {
+  if (getSema().ArgPackSubstIndex) {
     // We can expand this parameter pack now.
-    ValueDecl *D = E->getExpansion(getSema().ArgumentPackSubstitutionIndex);
+    ValueDecl *D = E->getExpansion(*getSema().ArgPackSubstIndex);
     ValueDecl *VD = cast_or_null<ValueDecl>(TransformDecl(E->getExprLoc(), D));
     if (!VD)
       return ExprError();
@@ -2445,7 +2446,7 @@ TemplateInstantiator::TransformFunctionParmPackRefExpr(DeclRefExpr *E,
   if (DeclArgumentPack *Pack = dyn_cast<DeclArgumentPack *>(*Found)) {
     // If this is a reference to a function parameter pack which we can
     // substitute but can't yet expand, build a FunctionParmPackExpr for it.
-    if (getSema().ArgumentPackSubstitutionIndex == -1) {
+    if (!getSema().ArgPackSubstIndex) {
       QualType T = TransformType(E->getType());
       if (T.isNull())
         return ExprError();
@@ -2455,7 +2456,7 @@ TemplateInstantiator::TransformFunctionParmPackRefExpr(DeclRefExpr *E,
       return PackExpr;
     }
 
-    TransformedDecl = (*Pack)[getSema().ArgumentPackSubstitutionIndex];
+    TransformedDecl = (*Pack)[*getSema().ArgPackSubstIndex];
   } else {
     TransformedDecl = cast<Decl *>(*Found);
   }
@@ -2520,8 +2521,8 @@ QualType TemplateInstantiator::TransformFunctionProtoType(TypeLocBuilder &TLB,
 }
 
 ParmVarDecl *TemplateInstantiator::TransformFunctionTypeParam(
-    ParmVarDecl *OldParm, int indexAdjustment,
-    std::optional<unsigned> NumExpansions, bool ExpectParameterPack) {
+    ParmVarDecl *OldParm, int indexAdjustment, UnsignedOrNone NumExpansions,
+    bool ExpectParameterPack) {
   auto NewParm = SemaRef.SubstParmVarDecl(
       OldParm, TemplateArgs, indexAdjustment, NumExpansions,
       ExpectParameterPack, EvaluateConstraints);
@@ -2532,7 +2533,7 @@ ParmVarDecl *TemplateInstantiator::TransformFunctionTypeParam(
 
 QualType TemplateInstantiator::BuildSubstTemplateTypeParmType(
     TypeLocBuilder &TLB, bool SuppressObjCLifetime, bool Final,
-    Decl *AssociatedDecl, unsigned Index, std::optional<unsigned> PackIndex,
+    Decl *AssociatedDecl, unsigned Index, UnsignedOrNone PackIndex,
     TemplateArgument Arg, SourceLocation NameLoc) {
   QualType Replacement = Arg.getAsType();
 
@@ -2594,12 +2595,12 @@ TemplateInstantiator::TransformTemplateTypeParmType(TypeLocBuilder &TLB,
 
     auto [AssociatedDecl, Final] =
         TemplateArgs.getAssociatedDecl(T->getDepth());
-    std::optional<unsigned> PackIndex;
+    UnsignedOrNone PackIndex = std::nullopt;
     if (T->isParameterPack()) {
       assert(Arg.getKind() == TemplateArgument::Pack &&
              "Missing argument pack");
 
-      if (getSema().ArgumentPackSubstitutionIndex == -1) {
+      if (!getSema().ArgPackSubstIndex) {
         // We have the template argument pack, but we're not expanding the
         // enclosing pack expansion yet. Just save the template argument
         // pack for later substitution.
@@ -2647,7 +2648,7 @@ QualType TemplateInstantiator::TransformSubstTemplateTypeParmPackType(
 
   Decl *NewReplaced = TransformDecl(TL.getNameLoc(), T->getAssociatedDecl());
 
-  if (getSema().ArgumentPackSubstitutionIndex == -1) {
+  if (!getSema().ArgPackSubstIndex) {
     // We aren't expanding the parameter pack, so just return ourselves.
     QualType Result = TL.getType();
     if (NewReplaced != T->getAssociatedDecl())
@@ -2866,7 +2867,7 @@ TemplateInstantiator::TransformNestedRequirement(
     if (!SemaRef.CheckConstraintSatisfaction(
             nullptr,
             AssociatedConstraint(Req->getConstraintExpr(),
-                                 SemaRef.ArgumentPackSubstitutionIndex),
+                                 SemaRef.ArgPackSubstIndex),
             Result, TemplateArgs, Req->getConstraintExpr()->getSourceRange(),
             Satisfaction) &&
         !Result.empty())
@@ -3150,9 +3151,9 @@ bool Sema::SubstTypeConstraint(
       TC->getTemplateArgsAsWritten();
 
   if (!EvaluateConstraints) {
-    auto Index = TC->getArgumentPackSubstitutionIndex();
-    if (Index == -1)
-      Index = SemaRef.ArgumentPackSubstitutionIndex;
+    UnsignedOrNone Index = TC->getArgPackSubstIndex();
+    if (!Index)
+      Index = SemaRef.ArgPackSubstIndex;
     Inst->setTypeConstraint(TC->getConceptReference(),
                             TC->getImmediatelyDeclaredConstraint(), Index);
     return false;
@@ -3177,10 +3178,11 @@ bool Sema::SubstTypeConstraint(
           : SourceLocation());
 }
 
-ParmVarDecl *Sema::SubstParmVarDecl(
-    ParmVarDecl *OldParm, const MultiLevelTemplateArgumentList &TemplateArgs,
-    int indexAdjustment, std::optional<unsigned> NumExpansions,
-    bool ExpectParameterPack, bool EvaluateConstraint) {
+ParmVarDecl *
+Sema::SubstParmVarDecl(ParmVarDecl *OldParm,
+                       const MultiLevelTemplateArgumentList &TemplateArgs,
+                       int indexAdjustment, UnsignedOrNone NumExpansions,
+                       bool ExpectParameterPack, bool EvaluateConstraint) {
   TypeSourceInfo *OldDI = OldParm->getTypeSourceInfo();
   TypeSourceInfo *NewDI = nullptr;
 
@@ -3422,7 +3424,7 @@ Sema::SubstBaseSpecifiers(CXXRecordDecl *Instantiation,
                                       Unexpanded);
       bool ShouldExpand = false;
       bool RetainExpansion = false;
-      std::optional<unsigned> NumExpansions;
+      UnsignedOrNone NumExpansions = std::nullopt;
       if (CheckParameterPacksForExpansion(Base.getEllipsisLoc(),
                                           Base.getSourceRange(),
                                           Unexpanded,
@@ -3436,7 +3438,7 @@ Sema::SubstBaseSpecifiers(CXXRecordDecl *Instantiation,
       // If we should expand this pack expansion now, do so.
       if (ShouldExpand) {
         for (unsigned I = 0; I != *NumExpansions; ++I) {
-            Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(*this, I);
+          Sema::ArgPackSubstIndexRAII SubstIndex(*this, I);
 
           TypeSourceInfo *BaseTypeLoc = SubstType(Base.getTypeSourceInfo(),
                                                   TemplateArgs,
@@ -3464,7 +3466,7 @@ Sema::SubstBaseSpecifiers(CXXRecordDecl *Instantiation,
 
       // The resulting base specifier will (still) be a pack expansion.
       EllipsisLoc = Base.getEllipsisLoc();
-      Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(*this, -1);
+      Sema::ArgPackSubstIndexRAII SubstIndex(*this, std::nullopt);
       BaseTypeLoc = SubstType(Base.getTypeSourceInfo(),
                               TemplateArgs,
                               Base.getSourceRange().getBegin(),
