@@ -3,6 +3,7 @@
 ; RUN: opt -p loop-unroll -mcpu=apple-m2 -S %s | FileCheck --check-prefix=APPLE %s
 ; RUN: opt -p loop-unroll -mcpu=apple-m3 -S %s | FileCheck --check-prefix=APPLE %s
 ; RUN: opt -p loop-unroll -mcpu=apple-m4 -S %s | FileCheck --check-prefix=APPLE %s
+; RUN: opt -p loop-unroll -mcpu=apple-m1 -unroll-runtime-multi-exit=false -S %s | FileCheck --check-prefix=OTHER %s
 ; RUN: opt -p loop-unroll -mcpu=cortex-a57 -S %s | FileCheck --check-prefix=OTHER %s
 
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-Fn32"
