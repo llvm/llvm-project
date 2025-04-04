@@ -65,6 +65,9 @@ std::int64_t RTNAME(Signal)(std::int64_t number, void (*handler)(int));
 // GNU extension subroutine SLEEP(SECONDS)
 void RTNAME(Sleep)(std::int64_t seconds);
 
+// GNU extension function TIME()
+std::int64_t RTNAME(time)();
+
 // GNU extension function ACCESS(NAME, MODE)
 // TODO: not supported on Windows
 #ifndef _WIN32
@@ -77,6 +80,9 @@ int RTNAME(Chdir)(const char *name);
 
 // GNU extension function IERRNO()
 int FORTRAN_PROCEDURE_NAME(ierrno)();
+
+// GNU extension subroutine PERROR(STRING)
+void RTNAME(Perror)(const char *str);
 
 } // extern "C"
 #endif // FORTRAN_RUNTIME_EXTENSIONS_H_

@@ -21,14 +21,14 @@ using namespace llvm;
 #define DEBUG_TYPE "aarch64-disassembler"
 
 static AArch64MCExpr::Specifier
-getVariant(uint64_t LLVMDisassembler_VariantKind) {
+getMachOSpecifier(uint64_t LLVMDisassembler_VariantKind) {
   switch (LLVMDisassembler_VariantKind) {
   case LLVMDisassembler_VariantKind_None:
     return AArch64MCExpr::None;
   case LLVMDisassembler_VariantKind_ARM64_PAGE:
-    return AArch64MCExpr::VK_PAGE;
+    return AArch64MCExpr::M_PAGE;
   case LLVMDisassembler_VariantKind_ARM64_PAGEOFF:
-    return AArch64MCExpr::VK_PAGEOFF;
+    return AArch64MCExpr::M_PAGEOFF;
   case LLVMDisassembler_VariantKind_ARM64_GOTPAGE:
     return AArch64MCExpr::M_GOTPAGE;
   case LLVMDisassembler_VariantKind_ARM64_GOTPAGEOFF:
@@ -171,9 +171,9 @@ bool AArch64ExternalSymbolizer::tryAddingSymbolicOperand(
     if (SymbolicOp.AddSymbol.Name) {
       StringRef Name(SymbolicOp.AddSymbol.Name);
       MCSymbol *Sym = Ctx.getOrCreateSymbol(Name);
-      auto Variant = getVariant(SymbolicOp.VariantKind);
-      if (Variant != AArch64MCExpr::None)
-        Add = MCSymbolRefExpr::create(Sym, Variant, Ctx);
+      auto Spec = getMachOSpecifier(SymbolicOp.VariantKind);
+      if (Spec != AArch64MCExpr::None)
+        Add = MCSymbolRefExpr::create(Sym, Spec, Ctx);
       else
         Add = MCSymbolRefExpr::create(Sym, Ctx);
     } else {

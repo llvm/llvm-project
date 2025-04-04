@@ -105,7 +105,7 @@ const MCExpr *AArch64_MachoTargetObjectFile::getIndirectSymViaGOTPCRel(
   // On ARM64 Darwin, we can reference symbols with foo@GOT-., which
   // is an indirect pc-relative reference.
   const MCExpr *Res =
-      MCSymbolRefExpr::create(Sym, AArch64MCExpr::VK_GOT, getContext());
+      MCSymbolRefExpr::create(Sym, AArch64MCExpr::M_GOT, getContext());
   MCSymbol *PCSym = getContext().createTempSymbol();
   Streamer.emitLabel(PCSym);
   const MCExpr *PC = MCSymbolRefExpr::create(PCSym, getContext());

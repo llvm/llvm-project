@@ -8215,7 +8215,7 @@ bool AArch64AsmParser::classifySymbolRef(const MCExpr *Expr,
   // Check that it looks like a symbol + an addend
   MCValue Res;
   bool Relocatable = Expr->evaluateAsRelocatable(Res, nullptr);
-  if (!Relocatable || Res.getSymB())
+  if (!Relocatable || Res.getSubSym())
     return false;
 
   // Treat expressions with an ELFSpec (like ":abs_g1:3", or

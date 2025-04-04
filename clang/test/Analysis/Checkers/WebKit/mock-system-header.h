@@ -29,3 +29,14 @@ enum os_log_type_t : uint8_t {
 typedef struct os_log_s *os_log_t;
 os_log_t os_log_create(const char *subsystem, const char *category);
 void os_log_msg(os_log_t oslog, os_log_type_t type, const char *msg, ...);
+
+typedef const struct __attribute__((objc_bridge(NSString))) __CFString * CFStringRef;
+
+#ifdef __OBJC__
+@class NSString;
+@interface SystemObject {
+  NSString *ns_string;
+  CFStringRef cf_string;
+}
+@end
+#endif

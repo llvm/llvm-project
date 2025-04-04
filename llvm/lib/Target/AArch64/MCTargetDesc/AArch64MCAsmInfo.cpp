@@ -34,6 +34,7 @@ static cl::opt<AsmWriterVariantTy> AsmWriterVariant(
 const MCAsmInfo::AtSpecifier COFFAtSpecifiers[] = {
     {MCSymbolRefExpr::VK_COFF_IMGREL32, "IMGREL"},
     {MCSymbolRefExpr::VK_WEAKREF, "WEAKREF"},
+    {AArch64MCExpr::M_PAGEOFF, "PAGEOFF"},
 };
 
 const MCAsmInfo::AtSpecifier ELFAtSpecifiers[] = {
@@ -83,7 +84,7 @@ const MCExpr *AArch64MCAsmInfoDarwin::getExprForPersonalitySymbol(
   // version.
   MCContext &Context = Streamer.getContext();
   const MCExpr *Res =
-      MCSymbolRefExpr::create(Sym, AArch64MCExpr::VK_GOT, Context);
+      MCSymbolRefExpr::create(Sym, AArch64MCExpr::M_GOT, Context);
   MCSymbol *PCSym = Context.createTempSymbol();
   Streamer.emitLabel(PCSym);
   const MCExpr *PC = MCSymbolRefExpr::create(PCSym, Context);

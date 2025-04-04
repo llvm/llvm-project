@@ -1026,6 +1026,12 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-dependency-file");
       CmdArgs.push_back(DepFile);
     }
+    // Cmake generates dependency files using all compilation options specified
+    // by users. Claim those not used for dependency files.
+    if (JA.isOffloading(Action::OFK_HIP)) {
+      Args.ClaimAllArgs(options::OPT_offload_compress);
+      Args.ClaimAllArgs(options::OPT_no_offload_compress);
+    }
 
     bool HasTarget = false;
     for (const Arg *A : Args.filtered(options::OPT_MT, options::OPT_MQ)) {
@@ -1100,8 +1106,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
   if (JA.isDeviceOffloading(Action::OFK_OpenMP) &&
       !Args.hasArg(options::OPT_nostdinc) &&
       !Args.hasArg(options::OPT_nogpuinc) &&
-      (getToolChain().getTriple().isNVPTX() ||
-       getToolChain().getTriple().isAMDGCN())) {
+      getToolChain().getTriple().isGPU()) {
     if (!Args.hasArg(options::OPT_nobuiltininc)) {
       // Add openmp_wrappers/* to our system include path.  This lets us wrap
       // standard library headers.
@@ -1288,8 +1293,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     // Without an offloading language we will include these headers directly.
     // Offloading languages will instead only use the declarations stored in
     // the resource directory at clang/lib/Headers/llvm_libc_wrappers.
-    if ((getToolChain().getTriple().isNVPTX() ||
-         getToolChain().getTriple().isAMDGCN()) &&
+    if (getToolChain().getTriple().isGPU() &&
         C.getActiveOffloadKinds() == Action::OFK_None) {
       SmallString<128> P(llvm::sys::path::parent_path(D.Dir));
       llvm::sys::path::append(P, "include");
@@ -6399,7 +6403,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_fconvergent_functions,
                   options::OPT_fno_convergent_functions);
 
-  addPGOAndCoverageFlags(TC, C, JA, Output, Args, SanitizeArgs, CmdArgs);
+  // NVPTX doesn't support PGO or coverage
+  if (!Triple.isNVPTX())
+    addPGOAndCoverageFlags(TC, C, JA, Output, Args, SanitizeArgs, CmdArgs);
 
   Args.AddLastArg(CmdArgs, options::OPT_fclang_abi_compat_EQ);
 
@@ -6917,8 +6923,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getAsString(Args) << TripleStr;
     else if (S.consumeInteger(10, Size) ||
-             (!S.empty() && (!S.consume_front(",") ||
-                             S.consumeInteger(10, Offset) || !S.empty())))
+             (!S.empty() &&
+              (!S.consume_front(",") || S.consumeInteger(10, Offset))) ||
+             (!S.empty() && (!S.consume_front(",") || S.empty())))
       D.Diag(diag::err_drv_invalid_argument_to_option)
           << S0 << A->getOption().getName();
     else if (Size < Offset)
@@ -6927,6 +6934,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back(Args.MakeArgString(A->getSpelling() + Twine(Size)));
       CmdArgs.push_back(Args.MakeArgString(
           "-fpatchable-function-entry-offset=" + Twine(Offset)));
+      if (!S.empty())
+        CmdArgs.push_back(
+            Args.MakeArgString("-fpatchable-function-entry-section=" + S));
     }
   }
 
@@ -9217,6 +9227,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_load,
       OPT_fno_lto,
       OPT_flto,
+      OPT_flto_partitions_EQ,
       OPT_flto_EQ};
   const llvm::DenseSet<unsigned> LinkerOptions{OPT_mllvm, OPT_Zlinker_input};
   auto ShouldForward = [&](const llvm::DenseSet<unsigned> &Set, Arg *A) {
@@ -9226,7 +9237,8 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   };
 
   ArgStringList CmdArgs;
-  for (Action::OffloadKind Kind : {Action::OFK_Cuda, Action::OFK_OpenMP}) {
+  for (Action::OffloadKind Kind : {Action::OFK_Cuda, Action::OFK_OpenMP,
+                                   Action::OFK_HIP, Action::OFK_SYCL}) {
     auto TCRange = C.getOffloadToolChains(Kind);
     for (auto &I : llvm::make_range(TCRange)) {
       const ToolChain *TC = I.second;

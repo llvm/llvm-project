@@ -565,7 +565,7 @@ def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
       }]
     >
   ];
-
+  let dependentTraits = [IsolatedFromAbove];
   let verify = [{ return ::mlir::detail::verifyDataLayoutOp($_op); }];
 }
 

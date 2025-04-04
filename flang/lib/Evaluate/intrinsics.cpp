@@ -8,6 +8,7 @@
 
 #include "flang/Evaluate/intrinsics.h"
 #include "flang/Common/enum-set.h"
+#include "flang/Common/float128.h"
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/common.h"
@@ -83,7 +84,7 @@ static constexpr CategorySet AnyType{IntrinsicType | DerivedType};
 
 ENUM_CLASS(KindCode, none, defaultIntegerKind,
     defaultRealKind, // is also the default COMPLEX kind
-    doublePrecision, defaultCharKind, defaultLogicalKind,
+    doublePrecision, quadPrecision, defaultCharKind, defaultLogicalKind,
     greaterOrEqualToKind, // match kind value greater than or equal to a single
                           // explicit kind value
     any, // matches any kind value; each instance is independent
@@ -139,6 +140,7 @@ static constexpr TypePattern DoublePrecision{
     RealType, KindCode::doublePrecision};
 static constexpr TypePattern DoublePrecisionComplex{
     ComplexType, KindCode::doublePrecision};
+static constexpr TypePattern QuadPrecision{RealType, KindCode::quadPrecision};
 static constexpr TypePattern SubscriptInt{IntType, KindCode::subscript};
 
 // Match any kind of some intrinsic or derived types
@@ -975,6 +977,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         DefaultInt, Rank::vector, IntrinsicClass::transformationalFunction},
     {"this_image", {OptionalTEAM}, DefaultInt, Rank::scalar,
         IntrinsicClass::transformationalFunction},
+    {"time", {}, TypePattern{IntType, KindCode::exactKind, 8}, Rank::scalar,
+        IntrinsicClass::transformationalFunction},
     {"tiny",
         {{"x", SameReal, Rank::anyOrAssumedRank, Optionality::required,
             common::Intent::In, {ArgFlag::canBeMoldNull}}},
@@ -1008,6 +1012,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         KINDUnsigned},
     {"umaskl", {{"i", AnyInt}, DefaultingKIND}, KINDUnsigned},
     {"umaskr", {{"i", AnyInt}, DefaultingKIND}, KINDUnsigned},
+    {"unlink", {{"path", DefaultChar, Rank::scalar}}, DefaultInt, Rank::scalar,
+        IntrinsicClass::transformationalFunction},
     {"unpack",
         {{"vector", SameType, Rank::vector}, {"mask", AnyLogical, Rank::array},
             {"field", SameType, Rank::conformable}},
@@ -1199,6 +1205,9 @@ static const SpecificIntrinsicInterface specificIntrinsicFunction[]{
          DoublePrecision},
         "dim"},
     {{"derf", {{"x", DoublePrecision}}, DoublePrecision}, "erf"},
+    {{"derfc", {{"x", DoublePrecision}}, DoublePrecision}, "erfc"},
+    {{"derfc_scaled", {{"x", DoublePrecision}}, DoublePrecision},
+        "erfc_scaled"},
     {{"dexp", {{"x", DoublePrecision}}, DoublePrecision}, "exp"},
     {{"dfloat", {{"a", AnyInt}}, DoublePrecision}, "real", true},
     {{"dim", {{"x", DefaultReal}, {"y", DefaultReal}}, DefaultReal}},
@@ -1299,6 +1308,9 @@ static const SpecificIntrinsicInterface specificIntrinsicFunction[]{
         "min", true, true},
     {{"mod", {{"a", DefaultInt}, {"p", DefaultInt}}, DefaultInt}},
     {{"nint", {{"a", DefaultReal}}, DefaultInt}},
+    {{"qerf", {{"x", QuadPrecision}}, QuadPrecision}, "erf"},
+    {{"qerfc", {{"x", QuadPrecision}}, QuadPrecision}, "erfc"},
+    {{"qerfc_scaled", {{"x", QuadPrecision}}, QuadPrecision}, "erfc_scaled"},
     {{"sign", {{"a", DefaultReal}, {"b", DefaultReal}}, DefaultReal}},
     {{"sin", {{"x", DefaultReal}}, DefaultReal}},
     {{"sinh", {{"x", DefaultReal}}, DefaultReal}},
@@ -1311,6 +1323,8 @@ static const SpecificIntrinsicInterface specificIntrinsicFunction[]{
         "abs"},
 };
 
+// Must be sorted by name. The rank of the return value is ignored since
+// subroutines are do not have a return value.
 static const IntrinsicInterface intrinsicSubroutine[]{
     {"abort", {}, {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"atomic_add",
@@ -1565,6 +1579,8 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"errmsg", DefaultChar, Rank::scalar, Optionality::optional,
                 common::Intent::InOut}},
         {}, Rank::elemental, IntrinsicClass::pureSubroutine},
+    {"perror", {{"string", DefaultChar, Rank::scalar}}, {}, Rank::elemental,
+        IntrinsicClass::impureSubroutine},
     {"mvbits",
         {{"from", SameIntOrUnsigned}, {"frompos", AnyInt}, {"len", AnyInt},
             {"to", SameIntOrUnsigned, Rank::elemental, Optionality::required,
@@ -1620,6 +1636,12 @@ static const IntrinsicInterface intrinsicSubroutine[]{
     {"sleep",
         {{"seconds", AnyInt, Rank::scalar, Optionality::required,
             common::Intent::In}},
+        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"unlink",
+        {{"path", DefaultChar, Rank::scalar, Optionality::required,
+             common::Intent::In},
+            {"status", DefaultInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
 };
 
@@ -2033,6 +2055,9 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     case KindCode::doublePrecision:
       argOk = type->kind() == defaults.doublePrecisionKind();
       break;
+    case KindCode::quadPrecision:
+      argOk = type->kind() == defaults.quadPrecisionKind();
+      break;
     case KindCode::defaultCharKind:
       argOk = type->kind() == defaults.GetDefaultKind(TypeCategory::Character);
       break;
@@ -2342,6 +2367,18 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       CHECK(result.categorySet == CategorySet{*category});
       CHECK(FloatingType.test(*category));
       resultType = DynamicType{*category, defaults.doublePrecisionKind()};
+      break;
+    case KindCode::quadPrecision:
+      CHECK(result.categorySet == CategorySet{*category});
+      CHECK(FloatingType.test(*category));
+      resultType = DynamicType{*category, defaults.quadPrecisionKind()};
+      if (!context.targetCharacteristics().CanSupportType(
+              *category, defaults.quadPrecisionKind())) {
+        messages.Say(
+            "%s(KIND=%jd) type not supported on this target."_err_en_US,
+            parser::ToUpperCaseLetters(EnumToString(*category)),
+            defaults.quadPrecisionKind());
+      }
       break;
     case KindCode::defaultLogicalKind:
       CHECK(result.categorySet == LogicalType);
@@ -2775,7 +2812,7 @@ bool IntrinsicProcTable::Implementation::IsDualIntrinsic(
   // Collection for some intrinsics with function and subroutine form,
   // in order to pass the semantic check.
   static const std::string dualIntrinsic[]{{"chdir"s}, {"etime"s}, {"getcwd"s},
-      {"hostnm"s}, {"rename"s}, {"second"s}, {"system"s}};
+      {"hostnm"s}, {"rename"s}, {"second"s}, {"system"s}, {"unlink"s}};
 
   return llvm::is_contained(dualIntrinsic, name);
 }
@@ -3341,6 +3378,7 @@ static DynamicType GetReturnType(const SpecificIntrinsicInterface &interface,
   case KindCode::defaultIntegerKind:
     break;
   case KindCode::doublePrecision:
+  case KindCode::quadPrecision:
   case KindCode::defaultRealKind:
     category = TypeCategory::Real;
     break;
@@ -3349,6 +3387,8 @@ static DynamicType GetReturnType(const SpecificIntrinsicInterface &interface,
   }
   int kind{interface.result.kindCode == KindCode::doublePrecision
           ? defaults.doublePrecisionKind()
+          : interface.result.kindCode == KindCode::quadPrecision
+          ? defaults.quadPrecisionKind()
           : defaults.GetDefaultKind(category)};
   return DynamicType{category, kind};
 }
@@ -3589,6 +3629,8 @@ DynamicType IntrinsicProcTable::Implementation::GetSpecificType(
   TypeCategory category{set.LeastElement().value()};
   if (pattern.kindCode == KindCode::doublePrecision) {
     return DynamicType{category, defaults_.doublePrecisionKind()};
+  } else if (pattern.kindCode == KindCode::quadPrecision) {
+    return DynamicType{category, defaults_.quadPrecisionKind()};
   } else if (category == TypeCategory::Character) {
     // All character arguments to specific intrinsic functions are
     // assumed-length.

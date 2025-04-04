@@ -349,12 +349,8 @@ MCOperand X86MCInstLower::LowerMachineOperand(const MachineInstr *MI,
     return MCOperand::createImm(MO.getImm());
   case MachineOperand::MO_MachineBasicBlock:
   case MachineOperand::MO_GlobalAddress:
+  case MachineOperand::MO_ExternalSymbol:
     return LowerSymbolOperand(MO, GetSymbolFromOperand(MO));
-  case MachineOperand::MO_ExternalSymbol: {
-    MCSymbol *Sym = GetSymbolFromOperand(MO);
-    Sym->setExternal(true);
-    return LowerSymbolOperand(MO, Sym);
-  }
   case MachineOperand::MO_MCSymbol:
     return LowerSymbolOperand(MO, MO.getMCSymbol());
   case MachineOperand::MO_JumpTableIndex:
@@ -448,7 +444,7 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     }
     OutMI.setOpcode(NewOpc);
     // Duplicate the destination.
-    unsigned DestReg = OutMI.getOperand(0).getReg();
+    MCRegister DestReg = OutMI.getOperand(0).getReg();
     OutMI.insert(OutMI.begin(), MCOperand::createReg(DestReg));
     break;
   }

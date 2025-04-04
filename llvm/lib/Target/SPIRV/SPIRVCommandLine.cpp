@@ -94,10 +94,10 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
         {"SPV_INTEL_fp_max_error",
          SPIRV::Extension::Extension::SPV_INTEL_fp_max_error}};
 
-bool SPIRVExtensionsParser::parse(cl::Option &O, llvm::StringRef ArgName,
-                                  llvm::StringRef ArgValue,
+bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
+                                  StringRef ArgValue,
                                   std::set<SPIRV::Extension::Extension> &Vals) {
-  llvm::SmallVector<llvm::StringRef, 10> Tokens;
+  SmallVector<StringRef, 10> Tokens;
   ArgValue.split(Tokens, ",", -1, false);
   std::sort(Tokens.begin(), Tokens.end());
 
@@ -114,7 +114,7 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, llvm::StringRef ArgName,
     if (Token.empty() || (!Token.starts_with("+") && !Token.starts_with("-")))
       return O.error("Invalid extension list format: " + Token.str());
 
-    llvm::StringRef ExtensionName = Token.substr(1);
+    StringRef ExtensionName = Token.substr(1);
     auto NameValuePair = SPIRVExtensionMap.find(ExtensionName);
 
     if (NameValuePair == SPIRVExtensionMap.end())
@@ -137,7 +137,7 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, llvm::StringRef ArgName,
   return false;
 }
 
-llvm::StringRef SPIRVExtensionsParser::checkExtensions(
+StringRef SPIRVExtensionsParser::checkExtensions(
     const std::vector<std::string> &ExtNames,
     std::set<SPIRV::Extension::Extension> &AllowedExtensions) {
   for (const auto &Ext : ExtNames) {
