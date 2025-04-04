@@ -4076,6 +4076,35 @@ add_entrypoint_object(
     libc.src.__support.macros.properties.types  
 )
 
+add_header_library(
+  asin_utils
+  HDRS
+    atan_utils.h
+  DEPENDS
+    libc.src.__support.integer_literals
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.macros.optimization
+)
+
+add_entrypoint_object(
+  asin
+  SRCS
+    asin.cpp
+  HDRS
+    ../asin.h
+  DEPENDS
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.optimization
+    .inv_trigf_utils
+)
+
 add_entrypoint_object(
   acosf
   SRCS
