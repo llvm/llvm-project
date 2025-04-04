@@ -131,6 +131,12 @@ private:
   void emitTraitMethod(const InterfaceMethod &method);
 
   //===--------------------------------------------------------------------===//
+  // OpAsm{Type,Attr}Interface Default Method Emission
+
+  /// Emit 'getAlias' method using mnemonic as alias.
+  void emitMnemonicAliasMethod();
+
+  //===--------------------------------------------------------------------===//
   // Storage Class Emission
   void emitStorageClass();
   /// Generate the storage class constructor.
@@ -215,6 +221,9 @@ DefGen::DefGen(const AttrOrTypeDef &def)
     emitAccessors();
   // Emit trait interface methods
   emitInterfaceMethods();
+  // Emit OpAsm{Type,Attr}Interface default methods
+  if (def.genMnemonicAlias())
+    emitMnemonicAliasMethod();
   defCls.finalize();
   // Emit a storage class if one is needed
   if (storageCls && def.genStorageClass())
@@ -575,6 +584,22 @@ void DefGen::emitTraitMethod(const InterfaceMethod &method) {
     params.emplace_back(param.type, param.name);
   defCls.addMethod(method.getReturnType(), method.getName(), props,
                    std::move(params));
+}
+
+//===----------------------------------------------------------------------===//
+// OpAsm{Type,Attr}Interface Default Method Emission
+
+void DefGen::emitMnemonicAliasMethod() {
+  // If the mnemonic is not set, there is nothing to do.
+  if (!def.getMnemonic())
+    return;
+
+  // Emit the mnemonic alias method.
+  SmallVector<MethodParameter> params{{"::llvm::raw_ostream &", "os"}};
+  Method *m = defCls.addMethod<Method::Const>("::mlir::OpAsmAliasResult",
+                                              "getAlias", std::move(params));
+  m->body().indent() << strfmt("os << \"{0}\";\n", *def.getMnemonic())
+                     << "return ::mlir::OpAsmAliasResult::OverridableAlias;\n";
 }
 
 //===----------------------------------------------------------------------===//
