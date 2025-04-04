@@ -706,7 +706,7 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
       // Driver.cpp::readSecurityNotes. This ensures that AArch64 build
       // attributes are represented in the linked object file as GNU properties,
       // which are already supported by the Linux kernel and the dynamic
-      // dispatcher.
+      // loader.
       if (sec.sh_type == SHT_AARCH64_ATTRIBUTES) {
         StringRef name = check(obj.getSectionName(sec, shstrtab));
         ArrayRef<uint8_t> contents = check(obj.getSectionContents(sec));
