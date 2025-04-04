@@ -3,15 +3,22 @@
 ID:              057557CEBF6E6B2D
 Name:            'vector'
 Scope:           'std::'
-SymInfo:         
+SymInfo:
   Kind:            Class
   Lang:            Cpp
-CanonicalDeclaration: 
-  FileURI:         'test:///vector.h'
-  Start:           
+CanonicalDeclaration:
+  NameLoc:
+    FileURI:         'test:///vector.h'
+    Start:
+      Line:            215
+      Column:          10
+    End:
+      Line:            215
+      Column:          16
+  Start:
     Line:            215
     Column:          10
-  End:             
+  End:
     Line:            215
     Column:          16
 ...

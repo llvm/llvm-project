@@ -418,7 +418,7 @@ struct CodeCompletionBuilder {
     auto Inserted = [&](llvm::StringRef Header)
         -> llvm::Expected<std::pair<std::string, bool>> {
       auto ResolvedDeclaring =
-          URI::resolve(C.IndexResult->CanonicalDeclaration.FileURI, FileName);
+          URI::resolve(C.IndexResult->CanonicalDeclaration.fileURI(), FileName);
       if (!ResolvedDeclaring)
         return ResolvedDeclaring.takeError();
       auto ResolvedInserted = toHeaderFile(Header, FileName);
@@ -451,7 +451,7 @@ struct CodeCompletionBuilder {
       } else
         log("Failed to generate include insertion edits for adding header "
             "(FileURI='{0}', IncludeHeader='{1}') into {2}: {3}",
-            C.IndexResult->CanonicalDeclaration.FileURI, Inc.Header, FileName,
+            C.IndexResult->CanonicalDeclaration.fileURI(), Inc.Header, FileName,
             ToInclude.takeError());
     }
     // Prefer includes that do not need edits (i.e. already exist).
