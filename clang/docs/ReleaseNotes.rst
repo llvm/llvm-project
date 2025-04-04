@@ -319,6 +319,9 @@ Improvements to Clang's diagnostics
 - ``-Wc++98-compat`` no longer diagnoses use of ``__auto_type`` or
   ``decltype(auto)`` as though it was the extension for ``auto``. (#GH47900)
 
+- Added ``-Wstatic-downcast`` to diagnose potentially dangerous uses of ``static_cast`` that perform a base-to-derived cast
+  on pointers and references of polymorphic types.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
