@@ -101,7 +101,7 @@ struct VPlanTransforms {
   /// Apply VPlan-to-VPlan optimizations to \p Plan, including induction recipe
   /// optimizations, dead recipe removal, replicate region optimizations and
   /// block merging.
-  static void optimize(VPlan &Plan);
+  static void optimize(VPlan &Plan, const DataLayout &DL);
 
   /// Wrap predicated VPReplicateRecipes with a mask operand in an if-then
   /// region block and remove the mask operand. Optimize the created regions by
@@ -181,7 +181,8 @@ struct VPlanTransforms {
 
   /// Perform instcombine-like simplifications on recipes in \p Plan. Use \p
   /// CanonicalIVTy as type for all un-typed live-ins in VPTypeAnalysis.
-  static void simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy);
+  static void simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy,
+                              const DataLayout &DL);
 
   /// If there's a single exit block, optimize its phi recipes that use exiting
   /// IV values by feeding them precomputed end values instead, possibly taken

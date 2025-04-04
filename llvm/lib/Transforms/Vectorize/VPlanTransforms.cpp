@@ -16,6 +16,7 @@
 #include "VPlan.h"
 #include "VPlanAnalysis.h"
 #include "VPlanCFG.h"
+#include "VPlanConstantFolder.h"
 #include "VPlanDominatorTree.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanUtils.h"
@@ -923,7 +924,8 @@ static void recursivelyDeleteDeadRecipes(VPValue *V) {
 }
 
 /// Try to simplify recipe \p R.
-static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
+static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo,
+                           const DataLayout &DL) {
   using namespace llvm::VPlanPatternMatch;
 
   if (auto *Blend = dyn_cast<VPBlendRecipe>(&R)) {
@@ -1053,7 +1055,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   // TODO: Split up into simpler, modular combines: (X && Y) || (X && Z) into X
   // && (Y || Z) and (X || !X) into true. This requires queuing newly created
   // recipes to be visited during simplification.
-  VPValue *X, *Y;
+  VPValue *X, *Y, *Z;
   if (match(&R,
             m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
                          m_LogicalAnd(m_Deferred(X), m_Not(m_Deferred(Y)))))) {
@@ -1079,15 +1081,39 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
       TypeInfo.inferScalarType(R.getOperand(1)) ==
           TypeInfo.inferScalarType(R.getVPSingleValue()))
     return R.getVPSingleValue()->replaceAllUsesWith(R.getOperand(1));
+
+  // Constant folding. TODO: cast and cmp.
+  VPConstantFolder Folder(DL);
+  VPlan *Plan = R.getParent()->getPlan();
+  if (match(&R, m_BinaryAnd(m_VPValue(X), m_VPValue(Y))))
+    if (Value *V = Folder.foldAnd(X, Y))
+      R.getVPSingleValue()->replaceAllUsesWith(Plan->getOrAddLiveIn(V));
+  if (match(&R, m_BinaryOr(m_VPValue(X), m_VPValue(Y))))
+    if (Value *V = Folder.foldOr(X, Y))
+      R.getVPSingleValue()->replaceAllUsesWith(Plan->getOrAddLiveIn(V));
+  if (match(&R, m_Not(m_VPValue(X))))
+    if (Value *V = Folder.foldNot(X))
+      R.getVPSingleValue()->replaceAllUsesWith(Plan->getOrAddLiveIn(V));
+  if (match(&R, m_LogicalAnd(m_VPValue(X), m_VPValue(Y))))
+    if (Value *V = Folder.foldLogicalAnd(X, Y))
+      R.getVPSingleValue()->replaceAllUsesWith(Plan->getOrAddLiveIn(V));
+  if (match(&R, m_Select(m_VPValue(X), m_VPValue(Y), m_VPValue(Z))))
+    if (Value *V = Folder.foldSelect(X, Y, Z))
+      R.getVPSingleValue()->replaceAllUsesWith(Plan->getOrAddLiveIn(V));
+  if (match(&R, m_GetElementPtr(m_VPValue(X), m_VPValue(Y))))
+    if (Value *V = Folder.foldPtrAdd(
+            X, Y, cast<VPRecipeWithIRFlags>(R).getGEPNoWrapFlags()))
+      R.getVPSingleValue()->replaceAllUsesWith(Plan->getOrAddLiveIn(V));
 }
 
-void VPlanTransforms::simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy) {
+void VPlanTransforms::simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy,
+                                      const DataLayout &DL) {
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getEntry());
   VPTypeAnalysis TypeInfo(&CanonicalIVTy);
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      simplifyRecipe(R, TypeInfo);
+      simplifyRecipe(R, TypeInfo, DL);
     }
   }
 }
@@ -1259,7 +1285,8 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
 
     VPBlockUtils::connectBlocks(Preheader, Header);
     VPBlockUtils::connectBlocks(ExitingVPBB, Exit);
-    VPlanTransforms::simplifyRecipes(Plan, *CanIVTy);
+    VPlanTransforms::simplifyRecipes(Plan, *CanIVTy,
+                                     PSE.getSE()->getDataLayout());
   } else {
     // The vector region contains header phis for which we cannot remove the
     // loop region yet.
@@ -1682,15 +1709,15 @@ void VPlanTransforms::truncateToMinimalBitwidths(
          "some entries in MinBWs haven't been processed");
 }
 
-void VPlanTransforms::optimize(VPlan &Plan) {
+void VPlanTransforms::optimize(VPlan &Plan, const DataLayout &DL) {
   runPass(removeRedundantCanonicalIVs, Plan);
   runPass(removeRedundantInductionCasts, Plan);
 
-  runPass(simplifyRecipes, Plan, *Plan.getCanonicalIV()->getScalarType());
+  runPass(simplifyRecipes, Plan, *Plan.getCanonicalIV()->getScalarType(), DL);
   runPass(removeDeadRecipes, Plan);
   runPass(legalizeAndOptimizeInductions, Plan);
   runPass(removeRedundantExpandSCEVRecipes, Plan);
-  runPass(simplifyRecipes, Plan, *Plan.getCanonicalIV()->getScalarType());
+  runPass(simplifyRecipes, Plan, *Plan.getCanonicalIV()->getScalarType(), DL);
   runPass(removeDeadRecipes, Plan);
 
   runPass(createAndOptimizeReplicateRegions, Plan);
