@@ -606,8 +606,10 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
   bool hasGnuProperties = false;
   for (size_t i = 0; i != size; ++i) {
     const Elf_Shdr &sec = objSections[i];
-    if (check(obj.getSectionName(sec, shstrtab)) == ".note.gnu.property")
+    if (check(obj.getSectionName(sec, shstrtab)) == ".note.gnu.property") {
       hasGnuProperties = true;
+      break;
+    }
   }
 
   for (size_t i = 0; i != size; ++i) {
