@@ -253,11 +253,12 @@ static bool isLegalToInterChangeLoops(CharMatrix &DepMatrix,
   std::vector<char> Cur;
   // For each row check if it is valid to interchange.
   for (unsigned Row = 0; Row < NumRows; ++Row) {
-    // Create temporary DepVector check its lexicographical order
-    // before and after swapping OuterLoop vs InnerLoop
+    // A dependence vector has to be lexigraphically positive. We could assert
+    // that here, as a sanity check for the dependency analysis, but it can
+    // contain "don't know" elements ('*'), which will be rightfully
+    // interpreted as not lexicographical positive. So, skip that sanity check,
+    // it suffices just to check the interchanged direction vector.
     Cur = DepMatrix[Row];
-    if (!isLexicographicallyPositive(Cur))
-      return false;
     std::swap(Cur[InnerLoopId], Cur[OuterLoopId]);
     if (!isLexicographicallyPositive(Cur))
       return false;
