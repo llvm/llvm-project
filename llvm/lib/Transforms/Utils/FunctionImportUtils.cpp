@@ -24,7 +24,14 @@ static cl::opt<bool> UseSourceFilenameForPromotedLocals(
              "This requires that the source filename has a unique name / "
              "path to avoid name collisions."));
 
-extern cl::list<GlobalValue::GUID> MoveSymbolGUID;
+cl::list<GlobalValue::GUID> MoveSymbolGUID(
+    "thinlto-move-symbols",
+    cl::desc(
+        "Move the symbols with the given name. This will delete these symbols "
+        "wherever they are originally defined, and make sure their "
+        "linkage is External where they are imported. It is meant to be "
+        "used with the name of contextual profiling roots."),
+    cl::Hidden);
 
 FunctionImportGlobalProcessing::FunctionImportGlobalProcessing(
     Module &M, const ModuleSummaryIndex &Index,
