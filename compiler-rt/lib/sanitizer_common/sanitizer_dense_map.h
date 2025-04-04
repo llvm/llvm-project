@@ -19,9 +19,6 @@
 #include "sanitizer_common.h"
 #include "sanitizer_dense_map_info.h"
 #include "sanitizer_internal_defs.h"
-// Placement-new is needed for bucket allocation. This avoids needing to include
-// it everywhere we use DenseMap.
-#include "sanitizer_placement_new.h"
 #include "sanitizer_type_traits.h"
 
 namespace __sanitizer {
