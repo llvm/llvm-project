@@ -1139,7 +1139,7 @@ LogicalResult NVVM::VoteSyncOp::verify() {
     }
   } else {
     if (!getType().isInteger(1)) {
-      return emitOpError("match.sync 'any', 'all' and 'uni' returns an i1");
+      return emitOpError("vote.sync 'any', 'all' and 'uni' returns an i1");
     }
   }
   return success();
