@@ -1523,7 +1523,7 @@ public:
     auto *symbol{FindSymbol(NonDerivedTypeScope(), name)};
     if (!symbol) {
       context().Say(name.source,
-          "Implicit subroutine declaration '%s' in !$OMP DECLARE REDUCTION"_err_en_US,
+          "Implicit subroutine declaration '%s' in DECLARE REDUCTION"_err_en_US,
           name.source);
     }
     return true;
@@ -1828,7 +1828,7 @@ parser::CharBlock MakeNameFromOperator(
     return parser::CharBlock{"op.NEQV", 8};
 
   default:
-    context.Say("Unsupported operator in OMP DECLARE REDUCTION"_err_en_US);
+    context.Say("Unsupported operator in DECLARE REDUCTION"_err_en_US);
     return parser::CharBlock{"op.?", 4};
   }
 }
@@ -1893,7 +1893,7 @@ void OmpVisitor::ProcessReductionSpecifier(
 
     if (!reductionDetails) {
       context().Say(name->source,
-          "Duplicate definition of '%s' in !$OMP DECLARE REDUCTION"_err_en_US,
+          "Duplicate definition of '%s' in DECLARE REDUCTION"_err_en_US,
           name->source);
       return;
     }
