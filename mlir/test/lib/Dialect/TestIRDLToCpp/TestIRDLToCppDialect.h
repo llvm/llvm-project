@@ -1,5 +1,4 @@
-//===- TestDialect.cpp - MLIR Test Dialect Types ------------------*- C++
-//-*-===//
+//===- TestIRDLToCppDialect.h - MLIR Test Dialect Types -----------------*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
