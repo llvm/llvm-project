@@ -207,7 +207,9 @@ struct DispatchOpConv : public OpConversionPattern<fir::DispatchOp> {
     args.append(dispatch.getArgs().begin(), dispatch.getArgs().end());
     rewriter.replaceOpWithNewOp<fir::CallOp>(
         dispatch, resTypes, nullptr, args, dispatch.getArgAttrsAttr(),
-        dispatch.getResAttrsAttr(), dispatch.getProcedureAttrsAttr());
+        dispatch.getResAttrsAttr(), dispatch.getProcedureAttrsAttr(),
+        /*no_inline*/ mlir::UnitAttr{},
+        /*alwais_inline*/ mlir::UnitAttr{});
     return mlir::success();
   }
 
