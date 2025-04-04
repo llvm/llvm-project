@@ -4547,8 +4547,8 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
 }
 
 static bool hasReplicatorRegion(VPlan &Plan) {
-  return any_of(VPBlockUtils::blocksOnly<VPRegionBlock>(
-                    vp_depth_first_deep(Plan.getEntry())),
+  return any_of(VPBlockUtils::blocksOnly<VPRegionBlock>(vp_depth_first_shallow(
+                    Plan.getVectorLoopRegion()->getEntry())),
                 [](auto *VPRB) { return VPRB->isReplicator(); });
 }
 
