@@ -966,7 +966,7 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   if (RVFI->useQCIInterrupt(MF)) {
     // The function starts with `QC.C.MIENTER(.NEST)`, so the `(QC.)CM.PUSH(FP)`
     // could only be the next instruction.
-    PossiblePush = std::next(PossiblePush);
+    ++PossiblePush;
 
     // Insert the CFI metadata before where we think the `(QC.)CM.PUSH(FP)`
     // could be. The PUSH will also get its own CFI metadata for its own
