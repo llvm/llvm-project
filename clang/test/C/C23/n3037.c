@@ -359,3 +359,9 @@ struct alignment { // c17-error {{redefinition of 'alignment'}} \
                       c23-error {{type 'struct alignment' has a member with an attribute which currently causes the types to be treated as though they are incompatible}}
   int x;
 };
+
+// Previously, this code was silently accepted by Clang despite the
+// incompatible redefinitions. This is now correctly being caught.
+unsigned GH28586;           // both-note 2 {{previous definition is here}}
+enum { GH28586_1 } GH28586; // both-error-re {{redefinition of 'GH28586' with a different type: 'enum (unnamed enum at {{.*}})' vs 'unsigned int'}}
+enum { GH28586_2 } GH28586; // both-error-re {{redefinition of 'GH28586' with a different type: 'enum (unnamed enum at {{.*}})' vs 'unsigned int'}}
