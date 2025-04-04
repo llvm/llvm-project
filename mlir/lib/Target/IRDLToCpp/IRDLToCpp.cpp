@@ -79,9 +79,7 @@ static TypeStrings getStrings(irdl::TypeOp type) {
 }
 
 static OpStrings getStrings(irdl::OperationOp op) {
-  auto operands = op.getOps<irdl::OperandsOp>();
-  auto operandOp =
-      operands.empty() ? std::optional<irdl::OperandsOp>{} : *operands.begin();
+  auto operandOp = op.getOp<irdl::OperandsOp>();
 
   auto resultOp = op.getOp<irdl::ResultsOp>();
 
