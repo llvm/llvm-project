@@ -29,8 +29,14 @@ namespace llvm {
 class X86MCInstLowerTest : public testing::Test {
 protected:
   static void SetUpTestCase() {
-    LLVMInitializeX86TargetMC();
-    LLVMInitializeX86Target();
+    //LLVMInitializeX86TargetInfo();
+    //LLVMInitializeX86TargetMC();
+    //LLVMInitializeX86Target();
+    //LLVMInitializeX86AsmPrinter();
+    InitializeAllTargetMCs();
+    InitializeAllTargetInfos();
+    InitializeAllTargets();
+    InitializeAllAsmPrinters();
   }
 
   // Function to setup codegen pipeline and returns the AsmPrinter.
@@ -96,6 +102,7 @@ protected:
     Triple TargetTriple("x86_64--");
     std::string Error;
     const Target *T = TargetRegistry::lookupTarget("", TargetTriple, Error);
+    // Skip the test if target is not built.
     if (!T)
       GTEST_SKIP();
 
@@ -109,8 +116,6 @@ protected:
     if (!TM)
       GTEST_SKIP();
 
-    LLVMInitializeX86AsmPrinter();
-    
     SMDiagnostic SMError;
 
     // Parse the module.
