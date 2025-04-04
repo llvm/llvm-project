@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
   Core
   ProfileData
   Support
+  TestingSupport
   TransformUtils
   Passes
   Vectorize
@@ -13,6 +14,7 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_unittest(UtilsTests
   ASanStackFrameLayoutTest.cpp
   BasicBlockUtilsTest.cpp
+  BuildBuiltinsTest.cpp
   CallPromotionUtilsTest.cpp
   CloningTest.cpp
   CodeExtractorTest.cpp
