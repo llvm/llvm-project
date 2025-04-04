@@ -63,7 +63,6 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::ReturnStmtClass:
     llvm_unreachable("should have emitted these statements as simple");
 
-
 #define STMT(Type, Base)
 #define ABSTRACT_STMT(Op)
 #define EXPR(Type, Base) case Stmt::Type##Class:
