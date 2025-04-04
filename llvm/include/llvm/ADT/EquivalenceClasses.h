@@ -148,7 +148,7 @@ public:
     TheMapping.clear();
     for (iterator I = RHS.begin(), E = RHS.end(); I != E; ++I)
       if (I->isLeader()) {
-        member_iterator MI = RHS.member_begin(I);
+        member_iterator MI = RHS.member_begin(*I);
         member_iterator LeaderIt = member_begin(insert(*MI));
         for (++MI; MI != member_end(); ++MI)
           unionSets(LeaderIt, member_begin(insert(*MI)));
@@ -171,13 +171,9 @@ public:
 
   /// member_* Iterate over the members of an equivalence class.
   class member_iterator;
-  member_iterator member_begin(iterator I) const {
-    // Only leaders provide anything to iterate over.
-    return member_iterator(I->isLeader() ? &*I : nullptr);
-  }
   member_iterator member_begin(const ECValue &ECV) const {
     // Only leaders provide anything to iterate over.
-    return member_iterator(ECV.getLeader());
+    return member_iterator(ECV.isLeader() ? ECV.getLeader() : nullptr);
   }
 
   member_iterator member_end() const {

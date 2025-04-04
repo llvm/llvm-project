@@ -1016,12 +1016,12 @@ void RecursiveSearchSplitting::setupWorkList() {
     });
   }
 
-  for (auto I = NodeEC.begin(), E = NodeEC.end(); I != E; ++I) {
-    if (!I->isLeader())
+  for (const auto &Node : NodeEC) {
+    if (!Node.isLeader())
       continue;
 
     BitVector Cluster = SG.createNodesBitVector();
-    for (auto MI = NodeEC.member_begin(I); MI != NodeEC.member_end(); ++MI) {
+    for (auto MI = NodeEC.member_begin(Node); MI != NodeEC.member_end(); ++MI) {
       const SplitGraph::Node &N = SG.getNode(*MI);
       if (N.isGraphEntryPoint())
         N.getDependencies(Cluster);
