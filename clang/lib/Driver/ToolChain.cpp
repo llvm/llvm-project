@@ -816,8 +816,7 @@ void ToolChain::addFortranRuntimeLibs(const ArgList &Args,
       if (AsNeeded)
         addAsNeededOption(*this, Args, CmdArgs, /*as_needed=*/false);
     }
-    CmdArgs.push_back("-lflang_rt.runtime");
-    addArchSpecificRPath(*this, Args, CmdArgs);
+    addFlangRTLibPath(Args, CmdArgs);
 
     // needs libexecinfo for backtrace functions
     if (getTriple().isOSFreeBSD() || getTriple().isOSNetBSD() ||
@@ -848,6 +847,23 @@ void ToolChain::addFortranRuntimeLibraryPath(const llvm::opt::ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString("-libpath:" + DefaultLibPath));
   else
     CmdArgs.push_back(Args.MakeArgString("-L" + DefaultLibPath));
+}
+
+void ToolChain::addFlangRTLibPath(const ArgList &Args,
+                                  llvm::opt::ArgStringList &CmdArgs) const {
+  // Link static flang_rt.runtime.a or shared flang_rt.runtime.so
+  const char *Path;
+  if (getVFS().exists(Twine(Path = getCompilerRTArgString(
+                                Args, "runtime", ToolChain::FT_Static, true))))
+    CmdArgs.push_back(Path);
+  else if (getVFS().exists(
+               Twine(Path = getCompilerRTArgString(
+                         Args, "runtime", ToolChain::FT_Shared, true))))
+    CmdArgs.push_back(Path);
+  else {
+    CmdArgs.push_back("-lflang_rt.runtime");
+    addArchSpecificRPath(*this, Args, CmdArgs);
+  }
 }
 
 // Android target triples contain a target version. If we don't have libraries
