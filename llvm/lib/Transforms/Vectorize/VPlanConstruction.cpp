@@ -14,11 +14,49 @@
 #include "LoopVectorizationPlanner.h"
 #include "VPlan.h"
 #include "VPlanCFG.h"
+#include "VPlanDominatorTree.h"
 #include "VPlanTransforms.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 
 using namespace llvm;
+
+/// Introduce VPRegionBlocks for each loop modeled using a plain CFG in \p Plan.
+static void introduceInnerLoopRegions(VPlan &Plan) {
+  VPDominatorTree VPDT;
+  VPDT.recalculate(Plan);
+
+  for (VPBlockBase *HeaderVPBB :
+       vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry())) {
+    if (HeaderVPBB->getNumPredecessors() != 2)
+      continue;
+    VPBlockBase *PreheaderVPBB = HeaderVPBB->getPredecessors()[0];
+    VPBlockBase *LatchVPBB = HeaderVPBB->getPredecessors()[1];
+    if (!VPDT.dominates(HeaderVPBB, LatchVPBB))
+      continue;
+    assert(VPDT.dominates(PreheaderVPBB, HeaderVPBB) &&
+           "preheader must dominate header");
+    if (LatchVPBB->getSuccessors()[1] != HeaderVPBB) {
+      auto *Term = cast<VPBasicBlock>(LatchVPBB)->getTerminator();
+      auto *Not = new VPInstruction(VPInstruction::Not, {Term->getOperand(0)});
+      Not->insertBefore(Term);
+      Term->setOperand(0, Not);
+    }
+
+    VPBlockUtils::disconnectBlocks(PreheaderVPBB, HeaderVPBB);
+    VPBlockUtils::disconnectBlocks(LatchVPBB, HeaderVPBB);
+    VPBlockBase *Succ = LatchVPBB->getSingleSuccessor();
+    VPBlockUtils::disconnectBlocks(LatchVPBB, Succ);
+
+    auto *R = Plan.createVPRegionBlock(HeaderVPBB, LatchVPBB, "",
+                                       false /*isReplicator*/);
+    for (VPBlockBase *VPBB : vp_depth_first_shallow(HeaderVPBB))
+      VPBB->setParent(R);
+
+    VPBlockUtils::insertBlockAfter(R, PreheaderVPBB);
+    VPBlockUtils::connectBlocks(R, Succ);
+  }
+}
 
 void VPlanTransforms::introduceTopLevelVectorLoopRegion(
     VPlan &Plan, Type *InductionTy, PredicatedScalarEvolution &PSE,
@@ -98,4 +136,6 @@ void VPlanTransforms::introduceTopLevelVectorLoopRegion(
                                ScalarLatchTerm->getDebugLoc(), "cmp.n");
   Builder.createNaryOp(VPInstruction::BranchOnCond, {Cmp},
                        ScalarLatchTerm->getDebugLoc());
+
+  introduceInnerLoopRegions(Plan);
 }
