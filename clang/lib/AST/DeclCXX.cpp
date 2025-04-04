@@ -2304,7 +2304,7 @@ CXXDeductionGuideDecl *CXXDeductionGuideDecl::Create(
     ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
     ExplicitSpecifier ES, const DeclarationNameInfo &NameInfo, QualType T,
     TypeSourceInfo *TInfo, SourceLocation EndLocation, CXXConstructorDecl *Ctor,
-    DeductionCandidate Kind, Expr *TrailingRequiresClause,
+    DeductionCandidate Kind, const AssociatedConstraint &TrailingRequiresClause,
     const CXXDeductionGuideDecl *GeneratedFrom,
     SourceDeductionGuideKind SourceKind) {
   return new (C, DC) CXXDeductionGuideDecl(
@@ -2318,7 +2318,7 @@ CXXDeductionGuideDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
       C, /*DC=*/nullptr, SourceLocation(), ExplicitSpecifier(),
       DeclarationNameInfo(), QualType(), /*TInfo=*/nullptr, SourceLocation(),
       /*Ctor=*/nullptr, DeductionCandidate::Normal,
-      /*TrailingRequiresClause=*/nullptr,
+      /*TrailingRequiresClause=*/{},
       /*GeneratedFrom=*/nullptr, SourceDeductionGuideKind::None);
 }
 
@@ -2427,7 +2427,7 @@ CXXMethodDecl::Create(ASTContext &C, CXXRecordDecl *RD, SourceLocation StartLoc,
                       TypeSourceInfo *TInfo, StorageClass SC, bool UsesFPIntrin,
                       bool isInline, ConstexprSpecKind ConstexprKind,
                       SourceLocation EndLocation,
-                      Expr *TrailingRequiresClause) {
+                      const AssociatedConstraint &TrailingRequiresClause) {
   return new (C, RD) CXXMethodDecl(
       CXXMethod, C, RD, StartLoc, NameInfo, T, TInfo, SC, UsesFPIntrin,
       isInline, ConstexprKind, EndLocation, TrailingRequiresClause);
@@ -2435,10 +2435,11 @@ CXXMethodDecl::Create(ASTContext &C, CXXRecordDecl *RD, SourceLocation StartLoc,
 
 CXXMethodDecl *CXXMethodDecl::CreateDeserialized(ASTContext &C,
                                                  GlobalDeclID ID) {
-  return new (C, ID) CXXMethodDecl(
-      CXXMethod, C, nullptr, SourceLocation(), DeclarationNameInfo(),
-      QualType(), nullptr, SC_None, false, false,
-      ConstexprSpecKind::Unspecified, SourceLocation(), nullptr);
+  return new (C, ID)
+      CXXMethodDecl(CXXMethod, C, nullptr, SourceLocation(),
+                    DeclarationNameInfo(), QualType(), nullptr, SC_None, false,
+                    false, ConstexprSpecKind::Unspecified, SourceLocation(),
+                    /*TrailingRequiresClause=*/{});
 }
 
 CXXMethodDecl *CXXMethodDecl::getDevirtualizedMethod(const Expr *Base,
@@ -2867,7 +2868,8 @@ CXXConstructorDecl::CXXConstructorDecl(
     const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
     ExplicitSpecifier ES, bool UsesFPIntrin, bool isInline,
     bool isImplicitlyDeclared, ConstexprSpecKind ConstexprKind,
-    InheritedConstructor Inherited, Expr *TrailingRequiresClause)
+    InheritedConstructor Inherited,
+    const AssociatedConstraint &TrailingRequiresClause)
     : CXXMethodDecl(CXXConstructor, C, RD, StartLoc, NameInfo, T, TInfo,
                     SC_None, UsesFPIntrin, isInline, ConstexprKind,
                     SourceLocation(), TrailingRequiresClause) {
@@ -2894,7 +2896,7 @@ CXXConstructorDecl *CXXConstructorDecl::CreateDeserialized(ASTContext &C,
   auto *Result = new (C, ID, Extra) CXXConstructorDecl(
       C, nullptr, SourceLocation(), DeclarationNameInfo(), QualType(), nullptr,
       ExplicitSpecifier(), false, false, false, ConstexprSpecKind::Unspecified,
-      InheritedConstructor(), nullptr);
+      InheritedConstructor(), /*TrailingRequiresClause=*/{});
   Result->setInheritingConstructor(isInheritingConstructor);
   Result->CXXConstructorDeclBits.HasTrailingExplicitSpecifier =
       hasTrailingExplicit;
@@ -2907,7 +2909,8 @@ CXXConstructorDecl *CXXConstructorDecl::Create(
     const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
     ExplicitSpecifier ES, bool UsesFPIntrin, bool isInline,
     bool isImplicitlyDeclared, ConstexprSpecKind ConstexprKind,
-    InheritedConstructor Inherited, Expr *TrailingRequiresClause) {
+    InheritedConstructor Inherited,
+    const AssociatedConstraint &TrailingRequiresClause) {
   assert(NameInfo.getName().getNameKind()
          == DeclarationName::CXXConstructorName &&
          "Name must refer to a constructor");
@@ -3033,14 +3036,16 @@ CXXDestructorDecl *CXXDestructorDecl::CreateDeserialized(ASTContext &C,
                                                          GlobalDeclID ID) {
   return new (C, ID) CXXDestructorDecl(
       C, nullptr, SourceLocation(), DeclarationNameInfo(), QualType(), nullptr,
-      false, false, false, ConstexprSpecKind::Unspecified, nullptr);
+      false, false, false, ConstexprSpecKind::Unspecified,
+      /*TrailingRequiresClause=*/{});
 }
 
 CXXDestructorDecl *CXXDestructorDecl::Create(
     ASTContext &C, CXXRecordDecl *RD, SourceLocation StartLoc,
     const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
     bool UsesFPIntrin, bool isInline, bool isImplicitlyDeclared,
-    ConstexprSpecKind ConstexprKind, Expr *TrailingRequiresClause) {
+    ConstexprSpecKind ConstexprKind,
+    const AssociatedConstraint &TrailingRequiresClause) {
   assert(NameInfo.getName().getNameKind()
          == DeclarationName::CXXDestructorName &&
          "Name must refer to a destructor");
@@ -3059,8 +3064,7 @@ void CXXDestructorDecl::setOperatorDelete(FunctionDecl *OD, Expr *ThisArg) {
   }
 }
 
-void CXXDestructorDecl::setOperatorArrayDelete(FunctionDecl *OD,
-                                               Expr *ThisArg) {
+void CXXDestructorDecl::setOperatorArrayDelete(FunctionDecl *OD) {
   auto *First = cast<CXXDestructorDecl>(getFirstDecl());
   if (OD && !First->OperatorArrayDelete)
     First->OperatorArrayDelete = OD;
@@ -3095,7 +3099,7 @@ CXXConversionDecl *CXXConversionDecl::CreateDeserialized(ASTContext &C,
   return new (C, ID) CXXConversionDecl(
       C, nullptr, SourceLocation(), DeclarationNameInfo(), QualType(), nullptr,
       false, false, ExplicitSpecifier(), ConstexprSpecKind::Unspecified,
-      SourceLocation(), nullptr);
+      SourceLocation(), /*TrailingRequiresClause=*/{});
 }
 
 CXXConversionDecl *CXXConversionDecl::Create(
@@ -3103,7 +3107,7 @@ CXXConversionDecl *CXXConversionDecl::Create(
     const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
     bool UsesFPIntrin, bool isInline, ExplicitSpecifier ES,
     ConstexprSpecKind ConstexprKind, SourceLocation EndLocation,
-    Expr *TrailingRequiresClause) {
+    const AssociatedConstraint &TrailingRequiresClause) {
   assert(NameInfo.getName().getNameKind()
          == DeclarationName::CXXConversionFunctionName &&
          "Name must refer to a conversion function");
