@@ -97,3 +97,13 @@ RetainPtr<CFArrayRef> create_cf_array();
 RetainPtr<id> return_bridge_cast() {
   return bridge_cast<CFArrayRef, NSArray>(create_cf_array());
 }
+
+void mutable_copy() {
+  RetainPtr<NSMutableDictionary> mutableArray = adoptNS(@{
+    @"Content-Type": @"text/html",
+  }.mutableCopy);
+}
+
+void string_copy(NSString *str) {
+  RetainPtr<NSString> copy = adoptNS(str.copy);
+}
