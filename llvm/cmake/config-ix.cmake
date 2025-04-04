@@ -295,10 +295,10 @@ if(LLVM_HAS_LOGF128)
 endif()
 
 if (LLVM_ENABLE_ICU STREQUAL FORCE_ON AND LLVM_ENABLE_ICONV STREQUAL FORCE_ON)
-  message(FATAL_ERROR "Both LLVM_ENABLE_ICU and LLVM_ENABLE_ICONV should not be FORCE_ON")
+  message(FATAL_ERROR "LLVM_ENABLE_ICU and LLVM_ENABLE_ICONV should both not be FORCE_ON")
 endif()
 
-# Check for ICU.
+# Check for ICU. Only allow an optional, dynamic link for ICU so we don't impact LLVM's licensing.
 if(LLVM_ENABLE_ICU AND NOT(LLVM_ENABLE_ICONV STREQUAL FORCE_ON))
   set(LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
   set(CMAKE_FIND_LIBRARY_SUFFIXES ".so")

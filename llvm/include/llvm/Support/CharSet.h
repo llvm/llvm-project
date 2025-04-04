@@ -92,8 +92,8 @@ public:
   /// \param[in] CSFrom the source character encoding
   /// \param[in] CSTo the target character encoding
   /// \return a CharSetConverter instance
-  static CharSetConverter create(text_encoding::id CSFrom,
-                                 text_encoding::id CSTo);
+  static ErrorOr<CharSetConverter> create(text_encoding::id CSFrom,
+                                          text_encoding::id CSTo);
 
   /// Creates a CharSetConverter instance.
   /// Returns std::errc::invalid_argument in case the requested conversion is

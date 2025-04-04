@@ -290,8 +290,8 @@ void CharSetConverterIconv::reset() {
 #endif // HAVE_ICONV
 } // namespace
 
-CharSetConverter CharSetConverter::create(text_encoding::id CPFrom,
-                                          text_encoding::id CPTo) {
+ErrorOr<CharSetConverter> CharSetConverter::create(text_encoding::id CPFrom,
+                                                   text_encoding::id CPTo) {
 
   assert(CPFrom != CPTo && "Text encodings should be distinct");
 
@@ -302,9 +302,10 @@ CharSetConverter CharSetConverter::create(text_encoding::id CPFrom,
            CPTo == text_encoding::id::UTF8)
     Conversion = IBM1047ToUTF8;
   else
-    llvm_unreachable("Invalid ConversionType!");
-  std::unique_ptr<details::CharSetConverterImplBase> Converter =
-      std::make_unique<CharSetConverterTable>(Conversion);
+    return std::error_code(errno, std::generic_category())
+               std::unique_ptr<details::CharSetConverterImplBase>
+                   Converter =
+                       std::make_unique<CharSetConverterTable>(Conversion);
 
   return CharSetConverter(std::move(Converter));
 }
@@ -313,8 +314,11 @@ ErrorOr<CharSetConverter> CharSetConverter::create(StringRef CSFrom,
                                                    StringRef CSTo) {
   std::optional<text_encoding::id> From = getKnownCharSet(CSFrom);
   std::optional<text_encoding::id> To = getKnownCharSet(CSTo);
-  if (From && To)
-    return create(*From, *To);
+  if (From && To) {
+    ErrorOr<CharSetConverter> Converter = create(*From, *To);
+    if (Converter)
+      return Converter;
+  }
 #ifdef HAVE_ICU
   UErrorCode EC = U_ZERO_ERROR;
   UConverterUniquePtr FromConvDesc(ucnv_open(CSFrom.str().c_str(), &EC));
