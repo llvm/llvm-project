@@ -4460,7 +4460,7 @@ static bool AdjustFunctionParmAndArgTypesForDeduction(
   //       transformed A can be a pointer to a derived class pointed to by
   //       the deduced A.
   if (isSimpleTemplateIdType(ParamType) ||
-      (isa<PointerType>(ParamType) &&
+      (ParamType->getAs<PointerType>() &&
        isSimpleTemplateIdType(
            ParamType->castAs<PointerType>()->getPointeeType())))
     TDF |= TDF_DerivedClass;
