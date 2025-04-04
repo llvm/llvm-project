@@ -222,9 +222,7 @@ struct KnownAArch64BuildAttrSubsections {
 };
 
 static KnownAArch64BuildAttrSubsections
-extractBuildAttributesSubsections(Ctx &ctx,
-                                  const AArch64AttributeParser &attributes,
-                                  const InputSection &isec) {
+extractBuildAttributesSubsections(const AArch64AttributeParser &attributes) {
 
   KnownAArch64BuildAttrSubsections subSections;
   subSections.pauth.tagPlatform =
@@ -718,7 +716,7 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
         } else {
           if (!hasGnuProperties) {
             KnownAArch64BuildAttrSubsections subSections =
-                extractBuildAttributesSubsections(ctx, attributes, isec);
+                extractBuildAttributesSubsections(attributes);
             if (ELFT::Endianness == llvm::endianness::big) {
               for (size_t i = 0; i < 8; ++i) {
                 this->aarch64PauthAbiCoreInfoStorage[i] = static_cast<uint8_t>(
