@@ -2655,12 +2655,12 @@ ParseStatus RISCVAsmParser::parseRegListCommon(OperandVector &Operands,
     }
   }
 
-  if (RegEnd == RISCV::X26)
-    return Error(getLoc(), "invalid register list, {ra, s0-s10} or {x1, x8-x9, "
-                           "x18-x26} is not supported");
-
   if (parseToken(AsmToken::RCurly, "register list must end with '}'"))
     return ParseStatus::Failure;
+
+  if (RegEnd == RISCV::X26)
+    return Error(S, "invalid register list, {ra, s0-s10} or {x1, x8-x9, "
+                    "x18-x26} is not supported");
 
   auto Encode = RISCVZC::encodeRlist(RegEnd, IsRVE);
   assert(Encode != RISCVZC::INVALID_RLIST);
