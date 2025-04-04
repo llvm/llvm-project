@@ -19,7 +19,14 @@
 #include "llvm/ProfileData/CtxInstrContextNode.h"
 
 namespace llvm {
-enum PGOCtxProfileRecords { Invalid = 0, Version, Guid, CalleeIndex, Counters };
+enum PGOCtxProfileRecords {
+  Invalid = 0,
+  Version,
+  Guid,
+  CallsiteIndex,
+  Counters,
+  TotalRootEntryCount
+};
 
 enum PGOCtxProfileBlockIDs {
   FIRST_VALID = bitc::FIRST_APPLICATION_BLOCKID,
@@ -29,7 +36,8 @@ enum PGOCtxProfileBlockIDs {
   ContextNodeBlockID = ContextRootBlockID + 1,
   FlatProfilesSectionBlockID = ContextNodeBlockID + 1,
   FlatProfileBlockID = FlatProfilesSectionBlockID + 1,
-  LAST_VALID = FlatProfileBlockID
+  UnhandledBlockID = FlatProfileBlockID + 1,
+  LAST_VALID = UnhandledBlockID
 };
 
 /// Write one or more ContextNodes to the provided raw_fd_stream.
@@ -73,9 +81,11 @@ class PGOCtxProfileWriter final : public ctx_profile::ProfileWriter {
   const bool IncludeEmpty;
 
   void writeGuid(ctx_profile::GUID Guid);
+  void writeCallsiteIndex(uint32_t Index);
+  void writeRootEntryCount(uint64_t EntryCount);
   void writeCounters(ArrayRef<uint64_t> Counters);
-  void writeImpl(std::optional<uint32_t> CallerIndex,
-                 const ctx_profile::ContextNode &Node);
+  void writeNode(uint32_t CallerIndex, const ctx_profile::ContextNode &Node);
+  void writeSubcontexts(const ctx_profile::ContextNode &Node);
 
 public:
   PGOCtxProfileWriter(raw_ostream &Out,
@@ -84,17 +94,19 @@ public:
   ~PGOCtxProfileWriter() { Writer.ExitBlock(); }
 
   void startContextSection() override;
-  void writeContextual(const ctx_profile::ContextNode &RootNode) override;
+  void writeContextual(const ctx_profile::ContextNode &RootNode,
+                       const ctx_profile::ContextNode *Unhandled,
+                       uint64_t TotalRootEntryCount) override;
   void endContextSection() override;
 
-  void startFlatSection();
-  void writeFlatSection(ctx_profile::GUID Guid, const uint64_t *Buffer,
-                        size_t BufferSize);
-  void endFlatSection();
+  void startFlatSection() override;
+  void writeFlat(ctx_profile::GUID Guid, const uint64_t *Buffer,
+                 size_t BufferSize) override;
+  void endFlatSection() override;
 
   // constants used in writing which a reader may find useful.
   static constexpr unsigned CodeLen = 2;
-  static constexpr uint32_t CurrentVersion = 2;
+  static constexpr uint32_t CurrentVersion = 4;
   static constexpr unsigned VBREncodingBits = 6;
   static constexpr StringRef ContainerMagic = "CTXP";
 };

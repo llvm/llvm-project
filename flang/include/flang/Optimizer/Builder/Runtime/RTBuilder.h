@@ -21,7 +21,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "flang/Runtime/io-api-consts.h"
+#include "flang/Runtime/io-api.h"
 #include "flang/Runtime/reduce.h"
 #include "flang/Support/Fortran.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -30,7 +30,7 @@
 #include <cstdint>
 #include <functional>
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 // On Windows* OS GetCurrentProcessId returns DWORD aka uint32_t
 typedef std::uint32_t pid_t;
 #endif

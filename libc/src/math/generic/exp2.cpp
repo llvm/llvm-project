@@ -35,11 +35,11 @@ using LIBC_NAMESPACE::operator""_u128;
 
 // Error bounds:
 // Errors when using double precision.
-#ifdef LIBC_TARGET_CPU_HAS_FMA
+#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 constexpr double ERR_D = 0x1.0p-63;
 #else
 constexpr double ERR_D = 0x1.8p-63;
-#endif // LIBC_TARGET_CPU_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 // Errors when using double-double precision.

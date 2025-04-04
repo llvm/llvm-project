@@ -180,8 +180,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'collapse' clause is not valid on 'kernels' directive}}
 #pragma acc kernels device_type(*) collapse(1)
   while(1);
-  // expected-error@+2{{OpenACC clause 'bind' may not follow a 'device_type' clause in a 'kernels' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'bind' clause is not valid on 'kernels' directive}}
 #pragma acc kernels device_type(*) bind(Var)
   while(1);
 #pragma acc kernels device_type(*) vector_length(1)

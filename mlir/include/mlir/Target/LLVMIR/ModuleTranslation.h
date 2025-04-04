@@ -161,6 +161,11 @@ public:
   /// Sets LLVM TBAA metadata for memory operations that have TBAA attributes.
   void setTBAAMetadata(AliasAnalysisOpInterface op, llvm::Instruction *inst);
 
+  /// Sets LLVM dereferenceable metadata for operations that have
+  /// dereferenceable attributes.
+  void setDereferenceableMetadata(DereferenceableOpInterface op,
+                                  llvm::Instruction *inst);
+
   /// Sets LLVM profiling metadata for operations that have branch weights.
   void setBranchWeightsMetadata(BranchWeightOpInterface op);
 
@@ -357,6 +362,9 @@ private:
 
   /// Process the llvm.commandline LLVM Metadata, if it exists.
   LogicalResult createCommandlineMetadata();
+
+  /// Process the llvm.dependent_libraries LLVM Metadata, if it exists.
+  LogicalResult createDependentLibrariesMetadata();
 
   /// Translates dialect attributes attached to the given operation.
   LogicalResult

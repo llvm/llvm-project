@@ -34,6 +34,7 @@ declare double @llvm.nvvm.bitcast.ll2d(i64)
 declare i32 @llvm.nvvm.rotate.b32(i32, i32)
 declare i64 @llvm.nvvm.rotate.right.b64(i64, i32)
 declare i64 @llvm.nvvm.rotate.b64(i64, i32)
+declare i64 @llvm.nvvm.swap.lo.hi.b64(i64)
 
 declare ptr addrspace(1) @llvm.nvvm.ptr.gen.to.global.p1.p0(ptr)
 declare ptr addrspace(3) @llvm.nvvm.ptr.gen.to.shared.p3.p0(ptr)
@@ -166,10 +167,12 @@ define void @rotate(i32 %a, i64 %b) {
 ; CHECK: call i32 @llvm.fshl.i32(i32 %a, i32 %a, i32 6)
 ; CHECK: call i64 @llvm.fshr.i64(i64 %b, i64 %b, i64 7)
 ; CHECK: call i64 @llvm.fshl.i64(i64 %b, i64 %b, i64 8)
+; CHECK: call i64 @llvm.fshl.i64(i64 %b, i64 %b, i64 32)
 ;
   %r1 = call i32 @llvm.nvvm.rotate.b32(i32 %a, i32 6)
   %r2 = call i64 @llvm.nvvm.rotate.right.b64(i64 %b, i32 7)
   %r3 = call i64 @llvm.nvvm.rotate.b64(i64 %b, i32 8)
+  %r4 = call i64 @llvm.nvvm.swap.lo.hi.b64(i64 %b)
   ret void
 }
 

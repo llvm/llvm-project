@@ -189,7 +189,7 @@ define amdgpu_ps float @fptrunc_f32_f32_to_v2bf16(float %a, float %b) {
 entry:
   %a.cvt = fptrunc float %a to bfloat
   %b.cvt = fptrunc float %b to bfloat
-  %v2.1 = insertelement <2 x bfloat> undef, bfloat %a.cvt, i32 0
+  %v2.1 = insertelement <2 x bfloat> poison, bfloat %a.cvt, i32 0
   %v2.2 = insertelement <2 x bfloat> %v2.1, bfloat %b.cvt, i32 1
   %ret = bitcast <2 x bfloat> %v2.2 to float
   ret float %ret
@@ -226,7 +226,7 @@ entry:
   %a.cvt = fptrunc float %a.neg to bfloat
   %b.abs = call float @llvm.fabs.f32(float %b)
   %b.cvt = fptrunc float %b.abs to bfloat
-  %v2.1 = insertelement <2 x bfloat> undef, bfloat %a.cvt, i32 0
+  %v2.1 = insertelement <2 x bfloat> poison, bfloat %a.cvt, i32 0
   %v2.2 = insertelement <2 x bfloat> %v2.1, bfloat %b.cvt, i32 1
   %ret = bitcast <2 x bfloat> %v2.2 to float
   ret float %ret

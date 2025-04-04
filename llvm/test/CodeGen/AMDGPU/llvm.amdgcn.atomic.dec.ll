@@ -269,7 +269,7 @@ define amdgpu_kernel void @flat_atomic_dec_noret_i64_offset_addr64(ptr %ptr) #0 
   ret void
 }
 
-@lds0 = addrspace(3) global [512 x i32] undef
+@lds0 = addrspace(3) global [512 x i32] poison
 
 ; GCN-LABEL: {{^}}atomic_dec_shl_base_lds_0:
 ; CIVI-DAG: s_mov_b32 m0
@@ -418,7 +418,7 @@ define amdgpu_kernel void @global_atomic_dec_noret_i64_offset_addr64(ptr addrspa
   ret void
 }
 
-@lds1 = addrspace(3) global [512 x i64] undef, align 8
+@lds1 = addrspace(3) global [512 x i64] poison, align 8
 
 ; GCN-LABEL: {{^}}atomic_dec_shl_base_lds_0_i64:
 ; CIVI-DAG: s_mov_b32 m0

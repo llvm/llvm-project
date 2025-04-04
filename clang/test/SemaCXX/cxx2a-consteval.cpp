@@ -201,7 +201,7 @@ struct A {
 
 using mem_ptr_type = int (A::*)(int);
 
-template<mem_ptr_type ptr> // expected-note 2{{template parameter is declared here}}
+template<mem_ptr_type ptr>
 struct C {};
 
 C<&A::f> c;

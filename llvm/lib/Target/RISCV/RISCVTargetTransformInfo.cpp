@@ -37,6 +37,12 @@ static cl::opt<unsigned> SLPMaxVF(
         "exclusively by SLP vectorizer."),
     cl::Hidden);
 
+static cl::opt<unsigned>
+    RVVMinTripCount("riscv-v-min-trip-count",
+                    cl::desc("Set the lower bound of a trip count to decide on "
+                             "vectorization while tail-folding."),
+                    cl::init(5), cl::Hidden);
+
 InstructionCost
 RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
                                       TTI::TargetCostKind CostKind) {
@@ -430,10 +436,14 @@ costShuffleViaVRegSplitting(RISCVTTIImpl &TTI, MVT LegalVT,
   copy(Mask, NormalizedMask.begin());
   InstructionCost Cost = 0;
   int NumShuffles = 0;
+  SmallDenseSet<std::pair<ArrayRef<int>, unsigned>> ReusedSingleSrcShuffles;
   processShuffleMasks(
       NormalizedMask, NumOfSrcRegs, NumOfDestRegs, NumOfDestRegs, []() {},
       [&](ArrayRef<int> RegMask, unsigned SrcReg, unsigned DestReg) {
         if (ShuffleVectorInst::isIdentityMask(RegMask, RegMask.size()))
+          return;
+        if (!ReusedSingleSrcShuffles.insert(std::make_pair(RegMask, SrcReg))
+                 .second)
           return;
         ++NumShuffles;
         Cost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, SingleOpTy,
@@ -1889,7 +1899,7 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
 
 InstructionCost RISCVTTIImpl::getExtendedReductionCost(
     unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *ValTy,
-    FastMathFlags FMF, TTI::TargetCostKind CostKind) {
+    std::optional<FastMathFlags> FMF, TTI::TargetCostKind CostKind) {
   if (isa<FixedVectorType>(ValTy) && !ST->useRVVForFixedLengthVectors())
     return BaseT::getExtendedReductionCost(Opcode, IsUnsigned, ResTy, ValTy,
                                            FMF, CostKind);
@@ -2598,6 +2608,10 @@ unsigned RISCVTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
   return std::max<unsigned>(1U, RegWidth.getFixedValue() / ElemWidth);
 }
 
+unsigned RISCVTTIImpl::getMinTripCountTailFoldingThreshold() const {
+  return RVVMinTripCount;
+}
+
 TTI::AddressingModeKind
 RISCVTTIImpl::getPreferredAddressingMode(const Loop *L,
                                          ScalarEvolution *SE) const {
@@ -2778,6 +2792,39 @@ bool RISCVTTIImpl::canSplatOperand(Instruction *I, int Operand) const {
 bool RISCVTTIImpl::isProfitableToSinkOperands(
     Instruction *I, SmallVectorImpl<Use *> &Ops) const {
   using namespace llvm::PatternMatch;
+
+  if (I->isBitwiseLogicOp()) {
+    if (!I->getType()->isVectorTy()) {
+      if (ST->hasStdExtZbb() || ST->hasStdExtZbkb()) {
+        for (auto &Op : I->operands()) {
+          // (and/or/xor X, (not Y)) -> (andn/orn/xnor X, Y)
+          if (match(Op.get(), m_Not(m_Value()))) {
+            Ops.push_back(&Op);
+            return true;
+          }
+        }
+      }
+    } else if (I->getOpcode() == Instruction::And && ST->hasStdExtZvkb()) {
+      for (auto &Op : I->operands()) {
+        // (and X, (not Y)) -> (vandn.vv X, Y)
+        if (match(Op.get(), m_Not(m_Value()))) {
+          Ops.push_back(&Op);
+          return true;
+        }
+        // (and X, (splat (not Y))) -> (vandn.vx X, Y)
+        if (match(Op.get(), m_Shuffle(m_InsertElt(m_Value(), m_Not(m_Value()),
+                                                  m_ZeroInt()),
+                                      m_Value(), m_ZeroMask()))) {
+          Use &InsertElt = cast<Instruction>(Op)->getOperandUse(0);
+          Use &Not = cast<Instruction>(InsertElt)->getOperandUse(1);
+          Ops.push_back(&Not);
+          Ops.push_back(&InsertElt);
+          Ops.push_back(&Op);
+          return true;
+        }
+      }
+    }
+  }
 
   if (!I->getType()->isVectorTy() || !ST->hasVInstructions())
     return false;

@@ -14,6 +14,15 @@ using namespace llvm;
 
 namespace llvm {
 
+TEST(EquivalenceClassesTest, CopyAssignemnt) {
+  EquivalenceClasses<int> EC, Copy;
+  EC.insert(1);
+  EC.insert(4);
+  EquivalenceClasses<int> &Ref = Copy = EC;
+  EXPECT_EQ(Copy.getNumClasses(), 2u);
+  EXPECT_EQ(&Ref, &Copy);
+}
+
 TEST(EquivalenceClassesTest, NoMerges) {
   EquivalenceClasses<int> EqClasses;
   // Until we merged any sets, check that every element is only equivalent to
@@ -75,9 +84,8 @@ TEST(EquivalenceClassesTest, MembersIterator) {
   EC.unionSets(5, 1);
   EXPECT_EQ(EC.getNumClasses(), 2u);
 
-  EquivalenceClasses<int>::iterator I = EC.findValue(EC.getLeaderValue(1));
-  EXPECT_THAT(EC.members(I), testing::ElementsAre(5, 1, 2));
-  EXPECT_EQ(EC.members(EC.end()).begin(), EC.member_end());
+  EXPECT_THAT(EC.members(4), testing::ElementsAre(4));
+  EXPECT_THAT(EC.members(1), testing::ElementsAre(5, 1, 2));
 }
 
 // Type-parameterized tests: Run the same test cases with different element

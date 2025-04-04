@@ -9,7 +9,7 @@ template<int *ip> struct IP {  // expected-note 6 {{template parameter is declar
   IP<ip> *ip2;
 };
 
-template<int &ip> struct IR {}; // expected-note {{template parameter is declared here}}
+template<int &ip> struct IR {};
 
 constexpr std::nullptr_t get_nullptr() { return nullptr; }
 

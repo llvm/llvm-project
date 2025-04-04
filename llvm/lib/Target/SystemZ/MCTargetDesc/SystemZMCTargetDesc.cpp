@@ -8,6 +8,7 @@
 
 #include "SystemZMCTargetDesc.h"
 #include "SystemZGNUInstPrinter.h"
+#include "SystemZHLASMAsmStreamer.h"
 #include "SystemZHLASMInstPrinter.h"
 #include "SystemZMCAsmInfo.h"
 #include "SystemZTargetStreamer.h"
@@ -21,6 +22,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
@@ -33,6 +35,12 @@ using namespace llvm;
 
 #define GET_REGINFO_MC_DESC
 #include "SystemZGenRegisterInfo.inc"
+
+// Temporary option to assist with the migration to a new HLASMAsmStreamer on
+// z/OS
+static cl::opt<bool> GNUAsOnzOSCL("emit-gnuas-syntax-on-zos",
+                                  cl::desc("Emit GNU Assembly Syntax on z/OS."),
+                                  cl::init(true));
 
 const unsigned SystemZMC::GR32Regs[16] = {
     SystemZ::R0L,  SystemZ::R1L,  SystemZ::R2L,  SystemZ::R3L,
@@ -175,49 +183,36 @@ static MCInstPrinter *createSystemZMCInstPrinter(const Triple &T,
   return new SystemZGNUInstPrinter(MAI, MII, MRI);
 }
 
-void SystemZTargetStreamer::emitConstantPools() {
-  // Emit EXRL target instructions.
-  if (EXRLTargets2Sym.empty())
-    return;
-  // Switch to the .text section.
-  const MCObjectFileInfo &OFI = *Streamer.getContext().getObjectFileInfo();
-  Streamer.switchSection(OFI.getTextSection());
-  for (auto &I : EXRLTargets2Sym) {
-    Streamer.emitLabel(I.second);
-    const MCInstSTIPair &MCI_STI = I.first;
-    Streamer.emitInstruction(MCI_STI.first, *MCI_STI.second);
-  }
-  EXRLTargets2Sym.clear();
-}
-
-namespace {
-class SystemZTargetAsmStreamer : public SystemZTargetStreamer {
-  formatted_raw_ostream &OS;
-
-public:
-  SystemZTargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS)
-      : SystemZTargetStreamer(S), OS(OS) {}
-  void emitMachine(StringRef CPU) override {
-    OS << "\t.machine " << CPU << "\n";
-  }
-};
-
-class SystemZTargetELFStreamer : public SystemZTargetStreamer {
-public:
-  SystemZTargetELFStreamer(MCStreamer &S) : SystemZTargetStreamer(S) {}
-  void emitMachine(StringRef CPU) override {}
-};
-} // end namespace
-
 static MCTargetStreamer *createAsmTargetStreamer(MCStreamer &S,
                                                  formatted_raw_ostream &OS,
                                                  MCInstPrinter *InstPrint) {
-  return new SystemZTargetAsmStreamer(S, OS);
+  if (S.getContext().getTargetTriple().isOSzOS())
+    return new SystemZTargetHLASMStreamer(S, OS);
+  else
+    return new SystemZTargetGNUStreamer(S, OS);
+}
+
+static MCStreamer *createAsmStreamer(MCContext &Ctx,
+                                     std::unique_ptr<formatted_raw_ostream> OS,
+                                     MCInstPrinter *IP,
+                                     std::unique_ptr<MCCodeEmitter> CE,
+                                     std::unique_ptr<MCAsmBackend> TAB) {
+
+  auto TT = Ctx.getTargetTriple();
+  if (TT.isOSzOS() && !GNUAsOnzOSCL)
+    return new SystemZHLASMAsmStreamer(Ctx, std::move(OS), IP, std::move(CE),
+                                       std::move(TAB));
+
+  return llvm::createAsmStreamer(Ctx, std::move(OS), IP, std::move(CE),
+                                 std::move(TAB));
 }
 
 static MCTargetStreamer *
 createObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
-  return new SystemZTargetELFStreamer(S);
+  if (S.getContext().getTargetTriple().isOSzOS())
+    return new SystemZTargetGOFFStreamer(S);
+  else
+    return new SystemZTargetELFStreamer(S);
 }
 
 static MCTargetStreamer *
@@ -259,6 +254,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZTargetMC() {
                                         createSystemZMCInstPrinter);
 
   // Register the asm streamer.
+  TargetRegistry::RegisterAsmStreamer(getTheSystemZTarget(), createAsmStreamer);
+
+  // Register the asm target streamer.
   TargetRegistry::RegisterAsmTargetStreamer(getTheSystemZTarget(),
                                             createAsmTargetStreamer);
 
