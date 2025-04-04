@@ -194,11 +194,29 @@ void for_test_scalable(int *List, int Length) {
   }
 }
 
-// Verify for loop is performing scalable vectorization
+// Verify for loop is NOT performing vectorization because the width is 1
 void for_test_scalable_1(int *List, int Length) {
 #pragma clang loop vectorize_width(1, scalable) interleave_count(4) unroll(disable) distribute(disable)
   for (int i = 0; i < Length; i++) {
     // CHECK: br label {{.*}}, !llvm.loop ![[LOOP_19:.*]]
+    List[i] = i * 2;
+  }
+}
+
+// Verify for loop is performing scalable vectorization
+void for_test_scalable_2(int *List, int Length) {
+#pragma clang loop vectorize_width(2, scalable) interleave_count(4) unroll(disable) distribute(disable)
+  for (int i = 0; i < Length; i++) {
+    // CHECK: br label {{.*}}, !llvm.loop ![[LOOP_20:.*]]
+    List[i] = i * 2;
+  }
+}
+
+// Verify unroll attributes are directly attached to the loop metadata
+void for_test_vectorize_disable_unroll(int *List, int Length) {
+#pragma clang loop vectorize(disable) unroll_count(8)
+  for (int i = 0; i < Length; i++) {
+    // CHECK: br label {{.*}}, !llvm.loop ![[LOOP_21:.*]]
     List[i] = i * 2;
   }
 }
@@ -220,9 +238,9 @@ void for_test_scalable_1(int *List, int Length) {
 // CHECK-DAG: ![[INTERLEAVE_16:[0-9]+]] = !{!"llvm.loop.interleave.count", i32 16}
 
 // CHECK-DAG: ![[VECTORIZE_ENABLE:[0-9]+]] = !{!"llvm.loop.vectorize.enable", i1 true}
+// CHECK-DAG: ![[VECTORIZE_DISABLE:[0-9]+]] = !{!"llvm.loop.vectorize.enable", i1 false}
 // CHECK-DAG: ![[FIXED_VEC:[0-9]+]] = !{!"llvm.loop.vectorize.scalable.enable", i1 false}
 // CHECK-DAG: ![[SCALABLE_VEC:[0-9]+]] = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
-// CHECK-DAG: ![[WIDTH_1:[0-9]+]] = !{!"llvm.loop.vectorize.width", i32 1}
 // CHECK-DAG: ![[WIDTH_2:[0-9]+]] = !{!"llvm.loop.vectorize.width", i32 2}
 // CHECK-DAG: ![[WIDTH_5:[0-9]+]] = !{!"llvm.loop.vectorize.width", i32 5}
 // CHECK-DAG: ![[WIDTH_6:[0-9]+]] = !{!"llvm.loop.vectorize.width", i32 6}
@@ -241,7 +259,7 @@ void for_test_scalable_1(int *List, int Length) {
 
 // CHECK-DAG: ![[LOOP_4]] = distinct !{![[LOOP_4]], ![[WIDTH_2]], ![[FIXED_VEC]], ![[INTERLEAVE_2]], ![[VECTORIZE_ENABLE]]}
 
-// CHECK-DAG: ![[LOOP_5]] = distinct !{![[LOOP_5]], ![[MP]], ![[UNROLL_DISABLE]], ![[DISTRIBUTE_DISABLE]], ![[WIDTH_1]]}
+// CHECK-DAG: ![[LOOP_5]] = distinct !{![[LOOP_5]], ![[MP]], ![[UNROLL_DISABLE]], ![[DISTRIBUTE_DISABLE]], ![[VECTORIZE_DISABLE]]}
 
 // CHECK-DAG: ![[LOOP_6]] = distinct !{![[LOOP_6]], ![[MP]], ![[WIDTH_2]], ![[FIXED_VEC]], ![[INTERLEAVE_2]], ![[VECTORIZE_ENABLE]], ![[FOLLOWUP_VECTOR_3]]}
 
@@ -269,4 +287,7 @@ void for_test_scalable_1(int *List, int Length) {
 
 // CHECK-DAG: ![[LOOP_17]] = distinct !{![[LOOP_17]], ![[MP]], ![[UNROLL_DISABLE]], ![[DISTRIBUTE_DISABLE]], ![[FIXED_VEC]], ![[INTERLEAVE_4]], ![[VECTORIZE_ENABLE]]}
 // CHECK-DAG: ![[LOOP_18]] = distinct !{![[LOOP_18]], ![[MP]], ![[UNROLL_DISABLE]], ![[DISTRIBUTE_DISABLE]], ![[SCALABLE_VEC]], ![[INTERLEAVE_4]], ![[VECTORIZE_ENABLE]]}
-// CHECK-DAG: ![[LOOP_19]] = distinct !{![[LOOP_19]], ![[MP]], ![[UNROLL_DISABLE]], ![[DISTRIBUTE_DISABLE]], ![[WIDTH_1]], ![[SCALABLE_VEC]], ![[INTERLEAVE_4]], ![[VECTORIZE_ENABLE]]}
+// CHECK-DAG: ![[LOOP_19]] = distinct !{![[LOOP_19]], ![[MP]], ![[UNROLL_DISABLE]], ![[DISTRIBUTE_DISABLE]], ![[VECTORIZE_DISABLE]]}
+// CHECK-DAG: ![[LOOP_20]] = distinct !{![[LOOP_20]], ![[MP]], ![[UNROLL_DISABLE]], ![[DISTRIBUTE_DISABLE]], ![[WIDTH_2]], ![[SCALABLE_VEC]], ![[INTERLEAVE_4]], ![[VECTORIZE_ENABLE]]}
+
+// CHECK-DAG: ![[LOOP_21]] = distinct !{![[LOOP_21]], ![[MP]], ![[VECTORIZE_DISABLE]], ![[UNROLL_8]]}
