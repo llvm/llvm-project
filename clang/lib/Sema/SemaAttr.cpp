@@ -1366,7 +1366,7 @@ static bool typeListMatches(ASTContext &Context, FunctionDecl *FD,
 }
 
 FunctionDecl *Sema::tryFunctionLookUpInPragma(NestedNameSpecifier *NestedName,
-                                      SourceLocation NameLoc) {
+                                              SourceLocation NameLoc) {
   assert(!NestedName->getPrefix() ||
          NestedName->getPrefix()->getKind() == NestedNameSpecifier::Identifier);
   IdentifierInfo *Prefix =
@@ -1396,8 +1396,9 @@ FunctionDecl *Sema::tryFunctionLookUpInPragma(NestedNameSpecifier *NestedName,
   return nullptr;
 }
 
-NamedDecl *Sema::trySymbolLookUpInPragma(NestedNameSpecifier *NestedName,
-                                 const clang::Sema::SymbolLabel &Label) {
+NamedDecl *
+Sema::trySymbolLookUpInPragma(NestedNameSpecifier *NestedName,
+                              const clang::Sema::SymbolLabel &Label) {
 
   assert(!NestedName->getPrefix() ||
          NestedName->getPrefix()->getKind() == NestedNameSpecifier::Identifier);
@@ -1428,7 +1429,8 @@ NamedDecl *Sema::trySymbolLookUpInPragma(NestedNameSpecifier *NestedName,
 
         // All function parameters must match if specified in pragma otherwise,
         // we accept a function found by lookup only if it's the only one.
-        if ((Label.TypeList.has_value() && typeListMatches(Context, FD, Label)) ||
+        if ((Label.TypeList.has_value() &&
+             typeListMatches(Context, FD, Label)) ||
             (!Label.TypeList.has_value() && LRes.isSingleResult()))
           return FD;
       }
