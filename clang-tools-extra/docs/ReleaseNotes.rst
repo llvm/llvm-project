@@ -131,6 +131,10 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`bugprone-exception-escape
+  <clang-tidy/checks/bugprone/exception-escape>` check to print stack trace
+  of a potentially escaped exception.
+
 - Improved :doc:`bugprone-optional-value-conversion
   <clang-tidy/checks/bugprone/optional-value-conversion>` check to detect
   conversion in argument of ``std::make_optional``.
