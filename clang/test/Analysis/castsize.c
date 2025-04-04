@@ -1,7 +1,8 @@
 // RUN: %clang_analyze_cc1 -verify %s \
 // RUN:   -analyzer-checker=core,unix.Malloc,alpha.core.CastSize
 
-void *malloc(unsigned long);
+typedef typeof(sizeof(int)) size_t;
+void *malloc(size_t);
 
 struct s1 {
   int a;
