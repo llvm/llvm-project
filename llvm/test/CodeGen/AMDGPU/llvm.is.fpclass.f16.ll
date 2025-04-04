@@ -1336,10 +1336,10 @@ define <2 x i1> @isnan_v2f16(<2 x half> %x) nounwind {
 ; GFX11GLISEL-TRUE16-LABEL: isnan_v2f16:
 ; GFX11GLISEL-TRUE16:       ; %bb.0:
 ; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 3
-; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s0
-; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.h, 3
-; GFX11GLISEL-TRUE16-NEXT:    v_mov_b32_e32 v0, v2
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v1.l, 3
 ; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s0
 ; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1499,12 +1499,13 @@ define <3 x i1> @isnan_v3f16(<3 x half> %x) nounwind {
 ; GFX11GLISEL-TRUE16-LABEL: isnan_v3f16:
 ; GFX11GLISEL-TRUE16:       ; %bb.0:
 ; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
 ; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 3
-; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v4, 0, 1, s0
-; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.h, 3
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v2.l, 3
 ; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s0
 ; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v1.l, 3
-; GFX11GLISEL-TRUE16-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_mov_b32 v1, v3
+; GFX11GLISEL-TRUE16-NEXT:    v_mov_b32_e32 v1, v3
 ; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s0
 ; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1694,14 +1695,14 @@ define <4 x i1> @isnan_v4f16(<4 x half> %x) nounwind {
 ; GFX11GLISEL-TRUE16:       ; %bb.0:
 ; GFX11GLISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 3
-; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v4, 0, 1, s0
-; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.h, 3
-; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v5, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
+; GFX11GLISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v1.l, 3
-; GFX11GLISEL-TRUE16-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s0
-; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v1.h, 3
-; GFX11GLISEL-TRUE16-NEXT:    v_mov_b32_e32 v1, v5
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v3.l, 3
+; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s0
+; GFX11GLISEL-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v4.l, 3
 ; GFX11GLISEL-TRUE16-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s0
 ; GFX11GLISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
