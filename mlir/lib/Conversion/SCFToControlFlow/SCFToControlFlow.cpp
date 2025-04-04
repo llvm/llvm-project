@@ -213,10 +213,10 @@ struct ExecuteRegionLowering : public OpRewritePattern<ExecuteRegionOp> {
 struct ParallelLowering : public OpRewritePattern<mlir::scf::ParallelOp> {
   using OpRewritePattern<mlir::scf::ParallelOp>::OpRewritePattern;
 
-  bool enableVectorizeHits;
+  bool enableVectorizeHints;
 
-  ParallelLowering(mlir::MLIRContext *ctx, bool enableVectorizeHits)
-      : OpRewritePattern(ctx), enableVectorizeHits(enableVectorizeHits) {}
+  ParallelLowering(mlir::MLIRContext *ctx, bool enableVectorizeHints)
+      : OpRewritePattern(ctx), enableVectorizeHints(enableVectorizeHints) {}
 
   LogicalResult matchAndRewrite(mlir::scf::ParallelOp parallelOp,
                                 PatternRewriter &rewriter) const override;
@@ -495,7 +495,7 @@ ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
 
   auto vecAttr = LLVM::LoopVectorizeAttr::get(
       rewriter.getContext(),
-      /* disable */ rewriter.getBoolAttr(false), {}, {}, {}, {}, {}, {});
+      /*disable=*/rewriter.getBoolAttr(false), {}, {}, {}, {}, {}, {});
   auto loopAnnotation = LLVM::LoopAnnotationAttr::get(
       rewriter.getContext(), {}, /*vectorize=*/vecAttr, {}, {}, {}, {}, {}, {},
       {}, {}, {}, {}, {}, {}, {});
@@ -530,7 +530,7 @@ ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
       rewriter.create<scf::YieldOp>(loc, forOp.getResults());
     }
 
-    if (enableVectorizeHits)
+    if (enableVectorizeHints)
       forOp->setAttr(LLVM::BrOp::getLoopAnnotationAttrName(OperationName(
                          LLVM::BrOp::getOperationName(), getContext())),
                      loopAnnotation);
@@ -724,18 +724,18 @@ LogicalResult ForallLowering::matchAndRewrite(ForallOp forallOp,
 }
 
 void mlir::populateSCFToControlFlowConversionPatterns(
-    RewritePatternSet &patterns, bool enableVectorizeHits) {
+    RewritePatternSet &patterns, bool enableVectorizeHints) {
   patterns.add<ForallLowering, ForLowering, IfLowering, WhileLowering,
                ExecuteRegionLowering, IndexSwitchLowering>(
       patterns.getContext());
-  patterns.add<ParallelLowering>(patterns.getContext(), enableVectorizeHits);
+  patterns.add<ParallelLowering>(patterns.getContext(), enableVectorizeHints);
   patterns.add<DoWhileLowering>(patterns.getContext(), /*benefit=*/2);
 }
 
 void SCFToControlFlowPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   populateSCFToControlFlowConversionPatterns(patterns,
-                                             enableVectorizeHits.getValue());
+                                             enableVectorizeHints.getValue());
 
   // Configure conversion to lower out SCF operations.
   ConversionTarget target(getContext());

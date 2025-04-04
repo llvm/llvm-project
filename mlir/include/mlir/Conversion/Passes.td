@@ -986,7 +986,8 @@ def SCFToControlFlowPass : Pass<"convert-scf-to-cf"> {
                 " control flow with a CFG";
   let dependentDialects = ["cf::ControlFlowDialect", "LLVM::LLVMDialect"];
 
-  let options = [Option<"enableVectorizeHits", "enable-vectorize-hits", "bool",
+  let options = [Option<"enableVectorizeHints", "enable-vectorize-hints",
+                        "bool",
                         /*default=*/"false",
                         "Add vectorization hints when convert SCF parallel "
                         "loop to ControlFlow dialect">];

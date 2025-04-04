@@ -21,7 +21,7 @@ class RewritePatternSet;
 /// Collect a set of patterns to convert SCF operations to CFG branch-based
 /// operations within the ControlFlow dialect.
 void populateSCFToControlFlowConversionPatterns(
-    RewritePatternSet &patterns, bool enableVectorizeHits = false);
+    RewritePatternSet &patterns, bool enableVectorizeHints = false);
 
 } // namespace mlir
 

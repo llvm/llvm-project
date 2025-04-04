@@ -1,5 +1,5 @@
 // RUN: mlir-opt -allow-unregistered-dialect -convert-scf-to-cf -split-input-file %s | FileCheck %s --check-prefixes=CHECK,NO-VEC
-// RUN: mlir-opt -allow-unregistered-dialect -convert-scf-to-cf="enable-vectorize-hits=true" \
+// RUN: mlir-opt -allow-unregistered-dialect -convert-scf-to-cf="enable-vectorize-hints=true" \
 // RUN:          -split-input-file %s | FileCheck %s --check-prefixes=CHECK,VEC
 
 // VEC: #loop_vectorize = #llvm.loop_vectorize<disable = false>
