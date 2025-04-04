@@ -254,6 +254,13 @@ public:
   bool IsElemental() const { return proc_.IsElemental(); }
   bool hasAlternateReturns() const { return hasAlternateReturns_; }
 
+  bool hasNoInline() const { return noInline_; }
+  void set_noInline(bool ni) { noInline_ = ni; }
+  bool hasAlwaysInline() const { return alwaysInline_; }
+  void set_alwaysInline(bool ai) { alwaysInline_ = ai; }
+  bool hasInlineHint() const { return inlineHint_; }
+  void set_inlineHint(bool ih) { inlineHint_ = ih; }
+
   Expr<SomeType> *UnwrapArgExpr(int n) {
     if (static_cast<std::size_t>(n) < arguments_.size() && arguments_[n]) {
       return arguments_[n]->UnwrapExpr();
@@ -277,6 +284,9 @@ protected:
   ActualArguments arguments_;
   Chevrons chevrons_;
   bool hasAlternateReturns_;
+  bool noInline_{false};
+  bool alwaysInline_{false};
+  bool inlineHint_{false};
 };
 
 template <typename A> class FunctionRef : public ProcedureRef {
