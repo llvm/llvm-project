@@ -140,6 +140,31 @@ allocator for LLVM-libc.
       -DCLANG_DEFAULT_RTLIB=compiler-rt \
       -DCMAKE_INSTALL_PREFIX=$SYSROOT
 
+Libc can optionally use `SnMalloc <https://github.com/microsoft/snmalloc>`_ as its
+allocator implementation. ``SnMalloc`` is a modern allocator implementation with excellent
+multicore performance. Please refer to ``SnMalloc``'s repositories for more information.
+
+To setup ``SnMalloc``, use the following ``cmake`` configuration instead:
+
+.. code-block:: sh
+
+   $> git clone https://github.com/microsoft/snmalloc
+   $> export SNMALLOC_DIR=$(realpath snmalloc)
+   $> cd /path/to/llvm-project
+   $> cmake -S runtimes \
+      -B build \
+      -G Ninja \
+      -DCMAKE_C_COMPILER=clang \
+      -DCMAKE_CXX_COMPILER=clang++ \
+      -DLLVM_ENABLE_RUNTIMES="libc" \
+      -DLLVM_LIBC_FULL_BUILD=ON \
+      -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+      -DLIBC_INCLUDE_SNMALLOC="$SNMALLOC_DIR"
+
+.. note::
+   LLVM's libc does not vendor ``SnMalloc``. The commit known to work is
+   ``80bdcd999f1881fd26463a6f5b5aca21600907de``.
+
 Build and install
 =================
 
