@@ -107,6 +107,7 @@ def Tosa_AvgPool2dOp : Tosa_InferShapedTypeOp<"avg_pool2d"> {
     LogicalResult verifyOutputZeroPoint(int64_t zp);
   }];
 
+  let hasCanonicalizer = 1;
   let hasVerifier = 1;
 }
 
@@ -153,6 +154,8 @@ def Tosa_Conv2DOp : Tosa_ConvOp<"conv2d"> {
   }];
 
   let builders = [Tosa_ConvOpQuantInfoBuilder];
+
+  let hasCanonicalizer = 1;
   let hasVerifier = 1;
 }
 
@@ -244,6 +247,8 @@ def Tosa_DepthwiseConv2DOp : Tosa_ConvOp<"depthwise_conv2d"> {
   }];
 
   let builders = [Tosa_ConvOpQuantInfoBuilder];
+
+  let hasCanonicalizer = 1;
   let hasVerifier = 1;
 }
 
