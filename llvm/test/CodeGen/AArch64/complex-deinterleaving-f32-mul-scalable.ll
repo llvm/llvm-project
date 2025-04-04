@@ -35,14 +35,14 @@ define <vscale x 8 x float> @complex_mul_v8f32(<vscale x 8 x float> %a, <vscale 
 ; CHECK-LABEL: complex_mul_v8f32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov z4.s, #0 // =0x0
+; CHECK-NEXT:    mov z5.s, #0 // =0x0
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    mov z5.d, z4.d
-; CHECK-NEXT:    fcmla z4.s, p0/m, z3.s, z1.s, #0
 ; CHECK-NEXT:    fcmla z5.s, p0/m, z2.s, z0.s, #0
-; CHECK-NEXT:    fcmla z4.s, p0/m, z3.s, z1.s, #90
+; CHECK-NEXT:    fcmla z4.s, p0/m, z3.s, z1.s, #0
 ; CHECK-NEXT:    fcmla z5.s, p0/m, z2.s, z0.s, #90
-; CHECK-NEXT:    mov z1.d, z4.d
+; CHECK-NEXT:    fcmla z4.s, p0/m, z3.s, z1.s, #90
 ; CHECK-NEXT:    mov z0.d, z5.d
+; CHECK-NEXT:    mov z1.d, z4.d
 ; CHECK-NEXT:    ret
 entry:
   %a.deinterleaved = tail call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> %a)
@@ -66,22 +66,22 @@ define <vscale x 16 x float> @complex_mul_v16f32(<vscale x 16 x float> %a, <vsca
 ; CHECK-LABEL: complex_mul_v16f32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov z24.s, #0 // =0x0
+; CHECK-NEXT:    mov z25.s, #0 // =0x0
+; CHECK-NEXT:    mov z26.s, #0 // =0x0
+; CHECK-NEXT:    mov z27.s, #0 // =0x0
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    mov z25.d, z24.d
-; CHECK-NEXT:    mov z26.d, z24.d
-; CHECK-NEXT:    mov z27.d, z24.d
-; CHECK-NEXT:    fcmla z24.s, p0/m, z7.s, z3.s, #0
-; CHECK-NEXT:    fcmla z25.s, p0/m, z4.s, z0.s, #0
-; CHECK-NEXT:    fcmla z26.s, p0/m, z5.s, z1.s, #0
+; CHECK-NEXT:    fcmla z24.s, p0/m, z4.s, z0.s, #0
+; CHECK-NEXT:    fcmla z25.s, p0/m, z5.s, z1.s, #0
 ; CHECK-NEXT:    fcmla z27.s, p0/m, z6.s, z2.s, #0
-; CHECK-NEXT:    fcmla z24.s, p0/m, z7.s, z3.s, #90
-; CHECK-NEXT:    fcmla z25.s, p0/m, z4.s, z0.s, #90
-; CHECK-NEXT:    fcmla z26.s, p0/m, z5.s, z1.s, #90
+; CHECK-NEXT:    fcmla z26.s, p0/m, z7.s, z3.s, #0
+; CHECK-NEXT:    fcmla z24.s, p0/m, z4.s, z0.s, #90
+; CHECK-NEXT:    fcmla z25.s, p0/m, z5.s, z1.s, #90
 ; CHECK-NEXT:    fcmla z27.s, p0/m, z6.s, z2.s, #90
-; CHECK-NEXT:    mov z3.d, z24.d
-; CHECK-NEXT:    mov z0.d, z25.d
-; CHECK-NEXT:    mov z1.d, z26.d
+; CHECK-NEXT:    fcmla z26.s, p0/m, z7.s, z3.s, #90
+; CHECK-NEXT:    mov z0.d, z24.d
+; CHECK-NEXT:    mov z1.d, z25.d
 ; CHECK-NEXT:    mov z2.d, z27.d
+; CHECK-NEXT:    mov z3.d, z26.d
 ; CHECK-NEXT:    ret
 entry:
   %a.deinterleaved = tail call { <vscale x 8 x float>, <vscale x 8 x float> } @llvm.vector.deinterleave2.nxv16f32(<vscale x 16 x float> %a)
