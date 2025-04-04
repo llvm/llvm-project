@@ -161,8 +161,17 @@ void populateVectorTransferCollapseInnerMostContiguousDimsPatterns(
 void populateSinkVectorOpsPatterns(RewritePatternSet &patterns,
                                    PatternBenefit benefit = 1);
 
-/// Patterns that remove redundant Vector Ops by re-ordering them with
-/// memory Ops:
+/// Patterns that remove redundant Vector Ops by merging them with load/store
+/// ops
+/// ```
+/// vector.load %arg0[%arg1] : memref<?xf32>, vector<4xf32>
+/// vector.extract %0[1] : f32 from vector<4xf32>
+/// ```
+/// Gets converted to:
+/// ```
+/// %c1 = arith.constant 1 : index
+/// %0 = arith.addi %arg1, %c1 overflow<nsw> : index
+/// %1 = memref.load %arg0[%0] : memref<?xf32>
 void populateSinkVectorMemOpsPatterns(RewritePatternSet &patterns,
                                       PatternBenefit benefit = 1);
 
