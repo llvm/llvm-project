@@ -350,7 +350,7 @@ struct RISCVOperand final : public MCParsedAsmOperand {
     FRM,
     Fence,
     RegList,
-    Spimm,
+    StackAdj,
     RegReg,
   } Kind;
 
@@ -392,7 +392,7 @@ struct RISCVOperand final : public MCParsedAsmOperand {
     unsigned Encoding;
   };
 
-  struct SpimmOp {
+  struct StackAdjOp {
     unsigned Val;
   };
 
@@ -412,7 +412,7 @@ struct RISCVOperand final : public MCParsedAsmOperand {
     FRMOp FRM;
     FenceOp Fence;
     RegListOp RegList;
-    SpimmOp Spimm;
+    StackAdjOp StackAdj;
     RegRegOp RegReg;
   };
 
@@ -451,8 +451,8 @@ public:
     case KindTy::RegList:
       RegList = o.RegList;
       break;
-    case KindTy::Spimm:
-      Spimm = o.Spimm;
+    case KindTy::StackAdj:
+      StackAdj = o.StackAdj;
       break;
     case KindTy::RegReg:
       RegReg = o.RegReg;
@@ -486,7 +486,7 @@ public:
   bool isRegListS0() const {
     return Kind == KindTy::RegList && RegList.Encoding != RISCVZC::RA;
   }
-  bool isSpimm() const { return Kind == KindTy::Spimm; }
+  bool isStackAdj() const { return Kind == KindTy::StackAdj; }
 
   bool isGPR() const {
     return Kind == KindTy::Register &&
@@ -1014,9 +1014,9 @@ public:
       RISCVZC::printRegList(RegList.Encoding, OS);
       OS << '>';
       break;
-    case KindTy::Spimm:
-      OS << "<Spimm: ";
-      OS << Spimm.Val;
+    case KindTy::StackAdj:
+      OS << "<stackadj: ";
+      OS << StackAdj.Val;
       OS << '>';
       break;
     case KindTy::RegReg:
@@ -1116,9 +1116,9 @@ public:
     return Op;
   }
 
-  static std::unique_ptr<RISCVOperand> createSpimm(unsigned Spimm, SMLoc S) {
-    auto Op = std::make_unique<RISCVOperand>(KindTy::Spimm);
-    Op->Spimm.Val = Spimm;
+  static std::unique_ptr<RISCVOperand> createStackAdj(unsigned StackAdj, SMLoc S) {
+    auto Op = std::make_unique<RISCVOperand>(KindTy::StackAdj);
+    Op->StackAdj.Val = StackAdj;
     Op->StartLoc = S;
     return Op;
   }
@@ -1194,9 +1194,9 @@ public:
     Inst.addOperand(MCOperand::createReg(RegReg.Reg2));
   }
 
-  void addSpimmOperands(MCInst &Inst, unsigned N) const {
+  void addStackAdjOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createImm(Spimm.Val));
+    Inst.addOperand(MCOperand::createImm(StackAdj.Val));
   }
 
   void addFRMArgOperands(MCInst &Inst, unsigned N) const {
@@ -2699,8 +2699,8 @@ ParseStatus RISCVAsmParser::parseZcmpStackAdj(OperandVector &Operands,
                                       "be a multiple of 16 bytes in the range");
   }
 
-  unsigned Spimm = (StackAdjustment - StackAdjBase) / 16;
-  Operands.push_back(RISCVOperand::createSpimm(Spimm << 4, S));
+  unsigned StackAdj = (StackAdjustment - StackAdjBase);
+  Operands.push_back(RISCVOperand::createStackAdj(StackAdj, S));
   Lex();
   return ParseStatus::Success;
 }
