@@ -339,12 +339,10 @@ std::int32_t RTNAME(PutEnv)(
   if (str_sep == str_end) {
     // No separator, invalid input string
     status = EINVAL;
-  }
-  else if ((str_sep + 1) == str_end) {
+  } else if ((str_sep + 1) == str_end) {
     // "name=" form, which means we need to delete this variable
     status = executionEnvironment.UnsetEnv(str, str_sep - str, terminator);
-  }
-  else {
+  } else {
     // Example: consider str "abc=defg", str_length = 8
     //
     // addr:     05 06 07 08 09 10 11 12 13
@@ -354,7 +352,7 @@ std::int32_t RTNAME(PutEnv)(
     // value ptr: str_sep + 1 = 9, value length: 4
     //
     status = executionEnvironment.SetEnv(
-      str, str_sep - str, str_sep + 1, str_end - str_sep - 1, terminator);
+        str, str_sep - str, str_sep + 1, str_end - str_sep - 1, terminator);
   }
 
   return status;

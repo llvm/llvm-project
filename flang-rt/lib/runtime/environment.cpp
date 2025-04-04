@@ -182,10 +182,9 @@ const char *ExecutionEnvironment::GetEnv(
   return std::getenv(cStyleName.get());
 }
 
-std::int32_t ExecutionEnvironment::SetEnv(
-  const char *name, std::size_t name_length,
-  const char *value, std::size_t value_length,
-  const Terminator &terminator) {
+std::int32_t ExecutionEnvironment::SetEnv(const char *name,
+    std::size_t name_length, const char *value, std::size_t value_length,
+    const Terminator &terminator) {
 
   RUNTIME_CHECK(terminator, name && name_length && value && value_length);
 
@@ -210,8 +209,7 @@ std::int32_t ExecutionEnvironment::SetEnv(
 
 #endif
 
-  if (status != 0)
-  {
+  if (status != 0) {
     status = errno;
   }
 
@@ -219,8 +217,7 @@ std::int32_t ExecutionEnvironment::SetEnv(
 }
 
 std::int32_t ExecutionEnvironment::UnsetEnv(
-    const char *name, std::size_t name_length,
-    const Terminator &terminator) {
+    const char *name, std::size_t name_length, const Terminator &terminator) {
 
   RUNTIME_CHECK(terminator, name && name_length);
 
@@ -241,8 +238,7 @@ std::int32_t ExecutionEnvironment::UnsetEnv(
 
 #endif
 
-  if (status != 0)
-  {
+  if (status != 0) {
     status = errno;
   }
 
