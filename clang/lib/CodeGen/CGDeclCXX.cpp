@@ -793,6 +793,7 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
     }
     CodeGenFunction(*this).GenerateCXXGlobalInitFunc(Fn, ModuleInits,
                                                      GuardAddr);
+    getTargetCodeGenInfo().setTargetAttributes(nullptr, Fn, *this);
   }
 
   // We allow for the case that a module object is added to a linked binary
@@ -816,12 +817,6 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
     else
       Fn->setCallingConv(llvm::CallingConv::AMDGPU_KERNEL);
     Fn->addFnAttr("device-init");
-  }
-
-  if (getTarget().isBranchProtectionSupportedArch(
-          getTarget().getTargetOpts().CPU)) {
-    TargetInfo::BranchProtectionInfo BPI(getLangOpts());
-    getTargetCodeGenInfo().setBranchProtectionFnAttributes(BPI, (*Fn));
   }
 
   // We are done with the inits.
