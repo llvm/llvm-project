@@ -3062,9 +3062,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_ctz:
   case Builtin::BI__builtin_ctzl:
   case Builtin::BI__builtin_ctzll:
-  case Builtin::BI__builtin_ctzg: {
-    bool HasFallback = BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_ctzg &&
-                       E->getNumArgs() > 1;
+  case Builtin::BI__builtin_ctzg:
+  case Builtin::BI__builtin_elementwise_ctz: {
+    bool HasFallback =
+        (BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_ctzg ||
+         BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_elementwise_ctz) &&
+        E->getNumArgs() > 1;
 
     Value *ArgValue =
         HasFallback ? EmitScalarExpr(E->getArg(0))
@@ -3094,9 +3097,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_clz:
   case Builtin::BI__builtin_clzl:
   case Builtin::BI__builtin_clzll:
-  case Builtin::BI__builtin_clzg: {
-    bool HasFallback = BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_clzg &&
-                       E->getNumArgs() > 1;
+  case Builtin::BI__builtin_clzg:
+  case Builtin::BI__builtin_elementwise_clz: {
+    bool HasFallback =
+        (BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_clzg ||
+         BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_elementwise_clz) &&
+        E->getNumArgs() > 1;
 
     Value *ArgValue =
         HasFallback ? EmitScalarExpr(E->getArg(0))
