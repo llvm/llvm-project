@@ -51,9 +51,7 @@ class DXContainerGlobals : public llvm::ModulePass {
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  DXContainerGlobals() : ModulePass(ID) {
-    initializeDXContainerGlobalsPass(*PassRegistry::getPassRegistry());
-  }
+  DXContainerGlobals() : ModulePass(ID) {}
 
   StringRef getPassName() const override {
     return "DXContainer Global Emitter";
