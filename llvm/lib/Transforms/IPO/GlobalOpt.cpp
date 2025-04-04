@@ -1525,6 +1525,7 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
     if (GS.Ordering == AtomicOrdering::NotAtomic) {
       assert(!GV->isConstant() && "Expected a non-constant global");
       GV->setConstant(true);
+      GV->disableSanitizerMetadataGlobalTagging();
       Changed = true;
     }
 
@@ -2257,8 +2258,10 @@ static bool EvaluateStaticConstructor(Function *F, const DataLayout &DL,
                       << " stores.\n");
     for (const auto &Pair : NewInitializers)
       Pair.first->setInitializer(Pair.second);
-    for (GlobalVariable *GV : Eval.getInvariants())
+    for (GlobalVariable *GV : Eval.getInvariants()) {
       GV->setConstant(true);
+      GV->disableSanitizerMetadataGlobalTagging();
+    }
   }
 
   return EvalSuccess;
