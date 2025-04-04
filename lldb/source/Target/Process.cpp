@@ -799,6 +799,31 @@ static bool AnyDebuggerCausedStop(ThreadList &thread_list) {
   return false;
 }
 
+/// Returns true if curr_thread is not null and it is stopped at a REPL
+/// breakpoint.
+static bool IsREPLBreakpoint(Thread *curr_thread) {
+  if (!curr_thread)
+    return false;
+
+  Process &process = *curr_thread->GetProcess();
+
+  if (StopInfoSP stop_info_sp = curr_thread->GetStopInfo())
+    if (BreakpointSiteSP bp_site_sp =
+            process.GetBreakpointSiteList().FindByID(stop_info_sp->GetValue()))
+      return BreakpointSiteMatchesREPLBreakpoint(bp_site_sp);
+
+  // Only check the breakpoint site for the current PC if the stop reason didn't
+  // have a valid breakpoint site.
+  if (StackFrameSP frame_sp = curr_thread->GetStackFrameAtIndex(0)) {
+    if (BreakpointSiteSP bp_site_sp =
+            process.GetBreakpointSiteList().FindByAddress(
+                frame_sp->GetStackID().GetPC()))
+      return BreakpointSiteMatchesREPLBreakpoint(bp_site_sp);
+  }
+
+  return false;
+}
+
 bool Process::HandleProcessStateChangedEvent(
     const EventSP &event_sp, Stream *stream,
     SelectMostRelevant select_most_relevant,
@@ -885,7 +910,6 @@ bool Process::HandleProcessStateChangedEvent(
       }
     } else {
       bool check_for_repl_breakpoint = false;
-      bool is_repl_breakpoint = false;
       ThreadSP curr_thread;
       StopInfoSP curr_thread_stop_info_sp;
       // Lock the thread list so it doesn't change on us, this is the scope for
@@ -993,38 +1017,8 @@ bool Process::HandleProcessStateChangedEvent(
                                : AnyDebuggerCausedStop(thread_list);
       }
 
-      BreakpointSiteSP bp_site_sp;
-      if (repl_is_enabled && check_for_repl_breakpoint) {
-        // Make sure this isn't the internal "REPL" breakpoint
-        if (curr_thread) {
-          StopInfoSP stop_info_sp = curr_thread->GetStopInfo();
-          if (stop_info_sp) {
-            bp_site_sp = process_sp->GetBreakpointSiteList().FindByID(
-                stop_info_sp->GetValue());
-            if (bp_site_sp) {
-              is_repl_breakpoint =
-                  BreakpointSiteMatchesREPLBreakpoint(bp_site_sp);
-            }
-          }
-
-          // Only check the breakpoint site for the current PC if the stop
-          // reason didn't have
-          // a valid breakpoint site
-          if (!bp_site_sp) {
-            // We might have stopped with a eStopReasonPlanComplete, see the PC
-            // is at
-
-            lldb::StackFrameSP frame_sp = curr_thread->GetStackFrameAtIndex(0);
-            if (frame_sp) {
-              bp_site_sp = process_sp->GetBreakpointSiteList().FindByAddress(
-                  frame_sp->GetStackID().GetPC());
-              if (bp_site_sp)
-                is_repl_breakpoint =
-                    BreakpointSiteMatchesREPLBreakpoint(bp_site_sp);
-            }
-          }
-        }
-      }
+      bool is_repl_breakpoint = repl_is_enabled && check_for_repl_breakpoint &&
+                                IsREPLBreakpoint(curr_thread.get());
 
       // Drop the ThreadList mutex by here, since GetThreadStatus below might
       // have to run code, e.g. for Data formatters, and if we hold the
