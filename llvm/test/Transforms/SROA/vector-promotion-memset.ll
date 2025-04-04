@@ -2,155 +2,116 @@
 ; RUN: opt < %s -passes='sroa' -S | FileCheck %s
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-n8:16:32:64"
 
-%ptr_pair = type { ptr, ptr }
-
-%struct.a = type { <32 x i8> }
-define void @vector_promote_memset_a(ptr %arg0) {
-; CHECK-LABEL: @vector_promote_memset_a(
-; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP0:%.*]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[TMP2]], align 1
-; CHECK-NEXT:    [[DOTSROA_0_0_VEC_INSERT:%.*]] = insertelement <32 x i8> zeroinitializer, i8 [[TMP3]], i32 0
-; CHECK-NEXT:    ret void
+%struct_a = type { [32 x i8] }
+define i8 @vector_promote_a(ptr %arg0) {
+; CHECK-LABEL: @vector_promote_a(
+; CHECK-NEXT:    [[V0:%.*]] = load i8, ptr [[ARG0:%.*]], align 1
+; CHECK-NEXT:    [[A0_SROA_0_0_VEC_INSERT:%.*]] = insertelement <32 x i8> zeroinitializer, i8 [[V0]], i32 0
+; CHECK-NEXT:    [[A0_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <32 x i8> [[A0_SROA_0_0_VEC_INSERT]], i32 4
+; CHECK-NEXT:    ret i8 [[A0_SROA_0_4_VEC_EXTRACT]]
 ;
-  %a0 = alloca %struct.a, align 32
-  %a1 = alloca %ptr_pair, align 8
+  %a0 = alloca %struct_a, align 32
   call void @llvm.memset.p0.i64(ptr align 32 %a0, i8 0, i64 32, i1 false)
-
-  store ptr %a0, ptr %a1, align 8
-
-  %p1 = getelementptr inbounds %ptr_pair, ptr %a1, i64 0, i32 1
-  %v0 = load ptr, ptr %arg0, align 8
-  store ptr %v0, ptr %p1, align 8
-
-  %p2 = getelementptr inbounds i8, ptr %a1, i32 8
-  %v1 = load ptr, ptr %p2, align 8
-
-  %v2 = load i8, ptr %v1, align 1
-  store i8 %v2, ptr %a0, align 32
-
-  ret void
+  %v0 = load i8, ptr %arg0, align 1
+  store i8 %v0, ptr %a0, align 1
+  %p0 = getelementptr inbounds i8, ptr %a0, i64 4
+  %v1 = load i8, ptr %p0, align 1
+  ret i8 %v1
 }
 
-%struct.b = type { <16 x i16> }
-define void @vector_promote_memset_b(ptr %arg0) {
-; CHECK-LABEL: @vector_promote_memset_b(
-; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP0:%.*]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr [[TMP2]], align 1
-; CHECK-NEXT:    [[DOTSROA_0_0_VEC_INSERT:%.*]] = insertelement <16 x i16> zeroinitializer, i16 [[TMP3]], i32 0
-; CHECK-NEXT:    ret void
+%struct_b = type { [16 x i16] }
+define i16 @vector_promote_b(ptr %arg0) {
+; CHECK-LABEL: @vector_promote_b(
+; CHECK-NEXT:    [[V0:%.*]] = load i16, ptr [[ARG0:%.*]], align 1
+; CHECK-NEXT:    [[A0_SROA_0_20_VEC_INSERT:%.*]] = insertelement <16 x i16> zeroinitializer, i16 [[V0]], i32 10
+; CHECK-NEXT:    [[A0_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <16 x i16> [[A0_SROA_0_20_VEC_INSERT]], i32 2
+; CHECK-NEXT:    ret i16 [[A0_SROA_0_4_VEC_EXTRACT]]
 ;
-  %a0 = alloca %struct.b, align 16
-  %a1 = alloca %ptr_pair, align 8
+  %a0 = alloca %struct_b, align 32
   call void @llvm.memset.p0.i64(ptr align 32 %a0, i8 0, i64 32, i1 false)
-
-  store ptr %a0, ptr %a1, align 8
-
-  %p1 = getelementptr inbounds %ptr_pair, ptr %a1, i64 0, i32 1
-  %v0 = load ptr, ptr %arg0, align 8
-  store ptr %v0, ptr %p1, align 8
-
-  %p2 = getelementptr inbounds i8, ptr %a1, i32 8
-  %v1 = load ptr, ptr %p2, align 8
-
-  %v2 = load i16, ptr %v1, align 1
-  store i16 %v2, ptr %a0, align 16
-
-  ret void
+  %v0 = load i16, ptr %arg0, align 1
+  %p0 = getelementptr inbounds i16, ptr %a0, i64 10
+  store i16 %v0, ptr %p0, align 1
+  %p1 = getelementptr inbounds i16, ptr %a0, i64 2
+  %v1 = load i16, ptr %p1, align 1
+  ret i16 %v1
 }
 
-%struct.c = type { <4 x i32> }
-define void @vector_promote_memset_c(ptr %arg0) {
-; CHECK-LABEL: @vector_promote_memset_c(
-; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP0:%.*]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 1
-; CHECK-NEXT:    [[DOTSROA_0_8_VEC_INSERT:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[TMP3]], i32 2
-; CHECK-NEXT:    ret void
+%struct_c = type { [4 x i32] }
+define i32 @vector_promote_c(ptr %arg0) {
+; CHECK-LABEL: @vector_promote_c(
+; CHECK-NEXT:    [[V0:%.*]] = load i32, ptr [[ARG0:%.*]], align 1
+; CHECK-NEXT:    [[A0_SROA_0_12_VEC_INSERT:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[V0]], i32 3
+; CHECK-NEXT:    [[A0_SROA_0_8_VEC_EXTRACT:%.*]] = extractelement <4 x i32> [[A0_SROA_0_12_VEC_INSERT]], i32 2
+; CHECK-NEXT:    ret i32 [[A0_SROA_0_8_VEC_EXTRACT]]
 ;
-  %a0 = alloca %struct.c, align 4
-  %a1 = alloca %ptr_pair, align 8
+  %a0 = alloca %struct_c, align 32
   call void @llvm.memset.p0.i64(ptr align 32 %a0, i8 0, i64 16, i1 false)
-
-  store ptr %a0, ptr %a1, align 8
-
-  %p1 = getelementptr inbounds %ptr_pair, ptr %a1, i64 0, i32 1
-  %v0 = load ptr, ptr %arg0, align 8
-  store ptr %v0, ptr %p1, align 8
-
-  %p2 = getelementptr inbounds i8, ptr %a1, i32 8
-  %v1 = load ptr, ptr %p2, align 8
-
-  %v2 = load i32, ptr %v1, align 1
-
-  %p3 = getelementptr inbounds i32, ptr %a0, i32 2
-  store i32 %v2, ptr %p3, align 4
-
-  ret void
+  %v0 = load i32, ptr %arg0, align 1
+  %p0 = getelementptr inbounds i32, ptr %a0, i64 3
+  store i32 %v0, ptr %p0, align 1
+  %p1 = getelementptr inbounds i32, ptr %a0, i64 2
+  %v1 = load i32, ptr %p1, align 1
+  ret i32 %v1
 }
 
 ; We currently prevent promotion if the vector would require padding
-%struct.d = type { <6 x i32> }
-define void @vector_promote_memset_d(ptr %arg0) {
-; CHECK-LABEL: @vector_promote_memset_d(
-; CHECK-NEXT:    [[DOTSROA_2:%.*]] = alloca [3 x i32], align 4
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[DOTSROA_2]], i8 0, i64 12, i1 false)
-; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP0:%.*]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 1
-; CHECK-NEXT:    ret void
+%struct_d = type { [6 x i32] }
+define i32 @vector_promote_d(ptr %arg0) {
+; CHECK-LABEL: @vector_promote_d(
+; CHECK-NEXT:    [[A0_SROA_3:%.*]] = alloca [3 x i32], align 4
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[A0_SROA_3]], i8 0, i64 12, i1 false)
+; CHECK-NEXT:    [[V0:%.*]] = load i32, ptr [[ARG0:%.*]], align 1
+; CHECK-NEXT:    ret i32 0
 ;
-  %a0 = alloca %struct.d, align 4
-  %a1 = alloca %ptr_pair, align 8
+  %a0 = alloca %struct_d, align 32
   call void @llvm.memset.p0.i64(ptr align 32 %a0, i8 0, i64 24, i1 false)
-
-  store ptr %a0, ptr %a1, align 8
-
-  %p1 = getelementptr inbounds %ptr_pair, ptr %a1, i64 0, i32 1
-  %v0 = load ptr, ptr %arg0, align 8
-  store ptr %v0, ptr %p1, align 8
-
-  %p2 = getelementptr inbounds i8, ptr %a1, i32 8
-  %v1 = load ptr, ptr %p2, align 8
-
-  %v2 = load i32, ptr %v1, align 1
-
-  %p3 = getelementptr inbounds i32, ptr %a0, i32 2
-  store i32 %v2, ptr %p3, align 4
-
-  ret void
+  %v0 = load i32, ptr %arg0, align 1
+  %p0 = getelementptr inbounds i32, ptr %a0, i64 1
+  store i32 %v0, ptr %p0, align 1
+  %p1 = getelementptr inbounds i32, ptr %a0, i64 2
+  %v1 = load i32, ptr %p1, align 1
+  ret i32 %v1
 }
 
-
-; We shouldn't promote large memsets.
-%struct.e = type { [65536 x i8] }
-define void @vector_promote_memset_e(ptr %arg0) {
-; CHECK-LABEL: @vector_promote_memset_e(
-; CHECK-NEXT:    [[A0_SROA_2:%.*]] = alloca [65524 x i8], align 4
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[A0_SROA_2]], i8 0, i64 65524, i1 false)
-; CHECK-NEXT:    [[V0:%.*]] = load ptr, ptr [[ARG0:%.*]], align 8
-; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[V0]], align 1
-; CHECK-NEXT:    ret void
+; We shouldn't promote memsets larger than the max value of `unsigned short`.
+; See getMaxNumFixedVectorElements().
+%struct_e = type { [65536 x i8] }
+define i8 @vector_promote_e(ptr %arg0) {
+; CHECK-LABEL: @vector_promote_e(
+; CHECK-NEXT:    [[A0_SROA_3:%.*]] = alloca [65532 x i8], align 4
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[A0_SROA_3]], i8 0, i64 65532, i1 false)
+; CHECK-NEXT:    [[V0:%.*]] = load i8, ptr [[ARG0:%.*]], align 1
+; CHECK-NEXT:    ret i8 0
 ;
-  %a0 = alloca %struct.e, align 4
-  %a1 = alloca %ptr_pair, align 8
+  %a0 = alloca %struct_e, align 32
   call void @llvm.memset.p0.i64(ptr align 32 %a0, i8 0, i64 65536, i1 false)
-
-  store ptr %a0, ptr %a1, align 8
-
-  %p1 = getelementptr inbounds %ptr_pair, ptr %a1, i64 0, i32 1
-  %v0 = load ptr, ptr %arg0, align 8
-  store ptr %v0, ptr %p1, align 8
-
-  %p2 = getelementptr inbounds i8, ptr %a1, i32 8
-  %v1 = load ptr, ptr %p2, align 8
-
-  %v2 = load i32, ptr %v1, align 1
-
-  %p3 = getelementptr inbounds i32, ptr %a0, i32 2
-  store i32 %v2, ptr %p3, align 4
-
-  ret void
+  %v0 = load i8, ptr %arg0, align 1
+  %p0 = getelementptr inbounds i8, ptr %a0, i64 3
+  store i8 %v0, ptr %p0, align 1
+  %p1 = getelementptr inbounds i8, ptr %a0, i64 2
+  %v1 = load i8, ptr %p1, align 1
+  ret i8 %v1
 }
 
-
+; Largest memset we currently promote
+%struct_f = type { [32768 x i8] }
+define i8 @vector_promote_f(ptr %arg0) {
+; CHECK-LABEL: @vector_promote_f(
+; CHECK-NEXT:    [[V0:%.*]] = load i8, ptr [[ARG0:%.*]], align 1
+; CHECK-NEXT:    [[A0_SROA_0_12345_VEC_INSERT:%.*]] = insertelement <32768 x i8> zeroinitializer, i8 [[V0]], i32 12345
+; CHECK-NEXT:    [[A0_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <32768 x i8> [[A0_SROA_0_12345_VEC_INSERT]], i32 2
+; CHECK-NEXT:    ret i8 [[A0_SROA_0_2_VEC_EXTRACT]]
+;
+  %a0 = alloca %struct_f, align 32
+  call void @llvm.memset.p0.i64(ptr align 32 %a0, i8 0, i64 32768, i1 false)
+  %v0 = load i8, ptr %arg0, align 1
+  %p0 = getelementptr inbounds i8, ptr %a0, i64 12345
+  store i8 %v0, ptr %p0, align 1
+  %p1 = getelementptr inbounds i8, ptr %a0, i64 2
+  %v1 = load i8, ptr %p1, align 1
+  ret i8 %v1
+}
 
 ; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
 declare void @llvm.memset.p0.i64(ptr writeonly captures(none), i8, i64, i1 immarg) #0
