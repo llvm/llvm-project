@@ -1,4 +1,4 @@
-; Test branch weights metadata, estimated trip count metadata, and block
+; Test branch weight metadata, estimated trip count metadata, and block
 ; frequencies after loop peeling.
 
 ; RUN: opt < %s -S -passes='print<block-freq>' 2>&1 | \
