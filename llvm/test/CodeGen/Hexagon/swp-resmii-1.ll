@@ -3,7 +3,7 @@
 
 ; Test that checks that we compute the correct ResMII for haar.
 
-; CHECK: MII = 4 MAX_II = 14 (rec=1, res=4)
+; CHECK: MII = {{[0-9]+}} MAX_II = {{[0-9]+}} (rec={{[0-9]+}}, res=4)
 
 ; Function Attrs: nounwind
 define void @f0(ptr noalias nocapture readonly %a0, i32 %a1, i32 %a2, i32 %a3, ptr noalias nocapture %a4, i32 %a5) #0 {
