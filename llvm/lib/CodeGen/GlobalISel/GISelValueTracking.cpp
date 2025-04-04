@@ -1,4 +1,5 @@
-//===- lib/CodeGen/GlobalISel/GISelKnownBits.cpp --------------*- C++ *-===//
+//===- lib/CodeGen/GlobalISel/GISelValueTracking.cpp --------------*- C++
+//*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,7 +11,7 @@
 /// passes.
 //
 //===----------------------------------------------------------------------===//
-#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
@@ -26,16 +27,16 @@
 
 using namespace llvm;
 
-char llvm::GISelKnownBitsAnalysis::ID = 0;
+char llvm::GISelValueTrackingAnalysis::ID = 0;
 
-INITIALIZE_PASS(GISelKnownBitsAnalysis, DEBUG_TYPE,
+INITIALIZE_PASS(GISelValueTrackingAnalysis, DEBUG_TYPE,
                 "Analysis for ComputingKnownBits", false, true)
 
-GISelKnownBits::GISelKnownBits(MachineFunction &MF, unsigned MaxDepth)
+GISelValueTracking::GISelValueTracking(MachineFunction &MF, unsigned MaxDepth)
     : MF(MF), MRI(MF.getRegInfo()), TL(*MF.getSubtarget().getTargetLowering()),
       DL(MF.getFunction().getDataLayout()), MaxDepth(MaxDepth) {}
 
-Align GISelKnownBits::computeKnownAlignment(Register R, unsigned Depth) {
+Align GISelValueTracking::computeKnownAlignment(Register R, unsigned Depth) {
   const MachineInstr *MI = MRI.getVRegDef(R);
   switch (MI->getOpcode()) {
   case TargetOpcode::COPY:
@@ -57,13 +58,13 @@ Align GISelKnownBits::computeKnownAlignment(Register R, unsigned Depth) {
   }
 }
 
-KnownBits GISelKnownBits::getKnownBits(MachineInstr &MI) {
+KnownBits GISelValueTracking::getKnownBits(MachineInstr &MI) {
   assert(MI.getNumExplicitDefs() == 1 &&
          "expected single return generic instruction");
   return getKnownBits(MI.getOperand(0).getReg());
 }
 
-KnownBits GISelKnownBits::getKnownBits(Register R) {
+KnownBits GISelValueTracking::getKnownBits(Register R) {
   const LLT Ty = MRI.getType(R);
   // Since the number of lanes in a scalable vector is unknown at compile time,
   // we track one bit which is implicitly broadcast to all lanes.  This means
@@ -73,8 +74,9 @@ KnownBits GISelKnownBits::getKnownBits(Register R) {
   return getKnownBits(R, DemandedElts);
 }
 
-KnownBits GISelKnownBits::getKnownBits(Register R, const APInt &DemandedElts,
-                                       unsigned Depth) {
+KnownBits GISelValueTracking::getKnownBits(Register R,
+                                           const APInt &DemandedElts,
+                                           unsigned Depth) {
   // For now, we only maintain the cache during one request.
   assert(ComputeKnownBitsCache.empty() && "Cache should have been cleared");
 
@@ -84,17 +86,19 @@ KnownBits GISelKnownBits::getKnownBits(Register R, const APInt &DemandedElts,
   return Known;
 }
 
-bool GISelKnownBits::signBitIsZero(Register R) {
+bool GISelValueTracking::signBitIsZero(Register R) {
   LLT Ty = MRI.getType(R);
   unsigned BitWidth = Ty.getScalarSizeInBits();
   return maskedValueIsZero(R, APInt::getSignMask(BitWidth));
 }
 
-APInt GISelKnownBits::getKnownZeroes(Register R) {
+APInt GISelValueTracking::getKnownZeroes(Register R) {
   return getKnownBits(R).Zero;
 }
 
-APInt GISelKnownBits::getKnownOnes(Register R) { return getKnownBits(R).One; }
+APInt GISelValueTracking::getKnownOnes(Register R) {
+  return getKnownBits(R).One;
+}
 
 LLVM_ATTRIBUTE_UNUSED static void
 dumpResult(const MachineInstr &MI, const KnownBits &Known, unsigned Depth) {
@@ -108,10 +112,10 @@ dumpResult(const MachineInstr &MI, const KnownBits &Known, unsigned Depth) {
 }
 
 /// Compute known bits for the intersection of \p Src0 and \p Src1
-void GISelKnownBits::computeKnownBitsMin(Register Src0, Register Src1,
-                                         KnownBits &Known,
-                                         const APInt &DemandedElts,
-                                         unsigned Depth) {
+void GISelValueTracking::computeKnownBitsMin(Register Src0, Register Src1,
+                                             KnownBits &Known,
+                                             const APInt &DemandedElts,
+                                             unsigned Depth) {
   // Test src1 first, since we canonicalize simpler expressions to the RHS.
   computeKnownBitsImpl(Src1, Known, DemandedElts, Depth);
 
@@ -140,9 +144,9 @@ static KnownBits extractBits(unsigned BitWidth, const KnownBits &SrcOpKnown,
   return KnownBits::lshr(SrcOpKnown, OffsetKnown) & Mask;
 }
 
-void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
-                                          const APInt &DemandedElts,
-                                          unsigned Depth) {
+void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
+                                              const APInt &DemandedElts,
+                                              unsigned Depth) {
   MachineInstr &MI = *MRI.getVRegDef(R);
   unsigned Opcode = MI.getOpcode();
   LLT DstTy = MRI.getType(R);
@@ -178,12 +182,12 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
   Known = KnownBits(BitWidth); // Don't know anything
 
   // Depth may get bigger than max depth if it gets passed to a different
-  // GISelKnownBits object.
-  // This may happen when say a generic part uses a GISelKnownBits object
+  // GISelValueTracking object.
+  // This may happen when say a generic part uses a GISelValueTracking object
   // with some max depth, but then we hit TL.computeKnownBitsForTargetInstr
-  // which creates a new GISelKnownBits object with a different and smaller
+  // which creates a new GISelValueTracking object with a different and smaller
   // depth. If we just check for equality, we would never exit if the depth
-  // that is passed down to the target specific GISelKnownBits object is
+  // that is passed down to the target specific GISelValueTracking object is
   // already bigger than its max depth.
   if (Depth >= getMaxDepth())
     return;
@@ -200,7 +204,8 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     break;
   case TargetOpcode::G_BUILD_VECTOR: {
     // Collect the known bits that are shared by every demanded vector element.
-    Known.Zero.setAllBits(); Known.One.setAllBits();
+    Known.Zero.setAllBits();
+    Known.One.setAllBits();
     for (unsigned i = 0, e = MI.getNumOperands() - 1; i < e; ++i) {
       if (!DemandedElts[i])
         continue;
@@ -365,19 +370,19 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
   }
   case TargetOpcode::G_UMIN: {
     KnownBits KnownRHS;
-    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known,
-                         DemandedElts, Depth + 1);
-    computeKnownBitsImpl(MI.getOperand(2).getReg(), KnownRHS,
-                         DemandedElts, Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), KnownRHS, DemandedElts,
+                         Depth + 1);
     Known = KnownBits::umin(Known, KnownRHS);
     break;
   }
   case TargetOpcode::G_UMAX: {
     KnownBits KnownRHS;
-    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known,
-                         DemandedElts, Depth + 1);
-    computeKnownBitsImpl(MI.getOperand(2).getReg(), KnownRHS,
-                         DemandedElts, Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), KnownRHS, DemandedElts,
+                         Depth + 1);
     Known = KnownBits::umax(Known, KnownRHS);
     break;
   }
@@ -557,8 +562,8 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
   case TargetOpcode::G_CTPOP: {
     computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedElts,
                          Depth + 1);
-    // We can bound the space the count needs.  Also, bits known to be zero can't
-    // contribute to the population.
+    // We can bound the space the count needs.  Also, bits known to be zero
+    // can't contribute to the population.
     unsigned BitsPossiblySet = Known2.countMaxPopulation();
     unsigned LowBits = llvm::bit_width(BitsPossiblySet);
     Known.Zero.setBitsFrom(LowBits);
@@ -633,9 +638,9 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
 }
 
 /// Compute number of sign bits for the intersection of \p Src0 and \p Src1
-unsigned GISelKnownBits::computeNumSignBitsMin(Register Src0, Register Src1,
-                                               const APInt &DemandedElts,
-                                               unsigned Depth) {
+unsigned GISelValueTracking::computeNumSignBitsMin(Register Src0, Register Src1,
+                                                   const APInt &DemandedElts,
+                                                   unsigned Depth) {
   // Test src1 first, since we canonicalize simpler expressions to the RHS.
   unsigned Src1SignBits = computeNumSignBits(Src1, DemandedElts, Depth);
   if (Src1SignBits == 1)
@@ -670,9 +675,9 @@ static unsigned computeNumSignBitsFromRangeMetadata(const GAnyLoad *Ld,
                   CR.getSignedMax().getNumSignBits());
 }
 
-unsigned GISelKnownBits::computeNumSignBits(Register R,
-                                            const APInt &DemandedElts,
-                                            unsigned Depth) {
+unsigned GISelValueTracking::computeNumSignBits(Register R,
+                                                const APInt &DemandedElts,
+                                                unsigned Depth) {
   MachineInstr &MI = *MRI.getVRegDef(R);
   unsigned Opcode = MI.getOpcode();
 
@@ -719,7 +724,8 @@ unsigned GISelKnownBits::computeNumSignBits(Register R,
     Register Src = MI.getOperand(1).getReg();
     unsigned SrcBits = MI.getOperand(2).getImm();
     unsigned InRegBits = TyBits - SrcBits + 1;
-    return std::max(computeNumSignBits(Src, DemandedElts, Depth + 1), InRegBits);
+    return std::max(computeNumSignBits(Src, DemandedElts, Depth + 1),
+                    InRegBits);
   }
   case TargetOpcode::G_LOAD: {
     GLoad *Ld = cast<GLoad>(&MI);
@@ -836,7 +842,7 @@ unsigned GISelKnownBits::computeNumSignBits(Register R,
   case TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS:
   default: {
     unsigned NumBits =
-      TL.computeNumSignBitsForTargetInstr(*this, R, DemandedElts, MRI, Depth);
+        TL.computeNumSignBitsForTargetInstr(*this, R, DemandedElts, MRI, Depth);
     if (NumBits > 1)
       FirstAnswer = std::max(FirstAnswer, NumBits);
     break;
@@ -847,9 +853,9 @@ unsigned GISelKnownBits::computeNumSignBits(Register R,
   // use this information.
   KnownBits Known = getKnownBits(R, DemandedElts, Depth);
   APInt Mask;
-  if (Known.isNonNegative()) {        // sign bit is 0
+  if (Known.isNonNegative()) { // sign bit is 0
     Mask = Known.Zero;
-  } else if (Known.isNegative()) {  // sign bit is 1;
+  } else if (Known.isNegative()) { // sign bit is 1;
     Mask = Known.One;
   } else {
     // Nothing known.
@@ -862,27 +868,27 @@ unsigned GISelKnownBits::computeNumSignBits(Register R,
   return std::max(FirstAnswer, Mask.countl_one());
 }
 
-unsigned GISelKnownBits::computeNumSignBits(Register R, unsigned Depth) {
+unsigned GISelValueTracking::computeNumSignBits(Register R, unsigned Depth) {
   LLT Ty = MRI.getType(R);
   APInt DemandedElts =
       Ty.isVector() ? APInt::getAllOnes(Ty.getNumElements()) : APInt(1, 1);
   return computeNumSignBits(R, DemandedElts, Depth);
 }
 
-void GISelKnownBitsAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
+void GISelValueTrackingAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-bool GISelKnownBitsAnalysis::runOnMachineFunction(MachineFunction &MF) {
+bool GISelValueTrackingAnalysis::runOnMachineFunction(MachineFunction &MF) {
   return false;
 }
 
-GISelKnownBits &GISelKnownBitsAnalysis::get(MachineFunction &MF) {
+GISelValueTracking &GISelValueTrackingAnalysis::get(MachineFunction &MF) {
   if (!Info) {
     unsigned MaxDepth =
         MF.getTarget().getOptLevel() == CodeGenOptLevel::None ? 2 : 6;
-    Info = std::make_unique<GISelKnownBits>(MF, MaxDepth);
+    Info = std::make_unique<GISelValueTracking>(MF, MaxDepth);
   }
   return *Info;
 }
