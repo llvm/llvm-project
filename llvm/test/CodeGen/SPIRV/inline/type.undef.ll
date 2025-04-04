@@ -13,5 +13,5 @@ define %int_t @foo() {
 entry:
 ; CHECK-DAG: [[undef:%[0-9]+]] = OpUndef [[int_t]]
 ; CHECK-DAG: OpReturnValue [[undef]]
-  ret %int_t undef
+  ret %int_t poison
 }
