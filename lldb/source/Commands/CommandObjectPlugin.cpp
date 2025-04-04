@@ -145,9 +145,9 @@ static int ActOnMatchingPlugins(
 // Return a string in glob syntax for matching plugins.
 static std::string GetPluginNamePatternString(llvm::StringRef user_input,
                                               bool add_default_glob) {
-  std::string pattern_str = user_input.empty() ? "*" : user_input;
+  std::string pattern_str = user_input.empty() ? "*" : user_input.str();
 
-  if (add_default_glob && pattern_str != "*") 
+  if (add_default_glob && pattern_str != "*")
     pattern_str = "*" + pattern_str + "*";
 
   return pattern_str;
@@ -232,9 +232,9 @@ The plugin information is formatted as shown below
 
 An enabled plugin is marked with [+] and a disabled plugin is marked with [-].
 
-Selecting plugins
-------------------
-plugin list [<plugin-namespace>.][<plugin-name>]
+Plugins can be listed by namespace and name with:
+
+  plugin list [<plugin-namespace>.][<plugin-name>]
 
 Plugin names are specified using glob patterns. The pattern will be matched
 against the plugins fully qualified name, which is composed of the namespace,
@@ -356,7 +356,7 @@ protected:
 
     int num_matching = SetEnableOnMatchingPlugins(*plugin_glob, result, false);
 
-    if (num_matching == 0) 
+    if (num_matching == 0)
       result.AppendErrorWithFormat("Found no matching plugins to disable");
   }
 
