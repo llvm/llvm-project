@@ -39,17 +39,24 @@ public:
   virtual void HandleComment(SMLoc Loc, StringRef CommentText) = 0;
 };
 
-/// Generic assembler lexer interface, for use by target specific assembly
-/// lexers.
-class MCAsmLexer {
+class AsmLexer {
   /// The current token, stored in the base class for faster access.
   SmallVector<AsmToken, 1> CurTok;
+
+  const char *CurPtr = nullptr;
+  StringRef CurBuf;
 
   /// The location and description of the current error
   SMLoc ErrLoc;
   std::string Err;
 
-protected: // Can only create subclasses.
+  const MCAsmInfo &MAI;
+
+  bool IsAtStartOfLine = true;
+  bool AtStartOfStatement = true;
+  bool IsPeeking = false;
+  bool EndStatementAtEOF = true;
+
   const char *TokStart = nullptr;
   bool SkipSpace = true;
   bool AllowAtInIdentifier = false;
@@ -65,9 +72,7 @@ protected: // Can only create subclasses.
   bool LexHLASMStrings = false;
   AsmCommentConsumer *CommentConsumer = nullptr;
 
-  MCAsmLexer();
-
-  virtual AsmToken LexToken() = 0;
+  AsmToken LexToken();
 
   void SetError(SMLoc errLoc, const std::string &err) {
     ErrLoc = errLoc;
@@ -75,9 +80,9 @@ protected: // Can only create subclasses.
   }
 
 public:
-  MCAsmLexer(const MCAsmLexer &) = delete;
-  MCAsmLexer &operator=(const MCAsmLexer &) = delete;
-  virtual ~MCAsmLexer();
+  AsmLexer(const MCAsmInfo &MAI);
+  AsmLexer(const AsmLexer &) = delete;
+  AsmLexer &operator=(const AsmLexer &) = delete;
 
   /// Consume the next token from the input stream and return it.
   ///
@@ -86,7 +91,7 @@ public:
   const AsmToken &Lex() {
     assert(!CurTok.empty());
     // Mark if we parsing out a EndOfStatement.
-    IsAtStartOfStatement = CurTok.front().getKind() == AsmToken::EndOfStatement;
+    AtStartOfStatement = CurTok.front().getKind() == AsmToken::EndOfStatement;
     CurTok.erase(CurTok.begin());
     // LexToken may generate multiple tokens via UnLex but will always return
     // the first one. Place returned value at head of CurTok vector.
@@ -98,16 +103,16 @@ public:
   }
 
   void UnLex(AsmToken const &Token) {
-    IsAtStartOfStatement = false;
+    AtStartOfStatement = false;
     CurTok.insert(CurTok.begin(), Token);
   }
 
-  bool isAtStartOfStatement() { return IsAtStartOfStatement; }
+  bool isAtStartOfStatement() { return AtStartOfStatement; }
 
-  virtual StringRef LexUntilEndOfStatement() = 0;
+  StringRef LexUntilEndOfStatement();
 
   /// Get the current source location.
-  SMLoc getLoc() const;
+  SMLoc getLoc() const { return SMLoc::getFromPointer(TokStart); }
 
   /// Get the current (last) lexed token.
   const AsmToken &getTok() const { return CurTok[0]; }
@@ -126,8 +131,7 @@ public:
   }
 
   /// Look ahead an arbitrary number of tokens.
-  virtual size_t peekTokens(MutableArrayRef<AsmToken> Buf,
-                            bool ShouldSkipSpace = true) = 0;
+  size_t peekTokens(MutableArrayRef<AsmToken> Buf, bool ShouldSkipSpace = true);
 
   /// Get the current error location
   SMLoc getErrLoc() { return ErrLoc; }
@@ -185,36 +189,9 @@ public:
   /// setting this option to true, will disable lexing for character and string
   /// literals.
   void setLexHLASMStrings(bool V) { LexHLASMStrings = V; }
-};
-
-/// AsmLexer - Lexer class for assembly files.
-class AsmLexer final : public MCAsmLexer {
-  const MCAsmInfo &MAI;
-
-  const char *CurPtr = nullptr;
-  StringRef CurBuf;
-  bool IsAtStartOfLine = true;
-  bool IsAtStartOfStatement = true;
-  bool IsPeeking = false;
-  bool EndStatementAtEOF = true;
-
-protected:
-  /// LexToken - Read the next token and return its code.
-  AsmToken LexToken() override;
-
-public:
-  AsmLexer(const MCAsmInfo &MAI);
-  AsmLexer(const AsmLexer &) = delete;
-  AsmLexer &operator=(const AsmLexer &) = delete;
-  ~AsmLexer() override;
 
   void setBuffer(StringRef Buf, const char *ptr = nullptr,
                  bool EndStatementAtEOF = true);
-
-  StringRef LexUntilEndOfStatement() override;
-
-  size_t peekTokens(MutableArrayRef<AsmToken> Buf,
-                    bool ShouldSkipSpace = true) override;
 
   const MCAsmInfo &getMAI() const { return MAI; }
 
@@ -236,6 +213,8 @@ private:
 
   StringRef LexUntilEndOfLine();
 };
+
+using MCAsmLexer = AsmLexer;
 
 } // end namespace llvm
 
