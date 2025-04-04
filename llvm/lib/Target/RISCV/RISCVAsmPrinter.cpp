@@ -108,6 +108,8 @@ public:
   void emitFunctionEntryLabel() override;
   bool emitDirectiveOptionArch();
 
+  void emitNoteGnuProperty(const Module &M);
+
 private:
   void emitAttributes(const MCSubtargetInfo &SubtargetInfo);
 
@@ -577,8 +579,10 @@ void RISCVAsmPrinter::emitEndOfAsmFile(Module &M) {
   RISCVTargetStreamer &RTS =
       static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
 
-  if (TM.getTargetTriple().isOSBinFormatELF())
+  if (TM.getTargetTriple().isOSBinFormatELF()) {
     RTS.finishAttributeSection();
+    emitNoteGnuProperty(M);
+  }
   EmitHwasanMemaccessSymbols(M);
 }
 
@@ -934,6 +938,15 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
 
     EmitToStreamer(*OutStreamer, MCInstBuilder(RISCV::PseudoCALL).addExpr(Expr),
                    MCSTI);
+  }
+}
+
+void RISCVAsmPrinter::emitNoteGnuProperty(const Module &M) {
+  if (const Metadata *const Flag = M.getModuleFlag("cf-protection-return");
+      Flag && !mdconst::extract<ConstantInt>(Flag)->isZero()) {
+    RISCVTargetStreamer &RTS =
+        static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
+    RTS.emitNoteGnuPropertySection(ELF::GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS);
   }
 }
 
