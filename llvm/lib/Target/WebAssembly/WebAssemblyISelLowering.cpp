@@ -1109,6 +1109,7 @@ void WebAssemblyTargetLowering::computeKnownBitsForTargetNode(
       break;
     }
     }
+    break;
   }
 
   // For 128-bit addition if the upper bits are all zero then it's known that
