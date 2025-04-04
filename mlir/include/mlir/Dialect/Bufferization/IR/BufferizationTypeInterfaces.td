@@ -1,14 +1,14 @@
-//===- BufferizationTypeInterfaces.td - Bufferization type interfaces -*- tablegen -*-===//
+//===- BufferizationTypeInterfaces.td - Type Interfaces ----*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===---------------------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // This is the definition file for type interfaces used in Bufferization.
 //
-//===---------------------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 #ifndef BUFFERIZATION_TYPE_INTERFACES
 #define BUFFERIZATION_TYPE_INTERFACES
@@ -21,8 +21,7 @@ def Bufferization_TensorLikeTypeInterface
   let cppNamespace = "::mlir::bufferization";
   let description = [{
     Indicates that the type that attaches this interface can be treated as a
-    tensor type (similarly to a MLIR builtin tensor) within the Bufferization
-    dialect.
+    tensor type (similarly to a MLIR builtin tensor) during bufferization.
 
     Implementing this interface means that the type also implements
     ShapedTypeInterface.
@@ -37,8 +36,7 @@ def Bufferization_MemRefLikeTypeInterface
   let cppNamespace = "::mlir::bufferization";
   let description = [{
     Indicates that the type that attaches this interface can be treated as a
-    memref type (similarly to a MLIR builtin memref) within the Bufferization
-    dialect.
+    memref type (similarly to a MLIR builtin memref) during bufferization.
 
     Implementing this interface means that the type also implements
     ShapedTypeInterface.

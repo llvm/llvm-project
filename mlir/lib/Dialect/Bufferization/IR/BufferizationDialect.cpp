@@ -12,7 +12,6 @@
 #include "mlir/Dialect/Bufferization/IR/BufferizationTypeInterfaces.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/ExecutionEngine/CRunnerUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Transforms/InliningUtils.h"
@@ -77,7 +76,6 @@ void mlir::bufferization::BufferizationDialect::initialize() {
       >();
   addInterfaces<BufferizationInlinerInterface>();
 
-  assert(getContext() != nullptr);
   RankedTensorType::attachInterface<
       BuiltinTensorExternalModel<RankedTensorType>>(*getContext());
   UnrankedTensorType::attachInterface<

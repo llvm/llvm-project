@@ -417,8 +417,10 @@ def TestTensorType : Test_Type<"TestTensor", [Bufferization_TensorLikeTypeInterf
     bool hasRank() const {
       return true;
     }
-    test::TestTensorType cloneWith(std::optional<llvm::ArrayRef<int64_t>> shape, mlir::Type elementType) const {
-      return test::TestTensorType::get(getContext(), shape.value_or(getShape()), elementType);
+    test::TestTensorType cloneWith(std::optional<llvm::ArrayRef<int64_t>> shape,
+                                   mlir::Type elementType) const {
+      return test::TestTensorType::get(
+        getContext(), shape.value_or(getShape()), elementType);
     }
   }];
 }
@@ -437,8 +439,10 @@ def TestMemrefType : Test_Type<"TestMemref", [Bufferization_MemRefLikeTypeInterf
     bool hasRank() const {
       return true;
     }
-    test::TestMemrefType cloneWith(std::optional<llvm::ArrayRef<int64_t>> shape, mlir::Type elementType) const {
-      return test::TestMemrefType::get(getContext(), shape.value_or(getShape()), elementType, getMemSpace());
+    test::TestMemrefType cloneWith(std::optional<llvm::ArrayRef<int64_t>> shape,
+                                   mlir::Type elementType) const {
+      return test::TestMemrefType::get(
+        getContext(), shape.value_or(getShape()), elementType, getMemSpace());
     }
   }];
 }
