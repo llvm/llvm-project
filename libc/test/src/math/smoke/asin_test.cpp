@@ -36,13 +36,13 @@ TEST_F(LlvmLibcAsinTest, FTZMode) {
 TEST_F(LlvmLibcAsinTest, DAZMode) {
   ModifyMXCSR mxcsr(DAZ);
 
-  EXPECT_FP_EQ(zero, LIBC_NAMESPACE::asin(min_denormal));
+  EXPECT_FP_EQ(min_denormal, LIBC_NAMESPACE::asin(min_denormal));
 }
 
 TEST_F(LlvmLibcAsinTest, FTZDAZMode) {
   ModifyMXCSR mxcsr(FTZ | DAZ);
 
-  EXPECT_FP_EQ(zero, LIBC_NAMESPACE::asin(min_denormal));
+  EXPECT_FP_EQ(min_denormal, LIBC_NAMESPACE::asin(min_denormal));
 }
 
 #endif
