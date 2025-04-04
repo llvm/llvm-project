@@ -1361,17 +1361,47 @@ public:
 
   int getUncondBranchEncodingSize() const override { return 28; }
 
+  // This helper function creates the snippet of code that compares a register
+  // RegNo with an immedaite Imm, and jumps to Target if they are equal.
+  // cmp RegNo, #Imm
+  // b.eq Target
+  // where cmp is an alias for subs, which results in the code below:
+  // subs xzr, RegNo, #Imm
+  // b.eq Target.
   InstructionListType createCmpJE(MCPhysReg RegNo, int64_t Imm,
                                   const MCSymbol *Target,
                                   MCContext *Ctx) const override {
     InstructionListType Code;
     Code.emplace_back(MCInstBuilder(AArch64::SUBSXri)
-                          .addReg(RegNo)
+                          .addReg(AArch64::XZR)
                           .addReg(RegNo)
                           .addImm(Imm)
                           .addImm(0));
     Code.emplace_back(MCInstBuilder(AArch64::Bcc)
+                          .addImm(AArch64CC::EQ)
+                          .addExpr(MCSymbolRefExpr::create(
+                              Target, MCSymbolRefExpr::VK_None, *Ctx)));
+    return Code;
+  }
+
+  // This helper function creates the snippet of code that compares a register
+  // RegNo with an immedaite Imm, and jumps to Target if they are not equal.
+  // cmp RegNo, #Imm
+  // b.ne Target
+  // where cmp is an alias for subs, which results in the code below:
+  // subs xzr, RegNo, #Imm
+  // b.ne Target.
+  InstructionListType createCmpJNE(MCPhysReg RegNo, int64_t Imm,
+                                   const MCSymbol *Target,
+                                   MCContext *Ctx) const override {
+    InstructionListType Code;
+    Code.emplace_back(MCInstBuilder(AArch64::SUBSXri)
+                          .addReg(AArch64::XZR)
+                          .addReg(RegNo)
                           .addImm(Imm)
+                          .addImm(0));
+    Code.emplace_back(MCInstBuilder(AArch64::Bcc)
+                          .addImm(AArch64CC::NE)
                           .addExpr(MCSymbolRefExpr::create(
                               Target, MCSymbolRefExpr::VK_None, *Ctx)));
     return Code;
