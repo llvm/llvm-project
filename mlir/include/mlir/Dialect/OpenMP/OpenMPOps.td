@@ -1655,8 +1655,6 @@ def CancelOp : OpenMP_Op<"cancel", clauses = [
   let builders = [
     OpBuilder<(ins CArg<"const CancelOperands &">:$clauses)>
   ];
-
-  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1675,8 +1673,6 @@ def CancellationPointOp : OpenMP_Op<"cancellation_point", clauses = [
   let builders = [
     OpBuilder<(ins CArg<"const CancellationPointOperands &">:$clauses)>
   ];
-
-  let hasVerifier = 1;
 }
 
 def ScanOp : OpenMP_Op<"scan", [
