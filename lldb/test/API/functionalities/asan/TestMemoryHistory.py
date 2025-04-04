@@ -59,9 +59,7 @@ class MemoryHistoryTestCase(TestBase):
     # Set breakpoint: after free, but before bug
     def set_breakpoint(self, target):
         bkpt = target.BreakpointCreateByLocation("main.c", self.line_breakpoint)
-        self.assertGreater(
-            bkpt.GetNumLocations(), 0, "Set the breakpoint successfully"
-        )
+        self.assertGreater(bkpt.GetNumLocations(), 0, "Set the breakpoint successfully")
 
     def run_to_breakpoint(self, target):
         self.set_breakpoint(target)
