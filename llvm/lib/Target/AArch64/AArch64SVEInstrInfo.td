@@ -3206,8 +3206,6 @@ let Predicates = [HasSVE_or_SME] in {
   // Insert scalar into undef[0]
   def : Pat<(nxv16i8 (vector_insert (nxv16i8 (undef)), (i32 FPR32:$src), 0)),
             (INSERT_SUBREG (nxv16i8 (IMPLICIT_DEF)), FPR32:$src, ssub)>;
-  def : Pat<(nxv16i8 (vector_insert (nxv16i8 (undef)), (i64 FPR64:$src), 0)),
-            (INSERT_SUBREG (nxv16i8 (IMPLICIT_DEF)), FPR64:$src, dsub)>;
   def : Pat<(nxv8i16 (vector_insert (nxv8i16 (undef)), (i32 FPR32:$src), 0)),
             (INSERT_SUBREG (nxv8i16 (IMPLICIT_DEF)), FPR32:$src, ssub)>;
   def : Pat<(nxv4i32 (vector_insert (nxv4i32 (undef)), (i32 FPR32:$src), 0)),

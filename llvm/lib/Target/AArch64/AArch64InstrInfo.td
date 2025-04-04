@@ -4602,16 +4602,10 @@ def : Pat<(truncstorei8 GPR64:$Rt, (am_unscaled8 GPR64sp:$Rn, simm9:$offset)),
   (STURBBi (EXTRACT_SUBREG GPR64:$Rt, sub_32), GPR64sp:$Rn, simm9:$offset)>;
 
 // v1i64 -> bsub truncating stores
-// Supporting pattern lower f32/64 -> v8i8
-def : Pat<(v8i8 (vector_insert (v8i8 (undef)), (i32 FPR32:$src), 0)),
-          (INSERT_SUBREG (v8i8 (IMPLICIT_DEF)), FPR32:$src, ssub)>;
-def : Pat<(v8i8 (vector_insert (v8i8 (undef)), (i64 FPR64:$src), 0)),
-          (v8i8 (EXTRACT_SUBREG (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)), FPR64:$src, dsub), dsub))>;
-// Lower v1i64 -> v1i8 truncstore to bsub store
 def : Pat<(truncstorevi8 v1i64:$VT, (am_unscaled8 GPR64sp:$Rn, simm9:$offset)),
-          (STURBi (vi8 (EXTRACT_SUBREG v1i64:$VT, bsub)), GPR64sp:$Rn, simm9:$offset)>;
+          (STURBi (aarch64mfp8 (EXTRACT_SUBREG v1i64:$VT, bsub)), GPR64sp:$Rn, simm9:$offset)>;
 def : Pat<(truncstorevi8 v1i64:$VT, (am_indexed8 GPR64sp:$Rn, uimm12s4:$offset)),
-          (STRBui (vi8 (EXTRACT_SUBREG v1i64:$VT, bsub)), GPR64sp:$Rn, uimm12s4:$offset)>;
+          (STRBui (aarch64mfp8 (EXTRACT_SUBREG v1i64:$VT, bsub)), GPR64sp:$Rn, uimm12s4:$offset)>;
 
 // Match stores from lane 0 to the appropriate subreg's store.
 multiclass VecStoreULane0Pat<SDPatternOperator StoreOp,
