@@ -993,7 +993,7 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
 
       if ((Target.hasBFloat16Type() || LangOpts.CUDA ||
            (LangOpts.OpenMPIsTargetDevice && Target.getTriple().isNVPTX())) &&
-          s + 2 < ThisTokEnd &&
+          s + 3 < ThisTokEnd &&
           ((s[0] == 'b' && s[1] == 'f') || (s[0] == 'B' && s[1] == 'F')) &&
           s[2] == '1' && s[3] == '6') {
         s += 3; // success, eat up 3 characters.
