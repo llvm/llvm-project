@@ -83,9 +83,7 @@ static OpStrings getStrings(irdl::OperationOp op) {
   auto operandOp =
       operands.empty() ? std::optional<irdl::OperandsOp>{} : *operands.begin();
 
-  auto results = op.getOps<irdl::ResultsOp>();
-  auto resultOp =
-      results.empty() ? std::optional<irdl::ResultsOp>{} : *results.begin();
+  auto resultOp = op.getOp<irdl::ResultsOp>();
 
   OpStrings strings;
   strings.opName = op.getSymName();
