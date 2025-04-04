@@ -1393,7 +1393,7 @@ func.func @shape_of_from_reshape(%arg0: tensor<*xf32>, %arg1: tensor<?xindex>) -
 // CHECK-LABEL: func @shape_of_from_reshape_compatible_types1
 // CHECK-SAME: %[[INPUT:.*]]: tensor<?x1xf32>
 // CHECK-SAME: %[[SHAPE:.*]]: tensor<3xi32>
-func.func @shape_of_from_reshape_compatible_types1(%arg0: tensor<?x1xf32>, %arg1: tensor<3xi32>) -> tensor<3xindex> {
+func.func @shape_of_from_reshape_int_to_index(%arg0: tensor<?x1xf32>, %arg1: tensor<3xi32>) -> tensor<3xindex> {
   // CHECK: %[[CAST_SHAPE:.*]] = arith.index_cast %[[SHAPE]] : tensor<3xi32> to tensor<3xindex>
   // CHECK: return %[[CAST_SHAPE]] : tensor<3xindex>
     %0 = tensor.reshape %arg0(%arg1) : (tensor<?x1xf32>, tensor<3xi32>) -> tensor<?x1x1xf32>
@@ -1407,7 +1407,7 @@ func.func @shape_of_from_reshape_compatible_types1(%arg0: tensor<?x1xf32>, %arg1
 // CHECK-LABEL: func @shape_of_from_reshape_compatible_types2
 // CHECK-SAME: %[[INPUT:.*]]: tensor<*xf32>
 // CHECK-SAME: %[[SHAPE:.*]]: tensor<5xindex>
-func.func @shape_of_from_reshape_compatible_types2(%arg0: tensor<*xf32>, %arg1: tensor<5xindex>) -> tensor<?xindex> {
+func.func @shape_of_from_reshape_static_to_dynamic(%arg0: tensor<*xf32>, %arg1: tensor<5xindex>) -> tensor<?xindex> {
   // CHECK: %[[CAST_SHAPE:.*]] = tensor.cast %[[SHAPE]] : tensor<5xindex> to tensor<?xindex>
   // CHECK: return %[[CAST_SHAPE]] : tensor<?xindex>
   %0 = tensor.reshape %arg0(%arg1) : (tensor<*xf32>, tensor<5xindex>) -> tensor<*xf32>
@@ -1421,7 +1421,7 @@ func.func @shape_of_from_reshape_compatible_types2(%arg0: tensor<*xf32>, %arg1: 
 // CHECK-LABEL: func @shape_of_from_reshape_compatible_types3
 // CHECK-SAME: %[[INPUT:.*]]: tensor<*xf32>
 // CHECK-SAME: %[[SHAPE:.*]]: tensor<?xindex>
-func.func @shape_of_from_reshape_compatible_types3(%arg0: tensor<*xf32>, %arg1: tensor<?xindex>) -> tensor<5xindex> {
+func.func @shape_of_from_reshape_dynamic_to_static(%arg0: tensor<*xf32>, %arg1: tensor<?xindex>) -> tensor<5xindex> {
   // CHECK: %[[CAST_SHAPE:.*]] = tensor.cast %[[SHAPE]] : tensor<?xindex> to tensor<5xindex>
   // CHECK: return %[[CAST_SHAPE]] : tensor<5xindex>
   %0 = tensor.reshape %arg0(%arg1) : (tensor<*xf32>, tensor<?xindex>) -> tensor<*xf32>
