@@ -138,7 +138,6 @@ def SourceLocation : PropertyType;
 def BoundsSafetyPointerAttributes : PropertyType;
 def StmtRef : RefPropertyType<"Stmt"> { let ConstWhenWriting = 1; }
   def ExprRef : SubclassPropertyType<"Expr", StmtRef>;
-def SubstTemplateTypeParmTypeFlag : EnumPropertyType;
 def TemplateArgument : PropertyType;
 def TemplateArgumentKind : EnumPropertyType<"TemplateArgument::ArgKind">;
 def TemplateName : DefaultValuePropertyType;

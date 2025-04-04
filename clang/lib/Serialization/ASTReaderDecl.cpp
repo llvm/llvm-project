@@ -2708,8 +2708,10 @@ void ASTDeclReader::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
     if (Record.readBool())
       CR = Record.readConceptReference();
     Expr *ImmediatelyDeclaredConstraint = Record.readExpr();
+    int ArgumentPackSubstitutionIndex = Record.readInt();
 
-    D->setTypeConstraint(CR, ImmediatelyDeclaredConstraint);
+    D->setTypeConstraint(CR, ImmediatelyDeclaredConstraint,
+                         ArgumentPackSubstitutionIndex);
     if ((D->ExpandedParameterPack = Record.readInt()))
       D->NumExpanded = Record.readInt();
   }
