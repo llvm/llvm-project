@@ -247,8 +247,8 @@ static void handleResultImpl(InlinerInterface &interface, OpBuilder &builder,
 
 static LogicalResult
 inlineRegionImpl(InlinerInterface &interface,
-                 InlinerConfig::CloneCallbackTy cloneCallback, Region *src,
-                 Block *inlineBlock, Block::iterator inlinePoint,
+                 function_ref<InlinerConfig::CloneCallbackSigTy> cloneCallback,
+                 Region *src, Block *inlineBlock, Block::iterator inlinePoint,
                  IRMapping &mapper, ValueRange resultsToReplace,
                  TypeRange regionResultTypes, std::optional<Location> inlineLoc,
                  bool shouldCloneInlinedRegion, CallOpInterface call = {}) {
@@ -350,8 +350,8 @@ inlineRegionImpl(InlinerInterface &interface,
 
 static LogicalResult
 inlineRegionImpl(InlinerInterface &interface,
-                 InlinerConfig::CloneCallbackTy cloneCallback, Region *src,
-                 Block *inlineBlock, Block::iterator inlinePoint,
+                 function_ref<InlinerConfig::CloneCallbackSigTy> cloneCallback,
+                 Region *src, Block *inlineBlock, Block::iterator inlinePoint,
                  ValueRange inlinedOperands, ValueRange resultsToReplace,
                  std::optional<Location> inlineLoc,
                  bool shouldCloneInlinedRegion, CallOpInterface call = {}) {
@@ -381,45 +381,45 @@ inlineRegionImpl(InlinerInterface &interface,
                           shouldCloneInlinedRegion, call);
 }
 
-LogicalResult mlir::inlineRegion(InlinerInterface &interface,
-                                 InlinerConfig::CloneCallbackTy cloneCallback,
-                                 Region *src, Operation *inlinePoint,
-                                 IRMapping &mapper, ValueRange resultsToReplace,
-                                 TypeRange regionResultTypes,
-                                 std::optional<Location> inlineLoc,
-                                 bool shouldCloneInlinedRegion) {
+LogicalResult mlir::inlineRegion(
+    InlinerInterface &interface,
+    function_ref<InlinerConfig::CloneCallbackSigTy> cloneCallback, Region *src,
+    Operation *inlinePoint, IRMapping &mapper, ValueRange resultsToReplace,
+    TypeRange regionResultTypes, std::optional<Location> inlineLoc,
+    bool shouldCloneInlinedRegion) {
   return inlineRegion(interface, cloneCallback, src, inlinePoint->getBlock(),
                       ++inlinePoint->getIterator(), mapper, resultsToReplace,
                       regionResultTypes, inlineLoc, shouldCloneInlinedRegion);
 }
 
 LogicalResult mlir::inlineRegion(
-    InlinerInterface &interface, InlinerConfig::CloneCallbackTy cloneCallback,
-    Region *src, Block *inlineBlock, Block::iterator inlinePoint,
-    IRMapping &mapper, ValueRange resultsToReplace, TypeRange regionResultTypes,
+    InlinerInterface &interface,
+    function_ref<InlinerConfig::CloneCallbackSigTy> cloneCallback, Region *src,
+    Block *inlineBlock, Block::iterator inlinePoint, IRMapping &mapper,
+    ValueRange resultsToReplace, TypeRange regionResultTypes,
     std::optional<Location> inlineLoc, bool shouldCloneInlinedRegion) {
   return inlineRegionImpl(
       interface, cloneCallback, src, inlineBlock, inlinePoint, mapper,
       resultsToReplace, regionResultTypes, inlineLoc, shouldCloneInlinedRegion);
 }
 
-LogicalResult mlir::inlineRegion(InlinerInterface &interface,
-                                 InlinerConfig::CloneCallbackTy cloneCallback,
-                                 Region *src, Operation *inlinePoint,
-                                 ValueRange inlinedOperands,
-                                 ValueRange resultsToReplace,
-                                 std::optional<Location> inlineLoc,
-                                 bool shouldCloneInlinedRegion) {
+LogicalResult mlir::inlineRegion(
+    InlinerInterface &interface,
+    function_ref<InlinerConfig::CloneCallbackSigTy> cloneCallback, Region *src,
+    Operation *inlinePoint, ValueRange inlinedOperands,
+    ValueRange resultsToReplace, std::optional<Location> inlineLoc,
+    bool shouldCloneInlinedRegion) {
   return inlineRegion(interface, cloneCallback, src, inlinePoint->getBlock(),
                       ++inlinePoint->getIterator(), inlinedOperands,
                       resultsToReplace, inlineLoc, shouldCloneInlinedRegion);
 }
 
 LogicalResult mlir::inlineRegion(
-    InlinerInterface &interface, InlinerConfig::CloneCallbackTy cloneCallback,
-    Region *src, Block *inlineBlock, Block::iterator inlinePoint,
-    ValueRange inlinedOperands, ValueRange resultsToReplace,
-    std::optional<Location> inlineLoc, bool shouldCloneInlinedRegion) {
+    InlinerInterface &interface,
+    function_ref<InlinerConfig::CloneCallbackSigTy> cloneCallback, Region *src,
+    Block *inlineBlock, Block::iterator inlinePoint, ValueRange inlinedOperands,
+    ValueRange resultsToReplace, std::optional<Location> inlineLoc,
+    bool shouldCloneInlinedRegion) {
   return inlineRegionImpl(interface, cloneCallback, src, inlineBlock,
                           inlinePoint, inlinedOperands, resultsToReplace,
                           inlineLoc, shouldCloneInlinedRegion);
@@ -453,11 +453,11 @@ static Value materializeConversion(const DialectInlinerInterface *interface,
 /// failure, no changes are made to the module. 'shouldCloneInlinedRegion'
 /// corresponds to whether the source region should be cloned into the 'call' or
 /// spliced directly.
-LogicalResult mlir::inlineCall(InlinerInterface &interface,
-                               InlinerConfig::CloneCallbackTy cloneCallback,
-                               CallOpInterface call,
-                               CallableOpInterface callable, Region *src,
-                               bool shouldCloneInlinedRegion) {
+LogicalResult
+mlir::inlineCall(InlinerInterface &interface,
+                 function_ref<InlinerConfig::CloneCallbackSigTy> cloneCallback,
+                 CallOpInterface call, CallableOpInterface callable,
+                 Region *src, bool shouldCloneInlinedRegion) {
   // We expect the region to have at least one block.
   if (src->empty())
     return failure();

@@ -27,12 +27,11 @@ class InlinerConfig {
 public:
   using DefaultPipelineTy = std::function<void(OpPassManager &)>;
   using OpPipelinesTy = llvm::StringMap<OpPassManager>;
-  using CloneCallbackSigTy =
-      void(*)(OpBuilder &builder, Region *src, Block *inlineBlock,
-                         Block *postInsertBlock, IRMapping &mapper,
-                         bool shouldCloneInlinedRegion);
-  using CloneCallbackTy =
-      std::function<CloneCallbackSigTy>;
+  using CloneCallbackSigTy = void(OpBuilder &builder, Region *src,
+                                  Block *inlineBlock, Block *postInsertBlock,
+                                  IRMapping &mapper,
+                                  bool shouldCloneInlinedRegion);
+  using CloneCallbackTy = std::function<CloneCallbackSigTy>;
 
   InlinerConfig() = default;
   InlinerConfig(DefaultPipelineTy defaultPipeline,
