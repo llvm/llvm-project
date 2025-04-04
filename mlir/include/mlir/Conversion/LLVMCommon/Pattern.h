@@ -75,9 +75,11 @@ protected:
                              ValueRange indices,
                              ConversionPatternRewriter &rewriter) const;
 
-  /// Returns if the given memref has identity maps and the element type is
-  /// convertible to LLVM.
-  bool isConvertibleAndHasIdentityMaps(MemRefType type) const;
+  /// Returns if the given memref type is convertible to LLVM and has an
+  /// identity layout map. If `verifyMemorySpace` is set to "false", the memory
+  /// space of the memref type is ignored.
+  bool isConvertibleAndHasIdentityMaps(MemRefType type,
+                                       bool verifyMemorySpace = true) const;
 
   /// Returns the type of a pointer to an element of the memref.
   Type getElementPtrType(MemRefType type) const;

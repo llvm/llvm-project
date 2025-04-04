@@ -98,10 +98,13 @@ Value ConvertToLLVMPattern::getStridedElementPtr(
 // Check if the MemRefType `type` is supported by the lowering. We currently
 // only support memrefs with identity maps.
 bool ConvertToLLVMPattern::isConvertibleAndHasIdentityMaps(
-    MemRefType type) const {
-  if (!typeConverter->convertType(type.getElementType()))
+    MemRefType type, bool verifyMemorySpace) const {
+  if (!type.getLayout().isIdentity())
     return false;
-  return type.getLayout().isIdentity();
+  // If the memory space should not be verified, just check the element type.
+  Type typeToVerify =
+      verifyMemorySpace ? static_cast<Type>(type) : type.getElementType();
+  return static_cast<bool>(typeConverter->convertType(typeToVerify));
 }
 
 Type ConvertToLLVMPattern::getElementPtrType(MemRefType type) const {
