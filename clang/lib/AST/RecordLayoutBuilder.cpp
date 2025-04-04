@@ -2563,7 +2563,8 @@ struct MicrosoftRecordLayoutBuilder {
   typedef llvm::DenseMap<const CXXRecordDecl *, CharUnits> BaseOffsetsMapTy;
   MicrosoftRecordLayoutBuilder(const ASTContext &Context,
                                EmptySubobjectMap *EmptySubobjects)
-      : Context(Context), EmptySubobjects(EmptySubobjects) {}
+      : Context(Context), EmptySubobjects(EmptySubobjects),
+        RemainingBitsInField(0) {}
 
 private:
   MicrosoftRecordLayoutBuilder(const MicrosoftRecordLayoutBuilder &) = delete;
