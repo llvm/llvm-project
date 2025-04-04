@@ -1,6 +1,6 @@
 // An end-to-end test to make sure coroutine passes are added for thinlto.
-
-// RUN: %clang_cc1 -std=c++23 -ffat-lto-objects -flto=thin -emit-llvm %s -O3 -o - \
+// REQUIRES: x86-registered-target
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++23 -ffat-lto-objects -flto=thin -emit-llvm %s -O3 -o - \
 // RUN:  | FileCheck %s
 
 #include "Inputs/coroutine.h"
