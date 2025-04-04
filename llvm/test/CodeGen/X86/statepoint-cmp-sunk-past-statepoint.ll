@@ -60,7 +60,7 @@ zero:
 ; CHECK:        JMP_1 %bb.4
 ; CHECK:      bb.4
 ; CHECK:      bb.5
-; CHECK:        %3:gr64 = COPY %10
+; CHECK:        %20:gr64 = COPY %10
 ; CHECK:        %4:gr64 = COPY killed %10
 ; CHECK:        %4:gr64 = nuw ADD64ri32 %4, 8, implicit-def dead $eflags
 ; CHECK:        TEST64rr killed %1, %1, implicit-def $eflags
