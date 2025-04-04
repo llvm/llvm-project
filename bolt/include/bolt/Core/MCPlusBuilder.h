@@ -577,6 +577,16 @@ public:
     return getNoRegister();
   }
 
+  /// Returns the register used as call destination, or no-register, if not
+  /// an indirect call. Sets IsAuthenticatedInternally if the instruction
+  /// accepts a signed pointer as its operand and authenticates it internally.
+  virtual MCPhysReg
+  getRegUsedAsCallDest(const MCInst &Inst,
+                       bool &IsAuthenticatedInternally) const {
+    llvm_unreachable("not implemented");
+    return getNoRegister();
+  }
+
   virtual bool isTerminator(const MCInst &Inst) const;
 
   virtual bool isNoop(const MCInst &Inst) const {
@@ -1737,6 +1747,15 @@ public:
   virtual InstructionListType createCmpJE(MCPhysReg RegNo, int64_t Imm,
                                           const MCSymbol *Target,
                                           MCContext *Ctx) const {
+    llvm_unreachable("not implemented");
+    return {};
+  }
+
+  /// Create a sequence of instructions to compare contents of a register
+  /// \p RegNo to immediate \Imm and jump to \p Target if they are different.
+  virtual InstructionListType createCmpJNE(MCPhysReg RegNo, int64_t Imm,
+                                           const MCSymbol *Target,
+                                           MCContext *Ctx) const {
     llvm_unreachable("not implemented");
     return {};
   }
