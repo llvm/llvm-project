@@ -298,6 +298,15 @@ Improvements to Clang's diagnostics
 
 - Improve the ``-Wundefined-func-template`` warning when a function template is not instantiated due to being unreachable in modules.
 
+- Fixed an assertion when referencing an out-of-bounds parameter via a function
+  attribute whose argument list refers to parameters by index and the function
+  is variadic. e.g.,
+  .. code-block:: c
+
+    __attribute__ ((__format_arg__(2))) void test (int i, ...) { }
+
+  Fixes #GH61635
+
 Improvements to Clang's time-trace
 ----------------------------------
 
