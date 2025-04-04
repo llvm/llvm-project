@@ -527,9 +527,6 @@ static DecodeStatus decodeXqccmpRlistS0(MCInst &Inst, uint32_t Imm,
                                         uint64_t Address,
                                         const MCDisassembler *Decoder);
 
-static DecodeStatus decodeZcmpStackAdj(MCInst &Inst, uint32_t Imm,
-                                       uint64_t Address, const void *Decoder);
-
 static DecodeStatus decodeCSSPushPopchk(MCInst &Inst, uint32_t Insn,
                                         uint64_t Address,
                                         const MCDisassembler *Decoder);
