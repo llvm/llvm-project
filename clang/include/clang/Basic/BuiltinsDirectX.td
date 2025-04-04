@@ -11,5 +11,5 @@ include "clang/Basic/BuiltinsBase.td"
 def DxDot2Add : Builtin { 
   let Spellings = ["__builtin_dx_dot2add"];
   let Attributes = [NoThrow, Const];
-  let Prototype = "float(_ExtVector<2, __fp16>,_ExtVector<2, __fp16>,float)";
+  let Prototype = "float(_ExtVector<2, _Float16>, _ExtVector<2, _Float16>, float)";
 }

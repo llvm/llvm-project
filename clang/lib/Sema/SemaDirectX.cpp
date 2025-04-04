@@ -18,11 +18,6 @@ SemaDirectX::SemaDirectX(Sema &S) : SemaBase(S) {}
 
 bool SemaDirectX::CheckDirectXBuiltinFunctionCall(unsigned BuiltinID,
                                                   CallExpr *TheCall) {
-  switch (BuiltinID) {
-  case DirectX::BI__builtin_dx_dot2add: {
-  }
-  }
-
   return false;
 }
 } // namespace clang

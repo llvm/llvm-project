@@ -20,6 +20,18 @@ using namespace CodeGen;
 using namespace llvm;
 
 Value *CodeGenFunction::EmitDirectXBuiltinExpr(unsigned BuiltinID,
-       const CallExpr *E) {
-return nullptr;
+                                               const CallExpr *E) {
+  switch (BuiltinID) {
+  case DirectX::BI__builtin_dx_dot2add: {
+    Value *A = EmitScalarExpr(E->getArg(0));
+    Value *B = EmitScalarExpr(E->getArg(1));
+    Value *C = EmitScalarExpr(E->getArg(2));
+
+    Intrinsic::ID ID = llvm ::Intrinsic::dx_dot2add;
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/C->getType(), ID, ArrayRef<Value *>{A, B, C}, nullptr,
+        "dx.dot2add");
+  }
+  }
+  return nullptr;
 }
