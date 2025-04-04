@@ -241,21 +241,11 @@ enum NodeType : unsigned {
   VSRI,
 
   // Vector comparisons
-  CMEQ,
-  CMGE,
-  CMGT,
-  CMHI,
-  CMHS,
   FCMEQ,
   FCMGE,
   FCMGT,
 
   // Vector zero comparisons
-  CMEQz,
-  CMGEz,
-  CMGTz,
-  CMLEz,
-  CMLTz,
   FCMEQz,
   FCMGEz,
   FCMGTz,
