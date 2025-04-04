@@ -49,3 +49,27 @@ float2 test_with_return_float2(float4 p0, float4 p1)
     return dst(p0, p1);
   // expected-warning@-1 {{implicit conversion truncates vector: 'vector<float, 4>' (vector of 4 'float' values) to 'vector<float, 2>' (vector of 2 'float' values)}}
 }
+
+float4 test_with_ambigious_float4_double_inp(float4 p0, double p1)
+{
+    return dst(p0, p1);
+  // expected-error@-1 {{call to 'dst' is ambiguous}}
+  // expected-note@hlsl/hlsl_intrinsics.h:* {{candidate function}}
+  // expected-note@hlsl/hlsl_intrinsics.h:* {{candidate function}}
+}
+
+float4 test_with_ambigious_double_float4_inp(double p0, float4 p1)
+{
+    return dst(p0, p1);
+  // expected-error@-1 {{call to 'dst' is ambiguous}}
+  // expected-note@hlsl/hlsl_intrinsics.h:* {{candidate function}}
+  // expected-note@hlsl/hlsl_intrinsics.h:* {{candidate function}}
+}
+
+float4 test_with_ambigious_double4_float_inp(double4 p0, float p1)
+{
+    return dst(p0, p1);
+  // expected-error@-1 {{call to 'dst' is ambiguous}}
+  // expected-note@hlsl/hlsl_intrinsics.h:* {{candidate function}}
+  // expected-note@hlsl/hlsl_intrinsics.h:* {{candidate function}}
+}
