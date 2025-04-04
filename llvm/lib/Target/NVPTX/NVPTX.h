@@ -43,7 +43,7 @@ ModulePass *createNVPTXAssignValidGlobalNamesPass();
 ModulePass *createGenericToNVVMLegacyPass();
 ModulePass *createNVPTXCtorDtorLoweringLegacyPass();
 FunctionPass *createNVVMIntrRangePass();
-FunctionPass *createNVVMReflectPass(unsigned int SmVersion);
+ModulePass *createNVVMReflectPass(unsigned int SmVersion);
 MachineFunctionPass *createNVPTXPrologEpilogPass();
 MachineFunctionPass *createNVPTXReplaceImageHandlesPass();
 FunctionPass *createNVPTXImageOptimizerPass();
@@ -78,12 +78,12 @@ struct NVVMIntrRangePass : PassInfoMixin<NVVMIntrRangePass> {
 };
 
 struct NVVMReflectPass : PassInfoMixin<NVVMReflectPass> {
-  NVVMReflectPass();
-  NVVMReflectPass(unsigned SmVersion) : SmVersion(SmVersion) {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  NVVMReflectPass() : NVVMReflectPass(0) {}
+  NVVMReflectPass(unsigned SmVersion);
+  PreservedAnalyses run(Module &F, ModuleAnalysisManager &AM);
 
 private:
-  unsigned SmVersion;
+  StringMap<int> VarMap;
 };
 
 struct GenericToNVVMPass : PassInfoMixin<GenericToNVVMPass> {

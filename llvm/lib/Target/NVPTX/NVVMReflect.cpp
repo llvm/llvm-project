@@ -4,7 +4,7 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===----------------------------------------------------------------------===//
+
 //
 // This pass replaces occurrences of __nvvm_reflect("foo") and llvm.nvvm.reflect
 // with an integer.
@@ -25,7 +25,6 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
@@ -39,27 +38,43 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/StripGCRelocates.h"
 #include <algorithm>
 #define NVVM_REFLECT_FUNCTION "__nvvm_reflect"
 #define NVVM_REFLECT_OCL_FUNCTION "__nvvm_reflect_ocl"
 
 using namespace llvm;
 
-#define DEBUG_TYPE "nvptx-reflect"
+#define DEBUG_TYPE "nvvm-reflect"
 
 namespace {
-class NVVMReflect : public FunctionPass {
+class NVVMReflect : public ModulePass {
+private:
+  StringMap<int> VarMap;
+  /// Process a reflect function by finding all its uses and replacing them with
+  /// appropriate constant values. For __CUDA_FTZ, uses the module flag value.
+  /// For __CUDA_ARCH, uses SmVersion * 10. For all other strings, uses 0.
+  bool handleReflectFunction(Function *F);
+  void setVarMap(Module &M);
+
 public:
   static char ID;
-  unsigned int SmVersion;
   NVVMReflect() : NVVMReflect(0) {}
-  explicit NVVMReflect(unsigned int Sm) : FunctionPass(ID), SmVersion(Sm) {}
-
-  bool runOnFunction(Function &) override;
+  // __CUDA_FTZ is assigned in `runOnModule` by checking nvvm-reflect-ftz module
+  // metadata.
+  explicit NVVMReflect(unsigned int Sm) : ModulePass(ID) {
+    VarMap["__CUDA_ARCH"] = Sm * 10;
+    initializeNVVMReflectPass(*PassRegistry::getPassRegistry());
+  }
+  // This mapping will contain should include __CUDA_FTZ and __CUDA_ARCH values.
+  explicit NVVMReflect(const StringMap<int> &Mapping) : ModulePass(ID), VarMap(Mapping) {
+    initializeNVVMReflectPass(*PassRegistry::getPassRegistry());
+  }
+  bool runOnModule(Module &M) override;
 };
 } // namespace
 
-FunctionPass *llvm::createNVVMReflectPass(unsigned int SmVersion) {
+ModulePass *llvm::createNVVMReflectPass(unsigned int SmVersion) {
   return new NVVMReflect(SmVersion);
 }
 
@@ -72,27 +87,51 @@ INITIALIZE_PASS(NVVMReflect, "nvvm-reflect",
                 "Replace occurrences of __nvvm_reflect() calls with 0/1", false,
                 false)
 
-static bool runNVVMReflect(Function &F, unsigned SmVersion) {
-  if (!NVVMReflectEnabled)
-    return false;
+static cl::list<std::string>
+    ReflectList("nvvm-reflect-list", cl::value_desc("name=<int>"), cl::Hidden,
+                cl::desc("A list of string=num assignments"),
+                cl::ValueRequired);
 
-  if (F.getName() == NVVM_REFLECT_FUNCTION ||
-      F.getName() == NVVM_REFLECT_OCL_FUNCTION) {
-    assert(F.isDeclaration() && "_reflect function should not have a body");
-    assert(F.getReturnType()->isIntegerTy() &&
-           "_reflect's return type should be integer");
-    return false;
+/// The command line can look as follows :
+/// -nvvm-reflect-list a=1,b=2 -nvvm-reflect-list c=3,d=0 -R e=2
+/// The strings "a=1,b=2", "c=3,d=0", "e=2" are available in the
+/// ReflectList vector. First, each of ReflectList[i] is 'split'
+/// using "," as the delimiter. Then each of this part is split
+/// using "=" as the delimiter.
+void NVVMReflect::setVarMap(Module &M) {
+  if (auto *Flag = mdconst::extract_or_null<ConstantInt>(
+          M.getModuleFlag("nvvm-reflect-ftz")))
+    VarMap["__CUDA_FTZ"] = Flag->getSExtValue();
+
+  for (unsigned I = 0, E = ReflectList.size(); I != E; ++I) {
+    LLVM_DEBUG(dbgs() << "Option : " << ReflectList[I] << "\n");
+    SmallVector<StringRef, 4> NameValList;
+    StringRef(ReflectList[I]).split(NameValList, ",");
+    for (unsigned J = 0, EJ = NameValList.size(); J != EJ; ++J) {
+      SmallVector<StringRef, 2> NameValPair;
+      NameValList[J].split(NameValPair, "=");
+      assert(NameValPair.size() == 2 && "name=val expected");
+      StringRef ValStr = NameValPair[1].trim();
+      int Val;
+      if (ValStr.getAsInteger(10, Val))
+        report_fatal_error("integer value expected");
+      VarMap[NameValPair[0]] = Val;
+    }
   }
+}
+
+bool NVVMReflect::handleReflectFunction(Function *F) {
+  // Validate _reflect function
+  assert(F->isDeclaration() && "_reflect function should not have a body");
+  assert(F->getReturnType()->isIntegerTy() &&
+         "_reflect's return type should be integer");
 
   SmallVector<Instruction *, 4> ToRemove;
   SmallVector<Instruction *, 4> ToSimplify;
 
-  // Go through the calls in this function.  Each call to __nvvm_reflect or
-  // llvm.nvvm.reflect should be a CallInst with a ConstantArray argument.
-  // First validate that. If the c-string corresponding to the ConstantArray can
-  // be found successfully, see if it can be found in VarMap. If so, replace the
-  // uses of CallInst with the value found in VarMap. If not, replace the use
-  // with value 0.
+  // Go through the uses of the reflect function. Each use should be a CallInst
+  // with a ConstantArray argument. Replace the uses with the appropriate
+  // constant values.
 
   // The IR for __nvvm_reflect calls differs between CUDA versions.
   //
@@ -113,15 +152,10 @@ static bool runNVVMReflect(Function &F, unsigned SmVersion) {
   //
   // In this case, we get a Constant with a GlobalVariable operand and we need
   // to dig deeper to find its initializer with the string we'll use for lookup.
-  for (Instruction &I : instructions(F)) {
-    CallInst *Call = dyn_cast<CallInst>(&I);
-    if (!Call)
-      continue;
-    Function *Callee = Call->getCalledFunction();
-    if (!Callee || (Callee->getName() != NVVM_REFLECT_FUNCTION &&
-                    Callee->getName() != NVVM_REFLECT_OCL_FUNCTION &&
-                    Callee->getIntrinsicID() != Intrinsic::nvvm_reflect))
-      continue;
+
+  for (User *U : F->users()) {
+    assert(isa<CallInst>(U) && "Only a call instruction can use _reflect");
+    CallInst *Call = cast<CallInst>(U);
 
     // FIXME: Improve error handling here and elsewhere in this pass.
     assert(Call->getNumOperands() == 2 &&
@@ -156,20 +190,15 @@ static bool runNVVMReflect(Function &F, unsigned SmVersion) {
            "Format of _reflect function not recognized");
 
     StringRef ReflectArg = cast<ConstantDataSequential>(Operand)->getAsString();
+    // Remove the null terminator from the string
     ReflectArg = ReflectArg.substr(0, ReflectArg.size() - 1);
     LLVM_DEBUG(dbgs() << "Arg of _reflect : " << ReflectArg << "\n");
 
     int ReflectVal = 0; // The default value is 0
-    if (ReflectArg == "__CUDA_FTZ") {
-      // Try to pull __CUDA_FTZ from the nvvm-reflect-ftz module flag.  Our
-      // choice here must be kept in sync with AutoUpgrade, which uses the same
-      // technique to detect whether ftz is enabled.
-      if (auto *Flag = mdconst::extract_or_null<ConstantInt>(
-              F.getParent()->getModuleFlag("nvvm-reflect-ftz")))
-        ReflectVal = Flag->getSExtValue();
-    } else if (ReflectArg == "__CUDA_ARCH") {
-      ReflectVal = SmVersion * 10;
+    if (VarMap.contains(ReflectArg)) {
+      ReflectVal = VarMap[ReflectArg];
     }
+    LLVM_DEBUG(dbgs() << "ReflectVal: " << ReflectVal << "\n");
 
     // If the immediate user is a simple comparison we want to simplify it.
     for (User *U : Call->users())
@@ -185,7 +214,7 @@ static bool runNVVMReflect(Function &F, unsigned SmVersion) {
   // until we find a terminator that we can then remove.
   while (!ToSimplify.empty()) {
     Instruction *I = ToSimplify.pop_back_val();
-    if (Constant *C = ConstantFoldInstruction(I, F.getDataLayout())) {
+    if (Constant *C = ConstantFoldInstruction(I, F->getDataLayout())) {
       for (User *U : I->users())
         if (Instruction *I = dyn_cast<Instruction>(U))
           ToSimplify.push_back(I);
@@ -202,23 +231,45 @@ static bool runNVVMReflect(Function &F, unsigned SmVersion) {
   // Removing via isInstructionTriviallyDead may add duplicates to the ToRemove
   // array. Filter out the duplicates before starting to erase from parent.
   std::sort(ToRemove.begin(), ToRemove.end());
-  auto NewLastIter = llvm::unique(ToRemove);
+  auto *NewLastIter = llvm::unique(ToRemove);
   ToRemove.erase(NewLastIter, ToRemove.end());
 
   for (Instruction *I : ToRemove)
     I->eraseFromParent();
 
+  // Remove the __nvvm_reflect function from the module
+  F->eraseFromParent();
   return ToRemove.size() > 0;
 }
 
-bool NVVMReflect::runOnFunction(Function &F) {
-  return runNVVMReflect(F, SmVersion);
+bool NVVMReflect::runOnModule(Module &M) {
+  if (!NVVMReflectEnabled)
+    return false;
+
+  setVarMap(M);
+
+  bool Changed = false;
+  // Names of reflect function to find and replace
+  SmallVector<std::string, 3> ReflectNames = {
+      NVVM_REFLECT_FUNCTION, NVVM_REFLECT_OCL_FUNCTION,
+      Intrinsic::getName(Intrinsic::nvvm_reflect).str()};
+
+  // Process all reflect functions
+  for (const std::string &Name : ReflectNames) {
+    Function *ReflectFunction = M.getFunction(Name);
+    if (ReflectFunction) {
+      Changed |= handleReflectFunction(ReflectFunction);
+    }
+  }
+
+  return Changed;
 }
 
-NVVMReflectPass::NVVMReflectPass() : NVVMReflectPass(0) {}
-
-PreservedAnalyses NVVMReflectPass::run(Function &F,
-                                       FunctionAnalysisManager &AM) {
-  return runNVVMReflect(F, SmVersion) ? PreservedAnalyses::none()
-                                      : PreservedAnalyses::all();
+// Implementations for the pass that works with the new pass manager.
+NVVMReflectPass::NVVMReflectPass(unsigned SmVersion) {
+  VarMap["__CUDA_ARCH"] = SmVersion * 10;
+}
+PreservedAnalyses NVVMReflectPass::run(Module &M, ModuleAnalysisManager &AM) {
+  return NVVMReflect(VarMap).runOnModule(M) ? PreservedAnalyses::none()
+                                            : PreservedAnalyses::all();
 }
