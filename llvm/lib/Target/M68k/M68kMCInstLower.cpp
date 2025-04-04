@@ -33,7 +33,7 @@ using namespace llvm;
 #define DEBUG_TYPE "m68k-mc-inst-lower"
 
 M68kMCInstLower::M68kMCInstLower(MachineFunction &MF, M68kAsmPrinter &AP)
-    : Ctx(MF.getContext()), MF(MF), TM(MF.getTarget()), MAI(*TM.getMCAsmInfo()),
+    : Ctx(AP.OutContext), MF(MF), TM(MF.getTarget()), MAI(*TM.getMCAsmInfo()),
       AsmPrinter(AP) {}
 
 MCSymbol *
@@ -65,12 +65,8 @@ M68kMCInstLower::GetSymbolFromOperand(const MachineOperand &MO) const {
   }
 
   Name += Suffix;
-  if (!Sym) {
-    if (MO.isSymbol())
-      Sym = AsmPrinter.OutContext.getOrCreateSymbol(Name);
-    else
-      Sym = Ctx.getOrCreateSymbol(Name);
-  }
+  if (!Sym)
+    Sym = Ctx.getOrCreateSymbol(Name);
 
   return Sym;
 }

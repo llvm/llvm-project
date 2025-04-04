@@ -29,10 +29,8 @@ namespace llvm {
 class X86MCInstLowerTest : public testing::Test {
 protected:
   static void SetUpTestCase() {
-    LLVMInitializeX86TargetInfo();
     LLVMInitializeX86TargetMC();
     LLVMInitializeX86Target();
-    LLVMInitializeX86AsmPrinter();
   }
 
   // Function to setup codegen pipeline and returns the AsmPrinter.
@@ -111,6 +109,8 @@ protected:
     if (!TM)
       GTEST_SKIP();
 
+    LLVMInitializeX86AsmPrinter();
+    
     SMDiagnostic SMError;
 
     // Parse the module.

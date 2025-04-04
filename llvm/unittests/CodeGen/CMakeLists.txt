@@ -50,6 +50,11 @@ add_llvm_unittest(CodeGenTests
   X86MCInstLowerTest.cpp
   )
 
+add_llvm_unittest(CodeGenTests1
+  X86MCInstLowerTest.cpp
+)
+
 add_subdirectory(GlobalISel)
 
 target_link_libraries(CodeGenTests PRIVATE LLVMTestingSupport)
+target_link_libraries(CodeGenTests1 PRIVATE LLVMTestingSupport)
