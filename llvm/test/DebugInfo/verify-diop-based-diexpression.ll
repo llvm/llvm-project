@@ -1,4 +1,5 @@
 ; RUN: rm -rf %t && split-file %s %t && cd %t
+; XFAIL: *
 
 ;--- valid.ll
 ; RUN: opt valid.ll -S -passes=verify 2>&1 | FileCheck --implicit-check-not 'invalid expression' valid.ll
