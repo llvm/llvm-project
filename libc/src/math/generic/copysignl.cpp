@@ -13,8 +13,15 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+// TODO: Change this implementation to copysignf80 and add long double alias
+// similar to copysign and copysignf128.
+#if !defined(LIBC_ALIAS_LONG_DOUBLE_TO_DOUBLE) &&                              \
+    !defined(LIBC_ALIAS_LONG_DOUBLE_TO_FLOAT128)
+
 LLVM_LIBC_FUNCTION(long double, copysignl, (long double x, long double y)) {
   return fputil::copysign(x, y);
 }
+
+#endif
 
 } // namespace LIBC_NAMESPACE_DECL
