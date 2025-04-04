@@ -396,40 +396,57 @@ void ModuleDepCollector::addModuleMapFiles(
   if (Service.shouldEagerLoadModules())
     return; // Only pcm is needed for eager load.
 
+  // Preallocate memory to avoid multiple allocations
+  CI.getFrontendOpts().ModuleMapFiles.reserve(
+       CI.getFrontendOpts().ModuleMapFiles.size() + ClangModuleDeps.size());
   for (const ModuleID &MID : ClangModuleDeps) {
-    ModuleDeps *MD = ModuleDepsByID.lookup(MID);
-    assert(MD && "Inconsistent dependency info");
-    CI.getFrontendOpts().ModuleMapFiles.push_back(MD->ClangModuleMapFile);
+    if (ModuleDeps *MD = ModuleDepsByID.lookup(MID)) { // Single lookup
+       assert(MD && "Inconsistent dependency info");
+       CI.getFrontendOpts().ModuleMapFiles.emplace_back(MD->ClangModuleMapFile);
+     }
   }
 }
 
 void ModuleDepCollector::addModuleFiles(
     CompilerInvocation &CI, ArrayRef<ModuleID> ClangModuleDeps) const {
+   // Preallocate memory if eager load is enabled
+  if (Service.shouldEagerLoadModules()) {
+     CI.getFrontendOpts().ModuleFiles.reserve(
+         CI.getFrontendOpts().ModuleFiles.size() + ClangModuleDeps.size());
+  }
   for (const ModuleID &MID : ClangModuleDeps) {
-    ModuleDeps *MD = ModuleDepsByID.lookup(MID);
-    std::string PCMPath =
-        Controller.lookupModuleOutput(*MD, ModuleOutputKind::ModuleFile);
-
-    if (Service.shouldEagerLoadModules())
-      CI.getFrontendOpts().ModuleFiles.push_back(std::move(PCMPath));
-    else
-      CI.getHeaderSearchOpts().PrebuiltModuleFiles.insert(
-          {MID.ModuleName, std::move(PCMPath)});
+    if (ModuleDeps *MD = ModuleDepsByID.lookup(MID)) {  
+      std::string PCMPath =
+           Controller.lookupModuleOutput(*MD, ModuleOutputKind::ModuleFile);
+      
+      if (Service.shouldEagerLoadModules()) {
+        CI.getFrontendOpts().ModuleFiles.emplace_back(std::move(PCMPath));
+      } else {
+        CI.getHeaderSearchOpts().PrebuiltModuleFiles.try_emplace(
+        MID.ModuleName, std::move(PCMPath));
+      }
+    }
   }
 }
 
 void ModuleDepCollector::addModuleFiles(
     CowCompilerInvocation &CI, ArrayRef<ModuleID> ClangModuleDeps) const {
+   // Preallocation
+   if (Service.shouldEagerLoadModules()) {
+     CI.getMutFrontendOpts().ModuleFiles.reserve(
+         CI.getMutFrontendOpts().ModuleFiles.size() + ClangModuleDeps.size());
+   }
   for (const ModuleID &MID : ClangModuleDeps) {
-    ModuleDeps *MD = ModuleDepsByID.lookup(MID);
-    std::string PCMPath =
-        Controller.lookupModuleOutput(*MD, ModuleOutputKind::ModuleFile);
-
-    if (Service.shouldEagerLoadModules())
-      CI.getMutFrontendOpts().ModuleFiles.push_back(std::move(PCMPath));
-    else
-      CI.getMutHeaderSearchOpts().PrebuiltModuleFiles.insert(
-          {MID.ModuleName, std::move(PCMPath)});
+    if (ModuleDeps *MD = ModuleDepsByID.lookup(MID)) {
+      std::string PCMPath =
+           Controller.lookupModuleOutput(*MD, ModuleOutputKind::ModuleFile);
+      if (Service.shouldEagerLoadModules()) {
+         CI.getMutFrontendOpts().ModuleFiles.emplace_back(std::move(PCMPath));
+      } else {
+        CI.getMutHeaderSearchOpts().PrebuiltModuleFiles.try_emplace(
+             MID.ModuleName, std::move(PCMPath));
+      }
+    }
   }
 }
 
