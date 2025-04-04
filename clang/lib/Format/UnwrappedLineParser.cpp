@@ -4860,7 +4860,8 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
       assert(Next); // There is an EOF token at the end.
       if ((Style.isVerilog() && !Keywords.isVerilogPPDirective(*Next)) ||
           (Style.isTableGen() &&
-           !Next->isOneOf(tok::pp_define, tok::pp_ifdef, tok::pp_ifndef))) {
+           !Next->isOneOf(tok::kw_else, tok::pp_define, tok::pp_ifdef,
+                          tok::pp_ifndef, tok::pp_endif))) {
         break;
       }
       distributeComments(Comments, FormatTok);
