@@ -1682,6 +1682,52 @@ void VPlanTransforms::truncateToMinimalBitwidths(
          "some entries in MinBWs haven't been processed");
 }
 
+/// Remove BranchOnCond recipes with true conditions together with removing
+/// dead edges to their successors.
+static void removeBranchOnCondTrue(VPlan &Plan) {
+  using namespace llvm::VPlanPatternMatch;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(Plan.getEntry()))) {
+    if (VPBB->getNumSuccessors() != 2 ||
+        !match(&VPBB->back(), m_BranchOnCond(m_True())))
+      continue;
+
+    VPBasicBlock *RemovedSucc = cast<VPBasicBlock>(VPBB->getSuccessors()[1]);
+    const auto &Preds = RemovedSucc->getPredecessors();
+    assert(count(Preds, VPBB) == 1 &&
+           "There must be a single edge between VPBB and its successor");
+    unsigned DeadIdx = std::distance(Preds.begin(), find(Preds, VPBB));
+
+    // Values coming from VPBB into ResumePhi recipes of RemoveSucc are removed
+    // from these recipes.
+    for (VPRecipeBase &R : make_early_inc_range(*RemovedSucc)) {
+      assert((!isa<VPIRInstruction>(&R) ||
+              !isa<PHINode>(cast<VPIRInstruction>(&R)->getInstruction())) &&
+             !isa<VPHeaderPHIRecipe>(&R) &&
+             "Cannot update VPIRInstructions wrapping phis or header phis yet");
+      auto *VPI = dyn_cast<VPInstruction>(&R);
+      if (!VPI || VPI->getOpcode() != VPInstruction::ResumePhi)
+        break;
+      VPBuilder B(VPI);
+      SmallVector<VPValue *> NewOperands;
+      // Create new operand list, with the dead incoming value filtered out.
+      for (const auto &[Idx, Op] : enumerate(VPI->operands())) {
+        if (Idx == DeadIdx)
+          continue;
+        NewOperands.push_back(Op);
+      }
+      VPI->replaceAllUsesWith(B.createNaryOp(VPInstruction::ResumePhi,
+                                             NewOperands, VPI->getDebugLoc(),
+                                             VPI->getName()));
+      VPI->eraseFromParent();
+    }
+    // Disconnect blocks and remove the terminator. RemovedSucc will be deleted
+    // automatically on VPlan destruction if it becomes unreachable.
+    VPBlockUtils::disconnectBlocks(VPBB, RemovedSucc);
+    VPBB->back().eraseFromParent();
+  }
+}
+
 void VPlanTransforms::optimize(VPlan &Plan) {
   runPass(removeRedundantCanonicalIVs, Plan);
   runPass(removeRedundantInductionCasts, Plan);
@@ -1691,6 +1737,7 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   runPass(legalizeAndOptimizeInductions, Plan);
   runPass(removeRedundantExpandSCEVRecipes, Plan);
   runPass(simplifyRecipes, Plan, *Plan.getCanonicalIV()->getScalarType());
+  runPass(removeBranchOnCondTrue, Plan);
   runPass(removeDeadRecipes, Plan);
 
   runPass(createAndOptimizeReplicateRegions, Plan);
