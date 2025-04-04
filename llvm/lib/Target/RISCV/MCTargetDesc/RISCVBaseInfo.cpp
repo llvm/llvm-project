@@ -241,6 +241,8 @@ float RISCVLoadFPImm::getFPImm(unsigned Imm) {
 }
 
 void RISCVZC::printRegList(unsigned RlistEncode, raw_ostream &OS) {
+  assert(RlistEncode >= RLISTENCODE::RA &&
+         RlistEncode <= RLISTENCODE::RA_S0_S11 && "Invalid Rlist");
   OS << "{ra";
   if (RlistEncode > RISCVZC::RA) {
     OS << ", s0";
