@@ -1478,8 +1478,7 @@ void AArch64DAGToDAGISel::SelectTable(SDNode *N, unsigned NumVecs, unsigned Opc,
 
   // Form a REG_SEQUENCE to force register allocation.
   unsigned Vec0Off = ExtOff + 1;
-  SmallVector<SDValue, 4> Regs(N->op_begin() + Vec0Off,
-                               N->op_begin() + Vec0Off + NumVecs);
+  SmallVector<SDValue, 4> Regs(N->ops().slice(Vec0Off, NumVecs));
   SDValue RegSeq = createQTuple(Regs);
 
   SmallVector<SDValue, 6> Ops;
@@ -1992,7 +1991,7 @@ void AArch64DAGToDAGISel::SelectWhilePair(SDNode *N, unsigned Opc) {
 void AArch64DAGToDAGISel::SelectCVTIntrinsic(SDNode *N, unsigned NumVecs,
                                              unsigned Opcode) {
   EVT VT = N->getValueType(0);
-  SmallVector<SDValue, 4> Regs(N->op_begin() + 1, N->op_begin() + 1 + NumVecs);
+  SmallVector<SDValue, 4> Regs(N->ops().slice(1, NumVecs));
   SDValue Ops = createZTuple(Regs);
   SDLoc DL(N);
   SDNode *Intrinsic = CurDAG->getMachineNode(Opcode, DL, MVT::Untyped, Ops);
@@ -2201,7 +2200,7 @@ void AArch64DAGToDAGISel::SelectClamp(SDNode *N, unsigned NumVecs,
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
 
-  SmallVector<SDValue, 4> Regs(N->op_begin() + 1, N->op_begin() + 1 + NumVecs);
+  SmallVector<SDValue, 4> Regs(N->ops().slice(1, NumVecs));
   SDValue Zd = createZMulTuple(Regs);
   SDValue Zn = N->getOperand(1 + NumVecs);
   SDValue Zm = N->getOperand(2 + NumVecs);
@@ -2371,7 +2370,7 @@ void AArch64DAGToDAGISel::SelectPredicatedStore(SDNode *N, unsigned NumVecs,
   SDLoc dl(N);
 
   // Form a REG_SEQUENCE to force register allocation.
-  SmallVector<SDValue, 4> Regs(N->op_begin() + 2, N->op_begin() + 2 + NumVecs);
+  SmallVector<SDValue, 4> Regs(N->ops().slice(2, NumVecs));
   SDValue RegSeq = createZTuple(Regs);
 
   // Optimize addressing mode.
@@ -2416,7 +2415,7 @@ void AArch64DAGToDAGISel::SelectPostStore(SDNode *N, unsigned NumVecs,
 
   // Form a REG_SEQUENCE to force register allocation.
   bool Is128Bit = VT.getSizeInBits() == 128;
-  SmallVector<SDValue, 4> Regs(N->op_begin() + 1, N->op_begin() + 1 + NumVecs);
+  SmallVector<SDValue, 4> Regs(N->ops().slice(1, NumVecs));
   SDValue RegSeq = Is128Bit ? createQTuple(Regs) : createDTuple(Regs);
 
   SDValue Ops[] = {RegSeq,
@@ -2470,7 +2469,7 @@ void AArch64DAGToDAGISel::SelectLoadLane(SDNode *N, unsigned NumVecs,
   bool Narrow = VT.getSizeInBits() == 64;
 
   // Form a REG_SEQUENCE to force register allocation.
-  SmallVector<SDValue, 4> Regs(N->op_begin() + 2, N->op_begin() + 2 + NumVecs);
+  SmallVector<SDValue, 4> Regs(N->ops().slice(2, NumVecs));
 
   if (Narrow)
     transform(Regs, Regs.begin(),
@@ -2508,7 +2507,7 @@ void AArch64DAGToDAGISel::SelectPostLoadLane(SDNode *N, unsigned NumVecs,
   bool Narrow = VT.getSizeInBits() == 64;
 
   // Form a REG_SEQUENCE to force register allocation.
-  SmallVector<SDValue, 4> Regs(N->op_begin() + 1, N->op_begin() + 1 + NumVecs);
+  SmallVector<SDValue, 4> Regs(N->ops().slice(1, NumVecs));
 
   if (Narrow)
     transform(Regs, Regs.begin(),
@@ -2562,7 +2561,7 @@ void AArch64DAGToDAGISel::SelectStoreLane(SDNode *N, unsigned NumVecs,
   bool Narrow = VT.getSizeInBits() == 64;
 
   // Form a REG_SEQUENCE to force register allocation.
-  SmallVector<SDValue, 4> Regs(N->op_begin() + 2, N->op_begin() + 2 + NumVecs);
+  SmallVector<SDValue, 4> Regs(N->ops().slice(2, NumVecs));
 
   if (Narrow)
     transform(Regs, Regs.begin(),
