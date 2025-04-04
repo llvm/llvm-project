@@ -981,7 +981,8 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
     switch (*s) {
     case 'b':
     case 'B':
-      if (!isFPConstant) break;  // Error for integer constant.
+      if (!isFPConstant)
+        break; // Error for integer constant.
       if (isBFloat16)
         break;
       if (!Target.hasBFloat16Type())
