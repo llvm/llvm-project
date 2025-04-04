@@ -177,7 +177,7 @@ static void generateOpGetterDeclarations(irdl::detail::dictionary &dict,
                                "getStructuredOperands({1}).front(); }\n  ",
                                op, i);
   }
-  for (size_t i = 0; i < opStrings.opResultNames.size(); ++i) {
+  for (size_t i = 0, end = opStrings.opResultNames.size(); i < end; ++i) {
     const auto op =
         llvm::convertToCamelFromSnakeCase(opStrings.opResultNames[i], true);
     resGetters += llvm::formatv(
