@@ -2,5 +2,5 @@
 
 function func(n)
     !$omp declare reduction(/:integer:omp_out=omp_out+omp_in)
-!CHECK: error: Unsupported operator in OMP DECLARE REDUCTION
+!CHECK: error: Unsupported operator in DECLARE REDUCTION
 end function func
