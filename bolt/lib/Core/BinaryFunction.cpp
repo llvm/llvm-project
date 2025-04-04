@@ -1997,7 +1997,7 @@ void BinaryFunction::postProcessJumpTables() {
 bool BinaryFunction::validateExternallyReferencedOffsets() {
   SmallPtrSet<MCSymbol *, 4> JTTargets;
   for (const JumpTable *JT : llvm::make_second_range(JumpTables))
-    JTTargets.insert(JT->Entries.begin(), JT->Entries.end());
+    JTTargets.insert_range(JT->Entries);
 
   bool HasUnclaimedReference = false;
   for (uint64_t Destination : ExternallyReferencedOffsets) {
