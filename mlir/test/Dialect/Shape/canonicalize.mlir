@@ -1431,6 +1431,19 @@ func.func @shape_of_from_reshape_dynamic_to_static(%arg0: tensor<*xf32>, %arg1: 
 
 // -----
 
+// Check similar element types and similar static shape.
+// CHECK-LABEL: func @shape_of_from_reshape_identical_types
+// CHECK-SAME: %[[INPUT:.*]]: tensor<*xf32>
+// CHECK-SAME: %[[SHAPE:.*]]: tensor<5xindex>
+func.func @shape_of_from_reshape_identical_types(%arg0: tensor<*xf32>, %arg1: tensor<5xindex>) -> tensor<5xindex> {
+  // CHECK: return %[[SHAPE]] : tensor<5xindex>
+  %0 = tensor.reshape %arg0(%arg1) : (tensor<*xf32>, tensor<5xindex>) -> tensor<*xf32>
+  %1 = shape.shape_of %0 : tensor<*xf32> -> tensor<5xindex>
+  return %1 : tensor<5xindex>
+}
+
+// -----
+
 // CHECK-LABEL: func @shape_of_from_reshape_nofold
 // CHECK-SAME: %[[INPUT:.*]]: tensor<*xf32>
 // CHECK-SAME: %[[SHAPE:.*]]: tensor<?xindex>
