@@ -38,6 +38,9 @@ Potentially Breaking Changes
 - Fix missing diagnostics for uses of declarations when performing typename access,
   such as when performing member access on a '[[deprecated]]' type alias.
   (#GH58547)
+- For ARM targets, when using cc1as, the features included in the selected CPU or
+  Arch's FPU are now loaded and utilized. If you wish not to use a specific feature,
+  this will need appending to the command line used.
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -363,6 +366,10 @@ Bug Fixes to Attribute Support
   or ``__attribute__((malloc(deallocator, ptr-index)))``
   (`#51607 <https://github.com/llvm/llvm-project/issues/51607>`_).
 
+- The ``+nosimd`` attribute is now fully supported for AArch32. Previously, this had no effect when being used with
+  AArch32 targets, however this will now disable NEON instructions being generated. The ``simd`` option is 
+  also now printed when the ``--print-supported-extensions`` option is used.
+
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -455,6 +462,7 @@ X86 Support
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
+- For ARM targets, cc1as now considers the FPU's features for the selected CPU or Arch.
 
 Android Support
 ^^^^^^^^^^^^^^^
