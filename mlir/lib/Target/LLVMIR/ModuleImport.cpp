@@ -2440,7 +2440,7 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
     // Skip unreachable blocks.
     if (!reachable.contains(&basicBlock)) {
       if (basicBlock.hasAddressTaken())
-        emitWarning(funcOp.getLoc())
+        emitError(funcOp.getLoc())
             << "unreachable block '" << basicBlock.getName()
             << "' with address taken";
       continue;
