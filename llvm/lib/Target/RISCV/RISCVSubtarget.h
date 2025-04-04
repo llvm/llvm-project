@@ -333,6 +333,8 @@ public:
 
   bool enableSubRegLiveness() const override;
 
+  bool enableSpillageCopyElimination() const override { return true; }
+
   bool enableMachinePipeliner() const override;
 
   bool useDFAforSMS() const override { return false; }
