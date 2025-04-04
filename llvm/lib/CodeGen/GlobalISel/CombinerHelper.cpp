@@ -1411,9 +1411,8 @@ bool CombinerHelper::matchCombineExtractedVectorLoad(
 
   LegalityQuery::MemDesc MMDesc(*NewMMO);
 
-  LegalityQuery Q = {TargetOpcode::G_LOAD, {VecEltTy, PtrTy}, {MMDesc}};
-
-  if (!isLegalOrBeforeLegalizer(Q))
+  if (!isLegalOrBeforeLegalizer(
+          {TargetOpcode::G_LOAD, {VecEltTy, PtrTy}, {MMDesc}}))
     return false;
 
   // Load must be allowed and fast on the target.
