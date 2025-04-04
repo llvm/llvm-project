@@ -1239,6 +1239,25 @@ void Verifier::visitDIBasicType(const DIBasicType &N) {
           "invalid tag", &N);
 }
 
+void Verifier::visitDIFixedPointType(const DIFixedPointType &N) {
+  visitDIBasicType(N);
+
+  CheckDI(N.getTag() == dwarf::DW_TAG_base_type, "invalid tag", &N);
+  CheckDI(N.getEncoding() == dwarf::DW_ATE_signed_fixed ||
+              N.getEncoding() == dwarf::DW_ATE_unsigned_fixed,
+          "invalid encoding", &N);
+  CheckDI(N.getKind() == DIFixedPointType::FixedPointBinary ||
+              N.getKind() == DIFixedPointType::FixedPointDecimal ||
+              N.getKind() == DIFixedPointType::FixedPointRational,
+          "invalid kind", &N);
+  CheckDI(N.getKind() != DIFixedPointType::FixedPointRational ||
+              N.getFactorRaw() == 0,
+          "factor should be 0 for rationals", &N);
+  CheckDI(N.getKind() == DIFixedPointType::FixedPointRational ||
+              (N.getNumeratorRaw() == 0 && N.getDenominatorRaw() == 0),
+          "numerator and denominator should be 0 for non-rationals", &N);
+}
+
 void Verifier::visitDIStringType(const DIStringType &N) {
   CheckDI(N.getTag() == dwarf::DW_TAG_string_type, "invalid tag", &N);
   CheckDI(!(N.isBigEndian() && N.isLittleEndian()), "has conflicting flags",
@@ -2390,6 +2409,11 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
 
   checkUnsignedBaseTenFuncAttr(Attrs, "patchable-function-prefix", V);
   checkUnsignedBaseTenFuncAttr(Attrs, "patchable-function-entry", V);
+  if (Attrs.hasFnAttr("patchable-function-entry-section"))
+    Check(!Attrs.getFnAttr("patchable-function-entry-section")
+               .getValueAsString()
+               .empty(),
+          "\"patchable-function-entry-section\" must not be empty");
   checkUnsignedBaseTenFuncAttr(Attrs, "warn-stack-size", V);
 
   if (auto A = Attrs.getFnAttr("sign-return-address"); A.isValid()) {

@@ -255,8 +255,7 @@ static bool hasOneBranchOpTo(Block &srcBlock, Block &dstBlock) {
 
 /// Returns true if the given `block` only contains one `spirv.mlir.merge` op.
 static bool isMergeBlock(Block &block) {
-  return !block.empty() && std::next(block.begin()) == block.end() &&
-         isa<spirv::MergeOp>(block.front());
+  return llvm::hasSingleElement(block) && isa<spirv::MergeOp>(block.front());
 }
 
 /// Returns true if a `spirv.mlir.merge` op outside the merge block.
@@ -309,7 +308,7 @@ LogicalResult LoopOp::verifyRegions() {
     return emitOpError(
         "should not have 'spirv.mlir.merge' op outside the merge block");
 
-  if (std::next(region.begin()) == region.end())
+  if (region.hasOneBlock())
     return emitOpError(
         "must have an entry block branching to the loop header block");
   // The first block is the entry block.
@@ -453,6 +452,11 @@ ParseResult SelectionOp::parse(OpAsmParser &parser, OperationState &result) {
   if (parseControlAttribute<spirv::SelectionControlAttr,
                             spirv::SelectionControl>(parser, result))
     return failure();
+
+  if (succeeded(parser.parseOptionalArrow()))
+    if (parser.parseTypeList(result.types))
+      return failure();
+
   return parser.parseRegion(*result.addRegion(), /*arguments=*/{});
 }
 
@@ -460,6 +464,10 @@ void SelectionOp::print(OpAsmPrinter &printer) {
   auto control = getSelectionControl();
   if (control != spirv::SelectionControl::None)
     printer << " control(" << spirv::stringifySelectionControl(control) << ")";
+  if (getNumResults() > 0) {
+    printer << " -> ";
+    printer << getResultTypes();
+  }
   printer << ' ';
   printer.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
                       /*printBlockTerminators=*/true);
@@ -503,7 +511,7 @@ LogicalResult SelectionOp::verifyRegions() {
     return emitOpError(
         "should not have 'spirv.mlir.merge' op outside the merge block");
 
-  if (std::next(region.begin()) == region.end())
+  if (region.hasOneBlock())
     return emitOpError("must have a selection header block");
 
   return success();

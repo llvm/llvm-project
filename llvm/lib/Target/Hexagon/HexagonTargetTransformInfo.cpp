@@ -340,13 +340,15 @@ InstructionCost HexagonTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   return 1;
 }
 
-bool HexagonTTIImpl::isLegalMaskedStore(Type *DataType, Align /*Alignment*/) {
+bool HexagonTTIImpl::isLegalMaskedStore(Type *DataType, Align /*Alignment*/,
+                                        unsigned /*AddressSpace*/) {
   // This function is called from scalarize-masked-mem-intrin, which runs
   // in pre-isel. Use ST directly instead of calling isHVXVectorType.
   return HexagonMaskedVMem && ST.isTypeForHVX(DataType);
 }
 
-bool HexagonTTIImpl::isLegalMaskedLoad(Type *DataType, Align /*Alignment*/) {
+bool HexagonTTIImpl::isLegalMaskedLoad(Type *DataType, Align /*Alignment*/,
+                                       unsigned /*AddressSpace*/) {
   // This function is called from scalarize-masked-mem-intrin, which runs
   // in pre-isel. Use ST directly instead of calling isHVXVectorType.
   return HexagonMaskedVMem && ST.isTypeForHVX(DataType);

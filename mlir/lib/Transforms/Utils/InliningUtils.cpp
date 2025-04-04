@@ -330,7 +330,7 @@ inlineRegionImpl(InlinerInterface &interface, Region *src, Block *inlineBlock,
   bool singleBlockFastPath = interface.allowSingleBlockOptimization(newBlocks);
 
   // Handle the case where only a single block was inlined.
-  if (singleBlockFastPath && std::next(newBlocks.begin()) == newBlocks.end()) {
+  if (singleBlockFastPath && llvm::hasSingleElement(newBlocks)) {
     // Run the result attribute handler on the terminator operands.
     Operation *firstBlockTerminator = firstNewBlock->getTerminator();
     builder.setInsertionPoint(firstBlockTerminator);

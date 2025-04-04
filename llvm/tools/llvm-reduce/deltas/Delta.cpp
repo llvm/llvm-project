@@ -63,6 +63,10 @@ static cl::opt<unsigned> NumJobs(
 unsigned NumJobs = 1;
 #endif
 
+static StringLiteral SeparatorLine =
+    "--------------------------------------------------------------------------"
+    "------\n";
+
 /// Splits Chunks in half and prints them.
 /// If unable to split (when chunk size is 1) returns false.
 static bool increaseGranularity(std::vector<Chunk> &Chunks) {
@@ -223,7 +227,7 @@ void llvm::runDeltaPass(TestRunner &Test, const DeltaPass &Pass) {
   if (!Targets) {
     if (Verbose)
       errs() << "\nNothing to reduce\n";
-    errs() << "----------------------------\n";
+    errs() << SeparatorLine;
     return;
   }
 
@@ -359,5 +363,5 @@ void llvm::runDeltaPass(TestRunner &Test, const DeltaPass &Pass) {
   }
   if (Verbose)
     errs() << "Couldn't increase anymore.\n";
-  errs() << "----------------------------\n";
+  errs() << SeparatorLine;
 }

@@ -25532,26 +25532,24 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
     // Handle only simple case where vector being inserted and vector
     // being extracted are of same size.
     EVT SmallVT = V.getOperand(1).getValueType();
-    if (!NVT.bitsEq(SmallVT))
-      return SDValue();
-
-    // Combine:
-    //    (extract_subvec (insert_subvec V1, V2, InsIdx), ExtIdx)
-    // Into:
-    //    indices are equal or bit offsets are equal => V1
-    //    otherwise => (extract_subvec V1, ExtIdx)
-    uint64_t InsIdx = V.getConstantOperandVal(2);
-    if (InsIdx * SmallVT.getScalarSizeInBits() ==
-        ExtIdx * NVT.getScalarSizeInBits()) {
-      if (LegalOperations && !TLI.isOperationLegal(ISD::BITCAST, NVT))
-        return SDValue();
-
-      return DAG.getBitcast(NVT, V.getOperand(1));
+    if (NVT.bitsEq(SmallVT)) {
+      // Combine:
+      //    (extract_subvec (insert_subvec V1, V2, InsIdx), ExtIdx)
+      // Into:
+      //    indices are equal or bit offsets are equal => V1
+      //    otherwise => (extract_subvec V1, ExtIdx)
+      uint64_t InsIdx = V.getConstantOperandVal(2);
+      if (InsIdx * SmallVT.getScalarSizeInBits() ==
+          ExtIdx * NVT.getScalarSizeInBits()) {
+        if (!LegalOperations || TLI.isOperationLegal(ISD::BITCAST, NVT))
+          return DAG.getBitcast(NVT, V.getOperand(1));
+      } else {
+        return DAG.getNode(
+            ISD::EXTRACT_SUBVECTOR, DL, NVT,
+            DAG.getBitcast(N->getOperand(0).getValueType(), V.getOperand(0)),
+            N->getOperand(1));
+      }
     }
-    return DAG.getNode(
-        ISD::EXTRACT_SUBVECTOR, DL, NVT,
-        DAG.getBitcast(N->getOperand(0).getValueType(), V.getOperand(0)),
-        N->getOperand(1));
   }
 
   if (SDValue NarrowBOp = narrowExtractedVectorBinOp(N, DAG, LegalOperations))

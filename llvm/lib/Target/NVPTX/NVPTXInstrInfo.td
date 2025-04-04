@@ -216,16 +216,25 @@ class fpimm_pos_inf<ValueType vt>
 
 // Utility class to wrap up information about a register and DAG type for more
 // convenient iteration and parameterization
-class RegTyInfo<ValueType ty, NVPTXRegClass rc, Operand imm> {
+class RegTyInfo<ValueType ty, NVPTXRegClass rc, Operand imm, SDNode imm_node,
+                bit supports_imm = 1> {
   ValueType Ty = ty;
   NVPTXRegClass RC = rc;
   Operand Imm = imm;
+  SDNode ImmNode = imm_node;
+  bit SupportsImm = supports_imm;
   int Size = ty.Size;
 }
 
-def I16RT : RegTyInfo<i16, Int16Regs, i16imm>;
-def I32RT : RegTyInfo<i32, Int32Regs, i32imm>;
-def I64RT : RegTyInfo<i64, Int64Regs, i64imm>;
+def I16RT : RegTyInfo<i16, Int16Regs, i16imm, imm>;
+def I32RT : RegTyInfo<i32, Int32Regs, i32imm, imm>;
+def I64RT : RegTyInfo<i64, Int64Regs, i64imm, imm>;
+
+def F32RT : RegTyInfo<f32, Float32Regs, f32imm, fpimm>;
+def F64RT : RegTyInfo<f64, Float64Regs, f64imm, fpimm>;
+def F16RT : RegTyInfo<f16, Int16Regs, f16imm, fpimm, supports_imm = 0>;
+def BF16RT : RegTyInfo<bf16, Int16Regs, bf16imm, fpimm, supports_imm = 0>;
+
 
 // Template for instructions which take three int64, int32, or int16 args.
 // The instructions are named "<OpcStr><Width>" (e.g. "add.s64").

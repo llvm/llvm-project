@@ -12,6 +12,7 @@
 #include "flang-rt/runtime/stat.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/tools.h"
+#include <cerrno>
 #include <cstdlib>
 #include <limits>
 
@@ -19,6 +20,7 @@
 #include "flang/Common/windows-include.h"
 #include <direct.h>
 #define getcwd _getcwd
+#define unlink _unlink
 #define PATH_MAX MAX_PATH
 
 #ifdef _MSC_VER
@@ -27,7 +29,7 @@
 inline pid_t getpid() { return GetCurrentProcessId(); }
 #endif
 #else
-#include <unistd.h> //getpid()
+#include <unistd.h> //getpid() unlink()
 
 #ifndef PATH_MAX
 #define PATH_MAX 4096
@@ -307,4 +309,19 @@ std::int32_t RTNAME(Hostnm)(
   return status;
 }
 
+std::int32_t RTNAME(Unlink)(
+    const char *str, size_t strLength, const char *sourceFile, int line) {
+  Terminator terminator{sourceFile, line};
+
+  auto pathLength = TrimTrailingSpaces(str, strLength);
+  auto path = SaveDefaultCharacter(str, pathLength, terminator);
+
+  std::int32_t status{0};
+
+  if (unlink(path.get()) != 0) {
+    status = errno;
+  }
+
+  return status;
+}
 } // namespace Fortran::runtime
