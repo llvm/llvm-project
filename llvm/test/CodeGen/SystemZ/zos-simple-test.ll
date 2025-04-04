@@ -5,9 +5,12 @@
 @a = global i32 0, align 4
 
 define signext i32 @main() {
-; CHECK: .section ".text"
+; CHECK: C_CODE64 CATTR
+; CHECK: #C XATTR
 ; CHECK: main:
-; CHECK: .section "a"
+; CHECK: a CSECT
+; CHECK: C_WSA64 CATTR
+; CHECK: a XATTR
 entry:
   ret i32 0
 }

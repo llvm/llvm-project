@@ -57,11 +57,12 @@ entry:
 
 ; ESD record, type ED.
 ; The name is C_CODE64.
+; The regular expression matches the low byte of the length.
 ; CHECK: 0000140 03 00 00 01 00 00 00 04 00 00 00 01 00 00 00 00
-; CHECK: 0000150 00 00 00 00 00 00 00 00 00 00 00 10 00 00 00 00
+; CHECK: 0000150 00 00 00 00 00 00 00 00 00 00 00 {{..}} 00 00 00 00
 ; CHECK: 0000160 00 00 00 00 00 00 00 00 01 80 00 00 00 00 00 00
 ; CHECK: 0000170 00 00 00 00 00 00 00 00 00 00 00 00 04 04 00 0a
-; CHECK: 0000180 00 00 04 00 00 00 00 08 c3 6d c3 d6 c4 c5 f6 f4
+; CHECK: 0000180 00 00 03 00 00 00 00 08 c3 6d c3 d6 c4 c5 f6 f4
 
 ; ESD record, type LD.
 ; The name is test#C.

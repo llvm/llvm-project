@@ -12,8 +12,8 @@
 
 #include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/MC/MCAssembler.h"
-#include "llvm/MC/MCGOFFObjectWriter.h"
 #include "llvm/MC/MCGOFFAttributes.h"
+#include "llvm/MC/MCGOFFObjectWriter.h"
 #include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Casting.h"
@@ -309,67 +309,71 @@ public:
 
 GOFFWriter::GOFFWriter(raw_pwrite_stream &OS) : OS(OS) {}
 
-GOFFSymbol GOFFWriter::createGOFFSymbol(StringRef Name, const GOFF::SDAttr &Attr) {
+GOFFSymbol GOFFWriter::createGOFFSymbol(StringRef Name,
+                                        const GOFF::SDAttr &Attr) {
   return GOFFSymbol(Name, ++EsdIdCounter, Attr);
 }
 
-GOFFSymbol GOFFWriter::createGOFFSymbol(StringRef Name, const GOFF::EDAttr &Attr,
+GOFFSymbol GOFFWriter::createGOFFSymbol(StringRef Name,
+                                        const GOFF::EDAttr &Attr,
                                         uint32_t ParentEsdId) {
   return GOFFSymbol(Name, ++EsdIdCounter, ParentEsdId, Attr);
 }
 
-GOFFSymbol GOFFWriter::createGOFFSymbol(StringRef Name, const GOFF::LDAttr &Attr,
+GOFFSymbol GOFFWriter::createGOFFSymbol(StringRef Name,
+                                        const GOFF::LDAttr &Attr,
                                         uint32_t ParentEsdId) {
   return GOFFSymbol(Name, ++EsdIdCounter, ParentEsdId, Attr);
 }
 
-GOFFSymbol GOFFWriter::createGOFFSymbol(StringRef Name, const GOFF::PRAttr &Attr,
+GOFFSymbol GOFFWriter::createGOFFSymbol(StringRef Name,
+                                        const GOFF::PRAttr &Attr,
                                         uint32_t ParentEsdId) {
   return GOFFSymbol(Name, ++EsdIdCounter, ParentEsdId, Attr);
 }
 
 void GOFFWriter::defineSectionSymbols(const MCSectionGOFF &Section) {
-    uint32_t SDEsdId = RootSDEsdId;
-    if (!Section.usesRootSD()) {
-      GOFFSymbol SD =
-          createGOFFSymbol(Section.getSDName(), Section.getSDAttributes());
-      SDEsdId = SD.EsdId;
-      if (RootSDEsdId == 0)
-        RootSDEsdId = SDEsdId;
-      writeSymbol(SD);
-    }
+  uint32_t SDEsdId = RootSDEsdId;
+  if (!Section.usesRootSD()) {
+    GOFFSymbol SD =
+        createGOFFSymbol(Section.getSDName(), Section.getSDAttributes());
+    SDEsdId = SD.EsdId;
+    if (RootSDEsdId == 0)
+      RootSDEsdId = SDEsdId;
+    writeSymbol(SD);
+  }
 
-    GOFFSymbol ED = createGOFFSymbol(Section.getEDName(),
-                                     Section.getEDAttributes(), SDEsdId);
-    if ((!Section.hasLD() && !Section.hasPR()) || Section.hasLD()) {
-      ED.SectionLength = Asm.getSectionAddressSize(Section);
-    }
-    writeSymbol(ED);
+  GOFFSymbol ED =
+      createGOFFSymbol(Section.getEDName(), Section.getEDAttributes(), SDEsdId);
+  if ((!Section.hasLD() && !Section.hasPR()) || Section.hasLD()) {
+    ED.SectionLength = Asm.getSectionAddressSize(Section);
+  }
+  writeSymbol(ED);
 
-    if (Section.hasLD()) {
-      GOFFSymbol LD = createGOFFSymbol(Section.getLDorPRName(),
-                                       Section.getLDAttributes(), ED.EsdId);
-      if (Section.isText())
-        LD.ADAEsdId = ADAEsdId;
-      writeSymbol(LD);
-    }
+  if (Section.hasLD()) {
+    GOFFSymbol LD = createGOFFSymbol(Section.getLDorPRName(),
+                                     Section.getLDAttributes(), ED.EsdId);
+    if (Section.isText())
+      LD.ADAEsdId = ADAEsdId;
+    writeSymbol(LD);
+  }
 
-    if (Section.hasPR()) {
-      GOFFSymbol PR = createGOFFSymbol(Section.getLDorPRName(),
-                                       Section.getPRAttributes(), ED.EsdId);
-      PR.SectionLength = Asm.getSectionAddressSize(Section);
-      if (&Section == ADA) {
-        // We cannot have a zero-length section for data.  If we do,
-        // artificially inflate it. Use 2 bytes to avoid odd alignments. Note:
-        // if this is ever changed, you will need to update the code in
-        // SystemZAsmPrinter::emitCEEMAIN and SystemZAsmPrinter::emitCELQMAIN to
-        // generate -1 if there is no ADA
-        if (!PR.SectionLength)
-          PR.SectionLength = 2;
-        ADAEsdId = PR.EsdId;
-      }
-      writeSymbol(PR);
+  if (Section.hasPR()) {
+    GOFFSymbol PR = createGOFFSymbol(Section.getLDorPRName(),
+                                     Section.getPRAttributes(), ED.EsdId);
+    PR.SectionLength = Asm.getSectionAddressSize(Section);
+    if (&Section == ADA) {
+      // We cannot have a zero-length section for data.  If we do,
+      // artificially inflate it. Use 2 bytes to avoid odd alignments. Note:
+      // if this is ever changed, you will need to update the code in
+      // SystemZAsmPrinter::emitCEEMAIN and SystemZAsmPrinter::emitCELQMAIN to
+      // generate -1 if there is no ADA
+      if (!PR.SectionLength)
+        PR.SectionLength = 2;
+      ADAEsdId = PR.EsdId;
     }
+    writeSymbol(PR);
+  }
 }
 
 void GOFFWriter::defineSymbols() {

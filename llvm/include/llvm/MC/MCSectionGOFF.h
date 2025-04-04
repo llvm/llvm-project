@@ -57,13 +57,18 @@ private:
                 GOFF::LDAttr LDAttributes, GOFF::PRAttr PRAttributes)
       : MCSection(SV_GOFF, SynName, K.isText(), /*IsVirtual=*/false, nullptr),
         SDName(SDName), EDName(EDName), LDorPRName(LDorPRName),
-        SDAttributes(SDAttributes), EDAttributes(EDAttributes), Flags(Flags) {}
+        SDAttributes(SDAttributes), EDAttributes(EDAttributes),
+        LDAttributes(LDAttributes), PRAttributes(PRAttributes), Flags(Flags) {}
 
 public:
   void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                             raw_ostream &OS,
                             uint32_t /*Subsection*/) const override {
-    OS << "\t.section\t\"" << getName() << "\"\n";
+    if (!usesRootSD())
+      OS << getSDName() << " CSECT\n";
+    OS << getEDName() << " CATTR\n";
+    if ((hasLD() || hasPR()) && !getLDorPRName().empty())
+      OS << getLDorPRName() << " XATTR\n";
   }
 
   bool useCodeAlign() const override { return false; }

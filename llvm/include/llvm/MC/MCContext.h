@@ -628,8 +628,7 @@ public:
                                 GOFF::PRAttr PRAttributes);
   // Create a section with root-SD/ED/LD symbols.
   MCSectionGOFF *getGOFFSection(SectionKind Kind, StringRef EDName,
-                                GOFF::EDAttr EDAttributes,
-                                StringRef LDorPRName,
+                                GOFF::EDAttr EDAttributes, StringRef LDorPRName,
                                 GOFF::LDAttr LDAttributes);
   // Create a section with root-SD/ED/PR symbols.
   MCSectionGOFF *getGOFFSection(SectionKind Kind, StringRef EDName,
