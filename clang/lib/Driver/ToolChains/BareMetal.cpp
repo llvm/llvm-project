@@ -534,8 +534,14 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   CmdArgs.push_back("-Bstatic");
 
-  if (TC.getTriple().isRISCV() && Args.hasArg(options::OPT_mno_relax))
-    CmdArgs.push_back("--no-relax");
+  if (Triple.isRISCV()) {
+    if (Args.hasArg(options::OPT_mno_relax))
+      CmdArgs.push_back("--no-relax");
+    CmdArgs.push_back("-m");
+    CmdArgs.push_back(Arch == llvm::Triple::riscv64 ? "elf64lriscv"
+                                                    : "elf32lriscv");
+    CmdArgs.push_back("-X");
+  }
 
   if (Triple.isARM() || Triple.isThumb()) {
     bool IsBigEndian = arm::isARMBigEndian(Triple, Args);
@@ -621,9 +627,6 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if ((TC.hasValidGCCInstallation() || hasGCCToolChainAlongSideClang(D)) &&
       NeedCRTs)
     CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath(CRTEnd)));
-
-  if (TC.getTriple().isRISCV())
-    CmdArgs.push_back("-X");
 
   // The R_ARM_TARGET2 relocation must be treated as R_ARM_REL32 on arm*-*-elf
   // and arm*-*-eabi (the default is R_ARM_GOT_PREL, used on arm*-*-linux and
