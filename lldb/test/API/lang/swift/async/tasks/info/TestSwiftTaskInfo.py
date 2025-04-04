@@ -5,7 +5,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 import re
 
-
 def _tail(output):
     """Delete the first line of output text."""
     result, _ = re.subn(r"^.*\n", "", output, count=1)
@@ -15,6 +14,7 @@ def _tail(output):
 class TestCase(TestBase):
 
     @skipUnlessDarwin
+    @swiftTest
     def test_compare_printed_task_variable_to_task_info(self):
         """Compare the output of a printed Task to the output of `task info`."""
         self.build()
@@ -28,6 +28,7 @@ class TestCase(TestBase):
         self.assertEqual(_tail(task_info_output), _tail(frame_variable_output))
 
     @skipUnlessDarwin
+    @swiftTest
     def test_compare_printed_task_variable_to_task_info_with_address(self):
         """Compare the output of a printed Task to the output of `task info <address>`."""
         self.build()
