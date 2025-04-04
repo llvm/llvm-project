@@ -1989,7 +1989,7 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
     if (PushedRegNum > 0) {
       // Use encoded number to represent registers to spill.
       unsigned Opcode = getPushOpcode(RVFI->getPushPopKind(*MF), hasFP(*MF));
-      unsigned RegEnc = RISCVZC::encodeRlistNumRegs(PushedRegNum);
+      unsigned RegEnc = RISCVZC::encodeRegListNumRegs(PushedRegNum);
       MachineInstrBuilder PushBuilder =
           BuildMI(MBB, MI, DL, TII.get(Opcode))
               .setMIFlag(MachineInstr::FrameSetup);
@@ -2151,7 +2151,7 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
     unsigned PushedRegNum = RVFI->getRVPushRegs();
     if (PushedRegNum > 0) {
       unsigned Opcode = getPopOpcode(RVFI->getPushPopKind(*MF));
-      unsigned RegEnc = RISCVZC::encodeRlistNumRegs(PushedRegNum);
+      unsigned RegEnc = RISCVZC::encodeRegListNumRegs(PushedRegNum);
       MachineInstrBuilder PopBuilder =
           BuildMI(MBB, MI, DL, TII.get(Opcode))
               .setMIFlag(MachineInstr::FrameDestroy);
