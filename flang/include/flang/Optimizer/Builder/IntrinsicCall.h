@@ -382,6 +382,8 @@ struct IntrinsicLibrary {
   mlir::Value genPoppar(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genPresent(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genProduct(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genPutenv(std::optional<mlir::Type>,
+                               llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomInit(llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomNumber(llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomSeed(llvm::ArrayRef<fir::ExtendedValue>);
