@@ -14943,7 +14943,6 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
     CANONICAL_TYPE(IncompleteArray)
     CANONICAL_TYPE(HLSLAttributedResource)
     CANONICAL_TYPE(LValueReference)
-    CANONICAL_TYPE(MemberPointer)
     CANONICAL_TYPE(ObjCInterface)
     CANONICAL_TYPE(ObjCObject)
     CANONICAL_TYPE(ObjCObjectPointer)
@@ -15120,6 +15119,15 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
     if (!CD)
       return QualType();
     return Ctx.getUsingType(CD, Ctx.getQualifiedType(Underlying));
+  }
+  case Type::MemberPointer: {
+    const auto *PX = cast<MemberPointerType>(X),
+               *PY = cast<MemberPointerType>(Y);
+    CXXRecordDecl *Cls = PX->getMostRecentCXXRecordDecl();
+    assert(Cls == PY->getMostRecentCXXRecordDecl());
+    return Ctx.getMemberPointerType(
+        ::getCommonPointeeType(Ctx, PX, PY),
+        ::getCommonQualifier(Ctx, PX, PY, /*IsSame=*/false), Cls);
   }
   case Type::CountAttributed: {
     const auto *DX = cast<CountAttributedType>(X),
