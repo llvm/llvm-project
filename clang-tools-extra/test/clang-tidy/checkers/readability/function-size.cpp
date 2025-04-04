@@ -15,7 +15,8 @@
 // RUN:         readability-function-size.BranchThreshold: "5", \
 // RUN:         readability-function-size.ParameterThreshold: "none", \
 // RUN:         readability-function-size.NestingThreshold: "", \
-// RUN:         readability-function-size.VariableThreshold: "" \
+// RUN:         readability-function-size.VariableThreshold: "", \
+// RUN:         readability-function-size.IgnoreMacros: "true" \
 // RUN:     }}'
 
 // Bad formatting is intentional, don't run clang-format over the whole file!
@@ -319,3 +320,15 @@ void variables_16() {
 // CHECK-MESSAGES: :[[@LINE-5]]:6: note: 3 lines including whitespace and comments (threshold 0)
 // CHECK-MESSAGES: :[[@LINE-6]]:6: note: 4 statements (threshold 0)
 // CHECK-MESSAGES: :[[@LINE-7]]:6: note: 2 variables (threshold 1)
+
+#define CONDITION(value) if (value) { return value; }
+
+int macro_test(int v) {
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: function 'macro_test' exceeds recommended size/complexity thresholds [readability-function-size]
+// CHECK-MESSAGES: :[[@LINE-2]]:5: note: 8 lines including whitespace and comments (threshold 0)
+// CHECK-MESSAGES: :[[@LINE-3]]:5: note: 31 statements (threshold 0)
+// CHECK-MESSAGES: :[[@LINE-4]]:5: note: 8 branches (threshold 0)
+
+  CONDITION(v);CONDITION(v);CONDITION(v);CONDITION(v);CONDITION(v);CONDITION(v);CONDITION(v);
+  if (v) { return v; }
+}
