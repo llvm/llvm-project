@@ -1564,6 +1564,9 @@ class FixedPointLiteral : public Expr, public APIntStorage {
   /// Returns an empty fixed-point literal.
   static FixedPointLiteral *Create(const ASTContext &C, EmptyShell Empty);
 
+  /// Returns an internal integer representation of the literal.
+  llvm::APInt getValue() const { return APIntStorage::getValue(); }
+
   SourceLocation getBeginLoc() const LLVM_READONLY { return Loc; }
   SourceLocation getEndLoc() const LLVM_READONLY { return Loc; }
 
