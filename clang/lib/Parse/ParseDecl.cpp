@@ -6188,9 +6188,6 @@ bool Parser::isDeclarationSpecifier(
   case tok::kw_virtual:
   case tok::kw_explicit:
   case tok::kw__Noreturn:
-#if SDP // need this in declspec?
-  case tok::kw__Export:
-#endif
 
     // alignment-specifier
   case tok::kw__Alignas:
