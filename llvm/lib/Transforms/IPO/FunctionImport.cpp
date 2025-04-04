@@ -182,14 +182,7 @@ static cl::opt<bool> CtxprofMoveRootsToOwnModule(
              "their own module."),
     cl::Hidden, cl::init(false));
 
-cl::list<GlobalValue::GUID> MoveSymbolGUID(
-    "thinlto-move-symbols",
-    cl::desc(
-        "Move the symbols with the given name. This will delete these symbols "
-        "wherever they are originally defined, and make sure their "
-        "linkage is External where they are imported. It is meant to be "
-        "used with the name of contextual profiling roots."),
-    cl::Hidden);
+extern cl::list<GlobalValue::GUID> MoveSymbolGUID;
 
 namespace llvm {
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
