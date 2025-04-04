@@ -206,8 +206,7 @@ Interpreter::Interpreter(lldb::TargetSP target, llvm::StringRef expr,
     : m_target(std::move(target)), m_expr(expr), m_default_dynamic(use_dynamic),
       m_exe_ctx_scope(frame_sp) {}
 
-llvm::Expected<lldb::ValueObjectSP>
-Interpreter::DILEvalNode(const ASTNode *node) {
+llvm::Expected<lldb::ValueObjectSP> Interpreter::Evaluate(const ASTNode *node) {
 
   // Traverse an AST pointed by the `node`.
   return node->Accept(this);

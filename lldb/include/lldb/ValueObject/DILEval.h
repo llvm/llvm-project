@@ -11,6 +11,8 @@
 
 #include "lldb/ValueObject/DILAST.h"
 #include "lldb/ValueObject/DILParser.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include <memory>
 #include <vector>
 
@@ -42,7 +44,7 @@ public:
               lldb::DynamicValueType use_dynamic,
               std::shared_ptr<StackFrame> frame_sp);
 
-  llvm::Expected<lldb::ValueObjectSP> DILEvalNode(const ASTNode *node);
+  llvm::Expected<lldb::ValueObjectSP> Evaluate(const ASTNode *node);
 
 private:
   llvm::Expected<lldb::ValueObjectSP>

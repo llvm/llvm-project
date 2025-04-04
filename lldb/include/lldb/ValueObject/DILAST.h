@@ -10,6 +10,8 @@
 #define LLDB_VALUEOBJECT_DILAST_H
 
 #include "lldb/ValueObject/ValueObject.h"
+#include "llvm/Support/Error.h"
+#include <cstdint>
 #include <string>
 
 namespace lldb_private::dil {

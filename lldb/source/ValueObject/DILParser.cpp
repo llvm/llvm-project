@@ -36,12 +36,10 @@ DILDiagnosticError::DILDiagnosticError(llvm::StringRef expr,
   std::string rendered_msg =
       llvm::formatv("<user expression 0>:1:{0}: {1}\n   1 | {2}\n     | ^",
                     loc + 1, message, expr);
-  DiagnosticDetail detail;
-  detail.source_location = sloc;
-  detail.severity = lldb::eSeverityError;
-  detail.message = message;
-  detail.rendered = rendered_msg;
-  m_detail = std::move(detail);
+  m_detail.source_location = sloc;
+  m_detail.severity = lldb::eSeverityError;
+  m_detail.message = message;
+  m_detail.rendered = std::move(rendered_msg);
 }
 
 llvm::Expected<ASTNodeUP>
@@ -124,14 +122,14 @@ ASTNodeUP DILParser::ParsePrimaryExpression() {
 std::string DILParser::ParseNestedNameSpecifier() {
   // The first token in nested_name_specifier is always an identifier, or
   // '(anonymous namespace)'.
-  if (CurToken().IsNot(Token::identifier) && CurToken().IsNot(Token::l_paren))
-    return "";
+  switch (CurToken().GetKind()) {
+  case Token::l_paren: {
+    // Anonymous namespaces need to be treated specially: They are
+    // represented the the string '(anonymous namespace)', which has a
+    // space in it (throwing off normal parsing) and is not actually
+    // proper C++> Check to see if we're looking at
+    // '(anonymous namespace)::...'
 
-  // Anonymous namespaces need to be treated specially: They are represented
-  // the the string '(anonymous namespace)', which has a space in it (throwing
-  // off normal parsing) and is not actually proper C++> Check to see if we're
-  // looking at '(anonymous namespace)::...'
-  if (CurToken().Is(Token::l_paren)) {
     // Look for all the pieces, in order:
     // l_paren 'anonymous' 'namespace' r_paren coloncolon
     if (m_dil_lexer.LookAhead(1).Is(Token::identifier) &&
@@ -157,20 +155,24 @@ std::string DILParser::ParseNestedNameSpecifier() {
 
     return "";
   } // end of special handling for '(anonymous namespace)'
+  case Token::identifier: {
+    // If the next token is scope ("::"), then this is indeed a
+    // nested_name_specifier
+    if (m_dil_lexer.LookAhead(1).Is(Token::coloncolon)) {
+      // This nested_name_specifier is a single identifier.
+      std::string identifier = CurToken().GetSpelling();
+      m_dil_lexer.Advance(1);
+      Expect(Token::coloncolon);
+      m_dil_lexer.Advance();
+      // Continue parsing the nested_name_specifier.
+      return identifier + "::" + ParseNestedNameSpecifier();
+    }
 
-  // If the next token is scope ("::"), then this is indeed a
-  // nested_name_specifier
-  if (m_dil_lexer.LookAhead(1).Is(Token::coloncolon)) {
-    // This nested_name_specifier is a single identifier.
-    std::string identifier = CurToken().GetSpelling();
-    m_dil_lexer.Advance(1);
-    Expect(Token::coloncolon);
-    m_dil_lexer.Advance();
-    // Continue parsing the nested_name_specifier.
-    return identifier + "::" + ParseNestedNameSpecifier();
+    return "";
   }
-
-  return "";
+  default:
+    return "";
+  }
 }
 
 // Parse an id_expression.
@@ -195,7 +197,7 @@ std::string DILParser::ParseIdExpression() {
   }
 
   // Try parsing optional nested_name_specifier.
-  auto nested_name_specifier = ParseNestedNameSpecifier();
+  std::string nested_name_specifier = ParseNestedNameSpecifier();
 
   // If nested_name_specifier is present, then it's qualified_id production.
   // Follow the first production rule.

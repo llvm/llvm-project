@@ -555,7 +555,7 @@ ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
   dil::Interpreter interpreter(target, var_expr, use_dynamic,
                                shared_from_this());
 
-  auto valobj_or_error = interpreter.DILEvalNode((*tree_or_error).get());
+  auto valobj_or_error = interpreter.Evaluate((*tree_or_error).get());
   if (!valobj_or_error) {
     error = Status::FromError(valobj_or_error.takeError());
     return ValueObjectSP();
