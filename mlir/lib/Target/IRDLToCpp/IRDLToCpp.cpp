@@ -466,27 +466,29 @@ static LogicalResult verifySupported(irdl::DialectOp dialect) {
             .Case<irdl::OperationOp>(
                 ([](irdl::OperationOp) { return success(); }))
             .Case<irdl::TypeOp>(([](irdl::TypeOp) { return success(); }))
-            .Case<irdl::OperandsOp>(([](irdl::OperandsOp op) {
+            .Case<irdl::OperandsOp>(([](irdl::OperandsOp op) -> LogicalResult {
               if (llvm::all_of(
                       op.getVariadicity(), [](irdl::VariadicityAttr attr) {
                         return attr.getValue() == irdl::Variadicity::single;
                       }))
                 return success();
-              return failure();
+              return op.emitError("IRDL C++ translation does not yet support "
+                                  "variadic operations");
             }))
-            .Case<irdl::ResultsOp>(([](irdl::ResultsOp op) {
+            .Case<irdl::ResultsOp>(([](irdl::ResultsOp op) -> LogicalResult {
               if (llvm::all_of(
                       op.getVariadicity(), [](irdl::VariadicityAttr attr) {
                         return attr.getValue() == irdl::Variadicity::single;
                       }))
                 return success();
-              return failure();
+              return op.emitError(
+                  "IRDL C++ translation does not yet support variadic results");
             }))
             .Case<irdl::AnyOp>(([](irdl::AnyOp) { return success(); }))
             .Default([](mlir::Operation *op) -> LogicalResult {
               return op->emitError("IRDL C++ translation does not yet support "
                                    "translation of ")
-                     << op->getName() << "operation";
+                     << op->getName() << " operation";
             });
 
     if (failed(res))
