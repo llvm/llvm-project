@@ -116,6 +116,10 @@ ReportLocation *SymbolizeData(uptr addr) {
   return ent;
 }
 
+bool SymbolizeData(uptr addr, DataInfo *info) {
+  return Symbolizer::GetOrInit()->SymbolizeData(addr, info);
+}
+
 void SymbolizeFlush() {
   Symbolizer::GetOrInit()->Flush();
 }
