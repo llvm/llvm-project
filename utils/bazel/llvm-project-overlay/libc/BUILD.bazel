@@ -1881,7 +1881,6 @@ libc_support_library(
     name = "inv_trigf_utils",
     srcs = ["src/math/generic/inv_trigf_utils.cpp"],
     hdrs = [
-        "src/math/generic/atan_utils.h",
         "src/math/generic/inv_trigf_utils.h",
     ],
     deps = [
