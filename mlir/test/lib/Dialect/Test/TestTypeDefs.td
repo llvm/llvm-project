@@ -169,6 +169,10 @@ def TestTypeWithLayoutType : Test_Type<"TestTypeWithLayout", [
 def TestMemRefElementType : Test_Type<"TestMemRefElementType",
                                       [MemRefElementTypeInterface]> {
   let mnemonic = "memref_element";
+
+  let extraClassDeclaration = [{
+    unsigned getAnalysisSizeInBytes() const { return 1; }
+  }];
 }
 
 def TestTypeTrait : NativeTypeTrait<"TestTypeTrait">;

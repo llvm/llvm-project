@@ -149,6 +149,13 @@ bool MMAMatrixType::isValidElementType(Type elementType) {
          elementType.isInteger(32);
 }
 
+unsigned MMAMatrixType::getAnalysisSizeInBytes() const {
+  // The underlying element type is expected to always be int or float and
+  // typically divisible by 8 bits.
+  return ShapedType::getNumElements(getShape()) *
+         llvm::divideCeil(getElementType().getIntOrFloatBitWidth(), 8);
+}
+
 LogicalResult
 MMAMatrixType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
                                 ArrayRef<int64_t> shape, Type elementType,

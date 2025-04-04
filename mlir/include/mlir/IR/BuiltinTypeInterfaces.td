@@ -74,10 +74,20 @@ def MemRefElementTypeInterface : TypeInterface<"MemRefElementTypeInterface"> {
     For example, scalar values such as integers can implement this interface,
     but indicator types such as `void` or `unit` should not.
 
-    The interface currently has no methods and is used by types to opt into
-    being memref elements. This may change in the future, in particular to
-    require types to provide their size or alignment given a data layout.
+    The interface currently has one method and is mainly used by types to opt
+    into being memref elements. This may change in the future, in particular to
+    require types to provide actual size or alignment given a data layout.
   }];
+
+  let methods = [
+    InterfaceMethod<[{
+      Returns the size of the element type in bytes for purposes such as
+      analysis. Such a size is meant to be used in analysis costs models as a
+      best effort in the absence of data layout, as opposed to for
+      target-specific lowering which would require a data layout.
+    }],
+    "unsigned", "getAnalysisSizeInBytes">,
+  ];
 }
 
 //===----------------------------------------------------------------------===//
