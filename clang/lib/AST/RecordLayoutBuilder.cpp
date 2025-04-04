@@ -3262,9 +3262,9 @@ void MicrosoftRecordLayoutBuilder::finalizeLayout(const RecordDecl *RD) {
     return;
   }
   unsigned CharBitNum = Context.getTargetInfo().getCharWidth();
-  uint64_t SizeInBits = Context.toBits(Size);
-  if (SizeInBits > UnpaddedSizeInBits) {
-    unsigned int PadSize = SizeInBits - UnpaddedSizeInBits;
+  uint64_t DataSizeInBits = Context.toBits(DataSize);
+  if (DataSizeInBits > UnpaddedSizeInBits) {
+    unsigned int PadSize = DataSizeInBits - UnpaddedSizeInBits;
     bool InBits = true;
     if (PadSize % CharBitNum == 0) {
       PadSize = PadSize / CharBitNum;
