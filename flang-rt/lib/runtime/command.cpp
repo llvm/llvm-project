@@ -327,8 +327,6 @@ std::int32_t RTNAME(PutEnv)(
   // ExecutionEnvironment, which does the right thing for both Windows and
   // Linux.
 
-  std::printf("EE: %s: str = \"%.*s\", str_lengh = %zu\n", __func__, int{str_length}, str);
-
   std::int32_t status{0};
 
   // Split the input string into name and value substrings. Note:
@@ -340,7 +338,7 @@ std::int32_t RTNAME(PutEnv)(
   const char *str_sep = std::find(str, str_end, '=');
   if (str_sep == str_end) {
     // No separator, invalid input string
-    status == EINVAL;
+    status = EINVAL;
   }
   else if ((str_sep + 1) == str_end) {
     // "name=" form, which means we need to delete this variable

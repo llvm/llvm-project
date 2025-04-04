@@ -783,7 +783,7 @@ static constexpr IntrinsicHandler handlers[]{
        {"mask", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"putenv",
-     &I::genPutEnv,
+     &I::genPutenv,
      {{{"str", asAddr}, {"status", asAddr, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"random_init",
@@ -7260,7 +7260,7 @@ IntrinsicLibrary::genProduct(mlir::Type resultType,
 
 // PUTENV
 fir::ExtendedValue
-IntrinsicLibrary::genPutEnv(std::optional<mlir::Type> resultType,
+IntrinsicLibrary::genPutenv(std::optional<mlir::Type> resultType,
                             llvm::ArrayRef<fir::ExtendedValue> args) {
   assert((resultType.has_value() && args.size() == 1) ||
          (!resultType.has_value() && args.size() >= 1 && args.size() <= 2));
