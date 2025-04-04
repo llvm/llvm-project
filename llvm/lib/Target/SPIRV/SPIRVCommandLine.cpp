@@ -89,6 +89,8 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
          SPIRV::Extension::Extension::SPV_KHR_cooperative_matrix},
         {"SPV_KHR_non_semantic_info",
          SPIRV::Extension::Extension::SPV_KHR_non_semantic_info},
+        {"SPV_INTEL_fpga_memory_accesses",
+         SPIRV::Extension::Extension::SPV_INTEL_fpga_memory_accesses},
         {"SPV_INTEL_long_composites",
          SPIRV::Extension::Extension::SPV_INTEL_long_composites},
         {"SPV_INTEL_fp_max_error",
