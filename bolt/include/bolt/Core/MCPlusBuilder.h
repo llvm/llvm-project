@@ -49,6 +49,7 @@ class MCSymbol;
 class raw_ostream;
 
 namespace bolt {
+class BinaryBasicBlock;
 class BinaryFunction;
 
 /// Different types of indirect branches encountered during disassembly.
@@ -572,6 +573,11 @@ public:
     return false;
   }
 
+  virtual MCPhysReg getSignedReg(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return getNoRegister();
+  }
+
   virtual ErrorOr<MCPhysReg> getRegUsedAsRetDest(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return getNoRegister();
@@ -620,6 +626,40 @@ public:
   analyzeAddressArithmeticsForPtrAuth(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return std::make_pair(getNoRegister(), getNoRegister());
+  }
+
+  /// Analyzes if a pointer is checked to be valid by the end of BB.
+  ///
+  /// It is possible for pointer authentication instructions not to terminate
+  /// the program abnormally on authentication failure and return some *invalid
+  /// pointer* instead (like it is done on AArch64 when FEAT_FPAC is not
+  /// implemented). This might be enough to crash on invalid memory access
+  /// when the pointer is later used as the destination of load/store or branch
+  /// instruction. On the other hand, when the pointer is not used right away,
+  /// it may be important for the compiler to check the address explicitly not
+  /// to introduce signing or authentication oracle.
+  ///
+  /// If this function returns a (Reg, Inst) pair, then it is known that in any
+  /// successor of BB either
+  /// * Reg is trusted, provided it was safe-to-dereference before Inst, or
+  /// * the program is terminated abnormally without introducing any signing
+  ///   or authentication oracles
+  virtual std::optional<std::pair<MCPhysReg, MCInst *>>
+  getAuthCheckedReg(BinaryBasicBlock &BB) const {
+    llvm_unreachable("not implemented");
+    return std::nullopt;
+  }
+
+  /// Returns the register that is checked to be authenticated successfully.
+  ///
+  /// If the returned register was safe-to-dereference before execution of Inst,
+  /// it becomes trusted afterward (if MayOverwrite is false) or at least does
+  /// not escape in a way usable as an authentication oracle (if MayOverwrite
+  /// is true).
+  virtual MCPhysReg getAuthCheckedReg(const MCInst &Inst,
+                                      bool MayOverwrite) const {
+    llvm_unreachable("not implemented");
+    return getNoRegister();
   }
 
   virtual bool isTerminator(const MCInst &Inst) const;
