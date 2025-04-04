@@ -15,7 +15,7 @@ variables:
   - name: Codeql.Enabled
     value: True
   - name: Codeql.Language
-    value: cpp
+    value: cpp,python
   - name: Codeql.Cadence
     value: 0
   - name: Codeql.TSAEnabled
