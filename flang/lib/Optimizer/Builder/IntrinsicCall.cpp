@@ -462,6 +462,17 @@ static constexpr IntrinsicHandler handlers[]{
     {"floor", &I::genFloor},
     {"fraction", &I::genFraction},
     {"free", &I::genFree},
+    {"fseek",
+     &I::genFseek,
+     {{{"unit", asValue},
+       {"offset", asValue},
+       {"whence", asValue},
+       {"status", asAddr, handleDynamicOptional}}},
+     /*isElemental=*/false},
+    {"ftell",
+     &I::genFtell,
+     {{{"unit", asValue}, {"offset", asAddr}}},
+     /*isElemental=*/false},
     {"get_command",
      &I::genGetCommand,
      {{{"command", asBox, handleDynamicOptional},
@@ -769,7 +780,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"perror",
      &I::genPerror,
      {{{"string", asBox}}},
-     /*isElemental=*/false},
+     /*isElemental*/ false},
     {"popcnt", &I::genPopcnt},
     {"poppar", &I::genPoppar},
     {"present",
@@ -921,6 +932,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"threadfence", &I::genThreadFence, {}, /*isElemental=*/false},
     {"threadfence_block", &I::genThreadFenceBlock, {}, /*isElemental=*/false},
     {"threadfence_system", &I::genThreadFenceSystem, {}, /*isElemental=*/false},
+    {"time", &I::genTime, {}, /*isElemental=*/false},
     {"trailz", &I::genTrailz},
     {"transfer",
      &I::genTransfer,
@@ -937,6 +949,10 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"umaskl", &I::genMask<mlir::arith::ShLIOp>},
     {"umaskr", &I::genMask<mlir::arith::ShRUIOp>},
+    {"unlink",
+     &I::genUnlink,
+     {{{"path", asAddr}, {"status", asAddr, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"unpack",
      &I::genUnpack,
      {{{"vector", asBox}, {"mask", asBox}, {"field", asBox}}},
@@ -4134,6 +4150,69 @@ void IntrinsicLibrary::genFree(llvm::ArrayRef<fir::ExtendedValue> args) {
   fir::runtime::genFree(builder, loc, fir::getBase(args[0]));
 }
 
+// FSEEK
+fir::ExtendedValue
+IntrinsicLibrary::genFseek(std::optional<mlir::Type> resultType,
+                           llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert((args.size() == 4 && !resultType.has_value()) ||
+         (args.size() == 3 && resultType.has_value()));
+  mlir::Value unit = fir::getBase(args[0]);
+  mlir::Value offset = fir::getBase(args[1]);
+  mlir::Value whence = fir::getBase(args[2]);
+  if (!unit)
+    fir::emitFatalError(loc, "expected UNIT argument");
+  if (!offset)
+    fir::emitFatalError(loc, "expected OFFSET argument");
+  if (!whence)
+    fir::emitFatalError(loc, "expected WHENCE argument");
+  mlir::Value statusValue =
+      fir::runtime::genFseek(builder, loc, unit, offset, whence);
+  if (resultType.has_value()) { // function
+    return builder.createConvert(loc, *resultType, statusValue);
+  } else { // subroutine
+    const fir::ExtendedValue &statusVar = args[3];
+    if (!isStaticallyAbsent(statusVar)) {
+      mlir::Value statusAddr = fir::getBase(statusVar);
+      mlir::Value statusIsPresentAtRuntime =
+          builder.genIsNotNullAddr(loc, statusAddr);
+      builder.genIfThen(loc, statusIsPresentAtRuntime)
+          .genThen([&]() {
+            builder.createStoreWithConvert(loc, statusValue, statusAddr);
+          })
+          .end();
+    }
+    return {};
+  }
+}
+
+// FTELL
+fir::ExtendedValue
+IntrinsicLibrary::genFtell(std::optional<mlir::Type> resultType,
+                           llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert((args.size() == 2 && !resultType.has_value()) ||
+         (args.size() == 1 && resultType.has_value()));
+  mlir::Value unit = fir::getBase(args[0]);
+  if (!unit)
+    fir::emitFatalError(loc, "expected UNIT argument");
+  mlir::Value offsetValue = fir::runtime::genFtell(builder, loc, unit);
+  if (resultType.has_value()) { // function
+    return offsetValue;
+  } else { // subroutine
+    const fir::ExtendedValue &offsetVar = args[1];
+    if (!isStaticallyAbsent(offsetVar)) {
+      mlir::Value offsetAddr = fir::getBase(offsetVar);
+      mlir::Value offsetIsPresentAtRuntime =
+          builder.genIsNotNullAddr(loc, offsetAddr);
+      builder.genIfThen(loc, offsetIsPresentAtRuntime)
+          .genThen([&]() {
+            builder.createStoreWithConvert(loc, offsetValue, offsetAddr);
+          })
+          .end();
+    }
+    return {};
+  }
+}
+
 // GETCWD
 fir::ExtendedValue
 IntrinsicLibrary::genGetCwd(std::optional<mlir::Type> resultType,
@@ -6537,7 +6616,8 @@ IntrinsicLibrary::genVoteBallotSync(mlir::Type resultType,
   mlir::Value arg1 =
       builder.create<fir::ConvertOp>(loc, builder.getI1Type(), args[1]);
   return builder
-      .create<mlir::NVVM::VoteBallotOp>(loc, resultType, args[0], arg1)
+      .create<mlir::NVVM::VoteSyncOp>(loc, resultType, args[0], arg1,
+                                      mlir::NVVM::VoteSyncKind::ballot)
       .getResult();
 }
 
@@ -8424,6 +8504,14 @@ void IntrinsicLibrary::genThreadFenceSystem(
   builder.create<fir::CallOp>(loc, funcOp, noArgs);
 }
 
+// TIME
+mlir::Value IntrinsicLibrary::genTime(mlir::Type resultType,
+                                      llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 0);
+  return builder.createConvert(loc, resultType,
+                               fir::runtime::genTime(builder, loc));
+}
+
 // TRIM
 fir::ExtendedValue
 IntrinsicLibrary::genTrim(mlir::Type resultType,
@@ -8511,6 +8599,39 @@ static mlir::Value createExtremumCompare(mlir::Location loc,
   }
   assert(result && "result must be defined");
   return result;
+}
+
+// UNLINK
+fir::ExtendedValue
+IntrinsicLibrary::genUnlink(std::optional<mlir::Type> resultType,
+                            llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert((resultType.has_value() && args.size() == 1) ||
+         (!resultType.has_value() && args.size() >= 1 && args.size() <= 2));
+
+  mlir::Value path = fir::getBase(args[0]);
+  mlir::Value pathLength = fir::getLen(args[0]);
+  mlir::Value statusValue =
+      fir::runtime::genUnlink(builder, loc, path, pathLength);
+
+  if (resultType.has_value()) {
+    // Function form, return status.
+    return builder.createConvert(loc, *resultType, statusValue);
+  }
+
+  // Subroutine form, store status and return none.
+  const fir::ExtendedValue &status = args[1];
+  if (!isStaticallyAbsent(status)) {
+    mlir::Value statusAddr = fir::getBase(status);
+    mlir::Value statusIsPresentAtRuntime =
+        builder.genIsNotNullAddr(loc, statusAddr);
+    builder.genIfThen(loc, statusIsPresentAtRuntime)
+        .genThen([&]() {
+          builder.createStoreWithConvert(loc, statusValue, statusAddr);
+        })
+        .end();
+  }
+
+  return {};
 }
 
 // UNPACK
