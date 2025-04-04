@@ -58,30 +58,38 @@ TEST(CharSet, FromUTF8) {
   StringRef Src(HelloA);
   SmallString<64> Dst;
 
-  CharSetConverter Conv = CharSetConverter::create(text_encoding::id::UTF8,
-                                                   text_encoding::id::IBM1047);
-  std::error_code EC = Conv.convert(Src, Dst);
+  ErrorOr<CharSetConverter> Conv = CharSetConverter::create(
+      text_encoding::id::UTF8, text_encoding::id::IBM1047);
+
+  // Stop test if conversion is not supported.
+  if (!Conv) {
+    ASSERT_EQ(Conv.getError(),
+              std::make_error_code(std::errc::invalid_argument));
+    return;
+  }
+
+  std::error_code EC = Conv->convert(Src, Dst);
   EXPECT_TRUE(!EC);
   EXPECT_STREQ(HelloE, static_cast<std::string>(Dst).c_str());
   Dst.clear();
 
   // ABC string.
   Src = ABCStrA;
-  EC = Conv.convert(Src, Dst);
+  EC = Conv->convert(Src, Dst);
   EXPECT_TRUE(!EC);
   EXPECT_STREQ(ABCStrE, static_cast<std::string>(Dst).c_str());
   Dst.clear();
 
   // Accent string.
   Src = AccentUTF;
-  EC = Conv.convert(Src, Dst);
+  EC = Conv->convert(Src, Dst);
   EXPECT_TRUE(!EC);
   EXPECT_STREQ(AccentE, static_cast<std::string>(Dst).c_str());
   Dst.clear();
 
   // Cyrillic string. Results in error because not representable in 1047.
   Src = CyrillicUTF;
-  EC = Conv.convert(Src, Dst);
+  EC = Conv->convert(Src, Dst);
   EXPECT_EQ(EC, std::errc::illegal_byte_sequence);
 }
 
@@ -90,23 +98,32 @@ TEST(CharSet, ToUTF8) {
   StringRef Src(HelloE);
   SmallString<64> Dst;
 
-  CharSetConverter Conv = CharSetConverter::create(text_encoding::id::IBM1047,
-                                                   text_encoding::id::UTF8);
-  std::error_code EC = Conv.convert(Src, Dst);
+  ErrorOr<CharSetConverter> Conv = CharSetConverter::create(
+      text_encoding::id::IBM1047, text_encoding::id::UTF8);
+
+  // Stop test if conversion is not supported.
+  if (!Conv) {
+    ASSERT_EQ(Conv.getError(),
+              std::make_error_code(std::errc::invalid_argument));
+    return;
+  }
+
+  std::error_code EC = Conv->convert(Src, Dst);
+
   EXPECT_TRUE(!EC);
   EXPECT_STREQ(HelloA, static_cast<std::string>(Dst).c_str());
   Dst.clear();
 
   // ABC string.
   Src = ABCStrE;
-  EC = Conv.convert(Src, Dst);
+  EC = Conv->convert(Src, Dst);
   EXPECT_TRUE(!EC);
   EXPECT_STREQ(ABCStrA, static_cast<std::string>(Dst).c_str());
   Dst.clear();
 
   // Accent string.
   Src = AccentE;
-  EC = Conv.convert(Src, Dst);
+  EC = Conv->convert(Src, Dst);
   EXPECT_TRUE(!EC);
   EXPECT_STREQ(AccentUTF, static_cast<std::string>(Dst).c_str());
 }
