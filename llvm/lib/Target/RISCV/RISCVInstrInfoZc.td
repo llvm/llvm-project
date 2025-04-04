@@ -46,16 +46,16 @@ def StackAdjAsmOperand : AsmOperandClass {
   let Name = "StackAdj";
   let ParserMethod = "parseZcmpStackAdj";
   let DiagnosticType = "InvalidStackAdj";
-  let PredicateMethod = "isSpimm";
-  let RenderMethod = "addSpimmOperands";
+  let PredicateMethod = "isStackAdj";
+  let RenderMethod = "addStackAdjOperands";
 }
 
 def NegStackAdjAsmOperand : AsmOperandClass {
   let Name = "NegStackAdj";
   let ParserMethod = "parseZcmpNegStackAdj";
   let DiagnosticType = "InvalidStackAdj";
-  let PredicateMethod = "isSpimm";
-  let RenderMethod = "addSpimmOperands";
+  let PredicateMethod = "isStackAdj";
+  let RenderMethod = "addStackAdjOperands";
 }
 
 def reglist : RISCVOp<OtherVT> {
@@ -77,8 +77,7 @@ def reglist : RISCVOp<OtherVT> {
 def stackadj : RISCVOp<OtherVT> {
   let ParserMatchClass = StackAdjAsmOperand;
   let PrintMethod = "printStackAdj";
-  let DecoderMethod = "decodeZcmpSpimm";
-  let OperandType = "OPERAND_SPIMM";
+  let OperandType = "OPERAND_STACKADJ";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
@@ -90,8 +89,7 @@ def stackadj : RISCVOp<OtherVT> {
 def negstackadj : RISCVOp<OtherVT> {
   let ParserMatchClass = NegStackAdjAsmOperand;
   let PrintMethod = "printNegStackAdj";
-  let DecoderMethod = "decodeZcmpSpimm";
-  let OperandType = "OPERAND_SPIMM";
+  let OperandType = "OPERAND_STACKADJ";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
