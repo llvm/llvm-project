@@ -13,6 +13,7 @@
 #ifndef FORTRAN_OPTIMIZER_OPENMP_PASSES_H
 #define FORTRAN_OPTIMIZER_OPENMP_PASSES_H
 
+#include "flang/Optimizer/OpenMP/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
@@ -30,6 +31,7 @@ namespace flangomp {
 /// divided into units of work.
 bool shouldUseWorkshareLowering(mlir::Operation *op);
 
+std::unique_ptr<mlir::Pass> createDoConcurrentConversionPass(bool mapToDevice);
 } // namespace flangomp
 
 #endif // FORTRAN_OPTIMIZER_OPENMP_PASSES_H
