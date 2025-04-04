@@ -129,7 +129,7 @@
 #endif
 
 #if (!(defined(_WIN32) || defined(__CYGWIN__)) ||                              \
-     (defined(__MINGW32__) && defined(__clang__)))
+     ((defined(__MINGW32__) || defined(__CYGWIN__)) && defined(__clang__)))
 #define LLVM_LIBRARY_VISIBILITY LLVM_ATTRIBUTE_VISIBILITY_HIDDEN
 // Clang compilers older then 15 do not support gnu style attributes on
 // namespaces.
@@ -198,7 +198,7 @@
 #endif
 #define LLVM_ABI_EXPORT __declspec(dllexport)
 #elif defined(__ELF__) || defined(__MINGW32__) || defined(_AIX) ||             \
-    defined(__MVS__)
+    defined(__MVS__) || defined(__CYGWIN__)
 #define LLVM_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
 #define LLVM_TEMPLATE_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
 #define LLVM_EXPORT_TEMPLATE
