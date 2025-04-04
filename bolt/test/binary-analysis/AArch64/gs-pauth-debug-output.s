@@ -158,6 +158,85 @@ clobber:
 // CHECK-EMPTY:
 // CHECK-NEXT:   Attaching clobbering info to:     00000000:         ret # PacRetAnalysis: pacret-state<SafeToDerefRegs: BitVector, Insts: [0](0x{{[0-9a-f]+}} )>
 
+        .globl  nocfg
+        .type   nocfg,@function
+nocfg:
+        adr     x0, 1f
+        br      x0
+1:
+        ret
+        .size nocfg, .-nocfg
+
+// CHECK-LABEL:Analyzing in function nocfg, AllocatorId 1
+// CHECK-NEXT: Binary Function "nocfg"  {
+// CHECK-NEXT:   Number      : 3
+// CHECK-NEXT:   State       : disassembled
+// ...
+// CHECK:        IsSimple    : 0
+// CHECK-NEXT:   IsMultiEntry: 1
+// CHECK-NEXT:   IsSplit     : 0
+// CHECK-NEXT:   BB Count    : 0
+// CHECK-NEXT:   Secondary Entry Points : __ENTRY_nocfg@0x[[ENTRY_ADDR:[0-9a-f]+]]
+// CHECK-NEXT: }
+// CHECK-NEXT: .{{[A-Za-z0-9]+}}:
+// CHECK-NEXT:     00000000:   adr     x0, __ENTRY_nocfg@0x[[ENTRY_ADDR]]
+// CHECK-NEXT:     00000004:   br      x0 # UNKNOWN CONTROL FLOW # Offset: 4
+// CHECK-NEXT: __ENTRY_nocfg@0x[[ENTRY_ADDR]] (Entry Point):
+// CHECK-NEXT: .{{[A-Za-z0-9]+}}:
+// CHECK-NEXT:     00000008:   ret # Offset: 8
+// CHECK-NEXT: DWARF CFI Instructions:
+// CHECK-NEXT:     <empty>
+// CHECK-NEXT: End of Function "nocfg"
+// CHECK-EMPTY:
+// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   adr     x0, __ENTRY_nocfg@0x[[ENTRY_ADDR]], pacret-state<SafeToDerefRegs: LR W30 W30_HI , Insts: >)
+// CHECK-NEXT:   .. result: (pacret-state<SafeToDerefRegs: LR W0 W30 X0 W0_HI W30_HI , Insts: >)
+// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   ret     x30, pacret-state<SafeToDerefRegs: , Insts: >)
+// CHECK-NEXT:   .. result: (pacret-state<SafeToDerefRegs: , Insts: >)
+// CHECK-NEXT:  After PacRetAnalysis:
+// CHECK-NEXT: Binary Function "nocfg"  {
+// CHECK-NEXT:   Number      : 3
+// CHECK-NEXT:   State       : disassembled
+// ...
+// CHECK:        Secondary Entry Points : __ENTRY_nocfg@0x[[ENTRY_ADDR]]
+// CHECK-NEXT: }
+// CHECK-NEXT: .{{[A-Za-z0-9]+}}:
+// CHECK-NEXT:     00000000:   adr     x0, __ENTRY_nocfg@0x[[ENTRY_ADDR]] # NoCFGPacRetAnalysis: pacret-state<SafeToDerefRegs: BitVector, Insts: >
+// CHECK-NEXT:     00000004:   br      x0 # UNKNOWN CONTROL FLOW # Offset: 4 # NoCFGPacRetAnalysis: pacret-state<SafeToDerefRegs: BitVector, Insts: >
+// CHECK-NEXT: __ENTRY_nocfg@0x[[ENTRY_ADDR]] (Entry Point):
+// CHECK-NEXT: .{{[A-Za-z0-9]+}}:
+// CHECK-NEXT:     00000008:   ret # Offset: 8 # NoCFGPacRetAnalysis: pacret-state<SafeToDerefRegs: BitVector, Insts: >
+// CHECK-NEXT: DWARF CFI Instructions:
+// CHECK-NEXT:     <empty>
+// CHECK-NEXT: End of Function "nocfg"
+// CHECK-EMPTY:
+// PAUTH-NEXT:   Found call inst:     00000000:        br      x0 # UNKNOWN CONTROL FLOW # Offset: 4 # NoCFGPacRetAnalysis: pacret-state<SafeToDerefRegs: BitVector, Insts: >
+// PAUTH-NEXT:     Call destination reg: X0
+// PAUTH-NEXT:     SafeToDerefRegs: LR W0 W30 X0 W0_HI W30_HI
+// CHECK-NEXT:   Found RET inst:     00000000:         ret # Offset: 8 # NoCFGPacRetAnalysis: pacret-state<SafeToDerefRegs: BitVector, Insts: >
+// CHECK-NEXT:     RetReg: LR
+// CHECK-NEXT:     Authenticated reg: (none)
+// CHECK-NEXT:     SafeToDerefRegs:
+// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   adr     x0, __ENTRY_nocfg@0x[[ENTRY_ADDR]], pacret-state<SafeToDerefRegs: LR W30 W30_HI , Insts: [0]()>)
+// CHECK-NEXT:   .. result: (pacret-state<SafeToDerefRegs: LR W0 W30 X0 W0_HI W30_HI , Insts: [0]()>)
+// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   ret     x30, pacret-state<SafeToDerefRegs: , Insts: [0]()>)
+// CHECK-NEXT:   .. result: (pacret-state<SafeToDerefRegs: , Insts: [0]()>)
+// CHECK-NEXT:  After detailed PacRetAnalysis:
+// CHECK-NEXT: Binary Function "nocfg"  {
+// CHECK-NEXT:   Number      : 3
+// ...
+// CHECK:        Secondary Entry Points : __ENTRY_nocfg@0x[[ENTRY_ADDR]]
+// CHECK-NEXT: }
+// CHECK-NEXT: .{{[A-Za-z0-9]+}}:
+// CHECK-NEXT:     00000000:   adr     x0, __ENTRY_nocfg@0x[[ENTRY_ADDR]] # NoCFGPacRetAnalysis: pacret-state<SafeToDerefRegs: BitVector, Insts: [0]()>
+// CHECK-NEXT:     00000004:   br      x0 # UNKNOWN CONTROL FLOW # Offset: 4 # NoCFGPacRetAnalysis: pacret-state<SafeToDerefRegs: BitVector, Insts: [0]()>
+// CHECK-NEXT: __ENTRY_nocfg@0x[[ENTRY_ADDR]] (Entry Point):
+// CHECK-NEXT: .{{[A-Za-z0-9]+}}:
+// CHECK-NEXT:     00000008:   ret # Offset: 8 # NoCFGPacRetAnalysis: pacret-state<SafeToDerefRegs: BitVector, Insts: [0]()>
+// CHECK-NEXT: DWARF CFI Instructions:
+// CHECK-NEXT:     <empty>
+// CHECK-NEXT: End of Function "nocfg"
+// CHECK-EMPTY:
+// CHECK-NEXT:   Attaching clobbering info to:     00000000:   ret # Offset: 8 # NoCFGPacRetAnalysis: pacret-state<SafeToDerefRegs: BitVector, Insts: [0]()>
 
 // CHECK-LABEL:Analyzing in function main, AllocatorId 1
         .globl  main
