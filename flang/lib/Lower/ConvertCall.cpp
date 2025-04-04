@@ -645,9 +645,20 @@ Fortran::lower::genCallOpAndResult(
       callResult = dispatch.getResult(0);
   } else {
     // Standard procedure call with fir.call.
+    fir::FortranInlineEnumAttr inlineAttr;
+
+    if (caller.getCallDescription().hasNoInline())
+      inlineAttr = fir::FortranInlineEnumAttr::get(
+          builder.getContext(), fir::FortranInlineEnum::no_inline);
+    else if (caller.getCallDescription().hasInlineHint())
+      inlineAttr = fir::FortranInlineEnumAttr::get(
+          builder.getContext(), fir::FortranInlineEnum::inline_hint);
+    else if (caller.getCallDescription().hasAlwaysInline())
+      inlineAttr = fir::FortranInlineEnumAttr::get(
+          builder.getContext(), fir::FortranInlineEnum::always_inline);
     auto call = builder.create<fir::CallOp>(
         loc, funcType.getResults(), funcSymbolAttr, operands,
-        /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, procAttrs);
+        /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, procAttrs, inlineAttr);
 
     callNumResults = call.getNumResults();
     if (callNumResults != 0)
