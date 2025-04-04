@@ -91,14 +91,15 @@ template <typename T>
 class TemplateTest {
   T &Mem;
 public:
+  TemplateTest(T &V) : Mem{V} {}
   void setValue(T *NewValue) {
     // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: function 'setValue' can be mistakenly used in order to change the reference 'Mem' instead of the value of it
     Mem = *NewValue;
   }
 };
 
-void f_TTChar(TemplateTest<char> *);
-void f_TTChar(TemplateTest<float> *);
+char CharValue;
+TemplateTest<char> TTChar{CharValue};
 
 template <typename T>
 class AddMember {
