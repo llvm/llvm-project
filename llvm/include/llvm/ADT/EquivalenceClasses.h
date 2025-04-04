@@ -16,6 +16,7 @@
 #define LLVM_ADT_EQUIVALENCECLASSES_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/iterator_range.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -182,6 +183,14 @@ public:
 
   member_iterator member_end() const {
     return member_iterator(nullptr);
+  }
+
+  iterator_range<member_iterator> members(const ECValue &ECV) const {
+    return make_range(member_begin(ECV), member_end());
+  }
+
+  iterator_range<member_iterator> members(const ElemTy &V) const {
+    return make_range(findLeader(V), member_end());
   }
 
   /// Returns true if \p V is contained an equivalence class.
