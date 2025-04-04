@@ -188,7 +188,7 @@ TEST_P(BinaryContextTester,
   EXPECT_EXIT(BS.flushPendingRelocations(
                   OS, [&](const MCSymbol *S) { return 0x800000F; }),
               ::testing::ExitedWithCode(1),
-              "BOLT-ERROR: Cannot encode relocation for symbol Func0x4 as it is"
+              "BOLT-ERROR: cannot encode relocation for symbol Func0x4 as it is"
               " out-of-range. To proceed must use -force-patch");
 }
 
