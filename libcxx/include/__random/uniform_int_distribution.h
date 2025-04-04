@@ -207,8 +207,8 @@ public:
 
 template <class _IntType>
 template <class _URNG>
-typename uniform_int_distribution<_IntType>::result_type uniform_int_distribution<_IntType>::operator()(
-    _URNG& __g, const param_type& __p) _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK {
+_LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK typename uniform_int_distribution<_IntType>::result_type
+uniform_int_distribution<_IntType>::operator()(_URNG& __g, const param_type& __p) {
   static_assert(__libcpp_random_is_valid_urng<_URNG>::value, "");
   typedef __conditional_t<sizeof(result_type) <= sizeof(uint32_t), uint32_t, __make_unsigned_t<result_type> > _UIntType;
   const _UIntType __rp = _UIntType(__p.b()) - _UIntType(__p.a()) + _UIntType(1);
