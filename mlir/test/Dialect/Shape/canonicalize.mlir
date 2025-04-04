@@ -1390,7 +1390,7 @@ func.func @shape_of_from_reshape(%arg0: tensor<*xf32>, %arg1: tensor<?xindex>) -
 // -----
 
 // Check statically shaped types, with element types i32 to index.
-// CHECK-LABEL: func @shape_of_from_reshape_compatible_types1
+// CHECK-LABEL: func @shape_of_from_reshape_int_to_index
 // CHECK-SAME: %[[INPUT:.*]]: tensor<?x1xf32>
 // CHECK-SAME: %[[SHAPE:.*]]: tensor<3xi32>
 func.func @shape_of_from_reshape_int_to_index(%arg0: tensor<?x1xf32>, %arg1: tensor<3xi32>) -> tensor<3xindex> {
@@ -1404,7 +1404,7 @@ func.func @shape_of_from_reshape_int_to_index(%arg0: tensor<?x1xf32>, %arg1: ten
 // -----
 
 // Check similar element types, with statically shaped to dynamically shaped.
-// CHECK-LABEL: func @shape_of_from_reshape_compatible_types2
+// CHECK-LABEL: func @shape_of_from_reshape_static_to_dynamic
 // CHECK-SAME: %[[INPUT:.*]]: tensor<*xf32>
 // CHECK-SAME: %[[SHAPE:.*]]: tensor<5xindex>
 func.func @shape_of_from_reshape_static_to_dynamic(%arg0: tensor<*xf32>, %arg1: tensor<5xindex>) -> tensor<?xindex> {
@@ -1418,7 +1418,7 @@ func.func @shape_of_from_reshape_static_to_dynamic(%arg0: tensor<*xf32>, %arg1: 
 // -----
 
 // Check similar element types, with dynamically shaped to statically shaped.
-// CHECK-LABEL: func @shape_of_from_reshape_compatible_types3
+// CHECK-LABEL: func @shape_of_from_reshape_dynamic_to_static
 // CHECK-SAME: %[[INPUT:.*]]: tensor<*xf32>
 // CHECK-SAME: %[[SHAPE:.*]]: tensor<?xindex>
 func.func @shape_of_from_reshape_dynamic_to_static(%arg0: tensor<*xf32>, %arg1: tensor<?xindex>) -> tensor<5xindex> {
