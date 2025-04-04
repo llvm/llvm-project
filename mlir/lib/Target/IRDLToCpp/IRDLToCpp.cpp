@@ -170,7 +170,7 @@ static void generateOpGetterDeclarations(irdl::detail::dictionary &dict,
   auto opGetters = std::string{};
   auto resGetters = std::string{};
 
-  for (size_t i = 0; i < opStrings.opOperandNames.size(); ++i) {
+  for (size_t i = 0, end = opStrings.opOperandNames.size(); i < end; ++i) {
     const auto op =
         llvm::convertToCamelFromSnakeCase(opStrings.opOperandNames[i], true);
     opGetters += llvm::formatv("::mlir::Value get{0}() { return "
