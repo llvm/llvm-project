@@ -31,6 +31,7 @@ math/clc_atanpi.cl
 math/clc_cbrt.cl
 math/clc_ceil.cl
 math/clc_copysign.cl
+math/clc_cosh.cl
 math/clc_cospi.cl
 math/clc_ep_log.cl
 math/clc_exp.cl
@@ -76,10 +77,12 @@ math/clc_rootn.cl
 math/clc_round.cl
 math/clc_rsqrt.cl
 math/clc_sincos_helpers.cl
+math/clc_sinh.cl
 math/clc_sinpi.cl
 math/clc_sqrt.cl
 math/clc_sw_fma.cl
 math/clc_tables.cl
+math/clc_tanh.cl
 math/clc_tanpi.cl
 math/clc_tgamma.cl
 math/clc_trunc.cl

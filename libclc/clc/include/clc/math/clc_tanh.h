@@ -6,9 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
-#include <clc/math/clc_sinh.h>
+#ifndef __CLC_MATH_CLC_TANH_H__
+#define __CLC_MATH_CLC_TANH_H__
 
-#define FUNCTION sinh
-#define __CLC_BODY <clc/shared/unary_def.inc>
+#define __CLC_BODY <clc/math/unary_decl.inc>
+#define __CLC_FUNCTION __clc_tanh
+
 #include <clc/math/gentype.inc>
+
+#undef __CLC_BODY
+#undef __CLC_FUNCTION
+
+#endif // __CLC_MATH_CLC_TANH_H__
