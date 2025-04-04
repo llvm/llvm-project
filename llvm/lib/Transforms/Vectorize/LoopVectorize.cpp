@@ -4471,7 +4471,6 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPDef::VPScalarIVStepsSC:
       case VPDef::VPScalarCastSC:
       case VPDef::VPReplicateSC:
-      case VPDef::VPInstructionSC:
       case VPDef::VPCanonicalIVPHISC:
       case VPDef::VPVectorPointerSC:
       case VPDef::VPVectorEndPointerSC:
@@ -4480,6 +4479,10 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPDef::VPPredInstPHISC:
       case VPDef::VPBranchOnMaskSC:
         continue;
+      case VPDef::VPInstructionSC:
+        if (!cast<VPInstruction>(R).getUnderlyingValue())
+          continue;
+        break;
       case VPDef::VPReductionSC:
       case VPDef::VPActiveLaneMaskPHISC:
       case VPDef::VPWidenCallSC:
