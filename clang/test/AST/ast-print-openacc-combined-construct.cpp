@@ -139,8 +139,8 @@ void foo() {
 #pragma acc kernels loop deviceptr(iPtr, arrayPtr[0])
   for(int i = 0;i<5;++i);
 
-// CHECK: #pragma acc parallel loop wait()
-#pragma acc parallel loop wait()
+// CHECK: #pragma acc parallel loop wait
+#pragma acc parallel loop wait
   for(int i = 0;i<5;++i);
 
 // CHECK: #pragma acc parallel loop wait(*iPtr, i)
