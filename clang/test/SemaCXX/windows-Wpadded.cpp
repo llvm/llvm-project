@@ -32,9 +32,14 @@ struct __attribute__((ms_struct)) StructWithUnion { // expected-warning {{paddin
   short i;
 };
 
+struct __attribute__((ms_struct)) EmptyStruct {
+
+};
+
 int main() {
   Foo f;
   AlignedStruct a;
   Derived d;
   StructWithUnion swu;
+  EmptyStruct e;
 }
