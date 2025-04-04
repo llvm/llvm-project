@@ -766,14 +766,20 @@ Error SymbolTableSection::removeSymbols(
     function_ref<bool(const Symbol &)> ToRemove) {
   Symbols.erase(
       std::remove_if(std::begin(Symbols) + 1, std::end(Symbols),
-                     [ToRemove](const SymPtr &Sym) { return ToRemove(*Sym); }),
-      std::end(Symbols));
+               [&](const SymPtr &Sym) {
+                   if (ToRemove(*Sym)) {
+                    if(VerboseOutput)
+                      outs() << "Symbols Removed:" << Sym->Name<< "\n";
+                    return true;
+                   }
+                   return false;
+               }));
+
   auto PrevSize = Size;
   Size = Symbols.size() * EntrySize;
   if (Size < PrevSize)
     IndicesChanged = true;
   assignIndices();
-  return Error::success();
 }
 
 void SymbolTableSection::replaceSectionReferences(
@@ -2195,7 +2201,7 @@ Error Object::updateSectionData(SectionBase &S, ArrayRef<uint8_t> Data) {
 }
 
 Error Object::removeSections(
-    bool AllowBrokenLinks, std::function<bool(const SectionBase &)> ToRemove) {
+    bool AllowBrokenLinks, std::function<bool(const SectionBase &)> ToRemove, bool VerboseOutput) {
 
   auto Iter = std::stable_partition(
       std::begin(Sections), std::end(Sections), [=](const SecPtr &Sec) {
@@ -2230,6 +2236,9 @@ Error Object::removeSections(
   for (auto &RemoveSec : make_range(Iter, std::end(Sections))) {
     for (auto &Segment : Segments)
       Segment->removeSection(RemoveSec.get());
+    if (VerboseOutput) {
+      outs() << "removed section: " << (RemoveSec.get()->Name);
+    }
     RemoveSec->onRemove();
     RemoveSections.insert(RemoveSec.get());
   }
@@ -2273,17 +2282,20 @@ Error Object::replaceSections(
 
   if (Error E = removeSections(
           /*AllowBrokenLinks=*/false,
-          [=](const SectionBase &Sec) { return FromTo.count(&Sec) > 0; }))
+          [=](const SectionBase &Sec) { return FromTo.count(&Sec) > 0; }, false))
     return E;
   llvm::sort(Sections, SectionIndexLess);
   return Error::success();
 }
 
 Error Object::removeSymbols(function_ref<bool(const Symbol &)> ToRemove) {
-  if (SymbolTable)
-    for (const SecPtr &Sec : Sections)
+  if (SymbolTable){
+    for (const SecPtr &Sec : Sections){
       if (Error E = Sec->removeSymbols(ToRemove))
         return E;
+      outs() << "removed symbols:" << Sec->Name;
+    }
+  }
   return Error::success();
 }
 
@@ -2570,7 +2582,7 @@ static Error removeUnneededSections(Object &Obj) {
                      : Obj.SymbolTable->getStrTab();
   return Obj.removeSections(false, [&](const SectionBase &Sec) {
     return &Sec == Obj.SymbolTable || &Sec == StrTab;
-  });
+  }, false);
 }
 
 template <class ELFT> Error ELFWriter<ELFT>::finalize() {
@@ -2624,7 +2636,7 @@ template <class ELFT> Error ELFWriter<ELFT>::finalize() {
       if (Error E = Obj.removeSections(false /*AllowBrokenLinks*/,
                                        [this](const SectionBase &Sec) {
                                          return &Sec == Obj.SectionIndexTable;
-                                       }))
+                                       }, false))
         return E;
     }
   }
