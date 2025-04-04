@@ -13,13 +13,30 @@ include "mlir/Dialect/LLVMIR/LLVMDialect.td"
 include "mlir/Dialect/LLVMIR/LLVMInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/CommonAttrConstraints.td"
+include "mlir/IR/OpAsmInterface.td"
 
 // All of the attributes will extend this class.
 class LLVM_Attr<string name, string attrMnemonic,
                 list<Trait> traits = [],
                 string baseCppClass = "::mlir::Attribute">
-    : AttrDef<LLVM_Dialect, name, traits, baseCppClass> {
+    : AttrDef<LLVM_Dialect, name, traits # [OpAsmAttrInterface], baseCppClass> {
   let mnemonic = attrMnemonic;
+
+  // Custom flag for attribute to indicate whether it wants mnemonic alias.
+  int enableMnemonicAlias = 0;
+  // If the attribute already uses extraClassDeclaration, it should create
+  // its own OpAsmAttrInterface methods instead of relying on here as this
+  // part will be overriden.
+  let extraClassDeclaration = !if(!eq(enableMnemonicAlias, 1), [{
+    //===------------------------------------------------------------------===//
+    // OpAsmAttrInterface Methods
+    //===------------------------------------------------------------------===//
+
+    ::mlir::OpAsmAliasResult getAlias(::llvm::raw_ostream &os) const {
+      os << "}] # mnemonic # [{";
+      return ::mlir::OpAsmAliasResult::OverridableAlias;
+    }
+  }], "");
 }
 
 //===----------------------------------------------------------------------===//
@@ -79,6 +96,9 @@ def LoopVectorizeAttr : LLVM_Attr<"LoopVectorize", "loop_vectorize"> {
   );
 
   let assemblyFormat = "`<` struct(params) `>`";
+
+  // Custom flag for alias, check LLVM_Attr class for more details.
+  let enableMnemonicAlias = 1;
 }
 
 def LoopInterleaveAttr : LLVM_Attr<"LoopInterleave", "loop_interleave"> {
@@ -92,6 +112,9 @@ def LoopInterleaveAttr : LLVM_Attr<"LoopInterleave", "loop_interleave"> {
   );
 
   let assemblyFormat = "`<` struct(params) `>`";
+
+  // Custom flag for alias, check LLVM_Attr class for more details.
+  let enableMnemonicAlias = 1;
 }
 
 def LoopUnrollAttr : LLVM_Attr<"LoopUnroll", "loop_unroll"> {
@@ -111,6 +134,9 @@ def LoopUnrollAttr : LLVM_Attr<"LoopUnroll", "loop_unroll"> {
   );
 
   let assemblyFormat = "`<` struct(params) `>`";
+
+  // Custom flag for alias, check LLVM_Attr class for more details.
+  let enableMnemonicAlias = 1;
 }
 
 def LoopUnrollAndJamAttr : LLVM_Attr<"LoopUnrollAndJam", "loop_unroll_and_jam"> {
@@ -130,6 +156,9 @@ def LoopUnrollAndJamAttr : LLVM_Attr<"LoopUnrollAndJam", "loop_unroll_and_jam"> 
   );
 
   let assemblyFormat = "`<` struct(params) `>`";
+
+  // Custom flag for alias, check LLVM_Attr class for more details.
+  let enableMnemonicAlias = 1;
 }
 
 def LoopLICMAttr : LLVM_Attr<"LoopLICM", "loop_licm"> {
@@ -145,6 +174,9 @@ def LoopLICMAttr : LLVM_Attr<"LoopLICM", "loop_licm"> {
   );
 
   let assemblyFormat = "`<` struct(params) `>`";
+
+  // Custom flag for alias, check LLVM_Attr class for more details.
+  let enableMnemonicAlias = 1;
 }
 
 def LoopDistributeAttr : LLVM_Attr<"LoopDistribute", "loop_distribute"> {
@@ -162,6 +194,9 @@ def LoopDistributeAttr : LLVM_Attr<"LoopDistribute", "loop_distribute"> {
   );
 
   let assemblyFormat = "`<` struct(params) `>`";
+
+  // Custom flag for alias, check LLVM_Attr class for more details.
+  let enableMnemonicAlias = 1;
 }
 
 def LoopPipelineAttr : LLVM_Attr<"LoopPipeline", "loop_pipeline"> {
@@ -176,6 +211,9 @@ def LoopPipelineAttr : LLVM_Attr<"LoopPipeline", "loop_pipeline"> {
   );
 
   let assemblyFormat = "`<` struct(params) `>`";
+
+  // Custom flag for alias, check LLVM_Attr class for more details.
+  let enableMnemonicAlias = 1;
 }
 
 def LoopPeeledAttr : LLVM_Attr<"LoopPeeled", "loop_peeled"> {
@@ -189,6 +227,9 @@ def LoopPeeledAttr : LLVM_Attr<"LoopPeeled", "loop_peeled"> {
   );
 
   let assemblyFormat = "`<` struct(params) `>`";
+
+  // Custom flag for alias, check LLVM_Attr class for more details.
+  let enableMnemonicAlias = 1;
 }
 
 def LoopUnswitchAttr : LLVM_Attr<"LoopUnswitch", "loop_unswitch"> {
@@ -202,6 +243,9 @@ def LoopUnswitchAttr : LLVM_Attr<"LoopUnswitch", "loop_unswitch"> {
   );
 
   let assemblyFormat = "`<` struct(params) `>`";
+
+  // Custom flag for alias, check LLVM_Attr class for more details.
+  let enableMnemonicAlias = 1;
 }
 
 def LoopAnnotationAttr : LLVM_Attr<"LoopAnnotation", "loop_annotation"> {
@@ -232,6 +276,9 @@ def LoopAnnotationAttr : LLVM_Attr<"LoopAnnotation", "loop_annotation"> {
   );
 
   let assemblyFormat = "`<` struct(params) `>`";
+
+  // Custom flag for alias, check LLVM_Attr class for more details.
+  let enableMnemonicAlias = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -311,6 +358,9 @@ def LLVM_DIExpressionAttr : LLVM_Attr<"DIExpression", "di_expression"> {
 def LLVM_DINullTypeAttr : LLVM_Attr<"DINullType", "di_null_type",
                                     /*traits=*/[], "DITypeAttr"> {
   let parameters = (ins);
+
+  // Custom flag for alias, check LLVM_Attr class for more details.
+  let enableMnemonicAlias = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -336,6 +386,9 @@ def LLVM_DIBasicTypeAttr : LLVM_Attr<"DIBasicType", "di_basic_type",
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";
+
+  // Custom flag for alias, check LLVM_Attr class for more details.
+  let enableMnemonicAlias = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -365,6 +418,9 @@ def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";
+
+  // Custom flag for alias, check LLVM_Attr class for more details.
+  let enableMnemonicAlias = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -421,7 +477,20 @@ def LLVM_DICompositeTypeAttr : LLVM_Attr<"DICompositeType", "di_composite_type",
     static DIRecursiveTypeAttrInterface getRecSelf(DistinctAttr recId);
 
     /// @}
+
+    //===------------------------------------------------------------------===//
+    // OpAsmAttrInterface Methods
+    //===------------------------------------------------------------------===//
+
+    ::mlir::OpAsmAliasResult getAlias(::llvm::raw_ostream &os) const {
+      os << "}] # mnemonic # [{";
+      return ::mlir::OpAsmAliasResult::OverridableAlias;
+    }
   }];
+
+  // Custom flag for alias, check LLVM_Attr class for more details.
+  // Disable overriding in LLVM_Attr class.
+  let enableMnemonicAlias = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -441,6 +510,9 @@ def LLVM_DIDerivedTypeAttr : LLVM_Attr<"DIDerivedType", "di_derived_type",
     OptionalParameter<"DINodeAttr">:$extraData
   );
   let assemblyFormat = "`<` struct(params) `>`";
+
+  // Custom flag for alias, check LLVM_Attr class for more details.
+  let enableMnemonicAlias = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -455,6 +527,9 @@ def LLVM_DIFileAttr : LLVM_Attr<"DIFile", "di_file", /*traits=*/[], "DIScopeAttr
     }]>
   ];
   let assemblyFormat = "`<` $name `in` $directory `>`";
+
+  // Custom flag for alias, check LLVM_Attr class for more details.
+  let enableMnemonicAlias = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -469,6 +544,9 @@ def LLVM_DIGlobalVariableExpressionAttr
   );
   let assemblyFormat = "`<` struct(params) `>`";
   let constBuilderCall = "$0";
+
+  // Custom flag for alias, check LLVM_Attr class for more details.
+  let enableMnemonicAlias = 1;
 }
 
 def DIGlobalVariableExpressionArrayAttr :
@@ -492,6 +570,9 @@ def LLVM_DIGlobalVariable : LLVM_Attr<"DIGlobalVariable", "di_global_variable",
     OptionalParameter<"bool">:$isDefined,
     OptionalParameter<"unsigned">:$alignInBits);
   let assemblyFormat = "`<` struct(params) `>`";
+
+  // Custom flag for alias, check LLVM_Attr class for more details.
+  let enableMnemonicAlias = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -515,6 +596,9 @@ def LLVM_DILexicalBlockAttr : LLVM_Attr<"DILexicalBlock", "di_lexical_block",
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";
+
+  // Custom flag for alias, check LLVM_Attr class for more details.
+  let enableMnemonicAlias = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -536,6 +620,9 @@ def LLVM_DILexicalBlockFile : LLVM_Attr<"DILexicalBlockFile", "di_lexical_block_
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";
+
+  // Custom flag for alias, check LLVM_Attr class for more details.
+  let enableMnemonicAlias = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -566,6 +653,9 @@ def LLVM_DILocalVariableAttr : LLVM_Attr<"DILocalVariable", "di_local_variable",
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";
+
+  // Custom flag for alias, check LLVM_Attr class for more details.
+  let enableMnemonicAlias = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -618,7 +708,20 @@ def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram",
     static DIRecursiveTypeAttrInterface getRecSelf(DistinctAttr recId);
 
     /// @}
+
+    //===------------------------------------------------------------------===//
+    // OpAsmAttrInterface Methods
+    //===------------------------------------------------------------------===//
+
+    ::mlir::OpAsmAliasResult getAlias(::llvm::raw_ostream &os) const {
+      os << "}] # mnemonic # [{";
+      return ::mlir::OpAsmAliasResult::OverridableAlias;
+    }
   }];
+
+  // Custom flag for alias, check LLVM_Attr class for more details.
+  // Disable overriding in LLVM_Attr class.
+  let enableMnemonicAlias = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -639,6 +742,9 @@ def LLVM_DIModuleAttr : LLVM_Attr<"DIModule", "di_module",
   );
 
   let assemblyFormat = "`<` struct(params) `>`";
+
+  // Custom flag for alias, check LLVM_Attr class for more details.
+  let enableMnemonicAlias = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -654,6 +760,9 @@ def LLVM_DINamespaceAttr : LLVM_Attr<"DINamespace", "di_namespace",
   );
 
   let assemblyFormat = "`<` struct(params) `>`";
+
+  // Custom flag for alias, check LLVM_Attr class for more details.
+  let enableMnemonicAlias = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -673,6 +782,9 @@ def LLVM_DIImportedEntityAttr : LLVM_Attr<"DIImportedEntity", "di_imported_entit
   );
 
   let assemblyFormat = "`<` struct(params) `>`";
+
+  // Custom flag for alias, check LLVM_Attr class for more details.
+  let enableMnemonicAlias = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -719,6 +831,9 @@ def LLVM_DICommonBlockAttr : LLVM_Attr<"DICommonBlock", "di_common_block",
     OptionalParameter<"unsigned">:$line
   );
   let assemblyFormat = "`<` struct(params) `>`";
+
+  // Custom flag for alias, check LLVM_Attr class for more details.
+  let enableMnemonicAlias = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -753,6 +868,9 @@ def LLVM_DISubroutineTypeAttr : LLVM_Attr<"DISubroutineType", "di_subroutine_typ
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";
+
+  // Custom flag for alias, check LLVM_Attr class for more details.
+  let enableMnemonicAlias = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -778,6 +896,9 @@ def LLVM_DILabelAttr : LLVM_Attr<"DILabel", "di_label",
   ];
 
   let assemblyFormat = "`<` struct(params) `>`";
+
+  // Custom flag for alias, check LLVM_Attr class for more details.
+  let enableMnemonicAlias = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -797,6 +918,9 @@ def LLVM_DIStringTypeAttr : LLVM_Attr<"DIStringType", "di_string_type",
     LLVM_DIEncodingParameter:$encoding
   );
   let assemblyFormat = "`<` struct(params) `>`";
+
+  // Custom flag for alias, check LLVM_Attr class for more details.
+  let enableMnemonicAlias = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -845,6 +969,9 @@ def LLVM_AliasScopeDomainAttr : LLVM_Attr<"AliasScopeDomain",
   }];
 
   let assemblyFormat = "`<` struct(params) `>`";
+
+  // Custom flag for alias, check LLVM_Attr class for more details.
+  let enableMnemonicAlias = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -902,6 +1029,9 @@ def LLVM_AliasScopeAttr : LLVM_Attr<"AliasScope", "alias_scope"> {
   let assemblyFormat = "`<` struct(params) `>`";
 
   let genVerifyDecl = 1;
+
+  // Custom flag for alias, check LLVM_Attr class for more details.
+  let enableMnemonicAlias = 1;
 }
 
 def LLVM_AliasScopeArrayAttr
@@ -937,6 +1067,9 @@ def LLVM_AccessGroupAttr : LLVM_Attr<"AccessGroup", "access_group"> {
   }];
 
   let assemblyFormat = "`<` struct(params) `>`";
+
+  // Custom flag for alias, check LLVM_Attr class for more details.
+  let enableMnemonicAlias = 1;
 }
 
 def LLVM_AccessGroupArrayAttr
@@ -967,6 +1100,9 @@ def LLVM_TBAARootAttr : LLVM_Attr<"TBAARoot", "tbaa_root", [], "TBAANodeAttr"> {
   }];
 
   let assemblyFormat = "(`<` struct(params)^ `>`)?";
+
+  // Custom flag for alias, check LLVM_Attr class for more details.
+  let enableMnemonicAlias = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1040,6 +1176,9 @@ def LLVM_TBAATypeDescriptorAttr : LLVM_Attr<"TBAATypeDescriptor",
   }];
 
   let assemblyFormat = "`<` struct(params) `>`";
+
+  // Custom flag for alias, check LLVM_Attr class for more details.
+  let enableMnemonicAlias = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1082,6 +1221,9 @@ def LLVM_TBAATagAttr : LLVM_Attr<"TBAATag", "tbaa_tag"> {
   }];
 
   let assemblyFormat = "`<` struct(params) `>`";
+
+  // Custom flag for alias, check LLVM_Attr class for more details.
+  let enableMnemonicAlias = 1;
 }
 
 def LLVM_TBAATagArrayAttr
