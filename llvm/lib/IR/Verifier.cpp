@@ -6671,8 +6671,9 @@ void Verifier::visit(DbgVariableRecord &DVR) {
     if (DVR.isDbgDeclare())
       CheckDI(VAM->getValue()->getType()->isPointerTy(),
               "location of #dbg_declare must be a pointer", &DVR, MD);
-  } else if (auto *AL = dyn_cast<DIArgList>(MD))
+  } else if (auto *AL = dyn_cast<DIArgList>(MD)) {
     visitDIArgList(*AL, F);
+  }
 
   CheckDI(isa_and_nonnull<DILocalVariable>(DVR.getRawVariable()),
           "invalid #dbg record variable", &DVR, DVR.getRawVariable());
