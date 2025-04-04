@@ -125,14 +125,12 @@ static int ActOnMatchingPlugins(
   int num_matching = 0;
 
   for (const PluginNamespace &plugin_namespace : PluginNamespaces) {
-    std::vector<RegisteredPluginInfo> all_plugins = plugin_namespace.get_info();
     std::vector<RegisteredPluginInfo> matching_plugins;
-    for (const RegisteredPluginInfo &plugin_info : all_plugins) {
+    for (const RegisteredPluginInfo &plugin_info : plugin_namespace.get_info()) {
       std::string qualified_name =
           (plugin_namespace.name + "." + plugin_info.name).str();
-      if (pattern.match(qualified_name)) {
+      if (pattern.match(qualified_name))
         matching_plugins.push_back(plugin_info);
-      }
     }
 
     if (!matching_plugins.empty()) {
@@ -147,15 +145,10 @@ static int ActOnMatchingPlugins(
 // Return a string in glob syntax for matching plugins.
 static std::string GetPluginNamePatternString(llvm::StringRef user_input,
                                               bool add_default_glob) {
-  std::string pattern_str;
-  if (user_input.empty())
-    pattern_str = "*";
-  else
-    pattern_str = user_input;
+  std::string pattern_str = user_input.empty() ? "*" : user_input;
 
-  if (add_default_glob && pattern_str != "*") {
+  if (add_default_glob && pattern_str != "*") 
     pattern_str = "*" + pattern_str + "*";
-  }
 
   return pattern_str;
 }
@@ -178,10 +171,7 @@ TryCreatePluginPattern(const char *plugin_command_name, const Args &command,
     return {};
   }
 
-  llvm::StringRef user_pattern;
-  if (argc == 1) {
-    user_pattern = command[0].ref();
-  }
+  llvm::StringRef user_pattern = argc == 1 ? command[0].ref() : "";
 
   glob_storage =
       GetPluginNamePatternString(user_pattern, !options.m_exact_name_match);
@@ -255,8 +245,7 @@ By default wildcards are added around the input to enable searching by
 substring. You can prevent these implicit wild cards by using the
 -x flag.
 
-Examples
------------------
+Examples:
 List all plugins in the system-runtime namespace
 
   (lldb) plugin list system-runtime.*
@@ -367,9 +356,8 @@ protected:
 
     int num_matching = SetEnableOnMatchingPlugins(*plugin_glob, result, false);
 
-    if (num_matching == 0) {
+    if (num_matching == 0) 
       result.AppendErrorWithFormat("Found no matching plugins to disable");
-    }
   }
 
   PluginListCommandOptions m_options;
