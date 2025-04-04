@@ -3353,7 +3353,7 @@ defm implicit_modules : BoolFOption<"implicit-modules",
   NegFlag<SetFalse, [], [ClangOption, CC1Option]>,
   PosFlag<SetTrue>, BothFlags<
           [NoXarchOption], [ClangOption, CLOption]>>;
-def fno_modules_check_relocated : Joined<["-"], "fno-modules-check-relocated">,
+def fno_modules_check_relocated : Flag<["-"], "fno-modules-check-relocated">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Skip checks for relocated modules when loading PCM files">,
   MarshallingInfoNegativeFlag<PreprocessorOpts<"ModulesCheckRelocated">>;
