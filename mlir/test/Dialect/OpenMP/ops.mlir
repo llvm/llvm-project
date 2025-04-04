@@ -2879,6 +2879,22 @@ func.func @omp_target_host_eval(%x : i32) {
     }
     omp.terminator
   }
+
+  // CHECK: omp.target host_eval(%{{.*}} -> %[[HOST_ARG:.*]] : i32) {
+  // CHECK: omp.teams {
+  // CHECK: omp.loop {
+  // CHECK: omp.loop_nest (%{{.*}}) : i32 = (%[[HOST_ARG]]) to (%[[HOST_ARG]]) step (%[[HOST_ARG]]) {
+  omp.target host_eval(%x -> %arg0 : i32) {
+    omp.teams {
+      omp.loop {
+        omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
+          omp.yield
+        }
+      }
+      omp.terminator
+    }
+    omp.terminator
+  }
   return
 }
 

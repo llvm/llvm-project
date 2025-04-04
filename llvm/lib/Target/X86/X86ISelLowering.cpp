@@ -3941,6 +3941,24 @@ static bool canScaleShuffleElements(ArrayRef<int> Mask, unsigned NumDstElts) {
   return scaleShuffleElements(Mask, NumDstElts, ScaledMask);
 }
 
+// Helper to grow the shuffle mask for a larger value type.
+// NOTE: This is different to scaleShuffleElements which is a same size type.
+static void growShuffleMask(ArrayRef<int> SrcMask,
+                            SmallVectorImpl<int> &DstMask,
+                            unsigned SrcSizeInBits, unsigned DstSizeInBits) {
+  assert(DstMask.empty() && "Expected an empty shuffle mas");
+  assert((DstSizeInBits % SrcSizeInBits) == 0 && "Illegal shuffle scale");
+  unsigned Scale = DstSizeInBits / SrcSizeInBits;
+  unsigned NumSrcElts = SrcMask.size();
+  DstMask.assign(SrcMask.begin(), SrcMask.end());
+  for (int &M : DstMask) {
+    if (M < 0)
+      continue;
+    M = (M % NumSrcElts) + ((M / NumSrcElts) * Scale * NumSrcElts);
+  }
+  DstMask.append((Scale - 1) * NumSrcElts, SM_SentinelUndef);
+}
+
 /// Returns true if Elt is a constant zero or a floating point constant +0.0.
 bool X86::isZeroNode(SDValue Elt) {
   return isNullConstant(Elt) || isNullFPConstant(Elt);
@@ -40456,19 +40474,13 @@ static SDValue combineX86ShuffleChainWithExtract(
   }
 
   // Bail if we fail to find a source larger than the existing root.
-  unsigned Scale = WideSizeInBits / RootSizeInBits;
   if (WideSizeInBits <= RootSizeInBits ||
       (WideSizeInBits % RootSizeInBits) != 0)
     return SDValue();
 
   // Create new mask for larger type.
-  SmallVector<int, 64> WideMask(BaseMask);
-  for (int &M : WideMask) {
-    if (M < 0)
-      continue;
-    M = (M % NumMaskElts) + ((M / NumMaskElts) * Scale * NumMaskElts);
-  }
-  WideMask.append((Scale - 1) * NumMaskElts, SM_SentinelUndef);
+  SmallVector<int, 64> WideMask;
+  growShuffleMask(BaseMask, WideMask, RootSizeInBits, WideSizeInBits);
 
   // Attempt to peek through inputs and adjust mask when we extract from an
   // upper subvector.

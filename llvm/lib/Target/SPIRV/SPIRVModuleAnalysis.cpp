@@ -214,6 +214,26 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
   }
 }
 
+// Appends the signature of the decoration instructions that decorate R to
+// Signature.
+static void appendDecorationsForReg(const MachineRegisterInfo &MRI, Register R,
+                                    InstrSignature &Signature) {
+  for (MachineInstr &UseMI : MRI.use_instructions(R)) {
+    // We don't handle OpDecorateId because getting the register alias for the
+    // ID can cause problems, and we do not need it for now.
+    if (UseMI.getOpcode() != SPIRV::OpDecorate &&
+        UseMI.getOpcode() != SPIRV::OpMemberDecorate)
+      continue;
+
+    for (unsigned I = 0; I < UseMI.getNumOperands(); ++I) {
+      const MachineOperand &MO = UseMI.getOperand(I);
+      if (MO.isReg())
+        continue;
+      Signature.push_back(hash_value(MO));
+    }
+  }
+}
+
 // Returns a representation of an instruction as a vector of MachineOperand
 // hash values, see llvm::hash_value(const MachineOperand &MO) for details.
 // This creates a signature of the instruction with the same content
@@ -221,13 +241,17 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
 static InstrSignature instrToSignature(const MachineInstr &MI,
                                        SPIRV::ModuleAnalysisInfo &MAI,
                                        bool UseDefReg) {
+  Register DefReg;
   InstrSignature Signature{MI.getOpcode()};
   for (unsigned i = 0; i < MI.getNumOperands(); ++i) {
     const MachineOperand &MO = MI.getOperand(i);
     size_t h;
     if (MO.isReg()) {
-      if (!UseDefReg && MO.isDef())
+      if (!UseDefReg && MO.isDef()) {
+        assert(!DefReg.isValid() && "Multiple def registers.");
+        DefReg = MO.getReg();
         continue;
+      }
       Register RegAlias = MAI.getRegisterAlias(MI.getMF(), MO.getReg());
       if (!RegAlias.isValid()) {
         LLVM_DEBUG({
@@ -246,6 +270,13 @@ static InstrSignature instrToSignature(const MachineInstr &MI,
       h = hash_value(MO);
     }
     Signature.push_back(h);
+  }
+
+  if (DefReg.isValid()) {
+    // Decorations change the semantics of the current instruction. So two
+    // identical instruction with different decorations cannot be merged. That
+    // is why we add the decorations to the signature.
+    appendDecorationsForReg(MI.getMF()->getRegInfo(), DefReg, Signature);
   }
   return Signature;
 }
