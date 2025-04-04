@@ -12,7 +12,9 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolFileOnDemand.h"
+#include "lldb/Symbol/Symtab.h"
 #include "lldb/Symbol/TypeMap.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Symbol/VariableList.h"
@@ -258,4 +260,10 @@ void SymbolFileCommon::Dump(Stream &s) {
 
   if (Symtab *symtab = GetSymtab())
     symtab->Dump(&s, nullptr, eSortOrderNone);
+}
+
+std::string SymbolFile::GetObjectName() const {
+  if (const ObjectFile *object_file = GetObjectFile())
+    return object_file->GetObjectName();
+  return "";
 }
