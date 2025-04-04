@@ -62,6 +62,7 @@ private:
   std::unique_ptr<SDWAOperand> matchSDWAOperand(MachineInstr &MI);
   void pseudoOpConvertToVOP2(MachineInstr &MI,
                              const GCNSubtarget &ST) const;
+  void convertToImplicitVcc(MachineInstr &MI, const GCNSubtarget &ST) const;
   MachineInstr *createSDWAVersion(MachineInstr &MI);
   bool convertToSDWA(MachineInstr &MI, const SDWAOperandsVector &SDWAOperands);
   void legalizeScalarOperands(MachineInstr &MI, const GCNSubtarget &ST) const;
@@ -1061,6 +1062,79 @@ void SIPeepholeSDWA::pseudoOpConvertToVOP2(MachineInstr &MI,
   MISucc.substituteRegister(CarryIn->getReg(), TRI->getVCC(), 0, *TRI);
 }
 
+static unsigned getVCmpEqOpcode(unsigned Bits) {
+  if (Bits == 64)
+    return AMDGPU::V_CMP_EQ_U64_e64;
+  if (Bits == 32)
+    return AMDGPU::V_CMP_EQ_U32_e64;
+  if (Bits == 16)
+    return AMDGPU::V_CMP_EQ_U16_e64;
+
+  llvm_unreachable("Unexpected register bit width.");
+};
+
+/// Try to convert an \p MI in VOP3 which takes an src2 carry-in
+/// operand into the corresponding VOP2 form which expects the
+/// argument in VCC. To this end, either try to change the definition
+/// of the carry-in operand to write to VCC or add an instruction that
+/// copies from the carry-in to VCC.  The conversion will only be
+/// applied if \p MI can be shrunk to VOP2 and if VCC can be proven to
+/// be dead before \p MI.
+void SIPeepholeSDWA::convertToImplicitVcc(MachineInstr &MI,
+                                          const GCNSubtarget &ST) const {
+  assert(MI.getOpcode() == AMDGPU::V_CNDMASK_B32_e64);
+
+  MCRegister Vcc = TRI->getVCC();
+  // FIXME Conversion introduces implicit vcc_hi use
+  if (Vcc == AMDGPU::VCC_LO)
+    return;
+
+  LLVM_DEBUG(dbgs() << "Attempting VOP2 conversion: " << MI);
+  if (!TII->canShrink(MI, *MRI)) {
+    LLVM_DEBUG(dbgs() << "Cannot shrink instruction\n");
+    return;
+  }
+
+  const MachineOperand &CarryIn =
+      *TII->getNamedOperand(MI, AMDGPU::OpName::src2);
+
+  // Make sure VCC or its subregs are dead before MI.
+  MachineBasicBlock &MBB = *MI.getParent();
+  auto Liveness = MBB.computeRegisterLiveness(TRI, Vcc, MI, 100);
+  if (Liveness != MachineBasicBlock::LQR_Dead) {
+    LLVM_DEBUG(dbgs() << "VCC not known to be dead before instruction.\n");
+    return;
+  }
+  // Change destination of compare instruction to VCC
+  // or copy to VCC if carry-in is not a compare inst.
+  Register CarryReg = CarryIn.getReg();
+  MachineInstr &CarryDef = *MRI->getVRegDef(CarryReg);
+
+  if (CarryDef.isCompare() && TII->isVOP3(CarryDef) &&
+      MRI->hasOneUse(CarryIn.getReg())) {
+    CarryDef.substituteRegister(CarryIn.getReg(), Vcc, 0, *TRI);
+    CarryDef.moveBefore(&MI);
+  } else {
+    // Add write: VCC[lanedId] <- (CarryIn[laneId] == 1)
+    const TargetRegisterClass *Class =
+        TRI->getRegClassForOperandReg(*MRI, CarryIn);
+    unsigned RegSize = Class->MC->getSizeInBits();
+    BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(getVCmpEqOpcode(RegSize)))
+        .addReg(Vcc, RegState::Define)
+        .addImm(1)
+        .add(CarryIn);
+  }
+
+  auto Converted = BuildMI(MBB, MI, MI.getDebugLoc(),
+                           TII->get(AMDGPU::getVOPe32(MI.getOpcode())))
+                       .add(*TII->getNamedOperand(MI, AMDGPU::OpName::vdst))
+                       .add(*TII->getNamedOperand(MI, AMDGPU::OpName::src0))
+                       .add(*TII->getNamedOperand(MI, AMDGPU::OpName::src1))
+                       .setMIFlags(MI.getFlags());
+  LLVM_DEBUG(dbgs() << "Converted to VOP2: " << *Converted << '\n');
+  MI.eraseFromParent();
+}
+
 namespace {
 bool isConvertibleToSDWA(MachineInstr &MI,
                          const GCNSubtarget &ST,
@@ -1070,8 +1144,8 @@ bool isConvertibleToSDWA(MachineInstr &MI,
   if (TII->isSDWA(Opc))
     return true;
 
-  // FIXME V_CNDMASK_B32_e64 needs handling of the implicit VCC use
-  // introduced by conversion to VOP2.
+  // Can only be handled after ealier conversion to
+  // AMDGPU::V_CNDMASK_B32_e32 which is not always possible.
   if (Opc == AMDGPU::V_CNDMASK_B32_e64)
     return false;
 
@@ -1385,10 +1459,18 @@ bool SIPeepholeSDWA::run(MachineFunction &MF) {
       for (const auto &OperandPair : SDWAOperands) {
         const auto &Operand = OperandPair.second;
         MachineInstr *PotentialMI = Operand->potentialToConvert(TII, ST);
-        if (PotentialMI &&
-           (PotentialMI->getOpcode() == AMDGPU::V_ADD_CO_U32_e64 ||
-            PotentialMI->getOpcode() == AMDGPU::V_SUB_CO_U32_e64))
+        if (!PotentialMI)
+          continue;
+
+        switch (PotentialMI->getOpcode()) {
+        case AMDGPU::V_ADD_CO_U32_e64:
+        case AMDGPU::V_SUB_CO_U32_e64:
           pseudoOpConvertToVOP2(*PotentialMI, ST);
+          break;
+        case AMDGPU::V_CNDMASK_B32_e64:
+          convertToImplicitVcc(*PotentialMI, ST);
+          break;
+        };
       }
       SDWAOperands.clear();
 
