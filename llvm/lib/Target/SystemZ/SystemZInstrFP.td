@@ -84,8 +84,25 @@ let Predicates = [FeatureNoVectorEnhancements1] in
 def LGDR : UnaryRRE<"lgdr", 0xB3CD, bitconvert, GR64, FP64>;
 def LDGR : UnaryRRE<"ldgr", 0xB3C1, bitconvert, FP64, GR64>;
 
+// fcopysign with an FP16 result.
+let isCodeGenOnly = 1 in {
+  def CPSDRhh : BinaryRRFb<"cpsdr", 0xB372, fcopysign, FP16, FP16, FP16>;
+  def CPSDRhs : BinaryRRFb<"cpsdr", 0xB372, fcopysign, FP16, FP16, FP32>;
+  def CPSDRhd : BinaryRRFb<"cpsdr", 0xB372, fcopysign, FP16, FP16, FP64>;
+}
+
+// The sign of an FP128 is in the high register.
+let Predicates = [FeatureNoVectorEnhancements1] in
+  def : Pat<(fcopysign FP16:$src1, (f128 FP128:$src2)),
+            (CPSDRhd FP16:$src1, (EXTRACT_SUBREG FP128:$src2, subreg_h64))>;
+let Predicates = [FeatureVectorEnhancements1] in
+  def : Pat<(fcopysign FP16:$src1, (f128 VR128:$src2)),
+            (CPSDRhd FP16:$src1, (EXTRACT_SUBREG VR128:$src2, subreg_h64))>;
+
+
 // fcopysign with an FP32 result.
 let isCodeGenOnly = 1 in {
+  def CPSDRsh : BinaryRRFb<"cpsdr", 0xB372, fcopysign, FP32, FP32, FP16>;
   def CPSDRss : BinaryRRFb<"cpsdr", 0xB372, fcopysign, FP32, FP32, FP32>;
   def CPSDRsd : BinaryRRFb<"cpsdr", 0xB372, fcopysign, FP32, FP32, FP64>;
 }
@@ -99,8 +116,10 @@ let Predicates = [FeatureVectorEnhancements1] in
             (CPSDRsd FP32:$src1, (EXTRACT_SUBREG VR128:$src2, subreg_h64))>;
 
 // fcopysign with an FP64 result.
-let isCodeGenOnly = 1 in
+let isCodeGenOnly = 1 in {
+  def CPSDRdh : BinaryRRFb<"cpsdr", 0xB372, fcopysign, FP64, FP64, FP16>;
   def CPSDRds : BinaryRRFb<"cpsdr", 0xB372, fcopysign, FP64, FP64, FP32>;
+}
 def CPSDRdd : BinaryRRFb<"cpsdr", 0xB372, fcopysign, FP64, FP64, FP64>;
 
 // The sign of an FP128 is in the high register.
@@ -118,6 +137,8 @@ class CopySign128<RegisterOperand cls, dag upper>
         (INSERT_SUBREG FP128:$src1, upper, subreg_h64)>;
 
 let Predicates = [FeatureNoVectorEnhancements1] in {
+  def : CopySign128<FP16,  (CPSDRdh (EXTRACT_SUBREG FP128:$src1, subreg_h64),
+                                    FP16:$src2)>;
   def : CopySign128<FP32,  (CPSDRds (EXTRACT_SUBREG FP128:$src1, subreg_h64),
                                     FP32:$src2)>;
   def : CopySign128<FP64,  (CPSDRdd (EXTRACT_SUBREG FP128:$src1, subreg_h64),
