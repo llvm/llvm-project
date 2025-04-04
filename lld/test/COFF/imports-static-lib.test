@@ -8,6 +8,7 @@
 # RUN: not lld-link %t.foo.lib %t.main.obj -out:%t.dll -dll 2>&1 | FileCheck %s
 
 CHECK: error: undefined symbol: __declspec(dllimport) foo
+CHECK: NOTE: a relevant symbol 'foo' is available in {{.*}}.foo.lib but cannot be used because it is not an import library.
 
 # Now do the same thing, but import the symbol from a import library.
 # RUN: llvm-mc --filetype=obj -triple=x86_64-windows-msvc %t.dir/foo_dll_main.s -o %t.foo_dll_main.obj

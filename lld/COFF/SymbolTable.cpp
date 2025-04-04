@@ -234,12 +234,12 @@ void SymbolTable::reportUndefinedSymbol(const UndefinedDiag &undefDiag) {
 
   // Hints
   StringRef name = undefDiag.sym->getName();
-  if (name.starts_with("__imp_")) {
-    Symbol *imp = find(name.substr(strlen("__imp_")));
+  if (name.consume_front("__imp_")) {
+    Symbol *imp = find(name);
     if (imp && imp->isLazy()) {
       diag << "\nNOTE: a relevant symbol '" << imp->getName()
            << "' is available in " << toString(imp->getFile())
-           << " but cannot be used because it is not a import library.";
+           << " but cannot be used because it is not an import library.";
     }
   }
 }
