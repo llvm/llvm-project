@@ -12133,10 +12133,10 @@ void OpenACCClauseTransform<Derived>::VisitAttachClause(
   llvm::SmallVector<Expr *> VarList = VisitVarList(C.getVarList());
 
   // Ensure each var is a pointer type.
-  VarList.erase(std::remove_if(VarList.begin(), VarList.end(), [&](Expr *E) {
+  llvm::erase_if(VarList, [&](Expr *E) {
     return Self.getSema().OpenACC().CheckVarIsPointerType(
         OpenACCClauseKind::Attach, E);
-  }), VarList.end());
+  });
 
   ParsedClause.setVarListDetails(VarList,
                                  /*IsReadOnly=*/false, /*IsZero=*/false);
@@ -12196,10 +12196,10 @@ void OpenACCClauseTransform<Derived>::VisitDevicePtrClause(
   llvm::SmallVector<Expr *> VarList = VisitVarList(C.getVarList());
 
   // Ensure each var is a pointer type.
-  VarList.erase(std::remove_if(VarList.begin(), VarList.end(), [&](Expr *E) {
+  llvm::erase_if(VarList, [&](Expr *E) {
     return Self.getSema().OpenACC().CheckVarIsPointerType(
         OpenACCClauseKind::DevicePtr, E);
-  }), VarList.end());
+  });
 
   ParsedClause.setVarListDetails(VarList,
                                  /*IsReadOnly=*/false, /*IsZero=*/false);
