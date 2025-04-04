@@ -2020,7 +2020,7 @@ std::string ModuleCallsiteContextGraph::getLabel(const Function *Func,
                                                  const Instruction *Call,
                                                  unsigned CloneNo) const {
   return (Twine(Call->getFunction()->getName()) + " -> " +
-          cast<CallBase>(Call)->getCalledFunction()->getName())
+          *cast<CallBase>(Call)->getCalledFunctionName())
       .str();
 }
 

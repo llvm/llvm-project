@@ -1588,9 +1588,9 @@ void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
     return;
 
   // collect information about formal parameter types
-  std::string DemangledName =
-      getOclOrSpirvBuiltinDemangledName(CI->getCalledFunction()->getName());
   Function *CalledF = CI->getCalledFunction();
+  std::string DemangledName =
+      getOclOrSpirvBuiltinDemangledName(CalledF->getName());
   SmallVector<Type *, 4> CalledArgTys;
   bool HaveTypes = false;
   for (unsigned OpIdx = 0; OpIdx < CalledF->arg_size(); ++OpIdx) {
