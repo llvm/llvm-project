@@ -4602,15 +4602,9 @@ static void EmitIfElse(CodeGenFunction *CGF, Expr *Condition,
 
 void CodeGenFunction::EmitOMPDispatchDirective(const OMPDispatchDirective &S) {
   ArrayRef<OMPClause *> Clauses = S.clauses();
-  CapturedStmt *InnerCapturedStmt = nullptr;
   if (!Clauses.empty()) {
     if (S.hasClausesOfKind<OMPDependClause>()) {
-      Stmt *AssociatedStmt = const_cast<Stmt *>(S.getAssociatedStmt());
-      if (auto *AssocStmt = dyn_cast<CapturedStmt>(AssociatedStmt))
-        if (InnerCapturedStmt =
-                dyn_cast<CapturedStmt>(AssocStmt->getCapturedStmt())) {
-          EmitOMPDispatchToTaskwaitDirective(S);
-        }
+      EmitOMPDispatchToTaskwaitDirective(S);
     }
 
     if (S.hasClausesOfKind<OMPNovariantsClause>() ||
@@ -4626,8 +4620,17 @@ void CodeGenFunction::EmitOMPDispatchDirective(const OMPDispatchDirective &S) {
                 Clauses);
         Condition = getInitialExprFromCapturedExpr(NoContextC->getCondition());
       }
+      CodeGenFunction::CGCapturedStmtInfo CapStmtInfo;
+      if (!CapturedStmtInfo)
+        CapturedStmtInfo = &CapStmtInfo;
+      Stmt *AssociatedStmt = const_cast<Stmt *>(S.getAssociatedStmt());
+      if (auto *AssocStmt = dyn_cast<CapturedStmt>(AssociatedStmt))
+        if (auto *InnerCapturedStmt =
+                dyn_cast<CapturedStmt>(AssocStmt->getCapturedStmt())) {
+          AssociatedStmt = InnerCapturedStmt;
+        }
       /* OMPC_novariants or OMPC_nocontext present */
-      EmitIfElse(this, Condition, InnerCapturedStmt);
+      EmitIfElse(this, Condition, AssociatedStmt);
     }
   } else
     EmitStmt(S.getAssociatedStmt());
