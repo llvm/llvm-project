@@ -57,10 +57,9 @@ static std::optional<text_encoding::id> getKnownCharSet(StringRef CSName) {
   return std::nullopt;
 }
 
-#if defined(HAVE_ICONV) || defined(HAVE_ICU)
-static void HandleOverflow(size_t &Capacity, char *&Output,
-                           size_t &OutputLength,
-                           SmallVectorImpl<char> &Result) {
+LLVM_ATTRIBUTE_UNUSED static void
+HandleOverflow(size_t &Capacity, char *&Output, size_t &OutputLength,
+               SmallVectorImpl<char> &Result) {
   // No space left in output buffer. Double the size of the underlying
   // memory in the SmallVectorImpl, adjust pointer and length and continue
   // the conversion.
@@ -72,7 +71,6 @@ static void HandleOverflow(size_t &Capacity, char *&Output,
   Output = static_cast<char *>(Result.data());
   OutputLength = Capacity;
 }
-#endif
 
 namespace {
 enum ConversionType {
@@ -290,8 +288,8 @@ void CharSetConverterIconv::reset() {
 #endif // HAVE_ICONV
 } // namespace
 
-CharSetConverter CharSetConverter::create(text_encoding::id CPFrom,
-                                          text_encoding::id CPTo) {
+ErrorOr<CharSetConverter> CharSetConverter::create(text_encoding::id CPFrom,
+                                                   text_encoding::id CPTo) {
 
   assert(CPFrom != CPTo && "Text encodings should be distinct");
 
@@ -302,10 +300,10 @@ CharSetConverter CharSetConverter::create(text_encoding::id CPFrom,
            CPTo == text_encoding::id::UTF8)
     Conversion = IBM1047ToUTF8;
   else
-    llvm_unreachable("Invalid ConversionType!");
+    return std::error_code(errno, std::generic_category());
+
   std::unique_ptr<details::CharSetConverterImplBase> Converter =
       std::make_unique<CharSetConverterTable>(Conversion);
-
   return CharSetConverter(std::move(Converter));
 }
 
@@ -313,8 +311,11 @@ ErrorOr<CharSetConverter> CharSetConverter::create(StringRef CSFrom,
                                                    StringRef CSTo) {
   std::optional<text_encoding::id> From = getKnownCharSet(CSFrom);
   std::optional<text_encoding::id> To = getKnownCharSet(CSTo);
-  if (From && To)
-    return create(*From, *To);
+  if (From && To) {
+    ErrorOr<CharSetConverter> Converter = create(*From, *To);
+    if (Converter)
+      return Converter;
+  }
 #ifdef HAVE_ICU
   UErrorCode EC = U_ZERO_ERROR;
   UConverterUniquePtr FromConvDesc(ucnv_open(CSFrom.str().c_str(), &EC));

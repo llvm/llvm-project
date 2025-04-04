@@ -20,7 +20,6 @@
 #include "llvm/Config/config.h"
 #include "llvm/Support/ErrorOr.h"
 
-#include <functional>
 #include <string>
 #include <system_error>
 
@@ -89,11 +88,13 @@ class CharSetConverter {
 
 public:
   /// Creates a CharSetConverter instance.
+  /// Returns std::errc::invalid_argument in case the requested conversion is
+  /// not supported.
   /// \param[in] CSFrom the source character encoding
   /// \param[in] CSTo the target character encoding
-  /// \return a CharSetConverter instance
-  static CharSetConverter create(text_encoding::id CSFrom,
-                                 text_encoding::id CSTo);
+  /// \return a CharSetConverter instance or an error code
+  static ErrorOr<CharSetConverter> create(text_encoding::id CSFrom,
+                                          text_encoding::id CSTo);
 
   /// Creates a CharSetConverter instance.
   /// Returns std::errc::invalid_argument in case the requested conversion is
