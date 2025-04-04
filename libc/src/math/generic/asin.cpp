@@ -197,12 +197,26 @@ LLVM_LIBC_FUNCTION(double, asin, (double x)) {
                                           r0.lo - PI_OVER_TWO.lo);
   double r_lo = fputil::multiply_add(vh, -p, lo);
 
+  // Maintaining the sign:
+  constexpr double SIGN[2] = {1.0, -1.0};
+  double x_sign = SIGN[xbits.is_neg()];
+
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+  return fputil::multiply_add(x_sign, r.hi, x_sign * r.lo);
 #else
   // Ziv's accuracy test.
 
+#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
+  double r_upper = fputil::multiply_add(
+      r.hi, x_sign, fputil::multiply_add(r_lo, x_sign, err));
+  double r_lower = fputil::multiply_add(
+      r.hi, x_sign, fputil::multiply_add(r_lo, x_sign, -err));
+#else
+  r_lo *= x_sign;
+  r.hi *= x_sign;
   double r_upper = r.hi + (r_lo + err);
   double r_lower = r.hi + (r_lo - err);
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
   if (LIBC_LIKELY(r_upper == r_lower))
     return r_upper;
@@ -249,6 +263,9 @@ LLVM_LIBC_FUNCTION(double, asin, (double x)) {
   Float128 p_f128 = asin_eval(y_f128, idx);
   Float128 r0_f128 = fputil::quick_mul(m_v, p_f128);
   Float128 r_f128 = fputil::quick_add(PI_OVER_TWO_F128, r0_f128);
+
+  if (xbits.is_neg())
+    r_f128.sign = Sign::NEG;
 
   return static_cast<double>(r_f128);
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
