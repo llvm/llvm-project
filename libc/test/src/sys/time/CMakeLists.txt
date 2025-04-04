@@ -8,6 +8,7 @@ add_libc_unittest(
     utimes_test.cpp
   DEPENDS
     libc.hdr.fcntl_macros
+    libc.hdr.sys_stat_macros
     libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.sys.time.utimes
@@ -16,4 +17,5 @@ add_libc_unittest(
     libc.src.unistd.write
     libc.src.stdio.remove
     libc.src.sys.stat.stat
+    libc.test.UnitTest.ErrnoCheckingTest
 )

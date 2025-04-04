@@ -19,16 +19,16 @@
 #CHECK: dmxxextfdmr256 8, 3, 3
 0xf1 0x81 0x4f 0x90
 
-#CHECK: dmxxinstfdmr512 1, 2, 34, 0
+#CHECK: dmxxinstdmr512 1, 2, 34, 0
 0xf0 0x82 0x17 0x52
 
-#CHECK: dmxxinstfdmr512 1, 2, 34, 1
+#CHECK: dmxxinstdmr512 1, 2, 34, 1
 0xf0 0x83 0x17 0x52
 
-#CHECK: dmxxinstfdmr256 3, 8, 0
+#CHECK: dmxxinstdmr256 3, 8, 0
 0xf1 0x80 0x47 0x94
 
-#CHECK: dmxxinstfdmr256 3, 8, 3
+#CHECK: dmxxinstdmr256 3, 8, 3
 0xf1 0x81 0x4f 0x94
 
 #CHECK: dmsetdmrz 3

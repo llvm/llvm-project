@@ -527,8 +527,8 @@ static DecodeStatus decodeXqccmpRlistS0(MCInst &Inst, uint32_t Imm,
                                         uint64_t Address,
                                         const MCDisassembler *Decoder);
 
-static DecodeStatus decodeZcmpSpimm(MCInst &Inst, uint32_t Imm,
-                                    uint64_t Address, const void *Decoder);
+static DecodeStatus decodeZcmpStackAdj(MCInst &Inst, uint32_t Imm,
+                                       uint64_t Address, const void *Decoder);
 
 static DecodeStatus decodeCSSPushPopchk(MCInst &Inst, uint32_t Insn,
                                         uint64_t Address,
@@ -664,12 +664,6 @@ static DecodeStatus decodeXqccmpRlistS0(MCInst &Inst, uint32_t Imm,
   bool IsRVE = Decoder->getSubtargetInfo().hasFeature(RISCV::FeatureStdExtE);
   if (Imm < RISCVZC::RA_S0 || (IsRVE && Imm >= RISCVZC::RA_S0_S2))
     return MCDisassembler::Fail;
-  Inst.addOperand(MCOperand::createImm(Imm));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus decodeZcmpSpimm(MCInst &Inst, uint32_t Imm,
-                                    uint64_t Address, const void *Decoder) {
   Inst.addOperand(MCOperand::createImm(Imm));
   return MCDisassembler::Success;
 }

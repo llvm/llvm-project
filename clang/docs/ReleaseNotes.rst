@@ -367,6 +367,10 @@ Bug Fixes to Attribute Support
   or ``__attribute__((malloc(deallocator, ptr-index)))``
   (`#51607 <https://github.com/llvm/llvm-project/issues/51607>`_).
 
+- Corrected the diagnostic for the ``callback`` attribute when passing too many
+  or too few attribute argument indicies for the specified callback function.
+  (#GH47451)
+
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
