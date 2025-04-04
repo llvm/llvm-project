@@ -1380,9 +1380,9 @@ bool TargetTransformInfo::preferFixedOverScalableIfEqualCost() const {
   return TTIImpl->preferFixedOverScalableIfEqualCost();
 }
 
-bool TargetTransformInfo::preferInLoopReduction(unsigned Opcode,
+bool TargetTransformInfo::preferInLoopReduction(RecurKind Kind,
                                                 Type *Ty) const {
-  return TTIImpl->preferInLoopReduction(Opcode, Ty);
+  return TTIImpl->preferInLoopReduction(Kind, Ty);
 }
 
 bool TargetTransformInfo::preferAlternateOpcodeVectorization() const {
