@@ -128,6 +128,30 @@ void fir::runtime::genFree(fir::FirOpBuilder &builder, mlir::Location loc,
                               builder.createConvert(loc, intPtrTy, ptr));
 }
 
+mlir::Value fir::runtime::genFseek(fir::FirOpBuilder &builder,
+                                   mlir::Location loc, mlir::Value unit,
+                                   mlir::Value offset, mlir::Value whence) {
+  auto runtimeFunc = fir::runtime::getRuntimeFunc<mkRTKey(Fseek)>(loc, builder);
+  mlir::FunctionType runtimeFuncTy = runtimeFunc.getFunctionType();
+  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  mlir::Value sourceLine =
+      fir::factory::locationToLineNo(builder, loc, runtimeFuncTy.getInput(2));
+  llvm::SmallVector<mlir::Value> args =
+      fir::runtime::createArguments(builder, loc, runtimeFuncTy, unit, offset,
+                                    whence, sourceFile, sourceLine);
+  return builder.create<fir::CallOp>(loc, runtimeFunc, args).getResult(0);
+  ;
+}
+
+mlir::Value fir::runtime::genFtell(fir::FirOpBuilder &builder,
+                                   mlir::Location loc, mlir::Value unit) {
+  auto runtimeFunc = fir::runtime::getRuntimeFunc<mkRTKey(Ftell)>(loc, builder);
+  mlir::FunctionType runtimeFuncTy = runtimeFunc.getFunctionType();
+  llvm::SmallVector<mlir::Value> args =
+      fir::runtime::createArguments(builder, loc, runtimeFuncTy, unit);
+  return builder.create<fir::CallOp>(loc, runtimeFunc, args).getResult(0);
+}
+
 mlir::Value fir::runtime::genGetGID(fir::FirOpBuilder &builder,
                                     mlir::Location loc) {
   auto runtimeFunc =
