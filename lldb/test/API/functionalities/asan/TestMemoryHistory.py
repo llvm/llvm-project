@@ -56,12 +56,15 @@ class MemoryHistoryTestCase(TestBase):
             ],
         )
 
-    # Set breakpoint after free, but before bug
-    def set_breakpoint(self):
-        self.runCmd(f"breakpoint set -f main.c -l {self.line_breakpoint}")
+    # Set breakpoint: after free, but before bug
+    def set_breakpoint(self, target):
+        bkpt = target.BreakpointCreateByLocation("main.c", self.line_breakpoint)
+        self.assertGreater(
+            bkpt.GetNumLocations(), 0, "Set the breakpoint successfully"
+        )
 
-    def run_to_breakpoint(self):
-        self.set_breakpoint()
+    def run_to_breakpoint(self, target):
+        self.set_breakpoint(target)
         self.runCmd("run")
         self.expect(
             "thread list",
@@ -70,19 +73,19 @@ class MemoryHistoryTestCase(TestBase):
         )
 
     def libsanitizers_traces_tests(self):
-        self.createTestTarget()
+        target = self.createTestTarget()
 
         self.runCmd("env SanitizersAllocationTraces=all")
 
-        self.run_to_breakpoint()
+        self.run_to_breakpoint(target)
         self.check_traces(skip_line_numbers=True)
 
     def libsanitizers_asan_tests(self):
-        self.createTestTarget()
+        target = self.createTestTarget()
 
         self.runCmd("env SanitizersAddress=1 MallocSanitizerZone=1")
 
-        self.run_to_breakpoint()
+        self.run_to_breakpoint(target)
         self.check_traces(skip_line_numbers=True)
 
         self.runCmd("continue")
@@ -132,7 +135,7 @@ class MemoryHistoryTestCase(TestBase):
 
         self.registerSanitizerLibrariesWithTarget(target)
 
-        self.set_breakpoint()
+        self.set_breakpoint(target)
 
         # "memory history" command should not work without a process
         self.expect(
