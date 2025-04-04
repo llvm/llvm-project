@@ -1,3 +1,4 @@
+// REQUIRES: arm-registered-target
 // Ensures that when targeting an ARM target with an Asm file, clang
 // collects the features from the FPU. This is critical in the
 // activation of NEON for supported targets. The Cortex-R52 will be
