@@ -989,7 +989,7 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
         break;
       HasSize = true;
 
-      if ((Target.hasBFloat16Type()) && s + 3 < ThisTokEnd &&
+      if (s + 3 < ThisTokEnd &&
           ((s[0] == 'b' && s[1] == 'f') || (s[0] == 'B' && s[1] == 'F')) &&
           s[2] == '1' && s[3] == '6') {
         s += 3; // success, eat up 3 characters.
