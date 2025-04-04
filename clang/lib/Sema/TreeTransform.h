@@ -7143,7 +7143,8 @@ QualType TreeTransform<Derived>::TransformSubstTemplateTypeParmType(
     return QualType();
 
   QualType Result = SemaRef.Context.getSubstTemplateTypeParmType(
-      Replacement, NewReplaced, T->getIndex(), T->getPackIndex());
+      Replacement, NewReplaced, T->getIndex(), T->getPackIndex(),
+      T->getFinal());
 
   // Propagate type-source information.
   SubstTemplateTypeParmTypeLoc NewTL

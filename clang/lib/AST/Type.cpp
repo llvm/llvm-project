@@ -1399,9 +1399,9 @@ public:
           == T->getReplacementType().getAsOpaquePtr())
       return QualType(T, 0);
 
-    return Ctx.getSubstTemplateTypeParmType(replacementType,
-                                            T->getAssociatedDecl(),
-                                            T->getIndex(), T->getPackIndex());
+    return Ctx.getSubstTemplateTypeParmType(
+        replacementType, T->getAssociatedDecl(), T->getIndex(),
+        T->getPackIndex(), T->getFinal());
   }
 
   // FIXME: Non-trivial to implement, but important for C++
@@ -4445,7 +4445,7 @@ static const TemplateTypeParmDecl *getReplacedParameter(Decl *D,
 
 SubstTemplateTypeParmType::SubstTemplateTypeParmType(
     QualType Replacement, Decl *AssociatedDecl, unsigned Index,
-    std::optional<unsigned> PackIndex)
+    std::optional<unsigned> PackIndex, bool Final)
     : Type(SubstTemplateTypeParm, Replacement.getCanonicalType(),
            Replacement->getDependence()),
       AssociatedDecl(AssociatedDecl) {
@@ -4455,6 +4455,7 @@ SubstTemplateTypeParmType::SubstTemplateTypeParmType(
     *getTrailingObjects<QualType>() = Replacement;
 
   SubstTemplateTypeParmTypeBits.Index = Index;
+  SubstTemplateTypeParmTypeBits.Final = Final;
   SubstTemplateTypeParmTypeBits.PackIndex = PackIndex ? *PackIndex + 1 : 0;
   assert(AssociatedDecl != nullptr);
 }
@@ -4462,6 +4463,19 @@ SubstTemplateTypeParmType::SubstTemplateTypeParmType(
 const TemplateTypeParmDecl *
 SubstTemplateTypeParmType::getReplacedParameter() const {
   return ::getReplacedParameter(getAssociatedDecl(), getIndex());
+}
+
+void SubstTemplateTypeParmType::Profile(llvm::FoldingSetNodeID &ID,
+                                        QualType Replacement,
+                                        const Decl *AssociatedDecl,
+                                        unsigned Index,
+                                        std::optional<unsigned> PackIndex,
+                                        bool Final) {
+  Replacement.Profile(ID);
+  ID.AddPointer(AssociatedDecl);
+  ID.AddInteger(Index);
+  ID.AddInteger(PackIndex ? *PackIndex - 1 : 0);
+  ID.AddBoolean(Final);
 }
 
 SubstTemplateTypeParmPackType::SubstTemplateTypeParmPackType(
