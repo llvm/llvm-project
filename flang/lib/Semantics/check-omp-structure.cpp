@@ -3617,7 +3617,7 @@ void OmpStructureChecker::CheckReductionObjects(
 
 static bool IsReductionAllowedForType(
     const parser::OmpReductionIdentifier &ident, const DeclTypeSpec &type,
-    const Scope &scope) {
+    const Scope &scope, SemanticsContext &context) {
   auto isLogical{[](const DeclTypeSpec &type) -> bool {
     return type.category() == DeclTypeSpec::Logical;
   }};
@@ -3657,7 +3657,7 @@ static bool IsReductionAllowedForType(
         DIE("This should have been caught in CheckIntrinsicOperator");
         return false;
       }
-      parser::CharBlock name{MakeNameFromOperator(*intrinsicOp)};
+      parser::CharBlock name{MakeNameFromOperator(*intrinsicOp, context)};
       Symbol *symbol{scope.FindSymbol(name)};
       if (symbol) {
         const auto *reductionDetails{symbol->detailsIf<UserReductionDetails>()};
@@ -3668,11 +3668,11 @@ static bool IsReductionAllowedForType(
       return false;
     }
     DIE("Intrinsic Operator not found - parsing gone wrong?");
-    return false; // Reject everything else.
   }};
 
   auto checkDesignator{[&](const parser::ProcedureDesignator &procD) {
     const parser::Name *name{std::get_if<parser::Name>(&procD.u)};
+    CHECK(name && name->symbol);
     if (name && name->symbol) {
       const SourceName &realName{name->symbol->GetUltimate().name()};
       // OMP5.2: The type [...] of a list item that appears in a
@@ -3712,10 +3712,8 @@ static bool IsReductionAllowedForType(
           return reductionDetails->SupportsType(&type);
         }
       }
-      // Everything else is "not matching type".
-      return false;
     }
-    DIE("name and name->symbol should be set here...");
+    // Everything else is "not matching type".
     return false;
   }};
 
@@ -3732,7 +3730,7 @@ void OmpStructureChecker::CheckReductionObjectTypes(
   for (auto &[symbol, source] : symbols) {
     if (auto *type{symbol->GetType()}) {
       const auto &scope{context_.FindScope(symbol->name())};
-      if (!IsReductionAllowedForType(ident, *type, scope)) {
+      if (!IsReductionAllowedForType(ident, *type, scope, context_)) {
         context_.Say(source,
             "The type of '%s' is incompatible with the reduction operator."_err_en_US,
             symbol->name());
