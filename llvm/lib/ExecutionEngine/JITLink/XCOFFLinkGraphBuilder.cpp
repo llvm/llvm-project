@@ -235,7 +235,7 @@ static void printSymbolEntry(raw_ostream &OS,
 Error XCOFFLinkGraphBuilder::processCsectsAndSymbols() {
   LLVM_DEBUG(dbgs() << "  Creating graph blocks and symbols...\n");
 
-  for (auto [K, V] : SectionTable) {
+  for ([[maybe_unused]] auto [K, V] : SectionTable) {
     LLVM_DEBUG(dbgs() << "    section entry(idx: " << K
                       << " section: " << V.Section->getName() << ")\n");
   }
