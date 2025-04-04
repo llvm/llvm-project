@@ -437,15 +437,13 @@ void PlainCFGBuilder::buildPlainCFG(
 
     // Don't connect any blocks outside the current loop except the latch for
     // now. The latch is handled above.
-    if (LoopForBB) {
-      if (!LoopForBB->contains(IRSucc0)) {
-        VPBB->setOneSuccessor(Successor1);
-        continue;
-      }
-      if (!LoopForBB->contains(IRSucc1)) {
-        VPBB->setOneSuccessor(Successor0);
-        continue;
-      }
+    if (!LoopForBB->contains(IRSucc0)) {
+      VPBB->setOneSuccessor(Successor1);
+      continue;
+    }
+    if (!LoopForBB->contains(IRSucc1)) {
+      VPBB->setOneSuccessor(Successor0);
+      continue;
     }
 
     VPBB->setTwoSuccessors(Successor0, Successor1);
