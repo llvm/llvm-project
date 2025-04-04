@@ -9,6 +9,7 @@
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -19,6 +20,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <algorithm>
 
 #define DEBUG_TYPE "dxil-resource"
 
@@ -782,10 +784,10 @@ void DXILBindingMap::print(raw_ostream &OS, DXILResourceTypeMap &DRTM,
   }
 }
 
-SmallVector<dxil::ResourceBindingInfo>
+SmallVector<const dxil::ResourceBindingInfo *>
 DXILBindingMap::findByUse(const Value *Key) const {
   if (const PHINode *Phi = dyn_cast<PHINode>(Key)) {
-    SmallVector<dxil::ResourceBindingInfo> Children;
+    SmallVector<const dxil::ResourceBindingInfo *> Children;
     for (const Value *V : Phi->operands()) {
       Children.append(findByUse(V));
     }
@@ -801,7 +803,7 @@ DXILBindingMap::findByUse(const Value *Key) const {
   case Intrinsic::dx_resource_handlefrombinding: {
     const auto *It = find(CI);
     assert(It != Infos.end() && "HandleFromBinding must be in resource map");
-    return {*It};
+    return {It};
   }
   default:
     break;
@@ -810,7 +812,7 @@ DXILBindingMap::findByUse(const Value *Key) const {
   // Check if any of the parameters are the resource we are following. If so
   // keep searching. If none of them are return an empty list
   const Type *UseType = CI->getType();
-  SmallVector<dxil::ResourceBindingInfo> Children;
+  SmallVector<const dxil::ResourceBindingInfo *> Children;
   for (const Value *V : CI->args()) {
     if (V->getType() != UseType)
       continue;
@@ -823,8 +825,111 @@ DXILBindingMap::findByUse(const Value *Key) const {
 
 //===----------------------------------------------------------------------===//
 
+static bool isUpdateCounterIntrinsic(Function &F) {
+  return F.getIntrinsicID() == Intrinsic::dx_resource_updatecounter;
+}
+
+void DXILResourceCounterDirectionMap::populate(Module &M, DXILBindingMap &DBM) {
+  for (Function &F : M.functions()) {
+    if (!isUpdateCounterIntrinsic(F))
+      continue;
+
+    for (const User *U : F.users()) {
+      const CallInst *CI = dyn_cast<CallInst>(U);
+      assert(CI && "Users of dx_resource_updateCounter must be call instrs");
+
+      // Determine if the use is an increment or decrement
+      Value *CountArg = CI->getArgOperand(1);
+      ConstantInt *CountValue = cast<ConstantInt>(CountArg);
+      int64_t CountLiteral = CountValue->getSExtValue();
+
+      // 0 is an unknown direction and shouldn't result in an insert
+      if (CountLiteral == 0)
+        continue;
+
+      ResourceCounterDirection Direction = ResourceCounterDirection::Decrement;
+      if (CountLiteral > 0)
+        Direction = ResourceCounterDirection::Increment;
+
+      // Collect all potential creation points for the handle arg
+      Value *HandleArg = CI->getArgOperand(0);
+      SmallVector<const dxil::ResourceBindingInfo *> RBInfos =
+          DBM.findByUse(HandleArg);
+      for (const dxil::ResourceBindingInfo *RBInfo : RBInfos)
+        CounterDirections.emplace_back(RBInfo, Direction);
+    }
+  }
+
+  // Sort by the Binding and Direction for fast lookup
+  std::sort(CounterDirections.begin(), CounterDirections.end());
+
+  // Remove the duplicate entries. Since direction is considered for equality
+  // a unique resource with more than one direction will not be deduped.
+  auto UniqueEnd =
+      std::unique(CounterDirections.begin(), CounterDirections.end());
+
+  // If any duplicate entries still exist at this point then it must be a
+  // resource that was both incremented and decremented which is not allowed.
+  // Mark all those entries as invalid.
+  {
+    auto DupFirst = CounterDirections.begin();
+    auto DupNext = DupFirst + 1;
+    auto DupLast = UniqueEnd;
+    for (; DupFirst < DupLast && DupNext < DupLast; ++DupFirst, ++DupNext) {
+      if (std::get<const dxil::ResourceBindingInfo *>(*DupFirst) ==
+          std::get<const dxil::ResourceBindingInfo *>(*DupNext)) {
+        std::get<ResourceCounterDirection>(*DupFirst) =
+            ResourceCounterDirection::Invalid;
+        std::get<ResourceCounterDirection>(*DupNext) =
+            ResourceCounterDirection::Invalid;
+      }
+    }
+  }
+
+  // Remove the duplicate entries again now that each duplicate resource has the
+  // same direction for each entry leaving one entry per RBI
+  UniqueEnd = std::unique(CounterDirections.begin(), UniqueEnd);
+
+  // Actually erase the invalidated items
+  CounterDirections.erase(UniqueEnd, CounterDirections.end());
+}
+
+ResourceCounterDirection DXILResourceCounterDirectionMap::operator[](
+    const dxil::ResourceBindingInfo &Info) const {
+  auto Lower = llvm::lower_bound(
+      CounterDirections, Info,
+      [](const auto &LHS, const auto &RHS) { return *LHS.first < RHS; });
+
+  if (Lower == CounterDirections.end())
+    return ResourceCounterDirection::Unknown;
+  if (*Lower->first != Info)
+    return ResourceCounterDirection::Unknown;
+
+  return Lower->second;
+}
+
+void DXILResourceCounterDirectionWrapperPass::getAnalysisUsage(
+    AnalysisUsage &AU) const {
+  AU.addRequiredTransitive<DXILResourceBindingWrapperPass>();
+  AU.setPreservesAll();
+}
+
+bool DXILResourceCounterDirectionWrapperPass::runOnModule(Module &M) {
+  Map.reset(new DXILResourceCounterDirectionMap());
+
+  auto DBM = getAnalysis<DXILResourceBindingWrapperPass>().getBindingMap();
+  Map->populate(M, DBM);
+
+  return false;
+}
+
+void DXILResourceCounterDirectionWrapperPass::releaseMemory() { Map.reset(); }
+
+//===----------------------------------------------------------------------===//
+
 AnalysisKey DXILResourceTypeAnalysis::Key;
 AnalysisKey DXILResourceBindingAnalysis::Key;
+AnalysisKey DXILResourceCounterDirectionAnalysis::Key;
 
 DXILBindingMap DXILResourceBindingAnalysis::run(Module &M,
                                                 ModuleAnalysisManager &AM) {
@@ -843,6 +948,17 @@ DXILResourceBindingPrinterPass::run(Module &M, ModuleAnalysisManager &AM) {
   return PreservedAnalyses::all();
 }
 
+INITIALIZE_PASS(DXILResourceCounterDirectionWrapperPass,
+                "dxil-resource-counter", "DXIL Resource Counter Analysis",
+                false, true)
+
+DXILResourceCounterDirectionWrapperPass::
+    DXILResourceCounterDirectionWrapperPass()
+    : ModulePass(ID) {
+  initializeDXILResourceCounterDirectionWrapperPassPass(
+      *PassRegistry::getPassRegistry());
+}
+
 void DXILResourceTypeWrapperPass::anchor() {}
 
 DXILResourceTypeWrapperPass::DXILResourceTypeWrapperPass() : ImmutablePass(ID) {
@@ -852,9 +968,14 @@ DXILResourceTypeWrapperPass::DXILResourceTypeWrapperPass() : ImmutablePass(ID) {
 INITIALIZE_PASS(DXILResourceTypeWrapperPass, "dxil-resource-type",
                 "DXIL Resource Type Analysis", false, true)
 char DXILResourceTypeWrapperPass::ID = 0;
+char DXILResourceCounterDirectionWrapperPass::ID = 0;
 
 ModulePass *llvm::createDXILResourceTypeWrapperPassPass() {
   return new DXILResourceTypeWrapperPass();
+}
+
+ModulePass *llvm::createDXILResourceCounterDirectionWrapperPassPass() {
+  return new DXILResourceCounterDirectionWrapperPass();
 }
 
 DXILResourceBindingWrapperPass::DXILResourceBindingWrapperPass()
