@@ -1552,7 +1552,7 @@ public:
     AddOmpSourceRange(x.source);
     ProcessReductionSpecifier(
         std::get<Indirection<parser::OmpReductionSpecifier>>(x.t).value(),
-        std::get<std::optional<parser::OmpClauseList>>(x.t));
+        std::get<std::optional<parser::OmpClauseList>>(x.t), x);
     return false;
   }
   bool Pre(const parser::OmpMapClause &);
@@ -1713,8 +1713,13 @@ public:
 private:
   void ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
       const parser::OmpClauseList &clauses);
+  template <typename T>
   void ProcessReductionSpecifier(const parser::OmpReductionSpecifier &spec,
-      const std::optional<parser::OmpClauseList> &clauses);
+      const std::optional<parser::OmpClauseList> &clauses,
+      const T &wholeConstruct);
+
+  parser::CharBlock MangleDefinedOperator(const parser::CharBlock &name);
+
   int metaLevel_{0};
 };
 
@@ -1837,9 +1842,21 @@ parser::CharBlock MangleSpecialFunctions(const parser::CharBlock name) {
       .Default(name);
 }
 
+parser::CharBlock OmpVisitor::MangleDefinedOperator(
+    const parser::CharBlock &name) {
+  // This function should only be used with user defined operators, that have
+  // the pattern
+  // .<leters>.
+  CHECK(name[0] == '.' && name[name.size() - 1] == '.');
+  return parser::CharBlock{
+      context().StoreUserReductionName("op" + name.ToString())};
+}
+
+template <typename T>
 void OmpVisitor::ProcessReductionSpecifier(
     const parser::OmpReductionSpecifier &spec,
-    const std::optional<parser::OmpClauseList> &clauses) {
+    const std::optional<parser::OmpClauseList> &clauses,
+    const T &wholeOmpConstruct) {
   const parser::Name *name{nullptr};
   parser::Name mangledName;
   UserReductionDetails reductionDetailsTemp;
@@ -1849,11 +1866,17 @@ void OmpVisitor::ProcessReductionSpecifier(
     if (name) {
       mangledName.source = MangleSpecialFunctions(name->source);
     }
+
   } else {
     const auto &defOp{std::get<parser::DefinedOperator>(id.u)};
-    mangledName.source = MakeNameFromOperator(
-        std::get<parser::DefinedOperator::IntrinsicOperator>(defOp.u));
-    name = &mangledName;
+    if (const auto definedOp{std::get_if<parser::DefinedOpName>(&defOp.u)}) {
+      name = &definedOp->v;
+      mangledName.source = MangleDefinedOperator(definedOp->v.source);
+    } else {
+      mangledName.source = MakeNameFromOperator(
+          std::get<parser::DefinedOperator::IntrinsicOperator>(defOp.u));
+      name = &mangledName;
+    }
   }
 
   // Use reductionDetailsTemp if we can't find the symbol (this is
@@ -1868,7 +1891,7 @@ void OmpVisitor::ProcessReductionSpecifier(
 
     if (!reductionDetails) {
       context().Say(name->source,
-          "Duplicate defineition of '%s' in !$OMP DECLARE REDUCTION"_err_en_US,
+          "Duplicate definition of '%s' in !$OMP DECLARE REDUCTION"_err_en_US,
           name->source);
       return;
     }
@@ -1917,6 +1940,8 @@ void OmpVisitor::ProcessReductionSpecifier(
     PopScope();
   }
 
+  reductionDetails->AddDecl(&wholeOmpConstruct);
+
   if (name) {
     if (!symbol) {
       symbol = &MakeSymbol(mangledName, Attrs{}, std::move(*reductionDetails));
@@ -1952,7 +1977,7 @@ bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {
     if (maybeArgs && maybeClauses) {
       const parser::OmpArgument &first{maybeArgs->v.front()};
       if (auto *spec{std::get_if<parser::OmpReductionSpecifier>(&first.u)}) {
-        ProcessReductionSpecifier(*spec, maybeClauses);
+        ProcessReductionSpecifier(*spec, maybeClauses, x);
       }
     }
     break;

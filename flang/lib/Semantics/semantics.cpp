@@ -772,4 +772,10 @@ bool SemanticsContext::IsSymbolDefined(const Symbol &symbol) const {
   return isDefined_.find(symbol) != isDefined_.end();
 }
 
+std::string &SemanticsContext::StoreUserReductionName(const std::string &name) {
+  userReductionNames_.push_back(name);
+  CHECK(userReductionNames_.back() == name);
+  return userReductionNames_.back();
+}
+
 } // namespace Fortran::semantics
