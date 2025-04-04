@@ -23,6 +23,8 @@ add_flang_library(FIRCodeGen
   FIRBuilder
   FIRDialect
   FIRDialectSupport
+  FIROpenACCSupport
+  FIROpenMPSupport
   FIRSupport
 
   LINK_COMPONENTS
