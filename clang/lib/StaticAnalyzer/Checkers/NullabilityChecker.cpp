@@ -112,25 +112,30 @@ public:
   void printState(raw_ostream &Out, ProgramStateRef State, const char *NL,
                   const char *Sep) const override;
 
-  enum CheckKind {
-    CK_NullPassedToNonnull,
-    CK_NullReturnedFromNonnull,
-    CK_NullableDereferenced,
-    CK_NullablePassedToNonnull,
-    CK_NullableReturnedFromNonnull,
-    CK_NumCheckKinds
+  // FIXME: This enumeration of checker parts is extremely similar to the
+  // ErrorKind enum. It would be nice to unify them to simplify the code.
+  enum : CheckerPartIdx {
+    NullPassedToNonnullChecker,
+    NullReturnedFromNonnullChecker,
+    NullableDereferencedChecker,
+    NullablePassedToNonnullChecker,
+    NullableReturnedFromNonnullChecker,
+    NumCheckerParts
   };
 
-  bool ChecksEnabled[CK_NumCheckKinds] = {false};
-  CheckerNameRef CheckNames[CK_NumCheckKinds];
-  mutable std::unique_ptr<BugType> BTs[CK_NumCheckKinds];
-
-  const std::unique_ptr<BugType> &getBugType(CheckKind Kind) const {
-    if (!BTs[Kind])
-      BTs[Kind].reset(new BugType(CheckNames[Kind], "Nullability",
-                                  categories::MemoryError));
-    return BTs[Kind];
-  }
+  // FIXME: Currently the `Description` fields of these `BugType`s are all
+  // identical ("Nullability") -- they should be more descriptive than this.
+  BugType BugTypes[NumCheckerParts] = {
+      {this, NullPassedToNonnullChecker, "Nullability",
+       categories::MemoryError},
+      {this, NullReturnedFromNonnullChecker, "Nullability",
+       categories::MemoryError},
+      {this, NullableDereferencedChecker, "Nullability",
+       categories::MemoryError},
+      {this, NullablePassedToNonnullChecker, "Nullability",
+       categories::MemoryError},
+      {this, NullableReturnedFromNonnullChecker, "Nullability",
+       categories::MemoryError}};
 
   // When set to false no nullability information will be tracked in
   // NullabilityMap. It is possible to catch errors like passing a null pointer
@@ -163,17 +168,16 @@ private:
   ///
   /// When \p SuppressPath is set to true, no more bugs will be reported on this
   /// path by this checker.
-  void reportBugIfInvariantHolds(StringRef Msg, ErrorKind Error, CheckKind CK,
-                                 ExplodedNode *N, const MemRegion *Region,
-                                 CheckerContext &C,
+  void reportBugIfInvariantHolds(StringRef Msg, ErrorKind Error,
+                                 const BugType &BT, ExplodedNode *N,
+                                 const MemRegion *Region, CheckerContext &C,
                                  const Stmt *ValueExpr = nullptr,
                                  bool SuppressPath = false) const;
 
-  void reportBug(StringRef Msg, ErrorKind Error, CheckKind CK, ExplodedNode *N,
-                 const MemRegion *Region, BugReporter &BR,
+  void reportBug(StringRef Msg, ErrorKind Error, const BugType &BT,
+                 ExplodedNode *N, const MemRegion *Region, BugReporter &BR,
                  const Stmt *ValueExpr = nullptr) const {
-    const std::unique_ptr<BugType> &BT = getBugType(CK);
-    auto R = std::make_unique<PathSensitiveBugReport>(*BT, Msg, N);
+    auto R = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);
     if (Region) {
       R->markInteresting(Region);
       R->addVisitor<NullabilityBugVisitor>(Region);
@@ -479,7 +483,7 @@ static bool checkInvariantViolation(ProgramStateRef State, ExplodedNode *N,
 }
 
 void NullabilityChecker::reportBugIfInvariantHolds(
-    StringRef Msg, ErrorKind Error, CheckKind CK, ExplodedNode *N,
+    StringRef Msg, ErrorKind Error, const BugType &BT, ExplodedNode *N,
     const MemRegion *Region, CheckerContext &C, const Stmt *ValueExpr,
     bool SuppressPath) const {
   ProgramStateRef OriginalState = N->getState();
@@ -491,7 +495,7 @@ void NullabilityChecker::reportBugIfInvariantHolds(
     N = C.addTransition(OriginalState, N);
   }
 
-  reportBug(Msg, Error, CK, N, Region, C.getBugReporter(), ValueExpr);
+  reportBug(Msg, Error, BT, N, Region, C.getBugReporter(), ValueExpr);
 }
 
 /// Cleaning up the program state.
@@ -545,20 +549,21 @@ void NullabilityChecker::checkEvent(ImplicitNullDerefEvent Event) const {
   if (!TrackedNullability)
     return;
 
-  if (ChecksEnabled[CK_NullableDereferenced] &&
+  if (isPartEnabled(NullableDereferencedChecker) &&
       TrackedNullability->getValue() == Nullability::Nullable) {
     BugReporter &BR = *Event.BR;
     // Do not suppress errors on defensive code paths, because dereferencing
     // a nullable pointer is always an error.
     if (Event.IsDirectDereference)
-      reportBug("Nullable pointer is dereferenced",
-                ErrorKind::NullableDereferenced, CK_NullableDereferenced,
-                Event.SinkNode, Region, BR);
+      reportBug(
+          "Nullable pointer is dereferenced", ErrorKind::NullableDereferenced,
+          BugTypes[NullableDereferencedChecker], Event.SinkNode, Region, BR);
     else {
       reportBug("Nullable pointer is passed to a callee that requires a "
                 "non-null",
-                ErrorKind::NullablePassedToNonnull, CK_NullableDereferenced,
-                Event.SinkNode, Region, BR);
+                ErrorKind::NullablePassedToNonnull,
+                BugTypes[NullableDereferencedChecker], Event.SinkNode, Region,
+                BR);
     }
   }
 }
@@ -711,7 +716,8 @@ void NullabilityChecker::checkPreStmt(const ReturnStmt *S,
 
   bool NullReturnedFromNonNull = (RequiredNullability == Nullability::Nonnull &&
                                   Nullness == NullConstraint::IsNull);
-  if (ChecksEnabled[CK_NullReturnedFromNonnull] && NullReturnedFromNonNull &&
+  if (isPartEnabled(NullReturnedFromNonnullChecker) &&
+      NullReturnedFromNonNull &&
       RetExprTypeLevelNullability != Nullability::Nonnull &&
       !InSuppressedMethodFamily) {
     static CheckerProgramPointTag Tag(this, "NullReturnedFromNonnull");
@@ -725,8 +731,8 @@ void NullabilityChecker::checkPreStmt(const ReturnStmt *S,
     OS << " returned from a " << C.getDeclDescription(D) <<
           " that is expected to return a non-null value";
     reportBugIfInvariantHolds(OS.str(), ErrorKind::NilReturnedToNonnull,
-                              CK_NullReturnedFromNonnull, N, nullptr, C,
-                              RetExpr);
+                              BugTypes[NullReturnedFromNonnullChecker], N,
+                              nullptr, C, RetExpr);
     return;
   }
 
@@ -746,7 +752,7 @@ void NullabilityChecker::checkPreStmt(const ReturnStmt *S,
       State->get<NullabilityMap>(Region);
   if (TrackedNullability) {
     Nullability TrackedNullabValue = TrackedNullability->getValue();
-    if (ChecksEnabled[CK_NullableReturnedFromNonnull] &&
+    if (isPartEnabled(NullableReturnedFromNonnullChecker) &&
         Nullness != NullConstraint::IsNotNull &&
         TrackedNullabValue == Nullability::Nullable &&
         RequiredNullability == Nullability::Nonnull) {
@@ -759,7 +765,8 @@ void NullabilityChecker::checkPreStmt(const ReturnStmt *S,
             " that is expected to return a non-null value";
 
       reportBugIfInvariantHolds(OS.str(), ErrorKind::NullableReturnedToNonnull,
-                                CK_NullableReturnedFromNonnull, N, Region, C);
+                                BugTypes[NullableReturnedFromNonnullChecker], N,
+                                Region, C);
     }
     return;
   }
@@ -810,7 +817,7 @@ void NullabilityChecker::checkPreCall(const CallEvent &Call,
 
     unsigned ParamIdx = Param->getFunctionScopeIndex() + 1;
 
-    if (ChecksEnabled[CK_NullPassedToNonnull] &&
+    if (isPartEnabled(NullPassedToNonnullChecker) &&
         Nullness == NullConstraint::IsNull &&
         ArgExprTypeLevelNullability != Nullability::Nonnull &&
         RequiredNullability == Nullability::Nonnull &&
@@ -825,8 +832,8 @@ void NullabilityChecker::checkPreCall(const CallEvent &Call,
       OS << " passed to a callee that requires a non-null " << ParamIdx
          << llvm::getOrdinalSuffix(ParamIdx) << " parameter";
       reportBugIfInvariantHolds(OS.str(), ErrorKind::NilPassedToNonnull,
-                                CK_NullPassedToNonnull, N, nullptr, C, ArgExpr,
-                                /*SuppressPath=*/false);
+                                BugTypes[NullPassedToNonnullChecker], N,
+                                nullptr, C, ArgExpr, /*SuppressPath=*/false);
       return;
     }
 
@@ -842,7 +849,7 @@ void NullabilityChecker::checkPreCall(const CallEvent &Call,
           TrackedNullability->getValue() != Nullability::Nullable)
         continue;
 
-      if (ChecksEnabled[CK_NullablePassedToNonnull] &&
+      if (isPartEnabled(NullablePassedToNonnullChecker) &&
           RequiredNullability == Nullability::Nonnull &&
           isDiagnosableCall(Call)) {
         ExplodedNode *N = C.addTransition(State);
@@ -851,17 +858,17 @@ void NullabilityChecker::checkPreCall(const CallEvent &Call,
         OS << "Nullable pointer is passed to a callee that requires a non-null "
            << ParamIdx << llvm::getOrdinalSuffix(ParamIdx) << " parameter";
         reportBugIfInvariantHolds(OS.str(), ErrorKind::NullablePassedToNonnull,
-                                  CK_NullablePassedToNonnull, N, Region, C,
-                                  ArgExpr, /*SuppressPath=*/true);
+                                  BugTypes[NullablePassedToNonnullChecker], N,
+                                  Region, C, ArgExpr, /*SuppressPath=*/true);
         return;
       }
-      if (ChecksEnabled[CK_NullableDereferenced] &&
+      if (isPartEnabled(NullableDereferencedChecker) &&
           Param->getType()->isReferenceType()) {
         ExplodedNode *N = C.addTransition(State);
         reportBugIfInvariantHolds("Nullable pointer is dereferenced",
                                   ErrorKind::NullableDereferenced,
-                                  CK_NullableDereferenced, N, Region, C,
-                                  ArgExpr, /*SuppressPath=*/true);
+                                  BugTypes[NullableDereferencedChecker], N,
+                                  Region, C, ArgExpr, /*SuppressPath=*/true);
         return;
       }
       continue;
@@ -1295,7 +1302,7 @@ void NullabilityChecker::checkBind(SVal L, SVal V, const Stmt *S,
 
   bool NullAssignedToNonNull = (LocNullability == Nullability::Nonnull &&
                                 RhsNullness == NullConstraint::IsNull);
-  if (ChecksEnabled[CK_NullPassedToNonnull] && NullAssignedToNonNull &&
+  if (isPartEnabled(NullPassedToNonnullChecker) && NullAssignedToNonNull &&
       ValNullability != Nullability::Nonnull &&
       ValueExprTypeLevelNullability != Nullability::Nonnull &&
       !isARCNilInitializedLocal(C, S)) {
@@ -1314,7 +1321,8 @@ void NullabilityChecker::checkBind(SVal L, SVal V, const Stmt *S,
     OS << (LocType->isObjCObjectPointerType() ? "nil" : "Null");
     OS << " assigned to a pointer which is expected to have non-null value";
     reportBugIfInvariantHolds(OS.str(), ErrorKind::NilAssignedToNonnull,
-                              CK_NullPassedToNonnull, N, nullptr, C, ValueStmt);
+                              BugTypes[NullPassedToNonnullChecker], N, nullptr,
+                              C, ValueStmt);
     return;
   }
 
@@ -1340,14 +1348,15 @@ void NullabilityChecker::checkBind(SVal L, SVal V, const Stmt *S,
     if (RhsNullness == NullConstraint::IsNotNull ||
         TrackedNullability->getValue() != Nullability::Nullable)
       return;
-    if (ChecksEnabled[CK_NullablePassedToNonnull] &&
+    if (isPartEnabled(NullablePassedToNonnullChecker) &&
         LocNullability == Nullability::Nonnull) {
       static CheckerProgramPointTag Tag(this, "NullablePassedToNonnull");
       ExplodedNode *N = C.addTransition(State, C.getPredecessor(), &Tag);
       reportBugIfInvariantHolds("Nullable pointer is assigned to a pointer "
                                 "which is expected to have non-null value",
                                 ErrorKind::NullableAssignedToNonnull,
-                                CK_NullablePassedToNonnull, N, ValueRegion, C);
+                                BugTypes[NullablePassedToNonnullChecker], N,
+                                ValueRegion, C);
     }
     return;
   }
@@ -1394,35 +1403,34 @@ void NullabilityChecker::printState(raw_ostream &Out, ProgramStateRef State,
   }
 }
 
-void ento::registerNullabilityBase(CheckerManager &mgr) {
-  mgr.registerChecker<NullabilityChecker>();
-}
+// The checker group "nullability" consists of the checkers that are
+// implemented as the parts of the checker class `NullabilityChecker`. These
+// checkers share a checker option "nullability:NoDiagnoseCallsToSystemHeaders"
+// which semantically belongs to the whole group and not just one checker from
+// it. As this is a unique situation (I don't know about any other similar
+// group-level option) there is no mechanism to inject this group name from
+// e.g. Checkers.td, so I'm just hardcoding it here. (These are old stable
+// checkers, I don't think that their name will change.)
+#define CHECKER_GROUP_NAME "nullability"
 
-bool ento::shouldRegisterNullabilityBase(const CheckerManager &mgr) {
-  return true;
-}
-
-#define REGISTER_CHECKER(name, trackingRequired)                               \
-  void ento::register##name##Checker(CheckerManager &mgr) {                    \
-    NullabilityChecker *checker = mgr.getChecker<NullabilityChecker>();        \
-    checker->ChecksEnabled[NullabilityChecker::CK_##name] = true;              \
-    checker->CheckNames[NullabilityChecker::CK_##name] =                       \
-        mgr.getCurrentCheckerName();                                           \
-    checker->NeedTracking = checker->NeedTracking || trackingRequired;         \
-    checker->NoDiagnoseCallsToSystemHeaders =                                  \
-        checker->NoDiagnoseCallsToSystemHeaders ||                             \
-        mgr.getAnalyzerOptions().getCheckerBooleanOption(                      \
-            checker, "NoDiagnoseCallsToSystemHeaders", true);                  \
+#define REGISTER_CHECKER(Part, TrackingRequired)                               \
+  void ento::register##Part##Checker(CheckerManager &Mgr) {                    \
+    auto *Checker = Mgr.registerChecker<NullabilityChecker,                    \
+                                        NullabilityChecker::Part##Checker>();  \
+    Checker->NeedTracking = Checker->NeedTracking || TrackingRequired;         \
+    Checker->NoDiagnoseCallsToSystemHeaders =                                  \
+        Checker->NoDiagnoseCallsToSystemHeaders ||                             \
+        Mgr.getAnalyzerOptions().getCheckerBooleanOption(                      \
+            CHECKER_GROUP_NAME, "NoDiagnoseCallsToSystemHeaders", true);       \
   }                                                                            \
                                                                                \
-  bool ento::shouldRegister##name##Checker(const CheckerManager &mgr) {        \
+  bool ento::shouldRegister##Part##Checker(const CheckerManager &) {           \
     return true;                                                               \
   }
 
-// The checks are likely to be turned on by default and it is possible to do
-// them without tracking any nullability related information. As an optimization
-// no nullability information will be tracked when only these two checks are
-// enables.
+// These checker parts are likely to be turned on by default and they don't
+// need the tracking of nullability related information. As an optimization
+// nullability information won't be tracked when the rest are disabled.
 REGISTER_CHECKER(NullPassedToNonnull, false)
 REGISTER_CHECKER(NullReturnedFromNonnull, false)
 
