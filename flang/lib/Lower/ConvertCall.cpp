@@ -647,9 +647,15 @@ Fortran::lower::genCallOpAndResult(
       callResult = dispatch.getResult(0);
   } else {
     // Standard procedure call with fir.call.
+    mlir::UnitAttr noinlineAttr, alwaysinlineAttr;
+    if (caller.getCallDescription().hasNoInline())
+      noinlineAttr = builder.getUnitAttr();
+    else if (caller.getCallDescription().hasAlwaysInline())
+      alwaysinlineAttr = builder.getUnitAttr();
     auto call = builder.create<fir::CallOp>(
         loc, funcType.getResults(), funcSymbolAttr, operands,
-        /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, procAttrs);
+        /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, procAttrs, noinlineAttr,
+        alwaysinlineAttr);
 
     callNumResults = call.getNumResults();
     if (callNumResults != 0)

@@ -2490,6 +2490,8 @@ def fir_CallOp : fir_Op<"call",
     OptionalAttr<DictArrayAttr>:$arg_attrs,
     OptionalAttr<DictArrayAttr>:$res_attrs,
     OptionalAttr<fir_FortranProcedureFlagsAttr>:$procedure_attrs,
+    OptionalAttr<UnitAttr>:$no_inline,
+    OptionalAttr<UnitAttr>:$always_inline,
     DefaultValuedAttr<Arith_FastMathAttr,
                       "::mlir::arith::FastMathFlags::none">:$fastmath
   );
