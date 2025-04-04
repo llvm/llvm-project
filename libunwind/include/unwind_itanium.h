@@ -69,6 +69,9 @@ extern void _Unwind_SetGR(struct _Unwind_Context *context, int index,
 extern uintptr_t _Unwind_GetIP(struct _Unwind_Context *context);
 extern void _Unwind_SetIP(struct _Unwind_Context *, uintptr_t new_value);
 
+extern _Unwind_Reason_Code __gnu_unwind_frame(_Unwind_Exception *,
+                                              struct _Unwind_Context *);
+
 #ifdef __cplusplus
 }
 #endif
