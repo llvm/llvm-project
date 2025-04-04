@@ -401,6 +401,11 @@ AMDGPUMCCodeEmitter::getLitEncoding(const MCOperand &MO,
     return AMDGPU::getInlineEncodingV2BF16(static_cast<uint32_t>(Imm))
         .value_or(255);
 
+#if LLPC_BUILD_NPI
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
+    return 255;
+
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::OPERAND_KIMM32:
   case AMDGPU::OPERAND_KIMM16:
 #if LLPC_BUILD_NPI

@@ -1732,6 +1732,10 @@ def VSrc_f64 : SrcRegOrImm9 <VS_64, "OPW64", "OPERAND_REG_IMM_FP64", 64, Operand
 def VSrc_v2b32 : SrcRegOrImm9 <VS_64, "OPW64", "OPERAND_REG_IMM_V2INT32", 32, OperandSemantics.INT>;
 def VSrc_v2f32 : SrcRegOrImm9 <VS_64, "OPW64", "OPERAND_REG_IMM_V2FP32", 32, OperandSemantics.FP32>;
 
+#ifdef LLPC_BUILD_NPI
+def VSrc_NoInline_v2f16  : SrcRegOrImm9 <VS_32, "OPW32", "OPERAND_REG_IMM_NOINLINE_V2FP16", 16, OperandSemantics.FP16>;
+
+#endif /* LLPC_BUILD_NPI */
 //===----------------------------------------------------------------------===//
 //  VSrc_*_Deferred Operands with an SGPR, VGPR or a 32-bit immediate for use
 //  with FMAMK/FMAAK

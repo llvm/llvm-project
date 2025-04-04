@@ -120,6 +120,9 @@ private:
   bool IsVolatile = false;
   bool IsNonTemporal = false;
   bool IsLastUse = false;
+#if LLPC_BUILD_NPI
+  unsigned CFSBits = 0;
+#endif /* LLPC_BUILD_NPI */
 
   SIMemOpInfo(
       AtomicOrdering Ordering = AtomicOrdering::SequentiallyConsistent,
@@ -129,12 +132,20 @@ private:
       bool IsCrossAddressSpaceOrdering = true,
       AtomicOrdering FailureOrdering = AtomicOrdering::SequentiallyConsistent,
       bool IsVolatile = false, bool IsNonTemporal = false,
+#if LLPC_BUILD_NPI
+      bool IsLastUse = false, unsigned CFSBits = 0)
+#else /* LLPC_BUILD_NPI */
       bool IsLastUse = false)
+#endif /* LLPC_BUILD_NPI */
       : Ordering(Ordering), FailureOrdering(FailureOrdering), Scope(Scope),
         OrderingAddrSpace(OrderingAddrSpace), InstrAddrSpace(InstrAddrSpace),
         IsCrossAddressSpaceOrdering(IsCrossAddressSpaceOrdering),
         IsVolatile(IsVolatile), IsNonTemporal(IsNonTemporal),
+#if LLPC_BUILD_NPI
+        IsLastUse(IsLastUse), CFSBits(CFSBits) {
+#else /* LLPC_BUILD_NPI */
         IsLastUse(IsLastUse) {
+#endif /* LLPC_BUILD_NPI */
 
     if (Ordering == AtomicOrdering::NotAtomic) {
       assert(Scope == SIAtomicScope::NONE &&
@@ -242,6 +253,10 @@ public:
     return Ordering != AtomicOrdering::NotAtomic;
   }
 
+#if LLPC_BUILD_NPI
+  /// \returns cache fill size bits
+  unsigned getCFS() const { return CFSBits; }
+#endif /* LLPC_BUILD_NPI */
 };
 
 class SIMemOpAccess final {
@@ -412,6 +427,13 @@ public:
 
   /// Virtual destructor to allow derivations to be deleted.
   virtual ~SICacheControl() = default;
+#if LLPC_BUILD_NPI
+
+  virtual bool setCFS(const MachineBasicBlock::iterator &MI,
+                      unsigned CFSBits = 0) const {
+    return false;
+  }
+#endif /* LLPC_BUILD_NPI */
 };
 
 class SIGfx6CacheControl : public SICacheControl {
@@ -698,6 +720,9 @@ protected:
 
 public:
   SIGfx13CacheControl(const GCNSubtarget &ST) : SIGfx12CacheControl(ST) {}
+
+  bool setCFS(const MachineBasicBlock::iterator &MI,
+              unsigned CFSBits) const override;
 };
 
 #endif /* LLPC_BUILD_NPI */
@@ -891,6 +916,9 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
   bool IsNonTemporal = true;
   bool IsVolatile = false;
   bool IsLastUse = false;
+#if LLPC_BUILD_NPI
+  unsigned CFSBits = 0;
+#endif /* LLPC_BUILD_NPI */
 
   // Validator should check whether or not MMOs cover the entire set of
   // locations accessed by the memory instruction.
@@ -899,6 +927,7 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
     IsVolatile |= MMO->isVolatile();
     IsLastUse |= MMO->getFlags() & MOLastUse;
 #if LLPC_BUILD_NPI
+    CFSBits = (MMO->getFlags() / MOCFSB0) & 0x3;
     InstrAddrSpace |= toSIAtomicAddrSpace(MMO->getPointerInfo().getAddrSpace());
 #else /* LLPC_BUILD_NPI */
     InstrAddrSpace |=
@@ -955,7 +984,11 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
   }
   return SIMemOpInfo(Ordering, Scope, OrderingAddrSpace, InstrAddrSpace,
                      IsCrossAddressSpaceOrdering, FailureOrdering, IsVolatile,
+#if LLPC_BUILD_NPI
+                     IsNonTemporal, IsLastUse, CFSBits);
+#else /* LLPC_BUILD_NPI */
                      IsNonTemporal, IsLastUse);
+#endif /* LLPC_BUILD_NPI */
 }
 
 std::optional<SIMemOpInfo>
@@ -2665,14 +2698,14 @@ bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
   // gfx120x:
   //   global_wb is only necessary at system scope as stores
   //   can only report completion from L2 onwards.
+  //
+  //   Emitting it for lower scopes is a slow no-op, so we omit it
+  //   for performance.
 #else /* LLPC_BUILD_NPI */
   // global_wb is only necessary at system scope for gfx120x targets.
 #endif /* LLPC_BUILD_NPI */
   //
 #if LLPC_BUILD_NPI
-  //   Emitting it for lower scopes is a slow no-op, so we omit it
-  //   for performance.
-  //
   // gfx125x:
   //    stores can also report completion from CU$ so we must emit
   //    global_wb at device scope as well to ensure stores reached
@@ -2823,6 +2856,31 @@ bool SIGfx12CacheControl::setAtomicScope(const MachineBasicBlock::iterator &MI,
   return Changed;
 }
 
+#if LLPC_BUILD_NPI
+bool SIGfx13CacheControl::setCFS(const MachineBasicBlock::iterator &MI,
+                                 unsigned CFSBits) const {
+  auto CoreMI = &*MI;
+  if (MI->isBundle()) {
+    CoreMI = SIInstrInfo::bundleWithGPRIndexing(*MI);
+    assert(CoreMI);
+  }
+
+  MachineOperand *CPol = TII->getNamedOperand(*CoreMI, OpName::cpol);
+  if (!CPol)
+    return false;
+
+  uint64_t NewCFS = CFSBits << AMDGPU::CPol::CFS_SHIFT & AMDGPU::CPol::CFS;
+  if (CFSBits) {
+    if ((CPol->getImm() & AMDGPU::CPol::CFS) != NewCFS) {
+      CPol->setImm((CPol->getImm() & ~AMDGPU::CPol::CFS) | NewCFS);
+      return true;
+    }
+  }
+
+  return false;
+}
+
+#endif /* LLPC_BUILD_NPI */
 bool SIMemoryLegalizer::removeAtomicPseudoMIs() {
   if (AtomicPseudoMIs.empty())
     return false;
@@ -2878,6 +2936,10 @@ bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
       MI, MOI.getInstrAddrSpace(), SIMemOp::LOAD, MOI.isVolatile(),
       MOI.isNonTemporal(), MOI.isLastUse());
 
+#if LLPC_BUILD_NPI
+  Changed |= CC->setCFS(MI, MOI.getCFS());
+
+#endif /* LLPC_BUILD_NPI */
   return Changed;
 }
 
@@ -2918,6 +2980,10 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
   // GFX12 specific, scope(desired coherence domain in cache hierarchy) is
   // instruction field, do not confuse it with atomic scope.
   Changed |= CC->expandSystemScopeStore(MI);
+#if LLPC_BUILD_NPI
+
+  Changed |= CC->setCFS(MI, MOI.getCFS());
+#endif /* LLPC_BUILD_NPI */
   return Changed;
 }
 

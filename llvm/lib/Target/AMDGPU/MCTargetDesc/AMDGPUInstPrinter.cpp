@@ -705,6 +705,10 @@ void AMDGPUInstPrinter::printImmediateV216(uint32_t Imm, uint8_t OpType,
         printImmediateBFloat16(static_cast<uint16_t>(Imm), STI, O))
       return;
     break;
+#if LLPC_BUILD_NPI
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
+    break;
+#endif /* LLPC_BUILD_NPI */
   default:
     llvm_unreachable("bad operand type");
   }
@@ -976,6 +980,9 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
     case AMDGPU::OPERAND_REG_IMM_V2INT16:
     case AMDGPU::OPERAND_REG_IMM_V2BF16:
     case AMDGPU::OPERAND_REG_IMM_V2FP16:
+#if LLPC_BUILD_NPI
+    case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
+#endif /* LLPC_BUILD_NPI */
     case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
     case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16:
     case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
