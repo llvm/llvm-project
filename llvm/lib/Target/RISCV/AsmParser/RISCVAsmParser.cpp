@@ -215,10 +215,10 @@ class RISCVAsmParser : public MCTargetAsmParser {
   ParseStatus parseGPRPair(OperandVector &Operands, bool IsRV64Inst);
   ParseStatus parseFRMArg(OperandVector &Operands);
   ParseStatus parseFenceArg(OperandVector &Operands);
-  ParseStatus parseReglist(OperandVector &Operands) {
+  ParseStatus parseRegList(OperandVector &Operands) {
     return parseRegListCommon(Operands, /*MustIncludeS0=*/false);
   }
-  ParseStatus parseReglistS0(OperandVector &Operands) {
+  ParseStatus parseRegListS0(OperandVector &Operands) {
     return parseRegListCommon(Operands, /*MustIncludeS0=*/true);
   }
   ParseStatus parseRegListCommon(OperandVector &Operands, bool MustIncludeS0);
@@ -349,7 +349,7 @@ struct RISCVOperand final : public MCParsedAsmOperand {
     VType,
     FRM,
     Fence,
-    Rlist,
+    RegList,
     Spimm,
     RegReg,
   } Kind;
@@ -388,8 +388,8 @@ struct RISCVOperand final : public MCParsedAsmOperand {
     unsigned Val;
   };
 
-  struct RlistOp {
-    unsigned Val;
+  struct RegListOp {
+    unsigned Encoding;
   };
 
   struct SpimmOp {
@@ -411,7 +411,7 @@ struct RISCVOperand final : public MCParsedAsmOperand {
     VTypeOp VType;
     FRMOp FRM;
     FenceOp Fence;
-    RlistOp Rlist;
+    RegListOp RegList;
     SpimmOp Spimm;
     RegRegOp RegReg;
   };
@@ -448,8 +448,8 @@ public:
     case KindTy::Fence:
       Fence = o.Fence;
       break;
-    case KindTy::Rlist:
-      Rlist = o.Rlist;
+    case KindTy::RegList:
+      RegList = o.RegList;
       break;
     case KindTy::Spimm:
       Spimm = o.Spimm;
@@ -482,9 +482,9 @@ public:
   bool isMem() const override { return false; }
   bool isSystemRegister() const { return Kind == KindTy::SystemRegister; }
   bool isRegReg() const { return Kind == KindTy::RegReg; }
-  bool isRlist() const { return Kind == KindTy::Rlist; }
-  bool isRlistS0() const {
-    return Kind == KindTy::Rlist && Rlist.Val != RISCVZC::RA;
+  bool isRegList() const { return Kind == KindTy::RegList; }
+  bool isRegListS0() const {
+    return Kind == KindTy::RegList && RegList.Encoding != RISCVZC::RA;
   }
   bool isSpimm() const { return Kind == KindTy::Spimm; }
 
@@ -1009,9 +1009,9 @@ public:
       OS << getFence();
       OS << '>';
       break;
-    case KindTy::Rlist:
-      OS << "<rlist: ";
-      RISCVZC::printRlist(Rlist.Val, OS);
+    case KindTy::RegList:
+      OS << "<reglist: ";
+      RISCVZC::printRegList(RegList.Encoding, OS);
       OS << '>';
       break;
     case KindTy::Spimm:
@@ -1098,10 +1098,10 @@ public:
     return Op;
   }
 
-  static std::unique_ptr<RISCVOperand> createRlist(unsigned RlistEncode,
+  static std::unique_ptr<RISCVOperand> createRegList(unsigned RlistEncode,
                                                    SMLoc S) {
-    auto Op = std::make_unique<RISCVOperand>(KindTy::Rlist);
-    Op->Rlist.Val = RlistEncode;
+    auto Op = std::make_unique<RISCVOperand>(KindTy::RegList);
+    Op->RegList.Encoding = RlistEncode;
     Op->StartLoc = S;
     return Op;
   }
@@ -1183,9 +1183,9 @@ public:
     Inst.addOperand(MCOperand::createImm(Imm));
   }
 
-  void addRlistOperands(MCInst &Inst, unsigned N) const {
+  void addRegListOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createImm(Rlist.Val));
+    Inst.addOperand(MCOperand::createImm(RegList.Encoding));
   }
 
   void addRegRegOperands(MCInst &Inst, unsigned N) const {
@@ -2569,13 +2569,13 @@ ParseStatus RISCVAsmParser::parseRegReg(OperandVector &Operands) {
 
 ParseStatus RISCVAsmParser::parseRegListCommon(OperandVector &Operands,
                                                bool MustIncludeS0) {
-  // Rlist: {ra [, s0[-sN]]}
-  // XRlist: {x1 [, x8[-x9][, x18[-xN]]]}
+  // RegList: {ra [, s0[-sN]]}
+  // XRegList: {x1 [, x8[-x9][, x18[-xN]]]}
 
   // When MustIncludeS0 = true (not the default) (used for `qc.cm.pushfp`) which
   // must include `fp`/`s0` in the list:
-  // Rlist: {ra, s0[-sN]}
-  // XRlist: {x1, x8[-x9][, x18[-xN]]}
+  // RegList: {ra, s0[-sN]}
+  // XRegList: {x1, x8[-x9][, x18[-xN]]}
 
   if (getTok().isNot(AsmToken::LCurly))
     return ParseStatus::NoMatch;
@@ -2656,13 +2656,13 @@ ParseStatus RISCVAsmParser::parseRegListCommon(OperandVector &Operands,
     return Error(S, "invalid register list, {ra, s0-s10} or {x1, x8-x9, "
                     "x18-x26} is not supported");
 
-  auto Encode = RISCVZC::encodeRlist(RegEnd, IsRVE);
+  auto Encode = RISCVZC::encodeRegList(RegEnd, IsRVE);
   assert(Encode != RISCVZC::INVALID_RLIST);
 
   if (MustIncludeS0 && Encode == RISCVZC::RA)
     return Error(S, "register list must include 's0' or 'x8'");
 
-  Operands.push_back(RISCVOperand::createRlist(Encode, S));
+  Operands.push_back(RISCVOperand::createRegList(Encode, S));
 
   return ParseStatus::Success;
 }
@@ -2677,14 +2677,14 @@ ParseStatus RISCVAsmParser::parseZcmpStackAdj(OperandVector &Operands,
 
   int64_t StackAdjustment = getTok().getIntVal();
 
-  auto *RListOp = static_cast<RISCVOperand *>(Operands.back().get());
-  if (!RListOp->isRlist())
+  auto *RegListOp = static_cast<RISCVOperand *>(Operands.back().get());
+  if (!RegListOp->isRegList())
     return ParseStatus::NoMatch;
 
-  unsigned RlistVal = RListOp->Rlist.Val;
+  unsigned RlistEncode = RegListOp->RegList.Encoding;
 
-  assert(RlistVal != RISCVZC::INVALID_RLIST);
-  unsigned StackAdjBase = RISCVZC::getStackAdjBase(RlistVal, isRV64());
+  assert(RlistEncode != RISCVZC::INVALID_RLIST);
+  unsigned StackAdjBase = RISCVZC::getStackAdjBase(RlistEncode, isRV64());
   if (Negative != ExpectNegative || StackAdjustment % 16 != 0 ||
       StackAdjustment < StackAdjBase || (StackAdjustment - StackAdjBase) > 48) {
     int64_t Lower = StackAdjBase;

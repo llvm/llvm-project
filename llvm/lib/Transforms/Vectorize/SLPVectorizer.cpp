@@ -12346,8 +12346,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   }
   InstructionCost CommonCost = 0;
   SmallVector<int> Mask;
-  if (!E->ReorderIndices.empty() && (E->State != TreeEntry::StridedVectorize ||
-                                     !isReverseOrder(E->ReorderIndices))) {
+  if (!E->ReorderIndices.empty() && E->State != TreeEntry::CompressVectorize &&
+      (E->State != TreeEntry::StridedVectorize ||
+       !isReverseOrder(E->ReorderIndices))) {
     SmallVector<int> NewMask;
     if (E->getOpcode() == Instruction::Store) {
       // For stores the order is actually a mask.
@@ -12924,16 +12925,22 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         break;
       }
       case TreeEntry::CompressVectorize: {
-        SmallVector<Value *> PointerOps(VL.size());
-        for (auto [I, V] : enumerate(VL))
-          PointerOps[I] = cast<LoadInst>(V)->getPointerOperand();
         bool IsMasked;
         unsigned InterleaveFactor;
         SmallVector<int> CompressMask;
         VectorType *LoadVecTy;
+        SmallVector<Value *> Scalars(VL.begin(), VL.end());
+        if (!E->ReorderIndices.empty()) {
+          SmallVector<int> Mask(E->ReorderIndices.begin(),
+                                E->ReorderIndices.end());
+          reorderScalars(Scalars, Mask);
+        }
+        SmallVector<Value *> PointerOps(Scalars.size());
+        for (auto [I, V] : enumerate(Scalars))
+          PointerOps[I] = cast<LoadInst>(V)->getPointerOperand();
         [[maybe_unused]] bool IsVectorized = isMaskedLoadCompress(
-            VL, PointerOps, std::nullopt, *TTI, *DL, *SE, *AC, *DT, *TLI,
-            [](Value *) { return true; }, IsMasked, InterleaveFactor,
+            Scalars, PointerOps, E->ReorderIndices, *TTI, *DL, *SE, *AC, *DT,
+            *TLI, [](Value *) { return true; }, IsMasked, InterleaveFactor,
             CompressMask, LoadVecTy);
         assert(IsVectorized && "Expected to be vectorized");
         Align CommonAlignment;
@@ -16933,7 +16940,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           ArrayRef(reinterpret_cast<const int *>(E->ReorderIndices.begin()),
                    E->ReorderIndices.size());
       ShuffleBuilder.add(V, Mask);
-    } else if (E->State == TreeEntry::StridedVectorize && IsReverseOrder) {
+    } else if ((E->State == TreeEntry::StridedVectorize && IsReverseOrder) ||
+               E->State == TreeEntry::CompressVectorize) {
       ShuffleBuilder.addOrdered(V, {});
     } else {
       ShuffleBuilder.addOrdered(V, E->ReorderIndices);
@@ -17459,15 +17467,21 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       if (E->State == TreeEntry::Vectorize) {
         NewLI = Builder.CreateAlignedLoad(VecTy, PO, LI->getAlign());
       } else if (E->State == TreeEntry::CompressVectorize) {
-        SmallVector<Value *> PointerOps(E->Scalars.size());
-        for (auto [I, V] : enumerate(E->Scalars))
-          PointerOps[I] = cast<LoadInst>(V)->getPointerOperand();
         bool IsMasked;
         unsigned InterleaveFactor;
         SmallVector<int> CompressMask;
         VectorType *LoadVecTy;
+        SmallVector<Value *> Scalars(E->Scalars.begin(), E->Scalars.end());
+        if (!E->ReorderIndices.empty()) {
+          SmallVector<int> Mask(E->ReorderIndices.begin(),
+                                E->ReorderIndices.end());
+          reorderScalars(Scalars, Mask);
+        }
+        SmallVector<Value *> PointerOps(Scalars.size());
+        for (auto [I, V] : enumerate(Scalars))
+          PointerOps[I] = cast<LoadInst>(V)->getPointerOperand();
         [[maybe_unused]] bool IsVectorized = isMaskedLoadCompress(
-            E->Scalars, PointerOps, std::nullopt, *TTI, *DL, *SE, *AC, *DT,
+            Scalars, PointerOps, E->ReorderIndices, *TTI, *DL, *SE, *AC, *DT,
             *TLI, [](Value *) { return true; }, IsMasked, InterleaveFactor,
             CompressMask, LoadVecTy);
         assert(IsVectorized && "Expected to be vectorized");
