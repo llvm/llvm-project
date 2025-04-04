@@ -11,3 +11,20 @@ __bf16 h = 1.BF1; // expected-error{{invalid suffix 'BF1' on floating constant}}
 
 __bf16 i = 1.bf16; // expect-success
 __bf16 j = 1.BF16; // expect-success
+
+__bf16 k = 1B; // expected-error{{invalid digit 'B' in decimal constant}}
+__bf16 l = 1BF; // expected-error{{invalid digit 'B' in decimal constant}}
+__bf16 m = 1BF166; // expected-error{{invalid digit 'B' in decimal constant}}
+__bf16 n = 1BF1; // expected-error{{invalid digit 'B' in decimal constant}}
+
+__bf16 o = 1b; // expected-error{{invalid digit 'b' in decimal constant}}
+__bf16 p = 1bf; // expected-error{{invalid digit 'b' in decimal constant}}
+__bf16 q = 1bf166; // expected-error{{invalid digit 'b' in decimal constant}}
+__bf16 r = 1bf1; // expected-error{{invalid digit 'b' in decimal constant}}
+
+__bf16 s = 1bf16; // expected-error{{invalid digit 'b' in decimal constant}}
+__bf16 t = 1BF16; // expected-error{{invalid digit 'B' in decimal constant}}
+
+__bf16 u = 1.bf16F16; // expected-error{{invalid suffix 'bf16F16' on floating constant}}
+__bf16 v = 1.BF16f16; // expected-error{{invalid suffix 'BF16f16' on floating constant}}
+__bf16 w = 1.F16bf16; // expected-error{{invalid suffix 'F16bf16' on floating constant}}
