@@ -21,11 +21,18 @@ jobs:
             ccache-variant: sccache
             c_compiler: clang
             cpp_compiler: clang++
+            target: x86_64-unknown-linux-llvm
           # TODO: remove ccache logic when https://github.com/hendrikmuhs/ccache-action/issues/279 is resolved.
           - os: ubuntu-24.04-arm
             ccache-variant: ccache
             c_compiler: clang
             cpp_compiler: clang++
+            target: aarch64-unknown-linux-llvm
+          - os: ubuntu-24.04
+            ccache-variant: ccache
+            c_compiler: clang
+            cpp_compiler: clang++
+            target: x86_64-unknown-uefi-llvm
           # TODO: add back gcc build when it is fixed
           # - c_compiler: gcc
           #   cpp_compiler: g++
@@ -73,6 +80,7 @@ jobs:
         -DCMAKE_C_COMPILER_LAUNCHER=${{ matrix.ccache-variant }}
         -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.ccache-variant }}
         -DCMAKE_INSTALL_PREFIX=${{ steps.strings.outputs.build-install-dir }}
+        -DLLVM_RUNTIMES_TARGET=${{ matrix.target }}
         -DLLVM_ENABLE_RUNTIMES="libc;compiler-rt"
         -DLLVM_LIBC_FULL_BUILD=ON
         -DLLVM_LIBC_INCLUDE_SCUDO=ON
@@ -90,6 +98,8 @@ jobs:
         --target install
 
     - name: Test
+      # Skip UEFI tests until we have testing set up.
+      if: ${{ ! endsWith(matrix.target, '-uefi-llvm') }}
       run: >
         cmake 
         --build ${{ steps.strings.outputs.build-output-dir }} 
