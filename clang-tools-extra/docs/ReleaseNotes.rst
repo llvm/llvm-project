@@ -97,6 +97,9 @@ Improvements to clang-tidy
 - Fixed bug in :program:`clang-tidy` by which `HeaderFilterRegex` did not take
   effect when passed via the `.clang-tidy` file.
 
+- New :program:`clang-tidy` config property `ClangQueryChecks` that allows adding
+  custom checks based on a :program:`clang-query` syntax
+
 New checks
 ^^^^^^^^^^
 
