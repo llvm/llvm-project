@@ -33,17 +33,20 @@ sym3:
 
 .macro f, index
 
+# (Kept unique) first instruction of the GOT code sequence
 .section .text.f1_\index,"ax",@progbits
 f1_\index:
 adrp x0, :got:g\index
 mov x1, #\index
 b f2_\index
 
+# Folded, second instruction of the GOT code sequence
 .section .text.f2_\index,"ax",@progbits
 f2_\index:
 ldr x0, [x0, :got_lo12:g\index] 
 b callee
 
+# Folded
 .globl g\index
 .section .rodata.g\index,"a",@progbits
 g_\index:
