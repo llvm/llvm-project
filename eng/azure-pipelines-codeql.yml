@@ -2,7 +2,7 @@ trigger:
   none
 
 schedules:
-  - cron: 0 0 */3 * *
+  - cron: 0 0 */7 * *
     displayName: Periodic CodeQL run
     branches:
       include:
