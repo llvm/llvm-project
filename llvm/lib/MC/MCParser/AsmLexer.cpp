@@ -111,21 +111,15 @@ void AsmToken::dump(raw_ostream &OS) const {
   OS << "\")";
 }
 
-MCAsmLexer::MCAsmLexer() { CurTok.emplace_back(AsmToken::Space, StringRef()); }
-
-MCAsmLexer::~MCAsmLexer() = default;
-
-SMLoc MCAsmLexer::getLoc() const { return SMLoc::getFromPointer(TokStart); }
-
 AsmLexer::AsmLexer(const MCAsmInfo &MAI) : MAI(MAI) {
   // For COFF targets, this is true, while for ELF targets, it should be false.
   // Currently, @specifier parsing depends on '@' being included in the token.
   AllowAtInIdentifier = !StringRef(MAI.getCommentString()).starts_with("@") &&
                         MAI.useAtForSpecifier();
   LexMotorolaIntegers = MAI.shouldUseMotorolaIntegers();
-}
 
-AsmLexer::~AsmLexer() = default;
+  CurTok.emplace_back(AsmToken::Space, StringRef());
+}
 
 void AsmLexer::setBuffer(StringRef Buf, const char *ptr,
                          bool EndStatementAtEOF) {
