@@ -19,6 +19,35 @@ contains
   end function add_vectors
 end module vector_mod
 
+!! Test user-defined operators. Two different varieties, using conventional and
+!! unconventional names.
+module m1
+  interface operator(.mul.)
+    procedure my_mul
+  end interface
+  interface operator(.fluffy.)
+    procedure my_add
+  end interface
+  type t1
+    integer :: val = 1
+  end type
+!$omp declare reduction(.mul.:t1:omp_out=omp_out.mul.omp_in)
+!$omp declare reduction(.fluffy.:t1:omp_out=omp_out.fluffy.omp_in)
+!CHECK: op.fluffy., PUBLIC: UserReductionDetails TYPE(t1)
+!CHECK: op.mul., PUBLIC: UserReductionDetails TYPE(t1)   
+contains
+  function my_mul(x, y)
+    type (t1), intent (in) :: x, y
+    type (t1) :: my_mul
+    my_mul%val = x%val * y%val
+  end function
+  function my_add(x, y)
+    type (t1), intent (in) :: x, y
+    type (t1) :: my_add
+    my_add%val = x%val + y%val
+  end function
+end module m1
+
 program test_vector
 !CHECK-LABEL: MainProgram scope: test_vector
   use vector_mod

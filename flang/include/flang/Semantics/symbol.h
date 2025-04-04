@@ -29,6 +29,8 @@ class raw_ostream;
 }
 namespace Fortran::parser {
 struct Expr;
+struct OpenMPDeclareReductionConstruct;
+struct OmpDirectiveSpecification;
 }
 
 namespace Fortran::semantics {
@@ -707,6 +709,10 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const GenericDetails &);
 class UserReductionDetails {
 public:
   using TypeVector = std::vector<const DeclTypeSpec *>;
+  using DeclInfo = std::variant<const parser::OpenMPDeclareReductionConstruct *,
+      const parser::OmpDirectiveSpecification *>;
+  using DeclVector = std::vector<DeclInfo>;
+
   UserReductionDetails() = default;
 
   void AddType(const DeclTypeSpec *type) { typeList_.push_back(type); }
@@ -716,8 +722,12 @@ public:
     return llvm::is_contained(typeList_, type);
   }
 
+  void AddDecl(const DeclInfo &decl) { declList_.push_back(decl); }
+  const DeclVector &GetDeclList() const { return declList_; }
+
 private:
   TypeVector typeList_;
+  DeclVector declList_;
 };
 
 class UnknownDetails {};
