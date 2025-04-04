@@ -579,7 +579,8 @@ createGCNMaxOccupancyMachineScheduler(MachineSchedContext *C) {
   DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
   if (ST.shouldClusterStores())
     DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
-  DAG->addMutation(createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::Initial));
+  DAG->addMutation(
+      createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::Initial, {}));
   DAG->addMutation(createAMDGPUMacroFusionDAGMutation());
   DAG->addMutation(createAMDGPUExportClusteringDAGMutation());
   return DAG;
@@ -589,7 +590,8 @@ static ScheduleDAGInstrs *
 createGCNMaxILPMachineScheduler(MachineSchedContext *C) {
   ScheduleDAGMILive *DAG =
       new GCNScheduleDAGMILive(C, std::make_unique<GCNMaxILPSchedStrategy>(C));
-  DAG->addMutation(createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::Initial));
+  DAG->addMutation(
+      createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::Initial, {}));
   return DAG;
 }
 
@@ -1097,7 +1099,8 @@ GCNTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
   DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
   if (ST.shouldClusterStores())
     DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
-  DAG->addMutation(createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::PostRA));
+  DAG->addMutation(
+      createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::PostRA, {}));
   if ((EnableVOPD.getNumOccurrences() ||
        getOptLevel() >= CodeGenOptLevel::Less) &&
       EnableVOPD)

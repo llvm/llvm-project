@@ -9,6 +9,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUMFMAIGROUPLP_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUMFMAIGROUPLP_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include <memory>
 #include <vector>
@@ -20,8 +21,9 @@ namespace AMDGPU {
 enum class SchedulingPhase { Initial, PreRAReentry, PostRA };
 } // namespace AMDGPU
 
-std::unique_ptr<ScheduleDAGMutation>
-createIGroupLPDAGMutation(AMDGPU::SchedulingPhase Phase);
+std::unique_ptr<ScheduleDAGMutation> createIGroupLPDAGMutation(
+    AMDGPU::SchedulingPhase Phase,
+    std::vector<std::unique_ptr<ScheduleDAGMutation>> SavedMutations);
 
 } // namespace llvm
 
