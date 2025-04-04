@@ -926,9 +926,10 @@ TEST(RootSignature, ParseRootConstant) {
     ASSERT_EQ((unsigned)RootParam.ParameterType, 1u);
     ASSERT_EQ((unsigned)RootParam.ShaderVisibility, 2u);
     auto ParamView = RS.getParameter(RootParam);
+    ASSERT_THAT_ERROR(ParamView.takeError(), Succeeded());
 
     DirectX::RootConstantView *RootConstantsView =
-        dyn_cast<DirectX::RootConstantView>(&ParamView);
+        dyn_cast<DirectX::RootConstantView>(&*ParamView);
     ASSERT_TRUE(RootConstantsView != nullptr);
     auto Constants = RootConstantsView->read();
 
@@ -999,11 +1000,8 @@ TEST(RootSignature, ParseRootConstant) {
     const auto &RS = MaybeRS.value();
     auto RootParam = *RS.param_header().begin();
     auto ParamView = RS.getParameter(RootParam);
-    DirectX::RootConstantView *RootConstantsView =
-        dyn_cast<DirectX::RootConstantView>(&ParamView);
-    ASSERT_TRUE(RootConstantsView != nullptr);
-    EXPECT_THAT_EXPECTED(
-        RootConstantsView->read(),
+    ASSERT_THAT_ERROR(
+        ParamView.takeError(),
         FailedWithMessage("Reading structure out of file bounds"));
   }
 }

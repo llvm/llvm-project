@@ -45,9 +45,13 @@ DXContainerYAML::RootSignatureYamlDesc::RootSignatureYamlDesc(
     NewP.Type = PH.ParameterType;
     NewP.Visibility = PH.ShaderVisibility;
 
-    auto ParamView = Data.getParameter(PH);
+    llvm::Expected<object::DirectX::RootParameterView> ParamView =
+        Data.getParameter(PH);
+    if (!ParamView)
+      llvm::errs() << "Error: " << ParamView.takeError() << "\n";
+    auto PV = *ParamView;
 
-    if (auto *RCV = dyn_cast<object::DirectX::RootConstantView>(&ParamView)) {
+    if (auto *RCV = dyn_cast<object::DirectX::RootConstantView>(&PV)) {
       auto Constants = RCV->read();
       if (!Constants)
         llvm::errs() << "Error: " << Constants.takeError() << "\n";

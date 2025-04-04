@@ -160,6 +160,10 @@ struct RootConstantView : RootParameterView {
   }
 };
 
+static Error parseFailed(const Twine &Msg) {
+  return make_error<GenericBinaryError>(Msg.str(), object_error::parse_failed);
+}
+
 class RootSignature {
 private:
   uint32_t Version = 2;
@@ -192,22 +196,24 @@ public:
   }
   param_header_iterator param_header_end() { return ParametersHeaders.end(); }
   uint32_t getFlags() const { return Flags; }
-  RootParameterView
+
+  llvm::Expected<RootParameterView>
   getParameter(const dxbc::RootParameterHeader &Header) const {
     size_t CorrectOffset = Header.ParameterOffset - ParameterSpaceOffset;
     StringRef Data;
 
-    size_t DataSize = 0;
+    size_t DataSize;
 
     switch (Header.ParameterType) {
     case dxbc::RootParameterType::Constants32Bit:
       DataSize = sizeof(dxbc::RootConstants);
-      if (CorrectOffset + DataSize > ParameterSpace.size()) {
-        // throw
-      }
-      Data = ParameterSpace.substr(CorrectOffset, DataSize);
       break;
     }
+
+    if (CorrectOffset + DataSize > ParameterSpace.size())
+      return parseFailed("Reading structure out of file bounds");
+
+    Data = ParameterSpace.substr(CorrectOffset, DataSize);
 
     RootParameterView View = RootParameterView(Header, Data);
     return View;
