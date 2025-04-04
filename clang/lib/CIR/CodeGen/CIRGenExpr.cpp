@@ -316,6 +316,106 @@ void CIRGenFunction::emitIgnoredExpr(const Expr *e) {
   emitLValue(e);
 }
 
+/// Emit an `if` on a boolean condition, filling `then` and `else` into
+/// appropriated regions.
+mlir::LogicalResult CIRGenFunction::emitIfOnBoolExpr(const Expr *cond,
+                                                     const Stmt *thenS,
+                                                     const Stmt *elseS) {
+  // Attempt to be more accurate as possible with IfOp location, generate
+  // one fused location that has either 2 or 4 total locations, depending
+  // on else's availability.
+  auto getStmtLoc = [this](const Stmt &s) {
+    return mlir::FusedLoc::get(&getMLIRContext(),
+                               {getLoc(s.getSourceRange().getBegin()),
+                                getLoc(s.getSourceRange().getEnd())});
+  };
+  mlir::Location thenLoc = getStmtLoc(*thenS);
+  std::optional<mlir::Location> elseLoc;
+  if (elseS)
+    elseLoc = getStmtLoc(*elseS);
+
+  mlir::LogicalResult resThen = mlir::success(), resElse = mlir::success();
+  emitIfOnBoolExpr(
+      cond, /*thenBuilder=*/
+      [&](mlir::OpBuilder &, mlir::Location) {
+        LexicalScope lexScope{*this, thenLoc, builder.getInsertionBlock()};
+        resThen = emitStmt(thenS, /*useCurrentScope=*/true);
+      },
+      thenLoc,
+      /*elseBuilder=*/
+      [&](mlir::OpBuilder &, mlir::Location) {
+        assert(elseLoc && "Invalid location for elseS.");
+        LexicalScope lexScope{*this, *elseLoc, builder.getInsertionBlock()};
+        resElse = emitStmt(elseS, /*useCurrentScope=*/true);
+      },
+      elseLoc);
+
+  return mlir::LogicalResult::success(resThen.succeeded() &&
+                                      resElse.succeeded());
+}
+
+/// Emit an `if` on a boolean condition, filling `then` and `else` into
+/// appropriated regions.
+cir::IfOp CIRGenFunction::emitIfOnBoolExpr(
+    const clang::Expr *cond, BuilderCallbackRef thenBuilder,
+    mlir::Location thenLoc, BuilderCallbackRef elseBuilder,
+    std::optional<mlir::Location> elseLoc) {
+
+  SmallVector<mlir::Location, 2> ifLocs{thenLoc};
+  if (elseLoc)
+    ifLocs.push_back(*elseLoc);
+  mlir::Location loc = mlir::FusedLoc::get(&getMLIRContext(), ifLocs);
+
+  // Emit the code with the fully general case.
+  mlir::Value condV = emitOpOnBoolExpr(loc, cond);
+  return builder.create<cir::IfOp>(loc, condV, elseLoc.has_value(),
+                                   /*thenBuilder=*/thenBuilder,
+                                   /*elseBuilder=*/elseBuilder);
+}
+
+/// TODO(cir): PGO data
+/// TODO(cir): see EmitBranchOnBoolExpr for extra ideas).
+mlir::Value CIRGenFunction::emitOpOnBoolExpr(mlir::Location loc,
+                                             const Expr *cond) {
+  // TODO(CIR): scoped ApplyDebugLocation DL(*this, Cond);
+  // TODO(CIR): __builtin_unpredictable and profile counts?
+  cond = cond->IgnoreParens();
+
+  // if (const BinaryOperator *CondBOp = dyn_cast<BinaryOperator>(cond)) {
+  //   llvm_unreachable("binaryoperator ifstmt NYI");
+  // }
+
+  if (const UnaryOperator *CondUOp = dyn_cast<UnaryOperator>(cond)) {
+    // In LLVM the condition is reversed here for efficient codegen.
+    // This should be done in CIR prior to LLVM lowering, if we do now
+    // we can make CIR based diagnostics misleading.
+    //  cir.ternary(!x, t, f) -> cir.ternary(x, f, t)
+    assert(!cir::MissingFeatures::shouldReverseUnaryCondOnBoolExpr());
+  }
+
+  if (const ConditionalOperator *CondOp = dyn_cast<ConditionalOperator>(cond)) {
+
+    cgm.errorNYI(cond->getExprLoc(), "Ternary NYI");
+    assert(!cir::MissingFeatures::ternaryOp());
+    return createDummyValue(loc, cond->getType());
+  }
+
+  // if (const CXXThrowExpr *Throw = dyn_cast<CXXThrowExpr>(cond)) {
+  //   llvm_unreachable("NYI");
+  // }
+
+  // If the branch has a condition wrapped by __builtin_unpredictable,
+  // create metadata that specifies that the branch is unpredictable.
+  // Don't bother if not optimizing because that metadata would not be used.
+  auto *Call = dyn_cast<CallExpr>(cond->IgnoreImpCasts());
+  if (Call && cgm.getCodeGenOpts().OptimizationLevel != 0) {
+    assert(!cir::MissingFeatures::insertBuiltinUnpredictable());
+  }
+
+  // Emit the code with the fully general case.
+  return evaluateExprAsBool(cond);
+}
+
 mlir::Value CIRGenFunction::emitAlloca(StringRef name, mlir::Type ty,
                                        mlir::Location loc, CharUnits alignment,
                                        bool insertIntoFnEntryBlock,
