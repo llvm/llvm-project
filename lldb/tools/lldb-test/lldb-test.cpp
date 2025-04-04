@@ -17,7 +17,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Expression/IRMemoryMap.h"
-#include "lldb/Initialization/SystemLifetimeManager.h"
+#include "lldb/Initialization/SystemLifetimeManagerDbg.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Symbol/CompileUnit.h"
@@ -1245,7 +1245,7 @@ int main(int argc, const char *argv[]) {
 
   cl::ParseCommandLineOptions(argc, argv, "LLDB Testing Utility\n");
 
-  SystemLifetimeManager DebuggerLifetime;
+  SystemLifetimeManagerDbg DebuggerLifetime;
   if (auto e = DebuggerLifetime.Initialize(
           std::make_unique<SystemInitializerTest>(), nullptr)) {
     WithColor::error() << "initialization failed: " << toString(std::move(e))

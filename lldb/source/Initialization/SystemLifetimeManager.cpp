@@ -8,7 +8,6 @@
 
 #include "lldb/Initialization/SystemLifetimeManager.h"
 
-#include "lldb/Core/Debugger.h"
 #include "lldb/Initialization/SystemInitializer.h"
 
 #include <utility>
@@ -36,7 +35,7 @@ llvm::Error SystemLifetimeManager::Initialize(
     if (auto e = m_initializer->Initialize())
       return e;
 
-    Debugger::Initialize(plugin_callback);
+    InitializeDebugger(plugin_callback);
   }
 
   return llvm::Error::success();
@@ -46,7 +45,7 @@ void SystemLifetimeManager::Terminate() {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
   if (m_initialized) {
-    Debugger::Terminate();
+    TerminateDebugger();
     m_initializer->Terminate();
 
     m_initializer.reset();
