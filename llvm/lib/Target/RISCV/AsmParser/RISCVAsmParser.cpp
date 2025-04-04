@@ -2587,6 +2587,7 @@ ParseStatus RISCVAsmParser::parseRegListCommon(OperandVector &Operands,
     return Error(getLoc(), "register list must start from 'ra' or 'x1'");
 
   StringRef RegName = getLexer().getTok().getIdentifier();
+  bool XRegs = RegName[0] == 'x';
   MCRegister RegEnd = matchRegisterNameHelper(RegName);
   if (RegEnd != RISCV::X1)
     return Error(getLoc(), "register list must start from 'ra' or 'x1'");
@@ -2597,6 +2598,9 @@ ParseStatus RISCVAsmParser::parseRegListCommon(OperandVector &Operands,
     if (getLexer().isNot(AsmToken::Identifier))
       return Error(getLoc(), "invalid register");
     StringRef RegName = getLexer().getTok().getIdentifier();
+    // If 'x1' was used intead of 'ra', this must be 'x8' and not 's0'.
+    if (XRegs != (RegName[0] == 'x'))
+      return Error(getLoc(), "invalid register");
     RegEnd = matchRegisterNameHelper(RegName);
     if (!RegEnd)
       return Error(getLoc(), "invalid register");
@@ -2608,10 +2612,14 @@ ParseStatus RISCVAsmParser::parseRegListCommon(OperandVector &Operands,
     // parse case like -s1
     if (parseOptionalToken(AsmToken::Minus)) {
       StringRef EndName = getLexer().getTok().getIdentifier();
-      // FIXME: the register mapping and checks of RVE is wrong
+      // If 'x1' and 'x8' were used, this must also start with 'x'.
+      if (XRegs != (EndName[0] == 'x'))
+        return Error(getLoc(), "invalid register");
       RegEnd = matchRegisterNameHelper(EndName);
+      // If 'x8' was used instead of 's0', this must be 'x9' and can't be
+      // 'x18'-'x27'.
       if (!(RegEnd == RISCV::X9 ||
-            (RegEnd >= RISCV::X18 && RegEnd <= RISCV::X27)))
+            (!XRegs && RegEnd >= RISCV::X18 && RegEnd <= RISCV::X27)))
         return Error(getLoc(), "invalid register");
       getLexer().Lex();
     }
@@ -2624,10 +2632,13 @@ ParseStatus RISCVAsmParser::parseRegListCommon(OperandVector &Operands,
             "first contiguous registers pair of register list must be 'x8-x9'");
 
       // parse ', x18' for extra part
-      if (getLexer().isNot(AsmToken::Identifier) || IsRVE)
+      if (getLexer().isNot(AsmToken::Identifier) || IsRVE || !XRegs)
         return Error(getLoc(), "invalid register");
       StringRef EndName = getLexer().getTok().getIdentifier();
-      RegEnd = MatchRegisterName(EndName);
+      // If 'x1' and 'x8' were used, this must also start with 'x'.
+      if (EndName[0] != 'x')
+        return Error(getLoc(), "invalid register");
+      RegEnd = matchRegisterNameHelper(EndName);
       if (RegEnd != RISCV::X18)
         return Error(getLoc(),
                      "second contiguous registers pair of register list "
@@ -2639,7 +2650,10 @@ ParseStatus RISCVAsmParser::parseRegListCommon(OperandVector &Operands,
         if (getLexer().isNot(AsmToken::Identifier) || IsRVE)
           return Error(getLoc(), "invalid register");
         EndName = getLexer().getTok().getIdentifier();
-        RegEnd = MatchRegisterName(EndName);
+        // If 'x1' and 'x8' were used, this must also start with 'x'.
+        if (EndName[0] != 'x')
+          return Error(getLoc(), "invalid register");
+        RegEnd = matchRegisterNameHelper(EndName);
         if (!(RegEnd >= RISCV::X19 && RegEnd <= RISCV::X27))
           return Error(getLoc(), "invalid register");
         getLexer().Lex();
