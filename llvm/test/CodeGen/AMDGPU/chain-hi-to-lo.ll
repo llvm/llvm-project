@@ -329,11 +329,10 @@ define <2 x half> @chain_hi_to_lo_global() {
 ; GFX11-TRUE16:       ; %bb.0: ; %bb
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, 2
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v[0:1], off
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, 0
-; GFX11-TRUE16-NEXT:    global_load_d16_hi_b16 v0, v[1:2], off
+; GFX11-TRUE16-NEXT:    global_load_d16_hi_b16 v0, v[2:3], off
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
