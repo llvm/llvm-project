@@ -350,3 +350,13 @@ bb2:
 declare i32 @g()
 
 declare i32 @__gxx_personality_v0(...)
+
+; // -----
+
+@g = private global ptr blockaddress(@fn, %bb1)
+define void @fn() {
+  ret void
+; CHECK: unreachable block 'bb1' with address taken
+bb1:
+  ret void
+}
