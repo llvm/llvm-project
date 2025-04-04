@@ -27,6 +27,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/Basic/Builtins.h"
@@ -1761,12 +1762,14 @@ bool CodeGenFunction::ConstantFoldsToSimpleInteger(const Expr *Cond,
 
 /// Strip parentheses and simplistic logical-NOT operators.
 const Expr *CodeGenFunction::stripCond(const Expr *C) {
-  while (const UnaryOperator *Op = dyn_cast<UnaryOperator>(C->IgnoreParens())) {
-    if (Op->getOpcode() != UO_LNot)
-      break;
-    C = Op->getSubExpr();
+  while (true) {
+    const Expr *SC = IgnoreExprNodes(
+        C, IgnoreParensSingleStep, IgnoreUOpLNotSingleStep,
+        IgnoreBuiltinExpectSingleStep, IgnoreImplicitCastsSingleStep);
+    if (C == SC)
+      return SC;
+    C = SC;
   }
-  return C->IgnoreParens();
 }
 
 /// Determine whether the given condition is an instrumentable condition
@@ -1865,8 +1868,6 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
   if (const BinaryOperator *CondBOp = dyn_cast<BinaryOperator>(Cond)) {
     // Handle X && Y in a condition.
     if (CondBOp->getOpcode() == BO_LAnd) {
-      MCDCLogOpStack.push_back(CondBOp);
-
       // If we have "1 && X", simplify the code.  "0 && X" would have constant
       // folded if the case was simple enough.
       bool ConstantBool = false;
@@ -1876,7 +1877,6 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
         incrementProfileCounter(CondBOp);
         EmitBranchToCounterBlock(CondBOp->getRHS(), BO_LAnd, TrueBlock,
                                  FalseBlock, TrueCount, LH);
-        MCDCLogOpStack.pop_back();
         return;
       }
 
@@ -1887,7 +1887,6 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
         // br(X && 1) -> br(X).
         EmitBranchToCounterBlock(CondBOp->getLHS(), BO_LAnd, TrueBlock,
                                  FalseBlock, TrueCount, LH, CondBOp);
-        MCDCLogOpStack.pop_back();
         return;
       }
 
@@ -1917,13 +1916,10 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
       EmitBranchToCounterBlock(CondBOp->getRHS(), BO_LAnd, TrueBlock,
                                FalseBlock, TrueCount, LH);
       eval.end(*this);
-      MCDCLogOpStack.pop_back();
       return;
     }
 
     if (CondBOp->getOpcode() == BO_LOr) {
-      MCDCLogOpStack.push_back(CondBOp);
-
       // If we have "0 || X", simplify the code.  "1 || X" would have constant
       // folded if the case was simple enough.
       bool ConstantBool = false;
@@ -1933,7 +1929,6 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
         incrementProfileCounter(CondBOp);
         EmitBranchToCounterBlock(CondBOp->getRHS(), BO_LOr, TrueBlock,
                                  FalseBlock, TrueCount, LH);
-        MCDCLogOpStack.pop_back();
         return;
       }
 
@@ -1944,7 +1939,6 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
         // br(X || 0) -> br(X).
         EmitBranchToCounterBlock(CondBOp->getLHS(), BO_LOr, TrueBlock,
                                  FalseBlock, TrueCount, LH, CondBOp);
-        MCDCLogOpStack.pop_back();
         return;
       }
       // Emit the LHS as a conditional.  If the LHS conditional is true, we
@@ -1977,7 +1971,6 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
                                RHSCount, LH);
 
       eval.end(*this);
-      MCDCLogOpStack.pop_back();
       return;
     }
   }
@@ -2064,7 +2057,7 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
 
   // If not at the top of the logical operator nest, update MCDC temp with the
   // boolean result of the evaluated condition.
-  if (!MCDCLogOpStack.empty()) {
+  {
     const Expr *MCDCBaseExpr = Cond;
     // When a nested ConditionalOperator (ternary) is encountered in a boolean
     // expression, MC/DC tracks the result of the ternary, and this is tied to
@@ -2074,7 +2067,9 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
     if (ConditionalOp)
       MCDCBaseExpr = ConditionalOp;
 
-    maybeUpdateMCDCCondBitmap(MCDCBaseExpr, CondV);
+    if (isMCDCBranchExpr(stripCond(MCDCBaseExpr)) &&
+        !isMCDCDecisionExpr(stripCond(Cond)))
+      maybeUpdateMCDCCondBitmap(MCDCBaseExpr, CondV);
   }
 
   llvm::MDNode *Weights = nullptr;
