@@ -1759,7 +1759,8 @@ void OmpVisitor::ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
 }
 
 parser::CharBlock MakeNameFromOperator(
-    const parser::DefinedOperator::IntrinsicOperator &op) {
+    const parser::DefinedOperator::IntrinsicOperator &op,
+    SemanticsContext &context) {
   switch (op) {
   case parser::DefinedOperator::IntrinsicOperator::Multiply:
     return parser::CharBlock{"op.*", 4};
@@ -1778,7 +1779,7 @@ parser::CharBlock MakeNameFromOperator(
     return parser::CharBlock{"op.NEQV", 8};
 
   default:
-    DIE("Unsupported operator...");
+    context.Say("Unsupported operator in OMP DECLARE REDUCTION"_err_en_US);
     return parser::CharBlock{"op.?", 4};
   }
 }
@@ -1825,7 +1826,8 @@ void OmpVisitor::ProcessReductionSpecifier(
       mangledName.source = MangleDefinedOperator(definedOp->v.source);
     } else {
       mangledName.source = MakeNameFromOperator(
-          std::get<parser::DefinedOperator::IntrinsicOperator>(defOp.u));
+          std::get<parser::DefinedOperator::IntrinsicOperator>(defOp.u),
+          context());
       name = &mangledName;
     }
   }
