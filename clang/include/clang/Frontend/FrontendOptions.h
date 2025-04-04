@@ -530,6 +530,9 @@ public:
   /// Output Path for module output file.
   std::string ModuleOutputPath;
 
+  /// Output path to dump ranges of deserialized declarations.
+  std::string DumpDeserializedDeclarationRangesPath;
+
 public:
   FrontendOptions()
       : DisableFree(false), RelocatablePCH(false), ShowHelp(false),
