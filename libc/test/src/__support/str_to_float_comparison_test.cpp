@@ -14,7 +14,9 @@
 #include "src/stdlib/getenv.h"
 #include "src/stdlib/strtod.h"
 #include "src/stdlib/strtof.h"
+#include "src/stdlib/free.h"
 #include "src/string/strtok.h"
+#include "src/string/strdup.h"
 #include "test/UnitTest/Test.h"
 #include <stdint.h>
 
@@ -154,6 +156,7 @@ TEST(LlvmLibcStrToFloatComparisonTest, CheckFile) {
   int total = 0;
 
   char *files = LIBC_NAMESPACE::getenv("FILES");
+  files = LIBC_NAMESPACE::strdup(files);
   for (char *file = LIBC_NAMESPACE::strtok(files, ","); file != nullptr;
        file = LIBC_NAMESPACE::strtok(nullptr, ",")) {
     int curResult =
@@ -164,6 +167,8 @@ TEST(LlvmLibcStrToFloatComparisonTest, CheckFile) {
       result = 2;
     }
   }
+
+  LIBC_NAMESPACE::free(files);
 
   EXPECT_EQ(result, 0);
   EXPECT_EQ(fails, 0);
