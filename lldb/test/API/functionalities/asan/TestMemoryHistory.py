@@ -10,13 +10,13 @@ from lldbsuite.test import lldbplatform
 from lldbsuite.test import lldbutil
 from lldbsuite.test_event.build_exception import BuildError
 
-class AsanTestCase(TestBase):
+class MemoryHistoryTestCase(TestBase):
     @skipIfFreeBSD  # llvm.org/pr21136 runtimes not yet available by default
     @expectedFailureNetBSD
     @skipUnlessAddressSanitizer
-    def test(self):
+    def test_compiler_rt_asan(self):
         self.build(make_targets=["compiler_rt-asan"])
-        self.asan_tests()
+        self.compiler_rt_asan_tests()
 
     @skipUnlessDarwin
     @skipIf(bugnumber="rdar://109913184&143590169")
@@ -43,7 +43,7 @@ class AsanTestCase(TestBase):
 
     # Test line numbers: rdar://126237493
     # for libsanitizers and remove `skip_line_numbers` parameter
-    def check_traces(self, skip_line_numbers):
+    def check_traces(self, skip_line_numbers=False):
         self.expect(
             "memory history 'pointer'",
             substrs=[
@@ -56,20 +56,25 @@ class AsanTestCase(TestBase):
             ],
         )
 
-    def libsanitizers_traces_tests(self):
-        self.createTestTarget()
+    # Set breakpoint after free, but before bug
+    def set_breakpoint(self):
+        self.runCmd(f"breakpoint set -f main.c -l {self.line_breakpoint}")
 
-        self.runCmd("env SanitizersAllocationTraces=all")
-
-        self.runCmd("breakpoint set -f main.c -l %d" % self.line_breakpoint)
+    def run_to_breakpoint(self):
+        self.set_breakpoint()
         self.runCmd("run")
-
-        # Stop on breakpoint, before report
         self.expect(
             "thread list",
             STOPPED_DUE_TO_BREAKPOINT,
             substrs=["stopped", "stop reason = breakpoint"],
         )
+
+    def libsanitizers_traces_tests(self):
+        self.createTestTarget()
+
+        self.runCmd("env SanitizersAllocationTraces=all")
+
+        self.run_to_breakpoint()
         self.check_traces(skip_line_numbers=True)
 
     def libsanitizers_asan_tests(self):
@@ -77,15 +82,7 @@ class AsanTestCase(TestBase):
 
         self.runCmd("env SanitizersAddress=1 MallocSanitizerZone=1")
 
-        self.runCmd("breakpoint set -f main.c -l %d" % self.line_breakpoint)
-        self.runCmd("run")
-
-        # Stop on breakpoint, before report
-        self.expect(
-            "thread list",
-            STOPPED_DUE_TO_BREAKPOINT,
-            substrs=["stopped", "stop reason = breakpoint"],
-        )
+        self.run_to_breakpoint()
         self.check_traces(skip_line_numbers=True)
 
         self.runCmd("continue")
@@ -130,12 +127,12 @@ class AsanTestCase(TestBase):
             "main.c",
         )
 
-    def asan_tests(self):
+    def compiler_rt_asan_tests(self):
         target = self.createTestTarget()
 
         self.registerSanitizerLibrariesWithTarget(target)
 
-        self.runCmd("breakpoint set -f main.c -l %d" % self.line_breakpoint)
+        self.set_breakpoint()
 
         # "memory history" command should not work without a process
         self.expect(
