@@ -292,8 +292,7 @@ void GenericDetails::CopyFrom(const GenericDetails &from) {
 // This is primarily for debugging.
 std::string DetailsToString(const Details &details) {
   return common::visit(
-      common::visitors{//
-          [](const UnknownDetails &) { return "Unknown"; },
+      common::visitors{[](const UnknownDetails &) { return "Unknown"; },
           [](const MainProgramDetails &) { return "MainProgram"; },
           [](const ModuleDetails &) { return "Module"; },
           [](const SubprogramDetails &) { return "Subprogram"; },
