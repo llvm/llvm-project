@@ -13,7 +13,6 @@
 #define __ADDRESSSPACE_HPP__
 
 #include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -672,7 +671,10 @@ inline bool LocalAddressSpace::findFunctionName(pint_t addr, char *buf,
   Dl_info dyldInfo;
   if (dladdr((void *)addr, &dyldInfo)) {
     if (dyldInfo.dli_sname != NULL) {
-      snprintf(buf, bufLen, "%s", dyldInfo.dli_sname);
+      size_t nameLen = strlen(dyldInfo.dli_sname);
+      size_t len = nameLen < (bufLen - 1) ? nameLen : (bufLen - 1);
+      memcpy(buf, dyldInfo.dli_sname, len);
+      buf[len] = '\0';
       *offset = (addr - (pint_t) dyldInfo.dli_saddr);
       return true;
     }
@@ -681,7 +683,9 @@ inline bool LocalAddressSpace::findFunctionName(pint_t addr, char *buf,
   uint16_t nameLen;
   char *funcName = getFuncNameFromTBTable(addr, nameLen, offset);
   if (funcName != NULL) {
-    snprintf(buf, bufLen, "%.*s", nameLen, funcName);
+    size_t len = nameLen < (bufLen - 1) ? nameLen : (bufLen - 1);
+    memcpy(buf, funcName, len);
+    buf[len] = '\0';
     return true;
   }
 #else
