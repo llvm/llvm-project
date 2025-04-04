@@ -13,8 +13,8 @@
 #include "flang-rt/runtime/derived.h"
 #include "flang-rt/runtime/stat.h"
 #include "flang-rt/runtime/terminator.h"
-#include "flang-rt/runtime/tools.h"
 #include "flang-rt/runtime/type-info.h"
+#include "flang/Common/type-kinds.h"
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
@@ -61,18 +61,11 @@ RT_API_ATTRS void Descriptor::Establish(TypeCode t, std::size_t elementBytes,
   }
 }
 
-namespace {
-template <TypeCategory CAT, int KIND> struct TypeSizeGetter {
-  constexpr RT_API_ATTRS std::size_t operator()() const {
-    CppTypeFor<CAT, KIND> arr[2];
-    return sizeof arr / 2;
-  }
-};
-} // namespace
-
 RT_API_ATTRS std::size_t Descriptor::BytesFor(TypeCategory category, int kind) {
   Terminator terminator{__FILE__, __LINE__};
-  return ApplyType<TypeSizeGetter, std::size_t>(category, kind, terminator);
+  int bytes{common::TypeSizeInBytes(category, kind)};
+  RUNTIME_CHECK(terminator, bytes > 0);
+  return bytes;
 }
 
 RT_API_ATTRS void Descriptor::Establish(TypeCategory c, int kind, void *p,
