@@ -12,8 +12,11 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
+#include "SIRegisterInfo.h"
 #include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineOperand.h"
 
@@ -576,6 +579,10 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
   }
 
   MachineOperand *New = Fold.OpToFold;
+  // Rework once the VS_16 register class is updated to include proper
+  // 16-bit SGPRs instead of 32-bit ones.
+  if (Old.getSubReg() == AMDGPU::lo16 && TRI->isSGPRReg(*MRI, New->getReg()))
+    Old.setSubReg(AMDGPU::NoSubRegister);
   Old.substVirtReg(New->getReg(), New->getSubReg(), *TRI);
   Old.setIsUndef(New->isUndef());
   return true;
@@ -947,9 +954,15 @@ void SIFoldOperandsImpl::foldOperand(
     return;
 
   // FIXME: Fold operands with subregs.
-  if (UseOp->isReg() && OpToFold.isReg() &&
-      (UseOp->isImplicit() || UseOp->getSubReg() != AMDGPU::NoSubRegister))
-    return;
+  if (UseOp->isReg() && OpToFold.isReg()) {
+    if (UseOp->isImplicit())
+      return;
+    // Allow folding from SGPRs to 16-bit VGPRs.
+    if (UseOp->getSubReg() != AMDGPU::NoSubRegister &&
+        (UseOp->getSubReg() != AMDGPU::lo16 ||
+         !TRI->isSGPRReg(*MRI, OpToFold.getReg())))
+      return;
+  }
 
   // Special case for REG_SEQUENCE: We can't fold literals into
   // REG_SEQUENCE instructions, so we have to fold them into the
@@ -1040,6 +1053,14 @@ void SIFoldOperandsImpl::foldOperand(
       }
     }
 
+    // Allow immediates COPYd into sgpr_lo16 to be further folded while
+    // still being legal if not further folded
+    if (DestRC == &AMDGPU::SGPR_LO16RegClass) {
+      assert(ST->useRealTrue16Insts());
+      MRI->setRegClass(DestReg, &AMDGPU::SGPR_32RegClass);
+      DestRC = &AMDGPU::SGPR_32RegClass;
+    }
+
     // In order to fold immediates into copies, we need to change the
     // copy to a MOV.
 
@@ -1073,9 +1094,43 @@ void SIFoldOperandsImpl::foldOperand(
         UseMI->getOperand(0).getReg().isVirtual() &&
         !UseMI->getOperand(1).getSubReg()) {
       LLVM_DEBUG(dbgs() << "Folding " << OpToFold << "\n into " << *UseMI);
+      unsigned Size = TII->getOpSize(*UseMI, 1);
       Register UseReg = OpToFold.getReg();
       UseMI->getOperand(1).setReg(UseReg);
-      UseMI->getOperand(1).setSubReg(OpToFold.getSubReg());
+      unsigned SubRegIdx = OpToFold.getSubReg();
+      // Hack to allow 32-bit SGPRs to be folded into True16 instructions
+      // Remove this if 16-bit SGPRs (i.e. SGPR_LO16) are added to the
+      // VS_16RegClass
+      //
+      // Excerpt from AMDGPUGenRegisterInfo.inc
+      // NoSubRegister, //0
+      // hi16, // 1
+      // lo16, // 2
+      // sub0, // 3
+      // ...
+      // sub1, // 11
+      // sub1_hi16, // 12
+      // sub1_lo16, // 13
+      static_assert(AMDGPU::sub1_hi16 == 12, "Subregister layout has changed");
+      if (Size == 2 && TRI->isVGPR(*MRI, UseMI->getOperand(0).getReg()) &&
+          TRI->isSGPRReg(*MRI, UseReg)) {
+        // Produce the 32 bit subregister index to which the 16-bit subregister
+        // is aligned.
+        if (SubRegIdx > AMDGPU::sub1) {
+          LaneBitmask M = TRI->getSubRegIndexLaneMask(SubRegIdx);
+          M |= M.getLane(M.getHighestLane() - 1);
+          SmallVector<unsigned, 4> Indexes;
+          TRI->getCoveringSubRegIndexes(TRI->getRegClassForReg(*MRI, UseReg), M,
+                                        Indexes);
+          assert(Indexes.size() == 1 && "Expected one 32-bit subreg to cover");
+          SubRegIdx = Indexes[0];
+          // 32-bit registers do not have a sub0 index
+        } else if (TII->getOpSize(*UseMI, 1) == 4)
+          SubRegIdx = 0;
+        else
+          SubRegIdx = AMDGPU::sub0;
+      }
+      UseMI->getOperand(1).setSubReg(SubRegIdx);
       UseMI->getOperand(1).setIsKill(false);
       CopiesToReplace.push_back(UseMI);
       OpToFold.setIsKill(false);
@@ -1712,6 +1767,31 @@ bool SIFoldOperandsImpl::tryFoldFoldableCopy(
 
   if (OpToFold.isReg() && !OpToFold.getReg().isVirtual())
     return false;
+
+  // True16: Fix malformed 16-bit sgpr COPY produced by peephole-opt
+  // Can remove this code if proper 16-bit SGPRs are implemented
+  // Example: Pre-peephole-opt
+  // %29:sgpr_lo16 = COPY %16.lo16:sreg_32
+  // %32:sreg_32 = COPY %29:sgpr_lo16
+  // %30:sreg_32 = S_PACK_LL_B32_B16 killed %31:sreg_32, killed %32:sreg_32
+  // Post-peephole-opt and DCE
+  // %32:sreg_32 = COPY %16.lo16:sreg_32
+  // %30:sreg_32 = S_PACK_LL_B32_B16 killed %31:sreg_32, killed %32:sreg_32
+  // After this transform
+  // %32:sreg_32 = COPY %16:sreg_32
+  // %30:sreg_32 = S_PACK_LL_B32_B16 killed %31:sreg_32, killed %32:sreg_32
+  // After the fold operands pass
+  // %30:sreg_32 = S_PACK_LL_B32_B16 killed %31:sreg_32, killed %16:sreg_32
+  if (MI.getOpcode() == AMDGPU::COPY && OpToFold.isReg() &&
+      OpToFold.getSubReg()) {
+    const TargetRegisterClass *DstRC =
+        MRI->getRegClass(MI.getOperand(0).getReg());
+    if (DstRC == &AMDGPU::SReg_32RegClass &&
+        DstRC == MRI->getRegClass(OpToFold.getReg())) {
+      assert(OpToFold.getSubReg() == AMDGPU::lo16);
+      OpToFold.setSubReg(0);
+    }
+  }
 
   // Prevent folding operands backwards in the function. For example,
   // the COPY opcode must not be replaced by 1 in this example:

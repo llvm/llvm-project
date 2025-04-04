@@ -38819,16 +38819,14 @@ define amdgpu_ps i32 @s_select_v2bf16(<2 x bfloat> inreg %a, <2 x bfloat> inreg 
 ; GFX11TRUE16-LABEL: s_select_v2bf16:
 ; GFX11TRUE16:       ; %bb.0:
 ; GFX11TRUE16-NEXT:    s_lshr_b32 s2, s0, 16
-; GFX11TRUE16-NEXT:    s_lshr_b32 s3, s1, 16
 ; GFX11TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
-; GFX11TRUE16-NEXT:    v_mov_b16_e32 v0.l, s3
-; GFX11TRUE16-NEXT:    v_mov_b16_e32 v0.h, s2
-; GFX11TRUE16-NEXT:    v_mov_b16_e32 v1.l, s1
-; GFX11TRUE16-NEXT:    v_mov_b16_e32 v1.h, s0
-; GFX11TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11TRUE16-NEXT:    v_cndmask_b16 v0.h, v0.l, v0.h, vcc_lo
-; GFX11TRUE16-NEXT:    v_cndmask_b16 v0.l, v1.l, v1.h, vcc_lo
-; GFX11TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11TRUE16-NEXT:    v_mov_b16_e32 v1.l, s2
+; GFX11TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
+; GFX11TRUE16-NEXT:    s_lshr_b32 s0, s1, 16
+; GFX11TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
+; GFX11TRUE16-NEXT:    v_cndmask_b16 v0.h, s0, v1.l, vcc_lo
+; GFX11TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11TRUE16-NEXT:    v_cndmask_b16 v0.l, s1, v0.l, vcc_lo
 ; GFX11TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11TRUE16-NEXT:    ; return to shader part epilog
 ;
@@ -38936,19 +38934,17 @@ define amdgpu_ps i32 @s_vselect_v2bf16(<2 x bfloat> inreg %a, <2 x bfloat> inreg
 ;
 ; GFX11TRUE16-LABEL: s_vselect_v2bf16:
 ; GFX11TRUE16:       ; %bb.0:
-; GFX11TRUE16-NEXT:    s_lshr_b32 s3, s1, 16
-; GFX11TRUE16-NEXT:    s_lshr_b32 s4, s0, 16
+; GFX11TRUE16-NEXT:    s_lshr_b32 s3, s0, 16
 ; GFX11TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX11TRUE16-NEXT:    v_cmp_eq_u32_e64 s2, 0, v1
 ; GFX11TRUE16-NEXT:    v_mov_b16_e32 v0.l, s3
-; GFX11TRUE16-NEXT:    v_mov_b16_e32 v0.h, s4
-; GFX11TRUE16-NEXT:    v_mov_b16_e32 v1.l, s1
-; GFX11TRUE16-NEXT:    v_mov_b16_e32 v1.h, s0
-; GFX11TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11TRUE16-NEXT:    v_cndmask_b16 v0.h, v0.l, v0.h, s2
-; GFX11TRUE16-NEXT:    v_cndmask_b16 v0.l, v1.l, v1.h, vcc_lo
-; GFX11TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11TRUE16-NEXT:    v_mov_b16_e32 v0.h, s0
+; GFX11TRUE16-NEXT:    s_lshr_b32 s0, s1, 16
+; GFX11TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
+; GFX11TRUE16-NEXT:    v_cndmask_b16 v1.h, s0, v0.l, s2
+; GFX11TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11TRUE16-NEXT:    v_cndmask_b16 v1.l, s1, v0.h, vcc_lo
+; GFX11TRUE16-NEXT:    v_readfirstlane_b32 s0, v1
 ; GFX11TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX11FAKE16-LABEL: s_vselect_v2bf16:
@@ -40655,30 +40651,25 @@ define amdgpu_ps <2 x i32> @s_vselect_v4bf16(<4 x bfloat> inreg %a, <4 x bfloat>
 ;
 ; GFX11TRUE16-LABEL: s_vselect_v4bf16:
 ; GFX11TRUE16:       ; %bb.0:
-; GFX11TRUE16-NEXT:    s_lshr_b32 s7, s3, 16
+; GFX11TRUE16-NEXT:    s_lshr_b32 s7, s1, 16
+; GFX11TRUE16-NEXT:    s_lshr_b32 s9, s0, 16
 ; GFX11TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX11TRUE16-NEXT:    v_cmp_eq_u32_e64 s4, 0, v1
-; GFX11TRUE16-NEXT:    s_lshr_b32 s8, s1, 16
-; GFX11TRUE16-NEXT:    v_mov_b16_e32 v0.l, s7
-; GFX11TRUE16-NEXT:    v_mov_b16_e32 v1.l, s3
-; GFX11TRUE16-NEXT:    s_lshr_b32 s3, s2, 16
-; GFX11TRUE16-NEXT:    s_lshr_b32 s7, s0, 16
 ; GFX11TRUE16-NEXT:    v_cmp_eq_u32_e64 s5, 0, v2
 ; GFX11TRUE16-NEXT:    v_cmp_eq_u32_e64 s6, 0, v3
-; GFX11TRUE16-NEXT:    v_mov_b16_e32 v0.h, s8
-; GFX11TRUE16-NEXT:    v_mov_b16_e32 v1.h, s3
-; GFX11TRUE16-NEXT:    v_mov_b16_e32 v2.l, s7
-; GFX11TRUE16-NEXT:    v_mov_b16_e32 v2.h, s2
-; GFX11TRUE16-NEXT:    v_mov_b16_e32 v3.l, s0
-; GFX11TRUE16-NEXT:    v_mov_b16_e32 v3.h, s1
-; GFX11TRUE16-NEXT:    v_cndmask_b16 v0.h, v0.l, v0.h, s6
-; GFX11TRUE16-NEXT:    v_cndmask_b16 v4.h, v1.h, v2.l, s4
-; GFX11TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11TRUE16-NEXT:    v_cndmask_b16 v4.l, v2.h, v3.l, vcc_lo
-; GFX11TRUE16-NEXT:    v_cndmask_b16 v0.l, v1.l, v3.h, s5
+; GFX11TRUE16-NEXT:    v_mov_b16_e32 v0.l, s7
+; GFX11TRUE16-NEXT:    v_mov_b16_e32 v0.h, s9
+; GFX11TRUE16-NEXT:    v_mov_b16_e32 v1.l, s0
+; GFX11TRUE16-NEXT:    v_mov_b16_e32 v1.h, s1
+; GFX11TRUE16-NEXT:    s_lshr_b32 s8, s3, 16
+; GFX11TRUE16-NEXT:    s_lshr_b32 s0, s2, 16
+; GFX11TRUE16-NEXT:    v_cndmask_b16 v2.h, s8, v0.l, s6
+; GFX11TRUE16-NEXT:    v_cndmask_b16 v0.h, s0, v0.h, s4
+; GFX11TRUE16-NEXT:    v_cndmask_b16 v0.l, s2, v1.l, vcc_lo
+; GFX11TRUE16-NEXT:    v_cndmask_b16 v2.l, s3, v1.h, s5
 ; GFX11TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11TRUE16-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX11TRUE16-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX11TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11TRUE16-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX11TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX11FAKE16-LABEL: s_vselect_v4bf16:
