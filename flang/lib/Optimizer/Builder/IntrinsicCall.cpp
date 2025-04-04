@@ -48,6 +48,7 @@
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "llvm/Support/CommandLine.h"
@@ -6552,23 +6553,15 @@ IntrinsicLibrary::genMatchAnySync(mlir::Type resultType,
   assert(args.size() == 2);
   bool is32 = args[1].getType().isInteger(32) || args[1].getType().isF32();
 
-  llvm::StringRef funcName =
-      is32 ? "llvm.nvvm.match.any.sync.i32p" : "llvm.nvvm.match.any.sync.i64p";
-  mlir::MLIRContext *context = builder.getContext();
-  mlir::Type i32Ty = builder.getI32Type();
-  mlir::Type i64Ty = builder.getI64Type();
-  mlir::Type valTy = is32 ? i32Ty : i64Ty;
+  mlir::Value arg1 = args[1];
+  if (arg1.getType().isF32() || arg1.getType().isF64())
+    arg1 = builder.create<fir::ConvertOp>(
+        loc, is32 ? builder.getI32Type() : builder.getI64Type(), arg1);
 
-  mlir::FunctionType ftype =
-      mlir::FunctionType::get(context, {i32Ty, valTy}, {i32Ty});
-  auto funcOp = builder.createFunction(loc, funcName, ftype);
-  llvm::SmallVector<mlir::Value> filteredArgs;
-  filteredArgs.push_back(args[0]);
-  if (args[1].getType().isF32() || args[1].getType().isF64())
-    filteredArgs.push_back(builder.create<fir::ConvertOp>(loc, valTy, args[1]));
-  else
-    filteredArgs.push_back(args[1]);
-  return builder.create<fir::CallOp>(loc, funcOp, filteredArgs).getResult(0);
+  return builder
+      .create<mlir::NVVM::MatchSyncOp>(loc, resultType, args[0], arg1,
+                                       mlir::NVVM::MatchSyncKind::any)
+      .getResult();
 }
 
 // MATMUL
