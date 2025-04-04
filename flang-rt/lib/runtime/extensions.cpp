@@ -272,5 +272,8 @@ void FORTRAN_PROCEDURE_NAME(qsort)(int *array, int *len, int *isize,
 // PERROR(STRING)
 void RTNAME(Perror)(const char *str) { perror(str); }
 
+// GNU extension function TIME()
+std::int64_t RTNAME(time)() { return time(nullptr); }
+
 } // namespace Fortran::runtime
 } // extern "C"
