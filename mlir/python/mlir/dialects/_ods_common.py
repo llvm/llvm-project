@@ -105,7 +105,7 @@ def get_op_result_or_value(
     elif isinstance(arg, _cext.ir.OpResultList):
         return arg[0]
     else:
-        assert isinstance(arg, _cext.ir.Value)
+        assert isinstance(arg, _cext.ir.Value), f"expects Value, got {type(arg)}"
         return arg
 
 
@@ -146,6 +146,7 @@ def get_op_result_or_op_results(
         return op.operation
     else:
         return op
+
 
 ResultValueTypeTuple = _cext.ir.Operation, _cext.ir.OpView, _cext.ir.Value
 ResultValueT = _Union[ResultValueTypeTuple]
