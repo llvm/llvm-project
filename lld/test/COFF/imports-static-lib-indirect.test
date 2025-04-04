@@ -7,7 +7,7 @@
 # RUN: llvm-lib %t.other.obj -out:%t.other.lib
 # RUN: lld-link %t.other.lib %t.main.obj -out:%t.dll -dll 2>&1 | FileCheck %s
 
-CHECK: warning: {{.*}} [LNK4217]
+CHECK: warning: {{.*}} locally defined symbol imported: foo {{.*}} [LNK4217]
 
 #--- other.s
 .text
