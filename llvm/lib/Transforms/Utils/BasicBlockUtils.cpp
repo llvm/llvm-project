@@ -1907,11 +1907,11 @@ void llvm::InvertBranch(BranchInst *PBI, IRBuilderBase &Builder) {
   PBI->swapSuccessors();
 }
 
-bool llvm::hasOnlySimpleTerminator(const Function &F) {
+bool llvm::hasOnlySimpleTerminator(const Function &F, bool AllowCallBr) {
   for (auto &BB : F) {
     auto *Term = BB.getTerminator();
     if (!(isa<ReturnInst>(Term) || isa<UnreachableInst>(Term) ||
-          isa<BranchInst>(Term)))
+          isa<BranchInst>(Term) || (AllowCallBr && isa<CallBrInst>(Term))))
       return false;
   }
   return true;

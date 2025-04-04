@@ -1693,7 +1693,7 @@ bool IRTranslator::translateGetElementPtr(const User &U,
   return true;
 }
 
-bool IRTranslator::translateMemFunc(const CallInst &CI,
+bool IRTranslator::translateMemFunc(const CallBase &CI,
                                     MachineIRBuilder &MIRBuilder,
                                     unsigned Opcode) {
   const Value *SrcPtr = CI.getArgOperand(1);
@@ -1784,7 +1784,7 @@ bool IRTranslator::translateMemFunc(const CallInst &CI,
   return true;
 }
 
-bool IRTranslator::translateTrap(const CallInst &CI,
+bool IRTranslator::translateTrap(const CallBase &CI,
                                  MachineIRBuilder &MIRBuilder,
                                  unsigned Opcode) {
   StringRef TrapFuncName =
@@ -1811,7 +1811,7 @@ bool IRTranslator::translateTrap(const CallInst &CI,
 }
 
 bool IRTranslator::translateVectorInterleave2Intrinsic(
-    const CallInst &CI, MachineIRBuilder &MIRBuilder) {
+    const CallBase &CI, MachineIRBuilder &MIRBuilder) {
   assert(CI.getIntrinsicID() == Intrinsic::vector_interleave2 &&
          "This function can only be called on the interleave2 intrinsic!");
   // Canonicalize interleave2 to G_SHUFFLE_VECTOR (similar to SelectionDAG).
@@ -1827,7 +1827,7 @@ bool IRTranslator::translateVectorInterleave2Intrinsic(
 }
 
 bool IRTranslator::translateVectorDeinterleave2Intrinsic(
-    const CallInst &CI, MachineIRBuilder &MIRBuilder) {
+    const CallBase &CI, MachineIRBuilder &MIRBuilder) {
   assert(CI.getIntrinsicID() == Intrinsic::vector_deinterleave2 &&
          "This function can only be called on the deinterleave2 intrinsic!");
   // Canonicalize deinterleave2 to shuffles that extract sub-vectors (similar to
@@ -1867,7 +1867,7 @@ void IRTranslator::getStackGuard(Register DstReg,
   MIB.setMemRefs({MemRef});
 }
 
-bool IRTranslator::translateOverflowIntrinsic(const CallInst &CI, unsigned Op,
+bool IRTranslator::translateOverflowIntrinsic(const CallBase &CI, unsigned Op,
                                               MachineIRBuilder &MIRBuilder) {
   ArrayRef<Register> ResRegs = getOrCreateVRegs(CI);
   MIRBuilder.buildInstr(
@@ -1877,7 +1877,7 @@ bool IRTranslator::translateOverflowIntrinsic(const CallInst &CI, unsigned Op,
   return true;
 }
 
-bool IRTranslator::translateFixedPointIntrinsic(unsigned Op, const CallInst &CI,
+bool IRTranslator::translateFixedPointIntrinsic(unsigned Op, const CallBase &CI,
                                                 MachineIRBuilder &MIRBuilder) {
   Register Dst = getOrCreateVReg(CI);
   Register Src0 = getOrCreateVReg(*CI.getOperand(0));
@@ -2022,7 +2022,7 @@ unsigned IRTranslator::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
   return Intrinsic::not_intrinsic;
 }
 
-bool IRTranslator::translateSimpleIntrinsic(const CallInst &CI,
+bool IRTranslator::translateSimpleIntrinsic(const CallBase &CI,
                                             Intrinsic::ID ID,
                                             MachineIRBuilder &MIRBuilder) {
 
@@ -2144,7 +2144,7 @@ static unsigned getConvOpcode(Intrinsic::ID ID) {
 }
 
 bool IRTranslator::translateConvergenceControlIntrinsic(
-    const CallInst &CI, Intrinsic::ID ID, MachineIRBuilder &MIRBuilder) {
+    const CallBase &CI, Intrinsic::ID ID, MachineIRBuilder &MIRBuilder) {
   MachineInstrBuilder MIB = MIRBuilder.buildInstr(getConvOpcode(ID));
   Register OutputReg = getOrCreateConvergenceTokenVReg(CI);
   MIB.addDef(OutputReg);
@@ -2160,7 +2160,7 @@ bool IRTranslator::translateConvergenceControlIntrinsic(
   return true;
 }
 
-bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
+bool IRTranslator::translateKnownIntrinsic(const CallBase &CI, Intrinsic::ID ID,
                                            MachineIRBuilder &MIRBuilder) {
   if (auto *MI = dyn_cast<AnyMemIntrinsic>(&CI)) {
     if (ORE->enabled()) {
@@ -2754,7 +2754,7 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
   if (containsBF16Type(U))
     return false;
 
-  const CallInst &CI = cast<CallInst>(U);
+  const CallBase &CI = cast<CallBase>(U);
   const Function *F = CI.getCalledFunction();
 
   // FIXME: support Windows dllimport function calls and calls through
@@ -3007,8 +3007,56 @@ bool IRTranslator::translateInvoke(const User &U,
 
 bool IRTranslator::translateCallBr(const User &U,
                                    MachineIRBuilder &MIRBuilder) {
-  // FIXME: Implement this.
-  return false;
+  const CallBrInst &I = cast<CallBrInst>(U);
+  MachineBasicBlock *CallBrMBB = &MIRBuilder.getMBB();
+
+  // TODO: operand bundles (see SelDAG implementation of callbr)?
+  assert(!I.hasOperandBundles() &&
+         "Cannot lower callbrs with operand bundles yet");
+
+  if (I.isInlineAsm()) {
+    // FIXME: inline asm not yet supported
+    if (!translateInlineAsm(I, MIRBuilder))
+      return false;
+  } else if (I.getIntrinsicID() != Intrinsic::not_intrinsic) {
+    switch (I.getIntrinsicID()) {
+    default:
+      return false;
+    case Intrinsic::amdgcn_kill:
+      if (!translateCall(I, MIRBuilder))
+        return false;
+      break;
+    }
+  } else {
+    return false;
+  }
+
+  // Retrieve successors.
+  SmallPtrSet<BasicBlock *, 8> Dests;
+  Dests.insert(I.getDefaultDest());
+  MachineBasicBlock *Return = &getMBB(*I.getDefaultDest());
+
+  // Update successor info.
+  addSuccessorWithProb(CallBrMBB, Return, BranchProbability::getOne());
+  // TODO: For most of the cases where there is an intrinsic callbr, we're
+  // having exactly one indirect target, which will be unreachable. As soon as
+  // this changes, we might need to enhance
+  // Target->setIsInlineAsmBrIndirectTarget or add something similar for
+  // intrinsic indirect branches.
+  if (I.isInlineAsm()) {
+    for (BasicBlock *Dest : I.getIndirectDests()) {
+      MachineBasicBlock *Target = &getMBB(*Dest);
+      Target->setIsInlineAsmBrIndirectTarget();
+      Target->setMachineBlockAddressTaken();
+      Target->setLabelMustBeEmitted();
+      // Don't add duplicate machine successors.
+      if (Dests.insert(Dest).second)
+        addSuccessorWithProb(CallBrMBB, Target, BranchProbability::getZero());
+    }
+  }
+  CallBrMBB->normalizeSuccProbs();
+
+  return true;
 }
 
 bool IRTranslator::translateLandingPad(const User &U,

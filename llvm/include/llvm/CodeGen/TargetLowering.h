@@ -1238,7 +1238,7 @@ public:
   /// to a MemIntrinsicNode (touches memory). If this is the case, it returns
   /// true and store the intrinsic information into the IntrinsicInfo that was
   /// passed to the function.
-  virtual bool getTgtMemIntrinsic(IntrinsicInfo &, const CallInst &,
+  virtual bool getTgtMemIntrinsic(IntrinsicInfo &, const CallBase &,
                                   MachineFunction &,
                                   unsigned /*Intrinsic*/) const {
     return false;
@@ -5147,9 +5147,9 @@ public:
                                               const AsmOperandInfo &OpInfo,
                                               SelectionDAG &DAG) const;
 
-  // Targets may override this function to collect operands from the CallInst
+  // Targets may override this function to collect operands from the CallBase
   // and for example, lower them into the SelectionDAG operands.
-  virtual void CollectTargetIntrinsicOperands(const CallInst &I,
+  virtual void CollectTargetIntrinsicOperands(const CallBase &I,
                                               SmallVectorImpl<SDValue> &Ops,
                                               SelectionDAG &DAG) const;
 
