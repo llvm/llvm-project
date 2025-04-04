@@ -126,7 +126,8 @@ static int ActOnMatchingPlugins(
 
   for (const PluginNamespace &plugin_namespace : PluginNamespaces) {
     std::vector<RegisteredPluginInfo> matching_plugins;
-    for (const RegisteredPluginInfo &plugin_info : plugin_namespace.get_info()) {
+    for (const RegisteredPluginInfo &plugin_info :
+         plugin_namespace.get_info()) {
       std::string qualified_name =
           (plugin_namespace.name + "." + plugin_info.name).str();
       if (pattern.match(qualified_name))
