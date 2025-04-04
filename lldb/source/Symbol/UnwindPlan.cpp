@@ -451,7 +451,7 @@ const UnwindPlan::Row *UnwindPlan::GetLastRow() const {
   return m_row_list.back().get();
 }
 
-bool UnwindPlan::PlanValidAtAddress(Address addr) const {
+bool UnwindPlan::PlanValidAtAddress(Address addr) {
   // If this UnwindPlan has no rows, it is an invalid UnwindPlan.
   if (GetRowCount() == 0) {
     Log *log = GetLog(LLDBLog::Unwind);

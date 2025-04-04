@@ -36,19 +36,18 @@ public:
 
   ~FuncUnwinders();
 
-  std::shared_ptr<const UnwindPlan> GetUnwindPlanAtCallSite(Target &target,
-                                                            Thread &thread);
+  lldb::UnwindPlanSP GetUnwindPlanAtCallSite(Target &target, Thread &thread);
 
-  std::shared_ptr<const UnwindPlan>
-  GetUnwindPlanAtNonCallSite(Target &target, lldb_private::Thread &thread);
+  lldb::UnwindPlanSP GetUnwindPlanAtNonCallSite(Target &target,
+                                                lldb_private::Thread &thread);
 
-  std::shared_ptr<const UnwindPlan>
-  GetUnwindPlanFastUnwind(Target &target, lldb_private::Thread &thread);
+  lldb::UnwindPlanSP GetUnwindPlanFastUnwind(Target &target,
+                                             lldb_private::Thread &thread);
 
-  std::shared_ptr<const UnwindPlan>
+  lldb::UnwindPlanSP
   GetUnwindPlanArchitectureDefault(lldb_private::Thread &thread);
 
-  std::shared_ptr<const UnwindPlan>
+  lldb::UnwindPlanSP
   GetUnwindPlanArchitectureDefaultAtFunctionEntry(lldb_private::Thread &thread);
 
   Address &GetFirstNonPrologueInsn(Target &target);
@@ -78,34 +77,32 @@ public:
   // used. Instead, clients should ask for the *behavior* they are looking for,
   // using one of the above UnwindPlan retrieval methods.
 
-  std::shared_ptr<const UnwindPlan> GetAssemblyUnwindPlan(Target &target,
-                                                          Thread &thread);
+  lldb::UnwindPlanSP GetAssemblyUnwindPlan(Target &target, Thread &thread);
 
-  std::shared_ptr<const UnwindPlan> GetObjectFileUnwindPlan(Target &target);
+  lldb::UnwindPlanSP GetObjectFileUnwindPlan(Target &target);
 
-  std::shared_ptr<const UnwindPlan>
-  GetObjectFileAugmentedUnwindPlan(Target &target, Thread &thread);
+  lldb::UnwindPlanSP GetObjectFileAugmentedUnwindPlan(Target &target,
+                                                      Thread &thread);
 
-  std::shared_ptr<const UnwindPlan> GetEHFrameUnwindPlan(Target &target);
+  lldb::UnwindPlanSP GetEHFrameUnwindPlan(Target &target);
 
-  std::shared_ptr<const UnwindPlan>
-  GetEHFrameAugmentedUnwindPlan(Target &target, Thread &thread);
+  lldb::UnwindPlanSP GetEHFrameAugmentedUnwindPlan(Target &target,
+                                                   Thread &thread);
 
-  std::shared_ptr<const UnwindPlan> GetDebugFrameUnwindPlan(Target &target);
+  lldb::UnwindPlanSP GetDebugFrameUnwindPlan(Target &target);
 
-  std::shared_ptr<const UnwindPlan>
-  GetDebugFrameAugmentedUnwindPlan(Target &target, Thread &thread);
+  lldb::UnwindPlanSP GetDebugFrameAugmentedUnwindPlan(Target &target,
+                                                      Thread &thread);
 
-  std::shared_ptr<const UnwindPlan> GetCompactUnwindUnwindPlan(Target &target);
+  lldb::UnwindPlanSP GetCompactUnwindUnwindPlan(Target &target);
 
-  std::shared_ptr<const UnwindPlan> GetArmUnwindUnwindPlan(Target &target);
+  lldb::UnwindPlanSP GetArmUnwindUnwindPlan(Target &target);
 
-  std::shared_ptr<const UnwindPlan> GetSymbolFileUnwindPlan(Thread &thread);
+  lldb::UnwindPlanSP GetSymbolFileUnwindPlan(Thread &thread);
 
-  std::shared_ptr<const UnwindPlan> GetArchDefaultUnwindPlan(Thread &thread);
+  lldb::UnwindPlanSP GetArchDefaultUnwindPlan(Thread &thread);
 
-  std::shared_ptr<const UnwindPlan>
-  GetArchDefaultAtFuncEntryUnwindPlan(Thread &thread);
+  lldb::UnwindPlanSP GetArchDefaultAtFuncEntryUnwindPlan(Thread &thread);
 
 private:
   lldb::UnwindAssemblySP GetUnwindAssemblyProfiler(Target &target);
@@ -116,8 +113,7 @@ private:
   // unwind rule for the pc, and LazyBoolCalculate if it was unable to
   // determine this for some reason.
   lldb_private::LazyBool CompareUnwindPlansForIdenticalInitialPCLocation(
-      Thread &thread, const std::shared_ptr<const UnwindPlan> &a,
-      const std::shared_ptr<const UnwindPlan> &b);
+      Thread &thread, const lldb::UnwindPlanSP &a, const lldb::UnwindPlanSP &b);
 
   UnwindTable &m_unwind_table;
 
@@ -133,22 +129,22 @@ private:
 
   std::recursive_mutex m_mutex;
 
-  std::shared_ptr<const UnwindPlan> m_unwind_plan_assembly_sp;
-  std::shared_ptr<const UnwindPlan> m_unwind_plan_object_file_sp;
-  std::shared_ptr<const UnwindPlan> m_unwind_plan_eh_frame_sp;
-  std::shared_ptr<const UnwindPlan> m_unwind_plan_debug_frame_sp;
+  lldb::UnwindPlanSP m_unwind_plan_assembly_sp;
+  lldb::UnwindPlanSP m_unwind_plan_object_file_sp;
+  lldb::UnwindPlanSP m_unwind_plan_eh_frame_sp;
+  lldb::UnwindPlanSP m_unwind_plan_debug_frame_sp;
 
   // augmented by assembly inspection so it's valid everywhere
-  std::shared_ptr<const UnwindPlan> m_unwind_plan_object_file_augmented_sp;
-  std::shared_ptr<const UnwindPlan> m_unwind_plan_eh_frame_augmented_sp;
-  std::shared_ptr<const UnwindPlan> m_unwind_plan_debug_frame_augmented_sp;
+  lldb::UnwindPlanSP m_unwind_plan_object_file_augmented_sp;
+  lldb::UnwindPlanSP m_unwind_plan_eh_frame_augmented_sp;
+  lldb::UnwindPlanSP m_unwind_plan_debug_frame_augmented_sp;
 
-  std::vector<std::shared_ptr<const UnwindPlan>> m_unwind_plan_compact_unwind;
-  std::shared_ptr<const UnwindPlan> m_unwind_plan_arm_unwind_sp;
-  std::shared_ptr<const UnwindPlan> m_unwind_plan_symbol_file_sp;
-  std::shared_ptr<const UnwindPlan> m_unwind_plan_fast_sp;
-  std::shared_ptr<const UnwindPlan> m_unwind_plan_arch_default_sp;
-  std::shared_ptr<const UnwindPlan> m_unwind_plan_arch_default_at_func_entry_sp;
+  std::vector<lldb::UnwindPlanSP> m_unwind_plan_compact_unwind;
+  lldb::UnwindPlanSP m_unwind_plan_arm_unwind_sp;
+  lldb::UnwindPlanSP m_unwind_plan_symbol_file_sp;
+  lldb::UnwindPlanSP m_unwind_plan_fast_sp;
+  lldb::UnwindPlanSP m_unwind_plan_arch_default_sp;
+  lldb::UnwindPlanSP m_unwind_plan_arch_default_at_func_entry_sp;
 
   // Fetching the UnwindPlans can be expensive - if we've already attempted to
   // get one & failed, don't try again.
