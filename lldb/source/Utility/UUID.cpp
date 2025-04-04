@@ -123,7 +123,8 @@ UUID UUID::Generate(uint32_t num_bytes) {
   // If getRandomBytes failed, fall back to a lower entropy source.
   if (ec) {
     auto seed = std::chrono::steady_clock::now().time_since_epoch().count();
-    std::independent_bits_engine<std::default_random_engine, CHAR_BIT, uint8_t>
+    std::independent_bits_engine<std::default_random_engine, CHAR_BIT,
+                                 unsigned short>
         engine(seed);
     std::generate(bytes.begin(), bytes.end(), std::ref(engine));
   }
