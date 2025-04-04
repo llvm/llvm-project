@@ -927,8 +927,6 @@ static bool areExprsSameMacroOrLiteral(const BinaryOperator *BinOp,
   if (Lil && Ril)
     return Lil->getValue() == Ril->getValue();
 
-  const auto *LStrl = dyn_cast<StringLiteral>(Lhs);
-  const auto *RStrl = dyn_cast<StringLiteral>(Rhs);
   const auto *Lbl = dyn_cast<CXXBoolLiteralExpr>(Lhs);
   const auto *Rbl = dyn_cast<CXXBoolLiteralExpr>(Rhs);
   if (Lbl && Rbl)
