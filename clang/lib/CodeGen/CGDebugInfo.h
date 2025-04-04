@@ -228,6 +228,8 @@ class CGDebugInfo {
   llvm::DIType *CreateType(const MemberPointerType *Ty, llvm::DIFile *F);
   llvm::DIType *CreateType(const AtomicType *Ty, llvm::DIFile *F);
   llvm::DIType *CreateType(const PipeType *Ty, llvm::DIFile *F);
+  llvm::DIType *CreateType(const SubstTemplateTypeParmType *Ty,
+                           llvm::DIFile *F);
   /// Get enumeration type.
   llvm::DIType *CreateEnumType(const EnumType *Ty);
   llvm::DIType *CreateTypeDefinition(const EnumType *Ty);
@@ -303,8 +305,9 @@ class CGDebugInfo {
     llvm::ArrayRef<TemplateArgument> Args;
   };
   /// A helper function to collect template parameters.
-  llvm::DINodeArray CollectTemplateParams(std::optional<TemplateArgs> Args,
-                                          llvm::DIFile *Unit);
+  llvm::DINodeArray
+  CollectTemplateParams(std::optional<TemplateArgs> Args, llvm::DIFile *Unit,
+                        llvm::DICompositeType *RealDecl = nullptr);
   /// A helper function to collect debug info for function template
   /// parameters.
   llvm::DINodeArray CollectFunctionTemplateParams(const FunctionDecl *FD,
@@ -321,8 +324,9 @@ class CGDebugInfo {
 
   /// A helper function to collect debug info for template
   /// parameters.
-  llvm::DINodeArray CollectCXXTemplateParams(const RecordDecl *TS,
-                                             llvm::DIFile *F);
+  llvm::DINodeArray
+  CollectCXXTemplateParams(const RecordDecl *TS, llvm::DIFile *F,
+                           llvm::DICompositeType *RealDecl = nullptr);
 
   /// A helper function to collect debug info for btf_decl_tag annotations.
   llvm::DINodeArray CollectBTFDeclTagAnnotations(const Decl *D);
