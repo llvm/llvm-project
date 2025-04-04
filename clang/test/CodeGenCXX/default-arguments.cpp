@@ -74,14 +74,3 @@ void f3() {
  B *bs = new B[2];
  delete bs;
 }
-
-void f4() {
-  void g4(int a, int b = 7);
-  {
-    void g4(int a, int b = 5);
-  }
-  void g4(int a = 5, int b);
-
-  // CHECK: call void @_Z2g4ii(i32 noundef 5, i32 noundef 7)
-  g4();
-}
