@@ -974,11 +974,6 @@ def Tosa_MinimumOp : Tosa_ElementwiseOp<"minimum", [
   ];
 }
 
-def MulOperandsAndResultElementType :
-  NativeOpTrait<"MulOperandsAndResultElementType"> {
-  let cppNamespace = "mlir::OpTrait::tosa";
-}
-
 //===----------------------------------------------------------------------===//
 // Operator: mul
 //===----------------------------------------------------------------------===//
