@@ -322,20 +322,8 @@ function(create_libc_unittest fq_target_name)
         ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:${fq_build_target_name}>)
     add_custom_target(
       ${fq_target_name}
-      DEPENDS ${fq_target_name}.__cmd__
-    )
-
-    add_custom_command(
-      OUTPUT ${fq_target_name}.__cmd__
-      COMMAND ${test_cmd}
-      COMMAND_EXPAND_LISTS
+      COMMAND ${LIBC_UNITTEST_ENV} ${CMAKE_CROSSCOMPILING_EMULATOR} ${fq_build_target_name}
       COMMENT "Running unit test ${fq_target_name}"
-      ${LIBC_UNIT_TEST_JOB_POOL}
-    )
-
-    set_source_files_properties(${fq_target_name}.__cmd__
-      PROPERTIES
-        SYMBOLIC "TRUE"
     )
   endif()
 
