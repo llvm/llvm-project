@@ -268,7 +268,8 @@ public:
 
   // Creates a snippet generator for the given mode.
   std::unique_ptr<SnippetGenerator>
-  createSnippetGenerator(Benchmark::ModeE Mode, const LLVMState &State,
+  createSnippetGenerator(Benchmark::ModeE Mode,
+                         const LLVMState &State,
                          const SnippetGenerator::Options &Opts) const;
   // Creates a benchmark runner for the given mode.
   Expected<std::unique_ptr<BenchmarkRunner>> createBenchmarkRunner(
