@@ -538,6 +538,7 @@ Retry:
   case tok::annot_pragma_attribute:
     HandlePragmaAttribute();
     return StmtEmpty();
+
   case tok::annot_pragma_export:
     ProhibitAttributes(CXX11Attrs);
     ProhibitAttributes(GNUAttrs);

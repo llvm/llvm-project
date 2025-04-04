@@ -6503,10 +6503,10 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
           existingAttr->getVisibility();
       if (existingValue != VisibilityAttr::Default)
         Diag(D.getExportLoc(), diag::err_mismatched_visibility);
-    } else {
+    } else
+      // Add VisibilityAttr::Default since the default could be hidden, etc
       New->addAttr(
           VisibilityAttr::CreateImplicit(Context, VisibilityAttr::Default));
-    }
   }
 
   // If this has an identifier and is not a function template specialization,
@@ -6745,6 +6745,9 @@ Sema::ActOnTypedefDeclarator(Scope* S, Declarator& D, DeclContext* DC,
           << D.getName().getSourceRange();
     return nullptr;
   }
+
+  if (D.IsExport())
+    Diag(D.getName().StartLocation, diag::err_cannot_be_exported);
 
   TypedefDecl *NewTD = ParseTypedefDecl(S, D, TInfo->getType(), TInfo);
   if (!NewTD) return nullptr;
@@ -8207,6 +8210,9 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     CheckShadow(NewVD, ShadowedDecl, Previous);
 
   ProcessPragmaWeak(S, NewVD);
+
+  if (D.IsExport() && !NewVD->hasExternalFormalLinkage())
+    Diag(D.getIdentifierLoc(), diag::err_cannot_be_exported);
 
   // If this is the first declaration of an extern C variable, update
   // the map of such variables.
@@ -10851,6 +10857,10 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   }
 
   ProcessPragmaWeak(S, NewFD);
+
+  if (D.IsExport() && !NewFD->hasExternalFormalLinkage())
+    Diag(D.getIdentifierLoc(), diag::err_cannot_be_exported);
+
   checkAttributesAfterMerging(*this, *NewFD);
 
   AddKnownFunctionAttributes(NewFD);
@@ -15343,6 +15353,9 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D,
   if (getLangOpts().OpenCL)
     deduceOpenCLAddressSpace(New);
 
+  if (D.IsExport())
+    Diag(D.getIdentifierLoc(), diag::err_cannot_be_exported);
+
   return New;
 }
 
@@ -18704,6 +18717,9 @@ FieldDecl *Sema::HandleField(Scope *S, RecordDecl *Record,
     PushOnScopeChains(NewFD, S);
   } else
     Record->addDecl(NewFD);
+
+  if (D.IsExport())
+    Diag(D.getIdentifierLoc(), diag::err_cannot_be_exported);
 
   return NewFD;
 }

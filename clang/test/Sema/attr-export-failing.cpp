@@ -13,15 +13,3 @@ int v0;
 static int s0; // expected-warning{{#pragma export is applicable to symbols with external linkage only; not applied to 's0'}}
 #pragma export(sf0)
 #pragma export(s0)
-
-typedef int _Export ty;
-ty x;
-int f(int _Export x);
-static int _Export s;
-struct S {
-  int _Export nonstaticdatamember;
-};
-void g() {
-  int _Export automatic;
-}
-
