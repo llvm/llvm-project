@@ -2184,6 +2184,40 @@ size_t Process::ReadMemoryFromInferior(addr_t addr, void *buf, size_t size,
   return bytes_read;
 }
 
+size_t Process::ReadMemoryInChunks(lldb::addr_t vm_addr, DataBufferHeap &data,
+                                   size_t size,
+                                   ReadMemoryChunkCallback callback) {
+  // Safety check to prevent an infinite loop.
+  if (data.GetByteSize() == 0)
+    return 0;
+
+  uint64_t bytes_remaining = size;
+  uint64_t bytes_read = 0;
+  Status error;
+  while (bytes_remaining > 0) {
+    // Get the next read chunk size as the minimum of the remaining bytes and
+    // the write chunk max size.
+    const size_t bytes_to_read = std::min(bytes_remaining, data.GetByteSize());
+    const lldb::addr_t current_addr = vm_addr + bytes_read;
+    const size_t bytes_read_for_chunk = ReadMemoryFromInferior(
+        current_addr, data.GetBytes(), bytes_to_read, error);
+
+    if (callback(error, data, current_addr, bytes_to_read,
+                 bytes_read_for_chunk) == IterationAction::Stop)
+      break;
+
+    bytes_read += bytes_read_for_chunk;
+    // If the bytes read in this chunk would cause us to overflow, something
+    // went wrong and we should fail fast.
+    if (bytes_read_for_chunk > bytes_remaining)
+      return 0;
+    else
+      bytes_remaining -= bytes_read_for_chunk;
+  }
+
+  return bytes_read;
+}
+
 uint64_t Process::ReadUnsignedIntegerFromMemory(lldb::addr_t vm_addr,
                                                 size_t integer_byte_size,
                                                 uint64_t fail_value,
