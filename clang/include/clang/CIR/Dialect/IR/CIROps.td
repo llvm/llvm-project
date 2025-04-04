@@ -576,8 +576,8 @@ def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
 def BreakOp : CIR_Op<"break", [Terminator]> {
   let summary = "C/C++ `break` statement equivalent";
   let description = [{
-    The `cir.break` operation is used to cease the execution of the current
-    loop or switch and transfer control to the parent operation. It is only
+    The `cir.break` operation is used to cease the execution of the current loop
+    or switch operation and transfer control to the parent operation. It is only
     allowed within a breakable operations (loops and switches).
   }];
   let assemblyFormat = "attr-dict";
