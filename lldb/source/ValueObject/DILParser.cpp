@@ -82,7 +82,37 @@ ASTNodeUP DILParser::Run() {
 //  expression:
 //    primary_expression
 //
-ASTNodeUP DILParser::ParseExpression() { return ParsePrimaryExpression(); }
+ASTNodeUP DILParser::ParseExpression() { return ParseUnaryExpression(); }
+
+// Parse an unary_expression.
+//
+//  unary_expression:
+//    unary_operator primary_expression
+//
+//  unary_operator:
+//    "&"
+//    "*"
+//
+ASTNodeUP DILParser::ParseUnaryExpression() {
+  if (CurToken().IsOneOf({Token::amp, Token::star})) {
+    Token token = CurToken();
+    uint32_t loc = token.GetLocation();
+    m_dil_lexer.Advance();
+    auto rhs = ParsePrimaryExpression();
+    switch (token.GetKind()) {
+    case Token::star:
+      return std::make_unique<UnaryOpNode>(loc, UnaryOpKind::Deref,
+                                           std::move(rhs));
+    case Token::amp:
+      return std::make_unique<UnaryOpNode>(loc, UnaryOpKind::AddrOf,
+                                           std::move(rhs));
+
+    default:
+      llvm_unreachable("invalid token kind");
+    }
+  }
+  return ParsePrimaryExpression();
+}
 
 // Parse a primary_expression.
 //
