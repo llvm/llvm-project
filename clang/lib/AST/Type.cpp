@@ -4241,7 +4241,7 @@ PackIndexingType::PackIndexingType(const ASTContext &Context,
                           getTrailingObjects<QualType>());
 }
 
-std::optional<unsigned> PackIndexingType::getSelectedIndex() const {
+UnsignedOrNone PackIndexingType::getSelectedIndex() const {
   if (isInstantiationDependentType())
     return std::nullopt;
   // Should only be not a constant for error recovery.
@@ -4443,9 +4443,11 @@ static const TemplateTypeParmDecl *getReplacedParameter(Decl *D,
       getReplacedTemplateParameterList(D)->getParam(Index));
 }
 
-SubstTemplateTypeParmType::SubstTemplateTypeParmType(
-    QualType Replacement, Decl *AssociatedDecl, unsigned Index,
-    std::optional<unsigned> PackIndex, bool Final)
+SubstTemplateTypeParmType::SubstTemplateTypeParmType(QualType Replacement,
+                                                     Decl *AssociatedDecl,
+                                                     unsigned Index,
+                                                     UnsignedOrNone PackIndex,
+                                                     bool Final)
     : Type(SubstTemplateTypeParm, Replacement.getCanonicalType(),
            Replacement->getDependence()),
       AssociatedDecl(AssociatedDecl) {
@@ -4456,7 +4458,8 @@ SubstTemplateTypeParmType::SubstTemplateTypeParmType(
 
   SubstTemplateTypeParmTypeBits.Index = Index;
   SubstTemplateTypeParmTypeBits.Final = Final;
-  SubstTemplateTypeParmTypeBits.PackIndex = PackIndex ? *PackIndex + 1 : 0;
+  SubstTemplateTypeParmTypeBits.PackIndex =
+      PackIndex.toInternalRepresentation();
   assert(AssociatedDecl != nullptr);
 }
 
@@ -4469,12 +4472,11 @@ void SubstTemplateTypeParmType::Profile(llvm::FoldingSetNodeID &ID,
                                         QualType Replacement,
                                         const Decl *AssociatedDecl,
                                         unsigned Index,
-                                        std::optional<unsigned> PackIndex,
-                                        bool Final) {
+                                        UnsignedOrNone PackIndex, bool Final) {
   Replacement.Profile(ID);
   ID.AddPointer(AssociatedDecl);
   ID.AddInteger(Index);
-  ID.AddInteger(PackIndex ? *PackIndex - 1 : 0);
+  ID.AddInteger(PackIndex.toInternalRepresentation());
   ID.AddBoolean(Final);
 }
 

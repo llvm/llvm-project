@@ -4375,7 +4375,7 @@ static bool IsEquivalentFriend(ASTImporter &Importer, FriendDecl *FD1,
 static FriendCountAndPosition getFriendCountAndPosition(ASTImporter &Importer,
                                                         FriendDecl *FD) {
   unsigned int FriendCount = 0;
-  std::optional<unsigned int> FriendPosition;
+  UnsignedOrNone FriendPosition = std::nullopt;
   const auto *RD = cast<CXXRecordDecl>(FD->getLexicalDeclContext());
 
   for (FriendDecl *FoundFriend : RD->friends()) {
@@ -5997,8 +5997,7 @@ ASTNodeImporter::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
     if (Err)
       return std::move(Err);
 
-    ToD->setTypeConstraint(ToConceptRef, ToIDC,
-                           TC->getArgumentPackSubstitutionIndex());
+    ToD->setTypeConstraint(ToConceptRef, ToIDC, TC->getArgPackSubstIndex());
   }
 
   if (Error Err = importTemplateParameterDefaultArgument(D, ToD))
@@ -8314,7 +8313,7 @@ ExpectedStmt ASTNodeImporter::VisitSizeOfPackExpr(SizeOfPackExpr *E) {
   if (Err)
     return std::move(Err);
 
-  std::optional<unsigned> Length;
+  UnsignedOrNone Length = std::nullopt;
   if (!E->isValueDependent())
     Length = E->getPackLength();
 
@@ -9064,7 +9063,7 @@ ASTImporter::ASTImporter(ASTContext &ToContext, FileManager &ToFileManager,
 
 ASTImporter::~ASTImporter() = default;
 
-std::optional<unsigned> ASTImporter::getFieldIndex(Decl *F) {
+UnsignedOrNone ASTImporter::getFieldIndex(Decl *F) {
   assert(F && (isa<FieldDecl>(*F) || isa<IndirectFieldDecl>(*F)) &&
       "Try to get field index for non-field.");
 

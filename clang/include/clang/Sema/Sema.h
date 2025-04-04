@@ -6519,8 +6519,8 @@ public:
                                          RecordDecl *ClassDecl,
                                          const IdentifierInfo *Name);
 
-  std::optional<unsigned int> GetDecompositionElementCount(QualType DecompType,
-                                                           SourceLocation Loc);
+  UnsignedOrNone GetDecompositionElementCount(QualType DecompType,
+                                              SourceLocation Loc);
   void CheckCompleteDecompositionDeclaration(DecompositionDecl *DD);
 
   /// Stack containing information needed when in C++2a an 'auto' is encountered
@@ -9461,10 +9461,11 @@ public:
         Loc, ByRef, EllipsisLoc, std::nullopt, Id,
         InitKind != LambdaCaptureInitKind::CopyInit, Init));
   }
-  QualType buildLambdaInitCaptureInitialization(
-      SourceLocation Loc, bool ByRef, SourceLocation EllipsisLoc,
-      std::optional<unsigned> NumExpansions, IdentifierInfo *Id,
-      bool DirectInit, Expr *&Init);
+  QualType buildLambdaInitCaptureInitialization(SourceLocation Loc, bool ByRef,
+                                                SourceLocation EllipsisLoc,
+                                                UnsignedOrNone NumExpansions,
+                                                IdentifierInfo *Id,
+                                                bool DirectInit, Expr *&Init);
 
   /// Create a dummy variable within the declcontext of the lambda's
   ///  call operator, for name lookup purposes for a lambda init capture.
@@ -13919,28 +13920,25 @@ public:
   /// The current index into pack expansion arguments that will be
   /// used for substitution of parameter packs.
   ///
-  /// The pack expansion index will be -1 to indicate that parameter packs
+  /// The pack expansion index will be none to indicate that parameter packs
   /// should be instantiated as themselves. Otherwise, the index specifies
   /// which argument within the parameter pack will be used for substitution.
-  int ArgumentPackSubstitutionIndex;
+  UnsignedOrNone ArgPackSubstIndex;
 
   /// RAII object used to change the argument pack substitution index
   /// within a \c Sema object.
   ///
-  /// See \c ArgumentPackSubstitutionIndex for more information.
-  class ArgumentPackSubstitutionIndexRAII {
+  /// See \c ArgPackSubstIndex for more information.
+  class ArgPackSubstIndexRAII {
     Sema &Self;
-    int OldSubstitutionIndex;
+    UnsignedOrNone OldSubstIndex;
 
   public:
-    ArgumentPackSubstitutionIndexRAII(Sema &Self, int NewSubstitutionIndex)
-        : Self(Self), OldSubstitutionIndex(Self.ArgumentPackSubstitutionIndex) {
-      Self.ArgumentPackSubstitutionIndex = NewSubstitutionIndex;
-    }
+    ArgPackSubstIndexRAII(Sema &Self, UnsignedOrNone NewSubstIndex)
+        : Self(Self),
+          OldSubstIndex(std::exchange(Self.ArgPackSubstIndex, NewSubstIndex)) {}
 
-    ~ArgumentPackSubstitutionIndexRAII() {
-      Self.ArgumentPackSubstitutionIndex = OldSubstitutionIndex;
-    }
+    ~ArgPackSubstIndexRAII() { Self.ArgPackSubstIndex = OldSubstIndex; }
   };
 
   friend class ArgumentPackSubstitutionRAII;
@@ -14040,7 +14038,7 @@ public:
   ParmVarDecl *
   SubstParmVarDecl(ParmVarDecl *D,
                    const MultiLevelTemplateArgumentList &TemplateArgs,
-                   int indexAdjustment, std::optional<unsigned> NumExpansions,
+                   int indexAdjustment, UnsignedOrNone NumExpansions,
                    bool ExpectParameterPack, bool EvaluateConstraints = true);
 
   /// Substitute the given template arguments into the given set of
@@ -14890,13 +14888,13 @@ public:
   /// expansion.
   TypeSourceInfo *CheckPackExpansion(TypeSourceInfo *Pattern,
                                      SourceLocation EllipsisLoc,
-                                     std::optional<unsigned> NumExpansions);
+                                     UnsignedOrNone NumExpansions);
 
   /// Construct a pack expansion type from the pattern of the pack
   /// expansion.
   QualType CheckPackExpansion(QualType Pattern, SourceRange PatternRange,
                               SourceLocation EllipsisLoc,
-                              std::optional<unsigned> NumExpansions);
+                              UnsignedOrNone NumExpansions);
 
   /// Invoked when parsing an expression followed by an ellipsis, which
   /// creates a pack expansion.
@@ -14915,7 +14913,7 @@ public:
   ///
   /// \param EllipsisLoc The location of the ellipsis.
   ExprResult CheckPackExpansion(Expr *Pattern, SourceLocation EllipsisLoc,
-                                std::optional<unsigned> NumExpansions);
+                                UnsignedOrNone NumExpansions);
 
   /// Determine whether we could expand a pack expansion with the
   /// given set of parameter packs into separate arguments by repeatedly
@@ -14955,7 +14953,7 @@ public:
       SourceLocation EllipsisLoc, SourceRange PatternRange,
       ArrayRef<UnexpandedParameterPack> Unexpanded,
       const MultiLevelTemplateArgumentList &TemplateArgs, bool &ShouldExpand,
-      bool &RetainExpansion, std::optional<unsigned> &NumExpansions);
+      bool &RetainExpansion, UnsignedOrNone &NumExpansions);
 
   /// Determine the number of arguments in the given pack expansion
   /// type.
@@ -14964,10 +14962,10 @@ public:
   /// consistent across all of the unexpanded parameter packs in its pattern.
   ///
   /// Returns an empty Optional if the type can't be expanded.
-  std::optional<unsigned> getNumArgumentsInExpansion(
+  UnsignedOrNone getNumArgumentsInExpansion(
       QualType T, const MultiLevelTemplateArgumentList &TemplateArgs);
 
-  std::optional<unsigned> getNumArgumentsInExpansionFromUnexpanded(
+  UnsignedOrNone getNumArgumentsInExpansionFromUnexpanded(
       llvm::ArrayRef<UnexpandedParameterPack> Unexpanded,
       const MultiLevelTemplateArgumentList &TemplateArgs);
 
@@ -14996,9 +14994,10 @@ public:
   ///
   /// \param NumExpansions Will be set to the number of expansions that will
   /// be generated from this pack expansion, if known a priori.
-  TemplateArgumentLoc getTemplateArgumentPackExpansionPattern(
-      TemplateArgumentLoc OrigLoc, SourceLocation &Ellipsis,
-      std::optional<unsigned> &NumExpansions) const;
+  TemplateArgumentLoc
+  getTemplateArgumentPackExpansionPattern(TemplateArgumentLoc OrigLoc,
+                                          SourceLocation &Ellipsis,
+                                          UnsignedOrNone &NumExpansions) const;
 
   /// Given a template argument that contains an unexpanded parameter pack, but
   /// which has already been substituted, attempt to determine the number of
@@ -15006,7 +15005,7 @@ public:
   ///
   /// This is intended for use when transforming 'sizeof...(Arg)' in order to
   /// avoid actually expanding the pack where possible.
-  std::optional<unsigned> getFullyPackExpandedSize(TemplateArgument Arg);
+  UnsignedOrNone getFullyPackExpandedSize(TemplateArgument Arg);
 
   /// Called when an expression computing the size of a parameter pack
   /// is parsed.
@@ -15048,7 +15047,7 @@ public:
                               BinaryOperatorKind Operator,
                               SourceLocation EllipsisLoc, Expr *RHS,
                               SourceLocation RParenLoc,
-                              std::optional<unsigned> NumExpansions);
+                              UnsignedOrNone NumExpansions);
   ExprResult BuildEmptyCXXFoldExpr(SourceLocation EllipsisLoc,
                                    BinaryOperatorKind Operator);
 

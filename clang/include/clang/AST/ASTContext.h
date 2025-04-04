@@ -1892,7 +1892,7 @@ public:
 
   QualType getSubstTemplateTypeParmType(QualType Replacement,
                                         Decl *AssociatedDecl, unsigned Index,
-                                        std::optional<unsigned> PackIndex,
+                                        UnsignedOrNone PackIndex,
                                         bool Final) const;
   QualType getSubstTemplateTypeParmPackType(Decl *AssociatedDecl,
                                             unsigned Index, bool Final,
@@ -1948,8 +1948,7 @@ public:
   ///        expansion is used in a context where the arity is inferred from
   ///        elsewhere, such as if the pattern contains a placeholder type or
   ///        if this is the canonical type of another pack expansion type.
-  QualType getPackExpansionType(QualType Pattern,
-                                std::optional<unsigned> NumExpansions,
+  QualType getPackExpansionType(QualType Pattern, UnsignedOrNone NumExpansions,
                                 bool ExpectPackInType = true) const;
 
   QualType getObjCInterfaceType(const ObjCInterfaceDecl *Decl,
@@ -1993,7 +1992,7 @@ public:
   QualType getPackIndexingType(QualType Pattern, Expr *IndexExpr,
                                bool FullySubstituted = false,
                                ArrayRef<QualType> Expansions = {},
-                               int Index = -1) const;
+                               UnsignedOrNone Index = std::nullopt) const;
 
   /// Unary type transforms
   QualType getUnaryTransformType(QualType BaseType, QualType UnderlyingType,
@@ -2491,7 +2490,7 @@ public:
   TemplateName getSubstTemplateTemplateParm(TemplateName replacement,
                                             Decl *AssociatedDecl,
                                             unsigned Index,
-                                            std::optional<unsigned> PackIndex,
+                                            UnsignedOrNone PackIndex,
                                             bool Final) const;
   TemplateName getSubstTemplateTemplateParmPack(const TemplateArgument &ArgPack,
                                                 Decl *AssociatedDecl,
