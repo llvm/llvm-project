@@ -80,7 +80,7 @@ bool ConstraintSystem::eliminateUsingFM() {
       auto &LowerRow = RemainingRows[LowerR];
       auto &UpperRow = RemainingRows[UpperR];
       // Update constant and coefficients of both constraints.
-      // Stops until every coefficient is updated or overflow.
+      // Stops until every coefficient is updated or overflows.
       while (true) {
         if (IdxUpper >= UpperRow.size() || IdxLower >= LowerRow.size())
           break;
@@ -101,14 +101,6 @@ bool ConstraintSystem::eliminateUsingFM() {
           IdxUpper++;
         }
 
-        // The new coefficient for CurrentId is
-        // N = UpperV * (-1) * LowerLast + LowerV * UpperLast
-        //
-        // LowerRow: { 0,  1, -2 }, UpperLast: 3
-        // UpperRow: { 3,  2,  3 }, LowerLast: -2
-        //
-        // Multiply by -1 is to ensure the last variable has opposite sign,
-        // so that it can be eliminated with addition.
         if (MulOverflow(UpperV, -1 * LowerLast, M1))
           return false;
         if (IdxLower < LowerRow.size() && LowerRow[IdxLower].Id == CurrentId) {
@@ -118,6 +110,14 @@ bool ConstraintSystem::eliminateUsingFM() {
 
         if (MulOverflow(LowerV, UpperLast, M2))
           return false;
+        // This algorithm is a variant of sparse Gaussian elimination.
+        //
+        // The new coefficient for CurrentId is
+        // N = UpperV * (-1) * LowerLast + LowerV * UpperLast
+        //
+        // UpperRow: { 3,  2,  3 }, LowerLast: -2
+        // LowerRow: { 0,  1, -2 }, UpperLast: 3
+        //
         // After multiplication:
         // UpperRow: { 6, 4, 6 }
         // LowerRow: { 0, 3, -6 }
