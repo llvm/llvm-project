@@ -1381,17 +1381,16 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
     return builder.create<LLVM::ZeroOp>(loc, targetExtType).getRes();
   }
 
-  if (auto *blockAddr = dyn_cast<llvm::BlockAddress>(constant))
+  if (auto *blockAddr = dyn_cast<llvm::BlockAddress>(constant)) {
+    auto fnSym =
+        FlatSymbolRefAttr::get(context, blockAddr->getFunction()->getName());
+    auto blockTag =
+        BlockTagAttr::get(context, blockAddr->getBasicBlock()->getNumber());
     return builder
-        .create<BlockAddressOp>(
-            loc, convertType(blockAddr->getType()),
-            BlockAddressAttr::get(
-                context,
-                FlatSymbolRefAttr::get(context,
-                                       blockAddr->getFunction()->getName()),
-                BlockTagAttr::get(context,
-                                  blockAddr->getBasicBlock()->getNumber())))
+        .create<BlockAddressOp>(loc, convertType(blockAddr->getType()),
+                                BlockAddressAttr::get(context, fnSym, blockTag))
         .getRes();
+  }
 
   StringRef error = "";
 
