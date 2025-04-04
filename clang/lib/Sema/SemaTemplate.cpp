@@ -916,7 +916,7 @@ static TemplateArgumentLoc translateTemplateArgument(Sema &SemaRef,
     TemplateName Template = Arg.getAsTemplate().get();
     TemplateArgument TArg;
     if (Arg.getEllipsisLoc().isValid())
-      TArg = TemplateArgument(Template, std::optional<unsigned int>());
+      TArg = TemplateArgument(Template, /*NumExpansions=*/std::nullopt);
     else
       TArg = Template;
     return TemplateArgumentLoc(
@@ -1220,9 +1220,8 @@ bool Sema::AttachTypeConstraint(NestedNameSpecifierLoc NS,
                                       /*FoundDecl=*/FoundDecl,
                                       /*NamedConcept=*/NamedConcept,
                                       /*ArgsWritten=*/ArgsAsWritten);
-  ConstrainedParameter->setTypeConstraint(CL,
-                                          ImmediatelyDeclaredConstraint.get(),
-                                          /*ArgumentPackSubstitutionIndex=*/-1);
+  ConstrainedParameter->setTypeConstraint(
+      CL, ImmediatelyDeclaredConstraint.get(), std::nullopt);
   return false;
 }
 
@@ -3528,16 +3527,10 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
     if (Pattern->isInvalidDecl())
       return QualType();
 
-    // Only substitute for the innermost template argument list.  NOTE: Some
-    // external resugarers rely on leaving a Subst* node here.  Make the
-    // substitution non-final in that case.  Note that these external resugarers
-    // will still miss some information in this representation, because we don't
-    // provide enough context in the Subst* nodes in order to tell different
-    // template type alias specializations apart.
+    // Only substitute for the innermost template argument list.
     MultiLevelTemplateArgumentList TemplateArgLists;
-    TemplateArgLists.addOuterTemplateArguments(
-        Template, CTAI.SugaredConverted,
-        /*Final=*/!getLangOpts().RetainSubstTemplateTypeParmTypeAstNodes);
+    TemplateArgLists.addOuterTemplateArguments(Template, CTAI.SugaredConverted,
+                                               /*Final=*/true);
     TemplateArgLists.addOuterRetainedLevels(
         AliasTemplate->getTemplateParameters()->getDepth());
 
@@ -5250,8 +5243,7 @@ bool Sema::CheckTemplateArgument(NamedDecl *Param, TemplateArgumentLoc &ArgLoc,
                                            /*Final=*/true);
       // If the parameter is a pack expansion, expand this slice of the pack.
       if (auto *PET = NTTPType->getAs<PackExpansionType>()) {
-        Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(*this,
-                                                           ArgumentPackIndex);
+        Sema::ArgPackSubstIndexRAII SubstIndex(*this, ArgumentPackIndex);
         NTTPType = SubstType(PET->getPattern(), MLTAL, NTTP->getLocation(),
                              NTTP->getDeclName());
       } else {
@@ -5569,7 +5561,7 @@ bool Sema::CheckTemplateArgumentList(
 
     // If we have an expanded parameter pack, make sure we don't have too
     // many arguments.
-    if (std::optional<unsigned> Expansions = getExpandedPackSize(*Param)) {
+    if (UnsignedOrNone Expansions = getExpandedPackSize(*Param)) {
       if (*Expansions == SugaredArgumentPack.size()) {
         // We're done with this parameter pack. Pack up its arguments and add
         // them to the list.
@@ -7558,7 +7550,7 @@ ExprResult Sema::BuildExpressionFromDeclTemplateArgument(
             ParamType->getPointeeType(), RefExpr.get()->getValueKind(),
             RefExpr.get()->getExprLoc(), RefExpr.get(), VD, NTTP->getIndex(),
             /*PackIndex=*/std::nullopt,
-            /*RefParam=*/true);
+            /*RefParam=*/true, /*Final=*/true);
       }
     }
   }

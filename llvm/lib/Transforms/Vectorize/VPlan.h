@@ -2189,9 +2189,10 @@ class VPInterleaveRecipe : public VPRecipeBase {
 public:
   VPInterleaveRecipe(const InterleaveGroup<Instruction> *IG, VPValue *Addr,
                      ArrayRef<VPValue *> StoredValues, VPValue *Mask,
-                     bool NeedsMaskForGaps)
+                     bool NeedsMaskForGaps, DebugLoc DL)
       : VPRecipeBase(VPDef::VPInterleaveSC, {Addr},
-                     IG->getInsertPos()->getDebugLoc()),
+                     DL),
+
         IG(IG), NeedsMaskForGaps(NeedsMaskForGaps) {
     for (unsigned i = 0; i < IG->getFactor(); ++i)
       if (Instruction *I = IG->getMember(i)) {
@@ -2211,7 +2212,7 @@ public:
 
   VPInterleaveRecipe *clone() override {
     return new VPInterleaveRecipe(IG, getAddr(), getStoredValues(), getMask(),
-                                  NeedsMaskForGaps);
+                                  NeedsMaskForGaps, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPInterleaveSC)

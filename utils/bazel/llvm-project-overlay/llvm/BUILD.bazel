@@ -3371,6 +3371,8 @@ gentbl_cc_library(
         name = target["name"] + "CodeGen",
         srcs = glob(
             [
+                "lib/Target/" + target["name"] + "/Analysis/*.cpp",
+                "lib/Target/" + target["name"] + "/Analysis/*.h",
                 "lib/Target/" + target["name"] + "/GISel/*.cpp",
                 "lib/Target/" + target["name"] + "/GISel/*.h",
                 "lib/Target/" + target["name"] + "/*.cpp",
@@ -3406,7 +3408,6 @@ gentbl_cc_library(
             ":TransformUtils",
             ":Vectorize",
             ":config",
-            ":" + target["name"] + "Analysis",
             ":" + target["name"] + "CommonTableGen",
             ":" + target["name"] + "Info",
             ":" + target["name"] + "UtilsAndDesc",
@@ -3509,24 +3510,6 @@ gentbl_cc_library(
             ":" + target["name"] + "DisassemblerInternalHeaders",
             ":" + target["name"] + "Info",
             ":" + target["name"] + "UtilsAndDesc",
-        ],
-    )],
-    [cc_library(
-        name = target["name"] + "Analysis",
-        srcs = glob(
-            [
-                "lib/Target/" + target["name"] + "/Analysis/*.cpp",
-                "lib/Target/" + target["name"] + "/Analysis/*.h",
-            ],
-            allow_empty = True,
-        ),
-        copts = llvm_copts,
-        features = ["-layering_check"],
-        deps = [
-            ":Analysis",
-            ":Core",
-            ":Support",
-            ":TransformUtils",
         ],
     )],
 ] for target in llvm_target_lib_list]

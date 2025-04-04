@@ -2409,6 +2409,11 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
 
   checkUnsignedBaseTenFuncAttr(Attrs, "patchable-function-prefix", V);
   checkUnsignedBaseTenFuncAttr(Attrs, "patchable-function-entry", V);
+  if (Attrs.hasFnAttr("patchable-function-entry-section"))
+    Check(!Attrs.getFnAttr("patchable-function-entry-section")
+               .getValueAsString()
+               .empty(),
+          "\"patchable-function-entry-section\" must not be empty");
   checkUnsignedBaseTenFuncAttr(Attrs, "warn-stack-size", V);
 
   if (auto A = Attrs.getFnAttr("sign-return-address"); A.isValid()) {
