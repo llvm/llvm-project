@@ -2310,7 +2310,7 @@ static LogicalResult verifyBlockTags(LLVMFuncOp funcOp) {
   BlockTagOp badBlockTagOp;
   if (funcOp
           .walk([&](BlockTagOp blockTagOp) {
-            if (blockTags.count(blockTagOp.getTag())) {
+            if (blockTags.contains(blockTagOp.getTag())) {
               badBlockTagOp = blockTagOp;
               return WalkResult::interrupt();
             }
@@ -3862,9 +3862,8 @@ LLVMFuncOp BlockAddressOp::getFunction(SymbolTableCollection &symbolTable) {
 }
 
 BlockTagOp BlockAddressOp::getBlockTagOp() {
-  auto m = (*this)->getParentOfType<ModuleOp>();
   auto funcOp = cast<LLVMFuncOp>(mlir::SymbolTable::lookupNearestSymbolFrom(
-      m, getBlockAddr().getFunction()));
+      parentLLVMModule(*this), getBlockAddr().getFunction()));
 
   BlockTagOp blockTagOp = nullptr;
   funcOp.walk([&](LLVM::BlockTagOp labelOp) {
