@@ -4917,6 +4917,8 @@ behavior. Notably this includes (but is not limited to):
    space).
 -  The divisor operand of a ``udiv``, ``sdiv``, ``urem`` or ``srem``
    instruction.
+-  The dividend operand of a ``sdiv`` or ``srem`` instruction when the divisor
+   is -1.
 -  The condition operand of a :ref:`br <i_br>` instruction.
 -  The callee operand of a :ref:`call <i_call>` or :ref:`invoke <i_invoke>`
    instruction.
