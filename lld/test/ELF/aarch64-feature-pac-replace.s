@@ -5,17 +5,23 @@
 # REQUIRES: aarch64
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu %s -o %t.o
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu %p/Inputs/aarch64-pac1.s -o %t1.o
+# RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu %p/Inputs/aarch64-pac1-replace.s -o %t1-ba.o
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu %p/Inputs/aarch64-func3.s -o %t2.o
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu %p/Inputs/aarch64-func3-pac.s -o %t3.o
+# RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu %p/Inputs/aarch64-func3-pac-replace.s -o %t3-ba.o
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu %p/Inputs/aarch64-func2.s -o %tno.o
 
 ## We do not add PAC support when the inputs don't have the .note.gnu.property
 ## field.
 
 # RUN: ld.lld %tno.o %t3.o --shared -o %tno.so
+# RUN: ld.lld %tno.o %t3-ba.o --shared -o %tno-ba.so
 # RUN: llvm-objdump --no-print-imm-hex -d --mattr=+v8.3a --no-show-raw-insn %tno.so | FileCheck --check-prefix=NOPAC %s
+# RUN: llvm-objdump --no-print-imm-hex -d --mattr=+v8.3a --no-show-raw-insn %tno-ba.so | FileCheck --check-prefix=NOPAC %s
 # RUN: llvm-readelf -x .got.plt %tno.so | FileCheck --check-prefix SOGOTPLT %s
+# RUN: llvm-readelf -x .got.plt %tno-ba.so | FileCheck --check-prefix SOGOTPLT %s
 # RUN: llvm-readelf --dynamic-table %tno.so | FileCheck --check-prefix NOPACDYN %s
+# RUN: llvm-readelf --dynamic-table %tno-ba.so | FileCheck --check-prefix NOPACDYN %s
 
 # NOPAC: 00000000000102b8 <func2>:
 # NOPAC-NEXT:    102b8: bl      0x102f0 <func3@plt>
@@ -45,10 +51,15 @@
 
 
 # RUN: ld.lld %t1.o %t3.o --shared --soname=t.so -o %t.so
+# RUN: ld.lld %t1-ba.o %t3-ba.o --shared --soname=t.so -o %t-ba.so
 # RUN: llvm-readelf -n %t.so | FileCheck --check-prefix PACPROP %s
+# RUN: llvm-readelf -n %t-ba.so | FileCheck --check-prefix PACPROP %s
 # RUN: llvm-objdump --no-print-imm-hex -d --mattr=+v8.3a --no-show-raw-insn %t.so | FileCheck --check-prefix PACSO %s
+# RUN: llvm-objdump --no-print-imm-hex -d --mattr=+v8.3a --no-show-raw-insn %t-ba.so | FileCheck --check-prefix PACSO %s
 # RUN: llvm-readelf -x .got.plt %t.so | FileCheck --check-prefix SOGOTPLT2 %s
+# RUN: llvm-readelf -x .got.plt %t-ba.so | FileCheck --check-prefix SOGOTPLT2 %s
 # RUN: llvm-readelf --dynamic-table %t.so |  FileCheck --check-prefix PACDYN %s
+# RUN: llvm-readelf --dynamic-table %t-ba.so |  FileCheck --check-prefix PACDYN %s
 
 # PACPROP: Properties: aarch64 feature: PAC
 
@@ -83,13 +94,17 @@
 
 
 # RUN: ld.lld %t.o %t2.o -z pac-plt %t.so -o %tpacplt.exe 2>&1 | FileCheck -DFILE=%t2.o --check-prefix WARN %s
+# RUN: ld.lld %t.o %t2.o -z pac-plt %t-ba.so -o %tpacplt-ba.exe 2>&1 | FileCheck -DFILE=%t2.o --check-prefix WARN %s
 
 # WARN: warning: [[FILE]]: -z pac-plt: file does not have GNU_PROPERTY_AARCH64_FEATURE_1_PAC property and no valid PAuth core info present for this link job
 
 
 # RUN: llvm-readelf -n %tpacplt.exe | FileCheck --check-prefix=PACPROP %s
+# RUN: llvm-readelf -n %tpacplt-ba.exe | FileCheck --check-prefix=PACPROP %s
 # RUN: llvm-readelf --dynamic-table %tpacplt.exe | FileCheck --check-prefix PACDYN2 %s
+# RUN: llvm-readelf --dynamic-table %tpacplt-ba.exe | FileCheck --check-prefix PACDYN2 %s
 # RUN: llvm-objdump --no-print-imm-hex -d --mattr=+v8.3a --no-show-raw-insn %tpacplt.exe | FileCheck --check-prefix PACPLT %s
+# RUN: llvm-objdump --no-print-imm-hex -d --mattr=+v8.3a --no-show-raw-insn %tpacplt-ba.exe | FileCheck --check-prefix PACPLT %s
 
 # PACDYN2-NOT:      0x0000000070000001 (AARCH64_BTI_PLT)
 # PACDYN2:      0x0000000070000003 (AARCH64_PAC_PLT)

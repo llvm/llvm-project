@@ -719,6 +719,8 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
           if (!hasGnuProperties) {
             KnownAArch64BuildAttrSubsections subSections =
                 extractBuildAttributesSubsections(attributes);
+            // this condition is important in order not to emit section when
+            // data does not exists, same as GNU properties.
             if (subSections.pauth.tagPlatform || subSections.pauth.tagSchema) {
               auto serializeUnsigned = [&](unsigned value, size_t offset,
                                            bool isBE) {
