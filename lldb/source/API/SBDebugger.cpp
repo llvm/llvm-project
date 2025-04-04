@@ -44,7 +44,7 @@
 #include "lldb/Host/Config.h"
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Host/XML.h"
-#include "lldb/Initialization/SystemLifetimeManagerDbg.h"
+#include "lldb/Initialization/SystemLifetimeManager.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionGroupPlatform.h"
@@ -66,7 +66,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-static llvm::ManagedStatic<SystemLifetimeManagerDbg> g_debugger_lifetime;
+static llvm::ManagedStatic<SystemLifetimeManager> g_debugger_lifetime;
 
 SBError SBInputReader::Initialize(
     lldb::SBDebugger &sb_debugger,

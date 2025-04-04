@@ -23,7 +23,7 @@ public:
   SystemInitializerFull();
   ~SystemInitializerFull() override;
 
-  llvm::Error Initialize() override;
+  llvm::Error Initialize(LoadPluginCallbackType plugin_callback) override;
   void Terminate() override;
 };
 

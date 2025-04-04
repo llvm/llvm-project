@@ -26,8 +26,9 @@ SystemInitializerTest::SystemInitializerTest()
     : SystemInitializerCommon(nullptr) {}
 SystemInitializerTest::~SystemInitializerTest() = default;
 
-llvm::Error SystemInitializerTest::Initialize() {
-  if (auto e = SystemInitializerCommon::Initialize())
+llvm::Error
+SystemInitializerTest::Initialize(LoadPluginCallbackType plugin_callback) {
+  if (auto e = SystemInitializerCommon::Initialize(plugin_callback))
     return e;
 
   // Initialize LLVM and Clang
@@ -51,10 +52,14 @@ llvm::Error SystemInitializerTest::Initialize() {
   // Settings must be initialized AFTER PluginManager::Initialize is called.
   Debugger::SettingsInitialize();
 
+  Debugger::Initialize(plugin_callback);
+
   return llvm::Error::success();
 }
 
 void SystemInitializerTest::Terminate() {
+  Debugger::Terminate();
+
   Debugger::SettingsTerminate();
 
   // Terminate and unload and loaded system or user LLDB plug-ins

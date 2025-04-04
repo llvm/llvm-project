@@ -21,7 +21,7 @@ namespace lldb_private {
 class SystemLifetimeManager {
 public:
   SystemLifetimeManager();
-  virtual ~SystemLifetimeManager();
+  ~SystemLifetimeManager();
 
   llvm::Error Initialize(std::unique_ptr<SystemInitializer> initializer,
                          LoadPluginCallbackType plugin_callback);
@@ -31,9 +31,6 @@ private:
   std::recursive_mutex m_mutex;
   std::unique_ptr<SystemInitializer> m_initializer;
   bool m_initialized = false;
-
-  virtual void InitializeDebugger(LoadPluginCallbackType plugin_callback) {};
-  virtual void TerminateDebugger() {};
 
   // Noncopyable.
   SystemLifetimeManager(const SystemLifetimeManager &other) = delete;
