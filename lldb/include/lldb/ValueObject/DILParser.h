@@ -95,6 +95,8 @@ private:
   void Expect(Token::Kind kind);
 
   void TentativeParsingRollback(uint32_t saved_idx) {
+    if (m_error)
+      llvm::consumeError(std::move(m_error));
     m_dil_lexer.ResetTokenIdx(saved_idx);
   }
 
