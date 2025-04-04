@@ -972,8 +972,8 @@ struct DSEState {
   // function due to removing a store causing a previously captured pointer to
   // no longer be captured.
   bool ShouldIterateEndOfFunctionDSE;
-
-  CoroIdInst *CoroId = nullptr;
+  // Pre-split coroutine promise is specially handled
+  AllocaInst *PresplitCoroPromise = nullptr;
 
   /// Dead instructions to be removed at the end of DSE.
   SmallVector<Instruction *> ToRemove;
@@ -993,11 +993,16 @@ struct DSEState {
     for (BasicBlock *BB : post_order(&F)) {
       PostOrderNumbers[BB] = PO++;
       for (Instruction &I : *BB) {
-        if (auto* II = dyn_cast<IntrinsicInst>(&I)) {
+        auto *II = dyn_cast<IntrinsicInst>(&I);
+        if (F.isPresplitCoroutine() && II != nullptr) {
           const auto ID = II->getIntrinsicID();
           if (ID == Intrinsic::coro_begin ||
-              ID == Intrinsic::coro_begin_custom_abi)
-            CoroId = cast<CoroIdInst>(cast<CoroBeginInst>(II)->getId());
+              ID == Intrinsic::coro_begin_custom_abi) {
+            auto *AnyCoroId = cast<CoroBeginInst>(II)->getId();
+            auto *CoroId = dyn_cast_if_present<CoroIdInst>(AnyCoroId);
+            if (CoroId)
+              PresplitCoroPromise = CoroId->getPromise();
+          }
         }
 
         MemoryAccess *MA = MSSA.getMemoryAccess(&I);
@@ -1204,7 +1209,7 @@ struct DSEState {
 
   bool isInvisibleToCallerAfterRet(const Value *V) {
     if (isa<AllocaInst>(V))
-      return !(F.isPresplitCoroutine() && V == CoroId->getPromise());
+      return V != PresplitCoroPromise;
 
     auto I = InvisibleToCallerAfterRet.insert({V, false});
     if (I.second) {
