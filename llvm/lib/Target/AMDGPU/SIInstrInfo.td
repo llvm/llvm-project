@@ -1532,6 +1532,10 @@ class PackedFPInputModsMatchClass <int opSize> : AsmOperandClass {
   let PredicateMethod = "isPackedFP"#opSize#"InputMods";
 }
 
+class PackedVGPRFPInputModsMatchClass <int opSize> : PackedFPInputModsMatchClass<opSize> {
+  let PredicateMethod = "isPackedVGPRFP"#opSize#"InputMods";
+}
+
 class PackedIntInputModsMatchClass <int opSize> : AsmOperandClass {
   let Name = "PackedInt"#opSize#"InputMods";
   let ParserMethod = "parseRegOrImm";
@@ -1541,7 +1545,7 @@ class PackedIntInputModsMatchClass <int opSize> : AsmOperandClass {
 
 def PackedF16InputModsMatchClass : PackedFPInputModsMatchClass<16>;
 def PackedI16InputModsMatchClass : PackedIntInputModsMatchClass<16>;
-def PackedF32InputModsMatchClass : PackedFPInputModsMatchClass<32>;
+def PackedVGPRF32InputModsMatchClass : PackedVGPRFPInputModsMatchClass<32>;
 
 class PackedFPInputMods <PackedFPInputModsMatchClass matchClass> : InputMods <matchClass> {
   let PrintMethod = "printOperandAndFPInputMods";
@@ -1553,7 +1557,7 @@ class PackedIntInputMods <PackedIntInputModsMatchClass matchClass> : InputMods <
 
 def PackedF16InputMods : PackedFPInputMods<PackedF16InputModsMatchClass>;
 def PackedI16InputMods : PackedIntInputMods<PackedI16InputModsMatchClass>;
-def PackedF32InputMods : PackedFPInputMods<PackedF32InputModsMatchClass>;
+def PackedVGPRF32InputMods : PackedFPInputMods<PackedVGPRF32InputModsMatchClass>;
 
 def MFMALdScaleModifierOp : TImmLeaf<i32, [{
   return isUInt<2>(Imm);
