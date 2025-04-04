@@ -319,7 +319,7 @@ Improvements to Clang's diagnostics
 - ``-Wc++98-compat`` no longer diagnoses use of ``__auto_type`` or
   ``decltype(auto)`` as though it was the extension for ``auto``. (#GH47900)
 
-- Now correctly diagnose use of a tentative definition of an array with static
+- Now correctly diagnose a tentative definition of an array with static
   storage duration in pedantic mode in C. (#GH50661)
 
 Improvements to Clang's time-trace
