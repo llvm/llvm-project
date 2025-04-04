@@ -182,6 +182,15 @@ static cl::opt<bool> CtxprofMoveRootsToOwnModule(
              "their own module."),
     cl::Hidden, cl::init(false));
 
+cl::list<GlobalValue::GUID> MoveSymbolGUID(
+    "thinlto-move-symbols",
+    cl::desc(
+        "Move the symbols with the given name. This will delete these symbols "
+        "wherever they are originally defined, and make sure their "
+        "linkage is External where they are imported. It is meant to be "
+        "used with the name of contextual profiling roots."),
+    cl::Hidden);
+
 namespace llvm {
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
 }
@@ -1859,6 +1868,15 @@ Expected<bool> FunctionImporter::importFunctions(
   LLVM_DEBUG(dbgs() << "Starting import for Module "
                     << DestModule.getModuleIdentifier() << "\n");
   unsigned ImportedCount = 0, ImportedGVCount = 0;
+  // Before carrying out any imports, see if this module defines functions in
+  // MoveSymbolGUID. If it does, delete them here (but leave the declaration).
+  // The function will be imported elsewhere, as extenal linkage, and the
+  // destination doesn't yet have its definition.
+  DenseSet<GlobalValue::GUID> MoveSymbolGUIDSet;
+  MoveSymbolGUIDSet.insert_range(MoveSymbolGUID);
+  for (auto &F : DestModule)
+    if (!F.isDeclaration() && MoveSymbolGUIDSet.contains(F.getGUID()))
+      F.deleteBody();
 
   IRMover Mover(DestModule);
 
