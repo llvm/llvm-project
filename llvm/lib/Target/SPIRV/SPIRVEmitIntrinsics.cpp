@@ -2062,21 +2062,13 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
     }
     Type *OpTy = Op->getType();
     Value *OpTyVal = Op;
-    if (OpTy->isTargetExtTy())
-      OpTyVal = getNormalizedPoisonValue(OpTy);
     Type *OpElemTy = GR->findDeducedElementType(Op);
     Value *NewOp = Op;
-    if (OpTy->isTargetExtTy()) {
+    TargetExtType *TargetTy = dyn_cast<TargetExtType>(OpTy);
+    if (TargetTy && TargetTy->getName() != "spirv.Type") {
+      OpTyVal = getNormalizedPoisonValue(OpTy);
       NewOp = buildIntrWithMD(Intrinsic::spv_track_constant,
                               {OpTy, OpTyVal->getType()}, Op, OpTyVal, {}, B);
-      if (isPointerTy(OpTy)) {
-        if (OpElemTy) {
-          GR->buildAssignPtr(B, OpElemTy, NewOp);
-        } else {
-          insertTodoType(NewOp);
-          GR->buildAssignPtr(B, OpTy, NewOp);
-        }
-      }
     }
     if (!IsConstComposite && isPointerTy(OpTy) && OpElemTy != nullptr &&
         OpElemTy != IntegerType::getInt8Ty(I->getContext())) {
