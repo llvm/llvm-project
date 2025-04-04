@@ -9332,9 +9332,9 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   VPlanHCFGBuilder HCFGBuilder(OrigLoop, LI, *Plan);
   HCFGBuilder.buildPlainCFG();
 
-  VPlanTransforms::introduceTopLevelVectorLoopRegion(
-      *Plan, Legal->getWidestInductionType(), PSE, RequiresScalarEpilogueCheck,
-      CM.foldTailByMasking(), OrigLoop);
+  VPlanTransforms::introduceRegions(*Plan, Legal->getWidestInductionType(), PSE,
+                                    RequiresScalarEpilogueCheck,
+                                    CM.foldTailByMasking(), OrigLoop);
 
   // Don't use getDecisionAndClampRange here, because we don't know the UF
   // so this function is better to be conservative, rather than to split
@@ -9636,8 +9636,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
   VPlanHCFGBuilder HCFGBuilder(OrigLoop, LI, *Plan);
   HCFGBuilder.buildPlainCFG();
 
-  VPlanTransforms::introduceTopLevelVectorLoopRegion(
-      *Plan, Legal->getWidestInductionType(), PSE, true, false, OrigLoop);
+  VPlanTransforms::introduceRegions(*Plan, Legal->getWidestInductionType(), PSE,
+                                    true, false, OrigLoop);
 
   for (ElementCount VF : Range)
     Plan->addVF(VF);

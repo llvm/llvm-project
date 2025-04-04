@@ -48,9 +48,10 @@ static VPRegionBlock *introduceRegion(VPlan &Plan, VPBlockBase *HeaderVPBB) {
   return R;
 }
 
-void VPlanTransforms::introduceTopLevelVectorLoopRegion(
-    VPlan &Plan, Type *InductionTy, PredicatedScalarEvolution &PSE,
-    bool RequiresScalarEpilogueCheck, bool TailFolded, Loop *TheLoop) {
+void VPlanTransforms::introduceRegions(VPlan &Plan, Type *InductionTy,
+                                       PredicatedScalarEvolution &PSE,
+                                       bool RequiresScalarEpilogueCheck,
+                                       bool TailFolded, Loop *TheLoop) {
   VPDominatorTree VPDT;
   VPDT.recalculate(Plan);
   for (VPBasicBlock *HeaderVPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
