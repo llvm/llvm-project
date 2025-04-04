@@ -3031,8 +3031,7 @@ void CXXDestructorDecl::setOperatorDelete(FunctionDecl *OD, Expr *ThisArg) {
   }
 }
 
-void CXXDestructorDecl::setOperatorArrayDelete(FunctionDecl *OD,
-                                               Expr *ThisArg) {
+void CXXDestructorDecl::setOperatorArrayDelete(FunctionDecl *OD) {
   auto *First = cast<CXXDestructorDecl>(getFirstDecl());
   if (OD && !First->OperatorArrayDelete)
     First->OperatorArrayDelete = OD;
