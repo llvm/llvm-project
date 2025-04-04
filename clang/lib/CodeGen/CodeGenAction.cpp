@@ -1050,16 +1050,13 @@ CodeGenAction::loadModule(MemoryBufferRef MBRef) {
   // Handle textual IR and bitcode file with one single module.
   llvm::SMDiagnostic Err;
   if (std::unique_ptr<llvm::Module> M = parseIR(MBRef, Err, *VMContext)) {
-    // For textual LLVM IR files, always verify the input and report the error
-    // in a way that does not ask people to report an issue for it.
-    if (!llvm::isBitcode((const unsigned char *)MBRef.getBufferStart(),
-                         (const unsigned char *)MBRef.getBufferEnd())) {
-      std::string VerifierErr;
-      raw_string_ostream VerifierErrStream(VerifierErr);
-      if (llvm::verifyModule(*M, &VerifierErrStream)) {
-        CI.getDiagnostics().Report(diag::err_invalid_llvm_ir) << VerifierErr;
-        return {};
-      }
+    // For LLVM IR files, always verify the input and report the error in a way
+    // that does not ask people to report an issue for it.
+    std::string VerifierErr;
+    raw_string_ostream VerifierErrStream(VerifierErr);
+    if (llvm::verifyModule(*M, &VerifierErrStream)) {
+      CI.getDiagnostics().Report(diag::err_invalid_llvm_ir) << VerifierErr;
+      return {};
     }
     return M;
   }
