@@ -298,17 +298,10 @@ LogicalResult TensorDescType::verify(
                               "contiguous elements";
     }
 
-    // For 1D tensor, pad the shape with an outer unit dimension to allow common
-    // validation logic.
-    SmallVector<int64_t> tensorShape(shape);
-    if (rank == 1)
-      tensorShape = {1, tensorShape.back()};
-
-    size_t dims = tensorShape.size();
-    for (size_t i = 0; i < dims; ++i) {
+    for (size_t i = 0; i < shape.size(); ++i) {
       uint32_t numElemPerWi = laneLayout[i] * laneData[i];
-      if (tensorShape[i] < numElemPerWi || tensorShape[i] % numElemPerWi != 0)
-        return emitError() << "cannot distribute " << tensorShape[i] << " over "
+      if (shape[i] < numElemPerWi || shape[i] % numElemPerWi != 0)
+        return emitError() << "cannot distribute " << shape[i] << " over "
                            << laneLayout[i] << " work items with "
                            << laneData[i] << " elements each";
     }
