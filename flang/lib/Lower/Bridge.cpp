@@ -94,11 +94,11 @@ struct IncrementLoopInfo {
   template <typename T>
   explicit IncrementLoopInfo(Fortran::semantics::Symbol &sym, const T &lower,
                              const T &upper, const std::optional<T> &step,
-                             bool isUnordered = false)
+                             bool isConcurrent = false)
       : loopVariableSym{&sym}, lowerExpr{Fortran::semantics::GetExpr(lower)},
         upperExpr{Fortran::semantics::GetExpr(upper)},
-        stepExpr{Fortran::semantics::GetExpr(step)}, isConcurrent{isUnordered} {
-  }
+        stepExpr{Fortran::semantics::GetExpr(step)}, isConcurrent{
+                                                         isConcurrent} {}
 
   IncrementLoopInfo(IncrementLoopInfo &&) = default;
   IncrementLoopInfo &operator=(IncrementLoopInfo &&x) = default;
