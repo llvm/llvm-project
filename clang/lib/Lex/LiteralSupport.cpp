@@ -981,12 +981,10 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
     switch (*s) {
     case 'b': // FP Suffix for "__bf16"
     case 'B':
-      if (!isFPConstant)
-        break; // Error for integer constant.
-      if (isBFloat16)
-        break;
       if (!Target.hasBFloat16Type())
         break;
+      if (!isFPConstant)
+        break; // Error for integer constant.
       if (HasSize)
         break;
       HasSize = true;
