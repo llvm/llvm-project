@@ -422,6 +422,20 @@ bool SystemZTTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
              C2.ScaleCost, C2.SetupCost);
 }
 
+bool SystemZTTIImpl::areInlineCompatible(const Function *Caller,
+                                         const Function *Callee) const {
+  const TargetMachine &TM = getTLI()->getTargetMachine();
+
+  const FeatureBitset &CallerBits =
+      TM.getSubtargetImpl(*Caller)->getFeatureBits();
+  const FeatureBitset &CalleeBits =
+      TM.getSubtargetImpl(*Callee)->getFeatureBits();
+
+  // Check that target features from the callee are subset or
+  // equal to the caller's features.
+  return (CalleeBits == CallerBits) || (CalleeBits < CallerBits);
+}
+
 unsigned SystemZTTIImpl::getNumberOfRegisters(unsigned ClassID) const {
   bool Vector = (ClassID == 1);
   if (!Vector)
