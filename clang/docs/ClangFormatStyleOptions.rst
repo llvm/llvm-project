@@ -1994,7 +1994,7 @@ the configuration (without a prefix: ``Auto``).
       Inline: true
       All: false
 
-  * ``bool Empty`` Only merge empty functions.
+  * ``bool Empty`` Merge top-level empty functions.
 
     .. code-block:: c++
 
@@ -2002,20 +2002,23 @@ the configuration (without a prefix: ``Auto``).
       void f2() {
         bar2();
       }
+      void f3() { /* comment */ }
 
-  * ``bool Inline`` Only merge functions defined inside a class.
+  * ``bool Inline`` Merge functions defined inside a class.
 
     .. code-block:: c++
 
       class Foo {
         void f() { foo(); }
+        void g() {}
       };
       void f() {
         foo();
       }
-      void f() {}
+      void f() {
+      }
 
-  * ``bool All`` Merge all functions fitting on a single line.
+  * ``bool Other`` Merge all functions fitting on a single line.
 
     .. code-block:: c++
 

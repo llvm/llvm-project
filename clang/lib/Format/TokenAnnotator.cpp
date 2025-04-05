@@ -5688,7 +5688,7 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
         !Left.Children.empty()) {
       // Support AllowShortFunctionsOnASingleLine for JavaScript.
       return (!Style.AllowShortFunctionsOnASingleLineOptions.Inline &&
-              !Style.AllowShortFunctionsOnASingleLineOptions.All) ||
+              !Style.AllowShortFunctionsOnASingleLineOptions.Other) ||
              (Left.NestingLevel == 0 && Line.Level == 0 &&
               Style.AllowShortFunctionsOnASingleLineOptions.Inline);
     }

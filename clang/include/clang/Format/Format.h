@@ -890,23 +890,26 @@ struct FormatStyle {
   ///     All: false
   /// \endcode
   struct ShortFunctionMergeFlags {
-    /// Only merge empty functions.
+    /// Merge top-level empty functions.
     /// \code
     ///   void f() {}
     ///   void f2() {
     ///     bar2();
     ///   }
+    ///   void f3() { /* comment */ }
     /// \endcode
     bool Empty;
-    /// Only merge functions defined inside a class.
+    /// Merge functions defined inside a class.
     /// \code
     ///   class Foo {
     ///     void f() { foo(); }
+    ///     void g() {}
     ///   };
     ///   void f() {
     ///     foo();
     ///   }
-    ///   void f() {}
+    ///   void f() {
+    ///   }
     /// \endcode
     bool Inline;
     /// Merge all functions fitting on a single line.
@@ -916,15 +919,15 @@ struct FormatStyle {
     ///   };
     ///   void f() { bar(); }
     /// \endcode
-    bool All;
+    bool Other;
 
-    ShortFunctionMergeFlags() : Empty(false), Inline(false), All(false) {}
+    ShortFunctionMergeFlags() : Empty(false), Inline(false), Other(false) {}
 
     ShortFunctionMergeFlags(bool Empty, bool Inline, bool All)
-        : Empty(Empty), Inline(Inline), All(All) {}
+        : Empty(Empty), Inline(Inline), Other(All) {}
 
     bool operator==(const ShortFunctionMergeFlags &R) const {
-      return Empty == R.Empty && Inline == R.Inline && All == R.All;
+      return Empty == R.Empty && Inline == R.Inline && Other == R.Other;
     }
     bool operator!=(const ShortFunctionMergeFlags &R) const {
       return !(*this == R);

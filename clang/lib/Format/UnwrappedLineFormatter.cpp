@@ -293,7 +293,7 @@ private:
 
     auto ShouldMergeShortFunctions = [this, &I, &NextLine, PreviousLine,
                                       TheLine]() {
-      if (Style.AllowShortFunctionsOnASingleLineOptions.All)
+      if (Style.AllowShortFunctionsOnASingleLineOptions.Other)
         return true;
       if (Style.AllowShortFunctionsOnASingleLineOptions.Empty &&
           NextLine.First->is(tok::r_brace)) {

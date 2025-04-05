@@ -258,7 +258,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_NESTED_BOOL(SpacesInParensOptions, Other);
   CHECK_PARSE_NESTED_BOOL(AllowShortFunctionsOnASingleLineOptions, Empty);
   CHECK_PARSE_NESTED_BOOL(AllowShortFunctionsOnASingleLineOptions, Inline);
-  CHECK_PARSE_NESTED_BOOL(AllowShortFunctionsOnASingleLineOptions, All);
+  CHECK_PARSE_NESTED_BOOL(AllowShortFunctionsOnASingleLineOptions, Other);
 }
 
 #undef CHECK_PARSE_BOOL

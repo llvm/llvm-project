@@ -630,7 +630,7 @@ template <> struct MappingTraits<FormatStyle::ShortFunctionMergeFlags> {
   static void mapping(IO &IO, FormatStyle::ShortFunctionMergeFlags &Value) {
     IO.mapOptional("Empty", Value.Empty);
     IO.mapOptional("Inline", Value.Inline);
-    IO.mapOptional("All", Value.All);
+    IO.mapOptional("Other", Value.Other);
   }
 };
 
@@ -1504,7 +1504,7 @@ static void expandPresetsShortFunctionsOnSingleLine(FormatStyle &Expanded) {
   }
 
   if (Expanded.AllowShortFunctionsOnASingleLine == FormatStyle::SFS_All)
-    Expanded.AllowShortFunctionsOnASingleLineOptions.All = true;
+    Expanded.AllowShortFunctionsOnASingleLineOptions.Other = true;
 }
 
 FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
@@ -1537,7 +1537,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AllowShortEnumsOnASingleLine = true;
   LLVMStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_All;
   LLVMStyle.AllowShortFunctionsOnASingleLineOptions = {};
-  LLVMStyle.AllowShortFunctionsOnASingleLineOptions.All = true;
+  LLVMStyle.AllowShortFunctionsOnASingleLineOptions.Other = true;
   LLVMStyle.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_Never;
   LLVMStyle.AllowShortLambdasOnASingleLine = FormatStyle::SLS_All;
   LLVMStyle.AllowShortLoopsOnASingleLine = false;

@@ -15125,7 +15125,7 @@ TEST_F(FormatTest, CustomShortFunctionOptions) {
   CustomEmpty.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Custom;
   CustomEmpty.AllowShortFunctionsOnASingleLineOptions.Empty = true;
   CustomEmpty.AllowShortFunctionsOnASingleLineOptions.Inline = false;
-  CustomEmpty.AllowShortFunctionsOnASingleLineOptions.All = false;
+  CustomEmpty.AllowShortFunctionsOnASingleLineOptions.Other = false;
 
   // Empty functions should be on a single line
   verifyFormat("int f() {}", CustomEmpty);
@@ -15146,6 +15146,9 @@ TEST_F(FormatTest, CustomShortFunctionOptions) {
                "};",
                CustomEmpty);
 
+  // test with comment
+  verifyFormat("void f3() { /* comment */ }", CustomEmpty);
+
   // Test with AfterFunction = true
   CustomEmpty.BreakBeforeBraces = FormatStyle::BS_Custom;
   CustomEmpty.BraceWrapping.AfterFunction = true;
@@ -15161,7 +15164,7 @@ TEST_F(FormatTest, CustomShortFunctionOptions) {
   CustomInline.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Custom;
   CustomInline.AllowShortFunctionsOnASingleLineOptions.Empty = false;
   CustomInline.AllowShortFunctionsOnASingleLineOptions.Inline = true;
-  CustomInline.AllowShortFunctionsOnASingleLineOptions.All = false;
+  CustomInline.AllowShortFunctionsOnASingleLineOptions.Other = false;
 
   verifyFormat("class C {\n"
                "  int f() {}\n"
@@ -15188,7 +15191,7 @@ TEST_F(FormatTest, CustomShortFunctionOptions) {
   CustomAll.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Custom;
   CustomAll.AllowShortFunctionsOnASingleLineOptions.Empty = false;
   CustomAll.AllowShortFunctionsOnASingleLineOptions.Inline = false;
-  CustomAll.AllowShortFunctionsOnASingleLineOptions.All = true;
+  CustomAll.AllowShortFunctionsOnASingleLineOptions.Other = true;
 
   // All functions should be on a single line if they fit
   verifyFormat("int f() { return 42; }", CustomAll);
@@ -15209,7 +15212,7 @@ TEST_F(FormatTest, CustomShortFunctionOptions) {
   CustomMixed.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Custom;
   CustomMixed.AllowShortFunctionsOnASingleLineOptions.Empty = true;
   CustomMixed.AllowShortFunctionsOnASingleLineOptions.Inline = true;
-  CustomMixed.AllowShortFunctionsOnASingleLineOptions.All = false;
+  CustomMixed.AllowShortFunctionsOnASingleLineOptions.Other = false;
 
   // Empty functions should be on a single line
   verifyFormat("int f() {}", CustomMixed);
