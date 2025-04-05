@@ -434,12 +434,12 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
 // NOTE: This function can be used before layout is done (see the object
 // streamer for example) and having the Asm argument lets us avoid relaxations
 // early.
-static bool evaluateSymbolicAdd(const MCAssembler *Asm,
-                                const SectionAddrMap *Addrs, bool InSet,
-                                const MCValue &LHS,
-                                const MCSymbolRefExpr *RhsAdd,
-                                const MCSymbolRefExpr *RhsSub, int64_t RHS_Cst,
-                                MCValue &Res) {
+bool MCExpr::evaluateSymbolicAdd(const MCAssembler *Asm,
+                                 const SectionAddrMap *Addrs, bool InSet,
+                                 const MCValue &LHS,
+                                 const MCSymbolRefExpr *RhsAdd,
+                                 const MCSymbolRefExpr *RhsSub, int64_t RHS_Cst,
+                                 MCValue &Res) {
   const MCSymbol *LHS_A = LHS.getAddSym();
   const MCSymbol *LHS_B = LHS.getSubSym();
   int64_t LHS_Cst = LHS.getConstant();
@@ -536,15 +536,14 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
           if (Res.getRefKind() != MCSymbolRefExpr::VK_None || !Res.getSymA() ||
               Res.getSubSym() || Res.getConstant())
             return false;
-          Res =
-              MCValue::get(MCSymbolRefExpr::create(&Res.getSymA()->getSymbol(),
-                                                   Kind, Asm->getContext()),
-                           Res.getSymB(), Res.getConstant(), Res.getRefKind());
+          Res = MCValue::get(
+              MCSymbolRefExpr::create(Res.getAddSym(), Kind, Asm->getContext()),
+              Res.getSymB(), Res.getConstant(), Res.getRefKind());
         }
         if (!IsMachO)
           return true;
 
-        const MCSymbolRefExpr *A = Res.getSymA();
+        auto *A = Res.getAddSym();
         auto *B = Res.getSubSym();
         // FIXME: This is small hack. Given
         // a = b + 4
@@ -579,7 +578,7 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
       break;
     case MCUnaryExpr::Minus:
       /// -(a - b + const) ==> (b - a - const)
-      if (Value.getSymA() && !Value.getSubSym())
+      if (Value.getAddSym() && !Value.getSubSym())
         return false;
 
       // The cast avoids undefined behavior if the constant is INT64_MIN.

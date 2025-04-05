@@ -45,8 +45,8 @@ unsigned VEELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
   case VEMCExpr::VK_TLS_GD_LO32:
   case VEMCExpr::VK_TPOFF_HI32:
   case VEMCExpr::VK_TPOFF_LO32:
-    if (auto *S = Target.getSymA())
-      cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
+    if (auto *SA = Target.getAddSym())
+      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;

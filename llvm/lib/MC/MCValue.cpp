@@ -27,7 +27,7 @@ void MCValue::print(raw_ostream &OS) const {
   if (getRefKind())
     OS << ':' << getRefKind() <<  ':';
 
-  OS << *getSymA();
+  SymA->print(OS, nullptr);
 
   if (auto *B = getSubSym()) {
     OS << " - ";
@@ -44,10 +44,8 @@ LLVM_DUMP_METHOD void MCValue::dump() const {
 }
 #endif
 
-MCSymbolRefExpr::VariantKind MCValue::getAccessVariant() const {
-  const MCSymbolRefExpr *A = getSymA();
-  if (!A)
-    return MCSymbolRefExpr::VK_None;
-
-  return A->getKind();
+uint16_t MCValue::getAccessVariant() const {
+  if (!SymA)
+    return 0;
+  return SymA->getSpecifier();
 }

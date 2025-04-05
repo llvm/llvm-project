@@ -125,15 +125,11 @@ bool MCAssembler::isThumbFunc(const MCSymbol *Symbol) const {
   if (V.getSubSym() || V.getRefKind() != MCSymbolRefExpr::VK_None)
     return false;
 
-  const MCSymbolRefExpr *Ref = V.getSymA();
-  if (!Ref)
+  auto *Sym = V.getAddSym();
+  if (!Sym || V.getSymSpecifier())
     return false;
 
-  if (Ref->getKind() != MCSymbolRefExpr::VK_None)
-    return false;
-
-  const MCSymbol &Sym = Ref->getSymbol();
-  if (!isThumbFunc(&Sym))
+  if (!isThumbFunc(Sym))
     return false;
 
   ThumbFuncs.insert(Symbol); // Cache it.
@@ -168,14 +164,11 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
   bool IsPCRel = FixupFlags & MCFixupKindInfo::FKF_IsPCRel;
   bool IsResolved = false;
   if (IsPCRel) {
-    if (Target.getSubSym()) {
-      IsResolved = false;
-    } else if (!Target.getSymA()) {
+    if (Target.getSubSym() || !Target.getAddSym()) {
       IsResolved = false;
     } else {
-      const MCSymbolRefExpr *A = Target.getSymA();
-      const MCSymbol &SA = A->getSymbol();
-      if (A->getKind() != MCSymbolRefExpr::VK_None || SA.isUndefined()) {
+      auto &SA = *Target.getAddSym();
+      if (Target.getSymSpecifier() || SA.isUndefined()) {
         IsResolved = false;
       } else {
         IsResolved = (FixupFlags & MCFixupKindInfo::FKF_Constant) ||
@@ -189,10 +182,9 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
 
   Value = Target.getConstant();
 
-  if (const MCSymbolRefExpr *A = Target.getSymA()) {
-    const MCSymbol &Sym = A->getSymbol();
-    if (Sym.isDefined())
-      Value += getSymbolOffset(Sym);
+  if (const MCSymbol *Add = Target.getAddSym()) {
+    if (Add->isDefined())
+      Value += getSymbolOffset(*Add);
   }
   if (const MCSymbol *Sub = Target.getSubSym())
     if (Sub->isDefined())
@@ -296,9 +288,9 @@ uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
 
     uint64_t FragmentOffset = getFragmentOffset(OF);
     int64_t TargetLocation = Value.getConstant();
-    if (const MCSymbolRefExpr *A = Value.getSymA()) {
+    if (const auto *SA = Value.getAddSym()) {
       uint64_t Val;
-      if (!getSymbolOffset(A->getSymbol(), Val)) {
+      if (!getSymbolOffset(*SA, Val)) {
         getContext().reportError(OF.getLoc(), "expected absolute expression");
         return 0;
       }
@@ -460,14 +452,14 @@ static bool getSymbolOffsetImpl(const MCAssembler &Asm, const MCSymbol &S,
 
   uint64_t Offset = Target.getConstant();
 
-  const MCSymbolRefExpr *A = Target.getSymA();
+  const MCSymbol *A = Target.getAddSym();
   if (A) {
     uint64_t ValA;
     // FIXME: On most platforms, `Target`'s component symbols are labels from
     // having been simplified during evaluation, but on Mach-O they can be
     // variables due to PR19203. This, and the line below for `B` can be
     // restored to call `getLabelOffset` when PR19203 is fixed.
-    if (!getSymbolOffsetImpl(Asm, A->getSymbol(), ReportError, ValA))
+    if (!getSymbolOffsetImpl(Asm, *A, ReportError, ValA))
       return false;
     Offset += ValA;
   }
@@ -516,11 +508,11 @@ const MCSymbol *MCAssembler::getBaseSymbol(const MCSymbol &Symbol) const {
     return nullptr;
   }
 
-  const MCSymbolRefExpr *A = Value.getSymA();
+  const MCSymbol *A = Value.getAddSym();
   if (!A)
     return nullptr;
 
-  const MCSymbol &ASym = A->getSymbol();
+  const MCSymbol &ASym = *A;
   if (ASym.isCommon()) {
     getContext().reportError(Expr->getLoc(),
                              "Common symbol '" + ASym.getName() +

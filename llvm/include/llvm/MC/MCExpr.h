@@ -26,6 +26,7 @@ class MCSymbol;
 class MCValue;
 class raw_ostream;
 class StringRef;
+class MCSymbolRefExpr;
 
 using SectionAddrMap = DenseMap<const MCSection *, uint64_t>;
 
@@ -130,6 +131,11 @@ public:
   MCFragment *findAssociatedFragment() const;
 
   /// @}
+
+  static bool evaluateSymbolicAdd(const MCAssembler *, const SectionAddrMap *,
+                                  bool, const MCValue &,
+                                  const MCSymbolRefExpr *,
+                                  const MCSymbolRefExpr *, int64_t, MCValue &);
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const MCExpr &E) {
