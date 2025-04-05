@@ -1398,6 +1398,49 @@ static void showBRDefaultDiagnostics(llvm::raw_svector_ostream &OS,
     OS << " to ";
     SI.Dest->printPretty(OS);
   }
+
+  // If the value was part of a loop widening node and its value was
+  // invalidated (i.e. replaced with a conjured symbol) then let the user know
+  // that it was due to loop widening.
+  if (SI.StoreSite && SI.Dest &&
+      SI.StoreSite->getLocation().getTag() ==
+          ExprEngine::loopWideningNodeTag()) {
+
+    // TODO: Is it always the case that there's only one predecessor?
+    assert(SI.StoreSite->hasSinglePred() &&
+           "more than one predecessor found, this needs to be handled...");
+    if (const ExplodedNode *previous = SI.StoreSite->getFirstPred()) {
+      // Was the associated memory region for this variable changed from
+      // non-Symbolic to Symbolic because of invalidation?
+      // TODO: Better yet, if there was simply a way to know if a given
+      // SVal / MemRegion was invalidated as part of the current state,
+      // then that should be more robust than what's going on here.
+      // Could we somehow make use of "RegionChanges" /
+      // "runCheckersForRegionChanges" and the ExplicitRegions parameter.
+      // Still need to somehow know when a particular Global
+      // Variable is invalidated. I have not found this to be possible with
+      // "RegionChanges" unless I'm missing something...
+      const ProgramState *lastState = previous->getState().get();
+      const SVal &lastSVal = lastState->getSVal(SI.Dest);
+      const SymbolRef valueSymbol = SI.Value.getAsSymbol(true);
+      const SymbolRef lastSymbol = lastSVal.getAsSymbol(true);
+
+      bool isNowSymbolic = false;
+      if (valueSymbol) {
+        if (!lastSymbol) {
+          // Last state did not have a symbol for SI.Value in current state.
+          // Probably (?) invalidated.
+          isNowSymbolic = true;
+        } else {
+          // If the symbol types differ, then there was likely invalidation
+          isNowSymbolic = valueSymbol->getKind() != lastSymbol->getKind();
+        }
+      }
+
+      if (isNowSymbolic)
+        OS << " (invalidation as part of widen-loops made this symbolic here)";
+    }
+  }
 }
 
 static bool isTrivialCopyOrMoveCtor(const CXXConstructExpr *CE) {
