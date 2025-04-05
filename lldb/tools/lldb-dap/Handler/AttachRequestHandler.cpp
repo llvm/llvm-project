@@ -43,10 +43,8 @@ namespace lldb_dap {
 //     acknowledgement, so no body field is required."
 //   }]
 // }
-
 void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
   dap.is_attach = true;
-  dap.last_launch_or_attach_request = request;
   llvm::json::Object response;
   lldb::SBError error;
   FillResponse(request, response);
@@ -65,6 +63,7 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
   attach_info.SetWaitForLaunch(wait_for, false /*async*/);
   dap.configuration.initCommands = GetStrings(arguments, "initCommands");
   dap.configuration.preRunCommands = GetStrings(arguments, "preRunCommands");
+  dap.configuration.postRunCommands = GetStrings(arguments, "postRunCommands");
   dap.configuration.stopCommands = GetStrings(arguments, "stopCommands");
   dap.configuration.exitCommands = GetStrings(arguments, "exitCommands");
   dap.configuration.terminateCommands =
@@ -76,7 +75,6 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
   dap.stop_at_entry = core_file.empty()
                           ? GetBoolean(arguments, "stopOnEntry").value_or(false)
                           : true;
-  dap.configuration.postRunCommands = GetStrings(arguments, "postRunCommands");
   const llvm::StringRef debuggerRoot =
       GetString(arguments, "debuggerRoot").value_or("");
   dap.configuration.enableAutoVariableSummaries =
@@ -109,8 +107,14 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
 
   SetSourceMapFromArguments(*arguments);
 
+  llvm::StringRef program = GetString(arguments, "program").value_or("");
+  llvm::StringRef target_triple =
+      GetString(arguments, "targetTriple").value_or("");
+  llvm::StringRef platform_name =
+      GetString(arguments, "platformName").value_or("");
   lldb::SBError status;
-  dap.SetTarget(dap.CreateTargetFromArguments(*arguments, status));
+  dap.SetTarget(dap.CreateTargetFromArguments(program, target_triple,
+                                              platform_name, status));
   if (status.Fail()) {
     response["success"] = llvm::json::Value(false);
     EmplaceSafeString(response, "message", status.GetCString());
@@ -180,7 +184,7 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
 
     // Make sure the process is attached and stopped before proceeding as the
     // the launch commands are not run using the synchronous mode.
-    error = dap.WaitForProcessToStop(timeout_seconds);
+    error = dap.WaitForProcessToStop(std::chrono::seconds(timeout_seconds));
   }
 
   if (error.Success() && core_file.empty()) {

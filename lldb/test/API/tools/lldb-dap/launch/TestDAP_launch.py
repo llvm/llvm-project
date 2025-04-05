@@ -41,7 +41,9 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.dap_server.request_disconnect()
 
         # Wait until the underlying lldb-dap process dies.
-        self.dap_server.process.wait(timeout=lldbdap_testcase.DAPTestCaseBase.timeoutval)
+        self.dap_server.process.wait(
+            timeout=lldbdap_testcase.DAPTestCaseBase.timeoutval
+        )
 
         # Check the return code
         self.assertEqual(self.dap_server.process.poll(), 0)
@@ -459,7 +461,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
 
         self.assertFalse(response["success"])
         self.assertRegex(
-            response["message"],
+            response["body"]["error"]["format"],
             r"Failed to run launch commands\. See the Debug Console for more details",
         )
 
