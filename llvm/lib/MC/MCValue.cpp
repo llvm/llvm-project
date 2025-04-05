@@ -44,10 +44,10 @@ LLVM_DUMP_METHOD void MCValue::dump() const {
 }
 #endif
 
-MCSymbolRefExpr::VariantKind MCValue::getAccessVariant() const {
+uint16_t MCValue::getAccessVariant() const {
   const MCSymbolRefExpr *A = getSymA();
   if (!A)
-    return MCSymbolRefExpr::VK_None;
+    return 0;
 
-  return A->getKind();
+  return A->getSpecifier();
 }
