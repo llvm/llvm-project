@@ -73,9 +73,11 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
   llvm::StringRef core_file = GetString(arguments, "coreFile").value_or("");
   const uint64_t timeout_seconds =
       GetInteger<uint64_t>(arguments, "timeout").value_or(30);
-  dap.stop_at_entry = core_file.empty()
-                          ? GetBoolean(arguments, "stopOnEntry").value_or(false)
-                          : true;
+  // Clients like VS Code sends threads request right after receiving
+  // configurationDone reponse where the process might be resuming.
+  // Getting threads list on a running process is not supported by LLDB.
+  // Always stop the process after attaching.
+  dap.stop_at_entry = true;
   dap.configuration.postRunCommands = GetStrings(arguments, "postRunCommands");
   const llvm::StringRef debuggerRoot =
       GetString(arguments, "debuggerRoot").value_or("");

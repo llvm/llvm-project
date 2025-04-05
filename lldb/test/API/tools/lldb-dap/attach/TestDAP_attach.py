@@ -1,5 +1,5 @@
 """
-Test lldb-dap setBreakpoints request
+Test lldb-dap attach request
 """
 
 
@@ -35,6 +35,9 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(
             len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
         )
+        # Send a configurationDone request when process is ready to continue
+        self.dap_server.request_configurationDone()
+        self.assertTrue(self.verify_stop_exception_info("signal SIGSTOP"))
         self.continue_to_breakpoints(breakpoint_ids)
         if continueToExit:
             self.continue_to_exit()
@@ -175,6 +178,9 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         functions = ["main"]
         breakpoint_ids = self.set_function_breakpoints(functions)
         self.assertEqual(len(breakpoint_ids), len(functions), "expect one breakpoint")
+        # Execute the configurationDone even if this is not real attaching
+        self.dap_server.request_configurationDone()
+        self.assertTrue(self.verify_stop_exception_info("signal SIGSTOP"))
         self.continue_to_breakpoints(breakpoint_ids)
         output = self.collect_console(timeout_secs=10, pattern=stopCommands[-1])
         self.verify_commands("stopCommands", output, stopCommands)
