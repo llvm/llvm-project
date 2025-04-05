@@ -19,6 +19,7 @@
 #include "flang/Runtime/iostat-consts.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include <optional>
 
@@ -450,9 +451,8 @@ struct IntrinsicLibrary {
                                llvm::ArrayRef<fir::ExtendedValue> args);
   fir::ExtendedValue genUnpack(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genVerify(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genVoteAllSync(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genVoteAnySync(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genVoteBallotSync(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  template <mlir::NVVM::VoteSyncKind kind>
+  mlir::Value genVoteSync(mlir::Type, llvm::ArrayRef<mlir::Value>);
 
   /// Implement all conversion functions like DBLE, the first argument is
   /// the value to convert. There may be an additional KIND arguments that
