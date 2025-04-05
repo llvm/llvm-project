@@ -176,11 +176,10 @@ void AArch64MachObjectWriter::recordRelocation(
   // assembler local symbols. If we got here, that's not what we have,
   // so complain loudly.
   if (Kind == AArch64::fixup_aarch64_pcrel_branch19) {
-    Asm.getContext().reportError(Fixup.getLoc(),
-                                 "conditional branch requires assembler-local"
-                                 " label. '" +
-                                     Target.getSymA()->getSymbol().getName() +
-                                     "' is external.");
+    Asm.getContext().reportError(
+        Fixup.getLoc(), "conditional branch requires assembler-local"
+                        " label. '" +
+                            Target.getAddSym()->getName() + "' is external.");
     return;
   }
 
@@ -214,7 +213,7 @@ void AArch64MachObjectWriter::recordRelocation(
       // something similar?
     }
   } else if (auto *B = Target.getSubSym()) { // A - B + constant
-    const MCSymbol *A = &Target.getSymA()->getSymbol();
+    const MCSymbol *A = Target.getAddSym();
     const MCSymbol *A_Base = Writer->getAtom(*A);
     const MCSymbol *B_Base = Writer->getAtom(*B);
 
@@ -293,7 +292,7 @@ void AArch64MachObjectWriter::recordRelocation(
     RelSymbol = B_Base;
     Type = MachO::ARM64_RELOC_SUBTRACTOR;
   } else { // A + constant
-    const MCSymbol *Symbol = &Target.getSymA()->getSymbol();
+    const MCSymbol *Symbol = Target.getAddSym();
     const MCSectionMachO &Section =
         static_cast<const MCSectionMachO &>(*Fragment->getParent());
 

@@ -140,7 +140,7 @@ void X86MachObjectWriter::RecordX86_64Relocation(
       Type = MachO::X86_64_RELOC_BRANCH;
     }
   } else if (Target.getSubSym()) { // A - B + constant
-    const MCSymbol *A = &Target.getSymA()->getSymbol();
+    const MCSymbol *A = Target.getAddSym();
     if (A->isTemporary())
       A = &Writer->findAliasedSymbol(*A);
     const MCSymbol *A_Base = Writer->getAtom(*A);
@@ -212,7 +212,7 @@ void X86MachObjectWriter::RecordX86_64Relocation(
       Index = B->getFragment()->getParent()->getOrdinal() + 1;
     Type = MachO::X86_64_RELOC_SUBTRACTOR;
   } else {
-    const MCSymbol *Symbol = &Target.getSymA()->getSymbol();
+    const MCSymbol *Symbol = Target.getAddSym();
     if (Symbol->isTemporary() && Value) {
       const MCSection &Sec = Symbol->getSection();
       if (!MCAsmInfoDarwin::isSectionAtomizableBySymbols(Sec))
@@ -370,7 +370,7 @@ bool X86MachObjectWriter::recordScatteredRelocation(MachObjectWriter *Writer,
   unsigned Type = MachO::GENERIC_RELOC_VANILLA;
 
   // See <reloc.h>.
-  const MCSymbol *A = &Target.getSymA()->getSymbol();
+  const MCSymbol *A = Target.getAddSym();
 
   if (!A->getFragment()) {
     Asm.getContext().reportError(
@@ -500,9 +500,10 @@ void X86MachObjectWriter::RecordX86Relocation(MachObjectWriter *Writer,
                                               uint64_t &FixedValue) {
   unsigned IsPCRel = Writer->isFixupKindPCRel(Asm, Fixup.getKind());
   unsigned Log2Size = getFixupKindLog2Size(Fixup.getKind());
+  const MCSymbol *A = Target.getAddSym();
 
   // If this is a 32-bit TLVP reloc it's handled a bit differently.
-  if (Target.getSymA() && Target.getSymSpecifier() == X86MCExpr::VK_TLVP) {
+  if (A && Target.getSymSpecifier() == X86MCExpr::VK_TLVP) {
     recordTLVPRelocation(Writer, Asm, Fragment, Fixup, Target, FixedValue);
     return;
   }
@@ -515,11 +516,6 @@ void X86MachObjectWriter::RecordX86Relocation(MachObjectWriter *Writer,
                               FixedValue);
     return;
   }
-
-  // Get the symbol data, if any.
-  const MCSymbol *A = nullptr;
-  if (Target.getSymA())
-    A = &Target.getSymA()->getSymbol();
 
   // If this is an internal relocation with an offset, it also needs a scattered
   // relocation entry.
