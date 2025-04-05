@@ -4,6 +4,7 @@
 """
 
 import os
+import signal
 import socket
 import shutil
 import lldbgdbserverutils
@@ -58,3 +59,45 @@ class TestPlatformProcessLaunchGDBServer(TestBase):
 
         self.runCmd("target create {}".format(self.getBuildArtifact("a.out")))
         self.expect("run", substrs=["unable to launch a GDB server on"], error=True)
+
+    @skipIfRemote
+    @skipUnlessPlatform(["linux"])
+    @add_test_categories(["lldb-server"])
+    def test_lldb_server_weird_symlinks(self):
+        self.build()
+
+        hostname = socket.getaddrinfo("localhost", 0, proto=socket.IPPROTO_TCP)[0][4][0]
+        listen_url = "[%s]:0" % hostname
+
+        port_file = self.getBuildArtifact("port")
+        commandline_args = [
+            "platform",
+            "--listen",
+            listen_url,
+            "--socket-file",
+            port_file,
+        ]
+
+        # Run lldb-server from a symlink without any binary called "lldb-server" in the directory.
+        llgs_hiding_directory = self.getBuildArtifact("hiding-directory")
+        new_lldb_server_link = self.getBuildArtifact(
+            "lldb-server-with-an-unconventional-name"
+        )
+        new_lldb_server = os.path.join(llgs_hiding_directory, "lldb-server")
+        os.makedirs(llgs_hiding_directory)
+        shutil.copy(lldbgdbserverutils.get_lldb_server_exe(), new_lldb_server)
+        os.symlink(new_lldb_server, new_lldb_server_link)
+
+        proc = self.spawnSubprocess(new_lldb_server_link, commandline_args)
+        socket_id = lldbutil.wait_for_file_on_target(self, port_file)
+
+        new_platform = lldb.SBPlatform("remote-" + self.getPlatform())
+        self.dbg.SetSelectedPlatform(new_platform)
+
+        connect_url = "connect://[%s]:%s" % (hostname, socket_id)
+        self.runCmd("platform connect %s" % connect_url)
+        self.runCmd("target create {}".format(self.getBuildArtifact("a.out")))
+        self.runCmd("run")
+
+        # So that lldb-server doesn't crash over SIGHUP
+        os.kill(proc.pid, signal.SIGTERM)
