@@ -259,6 +259,9 @@ public:
   VariantKind getKind() const {
     return (VariantKind)(getSubclassData() & VariantKindMask);
   }
+  uint16_t getSpecifier() const {
+    return (getSubclassData() & VariantKindMask);
+  }
 
   bool hasSubsectionsViaSymbols() const {
     return (getSubclassData() & HasSubsectionsViaSymbolsBit) != 0;
