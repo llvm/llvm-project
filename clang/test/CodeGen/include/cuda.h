@@ -1,5 +1,5 @@
 /* Minimal declarations for CUDA support.  Testing purposes only.
- * This should stay in sync with clang/test/CodeGen/include/cuda.h
+ * This should stay in sync with clang/test/Headers/Inputs/include/cuda.h
  */
 #pragma once
 
