@@ -21,6 +21,7 @@ using namespace test;
 
 //===----------------------------------------------------------------------===//
 // Parsing
+//===----------------------------------------------------------------------===//
 
 static ParseResult parseCustomOptionalOperand(
     OpAsmParser &parser,
@@ -155,6 +156,7 @@ static ParseResult parseCustomDirectiveOptionalOperandRef(
 
 //===----------------------------------------------------------------------===//
 // Printing
+//===----------------------------------------------------------------------===//
 
 static void printCustomOptionalOperand(OpAsmPrinter &printer, Operation *,
                                        Value optOperand) {
@@ -291,6 +293,7 @@ void ParseB64BytesOp::print(OpAsmPrinter &p) {
 
 //===----------------------------------------------------------------------===//
 // Test WrapRegionOp - wrapping op exercising `parseGenericOperation()`.
+//===----------------------------------------------------------------------===//
 
 ParseResult WrappingRegionOp::parse(OpAsmParser &parser,
                                     OperationState &result) {

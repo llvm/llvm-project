@@ -1,5 +1,7 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.NoUnretainedMemberChecker -verify %s
 
+@class SystemObject;
+
 #include "objc-mock-types.h"
 #include "mock-system-header.h"
 

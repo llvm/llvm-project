@@ -37,10 +37,22 @@ STATISTIC(MCExprEvaluate, "Number of MCExpr evaluations");
 } // end namespace stats
 } // end anonymous namespace
 
+static int getPrecedence(MCBinaryExpr::Opcode Op) {
+  switch (Op) {
+  case MCBinaryExpr::Add:
+  case MCBinaryExpr::Sub:
+    return 1;
+  default:
+    return 0;
+  }
+}
+
 // VariantKind printing and formatting utilize MAI. operator<< (dump and some
 // target code) specifies MAI as nullptr and should be avoided when MAI is
 // needed.
-void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI, bool InParens) const {
+void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI,
+                   int SurroundingPrec) const {
+  constexpr int MaxPrec = 9;
   switch (getKind()) {
   case MCExpr::Target:
     return cast<MCTargetExpr>(this)->printImpl(OS, MAI);
@@ -75,23 +87,13 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI, bool InParens) const {
   case MCExpr::SymbolRef: {
     const MCSymbolRefExpr &SRE = cast<MCSymbolRefExpr>(*this);
     const MCSymbol &Sym = SRE.getSymbol();
-    // Parenthesize names that start with $ so that they don't look like
-    // absolute names.
-    bool UseParens = MAI && MAI->useParensForDollarSignNames() && !InParens &&
-                     Sym.getName().starts_with('$');
-
-    if (UseParens) {
-      OS << '(';
-      Sym.print(OS, MAI);
-      OS << ')';
-    } else
-      Sym.print(OS, MAI);
+    Sym.print(OS, MAI);
 
     const MCSymbolRefExpr::VariantKind Kind = SRE.getKind();
     if (Kind != MCSymbolRefExpr::VK_None) {
       if (!MAI) // should only be used by dump()
         OS << "@<variant " << Kind << '>';
-      else if (MAI->useParensForSymbolVariant()) // ARM
+      else if (MAI->useParensForSpecifier()) // ARM
         OS << '(' << MAI->getSpecifierName(Kind) << ')';
       else
         OS << '@' << MAI->getSpecifierName(Kind);
@@ -108,24 +110,26 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI, bool InParens) const {
     case MCUnaryExpr::Not:   OS << '~'; break;
     case MCUnaryExpr::Plus:  OS << '+'; break;
     }
-    bool Binary = UE.getSubExpr()->getKind() == MCExpr::Binary;
-    if (Binary) OS << "(";
-    UE.getSubExpr()->print(OS, MAI);
-    if (Binary) OS << ")";
+    UE.getSubExpr()->print(OS, MAI, MaxPrec);
     return;
   }
 
   case MCExpr::Binary: {
     const MCBinaryExpr &BE = cast<MCBinaryExpr>(*this);
-
-    // Only print parens around the LHS if it is non-trivial.
-    if (isa<MCConstantExpr>(BE.getLHS()) || isa<MCSymbolRefExpr>(BE.getLHS())) {
-      BE.getLHS()->print(OS, MAI);
-    } else {
+    // We want to avoid redundant parentheses for relocatable expressions like
+    // a-b+c.
+    //
+    // Print '(' if the current operator has lower precedence than the
+    // surrounding operator, or if the surrounding operator's precedence is
+    // unknown (set to HighPrecedence).
+    int Prec = getPrecedence(BE.getOpcode());
+    bool Paren = Prec < SurroundingPrec;
+    if (Paren)
       OS << '(';
-      BE.getLHS()->print(OS, MAI);
-      OS << ')';
-    }
+    // Many operators' precedence is different from C. Set the precedence to
+    // HighPrecedence for unknown operators.
+    int SubPrec = Prec ? Prec : MaxPrec;
+    BE.getLHS()->print(OS, MAI, SubPrec);
 
     switch (BE.getOpcode()) {
     case MCBinaryExpr::Add:
@@ -133,6 +137,8 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI, bool InParens) const {
       if (const MCConstantExpr *RHSC = dyn_cast<MCConstantExpr>(BE.getRHS())) {
         if (RHSC->getValue() < 0) {
           OS << RHSC->getValue();
+          if (Paren)
+            OS << ')';
           return;
         }
       }
@@ -160,14 +166,9 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI, bool InParens) const {
     case MCBinaryExpr::Xor:  OS <<  '^'; break;
     }
 
-    // Only print parens around the LHS if it is non-trivial.
-    if (isa<MCConstantExpr>(BE.getRHS()) || isa<MCSymbolRefExpr>(BE.getRHS())) {
-      BE.getRHS()->print(OS, MAI);
-    } else {
-      OS << '(';
-      BE.getRHS()->print(OS, MAI);
+    BE.getRHS()->print(OS, MAI, SubPrec + 1);
+    if (Paren)
       OS << ')';
-    }
     return;
   }
   }
@@ -294,19 +295,18 @@ bool MCExpr::evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm,
 }
 
 /// Helper method for \see EvaluateSymbolAdd().
-static void AttemptToFoldSymbolOffsetDifference(
-    const MCAssembler *Asm, const SectionAddrMap *Addrs, bool InSet,
-    const MCSymbolRefExpr *&A, const MCSymbolRefExpr *&B, int64_t &Addend) {
+static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
+                                                const SectionAddrMap *Addrs,
+                                                bool InSet, const MCSymbol *&A,
+                                                const MCSymbol *&B,
+                                                int64_t &Addend) {
   if (!A || !B)
     return;
 
-  const MCSymbol &SA = A->getSymbol();
-  const MCSymbol &SB = B->getSymbol();
-
+  const MCSymbol &SA = *A, &SB = *B;
   if (SA.isUndefined() || SB.isUndefined())
     return;
-
-  if (!Asm->getWriter().isSymbolRefDifferenceFullyResolved(*Asm, A, B, InSet))
+  if (!Asm->getWriter().isSymbolRefDifferenceFullyResolved(*Asm, SA, SB, InSet))
     return;
 
   auto FinalizeFolding = [&]() {
@@ -344,8 +344,7 @@ static void AttemptToFoldSymbolOffsetDifference(
     }
 
     // Eagerly evaluate when layout is finalized.
-    Addend += Asm->getSymbolOffset(A->getSymbol()) -
-              Asm->getSymbolOffset(B->getSymbol());
+    Addend += Asm->getSymbolOffset(SA) - Asm->getSymbolOffset(SB);
     if (Addrs && (&SecA != &SecB))
       Addend += (Addrs->lookup(&SecA) - Addrs->lookup(&SecB));
 
@@ -419,65 +418,52 @@ static void AttemptToFoldSymbolOffsetDifference(
   }
 }
 
-/// Evaluate the result of an add between (conceptually) two MCValues.
-///
-/// This routine conceptually attempts to construct an MCValue:
-///   Result = (Result_A - Result_B + Result_Cst)
-/// from two MCValue's LHS and RHS where
-///   Result = LHS + RHS
-/// and
-///   Result = (LHS_A - LHS_B + LHS_Cst) + (RHS_A - RHS_B + RHS_Cst).
-///
-/// This routine attempts to aggressively fold the operands such that the result
-/// is representable in an MCValue, but may not always succeed.
-///
-/// \returns True on success, false if the result is not representable in an
-/// MCValue.
+// Evaluate the sum of two relocatable expressions.
+//
+//   Result = (LHS_A - LHS_B + LHS_Cst) + (RHS_A - RHS_B + RHS_Cst).
+//
+// This routine attempts to aggressively fold the operands such that the result
+// is representable in an MCValue, but may not always succeed.
+//
+// LHS_A and RHS_A might have relocation specifiers while LHS_B and RHS_B
+// cannot have specifiers.
+//
+// \returns True on success, false if the result is not representable in an
+// MCValue.
 
-/// NOTE: It is really important to have both the Asm and Layout arguments.
-/// They might look redundant, but this function can be used before layout
-/// is done (see the object streamer for example) and having the Asm argument
-/// lets us avoid relaxations early.
-static bool evaluateSymbolicAdd(const MCAssembler *Asm,
-                                const SectionAddrMap *Addrs, bool InSet,
-                                const MCValue &LHS, const MCValue &RHS,
-                                MCValue &Res) {
-  // FIXME: This routine (and other evaluation parts) are *incredibly* sloppy
-  // about dealing with modifiers. This will ultimately bite us, one day.
-  const MCSymbolRefExpr *LHS_A = LHS.getSymA();
-  const MCSymbolRefExpr *LHS_B = LHS.getSymB();
+// NOTE: This function can be used before layout is done (see the object
+// streamer for example) and having the Asm argument lets us avoid relaxations
+// early.
+bool MCExpr::evaluateSymbolicAdd(const MCAssembler *Asm,
+                                 const SectionAddrMap *Addrs, bool InSet,
+                                 const MCValue &LHS,
+                                 const MCSymbolRefExpr *RhsAdd,
+                                 const MCSymbolRefExpr *RhsSub, int64_t RHS_Cst,
+                                 MCValue &Res) {
+  const MCSymbol *LHS_A = LHS.getAddSym();
+  const MCSymbol *LHS_B = LHS.getSubSym();
   int64_t LHS_Cst = LHS.getConstant();
 
-  const MCSymbolRefExpr *RHS_A = RHS.getSymA();
-  const MCSymbolRefExpr *RHS_B = RHS.getSymB();
-  int64_t RHS_Cst = RHS.getConstant();
-
-  if (LHS.getRefKind() != RHS.getRefKind())
-    return false;
+  const MCSymbol *RHS_A = RhsAdd ? &RhsAdd->getSymbol() : nullptr;
+  const MCSymbol *RHS_B = RhsSub ? &RhsSub->getSymbol() : nullptr;
 
   // Fold the result constant immediately.
   int64_t Result_Cst = LHS_Cst + RHS_Cst;
 
   // If we have a layout, we can fold resolved differences.
   if (Asm) {
-    // First, fold out any differences which are fully resolved. By
-    // reassociating terms in
+    // While LHS_A-LHS_B and RHS_A-RHS_B from recursive calls have already been
+    // folded, reassociating terms in
     //   Result = (LHS_A - LHS_B + LHS_Cst) + (RHS_A - RHS_B + RHS_Cst).
-    // we have the four possible differences:
-    //   (LHS_A - LHS_B),
-    //   (LHS_A - RHS_B),
-    //   (RHS_A - LHS_B),
-    //   (RHS_A - RHS_B).
-    // Since we are attempting to be as aggressive as possible about folding, we
-    // attempt to evaluate each possible alternative.
-    AttemptToFoldSymbolOffsetDifference(Asm, Addrs, InSet, LHS_A, LHS_B,
-                                        Result_Cst);
-    AttemptToFoldSymbolOffsetDifference(Asm, Addrs, InSet, LHS_A, RHS_B,
-                                        Result_Cst);
-    AttemptToFoldSymbolOffsetDifference(Asm, Addrs, InSet, RHS_A, LHS_B,
-                                        Result_Cst);
-    AttemptToFoldSymbolOffsetDifference(Asm, Addrs, InSet, RHS_A, RHS_B,
-                                        Result_Cst);
+    // might bring more opportunities.
+    if (LHS_A && RHS_B && !LHS.getSymA()->getSpecifier()) {
+      attemptToFoldSymbolOffsetDifference(Asm, Addrs, InSet, LHS_A, RHS_B,
+                                          Result_Cst);
+    }
+    if (RHS_A && LHS_B && !RhsAdd->getSpecifier()) {
+      attemptToFoldSymbolOffsetDifference(Asm, Addrs, InSet, RHS_A, LHS_B,
+                                          Result_Cst);
+    }
   }
 
   // We can't represent the addition or subtraction of two symbols.
@@ -486,9 +472,10 @@ static bool evaluateSymbolicAdd(const MCAssembler *Asm,
 
   // At this point, we have at most one additive symbol and one subtractive
   // symbol -- find them.
-  const MCSymbolRefExpr *A = LHS_A ? LHS_A : RHS_A;
-  const MCSymbolRefExpr *B = LHS_B ? LHS_B : RHS_B;
-
+  auto *A = LHS_A ? LHS.getSymA() : RHS_A ? RhsAdd : nullptr;
+  auto *B = LHS_B ? LHS.getSymB() : RHS_B ? RhsSub : nullptr;
+  if (B && B->getKind() != MCSymbolRefExpr::VK_None)
+    return false;
   Res = MCValue::get(A, B, Result_Cst);
   return true;
 }
@@ -640,31 +627,40 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
 
     // We only support a few operations on non-constant expressions, handle
     // those first.
+    auto Op = ABE->getOpcode();
+    int64_t LHS = LHSValue.getConstant(), RHS = RHSValue.getConstant();
     if (!LHSValue.isAbsolute() || !RHSValue.isAbsolute()) {
-      switch (ABE->getOpcode()) {
+      switch (Op) {
       default:
         return false;
-      case MCBinaryExpr::Sub:
-        // Negate RHS and add.
-        // The cast avoids undefined behavior if the constant is INT64_MIN.
-        return evaluateSymbolicAdd(
-            Asm, Addrs, InSet, LHSValue,
-            MCValue::get(RHSValue.getSymB(), RHSValue.getSymA(),
-                         -(uint64_t)RHSValue.getConstant(),
-                         RHSValue.getRefKind()),
-            Res);
-
       case MCBinaryExpr::Add:
-        return evaluateSymbolicAdd(Asm, Addrs, InSet, LHSValue, RHSValue, Res);
+      case MCBinaryExpr::Sub:
+        // TODO: Prevent folding for AArch64 @AUTH operands.
+        if (LHSValue.getSpecifier() || RHSValue.getSpecifier())
+          return false;
+        if (Op == MCBinaryExpr::Sub) {
+          std::swap(RHSValue.SymA, RHSValue.SymB);
+          RHSValue.Cst = -(uint64_t)RHSValue.Cst;
+        }
+        if (RHSValue.isAbsolute()) {
+          LHSValue.Cst += RHSValue.Cst;
+          Res = LHSValue;
+          return true;
+        }
+        if (LHSValue.isAbsolute()) {
+          RHSValue.Cst += LHSValue.Cst;
+          Res = RHSValue;
+          return true;
+        }
+        return evaluateSymbolicAdd(Asm, Addrs, InSet, LHSValue, RHSValue.SymA,
+                                   RHSValue.SymB, RHSValue.Cst, Res);
       }
     }
 
     // FIXME: We need target hooks for the evaluation. It may be limited in
     // width, and gas defines the result of comparisons differently from
     // Apple as.
-    int64_t LHS = LHSValue.getConstant(), RHS = RHSValue.getConstant();
     int64_t Result = 0;
-    auto Op = ABE->getOpcode();
     switch (Op) {
     case MCBinaryExpr::AShr: Result = LHS >> RHS; break;
     case MCBinaryExpr::Add:  Result = LHS + RHS; break;
