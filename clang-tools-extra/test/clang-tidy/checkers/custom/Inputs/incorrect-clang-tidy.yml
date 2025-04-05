@@ -1,0 +1,10 @@
+CustomChecks:
+  - Name: test-let-bind
+    Query: |
+      let expr varDecl(isStaticStorageClass()).bind("vd")
+      match expr
+      set output print
+    Diagnostic:
+      - BindName: vd
+        Message: find static variable
+        Level: Warning
