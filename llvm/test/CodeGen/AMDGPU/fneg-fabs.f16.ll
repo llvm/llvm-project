@@ -478,13 +478,13 @@ define amdgpu_kernel void @fneg_fabs_v4f16(ptr addrspace(1) %out, <4 x half> %in
 ; CIVI:       ; %bb.0:
 ; CIVI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CIVI-NEXT:    s_waitcnt lgkmcnt(0)
-; CIVI-NEXT:    s_or_b32 s3, s3, 0x80008000
-; CIVI-NEXT:    s_or_b32 s2, s2, 0x80008000
-; CIVI-NEXT:    v_mov_b32_e32 v3, s1
-; CIVI-NEXT:    v_mov_b32_e32 v0, s2
-; CIVI-NEXT:    v_mov_b32_e32 v1, s3
-; CIVI-NEXT:    v_mov_b32_e32 v2, s0
-; CIVI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
+; CIVI-NEXT:    v_mov_b32_e32 v0, s0
+; CIVI-NEXT:    v_mov_b32_e32 v1, s1
+; CIVI-NEXT:    s_or_b32 s0, s3, 0x80008000
+; CIVI-NEXT:    s_or_b32 s1, s2, 0x80008000
+; CIVI-NEXT:    v_mov_b32_e32 v2, s1
+; CIVI-NEXT:    v_mov_b32_e32 v3, s0
+; CIVI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; CIVI-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: fneg_fabs_v4f16:

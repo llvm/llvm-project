@@ -281,17 +281,17 @@ define hidden void @i32_libcS(i32 noundef %x, i8 %y.coerce0, i16 %y.coerce1, i32
 ; CHECK-LABEL: define {{[^@]+}}@i32_libcS(i32 noundef %x, i8 %y.coerce0, i16 %y.coerce1, i32 %y.coerce2, i64 %y.coerce3, float %y.coerce4, double %y.coerce5) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    %vararg_buffer = alloca %i32_libcS.vararg, align 4, addrspace(5)
-; CHECK-NEXT:    %.fca.0.insert = insertvalue %struct.libcS poison, i8 %y.coerce0, 0
-; CHECK-NEXT:    %.fca.1.insert = insertvalue %struct.libcS %.fca.0.insert, i16 %y.coerce1, 1
-; CHECK-NEXT:    %.fca.2.insert = insertvalue %struct.libcS %.fca.1.insert, i32 %y.coerce2, 2
-; CHECK-NEXT:    %.fca.3.insert = insertvalue %struct.libcS %.fca.2.insert, i64 %y.coerce3, 3
-; CHECK-NEXT:    %.fca.4.insert = insertvalue %struct.libcS %.fca.3.insert, float %y.coerce4, 4
-; CHECK-NEXT:    %.fca.5.insert = insertvalue %struct.libcS %.fca.4.insert, double %y.coerce5, 5
+; CHECK-NEXT:    %dotfca.0.insert = insertvalue %struct.libcS poison, i8 %y.coerce0, 0
+; CHECK-NEXT:    %dotfca.1.insert = insertvalue %struct.libcS %dotfca.0.insert, i16 %y.coerce1, 1
+; CHECK-NEXT:    %dotfca.2.insert = insertvalue %struct.libcS %dotfca.1.insert, i32 %y.coerce2, 2
+; CHECK-NEXT:    %dotfca.3.insert = insertvalue %struct.libcS %dotfca.2.insert, i64 %y.coerce3, 3
+; CHECK-NEXT:    %dotfca.4.insert = insertvalue %struct.libcS %dotfca.3.insert, float %y.coerce4, 4
+; CHECK-NEXT:    %dotfca.5.insert = insertvalue %struct.libcS %dotfca.4.insert, double %y.coerce5, 5
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p5(i64 36, ptr addrspace(5) %vararg_buffer)
 ; CHECK-NEXT:    %0 = getelementptr inbounds nuw %i32_libcS.vararg, ptr addrspace(5) %vararg_buffer, i32 0, i32 0
 ; CHECK-NEXT:    store i32 %x, ptr addrspace(5) %0, align 4
 ; CHECK-NEXT:    %1 = getelementptr inbounds nuw %i32_libcS.vararg, ptr addrspace(5) %vararg_buffer, i32 0, i32 1
-; CHECK-NEXT:    store %struct.libcS %.fca.5.insert, ptr addrspace(5) %1, align 8
+; CHECK-NEXT:    store %struct.libcS %dotfca.5.insert, ptr addrspace(5) %1, align 8
 ; CHECK-NEXT:    %2 = addrspacecast ptr addrspace(5) %vararg_buffer to ptr
 ; CHECK-NEXT:    call void @vararg(ptr %2)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p5(i64 36, ptr addrspace(5) %vararg_buffer)
@@ -312,15 +312,15 @@ define hidden void @libcS_i32(i8 %x.coerce0, i16 %x.coerce1, i32 %x.coerce2, i64
 ; CHECK-LABEL: define {{[^@]+}}@libcS_i32(i8 %x.coerce0, i16 %x.coerce1, i32 %x.coerce2, i64 %x.coerce3, float %x.coerce4, double %x.coerce5, i32 noundef %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    %vararg_buffer = alloca %libcS_i32.vararg, align 4, addrspace(5)
-; CHECK-NEXT:    %.fca.0.insert = insertvalue %struct.libcS poison, i8 %x.coerce0, 0
-; CHECK-NEXT:    %.fca.1.insert = insertvalue %struct.libcS %.fca.0.insert, i16 %x.coerce1, 1
-; CHECK-NEXT:    %.fca.2.insert = insertvalue %struct.libcS %.fca.1.insert, i32 %x.coerce2, 2
-; CHECK-NEXT:    %.fca.3.insert = insertvalue %struct.libcS %.fca.2.insert, i64 %x.coerce3, 3
-; CHECK-NEXT:    %.fca.4.insert = insertvalue %struct.libcS %.fca.3.insert, float %x.coerce4, 4
-; CHECK-NEXT:    %.fca.5.insert = insertvalue %struct.libcS %.fca.4.insert, double %x.coerce5, 5
+; CHECK-NEXT:    %dotfca.0.insert = insertvalue %struct.libcS poison, i8 %x.coerce0, 0
+; CHECK-NEXT:    %dotfca.1.insert = insertvalue %struct.libcS %dotfca.0.insert, i16 %x.coerce1, 1
+; CHECK-NEXT:    %dotfca.2.insert = insertvalue %struct.libcS %dotfca.1.insert, i32 %x.coerce2, 2
+; CHECK-NEXT:    %dotfca.3.insert = insertvalue %struct.libcS %dotfca.2.insert, i64 %x.coerce3, 3
+; CHECK-NEXT:    %dotfca.4.insert = insertvalue %struct.libcS %dotfca.3.insert, float %x.coerce4, 4
+; CHECK-NEXT:    %dotfca.5.insert = insertvalue %struct.libcS %dotfca.4.insert, double %x.coerce5, 5
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p5(i64 36, ptr addrspace(5) %vararg_buffer)
 ; CHECK-NEXT:    %0 = getelementptr inbounds nuw %libcS_i32.vararg, ptr addrspace(5) %vararg_buffer, i32 0, i32 0
-; CHECK-NEXT:    store %struct.libcS %.fca.5.insert, ptr addrspace(5) %0, align 8
+; CHECK-NEXT:    store %struct.libcS %dotfca.5.insert, ptr addrspace(5) %0, align 8
 ; CHECK-NEXT:    %1 = getelementptr inbounds nuw %libcS_i32.vararg, ptr addrspace(5) %vararg_buffer, i32 0, i32 1
 ; CHECK-NEXT:    store i32 %y, ptr addrspace(5) %1, align 4
 ; CHECK-NEXT:    %2 = addrspacecast ptr addrspace(5) %vararg_buffer to ptr
@@ -515,15 +515,15 @@ define hidden void @fptr_libcS(i8 %x.coerce0, i16 %x.coerce1, i32 %x.coerce2, i6
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    %vararg_buffer = alloca %fptr_libcS.vararg, align 4, addrspace(5)
 ; CHECK-NEXT:    %0 = load volatile ptr, ptr addrspacecast (ptr addrspace(1) @vararg_ptr to ptr), align 8
-; CHECK-NEXT:    %.fca.0.insert = insertvalue %struct.libcS poison, i8 %x.coerce0, 0
-; CHECK-NEXT:    %.fca.1.insert = insertvalue %struct.libcS %.fca.0.insert, i16 %x.coerce1, 1
-; CHECK-NEXT:    %.fca.2.insert = insertvalue %struct.libcS %.fca.1.insert, i32 %x.coerce2, 2
-; CHECK-NEXT:    %.fca.3.insert = insertvalue %struct.libcS %.fca.2.insert, i64 %x.coerce3, 3
-; CHECK-NEXT:    %.fca.4.insert = insertvalue %struct.libcS %.fca.3.insert, float %x.coerce4, 4
-; CHECK-NEXT:    %.fca.5.insert = insertvalue %struct.libcS %.fca.4.insert, double %x.coerce5, 5
+; CHECK-NEXT:    %dotfca.0.insert = insertvalue %struct.libcS poison, i8 %x.coerce0, 0
+; CHECK-NEXT:    %dotfca.1.insert = insertvalue %struct.libcS %dotfca.0.insert, i16 %x.coerce1, 1
+; CHECK-NEXT:    %dotfca.2.insert = insertvalue %struct.libcS %dotfca.1.insert, i32 %x.coerce2, 2
+; CHECK-NEXT:    %dotfca.3.insert = insertvalue %struct.libcS %dotfca.2.insert, i64 %x.coerce3, 3
+; CHECK-NEXT:    %dotfca.4.insert = insertvalue %struct.libcS %dotfca.3.insert, float %x.coerce4, 4
+; CHECK-NEXT:    %dotfca.5.insert = insertvalue %struct.libcS %dotfca.4.insert, double %x.coerce5, 5
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p5(i64 32, ptr addrspace(5) %vararg_buffer)
 ; CHECK-NEXT:    %1 = getelementptr inbounds nuw %fptr_libcS.vararg, ptr addrspace(5) %vararg_buffer, i32 0, i32 0
-; CHECK-NEXT:    store %struct.libcS %.fca.5.insert, ptr addrspace(5) %1, align 8
+; CHECK-NEXT:    store %struct.libcS %dotfca.5.insert, ptr addrspace(5) %1, align 8
 ; CHECK-NEXT:    %2 = addrspacecast ptr addrspace(5) %vararg_buffer to ptr
 ; CHECK-NEXT:    call void %0(ptr %2)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p5(i64 32, ptr addrspace(5) %vararg_buffer)

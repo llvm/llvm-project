@@ -2069,7 +2069,7 @@ define amdgpu_kernel void @fadd_fadd_fsub(<2 x float> %arg, <2 x float> %arg1, p
 ; GFX900-LABEL: fadd_fadd_fsub:
 ; GFX900:       ; %bb.0: ; %bb
 ; GFX900-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX900-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX900-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x34
 ; GFX900-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX900-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX900-NEXT:    v_mov_b32_e32 v0, s3
