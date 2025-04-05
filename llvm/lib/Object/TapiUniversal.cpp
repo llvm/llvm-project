@@ -29,7 +29,7 @@ TapiUniversal::TapiUniversal(MemoryBufferRef Source, Error &Err)
   }
   ParsedFile = std::move(Result.get());
 
-  auto FlattenObjectInfo = [this](const auto &File, unsigned DocIdx) {
+  auto FlattenObjectInfo = [this](const auto &File, size_t DocIdx) {
     StringRef Name = File->getInstallName();
     for (const Architecture Arch : File->getArchitectures())
       Libraries.emplace_back(Library({Name, Arch, DocIdx}));
