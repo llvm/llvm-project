@@ -547,46 +547,53 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
 }
 
 void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
+  RootSDSection = Ctx->getGOFFSection(
+      SectionKind::getMetadata(), "#C",
+      GOFF::SDAttr{GOFF::ESD_TA_Rent, GOFF::ESD_BSC_Section});
+
+  ADAEDSection = Ctx->getGOFFSection(
+      SectionKind::getMetadata(), GOFF::CLASS_WSA,
+      GOFF::EDAttr{false, GOFF::ESD_EXE_DATA, GOFF::AMODE, GOFF::RMODE,
+                   GOFF::ESD_NS_Parts, GOFF::ESD_TS_ByteOriented,
+                   GOFF::ESD_BA_Merge, GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_1,
+                   GOFF::ESD_ALIGN_Quadword},
+      RootSDSection);
+  ADAPRSection = Ctx->getGOFFSection(
+      SectionKind::getData(), "#S",
+      GOFF::PRAttr{false, false, GOFF::ESD_EXE_DATA, GOFF::ESD_NS_Parts,
+                   GOFF::ESD_LT_XPLink, GOFF::AMODE, GOFF::ESD_BSC_Section,
+                   GOFF::ESD_DSS_NoWarning, GOFF::ESD_ALIGN_Quadword, 0},
+      ADAEDSection);
+
   TextSection = Ctx->getGOFFSection(
       SectionKind::getText(), GOFF::CLASS_CODE,
       GOFF::EDAttr{true, GOFF::ESD_EXE_CODE, GOFF::AMODE, GOFF::RMODE,
                    GOFF::ESD_NS_NormalName, GOFF::ESD_TS_ByteOriented,
                    GOFF::ESD_BA_Concatenate, GOFF::ESD_LB_Initial,
                    GOFF::ESD_RQ_0, GOFF::ESD_ALIGN_Doubleword},
-      "#C",
-      GOFF::LDAttr{false, GOFF::ESD_EXE_CODE, GOFF::ESD_NS_NormalName,
-                   GOFF::ESD_BST_Strong, GOFF::LINKAGE, GOFF::AMODE,
-                   GOFF::ESD_BSC_Section});
+      RootSDSection);
 
-  PPA2ListSection = Ctx->getGOFFSection(
-      SectionKind::getData(), GOFF::CLASS_PPA2,
+  PPA2ListEDSection = Ctx->getGOFFSection(
+      SectionKind::getMetadata(), GOFF::CLASS_PPA2,
       GOFF::EDAttr{true, GOFF::ESD_EXE_DATA, GOFF::AMODE, GOFF::RMODE,
                    GOFF::ESD_NS_Parts, GOFF::ESD_TS_ByteOriented,
                    GOFF::ESD_BA_Merge, GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0,
                    GOFF::ESD_ALIGN_Doubleword},
-      ".&ppa2",
+      RootSDSection);
+  PPA2ListPRSection = Ctx->getGOFFSection(
+      SectionKind::getData(), ".&ppa2",
       GOFF::PRAttr{true, false, GOFF::ESD_EXE_Unspecified, GOFF::ESD_NS_Parts,
                    GOFF::ESD_LT_OS, GOFF::AMODE, GOFF::ESD_BSC_Section,
-                   GOFF::ESD_DSS_NoWarning, GOFF::ESD_ALIGN_Doubleword, 0});
-
-  ADASection = Ctx->getGOFFSection(
-      SectionKind::getData(), "#C",
-      GOFF::SDAttr{GOFF::ESD_TA_Rent, GOFF::ESD_BSC_Section}, GOFF::CLASS_WSA,
-      GOFF::EDAttr{false, GOFF::ESD_EXE_DATA, GOFF::AMODE, GOFF::RMODE,
-                   GOFF::ESD_NS_Parts, GOFF::ESD_TS_ByteOriented,
-                   GOFF::ESD_BA_Merge, GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_1,
-                   GOFF::ESD_ALIGN_Quadword},
-      "#S",
-      GOFF::PRAttr{false, false, GOFF::ESD_EXE_DATA, GOFF::ESD_NS_Parts,
-                   GOFF::ESD_LT_XPLink, GOFF::AMODE, GOFF::ESD_BSC_Section,
-                   GOFF::ESD_DSS_NoWarning, GOFF::ESD_ALIGN_Quadword, 0});
+                   GOFF::ESD_DSS_NoWarning, GOFF::ESD_ALIGN_Doubleword, 0},
+      PPA2ListEDSection);
 
   IDRLSection = Ctx->getGOFFSection(
       SectionKind::getData(), "B_IDRL",
       GOFF::EDAttr{true, GOFF::ESD_EXE_Unspecified, GOFF::AMODE, GOFF::RMODE,
                    GOFF::ESD_NS_NormalName, GOFF::ESD_TS_Structured,
                    GOFF::ESD_BA_Concatenate, GOFF::ESD_LB_NoLoad,
-                   GOFF::ESD_RQ_0, GOFF::ESD_ALIGN_Doubleword});
+                   GOFF::ESD_RQ_0, GOFF::ESD_ALIGN_Doubleword},
+      RootSDSection);
 }
 
 void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {

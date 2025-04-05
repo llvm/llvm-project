@@ -27,25 +27,27 @@ GOFFObjectWriter &MCGOFFStreamer::getWriter() {
   return static_cast<GOFFObjectWriter &>(getAssembler().getWriter());
 }
 
-void MCGOFFStreamer::initSections(bool NoExecStack,
+void MCGOFFStreamer::initSections(bool /*NoExecStack*/,
                                   const MCSubtargetInfo &STI) {
   MCContext &Ctx = getContext();
+  // Emit the text section.
+  switchSection(Ctx.getObjectFileInfo()->getTextSection());
+}
 
-  // Initialize the special names for the code and ada section.
-  StringRef FileName = sys::path::stem(Ctx.getMainFileName());
-  RootSDName = Twine(FileName).concat("#C").str();
-  ADAPRName = Twine(FileName).concat("#S").str();
-  MCSectionGOFF *TextSection =
-      static_cast<MCSectionGOFF *>(Ctx.getObjectFileInfo()->getTextSection());
-  MCSectionGOFF *ADASection =
-      static_cast<MCSectionGOFF *>(Ctx.getObjectFileInfo()->getADASection());
-  ADASection->setSDName(RootSDName);
-  ADASection->setLDorPRName(ADAPRName);
-  TextSection->setLDorPRName(RootSDName);
+namespace {
+// Make sure that all section are registered in the correct order.
+void registerSectionHierarchy(MCAssembler &Asm, MCSectionGOFF *Section) {
+  if (Section->isRegistered())
+    return;
+  if (Section->getParent())
+    registerSectionHierarchy(Asm, Section->getParent());
+  registerSectionHierarchy(Asm, Section);
+}
+} // namespace
 
-  // Switch to the ADA section first, then code section.
-  switchSection(ADASection);
-  switchSection(TextSection);
+void MCGOFFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
+  registerSectionHierarchy(getAssembler(), static_cast<MCSectionGOFF *>(Section));
+  MCObjectStreamer::changeSection(Section, Subsection);
 }
 
 MCStreamer *llvm::createGOFFStreamer(MCContext &Context,

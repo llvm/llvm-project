@@ -57,6 +57,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolELF.h"
+#include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/ProfileData/InstrProf.h"
@@ -2777,9 +2778,21 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForLSDA(
 TargetLoweringObjectFileGOFF::TargetLoweringObjectFileGOFF() = default;
 
 void TargetLoweringObjectFileGOFF::getModuleMetadata(Module &M) {
-  // Set the main file name if not set previously by the tool.
-  if (getContext().getMainFileName().empty())
-    getContext().setMainFileName(M.getSourceFileName());
+  // Construct the default names for the root SD and the ADA PR symbol.
+  DefaultRootSDName = Twine(M.getSourceFileName()).concat("#C").str();
+  DefaultADAPRName = Twine(M.getSourceFileName()).concat("#S").str();
+  MCSectionGOFF *RootSD = static_cast<MCSectionGOFF *>(RootSDSection);
+  MCSectionGOFF *ADAPR = static_cast<MCSectionGOFF *>(ADAPRSection);
+  RootSD->setName(DefaultRootSDName);
+  ADAPR->setName(DefaultADAPRName);
+  // Initialize the label for the text section.
+  MCSymbolGOFF *TextLD = static_cast<MCSymbolGOFF *>(
+      getContext().getOrCreateSymbol(RootSD->getName()));
+  TextLD->setLDAttributes(GOFF::LDAttr{
+      false, GOFF::ESD_EXE_CODE, GOFF::ESD_NS_NormalName, GOFF::ESD_BST_Strong,
+      GOFF::LINKAGE, GOFF::AMODE, GOFF::ESD_BSC_Section});
+  TextLD->setADA(ADAPR);
+  TextSection->setBeginSymbol(TextLD);
 }
 
 MCSection *TargetLoweringObjectFileGOFF::getExplicitSectionGlobal(
@@ -2790,16 +2803,20 @@ MCSection *TargetLoweringObjectFileGOFF::getExplicitSectionGlobal(
 MCSection *TargetLoweringObjectFileGOFF::getSectionForLSDA(
     const Function &F, const MCSymbol &FnSym, const TargetMachine &TM) const {
   std::string Name = ".gcc_exception_table." + F.getName().str();
-  return getContext().getGOFFSection(
-      SectionKind::getData(), GOFF::CLASS_WSA,
+
+  MCSectionGOFF *WSA = getContext().getGOFFSection(
+      SectionKind::getMetadata(), GOFF::CLASS_WSA,
       GOFF::EDAttr{false, GOFF::ESD_EXE_DATA, GOFF::AMODE, GOFF::RMODE,
                    GOFF::ESD_NS_Parts, GOFF::ESD_TS_ByteOriented,
                    GOFF::ESD_BA_Merge, GOFF::LOADBEHAVIOR, GOFF::ESD_RQ_0,
                    GOFF::ESD_ALIGN_Doubleword},
-      Name,
+      RootSDSection);
+  return getContext().getGOFFSection(
+      SectionKind::getData(), Name,
       GOFF::PRAttr{true, false, GOFF::ESD_EXE_Unspecified, GOFF::ESD_NS_Parts,
                    GOFF::LINKAGE, GOFF::AMODE, GOFF::ESD_BSC_Section,
-                   GOFF::ESD_DSS_NoWarning, GOFF::ESD_ALIGN_Fullword, 0});
+                   GOFF::ESD_DSS_NoWarning, GOFF::ESD_ALIGN_Fullword, 0},
+      WSA);
 }
 
 MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
@@ -2815,22 +2832,23 @@ MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
     GOFF::ESDBindingScope SDBindingScope =
         PRBindingScope == GOFF::ESD_BSC_Section ? GOFF::ESD_BSC_Section
                                                 : GOFF::ESD_BSC_Unspecified;
-    return getContext().getGOFFSection(
-        Kind, Symbol->getName(),
-        GOFF::SDAttr{GOFF::ESD_TA_Unspecified, SDBindingScope}, GOFF::CLASS_WSA,
+    MCSectionGOFF *SD = getContext().getGOFFSection(
+        SectionKind::getMetadata(), Symbol->getName(),
+        GOFF::SDAttr{GOFF::ESD_TA_Unspecified, SDBindingScope});
+    MCSectionGOFF *ED = getContext().getGOFFSection(
+        SectionKind::getMetadata(), GOFF::CLASS_WSA,
         GOFF::EDAttr{false, GOFF::ESD_EXE_DATA, GOFF::AMODE, GOFF::RMODE,
                      GOFF::ESD_NS_Parts, GOFF::ESD_TS_ByteOriented,
                      GOFF::ESD_BA_Merge, GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_0,
-                     static_cast<GOFF::ESDAlignment>(GO->getAlignment())
-
-        },
-        Symbol->getName(),
+                     static_cast<GOFF::ESDAlignment>(GO->getAlignment())},
+        SD);
+    return getContext().getGOFFSection(
+        Kind, Symbol->getName(),
         GOFF::PRAttr{false, false, GOFF::ESD_EXE_DATA, GOFF::ESD_NS_Parts,
                      GOFF::LINKAGE, GOFF::AMODE, PRBindingScope,
                      GOFF::ESD_DSS_NoWarning,
-                     static_cast<GOFF::ESDAlignment>(GO->getAlignment()), 0
-
-        });
+                     static_cast<GOFF::ESDAlignment>(GO->getAlignment()), 0},
+        ED);
   }
   return TextSection;
 }

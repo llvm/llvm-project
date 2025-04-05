@@ -15,10 +15,10 @@
 #ifndef LLVM_MC_MCSECTIONGOFF_H
 #define LLVM_MC_MCSECTIONGOFF_H
 
-#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/MC/MCGOFFAttributes.h"
 #include "llvm/MC/MCSection.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -26,85 +26,85 @@ namespace llvm {
 class MCExpr;
 
 class MCSectionGOFF final : public MCSection {
-private:
-  // The names of the GOFF symbols.
-  StringRef SDName;
-  StringRef EDName;
-  StringRef LDorPRName;
+  // Parent of this section. Implies that the parent is emitted first.
+  MCSectionGOFF *Parent;
 
   // The attributes of the GOFF symbols.
   GOFF::SDAttr SDAttributes;
   GOFF::EDAttr EDAttributes;
-  GOFF::LDAttr LDAttributes;
   GOFF::PRAttr PRAttributes;
 
-public:
-  enum SectionFlags {
-    UsesRootSD = 1,     // Uses the common root SD.
-    HasLD = 2,          // Has a LD symbol.
-    HasPR = 4,          // Has a PR symbol.
-    LDorPRNameIsSD = 8, // The LD or PR name is the same as the SD name.
-    LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ 8)
-  };
+  // The type of this section.
+  GOFF::ESDSymbolType SymbolType;
 
-private:
-  SectionFlags Flags;
+  // Indicates that the ED symbol needs to set the length of the section.
+  unsigned RequiresLength : 1;
+
+  // Indicates that the PR symbol needs to set the length of the section to a
+  // non-zero value.
+  unsigned RequiresNonZeroLength : 1;
 
   friend class MCContext;
-  MCSectionGOFF(StringRef SynName, SectionKind K, SectionFlags Flags,
-                StringRef SDName, GOFF::SDAttr SDAttributes, StringRef EDName,
-                GOFF::EDAttr EDAttributes, StringRef LDorPRName,
-                GOFF::LDAttr LDAttributes, GOFF::PRAttr PRAttributes)
-      : MCSection(SV_GOFF, SynName, K.isText(), /*IsVirtual=*/false, nullptr),
-        SDName(SDName), EDName(EDName), LDorPRName(LDorPRName),
-        SDAttributes(SDAttributes), EDAttributes(EDAttributes),
-        LDAttributes(LDAttributes), PRAttributes(PRAttributes), Flags(Flags) {}
+  MCSectionGOFF(StringRef Name, SectionKind K, GOFF::ESDSymbolType SymbolType,
+                GOFF::SDAttr SDAttributes, GOFF::EDAttr EDAttributes,
+                GOFF::PRAttr PRAttributes, MCSectionGOFF *Parent = nullptr)
+      : MCSection(SV_GOFF, Name, K.isText(), /*IsVirtual=*/false, nullptr),
+        Parent(Parent), SDAttributes(SDAttributes), EDAttributes(EDAttributes),
+        PRAttributes(PRAttributes), SymbolType(SymbolType) {}
 
 public:
   void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                             raw_ostream &OS,
                             uint32_t /*Subsection*/) const override {
-    if (!usesRootSD())
-      OS << getSDName() << " CSECT\n";
-    OS << getEDName() << " CATTR\n";
-    if ((hasLD() || hasPR()) && !getLDorPRName().empty())
-      OS << getLDorPRName() << " XATTR\n";
+    ;
+    switch (SymbolType) {
+    case GOFF::ESD_ST_SectionDefinition:
+      OS << Name << " CSECT\n";
+      break;
+    case GOFF::ESD_ST_ElementDefinition:
+      OS << Name << " CATTR\n";
+      break;
+    case GOFF::ESD_ST_PartReference:
+      OS << Name << " XATTR\n";
+      break;
+    default:
+      llvm_unreachable("Wrong section type");
+    }
   }
 
   bool useCodeAlign() const override { return false; }
 
-  // Accessors to the various symbol names.
-  StringRef getSDName() const { return SDName; };
-  StringRef getEDName() const { return EDName; };
-  StringRef getLDorPRName() const {
-    assert(Flags & (HasLD | HasPR) && "LD/PR name not available");
-    return (Flags & LDorPRNameIsSD) ? SDName : LDorPRName;
-  };
+  // Return the id of the section. It is the 1-based ordinal number.
+  unsigned getId() const { return getOrdinal() + 1; }
 
-  // Setters for the SD and LD/PR symbol names.
-  void setSDName(StringRef Name) {
-    assert(!(Flags & UsesRootSD) && "Uses root SD");
-    SDName = Name;
+  // Return the parent section.
+  MCSectionGOFF *getParent() const { return Parent; }
+
+  // Returns the type of this section.
+  GOFF::ESDSymbolType getSymbolType() const { return SymbolType; }
+
+  bool isSD() const { return SymbolType == GOFF::ESD_ST_SectionDefinition; }
+  bool isED() const { return SymbolType == GOFF::ESD_ST_ElementDefinition; }
+  bool isPR() const { return SymbolType == GOFF::ESD_ST_PartReference; }
+
+  // Accessors to the attributes.
+  GOFF::SDAttr getSDAttributes() const {
+    assert(SymbolType == GOFF::ESD_ST_SectionDefinition && "Not PR symbol");
+    return SDAttributes;
   }
-  void setLDorPRName(StringRef Name) { LDorPRName = Name; }
-
-  // Accessors to the various attributes.
-  GOFF::SDAttr getSDAttributes() const { return SDAttributes; }
-  GOFF::EDAttr getEDAttributes() const { return EDAttributes; }
-  GOFF::LDAttr getLDAttributes() const {
-    assert(Flags & HasLD && "LD not available");
-    return LDAttributes;
+  GOFF::EDAttr getEDAttributes() const {
+    assert(SymbolType == GOFF::ESD_ST_ElementDefinition && "Not PR symbol");
+    return EDAttributes;
   }
   GOFF::PRAttr getPRAttributes() const {
-    assert(Flags & HasPR && "PR not available");
+    assert(SymbolType == GOFF::ESD_ST_PartReference && "Not PR symbol");
     return PRAttributes;
   }
 
-  // Query various flags.
-  bool usesRootSD() const { return Flags & UsesRootSD; }
-  bool hasLD() const { return Flags & HasLD; }
-  bool hasPR() const { return Flags & HasPR; }
-  bool isLDorPRNameTheSD() const { return Flags & LDorPRNameIsSD; }
+  bool requiresLength() const { return RequiresLength; }
+  bool requiresNonZeroLength() const { return RequiresNonZeroLength; }
+
+  void setName(StringRef SectionName) { Name = SectionName; }
 
   static bool classof(const MCSection *S) { return S->getVariant() == SV_GOFF; }
 };

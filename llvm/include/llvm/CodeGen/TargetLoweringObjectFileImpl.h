@@ -316,6 +316,8 @@ public:
 };
 
 class TargetLoweringObjectFileGOFF : public TargetLoweringObjectFile {
+  std::string DefaultRootSDName;
+  std::string DefaultADAPRName;
 public:
   TargetLoweringObjectFileGOFF();
   ~TargetLoweringObjectFileGOFF() override = default;

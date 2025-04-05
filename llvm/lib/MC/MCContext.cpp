@@ -14,6 +14,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -721,77 +722,45 @@ MCContext::getELFUniqueIDForEntsize(StringRef SectionName, unsigned Flags,
 }
 
 MCSectionGOFF *
-MCContext::getGOFFSection(SectionKind Kind, StringRef SDName,
-                          GOFF::SDAttr SDAttributes, StringRef EDName,
-                          GOFF::EDAttr EDAttributes, StringRef LDorPRName,
-                          GOFF::LDAttr LDAttributes, GOFF::PRAttr PRAttributes,
-                          MCSectionGOFF::SectionFlags Flags) {
-  std::string SynName = Twine(SDName)
-                            .concat("/")
-                            .concat(EDName)
-                            .concat("/")
-                            .concat(LDorPRName)
-                            .str();
+MCContext::getGOFFSection(SectionKind Kind, GOFF::ESDSymbolType SymbolType,
+                          StringRef Name, GOFF::SDAttr SDAttributes,
+                          GOFF::EDAttr EDAttributes, GOFF::PRAttr PRAttributes,
+                          MCSection *Parent) {
+  GOFFSectionKey T{Name, SymbolType};
   // Do the lookup. If we don't have a hit, return a new section.
-  auto IterBool = GOFFUniquingMap.insert(std::make_pair(SynName, nullptr));
+  auto IterBool = GOFFUniquingMap.insert(std::make_pair(T, nullptr));
   auto Iter = IterBool.first;
   if (!IterBool.second)
     return Iter->second;
 
-  StringRef CachedSynName = Iter->first;
+  StringRef CachedName = Iter->first.SectionName;
   MCSectionGOFF *GOFFSection = new (GOFFAllocator.Allocate())
-      MCSectionGOFF(CachedSynName, Kind, Flags, SDName, SDAttributes, EDName,
-                    EDAttributes, LDorPRName, LDAttributes, PRAttributes);
+      MCSectionGOFF(CachedName, Kind, SymbolType, SDAttributes, EDAttributes,
+                    PRAttributes, static_cast<MCSectionGOFF *>(Parent));
   Iter->second = GOFFSection;
   allocInitialFragment(*GOFFSection);
   return GOFFSection;
 }
 
-MCSectionGOFF *MCContext::getGOFFSection(SectionKind Kind, StringRef SDName,
+MCSectionGOFF *MCContext::getGOFFSection(SectionKind Kind, StringRef Name,
                                          GOFF::SDAttr SDAttributes,
-                                         StringRef EDName,
-                                         GOFF::EDAttr EDAttributes,
-                                         StringRef LDorPRName,
-                                         GOFF::LDAttr LDAttributes) {
-  return getGOFFSection(Kind, SDName, SDAttributes, EDName, EDAttributes,
-                        LDorPRName, LDAttributes, GOFF::PRAttr{},
-                        MCSectionGOFF::HasLD);
+                                         MCSection *Parent) {
+  return getGOFFSection(Kind, GOFF::ESD_ST_SectionDefinition, Name,
+                        SDAttributes, GOFF::EDAttr{}, GOFF::PRAttr{}, Parent);
 }
 
-MCSectionGOFF *MCContext::getGOFFSection(SectionKind Kind, StringRef SDName,
-                                         GOFF::SDAttr SDAttributes,
-                                         StringRef EDName,
+MCSectionGOFF *MCContext::getGOFFSection(SectionKind Kind, StringRef Name,
                                          GOFF::EDAttr EDAttributes,
-                                         StringRef LDorPRName,
-                                         GOFF::PRAttr PRAttributes) {
-  return getGOFFSection(Kind, SDName, SDAttributes, EDName, EDAttributes,
-                        LDorPRName, GOFF::LDAttr{}, PRAttributes,
-                        MCSectionGOFF::HasPR);
+                                         MCSection *Parent) {
+  return getGOFFSection(Kind, GOFF::ESD_ST_ElementDefinition, Name,
+                        GOFF::SDAttr{}, EDAttributes, GOFF::PRAttr{}, Parent);
 }
 
-MCSectionGOFF *MCContext::getGOFFSection(SectionKind Kind, StringRef EDName,
-                                         GOFF::EDAttr EDAttributes,
-                                         StringRef LDorPRName,
-                                         GOFF::LDAttr LDAttributes) {
-  return getGOFFSection(Kind, "", GOFF::SDAttr{}, EDName, EDAttributes,
-                        LDorPRName, LDAttributes, GOFF::PRAttr{},
-                        MCSectionGOFF::UsesRootSD | MCSectionGOFF::HasLD);
-}
-
-MCSectionGOFF *MCContext::getGOFFSection(SectionKind Kind, StringRef EDName,
-                                         GOFF::EDAttr EDAttributes,
-                                         StringRef LDorPRName,
-                                         GOFF::PRAttr PRAttributes) {
-  return getGOFFSection(Kind, "", GOFF::SDAttr{}, EDName, EDAttributes,
-                        LDorPRName, GOFF::LDAttr{}, PRAttributes,
-                        MCSectionGOFF::UsesRootSD | MCSectionGOFF::HasPR);
-}
-
-MCSectionGOFF *MCContext::getGOFFSection(SectionKind Kind, StringRef EDName,
-                                         GOFF::EDAttr EDAttributes) {
-  return getGOFFSection(Kind, "", GOFF::SDAttr{}, EDName, EDAttributes, "",
-                        GOFF::LDAttr{}, GOFF::PRAttr{},
-                        MCSectionGOFF::UsesRootSD);
+MCSectionGOFF *MCContext::getGOFFSection(SectionKind Kind, StringRef Name,
+                                         GOFF::PRAttr PRAttributes,
+                                         MCSection *Parent) {
+  return getGOFFSection(Kind, GOFF::ESD_ST_SectionDefinition, Name,
+                        GOFF::SDAttr{}, GOFF::EDAttr{}, PRAttributes, Parent);
 }
 
 MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,

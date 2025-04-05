@@ -15,6 +15,7 @@
 #include "llvm/MC/MCGOFFAttributes.h"
 #include "llvm/MC/MCGOFFObjectWriter.h"
 #include "llvm/MC/MCSectionGOFF.h"
+#include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ConvertEBCDIC.h"
@@ -280,25 +281,12 @@ class GOFFWriter {
   /// Counter for symbol id's.
   uint32_t EsdIdCounter = 0;
 
-  /// Id's of some special symbols.
-  uint32_t RootSDEsdId = 0;
-  uint32_t ADAEsdId = 0;
-
-  MCSectionGOFF *ADA = nullptr;
-
   void writeHeader();
   void writeSymbol(const GOFFSymbol &Symbol);
   void writeEnd();
 
-  GOFFSymbol createGOFFSymbol(StringRef Name, const GOFF::SDAttr &Attr);
-  GOFFSymbol createGOFFSymbol(StringRef Name, const GOFF::EDAttr &Attr,
-                              uint32_t ParentEsdId);
-  GOFFSymbol createGOFFSymbol(StringRef Name, const GOFF::LDAttr &Attr,
-                              uint32_t ParentEsdId);
-  GOFFSymbol createGOFFSymbol(StringRef Name, const GOFF::PRAttr &Attr,
-                              uint32_t ParentEsdId);
-
   void defineSectionSymbols(const MCSectionGOFF &Section);
+  void defineLabel(const MCSymbolGOFF &Symbol);
   void defineSymbols();
 
 public:
@@ -309,60 +297,26 @@ public:
 
 GOFFWriter::GOFFWriter(raw_pwrite_stream &OS) : OS(OS) {}
 
-GOFFSymbol GOFFWriter::createGOFFSymbol(StringRef Name,
-                                        const GOFF::SDAttr &Attr) {
-  return GOFFSymbol(Name, ++EsdIdCounter, Attr);
-}
-
-GOFFSymbol GOFFWriter::createGOFFSymbol(StringRef Name,
-                                        const GOFF::EDAttr &Attr,
-                                        uint32_t ParentEsdId) {
-  return GOFFSymbol(Name, ++EsdIdCounter, ParentEsdId, Attr);
-}
-
-GOFFSymbol GOFFWriter::createGOFFSymbol(StringRef Name,
-                                        const GOFF::LDAttr &Attr,
-                                        uint32_t ParentEsdId) {
-  return GOFFSymbol(Name, ++EsdIdCounter, ParentEsdId, Attr);
-}
-
-GOFFSymbol GOFFWriter::createGOFFSymbol(StringRef Name,
-                                        const GOFF::PRAttr &Attr,
-                                        uint32_t ParentEsdId) {
-  return GOFFSymbol(Name, ++EsdIdCounter, ParentEsdId, Attr);
-}
-
 void GOFFWriter::defineSectionSymbols(const MCSectionGOFF &Section) {
-  uint32_t SDEsdId = RootSDEsdId;
-  if (!Section.usesRootSD()) {
-    GOFFSymbol SD =
-        createGOFFSymbol(Section.getSDName(), Section.getSDAttributes());
-    SDEsdId = SD.EsdId;
-    if (RootSDEsdId == 0)
-      RootSDEsdId = SDEsdId;
+  if (Section.isSD()) {
+    GOFFSymbol SD(Section.getName(), Section.getId(),
+                  Section.getSDAttributes());
     writeSymbol(SD);
   }
 
-  GOFFSymbol ED =
-      createGOFFSymbol(Section.getEDName(), Section.getEDAttributes(), SDEsdId);
-  if ((!Section.hasLD() && !Section.hasPR()) || Section.hasLD()) {
-    ED.SectionLength = Asm.getSectionAddressSize(Section);
-  }
-  writeSymbol(ED);
-
-  if (Section.hasLD()) {
-    GOFFSymbol LD = createGOFFSymbol(Section.getLDorPRName(),
-                                     Section.getLDAttributes(), ED.EsdId);
-    if (Section.isText())
-      LD.ADAEsdId = ADAEsdId;
-    writeSymbol(LD);
+  if (Section.isED()) {
+    GOFFSymbol ED(Section.getName(), Section.getId(),
+                  Section.getParent()->getId(), Section.getEDAttributes());
+    if (Section.requiresLength())
+      ED.SectionLength = Asm.getSectionAddressSize(Section);
+    writeSymbol(ED);
   }
 
-  if (Section.hasPR()) {
-    GOFFSymbol PR = createGOFFSymbol(Section.getLDorPRName(),
-                                     Section.getPRAttributes(), ED.EsdId);
+  if (Section.isPR()) {
+    GOFFSymbol PR(Section.getName(), Section.getId(),
+                  Section.getParent()->getId(), Section.getPRAttributes());
     PR.SectionLength = Asm.getSectionAddressSize(Section);
-    if (&Section == ADA) {
+    if (Section.requiresNonZeroLength()) {
       // We cannot have a zero-length section for data.  If we do,
       // artificially inflate it. Use 2 bytes to avoid odd alignments. Note:
       // if this is ever changed, you will need to update the code in
@@ -370,19 +324,33 @@ void GOFFWriter::defineSectionSymbols(const MCSectionGOFF &Section) {
       // generate -1 if there is no ADA
       if (!PR.SectionLength)
         PR.SectionLength = 2;
-      ADAEsdId = PR.EsdId;
     }
     writeSymbol(PR);
   }
+}
+
+void GOFFWriter::defineLabel(const MCSymbolGOFF &Symbol) {
+  GOFFSymbol LD(Symbol.getName(), ++EsdIdCounter, 0, Symbol.getLDAttributes());
+  if (Symbol.getADA())
+    LD.ADAEsdId = Symbol.getADA()->getId();
+  writeSymbol(LD);
 }
 
 void GOFFWriter::defineSymbols() {
   // Process all sections.
   for (MCSection &S : Asm) {
     auto &Section = cast<MCSectionGOFF>(S);
-    if (!ADA)
-      ADA = &Section;
     defineSectionSymbols(Section);
+    EsdIdCounter = std::max(EsdIdCounter, Section.getId());
+  }
+
+  // Process all symbols
+  for (const MCSymbol &Sym : Asm.symbols()) {
+    if (Sym.isTemporary())
+      continue;
+    auto &Symbol = cast<MCSymbolGOFF>(Sym);
+    if (Symbol.hasLDAttributes()) {
+    }
   }
 }
 

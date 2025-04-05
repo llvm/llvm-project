@@ -266,6 +266,21 @@ private:
     }
   };
 
+  struct GOFFSectionKey {
+    std::string SectionName;
+    GOFF::ESDSymbolType SymbolType;
+
+    GOFFSectionKey(StringRef SectionName, GOFF::ESDSymbolType SymbolType)
+        : SectionName(SectionName), SymbolType(SymbolType) {}
+
+    bool operator<(const GOFFSectionKey &Other) const {
+      if (SymbolType == Other.SymbolType) {
+        return SectionName < Other.SectionName;
+      }
+      return SymbolType < Other.SymbolType;
+    }
+  };
+
   struct WasmSectionKey {
     std::string SectionName;
     StringRef GroupName;
@@ -316,7 +331,7 @@ private:
   StringMap<MCSectionMachO *> MachOUniquingMap;
   std::map<COFFSectionKey, MCSectionCOFF *> COFFUniquingMap;
   StringMap<MCSectionELF *> ELFUniquingMap;
-  std::map<std::string, MCSectionGOFF *> GOFFUniquingMap;
+  std::map<GOFFSectionKey, MCSectionGOFF *> GOFFUniquingMap;
   std::map<WasmSectionKey, MCSectionWasm *> WasmUniquingMap;
   std::map<XCOFFSectionKey, MCSectionXCOFF *> XCOFFUniquingMap;
   StringMap<MCSectionDXContainer *> DXCUniquingMap;
@@ -608,35 +623,22 @@ public:
                            unsigned EntrySize);
 
 private:
-  MCSectionGOFF *getGOFFSection(SectionKind Kind, StringRef SDName,
-                                GOFF::SDAttr SDAttributes, StringRef EDName,
-                                GOFF::EDAttr EDAttributes, StringRef LDorPRName,
-                                GOFF::LDAttr LDAttributes,
-                                GOFF::PRAttr PRAttributes,
-                                MCSectionGOFF::SectionFlags Flags);
+  MCSectionGOFF *getGOFFSection(SectionKind Kind,
+                                GOFF::ESDSymbolType SymbolType, StringRef Name,
+                                GOFF::SDAttr SDAttributes,
+                                GOFF::EDAttr EDAttributes,
+                                GOFF::PRAttr PRAttributes, MCSection *Parent);
 
 public:
-  // Create a section with SD/ED/LD symbols.
-  MCSectionGOFF *getGOFFSection(SectionKind Kind, StringRef SDName,
-                                GOFF::SDAttr SDAttributes, StringRef EDName,
-                                GOFF::EDAttr EDAttributes, StringRef LDorPRName,
-                                GOFF::LDAttr LDAttributes);
-  // Create a section with SD/ED/PR symbols.
-  MCSectionGOFF *getGOFFSection(SectionKind Kind, StringRef SDName,
-                                GOFF::SDAttr SDAttributes, StringRef EDName,
-                                GOFF::EDAttr EDAttributes, StringRef LDorPRName,
-                                GOFF::PRAttr PRAttributes);
-  // Create a section with root-SD/ED/LD symbols.
-  MCSectionGOFF *getGOFFSection(SectionKind Kind, StringRef EDName,
-                                GOFF::EDAttr EDAttributes, StringRef LDorPRName,
-                                GOFF::LDAttr LDAttributes);
-  // Create a section with root-SD/ED/PR symbols.
-  MCSectionGOFF *getGOFFSection(SectionKind Kind, StringRef EDName,
-                                GOFF::EDAttr EDAttributes, StringRef PRName,
-                                GOFF::PRAttr PRAttributes);
-  // Create a section with root-SD/ED symbols.
-  MCSectionGOFF *getGOFFSection(SectionKind Kind, StringRef EDName,
-                                GOFF::EDAttr EDAttributes);
+  MCSectionGOFF *getGOFFSection(SectionKind Kind, StringRef Name,
+                                GOFF::SDAttr SDAttributes,
+                                MCSection *Parent = nullptr);
+  MCSectionGOFF *getGOFFSection(SectionKind Kind, StringRef Name,
+                                GOFF::EDAttr EDAttributes,
+                                MCSection *Parent = nullptr);
+  MCSectionGOFF *getGOFFSection(SectionKind Kind, StringRef Name,
+                                GOFF::PRAttr PRAttributes,
+                                MCSection *Parent = nullptr);
 
   LLVM_ABI MCSectionCOFF *
   getCOFFSection(StringRef Section, unsigned Characteristics,
