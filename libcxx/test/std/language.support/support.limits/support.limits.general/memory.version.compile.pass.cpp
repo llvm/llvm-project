@@ -25,6 +25,7 @@
     __cpp_lib_constexpr_memory                    201811L [C++20]
                                                   202202L [C++23]
     __cpp_lib_enable_shared_from_this             201603L [C++17]
+    __cpp_lib_is_sufficiently_aligned             202411L [C++26]
     __cpp_lib_make_unique                         201304L [C++14]
     __cpp_lib_out_ptr                             202106L [C++23]
                                                   202311L [C++26]
@@ -76,6 +77,10 @@
 
 # ifdef __cpp_lib_enable_shared_from_this
 #   error "__cpp_lib_enable_shared_from_this should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_is_sufficiently_aligned
+#   error "__cpp_lib_is_sufficiently_aligned should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_make_unique
@@ -150,6 +155,10 @@
 
 # ifdef __cpp_lib_enable_shared_from_this
 #   error "__cpp_lib_enable_shared_from_this should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_is_sufficiently_aligned
+#   error "__cpp_lib_is_sufficiently_aligned should not be defined before c++26"
 # endif
 
 # ifndef __cpp_lib_make_unique
@@ -239,6 +248,10 @@
 # endif
 # if __cpp_lib_enable_shared_from_this != 201603L
 #   error "__cpp_lib_enable_shared_from_this should have the value 201603L in c++17"
+# endif
+
+# ifdef __cpp_lib_is_sufficiently_aligned
+#   error "__cpp_lib_is_sufficiently_aligned should not be defined before c++26"
 # endif
 
 # ifndef __cpp_lib_make_unique
@@ -349,6 +362,10 @@
 # endif
 # if __cpp_lib_enable_shared_from_this != 201603L
 #   error "__cpp_lib_enable_shared_from_this should have the value 201603L in c++20"
+# endif
+
+# ifdef __cpp_lib_is_sufficiently_aligned
+#   error "__cpp_lib_is_sufficiently_aligned should not be defined before c++26"
 # endif
 
 # ifndef __cpp_lib_make_unique
@@ -471,6 +488,10 @@
 # endif
 # if __cpp_lib_enable_shared_from_this != 201603L
 #   error "__cpp_lib_enable_shared_from_this should have the value 201603L in c++23"
+# endif
+
+# ifdef __cpp_lib_is_sufficiently_aligned
+#   error "__cpp_lib_is_sufficiently_aligned should not be defined before c++26"
 # endif
 
 # ifndef __cpp_lib_make_unique
@@ -596,6 +617,13 @@
 # endif
 # if __cpp_lib_enable_shared_from_this != 201603L
 #   error "__cpp_lib_enable_shared_from_this should have the value 201603L in c++26"
+# endif
+
+# ifndef __cpp_lib_is_sufficiently_aligned
+#   error "__cpp_lib_is_sufficiently_aligned should be defined in c++26"
+# endif
+# if __cpp_lib_is_sufficiently_aligned != 202411L
+#   error "__cpp_lib_is_sufficiently_aligned should have the value 202411L in c++26"
 # endif
 
 # ifndef __cpp_lib_make_unique
