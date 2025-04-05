@@ -24,10 +24,10 @@ define void @test2(i64 %Q_as_int) {
   ret void
 }
 
-; Verify that escaped noalias parameter may alias inttoptr
+; Verify that escaped noalias parameter are no alias inttoptr
 define void @test3(ptr noalias %P, i64 %Q_as_int) {
   ; CHECK-LABEL: Function: test3:
-  ; CHECK: MayAlias:	i8* %P, i8* %Q
+  ; CHECK: NoAlias:	i8* %P, i8* %Q
   call void @escape(ptr %P)
   %Q = inttoptr i64 %Q_as_int to ptr
   store i8 0, ptr %P
@@ -35,10 +35,10 @@ define void @test3(ptr noalias %P, i64 %Q_as_int) {
   ret void
 }
 
-; Verify that escaped alloca may alias inttoptr
+; Verify that escaped alloca are noalias inttoptr
 define void @test4(i64 %Q_as_int) {
   ; CHECK-LABEL: Function: test4:
-  ; CHECK: MayAlias:	i8* %P, i8* %Q
+  ; CHECK: NoAlias:	i8* %P, i8* %Q
   %P = alloca i8
   call void @escape(ptr %P)
   %Q = inttoptr i64 %Q_as_int to ptr
@@ -55,6 +55,18 @@ define void @test5(i64 %Q_as_int) {
   ; CHECK: MayAlias:	i8* %Q, i8* @G
   %Q = inttoptr i64 %Q_as_int to ptr
   store i8 0, ptr @G
+  store i8 1, ptr %Q
+  ret void
+}
+
+; Verify that extractvalue of a coerced argument are noalias a function local object
+define void @test6([2 x i64] %Q.coerce) {
+  ; CHECK-LABEL: Function: test6:
+  ; CHECK: NoAlias:	i8* %P, i8* %Q
+  %P = alloca i8
+  %Q_as_int = extractvalue [2 x i64] %Q.coerce, 1
+  %Q = inttoptr i64 %Q_as_int to ptr
+  store i8 0, ptr %P
   store i8 1, ptr %Q
   ret void
 }
