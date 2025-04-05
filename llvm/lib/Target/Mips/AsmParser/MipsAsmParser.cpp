@@ -2947,8 +2947,7 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
     bool IsLocalSym =
         Res.getAddSym()->isInSection() || Res.getAddSym()->isTemporary() ||
         (Res.getAddSym()->isELF() &&
-         cast<MCSymbolELF>(Res.getSymA()->getSymbol()).getBinding() ==
-             ELF::STB_LOCAL);
+         cast<MCSymbolELF>(Res.getAddSym())->getBinding() == ELF::STB_LOCAL);
     // For O32, "$"-prefixed symbols are recognized as temporary while
     // .L-prefixed symbols are not (PrivateGlobalPrefix is "$"). Recognize ".L"
     // manually.

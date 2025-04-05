@@ -182,10 +182,9 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
 
   Value = Target.getConstant();
 
-  if (const MCSymbolRefExpr *A = Target.getSymA()) {
-    const MCSymbol &Sym = A->getSymbol();
-    if (Sym.isDefined())
-      Value += getSymbolOffset(Sym);
+  if (const MCSymbol *Add = Target.getAddSym()) {
+    if (Add->isDefined())
+      Value += getSymbolOffset(*Add);
   }
   if (const MCSymbol *Sub = Target.getSubSym())
     if (Sub->isDefined())
@@ -289,9 +288,9 @@ uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
 
     uint64_t FragmentOffset = getFragmentOffset(OF);
     int64_t TargetLocation = Value.getConstant();
-    if (const MCSymbolRefExpr *A = Value.getSymA()) {
+    if (const auto *SA = Value.getAddSym()) {
       uint64_t Val;
-      if (!getSymbolOffset(A->getSymbol(), Val)) {
+      if (!getSymbolOffset(*SA, Val)) {
         getContext().reportError(OF.getLoc(), "expected absolute expression");
         return 0;
       }
