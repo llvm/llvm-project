@@ -337,13 +337,17 @@ std::string riscv::getRISCVArch(const llvm::opt::ArgList &Args,
   // - On `riscv{XLEN}-unknown-elf` we default to `rv{XLEN}imac`
   // - On all other OSs we use `rv{XLEN}imafdc` (equivalent to `rv{XLEN}gc`)
   if (Triple.isRISCV32()) {
-    if (Triple.getOS() == llvm::Triple::UnknownOS)
+    if (Triple.getOS() == llvm::Triple::UnknownOS &&
+        Triple.getVendor() != llvm::Triple::MipsTechnologies)
       return "rv32imac";
     return "rv32imafdc";
   }
 
-  if (Triple.getOS() == llvm::Triple::UnknownOS)
+  if (Triple.getOS() == llvm::Triple::UnknownOS &&
+      Triple.getVendor() != llvm::Triple::MipsTechnologies)
     return "rv64imac";
+  if (Triple.getVendor() == llvm::Triple::MipsTechnologies)
+    return "rv64imafdc_zba_zbb_zicsr_zifencei";
   if (Triple.isAndroid())
     return "rv64imafdcv_zba_zbb_zbs";
   if (Triple.isOSFuchsia())
@@ -364,6 +368,10 @@ std::string riscv::getRISCVTargetCPU(const llvm::opt::ArgList &Args,
 
   if (!CPU.empty())
     return CPU;
+
+  if (Triple.getVendor() == llvm::Triple::MipsTechnologies &&
+      Triple.isRISCV64())
+    return "mips-p8700";
 
   return Triple.isRISCV64() ? "generic-rv64" : "generic-rv32";
 }
