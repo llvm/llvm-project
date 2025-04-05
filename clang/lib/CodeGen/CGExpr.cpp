@@ -4509,6 +4509,8 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
   NoMerge = NoMerge || !CGM.getCodeGenOpts().OptimizationLevel ||
             (CurCodeDecl && CurCodeDecl->hasAttr<OptimizeNoneAttr>());
 
+  llvm::MDBuilder MDHelper(getLLVMContext());
+
   /*TO_UPSTREAM(BoundsSafety) ON*/
   NoMerge |= CGM.getCodeGenOpts().TrapFuncReturns;
   NoMerge |= CGM.getCodeGenOpts().UniqueTrapBlocks;
@@ -4532,7 +4534,9 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
       Call->addAnnotationMetadata(Annotation);
       Unreachable->addAnnotationMetadata(Annotation);
     }
-    auto *CondBrInst = Builder.CreateCondBr(Checked, Cont, TrapBB);
+    auto *CondBrInst = Builder.CreateCondBr(Checked, Cont, TrapBB,
+                         MDHelper.createLikelyBranchWeights());
+
     if (!Annotation.empty())
       CondBrInst->addAnnotationMetadata(Annotation);
     /* TO_UPSTREAM(BoundsSafety) OFF*/
@@ -4543,7 +4547,9 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
       TrapBB = createUnmergeableBasicBlock("trap");
     else
       TrapBB = createBasicBlock("trap");
-    auto *BrInst = Builder.CreateCondBr(Checked, Cont, TrapBB);
+    auto *BrInst = Builder.CreateCondBr(Checked, Cont, TrapBB,
+                         MDHelper.createLikelyBranchWeights());
+
     if (!Annotation.empty())
       BrInst->addAnnotationMetadata(Annotation);
     /*TO_UPSTREAM(BoundsSafety) OFF*/
