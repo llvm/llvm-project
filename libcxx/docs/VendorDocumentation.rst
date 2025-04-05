@@ -264,6 +264,17 @@ General purpose options
   default assertion handler. If this is specified as a relative path, it
   is assumed to be relative to ``<monorepo>/libcxx``.
 
+.. option:: LIBCXX_PSTL_BACKEND:STRING
+
+  **Default**:: ``"serial"``
+
+  **Values**:: ``serial``, ``std-thread``, ``libdispatch``, ``openmp``
+
+  Select the desired backend for C++ parallel algorithms. All four options can
+  target multi-core CPU architectures, and ``openmp`` can additionally target
+  GPU architectures. The ``openmp`` backend requires OpenMP version 4.5 or
+  later (clang's default is sufficient).
+
 ABI Specific Options
 --------------------
 
