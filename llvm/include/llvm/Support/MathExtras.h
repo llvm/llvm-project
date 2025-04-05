@@ -113,7 +113,7 @@ static const unsigned char BitReverseTable256[256] = {
 #define R2(n) n, n + 2 * 64, n + 1 * 64, n + 3 * 64
 #define R4(n) R2(n), R2(n + 2 * 16), R2(n + 1 * 16), R2(n + 3 * 16)
 #define R6(n) R4(n), R4(n + 2 * 4), R4(n + 1 * 4), R4(n + 3 * 4)
-  R6(0), R6(2), R6(1), R6(3)
+    R6(0), R6(2), R6(1), R6(3)
 #undef R2
 #undef R4
 #undef R6
@@ -183,8 +183,7 @@ template <unsigned N> constexpr bool isInt(int64_t x) {
 }
 
 /// Checks if a signed integer is an N bit number shifted left by S.
-template <unsigned N, unsigned S>
-constexpr bool isShiftedInt(int64_t x) {
+template <unsigned N, unsigned S> constexpr bool isShiftedInt(int64_t x) {
   static_assert(S < 64, "isShiftedInt<N, S> with S >= 64 is too much.");
   static_assert(N + S <= 64, "isShiftedInt<N, S> with N + S > 64 is too wide.");
   return isInt<N + S>(x) && (x % (UINT64_C(1) << S) == 0);
@@ -207,8 +206,7 @@ template <unsigned N> constexpr bool isUInt(uint64_t x) {
 }
 
 /// Checks if a unsigned integer is an N bit number shifted left by S.
-template <unsigned N, unsigned S>
-constexpr bool isShiftedUInt(uint64_t x) {
+template <unsigned N, unsigned S> constexpr bool isShiftedUInt(uint64_t x) {
   static_assert(S < 64, "isShiftedUInt<N, S> with S >= 64 is too much.");
   static_assert(N + S <= 64,
                 "isShiftedUInt<N, S> with N + S > 64 is too wide.");
@@ -757,34 +755,46 @@ std::enable_if_t<std::is_signed_v<T>, T> SubOverflow(T X, T Y, T &Result) {
 #endif
 }
 
-/// Multiply two signed integers, computing the two's complement truncated
-/// result, returning true if an overflow occurred.
 template <typename T>
-std::enable_if_t<std::is_signed_v<T>, T> MulOverflow(T X, T Y, T &Result) {
+std::enable_if_t<std::is_signed_v<T>, bool> MulOverflow(T X, T Y, T &Result) {
 #if __has_builtin(__builtin_mul_overflow)
   return __builtin_mul_overflow(X, Y, &Result);
 #else
-  // Perform the unsigned multiplication on absolute values.
   using U = std::make_unsigned_t<T>;
-  const U UX = X < 0 ? (0 - static_cast<U>(X)) : static_cast<U>(X);
-  const U UY = Y < 0 ? (0 - static_cast<U>(Y)) : static_cast<U>(Y);
-  const U UResult = UX * UY;
 
-  // Convert to signed.
-  const bool IsNegative = (X < 0) ^ (Y < 0);
-  Result = IsNegative ? (0 - UResult) : UResult;
-
-  // If any of the args was 0, result is 0 and no overflow occurs.
-  if (UX == 0 || UY == 0)
+  // Handle zero case
+  if (X == 0 || Y == 0) {
+    Result = 0;
     return false;
+  }
 
-  // UX and UY are in [1, 2^n], where n is the number of digits.
-  // Check how the max allowed absolute value (2^n for negative, 2^(n-1) for
-  // positive) divided by an argument compares to the other.
-  if (IsNegative)
-    return UX > (static_cast<U>(std::numeric_limits<T>::max()) + U(1)) / UY;
-  else
-    return UX > (static_cast<U>(std::numeric_limits<T>::max())) / UY;
+  bool IsNegative = (X < 0) ^ (Y < 0);
+
+  // Safely compute absolute values
+  const U AbsX = X < 0 ? (0 - static_cast<U>(X)) : static_cast<U>(X);
+  const U AbsY = Y < 0 ? (0 - static_cast<U>(Y)) : static_cast<U>(Y);
+
+  // Overflow check before actual multiplication
+  constexpr U MaxPositive = static_cast<U>(std::numeric_limits<T>::max());
+  constexpr U MaxNegative = static_cast<U>(std::numeric_limits<T>::max()) + 1;
+
+  // Safe to multiply
+  U AbsResult = AbsX * AbsY;
+  Result =
+      IsNegative ? static_cast<T>(0 - AbsResult) : static_cast<T>(AbsResult);
+
+  // Handle INT_MIN * -1 overflow case explicitly
+  if ((X == std::numeric_limits<T>::min() && Y == -1) ||
+      (Y == std::numeric_limits<T>::min() && X == -1)) {
+    return true; // overflow
+  }
+
+  U Limit = IsNegative ? MaxNegative : MaxPositive;
+
+  if (AbsX > Limit / AbsY)
+    return true;
+
+  return false;
 #endif
 }
 
