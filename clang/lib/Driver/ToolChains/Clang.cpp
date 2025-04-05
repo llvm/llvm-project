@@ -28,6 +28,7 @@
 #include "clang/Basic/CLWarnings.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/DiagnosticLex.h"
 #include "clang/Basic/HeaderInclude.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/MakeSupport.h"
@@ -5077,6 +5078,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   const InputInfo &Input =
       IsExtractAPI ? ExtractAPIPlaceholderInput : Inputs[0];
 
+  bool hasPreprocessorJobInput = false;
   InputInfoList ExtractAPIInputs;
   InputInfoList HostOffloadingInputs;
   const InputInfo *CudaDeviceInput = nullptr;
@@ -5101,6 +5103,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     } else {
       llvm_unreachable("unexpectedly given multiple inputs");
     }
+    hasPreprocessorJobInput |=
+        I.getAction()->getKind() == Action::PreprocessJobClass;
   }
 
   const llvm::Triple *AuxTriple =
@@ -6505,6 +6509,27 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-pedantic");
   Args.AddLastArg(CmdArgs, options::OPT_pedantic_errors);
   Args.AddLastArg(CmdArgs, options::OPT_w);
+
+  // Possibly suppress gnu-line-marker diagnostics. This suppresses spurious
+  // warnings or errors when using '-save-temps' with, for example, '-Werror
+  // -Weverything' or '-pedantic'.
+  if (hasPreprocessorJobInput &&
+      !D.getDiags().isIgnored(diag::ext_pp_gnu_line_directive,
+                              SourceLocation())) {
+    auto IDs = D.getDiags().getDiagnosticIDs();
+    StringRef gnuLineMarker =
+        IDs->getWarningOptionForDiag(diag::ext_pp_gnu_line_directive);
+
+    // If for some reason the user has explicitly specified -Wgnu-line-marker,
+    // they are on their own.
+    bool hasGnuLineMarker = false;
+    for (std::string &V : Args.getAllArgValues(options::OPT_W_Joined)) {
+      if ((hasGnuLineMarker = V == gnuLineMarker))
+        break;
+    }
+    if (!hasGnuLineMarker)
+      CmdArgs.push_back(Args.MakeArgString("-Wno-" + gnuLineMarker));
+  }
 
   Args.addOptInFlag(CmdArgs, options::OPT_ffixed_point,
                     options::OPT_fno_fixed_point);
