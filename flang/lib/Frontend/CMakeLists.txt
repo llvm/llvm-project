@@ -33,11 +33,13 @@ add_flang_library(flangFrontend
   FIRSupport
   FIRBuilder
   FIRCodeGen
+  FIRCodeGenDialect
   FIRTransforms
   HLFIRDialect
   HLFIRTransforms
   flangPasses
   FIROpenACCSupport
+  FIROpenMPSupport
   FlangOpenMPTransforms
 
   LINK_COMPONENTS
