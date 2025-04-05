@@ -5,15 +5,16 @@ target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:
 target triple = "spirv-unknown-vulkan1.3-compute"
 
 define internal spir_func void @main() #3 {
-; CHECK-DAG:   OpName %[[#switch_0:]] "reg1"
-; CHECK-DAG:   OpName %[[#switch_1:]] "reg"
+; CHECK-DAG:   OpName %[[#switch_0:]] "main.local"
+; CHECK-DAG:   OpName %[[#switch_1:]] "main.local.1"
 
 ; CHECK-DAG:   %[[#int_0:]] = OpConstant %[[#]] 0
 ; CHECK-DAG:   %[[#int_1:]] = OpConstant %[[#]] 1
 
+; CHECK-DAG: %[[#switch_0]] = OpVariable %[[#]] Private
+; CHECK-DAG: %[[#switch_1]] = OpVariable %[[#]] Private
+
 ; CHECK:       %[[#entry:]] = OpLabel
-; CHECK-DAG: %[[#switch_0]] = OpVariable %[[#]] Function
-; CHECK-DAG: %[[#switch_1]] = OpVariable %[[#]] Function
 ; CHECK:                      OpSelectionMerge %[[#merge:]] None
 ; CHECK:                      OpBranchConditional %[[#]] %[[#new_header:]] %[[#unreachable:]]
 

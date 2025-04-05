@@ -13,8 +13,8 @@
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-G1"
 target triple = "spirv-unknown-vulkan1.3-compute"
 
-; CHECK-DAG:    OpName %[[#switch_0:]] "reg1"
-; CHECK-DAG:    OpName %[[#variable:]] "var"
+; CHECK-DAG:    OpName %[[#switch_0:]] "main.local"
+; CHECK-DAG:    OpName %[[#variable:]] "main.local.2"
 
 ; CHECK-DAG:    %[[#int_0:]] = OpConstant %[[#]] 0
 ; CHECK-DAG:    %[[#int_1:]] = OpConstant %[[#]] 1
@@ -22,10 +22,11 @@ target triple = "spirv-unknown-vulkan1.3-compute"
 ; CHECK-DAG:    %[[#int_3:]] = OpConstant %[[#]] 3
 ; CHECK-DAG:    %[[#int_4:]] = OpConstant %[[#]] 4
 
+; CHECK-DAG:    %[[#switch_0]] = OpVariable %[[#]] Private
+; CHECK-DAG:    %[[#variable]] = OpVariable %[[#]] Private
+
 define internal spir_func void @main() #1 {
 ; CHECK:      %[[#entry:]] = OpLabel
-; CHECK:    %[[#switch_0]] = OpVariable %[[#]] Function
-; CHECK:    %[[#variable]] = OpVariable %[[#]] Function
 ; CHECK:                     OpBranch %[[#header:]]
 entry:
   %0 = call token @llvm.experimental.convergence.entry()
