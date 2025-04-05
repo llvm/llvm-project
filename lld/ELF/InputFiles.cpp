@@ -22,6 +22,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/IRObjectFile.h"
+#include "llvm/Support/AArch64AttributeParser.h"
+#include "llvm/Support/AArch64BuildAttributes.h"
 #include "llvm/Support/ARMAttributeParser.h"
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/Endian.h"
@@ -205,6 +207,51 @@ static void updateSupportedARMFeatures(Ctx &ctx,
       attributes.getAttributeValue(ARMBuildAttrs::THUMB_ISA_use);
   ctx.arg.armHasArmISA |= armISA && *armISA >= ARMBuildAttrs::Allowed;
   ctx.arg.armHasThumb2ISA |= thumb && *thumb >= ARMBuildAttrs::AllowThumb32;
+}
+
+struct KnownAArch64BuildAttrSubsections {
+  struct PauthSubSection {
+    unsigned tagPlatform = 0;
+    unsigned tagSchema = 0;
+  } pauth;
+  struct FAndBSubSection {
+    unsigned tagBTI = 0;
+    unsigned tagPAC = 0;
+    unsigned tagGCS = 0;
+  } fAndB;
+};
+
+static KnownAArch64BuildAttrSubsections
+extractBuildAttributesSubsections(const AArch64AttributeParser &attributes) {
+
+  KnownAArch64BuildAttrSubsections subSections;
+  subSections.pauth.tagPlatform =
+      attributes
+          .getAttributeValue("aeabi_pauthabi",
+                             llvm::AArch64BuildAttributes::TAG_PAUTH_PLATFORM)
+          .value_or(0);
+  subSections.pauth.tagSchema =
+      attributes
+          .getAttributeValue("aeabi_pauthabi",
+                             llvm::AArch64BuildAttributes::TAG_PAUTH_SCHEMA)
+          .value_or(0);
+  subSections.fAndB.tagBTI =
+      attributes
+          .getAttributeValue("aeabi_feature_and_bits",
+                             llvm::AArch64BuildAttributes::TAG_FEATURE_BTI)
+          .value_or(0);
+  subSections.fAndB.tagPAC =
+      attributes
+          .getAttributeValue("aeabi_feature_and_bits",
+                             llvm::AArch64BuildAttributes::TAG_FEATURE_PAC)
+          .value_or(0);
+  subSections.fAndB.tagGCS =
+      attributes
+          .getAttributeValue("aeabi_feature_and_bits",
+                             llvm::AArch64BuildAttributes::TAG_FEATURE_GCS)
+          .value_or(0);
+
+  return subSections;
 }
 
 InputFile::InputFile(Ctx &ctx, Kind k, MemoryBufferRef m)
@@ -554,6 +601,17 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
   StringRef shstrtab = CHECK2(obj.getSectionStringTable(objSections), this);
   uint64_t size = objSections.size();
   sections.resize(size);
+
+  // Check whether GNU properties section present.
+  bool hasGnuProperties = false;
+  for (size_t i = 0; i != size; ++i) {
+    const Elf_Shdr &sec = objSections[i];
+    if (check(obj.getSectionName(sec, shstrtab)) == ".note.gnu.property") {
+      hasGnuProperties = true;
+      break;
+    }
+  }
+
   for (size_t i = 0; i != size; ++i) {
     const Elf_Shdr &sec = objSections[i];
     if (LLVM_LIKELY(sec.sh_type == SHT_PROGBITS))
@@ -638,14 +696,56 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
         }
       }
       break;
-    case EM_AARCH64:
-      // FIXME: BuildAttributes have been implemented in llvm, but not yet in
-      // lld. Remove the section so that it does not accumulate in the output
-      // file. When support is implemented we expect not to output a build
-      // attributes section in files of type ET_EXEC or ET_SHARED, but ld -r
-      // ouptut will need a single merged attributes section.
-      if (sec.sh_type == SHT_AARCH64_ATTRIBUTES)
+    case EM_AARCH64: {
+      // The specification states that if a file contains both GNU properties
+      // and AArch64 build attributes, they can be assumed to be identical.
+      // Therefore, if a file contains GNU properties, the AArch64 build
+      // attributes are ignored. If a file does not contain GNU properties, we
+      // leverage the existing GNU properties mechanism by populating the
+      // corresponding data structures, which will later be handled by
+      // Driver.cpp::readSecurityNotes. This ensures that AArch64 build
+      // attributes are represented in the linked object file as GNU properties,
+      // which are already supported by the Linux kernel and the dynamic
+      // loader.
+      if (sec.sh_type == SHT_AARCH64_ATTRIBUTES) {
+        StringRef name = check(obj.getSectionName(sec, shstrtab));
+        ArrayRef<uint8_t> contents = check(obj.getSectionContents(sec));
+        AArch64AttributeParser attributes;
+        // For functions that has to warn/err/report.
+        InputSection isec(*this, sec, name);
+        if (Error e = attributes.parse(contents, ELFT::Endianness)) {
+          Warn(ctx) << &isec << ": " << std::move(e);
+        } else {
+          if (!hasGnuProperties) {
+            KnownAArch64BuildAttrSubsections subSections =
+                extractBuildAttributesSubsections(attributes);
+            // this condition is important in order not to emit section when
+            // data does not exists, same as GNU properties.
+            if (subSections.pauth.tagPlatform || subSections.pauth.tagSchema) {
+              auto serializeUnsigned = [&](unsigned value, size_t offset,
+                                           bool isBE) {
+                for (size_t i = 0; i < 8; ++i) {
+                  this->aarch64PauthAbiCoreInfoStorage[i + offset] =
+                      static_cast<uint8_t>((static_cast<uint64_t>(value) >>
+                                            (8 * (isBE ? (7 - i) : i))) &
+                                           0xFF);
+                };
+              };
+              serializeUnsigned(subSections.pauth.tagPlatform, 0,
+                                ELFT::Endianness == llvm::endianness::big);
+              serializeUnsigned(subSections.pauth.tagSchema, 8,
+                                ELFT::Endianness == llvm::endianness::big);
+              this->aarch64PauthAbiCoreInfo =
+                  this->aarch64PauthAbiCoreInfoStorage;
+            }
+            this->andFeatures = 0;
+            this->andFeatures |= (subSections.fAndB.tagBTI) << 0;
+            this->andFeatures |= (subSections.fAndB.tagPAC) << 1;
+            this->andFeatures |= (subSections.fAndB.tagGCS) << 2;
+          }
+        }
         sections[i] = &InputSection::discarded;
+      }
       // Producing a static binary with MTE globals is not currently supported,
       // remove all SHT_AARCH64_MEMTAG_GLOBALS_STATIC sections as they're unused
       // medatada, and we don't want them to end up in the output file for
@@ -653,10 +753,9 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
       if (sec.sh_type == SHT_AARCH64_MEMTAG_GLOBALS_STATIC &&
           !canHaveMemtagGlobals(ctx))
         sections[i] = &InputSection::discarded;
-      break;
+    } break;
     }
   }
-
   // Read a symbol table.
   initializeSymbols(obj);
 }

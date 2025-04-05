@@ -241,7 +241,12 @@ public:
   StringRef sourceFile;
   uint32_t andFeatures = 0;
   bool hasCommonSyms = false;
+  struct PauthSubSection {
+    unsigned tagPlatform = 0;
+    unsigned tagSchema = 0;
+  } pauthAbiCoreInfo;
   ArrayRef<uint8_t> aarch64PauthAbiCoreInfo;
+  std::array<uint8_t, 16> aarch64PauthAbiCoreInfoStorage;
 };
 
 // .o file.
@@ -267,7 +272,6 @@ public:
                                  const Elf_Shdr &sec);
 
   uint32_t getSectionIndex(const Elf_Sym &sym) const;
-
 
   // Pointer to this input file's .llvm_addrsig section, if it has one.
   const Elf_Shdr *addrsigSec = nullptr;
