@@ -81,6 +81,8 @@ template <class _Container, input_range _Range, class... _Args>
   static_assert(!is_const_v<_Container>, "The target container cannot be const-qualified, please remove the const");
   static_assert(
       !is_volatile_v<_Container>, "The target container cannot be volatile-qualified, please remove the volatile");
+  static_assert(
+      is_class_v<_Container>, "The target must be a class type");
 
   // First see if the non-recursive case applies -- the conversion target is either:
   // - a range with a convertible value type;
@@ -208,6 +210,8 @@ template <class _Container, class... _Args>
   static_assert(!is_const_v<_Container>, "The target container cannot be const-qualified, please remove the const");
   static_assert(
       !is_volatile_v<_Container>, "The target container cannot be volatile-qualified, please remove the volatile");
+    static_assert(
+      is_class_v<_Container>, "The target must be a class type");
 
   auto __to_func = []<input_range _Range, class... _Tail>(_Range&& __range, _Tail&&... __tail) static
     requires requires { //
