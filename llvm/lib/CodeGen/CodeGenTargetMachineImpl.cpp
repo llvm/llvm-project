@@ -208,20 +208,27 @@ CodeGenTargetMachineImpl::createMCStreamer(raw_pwrite_stream &Out,
   return std::move(AsmStreamer);
 }
 
+std::unique_ptr<MachineModuleInfo>
+CodeGenTargetMachineImpl::createMachineModuleInfo() const override {
+  return std::make_unique<MachineModuleInfo>(this);
+}
+
 bool CodeGenTargetMachineImpl::addPassesToEmitFile(
     PassManagerBase &PM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-    CodeGenFileType FileType, bool DisableVerify,
-    MachineModuleInfoWrapperPass *MMIWP) {
-  // Add common CodeGen passes.
-  if (!MMIWP)
-    MMIWP = new MachineModuleInfoWrapperPass(this);
+    CodeGenFileType FileType, MachineModuleInfo *MMI, bool DisableVerify) {
+  // Check if MMI is nullptr, or if MMI pointer is valid but the target
+  // machine of the MMI is not the same as this target machine
+  if (!MMI || &MMI->getTarget() != this)
+    return true;
+  // Add the wrapper pass for MMI
+  auto *MMIWP = new MachineModuleInfoWrapperPass(MMI);
   TargetPassConfig *PassConfig =
       addPassesToGenerateCode(*this, PM, DisableVerify, *MMIWP);
   if (!PassConfig)
     return true;
 
   if (TargetPassConfig::willCompleteCodeGenPipeline()) {
-    if (addAsmPrinter(PM, Out, DwoOut, FileType, MMIWP->getMMI().getContext()))
+    if (addAsmPrinter(PM, Out, DwoOut, FileType, MMI->getContext()))
       return true;
   } else {
     // MIR printing is redundant with -filetype=null.
@@ -239,11 +246,15 @@ bool CodeGenTargetMachineImpl::addPassesToEmitFile(
 /// used to build custom MCStreamer.
 ///
 bool CodeGenTargetMachineImpl::addPassesToEmitMC(PassManagerBase &PM,
-                                                 MCContext *&Ctx,
                                                  raw_pwrite_stream &Out,
+                                                 MachineModuleInfo *MMI,
                                                  bool DisableVerify) {
+  // Check if MMI is nullptr, or if MMI pointer is valid but the target
+  // machine of the MMI is not the same as this target machine
+  if (!MMI || &MMI->getTarget() != this)
+    return true;
   // Add common CodeGen passes.
-  MachineModuleInfoWrapperPass *MMIWP = new MachineModuleInfoWrapperPass(this);
+  MachineModuleInfoWrapperPass *MMIWP = new MachineModuleInfoWrapperPass(MMI);
   TargetPassConfig *PassConfig =
       addPassesToGenerateCode(*this, PM, DisableVerify, *MMIWP);
   if (!PassConfig)
@@ -251,7 +262,7 @@ bool CodeGenTargetMachineImpl::addPassesToEmitMC(PassManagerBase &PM,
   assert(TargetPassConfig::willCompleteCodeGenPipeline() &&
          "Cannot emit MC with limited codegen pipeline");
 
-  Ctx = &MMIWP->getMMI().getContext();
+  MCContext &Ctx = MMI->getContext();
   // libunwind is unable to load compact unwind dynamically, so we must generate
   // DWARF unwind info for the JIT.
   Options.MCOptions.EmitDwarfUnwind = EmitDwarfUnwindType::Always;
@@ -261,7 +272,7 @@ bool CodeGenTargetMachineImpl::addPassesToEmitMC(PassManagerBase &PM,
   const MCSubtargetInfo &STI = *getMCSubtargetInfo();
   const MCRegisterInfo &MRI = *getMCRegisterInfo();
   std::unique_ptr<MCCodeEmitter> MCE(
-      getTarget().createMCCodeEmitter(*getMCInstrInfo(), *Ctx));
+      getTarget().createMCCodeEmitter(*getMCInstrInfo(), Ctx));
   if (!MCE)
     return true;
   MCAsmBackend *MAB =
@@ -271,7 +282,7 @@ bool CodeGenTargetMachineImpl::addPassesToEmitMC(PassManagerBase &PM,
 
   const Triple &T = getTargetTriple();
   std::unique_ptr<MCStreamer> AsmStreamer(getTarget().createMCObjectStreamer(
-      T, *Ctx, std::unique_ptr<MCAsmBackend>(MAB), MAB->createObjectWriter(Out),
+      T, Ctx, std::unique_ptr<MCAsmBackend>(MAB), MAB->createObjectWriter(Out),
       std::move(MCE), STI));
 
   // Create the AsmPrinter, which takes ownership of AsmStreamer if successful.

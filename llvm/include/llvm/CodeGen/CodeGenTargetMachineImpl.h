@@ -43,22 +43,27 @@ public:
   /// for generating a pipeline of CodeGen passes.
   virtual TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 
+  /// Creates a new \c MachineModuleInfo from this \c TargetMachine
+  std::unique_ptr<MachineModuleInfo> createMachineModuleInfo() const override;
+
   /// Add passes to the specified pass manager to get the specified file
-  /// emitted.  Typically this will involve several steps of code generation.
-  /// \p MMIWP is an optional parameter that, if set to non-nullptr,
-  /// will be used to set the MachineModuloInfo for this PM.
-  bool
-  addPassesToEmitFile(PassManagerBase &PM, raw_pwrite_stream &Out,
-                      raw_pwrite_stream *DwoOut, CodeGenFileType FileType,
-                      bool DisableVerify = true,
-                      MachineModuleInfoWrapperPass *MMIWP = nullptr) override;
+  /// emitted. Typically, this will involve several steps of code generation.
+  /// This method should return true if emission of this file type is not
+  /// supported, or false on success.
+  /// \p MMI a \c MachineModuleInfo that holds the generated machine code
+  /// throughout the code generation process
+  bool addPassesToEmitFile(PassManagerBase &PM, raw_pwrite_stream &Out,
+                           raw_pwrite_stream *DwoOut, CodeGenFileType FileType,
+                           MachineModuleInfo *MMI,
+                           bool DisableVerify = true) override;
 
   /// Add passes to the specified pass manager to get machine code emitted with
-  /// the MCJIT. This method returns true if machine code is not supported. It
-  /// fills the MCContext Ctx pointer which can be used to build custom
-  /// MCStreamer.
-  bool addPassesToEmitMC(PassManagerBase &PM, MCContext *&Ctx,
+  /// the MCJIT. This method returns true if machine code is not supported.
+  /// \p MMI a \c MachineModuleInfo that holds the generated machine code
+  /// throughout the code generation process
+  bool addPassesToEmitMC(PassManagerBase &PM,
                          raw_pwrite_stream &Out,
+                         MachineModuleInfo *MMI,
                          bool DisableVerify = true) override;
 
   /// Adds an AsmPrinter pass to the pipeline that prints assembly or

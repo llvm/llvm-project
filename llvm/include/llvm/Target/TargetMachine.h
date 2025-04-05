@@ -38,7 +38,7 @@ using ModulePassManager = PassManager<Module>;
 
 class Function;
 class GlobalValue;
-class MachineModuleInfoWrapperPass;
+class MachineModuleInfo;
 struct MachineSchedContext;
 class Mangler;
 class MCAsmInfo;
@@ -195,7 +195,7 @@ public:
   /// TargetSubtargetInfo.  In debug builds, it verifies that the object being
   /// returned is of the correct type.
   template <typename STC> const STC &getSubtarget(const Function &F) const {
-    return *static_cast<const STC*>(getSubtargetImpl(F));
+    return *static_cast<const STC *>(getSubtargetImpl(F));
   }
 
   /// Create a DataLayout.
@@ -400,27 +400,37 @@ public:
   /// with the new pass manager. Only affects the "default" AAManager.
   virtual void registerDefaultAliasAnalyses(AAManager &) {}
 
+  /// For targets that utilize the target-independent code generator
+  /// (CodeGen), this method creates a new \c MachineModuleInfo from this
+  /// \c TargetMachine and returns it; For targets that don't use CodeGen,
+  /// returns nullptr
+  virtual std::unique_ptr<MachineModuleInfo> createMachineModuleInfo() const {
+    return nullptr;
+  }
+
   /// Add passes to the specified pass manager to get the specified file
-  /// emitted.  Typically this will involve several steps of code generation.
+  /// emitted. Typically, this will involve several steps of code generation.
   /// This method should return true if emission of this file type is not
   /// supported, or false on success.
-  /// \p MMIWP is an optional parameter that, if set to non-nullptr,
-  /// will be used to set the MachineModuloInfo for this PM.
-  virtual bool
-  addPassesToEmitFile(PassManagerBase &, raw_pwrite_stream &,
-                      raw_pwrite_stream *, CodeGenFileType,
-                      bool /*DisableVerify*/ = true,
-                      MachineModuleInfoWrapperPass *MMIWP = nullptr) {
+  /// For targets that utilize the target-independent code generator
+  /// (CodeGen) to emit the file, \c MachineModuleInfo pointer will hold the
+  /// generated machine code; For targets that don't use CodeGen, it is set
+  /// to \c nullptr
+  virtual bool addPassesToEmitFile(PassManagerBase &, raw_pwrite_stream &,
+                                   raw_pwrite_stream *, CodeGenFileType,
+                                   MachineModuleInfo *,
+                                   bool /*DisableVerify*/ = true) {
     return true;
   }
 
   /// Add passes to the specified pass manager to get machine code emitted with
-  /// the MCJIT. This method returns true if machine code is not supported. It
-  /// fills the MCContext Ctx pointer which can be used to build custom
-  /// MCStreamer.
-  ///
-  virtual bool addPassesToEmitMC(PassManagerBase &, MCContext *&,
-                                 raw_pwrite_stream &,
+  /// the MCJIT. This method returns true if machine code is not supported.
+  /// For targets that utilize the target-independent code generator
+  /// (CodeGen), \c MachineModuleInfo pointer will hold the generated
+  /// machine code; For targets that don't use CodeGen, it must be set
+  /// to \c nullptr
+  virtual bool addPassesToEmitMC(PassManagerBase &, raw_pwrite_stream &,
+                                 MachineModuleInfo *,
                                  bool /*DisableVerify*/ = true) {
     return true;
   }
