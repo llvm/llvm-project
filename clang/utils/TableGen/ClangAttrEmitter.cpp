@@ -5311,7 +5311,7 @@ void EmitClangAttrDocs(const RecordKeeper &Records, raw_ostream &OS) {
   };
 
   std::map<const Record *, std::map<uint32_t, DocumentationData>, CategoryLess>
-    MergedDocs;
+      MergedDocs;
 
   std::vector<DocumentationData> UndocumentedDocs;
   const Record *UndocumentedCategory = nullptr;
@@ -5336,7 +5336,7 @@ void EmitClangAttrDocs(const RecordKeeper &Records, raw_ostream &OS) {
 
       if (Cat == "InternalOnly")
         continue;
-      
+
       // Track the Undocumented category Record for later grouping
       if (Cat == "Undocumented" && !UndocumentedCategory)
         UndocumentedCategory = Category;
@@ -5344,10 +5344,11 @@ void EmitClangAttrDocs(const RecordKeeper &Records, raw_ostream &OS) {
       // Generate Heading and Spellings.
       auto HeadingAndSpellings =
           GetAttributeHeadingAndSpellings(Doc, Attr, Cat);
-      
+
       // Handle Undocumented category separately - no content merging
       if (Cat == "Undocumented" && UndocumentedCategory) {
-        UndocumentedDocs.push_back(DocumentationData(Doc, Attr, HeadingAndSpellings));
+        UndocumentedDocs.push_back(
+            DocumentationData(Doc, Attr, HeadingAndSpellings));
         continue;
       }
 
@@ -5374,17 +5375,18 @@ void EmitClangAttrDocs(const RecordKeeper &Records, raw_ostream &OS) {
     }
   }
 
-  std::map<const Record *, std::vector<DocumentationData>, CategoryLess> SplitDocs;
+  std::map<const Record *, std::vector<DocumentationData>, CategoryLess>
+      SplitDocs;
 
   for (auto &CategoryPair : MergedDocs) {
 
     std::vector<DocumentationData> MD;
     for (auto &DocPair : CategoryPair.second)
-    MD.push_back(std::move(DocPair.second));
-    
+      MD.push_back(std::move(DocPair.second));
+
     SplitDocs.emplace(CategoryPair.first, MD);
   }
-  
+
   // Append Undocumented category entries
   if (!UndocumentedDocs.empty() && UndocumentedCategory) {
     SplitDocs.emplace(UndocumentedCategory, UndocumentedDocs);
