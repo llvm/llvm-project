@@ -322,6 +322,17 @@ INTERCEPTOR(int, ftruncate64, int fd, off64_t length) {
 #define RTSAN_MAYBE_INTERCEPT_FTRUNCATE64
 #endif
 
+INTERCEPTOR(int, symlink, const char *target, const char *linkpath) {
+  __rtsan_notify_intercepted_call("symlink");
+  return REAL(symlink)(target, linkpath);
+}
+
+INTERCEPTOR(int, symlinkat, const char *target, int newdirfd,
+            const char *linkpath) {
+  __rtsan_notify_intercepted_call("symlinkat");
+  return REAL(symlinkat)(target, newdirfd, linkpath);
+}
+
 // Streams
 
 INTERCEPTOR(FILE *, fopen, const char *path, const char *mode) {
@@ -1523,6 +1534,8 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_READLINKAT;
   INTERCEPT_FUNCTION(unlink);
   INTERCEPT_FUNCTION(unlinkat);
+  INTERCEPT_FUNCTION(symlink);
+  INTERCEPT_FUNCTION(symlinkat);
   INTERCEPT_FUNCTION(truncate);
   INTERCEPT_FUNCTION(ftruncate);
   RTSAN_MAYBE_INTERCEPT_TRUNCATE64;
