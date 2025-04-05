@@ -44,6 +44,10 @@
 ARG BASE_IMAGE
 FROM $BASE_IMAGE AS builder-base
 
+# Changing this file causes a rebuild of the image in a GitHub action.
+# The date uses the ISO format YYYY-MM-DD.
+RUN echo "Last forced update executed on 2025-04-05."
+
 # Make sure apt-get doesn't try to prompt for stuff like our time zone, etc.
 ENV DEBIAN_FRONTEND=noninteractive
 
