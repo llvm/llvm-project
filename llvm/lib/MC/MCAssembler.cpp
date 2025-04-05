@@ -164,14 +164,11 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
   bool IsPCRel = FixupFlags & MCFixupKindInfo::FKF_IsPCRel;
   bool IsResolved = false;
   if (IsPCRel) {
-    if (Target.getSubSym()) {
-      IsResolved = false;
-    } else if (!Target.getSymA()) {
+    if (Target.getSubSym() || !Target.getAddSym()) {
       IsResolved = false;
     } else {
-      const MCSymbolRefExpr *A = Target.getSymA();
-      const MCSymbol &SA = A->getSymbol();
-      if (A->getKind() != MCSymbolRefExpr::VK_None || SA.isUndefined()) {
+      auto &SA = *Target.getAddSym();
+      if (Target.getSymSpecifier() || SA.isUndefined()) {
         IsResolved = false;
       } else {
         IsResolved = (FixupFlags & MCFixupKindInfo::FKF_Constant) ||
