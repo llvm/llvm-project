@@ -15,6 +15,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUHSAMETADATASTREAMER_H
 #define LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUHSAMETADATASTREAMER_H
 
+#include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUDelayedMCExpr.h"
 #include "llvm/BinaryFormat/MsgPackDocument.h"
 #include "llvm/Support/AMDGPUMetadata.h"
@@ -60,6 +61,9 @@ protected:
   virtual void emitVersion() = 0;
   virtual void emitHiddenKernelArgs(const MachineFunction &MF, unsigned &Offset,
                                     msgpack::ArrayDocNode Args) = 0;
+  virtual void emitKernelArg(const Argument &Arg, unsigned &Offset,
+                             msgpack::ArrayDocNode Args,
+                             const MachineFunction &MF) = 0;
   virtual void emitKernelAttrs(const AMDGPUTargetMachine &TM,
                                const Function &Func,
                                msgpack::MapDocNode Kern) = 0;
@@ -108,15 +112,17 @@ protected:
   void emitKernelArgs(const MachineFunction &MF, msgpack::MapDocNode Kern);
 
   void emitKernelArg(const Argument &Arg, unsigned &Offset,
-                     msgpack::ArrayDocNode Args);
-
-  void emitKernelArg(const DataLayout &DL, Type *Ty, Align Alignment,
-                     StringRef ValueKind, unsigned &Offset,
                      msgpack::ArrayDocNode Args,
-                     MaybeAlign PointeeAlign = std::nullopt,
-                     StringRef Name = "", StringRef TypeName = "",
-                     StringRef BaseTypeName = "", StringRef ActAccQual = "",
-                     StringRef AccQual = "", StringRef TypeQual = "");
+                     const MachineFunction &MF) override;
+
+  void emitKernelArgImpl(const DataLayout &DL, Type *Ty, Align Alignment,
+                         StringRef ValueKind, unsigned &Offset,
+                         msgpack::ArrayDocNode Args,
+                         StringRef PreloadRegisters = "",
+                         MaybeAlign PointeeAlign = std::nullopt,
+                         StringRef Name = "", StringRef TypeName = "",
+                         StringRef BaseTypeName = "", StringRef ActAccQual = "",
+                         StringRef AccQual = "", StringRef TypeQual = "");
 
   void emitHiddenKernelArgs(const MachineFunction &MF, unsigned &Offset,
                             msgpack::ArrayDocNode Args) override;
@@ -160,6 +166,18 @@ public:
 class MetadataStreamerMsgPackV6 final : public MetadataStreamerMsgPackV5 {
 protected:
   void emitVersion() override;
+  void emitHiddenKernelArgs(const MachineFunction &MF, unsigned &Offset,
+                            msgpack::ArrayDocNode Args) override;
+  void emitKernelArg(const Argument &Arg, unsigned &Offset,
+                     msgpack::ArrayDocNode Args,
+                     const MachineFunction &MF) override;
+
+  void emitHiddenKernelArgWithPreload(const DataLayout &DL, Type *ArgTy,
+                                      Align Alignment,
+                                      KernArgPreload::HiddenArg HiddenArg,
+                                      StringRef ArgName, unsigned &Offset,
+                                      msgpack::ArrayDocNode Args,
+                                      const AMDGPUFunctionArgInfo &ArgInfo);
 
 public:
   MetadataStreamerMsgPackV6() = default;
