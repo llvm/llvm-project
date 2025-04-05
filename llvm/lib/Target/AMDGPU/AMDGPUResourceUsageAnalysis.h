@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "SIMachineFunctionInfo.h"
 
 namespace llvm {
 
@@ -27,28 +28,10 @@ class TargetMachine;
 struct AMDGPUResourceUsageAnalysis : public MachineFunctionPass {
 public:
   static char ID;
-  // Track resource usage for callee functions.
-  struct SIFunctionResourceInfo {
-    // Track the number of explicitly used VGPRs. Special registers reserved at
-    // the end are tracked separately.
-    int32_t NumVGPR = 0;
-    int32_t NumAGPR = 0;
-    int32_t NumExplicitSGPR = 0;
-    uint64_t CalleeSegmentSize = 0;
-    uint64_t PrivateSegmentSize = 0;
-    bool UsesVCC = false;
-    bool UsesFlatScratch = false;
-    bool HasDynamicallySizedStack = false;
-    bool HasRecursion = false;
-    bool HasIndirectCall = false;
-    SmallVector<const Function *, 16> Callees;
-  };
 
   AMDGPUResourceUsageAnalysis() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
-
-  const SIFunctionResourceInfo &getResourceInfo() const { return ResourceInfo; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
@@ -56,11 +39,10 @@ public:
   }
 
 private:
-  SIFunctionResourceInfo
+  SIMachineFunctionInfo::SIFunctionResourceInfo
   analyzeResourceUsage(const MachineFunction &MF,
                        uint32_t AssumedStackSizeForDynamicSizeObjects,
                        uint32_t AssumedStackSizeForExternalCall) const;
-  SIFunctionResourceInfo ResourceInfo;
 };
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_AMDGPU_AMDGPURESOURCEUSAGEANALYSIS_H
