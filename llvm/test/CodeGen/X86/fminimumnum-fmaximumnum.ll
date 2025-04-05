@@ -1840,9 +1840,7 @@ define <4 x half> @test_fmaximumnum_v4f16(<4 x half> %x, <4 x half> %y) nounwind
 ; AVX512-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX512-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX512-NEXT:    movzwl {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %eax
-; AVX512-NEXT:    vmovd %eax, %xmm1
-; AVX512-NEXT:    vcvtph2ps %xmm1, %xmm9
+; AVX512-NEXT:    vcvtph2ps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm9
 ; AVX512-NEXT:    vmulss %xmm0, %xmm9, %xmm0
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm4[3,3,3,3]
 ; AVX512-NEXT:    vcvtph2ps %xmm1, %xmm1
