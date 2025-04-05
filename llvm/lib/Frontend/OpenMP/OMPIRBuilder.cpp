@@ -59,6 +59,7 @@
 #include "llvm/Transforms/Utils/LoopPeel.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
 
+#include <cassert>
 #include <cstdint>
 #include <optional>
 
@@ -3918,6 +3919,266 @@ OpenMPIRBuilder::createMasked(const LocationDescription &Loc,
                               /*Conditional*/ true, /*hasFinalize*/ true);
 }
 
+llvm::CallInst *
+OpenMPIRBuilder::emitNoUnwindRuntimeCall(llvm::FunctionCallee Callee,
+                                         ArrayRef<llvm::Value *> Args,
+                                         const llvm::Twine &Name) {
+  llvm::CallInst *Call = Builder.CreateCall(
+      Callee, Args, SmallVector<llvm::OperandBundleDef, 1>(), Name);
+  Call->setDoesNotThrow();
+  return Call;
+}
+
+// Expects input basic block is dominated by BeforeScanBB.
+// Once Scan directive is encountered, the code after scan directive should be
+// dominated by AfterScanBB. Scan directive splits the code sequence to
+// scan and input phase. Based on whether inclusive or exclusive
+// clause is used in the scan directive and whether input loop or scan loop
+// is lowered, it adds jumps to input and scan phase. First Scan loop is the
+// input loop and second is the scan loop. The code generated handles only
+// inclusive scans now.
+OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createScan(
+    const LocationDescription &Loc, InsertPointTy AllocaIP,
+    ArrayRef<llvm::Value *> ScanVars, bool IsInclusive) {
+  if (ScanInfo.OMPFirstScanLoop) {
+    Builder.restoreIP(AllocaIP);
+    emitScanBasedDirectiveDeclsIR(ScanVars);
+  }
+  if (!updateToLocation(Loc))
+    return Loc.IP;
+  unsigned int defaultAS = M.getDataLayout().getProgramAddressSpace();
+  llvm::Value *IV = ScanInfo.IV;
+
+  if (ScanInfo.OMPFirstScanLoop) {
+    // Emit buffer[i] = red; at the end of the input phase.
+    for (Value *ScanVar : ScanVars) {
+      Value *Buff = ScanInfo.ReductionVarToScanBuffs[ScanVar];
+      Type *DestTy = Builder.getInt32Ty(); // ScanVars[i]->getType();
+      Value *Val = Builder.CreateInBoundsGEP(DestTy, Buff, IV, "arrayOffset");
+      Value *Src = Builder.CreateLoad(DestTy, ScanVar);
+      Value *Dest = Builder.CreatePointerBitCastOrAddrSpaceCast(
+          Val, DestTy->getPointerTo(defaultAS));
+
+      Builder.CreateStore(Src, Dest);
+    }
+  }
+  Builder.CreateBr(ScanInfo.OMPScanLoopExit);
+  emitBlock(ScanInfo.OMPScanDispatch, Builder.GetInsertBlock()->getParent());
+
+  // Initialize the private reduction variable to 0 in each iteration.
+  // It is used to copy intial values to scan buffer.
+  ConstantInt *Zero = ConstantInt::get(Builder.getInt32Ty(), 0);
+  for (Value *ScanVar : ScanVars) {
+    Type *DestTy = Builder.getInt32Ty(); // ScanVars[i]->getType();
+    Value *Dest = Builder.CreatePointerBitCastOrAddrSpaceCast(
+        ScanVar, DestTy->getPointerTo(defaultAS));
+    Builder.CreateStore(Zero, Dest);
+  }
+
+  if (!ScanInfo.OMPFirstScanLoop) {
+    IV = ScanInfo.IV;
+    // Emit red = buffer[i]; at the entrance to the scan phase.
+    // TODO: if exclusive scan, the red = buffer[i-1] needs to be updated.
+    for (Value *ScanVar : ScanVars) {
+      Value *Buff = ScanInfo.ReductionVarToScanBuffs[ScanVar];
+      Type *DestTy = Builder.getInt32Ty(); // ScanVars[i]->getType();
+      Value *SrcPtr =
+          Builder.CreateInBoundsGEP(DestTy, Buff, IV, "arrayOffset");
+      Value *Src = Builder.CreateLoad(DestTy, SrcPtr);
+      Value *Dest = Builder.CreatePointerBitCastOrAddrSpaceCast(
+          ScanVar, DestTy->getPointerTo(defaultAS));
+
+      Builder.CreateStore(Src, Dest);
+    }
+  }
+
+  // TODO: Update it to CreateBr and remove dead blocks
+  llvm::Value *CmpI = Builder.getInt1(true);
+  if (ScanInfo.OMPFirstScanLoop == IsInclusive) {
+    Builder.CreateCondBr(CmpI, ScanInfo.OMPBeforeScanBlock,
+                         ScanInfo.OMPAfterScanBlock);
+  } else {
+    Builder.CreateCondBr(CmpI, ScanInfo.OMPAfterScanBlock,
+                         ScanInfo.OMPBeforeScanBlock);
+  }
+  emitBlock(ScanInfo.OMPAfterScanBlock, Builder.GetInsertBlock()->getParent());
+  Builder.SetInsertPoint(ScanInfo.OMPAfterScanBlock);
+  return Builder.saveIP();
+}
+
+void OpenMPIRBuilder::emitScanBasedDirectiveDeclsIR(
+    ArrayRef<Value *> ScanVars) {
+
+  Value *AllocSpan = Builder.CreateAdd(ScanInfo.Span, Builder.getInt32(1));
+  for (Value *ScanVar : ScanVars) {
+    // TODO: remove after all users of by-ref are updated to use the alloc
+    // region: Allocate reduction variable (which is a pointer to the real
+    // reduciton variable allocated in the inlined region)
+    llvm::Value *Buff =
+        Builder.CreateAlloca(Builder.getInt32Ty(), AllocSpan, "vla");
+    ScanInfo.ReductionVarToScanBuffs[ScanVar] = Buff;
+  }
+}
+
+void OpenMPIRBuilder::emitScanBasedDirectiveFinalsIR(
+    SmallVector<ReductionInfo> ReductionInfos) {
+  llvm::Value *OMPLast = Builder.CreateNSWAdd(
+      ScanInfo.Span,
+      llvm::ConstantInt::get(ScanInfo.Span->getType(), 1, /*isSigned=*/false));
+  unsigned int DefaultAS = M.getDataLayout().getProgramAddressSpace();
+  for (ReductionInfo RedInfo : ReductionInfos) {
+    Value *PrivateVar = RedInfo.PrivateVariable;
+    Value *OrigVar = RedInfo.Variable;
+    Value *Buff = ScanInfo.ReductionVarToScanBuffs[PrivateVar];
+
+    Type *SrcTy = RedInfo.ElementType;
+    Value *Val = Builder.CreateInBoundsGEP(SrcTy, Buff, OMPLast, "arrayOffset");
+    Value *Src = Builder.CreateLoad(SrcTy, Val);
+    Value *Dest = Builder.CreatePointerBitCastOrAddrSpaceCast(
+        OrigVar, SrcTy->getPointerTo(DefaultAS));
+
+    Builder.CreateStore(Src, Dest);
+  }
+}
+
+OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitScanReduction(
+    const LocationDescription &Loc, InsertPointTy &FinalizeIP,
+    SmallVector<llvm::OpenMPIRBuilder::ReductionInfo> ReductionInfos) {
+
+  llvm::Value *spanDiff = ScanInfo.Span;
+
+  if (!updateToLocation(Loc))
+    return Loc.IP;
+  auto curFn = Builder.GetInsertBlock()->getParent();
+  // for (int k = 0; k <= ceil(log2(n)); ++k)
+  llvm::BasicBlock *LoopBB =
+      BasicBlock::Create(curFn->getContext(), "omp.outer.log.scan.body");
+  llvm::BasicBlock *ExitBB =
+      BasicBlock::Create(curFn->getContext(), "omp.outer.log.scan.exit");
+  llvm::Function *F = llvm::Intrinsic::getOrInsertDeclaration(
+      Builder.GetInsertBlock()->getModule(),
+      (llvm::Intrinsic::ID)llvm::Intrinsic::log2, Builder.getDoubleTy());
+  llvm::BasicBlock *InputBB = Builder.GetInsertBlock();
+  ConstantInt *One = ConstantInt::get(Builder.getInt32Ty(), 1);
+  llvm::Value *span = Builder.CreateAdd(spanDiff, One);
+  llvm::Value *Arg = Builder.CreateUIToFP(span, Builder.getDoubleTy());
+  llvm::Value *LogVal = emitNoUnwindRuntimeCall(F, Arg, "");
+  F = llvm::Intrinsic::getOrInsertDeclaration(
+      Builder.GetInsertBlock()->getModule(),
+      (llvm::Intrinsic::ID)llvm::Intrinsic::ceil, Builder.getDoubleTy());
+  LogVal = emitNoUnwindRuntimeCall(F, LogVal, "");
+  LogVal = Builder.CreateFPToUI(LogVal, Builder.getInt32Ty());
+  llvm::Value *NMin1 =
+      Builder.CreateNUWSub(span, llvm::ConstantInt::get(span->getType(), 1));
+  Builder.SetInsertPoint(InputBB);
+  Builder.CreateBr(LoopBB);
+  emitBlock(LoopBB, Builder.GetInsertBlock()->getParent());
+  Builder.SetInsertPoint(LoopBB);
+
+  PHINode *Counter = Builder.CreatePHI(Builder.getInt32Ty(), 2);
+  //// size pow2k = 1;
+  PHINode *Pow2K = Builder.CreatePHI(Builder.getInt32Ty(), 2);
+  Counter->addIncoming(llvm::ConstantInt::get(Builder.getInt32Ty(), 0),
+                       InputBB);
+  Pow2K->addIncoming(llvm::ConstantInt::get(Builder.getInt32Ty(), 1), InputBB);
+  //// for (size i = n - 1; i >= 2 ^ k; --i)
+  ////   tmp[i] op= tmp[i-pow2k];
+  llvm::BasicBlock *InnerLoopBB =
+      BasicBlock::Create(curFn->getContext(), "omp.inner.log.scan.body");
+  llvm::BasicBlock *InnerExitBB =
+      BasicBlock::Create(curFn->getContext(), "omp.inner.log.scan.exit");
+  llvm::Value *CmpI = Builder.CreateICmpUGE(NMin1, Pow2K);
+  Builder.CreateCondBr(CmpI, InnerLoopBB, InnerExitBB);
+  emitBlock(InnerLoopBB, Builder.GetInsertBlock()->getParent());
+  Builder.SetInsertPoint(InnerLoopBB);
+  auto *IVal = Builder.CreatePHI(Builder.getInt32Ty(), 2);
+  IVal->addIncoming(NMin1, LoopBB);
+  unsigned int defaultAS = M.getDataLayout().getProgramAddressSpace();
+  for (ReductionInfo RedInfo : ReductionInfos) {
+    Value *ReductionVal = RedInfo.PrivateVariable;
+    Value *Buff = ScanInfo.ReductionVarToScanBuffs[ReductionVal];
+    Type *DestTy = RedInfo.ElementType;
+    Value *IV = Builder.CreateAdd(IVal, Builder.getInt32(1));
+    Value *LHSPtr = Builder.CreateInBoundsGEP(DestTy, Buff, IV, "arrayOffset");
+    Value *OffsetIval = Builder.CreateNUWSub(IV, Pow2K);
+    Value *RHSPtr =
+        Builder.CreateInBoundsGEP(DestTy, Buff, OffsetIval, "arrayOffset");
+    Value *LHS = Builder.CreateLoad(DestTy, LHSPtr);
+    Value *RHS = Builder.CreateLoad(DestTy, RHSPtr);
+    Value *LHSAddr = Builder.CreatePointerBitCastOrAddrSpaceCast(
+        LHSPtr, RHS->getType()->getPointerTo(defaultAS));
+    llvm::Value *Result;
+    InsertPointOrErrorTy AfterIP =
+        RedInfo.ReductionGen(Builder.saveIP(), LHS, RHS, Result);
+    if (!AfterIP)
+      return AfterIP.takeError();
+    Builder.CreateStore(Result, LHSAddr);
+  }
+  llvm::Value *NextIVal = Builder.CreateNUWSub(
+      IVal, llvm::ConstantInt::get(Builder.getInt32Ty(), 1));
+  IVal->addIncoming(NextIVal, Builder.GetInsertBlock());
+  CmpI = Builder.CreateICmpUGE(NextIVal, Pow2K);
+  Builder.CreateCondBr(CmpI, InnerLoopBB, InnerExitBB);
+  emitBlock(InnerExitBB, Builder.GetInsertBlock()->getParent());
+  llvm::Value *Next = Builder.CreateNUWAdd(
+      Counter, llvm::ConstantInt::get(Counter->getType(), 1));
+  Counter->addIncoming(Next, Builder.GetInsertBlock());
+  // pow2k <<= 1;
+  llvm::Value *NextPow2K = Builder.CreateShl(Pow2K, 1, "", /*HasNUW=*/true);
+  Pow2K->addIncoming(NextPow2K, Builder.GetInsertBlock());
+  llvm::Value *Cmp = Builder.CreateICmpNE(Next, LogVal);
+  Builder.CreateCondBr(Cmp, LoopBB, ExitBB);
+  emitBlock(ExitBB, Builder.GetInsertBlock()->getParent());
+  Builder.SetInsertPoint(ExitBB);
+  llvm::OpenMPIRBuilder::InsertPointOrErrorTy AfterIP =
+      createBarrier(Builder.saveIP(), llvm::omp::OMPD_barrier);
+
+  Builder.restoreIP(FinalizeIP);
+  emitScanBasedDirectiveFinalsIR(ReductionInfos);
+  FinalizeIP = Builder.saveIP();
+
+  return AfterIP;
+}
+
+Error OpenMPIRBuilder::emitScanBasedDirectiveIR(
+    llvm::function_ref<Error()> InputLoopGen,
+    llvm::function_ref<Error(LocationDescription Loc)> ScanLoopGen) {
+
+  {
+    // Emit loop with input phase:
+    // #pragma omp ...
+    // for (i: 0..<num_iters>) {
+    //   <input phase>;
+    //   buffer[i] = red;
+    // }
+    ScanInfo.OMPFirstScanLoop = true;
+    auto Result = InputLoopGen();
+    if (Result)
+      return Result;
+  }
+  {
+    ScanInfo.OMPFirstScanLoop = false;
+    auto Result = ScanLoopGen(Builder.saveIP());
+    if (Result)
+      return Result;
+  }
+  return Error::success();
+}
+
+void OpenMPIRBuilder::createScanBBs() {
+  auto fun = Builder.GetInsertBlock()->getParent();
+  ScanInfo.OMPScanExitBlock =
+      BasicBlock::Create(fun->getContext(), "omp.exit.inscan.bb");
+  ScanInfo.OMPScanDispatch =
+      BasicBlock::Create(fun->getContext(), "omp.inscan.dispatch");
+  ScanInfo.OMPAfterScanBlock =
+      BasicBlock::Create(fun->getContext(), "omp.after.scan.bb");
+  ScanInfo.OMPBeforeScanBlock =
+      BasicBlock::Create(fun->getContext(), "omp.before.scan.bb");
+  ScanInfo.OMPScanLoopExit =
+      BasicBlock::Create(fun->getContext(), "omp.scan.loop.exit");
+}
+
 CanonicalLoopInfo *OpenMPIRBuilder::createLoopSkeleton(
     DebugLoc DL, Value *TripCount, Function *F, BasicBlock *PreInsertBefore,
     BasicBlock *PostInsertBefore, const Twine &Name) {
@@ -4015,10 +4276,91 @@ OpenMPIRBuilder::createCanonicalLoop(const LocationDescription &Loc,
   return CL;
 }
 
+Expected<SmallVector<llvm::CanonicalLoopInfo *>>
+OpenMPIRBuilder::createCanonicalScanLoops(
+    const LocationDescription &Loc, LoopBodyGenCallbackTy BodyGenCB,
+    Value *Start, Value *Stop, Value *Step, bool IsSigned, bool InclusiveStop,
+    InsertPointTy ComputeIP, const Twine &Name) {
+  LocationDescription ComputeLoc =
+      ComputeIP.isSet() ? LocationDescription(ComputeIP, Loc.DL) : Loc;
+  updateToLocation(ComputeLoc);
+
+  Value *TripCount = calculateCanonicalLoopTripCount(
+      ComputeLoc, Start, Stop, Step, IsSigned, InclusiveStop, Name);
+  ScanInfo.Span = TripCount;
+
+  auto BodyGen = [=](InsertPointTy CodeGenIP, Value *IV) {
+    /// The control of the loopbody of following structure:
+    ///
+    ///     InputBlock
+    ///        |
+    ///     ContinueBlock
+    ///
+    ///  is transformed to:
+    ///
+    ///     InputBlock
+    ///        |
+    ///     OMPScanDispatch
+    ///
+    ///     OMPBeforeScanBlock
+    ///        |
+    ///     OMPScanLoopExit
+    ///        |
+    ///     ContinueBlock
+    ///
+    /// OMPBeforeScanBlock dominates the control flow of code generated until
+    /// scan directive is encountered and OMPAfterScanBlock dominates the
+    /// control flow of code generated after scan is encountered. The successor
+    /// of OMPScanDispatch can be OMPBeforeScanBlock or OMPAfterScanBlock based
+    /// on 1.whether it is in Input phase or Scan Phase , 2. whether it is an
+    /// exclusive or inclusive scan.
+    ScanInfo.IV = IV;
+    createScanBBs();
+    BasicBlock *InputBlock = Builder.GetInsertBlock();
+    Instruction *Terminator = InputBlock->getTerminator();
+    assert(Terminator->getNumSuccessors() == 1);
+    BasicBlock *ContinueBlock = Terminator->getSuccessor(0);
+    Terminator->setSuccessor(0, ScanInfo.OMPScanDispatch);
+    emitBlock(ScanInfo.OMPBeforeScanBlock,
+              Builder.GetInsertBlock()->getParent());
+    Builder.CreateBr(ScanInfo.OMPScanLoopExit);
+    emitBlock(ScanInfo.OMPScanLoopExit, Builder.GetInsertBlock()->getParent());
+    Builder.CreateBr(ContinueBlock);
+    Builder.SetInsertPoint(ScanInfo.OMPBeforeScanBlock->getFirstInsertionPt());
+    return BodyGenCB(Builder.saveIP(), IV);
+  };
+
+  SmallVector<llvm::CanonicalLoopInfo *> Result;
+  const auto &&InputLoopGen = [&]() -> Error {
+    auto LoopInfo =
+        createCanonicalLoop(Loc, BodyGen, Start, Stop, Step, IsSigned,
+                            InclusiveStop, ComputeIP, Name, true);
+    if (!LoopInfo)
+      return LoopInfo.takeError();
+    Result.push_back(*LoopInfo);
+    Builder.restoreIP((*LoopInfo)->getAfterIP());
+    return Error::success();
+  };
+  const auto &&ScanLoopGen = [&](LocationDescription Loc) -> Error {
+    auto LoopInfo =
+        createCanonicalLoop(Loc, BodyGen, Start, Stop, Step, IsSigned,
+                            InclusiveStop, ComputeIP, Name, true);
+    if (!LoopInfo)
+      return LoopInfo.takeError();
+    Result.push_back(*LoopInfo);
+    Builder.restoreIP((*LoopInfo)->getAfterIP());
+    return Error::success();
+  };
+  Error Err = emitScanBasedDirectiveIR(InputLoopGen, ScanLoopGen);
+  if (Err) {
+    return Err;
+  }
+  return Result;
+}
+
 Value *OpenMPIRBuilder::calculateCanonicalLoopTripCount(
     const LocationDescription &Loc, Value *Start, Value *Stop, Value *Step,
     bool IsSigned, bool InclusiveStop, const Twine &Name) {
-
   // Consider the following difficulties (assuming 8-bit signed integers):
   //  * Adding \p Step to the loop counter which passes \p Stop may overflow:
   //      DO I = 1, 100, 50
@@ -4078,7 +4420,7 @@ Value *OpenMPIRBuilder::calculateCanonicalLoopTripCount(
 Expected<CanonicalLoopInfo *> OpenMPIRBuilder::createCanonicalLoop(
     const LocationDescription &Loc, LoopBodyGenCallbackTy BodyGenCB,
     Value *Start, Value *Stop, Value *Step, bool IsSigned, bool InclusiveStop,
-    InsertPointTy ComputeIP, const Twine &Name) {
+    InsertPointTy ComputeIP, const Twine &Name, bool InScan) {
   LocationDescription ComputeLoc =
       ComputeIP.isSet() ? LocationDescription(ComputeIP, Loc.DL) : Loc;
 
@@ -4089,6 +4431,9 @@ Expected<CanonicalLoopInfo *> OpenMPIRBuilder::createCanonicalLoop(
     Builder.restoreIP(CodeGenIP);
     Value *Span = Builder.CreateMul(IV, Step);
     Value *IndVar = Builder.CreateAdd(Span, Start);
+    if (InScan) {
+      ScanInfo.IV = IndVar;
+    }
     return BodyGenCB(Builder.saveIP(), IndVar);
   };
   LocationDescription LoopLoc = ComputeIP.isSet() ? Loc.IP : Builder.saveIP();
