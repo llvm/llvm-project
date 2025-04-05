@@ -3239,13 +3239,14 @@ public:
     bool Found = false;
 
     if (const auto *Call = dyn_cast<CallExpr>(Stmt)) {
-      forEachArgumentWithParamType(*Call, [&Results, &Ctx, &Found](
-                                              QualType QT, const Expr *Arg) {
-        if (isSinglePointerType(QT) && !isSinglePointerArgumentSafe(Ctx, Arg)) {
-          Results.emplace_back(ArgTag, DynTypedNode::create(*Arg));
-          Found = true;
-        }
-      });
+      ast_matchers::matchEachArgumentWithParamType(
+          *Call, [&Results, &Ctx, &Found](QualType QT, const Expr *Arg) {
+            if (isSinglePointerType(QT) &&
+                !isSinglePointerArgumentSafe(Ctx, Arg)) {
+              Results.emplace_back(ArgTag, DynTypedNode::create(*Arg));
+              Found = true;
+            }
+          });
     }
     return Found;
   }
