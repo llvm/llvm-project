@@ -578,7 +578,7 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
       break;
     case MCUnaryExpr::Minus:
       /// -(a - b + const) ==> (b - a - const)
-      if (Value.getSymA() && !Value.getSubSym())
+      if (Value.getAddSym() && !Value.getSubSym())
         return false;
 
       // The cast avoids undefined behavior if the constant is INT64_MIN.

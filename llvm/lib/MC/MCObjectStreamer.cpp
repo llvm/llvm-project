@@ -676,8 +676,7 @@ MCObjectStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
     return std::make_pair(false,
                           std::string(".reloc offset is not representable"));
 
-  const MCSymbolRefExpr &SRE = cast<MCSymbolRefExpr>(*OffsetVal.getSymA());
-  const MCSymbol &Symbol = SRE.getSymbol();
+  const MCSymbol &Symbol = *OffsetVal.getAddSym();
   if (Symbol.isDefined()) {
     uint32_t SymbolOffset = 0;
     std::optional<std::pair<bool, std::string>> Error =
@@ -693,8 +692,7 @@ MCObjectStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
   }
 
   PendingFixups.emplace_back(
-      &SRE.getSymbol(), DF,
-      MCFixup::create(OffsetVal.getConstant(), Expr, Kind, Loc));
+      &Symbol, DF, MCFixup::create(OffsetVal.getConstant(), Expr, Kind, Loc));
   return std::nullopt;
 }
 
