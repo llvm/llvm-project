@@ -340,19 +340,27 @@ def S_SUB_U64_PSEUDO : SPseudoInstSI <
 
 def S_ADD_CO_PSEUDO : SPseudoInstSI <
   (outs SReg_32:$sdst, SSrc_i1:$scc_out), (ins SSrc_b32:$src0, SSrc_b32:$src1, SSrc_i1:$scc_in)
->;
+>{
+    let hasSideEffects = 0;
+}
 
 def S_SUB_CO_PSEUDO : SPseudoInstSI <
   (outs SReg_32:$sdst, SSrc_i1:$scc_out), (ins SSrc_b32:$src0, SSrc_b32:$src1, SSrc_i1:$scc_in)
->;
+>{
+    let hasSideEffects = 0;
+}
 
 def S_UADDO_PSEUDO : SPseudoInstSI <
   (outs SReg_32:$sdst, SSrc_i1:$scc_out), (ins SSrc_b32:$src0, SSrc_b32:$src1)
->;
+>{
+    let hasSideEffects = 0;
+}
 
 def S_USUBO_PSEUDO : SPseudoInstSI <
   (outs SReg_32:$sdst, SSrc_i1:$scc_out), (ins SSrc_b32:$src0, SSrc_b32:$src1)
->;
+>{
+    let hasSideEffects = 0;
+}
 
 let OtherPredicates = [HasShaderCyclesHiLoRegisters] in
 def GET_SHADERCYCLESHILO : SPseudoInstSI<
