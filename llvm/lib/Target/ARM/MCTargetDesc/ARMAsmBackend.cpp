@@ -460,9 +460,9 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   // Other relocation types don't want this bit though (branches couldn't encode
   // it if it *was* present, and no other relocations exist) and it can
   // interfere with checking valid expressions.
-  if (const MCSymbolRefExpr *A = Target.getSymA()) {
-    if (A->hasSubsectionsViaSymbols() && Asm.isThumbFunc(&A->getSymbol()) &&
-        A->getSymbol().isExternal() &&
+  bool IsMachO = Asm.getContext().getObjectFileType() == MCContext::IsMachO;
+  if (const auto *SA = Target.getAddSym()) {
+    if (IsMachO && Asm.isThumbFunc(SA) && SA->isExternal() &&
         (Kind == FK_Data_4 || Kind == ARM::fixup_arm_movw_lo16 ||
          Kind == ARM::fixup_arm_movt_hi16 || Kind == ARM::fixup_t2_movw_lo16 ||
          Kind == ARM::fixup_t2_movt_hi16))
@@ -958,8 +958,7 @@ bool ARMAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                           const MCFixup &Fixup,
                                           const MCValue &Target,
                                           const MCSubtargetInfo *STI) {
-  const MCSymbolRefExpr *A = Target.getSymA();
-  const MCSymbol *Sym = A ? &A->getSymbol() : nullptr;
+  const MCSymbol *Sym = Target.getAddSym();
   const unsigned FixupKind = Fixup.getKind();
   if (FixupKind == ARM::fixup_arm_thumb_bl) {
     assert(Sym && "How did we resolve this?");
@@ -989,10 +988,10 @@ bool ARMAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   // We must always generate a relocation for BL/BLX instructions if we have
   // a symbol to reference, as the linker relies on knowing the destination
   // symbol's thumb-ness to get interworking right.
-  if (A && (FixupKind == ARM::fixup_arm_thumb_blx ||
-            FixupKind == ARM::fixup_arm_blx ||
-            FixupKind == ARM::fixup_arm_uncondbl ||
-            FixupKind == ARM::fixup_arm_condbl))
+  if (Sym && (FixupKind == ARM::fixup_arm_thumb_blx ||
+              FixupKind == ARM::fixup_arm_blx ||
+              FixupKind == ARM::fixup_arm_uncondbl ||
+              FixupKind == ARM::fixup_arm_condbl))
     return true;
   return false;
 }
