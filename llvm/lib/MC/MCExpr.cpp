@@ -434,12 +434,12 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
 // NOTE: This function can be used before layout is done (see the object
 // streamer for example) and having the Asm argument lets us avoid relaxations
 // early.
-static bool evaluateSymbolicAdd(const MCAssembler *Asm,
-                                const SectionAddrMap *Addrs, bool InSet,
-                                const MCValue &LHS,
-                                const MCSymbolRefExpr *RhsAdd,
-                                const MCSymbolRefExpr *RhsSub, int64_t RHS_Cst,
-                                MCValue &Res) {
+bool MCExpr::evaluateSymbolicAdd(const MCAssembler *Asm,
+                                 const SectionAddrMap *Addrs, bool InSet,
+                                 const MCValue &LHS,
+                                 const MCSymbolRefExpr *RhsAdd,
+                                 const MCSymbolRefExpr *RhsSub, int64_t RHS_Cst,
+                                 MCValue &Res) {
   const MCSymbol *LHS_A = LHS.getAddSym();
   const MCSymbol *LHS_B = LHS.getSubSym();
   int64_t LHS_Cst = LHS.getConstant();
