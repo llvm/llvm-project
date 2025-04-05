@@ -116,7 +116,7 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
   AArch64MCExpr::Specifier SymLoc = AArch64MCExpr::getSymbolLoc(RefKind);
   bool IsNC = AArch64MCExpr::isNotChecked(RefKind);
 
-  assert((!Target.getSymA() ||
+  assert((!Target.getAddSym() ||
           Target.getSymSpecifier() == AArch64MCExpr::None ||
           Target.getSymSpecifier() == AArch64MCExpr::VK_PLT ||
           Target.getSymSpecifier() == AArch64MCExpr::VK_GOTPCREL) &&
