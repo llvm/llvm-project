@@ -117,11 +117,6 @@ struct ParseStatementInfo {
 /// The concrete assembly parser instance.
 class AsmParser : public MCAsmParser {
 private:
-  AsmLexer Lexer;
-  MCContext &Ctx;
-  MCStreamer &Out;
-  const MCAsmInfo &MAI;
-  SourceMgr &SrcMgr;
   SourceMgr::DiagHandlerTy SavedDiagHandler;
   void *SavedDiagContext;
   std::unique_ptr<MCAsmParserExtension> PlatformParser;
@@ -221,11 +216,6 @@ public:
 
   /// @name MCAsmParser Interface
   /// {
-
-  SourceMgr &getSourceManager() override { return SrcMgr; }
-  MCAsmLexer &getLexer() override { return Lexer; }
-  MCContext &getContext() override { return Ctx; }
-  MCStreamer &getStreamer() override { return Out; }
 
   CodeViewContext &getCVContext() { return Ctx.getCVContext(); }
 
@@ -773,8 +763,8 @@ enum { DEFAULT_ADDRSPACE = 0 };
 
 AsmParser::AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
                      const MCAsmInfo &MAI, unsigned CB = 0)
-    : Lexer(MAI), Ctx(Ctx), Out(Out), MAI(MAI), SrcMgr(SM),
-      CurBuffer(CB ? CB : SM.getMainFileID()), MacrosEnabledFlag(true) {
+    : MCAsmParser(Ctx, Out, SM, MAI), CurBuffer(CB ? CB : SM.getMainFileID()),
+      MacrosEnabledFlag(true) {
   HadError = false;
   // Save the old handler.
   SavedDiagHandler = SrcMgr.getDiagHandler();
@@ -991,20 +981,19 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
   // While we have input, parse each statement.
   while (Lexer.isNot(AsmToken::Eof)) {
     ParseStatementInfo Info(&AsmStrRewrites);
-    bool Parsed = parseStatement(Info, nullptr);
+    bool HasError = parseStatement(Info, nullptr);
 
     // If we have a Lexer Error we are on an Error Token. Load in Lexer Error
     // for printing ErrMsg via Lex() only if no (presumably better) parser error
     // exists.
-    if (Parsed && !hasPendingError() && Lexer.getTok().is(AsmToken::Error)) {
+    if (HasError && !hasPendingError() && Lexer.getTok().is(AsmToken::Error))
       Lex();
-    }
 
     // parseStatement returned true so may need to emit an error.
     printPendingErrors();
 
     // Skipping to the next line if needed.
-    if (Parsed && !getLexer().isAtStartOfStatement())
+    if (HasError && !getLexer().justConsumedEOL())
       eatToEndOfStatement();
   }
 

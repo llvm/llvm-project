@@ -80,6 +80,13 @@ class CIR_Op<string mnemonic, list<Trait> traits = []> :
     Op<CIR_Dialect, mnemonic, traits>, LLVMLoweringInfo;
 
 //===----------------------------------------------------------------------===//
+// CIR Op Traits
+//===----------------------------------------------------------------------===//
+
+def SameFirstOperandAndResultType :
+  NativeOpTrait<"SameFirstOperandAndResultType">;
+
+//===----------------------------------------------------------------------===//
 // CastOp
 //===----------------------------------------------------------------------===//
 
@@ -227,6 +234,40 @@ def CastOp : CIR_Op<"cast",
   // The input and output types should match the cast kind.
   let hasVerifier = 1;
   let hasFolder = 1;
+}
+
+
+//===----------------------------------------------------------------------===//
+// PtrStrideOp
+//===----------------------------------------------------------------------===//
+
+def PtrStrideOp : CIR_Op<"ptr_stride",
+                         [Pure, SameFirstOperandAndResultType]> {
+  let summary = "Pointer access with stride";
+  let description = [{
+    Given a base pointer as first operand, provides a new pointer after applying
+    a stride (second operand).
+
+    ```mlir
+    %3 = cir.const 0 : i32
+    %4 = cir.ptr_stride(%2 : !cir.ptr<i32>, %3 : i32), !cir.ptr<i32>
+    ```
+  }];
+
+  let arguments = (ins CIR_PointerType:$base, PrimitiveInt:$stride);
+  let results = (outs CIR_PointerType:$result);
+
+  let assemblyFormat = [{
+    `(` $base `:` qualified(type($base)) `,` $stride `:`
+    qualified(type($stride)) `)` `,` qualified(type($result)) attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    // Get type pointed by the base pointer.
+    mlir::Type getElementTy() {
+      return mlir::cast<cir::PointerType>(getBase().getType()).getPointee();
+    }
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -424,7 +465,8 @@ def StoreOp : CIR_Op<"store", [
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
-def ReturnOp : CIR_Op<"return", [ParentOneOf<["FuncOp", "ScopeOp", "ForOp"]>,
+def ReturnOp : CIR_Op<"return", [ParentOneOf<["FuncOp", "ScopeOp", "DoWhileOp",
+                                              "WhileOp", "ForOp"]>,
                                  Terminator]> {
   let summary = "Return from function";
   let description = [{
@@ -476,7 +518,7 @@ def ConditionOp : CIR_Op<"condition", [
     `cir.bool` operand and, depending on its value, may branch to different
     regions:
 
-     - When in the `cond` region of a `cir.loop`, it continues the loop
+     - When in the `cond` region of a loop, it continues the loop
        if true, or exits it if false.
      - When in the `ready` region of a `cir.await`, it branches to the `resume`
        region when true, and to the `suspend` region when false.
@@ -484,12 +526,12 @@ def ConditionOp : CIR_Op<"condition", [
     Example:
 
     ```mlir
-    cir.loop for(cond : {
-      cir.condition(%arg0) // Branches to `step` region or exits.
-    }, step : {
-      [...]
-    }) {
-      [...]
+    cir.for cond {
+      cir.condition(%val) // Branches to `step` region or exits.
+    } body {
+      cir.yield
+    } step {
+      cir.yield
     }
 
     cir.await(user, ready : {
@@ -511,7 +553,8 @@ def ConditionOp : CIR_Op<"condition", [
 //===----------------------------------------------------------------------===//
 
 def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
-                               ParentOneOf<["ScopeOp", "ForOp"]>]> {
+                               ParentOneOf<["ScopeOp", "WhileOp", "ForOp",
+                                            "DoWhileOp"]>]> {
   let summary = "Represents the default branching behaviour of a region";
   let description = [{
     The `cir.yield` operation terminates regions on different CIR operations,
@@ -565,6 +608,36 @@ def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
   let builders = [
     OpBuilder<(ins), [{ /* nothing to do */ }]>,
   ];
+}
+
+//===----------------------------------------------------------------------===//
+// BreakOp
+//===----------------------------------------------------------------------===//
+
+def BreakOp : CIR_Op<"break", [Terminator]> {
+  let summary = "C/C++ `break` statement equivalent";
+  let description = [{
+    The `cir.break` operation is used to cease the execution of the current loop
+    or switch operation and transfer control to the parent operation. It is only
+    allowed within a breakable operations (loops and switches).
+  }];
+  let assemblyFormat = "attr-dict";
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// ContinueOp
+//===----------------------------------------------------------------------===//
+
+def ContinueOp : CIR_Op<"continue", [Terminator]> {
+  let summary = "C/C++ `continue` statement equivalent";
+  let description = [{
+    The `cir.continue` operation is used to end execution of the current
+    iteration of a loop and resume execution beginning at the next iteration.
+    It is only allowed within loop regions.
+  }];
+  let assemblyFormat = "attr-dict";
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -695,17 +768,24 @@ def UnaryOp : CIR_Op<"unary", [Pure, SameOperandsAndResultType]> {
     It requires one input operand and has one result, both types
     should be the same.
 
+    If the `nsw` (no signed wrap) attribute is present, the result is poison if
+    signed overflow occurs.
+
     ```mlir
     %7 = cir.unary(inc, %1) : i32 -> i32
-    %8 = cir.unary(dec, %2) : i32 -> i32
+    %8 = cir.unary(dec, %2) nsw : i32 -> i32
     ```
   }];
 
   let results = (outs CIR_AnyType:$result);
-  let arguments = (ins Arg<UnaryOpKind, "unary op kind">:$kind, Arg<CIR_AnyType>:$input);
+  let arguments = (ins Arg<UnaryOpKind, "unary op kind">:$kind,
+                   Arg<CIR_AnyType>:$input,
+                   UnitAttr:$no_signed_wrap);
 
   let assemblyFormat = [{
-      `(` $kind `,` $input `)` `:` type($input) `,` type($result) attr-dict
+      `(` $kind `,` $input `)`
+      (`nsw` $no_signed_wrap^)?
+      `:` type($input) `,` type($result) attr-dict 
   }];
 
   let hasVerifier = 1;
@@ -760,10 +840,105 @@ def BrCondOp : CIR_Op<"brcond",
 }
 
 //===----------------------------------------------------------------------===//
+// Common loop op definitions
+//===----------------------------------------------------------------------===//
+
+class LoopOpBase<string mnemonic> : CIR_Op<mnemonic, [
+  LoopOpInterface,
+  NoRegionArguments,
+]> {
+  let extraClassDefinition = [{
+    void $cppClass::getSuccessorRegions(
+        mlir::RegionBranchPoint point,
+        llvm::SmallVectorImpl<mlir::RegionSuccessor> &regions) {
+      LoopOpInterface::getLoopOpSuccessorRegions(*this, point, regions);
+    }
+    llvm::SmallVector<Region *> $cppClass::getLoopRegions() {
+      return {&getBody()};
+    }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// While & DoWhileOp
+//===----------------------------------------------------------------------===//
+
+class WhileOpBase<string mnemonic> : LoopOpBase<mnemonic> {
+  defvar isWhile = !eq(mnemonic, "while");
+  let summary = "C/C++ " # !if(isWhile, "while", "do-while") # " loop";
+  let builders = [
+    OpBuilder<(ins "BuilderCallbackRef":$condBuilder,
+                   "BuilderCallbackRef":$bodyBuilder), [{
+        mlir::OpBuilder::InsertionGuard guard($_builder);
+        $_builder.createBlock($_state.addRegion());
+      }] # !if(isWhile, [{
+        condBuilder($_builder, $_state.location);
+        $_builder.createBlock($_state.addRegion());
+        bodyBuilder($_builder, $_state.location);
+      }], [{
+        bodyBuilder($_builder, $_state.location);
+        $_builder.createBlock($_state.addRegion());
+        condBuilder($_builder, $_state.location);
+      }])>
+  ];
+}
+
+def WhileOp : WhileOpBase<"while"> {
+  let regions = (region SizedRegion<1>:$cond, MinSizedRegion<1>:$body);
+  let assemblyFormat = "$cond `do` $body attr-dict";
+
+  let description = [{
+    Represents a C/C++ while loop. It consists of two regions:
+
+     - `cond`: single block region with the loop's condition. Should be
+     terminated with a `cir.condition` operation.
+     - `body`: contains the loop body and an arbitrary number of blocks.
+
+    Example:
+
+    ```mlir
+    cir.while {
+      cir.break
+    ^bb2:
+      cir.yield
+    } do {
+      cir.condition %cond : cir.bool
+    }
+    ```
+  }];
+}
+
+def DoWhileOp : WhileOpBase<"do"> {
+  let regions = (region MinSizedRegion<1>:$body, SizedRegion<1>:$cond);
+  let assemblyFormat = " $body `while` $cond attr-dict";
+
+  let extraClassDeclaration = [{
+    mlir::Region &getEntry() { return getBody(); }
+  }];
+
+  let description = [{
+    Represents a C/C++ do-while loop. Identical to `cir.while` but the
+    condition is evaluated after the body.
+
+    Example:
+
+    ```mlir
+    cir.do {
+      cir.break
+    ^bb2:
+      cir.yield
+    } while {
+      cir.condition %cond : cir.bool
+    }
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // ForOp
 //===----------------------------------------------------------------------===//
 
-def ForOp : CIR_Op<"for", [LoopOpInterface, NoRegionArguments]> {
+def ForOp : LoopOpBase<"for"> {
   let summary = "C/C++ for loop counterpart";
   let description = [{
     Represents a C/C++ for loop. It consists of three regions:
@@ -864,9 +1039,21 @@ def BinOp : CIR_Op<"binop", [Pure,
     It requires two input operands and has one result, all types
     should be the same.
 
+    If the `nsw` (no signed wrap) or `nuw` (no unsigned wrap) attributes are
+    present, the result is poison if signed or unsigned overflow occurs
+    (respectively).
+
+    If the `sat` (saturated) attribute is present, the result is clamped to
+    the maximum value representatable by the type if it would otherwise
+    exceed that value and is clamped to the minimum representable value if
+    it would otherwise be below that value.
+
     ```mlir
-    %7 = cir.binop(add, %1, %2) : !s32i
-    %7 = cir.binop(mul, %1, %2) : !u8i
+    %5 = cir.binop(add, %1, %2) : !s32i
+    %6 = cir.binop(mul, %1, %2) : !u8i
+    %7 = cir.binop(add, %1, %2) nsw : !s32i
+    %8 = cir.binop(add, %3, %4) nuw : !u32i
+    %9 = cir.binop(add, %1, %2) sat : !s32i
     ```
   }];
 

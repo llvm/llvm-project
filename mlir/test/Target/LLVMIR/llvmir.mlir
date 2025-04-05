@@ -2825,6 +2825,14 @@ module {
 
 // -----
 
+module attributes {llvm.dependent_libraries = ["foo", "bar"]} {}
+
+// CHECK: !llvm.dependent-libraries =  !{![[#LIBFOO:]], ![[#LIBBAR:]]}
+// CHECK: ![[#LIBFOO]] = !{!"foo"}
+// CHECK: ![[#LIBBAR]] = !{!"bar"}
+
+// -----
+
 llvm.mlir.global external constant @const() {addr_space = 0 : i32, dso_local} : i32 {
   %0 = llvm.mlir.addressof @const : !llvm.ptr
   %1 = llvm.ptrtoint %0 : !llvm.ptr to i64
