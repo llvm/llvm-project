@@ -3058,6 +3058,12 @@ bool AMDGPUDAGToDAGISel::SelectVOP3NoMods(SDValue In, SDValue &Src) const {
   Src = In;
   return true;
 }
+bool AMDGPUDAGToDAGISel::SelectSGPR(SDValue In, SDValue &Src) const {
+  if (In.getNode()->isDivergent())
+    return false;
+  Src = In;
+  return true;
+}
 
 bool AMDGPUDAGToDAGISel::SelectVINTERPModsImpl(SDValue In, SDValue &Src,
                                                SDValue &SrcMods,
