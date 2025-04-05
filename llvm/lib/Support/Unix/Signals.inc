@@ -847,7 +847,11 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS, int Depth) {
 
     const char *name = strrchr(dlinfo.dli_fname, '/');
     if (!name)
+#ifdef __CYGWIN__
+      OS << format(" %-*s", width, &dlinfo.dli_fname);
+#else
       OS << format(" %-*s", width, dlinfo.dli_fname);
+#endif
     else
       OS << format(" %-*s", width, name + 1);
 
