@@ -665,6 +665,52 @@ if.end:
   ret i32 %v1
 }
 
+; Do not unfold select when parent block address is taken and used
+define i32 @ba_unfold(i1 %cond, i32 %arg) {
+; CHECK-LABEL: @ba_unfold(
+; CHECK: B4:
+; CHECK-NEXT:   [[P:%.*]] = phi i1 [ true, [[B1:%.*]] ], [ [[COND_NOT:%.*]], [[LOOPEXIT:%.*]] ]
+; CHECK-NEXT:   [[OFFSET:%.*]] = select i1 [[P]], i64 8, i64 16
+; CHECK-NEXT:   [[ADDR_I:%.*]] = add i64 [[OFFSET]], ptrtoint (ptr blockaddress(@ba_unfold, %B4) to i64)
+;
+entry:
+  br label %B1
+
+B1:
+  br i1 %cond, label %B2, label %B4
+
+B2:
+  br label %while.body
+
+B3:
+  %new_i = add nuw nsw i32 1, %i
+  %exitcond = icmp eq i32 %new_i, 5
+  br i1 %exitcond, label %loopexit, label %while.body
+
+while.body:
+  %i = phi i32 [ 0, %B2 ], [ %new_i, %B3 ]
+  %xor = xor i32 %i, 16
+  %cmp = icmp eq i32 %xor, %arg
+  br i1 %cmp, label %B3, label %loopexit
+
+loopexit:
+  %cond.not = xor i1 %cmp, true
+  br label %B4
+
+B4:
+  %p = phi i1 [true, %B1], [ %cond.not, %loopexit ]
+  %offset = select i1 %p, i64 8, i64 16
+  %addr_i = add i64 %offset, ptrtoint (ptr blockaddress(@ba_unfold, %B4) to i64)
+  %addr = inttoptr i64 %addr_i to ptr
+  indirectbr ptr %addr, [label %B5, label %B6]
+
+B5:
+  br label %B6
+
+B6:
+  ret i32 0
+}
+
 ; branch_weights overflowing uint32_t
 !0 = !{!"branch_weights", i64 1073741824, i64 3221225472}
 !1 = !{!"function_entry_count", i64 1984}
