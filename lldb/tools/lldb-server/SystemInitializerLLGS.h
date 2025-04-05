@@ -16,7 +16,8 @@ class SystemInitializerLLGS : public lldb_private::SystemInitializerCommon {
 public:
   SystemInitializerLLGS() : SystemInitializerCommon(nullptr) {}
 
-  llvm::Error Initialize() override;
+  llvm::Error
+  Initialize(lldb_private::LoadPluginCallbackType plugin_callback) override;
   void Terminate() override;
 };
 

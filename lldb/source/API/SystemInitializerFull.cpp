@@ -49,8 +49,9 @@ SystemInitializerFull::SystemInitializerFull()
     : SystemInitializerCommon(g_shlib_dir_helper) {}
 SystemInitializerFull::~SystemInitializerFull() = default;
 
-llvm::Error SystemInitializerFull::Initialize() {
-  llvm::Error error = SystemInitializerCommon::Initialize();
+llvm::Error
+SystemInitializerFull::Initialize(LoadPluginCallbackType plugin_callback) {
+  llvm::Error error = SystemInitializerCommon::Initialize(plugin_callback);
   if (error)
     return error;
 
@@ -86,10 +87,14 @@ llvm::Error SystemInitializerFull::Initialize() {
 
   LLDB_LOG(GetLog(SystemLog::System), "{0}", GetVersion());
 
+  Debugger::Initialize(plugin_callback);
+
   return llvm::Error::success();
 }
 
 void SystemInitializerFull::Terminate() {
+  Debugger::Terminate();
+
   Debugger::SettingsTerminate();
 
   // Terminate plug-ins in core LLDB.
