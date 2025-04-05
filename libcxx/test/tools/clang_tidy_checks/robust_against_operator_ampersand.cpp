@@ -22,7 +22,7 @@
 
 // TODO(LLVM-21) Remove dependentScopeDeclRefExpr
 // dependentScopeDeclRefExpr requires Clang 20, this uses the same definition as Clang
-#if defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 2000
+#if defined(__clang_major__) && __clang_major__ < 20
 const clang::ast_matchers::internal::VariadicDynCastAllOfMatcher<clang::Stmt, clang::DependentScopeDeclRefExpr>
     clang::ast_matchers::dependentScopeDeclRefExpr;
 #endif
