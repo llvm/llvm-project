@@ -928,3 +928,7 @@ def OpAliasScopeDeclINTEL: Op<5912, (outs ID:$res), (ins ID:$AliasDomain, variab
                   "$res = OpAliasScopeDeclINTEL $AliasDomain">;
 def OpAliasScopeListDeclINTEL: Op<5913, (outs ID:$res), (ins variable_ops),
                   "$res = OpAliasScopeListDeclINTEL">;
+
+//SPV_INTEL_fpga_reg 
+def OpFPGARegINTEL: Op<5949, (outs ID:$Result), (ins TYPE:$ResultType, ID:$Input),
+                  "$Result = OpFPGARegINTEL $ResultType $Input">; 
