@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -67,6 +68,9 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
       return "<<Unknown Machine Node #" + utostr(getOpcode()) + ">>";
     }
     if (G) {
+      const SelectionDAGTargetInfo &TSI = G->getSelectionDAGInfo();
+      if (const char *Name = TSI.getTargetNodeName(getOpcode()))
+        return Name;
       const TargetLowering &TLI = G->getTargetLoweringInfo();
       const char *Name = TLI.getTargetNodeName(getOpcode());
       if (Name) return Name;
