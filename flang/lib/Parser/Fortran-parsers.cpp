@@ -1314,6 +1314,10 @@ constexpr auto novector{"NOVECTOR" >> construct<CompilerDirective::NoVector>()};
 constexpr auto nounroll{"NOUNROLL" >> construct<CompilerDirective::NoUnroll>()};
 constexpr auto nounrollAndJam{
     "NOUNROLL_AND_JAM" >> construct<CompilerDirective::NoUnrollAndJam>()};
+constexpr auto forceinlineDir{
+    "FORCEINLINE" >> construct<CompilerDirective::ForceInline>()};
+constexpr auto noinlineDir{
+    "NOINLINE" >> construct<CompilerDirective::NoInline>()};
 TYPE_PARSER(beginDirective >> "DIR$ "_tok >>
     sourced((construct<CompilerDirective>(ignore_tkr) ||
                 construct<CompilerDirective>(loopCount) ||
@@ -1324,6 +1328,8 @@ TYPE_PARSER(beginDirective >> "DIR$ "_tok >>
                 construct<CompilerDirective>(novector) ||
                 construct<CompilerDirective>(nounrollAndJam) ||
                 construct<CompilerDirective>(nounroll) ||
+                construct<CompilerDirective>(noinlineDir) ||
+                construct<CompilerDirective>(forceinlineDir) ||
                 construct<CompilerDirective>(
                     many(construct<CompilerDirective::NameValue>(
                         name, maybe(("="_tok || ":"_tok) >> digitString64))))) /
