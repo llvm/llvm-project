@@ -577,12 +577,12 @@ public:
     return getNoRegister();
   }
 
-  /// Returns the register used as call destination, or no-register, if not
-  /// an indirect call. Sets IsAuthenticatedInternally if the instruction
-  /// accepts a signed pointer as its operand and authenticates it internally.
+  /// Returns the register used as the destination of an indirect branch or call
+  /// instruction. Sets IsAuthenticatedInternally if the instruction accepts
+  /// a signed pointer as its operand and authenticates it internally.
   virtual MCPhysReg
-  getRegUsedAsCallDest(const MCInst &Inst,
-                       bool &IsAuthenticatedInternally) const {
+  getRegUsedAsIndirectBranchDest(const MCInst &Inst,
+                                 bool &IsAuthenticatedInternally) const {
     llvm_unreachable("not implemented");
     return getNoRegister();
   }
