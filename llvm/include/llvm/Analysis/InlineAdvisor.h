@@ -74,7 +74,8 @@ class InlineAdvisor;
 class InlineAdvice {
 public:
   InlineAdvice(InlineAdvisor *Advisor, CallBase &CB,
-               OptimizationRemarkEmitter &ORE, bool IsInliningRecommended);
+               OptimizationRemarkEmitter &ORE, bool IsInliningRecommended,
+               std::optional<int> InliningCost = std::nullopt);
 
   InlineAdvice(InlineAdvice &&) = delete;
   InlineAdvice(const InlineAdvice &) = delete;
@@ -108,6 +109,7 @@ public:
 
   /// Get the inlining recommendation.
   bool isInliningRecommended() const { return IsInliningRecommended; }
+  std::optional<int> inliningCost() const { return InliningCost; }
   const DebugLoc &getOriginalCallSiteDebugLoc() const { return DLoc; }
   const BasicBlock *getOriginalCallSiteBasicBlock() const { return Block; }
 
@@ -129,6 +131,7 @@ protected:
   const BasicBlock *const Block;
   OptimizationRemarkEmitter &ORE;
   const bool IsInliningRecommended;
+  const std::optional<int> InliningCost;
 
 private:
   void markRecorded() {
@@ -145,8 +148,11 @@ public:
   DefaultInlineAdvice(InlineAdvisor *Advisor, CallBase &CB,
                       std::optional<InlineCost> OIC,
                       OptimizationRemarkEmitter &ORE, bool EmitRemarks = true)
-      : InlineAdvice(Advisor, CB, ORE, OIC.has_value()), OriginalCB(&CB),
-        OIC(OIC), EmitRemarks(EmitRemarks) {}
+      : InlineAdvice(Advisor, CB, ORE, OIC.has_value(),
+                     OIC && OIC->isVariable()
+                         ? std::optional<int>(OIC->getCost())
+                         : std::nullopt),
+        OriginalCB(&CB), OIC(OIC), EmitRemarks(EmitRemarks) {}
 
 private:
   void recordUnsuccessfulInliningImpl(const InlineResult &Result) override;
