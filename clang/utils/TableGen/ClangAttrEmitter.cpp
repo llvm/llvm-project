@@ -5311,7 +5311,10 @@ void EmitClangAttrDocs(const RecordKeeper &Records, raw_ostream &OS) {
   };
 
   std::map<const Record *, std::map<uint32_t, DocumentationData>, CategoryLess>
-      SplitDocs;
+    MergedDocs;
+
+  std::vector<DocumentationData> UndocumentedDocs;
+  const Record *UndocumentedCategory = nullptr;
 
   // Collect documentation data, grouping by category and heading.
   for (const auto *A : Records.getAllDerivedDefinitions("Attr")) {
@@ -5333,15 +5336,26 @@ void EmitClangAttrDocs(const RecordKeeper &Records, raw_ostream &OS) {
 
       if (Cat == "InternalOnly")
         continue;
+      
+      // Track the Undocumented category Record for later grouping
+      if (Cat == "Undocumented" && !UndocumentedCategory)
+        UndocumentedCategory = Category;
 
       // Generate Heading and Spellings.
       auto HeadingAndSpellings =
           GetAttributeHeadingAndSpellings(Doc, Attr, Cat);
+      
+      // Handle Undocumented category separately - no content merging
+      if (Cat == "Undocumented" && UndocumentedCategory) {
+        UndocumentedDocs.push_back(DocumentationData(Doc, Attr, HeadingAndSpellings));
+        continue;
+      }
 
-      auto &CategoryDocs = SplitDocs[Category];
+      auto &CategoryDocs = MergedDocs[Category];
 
       std::string key = Doc.getValueAsString("Content").str();
       uint32_t keyHash = llvm::hash_value(key);
+
       // If the content already exists, merge the documentation.
       auto It = CategoryDocs.find(keyHash);
       if (It != CategoryDocs.end()) {
@@ -5353,28 +5367,42 @@ void EmitClangAttrDocs(const RecordKeeper &Records, raw_ostream &OS) {
         // Merge content
         It->second.Documentation = &Doc; // Update reference
       } else {
-        // Otherwise, add a new entry.
+        // Create new entry for unique content
         CategoryDocs.emplace(keyHash,
                              DocumentationData(Doc, Attr, HeadingAndSpellings));
       }
     }
   }
 
-  // Write out documentation, merging attributes with the same content.
-  for (auto &CategoryPair : SplitDocs) {
-    WriteCategoryHeader(CategoryPair.first, OS);
+  std::map<const Record *, std::vector<DocumentationData>, CategoryLess> SplitDocs;
 
-    std::vector<DocumentationData> MergedDocs;
+  for (auto &CategoryPair : MergedDocs) {
+
+    std::vector<DocumentationData> MD;
     for (auto &DocPair : CategoryPair.second)
-      MergedDocs.push_back(std::move(DocPair.second));
+    MD.push_back(std::move(DocPair.second));
+    
+    SplitDocs.emplace(CategoryPair.first, MD);
+  }
+  
+  // Append Undocumented category entries
+  if (!UndocumentedDocs.empty() && UndocumentedCategory) {
+    SplitDocs.emplace(UndocumentedCategory, UndocumentedDocs);
+  }
 
-    std::sort(MergedDocs.begin(), MergedDocs.end(),
-              [](const DocumentationData &D1, const DocumentationData &D2) {
-                return D1.Heading < D2.Heading;
-              });
+  // Having split the attributes out based on what documentation goes where,
+  // we can begin to generate sections of documentation.
+  for (auto &I : SplitDocs) {
+    WriteCategoryHeader(I.first, OS);
 
-    // Output each documentation entry.
-    for (const auto &Doc : MergedDocs)
+    sort(I.second,
+         [](const DocumentationData &D1, const DocumentationData &D2) {
+           return D1.Heading < D2.Heading;
+         });
+
+    // Walk over each of the attributes in the category and write out their
+    // documentation.
+    for (const auto &Doc : I.second)
       WriteDocumentation(Records, Doc, OS);
   }
 }
