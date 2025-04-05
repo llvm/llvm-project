@@ -20,6 +20,13 @@ namespace lldb_private::dil {
 enum class NodeKind {
   eErrorNode,
   eIdentifierNode,
+  eUnaryOpNode,
+};
+
+/// The Unary operators recognized by DIL.
+enum class UnaryOpKind {
+  AddrOf, // "&"
+  Deref,  // "*"
 };
 
 /// Forward declaration, for use in DIL AST nodes. Definition is at the very
@@ -43,6 +50,8 @@ public:
   virtual ~ASTNode() = default;
 
   virtual llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const = 0;
+
+  virtual bool is_rvalue() const { return false; }
 
   uint32_t GetLocation() const { return m_location; }
   NodeKind GetKind() const { return m_kind; }
@@ -81,6 +90,27 @@ private:
   std::string m_name;
 };
 
+class UnaryOpNode : public ASTNode {
+public:
+  UnaryOpNode(uint32_t location, UnaryOpKind kind, ASTNodeUP rhs)
+      : ASTNode(location, NodeKind::eUnaryOpNode), m_kind(kind),
+        m_rhs(std::move(rhs)) {}
+
+  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
+  bool is_rvalue() const override { return m_kind != UnaryOpKind::Deref; }
+
+  UnaryOpKind kind() const { return m_kind; }
+  ASTNode *rhs() const { return m_rhs.get(); }
+
+  static bool classof(const ASTNode *node) {
+    return node->GetKind() == NodeKind::eUnaryOpNode;
+  }
+
+private:
+  UnaryOpKind m_kind;
+  ASTNodeUP m_rhs;
+};
+
 /// This class contains one Visit method for each specialized type of
 /// DIL AST node. The Visit methods are used to dispatch a DIL AST node to
 /// the correct function in the DIL expression evaluator for evaluating that
@@ -90,6 +120,8 @@ public:
   virtual ~Visitor() = default;
   virtual llvm::Expected<lldb::ValueObjectSP>
   Visit(const IdentifierNode *node) = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP>
+  Visit(const UnaryOpNode *node) = 0;
 };
 
 } // namespace lldb_private::dil
