@@ -14,6 +14,7 @@
 // target-specific device code.
 //===---------------------------------------------------------------------===//
 
+#include "clang/Basic/Cuda.h"
 #include "clang/Basic/Version.h"
 
 #include "llvm/ADT/StringExtras.h"
@@ -54,6 +55,7 @@
 using namespace llvm;
 using namespace llvm::opt;
 using namespace llvm::object;
+using namespace clang;
 
 /// Save intermediary results.
 static bool SaveTemps = false;
@@ -69,6 +71,8 @@ static StringRef OutputFile;
 
 /// Directory to dump SPIR-V IR if requested by user.
 static SmallString<128> SPIRVDumpDir;
+
+static bool IsAOTCompileNeeded = false;
 
 static void printVersion(raw_ostream &OS) {
   OS << clang::getClangToolFullVersion("clang-sycl-linker") << '\n';
@@ -126,6 +130,12 @@ const OptTable &getOptTable() {
   exit(EXIT_FAILURE);
 }
 
+std::string getMainExecutable(const char *Name) {
+  void *Ptr = (void *)(intptr_t)&getMainExecutable;
+  auto COWPath = sys::fs::getMainExecutable(Name, Ptr);
+  return sys::path::parent_path(COWPath).str();
+}
+
 Expected<StringRef> createTempFile(const ArgList &Args, const Twine &Prefix,
                                    StringRef Extension) {
   SmallString<128> OutputFile;
@@ -141,6 +151,40 @@ Expected<StringRef> createTempFile(const ArgList &Args, const Twine &Prefix,
 
   TempFiles.emplace_back(std::move(OutputFile));
   return TempFiles.back();
+}
+
+Expected<std::string> findProgram(const ArgList &Args, StringRef Name,
+                                  ArrayRef<StringRef> Paths) {
+  if (Args.hasArg(OPT_dry_run))
+    return Name.str();
+  ErrorOr<std::string> Path = sys::findProgramByName(Name, Paths);
+  if (!Path)
+    Path = sys::findProgramByName(Name);
+  if (!Path)
+    return createStringError(Path.getError(),
+                             "Unable to find '" + Name + "' in path");
+  return *Path;
+}
+
+void printCommands(ArrayRef<StringRef> CmdArgs) {
+  if (CmdArgs.empty())
+    return;
+
+  llvm::errs() << " \"" << CmdArgs.front() << "\" ";
+  llvm::errs() << llvm::join(std::next(CmdArgs.begin()), CmdArgs.end(), " ")
+               << "\n";
+}
+
+/// Execute the command \p ExecutablePath with the arguments \p Args.
+Error executeCommands(StringRef ExecutablePath, ArrayRef<StringRef> Args) {
+  if (Verbose || DryRun)
+    printCommands(Args);
+
+  if (!DryRun)
+    if (sys::ExecuteAndWait(ExecutablePath, Args))
+      return createStringError(
+          "'%s' failed", sys::path::filename(ExecutablePath).str().c_str());
+  return Error::success();
 }
 
 Expected<SmallVector<std::string>> getInput(const ArgList &Args) {
@@ -315,25 +359,109 @@ static Expected<StringRef> runSPIRVCodeGen(StringRef File, const ArgList &Args,
     M->setDataLayout(TM->createDataLayout());
 
   // Open output file for writing.
-  int FD = -1;
-  if (std::error_code EC = sys::fs::openFileForWrite(OutputFile, FD))
-    return errorCodeToError(EC);
-  auto OS = std::make_unique<llvm::raw_fd_ostream>(FD, true);
+  Expected<StringRef> OutFileOrErr =
+      IsAOTCompileNeeded
+          ? createTempFile(Args, sys::path::filename(OutputFile), "spv")
+          : OutputFile;
+  if (!OutFileOrErr)
+    return OutFileOrErr.takeError();
+  std::error_code EC;
+  raw_fd_ostream OS(*OutFileOrErr, EC);
+  if (EC)
+    return createStringError(EC, "Could not open file " + *OutFileOrErr);
 
   // Run SPIR-V codegen passes to generate SPIR-V file.
   legacy::PassManager CodeGenPasses;
   TargetLibraryInfoImpl TLII(M->getTargetTriple());
   CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
-  if (TM->addPassesToEmitFile(CodeGenPasses, *OS, nullptr,
+  if (TM->addPassesToEmitFile(CodeGenPasses, OS, nullptr,
                               CodeGenFileType::ObjectFile))
     return createStringError("Failed to execute SPIR-V Backend");
   CodeGenPasses.run(*M);
 
   if (Verbose)
     errs() << formatv("SPIR-V Backend: input: {0}, output: {1}\n", File,
-                      OutputFile);
+                      *OutFileOrErr);
 
-  return OutputFile;
+  return *OutFileOrErr;
+}
+
+/// Run AOT compilation for Intel CPU.
+/// Calls opencl-aot tool to generate device code for Intel CPU backend.
+/// 'InputFile' is the input SPIR-V file.
+/// 'Args' encompasses all arguments required for linking and wrapping device
+/// code and will be parsed to generate options required to be passed into the
+/// SYCL AOT compilation step.
+static Error runAOTCompileIntelCPU(StringRef InputFile, const ArgList &Args) {
+  SmallVector<StringRef, 8> CmdArgs;
+  Expected<std::string> OpenCLAOTPath =
+      findProgram(Args, "opencl-aot", {getMainExecutable("opencl-aot")});
+  if (!OpenCLAOTPath)
+    return OpenCLAOTPath.takeError();
+
+  CmdArgs.push_back(*OpenCLAOTPath);
+  CmdArgs.push_back("--device=cpu");
+  StringRef ExtraArgs = Args.getLastArgValue(OPT_opencl_aot_options_EQ);
+  ExtraArgs.split(CmdArgs, " ", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+  CmdArgs.push_back("-o");
+  CmdArgs.push_back(OutputFile);
+  CmdArgs.push_back(InputFile);
+  if (Error Err = executeCommands(*OpenCLAOTPath, CmdArgs))
+    return Err;
+  return Error::success();
+}
+
+/// Run AOT compilation for Intel GPU
+/// Calls ocloc tool to generate device code for Intel GPU backend.
+/// 'InputFile' is the input SPIR-V file.
+/// 'Args' encompasses all arguments required for linking and wrapping device
+/// code and will be parsed to generate options required to be passed into the
+/// SYCL AOT compilation step.
+static Error runAOTCompileIntelGPU(StringRef InputFile, const ArgList &Args) {
+  SmallVector<StringRef, 8> CmdArgs;
+  Expected<std::string> OclocPath =
+      findProgram(Args, "ocloc", {getMainExecutable("ocloc")});
+  if (!OclocPath)
+    return OclocPath.takeError();
+
+  CmdArgs.push_back(*OclocPath);
+  // The next line prevents ocloc from modifying the image name
+  CmdArgs.push_back("-output_no_suffix");
+  CmdArgs.push_back("-spirv_input");
+
+  StringRef Arch(Args.getLastArgValue(OPT_arch_EQ));
+  if (Arch.empty())
+    return createStringError(inconvertibleErrorCode(),
+                             "Arch must be specified for AOT compilation");
+  CmdArgs.push_back("-device");
+  CmdArgs.push_back(Arch);
+
+  StringRef ExtraArgs = Args.getLastArgValue(OPT_ocloc_options_EQ);
+  ExtraArgs.split(CmdArgs, " ", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+
+  CmdArgs.push_back("-output");
+  CmdArgs.push_back(OutputFile);
+  CmdArgs.push_back("-file");
+  CmdArgs.push_back(InputFile);
+  if (Error Err = executeCommands(*OclocPath, CmdArgs))
+    return Err;
+  return Error::success();
+}
+
+/// Run AOT compilation for Intel CPU/GPU.
+/// 'InputFile' is the input SPIR-V file.
+/// 'Args' encompasses all arguments required for linking and wrapping device
+/// code and will be parsed to generate options required to be passed into the
+/// SYCL AOT compilation step.
+static Error runAOTCompile(StringRef InputFile, const ArgList &Args) {
+  StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
+  OffloadArch OffloadArch = StringToOffloadArch(Arch);
+  if (IsIntelGPUArch(OffloadArch))
+    return runAOTCompileIntelGPU(InputFile, Args);
+  if (IsIntelCPUArch(OffloadArch))
+    return runAOTCompileIntelCPU(InputFile, Args);
+
+  return createStringError(inconvertibleErrorCode(), "Unsupported arch");
 }
 
 /// Performs the following steps:
@@ -347,12 +475,18 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
   // Link all input bitcode files and SYCL device library files, if any.
   auto LinkedFile = linkDeviceCode(Files, Args, C);
   if (!LinkedFile)
-    reportError(LinkedFile.takeError());
+    return LinkedFile.takeError();
 
   // SPIR-V code generation step.
   auto SPVFile = runSPIRVCodeGen(*LinkedFile, Args, C);
   if (!SPVFile)
     return SPVFile.takeError();
+
+  if (IsAOTCompileNeeded) {
+    if (Error Err = runAOTCompile(*SPVFile, Args))
+      return Err;
+  }
+
   return Error::success();
 }
 
@@ -394,9 +528,14 @@ int main(int argc, char **argv) {
   DryRun = Args.hasArg(OPT_dry_run);
   SaveTemps = Args.hasArg(OPT_save_temps);
 
-  OutputFile = "a.spv";
-  if (Args.hasArg(OPT_o))
-    OutputFile = Args.getLastArgValue(OPT_o);
+  IsAOTCompileNeeded = Args.hasArg(OPT_arch_EQ);
+
+  if (!Args.hasArg(OPT_o))
+    reportError(createStringError("Output file must be specified"));
+  OutputFile = Args.getLastArgValue(OPT_o);
+
+  if (!Args.hasArg(OPT_triple_EQ))
+    reportError(createStringError("Target triple must be specified"));
 
   if (Args.hasArg(OPT_spirv_dump_device_code_EQ)) {
     Arg *A = Args.getLastArg(OPT_spirv_dump_device_code_EQ);
