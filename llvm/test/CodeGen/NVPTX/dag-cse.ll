@@ -9,8 +9,8 @@
 ; Verify that loads with different memory types are not subject to CSE
 ; once they are promoted to the same type.
 ;
-; CHECK: ld.global.v2.u8  {%[[B1:rs[0-9]+]], %[[B2:rs[0-9]+]]}, [a];
-; CHECK: st.global.v2.u8  [b], {%[[B1]], %[[B2]]};
+; CHECK: ld.global.u16  %[[B1:rs[0-9]+]], [a];
+; CHECK: st.global.u16  [b], %[[B1]];
 ;
 ; CHECK: ld.global.u32 %[[C:r[0-9]+]], [a];
 ; CHECK: st.global.u32 [c], %[[C]];

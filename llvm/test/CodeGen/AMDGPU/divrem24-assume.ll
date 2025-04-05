@@ -4,7 +4,7 @@
 define amdgpu_kernel void @divrem24_assume(ptr addrspace(1) %arg, i32 %arg1) {
 ; CHECK-LABEL: @divrem24_assume(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x(), !range !0
+; CHECK-NEXT:    [[TMP:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x(), !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[ARG1:%.*]], 42
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP2]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = uitofp i32 [[TMP]] to float

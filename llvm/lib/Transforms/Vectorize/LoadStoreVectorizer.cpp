@@ -325,8 +325,8 @@ private:
       Instruction *ChainElem, Instruction *ChainBegin,
       const DenseMap<Instruction *, APInt /*OffsetFromLeader*/> &ChainOffsets);
 
-  /// Merge the equivalence classes if casts could be inserted in one to match
-  /// the scalar bitwidth of the instructions in the other class.
+  /// Merge equivalence classes if casts could be inserted in one to match
+  /// the total bitwidth of the instructions.
   void insertCastsToMergeClasses(EquivalenceClassMap &EQClasses);
 
   /// Merges the equivalence classes if they have underlying objects that differ
@@ -1346,7 +1346,10 @@ void Vectorizer::insertCastsToMergeClasses(EquivalenceClassMap &EQClasses) {
   DenseSet<EqClassKey> ClassesToErase;
   for (auto EC1 : EQClasses) {
     for (auto EC2 : EQClasses) {
-      if (ClassesToErase.contains(EC2.first) || EC1 <= EC2)
+      // Skip if EC2 was already merged before, EC1 follows EC2 in the
+      // collection or EC1 is the same as EC2.
+      if (ClassesToErase.contains(EC2.first) || EC1 <= EC2 ||
+          EC1.first == EC2.first)
         continue;
 
       auto [Ptr1, AS1, TySize1, IsLoad1] = EC1.first;
