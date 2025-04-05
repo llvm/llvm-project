@@ -1017,6 +1017,49 @@ TEST_P(ASTMatchersTest, FloatLiteral) {
       notMatches("double i = 5.0;", floatLiteral(equals(llvm::APFloat(6.0)))));
 }
 
+TEST_P(ASTMatchersTest, FixedPointLiterals) {
+  StatementMatcher HasFixedPointLiteral = fixedPointLiteral();
+  EXPECT_TRUE(matchesWithFixedpoint("_Fract i = 0.25r;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      matchesWithFixedpoint("_Fract i = 0.25hr;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      matchesWithFixedpoint("_Fract i = 0.25uhr;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      matchesWithFixedpoint("_Fract i = 0.25ur;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      matchesWithFixedpoint("_Fract i = 0.25lr;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      matchesWithFixedpoint("_Fract i = 0.25ulr;", HasFixedPointLiteral));
+  EXPECT_TRUE(matchesWithFixedpoint("_Accum i = 1.25k;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      matchesWithFixedpoint("_Accum i = 1.25hk;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      matchesWithFixedpoint("_Accum i = 1.25uhk;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      matchesWithFixedpoint("_Accum i = 1.25uk;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      matchesWithFixedpoint("_Accum i = 1.25lk;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      matchesWithFixedpoint("_Accum i = 1.25ulk;", HasFixedPointLiteral));
+  EXPECT_TRUE(matchesWithFixedpoint("_Accum decexp1 = 1.575e1k;",
+                                    HasFixedPointLiteral));
+  EXPECT_TRUE(
+      matchesWithFixedpoint("_Accum hex = 0x1.25fp2k;", HasFixedPointLiteral));
+  EXPECT_TRUE(matchesWithFixedpoint("_Sat long _Fract i = 0.25r;",
+                                    HasFixedPointLiteral));
+  EXPECT_TRUE(matchesWithFixedpoint("_Sat short _Accum i = 256.0k;",
+                                    HasFixedPointLiteral));
+
+  EXPECT_TRUE(
+      notMatchesWithFixedpoint("short _Accum i = 2u;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      notMatchesWithFixedpoint("short _Accum i = 2;", HasFixedPointLiteral));
+  EXPECT_TRUE(
+      notMatchesWithFixedpoint("_Accum i = 1.25;", HasFixedPointLiteral));
+  EXPECT_TRUE(notMatchesWithFixedpoint("_Accum i = 1.25 *  4.5i;",
+                                       HasFixedPointLiteral));
+}
+
 TEST_P(ASTMatchersTest, CXXNullPtrLiteralExpr) {
   if (!GetParam().isCXX11OrLater()) {
     return;
