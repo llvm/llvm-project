@@ -967,39 +967,39 @@ public:
   typedef __tree_iterator<value_type, __node_pointer, difference_type> iterator;
   typedef __tree_const_iterator<value_type, __node_pointer, difference_type> const_iterator;
 
-  _LIBCPP_HIDE_FROM_ABI explicit __tree(const value_compare& __comp) _NOEXCEPT_(
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 explicit __tree(const value_compare& __comp) _NOEXCEPT_(
       is_nothrow_default_constructible<__node_allocator>::value&& is_nothrow_copy_constructible<value_compare>::value);
-  _LIBCPP_HIDE_FROM_ABI explicit __tree(const allocator_type& __a);
-  _LIBCPP_HIDE_FROM_ABI __tree(const value_compare& __comp, const allocator_type& __a);
-  _LIBCPP_HIDE_FROM_ABI __tree(const __tree& __t);
-  _LIBCPP_HIDE_FROM_ABI __tree& operator=(const __tree& __t);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 explicit __tree(const allocator_type& __a);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree(const value_compare& __comp, const allocator_type& __a);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree(const __tree& __t);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree& operator=(const __tree& __t);
   template <class _ForwardIterator>
-  _LIBCPP_HIDE_FROM_ABI void __assign_unique(_ForwardIterator __first, _ForwardIterator __last);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __assign_unique(_ForwardIterator __first, _ForwardIterator __last);
   template <class _InputIterator>
-  _LIBCPP_HIDE_FROM_ABI void __assign_multi(_InputIterator __first, _InputIterator __last);
-  _LIBCPP_HIDE_FROM_ABI __tree(__tree&& __t) _NOEXCEPT_(
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __assign_multi(_InputIterator __first, _InputIterator __last);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree(__tree&& __t) _NOEXCEPT_(
       is_nothrow_move_constructible<__node_allocator>::value&& is_nothrow_move_constructible<value_compare>::value);
-  _LIBCPP_HIDE_FROM_ABI __tree(__tree&& __t, const allocator_type& __a);
-  _LIBCPP_HIDE_FROM_ABI __tree& operator=(__tree&& __t)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree(__tree&& __t, const allocator_type& __a);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree& operator=(__tree&& __t)
       _NOEXCEPT_(is_nothrow_move_assignable<value_compare>::value &&
                  ((__node_traits::propagate_on_container_move_assignment::value &&
                    is_nothrow_move_assignable<__node_allocator>::value) ||
                   allocator_traits<__node_allocator>::is_always_equal::value));
 
-  _LIBCPP_HIDE_FROM_ABI ~__tree();
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 ~__tree();
 
-  _LIBCPP_HIDE_FROM_ABI iterator begin() _NOEXCEPT { return iterator(__begin_node()); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator begin() const _NOEXCEPT { return const_iterator(__begin_node()); }
-  _LIBCPP_HIDE_FROM_ABI iterator end() _NOEXCEPT { return iterator(__end_node()); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator end() const _NOEXCEPT { return const_iterator(__end_node()); }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator begin() _NOEXCEPT { return iterator(__begin_node()); }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator begin() const _NOEXCEPT { return const_iterator(__begin_node()); }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator end() _NOEXCEPT { return iterator(__end_node()); }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator end() const _NOEXCEPT { return const_iterator(__end_node()); }
 
-  _LIBCPP_HIDE_FROM_ABI size_type max_size() const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 size_type max_size() const _NOEXCEPT {
     return std::min<size_type>(__node_traits::max_size(__node_alloc()), numeric_limits<difference_type >::max());
   }
 
-  _LIBCPP_HIDE_FROM_ABI void clear() _NOEXCEPT;
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void clear() _NOEXCEPT;
 
-  _LIBCPP_HIDE_FROM_ABI void swap(__tree& __t)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void swap(__tree& __t)
 #if _LIBCPP_STD_VER <= 11
       _NOEXCEPT_(__is_nothrow_swappable_v<value_compare> &&
                  (!__node_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<__node_allocator>));
@@ -1315,20 +1315,20 @@ private:
 };
 
 template <class _Tp, class _Compare, class _Allocator>
-__tree<_Tp, _Compare, _Allocator>::__tree(const value_compare& __comp) _NOEXCEPT_(
+_LIBCPP_CONSTEXPR_SINCE_CXX26 __tree<_Tp, _Compare, _Allocator>::__tree(const value_compare& __comp) _NOEXCEPT_(
     is_nothrow_default_constructible<__node_allocator>::value&& is_nothrow_copy_constructible<value_compare>::value)
     : __size_(0), __value_comp_(__comp) {
   __begin_node() = __end_node();
 }
 
 template <class _Tp, class _Compare, class _Allocator>
-__tree<_Tp, _Compare, _Allocator>::__tree(const allocator_type& __a)
+_LIBCPP_CONSTEXPR_SINCE_CXX26 __tree<_Tp, _Compare, _Allocator>::__tree(const allocator_type& __a)
     : __begin_node_(__iter_pointer()), __node_alloc_(__node_allocator(__a)), __size_(0) {
   __begin_node() = __end_node();
 }
 
 template <class _Tp, class _Compare, class _Allocator>
-__tree<_Tp, _Compare, _Allocator>::__tree(const value_compare& __comp, const allocator_type& __a)
+_LIBCPP_CONSTEXPR_SINCE_CXX26 __tree<_Tp, _Compare, _Allocator>::__tree(const value_compare& __comp, const allocator_type& __a)
     : __begin_node_(__iter_pointer()), __node_alloc_(__node_allocator(__a)), __size_(0), __value_comp_(__comp) {
   __begin_node() = __end_node();
 }
@@ -1375,7 +1375,7 @@ __tree<_Tp, _Compare, _Allocator>::_DetachedTreeCache::__detach_next(__node_poin
 }
 
 template <class _Tp, class _Compare, class _Allocator>
-__tree<_Tp, _Compare, _Allocator>& __tree<_Tp, _Compare, _Allocator>::operator=(const __tree& __t) {
+_LIBCPP_CONSTEXPR_SINCE_CXX26 __tree<_Tp, _Compare, _Allocator>& __tree<_Tp, _Compare, _Allocator>::operator=(const __tree& __t) {
   if (this != std::addressof(__t)) {
     value_comp() = __t.value_comp();
     __copy_assign_alloc(__t);
@@ -1386,7 +1386,7 @@ __tree<_Tp, _Compare, _Allocator>& __tree<_Tp, _Compare, _Allocator>::operator=(
 
 template <class _Tp, class _Compare, class _Allocator>
 template <class _ForwardIterator>
-void __tree<_Tp, _Compare, _Allocator>::__assign_unique(_ForwardIterator __first, _ForwardIterator __last) {
+_LIBCPP_CONSTEXPR_SINCE_CXX26 void __tree<_Tp, _Compare, _Allocator>::__assign_unique(_ForwardIterator __first, _ForwardIterator __last) {
   typedef iterator_traits<_ForwardIterator> _ITraits;
   typedef typename _ITraits::value_type _ItValueType;
   static_assert(is_same<_ItValueType, __container_value_type>::value,
@@ -1406,7 +1406,7 @@ void __tree<_Tp, _Compare, _Allocator>::__assign_unique(_ForwardIterator __first
 
 template <class _Tp, class _Compare, class _Allocator>
 template <class _InputIterator>
-void __tree<_Tp, _Compare, _Allocator>::__assign_multi(_InputIterator __first, _InputIterator __last) {
+_LIBCPP_CONSTEXPR_SINCE_CXX26 void __tree<_Tp, _Compare, _Allocator>::__assign_multi(_InputIterator __first, _InputIterator __last) {
   typedef iterator_traits<_InputIterator> _ITraits;
   typedef typename _ITraits::value_type _ItValueType;
   static_assert(
@@ -1426,7 +1426,7 @@ void __tree<_Tp, _Compare, _Allocator>::__assign_multi(_InputIterator __first, _
 }
 
 template <class _Tp, class _Compare, class _Allocator>
-__tree<_Tp, _Compare, _Allocator>::__tree(const __tree& __t)
+_LIBCPP_CONSTEXPR_SINCE_CXX26 __tree<_Tp, _Compare, _Allocator>::__tree(const __tree& __t)
     : __begin_node_(__iter_pointer()),
       __node_alloc_(__node_traits::select_on_container_copy_construction(__t.__node_alloc())),
       __size_(0),
@@ -1435,7 +1435,7 @@ __tree<_Tp, _Compare, _Allocator>::__tree(const __tree& __t)
 }
 
 template <class _Tp, class _Compare, class _Allocator>
-__tree<_Tp, _Compare, _Allocator>::__tree(__tree&& __t) _NOEXCEPT_(
+_LIBCPP_CONSTEXPR_SINCE_CXX26 __tree<_Tp, _Compare, _Allocator>::__tree(__tree&& __t) _NOEXCEPT_(
     is_nothrow_move_constructible<__node_allocator>::value&& is_nothrow_move_constructible<value_compare>::value)
     : __begin_node_(std::move(__t.__begin_node_)),
       __end_node_(std::move(__t.__end_node_)),
@@ -1453,7 +1453,7 @@ __tree<_Tp, _Compare, _Allocator>::__tree(__tree&& __t) _NOEXCEPT_(
 }
 
 template <class _Tp, class _Compare, class _Allocator>
-__tree<_Tp, _Compare, _Allocator>::__tree(__tree&& __t, const allocator_type& __a)
+_LIBCPP_CONSTEXPR_SINCE_CXX26 __tree<_Tp, _Compare, _Allocator>::__tree(__tree&& __t, const allocator_type& __a)
     : __node_alloc_(__node_allocator(__a)), __size_(0), __value_comp_(std::move(__t.value_comp())) {
   if (__a == __t.__alloc()) {
     if (__t.size() == 0)
@@ -1512,7 +1512,7 @@ void __tree<_Tp, _Compare, _Allocator>::__move_assign(__tree& __t, false_type) {
 }
 
 template <class _Tp, class _Compare, class _Allocator>
-__tree<_Tp, _Compare, _Allocator>& __tree<_Tp, _Compare, _Allocator>::operator=(__tree&& __t)
+_LIBCPP_CONSTEXPR_SINCE_CXX26 __tree<_Tp, _Compare, _Allocator>& __tree<_Tp, _Compare, _Allocator>::operator=(__tree&& __t)
     _NOEXCEPT_(is_nothrow_move_assignable<value_compare>::value &&
                ((__node_traits::propagate_on_container_move_assignment::value &&
                  is_nothrow_move_assignable<__node_allocator>::value) ||
@@ -1522,7 +1522,7 @@ __tree<_Tp, _Compare, _Allocator>& __tree<_Tp, _Compare, _Allocator>::operator=(
 }
 
 template <class _Tp, class _Compare, class _Allocator>
-__tree<_Tp, _Compare, _Allocator>::~__tree() {
+_LIBCPP_CONSTEXPR_SINCE_CXX26 __tree<_Tp, _Compare, _Allocator>::~__tree() {
   static_assert(is_copy_constructible<value_compare>::value, "Comparator must be copy-constructible.");
   destroy(__root());
 }
@@ -1539,7 +1539,7 @@ void __tree<_Tp, _Compare, _Allocator>::destroy(__node_pointer __nd) _NOEXCEPT {
 }
 
 template <class _Tp, class _Compare, class _Allocator>
-void __tree<_Tp, _Compare, _Allocator>::swap(__tree& __t)
+_LIBCPP_CONSTEXPR_SINCE_CXX26 void __tree<_Tp, _Compare, _Allocator>::swap(__tree& __t)
 #if _LIBCPP_STD_VER <= 11
     _NOEXCEPT_(__is_nothrow_swappable_v<value_compare> &&
                (!__node_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<__node_allocator>))
@@ -1564,7 +1564,7 @@ void __tree<_Tp, _Compare, _Allocator>::swap(__tree& __t)
 }
 
 template <class _Tp, class _Compare, class _Allocator>
-void __tree<_Tp, _Compare, _Allocator>::clear() _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX26 void __tree<_Tp, _Compare, _Allocator>::clear() _NOEXCEPT {
   destroy(__root());
   size()                = 0;
   __begin_node()        = __end_node();
