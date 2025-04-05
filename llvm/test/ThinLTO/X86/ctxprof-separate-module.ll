@@ -22,15 +22,31 @@
 ; RUN:  -r %t/m2.bc,m2_f1,plx \
 ; RUN:  -r %t/m3.bc,m1_f1 \
 ; RUN:  -r %t/m3.bc,m3_f1,plx -debug-only=function-import 2>&1 | FileCheck %s --check-prefix=ABSENT-MSG
+
+; also add the move semantics for the root:
+; RUN: llvm-lto2 run %t/m1.bc %t/m2.bc %t/m3.bc %t/6019442868614718803.bc -thinlto-move-ctxprof-trees \
+; RUN:  -thinlto-move-symbols=6019442868614718803 \
+; RUN:  -o %t/result-with-move.o -save-temps \
+; RUN:  -use-ctx-profile=%t/ctxprof.bitstream \
+; RUN:  -r %t/m1.bc,m1_f1,plx \
+; RUN:  -r %t/m2.bc,m2_f1,plx \
+; RUN:  -r %t/m3.bc,m1_f1 \
+; RUN:  -r %t/m3.bc,m3_f1,plx -debug-only=function-import 2>&1 | FileCheck %s --check-prefix=ABSENT-MSG
+
 ; RUN: llvm-dis %t/result.o.4.3.import.bc -o - | FileCheck %s
 ; RUN: llvm-dis %t/result.o.3.3.import.bc -o - | FileCheck %s --check-prefix=ABSENT
+; RUN: llvm-dis %t/result-with-move.o.1.3.import.bc -o - | FileCheck %s --check-prefix=WITHMOVE-SRC
+; RUN: llvm-dis %t/result-with-move.o.4.3.import.bc -o - | FileCheck %s --check-prefix=WITHMOVE-DEST
+; RUN: llvm-dis %t/result.o.1.3.import.bc -o - | FileCheck %s --check-prefix=WITHOUTMOVE-SRC
 ;
-;
-; CHECK: m1_f1()
-; CHECK: m2_f1()
+; CHECK: define available_externally void @m1_f1()
+; CHECK: define available_externally void @m2_f1()
 ; ABSENT: declare void @m1_f1()
 ; ABSENT-MSG: Skipping over 6019442868614718803 because its import is handled in a different module.
 ;
+; WITHMOVE-SRC: declare dso_local void @m1_f1
+; WITHMOVE-DEST: define dso_local void @m1_f1
+; WITHOUTMOVE-SRC: define dso_local void @m1_f1
 ;--- ctxprof.yaml
 Contexts: 
   -

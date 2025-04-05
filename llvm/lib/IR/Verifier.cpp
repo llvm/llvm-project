@@ -6666,10 +6666,14 @@ void Verifier::visit(DbgVariableRecord &DVR) {
   CheckDI(MD && (isa<ValueAsMetadata>(MD) || isa<DIArgList>(MD) ||
                  (isa<MDNode>(MD) && !cast<MDNode>(MD)->getNumOperands())),
           "invalid #dbg record address/value", &DVR, MD);
-  if (auto *VAM = dyn_cast<ValueAsMetadata>(MD))
+  if (auto *VAM = dyn_cast<ValueAsMetadata>(MD)) {
     visitValueAsMetadata(*VAM, F);
-  else if (auto *AL = dyn_cast<DIArgList>(MD))
+    if (DVR.isDbgDeclare())
+      CheckDI(VAM->getValue()->getType()->isPointerTy(),
+              "location of #dbg_declare must be a pointer", &DVR, MD);
+  } else if (auto *AL = dyn_cast<DIArgList>(MD)) {
     visitDIArgList(*AL, F);
+  }
 
   CheckDI(isa_and_nonnull<DILocalVariable>(DVR.getRawVariable()),
           "invalid #dbg record variable", &DVR, DVR.getRawVariable());

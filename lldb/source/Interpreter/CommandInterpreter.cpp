@@ -1918,7 +1918,9 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
     // Those will be collected by the on-exit-callback.
   });
 
-  helper.DispatchOnExit([&](lldb_private::telemetry::CommandInfo *info) {
+  helper.DispatchOnExit([&cmd_obj, &parsed_command_args, &result,
+                         detailed_command_telemetry, command_id](
+                            lldb_private::telemetry::CommandInfo *info) {
     // TODO: this is logging the time the command-handler finishes.
     // But we may want a finer-grain durations too?
     // (ie., the execute_time recorded below?)
