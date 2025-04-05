@@ -64,7 +64,7 @@ template <class T, bool ConvertibleToT = false>
 struct Transparent {
   T t;
 
-  operator T() const
+  explicit operator T() const
     requires ConvertibleToT
   {
     return t;
@@ -72,7 +72,7 @@ struct Transparent {
 };
 
 template <class T>
-using ConvertibleTransparent = Transparent<T, true>;
+using ExplicitlyConvertibleTransparent = Transparent<T, true>;
 
 template <class T>
 using NonConvertibleTransparent = Transparent<T, false>;

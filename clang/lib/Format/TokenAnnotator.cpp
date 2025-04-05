@@ -1417,6 +1417,10 @@ private:
         }
       } else if (Contexts.back().ContextType == Context::C11GenericSelection) {
         Tok->setType(TT_GenericSelectionColon);
+        auto *Prev = Tok->getPreviousNonComment();
+        assert(Prev);
+        if (Prev->isPointerOrReference())
+          Prev->setFinalizedType(TT_PointerOrReference);
       } else if (CurrentToken && CurrentToken->is(tok::numeric_constant)) {
         Tok->setType(TT_BitFieldColon);
       } else if (Contexts.size() == 1 &&

@@ -108,8 +108,7 @@ public:
         LookupContinuation->run(Result.takeError());
       else {
         AsyncLookupResult LR;
-        for (auto &KV : *Result)
-          LR[KV.first] = KV.second;
+        LR.insert_range(*Result);
         LookupContinuation->run(std::move(LR));
       }
     };
