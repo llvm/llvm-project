@@ -1285,9 +1285,7 @@ public:
   const AMDGPUTargetMachine *AMDGPUTM;
   static char ID;
   AMDGPUSwLowerLDSLegacy(const AMDGPUTargetMachine *TM)
-      : ModulePass(ID), AMDGPUTM(TM) {
-    initializeAMDGPUSwLowerLDSLegacyPass(*PassRegistry::getPassRegistry());
-  }
+      : ModulePass(ID), AMDGPUTM(TM) {}
   bool runOnModule(Module &M) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addPreserved<DominatorTreeWrapperPass>();

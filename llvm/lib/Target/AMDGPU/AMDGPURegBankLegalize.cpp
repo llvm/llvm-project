@@ -40,9 +40,7 @@ public:
   static char ID;
 
 public:
-  AMDGPURegBankLegalize() : MachineFunctionPass(ID) {
-    initializeAMDGPURegBankLegalizePass(*PassRegistry::getPassRegistry());
-  }
+  AMDGPURegBankLegalize() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
