@@ -609,7 +609,7 @@ enum RLISTENCODE {
   INVALID_RLIST,
 };
 
-inline unsigned encodeRlist(MCRegister EndReg, bool IsRVE = false) {
+inline unsigned encodeRegList(MCRegister EndReg, bool IsRVE = false) {
   assert((!IsRVE || EndReg <= RISCV::X9) && "Invalid Rlist for RV32E");
   switch (EndReg) {
   case RISCV::X1:
@@ -641,7 +641,7 @@ inline unsigned encodeRlist(MCRegister EndReg, bool IsRVE = false) {
   }
 }
 
-inline static unsigned encodeRlistNumRegs(unsigned NumRegs) {
+inline static unsigned encodeRegListNumRegs(unsigned NumRegs) {
   assert(NumRegs > 0 && NumRegs < 14 && NumRegs != 12 &&
          "Unexpected number of registers");
   if (NumRegs == 13)
@@ -662,7 +662,7 @@ inline static unsigned getStackAdjBase(unsigned RlistVal, bool IsRV64) {
   return alignTo(NumRegs * RegSize, 16);
 }
 
-void printRlist(unsigned SlistEncode, raw_ostream &OS);
+void printRegList(unsigned RlistEncode, raw_ostream &OS);
 } // namespace RISCVZC
 
 namespace RISCVVInversePseudosTable {
