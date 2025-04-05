@@ -41,8 +41,6 @@
 // RELOC-NEXT: 70 00000000 10000000
 //                         ^^^^ discriminator
 //                               ^^ 0 no addr diversity 0 reserved 00 ia key 0000 reserved
-// RELOC-NEXT: 80 04000000 00000000
-// Folded to constant 4 bytes difference between _g9 and _g8
 
 .section    .helper
 .local "_g 6"
@@ -89,10 +87,6 @@ _g9:
 
 // ASM:          .xword ("_g 7"+7)@AUTH(ia,16)
 .quad ("_g 7" + 7)@AUTH(ia,16)
-.quad 0
-
-// ASM:          .xword _g9@AUTH(ia,42)-_g8@AUTH(ia,42)
-.quad _g9@AUTH(ia,42) - _g8@AUTH(ia,42)
 .quad 0
 
 .ifdef ASMONLY
@@ -189,5 +183,9 @@ _g9:
 // are handled identically.
 // ERROBJ: :[[#@LINE+1]]:7: error: expected relocatable expression
 .quad _g9@AUTH(ia,42) - _g8
+
+// ERROBJ: :[[#@LINE+1]]:7: error: expected relocatable expression
+.quad _g9@AUTH(ia,42) - _g8@AUTH(ia,42)
+.quad 0
 
 .endif // ERROBJ
