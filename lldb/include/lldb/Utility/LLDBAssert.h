@@ -27,8 +27,11 @@
   } while (0)
 #else
 #define lldbassert(x)                                                          \
-  lldb_private::_lldb_assert(static_cast<bool>(x), #x, __FUNCTION__, __FILE__, \
-                             __LINE__)
+  do {                                                                         \
+    static std::once_flag _once_flag;                                          \
+    lldb_private::_lldb_assert(static_cast<bool>(x), #x, __FUNCTION__,         \
+                               __FILE__,  __LINE__, _once_flag);               \
+  } while (0)
 #endif
 #endif
 

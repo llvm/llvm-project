@@ -85,12 +85,13 @@ bool AVRMCExpr::evaluateAsRelocatableImpl(MCValue &Result,
     MCSymbolRefExpr::VariantKind Modifier = Sym->getKind();
     if (Modifier != MCSymbolRefExpr::VK_None)
       return false;
+    assert(!Value.getSubSym());
     if (specifier == VK_PM) {
       Modifier = MCSymbolRefExpr::VariantKind(AVRMCExpr::VK_PM);
     }
 
     Sym = MCSymbolRefExpr::create(&Sym->getSymbol(), Modifier, Context);
-    Result = MCValue::get(Sym, Value.getSymB(), Value.getConstant());
+    Result = MCValue::get(Sym, nullptr, Value.getConstant());
   }
 
   return true;
