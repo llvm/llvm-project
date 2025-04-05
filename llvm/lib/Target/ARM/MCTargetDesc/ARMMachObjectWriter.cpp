@@ -386,9 +386,7 @@ void ARMMachObjectWriter::recordRelocation(MachObjectWriter *Writer,
   }
 
   // Get the symbol data, if any.
-  const MCSymbol *A = nullptr;
-  if (Target.getSymA())
-    A = Target.getAddSym();
+  const MCSymbol *A = Target.getAddSym();
 
   // FIXME: For other platforms, we need to use scattered relocations for
   // internal relocations with offsets.  If this is an internal relocation with
