@@ -8,6 +8,7 @@
 
 #include "clang-tidy/ClangTidyCheck.h"
 #include "clang-tidy/ClangTidyModuleRegistry.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/FixIt.h"
 
 #include "robust_against_operator_ampersand.hpp"
@@ -15,6 +16,9 @@
 // This clang-tidy check ensures that we don't use operator& on dependant
 // types. If the type is user supplied it may call the type's operator&.
 // Instead use std::addressof.
+//
+// This is part of libc++'s policy
+// https://libcxx.llvm.org/CodingGuidelines.html#don-t-use-argument-dependent-lookup-unless-required-by-the-standard
 
 namespace libcpp {
 robust_against_operator_ampersand::robust_against_operator_ampersand(
