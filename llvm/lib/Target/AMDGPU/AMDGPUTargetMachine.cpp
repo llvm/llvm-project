@@ -517,6 +517,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUAtomicOptimizerPass(*PR);
   initializeAMDGPULowerKernelArgumentsPass(*PR);
   initializeAMDGPUPromoteKernelArgumentsPass(*PR);
+  initializeAMDGPUSplitKernelArgumentsPass(*PR);
   initializeAMDGPULowerKernelAttributesPass(*PR);
   initializeAMDGPUExportKernelRuntimeHandlesLegacyPass(*PR);
   initializeAMDGPUPostLegalizerCombinerPass(*PR);
@@ -876,8 +877,10 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
                                             OptimizationLevel Level,
                                             ThinOrFullLTOPhase Phase) {
     if (Level != OptimizationLevel::O0) {
-      if (!isLTOPreLink(Phase))
+      if (!isLTOPreLink(Phase)) {
+        MPM.addPass(AMDGPUSplitKernelArgumentsPass());
         MPM.addPass(AMDGPUAttributorPass(*this));
+      }
     }
   });
 
@@ -896,6 +899,7 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
             PM.addPass(InternalizePass(mustPreserveGV));
             PM.addPass(GlobalDCEPass());
           }
+          PM.addPass(AMDGPUSplitKernelArgumentsPass());
           if (EnableAMDGPUAttributor) {
             AMDGPUAttributorOptions Opt;
             if (HasClosedWorldAssumption)
@@ -1237,6 +1241,9 @@ void AMDGPUPassConfig::addIRPasses() {
     addPass(createAMDGPULowerModuleLDSLegacyPass(&TM));
   }
 
+  if (TM.getOptLevel() > CodeGenOptLevel::None) {
+    addPass(createAMDGPUSplitKernelArgumentsPass());
+  }
   if (TM.getOptLevel() > CodeGenOptLevel::None)
     addPass(createInferAddressSpacesPass());
 
