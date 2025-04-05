@@ -648,15 +648,20 @@ bool VPBasicBlock::isExiting() const {
   return getParent() && getParent()->getExitingBasicBlock() == this;
 }
 
-bool VPBasicBlock::isHeader(const VPDominatorTree &VPDT) const {
-  if (getNumPredecessors() != 2)
-    return false;
-  VPBlockBase *LatchVPBB = getPredecessors()[1];
-  if (!VPDT.dominates(this, LatchVPBB))
-    return false;
-  assert(VPDT.dominates(getPredecessors()[0], this) &&
-         "preheader must dominate header");
-  return true;
+std::optional<std::pair<VPBasicBlock *, VPBasicBlock *>>
+VPBasicBlock::isHeader(const VPDominatorTree &VPDT) const {
+  ArrayRef<VPBlockBase *> Preds = getPredecessors();
+  if (Preds.size() != 2)
+    return std::nullopt;
+
+  for (unsigned Idx : {0, 1}) {
+    auto *PreheaderVPBB = cast<VPBasicBlock>(Preds[Idx]);
+    auto *LatchVPBB = cast<VPBasicBlock>(Preds[1 - Idx]);
+    if (VPDT.dominates(PreheaderVPBB, this) && VPDT.dominates(this, LatchVPBB))
+      return {std::make_pair(PreheaderVPBB, LatchVPBB)};
+  }
+
+  return std::nullopt;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

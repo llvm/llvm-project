@@ -313,21 +313,10 @@ void PlainCFGBuilder::buildPlainCFG(
     VPBasicBlock *VPBB = getOrCreateVPBB(BB);
     Loop *LoopForBB = LI->getLoopFor(BB);
     // Set VPBB predecessors in the same order as they are in the incoming BB.
-    if (!isHeaderBB(BB, LoopForBB)) {
-      setVPBBPredsFromBB(VPBB, BB);
-    } else {
-      VPBB->setPredecessors({getOrCreateVPBB(LoopForBB->getLoopPredecessor()),
-                             getOrCreateVPBB(LoopForBB->getLoopLatch())});
-    }
+    setVPBBPredsFromBB(VPBB, BB);
 
     // Create VPInstructions for BB.
     createVPInstructionsForVPBB(VPBB, BB);
-
-    if (BB == TheLoop->getLoopLatch()) {
-      VPBasicBlock *HeaderVPBB = getOrCreateVPBB(LoopForBB->getHeader());
-      VPBB->setOneSuccessor(HeaderVPBB);
-      continue;
-    }
 
     // Set VPBB successors. We create empty VPBBs for successors if they don't
     // exist already. Recipes will be created when the successor is visited

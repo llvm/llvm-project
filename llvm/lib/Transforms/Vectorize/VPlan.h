@@ -3255,10 +3255,13 @@ public:
   /// Returns true if the block is exiting it's parent region.
   bool isExiting() const;
 
-  /// Returns true if the block is a loop header block in the plain CFG; that
-  /// is, it has exactly 2 predecessors (preheader and latch), where the block
-  /// dominates the latch and the preheader dominates the block.
-  bool isHeader(const VPDominatorTree &VPDT) const;
+  /// Checks if the block is a loop header block in the plain CFG; that is, it
+  /// has exactly 2 predecessors (preheader and latch), where the block
+  /// dominates the latch and the preheader dominates the block. If it is a
+  /// header block, returns a pair with the corresponding preheader and latch
+  /// blocks. Otherwise return std::nullopt.
+  std::optional<std::pair<VPBasicBlock *, VPBasicBlock *>>
+  isHeader(const VPDominatorTree &VPDT) const;
 
   /// Clone the current block and it's recipes, without updating the operands of
   /// the cloned recipes.

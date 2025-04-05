@@ -23,9 +23,9 @@ using namespace llvm;
 
 /// Create and return a new VPRegionBlock for loop starting at \p HeaderVPBB and
 /// return it.
-static VPRegionBlock *introduceRegion(VPlan &Plan, VPBlockBase *HeaderVPBB) {
-  VPBlockBase *PreheaderVPBB = HeaderVPBB->getPredecessors()[0];
-  VPBlockBase *LatchVPBB = HeaderVPBB->getPredecessors()[1];
+static VPRegionBlock *introduceRegion(VPlan &Plan, VPBasicBlock *PreheaderVPBB,
+                                      VPBasicBlock *HeaderVPBB,
+                                      VPBasicBlock *LatchVPBB) {
   VPBlockUtils::disconnectBlocks(PreheaderVPBB, HeaderVPBB);
   VPBlockUtils::disconnectBlocks(LatchVPBB, HeaderVPBB);
   VPBlockBase *Succ = LatchVPBB->getSingleSuccessor();
@@ -56,9 +56,11 @@ void VPlanTransforms::introduceRegions(VPlan &Plan, Type *InductionTy,
   VPDT.recalculate(Plan);
   for (VPBasicBlock *HeaderVPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getEntry()))) {
-    if (!HeaderVPBB->isHeader(VPDT))
+    auto Res = HeaderVPBB->isHeader(VPDT);
+    if (!Res)
       continue;
-    introduceRegion(Plan, HeaderVPBB);
+    const auto &[PreheaderVPBB, LatchVPBB] = *Res;
+    introduceRegion(Plan, PreheaderVPBB, HeaderVPBB, LatchVPBB);
   }
 
   VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
