@@ -49,6 +49,9 @@ C++ Specific Potentially Breaking Changes
   very few users and all the type traits that could benefit from it in the
   standard library already have their own bespoke builtins.
 
+- Clang now emits errors for coroutine `await_suspend` functions whose return type is not
+  one of `void`, `bool`, or `std::coroutine_handle`.
+
 ABI Changes in This Version
 ---------------------------
 
