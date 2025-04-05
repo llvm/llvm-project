@@ -1179,6 +1179,13 @@ def err_pragma_pop_visibility_mismatch : Error<
   "#pragma visibility pop with no matching #pragma visibility push">;
 def note_surrounding_namespace_starts_here : Note<
   "surrounding namespace with visibility attribute starts here">;
+def warn_failed_to_resolve_pragma : Warning<
+  "failed to resolve '#pragma %0' to a declaration">,
+  InGroup<IgnoredPragmas>;
+def warn_pragma_not_applied : Warning<
+  "#pragma %0 is applicable to symbols with external linkage only; "
+  "not applied to %1">,
+  InGroup<IgnoredPragmas>;
 def err_pragma_loop_invalid_argument_type : Error<
   "invalid argument of type %0; expected an integer type">;
 def err_pragma_loop_compatibility : Error<
@@ -9443,6 +9450,8 @@ def warn_redefine_extname_not_applied : Warning<
   "#pragma redefine_extname is applicable to external C declarations only; "
   "not applied to %select{function|variable}0 %1">,
   InGroup<Pragmas>;
+def err_cannot_be_exported : Error<
+  "cannot be '_Export` qualified">;
 } // End of general sema category.
 
 // inline asm.
