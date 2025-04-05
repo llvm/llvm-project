@@ -353,8 +353,8 @@ unsigned X86ELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
   case X86MCExpr::VK_TLSLDM:
   case X86MCExpr::VK_TPOFF:
   case X86MCExpr::VK_DTPOFF:
-    if (auto *S = Target.getSymA())
-      cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
+    if (auto *S = Target.getAddSym())
+      cast<MCSymbolELF>(S)->setType(ELF::STT_TLS);
     break;
   default:
     break;

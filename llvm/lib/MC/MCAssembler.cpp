@@ -125,15 +125,11 @@ bool MCAssembler::isThumbFunc(const MCSymbol *Symbol) const {
   if (V.getSubSym() || V.getRefKind() != MCSymbolRefExpr::VK_None)
     return false;
 
-  const MCSymbolRefExpr *Ref = V.getSymA();
-  if (!Ref)
+  auto *Sym = V.getAddSym();
+  if (!Sym || V.getSymSpecifier())
     return false;
 
-  if (Ref->getKind() != MCSymbolRefExpr::VK_None)
-    return false;
-
-  const MCSymbol &Sym = Ref->getSymbol();
-  if (!isThumbFunc(&Sym))
+  if (!isThumbFunc(Sym))
     return false;
 
   ThumbFuncs.insert(Symbol); // Cache it.
@@ -460,14 +456,14 @@ static bool getSymbolOffsetImpl(const MCAssembler &Asm, const MCSymbol &S,
 
   uint64_t Offset = Target.getConstant();
 
-  const MCSymbolRefExpr *A = Target.getSymA();
+  const MCSymbol *A = Target.getAddSym();
   if (A) {
     uint64_t ValA;
     // FIXME: On most platforms, `Target`'s component symbols are labels from
     // having been simplified during evaluation, but on Mach-O they can be
     // variables due to PR19203. This, and the line below for `B` can be
     // restored to call `getLabelOffset` when PR19203 is fixed.
-    if (!getSymbolOffsetImpl(Asm, A->getSymbol(), ReportError, ValA))
+    if (!getSymbolOffsetImpl(Asm, *A, ReportError, ValA))
       return false;
     Offset += ValA;
   }
@@ -516,11 +512,11 @@ const MCSymbol *MCAssembler::getBaseSymbol(const MCSymbol &Symbol) const {
     return nullptr;
   }
 
-  const MCSymbolRefExpr *A = Value.getSymA();
+  const MCSymbol *A = Value.getAddSym();
   if (!A)
     return nullptr;
 
-  const MCSymbol &ASym = A->getSymbol();
+  const MCSymbol &ASym = *A;
   if (ASym.isCommon()) {
     getContext().reportError(Expr->getLoc(),
                              "Common symbol '" + ASym.getName() +
