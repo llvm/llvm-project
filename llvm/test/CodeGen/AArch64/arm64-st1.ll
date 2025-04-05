@@ -1,11 +1,15 @@
-; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -verify-machineinstrs | FileCheck %s
-; RUN: llc < %s -global-isel -global-isel-abort=1 -mtriple=arm64-eabi -aarch64-neon-syntax=apple -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,SD-CHECK
+; RUN: llc < %s -global-isel -global-isel-abort=1 -mtriple=arm64-eabi -aarch64-neon-syntax=apple -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,GI-CHECK
 ; The instruction latencies of Exynos-M3 trigger the transform we see under the Exynos check.
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -verify-machineinstrs -mcpu=exynos-m3 | FileCheck --check-prefix=EXYNOS %s
 
 define void @st1lane_16b(<16 x i8> %A, ptr %D) {
-; CHECK-LABEL: st1lane_16b
-; CHECK: st1.b { v0 }[1], [x{{[0-9]+}}]
+; SD-CHECK-LABEL: st1lane_16b
+; SD-CHECK: mov.b   v0[0], v0[1]
+; SD-CHECK: stur b0, [x{{[0-9]+}}, #1]
+
+; GI-CHECK-LABEL: st1lane_16b
+; GI-CHECK: st1.b { v0 }[1], [x{{[0-9]+}}]
   %ptr = getelementptr i8, ptr %D, i64 1
   %tmp = extractelement <16 x i8> %A, i32 1
   store i8 %tmp, ptr %ptr
@@ -13,8 +17,11 @@ define void @st1lane_16b(<16 x i8> %A, ptr %D) {
 }
 
 define void @st1lane0_16b(<16 x i8> %A, ptr %D) {
-; CHECK-LABEL: st1lane0_16b
-; CHECK: st1.b { v0 }[0], [x{{[0-9]+}}]
+; SD-CHECK-LABEL: st1lane0_16b
+; SD-CHECK: stur b0, [x{{[0-9]+}}, #1]
+
+; GI-CHECK-LABEL: st1lane0_16b
+; GI-CHECK: st1.b { v0 }[0], [x{{[0-9]+}}]
   %ptr = getelementptr i8, ptr %D, i64 1
   %tmp = extractelement <16 x i8> %A, i32 0
   store i8 %tmp, ptr %ptr
@@ -22,8 +29,11 @@ define void @st1lane0_16b(<16 x i8> %A, ptr %D) {
 }
 
 define void @st1lane0u_16b(<16 x i8> %A, ptr %D) {
-; CHECK-LABEL: st1lane0u_16b
-; CHECK: st1.b { v0 }[0], [x{{[0-9]+}}]
+; SD-CHECK-LABEL: st1lane0u_16b
+; SD-CHECK: stur b0, [x{{[0-9]+}}, #-1]
+
+; GI-CHECK-LABEL: st1lane0u_16b
+; GI-CHECK: st1.b { v0 }[0], [x{{[0-9]+}}]
   %ptr = getelementptr i8, ptr %D, i64 -1
   %tmp = extractelement <16 x i8> %A, i32 0
   store i8 %tmp, ptr %ptr
@@ -31,9 +41,13 @@ define void @st1lane0u_16b(<16 x i8> %A, ptr %D) {
 }
 
 define void @st1lane_ro_16b(<16 x i8> %A, ptr %D, i64 %offset) {
-; CHECK-LABEL: st1lane_ro_16b
-; CHECK: add x[[XREG:[0-9]+]], x0, x1
-; CHECK: st1.b { v0 }[1], [x[[XREG]]]
+; SD-CHECK-LABEL: st1lane_ro_16b
+; SD-CHECK: mov.b   v0[0], v0[1]
+; SD-CHECK: str     b0, [x0, x1]
+
+; GI-CHECK-LABEL: st1lane_ro_16b
+; GI-CHECK: add x[[XREG:[0-9]+]], x0, x1
+; GI-CHECK: st1.b { v0 }[1], [x[[XREG]]]
   %ptr = getelementptr i8, ptr %D, i64 %offset
   %tmp = extractelement <16 x i8> %A, i32 1
   store i8 %tmp, ptr %ptr
@@ -41,9 +55,12 @@ define void @st1lane_ro_16b(<16 x i8> %A, ptr %D, i64 %offset) {
 }
 
 define void @st1lane0_ro_16b(<16 x i8> %A, ptr %D, i64 %offset) {
-; CHECK-LABEL: st1lane0_ro_16b
-; CHECK: add x[[XREG:[0-9]+]], x0, x1
-; CHECK: st1.b { v0 }[0], [x[[XREG]]]
+; SD-CHECK-LABEL: st1lane0_ro_16b
+; SD-CHECK: str b0, [x0, x1]
+
+; GI-CHECK-LABEL: st1lane0_ro_16b
+; GI-CHECK: add x[[XREG:[0-9]+]], x0, x1
+; GI-CHECK: st1.b { v0 }[0], [x[[XREG]]]
   %ptr = getelementptr i8, ptr %D, i64 %offset
   %tmp = extractelement <16 x i8> %A, i32 0
   store i8 %tmp, ptr %ptr
@@ -281,8 +298,12 @@ define void @st1lane0_ro_2d_double(<2 x double> %A, ptr %D, i64 %offset) {
 }
 
 define void @st1lane_8b(<8 x i8> %A, ptr %D) {
-; CHECK-LABEL: st1lane_8b
-; CHECK: st1.b { v0 }[1], [x{{[0-9]+}}]
+; SD-CHECK-LABEL: st1lane_8b
+; SD-CHECK: mov.b   v0[0], v0[1]
+; SD-CHECK: stur    b0, [x0, #1]
+
+; GI-CHECK-LABEL: st1lane_8b
+; GI-CHECK: st1.b { v0 }[1], [x{{[0-9]+}}]
   %ptr = getelementptr i8, ptr %D, i64 1
   %tmp = extractelement <8 x i8> %A, i32 1
   store i8 %tmp, ptr %ptr
@@ -290,9 +311,13 @@ define void @st1lane_8b(<8 x i8> %A, ptr %D) {
 }
 
 define void @st1lane_ro_8b(<8 x i8> %A, ptr %D, i64 %offset) {
-; CHECK-LABEL: st1lane_ro_8b
-; CHECK: add x[[XREG:[0-9]+]], x0, x1
-; CHECK: st1.b { v0 }[1], [x[[XREG]]]
+; SD-CHECK-LABEL: st1lane_ro_8b
+; SD-CHECK: mov.b   v0[0], v0[1]
+; SD-CHECK: str     b0, [x0, x1]
+
+; GI-CHECK-LABEL: st1lane_ro_8b
+; GI-CHECK: add x[[XREG:[0-9]+]], x0, x1
+; GI-CHECK: st1.b { v0 }[1], [x[[XREG]]]
   %ptr = getelementptr i8, ptr %D, i64 %offset
   %tmp = extractelement <8 x i8> %A, i32 1
   store i8 %tmp, ptr %ptr
@@ -300,9 +325,12 @@ define void @st1lane_ro_8b(<8 x i8> %A, ptr %D, i64 %offset) {
 }
 
 define void @st1lane0_ro_8b(<8 x i8> %A, ptr %D, i64 %offset) {
-; CHECK-LABEL: st1lane0_ro_8b
-; CHECK: add x[[XREG:[0-9]+]], x0, x1
-; CHECK: st1.b { v0 }[0], [x[[XREG]]]
+; SD-CHECK-LABEL: st1lane0_ro_8b
+; SD-CHECK: str b0, [x0, x1]
+
+; GI-CHECK-LABEL: st1lane0_ro_8b
+; GI-CHECK: add x[[XREG:[0-9]+]], x0, x1
+; GI-CHECK: st1.b { v0 }[0], [x[[XREG]]]
   %ptr = getelementptr i8, ptr %D, i64 %offset
   %tmp = extractelement <8 x i8> %A, i32 0
   store i8 %tmp, ptr %ptr

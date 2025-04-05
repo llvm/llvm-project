@@ -2702,28 +2702,29 @@ define void @zext_v8i8_to_v8i33_in_loop(ptr %src, ptr %dst) {
 ; CHECK-BE-NEXT:    ushll2 v1.2d, v1.4s, #0
 ; CHECK-BE-NEXT:    ushll2 v3.2d, v0.4s, #0
 ; CHECK-BE-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-BE-NEXT:    mov x9, v2.d[1]
 ; CHECK-BE-NEXT:    mov x10, v1.d[1]
+; CHECK-BE-NEXT:    mov x9, v2.d[1]
 ; CHECK-BE-NEXT:    fmov x13, d1
 ; CHECK-BE-NEXT:    mov x11, v3.d[1]
 ; CHECK-BE-NEXT:    mov x12, v0.d[1]
-; CHECK-BE-NEXT:    fmov x14, d2
-; CHECK-BE-NEXT:    fmov x15, d3
+; CHECK-BE-NEXT:    mov v1.d[0], v1.d[1]
+; CHECK-BE-NEXT:    orr x10, x10, x13, lsl #33
+; CHECK-BE-NEXT:    fmov x13, d2
 ; CHECK-BE-NEXT:    lsl x9, x9, #2
-; CHECK-BE-NEXT:    orr x13, x10, x13, lsl #33
-; CHECK-BE-NEXT:    strb w10, [x1, #32]
 ; CHECK-BE-NEXT:    lsl x11, x11, #4
 ; CHECK-BE-NEXT:    lsl x12, x12, #6
-; CHECK-BE-NEXT:    orr x14, x9, x14, lsl #35
-; CHECK-BE-NEXT:    extr x9, x9, x13, #8
+; CHECK-BE-NEXT:    stur b1, [x1, #32]
+; CHECK-BE-NEXT:    orr x13, x9, x13, lsl #35
+; CHECK-BE-NEXT:    extr x9, x9, x10, #8
+; CHECK-BE-NEXT:    fmov x10, d3
+; CHECK-BE-NEXT:    orr x10, x11, x10, lsl #37
+; CHECK-BE-NEXT:    extr x11, x11, x13, #8
 ; CHECK-BE-NEXT:    fmov x13, d0
-; CHECK-BE-NEXT:    orr x15, x11, x15, lsl #37
-; CHECK-BE-NEXT:    extr x10, x11, x14, #8
-; CHECK-BE-NEXT:    orr x11, x12, x13, lsl #39
-; CHECK-BE-NEXT:    extr x12, x12, x15, #8
-; CHECK-BE-NEXT:    stp x10, x9, [x1, #16]
-; CHECK-BE-NEXT:    lsr x9, x11, #8
-; CHECK-BE-NEXT:    stp x9, x12, [x1], #128
+; CHECK-BE-NEXT:    stp x11, x9, [x1, #16]
+; CHECK-BE-NEXT:    extr x9, x12, x10, #8
+; CHECK-BE-NEXT:    orr x13, x12, x13, lsl #39
+; CHECK-BE-NEXT:    lsr x10, x13, #8
+; CHECK-BE-NEXT:    stp x10, x9, [x1], #128
 ; CHECK-BE-NEXT:    b.ne .LBB22_1
 ; CHECK-BE-NEXT:  // %bb.2: // %exit
 ; CHECK-BE-NEXT:    ret

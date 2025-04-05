@@ -3587,7 +3587,7 @@ defm LDRW : LoadUI<0b10, 0, 0b01, GPR32z, uimm12s4, "ldr",
                          (load (am_indexed32 GPR64sp:$Rn, uimm12s4:$offset)))]>;
 let Predicates = [HasFPARMv8] in {
 defm LDRB : LoadUI<0b00, 1, 0b01, FPR8Op, uimm12s1, "ldr",
-                   [(set FPR8Op:$Rt,
+                   [(set (i8 FPR8Op:$Rt),
                          (load (am_indexed8 GPR64sp:$Rn, uimm12s1:$offset)))]>;
 defm LDRH : LoadUI<0b01, 1, 0b01, FPR16Op, uimm12s2, "ldr",
                    [(set (f16 FPR16Op:$Rt),
@@ -3775,7 +3775,7 @@ defm LDURW : LoadUnscaled<0b10, 0, 0b01, GPR32z, "ldur",
                           (load (am_unscaled32 GPR64sp:$Rn, simm9:$offset)))]>;
 let Predicates = [HasFPARMv8] in {
 defm LDURB : LoadUnscaled<0b00, 1, 0b01, FPR8Op, "ldur",
-                    [(set FPR8Op:$Rt,
+                    [(set (i8 FPR8Op:$Rt),
                           (load (am_unscaled8 GPR64sp:$Rn, simm9:$offset)))]>;
 defm LDURH : LoadUnscaled<0b01, 1, 0b01, FPR16Op, "ldur",
                     [(set (f16 FPR16Op:$Rt),
@@ -4345,7 +4345,7 @@ defm STRW : StoreUIz<0b10, 0, 0b00, GPR32z, uimm12s4, "str",
                             (am_indexed32 GPR64sp:$Rn, uimm12s4:$offset))]>;
 let Predicates = [HasFPARMv8] in {
 defm STRB : StoreUI<0b00, 1, 0b00, FPR8Op, uimm12s1, "str",
-                    [(store FPR8Op:$Rt,
+                    [(store (i8 FPR8Op:$Rt),
                             (am_indexed8 GPR64sp:$Rn, uimm12s1:$offset))]>;
 defm STRH : StoreUI<0b01, 1, 0b00, FPR16Op, uimm12s2, "str",
                     [(store (f16 FPR16Op:$Rt),
@@ -4481,7 +4481,7 @@ defm STURW : StoreUnscaled<0b10, 0, 0b00, GPR32z, "stur",
                                  (am_unscaled32 GPR64sp:$Rn, simm9:$offset))]>;
 let Predicates = [HasFPARMv8] in {
 defm STURB : StoreUnscaled<0b00, 1, 0b00, FPR8Op, "stur",
-                         [(store FPR8Op:$Rt,
+                         [(store (i8 FPR8Op:$Rt),
                                  (am_unscaled8 GPR64sp:$Rn, simm9:$offset))]>;
 defm STURH : StoreUnscaled<0b01, 1, 0b00, FPR16Op, "stur",
                          [(store (f16 FPR16Op:$Rt),
@@ -4600,6 +4600,12 @@ def : Pat<(truncstorei16 GPR64:$Rt, (am_unscaled16 GPR64sp:$Rn, simm9:$offset)),
   (STURHHi (EXTRACT_SUBREG GPR64:$Rt, sub_32), GPR64sp:$Rn, simm9:$offset)>;
 def : Pat<(truncstorei8 GPR64:$Rt, (am_unscaled8 GPR64sp:$Rn, simm9:$offset)),
   (STURBBi (EXTRACT_SUBREG GPR64:$Rt, sub_32), GPR64sp:$Rn, simm9:$offset)>;
+
+// v1i64 -> bsub truncating stores
+def : Pat<(truncstorevi8 v1i64:$VT, (am_unscaled8 GPR64sp:$Rn, simm9:$offset)),
+          (STURBi (aarch64mfp8 (EXTRACT_SUBREG v1i64:$VT, bsub)), GPR64sp:$Rn, simm9:$offset)>;
+def : Pat<(truncstorevi8 v1i64:$VT, (am_indexed8 GPR64sp:$Rn, uimm12s4:$offset)),
+          (STRBui (aarch64mfp8 (EXTRACT_SUBREG v1i64:$VT, bsub)), GPR64sp:$Rn, uimm12s4:$offset)>;
 
 // Match stores from lane 0 to the appropriate subreg's store.
 multiclass VecStoreULane0Pat<SDPatternOperator StoreOp,
