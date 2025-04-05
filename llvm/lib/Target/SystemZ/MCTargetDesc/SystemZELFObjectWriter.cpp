@@ -166,8 +166,8 @@ unsigned SystemZELFObjectWriter::getRelocType(MCContext &Ctx,
   case SystemZMCExpr::VK_TLSLD:
   case SystemZMCExpr::VK_TLSLDM:
   case SystemZMCExpr::VK_DTPOFF:
-    if (auto *S = Target.getSymA())
-      cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
+    if (auto *SA = Target.getAddSym())
+      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;

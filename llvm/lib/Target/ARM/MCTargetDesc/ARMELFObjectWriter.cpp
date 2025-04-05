@@ -103,8 +103,8 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
   case ARMMCExpr::VK_TLSLDM_FDPIC:
   case ARMMCExpr::VK_TLSLDO:
   case ARMMCExpr::VK_TPOFF:
-    if (auto *S = Target.getSymA())
-      cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
+    if (auto *SA = Target.getAddSym())
+      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;
