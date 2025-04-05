@@ -34,6 +34,13 @@
 // ./libc_str_to_float_comparison_test <path/to/dataset/repo>/data/*
 // It will take a few seconds to run.
 
+struct ParseResult {
+  uint32_t totalFails;
+  uint32_t totalBitDiffs;
+  uint32_t detailedBitDiffs[4];
+  uint32_t total;
+};
+
 static inline uint32_t hexCharToU32(char in) {
   return in > '9' ? in + 10 - 'A' : in - '0';
 }
@@ -56,13 +63,13 @@ static inline uint64_t fastHexToU64(const char *inStr) {
   return result;
 }
 
-static void parseLine(char *line, int *total, int *detailedBitDiffs,
-                      int32_t &curFails, int32_t &curBitDiffs) {
+static void parseLine(char *line, ParseResult &parseResult, int32_t &curFails,
+                      int32_t &curBitDiffs) {
 
   if (line[0] == '#') {
     return;
   }
-  *total = *total + 1;
+  parseResult.total += 1;
   uint32_t expectedFloatRaw;
   uint64_t expectedDoubleRaw;
 
@@ -83,9 +90,11 @@ static void parseLine(char *line, int *total, int *detailedBitDiffs,
     if (expectedFloatRaw == floatRaw + 1 || expectedFloatRaw == floatRaw - 1) {
       curBitDiffs++;
       if (expectedFloatRaw == floatRaw + 1) {
-        detailedBitDiffs[0] = detailedBitDiffs[0] + 1; // float low
+        parseResult.detailedBitDiffs[0] =
+            parseResult.detailedBitDiffs[0] + 1; // float low
       } else {
-        detailedBitDiffs[1] = detailedBitDiffs[1] + 1; // float high
+        parseResult.detailedBitDiffs[1] =
+            parseResult.detailedBitDiffs[1] + 1; // float high
       }
     } else {
       curFails++;
@@ -101,9 +110,11 @@ static void parseLine(char *line, int *total, int *detailedBitDiffs,
         expectedDoubleRaw == doubleRaw - 1) {
       curBitDiffs++;
       if (expectedDoubleRaw == doubleRaw + 1) {
-        detailedBitDiffs[2] = detailedBitDiffs[2] + 1; // double low
+        parseResult.detailedBitDiffs[2] =
+            parseResult.detailedBitDiffs[2] + 1; // double low
       } else {
-        detailedBitDiffs[3] = detailedBitDiffs[3] + 1; // double high
+        parseResult.detailedBitDiffs[3] =
+            parseResult.detailedBitDiffs[3] + 1; // double high
       }
     } else {
       curFails++;
@@ -115,8 +126,7 @@ static void parseLine(char *line, int *total, int *detailedBitDiffs,
   }
 }
 
-int checkBuffer(int *totalFails, int *totalBitDiffs, int *detailedBitDiffs,
-                int *total) {
+int checkBuffer(ParseResult &parseResult) {
   const char *lines[6] = {"3C00 3F800000 3FF0000000000000 1",
                           "3D00 3FA00000 3FF4000000000000 1.25",
                           "3D9A 3FB33333 3FF6666666666666 1.4",
@@ -130,11 +140,11 @@ int checkBuffer(int *totalFails, int *totalBitDiffs, int *detailedBitDiffs,
 
   for (uint8_t i = 0; i < 6; i++) {
     auto line = const_cast<char *>(lines[i]);
-    parseLine(line, total, detailedBitDiffs, curFails, curBitDiffs);
+    parseLine(line, parseResult, curFails, curBitDiffs);
   }
 
-  *totalBitDiffs += curBitDiffs;
-  *totalFails += curFails;
+  parseResult.totalBitDiffs += curBitDiffs;
+  parseResult.totalFails += curFails;
 
   if (curFails > 1 || curBitDiffs > 1) {
     return 2;
@@ -142,8 +152,7 @@ int checkBuffer(int *totalFails, int *totalBitDiffs, int *detailedBitDiffs,
   return 0;
 }
 
-int checkFile(char *inputFileName, int *totalFails, int *totalBitDiffs,
-              int *detailedBitDiffs, int *total) {
+int checkFile(char *inputFileName, ParseResult &parseResult) {
   int32_t curFails = 0;    // Only counts actual failures, not bitdiffs.
   int32_t curBitDiffs = 0; // A bitdiff is when the expected result and actual
   // result are off by +/- 1 bit.
@@ -158,13 +167,13 @@ int checkFile(char *inputFileName, int *totalFails, int *totalBitDiffs,
   }
 
   while (LIBC_NAMESPACE::fgets(line, sizeof(line), fileHandle)) {
-    parseLine(line, total, detailedBitDiffs, curFails, curBitDiffs);
+    parseLine(line, parseResult, curFails, curBitDiffs);
   }
 
   LIBC_NAMESPACE::fclose(fileHandle);
 
-  *totalBitDiffs += curBitDiffs;
-  *totalFails += curFails;
+  parseResult.totalBitDiffs += curBitDiffs;
+  parseResult.totalFails += curFails;
 
   if (curFails > 1 || curBitDiffs > 1) {
     return 2;
@@ -183,38 +192,39 @@ int updateResult(int result, int curResult) {
 
 TEST(LlvmLibcStrToFloatComparisonTest, CheckFloats) {
   int result = 0;
-  int fails = 0;
 
   // Bitdiffs are cases where the expected result and actual result only differ
   // by +/- the least significant bit. They are tracked separately from larger
   // failures since a bitdiff is most likely the result of a rounding error, and
   // splitting them off makes them easier to track down.
-  int bitdiffs = 0;
-  int detailedBitDiffs[4] = {0, 0, 0, 0};
 
-  int total = 0;
+  ParseResult parseResult = {
+      .totalFails = 0,
+      .totalBitDiffs = 0,
+      .detailedBitDiffs = {0, 0, 0, 0},
+      .total = 0,
+  };
 
   char *files = LIBC_NAMESPACE::getenv("FILES");
 
   if (files == nullptr) {
-    int curResult = checkBuffer(&fails, &bitdiffs, detailedBitDiffs, &total);
+    int curResult = checkBuffer(parseResult);
     result = updateResult(result, curResult);
   } else {
     files = LIBC_NAMESPACE::strdup(files);
     for (char *file = LIBC_NAMESPACE::strtok(files, ","); file != nullptr;
          file = LIBC_NAMESPACE::strtok(nullptr, ",")) {
-      int curResult =
-          checkFile(file, &fails, &bitdiffs, detailedBitDiffs, &total);
+      int curResult = checkFile(file, parseResult);
       result = updateResult(result, curResult);
     }
   }
 
   EXPECT_EQ(result, 0);
-  EXPECT_EQ(fails, 0);
-  EXPECT_EQ(bitdiffs, 0);
-  EXPECT_EQ(detailedBitDiffs[0], 0); // float low
-  EXPECT_EQ(detailedBitDiffs[1], 0); // float high
-  EXPECT_EQ(detailedBitDiffs[2], 0); // double low
-  EXPECT_EQ(detailedBitDiffs[3], 0); // double high
-  EXPECT_EQ(total, 6);
+  EXPECT_EQ(parseResult.totalFails, 0u);
+  EXPECT_EQ(parseResult.totalBitDiffs, 0u);
+  EXPECT_EQ(parseResult.detailedBitDiffs[0], 0u); // float low
+  EXPECT_EQ(parseResult.detailedBitDiffs[1], 0u); // float high
+  EXPECT_EQ(parseResult.detailedBitDiffs[2], 0u); // double low
+  EXPECT_EQ(parseResult.detailedBitDiffs[3], 0u); // double high
+  EXPECT_EQ(parseResult.total, 6u);
 }
