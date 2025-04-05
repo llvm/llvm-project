@@ -128,8 +128,8 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
   case AArch64MCExpr::VK_TPREL:
   case AArch64MCExpr::VK_TLSDESC:
   case AArch64MCExpr::VK_TLSDESC_AUTH:
-    if (auto *S = Target.getSymA())
-      cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
+    if (auto *SA = Target.getAddSym())
+      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;

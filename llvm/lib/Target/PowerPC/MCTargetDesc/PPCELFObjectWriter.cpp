@@ -100,8 +100,8 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
   case PPCMCExpr::VK_TPREL_HIGHEST:
   case PPCMCExpr::VK_TPREL_HIGHESTA:
   case PPCMCExpr::VK_TPREL_LO:
-    if (auto *S = Target.getSymA())
-      cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
+    if (auto *SA = Target.getAddSym())
+      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;
