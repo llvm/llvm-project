@@ -548,15 +548,16 @@ bool ItaniumPartialDemangler::hasFunctionQualifiers() const {
   return E->getCVQuals() != QualNone || E->getRefQual() != FrefQualNone;
 }
 
-bool ItaniumPartialDemangler::isCtorOrDtor() const {
+std::optional<int> ItaniumPartialDemangler::getCtorDtorVariant() const {
   const Node *N = static_cast<const Node *>(RootNode);
   while (N) {
     switch (N->getKind()) {
     default:
-      return false;
-    case Node::KCtorDtorName:
-      return true;
-
+      return std::nullopt;
+    case Node::KCtorDtorName: {
+      auto const *StructorNode = static_cast<const CtorDtorName *>(N);
+      return StructorNode->getVariant();
+    }
     case Node::KAbiTagAttr:
       N = static_cast<const AbiTagAttr *>(N)->Base;
       break;
@@ -577,7 +578,11 @@ bool ItaniumPartialDemangler::isCtorOrDtor() const {
       break;
     }
   }
-  return false;
+  return std::nullopt;
+}
+
+bool ItaniumPartialDemangler::isCtorOrDtor() const {
+  return getCtorDtorVariant().has_value();
 }
 
 bool ItaniumPartialDemangler::isFunction() const {
