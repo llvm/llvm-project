@@ -187,7 +187,7 @@ TokenSequence &TokenSequence::ToLowerCase() {
       } else if (*p == 'h' || *p == 'H') {
         // Hollerith
         *p = 'h';
-      } else if (*p == '_') {
+      } else if (*p == '_' && p + 1 < limit && (p[1] == '"' || p[1] == '\'')) {
         // kind-prefixed character literal (e.g., 1_"ABC")
       } else {
         // exponent
