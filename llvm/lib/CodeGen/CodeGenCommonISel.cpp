@@ -200,6 +200,9 @@ FPClassTest llvm::invertFPClassTestIfSimpler(FPClassTest Test, bool UseFCmp) {
   case fcZero | fcNan:
   case fcSubnormal | fcZero:
   case fcSubnormal | fcZero | fcNan:
+  case fcNormal | fcSubnormal:
+  case fcPosNormal | fcPosSubnormal:
+  case fcNegNormal | fcNegSubnormal:
     return InvertedTest;
   case fcInf | fcNan:
   case fcPosInf | fcNan:
