@@ -256,7 +256,6 @@ add_libc_test(
     libc-support-tests
   SRCS
     str_to_float_comparison_test.cpp
-  ENV "FILES=${CMAKE_CURRENT_SOURCE_DIR}/str_to_float_comparison_data.txt"
   DEPENDS
     libc.src.stdio.printf
     libc.src.stdio.fopen
