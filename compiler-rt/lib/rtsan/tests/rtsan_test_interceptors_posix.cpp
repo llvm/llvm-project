@@ -897,6 +897,22 @@ TEST_F(RtsanOpenedFileTest, FtruncateDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
+TEST_F(RtsanOpenedFileTest, SymlinkDiesWhenRealtime) {
+  auto Func = [&]() {
+    symlink("/tmp/rtsan_symlink_test", GetTemporaryFilePath());
+  };
+  ExpectRealtimeDeath(Func, "symlink");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, SymlinkatDiesWhenRealtime) {
+  auto Func = [&]() {
+    symlinkat("/tmp/rtsan_symlinkat_test", AT_FDCWD, GetTemporaryFilePath());
+  };
+  ExpectRealtimeDeath(Func, "symlinkat");
+  ExpectNonRealtimeSurvival(Func);
+}
+
 TEST_F(RtsanFileTest, FcloseDiesWhenRealtime) {
   FILE *f = fopen(GetTemporaryFilePath(), "w");
   EXPECT_THAT(f, Ne(nullptr));
