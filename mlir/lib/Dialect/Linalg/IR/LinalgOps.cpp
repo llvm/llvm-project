@@ -75,7 +75,7 @@ static OpFoldResult getDimValue(OpBuilder &builder, Location loc, Value v,
 
 /// Returns a memref.subview or a tensor.extract_slice based on the type of the
 /// `source`.
-static Operation *getSlice(OpBuilder &b, Location loc, Value source,
+static Operation *getSubviewOrSlice(OpBuilder &b, Location loc, Value source,
                            ArrayRef<OpFoldResult> offsets,
                            ArrayRef<OpFoldResult> sizes,
                            ArrayRef<OpFoldResult> strides) {
@@ -2676,13 +2676,13 @@ SoftmaxOp::getTiledImplementation(OpBuilder &builder,
   SmallVector<OpFoldResult> strides(rank, oneAttr);
   SmallVector<Value> tiledOperands;
   Operation *inputSlice =
-      getSlice(builder, getLoc(), getInput(), offsets, sizes, strides);
+      getSubviewOrSlice(builder, getLoc(), getInput(), offsets, sizes, strides);
   if (!inputSlice) {
     return emitOpError("failed to compute input slice");
   }
   tiledOperands.emplace_back(inputSlice->getResult(0));
   Operation *outputSlice =
-      getSlice(builder, getLoc(), getOutput(), offsets, sizes, strides);
+      getSubviewOrSlice(builder, getLoc(), getOutput(), offsets, sizes, strides);
   if (!outputSlice) {
     return emitOpError("failed to compute output slice");
   }
