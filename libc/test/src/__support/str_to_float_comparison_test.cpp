@@ -56,13 +56,98 @@ static inline uint64_t fastHexToU64(const char *inStr) {
   return result;
 }
 
+static void parseLine(char *line, int *total, int *detailedBitDiffs,
+                      int32_t &curFails, int32_t &curBitDiffs) {
+
+  if (line[0] == '#') {
+    return;
+  }
+  *total = *total + 1;
+  uint32_t expectedFloatRaw;
+  uint64_t expectedDoubleRaw;
+
+  expectedFloatRaw = fastHexToU32(line + 5);
+  expectedDoubleRaw = fastHexToU64(line + 14);
+
+  char *num = line + 31;
+
+  float floatResult = LIBC_NAMESPACE::strtof(num, nullptr);
+
+  double doubleResult = LIBC_NAMESPACE::strtod(num, nullptr);
+
+  uint32_t floatRaw = LIBC_NAMESPACE::cpp::bit_cast<uint32_t>(floatResult);
+
+  uint64_t doubleRaw = LIBC_NAMESPACE::cpp::bit_cast<uint64_t>(doubleResult);
+
+  if (!(expectedFloatRaw == floatRaw)) {
+    if (expectedFloatRaw == floatRaw + 1 || expectedFloatRaw == floatRaw - 1) {
+      curBitDiffs++;
+      if (expectedFloatRaw == floatRaw + 1) {
+        detailedBitDiffs[0] = detailedBitDiffs[0] + 1; // float low
+      } else {
+        detailedBitDiffs[1] = detailedBitDiffs[1] + 1; // float high
+      }
+    } else {
+      curFails++;
+    }
+    if (curFails + curBitDiffs < 10) {
+      LIBC_NAMESPACE::printf("Float fail for '%s'. Expected %x but got %x\n",
+                             num, expectedFloatRaw, floatRaw);
+    }
+  }
+
+  if (!(expectedDoubleRaw == doubleRaw)) {
+    if (expectedDoubleRaw == doubleRaw + 1 ||
+        expectedDoubleRaw == doubleRaw - 1) {
+      curBitDiffs++;
+      if (expectedDoubleRaw == doubleRaw + 1) {
+        detailedBitDiffs[2] = detailedBitDiffs[2] + 1; // double low
+      } else {
+        detailedBitDiffs[3] = detailedBitDiffs[3] + 1; // double high
+      }
+    } else {
+      curFails++;
+    }
+    if (curFails + curBitDiffs < 10) {
+      LIBC_NAMESPACE::printf("Double fail for '%s'. Expected %lx but got %lx\n",
+                             num, expectedDoubleRaw, doubleRaw);
+    }
+  }
+}
+
+int checkBuffer(int *totalFails, int *totalBitDiffs, int *detailedBitDiffs,
+                int *total) {
+  const char *lines[6] = {"3C00 3F800000 3FF0000000000000 1",
+                          "3D00 3FA00000 3FF4000000000000 1.25",
+                          "3D9A 3FB33333 3FF6666666666666 1.4",
+                          "57B7 42F6E979 405EDD2F1A9FBE77 123.456",
+                          "622A 44454000 4088A80000000000 789",
+                          "7C00 7F800000 7FF0000000000000 123.456e789"};
+
+  int32_t curFails = 0;    // Only counts actual failures, not bitdiffs.
+  int32_t curBitDiffs = 0; // A bitdiff is when the expected result and actual
+  // result are off by +/- 1 bit.
+
+  for (uint8_t i = 0; i < 6; i++) {
+    auto line = const_cast<char *>(lines[i]);
+    parseLine(line, total, detailedBitDiffs, curFails, curBitDiffs);
+  }
+
+  *totalBitDiffs += curBitDiffs;
+  *totalFails += curFails;
+
+  if (curFails > 1 || curBitDiffs > 1) {
+    return 2;
+  }
+  return 0;
+}
+
 int checkFile(char *inputFileName, int *totalFails, int *totalBitDiffs,
               int *detailedBitDiffs, int *total) {
   int32_t curFails = 0;    // Only counts actual failures, not bitdiffs.
   int32_t curBitDiffs = 0; // A bitdiff is when the expected result and actual
-                           // result are off by +/- 1 bit.
+  // result are off by +/- 1 bit.
   char line[100];
-  char *num;
 
   auto *fileHandle = LIBC_NAMESPACE::fopen(inputFileName, "r");
 
@@ -73,61 +158,7 @@ int checkFile(char *inputFileName, int *totalFails, int *totalBitDiffs,
   }
 
   while (LIBC_NAMESPACE::fgets(line, sizeof(line), fileHandle)) {
-    if (line[0] == '#') {
-      continue;
-    }
-    *total = *total + 1;
-    uint32_t expectedFloatRaw;
-    uint64_t expectedDoubleRaw;
-
-    expectedFloatRaw = fastHexToU32(line + 5);
-    expectedDoubleRaw = fastHexToU64(line + 14);
-    num = line + 31;
-
-    float floatResult = LIBC_NAMESPACE::strtof(num, nullptr);
-
-    double doubleResult = LIBC_NAMESPACE::strtod(num, nullptr);
-
-    uint32_t floatRaw = LIBC_NAMESPACE::cpp::bit_cast<uint32_t>(floatResult);
-
-    uint64_t doubleRaw = LIBC_NAMESPACE::cpp::bit_cast<uint64_t>(doubleResult);
-
-    if (!(expectedFloatRaw == floatRaw)) {
-      if (expectedFloatRaw == floatRaw + 1 ||
-          expectedFloatRaw == floatRaw - 1) {
-        curBitDiffs++;
-        if (expectedFloatRaw == floatRaw + 1) {
-          detailedBitDiffs[0] = detailedBitDiffs[0] + 1; // float low
-        } else {
-          detailedBitDiffs[1] = detailedBitDiffs[1] + 1; // float high
-        }
-      } else {
-        curFails++;
-      }
-      if (curFails + curBitDiffs < 10) {
-        LIBC_NAMESPACE::printf("Float fail for '%s'. Expected %x but got %x\n",
-                               num, expectedFloatRaw, floatRaw);
-      }
-    }
-
-    if (!(expectedDoubleRaw == doubleRaw)) {
-      if (expectedDoubleRaw == doubleRaw + 1 ||
-          expectedDoubleRaw == doubleRaw - 1) {
-        curBitDiffs++;
-        if (expectedDoubleRaw == doubleRaw + 1) {
-          detailedBitDiffs[2] = detailedBitDiffs[2] + 1; // double low
-        } else {
-          detailedBitDiffs[3] = detailedBitDiffs[3] + 1; // double high
-        }
-      } else {
-        curFails++;
-      }
-      if (curFails + curBitDiffs < 10) {
-        LIBC_NAMESPACE::printf(
-            "Double fail for '%s'. Expected %lx but got %lx\n", num,
-            expectedDoubleRaw, doubleRaw);
-      }
-    }
+    parseLine(line, total, detailedBitDiffs, curFails, curBitDiffs);
   }
 
   LIBC_NAMESPACE::fclose(fileHandle);
@@ -141,7 +172,16 @@ int checkFile(char *inputFileName, int *totalFails, int *totalBitDiffs,
   return 0;
 }
 
-TEST(LlvmLibcStrToFloatComparisonTest, CheckFile) {
+int updateResult(int result, int curResult) {
+  if (curResult == 1) {
+    result = 1;
+  } else if (curResult == 2) {
+    result = 2;
+  }
+  return result;
+}
+
+TEST(LlvmLibcStrToFloatComparisonTest, CheckFloats) {
   int result = 0;
   int fails = 0;
 
@@ -155,15 +195,17 @@ TEST(LlvmLibcStrToFloatComparisonTest, CheckFile) {
   int total = 0;
 
   char *files = LIBC_NAMESPACE::getenv("FILES");
-  files = LIBC_NAMESPACE::strdup(files);
-  for (char *file = LIBC_NAMESPACE::strtok(files, ","); file != nullptr;
-       file = LIBC_NAMESPACE::strtok(nullptr, ",")) {
-    int curResult =
-        checkFile(file, &fails, &bitdiffs, detailedBitDiffs, &total);
-    if (curResult == 1) {
-      result = 1;
-    } else if (curResult == 2) {
-      result = 2;
+
+  if (files == nullptr) {
+    int curResult = checkBuffer(&fails, &bitdiffs, detailedBitDiffs, &total);
+    result = updateResult(result, curResult);
+  } else {
+    files = LIBC_NAMESPACE::strdup(files);
+    for (char *file = LIBC_NAMESPACE::strtok(files, ","); file != nullptr;
+         file = LIBC_NAMESPACE::strtok(nullptr, ",")) {
+      int curResult =
+          checkFile(file, &fails, &bitdiffs, detailedBitDiffs, &total);
+      result = updateResult(result, curResult);
     }
   }
 
