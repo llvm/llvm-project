@@ -445,8 +445,10 @@ void NormalizeMemRefs::normalizeFuncOpMemRefs(func::FuncOp funcOp,
           if (oldMemRefType == newMemRefType)
             continue;
           // TODO: Assume single layout map. Multiple maps not supported.
+          // TODO: Semi-affine layout not supported.
           AffineMap layoutMap = oldMemRefType.getLayout().getAffineMap();
-          if (failed(replaceAllMemRefUsesWith(oldMemRef,
+          if (!layoutMap.getResult(0).isPureAffine() ||
+              failed(replaceAllMemRefUsesWith(oldMemRef,
                                               /*newMemRef=*/newMemRef,
                                               /*extraIndices=*/{},
                                               /*indexRemap=*/layoutMap,
