@@ -426,6 +426,8 @@ public:
 
   void emitBBAddrMapSection(const MachineFunction &MF);
 
+  void emitFuncAddrMapSection(const MachineFunction &MF);
+
   void emitKCFITrapEntry(const MachineFunction &MF, const MCSymbol *Symbol);
   virtual void emitKCFITypeId(const MachineFunction &MF);
 
