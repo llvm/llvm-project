@@ -379,7 +379,9 @@ void CoverageReport::render(const FunctionCoverageSummary &Function,
                   (unsigned)(Function.MCDCCoverage.getNumPairs() -
                              Function.MCDCCoverage.getCoveredPairs()));
     Options.colored_ostream(
-        OS, determineCoveragePercentageColor(Function.MCDCCoverage))
+        OS, Function.MCDCCoverage.getNumPairs() == 0
+                ? raw_ostream::GREEN
+                : determineCoveragePercentageColor(Function.MCDCCoverage))
         << format("%*.2f", FunctionReportColumns[12] - 1,
                   Function.MCDCCoverage.getPercentCovered())
         << '%';
@@ -426,7 +428,8 @@ void CoverageReport::renderFunctionReports(ArrayRef<std::string> Files,
     OS << "\n";
     FunctionCoverageSummary Totals("TOTAL");
     for (const auto &F : Functions) {
-      auto Function = FunctionCoverageSummary::get(Coverage, F);
+      auto Function =
+          FunctionCoverageSummary::get(Coverage, F, Options.MCDCCountedStates);
       ++Totals.ExecutionCount;
       Totals.RegionCoverage += Function.RegionCoverage;
       Totals.LineCoverage += Function.LineCoverage;
@@ -451,7 +454,8 @@ void CoverageReport::prepareSingleFileReport(const StringRef Filename,
     for (const coverage::FunctionRecord *F : Group.getInstantiations()) {
       if (!Filters->matches(*Coverage, *F))
         continue;
-      auto InstantiationSummary = FunctionCoverageSummary::get(*Coverage, *F);
+      auto InstantiationSummary = FunctionCoverageSummary::get(
+          *Coverage, *F, Options.MCDCCountedStates);
       FileReport->addInstantiation(InstantiationSummary);
       InstantiationSummaries.push_back(InstantiationSummary);
     }

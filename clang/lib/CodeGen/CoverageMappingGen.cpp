@@ -1159,8 +1159,8 @@ struct CounterCoverageMappingBuilder
         BranchParams = mcdc::BranchParameters{ID, Conds};
 
       // If a condition can fold to true or false, the corresponding branch
-      // will be removed.  Create a region with both counters hard-coded to
-      // zero. This allows us to visualize them in a special way.
+      // will be removed. Create a region with the relative counter hard-coded
+      // to zero. This allows us to visualize them in a special way.
       // Alternatively, we can prevent any optimization done via
       // constant-folding by ensuring that ConstantFoldsToSimpleInteger() in
       // CodeGenFunction.c always returns false, but that is very heavy-handed.
