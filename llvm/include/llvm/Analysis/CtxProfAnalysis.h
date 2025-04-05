@@ -33,6 +33,7 @@ class PGOContextualProfile {
     FunctionInfo(StringRef Name) : Name(Name) {}
   };
   PGOCtxProfile Profiles;
+  bool IsInSpecializedModule = false;
   // For the GUIDs in this module, associate metadata about each function which
   // we'll need when we maintain the profiles during IPO transformations.
   std::map<GlobalValue::GUID, FunctionInfo> FuncInfo;
@@ -55,6 +56,10 @@ public:
   }
 
   const PGOCtxProfile &profiles() const { return Profiles; }
+
+  // True if this module is a post-thinlto module containing just functions
+  // participating in one or more contextual profiles.
+  bool isInSpecializedModule() const { return IsInSpecializedModule; }
 
   bool isFunctionKnown(const Function &F) const {
     return getDefinedFunctionGUID(F) != 0;
