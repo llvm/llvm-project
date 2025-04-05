@@ -2103,7 +2103,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMCPY_INLINE, G_MEMMOVE, G_MEMSET})
       .lower();
 
-  getActionDefinitionsBuilder({G_TRAP, G_DEBUGTRAP}).custom();
+  getActionDefinitionsBuilder({G_TRAP, G_DEBUGTRAP, G_UBSANTRAP}).custom();
 
   getActionDefinitionsBuilder({G_VASTART, G_VAARG, G_BRJT, G_JUMP_TABLE,
         G_INDEXED_LOAD, G_INDEXED_SEXTLOAD,
@@ -2222,6 +2222,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(
     return legalizeTrap(MI, MRI, B);
   case TargetOpcode::G_DEBUGTRAP:
     return legalizeDebugTrap(MI, MRI, B);
+  case TargetOpcode::G_UBSANTRAP:
+    return legalizeUbsanTrap(MI, MRI, B);
   default:
     return false;
   }
@@ -7039,6 +7041,29 @@ bool AMDGPULegalizerInfo::legalizeDebugTrap(MachineInstr &MI,
     // Insert debug-trap instruction
     B.buildInstr(AMDGPU::S_TRAP)
         .addImm(static_cast<unsigned>(GCNSubtarget::TrapID::LLVMAMDHSADebugTrap));
+  }
+
+  MI.eraseFromParent();
+  return true;
+}
+
+
+bool AMDGPULegalizerInfo::legalizeUbsanTrap(MachineInstr &MI,
+                                            MachineRegisterInfo &MRI,
+                                            MachineIRBuilder &B) const {
+  // Is non-HSA path or trap-handler disabled? Then, report a warning
+  // accordingly
+  if (!ST.isTrapHandlerEnabled() ||
+      ST.getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA) {
+    DiagnosticInfoUnsupported NoTrap(B.getMF().getFunction(),
+                                     "ubsantrap handler not supported",
+                                     MI.getDebugLoc(), DS_Warning);
+    LLVMContext &Ctx = B.getMF().getFunction().getContext();
+    Ctx.diagnose(NoTrap);
+  } else {
+    // Insert trap instruction
+    B.buildInstr(AMDGPU::S_TRAP)
+        .addImm(static_cast<unsigned>(GCNSubtarget::TrapID::LLVMAMDHSATrap));
   }
 
   MI.eraseFromParent();

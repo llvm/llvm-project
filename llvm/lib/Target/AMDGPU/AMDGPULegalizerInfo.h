@@ -244,6 +244,11 @@ public:
   bool legalizeDebugTrap(MachineInstr &MI, MachineRegisterInfo &MRI,
                          MachineIRBuilder &B) const;
 
+
+  bool legalizeUbsanTrap(MachineInstr &MI, MachineRegisterInfo &MRI,
+   MachineIRBuilder &B) const;
+
+
   bool legalizeIntrinsic(LegalizerHelper &Helper,
                          MachineInstr &MI) const override;
 };
