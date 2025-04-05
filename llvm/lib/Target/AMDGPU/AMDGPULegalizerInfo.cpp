@@ -7047,7 +7047,6 @@ bool AMDGPULegalizerInfo::legalizeDebugTrap(MachineInstr &MI,
   return true;
 }
 
-
 bool AMDGPULegalizerInfo::legalizeUbsanTrap(MachineInstr &MI,
                                             MachineRegisterInfo &MRI,
                                             MachineIRBuilder &B) const {
@@ -7058,7 +7057,7 @@ bool AMDGPULegalizerInfo::legalizeUbsanTrap(MachineInstr &MI,
     DiagnosticInfoUnsupported NoTrap(B.getMF().getFunction(),
                                      "ubsantrap handler not supported",
                                      MI.getDebugLoc(), DS_Warning);
-    LLVMContext &Ctx = B.getMF().getFunction().getContext();
+    LLVMContext &Ctx = B.getContext();
     Ctx.diagnose(NoTrap);
   } else {
     // Insert trap instruction
