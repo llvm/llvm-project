@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_HOST_TRIPLE
 #include "llvm/Option/ArgList.h"
+#include "llvm/Option/Option.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -861,6 +862,10 @@ void CudaToolChain::addClangTargetOptions(
   // headers rely on that. https://github.com/llvm/llvm-project/issues/58410
   if (CudaInstallation.version() >= CudaVersion::CUDA_90)
     CC1Args.push_back("-fcuda-allow-variadic-functions");
+
+  if (DriverArgs.hasFlag(options::OPT_fcuda_prec_sqrt,
+                         options::OPT_fno_cuda_prec_sqrt, false))
+    CC1Args.append({"-fcuda-prec-sqrt"});
 
   if (DriverArgs.hasFlag(options::OPT_fcuda_short_ptr,
                          options::OPT_fno_cuda_short_ptr, false))

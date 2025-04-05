@@ -1286,6 +1286,10 @@ void CodeGenModule::Release() {
   }
 
   if (LangOpts.CUDAIsDevice && getTriple().isNVPTX()) {
+    // Indicate whether __nvvm_reflect should be configured to use precise
+    // square root.  (This corresponds to its "__CUDA_PREC_SQRT" property.)
+    getModule().addModuleFlag(llvm::Module::Override, "nvvm-reflect-prec-sqrt",
+                              CodeGenOpts.CudaPreciseSqrt);
     // Indicate whether __nvvm_reflect should be configured to flush denormal
     // floating point values to 0.  (This corresponds to its "__CUDA_FTZ"
     // property.)
