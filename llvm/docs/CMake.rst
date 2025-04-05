@@ -670,8 +670,8 @@ enabled sub-projects. Nearly all of these variable names begin with
   to a valid path, then that project will not be built.
 
 **LLVM_EXTERNALIZE_DEBUGINFO**:BOOL
-  Generate dSYM files and strip executables and libraries (Darwin Only).
-  Defaults to OFF.
+  Generate dSYM files and strip executables and libraries. Defaults to OFF.
+  This option is not available on Windows.
 
 **LLVM_ENABLE_EXPORTED_SYMBOLS_IN_EXECUTABLES**:BOOL
   When building executables, preserve symbol exports. Defaults to ON.
