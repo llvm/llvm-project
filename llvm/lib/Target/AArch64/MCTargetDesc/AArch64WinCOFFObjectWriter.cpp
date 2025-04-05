@@ -61,8 +61,8 @@ unsigned AArch64WinCOFFObjectWriter::getRelocType(
     FixupKind = FK_PCRel_4;
   }
 
-  auto Modifier = Target.isAbsolute() ? MCSymbolRefExpr::VK_None
-                                      : Target.getSymA()->getKind();
+  auto Modifier =
+      Target.isAbsolute() ? AArch64MCExpr::None : Target.getSymA()->getKind();
   const MCExpr *Expr = Fixup.getValue();
 
   if (const AArch64MCExpr *A64E = dyn_cast<AArch64MCExpr>(Expr)) {

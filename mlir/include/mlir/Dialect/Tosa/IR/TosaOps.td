@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file defines the operation set for the TOSA dialect as defined in
-// the TOSA specfication (https://developer.mlplatform.org/w/tosa/).
+// the TOSA specfication (https://www.mlplatform.org/tosa/tosa_spec.html).
 //
 //===----------------------------------------------------------------------===//
 
