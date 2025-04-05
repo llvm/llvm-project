@@ -15,12 +15,11 @@
 #include <__config>
 #include <__functional/identity.h>
 #include <__iterator/iterator_traits.h>
-#include <__iterator/next.h>
 #include <__iterator/segmented_iterator.h>
 #include <__type_traits/disjunction.h>
 #include <__type_traits/enable_if.h>
-#include <__type_traits/negation.h>
 #include <__type_traits/invoke.h>
+#include <__type_traits/negation.h>
 #include <__utility/convert_to_integral.h>
 #include <__utility/move.h>
 
@@ -59,11 +58,11 @@ template <class _RandIter,
           class _Proj,
           __enable_if_t<__has_random_access_iterator_category<_RandIter>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _RandIter
-__for_each_n(_RandIter __first, _Size __orig_n, _Func& __f) {
+__for_each_n(_RandIter __first, _Size __orig_n, _Func& __f, _Proj& __proj) {
   typename std::iterator_traits<_RandIter>::difference_type __n = __orig_n;
   auto __last                                                   = __first + __n;
   std::__for_each(__first, __last, __f, __proj);
-  return std::move(__last);
+  return __last;
 }
 
 #ifndef _LIBCPP_CXX03_LANG
