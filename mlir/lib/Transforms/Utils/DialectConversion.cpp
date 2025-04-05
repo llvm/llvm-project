@@ -2931,17 +2931,6 @@ TypeConverter::convertSignatureArgs(TypeRange types,
   return success();
 }
 
-Value TypeConverter::materializeArgumentConversion(OpBuilder &builder,
-                                                   Location loc,
-                                                   Type resultType,
-                                                   ValueRange inputs) const {
-  for (const MaterializationCallbackFn &fn :
-       llvm::reverse(argumentMaterializations))
-    if (Value result = fn(builder, resultType, inputs, loc))
-      return result;
-  return nullptr;
-}
-
 Value TypeConverter::materializeSourceConversion(OpBuilder &builder,
                                                  Location loc, Type resultType,
                                                  ValueRange inputs) const {
