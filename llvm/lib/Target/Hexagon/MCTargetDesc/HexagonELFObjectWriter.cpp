@@ -51,8 +51,8 @@ unsigned HexagonELFObjectWriter::getRelocType(MCContext &Ctx,
   case HexagonMCExpr::VK_IE:
   case HexagonMCExpr::VK_IE_GOT:
   case HexagonMCExpr::VK_TPREL:
-    if (auto *S = Target.getSymA())
-      cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
+    if (auto *SA = Target.getAddSym())
+      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;

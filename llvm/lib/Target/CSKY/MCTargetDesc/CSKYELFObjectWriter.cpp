@@ -50,8 +50,8 @@ unsigned CSKYELFObjectWriter::getRelocType(MCContext &Ctx,
   case CSKYMCExpr::VK_TLSGD:
   case CSKYMCExpr::VK_TLSLDM:
   case CSKYMCExpr::VK_TLSLDO:
-    if (auto *S = Target.getSymA())
-      cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
+    if (auto *SA = Target.getAddSym())
+      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;
