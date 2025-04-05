@@ -1,5 +1,8 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 %s
-// XFAIL: asserts
+
+// FIXME: With deduction changes to better preserve
+// type sugar, the bug that this test case used to
+// expose is harder to reproduce.
 
 template <class> struct Pair;
 template <class...> struct Tuple {

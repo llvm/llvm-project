@@ -1718,7 +1718,7 @@ public:
   }
 
   unsigned getNumArgs() const {
-    return getTypePtr()->template_arguments().size();
+    return getTypePtr()->getSpecifiedArguments().size();
   }
 
   void setArgLocInfo(unsigned i, TemplateArgumentLocInfo AI) {
@@ -1730,7 +1730,7 @@ public:
   }
 
   TemplateArgumentLoc getArgLoc(unsigned i) const {
-    return TemplateArgumentLoc(getTypePtr()->template_arguments()[i],
+    return TemplateArgumentLoc(getTypePtr()->getSpecifiedArguments()[i],
                                getArgLocInfo(i));
   }
 
@@ -1766,7 +1766,7 @@ public:
     setTemplateNameLoc(Loc);
     setLAngleLoc(Loc);
     setRAngleLoc(Loc);
-    initializeArgLocs(Context, getTypePtr()->template_arguments(),
+    initializeArgLocs(Context, getTypePtr()->getSpecifiedArguments(),
                       getArgInfos(), Loc);
   }
 

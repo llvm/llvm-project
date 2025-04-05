@@ -130,16 +130,12 @@ namespace ttp_defaults {
   template <template <class T1> class TT1> struct A {};
 
   template <template <class T2> class TT2> void f(A<TT2>);
-  // expected-note@-1 {{explicit instantiation candidate}}
 
-  // FIXME: The default arguments on the TTP are not available during partial ordering.
   template <template <class T3, class T4 = float> class TT3> void f(A<TT3>) {};
-  // expected-note@-1 {{explicit instantiation candidate}}
 
   template <class T5, class T6 = int> struct B;
 
   template void f<B>(A<B>);
-  // expected-error@-1 {{partial ordering for explicit instantiation of 'f' is ambiguous}}
 } // namespace ttp_defaults
 
 namespace ttp_only {

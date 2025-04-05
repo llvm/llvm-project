@@ -49,9 +49,9 @@ struct alignas(ConstraintAlignment) AtomicConstraint {
     for (unsigned I = 0, S = ParameterMapping->size(); I < S; ++I) {
       llvm::FoldingSetNodeID IDA, IDB;
       C.getCanonicalTemplateArgument((*ParameterMapping)[I].getArgument())
-          .Profile(IDA, C);
+          .Profile(IDA, C, /*Canonical=*/true);
       C.getCanonicalTemplateArgument((*Other.ParameterMapping)[I].getArgument())
-          .Profile(IDB, C);
+          .Profile(IDB, C, /*Canonical=*/true);
       if (IDA != IDB)
         return false;
     }

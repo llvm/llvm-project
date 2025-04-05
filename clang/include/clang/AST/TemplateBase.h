@@ -462,7 +462,8 @@ public:
   void dump() const;
 
   /// Used to insert TemplateArguments into FoldingSets.
-  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) const;
+  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
+               bool Canonical) const;
 };
 
 /// Location information for a TemplateArgument.
