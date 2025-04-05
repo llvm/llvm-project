@@ -39,6 +39,11 @@ static inline bool cstring_is_mangled(llvm::StringRef s) {
 
 #pragma mark Mangled
 
+bool Mangled::IsCPPMangledName(llvm::StringRef name) {
+  Mangled::ManglingScheme scheme = Mangled::GetManglingScheme(name);
+  return (scheme != Mangled::eManglingSchemeNone);
+}
+
 Mangled::ManglingScheme Mangled::GetManglingScheme(llvm::StringRef const name) {
   if (name.empty())
     return Mangled::eManglingSchemeNone;
