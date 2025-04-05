@@ -15,7 +15,6 @@
 #include <__concepts/assignable.h>
 #include <__config>
 #include <__functional/identity.h>
-#include <__functional/invoke.h>
 #include <__iterator/concepts.h>
 #include <__iterator/projected.h>
 #include <__ranges/access.h>

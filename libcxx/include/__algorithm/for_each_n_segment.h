@@ -23,10 +23,9 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 // __for_each_n_segment optimizes linear iteration over segmented iterators. It processes a segmented
-// input range defined by [__first, __first + __n), where __first is the starting segmented iterator
-// and __n is the number of elements to process. The functor __func is applied to each segment using
-// local iterator pairs for that segment. The return value of __func is ignored, and the function
-// returns an iterator pointing to one past the last processed element in the input range.
+// input range [__first, __first + __n) by applying the functor __func to each element within the segment.
+// The return value of __func is ignored, and the function returns an iterator pointing to one past the
+// last processed element in the input range.
 
 template <class _SegmentedIterator, class _Size, class _Functor>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _SegmentedIterator
