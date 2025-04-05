@@ -16230,7 +16230,9 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
 
       // If the function implicitly returns zero (like 'main') or is naked,
       // don't complain about missing return statements.
-      if (FD->hasImplicitReturnZero() || FD->hasAttr<NakedAttr>())
+      if ((FD->hasImplicitReturnZero() &&
+           (getLangOpts().CPlusPlus || getLangOpts().C99 || !FD->isMain())) ||
+          FD->hasAttr<NakedAttr>())
         WP.disableCheckFallThrough();
 
       // MSVC permits the use of pure specifier (=0) on function definition,
