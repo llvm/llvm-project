@@ -78,25 +78,25 @@ func.func @test_load_nd_vc_3(%src: memref<8x16xf16>) {
 }
 
 // -----
-func.func @test_load_nd_sg_map(%src: memref<24x32xf32>) {
+func.func @test_load_nd_layout(%src: memref<24x32xf32>) {
   %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> ->
-    !xegpu.tensor_desc<8x16xf32, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>>
+    !xegpu.tensor_desc<8x16xf32,   #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
   // expected-error@+1 {{Result shape [8, 2] is not consistent with distributed vector shape [8, 1]}}
   %2 = xegpu.load_nd %1 <{l1_hint = #xegpu.cache_hint<cached>,
       l2_hint = #xegpu.cache_hint<uncached>}>
-    : !xegpu.tensor_desc<8x16xf32, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>>
+    : !xegpu.tensor_desc<8x16xf32,   #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
     -> vector<8x2xf32>
   return
 }
 
 // -----
-func.func @test_load_nd_sg_map(%src: memref<24x32xf32>) {
+func.func @test_load_nd_layout(%src: memref<24x32xf32>) {
   %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> ->
-    !xegpu.tensor_desc<16xf32, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>>
+    !xegpu.tensor_desc<16xf32, #xegpu.layout<lane_layout = [16], lane_data = [1]>>
   // expected-error@+1 {{Result shape [8] is not consistent with distributed vector shape [1, 1]}}
   %2 = xegpu.load_nd %1 <{l1_hint = #xegpu.cache_hint<cached>,
       l2_hint = #xegpu.cache_hint<uncached>}>
-    : !xegpu.tensor_desc<16xf32, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>>
+    : !xegpu.tensor_desc<16xf32, #xegpu.layout<lane_layout = [16], lane_data = [1]>>
     -> vector<8xf32>
   return
 }
@@ -134,22 +134,22 @@ func.func @test_store_nd_vc_2(%dst: memref<16xf16>) {
 }
 
 // -----
-func.func @test_store_nd_sg_map(%dst: memref<24x32xf32>, %data: vector<8x2xf32>) {
+func.func @test_store_nd_layout(%dst: memref<24x32xf32>, %data: vector<8x2xf32>) {
   %1 = xegpu.create_nd_tdesc %dst[0, 0] : memref<24x32xf32> ->
-    !xegpu.tensor_desc<8x16xf32, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>>
+    !xegpu.tensor_desc<8x16xf32,   #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
   // expected-error@+1 {{Result shape [8, 2] is not consistent with distributed vector shape [8, 1] for tensor descriptor}}
   xegpu.store_nd %data, %1
-    : vector<8x2xf32>, !xegpu.tensor_desc<8x16xf32, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>>
+    : vector<8x2xf32>, !xegpu.tensor_desc<8x16xf32,   #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
   return
 }
 
 // -----
-func.func @test_store_nd_sg_map(%dst: memref<24x32xf32>, %data: vector<2xf32>) {
+func.func @test_store_nd_layout(%dst: memref<24x32xf32>, %data: vector<2xf32>) {
   %1 = xegpu.create_nd_tdesc %dst[0, 0] : memref<24x32xf32> ->
-    !xegpu.tensor_desc<16xf32, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>>
+    !xegpu.tensor_desc<16xf32, #xegpu.layout<lane_layout = [16], lane_data = [1]>>
   // expected-error@+1 {{Result shape [2] is not consistent with distributed vector shape [1, 1] for tensor descriptor}}
   xegpu.store_nd %data, %1
-    : vector<2xf32>, !xegpu.tensor_desc<16xf32, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>>
+    : vector<2xf32>, !xegpu.tensor_desc<16xf32, #xegpu.layout<lane_layout = [16], lane_data = [1]>>
   return
 }
 
@@ -245,69 +245,69 @@ func.func @test_prefetch_vc_2(%src: ui64) {
 }
 
 // -----
-func.func @test_create_tdesc_sg_map_1(%src: ui64) {
+func.func @test_create_tdesc_layout_1(%src: ui64) {
   %cst = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
-  // expected-error@+1 {{outer layout distribution and data mapping must be 1 for 1D tensor}}
-  %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex> -> !xegpu.tensor_desc<4xf32, #xegpu.scatter_tdesc_attr<>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 1]>>
+  // expected-error@+1 {{expected layout rank to match tensor rank}}
+  %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex> -> !xegpu.tensor_desc<4xf32, #xegpu.scatter_tdesc_attr<>,   #xegpu.layout<lane_layout = [4, 1], lane_data = [1, 1]>>
   return
 }
 
 // -----
-func.func @test_create_tdesc_sg_map_2(%src: ui64) {
+func.func @test_create_tdesc_layout_2(%src: ui64) {
   %cst = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   // expected-error@+1 {{cannot map over non-contiguous scattered row elements}}
-  %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [1, 4], wi_data = [2, 1]>>
+  %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>,   #xegpu.layout<lane_layout = [1, 4], lane_data = [2, 1]>>
   return
 }
 
 // -----
-func.func @test_create_tdesc_sg_map_3(%src: ui64) {
+func.func @test_create_tdesc_layout_3(%src: ui64) {
   %cst = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   // expected-error@+1 {{work item data mapping must match the number of contiguous elements}}
-  %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x3xf32, #xegpu.scatter_tdesc_attr<chunk_size = 3>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 2]>>
+  %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x3xf32, #xegpu.scatter_tdesc_attr<chunk_size = 3>,   #xegpu.layout<lane_layout = [4, 1], lane_data = [1, 2]>>
   return
 }
 
 // -----
-func.func @test_load_gather_sg_map_1(%src: ui64) {
+func.func @test_load_gather_layout_1(%src: ui64) {
   %0 = arith.constant dense<1>: vector<4xi1>
   %cst = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
-  %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 1]>>
+  %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>,   #xegpu.layout<lane_layout = [4, 1], lane_data = [1, 1]>>
   // expected-error@+1 {{Result shape [1, 2] is not consistent with distributed vector shape [2, 1] for tensor descriptor}}
-  %2 = xegpu.load %1, %0 <{l1_hint = #xegpu.cache_hint<cached>, transpose}> : !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 1]>>, vector<4xi1> -> vector<1x2xf32>
+  %2 = xegpu.load %1, %0 <{l1_hint = #xegpu.cache_hint<cached>, transpose}> : !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>,  #xegpu.layout<lane_layout = [4, 1], lane_data = [1, 1]>>, vector<4xi1> -> vector<1x2xf32>
   return
 }
 
 // -----
-func.func @test_load_gather_sg_map_2(%src: ui64) {
+func.func @test_load_gather_layout_2(%src: ui64) {
   %0 = arith.constant dense<1>: vector<4xi1>
   %cst = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
-  %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 1]>>
+  %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>,  #xegpu.layout<lane_layout = [4, 1], lane_data = [1, 1]>>
   // expected-error@+1 {{esult shape [2] is not consistent with distributed vector shape [2, 1] for tensor descriptor}}
-  %2 = xegpu.load %1, %0 <{l1_hint = #xegpu.cache_hint<cached>, transpose}> : !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 1]>>, vector<4xi1> -> vector<2xf32>
+  %2 = xegpu.load %1, %0 <{l1_hint = #xegpu.cache_hint<cached>, transpose}> : !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>,  #xegpu.layout<lane_layout = [4, 1], lane_data = [1, 1]>>, vector<4xi1> -> vector<2xf32>
   return
 }
 
 
 // -----
-func.func @test_store_scatter_sg_map_1(%src: ui64) {
+func.func @test_store_scatter_layout_1(%src: ui64) {
   %0 = arith.constant dense<1>: vector<4xi1>
   %cst = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   %val = arith.constant dense<2.9>: vector<1x2xf32>
-  %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 1]>>
+  %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>,  #xegpu.layout<lane_layout = [4, 1], lane_data = [1, 1]>>
   // expected-error@+1 {{Result shape [1, 2] is not consistent with distributed vector shape [2, 1] for tensor descriptor}}
-  xegpu.store %val, %1, %0 <{l1_hint = #xegpu.cache_hint<cached>, transpose}> : vector<1x2xf32>, !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 1]>>, vector<4xi1>
+  xegpu.store %val, %1, %0 <{l1_hint = #xegpu.cache_hint<cached>, transpose}> : vector<1x2xf32>, !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>,  #xegpu.layout<lane_layout = [4, 1], lane_data = [1, 1]>>, vector<4xi1>
   return
 }
 
 // -----
-func.func @test_store_scatter_sg_map_2(%src: ui64) {
+func.func @test_store_scatter_layout_2(%src: ui64) {
   %0 = arith.constant dense<1>: vector<4xi1>
   %cst = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   %val = arith.constant dense<2.9>: vector<2xf32>
-  %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 1]>>
+  %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>,  #xegpu.layout<lane_layout = [4, 1], lane_data = [1, 1]>>
   // expected-error@+1 {{esult shape [2] is not consistent with distributed vector shape [2, 1] for tensor descriptor}}
-  xegpu.store %val, %1, %0 <{l1_hint = #xegpu.cache_hint<cached>, transpose}> : vector<2xf32>, !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 1]>>, vector<4xi1>
+  xegpu.store %val, %1, %0 <{l1_hint = #xegpu.cache_hint<cached>, transpose}> : vector<2xf32>, !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>,  #xegpu.layout<lane_layout = [4, 1], lane_data = [1, 1]>>, vector<4xi1>
   return
 }
 
@@ -394,18 +394,18 @@ func.func @test_dpas_4(%a : vector<8x16xf16>, %b: vector<8x8x2xf16>) {
 }
 
 // -----
-func.func @test_dpas_sg_map_1(%a : vector<8x1xf16>, %b: vector<8x2xf16>) {
-  // expected-error@+1 {{sg_map attributes for all operands and outputs are expected in SIMT xegpu::Dpas operation}}
-  %1 = xegpu.dpas %a, %b {sg_map_a = #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>} : vector<8x1xf16>, vector<8x2xf16> -> vector<8x1xf32>
+func.func @test_dpas_layout_1(%a : vector<8x1xf16>, %b: vector<8x2xf16>) {
+  // expected-error@+1 {{layout attributes should be either set for all operands (for SIMT code) or not set at all (for SIMD code)}}
+  %1 = xegpu.dpas %a, %b {a_layout =  #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<8x1xf16>, vector<8x2xf16> -> vector<8x1xf32>
   return
 }
 
 // -----
-func.func @test_dpas_sg_map_2(%a : vector<8x1xf16>, %b: vector<4x2xf16>) {
+func.func @test_dpas_layout_2(%a : vector<8x1xf16>, %b: vector<4x2xf16>) {
   // expected-error@+1 {{K-dimension mismatch}}
-  %1 = xegpu.dpas %a, %b {sg_map_a = #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>,
-                          sg_map_b = #xegpu.sg_map<wi_layout = [1, 16], wi_data = [2, 1]>,
-                          sg_map_c = #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>}
+  %1 = xegpu.dpas %a, %b {a_layout =  #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+                          b_layout =  #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>,
+                          c_layout =  #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
                           : vector<8x1xf16>, vector<4x2xf16> -> vector<8x1xf32>
   return
 }
@@ -438,16 +438,16 @@ func.func @tensor_desc_invalid_rank_1(%src: memref<24x32xf32>) {
 // -----
 func.func @tensor_desc_1D_invalid_map_layout(%src: memref<24x32xf32>) {
   %0 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> ->
-      // expected-error@+1 {{outer layout distribution and data mapping must be 1 for 1D tensor}}
-      !xegpu.tensor_desc<16xf32, #xegpu.sg_map<wi_layout = [2, 16], wi_data = [1, 1]>>
+      // expected-error@+1 {{expected layout rank to match tensor rank}}
+      !xegpu.tensor_desc<16xf32,  #xegpu.layout<lane_layout = [2, 16], lane_data = [1, 1]>>
   return
 }
 
 // -----
 func.func @tensor_desc_1D_invalid_map_data(%src: memref<24x32xf32>) {
   %0 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> ->
-      // expected-error@+1 {{outer layout distribution and data mapping must be 1 for 1D tensor}}
-      !xegpu.tensor_desc<16xf32, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [2, 1]>>
+      // expected-error@+1 {{expected layout rank to match tensor rank}}
+      !xegpu.tensor_desc<16xf32,  #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>>
   return
 }
 
@@ -455,7 +455,7 @@ func.func @tensor_desc_1D_invalid_map_data(%src: memref<24x32xf32>) {
 func.func @tensor_desc_invalid_map_layout(%src: memref<24x32xf32>) {
   %0 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> ->
       // expected-error@+1 {{cannot distribute 8 over 16 work items with 1 elements each}}
-      !xegpu.tensor_desc<4x8xf32, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>>
+      !xegpu.tensor_desc<4x8xf32,  #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
   return
 }
 
@@ -463,7 +463,7 @@ func.func @tensor_desc_invalid_map_layout(%src: memref<24x32xf32>) {
 func.func @tensor_desc_invalid_map_layout_1(%src: memref<24x32xf32>) {
   %0 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> ->
       // expected-error@+1 {{cannot distribute 4 over 8 work items with 1 elements each}}
-      !xegpu.tensor_desc<4x8xf32, #xegpu.sg_map<wi_layout = [8, 2], wi_data = [1, 1]>>
+      !xegpu.tensor_desc<4x8xf32,  #xegpu.layout<lane_layout = [8, 2], lane_data = [1, 1]>>
   return
 }
 
@@ -471,7 +471,7 @@ func.func @tensor_desc_invalid_map_layout_1(%src: memref<24x32xf32>) {
 func.func @tensor_desc_invalid_map_data(%src: memref<24x32xf32>) {
   %0 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> ->
       // expected-error@+1 {{cannot distribute 4 over 2 work items with 4 elements each}}
-      !xegpu.tensor_desc<4x8xf32, #xegpu.sg_map<wi_layout = [2, 8], wi_data = [4, 1]>>
+      !xegpu.tensor_desc<4x8xf32,  #xegpu.layout<lane_layout = [2, 8], lane_data = [4, 1]>>
   return
 }
 
@@ -479,7 +479,7 @@ func.func @tensor_desc_invalid_map_data(%src: memref<24x32xf32>) {
 func.func @tensor_desc_invalid_map_data_1(%src: memref<24x32xf32>) {
   %0 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> ->
       // expected-error@+1 {{cannot distribute 4 over 8 work items with 1 elements each}}
-      !xegpu.tensor_desc<4x8xf32, #xegpu.sg_map<wi_layout = [8, 2], wi_data = [1, 2]>>
+      !xegpu.tensor_desc<4x8xf32,  #xegpu.layout<lane_layout = [8, 2], lane_data = [1, 2]>>
   return
 }
 
@@ -490,7 +490,7 @@ func.func @tensor_desc_scatter_invalid_map_data(%src: ui64) {
       // expected-error@+1 {{cannot map over non-contiguous scattered row elements}}
       !xegpu.tensor_desc<4x2xf32,
         #xegpu.scatter_tdesc_attr<chunk_size = 2>,
-        #xegpu.sg_map<wi_layout = [1, 1], wi_data = [2, 1]>>
+         #xegpu.layout<lane_layout = [1, 1], lane_data = [2, 1]>>
   return
 }
 
@@ -500,7 +500,7 @@ func.func @tensor_desc_scatter_invalid_map_data_1(%src: ui64, %offsets: vector<1
       // expected-error@+1 {{work item data mapping must match the number of contiguous elements}}
       !xegpu.tensor_desc<16xf32,
         #xegpu.scatter_tdesc_attr<chunk_size = 1>,
-        #xegpu.sg_map<wi_layout = [1, 8], wi_data = [1, 2]>>
+         #xegpu.layout<lane_layout = [8], lane_data = [2]>>
   return
 }
 
@@ -510,7 +510,7 @@ func.func @tensor_desc_scatter_invalid_chunk_size_1D(%src: ui64, %offsets: vecto
       // expected-error@+1 {{expected non-contiguous elements for 1D tensor}}
       !xegpu.tensor_desc<16xf32,
         #xegpu.scatter_tdesc_attr<chunk_size = 2>,
-        #xegpu.sg_map<wi_layout = [1, 8], wi_data = [1, 2]>>
+         #xegpu.layout<lane_layout = [1, 8], lane_data = [1, 2]>>
   return
 }
 
@@ -520,6 +520,142 @@ func.func @tensor_desc_scatter_invalid_chunk_size_2D(%src: ui64, %offsets: vecto
       // expected-error@+1 {{expected chunk blocks for 2D tensor}}
       !xegpu.tensor_desc<16x2xf32,
         #xegpu.scatter_tdesc_attr<chunk_size = 1>,
-        #xegpu.sg_map<wi_layout = [8, 1], wi_data = [1, 2]>>
+         #xegpu.layout<lane_layout = [8, 1], lane_data = [1, 2]>>
+  return
+}
+
+// -----
+func.func @test_convert_layout_same_map(%a: vector<32x64xf16>) {
+  // expected-error@+1 {{expected different srcMap and resMap}}
+  %2 = xegpu.convert_layout %a {srcMap = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+                                resMap = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<32x64xf16>
+  gpu.return
+}
+
+// -----
+func.func @test_convert_layout_unmatch(%a: vector<32x64xf16>) {
+  // expected-error@+1 {{expected srcMap and resMap be WgLayout or SgLayout at the same time}}
+  %2 = xegpu.convert_layout %a {srcMap = #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1]>,
+                                resMap = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<32x64xf16>
+  gpu.return
+}
+
+// -----
+func.func @tensor_desc_invalid_layout_attr(%src: ui64, %offsets: vector<16xindex>) {
+  %1 = xegpu.create_tdesc %src, %offsets : ui64, vector<16xindex> ->
+      !xegpu.tensor_desc<16x2xf32,
+        #xegpu.scatter_tdesc_attr<chunk_size = 2>,
+         // expected-error@+1 {{expected at least one of sg_layout, inst_data or lane_layout}}
+         #xegpu.layout<sg_data = [16, 2], lane_data = [1, 2]>>
+  return
+}
+
+// -----
+func.func @tensor_desc_rank_mismatch(%src: ui64, %offsets: vector<16xindex>) {
+  %1 = xegpu.create_tdesc %src, %offsets : ui64, vector<16xindex> ->
+      !xegpu.tensor_desc<16x2xf32,
+        #xegpu.scatter_tdesc_attr<chunk_size = 2>,
+        // expected-error@+1 {{expected sg_layout and lane_layout to have the same rank}}
+        #xegpu.layout<sg_layout = [1, 1, 1], sg_data = [16, 2, 1], lane_layout = [8, 1], lane_data = [1, 2]>>
+  return
+}
+
+// -----
+func.func @tensor_desc_rank_mismatch(%src: ui64, %offsets: vector<16xindex>) {
+  %1 = xegpu.create_tdesc %src, %offsets : ui64, vector<16xindex> ->
+      !xegpu.tensor_desc<16x2xf32,
+        #xegpu.scatter_tdesc_attr<chunk_size = 2>,
+        // expected-error@+1 {{expected sg_layout and inst_data to have the same rank}}
+        #xegpu.layout<sg_layout = [1, 1, 1], sg_data = [16, 2, 1], inst_data = [16, 2]>>
+  return
+}
+
+// -----
+func.func @tensor_desc_rank_mismatch(%src: ui64, %offsets: vector<16xindex>) {
+  %1 = xegpu.create_tdesc %src, %offsets : ui64, vector<16xindex> ->
+      !xegpu.tensor_desc<16x2xf32,
+        #xegpu.scatter_tdesc_attr<chunk_size = 2>,
+        // expected-error@+1 {{expected inst_data and lane_layout to have the same rank}}
+        #xegpu.layout<inst_data = [16, 2, 1], lane_layout = [8, 1], lane_data = [1, 2]>>
+  return
+}
+
+// -----
+func.func @tensor_desc_rank_mismatch(%src: ui64, %offsets: vector<16xindex>) {
+  %1 = xegpu.create_tdesc %src, %offsets : ui64, vector<16xindex> ->
+      !xegpu.tensor_desc<16x2xf32,
+        #xegpu.scatter_tdesc_attr<chunk_size = 2>,
+        // expected-error@+1 {{expected lane_data and lane_layout to have the same rank}}
+        #xegpu.layout<inst_data = [16, 2], lane_layout = [8, 1], lane_data = [1, 2, 1]>>
+  return
+}
+
+// -----
+func.func @tensor_desc_rank_mismatch(%src: ui64, %offsets: vector<16xindex>) {
+  %1 = xegpu.create_tdesc %src, %offsets : ui64, vector<16xindex> ->
+      !xegpu.tensor_desc<16x2xf32,
+        #xegpu.scatter_tdesc_attr<chunk_size = 2>,
+        // expected-error@+1 {{expected sg_data and sg_layout to have the same rank}}
+        #xegpu.layout<sg_layout = [1, 1], sg_data = [16, 2, 1], inst_data = [16, 2]>>
+  return
+}
+
+// -----
+func.func @tensor_desc_rank_mismatch(%src: ui64, %offsets: vector<16xindex>) {
+  %1 = xegpu.create_tdesc %src, %offsets : ui64, vector<16xindex> ->
+      // expected-error@+1 {{expected layout rank to match tensor rank}}
+      !xegpu.tensor_desc<16x2xf32,
+        #xegpu.scatter_tdesc_attr<chunk_size = 2>,
+        #xegpu.layout<sg_layout = [1], sg_data = [32], inst_data = [16]>>
+  return
+}
+
+// -----
+func.func @tensor_desc_invalid_sg_data(%src: ui64, %offsets: vector<16xindex>) {
+  %1 = xegpu.create_tdesc %src, %offsets : ui64, vector<16xindex> ->
+      !xegpu.tensor_desc<16x2xf32,
+        #xegpu.scatter_tdesc_attr<chunk_size = 2>,
+        // expected-error@+1 {{expected sg_layout being used with sg_data}}
+        #xegpu.layout<sg_data = [16, 2], lane_layout = [8, 1], lane_data = [1, 2]>>
+  return
+}
+
+// -----
+func.func @tensor_desc_rank_mismatch(%src: ui64, %offsets: vector<16xindex>) {
+  %1 = xegpu.create_tdesc %src, %offsets : ui64, vector<16xindex> ->
+      !xegpu.tensor_desc<16x2xf32,
+        #xegpu.scatter_tdesc_attr<chunk_size = 2>,
+        // expected-error@+1 {{expected lane_layout being used with lane_data}}
+        #xegpu.layout<inst_data = [16, 2], lane_data = [1, 2]>>
+  return
+}
+
+// -----
+func.func @tensor_desc_rank_mismatch(%src: ui64, %offsets: vector<16xindex>) {
+  %1 = xegpu.create_tdesc %src, %offsets : ui64, vector<16xindex> ->
+      !xegpu.tensor_desc<16x2xf32,
+        #xegpu.scatter_tdesc_attr<chunk_size = 2>,
+        // expected-error@+1 {{expected sg_layout/lane_layout being used with order}}
+        #xegpu.layout<inst_data = [16, 2], order = [0, 1]>>
+  return
+}
+
+// -----
+func.func @tensor_desc_rank_mismatch(%src: ui64, %offsets: vector<16xindex>) {
+  %1 = xegpu.create_tdesc %src, %offsets : ui64, vector<16xindex> ->
+      !xegpu.tensor_desc<16x2xf32,
+        #xegpu.scatter_tdesc_attr<chunk_size = 2>,
+        // expected-error@+1 {{expected order and sg_layout to have the same rank}}
+        #xegpu.layout<sg_layout = [1, 1], sg_data = [16, 2], order = [0, 1, 2]>>
+  return
+}
+
+// -----
+func.func @tensor_desc_invalid_sg_data(%src: ui64, %offsets: vector<16xindex>) {
+  %1 = xegpu.create_tdesc %src, %offsets : ui64, vector<16xindex> ->
+      !xegpu.tensor_desc<16x2xf32,
+        #xegpu.scatter_tdesc_attr<chunk_size = 2>,
+        // expected-error@+1 {{expected order and lane_layout to have the same rank}}
+        #xegpu.layout<lane_layout = [8, 1], lane_data = [1, 2], order = [0, 1, 2]>>
   return
 }
