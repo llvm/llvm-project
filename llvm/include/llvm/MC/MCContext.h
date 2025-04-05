@@ -19,8 +19,10 @@
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCAsmMacro.h"
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/MC/MCGOFFAttributes.h"
 #include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/MC/MCSection.h"
+#include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCSymbolTableEntry.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Support/Allocator.h"
@@ -54,7 +56,6 @@ class MCSection;
 class MCSectionCOFF;
 class MCSectionDXContainer;
 class MCSectionELF;
-class MCSectionGOFF;
 class MCSectionMachO;
 class MCSectionSPIRV;
 class MCSectionWasm;
@@ -269,6 +270,21 @@ private:
     }
   };
 
+  struct GOFFSectionKey {
+    std::string SectionName;
+    GOFF::ESDSymbolType SymbolType;
+
+    GOFFSectionKey(StringRef SectionName, GOFF::ESDSymbolType SymbolType)
+        : SectionName(SectionName), SymbolType(SymbolType) {}
+
+    bool operator<(const GOFFSectionKey &Other) const {
+      if (SymbolType == Other.SymbolType) {
+        return SectionName < Other.SectionName;
+      }
+      return SymbolType < Other.SymbolType;
+    }
+  };
+
   struct WasmSectionKey {
     std::string SectionName;
     StringRef GroupName;
@@ -322,7 +338,7 @@ private:
   StringMap<MCSectionMachO *> MachOUniquingMap;
   std::map<COFFSectionKey, MCSectionCOFF *> COFFUniquingMap;
   StringMap<MCSectionELF *> ELFUniquingMap;
-  std::map<std::string, MCSectionGOFF *> GOFFUniquingMap;
+  std::map<GOFFSectionKey, MCSectionGOFF *> GOFFUniquingMap;
   std::map<WasmSectionKey, MCSectionWasm *> WasmUniquingMap;
   std::map<XCOFFSectionKey, MCSectionXCOFF *> XCOFFUniquingMap;
   StringMap<MCSectionDXContainer *> DXCUniquingMap;
@@ -599,8 +615,23 @@ public:
                                                    unsigned Flags,
                                                    unsigned EntrySize);
 
-  MCSectionGOFF *getGOFFSection(StringRef Section, SectionKind Kind,
-                                MCSection *Parent, uint32_t Subsection = 0);
+private:
+  MCSectionGOFF *getGOFFSection(SectionKind Kind,
+                                GOFF::ESDSymbolType SymbolType, StringRef Name,
+                                GOFF::SDAttr SDAttributes,
+                                GOFF::EDAttr EDAttributes,
+                                GOFF::PRAttr PRAttributes, MCSection *Parent);
+
+public:
+  MCSectionGOFF *getGOFFSection(SectionKind Kind, StringRef Name,
+                                GOFF::SDAttr SDAttributes,
+                                MCSection *Parent = nullptr);
+  MCSectionGOFF *getGOFFSection(SectionKind Kind, StringRef Name,
+                                GOFF::EDAttr EDAttributes,
+                                MCSection *Parent = nullptr);
+  MCSectionGOFF *getGOFFSection(SectionKind Kind, StringRef Name,
+                                GOFF::PRAttr PRAttributes,
+                                MCSection *Parent = nullptr);
 
   MCSectionCOFF *getCOFFSection(StringRef Section, unsigned Characteristics,
                                 StringRef COMDATSymName, int Selection,

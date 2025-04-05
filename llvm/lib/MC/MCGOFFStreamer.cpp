@@ -17,6 +17,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCGOFFObjectWriter.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Path.h"
 
 using namespace llvm;
 
@@ -24,6 +25,29 @@ MCGOFFStreamer::~MCGOFFStreamer() {}
 
 GOFFObjectWriter &MCGOFFStreamer::getWriter() {
   return static_cast<GOFFObjectWriter &>(getAssembler().getWriter());
+}
+
+void MCGOFFStreamer::initSections(bool /*NoExecStack*/,
+                                  const MCSubtargetInfo &STI) {
+  MCContext &Ctx = getContext();
+  // Emit the text section.
+  switchSection(Ctx.getObjectFileInfo()->getTextSection());
+}
+
+namespace {
+// Make sure that all section are registered in the correct order.
+void registerSectionHierarchy(MCAssembler &Asm, MCSectionGOFF *Section) {
+  if (Section->isRegistered())
+    return;
+  if (Section->getParent())
+    registerSectionHierarchy(Asm, Section->getParent());
+  registerSectionHierarchy(Asm, Section);
+}
+} // namespace
+
+void MCGOFFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
+  registerSectionHierarchy(getAssembler(), static_cast<MCSectionGOFF *>(Section));
+  MCObjectStreamer::changeSection(Section, Subsection);
 }
 
 MCStreamer *llvm::createGOFFStreamer(MCContext &Context,
