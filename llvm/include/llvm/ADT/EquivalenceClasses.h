@@ -15,13 +15,14 @@
 #ifndef LLVM_ADT_EQUIVALENCECLASSES_H
 #define LLVM_ADT_EQUIVALENCECLASSES_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Support/Allocator.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
-#include <set>
 
 namespace llvm {
 
@@ -33,8 +34,7 @@ namespace llvm {
 ///
 /// This implementation is an efficient implementation that only stores one copy
 /// of the element being indexed per entry in the set, and allows any arbitrary
-/// type to be indexed (as long as it can be ordered with operator< or a
-/// comparator is provided).
+/// type to be indexed (as long as it can be implements DenseMapInfo).
 ///
 /// Here is a simple example using integers:
 ///
@@ -58,18 +58,17 @@ namespace llvm {
 ///   4
 ///   5 1 2
 ///
-template <class ElemTy, class Compare = std::less<ElemTy>>
-class EquivalenceClasses {
+template <class ElemTy> class EquivalenceClasses {
   /// ECValue - The EquivalenceClasses data structure is just a set of these.
   /// Each of these represents a relation for a value.  First it stores the
-  /// value itself, which provides the ordering that the set queries.  Next, it
-  /// provides a "next pointer", which is used to enumerate all of the elements
-  /// in the unioned set.  Finally, it defines either a "end of list pointer" or
-  /// "leader pointer" depending on whether the value itself is a leader.  A
-  /// "leader pointer" points to the node that is the leader for this element,
-  /// if the node is not a leader.  A "end of list pointer" points to the last
-  /// node in the list of members of this list.  Whether or not a node is a
-  /// leader is determined by a bit stolen from one of the pointers.
+  /// value itself. Next, it provides a "next pointer", which is used to
+  /// enumerate all of the elements in the unioned set.  Finally, it defines
+  /// either a "end of list pointer" or "leader pointer" depending on whether
+  /// the value itself is a leader. A "leader pointer" points to the node that
+  /// is the leader for this element, if the node is not a leader.  A "end of
+  /// list pointer" points to the last node in the list of members of this list.
+  /// Whether or not a node is a leader is determined by a bit stolen from one
+  /// of the pointers.
   class ECValue {
     friend class EquivalenceClasses;
 
@@ -113,35 +112,14 @@ class EquivalenceClasses {
     }
   };
 
-  /// A wrapper of the comparator, to be passed to the set.
-  struct ECValueComparator {
-    using is_transparent = void;
-
-    ECValueComparator() : compare(Compare()) {}
-
-    bool operator()(const ECValue &lhs, const ECValue &rhs) const {
-      return compare(lhs.Data, rhs.Data);
-    }
-
-    template <typename T>
-    bool operator()(const T &lhs, const ECValue &rhs) const {
-      return compare(lhs, rhs.Data);
-    }
-
-    template <typename T>
-    bool operator()(const ECValue &lhs, const T &rhs) const {
-      return compare(lhs.Data, rhs);
-    }
-
-    const Compare compare;
-  };
-
   /// TheMapping - This implicitly provides a mapping from ElemTy values to the
   /// ECValues, it just keeps the key as part of the value.
-  std::set<ECValue, ECValueComparator> TheMapping;
+  DenseMap<ElemTy, ECValue *> TheMapping;
 
   /// List of all members, used to provide a determinstic iteration order.
   SmallVector<const ECValue *> Members;
+
+  mutable BumpPtrAllocator ECValueAllocator;
 
 public:
   EquivalenceClasses() = default;
@@ -232,10 +210,14 @@ public:
   /// insert - Insert a new value into the union/find set, ignoring the request
   /// if the value already exists.
   const ECValue &insert(const ElemTy &Data) {
-    auto I = TheMapping.insert(ECValue(Data));
-    if (I.second)
-      Members.push_back(&*I.first);
-    return *I.first;
+    auto I = TheMapping.insert({Data, nullptr});
+    if (!I.second)
+      return *I.first->second;
+
+    auto *ECV = new (ECValueAllocator) ECValue(Data);
+    I.first->second = ECV;
+    Members.push_back(ECV);
+    return *ECV;
   }
 
   /// findLeader - Given a value in the set, return a member iterator for the
@@ -246,7 +228,7 @@ public:
     auto I = TheMapping.find(V);
     if (I == TheMapping.end())
       return member_iterator(nullptr);
-    return findLeader(*I);
+    return findLeader(*I->second);
   }
   member_iterator findLeader(const ECValue &ECV) const {
     return member_iterator(ECV.getLeader());
