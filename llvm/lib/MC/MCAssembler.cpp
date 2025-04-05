@@ -159,13 +159,6 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
     Ctx.reportError(Fixup.getLoc(), "expected relocatable expression");
     return true;
   }
-  if (const MCSymbolRefExpr *RefB = Target.getSymB()) {
-    if (RefB->getKind() != MCSymbolRefExpr::VK_None) {
-      Ctx.reportError(Fixup.getLoc(),
-                      "unsupported subtraction of qualified symbol");
-      return true;
-    }
-  }
 
   unsigned FixupFlags = getBackend().getFixupKindInfo(Fixup.getKind()).Flags;
   if (FixupFlags & MCFixupKindInfo::FKF_IsTarget)
