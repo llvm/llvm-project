@@ -3550,7 +3550,13 @@ struct StoreOpConversion : public fir::FIROpConversion<fir::StoreOp> {
       newOp = rewriter.create<mlir::LLVM::MemcpyOp>(
           loc, llvmMemref, llvmValue, boxSize, /*isVolatile=*/false);
     } else {
-      newOp = rewriter.create<mlir::LLVM::StoreOp>(loc, llvmValue, llvmMemref);
+      unsigned alignment =
+          store->getAttrOfType<mlir::IntegerAttr>("alignment")
+              ? store->getAttrOfType<mlir::IntegerAttr>("alignment").getInt()
+              : 0;
+      newOp = rewriter.create<mlir::LLVM::StoreOp>(
+          loc, llvmValue, llvmMemref, alignment, store->hasAttr("volatile"),
+          store->hasAttr("nontemporal"));
     }
     if (std::optional<mlir::ArrayAttr> optionalTag = store.getTbaa())
       newOp.setTBAATags(*optionalTag);
