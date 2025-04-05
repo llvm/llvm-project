@@ -102,7 +102,7 @@ std::unique_ptr<InterfacePass<FunctionOpInterface>> createLoopUnrollPass(
 /// Creates a loop unroll jam pass to unroll jam by the specified factor. A
 /// factor of -1 lets the pass use the default factor or the one on the command
 /// line if provided.
-std::unique_ptr<OperationPass<func::FuncOp>>
+std::unique_ptr<InterfacePass<FunctionOpInterface>>
 createLoopUnrollAndJamPass(int unrollJamFactor = -1);
 
 /// Creates a pass to pipeline explicit movement of data across levels of the

@@ -109,7 +109,6 @@ public:
   size_t GetIndexOfChildWithName(ConstString name) override {
     return ExtractIndexFromString(name.GetCString());
   }
-  bool MightHaveChildren() override { return true; }
   lldb::ChildCacheState Update() override;
 
 protected:

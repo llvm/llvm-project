@@ -4,7 +4,7 @@ export void cantCast() {
   int A[3] = {1,2,3};
   int B[4] = {1,2,3,4};
   B = (int[4])A;
-  // expected-error@-1 {{C-style cast from 'int *' to 'int[4]' is not allowed}}
+  // expected-error@-1 {{C-style cast from 'int[3]' to 'int[4]' is not allowed}}
 }
 
 struct S {
@@ -43,7 +43,9 @@ export void cantCast4() {
   int2 A = {1,2};
   R r = R(A);
   // expected-error@-1 {{no matching conversion for functional-style cast from 'int2' (aka 'vector<int, 2>') to 'R'}}
-  R r2 = {1, 2};
+  R r2;
+  r2.A = 1;
+  r2.F = 2.0;
   int2 B = (int2)r2;
   // expected-error@-1 {{cannot convert 'R' to 'int2' (aka 'vector<int, 2>') without a conversion operator}}
 }

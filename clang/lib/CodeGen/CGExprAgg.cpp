@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "CGCXXABI.h"
+#include "CGDebugInfo.h"
+#include "CGHLSLRuntime.h"
 #include "CGObjCRuntime.h"
 #include "CGRecordLayout.h"
 #include "CodeGenFunction.h"
@@ -301,15 +303,7 @@ void AggExprEmitter::withReturnValueSlot(
   llvm::Value *LifetimeSizePtr = nullptr;
   llvm::IntrinsicInst *LifetimeStartInst = nullptr;
   if (!UseTemp) {
-    // It is possible for the existing slot we are using directly to have been
-    // allocated in the correct AS for an indirect return, and then cast to
-    // the default AS (this is the behaviour of CreateMemTemp), however we know
-    // that the return address is expected to point to the uncasted AS, hence we
-    // strip possible pointer casts here.
-    if (Dest.getAddress().isValid())
-      RetAddr = Dest.getAddress().withPointer(
-          Dest.getAddress().getBasePointer()->stripPointerCasts(),
-          Dest.getAddress().isKnownNonNull());
+    RetAddr = Dest.getAddress();
   } else {
     RetAddr = CGF.CreateMemTempWithoutCast(RetTy, "tmp");
     llvm::TypeSize Size =
@@ -1775,6 +1769,18 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
     return;
   }
 #endif
+
+  // HLSL initialization lists in the AST are an expansion which can contain
+  // side-effecting expressions wrapped in opaque value expressions. To properly
+  // emit these we need to emit the opaque values before we emit the argument
+  // expressions themselves. This is a little hacky, but it prevents us needing
+  // to do a bigger AST-level change for a language feature that we need
+  // deprecate in the near future. See related HLSL language proposals:
+  // * 0005-strict-initializer-lists.md
+  // * https://github.com/microsoft/hlsl-specs/pull/325
+  if (CGF.getLangOpts().HLSL && isa<InitListExpr>(ExprToVisit))
+    CGF.CGM.getHLSLRuntime().emitInitListOpaqueValues(
+        CGF, cast<InitListExpr>(ExprToVisit));
 
   AggValueSlot Dest = EnsureSlot(ExprToVisit->getType());
 

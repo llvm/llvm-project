@@ -555,8 +555,6 @@ static AttributeSet getIntrinsicFnAttributeSet(LLVMContext &C, unsigned ID) {
     default: llvm_unreachable("Invalid attribute set number");)";
 
   for (const CodeGenIntrinsic &Int : Ints) {
-    if (!hasFnAttributes(Int))
-      continue;
     unsigned ID = UniqFnAttributes.size();
     if (!UniqFnAttributes.try_emplace(&Int, ID).second)
       continue;
@@ -606,8 +604,7 @@ static AttributeSet getIntrinsicFnAttributeSet(LLVMContext &C, unsigned ID) {
   }
 } // getIntrinsicFnAttributeSet
 
-AttributeList Intrinsic::getAttributes(LLVMContext &C, ID id) {
-)";
+static constexpr uint16_t IntrinsicsToAttributesMap[] = {)";
 
   // Compute the maximum number of attribute arguments and the map. For function
   // attributes, we only consider whether the intrinsics has any function
@@ -619,6 +616,14 @@ AttributeList Intrinsic::getAttributes(LLVMContext &C, ID id) {
     UniqAttributes.try_emplace(&Int, ID);
   }
 
+  // Emit an array of AttributeList.  Most intrinsics will have at least one
+  // entry, for the function itself (index ~1), which is usually nounwind.
+  for (const CodeGenIntrinsic &Int : Ints) {
+    uint16_t FnAttrIndex = UniqFnAttributes[&Int];
+    OS << formatv("\n    {} << 8 | {}, // {}", FnAttrIndex,
+                  UniqAttributes[&Int], Int.Name);
+  }
+
   // Assign a 16-bit packed ID for each intrinsic. The lower 8-bits will be its
   // "argument attribute ID" (index in UniqAttributes) and upper 8 bits will be
   // its "function attribute ID" (index in UniqFnAttributes).
@@ -627,17 +632,12 @@ AttributeList Intrinsic::getAttributes(LLVMContext &C, ID id) {
   if (UniqFnAttributes.size() > 256)
     PrintFatalError("Too many unique function attributes for table!");
 
-  // Emit an array of AttributeList.  Most intrinsics will have at least one
-  // entry, for the function itself (index ~1), which is usually nounwind.
-  OS << "  static constexpr uint16_t IntrinsicsToAttributesMap[] = {";
-  for (const CodeGenIntrinsic &Int : Ints) {
-    uint16_t FnAttrIndex = hasFnAttributes(Int) ? UniqFnAttributes[&Int] : 0;
-    OS << formatv("\n    {} << 8 | {}, // {}", FnAttrIndex,
-                  UniqAttributes[&Int], Int.Name);
-  }
+  OS << R"(
+};
+
+AttributeList Intrinsic::getAttributes(LLVMContext &C, ID id) {)";
 
   OS << formatv(R"(
-  };
   if (id == 0)
     return AttributeList();
 

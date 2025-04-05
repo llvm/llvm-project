@@ -314,6 +314,8 @@ public:
   mangleName(const Fortran::semantics::DerivedTypeSpec &) = 0;
   /// Unique a compiler generated name (add a containing scope specific prefix)
   virtual std::string mangleName(std::string &) = 0;
+  /// Unique a compiler generated name (add a provided scope specific prefix)
+  virtual std::string mangleName(std::string &, const semantics::Scope &) = 0;
   /// Return the field name for a derived type component inside a fir.record
   /// type.
   virtual std::string

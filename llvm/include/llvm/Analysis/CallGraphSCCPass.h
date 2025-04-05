@@ -76,11 +76,6 @@ public:
   /// the call graph.  If the derived class implements this method, it should
   /// always explicitly call the implementation here.
   void getAnalysisUsage(AnalysisUsage &Info) const override;
-
-protected:
-  /// Optional passes call this function to check whether the pass should be
-  /// skipped. This is the case when optimization bisect is over the limit.
-  bool skipSCC(CallGraphSCC &SCC) const;
 };
 
 /// CallGraphSCC - This is a single SCC that a CallGraphSCCPass is run on.

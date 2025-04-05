@@ -371,7 +371,7 @@ bool RISCVVectorPeephole::convertAllOnesVMergeToVMv(MachineInstr &MI) const {
   MI.removeOperand(2); // False operand
   MI.removeOperand(3); // Mask operand
   MI.addOperand(
-      MachineOperand::CreateImm(RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED));
+      MachineOperand::CreateImm(RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED));
 
   // vmv.v.v doesn't have a mask operand, so we may be able to inflate the
   // register class for the destination and passthru operands e.g. VRNoV0 -> VR
@@ -438,7 +438,7 @@ bool RISCVVectorPeephole::convertSameMaskVMergeToVMv(MachineInstr &MI) {
   MI.removeOperand(2); // False operand
   MI.removeOperand(3); // Mask operand
   MI.addOperand(
-      MachineOperand::CreateImm(RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED));
+      MachineOperand::CreateImm(RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED));
 
   // vmv.v.v doesn't have a mask operand, so we may be able to inflate the
   // register class for the destination and passthru operands e.g. VRNoV0 -> VR
@@ -466,15 +466,20 @@ bool RISCVVectorPeephole::convertToUnmasked(MachineInstr &MI) const {
       RISCVII::hasVecPolicyOp(MCID.TSFlags);
   const bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(MCID);
   const MCInstrDesc &MaskedMCID = TII->get(MI.getOpcode());
-  assert(RISCVII::hasVecPolicyOp(MaskedMCID.TSFlags) ==
-             RISCVII::hasVecPolicyOp(MCID.TSFlags) &&
-         "Masked and unmasked pseudos are inconsistent");
+  assert((RISCVII::hasVecPolicyOp(MaskedMCID.TSFlags) ||
+          !RISCVII::hasVecPolicyOp(MCID.TSFlags)) &&
+         "Unmasked pseudo has policy but masked pseudo doesn't?");
   assert(HasPolicyOp == HasPassthru && "Unexpected pseudo structure");
   assert(!(HasPassthru && !RISCVII::isFirstDefTiedToFirstUse(MaskedMCID)) &&
          "Unmasked with passthru but masked with no passthru?");
   (void)HasPolicyOp;
 
   MI.setDesc(MCID);
+
+  // Drop the policy operand if unmasked doesn't need it.
+  if (RISCVII::hasVecPolicyOp(MaskedMCID.TSFlags) &&
+      !RISCVII::hasVecPolicyOp(MCID.TSFlags))
+    MI.removeOperand(RISCVII::getVecPolicyOpNum(MaskedMCID));
 
   // TODO: Increment all MaskOpIdxs in tablegen by num of explicit defs?
   unsigned MaskOpIdx = I->MaskOpIdx + MI.getNumExplicitDefs();
@@ -575,7 +580,7 @@ bool RISCVVectorPeephole::foldUndefPassthruVMV_V_V(MachineInstr &MI) {
         Src->getOperand(RISCVII::getVecPolicyOpNum(Src->getDesc()));
 
     if (RISCV::isVLKnownLE(MIVL, SrcVL))
-      SrcPolicy.setImm(SrcPolicy.getImm() | RISCVII::TAIL_AGNOSTIC);
+      SrcPolicy.setImm(SrcPolicy.getImm() | RISCVVType::TAIL_AGNOSTIC);
   }
 
   MRI->replaceRegWith(MI.getOperand(0).getReg(), MI.getOperand(2).getReg());
@@ -641,10 +646,10 @@ bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
   }
 
   // If MI was tail agnostic and the VL didn't increase, preserve it.
-  int64_t Policy = RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED;
-  if ((MI.getOperand(5).getImm() & RISCVII::TAIL_AGNOSTIC) &&
+  int64_t Policy = RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED;
+  if ((MI.getOperand(5).getImm() & RISCVVType::TAIL_AGNOSTIC) &&
       RISCV::isVLKnownLE(MI.getOperand(3), SrcVL))
-    Policy |= RISCVII::TAIL_AGNOSTIC;
+    Policy |= RISCVVType::TAIL_AGNOSTIC;
   Src->getOperand(RISCVII::getVecPolicyOpNum(Src->getDesc())).setImm(Policy);
 
   MRI->replaceRegWith(MI.getOperand(0).getReg(), Src->getOperand(0).getReg());

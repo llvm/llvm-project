@@ -202,6 +202,13 @@ public:
           if (!C)
             continue;
 
+          bool isExempt = T.getAsString() == "NoVirtualDestructorBase" &&
+                          safeGetName(C->getParent()) == "WTF";
+          if (isExempt || ExemptDecls.contains(C)) {
+            ExemptDecls.insert(RD);
+            continue;
+          }
+
           if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(C)) {
             for (auto &Arg : CTSD->getTemplateArgs().asArray()) {
               if (Arg.getKind() != TemplateArgument::Type)
@@ -223,12 +230,13 @@ public:
 
       llvm::SetVector<const CXXRecordDecl *> Decls;
       llvm::DenseSet<const CXXRecordDecl *> CRTPs;
+      llvm::DenseSet<const CXXRecordDecl *> ExemptDecls;
     };
 
     LocalVisitor visitor(this);
     visitor.TraverseDecl(const_cast<TranslationUnitDecl *>(TUD));
     for (auto *RD : visitor.Decls) {
-      if (visitor.CRTPs.contains(RD))
+      if (visitor.CRTPs.contains(RD) || visitor.ExemptDecls.contains(RD))
         continue;
       visitCXXRecordDecl(RD);
     }

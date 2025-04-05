@@ -185,6 +185,8 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
             ]
 
     def get_next_port(self):
+        if available_ports := self.getPlatformAvailablePorts():
+            return random.choice(available_ports)
         return 12000 + random.randint(0, 7999)
 
     def reset_test_sequence(self):
@@ -249,14 +251,11 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
 
     def _verify_socket(self, sock):
         # Normally, when the remote stub is not ready, we will get ECONNREFUSED during the
-        # connect() attempt. However, due to the way how ADB forwarding works, on android targets
+        # connect() attempt. However, due to the way how port forwarding can work, on some targets
         # the connect() will always be successful, but the connection will be immediately dropped
-        # if ADB could not connect on the remote side. This function tries to detect this
+        # if we could not connect on the remote side. This function tries to detect this
         # situation, and report it as "connection refused" so that the upper layers attempt the
         # connection again.
-        triple = self.dbg.GetSelectedPlatform().GetTriple()
-        if not re.match(".*-.*-.*-android", triple):
-            return  # Not android.
         can_read, _, _ = select.select([sock], [], [], 0.1)
         if sock not in can_read:
             return  # Data is not available, but the connection is alive.
@@ -397,13 +396,13 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
             # Schedule debug monitor to be shut down during teardown.
             logger = self.logger
 
-            connect_attemps = 0
+            connect_attempts = 0
             MAX_CONNECT_ATTEMPTS = 10
 
-            while connect_attemps < MAX_CONNECT_ATTEMPTS:
+            while connect_attempts < MAX_CONNECT_ATTEMPTS:
                 # Create a socket to talk to the server
                 try:
-                    logger.info("Connect attempt %d", connect_attemps + 1)
+                    logger.info("Connect attempt %d", connect_attempts + 1)
                     self.sock = self.create_socket()
                     self._server = Server(self.sock, server)
                     return server
@@ -411,7 +410,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
                     # Ignore, and try again.
                     pass
                 time.sleep(0.5)
-                connect_attemps += 1
+                connect_attempts += 1
 
             # We should close the server here to be safe.
             server.terminate()
@@ -685,7 +684,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         self.assertTrue("name" in reg_info)
         self.assertTrue("bitsize" in reg_info)
 
-        if not self.getArchitecture() == "aarch64":
+        if not (self.getArchitecture() == "aarch64" or self.isRISCV()):
             self.assertTrue("offset" in reg_info)
 
         self.assertTrue("encoding" in reg_info)

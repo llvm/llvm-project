@@ -19,6 +19,9 @@ class MMAType:
             "f64": "double",
             "s32": "i32",
             "b16": "i32",
+            "b8": "i32",
+            "b8x16.b6x16_p32": "i32",
+            "b8x16.b4x16_p64": "i32",
             "s8": "i32",
             "u8": "i32",
             "s4": "i32",
@@ -161,6 +164,18 @@ class MMAFrag:
             "m8n8:x1:b16": 1,
             "m8n8:x2:b16": 2,
             "m8n8:x4:b16": 4,
+            "m16n16:x1:b8": 2,
+            "m16n16:x2:b8": 4,
+            "m16n16:x1:b8x16.b6x16_p32": 2,
+            "m16n16:x2:b8x16.b6x16_p32": 4,
+            "m16n16:x1:b8x16.b4x16_p64": 2,
+            "m16n16:x2:b8x16.b4x16_p64": 4,
+            "m8n16:x1:b8x16.b6x16_p32": 1,
+            "m8n16:x2:b8x16.b6x16_p32": 2,
+            "m8n16:x4:b8x16.b6x16_p32": 4,
+            "m8n16:x1:b8x16.b4x16_p64": 1,
+            "m8n16:x2:b8x16.b4x16_p64": 2,
+            "m8n16:x4:b8x16.b4x16_p64": 4,
         }.get(
             "%s:%s:%s" % (geom, frag, ptx_elt_type),
             {
@@ -289,7 +304,15 @@ def get_ldst_ops(kind):
 
 
 def get_ldmatrix_ops():
-    return make_ldmatrix_ops(["m8n8"], ["x1", "x2", "x4"], ["b16"])
+    return (
+        make_ldmatrix_ops(["m8n8"], ["x1", "x2", "x4"], ["b16"])
+        + make_ldmatrix_ops(
+            ["m16n16"], ["x1", "x2"], ["b8", "b8x16.b6x16_p32", "b8x16.b4x16_p64"]
+        )
+        + make_ldmatrix_ops(
+            ["m8n16"], ["x1", "x2", "x4"], ["b8x16.b6x16_p32", "b8x16.b4x16_p64"]
+        )
+    )
 
 
 def is_wmma_geom_supported(geom):
@@ -330,8 +353,21 @@ def is_mma_geom_supported(geom):
 def is_ldmatrix_geom_supported(geom):
     if geom in ["m8n8"]:
         return ptx_version >= 65 and gpu_arch >= 75
+    elif geom in ["m16n16"]:
+        return ptx_version >= 86 and gpu_arch >= 100 and aa
+    elif geom in ["m8n16"]:
+        return ptx_version >= 86 and gpu_arch >= 100 and aa
     assert False  # Unexpected geometry.
 
+
+def is_ldmatrix_trans_supported(geom, trans):
+    if geom in ["m8n8"]:
+        return True
+    elif geom in ["m16n16"]:
+        return trans == ".trans"
+    elif geom in ["m8n16"]:
+        return trans == ""
+    assert False  # Unexpected geometry.
 
 def is_type_supported(ptx_type):
     if ptx_type in ["s8", "u8", "s32"]:
@@ -417,10 +453,11 @@ def is_ldst_variant_supported(frag, layout):
     return True
 
 
-def is_ldmatrix_variant_supported(frag):
+def is_ldmatrix_variant_supported(frag, trans):
     if not (
         is_type_supported(frag.mma_type.ptx_type)
         and is_ldmatrix_geom_supported(frag.geom)
+        and is_ldmatrix_trans_supported(frag.geom, trans)
     ):
         return False
     return frag.frag in ["x1", "x2", "x4"]
@@ -653,7 +690,7 @@ define ${ret_ty} @test_${function}_o(i8 ${as}* %src) {
         ["", ".shared"],
         ["", ".trans"],
     ):
-        if not is_ldmatrix_variant_supported(frag):
+        if not is_ldmatrix_variant_supported(frag, trans):
             continue
 
         params = {
@@ -944,6 +981,19 @@ def gen_check_unsupported_ops(items):
 ; PTX65LDMATRIX-DAG: ldmatrix.sync.aligned.m8n8.x2.trans.shared.b16
 ; PTX65LDMATRIX-DAG: ldmatrix.sync.aligned.m8n8.x4.trans.shared.b16
 
+; PTX86LDMATRIX-DAG: ldmatrix.sync.aligned.m16n16.x1.trans.shared.b8
+; PTX86LDMATRIX-DAG: ldmatrix.sync.aligned.m16n16.x2.trans.shared.b8
+; PTX86LDMATRIX-DAG: ldmatrix.sync.aligned.m16n16.x1.trans.b8x16.b6x16_p32
+; PTX86LDMATRIX-DAG: ldmatrix.sync.aligned.m16n16.x1.trans.b8x16.b4x16_p64
+; PTX86LDMATRIX-DAG: ldmatrix.sync.aligned.m16n16.x2.trans.b8x16.b6x16_p32
+; PTX86LDMATRIX-DAG: ldmatrix.sync.aligned.m16n16.x2.trans.b8x16.b4x16_p64
+; PTX86LDMATRIX-DAG: ldmatrix.sync.aligned.m8n16.x1.b8x16.b6x16_p32
+; PTX86LDMATRIX-DAG: ldmatrix.sync.aligned.m8n16.x1.b8x16.b4x16_p64
+; PTX86LDMATRIX-DAG: ldmatrix.sync.aligned.m8n16.x2.b8x16.b6x16_p32
+; PTX86LDMATRIX-DAG: ldmatrix.sync.aligned.m8n16.x2.b8x16.b4x16_p64
+; PTX86LDMATRIX-DAG: ldmatrix.sync.aligned.m8n16.x4.b8x16.b6x16_p32
+; PTX86LDMATRIX-DAG: ldmatrix.sync.aligned.m8n16.x4.b8x16.b4x16_p64
+
 ; PTX71MMA-DAG: mma.m8n8k4.row.col.f64
 ; PTX71MMA-DAG: mma.m16n8k4.row.col.tf32
 ; PTX71MMA-DAG: mma.m16n8k8.row.col.tf32
@@ -997,13 +1047,16 @@ def gen_tests():
 def main():
     global ptx_version
     global gpu_arch
+    global aa
     parser = argparse.ArgumentParser()
     parser.add_argument("--ptx", type=int, default=60)
     parser.add_argument("--gpu-arch", type=int, default=70)
+    parser.add_argument("--aa", action="store_true")
     args = parser.parse_args()
 
     ptx_version = args.ptx
     gpu_arch = args.gpu_arch
+    aa = args.aa
 
     gen_tests()
 

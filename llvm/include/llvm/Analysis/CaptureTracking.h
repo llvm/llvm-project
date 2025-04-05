@@ -37,14 +37,21 @@ namespace llvm {
   /// by the enclosing function (which is required to exist).  This routine can
   /// be expensive, so consider caching the results.  The boolean ReturnCaptures
   /// specifies whether returning the value (or part of it) from the function
-  /// counts as capturing it or not.  The boolean StoreCaptures specified
-  /// whether storing the value (or part of it) into memory anywhere
-  /// automatically counts as capturing it or not.
+  /// counts as capturing it or not.
   /// MaxUsesToExplore specifies how many uses the analysis should explore for
   /// one value before giving up due too "too many uses". If MaxUsesToExplore
   /// is zero, a default value is assumed.
   bool PointerMayBeCaptured(const Value *V, bool ReturnCaptures,
-                            bool StoreCaptures, unsigned MaxUsesToExplore = 0);
+                            unsigned MaxUsesToExplore = 0);
+
+  /// Return which components of the pointer may be captured. Only consider
+  /// components that are part of \p Mask. Once \p StopFn on the accumulated
+  /// components returns true, the traversal is aborted early. By default, this
+  /// happens when *any* of the components in \p Mask are captured.
+  CaptureComponents PointerMayBeCaptured(
+      const Value *V, bool ReturnCaptures, CaptureComponents Mask,
+      function_ref<bool(CaptureComponents)> StopFn = capturesAnything,
+      unsigned MaxUsesToExplore = 0);
 
   /// PointerMayBeCapturedBefore - Return true if this pointer value may be
   /// captured by the enclosing function (which is required to exist). If a
@@ -52,19 +59,27 @@ namespace llvm {
   /// instruction are considered. This routine can be expensive, so consider
   /// caching the results.  The boolean ReturnCaptures specifies whether
   /// returning the value (or part of it) from the function counts as capturing
-  /// it or not.  The boolean StoreCaptures specified whether storing the value
-  /// (or part of it) into memory anywhere automatically counts as capturing it
-  /// or not. Captures by the provided instruction are considered if the
+  /// it or not. Captures by the provided instruction are considered if the
   /// final parameter is true.
   /// MaxUsesToExplore specifies how many uses the analysis should explore for
   /// one value before giving up due too "too many uses". If MaxUsesToExplore
   /// is zero, a default value is assumed.
   bool PointerMayBeCapturedBefore(const Value *V, bool ReturnCaptures,
-                                  bool StoreCaptures, const Instruction *I,
-                                  const DominatorTree *DT,
+                                  const Instruction *I, const DominatorTree *DT,
                                   bool IncludeI = false,
                                   unsigned MaxUsesToExplore = 0,
                                   const LoopInfo *LI = nullptr);
+
+  /// Return which components of the pointer may be captured on the path to
+  /// \p I. Only consider components that are part of \p Mask. Once \p StopFn
+  /// on the accumulated components returns true, the traversal is aborted
+  /// early. By default, this happens when *any* of the components in \p Mask
+  /// are captured.
+  CaptureComponents PointerMayBeCapturedBefore(
+      const Value *V, bool ReturnCaptures, const Instruction *I,
+      const DominatorTree *DT, bool IncludeI, CaptureComponents Mask,
+      function_ref<bool(CaptureComponents)> StopFn = capturesAnything,
+      const LoopInfo *LI = nullptr, unsigned MaxUsesToExplore = 0);
 
   // Returns the 'earliest' instruction that captures \p V in \F. An instruction
   // A is considered earlier than instruction B, if A dominates B. If 2 escapes
@@ -74,9 +89,11 @@ namespace llvm {
   // nullptr is returned. Note that the caller of the function has to ensure
   // that the instruction the result value is compared against is not in a
   // cycle.
+  //
+  // Only consider components that are part of \p Mask.
   Instruction *FindEarliestCapture(const Value *V, Function &F,
-                                   bool ReturnCaptures, bool StoreCaptures,
-                                   const DominatorTree &DT,
+                                   bool ReturnCaptures, const DominatorTree &DT,
+                                   CaptureComponents Mask,
                                    unsigned MaxUsesToExplore = 0);
 
   /// Capture information for a specific Use.

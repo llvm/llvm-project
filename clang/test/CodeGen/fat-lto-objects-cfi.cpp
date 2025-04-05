@@ -70,9 +70,9 @@ void foo(const void* ptr, size_t len, long disp_addr,
 // COM: llvm.type.checked.load, so we need to match the function body first.
 // NO_CHECKED_LOAD-LABEL: entry:
 // NO_CHECKED_LOAD-NEXT:    %vtable = load ptr, ptr %p1
-// NO_CHECKED_LOAD-NOT:   llvm.type.checked.load
-// NO_CHECKED_LOAD-NEXT:    %vfunc = load ptr, ptr %vtable
-// NO_CHECKED_LOAD-NEXT:    %call = tail call {{.*}} %vfunc(ptr {{.*}} %p1)
+// NO_CHECKED_LOAD-NOT:   llvm.type.checked.load.relative
+// NO_CHECKED_LOAD-NEXT:    %rel_load = tail call ptr @llvm.load.relative.i32(ptr %vtable, i32 0)
+// NO_CHECKED_LOAD-NEXT:    %call = tail call {{.*}} %rel_load(ptr {{.*}} %p1)
 // NO_CHECKED_LOAD-NEXT:    ret void
 
 // COM: Ensure that we don't crash in the backend anymore when clang uses

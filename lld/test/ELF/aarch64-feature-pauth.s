@@ -83,6 +83,10 @@
 # HINT-NEXT:       br      x17
 # PACPLT-NEXT:     nop
 
+# RUN: not ld.lld tag1.o -z pauth-report=u 2>&1 | FileCheck --check-prefix=REPORT-ERR %s
+# REPORT-ERR:  error: unknown -z pauth-report= value: u{{$}}
+# REPORT-EMPTY:
+
 #--- abi-tag-short.s
 
 .section ".note.gnu.property", "a"

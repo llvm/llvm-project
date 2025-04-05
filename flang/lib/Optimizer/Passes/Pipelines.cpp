@@ -198,6 +198,12 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
   pm.addPass(fir::createPolymorphicOpConversion());
   pm.addPass(fir::createAssumedRankOpConversion());
 
+  pm.addPass(fir::createLowerRepackArraysPass());
+  // Expand FIR operations that may use SCF dialect for their
+  // implementation. This is a mandatory pass.
+  pm.addPass(fir::createSimplifyFIROperations(
+      {/*preferInlineImplementation=*/pc.OptLevel.isOptimizingForSpeed()}));
+
   if (pc.AliasAnalysis && !disableFirAliasTags && !useOldAliasTags)
     pm.addPass(fir::createAddAliasTags());
 
@@ -205,11 +211,14 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
       pm, fir::createStackReclaim);
   // convert control flow to CFG form
   fir::addCfgConversionPass(pm, pc);
-  pm.addPass(mlir::createConvertSCFToCFPass());
+  pm.addPass(mlir::createSCFToControlFlowPass());
 
   pm.addPass(mlir::createCanonicalizerPass(config));
   pm.addPass(fir::createSimplifyRegionLite());
   pm.addPass(mlir::createCSEPass());
+
+  if (pc.OptLevel.isOptimizingForSpeed())
+    pm.addPass(fir::createSetRuntimeCallAttributes());
 
   // Last Optimizer EP Callback
   pc.invokeFIROptLastEPCallbacks(pm, pc.OptLevel);
@@ -278,12 +287,20 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm, bool enableOpenMP,
 /// \param pm - MLIR pass manager that will hold the pipeline definition.
 /// \param isTargetDevice - Whether code is being generated for a target device
 /// rather than the host device.
-void createOpenMPFIRPassPipeline(mlir::PassManager &pm, bool isTargetDevice) {
+void createOpenMPFIRPassPipeline(mlir::PassManager &pm,
+                                 OpenMPFIRPassPipelineOpts opts) {
+  using DoConcurrentMappingKind =
+      Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind;
+
+  if (opts.doConcurrentMappingKind != DoConcurrentMappingKind::DCMK_None)
+    pm.addPass(flangomp::createDoConcurrentConversionPass(
+        opts.doConcurrentMappingKind == DoConcurrentMappingKind::DCMK_Device));
+
   pm.addPass(flangomp::createMapInfoFinalizationPass());
   pm.addPass(flangomp::createMapsForPrivatizedSymbolsPass());
   pm.addPass(flangomp::createMarkDeclareTargetPass());
   pm.addPass(flangomp::createGenericLoopConversionPass());
-  if (isTargetDevice)
+  if (opts.isTargetDevice)
     pm.addPass(flangomp::createFunctionFilteringPass());
 }
 
