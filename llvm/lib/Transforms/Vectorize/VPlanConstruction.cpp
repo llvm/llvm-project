@@ -14,26 +14,61 @@
 #include "LoopVectorizationPlanner.h"
 #include "VPlan.h"
 #include "VPlanCFG.h"
+#include "VPlanDominatorTree.h"
 #include "VPlanTransforms.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 
 using namespace llvm;
 
-void VPlanTransforms::introduceTopLevelVectorLoopRegion(
-    VPlan &Plan, Type *InductionTy, PredicatedScalarEvolution &PSE,
-    bool RequiresScalarEpilogueCheck, bool TailFolded, Loop *TheLoop) {
-  // TODO: Generalize to introduce all loop regions.
-  auto *HeaderVPBB = cast<VPBasicBlock>(Plan.getEntry()->getSingleSuccessor());
-  VPBlockUtils::disconnectBlocks(Plan.getEntry(), HeaderVPBB);
+/// Create and return a new VPRegionBlock for loop starting at \p HeaderVPBB and
+/// return it.
+static VPRegionBlock *introduceRegion(VPlan &Plan, VPBasicBlock *PreheaderVPBB,
+                                      VPBasicBlock *HeaderVPBB,
+                                      VPBasicBlock *LatchVPBB) {
+  VPBlockUtils::disconnectBlocks(PreheaderVPBB, HeaderVPBB);
+  VPBlockUtils::disconnectBlocks(LatchVPBB, HeaderVPBB);
+  VPBlockBase *Succ = LatchVPBB->getSingleSuccessor();
+  assert(LatchVPBB->getNumSuccessors() <= 1 &&
+         "Latch has more than one successor");
+  if (Succ)
+    VPBlockUtils::disconnectBlocks(LatchVPBB, Succ);
 
-  VPBasicBlock *OriginalLatch =
-      cast<VPBasicBlock>(HeaderVPBB->getSinglePredecessor());
-  VPBlockUtils::disconnectBlocks(OriginalLatch, HeaderVPBB);
-  VPBasicBlock *VecPreheader = Plan.createVPBasicBlock("vector.ph");
-  VPBlockUtils::connectBlocks(Plan.getEntry(), VecPreheader);
-  assert(OriginalLatch->getNumSuccessors() == 0 &&
-         "Plan should end at top level latch");
+  auto *R = Plan.createVPRegionBlock(HeaderVPBB, LatchVPBB, "",
+                                     false /*isReplicator*/);
+  R->setParent(HeaderVPBB->getParent());
+  // All VPBB's reachable shallowly from HeaderVPBB belong to top level loop,
+  // because VPlan is expected to end at top level latch disconnected above.
+  for (VPBlockBase *VPBB : vp_depth_first_shallow(HeaderVPBB))
+    VPBB->setParent(R);
+
+  VPBlockUtils::insertBlockAfter(R, PreheaderVPBB);
+  if (Succ)
+    VPBlockUtils::connectBlocks(R, Succ);
+  return R;
+}
+
+void VPlanTransforms::introduceRegions(VPlan &Plan, Type *InductionTy,
+                                       PredicatedScalarEvolution &PSE,
+                                       bool RequiresScalarEpilogueCheck,
+                                       bool TailFolded, Loop *TheLoop) {
+  VPDominatorTree VPDT;
+  VPDT.recalculate(Plan);
+  for (VPBasicBlock *HeaderVPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(Plan.getEntry()))) {
+    auto Res = HeaderVPBB->isHeader(VPDT);
+    if (!Res)
+      continue;
+    const auto &[PreheaderVPBB, LatchVPBB] = *Res;
+    introduceRegion(Plan, PreheaderVPBB, HeaderVPBB, LatchVPBB);
+  }
+
+  VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
+  auto *OrigExiting = TopRegion->getExiting();
+  VPBasicBlock *LatchVPBB = Plan.createVPBasicBlock("vector.latch");
+  VPBlockUtils::insertBlockAfter(LatchVPBB, OrigExiting);
+  TopRegion->setExiting(LatchVPBB);
+  TopRegion->setName("vector loop");
 
   // Create SCEV and VPValue for the trip count.
   // We use the symbolic max backedge-taken-count, which works also when
@@ -47,18 +82,9 @@ void VPlanTransforms::introduceTopLevelVectorLoopRegion(
   Plan.setTripCount(
       vputils::getOrCreateVPValueForSCEVExpr(Plan, TripCount, SE));
 
-  // Create VPRegionBlock, with existing header and new empty latch block, to be
-  // filled.
-  VPBasicBlock *LatchVPBB = Plan.createVPBasicBlock("vector.latch");
-  VPBlockUtils::insertBlockAfter(LatchVPBB, OriginalLatch);
-  auto *TopRegion = Plan.createVPRegionBlock(
-      HeaderVPBB, LatchVPBB, "vector loop", false /*isReplicator*/);
-  // All VPBB's reachable shallowly from HeaderVPBB belong to top level loop,
-  // because VPlan is expected to end at top level latch.
-  for (VPBlockBase *VPBB : vp_depth_first_shallow(HeaderVPBB))
-    VPBB->setParent(TopRegion);
+  VPBasicBlock *VecPreheader = Plan.createVPBasicBlock("vector.ph");
+  VPBlockUtils::insertBlockAfter(VecPreheader, Plan.getEntry());
 
-  VPBlockUtils::insertBlockAfter(TopRegion, VecPreheader);
   VPBasicBlock *MiddleVPBB = Plan.createVPBasicBlock("middle.block");
   VPBlockUtils::insertBlockAfter(MiddleVPBB, TopRegion);
 
