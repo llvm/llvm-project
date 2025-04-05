@@ -65,13 +65,23 @@ inline const size_t __compressed_pair_alignment<_Tp&> = _LIBCPP_ALIGNOF(void*);
 
 template <class _ToPad,
           bool _Empty = ((is_empty<_ToPad>::value && !__libcpp_is_final<_ToPad>::value) ||
-                         is_reference<_ToPad>::value || sizeof(_ToPad) == __datasizeof_v<_ToPad>)>
-class __compressed_pair_padding {
+                         sizeof(_ToPad) == __datasizeof_v<_ToPad>)>
+class __compressed_pair_padding_impl {
   char __padding_[sizeof(_ToPad) - __datasizeof_v<_ToPad>] = {};
 };
 
 template <class _ToPad>
+class __compressed_pair_padding_impl<_ToPad, true> {};
+
+template <class _ToPad, bool _IsReference = is_reference<_ToPad>::value>
+class __compressed_pair_padding : __compressed_pair_padding_impl<_ToPad> {};
+
+template <class _ToPad>
 class __compressed_pair_padding<_ToPad, true> {};
+
+#  define _LIBCPP_COMPRESSED_ELEMENT(T1, Initializer1)                                                                 \
+    _LIBCPP_NO_UNIQUE_ADDRESS T1 Initializer1;                                                                         \
+    _LIBCPP_NO_UNIQUE_ADDRESS ::std::__compressed_pair_padding<T1> _LIBCPP_CONCAT3(__padding_, __LINE__, _)
 
 #  define _LIBCPP_COMPRESSED_PAIR(T1, Initializer1, T2, Initializer2)                                                  \
     _LIBCPP_NO_UNIQUE_ADDRESS __attribute__((__aligned__(::std::__compressed_pair_alignment<T2>))) T1 Initializer1;    \
@@ -90,6 +100,8 @@ class __compressed_pair_padding<_ToPad, true> {};
     _LIBCPP_NO_UNIQUE_ADDRESS ::std::__compressed_pair_padding<T3> _LIBCPP_CONCAT3(__padding3_, __LINE__, _)
 
 #else
+#  define _LIBCPP_COMPRESSED_ELEMENT(T1, Initializer1) _LIBCPP_NO_UNQIUE_ADDRESS T1 Initializer1
+
 #  define _LIBCPP_COMPRESSED_PAIR(T1, Name1, T2, Name2)                                                                \
     _LIBCPP_NO_UNIQUE_ADDRESS T1 Name1;                                                                                \
     _LIBCPP_NO_UNIQUE_ADDRESS T2 Name2
