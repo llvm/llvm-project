@@ -11,7 +11,6 @@
 #include "src/stdio/fgets.h"
 #include "src/stdio/fopen.h"
 #include "src/stdio/printf.h"
-#include "src/stdlib/free.h"
 #include "src/stdlib/getenv.h"
 #include "src/stdlib/strtod.h"
 #include "src/stdlib/strtof.h"
@@ -167,8 +166,6 @@ TEST(LlvmLibcStrToFloatComparisonTest, CheckFile) {
       result = 2;
     }
   }
-
-  LIBC_NAMESPACE::free(files);
 
   EXPECT_EQ(result, 0);
   EXPECT_EQ(fails, 0);

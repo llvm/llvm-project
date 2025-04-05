@@ -265,7 +265,6 @@ add_libc_test(
     libc.src.stdlib.strtof
     libc.src.stdlib.strtod
     libc.src.stdlib.getenv
-    libc.src.stdlib.free
     libc.src.string.strtok
     libc.src.string.strdup
     libc.src.__support.CPP.bit
