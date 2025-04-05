@@ -142,8 +142,6 @@ void AArch64O0PreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
 
 AArch64O0PreLegalizerCombiner::AArch64O0PreLegalizerCombiner()
     : MachineFunctionPass(ID) {
-  initializeAArch64O0PreLegalizerCombinerPass(*PassRegistry::getPassRegistry());
-
   if (!RuleConfig.parseCommandLineOption())
     report_fatal_error("Invalid rule identifier");
 }
