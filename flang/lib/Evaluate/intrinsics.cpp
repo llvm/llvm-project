@@ -545,6 +545,12 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         KINDInt, Rank::vector, IntrinsicClass::transformationalFunction},
     {"floor", {{"a", AnyReal}, DefaultingKIND}, KINDInt},
     {"fraction", {{"x", SameReal}}, SameReal},
+    {"fseek",
+        {{"unit", AnyInt, Rank::scalar}, {"offset", AnyInt, Rank::scalar},
+            {"whence", AnyInt, Rank::scalar}},
+        DefaultInt, Rank::scalar},
+    {"ftell", {{"unit", AnyInt, Rank::scalar}},
+        TypePattern{IntType, KindCode::exactKind, 8}, Rank::scalar},
     {"gamma", {{"x", SameReal}}, SameReal},
     {"get_team", {{"level", DefaultInt, Rank::scalar, Optionality::optional}},
         TeamType, Rank::scalar, IntrinsicClass::transformationalFunction},
@@ -1083,11 +1089,16 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
 //  LOC, probably others
 // TODO: Optionally warn on operand promotion extension
 
-// Aliases for a few generic intrinsic functions for legacy
-// compatibility and builtins.
+// Aliases for a few generic procedures for legacy compatibility and builtins.
 static const std::pair<const char *, const char *> genericAlias[]{
     {"and", "iand"},
     {"getenv", "get_environment_variable"},
+    {"fseek64", "fseek"},
+    {"fseeko64", "fseek"}, // SUN
+    {"fseeki8", "fseek"}, // Intel
+    {"ftell64", "ftell"},
+    {"ftello64", "ftell"}, // SUN
+    {"ftelli8", "ftell"}, // Intel
     {"imag", "aimag"},
     {"lshift", "shiftl"},
     {"or", "ior"},
@@ -1524,6 +1535,17 @@ static const IntrinsicInterface intrinsicSubroutine[]{
     {"exit", {{"status", DefaultInt, Rank::scalar, Optionality::optional}}, {},
         Rank::elemental, IntrinsicClass::impureSubroutine},
     {"free", {{"ptr", Addressable}}, {}},
+    {"fseek",
+        {{"unit", AnyInt, Rank::scalar}, {"offset", AnyInt, Rank::scalar},
+            {"whence", AnyInt, Rank::scalar},
+            {"status", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::InOut}},
+        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"ftell",
+        {{"unit", AnyInt, Rank::scalar},
+            {"offset", AnyInt, Rank::scalar, Optionality::required,
+                common::Intent::Out}},
+        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"get_command",
         {{"command", DefaultChar, Rank::scalar, Optionality::optional,
              common::Intent::Out},
@@ -2811,9 +2833,9 @@ bool IntrinsicProcTable::Implementation::IsDualIntrinsic(
     const std::string &name) const {
   // Collection for some intrinsics with function and subroutine form,
   // in order to pass the semantic check.
-  static const std::string dualIntrinsic[]{{"chdir"s}, {"etime"s}, {"getcwd"s},
-      {"hostnm"s}, {"rename"s}, {"second"s}, {"system"s}, {"unlink"s}};
-
+  static const std::string dualIntrinsic[]{{"chdir"}, {"etime"}, {"fseek"},
+      {"ftell"}, {"getcwd"}, {"hostnm"}, {"rename"}, {"second"}, {"system"},
+      {"unlink"}};
   return llvm::is_contained(dualIntrinsic, name);
 }
 
