@@ -2029,6 +2029,7 @@ void VPDerivedIVRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
+  State.setDebugLocFrom(getDebugLoc());
   // Fast-math-flags propagate from the original induction instruction.
   IRBuilder<>::FastMathFlagGuard FMFG(State.Builder);
   if (hasFastMathFlags())
