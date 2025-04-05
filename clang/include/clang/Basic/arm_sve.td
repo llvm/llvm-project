@@ -836,9 +836,11 @@ defm SVRINTP : SInstZPZ<"svrintp", "hfd", "aarch64_sve_frintp">;
 defm SVRINTX : SInstZPZ<"svrintx", "hfd", "aarch64_sve_frintx">;
 defm SVRINTZ : SInstZPZ<"svrintz", "hfd", "aarch64_sve_frintz">;
 defm SVSQRT  : SInstZPZ<"svsqrt",  "hfd", "aarch64_sve_fsqrt">;
-
+def SVEXPA  : SInst<"svexpa[_{d}]",  "du",   "hfd", MergeNone, "aarch64_sve_fexpa_x", [VerifyRuntimeMode]>{
+   let SVETargetGuard = "sve";
+   let SMETargetGuard = "sme2,ssve-fexpa";
+}
 let SVETargetGuard = "sve", SMETargetGuard = InvalidMode in {
-def SVEXPA  : SInst<"svexpa[_{d}]",  "du",   "hfd", MergeNone, "aarch64_sve_fexpa_x">;
 def SVTMAD  : SInst<"svtmad[_{d}]",  "dddi", "hfd", MergeNone, "aarch64_sve_ftmad_x", [], [ImmCheck<2, ImmCheck0_7>]>;
 def SVTSMUL : SInst<"svtsmul[_{d}]", "ddu",  "hfd", MergeNone, "aarch64_sve_ftsmul_x">;
 def SVTSSEL : SInst<"svtssel[_{d}]", "ddu",  "hfd", MergeNone, "aarch64_sve_ftssel_x">;
