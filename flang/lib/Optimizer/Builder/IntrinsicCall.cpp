@@ -462,6 +462,17 @@ static constexpr IntrinsicHandler handlers[]{
     {"floor", &I::genFloor},
     {"fraction", &I::genFraction},
     {"free", &I::genFree},
+    {"fseek",
+     &I::genFseek,
+     {{{"unit", asValue},
+       {"offset", asValue},
+       {"whence", asValue},
+       {"status", asAddr, handleDynamicOptional}}},
+     /*isElemental=*/false},
+    {"ftell",
+     &I::genFtell,
+     {{{"unit", asValue}, {"offset", asAddr}}},
+     /*isElemental=*/false},
     {"get_command",
      &I::genGetCommand,
      {{{"command", asBox, handleDynamicOptional},
@@ -4137,6 +4148,69 @@ void IntrinsicLibrary::genFree(llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 1);
 
   fir::runtime::genFree(builder, loc, fir::getBase(args[0]));
+}
+
+// FSEEK
+fir::ExtendedValue
+IntrinsicLibrary::genFseek(std::optional<mlir::Type> resultType,
+                           llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert((args.size() == 4 && !resultType.has_value()) ||
+         (args.size() == 3 && resultType.has_value()));
+  mlir::Value unit = fir::getBase(args[0]);
+  mlir::Value offset = fir::getBase(args[1]);
+  mlir::Value whence = fir::getBase(args[2]);
+  if (!unit)
+    fir::emitFatalError(loc, "expected UNIT argument");
+  if (!offset)
+    fir::emitFatalError(loc, "expected OFFSET argument");
+  if (!whence)
+    fir::emitFatalError(loc, "expected WHENCE argument");
+  mlir::Value statusValue =
+      fir::runtime::genFseek(builder, loc, unit, offset, whence);
+  if (resultType.has_value()) { // function
+    return builder.createConvert(loc, *resultType, statusValue);
+  } else { // subroutine
+    const fir::ExtendedValue &statusVar = args[3];
+    if (!isStaticallyAbsent(statusVar)) {
+      mlir::Value statusAddr = fir::getBase(statusVar);
+      mlir::Value statusIsPresentAtRuntime =
+          builder.genIsNotNullAddr(loc, statusAddr);
+      builder.genIfThen(loc, statusIsPresentAtRuntime)
+          .genThen([&]() {
+            builder.createStoreWithConvert(loc, statusValue, statusAddr);
+          })
+          .end();
+    }
+    return {};
+  }
+}
+
+// FTELL
+fir::ExtendedValue
+IntrinsicLibrary::genFtell(std::optional<mlir::Type> resultType,
+                           llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert((args.size() == 2 && !resultType.has_value()) ||
+         (args.size() == 1 && resultType.has_value()));
+  mlir::Value unit = fir::getBase(args[0]);
+  if (!unit)
+    fir::emitFatalError(loc, "expected UNIT argument");
+  mlir::Value offsetValue = fir::runtime::genFtell(builder, loc, unit);
+  if (resultType.has_value()) { // function
+    return offsetValue;
+  } else { // subroutine
+    const fir::ExtendedValue &offsetVar = args[1];
+    if (!isStaticallyAbsent(offsetVar)) {
+      mlir::Value offsetAddr = fir::getBase(offsetVar);
+      mlir::Value offsetIsPresentAtRuntime =
+          builder.genIsNotNullAddr(loc, offsetAddr);
+      builder.genIfThen(loc, offsetIsPresentAtRuntime)
+          .genThen([&]() {
+            builder.createStoreWithConvert(loc, offsetValue, offsetAddr);
+          })
+          .end();
+    }
+    return {};
+  }
 }
 
 // GETCWD
