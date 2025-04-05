@@ -2617,21 +2617,25 @@ SchedBoundary::getNextResourceCycle(const MCSchedClassDesc *SC, unsigned PIdx,
 bool SchedBoundary::checkHazard(SUnit *SU) {
   if (HazardRec->isEnabled()
       && HazardRec->getHazardType(SU) != ScheduleHazardRecognizer::NoHazard) {
+    LLVM_DEBUG(dbgs().indent(2)
+               << "hazard: SU(" << SU->NodeNum << ") reported by HazardRec\n");
     return true;
   }
 
   unsigned uops = SchedModel->getNumMicroOps(SU->getInstr());
   if ((CurrMOps > 0) && (CurrMOps + uops > SchedModel->getIssueWidth())) {
-    LLVM_DEBUG(dbgs() << "  SU(" << SU->NodeNum << ") uops="
-                      << SchedModel->getNumMicroOps(SU->getInstr()) << '\n');
+    LLVM_DEBUG(dbgs().indent(2) << "hazard:  SU(" << SU->NodeNum << ") uops="
+                                << uops << ", CurrMOps = " << CurrMOps << ", "
+                                << "CurrMOps + uops > issue width of "
+                                << SchedModel->getIssueWidth() << "\n");
     return true;
   }
 
   if (CurrMOps > 0 &&
       ((isTop() && SchedModel->mustBeginGroup(SU->getInstr())) ||
        (!isTop() && SchedModel->mustEndGroup(SU->getInstr())))) {
-    LLVM_DEBUG(dbgs() << "  hazard: SU(" << SU->NodeNum << ") must "
-                      << (isTop() ? "begin" : "end") << " group\n");
+    LLVM_DEBUG(dbgs().indent(2) << "hazard: SU(" << SU->NodeNum << ") must "
+                                << (isTop() ? "begin" : "end") << " group\n");
     return true;
   }
 
@@ -2650,10 +2654,12 @@ bool SchedBoundary::checkHazard(SUnit *SU) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
         MaxObservedStall = std::max(ReleaseAtCycle, MaxObservedStall);
 #endif
-        LLVM_DEBUG(dbgs() << "  SU(" << SU->NodeNum << ") "
-                          << SchedModel->getResourceName(ResIdx)
-                          << '[' << InstanceIdx - ReservedCyclesIndex[ResIdx]  << ']'
-                          << "=" << NRCycle << "c\n");
+        LLVM_DEBUG(dbgs().indent(2)
+                   << "hazard:  SU(" << SU->NodeNum << ") "
+                   << SchedModel->getResourceName(ResIdx) << '['
+                   << InstanceIdx - ReservedCyclesIndex[ResIdx] << ']' << "="
+                   << NRCycle << "c, is later than "
+                   << "CurrCycle = " << CurrCycle << "c\n");
         return true;
       }
     }
@@ -2728,11 +2734,25 @@ void SchedBoundary::releaseNode(SUnit *SU, unsigned ReadyCycle, bool InPQueue,
   // Check for interlocks first. For the purpose of other heuristics, an
   // instruction that cannot issue appears as if it's not in the ReadyQueue.
   bool IsBuffered = SchedModel->getMicroOpBufferSize() != 0;
-  bool HazardDetected = (!IsBuffered && ReadyCycle > CurrCycle) ||
-                        checkHazard(SU) || (Available.size() >= ReadyListLimit);
+  bool HazardDetected = !IsBuffered && ReadyCycle > CurrCycle;
+  if (HazardDetected)
+    LLVM_DEBUG(dbgs().indent(2) << "hazard: SU(" << SU->NodeNum
+                                << ") ReadyCycle = " << ReadyCycle
+                                << " is later than CurrCycle = " << CurrCycle
+                                << " on an unbuffered resource" << "\n");
+  else
+    HazardDetected = checkHazard(SU);
+
+  if (!HazardDetected && Available.size() >= ReadyListLimit) {
+    HazardDetected = true;
+    LLVM_DEBUG(dbgs().indent(2) << "hazard: Available Q is full (size: "
+                                << Available.size() << ")\n");
+  }
 
   if (!HazardDetected) {
     Available.push(SU);
+    LLVM_DEBUG(dbgs().indent(2)
+               << "Move SU(" << SU->NodeNum << ") into Available Q\n");
 
     if (InPQueue)
       Pending.remove(Pending.begin() + Idx);
@@ -3010,6 +3030,8 @@ void SchedBoundary::releasePending() {
   for (unsigned I = 0, E = Pending.size(); I < E; ++I) {
     SUnit *SU = *(Pending.begin() + I);
     unsigned ReadyCycle = isTop() ? SU->TopReadyCycle : SU->BotReadyCycle;
+
+    LLVM_DEBUG(dbgs() << "Checking pending node SU(" << SU->NodeNum << ")\n");
 
     if (ReadyCycle < MinReadyCycle)
       MinReadyCycle = ReadyCycle;
