@@ -89,6 +89,10 @@ public:
   mlir::Location getLoc(clang::SourceLocation cLoc);
   mlir::Location getLoc(clang::SourceRange cRange);
 
+  /// FIXME: this could likely be a common helper and not necessarily related
+  /// with codegen.
+  clang::CharUnits getNaturalTypeAlignment(clang::QualType t);
+
   void emitTopLevelDecl(clang::Decl *decl);
 
   bool verifyModule() const;
