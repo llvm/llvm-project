@@ -36,9 +36,25 @@ class Test(unittest.TestCase):
                     ),
                 },
                 {
+                    "__cpp_lib_clamp": VersionHeader(
+                        value="201603L",
+                        implemented=True,
+                        need_undef=False,
+                        condition=None,
+                    )
+                },
+                {
                     "__cpp_lib_parallel_algorithm": VersionHeader(
                         value="201603L",
                         implemented=True,
+                        need_undef=False,
+                        condition=None,
+                    ),
+                },
+                {
+                    "__cpp_lib_to_chars": VersionHeader(
+                        value="201611L",
+                        implemented=False,
                         need_undef=False,
                         condition=None,
                     ),
@@ -52,7 +68,7 @@ class Test(unittest.TestCase):
                     ),
                 },
                 {
-                    "__cpp_lib_missing_FTM_in_older_standard": VersionHeader(
+                    "__cpp_lib_zz_missing_FTM_in_older_standard": VersionHeader(
                         value="2017L",
                         implemented=False,
                         need_undef=False,
@@ -86,7 +102,7 @@ class Test(unittest.TestCase):
                     ),
                 },
                 {
-                    "__cpp_lib_missing_FTM_in_older_standard": VersionHeader(
+                    "__cpp_lib_zz_missing_FTM_in_older_standard": VersionHeader(
                         value="2020L",
                         implemented=False,
                         need_undef=False,
@@ -130,7 +146,7 @@ class Test(unittest.TestCase):
                     ),
                 },
                 {
-                    "__cpp_lib_missing_FTM_in_older_standard": VersionHeader(
+                    "__cpp_lib_zz_missing_FTM_in_older_standard": VersionHeader(
                         value="2026L",
                         implemented=False,
                         need_undef=False,
