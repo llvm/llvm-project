@@ -1442,6 +1442,9 @@ spirv::Deserializer::processConstantComposite(ArrayRef<uint32_t> operands) {
   } else if (auto arrayType = dyn_cast<spirv::ArrayType>(resultType)) {
     auto attr = opBuilder.getArrayAttr(elements);
     constantMap.try_emplace(resultID, attr, resultType);
+  } else if (auto matrixType = dyn_cast<spirv::MatrixType>(resultType)) {
+    auto attr = opBuilder.getArrayAttr(elements);
+    constantMap.try_emplace(resultID, attr, resultType);
   } else {
     return emitError(unknownLoc, "unsupported OpConstantComposite type: ")
            << resultType;
