@@ -1925,8 +1925,9 @@ bool SITargetLowering::allowsMisalignedMemoryAccesses(
                                             Alignment, Flags, IsFast);
 }
 
-EVT SITargetLowering::getOptimalMemOpType(
-    const MemOp &Op, const AttributeList &FuncAttributes) const {
+EVT SITargetLowering::getOptimalMemOpType(const MemOp &Op,
+                                          const AttributeList &FuncAttributes,
+                                          bool PreferIntScalar) const {
   // FIXME: Should account for address space here.
 
   // The default fallback uses the private pointer size as a guess for a type to

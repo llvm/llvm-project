@@ -22998,13 +22998,10 @@ bool RISCVTargetLowering::allowsMisalignedMemoryAccesses(
   return Subtarget.enableUnalignedVectorMem();
 }
 
-
-EVT RISCVTargetLowering::getOptimalMemOpType(const MemOp &Op,
-                                             const AttributeList &FuncAttributes) const {
+EVT RISCVTargetLowering::getOptimalMemOpType(
+    const MemOp &Op, const AttributeList &FuncAttributes,
+    bool PreferIntScalar) const {
   if (!Subtarget.hasVInstructions())
-    return MVT::Other;
-
-  if (FuncAttributes.hasFnAttr(Attribute::NoImplicitFloat))
     return MVT::Other;
 
   // We use LMUL1 memory operations here for a non-obvious reason.  Our caller

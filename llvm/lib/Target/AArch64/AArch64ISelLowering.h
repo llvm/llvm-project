@@ -738,11 +738,11 @@ public:
 
   bool shouldConsiderGEPOffsetSplit() const override;
 
-  EVT getOptimalMemOpType(const MemOp &Op,
-                          const AttributeList &FuncAttributes) const override;
+  EVT getOptimalMemOpType(const MemOp &Op, const AttributeList &FuncAttributes,
+                          bool PreferIntScalar) const override;
 
-  LLT getOptimalMemOpLLT(const MemOp &Op,
-                         const AttributeList &FuncAttributes) const override;
+  LLT getOptimalMemOpLLT(const MemOp &Op, const AttributeList &FuncAttributes,
+                         bool PreferIntScalar) const override;
 
   /// Return true if the addressing mode represented by AM is legal for this
   /// target, for a load/store of the specified type.

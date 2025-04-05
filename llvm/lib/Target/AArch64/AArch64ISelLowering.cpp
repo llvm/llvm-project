@@ -17638,10 +17638,10 @@ bool AArch64TargetLowering::lowerInterleaveIntrinsicToStore(
 }
 
 EVT AArch64TargetLowering::getOptimalMemOpType(
-    const MemOp &Op, const AttributeList &FuncAttributes) const {
-  bool CanImplicitFloat = !FuncAttributes.hasFnAttr(Attribute::NoImplicitFloat);
-  bool CanUseNEON = Subtarget->hasNEON() && CanImplicitFloat;
-  bool CanUseFP = Subtarget->hasFPARMv8() && CanImplicitFloat;
+    const MemOp &Op, const AttributeList &FuncAttributes,
+    bool PreferIntScalar) const {
+  bool CanUseNEON = Subtarget->hasNEON();
+  bool CanUseFP = Subtarget->hasFPARMv8();
   // Only use AdvSIMD to implement memset of 32-byte and above. It would have
   // taken one instruction to materialize the v2i64 zero and one store (with
   // restrictive addressing mode). Just do i64 stores.
@@ -17660,18 +17660,15 @@ EVT AArch64TargetLowering::getOptimalMemOpType(
     return MVT::v16i8;
   if (CanUseFP && !IsSmallMemset && AlignmentIsAcceptable(MVT::f128, Align(16)))
     return MVT::f128;
-  if (Op.size() >= 8 && AlignmentIsAcceptable(MVT::i64, Align(8)))
-    return MVT::i64;
-  if (Op.size() >= 4 && AlignmentIsAcceptable(MVT::i32, Align(4)))
-    return MVT::i32;
+
   return MVT::Other;
 }
 
 LLT AArch64TargetLowering::getOptimalMemOpLLT(
-    const MemOp &Op, const AttributeList &FuncAttributes) const {
-  bool CanImplicitFloat = !FuncAttributes.hasFnAttr(Attribute::NoImplicitFloat);
-  bool CanUseNEON = Subtarget->hasNEON() && CanImplicitFloat;
-  bool CanUseFP = Subtarget->hasFPARMv8() && CanImplicitFloat;
+    const MemOp &Op, const AttributeList &FuncAttributes,
+    bool PreferIntScalar) const {
+  bool CanUseNEON = Subtarget->hasNEON();
+  bool CanUseFP = Subtarget->hasFPARMv8();
   // Only use AdvSIMD to implement memset of 32-byte and above. It would have
   // taken one instruction to materialize the v2i64 zero and one store (with
   // restrictive addressing mode). Just do i64 stores.
@@ -17690,10 +17687,7 @@ LLT AArch64TargetLowering::getOptimalMemOpLLT(
     return LLT::fixed_vector(2, 64);
   if (CanUseFP && !IsSmallMemset && AlignmentIsAcceptable(MVT::f128, Align(16)))
     return LLT::scalar(128);
-  if (Op.size() >= 8 && AlignmentIsAcceptable(MVT::i64, Align(8)))
-    return LLT::scalar(64);
-  if (Op.size() >= 4 && AlignmentIsAcceptable(MVT::i32, Align(4)))
-    return LLT::scalar(32);
+
   return LLT();
 }
 
