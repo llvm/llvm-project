@@ -92,3 +92,162 @@ const char name[] = "Some string";
 
 void takeCharArray(const char name[]);
 // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: do not declare C-style arrays, use 'std::array' or 'std::vector' instead [modernize-avoid-c-arrays]
+
+namespace std {
+  template<class T, class U>
+  struct is_same { constexpr static bool value{false}; };
+
+  template<class T>
+  struct is_same<T, T> { constexpr static bool value{true}; };
+
+  template<class T, class U>
+  constexpr bool is_same_v = is_same<T, U>::value;
+
+  template<class T> struct remove_const { typedef T type; };
+  template<class T> struct remove_const<const T> { typedef T type; };
+
+  template<class T>
+  using remove_const_t = typename remove_const<T>::type;
+
+  template<bool B, class T = void> struct enable_if {};
+  template<class T> struct enable_if<true, T> { typedef T type; };
+
+  template< bool B, class T = void >
+  using enable_if_t = typename enable_if<B, T>::type;
+}
+
+// below, no array type findings are expected within the template parameter declarations since no array type gets written explicitly
+template <typename T,
+          bool = std::is_same_v<T, int>,
+          bool = std::is_same<T, int>::value,
+          bool = std::is_same_v<std::remove_const_t<T>, int>,
+          bool = std::is_same<std::remove_const_t<T>, int>::value,
+          bool = std::is_same_v<typename std::remove_const<T>::type, int>,
+          bool = std::is_same<typename std::remove_const<T>::type, int>::value,
+          std::enable_if_t<not(std::is_same_v<std::remove_const_t<T>, int>) && not(std::is_same_v<typename std::remove_const<T>::type, char>), bool> = true,
+          typename std::enable_if<not(std::is_same_v<std::remove_const_t<T>, int>) && not(std::is_same_v<typename std::remove_const<T>::type, char>), bool>::type = true,
+          typename = std::enable_if_t<not(std::is_same_v<std::remove_const_t<T>, int>) && not(std::is_same_v<typename std::remove_const<T>::type, char>)>,
+          typename = typename std::remove_const<T>::type,
+          typename = std::remove_const_t<T>>
+class MyClassTemplate {
+ public:
+  // here, plenty of array type findings are expected for below template parameter declarations since array types get written explicitly
+  template <typename U = T,
+            bool = std::is_same_v<U, int[]>,
+            // CHECK-MESSAGES: :[[@LINE-1]]:38: warning: do not declare C-style arrays, use 'std::array' instead [modernize-avoid-c-arrays]
+            bool = std::is_same<U, int[10]>::value,
+            // CHECK-MESSAGES: :[[@LINE-1]]:36: warning: do not declare C-style arrays, use 'std::array' instead [modernize-avoid-c-arrays]
+            std::enable_if_t<not(std::is_same_v<std::remove_const_t<U>, int[]>) && not(std::is_same_v<typename std::remove_const<U>::type, char[10]>), bool> = true,
+            // CHECK-MESSAGES: :[[@LINE-1]]:73: warning: do not declare C-style arrays, use 'std::array' instead [modernize-avoid-c-arrays]
+            // CHECK-MESSAGES: :[[@LINE-2]]:140: warning: do not declare C-style arrays, use 'std::array' instead [modernize-avoid-c-arrays]
+            typename = typename std::remove_const<int[10]>::type,
+            // CHECK-MESSAGES: :[[@LINE-1]]:51: warning: do not declare C-style arrays, use 'std::array' instead [modernize-avoid-c-arrays]
+            typename = std::remove_const_t<int[]>>
+            // CHECK-MESSAGES: :[[@LINE-1]]:44: warning: do not declare C-style arrays, use 'std::array' instead [modernize-avoid-c-arrays]
+    class MyInnerClassTemplate {
+     public:
+      MyInnerClassTemplate(const U&) {}
+     private:
+      U field[3];
+      // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: do not declare C-style arrays, use 'std::array' instead [modernize-avoid-c-arrays]
+    };
+
+    MyClassTemplate(const T&) {}
+
+ private:
+    T field[7];
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not declare C-style arrays, use 'std::array' instead [modernize-avoid-c-arrays]
+};
+
+// an explicit instantiation
+template
+class MyClassTemplate<int[2]>;
+// CHECK-MESSAGES: :[[@LINE-1]]:23: warning: do not declare C-style arrays, use 'std::array' instead [modernize-avoid-c-arrays]
+
+using MyArrayType = int[3];
+// CHECK-MESSAGES: :[[@LINE-1]]:21: warning: do not declare C-style arrays, use 'std::array' instead [modernize-avoid-c-arrays]
+
+// another explicit instantiation
+template
+class MyClassTemplate<MyArrayType>;
+
+// below, no array type findings are expected within the template parameter declarations since no array type gets written explicitly
+template <typename T,
+          bool = std::is_same_v<T, int>,
+          bool = std::is_same<T, int>::value,
+          bool = std::is_same_v<std::remove_const_t<T>, int>,
+          bool = std::is_same<std::remove_const_t<T>, int>::value,
+          bool = std::is_same_v<typename std::remove_const<T>::type, int>,
+          bool = std::is_same<typename std::remove_const<T>::type, int>::value,
+          std::enable_if_t<not(std::is_same_v<std::remove_const_t<T>, int>) && not(std::is_same_v<typename std::remove_const<T>::type, char>), bool> = true,
+          typename std::enable_if<not(std::is_same_v<std::remove_const_t<T>, int>) && not(std::is_same_v<typename std::remove_const<T>::type, char>), bool>::type = true,
+          typename = std::enable_if_t<not(std::is_same_v<std::remove_const_t<T>, int>) && not(std::is_same_v<typename std::remove_const<T>::type, char>)>,
+          typename = typename std::remove_const<T>::type,
+          typename = std::remove_const_t<T>>
+void func(const T& param) {
+  int array1[1];
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: do not declare C-style arrays, use 'std::array' instead [modernize-avoid-c-arrays]
+
+  T array2[2];
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: do not declare C-style arrays, use 'std::array' instead [modernize-avoid-c-arrays]
+
+  T value;
+}
+
+// here, plenty of array type findings are expected for below template parameter declarations since array types get written explicitly
+template <typename T = int[],
+          // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: do not declare C-style arrays, use 'std::array' instead [modernize-avoid-c-arrays]
+          bool = std::is_same_v<T, int[]>,
+          // CHECK-MESSAGES: :[[@LINE-1]]:36: warning: do not declare C-style arrays, use 'std::array' instead [modernize-avoid-c-arrays]
+          bool = std::is_same<T, int[10]>::value,
+          // CHECK-MESSAGES: :[[@LINE-1]]:34: warning: do not declare C-style arrays, use 'std::array' instead [modernize-avoid-c-arrays]
+          std::enable_if_t<not(std::is_same_v<std::remove_const_t<T>, int[]>) && not(std::is_same_v<typename std::remove_const<T>::type, char[10]>), bool> = true,
+          // CHECK-MESSAGES: :[[@LINE-1]]:71: warning: do not declare C-style arrays, use 'std::array' instead [modernize-avoid-c-arrays]
+          // CHECK-MESSAGES: :[[@LINE-2]]:138: warning: do not declare C-style arrays, use 'std::array' instead [modernize-avoid-c-arrays]
+          typename = typename std::remove_const<int[10]>::type,
+          // CHECK-MESSAGES: :[[@LINE-1]]:49: warning: do not declare C-style arrays, use 'std::array' instead [modernize-avoid-c-arrays]
+          typename = std::remove_const_t<int[]>>
+          // CHECK-MESSAGES: :[[@LINE-1]]:42: warning: do not declare C-style arrays, use 'std::array' instead [modernize-avoid-c-arrays]
+void fun(const T& param) {
+  int array3[3];
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: do not declare C-style arrays, use 'std::array' instead [modernize-avoid-c-arrays]
+
+  T array4[4];
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: do not declare C-style arrays, use 'std::array' instead [modernize-avoid-c-arrays]
+
+  T value;
+}
+
+template<typename T>
+T some_constant{};
+
+// explicit instantiation
+template
+int some_constant<int[5]>[5];
+// FIXME: why no diagnostics here?
+
+// explicit specialization
+template<>
+int some_constant<int[7]>[7]{};
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: do not declare C-style arrays, use 'std::array' instead [modernize-avoid-c-arrays]
+// CHECK-MESSAGES: :[[@LINE-2]]:19: warning: do not declare C-style arrays, use 'std::array' instead [modernize-avoid-c-arrays]
+
+void testArrayInTemplateType() {
+  int t[10];
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: do not declare C-style arrays, use 'std::array' instead [modernize-avoid-c-arrays]
+
+  func(t);
+  fun(t);
+
+  func<decltype(t)>({});
+  fun<decltype(t)>({});
+
+  MyClassTemplate var1{t};
+  MyClassTemplate<decltype(t)> var2{{}};
+
+  decltype(var1)::MyInnerClassTemplate var3{t};
+  decltype(var1)::MyInnerClassTemplate<decltype(t)> var4{{}};
+
+  MyClassTemplate<decltype(t)>::MyInnerClassTemplate var5{t};
+  MyClassTemplate<decltype(t)>::MyInnerClassTemplate<decltype(t)> var6{{}};
+}
