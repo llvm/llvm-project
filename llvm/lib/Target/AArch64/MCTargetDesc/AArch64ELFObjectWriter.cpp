@@ -117,9 +117,9 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
   bool IsNC = AArch64MCExpr::isNotChecked(RefKind);
 
   assert((!Target.getSymA() ||
-          getSpecifier(Target.getSymA()) == AArch64MCExpr::None ||
-          getSpecifier(Target.getSymA()) == AArch64MCExpr::VK_PLT ||
-          getSpecifier(Target.getSymA()) == AArch64MCExpr::VK_GOTPCREL) &&
+          Target.getSymSpecifier() == AArch64MCExpr::None ||
+          Target.getSymSpecifier() == AArch64MCExpr::VK_PLT ||
+          Target.getSymSpecifier() == AArch64MCExpr::VK_GOTPCREL) &&
          "Should only be expression-level modifiers here");
 
   switch (SymLoc) {
