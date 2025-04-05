@@ -4572,6 +4572,9 @@ bool Lexer::LexDependencyDirectiveToken(Token &Result) {
 
   using namespace dependency_directives_scan;
 
+  if (BufferPtr == BufferEnd)
+    return LexEndOfFile(Result, BufferPtr);
+
   while (NextDepDirectiveTokenIndex == DepDirectives.front().Tokens.size()) {
     if (DepDirectives.front().Kind == pp_eof)
       return LexEndOfFile(Result, BufferEnd);
