@@ -70,6 +70,8 @@ Changes to LLVM infrastructure
 
 * Removed support for target intrinsics being defined in the target directories
   themselves (i.e., the `TargetIntrinsicInfo` class).
+* Fix Microsoft demanling of string literals to be stricter
+  ([Fixes 129970](https://github.com/llvm/llvm-project/issues/129970))
 
 Changes to building LLVM
 ------------------------
