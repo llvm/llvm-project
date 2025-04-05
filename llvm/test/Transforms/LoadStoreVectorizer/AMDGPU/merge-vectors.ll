@@ -135,3 +135,14 @@ define void @merge_i32_2i16_float_4i8(ptr addrspace(1) %ptr1, ptr addrspace(2) %
   store <4 x i8> %load4, ptr addrspace(2) %store.gep4, align 4
   ret void
 }
+
+; CHECK-LABEL: @merge_fp_type(
+; CHECK: load <2 x float>
+; CHECK: bitcast float {{.*}} to <2 x half>
+define void @merge_fp_type(ptr addrspace(1) %ptr1, ptr addrspace(2) %ptr2) {
+  %gep1 = getelementptr inbounds float, ptr addrspace(1) %ptr1, i64 0
+  %load1 = load float, ptr addrspace(1) %gep1, align 4
+  %gep2 = getelementptr inbounds <2 x half>, ptr addrspace(1) %ptr1, i64 1
+  %load2 = load <2 x half>, ptr addrspace(1) %gep2, align 4
+  ret void
+}

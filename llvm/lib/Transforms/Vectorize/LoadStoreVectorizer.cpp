@@ -60,6 +60,7 @@
 #include "llvm/Transforms/Vectorize/LoadStoreVectorizer.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Bitset.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
@@ -1318,6 +1319,28 @@ void Vectorizer::insertCastsToMergeClasses(EquivalenceClassMap &EQClasses) {
   if (EQClasses.size() < 2)
     return;
 
+  // For each class, determine if all instructions are of type int, FP or ptr.
+  // This information will help us determine the type instructions should be
+  // casted into.
+  MapVector<EqClassKey, Bitset<3>> ClassAllTy;
+  for (auto C : EQClasses) {
+    if (all_of(EQClasses[C.first], 
+      [](Instruction *I) {
+        return I->getType()->isIntOrIntVectorTy();
+      }))
+      ClassAllTy[C.first].set(0);
+    else if (all_of(EQClasses[C.first],
+      [](Instruction *I) {
+        return I->getType()->isFPOrFPVectorTy();
+      }))
+      ClassAllTy[C.first].set(1);
+    else if (all_of(EQClasses[C.first],
+      [](Instruction *I) {
+        return I->getType()->isPtrOrPtrVectorTy();
+      }))
+      ClassAllTy[C.first].set(2);
+  }
+
   // Loop over all equivalence classes and try to merge them. Keep track of
   // classes that are merged into others.
   DenseSet<EqClassKey> ClassesToErase;
@@ -1346,8 +1369,19 @@ void Vectorizer::insertCastsToMergeClasses(EquivalenceClassMap &EQClasses) {
         continue;
 
       // Create a new type for the equivalence class.
-      /// TODO: NewTy should be an FP type for an all-FP equivalence class.
-      auto *NewTy = Type::getIntNTy(EC2.second[0]->getContext(), NewTyBits);
+      auto &Ctx = EC2.second[0]->getContext();
+      Type *NewTy = Type::getIntNTy(EC2.second[0]->getContext(), NewTyBits);
+      if (ClassAllTy[EC1.first].test(1) && ClassAllTy[EC2.first].test(1)) {
+        if (NewTyBits == 16)
+          NewTy = Type::getHalfTy(Ctx);
+        else if (NewTyBits == 32)
+          NewTy = Type::getFloatTy(Ctx);
+        else if (NewTyBits == 64)
+          NewTy = Type::getDoubleTy(Ctx);
+      } else if (ClassAllTy[EC1.first].test(2) && ClassAllTy[EC2.first].test(2)) {
+        NewTy = PointerType::get(Ctx, AS2);
+      }
+
       for (auto *Inst : EC2.second) {
         auto *Ptr = getLoadStorePointerOperand(Inst);
         auto *OrigTy = Inst->getType();
