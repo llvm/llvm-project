@@ -1780,3 +1780,25 @@ module {
   // expected-error@+1 {{failed to parse ModuleFlagAttr parameter 'value' which is to be a `uint32_t`}}
   llvm.module_flags [#llvm.mlir.module_flag<error, "wchar_size", "yolo">]
 }
+
+// -----
+
+llvm.func @t0() -> !llvm.ptr {
+  %0 = llvm.blockaddress <function = @t0, tag = <id = 1>> : !llvm.ptr
+  llvm.blocktag <id = 1>
+  llvm.br ^bb1
+^bb1:
+  // expected-error@+1 {{duplicate block tag '1' in the same function}}
+  llvm.blocktag <id = 1>
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.func @t1() -> !llvm.ptr {
+  // expected-error@+1 {{expects an existing block label target in the referenced function}}
+  %0 = llvm.blockaddress <function = @t1, tag = <id = 1>> : !llvm.ptr
+  llvm.br ^bb1
+^bb1:
+  llvm.return %0 : !llvm.ptr
+}
