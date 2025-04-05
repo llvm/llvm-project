@@ -920,7 +920,7 @@ def FrameAddress : Builtin {
 def ClearCache : Builtin {
   let Spellings = ["__builtin___clear_cache"];
   let Attributes = [NoThrow];
-  let Prototype = "void(char*, char*)";
+  let Prototype = "void(void*, void*)";
 }
 
 def BuiltinSetjmp : Builtin {

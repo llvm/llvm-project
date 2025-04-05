@@ -354,6 +354,10 @@ Bug Fixes to Compiler Builtins
 
 - The behvaiour of ``__add_pointer`` and ``__remove_pointer`` for Objective-C++'s ``id`` and interfaces has been fixed.
 
+- The signature for ``__builtin___clear_cache`` was changed from
+  ``void(char *, char *)`` to ``void(void *, void *)`` to match GCC's signature
+  for the same builtin. (#GH47833)
+
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
  - Fixed crash when a parameter to the ``clang::annotate`` attribute evaluates to ``void``. See #GH119125
@@ -362,6 +366,10 @@ Bug Fixes to Attribute Support
   argument form of GCC 11's ``__attribute__((malloc(deallocator)))``
   or ``__attribute__((malloc(deallocator, ptr-index)))``
   (`#51607 <https://github.com/llvm/llvm-project/issues/51607>`_).
+
+- Corrected the diagnostic for the ``callback`` attribute when passing too many
+  or too few attribute argument indicies for the specified callback function.
+  (#GH47451)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
