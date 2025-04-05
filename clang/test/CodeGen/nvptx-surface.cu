@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple nvptx-unknown-unknown -fcuda-is-device -O3 -o - %s -emit-llvm | FileCheck %s
 // RUN: %clang_cc1 -triple nvptx64-unknown-unknown -fcuda-is-device -O3 -o - %s -emit-llvm | FileCheck %s
-#include "../Headers/Inputs/include/cuda.h"
+#include "include/cuda.h"
 
 #include "__clang_cuda_texture_intrinsics.h"
 

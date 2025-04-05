@@ -109,9 +109,9 @@ uint64_t MachObjectWriter::getSymbolAddress(const MCSymbol &S,
                          S.getName() + "'");
 
     // Verify that any used symbols are defined.
-    if (Target.getSymA() && Target.getSymA()->getSymbol().isUndefined())
+    if (Target.getSymA() && Target.getAddSym()->isUndefined())
       report_fatal_error("unable to evaluate offset to undefined symbol '" +
-                         Target.getSymA()->getSymbol().getName() + "'");
+                         Target.getAddSym()->getName() + "'");
     if (Target.getSubSym() && Target.getSubSym()->isUndefined())
       report_fatal_error("unable to evaluate offset to undefined symbol '" +
                          Target.getSubSym()->getName() + "'");
@@ -507,7 +507,7 @@ void MachObjectWriter::writeLinkerOptionsLoadCommand(
 static bool isFixupTargetValid(const MCValue &Target) {
   // Target is (LHS - RHS + cst).
   // We don't support the form where LHS is null: -RHS + cst
-  if (!Target.getSymA() && Target.getSubSym())
+  if (!Target.getAddSym() && Target.getSubSym())
     return false;
   return true;
 }
