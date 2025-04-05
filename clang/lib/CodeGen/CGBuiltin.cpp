@@ -5994,10 +5994,27 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   }
   }
 
+  // These will be emitted as Intrinsic later.
+  auto NeedsDeviceOverload = [&](unsigned BuiltinID) {
+    if (getTarget().getTriple().isAMDGCN()) {
+      switch (BuiltinID) {
+      default:
+        return false;
+      case Builtin::BIlogb:
+      case Builtin::BI__builtin_logb:
+      case Builtin::BIscalbn:
+      case Builtin::BI__builtin_scalbn:
+        return true;
+      }
+    }
+    return false;
+  };
+
   // If this is an alias for a lib function (e.g. __builtin_sin), emit
   // the call using the normal call path, but using the unmangled
   // version of the function name.
-  if (getContext().BuiltinInfo.isLibFunction(BuiltinID))
+  if (!NeedsDeviceOverload(BuiltinID) &&
+      getContext().BuiltinInfo.isLibFunction(BuiltinID))
     return emitLibraryCall(*this, FD, E,
                            CGM.getBuiltinLibFunction(FD, BuiltinID));
 
