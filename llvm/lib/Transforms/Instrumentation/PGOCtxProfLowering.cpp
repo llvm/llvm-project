@@ -219,6 +219,14 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
   Value *TheRootFuctionData = nullptr;
   Value *ExpectedCalleeTLSAddr = nullptr;
   Value *CallsiteInfoTLSAddr = nullptr;
+  const bool HasMusttail = [&F]() {
+    for (auto &BB : F)
+      for (auto &I : BB)
+        if (auto *CB = dyn_cast<CallBase>(&I))
+          if (CB->isMustTailCall())
+            return true;
+    return false;
+  }();
 
   auto &Head = F.getEntryBlock();
   for (auto &I : Head) {
@@ -243,19 +251,18 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
       // regular function)
       // Don't set a name, they end up taking a lot of space and we don't need
       // them.
-      auto *FData = new GlobalVariable(M, FunctionDataTy, false,
-                                       GlobalVariable::InternalLinkage,
-                                       Constant::getNullValue(FunctionDataTy));
+      TheRootFuctionData = new GlobalVariable(
+          M, FunctionDataTy, false, GlobalVariable::InternalLinkage,
+          Constant::getNullValue(FunctionDataTy));
 
       if (ContextRootSet.contains(&F)) {
         Context = Builder.CreateCall(
-            StartCtx, {FData, Guid, Builder.getInt32(NumCounters),
+            StartCtx, {TheRootFuctionData, Guid, Builder.getInt32(NumCounters),
                        Builder.getInt32(NumCallsites)});
-        TheRootFuctionData = FData;
         ORE.emit(
             [&] { return OptimizationRemark(DEBUG_TYPE, "Entrypoint", &F); });
       } else {
-        Context = Builder.CreateCall(GetCtx, {FData, &F, Guid,
+        Context = Builder.CreateCall(GetCtx, {TheRootFuctionData, &F, Guid,
                                               Builder.getInt32(NumCounters),
                                               Builder.getInt32(NumCallsites)});
         ORE.emit([&] {
@@ -339,7 +346,7 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
           break;
         }
         I.eraseFromParent();
-      } else if (TheRootFuctionData && isa<ReturnInst>(I)) {
+      } else if (!HasMusttail && isa<ReturnInst>(I)) {
         // Remember to release the context if we are an entrypoint.
         IRBuilder<> Builder(&I);
         Builder.CreateCall(ReleaseCtx, {TheRootFuctionData});
@@ -351,9 +358,10 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
   // to disallow this, (so this then stays as an error), another is to detect
   // that and then do a wrapper or disallow the tail call. This only affects
   // instrumentation, when we want to detect the call graph.
-  if (TheRootFuctionData && !ContextWasReleased)
+  if (!HasMusttail && !ContextWasReleased)
     F.getContext().emitError(
-        "[ctx_prof] An entrypoint was instrumented but it has no `ret` "
+        "[ctx_prof] A function that doesn't have musttail calls was "
+        "instrumented but it has no `ret` "
         "instructions above which to release the context: " +
         F.getName());
   return true;

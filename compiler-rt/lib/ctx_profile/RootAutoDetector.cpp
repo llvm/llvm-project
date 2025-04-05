@@ -8,6 +8,7 @@
 
 #include "RootAutoDetector.h"
 
+#include "CtxInstrProfiling.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_placement_new.h" // IWYU pragma: keep (DenseMap)
 #include <assert.h>
@@ -16,6 +17,99 @@
 
 using namespace __ctx_profile;
 template <typename T> using Set = DenseMap<T, bool>;
+
+namespace __sanitizer {
+void BufferedStackTrace::UnwindImpl(uptr pc, uptr bp, void *context,
+                                    bool request_fast, u32 max_depth) {
+  // We can't implement the fast variant. The fast variant ends up invoking an
+  // external allocator, because of pthread_attr_getstack. If this happens
+  // during an allocation of the program being instrumented, a non-reentrant
+  // lock may be taken (this was observed). The allocator called by
+  // pthread_attr_getstack will also try to take that lock.
+  UnwindSlow(pc, max_depth);
+}
+} // namespace __sanitizer
+
+RootAutoDetector::PerThreadSamples::PerThreadSamples(RootAutoDetector &Parent) {
+  GenericScopedLock<SpinMutex> L(&Parent.AllSamplesMutex);
+  Parent.AllSamples.PushBack(this);
+}
+
+void RootAutoDetector::start() {
+  atomic_store_relaxed(&Self, reinterpret_cast<uintptr_t>(this));
+  pthread_create(
+      &WorkerThread, nullptr,
+      +[](void *Ctx) -> void * {
+        RootAutoDetector *RAD = reinterpret_cast<RootAutoDetector *>(Ctx);
+        SleepForSeconds(RAD->WaitSeconds);
+        // To avoid holding the AllSamplesMutex, make a snapshot of all the
+        // thread samples collected so far
+        Vector<PerThreadSamples *> SamplesSnapshot;
+        {
+          GenericScopedLock<SpinMutex> M(&RAD->AllSamplesMutex);
+          SamplesSnapshot.Resize(RAD->AllSamples.Size());
+          for (uptr I = 0; I < RAD->AllSamples.Size(); ++I)
+            SamplesSnapshot[I] = RAD->AllSamples[I];
+        }
+        DenseMap<uptr, uint64_t> AllRoots;
+        for (uptr I = 0; I < SamplesSnapshot.Size(); ++I) {
+          GenericScopedLock<SpinMutex>(&SamplesSnapshot[I]->M);
+          SamplesSnapshot[I]->TrieRoot.determineRoots().forEach([&](auto &KVP) {
+            auto [FAddr, Count] = KVP;
+            AllRoots[FAddr] += Count;
+            return true;
+          });
+        }
+        // FIXME: as a next step, establish a minimum relative nr of samples
+        // per root that would qualify it as a root.
+        for (auto *FD = reinterpret_cast<FunctionData *>(
+                 atomic_load_relaxed(&RAD->FunctionDataListHead));
+             FD; FD = FD->Next) {
+          if (AllRoots.contains(reinterpret_cast<uptr>(FD->EntryAddress))) {
+            FD->getOrAllocateContextRoot();
+          }
+        }
+        atomic_store_relaxed(&RAD->Self, 0);
+        return nullptr;
+      },
+      this);
+}
+
+void RootAutoDetector::join() { pthread_join(WorkerThread, nullptr); }
+
+void RootAutoDetector::sample() {
+  // tracking reentry in case we want to re-explore fast stack unwind - which
+  // does potentially re-enter the runtime because it calls the instrumented
+  // allocator because of pthread_attr_getstack. See the notes also on
+  // UnwindImpl above.
+  static thread_local bool Entered = false;
+  static thread_local uint64_t Entries = 0;
+  if (Entered || (++Entries % SampleRate))
+    return;
+  Entered = true;
+  collectStack();
+  Entered = false;
+}
+
+void RootAutoDetector::collectStack() {
+  GET_CALLER_PC_BP;
+  BufferedStackTrace CurrentStack;
+  CurrentStack.Unwind(pc, bp, nullptr, false);
+  // 2 stack frames would be very unlikely to mean anything, since at least the
+  // compiler-rt frame - which can't be inlined - should be observable, which
+  // counts as 1; we can be even more aggressive with this number.
+  if (CurrentStack.size <= 2)
+    return;
+  static thread_local PerThreadSamples *ThisThreadSamples =
+      new (__sanitizer::InternalAlloc(sizeof(PerThreadSamples)))
+          PerThreadSamples(*this);
+
+  if (!ThisThreadSamples->M.TryLock())
+    return;
+
+  ThisThreadSamples->TrieRoot.insertStack(CurrentStack);
+  ThisThreadSamples->M.Unlock();
+}
 
 uptr PerThreadCallsiteTrie::getFctStartAddr(uptr CallsiteAddress) const {
   // this requires --linkopt=-Wl,--export-dynamic
