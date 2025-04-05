@@ -18,6 +18,7 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Region.h"
 #include "mlir/IR/ValueRange.h"
+#include "mlir/Transforms/Inliner.h"
 #include <optional>
 
 namespace mlir {
@@ -253,33 +254,39 @@ public:
 /// provided, will be used to update the inlined operations' location
 /// information. 'shouldCloneInlinedRegion' corresponds to whether the source
 /// region should be cloned into the 'inlinePoint' or spliced directly.
-LogicalResult inlineRegion(InlinerInterface &interface, Region *src,
-                           Operation *inlinePoint, IRMapping &mapper,
-                           ValueRange resultsToReplace,
-                           TypeRange regionResultTypes,
-                           std::optional<Location> inlineLoc = std::nullopt,
-                           bool shouldCloneInlinedRegion = true);
-LogicalResult inlineRegion(InlinerInterface &interface, Region *src,
-                           Block *inlineBlock, Block::iterator inlinePoint,
-                           IRMapping &mapper, ValueRange resultsToReplace,
-                           TypeRange regionResultTypes,
-                           std::optional<Location> inlineLoc = std::nullopt,
-                           bool shouldCloneInlinedRegion = true);
+LogicalResult
+inlineRegion(InlinerInterface &interface,
+             function_ref<InlinerConfig::CloneCallbackSigTy> cloneCallback,
+             Region *src, Operation *inlinePoint, IRMapping &mapper,
+             ValueRange resultsToReplace, TypeRange regionResultTypes,
+             std::optional<Location> inlineLoc = std::nullopt,
+             bool shouldCloneInlinedRegion = true);
+LogicalResult
+inlineRegion(InlinerInterface &interface,
+             function_ref<InlinerConfig::CloneCallbackSigTy> cloneCallback,
+             Region *src, Block *inlineBlock, Block::iterator inlinePoint,
+             IRMapping &mapper, ValueRange resultsToReplace,
+             TypeRange regionResultTypes,
+             std::optional<Location> inlineLoc = std::nullopt,
+             bool shouldCloneInlinedRegion = true);
 
 /// This function is an overload of the above 'inlineRegion' that allows for
 /// providing the set of operands ('inlinedOperands') that should be used
 /// in-favor of the region arguments when inlining.
-LogicalResult inlineRegion(InlinerInterface &interface, Region *src,
-                           Operation *inlinePoint, ValueRange inlinedOperands,
-                           ValueRange resultsToReplace,
-                           std::optional<Location> inlineLoc = std::nullopt,
-                           bool shouldCloneInlinedRegion = true);
-LogicalResult inlineRegion(InlinerInterface &interface, Region *src,
-                           Block *inlineBlock, Block::iterator inlinePoint,
-                           ValueRange inlinedOperands,
-                           ValueRange resultsToReplace,
-                           std::optional<Location> inlineLoc = std::nullopt,
-                           bool shouldCloneInlinedRegion = true);
+LogicalResult
+inlineRegion(InlinerInterface &interface,
+             function_ref<InlinerConfig::CloneCallbackSigTy> cloneCallback,
+             Region *src, Operation *inlinePoint, ValueRange inlinedOperands,
+             ValueRange resultsToReplace,
+             std::optional<Location> inlineLoc = std::nullopt,
+             bool shouldCloneInlinedRegion = true);
+LogicalResult
+inlineRegion(InlinerInterface &interface,
+             function_ref<InlinerConfig::CloneCallbackSigTy> cloneCallback,
+             Region *src, Block *inlineBlock, Block::iterator inlinePoint,
+             ValueRange inlinedOperands, ValueRange resultsToReplace,
+             std::optional<Location> inlineLoc = std::nullopt,
+             bool shouldCloneInlinedRegion = true);
 
 /// This function inlines a given region, 'src', of a callable operation,
 /// 'callable', into the location defined by the given call operation. This
@@ -287,9 +294,11 @@ LogicalResult inlineRegion(InlinerInterface &interface, Region *src,
 /// failure, no changes are made to the module. 'shouldCloneInlinedRegion'
 /// corresponds to whether the source region should be cloned into the 'call' or
 /// spliced directly.
-LogicalResult inlineCall(InlinerInterface &interface, CallOpInterface call,
-                         CallableOpInterface callable, Region *src,
-                         bool shouldCloneInlinedRegion = true);
+LogicalResult
+inlineCall(InlinerInterface &interface,
+           function_ref<InlinerConfig::CloneCallbackSigTy> cloneCallback,
+           CallOpInterface call, CallableOpInterface callable, Region *src,
+           bool shouldCloneInlinedRegion = true);
 
 } // namespace mlir
 
