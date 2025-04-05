@@ -319,6 +319,8 @@ Improvements to Clang's diagnostics
 - ``-Wc++98-compat`` no longer diagnoses use of ``__auto_type`` or
   ``decltype(auto)`` as though it was the extension for ``auto``. (#GH47900)
 
+- Clang now downgrades the inconsistent language options between modules to warnings instead of errors.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
