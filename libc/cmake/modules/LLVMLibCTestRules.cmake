@@ -318,8 +318,6 @@ function(create_libc_unittest fq_target_name)
   target_link_libraries(${fq_build_target_name} PRIVATE ${link_libraries})
 
   if(NOT LIBC_UNITTEST_NO_RUN_POSTBUILD)
-    set(test_cmd ${LIBC_UNITTEST_ENV}
-        ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:${fq_build_target_name}>)
     add_custom_target(
       ${fq_target_name}
       COMMAND ${LIBC_UNITTEST_ENV} ${CMAKE_CROSSCOMPILING_EMULATOR} ${fq_build_target_name}
