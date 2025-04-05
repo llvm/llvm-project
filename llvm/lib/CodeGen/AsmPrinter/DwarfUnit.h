@@ -324,6 +324,9 @@ public:
   void updateAcceleratorTables(const DIScope *Context, const DIType *Ty,
                                const DIE &TyDIE);
 
+  /// Add DW_TAG_LLVM_func_args_changed.
+  void addLLVMChangedArgs(DIE &ScopeDIE, const DISubprogram *SP);
+
 protected:
   ~DwarfUnit();
 
