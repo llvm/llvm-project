@@ -1518,6 +1518,7 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   SmallVector<Instruction *, 4> LifetimeMarkers;
   SmallSet<Instruction *, 4> NoAliasInstrs;
   bool SrcNotDom = false;
+  SmallSet<Instruction *, 4> OptimizedAllocaInstUsers;
 
   // Recursively track the user and check whether modified alias exist.
   auto IsDereferenceableOrNull = [](Value *V, const DataLayout &DL) -> bool {
@@ -1526,8 +1527,8 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   };
 
   auto CaptureTrackingWithModRef =
-      [&](Instruction *AI,
-          function_ref<bool(Instruction *)> ModRefCallback) -> bool {
+      [&](Instruction *AI, function_ref<bool(Instruction *)> ModRefCallback,
+          SmallSet<Instruction *, 4> &AllocaInstUsersWithTBAA) -> bool {
     SmallVector<Instruction *, 8> Worklist;
     Worklist.push_back(AI);
     unsigned MaxUsesToExplore = getDefaultMaxUsesToExploreForCaptureTracking();
@@ -1570,6 +1571,9 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
               continue;
             }
           }
+          if (UI != Store && (UI->hasMetadata(LLVMContext::MD_tbaa) ||
+                              UI->hasMetadata(LLVMContext::MD_tbaa_struct)))
+            AllocaInstUsersWithTBAA.insert(UI);
           if (UI->hasMetadata(LLVMContext::MD_noalias))
             NoAliasInstrs.insert(UI);
           if (!ModRefCallback(UI))
@@ -1626,7 +1630,8 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
     return true;
   };
 
-  if (!CaptureTrackingWithModRef(DestAlloca, DestModRefCallback))
+  if (!CaptureTrackingWithModRef(DestAlloca, DestModRefCallback,
+                                 OptimizedAllocaInstUsers))
     return false;
   // Bailout if Dest may have any ModRef before Store.
   if (!ReachabilityWorklist.empty() &&
@@ -1652,7 +1657,8 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
     return true;
   };
 
-  if (!CaptureTrackingWithModRef(SrcAlloca, SrcModRefCallback))
+  if (!CaptureTrackingWithModRef(SrcAlloca, SrcModRefCallback,
+                                 OptimizedAllocaInstUsers))
     return false;
 
   // We can do the transformation. First, move the SrcAlloca to the start of the
@@ -1685,6 +1691,12 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   // seem worthwhile right now.
   for (Instruction *I : NoAliasInstrs)
     I->setMetadata(LLVMContext::MD_noalias, nullptr);
+
+  // Remove !tbaa and !tbaa_struct from the metadata, since they are invalid.
+  for (Instruction *I : OptimizedAllocaInstUsers) {
+    I->setMetadata(LLVMContext::MD_tbaa, nullptr);
+    I->setMetadata(LLVMContext::MD_tbaa_struct, nullptr);
+  }
 
   LLVM_DEBUG(dbgs() << "Stack Move: Performed staack-move optimization\n");
   NumStackMove++;
