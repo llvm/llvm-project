@@ -398,6 +398,14 @@ struct DAP {
   InstructionBreakpoint *GetInstructionBPFromStopReason(lldb::SBThread &thread);
 
   lldb::SBMutex GetAPIMutex() const { return target.GetAPIMutex(); }
+
+  /// Sends an error response in DAP with success=false and an error message.
+  ///
+  /// \param[out] response
+  ///   The response object to update.
+  /// \param[in] message
+  ///   The error message.
+  void SendErrorResponse(llvm::json::Object &response, llvm::StringRef message);
 };
 
 } // namespace lldb_dap
