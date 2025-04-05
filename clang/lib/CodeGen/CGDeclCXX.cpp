@@ -794,6 +794,7 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
     }
     CodeGenFunction(*this).GenerateCXXGlobalInitFunc(Fn, ModuleInits,
                                                      GuardAddr);
+    getTargetCodeGenInfo().setTargetAttributes(nullptr, Fn, *this);
   }
 
   // We allow for the case that a module object is added to a linked binary
