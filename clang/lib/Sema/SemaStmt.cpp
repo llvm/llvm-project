@@ -717,6 +717,14 @@ bool Sema::checkMustTailAttr(const Stmt *St, const Attr &MTA) {
     return false;
   }
 
+  if (const FunctionDecl *CalleeDecl = CE->getDirectCallee()) {
+    if (CalleeDecl->hasAttr<NotTailCalledAttr>()) {
+      Diag(St->getBeginLoc(), diag::err_musttail_conflicts_with_not_tail_called)
+          << &MTA;
+      return false;
+    }
+  }
+
   if (const auto *EWC = dyn_cast<ExprWithCleanups>(E)) {
     if (EWC->cleanupsHaveSideEffects()) {
       Diag(St->getBeginLoc(), diag::err_musttail_needs_trivial_args) << &MTA;
