@@ -25,17 +25,25 @@ namespace fputil {
 
 #ifdef LIBC_TARGET_CPU_HAS_ARM_FPU_FLOAT
 template <> LIBC_INLINE float sqrt<float>(float x) {
+#if __has_builtin(__builtin_elementwise_sqrt)
+  return __builtin_elementwise_sqrt(x);
+#else
   float y;
   asm("fsqrt %s0, %s1\n\t" : "=w"(y) : "w"(x));
   return y;
+#endif // __builtin_elementwise_sqrt
 }
 #endif // LIBC_TARGET_CPU_HAS_ARM_FPU_FLOAT
 
 #ifdef LIBC_TARGET_CPU_HAS_ARM_FPU_DOUBLE
 template <> LIBC_INLINE double sqrt<double>(double x) {
+#if __has_builtin(__builtin_elementwise_sqrt)
+  return __builtin_elementwise_sqrt(x);
+#else
   double y;
   asm("fsqrt %d0, %d1\n\t" : "=w"(y) : "w"(x));
   return y;
+#endif // __builtin_elementwise_sqrt
 }
 #endif // LIBC_TARGET_CPU_HAS_ARM_FPU_DOUBLE
 
