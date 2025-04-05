@@ -498,7 +498,8 @@ bool LoongArchAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
     llvm_unreachable("unsupported fixup size");
   }
   MCValue A = MCValue::get(Target.getSymA(), nullptr, Target.getConstant());
-  MCValue B = MCValue::get(Target.getSymB());
+  MCValue B = MCValue::get(
+      MCSymbolRefExpr::create(Target.getSubSym(), Asm.getContext()));
   auto FA = MCFixup::create(Fixup.getOffset(), nullptr, std::get<0>(FK));
   auto FB = MCFixup::create(Fixup.getOffset(), nullptr, std::get<1>(FK));
   auto &Assembler = const_cast<MCAssembler &>(Asm);

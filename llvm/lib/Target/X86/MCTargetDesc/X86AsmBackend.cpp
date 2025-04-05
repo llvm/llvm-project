@@ -744,8 +744,7 @@ bool X86AsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
   if (Fixup.getKind() == FK_Data_1) {
     MCValue Target;
     if (Fixup.getValue()->evaluateAsRelocatable(Target, &Asm) &&
-        Target.getSymA() &&
-        getSpecifier(Target.getSymA()) == X86MCExpr::VK_ABS8)
+        Target.getSymA() && Target.getSymSpecifier() == X86MCExpr::VK_ABS8)
       return false;
   }
   return true;
