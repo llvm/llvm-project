@@ -55,6 +55,9 @@ private:
   // Second index is 32 different dword offsets.
   static std::array<std::array<uint16_t, 32>, 9> SubRegFromChannelTable;
 
+  static BitVector AlwaysReservedRegs;
+  BitVector getAlwaysReservedRegs() const;
+
   void reserveRegisterTuples(BitVector &, MCRegister Reg) const;
 
 public:
