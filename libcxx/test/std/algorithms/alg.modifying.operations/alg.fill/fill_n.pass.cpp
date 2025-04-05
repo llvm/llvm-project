@@ -17,6 +17,8 @@
 #include <array>
 #include <cassert>
 #include <cstddef>
+#include <deque>
+#include <ranges>
 #include <vector>
 
 #include "sized_allocator.h"
@@ -176,6 +178,27 @@ TEST_CONSTEXPR_CXX20 void test_struct_array() {
   }
 }
 
+/*TEST_CONSTEXPR_CXX23*/ void
+test_segmented_iterator() { // TODO: Mark this test as TEST_CONSTEXPR_CXX23 when std::deque is constexpr
+  {                         // std::deque iterator
+    std::deque<int> in(20);
+    std::deque<int> expected(in.size(), 42);
+    std::fill_n(in.begin(), in.size(), 42);
+    assert(in == expected);
+  }
+
+#if TEST_STD_VER >= 20
+  { // join_view iterator
+    std::vector<std::vector<int>> v{{1, 2}, {1, 2, 3}, {0, 0}, {3, 4, 5}, {6}, {7, 8, 9, 6}, {0, 1, 2, 3, 0, 1, 2}};
+    auto jv = std::ranges::join_view(v);
+    std::fill_n(jv.begin(), std::distance(jv.begin(), jv.end()), 42);
+    for (const auto& vec : v)
+      for (auto n : vec)
+        assert(n == 42);
+  }
+#endif
+}
+
 TEST_CONSTEXPR_CXX20 bool test() {
   types::for_each(types::forward_iterator_list<char*>(), Test<char>());
   types::for_each(types::forward_iterator_list<int*>(), Test<int>());
@@ -224,6 +247,9 @@ TEST_CONSTEXPR_CXX20 bool test() {
       assert(in == expected);
     }
   }
+
+  if (!TEST_IS_CONSTANT_EVALUATED) // TODO: Use TEST_STD_AT_LEAST_23_OR_RUNTIME_EVALUATED when std::deque is made constexpr
+    test_segmented_iterator();
 
   return true;
 }
