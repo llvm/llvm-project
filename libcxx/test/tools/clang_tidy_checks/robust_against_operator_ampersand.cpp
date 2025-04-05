@@ -20,6 +20,13 @@
 // This is part of libc++'s policy
 // https://libcxx.llvm.org/CodingGuidelines.html#don-t-use-argument-dependent-lookup-unless-required-by-the-standard
 
+// TODO(LLVM-21) Remove dependentScopeDeclRefExpr
+// dependentScopeDeclRefExpr requires Clang 20, this uses the same definition as Clang
+#if defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 2000
+const clang::ast_matchers::internal::VariadicDynCastAllOfMatcher<clang::Stmt, clang::DependentScopeDeclRefExpr>
+    clang::ast_matchers::dependentScopeDeclRefExpr;
+#endif
+
 namespace libcpp {
 robust_against_operator_ampersand::robust_against_operator_ampersand(
     llvm::StringRef name, clang::tidy::ClangTidyContext* context)
