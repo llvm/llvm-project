@@ -990,7 +990,7 @@ bool CodeGenPrepare::isMergingEmptyBlockProfitable(BasicBlock *BB,
                  isa<IndirectBrInst>(Pred->getTerminator())))
     return true;
 
-  if (BB->getTerminator() != BB->getFirstNonPHIOrDbg())
+  if (BB->getTerminator() != &*BB->getFirstNonPHIOrDbg())
     return true;
 
   // We use a simple cost heuristic which determine skipping merging is
@@ -1082,7 +1082,7 @@ bool CodeGenPrepare::canMergeBlocks(const BasicBlock *BB,
     for (unsigned i = 0, e = BBPN->getNumIncomingValues(); i != e; ++i)
       BBPreds.insert(BBPN->getIncomingBlock(i));
   } else {
-    BBPreds.insert(pred_begin(BB), pred_end(BB));
+    BBPreds.insert_range(predecessors(BB));
   }
 
   // Walk the preds of DestBB.
@@ -2935,13 +2935,13 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
 
   // Make sure there are no instructions between the first instruction
   // and return.
-  const Instruction *BI = BB->getFirstNonPHI();
+  BasicBlock::const_iterator BI = BB->getFirstNonPHIIt();
   // Skip over debug and the bitcast.
-  while (isa<DbgInfoIntrinsic>(BI) || BI == BCI || BI == EVI ||
-         isa<PseudoProbeInst>(BI) || isLifetimeEndOrBitCastFor(BI) ||
-         isFakeUse(BI))
-    BI = BI->getNextNode();
-  if (BI != RetI)
+  while (isa<DbgInfoIntrinsic>(BI) || &*BI == BCI || &*BI == EVI ||
+         isa<PseudoProbeInst>(BI) || isLifetimeEndOrBitCastFor(&*BI) ||
+         isFakeUse(&*BI))
+    BI = std::next(BI);
+  if (&*BI != RetI)
     return false;
 
   /// Only dup the ReturnInst if the CallInst is likely to be emitted as a tail
@@ -3073,6 +3073,14 @@ struct ExtAddrMode : public TargetLowering::AddrMode {
 
   void print(raw_ostream &OS) const;
   void dump() const;
+
+  // Replace From in ExtAddrMode with To.
+  // E.g., SExt insts may be promoted and deleted. We should replace them with
+  // the promoted values.
+  void replaceWith(Value *From, Value *To) {
+    if (ScaledReg == From)
+      ScaledReg = To;
+  }
 
   FieldName compare(const ExtAddrMode &other) {
     // First check that the types are the same on each field, as differing types
@@ -3265,8 +3273,8 @@ class TypePromotionTransaction {
     /// Either an instruction:
     /// - Is the first in a basic block: BB is used.
     /// - Has a previous instruction: PrevInst is used.
-    union {
-      Instruction *PrevInst;
+    struct {
+      BasicBlock::iterator PrevInst;
       BasicBlock *BB;
     } Point;
     std::optional<DbgRecord::self_iterator> BeforeDbgRecord = std::nullopt;
@@ -3286,7 +3294,7 @@ class TypePromotionTransaction {
         BeforeDbgRecord = Inst->getDbgReinsertionPosition();
 
       if (HasPrevInstruction) {
-        Point.PrevInst = &*std::prev(Inst->getIterator());
+        Point.PrevInst = std::prev(Inst->getIterator());
       } else {
         Point.BB = BB;
       }
@@ -3297,7 +3305,7 @@ class TypePromotionTransaction {
       if (HasPrevInstruction) {
         if (Inst->getParent())
           Inst->removeFromParent();
-        Inst->insertAfter(&*Point.PrevInst);
+        Inst->insertAfter(Point.PrevInst);
       } else {
         BasicBlock::iterator Position = Point.BB->getFirstInsertionPt();
         if (Inst->getParent())
@@ -3317,7 +3325,7 @@ class TypePromotionTransaction {
 
   public:
     /// Move \p Inst before \p Before.
-    InstructionMoveBefore(Instruction *Inst, Instruction *Before)
+    InstructionMoveBefore(Instruction *Inst, BasicBlock::iterator Before)
         : TypePromotionAction(Inst), Position(Inst) {
       LLVM_DEBUG(dbgs() << "Do: move: " << *Inst << "\nbefore: " << *Before
                         << "\n");
@@ -4362,8 +4370,7 @@ private:
         // If it does not match, collect all Phi nodes from matcher.
         // if we end up with no match, them all these Phi nodes will not match
         // later.
-        for (auto M : Matched)
-          WillNotMatch.insert(M.first);
+        WillNotMatch.insert_range(llvm::make_first_range(Matched));
         Matched.clear();
       }
       if (IsMatched) {
@@ -4664,8 +4671,8 @@ class TypePromotionHelper {
   static void addPromotedInst(InstrToOrigTy &PromotedInsts,
                               Instruction *ExtOpnd, bool IsSExt) {
     ExtType ExtTy = IsSExt ? SignExtension : ZeroExtension;
-    InstrToOrigTy::iterator It = PromotedInsts.find(ExtOpnd);
-    if (It != PromotedInsts.end()) {
+    auto [It, Inserted] = PromotedInsts.try_emplace(ExtOpnd);
+    if (!Inserted) {
       // If the new extension is same as original, the information in
       // PromotedInsts[ExtOpnd] is still correct.
       if (It->second.getInt() == ExtTy)
@@ -4676,7 +4683,7 @@ class TypePromotionHelper {
       // BothExtension.
       ExtTy = BothExtension;
     }
-    PromotedInsts[ExtOpnd] = TypeIsSExt(ExtOpnd->getType(), ExtTy);
+    It->second = TypeIsSExt(ExtOpnd->getType(), ExtTy);
   }
 
   /// Utility function to query the original type of instruction \p Opnd
@@ -5365,6 +5372,9 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
       TPT.rollback(LastKnownGood);
       return false;
     }
+
+    // SExt has been deleted. Make sure it is not referenced by the AddrMode.
+    AddrMode.replaceWith(Ext, PromotedOperand);
     return true;
   }
   case Instruction::Call:
@@ -6798,8 +6808,7 @@ bool CodeGenPrepare::optimizePhiType(
   }
 
   // Save the removed phis to be deleted later.
-  for (PHINode *Phi : PhiNodes)
-    DeletedInstrs.insert(Phi);
+  DeletedInstrs.insert_range(PhiNodes);
   return true;
 }
 
@@ -7565,8 +7574,7 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   else if (FalseBlock == nullptr)
     FalseBlock = StartBlock;
 
-  SmallPtrSet<const Instruction *, 2> INS;
-  INS.insert(ASI.begin(), ASI.end());
+  SmallPtrSet<const Instruction *, 2> INS(llvm::from_range, ASI);
   // Use reverse iterator because later select may use the value of the
   // earlier select, and we need to propagate value through earlier select
   // to get the PHI operand.
@@ -8567,7 +8575,8 @@ static bool optimizeBranch(BranchInst *Branch, const TargetLowering &TLI,
     }
     if (Cmp->isEquality() &&
         (match(UI, m_Add(m_Specific(X), m_SpecificInt(-CmpC))) ||
-         match(UI, m_Sub(m_Specific(X), m_SpecificInt(CmpC))))) {
+         match(UI, m_Sub(m_Specific(X), m_SpecificInt(CmpC))) ||
+         match(UI, m_Xor(m_Specific(X), m_SpecificInt(CmpC))))) {
       IRBuilder<> Builder(Branch);
       if (UI->getParent() != Branch->getParent())
         UI->moveBefore(Branch->getIterator());

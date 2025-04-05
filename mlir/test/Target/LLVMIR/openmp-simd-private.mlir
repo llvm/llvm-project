@@ -1,17 +1,12 @@
 // RUN: mlir-translate -mlir-to-llvmir -split-input-file %s | FileCheck %s
 
-omp.private {type = private} @i_privatizer : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
-  %0 = llvm.mlir.constant(1 : i64) : i64
-  %1 = llvm.alloca %0 x i32 {bindc_name = "i", pinned} : (i64) -> !llvm.ptr
-  omp.yield(%1 : !llvm.ptr)
-}
+omp.private {type = private} @i_privatizer : i32
 
 // CHECK-LABEL: test_loop_var_privatization()
 //                Original (non-privatized) allocation for `i`.
 // CHECK:         %{{.*}} = alloca i32, i64 1, align 4
 // CHECK:         %[[DUMMY:.*]] = alloca float, i64 1, align 4
-// CHECK:         %[[PRIV_I:.*]] = alloca i32, i64 1, align 4
+// CHECK:         %[[PRIV_I:.*]] = alloca i32, align 4
 // CHECK:         br label %[[LATE_ALLOC:.*]]
 
 // CHECK:     [[LATE_ALLOC]]:
@@ -21,6 +16,9 @@ omp.private {type = private} @i_privatizer : !llvm.ptr alloc {
 // CHECK:         br label %[[ENTRY:.*]]
 
 // CHECK:       [[ENTRY]]:
+// CHECK:         br label %[[OMP_SIMD_REGION:.*]]
+
+// CHECK:       [[OMP_SIMD_REGION]]:
 // CHECK:         br label %[[OMP_LOOP_PREHEADER:.*]]
 
 // CHECK:       [[OMP_LOOP_PREHEADER]]:
@@ -37,9 +35,9 @@ omp.private {type = private} @i_privatizer : !llvm.ptr alloc {
 // CHECK:       [[OMP_LOOP_BODY]]:
 // CHECK:         %[[IV_UPDATE:.*]] = mul i32 %[[OMP_LOOP_IV]], 1
 // CHECK:         %[[IV_UPDATE_2:.*]] = add i32 %[[IV_UPDATE]], 1
-// CHECK:         br label %[[OMP_SIMD_REGION:.*]]
+// CHECK:         br label %[[OMP_LOOP_NEST_REGION:.*]]
 
-// CHECK:       [[OMP_SIMD_REGION]]:
+// CHECK:       [[OMP_LOOP_NEST_REGION]]:
 // CHECK:         store i32 %[[IV_UPDATE_2]], ptr %[[PRIV_I]], align 4
 // CHECK:         %[[DUMMY_VAL:.*]] = load float, ptr %[[DUMMY]], align 4
 // CHECK:         %[[PRIV_I_VAL:.*]] = load i32, ptr %[[PRIV_I]], align 4
@@ -78,22 +76,17 @@ llvm.func @test_loop_var_privatization() attributes {fir.internal_name = "_QPtes
   llvm.return
 }
 
-omp.private {type = private} @dummy_privatizer : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
-  %0 = llvm.mlir.constant(1 : i64) : i64
-  %1 = llvm.alloca %0 x f32 {bindc_name = "dummy", pinned} : (i64) -> !llvm.ptr
-  omp.yield(%1 : !llvm.ptr)
-}
+omp.private {type = private} @dummy_privatizer : f32
 
 // CHECK-LABEL: test_private_clause()
 //                Original (non-privatized) allocation for `i`.
 // CHECK:         %{{.*}} = alloca i32, i64 1, align 4
 //                Original (non-privatized) allocation for `dummy`.
 // CHECK:         %{{.*}} = alloca float, i64 1, align 4
-// CHECK:         %[[PRIV_DUMMY:.*]] = alloca float, i64 1, align 4
-// CHECK:         %[[PRIV_I:.*]] = alloca i32, i64 1, align 4
+// CHECK:         %[[PRIV_DUMMY:.*]] = alloca float, align 4
+// CHECK:         %[[PRIV_I:.*]] = alloca i32, align 4
 
-// CHECK:       omp.simd.region:
+// CHECK:       omp.loop_nest.region:
 // CHECK-NOT:     br label
 // CHECK:         store i32 %{{.*}}, ptr %[[PRIV_I]], align 4
 // CHECK:        %{{.*}} = load float, ptr %[[PRIV_DUMMY]], align 4

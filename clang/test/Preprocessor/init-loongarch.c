@@ -85,26 +85,31 @@
 // LA32: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
 // LA32: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
 // LA32: #define __ILP32__ 1
+// LA32: #define __INT16_C(c) c
 // LA32: #define __INT16_C_SUFFIX__
 // LA32: #define __INT16_FMTd__ "hd"
 // LA32: #define __INT16_FMTi__ "hi"
 // LA32: #define __INT16_MAX__ 32767
 // LA32: #define __INT16_TYPE__ short
+// LA32: #define __INT32_C(c) c
 // LA32: #define __INT32_C_SUFFIX__
 // LA32: #define __INT32_FMTd__ "d"
 // LA32: #define __INT32_FMTi__ "i"
 // LA32: #define __INT32_MAX__ 2147483647
 // LA32: #define __INT32_TYPE__ int
+// LA32: #define __INT64_C(c) c##LL
 // LA32: #define __INT64_C_SUFFIX__ LL
 // LA32: #define __INT64_FMTd__ "lld"
 // LA32: #define __INT64_FMTi__ "lli"
 // LA32: #define __INT64_MAX__ 9223372036854775807LL
 // LA32: #define __INT64_TYPE__ long long int
+// LA32: #define __INT8_C(c) c
 // LA32: #define __INT8_C_SUFFIX__
 // LA32: #define __INT8_FMTd__ "hhd"
 // LA32: #define __INT8_FMTi__ "hhi"
 // LA32: #define __INT8_MAX__ 127
 // LA32: #define __INT8_TYPE__ signed char
+// LA32: #define __INTMAX_C(c) c##LL
 // LA32: #define __INTMAX_C_SUFFIX__ LL
 // LA32: #define __INTMAX_FMTd__ "lld"
 // LA32: #define __INTMAX_FMTi__ "lli"
@@ -227,6 +232,7 @@
 // LA32: #define __STDC_UTF_32__ 1
 // LA32: #define __STDC_VERSION__ 201710L
 // LA32: #define __STDC__ 1
+// LA32: #define __UINT16_C(c) c
 // LA32: #define __UINT16_C_SUFFIX__
 // LA32: #define __UINT16_FMTX__ "hX"
 // LA32: #define __UINT16_FMTo__ "ho"
@@ -234,6 +240,7 @@
 // LA32: #define __UINT16_FMTx__ "hx"
 // LA32: #define __UINT16_MAX__ 65535
 // LA32: #define __UINT16_TYPE__ unsigned short
+// LA32: #define __UINT32_C(c) c##U
 // LA32: #define __UINT32_C_SUFFIX__ U
 // LA32: #define __UINT32_FMTX__ "X"
 // LA32: #define __UINT32_FMTo__ "o"
@@ -241,6 +248,7 @@
 // LA32: #define __UINT32_FMTx__ "x"
 // LA32: #define __UINT32_MAX__ 4294967295U
 // LA32: #define __UINT32_TYPE__ unsigned int
+// LA32: #define __UINT64_C(c) c##ULL
 // LA32: #define __UINT64_C_SUFFIX__ ULL
 // LA32: #define __UINT64_FMTX__ "llX"
 // LA32: #define __UINT64_FMTo__ "llo"
@@ -248,6 +256,7 @@
 // LA32: #define __UINT64_FMTx__ "llx"
 // LA32: #define __UINT64_MAX__ 18446744073709551615ULL
 // LA32: #define __UINT64_TYPE__ long long unsigned int
+// LA32: #define __UINT8_C(c) c
 // LA32: #define __UINT8_C_SUFFIX__
 // LA32: #define __UINT8_FMTX__ "hhX"
 // LA32: #define __UINT8_FMTo__ "hho"
@@ -255,6 +264,7 @@
 // LA32: #define __UINT8_FMTx__ "hhx"
 // LA32: #define __UINT8_MAX__ 255
 // LA32: #define __UINT8_TYPE__ unsigned char
+// LA32: #define __UINTMAX_C(c) c##ULL
 // LA32: #define __UINTMAX_C_SUFFIX__ ULL
 // LA32: #define __UINTMAX_FMTX__ "llX"
 // LA32: #define __UINTMAX_FMTo__ "llo"
@@ -406,26 +416,31 @@
 // LA64: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
 // LA64: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
 // LA64: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
+// LA64: #define __INT16_C(c) c
 // LA64: #define __INT16_C_SUFFIX__
 // LA64: #define __INT16_FMTd__ "hd"
 // LA64: #define __INT16_FMTi__ "hi"
 // LA64: #define __INT16_MAX__ 32767
 // LA64: #define __INT16_TYPE__ short
+// LA64: #define __INT32_C(c) c
 // LA64: #define __INT32_C_SUFFIX__
 // LA64: #define __INT32_FMTd__ "d"
 // LA64: #define __INT32_FMTi__ "i"
 // LA64: #define __INT32_MAX__ 2147483647
 // LA64: #define __INT32_TYPE__ int
+// LA64: #define __INT64_C(c) c##L
 // LA64: #define __INT64_C_SUFFIX__ L
 // LA64: #define __INT64_FMTd__ "ld"
 // LA64: #define __INT64_FMTi__ "li"
 // LA64: #define __INT64_MAX__ 9223372036854775807L
 // LA64: #define __INT64_TYPE__ long int
+// LA64: #define __INT8_C(c) c
 // LA64: #define __INT8_C_SUFFIX__
 // LA64: #define __INT8_FMTd__ "hhd"
 // LA64: #define __INT8_FMTi__ "hhi"
 // LA64: #define __INT8_MAX__ 127
 // LA64: #define __INT8_TYPE__ signed char
+// LA64: #define __INTMAX_C(c) c##L
 // LA64: #define __INTMAX_C_SUFFIX__ L
 // LA64: #define __INTMAX_FMTd__ "ld"
 // LA64: #define __INTMAX_FMTi__ "li"
@@ -549,6 +564,7 @@
 // LA64: #define __STDC_UTF_32__ 1
 // LA64: #define __STDC_VERSION__ 201710L
 // LA64: #define __STDC__ 1
+// LA64: #define __UINT16_C(c) c
 // LA64: #define __UINT16_C_SUFFIX__
 // LA64: #define __UINT16_FMTX__ "hX"
 // LA64: #define __UINT16_FMTo__ "ho"
@@ -556,6 +572,7 @@
 // LA64: #define __UINT16_FMTx__ "hx"
 // LA64: #define __UINT16_MAX__ 65535
 // LA64: #define __UINT16_TYPE__ unsigned short
+// LA64: #define __UINT32_C(c) c##U
 // LA64: #define __UINT32_C_SUFFIX__ U
 // LA64: #define __UINT32_FMTX__ "X"
 // LA64: #define __UINT32_FMTo__ "o"
@@ -563,6 +580,7 @@
 // LA64: #define __UINT32_FMTx__ "x"
 // LA64: #define __UINT32_MAX__ 4294967295U
 // LA64: #define __UINT32_TYPE__ unsigned int
+// LA64: #define __UINT64_C(c) c##UL
 // LA64: #define __UINT64_C_SUFFIX__ UL
 // LA64: #define __UINT64_FMTX__ "lX"
 // LA64: #define __UINT64_FMTo__ "lo"
@@ -570,6 +588,7 @@
 // LA64: #define __UINT64_FMTx__ "lx"
 // LA64: #define __UINT64_MAX__ 18446744073709551615UL
 // LA64: #define __UINT64_TYPE__ long unsigned int
+// LA64: #define __UINT8_C(c) c
 // LA64: #define __UINT8_C_SUFFIX__
 // LA64: #define __UINT8_FMTX__ "hhX"
 // LA64: #define __UINT8_FMTo__ "hho"
@@ -577,6 +596,7 @@
 // LA64: #define __UINT8_FMTx__ "hhx"
 // LA64: #define __UINT8_MAX__ 255
 // LA64: #define __UINT8_TYPE__ unsigned char
+// LA64: #define __UINTMAX_C(c) c##UL
 // LA64: #define __UINTMAX_C_SUFFIX__ UL
 // LA64: #define __UINTMAX_FMTX__ "lX"
 // LA64: #define __UINTMAX_FMTo__ "lo"

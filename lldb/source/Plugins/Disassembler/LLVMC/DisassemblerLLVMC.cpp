@@ -31,6 +31,7 @@
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
@@ -1806,10 +1807,13 @@ const char *DisassemblerLLVMC::SymbolLookup(uint64_t value, uint64_t *type_ptr,
         bool format_omitting_current_func_name = false;
         if (sym_ctx.symbol || sym_ctx.function) {
           AddressRange range;
-          if (sym_ctx.GetAddressRange(resolve_scope, 0, false, range) &&
-              range.GetBaseAddress().IsValid() &&
-              range.ContainsLoadAddress(value_so_addr, target)) {
-            format_omitting_current_func_name = true;
+          for (uint32_t idx = 0;
+               sym_ctx.GetAddressRange(resolve_scope, idx, false, range);
+               ++idx) {
+            if (range.ContainsLoadAddress(value_so_addr, target)) {
+              format_omitting_current_func_name = true;
+              break;
+            }
           }
         }
 

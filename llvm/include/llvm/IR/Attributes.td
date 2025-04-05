@@ -180,9 +180,6 @@ def NoBuiltin : EnumAttr<"nobuiltin", IntersectPreserve, [FnAttr]>;
 /// Function cannot enter into caller's translation unit.
 def NoCallback : EnumAttr<"nocallback", IntersectAnd, [FnAttr]>;
 
-/// Function creates no aliases of pointer.
-def NoCapture : EnumAttr<"nocapture", IntersectAnd, [ParamAttr]>;
-
 /// Specify how the pointer may be captured.
 def Captures : IntAttr<"captures", IntersectCustom, [ParamAttr]>;
 
@@ -294,7 +291,7 @@ def SExt : EnumAttr<"signext", IntersectPreserve, [ParamAttr, RetAttr]>;
 
 /// Alignment of stack for function (3 bits)  stored as log2 of alignment with
 /// +1 bias 0 means unaligned (different from alignstack=(1)).
-def StackAlignment : IntAttr<"alignstack", IntersectPreserve, [FnAttr, ParamAttr]>;
+def StackAlignment : IntAttr<"alignstack", IntersectPreserve, [FnAttr, ParamAttr, RetAttr]>;
 
 /// Function can be speculated.
 def Speculatable : EnumAttr<"speculatable", IntersectAnd, [FnAttr]>;

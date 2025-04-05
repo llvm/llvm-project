@@ -189,10 +189,7 @@ void MachineFunction::init() {
   // Assume the function starts in SSA form with correct liveness.
   Properties.set(MachineFunctionProperties::Property::IsSSA);
   Properties.set(MachineFunctionProperties::Property::TracksLiveness);
-  if (STI->getRegisterInfo())
-    RegInfo = new (Allocator) MachineRegisterInfo(this);
-  else
-    RegInfo = nullptr;
+  RegInfo = new (Allocator) MachineRegisterInfo(this);
 
   MFInfo = nullptr;
 
@@ -967,13 +964,13 @@ void MachineFunction::copyAdditionalCallInfo(const MachineInstr *Old,
   CallSiteInfoMap::iterator CSIt = getCallSiteInfo(OldCallMI);
   if (CSIt != CallSitesInfo.end()) {
     CallSiteInfo CSInfo = CSIt->second;
-    CallSitesInfo[New] = CSInfo;
+    CallSitesInfo[New] = std::move(CSInfo);
   }
 
   CalledGlobalsMap::iterator CGIt = CalledGlobalsInfo.find(OldCallMI);
   if (CGIt != CalledGlobalsInfo.end()) {
     CalledGlobalInfo CGInfo = CGIt->second;
-    CalledGlobalsInfo[New] = CGInfo;
+    CalledGlobalsInfo[New] = std::move(CGInfo);
   }
 }
 
@@ -991,14 +988,14 @@ void MachineFunction::moveAdditionalCallInfo(const MachineInstr *Old,
   if (CSIt != CallSitesInfo.end()) {
     CallSiteInfo CSInfo = std::move(CSIt->second);
     CallSitesInfo.erase(CSIt);
-    CallSitesInfo[New] = CSInfo;
+    CallSitesInfo[New] = std::move(CSInfo);
   }
 
   CalledGlobalsMap::iterator CGIt = CalledGlobalsInfo.find(OldCallMI);
   if (CGIt != CalledGlobalsInfo.end()) {
     CalledGlobalInfo CGInfo = std::move(CGIt->second);
     CalledGlobalsInfo.erase(CGIt);
-    CalledGlobalsInfo[New] = CGInfo;
+    CalledGlobalsInfo[New] = std::move(CGInfo);
   }
 }
 
@@ -1054,7 +1051,7 @@ auto MachineFunction::salvageCopySSA(
   // Check whether this copy-like instruction has already been salvaged into
   // an operand pair.
   Register Dest;
-  if (auto CopyDstSrc = TII.isCopyInstr(MI)) {
+  if (auto CopyDstSrc = TII.isCopyLikeInstr(MI)) {
     Dest = CopyDstSrc->Destination->getReg();
   } else {
     assert(MI.isSubregToReg());
@@ -1138,7 +1135,7 @@ auto MachineFunction::salvageCopySSAImpl(MachineInstr &MI)
     CurInst = Inst.getIterator();
 
     // Any non-copy instruction is the defining instruction we're seeking.
-    if (!Inst.isCopyLike() && !TII.isCopyInstr(Inst))
+    if (!Inst.isCopyLike() && !TII.isCopyLikeInstr(Inst))
       break;
     State = GetRegAndSubreg(Inst);
   };

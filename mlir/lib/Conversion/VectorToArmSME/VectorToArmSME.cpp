@@ -332,7 +332,7 @@ struct SplatOpToArmSMELowering : public OpRewritePattern<vector::SplatOp> {
 ///   %transposed_src = arm_sme.tile_load %alloca[%c0, %c0]
 ///     layout<vertical> : memref<?x?xi32>, vector<[4]x[4]xi32>
 ///
-/// NOTE: Tranposing via memory is obviously expensive, the current intention
+/// NOTE: Transposing via memory is obviously expensive, the current intention
 /// is to avoid the transpose if possible, this is therefore intended as a
 /// fallback and to provide base support for Vector ops. If it turns out
 /// transposes can't be avoided then this should be replaced with a more optimal

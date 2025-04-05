@@ -138,7 +138,7 @@ FailureOr<Operation *> transposeConv2D(RewriterBase &rewriter,
                                linalg::Conv2DNhwcHwcfQOp>(rewriter, op);
 }
 
-void populateTranposeConv2DPatterns(RewritePatternSet &patterns) {
+void populateTransposeConv2DPatterns(RewritePatternSet &patterns) {
   MLIRContext *context = patterns.getContext();
   patterns.insert<
       ConvConverter<linalg::Conv2DNhwcFhwcOp, linalg::Conv2DNhwcHwcfOp>,

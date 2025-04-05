@@ -21,10 +21,10 @@ define amdgpu_kernel void @kernel_background_evaluate(ptr addrspace(5) %kg, ptr 
 ; MUBUF-NEXT:    v_mov_b32_e32 v2, 0x4000
 ; MUBUF-NEXT:    v_mov_b32_e32 v3, 0
 ; MUBUF-NEXT:    v_mov_b32_e32 v4, 0x400000
-; MUBUF-NEXT:    s_mov_b32 s32, 0xc0000
 ; MUBUF-NEXT:    s_getpc_b64 s[4:5]
 ; MUBUF-NEXT:    s_add_u32 s4, s4, svm_eval_nodes@rel32@lo+4
 ; MUBUF-NEXT:    s_addc_u32 s5, s5, svm_eval_nodes@rel32@hi+12
+; MUBUF-NEXT:    s_mov_b32 s32, 0xc0000
 ; MUBUF-NEXT:    s_waitcnt lgkmcnt(0)
 ; MUBUF-NEXT:    v_mov_b32_e32 v0, s0
 ; MUBUF-NEXT:    s_mov_b64 s[0:1], s[36:37]
@@ -85,10 +85,10 @@ define amdgpu_kernel void @kernel_background_evaluate(ptr addrspace(5) %kg, ptr 
 ; MUBUF11-NEXT:    v_mov_b32_e32 v1, 0x2000
 ; MUBUF11-NEXT:    v_dual_mov_b32 v2, 0x4000 :: v_dual_mov_b32 v3, 0
 ; MUBUF11-NEXT:    v_mov_b32_e32 v4, 0x400000
-; MUBUF11-NEXT:    s_movk_i32 s32, 0x6000
 ; MUBUF11-NEXT:    s_getpc_b64 s[0:1]
 ; MUBUF11-NEXT:    s_add_u32 s0, s0, svm_eval_nodes@rel32@lo+4
 ; MUBUF11-NEXT:    s_addc_u32 s1, s1, svm_eval_nodes@rel32@hi+12
+; MUBUF11-NEXT:    s_movk_i32 s32, 0x6000
 ; MUBUF11-NEXT:    s_waitcnt lgkmcnt(0)
 ; MUBUF11-NEXT:    v_mov_b32_e32 v0, s2
 ; MUBUF11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
@@ -112,10 +112,10 @@ define amdgpu_kernel void @kernel_background_evaluate(ptr addrspace(5) %kg, ptr 
 ; FLATSCR11-NEXT:    v_mov_b32_e32 v1, 0x2000
 ; FLATSCR11-NEXT:    v_dual_mov_b32 v2, 0x4000 :: v_dual_mov_b32 v3, 0
 ; FLATSCR11-NEXT:    v_mov_b32_e32 v4, 0x400000
-; FLATSCR11-NEXT:    s_movk_i32 s32, 0x6000
 ; FLATSCR11-NEXT:    s_getpc_b64 s[0:1]
 ; FLATSCR11-NEXT:    s_add_u32 s0, s0, svm_eval_nodes@rel32@lo+4
 ; FLATSCR11-NEXT:    s_addc_u32 s1, s1, svm_eval_nodes@rel32@hi+12
+; FLATSCR11-NEXT:    s_movk_i32 s32, 0x6000
 ; FLATSCR11-NEXT:    s_waitcnt lgkmcnt(0)
 ; FLATSCR11-NEXT:    v_mov_b32_e32 v0, s2
 ; FLATSCR11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
@@ -148,7 +148,7 @@ if.then4.i:                                       ; preds = %entry
   %add1.i.i = add i32 %add.i.i, 0
   %mul.i.i.i.i = mul i32 %add1.i.i, 1103515245
   %add.i.i.i.i = add i32 %mul.i.i.i.i, 12345
-  store i32 %add.i.i.i.i, ptr addrspace(5) undef, align 16
+  store i32 %add.i.i.i.i, ptr addrspace(5) poison, align 16
   br label %shader_eval_surface.exit
 
 shader_eval_surface.exit:                         ; preds = %entry

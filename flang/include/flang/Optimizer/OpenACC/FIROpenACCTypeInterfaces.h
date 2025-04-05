@@ -19,6 +19,19 @@
 namespace fir::acc {
 
 template <typename T>
+struct OpenACCPointerLikeModel
+    : public mlir::acc::PointerLikeType::ExternalModel<
+          OpenACCPointerLikeModel<T>, T> {
+  mlir::Type getElementType(mlir::Type pointer) const {
+    return mlir::cast<T>(pointer).getElementType();
+  }
+  mlir::acc::VariableTypeCategory
+  getPointeeTypeCategory(mlir::Type pointer,
+                         mlir::TypedValue<mlir::acc::PointerLikeType> varPtr,
+                         mlir::Type varType) const;
+};
+
+template <typename T>
 struct OpenACCMappableModel
     : public mlir::acc::MappableType::ExternalModel<OpenACCMappableModel<T>,
                                                     T> {
@@ -36,6 +49,9 @@ struct OpenACCMappableModel
   llvm::SmallVector<mlir::Value>
   generateAccBounds(mlir::Type type, mlir::Value var,
                     mlir::OpBuilder &builder) const;
+
+  mlir::acc::VariableTypeCategory getTypeCategory(mlir::Type type,
+                                                  mlir::Value var) const;
 };
 
 } // namespace fir::acc

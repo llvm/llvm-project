@@ -1462,6 +1462,18 @@ void CXXRecordDecl::addedMember(Decl *D) {
     if (Using->getDeclName().getCXXOverloadedOperator() == OO_Equal)
       data().HasInheritedAssignment = true;
   }
+
+  // HLSL: All user-defined data types are aggregates and use aggregate
+  // initialization, meanwhile most, but not all built-in types behave like
+  // aggregates. Resource types, and some other HLSL types that wrap handles
+  // don't behave like aggregates. We can identify these as different because we
+  // implicitly define "special" member functions, which aren't spellable in
+  // HLSL. This all _needs_ to change in the future. There are two
+  // relevant HLSL feature proposals that will depend on this changing:
+  // * 0005-strict-initializer-lists.md
+  // * https://github.com/microsoft/hlsl-specs/pull/325
+  if (getLangOpts().HLSL)
+    data().Aggregate = data().UserDeclaredSpecialMembers == 0;
 }
 
 bool CXXRecordDecl::isLiteral() const {
@@ -1987,7 +1999,8 @@ CXXRecordDecl *CXXRecordDecl::getInstantiatedFromMemberClass() const {
 }
 
 MemberSpecializationInfo *CXXRecordDecl::getMemberSpecializationInfo() const {
-  return TemplateOrInstantiation.dyn_cast<MemberSpecializationInfo *>();
+  return dyn_cast_if_present<MemberSpecializationInfo *>(
+      TemplateOrInstantiation);
 }
 
 void
@@ -2001,7 +2014,7 @@ CXXRecordDecl::setInstantiationOfMemberClass(CXXRecordDecl *RD,
 }
 
 ClassTemplateDecl *CXXRecordDecl::getDescribedClassTemplate() const {
-  return TemplateOrInstantiation.dyn_cast<ClassTemplateDecl *>();
+  return dyn_cast_if_present<ClassTemplateDecl *>(TemplateOrInstantiation);
 }
 
 void CXXRecordDecl::setDescribedClassTemplate(ClassTemplateDecl *Template) {
@@ -2045,7 +2058,7 @@ const CXXRecordDecl *CXXRecordDecl::getTemplateInstantiationPattern() const {
   // specialization from which it was instantiated.
   if (auto *TD = dyn_cast<ClassTemplateSpecializationDecl>(this)) {
     auto From = TD->getInstantiatedFrom();
-    if (auto *CTD = From.dyn_cast<ClassTemplateDecl *>()) {
+    if (auto *CTD = dyn_cast_if_present<ClassTemplateDecl *>(From)) {
       while (auto *NewCTD = CTD->getInstantiatedFromMemberTemplate()) {
         if (NewCTD->isMemberSpecialization())
           break;
@@ -2054,7 +2067,8 @@ const CXXRecordDecl *CXXRecordDecl::getTemplateInstantiationPattern() const {
       return GetDefinitionOrSelf(CTD->getTemplatedDecl());
     }
     if (auto *CTPSD =
-            From.dyn_cast<ClassTemplatePartialSpecializationDecl *>()) {
+            dyn_cast_if_present<ClassTemplatePartialSpecializationDecl *>(
+                From)) {
       while (auto *NewCTPSD = CTPSD->getInstantiatedFromMember()) {
         if (NewCTPSD->isMemberSpecialization())
           break;
@@ -2290,18 +2304,22 @@ CXXDeductionGuideDecl *CXXDeductionGuideDecl::Create(
     ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
     ExplicitSpecifier ES, const DeclarationNameInfo &NameInfo, QualType T,
     TypeSourceInfo *TInfo, SourceLocation EndLocation, CXXConstructorDecl *Ctor,
-    DeductionCandidate Kind, Expr *TrailingRequiresClause) {
-  return new (C, DC)
-      CXXDeductionGuideDecl(C, DC, StartLoc, ES, NameInfo, T, TInfo,
-                            EndLocation, Ctor, Kind, TrailingRequiresClause);
+    DeductionCandidate Kind, const AssociatedConstraint &TrailingRequiresClause,
+    const CXXDeductionGuideDecl *GeneratedFrom,
+    SourceDeductionGuideKind SourceKind) {
+  return new (C, DC) CXXDeductionGuideDecl(
+      C, DC, StartLoc, ES, NameInfo, T, TInfo, EndLocation, Ctor, Kind,
+      TrailingRequiresClause, GeneratedFrom, SourceKind);
 }
 
 CXXDeductionGuideDecl *
 CXXDeductionGuideDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   return new (C, ID) CXXDeductionGuideDecl(
-      C, nullptr, SourceLocation(), ExplicitSpecifier(), DeclarationNameInfo(),
-      QualType(), nullptr, SourceLocation(), nullptr,
-      DeductionCandidate::Normal, nullptr);
+      C, /*DC=*/nullptr, SourceLocation(), ExplicitSpecifier(),
+      DeclarationNameInfo(), QualType(), /*TInfo=*/nullptr, SourceLocation(),
+      /*Ctor=*/nullptr, DeductionCandidate::Normal,
+      /*TrailingRequiresClause=*/{},
+      /*GeneratedFrom=*/nullptr, SourceDeductionGuideKind::None);
 }
 
 RequiresExprBodyDecl *RequiresExprBodyDecl::Create(
@@ -2409,7 +2427,7 @@ CXXMethodDecl::Create(ASTContext &C, CXXRecordDecl *RD, SourceLocation StartLoc,
                       TypeSourceInfo *TInfo, StorageClass SC, bool UsesFPIntrin,
                       bool isInline, ConstexprSpecKind ConstexprKind,
                       SourceLocation EndLocation,
-                      Expr *TrailingRequiresClause) {
+                      const AssociatedConstraint &TrailingRequiresClause) {
   return new (C, RD) CXXMethodDecl(
       CXXMethod, C, RD, StartLoc, NameInfo, T, TInfo, SC, UsesFPIntrin,
       isInline, ConstexprKind, EndLocation, TrailingRequiresClause);
@@ -2417,10 +2435,11 @@ CXXMethodDecl::Create(ASTContext &C, CXXRecordDecl *RD, SourceLocation StartLoc,
 
 CXXMethodDecl *CXXMethodDecl::CreateDeserialized(ASTContext &C,
                                                  GlobalDeclID ID) {
-  return new (C, ID) CXXMethodDecl(
-      CXXMethod, C, nullptr, SourceLocation(), DeclarationNameInfo(),
-      QualType(), nullptr, SC_None, false, false,
-      ConstexprSpecKind::Unspecified, SourceLocation(), nullptr);
+  return new (C, ID)
+      CXXMethodDecl(CXXMethod, C, nullptr, SourceLocation(),
+                    DeclarationNameInfo(), QualType(), nullptr, SC_None, false,
+                    false, ConstexprSpecKind::Unspecified, SourceLocation(),
+                    /*TrailingRequiresClause=*/{});
 }
 
 CXXMethodDecl *CXXMethodDecl::getDevirtualizedMethod(const Expr *Base,
@@ -2816,7 +2835,8 @@ CXXConstructorDecl::CXXConstructorDecl(
     const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
     ExplicitSpecifier ES, bool UsesFPIntrin, bool isInline,
     bool isImplicitlyDeclared, ConstexprSpecKind ConstexprKind,
-    InheritedConstructor Inherited, Expr *TrailingRequiresClause)
+    InheritedConstructor Inherited,
+    const AssociatedConstraint &TrailingRequiresClause)
     : CXXMethodDecl(CXXConstructor, C, RD, StartLoc, NameInfo, T, TInfo,
                     SC_None, UsesFPIntrin, isInline, ConstexprKind,
                     SourceLocation(), TrailingRequiresClause) {
@@ -2843,7 +2863,7 @@ CXXConstructorDecl *CXXConstructorDecl::CreateDeserialized(ASTContext &C,
   auto *Result = new (C, ID, Extra) CXXConstructorDecl(
       C, nullptr, SourceLocation(), DeclarationNameInfo(), QualType(), nullptr,
       ExplicitSpecifier(), false, false, false, ConstexprSpecKind::Unspecified,
-      InheritedConstructor(), nullptr);
+      InheritedConstructor(), /*TrailingRequiresClause=*/{});
   Result->setInheritingConstructor(isInheritingConstructor);
   Result->CXXConstructorDeclBits.HasTrailingExplicitSpecifier =
       hasTrailingExplicit;
@@ -2856,7 +2876,8 @@ CXXConstructorDecl *CXXConstructorDecl::Create(
     const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
     ExplicitSpecifier ES, bool UsesFPIntrin, bool isInline,
     bool isImplicitlyDeclared, ConstexprSpecKind ConstexprKind,
-    InheritedConstructor Inherited, Expr *TrailingRequiresClause) {
+    InheritedConstructor Inherited,
+    const AssociatedConstraint &TrailingRequiresClause) {
   assert(NameInfo.getName().getNameKind()
          == DeclarationName::CXXConstructorName &&
          "Name must refer to a constructor");
@@ -2982,14 +3003,16 @@ CXXDestructorDecl *CXXDestructorDecl::CreateDeserialized(ASTContext &C,
                                                          GlobalDeclID ID) {
   return new (C, ID) CXXDestructorDecl(
       C, nullptr, SourceLocation(), DeclarationNameInfo(), QualType(), nullptr,
-      false, false, false, ConstexprSpecKind::Unspecified, nullptr);
+      false, false, false, ConstexprSpecKind::Unspecified,
+      /*TrailingRequiresClause=*/{});
 }
 
 CXXDestructorDecl *CXXDestructorDecl::Create(
     ASTContext &C, CXXRecordDecl *RD, SourceLocation StartLoc,
     const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
     bool UsesFPIntrin, bool isInline, bool isImplicitlyDeclared,
-    ConstexprSpecKind ConstexprKind, Expr *TrailingRequiresClause) {
+    ConstexprSpecKind ConstexprKind,
+    const AssociatedConstraint &TrailingRequiresClause) {
   assert(NameInfo.getName().getNameKind()
          == DeclarationName::CXXDestructorName &&
          "Name must refer to a destructor");
@@ -3006,6 +3029,12 @@ void CXXDestructorDecl::setOperatorDelete(FunctionDecl *OD, Expr *ThisArg) {
     if (auto *L = getASTMutationListener())
       L->ResolvedOperatorDelete(First, OD, ThisArg);
   }
+}
+
+void CXXDestructorDecl::setOperatorArrayDelete(FunctionDecl *OD) {
+  auto *First = cast<CXXDestructorDecl>(getFirstDecl());
+  if (OD && !First->OperatorArrayDelete)
+    First->OperatorArrayDelete = OD;
 }
 
 bool CXXDestructorDecl::isCalledByDelete(const FunctionDecl *OpDel) const {
@@ -3037,7 +3066,7 @@ CXXConversionDecl *CXXConversionDecl::CreateDeserialized(ASTContext &C,
   return new (C, ID) CXXConversionDecl(
       C, nullptr, SourceLocation(), DeclarationNameInfo(), QualType(), nullptr,
       false, false, ExplicitSpecifier(), ConstexprSpecKind::Unspecified,
-      SourceLocation(), nullptr);
+      SourceLocation(), /*TrailingRequiresClause=*/{});
 }
 
 CXXConversionDecl *CXXConversionDecl::Create(
@@ -3045,7 +3074,7 @@ CXXConversionDecl *CXXConversionDecl::Create(
     const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
     bool UsesFPIntrin, bool isInline, ExplicitSpecifier ES,
     ConstexprSpecKind ConstexprKind, SourceLocation EndLocation,
-    Expr *TrailingRequiresClause) {
+    const AssociatedConstraint &TrailingRequiresClause) {
   assert(NameInfo.getName().getNameKind()
          == DeclarationName::CXXConversionFunctionName &&
          "Name must refer to a conversion function");
@@ -3456,19 +3485,21 @@ VarDecl *ValueDecl::getPotentiallyDecomposedVarDecl() {
   if (auto *Var = llvm::dyn_cast<VarDecl>(this))
     return Var;
   if (auto *BD = llvm::dyn_cast<BindingDecl>(this))
-    return llvm::dyn_cast<VarDecl>(BD->getDecomposedDecl());
+    return llvm::dyn_cast_if_present<VarDecl>(BD->getDecomposedDecl());
   return nullptr;
 }
 
 void BindingDecl::anchor() {}
 
 BindingDecl *BindingDecl::Create(ASTContext &C, DeclContext *DC,
-                                 SourceLocation IdLoc, IdentifierInfo *Id) {
-  return new (C, DC) BindingDecl(DC, IdLoc, Id);
+                                 SourceLocation IdLoc, IdentifierInfo *Id,
+                                 QualType T) {
+  return new (C, DC) BindingDecl(DC, IdLoc, Id, T);
 }
 
 BindingDecl *BindingDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
-  return new (C, ID) BindingDecl(nullptr, SourceLocation(), nullptr);
+  return new (C, ID)
+      BindingDecl(nullptr, SourceLocation(), nullptr, QualType());
 }
 
 VarDecl *BindingDecl::getHoldingVar() const {
@@ -3482,6 +3513,15 @@ VarDecl *BindingDecl::getHoldingVar() const {
   auto *VD = cast<VarDecl>(DRE->getDecl());
   assert(VD->isImplicit() && "holding var for binding decl not implicit");
   return VD;
+}
+
+llvm::ArrayRef<BindingDecl *> BindingDecl::getBindingPackDecls() const {
+  assert(Binding && "expecting a pack expr");
+  auto *FP = cast<FunctionParmPackExpr>(Binding);
+  ValueDecl *const *First = FP->getNumExpansions() > 0 ? FP->begin() : nullptr;
+  assert((!First || isa<BindingDecl>(*First)) && "expecting a BindingDecl");
+  return llvm::ArrayRef<BindingDecl *>(
+      reinterpret_cast<BindingDecl *const *>(First), FP->getNumExpansions());
 }
 
 void DecompositionDecl::anchor() {}

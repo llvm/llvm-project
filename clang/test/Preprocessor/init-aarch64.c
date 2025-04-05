@@ -125,8 +125,8 @@
 // AARCH64-NEXT: #define __FP_FAST_FMAF 1
 // AARCH64-NEXT: #define __FUNCTION_MULTI_VERSIONING_SUPPORT_LEVEL 202430
 // AARCH64-NEXT: #define __GCC_ASM_FLAG_OUTPUTS__ 1
-// AARCH64-NEXT: #define __GCC_CONSTRUCTIVE_SIZE {{.+}}
-// AARCH64-NEXT: #define __GCC_DESTRUCTIVE_SIZE {{.+}}
+// AARCH64-NEXT: #define __GCC_CONSTRUCTIVE_SIZE 64
+// AARCH64-NEXT: #define __GCC_DESTRUCTIVE_SIZE 256
 // AARCH64-NEXT: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
 // AARCH64-NEXT: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_16 1
 // AARCH64-NEXT: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
@@ -135,26 +135,31 @@
 // AARCH64_CXX-NEXT: #define __GLIBCXX_BITSIZE_INT_N_0 128
 // AARCH64_CXX-NEXT: #define __GLIBCXX_TYPE_INT_N_0 __int128
 // AARCH64-NEXT: #define __HAVE_FUNCTION_MULTI_VERSIONING 1
+// AARCH64-NEXT: #define __INT16_C(c) c
 // AARCH64-NEXT: #define __INT16_C_SUFFIX__
 // AARCH64-NEXT: #define __INT16_FMTd__ "hd"
 // AARCH64-NEXT: #define __INT16_FMTi__ "hi"
 // AARCH64-NEXT: #define __INT16_MAX__ 32767
 // AARCH64-NEXT: #define __INT16_TYPE__ short
+// AARCH64-NEXT: #define __INT32_C(c) c
 // AARCH64-NEXT: #define __INT32_C_SUFFIX__
 // AARCH64-NEXT: #define __INT32_FMTd__ "d"
 // AARCH64-NEXT: #define __INT32_FMTi__ "i"
 // AARCH64-NEXT: #define __INT32_MAX__ 2147483647
 // AARCH64-NEXT: #define __INT32_TYPE__ int
+// AARCH64-NEXT: #define __INT64_C(c) c##L
 // AARCH64-NEXT: #define __INT64_C_SUFFIX__ L
 // AARCH64-NEXT: #define __INT64_FMTd__ "ld"
 // AARCH64-NEXT: #define __INT64_FMTi__ "li"
 // AARCH64-NEXT: #define __INT64_MAX__ 9223372036854775807L
 // AARCH64-NEXT: #define __INT64_TYPE__ long int
+// AARCH64-NEXT: #define __INT8_C(c) c
 // AARCH64-NEXT: #define __INT8_C_SUFFIX__
 // AARCH64-NEXT: #define __INT8_FMTd__ "hhd"
 // AARCH64-NEXT: #define __INT8_FMTi__ "hhi"
 // AARCH64-NEXT: #define __INT8_MAX__ 127
 // AARCH64-NEXT: #define __INT8_TYPE__ signed char
+// AARCH64-NEXT: #define __INTMAX_C(c) c##L
 // AARCH64-NEXT: #define __INTMAX_C_SUFFIX__ L
 // AARCH64-NEXT: #define __INTMAX_FMTd__ "ld"
 // AARCH64-NEXT: #define __INTMAX_FMTi__ "li"
@@ -287,6 +292,7 @@
 // AARCH64-NEXT: #define __STDC_UTF_32__ 1
 // AARCH64_C: #define __STDC_VERSION__ 201710L
 // AARCH64-NEXT: #define __STDC__ 1
+// AARCH64-NEXT: #define __UINT16_C(c) c
 // AARCH64-NEXT: #define __UINT16_C_SUFFIX__
 // AARCH64-NEXT: #define __UINT16_FMTX__ "hX"
 // AARCH64-NEXT: #define __UINT16_FMTo__ "ho"
@@ -294,6 +300,7 @@
 // AARCH64-NEXT: #define __UINT16_FMTx__ "hx"
 // AARCH64-NEXT: #define __UINT16_MAX__ 65535
 // AARCH64-NEXT: #define __UINT16_TYPE__ unsigned short
+// AARCH64-NEXT: #define __UINT32_C(c) c##U
 // AARCH64-NEXT: #define __UINT32_C_SUFFIX__ U
 // AARCH64-NEXT: #define __UINT32_FMTX__ "X"
 // AARCH64-NEXT: #define __UINT32_FMTo__ "o"
@@ -301,6 +308,7 @@
 // AARCH64-NEXT: #define __UINT32_FMTx__ "x"
 // AARCH64-NEXT: #define __UINT32_MAX__ 4294967295U
 // AARCH64-NEXT: #define __UINT32_TYPE__ unsigned int
+// AARCH64-NEXT: #define __UINT64_C(c) c##UL
 // AARCH64-NEXT: #define __UINT64_C_SUFFIX__ UL
 // AARCH64-NEXT: #define __UINT64_FMTX__ "lX"
 // AARCH64-NEXT: #define __UINT64_FMTo__ "lo"
@@ -308,6 +316,7 @@
 // AARCH64-NEXT: #define __UINT64_FMTx__ "lx"
 // AARCH64-NEXT: #define __UINT64_MAX__ 18446744073709551615UL
 // AARCH64-NEXT: #define __UINT64_TYPE__ long unsigned int
+// AARCH64-NEXT: #define __UINT8_C(c) c
 // AARCH64-NEXT: #define __UINT8_C_SUFFIX__
 // AARCH64-NEXT: #define __UINT8_FMTX__ "hhX"
 // AARCH64-NEXT: #define __UINT8_FMTo__ "hho"
@@ -315,6 +324,7 @@
 // AARCH64-NEXT: #define __UINT8_FMTx__ "hhx"
 // AARCH64-NEXT: #define __UINT8_MAX__ 255
 // AARCH64-NEXT: #define __UINT8_TYPE__ unsigned char
+// AARCH64-NEXT: #define __UINTMAX_C(c) c##UL
 // AARCH64-NEXT: #define __UINTMAX_C_SUFFIX__ UL
 // AARCH64-NEXT: #define __UINTMAX_FMTX__ "lX"
 // AARCH64-NEXT: #define __UINTMAX_FMTo__ "lo"
@@ -435,26 +445,31 @@
 // AARCH64-DARWIN: #define __FLT_MIN__ 1.17549435e-38F
 // AARCH64-DARWIN: #define __FLT_RADIX__ 2
 // AARCH64-DARWIN: #define __FUNCTION_MULTI_VERSIONING_SUPPORT_LEVEL 202430
+// AARCH64-DARWIN: #define __INT16_C(c) c
 // AARCH64-DARWIN: #define __INT16_C_SUFFIX__
 // AARCH64-DARWIN: #define __INT16_FMTd__ "hd"
 // AARCH64-DARWIN: #define __INT16_FMTi__ "hi"
 // AARCH64-DARWIN: #define __INT16_MAX__ 32767
 // AARCH64-DARWIN: #define __INT16_TYPE__ short
+// AARCH64-DARWIN: #define __INT32_C(c) c
 // AARCH64-DARWIN: #define __INT32_C_SUFFIX__
 // AARCH64-DARWIN: #define __INT32_FMTd__ "d"
 // AARCH64-DARWIN: #define __INT32_FMTi__ "i"
 // AARCH64-DARWIN: #define __INT32_MAX__ 2147483647
 // AARCH64-DARWIN: #define __INT32_TYPE__ int
+// AARCH64-DARWIN: #define __INT64_C(c) c##LL
 // AARCH64-DARWIN: #define __INT64_C_SUFFIX__ LL
 // AARCH64-DARWIN: #define __INT64_FMTd__ "lld"
 // AARCH64-DARWIN: #define __INT64_FMTi__ "lli"
 // AARCH64-DARWIN: #define __INT64_MAX__ 9223372036854775807LL
 // AARCH64-DARWIN: #define __INT64_TYPE__ long long int
+// AARCH64-DARWIN: #define __INT8_C(c) c
 // AARCH64-DARWIN: #define __INT8_C_SUFFIX__
 // AARCH64-DARWIN: #define __INT8_FMTd__ "hhd"
 // AARCH64-DARWIN: #define __INT8_FMTi__ "hhi"
 // AARCH64-DARWIN: #define __INT8_MAX__ 127
 // AARCH64-DARWIN: #define __INT8_TYPE__ signed char
+// AARCH64-DARWIN: #define __INTMAX_C(c) c##L
 // AARCH64-DARWIN: #define __INTMAX_C_SUFFIX__ L
 // AARCH64-DARWIN: #define __INTMAX_FMTd__ "ld"
 // AARCH64-DARWIN: #define __INTMAX_FMTi__ "li"
@@ -538,18 +553,23 @@
 // AARCH64-DARWIN: #define __SIZE_MAX__ 18446744073709551615UL
 // AARCH64-DARWIN: #define __SIZE_TYPE__ long unsigned int
 // AARCH64-DARWIN: #define __SIZE_WIDTH__ 64
+// AARCH64-DARWIN: #define __UINT16_C(c) c
 // AARCH64-DARWIN: #define __UINT16_C_SUFFIX__
 // AARCH64-DARWIN: #define __UINT16_MAX__ 65535
 // AARCH64-DARWIN: #define __UINT16_TYPE__ unsigned short
+// AARCH64-DARWIN: #define __UINT32_C(c) c##U
 // AARCH64-DARWIN: #define __UINT32_C_SUFFIX__ U
 // AARCH64-DARWIN: #define __UINT32_MAX__ 4294967295U
 // AARCH64-DARWIN: #define __UINT32_TYPE__ unsigned int
+// AARCH64-DARWIN: #define __UINT64_C(c) c##ULL
 // AARCH64-DARWIN: #define __UINT64_C_SUFFIX__ ULL
 // AARCH64-DARWIN: #define __UINT64_MAX__ 18446744073709551615ULL
 // AARCH64-DARWIN: #define __UINT64_TYPE__ long long unsigned int
+// AARCH64-DARWIN: #define __UINT8_C(c) c
 // AARCH64-DARWIN: #define __UINT8_C_SUFFIX__
 // AARCH64-DARWIN: #define __UINT8_MAX__ 255
 // AARCH64-DARWIN: #define __UINT8_TYPE__ unsigned char
+// AARCH64-DARWIN: #define __UINTMAX_C(c) c##UL
 // AARCH64-DARWIN: #define __UINTMAX_C_SUFFIX__ UL
 // AARCH64-DARWIN: #define __UINTMAX_MAX__ 18446744073709551615UL
 // AARCH64-DARWIN: #define __UINTMAX_TYPE__ long unsigned int
@@ -703,18 +723,23 @@
 // AARCH64-MSVC: #define __STDC_UTF_32__ 1
 // AARCH64-MSVC: #define __STDC_VERSION__ 201710L
 // AARCH64-MSVC: #define __STDC__ 1
+// AARCH64-MSVC: #define __UINT16_C(c) c
 // AARCH64-MSVC: #define __UINT16_C_SUFFIX__
 // AARCH64-MSVC: #define __UINT16_MAX__ 65535
 // AARCH64-MSVC: #define __UINT16_TYPE__ unsigned short
+// AARCH64-MSVC: #define __UINT32_C(c) c##U
 // AARCH64-MSVC: #define __UINT32_C_SUFFIX__ U
 // AARCH64-MSVC: #define __UINT32_MAX__ 4294967295U
 // AARCH64-MSVC: #define __UINT32_TYPE__ unsigned int
+// AARCH64-MSVC: #define __UINT64_C(c) c##ULL
 // AARCH64-MSVC: #define __UINT64_C_SUFFIX__ ULL
 // AARCH64-MSVC: #define __UINT64_MAX__ 18446744073709551615ULL
 // AARCH64-MSVC: #define __UINT64_TYPE__ long long unsigned int
+// AARCH64-MSVC: #define __UINT8_C(c) c
 // AARCH64-MSVC: #define __UINT8_C_SUFFIX__
 // AARCH64-MSVC: #define __UINT8_MAX__ 255
 // AARCH64-MSVC: #define __UINT8_TYPE__ unsigned char
+// AARCH64-MSVC: #define __UINTMAX_C(c) c##ULL
 // AARCH64-MSVC: #define __UINTMAX_C_SUFFIX__ ULL
 // AARCH64-MSVC: #define __UINTMAX_MAX__ 18446744073709551615ULL
 // AARCH64-MSVC: #define __UINTMAX_TYPE__ long long unsigned int
@@ -747,7 +772,7 @@
 // AARCH64-MSVC: #define __WINT_WIDTH__ 16
 // AARCH64-MSVC: #define __aarch64__ 1
 
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple=arm64ec-windows-msvc < /dev/null | FileCheck -match-full-lines -check-prefix ARM64EC-MSVC %s
+// RUN: %clang_cc1 -E -dM -fms-compatibility-version=19.33 -ffreestanding -triple=arm64ec-windows-msvc < /dev/null | FileCheck -match-full-lines -check-prefix ARM64EC-MSVC %s
 
 // ARM64EC-MSVC: #define _INTEGRAL_MAX_BITS 64
 // ARM64EC-MSVC: #define _M_AMD64 100
@@ -867,26 +892,31 @@
 // ARM64EC-MSVC: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
 // ARM64EC-MSVC: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
 // ARM64EC-MSVC: #define __HAVE_FUNCTION_MULTI_VERSIONING 1
+// ARM64EC-MSVC: #define __INT16_C(c) c
 // ARM64EC-MSVC: #define __INT16_C_SUFFIX__
 // ARM64EC-MSVC: #define __INT16_FMTd__ "hd"
 // ARM64EC-MSVC: #define __INT16_FMTi__ "hi"
 // ARM64EC-MSVC: #define __INT16_MAX__ 32767
 // ARM64EC-MSVC: #define __INT16_TYPE__ short
+// ARM64EC-MSVC: #define __INT32_C(c) c
 // ARM64EC-MSVC: #define __INT32_C_SUFFIX__
 // ARM64EC-MSVC: #define __INT32_FMTd__ "d"
 // ARM64EC-MSVC: #define __INT32_FMTi__ "i"
 // ARM64EC-MSVC: #define __INT32_MAX__ 2147483647
 // ARM64EC-MSVC: #define __INT32_TYPE__ int
+// ARM64EC-MSVC: #define __INT64_C(c) c##LL
 // ARM64EC-MSVC: #define __INT64_C_SUFFIX__ LL
 // ARM64EC-MSVC: #define __INT64_FMTd__ "lld"
 // ARM64EC-MSVC: #define __INT64_FMTi__ "lli"
 // ARM64EC-MSVC: #define __INT64_MAX__ 9223372036854775807LL
 // ARM64EC-MSVC: #define __INT64_TYPE__ long long int
+// ARM64EC-MSVC: #define __INT8_C(c) c
 // ARM64EC-MSVC: #define __INT8_C_SUFFIX__
 // ARM64EC-MSVC: #define __INT8_FMTd__ "hhd"
 // ARM64EC-MSVC: #define __INT8_FMTi__ "hhi"
 // ARM64EC-MSVC: #define __INT8_MAX__ 127
 // ARM64EC-MSVC: #define __INT8_TYPE__ signed char
+// ARM64EC-MSVC: #define __INTMAX_C(c) c##LL
 // ARM64EC-MSVC: #define __INTMAX_C_SUFFIX__ LL
 // ARM64EC-MSVC: #define __INTMAX_FMTd__ "lld"
 // ARM64EC-MSVC: #define __INTMAX_FMTi__ "lli"
@@ -1013,6 +1043,7 @@
 // ARM64EC-MSVC: #define __STDC_UTF_32__ 1
 // ARM64EC-MSVC: #define __STDC_VERSION__ 201710L
 // ARM64EC-MSVC: #define __STDC__ 1
+// ARM64EC-MSVC: #define __UINT16_C(c) c
 // ARM64EC-MSVC: #define __UINT16_C_SUFFIX__
 // ARM64EC-MSVC: #define __UINT16_FMTX__ "hX"
 // ARM64EC-MSVC: #define __UINT16_FMTo__ "ho"
@@ -1020,6 +1051,7 @@
 // ARM64EC-MSVC: #define __UINT16_FMTx__ "hx"
 // ARM64EC-MSVC: #define __UINT16_MAX__ 65535
 // ARM64EC-MSVC: #define __UINT16_TYPE__ unsigned short
+// ARM64EC-MSVC: #define __UINT32_C(c) c##U
 // ARM64EC-MSVC: #define __UINT32_C_SUFFIX__ U
 // ARM64EC-MSVC: #define __UINT32_FMTX__ "X"
 // ARM64EC-MSVC: #define __UINT32_FMTo__ "o"
@@ -1027,6 +1059,7 @@
 // ARM64EC-MSVC: #define __UINT32_FMTx__ "x"
 // ARM64EC-MSVC: #define __UINT32_MAX__ 4294967295U
 // ARM64EC-MSVC: #define __UINT32_TYPE__ unsigned int
+// ARM64EC-MSVC: #define __UINT64_C(c) c##ULL
 // ARM64EC-MSVC: #define __UINT64_C_SUFFIX__ ULL
 // ARM64EC-MSVC: #define __UINT64_FMTX__ "llX"
 // ARM64EC-MSVC: #define __UINT64_FMTo__ "llo"
@@ -1034,6 +1067,7 @@
 // ARM64EC-MSVC: #define __UINT64_FMTx__ "llx"
 // ARM64EC-MSVC: #define __UINT64_MAX__ 18446744073709551615ULL
 // ARM64EC-MSVC: #define __UINT64_TYPE__ long long unsigned int
+// ARM64EC-MSVC: #define __UINT8_C(c) c
 // ARM64EC-MSVC: #define __UINT8_C_SUFFIX__
 // ARM64EC-MSVC: #define __UINT8_FMTX__ "hhX"
 // ARM64EC-MSVC: #define __UINT8_FMTo__ "hho"
@@ -1041,6 +1075,7 @@
 // ARM64EC-MSVC: #define __UINT8_FMTx__ "hhx"
 // ARM64EC-MSVC: #define __UINT8_MAX__ 255
 // ARM64EC-MSVC: #define __UINT8_TYPE__ unsigned char
+// ARM64EC-MSVC: #define __UINTMAX_C(c) c##ULL
 // ARM64EC-MSVC: #define __UINTMAX_C_SUFFIX__ ULL
 // ARM64EC-MSVC: #define __UINTMAX_FMTX__ "llX"
 // ARM64EC-MSVC: #define __UINTMAX_FMTo__ "llo"

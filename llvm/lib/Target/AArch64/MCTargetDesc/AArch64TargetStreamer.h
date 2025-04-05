@@ -100,7 +100,7 @@ public:
                           AArch64BuildAttributes::SubsectionOptional IsOptional,
                           AArch64BuildAttributes::SubsectionType ParameterType);
   virtual void emitAttribute(StringRef VendorName, unsigned Tag, unsigned Value,
-                             std::string String, bool Override);
+                             std::string String);
   void activateAtributesSubsection(StringRef VendorName);
   std::unique_ptr<MCELFStreamer::AttributeSubSection>
   getActiveAtributesSubsection();
@@ -128,7 +128,7 @@ private:
       AArch64BuildAttributes::SubsectionOptional IsOptional,
       AArch64BuildAttributes::SubsectionType ParameterType) override;
   void emitAttribute(StringRef VendorName, unsigned Tag, unsigned Value,
-                     std::string String, bool Override = false) override;
+                     std::string String) override;
   void emitInst(uint32_t Inst) override;
   void emitDirectiveVariantPCS(MCSymbol *Symbol) override;
   void finish() override;
@@ -138,12 +138,6 @@ public:
 };
 
 class AArch64TargetWinCOFFStreamer : public llvm::AArch64TargetStreamer {
-private:
-  // True if we are processing SEH directives in an epilogue.
-  bool InEpilogCFI = false;
-
-  // Symbol of the current epilog for which we are processing SEH directives.
-  MCSymbol *CurrentEpilog = nullptr;
 public:
   AArch64TargetWinCOFFStreamer(llvm::MCStreamer &S)
     : AArch64TargetStreamer(S) {}

@@ -44,7 +44,7 @@ private:
   using InstrSet = SmallPtrSet<MachineInstr *, 16>;
   using InstrSetIterator = SmallPtrSetIterator<MachineInstr *>;
 
-  bool IsSingleValuePHICycle(MachineInstr *MI, unsigned &SingleValReg,
+  bool IsSingleValuePHICycle(MachineInstr *MI, Register &SingleValReg,
                              InstrSet &PHIsInCycle);
   bool IsDeadPHICycle(MachineInstr *MI, InstrSet &PHIsInCycle);
   bool OptimizeBB(MachineBasicBlock &MBB);
@@ -109,7 +109,7 @@ bool OptimizePHIs::run(MachineFunction &Fn) {
 /// non-copy value. PHIsInCycle is a set used to keep track of the PHIs that
 /// have been scanned. PHIs may be grouped by cycle, several cycles or chains.
 bool OptimizePHIs::IsSingleValuePHICycle(MachineInstr *MI,
-                                         unsigned &SingleValReg,
+                                         Register &SingleValReg,
                                          InstrSet &PHIsInCycle) {
   assert(MI->isPHI() && "IsSingleValuePHICycle expects a PHI instruction");
   Register DstReg = MI->getOperand(0).getReg();
@@ -144,7 +144,7 @@ bool OptimizePHIs::IsSingleValuePHICycle(MachineInstr *MI,
         return false;
     } else {
       // Fail if there is more than one non-phi/non-move register.
-      if (SingleValReg != 0 && SingleValReg != SrcReg)
+      if (SingleValReg && SingleValReg != SrcReg)
         return false;
       SingleValReg = SrcReg;
     }
@@ -186,10 +186,9 @@ bool OptimizePHIs::OptimizeBB(MachineBasicBlock &MBB) {
       break;
 
     // Check for single-value PHI cycles.
-    unsigned SingleValReg = 0;
+    Register SingleValReg;
     InstrSet PHIsInCycle;
-    if (IsSingleValuePHICycle(MI, SingleValReg, PHIsInCycle) &&
-        SingleValReg != 0) {
+    if (IsSingleValuePHICycle(MI, SingleValReg, PHIsInCycle) && SingleValReg) {
       Register OldReg = MI->getOperand(0).getReg();
       if (!MRI->constrainRegClass(SingleValReg, MRI->getRegClass(OldReg)))
         continue;

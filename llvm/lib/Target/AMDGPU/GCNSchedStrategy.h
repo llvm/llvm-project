@@ -442,7 +442,7 @@ private:
 
   // Map a trivially rematerializable def to a list of regions at MinOccupancy
   // that has the defined reg as a live-in.
-  DenseMap<MachineInstr *, SmallVector<unsigned, 4>> RematDefToLiveInRegions;
+  MapVector<MachineInstr *, SmallVector<unsigned, 4>> RematDefToLiveInRegions;
 
   // Collect all trivially rematerializable VGPR instructions with a single def
   // and single use outside the defining block into RematerializableInsts.
@@ -455,6 +455,12 @@ private:
   // instructions. Returns true if we were able to sink instruction(s).
   bool sinkTriviallyRematInsts(const GCNSubtarget &ST,
                                const TargetInstrInfo *TII);
+
+  /// \p Returns true if all the uses in \p InstToRemat defined at \p
+  /// OriginalIdx are live at \p RematIdx. This only checks liveness of virtual
+  /// reg uses.
+  bool allUsesAvailableAt(const MachineInstr *InstToRemat,
+                          SlotIndex OriginalIdx, SlotIndex RematIdx) const;
 
 public:
   bool initGCNSchedStage() override;

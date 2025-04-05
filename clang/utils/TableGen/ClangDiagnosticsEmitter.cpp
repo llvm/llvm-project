@@ -359,7 +359,7 @@ void InferPedantic::compute(VecOrSet DiagsInPedantic,
 
     // The diagnostic is not included in a group that is (transitively) in
     // -Wpedantic.  Include it in -Wpedantic directly.
-    if (auto *V = DiagsInPedantic.dyn_cast<RecordVec *>())
+    if (auto *V = dyn_cast<RecordVec *>(DiagsInPedantic))
       V->push_back(R);
     else
       cast<RecordSet *>(DiagsInPedantic)->insert(R);
@@ -386,7 +386,7 @@ void InferPedantic::compute(VecOrSet DiagsInPedantic,
     if (Parents.size() > 0 && AllParentsInPedantic)
       continue;
 
-    if (auto *V = GroupsInPedantic.dyn_cast<RecordVec *>())
+    if (auto *V = dyn_cast<RecordVec *>(GroupsInPedantic))
       V->push_back(Group);
     else
       cast<RecordSet *>(GroupsInPedantic)->insert(Group);
@@ -1518,6 +1518,50 @@ static void verifyDiagnosticWording(const Record &Diag) {
   // runs into odd situations like [[clang::warn_unused_result]],
   // #pragma clang, or --unwindlib=libgcc.
 }
+
+/// ClangDiagsCompatIDsEmitter - Emit a set of 'compatibility diagnostic ids'
+/// that map to a set of 2 regular diagnostic ids each and which are used to
+/// simplify emitting compatibility warnings.
+void clang::EmitClangDiagsCompatIDs(const llvm::RecordKeeper &Records,
+                                    llvm::raw_ostream &OS,
+                                    const std::string &Component) {
+  ArrayRef<const Record *> Ids =
+      Records.getAllDerivedDefinitions("CompatWarningId");
+
+  StringRef PrevComponent = "";
+  for (auto [I, R] : enumerate(make_pointee_range(Ids))) {
+    StringRef DiagComponent = R.getValueAsString("Component");
+    if (!Component.empty() && Component != DiagComponent)
+      continue;
+
+    StringRef CompatDiagName = R.getValueAsString("Name");
+    StringRef Diag = R.getValueAsString("Diag");
+    StringRef DiagPre = R.getValueAsString("DiagPre");
+    int64_t CXXStdVer = R.getValueAsInt("Std");
+
+    // We don't want to create empty enums since some compilers (including
+    // Clang) warn about that, so these macros are used to avoid having to
+    // unconditionally write 'enum {' and '};' in the headers.
+    if (PrevComponent != DiagComponent) {
+      if (!PrevComponent.empty())
+        OS << "DIAG_COMPAT_IDS_END()\n";
+      OS << "DIAG_COMPAT_IDS_BEGIN()\n";
+      PrevComponent = DiagComponent;
+    }
+
+    // FIXME: We sometimes define multiple compat diagnostics with the same
+    // name, e.g. 'constexpr_body_invalid_stmt' exists for C++14/20/23. It would
+    // be nice if we could combine all of them into a single compatibility diag
+    // id.
+    OS << "DIAG_COMPAT_ID(" << I << ",";
+    OS << CompatDiagName << "," << CXXStdVer << "," << Diag << "," << DiagPre;
+    OS << ")\n";
+  }
+
+  if (!PrevComponent.empty())
+    OS << "DIAG_COMPAT_IDS_END()\n";
+}
+
 /// ClangDiagsEnumsEmitter - The top-level class emits .def files containing
 /// declarations of Clang diagnostic enums for selects.
 void clang::EmitClangDiagsEnums(const RecordKeeper &Records, raw_ostream &OS,
@@ -1785,8 +1829,7 @@ static void emitDiagArrays(DiagsInGroupTy &DiagsInGroup,
 /// This creates an `llvm::StringTable` of all the diagnostic group names.
 static void emitDiagGroupNames(const StringToOffsetTable &GroupNames,
                                raw_ostream &OS) {
-  GroupNames.EmitStringLiteralDef(
-      OS, "static constexpr llvm::StringTable DiagGroupNames");
+  GroupNames.EmitStringTableDef(OS, "DiagGroupNames");
   OS << "\n";
 }
 
@@ -1939,9 +1982,6 @@ void clang::EmitClangDiagGroups(const RecordKeeper &Records, raw_ostream &OS) {
   inferPedantic.compute(&DiagsInPedantic, &GroupsInPedantic);
 
   StringToOffsetTable GroupNames;
-  // Add an empty string to the table first so we can use `llvm::StringTable`.
-  // TODO: Factor this into `StringToOffsetTable`.
-  GroupNames.GetOrAddStringOffset("");
   for (const auto &[Name, Group] : DiagsInGroup) {
     GroupNames.GetOrAddStringOffset(Name);
   }

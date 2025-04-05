@@ -1325,13 +1325,13 @@ bool PolynomialMultiplyRecognize::convertShiftsToLeft(BasicBlock *LoopB,
     // Found a cycle.
     C.insert(&I);
     classifyCycle(&I, C, Early, Late);
-    Cycled.insert(C.begin(), C.end());
+    Cycled.insert_range(C);
     RShifts.insert(&I);
   }
 
   // Find the set of all values affected by the shift cycles, i.e. all
   // cycled values, and (recursively) all their users.
-  ValueSeq Users(Cycled.begin(), Cycled.end());
+  ValueSeq Users(llvm::from_range, Cycled);
   for (unsigned i = 0; i < Users.size(); ++i) {
     Value *V = Users[i];
     if (!isa<IntegerType>(V->getType()))
@@ -1359,7 +1359,7 @@ bool PolynomialMultiplyRecognize::convertShiftsToLeft(BasicBlock *LoopB,
     return false;
 
   // Verify that high bits remain zero.
-  ValueSeq Internal(Users.begin(), Users.end());
+  ValueSeq Internal(llvm::from_range, Users);
   ValueSeq Inputs;
   for (unsigned i = 0; i < Internal.size(); ++i) {
     auto *R = dyn_cast<Instruction>(Internal[i]);
@@ -1388,14 +1388,12 @@ bool PolynomialMultiplyRecognize::convertShiftsToLeft(BasicBlock *LoopB,
 
   CastMapType CastMap;
 
-  auto upcast = [] (CastMapType &CM, IRBuilder<> &IRB, Value *V,
-        IntegerType *Ty) -> Value* {
-    auto H = CM.find(std::make_pair(V, Ty));
-    if (H != CM.end())
-      return H->second;
-    Value *CV = IRB.CreateIntCast(V, Ty, false);
-    CM.insert(std::make_pair(std::make_pair(V, Ty), CV));
-    return CV;
+  auto upcast = [](CastMapType &CM, IRBuilder<> &IRB, Value *V,
+                   IntegerType *Ty) -> Value * {
+    auto [H, Inserted] = CM.try_emplace(std::make_pair(V, Ty));
+    if (Inserted)
+      H->second = IRB.CreateIntCast(V, Ty, false);
+    return H->second;
   };
 
   for (auto I = LoopB->begin(), E = LoopB->end(); I != E; ++I) {
@@ -2305,10 +2303,9 @@ CleanupAndExit:
 bool HexagonLoopIdiomRecognize::coverLoop(Loop *L,
       SmallVectorImpl<Instruction*> &Insts) const {
   SmallSet<BasicBlock*,8> LoopBlocks;
-  for (auto *B : L->blocks())
-    LoopBlocks.insert(B);
+  LoopBlocks.insert_range(L->blocks());
 
-  SetVector<Instruction*> Worklist(Insts.begin(), Insts.end());
+  SetVector<Instruction *> Worklist(llvm::from_range, Insts);
 
   // Collect all instructions from the loop that the instructions in Insts
   // depend on (plus their dependencies, etc.).  These instructions will
@@ -2408,7 +2405,7 @@ bool HexagonLoopIdiomRecognize::runOnCountableLoop(Loop *L) {
 
 bool HexagonLoopIdiomRecognize::run(Loop *L) {
   const Module &M = *L->getHeader()->getParent()->getParent();
-  if (Triple(M.getTargetTriple()).getArch() != Triple::hexagon)
+  if (M.getTargetTriple().getArch() != Triple::hexagon)
     return false;
 
   // If the loop could not be converted to canonical form, it must have an

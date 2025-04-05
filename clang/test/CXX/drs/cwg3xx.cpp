@@ -444,7 +444,7 @@ namespace cwg329 { // cwg329: 3.5
     //   expected-note@#cwg329-b {{in instantiation of template class 'cwg329::A<char>' requested here}}
     //   expected-note@#cwg329-i {{previous definition is here}}
   };
-  A<int> a; 
+  A<int> a;
   A<char> b; // #cwg329-b
 
   void test() {
@@ -603,7 +603,7 @@ namespace cwg336 { // cwg336: 2.7
     // expected-error@-1 {{out-of-line definition of 'mf1' does not match any declaration in 'cwg336::Pre::A<int>::B<double>'}}
     //   expected-note@#cwg336-B {{defined here}}
     template<class Y> template<> void A<Y>::B<double>::mf2() {}
-    // expected-error@-1 {{nested name specifier 'A<Y>::B<double>::' for declaration does not refer into a class, class template or class template partial specialization}}
+    // expected-error@-1 {{nested name specifier 'A<Y>::B<double>' for declaration does not refer into a class, class template or class template partial specialization}}
   }
   namespace Post {
     template<class T1> class A {
@@ -618,7 +618,7 @@ namespace cwg336 { // cwg336: 2.7
     template<> template<> template<class T> void A<int>::B<double>::mf1(T t) {}
     // FIXME: This diagnostic isn't very good.
     template<class Y> template<> void A<Y>::B<double>::mf2() {}
-    // expected-error@-1 {{nested name specifier 'A<Y>::B<double>::' for declaration does not refer into a class, class template or class template partial specialization}}
+    // expected-error@-1 {{nested name specifier 'A<Y>::B<double>' for declaration does not refer into a class, class template or class template partial specialization}}
   }
 } // namespace cwg336
 
@@ -688,9 +688,9 @@ namespace cwg341 { // cwg341: sup 1708
   namespace B {
     extern "C" int &cwg341_a = cwg341_a;
     // expected-error@-1 {{redefinition of 'cwg341_a'}}
-    //   expected-note@#cwg341_a {{previous definition is here}} 
+    //   expected-note@#cwg341_a {{previous definition is here}}
   }
-  extern "C" void cwg341_b(); // #cwg341_b 
+  extern "C" void cwg341_b(); // #cwg341_b
 }
 int cwg341_a;
 // expected-error@-1 {{declaration of 'cwg341_a' in global scope conflicts with declaration with C language linkage}}
@@ -708,7 +708,7 @@ namespace cwg341 {
   // expected-error@-1 {{declaration of 'cwg341_d' with C language linkage conflicts with declaration in global scope}}
   //   expected-note@#cwg341_d {{declared in global scope here}}
 
-  namespace A { extern "C" int cwg341_e; } // #cwg341_e 
+  namespace A { extern "C" int cwg341_e; } // #cwg341_e
   namespace B { extern "C" void cwg341_e(); }
   // expected-error@-1 {{redefinition of 'cwg341_e' as different kind of symbol}}
   //   expected-note@#cwg341_e {{previous definition is here}}
@@ -960,6 +960,7 @@ namespace cwg354 { // cwg354: 3.1 c++11
   // cxx11-14-error@#cwg354-p0 {{null non-type template argument must be cast to template parameter type 'int *'}}
   //   cxx11-14-note@#cwg354-ptr {{template parameter is declared here}}
   // since-cxx17-error@#cwg354-p0 {{conversion from 'int' to 'int *' is not allowed in a converted constant expression}}
+  //   since-cxx17-note@#cwg354-ptr {{template parameter is declared here}}
   ptr<(int*)0> p1;
   // cxx98-error@-1 {{non-type template argument does not refer to any declaration}}
   //   cxx98-note@#cwg354-ptr {{template parameter is declared here}}
@@ -969,12 +970,14 @@ namespace cwg354 { // cwg354: 3.1 c++11
   // cxx11-14-error@#cwg354-p2 {{null non-type template argument of type 'float *' does not match template parameter of type 'int *'}}
   //   cxx11-14-note@#cwg354-ptr {{template parameter is declared here}}
   // since-cxx17-error@#cwg354-p2 {{value of type 'float *' is not implicitly convertible to 'int *'}}
+  //   since-cxx17-note@#cwg354-ptr {{template parameter is declared here}}
   ptr<(int S::*)0> p3; // #cwg354-p3
   // cxx98-error@#cwg354-p3 {{non-type template argument does not refer to any declaration}}
   //   cxx98-note@#cwg354-ptr {{template parameter is declared here}}
   // cxx11-14-error@#cwg354-p3 {{null non-type template argument of type 'int S::*' does not match template parameter of type 'int *'}}
   //   cxx11-14-note@#cwg354-ptr {{template parameter is declared here}}
   // since-cxx17-error@#cwg354-p3 {{value of type 'int S::*' is not implicitly convertible to 'int *'}}
+  //   since-cxx17-note@#cwg354-ptr {{template parameter is declared here}}
 
   template<int*> int both(); // #cwg354-both-int-ptr
   template<int> int both(); // #cwg354-both-int
@@ -991,6 +994,7 @@ namespace cwg354 { // cwg354: 3.1 c++11
   // cxx11-14-error@#cwg354-m0 {{null non-type template argument must be cast to template parameter type 'int S::*'}}
   //   cxx11-14-note@#cwg354-ptr_mem {{template parameter is declared here}}
   // since-cxx17-error@#cwg354-m0 {{conversion from 'int' to 'int S::*' is not allowed in a converted constant expression}}
+  //   since-cxx17-note@#cwg354-ptr_mem {{template parameter is declared here}}
   ptr_mem<(int S::*)0> m1;
   // cxx98-error@-1 {{non-type template argument is not a pointer to member constant}}
   ptr_mem<(float S::*)0> m2; // #cwg354-m2
@@ -999,12 +1003,14 @@ namespace cwg354 { // cwg354: 3.1 c++11
   // cxx11-14-error@#cwg354-m2 {{null non-type template argument of type 'float S::*' does not match template parameter of type 'int S::*'}}
   //   cxx11-14-note@#cwg354-ptr_mem {{template parameter is declared here}}
   // since-cxx17-error@#cwg354-m2 {{value of type 'float S::*' is not implicitly convertible to 'int S::*'}}
+  //   since-cxx17-note@#cwg354-ptr_mem {{template parameter is declared here}}
   ptr_mem<(int *)0> m3; // #cwg354-m3
   // cxx98-error@#cwg354-m3 {{non-type template argument of type 'int *' cannot be converted to a value of type 'int S::*'}}
   //   cxx98-note@#cwg354-ptr_mem {{template parameter is declared here}}
   // cxx11-14-error@#cwg354-m3 {{null non-type template argument of type 'int *' does not match template parameter of type 'int S::*'}}
   //   cxx11-14-note@#cwg354-ptr_mem {{template parameter is declared here}}
   // since-cxx17-error@#cwg354-m3 {{value of type 'int *' is not implicitly convertible to 'int S::*'}}
+  //   since-cxx17-note@#cwg354-ptr_mem {{template parameter is declared here}}
 } // namespace cwg354
 
 struct cwg355_S; // cwg355: 2.7
@@ -1116,7 +1122,7 @@ namespace cwg364 { // cwg364: 2.7
 } // namespace cwg364
 
 namespace cwg366 { // cwg366: 2.7
-#if "foo" // expected-error {{invalid token at start of a preprocessor expression}} 
+#if "foo" // expected-error {{invalid token at start of a preprocessor expression}}
 #endif
 } // namespace cwg366
 
@@ -1327,9 +1333,9 @@ namespace cwg382 { // cwg382: 2.7 c++11
   // FIXME: Should we allow this in C++98 mode?
   struct A { typedef int T; };
   typename A::T t;
-  // cxx98-error@-1 {{'typename' occurs outside of a template}}
+  // cxx98-error@-1 {{'typename' outside of a template is a C++11 extension}}
   typename cwg382::A a;
-  // cxx98-error@-1 {{'typename' occurs outside of a template}}
+  // cxx98-error@-1 {{'typename' outside of a template is a C++11 extension}}
   typename A b;
   // expected-error@-1 {{expected a qualified name after 'typename'}}
 } // namespace cwg382

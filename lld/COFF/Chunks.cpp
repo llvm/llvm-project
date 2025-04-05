@@ -1070,15 +1070,19 @@ void MergeChunk::writeTo(uint8_t *buf) const {
 }
 
 // MinGW specific.
-size_t AbsolutePointerChunk::getSize() const { return ctx.config.wordsize; }
+size_t AbsolutePointerChunk::getSize() const {
+  return symtab.ctx.config.wordsize;
+}
 
 void AbsolutePointerChunk::writeTo(uint8_t *buf) const {
-  if (ctx.config.is64()) {
+  if (symtab.ctx.config.is64()) {
     write64le(buf, value);
   } else {
     write32le(buf, value);
   }
 }
+
+MachineTypes AbsolutePointerChunk::getMachine() const { return symtab.machine; }
 
 void ECExportThunkChunk::writeTo(uint8_t *buf) const {
   memcpy(buf, ECExportThunkCode, sizeof(ECExportThunkCode));
@@ -1172,11 +1176,12 @@ uint64_t Arm64XRelocVal::get() const {
 
 size_t Arm64XDynamicRelocEntry::getSize() const {
   switch (type) {
+  case IMAGE_DVRT_ARM64X_FIXUP_TYPE_ZEROFILL:
+    return sizeof(uint16_t); // Just a header.
   case IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE:
     return sizeof(uint16_t) + size; // A header and a payload.
   case IMAGE_DVRT_ARM64X_FIXUP_TYPE_DELTA:
-  case IMAGE_DVRT_ARM64X_FIXUP_TYPE_ZEROFILL:
-    llvm_unreachable("unsupported type");
+    return 2 * sizeof(uint16_t); // A header and a delta.
   }
   llvm_unreachable("invalid type");
 }
@@ -1186,6 +1191,9 @@ void Arm64XDynamicRelocEntry::writeTo(uint8_t *buf) const {
   *out = (offset.get() & 0xfff) | (type << 12);
 
   switch (type) {
+  case IMAGE_DVRT_ARM64X_FIXUP_TYPE_ZEROFILL:
+    *out |= ((bit_width(size) - 1) << 14); // Encode the size.
+    break;
   case IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE:
     *out |= ((bit_width(size) - 1) << 14); // Encode the size.
     switch (size) {
@@ -1203,8 +1211,23 @@ void Arm64XDynamicRelocEntry::writeTo(uint8_t *buf) const {
     }
     break;
   case IMAGE_DVRT_ARM64X_FIXUP_TYPE_DELTA:
-  case IMAGE_DVRT_ARM64X_FIXUP_TYPE_ZEROFILL:
-    llvm_unreachable("unsupported type");
+    int delta = value.get();
+    // Negative offsets use a sign bit in the header.
+    if (delta < 0) {
+      *out |= 1 << 14;
+      delta = -delta;
+    }
+    // Depending on the value, the delta is encoded with a shift of 2 or 3 bits.
+    if (delta & 7) {
+      assert(!(delta & 3));
+      delta >>= 2;
+    } else {
+      *out |= (1 << 15);
+      delta >>= 3;
+    }
+    out[1] = delta;
+    assert(!(delta & ~0xffff));
+    break;
   }
 }
 
