@@ -27,6 +27,8 @@
 
 DEMANGLE_NAMESPACE_BEGIN
 
+class Node;
+
 // Stream that AST nodes write their string representation into after the AST
 // has been parsed.
 class OutputBuffer {
@@ -79,9 +81,14 @@ public:
   OutputBuffer(const OutputBuffer &) = delete;
   OutputBuffer &operator=(const OutputBuffer &) = delete;
 
+  virtual ~OutputBuffer() {}
+
   operator std::string_view() const {
     return std::string_view(Buffer, CurrentPosition);
   }
+
+  virtual void printLeft(const Node &N);
+  virtual void printRight(const Node &N);
 
   /// If a ParameterPackExpansion (or similar type) is encountered, the offset
   /// into the pack that we're currently printing.
