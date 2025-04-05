@@ -210,6 +210,7 @@ add_llvm_component_library(LLVMSupport
   KnownFPClass.cpp
   LEB128.cpp
   LineIterator.cpp
+  LibCXXABI.cpp
   Locale.cpp
   LockFileManager.cpp
   ManagedStatic.cpp
