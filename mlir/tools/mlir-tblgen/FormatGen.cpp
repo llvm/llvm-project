@@ -400,9 +400,6 @@ FailureOr<FormatElement *> FormatParser::parseOptionalGroup(Context ctx) {
 
 FailureOr<FormatElement *> FormatParser::parseCustomDirective(SMLoc loc,
                                                               Context ctx) {
-  if (ctx != TopLevelContext)
-    return emitError(loc, "'custom' is only valid as a top-level directive");
-
   FailureOr<FormatToken> nameTok;
   if (failed(parseToken(FormatToken::less,
                         "expected '<' before custom directive name")) ||

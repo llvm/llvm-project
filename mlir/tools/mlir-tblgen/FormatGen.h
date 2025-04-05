@@ -14,7 +14,13 @@
 #ifndef MLIR_TOOLS_MLIRTBLGEN_FORMATGEN_H_
 #define MLIR_TOOLS_MLIRTBLGEN_FORMATGEN_H_
 
+#include "AttrOrTypeFormatGen.h"
+#include "FormatGen.h"
+
 #include "mlir/Support/LLVM.h"
+#include "mlir/TableGen/AttrOrTypeDef.h"
+#include "mlir/TableGen/Format.h"
+#include "mlir/TableGen/GenInfo.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Allocator.h"
@@ -274,6 +280,49 @@ protected:
   VariableElementBase() : VariableElement(VariableKind) {}
 };
 
+/// This class represents an instance of a variable element. A variable refers
+/// to an attribute or type parameter.
+class ParameterElement
+    : public VariableElementBase<VariableElement::Parameter> {
+public:
+  ParameterElement(AttrOrTypeParameter param) : param(param) {}
+
+  /// Get the parameter in the element.
+  const AttrOrTypeParameter &getParam() const { return param; }
+
+  /// Indicate if this variable is printed "qualified" (that is it is
+  /// prefixed with the `#dialect.mnemonic`).
+  bool shouldBeQualified() { return shouldBeQualifiedFlag; }
+  void setShouldBeQualified(bool qualified = true) {
+    shouldBeQualifiedFlag = qualified;
+  }
+
+  /// Returns true if the element contains an optional parameter.
+  bool isOptional() const { return param.isOptional(); }
+
+  /// Returns the name of the parameter.
+  StringRef getName() const { return param.getName(); }
+
+  /// Return the code to check whether the parameter is present.
+  auto genIsPresent(FmtContext &ctx, const Twine &self) const {
+    assert(isOptional() && "cannot guard on a mandatory parameter");
+    std::string valueStr = tgfmt(*param.getDefaultValue(), &ctx).str();
+    ctx.addSubst("_lhs", self).addSubst("_rhs", valueStr);
+    return tgfmt(getParam().getComparator(), &ctx);
+  }
+
+  /// Generate the code to check whether the parameter should be printed.
+  MethodBody &genPrintGuard(FmtContext &ctx, MethodBody &os) const {
+    assert(isOptional() && "cannot guard on a mandatory parameter");
+    std::string self = param.getAccessorName() + "()";
+    return os << "!(" << genIsPresent(ctx, self) << ")";
+  }
+
+private:
+  bool shouldBeQualifiedFlag = false;
+  AttrOrTypeParameter param;
+};
+
 /// This class represents a whitespace element, e.g. a newline or space. It is a
 /// literal that is printed but never parsed. When the value is empty, i.e. ``,
 /// a space is elided where one would have been printed automatically.
@@ -338,29 +387,56 @@ public:
   }
 };
 
+/// Base class for a directive that contains references to elements of type `T`
+/// in a vector.
+template <DirectiveElement::Kind DirectiveKind, typename T>
+class VectorDirectiveBase : public DirectiveElementBase<DirectiveKind> {
+public:
+  using Base = VectorDirectiveBase<DirectiveKind, T>;
+
+  VectorDirectiveBase(std::vector<T> &&elems) : elems(std::move(elems)) {}
+
+  /// Get the elements contained in this directive.
+  ArrayRef<T> getElements() const { return elems; }
+
+  /// Get the number of elements.
+  unsigned getNumElements() const { return elems.size(); }
+
+  /// Take all of the elements from this directive.
+  std::vector<T> takeElements() { return std::move(elems); }
+
+protected:
+  /// The elements captured by this directive.
+  std::vector<T> elems;
+};
+
 /// This class represents a custom format directive that is implemented by the
 /// user in C++. The directive accepts a list of arguments that is passed to the
 /// C++ function.
-class CustomDirective : public DirectiveElementBase<DirectiveElement::Custom> {
+class CustomDirective
+    : public VectorDirectiveBase<DirectiveElement::Custom, FormatElement *> {
 public:
+  using Base::Base;
   /// Create a custom directive with a name and list of arguments.
   CustomDirective(StringRef name, std::vector<FormatElement *> &&arguments)
-      : name(name), arguments(std::move(arguments)) {}
+      : Base(std::move(arguments)), name(name) {}
 
   /// Get the custom directive name.
   StringRef getName() const { return name; }
 
-  /// Get the arguments to the custom directive.
-  ArrayRef<FormatElement *> getArguments() const { return arguments; }
+  FailureOr<ParameterElement *> getFrontAsParam() const {
+    if (getNumElements() != 1)
+      return failure();
+    ParameterElement *param = dyn_cast<ParameterElement>(getElements()[0]);
+    if (param == nullptr)
+      return failure();
+    return param;
+  }
 
 private:
   /// The name of the custom directive. The name is used to call two C++
   /// methods: `parse{name}` and `print{name}` with the given arguments.
   StringRef name;
-  /// The arguments with which to call the custom functions. These are either
-  /// variables (for which the functions are responsible for populating) or
-  /// references to variables.
-  std::vector<FormatElement *> arguments;
 };
 
 /// This class represents a reference directive. This directive can be used to
