@@ -648,6 +648,23 @@ bool VPBasicBlock::isExiting() const {
   return getParent() && getParent()->getExitingBasicBlock() == this;
 }
 
+std::optional<std::pair<VPBasicBlock *, VPBasicBlock *>>
+VPBasicBlock::isHeader(const VPDominatorTree &VPDT) const {
+  ArrayRef<VPBlockBase *> Preds = getPredecessors();
+  if (Preds.size() != 2)
+    return std::nullopt;
+
+  for (unsigned Idx : {0, 1}) {
+    auto *PreheaderVPBB = dyn_cast<VPBasicBlock>(Preds[Idx]);
+    auto *LatchVPBB = dyn_cast<VPBasicBlock>(Preds[1 - Idx]);
+    if (PreheaderVPBB && LatchVPBB && VPDT.dominates(PreheaderVPBB, this) &&
+        VPDT.dominates(this, LatchVPBB))
+      return {std::make_pair(PreheaderVPBB, LatchVPBB)};
+  }
+
+  return std::nullopt;
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPBlockBase::print(raw_ostream &O) const {
   VPSlotTracker SlotTracker(getPlan());
@@ -855,7 +872,7 @@ VPlan::VPlan(Loop *L) {
   ScalarHeader = createVPIRBasicBlock(L->getHeader());
 
   SmallVector<BasicBlock *> IRExitBlocks;
-  L->getExitBlocks(IRExitBlocks);
+  L->getUniqueExitBlocks(IRExitBlocks);
   for (BasicBlock *EB : IRExitBlocks)
     ExitBlocks.push_back(createVPIRBasicBlock(EB));
 }
