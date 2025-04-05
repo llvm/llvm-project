@@ -167,9 +167,7 @@ UnwrappedLineParser::UnwrappedLineParser(
                        ? IG_Rejected
                        : IG_Inited),
       IncludeGuardToken(nullptr), FirstStartColumn(FirstStartColumn),
-      Macros(Style.Macros, SourceMgr, Style, Allocator, IdentTable) {
-  assert(IsCpp == (LangOpts.CXXOperatorNames || LangOpts.C17));
-}
+      Macros(Style.Macros, SourceMgr, Style, Allocator, IdentTable) {}
 
 void UnwrappedLineParser::reset() {
   PPBranchLevel = -1;
