@@ -269,6 +269,32 @@ const inline float length(__detail::HLSL_FIXED_VECTOR<float, N> X) {
 }
 
 //===----------------------------------------------------------------------===//
+// lit builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn vector<T, 4> lit(T NDotL, T NDotH, T M)
+/// \brief Returns a lighting coefficient vector.
+/// \param NDotL The dot product of the normalized surface normal and the
+/// light vector.
+/// \param NDotH The dot product of the half-angle vector and the surface
+/// normal.
+/// \param M A specular exponent.
+///
+/// This function returns a lighting coefficient vector (ambient, diffuse,
+/// specular, 1).
+
+template <>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline vector<half, 4> lit<half>(half NDotL, half NDotH, half M) {
+  return __detail::lit_impl(NDotL, NDotH, M);
+}
+
+template <>
+const inline vector<float, 4> lit<float>(float NDotL, float NDotH, float M) {
+  return __detail::lit_impl(NDotL, NDotH, M);
+}
+
+//===----------------------------------------------------------------------===//
 // D3DCOLORtoUBYTE4 builtin
 //===----------------------------------------------------------------------===//
 
