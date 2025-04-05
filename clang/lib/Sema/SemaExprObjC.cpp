@@ -2704,6 +2704,11 @@ ExprResult SemaObjC::BuildClassMessage(
         << Method->getDeclName();
   }
 
+  // Check any arg-dependent diagnose_if conditions;
+  if (Method)
+    SemaRef.diagnoseArgDependentDiagnoseIfAttrs(Method, nullptr, ArgsIn,
+                                                RBracLoc);
+
   // Warn about explicit call of +initialize on its own class. But not on 'super'.
   if (Method && Method->getMethodFamily() == OMF_initialize) {
     if (!SuperLoc.isValid()) {
@@ -3236,6 +3241,11 @@ ExprResult SemaObjC::BuildInstanceMessage(
           LBracLoc, Method->getReturnType(),
           diag::err_illegal_message_expr_incomplete_type))
     return ExprError();
+
+  // Check any arg-dependent diagnose_if conditions;
+  if (Method)
+    SemaRef.diagnoseArgDependentDiagnoseIfAttrs(Method, nullptr, ArgsIn,
+                                                RBracLoc);
 
   // In ARC, forbid the user from sending messages to
   // retain/release/autorelease/dealloc/retainCount explicitly.
