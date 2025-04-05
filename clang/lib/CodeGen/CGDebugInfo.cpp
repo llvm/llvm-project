@@ -1801,6 +1801,7 @@ CGDebugInfo::createInlinedSubprogram(StringRef FuncName,
         /*ScopeLine=*/0,
         /*Flags=*/llvm::DINode::FlagArtificial,
         /*SPFlags=*/llvm::DISubprogram::SPFlagDefinition,
+        /*ShortBacktrace=*/std::nullopt,
         /*TParams=*/nullptr, /*ThrownTypes=*/nullptr, /*Annotations=*/nullptr);
   }
 
@@ -2182,7 +2183,7 @@ llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
   llvm::DISubprogram *SP = DBuilder.createMethod(
       RecordTy, MethodName, MethodLinkageName, MethodDefUnit, MethodLine,
       MethodTy, VIndex, ThisAdjustment, ContainingType, Flags, SPFlags,
-      TParamsArray.get());
+      std::nullopt, TParamsArray.get());
 
   SPCache[Method->getCanonicalDecl()].reset(SP);
 
@@ -4191,13 +4192,13 @@ llvm::DISubprogram *CGDebugInfo::getFunctionFwdDeclOrStub(GlobalDecl GD,
     return DBuilder.createFunction(
         DContext, Name, LinkageName, Unit, Line,
         getOrCreateFunctionType(GD.getDecl(), FnType, Unit), 0, Flags, SPFlags,
-        TParamsArray.get(), getFunctionDeclaration(FD));
+        std::nullopt, TParamsArray.get(), getFunctionDeclaration(FD));
   }
 
   llvm::DISubprogram *SP = DBuilder.createTempFunctionFwdDecl(
       DContext, Name, LinkageName, Unit, Line,
       getOrCreateFunctionType(GD.getDecl(), FnType, Unit), 0, Flags, SPFlags,
-      TParamsArray.get(), getFunctionDeclaration(FD));
+      std::nullopt, TParamsArray.get(), getFunctionDeclaration(FD));
   const FunctionDecl *CanonDecl = FD->getCanonicalDecl();
   FwdDeclReplaceMap.emplace_back(std::piecewise_construct,
                                  std::make_tuple(CanonDecl),
@@ -4527,8 +4528,8 @@ void CGDebugInfo::emitFunctionStart(GlobalDecl GD, SourceLocation Loc,
   // are emitted as CU level entities by the backend.
   llvm::DISubprogram *SP = DBuilder.createFunction(
       FDContext, Name, LinkageName, Unit, LineNo, DIFnType, ScopeLine,
-      FlagsForDef, SPFlagsForDef, TParamsArray.get(), Decl, nullptr,
-      Annotations);
+      FlagsForDef, SPFlagsForDef, std::nullopt, TParamsArray.get(), Decl,
+      nullptr, Annotations);
   Fn->setSubprogram(SP);
   // We might get here with a VarDecl in the case we're generating
   // code for the initialization of globals. Do not record these decls
@@ -4591,7 +4592,7 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
   llvm::DISubroutineType *STy = getOrCreateFunctionType(D, FnType, Unit);
   llvm::DISubprogram *SP = DBuilder.createFunction(
       FDContext, Name, LinkageName, Unit, LineNo, STy, ScopeLine, Flags,
-      SPFlags, TParamsArray.get(), nullptr, nullptr, Annotations);
+      SPFlags, std::nullopt, TParamsArray.get(), nullptr, nullptr, Annotations);
 
   // Preserve btf_decl_tag attributes for parameters of extern functions
   // for BPF target. The parameters created in this loop are attached as

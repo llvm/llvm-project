@@ -437,7 +437,7 @@ TEST(DIBuilder, CreateSetType) {
   DIBuilder DIB(*M);
   DIScope *Scope = DISubprogram::getDistinct(
       Ctx, nullptr, "", "", nullptr, 0, nullptr, 0, nullptr, 0, 0,
-      DINode::FlagZero, DISubprogram::SPFlagZero, nullptr);
+      DINode::FlagZero, DISubprogram::SPFlagZero, std::nullopt, nullptr);
   DIType *Type = DIB.createBasicType("Int", 64, dwarf::DW_ATE_signed);
   DIFile *F = DIB.createFile("main.c", "/");
 
@@ -451,7 +451,7 @@ TEST(DIBuilder, CreateStringType) {
   DIBuilder DIB(*M);
   DIScope *Scope = DISubprogram::getDistinct(
       Ctx, nullptr, "", "", nullptr, 0, nullptr, 0, nullptr, 0, 0,
-      DINode::FlagZero, DISubprogram::SPFlagZero, nullptr);
+      DINode::FlagZero, DISubprogram::SPFlagZero, std::nullopt, nullptr);
   DIFile *F = DIB.createFile("main.c", "/");
   StringRef StrName = "string";
   DIVariable *StringLen = DIB.createAutoVariable(Scope, StrName, F, 0, nullptr,
@@ -1274,7 +1274,7 @@ TEST(DIBuilder, HashingDISubprogram) {
   DISubprogram *Definition = DIB.createFunction(
       ForwardDeclaredType.get(), "MethodName", "LinkageName", F, 0,
       DIB.createSubroutineType({}), 0, DINode::FlagZero,
-      llvm::DISubprogram::SPFlagDefinition, nullptr, Declaration);
+      llvm::DISubprogram::SPFlagDefinition, std::nullopt, nullptr, Declaration);
 
   // Produce the hash with the temporary scope.
   unsigned HashDeclaration =
