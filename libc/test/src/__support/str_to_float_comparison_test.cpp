@@ -11,12 +11,12 @@
 #include "src/stdio/fgets.h"
 #include "src/stdio/fopen.h"
 #include "src/stdio/printf.h"
+#include "src/stdlib/free.h"
 #include "src/stdlib/getenv.h"
 #include "src/stdlib/strtod.h"
 #include "src/stdlib/strtof.h"
-#include "src/stdlib/free.h"
-#include "src/string/strtok.h"
 #include "src/string/strdup.h"
+#include "src/string/strtok.h"
 #include "test/UnitTest/Test.h"
 #include <stdint.h>
 
