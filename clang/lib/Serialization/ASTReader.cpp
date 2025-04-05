@@ -2926,6 +2926,8 @@ static bool isDiagnosedResult(ASTReader::ASTReadResult ARR, unsigned Caps) {
   case ASTReader::VersionMismatch: return !(Caps & ASTReader::ARR_VersionMismatch);
   case ASTReader::ConfigurationMismatch:
     return !(Caps & ASTReader::ARR_ConfigurationMismatch);
+  case ASTReader::ModuleMismatch:
+    return true;
   case ASTReader::HadErrors: return true;
   case ASTReader::Success: return false;
   }
@@ -3020,11 +3022,10 @@ ASTReader::ASTReadResult ASTReader::ReadOptionsBlock(
   }
 }
 
-ASTReader::ASTReadResult
-ASTReader::ReadControlBlock(ModuleFile &F,
-                            SmallVectorImpl<ImportedModule> &Loaded,
-                            const ModuleFile *ImportedBy,
-                            unsigned ClientLoadCapabilities) {
+ASTReader::ASTReadResult ASTReader::ReadControlBlock(
+    ModuleFile &F, SmallVectorImpl<ImportedModule> &Loaded,
+    const ModuleFile *ImportedBy, StringRef ExpectedModuleName,
+    unsigned ClientLoadCapabilities) {
   BitstreamCursor &Stream = F.Stream;
 
   if (llvm::Error Err = Stream.EnterSubBlock(CONTROL_BLOCK_ID)) {
@@ -3315,7 +3316,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
 
       // Load the AST file.
       auto Result = ReadASTCore(ImportedFile, ImportedKind, ImportLoc, &F,
-                                Loaded, StoredSize, StoredModTime,
+                                Loaded, StoredSize, StoredModTime, ImportedName,
                                 StoredSignature, Capabilities);
 
       // If we diagnosed a problem, produce a backtrace.
@@ -3338,7 +3339,10 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       case OutOfDate: return OutOfDate;
       case VersionMismatch: return VersionMismatch;
       case ConfigurationMismatch: return ConfigurationMismatch;
-      case HadErrors: return HadErrors;
+      case ModuleMismatch:
+        return ModuleMismatch;
+      case HadErrors:
+        return HadErrors;
       case Success: break;
       }
       break;
@@ -3362,6 +3366,14 @@ ASTReader::ReadControlBlock(ModuleFile &F,
           << (ImportedBy ? StringRef(ImportedBy->ModuleName) : StringRef());
       if (Listener)
         Listener->ReadModuleName(F.ModuleName);
+
+      // Return if the AST unexpectedly contains a different module
+      if (F.Kind == MK_PrebuiltModule && !ExpectedModuleName.empty() &&
+          F.ModuleName != ExpectedModuleName) {
+        Diag(diag::err_module_mismatch)
+            << ExpectedModuleName << F.FileName << F.ModuleName;
+        return ASTReadResult::ModuleMismatch;
+      }
 
       // Validate the AST as soon as we have a name so we can exit early on
       // failure.
@@ -4684,6 +4696,15 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName, ModuleKind Type,
                                             SourceLocation ImportLoc,
                                             unsigned ClientLoadCapabilities,
                                             ModuleFile **NewLoadedModuleFile) {
+  return ReadAST(FileName, Type, ImportLoc, ClientLoadCapabilities, "",
+                 NewLoadedModuleFile);
+}
+
+ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName, ModuleKind Type,
+                                            SourceLocation ImportLoc,
+                                            unsigned ClientLoadCapabilities,
+                                            StringRef ExpectedModuleName,
+                                            ModuleFile **NewLoadedModuleFile) {
   llvm::TimeTraceScope scope("ReadAST", FileName);
 
   llvm::SaveAndRestore SetCurImportLocRAII(CurrentImportLoc, ImportLoc);
@@ -4702,8 +4723,8 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName, ModuleKind Type,
   SmallVector<ImportedModule, 4> Loaded;
   if (ASTReadResult ReadResult =
           ReadASTCore(FileName, Type, ImportLoc,
-                      /*ImportedBy=*/nullptr, Loaded, 0, 0, ASTFileSignature(),
-                      ClientLoadCapabilities)) {
+                      /*ImportedBy=*/nullptr, Loaded, 0, 0, ExpectedModuleName,
+                      ASTFileSignature(), ClientLoadCapabilities)) {
     ModuleMgr.removeModules(ModuleMgr.begin() + NumModules);
 
     // If we find that any modules are unusable, the global index is going
@@ -4954,25 +4975,26 @@ static unsigned moduleKindForDiagnostic(ModuleKind Kind) {
   llvm_unreachable("unknown module kind");
 }
 
-ASTReader::ASTReadResult
-ASTReader::ReadASTCore(StringRef FileName,
-                       ModuleKind Type,
-                       SourceLocation ImportLoc,
-                       ModuleFile *ImportedBy,
-                       SmallVectorImpl<ImportedModule> &Loaded,
-                       off_t ExpectedSize, time_t ExpectedModTime,
-                       ASTFileSignature ExpectedSignature,
-                       unsigned ClientLoadCapabilities) {
+ASTReader::ASTReadResult ASTReader::ReadASTCore(
+    StringRef FileName, ModuleKind Type, SourceLocation ImportLoc,
+    ModuleFile *ImportedBy, SmallVectorImpl<ImportedModule> &Loaded,
+    off_t ExpectedSize, time_t ExpectedModTime, StringRef ExpectedModuleName,
+    ASTFileSignature ExpectedSignature, unsigned ClientLoadCapabilities) {
   ModuleFile *M;
   std::string ErrorStr;
-  ModuleManager::AddModuleResult AddResult
-    = ModuleMgr.addModule(FileName, Type, ImportLoc, ImportedBy,
-                          getGeneration(), ExpectedSize, ExpectedModTime,
-                          ExpectedSignature, readASTFileSignature,
-                          M, ErrorStr);
+  ModuleManager::AddModuleResult AddResult = ModuleMgr.addModule(
+      FileName, Type, ImportLoc, ImportedBy, getGeneration(), ExpectedSize,
+      ExpectedModTime, ExpectedSignature, readASTFileSignature, M, ErrorStr);
 
   switch (AddResult) {
   case ModuleManager::AlreadyLoaded:
+    // Return if the AST unexpectedly contains a different module
+    if (Type == MK_PrebuiltModule && !ExpectedModuleName.empty() &&
+        M->ModuleName != ExpectedModuleName) {
+      Diag(diag::err_module_mismatch)
+          << ExpectedModuleName << FileName << M->ModuleName;
+      return ASTReadResult::ModuleMismatch;
+    }
     Diag(diag::remark_module_import)
         << M->ModuleName << M->FileName << (ImportedBy ? true : false)
         << (ImportedBy ? StringRef(ImportedBy->ModuleName) : StringRef());
@@ -5053,7 +5075,8 @@ ASTReader::ReadASTCore(StringRef FileName,
     switch (Entry.ID) {
     case CONTROL_BLOCK_ID:
       HaveReadControlBlock = true;
-      switch (ReadControlBlock(F, Loaded, ImportedBy, ClientLoadCapabilities)) {
+      switch (ReadControlBlock(F, Loaded, ImportedBy, ExpectedModuleName,
+                               ClientLoadCapabilities)) {
       case Success:
         // Check that we didn't try to load a non-module AST file as a module.
         //
@@ -5075,6 +5098,8 @@ ASTReader::ReadASTCore(StringRef FileName,
       case OutOfDate: return OutOfDate;
       case VersionMismatch: return VersionMismatch;
       case ConfigurationMismatch: return ConfigurationMismatch;
+      case ModuleMismatch:
+        return ModuleMismatch;
       case HadErrors: return HadErrors;
       }
       break;

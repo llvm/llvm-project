@@ -676,6 +676,7 @@ IntrusiveRefCntPtr<ASTReader> CompilerInstance::createPCHExternalASTSource(
   case ASTReader::OutOfDate:
   case ASTReader::VersionMismatch:
   case ASTReader::ConfigurationMismatch:
+  case ASTReader::ModuleMismatch:
   case ASTReader::HadErrors:
     // No suitable PCH file could be found. Return an error.
     break;
@@ -1909,13 +1910,12 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
                           : Source == MS_PrebuiltModulePath
                                 ? 0
                                 : ASTReader::ARR_ConfigurationMismatch;
-  switch (getASTReader()->ReadAST(ModuleFilename,
-                                  Source == MS_PrebuiltModulePath
-                                      ? serialization::MK_PrebuiltModule
-                                      : Source == MS_ModuleBuildPragma
-                                            ? serialization::MK_ExplicitModule
-                                            : serialization::MK_ImplicitModule,
-                                  ImportLoc, ARRFlags)) {
+  switch (getASTReader()->ReadAST(
+      ModuleFilename,
+      Source == MS_PrebuiltModulePath  ? serialization::MK_PrebuiltModule
+      : Source == MS_ModuleBuildPragma ? serialization::MK_ExplicitModule
+                                       : serialization::MK_ImplicitModule,
+      ImportLoc, ARRFlags, ModuleName)) {
   case ASTReader::Success: {
     if (M)
       return M;
@@ -1952,6 +1952,7 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
     // Fall through to error out.
     [[fallthrough]];
   case ASTReader::VersionMismatch:
+  case ASTReader::ModuleMismatch:
   case ASTReader::HadErrors:
     ModuleLoader::HadFatalFailure = true;
     // FIXME: The ASTReader will already have complained, but can we shoehorn
