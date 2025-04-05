@@ -4209,10 +4209,10 @@ class PackExpansionExpr : public Expr {
   Stmt *Pattern;
 
 public:
-  PackExpansionExpr(QualType T, Expr *Pattern, SourceLocation EllipsisLoc,
+  PackExpansionExpr(Expr *Pattern, SourceLocation EllipsisLoc,
                     UnsignedOrNone NumExpansions)
-      : Expr(PackExpansionExprClass, T, Pattern->getValueKind(),
-             Pattern->getObjectKind()),
+      : Expr(PackExpansionExprClass, Pattern->getType(),
+             Pattern->getValueKind(), Pattern->getObjectKind()),
         EllipsisLoc(EllipsisLoc),
         NumExpansions(NumExpansions ? *NumExpansions + 1 : 0),
         Pattern(Pattern) {

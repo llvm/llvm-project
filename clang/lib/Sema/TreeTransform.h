@@ -16126,8 +16126,7 @@ TreeTransform<Derived>::TransformSizeOfPackExpr(SizeOfPackExpr *E) {
         if (DRE.isInvalid())
           return ExprError();
         ArgStorage = new (getSema().Context)
-            PackExpansionExpr(getSema().Context.DependentTy, DRE.get(),
-                              E->getPackLoc(), std::nullopt);
+            PackExpansionExpr(DRE.get(), E->getPackLoc(), std::nullopt);
       }
       PackArgs = ArgStorage;
     }
