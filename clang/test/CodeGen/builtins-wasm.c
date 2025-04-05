@@ -743,5 +743,5 @@ __externref_t externref_null() {
 
 void *tp (void) {
   return __builtin_thread_pointer ();
-  // WEBASSEMBLY: call {{.*}} @llvm.thread.pointer()
+  // WEBASSEMBLY: call {{.*}} @llvm.thread.pointer.p0()
 }
