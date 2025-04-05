@@ -2806,7 +2806,7 @@ bool RISCVAsmParser::isSymbolDiff(const MCExpr *Expr) {
   MCValue Res;
   if (Expr->evaluateAsRelocatable(Res, nullptr)) {
     return Res.getRefKind() == RISCVMCExpr::VK_None && Res.getSymA() &&
-           Res.getSymB();
+           Res.getSubSym();
   }
   return false;
 }
