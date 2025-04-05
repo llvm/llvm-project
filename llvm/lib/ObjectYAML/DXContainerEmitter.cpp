@@ -267,12 +267,24 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
         continue;
 
       mcdxbc::RootSignatureDesc RS;
-      RS.Flags = P.RootSignature->getEncodedFlags();
-      RS.Version = P.RootSignature->Version;
-      RS.NumParameters = P.RootSignature->NumParameters;
-      RS.RootParametersOffset = P.RootSignature->RootParametersOffset;
-      RS.NumStaticSamplers = P.RootSignature->NumStaticSamplers;
-      RS.StaticSamplersOffset = P.RootSignature->StaticSamplersOffset;
+      RS.Header.Flags = P.RootSignature->getEncodedFlags();
+      RS.Header.Version = P.RootSignature->Version;
+      for (const auto &Param : P.RootSignature->Parameters) {
+        mcdxbc::RootParameter NewParam;
+        NewParam.Header = dxbc::RootParameterHeader{
+            Param.Type, Param.Visibility, Param.Offset};
+
+        switch (Param.Type) {
+
+        case dxbc::RootParameterType::Constants32Bit:
+          NewParam.Constants.NumOfConstants = Param.Constants.NumOfConstants;
+          NewParam.Constants.Space = Param.Constants.Space;
+          NewParam.Constants.Register = Param.Constants.Register;
+          break;
+        }
+
+        RS.Parameters.push_back(NewParam);
+      }
 
       RS.write(OS);
       break;

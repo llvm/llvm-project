@@ -8,10 +8,13 @@
 
 #include "llvm/Object/DXContainer.h"
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/BinaryFormat/RootSignatureVerifier.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <cstdint>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -247,6 +250,7 @@ void DXContainer::PartIterator::updateIteratorImpl(const uint32_t Offset) {
 }
 
 Error DirectX::RootSignature::parse(StringRef Data) {
+  const char *Begin = Data.begin();
   const char *Current = Data.begin();
 
   // Root Signature headers expects 6 integers to be present.
@@ -258,7 +262,7 @@ Error DirectX::RootSignature::parse(StringRef Data) {
       support::endian::read<uint32_t, llvm::endianness::little>(Current);
   Current += sizeof(uint32_t);
 
-  if (!dxbc::RootSignatureValidations::isValidVersion(VValue))
+  if (!dxbc::RootSignatureVerifier::verifyVersion(VValue))
     return validationFailed("unsupported root signature version read: " +
                             llvm::Twine(VValue));
   Version = VValue;
@@ -283,11 +287,35 @@ Error DirectX::RootSignature::parse(StringRef Data) {
       support::endian::read<uint32_t, llvm::endianness::little>(Current);
   Current += sizeof(uint32_t);
 
-  if (!dxbc::RootSignatureValidations::isValidRootFlag(FValue))
+  if (!dxbc::RootSignatureVerifier::verifyRootFlag(FValue))
     return validationFailed("unsupported root signature flag value read: " +
                             llvm::Twine(FValue));
   Flags = FValue;
 
+  assert(Current == Begin + RootParametersOffset);
+
+  ParametersHeaders.Data = Data.substr(
+      RootParametersOffset, NumParameters * sizeof(dxbc::RootParameterHeader));
+
+  ParameterSpaceOffset =
+      RootParametersOffset + NumParameters * sizeof(dxbc::RootParameterHeader);
+  size_t ParameterSpaceEnd =
+      Data.size() - ((NumStaticSamplers == 0) ? 0 : StaticSamplersOffset);
+
+  ParameterSpace = Data.substr(ParameterSpaceOffset,
+                               ParameterSpaceEnd - ParameterSpaceOffset);
+
+  for (auto P : param_header()) {
+
+    if (!dxbc::RootSignatureVerifier::verifyParameterType(P.ParameterType))
+      return validationFailed("unsupported parameter type value read: " +
+                              llvm::Twine((uint32_t)P.ParameterType));
+
+    if (!dxbc::RootSignatureVerifier::verifyShaderVisibility(
+            P.ShaderVisibility))
+      return validationFailed("unsupported shader visility flag value read: " +
+                              llvm::Twine((uint32_t)P.ShaderVisibility));
+  }
   return Error::success();
 }
 

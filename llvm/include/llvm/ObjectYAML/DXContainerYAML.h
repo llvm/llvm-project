@@ -74,15 +74,34 @@ struct ShaderHash {
 };
 
 #define ROOT_ELEMENT_FLAG(Num, Val) bool Val = false;
+
+struct RootConstantsYaml {
+  uint32_t Register;
+  uint32_t Space;
+  uint32_t NumOfConstants;
+};
+
+struct RootParameterYamlDesc {
+  dxbc::RootParameterType Type;
+  dxbc::ShaderVisibility Visibility;
+  uint32_t Offset;
+
+  RootParameterYamlDesc() = default;
+
+  union {
+    RootConstantsYaml Constants;
+  };
+};
+
 struct RootSignatureYamlDesc {
   RootSignatureYamlDesc() = default;
   RootSignatureYamlDesc(const object::DirectX::RootSignature &Data);
 
   uint32_t Version;
-  uint32_t NumParameters;
-  uint32_t RootParametersOffset;
   uint32_t NumStaticSamplers;
   uint32_t StaticSamplersOffset;
+
+  SmallVector<RootParameterYamlDesc> Parameters;
 
   uint32_t getEncodedFlags();
 
@@ -192,6 +211,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::ResourceBindInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::SignatureElement)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::PSVInfo::MaskVector)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::SignatureParameter)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::RootParameterYamlDesc)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::SemanticKind)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::ComponentType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::InterpolationMode)
@@ -200,6 +220,8 @@ LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::ResourceKind)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::D3DSystemValue)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::SigComponentType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::SigMinPrecision)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::RootParameterType)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::ShaderVisibility)
 
 namespace llvm {
 
@@ -262,6 +284,14 @@ template <> struct MappingTraits<DXContainerYAML::Signature> {
 template <> struct MappingTraits<DXContainerYAML::RootSignatureYamlDesc> {
   static void mapping(IO &IO,
                       DXContainerYAML::RootSignatureYamlDesc &RootSignature);
+};
+
+template <> struct MappingTraits<llvm::DXContainerYAML::RootParameterYamlDesc> {
+  static void mapping(IO &IO, llvm::DXContainerYAML::RootParameterYamlDesc &P);
+};
+
+template <> struct MappingTraits<llvm::DXContainerYAML::RootConstantsYaml> {
+  static void mapping(IO &IO, llvm::DXContainerYAML::RootConstantsYaml &C);
 };
 
 } // namespace yaml

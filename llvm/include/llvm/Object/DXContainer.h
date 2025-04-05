@@ -18,10 +18,14 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/Object/Error.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/TargetParser/Triple.h"
 #include <array>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
 #include <variant>
 
 namespace llvm {
@@ -117,14 +121,63 @@ template <typename T> struct ViewArray {
 
 namespace DirectX {
 
+struct RootParameter {
+  dxbc::RootParameterHeader Header;
+  union {
+    dxbc::RootConstants Constants;
+  };
+
+  RootParameter() = default;
+};
+
+struct RootParameterView {
+  const dxbc::RootParameterHeader &Header;
+  StringRef ParamData;
+  RootParameterView(const dxbc::RootParameterHeader &H, StringRef P)
+      : Header(H), ParamData(P) {}
+
+  template <typename T> Expected<T> readParameter() {
+    T Struct;
+    if (sizeof(T) > ParamData.size())
+      return make_error<GenericBinaryError>(
+          "Reading structure out of file bounds", object_error::parse_failed);
+
+    memcpy(&Struct, ParamData.data(), sizeof(T));
+    // DXContainer is always little endian
+    if (sys::IsBigEndianHost)
+      Struct.swapBytes();
+    return Struct;
+  }
+};
+
+struct RootConstantView : RootParameterView {
+  static bool classof(const RootParameterView *V) {
+    return V->Header.ParameterType == dxbc::RootParameterType::Constants32Bit;
+  }
+
+  llvm::Expected<dxbc::RootConstants> read() {
+    return readParameter<dxbc::RootConstants>();
+  }
+};
+
+static Error parseFailed(const Twine &Msg) {
+  return make_error<GenericBinaryError>(Msg.str(), object_error::parse_failed);
+}
+
 class RootSignature {
 private:
-  uint32_t Version;
-  uint32_t NumParameters;
-  uint32_t RootParametersOffset;
-  uint32_t NumStaticSamplers;
-  uint32_t StaticSamplersOffset;
-  uint32_t Flags;
+  uint32_t Version = 2;
+  uint32_t NumParameters = 0;
+  uint32_t RootParametersOffset = 0;
+  uint32_t NumStaticSamplers = 0;
+  uint32_t StaticSamplersOffset = 0;
+  uint32_t Flags = 0;
+
+  ViewArray<dxbc::RootParameterHeader> ParametersHeaders;
+  size_t ParameterSpaceOffset;
+  StringRef ParameterSpace;
+
+  using param_header_iterator = ViewArray<dxbc::RootParameterHeader>::iterator;
 
 public:
   RootSignature() {}
@@ -135,7 +188,36 @@ public:
   uint32_t getRootParametersOffset() const { return RootParametersOffset; }
   uint32_t getNumStaticSamplers() const { return NumStaticSamplers; }
   uint32_t getStaticSamplersOffset() const { return StaticSamplersOffset; }
+  llvm::iterator_range<param_header_iterator> param_header() const {
+    return llvm::make_range(ParametersHeaders.begin(), ParametersHeaders.end());
+  }
+  param_header_iterator param_header_begin() {
+    return ParametersHeaders.begin();
+  }
+  param_header_iterator param_header_end() { return ParametersHeaders.end(); }
   uint32_t getFlags() const { return Flags; }
+
+  llvm::Expected<RootParameterView>
+  getParameter(const dxbc::RootParameterHeader &Header) const {
+    size_t CorrectOffset = Header.ParameterOffset - ParameterSpaceOffset;
+    StringRef Data;
+
+    size_t DataSize;
+
+    switch (Header.ParameterType) {
+    case dxbc::RootParameterType::Constants32Bit:
+      DataSize = sizeof(dxbc::RootConstants);
+      break;
+    }
+
+    if (CorrectOffset + DataSize > ParameterSpace.size())
+      return parseFailed("Reading structure out of file bounds");
+
+    Data = ParameterSpace.substr(CorrectOffset, DataSize);
+
+    RootParameterView View = RootParameterView(Header, Data);
+    return View;
+  }
 };
 
 class PSVRuntimeInfo {
