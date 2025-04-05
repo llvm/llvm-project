@@ -69,13 +69,14 @@ public:
   bool operator()(const Component &component) const {
     return (*this)(component.base());
   }
-  // Forbid integer division by zero in constants.
+  // Prevent integer division by known zeroes in constant expressions.
   template <int KIND>
   bool operator()(
       const Divide<Type<TypeCategory::Integer, KIND>> &division) const {
     using T = Type<TypeCategory::Integer, KIND>;
-    if (const auto divisor{GetScalarConstantValue<T>(division.right())}) {
-      return !divisor->IsZero() && (*this)(division.left());
+    if ((*this)(division.left()) && (*this)(division.right())) {
+      const auto divisor{GetScalarConstantValue<T>(division.right())};
+      return !divisor || !divisor->IsZero();
     } else {
       return false;
     }
@@ -100,9 +101,9 @@ template <bool INVARIANT>
 bool IsConstantExprHelper<INVARIANT>::IsConstantStructureConstructorComponent(
     const Symbol &component, const Expr<SomeType> &expr) const {
   if (IsAllocatable(component)) {
-    return IsNullObjectPointer(expr);
+    return IsNullObjectPointer(&expr);
   } else if (IsPointer(component)) {
-    return IsNullPointer(expr) || IsInitialDataTarget(expr) ||
+    return IsNullPointerOrAllocatable(&expr) || IsInitialDataTarget(expr) ||
         IsInitialProcedureTarget(expr);
   } else {
     return (*this)(expr);
@@ -132,13 +133,23 @@ bool IsConstantExprHelper<INVARIANT>::operator()(
       auto shape{GetShape(call.arguments()[0]->UnwrapExpr())};
       return shape && IsConstantExprShape(*shape);
     } else if (proc.IsPure()) {
+      std::size_t j{0};
       for (const auto &arg : call.arguments()) {
-        if (!arg) {
+        if (const auto *dataDummy{j < proc.dummyArguments.size()
+                    ? std::get_if<characteristics::DummyDataObject>(
+                          &proc.dummyArguments[j].u)
+                    : nullptr};
+            dataDummy &&
+            dataDummy->attrs.test(
+                characteristics::DummyDataObject::Attr::OnlyIntrinsicInquiry)) {
+          // The value of the argument doesn't matter
+        } else if (!arg) {
           return false;
         } else if (const auto *expr{arg->UnwrapExpr()};
-                   !expr || !(*this)(*expr)) {
+            !expr || !(*this)(*expr)) {
           return false;
         }
+        ++j;
       }
       return true;
     }
@@ -194,7 +205,7 @@ struct IsActuallyConstantHelper {
       const bool compIsConstant{(*this)(y)};
       // If an allocatable component is initialized by a constant,
       // the structure constructor is not a constant.
-      if ((!compIsConstant && !IsNullPointer(y)) ||
+      if ((!compIsConstant && !IsNullPointerOrAllocatable(&y)) ||
           (compIsConstant && IsAllocatable(sym))) {
         return false;
       }
@@ -311,7 +322,9 @@ public:
   bool operator()(const ProcedureRef &x) const {
     if (const SpecificIntrinsic * intrinsic{x.proc().GetSpecificIntrinsic()}) {
       return intrinsic->characteristics.value().attrs.test(
-          characteristics::Procedure::Attr::NullPointer);
+                 characteristics::Procedure::Attr::NullPointer) ||
+          intrinsic->characteristics.value().attrs.test(
+              characteristics::Procedure::Attr::NullAllocatable);
     }
     return false;
   }
@@ -388,7 +401,7 @@ bool IsInitialProcedureTarget(const Expr<SomeType> &expr) {
   if (const auto *proc{std::get_if<ProcedureDesignator>(&expr.u)}) {
     return IsInitialProcedureTarget(*proc);
   } else {
-    return IsNullProcedurePointer(expr);
+    return IsNullProcedurePointer(&expr);
   }
 }
 
@@ -644,7 +657,6 @@ public:
   }
 
   Result operator()(const ProcedureRef &x) const {
-    bool inInquiry{false};
     if (const auto *symbol{x.proc().GetSymbol()}) {
       const Symbol &ultimate{symbol->GetUltimate()};
       if (!semantics::IsPureProcedure(ultimate)) {
@@ -676,10 +688,12 @@ public:
       }
       // References to internal functions are caught in expression semantics.
       // TODO: other checks for standard module procedures
+      auto restorer{common::ScopedSet(inInquiry_, false)};
+      return (*this)(x.arguments());
     } else { // intrinsic
       const SpecificIntrinsic &intrin{DEREF(x.proc().GetSpecificIntrinsic())};
-      inInquiry = context_.intrinsics().GetIntrinsicClass(intrin.name) ==
-          IntrinsicClass::inquiryFunction;
+      bool inInquiry{context_.intrinsics().GetIntrinsicClass(intrin.name) ==
+          IntrinsicClass::inquiryFunction};
       if (scope_.IsDerivedType()) { // C750, C754
         if ((context_.intrinsics().IsIntrinsic(intrin.name) &&
                 badIntrinsicsForComponents_.find(intrin.name) !=
@@ -706,37 +720,55 @@ public:
       if (intrin.name == "present") {
         return std::nullopt; // always ok
       }
-      // Catch CHARACTER(:), ALLOCATABLE :: X; CHARACTER(LEN(X)) :: Y
-      if (inInquiry && x.arguments().size() >= 1) {
-        if (const auto &arg{x.arguments().at(0)}) {
-          if (auto dataRef{ExtractDataRef(*arg, true, true)}) {
-            if (intrin.name == "allocated" || intrin.name == "associated" ||
-                intrin.name == "is_contiguous") { // ok
-            } else if (intrin.name == "len" &&
-                IsPermissibleInquiry(dataRef->GetFirstSymbol(),
-                    dataRef->GetLastSymbol(),
-                    DescriptorInquiry::Field::Len)) { // ok
-            } else if (intrin.name == "lbound" &&
-                IsPermissibleInquiry(dataRef->GetFirstSymbol(),
-                    dataRef->GetLastSymbol(),
-                    DescriptorInquiry::Field::LowerBound)) { // ok
-            } else if ((intrin.name == "shape" || intrin.name == "size" ||
-                           intrin.name == "sizeof" ||
-                           intrin.name == "storage_size" ||
-                           intrin.name == "ubound") &&
-                IsPermissibleInquiry(dataRef->GetFirstSymbol(),
-                    dataRef->GetLastSymbol(),
-                    DescriptorInquiry::Field::Extent)) { // ok
-            } else {
-              return "non-constant inquiry function '"s + intrin.name +
-                  "' not allowed for local object";
-            }
+      const auto &proc{intrin.characteristics.value()};
+      std::size_t j{0};
+      for (const auto &arg : x.arguments()) {
+        bool checkArg{true};
+        if (const auto *dataDummy{j < proc.dummyArguments.size()
+                    ? std::get_if<characteristics::DummyDataObject>(
+                          &proc.dummyArguments[j].u)
+                    : nullptr}) {
+          if (dataDummy->attrs.test(characteristics::DummyDataObject::Attr::
+                      OnlyIntrinsicInquiry)) {
+            checkArg = false; // value unused, e.g. IEEE_SUPPORT_FLAG(,,,. X)
           }
         }
+        if (arg && checkArg) {
+          // Catch CHARACTER(:), ALLOCATABLE :: X; CHARACTER(LEN(X)) :: Y
+          if (inInquiry) {
+            if (auto dataRef{ExtractDataRef(*arg, true, true)}) {
+              if (intrin.name == "allocated" || intrin.name == "associated" ||
+                  intrin.name == "is_contiguous") { // ok
+              } else if (intrin.name == "len" &&
+                  IsPermissibleInquiry(dataRef->GetFirstSymbol(),
+                      dataRef->GetLastSymbol(),
+                      DescriptorInquiry::Field::Len)) { // ok
+              } else if (intrin.name == "lbound" &&
+                  IsPermissibleInquiry(dataRef->GetFirstSymbol(),
+                      dataRef->GetLastSymbol(),
+                      DescriptorInquiry::Field::LowerBound)) { // ok
+              } else if ((intrin.name == "shape" || intrin.name == "size" ||
+                             intrin.name == "sizeof" ||
+                             intrin.name == "storage_size" ||
+                             intrin.name == "ubound") &&
+                  IsPermissibleInquiry(dataRef->GetFirstSymbol(),
+                      dataRef->GetLastSymbol(),
+                      DescriptorInquiry::Field::Extent)) { // ok
+              } else {
+                return "non-constant inquiry function '"s + intrin.name +
+                    "' not allowed for local object";
+              }
+            }
+          }
+          auto restorer{common::ScopedSet(inInquiry_, inInquiry)};
+          if (auto err{(*this)(*arg)}) {
+            return err;
+          }
+        }
+        ++j;
       }
+      return std::nullopt;
     }
-    auto restorer{common::ScopedSet(inInquiry_, inInquiry)};
-    return (*this)(x.arguments());
   }
 
 private:
@@ -833,7 +865,10 @@ class IsContiguousHelper
 public:
   using Result = std::optional<bool>; // tri-state
   using Base = AnyTraverse<IsContiguousHelper, Result>;
-  explicit IsContiguousHelper(FoldingContext &c) : Base{*this}, context_{c} {}
+  explicit IsContiguousHelper(
+      FoldingContext &c, bool namedConstantSectionsAreContiguous)
+      : Base{*this}, context_{c}, namedConstantSectionsAreContiguous_{
+                                      namedConstantSectionsAreContiguous} {}
   using Base::operator();
 
   template <typename T> Result operator()(const Constant<T> &) const {
@@ -855,6 +890,11 @@ public:
                    ultimate.detailsIf<semantics::AssocEntityDetails>()}) {
       // RANK(*) associating entity is contiguous.
       if (details->IsAssumedSize()) {
+        return true;
+      } else if (!IsVariable(details->expr()) &&
+          (namedConstantSectionsAreContiguous_ ||
+              !ExtractDataRef(details->expr(), true, true))) {
+        // Selector is associated to an expression value.
         return true;
       } else {
         return Base::operator()(ultimate); // use expr
@@ -1113,22 +1153,34 @@ private:
   }
 
   FoldingContext &context_;
+  bool namedConstantSectionsAreContiguous_{false};
 };
 
 template <typename A>
-std::optional<bool> IsContiguous(const A &x, FoldingContext &context) {
-  return IsContiguousHelper{context}(x);
+std::optional<bool> IsContiguous(const A &x, FoldingContext &context,
+    bool namedConstantSectionsAreContiguous) {
+  if (!IsVariable(x) &&
+      (namedConstantSectionsAreContiguous || !ExtractDataRef(x, true, true))) {
+    return true;
+  } else {
+    return IsContiguousHelper{context, namedConstantSectionsAreContiguous}(x);
+  }
 }
 
+template std::optional<bool> IsContiguous(const Expr<SomeType> &,
+    FoldingContext &, bool namedConstantSectionsAreContiguous);
+template std::optional<bool> IsContiguous(const ArrayRef &, FoldingContext &,
+    bool namedConstantSectionsAreContiguous);
+template std::optional<bool> IsContiguous(const Substring &, FoldingContext &,
+    bool namedConstantSectionsAreContiguous);
+template std::optional<bool> IsContiguous(const Component &, FoldingContext &,
+    bool namedConstantSectionsAreContiguous);
+template std::optional<bool> IsContiguous(const ComplexPart &, FoldingContext &,
+    bool namedConstantSectionsAreContiguous);
+template std::optional<bool> IsContiguous(const CoarrayRef &, FoldingContext &,
+    bool namedConstantSectionsAreContiguous);
 template std::optional<bool> IsContiguous(
-    const Expr<SomeType> &, FoldingContext &);
-template std::optional<bool> IsContiguous(const ArrayRef &, FoldingContext &);
-template std::optional<bool> IsContiguous(const Substring &, FoldingContext &);
-template std::optional<bool> IsContiguous(const Component &, FoldingContext &);
-template std::optional<bool> IsContiguous(
-    const ComplexPart &, FoldingContext &);
-template std::optional<bool> IsContiguous(const CoarrayRef &, FoldingContext &);
-template std::optional<bool> IsContiguous(const Symbol &, FoldingContext &);
+    const Symbol &, FoldingContext &, bool namedConstantSectionsAreContiguous);
 
 // IsErrorExpr()
 struct IsErrorExprHelper : public AnyTraverse<IsErrorExprHelper, bool> {

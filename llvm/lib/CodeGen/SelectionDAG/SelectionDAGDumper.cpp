@@ -44,7 +44,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Printable.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetIntrinsicInfo.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cstdint>
 #include <iterator>
@@ -168,8 +167,6 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
       return Intrinsic::getBaseName((Intrinsic::ID)IID).str();
     if (!G)
       return "Unknown intrinsic";
-    if (const TargetIntrinsicInfo *TII = G->getTarget().getIntrinsicInfo())
-      return TII->getName(IID);
     llvm_unreachable("Invalid intrinsic ID");
   }
 
@@ -223,6 +220,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::FCOS:                       return "fcos";
   case ISD::STRICT_FCOS:                return "strict_fcos";
   case ISD::FSINCOS:                    return "fsincos";
+  case ISD::FSINCOSPI:                  return "fsincospi";
+  case ISD::FMODF:                      return "fmodf";
   case ISD::FTAN:                       return "ftan";
   case ISD::STRICT_FTAN:                return "strict_ftan";
   case ISD::FASIN:                      return "fasin";
@@ -573,6 +572,11 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
 
   case ISD::VECTOR_FIND_LAST_ACTIVE:
     return "find_last_active";
+
+  case ISD::PARTIAL_REDUCE_UMLA:
+    return "partial_reduce_umla";
+  case ISD::PARTIAL_REDUCE_SMLA:
+    return "partial_reduce_smla";
 
     // Vector Predication
 #define BEGIN_REGISTER_VP_SDNODE(SDID, LEGALARG, NAME, ...)                    \
@@ -989,7 +993,7 @@ LLVM_DUMP_METHOD void SDDbgValue::print(raw_ostream &OS) const {
       OS << "FRAMEIX=" << Op.getFrameIx();
       break;
     case SDDbgOperand::VREG:
-      OS << "VREG=" << Op.getVReg();
+      OS << "VREG=" << printReg(Op.getVReg());
       break;
     }
     Comma = true;

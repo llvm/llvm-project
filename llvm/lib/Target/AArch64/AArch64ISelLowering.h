@@ -241,21 +241,11 @@ enum NodeType : unsigned {
   VSRI,
 
   // Vector comparisons
-  CMEQ,
-  CMGE,
-  CMGT,
-  CMHI,
-  CMHS,
   FCMEQ,
   FCMGE,
   FCMGT,
 
   // Vector zero comparisons
-  CMEQz,
-  CMGEz,
-  CMGTz,
-  CMLEz,
-  CMLTz,
   FCMEQz,
   FCMGEz,
   FCMGTz,
@@ -529,6 +519,9 @@ enum NodeType : unsigned {
   // SME ZA loads and stores
   SME_ZA_LDR,
   SME_ZA_STR,
+
+  // Compare-and-branch
+  CB,
 };
 
 } // end namespace AArch64ISD
@@ -611,6 +604,11 @@ public:
       // allows us to use AArch64's addressing modes much more easily.
       return MVT::i64;
     }
+  }
+
+  unsigned getVectorIdxWidth(const DataLayout &DL) const override {
+    // The VectorIdx type is i64, with both normal and ilp32.
+    return 64;
   }
 
   bool targetShrinkDemandedConstant(SDValue Op, const APInt &DemandedBits,

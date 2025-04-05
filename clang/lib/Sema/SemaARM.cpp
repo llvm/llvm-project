@@ -249,16 +249,16 @@ bool SemaARM::BuiltinARMSpecialReg(unsigned BuiltinID, CallExpr *TheCall,
       }
     }
 
-    SmallVector<int, 5> Ranges;
+    SmallVector<int, 5> FieldBitWidths;
     if (FiveFields)
-      Ranges.append({IsAArch64Builtin ? 1 : 15, 7, 15, 15, 7});
+      FieldBitWidths.append({IsAArch64Builtin ? 2 : 4, 3, 4, 4, 3});
     else
-      Ranges.append({15, 7, 15});
+      FieldBitWidths.append({4, 3, 4});
 
     for (unsigned i = 0; i < Fields.size(); ++i) {
       int IntField;
       ValidString &= !Fields[i].getAsInteger(10, IntField);
-      ValidString &= (IntField >= 0 && IntField <= Ranges[i]);
+      ValidString &= (IntField >= 0 && IntField < (1 << FieldBitWidths[i]));
     }
 
     if (!ValidString)
@@ -709,22 +709,18 @@ bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
                                            CallExpr *TheCall) {
   if (const FunctionDecl *FD =
           SemaRef.getCurFunctionDecl(/*AllowLambda=*/true)) {
+    std::optional<ArmStreamingType> BuiltinType;
 
     switch (BuiltinID) {
     default:
       break;
-#define GET_NEON_BUILTINS
-#define TARGET_BUILTIN(id, ...) case NEON::BI##id:
-#define BUILTIN(id, ...) case NEON::BI##id:
+#define GET_NEON_STREAMING_COMPAT_FLAG
 #include "clang/Basic/arm_neon.inc"
-      if (checkArmStreamingBuiltin(SemaRef, TheCall, FD, ArmNonStreaming,
-                                   BuiltinID))
-        return true;
-      break;
-#undef TARGET_BUILTIN
-#undef BUILTIN
-#undef GET_NEON_BUILTINS
+#undef GET_NEON_STREAMING_COMPAT_FLAG
     }
+    if (BuiltinType &&
+        checkArmStreamingBuiltin(SemaRef, TheCall, FD, *BuiltinType, BuiltinID))
+      return true;
   }
 
   llvm::APSInt Result;

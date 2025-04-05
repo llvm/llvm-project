@@ -199,6 +199,18 @@ uint64_t GDBRemoteCommunicationClient::GetRemoteMaxPacketSize() {
   return m_max_packet_size;
 }
 
+bool GDBRemoteCommunicationClient::GetReverseContinueSupported() {
+  if (m_supports_reverse_continue == eLazyBoolCalculate)
+    GetRemoteQSupported();
+  return m_supports_reverse_continue == eLazyBoolYes;
+}
+
+bool GDBRemoteCommunicationClient::GetReverseStepSupported() {
+  if (m_supports_reverse_step == eLazyBoolCalculate)
+    GetRemoteQSupported();
+  return m_supports_reverse_step == eLazyBoolYes;
+}
+
 bool GDBRemoteCommunicationClient::QueryNoAckModeSupported() {
   if (m_supports_not_sending_acks == eLazyBoolCalculate) {
     m_send_acks = true;
@@ -295,6 +307,8 @@ void GDBRemoteCommunicationClient::ResetDiscoverableSettings(bool did_exec) {
     m_supports_augmented_libraries_svr4_read = eLazyBoolCalculate;
     m_uses_native_signals = eLazyBoolCalculate;
     m_x_packet_state.reset();
+    m_supports_reverse_continue = eLazyBoolCalculate;
+    m_supports_reverse_step = eLazyBoolCalculate;
     m_supports_qProcessInfoPID = true;
     m_supports_qfProcessInfo = true;
     m_supports_qUserName = true;
@@ -349,6 +363,8 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
   m_supports_qSaveCore = eLazyBoolNo;
   m_uses_native_signals = eLazyBoolNo;
   m_x_packet_state.reset();
+  m_supports_reverse_continue = eLazyBoolNo;
+  m_supports_reverse_step = eLazyBoolNo;
 
   m_max_packet_size = UINT64_MAX; // It's supposed to always be there, but if
                                   // not, we assume no limit
@@ -404,6 +420,10 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
         m_uses_native_signals = eLazyBoolYes;
       else if (x == "binary-upload+")
         m_x_packet_state = xPacketState::Prefixed;
+      else if (x == "ReverseContinue+")
+        m_supports_reverse_continue = eLazyBoolYes;
+      else if (x == "ReverseStep+")
+        m_supports_reverse_step = eLazyBoolYes;
       // Look for a list of compressions in the features list e.g.
       // qXfer:features:read+;PacketSize=20000;qEcho+;SupportedCompressions=zlib-
       // deflate,lzma

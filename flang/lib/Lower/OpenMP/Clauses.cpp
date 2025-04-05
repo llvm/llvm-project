@@ -132,6 +132,25 @@ Object makeObject(const parser::OmpObject &object,
   return makeObject(std::get<parser::Designator>(object.u), semaCtx);
 }
 
+ObjectList makeObjects(const parser::OmpArgumentList &objects,
+                       semantics::SemanticsContext &semaCtx) {
+  return makeList(objects.v, [&](const parser::OmpArgument &arg) {
+    return common::visit(
+        common::visitors{
+            [&](const parser::OmpLocator &locator) -> Object {
+              if (auto *object = std::get_if<parser::OmpObject>(&locator.u)) {
+                return makeObject(*object, semaCtx);
+              }
+              llvm_unreachable("Expecting object");
+            },
+            [](auto &&s) -> Object { //
+              llvm_unreachable("Expecting object");
+            },
+        },
+        arg.u);
+  });
+}
+
 std::optional<Object> getBaseObject(const Object &object,
                                     semantics::SemanticsContext &semaCtx) {
   // If it's just the symbol, then there is no base.
@@ -159,7 +178,13 @@ std::optional<Object> getBaseObject(const Object &object,
       return Object{SymbolAndDesignatorExtractor::symbol_addr(comp->symbol()),
                     ea.Designate(evaluate::DataRef{
                         SymbolAndDesignatorExtractor::AsRvalueRef(*comp)})};
-    } else if (base.UnwrapSymbolRef()) {
+    } else if (auto *symRef = base.UnwrapSymbolRef()) {
+      // This is the base symbol of the array reference, which is the same
+      // as the symbol in the input object,
+      // e.g. A(i) is represented as {Symbol(A), Designator(ArrayRef(A, i))}.
+      // Here we have the Symbol(A), which is what we started with.
+      (void)symRef;
+      assert(&**symRef == object.sym());
       return std::nullopt;
     }
   } else {
@@ -202,6 +227,7 @@ MAKE_EMPTY_CLASS(Mergeable, Mergeable);
 MAKE_EMPTY_CLASS(Nogroup, Nogroup);
 MAKE_EMPTY_CLASS(NoOpenmp, NoOpenmp);
 MAKE_EMPTY_CLASS(NoOpenmpRoutines, NoOpenmpRoutines);
+MAKE_EMPTY_CLASS(NoOpenmpConstructs, NoOpenmpConstructs);
 MAKE_EMPTY_CLASS(NoParallelism, NoParallelism);
 MAKE_EMPTY_CLASS(Notinbranch, Notinbranch);
 MAKE_EMPTY_CLASS(Nowait, Nowait);
@@ -216,6 +242,7 @@ MAKE_EMPTY_CLASS(Simd, Simd);
 MAKE_EMPTY_CLASS(Threads, Threads);
 MAKE_EMPTY_CLASS(UnifiedAddress, UnifiedAddress);
 MAKE_EMPTY_CLASS(UnifiedSharedMemory, UnifiedSharedMemory);
+MAKE_EMPTY_CLASS(SelfMaps, SelfMaps);
 MAKE_EMPTY_CLASS(Unknown, Unknown);
 MAKE_EMPTY_CLASS(Untied, Untied);
 MAKE_EMPTY_CLASS(Weak, Weak);
@@ -736,8 +763,8 @@ Enter make(const parser::OmpClause::Enter &inp,
 
 Exclusive make(const parser::OmpClause::Exclusive &inp,
                semantics::SemanticsContext &semaCtx) {
-  // inp -> empty
-  llvm_unreachable("Empty: exclusive");
+  // inp.v -> parser::OmpObjectList
+  return Exclusive{makeObjects(/*List=*/inp.v, semaCtx)};
 }
 
 Fail make(const parser::OmpClause::Fail &inp,
@@ -846,8 +873,8 @@ If make(const parser::OmpClause::If &inp,
 
 Inclusive make(const parser::OmpClause::Inclusive &inp,
                semantics::SemanticsContext &semaCtx) {
-  // inp -> empty
-  llvm_unreachable("Empty: inclusive");
+  // inp.v -> parser::OmpObjectList
+  return Inclusive{makeObjects(/*List=*/inp.v, semaCtx)};
 }
 
 Indirect make(const parser::OmpClause::Indirect &inp,
@@ -862,7 +889,10 @@ Init make(const parser::OmpClause::Init &inp,
   llvm_unreachable("Empty: init");
 }
 
-// Initializer: missing-in-parser
+Initializer make(const parser::OmpClause::Initializer &inp,
+                 semantics::SemanticsContext &semaCtx) {
+  llvm_unreachable("Empty: initializer");
+}
 
 InReduction make(const parser::OmpClause::InReduction &inp,
                  semantics::SemanticsContext &semaCtx) {
@@ -1035,6 +1065,7 @@ Nontemporal make(const parser::OmpClause::Nontemporal &inp,
 
 // NoOpenmp: empty
 // NoOpenmpRoutines: empty
+// NoOpenmpConstructs: empty
 // NoParallelism: empty
 // Notinbranch: empty
 

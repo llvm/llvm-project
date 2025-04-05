@@ -3589,7 +3589,7 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportUnnamedFieldsInCorrectOrder) {
     ASSERT_FALSE(FromField->getDeclName());
     auto *ToField = cast_or_null<FieldDecl>(Import(FromField, Lang_CXX11));
     EXPECT_TRUE(ToField);
-    std::optional<unsigned> ToIndex = ASTImporter::getFieldIndex(ToField);
+    UnsignedOrNone ToIndex = ASTImporter::getFieldIndex(ToField);
     EXPECT_TRUE(ToIndex);
     EXPECT_EQ(*ToIndex, FromIndex);
     ++FromIndex;
@@ -5472,7 +5472,7 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportSubstTemplateTypeParmType) {
       FromTU, classTemplateSpecializationDecl());
 
   auto testType = [&](ASTContext &Ctx, const char *Name,
-                      std::optional<unsigned> PackIndex) {
+                      UnsignedOrNone PackIndex) {
     const auto *Subst = selectFirst<SubstTemplateTypeParmType>(
         "sttp", match(substTemplateTypeParmType(
                           hasReplacementType(hasCanonicalType(asString(Name))))
@@ -5486,10 +5486,10 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportSubstTemplateTypeParmType) {
   };
   auto tests = [&](ASTContext &Ctx) {
     testType(Ctx, "void", std::nullopt);
-    testType(Ctx, "char", 3);
-    testType(Ctx, "float", 2);
-    testType(Ctx, "int", 1);
-    testType(Ctx, "short", 0);
+    testType(Ctx, "char", 3u);
+    testType(Ctx, "float", 2u);
+    testType(Ctx, "int", 1u);
+    testType(Ctx, "short", 0u);
   };
 
   tests(FromTU->getASTContext());
@@ -8186,6 +8186,29 @@ TEST_P(ImportFunctions, CTADAliasTemplate) {
       Lang_CXX20, "input.cc");
   auto *FromD = FirstDeclMatcher<CXXDeductionGuideDecl>().match(
       TU, cxxDeductionGuideDecl(hasParameter(0, hasType(asString("int")))));
+  auto *ToD = Import(FromD, Lang_CXX20);
+  ASSERT_TRUE(ToD);
+  EXPECT_TRUE(ToD->getSourceDeductionGuideKind() ==
+              CXXDeductionGuideDecl::SourceDeductionGuideKind::Alias);
+  EXPECT_TRUE(ToD->getSourceDeductionGuide());
+}
+
+TEST_P(ImportFunctions, CTADAliasTemplateWithExplicitSourceDeductionGuide) {
+  Decl *TU = getTuDecl(
+      R"(
+      template <typename T> struct A {
+        A(T);
+      };
+      template<typename T>
+      using B = A<T>;
+      A(int) -> A<double>; // explicit
+      B b{(int)0};
+      )",
+      Lang_CXX20, "input.cc");
+  auto *FromD = FirstDeclMatcher<CXXDeductionGuideDecl>().match(
+      TU, cxxDeductionGuideDecl(hasParameter(0, hasType(asString("int"))),
+                                hasName("<deduction guide for B>"),
+                                hasReturnTypeLoc(loc(asString("A<double>")))));
   auto *ToD = Import(FromD, Lang_CXX20);
   ASSERT_TRUE(ToD);
   EXPECT_TRUE(ToD->getSourceDeductionGuideKind() ==

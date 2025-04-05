@@ -18,6 +18,7 @@
 #include "NVPTXTargetMachine.h"
 #include "NVPTXTargetObjectFile.h"
 #include "NVPTXUtilities.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -42,6 +43,7 @@
 #include "llvm/IR/FPEnv.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
@@ -49,6 +51,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
@@ -64,14 +67,13 @@
 #include <iterator>
 #include <optional>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
 #define DEBUG_TYPE "nvptx-lower"
 
 using namespace llvm;
-
-static std::atomic<unsigned> GlobalUniqueCallSite;
 
 static cl::opt<bool> sched4reg(
     "nvptx-sched4reg",
@@ -286,7 +288,7 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
     if (VT.isVector()) {
       unsigned NumElts = VT.getVectorNumElements();
       EVT EltVT = VT.getVectorElementType();
-      // We require power-of-2 sized vectors becuase
+      // We require power-of-2 sized vectors because
       // TargetLoweringBase::getVectorTypeBreakdown() which is invoked in
       // ComputePTXValueVTs() cannot currently break down non-power-of-2 sized
       // vectors.
@@ -498,7 +500,7 @@ static SDValue MaybeBitcast(SelectionDAG &DAG, SDLoc DL, EVT VT,
 // NVPTXTargetLowering Constructor.
 NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                                          const NVPTXSubtarget &STI)
-    : TargetLowering(TM), nvTM(&TM), STI(STI) {
+    : TargetLowering(TM), nvTM(&TM), STI(STI), GlobalUniqueCallSite(0) {
   // always lower memset, memcpy, and memmove intrinsics to load/store
   // instructions, rather
   // then generating calls to memset, mempcy or memmove.
@@ -668,8 +670,11 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                      {MVT::i8, MVT::i16, MVT::v2i16, MVT::i32, MVT::i64},
                      Expand);
 
-  if (STI.hasHWROT32())
+  if (STI.hasHWROT32()) {
     setOperationAction({ISD::FSHL, ISD::FSHR}, MVT::i32, Legal);
+    setOperationAction({ISD::ROTL, ISD::ROTR, ISD::FSHL, ISD::FSHR}, MVT::i64,
+                       Custom);
+  }
 
   setOperationAction(ISD::BSWAP, MVT::i16, Expand);
 
@@ -764,16 +769,13 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // Custom handling for i8 intrinsics
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i8, Custom);
 
-  for (const auto& Ty : {MVT::i16, MVT::i32, MVT::i64}) {
-    setOperationAction(ISD::ABS,  Ty, Legal);
-    setOperationAction(ISD::SMIN, Ty, Legal);
-    setOperationAction(ISD::SMAX, Ty, Legal);
-    setOperationAction(ISD::UMIN, Ty, Legal);
-    setOperationAction(ISD::UMAX, Ty, Legal);
+  setOperationAction({ISD::ABS, ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX},
+                     {MVT::i16, MVT::i32, MVT::i64}, Legal);
 
-    setOperationAction(ISD::CTPOP, Ty, Legal);
-    setOperationAction(ISD::CTLZ, Ty, Legal);
-  }
+  setOperationAction({ISD::CTPOP, ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF}, MVT::i16,
+                     Promote);
+  setOperationAction({ISD::CTPOP, ISD::CTLZ}, MVT::i32, Legal);
+  setOperationAction({ISD::CTPOP, ISD::CTLZ}, MVT::i64, Custom);
 
   setI16x2OperationAction(ISD::ABS, MVT::v2i16, Legal, Custom);
   setI16x2OperationAction(ISD::SMIN, MVT::v2i16, Legal, Custom);
@@ -822,7 +824,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // We have some custom DAG combine patterns for these nodes
   setTargetDAGCombine({ISD::ADD, ISD::AND, ISD::EXTRACT_VECTOR_ELT, ISD::FADD,
                        ISD::MUL, ISD::SHL, ISD::SREM, ISD::UREM, ISD::VSELECT,
-                       ISD::BUILD_VECTOR});
+                       ISD::BUILD_VECTOR, ISD::ADDRSPACECAST});
 
   // setcc for f16x2 and bf16x2 needs special handling to prevent
   // legalizer's attempt to scalarize it due to v2i1 not being legal.
@@ -931,6 +933,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setOperationAction(Op, MVT::bf16, Promote);
     AddPromotedToType(Op, MVT::bf16, MVT::f32);
   }
+  setOperationAction(ISD::FREM, {MVT::f32, MVT::f64}, Custom);
 
   setOperationAction(ISD::FABS, {MVT::f32, MVT::f64}, Legal);
   if (STI.getPTXVersion() >= 65) {
@@ -989,15 +992,31 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setOperationAction(ISD::FLOG2, {MVT::v2f16, MVT::v2bf16}, Expand);
   }
 
+  setOperationAction(ISD::ADDRSPACECAST, {MVT::i32, MVT::i64}, Custom);
+
+  setOperationAction(ISD::ATOMIC_LOAD_SUB, {MVT::i32, MVT::i64}, Expand);
   // No FPOW or FREM in PTX.
 
   // Now deduce the information based on the above mentioned
   // actions
   computeRegisterProperties(STI.getRegisterInfo());
 
+  // PTX support for 16-bit CAS is emulated. Only use 32+
   setMinCmpXchgSizeInBits(STI.getMinCmpXchgSizeInBits());
   setMaxAtomicSizeInBitsSupported(64);
   setMaxDivRemBitWidthSupported(64);
+
+  // Custom lowering for tcgen05.ld vector operands
+  setOperationAction(ISD::INTRINSIC_W_CHAIN,
+                     {MVT::v2i32, MVT::v4i32, MVT::v8i32, MVT::v16i32,
+                      MVT::v32i32, MVT::v64i32, MVT::v128i32},
+                     Custom);
+
+  // Custom lowering for tcgen05.st vector operands
+  setOperationAction(ISD::INTRINSIC_VOID,
+                     {MVT::v2i32, MVT::v4i32, MVT::v8i32, MVT::v16i32,
+                      MVT::v32i32, MVT::v64i32, MVT::v128i32},
+                     Custom);
 }
 
 const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
@@ -1044,6 +1063,8 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(NVPTXISD::StoreRetvalV2)
     MAKE_CASE(NVPTXISD::StoreRetvalV4)
     MAKE_CASE(NVPTXISD::PseudoUseParam)
+    MAKE_CASE(NVPTXISD::UNPACK_VECTOR)
+    MAKE_CASE(NVPTXISD::BUILD_VECTOR)
     MAKE_CASE(NVPTXISD::RETURN)
     MAKE_CASE(NVPTXISD::CallSeqBegin)
     MAKE_CASE(NVPTXISD::CallSeqEnd)
@@ -1155,11 +1176,6 @@ std::string NVPTXTargetLowering::getPrototype(
     std::optional<std::pair<unsigned, const APInt &>> VAInfo,
     const CallBase &CB, unsigned UniqueCallSite) const {
   auto PtrVT = getPointerTy(DL);
-
-  bool isABI = (STI.getSmVersion() >= 20);
-  assert(isABI && "Non-ABI compilation is not supported");
-  if (!isABI)
-    return "";
 
   std::string Prototype;
   raw_string_ostream O(Prototype);
@@ -1408,6 +1424,19 @@ static bool shouldConvertToIndirectCall(const CallBase *CB,
   return false;
 }
 
+static MachinePointerInfo refinePtrAS(SDValue &Ptr, SelectionDAG &DAG,
+                                      const DataLayout &DL,
+                                      const TargetLowering &TL) {
+  if (Ptr->getOpcode() == ISD::FrameIndex) {
+    auto Ty = TL.getPointerTy(DL, ADDRESS_SPACE_LOCAL);
+    Ptr = DAG.getAddrSpaceCast(SDLoc(), Ty, Ptr, ADDRESS_SPACE_GENERIC,
+                               ADDRESS_SPACE_LOCAL);
+
+    return MachinePointerInfo(ADDRESS_SPACE_LOCAL);
+  }
+  return MachinePointerInfo();
+}
+
 SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                        SmallVectorImpl<SDValue> &InVals) const {
 
@@ -1429,11 +1458,6 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   const CallBase *CB = CLI.CB;
   const DataLayout &DL = DAG.getDataLayout();
 
-  bool isABI = (STI.getSmVersion() >= 20);
-  assert(isABI && "Non-ABI compilation is not supported");
-  if (!isABI)
-    return Chain;
-
   // Variadic arguments.
   //
   // Normally, for each argument, we declare a param scalar or a param
@@ -1454,7 +1478,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   unsigned FirstVAArg = CLI.NumFixedArgs; // position of the first variadic
   unsigned VAOffset = 0;                  // current offset in the param array
 
-  unsigned UniqueCallSite = GlobalUniqueCallSite.fetch_add(1);
+  const unsigned UniqueCallSite = GlobalUniqueCallSite++;
   SDValue TempChain = Chain;
   Chain = DAG.getCALLSEQ_START(Chain, UniqueCallSite, 0, dl);
   SDValue InGlue = Chain.getValue(1);
@@ -1572,11 +1596,12 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       }
 
       if (IsByVal) {
-        auto PtrVT = getPointerTy(DL);
-        SDValue srcAddr = DAG.getNode(ISD::ADD, dl, PtrVT, StVal,
+        auto MPI = refinePtrAS(StVal, DAG, DL, *this);
+        const EVT PtrVT = StVal.getValueType();
+        SDValue SrcAddr = DAG.getNode(ISD::ADD, dl, PtrVT, StVal,
                                       DAG.getConstant(CurOffset, dl, PtrVT));
-        StVal = DAG.getLoad(EltVT, dl, TempChain, srcAddr, MachinePointerInfo(),
-                            PartAlign);
+
+        StVal = DAG.getLoad(EltVT, dl, TempChain, SrcAddr, MPI, PartAlign);
       } else if (ExtendIntegerParam) {
         assert(VTs.size() == 1 && "Scalar can't have multiple parts.");
         // zext/sext to i32
@@ -1614,6 +1639,12 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         StoreOperands.push_back(Chain);
         StoreOperands.push_back(
             DAG.getConstant(IsVAArg ? FirstVAArg : ParamCount, dl, MVT::i32));
+
+        if (!IsByVal && IsVAArg) {
+          // Align each part of the variadic argument to their type.
+          VAOffset = alignTo(VAOffset, DL.getABITypeAlign(EltVT.getTypeForEVT(
+                                           *DAG.getContext())));
+        }
 
         StoreOperands.push_back(DAG.getConstant(
             IsByVal ? CurOffset + VAOffset : (IsVAArg ? VAOffset : CurOffset),
@@ -2645,6 +2676,180 @@ static SDValue LowerVectorArith(SDValue Op, SelectionDAG &DAG) {
   return V;
 }
 
+static SDValue LowerTcgen05St(SDValue Op, SelectionDAG &DAG) {
+  SDNode *N = Op.getNode();
+  SDLoc DL(N);
+  SmallVector<SDValue, 32> Ops;
+
+  // split the vector argument
+  for (size_t I = 0; I < N->getNumOperands(); I++) {
+    SDValue Val = N->getOperand(I);
+    EVT ValVT = Val.getValueType();
+    if (ValVT.isVector()) {
+      EVT EltVT = ValVT.getVectorElementType();
+      for (unsigned J = 0, NElts = ValVT.getVectorNumElements(); J < NElts; J++)
+        Ops.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Val,
+                                  DAG.getIntPtrConstant(J, DL)));
+    } else
+      Ops.push_back(Val);
+  }
+
+  MemIntrinsicSDNode *MemSD = cast<MemIntrinsicSDNode>(N);
+  SDValue Tcgen05StNode =
+      DAG.getMemIntrinsicNode(ISD::INTRINSIC_VOID, DL, N->getVTList(), Ops,
+                              MemSD->getMemoryVT(), MemSD->getMemOperand());
+
+  return Tcgen05StNode;
+}
+
+static SDValue LowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
+  SDNode *N = Op.getNode();
+  SDValue Intrin = N->getOperand(1);
+  SDLoc DL(N);
+
+  // Get the intrinsic ID
+  unsigned IntrinNo = cast<ConstantSDNode>(Intrin.getNode())->getZExtValue();
+  switch (IntrinNo) {
+  default:
+    break;
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x1:
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x2:
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x4:
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x8:
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x16:
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x32:
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x128:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x1:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x2:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x4:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x8:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x16:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x32:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x64:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x1:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x2:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x4:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x8:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x16:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x32:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x1:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x2:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x4:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x8:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x16:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x32:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x64:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x128:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x1:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x2:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x4:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x8:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x16:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x32:
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x64:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x64:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x128:
+    return LowerTcgen05St(Op, DAG);
+  }
+  return Op;
+}
+
+// In PTX 64-bit CTLZ and CTPOP are supported, but they return a 32-bit value.
+// Lower these into a node returning the correct type which is zero-extended
+// back to the correct size.
+static SDValue lowerCTLZCTPOP(SDValue Op, SelectionDAG &DAG) {
+  SDValue V = Op->getOperand(0);
+  assert(V.getValueType() == MVT::i64 &&
+         "Unexpected CTLZ/CTPOP type to legalize");
+
+  SDLoc DL(Op);
+  SDValue CT = DAG.getNode(Op->getOpcode(), DL, MVT::i32, V);
+  return DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, CT, SDNodeFlags::NonNeg);
+}
+
+static SDValue expandFSH64(SDValue A, SDValue B, SDValue ShiftAmount, SDLoc DL,
+                           unsigned Opcode, SelectionDAG &DAG) {
+  assert(A.getValueType() == MVT::i64 && B.getValueType() == MVT::i64);
+
+  const auto *AmtConst = dyn_cast<ConstantSDNode>(ShiftAmount);
+  if (!AmtConst)
+    return SDValue();
+  const auto Amt = AmtConst->getZExtValue() & 63;
+
+  SDValue UnpackA =
+      DAG.getNode(NVPTXISD::UNPACK_VECTOR, DL, {MVT::i32, MVT::i32}, A);
+  SDValue UnpackB =
+      DAG.getNode(NVPTXISD::UNPACK_VECTOR, DL, {MVT::i32, MVT::i32}, B);
+
+  // Arch is Little endiain: 0 = low bits, 1 = high bits
+  SDValue ALo = UnpackA.getValue(0);
+  SDValue AHi = UnpackA.getValue(1);
+  SDValue BLo = UnpackB.getValue(0);
+  SDValue BHi = UnpackB.getValue(1);
+
+  // The bitfeild consists of { AHi : ALo : BHi : BLo }
+  //
+  // * FSHL, Amt <  32 - The window will contain { AHi : ALo : BHi }
+  // * FSHL, Amt >= 32 - The window will contain { ALo : BHi : BLo }
+  // * FSHR, Amt <  32 - The window will contain { ALo : BHi : BLo }
+  // * FSHR, Amt >= 32 - The window will contain { AHi : ALo : BHi }
+  //
+  // Note that Amt = 0 and Amt = 32 are special cases where 32-bit funnel shifts
+  // are not needed at all. Amt = 0 is a no-op producing either A or B depending
+  // on the direction. Amt = 32 can be implemented by a packing and unpacking
+  // move to select and arrange the 32bit values. For simplicity, these cases
+  // are not handled here explicitly and instead we rely on DAGCombiner to
+  // remove the no-op funnel shifts we insert.
+  auto [High, Mid, Low] = ((Opcode == ISD::FSHL) == (Amt < 32))
+                              ? std::make_tuple(AHi, ALo, BHi)
+                              : std::make_tuple(ALo, BHi, BLo);
+
+  SDValue NewAmt = DAG.getConstant(Amt & 31, DL, MVT::i32);
+  SDValue RHi = DAG.getNode(Opcode, DL, MVT::i32, {High, Mid, NewAmt});
+  SDValue RLo = DAG.getNode(Opcode, DL, MVT::i32, {Mid, Low, NewAmt});
+
+  return DAG.getNode(NVPTXISD::BUILD_VECTOR, DL, MVT::i64, {RLo, RHi});
+}
+
+static SDValue lowerFSH(SDValue Op, SelectionDAG &DAG) {
+  return expandFSH64(Op->getOperand(0), Op->getOperand(1), Op->getOperand(2),
+                     SDLoc(Op), Op->getOpcode(), DAG);
+}
+
+static SDValue lowerROT(SDValue Op, SelectionDAG &DAG) {
+  unsigned Opcode = Op->getOpcode() == ISD::ROTL ? ISD::FSHL : ISD::FSHR;
+  return expandFSH64(Op->getOperand(0), Op->getOperand(0), Op->getOperand(1),
+                     SDLoc(Op), Opcode, DAG);
+}
+
+static SDValue lowerFREM(SDValue Op, SelectionDAG &DAG,
+                         bool AllowUnsafeFPMath) {
+  // Lower (frem x, y) into (sub x, (mul (ftrunc (div x, y)) y)),
+  // i.e. "poor man's fmod()". When y is infinite, x is returned. This matches
+  // the semantics of LLVM's frem.
+  SDLoc DL(Op);
+  SDValue X = Op->getOperand(0);
+  SDValue Y = Op->getOperand(1);
+  EVT Ty = Op.getValueType();
+
+  SDValue Div = DAG.getNode(ISD::FDIV, DL, Ty, X, Y);
+  SDValue Trunc = DAG.getNode(ISD::FTRUNC, DL, Ty, Div);
+  SDValue Mul =
+      DAG.getNode(ISD::FMUL, DL, Ty, Trunc, Y, SDNodeFlags::AllowContract);
+  SDValue Sub =
+      DAG.getNode(ISD::FSUB, DL, Ty, X, Mul, SDNodeFlags::AllowContract);
+
+  if (AllowUnsafeFPMath || Op->getFlags().hasNoInfs())
+    return Sub;
+
+  // If Y is infinite, return X
+  SDValue AbsY = DAG.getNode(ISD::FABS, DL, Ty, Y);
+  SDValue Inf =
+      DAG.getConstantFP(APFloat::getInf(Ty.getFltSemantics()), DL, Ty);
+  SDValue IsInf = DAG.getSetCC(DL, MVT::i1, AbsY, Inf, ISD::SETEQ);
+  return DAG.getSelect(DL, Ty, IsInf, X, Sub);
+}
+
 SDValue
 NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
@@ -2652,10 +2857,14 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return SDValue();
   case ISD::FRAMEADDR:
     return SDValue();
+  case ISD::ADDRSPACECAST:
+    return LowerADDRSPACECAST(Op, DAG);
   case ISD::GlobalAddress:
     return LowerGlobalAddress(Op, DAG);
   case ISD::INTRINSIC_W_CHAIN:
     return Op;
+  case ISD::INTRINSIC_VOID:
+    return LowerIntrinsicVoid(Op, DAG);
   case ISD::BUILD_VECTOR:
     return LowerBUILD_VECTOR(Op, DAG);
   case ISD::BITCAST:
@@ -2701,6 +2910,12 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerVAARG(Op, DAG);
   case ISD::VASTART:
     return LowerVASTART(Op, DAG);
+  case ISD::FSHL:
+  case ISD::FSHR:
+    return lowerFSH(Op, DAG);
+  case ISD::ROTL:
+  case ISD::ROTR:
+    return lowerROT(Op, DAG);
   case ISD::ABS:
   case ISD::SMIN:
   case ISD::SMAX:
@@ -2726,6 +2941,11 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FMUL:
     // Used only for bf16 on SM80, where we select fma for non-ftz operation
     return PromoteBinOpIfF32FTZ(Op, DAG);
+  case ISD::CTPOP:
+  case ISD::CTLZ:
+    return lowerCTLZCTPOP(Op, DAG);
+  case ISD::FREM:
+    return lowerFREM(Op, DAG, allowUnsafeFPMath(DAG.getMachineFunction()));
 
   default:
     llvm_unreachable("Custom lowering not defined for operation");
@@ -2765,6 +2985,17 @@ SDValue NVPTXTargetLowering::LowerBR_JT(SDValue Op, SelectionDAG &DAG) const {
 // This will prevent AsmPrinter from trying to print the jump tables itself.
 unsigned NVPTXTargetLowering::getJumpTableEncoding() const {
   return MachineJumpTableInfo::EK_Inline;
+}
+
+SDValue NVPTXTargetLowering::LowerADDRSPACECAST(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  AddrSpaceCastSDNode *N = cast<AddrSpaceCastSDNode>(Op.getNode());
+  unsigned SrcAS = N->getSrcAddressSpace();
+  unsigned DestAS = N->getDestAddressSpace();
+  if (SrcAS != llvm::ADDRESS_SPACE_GENERIC &&
+      DestAS != llvm::ADDRESS_SPACE_GENERIC)
+    return DAG.getUNDEF(Op.getValueType());
+  return Op;
 }
 
 // This function is almost a copy of SelectionDAG::expandVAArg().
@@ -3091,11 +3322,6 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
   SDValue Root = DAG.getRoot();
   std::vector<SDValue> OutChains;
 
-  bool isABI = (STI.getSmVersion() >= 20);
-  assert(isABI && "Non-ABI compilation is not supported");
-  if (!isABI)
-    return Chain;
-
   std::vector<Type *> argTypes;
   std::vector<const Argument *> theArgs;
   for (const Argument &I : F->args()) {
@@ -3261,10 +3487,18 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
     assert(ObjectVT == Ins[InsIdx].VT &&
            "Ins type did not match function type");
     SDValue Arg = getParamSymbol(DAG, i, PtrVT);
-    SDValue p = DAG.getNode(NVPTXISD::MoveParam, dl, ObjectVT, Arg);
-    if (p.getNode())
-      p.getNode()->setIROrder(i + 1);
-    InVals.push_back(p);
+
+    SDValue P;
+    if (isKernelFunction(*F)) {
+      P = DAG.getNode(NVPTXISD::Wrapper, dl, ObjectVT, Arg);
+      P.getNode()->setIROrder(i + 1);
+    } else {
+      P = DAG.getNode(NVPTXISD::MoveParam, dl, ObjectVT, Arg);
+      P.getNode()->setIROrder(i + 1);
+      P = DAG.getAddrSpaceCast(dl, ObjectVT, P, ADDRESS_SPACE_LOCAL,
+                               ADDRESS_SPACE_GENERIC);
+    }
+    InVals.push_back(P);
   }
 
   if (!OutChains.empty())
@@ -3309,11 +3543,6 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   const MachineFunction &MF = DAG.getMachineFunction();
   const Function &F = MF.getFunction();
   Type *RetTy = MF.getFunction().getReturnType();
-
-  bool isABI = (STI.getSmVersion() >= 20);
-  assert(isABI && "Non-ABI compilation is not supported");
-  if (!isABI)
-    return Chain;
 
   const DataLayout &DL = DAG.getDataLayout();
   SmallVector<SDValue, 16> PromotedOutVals;
@@ -3552,7 +3781,12 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_wmma_m16n16k8_load_b_tf32_row:
   case Intrinsic::nvvm_wmma_m16n16k8_load_b_tf32_row_stride:
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x4_b16:
-  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x4_trans_b16: {
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x4_trans_b16:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x2_trans_b8:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x2_trans_b8x16_b4x16_p64:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x2_trans_b8x16_b6x16_p32:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x4_b8x16_b4x16_p64:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x4_b8x16_b6x16_p32: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v4i32;
     Info.ptrVal = I.getArgOperand(0);
@@ -3592,7 +3826,9 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_wmma_m8n8k32_load_b_u4_col_stride:
   case Intrinsic::nvvm_wmma_m8n8k32_load_b_u4_col:
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x1_b16:
-  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x1_trans_b16: {
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x1_trans_b16:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x1_b8x16_b4x16_p64:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x1_b8x16_b6x16_p32: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::i32;
     Info.ptrVal = I.getArgOperand(0);
@@ -3688,7 +3924,12 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_wmma_m8n8k32_load_c_s32_row:
   case Intrinsic::nvvm_wmma_m8n8k32_load_c_s32_row_stride:
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x2_b16:
-  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x2_trans_b16: {
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x2_trans_b16:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x1_trans_b8:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x1_trans_b8x16_b4x16_p64:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x1_trans_b8x16_b6x16_p32:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x2_b8x16_b4x16_p64:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x2_b8x16_b6x16_p32: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v2i32;
     Info.ptrVal = I.getArgOperand(0);
@@ -4265,6 +4506,224 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(16);
     return true;
+
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x1:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x1:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x1: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v1i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x2:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x1:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x2:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x2: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v2i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x4:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x2:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x4:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x1:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x4: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v4i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x8:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x4:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x2:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x8:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x8: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v8i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x16:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x8:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x4:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x16:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x16: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v16i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x32:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x16:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x8:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x32:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x32: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v32i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x64:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x32:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x16:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x64:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x64: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v64i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x128:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x64:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x32:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x128:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x128: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v128i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x1:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x1:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x1: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x2:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x1:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x2:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x2: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::v2i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x4:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x2:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x1:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x4:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x4: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::v4i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x8:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x4:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x2:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x8:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x8: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::v8i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x16:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x8:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x4:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x16:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x16: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::v16i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x32:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x16:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x8:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x32:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x32: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::v32i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x64:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x32:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x16:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x64:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x64: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::v64i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x128:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x64:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x32:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x128:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x128: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::v128i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align.reset();
+    return true;
+  }
   }
   return false;
 }
@@ -4524,7 +4983,9 @@ PerformFADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
   if (N0.getOpcode() == ISD::FMUL) {
     const auto *TLI = static_cast<const NVPTXTargetLowering *>(
         &DCI.DAG.getTargetLoweringInfo());
-    if (!TLI->allowFMA(DCI.DAG.getMachineFunction(), OptLevel))
+    if (!(TLI->allowFMA(DCI.DAG.getMachineFunction(), OptLevel) ||
+          (N->getFlags().hasAllowContract() &&
+           N0->getFlags().hasAllowContract())))
       return SDValue();
 
     // For floating point:
@@ -5208,6 +5669,21 @@ PerformBUILD_VECTORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   return DAG.getNode(ISD::BITCAST, DL, VT, PRMT);
 }
 
+static SDValue combineADDRSPACECAST(SDNode *N,
+                                    TargetLowering::DAGCombinerInfo &DCI) {
+  auto *ASCN1 = cast<AddrSpaceCastSDNode>(N);
+
+  if (auto *ASCN2 = dyn_cast<AddrSpaceCastSDNode>(ASCN1->getOperand(0))) {
+    assert(ASCN2->getDestAddressSpace() == ASCN1->getSrcAddressSpace());
+
+    // Fold asc[B -> A](asc[A -> B](x)) -> x
+    if (ASCN1->getDestAddressSpace() == ASCN2->getSrcAddressSpace())
+      return ASCN2->getOperand(0);
+  }
+
+  return SDValue();
+}
+
 SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   CodeGenOptLevel OptLevel = getTargetMachine().getOptLevel();
@@ -5242,6 +5718,8 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
       return PerformVSELECTCombine(N, DCI);
     case ISD::BUILD_VECTOR:
       return PerformBUILD_VECTORCombine(N, DCI);
+    case ISD::ADDRSPACECAST:
+      return combineADDRSPACECAST(N, DCI);
   }
   return SDValue();
 }
@@ -5365,6 +5843,54 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
   Results.push_back(LoadChain);
 }
 
+// Lower vector return type of tcgen05.ld intrinsics
+static void ReplaceTcgen05Ld(SDNode *N, SelectionDAG &DAG,
+                             SmallVectorImpl<SDValue> &Results,
+                             bool hasOffset = false) {
+  SDLoc DL(N);
+  EVT ResVT = N->getValueType(0);
+  if (!ResVT.isVector())
+    return; // already legalized.
+
+  const unsigned NumElts = ResVT.getVectorNumElements();
+
+  // Create the return type of the instructions
+  SmallVector<EVT, 5> ListVTs;
+  for (unsigned i = 0; i < NumElts; ++i)
+    ListVTs.push_back(MVT::i32);
+
+  ListVTs.push_back(N->getValueType(1)); // Chain
+
+  SDVTList ResVTs = DAG.getVTList(ListVTs);
+
+  SmallVector<SDValue, 8> Ops{N->getOperand(0), N->getOperand(1),
+                              N->getOperand(2)};
+
+  if (hasOffset) {
+    Ops.push_back(N->getOperand(3)); // offset
+    Ops.push_back(N->getOperand(4)); // Pack flag
+  } else
+    Ops.push_back(N->getOperand(3)); // Pack flag
+
+  MemIntrinsicSDNode *MemSD = cast<MemIntrinsicSDNode>(N);
+  SDValue NewNode =
+      DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, ResVTs, Ops,
+                              MemSD->getMemoryVT(), MemSD->getMemOperand());
+
+  // split the vector result
+  SmallVector<SDValue, 4> ScalarRes;
+  for (unsigned i = 0; i < NumElts; ++i) {
+    SDValue Res = NewNode.getValue(i);
+    ScalarRes.push_back(Res);
+  }
+
+  SDValue Chain = NewNode.getValue(NumElts);
+  SDValue BuildVector = DAG.getNode(ISD::BUILD_VECTOR, DL, ResVT, ScalarRes);
+  Results.push_back(BuildVector); // Build Vector
+  Results.push_back(Chain);       // Chain
+  return;
+}
+
 static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
                                      SmallVectorImpl<SDValue> &Results) {
   SDValue Chain = N->getOperand(0);
@@ -5470,7 +5996,46 @@ static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
                                     NewLD.getValue(0)));
       Results.push_back(NewLD.getValue(1));
     }
+    return;
   }
+
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x2:
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x4:
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x8:
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x16:
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x32:
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x64:
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x128:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x2:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x4:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x8:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x16:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x32:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x64:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x128:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x1:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x2:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x4:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x8:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x16:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x32:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x64:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x1:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x2:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x4:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x8:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x16:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x32:
+    return ReplaceTcgen05Ld(N, DAG, Results);
+
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x2:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x4:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x8:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x16:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x32:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x64:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x128:
+    return ReplaceTcgen05Ld(N, DAG, Results, /* Offset */ true);
   }
 }
 
@@ -5583,6 +6148,70 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   }
 
   return AtomicExpansionKind::CmpXChg;
+}
+
+bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
+    const Instruction *I) const {
+  auto *CI = dyn_cast<AtomicCmpXchgInst>(I);
+  // When CAS bitwidth is not supported on the hardware, the CAS is emulated
+  // using a retry loop that uses a higher-bitwidth monotonic CAS. We enforce
+  // the memory order using explicit fences around the retry loop.
+  // The memory order of natively supported CAS operations can be enforced
+  // by lowering to an atom.cas with the right memory synchronizing effect.
+  // However, atom.cas only supports relaxed, acquire, release and acq_rel.
+  // So we also use explicit fences for enforcing memory order for
+  // seq_cast CAS with natively-supported bitwidths.
+  return CI &&
+         (cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth() <
+              STI.getMinCmpXchgSizeInBits() ||
+          CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent);
+}
+
+AtomicOrdering NVPTXTargetLowering::atomicOperationOrderAfterFenceSplit(
+    const Instruction *I) const {
+  auto *CI = dyn_cast<AtomicCmpXchgInst>(I);
+  bool BitwidthSupportedAndIsSeqCst =
+      CI && CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent &&
+      cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth() >=
+          STI.getMinCmpXchgSizeInBits();
+  return BitwidthSupportedAndIsSeqCst ? AtomicOrdering::Acquire
+                                      : AtomicOrdering::Monotonic;
+}
+
+Instruction *NVPTXTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
+                                                   Instruction *Inst,
+                                                   AtomicOrdering Ord) const {
+  if (!isa<AtomicCmpXchgInst>(Inst))
+    return TargetLoweringBase::emitLeadingFence(Builder, Inst, Ord);
+
+  // Specialize for cmpxchg
+  // Emit a fence.sc leading fence for cmpxchg seq_cst which are not emulated
+  if (isReleaseOrStronger(Ord))
+    return Ord == AtomicOrdering::SequentiallyConsistent
+               ? Builder.CreateFence(AtomicOrdering::SequentiallyConsistent)
+               : Builder.CreateFence(AtomicOrdering::Release);
+
+  return nullptr;
+}
+
+Instruction *NVPTXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
+                                                    Instruction *Inst,
+                                                    AtomicOrdering Ord) const {
+  // Specialize for cmpxchg
+  if (!isa<AtomicCmpXchgInst>(Inst))
+    return TargetLoweringBase::emitTrailingFence(Builder, Inst, Ord);
+
+  auto CASWidth =
+      cast<IntegerType>(
+          dyn_cast<AtomicCmpXchgInst>(Inst)->getCompareOperand()->getType())
+          ->getBitWidth();
+  // Do not emit a trailing fence for cmpxchg seq_cst which are not emulated
+  if (isAcquireOrStronger(Ord) &&
+      (Ord != AtomicOrdering::SequentiallyConsistent ||
+       CASWidth < STI.getMinCmpXchgSizeInBits()))
+    return Builder.CreateFence(AtomicOrdering::Acquire);
+
+  return nullptr;
 }
 
 // Pin NVPTXTargetObjectFile's vtables to this file.

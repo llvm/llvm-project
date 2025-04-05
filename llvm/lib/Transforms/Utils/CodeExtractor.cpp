@@ -170,6 +170,14 @@ static bool isBlockValidForExtraction(const BasicBlock &BB,
     }
 
     if (const CallInst *CI = dyn_cast<CallInst>(I)) {
+      // musttail calls have several restrictions, generally enforcing matching
+      // calling conventions between the caller parent and musttail callee.
+      // We can't usually honor them, because the extracted function has a
+      // different signature altogether, taking inputs/outputs and returning
+      // a control-flow identifier rather than the actual return value.
+      if (CI->isMustTailCall())
+        return false;
+
       if (const Function *F = CI->getCalledFunction()) {
         auto IID = F->getIntrinsicID();
         if (IID == Intrinsic::vastart) {
@@ -535,11 +543,8 @@ void CodeExtractor::findAllocas(const CodeExtractorAnalysisCache &CEAC,
 
       Instruction *Bitcast = cast<Instruction>(U);
       for (User *BU : Bitcast->users()) {
-        IntrinsicInst *IntrInst = dyn_cast<IntrinsicInst>(BU);
+        auto *IntrInst = dyn_cast<LifetimeIntrinsic>(BU);
         if (!IntrInst)
-          continue;
-
-        if (!IntrInst->isLifetimeStartOrEnd())
           continue;
 
         if (definedInRegion(Blocks, IntrInst))
@@ -1083,8 +1088,8 @@ static void eraseLifetimeMarkersOnInputs(const SetVector<BasicBlock *> &Blocks,
                                          SetVector<Value *> &LifetimesStart) {
   for (BasicBlock *BB : Blocks) {
     for (Instruction &I : llvm::make_early_inc_range(*BB)) {
-      auto *II = dyn_cast<IntrinsicInst>(&I);
-      if (!II || !II->isLifetimeStartOrEnd())
+      auto *II = dyn_cast<LifetimeIntrinsic>(&I);
+      if (!II)
         continue;
 
       // Get the memory operand of the lifetime marker. If the underlying

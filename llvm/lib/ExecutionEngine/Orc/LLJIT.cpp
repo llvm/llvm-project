@@ -14,13 +14,13 @@
 #include "llvm/ExecutionEngine/Orc/EHFrameRegistrationPlugin.h"
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
-#include "llvm/ExecutionEngine/Orc/EPCEHFrameRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
+#include "llvm/ExecutionEngine/Orc/UnwindInfoRegistrationPlugin.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
@@ -57,8 +57,7 @@ Function *addHelperAndWrapper(Module &M, StringRef WrapperName,
   std::vector<Type *> HelperArgTypes;
   for (auto *Arg : HelperPrefixArgs)
     HelperArgTypes.push_back(Arg->getType());
-  for (auto *T : WrapperFnType->params())
-    HelperArgTypes.push_back(T);
+  llvm::append_range(HelperArgTypes, WrapperFnType->params());
   auto *HelperFnType =
       FunctionType::get(WrapperFnType->getReturnType(), HelperArgTypes, false);
   auto *HelperFn = Function::Create(HelperFnType, GlobalValue::ExternalLinkage,
@@ -72,8 +71,7 @@ Function *addHelperAndWrapper(Module &M, StringRef WrapperName,
   IRBuilder<> IB(EntryBlock);
 
   std::vector<Value *> HelperArgs;
-  for (auto *Arg : HelperPrefixArgs)
-    HelperArgs.push_back(Arg);
+  llvm::append_range(HelperArgs, HelperPrefixArgs);
   for (auto &Arg : WrapperFn->args())
     HelperArgs.push_back(&Arg);
   auto *HelperResult = IB.CreateCall(HelperFn, HelperArgs);
@@ -831,8 +829,7 @@ Error LLJITBuilderState::prepareForConstruction() {
         JTMB->setCodeModel(CodeModel::Small);
       JTMB->setRelocationModel(Reloc::PIC_);
       CreateObjectLinkingLayer =
-          [](ExecutionSession &ES,
-             const Triple &) -> Expected<std::unique_ptr<ObjectLayer>> {
+          [](ExecutionSession &ES) -> Expected<std::unique_ptr<ObjectLayer>> {
         return std::make_unique<ObjectLinkingLayer>(ES);
       };
     }
@@ -950,7 +947,7 @@ LLJIT::createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES) {
 
   // If the config state provided an ObjectLinkingLayer factory then use it.
   if (S.CreateObjectLinkingLayer)
-    return S.CreateObjectLinkingLayer(ES, S.JTMB->getTargetTriple());
+    return S.CreateObjectLinkingLayer(ES);
 
   // Otherwise default to creating an RTDyldObjectLinkingLayer that constructs
   // a new SectionMemoryManager for each object.
@@ -1220,12 +1217,44 @@ Expected<JITDylibSP> setUpGenericLLVMIRPlatform(LLJIT &J) {
 
   if (auto *OLL = dyn_cast<ObjectLinkingLayer>(&J.getObjLinkingLayer())) {
 
-    auto &ES = J.getExecutionSession();
-    if (auto EHFrameRegistrar = EPCEHFrameRegistrar::Create(ES))
-      OLL->addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
-          ES, std::move(*EHFrameRegistrar)));
-    else
-      return EHFrameRegistrar.takeError();
+    bool UseEHFrames = true;
+
+    // Enable compact-unwind support if possible.
+    if (J.getTargetTriple().isOSDarwin() ||
+        J.getTargetTriple().isOSBinFormatMachO()) {
+
+      // Check if the bootstrap map says that we should force eh-frames:
+      // Older libunwinds require this as they don't have a dynamic
+      // registration API for compact-unwind.
+      std::optional<bool> ForceEHFrames;
+      if (auto Err = J.getExecutionSession().getBootstrapMapValue<bool, bool>(
+              "darwin-use-ehframes-only", ForceEHFrames))
+        return Err;
+      if (ForceEHFrames.has_value())
+        UseEHFrames = *ForceEHFrames;
+      else
+        UseEHFrames = false;
+
+      // If UseEHFrames hasn't been set then we're good to use compact-unwind.
+      if (!UseEHFrames) {
+        if (auto UIRP =
+                UnwindInfoRegistrationPlugin::Create(J.getExecutionSession())) {
+          OLL->addPlugin(std::move(*UIRP));
+          LLVM_DEBUG(dbgs() << "Enabled compact-unwind support.\n");
+        } else
+          return UIRP.takeError();
+      }
+    }
+
+    // Otherwise fall back to standard unwind registration.
+    if (UseEHFrames) {
+      auto &ES = J.getExecutionSession();
+      if (auto EHFP = EHFrameRegistrationPlugin::Create(ES)) {
+        OLL->addPlugin(std::move(*EHFP));
+        LLVM_DEBUG(dbgs() << "Enabled eh-frame support.\n");
+      } else
+        return EHFP.takeError();
+    }
   }
 
   J.setPlatformSupport(
@@ -1309,8 +1338,8 @@ LLLazyJIT::LLLazyJIT(LLLazyJITBuilderState &S, Error &Err) : LLJIT(S, Err) {
 // In-process LLJIT uses eh-frame section wrappers via EPC, so we need to force
 // them to be linked in.
 LLVM_ATTRIBUTE_USED void linkComponents() {
-  errs() << (void *)&llvm_orc_registerEHFrameSectionWrapper
-         << (void *)&llvm_orc_deregisterEHFrameSectionWrapper;
+  errs() << (void *)&llvm_orc_registerEHFrameSectionAllocAction
+         << (void *)&llvm_orc_deregisterEHFrameSectionAllocAction;
 }
 
 } // End namespace orc.

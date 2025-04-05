@@ -14,10 +14,12 @@
 #include <__algorithm/fill_n.h>
 #include <__algorithm/iterator_operations.h>
 #include <__algorithm/max.h>
+#include <__algorithm/rotate.h>
 #include <__assert>
 #include <__bit_reference>
 #include <__config>
 #include <__functional/unary_function.h>
+#include <__fwd/bit_reference.h> // TODO: This is a workaround for https://github.com/llvm/llvm-project/issues/131814
 #include <__fwd/functional.h>
 #include <__fwd/vector.h>
 #include <__iterator/distance.h>
@@ -445,7 +447,7 @@ private:
   //  Postcondition:  size() == 0
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __vallocate(size_type __n) {
     if (__n > max_size())
-      __throw_length_error();
+      this->__throw_length_error();
     auto __allocation = std::__allocate_at_least(__alloc_, __external_cap_to_internal(__n));
     __begin_          = __allocation.ptr;
     __size_           = 0;
@@ -533,10 +535,8 @@ template <class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<bool, _Allocator>::size_type
 vector<bool, _Allocator>::max_size() const _NOEXCEPT {
   size_type __amax = __storage_traits::max_size(__alloc_);
-  size_type __nmax = numeric_limits<size_type>::max() / 2; // end() >= begin(), always
-  if (__nmax / __bits_per_word <= __amax)
-    return __nmax;
-  return __internal_cap_to_external(__amax);
+  size_type __nmax = numeric_limits<difference_type>::max();
+  return __nmax / __bits_per_word <= __amax ? __nmax : __internal_cap_to_external(__amax);
 }
 
 //  Precondition:  __new_size > capacity()
@@ -549,7 +549,7 @@ vector<bool, _Allocator>::__recommend(size_type __new_size) const {
   const size_type __cap = capacity();
   if (__cap >= __ms / 2)
     return __ms;
-  return std::max(2 * __cap, __align_it(__new_size));
+  return std::max<size_type>(2 * __cap, __align_it(__new_size));
 }
 
 //  Default constructs __n objects starting at __end_

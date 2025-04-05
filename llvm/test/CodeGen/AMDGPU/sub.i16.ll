@@ -144,7 +144,7 @@ define amdgpu_kernel void @v_test_sub_i16_sext_to_i64(ptr addrspace(1) %out, ptr
   ret void
 }
 
-@lds = addrspace(3) global [512 x i32] undef, align 4
+@lds = addrspace(3) global [512 x i32] poison, align 4
 
 ; GCN-LABEL: {{^}}v_test_sub_i16_constant_commute:
 ; VI: v_subrev_u16_e32 v{{[0-9]+}}, 0x800, v{{[0-9]+}}

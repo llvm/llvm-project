@@ -852,3 +852,27 @@ struct Test {
 };
 
 } // namespace GH120543
+
+namespace GH127195 {
+template <typename T>
+struct StatusOr {
+  T* operator->() [[clang::lifetimebound]];
+  T* value() [[clang::lifetimebound]];
+};
+
+const char* foo() {
+  StatusOr<std::string> s;
+  return s->data(); // expected-warning {{address of stack memory associated with local variable}}
+  
+  StatusOr<std::string_view> s2;
+  return s2->data();
+
+  StatusOr<StatusOr<std::string_view>> s3;
+  return s3.value()->value()->data();
+
+  // FIXME: nested cases are not supported now.
+  StatusOr<StatusOr<std::string>> s4;
+  return s4.value()->value()->data();
+}
+
+} // namespace GH127195

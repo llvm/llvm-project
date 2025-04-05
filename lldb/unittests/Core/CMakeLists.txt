@@ -1,3 +1,4 @@
+
 add_lldb_unittest(LLDBCoreTests
   CommunicationTest.cpp
   DiagnosticEventTest.cpp
@@ -6,10 +7,12 @@ add_lldb_unittest(LLDBCoreTests
   FormatEntityTest.cpp
   MangledTest.cpp
   ModuleSpecTest.cpp
+  PluginManagerTest.cpp
   ProgressReportTest.cpp
   RichManglingContextTest.cpp
   SourceLocationSpecTest.cpp
   SourceManagerTest.cpp
+  TelemetryTest.cpp
   UniqueCStringMapTest.cpp
 
   LINK_LIBS
@@ -26,4 +29,5 @@ add_lldb_unittest(LLDBCoreTests
     LLVMTestingSupport
   LINK_COMPONENTS
     Support
+    Telemetry
   )

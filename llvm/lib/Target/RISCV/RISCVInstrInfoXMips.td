@@ -116,24 +116,13 @@ def MIPS_CCMOV : RVInstR4<0b11, 0b011, OPC_CUSTOM_0, (outs GPR:$rd),
 }
 
 let Predicates = [UseCCMovInsn] in {
-def : Pat<(select (XLenVT (setne (XLenVT GPR:$rs2), (XLenVT 0))),
+def : Pat<(select (riscv_setne (XLenVT GPR:$rs2)),
                   (XLenVT GPR:$rs1), (XLenVT GPR:$rs3)),
           (MIPS_CCMOV GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
-def : Pat<(select (XLenVT (setne (XLenVT GPR:$x), (XLenVT simm12_plus1:$y))),
-                  (XLenVT GPR:$rs1), (XLenVT GPR:$rs3)),
-          (MIPS_CCMOV GPR:$rs1, (ADDI GPR:$x, (NegImm simm12_plus1:$y)), GPR:$rs3)>;
-def : Pat<(select (XLenVT (setne (XLenVT GPR:$x), (XLenVT GPR:$y))),
-                  (XLenVT GPR:$rs1), (XLenVT GPR:$rs3)),
-          (MIPS_CCMOV GPR:$rs1, (XOR GPR:$x, GPR:$y), GPR:$rs3)>;
-def : Pat<(select (XLenVT (seteq (XLenVT GPR:$rs2), (XLenVT 0))),
+def : Pat<(select (riscv_seteq (XLenVT GPR:$rs2)),
                   (XLenVT GPR:$rs3), (XLenVT GPR:$rs1)),
           (MIPS_CCMOV GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
-def : Pat<(select (XLenVT (seteq (XLenVT GPR:$x), (XLenVT simm12_plus1:$y))),
-                  (XLenVT GPR:$rs3), (XLenVT GPR:$rs1)),
-          (MIPS_CCMOV GPR:$rs1, (ADDI GPR:$x, (NegImm simm12_plus1:$y)), GPR:$rs3)>;
-def : Pat<(select (XLenVT (seteq (XLenVT GPR:$x), (XLenVT GPR:$y))),
-                  (XLenVT GPR:$rs3), (XLenVT GPR:$rs1)),
-          (MIPS_CCMOV GPR:$rs1, (XOR GPR:$x, GPR:$y), GPR:$rs3)>;
+
 def : Pat<(select (XLenVT GPR:$rs2), (XLenVT GPR:$rs1), (XLenVT GPR:$rs3)),
           (MIPS_CCMOV GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
 }
