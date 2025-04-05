@@ -122,10 +122,10 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
                         "invalid fixup for 4-byte pc-relative data relocation");
         return ELF::R_ARM_NONE;
       case ARMMCExpr::VK_None: {
-        if (const MCSymbolRefExpr *SymRef = Target.getSymA()) {
+        if (const auto *SA = Target.getAddSym()) {
           // For GNU AS compatibility expressions such as
           // _GLOBAL_OFFSET_TABLE_ - label emit a R_ARM_BASE_PREL relocation.
-          if (SymRef->getSymbol().getName() == "_GLOBAL_OFFSET_TABLE_")
+          if (SA->getName() == "_GLOBAL_OFFSET_TABLE_")
             return ELF::R_ARM_BASE_PREL;
         }
         return ELF::R_ARM_REL32;
