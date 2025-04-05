@@ -610,25 +610,25 @@ getOffsetAndDataFragment(const MCSymbol &Symbol, uint32_t &RelocOffset,
                             std::string(".reloc symbol offset is not "
                                         "representable"));
 
-    const MCSymbolRefExpr &SRE = cast<MCSymbolRefExpr>(*OffsetVal.getSymA());
-    if (!SRE.getSymbol().isDefined())
+    const MCSymbol &SA = *OffsetVal.getAddSym();
+    if (!SA.isDefined())
       return std::make_pair(false,
                             std::string("symbol used in the .reloc offset is "
                                         "not defined"));
 
-    if (SRE.getSymbol().isVariable())
+    if (SA.isVariable())
       return std::make_pair(false,
                             std::string("symbol used in the .reloc offset is "
                                         "variable"));
 
-    MCFragment *Fragment = SRE.getSymbol().getFragment();
+    MCFragment *Fragment = SA.getFragment();
     // FIXME Support symbols with no DF. For example:
     // .reloc .data, ENUM_VALUE, <some expr>
     if (!Fragment || Fragment->getKind() != MCFragment::FT_Data)
       return std::make_pair(false,
                             std::string("symbol in offset has no data "
                                         "fragment"));
-    RelocOffset = SRE.getSymbol().getOffset() + OffsetVal.getConstant();
+    RelocOffset = SA.getOffset() + OffsetVal.getConstant();
     DF = cast<MCDataFragment>(Fragment);
   } else {
     RelocOffset = Symbol.getOffset();

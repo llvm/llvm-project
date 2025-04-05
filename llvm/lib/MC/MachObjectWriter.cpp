@@ -109,7 +109,7 @@ uint64_t MachObjectWriter::getSymbolAddress(const MCSymbol &S,
                          S.getName() + "'");
 
     // Verify that any used symbols are defined.
-    if (Target.getSymA() && Target.getAddSym()->isUndefined())
+    if (Target.getAddSym() && Target.getAddSym()->isUndefined())
       report_fatal_error("unable to evaluate offset to undefined symbol '" +
                          Target.getAddSym()->getName() + "'");
     if (Target.getSubSym() && Target.getSubSym()->isUndefined())
@@ -117,8 +117,8 @@ uint64_t MachObjectWriter::getSymbolAddress(const MCSymbol &S,
                          Target.getSubSym()->getName() + "'");
 
     uint64_t Address = Target.getConstant();
-    if (Target.getSymA())
-      Address += getSymbolAddress(Target.getSymA()->getSymbol(), Asm);
+    if (Target.getAddSym())
+      Address += getSymbolAddress(*Target.getAddSym(), Asm);
     if (Target.getSubSym())
       Address += getSymbolAddress(*Target.getSubSym(), Asm);
     return Address;
