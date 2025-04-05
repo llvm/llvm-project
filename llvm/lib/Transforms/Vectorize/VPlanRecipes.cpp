@@ -281,31 +281,18 @@ bool VPRecipeBase::isPhi() const {
 InstructionCost
 VPPartialReductionRecipe::computeCost(ElementCount VF,
                                       VPCostContext &Ctx) const {
-  std::optional<unsigned> Opcode = std::nullopt;
-  VPValue *BinOp = getOperand(0);
+  // If the input operand is an extend then use the opcode for this recipe.
+  std::optional<unsigned> Opcode;
+  VPValue *Op = getOperand(0);
+  VPRecipeBase *OpR = Op->getDefiningRecipe();
 
   // If the partial reduction is predicated, a select will be operand 0 rather
-  // than the binary op
+  // than the extend user.
   using namespace llvm::VPlanPatternMatch;
-  if (match(getOperand(0), m_Select(m_VPValue(), m_VPValue(), m_VPValue())))
-    BinOp = BinOp->getDefiningRecipe()->getOperand(1);
-
-  // If BinOp is a negation, use the side effect of match to assign the actual
-  // binary operation to BinOp
-  match(BinOp, m_Binary<Instruction::Sub>(m_SpecificInt(0), m_VPValue(BinOp)));
-  VPRecipeBase *BinOpR = BinOp->getDefiningRecipe();
-
-  if (auto *WidenR = dyn_cast<VPWidenRecipe>(BinOpR))
-    Opcode = std::make_optional(WidenR->getOpcode());
-
-  VPRecipeBase *ExtAR = BinOpR->getOperand(0)->getDefiningRecipe();
-  VPRecipeBase *ExtBR = BinOpR->getOperand(1)->getDefiningRecipe();
-
-  auto *PhiType = Ctx.Types.inferScalarType(getOperand(1));
-  auto *InputTypeA = Ctx.Types.inferScalarType(ExtAR ? ExtAR->getOperand(0)
-                                                     : BinOpR->getOperand(0));
-  auto *InputTypeB = Ctx.Types.inferScalarType(ExtBR ? ExtBR->getOperand(0)
-                                                     : BinOpR->getOperand(1));
+  if (match(getOperand(0), m_Select(m_VPValue(), m_VPValue(), m_VPValue()))) {
+    Op = OpR->getOperand(1);
+    OpR = Op->getDefiningRecipe();
+  }
 
   auto GetExtendKind = [](VPRecipeBase *R) {
     // The extend could come from outside the plan.
@@ -321,9 +308,38 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
     return TargetTransformInfo::PR_None;
   };
 
+  Type *InputTypeA, *InputTypeB;
+  TTI::PartialReductionExtendKind ExtAType, ExtBType;
+
+  // The input may come straight from a zext or sext.
+  if (isa<VPWidenCastRecipe>(OpR)) {
+    Opcode = std::nullopt;
+    InputTypeA = Ctx.Types.inferScalarType(OpR->getOperand(0));
+    InputTypeB = nullptr;
+    ExtAType = GetExtendKind(OpR);
+    ExtBType = TargetTransformInfo::PR_None;
+  } else {
+    // If BinOp is a negation, use the side effect of match to assign the actual
+    // binary operation to BinOp
+    match(Op, m_Binary<Instruction::Sub>(m_SpecificInt(0), m_VPValue(Op)));
+    OpR = Op->getDefiningRecipe();
+    Opcode = std::make_optional(cast<VPWidenRecipe>(OpR)->getOpcode());
+
+    VPRecipeBase *ExtAR = OpR->getOperand(0)->getDefiningRecipe();
+    VPRecipeBase *ExtBR = OpR->getOperand(1)->getDefiningRecipe();
+
+    InputTypeA = Ctx.Types.inferScalarType(ExtAR ? ExtAR->getOperand(0)
+                                                 : OpR->getOperand(0));
+    InputTypeB = Ctx.Types.inferScalarType(ExtBR ? ExtBR->getOperand(0)
+                                                 : OpR->getOperand(1));
+    ExtAType = GetExtendKind(ExtAR);
+    ExtBType = GetExtendKind(ExtBR);
+  }
+
+  auto *PhiType = Ctx.Types.inferScalarType(getOperand(1));
   return Ctx.TTI.getPartialReductionCost(getOpcode(), InputTypeA, InputTypeB,
-                                         PhiType, VF, GetExtendKind(ExtAR),
-                                         GetExtendKind(ExtBR), Opcode);
+                                         PhiType, VF, ExtAType, ExtBType,
+                                         Opcode);
 }
 
 void VPPartialReductionRecipe::execute(VPTransformState &State) {

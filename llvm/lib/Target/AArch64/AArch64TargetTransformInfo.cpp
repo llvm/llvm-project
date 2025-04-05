@@ -5177,11 +5177,21 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
 
   // Sub opcodes currently only occur in chained cases.
   // Independent partial reduction subtractions are still costed as an add
-  if (Opcode != Instruction::Add && Opcode != Instruction::Sub)
+  if ((Opcode != Instruction::Add && Opcode != Instruction::Sub) ||
+      OpAExtend == TTI::PR_None)
     return Invalid;
 
-  if (InputTypeA != InputTypeB)
+  // We only support multiply binary operations for now, and for muls we
+  // require the types being extended to be the same.
+  // NOTE: For muls AArch64 supports lowering mixed extensions to a usdot but
+  // only if the i8mm or sve/streaming features are available.
+  if (BinOp && (*BinOp != Instruction::Mul || InputTypeA != InputTypeB ||
+                OpBExtend == TTI::PR_None ||
+                (OpAExtend != OpBExtend && !ST->hasMatMulInt8() &&
+                 !ST->isSVEorStreamingSVEAvailable())))
     return Invalid;
+  assert((BinOp || (OpBExtend == TTI::PR_None && !InputTypeB)) &&
+         "Unexpected values for OpBExtend or InputTypeB");
 
   EVT InputEVT = EVT::getEVT(InputTypeA);
   EVT AccumEVT = EVT::getEVT(AccumType);
@@ -5226,16 +5236,6 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
     if (VFMinValue != 8 || AccumEVT != MVT::i64)
       return Invalid;
   } else
-    return Invalid;
-
-  // AArch64 supports lowering mixed extensions to a usdot but only if the
-  // i8mm or sve/streaming features are available.
-  if (OpAExtend == TTI::PR_None || OpBExtend == TTI::PR_None ||
-      (OpAExtend != OpBExtend && !ST->hasMatMulInt8() &&
-       !ST->isSVEorStreamingSVEAvailable()))
-    return Invalid;
-
-  if (!BinOp || *BinOp != Instruction::Mul)
     return Invalid;
 
   return Cost;
