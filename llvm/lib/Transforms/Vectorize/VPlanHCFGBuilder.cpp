@@ -118,10 +118,8 @@ static bool isHeaderVPBB(VPBasicBlock *VPBB) {
   return VPBB->getParent() && VPBB->getParent()->getEntry() == VPBB;
 }
 
-// Create a new empty VPBasicBlock for an incoming BasicBlock in the region
-// corresponding to the containing loop  or retrieve an existing one if it was
-// already created. If no region exists yet for the loop containing \p BB, a new
-// one is created.
+// Create a new empty VPBasicBlock for an incoming BasicBlock or retrieve an
+// existing one if it was already created.
 VPBasicBlock *PlainCFGBuilder::getOrCreateVPBB(BasicBlock *BB) {
   if (auto *VPBB = BB2VPBB.lookup(BB)) {
     // Retrieve existing VPBB.
