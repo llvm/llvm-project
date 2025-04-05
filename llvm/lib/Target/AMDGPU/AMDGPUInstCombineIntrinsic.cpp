@@ -18,6 +18,7 @@
 #include "AMDGPUTargetTransformInfo.h"
 #include "GCNSubtarget.h"
 #include "llvm/ADT/FloatingPointMode.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <optional>
@@ -479,6 +480,81 @@ bool GCNTTIImpl::simplifyDemandedLaneMaskArg(InstCombiner &IC,
   }
 
   return false;
+}
+
+Instruction *
+GCNTTIImpl::hoistLaneIntrinsicThroughOperand(InstCombiner &IC,
+                                             IntrinsicInst &II) const {
+  const auto IID = II.getIntrinsicID();
+  assert(IID == Intrinsic::amdgcn_readlane ||
+         IID == Intrinsic::amdgcn_readfirstlane ||
+         IID == Intrinsic::amdgcn_permlane64);
+
+  Instruction *Op = dyn_cast<Instruction>(II.getOperand(0));
+
+  // Only do this if both instructions are in the same block
+  // (so the exec mask won't change) and the readlane is the only user of its
+  // operand.
+  if (!Op || !Op->hasOneUser() || Op->getParent() != II.getParent())
+    return nullptr;
+
+  const bool IsReadLane = (IID == Intrinsic::amdgcn_readlane);
+
+  // If this is a readlane, check that the second operand is a constant, or is
+  // defined before Op so we know it's safe to move this intrinsic higher.
+  Value *LaneID = nullptr;
+  if (IsReadLane) {
+    LaneID = II.getOperand(1);
+    // Check LaneID is available at Op, otherwise we can't move the readlane
+    // higher.
+    if (!IC.getDominatorTree().dominates(LaneID, Op))
+      return nullptr;
+  }
+
+  const auto DoIt = [&](unsigned OpIdx,
+                        Function *NewIntrinsic) -> Instruction * {
+    SmallVector<Value *, 2> Ops{Op->getOperand(OpIdx)};
+    if (IsReadLane)
+      Ops.push_back(LaneID);
+
+    // Make sure convergence tokens are preserved.
+    // TODO: CreateIntrinsic should allow directly copying bundles
+    SmallVector<OperandBundleDef, 2> OpBundles;
+    II.getOperandBundlesAsDefs(OpBundles);
+
+    CallInst *NewII = IC.Builder.CreateCall(NewIntrinsic, Ops, OpBundles);
+    NewII->takeName(&II);
+
+    Instruction &NewOp = *Op->clone();
+    NewOp.setOperand(OpIdx, NewII);
+    return &NewOp;
+  };
+
+  if (isa<UnaryOperator>(Op))
+    return DoIt(0, II.getCalledFunction());
+
+  if (isa<CastInst>(Op)) {
+    Value *Src = Op->getOperand(0);
+    Type *SrcTy = Src->getType();
+    if (!isTypeLegal(SrcTy))
+      return nullptr;
+
+    Function *Remangled =
+        Intrinsic::getOrInsertDeclaration(II.getModule(), IID, {SrcTy});
+    return DoIt(0, Remangled);
+  }
+
+  // We can also hoist through binary operators if the other operand is uniform.
+  if (isa<BinaryOperator>(Op)) {
+    // FIXME: If we had access to UniformityInfo here we could just check
+    // if the operand is uniform.
+    if (isTriviallyUniform(Op->getOperandUse(0)))
+      return DoIt(1, II.getCalledFunction());
+    if (isTriviallyUniform(Op->getOperandUse(1)))
+      return DoIt(0, II.getCalledFunction());
+  }
+
+  return nullptr;
 }
 
 std::optional<Instruction *>
@@ -1171,29 +1247,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         simplifyDemandedLaneMaskArg(IC, II, 1))
       return &II;
 
-    // readfirstlane.ty0 (bitcast ty1 x to ty0) -> bitcast (readfirstlane.ty1)
-    if (auto *BC = dyn_cast<BitCastInst>(Src); BC && BC->hasOneUse()) {
-      Value *BCSrc = BC->getOperand(0);
-
-      // TODO: Handle this for update_dpp, mov_ddp8, and all permlane variants.
-      if (isTypeLegal(BCSrc->getType())) {
-        Module *M = IC.Builder.GetInsertBlock()->getModule();
-        Function *Remangled =
-            Intrinsic::getOrInsertDeclaration(M, IID, {BCSrc->getType()});
-
-        // Make sure convergence tokens are preserved.
-        // TODO: CreateIntrinsic should allow directly copying bundles
-        SmallVector<OperandBundleDef, 2> OpBundles;
-        II.getOperandBundlesAsDefs(OpBundles);
-
-        SmallVector<Value *, 3> Args(II.args());
-        Args[0] = BCSrc;
-
-        CallInst *NewCall = IC.Builder.CreateCall(Remangled, Args, OpBundles);
-        NewCall->takeName(&II);
-        return new BitCastInst(NewCall, II.getType());
-      }
-    }
+    if (Instruction *Res = hoistLaneIntrinsicThroughOperand(IC, II))
+      return Res;
 
     return std::nullopt;
   }
