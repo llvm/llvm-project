@@ -111,6 +111,15 @@ inline bool isa_ref_type(mlir::Type t) {
                    fir::LLVMPointerType>(t);
 }
 
+/// Is `t` a FIR dialect type that has been marked volatile?
+inline bool isa_volatile_type(mlir::Type t) {
+  if (auto refTy = mlir::dyn_cast_or_null<fir::ReferenceType>(t))
+    return refTy.isVolatile();
+  if (auto boxTy = mlir::dyn_cast_or_null<fir::BoxType>(t))
+    return boxTy.isVolatile();
+  return false;
+}
+
 /// Is `t` a boxed type?
 inline bool isa_box_type(mlir::Type t) {
   return mlir::isa<fir::BaseBoxType, fir::BoxCharType, fir::BoxProcType>(t);
@@ -452,6 +461,10 @@ inline mlir::Type wrapInClassOrBoxType(mlir::Type eleTy,
     return fir::ClassType::get(eleTy);
   return fir::BoxType::get(eleTy);
 }
+
+/// Re-create the given type with the given volatility, if this is a type
+/// that can represent volatility.
+mlir::Type updateTypeWithVolatility(mlir::Type type, bool isVolatile);
 
 /// Return the elementType where intrinsic types are replaced with none for
 /// unlimited polymorphic entities.

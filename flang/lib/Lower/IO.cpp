@@ -709,7 +709,8 @@ static void genOutputItemList(
     fir::factory::CharacterExprHelper helper{builder, loc};
     if (mlir::isa<fir::BoxType>(argType)) {
       mlir::Value box = fir::getBase(converter.genExprBox(loc, *expr, stmtCtx));
-      outputFuncArgs.push_back(builder.createConvert(loc, argType, box));
+      outputFuncArgs.push_back(
+          builder.createConvertWithVolatileCast(loc, argType, box));
       if (mlir::isa<fir::RecordType>(fir::unwrapPassByRefType(itemTy)))
         outputFuncArgs.push_back(getNonTbpDefinedIoTableAddr(converter));
     } else if (helper.isCharacterScalar(itemTy)) {
@@ -719,9 +720,9 @@ static void genOutputItemList(
       if (!exv.getCharBox())
         llvm::report_fatal_error(
             "internal error: scalar character not in CharBox");
-      outputFuncArgs.push_back(builder.createConvert(
+      outputFuncArgs.push_back(builder.createConvertWithVolatileCast(
           loc, outputFunc.getFunctionType().getInput(1), fir::getBase(exv)));
-      outputFuncArgs.push_back(builder.createConvert(
+      outputFuncArgs.push_back(builder.createConvertWithVolatileCast(
           loc, outputFunc.getFunctionType().getInput(2), fir::getLen(exv)));
     } else {
       fir::ExtendedValue itemBox = converter.genExprValue(loc, expr, stmtCtx);
@@ -822,6 +823,17 @@ createIoRuntimeCallForItem(Fortran::lower::AbstractConverter &converter,
   } else {
     mlir::Value itemAddr = fir::getBase(item);
     mlir::Type itemTy = fir::unwrapPassByRefType(itemAddr.getType());
+
+    // Handle conversion between volatile and non-volatile reference types
+    // Need to explicitly cast when volatility qualification differs
+    bool srcIsVolatile = fir::isa_volatile_type(itemAddr.getType());
+    bool dstIsVolatile = fir::isa_volatile_type(argType);
+
+    if (srcIsVolatile != dstIsVolatile) {
+      // Create an explicit conversion to handle the volatility difference
+      itemAddr = builder.create<fir::VolatileCastOp>(loc, argType, itemAddr);
+    }
+
     inputFuncArgs.push_back(builder.createConvert(loc, argType, itemAddr));
     fir::factory::CharacterExprHelper charHelper{builder, loc};
     if (charHelper.isCharacterScalar(itemTy)) {

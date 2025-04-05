@@ -327,7 +327,6 @@ Fortran::lower::genCallOpAndResult(
         charFuncPointerLength = charBox->getLen();
     }
   }
-
   const bool isExprCall =
       converter.getLoweringOptions().getLowerToHighLevelFIR() &&
       callSiteType.getNumResults() == 1 &&
@@ -1415,6 +1414,25 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
     addr = entity;
   } else {
     addr = hlfir::genVariableRawAddress(loc, builder, entity);
+  }
+
+  // If the volatility of the input type does not match the dummy type,
+  // we need to cast the argument.
+  if (fir::isa_volatile_type(dummyTypeWithActualRank) !=
+      fir::isa_volatile_type(addr.getType())) {
+    const bool isToTypeVolatile =
+        fir::isa_volatile_type(dummyTypeWithActualRank);
+    mlir::Type volatileAdjustedType =
+        llvm::TypeSwitch<mlir::Type, mlir::Type>(addr.getType())
+            .Case<fir::ReferenceType, fir::BoxType>([&](auto ty) {
+              using TYPE = decltype(ty);
+              return TYPE::get(ty.getElementType(), isToTypeVolatile);
+            })
+            .Default([](auto t) {
+              assert(false && "unexpected type");
+              return t;
+            });
+    addr = builder.create<fir::VolatileCastOp>(loc, volatileAdjustedType, addr);
   }
 
   // For ranked actual passed to assumed-rank dummy, the cast to assumed-rank
