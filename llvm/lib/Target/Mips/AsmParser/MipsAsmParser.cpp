@@ -3009,7 +3009,7 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
       const MCExpr *CallHiExpr =
           MipsMCExpr::create(MipsMCExpr::MEK_GOT_HI16, SymExpr, getContext());
       const MCExpr *CallLoExpr = MipsMCExpr::create(
-          MipsMCExpr::MEK_GOT_LO16, Res.getSymA(), getContext());
+          Res.getAddSym(), MipsMCExpr::MEK_GOT_LO16, getContext());
 
       TOut.emitRX(Mips::LUi, TmpReg, MCOperand::createExpr(CallHiExpr), IDLoc,
                   STI);
@@ -3040,7 +3040,7 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
       // The daddiu's marked with a '>' may be omitted if they are redundant. If
       // this happens then the last instruction must use $rd as the result
       // register.
-      GotExpr = MipsMCExpr::create(MipsMCExpr::MEK_GOT_DISP, Res.getSymA(),
+      GotExpr = MipsMCExpr::create(Res.getAddSym(), MipsMCExpr::MEK_GOT_DISP,
                                    getContext());
       if (Res.getConstant() != 0) {
         // Symbols fully resolve with just the %got_disp(symbol) but we
@@ -3075,7 +3075,7 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
         // External symbols fully resolve the symbol with just the %got(symbol)
         // but we must still account for any offset to the symbol for
         // expressions like symbol+8.
-        GotExpr = MipsMCExpr::create(MipsMCExpr::MEK_GOT, Res.getSymA(),
+        GotExpr = MipsMCExpr::create(Res.getAddSym(), MipsMCExpr::MEK_GOT,
                                      getContext());
         if (Res.getConstant() != 0)
           LoExpr = MCConstantExpr::create(Res.getConstant(), getContext());
@@ -3771,8 +3771,9 @@ void MipsAsmParser::expandMem16Inst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
         return;
       }
 
-      loadAndAddSymbolAddress(Res.getSymA(), TmpReg, BaseReg,
-                              !ABI.ArePtrs64bit(), IDLoc, Out, STI);
+      loadAndAddSymbolAddress(
+          MCSymbolRefExpr::create(Res.getAddSym(), getContext()), TmpReg,
+          BaseReg, !ABI.ArePtrs64bit(), IDLoc, Out, STI);
       emitInstWithOffset(MCOperand::createImm(int16_t(Res.getConstant())));
     } else {
       // FIXME: Implement 64-bit case.
