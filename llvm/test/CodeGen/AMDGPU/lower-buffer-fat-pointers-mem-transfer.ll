@@ -3,7 +3,7 @@
 ; RUN: opt -S -mcpu=gfx900 -passes=amdgpu-lower-buffer-fat-pointers < %s | FileCheck %s
 
 target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8"
-target triple = "amdgcn--"
+target triple = "amdgcn-amd-amdhsa"
 
 ;; memcpy
 
@@ -27,112 +27,112 @@ define void @memcpy_known(ptr addrspace(7) inreg %src, ptr addrspace(7) inreg %d
 ; CHECK-NEXT:    [[DOTOFF_0:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[TMP1]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_0:%.*]] = shufflevector <4 x i32> [[DOTOFF_0]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_0:%.*]] = shufflevector <64 x i32> poison, <64 x i32> [[DOTEXT_0]], <64 x i32> <i32 64, i32 65, i32 66, i32 67, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_16:%.*]] = add nuw i32 [[TMP1]], 16
+; CHECK-NEXT:    [[DOTOFF_PTR_16:%.*]] = add i32 [[TMP1]], 16
 ; CHECK-NEXT:    [[DOTOFF_16:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_16]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_4:%.*]] = shufflevector <4 x i32> [[DOTOFF_16]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_4:%.*]] = shufflevector <64 x i32> [[DOTPARTS_0]], <64 x i32> [[DOTEXT_4]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 64, i32 65, i32 66, i32 67, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_32:%.*]] = add nuw i32 [[TMP1]], 32
+; CHECK-NEXT:    [[DOTOFF_PTR_32:%.*]] = add i32 [[TMP1]], 32
 ; CHECK-NEXT:    [[DOTOFF_32:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_32]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_8:%.*]] = shufflevector <4 x i32> [[DOTOFF_32]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_8:%.*]] = shufflevector <64 x i32> [[DOTPARTS_4]], <64 x i32> [[DOTEXT_8]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 64, i32 65, i32 66, i32 67, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_48:%.*]] = add nuw i32 [[TMP1]], 48
+; CHECK-NEXT:    [[DOTOFF_PTR_48:%.*]] = add i32 [[TMP1]], 48
 ; CHECK-NEXT:    [[DOTOFF_48:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_48]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_12:%.*]] = shufflevector <4 x i32> [[DOTOFF_48]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_12:%.*]] = shufflevector <64 x i32> [[DOTPARTS_8]], <64 x i32> [[DOTEXT_12]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 64, i32 65, i32 66, i32 67, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_64:%.*]] = add nuw i32 [[TMP1]], 64
+; CHECK-NEXT:    [[DOTOFF_PTR_64:%.*]] = add i32 [[TMP1]], 64
 ; CHECK-NEXT:    [[DOTOFF_64:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_64]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_16:%.*]] = shufflevector <4 x i32> [[DOTOFF_64]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_16:%.*]] = shufflevector <64 x i32> [[DOTPARTS_12]], <64 x i32> [[DOTEXT_16]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 64, i32 65, i32 66, i32 67, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_80:%.*]] = add nuw i32 [[TMP1]], 80
+; CHECK-NEXT:    [[DOTOFF_PTR_80:%.*]] = add i32 [[TMP1]], 80
 ; CHECK-NEXT:    [[DOTOFF_80:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_80]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_20:%.*]] = shufflevector <4 x i32> [[DOTOFF_80]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_20:%.*]] = shufflevector <64 x i32> [[DOTPARTS_16]], <64 x i32> [[DOTEXT_20]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 64, i32 65, i32 66, i32 67, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_96:%.*]] = add nuw i32 [[TMP1]], 96
+; CHECK-NEXT:    [[DOTOFF_PTR_96:%.*]] = add i32 [[TMP1]], 96
 ; CHECK-NEXT:    [[DOTOFF_96:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_96]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_24:%.*]] = shufflevector <4 x i32> [[DOTOFF_96]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_24:%.*]] = shufflevector <64 x i32> [[DOTPARTS_20]], <64 x i32> [[DOTEXT_24]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 64, i32 65, i32 66, i32 67, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_112:%.*]] = add nuw i32 [[TMP1]], 112
+; CHECK-NEXT:    [[DOTOFF_PTR_112:%.*]] = add i32 [[TMP1]], 112
 ; CHECK-NEXT:    [[DOTOFF_112:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_112]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_28:%.*]] = shufflevector <4 x i32> [[DOTOFF_112]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_28:%.*]] = shufflevector <64 x i32> [[DOTPARTS_24]], <64 x i32> [[DOTEXT_28]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 64, i32 65, i32 66, i32 67, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_128:%.*]] = add nuw i32 [[TMP1]], 128
+; CHECK-NEXT:    [[DOTOFF_PTR_128:%.*]] = add i32 [[TMP1]], 128
 ; CHECK-NEXT:    [[DOTOFF_128:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_128]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_32:%.*]] = shufflevector <4 x i32> [[DOTOFF_128]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_32:%.*]] = shufflevector <64 x i32> [[DOTPARTS_28]], <64 x i32> [[DOTEXT_32]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 64, i32 65, i32 66, i32 67, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_144:%.*]] = add nuw i32 [[TMP1]], 144
+; CHECK-NEXT:    [[DOTOFF_PTR_144:%.*]] = add i32 [[TMP1]], 144
 ; CHECK-NEXT:    [[DOTOFF_144:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_144]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_36:%.*]] = shufflevector <4 x i32> [[DOTOFF_144]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_36:%.*]] = shufflevector <64 x i32> [[DOTPARTS_32]], <64 x i32> [[DOTEXT_36]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 64, i32 65, i32 66, i32 67, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_160:%.*]] = add nuw i32 [[TMP1]], 160
+; CHECK-NEXT:    [[DOTOFF_PTR_160:%.*]] = add i32 [[TMP1]], 160
 ; CHECK-NEXT:    [[DOTOFF_160:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_160]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_40:%.*]] = shufflevector <4 x i32> [[DOTOFF_160]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_40:%.*]] = shufflevector <64 x i32> [[DOTPARTS_36]], <64 x i32> [[DOTEXT_40]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 64, i32 65, i32 66, i32 67, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_176:%.*]] = add nuw i32 [[TMP1]], 176
+; CHECK-NEXT:    [[DOTOFF_PTR_176:%.*]] = add i32 [[TMP1]], 176
 ; CHECK-NEXT:    [[DOTOFF_176:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_176]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_44:%.*]] = shufflevector <4 x i32> [[DOTOFF_176]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_44:%.*]] = shufflevector <64 x i32> [[DOTPARTS_40]], <64 x i32> [[DOTEXT_44]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 64, i32 65, i32 66, i32 67, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_192:%.*]] = add nuw i32 [[TMP1]], 192
+; CHECK-NEXT:    [[DOTOFF_PTR_192:%.*]] = add i32 [[TMP1]], 192
 ; CHECK-NEXT:    [[DOTOFF_192:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_192]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_48:%.*]] = shufflevector <4 x i32> [[DOTOFF_192]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_48:%.*]] = shufflevector <64 x i32> [[DOTPARTS_44]], <64 x i32> [[DOTEXT_48]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 64, i32 65, i32 66, i32 67, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_208:%.*]] = add nuw i32 [[TMP1]], 208
+; CHECK-NEXT:    [[DOTOFF_PTR_208:%.*]] = add i32 [[TMP1]], 208
 ; CHECK-NEXT:    [[DOTOFF_208:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_208]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_52:%.*]] = shufflevector <4 x i32> [[DOTOFF_208]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_52:%.*]] = shufflevector <64 x i32> [[DOTPARTS_48]], <64 x i32> [[DOTEXT_52]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 64, i32 65, i32 66, i32 67, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_224:%.*]] = add nuw i32 [[TMP1]], 224
+; CHECK-NEXT:    [[DOTOFF_PTR_224:%.*]] = add i32 [[TMP1]], 224
 ; CHECK-NEXT:    [[DOTOFF_224:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_224]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_56:%.*]] = shufflevector <4 x i32> [[DOTOFF_224]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_56:%.*]] = shufflevector <64 x i32> [[DOTPARTS_52]], <64 x i32> [[DOTEXT_56]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 64, i32 65, i32 66, i32 67, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_240:%.*]] = add nuw i32 [[TMP1]], 240
+; CHECK-NEXT:    [[DOTOFF_PTR_240:%.*]] = add i32 [[TMP1]], 240
 ; CHECK-NEXT:    [[DOTOFF_240:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_240]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_60:%.*]] = shufflevector <4 x i32> [[DOTOFF_240]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <64 x i32> [[DOTPARTS_56]], <64 x i32> [[DOTEXT_60]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 64, i32 65, i32 66, i32 67>
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[DST_OFF]], [[LOOP_INDEX]]
 ; CHECK-NEXT:    [[DOTSLICE_0:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_0]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[TMP3]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_4:%.*]] = add nuw i32 [[TMP3]], 16
+; CHECK-NEXT:    [[DOTPART_4:%.*]] = add i32 [[TMP3]], 16
 ; CHECK-NEXT:    [[DOTSLICE_4:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_4]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_4]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_8:%.*]] = add nuw i32 [[TMP3]], 32
+; CHECK-NEXT:    [[DOTPART_8:%.*]] = add i32 [[TMP3]], 32
 ; CHECK-NEXT:    [[DOTSLICE_8:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_8]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_8]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_12:%.*]] = add nuw i32 [[TMP3]], 48
+; CHECK-NEXT:    [[DOTPART_12:%.*]] = add i32 [[TMP3]], 48
 ; CHECK-NEXT:    [[DOTSLICE_12:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_12]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_12]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_16:%.*]] = add nuw i32 [[TMP3]], 64
+; CHECK-NEXT:    [[DOTPART_16:%.*]] = add i32 [[TMP3]], 64
 ; CHECK-NEXT:    [[DOTSLICE_16:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 16, i32 17, i32 18, i32 19>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_16]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_16]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_20:%.*]] = add nuw i32 [[TMP3]], 80
+; CHECK-NEXT:    [[DOTPART_20:%.*]] = add i32 [[TMP3]], 80
 ; CHECK-NEXT:    [[DOTSLICE_20:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 20, i32 21, i32 22, i32 23>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_20]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_20]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_24:%.*]] = add nuw i32 [[TMP3]], 96
+; CHECK-NEXT:    [[DOTPART_24:%.*]] = add i32 [[TMP3]], 96
 ; CHECK-NEXT:    [[DOTSLICE_24:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 24, i32 25, i32 26, i32 27>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_24]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_24]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_28:%.*]] = add nuw i32 [[TMP3]], 112
+; CHECK-NEXT:    [[DOTPART_28:%.*]] = add i32 [[TMP3]], 112
 ; CHECK-NEXT:    [[DOTSLICE_28:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 28, i32 29, i32 30, i32 31>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_28]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_28]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_32:%.*]] = add nuw i32 [[TMP3]], 128
+; CHECK-NEXT:    [[DOTPART_32:%.*]] = add i32 [[TMP3]], 128
 ; CHECK-NEXT:    [[DOTSLICE_32:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 32, i32 33, i32 34, i32 35>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_32]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_32]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_36:%.*]] = add nuw i32 [[TMP3]], 144
+; CHECK-NEXT:    [[DOTPART_36:%.*]] = add i32 [[TMP3]], 144
 ; CHECK-NEXT:    [[DOTSLICE_36:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 36, i32 37, i32 38, i32 39>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_36]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_36]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_40:%.*]] = add nuw i32 [[TMP3]], 160
+; CHECK-NEXT:    [[DOTPART_40:%.*]] = add i32 [[TMP3]], 160
 ; CHECK-NEXT:    [[DOTSLICE_40:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 40, i32 41, i32 42, i32 43>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_40]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_40]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_44:%.*]] = add nuw i32 [[TMP3]], 176
+; CHECK-NEXT:    [[DOTPART_44:%.*]] = add i32 [[TMP3]], 176
 ; CHECK-NEXT:    [[DOTSLICE_44:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 44, i32 45, i32 46, i32 47>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_44]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_44]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_48:%.*]] = add nuw i32 [[TMP3]], 192
+; CHECK-NEXT:    [[DOTPART_48:%.*]] = add i32 [[TMP3]], 192
 ; CHECK-NEXT:    [[DOTSLICE_48:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 48, i32 49, i32 50, i32 51>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_48]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_48]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_52:%.*]] = add nuw i32 [[TMP3]], 208
+; CHECK-NEXT:    [[DOTPART_52:%.*]] = add i32 [[TMP3]], 208
 ; CHECK-NEXT:    [[DOTSLICE_52:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 52, i32 53, i32 54, i32 55>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_52]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_52]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_56:%.*]] = add nuw i32 [[TMP3]], 224
+; CHECK-NEXT:    [[DOTPART_56:%.*]] = add i32 [[TMP3]], 224
 ; CHECK-NEXT:    [[DOTSLICE_56:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 56, i32 57, i32 58, i32 59>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_56]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_56]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_60:%.*]] = add nuw i32 [[TMP3]], 240
+; CHECK-NEXT:    [[DOTPART_60:%.*]] = add i32 [[TMP3]], 240
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTOFF_240]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_60]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP4]] = add i32 [[LOOP_INDEX]], 256
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP4]], 8192
@@ -151,12 +151,44 @@ define void @memcpy_known_small(ptr addrspace(7) inreg %src, ptr addrspace(7) in
 ; CHECK-NEXT:    [[DST_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[DST]], 1
 ; CHECK-NEXT:    [[SRC_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[SRC]], 0
 ; CHECK-NEXT:    [[SRC_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[SRC]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[SRC_OFF]], i32 0, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[TMP1]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DST_OFF]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTOFF_0:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[SRC_OFF]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_0:%.*]] = insertelement <4 x i32> poison, i32 [[DOTOFF_0]], i64 0
+; CHECK-NEXT:    [[DOTOFF_PTR_4:%.*]] = add i32 [[SRC_OFF]], 4
+; CHECK-NEXT:    [[DOTOFF_4:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_4]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_1:%.*]] = insertelement <4 x i32> [[DOTSLICE_0]], i32 [[DOTOFF_4]], i64 1
+; CHECK-NEXT:    [[DOTOFF_PTR_8:%.*]] = add i32 [[SRC_OFF]], 8
+; CHECK-NEXT:    [[DOTOFF_8:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_8]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_2:%.*]] = insertelement <4 x i32> [[DOTSLICE_1]], i32 [[DOTOFF_8]], i64 2
+; CHECK-NEXT:    [[DOTOFF_PTR_12:%.*]] = add i32 [[SRC_OFF]], 12
+; CHECK-NEXT:    [[DOTOFF_12:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_12]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[DOTSLICE_2]], i32 [[DOTOFF_12]], i64 3
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_0]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DST_OFF]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_4:%.*]] = add i32 [[DST_OFF]], 4
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_4]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_4]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_8:%.*]] = add i32 [[DST_OFF]], 8
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_8]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_8]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_12:%.*]] = add i32 [[DST_OFF]], 12
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_12]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_12]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i32 [[SRC_OFF]], 16
-; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP2]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTOFF_05:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP2]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_06:%.*]] = insertelement <4 x i32> poison, i32 [[DOTOFF_05]], i64 0
+; CHECK-NEXT:    [[DOTOFF_PTR_433:%.*]] = add i32 [[TMP2]], 4
+; CHECK-NEXT:    [[DOTOFF_48:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_433]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_19:%.*]] = insertelement <4 x i32> [[DOTSLICE_06]], i32 [[DOTOFF_48]], i64 1
+; CHECK-NEXT:    [[DOTOFF_PTR_845:%.*]] = add i32 [[TMP2]], 8
+; CHECK-NEXT:    [[DOTOFF_811:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_845]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_212:%.*]] = insertelement <4 x i32> [[DOTSLICE_19]], i32 [[DOTOFF_811]], i64 2
+; CHECK-NEXT:    [[DOTOFF_PTR_1257:%.*]] = add i32 [[TMP2]], 12
+; CHECK-NEXT:    [[DOTOFF_1214:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_1257]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[DOTSLICE_212]], i32 [[DOTOFF_1214]], i64 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nuw i32 [[DST_OFF]], 16
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[TMP3]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP4]], i32 0, i32 0)
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_05]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP4]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_478:%.*]] = add i32 [[TMP4]], 4
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_48]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_478]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_886:%.*]] = add i32 [[TMP4]], 8
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_811]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_886]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_1294:%.*]] = add i32 [[TMP4]], 12
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_1214]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_1294]], i32 0, i32 0)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p7.p7.i32(ptr addrspace(7) %dst, ptr addrspace(7) %src, i32 32, i1 false)
@@ -217,117 +249,326 @@ define void @memcpy_known_i64(ptr addrspace(7) inreg %src, ptr addrspace(7) inre
 ; CHECK-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], %[[LOAD_STORE_LOOP]] ]
 ; CHECK-NEXT:    [[LOOP_INDEX_C:%.*]] = trunc i64 [[LOOP_INDEX]] to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[SRC_OFF]], [[LOOP_INDEX_C]]
-; CHECK-NEXT:    [[DOTOFF_0:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP1]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTEXT_0:%.*]] = shufflevector <4 x i32> [[DOTOFF_0]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[DOTPARTS_0:%.*]] = shufflevector <64 x i32> poison, <64 x i32> [[DOTEXT_0]], <64 x i32> <i32 64, i32 65, i32 66, i32 67, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_16:%.*]] = add nuw i32 [[TMP1]], 16
-; CHECK-NEXT:    [[DOTOFF_16:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_16]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTEXT_4:%.*]] = shufflevector <4 x i32> [[DOTOFF_16]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[DOTPARTS_4:%.*]] = shufflevector <64 x i32> [[DOTPARTS_0]], <64 x i32> [[DOTEXT_4]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 64, i32 65, i32 66, i32 67, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_32:%.*]] = add nuw i32 [[TMP1]], 32
-; CHECK-NEXT:    [[DOTOFF_32:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_32]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTEXT_8:%.*]] = shufflevector <4 x i32> [[DOTOFF_32]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[DOTPARTS_8:%.*]] = shufflevector <64 x i32> [[DOTPARTS_4]], <64 x i32> [[DOTEXT_8]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 64, i32 65, i32 66, i32 67, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_48:%.*]] = add nuw i32 [[TMP1]], 48
-; CHECK-NEXT:    [[DOTOFF_48:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_48]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTEXT_12:%.*]] = shufflevector <4 x i32> [[DOTOFF_48]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[DOTPARTS_12:%.*]] = shufflevector <64 x i32> [[DOTPARTS_8]], <64 x i32> [[DOTEXT_12]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 64, i32 65, i32 66, i32 67, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_64:%.*]] = add nuw i32 [[TMP1]], 64
-; CHECK-NEXT:    [[DOTOFF_64:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_64]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTEXT_16:%.*]] = shufflevector <4 x i32> [[DOTOFF_64]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[DOTPARTS_16:%.*]] = shufflevector <64 x i32> [[DOTPARTS_12]], <64 x i32> [[DOTEXT_16]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 64, i32 65, i32 66, i32 67, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_80:%.*]] = add nuw i32 [[TMP1]], 80
-; CHECK-NEXT:    [[DOTOFF_80:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_80]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTEXT_20:%.*]] = shufflevector <4 x i32> [[DOTOFF_80]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[DOTPARTS_20:%.*]] = shufflevector <64 x i32> [[DOTPARTS_16]], <64 x i32> [[DOTEXT_20]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 64, i32 65, i32 66, i32 67, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_96:%.*]] = add nuw i32 [[TMP1]], 96
-; CHECK-NEXT:    [[DOTOFF_96:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_96]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTEXT_24:%.*]] = shufflevector <4 x i32> [[DOTOFF_96]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[DOTPARTS_24:%.*]] = shufflevector <64 x i32> [[DOTPARTS_20]], <64 x i32> [[DOTEXT_24]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 64, i32 65, i32 66, i32 67, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_112:%.*]] = add nuw i32 [[TMP1]], 112
-; CHECK-NEXT:    [[DOTOFF_112:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_112]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTEXT_28:%.*]] = shufflevector <4 x i32> [[DOTOFF_112]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[DOTPARTS_28:%.*]] = shufflevector <64 x i32> [[DOTPARTS_24]], <64 x i32> [[DOTEXT_28]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 64, i32 65, i32 66, i32 67, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_128:%.*]] = add nuw i32 [[TMP1]], 128
-; CHECK-NEXT:    [[DOTOFF_128:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_128]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTEXT_32:%.*]] = shufflevector <4 x i32> [[DOTOFF_128]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[DOTPARTS_32:%.*]] = shufflevector <64 x i32> [[DOTPARTS_28]], <64 x i32> [[DOTEXT_32]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 64, i32 65, i32 66, i32 67, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_144:%.*]] = add nuw i32 [[TMP1]], 144
-; CHECK-NEXT:    [[DOTOFF_144:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_144]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTEXT_36:%.*]] = shufflevector <4 x i32> [[DOTOFF_144]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[DOTPARTS_36:%.*]] = shufflevector <64 x i32> [[DOTPARTS_32]], <64 x i32> [[DOTEXT_36]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 64, i32 65, i32 66, i32 67, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_160:%.*]] = add nuw i32 [[TMP1]], 160
-; CHECK-NEXT:    [[DOTOFF_160:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_160]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTEXT_40:%.*]] = shufflevector <4 x i32> [[DOTOFF_160]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[DOTPARTS_40:%.*]] = shufflevector <64 x i32> [[DOTPARTS_36]], <64 x i32> [[DOTEXT_40]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 64, i32 65, i32 66, i32 67, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_176:%.*]] = add nuw i32 [[TMP1]], 176
-; CHECK-NEXT:    [[DOTOFF_176:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_176]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTEXT_44:%.*]] = shufflevector <4 x i32> [[DOTOFF_176]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[DOTPARTS_44:%.*]] = shufflevector <64 x i32> [[DOTPARTS_40]], <64 x i32> [[DOTEXT_44]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 64, i32 65, i32 66, i32 67, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_192:%.*]] = add nuw i32 [[TMP1]], 192
-; CHECK-NEXT:    [[DOTOFF_192:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_192]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTEXT_48:%.*]] = shufflevector <4 x i32> [[DOTOFF_192]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[DOTPARTS_48:%.*]] = shufflevector <64 x i32> [[DOTPARTS_44]], <64 x i32> [[DOTEXT_48]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 64, i32 65, i32 66, i32 67, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_208:%.*]] = add nuw i32 [[TMP1]], 208
-; CHECK-NEXT:    [[DOTOFF_208:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_208]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTEXT_52:%.*]] = shufflevector <4 x i32> [[DOTOFF_208]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[DOTPARTS_52:%.*]] = shufflevector <64 x i32> [[DOTPARTS_48]], <64 x i32> [[DOTEXT_52]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 64, i32 65, i32 66, i32 67, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_224:%.*]] = add nuw i32 [[TMP1]], 224
-; CHECK-NEXT:    [[DOTOFF_224:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_224]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTEXT_56:%.*]] = shufflevector <4 x i32> [[DOTOFF_224]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[DOTPARTS_56:%.*]] = shufflevector <64 x i32> [[DOTPARTS_52]], <64 x i32> [[DOTEXT_56]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 64, i32 65, i32 66, i32 67, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_240:%.*]] = add nuw i32 [[TMP1]], 240
-; CHECK-NEXT:    [[DOTOFF_240:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_240]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTEXT_60:%.*]] = shufflevector <4 x i32> [[DOTOFF_240]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <64 x i32> [[DOTPARTS_56]], <64 x i32> [[DOTEXT_60]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 64, i32 65, i32 66, i32 67>
+; CHECK-NEXT:    [[DOTOFF_0:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP1]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_0:%.*]] = insertelement <64 x i32> poison, i32 [[DOTOFF_0]], i64 0
+; CHECK-NEXT:    [[DOTOFF_PTR_4:%.*]] = add i32 [[TMP1]], 4
+; CHECK-NEXT:    [[DOTOFF_4:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_4]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_1:%.*]] = insertelement <64 x i32> [[DOTSLICE_0]], i32 [[DOTOFF_4]], i64 1
+; CHECK-NEXT:    [[DOTOFF_PTR_8:%.*]] = add i32 [[TMP1]], 8
+; CHECK-NEXT:    [[DOTOFF_8:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_8]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_2:%.*]] = insertelement <64 x i32> [[DOTSLICE_1]], i32 [[DOTOFF_8]], i64 2
+; CHECK-NEXT:    [[DOTOFF_PTR_12:%.*]] = add i32 [[TMP1]], 12
+; CHECK-NEXT:    [[DOTOFF_12:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_12]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_3:%.*]] = insertelement <64 x i32> [[DOTSLICE_2]], i32 [[DOTOFF_12]], i64 3
+; CHECK-NEXT:    [[DOTOFF_PTR_16:%.*]] = add i32 [[TMP1]], 16
+; CHECK-NEXT:    [[DOTOFF_16:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_16]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_4:%.*]] = insertelement <64 x i32> [[DOTSLICE_3]], i32 [[DOTOFF_16]], i64 4
+; CHECK-NEXT:    [[DOTOFF_PTR_20:%.*]] = add i32 [[TMP1]], 20
+; CHECK-NEXT:    [[DOTOFF_20:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_20]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_5:%.*]] = insertelement <64 x i32> [[DOTSLICE_4]], i32 [[DOTOFF_20]], i64 5
+; CHECK-NEXT:    [[DOTOFF_PTR_24:%.*]] = add i32 [[TMP1]], 24
+; CHECK-NEXT:    [[DOTOFF_24:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_24]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_6:%.*]] = insertelement <64 x i32> [[DOTSLICE_5]], i32 [[DOTOFF_24]], i64 6
+; CHECK-NEXT:    [[DOTOFF_PTR_28:%.*]] = add i32 [[TMP1]], 28
+; CHECK-NEXT:    [[DOTOFF_28:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_28]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_7:%.*]] = insertelement <64 x i32> [[DOTSLICE_6]], i32 [[DOTOFF_28]], i64 7
+; CHECK-NEXT:    [[DOTOFF_PTR_32:%.*]] = add i32 [[TMP1]], 32
+; CHECK-NEXT:    [[DOTOFF_32:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_32]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_8:%.*]] = insertelement <64 x i32> [[DOTSLICE_7]], i32 [[DOTOFF_32]], i64 8
+; CHECK-NEXT:    [[DOTOFF_PTR_36:%.*]] = add i32 [[TMP1]], 36
+; CHECK-NEXT:    [[DOTOFF_36:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_36]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_9:%.*]] = insertelement <64 x i32> [[DOTSLICE_8]], i32 [[DOTOFF_36]], i64 9
+; CHECK-NEXT:    [[DOTOFF_PTR_40:%.*]] = add i32 [[TMP1]], 40
+; CHECK-NEXT:    [[DOTOFF_40:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_40]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_10:%.*]] = insertelement <64 x i32> [[DOTSLICE_9]], i32 [[DOTOFF_40]], i64 10
+; CHECK-NEXT:    [[DOTOFF_PTR_44:%.*]] = add i32 [[TMP1]], 44
+; CHECK-NEXT:    [[DOTOFF_44:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_44]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_11:%.*]] = insertelement <64 x i32> [[DOTSLICE_10]], i32 [[DOTOFF_44]], i64 11
+; CHECK-NEXT:    [[DOTOFF_PTR_48:%.*]] = add i32 [[TMP1]], 48
+; CHECK-NEXT:    [[DOTOFF_48:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_48]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_12:%.*]] = insertelement <64 x i32> [[DOTSLICE_11]], i32 [[DOTOFF_48]], i64 12
+; CHECK-NEXT:    [[DOTOFF_PTR_52:%.*]] = add i32 [[TMP1]], 52
+; CHECK-NEXT:    [[DOTOFF_52:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_52]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_13:%.*]] = insertelement <64 x i32> [[DOTSLICE_12]], i32 [[DOTOFF_52]], i64 13
+; CHECK-NEXT:    [[DOTOFF_PTR_56:%.*]] = add i32 [[TMP1]], 56
+; CHECK-NEXT:    [[DOTOFF_56:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_56]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_14:%.*]] = insertelement <64 x i32> [[DOTSLICE_13]], i32 [[DOTOFF_56]], i64 14
+; CHECK-NEXT:    [[DOTOFF_PTR_60:%.*]] = add i32 [[TMP1]], 60
+; CHECK-NEXT:    [[DOTOFF_60:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_60]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_15:%.*]] = insertelement <64 x i32> [[DOTSLICE_14]], i32 [[DOTOFF_60]], i64 15
+; CHECK-NEXT:    [[DOTOFF_PTR_64:%.*]] = add i32 [[TMP1]], 64
+; CHECK-NEXT:    [[DOTOFF_64:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_64]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_16:%.*]] = insertelement <64 x i32> [[DOTSLICE_15]], i32 [[DOTOFF_64]], i64 16
+; CHECK-NEXT:    [[DOTOFF_PTR_68:%.*]] = add i32 [[TMP1]], 68
+; CHECK-NEXT:    [[DOTOFF_68:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_68]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_17:%.*]] = insertelement <64 x i32> [[DOTSLICE_16]], i32 [[DOTOFF_68]], i64 17
+; CHECK-NEXT:    [[DOTOFF_PTR_72:%.*]] = add i32 [[TMP1]], 72
+; CHECK-NEXT:    [[DOTOFF_72:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_72]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_18:%.*]] = insertelement <64 x i32> [[DOTSLICE_17]], i32 [[DOTOFF_72]], i64 18
+; CHECK-NEXT:    [[DOTOFF_PTR_76:%.*]] = add i32 [[TMP1]], 76
+; CHECK-NEXT:    [[DOTOFF_76:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_76]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_19:%.*]] = insertelement <64 x i32> [[DOTSLICE_18]], i32 [[DOTOFF_76]], i64 19
+; CHECK-NEXT:    [[DOTOFF_PTR_80:%.*]] = add i32 [[TMP1]], 80
+; CHECK-NEXT:    [[DOTOFF_80:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_80]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_20:%.*]] = insertelement <64 x i32> [[DOTSLICE_19]], i32 [[DOTOFF_80]], i64 20
+; CHECK-NEXT:    [[DOTOFF_PTR_84:%.*]] = add i32 [[TMP1]], 84
+; CHECK-NEXT:    [[DOTOFF_84:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_84]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_21:%.*]] = insertelement <64 x i32> [[DOTSLICE_20]], i32 [[DOTOFF_84]], i64 21
+; CHECK-NEXT:    [[DOTOFF_PTR_88:%.*]] = add i32 [[TMP1]], 88
+; CHECK-NEXT:    [[DOTOFF_88:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_88]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_22:%.*]] = insertelement <64 x i32> [[DOTSLICE_21]], i32 [[DOTOFF_88]], i64 22
+; CHECK-NEXT:    [[DOTOFF_PTR_92:%.*]] = add i32 [[TMP1]], 92
+; CHECK-NEXT:    [[DOTOFF_92:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_92]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_23:%.*]] = insertelement <64 x i32> [[DOTSLICE_22]], i32 [[DOTOFF_92]], i64 23
+; CHECK-NEXT:    [[DOTOFF_PTR_96:%.*]] = add i32 [[TMP1]], 96
+; CHECK-NEXT:    [[DOTOFF_96:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_96]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_24:%.*]] = insertelement <64 x i32> [[DOTSLICE_23]], i32 [[DOTOFF_96]], i64 24
+; CHECK-NEXT:    [[DOTOFF_PTR_100:%.*]] = add i32 [[TMP1]], 100
+; CHECK-NEXT:    [[DOTOFF_100:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_100]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_25:%.*]] = insertelement <64 x i32> [[DOTSLICE_24]], i32 [[DOTOFF_100]], i64 25
+; CHECK-NEXT:    [[DOTOFF_PTR_104:%.*]] = add i32 [[TMP1]], 104
+; CHECK-NEXT:    [[DOTOFF_104:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_104]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_26:%.*]] = insertelement <64 x i32> [[DOTSLICE_25]], i32 [[DOTOFF_104]], i64 26
+; CHECK-NEXT:    [[DOTOFF_PTR_108:%.*]] = add i32 [[TMP1]], 108
+; CHECK-NEXT:    [[DOTOFF_108:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_108]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_27:%.*]] = insertelement <64 x i32> [[DOTSLICE_26]], i32 [[DOTOFF_108]], i64 27
+; CHECK-NEXT:    [[DOTOFF_PTR_112:%.*]] = add i32 [[TMP1]], 112
+; CHECK-NEXT:    [[DOTOFF_112:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_112]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_28:%.*]] = insertelement <64 x i32> [[DOTSLICE_27]], i32 [[DOTOFF_112]], i64 28
+; CHECK-NEXT:    [[DOTOFF_PTR_116:%.*]] = add i32 [[TMP1]], 116
+; CHECK-NEXT:    [[DOTOFF_116:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_116]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_29:%.*]] = insertelement <64 x i32> [[DOTSLICE_28]], i32 [[DOTOFF_116]], i64 29
+; CHECK-NEXT:    [[DOTOFF_PTR_120:%.*]] = add i32 [[TMP1]], 120
+; CHECK-NEXT:    [[DOTOFF_120:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_120]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_30:%.*]] = insertelement <64 x i32> [[DOTSLICE_29]], i32 [[DOTOFF_120]], i64 30
+; CHECK-NEXT:    [[DOTOFF_PTR_124:%.*]] = add i32 [[TMP1]], 124
+; CHECK-NEXT:    [[DOTOFF_124:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_124]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_31:%.*]] = insertelement <64 x i32> [[DOTSLICE_30]], i32 [[DOTOFF_124]], i64 31
+; CHECK-NEXT:    [[DOTOFF_PTR_128:%.*]] = add i32 [[TMP1]], 128
+; CHECK-NEXT:    [[DOTOFF_128:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_128]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_32:%.*]] = insertelement <64 x i32> [[DOTSLICE_31]], i32 [[DOTOFF_128]], i64 32
+; CHECK-NEXT:    [[DOTOFF_PTR_132:%.*]] = add i32 [[TMP1]], 132
+; CHECK-NEXT:    [[DOTOFF_132:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_132]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_33:%.*]] = insertelement <64 x i32> [[DOTSLICE_32]], i32 [[DOTOFF_132]], i64 33
+; CHECK-NEXT:    [[DOTOFF_PTR_136:%.*]] = add i32 [[TMP1]], 136
+; CHECK-NEXT:    [[DOTOFF_136:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_136]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_34:%.*]] = insertelement <64 x i32> [[DOTSLICE_33]], i32 [[DOTOFF_136]], i64 34
+; CHECK-NEXT:    [[DOTOFF_PTR_140:%.*]] = add i32 [[TMP1]], 140
+; CHECK-NEXT:    [[DOTOFF_140:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_140]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_35:%.*]] = insertelement <64 x i32> [[DOTSLICE_34]], i32 [[DOTOFF_140]], i64 35
+; CHECK-NEXT:    [[DOTOFF_PTR_144:%.*]] = add i32 [[TMP1]], 144
+; CHECK-NEXT:    [[DOTOFF_144:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_144]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_36:%.*]] = insertelement <64 x i32> [[DOTSLICE_35]], i32 [[DOTOFF_144]], i64 36
+; CHECK-NEXT:    [[DOTOFF_PTR_148:%.*]] = add i32 [[TMP1]], 148
+; CHECK-NEXT:    [[DOTOFF_148:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_148]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_37:%.*]] = insertelement <64 x i32> [[DOTSLICE_36]], i32 [[DOTOFF_148]], i64 37
+; CHECK-NEXT:    [[DOTOFF_PTR_152:%.*]] = add i32 [[TMP1]], 152
+; CHECK-NEXT:    [[DOTOFF_152:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_152]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_38:%.*]] = insertelement <64 x i32> [[DOTSLICE_37]], i32 [[DOTOFF_152]], i64 38
+; CHECK-NEXT:    [[DOTOFF_PTR_156:%.*]] = add i32 [[TMP1]], 156
+; CHECK-NEXT:    [[DOTOFF_156:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_156]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_39:%.*]] = insertelement <64 x i32> [[DOTSLICE_38]], i32 [[DOTOFF_156]], i64 39
+; CHECK-NEXT:    [[DOTOFF_PTR_160:%.*]] = add i32 [[TMP1]], 160
+; CHECK-NEXT:    [[DOTOFF_160:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_160]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_40:%.*]] = insertelement <64 x i32> [[DOTSLICE_39]], i32 [[DOTOFF_160]], i64 40
+; CHECK-NEXT:    [[DOTOFF_PTR_164:%.*]] = add i32 [[TMP1]], 164
+; CHECK-NEXT:    [[DOTOFF_164:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_164]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_41:%.*]] = insertelement <64 x i32> [[DOTSLICE_40]], i32 [[DOTOFF_164]], i64 41
+; CHECK-NEXT:    [[DOTOFF_PTR_168:%.*]] = add i32 [[TMP1]], 168
+; CHECK-NEXT:    [[DOTOFF_168:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_168]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_42:%.*]] = insertelement <64 x i32> [[DOTSLICE_41]], i32 [[DOTOFF_168]], i64 42
+; CHECK-NEXT:    [[DOTOFF_PTR_172:%.*]] = add i32 [[TMP1]], 172
+; CHECK-NEXT:    [[DOTOFF_172:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_172]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_43:%.*]] = insertelement <64 x i32> [[DOTSLICE_42]], i32 [[DOTOFF_172]], i64 43
+; CHECK-NEXT:    [[DOTOFF_PTR_176:%.*]] = add i32 [[TMP1]], 176
+; CHECK-NEXT:    [[DOTOFF_176:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_176]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_44:%.*]] = insertelement <64 x i32> [[DOTSLICE_43]], i32 [[DOTOFF_176]], i64 44
+; CHECK-NEXT:    [[DOTOFF_PTR_180:%.*]] = add i32 [[TMP1]], 180
+; CHECK-NEXT:    [[DOTOFF_180:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_180]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_45:%.*]] = insertelement <64 x i32> [[DOTSLICE_44]], i32 [[DOTOFF_180]], i64 45
+; CHECK-NEXT:    [[DOTOFF_PTR_184:%.*]] = add i32 [[TMP1]], 184
+; CHECK-NEXT:    [[DOTOFF_184:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_184]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_46:%.*]] = insertelement <64 x i32> [[DOTSLICE_45]], i32 [[DOTOFF_184]], i64 46
+; CHECK-NEXT:    [[DOTOFF_PTR_188:%.*]] = add i32 [[TMP1]], 188
+; CHECK-NEXT:    [[DOTOFF_188:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_188]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_47:%.*]] = insertelement <64 x i32> [[DOTSLICE_46]], i32 [[DOTOFF_188]], i64 47
+; CHECK-NEXT:    [[DOTOFF_PTR_192:%.*]] = add i32 [[TMP1]], 192
+; CHECK-NEXT:    [[DOTOFF_192:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_192]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_48:%.*]] = insertelement <64 x i32> [[DOTSLICE_47]], i32 [[DOTOFF_192]], i64 48
+; CHECK-NEXT:    [[DOTOFF_PTR_196:%.*]] = add i32 [[TMP1]], 196
+; CHECK-NEXT:    [[DOTOFF_196:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_196]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_49:%.*]] = insertelement <64 x i32> [[DOTSLICE_48]], i32 [[DOTOFF_196]], i64 49
+; CHECK-NEXT:    [[DOTOFF_PTR_200:%.*]] = add i32 [[TMP1]], 200
+; CHECK-NEXT:    [[DOTOFF_200:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_200]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_50:%.*]] = insertelement <64 x i32> [[DOTSLICE_49]], i32 [[DOTOFF_200]], i64 50
+; CHECK-NEXT:    [[DOTOFF_PTR_204:%.*]] = add i32 [[TMP1]], 204
+; CHECK-NEXT:    [[DOTOFF_204:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_204]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_51:%.*]] = insertelement <64 x i32> [[DOTSLICE_50]], i32 [[DOTOFF_204]], i64 51
+; CHECK-NEXT:    [[DOTOFF_PTR_208:%.*]] = add i32 [[TMP1]], 208
+; CHECK-NEXT:    [[DOTOFF_208:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_208]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_52:%.*]] = insertelement <64 x i32> [[DOTSLICE_51]], i32 [[DOTOFF_208]], i64 52
+; CHECK-NEXT:    [[DOTOFF_PTR_212:%.*]] = add i32 [[TMP1]], 212
+; CHECK-NEXT:    [[DOTOFF_212:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_212]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_53:%.*]] = insertelement <64 x i32> [[DOTSLICE_52]], i32 [[DOTOFF_212]], i64 53
+; CHECK-NEXT:    [[DOTOFF_PTR_216:%.*]] = add i32 [[TMP1]], 216
+; CHECK-NEXT:    [[DOTOFF_216:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_216]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_54:%.*]] = insertelement <64 x i32> [[DOTSLICE_53]], i32 [[DOTOFF_216]], i64 54
+; CHECK-NEXT:    [[DOTOFF_PTR_220:%.*]] = add i32 [[TMP1]], 220
+; CHECK-NEXT:    [[DOTOFF_220:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_220]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_55:%.*]] = insertelement <64 x i32> [[DOTSLICE_54]], i32 [[DOTOFF_220]], i64 55
+; CHECK-NEXT:    [[DOTOFF_PTR_224:%.*]] = add i32 [[TMP1]], 224
+; CHECK-NEXT:    [[DOTOFF_224:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_224]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_56:%.*]] = insertelement <64 x i32> [[DOTSLICE_55]], i32 [[DOTOFF_224]], i64 56
+; CHECK-NEXT:    [[DOTOFF_PTR_228:%.*]] = add i32 [[TMP1]], 228
+; CHECK-NEXT:    [[DOTOFF_228:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_228]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_57:%.*]] = insertelement <64 x i32> [[DOTSLICE_56]], i32 [[DOTOFF_228]], i64 57
+; CHECK-NEXT:    [[DOTOFF_PTR_232:%.*]] = add i32 [[TMP1]], 232
+; CHECK-NEXT:    [[DOTOFF_232:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_232]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_58:%.*]] = insertelement <64 x i32> [[DOTSLICE_57]], i32 [[DOTOFF_232]], i64 58
+; CHECK-NEXT:    [[DOTOFF_PTR_236:%.*]] = add i32 [[TMP1]], 236
+; CHECK-NEXT:    [[DOTOFF_236:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_236]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_59:%.*]] = insertelement <64 x i32> [[DOTSLICE_58]], i32 [[DOTOFF_236]], i64 59
+; CHECK-NEXT:    [[DOTOFF_PTR_240:%.*]] = add i32 [[TMP1]], 240
+; CHECK-NEXT:    [[DOTOFF_240:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_240]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_60:%.*]] = insertelement <64 x i32> [[DOTSLICE_59]], i32 [[DOTOFF_240]], i64 60
+; CHECK-NEXT:    [[DOTOFF_PTR_244:%.*]] = add i32 [[TMP1]], 244
+; CHECK-NEXT:    [[DOTOFF_244:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_244]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_61:%.*]] = insertelement <64 x i32> [[DOTSLICE_60]], i32 [[DOTOFF_244]], i64 61
+; CHECK-NEXT:    [[DOTOFF_PTR_248:%.*]] = add i32 [[TMP1]], 248
+; CHECK-NEXT:    [[DOTOFF_248:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_248]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_62:%.*]] = insertelement <64 x i32> [[DOTSLICE_61]], i32 [[DOTOFF_248]], i64 62
+; CHECK-NEXT:    [[DOTOFF_PTR_252:%.*]] = add i32 [[TMP1]], 252
+; CHECK-NEXT:    [[DOTOFF_252:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_252]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <64 x i32> [[DOTSLICE_62]], i32 [[DOTOFF_252]], i64 63
 ; CHECK-NEXT:    [[LOOP_INDEX_C1:%.*]] = trunc i64 [[LOOP_INDEX]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[DST_OFF]], [[LOOP_INDEX_C1]]
-; CHECK-NEXT:    [[DOTSLICE_0:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_0]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP3]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_4:%.*]] = add nuw i32 [[TMP3]], 16
-; CHECK-NEXT:    [[DOTSLICE_4:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_4]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_4]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_8:%.*]] = add nuw i32 [[TMP3]], 32
-; CHECK-NEXT:    [[DOTSLICE_8:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_8]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_8]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_12:%.*]] = add nuw i32 [[TMP3]], 48
-; CHECK-NEXT:    [[DOTSLICE_12:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_12]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_12]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_16:%.*]] = add nuw i32 [[TMP3]], 64
-; CHECK-NEXT:    [[DOTSLICE_16:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 16, i32 17, i32 18, i32 19>
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_16]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_16]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_20:%.*]] = add nuw i32 [[TMP3]], 80
-; CHECK-NEXT:    [[DOTSLICE_20:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 20, i32 21, i32 22, i32 23>
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_20]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_20]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_24:%.*]] = add nuw i32 [[TMP3]], 96
-; CHECK-NEXT:    [[DOTSLICE_24:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 24, i32 25, i32 26, i32 27>
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_24]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_24]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_28:%.*]] = add nuw i32 [[TMP3]], 112
-; CHECK-NEXT:    [[DOTSLICE_28:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_28]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_28]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_32:%.*]] = add nuw i32 [[TMP3]], 128
-; CHECK-NEXT:    [[DOTSLICE_32:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 32, i32 33, i32 34, i32 35>
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_32]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_32]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_36:%.*]] = add nuw i32 [[TMP3]], 144
-; CHECK-NEXT:    [[DOTSLICE_36:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 36, i32 37, i32 38, i32 39>
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_36]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_36]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_40:%.*]] = add nuw i32 [[TMP3]], 160
-; CHECK-NEXT:    [[DOTSLICE_40:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 40, i32 41, i32 42, i32 43>
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_40]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_40]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_44:%.*]] = add nuw i32 [[TMP3]], 176
-; CHECK-NEXT:    [[DOTSLICE_44:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 44, i32 45, i32 46, i32 47>
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_44]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_44]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_48:%.*]] = add nuw i32 [[TMP3]], 192
-; CHECK-NEXT:    [[DOTSLICE_48:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 48, i32 49, i32 50, i32 51>
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_48]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_48]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_52:%.*]] = add nuw i32 [[TMP3]], 208
-; CHECK-NEXT:    [[DOTSLICE_52:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 52, i32 53, i32 54, i32 55>
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_52]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_52]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_56:%.*]] = add nuw i32 [[TMP3]], 224
-; CHECK-NEXT:    [[DOTSLICE_56:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 56, i32 57, i32 58, i32 59>
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_56]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_56]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_60:%.*]] = add nuw i32 [[TMP3]], 240
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTOFF_240]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_60]], i32 0, i32 0)
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_0]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP3]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_1:%.*]] = add i32 [[TMP3]], 4
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_4]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_1]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_2:%.*]] = add i32 [[TMP3]], 8
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_8]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_2]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_3:%.*]] = add i32 [[TMP3]], 12
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_12]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_3]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_4:%.*]] = add i32 [[TMP3]], 16
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_16]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_4]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_5:%.*]] = add i32 [[TMP3]], 20
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_20]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_5]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_6:%.*]] = add i32 [[TMP3]], 24
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_24]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_6]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_7:%.*]] = add i32 [[TMP3]], 28
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_28]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_7]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_8:%.*]] = add i32 [[TMP3]], 32
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_32]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_8]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_9:%.*]] = add i32 [[TMP3]], 36
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_36]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_9]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_10:%.*]] = add i32 [[TMP3]], 40
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_40]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_10]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_11:%.*]] = add i32 [[TMP3]], 44
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_44]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_11]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_12:%.*]] = add i32 [[TMP3]], 48
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_48]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_12]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_13:%.*]] = add i32 [[TMP3]], 52
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_52]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_13]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_14:%.*]] = add i32 [[TMP3]], 56
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_56]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_14]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_15:%.*]] = add i32 [[TMP3]], 60
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_60]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_15]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_16:%.*]] = add i32 [[TMP3]], 64
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_64]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_16]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_17:%.*]] = add i32 [[TMP3]], 68
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_68]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_17]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_18:%.*]] = add i32 [[TMP3]], 72
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_72]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_18]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_19:%.*]] = add i32 [[TMP3]], 76
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_76]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_19]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_20:%.*]] = add i32 [[TMP3]], 80
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_80]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_20]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_21:%.*]] = add i32 [[TMP3]], 84
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_84]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_21]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_22:%.*]] = add i32 [[TMP3]], 88
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_88]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_22]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_23:%.*]] = add i32 [[TMP3]], 92
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_92]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_23]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_24:%.*]] = add i32 [[TMP3]], 96
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_96]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_24]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_25:%.*]] = add i32 [[TMP3]], 100
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_100]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_25]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_26:%.*]] = add i32 [[TMP3]], 104
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_104]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_26]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_27:%.*]] = add i32 [[TMP3]], 108
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_108]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_27]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_28:%.*]] = add i32 [[TMP3]], 112
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_112]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_28]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_29:%.*]] = add i32 [[TMP3]], 116
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_116]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_29]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_30:%.*]] = add i32 [[TMP3]], 120
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_120]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_30]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_31:%.*]] = add i32 [[TMP3]], 124
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_124]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_31]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_32:%.*]] = add i32 [[TMP3]], 128
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_128]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_32]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_33:%.*]] = add i32 [[TMP3]], 132
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_132]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_33]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_34:%.*]] = add i32 [[TMP3]], 136
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_136]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_34]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_35:%.*]] = add i32 [[TMP3]], 140
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_140]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_35]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_36:%.*]] = add i32 [[TMP3]], 144
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_144]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_36]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_37:%.*]] = add i32 [[TMP3]], 148
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_148]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_37]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_38:%.*]] = add i32 [[TMP3]], 152
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_152]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_38]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_39:%.*]] = add i32 [[TMP3]], 156
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_156]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_39]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_40:%.*]] = add i32 [[TMP3]], 160
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_160]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_40]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_41:%.*]] = add i32 [[TMP3]], 164
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_164]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_41]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_42:%.*]] = add i32 [[TMP3]], 168
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_168]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_42]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_43:%.*]] = add i32 [[TMP3]], 172
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_172]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_43]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_44:%.*]] = add i32 [[TMP3]], 176
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_176]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_44]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_45:%.*]] = add i32 [[TMP3]], 180
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_180]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_45]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_46:%.*]] = add i32 [[TMP3]], 184
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_184]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_46]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_47:%.*]] = add i32 [[TMP3]], 188
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_188]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_47]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_48:%.*]] = add i32 [[TMP3]], 192
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_192]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_48]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_49:%.*]] = add i32 [[TMP3]], 196
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_196]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_49]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_50:%.*]] = add i32 [[TMP3]], 200
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_200]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_50]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_51:%.*]] = add i32 [[TMP3]], 204
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_204]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_51]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_52:%.*]] = add i32 [[TMP3]], 208
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_208]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_52]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_53:%.*]] = add i32 [[TMP3]], 212
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_212]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_53]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_54:%.*]] = add i32 [[TMP3]], 216
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_216]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_54]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_55:%.*]] = add i32 [[TMP3]], 220
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_220]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_55]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_56:%.*]] = add i32 [[TMP3]], 224
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_224]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_56]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_57:%.*]] = add i32 [[TMP3]], 228
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_228]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_57]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_58:%.*]] = add i32 [[TMP3]], 232
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_232]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_58]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_59:%.*]] = add i32 [[TMP3]], 236
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_236]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_59]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_60:%.*]] = add i32 [[TMP3]], 240
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_240]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_60]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_61:%.*]] = add i32 [[TMP3]], 244
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_244]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_61]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_62:%.*]] = add i32 [[TMP3]], 248
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_248]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_62]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_63:%.*]] = add i32 [[TMP3]], 252
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_252]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_63]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 256
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 8192
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[LOAD_STORE_LOOP]], label %[[MEMCPY_SPLIT:.*]]
@@ -345,12 +586,44 @@ define void @memcpy_known_i32_volatile(ptr addrspace(7) inreg %src, ptr addrspac
 ; CHECK-NEXT:    [[DST_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[DST]], 1
 ; CHECK-NEXT:    [[SRC_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[SRC]], 0
 ; CHECK-NEXT:    [[SRC_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[SRC]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[SRC_OFF]], i32 0, i32 -2147483648)
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[TMP1]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DST_OFF]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[DOTOFF_0:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[SRC_OFF]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[DOTSLICE_0:%.*]] = insertelement <4 x i32> poison, i32 [[DOTOFF_0]], i64 0
+; CHECK-NEXT:    [[DOTOFF_PTR_4:%.*]] = add i32 [[SRC_OFF]], 4
+; CHECK-NEXT:    [[DOTOFF_4:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_4]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[DOTSLICE_1:%.*]] = insertelement <4 x i32> [[DOTSLICE_0]], i32 [[DOTOFF_4]], i64 1
+; CHECK-NEXT:    [[DOTOFF_PTR_8:%.*]] = add i32 [[SRC_OFF]], 8
+; CHECK-NEXT:    [[DOTOFF_8:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_8]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[DOTSLICE_2:%.*]] = insertelement <4 x i32> [[DOTSLICE_1]], i32 [[DOTOFF_8]], i64 2
+; CHECK-NEXT:    [[DOTOFF_PTR_12:%.*]] = add i32 [[SRC_OFF]], 12
+; CHECK-NEXT:    [[DOTOFF_12:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_12]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[DOTSLICE_2]], i32 [[DOTOFF_12]], i64 3
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_0]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DST_OFF]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[DOTPART_4:%.*]] = add i32 [[DST_OFF]], 4
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_4]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_4]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[DOTPART_8:%.*]] = add i32 [[DST_OFF]], 8
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_8]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_8]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[DOTPART_12:%.*]] = add i32 [[DST_OFF]], 12
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_12]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_12]], i32 0, i32 -2147483648)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i32 [[SRC_OFF]], 16
-; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP2]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[DOTOFF_05:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP2]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[DOTSLICE_06:%.*]] = insertelement <4 x i32> poison, i32 [[DOTOFF_05]], i64 0
+; CHECK-NEXT:    [[DOTOFF_PTR_433:%.*]] = add i32 [[TMP2]], 4
+; CHECK-NEXT:    [[DOTOFF_48:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_433]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[DOTSLICE_19:%.*]] = insertelement <4 x i32> [[DOTSLICE_06]], i32 [[DOTOFF_48]], i64 1
+; CHECK-NEXT:    [[DOTOFF_PTR_845:%.*]] = add i32 [[TMP2]], 8
+; CHECK-NEXT:    [[DOTOFF_811:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_845]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[DOTSLICE_212:%.*]] = insertelement <4 x i32> [[DOTSLICE_19]], i32 [[DOTOFF_811]], i64 2
+; CHECK-NEXT:    [[DOTOFF_PTR_1257:%.*]] = add i32 [[TMP2]], 12
+; CHECK-NEXT:    [[DOTOFF_1214:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_1257]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[DOTSLICE_212]], i32 [[DOTOFF_1214]], i64 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nuw i32 [[DST_OFF]], 16
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[TMP3]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP4]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_05]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP4]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[DOTPART_478:%.*]] = add i32 [[TMP4]], 4
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_48]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_478]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[DOTPART_886:%.*]] = add i32 [[TMP4]], 8
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_811]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_886]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[DOTPART_1294:%.*]] = add i32 [[TMP4]], 12
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_1214]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_1294]], i32 0, i32 -2147483648)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p7.p7.i32(ptr addrspace(7) %dst, ptr addrspace(7) %src, i32 32, i1 true)
@@ -371,9 +644,25 @@ define void @memcpy_unknown(ptr addrspace(7) inreg %src, ptr addrspace(7) inreg 
 ; CHECK:       [[LOOP_MEMCPY_EXPANSION]]:
 ; CHECK-NEXT:    [[LOOP_INDEX:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[TMP7:%.*]], %[[LOOP_MEMCPY_EXPANSION]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[SRC_OFF]], [[LOOP_INDEX]]
-; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP4]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTOFF_0:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP4]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_0:%.*]] = insertelement <4 x i32> poison, i32 [[DOTOFF_0]], i64 0
+; CHECK-NEXT:    [[DOTOFF_PTR_4:%.*]] = add i32 [[TMP4]], 4
+; CHECK-NEXT:    [[DOTOFF_4:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_4]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_1:%.*]] = insertelement <4 x i32> [[DOTSLICE_0]], i32 [[DOTOFF_4]], i64 1
+; CHECK-NEXT:    [[DOTOFF_PTR_8:%.*]] = add i32 [[TMP4]], 8
+; CHECK-NEXT:    [[DOTOFF_8:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_8]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_2:%.*]] = insertelement <4 x i32> [[DOTSLICE_1]], i32 [[DOTOFF_8]], i64 2
+; CHECK-NEXT:    [[DOTOFF_PTR_12:%.*]] = add i32 [[TMP4]], 12
+; CHECK-NEXT:    [[DOTOFF_12:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_12]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[DOTSLICE_2]], i32 [[DOTOFF_12]], i64 3
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[DST_OFF]], [[LOOP_INDEX]]
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[TMP5]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP6]], i32 0, i32 0)
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_0]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP6]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_4:%.*]] = add i32 [[TMP6]], 4
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_4]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_4]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_8:%.*]] = add i32 [[TMP6]], 8
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_8]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_8]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_12:%.*]] = add i32 [[TMP6]], 12
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_12]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_12]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP7]] = add i32 [[LOOP_INDEX]], 16
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ult i32 [[TMP7]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[LOOP_MEMCPY_EXPANSION]], label %[[LOOP_MEMCPY_RESIDUAL_HEADER]]
@@ -410,49 +699,49 @@ define void @memcpy_known_p1_to_p7(ptr addrspace(1) inreg %src, ptr addrspace(7)
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[DST_OFF]], [[LOOP_INDEX]]
 ; CHECK-NEXT:    [[DOTSLICE_0:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_0]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[TMP3]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_4:%.*]] = add nuw i32 [[TMP3]], 16
+; CHECK-NEXT:    [[DOTPART_4:%.*]] = add i32 [[TMP3]], 16
 ; CHECK-NEXT:    [[DOTSLICE_4:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_4]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_4]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_8:%.*]] = add nuw i32 [[TMP3]], 32
+; CHECK-NEXT:    [[DOTPART_8:%.*]] = add i32 [[TMP3]], 32
 ; CHECK-NEXT:    [[DOTSLICE_8:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_8]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_8]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_12:%.*]] = add nuw i32 [[TMP3]], 48
+; CHECK-NEXT:    [[DOTPART_12:%.*]] = add i32 [[TMP3]], 48
 ; CHECK-NEXT:    [[DOTSLICE_12:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_12]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_12]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_16:%.*]] = add nuw i32 [[TMP3]], 64
+; CHECK-NEXT:    [[DOTPART_16:%.*]] = add i32 [[TMP3]], 64
 ; CHECK-NEXT:    [[DOTSLICE_16:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 16, i32 17, i32 18, i32 19>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_16]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_16]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_20:%.*]] = add nuw i32 [[TMP3]], 80
+; CHECK-NEXT:    [[DOTPART_20:%.*]] = add i32 [[TMP3]], 80
 ; CHECK-NEXT:    [[DOTSLICE_20:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 20, i32 21, i32 22, i32 23>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_20]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_20]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_24:%.*]] = add nuw i32 [[TMP3]], 96
+; CHECK-NEXT:    [[DOTPART_24:%.*]] = add i32 [[TMP3]], 96
 ; CHECK-NEXT:    [[DOTSLICE_24:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 24, i32 25, i32 26, i32 27>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_24]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_24]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_28:%.*]] = add nuw i32 [[TMP3]], 112
+; CHECK-NEXT:    [[DOTPART_28:%.*]] = add i32 [[TMP3]], 112
 ; CHECK-NEXT:    [[DOTSLICE_28:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 28, i32 29, i32 30, i32 31>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_28]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_28]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_32:%.*]] = add nuw i32 [[TMP3]], 128
+; CHECK-NEXT:    [[DOTPART_32:%.*]] = add i32 [[TMP3]], 128
 ; CHECK-NEXT:    [[DOTSLICE_32:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 32, i32 33, i32 34, i32 35>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_32]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_32]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_36:%.*]] = add nuw i32 [[TMP3]], 144
+; CHECK-NEXT:    [[DOTPART_36:%.*]] = add i32 [[TMP3]], 144
 ; CHECK-NEXT:    [[DOTSLICE_36:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 36, i32 37, i32 38, i32 39>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_36]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_36]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_40:%.*]] = add nuw i32 [[TMP3]], 160
+; CHECK-NEXT:    [[DOTPART_40:%.*]] = add i32 [[TMP3]], 160
 ; CHECK-NEXT:    [[DOTSLICE_40:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 40, i32 41, i32 42, i32 43>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_40]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_40]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_44:%.*]] = add nuw i32 [[TMP3]], 176
+; CHECK-NEXT:    [[DOTPART_44:%.*]] = add i32 [[TMP3]], 176
 ; CHECK-NEXT:    [[DOTSLICE_44:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 44, i32 45, i32 46, i32 47>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_44]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_44]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_48:%.*]] = add nuw i32 [[TMP3]], 192
+; CHECK-NEXT:    [[DOTPART_48:%.*]] = add i32 [[TMP3]], 192
 ; CHECK-NEXT:    [[DOTSLICE_48:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 48, i32 49, i32 50, i32 51>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_48]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_48]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_52:%.*]] = add nuw i32 [[TMP3]], 208
+; CHECK-NEXT:    [[DOTPART_52:%.*]] = add i32 [[TMP3]], 208
 ; CHECK-NEXT:    [[DOTSLICE_52:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 52, i32 53, i32 54, i32 55>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_52]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_52]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_56:%.*]] = add nuw i32 [[TMP3]], 224
+; CHECK-NEXT:    [[DOTPART_56:%.*]] = add i32 [[TMP3]], 224
 ; CHECK-NEXT:    [[DOTSLICE_56:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 56, i32 57, i32 58, i32 59>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_56]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_56]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_60:%.*]] = add nuw i32 [[TMP3]], 240
+; CHECK-NEXT:    [[DOTPART_60:%.*]] = add i32 [[TMP3]], 240
 ; CHECK-NEXT:    [[DOTSLICE_60:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 60, i32 61, i32 62, i32 63>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_60]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_60]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP4]] = add i32 [[LOOP_INDEX]], 256
@@ -477,63 +766,63 @@ define void @memcpy_known_p7_to_p1(ptr addrspace(7) inreg %src, ptr addrspace(1)
 ; CHECK-NEXT:    [[DOTOFF_0:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[TMP1]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_0:%.*]] = shufflevector <4 x i32> [[DOTOFF_0]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_0:%.*]] = shufflevector <64 x i32> poison, <64 x i32> [[DOTEXT_0]], <64 x i32> <i32 64, i32 65, i32 66, i32 67, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_16:%.*]] = add nuw i32 [[TMP1]], 16
+; CHECK-NEXT:    [[DOTOFF_PTR_16:%.*]] = add i32 [[TMP1]], 16
 ; CHECK-NEXT:    [[DOTOFF_16:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_16]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_4:%.*]] = shufflevector <4 x i32> [[DOTOFF_16]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_4:%.*]] = shufflevector <64 x i32> [[DOTPARTS_0]], <64 x i32> [[DOTEXT_4]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 64, i32 65, i32 66, i32 67, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_32:%.*]] = add nuw i32 [[TMP1]], 32
+; CHECK-NEXT:    [[DOTOFF_PTR_32:%.*]] = add i32 [[TMP1]], 32
 ; CHECK-NEXT:    [[DOTOFF_32:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_32]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_8:%.*]] = shufflevector <4 x i32> [[DOTOFF_32]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_8:%.*]] = shufflevector <64 x i32> [[DOTPARTS_4]], <64 x i32> [[DOTEXT_8]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 64, i32 65, i32 66, i32 67, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_48:%.*]] = add nuw i32 [[TMP1]], 48
+; CHECK-NEXT:    [[DOTOFF_PTR_48:%.*]] = add i32 [[TMP1]], 48
 ; CHECK-NEXT:    [[DOTOFF_48:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_48]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_12:%.*]] = shufflevector <4 x i32> [[DOTOFF_48]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_12:%.*]] = shufflevector <64 x i32> [[DOTPARTS_8]], <64 x i32> [[DOTEXT_12]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 64, i32 65, i32 66, i32 67, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_64:%.*]] = add nuw i32 [[TMP1]], 64
+; CHECK-NEXT:    [[DOTOFF_PTR_64:%.*]] = add i32 [[TMP1]], 64
 ; CHECK-NEXT:    [[DOTOFF_64:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_64]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_16:%.*]] = shufflevector <4 x i32> [[DOTOFF_64]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_16:%.*]] = shufflevector <64 x i32> [[DOTPARTS_12]], <64 x i32> [[DOTEXT_16]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 64, i32 65, i32 66, i32 67, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_80:%.*]] = add nuw i32 [[TMP1]], 80
+; CHECK-NEXT:    [[DOTOFF_PTR_80:%.*]] = add i32 [[TMP1]], 80
 ; CHECK-NEXT:    [[DOTOFF_80:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_80]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_20:%.*]] = shufflevector <4 x i32> [[DOTOFF_80]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_20:%.*]] = shufflevector <64 x i32> [[DOTPARTS_16]], <64 x i32> [[DOTEXT_20]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 64, i32 65, i32 66, i32 67, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_96:%.*]] = add nuw i32 [[TMP1]], 96
+; CHECK-NEXT:    [[DOTOFF_PTR_96:%.*]] = add i32 [[TMP1]], 96
 ; CHECK-NEXT:    [[DOTOFF_96:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_96]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_24:%.*]] = shufflevector <4 x i32> [[DOTOFF_96]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_24:%.*]] = shufflevector <64 x i32> [[DOTPARTS_20]], <64 x i32> [[DOTEXT_24]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 64, i32 65, i32 66, i32 67, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_112:%.*]] = add nuw i32 [[TMP1]], 112
+; CHECK-NEXT:    [[DOTOFF_PTR_112:%.*]] = add i32 [[TMP1]], 112
 ; CHECK-NEXT:    [[DOTOFF_112:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_112]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_28:%.*]] = shufflevector <4 x i32> [[DOTOFF_112]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_28:%.*]] = shufflevector <64 x i32> [[DOTPARTS_24]], <64 x i32> [[DOTEXT_28]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 64, i32 65, i32 66, i32 67, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_128:%.*]] = add nuw i32 [[TMP1]], 128
+; CHECK-NEXT:    [[DOTOFF_PTR_128:%.*]] = add i32 [[TMP1]], 128
 ; CHECK-NEXT:    [[DOTOFF_128:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_128]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_32:%.*]] = shufflevector <4 x i32> [[DOTOFF_128]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_32:%.*]] = shufflevector <64 x i32> [[DOTPARTS_28]], <64 x i32> [[DOTEXT_32]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 64, i32 65, i32 66, i32 67, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_144:%.*]] = add nuw i32 [[TMP1]], 144
+; CHECK-NEXT:    [[DOTOFF_PTR_144:%.*]] = add i32 [[TMP1]], 144
 ; CHECK-NEXT:    [[DOTOFF_144:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_144]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_36:%.*]] = shufflevector <4 x i32> [[DOTOFF_144]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_36:%.*]] = shufflevector <64 x i32> [[DOTPARTS_32]], <64 x i32> [[DOTEXT_36]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 64, i32 65, i32 66, i32 67, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_160:%.*]] = add nuw i32 [[TMP1]], 160
+; CHECK-NEXT:    [[DOTOFF_PTR_160:%.*]] = add i32 [[TMP1]], 160
 ; CHECK-NEXT:    [[DOTOFF_160:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_160]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_40:%.*]] = shufflevector <4 x i32> [[DOTOFF_160]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_40:%.*]] = shufflevector <64 x i32> [[DOTPARTS_36]], <64 x i32> [[DOTEXT_40]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 64, i32 65, i32 66, i32 67, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_176:%.*]] = add nuw i32 [[TMP1]], 176
+; CHECK-NEXT:    [[DOTOFF_PTR_176:%.*]] = add i32 [[TMP1]], 176
 ; CHECK-NEXT:    [[DOTOFF_176:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_176]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_44:%.*]] = shufflevector <4 x i32> [[DOTOFF_176]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_44:%.*]] = shufflevector <64 x i32> [[DOTPARTS_40]], <64 x i32> [[DOTEXT_44]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 64, i32 65, i32 66, i32 67, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_192:%.*]] = add nuw i32 [[TMP1]], 192
+; CHECK-NEXT:    [[DOTOFF_PTR_192:%.*]] = add i32 [[TMP1]], 192
 ; CHECK-NEXT:    [[DOTOFF_192:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_192]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_48:%.*]] = shufflevector <4 x i32> [[DOTOFF_192]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_48:%.*]] = shufflevector <64 x i32> [[DOTPARTS_44]], <64 x i32> [[DOTEXT_48]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 64, i32 65, i32 66, i32 67, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_208:%.*]] = add nuw i32 [[TMP1]], 208
+; CHECK-NEXT:    [[DOTOFF_PTR_208:%.*]] = add i32 [[TMP1]], 208
 ; CHECK-NEXT:    [[DOTOFF_208:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_208]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_52:%.*]] = shufflevector <4 x i32> [[DOTOFF_208]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_52:%.*]] = shufflevector <64 x i32> [[DOTPARTS_48]], <64 x i32> [[DOTEXT_52]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 64, i32 65, i32 66, i32 67, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_224:%.*]] = add nuw i32 [[TMP1]], 224
+; CHECK-NEXT:    [[DOTOFF_PTR_224:%.*]] = add i32 [[TMP1]], 224
 ; CHECK-NEXT:    [[DOTOFF_224:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_224]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_56:%.*]] = shufflevector <4 x i32> [[DOTOFF_224]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_56:%.*]] = shufflevector <64 x i32> [[DOTPARTS_52]], <64 x i32> [[DOTEXT_56]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 64, i32 65, i32 66, i32 67, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_240:%.*]] = add nuw i32 [[TMP1]], 240
+; CHECK-NEXT:    [[DOTOFF_PTR_240:%.*]] = add i32 [[TMP1]], 240
 ; CHECK-NEXT:    [[DOTOFF_240:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_240]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_60:%.*]] = shufflevector <4 x i32> [[DOTOFF_240]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <64 x i32> [[DOTPARTS_56]], <64 x i32> [[DOTEXT_60]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 64, i32 65, i32 66, i32 67>
@@ -590,63 +879,63 @@ define void @memcpy_known_p7_to_p3_long(ptr addrspace(7) inreg %src, ptr addrspa
 ; CHECK-NEXT:    [[DOTOFF_0:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[TMP1]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_0:%.*]] = shufflevector <4 x i32> [[DOTOFF_0]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_0:%.*]] = shufflevector <64 x i32> poison, <64 x i32> [[DOTEXT_0]], <64 x i32> <i32 64, i32 65, i32 66, i32 67, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_16:%.*]] = add nuw i32 [[TMP1]], 16
+; CHECK-NEXT:    [[DOTOFF_PTR_16:%.*]] = add i32 [[TMP1]], 16
 ; CHECK-NEXT:    [[DOTOFF_16:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_16]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_4:%.*]] = shufflevector <4 x i32> [[DOTOFF_16]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_4:%.*]] = shufflevector <64 x i32> [[DOTPARTS_0]], <64 x i32> [[DOTEXT_4]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 64, i32 65, i32 66, i32 67, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_32:%.*]] = add nuw i32 [[TMP1]], 32
+; CHECK-NEXT:    [[DOTOFF_PTR_32:%.*]] = add i32 [[TMP1]], 32
 ; CHECK-NEXT:    [[DOTOFF_32:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_32]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_8:%.*]] = shufflevector <4 x i32> [[DOTOFF_32]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_8:%.*]] = shufflevector <64 x i32> [[DOTPARTS_4]], <64 x i32> [[DOTEXT_8]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 64, i32 65, i32 66, i32 67, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_48:%.*]] = add nuw i32 [[TMP1]], 48
+; CHECK-NEXT:    [[DOTOFF_PTR_48:%.*]] = add i32 [[TMP1]], 48
 ; CHECK-NEXT:    [[DOTOFF_48:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_48]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_12:%.*]] = shufflevector <4 x i32> [[DOTOFF_48]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_12:%.*]] = shufflevector <64 x i32> [[DOTPARTS_8]], <64 x i32> [[DOTEXT_12]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 64, i32 65, i32 66, i32 67, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_64:%.*]] = add nuw i32 [[TMP1]], 64
+; CHECK-NEXT:    [[DOTOFF_PTR_64:%.*]] = add i32 [[TMP1]], 64
 ; CHECK-NEXT:    [[DOTOFF_64:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_64]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_16:%.*]] = shufflevector <4 x i32> [[DOTOFF_64]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_16:%.*]] = shufflevector <64 x i32> [[DOTPARTS_12]], <64 x i32> [[DOTEXT_16]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 64, i32 65, i32 66, i32 67, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_80:%.*]] = add nuw i32 [[TMP1]], 80
+; CHECK-NEXT:    [[DOTOFF_PTR_80:%.*]] = add i32 [[TMP1]], 80
 ; CHECK-NEXT:    [[DOTOFF_80:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_80]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_20:%.*]] = shufflevector <4 x i32> [[DOTOFF_80]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_20:%.*]] = shufflevector <64 x i32> [[DOTPARTS_16]], <64 x i32> [[DOTEXT_20]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 64, i32 65, i32 66, i32 67, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_96:%.*]] = add nuw i32 [[TMP1]], 96
+; CHECK-NEXT:    [[DOTOFF_PTR_96:%.*]] = add i32 [[TMP1]], 96
 ; CHECK-NEXT:    [[DOTOFF_96:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_96]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_24:%.*]] = shufflevector <4 x i32> [[DOTOFF_96]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_24:%.*]] = shufflevector <64 x i32> [[DOTPARTS_20]], <64 x i32> [[DOTEXT_24]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 64, i32 65, i32 66, i32 67, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_112:%.*]] = add nuw i32 [[TMP1]], 112
+; CHECK-NEXT:    [[DOTOFF_PTR_112:%.*]] = add i32 [[TMP1]], 112
 ; CHECK-NEXT:    [[DOTOFF_112:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_112]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_28:%.*]] = shufflevector <4 x i32> [[DOTOFF_112]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_28:%.*]] = shufflevector <64 x i32> [[DOTPARTS_24]], <64 x i32> [[DOTEXT_28]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 64, i32 65, i32 66, i32 67, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_128:%.*]] = add nuw i32 [[TMP1]], 128
+; CHECK-NEXT:    [[DOTOFF_PTR_128:%.*]] = add i32 [[TMP1]], 128
 ; CHECK-NEXT:    [[DOTOFF_128:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_128]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_32:%.*]] = shufflevector <4 x i32> [[DOTOFF_128]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_32:%.*]] = shufflevector <64 x i32> [[DOTPARTS_28]], <64 x i32> [[DOTEXT_32]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 64, i32 65, i32 66, i32 67, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_144:%.*]] = add nuw i32 [[TMP1]], 144
+; CHECK-NEXT:    [[DOTOFF_PTR_144:%.*]] = add i32 [[TMP1]], 144
 ; CHECK-NEXT:    [[DOTOFF_144:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_144]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_36:%.*]] = shufflevector <4 x i32> [[DOTOFF_144]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_36:%.*]] = shufflevector <64 x i32> [[DOTPARTS_32]], <64 x i32> [[DOTEXT_36]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 64, i32 65, i32 66, i32 67, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_160:%.*]] = add nuw i32 [[TMP1]], 160
+; CHECK-NEXT:    [[DOTOFF_PTR_160:%.*]] = add i32 [[TMP1]], 160
 ; CHECK-NEXT:    [[DOTOFF_160:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_160]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_40:%.*]] = shufflevector <4 x i32> [[DOTOFF_160]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_40:%.*]] = shufflevector <64 x i32> [[DOTPARTS_36]], <64 x i32> [[DOTEXT_40]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 64, i32 65, i32 66, i32 67, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_176:%.*]] = add nuw i32 [[TMP1]], 176
+; CHECK-NEXT:    [[DOTOFF_PTR_176:%.*]] = add i32 [[TMP1]], 176
 ; CHECK-NEXT:    [[DOTOFF_176:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_176]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_44:%.*]] = shufflevector <4 x i32> [[DOTOFF_176]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_44:%.*]] = shufflevector <64 x i32> [[DOTPARTS_40]], <64 x i32> [[DOTEXT_44]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 64, i32 65, i32 66, i32 67, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_192:%.*]] = add nuw i32 [[TMP1]], 192
+; CHECK-NEXT:    [[DOTOFF_PTR_192:%.*]] = add i32 [[TMP1]], 192
 ; CHECK-NEXT:    [[DOTOFF_192:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_192]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_48:%.*]] = shufflevector <4 x i32> [[DOTOFF_192]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_48:%.*]] = shufflevector <64 x i32> [[DOTPARTS_44]], <64 x i32> [[DOTEXT_48]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 64, i32 65, i32 66, i32 67, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_208:%.*]] = add nuw i32 [[TMP1]], 208
+; CHECK-NEXT:    [[DOTOFF_PTR_208:%.*]] = add i32 [[TMP1]], 208
 ; CHECK-NEXT:    [[DOTOFF_208:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_208]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_52:%.*]] = shufflevector <4 x i32> [[DOTOFF_208]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_52:%.*]] = shufflevector <64 x i32> [[DOTPARTS_48]], <64 x i32> [[DOTEXT_52]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 64, i32 65, i32 66, i32 67, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_224:%.*]] = add nuw i32 [[TMP1]], 224
+; CHECK-NEXT:    [[DOTOFF_PTR_224:%.*]] = add i32 [[TMP1]], 224
 ; CHECK-NEXT:    [[DOTOFF_224:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_224]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_56:%.*]] = shufflevector <4 x i32> [[DOTOFF_224]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_56:%.*]] = shufflevector <64 x i32> [[DOTPARTS_52]], <64 x i32> [[DOTEXT_56]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 64, i32 65, i32 66, i32 67, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_240:%.*]] = add nuw i32 [[TMP1]], 240
+; CHECK-NEXT:    [[DOTOFF_PTR_240:%.*]] = add i32 [[TMP1]], 240
 ; CHECK-NEXT:    [[DOTOFF_240:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_240]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_60:%.*]] = shufflevector <4 x i32> [[DOTOFF_240]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <64 x i32> [[DOTPARTS_56]], <64 x i32> [[DOTEXT_60]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 64, i32 65, i32 66, i32 67>
@@ -684,112 +973,112 @@ define void @memcpy.inline_known(ptr addrspace(7) inreg %src, ptr addrspace(7) i
 ; CHECK-NEXT:    [[DOTOFF_0:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[TMP1]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_0:%.*]] = shufflevector <4 x i32> [[DOTOFF_0]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_0:%.*]] = shufflevector <64 x i32> poison, <64 x i32> [[DOTEXT_0]], <64 x i32> <i32 64, i32 65, i32 66, i32 67, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_16:%.*]] = add nuw i32 [[TMP1]], 16
+; CHECK-NEXT:    [[DOTOFF_PTR_16:%.*]] = add i32 [[TMP1]], 16
 ; CHECK-NEXT:    [[DOTOFF_16:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_16]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_4:%.*]] = shufflevector <4 x i32> [[DOTOFF_16]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_4:%.*]] = shufflevector <64 x i32> [[DOTPARTS_0]], <64 x i32> [[DOTEXT_4]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 64, i32 65, i32 66, i32 67, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_32:%.*]] = add nuw i32 [[TMP1]], 32
+; CHECK-NEXT:    [[DOTOFF_PTR_32:%.*]] = add i32 [[TMP1]], 32
 ; CHECK-NEXT:    [[DOTOFF_32:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_32]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_8:%.*]] = shufflevector <4 x i32> [[DOTOFF_32]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_8:%.*]] = shufflevector <64 x i32> [[DOTPARTS_4]], <64 x i32> [[DOTEXT_8]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 64, i32 65, i32 66, i32 67, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_48:%.*]] = add nuw i32 [[TMP1]], 48
+; CHECK-NEXT:    [[DOTOFF_PTR_48:%.*]] = add i32 [[TMP1]], 48
 ; CHECK-NEXT:    [[DOTOFF_48:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_48]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_12:%.*]] = shufflevector <4 x i32> [[DOTOFF_48]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_12:%.*]] = shufflevector <64 x i32> [[DOTPARTS_8]], <64 x i32> [[DOTEXT_12]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 64, i32 65, i32 66, i32 67, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_64:%.*]] = add nuw i32 [[TMP1]], 64
+; CHECK-NEXT:    [[DOTOFF_PTR_64:%.*]] = add i32 [[TMP1]], 64
 ; CHECK-NEXT:    [[DOTOFF_64:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_64]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_16:%.*]] = shufflevector <4 x i32> [[DOTOFF_64]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_16:%.*]] = shufflevector <64 x i32> [[DOTPARTS_12]], <64 x i32> [[DOTEXT_16]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 64, i32 65, i32 66, i32 67, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_80:%.*]] = add nuw i32 [[TMP1]], 80
+; CHECK-NEXT:    [[DOTOFF_PTR_80:%.*]] = add i32 [[TMP1]], 80
 ; CHECK-NEXT:    [[DOTOFF_80:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_80]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_20:%.*]] = shufflevector <4 x i32> [[DOTOFF_80]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_20:%.*]] = shufflevector <64 x i32> [[DOTPARTS_16]], <64 x i32> [[DOTEXT_20]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 64, i32 65, i32 66, i32 67, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_96:%.*]] = add nuw i32 [[TMP1]], 96
+; CHECK-NEXT:    [[DOTOFF_PTR_96:%.*]] = add i32 [[TMP1]], 96
 ; CHECK-NEXT:    [[DOTOFF_96:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_96]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_24:%.*]] = shufflevector <4 x i32> [[DOTOFF_96]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_24:%.*]] = shufflevector <64 x i32> [[DOTPARTS_20]], <64 x i32> [[DOTEXT_24]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 64, i32 65, i32 66, i32 67, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_112:%.*]] = add nuw i32 [[TMP1]], 112
+; CHECK-NEXT:    [[DOTOFF_PTR_112:%.*]] = add i32 [[TMP1]], 112
 ; CHECK-NEXT:    [[DOTOFF_112:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_112]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_28:%.*]] = shufflevector <4 x i32> [[DOTOFF_112]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_28:%.*]] = shufflevector <64 x i32> [[DOTPARTS_24]], <64 x i32> [[DOTEXT_28]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 64, i32 65, i32 66, i32 67, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_128:%.*]] = add nuw i32 [[TMP1]], 128
+; CHECK-NEXT:    [[DOTOFF_PTR_128:%.*]] = add i32 [[TMP1]], 128
 ; CHECK-NEXT:    [[DOTOFF_128:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_128]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_32:%.*]] = shufflevector <4 x i32> [[DOTOFF_128]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_32:%.*]] = shufflevector <64 x i32> [[DOTPARTS_28]], <64 x i32> [[DOTEXT_32]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 64, i32 65, i32 66, i32 67, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_144:%.*]] = add nuw i32 [[TMP1]], 144
+; CHECK-NEXT:    [[DOTOFF_PTR_144:%.*]] = add i32 [[TMP1]], 144
 ; CHECK-NEXT:    [[DOTOFF_144:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_144]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_36:%.*]] = shufflevector <4 x i32> [[DOTOFF_144]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_36:%.*]] = shufflevector <64 x i32> [[DOTPARTS_32]], <64 x i32> [[DOTEXT_36]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 64, i32 65, i32 66, i32 67, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_160:%.*]] = add nuw i32 [[TMP1]], 160
+; CHECK-NEXT:    [[DOTOFF_PTR_160:%.*]] = add i32 [[TMP1]], 160
 ; CHECK-NEXT:    [[DOTOFF_160:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_160]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_40:%.*]] = shufflevector <4 x i32> [[DOTOFF_160]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_40:%.*]] = shufflevector <64 x i32> [[DOTPARTS_36]], <64 x i32> [[DOTEXT_40]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 64, i32 65, i32 66, i32 67, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_176:%.*]] = add nuw i32 [[TMP1]], 176
+; CHECK-NEXT:    [[DOTOFF_PTR_176:%.*]] = add i32 [[TMP1]], 176
 ; CHECK-NEXT:    [[DOTOFF_176:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_176]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_44:%.*]] = shufflevector <4 x i32> [[DOTOFF_176]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_44:%.*]] = shufflevector <64 x i32> [[DOTPARTS_40]], <64 x i32> [[DOTEXT_44]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 64, i32 65, i32 66, i32 67, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_192:%.*]] = add nuw i32 [[TMP1]], 192
+; CHECK-NEXT:    [[DOTOFF_PTR_192:%.*]] = add i32 [[TMP1]], 192
 ; CHECK-NEXT:    [[DOTOFF_192:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_192]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_48:%.*]] = shufflevector <4 x i32> [[DOTOFF_192]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_48:%.*]] = shufflevector <64 x i32> [[DOTPARTS_44]], <64 x i32> [[DOTEXT_48]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 64, i32 65, i32 66, i32 67, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_208:%.*]] = add nuw i32 [[TMP1]], 208
+; CHECK-NEXT:    [[DOTOFF_PTR_208:%.*]] = add i32 [[TMP1]], 208
 ; CHECK-NEXT:    [[DOTOFF_208:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_208]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_52:%.*]] = shufflevector <4 x i32> [[DOTOFF_208]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_52:%.*]] = shufflevector <64 x i32> [[DOTPARTS_48]], <64 x i32> [[DOTEXT_52]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 64, i32 65, i32 66, i32 67, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_224:%.*]] = add nuw i32 [[TMP1]], 224
+; CHECK-NEXT:    [[DOTOFF_PTR_224:%.*]] = add i32 [[TMP1]], 224
 ; CHECK-NEXT:    [[DOTOFF_224:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_224]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_56:%.*]] = shufflevector <4 x i32> [[DOTOFF_224]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_56:%.*]] = shufflevector <64 x i32> [[DOTPARTS_52]], <64 x i32> [[DOTEXT_56]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 64, i32 65, i32 66, i32 67, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_240:%.*]] = add nuw i32 [[TMP1]], 240
+; CHECK-NEXT:    [[DOTOFF_PTR_240:%.*]] = add i32 [[TMP1]], 240
 ; CHECK-NEXT:    [[DOTOFF_240:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_240]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_60:%.*]] = shufflevector <4 x i32> [[DOTOFF_240]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <64 x i32> [[DOTPARTS_56]], <64 x i32> [[DOTEXT_60]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 64, i32 65, i32 66, i32 67>
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[DST_OFF]], [[LOOP_INDEX]]
 ; CHECK-NEXT:    [[DOTSLICE_0:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_0]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[TMP3]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_4:%.*]] = add nuw i32 [[TMP3]], 16
+; CHECK-NEXT:    [[DOTPART_4:%.*]] = add i32 [[TMP3]], 16
 ; CHECK-NEXT:    [[DOTSLICE_4:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_4]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_4]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_8:%.*]] = add nuw i32 [[TMP3]], 32
+; CHECK-NEXT:    [[DOTPART_8:%.*]] = add i32 [[TMP3]], 32
 ; CHECK-NEXT:    [[DOTSLICE_8:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_8]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_8]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_12:%.*]] = add nuw i32 [[TMP3]], 48
+; CHECK-NEXT:    [[DOTPART_12:%.*]] = add i32 [[TMP3]], 48
 ; CHECK-NEXT:    [[DOTSLICE_12:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_12]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_12]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_16:%.*]] = add nuw i32 [[TMP3]], 64
+; CHECK-NEXT:    [[DOTPART_16:%.*]] = add i32 [[TMP3]], 64
 ; CHECK-NEXT:    [[DOTSLICE_16:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 16, i32 17, i32 18, i32 19>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_16]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_16]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_20:%.*]] = add nuw i32 [[TMP3]], 80
+; CHECK-NEXT:    [[DOTPART_20:%.*]] = add i32 [[TMP3]], 80
 ; CHECK-NEXT:    [[DOTSLICE_20:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 20, i32 21, i32 22, i32 23>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_20]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_20]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_24:%.*]] = add nuw i32 [[TMP3]], 96
+; CHECK-NEXT:    [[DOTPART_24:%.*]] = add i32 [[TMP3]], 96
 ; CHECK-NEXT:    [[DOTSLICE_24:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 24, i32 25, i32 26, i32 27>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_24]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_24]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_28:%.*]] = add nuw i32 [[TMP3]], 112
+; CHECK-NEXT:    [[DOTPART_28:%.*]] = add i32 [[TMP3]], 112
 ; CHECK-NEXT:    [[DOTSLICE_28:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 28, i32 29, i32 30, i32 31>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_28]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_28]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_32:%.*]] = add nuw i32 [[TMP3]], 128
+; CHECK-NEXT:    [[DOTPART_32:%.*]] = add i32 [[TMP3]], 128
 ; CHECK-NEXT:    [[DOTSLICE_32:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 32, i32 33, i32 34, i32 35>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_32]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_32]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_36:%.*]] = add nuw i32 [[TMP3]], 144
+; CHECK-NEXT:    [[DOTPART_36:%.*]] = add i32 [[TMP3]], 144
 ; CHECK-NEXT:    [[DOTSLICE_36:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 36, i32 37, i32 38, i32 39>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_36]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_36]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_40:%.*]] = add nuw i32 [[TMP3]], 160
+; CHECK-NEXT:    [[DOTPART_40:%.*]] = add i32 [[TMP3]], 160
 ; CHECK-NEXT:    [[DOTSLICE_40:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 40, i32 41, i32 42, i32 43>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_40]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_40]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_44:%.*]] = add nuw i32 [[TMP3]], 176
+; CHECK-NEXT:    [[DOTPART_44:%.*]] = add i32 [[TMP3]], 176
 ; CHECK-NEXT:    [[DOTSLICE_44:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 44, i32 45, i32 46, i32 47>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_44]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_44]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_48:%.*]] = add nuw i32 [[TMP3]], 192
+; CHECK-NEXT:    [[DOTPART_48:%.*]] = add i32 [[TMP3]], 192
 ; CHECK-NEXT:    [[DOTSLICE_48:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 48, i32 49, i32 50, i32 51>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_48]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_48]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_52:%.*]] = add nuw i32 [[TMP3]], 208
+; CHECK-NEXT:    [[DOTPART_52:%.*]] = add i32 [[TMP3]], 208
 ; CHECK-NEXT:    [[DOTSLICE_52:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 52, i32 53, i32 54, i32 55>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_52]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_52]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_56:%.*]] = add nuw i32 [[TMP3]], 224
+; CHECK-NEXT:    [[DOTPART_56:%.*]] = add i32 [[TMP3]], 224
 ; CHECK-NEXT:    [[DOTSLICE_56:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 56, i32 57, i32 58, i32 59>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_56]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_56]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_60:%.*]] = add nuw i32 [[TMP3]], 240
+; CHECK-NEXT:    [[DOTPART_60:%.*]] = add i32 [[TMP3]], 240
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTOFF_240]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_60]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP4]] = add i32 [[LOOP_INDEX]], 256
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP4]], 8192
@@ -808,12 +1097,44 @@ define void @memcpy.inline_known_small(ptr addrspace(7) inreg %src, ptr addrspac
 ; CHECK-NEXT:    [[DST_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[DST]], 1
 ; CHECK-NEXT:    [[SRC_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[SRC]], 0
 ; CHECK-NEXT:    [[SRC_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[SRC]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[SRC_OFF]], i32 0, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[TMP1]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DST_OFF]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTOFF_0:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[SRC_OFF]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_0:%.*]] = insertelement <4 x i32> poison, i32 [[DOTOFF_0]], i64 0
+; CHECK-NEXT:    [[DOTOFF_PTR_4:%.*]] = add i32 [[SRC_OFF]], 4
+; CHECK-NEXT:    [[DOTOFF_4:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_4]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_1:%.*]] = insertelement <4 x i32> [[DOTSLICE_0]], i32 [[DOTOFF_4]], i64 1
+; CHECK-NEXT:    [[DOTOFF_PTR_8:%.*]] = add i32 [[SRC_OFF]], 8
+; CHECK-NEXT:    [[DOTOFF_8:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_8]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_2:%.*]] = insertelement <4 x i32> [[DOTSLICE_1]], i32 [[DOTOFF_8]], i64 2
+; CHECK-NEXT:    [[DOTOFF_PTR_12:%.*]] = add i32 [[SRC_OFF]], 12
+; CHECK-NEXT:    [[DOTOFF_12:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_12]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[DOTSLICE_2]], i32 [[DOTOFF_12]], i64 3
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_0]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DST_OFF]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_4:%.*]] = add i32 [[DST_OFF]], 4
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_4]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_4]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_8:%.*]] = add i32 [[DST_OFF]], 8
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_8]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_8]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_12:%.*]] = add i32 [[DST_OFF]], 12
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_12]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_12]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i32 [[SRC_OFF]], 16
-; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP2]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTOFF_05:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP2]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_06:%.*]] = insertelement <4 x i32> poison, i32 [[DOTOFF_05]], i64 0
+; CHECK-NEXT:    [[DOTOFF_PTR_433:%.*]] = add i32 [[TMP2]], 4
+; CHECK-NEXT:    [[DOTOFF_48:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_433]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_19:%.*]] = insertelement <4 x i32> [[DOTSLICE_06]], i32 [[DOTOFF_48]], i64 1
+; CHECK-NEXT:    [[DOTOFF_PTR_845:%.*]] = add i32 [[TMP2]], 8
+; CHECK-NEXT:    [[DOTOFF_811:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_845]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_212:%.*]] = insertelement <4 x i32> [[DOTSLICE_19]], i32 [[DOTOFF_811]], i64 2
+; CHECK-NEXT:    [[DOTOFF_PTR_1257:%.*]] = add i32 [[TMP2]], 12
+; CHECK-NEXT:    [[DOTOFF_1214:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_1257]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[DOTSLICE_212]], i32 [[DOTOFF_1214]], i64 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nuw i32 [[DST_OFF]], 16
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[TMP3]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP4]], i32 0, i32 0)
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_05]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP4]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_478:%.*]] = add i32 [[TMP4]], 4
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_48]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_478]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_886:%.*]] = add i32 [[TMP4]], 8
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_811]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_886]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_1294:%.*]] = add i32 [[TMP4]], 12
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_1214]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_1294]], i32 0, i32 0)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.inline.p7.p7.i32(ptr addrspace(7) %dst, ptr addrspace(7) %src, i32 32, i1 false)
@@ -874,117 +1195,326 @@ define void @memcpy.inline_known_i64(ptr addrspace(7) inreg %src, ptr addrspace(
 ; CHECK-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], %[[LOAD_STORE_LOOP]] ]
 ; CHECK-NEXT:    [[LOOP_INDEX_C:%.*]] = trunc i64 [[LOOP_INDEX]] to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[SRC_OFF]], [[LOOP_INDEX_C]]
-; CHECK-NEXT:    [[DOTOFF_0:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP1]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTEXT_0:%.*]] = shufflevector <4 x i32> [[DOTOFF_0]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[DOTPARTS_0:%.*]] = shufflevector <64 x i32> poison, <64 x i32> [[DOTEXT_0]], <64 x i32> <i32 64, i32 65, i32 66, i32 67, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_16:%.*]] = add nuw i32 [[TMP1]], 16
-; CHECK-NEXT:    [[DOTOFF_16:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_16]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTEXT_4:%.*]] = shufflevector <4 x i32> [[DOTOFF_16]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[DOTPARTS_4:%.*]] = shufflevector <64 x i32> [[DOTPARTS_0]], <64 x i32> [[DOTEXT_4]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 64, i32 65, i32 66, i32 67, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_32:%.*]] = add nuw i32 [[TMP1]], 32
-; CHECK-NEXT:    [[DOTOFF_32:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_32]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTEXT_8:%.*]] = shufflevector <4 x i32> [[DOTOFF_32]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[DOTPARTS_8:%.*]] = shufflevector <64 x i32> [[DOTPARTS_4]], <64 x i32> [[DOTEXT_8]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 64, i32 65, i32 66, i32 67, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_48:%.*]] = add nuw i32 [[TMP1]], 48
-; CHECK-NEXT:    [[DOTOFF_48:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_48]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTEXT_12:%.*]] = shufflevector <4 x i32> [[DOTOFF_48]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[DOTPARTS_12:%.*]] = shufflevector <64 x i32> [[DOTPARTS_8]], <64 x i32> [[DOTEXT_12]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 64, i32 65, i32 66, i32 67, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_64:%.*]] = add nuw i32 [[TMP1]], 64
-; CHECK-NEXT:    [[DOTOFF_64:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_64]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTEXT_16:%.*]] = shufflevector <4 x i32> [[DOTOFF_64]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[DOTPARTS_16:%.*]] = shufflevector <64 x i32> [[DOTPARTS_12]], <64 x i32> [[DOTEXT_16]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 64, i32 65, i32 66, i32 67, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_80:%.*]] = add nuw i32 [[TMP1]], 80
-; CHECK-NEXT:    [[DOTOFF_80:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_80]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTEXT_20:%.*]] = shufflevector <4 x i32> [[DOTOFF_80]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[DOTPARTS_20:%.*]] = shufflevector <64 x i32> [[DOTPARTS_16]], <64 x i32> [[DOTEXT_20]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 64, i32 65, i32 66, i32 67, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_96:%.*]] = add nuw i32 [[TMP1]], 96
-; CHECK-NEXT:    [[DOTOFF_96:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_96]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTEXT_24:%.*]] = shufflevector <4 x i32> [[DOTOFF_96]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[DOTPARTS_24:%.*]] = shufflevector <64 x i32> [[DOTPARTS_20]], <64 x i32> [[DOTEXT_24]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 64, i32 65, i32 66, i32 67, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_112:%.*]] = add nuw i32 [[TMP1]], 112
-; CHECK-NEXT:    [[DOTOFF_112:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_112]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTEXT_28:%.*]] = shufflevector <4 x i32> [[DOTOFF_112]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[DOTPARTS_28:%.*]] = shufflevector <64 x i32> [[DOTPARTS_24]], <64 x i32> [[DOTEXT_28]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 64, i32 65, i32 66, i32 67, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_128:%.*]] = add nuw i32 [[TMP1]], 128
-; CHECK-NEXT:    [[DOTOFF_128:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_128]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTEXT_32:%.*]] = shufflevector <4 x i32> [[DOTOFF_128]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[DOTPARTS_32:%.*]] = shufflevector <64 x i32> [[DOTPARTS_28]], <64 x i32> [[DOTEXT_32]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 64, i32 65, i32 66, i32 67, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_144:%.*]] = add nuw i32 [[TMP1]], 144
-; CHECK-NEXT:    [[DOTOFF_144:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_144]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTEXT_36:%.*]] = shufflevector <4 x i32> [[DOTOFF_144]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[DOTPARTS_36:%.*]] = shufflevector <64 x i32> [[DOTPARTS_32]], <64 x i32> [[DOTEXT_36]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 64, i32 65, i32 66, i32 67, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_160:%.*]] = add nuw i32 [[TMP1]], 160
-; CHECK-NEXT:    [[DOTOFF_160:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_160]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTEXT_40:%.*]] = shufflevector <4 x i32> [[DOTOFF_160]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[DOTPARTS_40:%.*]] = shufflevector <64 x i32> [[DOTPARTS_36]], <64 x i32> [[DOTEXT_40]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 64, i32 65, i32 66, i32 67, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_176:%.*]] = add nuw i32 [[TMP1]], 176
-; CHECK-NEXT:    [[DOTOFF_176:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_176]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTEXT_44:%.*]] = shufflevector <4 x i32> [[DOTOFF_176]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[DOTPARTS_44:%.*]] = shufflevector <64 x i32> [[DOTPARTS_40]], <64 x i32> [[DOTEXT_44]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 64, i32 65, i32 66, i32 67, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_192:%.*]] = add nuw i32 [[TMP1]], 192
-; CHECK-NEXT:    [[DOTOFF_192:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_192]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTEXT_48:%.*]] = shufflevector <4 x i32> [[DOTOFF_192]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[DOTPARTS_48:%.*]] = shufflevector <64 x i32> [[DOTPARTS_44]], <64 x i32> [[DOTEXT_48]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 64, i32 65, i32 66, i32 67, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_208:%.*]] = add nuw i32 [[TMP1]], 208
-; CHECK-NEXT:    [[DOTOFF_208:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_208]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTEXT_52:%.*]] = shufflevector <4 x i32> [[DOTOFF_208]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[DOTPARTS_52:%.*]] = shufflevector <64 x i32> [[DOTPARTS_48]], <64 x i32> [[DOTEXT_52]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 64, i32 65, i32 66, i32 67, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_224:%.*]] = add nuw i32 [[TMP1]], 224
-; CHECK-NEXT:    [[DOTOFF_224:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_224]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTEXT_56:%.*]] = shufflevector <4 x i32> [[DOTOFF_224]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[DOTPARTS_56:%.*]] = shufflevector <64 x i32> [[DOTPARTS_52]], <64 x i32> [[DOTEXT_56]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 64, i32 65, i32 66, i32 67, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_240:%.*]] = add nuw i32 [[TMP1]], 240
-; CHECK-NEXT:    [[DOTOFF_240:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_240]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTEXT_60:%.*]] = shufflevector <4 x i32> [[DOTOFF_240]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <64 x i32> [[DOTPARTS_56]], <64 x i32> [[DOTEXT_60]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 64, i32 65, i32 66, i32 67>
+; CHECK-NEXT:    [[DOTOFF_0:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP1]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_0:%.*]] = insertelement <64 x i32> poison, i32 [[DOTOFF_0]], i64 0
+; CHECK-NEXT:    [[DOTOFF_PTR_4:%.*]] = add i32 [[TMP1]], 4
+; CHECK-NEXT:    [[DOTOFF_4:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_4]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_1:%.*]] = insertelement <64 x i32> [[DOTSLICE_0]], i32 [[DOTOFF_4]], i64 1
+; CHECK-NEXT:    [[DOTOFF_PTR_8:%.*]] = add i32 [[TMP1]], 8
+; CHECK-NEXT:    [[DOTOFF_8:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_8]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_2:%.*]] = insertelement <64 x i32> [[DOTSLICE_1]], i32 [[DOTOFF_8]], i64 2
+; CHECK-NEXT:    [[DOTOFF_PTR_12:%.*]] = add i32 [[TMP1]], 12
+; CHECK-NEXT:    [[DOTOFF_12:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_12]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_3:%.*]] = insertelement <64 x i32> [[DOTSLICE_2]], i32 [[DOTOFF_12]], i64 3
+; CHECK-NEXT:    [[DOTOFF_PTR_16:%.*]] = add i32 [[TMP1]], 16
+; CHECK-NEXT:    [[DOTOFF_16:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_16]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_4:%.*]] = insertelement <64 x i32> [[DOTSLICE_3]], i32 [[DOTOFF_16]], i64 4
+; CHECK-NEXT:    [[DOTOFF_PTR_20:%.*]] = add i32 [[TMP1]], 20
+; CHECK-NEXT:    [[DOTOFF_20:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_20]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_5:%.*]] = insertelement <64 x i32> [[DOTSLICE_4]], i32 [[DOTOFF_20]], i64 5
+; CHECK-NEXT:    [[DOTOFF_PTR_24:%.*]] = add i32 [[TMP1]], 24
+; CHECK-NEXT:    [[DOTOFF_24:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_24]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_6:%.*]] = insertelement <64 x i32> [[DOTSLICE_5]], i32 [[DOTOFF_24]], i64 6
+; CHECK-NEXT:    [[DOTOFF_PTR_28:%.*]] = add i32 [[TMP1]], 28
+; CHECK-NEXT:    [[DOTOFF_28:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_28]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_7:%.*]] = insertelement <64 x i32> [[DOTSLICE_6]], i32 [[DOTOFF_28]], i64 7
+; CHECK-NEXT:    [[DOTOFF_PTR_32:%.*]] = add i32 [[TMP1]], 32
+; CHECK-NEXT:    [[DOTOFF_32:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_32]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_8:%.*]] = insertelement <64 x i32> [[DOTSLICE_7]], i32 [[DOTOFF_32]], i64 8
+; CHECK-NEXT:    [[DOTOFF_PTR_36:%.*]] = add i32 [[TMP1]], 36
+; CHECK-NEXT:    [[DOTOFF_36:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_36]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_9:%.*]] = insertelement <64 x i32> [[DOTSLICE_8]], i32 [[DOTOFF_36]], i64 9
+; CHECK-NEXT:    [[DOTOFF_PTR_40:%.*]] = add i32 [[TMP1]], 40
+; CHECK-NEXT:    [[DOTOFF_40:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_40]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_10:%.*]] = insertelement <64 x i32> [[DOTSLICE_9]], i32 [[DOTOFF_40]], i64 10
+; CHECK-NEXT:    [[DOTOFF_PTR_44:%.*]] = add i32 [[TMP1]], 44
+; CHECK-NEXT:    [[DOTOFF_44:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_44]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_11:%.*]] = insertelement <64 x i32> [[DOTSLICE_10]], i32 [[DOTOFF_44]], i64 11
+; CHECK-NEXT:    [[DOTOFF_PTR_48:%.*]] = add i32 [[TMP1]], 48
+; CHECK-NEXT:    [[DOTOFF_48:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_48]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_12:%.*]] = insertelement <64 x i32> [[DOTSLICE_11]], i32 [[DOTOFF_48]], i64 12
+; CHECK-NEXT:    [[DOTOFF_PTR_52:%.*]] = add i32 [[TMP1]], 52
+; CHECK-NEXT:    [[DOTOFF_52:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_52]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_13:%.*]] = insertelement <64 x i32> [[DOTSLICE_12]], i32 [[DOTOFF_52]], i64 13
+; CHECK-NEXT:    [[DOTOFF_PTR_56:%.*]] = add i32 [[TMP1]], 56
+; CHECK-NEXT:    [[DOTOFF_56:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_56]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_14:%.*]] = insertelement <64 x i32> [[DOTSLICE_13]], i32 [[DOTOFF_56]], i64 14
+; CHECK-NEXT:    [[DOTOFF_PTR_60:%.*]] = add i32 [[TMP1]], 60
+; CHECK-NEXT:    [[DOTOFF_60:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_60]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_15:%.*]] = insertelement <64 x i32> [[DOTSLICE_14]], i32 [[DOTOFF_60]], i64 15
+; CHECK-NEXT:    [[DOTOFF_PTR_64:%.*]] = add i32 [[TMP1]], 64
+; CHECK-NEXT:    [[DOTOFF_64:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_64]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_16:%.*]] = insertelement <64 x i32> [[DOTSLICE_15]], i32 [[DOTOFF_64]], i64 16
+; CHECK-NEXT:    [[DOTOFF_PTR_68:%.*]] = add i32 [[TMP1]], 68
+; CHECK-NEXT:    [[DOTOFF_68:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_68]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_17:%.*]] = insertelement <64 x i32> [[DOTSLICE_16]], i32 [[DOTOFF_68]], i64 17
+; CHECK-NEXT:    [[DOTOFF_PTR_72:%.*]] = add i32 [[TMP1]], 72
+; CHECK-NEXT:    [[DOTOFF_72:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_72]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_18:%.*]] = insertelement <64 x i32> [[DOTSLICE_17]], i32 [[DOTOFF_72]], i64 18
+; CHECK-NEXT:    [[DOTOFF_PTR_76:%.*]] = add i32 [[TMP1]], 76
+; CHECK-NEXT:    [[DOTOFF_76:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_76]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_19:%.*]] = insertelement <64 x i32> [[DOTSLICE_18]], i32 [[DOTOFF_76]], i64 19
+; CHECK-NEXT:    [[DOTOFF_PTR_80:%.*]] = add i32 [[TMP1]], 80
+; CHECK-NEXT:    [[DOTOFF_80:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_80]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_20:%.*]] = insertelement <64 x i32> [[DOTSLICE_19]], i32 [[DOTOFF_80]], i64 20
+; CHECK-NEXT:    [[DOTOFF_PTR_84:%.*]] = add i32 [[TMP1]], 84
+; CHECK-NEXT:    [[DOTOFF_84:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_84]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_21:%.*]] = insertelement <64 x i32> [[DOTSLICE_20]], i32 [[DOTOFF_84]], i64 21
+; CHECK-NEXT:    [[DOTOFF_PTR_88:%.*]] = add i32 [[TMP1]], 88
+; CHECK-NEXT:    [[DOTOFF_88:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_88]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_22:%.*]] = insertelement <64 x i32> [[DOTSLICE_21]], i32 [[DOTOFF_88]], i64 22
+; CHECK-NEXT:    [[DOTOFF_PTR_92:%.*]] = add i32 [[TMP1]], 92
+; CHECK-NEXT:    [[DOTOFF_92:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_92]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_23:%.*]] = insertelement <64 x i32> [[DOTSLICE_22]], i32 [[DOTOFF_92]], i64 23
+; CHECK-NEXT:    [[DOTOFF_PTR_96:%.*]] = add i32 [[TMP1]], 96
+; CHECK-NEXT:    [[DOTOFF_96:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_96]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_24:%.*]] = insertelement <64 x i32> [[DOTSLICE_23]], i32 [[DOTOFF_96]], i64 24
+; CHECK-NEXT:    [[DOTOFF_PTR_100:%.*]] = add i32 [[TMP1]], 100
+; CHECK-NEXT:    [[DOTOFF_100:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_100]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_25:%.*]] = insertelement <64 x i32> [[DOTSLICE_24]], i32 [[DOTOFF_100]], i64 25
+; CHECK-NEXT:    [[DOTOFF_PTR_104:%.*]] = add i32 [[TMP1]], 104
+; CHECK-NEXT:    [[DOTOFF_104:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_104]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_26:%.*]] = insertelement <64 x i32> [[DOTSLICE_25]], i32 [[DOTOFF_104]], i64 26
+; CHECK-NEXT:    [[DOTOFF_PTR_108:%.*]] = add i32 [[TMP1]], 108
+; CHECK-NEXT:    [[DOTOFF_108:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_108]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_27:%.*]] = insertelement <64 x i32> [[DOTSLICE_26]], i32 [[DOTOFF_108]], i64 27
+; CHECK-NEXT:    [[DOTOFF_PTR_112:%.*]] = add i32 [[TMP1]], 112
+; CHECK-NEXT:    [[DOTOFF_112:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_112]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_28:%.*]] = insertelement <64 x i32> [[DOTSLICE_27]], i32 [[DOTOFF_112]], i64 28
+; CHECK-NEXT:    [[DOTOFF_PTR_116:%.*]] = add i32 [[TMP1]], 116
+; CHECK-NEXT:    [[DOTOFF_116:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_116]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_29:%.*]] = insertelement <64 x i32> [[DOTSLICE_28]], i32 [[DOTOFF_116]], i64 29
+; CHECK-NEXT:    [[DOTOFF_PTR_120:%.*]] = add i32 [[TMP1]], 120
+; CHECK-NEXT:    [[DOTOFF_120:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_120]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_30:%.*]] = insertelement <64 x i32> [[DOTSLICE_29]], i32 [[DOTOFF_120]], i64 30
+; CHECK-NEXT:    [[DOTOFF_PTR_124:%.*]] = add i32 [[TMP1]], 124
+; CHECK-NEXT:    [[DOTOFF_124:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_124]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_31:%.*]] = insertelement <64 x i32> [[DOTSLICE_30]], i32 [[DOTOFF_124]], i64 31
+; CHECK-NEXT:    [[DOTOFF_PTR_128:%.*]] = add i32 [[TMP1]], 128
+; CHECK-NEXT:    [[DOTOFF_128:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_128]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_32:%.*]] = insertelement <64 x i32> [[DOTSLICE_31]], i32 [[DOTOFF_128]], i64 32
+; CHECK-NEXT:    [[DOTOFF_PTR_132:%.*]] = add i32 [[TMP1]], 132
+; CHECK-NEXT:    [[DOTOFF_132:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_132]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_33:%.*]] = insertelement <64 x i32> [[DOTSLICE_32]], i32 [[DOTOFF_132]], i64 33
+; CHECK-NEXT:    [[DOTOFF_PTR_136:%.*]] = add i32 [[TMP1]], 136
+; CHECK-NEXT:    [[DOTOFF_136:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_136]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_34:%.*]] = insertelement <64 x i32> [[DOTSLICE_33]], i32 [[DOTOFF_136]], i64 34
+; CHECK-NEXT:    [[DOTOFF_PTR_140:%.*]] = add i32 [[TMP1]], 140
+; CHECK-NEXT:    [[DOTOFF_140:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_140]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_35:%.*]] = insertelement <64 x i32> [[DOTSLICE_34]], i32 [[DOTOFF_140]], i64 35
+; CHECK-NEXT:    [[DOTOFF_PTR_144:%.*]] = add i32 [[TMP1]], 144
+; CHECK-NEXT:    [[DOTOFF_144:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_144]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_36:%.*]] = insertelement <64 x i32> [[DOTSLICE_35]], i32 [[DOTOFF_144]], i64 36
+; CHECK-NEXT:    [[DOTOFF_PTR_148:%.*]] = add i32 [[TMP1]], 148
+; CHECK-NEXT:    [[DOTOFF_148:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_148]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_37:%.*]] = insertelement <64 x i32> [[DOTSLICE_36]], i32 [[DOTOFF_148]], i64 37
+; CHECK-NEXT:    [[DOTOFF_PTR_152:%.*]] = add i32 [[TMP1]], 152
+; CHECK-NEXT:    [[DOTOFF_152:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_152]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_38:%.*]] = insertelement <64 x i32> [[DOTSLICE_37]], i32 [[DOTOFF_152]], i64 38
+; CHECK-NEXT:    [[DOTOFF_PTR_156:%.*]] = add i32 [[TMP1]], 156
+; CHECK-NEXT:    [[DOTOFF_156:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_156]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_39:%.*]] = insertelement <64 x i32> [[DOTSLICE_38]], i32 [[DOTOFF_156]], i64 39
+; CHECK-NEXT:    [[DOTOFF_PTR_160:%.*]] = add i32 [[TMP1]], 160
+; CHECK-NEXT:    [[DOTOFF_160:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_160]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_40:%.*]] = insertelement <64 x i32> [[DOTSLICE_39]], i32 [[DOTOFF_160]], i64 40
+; CHECK-NEXT:    [[DOTOFF_PTR_164:%.*]] = add i32 [[TMP1]], 164
+; CHECK-NEXT:    [[DOTOFF_164:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_164]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_41:%.*]] = insertelement <64 x i32> [[DOTSLICE_40]], i32 [[DOTOFF_164]], i64 41
+; CHECK-NEXT:    [[DOTOFF_PTR_168:%.*]] = add i32 [[TMP1]], 168
+; CHECK-NEXT:    [[DOTOFF_168:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_168]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_42:%.*]] = insertelement <64 x i32> [[DOTSLICE_41]], i32 [[DOTOFF_168]], i64 42
+; CHECK-NEXT:    [[DOTOFF_PTR_172:%.*]] = add i32 [[TMP1]], 172
+; CHECK-NEXT:    [[DOTOFF_172:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_172]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_43:%.*]] = insertelement <64 x i32> [[DOTSLICE_42]], i32 [[DOTOFF_172]], i64 43
+; CHECK-NEXT:    [[DOTOFF_PTR_176:%.*]] = add i32 [[TMP1]], 176
+; CHECK-NEXT:    [[DOTOFF_176:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_176]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_44:%.*]] = insertelement <64 x i32> [[DOTSLICE_43]], i32 [[DOTOFF_176]], i64 44
+; CHECK-NEXT:    [[DOTOFF_PTR_180:%.*]] = add i32 [[TMP1]], 180
+; CHECK-NEXT:    [[DOTOFF_180:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_180]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_45:%.*]] = insertelement <64 x i32> [[DOTSLICE_44]], i32 [[DOTOFF_180]], i64 45
+; CHECK-NEXT:    [[DOTOFF_PTR_184:%.*]] = add i32 [[TMP1]], 184
+; CHECK-NEXT:    [[DOTOFF_184:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_184]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_46:%.*]] = insertelement <64 x i32> [[DOTSLICE_45]], i32 [[DOTOFF_184]], i64 46
+; CHECK-NEXT:    [[DOTOFF_PTR_188:%.*]] = add i32 [[TMP1]], 188
+; CHECK-NEXT:    [[DOTOFF_188:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_188]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_47:%.*]] = insertelement <64 x i32> [[DOTSLICE_46]], i32 [[DOTOFF_188]], i64 47
+; CHECK-NEXT:    [[DOTOFF_PTR_192:%.*]] = add i32 [[TMP1]], 192
+; CHECK-NEXT:    [[DOTOFF_192:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_192]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_48:%.*]] = insertelement <64 x i32> [[DOTSLICE_47]], i32 [[DOTOFF_192]], i64 48
+; CHECK-NEXT:    [[DOTOFF_PTR_196:%.*]] = add i32 [[TMP1]], 196
+; CHECK-NEXT:    [[DOTOFF_196:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_196]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_49:%.*]] = insertelement <64 x i32> [[DOTSLICE_48]], i32 [[DOTOFF_196]], i64 49
+; CHECK-NEXT:    [[DOTOFF_PTR_200:%.*]] = add i32 [[TMP1]], 200
+; CHECK-NEXT:    [[DOTOFF_200:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_200]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_50:%.*]] = insertelement <64 x i32> [[DOTSLICE_49]], i32 [[DOTOFF_200]], i64 50
+; CHECK-NEXT:    [[DOTOFF_PTR_204:%.*]] = add i32 [[TMP1]], 204
+; CHECK-NEXT:    [[DOTOFF_204:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_204]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_51:%.*]] = insertelement <64 x i32> [[DOTSLICE_50]], i32 [[DOTOFF_204]], i64 51
+; CHECK-NEXT:    [[DOTOFF_PTR_208:%.*]] = add i32 [[TMP1]], 208
+; CHECK-NEXT:    [[DOTOFF_208:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_208]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_52:%.*]] = insertelement <64 x i32> [[DOTSLICE_51]], i32 [[DOTOFF_208]], i64 52
+; CHECK-NEXT:    [[DOTOFF_PTR_212:%.*]] = add i32 [[TMP1]], 212
+; CHECK-NEXT:    [[DOTOFF_212:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_212]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_53:%.*]] = insertelement <64 x i32> [[DOTSLICE_52]], i32 [[DOTOFF_212]], i64 53
+; CHECK-NEXT:    [[DOTOFF_PTR_216:%.*]] = add i32 [[TMP1]], 216
+; CHECK-NEXT:    [[DOTOFF_216:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_216]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_54:%.*]] = insertelement <64 x i32> [[DOTSLICE_53]], i32 [[DOTOFF_216]], i64 54
+; CHECK-NEXT:    [[DOTOFF_PTR_220:%.*]] = add i32 [[TMP1]], 220
+; CHECK-NEXT:    [[DOTOFF_220:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_220]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_55:%.*]] = insertelement <64 x i32> [[DOTSLICE_54]], i32 [[DOTOFF_220]], i64 55
+; CHECK-NEXT:    [[DOTOFF_PTR_224:%.*]] = add i32 [[TMP1]], 224
+; CHECK-NEXT:    [[DOTOFF_224:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_224]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_56:%.*]] = insertelement <64 x i32> [[DOTSLICE_55]], i32 [[DOTOFF_224]], i64 56
+; CHECK-NEXT:    [[DOTOFF_PTR_228:%.*]] = add i32 [[TMP1]], 228
+; CHECK-NEXT:    [[DOTOFF_228:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_228]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_57:%.*]] = insertelement <64 x i32> [[DOTSLICE_56]], i32 [[DOTOFF_228]], i64 57
+; CHECK-NEXT:    [[DOTOFF_PTR_232:%.*]] = add i32 [[TMP1]], 232
+; CHECK-NEXT:    [[DOTOFF_232:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_232]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_58:%.*]] = insertelement <64 x i32> [[DOTSLICE_57]], i32 [[DOTOFF_232]], i64 58
+; CHECK-NEXT:    [[DOTOFF_PTR_236:%.*]] = add i32 [[TMP1]], 236
+; CHECK-NEXT:    [[DOTOFF_236:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_236]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_59:%.*]] = insertelement <64 x i32> [[DOTSLICE_58]], i32 [[DOTOFF_236]], i64 59
+; CHECK-NEXT:    [[DOTOFF_PTR_240:%.*]] = add i32 [[TMP1]], 240
+; CHECK-NEXT:    [[DOTOFF_240:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_240]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_60:%.*]] = insertelement <64 x i32> [[DOTSLICE_59]], i32 [[DOTOFF_240]], i64 60
+; CHECK-NEXT:    [[DOTOFF_PTR_244:%.*]] = add i32 [[TMP1]], 244
+; CHECK-NEXT:    [[DOTOFF_244:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_244]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_61:%.*]] = insertelement <64 x i32> [[DOTSLICE_60]], i32 [[DOTOFF_244]], i64 61
+; CHECK-NEXT:    [[DOTOFF_PTR_248:%.*]] = add i32 [[TMP1]], 248
+; CHECK-NEXT:    [[DOTOFF_248:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_248]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_62:%.*]] = insertelement <64 x i32> [[DOTSLICE_61]], i32 [[DOTOFF_248]], i64 62
+; CHECK-NEXT:    [[DOTOFF_PTR_252:%.*]] = add i32 [[TMP1]], 252
+; CHECK-NEXT:    [[DOTOFF_252:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_252]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <64 x i32> [[DOTSLICE_62]], i32 [[DOTOFF_252]], i64 63
 ; CHECK-NEXT:    [[LOOP_INDEX_C1:%.*]] = trunc i64 [[LOOP_INDEX]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[DST_OFF]], [[LOOP_INDEX_C1]]
-; CHECK-NEXT:    [[DOTSLICE_0:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_0]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP3]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_4:%.*]] = add nuw i32 [[TMP3]], 16
-; CHECK-NEXT:    [[DOTSLICE_4:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_4]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_4]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_8:%.*]] = add nuw i32 [[TMP3]], 32
-; CHECK-NEXT:    [[DOTSLICE_8:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_8]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_8]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_12:%.*]] = add nuw i32 [[TMP3]], 48
-; CHECK-NEXT:    [[DOTSLICE_12:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_12]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_12]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_16:%.*]] = add nuw i32 [[TMP3]], 64
-; CHECK-NEXT:    [[DOTSLICE_16:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 16, i32 17, i32 18, i32 19>
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_16]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_16]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_20:%.*]] = add nuw i32 [[TMP3]], 80
-; CHECK-NEXT:    [[DOTSLICE_20:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 20, i32 21, i32 22, i32 23>
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_20]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_20]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_24:%.*]] = add nuw i32 [[TMP3]], 96
-; CHECK-NEXT:    [[DOTSLICE_24:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 24, i32 25, i32 26, i32 27>
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_24]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_24]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_28:%.*]] = add nuw i32 [[TMP3]], 112
-; CHECK-NEXT:    [[DOTSLICE_28:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_28]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_28]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_32:%.*]] = add nuw i32 [[TMP3]], 128
-; CHECK-NEXT:    [[DOTSLICE_32:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 32, i32 33, i32 34, i32 35>
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_32]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_32]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_36:%.*]] = add nuw i32 [[TMP3]], 144
-; CHECK-NEXT:    [[DOTSLICE_36:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 36, i32 37, i32 38, i32 39>
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_36]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_36]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_40:%.*]] = add nuw i32 [[TMP3]], 160
-; CHECK-NEXT:    [[DOTSLICE_40:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 40, i32 41, i32 42, i32 43>
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_40]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_40]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_44:%.*]] = add nuw i32 [[TMP3]], 176
-; CHECK-NEXT:    [[DOTSLICE_44:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 44, i32 45, i32 46, i32 47>
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_44]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_44]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_48:%.*]] = add nuw i32 [[TMP3]], 192
-; CHECK-NEXT:    [[DOTSLICE_48:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 48, i32 49, i32 50, i32 51>
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_48]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_48]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_52:%.*]] = add nuw i32 [[TMP3]], 208
-; CHECK-NEXT:    [[DOTSLICE_52:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 52, i32 53, i32 54, i32 55>
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_52]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_52]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_56:%.*]] = add nuw i32 [[TMP3]], 224
-; CHECK-NEXT:    [[DOTSLICE_56:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 56, i32 57, i32 58, i32 59>
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_56]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_56]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_60:%.*]] = add nuw i32 [[TMP3]], 240
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTOFF_240]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_60]], i32 0, i32 0)
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_0]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP3]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_1:%.*]] = add i32 [[TMP3]], 4
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_4]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_1]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_2:%.*]] = add i32 [[TMP3]], 8
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_8]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_2]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_3:%.*]] = add i32 [[TMP3]], 12
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_12]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_3]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_4:%.*]] = add i32 [[TMP3]], 16
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_16]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_4]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_5:%.*]] = add i32 [[TMP3]], 20
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_20]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_5]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_6:%.*]] = add i32 [[TMP3]], 24
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_24]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_6]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_7:%.*]] = add i32 [[TMP3]], 28
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_28]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_7]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_8:%.*]] = add i32 [[TMP3]], 32
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_32]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_8]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_9:%.*]] = add i32 [[TMP3]], 36
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_36]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_9]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_10:%.*]] = add i32 [[TMP3]], 40
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_40]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_10]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_11:%.*]] = add i32 [[TMP3]], 44
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_44]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_11]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_12:%.*]] = add i32 [[TMP3]], 48
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_48]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_12]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_13:%.*]] = add i32 [[TMP3]], 52
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_52]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_13]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_14:%.*]] = add i32 [[TMP3]], 56
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_56]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_14]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_15:%.*]] = add i32 [[TMP3]], 60
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_60]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_15]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_16:%.*]] = add i32 [[TMP3]], 64
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_64]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_16]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_17:%.*]] = add i32 [[TMP3]], 68
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_68]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_17]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_18:%.*]] = add i32 [[TMP3]], 72
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_72]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_18]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_19:%.*]] = add i32 [[TMP3]], 76
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_76]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_19]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_20:%.*]] = add i32 [[TMP3]], 80
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_80]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_20]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_21:%.*]] = add i32 [[TMP3]], 84
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_84]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_21]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_22:%.*]] = add i32 [[TMP3]], 88
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_88]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_22]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_23:%.*]] = add i32 [[TMP3]], 92
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_92]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_23]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_24:%.*]] = add i32 [[TMP3]], 96
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_96]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_24]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_25:%.*]] = add i32 [[TMP3]], 100
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_100]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_25]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_26:%.*]] = add i32 [[TMP3]], 104
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_104]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_26]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_27:%.*]] = add i32 [[TMP3]], 108
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_108]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_27]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_28:%.*]] = add i32 [[TMP3]], 112
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_112]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_28]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_29:%.*]] = add i32 [[TMP3]], 116
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_116]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_29]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_30:%.*]] = add i32 [[TMP3]], 120
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_120]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_30]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_31:%.*]] = add i32 [[TMP3]], 124
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_124]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_31]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_32:%.*]] = add i32 [[TMP3]], 128
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_128]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_32]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_33:%.*]] = add i32 [[TMP3]], 132
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_132]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_33]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_34:%.*]] = add i32 [[TMP3]], 136
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_136]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_34]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_35:%.*]] = add i32 [[TMP3]], 140
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_140]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_35]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_36:%.*]] = add i32 [[TMP3]], 144
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_144]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_36]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_37:%.*]] = add i32 [[TMP3]], 148
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_148]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_37]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_38:%.*]] = add i32 [[TMP3]], 152
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_152]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_38]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_39:%.*]] = add i32 [[TMP3]], 156
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_156]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_39]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_40:%.*]] = add i32 [[TMP3]], 160
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_160]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_40]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_41:%.*]] = add i32 [[TMP3]], 164
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_164]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_41]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_42:%.*]] = add i32 [[TMP3]], 168
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_168]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_42]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_43:%.*]] = add i32 [[TMP3]], 172
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_172]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_43]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_44:%.*]] = add i32 [[TMP3]], 176
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_176]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_44]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_45:%.*]] = add i32 [[TMP3]], 180
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_180]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_45]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_46:%.*]] = add i32 [[TMP3]], 184
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_184]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_46]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_47:%.*]] = add i32 [[TMP3]], 188
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_188]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_47]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_48:%.*]] = add i32 [[TMP3]], 192
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_192]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_48]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_49:%.*]] = add i32 [[TMP3]], 196
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_196]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_49]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_50:%.*]] = add i32 [[TMP3]], 200
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_200]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_50]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_51:%.*]] = add i32 [[TMP3]], 204
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_204]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_51]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_52:%.*]] = add i32 [[TMP3]], 208
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_208]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_52]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_53:%.*]] = add i32 [[TMP3]], 212
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_212]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_53]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_54:%.*]] = add i32 [[TMP3]], 216
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_216]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_54]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_55:%.*]] = add i32 [[TMP3]], 220
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_220]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_55]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_56:%.*]] = add i32 [[TMP3]], 224
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_224]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_56]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_57:%.*]] = add i32 [[TMP3]], 228
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_228]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_57]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_58:%.*]] = add i32 [[TMP3]], 232
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_232]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_58]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_59:%.*]] = add i32 [[TMP3]], 236
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_236]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_59]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_60:%.*]] = add i32 [[TMP3]], 240
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_240]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_60]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_61:%.*]] = add i32 [[TMP3]], 244
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_244]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_61]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_62:%.*]] = add i32 [[TMP3]], 248
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_248]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_62]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_63:%.*]] = add i32 [[TMP3]], 252
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_252]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_63]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 256
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 8192
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[LOAD_STORE_LOOP]], label %[[MEMCPY_SPLIT:.*]]
@@ -1002,12 +1532,44 @@ define void @memcpy.inline_known_i32_volatile(ptr addrspace(7) inreg %src, ptr a
 ; CHECK-NEXT:    [[DST_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[DST]], 1
 ; CHECK-NEXT:    [[SRC_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[SRC]], 0
 ; CHECK-NEXT:    [[SRC_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[SRC]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[SRC_OFF]], i32 0, i32 -2147483648)
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[TMP1]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DST_OFF]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[DOTOFF_0:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[SRC_OFF]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[DOTSLICE_0:%.*]] = insertelement <4 x i32> poison, i32 [[DOTOFF_0]], i64 0
+; CHECK-NEXT:    [[DOTOFF_PTR_4:%.*]] = add i32 [[SRC_OFF]], 4
+; CHECK-NEXT:    [[DOTOFF_4:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_4]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[DOTSLICE_1:%.*]] = insertelement <4 x i32> [[DOTSLICE_0]], i32 [[DOTOFF_4]], i64 1
+; CHECK-NEXT:    [[DOTOFF_PTR_8:%.*]] = add i32 [[SRC_OFF]], 8
+; CHECK-NEXT:    [[DOTOFF_8:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_8]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[DOTSLICE_2:%.*]] = insertelement <4 x i32> [[DOTSLICE_1]], i32 [[DOTOFF_8]], i64 2
+; CHECK-NEXT:    [[DOTOFF_PTR_12:%.*]] = add i32 [[SRC_OFF]], 12
+; CHECK-NEXT:    [[DOTOFF_12:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_12]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[DOTSLICE_2]], i32 [[DOTOFF_12]], i64 3
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_0]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DST_OFF]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[DOTPART_4:%.*]] = add i32 [[DST_OFF]], 4
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_4]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_4]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[DOTPART_8:%.*]] = add i32 [[DST_OFF]], 8
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_8]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_8]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[DOTPART_12:%.*]] = add i32 [[DST_OFF]], 12
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_12]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_12]], i32 0, i32 -2147483648)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i32 [[SRC_OFF]], 16
-; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP2]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[DOTOFF_05:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP2]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[DOTSLICE_06:%.*]] = insertelement <4 x i32> poison, i32 [[DOTOFF_05]], i64 0
+; CHECK-NEXT:    [[DOTOFF_PTR_433:%.*]] = add i32 [[TMP2]], 4
+; CHECK-NEXT:    [[DOTOFF_48:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_433]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[DOTSLICE_19:%.*]] = insertelement <4 x i32> [[DOTSLICE_06]], i32 [[DOTOFF_48]], i64 1
+; CHECK-NEXT:    [[DOTOFF_PTR_845:%.*]] = add i32 [[TMP2]], 8
+; CHECK-NEXT:    [[DOTOFF_811:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_845]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[DOTSLICE_212:%.*]] = insertelement <4 x i32> [[DOTSLICE_19]], i32 [[DOTOFF_811]], i64 2
+; CHECK-NEXT:    [[DOTOFF_PTR_1257:%.*]] = add i32 [[TMP2]], 12
+; CHECK-NEXT:    [[DOTOFF_1214:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_1257]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[DOTSLICE_212]], i32 [[DOTOFF_1214]], i64 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nuw i32 [[DST_OFF]], 16
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[TMP3]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP4]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_05]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP4]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[DOTPART_478:%.*]] = add i32 [[TMP4]], 4
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_48]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_478]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[DOTPART_886:%.*]] = add i32 [[TMP4]], 8
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_811]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_886]], i32 0, i32 -2147483648)
+; CHECK-NEXT:    [[DOTPART_1294:%.*]] = add i32 [[TMP4]], 12
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_1214]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_1294]], i32 0, i32 -2147483648)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.inline.p7.p7.i32(ptr addrspace(7) %dst, ptr addrspace(7) %src, i32 32, i1 true)
@@ -1028,9 +1590,25 @@ define void @memcpy.inline_unknown(ptr addrspace(7) inreg %src, ptr addrspace(7)
 ; CHECK:       [[LOOP_MEMCPY_EXPANSION]]:
 ; CHECK-NEXT:    [[LOOP_INDEX:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[TMP7:%.*]], %[[LOOP_MEMCPY_EXPANSION]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[SRC_OFF]], [[LOOP_INDEX]]
-; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP4]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTOFF_0:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[TMP4]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_0:%.*]] = insertelement <4 x i32> poison, i32 [[DOTOFF_0]], i64 0
+; CHECK-NEXT:    [[DOTOFF_PTR_4:%.*]] = add i32 [[TMP4]], 4
+; CHECK-NEXT:    [[DOTOFF_4:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_4]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_1:%.*]] = insertelement <4 x i32> [[DOTSLICE_0]], i32 [[DOTOFF_4]], i64 1
+; CHECK-NEXT:    [[DOTOFF_PTR_8:%.*]] = add i32 [[TMP4]], 8
+; CHECK-NEXT:    [[DOTOFF_8:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_8]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTSLICE_2:%.*]] = insertelement <4 x i32> [[DOTSLICE_1]], i32 [[DOTOFF_8]], i64 2
+; CHECK-NEXT:    [[DOTOFF_PTR_12:%.*]] = add i32 [[TMP4]], 12
+; CHECK-NEXT:    [[DOTOFF_12:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 1 [[SRC_RSRC]], i32 [[DOTOFF_PTR_12]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[DOTSLICE_2]], i32 [[DOTOFF_12]], i64 3
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[DST_OFF]], [[LOOP_INDEX]]
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[TMP5]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP6]], i32 0, i32 0)
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_0]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[TMP6]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_4:%.*]] = add i32 [[TMP6]], 4
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_4]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_4]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_8:%.*]] = add i32 [[TMP6]], 8
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_8]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_8]], i32 0, i32 0)
+; CHECK-NEXT:    [[DOTPART_12:%.*]] = add i32 [[TMP6]], 12
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[DOTOFF_12]], ptr addrspace(8) align 1 [[DST_RSRC]], i32 [[DOTPART_12]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP7]] = add i32 [[LOOP_INDEX]], 16
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ult i32 [[TMP7]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[LOOP_MEMCPY_EXPANSION]], label %[[LOOP_MEMCPY_RESIDUAL_HEADER]]
@@ -1067,49 +1645,49 @@ define void @memcpy.inline_known_p1_to_p7(ptr addrspace(1) inreg %src, ptr addrs
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[DST_OFF]], [[LOOP_INDEX]]
 ; CHECK-NEXT:    [[DOTSLICE_0:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_0]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[TMP3]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_4:%.*]] = add nuw i32 [[TMP3]], 16
+; CHECK-NEXT:    [[DOTPART_4:%.*]] = add i32 [[TMP3]], 16
 ; CHECK-NEXT:    [[DOTSLICE_4:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_4]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_4]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_8:%.*]] = add nuw i32 [[TMP3]], 32
+; CHECK-NEXT:    [[DOTPART_8:%.*]] = add i32 [[TMP3]], 32
 ; CHECK-NEXT:    [[DOTSLICE_8:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_8]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_8]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_12:%.*]] = add nuw i32 [[TMP3]], 48
+; CHECK-NEXT:    [[DOTPART_12:%.*]] = add i32 [[TMP3]], 48
 ; CHECK-NEXT:    [[DOTSLICE_12:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_12]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_12]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_16:%.*]] = add nuw i32 [[TMP3]], 64
+; CHECK-NEXT:    [[DOTPART_16:%.*]] = add i32 [[TMP3]], 64
 ; CHECK-NEXT:    [[DOTSLICE_16:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 16, i32 17, i32 18, i32 19>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_16]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_16]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_20:%.*]] = add nuw i32 [[TMP3]], 80
+; CHECK-NEXT:    [[DOTPART_20:%.*]] = add i32 [[TMP3]], 80
 ; CHECK-NEXT:    [[DOTSLICE_20:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 20, i32 21, i32 22, i32 23>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_20]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_20]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_24:%.*]] = add nuw i32 [[TMP3]], 96
+; CHECK-NEXT:    [[DOTPART_24:%.*]] = add i32 [[TMP3]], 96
 ; CHECK-NEXT:    [[DOTSLICE_24:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 24, i32 25, i32 26, i32 27>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_24]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_24]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_28:%.*]] = add nuw i32 [[TMP3]], 112
+; CHECK-NEXT:    [[DOTPART_28:%.*]] = add i32 [[TMP3]], 112
 ; CHECK-NEXT:    [[DOTSLICE_28:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 28, i32 29, i32 30, i32 31>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_28]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_28]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_32:%.*]] = add nuw i32 [[TMP3]], 128
+; CHECK-NEXT:    [[DOTPART_32:%.*]] = add i32 [[TMP3]], 128
 ; CHECK-NEXT:    [[DOTSLICE_32:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 32, i32 33, i32 34, i32 35>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_32]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_32]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_36:%.*]] = add nuw i32 [[TMP3]], 144
+; CHECK-NEXT:    [[DOTPART_36:%.*]] = add i32 [[TMP3]], 144
 ; CHECK-NEXT:    [[DOTSLICE_36:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 36, i32 37, i32 38, i32 39>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_36]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_36]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_40:%.*]] = add nuw i32 [[TMP3]], 160
+; CHECK-NEXT:    [[DOTPART_40:%.*]] = add i32 [[TMP3]], 160
 ; CHECK-NEXT:    [[DOTSLICE_40:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 40, i32 41, i32 42, i32 43>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_40]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_40]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_44:%.*]] = add nuw i32 [[TMP3]], 176
+; CHECK-NEXT:    [[DOTPART_44:%.*]] = add i32 [[TMP3]], 176
 ; CHECK-NEXT:    [[DOTSLICE_44:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 44, i32 45, i32 46, i32 47>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_44]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_44]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_48:%.*]] = add nuw i32 [[TMP3]], 192
+; CHECK-NEXT:    [[DOTPART_48:%.*]] = add i32 [[TMP3]], 192
 ; CHECK-NEXT:    [[DOTSLICE_48:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 48, i32 49, i32 50, i32 51>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_48]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_48]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_52:%.*]] = add nuw i32 [[TMP3]], 208
+; CHECK-NEXT:    [[DOTPART_52:%.*]] = add i32 [[TMP3]], 208
 ; CHECK-NEXT:    [[DOTSLICE_52:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 52, i32 53, i32 54, i32 55>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_52]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_52]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_56:%.*]] = add nuw i32 [[TMP3]], 224
+; CHECK-NEXT:    [[DOTPART_56:%.*]] = add i32 [[TMP3]], 224
 ; CHECK-NEXT:    [[DOTSLICE_56:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 56, i32 57, i32 58, i32 59>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_56]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_56]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTPART_60:%.*]] = add nuw i32 [[TMP3]], 240
+; CHECK-NEXT:    [[DOTPART_60:%.*]] = add i32 [[TMP3]], 240
 ; CHECK-NEXT:    [[DOTSLICE_60:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 60, i32 61, i32 62, i32 63>
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[DOTSLICE_60]], ptr addrspace(8) align 16 [[DST_RSRC]], i32 [[DOTPART_60]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP4]] = add i32 [[LOOP_INDEX]], 256
@@ -1134,63 +1712,63 @@ define void @memcpy.inline_known_p7_to_p1(ptr addrspace(7) inreg %src, ptr addrs
 ; CHECK-NEXT:    [[DOTOFF_0:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[TMP1]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_0:%.*]] = shufflevector <4 x i32> [[DOTOFF_0]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_0:%.*]] = shufflevector <64 x i32> poison, <64 x i32> [[DOTEXT_0]], <64 x i32> <i32 64, i32 65, i32 66, i32 67, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_16:%.*]] = add nuw i32 [[TMP1]], 16
+; CHECK-NEXT:    [[DOTOFF_PTR_16:%.*]] = add i32 [[TMP1]], 16
 ; CHECK-NEXT:    [[DOTOFF_16:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_16]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_4:%.*]] = shufflevector <4 x i32> [[DOTOFF_16]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_4:%.*]] = shufflevector <64 x i32> [[DOTPARTS_0]], <64 x i32> [[DOTEXT_4]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 64, i32 65, i32 66, i32 67, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_32:%.*]] = add nuw i32 [[TMP1]], 32
+; CHECK-NEXT:    [[DOTOFF_PTR_32:%.*]] = add i32 [[TMP1]], 32
 ; CHECK-NEXT:    [[DOTOFF_32:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_32]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_8:%.*]] = shufflevector <4 x i32> [[DOTOFF_32]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_8:%.*]] = shufflevector <64 x i32> [[DOTPARTS_4]], <64 x i32> [[DOTEXT_8]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 64, i32 65, i32 66, i32 67, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_48:%.*]] = add nuw i32 [[TMP1]], 48
+; CHECK-NEXT:    [[DOTOFF_PTR_48:%.*]] = add i32 [[TMP1]], 48
 ; CHECK-NEXT:    [[DOTOFF_48:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_48]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_12:%.*]] = shufflevector <4 x i32> [[DOTOFF_48]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_12:%.*]] = shufflevector <64 x i32> [[DOTPARTS_8]], <64 x i32> [[DOTEXT_12]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 64, i32 65, i32 66, i32 67, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_64:%.*]] = add nuw i32 [[TMP1]], 64
+; CHECK-NEXT:    [[DOTOFF_PTR_64:%.*]] = add i32 [[TMP1]], 64
 ; CHECK-NEXT:    [[DOTOFF_64:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_64]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_16:%.*]] = shufflevector <4 x i32> [[DOTOFF_64]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_16:%.*]] = shufflevector <64 x i32> [[DOTPARTS_12]], <64 x i32> [[DOTEXT_16]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 64, i32 65, i32 66, i32 67, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_80:%.*]] = add nuw i32 [[TMP1]], 80
+; CHECK-NEXT:    [[DOTOFF_PTR_80:%.*]] = add i32 [[TMP1]], 80
 ; CHECK-NEXT:    [[DOTOFF_80:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_80]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_20:%.*]] = shufflevector <4 x i32> [[DOTOFF_80]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_20:%.*]] = shufflevector <64 x i32> [[DOTPARTS_16]], <64 x i32> [[DOTEXT_20]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 64, i32 65, i32 66, i32 67, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_96:%.*]] = add nuw i32 [[TMP1]], 96
+; CHECK-NEXT:    [[DOTOFF_PTR_96:%.*]] = add i32 [[TMP1]], 96
 ; CHECK-NEXT:    [[DOTOFF_96:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_96]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_24:%.*]] = shufflevector <4 x i32> [[DOTOFF_96]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_24:%.*]] = shufflevector <64 x i32> [[DOTPARTS_20]], <64 x i32> [[DOTEXT_24]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 64, i32 65, i32 66, i32 67, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_112:%.*]] = add nuw i32 [[TMP1]], 112
+; CHECK-NEXT:    [[DOTOFF_PTR_112:%.*]] = add i32 [[TMP1]], 112
 ; CHECK-NEXT:    [[DOTOFF_112:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_112]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_28:%.*]] = shufflevector <4 x i32> [[DOTOFF_112]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_28:%.*]] = shufflevector <64 x i32> [[DOTPARTS_24]], <64 x i32> [[DOTEXT_28]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 64, i32 65, i32 66, i32 67, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_128:%.*]] = add nuw i32 [[TMP1]], 128
+; CHECK-NEXT:    [[DOTOFF_PTR_128:%.*]] = add i32 [[TMP1]], 128
 ; CHECK-NEXT:    [[DOTOFF_128:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_128]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_32:%.*]] = shufflevector <4 x i32> [[DOTOFF_128]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_32:%.*]] = shufflevector <64 x i32> [[DOTPARTS_28]], <64 x i32> [[DOTEXT_32]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 64, i32 65, i32 66, i32 67, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_144:%.*]] = add nuw i32 [[TMP1]], 144
+; CHECK-NEXT:    [[DOTOFF_PTR_144:%.*]] = add i32 [[TMP1]], 144
 ; CHECK-NEXT:    [[DOTOFF_144:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_144]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_36:%.*]] = shufflevector <4 x i32> [[DOTOFF_144]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_36:%.*]] = shufflevector <64 x i32> [[DOTPARTS_32]], <64 x i32> [[DOTEXT_36]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 64, i32 65, i32 66, i32 67, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_160:%.*]] = add nuw i32 [[TMP1]], 160
+; CHECK-NEXT:    [[DOTOFF_PTR_160:%.*]] = add i32 [[TMP1]], 160
 ; CHECK-NEXT:    [[DOTOFF_160:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_160]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_40:%.*]] = shufflevector <4 x i32> [[DOTOFF_160]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_40:%.*]] = shufflevector <64 x i32> [[DOTPARTS_36]], <64 x i32> [[DOTEXT_40]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 64, i32 65, i32 66, i32 67, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_176:%.*]] = add nuw i32 [[TMP1]], 176
+; CHECK-NEXT:    [[DOTOFF_PTR_176:%.*]] = add i32 [[TMP1]], 176
 ; CHECK-NEXT:    [[DOTOFF_176:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_176]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_44:%.*]] = shufflevector <4 x i32> [[DOTOFF_176]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_44:%.*]] = shufflevector <64 x i32> [[DOTPARTS_40]], <64 x i32> [[DOTEXT_44]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 64, i32 65, i32 66, i32 67, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_192:%.*]] = add nuw i32 [[TMP1]], 192
+; CHECK-NEXT:    [[DOTOFF_PTR_192:%.*]] = add i32 [[TMP1]], 192
 ; CHECK-NEXT:    [[DOTOFF_192:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_192]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_48:%.*]] = shufflevector <4 x i32> [[DOTOFF_192]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_48:%.*]] = shufflevector <64 x i32> [[DOTPARTS_44]], <64 x i32> [[DOTEXT_48]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 64, i32 65, i32 66, i32 67, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_208:%.*]] = add nuw i32 [[TMP1]], 208
+; CHECK-NEXT:    [[DOTOFF_PTR_208:%.*]] = add i32 [[TMP1]], 208
 ; CHECK-NEXT:    [[DOTOFF_208:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_208]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_52:%.*]] = shufflevector <4 x i32> [[DOTOFF_208]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_52:%.*]] = shufflevector <64 x i32> [[DOTPARTS_48]], <64 x i32> [[DOTEXT_52]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 64, i32 65, i32 66, i32 67, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_224:%.*]] = add nuw i32 [[TMP1]], 224
+; CHECK-NEXT:    [[DOTOFF_PTR_224:%.*]] = add i32 [[TMP1]], 224
 ; CHECK-NEXT:    [[DOTOFF_224:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_224]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_56:%.*]] = shufflevector <4 x i32> [[DOTOFF_224]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_56:%.*]] = shufflevector <64 x i32> [[DOTPARTS_52]], <64 x i32> [[DOTEXT_56]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 64, i32 65, i32 66, i32 67, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_240:%.*]] = add nuw i32 [[TMP1]], 240
+; CHECK-NEXT:    [[DOTOFF_PTR_240:%.*]] = add i32 [[TMP1]], 240
 ; CHECK-NEXT:    [[DOTOFF_240:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_240]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_60:%.*]] = shufflevector <4 x i32> [[DOTOFF_240]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <64 x i32> [[DOTPARTS_56]], <64 x i32> [[DOTEXT_60]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 64, i32 65, i32 66, i32 67>
@@ -1247,63 +1825,63 @@ define void @memcpy.inline_known_p7_to_p3_long(ptr addrspace(7) inreg %src, ptr 
 ; CHECK-NEXT:    [[DOTOFF_0:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[TMP1]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_0:%.*]] = shufflevector <4 x i32> [[DOTOFF_0]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_0:%.*]] = shufflevector <64 x i32> poison, <64 x i32> [[DOTEXT_0]], <64 x i32> <i32 64, i32 65, i32 66, i32 67, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_16:%.*]] = add nuw i32 [[TMP1]], 16
+; CHECK-NEXT:    [[DOTOFF_PTR_16:%.*]] = add i32 [[TMP1]], 16
 ; CHECK-NEXT:    [[DOTOFF_16:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_16]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_4:%.*]] = shufflevector <4 x i32> [[DOTOFF_16]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_4:%.*]] = shufflevector <64 x i32> [[DOTPARTS_0]], <64 x i32> [[DOTEXT_4]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 64, i32 65, i32 66, i32 67, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_32:%.*]] = add nuw i32 [[TMP1]], 32
+; CHECK-NEXT:    [[DOTOFF_PTR_32:%.*]] = add i32 [[TMP1]], 32
 ; CHECK-NEXT:    [[DOTOFF_32:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_32]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_8:%.*]] = shufflevector <4 x i32> [[DOTOFF_32]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_8:%.*]] = shufflevector <64 x i32> [[DOTPARTS_4]], <64 x i32> [[DOTEXT_8]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 64, i32 65, i32 66, i32 67, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_48:%.*]] = add nuw i32 [[TMP1]], 48
+; CHECK-NEXT:    [[DOTOFF_PTR_48:%.*]] = add i32 [[TMP1]], 48
 ; CHECK-NEXT:    [[DOTOFF_48:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_48]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_12:%.*]] = shufflevector <4 x i32> [[DOTOFF_48]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_12:%.*]] = shufflevector <64 x i32> [[DOTPARTS_8]], <64 x i32> [[DOTEXT_12]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 64, i32 65, i32 66, i32 67, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_64:%.*]] = add nuw i32 [[TMP1]], 64
+; CHECK-NEXT:    [[DOTOFF_PTR_64:%.*]] = add i32 [[TMP1]], 64
 ; CHECK-NEXT:    [[DOTOFF_64:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_64]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_16:%.*]] = shufflevector <4 x i32> [[DOTOFF_64]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_16:%.*]] = shufflevector <64 x i32> [[DOTPARTS_12]], <64 x i32> [[DOTEXT_16]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 64, i32 65, i32 66, i32 67, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_80:%.*]] = add nuw i32 [[TMP1]], 80
+; CHECK-NEXT:    [[DOTOFF_PTR_80:%.*]] = add i32 [[TMP1]], 80
 ; CHECK-NEXT:    [[DOTOFF_80:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_80]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_20:%.*]] = shufflevector <4 x i32> [[DOTOFF_80]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_20:%.*]] = shufflevector <64 x i32> [[DOTPARTS_16]], <64 x i32> [[DOTEXT_20]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 64, i32 65, i32 66, i32 67, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_96:%.*]] = add nuw i32 [[TMP1]], 96
+; CHECK-NEXT:    [[DOTOFF_PTR_96:%.*]] = add i32 [[TMP1]], 96
 ; CHECK-NEXT:    [[DOTOFF_96:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_96]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_24:%.*]] = shufflevector <4 x i32> [[DOTOFF_96]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_24:%.*]] = shufflevector <64 x i32> [[DOTPARTS_20]], <64 x i32> [[DOTEXT_24]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 64, i32 65, i32 66, i32 67, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_112:%.*]] = add nuw i32 [[TMP1]], 112
+; CHECK-NEXT:    [[DOTOFF_PTR_112:%.*]] = add i32 [[TMP1]], 112
 ; CHECK-NEXT:    [[DOTOFF_112:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_112]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_28:%.*]] = shufflevector <4 x i32> [[DOTOFF_112]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_28:%.*]] = shufflevector <64 x i32> [[DOTPARTS_24]], <64 x i32> [[DOTEXT_28]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 64, i32 65, i32 66, i32 67, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_128:%.*]] = add nuw i32 [[TMP1]], 128
+; CHECK-NEXT:    [[DOTOFF_PTR_128:%.*]] = add i32 [[TMP1]], 128
 ; CHECK-NEXT:    [[DOTOFF_128:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_128]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_32:%.*]] = shufflevector <4 x i32> [[DOTOFF_128]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_32:%.*]] = shufflevector <64 x i32> [[DOTPARTS_28]], <64 x i32> [[DOTEXT_32]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 64, i32 65, i32 66, i32 67, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_144:%.*]] = add nuw i32 [[TMP1]], 144
+; CHECK-NEXT:    [[DOTOFF_PTR_144:%.*]] = add i32 [[TMP1]], 144
 ; CHECK-NEXT:    [[DOTOFF_144:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_144]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_36:%.*]] = shufflevector <4 x i32> [[DOTOFF_144]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_36:%.*]] = shufflevector <64 x i32> [[DOTPARTS_32]], <64 x i32> [[DOTEXT_36]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 64, i32 65, i32 66, i32 67, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_160:%.*]] = add nuw i32 [[TMP1]], 160
+; CHECK-NEXT:    [[DOTOFF_PTR_160:%.*]] = add i32 [[TMP1]], 160
 ; CHECK-NEXT:    [[DOTOFF_160:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_160]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_40:%.*]] = shufflevector <4 x i32> [[DOTOFF_160]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_40:%.*]] = shufflevector <64 x i32> [[DOTPARTS_36]], <64 x i32> [[DOTEXT_40]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 64, i32 65, i32 66, i32 67, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_176:%.*]] = add nuw i32 [[TMP1]], 176
+; CHECK-NEXT:    [[DOTOFF_PTR_176:%.*]] = add i32 [[TMP1]], 176
 ; CHECK-NEXT:    [[DOTOFF_176:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_176]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_44:%.*]] = shufflevector <4 x i32> [[DOTOFF_176]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_44:%.*]] = shufflevector <64 x i32> [[DOTPARTS_40]], <64 x i32> [[DOTEXT_44]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 64, i32 65, i32 66, i32 67, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_192:%.*]] = add nuw i32 [[TMP1]], 192
+; CHECK-NEXT:    [[DOTOFF_PTR_192:%.*]] = add i32 [[TMP1]], 192
 ; CHECK-NEXT:    [[DOTOFF_192:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_192]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_48:%.*]] = shufflevector <4 x i32> [[DOTOFF_192]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_48:%.*]] = shufflevector <64 x i32> [[DOTPARTS_44]], <64 x i32> [[DOTEXT_48]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 64, i32 65, i32 66, i32 67, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_208:%.*]] = add nuw i32 [[TMP1]], 208
+; CHECK-NEXT:    [[DOTOFF_PTR_208:%.*]] = add i32 [[TMP1]], 208
 ; CHECK-NEXT:    [[DOTOFF_208:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_208]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_52:%.*]] = shufflevector <4 x i32> [[DOTOFF_208]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_52:%.*]] = shufflevector <64 x i32> [[DOTPARTS_48]], <64 x i32> [[DOTEXT_52]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 64, i32 65, i32 66, i32 67, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_224:%.*]] = add nuw i32 [[TMP1]], 224
+; CHECK-NEXT:    [[DOTOFF_PTR_224:%.*]] = add i32 [[TMP1]], 224
 ; CHECK-NEXT:    [[DOTOFF_224:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_224]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_56:%.*]] = shufflevector <4 x i32> [[DOTOFF_224]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[DOTPARTS_56:%.*]] = shufflevector <64 x i32> [[DOTPARTS_52]], <64 x i32> [[DOTEXT_56]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 64, i32 65, i32 66, i32 67, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[DOTOFF_PTR_240:%.*]] = add nuw i32 [[TMP1]], 240
+; CHECK-NEXT:    [[DOTOFF_PTR_240:%.*]] = add i32 [[TMP1]], 240
 ; CHECK-NEXT:    [[DOTOFF_240:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_240]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_60:%.*]] = shufflevector <4 x i32> [[DOTOFF_240]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <64 x i32> [[DOTPARTS_56]], <64 x i32> [[DOTEXT_60]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 64, i32 65, i32 66, i32 67>
