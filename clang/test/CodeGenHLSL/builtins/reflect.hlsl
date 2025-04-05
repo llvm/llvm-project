@@ -24,7 +24,7 @@
 // SPVCHECK-NEXT:    [[SUB_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn half [[I]], [[MUL2_I]]
 // SPVCHECK-NEXT:    ret half [[SUB_I]]
 //
-half test_reflect_half(half I, half N) {
+export half test_reflect_half(half I, half N) {
     return reflect(I, N);
 }
 
@@ -45,7 +45,7 @@ half test_reflect_half(half I, half N) {
 // SPVCHECK-NEXT:    [[SPV_REFLECT_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef <2 x half> @llvm.spv.reflect.v2f16(<2 x half> [[I]], <2 x half> [[N]])
 // SPVCHECK-NEXT:    ret <2 x half> [[SPV_REFLECT_I]]
 //
-half2 test_reflect_half2(half2 I, half2 N) {
+export half2 test_reflect_half2(half2 I, half2 N) {
     return reflect(I, N);
 }
 
@@ -66,7 +66,7 @@ half2 test_reflect_half2(half2 I, half2 N) {
 // SPVCHECK-NEXT:    [[SPV_REFLECT_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef <3 x half> @llvm.spv.reflect.v3f16(<3 x half> [[I]], <3 x half> [[N]])
 // SPVCHECK-NEXT:    ret <3 x half> [[SPV_REFLECT_I]]
 //
-half3 test_reflect_half3(half3 I, half3 N) {
+export half3 test_reflect_half3(half3 I, half3 N) {
     return reflect(I, N);
 }
 
@@ -87,7 +87,7 @@ half3 test_reflect_half3(half3 I, half3 N) {
 // SPVCHECK-NEXT:    [[SPV_REFLECT_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef <4 x half> @llvm.spv.reflect.v4f16(<4 x half> [[I]], <4 x half> [[N]])
 // SPVCHECK-NEXT:    ret <4 x half> [[SPV_REFLECT_I]]
 //
-half4 test_reflect_half4(half4 I, half4 N) {
+export half4 test_reflect_half4(half4 I, half4 N) {
     return reflect(I, N);
 }
 
@@ -109,7 +109,7 @@ half4 test_reflect_half4(half4 I, half4 N) {
 // SPVCHECK-NEXT:    [[SUB_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn float [[I]], [[MUL2_I]]
 // SPVCHECK-NEXT:    ret float [[SUB_I]]
 //
-float test_reflect_float(float I, float N) {
+export float test_reflect_float(float I, float N) {
     return reflect(I, N);
 }
 
@@ -130,7 +130,7 @@ float test_reflect_float(float I, float N) {
 // SPVCHECK-NEXT:    [[SPV_REFLECT_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef <2 x float> @llvm.spv.reflect.v2f32(<2 x float> [[I]], <2 x float> [[N]])
 // SPVCHECK-NEXT:    ret <2 x float> [[SPV_REFLECT_I]]
 //
-float2 test_reflect_float2(float2 I, float2 N) {
+export float2 test_reflect_float2(float2 I, float2 N) {
     return reflect(I, N);
 }
 
@@ -151,7 +151,7 @@ float2 test_reflect_float2(float2 I, float2 N) {
 // SPVCHECK-NEXT:    [[SPV_REFLECT_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef <3 x float> @llvm.spv.reflect.v3f32(<3 x float> [[I]], <3 x float> [[N]])
 // SPVCHECK-NEXT:    ret <3 x float> [[SPV_REFLECT_I]]
 //
-float3 test_reflect_float3(float3 I, float3 N) {
+export float3 test_reflect_float3(float3 I, float3 N) {
     return reflect(I, N);
 }
 
@@ -172,6 +172,6 @@ float3 test_reflect_float3(float3 I, float3 N) {
 // SPVCHECK-NEXT:    [[SPV_REFLECT_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef <4 x float> @llvm.spv.reflect.v4f32(<4 x float> [[I]], <4 x float> [[N]])
 // SPVCHECK-NEXT:    ret <4 x float> [[SPV_REFLECT_I]]
 //
-float4 test_reflect_float4(float4 I, float4 N) {
+export float4 test_reflect_float4(float4 I, float4 N) {
     return reflect(I, N);
 }

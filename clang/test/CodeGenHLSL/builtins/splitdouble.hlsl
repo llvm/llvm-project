@@ -14,7 +14,7 @@
 // SPIRV-NEXT: [[CAST:%.*]] = bitcast double [[LOAD]] to <2 x i32>
 // SPIRV-NEXT: extractelement <2 x i32> [[CAST]], i64 0
 // SPIRV-NEXT: extractelement <2 x i32> [[CAST]], i64 1
-uint test_scalar(double D) {
+export uint test_scalar(double D) {
   uint A, B;
   asuint(D, A, B);
   return A + B;
@@ -33,7 +33,7 @@ uint test_scalar(double D) {
 // SPIRV-NEXT: [[CAST:%.*]] = bitcast double [[TRUNC]] to <2 x i32>
 // SPIRV-NEXT: extractelement <2 x i32> [[CAST]], i64 0
 // SPIRV-NEXT: extractelement <2 x i32> [[CAST]], i64 1
-uint1 test_double1(double1 D) {
+export uint1 test_double1(double1 D) {
   uint A, B;
   asuint(D, A, B);
   return A + B;
@@ -50,7 +50,7 @@ uint1 test_double1(double1 D) {
 // SPIRV-NEXT: [[CAST1:%.*]] = bitcast <2 x double> [[LOAD]] to <4 x i32>
 // SPIRV-NEXT: [[SHUF1:%.*]] = shufflevector <4 x i32> [[CAST1]], <4 x i32> poison, <2 x i32> <i32 0, i32 2>
 // SPIRV-NEXT: [[SHUF2:%.*]] = shufflevector <4 x i32> [[CAST1]], <4 x i32> poison, <2 x i32> <i32 1, i32 3>
-uint2 test_vector2(double2 D) {
+export uint2 test_vector2(double2 D) {
   uint2 A, B;
   asuint(D, A, B);
   return A + B;
@@ -67,7 +67,7 @@ uint2 test_vector2(double2 D) {
 // SPIRV-NEXT: [[CAST1:%.*]] = bitcast <3 x double> [[LOAD]] to <6 x i32>
 // SPIRV-NEXT: [[SHUF1:%.*]] = shufflevector <6 x i32> [[CAST1]], <6 x i32> poison, <3 x i32> <i32 0, i32 2, i32 4>
 // SPIRV-NEXT: [[SHUF2:%.*]] = shufflevector <6 x i32> [[CAST1]], <6 x i32> poison, <3 x i32> <i32 1, i32 3, i32 5>
-uint3 test_vector3(double3 D) {
+export uint3 test_vector3(double3 D) {
   uint3 A, B;
   asuint(D, A, B);
   return A + B;
@@ -84,7 +84,7 @@ uint3 test_vector3(double3 D) {
 // SPIRV-NEXT: [[CAST1:%.*]] = bitcast <4 x double> [[LOAD]] to <8 x i32>
 // SPIRV-NEXT: [[SHUF1:%.*]] = shufflevector <8 x i32> [[CAST1]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 // SPIRV-NEXT: [[SHUF2:%.*]] = shufflevector <8 x i32> [[CAST1]], <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-uint4 test_vector4(double4 D) {
+export uint4 test_vector4(double4 D) {
   uint4 A, B;
   asuint(D, A, B);
   return A + B;

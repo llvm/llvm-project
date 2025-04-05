@@ -20,7 +20,7 @@
 // SPVCHECK-NEXT:    [[ELT_ABS_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef half @llvm.fabs.f16(half [[SUB_I]])
 // SPVCHECK-NEXT:    ret half [[ELT_ABS_I]]
 //
-half test_distance_half(half X, half Y) { return distance(X, Y); }
+export half test_distance_half(half X, half Y) { return distance(X, Y); }
 
 // CHECK-LABEL: define noundef nofpclass(nan inf) half @_Z19test_distance_half2Dv2_DhS_(
 // CHECK-SAME: <2 x half> noundef nofpclass(nan inf) [[X:%.*]], <2 x half> noundef nofpclass(nan inf) [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
@@ -37,7 +37,7 @@ half test_distance_half(half X, half Y) { return distance(X, Y); }
 // SPVCHECK-NEXT:    [[SPV_LENGTH_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef half @llvm.spv.length.v2f16(<2 x half> [[SUB_I]])
 // SPVCHECK-NEXT:    ret half [[SPV_LENGTH_I]]
 //
-half test_distance_half2(half2 X, half2 Y) { return distance(X, Y); }
+export half test_distance_half2(half2 X, half2 Y) { return distance(X, Y); }
 
 // CHECK-LABEL: define noundef nofpclass(nan inf) half @_Z19test_distance_half3Dv3_DhS_(
 // CHECK-SAME: <3 x half> noundef nofpclass(nan inf) [[X:%.*]], <3 x half> noundef nofpclass(nan inf) [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
@@ -54,7 +54,7 @@ half test_distance_half2(half2 X, half2 Y) { return distance(X, Y); }
 // SPVCHECK-NEXT:    [[SPV_LENGTH_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef half @llvm.spv.length.v3f16(<3 x half> [[SUB_I]])
 // SPVCHECK-NEXT:    ret half [[SPV_LENGTH_I]]
 //
-half test_distance_half3(half3 X, half3 Y) { return distance(X, Y); }
+export half test_distance_half3(half3 X, half3 Y) { return distance(X, Y); }
 
 // CHECK-LABEL: define noundef nofpclass(nan inf) half @_Z19test_distance_half4Dv4_DhS_(
 // CHECK-SAME: <4 x half> noundef nofpclass(nan inf) [[X:%.*]], <4 x half> noundef nofpclass(nan inf) [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
@@ -71,7 +71,7 @@ half test_distance_half3(half3 X, half3 Y) { return distance(X, Y); }
 // SPVCHECK-NEXT:    [[SPV_LENGTH_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef half @llvm.spv.length.v4f16(<4 x half> [[SUB_I]])
 // SPVCHECK-NEXT:    ret half [[SPV_LENGTH_I]]
 //
-half test_distance_half4(half4 X, half4 Y) { return distance(X, Y); }
+export half test_distance_half4(half4 X, half4 Y) { return distance(X, Y); }
 
 // CHECK-LABEL: define noundef nofpclass(nan inf) float @_Z19test_distance_floatff(
 // CHECK-SAME: float noundef nofpclass(nan inf) [[X:%.*]], float noundef nofpclass(nan inf) [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
@@ -87,7 +87,7 @@ half test_distance_half4(half4 X, half4 Y) { return distance(X, Y); }
 // SPVCHECK-NEXT:    [[ELT_ABS_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef float @llvm.fabs.f32(float [[SUB_I]])
 // SPVCHECK-NEXT:    ret float [[ELT_ABS_I]]
 //
-float test_distance_float(float X, float Y) { return distance(X, Y); }
+export float test_distance_float(float X, float Y) { return distance(X, Y); }
 
 // CHECK-LABEL: define noundef nofpclass(nan inf) float @_Z20test_distance_float2Dv2_fS_(
 // CHECK-SAME: <2 x float> noundef nofpclass(nan inf) [[X:%.*]], <2 x float> noundef nofpclass(nan inf) [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
@@ -104,7 +104,7 @@ float test_distance_float(float X, float Y) { return distance(X, Y); }
 // SPVCHECK-NEXT:    [[SPV_LENGTH_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef float @llvm.spv.length.v2f32(<2 x float> [[SUB_I]])
 // SPVCHECK-NEXT:    ret float [[SPV_LENGTH_I]]
 //
-float test_distance_float2(float2 X, float2 Y) { return distance(X, Y); }
+export float test_distance_float2(float2 X, float2 Y) { return distance(X, Y); }
 
 // CHECK-LABEL: define noundef nofpclass(nan inf) float @_Z20test_distance_float3Dv3_fS_(
 // CHECK-SAME: <3 x float> noundef nofpclass(nan inf) [[X:%.*]], <3 x float> noundef nofpclass(nan inf) [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
@@ -121,7 +121,7 @@ float test_distance_float2(float2 X, float2 Y) { return distance(X, Y); }
 // SPVCHECK-NEXT:    [[SPV_LENGTH_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef float @llvm.spv.length.v3f32(<3 x float> [[SUB_I]])
 // SPVCHECK-NEXT:    ret float [[SPV_LENGTH_I]]
 //
-float test_distance_float3(float3 X, float3 Y) { return distance(X, Y); }
+export float test_distance_float3(float3 X, float3 Y) { return distance(X, Y); }
 
 // CHECK-LABEL: define noundef nofpclass(nan inf) float @_Z20test_distance_float4Dv4_fS_(
 // CHECK-SAME: <4 x float> noundef nofpclass(nan inf) [[X:%.*]], <4 x float> noundef nofpclass(nan inf) [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
@@ -138,4 +138,4 @@ float test_distance_float3(float3 X, float3 Y) { return distance(X, Y); }
 // SPVCHECK-NEXT:    [[SPV_LENGTH_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef float @llvm.spv.length.v4f32(<4 x float> [[SUB_I]])
 // SPVCHECK-NEXT:    ret float [[SPV_LENGTH_I]]
 //
-float test_distance_float4(float4 X, float4 Y) { return distance(X, Y); }
+export float test_distance_float4(float4 X, float4 Y) { return distance(X, Y); }
