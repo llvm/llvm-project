@@ -13,9 +13,9 @@
 #include <__algorithm/for_each_segment.h>
 #include <__config>
 #include <__functional/identity.h>
-#include <__functional/invoke.h>
 #include <__iterator/segmented_iterator.h>
 #include <__type_traits/enable_if.h>
+#include <__type_traits/invoke.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -27,13 +27,13 @@ template <class _InputIterator, class _Sent, class _Func, class _Proj>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIterator
 __for_each(_InputIterator __first, _Sent __last, _Func& __f, _Proj& __proj) {
   for (; __first != __last; ++__first)
-    std::invoke(__f, std::invoke(__proj, *__first));
+    std::__invoke(__f, std::__invoke(__proj, *__first));
   return __first;
 }
 
 #ifndef _LIBCPP_CXX03_LANG
 template <class _SegmentedIterator,
-          class _Function,
+          class _Func,
           class _Proj,
           __enable_if_t<__is_segmented_iterator<_SegmentedIterator>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
@@ -45,9 +45,9 @@ __for_each(_SegmentedIterator __first, _SegmentedIterator __last, _Function& __f
 }
 #endif // !_LIBCPP_CXX03_LANG
 
-template <class _InputIterator, class _Function>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Function
-for_each(_InputIterator __first, _InputIterator __last, _Function __f) {
+template <class _InputIterator, class _Func>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Func
+for_each(_InputIterator __first, _InputIterator __last, _Func __f) {
   __identity __proj;
   std::__for_each(__first, __last, __f, __proj);
   return __f;

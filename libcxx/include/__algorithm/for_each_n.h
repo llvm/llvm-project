@@ -14,12 +14,13 @@
 #include <__algorithm/for_each_n_segment.h>
 #include <__config>
 #include <__functional/identity.h>
-#include <__functional/invoke.h>
 #include <__iterator/iterator_traits.h>
+#include <__iterator/next.h>
 #include <__iterator/segmented_iterator.h>
 #include <__type_traits/disjunction.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/negation.h>
+#include <__type_traits/invoke.h>
 #include <__utility/convert_to_integral.h>
 #include <__utility/move.h>
 
@@ -45,7 +46,7 @@ __for_each_n(_InputIterator __first, _Size __orig_n, _Func& __f, _Proj& __proj) 
   typedef decltype(std::__convert_to_integral(__orig_n)) _IntegralSize;
   _IntegralSize __n = __orig_n;
   while (__n > 0) {
-    std::invoke(__f, std::invoke(__proj, *__first));
+    std::__invoke(__f, std::__invoke(__proj, *__first));
     ++__first;
     --__n;
   }
@@ -86,9 +87,9 @@ __for_each_n(_SegmentedIterator __first, _Size __orig_n, _Func& __f, _Proj& __pr
 
 #if _LIBCPP_STD_VER >= 17
 
-template <class _InputIterator, class _Size, class _Function>
+template <class _InputIterator, class _Size, class _Func>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIterator
-for_each_n(_InputIterator __first, _Size __orig_n, _Function __f) {
+for_each_n(_InputIterator __first, _Size __orig_n, _Func __f) {
   __identity __proj;
   return std::__for_each_n(__first, __orig_n, __f, __proj);
 }
