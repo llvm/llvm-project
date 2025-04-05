@@ -10,8 +10,6 @@
 #ifndef _LIBCPP___CXX03___ITERATOR_WRAP_ITER_H
 #define _LIBCPP___CXX03___ITERATOR_WRAP_ITER_H
 
-#include <__cxx03/__compare/ordering.h>
-#include <__cxx03/__compare/three_way_comparable.h>
 #include <__cxx03/__config>
 #include <__cxx03/__iterator/iterator_traits.h>
 #include <__cxx03/__memory/addressof.h>

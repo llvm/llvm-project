@@ -12,7 +12,6 @@
 #include <__cxx03/__assert>
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/is_nothrow_constructible.h>
-#include <__cxx03/__utility/exchange.h>
 #include <__cxx03/__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

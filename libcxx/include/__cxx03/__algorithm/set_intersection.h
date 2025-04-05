@@ -18,7 +18,6 @@
 #include <__cxx03/__iterator/iterator_traits.h>
 #include <__cxx03/__iterator/next.h>
 #include <__cxx03/__type_traits/is_same.h>
-#include <__cxx03/__utility/exchange.h>
 #include <__cxx03/__utility/move.h>
 #include <__cxx03/__utility/swap.h>
 

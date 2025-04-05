@@ -13,7 +13,6 @@
 #include <__cxx03/__config>
 #include <__cxx03/__fwd/istream.h>
 #include <__cxx03/__fwd/streambuf.h>
-#include <__cxx03/__iterator/default_sentinel.h>
 #include <__cxx03/__iterator/iterator.h>
 #include <__cxx03/__iterator/iterator_traits.h>
 

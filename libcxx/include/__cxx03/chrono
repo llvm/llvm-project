@@ -948,48 +948,7 @@ constexpr chrono::year                                  operator ""y(unsigned lo
 #include <__cxx03/__chrono/system_clock.h>
 #include <__cxx03/__chrono/time_point.h>
 
-#if _LIBCPP_STD_VER >= 20
-#  include <__cxx03/__chrono/calendar.h>
-#  include <__cxx03/__chrono/day.h>
-#  include <__cxx03/__chrono/exception.h>
-#  include <__cxx03/__chrono/hh_mm_ss.h>
-#  include <__cxx03/__chrono/literals.h>
-#  include <__cxx03/__chrono/local_info.h>
-#  include <__cxx03/__chrono/month.h>
-#  include <__cxx03/__chrono/month_weekday.h>
-#  include <__cxx03/__chrono/monthday.h>
-#  include <__cxx03/__chrono/sys_info.h>
-#  include <__cxx03/__chrono/weekday.h>
-#  include <__cxx03/__chrono/year.h>
-#  include <__cxx03/__chrono/year_month.h>
-#  include <__cxx03/__chrono/year_month_day.h>
-#  include <__cxx03/__chrono/year_month_weekday.h>
-
-#  if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
-#    include <__cxx03/__chrono/formatter.h>
-#    include <__cxx03/__chrono/ostream.h>
-#    include <__cxx03/__chrono/parser_std_format_spec.h>
-#    include <__cxx03/__chrono/statically_widen.h>
-#  endif
-
-#  if !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&                            \
-      !defined(_LIBCPP_HAS_NO_LOCALIZATION)
-#    include <__cxx03/__chrono/leap_second.h>
-#    include <__cxx03/__chrono/time_zone.h>
-#    include <__cxx03/__chrono/time_zone_link.h>
-#    include <__cxx03/__chrono/tzdb.h>
-#    include <__cxx03/__chrono/tzdb_list.h>
-#    include <__cxx03/__chrono/zoned_time.h>
-#  endif
-
-#endif
-
 #include <__cxx03/version>
-
-// standard-mandated includes
-
-// [time.syn]
-#include <__cxx03/compare>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -1003,12 +962,9 @@ constexpr chrono::year                                  operator ""y(unsigned lo
 #endif
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#  include <__cxx03/bit>
-#  include <__cxx03/concepts>
 #  include <__cxx03/cstring>
 #  include <__cxx03/forward_list>
 #  include <__cxx03/string>
-#  include <__cxx03/tuple>
 #endif
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER == 20
