@@ -146,6 +146,16 @@ public:
     return create<cir::ForOp>(loc, condBuilder, bodyBuilder, stepBuilder);
   }
 
+  /// Create a break operation.
+  cir::BreakOp createBreak(mlir::Location loc) {
+    return create<cir::BreakOp>(loc);
+  }
+
+  /// Create a continue operation.
+  cir::ContinueOp createContinue(mlir::Location loc) {
+    return create<cir::ContinueOp>(loc);
+  }
+
   mlir::TypedAttr getConstPtrAttr(mlir::Type type, int64_t value) {
     auto valueAttr = mlir::IntegerAttr::get(
         mlir::IntegerType::get(type.getContext(), 64), value);
