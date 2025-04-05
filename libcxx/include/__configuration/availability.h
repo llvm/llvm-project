@@ -372,6 +372,10 @@
 #define _LIBCPP_AVAILABILITY_HAS_HASH_MEMORY _LIBCPP_INTRODUCED_IN_LLVM_21
 // No attribute, since we've had hash in the headers before
 
+// This controls whether `bad_function_call::what()` is available in the dylib
+#define _LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE _LIBCPP_INTRODUCED_IN_LLVM_21
+// No attribute, since we've had bad_function_call::what() in the headers before
+
 // Define availability attributes that depend on _LIBCPP_HAS_EXCEPTIONS.
 // Those are defined in terms of the availability attributes above, and
 // should not be vendor-specific.
