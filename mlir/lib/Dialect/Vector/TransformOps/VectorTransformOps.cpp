@@ -212,6 +212,11 @@ void transform::ApplySinkVectorPatternsOp::populatePatterns(
   vector::populateSinkVectorOpsPatterns(patterns);
 }
 
+void transform::ApplySinkVectorMemPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateSinkVectorMemOpsPatterns(patterns);
+}
+
 //===----------------------------------------------------------------------===//
 // Transform op registration
 //===----------------------------------------------------------------------===//
