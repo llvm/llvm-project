@@ -40,7 +40,7 @@ func.func @entry() {
   %cst_pow40ppow20 = arith.constant 1099512676352.0 : f64
 
   %cst_nzero = arith.constant 0x8000000000000000 : f64
-  
+
   // CHECK:         0
   func.call @check_fptoui(%cst0) : (f64) -> ()
   // CHECK-NEXT:    1

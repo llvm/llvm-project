@@ -16,8 +16,9 @@
 #ifndef LLVM_LIB_TARGET_NVPTX_NVPTXTARGETTRANSFORMINFO_H
 #define LLVM_LIB_TARGET_NVPTX_NVPTXTARGETTRANSFORMINFO_H
 
-#include "NVPTXTargetMachine.h"
 #include "MCTargetDesc/NVPTXBaseInfo.h"
+#include "NVPTXTargetMachine.h"
+#include "NVPTXUtilities.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -103,6 +104,42 @@ public:
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
       ArrayRef<const Value *> Args = {}, const Instruction *CxtI = nullptr);
+
+  InstructionCost getScalarizationOverhead(VectorType *InTy,
+                                           const APInt &DemandedElts,
+                                           bool Insert, bool Extract,
+                                           TTI::TargetCostKind CostKind,
+                                           ArrayRef<Value *> VL = {}) {
+    if (!InTy->getElementCount().isFixed())
+      return InstructionCost::getInvalid();
+
+    auto VT = getTLI()->getValueType(DL, InTy);
+    auto NumElements = InTy->getElementCount().getFixedValue();
+    InstructionCost Cost = 0;
+    if (Insert && !VL.empty()) {
+      bool AllConstant = all_of(seq(NumElements), [&](int Idx) {
+        return !DemandedElts[Idx] || isa<Constant>(VL[Idx]);
+      });
+      if (AllConstant) {
+        Cost += TTI::TCC_Free;
+        Insert = false;
+      }
+    }
+    if (Insert && Isv2x16VT(VT)) {
+      // Can be built in a single mov
+      Cost += 1;
+      Insert = false;
+    }
+    if (Insert && VT == MVT::v4i8) {
+      InstructionCost Cost = 3; // 3 x PRMT
+      for (auto Idx : seq(NumElements))
+        if (DemandedElts[Idx])
+          Cost += 1; // zext operand to i32
+      Insert = false;
+    }
+    return Cost + BaseT::getScalarizationOverhead(InTy, DemandedElts, Insert,
+                                                  Extract, CostKind, VL);
+  }
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,

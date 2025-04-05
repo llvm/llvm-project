@@ -57,6 +57,18 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   FP80Ty = cir::FP80Type::get(&getMLIRContext());
   FP128Ty = cir::FP128Type::get(&getMLIRContext());
 
+  PointerAlignInBytes =
+      astContext
+          .toCharUnitsFromBits(
+              astContext.getTargetInfo().getPointerAlign(LangAS::Default))
+          .getQuantity();
+
+  // TODO(CIR): Should be updated once TypeSizeInfoAttr is upstreamed
+  const unsigned sizeTypeSize =
+      astContext.getTypeSize(astContext.getSignedSizeType());
+  PtrDiffTy =
+      cir::IntType::get(&getMLIRContext(), sizeTypeSize, /*isSigned=*/true);
+
   theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
                      builder.getStringAttr(getTriple().str()));
 }
@@ -140,16 +152,19 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
     // certain constant expressions is implemented for now.
     const VarDecl *initDecl;
     const Expr *initExpr = vd->getAnyInitializer(initDecl);
+    mlir::Attribute initializer;
     if (initExpr) {
-      mlir::Attribute initializer;
       if (APValue *value = initDecl->evaluateValue()) {
         ConstantEmitter emitter(*this);
         initializer = emitter.tryEmitPrivateForMemory(*value, astTy);
       } else {
         errorNYI(initExpr->getSourceRange(), "non-constant initializer");
       }
-      varOp.setInitialValueAttr(initializer);
+    } else {
+      initializer = builder.getZeroInitAttr(convertType(astTy));
     }
+
+    varOp.setInitialValueAttr(initializer);
 
     // Set CIR's linkage type as appropriate.
     cir::GlobalLinkageKind linkage =

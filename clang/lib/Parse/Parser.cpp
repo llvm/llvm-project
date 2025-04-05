@@ -89,6 +89,16 @@ DiagnosticBuilder Parser::Diag(const Token &Tok, unsigned DiagID) {
   return Diag(Tok.getLocation(), DiagID);
 }
 
+DiagnosticBuilder Parser::DiagCompat(SourceLocation Loc,
+                                     unsigned CompatDiagId) {
+  return Diag(Loc,
+              DiagnosticIDs::getCXXCompatDiagId(getLangOpts(), CompatDiagId));
+}
+
+DiagnosticBuilder Parser::DiagCompat(const Token &Tok, unsigned CompatDiagId) {
+  return DiagCompat(Tok.getLocation(), CompatDiagId);
+}
+
 /// Emits a diagnostic suggesting parentheses surrounding a
 /// given range.
 ///

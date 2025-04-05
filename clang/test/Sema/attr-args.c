@@ -24,3 +24,8 @@ inline __attribute__((stdcall(a))) void *f8(void);  // expected-error {{'stdcall
 inline __attribute__((used(a))) void *f9(void);  // expected-error {{'used' attribute takes no arguments}}
 inline __attribute__((unused(a))) void *f10(void);  // expected-error {{'unused' attribute takes no arguments}}
 inline __attribute__((weak(a))) void *f11(void);  // expected-error {{'weak' attribute takes no arguments}}
+
+__attribute__ ((__format_arg__(2))) // expected-error {{'__format_arg__' attribute parameter 1 is out of bounds}}
+void test (int, ...);
+
+void __attribute__ ((alloc_size (2, 3))) *test2(int, ...); // expected-error {{'alloc_size' attribute parameter 1 is out of bounds}}

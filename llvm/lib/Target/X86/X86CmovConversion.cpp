@@ -240,8 +240,7 @@ bool X86CmovConverterPass::runOnMachineFunction(MachineFunction &MF) {
   // Note that we need to check size on each iteration as we accumulate child
   // loops.
   for (int i = 0; i < (int)Loops.size(); ++i)
-    for (MachineLoop *Child : Loops[i]->getSubLoops())
-      Loops.push_back(Child);
+    llvm::append_range(Loops, Loops[i]->getSubLoops());
 
   for (MachineLoop *CurrLoop : Loops) {
     // Optimize only innermost loops.

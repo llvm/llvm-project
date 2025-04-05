@@ -90,9 +90,9 @@ qc.insbprh x2, x3, x11
 # CHECK-ENC: encoding: [0x8b,0xb4,0xd9,0x09]
 qc.extdur x9, x19, x29
 
-# CHECK-INST: qc.extdr    a2, t6, t5
-# CHECK-ENC: encoding: [0x0b,0xb6,0xef,0x0b]
-qc.extdr x12, x31, x30
+# CHECK-INST: qc.extdr    a2, t4, t5
+# CHECK-ENC: encoding: [0x0b,0xb6,0xee,0x0b]
+qc.extdr x12, x29, x30
 
 # CHECK-INST: qc.extdupr   a3, s7, gp
 # CHECK-ENC: encoding: [0x8b,0xb6,0x3b,0x0c]

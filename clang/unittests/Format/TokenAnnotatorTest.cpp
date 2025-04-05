@@ -363,6 +363,10 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   ASSERT_EQ(Tokens.size(), 20u) << Tokens;
   EXPECT_TOKEN(Tokens[14], tok::star, TT_PointerOrReference);
 
+  Tokens = annotate("#define foo(x) _Generic(x, bar *: 1, default: 0)");
+  ASSERT_EQ(Tokens.size(), 20u) << Tokens;
+  EXPECT_TOKEN(Tokens[11], tok::star, TT_PointerOrReference);
+
   Tokens = annotate("Thingy kConfig = {\n"
                     "    1,\n"
                     "    (uint16_t)(kScale * height_pixels),\n"
@@ -3618,6 +3622,11 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
   EXPECT_BRACE_KIND(Tokens[7], BK_BracedInit);
   EXPECT_BRACE_KIND(Tokens[9], BK_BracedInit);
+
+  Tokens = annotate("return lhs ^ Byte{rhs};");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[4], BK_BracedInit);
+  EXPECT_BRACE_KIND(Tokens[6], BK_BracedInit);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsElaboratedTypeSpecifier) {

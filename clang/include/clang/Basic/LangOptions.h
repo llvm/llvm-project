@@ -838,6 +838,11 @@ public:
       return FPExceptionModeKind::FPE_Ignore;
     return EM;
   }
+
+  /// True when compiling for an offloading target device.
+  bool isTargetDevice() const {
+    return OpenMPIsTargetDevice || CUDAIsDevice || SYCLIsDevice;
+  }
 };
 
 /// Floating point control options

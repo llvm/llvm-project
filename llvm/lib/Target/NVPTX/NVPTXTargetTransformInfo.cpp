@@ -599,6 +599,21 @@ unsigned NVPTXTTIImpl::getAssumedAddrSpace(const Value *V) const {
   if (isa<AllocaInst>(V))
     return ADDRESS_SPACE_LOCAL;
 
+  if (const Argument *Arg = dyn_cast<Argument>(V)) {
+    if (isKernelFunction(*Arg->getParent())) {
+      const NVPTXTargetMachine &TM =
+          static_cast<const NVPTXTargetMachine &>(getTLI()->getTargetMachine());
+      if (TM.getDrvInterface() == NVPTX::CUDA && !Arg->hasByValAttr())
+        return ADDRESS_SPACE_GLOBAL;
+    } else {
+      // We assume that all device parameters that are passed byval will be
+      // placed in the local AS. Very simple cases will be updated after ISel to
+      // use the device param space where possible.
+      if (Arg->hasByValAttr())
+        return ADDRESS_SPACE_LOCAL;
+    }
+  }
+
   return -1;
 }
 

@@ -1002,7 +1002,7 @@ const TemplateArgument *DeductionFailureInfo::getSecondArg() {
   return nullptr;
 }
 
-std::optional<unsigned> DeductionFailureInfo::getCallArgIndex() {
+UnsignedOrNone DeductionFailureInfo::getCallArgIndex() {
   switch (static_cast<TemplateDeductionResult>(Result)) {
   case TemplateDeductionResult::DeducedMismatch:
   case TemplateDeductionResult::DeducedMismatchNested:
@@ -1551,12 +1551,15 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
 
   if (!UseOverrideRules &&
       New->getTemplateSpecializationKind() != TSK_ExplicitSpecialization) {
-    Expr *NewRC = New->getTrailingRequiresClause(),
-         *OldRC = Old->getTrailingRequiresClause();
-    if ((NewRC != nullptr) != (OldRC != nullptr))
+    AssociatedConstraint NewRC = New->getTrailingRequiresClause(),
+                         OldRC = Old->getTrailingRequiresClause();
+    if (!NewRC != !OldRC)
+      return true;
+    if (NewRC.ArgPackSubstIndex != OldRC.ArgPackSubstIndex)
       return true;
     if (NewRC &&
-        !SemaRef.AreConstraintExpressionsEqual(OldDecl, OldRC, NewDecl, NewRC))
+        !SemaRef.AreConstraintExpressionsEqual(OldDecl, OldRC.ConstraintExpr,
+                                               NewDecl, NewRC.ConstraintExpr))
       return true;
   }
 
@@ -11280,12 +11283,12 @@ MaybeDiagnoseAmbiguousConstraints(Sema &S, ArrayRef<OverloadCandidate> Cands) {
   // source-level construct. This behavior is quite confusing and we should try
   // to help the user figure out what happened.
 
-  SmallVector<const Expr *, 3> FirstAC, SecondAC;
+  SmallVector<AssociatedConstraint, 3> FirstAC, SecondAC;
   FunctionDecl *FirstCand = nullptr, *SecondCand = nullptr;
   for (auto I = Cands.begin(), E = Cands.end(); I != E; ++I) {
     if (!I->Function)
       continue;
-    SmallVector<const Expr *, 3> AC;
+    SmallVector<AssociatedConstraint, 3> AC;
     if (auto *Template = I->Function->getPrimaryTemplate())
       Template->getAssociatedConstraints(AC);
     else

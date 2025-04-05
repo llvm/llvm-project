@@ -1098,14 +1098,18 @@ static bool optimizeCallInst(CallInst *CI, bool &ModifiedDT,
       // Scalarize unsupported vector masked load
       if (TTI.isLegalMaskedLoad(
               CI->getType(),
-              cast<ConstantInt>(CI->getArgOperand(1))->getAlignValue()))
+              cast<ConstantInt>(CI->getArgOperand(1))->getAlignValue(),
+              cast<PointerType>(CI->getArgOperand(0)->getType())
+                  ->getAddressSpace()))
         return false;
       scalarizeMaskedLoad(DL, HasBranchDivergence, CI, DTU, ModifiedDT);
       return true;
     case Intrinsic::masked_store:
       if (TTI.isLegalMaskedStore(
               CI->getArgOperand(0)->getType(),
-              cast<ConstantInt>(CI->getArgOperand(2))->getAlignValue()))
+              cast<ConstantInt>(CI->getArgOperand(2))->getAlignValue(),
+              cast<PointerType>(CI->getArgOperand(1)->getType())
+                  ->getAddressSpace()))
         return false;
       scalarizeMaskedStore(DL, HasBranchDivergence, CI, DTU, ModifiedDT);
       return true;

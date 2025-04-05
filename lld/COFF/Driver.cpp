@@ -1977,8 +1977,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle /lldsavetemps
   if (args.hasArg(OPT_lldsavetemps)) {
-    for (const char *s : lldsaveTempsValues)
-      config->saveTempsArgs.insert(s);
+    config->saveTempsArgs.insert_range(lldsaveTempsValues);
   } else {
     for (auto *arg : args.filtered(OPT_lldsavetemps_colon)) {
       StringRef s = arg->getValue();

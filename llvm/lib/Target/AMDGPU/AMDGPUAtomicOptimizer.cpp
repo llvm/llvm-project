@@ -666,7 +666,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
     // Record I's original position as the entry block.
     PixelEntryBB = I.getParent();
 
-    Value *const Cond = B.CreateIntrinsic(Intrinsic::amdgcn_ps_live, {}, {});
+    Value *const Cond = B.CreateIntrinsic(Intrinsic::amdgcn_ps_live, {});
     Instruction *const NonHelperTerminator =
         SplitBlockAndInsertIfThen(Cond, &I, false, nullptr, &DTU, nullptr);
 
@@ -698,15 +698,14 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   // using the mbcnt intrinsic.
   Value *Mbcnt;
   if (ST.isWave32()) {
-    Mbcnt = B.CreateIntrinsic(Intrinsic::amdgcn_mbcnt_lo, {},
-                              {Ballot, B.getInt32(0)});
+    Mbcnt =
+        B.CreateIntrinsic(Intrinsic::amdgcn_mbcnt_lo, {Ballot, B.getInt32(0)});
   } else {
     Value *const ExtractLo = B.CreateTrunc(Ballot, Int32Ty);
     Value *const ExtractHi = B.CreateTrunc(B.CreateLShr(Ballot, 32), Int32Ty);
-    Mbcnt = B.CreateIntrinsic(Intrinsic::amdgcn_mbcnt_lo, {},
+    Mbcnt = B.CreateIntrinsic(Intrinsic::amdgcn_mbcnt_lo,
                               {ExtractLo, B.getInt32(0)});
-    Mbcnt =
-        B.CreateIntrinsic(Intrinsic::amdgcn_mbcnt_hi, {}, {ExtractHi, Mbcnt});
+    Mbcnt = B.CreateIntrinsic(Intrinsic::amdgcn_mbcnt_hi, {ExtractHi, Mbcnt});
   }
 
   Function *F = I.getFunction();

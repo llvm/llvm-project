@@ -54,6 +54,7 @@ static_library("Basic") {
     ":write_vcsversion",
     "//clang/include/clang/Basic:AttrHasAttributeImpl",
     "//clang/include/clang/Basic:CXX11AttributeInfo",
+    "//clang/include/clang/Basic:DiagnosticAllCompatIDs",
     "//clang/include/clang/Basic:arm_fp16",
     "//clang/include/clang/Basic:arm_neon",
     "//clang/include/clang/Config",

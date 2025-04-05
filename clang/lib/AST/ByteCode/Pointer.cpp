@@ -339,6 +339,39 @@ void Pointer::print(llvm::raw_ostream &OS) const {
   }
 }
 
+/// Compute an integer that can be used to compare this pointer to
+/// another one.
+size_t Pointer::computeOffsetForComparison() const {
+  if (!isBlockPointer())
+    return Offset;
+
+  size_t Result = 0;
+  Pointer P = *this;
+  while (!P.isRoot()) {
+    if (P.isArrayRoot()) {
+      P = P.getBase();
+      continue;
+    }
+    if (P.isArrayElement()) {
+      P = P.expand();
+      Result += (P.getIndex() * P.elemSize());
+      P = P.getArray();
+      continue;
+    }
+
+    if (const Record *R = P.getBase().getRecord(); R && R->isUnion()) {
+      // Direct child of a union - all have offset 0.
+      P = P.getBase();
+      continue;
+    }
+
+    Result += P.getInlineDesc()->Offset;
+    P = P.getBase();
+  }
+
+  return Result;
+}
+
 std::string Pointer::toDiagnosticString(const ASTContext &Ctx) const {
   if (isZero())
     return "nullptr";

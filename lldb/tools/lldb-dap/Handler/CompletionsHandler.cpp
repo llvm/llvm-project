@@ -157,19 +157,20 @@ void CompletionsRequestHandler::operator()(
   llvm::json::Array targets;
 
   bool had_escape_prefix =
-      llvm::StringRef(text).starts_with(dap.command_escape_prefix);
+      llvm::StringRef(text).starts_with(dap.configuration.commandEscapePrefix);
   ReplMode completion_mode = dap.DetectReplMode(frame, text, true);
 
   // Handle the offset change introduced by stripping out the
   // `command_escape_prefix`.
   if (had_escape_prefix) {
-    if (offset < static_cast<int64_t>(dap.command_escape_prefix.size())) {
+    if (offset <
+        static_cast<int64_t>(dap.configuration.commandEscapePrefix.size())) {
       body.try_emplace("targets", std::move(targets));
       response.try_emplace("body", std::move(body));
       dap.SendJSON(llvm::json::Value(std::move(response)));
       return;
     }
-    offset -= dap.command_escape_prefix.size();
+    offset -= dap.configuration.commandEscapePrefix.size();
   }
 
   // While the user is typing then we likely have an incomplete input and cannot

@@ -2271,7 +2271,7 @@ void ASTStmtWriter::VisitCXXFoldExpr(CXXFoldExpr *E) {
   Record.AddSourceLocation(E->LParenLoc);
   Record.AddSourceLocation(E->EllipsisLoc);
   Record.AddSourceLocation(E->RParenLoc);
-  Record.push_back(E->NumExpansions);
+  Record.push_back(E->NumExpansions.toInternalRepresentation());
   Record.AddStmt(E->SubExprs[0]);
   Record.AddStmt(E->SubExprs[1]);
   Record.AddStmt(E->SubExprs[2]);
@@ -3014,9 +3014,7 @@ void ASTStmtWriter::VisitOpenACCWaitConstruct(OpenACCWaitConstruct *S) {
 
 void ASTStmtWriter::VisitOpenACCAtomicConstruct(OpenACCAtomicConstruct *S) {
   VisitStmt(S);
-  Record.writeEnum(S->Kind);
-  Record.AddSourceRange(S->Range);
-  Record.AddSourceLocation(S->DirectiveLoc);
+  VisitOpenACCConstructStmt(S);
   Record.writeEnum(S->getAtomicKind());
   Record.AddStmt(S->getAssociatedStmt());
 

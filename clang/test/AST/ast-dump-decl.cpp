@@ -351,8 +351,8 @@ namespace testClassTemplateDecl {
 // CHECK-NEXT:  | |-CXXDestructorDecl 0x{{.+}} <line:[[@LINE-67]]:5, col:24> col:5 used ~TestClassTemplate 'void () noexcept' implicit_instantiation instantiated_from 0x[[#TEMPLATE_DESTRUCTOR_DECL]]{{$}}
 // CHECK-NEXT:  | |-CXXMethodDecl 0x{{.+}} <line:[[@LINE-67]]:5, col:11> col:9 j 'int ()' implicit_instantiation instantiated_from 0x[[#TEMPLATE_METHOD_DECL]]{{$}}
 // CHECK-NEXT:  | |-FieldDecl 0x{{.+}} <line:[[@LINE-67]]:5, col:9> col:9 i 'int'{{$}}
-// CHECK-NEXT:  | `-CXXConstructorDecl 0x{{.+}} <line:[[@LINE-73]]:30> col:30 implicit constexpr TestClassTemplate 'void (const TestClassTemplate<A> &)' inline default trivial noexcept-unevaluated 0x{{.+}}{{$}}
-// CHECK-NEXT:  |   `-ParmVarDecl 0x{{.+}} <col:30> col:30 'const TestClassTemplate<A> &'{{$}}
+// CHECK-NEXT:  | `-CXXConstructorDecl 0x{{.+}} <line:[[@LINE-73]]:30> col:30 implicit constexpr TestClassTemplate 'void (const TestClassTemplate<testClassTemplateDecl::A> &)' inline default trivial noexcept-unevaluated 0x{{.+}}{{$}}
+// CHECK-NEXT:  |   `-ParmVarDecl 0x{{.+}} <col:30> col:30 'const TestClassTemplate<testClassTemplateDecl::A> &'{{$}}
 // CHECK-NEXT:  |-ClassTemplateSpecialization 0x{{.+}} 'TestClassTemplate'{{$}}
 // CHECK-NEXT:  |-ClassTemplateSpecialization 0x{{.+}} 'TestClassTemplate'{{$}}
 // CHECK-NEXT:  `-ClassTemplateSpecialization 0x{{.+}} 'TestClassTemplate'{{$}}
@@ -654,10 +654,10 @@ namespace testCanonicalTemplate {
   // CHECK-NEXT:   |   `-ClassTemplateSpecialization 0x{{.+}} 'TestClassTemplate'{{$}}
   // CHECK-NEXT:   |-CXXConstructorDecl 0x{{.+}} <line:[[@LINE-36]]:31> col:31 implicit used constexpr TestClassTemplate 'void () noexcept' inline default trivial{{$}}
   // CHECK-NEXT:   | `-CompoundStmt 0x{{.+}} <col:31>{{$}}
-  // CHECK-NEXT:   |-CXXConstructorDecl 0x{{.+}} <col:31> col:31 implicit constexpr TestClassTemplate 'void (const TestClassTemplate<A> &)' inline default trivial noexcept-unevaluated 0x{{.+}}{{$}}
-  // CHECK-NEXT:   | `-ParmVarDecl 0x{{.+}} <col:31> col:31 'const TestClassTemplate<A> &'{{$}}
-  // CHECK-NEXT:   `-CXXConstructorDecl 0x{{.+}} <col:31> col:31 implicit constexpr TestClassTemplate 'void (TestClassTemplate<A> &&)' inline default trivial noexcept-unevaluated 0x{{.+}}{{$}}
-  // CHECK-NEXT:     `-ParmVarDecl 0x{{.+}} <col:31> col:31 'TestClassTemplate<A> &&'{{$}}
+  // CHECK-NEXT:   |-CXXConstructorDecl 0x{{.+}} <col:31> col:31 implicit constexpr TestClassTemplate 'void (const TestClassTemplate<testCanonicalTemplate::A> &)' inline default trivial noexcept-unevaluated 0x{{.+}}{{$}}
+  // CHECK-NEXT:   | `-ParmVarDecl 0x{{.+}} <col:31> col:31 'const TestClassTemplate<testCanonicalTemplate::A> &'{{$}}
+  // CHECK-NEXT:   `-CXXConstructorDecl 0x{{.+}} <col:31> col:31 implicit constexpr TestClassTemplate 'void (TestClassTemplate<testCanonicalTemplate::A> &&)' inline default trivial noexcept-unevaluated 0x{{.+}}{{$}}
+  // CHECK-NEXT:     `-ParmVarDecl 0x{{.+}} <col:31> col:31 'TestClassTemplate<testCanonicalTemplate::A> &&'{{$}}
 
 
   template<typename T1> class TestClassTemplate2;
@@ -682,10 +682,10 @@ namespace testCanonicalTemplate {
   // CHECK-NEXT:   |-CXXRecordDecl 0x{{.+}} <col:25, col:31> col:31 implicit class TestClassTemplate2{{$}}
   // CHECK-NEXT:   |-CXXConstructorDecl 0x{{.+}} <col:31> col:31 implicit used constexpr TestClassTemplate2 'void () noexcept' inline default trivial{{$}}
   // CHECK-NEXT:   | `-CompoundStmt 0x{{.+}} <col:31>{{$}}
-  // CHECK-NEXT:   |-CXXConstructorDecl 0x{{.+}} <col:31> col:31 implicit constexpr TestClassTemplate2 'void (const TestClassTemplate2<A> &)' inline default trivial noexcept-unevaluated 0x{{.+}}{{$}}
-  // CHECK-NEXT:   | `-ParmVarDecl 0x{{.+}} <col:31> col:31 'const TestClassTemplate2<A> &'{{$}}
-  // CHECK-NEXT:   `-CXXConstructorDecl 0x{{.+}} <col:31> col:31 implicit constexpr TestClassTemplate2 'void (TestClassTemplate2<A> &&)' inline default trivial noexcept-unevaluated 0x{{.+}}{{$}}
-  // CHECK-NEXT:     `-ParmVarDecl 0x{{.+}} <col:31> col:31 'TestClassTemplate2<A> &&'{{$}}
+  // CHECK-NEXT:   |-CXXConstructorDecl 0x{{.+}} <col:31> col:31 implicit constexpr TestClassTemplate2 'void (const TestClassTemplate2<testCanonicalTemplate::A> &)' inline default trivial noexcept-unevaluated 0x{{.+}}{{$}}
+  // CHECK-NEXT:   | `-ParmVarDecl 0x{{.+}} <col:31> col:31 'const TestClassTemplate2<testCanonicalTemplate::A> &'{{$}}
+  // CHECK-NEXT:   `-CXXConstructorDecl 0x{{.+}} <col:31> col:31 implicit constexpr TestClassTemplate2 'void (TestClassTemplate2<testCanonicalTemplate::A> &&)' inline default trivial noexcept-unevaluated 0x{{.+}}{{$}}
+  // CHECK-NEXT:     `-ParmVarDecl 0x{{.+}} <col:31> col:31 'TestClassTemplate2<testCanonicalTemplate::A> &&'{{$}}
 
   // CHECK:      ClassTemplateDecl 0x{{.+}} prev 0x{{.+}} <{{.+}}:[[@LINE-26]]:3, col:31> col:31 TestClassTemplate2{{$}}
   // CHECK-NEXT: |-TemplateTypeParmDecl 0x{{.+}} <col:12, col:21> col:21 typename depth 0 index 0 T1{{$}}

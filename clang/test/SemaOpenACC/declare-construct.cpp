@@ -306,3 +306,48 @@ struct Struct2 {
 }
 };
 
+void ModList() {
+  int V1, V2, V3, V4, V5, V6, V7, V8, V9, V10,
+      V11, V12, V13, V14, V15, V16, V17, V18;
+  // expected-error@+2{{OpenACC 'readonly' modifier not valid on 'copy' clause}}
+  // expected-error@+1{{OpenACC 'zero' modifier not valid on 'copy' clause}}
+#pragma acc declare copy(always, alwaysin, alwaysout, zero, readonly: V1)
+  // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'copy' clause}}
+#pragma acc declare copy(readonly: V2)
+  // expected-error@+1{{OpenACC 'zero' modifier not valid on 'copy' clause}}
+#pragma acc declare copy(zero: V3)
+#pragma acc declare copy(always, alwaysin, alwaysout: V4)
+
+  // expected-error@+2{{OpenACC 'alwaysout' modifier not valid on 'copyin' clause}}
+  // expected-error@+1{{OpenACC 'zero' modifier not valid on 'copyin' clause}}
+#pragma acc declare copyin(always, alwaysin, alwaysout, zero, readonly: V5)
+  // expected-error@+1{{OpenACC 'alwaysout' modifier not valid on 'copyin' clause}}
+#pragma acc declare copyin(alwaysout: V6)
+  // expected-error@+1{{OpenACC 'zero' modifier not valid on 'copyin' clause}}
+#pragma acc declare copyin(zero: V7)
+#pragma acc declare copyin(always, alwaysin, readonly: V8)
+
+  // expected-error@+2{{OpenACC 'alwaysout' modifier not valid on 'copyout' clause}}
+  // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'copyout' clause}}
+#pragma acc declare copyout(always, alwaysin, alwaysout, zero, readonly: V9)
+  // expected-error@+1{{OpenACC 'alwaysout' modifier not valid on 'copyout' clause}}
+#pragma acc declare copyout(alwaysout: V10)
+  // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'copyout' clause}}
+#pragma acc declare copyout(readonly: V11)
+#pragma acc declare copyout(always, alwaysin, zero: V12)
+
+  // expected-error@+4{{OpenACC 'always' modifier not valid on 'create' clause}}
+  // expected-error@+3{{OpenACC 'alwaysin' modifier not valid on 'create' clause}}
+  // expected-error@+2{{OpenACC 'alwaysout' modifier not valid on 'create' clause}}
+  // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'create' clause}}
+#pragma acc declare create(always, alwaysin, alwaysout, zero, readonly: V13)
+  // expected-error@+1{{OpenACC 'always' modifier not valid on 'create' clause}}
+#pragma acc declare create(always: V14)
+  // expected-error@+1{{OpenACC 'alwaysin' modifier not valid on 'create' clause}}
+#pragma acc declare create(alwaysin: V15)
+  // expected-error@+1{{OpenACC 'alwaysout' modifier not valid on 'create' clause}}
+#pragma acc declare create(alwaysout: V16)
+  // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'create' clause}}
+#pragma acc declare create(readonly: V17)
+#pragma acc declare create(zero: V18)
+}

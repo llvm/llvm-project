@@ -755,7 +755,7 @@ getRequiredQualification(ASTContext &Context, const DeclContext *CurContext,
       Result = NestedNameSpecifier::Create(Context, Result, Namespace);
     } else if (const auto *TD = dyn_cast<TagDecl>(Parent))
       Result = NestedNameSpecifier::Create(
-          Context, Result, false, Context.getTypeDeclType(TD).getTypePtr());
+          Context, Result, Context.getTypeDeclType(TD).getTypePtr());
   }
   return Result;
 }
@@ -1216,7 +1216,7 @@ void ResultBuilder::MaybeAddResult(Result R, DeclContext *CurContext) {
           NestedNameSpecifier::Create(SemaRef.Context, nullptr, Namespace);
     else if (const TagDecl *Tag = dyn_cast<TagDecl>(Ctx))
       R.Qualifier = NestedNameSpecifier::Create(
-          SemaRef.Context, nullptr, false,
+          SemaRef.Context, nullptr,
           SemaRef.Context.getTypeDeclType(Tag).getTypePtr());
     else
       R.QualifierIsInformative = false;
@@ -1405,7 +1405,7 @@ void ResultBuilder::AddResult(Result R, DeclContext *CurContext,
           NestedNameSpecifier::Create(SemaRef.Context, nullptr, Namespace);
     else if (const auto *Tag = dyn_cast<TagDecl>(Ctx))
       R.Qualifier = NestedNameSpecifier::Create(
-          SemaRef.Context, nullptr, false,
+          SemaRef.Context, nullptr,
           SemaRef.Context.getTypeDeclType(Tag).getTypePtr());
     else
       R.QualifierIsInformative = false;
@@ -5463,8 +5463,9 @@ public:
   // that T is attached to in order to gather the relevant constraints.
   ConceptInfo(const TemplateTypeParmType &BaseType, Scope *S) {
     auto *TemplatedEntity = getTemplatedEntity(BaseType.getDecl(), S);
-    for (const Expr *E : constraintsForTemplatedEntity(TemplatedEntity))
-      believe(E, &BaseType);
+    for (const AssociatedConstraint &AC :
+         constraintsForTemplatedEntity(TemplatedEntity))
+      believe(AC.ConstraintExpr, &BaseType);
   }
 
   std::vector<Member> members() {
@@ -5696,9 +5697,9 @@ private:
 
   // Gets all the type constraint expressions that might apply to the type
   // variables associated with DC (as returned by getTemplatedEntity()).
-  static SmallVector<const Expr *, 1>
+  static SmallVector<AssociatedConstraint, 1>
   constraintsForTemplatedEntity(DeclContext *DC) {
-    SmallVector<const Expr *, 1> Result;
+    SmallVector<AssociatedConstraint, 1> Result;
     if (DC == nullptr)
       return Result;
     // Primary templates can have constraints.

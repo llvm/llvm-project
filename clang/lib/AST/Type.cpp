@@ -1294,9 +1294,9 @@ public:
           == T->getReplacementType().getAsOpaquePtr())
       return QualType(T, 0);
 
-    return Ctx.getSubstTemplateTypeParmType(replacementType,
-                                            T->getAssociatedDecl(),
-                                            T->getIndex(), T->getPackIndex());
+    return Ctx.getSubstTemplateTypeParmType(
+        replacementType, T->getAssociatedDecl(), T->getIndex(),
+        T->getPackIndex(), T->getFinal());
   }
 
   // FIXME: Non-trivial to implement, but important for C++
@@ -2334,6 +2334,19 @@ bool Type::isArithmeticType() const {
   return isa<ComplexType>(CanonicalType) || isBitIntType();
 }
 
+bool Type::hasBooleanRepresentation() const {
+  if (isBooleanType())
+    return true;
+
+  if (const EnumType *ET = getAs<EnumType>())
+    return ET->getDecl()->getIntegerType()->isBooleanType();
+
+  if (const AtomicType *AT = getAs<AtomicType>())
+    return AT->getValueType()->hasBooleanRepresentation();
+
+  return false;
+}
+
 Type::ScalarTypeKind Type::getScalarTypeKind() const {
   assert(isScalarType());
 
@@ -3270,16 +3283,13 @@ StringRef TypeWithKeyword::getKeywordName(ElaboratedTypeKeyword Keyword) {
 }
 
 DependentTemplateSpecializationType::DependentTemplateSpecializationType(
-    ElaboratedTypeKeyword Keyword, NestedNameSpecifier *NNS,
-    const IdentifierInfo *Name, ArrayRef<TemplateArgument> Args, QualType Canon)
+    ElaboratedTypeKeyword Keyword, const DependentTemplateStorage &Name,
+    ArrayRef<TemplateArgument> Args, QualType Canon)
     : TypeWithKeyword(Keyword, DependentTemplateSpecialization, Canon,
-                      TypeDependence::DependentInstantiation |
-                          (NNS ? toTypeDependence(NNS->getDependence())
-                               : TypeDependence::None)),
-      NNS(NNS), Name(Name) {
+
+                      toTypeDependence(Name.getDependence())),
+      Name(Name) {
   DependentTemplateSpecializationTypeBits.NumArgs = Args.size();
-  assert((!NNS || NNS->isDependent()) &&
-         "DependentTemplateSpecializatonType requires dependent qualifier");
   auto *ArgBuffer = const_cast<TemplateArgument *>(template_arguments().data());
   for (const TemplateArgument &Arg : Args) {
     addDependence(toTypeDependence(Arg.getDependence() &
@@ -3289,16 +3299,12 @@ DependentTemplateSpecializationType::DependentTemplateSpecializationType(
   }
 }
 
-void
-DependentTemplateSpecializationType::Profile(llvm::FoldingSetNodeID &ID,
-                                             const ASTContext &Context,
-                                             ElaboratedTypeKeyword Keyword,
-                                             NestedNameSpecifier *Qualifier,
-                                             const IdentifierInfo *Name,
-                                             ArrayRef<TemplateArgument> Args) {
+void DependentTemplateSpecializationType::Profile(
+    llvm::FoldingSetNodeID &ID, const ASTContext &Context,
+    ElaboratedTypeKeyword Keyword, const DependentTemplateStorage &Name,
+    ArrayRef<TemplateArgument> Args) {
   ID.AddInteger(llvm::to_underlying(Keyword));
-  ID.AddPointer(Qualifier);
-  ID.AddPointer(Name);
+  Name.Profile(ID);
   for (const TemplateArgument &Arg : Args)
     Arg.Profile(ID, Context);
 }
@@ -4066,7 +4072,7 @@ PackIndexingType::PackIndexingType(const ASTContext &Context,
                           getTrailingObjects<QualType>());
 }
 
-std::optional<unsigned> PackIndexingType::getSelectedIndex() const {
+UnsignedOrNone PackIndexingType::getSelectedIndex() const {
   if (isInstantiationDependentType())
     return std::nullopt;
   // Should only be not a constant for error recovery.
@@ -4268,9 +4274,11 @@ static const TemplateTypeParmDecl *getReplacedParameter(Decl *D,
       getReplacedTemplateParameterList(D)->getParam(Index));
 }
 
-SubstTemplateTypeParmType::SubstTemplateTypeParmType(
-    QualType Replacement, Decl *AssociatedDecl, unsigned Index,
-    std::optional<unsigned> PackIndex, SubstTemplateTypeParmTypeFlag Flag)
+SubstTemplateTypeParmType::SubstTemplateTypeParmType(QualType Replacement,
+                                                     Decl *AssociatedDecl,
+                                                     unsigned Index,
+                                                     UnsignedOrNone PackIndex,
+                                                     bool Final)
     : Type(SubstTemplateTypeParm, Replacement.getCanonicalType(),
            Replacement->getDependence()),
       AssociatedDecl(AssociatedDecl) {
@@ -4280,17 +4288,27 @@ SubstTemplateTypeParmType::SubstTemplateTypeParmType(
     *getTrailingObjects<QualType>() = Replacement;
 
   SubstTemplateTypeParmTypeBits.Index = Index;
-  SubstTemplateTypeParmTypeBits.PackIndex = PackIndex ? *PackIndex + 1 : 0;
-  SubstTemplateTypeParmTypeBits.SubstitutionFlag = llvm::to_underlying(Flag);
-  assert((Flag != SubstTemplateTypeParmTypeFlag::ExpandPacksInPlace ||
-          PackIndex) &&
-         "ExpandPacksInPlace needs a valid PackIndex");
+  SubstTemplateTypeParmTypeBits.Final = Final;
+  SubstTemplateTypeParmTypeBits.PackIndex =
+      PackIndex.toInternalRepresentation();
   assert(AssociatedDecl != nullptr);
 }
 
 const TemplateTypeParmDecl *
 SubstTemplateTypeParmType::getReplacedParameter() const {
   return ::getReplacedParameter(getAssociatedDecl(), getIndex());
+}
+
+void SubstTemplateTypeParmType::Profile(llvm::FoldingSetNodeID &ID,
+                                        QualType Replacement,
+                                        const Decl *AssociatedDecl,
+                                        unsigned Index,
+                                        UnsignedOrNone PackIndex, bool Final) {
+  Replacement.Profile(ID);
+  ID.AddPointer(AssociatedDecl);
+  ID.AddInteger(Index);
+  ID.AddInteger(PackIndex.toInternalRepresentation());
+  ID.AddBoolean(Final);
 }
 
 SubstTemplateTypeParmPackType::SubstTemplateTypeParmPackType(

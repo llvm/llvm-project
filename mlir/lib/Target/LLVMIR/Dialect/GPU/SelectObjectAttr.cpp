@@ -116,8 +116,11 @@ LogicalResult SelectObjectAttrImpl::embedBinary(
   llvm::Module *module = moduleTranslation.getLLVMModule();
 
   // Embed the object as a global string.
+  // Add null for assembly output for JIT paths that expect null-terminated
+  // strings.
+  bool addNull = (object.getFormat() == gpu::CompilationTarget::Assembly);
   llvm::Constant *binary = llvm::ConstantDataArray::getString(
-      builder.getContext(), object.getObject().getValue(), false);
+      builder.getContext(), object.getObject().getValue(), addNull);
   llvm::GlobalVariable *serializedObj =
       new llvm::GlobalVariable(*module, binary->getType(), true,
                                llvm::GlobalValue::LinkageTypes::InternalLinkage,

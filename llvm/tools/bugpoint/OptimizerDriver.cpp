@@ -203,8 +203,7 @@ bool BugDriver::runPasses(Module &Program,
   } else
     Args.push_back(tool);
 
-  for (unsigned i = 0, e = OptArgs.size(); i != e; ++i)
-    Args.push_back(OptArgs[i]);
+  llvm::append_range(Args, OptArgs);
   // Pin to legacy PM since bugpoint has lots of infra and hacks revolving
   // around the legacy PM.
   Args.push_back("-bugpoint-enable-legacy-pm");

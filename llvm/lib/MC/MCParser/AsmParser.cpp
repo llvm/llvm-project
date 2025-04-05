@@ -117,11 +117,6 @@ struct ParseStatementInfo {
 /// The concrete assembly parser instance.
 class AsmParser : public MCAsmParser {
 private:
-  AsmLexer Lexer;
-  MCContext &Ctx;
-  MCStreamer &Out;
-  const MCAsmInfo &MAI;
-  SourceMgr &SrcMgr;
   SourceMgr::DiagHandlerTy SavedDiagHandler;
   void *SavedDiagContext;
   std::unique_ptr<MCAsmParserExtension> PlatformParser;
@@ -221,11 +216,6 @@ public:
 
   /// @name MCAsmParser Interface
   /// {
-
-  SourceMgr &getSourceManager() override { return SrcMgr; }
-  MCAsmLexer &getLexer() override { return Lexer; }
-  MCContext &getContext() override { return Ctx; }
-  MCStreamer &getStreamer() override { return Out; }
 
   CodeViewContext &getCVContext() { return Ctx.getCVContext(); }
 
@@ -773,8 +763,8 @@ enum { DEFAULT_ADDRSPACE = 0 };
 
 AsmParser::AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
                      const MCAsmInfo &MAI, unsigned CB = 0)
-    : Lexer(MAI), Ctx(Ctx), Out(Out), MAI(MAI), SrcMgr(SM),
-      CurBuffer(CB ? CB : SM.getMainFileID()), MacrosEnabledFlag(true) {
+    : MCAsmParser(Ctx, Out, SM, MAI), CurBuffer(CB ? CB : SM.getMainFileID()),
+      MacrosEnabledFlag(true) {
   HadError = false;
   // Save the old handler.
   SavedDiagHandler = SrcMgr.getDiagHandler();
@@ -1191,9 +1181,9 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
         return false;
       }
     }
-    // Parse symbol variant
+    // Parse an optional relocation specifier.
     std::pair<StringRef, StringRef> Split;
-    if (!MAI.useParensForSymbolVariant()) {
+    if (MAI.useAtForSpecifier()) {
       if (FirstTokenKind == AsmToken::String) {
         if (Lexer.is(AsmToken::At)) {
           Lex(); // eat @
@@ -1207,8 +1197,8 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
       } else {
         Split = Identifier.split('@');
       }
-    } else if (Lexer.is(AsmToken::LParen)) {
-      Lex(); // eat '('.
+    } else if (MAI.useParensForSpecifier() &&
+               parseOptionalToken(AsmToken::LParen)) {
       StringRef VName;
       parseIdentifier(VName);
       if (parseRParen())
@@ -1231,7 +1221,7 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
       if (MaybeVariant) {
         SymbolName = Split.first;
         Variant = MCSymbolRefExpr::VariantKind(*MaybeVariant);
-      } else if (MAI.doesAllowAtInName() && !MAI.useParensForSymbolVariant()) {
+      } else if (MAI.doesAllowAtInName()) {
         Variant = MCSymbolRefExpr::VK_None;
       } else {
         return Error(SMLoc::getFromPointer(Split.second.begin()),
@@ -1463,7 +1453,8 @@ bool AsmParser::parseExpression(const MCExpr *&Res, SMLoc &EndLoc) {
   // As a special case, we support 'a op b @ modifier' by rewriting the
   // expression to include the modifier. This is inefficient, but in general we
   // expect users to use 'a@modifier op b'.
-  if (parseOptionalToken(AsmToken::At)) {
+  if (Ctx.getAsmInfo()->useAtForSpecifier() &&
+      parseOptionalToken(AsmToken::At)) {
     if (Lexer.isNot(AsmToken::Identifier))
       return TokError("unexpected symbol modifier following '@'");
 
@@ -3144,7 +3135,7 @@ bool AsmParser::parseDirectiveValue(StringRef IDVal, unsigned Size) {
   auto parseOp = [&]() -> bool {
     const MCExpr *Value;
     SMLoc ExprLoc = getLexer().getLoc();
-    if (checkForValidSection() || parseExpression(Value))
+    if (checkForValidSection() || getTargetParser().parseDataExpr(Value))
       return true;
     // Special case constant expressions to match code generator.
     if (const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(Value)) {

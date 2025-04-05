@@ -61,6 +61,14 @@ public:
     currStmt_ = std::nullopt;
   }
 
+  bool Pre(const parser::OpenMPDeclareTargetConstruct &x) {
+    currStmt_ = x.source;
+    return true;
+  }
+  void Post(const parser::OpenMPDeclareTargetConstruct &) {
+    currStmt_ = std::nullopt;
+  }
+
 private:
   std::optional<SourceName> currStmt_; // current statement we are processing
   std::multimap<const char *, const Symbol *> symbols_; // location to symbol

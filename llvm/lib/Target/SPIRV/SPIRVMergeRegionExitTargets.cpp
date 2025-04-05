@@ -34,16 +34,13 @@
 
 using namespace llvm;
 
-namespace llvm {
-void initializeSPIRVMergeRegionExitTargetsPass(PassRegistry &);
+namespace {
 
 class SPIRVMergeRegionExitTargets : public FunctionPass {
 public:
   static char ID;
 
-  SPIRVMergeRegionExitTargets() : FunctionPass(ID) {
-    initializeSPIRVMergeRegionExitTargetsPass(*PassRegistry::getPassRegistry());
-  };
+  SPIRVMergeRegionExitTargets() : FunctionPass(ID) {}
 
   // Gather all the successors of |BB|.
   // This function asserts if the terminator neither a branch, switch or return.
@@ -273,7 +270,7 @@ public:
     FunctionPass::getAnalysisUsage(AU);
   }
 };
-} // namespace llvm
+} // namespace
 
 char SPIRVMergeRegionExitTargets::ID = 0;
 

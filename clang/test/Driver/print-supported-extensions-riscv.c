@@ -206,6 +206,7 @@
 // CHECK-NEXT:     xqcics               0.2       'Xqcics' (Qualcomm uC Conditional Select Extension)
 // CHECK-NEXT:     xqcicsr              0.2       'Xqcicsr' (Qualcomm uC CSR Extension)
 // CHECK-NEXT:     xqciint              0.4       'Xqciint' (Qualcomm uC Interrupts Extension)
+// CHECK-NEXT:     xqciio               0.1       'Xqciio' (Qualcomm uC External Input Output Extension)
 // CHECK-NEXT:     xqcilb               0.2       'Xqcilb' (Qualcomm uC Long Branch Extension)
 // CHECK-NEXT:     xqcili               0.2       'Xqcili' (Qualcomm uC Load Large Immediate Extension)
 // CHECK-NEXT:     xqcilia              0.2       'Xqcilia' (Qualcomm uC Large Immediate Arithmetic Extension)

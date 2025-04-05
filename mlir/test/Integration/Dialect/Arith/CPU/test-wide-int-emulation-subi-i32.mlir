@@ -32,7 +32,7 @@ func.func @entry() {
   func.call @check_subi(%lhs1, %rhs1) : (i32, i32) -> ()
   // CHECK-NEXT:  1
   func.call @check_subi(%rhs1, %lhs1) : (i32, i32) -> ()
-  
+
   %lhs2 = arith.constant 1 : i32
   %rhs2 = arith.constant -2 : i32
 
@@ -40,7 +40,7 @@ func.func @entry() {
   func.call @check_subi(%lhs2, %rhs2) : (i32, i32) -> ()
   // CHECK-NEXT:  -3
   func.call @check_subi(%rhs2, %lhs2) : (i32, i32) -> ()
-  
+
   %lhs3 = arith.constant -1 : i32
   %rhs3 = arith.constant -2 : i32
 
@@ -48,7 +48,7 @@ func.func @entry() {
   func.call @check_subi(%lhs3, %rhs3) : (i32, i32) -> ()
   // CHECK-NEXT:  -1
   func.call @check_subi(%rhs3, %lhs3) : (i32, i32) -> ()
-  
+
   // Overflow from the upper/lower part.
   %lhs4 = arith.constant 131074 : i32
   %rhs4 = arith.constant 3 : i32
@@ -59,7 +59,7 @@ func.func @entry() {
   func.call @check_subi(%rhs4, %lhs4) : (i32, i32) -> ()
 
   // Overflow in both parts.
-  %lhs5 = arith.constant 16385027 : i32 
+  %lhs5 = arith.constant 16385027 : i32
   %rhs5 = arith.constant 16450564 : i32
 
   // CHECK-NEXT:  -65537
@@ -67,7 +67,7 @@ func.func @entry() {
   // CHECK-NEXT:  65537
   func.call @check_subi(%rhs5, %lhs5) : (i32, i32) -> ()
 
-  %lhs6 = arith.constant 65536 : i32 
+  %lhs6 = arith.constant 65536 : i32
   %rhs6 = arith.constant 1 : i32
 
   // CHECK-NEXT:  65535
@@ -76,7 +76,7 @@ func.func @entry() {
   func.call @check_subi(%rhs6, %lhs6) : (i32, i32) -> ()
 
   // Max/Min (un)signed integers.
-  %sintmax = arith.constant 2147483647 : i32 
+  %sintmax = arith.constant 2147483647 : i32
   %sintmin = arith.constant -2147483648 : i32
   %uintmax = arith.constant -1 : i32
   %uintmin = arith.constant 0 : i32
@@ -98,7 +98,6 @@ func.func @entry() {
   func.call @check_subi(%uintmin, %cst1) : (i32, i32) -> ()
   // CHECK-NEXT:  1
   func.call @check_subi(%uintmin, %uintmax) : (i32, i32) -> ()
-  
 
   return
 }

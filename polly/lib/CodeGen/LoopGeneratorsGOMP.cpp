@@ -30,13 +30,9 @@ void ParallelLoopGeneratorGOMP::createCallSpawnThreads(Value *SubFn,
   if (!F) {
     GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
 
-    Type *Params[] = {PointerType::getUnqual(FunctionType::get(
-                          Builder.getVoidTy(), Builder.getPtrTy(), false)),
-                      Builder.getPtrTy(),
-                      Builder.getInt32Ty(),
-                      LongType,
-                      LongType,
-                      LongType};
+    Type *Params[] = {
+        Builder.getPtrTy(), Builder.getPtrTy(), Builder.getInt32Ty(),
+        LongType,           LongType,           LongType};
 
     FunctionType *Ty = FunctionType::get(Builder.getVoidTy(), Params, false);
     F = Function::Create(Ty, Linkage, Name, M);

@@ -15,10 +15,13 @@
 #define LLVM_CLANG_BASIC_OPENACCKINDS_H
 
 #include "clang/Basic/Diagnostic.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
+
 // Represents the Construct/Directive kind of a pragma directive. Note the
 // OpenACC standard is inconsistent between calling these Construct vs
 // Directive, but we're calling it a Directive to be consistent with OpenMP.
@@ -618,6 +621,74 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &Out,
                                      OpenACCGangKind Op) {
   return printOpenACCGangKind(Out, Op);
+}
+
+// Represents the 'modifier' of a 'modifier-list', as applied to copy, copyin,
+// copyout, and create. Implemented as a 'bitmask'
+enum class OpenACCModifierKind : uint8_t {
+  Invalid = 0,
+  Always = 1 << 0,
+  AlwaysIn = 1 << 1,
+  AlwaysOut = 1 << 2,
+  Readonly = 1 << 3,
+  Zero = 1 << 4,
+  LLVM_MARK_AS_BITMASK_ENUM(Zero)
+};
+
+inline bool isOpenACCModifierBitSet(OpenACCModifierKind List,
+                                    OpenACCModifierKind Bit) {
+  return (List & Bit) != OpenACCModifierKind::Invalid;
+}
+
+template <typename StreamTy>
+inline StreamTy &printOpenACCModifierKind(StreamTy &Out,
+                                          OpenACCModifierKind Mods) {
+  if (Mods == OpenACCModifierKind::Invalid)
+    return Out << "<invalid>";
+
+  bool First = true;
+
+  if (isOpenACCModifierBitSet(Mods, OpenACCModifierKind::Always)) {
+    Out << "always";
+    First = false;
+  }
+
+  if (isOpenACCModifierBitSet(Mods, OpenACCModifierKind::AlwaysIn)) {
+    if (!First)
+      Out << ", ";
+    Out << "alwaysin";
+    First = false;
+  }
+
+  if (isOpenACCModifierBitSet(Mods, OpenACCModifierKind::AlwaysOut)) {
+    if (!First)
+      Out << ", ";
+    Out << "alwaysout";
+    First = false;
+  }
+
+  if (isOpenACCModifierBitSet(Mods, OpenACCModifierKind::Readonly)) {
+    if (!First)
+      Out << ", ";
+    Out << "readonly";
+    First = false;
+  }
+
+  if (isOpenACCModifierBitSet(Mods, OpenACCModifierKind::Zero)) {
+    if (!First)
+      Out << ", ";
+    Out << "zero";
+    First = false;
+  }
+  return Out;
+}
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
+                                             OpenACCModifierKind Op) {
+  return printOpenACCModifierKind(Out, Op);
+}
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &Out,
+                                     OpenACCModifierKind Op) {
+  return printOpenACCModifierKind(Out, Op);
 }
 } // namespace clang
 

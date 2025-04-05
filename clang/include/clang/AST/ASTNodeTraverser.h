@@ -396,8 +396,7 @@ public:
     // FIXME: Provide a NestedNameSpecifier visitor.
     NestedNameSpecifier *Qualifier = T->getQualifier();
     if (NestedNameSpecifier::SpecifierKind K = Qualifier->getKind();
-        K == NestedNameSpecifier::TypeSpec ||
-        K == NestedNameSpecifier::TypeSpecWithTemplate)
+        K == NestedNameSpecifier::TypeSpec)
       Visit(Qualifier->getAsType());
     if (T->isSugared())
       Visit(T->getMostRecentCXXRecordDecl()->getTypeForDecl());
@@ -539,8 +538,8 @@ public:
       for (const auto *Parameter : D->parameters())
         Visit(Parameter);
 
-    if (const Expr *TRC = D->getTrailingRequiresClause())
-      Visit(TRC);
+    if (const AssociatedConstraint &TRC = D->getTrailingRequiresClause())
+      Visit(TRC.ConstraintExpr);
 
     if (Traversal == TK_IgnoreUnlessSpelledInSource && D->isDefaulted())
       return;

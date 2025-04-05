@@ -71,7 +71,7 @@ void recursive_func(uintptr_t parent_frame_address) {
   z13 = t13;
 #else
   char buf[BS];
-  // Check that the stack grows in the righ direction, unless we use fake stack.
+  // Check that the stack grows in the right direction, unless we use fake stack.
   assert(parent_frame_address > (uintptr_t)__builtin_frame_address(0));
   buf[rand() % BS] = 1;
   buf[rand() % BS] = 2;

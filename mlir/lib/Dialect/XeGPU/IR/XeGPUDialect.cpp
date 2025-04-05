@@ -301,7 +301,7 @@ LogicalResult TensorDescType::verify(
 
     // For 1D tensor, pad the shape with an outer unit dimension to allow common
     // validation logic.
-    SmallVector<int64_t> tensorShape(shape.begin(), shape.end());
+    SmallVector<int64_t> tensorShape(shape);
     if (rank == 1)
       tensorShape = {1, tensorShape.back()};
 

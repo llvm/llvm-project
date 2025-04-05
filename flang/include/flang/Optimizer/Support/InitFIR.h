@@ -22,6 +22,7 @@
 #include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Func/Extensions/InlinerExtension.h"
+#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 #include "mlir/InitAllDialects.h"
 #include "mlir/Pass/Pass.h"
@@ -37,7 +38,8 @@ namespace fir::support {
       mlir::scf::SCFDialect, mlir::arith::ArithDialect,                        \
       mlir::cf::ControlFlowDialect, mlir::func::FuncDialect,                   \
       mlir::vector::VectorDialect, mlir::math::MathDialect,                    \
-      mlir::complex::ComplexDialect, mlir::DLTIDialect, cuf::CUFDialect
+      mlir::complex::ComplexDialect, mlir::DLTIDialect, cuf::CUFDialect,       \
+      mlir::NVVM::NVVMDialect
 
 #define FLANG_CODEGEN_DIALECT_LIST FIRCodeGenDialect, mlir::LLVM::LLVMDialect
 

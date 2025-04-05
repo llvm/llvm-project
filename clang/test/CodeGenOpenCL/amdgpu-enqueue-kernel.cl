@@ -68,7 +68,6 @@ kernel void test_target_features_kernel(global int *i) {
 // CHECK: @__block_literal_global = internal addrspace(1) constant { i32, i32, ptr } { i32 16, i32 8, ptr @__test_target_features_kernel_block_invoke }, align 8 #0
 // CHECK: @__test_target_features_kernel_block_invoke_kernel.runtime.handle = internal addrspace(1) externally_initialized constant %block.runtime.handle.t.3 zeroinitializer, section ".amdgpu.kernel.runtime.handle"
 // CHECK: @llvm.used = appending addrspace(1) global [10 x ptr] [ptr @__test_block_invoke_kernel, ptr addrspacecast (ptr addrspace(1) @__test_block_invoke_kernel.runtime.handle to ptr), ptr @__test_block_invoke_2_kernel, ptr addrspacecast (ptr addrspace(1) @__test_block_invoke_2_kernel.runtime.handle to ptr), ptr @__test_block_invoke_3_kernel, ptr addrspacecast (ptr addrspace(1) @__test_block_invoke_3_kernel.runtime.handle to ptr), ptr @__test_block_invoke_4_kernel, ptr addrspacecast (ptr addrspace(1) @__test_block_invoke_4_kernel.runtime.handle to ptr), ptr @__test_target_features_kernel_block_invoke_kernel, ptr addrspacecast (ptr addrspace(1) @__test_target_features_kernel_block_invoke_kernel.runtime.handle to ptr)], section "llvm.metadata"
-// CHECK: @__oclc_ABI_version = weak_odr hidden local_unnamed_addr addrspace(4) constant i32 600
 //.
 // NOCPU: Function Attrs: convergent noinline norecurse nounwind optnone
 // NOCPU-LABEL: define {{[^@]+}}@callee

@@ -160,6 +160,15 @@ public:
     llvm_unreachable("negation for the given type is NYI");
   }
 
+  // TODO: split this to createFPExt/createFPTrunc when we have dedicated cast
+  // operations.
+  mlir::Value createFloatingCast(mlir::Value v, mlir::Type destType) {
+    assert(!cir::MissingFeatures::fpConstraints());
+
+    return create<cir::CastOp>(v.getLoc(), destType, cir::CastKind::floating,
+                               v);
+  }
+
   mlir::Value createFSub(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
     assert(!cir::MissingFeatures::fpConstraints());

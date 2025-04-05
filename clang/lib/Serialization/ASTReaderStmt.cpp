@@ -2271,7 +2271,7 @@ void ASTStmtReader::VisitCXXFoldExpr(CXXFoldExpr *E) {
   E->LParenLoc = readSourceLocation();
   E->EllipsisLoc = readSourceLocation();
   E->RParenLoc = readSourceLocation();
-  E->NumExpansions = Record.readInt();
+  E->NumExpansions = Record.readUnsignedOrNone();
   E->SubExprs[0] = Record.readSubExpr();
   E->SubExprs[1] = Record.readSubExpr();
   E->SubExprs[2] = Record.readSubExpr();
@@ -2940,9 +2940,7 @@ void ASTStmtReader::VisitOpenACCCacheConstruct(OpenACCCacheConstruct *S) {
 
 void ASTStmtReader::VisitOpenACCAtomicConstruct(OpenACCAtomicConstruct *S) {
   VisitStmt(S);
-  S->Kind = Record.readEnum<OpenACCDirectiveKind>();
-  S->Range = Record.readSourceRange();
-  S->DirectiveLoc = Record.readSourceLocation();
+  VisitOpenACCConstructStmt(S);
   S->AtomicKind = Record.readEnum<OpenACCAtomicKind>();
   S->setAssociatedStmt(Record.readSubStmt());
 }
@@ -4490,7 +4488,8 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
     }
     case STMT_OPENACC_ATOMIC_CONSTRUCT: {
-      S = OpenACCAtomicConstruct::CreateEmpty(Context);
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields];
+      S = OpenACCAtomicConstruct::CreateEmpty(Context, NumClauses);
       break;
     }
     case EXPR_REQUIRES: {

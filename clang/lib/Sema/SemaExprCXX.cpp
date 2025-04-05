@@ -508,7 +508,6 @@ bool Sema::checkLiteralOperatorId(const CXXScopeSpec &SS,
   switch (SS.getScopeRep()->getKind()) {
   case NestedNameSpecifier::Identifier:
   case NestedNameSpecifier::TypeSpec:
-  case NestedNameSpecifier::TypeSpecWithTemplate:
     // Per C++11 [over.literal]p2, literal operators can only be declared at
     // namespace scope. Therefore, this unqualified-id cannot name anything.
     // Reject it early, because we have no AST representation for this in the
@@ -1996,7 +1995,7 @@ Sema::isUnavailableAlignedAllocationFunction(const FunctionDecl &FD) const {
     return false;
   if (FD.isDefined())
     return false;
-  std::optional<unsigned> AlignmentParam;
+  UnsignedOrNone AlignmentParam = std::nullopt;
   if (FD.isReplaceableGlobalAllocationFunction(&AlignmentParam) &&
       AlignmentParam)
     return true;
@@ -3267,17 +3266,17 @@ FunctionDecl *Sema::FindUsualDeallocationFunction(SourceLocation StartLoc,
 }
 
 FunctionDecl *Sema::FindDeallocationFunctionForDestructor(SourceLocation Loc,
-                                                          CXXRecordDecl *RD) {
-  DeclarationName Name = Context.DeclarationNames.getCXXOperatorName(OO_Delete);
+                                                          CXXRecordDecl *RD,
+                                                          DeclarationName Name,
+                                                          bool Diagnose) {
 
   FunctionDecl *OperatorDelete = nullptr;
-  if (FindDeallocationFunction(Loc, RD, Name, OperatorDelete))
+  if (FindDeallocationFunction(Loc, RD, Name, OperatorDelete, Diagnose))
     return nullptr;
   if (OperatorDelete)
     return OperatorDelete;
 
-  // If there's no class-specific operator delete, look up the global
-  // non-array delete.
+  // If there's no class-specific operator delete, look up the global delete.
   return FindUsualDeallocationFunction(
       Loc, true, hasNewExtendedAlignment(*this, Context.getRecordType(RD)),
       Name);
@@ -5821,7 +5820,7 @@ static APValue EvaluateSizeTTypeTrait(Sema &S, TypeTrait Kind,
   case TypeTrait::UTT_StructuredBindingSize: {
     QualType T = Args[0]->getType();
     SourceRange ArgRange = Args[0]->getTypeLoc().getSourceRange();
-    std::optional<unsigned> Size =
+    UnsignedOrNone Size =
         S.GetDecompositionElementCount(T, ArgRange.getBegin());
     if (!Size) {
       S.Diag(KWLoc, diag::err_arg_is_not_destructurable) << T << ArgRange;
@@ -8780,7 +8779,7 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
 
     // If we have a capture-capable lambda for the variable, go ahead and
     // capture the variable in that lambda (and all its enclosing lambdas).
-    if (const std::optional<unsigned> Index =
+    if (const UnsignedOrNone Index =
             getStackIndexOfNearestEnclosingCaptureCapableLambda(
                 S.FunctionScopes, Var, S))
       S.MarkCaptureUsedInEnclosingContext(Var, VarExpr->getExprLoc(), *Index);
@@ -8813,7 +8812,7 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
   if (CurrentLSI->hasPotentialThisCapture()) {
     // If we have a capture-capable lambda for 'this', go ahead and capture
     // 'this' in that lambda (and all its enclosing lambdas).
-    if (const std::optional<unsigned> Index =
+    if (const UnsignedOrNone Index =
             getStackIndexOfNearestEnclosingCaptureCapableLambda(
                 S.FunctionScopes, /*0 is 'this'*/ nullptr, S)) {
       const unsigned FunctionScopeIndexOfCapturableLambda = *Index;
@@ -9552,7 +9551,8 @@ concepts::NestedRequirement *
 Sema::BuildNestedRequirement(Expr *Constraint) {
   ConstraintSatisfaction Satisfaction;
   if (!Constraint->isInstantiationDependent() &&
-      CheckConstraintSatisfaction(nullptr, {Constraint}, /*TemplateArgs=*/{},
+      CheckConstraintSatisfaction(nullptr, AssociatedConstraint(Constraint),
+                                  /*TemplateArgs=*/{},
                                   Constraint->getSourceRange(), Satisfaction))
     return nullptr;
   return new (Context) concepts::NestedRequirement(Context, Constraint,

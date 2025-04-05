@@ -194,6 +194,17 @@ def _compute_runtime_check_targets(runtimes_to_test: Set[str]) -> Set[str]:
 def _get_modified_projects(modified_files: list[str]) -> Set[str]:
     modified_projects = set()
     for modified_file in modified_files:
+        path_parts = pathlib.Path(modified_file).parts
+        # Exclude files in the docs directory. They do not impact an test
+        # targets and there is a separate workflow used for ensuring the
+        # documentation builds.
+        if len(path_parts) > 2 and path_parts[1] == "docs":
+            continue
+        # Exclude files for the gn build. We do not test it within premerge
+        # and changes occur often enough that they otherwise take up
+        # capacity.
+        if len(path_parts) > 3 and path_parts[:3] == ("llvm", "utils", "gn"):
+            continue
         modified_projects.add(pathlib.Path(modified_file).parts[0])
     return modified_projects
 

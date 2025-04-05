@@ -57,10 +57,38 @@ public:
       rewriteToWsloop(loopOp, rewriter);
       break;
     case GenericLoopCombinedInfo::TeamsLoop:
-      if (teamsLoopCanBeParallelFor(loopOp))
+      if (teamsLoopCanBeParallelFor(loopOp)) {
         rewriteToDistributeParallelDo(loopOp, rewriter);
-      else
+      } else {
+        auto teamsOp = llvm::cast<mlir::omp::TeamsOp>(loopOp->getParentOp());
+        auto teamsBlockArgIface =
+            llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(*teamsOp);
+        auto loopBlockArgIface =
+            llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(*loopOp);
+
+        for (unsigned i = 0; i < loopBlockArgIface.numReductionBlockArgs();
+             ++i) {
+          mlir::BlockArgument loopRedBlockArg =
+              loopBlockArgIface.getReductionBlockArgs()[i];
+          mlir::BlockArgument teamsRedBlockArg =
+              teamsBlockArgIface.getReductionBlockArgs()[i];
+          rewriter.replaceAllUsesWith(loopRedBlockArg, teamsRedBlockArg);
+        }
+
+        for (unsigned i = 0; i < loopBlockArgIface.numReductionBlockArgs();
+             ++i) {
+          loopOp.getRegion().eraseArgument(
+              loopBlockArgIface.getReductionBlockArgsStart());
+        }
+
+        loopOp.removeReductionModAttr();
+        loopOp.getReductionVarsMutable().clear();
+        loopOp.removeReductionByrefAttr();
+        loopOp.removeReductionSymsAttr();
+
         rewriteToDistribute(loopOp, rewriter);
+      }
+
       break;
     }
 

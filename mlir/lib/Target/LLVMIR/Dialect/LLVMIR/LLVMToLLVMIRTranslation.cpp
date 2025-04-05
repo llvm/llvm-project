@@ -319,6 +319,10 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
       call->addFnAttr(llvm::Attribute::NoUnwind);
     if (callOp.getWillReturnAttr())
       call->addFnAttr(llvm::Attribute::WillReturn);
+    if (callOp.getNoInlineAttr())
+      call->addFnAttr(llvm::Attribute::NoInline);
+    if (callOp.getAlwaysInlineAttr())
+      call->addFnAttr(llvm::Attribute::AlwaysInline);
 
     if (failed(convertParameterAndResultAttrs(callOp, call, moduleTranslation)))
       return failure();

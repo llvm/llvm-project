@@ -175,7 +175,7 @@ define float @test_v16f32(<16 x float> %a0) {
 ; AVX512-LABEL: test_v16f32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vextractf64x4 $1, %zmm0, %ymm1
-; AVX512-NEXT:    vmaxps %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vmaxps %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX512-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
@@ -311,7 +311,7 @@ define double @test_v8f64(<8 x double> %a0) {
 ; AVX512-LABEL: test_v8f64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vextractf64x4 $1, %zmm0, %ymm1
-; AVX512-NEXT:    vmaxpd %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vmaxpd %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX512-NEXT:    vmaxpd %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
@@ -353,7 +353,7 @@ define double @test_v16f64(<16 x double> %a0) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmaxpd %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vextractf64x4 $1, %zmm0, %ymm1
-; AVX512-NEXT:    vmaxpd %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vmaxpd %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX512-NEXT:    vmaxpd %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
@@ -417,7 +417,6 @@ define half @test_v2f16(<2 x half> %a0) nounwind {
 ; AVX512F-NEXT:    vcvtph2ps %xmm1, %xmm3
 ; AVX512F-NEXT:    vucomiss %xmm3, %xmm2
 ; AVX512F-NEXT:    seta %al
-; AVX512F-NEXT:    negb %al
 ; AVX512F-NEXT:    kmovd %eax, %k1
 ; AVX512F-NEXT:    vmovdqu16 %zmm0, %zmm1 {%k1}
 ; AVX512F-NEXT:    vmovdqa %xmm1, %xmm0

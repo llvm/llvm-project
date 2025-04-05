@@ -2159,7 +2159,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
         //   call.
         if (IsUnsafeClaimRV) {
           Builder.SetInsertPoint(II);
-          Builder.CreateIntrinsic(Intrinsic::objc_release, {}, RetOpnd);
+          Builder.CreateIntrinsic(Intrinsic::objc_release, RetOpnd);
         }
         II->eraseFromParent();
         InsertRetainCall = false;
@@ -2193,7 +2193,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
       // matching autoreleaseRV or an annotated call in the callee. Emit a call
       // to objc_retain.
       Builder.SetInsertPoint(RI);
-      Builder.CreateIntrinsic(Intrinsic::objc_retain, {}, RetOpnd);
+      Builder.CreateIntrinsic(Intrinsic::objc_retain, RetOpnd);
     }
   }
 }

@@ -10279,18 +10279,23 @@ INTERCEPTOR(SSIZE_T, freadlink, int fd, char *buf, SIZE_T bufsiz) {
 #  define INIT_FREADLINK
 #endif
 
+#if SANITIZER_INTERCEPT_GETSERVENT_R || SANITIZER_INTERCEPT_GETSERVBYNAME_R || \
+    SANITIZER_INTERCEPT_GETSERVBYPORT_R
+
 UNUSED static void HandleGetServentReentrantResult(
     void *ctx, int res, struct __sanitizer_servent *result_buf, char *buf,
     SIZE_T buflen, struct __sanitizer_servent **result) {
+  COMMON_INTERCEPTOR_WRITE_RANGE(ctx, (char *)result, sizeof(void *));
   if (res)
     return;
-  COMMON_INTERCEPTOR_WRITE_RANGE(ctx, (char *)result, sizeof(void *));
   if (*result) {
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, (char *)*result,
                                    sizeof(__sanitizer_servent));
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, buflen);
   }
 }
+
+#endif
 
 #if SANITIZER_INTERCEPT_GETSERVENT_R
 INTERCEPTOR(int, getservent_r, struct __sanitizer_servent *result_buf,

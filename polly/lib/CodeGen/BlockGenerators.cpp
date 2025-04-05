@@ -76,8 +76,8 @@ Value *BlockGenerator::trySynthesizeNewValue(ScopStmt &Stmt, Value *Old,
     return nullptr;
 
   ValueMapT VTV;
-  VTV.insert(BBMap.begin(), BBMap.end());
-  VTV.insert(GlobalMap.begin(), GlobalMap.end());
+  VTV.insert_range(BBMap);
+  VTV.insert_range(GlobalMap);
 
   Scop &S = *Stmt.getParent();
   const DataLayout &DL = S.getFunction().getDataLayout();
@@ -1131,7 +1131,7 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
 
     // Remember value in case it is visible after this subregion.
     if (isDominatingSubregionExit(DT, R, BB))
-      ValueMap.insert(RegionMap.begin(), RegionMap.end());
+      ValueMap.insert_range(RegionMap);
   }
 
   // Now create a new dedicated region exit block and add it to the region map.
@@ -1164,7 +1164,7 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
     Instruction *BICopy = BBCopyEnd->getTerminator();
 
     ValueMapT &RegionMap = RegionMaps[BBCopyStart];
-    RegionMap.insert(StartBlockMap.begin(), StartBlockMap.end());
+    RegionMap.insert_range(StartBlockMap);
 
     Builder.SetInsertPoint(BICopy);
     copyInstScalar(Stmt, TI, RegionMap, LTS);

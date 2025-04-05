@@ -4910,6 +4910,8 @@ TEST(MemorySanitizer, timer_create) {
 }
 
 TEST(MemorySanitizer, getservent_r) {
+  if (access("/etc/services", O_RDONLY) != 0)
+    GTEST_SKIP() << "Missing /etc/services";
   struct servent result_buf;
   struct servent *result;
   char buf[1024];
@@ -4924,6 +4926,8 @@ TEST(MemorySanitizer, getservent_r) {
 }
 
 TEST(MemorySanitizer, getservbyname_r) {
+  if (access("/etc/services", O_RDONLY) != 0)
+    GTEST_SKIP() << "Missing /etc/services";
   struct servent result_buf;
   struct servent *result;
   char buf[1024];
@@ -4943,6 +4947,8 @@ TEST(MemorySanitizer, getservbyname_r) {
 }
 
 TEST(MemorySanitizer, getservbyname_r_unknown) {
+  if (access("/etc/services", O_RDONLY) != 0)
+    GTEST_SKIP() << "Missing /etc/services";
   struct servent result_buf;
   struct servent *result;
   char buf[1024];
@@ -4959,6 +4965,8 @@ TEST(MemorySanitizer, getservbyname_r_unknown) {
 }
 
 TEST(MemorySanitizer, getservbyport_r) {
+  if (access("/etc/services", O_RDONLY) != 0)
+    GTEST_SKIP() << "Missing /etc/services";
   struct servent result_buf;
   struct servent *result;
   char buf[1024];
@@ -4975,6 +4983,24 @@ TEST(MemorySanitizer, getservbyport_r) {
   ASSERT_NE(result, nullptr);
   EXPECT_NOT_POISONED(result_buf);
   EXPECT_NOT_POISONED(buf);
+}
+
+TEST(MemorySanitizer, getservbyport_r_smallbuf) {
+  if (access("/etc/services", O_RDONLY) != 0)
+    GTEST_SKIP() << "Missing /etc/services";
+  struct servent result_buf;
+  struct servent *result;
+  char buf[1];
+  EXPECT_POISONED(result_buf);
+  EXPECT_POISONED(result);
+  EXPECT_POISONED(buf);
+  ASSERT_EQ(getservbyport_r(htons(22), nullptr, &result_buf, buf, sizeof(buf),
+                            &result),
+            ERANGE);
+  EXPECT_NOT_POISONED(result);
+  ASSERT_EQ(result, nullptr);
+  EXPECT_POISONED(result_buf);
+  EXPECT_POISONED(buf);
 }
 
 #endif

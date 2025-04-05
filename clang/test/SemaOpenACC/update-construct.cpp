@@ -96,7 +96,6 @@ void uses() {
 
   // Checking for 'wait', which has a complicated set arguments.
 #pragma acc update self(Var) wait
-#pragma acc update self(Var) wait()
 #pragma acc update self(Var) wait(getI(), getI())
 #pragma acc update self(Var) wait(devnum: getI():  getI())
 #pragma acc update self(Var) wait(devnum: getI(): queues: getI(), getI())

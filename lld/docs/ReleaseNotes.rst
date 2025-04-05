@@ -39,6 +39,9 @@ ELF Improvements
   items that kept it live during garbage collection. This is inspired by the
   Mach-O LLD feature of the same name.
 
+* Linker script ``OVERLAY`` descriptions now support virtual memory regions
+  (e.g. ``>region``) and ``NOCROSSREFS``.
+
 Breaking changes
 ----------------
 

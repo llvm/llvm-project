@@ -18,7 +18,7 @@ func.func @mixing_packed_stoch_round_types(%arg0: f32, %arg1: i32, %arg2: vector
 
 func.func @bad_source_types(%a: vector<2xf32>, %b: vector<4xf16>,
                                 %c: vector<32xf32>) -> vector<32xf32> {
-  // expected-error@+1 {{'amdgpu.mfma' op expected both non-f8 source operand types to match exactly}}
+  // expected-error@+1 {{'amdgpu.mfma' op expected both non-small-float source operand types to match exactly}}
   %d = amdgpu.mfma %a * %b + %c {
     m = 32 : i32, n = 32 : i32, k = 1 : i32, blocks = 2 : i32,
     abid = 0 : i32, cbsz = 0 : i32} blgp = none : vector<2xf32>, vector<4xf16>, vector<32xf32>
@@ -29,7 +29,7 @@ func.func @bad_source_types(%a: vector<2xf32>, %b: vector<4xf16>,
 
 func.func @bad_source_types_f8(%a: vector<8xf8E5M2FNUZ>, %b: vector<8xi8>,
                                 %c: vector<32xf32>) -> vector<32xf32> {
-  // expected-error@+1 {{'amdgpu.mfma' op expected both source operands to have f8 elements}}
+  // expected-error@+1 {{'amdgpu.mfma' op expected both source operands to have small-float elements if one does}}
   %d = amdgpu.mfma %a * %b + %c {
     m = 32 : i32, n = 32 : i32, k = 1 : i32, blocks = 2 : i32,
     abid = 0 : i32, cbsz = 0 : i32} blgp = none : vector<8xf8E5M2FNUZ>, vector<8xi8>, vector<32xf32>

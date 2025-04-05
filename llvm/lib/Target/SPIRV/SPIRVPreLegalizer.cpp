@@ -18,7 +18,7 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
-#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -32,16 +32,14 @@ namespace {
 class SPIRVPreLegalizer : public MachineFunctionPass {
 public:
   static char ID;
-  SPIRVPreLegalizer() : MachineFunctionPass(ID) {
-    initializeSPIRVPreLegalizerPass(*PassRegistry::getPassRegistry());
-  }
+  SPIRVPreLegalizer() : MachineFunctionPass(ID) {}
   bool runOnMachineFunction(MachineFunction &MF) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 };
 } // namespace
 
 void SPIRVPreLegalizer::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addPreserved<GISelKnownBitsAnalysis>();
+  AU.addPreserved<GISelValueTrackingAnalysis>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 

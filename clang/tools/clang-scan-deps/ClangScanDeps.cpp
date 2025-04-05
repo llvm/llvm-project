@@ -929,7 +929,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
     FileOS.emplace(OutputFileName, EC, llvm::sys::fs::OF_Text);
     if (EC) {
       llvm::errs() << "Failed to open output file '" << OutputFileName
-                   << "': " << llvm::errorCodeToError(EC) << '\n';
+                   << "': " << EC.message() << '\n';
       std::exit(1);
     }
     return *FileOS;

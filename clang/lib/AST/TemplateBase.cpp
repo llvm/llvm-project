@@ -344,12 +344,9 @@ bool TemplateArgument::containsUnexpandedParameterPack() const {
   return getDependence() & TemplateArgumentDependence::UnexpandedPack;
 }
 
-std::optional<unsigned> TemplateArgument::getNumTemplateExpansions() const {
+UnsignedOrNone TemplateArgument::getNumTemplateExpansions() const {
   assert(getKind() == TemplateExpansion);
-  if (TemplateArg.NumExpansions)
-    return TemplateArg.NumExpansions - 1;
-
-  return std::nullopt;
+  return TemplateArg.NumExpansions;
 }
 
 QualType TemplateArgument::getNonTypeTemplateArgumentType() const {
@@ -401,7 +398,7 @@ void TemplateArgument::Profile(llvm::FoldingSetNodeID &ID,
     break;
 
   case TemplateExpansion:
-    ID.AddInteger(TemplateArg.NumExpansions);
+    ID.AddInteger(TemplateArg.NumExpansions.toInternalRepresentation());
     [[fallthrough]];
   case Template:
     ID.AddPointer(TemplateArg.Name);
