@@ -43,7 +43,7 @@ define void @memset_2(ptr %a, i8 %value) nounwind {
 ;
 ; RV32-FAST-LABEL: memset_2:
 ; RV32-FAST:       # %bb.0:
-; RV32-FAST-NEXT:    andi a2, a1, 255
+; RV32-FAST-NEXT:    zext.b a2, a1
 ; RV32-FAST-NEXT:    slli a1, a1, 8
 ; RV32-FAST-NEXT:    or a1, a1, a2
 ; RV32-FAST-NEXT:    sh a1, 0(a0)
@@ -51,7 +51,7 @@ define void @memset_2(ptr %a, i8 %value) nounwind {
 ;
 ; RV64-FAST-LABEL: memset_2:
 ; RV64-FAST:       # %bb.0:
-; RV64-FAST-NEXT:    andi a2, a1, 255
+; RV64-FAST-NEXT:    zext.b a2, a1
 ; RV64-FAST-NEXT:    slli a1, a1, 8
 ; RV64-FAST-NEXT:    or a1, a1, a2
 ; RV64-FAST-NEXT:    sh a1, 0(a0)
@@ -79,7 +79,7 @@ define void @memset_4(ptr %a, i8 %value) nounwind {
 ;
 ; RV32-FAST-LABEL: memset_4:
 ; RV32-FAST:       # %bb.0:
-; RV32-FAST-NEXT:    andi a1, a1, 255
+; RV32-FAST-NEXT:    zext.b a1, a1
 ; RV32-FAST-NEXT:    lui a2, 4112
 ; RV32-FAST-NEXT:    addi a2, a2, 257
 ; RV32-FAST-NEXT:    mul a1, a1, a2
@@ -126,7 +126,7 @@ define void @memset_8(ptr %a, i8 %value) nounwind {
 ;
 ; RV32-FAST-LABEL: memset_8:
 ; RV32-FAST:       # %bb.0:
-; RV32-FAST-NEXT:    andi a1, a1, 255
+; RV32-FAST-NEXT:    zext.b a1, a1
 ; RV32-FAST-NEXT:    lui a2, 4112
 ; RV32-FAST-NEXT:    addi a2, a2, 257
 ; RV32-FAST-NEXT:    mul a1, a1, a2
@@ -136,7 +136,7 @@ define void @memset_8(ptr %a, i8 %value) nounwind {
 ;
 ; RV64-FAST-LABEL: memset_8:
 ; RV64-FAST:       # %bb.0:
-; RV64-FAST-NEXT:    andi a1, a1, 255
+; RV64-FAST-NEXT:    zext.b a1, a1
 ; RV64-FAST-NEXT:    lui a2, 4112
 ; RV64-FAST-NEXT:    addiw a2, a2, 257
 ; RV64-FAST-NEXT:    slli a3, a2, 32
@@ -223,7 +223,7 @@ define void @memset_64(ptr %a, i8 %value) nounwind {
 define void @aligned_memset_2(ptr align 2 %a, i8 %value) nounwind {
 ; RV32-BOTH-LABEL: aligned_memset_2:
 ; RV32-BOTH:       # %bb.0:
-; RV32-BOTH-NEXT:    andi a2, a1, 255
+; RV32-BOTH-NEXT:    zext.b a2, a1
 ; RV32-BOTH-NEXT:    slli a1, a1, 8
 ; RV32-BOTH-NEXT:    or a1, a1, a2
 ; RV32-BOTH-NEXT:    sh a1, 0(a0)
@@ -231,7 +231,7 @@ define void @aligned_memset_2(ptr align 2 %a, i8 %value) nounwind {
 ;
 ; RV64-BOTH-LABEL: aligned_memset_2:
 ; RV64-BOTH:       # %bb.0:
-; RV64-BOTH-NEXT:    andi a2, a1, 255
+; RV64-BOTH-NEXT:    zext.b a2, a1
 ; RV64-BOTH-NEXT:    slli a1, a1, 8
 ; RV64-BOTH-NEXT:    or a1, a1, a2
 ; RV64-BOTH-NEXT:    sh a1, 0(a0)
@@ -243,7 +243,7 @@ define void @aligned_memset_2(ptr align 2 %a, i8 %value) nounwind {
 define void @aligned_memset_4(ptr align 4 %a, i8 %value) nounwind {
 ; RV32-BOTH-LABEL: aligned_memset_4:
 ; RV32-BOTH:       # %bb.0:
-; RV32-BOTH-NEXT:    andi a1, a1, 255
+; RV32-BOTH-NEXT:    zext.b a1, a1
 ; RV32-BOTH-NEXT:    lui a2, 4112
 ; RV32-BOTH-NEXT:    addi a2, a2, 257
 ; RV32-BOTH-NEXT:    mul a1, a1, a2
@@ -266,7 +266,7 @@ define void @aligned_memset_4(ptr align 4 %a, i8 %value) nounwind {
 define void @aligned_memset_8(ptr align 8 %a, i8 %value) nounwind {
 ; RV32-BOTH-LABEL: aligned_memset_8:
 ; RV32-BOTH:       # %bb.0:
-; RV32-BOTH-NEXT:    andi a1, a1, 255
+; RV32-BOTH-NEXT:    zext.b a1, a1
 ; RV32-BOTH-NEXT:    lui a2, 4112
 ; RV32-BOTH-NEXT:    addi a2, a2, 257
 ; RV32-BOTH-NEXT:    mul a1, a1, a2
@@ -276,7 +276,7 @@ define void @aligned_memset_8(ptr align 8 %a, i8 %value) nounwind {
 ;
 ; RV64-BOTH-LABEL: aligned_memset_8:
 ; RV64-BOTH:       # %bb.0:
-; RV64-BOTH-NEXT:    andi a1, a1, 255
+; RV64-BOTH-NEXT:    zext.b a1, a1
 ; RV64-BOTH-NEXT:    lui a2, 4112
 ; RV64-BOTH-NEXT:    addiw a2, a2, 257
 ; RV64-BOTH-NEXT:    slli a3, a2, 32

@@ -745,9 +745,9 @@ Error RISCVISAInfo::checkDependency() {
 
   static constexpr StringLiteral XqciExts[] = {
       {"xqcia"},   {"xqciac"},  {"xqcibi"},  {"xqcibm"},  {"xqcicli"},
-      {"xqcicm"},  {"xqcics"},  {"xqcicsr"}, {"xqciint"}, {"xqcilb"},
-      {"xqcili"},  {"xqcilia"}, {"xqcilo"},  {"xqcilsm"}, {"xqcisim"},
-      {"xqcisls"}, {"xqcisync"}};
+      {"xqcicm"},  {"xqcics"},  {"xqcicsr"}, {"xqciint"}, {"xqciio"},
+      {"xqcilb"},  {"xqcili"},  {"xqcilia"}, {"xqcilo"},  {"xqcilsm"},
+      {"xqcisim"}, {"xqcisls"}, {"xqcisync"}};
   static constexpr StringLiteral ZcdOverlaps[] = {
       {"zcmt"}, {"zcmp"}, {"xqccmp"}, {"xqciac"}, {"xqcicm"}};
 
