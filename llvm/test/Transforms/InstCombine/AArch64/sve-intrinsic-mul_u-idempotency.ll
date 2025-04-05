@@ -36,9 +36,8 @@ define <vscale x 2 x i64> @idempotent_mul_u_i64(<vscale x 2 x i1> %pg, <vscale x
 
 define <vscale x 2 x i64> @idempotent_mul_u_different_argument_order(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a) #0 {
 ; CHECK-LABEL: define <vscale x 2 x i64> @idempotent_mul_u_different_argument_order(
-; CHECK-SAME: <vscale x 2 x i1> [[PG:%.*]], <vscale x 2 x i64> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.mul.u.nxv2i64(<vscale x 2 x i1> [[PG]], <vscale x 2 x i64> splat (i64 1), <vscale x 2 x i64> [[A]])
-; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
+; CHECK-SAME: <vscale x 2 x i1> [[PG:%.*]], <vscale x 2 x i64> [[TMP0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 ;
   %1 = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 1)
   ; Different argument order to the above tests.
