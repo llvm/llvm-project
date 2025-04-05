@@ -383,6 +383,7 @@ public:
     case Kind::V:
       return -1;
     }
+    halt();
   }
 
   int operator+() {
@@ -392,6 +393,7 @@ public:
     case Kind::V:
       return -1;
     }
+    halt();
   }
 };
 
