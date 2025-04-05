@@ -245,3 +245,38 @@ ol_impl_result_t olGetDeviceInfoSize_impl(ol_device_handle_t Device,
                                           size_t *PropSizeRet) {
   return olGetDeviceInfoImplDetail(Device, PropName, 0, nullptr, PropSizeRet);
 }
+
+TargetAllocTy convertOlToPluginAllocTy(ol_alloc_type_t Type) {
+  switch (Type) {
+  case OL_ALLOC_TYPE_DEVICE:
+    return TARGET_ALLOC_DEVICE;
+  case OL_ALLOC_TYPE_HOST:
+    return TARGET_ALLOC_HOST;
+  case OL_ALLOC_TYPE_SHARED:
+  default:
+    return TARGET_ALLOC_SHARED;
+  }
+}
+
+ol_impl_result_t olMemAlloc_impl(ol_device_handle_t Device,
+                                 ol_alloc_type_t Type, size_t Size, size_t,
+                                 void **AllocationOut) {
+  auto Alloc =
+      Device->Device.dataAlloc(Size, nullptr, convertOlToPluginAllocTy(Type));
+  if (!Alloc) {
+    return {OL_ERRC_OUT_OF_RESOURCES,
+            formatv("Could not create allocation on device {0}", Device).str()};
+  }
+
+  *AllocationOut = *Alloc;
+  return OL_SUCCESS;
+}
+
+ol_impl_result_t olMemFree_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
+                                void *Address) {
+  auto Res = Device->Device.dataDelete(Address, convertOlToPluginAllocTy(Type));
+  if (Res) {
+    return {OL_ERRC_OUT_OF_RESOURCES, "Could not free allocation"};
+  }
+  return OL_SUCCESS;
+}
