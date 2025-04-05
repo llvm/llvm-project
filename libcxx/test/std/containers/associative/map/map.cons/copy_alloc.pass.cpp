@@ -10,7 +10,7 @@
 
 // class map
 
-// map(const map& m, const allocator_type& a);
+// map(const map& m, const allocator_type& a);// constexpr since C++26
 
 #include <map>
 #include <cassert>
@@ -20,7 +20,7 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     typedef std::pair<const int, double> V;
     V ar[] = {
@@ -122,6 +122,13 @@ int main(int, char**) {
     assert(*std::next(mo.begin(), 2) == V(3, 1));
   }
 #endif
+return true;
+}
 
+int main(int, char**) {
+assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

@@ -639,21 +639,21 @@ template <class _Key,
           bool = is_empty<_Compare>::value && !__libcpp_is_final<_Compare>::value>
 class __map_value_compare : private _Compare {
 public:
-  _LIBCPP_HIDE_FROM_ABI __map_value_compare() _NOEXCEPT_(is_nothrow_default_constructible<_Compare>::value)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __map_value_compare() _NOEXCEPT_(is_nothrow_default_constructible<_Compare>::value)
       : _Compare() {}
-  _LIBCPP_HIDE_FROM_ABI __map_value_compare(_Compare __c) _NOEXCEPT_(is_nothrow_copy_constructible<_Compare>::value)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __map_value_compare(_Compare __c) _NOEXCEPT_(is_nothrow_copy_constructible<_Compare>::value)
       : _Compare(__c) {}
-  _LIBCPP_HIDE_FROM_ABI const _Compare& key_comp() const _NOEXCEPT { return *this; }
-  _LIBCPP_HIDE_FROM_ABI bool operator()(const _CP& __x, const _CP& __y) const {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const _Compare& key_comp() const _NOEXCEPT { return *this; }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool operator()(const _CP& __x, const _CP& __y) const {
     return static_cast<const _Compare&>(*this)(__x.__get_value().first, __y.__get_value().first);
   }
-  _LIBCPP_HIDE_FROM_ABI bool operator()(const _CP& __x, const _Key& __y) const {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool operator()(const _CP& __x, const _Key& __y) const {
     return static_cast<const _Compare&>(*this)(__x.__get_value().first, __y);
   }
-  _LIBCPP_HIDE_FROM_ABI bool operator()(const _Key& __x, const _CP& __y) const {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool operator()(const _Key& __x, const _CP& __y) const {
     return static_cast<const _Compare&>(*this)(__x, __y.__get_value().first);
   }
-  _LIBCPP_HIDE_FROM_ABI void swap(__map_value_compare& __y) _NOEXCEPT_(__is_nothrow_swappable_v<_Compare>) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void swap(__map_value_compare& __y) _NOEXCEPT_(__is_nothrow_swappable_v<_Compare>) {
     using std::swap;
     swap(static_cast<_Compare&>(*this), static_cast<_Compare&>(__y));
   }
@@ -868,37 +868,37 @@ public:
   typedef value_type& reference;
   typedef typename _NodeTypes::__map_value_type_pointer pointer;
 
-  _LIBCPP_HIDE_FROM_ABI __map_iterator() _NOEXCEPT {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __map_iterator() _NOEXCEPT {}
 
-  _LIBCPP_HIDE_FROM_ABI __map_iterator(_TreeIterator __i) _NOEXCEPT : __i_(__i) {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __map_iterator(_TreeIterator __i) _NOEXCEPT : __i_(__i) {}
 
-  _LIBCPP_HIDE_FROM_ABI reference operator*() const { return __i_->__get_value(); }
-  _LIBCPP_HIDE_FROM_ABI pointer operator->() const { return pointer_traits<pointer>::pointer_to(__i_->__get_value()); }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 reference operator*() const { return __i_->__get_value(); }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pointer operator->() const { return pointer_traits<pointer>::pointer_to(__i_->__get_value()); }
 
-  _LIBCPP_HIDE_FROM_ABI __map_iterator& operator++() {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __map_iterator& operator++() {
     ++__i_;
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI __map_iterator operator++(int) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __map_iterator operator++(int) {
     __map_iterator __t(*this);
     ++(*this);
     return __t;
   }
 
-  _LIBCPP_HIDE_FROM_ABI __map_iterator& operator--() {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __map_iterator& operator--() {
     --__i_;
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI __map_iterator operator--(int) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __map_iterator operator--(int) {
     __map_iterator __t(*this);
     --(*this);
     return __t;
   }
 
-  friend _LIBCPP_HIDE_FROM_ABI bool operator==(const __map_iterator& __x, const __map_iterator& __y) {
+  friend _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool operator==(const __map_iterator& __x, const __map_iterator& __y) {
     return __x.__i_ == __y.__i_;
   }
-  friend _LIBCPP_HIDE_FROM_ABI bool operator!=(const __map_iterator& __x, const __map_iterator& __y) {
+  friend _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool operator!=(const __map_iterator& __x, const __map_iterator& __y) {
     return __x.__i_ != __y.__i_;
   }
 
@@ -924,39 +924,39 @@ public:
   typedef const value_type& reference;
   typedef typename _NodeTypes::__const_map_value_type_pointer pointer;
 
-  _LIBCPP_HIDE_FROM_ABI __map_const_iterator() _NOEXCEPT {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __map_const_iterator() _NOEXCEPT {}
 
-  _LIBCPP_HIDE_FROM_ABI __map_const_iterator(_TreeIterator __i) _NOEXCEPT : __i_(__i) {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __map_const_iterator(_TreeIterator __i) _NOEXCEPT : __i_(__i) {}
   _LIBCPP_HIDE_FROM_ABI
-  __map_const_iterator(__map_iterator< typename _TreeIterator::__non_const_iterator> __i) _NOEXCEPT : __i_(__i.__i_) {}
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 __map_const_iterator(__map_iterator< typename _TreeIterator::__non_const_iterator> __i) _NOEXCEPT : __i_(__i.__i_) {}
 
-  _LIBCPP_HIDE_FROM_ABI reference operator*() const { return __i_->__get_value(); }
-  _LIBCPP_HIDE_FROM_ABI pointer operator->() const { return pointer_traits<pointer>::pointer_to(__i_->__get_value()); }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 reference operator*() const { return __i_->__get_value(); }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pointer operator->() const { return pointer_traits<pointer>::pointer_to(__i_->__get_value()); }
 
-  _LIBCPP_HIDE_FROM_ABI __map_const_iterator& operator++() {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __map_const_iterator& operator++() {
     ++__i_;
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI __map_const_iterator operator++(int) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __map_const_iterator operator++(int) {
     __map_const_iterator __t(*this);
     ++(*this);
     return __t;
   }
 
-  _LIBCPP_HIDE_FROM_ABI __map_const_iterator& operator--() {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __map_const_iterator& operator--() {
     --__i_;
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI __map_const_iterator operator--(int) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __map_const_iterator operator--(int) {
     __map_const_iterator __t(*this);
     --(*this);
     return __t;
   }
 
-  friend _LIBCPP_HIDE_FROM_ABI bool operator==(const __map_const_iterator& __x, const __map_const_iterator& __y) {
+  friend _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool operator==(const __map_const_iterator& __x, const __map_const_iterator& __y) {
     return __x.__i_ == __y.__i_;
   }
-  friend _LIBCPP_HIDE_FROM_ABI bool operator!=(const __map_const_iterator& __x, const __map_const_iterator& __y) {
+  friend _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool operator!=(const __map_const_iterator& __x, const __map_const_iterator& __y) {
     return __x.__i_ != __y.__i_;
   }
 
