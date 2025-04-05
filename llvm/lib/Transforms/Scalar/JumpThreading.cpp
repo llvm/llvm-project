@@ -2933,6 +2933,11 @@ bool JumpThreadingPass::tryToUnfoldSelectInCurrBB(BasicBlock *BB) {
   if (LoopHeaders.count(BB))
     return false;
 
+  // If a block has its address taken, it would break the semantics of its block
+  // address. To be safe, don't thread the edge.
+  if (hasAddressTakenAndUsed(BB))
+    return false;
+
   for (BasicBlock::iterator BI = BB->begin();
        PHINode *PN = dyn_cast<PHINode>(BI); ++BI) {
     // Look for a Phi having at least one constant incoming value.
