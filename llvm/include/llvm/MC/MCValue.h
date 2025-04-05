@@ -36,15 +36,17 @@ class raw_ostream;
 class MCValue {
   const MCSymbolRefExpr *SymA = nullptr, *SymB = nullptr;
   int64_t Cst = 0;
-  uint32_t RefKind = 0;
+  uint32_t Specifier = 0;
 
 public:
+  friend class MCExpr;
   MCValue() = default;
   int64_t getConstant() const { return Cst; }
   const MCSymbolRefExpr *getSymA() const { return SymA; }
   const MCSymbolRefExpr *getSymB() const { return SymB; }
-  uint32_t getRefKind() const { return RefKind; }
-  void setSpecifier(uint32_t S) { RefKind = S; }
+  uint32_t getRefKind() const { return Specifier; }
+  uint32_t getSpecifier() const { return Specifier; }
+  void setSpecifier(uint32_t S) { Specifier = S; }
 
   const MCSymbol *getAddSym() const {
     return SymA ? &SymA->getSymbol() : nullptr;
@@ -71,7 +73,7 @@ public:
     R.Cst = Val;
     R.SymA = SymA;
     R.SymB = SymB;
-    R.RefKind = RefKind;
+    R.Specifier = RefKind;
     return R;
   }
 
@@ -80,7 +82,7 @@ public:
     R.Cst = Val;
     R.SymA = nullptr;
     R.SymB = nullptr;
-    R.RefKind = 0;
+    R.Specifier = 0;
     return R;
   }
 
