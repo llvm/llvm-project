@@ -84,7 +84,7 @@ bool OpTrait::util::getBroadcastedShape(ArrayRef<int64_t> shape1,
     if (ShapedType::isDynamic(*i1) || ShapedType::isDynamic(*i2)) {
       // One or both dimensions is unknown. Follow TensorFlow behavior:
       // - If either dimension is greater than 1, we assume that the program is
-      //   correct, and the other dimension will be broadcast to match it.
+      //   correct, and the other dimension will be broadcasted to match it.
       // - If either dimension is 1, the other dimension is the output.
       if (*i1 > 1) {
         *iR = *i1;
