@@ -657,7 +657,8 @@ bool RISCVAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
     llvm_unreachable("unsupported fixup size");
   }
   MCValue A = MCValue::get(Target.getSymA(), nullptr, Target.getConstant());
-  MCValue B = MCValue::get(Target.getSymB());
+  MCValue B = MCValue::get(
+      MCSymbolRefExpr::create(Target.getSubSym(), Asm.getContext()));
   auto FA = MCFixup::create(
       Fixup.getOffset(), nullptr,
       static_cast<MCFixupKind>(FirstLiteralRelocationKind + TA));
