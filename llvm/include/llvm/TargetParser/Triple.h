@@ -194,7 +194,8 @@ public:
     SUSE,
     OpenEmbedded,
     Intel,
-    LastVendorType = Intel
+    Plumbear,
+    LastVendorType = Plumbear
   };
   enum OSType {
     UnknownOS,
@@ -239,7 +240,8 @@ public:
     LiteOS,
     Serenity,
     Vulkan, // Vulkan SPIR-V
-    LastOSType = Vulkan
+    PlumOS,
+    LastOSType = PlumOS
   };
   enum EnvironmentType {
     UnknownEnvironment,
@@ -301,8 +303,8 @@ public:
     OpenHOS,
 
     PAuthTest,
-
-    LastEnvironmentType = PAuthTest
+    PlumEnv,
+    LastEnvironmentType = PlumEnv
   };
   enum ObjectFormatType {
     UnknownObjectFormat,
@@ -315,6 +317,7 @@ public:
     SPIRV,
     Wasm,
     XCOFF,
+    PLM,
   };
 
 private:
