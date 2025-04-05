@@ -340,9 +340,9 @@ class CodeGenRegisterClass {
   DenseMap<const CodeGenSubRegIndex *, SmallPtrSet<CodeGenRegisterClass *, 8>>
       SuperRegClasses;
 
-  // Bit vector of TopoSigs for the registers in this class. This will be
-  // very sparse on regular architectures.
-  BitVector TopoSigs;
+  // Bit vector of TopoSigs for the registers with super registers in this
+  // class. This will be very sparse on regular architectures.
+  BitVector RegsWithSuperRegsTopoSigs;
 
 public:
   unsigned EnumValue;
@@ -463,8 +463,11 @@ public:
   // getOrder(0).
   const CodeGenRegister::Vec &getMembers() const { return Members; }
 
-  // Get a bit vector of TopoSigs present in this register class.
-  const BitVector &getTopoSigs() const { return TopoSigs; }
+  // Get a bit vector of TopoSigs of registers with super registers in this
+  // register class.
+  const BitVector &getRegsWithSuperRegsTopoSigs() const {
+    return RegsWithSuperRegsTopoSigs;
+  }
 
   // Get a weight of this register class.
   unsigned getWeight(const CodeGenRegBank &) const;

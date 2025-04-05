@@ -765,7 +765,8 @@ static void sortAndUniqueRegisters(CodeGenRegister::Vec &M) {
 CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
                                            const Record *R)
     : TheDef(R), Name(std::string(R->getName())),
-      TopoSigs(RegBank.getNumTopoSigs()), EnumValue(-1), TSFlags(0) {
+      RegsWithSuperRegsTopoSigs(RegBank.getNumTopoSigs()), EnumValue(-1),
+      TSFlags(0) {
   GeneratePressureSet = R->getValueAsBit("GeneratePressureSet");
   std::vector<const Record *> TypeList = R->getValueAsListOfDefs("RegTypes");
   if (TypeList.empty())
@@ -791,7 +792,8 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
     const CodeGenRegister *Reg = RegBank.getReg((*Elements)[i]);
     Members.push_back(Reg);
     Artificial &= Reg->Artificial;
-    TopoSigs.set(Reg->getTopoSig());
+    if (!Reg->getSuperRegs().empty())
+      RegsWithSuperRegsTopoSigs.set(Reg->getTopoSig());
   }
   sortAndUniqueRegisters(Members);
 
@@ -849,13 +851,14 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
 CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
                                            StringRef Name, Key Props)
     : Members(*Props.Members), TheDef(nullptr), Name(std::string(Name)),
-      TopoSigs(RegBank.getNumTopoSigs()), EnumValue(-1), RSI(Props.RSI),
-      CopyCost(0), Allocatable(true), AllocationPriority(0),
+      RegsWithSuperRegsTopoSigs(RegBank.getNumTopoSigs()), EnumValue(-1),
+      RSI(Props.RSI), CopyCost(0), Allocatable(true), AllocationPriority(0),
       GlobalPriority(false), TSFlags(0) {
   Artificial = true;
   GeneratePressureSet = false;
   for (const auto R : Members) {
-    TopoSigs.set(R->getTopoSig());
+    if (!R->getSuperRegs().empty())
+      RegsWithSuperRegsTopoSigs.set(R->getTopoSig());
     Artificial &= R->Artificial;
   }
 }
@@ -2374,7 +2377,7 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
       if (SubRC.Artificial)
         continue;
       // Topological shortcut: SubRC members have the wrong shape.
-      if (!TopoSigs.anyCommon(SubRC.getTopoSigs()))
+      if (!TopoSigs.anyCommon(SubRC.getRegsWithSuperRegsTopoSigs()))
         continue;
       // Compute the subset of RC that maps into SubRC with a single linear scan
       // through SubToSuperRegs and the members of SubRC.
