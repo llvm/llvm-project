@@ -1626,6 +1626,45 @@ let TargetPrefix = "nvvm" in {
       Intrinsic<[llvm_v2f16_ty], [llvm_i16_ty], [IntrNoMem, IntrNoCallback]>;
   def int_nvvm_e5m2x2_to_f16x2_rn_relu : ClangBuiltin<"__nvvm_e5m2x2_to_f16x2_rn_relu">,
       Intrinsic<[llvm_v2f16_ty], [llvm_i16_ty], [IntrNoMem, IntrNoCallback]>;
+  
+  def int_nvvm_ff_to_e2m3x2_rn : ClangBuiltin<"__nvvm_ff_to_e2m3x2_rn">,
+      Intrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_ff_to_e2m3x2_rn_relu : ClangBuiltin<"__nvvm_ff_to_e2m3x2_rn_relu">,
+      Intrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_ff_to_e3m2x2_rn : ClangBuiltin<"__nvvm_ff_to_e3m2x2_rn">,
+     Intrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_ff_to_e3m2x2_rn_relu : ClangBuiltin<"__nvvm_ff_to_e3m2x2_rn_relu">,
+      Intrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+
+  def int_nvvm_e2m3x2_to_f16x2_rn : ClangBuiltin<"__nvvm_e2m3x2_to_f16x2_rn">,
+      Intrinsic<[llvm_v2f16_ty], [llvm_i16_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_e2m3x2_to_f16x2_rn_relu : ClangBuiltin<"__nvvm_e2m3x2_to_f16x2_rn_relu">,
+      Intrinsic<[llvm_v2f16_ty], [llvm_i16_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_e3m2x2_to_f16x2_rn : ClangBuiltin<"__nvvm_e3m2x2_to_f16x2_rn">,
+      Intrinsic<[llvm_v2f16_ty], [llvm_i16_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_e3m2x2_to_f16x2_rn_relu : ClangBuiltin<"__nvvm_e3m2x2_to_f16x2_rn_relu">,
+      Intrinsic<[llvm_v2f16_ty], [llvm_i16_ty], [IntrNoMem, IntrNoCallback]>;
+      
+  def int_nvvm_ff_to_ue8m0x2_rz : ClangBuiltin<"__nvvm_ff_to_ue8m0x2_rz">,
+      Intrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_ff_to_ue8m0x2_rz_satfinite : ClangBuiltin<"__nvvm_ff_to_ue8m0x2_rz_satfinite">,
+      Intrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_ff_to_ue8m0x2_rp : ClangBuiltin<"__nvvm_ff_to_ue8m0x2_rp">,
+      Intrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_ff_to_ue8m0x2_rp_satfinite : ClangBuiltin<"__nvvm_ff_to_ue8m0x2_rp_satfinite">,
+      Intrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+      
+  def int_nvvm_bf16x2_to_ue8m0x2_rz : ClangBuiltin<"__nvvm_bf16x2_to_ue8m0x2_rz">,
+      Intrinsic<[llvm_i16_ty], [llvm_v2bf16_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_bf16x2_to_ue8m0x2_rz_satfinite : ClangBuiltin<"__nvvm_bf16x2_to_ue8m0x2_rz_satfinite">,
+      Intrinsic<[llvm_i16_ty], [llvm_v2bf16_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_bf16x2_to_ue8m0x2_rp : ClangBuiltin<"__nvvm_bf16x2_to_ue8m0x2_rp">,
+      Intrinsic<[llvm_i16_ty], [llvm_v2bf16_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_bf16x2_to_ue8m0x2_rp_satfinite : ClangBuiltin<"__nvvm_bf16x2_to_ue8m0x2_rp_satfinite">,
+      Intrinsic<[llvm_i16_ty], [llvm_v2bf16_ty], [IntrNoMem, IntrNoCallback]>;
+      
+  def int_nvvm_ue8m0x2_to_bf16x2 : ClangBuiltin<"__nvvm_ue8m0x2_to_bf16x2">,
+      Intrinsic<[llvm_v2bf16_ty], [llvm_i16_ty], [IntrNoMem, IntrNoCallback]>;
 
 // FNS
 
