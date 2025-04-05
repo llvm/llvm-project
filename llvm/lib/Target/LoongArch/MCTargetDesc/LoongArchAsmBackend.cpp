@@ -456,7 +456,7 @@ bool LoongArchAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
          "relocatable SymA-SymB cannot have relocation specifier");
   std::pair<MCFixupKind, MCFixupKind> FK;
   uint64_t FixedValueA, FixedValueB;
-  const MCSymbol &SA = Target.getSymA()->getSymbol();
+  const MCSymbol &SA = *Target.getAddSym();
   const MCSymbol &SB = *Target.getSubSym();
 
   bool force = !SA.isInSection() || !SB.isInSection();
