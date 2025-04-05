@@ -349,6 +349,11 @@ void BTFTypeFuncProto::completeType(BTFDebug &BDebug) {
   if (IsCompleted)
     return;
   IsCompleted = true;
+  if (!STy) {
+    BTFType.Type = 0;
+    BTFType.NameOff = 0;
+    return;
+  }
 
   DITypeRefArray Elements = STy->getTypeArray();
   auto RetType = tryRemoveAtomicType(Elements[0]);
@@ -1621,6 +1626,25 @@ void BTFDebug::endModule() {
 
   // Collect global types/variables except MapDef globals.
   processGlobals(false);
+
+  // Create a BTF entry for func BPF_UNREACHABLE.
+  const Module *M = MMI->getModule();
+  Function *F = M->getFunction(BPF_UNREACHABLE);
+  if (F) {
+    std::unordered_map<uint32_t, StringRef> FuncArgNames;
+    auto TypeEntry =
+        std::make_unique<BTFTypeFuncProto>(nullptr, 0, FuncArgNames);
+    uint32_t TypeId = addType(std::move(TypeEntry));
+    auto FuncTypeEntry = std::make_unique<BTFTypeFunc>(BPF_UNREACHABLE, TypeId,
+                                                       BTF::FUNC_EXTERN);
+    uint32_t FuncId = addType(std::move(FuncTypeEntry));
+
+    StringRef SecName(".ksyms");
+    auto [It, Inserted] = DataSecEntries.try_emplace(std::string(SecName));
+    if (Inserted)
+      It->second = std::make_unique<BTFKindDataSec>(Asm, std::string(SecName));
+    It->second->addDataSecEntry(FuncId, Asm->getSymbol(F), 0);
+  }
 
   for (auto &DataSec : DataSecEntries)
     addType(std::move(DataSec.second));
