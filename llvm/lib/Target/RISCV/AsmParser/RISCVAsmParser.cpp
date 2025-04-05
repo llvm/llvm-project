@@ -2576,10 +2576,12 @@ ParseStatus RISCVAsmParser::parseRegListCommon(OperandVector &Operands,
   // must include `fp`/`s0` in the list:
   // Rlist: {ra, s0[-sN]}
   // XRlist: {x1, x8[-x9][, x18[-xN]]}
-  SMLoc S = getLoc();
 
-  if (parseToken(AsmToken::LCurly, "register list must start with '{'"))
-    return ParseStatus::Failure;
+  if (getTok().isNot(AsmToken::LCurly))
+    return ParseStatus::NoMatch;
+
+  SMLoc S = getLoc();
+  Lex();
 
   bool IsRVE = isRVE();
 
@@ -2674,7 +2676,12 @@ ParseStatus RISCVAsmParser::parseZcmpStackAdj(OperandVector &Operands,
     return ParseStatus::NoMatch;
 
   int64_t StackAdjustment = getTok().getIntVal();
-  unsigned RlistVal = static_cast<RISCVOperand *>(Operands[1].get())->Rlist.Val;
+
+  auto *RListOp = static_cast<RISCVOperand *>(Operands.back().get());
+  if (!RListOp->isRlist())
+    return ParseStatus::NoMatch;
+
+  unsigned RlistVal = RListOp->Rlist.Val;
 
   assert(RlistVal != RISCVZC::INVALID_RLIST);
   unsigned StackAdjBase = RISCVZC::getStackAdjBase(RlistVal, isRV64());
