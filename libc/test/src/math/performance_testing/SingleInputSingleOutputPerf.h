@@ -25,9 +25,9 @@ template <typename T> class SingleInputSingleOutputPerf {
 public:
   typedef T Func(T);
 
-  static void runPerfInRange(Func FuncA, Func FuncB,
-                             StorageType startingBit, StorageType endingBit,
-                             size_t rounds, std::ofstream &log) {
+  static void runPerfInRange(Func FuncA, Func FuncB, StorageType startingBit,
+                             StorageType endingBit, size_t rounds,
+                             std::ofstream &log) {
     size_t n = 10'010'001;
     if (sizeof(StorageType) <= sizeof(size_t))
       n = cpp::min(n, static_cast<size_t>(endingBit - startingBit));
@@ -98,8 +98,7 @@ public:
     return 0;                                                                  \
   }
 
-#define SINGLE_INPUT_SINGLE_OUTPUT_PERF_EX(T, FuncA, FuncB, rounds,            \
-                                           filename)                           \
+#define SINGLE_INPUT_SINGLE_OUTPUT_PERF_EX(T, FuncA, FuncB, rounds, filename)  \
   {                                                                            \
     LIBC_NAMESPACE::testing::SingleInputSingleOutputPerf<T>::runPerf(          \
         &FuncA, &FuncB, rounds, #FuncA, #FuncB, filename);                     \

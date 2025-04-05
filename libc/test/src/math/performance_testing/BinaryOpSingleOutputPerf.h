@@ -26,9 +26,9 @@ class BinaryOpSingleOutputPerf {
 public:
   typedef OutputType Func(InputType, InputType);
 
-  static void run_perf_in_range(Func FuncA, Func FuncB,
-                                StorageType startingBit, StorageType endingBit,
-                                size_t N, size_t rounds, std::ofstream &log) {
+  static void run_perf_in_range(Func FuncA, Func FuncB, StorageType startingBit,
+                                StorageType endingBit, size_t N, size_t rounds,
+                                std::ofstream &log) {
     if (sizeof(StorageType) <= sizeof(size_t))
       N = cpp::min(N, static_cast<size_t>(endingBit - startingBit));
 
