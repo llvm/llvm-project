@@ -6,7 +6,7 @@
 ;;   atomic_fetch_xor(object, desired);
 ;; }
 
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown-opencl %s -o - | FileCheck %s
 
 ; CHECK: OpCapability Int64Atomics
 

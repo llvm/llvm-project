@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown-opencl %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 
 ; StorageImageReadWithoutFormat/StorageImageWriteWithoutFormat implicitly
 ; declare Shader, causing a SPIR-V module to be rejected by the OpenCL

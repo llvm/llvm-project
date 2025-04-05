@@ -1,7 +1,7 @@
 ; The goal of the test case is to ensure that correct types are applied to virtual registers
 ; which were used as arguments in call lowering and so caused early definition of SPIR-V types.
 
-; RUN: %if spirv-tools %{ llc -O2 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O2 -mtriple=spirv64-unknown-unknown-opencl %s -o - -filetype=obj | spirv-val %}
 
 %t_id = type { %t_arr }
 %t_arr = type { [1 x i64] }

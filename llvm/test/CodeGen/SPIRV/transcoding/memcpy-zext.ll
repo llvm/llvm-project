@@ -1,7 +1,7 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-32
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-64
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown-opencl %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-32
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown-opencl %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown-opencl %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-64
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown-opencl %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG:    %[[#i64:]] = OpTypeInt 64 0
 ; CHECK-DAG:    %[[#i8:]] = OpTypeInt 8 0

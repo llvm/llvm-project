@@ -1,6 +1,6 @@
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_INTEL_long_composites %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown-opencl --spirv-ext=+SPV_INTEL_long_composites %s -o - | FileCheck %s
 ; TODO: enable back once spirv-val knows about OpTypeStructContinuedINTEL type
-; RUNx: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_INTEL_long_composites %s -o - -filetype=obj | spirv-val --max-struct-members 65535 %}
+; RUNx: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown-opencl --spirv-ext=+SPV_INTEL_long_composites %s -o - -filetype=obj | spirv-val --max-struct-members 65535 %}
 
 ; CHECK: OpCapability LongCompositesINTEL
 ; CHECK: OpExtension "SPV_INTEL_long_composites"

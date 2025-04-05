@@ -1,8 +1,8 @@
 ;; __kernel void fmod_kernel( float out, float in1, float in2 )
 ;; { out = fmod( in1, in2 ); }
 
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown-opencl %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown-opencl %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-SPIRV: %[[#]] = OpExtInst %[[#]] %[[#]] fmod %[[#]] %[[#]]
 

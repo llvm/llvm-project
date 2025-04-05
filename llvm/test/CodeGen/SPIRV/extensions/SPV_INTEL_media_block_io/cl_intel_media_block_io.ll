@@ -1,10 +1,10 @@
 ; Compiled from https://github.com/KhronosGroup/SPIRV-LLVM-Translator/test/extensions/INTEL/SPV_INTEL_media_block_io/SPV_INTEL_media_block_io.cl
 
-; RUN: not llc -O0 -mtriple=spirv32-unknown-unknown %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+; RUN: not llc -O0 -mtriple=spirv32-unknown-unknown-opencl %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
 ; CHECK-ERROR: LLVM ERROR: intel_sub_group_media_block_read_uc: the builtin requires the following SPIR-V extension: SPV_INTEL_media_block_io
 
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_INTEL_media_block_io %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_INTEL_media_block_io %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown-opencl --spirv-ext=+SPV_INTEL_media_block_io %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown-opencl --spirv-ext=+SPV_INTEL_media_block_io %s -o - -filetype=obj | spirv-val %}
 ; CHECK: Capability SubgroupImageMediaBlockIOINTEL
 ; CHECK: Extension "SPV_INTEL_media_block_io"
 

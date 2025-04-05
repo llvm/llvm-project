@@ -1,7 +1,7 @@
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s --spirv-ext=+SPV_INTEL_inline_assembly -o - | FileCheck %s
-; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s --spirv-ext=+SPV_INTEL_inline_assembly -o - -filetype=obj | spirv-val %}
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown-opencl %s --spirv-ext=+SPV_INTEL_inline_assembly -o - | FileCheck %s
+; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown-opencl %s --spirv-ext=+SPV_INTEL_inline_assembly -o - -filetype=obj | spirv-val %}
 
-; RUN: not llc -O0 -mtriple=spirv64-unknown-unknown %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+; RUN: not llc -O0 -mtriple=spirv64-unknown-unknown-opencl %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
 ; CHECK-ERROR: Inline assembly instructions require the following SPIR-V extension: SPV_INTEL_inline_assembly
 
 ; CHECK: OpCapability AsmINTEL
@@ -31,7 +31,7 @@
 ; CHECK-DAG: %[[#Const123:]] = OpConstant %[[#Int32Ty]] 123
 ; CHECK-DAG: %[[#Const42:]] = OpConstant %[[#DoubleTy:]] 42
 
-; CHECK-DAG: %[[#Dialect:]] = OpAsmTargetINTEL "spirv64-unknown-unknown"
+; CHECK-DAG: %[[#Dialect:]] = OpAsmTargetINTEL "spirv64-unknown-unknown-opencl"
 ; CHECK-NO: OpAsmTargetINTEL
 
 ; CHECK-DAG: %[[#Asm1:]] = OpAsmINTEL %[[#VoidTy]] %[[#Fun1Ty]] %[[#Dialect]] "" ""

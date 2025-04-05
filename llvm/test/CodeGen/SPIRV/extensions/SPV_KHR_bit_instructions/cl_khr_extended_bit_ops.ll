@@ -1,6 +1,6 @@
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s --spirv-ext=+SPV_KHR_bit_instructions -o - | FileCheck %s --check-prefix=CHECK-EXTENSION
-; RUN: not llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-NO-EXTENSION
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s --spirv-ext=+SPV_KHR_bit_instructions -o - -filetype=obj | spirv-val %} 
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown-opencl %s --spirv-ext=+SPV_KHR_bit_instructions -o - | FileCheck %s --check-prefix=CHECK-EXTENSION
+; RUN: not llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown-opencl %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-NO-EXTENSION
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown-opencl %s --spirv-ext=+SPV_KHR_bit_instructions -o - -filetype=obj | spirv-val %} 
 ;
 ; CHECK-EXTENSION: Capability BitInstructions
 ; CHECK-EXTENSION: Extension "SPV_KHR_bit_instructions"
@@ -2742,6 +2742,25 @@ entry:
 }
 
 declare spir_func <16 x i8> @_Z11bit_reverseDv16_h(<16 x i8> noundef) 
+
+
+; Same than above but calling 'llvm.bitreverse' instead.
+; CHECK-EXTENSION: %[[#]] = OpFunction %[[#]] None %[[#]]
+; CHECK-EXTENSION: %[[#reversebase:]] = OpFunctionParameter %[[#]]
+; CHECK-EXTENSION: %[[#]] = OpBitReverse %[[#]] %[[#reversebase]]
+; OpenCL equivalent.
+; kernel void testBitReverse_uchar16_bis(uchar16 b, global uchar16 *res) {
+;   *res = bit_reverse(b);
+; }
+
+define dso_local spir_kernel void @testBitReverse_uchar16_bis(<16 x i8> noundef %b, ptr addrspace(1) nocapture noundef writeonly align 16 initializes((0, 16)) %res) {
+entry:
+  %call = tail call spir_func <16 x i8> @llvm.bitreverse.v16i8(<16 x i8> noundef %b) #2
+  store <16 x i8> %call, ptr addrspace(1) %res, align 16, !tbaa !22
+  ret void
+}
+
+declare spir_func <16 x i8> @llvm.bitreverse.v16i8(<16 x i8> noundef) 
 
 attributes #2 = { convergent nounwind willreturn memory(none) }
 

@@ -1,5 +1,5 @@
 ; The goal of the test is to ensure that the output SPIR-V is valid from the perspective of the spirv-val tool.
-; RUN: %if spirv-tools %{ llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown-opencl %s -o - -filetype=obj | spirv-val %}
 
 %clsid = type { %arr }
 %arr = type { [1 x i64] }

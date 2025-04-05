@@ -26,12 +26,12 @@
 ;;    __spirv_ControlBarrierWaitINTEL(2, 3, 258);    // local, subgroup
 ;;}
 
-; RUN: not llc -O0 -mtriple=spirv64-unknown-unknown %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+; RUN: not llc -O0 -mtriple=spirv64-unknown-unknown-opencl %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
 
 ; CHECK-ERROR: LLVM ERROR: __spirv_ControlBarrierArriveINTEL: the builtin requires the following SPIR-V extension: SPV_INTEL_split_barrier
 
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_split_barrier %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_split_barrier %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown-opencl --spirv-ext=+SPV_INTEL_split_barrier %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown-opencl --spirv-ext=+SPV_INTEL_split_barrier %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK: Capability SplitBarrierINTEL
 ; CHECK: Extension "SPV_INTEL_split_barrier"

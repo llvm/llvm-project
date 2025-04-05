@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown-opencl %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 
 ; TODO: This test currently fails with LLVM_ENABLE_EXPENSIVE_CHECKS enabled
 ; XFAIL: expensive_checks

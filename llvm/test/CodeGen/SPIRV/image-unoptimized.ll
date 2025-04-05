@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown-opencl %s -o - | FileCheck %s
 
 ; CHECK-DAG: %[[#TypeImage:]] = OpTypeImage
 ; CHECK-DAG: %[[#TypeSampler:]] = OpTypeSampler
