@@ -3689,6 +3689,7 @@ _LIBCPP_POP_MACROS
 #    include <cstdarg>
 #    include <iterator>
 #    include <mutex>
+#    include <optional>
 #    include <stdexcept>
 #    include <type_traits>
 #    include <typeinfo>
