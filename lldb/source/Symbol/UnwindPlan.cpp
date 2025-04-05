@@ -392,16 +392,16 @@ bool UnwindPlan::Row::operator==(const UnwindPlan::Row &rhs) const {
 
 void UnwindPlan::AppendRow(Row row) {
   if (m_row_list.empty() || m_row_list.back()->GetOffset() != row.GetOffset())
-    m_row_list.push_back(std::make_shared<Row>(std::move(row)));
+    m_row_list.push_back(std::make_unique<Row>(std::move(row)));
   else
     *m_row_list.back() = std::move(row);
 }
 
 struct RowLess {
-  bool operator()(addr_t a, const UnwindPlan::RowSP &b) const {
+  bool operator()(addr_t a, const UnwindPlan::RowUP &b) const {
     return a < b->GetOffset();
   }
-  bool operator()(const UnwindPlan::RowSP &a, addr_t b) const {
+  bool operator()(const UnwindPlan::RowUP &a, addr_t b) const {
     return a->GetOffset() < b;
   }
 };
@@ -409,7 +409,7 @@ struct RowLess {
 void UnwindPlan::InsertRow(Row row, bool replace_existing) {
   auto it = llvm::lower_bound(m_row_list, row.GetOffset(), RowLess());
   if (it == m_row_list.end() || it->get()->GetOffset() > row.GetOffset())
-    m_row_list.insert(it, std::make_shared<Row>(std::move(row)));
+    m_row_list.insert(it, std::make_unique<Row>(std::move(row)));
   else {
     assert(it->get()->GetOffset() == row.GetOffset());
     if (replace_existing)
@@ -567,9 +567,9 @@ void UnwindPlan::Dump(Stream &s, Thread *thread, lldb::addr_t base_addr) const {
       range.Dump(&s, target_sp.get(), Address::DumpStyleSectionNameOffset);
     s.EOL();
   }
-  for (const auto &[index, row_sp] : llvm::enumerate(m_row_list)) {
+  for (const auto &[index, row_up] : llvm::enumerate(m_row_list)) {
     s.Format("row[{0}]: ", index);
-    row_sp->Dump(s, this, thread, base_addr);
+    row_up->Dump(s, this, thread, base_addr);
     s << "\n";
   }
 }
