@@ -1073,9 +1073,8 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(_ClassName) static_assert(true, "")
 #  endif
 
-// TODO(varconst): currently, there are bugs in Clang's intrinsics when handling Objective-C++ `id`, so don't use
-// compiler intrinsics in the Objective-C++ mode.
-#  ifdef __OBJC__
+// TODO(LLVM 22): Remove the workaround
+#  if defined(__OBJC__) && (!defined(_LIBCPP_CLANG_VER) || _LIBCPP_CLANG_VER < 2001)
 #    define _LIBCPP_WORKAROUND_OBJCXX_COMPILER_INTRINSICS
 #  endif
 
