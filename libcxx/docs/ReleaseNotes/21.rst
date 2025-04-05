@@ -65,6 +65,9 @@ Deprecations and Removals
 
 - ``std::is_pod`` and ``std::is_pod_v`` are deprecated in C++20 and later.
 
+- libc++ no long adds ``constexpr`` to ``std::hash<std::vector<bool, A>>::operator()``, as the ``constexpr`` addition
+  since C++20 was an unintended extension.
+
 Upcoming Deprecations and Removals
 ----------------------------------
 
