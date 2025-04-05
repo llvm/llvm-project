@@ -31,6 +31,7 @@
 #include <__ranges/range_adaptor.h>
 #include <__ranges/view_interface.h>
 #include <__type_traits/common_type.h>
+#include <__type_traits/integral_constant.h>
 #include <__type_traits/maybe_const.h>
 #include <__utility/as_lvalue.h>
 #include <__utility/empty.h>
@@ -378,6 +379,7 @@ template <class _JoinViewIterator>
            __has_random_access_iterator_category<typename _JoinViewIterator::_Outer>::value &&
            __has_random_access_iterator_category<typename _JoinViewIterator::_Inner>::value)
 struct __segmented_iterator_traits<_JoinViewIterator> {
+  using __is_segmented_iterator _LIBCPP_NODEBUG = true_type;
   using __segment_iterator _LIBCPP_NODEBUG =
       __iterator_with_data<typename _JoinViewIterator::_Outer, typename _JoinViewIterator::_Parent*>;
   using __local_iterator _LIBCPP_NODEBUG = typename _JoinViewIterator::_Inner;
