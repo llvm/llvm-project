@@ -518,7 +518,7 @@ def ConditionOp : CIR_Op<"condition", [
     `cir.bool` operand and, depending on its value, may branch to different
     regions:
 
-     - When in the `cond` region of a `cir.loop`, it continues the loop
+     - When in the `cond` region of a loop, it continues the loop
        if true, or exits it if false.
      - When in the `ready` region of a `cir.await`, it branches to the `resume`
        region when true, and to the `suspend` region when false.
@@ -526,12 +526,12 @@ def ConditionOp : CIR_Op<"condition", [
     Example:
 
     ```mlir
-    cir.loop for(cond : {
-      cir.condition(%arg0) // Branches to `step` region or exits.
-    }, step : {
-      [...]
-    }) {
-      [...]
+    cir.for cond {
+      cir.condition(%val) // Branches to `step` region or exits.
+    } body {
+      cir.yield
+    } step {
+      cir.yield
     }
 
     cir.await(user, ready : {
@@ -608,6 +608,36 @@ def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
   let builders = [
     OpBuilder<(ins), [{ /* nothing to do */ }]>,
   ];
+}
+
+//===----------------------------------------------------------------------===//
+// BreakOp
+//===----------------------------------------------------------------------===//
+
+def BreakOp : CIR_Op<"break", [Terminator]> {
+  let summary = "C/C++ `break` statement equivalent";
+  let description = [{
+    The `cir.break` operation is used to cease the execution of the current loop
+    or switch operation and transfer control to the parent operation. It is only
+    allowed within a breakable operations (loops and switches).
+  }];
+  let assemblyFormat = "attr-dict";
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// ContinueOp
+//===----------------------------------------------------------------------===//
+
+def ContinueOp : CIR_Op<"continue", [Terminator]> {
+  let summary = "C/C++ `continue` statement equivalent";
+  let description = [{
+    The `cir.continue` operation is used to end execution of the current
+    iteration of a loop and resume execution beginning at the next iteration.
+    It is only allowed within loop regions.
+  }];
+  let assemblyFormat = "attr-dict";
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
