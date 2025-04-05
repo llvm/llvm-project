@@ -161,10 +161,6 @@
 
 using namespace llvm;
 
-namespace llvm {
-void initializeNVPTXLowerArgsLegacyPassPass(PassRegistry &);
-}
-
 namespace {
 class NVPTXLowerArgsLegacyPass : public FunctionPass {
   bool runOnFunction(Function &F) override;
