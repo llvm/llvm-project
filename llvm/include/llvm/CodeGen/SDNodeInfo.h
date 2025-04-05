@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_INCLUDE_LLVM_CODEGEN_SDNODEINFO_H
-#define LLVM_INCLUDE_LLVM_CODEGEN_SDNODEINFO_H
+#ifndef LLVM_CODEGEN_SDNODEINFO_H
+#define LLVM_CODEGEN_SDNODEINFO_H
 
-#include "ISDOpcodes.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringTable.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
 
 namespace llvm {
@@ -112,4 +112,4 @@ public:
 
 } // namespace llvm
 
-#endif // LLVM_INCLUDE_LLVM_CODEGEN_SDNODEINFO_H
+#endif // LLVM_CODEGEN_SDNODEINFO_H

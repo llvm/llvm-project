@@ -15,8 +15,8 @@
 #ifndef LLVM_CODEGEN_SELECTIONDAGTARGETINFO_H
 #define LLVM_CODEGEN_SELECTIONDAGTARGETINFO_H
 
-#include "SDNodeInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/SDNodeInfo.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/Support/CodeGen.h"
 #include <utility>
