@@ -284,6 +284,15 @@ public:
   void print(raw_ostream &OS, const MCInstReference Location) const override;
 };
 
+class LeakageInfo : public ExtraInfo {
+  SmallVector<MCInstReference> LeakingInstrs;
+
+public:
+  LeakageInfo(const ArrayRef<MCInstReference> Instrs) : LeakingInstrs(Instrs) {}
+
+  void print(raw_ostream &OS, const MCInstReference Location) const override;
+};
+
 /// A brief version of a report that can be further augmented with the details.
 ///
 /// A half-baked report produced on the first run of the analysis. An extra,
@@ -323,6 +332,9 @@ class FunctionAnalysisContext {
 
   void findUnsafeUses(SmallVector<PartialReport<MCPhysReg>> &Reports);
   void augmentUnsafeUseReports(ArrayRef<PartialReport<MCPhysReg>> Reports);
+
+  void findUnsafeDefs(SmallVector<PartialReport<MCPhysReg>> &Reports);
+  void augmentUnsafeDefReports(ArrayRef<PartialReport<MCPhysReg>> Reports);
 
   /// Process the reports which do not have to be augmented, and remove them
   /// from Reports.

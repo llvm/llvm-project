@@ -251,6 +251,84 @@ nocfg:
 // CHECK-EMPTY:
 // CHECK-NEXT:   Attaching clobbering info to:     00000000:   ret # Offset: 8 # CFGUnawareSrcSafetyAnalysis: src-state<SafeToDerefRegs: BitVector, TrustedRegs: BitVector, Insts: [0]()>
 
+        .globl  auth_oracle
+        .type   auth_oracle,@function
+auth_oracle:
+        autia   x0, x1
+        ret
+        .size auth_oracle, .-auth_oracle
+
+// CHECK-LABEL:Analyzing function auth_oracle, AllocatorId = 1
+// CHECK-NEXT: Binary Function "auth_oracle"  {
+// CHECK-NEXT:   Number      : 4
+// CHECK-NEXT:   State       : CFG constructed
+// ...
+// CHECK:        BB Layout   : [[BB0:[0-9a-zA-Z.]+]]
+// CHECK-NEXT: }
+// CHECK-NEXT: [[BB0]] (2 instructions, align : 1)
+// CHECK-NEXT:   Entry Point
+// CHECK-NEXT:     00000000:   autia   x0, x1
+// CHECK-NEXT:     00000004:   ret
+// CHECK-EMPTY:
+// CHECK-NEXT: DWARF CFI Instructions:
+// CHECK-NEXT:     <empty>
+// CHECK-NEXT: End of Function "auth_oracle"
+// CHECK-EMPTY:
+// CHECK-NEXT: Running src register safety analysis...
+// ...
+// CHECK:      After src register safety analysis:
+// CHECK-NEXT: Binary Function "auth_oracle"  {
+// ...
+// CHECK:      End of Function "auth_oracle"
+// ...
+// PAUTH:      Running dst register safety analysis...
+// PAUTH-NEXT:   DstSafetyAnalysis::ComputeNext(       ret     x30, dst-state<CannotEscapeUnchecked: >)
+// PAUTH-NEXT:     .. result: (dst-state<CannotEscapeUnchecked: LR W30 W30_HI >)
+// PAUTH-NEXT:   DstSafetyAnalysis::ComputeNext(       autia   x0, x1, dst-state<CannotEscapeUnchecked: LR W30 W30_HI >)
+// PAUTH-NEXT:     .. result: (dst-state<CannotEscapeUnchecked: LR W30 W30_HI >)
+// PAUTH-NEXT: After dst register safety analysis:
+// PAUTH-NEXT: Binary Function "auth_oracle"  {
+// PAUTH-NEXT:   Number      : 4
+// PAUTH-NEXT:   State       : CFG constructed
+// ...
+// PAUTH:        BB Layout   : [[BB0]]
+// PAUTH-NEXT: }
+// PAUTH-NEXT: [[BB0]] (2 instructions, align : 1)
+// PAUTH-NEXT:   Entry Point
+// PAUTH-NEXT:     00000000:   autia   x0, x1 # DataflowDstSafetyAnalysis: dst-state<CannotEscapeUnchecked: BitVector>
+// PAUTH-NEXT:     00000004:   ret # DataflowDstSafetyAnalysis: dst-state<CannotEscapeUnchecked: BitVector>
+// PAUTH-EMPTY:
+// PAUTH-NEXT: DWARF CFI Instructions:
+// PAUTH-NEXT:     <empty>
+// PAUTH-NEXT: End of Function "auth_oracle"
+// PAUTH-EMPTY:
+// PAUTH-NEXT:   Found auth inst:     00000000:        autia   x0, x1 # DataflowDstSafetyAnalysis: dst-state<CannotEscapeUnchecked: BitVector>
+// PAUTH-NEXT:     Authenticated reg: X0
+// PAUTH-NEXT:     safe output registers: LR W30 W30_HI
+// PAUTH-EMPTY:
+// PAUTH-NEXT: Running detailed dst register safety analysis...
+// PAUTH-NEXT:   DstSafetyAnalysis::ComputeNext(       ret     x30, dst-state<CannotEscapeUnchecked: >)
+// PAUTH-NEXT:     .. result: (dst-state<CannotEscapeUnchecked: LR W30 W30_HI >)
+// PAUTH-NEXT:   DstSafetyAnalysis::ComputeNext(       autia   x0, x1, dst-state<CannotEscapeUnchecked: LR W30 W30_HI >)
+// PAUTH-NEXT:     .. result: (dst-state<CannotEscapeUnchecked: LR W30 W30_HI >)
+// PAUTH-NEXT: After detailed dst register safety analysis:
+// PAUTH-NEXT: Binary Function "auth_oracle"  {
+// PAUTH-NEXT:   Number      : 4
+// PAUTH-NEXT:   State       : CFG constructed
+// ...
+// PAUTH:        BB Layout   : [[BB0]]
+// PAUTH-NEXT: }
+// PAUTH-NEXT: [[BB0]] (2 instructions, align : 1)
+// PAUTH-NEXT:   Entry Point
+// PAUTH-NEXT:     00000000:   autia   x0, x1 # DataflowDstSafetyAnalysis: dst-state<CannotEscapeUnchecked: BitVector>
+// PAUTH-NEXT:     00000004:   ret # DataflowDstSafetyAnalysis: dst-state<CannotEscapeUnchecked: BitVector>
+// PAUTH-EMPTY:
+// PAUTH-NEXT: DWARF CFI Instructions:
+// PAUTH-NEXT:     <empty>
+// PAUTH-NEXT: End of Function "auth_oracle"
+// PAUTH-EMPTY:
+// PAUTH-NEXT:   Attaching leakage info to:     00000000:      autia   x0, x1 # DataflowDstSafetyAnalysis: dst-state<CannotEscapeUnchecked: BitVector>
+
 // CHECK-LABEL:Analyzing function main, AllocatorId = 1
         .globl  main
         .type   main,@function
