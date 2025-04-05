@@ -10,6 +10,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ExitCodes.h"
+#include "llvm/Support/ProgramStack.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/thread.h"
 #include <cassert>
@@ -522,4 +523,22 @@ bool CrashRecoveryContext::RunSafelyOnThread(function_ref<void()> Fn,
   if (CrashRecoveryContextImpl *CRC = (CrashRecoveryContextImpl *)Impl)
     CRC->setSwitchedThread();
   return Info.Result;
+}
+
+bool CrashRecoveryContext::RunSafelyOnNewStack(function_ref<void()> Fn,
+                                               unsigned RequestedStackSize) {
+  // If crash recovery is disabled, do nothing.
+  if (gCrashRecoveryEnabled) {
+    assert(!Impl && "Crash recovery context already initialized!");
+    CrashRecoveryContextImpl *CRCI = new CrashRecoveryContextImpl(this);
+    Impl = CRCI;
+
+    CRCI->ValidJumpBuffer = true;
+    if (setjmp(CRCI->JumpBuffer) != 0) {
+      return false;
+    }
+  }
+
+  runOnNewStack(RequestedStackSize, Fn);
+  return true;
 }
