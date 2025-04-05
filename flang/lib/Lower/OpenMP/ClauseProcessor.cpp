@@ -695,9 +695,10 @@ void TypeInfo::typeScan(mlir::Type ty) {
   } else if (auto pty = mlir::dyn_cast<fir::PointerType>(ty)) {
     typeScan(pty.getEleTy());
   } else {
-    // The scan ends when reaching any built-in or record type.
+    // The scan ends when reaching any built-in, record or boxproc type.
     assert(ty.isIntOrIndexOrFloat() || mlir::isa<mlir::ComplexType>(ty) ||
-           mlir::isa<fir::LogicalType>(ty) || mlir::isa<fir::RecordType>(ty));
+           mlir::isa<fir::LogicalType>(ty) || mlir::isa<fir::RecordType>(ty) ||
+           mlir::isa<fir::BoxProcType>(ty));
   }
 }
 
