@@ -1498,13 +1498,16 @@ Constant *JumpThreadingPass::evaluateOnPredecessorEdge(BasicBlock *BB,
                                                        BasicBlock *PredPredBB,
                                                        Value *V,
                                                        const DataLayout &DL) {
-  SmallPtrSet<Value *, 8> Visited({V});
+  SmallPtrSet<Value *, 8> Visited;
   return evaluateOnPredecessorEdge(BB, PredPredBB, V, DL, Visited);
 }
 
 Constant *JumpThreadingPass::evaluateOnPredecessorEdge(
     BasicBlock *BB, BasicBlock *PredPredBB, Value *V, const DataLayout &DL,
     SmallPtrSet<Value *, 8> &Visited) {
+  if (!Visited.insert(V).second)
+    return nullptr;
+
   BasicBlock *PredBB = BB->getSinglePredecessor();
   assert(PredBB && "Expected a single predecessor");
 
@@ -1535,12 +1538,10 @@ Constant *JumpThreadingPass::evaluateOnPredecessorEdge(
       Constant *Op0 = nullptr;
       Constant *Op1 = nullptr;
       if (Value *V0 = CondCmp->getOperand(0); !Visited.contains(V0)) {
-        Visited.insert(V0);
         Op0 = evaluateOnPredecessorEdge(BB, PredPredBB, V0, DL, Visited);
         Visited.erase(V0);
       }
       if (Value *V1 = CondCmp->getOperand(1); !Visited.contains(V1)) {
-        Visited.insert(V1);
         Op1 = evaluateOnPredecessorEdge(BB, PredPredBB, V1, DL, Visited);
         Visited.erase(V1);
       }
