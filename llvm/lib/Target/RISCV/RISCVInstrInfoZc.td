@@ -35,10 +35,10 @@ def uimm8ge32 : RISCVOp {
   let OperandType = "OPERAND_UIMM8_GE32";
 }
 
-def RlistAsmOperand : AsmOperandClass {
-  let Name = "Rlist";
-  let ParserMethod = "parseReglist";
-  let DiagnosticType = "InvalidRlist";
+def RegListAsmOperand : AsmOperandClass {
+  let Name = "RegList";
+  let ParserMethod = "parseRegList";
+  let DiagnosticType = "InvalidRegList";
   let DiagnosticString = "operand must be {ra [, s0[-sN]]} or {x1 [, x8[-x9][, x18[-xN]]]}";
 }
 
@@ -58,9 +58,9 @@ def NegStackAdjAsmOperand : AsmOperandClass {
   let RenderMethod = "addSpimmOperands";
 }
 
-def rlist : RISCVOp<OtherVT> {
-   let ParserMatchClass = RlistAsmOperand;
-   let PrintMethod = "printRlist";
+def reglist : RISCVOp<OtherVT> {
+   let ParserMatchClass = RegListAsmOperand;
+   let PrintMethod = "printRegList";
    let DecoderMethod = "decodeZcmpRlist";
    let EncoderMethod = "getRlistOpValue";
    let MCOperandPredicate = [{
@@ -155,7 +155,7 @@ class RVZcArith_r<bits<5> funct5, string OpcodeStr> :
 
 class RVInstZcCPPP<bits<5> funct5, string opcodestr,
                    DAGOperand immtype = stackadj>
-    : RVInst16<(outs), (ins rlist:$rlist, immtype:$stackadj),
+    : RVInst16<(outs), (ins reglist:$rlist, immtype:$stackadj),
                opcodestr, "$rlist, $stackadj", [], InstFormatOther> {
   bits<4> rlist;
   bits<16> stackadj;

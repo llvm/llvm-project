@@ -240,14 +240,14 @@ float RISCVLoadFPImm::getFPImm(unsigned Imm) {
   return bit_cast<float>(I);
 }
 
-void RISCVZC::printRlist(unsigned SlistEncode, raw_ostream &OS) {
+void RISCVZC::printRegList(unsigned RlistEncode, raw_ostream &OS) {
   OS << "{ra";
-  if (SlistEncode > RISCVZC::RA) {
+  if (RlistEncode > RISCVZC::RA) {
     OS << ", s0";
-    if (SlistEncode == RISCVZC::RA_S0_S11)
+    if (RlistEncode == RISCVZC::RA_S0_S11)
       OS << "-s11";
-    else if (SlistEncode > RISCVZC::RA_S0 && SlistEncode <= RISCVZC::RA_S0_S11)
-      OS << "-s" << (SlistEncode - RISCVZC::RA_S0);
+    else if (RlistEncode > RISCVZC::RA_S0 && RlistEncode <= RISCVZC::RA_S0_S11)
+      OS << "-s" << (RlistEncode - RISCVZC::RA_S0);
   }
   OS << "}";
 }
