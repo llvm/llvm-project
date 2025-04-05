@@ -2,6 +2,14 @@
 Talks
 =====
 ----
+2025
+----
+* An introduction to building and using LLVM libc - Peter Smith
+
+  * `slides <https://fosdem.org/2025/events/attachments/fosdem-2025-5456-an-introduction-to-building-and-using-llvm-libc/slides/237989/Fosdem202_76Bilu2.pdf>`__
+  * `videos <https://fosdem.org/2025/schedule/event/fosdem-2025-5456-an-introduction-to-building-and-using-llvm-libc/>`__
+
+----
 2024
 ----
 * A C/C++ Toolchain for your GPU - Joseph Huber

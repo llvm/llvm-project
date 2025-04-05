@@ -1,6 +1,3 @@
-if (LLVM_BUILD_TELEMETRY)
-  set(TELEMETRY_DEPS Telemetry)
-endif()
 
 add_lldb_unittest(LLDBCoreTests
   CommunicationTest.cpp
@@ -10,6 +7,7 @@ add_lldb_unittest(LLDBCoreTests
   FormatEntityTest.cpp
   MangledTest.cpp
   ModuleSpecTest.cpp
+  PluginManagerTest.cpp
   ProgressReportTest.cpp
   RichManglingContextTest.cpp
   SourceLocationSpecTest.cpp
@@ -31,5 +29,5 @@ add_lldb_unittest(LLDBCoreTests
     LLVMTestingSupport
   LINK_COMPONENTS
     Support
-    ${TELEMETRY_DEPS}
+    Telemetry
   )

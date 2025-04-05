@@ -300,7 +300,7 @@ static bool hasTensorSignature(func::FuncOp funcOp) {
 /// Store all functions of the `moduleOp` in `orderedFuncOps`, sorted by
 /// callee-caller order (i.e., callees without callers first). Store all
 /// remaining functions (i.e., the ones that call each other recursively) in
-/// `remainingFuncOps`.
+/// `remainingFuncOps`. Does not traverse nested symbol tables.
 ///
 /// Store the map of FuncOp to all its callers in `callerMap`.
 ///
@@ -314,10 +314,10 @@ static LogicalResult getFuncOpsOrderedByCalls(
   DenseMap<func::FuncOp, DenseSet<func::FuncOp>> calledBy;
   // For each FuncOp, the number of func::CallOp it contains.
   DenseMap<func::FuncOp, unsigned> numberCallOpsContainedInFuncOp;
-  WalkResult res = moduleOp.walk([&](func::FuncOp funcOp) -> WalkResult {
+  for (func::FuncOp funcOp : moduleOp.getOps<func::FuncOp>()) {
     // Collect function calls and populate the caller map.
     numberCallOpsContainedInFuncOp[funcOp] = 0;
-    return funcOp.walk([&](func::CallOp callOp) -> WalkResult {
+    WalkResult res = funcOp.walk([&](func::CallOp callOp) -> WalkResult {
       func::FuncOp calledFunction = getCalledFunction(callOp);
       assert(calledFunction && "could not retrieved called func::FuncOp");
       // If the called function does not have any tensors in its signature, then
@@ -331,9 +331,9 @@ static LogicalResult getFuncOpsOrderedByCalls(
       }
       return WalkResult::advance();
     });
-  });
-  if (res.wasInterrupted())
-    return failure();
+    if (res.wasInterrupted())
+      return failure();
+  }
 
   // Iteratively remove function operations that do not call any of the
   // functions remaining in the callCounter map and add them to ordered list.
@@ -498,10 +498,10 @@ mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
 
 void mlir::bufferization::removeBufferizationAttributesInModule(
     ModuleOp moduleOp) {
-  moduleOp.walk([&](func::FuncOp op) {
+  for (auto op : moduleOp.getOps<func::FuncOp>()) {
     for (BlockArgument bbArg : op.getArguments())
       removeBufferizationAttributes(bbArg);
-  });
+  }
 }
 
 LogicalResult mlir::bufferization::bufferizeModuleOp(
@@ -557,7 +557,7 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
   // Bufferize all other ops.
   for (Operation &op : llvm::make_early_inc_range(moduleOp.getOps())) {
     // Functions were already bufferized.
-    if (isa<func::FuncOp>(&op))
+    if (isa<func::FuncOp>(&op) || op.hasTrait<OpTrait::SymbolTable>())
       continue;
     if (failed(bufferizeOp(&op, options, statistics)))
       return failure();

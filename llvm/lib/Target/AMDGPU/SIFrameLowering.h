@@ -86,6 +86,10 @@ private:
 
 public:
   bool requiresStackPointerReference(const MachineFunction &MF) const;
+
+  // Returns true if the function may need to reserve space on the stack for the
+  // CWSR trap handler.
+  bool mayReserveScratchForCWSR(const MachineFunction &MF) const;
 };
 
 } // end namespace llvm

@@ -34,7 +34,7 @@ def int_dx_resource_load_typedbuffer
     : DefaultAttrsIntrinsic<[llvm_any_ty, llvm_i1_ty],
                             [llvm_any_ty, llvm_i32_ty], [IntrReadMem]>;
 def int_dx_resource_store_typedbuffer
-    : DefaultAttrsIntrinsic<[], [llvm_any_ty, llvm_i32_ty, llvm_anyvector_ty],
+    : DefaultAttrsIntrinsic<[], [llvm_any_ty, llvm_i32_ty, llvm_any_ty],
                             [IntrWriteMem]>;
 def int_dx_resource_load_rawbuffer
     : DefaultAttrsIntrinsic<[llvm_any_ty, llvm_i1_ty],
@@ -44,6 +44,21 @@ def int_dx_resource_store_rawbuffer
     : DefaultAttrsIntrinsic<
           [], [llvm_any_ty, llvm_i32_ty, llvm_i32_ty, llvm_any_ty],
           [IntrWriteMem]>;
+
+// dx.resource.load.cbufferrow encodes the number of elements returned in the
+// function name. The total size of the return should always be 128 bits.
+def int_dx_resource_load_cbufferrow_8
+    : DefaultAttrsIntrinsic<
+          [llvm_any_ty, llvm_any_ty, llvm_any_ty, llvm_any_ty,
+           llvm_any_ty, llvm_any_ty, llvm_any_ty, llvm_any_ty],
+          [llvm_any_ty, llvm_i32_ty], [IntrReadMem]>;
+def int_dx_resource_load_cbufferrow_4
+    : DefaultAttrsIntrinsic<
+          [llvm_any_ty, llvm_any_ty, llvm_any_ty, llvm_any_ty],
+          [llvm_any_ty, llvm_i32_ty], [IntrReadMem]>;
+def int_dx_resource_load_cbufferrow_2
+    : DefaultAttrsIntrinsic<[llvm_any_ty, llvm_any_ty],
+                            [llvm_any_ty, llvm_i32_ty], [IntrReadMem]>;
 
 def int_dx_resource_updatecounter
     : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_any_ty, llvm_i8_ty],
@@ -85,6 +100,10 @@ def int_dx_udot :
     DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
     [llvm_anyint_ty, LLVMScalarOrSameVectorWidth<0, LLVMVectorElementType<0>>],
     [IntrNoMem, Commutative] >;
+def int_dx_dot2add : 
+    DefaultAttrsIntrinsic<[llvm_float_ty], 
+    [llvm_anyfloat_ty, LLVMMatchType<0>, llvm_float_ty], 
+    [IntrNoMem, Commutative]>;
 def int_dx_dot4add_i8packed : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
 def int_dx_dot4add_u8packed : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
 

@@ -274,7 +274,7 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
         // and canonicalize that away later.
         Value attribution = gpuFuncOp.getWorkgroupAttributions()[idx];
         auto type = cast<MemRefType>(attribution.getType());
-        auto descr = MemRefDescriptor::fromStaticShape(
+        Value descr = MemRefDescriptor::fromStaticShape(
             rewriter, loc, *getTypeConverter(), type, memory);
         signatureConversion.remapInput(numProperArguments + idx, descr);
       }
@@ -303,7 +303,7 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
         alignment = alignAttr.getInt();
       Value allocated = rewriter.create<LLVM::AllocaOp>(
           gpuFuncOp.getLoc(), ptrType, elementType, numElements, alignment);
-      auto descr = MemRefDescriptor::fromStaticShape(
+      Value descr = MemRefDescriptor::fromStaticShape(
           rewriter, loc, *getTypeConverter(), type, allocated);
       signatureConversion.remapInput(
           numProperArguments + numWorkgroupAttributions + idx, descr);
@@ -624,7 +624,8 @@ LogicalResult impl::scalarizeVectorOp(Operation *op, ValueRange operands,
                                       const LLVMTypeConverter &converter) {
   TypeRange operandTypes(operands);
   if (llvm::any_of(operandTypes, llvm::IsaPred<VectorType>)) {
-    VectorType vectorType = cast<VectorType>(op->getResultTypes()[0]);
+    VectorType vectorType =
+        cast<VectorType>(converter.convertType(op->getResultTypes()[0]));
     rewriter.replaceOp(op, scalarizeVectorOpHelper(op, operands, vectorType,
                                                    rewriter, converter));
     return success();

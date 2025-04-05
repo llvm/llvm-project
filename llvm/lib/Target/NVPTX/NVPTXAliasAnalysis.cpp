@@ -13,6 +13,7 @@
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -114,4 +115,30 @@ ModRefInfo NVPTXAAResult::getModRefInfoMask(const MemoryLocation &Loc,
     return ModRefInfo::NoModRef;
 
   return ModRefInfo::ModRef;
+}
+
+MemoryEffects NVPTXAAResult::getMemoryEffects(const CallBase *Call,
+                                              AAQueryInfo &AAQI) {
+  // Inline assembly with no side-effect or memory clobbers should not
+  // indirectly access memory in the PTX specification.
+  if (const auto *IA = dyn_cast<InlineAsm>(Call->getCalledOperand())) {
+    // Volatile is translated as side-effects.
+    if (IA->hasSideEffects())
+      return MemoryEffects::unknown();
+
+    for (const InlineAsm::ConstraintInfo &Constraint : IA->ParseConstraints()) {
+      // Indirect constraints (e.g. =*m) are unsupported in inline PTX.
+      if (Constraint.isIndirect)
+        return MemoryEffects::unknown();
+
+      // Memory clobbers prevent optimization.
+      if ((Constraint.Type & InlineAsm::ConstraintPrefix::isClobber) &&
+          any_of(Constraint.Codes,
+                 [](const auto &Code) { return Code == "{memory}"; }))
+        return MemoryEffects::unknown();
+    }
+    return MemoryEffects::none();
+  }
+
+  return MemoryEffects::unknown();
 }

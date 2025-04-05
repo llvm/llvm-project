@@ -23,7 +23,7 @@
 // The trace also contains durations of each step, but they are so short that they are not reliably present
 // in each run. However, they are also aggregated into Total *, for example:
 //
-// CHECK:          "name": "Total Loc PostStmt",
+// CHECK:          "name": "Total dispatchWorkItem PostStmt",
 // CHECK-NEXT:     "args": {
 // CHECK-NEXT:         "count": {{[0-9]+}},
 // CHECK-NEXT:         "avg ms": {{[0-9]+}}

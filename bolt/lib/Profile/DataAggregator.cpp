@@ -831,9 +831,10 @@ bool DataAggregator::doTrace(const LBREntry &First, const LBREntry &Second,
     ParentFunc = FromFunc;
   ParentFunc->SampleCountInBytes += Count * (Second.From - First.To);
 
+  const uint64_t FuncAddress = FromFunc->getAddress();
   std::optional<BoltAddressTranslation::FallthroughListTy> FTs =
-      BAT ? BAT->getFallthroughsInTrace(FromFunc->getAddress(), First.To,
-                                        Second.From)
+      BAT && BAT->isBATFunction(FuncAddress)
+          ? BAT->getFallthroughsInTrace(FuncAddress, First.To, Second.From)
           : getFallthroughsInTrace(*FromFunc, First, Second, Count);
   if (!FTs) {
     LLVM_DEBUG(
