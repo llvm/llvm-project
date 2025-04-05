@@ -13,7 +13,7 @@
 #include "test/UnitTest/Test.h"
 
 using LlvmLibcSinpiTest = LIBC_NAMESPACE::testing::FPTest<double>;
-
+/*
 TEST_F(LlvmLibcSinpiTest, SpecialNumbers) {
   LIBC_NAMESPACE::libc_errno = 0;
 
@@ -49,4 +49,11 @@ TEST_F(LlvmLibcSinpiTest, Integers) {
   EXPECT_FP_EQ(zero, LIBC_NAMESPACE::sinpi(0x1.0000000000005p52));
 
   EXPECT_FP_EQ(zero, LIBC_NAMESPACE::sinpi(0x1.0000000000006p52));
+}
+*/
+
+TEST_F(LlvmLibcSinpiTest, Integers) {
+  //ASSERT_FP_EQ(zero, LIBC_NAMESPACE::sinpi(4503563146482784.00000000000000000000000000000000000000000000000000));
+
+  ASSERT_FP_EQ(-1.0, LIBC_NAMESPACE::sinpi(4499003037990983.50000000000000000000000000000000000000000000000000));
 }

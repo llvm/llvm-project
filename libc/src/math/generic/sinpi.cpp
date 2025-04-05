@@ -10,51 +10,40 @@
 #include "src/__support/FPUtil/generic/mul.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/math/pow.h"
-#include "range_reduction_double_nofma.h"
-#include "src/__support/FPUtil/multiply_add.h"
-#include "src/math/generic/range_reduction_double_common.h"
+//#include "range_reduction_double_nofma.h"
+//#include "src/__support/FPUtil/multiply_add.h"
+//#include "src/math/generic/range_reduction_double_common.h"
 #include <iostream>
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(double, sinpi, (double x)) {
-
-  // Range reduction:
-  // Given x = (k + y) * 1/128
-  // find k and y such that
-  //   k = round(x * 128)
-  //   y = x * 128 - k
-
-  // x = (k + y) * 1/128 and
-  // sin(x * pi) = sin((k +y)*pi/128)
-  //             = sin(k * pi/128) * cos(y * pi/128) +
-  //             = sin(y * pi/128) * cos(k* pi/128)
+  // Given x * pi = y - (k * (pi/128)) 
+  // find y and k such that
+  // y = x * pi - (k * pi/128) = x * pi - kpi/128
+  // k = round(x, 128)
 
   using FPBits = typename fputil::FPBits<double>;
   using DoubleDouble = fputil::DoubleDouble;
 
-  LargeRangeReduction range_reduction_large{};
-  double k = fputil::nearest_integer(x * 128);
-  FPBits kbits(k);
   FPBits xbits(x);
-  uint64_t k_bits = kbits.uintval();
 
-  double fff = 5.0;
-  [[maybe_unused]] Float128 ggg = range_reduction_small_f128(fff);
+  double k = fputil::nearest_integer(x * 128);
+  int  k_int = static_cast<int>(k);
+  
+  std::cout << "k" << k << std::endl;
+  
+  double yk = x - k/128;
 
-  double y = (x * 128) - k;
-  constexpr DoubleDouble PI_OVER_128_DD = {0x1.1a62633145c07p-60,
-                                           0x1.921fb54442d18p-6};
-  double pi_over_128 = PI_OVER_128_DD.hi;
-  DoubleDouble yy = fputil::exact_mult(y, pi_over_128);
-
+  DoubleDouble yy = fputil::exact_mult(yk, 3.141592653589793115997963468544185161590576171875);
+  yy.lo = fputil::multiply_add(yk, 1.2246467991473532071737640294583966046256921246776e-16, yy.lo);
+  
   uint64_t abs_u = xbits.uintval();
 
   uint64_t x_abs = abs_u & 0xFFFFFFFFFFFFFFFF;
 
   if (LIBC_UNLIKELY(x_abs == 0U))
     return x;
-
   if (x_abs >= 0x4330000000000000) {
     if (xbits.is_nan())
       return x;
@@ -69,76 +58,38 @@ LLVM_LIBC_FUNCTION(double, sinpi, (double x)) {
   DoubleDouble sin_y, cos_y;
 
   [[maybe_unused]] double err = generic::sincos_eval(yy, sin_y, cos_y);
-  DoubleDouble sin_k = SIN_K_PI_OVER_128[k_bits & 255];
-  DoubleDouble cos_k = SIN_K_PI_OVER_128[(k_bits + 64) & 255];
+  DoubleDouble sin_k = SIN_K_PI_OVER_128[k_int & 255];
+  DoubleDouble cos_k = SIN_K_PI_OVER_128[(k_int + 64) & 255];
   
-  DoubleDouble sin_k_cos_y = fputil::quick_mult(cos_y, sin_k);
-  DoubleDouble cos_k_sin_y = fputil::quick_mult(sin_y, cos_k);
+  std::cout << "sin_k: " << sin_k.hi << std::endl;
+  std::cout << "sin_klo: " << sin_k.lo << std::endl;
+  std::cout << "sin_y: " << sin_y.hi << std::endl;
+  std::cout << "cos_y: " << cos_y.hi << std::endl;
+  std::cout << "sin_y.lo: " << sin_y.lo << std::endl;
+  std::cout << "cos_y.o: " << cos_y.lo << std::endl;
   
+  double cosm1_y = cos_y.hi - 1.0;
+  DoubleDouble sin_y_cos_k = fputil::quick_mult(sin_y, cos_k);
   
-  DoubleDouble rr = fputil::exact_add<false>(sin_k_cos_y.hi, cos_k_sin_y.hi);
-  rr.lo += sin_k_cos_y.lo + cos_k_sin_y.lo;
-
-  double rlp = rr.lo + err;
-  double rlm = rr.lo - err;
-
-  double r_upper = rr.hi + rlp; // (rr.lo + ERR);
-  double r_lower = rr.hi + rlm; // (rr.lo - ERR);
-
-  uint16_t x_e = xbits.get_biased_exponent();
-
-  // Ziv's rounding test.
-  if (LIBC_LIKELY(r_upper == r_lower))
-    return r_upper;
-
-  Float128 u_f128, sin_u, cos_u;
-  if (LIBC_LIKELY(x_e < FPBits::EXP_BIAS + FAST_PASS_EXPONENT))
-    u_f128 = range_reduction_small_f128(x);
-  else
-    u_f128 = range_reduction_large.accurate();
-
-  generic::sincos_eval(u_f128, sin_u, cos_u);
-
-  auto get_sin_k = [](unsigned kk) -> Float128 {
-    unsigned idx = (kk & 64) ? 64 - (kk & 63) : (kk & 63);
-    Float128 ans = SIN_K_PI_OVER_128_F128[idx];
-    if (kk & 128)
-      ans.sign = Sign::NEG;
-    return ans;
-  };
-
-  unsigned k_r = range_reduction_large.fast(x, yy);
-  std::cout << k_r << "k_r" << std::endl;
-  // cos(k * pi/128) = sin(k * pi/128 + pi/2) = sin((k + 64) * pi/128).
-  Float128 sin_k_f128 = get_sin_k(k_r);
-  Float128 cos_k_f128 = get_sin_k(k_r + 64);
-
-  // sin(x) = sin((k * pi/128 + u)
-  //        = sin(u) * cos(k*pi/128) + cos(u) * sin(k*pi/128)
-  Float128 r = fputil::quick_add(fputil::quick_mul(sin_k_f128, cos_u),
-                                 fputil::quick_mul(cos_k_f128, sin_u));
-
-  // TODO: Add assertion if Ziv's accuracy tests fail in debug mode.
-  // https://github.com/llvm/llvm-project/issues/96452.
-
-  return static_cast<double>(r);
+  std::cout << "cosm1" << cosm1_y << std::endl;
+  DoubleDouble cosm1_yy;
+  cosm1_yy.hi = cosm1_y;
+  cosm1_yy.lo = 0.0;
   
-  //double cos_ulp = cos_k.lo + err;
-  //double sin_ulp = sin_k.hi + err;
-  /*
-  double sin_yy = sin_y.hi;
-  double cos_yy = cos_y.hi;
-  double sin_kk = sin_k.hi;
-  double cos_kk = cos_k.hi;
-  */
-  /*
-  if (LIBC_UNLIKELY(sin_yy == 0 && sin_kk == 0))
-    return FPBits::zero(xbits.sign()).get_val();
-  */
-  /*
-  return static_cast<double>(fputil::multiply_add(
-      sin_yy, cos_kk, fputil::multiply_add(cos_yy, sin_kk, 0.0)));
-  */
-
-}
+  DoubleDouble cos_y_sin_k = fputil::quick_mult(cos_y, sin_k);
+  DoubleDouble rr = fputil::exact_add<false>(sin_y_cos_k.hi, cos_y_sin_k.hi);
+  
+  std::cout << "r.hi:" << rr.hi << std::endl;
+  std::cout << "r.lo" << rr.lo << std::endl;
+  
+  rr.lo += sin_y_cos_k.lo + cos_y_sin_k.lo;
+ 
+  std::cout << "rrlo2: " << rr.lo << std::endl;  
+  std::cout << "cos_y_sin_k:" << cos_y_sin_k.hi << std::endl;
+  std::cout << "siny*cosk.lo:" << sin_y_cos_k.lo << std::endl;
+  std::cout << "rrhi + rrlo + sink.hi " << rr.hi + rr.lo + sin_k.hi + sin_k.lo << std::endl;
+  std::cout << "rrhi + rrlo " << rr.hi + rr.lo << std::endl;
+  
+  return rr.hi + rr.lo;
+ }
 } // namespace LIBC_NAMESPACE_DECL

@@ -507,7 +507,6 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.fma
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.polyeval
-    libc.src.math.pow
     libc.src.__support.common
     libc.src.__support.macros.optimization
     libc.src.__support.FPUtil.basic_operations
