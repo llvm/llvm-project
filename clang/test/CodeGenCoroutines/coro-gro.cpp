@@ -30,11 +30,12 @@ void doSomething() noexcept;
 int f() {
   // CHECK: %[[RetVal:.+]] = alloca i32
   // CHECK: %[[GroActive:.+]] = alloca i1
-  // CHECK: %[[CoroGro:.+]] = alloca %struct.GroType, {{.*}} !coro.outside.frame ![[OutFrameMetadata:.+]]
+  // CHECK: %[[CoroGro:.+]] = alloca %struct.GroType
 
   // CHECK: %[[Size:.+]] = call i64 @llvm.coro.size.i64()
   // CHECK: call noalias noundef nonnull ptr @_Znwm(i64 noundef %[[Size]])
   // CHECK: store i1 false, ptr %[[GroActive]]
+  // CHECK: call void @llvm.coro.outside.frame(ptr %[[CoroGro]])
   // CHECK: call void @_ZNSt16coroutine_traitsIiJEE12promise_typeC1Ev(
   // CHECK: call void @_ZNSt16coroutine_traitsIiJEE12promise_type17get_return_objectEv({{.*}} %[[CoroGro]]
   // CHECK: store i1 true, ptr %[[GroActive]]
@@ -106,4 +107,3 @@ invoker g() {
   // CHECK: call void @_ZN7invoker15invoker_promise17get_return_objectEv({{.*}} %[[AggRes]]
   co_return;
 }
-// CHECK: ![[OutFrameMetadata]] = !{}

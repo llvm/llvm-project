@@ -72,13 +72,13 @@ void consume(int,int,int,int) noexcept;
 // CHECK: define{{.*}} void @_Z1fi8MoveOnly11MoveAndCopy10TrivialABI(i32 noundef %val, ptr noundef %[[MoParam:.+]], ptr noundef %[[McParam:.+]], i32 %[[TrivialParam:.+]]) #0 personality ptr @__gxx_personality_v0
 void f(int val, MoveOnly moParam, MoveAndCopy mcParam, TrivialABI trivialParam) {
   // CHECK: %[[TrivialAlloca:.+]] = alloca %struct.TrivialABI,
-  // CHECK-SAME: !coro.outside.frame
   // CHECK: %[[MoCopy:.+]] = alloca %struct.MoveOnly,
   // CHECK: %[[McCopy:.+]] = alloca %struct.MoveAndCopy,
   // CHECK: %[[TrivialCopy:.+]] = alloca %struct.TrivialABI,
   // CHECK: store i32 %val, ptr %[[ValAddr:.+]]
 
   // CHECK: call ptr @llvm.coro.begin(
+  // CHECK: @llvm.coro.outside.frame(ptr %[[TrivialAlloca]])
   // CHECK: call void @_ZN8MoveOnlyC1EOS_(ptr {{[^,]*}} %[[MoCopy]], ptr noundef nonnull align 4 dereferenceable(4) %[[MoParam]])
   // CHECK-NEXT: call void @llvm.lifetime.start.p0(
   // CHECK-NEXT: call void @_ZN11MoveAndCopyC1EOS_(ptr {{[^,]*}} %[[McCopy]], ptr noundef nonnull align 4 dereferenceable(4) %[[McParam]]) #
@@ -226,12 +226,11 @@ void consume(int) noexcept;
 // may be destroyed before the destructor call.
 void msabi(MSParm p) {
   // MSABI: define{{.*}} void @"?msabi@@YAXUMSParm@@@Z"(i32 %[[Param:.+]])
+  // MSABI: %[[ParamAlloca:.+]] = alloca %struct.MSParm
+  // MSABI: %[[ParamCopy:.+]] = alloca %struct.MSParm
 
   // The parameter's local alloca is marked not part of the frame.
-  // MSABI: %[[ParamAlloca:.+]] = alloca %struct.MSParm
-  // MSABI-SAME: !coro.outside.frame
-
-  // MSABI: %[[ParamCopy:.+]] = alloca %struct.MSParm
+  // MSABI: call void @llvm.coro.outside.frame(ptr %[[ParamAlloca]])
 
   consume(p.val);
   // The parameter's copy is used by the coroutine.
