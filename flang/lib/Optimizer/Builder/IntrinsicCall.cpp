@@ -793,6 +793,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"dim", asValue},
        {"mask", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"putenv",
+     &I::genPutenv,
+     {{{"str", asAddr}, {"status", asAddr, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"random_init",
      &I::genRandomInit,
      {{{"repeatable", asValue}, {"image_distinct", asValue}}},
@@ -7327,6 +7331,39 @@ IntrinsicLibrary::genProduct(mlir::Type resultType,
                              llvm::ArrayRef<fir::ExtendedValue> args) {
   return genReduction(fir::runtime::genProduct, fir::runtime::genProductDim,
                       "PRODUCT", resultType, args);
+}
+
+// PUTENV
+fir::ExtendedValue
+IntrinsicLibrary::genPutenv(std::optional<mlir::Type> resultType,
+                            llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert((resultType.has_value() && args.size() == 1) ||
+         (!resultType.has_value() && args.size() >= 1 && args.size() <= 2));
+
+  mlir::Value str = fir::getBase(args[0]);
+  mlir::Value strLength = fir::getLen(args[0]);
+  mlir::Value statusValue =
+      fir::runtime::genPutEnv(builder, loc, str, strLength);
+
+  if (resultType.has_value()) {
+    // Function form, return status.
+    return builder.createConvert(loc, *resultType, statusValue);
+  }
+
+  // Subroutine form, store status and return none.
+  const fir::ExtendedValue &status = args[1];
+  if (!isStaticallyAbsent(status)) {
+    mlir::Value statusAddr = fir::getBase(status);
+    mlir::Value statusIsPresentAtRuntime =
+        builder.genIsNotNullAddr(loc, statusAddr);
+    builder.genIfThen(loc, statusIsPresentAtRuntime)
+        .genThen([&]() {
+          builder.createStoreWithConvert(loc, statusValue, statusAddr);
+        })
+        .end();
+  }
+
+  return {};
 }
 
 // RANDOM_INIT
