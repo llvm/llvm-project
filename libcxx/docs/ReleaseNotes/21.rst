@@ -64,28 +64,21 @@ Improvements and New Features
 
 - The ``num_put::do_put`` integral overloads have been optimized, resulting in a performance improvement of up to 2.4x.
 
-<<<<<<< HEAD
 - The ``std::stable_sort`` algorithm uses radix sort for floating-point types now, which can improve the performance
   up to 10x, depending on type of sorted elements and the initial state of the sorted array.
 
 - The segmented iterator optimization for ``std::for_each`` has been backported to C++11. Previously it was only available
   in C++23 and later.
-=======
-- The ``std::ranges::for_each`` and ``std::ranges::for_each_n`` algorithms have been optimized for segmented iterators,
-<<<<<<< HEAD
-  resulting in performance improvements of up to 21.3x for ``std::deque::iterator`` segmented inputs and 24.9x for
-  ``join_view`` of ``vector<vector<T>>``.
->>>>>>> 50ac206d4a13 (Apply optimization for join_view segmented iterators)
-=======
-  resulting in performance improvements of up to 21.3x for ``std::deque::iterator`` and 24.9x for ``join_view`` of
-  ``vector<vector<char>>``.
->>>>>>> 590136ba0d9f (Fix review comments)
 
 - The ``std::for_each_n`` algorithm has been optimized for segmented iterators, resulting in a performance improvement of
   up to 17.7x for ``std::deque<short>`` iterators, and up to 13.9x for ``std::join_view<vector<vector<short>>>`` iterators.
 
 - The ``bitset::to_string`` function has been optimized, resulting in a performance improvement of up to 8.3x for bitsets
   with uniformly distributed zeros and ones, and up to 13.5x and 16.1x for sparse and dense bitsets, respectively.
+
+- The ``std::ranges::for_each`` and ``std::ranges::for_each_n`` algorithms have been optimized for segmented iterators,
+  resulting in performance improvements of up to 21.3x for ``std::deque::iterator`` and 24.9x for ``join_view`` of
+  ``vector<vector<char>>``.
 
 Deprecations and Removals
 -------------------------
