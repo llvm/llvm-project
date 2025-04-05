@@ -268,6 +268,15 @@ void FillResponse(const llvm::json::Object &request,
   response.try_emplace("success", true);
 }
 
+void SetError(llvm::json::Object &response, lldb::SBError error) {
+  assert(error.Fail());
+
+  response["success"] = llvm::json::Value(error.Success());
+  const char *error_cstr = error.GetCString();
+  if (error_cstr && error_cstr[0])
+    EmplaceSafeString(response, "message", std::string(error_cstr));
+}
+
 // "Scope": {
 //   "type": "object",
 //   "description": "A Scope is a named container for variables. Optionally
