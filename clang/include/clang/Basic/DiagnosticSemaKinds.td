@@ -7350,8 +7350,9 @@ def err_typecheck_pointer_arith_void_type : Error<
   "arithmetic on%select{ a|}0 pointer%select{|s}0 to void">;
 def err_typecheck_decl_incomplete_type : Error<
   "variable has incomplete type %0">;
-def ext_typecheck_decl_incomplete_type : ExtWarn<
-  "tentative definition of variable with internal linkage has incomplete non-array type %0">,
+def ext_typecheck_decl_incomplete_type : Extension<
+  "tentative definition of variable with internal linkage has incomplete "
+  "%select{non-array|array}0 type %1">,
   InGroup<DiagGroup<"tentative-definition-incomplete-type">>;
 def err_tentative_def_incomplete_type : Error<
   "tentative definition has type %0 that is never completed">;
