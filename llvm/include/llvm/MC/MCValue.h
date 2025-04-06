@@ -32,6 +32,11 @@ class MCValue {
   int64_t Cst = 0;
   uint32_t Specifier = 0;
 
+  void print(raw_ostream &OS) const;
+
+  /// Print the value to stderr.
+  void dump() const;
+
 public:
   friend class MCAssembler;
   friend class MCExpr;
@@ -46,12 +51,6 @@ public:
 
   /// Is this an absolute (as opposed to relocatable) value.
   bool isAbsolute() const { return !SymA && !SymB; }
-
-  /// Print the value to the stream \p OS.
-  void print(raw_ostream &OS) const;
-
-  /// Print the value to stderr.
-  void dump() const;
 
   static MCValue get(const MCSymbol *SymA, const MCSymbol *SymB = nullptr,
                      int64_t Val = 0, uint32_t Specifier = 0) {
