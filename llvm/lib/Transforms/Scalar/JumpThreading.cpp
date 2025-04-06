@@ -14,6 +14,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -1507,6 +1508,7 @@ Constant *JumpThreadingPass::evaluateOnPredecessorEdge(
     SmallPtrSet<Value *, 8> &Visited) {
   if (!Visited.insert(V).second)
     return nullptr;
+  auto _ = make_scope_exit([&Visited, V]() { Visited.erase(V); });
 
   BasicBlock *PredBB = BB->getSinglePredecessor();
   assert(PredBB && "Expected a single predecessor");
@@ -1535,16 +1537,10 @@ Constant *JumpThreadingPass::evaluateOnPredecessorEdge(
   // instructions in unreachable code and check before going into recursion.
   if (CmpInst *CondCmp = dyn_cast<CmpInst>(V)) {
     if (CondCmp->getParent() == BB) {
-      Constant *Op0 = nullptr;
-      Constant *Op1 = nullptr;
-      if (Value *V0 = CondCmp->getOperand(0); !Visited.contains(V0)) {
-        Op0 = evaluateOnPredecessorEdge(BB, PredPredBB, V0, DL, Visited);
-        Visited.erase(V0);
-      }
-      if (Value *V1 = CondCmp->getOperand(1); !Visited.contains(V1)) {
-        Op1 = evaluateOnPredecessorEdge(BB, PredPredBB, V1, DL, Visited);
-        Visited.erase(V1);
-      }
+      Constant *Op0 = evaluateOnPredecessorEdge(
+          BB, PredPredBB, CondCmp->getOperand(0), DL, Visited);
+      Constant *Op1 = evaluateOnPredecessorEdge(
+          BB, PredPredBB, CondCmp->getOperand(1), DL, Visited);
       if (Op0 && Op1) {
         return ConstantFoldCompareInstOperands(CondCmp->getPredicate(), Op0,
                                                Op1, DL);
