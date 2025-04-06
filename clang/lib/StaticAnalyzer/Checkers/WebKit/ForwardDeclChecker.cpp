@@ -129,7 +129,7 @@ public:
       return false;
     // Find a definition amongst template declarations.
     if (auto *Specialization = dyn_cast<ClassTemplateSpecializationDecl>(R)) {
-      if (auto* S = Specialization->getSpecializedTemplate()) {
+      if (auto *S = Specialization->getSpecializedTemplate()) {
         for (S = S->getMostRecentDecl(); S; S = S->getPreviousDecl()) {
           if (S->isThisDeclarationADefinition())
             return false;
