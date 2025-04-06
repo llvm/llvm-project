@@ -50,14 +50,14 @@ namespace llvm {
   /// general safe to store a StringRef.
   class LLVM_GSL_POINTER StringRef {
   public:
-    static constexpr size_t npos = ~size_t(0);
+    static constexpr size_t npos = std::string_view::npos;
 
-    using iterator = const char *;
-    using const_iterator = const char *;
-    using size_type = size_t;
-    using value_type = char;
-    using reverse_iterator = std::reverse_iterator<iterator>;
-    using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+    using iterator = std::string_view::iterator;
+    using const_iterator = std::string_view::const_iterator;
+    using size_type = std::string_view::size_type;
+    using value_type = std::string_view::value_type;
+    using reverse_iterator = std::string_view::reverse_iterator;
+    using const_reverse_iterator = std::string_view::const_reverse_iterator;
 
   private:
     /// The start of the string, in an external buffer.
@@ -113,23 +113,16 @@ namespace llvm {
     /// @name Iterators
     /// @{
 
-    iterator begin() const { return data(); }
-
-    iterator end() const { return data() + size(); }
-
-    reverse_iterator rbegin() const {
-      return std::make_reverse_iterator(end());
-    }
-
-    reverse_iterator rend() const {
-      return std::make_reverse_iterator(begin());
-    }
+    iterator begin() const { return View.begin(); }
+    iterator end() const { return View.end(); }
+    reverse_iterator rbegin() const { return View.rbegin(); }
+    reverse_iterator rend() const { return View.rend(); }
 
     const unsigned char *bytes_begin() const {
-      return reinterpret_cast<const unsigned char *>(begin());
+      return reinterpret_cast<const unsigned char *>(data());
     }
     const unsigned char *bytes_end() const {
-      return reinterpret_cast<const unsigned char *>(end());
+      return reinterpret_cast<const unsigned char *>(data() + size());
     }
     iterator_range<const unsigned char *> bytes() const {
       return make_range(bytes_begin(), bytes_end());
@@ -144,7 +137,7 @@ namespace llvm {
     [[nodiscard]] constexpr const char *data() const { return Data; }
 
     /// empty - Check if the string is empty.
-    [[nodiscard]] constexpr bool empty() const { return size() == 0; }
+    [[nodiscard]] constexpr bool empty() const { return View.empty(); }
 
     /// size - Get the string size.
     [[nodiscard]] constexpr size_t size() const { return Length; }
@@ -152,13 +145,13 @@ namespace llvm {
     /// front - Get the first character in the string.
     [[nodiscard]] char front() const {
       assert(!empty());
-      return data()[0];
+      return View.front();
     }
 
     /// back - Get the last character in the string.
     [[nodiscard]] char back() const {
       assert(!empty());
-      return data()[size() - 1];
+      return View.back();
     }
 
     // copy - Allocate copy in Allocator and return StringRef to it.
@@ -229,7 +222,7 @@ namespace llvm {
     [[nodiscard]] std::string str() const {
       if (!data())
         return std::string();
-      return std::string(data(), size());
+      return std::string(View);
     }
 
     /// @}
@@ -253,9 +246,7 @@ namespace llvm {
     /// @name Type Conversions
     /// @{
 
-    constexpr operator std::string_view() const {
-      return std::string_view(data(), size());
-    }
+    constexpr operator std::string_view() const { return View; }
 
     /// @}
     /// @name String Predicates
@@ -276,7 +267,7 @@ namespace llvm {
     /// Check if this string ends with the given \p Suffix.
     [[nodiscard]] bool ends_with(StringRef Suffix) const {
       return size() >= Suffix.size() &&
-             compareMemory(end() - Suffix.size(), Suffix.data(),
+             compareMemory(data() + size() - Suffix.size(), Suffix.data(),
                            Suffix.size()) == 0;
     }
     [[nodiscard]] bool ends_with(char Suffix) const {
@@ -295,7 +286,7 @@ namespace llvm {
     /// \returns The index of the first occurrence of \p C, or npos if not
     /// found.
     [[nodiscard]] size_t find(char C, size_t From = 0) const {
-      return std::string_view(*this).find(C, From);
+      return View.find(C, From);
     }
 
     /// Search for the first character \p C in the string, ignoring case.
