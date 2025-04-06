@@ -159,3 +159,11 @@ define void @test_callbr_intrinsic_unsupported() {
 cont:
   ret void
 }
+
+; CHECK-NEXT: Callbr: indirect function / invalid signature
+define void @test_callbr_intrinsic_wrong_signature(ptr %ptr) {
+  %func = load ptr, ptr %ptr, align 8
+  callbr void %func() to label %cont []
+cont:
+  ret void
+}
