@@ -46,9 +46,10 @@ template <> LIBC_INLINE double sqrt<double>(double x) {
 #include "arm/sqrt.h"
 #elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
 #include "riscv/sqrt.h"
+#endif // Target specific header of inline asm.
 
 #endif // __builtin_elementwise_sqrt
 
-#endif
+#endif // LIBC_TARGET_CPU_HAS_FPU_FLOAT or DOUBLE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_SQRT_H
