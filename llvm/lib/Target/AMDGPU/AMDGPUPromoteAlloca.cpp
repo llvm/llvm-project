@@ -1042,7 +1042,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
   // Delete all instructions. On the first pass, new dummy loads may have been
   // added so we need to collect them too.
   DenseSet<Instruction *> InstsToDelete(WorkList.begin(), WorkList.end());
-  InstsToDelete.insert(DeferredLoads.begin(), DeferredLoads.end());
+  InstsToDelete.insert_range(DeferredLoads);
   for (Instruction *I : InstsToDelete) {
     assert(I->use_empty());
     I->eraseFromParent();
@@ -1068,9 +1068,9 @@ AMDGPUPromoteAllocaImpl::getLocalSizeYZ(IRBuilder<> &Builder) {
 
   if (!IsAMDHSA) {
     CallInst *LocalSizeY =
-        Builder.CreateIntrinsic(Intrinsic::r600_read_local_size_y, {}, {});
+        Builder.CreateIntrinsic(Intrinsic::r600_read_local_size_y, {});
     CallInst *LocalSizeZ =
-        Builder.CreateIntrinsic(Intrinsic::r600_read_local_size_z, {}, {});
+        Builder.CreateIntrinsic(Intrinsic::r600_read_local_size_z, {});
 
     ST.makeLIDRangeMetadata(LocalSizeY);
     ST.makeLIDRangeMetadata(LocalSizeZ);
@@ -1113,7 +1113,7 @@ AMDGPUPromoteAllocaImpl::getLocalSizeYZ(IRBuilder<> &Builder) {
   //   } hsa_kernel_dispatch_packet_t
   //
   CallInst *DispatchPtr =
-      Builder.CreateIntrinsic(Intrinsic::amdgcn_dispatch_ptr, {}, {});
+      Builder.CreateIntrinsic(Intrinsic::amdgcn_dispatch_ptr, {});
   DispatchPtr->addRetAttr(Attribute::NoAlias);
   DispatchPtr->addRetAttr(Attribute::NonNull);
   F.removeFnAttr("amdgpu-no-dispatch-ptr");

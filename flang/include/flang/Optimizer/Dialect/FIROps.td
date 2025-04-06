@@ -3478,7 +3478,8 @@ def fir_DoConcurrentOp : fir_Op<"do_concurrent",
 }
 
 def fir_DoConcurrentLoopOp : fir_Op<"do_concurrent.loop",
-    [AttrSizedOperandSegments, DeclareOpInterfaceMethods<LoopLikeOpInterface>,
+    [AttrSizedOperandSegments, DeclareOpInterfaceMethods<LoopLikeOpInterface,
+                                                         ["getLoopInductionVars"]>,
      Terminator, NoTerminator, SingleBlock, ParentOneOf<["DoConcurrentOp"]>]> {
   let summary = "do concurrent loop";
 

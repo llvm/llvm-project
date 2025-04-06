@@ -948,13 +948,20 @@ public:
       std::function<void(const Fortran::semantics::Symbol &, bool)>
           insertSymbols = [&](const Fortran::semantics::Symbol &oriSymbol,
                               bool collectSymbol) {
-            if (collectSymbol && oriSymbol.test(flag))
+            if (collectSymbol && oriSymbol.test(flag)) {
               symbolSet.insert(&oriSymbol);
-            else if (checkHostAssociatedSymbols)
+            } else if (const auto *commonDetails =
+                           oriSymbol.detailsIf<
+                               Fortran::semantics::CommonBlockDetails>()) {
+              for (const auto &mem : commonDetails->objects())
+                if (collectSymbol && mem->test(flag))
+                  symbolSet.insert(&(*mem).GetUltimate());
+            } else if (checkHostAssociatedSymbols) {
               if (const auto *details{
                       oriSymbol
                           .detailsIf<Fortran::semantics::HostAssocDetails>()})
                 insertSymbols(details->symbol(), true);
+            }
           };
       insertSymbols(sym, collectSymbols);
     };
@@ -2261,6 +2268,23 @@ private:
                 uja = genLoopUnrollAndJamAttr(u.v);
                 has_attrs = true;
               },
+              [&](const Fortran::parser::CompilerDirective::NoVector &u) {
+                mlir::BoolAttr trueAttr =
+                    mlir::BoolAttr::get(builder->getContext(), true);
+                va = mlir::LLVM::LoopVectorizeAttr::get(builder->getContext(),
+                                                        /*disable=*/trueAttr,
+                                                        {}, {}, {}, {}, {}, {});
+                has_attrs = true;
+              },
+              [&](const Fortran::parser::CompilerDirective::NoUnroll &u) {
+                ua = genLoopUnrollAttr(/*unrollingFactor=*/0);
+                has_attrs = true;
+              },
+              [&](const Fortran::parser::CompilerDirective::NoUnrollAndJam &u) {
+                uja = genLoopUnrollAndJamAttr(/*unrollingFactor=*/0);
+                has_attrs = true;
+              },
+
               [&](const auto &) {}},
           dir->u);
     }
@@ -2923,6 +2947,15 @@ private:
               attachDirectiveToLoop(dir, &eval);
             },
             [&](const Fortran::parser::CompilerDirective::UnrollAndJam &) {
+              attachDirectiveToLoop(dir, &eval);
+            },
+            [&](const Fortran::parser::CompilerDirective::NoVector &) {
+              attachDirectiveToLoop(dir, &eval);
+            },
+            [&](const Fortran::parser::CompilerDirective::NoUnroll &) {
+              attachDirectiveToLoop(dir, &eval);
+            },
+            [&](const Fortran::parser::CompilerDirective::NoUnrollAndJam &) {
               attachDirectiveToLoop(dir, &eval);
             },
             [&](const auto &) {}},
@@ -5967,10 +6000,27 @@ private:
           Fortran::lower::pft::getScopeVariableListMap(mod);
       for (const auto &var : Fortran::lower::pft::getScopeVariableList(
                mod.getScope(), scopeVariableListMap)) {
+
         // Only define the variables owned by this module.
         const Fortran::semantics::Scope *owningScope = var.getOwningScope();
-        if (!owningScope || mod.getScope() == *owningScope)
-          Fortran::lower::defineModuleVariable(*this, var);
+        if (owningScope && mod.getScope() != *owningScope)
+          continue;
+
+        // Very special case: The value of numeric_storage_size depends on
+        // compilation options and therefore its value is not yet known when
+        // building the builtins runtime. Instead, the parameter is folding a
+        // __numeric_storage_size() expression which is loaded into the user
+        // program. For the iso_fortran_env object file, omit the symbol as it
+        // is never used.
+        if (var.hasSymbol()) {
+          const Fortran::semantics::Symbol &sym = var.getSymbol();
+          const Fortran::semantics::Scope &owner = sym.owner();
+          if (sym.name() == "numeric_storage_size" && owner.IsModule() &&
+              DEREF(owner.symbol()).name() == "iso_fortran_env")
+            continue;
+        }
+
+        Fortran::lower::defineModuleVariable(*this, var);
       }
       for (auto &eval : mod.evaluationList)
         genFIR(eval);

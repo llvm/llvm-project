@@ -43,3 +43,10 @@ func.func @tensor_empty_same_static_dims_sizes() -> () {
 
   return
 }
+
+// CHECK-LABEL: func @tensor_empty_0d
+func.func @tensor_empty_0d() -> () {
+  tensor.empty() : tensor<f32>
+  // CHECK-NEXT:  tensor.empty() : tensor<f32>
+  return
+}

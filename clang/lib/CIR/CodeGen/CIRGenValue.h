@@ -85,11 +85,15 @@ class LValue {
     MatrixElt     // This is a matrix element, use getVector*
   } lvType;
   clang::QualType type;
+  clang::Qualifiers quals;
 
   mlir::Value v;
   mlir::Type elementType;
 
-  void initialize(clang::QualType type) { this->type = type; }
+  void initialize(clang::QualType type, clang::Qualifiers quals) {
+    this->type = type;
+    this->quals = quals;
+  }
 
 public:
   bool isSimple() const { return lvType == Simple; }
@@ -111,14 +115,50 @@ public:
     return Address(getPointer(), elementType, getAlignment());
   }
 
+  const clang::Qualifiers &getQuals() const { return quals; }
+
   static LValue makeAddr(Address address, clang::QualType t) {
     LValue r;
     r.lvType = Simple;
     r.v = address.getPointer();
     r.elementType = address.getElementType();
-    r.initialize(t);
+    r.initialize(t, t.getQualifiers());
     return r;
   }
+};
+
+/// An aggregate value slot.
+class AggValueSlot {
+
+  Address addr;
+  clang::Qualifiers quals;
+
+  /// This is set to true if the memory in the slot is known to be zero before
+  /// the assignment into it.  This means that zero fields don't need to be set.
+  bool zeroedFlag : 1;
+
+public:
+  enum IsZeroed_t { IsNotZeroed, IsZeroed };
+
+  AggValueSlot(Address addr, clang::Qualifiers quals, bool zeroedFlag)
+      : addr(addr), quals(quals), zeroedFlag(zeroedFlag) {}
+
+  static AggValueSlot forAddr(Address addr, clang::Qualifiers quals,
+                              IsZeroed_t isZeroed = IsNotZeroed) {
+    return AggValueSlot(addr, quals, isZeroed);
+  }
+
+  static AggValueSlot forLValue(const LValue &lv) {
+    return forAddr(lv.getAddress(), lv.getQuals());
+  }
+
+  clang::Qualifiers getQualifiers() const { return quals; }
+
+  Address getAddress() const { return addr; }
+
+  bool isIgnored() const { return !addr.isValid(); }
+
+  IsZeroed_t isZeroed() const { return IsZeroed_t(zeroedFlag); }
 };
 
 } // namespace clang::CIRGen

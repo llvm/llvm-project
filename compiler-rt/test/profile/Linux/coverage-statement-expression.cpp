@@ -1,3 +1,6 @@
+// REQUIRES: lld-available
+// XFAIL: powerpc64-target-arch
+
 // RUN: %clangxx_profgen -std=gnu++17 -fuse-ld=lld -fcoverage-mapping -o %t %s
 // RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t
 // RUN: llvm-profdata merge -o %t.profdata %t.profraw

@@ -9,7 +9,7 @@ end
 
 ! CHECK: func.func @_QPsub1()
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare
-! CHECK: cuf.free %[[DECL]]#1 : !fir.ref<!fir.array<10xi32>>
+! CHECK: cuf.free %[[DECL]]#0 : !fir.ref<!fir.array<10xi32>>
 ! CHECK: return
 ! CHECK: }
 

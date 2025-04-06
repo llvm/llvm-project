@@ -749,6 +749,10 @@ class Base(unittest.TestCase):
         """Return absolute path to a file in the test's source directory."""
         return os.path.join(self.getSourceDir(), name)
 
+    def getPlatformAvailablePorts(self):
+        """Return ports available for connection to a lldb server on the remote platform."""
+        return configuration.lldb_platform_available_ports
+
     @classmethod
     def setUpCommands(cls):
         commands = [
@@ -772,7 +776,10 @@ class Base(unittest.TestCase):
             'settings set symbols.clang-modules-cache-path "{}"'.format(
                 configuration.lldb_module_cache_dir
             ),
+            # Disable colors by default.
             "settings set use-color false",
+            # Disable the statusline by default.
+            "settings set show-statusline false",
         ]
 
         # Set any user-overridden settings.
@@ -2024,7 +2031,7 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
         """Get the working directory that should be used when launching processes for local or remote processes."""
         if lldb.remote_platform:
             # Remote tests set the platform working directory up in
-            # TestBase.setUp()
+            # Base.setUp()
             return lldb.remote_platform.GetWorkingDirectory()
         else:
             # local tests change directory into each test subdirectory
