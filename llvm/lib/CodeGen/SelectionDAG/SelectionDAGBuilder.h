@@ -712,13 +712,14 @@ private:
   SDValue lowerEndEH(SDValue Chain, const InvokeInst *II,
                      const BasicBlock *EHPadBB, MCSymbol *BeginLabel);
 
-  std::pair<bool, bool> getTargetIntrinsicCallProperties(const CallBase& I);
+  std::pair<bool, bool> getTargetIntrinsicCallProperties(const CallBase &I);
   SmallVector<SDValue, 8> getTargetIntrinsicOperands(
       const CallBase &I, bool HasChain, bool OnlyLoad,
       TargetLowering::IntrinsicInfo *TgtMemIntrinsicInfo = nullptr);
   SDVTList getTargetIntrinsicVTList(const CallBase &I, bool HasChain);
   SDValue getTargetNonMemIntrinsicNode(const CallBase &I, bool HasChain,
-                                 SmallVector<SDValue, 8> &Ops, SDVTList &VTs);
+                                       SmallVector<SDValue, 8> &Ops,
+                                       SDVTList &VTs);
   SDValue handleTargetIntrinsicRet(const CallBase &I, bool HasChain,
                                    bool OnlyLoad, SDValue Result);
 };
