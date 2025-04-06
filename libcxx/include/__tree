@@ -649,7 +649,10 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI void __set_parent(pointer __p) { __parent_ = static_cast<__parent_pointer>(__p); }
 
-  ~__tree_node_base()                                  = delete;
+
+  // template <typename... Args> constexpr __tree_node_base(Args && ... args) =default;
+  __tree_node_base() = default;
+  ~__tree_node_base()                                  = default;
   __tree_node_base(__tree_node_base const&)            = delete;
   __tree_node_base& operator=(__tree_node_base const&) = delete;
 };
@@ -664,6 +667,10 @@ public:
   _LIBCPP_HIDE_FROM_ABI _Tp& __get_value() { return __value_; }
   // _LIBCPP_HIDE_FROM_ABI static _Tp& __get_value_static(__tree_node * foo) { return (foo->__value_); }
 
+
+  template <typename... Args> constexpr __tree_node(Args && ... args): __value_{std::forward<Args>(args)...} { }
+  // TODO: libcxx26
+  // _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_node(__node_value_type &&  args): __value_{args} { }
   ~__tree_node()                             = delete;
   __tree_node(__tree_node const&)            = delete;
   __tree_node& operator=(__tree_node const&) = delete;
@@ -1814,7 +1821,16 @@ __tree<_Tp, _Compare, _Allocator>::__construct_node(_Args&&... __args) {
   static_assert(!__is_tree_value_type<_Args...>::value, "Cannot construct from __value_type");
   __node_allocator& __na = __node_alloc();
   __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
-  __node_traits::construct(__na, _NodeTypes::__get_ptr(__h->__value_), std::forward<_Args>(__args)...);
+  // std::__value_type<int, double>
+  // __h->__value_;
+// std::addresof(__h->__value_);
+
+  // __node_traits::construct(__na, std::addressof(__h->__value_), std::forward<_Args>(__args)...);
+  // *h is allocated as of yet, but not constructed
+  // TODO: -> remove (AFAIK, given only cc in  the following needs space: h, h->value and h->value->cc)
+  __node_traits::construct(__na, std::addressof(*__h), std::forward<_Args>(__args)...);
+
+  // __node_traits::construct(__na, _NodeTypes::__get_ptr(__h->__value_), std::forward<_Args>(__args)...);
   __h.get_deleter().__value_constructed = true;
   return __h;
 }
