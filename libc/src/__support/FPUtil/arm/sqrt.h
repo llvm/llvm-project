@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_AARCH64_SQRT_H
-#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_AARCH64_SQRT_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_ARM_SQRT_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_ARM_SQRT_H
 
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
@@ -18,36 +18,26 @@
 #error "Invalid include"
 #endif
 
-#include "src/__support/FPUtil/generic/sqrt.h"
-
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
-#ifdef LIBC_TARGET_CPU_HAS_ARM_FPU_FLOAT
+#ifdef LIBC_TARGET_CPU_HAS_FPU_FLOAT
 template <> LIBC_INLINE float sqrt<float>(float x) {
-#if __has_builtin(__builtin_elementwise_sqrt)
-  return __builtin_elementwise_sqrt(x);
-#else
   float y;
   asm("fsqrt %s0, %s1\n\t" : "=w"(y) : "w"(x));
   return y;
-#endif // __builtin_elementwise_sqrt
 }
-#endif // LIBC_TARGET_CPU_HAS_ARM_FPU_FLOAT
+#endif // LIBC_TARGET_CPU_HAS_FPU_FLOAT
 
-#ifdef LIBC_TARGET_CPU_HAS_ARM_FPU_DOUBLE
+#ifdef LIBC_TARGET_CPU_HAS_FPU_DOUBLE
 template <> LIBC_INLINE double sqrt<double>(double x) {
-#if __has_builtin(__builtin_elementwise_sqrt)
-  return __builtin_elementwise_sqrt(x);
-#else
   double y;
   asm("fsqrt %d0, %d1\n\t" : "=w"(y) : "w"(x));
   return y;
-#endif // __builtin_elementwise_sqrt
 }
-#endif // LIBC_TARGET_CPU_HAS_ARM_FPU_DOUBLE
+#endif // LIBC_TARGET_CPU_HAS_FPU_DOUBLE
 
 } // namespace fputil
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_AARCH64_SQRT_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_ARM_SQRT_H
