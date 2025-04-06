@@ -133,9 +133,7 @@ public:
   /// @}
 
   static bool evaluateSymbolicAdd(const MCAssembler *, const SectionAddrMap *,
-                                  bool, const MCValue &,
-                                  const MCSymbolRefExpr *,
-                                  const MCSymbolRefExpr *, int64_t, uint32_t,
+                                  bool, const MCValue &, const MCValue &,
                                   MCValue &);
 };
 
@@ -263,6 +261,9 @@ public:
 
   const MCSymbol &getSymbol() const { return *Symbol; }
 
+  // Some targets encode the relocation specifier within SymA using
+  // MCSymbolRefExpr::SubclassData and access it via getAccessVariant(), though
+  // this method is now deprecated.
   VariantKind getKind() const {
     return (VariantKind)(getSubclassData() & VariantKindMask);
   }

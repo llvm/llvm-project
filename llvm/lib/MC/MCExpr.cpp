@@ -436,22 +436,21 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
 // early.
 bool MCExpr::evaluateSymbolicAdd(const MCAssembler *Asm,
                                  const SectionAddrMap *Addrs, bool InSet,
-                                 const MCValue &LHS,
-                                 const MCSymbolRefExpr *RhsAdd,
-                                 const MCSymbolRefExpr *RhsSub, int64_t RHS_Cst,
-                                 uint32_t RhsSpec, MCValue &Res) {
+                                 const MCValue &LHS, const MCValue &RHS,
+                                 MCValue &Res) {
   const MCSymbol *LHS_A = LHS.getAddSym();
   const MCSymbol *LHS_B = LHS.getSubSym();
   int64_t LHS_Cst = LHS.getConstant();
 
-  const MCSymbol *RHS_A = RhsAdd ? &RhsAdd->getSymbol() : nullptr;
-  const MCSymbol *RHS_B = RhsSub ? &RhsSub->getSymbol() : nullptr;
+  const MCSymbol *RHS_A = RHS.getAddSym();
+  const MCSymbol *RHS_B = RHS.getSubSym();
+  int64_t RHS_Cst = RHS.getConstant();
 
   // Fold the result constant immediately.
   int64_t Result_Cst = LHS_Cst + RHS_Cst;
 
   // If we have a layout, we can fold resolved differences.
-  if (Asm && !LHS.getSpecifier() && !RhsSpec) {
+  if (Asm && !LHS.getSpecifier() && !RHS.getSpecifier()) {
     // While LHS_A-LHS_B and RHS_A-RHS_B from recursive calls have already been
     // folded, reassociating terms in
     //   Result = (LHS_A - LHS_B + LHS_Cst) + (RHS_A - RHS_B + RHS_Cst).
@@ -472,16 +471,12 @@ bool MCExpr::evaluateSymbolicAdd(const MCAssembler *Asm,
 
   // At this point, we have at most one additive symbol and one subtractive
   // symbol -- find them.
-  auto *A = LHS_A ? LHS.getSymA() : RHS_A ? RhsAdd : nullptr;
-  auto *B = LHS_B ? LHS.getSymB() : RHS_B ? RhsSub : nullptr;
-  if (B && B->getKind() != MCSymbolRefExpr::VK_None)
-    return false;
+  auto *A = LHS_A ? LHS_A : RHS_A;
+  auto *B = LHS_B ? LHS_B : RHS_B;
   auto Spec = LHS.getSpecifier();
   if (!Spec)
-    Spec = RhsSpec;
-  Res = MCValue::get(A, B, Result_Cst);
-  Res.Specifier = Spec;
-  Res.SymSpecifier = 0;
+    Spec = RHS.getSpecifier();
+  Res = MCValue::get(A, B, Result_Cst, Spec);
   return true;
 }
 
@@ -532,18 +527,16 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
                                                             InSet || IsMachO)) {
         if (Kind != MCSymbolRefExpr::VK_None) {
           if (Res.isAbsolute()) {
-            Res = MCValue::get(SRE, nullptr, 0);
+            Res = MCValue::get(&Sym, nullptr, 0, Kind);
             return true;
           }
           // If the reference has a variant kind, we can only handle expressions
           // which evaluate exactly to a single unadorned symbol. Attach the
           // original VariantKind to SymA of the result.
-          if (Res.getRefKind() != MCSymbolRefExpr::VK_None || !Res.getSymA() ||
-              Res.getSubSym() || Res.getConstant())
+          if (Res.getRefKind() != MCSymbolRefExpr::VK_None ||
+              !Res.getAddSym() || Res.getSubSym() || Res.getConstant())
             return false;
-          Res = MCValue::get(
-              MCSymbolRefExpr::create(Res.getAddSym(), Kind, Asm->getContext()),
-              Res.getSymB(), Res.getConstant(), Res.getRefKind());
+          Res.Specifier = Kind;
         }
         if (!IsMachO)
           return true;
@@ -565,7 +558,7 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
       }
     }
 
-    Res = MCValue::get(SRE, nullptr, 0);
+    Res = MCValue::get(&Sym, nullptr, 0, Kind);
     return true;
   }
 
@@ -587,7 +580,7 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
         return false;
 
       // The cast avoids undefined behavior if the constant is INT64_MIN.
-      Res = MCValue::get(Value.getSymB(), Value.getSymA(),
+      Res = MCValue::get(Value.getSubSym(), Value.getAddSym(),
                          -(uint64_t)Value.getConstant());
       break;
     case MCUnaryExpr::Not:
@@ -653,9 +646,11 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
           Res = RHSValue;
           return true;
         }
-        return evaluateSymbolicAdd(Asm, Addrs, InSet, LHSValue, RHSValue.SymA,
-                                   RHSValue.SymB, RHSValue.Cst,
-                                   RHSValue.SymSpecifier, Res);
+        if (LHSValue.SymB && LHSValue.Specifier)
+          return false;
+        if (RHSValue.SymB && RHSValue.Specifier)
+          return false;
+        return evaluateSymbolicAdd(Asm, Addrs, InSet, LHSValue, RHSValue, Res);
       }
     }
 
