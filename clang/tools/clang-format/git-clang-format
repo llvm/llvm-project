@@ -126,6 +126,7 @@ def main():
             "pb.txt",
             "textproto",
             "asciipb",  # TextProto
+            "cl", # OpenCL
         ]
     )
 
