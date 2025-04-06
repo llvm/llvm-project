@@ -671,8 +671,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
     }
 
     const char *argv0 = argv[0];
-    MachineModuleInfoWrapperPass *MMIWP =
-        new MachineModuleInfoWrapperPass(Target.get());
+    MachineModuleInfo MMI(Target.get());
 
     // Construct a custom pass pipeline that starts after instruction
     // selection.
@@ -680,7 +679,6 @@ static int compileModule(char **argv, LLVMContext &Context) {
       if (!MIR) {
         WithColor::error(errs(), argv[0])
             << "run-pass is for .mir file only.\n";
-        delete MMIWP;
         return 1;
       }
       TargetPassConfig *PTPC = Target->createPassConfig(PM);
@@ -690,13 +688,12 @@ static int compileModule(char **argv, LLVMContext &Context) {
             << "run-pass cannot be used with "
             << TPC.getLimitedCodeGenPipelineReason() << ".\n";
         delete PTPC;
-        delete MMIWP;
         return 1;
       }
 
       TPC.setDisableVerify(NoVerify);
       PM.add(&TPC);
-      PM.add(MMIWP);
+      PM.add(new NonOwningMachineModuleInfoWrapperPass(MMI));
       TPC.printAndVerify("");
       for (const std::string &RunPassName : getRunPassNames()) {
         if (addPass(PM, argv0, RunPassName, TPC))
@@ -707,15 +704,14 @@ static int compileModule(char **argv, LLVMContext &Context) {
       PM.add(createFreeMachineFunctionPass());
     } else if (Target->addPassesToEmitFile(
                    PM, *OS, DwoOut ? &DwoOut->os() : nullptr,
-                   codegen::getFileType(), NoVerify, MMIWP)) {
+                   codegen::getFileType(), NoVerify, &MMI)) {
       reportError("target does not support generation of this file type");
     }
 
     const_cast<TargetLoweringObjectFile *>(Target->getObjFileLowering())
-        ->Initialize(MMIWP->getMMI().getContext(), *Target);
+        ->Initialize(MMI.getContext(), *Target);
     if (MIR) {
-      assert(MMIWP && "Forgot to create MMIWP?");
-      if (MIR->parseMachineFunctions(*M, MMIWP->getMMI()))
+      if (MIR->parseMachineFunctions(*M, MMI))
         return 1;
     }
 

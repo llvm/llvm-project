@@ -233,9 +233,9 @@ createModule(const std::unique_ptr<LLVMContext> &Context, const DataLayout &DL) 
 BitVector getFunctionReservedRegs(const TargetMachine &TM) {
   std::unique_ptr<LLVMContext> Context = std::make_unique<LLVMContext>();
   std::unique_ptr<Module> Module = createModule(Context, TM.createDataLayout());
-  auto MMIWP = std::make_unique<MachineModuleInfoWrapperPass>(&TM);
-  MachineFunction &MF = createVoidVoidPtrMachineFunction(
-      FunctionID, Module.get(), &MMIWP->getMMI());
+  auto MMI = std::make_unique<MachineModuleInfo>(&TM);
+  MachineFunction &MF =
+      createVoidVoidPtrMachineFunction(FunctionID, Module.get(), MMI.get());
   // Saving reserved registers for client.
   return MF.getSubtarget().getRegisterInfo()->getReservedRegs(MF);
 }
@@ -248,7 +248,7 @@ Error assembleToStream(const ExegesisTarget &ET,
   auto Context = std::make_unique<LLVMContext>();
   std::unique_ptr<Module> Module =
       createModule(Context, TM->createDataLayout());
-  auto MMIWP = std::make_unique<MachineModuleInfoWrapperPass>(TM.get());
+  auto MMIWP = std::make_unique<OwningMachineModuleInfoWrapperPass>(*TM);
   MachineFunction &MF = createVoidVoidPtrMachineFunction(
       FunctionID, Module.get(), &MMIWP.get()->getMMI());
   MF.ensureAlignment(kFunctionAlignment);
