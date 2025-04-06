@@ -220,7 +220,7 @@ unsigned SystemZELFObjectWriter::getRelocType(MCContext &Ctx,
 bool SystemZELFObjectWriter::needsRelocateWithSymbol(const MCValue &V,
                                                      const MCSymbol &Sym,
                                                      unsigned Type) const {
-  switch (V.getSymSpecifier()) {
+  switch (V.getSpecifier()) {
   case SystemZMCExpr::VK_GOT:
   case SystemZMCExpr::VK_PLT:
     return true;
