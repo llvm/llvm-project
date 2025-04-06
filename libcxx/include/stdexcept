@@ -161,8 +161,8 @@ public:
 
 class _LIBCPP_EXPORTED_FROM_ABI out_of_range : public logic_error {
 public:
-  _LIBCPP_HIDE_FROM_ABI explicit out_of_range(const string& __s) : logic_error(__s) {}
-  _LIBCPP_HIDE_FROM_ABI explicit out_of_range(const char* __s) : logic_error(__s) {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 explicit out_of_range(const string& __s) : logic_error(__s) {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 explicit out_of_range(const char* __s) : logic_error(__s) {}
 
 #  ifndef _LIBCPP_ABI_VCRUNTIME
   _LIBCPP_HIDE_FROM_ABI out_of_range(const out_of_range&) _NOEXCEPT            = default;
@@ -246,7 +246,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #  endif
 }
 
-[[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_out_of_range(const char* __msg) {
+[[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __throw_out_of_range(const char* __msg) {
 #  if _LIBCPP_HAS_EXCEPTIONS
   throw out_of_range(__msg);
 #  else

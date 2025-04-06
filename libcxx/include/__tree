@@ -98,7 +98,7 @@ __root, have a non-null __parent_ field.
 // Returns:  true if __x is a left child of its parent, else false
 // Precondition:  __x != nullptr.
 template <class _NodePtr>
-inline _LIBCPP_HIDE_FROM_ABI bool __tree_is_left_child(_NodePtr __x) _NOEXCEPT {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool __tree_is_left_child(_NodePtr __x) _NOEXCEPT {
   return __x == __x->__parent_->__left_;
 }
 
@@ -164,7 +164,7 @@ inline _LIBCPP_HIDE_FROM_ABI _NodePtr __tree_min(_NodePtr __x) _NOEXCEPT {
 
 // Returns:  pointer to the right-most node under __x.
 template <class _NodePtr>
-inline _LIBCPP_HIDE_FROM_ABI _NodePtr __tree_max(_NodePtr __x) _NOEXCEPT {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _NodePtr __tree_max(_NodePtr __x) _NOEXCEPT {
   _LIBCPP_ASSERT_INTERNAL(__x != nullptr, "Root node shouldn't be null");
   while (__x->__right_ != nullptr)
     __x = __x->__right_;
@@ -195,7 +195,7 @@ inline _LIBCPP_HIDE_FROM_ABI _EndNodePtr __tree_next_iter(_NodePtr __x) _NOEXCEP
 // Returns:  pointer to the previous in-order node before __x.
 // Note: __x may be the end node.
 template <class _NodePtr, class _EndNodePtr>
-inline _LIBCPP_HIDE_FROM_ABI _NodePtr __tree_prev_iter(_EndNodePtr __x) _NOEXCEPT {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _NodePtr __tree_prev_iter(_EndNodePtr __x) _NOEXCEPT {
   _LIBCPP_ASSERT_INTERNAL(__x != nullptr, "node shouldn't be null");
   if (__x->__left_ != nullptr)
     return std::__tree_max(__x->__left_);
@@ -226,7 +226,7 @@ _LIBCPP_HIDE_FROM_ABI _NodePtr __tree_leaf(_NodePtr __x) _NOEXCEPT {
 // Effects:  Makes __x->__right_ the subtree root with __x as its left child
 //           while preserving in-order order.
 template <class _NodePtr>
-_LIBCPP_HIDE_FROM_ABI void __tree_left_rotate(_NodePtr __x) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __tree_left_rotate(_NodePtr __x) _NOEXCEPT {
   _LIBCPP_ASSERT_INTERNAL(__x != nullptr, "node shouldn't be null");
   _LIBCPP_ASSERT_INTERNAL(__x->__right_ != nullptr, "node should have a right child");
   _NodePtr __y  = __x->__right_;
@@ -269,7 +269,7 @@ _LIBCPP_HIDE_FROM_ABI void __tree_right_rotate(_NodePtr __x) _NOEXCEPT {
 // Postcondition: __tree_invariant(end_node->__left_) == true.  end_node->__left_
 //                may be different than the value passed in as __root.
 template <class _NodePtr>
-_LIBCPP_HIDE_FROM_ABI void __tree_balance_after_insert(_NodePtr __root, _NodePtr __x) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __tree_balance_after_insert(_NodePtr __root, _NodePtr __x) _NOEXCEPT {
   _LIBCPP_ASSERT_INTERNAL(__root != nullptr, "Root of the tree shouldn't be null");
   _LIBCPP_ASSERT_INTERNAL(__x != nullptr, "Can't attach null node to a leaf");
   __x->__is_black_ = __x == __root;
@@ -645,9 +645,9 @@ public:
   __parent_pointer __parent_;
   bool __is_black_;
 
-  _LIBCPP_HIDE_FROM_ABI pointer __parent_unsafe() const { return static_cast<pointer>(__parent_); }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pointer __parent_unsafe() const { return static_cast<pointer>(__parent_); }
 
-  _LIBCPP_HIDE_FROM_ABI void __set_parent(pointer __p) { __parent_ = static_cast<__parent_pointer>(__p); }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __set_parent(pointer __p) { __parent_ = static_cast<__parent_pointer>(__p); }
 
 
   // template <typename... Args> constexpr __tree_node_base(Args && ... args) =default;
@@ -960,19 +960,19 @@ public:
   _LIBCPP_HIDE_FROM_ABI allocator_type __alloc() const _NOEXCEPT { return allocator_type(__node_alloc()); }
 
 private:
-  _LIBCPP_HIDE_FROM_ABI size_type& size() _NOEXCEPT { return __size_; }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 size_type& size() _NOEXCEPT { return __size_; }
 
 public:
-  _LIBCPP_HIDE_FROM_ABI const size_type& size() const _NOEXCEPT { return __size_; }
-  _LIBCPP_HIDE_FROM_ABI value_compare& value_comp() _NOEXCEPT { return __value_comp_; }
-  _LIBCPP_HIDE_FROM_ABI const value_compare& value_comp() const _NOEXCEPT { return __value_comp_; }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const size_type& size() const _NOEXCEPT { return __size_; }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 value_compare& value_comp() _NOEXCEPT { return __value_comp_; }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const value_compare& value_comp() const _NOEXCEPT { return __value_comp_; }
 
 public:
-  _LIBCPP_HIDE_FROM_ABI __node_pointer __root() const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_pointer __root() const _NOEXCEPT {
     return static_cast<__node_pointer>(__end_node()->__left_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI __node_base_pointer* __root_ptr() const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_base_pointer* __root_ptr() const _NOEXCEPT {
     return std::addressof(__end_node()->__left_);
   }
 
@@ -1183,7 +1183,7 @@ public:
   template <class _Key>
   _LIBCPP_HIDE_FROM_ABI size_type __erase_multi(const _Key& __k);
 
-  _LIBCPP_HIDE_FROM_ABI void
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
   __insert_node_at(__parent_pointer __parent, __node_base_pointer& __child, __node_base_pointer __new_node) _NOEXCEPT;
 
   template <class _Key>
@@ -1764,7 +1764,7 @@ typename __tree<_Tp, _Compare, _Allocator>::__node_base_pointer& __tree<_Tp, _Co
 }
 
 template <class _Tp, class _Compare, class _Allocator>
-void __tree<_Tp, _Compare, _Allocator>::__insert_node_at(
+_LIBCPP_CONSTEXPR_SINCE_CXX26 void __tree<_Tp, _Compare, _Allocator>::__insert_node_at(
     __parent_pointer __parent, __node_base_pointer& __child, __node_base_pointer __new_node) _NOEXCEPT {
   __new_node->__left_   = nullptr;
   __new_node->__right_  = nullptr;

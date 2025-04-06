@@ -774,7 +774,7 @@ private:
   value_type __cc_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI value_type& __get_value() {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 value_type& __get_value() {
 #    if _LIBCPP_STD_VER >= 17
     return *std::launder(std::addressof(__cc_));
 #    else
@@ -782,7 +782,7 @@ public:
 #    endif
   }
 
-  _LIBCPP_HIDE_FROM_ABI const value_type& __get_value() const {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const value_type& __get_value() const {
 #    if _LIBCPP_STD_VER >= 17
     return *std::launder(std::addressof(__cc_));
 #    else
@@ -791,6 +791,7 @@ public:
   }
 
 
+  // TODO: possibly no longer needed
   /*
   Use this helper when the lifetime of __v may not have begun,
   so calling __v.__get_value() is not allowed
