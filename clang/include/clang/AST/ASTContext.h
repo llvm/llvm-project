@@ -825,6 +825,7 @@ public:
 
   struct AvailabilityDomainInfo {
     FeatureAvailKind Kind = FeatureAvailKind::None;
+    Decl *Decl = nullptr;
     ImplicitCastExpr *Call = nullptr;
     bool isInvalid() const { return Kind == FeatureAvailKind::None; }
   };
