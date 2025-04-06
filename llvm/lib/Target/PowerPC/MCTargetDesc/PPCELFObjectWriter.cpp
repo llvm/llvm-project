@@ -145,9 +145,8 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
       break;
     case PPC::fixup_ppc_half16ds:
     case PPC::fixup_ppc_half16dq:
-      Target.print(errs());
-      errs() << '\n';
-      report_fatal_error("Invalid PC-relative half16ds relocation");
+      Ctx.reportError(Loc, "unsupported relocation type");
+      break;
     case PPC::fixup_ppc_pcrel34:
       switch (Spec) {
       default:
