@@ -217,20 +217,6 @@ private:
   /// The symbol being referenced.
   const MCSymbol *Symbol;
 
-  // Subclass data stores VariantKind in bits 0..15 and HasSubsectionsViaSymbols
-  // in bit 16.
-  static const unsigned VariantKindBits = 16;
-  static const unsigned VariantKindMask = (1 << VariantKindBits) - 1;
-
-  // FIXME: Remove this bit.
-  static const unsigned HasSubsectionsViaSymbolsBit = 1 << VariantKindBits;
-
-  static unsigned encodeSubclassData(VariantKind Kind,
-                                     bool HasSubsectionsViaSymbols) {
-    return (unsigned)Kind |
-           (HasSubsectionsViaSymbols ? HasSubsectionsViaSymbolsBit : 0);
-  }
-
   explicit MCSymbolRefExpr(const MCSymbol *Symbol, VariantKind Kind,
                            const MCAsmInfo *MAI, SMLoc Loc = SMLoc());
 
@@ -259,16 +245,8 @@ public:
   // Some targets encode the relocation specifier within SymA using
   // MCSymbolRefExpr::SubclassData, which is copied to MCValue::Specifier,
   // though this method is now deprecated.
-  VariantKind getKind() const {
-    return (VariantKind)(getSubclassData() & VariantKindMask);
-  }
-  uint16_t getSpecifier() const {
-    return (getSubclassData() & VariantKindMask);
-  }
-
-  bool hasSubsectionsViaSymbols() const {
-    return (getSubclassData() & HasSubsectionsViaSymbolsBit) != 0;
-  }
+  VariantKind getKind() const { return VariantKind(getSubclassData()); }
+  uint16_t getSpecifier() const { return getSubclassData(); }
 
   /// @}
 
