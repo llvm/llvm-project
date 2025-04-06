@@ -16,7 +16,9 @@
 
 // clang-format off
 
-#include <cstring>
+#if __has_include(<cstring>)
+#  include <cstring>
+#endif
 #include "test_macros.h"
 
 #if TEST_STD_VER < 14

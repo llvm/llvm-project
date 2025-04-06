@@ -16,7 +16,9 @@
 
 // clang-format off
 
-#include <random>
+#if __has_include(<random>)
+#  include <random>
+#endif
 #include "test_macros.h"
 
 #if TEST_STD_VER < 14

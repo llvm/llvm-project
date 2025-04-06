@@ -16,7 +16,9 @@
 
 // clang-format off
 
-#include <flat_set>
+#if __has_include(<flat_set>)
+#  include <flat_set>
+#endif
 #include "test_macros.h"
 
 #if TEST_STD_VER < 14

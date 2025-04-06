@@ -2662,7 +2662,7 @@ def main():
     ftm = FeatureTestMacros(
         os.path.join(source_root, "utils", "data", "feature_test_macro", "data.json")
     )
-    ftm.generate_header_test_directory(os.path.join(macro_test_path, "v2"))
+    ftm.generate_header_test_directory(macro_test_path)
 
     # Example how to use the generator v2 to generate the output.
     if False:
