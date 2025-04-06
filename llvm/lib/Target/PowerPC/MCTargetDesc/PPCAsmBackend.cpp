@@ -159,6 +159,10 @@ public:
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
                              const MCValue &Target,
                              const MCSubtargetInfo *STI) override {
+    // If there is a @ specifier, unless it is optimized out (e.g. constant @l),
+    // force a relocation.
+    if (Target.getSpecifier())
+      return true;
     MCFixupKind Kind = Fixup.getKind();
     switch ((unsigned)Kind) {
     default:
