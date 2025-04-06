@@ -195,7 +195,7 @@ public:
   /// TargetSubtargetInfo.  In debug builds, it verifies that the object being
   /// returned is of the correct type.
   template <typename STC> const STC &getSubtarget(const Function &F) const {
-    return *static_cast<const STC *>(getSubtargetImpl(F));
+    return *static_cast<const STC*>(getSubtargetImpl(F));
   }
 
   /// Create a DataLayout.
