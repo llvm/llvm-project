@@ -75,13 +75,15 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(m.at(3) == 3.5);
     assert(m.at(4) == 4.5);
     assert(m.at(5) == 5.5);
-#ifndef TEST_HAS_NO_EXCEPTIONS
+// throwing is not allowed in constexpr
+#if TEST_STD_VER < 26
     try {
       TEST_IGNORE_NODISCARD m.at(6);
       assert(false);
     } catch (std::out_of_range&) {
     }
 #endif
+
     assert(m.at(7) == 7.5);
     assert(m.at(8) == 8.5);
     assert(m.size() == 7);

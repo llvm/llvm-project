@@ -1270,7 +1270,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_holder __construct_node(_Args&&... __args);
 
   // TODO: Make this _LIBCPP_HIDE_FROM_ABI
-  _LIBCPP_HIDDEN void destroy(__node_pointer __nd) _NOEXCEPT;
+  _LIBCPP_HIDDEN _LIBCPP_CONSTEXPR_SINCE_CXX26 void destroy(__node_pointer __nd) _NOEXCEPT;
 
   _LIBCPP_HIDE_FROM_ABI void __move_assign(__tree& __t, false_type);
   _LIBCPP_HIDE_FROM_ABI void __move_assign(__tree& __t, true_type) _NOEXCEPT_(
@@ -1540,7 +1540,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree<_Tp, _Compare, _Allocator>::~__tree() {
 }
 
 template <class _Tp, class _Compare, class _Allocator>
-void __tree<_Tp, _Compare, _Allocator>::destroy(__node_pointer __nd) _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX26 void __tree<_Tp, _Compare, _Allocator>::destroy(__node_pointer __nd) _NOEXCEPT {
   if (__nd != nullptr) {
     destroy(static_cast<__node_pointer>(__nd->__left_));
     destroy(static_cast<__node_pointer>(__nd->__right_));
