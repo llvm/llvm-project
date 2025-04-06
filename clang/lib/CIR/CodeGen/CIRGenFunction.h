@@ -170,16 +170,16 @@ public:
   /// If the specified expression does not fold to a constant, or if it does but
   /// contains a label, return false.  If it constant folds return true and set
   /// the boolean result in Result.
-  bool ConstantFoldsToSimpleInteger(const clang::Expr *Cond, bool &ResultBool,
-                                    bool AllowLabels = false);
-  bool ConstantFoldsToSimpleInteger(const clang::Expr *Cond,
-                                    llvm::APSInt &ResultInt,
-                                    bool AllowLabels = false);
+  bool constantFoldsToSimpleInteger(const clang::Expr *cond, bool &resultBool,
+                                    bool allowLabels = false);
+  bool constantFoldsToSimpleInteger(const clang::Expr *cond,
+                                    llvm::APSInt &resultInt,
+                                    bool allowLabels = false);
 
   /// Return true if the statement contains a label in it.  If
   /// this statement is not executed normally, it not containing a label means
   /// that we can just remove the code.
-  bool ContainsLabel(const clang::Stmt *s, bool IgnoreCaseStmts = false);
+  bool containsLabel(const clang::Stmt *s, bool ignoreCaseStmts = false);
 
   struct AutoVarEmission {
     const clang::VarDecl *Variable;
@@ -474,12 +474,12 @@ public:
   mlir::LogicalResult emitDeclStmt(const clang::DeclStmt &s);
   LValue emitDeclRefLValue(const clang::DeclRefExpr *e);
 
-  /// Emit an if on a boolean condition to the specified blocks.
+  /// Emit an `if` on a boolean condition to the specified blocks.
   /// FIXME: Based on the condition, this might try to simplify the codegen of
-  /// the conditional based on the branch. TrueCount should be the number of
-  /// times we expect the condition to evaluate to true based on PGO data. We
-  /// might decide to leave this as a separate pass (see EmitBranchOnBoolExpr
-  /// for extra ideas).
+  /// the conditional based on the branch.
+  /// In the future, we may apply code generation simplifications here,
+  /// similar to those used in classic LLVM  codegen
+  /// See `EmitBranchOnBoolExpr` for inspiration.
   mlir::LogicalResult emitIfOnBoolExpr(const clang::Expr *cond,
                                        const clang::Stmt *thenS,
                                        const clang::Stmt *elseS);

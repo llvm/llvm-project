@@ -135,7 +135,7 @@ mlir::Location CIRGenFunction::getLoc(mlir::Location lhs, mlir::Location rhs) {
   return mlir::FusedLoc::get(locs, metadata, &getMLIRContext());
 }
 
-bool CIRGenFunction::ContainsLabel(const Stmt *s, bool ignoreCaseStmts) {
+bool CIRGenFunction::containsLabel(const Stmt *s, bool ignoreCaseStmts) {
   // Null statement, not a label!
   if (!s)
     return false;
@@ -160,14 +160,14 @@ bool CIRGenFunction::ContainsLabel(const Stmt *s, bool ignoreCaseStmts) {
   // Scan subexpressions for verboten labels.
   return std::any_of(s->child_begin(), s->child_end(),
                      [=](const Stmt *subStmt) {
-                       return ContainsLabel(subStmt, ignoreCaseStmts);
+                       return containsLabel(subStmt, ignoreCaseStmts);
                      });
 }
 
 /// If the specified expression does not fold
 /// to a constant, or if it does but contains a label, return false.  If it
 /// constant folds return true and set the folded value.
-bool CIRGenFunction::ConstantFoldsToSimpleInteger(const Expr *cond,
+bool CIRGenFunction::constantFoldsToSimpleInteger(const Expr *cond,
                                                   llvm::APSInt &resultInt,
                                                   bool allowLabels) {
   // FIXME: Rename and handle conversion of other evaluatable things
@@ -177,7 +177,7 @@ bool CIRGenFunction::ConstantFoldsToSimpleInteger(const Expr *cond,
     return false; // Not foldable, not integer or not fully evaluatable.
 
   llvm::APSInt intValue = result.Val.getInt();
-  if (!allowLabels && ContainsLabel(cond))
+  if (!allowLabels && containsLabel(cond))
     return false; // Contains a label.
 
   resultInt = intValue;

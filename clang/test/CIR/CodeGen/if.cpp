@@ -252,3 +252,77 @@ void if2(int a, bool b, bool c) {
 // OGCG: [[IF_END6]]:
 // OGCG:   ret void
 
+int if_init() {
+  if (int x = 42) {
+    return x + 1; // x should be visible here
+  } else {
+    return x - 1; // x should also be visible here
+  }
+}
+
+// CIR: cir.func @if_init() -> !s32i
+// CIR: %[[RETVAL:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>
+// CIR: cir.scope {
+// CIR:   %[[X:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>,
+// CIR:   %[[CONST42:.*]] = cir.const #cir.int<42> : !s32i
+// CIR:   cir.store %[[CONST42]], %[[X]] : !s32i, !cir.ptr<!s32i>
+// CIR:   %[[X_VAL:.*]] = cir.load %[[X]] : !cir.ptr<!s32i>, !s32i
+// CIR:   %[[COND:.*]] = cir.cast(int_to_bool, %[[X_VAL]] : !s32i), !cir.bool
+// CIR:   cir.if %[[COND]] {
+// CIR:     %[[X_IF:.*]] = cir.load %[[X]] : !cir.ptr<!s32i>, !s32i
+// CIR:     %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CIR:     %[[ADD:.*]] = cir.binop(add, %[[X_IF]], %[[ONE]]) nsw : !s32i
+// CIR:     cir.store %[[ADD]], %[[RETVAL]] : !s32i, !cir.ptr<!s32i>
+// CIR:     %[[RETVAL_LOAD1:.*]] = cir.load %[[RETVAL]] : !cir.ptr<!s32i>, !s32i
+// CIR:     cir.return %[[RETVAL_LOAD1]] : !s32i
+// CIR:   } else {
+// CIR:     %[[X_ELSE:.*]] = cir.load %[[X]] : !cir.ptr<!s32i>, !s32i
+// CIR:     %[[ONE2:.*]] = cir.const #cir.int<1> : !s32i
+// CIR:     %[[SUB:.*]] = cir.binop(sub, %[[X_ELSE]], %[[ONE2]]) nsw : !s32i
+// CIR:     cir.store %[[SUB]], %[[RETVAL]] : !s32i, !cir.ptr<!s32i>
+// CIR:     %[[RETVAL_LOAD2:.*]] = cir.load %[[RETVAL]] : !cir.ptr<!s32i>, !s32i
+// CIR:     cir.return %[[RETVAL_LOAD2]] : !s32i
+// CIR:   }
+// CIR: }
+
+// LLVM: define i32 @if_init()
+// LLVM: %[[X:.*]] = alloca i32, i64 1, align 4
+// LLVM: %[[RETVAL:.*]] = alloca i32, i64 1, align 4
+// LLVM: store i32 42, ptr %[[X]], align 4
+// LLVM: %[[X_VAL:.*]] = load i32, ptr %[[X]], align 4
+// LLVM: %[[COND:.*]] = icmp ne i32 %[[X_VAL]], 0
+// LLVM: br i1 %[[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
+// LLVM: [[THEN]]:
+// LLVM:   %[[X_LOAD:.*]] = load i32, ptr %[[X]], align 4
+// LLVM:   %[[ADD:.*]] = add nsw i32 %[[X_LOAD]], 1
+// LLVM:   store i32 %[[ADD]], ptr %[[RETVAL]], align 4
+// LLVM:   %[[RETVAL_LOAD1:.*]] = load i32, ptr %[[RETVAL]], align 4
+// LLVM:   ret i32 %[[RETVAL_LOAD1]]
+// LLVM: [[ELSE]]:
+// LLVM:   %[[X_LOAD2:.*]] = load i32, ptr %[[X]], align 4
+// LLVM:   %[[SUB:.*]] = sub nsw i32 %[[X_LOAD2]], 1
+// LLVM:   store i32 %[[SUB]], ptr %[[RETVAL]], align 4
+// LLVM:   %[[RETVAL_LOAD2:.*]] = load i32, ptr %[[RETVAL]], align 4
+// LLVM:   ret i32 %[[RETVAL_LOAD2]]
+
+// OGCG: define dso_local noundef i32 @_Z7if_initv()
+// OGCG: entry:
+// OGCG:   %[[RETVAL:.*]] = alloca i32, align 4
+// OGCG:   %[[X:.*]] = alloca i32, align 4
+// OGCG:   store i32 42, ptr %[[X]], align 4
+// OGCG:   %[[X_VAL:.*]] = load i32, ptr %[[X]], align 4
+// OGCG:   %[[COND:.*]] = icmp ne i32 %[[X_VAL]], 0
+// OGCG:   br i1 %[[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
+// OGCG: [[THEN]]:
+// OGCG:   %[[X_LOAD:.*]] = load i32, ptr %[[X]], align 4
+// OGCG:   %[[ADD:.*]] = add nsw i32 %[[X_LOAD]], 1
+// OGCG:   store i32 %[[ADD]], ptr %[[RETVAL]], align 4
+// OGCG:   br label %[[RETURN:.*]]
+// OGCG: [[ELSE]]:
+// OGCG:   %[[X_LOAD2:.*]] = load i32, ptr %[[X]], align 4
+// OGCG:   %[[SUB:.*]] = sub nsw i32 %[[X_LOAD2]], 1
+// OGCG:   store i32 %[[SUB]], ptr %[[RETVAL]], align 4
+// OGCG:   br label %[[RETURN]]
+// OGCG: [[RETURN]]:
+// OGCG:   %[[RETVAL_FINAL:.*]] = load i32, ptr %[[RETVAL]], align 4
+// OGCG:   ret i32 %[[RETVAL_FINAL]]

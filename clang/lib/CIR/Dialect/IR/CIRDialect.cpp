@@ -520,7 +520,6 @@ ParseResult cir::IfOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void cir::IfOp::print(OpAsmPrinter &p) {
-
   p << " " << getCondition() << " ";
   mlir::Region &thenRegion = this->getThenRegion();
   p.printRegion(thenRegion,
@@ -562,17 +561,6 @@ void cir::IfOp::getSuccessorRegions(mlir::RegionBranchPoint point,
   Region *elseRegion = &this->getElseRegion();
   if (elseRegion->empty())
     elseRegion = nullptr;
-
-  // Otherwise, the successor is dependent on the condition.
-  // bool condition;
-  // if (auto condAttr = operands.front().dyn_cast_or_null<IntegerAttr>()) {
-  //   assert(0 && "not implemented");
-  // condition = condAttr.getValue().isOneValue();
-  // Add the successor regions using the condition.
-  // regions.push_back(RegionSuccessor(condition ? &thenRegion() :
-  // elseRegion));
-  // return;
-  // }
 
   // If the condition isn't constant, both regions may be executed.
   regions.push_back(RegionSuccessor(&getThenRegion()));
