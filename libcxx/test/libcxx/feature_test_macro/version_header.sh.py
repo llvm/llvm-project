@@ -45,9 +45,11 @@ class Test(unittest.TestCase):
 
 #if _LIBCPP_STD_VER >= 17
 #  define __cpp_lib_any 201606L
+#  define __cpp_lib_clamp 201603L
 #  define __cpp_lib_parallel_algorithm 201603L
+// define __cpp_lib_to_chars 201611L
 #  define __cpp_lib_variant 202102L
-// define __cpp_lib_missing_FTM_in_older_standard 2017L
+// define __cpp_lib_zz_missing_FTM_in_older_standard 2017L
 #endif // _LIBCPP_STD_VER >= 17
 
 #if _LIBCPP_STD_VER >= 20
@@ -56,7 +58,7 @@ class Test(unittest.TestCase):
 #  endif
 // define __cpp_lib_format 202110L
 // define __cpp_lib_variant 202106L
-// define __cpp_lib_missing_FTM_in_older_standard 2020L
+// define __cpp_lib_zz_missing_FTM_in_older_standard 2020L
 #endif // _LIBCPP_STD_VER >= 20
 
 #if _LIBCPP_STD_VER >= 23
@@ -70,7 +72,7 @@ class Test(unittest.TestCase):
 #  endif
 // define __cpp_lib_format 202311L
 // define __cpp_lib_variant 202306L
-// define __cpp_lib_missing_FTM_in_older_standard 2026L
+// define __cpp_lib_zz_missing_FTM_in_older_standard 2026L
 #endif // _LIBCPP_STD_VER >= 26
 
 #endif // _LIBCPP_VERSIONH
