@@ -1673,9 +1673,10 @@ public:
   /// \returns A value which is the result of the given memory intrinsic.  New
   /// instructions may be created to extract the result from the given intrinsic
   /// memory operation.  Returns nullptr if the target cannot create a result
-  /// from the given intrinsic.
-  Value *getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
-                                           Type *ExpectedType) const;
+  /// from the given intrinsic. Adds newly created instructions to \p NewInsts.
+  Value *getOrCreateResultFromMemIntrinsic(
+      IntrinsicInst *Inst, Type *ExpectedType,
+      SmallVectorImpl<Instruction *> &NewInsts) const;
 
   /// \returns The type to use in a loop expansion of a memcpy call.
   Type *getMemcpyLoopLoweringType(
@@ -2290,8 +2291,9 @@ public:
   virtual bool getTgtMemIntrinsic(IntrinsicInst *Inst,
                                   MemIntrinsicInfo &Info) = 0;
   virtual unsigned getAtomicMemIntrinsicMaxElementSize() const = 0;
-  virtual Value *getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
-                                                   Type *ExpectedType) = 0;
+  virtual Value *getOrCreateResultFromMemIntrinsic(
+      IntrinsicInst *Inst, Type *ExpectedType,
+      SmallVectorImpl<Instruction *> &NewInsts) = 0;
   virtual Type *getMemcpyLoopLoweringType(
       LLVMContext &Context, Value *Length, unsigned SrcAddrSpace,
       unsigned DestAddrSpace, Align SrcAlign, Align DestAlign,
@@ -3065,9 +3067,10 @@ public:
   unsigned getAtomicMemIntrinsicMaxElementSize() const override {
     return Impl.getAtomicMemIntrinsicMaxElementSize();
   }
-  Value *getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
-                                           Type *ExpectedType) override {
-    return Impl.getOrCreateResultFromMemIntrinsic(Inst, ExpectedType);
+  Value *getOrCreateResultFromMemIntrinsic(
+      IntrinsicInst *Inst, Type *ExpectedType,
+      SmallVectorImpl<Instruction *> &NewInsts) override {
+    return Impl.getOrCreateResultFromMemIntrinsic(Inst, ExpectedType, NewInsts);
   }
   Type *getMemcpyLoopLoweringType(
       LLVMContext &Context, Value *Length, unsigned SrcAddrSpace,
