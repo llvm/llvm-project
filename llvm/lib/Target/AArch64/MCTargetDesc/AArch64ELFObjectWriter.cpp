@@ -137,7 +137,7 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
     case FK_Data_2:
       return R_CLS(PREL16);
     case FK_Data_4: {
-      return AArch64MCExpr::Specifier(Target.getAccessVariant()) ==
+      return AArch64MCExpr::Specifier(Target.getSpecifier()) ==
                      AArch64MCExpr::VK_PLT
                  ? R_CLS(PLT32)
                  : R_CLS(PREL32);
@@ -249,7 +249,7 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
     case FK_Data_2:
       return R_CLS(ABS16);
     case FK_Data_4:
-      return (!IsILP32 && AArch64MCExpr::Specifier(Target.getAccessVariant()) ==
+      return (!IsILP32 && AArch64MCExpr::Specifier(Target.getSpecifier()) ==
                               AArch64MCExpr::VK_GOTPCREL)
                  ? ELF::R_AARCH64_GOTPCREL32
                  : R_CLS(ABS32);
@@ -546,7 +546,7 @@ bool AArch64ELFObjectWriter::needsRelocateWithSymbol(const MCValue &Val,
   if ((Val.getRefKind() & AArch64MCExpr::VK_GOT) == AArch64MCExpr::VK_GOT)
     return true;
   return is_contained({AArch64MCExpr::VK_GOTPCREL, AArch64MCExpr::VK_PLT},
-                      AArch64MCExpr::Specifier(Val.getAccessVariant()));
+                      AArch64MCExpr::Specifier(Val.getSpecifier()));
 }
 
 std::unique_ptr<MCObjectTargetWriter>
