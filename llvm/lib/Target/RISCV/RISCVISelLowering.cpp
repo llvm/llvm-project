@@ -15040,6 +15040,70 @@ static SDValue performTRUNCATECombine(SDNode *N, SelectionDAG &DAG,
   return combineTruncSelectToSMaxUSat(N, DAG);
 }
 
+// InstCombinerImpl::transformZExtICmp will narrow a zext of an icmp with a
+// truncation. But RVV doesn't have truncation instructions for more than twice
+// the bitwidth.
+//
+// E.g. trunc <vscale x 1 x i64> %x to <vscale x 1 x i8> will generate:
+//
+//     vsetvli a0, zero, e32, m2, ta, ma
+//     vnsrl.wi v12, v8, 0
+//     vsetvli zero, zero, e16, m1, ta, ma
+//     vnsrl.wi v8, v12, 0
+//     vsetvli zero, zero, e8, mf2, ta, ma
+//     vnsrl.wi v8, v8, 0
+//
+// So reverse the combine so we generate an vmseq/vmsne again:
+//
+// and (lshr (trunc X), ShAmt), 1
+// -->
+// zext (icmp ne (and X, (1 << ShAmt)), 0)
+//
+// and (lshr (not (trunc X)), ShAmt), 1
+// -->
+// zext (icmp eq (and X, (1 << ShAmt)), 0)
+static SDValue reverseZExtICmpCombine(SDNode *N, SelectionDAG &DAG,
+                                      const RISCVSubtarget &Subtarget) {
+  using namespace SDPatternMatch;
+  SDLoc DL(N);
+
+  if (!Subtarget.hasVInstructions())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  if (!VT.isVector())
+    return SDValue();
+
+  APInt ShAmt;
+  SDValue Inner;
+  if (!sd_match(N, m_And(m_OneUse(m_Srl(m_Value(Inner), m_ConstInt(ShAmt))),
+                         m_One())))
+    return SDValue();
+
+  SDValue X;
+  bool IsNot;
+  if (sd_match(Inner, m_Not(m_Trunc(m_Value(X)))))
+    IsNot = true;
+  else if (sd_match(Inner, m_Trunc(m_Value(X))))
+    IsNot = false;
+  else
+    return SDValue();
+
+  EVT WideVT = X.getValueType();
+  if (VT.getScalarSizeInBits() >= WideVT.getScalarSizeInBits() / 2)
+    return SDValue();
+
+  SDValue Res =
+      DAG.getNode(ISD::AND, DL, WideVT, X,
+                  DAG.getConstant(1 << ShAmt.getZExtValue(), DL, WideVT));
+  Res = DAG.getSetCC(DL,
+                     EVT::getVectorVT(*DAG.getContext(), MVT::i1,
+                                      WideVT.getVectorElementCount()),
+                     Res, DAG.getConstant(0, DL, WideVT),
+                     IsNot ? ISD::SETEQ : ISD::SETNE);
+  return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Res);
+}
+
 // Combines two comparison operation and logic operation to one selection
 // operation(min, max) and logic operation. Returns new constructed Node if
 // conditions for optimization are satisfied.
@@ -15066,6 +15130,9 @@ static SDValue performANDCombine(SDNode *N,
                               DAG.getConstant(1, DL, MVT::i64));
     return DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, And);
   }
+
+  if (SDValue V = reverseZExtICmpCombine(N, DAG, Subtarget))
+    return V;
 
   if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
     return V;

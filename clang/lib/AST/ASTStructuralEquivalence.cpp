@@ -1656,9 +1656,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   if (!D1->getDeclName() && !D2->getDeclName()) {
     // If both anonymous structs/unions are in a record context, make sure
     // they occur in the same location in the context records.
-    if (std::optional<unsigned> Index1 =
+    if (UnsignedOrNone Index1 =
             StructuralEquivalenceContext::findUntaggedStructOrUnionIndex(D1)) {
-      if (std::optional<unsigned> Index2 =
+      if (UnsignedOrNone Index2 =
               StructuralEquivalenceContext::findUntaggedStructOrUnionIndex(
                   D2)) {
         if (*Index1 != *Index2)
@@ -2345,7 +2345,7 @@ DiagnosticBuilder StructuralEquivalenceContext::Diag2(SourceLocation Loc,
   return ToCtx.getDiagnostics().Report(Loc, DiagID);
 }
 
-std::optional<unsigned>
+UnsignedOrNone
 StructuralEquivalenceContext::findUntaggedStructOrUnionIndex(RecordDecl *Anon) {
   ASTContext &Context = Anon->getASTContext();
   QualType AnonTy = Context.getRecordType(Anon);

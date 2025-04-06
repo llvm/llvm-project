@@ -94,6 +94,9 @@ Improvements to clang-tidy
 - Improved :program:`clang-tidy-diff.py` script. Add the `-warnings-as-errors`
   argument to treat warnings as errors.
 
+- Fixed bug in :program:`clang-tidy` by which `HeaderFilterRegex` did not take
+  effect when passed via the `.clang-tidy` file.
+
 New checks
 ^^^^^^^^^^
 

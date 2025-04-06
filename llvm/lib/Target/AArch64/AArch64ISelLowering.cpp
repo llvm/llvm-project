@@ -2057,6 +2057,15 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
     setOperationAction(ISD::READ_REGISTER, MVT::i128, Custom);
     setOperationAction(ISD::WRITE_REGISTER, MVT::i128, Custom);
   }
+
+  if (VT.isInteger()) {
+    // Let common code emit inverted variants of compares we do support.
+    setCondCodeAction(ISD::SETNE, VT, Expand);
+    setCondCodeAction(ISD::SETLE, VT, Expand);
+    setCondCodeAction(ISD::SETLT, VT, Expand);
+    setCondCodeAction(ISD::SETULE, VT, Expand);
+    setCondCodeAction(ISD::SETULT, VT, Expand);
+  }
 }
 
 bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
@@ -2581,31 +2590,21 @@ unsigned AArch64TargetLowering::ComputeNumSignBitsForTargetNode(
   unsigned VTBits = VT.getScalarSizeInBits();
   unsigned Opcode = Op.getOpcode();
   switch (Opcode) {
-    case AArch64ISD::CMEQ:
-    case AArch64ISD::CMGE:
-    case AArch64ISD::CMGT:
-    case AArch64ISD::CMHI:
-    case AArch64ISD::CMHS:
-    case AArch64ISD::FCMEQ:
-    case AArch64ISD::FCMGE:
-    case AArch64ISD::FCMGT:
-    case AArch64ISD::CMEQz:
-    case AArch64ISD::CMGEz:
-    case AArch64ISD::CMGTz:
-    case AArch64ISD::CMLEz:
-    case AArch64ISD::CMLTz:
-    case AArch64ISD::FCMEQz:
-    case AArch64ISD::FCMGEz:
-    case AArch64ISD::FCMGTz:
-    case AArch64ISD::FCMLEz:
-    case AArch64ISD::FCMLTz:
-      // Compares return either 0 or all-ones
-      return VTBits;
-    case AArch64ISD::VASHR: {
-      unsigned Tmp =
-          DAG.ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
-      return std::min<uint64_t>(Tmp + Op.getConstantOperandVal(1), VTBits);
-    }
+  case AArch64ISD::FCMEQ:
+  case AArch64ISD::FCMGE:
+  case AArch64ISD::FCMGT:
+  case AArch64ISD::FCMEQz:
+  case AArch64ISD::FCMGEz:
+  case AArch64ISD::FCMGTz:
+  case AArch64ISD::FCMLEz:
+  case AArch64ISD::FCMLTz:
+    // Compares return either 0 or all-ones
+    return VTBits;
+  case AArch64ISD::VASHR: {
+    unsigned Tmp =
+        DAG.ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    return std::min<uint64_t>(Tmp + Op.getConstantOperandVal(1), VTBits);
+  }
   }
 
   return 1;
@@ -2812,19 +2811,9 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::VASHR)
     MAKE_CASE(AArch64ISD::VSLI)
     MAKE_CASE(AArch64ISD::VSRI)
-    MAKE_CASE(AArch64ISD::CMEQ)
-    MAKE_CASE(AArch64ISD::CMGE)
-    MAKE_CASE(AArch64ISD::CMGT)
-    MAKE_CASE(AArch64ISD::CMHI)
-    MAKE_CASE(AArch64ISD::CMHS)
     MAKE_CASE(AArch64ISD::FCMEQ)
     MAKE_CASE(AArch64ISD::FCMGE)
     MAKE_CASE(AArch64ISD::FCMGT)
-    MAKE_CASE(AArch64ISD::CMEQz)
-    MAKE_CASE(AArch64ISD::CMGEz)
-    MAKE_CASE(AArch64ISD::CMGTz)
-    MAKE_CASE(AArch64ISD::CMLEz)
-    MAKE_CASE(AArch64ISD::CMLTz)
     MAKE_CASE(AArch64ISD::FCMEQz)
     MAKE_CASE(AArch64ISD::FCMGEz)
     MAKE_CASE(AArch64ISD::FCMGTz)
@@ -15840,9 +15829,6 @@ static SDValue EmitVectorComparison(SDValue LHS, SDValue RHS,
                                             SplatBitSize, HasAnyUndefs);
 
   bool IsZero = IsCnst && SplatValue == 0;
-  bool IsOne =
-      IsCnst && SrcVT.getScalarSizeInBits() == SplatBitSize && SplatValue == 1;
-  bool IsMinusOne = IsCnst && SplatValue.isAllOnes();
 
   if (SrcVT.getVectorElementType().isFloatingPoint()) {
     switch (CC) {
@@ -15889,50 +15875,7 @@ static SDValue EmitVectorComparison(SDValue LHS, SDValue RHS,
     }
   }
 
-  switch (CC) {
-  default:
-    return SDValue();
-  case AArch64CC::NE: {
-    SDValue Cmeq;
-    if (IsZero)
-      Cmeq = DAG.getNode(AArch64ISD::CMEQz, dl, VT, LHS);
-    else
-      Cmeq = DAG.getNode(AArch64ISD::CMEQ, dl, VT, LHS, RHS);
-    return DAG.getNOT(dl, Cmeq, VT);
-  }
-  case AArch64CC::EQ:
-    if (IsZero)
-      return DAG.getNode(AArch64ISD::CMEQz, dl, VT, LHS);
-    return DAG.getNode(AArch64ISD::CMEQ, dl, VT, LHS, RHS);
-  case AArch64CC::GE:
-    if (IsZero)
-      return DAG.getNode(AArch64ISD::CMGEz, dl, VT, LHS);
-    return DAG.getNode(AArch64ISD::CMGE, dl, VT, LHS, RHS);
-  case AArch64CC::GT:
-    if (IsZero)
-      return DAG.getNode(AArch64ISD::CMGTz, dl, VT, LHS);
-    if (IsMinusOne)
-      return DAG.getNode(AArch64ISD::CMGEz, dl, VT, LHS);
-    return DAG.getNode(AArch64ISD::CMGT, dl, VT, LHS, RHS);
-  case AArch64CC::LE:
-    if (IsZero)
-      return DAG.getNode(AArch64ISD::CMLEz, dl, VT, LHS);
-    return DAG.getNode(AArch64ISD::CMGE, dl, VT, RHS, LHS);
-  case AArch64CC::LS:
-    return DAG.getNode(AArch64ISD::CMHS, dl, VT, RHS, LHS);
-  case AArch64CC::LO:
-    return DAG.getNode(AArch64ISD::CMHI, dl, VT, RHS, LHS);
-  case AArch64CC::LT:
-    if (IsZero)
-      return DAG.getNode(AArch64ISD::CMLTz, dl, VT, LHS);
-    if (IsOne)
-      return DAG.getNode(AArch64ISD::CMLEz, dl, VT, LHS);
-    return DAG.getNode(AArch64ISD::CMGT, dl, VT, RHS, LHS);
-  case AArch64CC::HI:
-    return DAG.getNode(AArch64ISD::CMHI, dl, VT, LHS, RHS);
-  case AArch64CC::HS:
-    return DAG.getNode(AArch64ISD::CMHS, dl, VT, LHS, RHS);
-  }
+  return SDValue();
 }
 
 SDValue AArch64TargetLowering::LowerVSETCC(SDValue Op,
@@ -15950,13 +15893,8 @@ SDValue AArch64TargetLowering::LowerVSETCC(SDValue Op,
   EVT CmpVT = LHS.getValueType().changeVectorElementTypeToInteger();
   SDLoc dl(Op);
 
-  if (LHS.getValueType().getVectorElementType().isInteger()) {
-    assert(LHS.getValueType() == RHS.getValueType());
-    AArch64CC::CondCode AArch64CC = changeIntCCToAArch64CC(CC);
-    SDValue Cmp =
-        EmitVectorComparison(LHS, RHS, AArch64CC, false, CmpVT, dl, DAG);
-    return DAG.getSExtOrTrunc(Cmp, dl, Op.getValueType());
-  }
+  if (LHS.getValueType().getVectorElementType().isInteger())
+    return Op;
 
   // Lower isnan(x) | isnan(never-nan) to x != x.
   // Lower !isnan(x) & !isnan(never-nan) to x == x.
@@ -18152,7 +18090,9 @@ static SDValue foldVectorXorShiftIntoCmp(SDNode *N, SelectionDAG &DAG,
   if (!ShiftAmt || ShiftAmt->getZExtValue() != ShiftEltTy.getSizeInBits() - 1)
     return SDValue();
 
-  return DAG.getNode(AArch64ISD::CMGEz, SDLoc(N), VT, Shift.getOperand(0));
+  SDLoc DL(N);
+  SDValue Zero = DAG.getConstant(0, DL, Shift.getValueType());
+  return DAG.getSetCC(DL, VT, Shift.getOperand(0), Zero, ISD::SETGE);
 }
 
 // Given a vecreduce_add node, detect the below pattern and convert it to the
@@ -18763,7 +18703,8 @@ static SDValue performMulVectorCmpZeroCombine(SDNode *N, SelectionDAG &DAG) {
 
   SDLoc DL(N);
   SDValue In = DAG.getNode(AArch64ISD::NVCAST, DL, HalfVT, Srl.getOperand(0));
-  SDValue CM = DAG.getNode(AArch64ISD::CMLTz, DL, HalfVT, In);
+  SDValue Zero = DAG.getConstant(0, DL, In.getValueType());
+  SDValue CM = DAG.getSetCC(DL, HalfVT, Zero, In, ISD::SETGT);
   return DAG.getNode(AArch64ISD::NVCAST, DL, VT, CM);
 }
 
@@ -25291,6 +25232,16 @@ static SDValue performSETCCCombine(SDNode *N,
   // Try to perform the memcmp when the result is tested for [in]equality with 0
   if (SDValue V = performOrXorChainCombine(N, DAG))
     return V;
+
+  EVT CmpVT = LHS.getValueType();
+
+  // NOTE: This exists as a combine only because it proved too awkward to match
+  // splat(1) across all the NEON types during isel.
+  APInt SplatLHSVal;
+  if (CmpVT.isInteger() && Cond == ISD::SETGT &&
+      ISD::isConstantSplatVector(LHS.getNode(), SplatLHSVal) &&
+      SplatLHSVal.isOne())
+    return DAG.getSetCC(DL, VT, DAG.getConstant(0, DL, CmpVT), RHS, ISD::SETGE);
 
   return SDValue();
 }

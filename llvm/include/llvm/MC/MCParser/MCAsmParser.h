@@ -24,7 +24,6 @@
 
 namespace llvm {
 
-class MCAsmLexer;
 class MCAsmInfo;
 class MCAsmParserExtension;
 class MCExpr;

@@ -12,9 +12,7 @@ define dso_local noundef i32 @non_kernel_function(ptr nocapture noundef readonly
 ; OPT-LABEL: define dso_local noundef i32 @non_kernel_function(
 ; OPT-SAME: ptr noundef readonly byval([[STRUCT_UINT4:%.*]]) align 16 captures(none) [[A:%.*]], i1 noundef zeroext [[B:%.*]], i32 noundef [[C:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; OPT-NEXT:  [[ENTRY:.*:]]
-; OPT-NEXT:    [[A2:%.*]] = addrspacecast ptr [[A]] to ptr addrspace(5)
-; OPT-NEXT:    [[A1:%.*]] = addrspacecast ptr addrspace(5) [[A2]] to ptr
-; OPT-NEXT:    [[A_:%.*]] = select i1 [[B]], ptr [[A1]], ptr addrspacecast (ptr addrspace(1) @gi to ptr)
+; OPT-NEXT:    [[A_:%.*]] = select i1 [[B]], ptr [[A]], ptr addrspacecast (ptr addrspace(1) @gi to ptr)
 ; OPT-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[C]] to i64
 ; OPT-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[A_]], i64 [[IDX_EXT]]
 ; OPT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ADD_PTR]], align 1
@@ -74,12 +72,10 @@ define ptx_kernel void @grid_const_int(ptr byval(i32) align 4 %input1, i32 %inpu
 ; PTX-NEXT:    ret;
 ; OPT-LABEL: define ptx_kernel void @grid_const_int(
 ; OPT-SAME: ptr byval(i32) align 4 [[INPUT1:%.*]], i32 [[INPUT2:%.*]], ptr [[OUT:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
-; OPT-NEXT:    [[OUT2:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(1)
-; OPT-NEXT:    [[OUT3:%.*]] = addrspacecast ptr addrspace(1) [[OUT2]] to ptr
 ; OPT-NEXT:    [[INPUT11:%.*]] = addrspacecast ptr [[INPUT1]] to ptr addrspace(101)
 ; OPT-NEXT:    [[TMP:%.*]] = load i32, ptr addrspace(101) [[INPUT11]], align 4
 ; OPT-NEXT:    [[ADD:%.*]] = add i32 [[TMP]], [[INPUT2]]
-; OPT-NEXT:    store i32 [[ADD]], ptr [[OUT3]], align 4
+; OPT-NEXT:    store i32 [[ADD]], ptr [[OUT]], align 4
 ; OPT-NEXT:    ret void
   %tmp = load i32, ptr %input1, align 4
   %add = add i32 %tmp, %input2
@@ -105,15 +101,13 @@ define ptx_kernel void @grid_const_struct(ptr byval(%struct.s) align 4 %input, p
 ; PTX-NEXT:    ret;
 ; OPT-LABEL: define ptx_kernel void @grid_const_struct(
 ; OPT-SAME: ptr byval([[STRUCT_S:%.*]]) align 4 [[INPUT:%.*]], ptr [[OUT:%.*]]) #[[ATTR0]] {
-; OPT-NEXT:    [[OUT4:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(1)
-; OPT-NEXT:    [[OUT5:%.*]] = addrspacecast ptr addrspace(1) [[OUT4]] to ptr
 ; OPT-NEXT:    [[INPUT1:%.*]] = addrspacecast ptr [[INPUT]] to ptr addrspace(101)
 ; OPT-NEXT:    [[GEP13:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr addrspace(101) [[INPUT1]], i32 0, i32 0
 ; OPT-NEXT:    [[GEP22:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr addrspace(101) [[INPUT1]], i32 0, i32 1
 ; OPT-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(101) [[GEP13]], align 4
 ; OPT-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(101) [[GEP22]], align 4
 ; OPT-NEXT:    [[ADD:%.*]] = add i32 [[TMP1]], [[TMP2]]
-; OPT-NEXT:    store i32 [[ADD]], ptr [[OUT5]], align 4
+; OPT-NEXT:    store i32 [[ADD]], ptr [[OUT]], align 4
 ; OPT-NEXT:    ret void
   %gep1 = getelementptr inbounds %struct.s, ptr %input, i32 0, i32 0
   %gep2 = getelementptr inbounds %struct.s, ptr %input, i32 0, i32 1
@@ -233,11 +227,9 @@ define ptx_kernel void @grid_const_memory_escape(ptr byval(%struct.s) align 4 %i
 ; PTX-NEXT:    ret;
 ; OPT-LABEL: define ptx_kernel void @grid_const_memory_escape(
 ; OPT-SAME: ptr byval([[STRUCT_S:%.*]]) align 4 [[INPUT:%.*]], ptr [[ADDR:%.*]]) #[[ATTR0]] {
-; OPT-NEXT:    [[ADDR4:%.*]] = addrspacecast ptr [[ADDR]] to ptr addrspace(1)
-; OPT-NEXT:    [[ADDR5:%.*]] = addrspacecast ptr addrspace(1) [[ADDR4]] to ptr
 ; OPT-NEXT:    [[INPUT_PARAM:%.*]] = addrspacecast ptr [[INPUT]] to ptr addrspace(101)
 ; OPT-NEXT:    [[INPUT1:%.*]] = call ptr @llvm.nvvm.ptr.param.to.gen.p0.p101(ptr addrspace(101) [[INPUT_PARAM]])
-; OPT-NEXT:    store ptr [[INPUT1]], ptr [[ADDR5]], align 8
+; OPT-NEXT:    store ptr [[INPUT1]], ptr [[ADDR]], align 8
 ; OPT-NEXT:    ret void
   store ptr %input, ptr %addr, align 8
   ret void
@@ -263,14 +255,12 @@ define ptx_kernel void @grid_const_inlineasm_escape(ptr byval(%struct.s) align 4
 ; PTX-NOT      .local
 ; OPT-LABEL: define ptx_kernel void @grid_const_inlineasm_escape(
 ; OPT-SAME: ptr byval([[STRUCT_S:%.*]]) align 4 [[INPUT:%.*]], ptr [[RESULT:%.*]]) #[[ATTR0]] {
-; OPT-NEXT:    [[RESULT4:%.*]] = addrspacecast ptr [[RESULT]] to ptr addrspace(1)
-; OPT-NEXT:    [[RESULT5:%.*]] = addrspacecast ptr addrspace(1) [[RESULT4]] to ptr
 ; OPT-NEXT:    [[INPUT_PARAM:%.*]] = addrspacecast ptr [[INPUT]] to ptr addrspace(101)
 ; OPT-NEXT:    [[INPUT1:%.*]] = call ptr @llvm.nvvm.ptr.param.to.gen.p0.p101(ptr addrspace(101) [[INPUT_PARAM]])
 ; OPT-NEXT:    [[TMPPTR1:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[INPUT1]], i32 0, i32 0
 ; OPT-NEXT:    [[TMPPTR2:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[INPUT1]], i32 0, i32 1
 ; OPT-NEXT:    [[TMP2:%.*]] = call i64 asm "add.s64 $0, $1, $2
-; OPT-NEXT:    store i64 [[TMP2]], ptr [[RESULT5]], align 8
+; OPT-NEXT:    store i64 [[TMP2]], ptr [[RESULT]], align 8
 ; OPT-NEXT:    ret void
   %tmpptr1 = getelementptr inbounds %struct.s, ptr %input, i32 0, i32 0
   %tmpptr2 = getelementptr inbounds %struct.s, ptr %input, i32 0, i32 1
@@ -311,13 +301,11 @@ define ptx_kernel void @grid_const_partial_escape(ptr byval(i32) %input, ptr %ou
 ; PTX-NEXT:    ret;
 ; OPT-LABEL: define ptx_kernel void @grid_const_partial_escape(
 ; OPT-SAME: ptr byval(i32) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) #[[ATTR0]] {
-; OPT-NEXT:    [[OUTPUT4:%.*]] = addrspacecast ptr [[OUTPUT]] to ptr addrspace(1)
-; OPT-NEXT:    [[OUTPUT5:%.*]] = addrspacecast ptr addrspace(1) [[OUTPUT4]] to ptr
 ; OPT-NEXT:    [[INPUT1:%.*]] = addrspacecast ptr [[INPUT]] to ptr addrspace(101)
 ; OPT-NEXT:    [[INPUT1_GEN:%.*]] = call ptr @llvm.nvvm.ptr.param.to.gen.p0.p101(ptr addrspace(101) [[INPUT1]])
 ; OPT-NEXT:    [[VAL1:%.*]] = load i32, ptr [[INPUT1_GEN]], align 4
 ; OPT-NEXT:    [[TWICE:%.*]] = add i32 [[VAL1]], [[VAL1]]
-; OPT-NEXT:    store i32 [[TWICE]], ptr [[OUTPUT5]], align 4
+; OPT-NEXT:    store i32 [[TWICE]], ptr [[OUTPUT]], align 4
 ; OPT-NEXT:    [[CALL:%.*]] = call i32 @escape(ptr [[INPUT1_GEN]])
 ; OPT-NEXT:    ret void
   %val = load i32, ptr %input
@@ -361,15 +349,13 @@ define ptx_kernel i32 @grid_const_partial_escapemem(ptr byval(%struct.s) %input,
 ; PTX-NEXT:    ret;
 ; OPT-LABEL: define ptx_kernel i32 @grid_const_partial_escapemem(
 ; OPT-SAME: ptr byval([[STRUCT_S:%.*]]) [[INPUT:%.*]], ptr [[OUTPUT:%.*]]) #[[ATTR0]] {
-; OPT-NEXT:    [[OUTPUT4:%.*]] = addrspacecast ptr [[OUTPUT]] to ptr addrspace(1)
-; OPT-NEXT:    [[OUTPUT5:%.*]] = addrspacecast ptr addrspace(1) [[OUTPUT4]] to ptr
 ; OPT-NEXT:    [[INPUT2:%.*]] = addrspacecast ptr [[INPUT]] to ptr addrspace(101)
 ; OPT-NEXT:    [[INPUT1:%.*]] = call ptr @llvm.nvvm.ptr.param.to.gen.p0.p101(ptr addrspace(101) [[INPUT2]])
 ; OPT-NEXT:    [[PTR1:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[INPUT1]], i32 0, i32 0
 ; OPT-NEXT:    [[VAL1:%.*]] = load i32, ptr [[PTR1]], align 4
 ; OPT-NEXT:    [[PTR2:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[INPUT1]], i32 0, i32 1
 ; OPT-NEXT:    [[VAL2:%.*]] = load i32, ptr [[PTR2]], align 4
-; OPT-NEXT:    store ptr [[INPUT1]], ptr [[OUTPUT5]], align 8
+; OPT-NEXT:    store ptr [[INPUT1]], ptr [[OUTPUT]], align 8
 ; OPT-NEXT:    [[ADD:%.*]] = add i32 [[VAL1]], [[VAL2]]
 ; OPT-NEXT:    [[CALL2:%.*]] = call i32 @escape(ptr [[PTR1]])
 ; OPT-NEXT:    ret i32 [[ADD]]
@@ -407,11 +393,9 @@ define ptx_kernel void @grid_const_phi(ptr byval(%struct.s) align 4 %input1, ptr
 ; PTX-NEXT:    ret;
 ; OPT-LABEL: define ptx_kernel void @grid_const_phi(
 ; OPT-SAME: ptr byval([[STRUCT_S:%.*]]) align 4 [[INPUT1:%.*]], ptr [[INOUT:%.*]]) #[[ATTR0]] {
-; OPT-NEXT:    [[INOUT1:%.*]] = addrspacecast ptr [[INOUT]] to ptr addrspace(1)
-; OPT-NEXT:    [[INOUT2:%.*]] = addrspacecast ptr addrspace(1) [[INOUT1]] to ptr
 ; OPT-NEXT:    [[INPUT1_PARAM:%.*]] = addrspacecast ptr [[INPUT1]] to ptr addrspace(101)
 ; OPT-NEXT:    [[INPUT1_PARAM_GEN:%.*]] = call ptr @llvm.nvvm.ptr.param.to.gen.p0.p101(ptr addrspace(101) [[INPUT1_PARAM]])
-; OPT-NEXT:    [[VAL:%.*]] = load i32, ptr [[INOUT2]], align 4
+; OPT-NEXT:    [[VAL:%.*]] = load i32, ptr [[INOUT]], align 4
 ; OPT-NEXT:    [[LESS:%.*]] = icmp slt i32 [[VAL]], 0
 ; OPT-NEXT:    br i1 [[LESS]], label %[[FIRST:.*]], label %[[SECOND:.*]]
 ; OPT:       [[FIRST]]:
@@ -423,7 +407,7 @@ define ptx_kernel void @grid_const_phi(ptr byval(%struct.s) align 4 %input1, ptr
 ; OPT:       [[MERGE]]:
 ; OPT-NEXT:    [[PTRNEW:%.*]] = phi ptr [ [[PTR1]], %[[FIRST]] ], [ [[PTR2]], %[[SECOND]] ]
 ; OPT-NEXT:    [[VALLOADED:%.*]] = load i32, ptr [[PTRNEW]], align 4
-; OPT-NEXT:    store i32 [[VALLOADED]], ptr [[INOUT2]], align 4
+; OPT-NEXT:    store i32 [[VALLOADED]], ptr [[INOUT]], align 4
 ; OPT-NEXT:    ret void
 
   %val = load i32, ptr %inout
@@ -470,13 +454,11 @@ define ptx_kernel void @grid_const_phi_ngc(ptr byval(%struct.s) align 4 %input1,
 ; PTX-NEXT:    ret;
 ; OPT-LABEL: define ptx_kernel void @grid_const_phi_ngc(
 ; OPT-SAME: ptr byval([[STRUCT_S:%.*]]) align 4 [[INPUT1:%.*]], ptr byval([[STRUCT_S]]) [[INPUT2:%.*]], ptr [[INOUT:%.*]]) #[[ATTR0]] {
-; OPT-NEXT:    [[INOUT1:%.*]] = addrspacecast ptr [[INOUT]] to ptr addrspace(1)
-; OPT-NEXT:    [[INOUT2:%.*]] = addrspacecast ptr addrspace(1) [[INOUT1]] to ptr
 ; OPT-NEXT:    [[INPUT2_PARAM:%.*]] = addrspacecast ptr [[INPUT2]] to ptr addrspace(101)
 ; OPT-NEXT:    [[INPUT2_PARAM_GEN:%.*]] = call ptr @llvm.nvvm.ptr.param.to.gen.p0.p101(ptr addrspace(101) [[INPUT2_PARAM]])
 ; OPT-NEXT:    [[INPUT1_PARAM:%.*]] = addrspacecast ptr [[INPUT1]] to ptr addrspace(101)
 ; OPT-NEXT:    [[INPUT1_PARAM_GEN:%.*]] = call ptr @llvm.nvvm.ptr.param.to.gen.p0.p101(ptr addrspace(101) [[INPUT1_PARAM]])
-; OPT-NEXT:    [[VAL:%.*]] = load i32, ptr [[INOUT2]], align 4
+; OPT-NEXT:    [[VAL:%.*]] = load i32, ptr [[INOUT]], align 4
 ; OPT-NEXT:    [[LESS:%.*]] = icmp slt i32 [[VAL]], 0
 ; OPT-NEXT:    br i1 [[LESS]], label %[[FIRST:.*]], label %[[SECOND:.*]]
 ; OPT:       [[FIRST]]:
@@ -488,7 +470,7 @@ define ptx_kernel void @grid_const_phi_ngc(ptr byval(%struct.s) align 4 %input1,
 ; OPT:       [[MERGE]]:
 ; OPT-NEXT:    [[PTRNEW:%.*]] = phi ptr [ [[PTR1]], %[[FIRST]] ], [ [[PTR2]], %[[SECOND]] ]
 ; OPT-NEXT:    [[VALLOADED:%.*]] = load i32, ptr [[PTRNEW]], align 4
-; OPT-NEXT:    store i32 [[VALLOADED]], ptr [[INOUT2]], align 4
+; OPT-NEXT:    store i32 [[VALLOADED]], ptr [[INOUT]], align 4
 ; OPT-NEXT:    ret void
   %val = load i32, ptr %inout
   %less = icmp slt i32 %val, 0
@@ -531,17 +513,15 @@ define ptx_kernel void @grid_const_select(ptr byval(i32) align 4 %input1, ptr by
 ; PTX-NEXT:    ret;
 ; OPT-LABEL: define ptx_kernel void @grid_const_select(
 ; OPT-SAME: ptr byval(i32) align 4 [[INPUT1:%.*]], ptr byval(i32) [[INPUT2:%.*]], ptr [[INOUT:%.*]]) #[[ATTR0]] {
-; OPT-NEXT:    [[INOUT1:%.*]] = addrspacecast ptr [[INOUT]] to ptr addrspace(1)
-; OPT-NEXT:    [[INOUT2:%.*]] = addrspacecast ptr addrspace(1) [[INOUT1]] to ptr
 ; OPT-NEXT:    [[INPUT2_PARAM:%.*]] = addrspacecast ptr [[INPUT2]] to ptr addrspace(101)
 ; OPT-NEXT:    [[INPUT2_PARAM_GEN:%.*]] = call ptr @llvm.nvvm.ptr.param.to.gen.p0.p101(ptr addrspace(101) [[INPUT2_PARAM]])
 ; OPT-NEXT:    [[INPUT1_PARAM:%.*]] = addrspacecast ptr [[INPUT1]] to ptr addrspace(101)
 ; OPT-NEXT:    [[INPUT1_PARAM_GEN:%.*]] = call ptr @llvm.nvvm.ptr.param.to.gen.p0.p101(ptr addrspace(101) [[INPUT1_PARAM]])
-; OPT-NEXT:    [[VAL:%.*]] = load i32, ptr [[INOUT2]], align 4
+; OPT-NEXT:    [[VAL:%.*]] = load i32, ptr [[INOUT]], align 4
 ; OPT-NEXT:    [[LESS:%.*]] = icmp slt i32 [[VAL]], 0
 ; OPT-NEXT:    [[PTRNEW:%.*]] = select i1 [[LESS]], ptr [[INPUT1_PARAM_GEN]], ptr [[INPUT2_PARAM_GEN]]
 ; OPT-NEXT:    [[VALLOADED:%.*]] = load i32, ptr [[PTRNEW]], align 4
-; OPT-NEXT:    store i32 [[VALLOADED]], ptr [[INOUT2]], align 4
+; OPT-NEXT:    store i32 [[VALLOADED]], ptr [[INOUT]], align 4
 ; OPT-NEXT:    ret void
   %val = load i32, ptr %inout
   %less = icmp slt i32 %val, 0

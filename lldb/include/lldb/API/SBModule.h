@@ -290,9 +290,6 @@ public:
   lldb::SBAddress GetObjectFileHeaderAddress() const;
   lldb::SBAddress GetObjectFileEntryPointAddress() const;
 
-  /// Get if the symbol file for this module is loaded.
-  bool IsDebugInfoLoaded() const;
-
   /// Get the number of global modules.
   static uint32_t GetNumberAllocatedModules();
 

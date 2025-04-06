@@ -32,6 +32,7 @@ data1:
 .word extern@gotpcrel+4
 .word extern@GOTPCREL-5
 
+## Test parse-time errors
 .ifdef ERR
 # ERR: [[#@LINE+1]]:9: error: @ specifier only allowed after a symbol
 .quad 3@plt - .
