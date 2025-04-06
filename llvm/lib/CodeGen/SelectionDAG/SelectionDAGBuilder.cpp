@@ -3441,7 +3441,8 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
 /// intrinsics such as amdgcn.kill.
 /// - they should be called (no "dontcall-" attributes)
 /// - they do not touch memory on the target (= !TLI.getTgtMemIntrinsic())
-/// - they do not need custom argument handling (no TLI.CollectTargetIntrinsicOperands())
+/// - they do not need custom argument handling (no
+/// TLI.CollectTargetIntrinsicOperands())
 void SelectionDAGBuilder::visitCallBrIntrinsic(const CallBrInst &I) {
   auto [HasChain, OnlyLoad] = getTargetIntrinsicCallProperties(I);
 
@@ -5301,7 +5302,8 @@ void SelectionDAGBuilder::visitAtomicStore(const StoreInst &I) {
 /// Ignore the callsite's attributes. A specific call site may be marked with
 /// readnone, but the lowering code will expect the chain based on the
 /// definition.
-std::pair<bool, bool> SelectionDAGBuilder::getTargetIntrinsicCallProperties(const CallBase& I) {
+std::pair<bool, bool>
+SelectionDAGBuilder::getTargetIntrinsicCallProperties(const CallBase &I) {
   const Function *F = I.getCalledFunction();
   bool HasChain = !F->doesNotAccessMemory();
   bool OnlyLoad =
@@ -5378,11 +5380,11 @@ SDVTList SelectionDAGBuilder::getTargetIntrinsicVTList(const CallBase &I,
   return DAG.getVTList(ValueVTs);
 }
 
-/// Get an INTRINSIC node for a target intrinsic which does not touch touch memory.
-SDValue
-SelectionDAGBuilder::getTargetNonMemIntrinsicNode(const CallBase &I, bool HasChain,
-                                            SmallVector<SDValue, 8> &Ops,
-                                            SDVTList &VTs) {
+/// Get an INTRINSIC node for a target intrinsic which does not touch touch
+/// memory.
+SDValue SelectionDAGBuilder::getTargetNonMemIntrinsicNode(
+    const CallBase &I, bool HasChain, SmallVector<SDValue, 8> &Ops,
+    SDVTList &VTs) {
   SDValue Result;
 
   if (!HasChain) {
@@ -5419,8 +5421,7 @@ SDValue SelectionDAGBuilder::handleTargetIntrinsicRet(const CallBase &I,
 
   // Insert `assertalign` node if there's an alignment.
   if (InsertAssertAlign && Alignment) {
-    Result =
-        DAG.getAssertAlign(getCurSDLoc(), Result, Alignment.valueOrOne());
+    Result = DAG.getAssertAlign(getCurSDLoc(), Result, Alignment.valueOrOne());
   }
 
   return Result;
@@ -5435,9 +5436,8 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
   // Info is set by getTgtMemIntrinsic
   TargetLowering::IntrinsicInfo Info;
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  bool IsTgtMemIntrinsic = TLI.getTgtMemIntrinsic(Info, I,
-                                               DAG.getMachineFunction(),
-                                               Intrinsic);
+  bool IsTgtMemIntrinsic =
+      TLI.getTgtMemIntrinsic(Info, I, DAG.getMachineFunction(), Intrinsic);
 
   SmallVector<SDValue, 8> Ops = getTargetIntrinsicOperands(
       I, HasChain, OnlyLoad, IsTgtMemIntrinsic ? &Info : nullptr);
