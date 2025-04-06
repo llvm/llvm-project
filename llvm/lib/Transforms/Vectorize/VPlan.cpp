@@ -552,8 +552,10 @@ void VPBasicBlock::executeRecipes(VPTransformState *State, BasicBlock *BB) {
 
   State->CFG.PrevVPBB = this;
 
-  for (VPRecipeBase &Recipe : Recipes)
+  for (VPRecipeBase &Recipe : Recipes) {
+    State->setDebugLocFrom(Recipe.getDebugLoc());
     Recipe.execute(*State);
+  }
 
   LLVM_DEBUG(dbgs() << "LV: filled BB:" << *BB);
 }
@@ -919,7 +921,7 @@ VPIRBasicBlock *VPlan::getExitBlock(BasicBlock *IRBB) const {
 }
 
 bool VPlan::isExitBlock(VPBlockBase *VPBB) {
-  return isa<VPIRBasicBlock>(VPBB) && VPBB->getNumSuccessors() == 0;
+  return is_contained(ExitBlocks, VPBB);
 }
 
 /// Generate the code inside the preheader and body of the vectorized loop.

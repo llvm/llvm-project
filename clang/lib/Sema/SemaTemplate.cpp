@@ -916,7 +916,7 @@ static TemplateArgumentLoc translateTemplateArgument(Sema &SemaRef,
     TemplateName Template = Arg.getAsTemplate().get();
     TemplateArgument TArg;
     if (Arg.getEllipsisLoc().isValid())
-      TArg = TemplateArgument(Template, std::optional<unsigned int>());
+      TArg = TemplateArgument(Template, /*NumExpansions=*/std::nullopt);
     else
       TArg = Template;
     return TemplateArgumentLoc(
@@ -1220,9 +1220,8 @@ bool Sema::AttachTypeConstraint(NestedNameSpecifierLoc NS,
                                       /*FoundDecl=*/FoundDecl,
                                       /*NamedConcept=*/NamedConcept,
                                       /*ArgsWritten=*/ArgsAsWritten);
-  ConstrainedParameter->setTypeConstraint(CL,
-                                          ImmediatelyDeclaredConstraint.get(),
-                                          /*ArgumentPackSubstitutionIndex=*/-1);
+  ConstrainedParameter->setTypeConstraint(
+      CL, ImmediatelyDeclaredConstraint.get(), std::nullopt);
   return false;
 }
 
@@ -5244,8 +5243,7 @@ bool Sema::CheckTemplateArgument(NamedDecl *Param, TemplateArgumentLoc &ArgLoc,
                                            /*Final=*/true);
       // If the parameter is a pack expansion, expand this slice of the pack.
       if (auto *PET = NTTPType->getAs<PackExpansionType>()) {
-        Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(*this,
-                                                           ArgumentPackIndex);
+        Sema::ArgPackSubstIndexRAII SubstIndex(*this, ArgumentPackIndex);
         NTTPType = SubstType(PET->getPattern(), MLTAL, NTTP->getLocation(),
                              NTTP->getDeclName());
       } else {
@@ -5563,7 +5561,7 @@ bool Sema::CheckTemplateArgumentList(
 
     // If we have an expanded parameter pack, make sure we don't have too
     // many arguments.
-    if (std::optional<unsigned> Expansions = getExpandedPackSize(*Param)) {
+    if (UnsignedOrNone Expansions = getExpandedPackSize(*Param)) {
       if (*Expansions == SugaredArgumentPack.size()) {
         // We're done with this parameter pack. Pack up its arguments and add
         // them to the list.

@@ -27,6 +27,11 @@ class InlinerConfig {
 public:
   using DefaultPipelineTy = std::function<void(OpPassManager &)>;
   using OpPipelinesTy = llvm::StringMap<OpPassManager>;
+  using CloneCallbackSigTy = void(OpBuilder &builder, Region *src,
+                                  Block *inlineBlock, Block *postInsertBlock,
+                                  IRMapping &mapper,
+                                  bool shouldCloneInlinedRegion);
+  using CloneCallbackTy = std::function<CloneCallbackSigTy>;
 
   InlinerConfig() = default;
   InlinerConfig(DefaultPipelineTy defaultPipeline,
@@ -39,6 +44,9 @@ public:
   }
   const OpPipelinesTy &getOpPipelines() const { return opPipelines; }
   unsigned getMaxInliningIterations() const { return maxInliningIterations; }
+  const CloneCallbackTy &getCloneCallback() const { return cloneCallback; }
+  bool getCanHandleMultipleBlocks() const { return canHandleMultipleBlocks; }
+
   void setDefaultPipeline(DefaultPipelineTy pipeline) {
     defaultPipeline = std::move(pipeline);
   }
@@ -46,6 +54,12 @@ public:
     opPipelines = std::move(pipelines);
   }
   void setMaxInliningIterations(unsigned max) { maxInliningIterations = max; }
+  void setCloneCallback(CloneCallbackTy callback) {
+    cloneCallback = std::move(callback);
+  }
+  void setCanHandleMultipleBlocks(bool value = true) {
+    canHandleMultipleBlocks = value;
+  }
 
 private:
   /// An optional function that constructs an optimization pipeline for
@@ -60,6 +74,28 @@ private:
   /// For SCC-based inlining algorithms, specifies maximum number of iterations
   /// when inlining within an SCC.
   unsigned maxInliningIterations{0};
+  /// Callback for cloning operations during inlining
+  CloneCallbackTy cloneCallback = [](OpBuilder &builder, Region *src,
+                                     Block *inlineBlock, Block *postInsertBlock,
+                                     IRMapping &mapper,
+                                     bool shouldCloneInlinedRegion) {
+    // Check to see if the region is being cloned, or moved inline. In
+    // either case, move the new blocks after the 'insertBlock' to improve
+    // IR readability.
+    Region *insertRegion = inlineBlock->getParent();
+    if (shouldCloneInlinedRegion)
+      src->cloneInto(insertRegion, postInsertBlock->getIterator(), mapper);
+    else
+      insertRegion->getBlocks().splice(postInsertBlock->getIterator(),
+                                       src->getBlocks(), src->begin(),
+                                       src->end());
+  };
+  /// Determine if the inliner can inline a function containing multiple
+  /// blocks into a region that requires a single block. By default, it is
+  /// not allowed. If it is true, cloneCallback should perform the extra
+  /// transformation. see the example in
+  /// mlir/test/lib/Transforms/TestInliningCallback.cpp
+  bool canHandleMultipleBlocks{false};
 };
 
 /// This is an implementation of the inliner
