@@ -157,6 +157,15 @@ public:
 
   mlir::Value VisitCastExpr(CastExpr *e);
 
+  mlir::Value VisitArraySubscriptExpr(ArraySubscriptExpr *e) {
+    if (e->getBase()->getType()->isVectorType()) {
+      assert(!cir::MissingFeatures::scalableVectors() &&
+             "NYI: index into scalable vector");
+    }
+    // Just load the lvalue formed by the subscript expression.
+    return emitLoadOfLValue(e);
+  }
+
   mlir::Value VisitExplicitCastExpr(ExplicitCastExpr *e) {
     return VisitCastExpr(e);
   }

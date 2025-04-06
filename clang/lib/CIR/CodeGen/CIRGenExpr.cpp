@@ -12,6 +12,7 @@
 
 #include "Address.h"
 #include "CIRGenFunction.h"
+#include "CIRGenModule.h"
 #include "CIRGenValue.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "clang/AST/Attr.h"
@@ -230,6 +231,161 @@ LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
     llvm_unreachable("UnaryOperator of non-lvalue kind!");
   }
   llvm_unreachable("Unknown unary operator kind!");
+}
+
+/// If the specified expr is a simple decay from an array to pointer,
+/// return the array subexpression.
+/// FIXME: this could be abstracted into a commeon AST helper.
+static const Expr *isSimpleArrayDecayOperand(const Expr *e) {
+  // If this isn't just an array->pointer decay, bail out.
+  const auto *castExpr = dyn_cast<CastExpr>(e);
+  if (!castExpr || castExpr->getCastKind() != CK_ArrayToPointerDecay)
+    return nullptr;
+
+  // If this is a decay from variable width array, bail out.
+  const Expr *subExpr = castExpr->getSubExpr();
+  if (subExpr->getType()->isVariableArrayType())
+    return nullptr;
+
+  return subExpr;
+}
+
+static mlir::IntegerAttr getConstantIndexOrNull(mlir::Value idx) {
+  // TODO(cir): should we consider using MLIRs IndexType instead of IntegerAttr?
+  if (auto constantOp = dyn_cast<cir::ConstantOp>(idx.getDefiningOp()))
+    return mlir::dyn_cast<mlir::IntegerAttr>(constantOp.getValue());
+  return {};
+}
+
+static CharUnits getArrayElementAlign(CharUnits arrayAlign, mlir::Value idx,
+                                      CharUnits eltSize) {
+  // If we have a constant index, we can use the exact offset of the
+  // element we're accessing.
+  const mlir::IntegerAttr constantIdx = getConstantIndexOrNull(idx);
+  if (constantIdx) {
+    const CharUnits offset = constantIdx.getValue().getZExtValue() * eltSize;
+    return arrayAlign.alignmentAtOffset(offset);
+  }
+  // Otherwise, use the worst-case alignment for any element.
+  return arrayAlign.alignmentOfArrayElement(eltSize);
+}
+
+static QualType getFixedSizeElementType(const ASTContext &astContext,
+                                        const VariableArrayType *vla) {
+  QualType eltType;
+  do {
+    eltType = vla->getElementType();
+  } while ((vla = astContext.getAsVariableArrayType(eltType)));
+  return eltType;
+}
+
+static mlir::Value
+emitArraySubscriptPtr(CIRGenFunction &cgf, mlir::Location beginLoc,
+                      mlir::Location endLoc, mlir::Value ptr, mlir::Type eltTy,
+                      ArrayRef<mlir::Value> indices, bool inbounds,
+                      bool signedIndices, bool shouldDecay,
+                      const llvm::Twine &name = "arrayidx") {
+  if (indices.size() > 1) {
+    cgf.cgm.errorNYI("emitArraySubscriptPtr: handle multiple indices");
+    return {};
+  }
+
+  const mlir::Value idx = indices.back();
+  CIRGenModule &cgm = cgf.getCIRGenModule();
+  // TODO(cir): LLVM codegen emits in bound gep check here, is there anything
+  // that would enhance tracking this later in CIR?
+  if (inbounds)
+    assert(!cir::MissingFeatures::emitCheckedInBoundsGEP() && "NYI");
+  return cgm.getBuilder().getArrayElement(beginLoc, endLoc, ptr, eltTy, idx,
+                                          shouldDecay);
+}
+
+static Address emitArraySubscriptPtr(
+    CIRGenFunction &cgf, mlir::Location beginLoc, mlir::Location endLoc,
+    Address addr, ArrayRef<mlir::Value> indices, QualType eltType,
+    bool inbounds, bool signedIndices, mlir::Location loc, bool shouldDecay,
+    QualType *arrayType = nullptr, const Expr *base = nullptr,
+    const llvm::Twine &name = "arrayidx") {
+
+  // Determine the element size of the statically-sized base.  This is
+  // the thing that the indices are expressed in terms of.
+  if (const VariableArrayType *vla =
+          cgf.getContext().getAsVariableArrayType(eltType)) {
+    eltType = getFixedSizeElementType(cgf.getContext(), vla);
+  }
+
+  // We can use that to compute the best alignment of the element.
+  const CharUnits eltSize = cgf.getContext().getTypeSizeInChars(eltType);
+  const CharUnits eltAlign =
+      getArrayElementAlign(addr.getAlignment(), indices.back(), eltSize);
+
+  mlir::Value eltPtr;
+  const mlir::IntegerAttr lastIndex = getConstantIndexOrNull(indices.back());
+  if (!lastIndex) {
+    eltPtr = emitArraySubscriptPtr(cgf, beginLoc, endLoc, addr.getPointer(),
+                                   addr.getElementType(), indices, inbounds,
+                                   signedIndices, shouldDecay, name);
+  }
+  const mlir::Type elementType = cgf.convertTypeForMem(eltType);
+  return Address(eltPtr, elementType, eltAlign);
+}
+
+LValue
+CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
+  if (e->getBase()->getType()->isVectorType() &&
+      !isa<ExtVectorElementExpr>(e->getBase())) {
+    cgm.errorNYI(e->getSourceRange(), "emitArraySubscriptExpr: VectorType");
+    return {};
+  }
+
+  if (isa<ExtVectorElementExpr>(e->getBase())) {
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitArraySubscriptExpr: ExtVectorElementExpr");
+    return {};
+  }
+
+  if (getContext().getAsVariableArrayType(e->getType())) {
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitArraySubscriptExpr: VariableArrayType");
+    return {};
+  }
+
+  if (e->getType()->getAs<ObjCObjectType>()) {
+    cgm.errorNYI(e->getSourceRange(), "emitArraySubscriptExpr: ObjCObjectType");
+    return {};
+  }
+
+  // The index must always be an integer, which is not an aggregate.  Emit it
+  // in lexical order (this complexity is, sadly, required by C++17).
+  assert((e->getIdx() == e->getLHS() || e->getIdx() == e->getRHS()) &&
+         "index was neither LHS nor RHS");
+  const mlir::Value idx = emitScalarExpr(e->getIdx());
+  const QualType idxTy = e->getIdx()->getType();
+  const bool signedIndices = idxTy->isSignedIntegerOrEnumerationType();
+
+  if (const Expr *array = isSimpleArrayDecayOperand(e->getBase())) {
+    LValue arrayLV;
+    if (const auto *ase = dyn_cast<ArraySubscriptExpr>(array))
+      arrayLV = emitArraySubscriptExpr(ase);
+    else
+      arrayLV = emitLValue(array);
+
+    // Propagate the alignment from the array itself to the result.
+    QualType arrayType = array->getType();
+    const Address addr = emitArraySubscriptPtr(
+        *this, cgm.getLoc(array->getBeginLoc()), cgm.getLoc(array->getEndLoc()),
+        arrayLV.getAddress(), {idx}, e->getType(),
+        !getLangOpts().isSignedOverflowDefined(), signedIndices,
+        cgm.getLoc(e->getExprLoc()), /*shouldDecay=*/true, &arrayType,
+        e->getBase());
+
+    return LValue::makeAddr(addr, e->getType());
+  }
+
+  // The base must be a pointer; emit it with an estimate of its alignment.
+  cgm.errorNYI(e->getSourceRange(),
+               "emitArraySubscriptExpr: The base must be a pointer");
+  return {};
 }
 
 LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
