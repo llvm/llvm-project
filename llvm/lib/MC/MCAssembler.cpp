@@ -168,7 +168,7 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
       IsResolved = false;
     } else {
       auto &SA = *Target.getAddSym();
-      if (Target.getSymSpecifier() || SA.isUndefined()) {
+      if (Target.SymSpecifier || SA.isUndefined()) {
         IsResolved = false;
       } else {
         IsResolved = (FixupFlags & MCFixupKindInfo::FKF_Constant) ||

@@ -135,7 +135,8 @@ public:
   static bool evaluateSymbolicAdd(const MCAssembler *, const SectionAddrMap *,
                                   bool, const MCValue &,
                                   const MCSymbolRefExpr *,
-                                  const MCSymbolRefExpr *, int64_t, MCValue &);
+                                  const MCSymbolRefExpr *, int64_t, uint32_t,
+                                  MCValue &);
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const MCExpr &E) {
