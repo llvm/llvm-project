@@ -90,8 +90,8 @@ getOverloadedDeclaration(CallIntrinsicOp op, llvm::Intrinsic::ID id,
   ArrayRef<llvm::Intrinsic::IITDescriptor> tableRef = table;
 
   SmallVector<llvm::Type *, 8> overloadedArgTys;
-  if (llvm::Intrinsic::matchIntrinsicSignature(ft, tableRef,
-                                               overloadedArgTys) !=
+  if (llvm::Intrinsic::matchIntrinsicSignature(module->getDataLayout(), ft,
+                                               tableRef, overloadedArgTys) !=
       llvm::Intrinsic::MatchIntrinsicTypesResult::MatchIntrinsicTypes_Match) {
     return mlir::emitError(op.getLoc(), "call intrinsic signature ")
            << diagStr(ft) << " to overloaded intrinsic " << op.getIntrinAttr()
