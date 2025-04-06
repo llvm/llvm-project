@@ -291,7 +291,7 @@ bool MCExpr::evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm,
   // Value with RefKind (e.g. %hi(0xdeadbeef) in MIPS) is not considered
   // absolute (the value is unknown at parse time), even if it might be resolved
   // by evaluateFixup.
-  return IsRelocatable && Value.isAbsolute() && Value.getRefKind() == 0;
+  return IsRelocatable && Value.isAbsolute() && Value.getSpecifier() == 0;
 }
 
 /// Helper method for \see EvaluateSymbolAdd().
@@ -533,7 +533,7 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
           // If the reference has a variant kind, we can only handle expressions
           // which evaluate exactly to a single unadorned symbol. Attach the
           // original VariantKind to SymA of the result.
-          if (Res.getRefKind() != MCSymbolRefExpr::VK_None ||
+          if (Res.getSpecifier() != MCSymbolRefExpr::VK_None ||
               !Res.getAddSym() || Res.getSubSym() || Res.getConstant())
             return false;
           Res.Specifier = Kind;

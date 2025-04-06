@@ -42,7 +42,7 @@ unsigned HexagonELFObjectWriter::getRelocType(MCContext &Ctx,
                                               MCValue const &Target,
                                               MCFixup const &Fixup,
                                               bool IsPCRel) const {
-  auto Variant = HexagonMCExpr::VariantKind(Target.getAccessVariant());
+  auto Variant = HexagonMCExpr::VariantKind(Target.getSpecifier());
   switch (Variant) {
   case HexagonMCExpr::VK_GD_GOT:
   case HexagonMCExpr::VK_LD_GOT:

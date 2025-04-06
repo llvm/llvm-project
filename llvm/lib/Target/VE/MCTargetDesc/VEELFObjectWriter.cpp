@@ -40,7 +40,7 @@ protected:
 unsigned VEELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
                                          const MCFixup &Fixup,
                                          bool IsPCRel) const {
-  switch (Target.getRefKind()) {
+  switch (Target.getSpecifier()) {
   case VEMCExpr::VK_TLS_GD_HI32:
   case VEMCExpr::VK_TLS_GD_LO32:
   case VEMCExpr::VK_TPOFF_HI32:

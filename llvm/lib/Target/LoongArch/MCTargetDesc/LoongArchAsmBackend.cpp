@@ -452,7 +452,7 @@ bool LoongArchAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
                                                   const MCFixup &Fixup,
                                                   const MCValue &Target,
                                                   uint64_t &FixedValue) const {
-  assert(Target.getRefKind() == 0 &&
+  assert(Target.getSpecifier() == 0 &&
          "relocatable SymA-SymB cannot have relocation specifier");
   std::pair<MCFixupKind, MCFixupKind> FK;
   uint64_t FixedValueA, FixedValueB;

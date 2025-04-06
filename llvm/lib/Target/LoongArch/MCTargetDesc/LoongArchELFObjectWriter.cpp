@@ -50,7 +50,7 @@ unsigned LoongArchELFObjectWriter::getRelocType(MCContext &Ctx,
                                                 const MCValue &Target,
                                                 const MCFixup &Fixup,
                                                 bool IsPCRel) const {
-  switch (Target.getRefKind()) {
+  switch (Target.getSpecifier()) {
   case LoongArchMCExpr::VK_TLS_LE_HI20:
   case LoongArchMCExpr::VK_TLS_IE_PC_HI20:
   case LoongArchMCExpr::VK_TLS_IE_HI20:
