@@ -455,6 +455,8 @@ LLVM_21 {
     clang_Cursor_getGCCAssemblyNumClobbers;
     clang_Cursor_getGCCAssemblyClobber;
     clang_Cursor_isGCCAssemblyVolatile;
+    clang_getCStringInfo;
+    clang_EvalResult_getAsCXString;
 };
 
 # Example of how to add a new symbol version entry.  If you do add a new symbol

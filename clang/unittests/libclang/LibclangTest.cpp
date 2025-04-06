@@ -623,6 +623,46 @@ TEST_F(LibclangParseTest, EvaluateChildExpression) {
       nullptr);
 }
 
+TEST_F(LibclangParseTest, StringLiteralWithZeros) {
+  const char testSource[] = R"cpp(
+const char str[] = "pika\0chu";
+)cpp";
+  std::string fileName = "main.cpp";
+  WriteFile(fileName, testSource);
+
+  const char *Args[] = {"-xc++"};
+  ClangTU = clang_parseTranslationUnit(Index, fileName.c_str(), Args, 1,
+                                       nullptr, 0, TUFlags);
+
+  int nodes = 0;
+
+  Traverse([&nodes](CXCursor cursor, CXCursor parent) -> CXChildVisitResult {
+    if (cursor.kind == CXCursor_StringLiteral) {
+      CXEvalResult RE = clang_Cursor_Evaluate(cursor);
+      EXPECT_NE(RE, nullptr);
+      EXPECT_EQ(clang_EvalResult_getKind(RE), CXEval_StrLiteral);
+
+      const char expected[] = "pika\0chu";
+      size_t expected_size = sizeof(expected) - 1;
+
+      auto lit = clang_EvalResult_getAsCXString(RE);
+      auto str = clang_getCStringInfo(lit);
+
+      EXPECT_TRUE(str.length == expected_size &&
+                  memcmp(str.string, expected, str.length) == 0);
+
+      clang_disposeString(lit);
+      clang_EvalResult_dispose(RE);
+
+      nodes++;
+      return CXChildVisit_Continue;
+    }
+    return CXChildVisit_Recurse;
+  });
+
+  EXPECT_EQ(nodes, 1);
+}
+
 class LibclangReparseTest : public LibclangParseTest {
 public:
   void DisplayDiagnostics() {
