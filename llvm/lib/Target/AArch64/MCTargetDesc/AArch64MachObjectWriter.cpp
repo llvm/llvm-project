@@ -391,8 +391,8 @@ void AArch64MachObjectWriter::recordRelocation(
     Value = 0;
   }
 
-  if (Target.getRefKind() == AArch64MCExpr::VK_AUTH ||
-      Target.getRefKind() == AArch64MCExpr::VK_AUTHADDR) {
+  if (Target.getSpecifier() == AArch64MCExpr::VK_AUTH ||
+      Target.getSpecifier() == AArch64MCExpr::VK_AUTHADDR) {
     auto *Expr = cast<AArch64AuthMCExpr>(Fixup.getValue());
 
     assert(Type == MachO::ARM64_RELOC_UNSIGNED);

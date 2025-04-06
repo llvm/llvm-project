@@ -112,7 +112,7 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
   if (Kind >= FirstLiteralRelocationKind)
     return Kind - FirstLiteralRelocationKind;
   AArch64MCExpr::Specifier RefKind =
-      static_cast<AArch64MCExpr::Specifier>(Target.getRefKind());
+      static_cast<AArch64MCExpr::Specifier>(Target.getSpecifier());
   AArch64MCExpr::Specifier SymLoc = AArch64MCExpr::getSymbolLoc(RefKind);
   bool IsNC = AArch64MCExpr::isNotChecked(RefKind);
 
@@ -543,7 +543,7 @@ bool AArch64ELFObjectWriter::needsRelocateWithSymbol(const MCValue &Val,
   if (Val.getAddSym() && cast<MCSymbolELF>(Val.getAddSym())->isMemtag())
     return true;
 
-  if ((Val.getRefKind() & AArch64MCExpr::VK_GOT) == AArch64MCExpr::VK_GOT)
+  if ((Val.getSpecifier() & AArch64MCExpr::VK_GOT) == AArch64MCExpr::VK_GOT)
     return true;
   return is_contained({AArch64MCExpr::VK_GOTPCREL, AArch64MCExpr::VK_PLT},
                       AArch64MCExpr::Specifier(Val.getSpecifier()));
