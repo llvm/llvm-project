@@ -61,15 +61,15 @@
 
 #if defined(__riscv_flen)
 // https://github.com/riscv-non-isa/riscv-c-api-doc/blob/main/src/c-api.adoc
-#if (__riscv_flen & 0x20)
+#if (__riscv_flen & 0x10)
 #define LIBC_TARGET_CPU_HAS_RISCV_FPU_HALF
 #define LIBC_TARGET_CPU_HAS_FPU_HALF
 #endif // LIBC_TARGET_CPU_HAS_RISCV_FPU_HALF
-#if (__riscv_flen & 0x40)
+#if (__riscv_flen & 0x20)
 #define LIBC_TARGET_CPU_HAS_RISCV_FPU_FLOAT
 #define LIBC_TARGET_CPU_HAS_FPU_FLOAT
 #endif // LIBC_TARGET_CPU_HAS_RISCV_FPU_FLOAT
-#if (__riscv_flen & 0x80)
+#if (__riscv_flen & 0x40)
 #define LIBC_TARGET_CPU_HAS_RISCV_FPU_DOUBLE
 #define LIBC_TARGET_CPU_HAS_FPU_DOUBLE
 #endif // LIBC_TARGET_CPU_HAS_RISCV_FPU_DOUBLE
