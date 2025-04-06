@@ -26,6 +26,7 @@ class MCSymbol;
 class MCValue;
 class raw_ostream;
 class StringRef;
+class MCSymbolRefExpr;
 
 using SectionAddrMap = DenseMap<const MCSection *, uint64_t>;
 
@@ -130,6 +131,12 @@ public:
   MCFragment *findAssociatedFragment() const;
 
   /// @}
+
+  static bool evaluateSymbolicAdd(const MCAssembler *, const SectionAddrMap *,
+                                  bool, const MCValue &,
+                                  const MCSymbolRefExpr *,
+                                  const MCSymbolRefExpr *, int64_t, uint32_t,
+                                  MCValue &);
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const MCExpr &E) {
@@ -198,14 +205,6 @@ public:
 
     VK_GOT,
     VK_GOTPCREL,
-    VK_PLT,
-    VK_TLVP,    // Mach-O thread local variable relocations
-    VK_TLVPPAGE,
-    VK_TLVPPAGEOFF,
-    VK_PAGE,
-    VK_PAGEOFF,
-    VK_GOTPAGE,
-    VK_GOTPAGEOFF,
     VK_SECREL,
     VK_WEAKREF, // The link between the symbols in .weakref foo, bar
 
@@ -266,6 +265,9 @@ public:
 
   VariantKind getKind() const {
     return (VariantKind)(getSubclassData() & VariantKindMask);
+  }
+  uint16_t getSpecifier() const {
+    return (getSubclassData() & VariantKindMask);
   }
 
   bool hasSubsectionsViaSymbols() const {
