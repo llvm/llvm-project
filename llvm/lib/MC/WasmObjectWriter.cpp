@@ -606,7 +606,7 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
     SymA->setUsedInReloc();
   }
 
-  switch (Target.getSymSpecifier()) {
+  switch (Target.getSpecifier()) {
   case MCSymbolRefExpr::VK_GOT:
   case MCSymbolRefExpr::VK_WASM_GOT_TLS:
     SymA->setUsedInGOT();

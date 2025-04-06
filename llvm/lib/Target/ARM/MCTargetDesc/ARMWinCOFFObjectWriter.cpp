@@ -44,7 +44,7 @@ unsigned ARMWinCOFFObjectWriter::getRelocType(MCContext &Ctx,
                                               const MCFixup &Fixup,
                                               bool IsCrossSection,
                                               const MCAsmBackend &MAB) const {
-  auto Spec = Target.getAddSym() ? Target.getSymSpecifier() : 0;
+  auto Spec = Target.getSpecifier();
   unsigned FixupKind = Fixup.getKind();
   if (IsCrossSection) {
     if (FixupKind != FK_Data_4) {
