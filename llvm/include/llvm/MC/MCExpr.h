@@ -28,8 +28,6 @@ class raw_ostream;
 class StringRef;
 class MCSymbolRefExpr;
 
-using SectionAddrMap = DenseMap<const MCSection *, uint64_t>;
-
 /// Base class for the full range of assembler expressions which are
 /// needed for parsing.
 class MCExpr {
@@ -54,7 +52,7 @@ private:
   SMLoc Loc;
 
   bool evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm,
-                          const SectionAddrMap *Addrs, bool InSet) const;
+                          bool InSet) const;
 
 protected:
   explicit MCExpr(ExprKind Kind, SMLoc Loc, unsigned SubclassData = 0)
@@ -64,7 +62,7 @@ protected:
   }
 
   bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                 const SectionAddrMap *Addrs, bool InSet) const;
+                                 bool InSet) const;
 
   unsigned getSubclassData() const { return SubclassData; }
 
@@ -98,8 +96,6 @@ public:
   ///
   /// \param Res - The absolute value, if evaluation succeeds.
   /// \return - True on success.
-  bool evaluateAsAbsolute(int64_t &Res, const MCAssembler &Asm,
-                          const SectionAddrMap &Addrs) const;
   bool evaluateAsAbsolute(int64_t &Res) const;
   bool evaluateAsAbsolute(int64_t &Res, const MCAssembler &Asm) const;
   bool evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm) const;
@@ -132,9 +128,8 @@ public:
 
   /// @}
 
-  static bool evaluateSymbolicAdd(const MCAssembler *, const SectionAddrMap *,
-                                  bool, const MCValue &, const MCValue &,
-                                  MCValue &);
+  static bool evaluateSymbolicAdd(const MCAssembler *, bool, const MCValue &,
+                                  const MCValue &, MCValue &);
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const MCExpr &E) {
