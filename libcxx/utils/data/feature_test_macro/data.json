@@ -1,0 +1,3000 @@
+[
+  {
+    "name": "__cpp_lib_adaptor_iterator_pair_constructor",
+    "values": {
+      "c++23": {
+        "202106": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["queue", "stack"]
+  },
+  {
+    "name": "__cpp_lib_addressof_constexpr",
+    "values": {
+      "c++17": {
+        "201603": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["memory"]
+  },
+  {
+    "name": "__cpp_lib_allocate_at_least",
+    "values": {
+      "c++23": {
+        "202302": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["memory"]
+  },
+  {
+    "name": "__cpp_lib_allocator_traits_is_always_equal",
+    "values": {
+      "c++17": {
+        "201411": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["deque", "forward_list", "list", "map", "memory", "scoped_allocator", "set", "string", "unordered_map", "unordered_set", "vector"]
+  },
+  {
+    "name": "__cpp_lib_any",
+    "values": {
+      "c++17": {
+        "201606": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["any"]
+  },
+  {
+    "name": "__cpp_lib_apply",
+    "values": {
+      "c++17": {
+        "201603": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["tuple"]
+  },
+  {
+    "name": "__cpp_lib_array_constexpr",
+    "values": {
+      "c++17": {
+        "201603": [
+          {
+            "implemented": true
+          }
+        ]
+      },
+      "c++20": {
+        "201811": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["array", "iterator"]
+  },
+  {
+    "name": "__cpp_lib_as_const",
+    "values": {
+      "c++17": {
+        "201510": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["utility"]
+  },
+  {
+    "name": "__cpp_lib_associative_heterogeneous_erasure",
+    "values": {
+      "c++23": {
+        "202110": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["map", "set", "unordered_map", "unordered_set"]
+  },
+  {
+    "name": "__cpp_lib_associative_heterogeneous_insertion",
+    "values": {
+      "c++26": {
+        "202306": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["map", "set", "unordered_map", "unordered_set"]
+  },
+  {
+    "name": "__cpp_lib_assume_aligned",
+    "values": {
+      "c++20": {
+        "201811": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["memory"]
+  },
+  {
+    "name": "__cpp_lib_atomic_flag_test",
+    "values": {
+      "c++20": {
+        "201907": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["atomic"]
+  },
+  {
+    "name": "__cpp_lib_atomic_float",
+    "values": {
+      "c++20": {
+        "201711": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["atomic"]
+  },
+  {
+    "name": "__cpp_lib_atomic_is_always_lock_free",
+    "values": {
+      "c++17": {
+        "201603": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["atomic"]
+  },
+  {
+    "name": "__cpp_lib_atomic_lock_free_type_aliases",
+    "values": {
+      "c++20": {
+        "201907": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["atomic"]
+  },
+  {
+    "name": "__cpp_lib_atomic_min_max",
+    "values": {
+      "c++26": {
+        "202403": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["atomic"]
+  },
+  {
+    "name": "__cpp_lib_atomic_ref",
+    "values": {
+      "c++20": {
+        "201806": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["atomic"]
+  },
+  {
+    "name": "__cpp_lib_atomic_shared_ptr",
+    "values": {
+      "c++20": {
+        "201711": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["atomic"]
+  },
+  {
+    "name": "__cpp_lib_atomic_value_initialization",
+    "values": {
+      "c++20": {
+        "201911": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["atomic", "memory"]
+  },
+  {
+    "name": "__cpp_lib_atomic_wait",
+    "values": {
+      "c++20": {
+        "201907": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["atomic"],
+    "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC",
+    "libcxx_guard": "_LIBCPP_AVAILABILITY_HAS_SYNC"
+  },
+  {
+    "name": "__cpp_lib_barrier",
+    "values": {
+      "c++20": {
+        "201907": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["barrier"],
+    "test_suite_guard": "!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)",
+    "libcxx_guard": "_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC"
+  },
+  {
+    "name": "__cpp_lib_bind_back",
+    "values": {
+      "c++23": {
+        "202202": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["functional"]
+  },
+  {
+    "name": "__cpp_lib_bind_front",
+    "values": {
+      "c++20": {
+        "201907": [
+          {
+            "implemented": true
+          }
+        ]
+      },
+      "c++26": {
+        "202306": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["functional"]
+  },
+  {
+    "name": "__cpp_lib_bit_cast",
+    "values": {
+      "c++20": {
+        "201806": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["bit"]
+  },
+  {
+    "name": "__cpp_lib_bitops",
+    "values": {
+      "c++20": {
+        "201907": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["bit"]
+  },
+  {
+    "name": "__cpp_lib_bitset",
+    "values": {
+      "c++26": {
+        "202306": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["bitset"]
+  },
+  {
+    "name": "__cpp_lib_bool_constant",
+    "values": {
+      "c++17": {
+        "201505": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["type_traits"]
+  },
+  {
+    "name": "__cpp_lib_bounded_array_traits",
+    "values": {
+      "c++20": {
+        "201902": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["type_traits"]
+  },
+  {
+    "name": "__cpp_lib_boyer_moore_searcher",
+    "values": {
+      "c++17": {
+        "201603": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["functional"]
+  },
+  {
+    "name": "__cpp_lib_byte",
+    "values": {
+      "c++17": {
+        "201603": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["cstddef"]
+  },
+  {
+    "name": "__cpp_lib_byteswap",
+    "values": {
+      "c++23": {
+        "202110": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["bit"]
+  },
+  {
+    "name": "__cpp_lib_char8_t",
+    "values": {
+      "c++20": {
+        "201907": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["atomic", "filesystem", "istream", "limits", "locale", "ostream", "string", "string_view"],
+    "test_suite_guard": "defined(__cpp_char8_t)",
+    "libcxx_guard": "_LIBCPP_HAS_CHAR8_T"
+  },
+  {
+    "name": "__cpp_lib_chrono",
+    "values": {
+      "c++17": {
+        "201611": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["chrono"]
+  },
+  {
+    "name": "__cpp_lib_chrono_udls",
+    "values": {
+      "c++14": {
+        "201304": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["chrono"]
+  },
+  {
+    "name": "__cpp_lib_clamp",
+    "values": {
+      "c++17": {
+        "201603": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["algorithm"]
+  },
+  {
+    "name": "__cpp_lib_complex_udls",
+    "values": {
+      "c++14": {
+        "201309": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["complex"]
+  },
+  {
+    "name": "__cpp_lib_concepts",
+    "values": {
+      "c++20": {
+        "202002": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["concepts"]
+  },
+  {
+    "name": "__cpp_lib_constexpr_algorithms",
+    "values": {
+      "c++20": {
+        "201806": [
+          {
+            "implemented": true
+          }
+        ]
+      },
+      "c++26": {
+        "202306": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["algorithm", "utility"]
+  },
+  {
+    "name": "__cpp_lib_constexpr_bitset",
+    "values": {
+      "c++23": {
+        "202207": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["bitset"]
+  },
+  {
+    "name": "__cpp_lib_constexpr_charconv",
+    "values": {
+      "c++23": {
+        "202207": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["charconv"]
+  },
+  {
+    "name": "__cpp_lib_constexpr_cmath",
+    "values": {
+      "c++23": {
+        "202202": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["cmath", "cstdlib"]
+  },
+  {
+    "name": "__cpp_lib_constexpr_complex",
+    "values": {
+      "c++20": {
+        "201711": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["complex"]
+  },
+  {
+    "name": "__cpp_lib_constexpr_dynamic_alloc",
+    "values": {
+      "c++20": {
+        "201907": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["memory"]
+  },
+  {
+    "name": "__cpp_lib_constexpr_functional",
+    "values": {
+      "c++20": {
+        "201907": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["functional"]
+  },
+  {
+    "name": "__cpp_lib_constexpr_iterator",
+    "values": {
+      "c++20": {
+        "201811": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["iterator"]
+  },
+  {
+    "name": "__cpp_lib_constexpr_memory",
+    "values": {
+      "c++20": {
+        "201811": [
+          {
+            "implemented": true
+          }
+        ]
+      },
+      "c++23": {
+        "202202": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["memory"]
+  },
+  {
+    "name": "__cpp_lib_constexpr_new",
+    "values": {
+      "c++26": {
+        "202406": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["new"],
+    "test_suite_guard": "!defined(_LIBCPP_ABI_VCRUNTIME)",
+    "libcxx_guard": "!defined(_LIBCPP_ABI_VCRUNTIME)"
+  },
+  {
+    "name": "__cpp_lib_constexpr_numeric",
+    "values": {
+      "c++20": {
+        "201911": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["numeric"]
+  },
+  {
+    "name": "__cpp_lib_constexpr_string",
+    "values": {
+      "c++20": {
+        "201907": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["string"]
+  },
+  {
+    "name": "__cpp_lib_constexpr_string_view",
+    "values": {
+      "c++20": {
+        "201811": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["string_view"]
+  },
+  {
+    "name": "__cpp_lib_constexpr_tuple",
+    "values": {
+      "c++20": {
+        "201811": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["tuple"]
+  },
+  {
+    "name": "__cpp_lib_constexpr_typeinfo",
+    "values": {
+      "c++23": {
+        "202106": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["typeinfo"]
+  },
+  {
+    "name": "__cpp_lib_constexpr_utility",
+    "values": {
+      "c++20": {
+        "201811": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["utility"]
+  },
+  {
+    "name": "__cpp_lib_constexpr_vector",
+    "values": {
+      "c++20": {
+        "201907": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["vector"]
+  },
+  {
+    "name": "__cpp_lib_constrained_equality",
+    "values": {
+      "c++26": {
+        "202403": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["optional", "tuple", "utility", "variant"]
+  },
+  {
+    "name": "__cpp_lib_containers_ranges",
+    "values": {
+      "c++23": {
+        "202202": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["deque", "forward_list", "list", "map", "queue", "set", "stack", "string", "unordered_map", "unordered_set", "vector"]
+  },
+  {
+    "name": "__cpp_lib_copyable_function",
+    "values": {
+      "c++26": {
+        "202306": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["functional"]
+  },
+  {
+    "name": "__cpp_lib_coroutine",
+    "values": {
+      "c++20": {
+        "201902": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["coroutine"]
+  },
+  {
+    "name": "__cpp_lib_debugging",
+    "values": {
+      "c++26": {
+        "202311": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["debugging"]
+  },
+  {
+    "name": "__cpp_lib_default_template_type_for_algorithm_values",
+    "values": {
+      "c++26": {
+        "202403": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["algorithm", "deque", "forward_list", "list", "ranges", "string", "vector"]
+  },
+  {
+    "name": "__cpp_lib_destroying_delete",
+    "values": {
+      "c++20": {
+        "201806": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["new"],
+    "test_suite_guard": "TEST_STD_VER > 17 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L",
+    "libcxx_guard": "_LIBCPP_STD_VER >= 20 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L"
+  },
+  {
+    "name": "__cpp_lib_enable_shared_from_this",
+    "values": {
+      "c++17": {
+        "201603": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["memory"]
+  },
+  {
+    "name": "__cpp_lib_endian",
+    "values": {
+      "c++20": {
+        "201907": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["bit"]
+  },
+  {
+    "name": "__cpp_lib_erase_if",
+    "values": {
+      "c++20": {
+        "202002": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["deque", "forward_list", "list", "map", "set", "string", "unordered_map", "unordered_set", "vector"]
+  },
+  {
+    "name": "__cpp_lib_exchange_function",
+    "values": {
+      "c++14": {
+        "201304": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["utility"]
+  },
+  {
+    "name": "__cpp_lib_execution",
+    "values": {
+      "c++17": {
+        "201603": [
+          {
+            "implemented": false
+          }
+        ]
+      },
+      "c++20": {
+        "201902": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["execution"]
+  },
+  {
+    "name": "__cpp_lib_expected",
+    "values": {
+      "c++23": {
+        "202211": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["expected"]
+  },
+  {
+    "name": "__cpp_lib_filesystem",
+    "values": {
+      "c++17": {
+        "201703": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["filesystem"],
+    "test_suite_guard": "!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_FILESYSTEM && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)",
+    "libcxx_guard": "_LIBCPP_HAS_FILESYSTEM && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY"
+  },
+  {
+    "name": "__cpp_lib_flat_map",
+    "values": {
+      "c++23": {
+        "202207": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["flat_map"]
+  },
+  {
+    "name": "__cpp_lib_flat_set",
+    "values": {
+      "c++23": {
+        "202207": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["flat_set"]
+  },
+  {
+    "name": "__cpp_lib_format",
+    "values": {
+      "c++20": {
+        "202110": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["format"],
+    "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT",
+    "libcxx_guard": "_LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT"
+  },
+  {
+    "name": "__cpp_lib_format_path",
+    "values": {
+      "c++26": {
+        "202403": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["filesystem"]
+  },
+  {
+    "name": "__cpp_lib_format_ranges",
+    "values": {
+      "c++23": {
+        "202207": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["format"]
+  },
+  {
+    "name": "__cpp_lib_format_uchar",
+    "values": {
+      "c++20": {
+        "202311": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["format"]
+  },
+  {
+    "name": "__cpp_lib_formatters",
+    "values": {
+      "c++23": {
+        "202302": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["stacktrace", "thread"]
+  },
+  {
+    "name": "__cpp_lib_forward_like",
+    "values": {
+      "c++23": {
+        "202207": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["utility"]
+  },
+  {
+    "name": "__cpp_lib_freestanding_algorithm",
+    "values": {
+      "c++26": {
+        "202311": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["algorithm"]
+  },
+  {
+    "name": "__cpp_lib_freestanding_array",
+    "values": {
+      "c++26": {
+        "202311": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["array"]
+  },
+  {
+    "name": "__cpp_lib_freestanding_cstring",
+    "values": {
+      "c++26": {
+        "202306": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["cstring"]
+  },
+  {
+    "name": "__cpp_lib_freestanding_expected",
+    "values": {
+      "c++26": {
+        "202311": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["expected"]
+  },
+  {
+    "name": "__cpp_lib_freestanding_mdspan",
+    "values": {
+      "c++26": {
+        "202311": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["mdspan"]
+  },
+  {
+    "name": "__cpp_lib_freestanding_optional",
+    "values": {
+      "c++26": {
+        "202311": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["optional"]
+  },
+  {
+    "name": "__cpp_lib_freestanding_string_view",
+    "values": {
+      "c++26": {
+        "202311": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["string_view"]
+  },
+  {
+    "name": "__cpp_lib_freestanding_variant",
+    "values": {
+      "c++26": {
+        "202311": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["variant"]
+  },
+  {
+    "name": "__cpp_lib_fstream_native_handle",
+    "values": {
+      "c++26": {
+        "202306": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["fstream"],
+    "test_suite_guard": "!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION)",
+    "libcxx_guard": "_LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION"
+  },
+  {
+    "name": "__cpp_lib_function_ref",
+    "values": {
+      "c++26": {
+        "202306": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["functional"]
+  },
+  {
+    "name": "__cpp_lib_gcd_lcm",
+    "values": {
+      "c++17": {
+        "201606": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["numeric"]
+  },
+  {
+    "name": "__cpp_lib_generate_random",
+    "values": {
+      "c++26": {
+        "202403": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["random"]
+  },
+  {
+    "name": "__cpp_lib_generic_associative_lookup",
+    "values": {
+      "c++14": {
+        "201304": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["map", "set"]
+  },
+  {
+    "name": "__cpp_lib_generic_unordered_lookup",
+    "values": {
+      "c++20": {
+        "201811": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["unordered_map", "unordered_set"]
+  },
+  {
+    "name": "__cpp_lib_hardware_interference_size",
+    "values": {
+      "c++17": {
+        "201703": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["new"],
+    "test_suite_guard": "!defined(_LIBCPP_VERSION) || (defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE))",
+    "libcxx_guard": "defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE)"
+  },
+  {
+    "name": "__cpp_lib_has_unique_object_representations",
+    "values": {
+      "c++17": {
+        "201606": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["type_traits"]
+  },
+  {
+    "name": "__cpp_lib_hazard_pointer",
+    "values": {
+      "c++26": {
+        "202306": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["hazard_pointer"]
+  },
+  {
+    "name": "__cpp_lib_hypot",
+    "values": {
+      "c++17": {
+        "201603": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["cmath"]
+  },
+  {
+    "name": "__cpp_lib_incomplete_container_elements",
+    "values": {
+      "c++17": {
+        "201505": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["forward_list", "list", "vector"]
+  },
+  {
+    "name": "__cpp_lib_inplace_vector",
+    "values": {
+      "c++26": {
+        "202406": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["inplace_vector"]
+  },
+  {
+    "name": "__cpp_lib_int_pow2",
+    "values": {
+      "c++20": {
+        "202002": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["bit"]
+  },
+  {
+    "name": "__cpp_lib_integer_comparison_functions",
+    "values": {
+      "c++20": {
+        "202002": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["utility"]
+  },
+  {
+    "name": "__cpp_lib_integer_sequence",
+    "values": {
+      "c++14": {
+        "201304": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["utility"]
+  },
+  {
+    "name": "__cpp_lib_integral_constant_callable",
+    "values": {
+      "c++14": {
+        "201304": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["type_traits"]
+  },
+  {
+    "name": "__cpp_lib_interpolate",
+    "values": {
+      "c++20": {
+        "201902": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["cmath", "numeric"]
+  },
+  {
+    "name": "__cpp_lib_invoke",
+    "values": {
+      "c++17": {
+        "201411": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["functional"]
+  },
+  {
+    "name": "__cpp_lib_invoke_r",
+    "values": {
+      "c++23": {
+        "202106": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["functional"]
+  },
+  {
+    "name": "__cpp_lib_ios_noreplace",
+    "values": {
+      "c++23": {
+        "202207": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["ios"]
+  },
+  {
+    "name": "__cpp_lib_is_aggregate",
+    "values": {
+      "c++17": {
+        "201703": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["type_traits"]
+  },
+  {
+    "name": "__cpp_lib_is_constant_evaluated",
+    "values": {
+      "c++20": {
+        "201811": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["type_traits"]
+  },
+  {
+    "name": "__cpp_lib_is_final",
+    "values": {
+      "c++14": {
+        "201402": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["type_traits"]
+  },
+  {
+    "name": "__cpp_lib_is_implicit_lifetime",
+    "values": {
+      "c++23": {
+        "202302": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["type_traits"],
+    "test_suite_guard": "__has_builtin(__builtin_is_implicit_lifetime)",
+    "libcxx_guard": "__has_builtin(__builtin_is_implicit_lifetime)"
+  },
+  {
+    "name": "__cpp_lib_is_invocable",
+    "values": {
+      "c++17": {
+        "201703": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["type_traits"]
+  },
+  {
+    "name": "__cpp_lib_is_layout_compatible",
+    "values": {
+      "c++20": {
+        "201907": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["type_traits"]
+  },
+  {
+    "name": "__cpp_lib_is_nothrow_convertible",
+    "values": {
+      "c++20": {
+        "201806": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["type_traits"]
+  },
+  {
+    "name": "__cpp_lib_is_null_pointer",
+    "values": {
+      "c++14": {
+        "201309": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["type_traits"]
+  },
+  {
+    "name": "__cpp_lib_is_pointer_interconvertible",
+    "values": {
+      "c++20": {
+        "201907": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["type_traits"]
+  },
+  {
+    "name": "__cpp_lib_is_scoped_enum",
+    "values": {
+      "c++23": {
+        "202011": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["type_traits"]
+  },
+  {
+    "name": "__cpp_lib_is_swappable",
+    "values": {
+      "c++17": {
+        "201603": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["type_traits"]
+  },
+  {
+    "name": "__cpp_lib_is_virtual_base_of",
+    "values": {
+      "c++26": {
+        "202406": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["type_traits"],
+    "test_suite_guard": "__has_builtin(__builtin_is_virtual_base_of)",
+    "libcxx_guard": "__has_builtin(__builtin_is_virtual_base_of)"
+  },
+  {
+    "name": "__cpp_lib_is_within_lifetime",
+    "values": {
+      "c++26": {
+        "202306": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["type_traits"]
+  },
+  {
+    "name": "__cpp_lib_jthread",
+    "values": {
+      "c++20": {
+        "201911": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["stop_token", "thread"],
+    "test_suite_guard": "!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)",
+    "libcxx_guard": "_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC"
+  },
+  {
+    "name": "__cpp_lib_latch",
+    "values": {
+      "c++20": {
+        "201907": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["latch"],
+    "test_suite_guard": "!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)",
+    "libcxx_guard": "_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC"
+  },
+  {
+    "name": "__cpp_lib_launder",
+    "values": {
+      "c++17": {
+        "201606": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["new"]
+  },
+  {
+    "name": "__cpp_lib_linalg",
+    "values": {
+      "c++26": {
+        "202311": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["linalg"]
+  },
+  {
+    "name": "__cpp_lib_list_remove_return_type",
+    "values": {
+      "c++20": {
+        "201806": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["forward_list", "list"]
+  },
+  {
+    "name": "__cpp_lib_logical_traits",
+    "values": {
+      "c++17": {
+        "201510": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["type_traits"]
+  },
+  {
+    "name": "__cpp_lib_make_from_tuple",
+    "values": {
+      "c++17": {
+        "201606": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["tuple"]
+  },
+  {
+    "name": "__cpp_lib_make_reverse_iterator",
+    "values": {
+      "c++14": {
+        "201402": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["iterator"]
+  },
+  {
+    "name": "__cpp_lib_make_unique",
+    "values": {
+      "c++14": {
+        "201304": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["memory"]
+  },
+  {
+    "name": "__cpp_lib_map_try_emplace",
+    "values": {
+      "c++17": {
+        "201411": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["map"]
+  },
+  {
+    "name": "__cpp_lib_math_constants",
+    "values": {
+      "c++20": {
+        "201907": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["numbers"]
+  },
+  {
+    "name": "__cpp_lib_math_special_functions",
+    "values": {
+      "c++17": {
+        "201603": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["cmath"]
+  },
+  {
+    "name": "__cpp_lib_mdspan",
+    "values": {
+      "c++23": {
+        "202207": [
+          {
+            "implemented": true
+          }
+        ]
+      },
+      "c++26": {
+        "202406": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["mdspan"]
+  },
+  {
+    "name": "__cpp_lib_memory_resource",
+    "values": {
+      "c++17": {
+        "201603": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["memory_resource"],
+    "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR",
+    "libcxx_guard": "_LIBCPP_AVAILABILITY_HAS_PMR"
+  },
+  {
+    "name": "__cpp_lib_modules",
+    "values": {
+      "c++23": {
+        "202207": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": []
+  },
+  {
+    "name": "__cpp_lib_move_iterator_concept",
+    "values": {
+      "c++20": {
+        "202207": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["iterator"]
+  },
+  {
+    "name": "__cpp_lib_move_only_function",
+    "values": {
+      "c++23": {
+        "202110": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["functional"]
+  },
+  {
+    "name": "__cpp_lib_node_extract",
+    "values": {
+      "c++17": {
+        "201606": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["map", "set", "unordered_map", "unordered_set"]
+  },
+  {
+    "name": "__cpp_lib_nonmember_container_access",
+    "values": {
+      "c++17": {
+        "201411": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["array", "deque", "forward_list", "iterator", "list", "map", "regex", "set", "string", "unordered_map", "unordered_set", "vector"]
+  },
+  {
+    "name": "__cpp_lib_not_fn",
+    "values": {
+      "c++17": {
+        "201603": [
+          {
+            "implemented": true
+          }
+        ]
+      },
+      "c++26": {
+        "202306": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["functional"]
+  },
+  {
+    "name": "__cpp_lib_null_iterators",
+    "values": {
+      "c++14": {
+        "201304": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["iterator"]
+  },
+  {
+    "name": "__cpp_lib_optional",
+    "values": {
+      "c++17": {
+        "201606": [
+          {
+            "implemented": true
+          }
+        ]
+      },
+      "c++20": {
+        "202106": [
+          {
+            "implemented": true
+          }
+        ]
+      },
+      "c++23": {
+        "202110": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["optional"]
+  },
+  {
+    "name": "__cpp_lib_optional_range_support",
+    "values": {
+      "c++26": {
+        "202406": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["optional"]
+  },
+  {
+    "name": "__cpp_lib_out_ptr",
+    "values": {
+      "c++23": {
+        "202106": [
+          {
+            "implemented": true
+          }
+        ]
+      },
+      "c++26": {
+        "202311": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["memory"]
+  },
+  {
+    "name": "__cpp_lib_parallel_algorithm",
+    "values": {
+      "c++17": {
+        "201603": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["algorithm", "numeric"]
+  },
+  {
+    "name": "__cpp_lib_philox_engine",
+    "values": {
+      "c++26": {
+        "202406": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["random"]
+  },
+  {
+    "name": "__cpp_lib_polymorphic_allocator",
+    "values": {
+      "c++20": {
+        "201902": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["memory_resource"],
+    "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR",
+    "libcxx_guard": "_LIBCPP_AVAILABILITY_HAS_PMR"
+  },
+  {
+    "name": "__cpp_lib_print",
+    "values": {
+      "c++23": {
+        "202207": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["ostream", "print"],
+    "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT",
+    "libcxx_guard": "_LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT"
+  },
+  {
+    "name": "__cpp_lib_quoted_string_io",
+    "values": {
+      "c++14": {
+        "201304": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["iomanip"],
+    "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_LOCALIZATION",
+    "libcxx_guard": "_LIBCPP_HAS_LOCALIZATION"
+  },
+  {
+    "name": "__cpp_lib_ranges",
+    "values": {
+      "c++20": {
+        "202110": [
+          {
+            "implemented": true
+          }
+        ]
+      },
+      "c++23": {
+        "202406": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["algorithm", "functional", "iterator", "memory", "ranges"]
+  },
+  {
+    "name": "__cpp_lib_ranges_as_const",
+    "values": {
+      "c++23": {
+        "202207": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["ranges"]
+  },
+  {
+    "name": "__cpp_lib_ranges_as_rvalue",
+    "values": {
+      "c++23": {
+        "202207": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["ranges"]
+  },
+  {
+    "name": "__cpp_lib_ranges_chunk",
+    "values": {
+      "c++23": {
+        "202202": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["ranges"]
+  },
+  {
+    "name": "__cpp_lib_ranges_chunk_by",
+    "values": {
+      "c++23": {
+        "202202": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["ranges"]
+  },
+  {
+    "name": "__cpp_lib_ranges_concat",
+    "values": {
+      "c++26": {
+        "202403": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["ranges"]
+  },
+  {
+    "name": "__cpp_lib_ranges_contains",
+    "values": {
+      "c++23": {
+        "202207": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["algorithm"]
+  },
+  {
+    "name": "__cpp_lib_ranges_find_last",
+    "values": {
+      "c++23": {
+        "202207": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["algorithm"]
+  },
+  {
+    "name": "__cpp_lib_ranges_iota",
+    "values": {
+      "c++23": {
+        "202202": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["numeric"]
+  },
+  {
+    "name": "__cpp_lib_ranges_join_with",
+    "values": {
+      "c++23": {
+        "202202": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["ranges"]
+  },
+  {
+    "name": "__cpp_lib_ranges_repeat",
+    "values": {
+      "c++23": {
+        "202207": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["ranges"]
+  },
+  {
+    "name": "__cpp_lib_ranges_slide",
+    "values": {
+      "c++23": {
+        "202202": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["ranges"]
+  },
+  {
+    "name": "__cpp_lib_ranges_starts_ends_with",
+    "values": {
+      "c++23": {
+        "202106": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["algorithm"]
+  },
+  {
+    "name": "__cpp_lib_ranges_to_container",
+    "values": {
+      "c++23": {
+        "202202": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["ranges"]
+  },
+  {
+    "name": "__cpp_lib_ranges_zip",
+    "values": {
+      "c++23": {
+        "202110": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["ranges", "tuple", "utility"]
+  },
+  {
+    "name": "__cpp_lib_ratio",
+    "values": {
+      "c++26": {
+        "202306": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["ratio"]
+  },
+  {
+    "name": "__cpp_lib_raw_memory_algorithms",
+    "values": {
+      "c++17": {
+        "201606": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["memory"]
+  },
+  {
+    "name": "__cpp_lib_rcu",
+    "values": {
+      "c++26": {
+        "202306": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["rcu"]
+  },
+  {
+    "name": "__cpp_lib_reference_from_temporary",
+    "values": {
+      "c++23": {
+        "202202": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["type_traits"]
+  },
+  {
+    "name": "__cpp_lib_reference_wrapper",
+    "values": {
+      "c++26": {
+        "202403": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["functional"]
+  },
+  {
+    "name": "__cpp_lib_remove_cvref",
+    "values": {
+      "c++20": {
+        "201711": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["type_traits"]
+  },
+  {
+    "name": "__cpp_lib_result_of_sfinae",
+    "values": {
+      "c++14": {
+        "201210": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["functional", "type_traits"]
+  },
+  {
+    "name": "__cpp_lib_robust_nonmodifying_seq_ops",
+    "values": {
+      "c++14": {
+        "201304": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["algorithm"]
+  },
+  {
+    "name": "__cpp_lib_sample",
+    "values": {
+      "c++17": {
+        "201603": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["algorithm"]
+  },
+  {
+    "name": "__cpp_lib_saturation_arithmetic",
+    "values": {
+      "c++26": {
+        "202311": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["numeric"]
+  },
+  {
+    "name": "__cpp_lib_scoped_lock",
+    "values": {
+      "c++17": {
+        "201703": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["mutex"],
+    "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS",
+    "libcxx_guard": "_LIBCPP_HAS_THREADS"
+  },
+  {
+    "name": "__cpp_lib_semaphore",
+    "values": {
+      "c++20": {
+        "201907": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["semaphore"],
+    "test_suite_guard": "!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)",
+    "libcxx_guard": "_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC"
+  },
+  {
+    "name": "__cpp_lib_senders",
+    "values": {
+      "c++26": {
+        "202406": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["execution"]
+  },
+  {
+    "name": "__cpp_lib_shared_mutex",
+    "values": {
+      "c++17": {
+        "201505": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["shared_mutex"],
+    "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS",
+    "libcxx_guard": "_LIBCPP_HAS_THREADS"
+  },
+  {
+    "name": "__cpp_lib_shared_ptr_arrays",
+    "values": {
+      "c++17": {
+        "201611": [
+          {
+            "implemented": true
+          }
+        ]
+      },
+      "c++20": {
+        "201707": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["memory"]
+  },
+  {
+    "name": "__cpp_lib_shared_ptr_weak_type",
+    "values": {
+      "c++17": {
+        "201606": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["memory"]
+  },
+  {
+    "name": "__cpp_lib_shared_timed_mutex",
+    "values": {
+      "c++14": {
+        "201402": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["shared_mutex"],
+    "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS",
+    "libcxx_guard": "_LIBCPP_HAS_THREADS"
+  },
+  {
+    "name": "__cpp_lib_shift",
+    "values": {
+      "c++20": {
+        "201806": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["algorithm"]
+  },
+  {
+    "name": "__cpp_lib_smart_ptr_for_overwrite",
+    "values": {
+      "c++20": {
+        "202002": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["memory"]
+  },
+  {
+    "name": "__cpp_lib_smart_ptr_owner_equality",
+    "values": {
+      "c++26": {
+        "202306": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["memory"]
+  },
+  {
+    "name": "__cpp_lib_source_location",
+    "values": {
+      "c++20": {
+        "201907": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["source_location"]
+  },
+  {
+    "name": "__cpp_lib_span",
+    "values": {
+      "c++20": {
+        "202002": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["span"]
+  },
+  {
+    "name": "__cpp_lib_span_at",
+    "values": {
+      "c++26": {
+        "202311": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["span"]
+  },
+  {
+    "name": "__cpp_lib_span_initializer_list",
+    "values": {
+      "c++26": {
+        "202311": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["span"]
+  },
+  {
+    "name": "__cpp_lib_spanstream",
+    "values": {
+      "c++23": {
+        "202106": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["spanstream"]
+  },
+  {
+    "name": "__cpp_lib_ssize",
+    "values": {
+      "c++20": {
+        "201902": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["iterator"]
+  },
+  {
+    "name": "__cpp_lib_sstream_from_string_view",
+    "values": {
+      "c++26": {
+        "202306": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["sstream"]
+  },
+  {
+    "name": "__cpp_lib_stacktrace",
+    "values": {
+      "c++23": {
+        "202011": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["stacktrace"]
+  },
+  {
+    "name": "__cpp_lib_starts_ends_with",
+    "values": {
+      "c++20": {
+        "201711": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["string", "string_view"]
+  },
+  {
+    "name": "__cpp_lib_stdatomic_h",
+    "values": {
+      "c++23": {
+        "202011": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["stdatomic.h"]
+  },
+  {
+    "name": "__cpp_lib_string_contains",
+    "values": {
+      "c++23": {
+        "202011": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["string", "string_view"]
+  },
+  {
+    "name": "__cpp_lib_string_resize_and_overwrite",
+    "values": {
+      "c++23": {
+        "202110": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["string"]
+  },
+  {
+    "name": "__cpp_lib_string_udls",
+    "values": {
+      "c++14": {
+        "201304": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["string"]
+  },
+  {
+    "name": "__cpp_lib_string_view",
+    "values": {
+      "c++17": {
+        "201606": [
+          {
+            "implemented": true
+          }
+        ]
+      },
+      "c++20": {
+        "201803": [
+          {
+            "implemented": true
+          }
+        ]
+      },
+      "c++26": {
+        "202403": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["string", "string_view"]
+  },
+  {
+    "name": "__cpp_lib_submdspan",
+    "values": {
+      "c++26": {
+        "202306": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["mdspan"]
+  },
+  {
+    "name": "__cpp_lib_syncbuf",
+    "values": {
+      "c++20": {
+        "201803": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["syncstream"],
+    "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM",
+    "libcxx_guard": "_LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM"
+  },
+  {
+    "name": "__cpp_lib_text_encoding",
+    "values": {
+      "c++26": {
+        "202306": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["text_encoding"]
+  },
+  {
+    "name": "__cpp_lib_three_way_comparison",
+    "values": {
+      "c++20": {
+        "201907": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["compare"]
+  },
+  {
+    "name": "__cpp_lib_to_address",
+    "values": {
+      "c++20": {
+        "201711": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["memory"]
+  },
+  {
+    "name": "__cpp_lib_to_array",
+    "values": {
+      "c++20": {
+        "201907": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["array"]
+  },
+  {
+    "name": "__cpp_lib_to_chars",
+    "values": {
+      "c++17": {
+        "201611": [
+          {
+            "implemented": false
+          }
+        ]
+      },
+      "c++26": {
+        "202306": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["charconv"]
+  },
+  {
+    "name": "__cpp_lib_to_string",
+    "values": {
+      "c++26": {
+        "202306": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["string"]
+  },
+  {
+    "name": "__cpp_lib_to_underlying",
+    "values": {
+      "c++23": {
+        "202102": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["utility"]
+  },
+  {
+    "name": "__cpp_lib_transformation_trait_aliases",
+    "values": {
+      "c++14": {
+        "201304": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["type_traits"]
+  },
+  {
+    "name": "__cpp_lib_transparent_operators",
+    "values": {
+      "c++14": {
+        "201210": [
+          {
+            "implemented": true
+          }
+        ]
+      },
+      "c++17": {
+        "201510": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["functional", "memory"]
+  },
+  {
+    "name": "__cpp_lib_tuple_element_t",
+    "values": {
+      "c++14": {
+        "201402": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["tuple"]
+  },
+  {
+    "name": "__cpp_lib_tuple_like",
+    "values": {
+      "c++23": {
+        "202207": [
+          {
+            "implemented": false
+          }
+        ]
+      },
+      "c++26": {
+        "202311": [
+          {
+            "implemented": false
+          }
+        ]
+      }
+    },
+    "headers": ["map", "tuple", "unordered_map", "utility"]
+  },
+  {
+    "name": "__cpp_lib_tuples_by_type",
+    "values": {
+      "c++14": {
+        "201304": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["tuple", "utility"]
+  },
+  {
+    "name": "__cpp_lib_type_identity",
+    "values": {
+      "c++20": {
+        "201806": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["type_traits"]
+  },
+  {
+    "name": "__cpp_lib_type_trait_variable_templates",
+    "values": {
+      "c++17": {
+        "201510": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["type_traits"]
+  },
+  {
+    "name": "__cpp_lib_uncaught_exceptions",
+    "values": {
+      "c++17": {
+        "201411": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["exception"]
+  },
+  {
+    "name": "__cpp_lib_unordered_map_try_emplace",
+    "values": {
+      "c++17": {
+        "201411": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["unordered_map"]
+  },
+  {
+    "name": "__cpp_lib_unreachable",
+    "values": {
+      "c++23": {
+        "202202": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["utility"]
+  },
+  {
+    "name": "__cpp_lib_unwrap_ref",
+    "values": {
+      "c++20": {
+        "201811": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["functional"]
+  },
+  {
+    "name": "__cpp_lib_variant",
+    "values": {
+      "c++17": {
+        "202102": [
+          {
+            "implemented": true
+          }
+        ]
+      },
+      "c++20": {
+        "202106": [
+          {
+            "implemented": true
+          }
+        ]
+      },
+      "c++26": {
+        "202306": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["variant"]
+  },
+  {
+    "name": "__cpp_lib_void_t",
+    "values": {
+      "c++17": {
+        "201411": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": ["type_traits"]
+  }
+]

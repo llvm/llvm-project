@@ -1958,6 +1958,66 @@ Status
     with open(table_doc_path, "w", newline="\n") as f:
         f.write(doc_str)
 
+def get_values(tc) -> str:
+    implemented = True if not "unimplemented" in tc.keys() else not tc["unimplemented"]
+
+    return ",\n".join("""\
+      "{std}": {{
+        "{value}": [
+          {{
+            "implemented": {implemented}
+          }}
+        ]
+      }}\
+""".format(std=key, value=tc["values"][key], implemented="true" if implemented else "false") for key in tc["values"].keys())
+
+def get_headers(tc) -> str:
+    headers = tc["headers"]
+    headers.remove("version")
+    return f'{headers}'.replace("'", '"')
+
+def get_test_suite_guard(tc) -> str:
+    if not "test_suite_guard" in tc.keys():
+        return ""
+    return f',\n    "test_suite_guard": "{tc["test_suite_guard"]}"'
+
+def get_libcxx_guard(tc) -> str:
+    if not "libcxx_guard" in tc.keys():
+        return ""
+    return f',\n    "libcxx_guard": "{tc["libcxx_guard"]}"'
+
+def get_ftm_json(tc) -> str:
+    data="""\
+  {{
+    "name": "{ftm}",
+    "values": {{
+{values}
+    }},
+    "headers": {headers}{test_suite_guard}{libcxx_guard}
+  }}\
+""".format(
+        ftm=tc["name"],
+        values=get_values(tc),
+        headers=get_headers(tc),
+        test_suite_guard=get_test_suite_guard(tc),
+        libcxx_guard=get_libcxx_guard(tc),
+    )
+    return data
+
+
+def get_json() -> str:
+    return ",\n".join(get_ftm_json(tc) for tc in feature_test_macros)
+
+
+def produce_json(file: os.path) -> None:
+    contents = """\
+[
+{data}
+]
+""".format(data=get_json())
+    with open(file, "w", newline="\n") as f:
+        f.write(contents)
+
 
 Std = NewType("Std", str)  # Standard version number
 Ftm = NewType("Ftm", str)  # The name of a feature test macro
@@ -2574,11 +2634,32 @@ class FeatureTestMacros:
 
 
 def main():
+    #
+    # Note this generator switches from the data structures in this file (v1)
+    # to data structures in an external json file (v2). This project is in its
+    # transition phase. So currently both data structures are present.
+    #
+
+    # Generation using data structure v1
     produce_version_header()
     produce_tests()
     produce_docs()
 
-    # Example how to use the new generator to generate the output.
+    #
+    # Conversion of the v1 data to v2 data.
+    # This is a temporary solution.
+    #
+    produce_json(
+        os.path.join(source_root, "utils", "data", "feature_test_macro", "data.json")
+    )
+
+    # Generation using data structure v2
+    ftm = FeatureTestMacros(
+        os.path.join(source_root, "utils", "data", "feature_test_macro", "data.json")
+    )
+    ftm.generate_header_test_directory(os.path.join(macro_test_path, "v2"))
+
+    # Example how to use the generator v2 to generate the output.
     if False:
         ftm = FeatureTestMacros(
             os.path.join(
