@@ -110,8 +110,6 @@ void RISCVO0PreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
 
 RISCVO0PreLegalizerCombiner::RISCVO0PreLegalizerCombiner()
     : MachineFunctionPass(ID) {
-  initializeRISCVO0PreLegalizerCombinerPass(*PassRegistry::getPassRegistry());
-
   if (!RuleConfig.parseCommandLineOption())
     report_fatal_error("Invalid rule identifier");
 }
@@ -150,8 +148,6 @@ INITIALIZE_PASS_END(RISCVO0PreLegalizerCombiner, DEBUG_TYPE,
                     "Combine RISC-V machine instrs before legalization", false,
                     false)
 
-namespace llvm {
-FunctionPass *createRISCVO0PreLegalizerCombiner() {
+FunctionPass *llvm::createRISCVO0PreLegalizerCombiner() {
   return new RISCVO0PreLegalizerCombiner();
 }
-} // end namespace llvm

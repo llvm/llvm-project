@@ -49,16 +49,27 @@ foreach(diag_group, diag_groups) {
     ]
     td_file = "Diagnostic.td"
   }
+
+  clang_tablegen("Diagnostic${diag_group}CompatIDs") {
+    args = [
+      "-gen-clang-diags-compat-ids",
+      "-clang-component=${diag_group}",
+    ]
+    td_file = "Diagnostic.td"
+  }
 }
 group("diags_tablegen") {
-  # DiagnosticGroups and DiagnosticIndexName are intentionally not part of this
-  # group.  Much of clang depends on the DiagKinds.inc files transitively,
-  # but almost nothing needs DiagnosticGroups.inc or DiagnosticIndexName.inc.
+  # DiagnosticGroups, DiagnosticIndexName, DiagnosticAllCompatIDs are
+  # intentionally not part of this group.  Much of clang depends on the
+  # DiagKinds.inc files transitively, but almost nothing needs
+  # DiagnosticGroups.inc, DiagnosticIndexName.inc, or
+  # DiagnosticAllCompatIDs.inc.
   public_deps = []
   foreach(diag_group, diag_groups) {
     public_deps += [
         ":Diagnostic${diag_group}Kinds",
         ":Diagnostic${diag_group}Enums",
+        ":Diagnostic${diag_group}CompatIDs",
     ]
   }
 }
@@ -70,6 +81,11 @@ clang_tablegen("DiagnosticGroups") {
 
 clang_tablegen("DiagnosticIndexName") {
   args = [ "-gen-clang-diags-index-name" ]
+  td_file = "Diagnostic.td"
+}
+
+clang_tablegen("DiagnosticAllCompatIDs") {
+  args = [ "-gen-clang-diags-compat-ids" ]
   td_file = "Diagnostic.td"
 }
 

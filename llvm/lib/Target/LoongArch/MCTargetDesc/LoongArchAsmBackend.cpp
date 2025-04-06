@@ -456,7 +456,7 @@ bool LoongArchAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
          "relocatable SymA-SymB cannot have relocation specifier");
   std::pair<MCFixupKind, MCFixupKind> FK;
   uint64_t FixedValueA, FixedValueB;
-  const MCSymbol &SA = Target.getSymA()->getSymbol();
+  const MCSymbol &SA = *Target.getAddSym();
   const MCSymbol &SB = *Target.getSubSym();
 
   bool force = !SA.isInSection() || !SB.isInSection();
@@ -497,8 +497,11 @@ bool LoongArchAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
   default:
     llvm_unreachable("unsupported fixup size");
   }
-  MCValue A = MCValue::get(Target.getSymA(), nullptr, Target.getConstant());
-  MCValue B = MCValue::get(Target.getSymB());
+  MCValue A = MCValue::get(
+      MCSymbolRefExpr::create(Target.getAddSym(), Asm.getContext()), nullptr,
+      Target.getConstant());
+  MCValue B = MCValue::get(
+      MCSymbolRefExpr::create(Target.getSubSym(), Asm.getContext()));
   auto FA = MCFixup::create(Fixup.getOffset(), nullptr, std::get<0>(FK));
   auto FB = MCFixup::create(Fixup.getOffset(), nullptr, std::get<1>(FK));
   auto &Assembler = const_cast<MCAssembler &>(Asm);

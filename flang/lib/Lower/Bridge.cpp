@@ -2268,6 +2268,23 @@ private:
                 uja = genLoopUnrollAndJamAttr(u.v);
                 has_attrs = true;
               },
+              [&](const Fortran::parser::CompilerDirective::NoVector &u) {
+                mlir::BoolAttr trueAttr =
+                    mlir::BoolAttr::get(builder->getContext(), true);
+                va = mlir::LLVM::LoopVectorizeAttr::get(builder->getContext(),
+                                                        /*disable=*/trueAttr,
+                                                        {}, {}, {}, {}, {}, {});
+                has_attrs = true;
+              },
+              [&](const Fortran::parser::CompilerDirective::NoUnroll &u) {
+                ua = genLoopUnrollAttr(/*unrollingFactor=*/0);
+                has_attrs = true;
+              },
+              [&](const Fortran::parser::CompilerDirective::NoUnrollAndJam &u) {
+                uja = genLoopUnrollAndJamAttr(/*unrollingFactor=*/0);
+                has_attrs = true;
+              },
+
               [&](const auto &) {}},
           dir->u);
     }
@@ -2930,6 +2947,15 @@ private:
               attachDirectiveToLoop(dir, &eval);
             },
             [&](const Fortran::parser::CompilerDirective::UnrollAndJam &) {
+              attachDirectiveToLoop(dir, &eval);
+            },
+            [&](const Fortran::parser::CompilerDirective::NoVector &) {
+              attachDirectiveToLoop(dir, &eval);
+            },
+            [&](const Fortran::parser::CompilerDirective::NoUnroll &) {
+              attachDirectiveToLoop(dir, &eval);
+            },
+            [&](const Fortran::parser::CompilerDirective::NoUnrollAndJam &) {
               attachDirectiveToLoop(dir, &eval);
             },
             [&](const auto &) {}},
