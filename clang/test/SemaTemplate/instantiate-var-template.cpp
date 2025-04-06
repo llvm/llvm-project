@@ -47,3 +47,21 @@ namespace InvalidInsertPos {
   template<> int v<int, 0>;
   int k = v<int, 500>;
 }
+
+namespace GH51347 {
+  template <typename T>
+  auto p = p<T>; // expected-error {{the type of variable template specialization 'p<int>'}}
+
+  auto x = p<int>; // expected-note {{in instantiation of variable template specialization 'GH51347::p'}}
+}
+
+namespace GH97881_comment {
+  template <bool B>
+  auto g = sizeof(g<!B>);
+  // expected-error@-1 {{the type of variable template specialization 'g<false>'}}
+  // expected-note@-2 {{in instantiation of variable template specialization 'GH97881_comment::g'}}
+
+  void test() {
+    (void)sizeof(g<false>); // expected-note {{in instantiation of variable template specialization 'GH97881_comment::g'}}
+  }
+}
