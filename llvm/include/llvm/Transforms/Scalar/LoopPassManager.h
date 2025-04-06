@@ -130,6 +130,20 @@ public:
         new LoopNestPassModelT(std::forward<PassT>(Pass))));
   }
 
+  LLVM_ATTRIBUTE_MINSIZE
+  void addPass(PassManager &&PM) {
+    std::size_t VecSize = PM.IsLoopNestPass.size();
+    IsLoopNestPass.reserve(IsLoopNestPass.size() + VecSize);
+    for (std::size_t I = 0; I != VecSize; ++I)
+      IsLoopNestPass.push_back(PM.IsLoopNestPass[I]);
+    LoopPasses.insert(LoopPasses.end(),
+                      std::make_move_iterator(PM.LoopPasses.begin()),
+                      std::make_move_iterator(PM.LoopPasses.end()));
+    LoopNestPasses.insert(LoopNestPasses.end(),
+                          std::make_move_iterator(PM.LoopNestPasses.begin()),
+                          std::make_move_iterator(PM.LoopNestPasses.end()));
+  }
+
   bool isEmpty() const { return LoopPasses.empty() && LoopNestPasses.empty(); }
 
   static bool isRequired() { return true; }
