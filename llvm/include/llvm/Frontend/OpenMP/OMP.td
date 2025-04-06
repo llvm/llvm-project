@@ -512,7 +512,10 @@ def OMPC_ThreadPrivate : Clause<[Spelling<"threadprivate">]> {
 def OMPC_Threads : Clause<[Spelling<"threads">]> {
   let clangClass = "OMPThreadsClause";
 }
-def OMPC_To : Clause<[Spelling<"to">]> {
+def OMPC_Threadset : Clause<"threadset"> {
+  let clangClass = "OMPThreadsetClause";
+}
+def OMPC_To : Clause<"to"> {
   let clangClass = "OMPToClause";
   let flangClass = "OmpToClause";
 }
@@ -1206,6 +1209,7 @@ def OMP_Task : Directive<[Spelling<"task">]> {
     VersionedClause<OMPC_Final>,
     VersionedClause<OMPC_If>,
     VersionedClause<OMPC_Priority>,
+    VersionedClause<OMPC_Threadset, 60>,
   ];
   let association = AS_Block;
   let category = CA_Executable;

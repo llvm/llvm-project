@@ -11648,6 +11648,17 @@ void OMPClauseReader::VisitOMPDefaultClause(OMPDefaultClause *C) {
   C->setDefaultKindKwLoc(Record.readSourceLocation());
 }
 
+// Read the parameter of fail clause. This will have been saved when
+// OMPClauseWriter is called.
+void OMPClauseReader::VisitOMPThreadsetClause(OMPThreadsetClause *C) {
+  C->setLParenLoc(Record.readSourceLocation());
+  SourceLocation ThreadsetKindLoc = Record.readSourceLocation();
+  C->setThreadsetKindLoc(ThreadsetKindLoc);
+  OpenMPThreadsetKind TKind =
+      static_cast<OpenMPThreadsetKind>(Record.readInt());
+  C->setThreadsetKind(TKind);
+}
+
 void OMPClauseReader::VisitOMPProcBindClause(OMPProcBindClause *C) {
   C->setProcBindKind(static_cast<llvm::omp::ProcBindKind>(Record.readInt()));
   C->setLParenLoc(Record.readSourceLocation());

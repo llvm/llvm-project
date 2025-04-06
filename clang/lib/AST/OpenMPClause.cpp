@@ -1914,6 +1914,13 @@ void OMPClausePrinter::VisitOMPDefaultClause(OMPDefaultClause *Node) {
      << ")";
 }
 
+void OMPClausePrinter::VisitOMPThreadsetClause(OMPThreadsetClause *Node) {
+  OS << "threadset("
+     << getOpenMPSimpleClauseTypeName(OMPC_threadset,
+                                      unsigned(Node->getThreadsetKind()))
+     << ")";
+}
+
 void OMPClausePrinter::VisitOMPProcBindClause(OMPProcBindClause *Node) {
   OS << "proc_bind("
      << getOpenMPSimpleClauseTypeName(OMPC_proc_bind,
