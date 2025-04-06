@@ -1,6 +1,6 @@
 ; RUN: opt < %s -passes='print<scalar-evolution>' 2>&1 | FileCheck %s
 
-; CHECK: -->  (1 + (zext i4 {-8,+,-8}<%loop> to i32))<nuw><nsw>
+; CHECK: -->  (1 + (zext i4 {-8,+,-8}<sw><%loop> to i32))<nuw><nsw>
 
 define fastcc void @foo() nounwind {
 entry:
