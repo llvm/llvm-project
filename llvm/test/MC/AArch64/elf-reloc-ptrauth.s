@@ -3,7 +3,7 @@
 // RUN: llvm-mc -triple=aarch64 -filetype=obj %s | \
 // RUN:   llvm-readelf -S -r -x .test - | FileCheck %s --check-prefix=RELOC
 
-// RELOC: Relocation section '.rela.test' at offset {{.*}} contains 8 entries:
+// RELOC: Relocation section '.rela.test' at offset {{.*}} contains 9 entries:
 // RELOC-NEXT:  Offset Info Type Symbol's Value Symbol's Name + Addend
 // RELOC-NEXT: 0000000000000000 {{.*}} R_AARCH64_AUTH_ABS64 0000000000000000 .helper + 0
 // RELOC-NEXT: 0000000000000010 {{.*}} R_AARCH64_AUTH_ABS64 0000000000000000 _g1 + 0
@@ -13,6 +13,7 @@
 // RELOC-NEXT: 0000000000000050 {{.*}} R_AARCH64_AUTH_ABS64 0000000000000000 _g5 - 3
 // RELOC-NEXT: 0000000000000060 {{.*}} R_AARCH64_AUTH_ABS64 0000000000000000 _g 6 + 0
 // RELOC-NEXT: 0000000000000070 {{.*}} R_AARCH64_AUTH_ABS64 0000000000000000 _g 7 + 7
+// RELOC-NEXT: 0000000000000080 {{.*}} R_AARCH64_AUTH_ABS64 0000000000000000 _g4 + 7
 
 // RELOC: Hex dump of section '.test':
 //                VVVVVVVV addend, not needed for rela
@@ -39,6 +40,9 @@
 //                         ^^^^ discriminator
 //                               ^^ 1    addr diversity 0 reserved 11 db key 0000 reserved
 // RELOC-NEXT: 70 00000000 10000000
+//                         ^^^^ discriminator
+//                               ^^ 0 no addr diversity 0 reserved 00 ia key 0000 reserved
+// RELOC-NEXT: 80 00000000 00000000
 //                         ^^^^ discriminator
 //                               ^^ 0 no addr diversity 0 reserved 00 ia key 0000 reserved
 
@@ -89,20 +93,13 @@ _g9:
 .quad ("_g 7" + 7)@AUTH(ia,16)
 .quad 0
 
+.quad 7 + _g4@AUTH(ia,0)
+.quad 0
+
 // RUN: not llvm-mc -triple=aarch64 --defsym=ERR=1 %s 2>&1 | \
-// RUN:   FileCheck %s --check-prefix=ERR
+// RUN:   FileCheck %s --check-prefix=ERR --implicit-check-not=error:
 
 .ifdef ERR
-
-.quad _g10@AUTH(ia,42) + 1
-
-.quad 1 + _g11@AUTH(ia,42)
-
-.quad 1 + _g12@AUTH(ia,42) + 1
-
-.quad _g13@AUTH(ia,42) + _g14@AUTH(ia,42)
-
-.quad _g9@AUTH(ia,42) - _g8
 
 // ERR: :[[#@LINE+1]]:15: error: expected '('
 .quad sym@AUTH)ia,42)
@@ -151,5 +148,11 @@ _g9:
 /// result might make sense.
 // ERR: :[[#@LINE+1]]:23: error: unexpected token
 .quad _g9@AUTH(ia,42) - _g8
+
+// ERR: :[[#@LINE+1]]:23: error: unexpected token
+.quad _g9@AUTH(ia,42) - _g8@AUTH(ia,42)
+
+// ERR: :[[#@LINE+1]]:24: error: unexpected token
+.quad _g13@AUTH(ia,42) + _g14@AUTH(ia,42)
 
 .endif // ERR
