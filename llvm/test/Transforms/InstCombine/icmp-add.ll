@@ -3306,8 +3306,7 @@ entry:
 define i1 @icmp_partial_negative_samesign_ult_folded_to_slt(i8 range(i8 -1, 5) %x) {
 ; CHECK-LABEL: @icmp_partial_negative_samesign_ult_folded_to_slt(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[X:%.*]], -5
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i8 [[ADD]], -3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], 2
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
