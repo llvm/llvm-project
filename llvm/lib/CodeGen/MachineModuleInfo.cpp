@@ -139,12 +139,8 @@ FunctionPass *llvm::createFreeMachineFunctionPass() {
   return new FreeMachineFunction();
 }
 
-MachineModuleInfoWrapperPass::MachineModuleInfoWrapperPass(
-    MachineModuleInfo *MMI)
-    : ImmutablePass(ID), MMI([&] -> MachineModuleInfo & {
-        assert(MMI != nullptr, "MMI is nullptr");
-        return *MMI;
-      }()) {
+MachineModuleInfoWrapperPass::MachineModuleInfoWrapperPass()
+    : ImmutablePass(ID) {
   initializeMachineModuleInfoWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
@@ -179,6 +175,7 @@ static uint64_t getLocCookie(const SMDiagnostic &SMD, const SourceMgr &SrcMgr,
 }
 
 bool MachineModuleInfoWrapperPass::doInitialization(Module &M) {
+  MachineModuleInfo &MMI = getMMI();
   MMI.initialize();
   MMI.TheModule = &M;
   LLVMContext &Ctx = M.getContext();
@@ -196,7 +193,7 @@ bool MachineModuleInfoWrapperPass::doInitialization(Module &M) {
 }
 
 bool MachineModuleInfoWrapperPass::doFinalization(Module &M) {
-  MMI.finalize();
+  getMMI().finalize();
   return false;
 }
 

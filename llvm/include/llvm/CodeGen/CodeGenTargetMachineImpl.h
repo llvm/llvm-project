@@ -43,28 +43,24 @@ public:
   /// for generating a pipeline of CodeGen passes.
   virtual TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 
-  /// Creates a new \c MachineModuleInfo from this \c TargetMachine
-  std::unique_ptr<MachineModuleInfo> createMachineModuleInfo() const override;
-
   /// Add passes to the specified pass manager to get the specified file
   /// emitted. Typically, this will involve several steps of code generation.
   /// This method should return true if emission of this file type is not
   /// supported, or false on success.
-  /// \p MMI a \c MachineModuleInfo that holds the generated machine code
-  /// throughout the code generation process
+  /// \p MMI an optional, externally-managed \c MachineModuleInfo to
+  /// hold the generated machine code even after the \p PM is destroyed
   bool addPassesToEmitFile(PassManagerBase &PM, raw_pwrite_stream &Out,
                            raw_pwrite_stream *DwoOut, CodeGenFileType FileType,
-                           MachineModuleInfo *MMI,
-                           bool DisableVerify = true) override;
+                           bool DisableVerify = true,
+                           MachineModuleInfo *MMI = nullptr) override;
 
   /// Add passes to the specified pass manager to get machine code emitted with
   /// the MCJIT. This method returns true if machine code is not supported.
-  /// \p MMI a \c MachineModuleInfo that holds the generated machine code
-  /// throughout the code generation process
-  bool addPassesToEmitMC(PassManagerBase &PM,
-                         raw_pwrite_stream &Out,
-                         MachineModuleInfo *MMI,
-                         bool DisableVerify = true) override;
+  /// \p MMI an optional, externally-managed \c MachineModuleInfo to
+  /// hold the generated machine code even after the \p PM is destroyed
+  bool addPassesToEmitMC(PassManagerBase &PM, raw_pwrite_stream &Out,
+                         bool DisableVerify = true,
+                         MachineModuleInfo *MMI = nullptr) override;
 
   /// Adds an AsmPrinter pass to the pipeline that prints assembly or
   /// machine code from the MI representation.

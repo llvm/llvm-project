@@ -133,8 +133,7 @@ void DirectXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
 bool DirectXTargetMachine::addPassesToEmitFile(
     PassManagerBase &PM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-    CodeGenFileType FileType, bool DisableVerify,
-    MachineModuleInfoWrapperPass *MMIWP) {
+    CodeGenFileType FileType, bool DisableVerify, MachineModuleInfo *MMI) {
   TargetPassConfig *PassConfig = createPassConfig(PM);
   PassConfig->addCodeGenPrepare();
 
@@ -150,8 +149,17 @@ bool DirectXTargetMachine::addPassesToEmitFile(
       // globals don't pollute the DXIL.
       PM.add(createDXContainerGlobalsPass());
 
-      if (!MMIWP)
-        MMIWP = new MachineModuleInfoWrapperPass(this);
+      MachineModuleInfoWrapperPass *MMIWP;
+      if (MMI) {
+        MMIWP = new NonOwningMachineModuleInfoWrapperPass(*MMI);
+      } else {
+        MMIWP = new OwningMachineModuleInfoWrapperPass(*this);
+        MMI = &MMIWP->getMMI();
+      }
+      // Check (for the case of externally-managed MMI) if the TM of MMI is
+      // the same as this target machine
+      if (&MMI->getTarget() != this)
+        return true;
       PM.add(MMIWP);
       if (addAsmPrinter(PM, Out, DwoOut, FileType,
                         MMIWP->getMMI().getContext()))
@@ -166,9 +174,9 @@ bool DirectXTargetMachine::addPassesToEmitFile(
 }
 
 bool DirectXTargetMachine::addPassesToEmitMC(PassManagerBase &PM,
-                                             MCContext *&Ctx,
                                              raw_pwrite_stream &Out,
-                                             bool DisableVerify) {
+                                             bool DisableVerify,
+                                             MachineModuleInfo *MMI) {
   return true;
 }
 

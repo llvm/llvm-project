@@ -331,9 +331,11 @@ static std::unique_ptr<MemoryBuffer> codegenModule(Module &TheModule,
   {
     raw_svector_ostream OS(OutputBuffer);
     legacy::PassManager PM;
+    std::unique_ptr<MachineModuleInfo> MMI = TM.createMachineModuleInfo();
 
-    // Setup the codegen now.
+    // Setup the codegen pipeline.
     if (TM.addPassesToEmitFile(PM, OS, nullptr, CodeGenFileType::ObjectFile,
+                               MMI.get(),
                                /* DisableVerify */ true))
       report_fatal_error("Failed to setup codegen");
 

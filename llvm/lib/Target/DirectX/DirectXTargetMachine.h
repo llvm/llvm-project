@@ -33,10 +33,10 @@ public:
   bool addPassesToEmitFile(PassManagerBase &PM, raw_pwrite_stream &Out,
                            raw_pwrite_stream *DwoOut, CodeGenFileType FileType,
                            bool DisableVerify,
-                           MachineModuleInfoWrapperPass *MMIWP) override;
+                           MachineModuleInfo *MMIWP) override;
 
-  bool addPassesToEmitMC(PassManagerBase &PM, MCContext *&Ctx,
-                         raw_pwrite_stream &Out, bool DisableVerify) override;
+  bool addPassesToEmitMC(PassManagerBase &PM, raw_pwrite_stream &Out,
+                         bool DisableVerify, MachineModuleInfo *MMIWP) override;
 
   const DirectXSubtarget *getSubtargetImpl(const Function &) const override;
 

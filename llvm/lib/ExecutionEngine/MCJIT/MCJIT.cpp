@@ -66,9 +66,8 @@ MCJIT::MCJIT(std::unique_ptr<Module> M, std::unique_ptr<TargetMachine> TM,
              std::shared_ptr<MCJITMemoryManager> MemMgr,
              std::shared_ptr<LegacyJITSymbolResolver> Resolver)
     : ExecutionEngine(TM->createDataLayout(), std::move(M)), TM(std::move(TM)),
-      Ctx(nullptr), MemMgr(std::move(MemMgr)),
-      Resolver(*this, std::move(Resolver)), Dyld(*this->MemMgr, this->Resolver),
-      ObjCache(nullptr) {
+      MemMgr(std::move(MemMgr)), Resolver(*this, std::move(Resolver)),
+      Dyld(*this->MemMgr, this->Resolver), ObjCache(nullptr) {
   // FIXME: We are managing our modules, so we do not want the base class
   // ExecutionEngine to manage them as well. To avoid double destruction
   // of the first (and only) module added in ExecutionEngine constructor
@@ -163,7 +162,7 @@ std::unique_ptr<MemoryBuffer> MCJIT::emitObject(Module *M) {
 
   // Turn the machine code intermediate representation into bytes in memory
   // that may be executed.
-  if (TM->addPassesToEmitMC(PM, Ctx, ObjStream, !getVerifyModules()))
+  if (TM->addPassesToEmitMC(PM, ObjStream, !getVerifyModules()))
     report_fatal_error("Target does not support MC emission!");
 
   // Initialize passes.

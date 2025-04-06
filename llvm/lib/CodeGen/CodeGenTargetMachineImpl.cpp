@@ -208,20 +208,22 @@ CodeGenTargetMachineImpl::createMCStreamer(raw_pwrite_stream &Out,
   return std::move(AsmStreamer);
 }
 
-std::unique_ptr<MachineModuleInfo>
-CodeGenTargetMachineImpl::createMachineModuleInfo() const override {
-  return std::make_unique<MachineModuleInfo>(this);
-}
-
 bool CodeGenTargetMachineImpl::addPassesToEmitFile(
     PassManagerBase &PM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-    CodeGenFileType FileType, MachineModuleInfo *MMI, bool DisableVerify) {
-  // Check if MMI is nullptr, or if MMI pointer is valid but the target
-  // machine of the MMI is not the same as this target machine
-  if (!MMI || &MMI->getTarget() != this)
-    return true;
+    CodeGenFileType FileType, bool DisableVerify, MachineModuleInfo *MMI) {
   // Add the wrapper pass for MMI
-  auto *MMIWP = new MachineModuleInfoWrapperPass(MMI);
+  MachineModuleInfoWrapperPass *MMIWP;
+  if (MMI) {
+    MMIWP = new NonOwningMachineModuleInfoWrapperPass(*MMI);
+  } else {
+    MMIWP = new OwningMachineModuleInfoWrapperPass(*this);
+    MMI = &MMIWP->getMMI();
+  }
+  // Check (for the case of externally-managed MMI) if the TM of MMI is
+  // the same as this target machine
+  if (&MMI->getTarget() != this)
+    return true;
+
   TargetPassConfig *PassConfig =
       addPassesToGenerateCode(*this, PM, DisableVerify, *MMIWP);
   if (!PassConfig)
@@ -240,21 +242,22 @@ bool CodeGenTargetMachineImpl::addPassesToEmitFile(
   return false;
 }
 
-/// addPassesToEmitMC - Add passes to the specified pass manager to get
-/// machine code emitted with the MCJIT. This method returns true if machine
-/// code is not supported. It fills the MCContext Ctx pointer which can be
-/// used to build custom MCStreamer.
-///
 bool CodeGenTargetMachineImpl::addPassesToEmitMC(PassManagerBase &PM,
                                                  raw_pwrite_stream &Out,
-                                                 MachineModuleInfo *MMI,
-                                                 bool DisableVerify) {
-  // Check if MMI is nullptr, or if MMI pointer is valid but the target
-  // machine of the MMI is not the same as this target machine
-  if (!MMI || &MMI->getTarget() != this)
+                                                 bool DisableVerify,
+                                                 MachineModuleInfo *MMI) {
+  // Add the wrapper pass for MMI
+  MachineModuleInfoWrapperPass *MMIWP;
+  if (MMI) {
+    MMIWP = new NonOwningMachineModuleInfoWrapperPass(*MMI);
+  } else {
+    MMIWP = new OwningMachineModuleInfoWrapperPass(*this);
+    MMI = &MMIWP->getMMI();
+  }
+  // Check (for the case of externally-managed MMI) if the TM of MMI is
+  // the same as this target machine
+  if (&MMI->getTarget() != this)
     return true;
-  // Add common CodeGen passes.
-  MachineModuleInfoWrapperPass *MMIWP = new MachineModuleInfoWrapperPass(MMI);
   TargetPassConfig *PassConfig =
       addPassesToGenerateCode(*this, PM, DisableVerify, *MMIWP);
   if (!PassConfig)

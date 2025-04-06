@@ -400,38 +400,30 @@ public:
   /// with the new pass manager. Only affects the "default" AAManager.
   virtual void registerDefaultAliasAnalyses(AAManager &) {}
 
-  /// For targets that utilize the target-independent code generator
-  /// (CodeGen), this method creates a new \c MachineModuleInfo from this
-  /// \c TargetMachine and returns it; For targets that don't use CodeGen,
-  /// returns nullptr
-  virtual std::unique_ptr<MachineModuleInfo> createMachineModuleInfo() const {
-    return nullptr;
-  }
-
   /// Add passes to the specified pass manager to get the specified file
   /// emitted. Typically, this will involve several steps of code generation.
   /// This method should return true if emission of this file type is not
   /// supported, or false on success.
   /// For targets that utilize the target-independent code generator
-  /// (CodeGen) to emit the file, \c MachineModuleInfo pointer will hold the
-  /// generated machine code; For targets that don't use CodeGen, it is set
-  /// to \c nullptr
+  /// (CodeGen), an externally-managed \c MachineModuleInfo can be provided
+  /// to ensure persistence of the generated machine code even after the pass
+  /// manager is destroyed
   virtual bool addPassesToEmitFile(PassManagerBase &, raw_pwrite_stream &,
                                    raw_pwrite_stream *, CodeGenFileType,
-                                   MachineModuleInfo *,
-                                   bool /*DisableVerify*/ = true) {
+                                   bool /*DisableVerify*/ = true,
+                                   MachineModuleInfo * = nullptr) {
     return true;
   }
 
   /// Add passes to the specified pass manager to get machine code emitted with
   /// the MCJIT. This method returns true if machine code is not supported.
   /// For targets that utilize the target-independent code generator
-  /// (CodeGen), \c MachineModuleInfo pointer will hold the generated
-  /// machine code; For targets that don't use CodeGen, it must be set
-  /// to \c nullptr
+  /// (CodeGen), an externally-managed \c MachineModuleInfo can be provided
+  /// to ensure persistence of the generated machine code even after the pass
+  /// manager is destroyed
   virtual bool addPassesToEmitMC(PassManagerBase &, raw_pwrite_stream &,
-                                 MachineModuleInfo *,
-                                 bool /*DisableVerify*/ = true) {
+                                 bool /*DisableVerify*/ = true,
+                                 MachineModuleInfo * = nullptr) {
     return true;
   }
 

@@ -163,19 +163,51 @@ public:
   /// \}
 }; // End class MachineModuleInfo
 
+/// \brief Interface for pass that provide access to \c MachineModuleInfo
+/// being worked on
 class MachineModuleInfoWrapperPass : public ImmutablePass {
-  MachineModuleInfo &MMI;
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  explicit MachineModuleInfoWrapperPass(MachineModuleInfo *MMI = nullptr);
+  MachineModuleInfoWrapperPass();
 
   // Initialization and Finalization
   bool doInitialization(Module &) override;
   bool doFinalization(Module &) override;
 
-  MachineModuleInfo &getMMI() { return MMI; }
-  const MachineModuleInfo &getMMI() const { return MMI; }
+  virtual MachineModuleInfo &getMMI() = 0;
+  virtual const MachineModuleInfo &getMMI() const = 0;
+};
+
+/// \brief a version of \c MachineModuleInfoWrapperPass that manages the
+/// lifetime of its \c MachineModuleInfo
+class OwningMachineModuleInfoWrapperPass : public MachineModuleInfoWrapperPass {
+  MachineModuleInfo MMI;
+
+public:
+  explicit OwningMachineModuleInfoWrapperPass(const TargetMachine &TM)
+      : MMI(&TM) {};
+
+  OwningMachineModuleInfoWrapperPass(const TargetMachine &TM,
+                                     MCContext &ExtContext)
+      : MMI(&TM, &ExtContext) {};
+
+  MachineModuleInfo &getMMI() override { return MMI; }
+  const MachineModuleInfo &getMMI() const override { return MMI; }
+};
+
+/// \brief a version of \c MachineModuleInfoWrapperPass that does not manage the
+/// lifetime of its \c MachineModuleInfo
+class NonOwningMachineModuleInfoWrapperPass
+    : public MachineModuleInfoWrapperPass {
+  MachineModuleInfo &MMI;
+
+public:
+  explicit NonOwningMachineModuleInfoWrapperPass(MachineModuleInfo &MMI)
+      : MMI(MMI) {};
+
+  MachineModuleInfo &getMMI() override { return MMI; }
+  const MachineModuleInfo &getMMI() const override { return MMI; }
 };
 
 /// An analysis that produces \c MachineModuleInfo for a module.
