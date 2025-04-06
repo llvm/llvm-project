@@ -179,8 +179,7 @@ void JITEngine::codegen(TargetMachine *TM, TargetLibraryInfoImpl *TLII,
   TM->addPassesToEmitFile(PM, OS, nullptr,
                           TT.isNVPTX() ? CodeGenFileType::AssemblyFile
                                        : CodeGenFileType::ObjectFile,
-                          /*DisableVerify=*/false,
-                          &MMI);
+                          /*DisableVerify=*/false, &MMI);
 
   PM.run(M);
 }
