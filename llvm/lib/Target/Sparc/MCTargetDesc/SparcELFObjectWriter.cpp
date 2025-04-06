@@ -63,8 +63,8 @@ unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
   case SparcMCExpr::VK_TLS_IE_ADD:
   case SparcMCExpr::VK_TLS_LE_HIX22:
   case SparcMCExpr::VK_TLS_LE_LOX10:
-    if (auto *S = Target.getSymA())
-      cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
+    if (auto *SA = Target.getAddSym())
+      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;

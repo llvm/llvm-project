@@ -62,7 +62,7 @@ unsigned AArch64WinCOFFObjectWriter::getRelocType(
   }
 
   auto Modifier =
-      Target.isAbsolute() ? AArch64MCExpr::None : Target.getSymA()->getKind();
+      Target.isAbsolute() ? AArch64MCExpr::None : Target.getSymSpecifier();
   const MCExpr *Expr = Fixup.getValue();
 
   if (const AArch64MCExpr *A64E = dyn_cast<AArch64MCExpr>(Expr)) {

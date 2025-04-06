@@ -165,15 +165,6 @@ _g9:
 // RUN:   FileCheck %s --check-prefix=ERROBJ
 
 // ERROBJ: :[[#@LINE+1]]:7: error: expected relocatable expression
-.quad sym@AUTH(ia,42) + 1
-
-// ERROBJ: :[[#@LINE+1]]:7: error: expected relocatable expression
-.quad 1 + sym@AUTH(ia,42)
-
-// ERROBJ: :[[#@LINE+1]]:7: error: expected relocatable expression
-.quad 1 + sym@AUTH(ia,42) + 1
-
-// ERROBJ: :[[#@LINE+1]]:7: error: expected relocatable expression
 .quad sym@AUTH(ia,42) + sym@AUTH(ia,42)
 
 // TODO: do we really want to emit an error here? It might not be important
@@ -181,11 +172,17 @@ _g9:
 // distance remains the same. Leave it in such state as for now since it
 // makes code simpler: subtraction of a non-AUTH symbol and of a constant
 // are handled identically.
-// ERROBJ: :[[#@LINE+1]]:7: error: expected relocatable expression
+// ERROBJ: :[[#@LINE+1]]:7: error: Cannot represent a difference across sections
 .quad _g9@AUTH(ia,42) - _g8
 
-// ERROBJ: :[[#@LINE+1]]:7: error: expected relocatable expression
+// ERROBJ: :[[#@LINE+1]]:7: error: Cannot represent a difference across sections
 .quad _g9@AUTH(ia,42) - _g8@AUTH(ia,42)
 .quad 0
+
+// ERROBJ: :[[#@LINE+1]]:23: error: expected relocatable expression
+.quad sym@AUTH(ia,42) + 1
+
+// ERROBJ: :[[#@LINE+1]]:9: error: expected relocatable expression
+.quad 1 + sym@AUTH(ia,42)
 
 .endif // ERROBJ
