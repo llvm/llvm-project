@@ -444,6 +444,7 @@ void CommandInterpreter::Initialize() {
   if (cmd_obj_sp) {
     // Ensure `e` runs `expression`.
     AddAlias("e", cmd_obj_sp);
+    AddAlias("expr", cmd_obj_sp);
     AddAlias("call", cmd_obj_sp, "--")->SetHelpLong("");
     CommandAlias *parray_alias =
         AddAlias("parray", cmd_obj_sp, "--element-count %1 --");
@@ -1376,7 +1377,9 @@ bool CommandInterpreter::GetAliasFullName(llvm::StringRef cmd,
 }
 
 bool CommandInterpreter::AliasExists(llvm::StringRef cmd) const {
-  return m_alias_dict.find(cmd) != m_alias_dict.end();
+  std::string alias_name;
+  return GetAliasFullName(cmd, alias_name);
+  // return m_alias_dict.find(cmd) != m_alias_dict.end();
 }
 
 bool CommandInterpreter::UserCommandExists(llvm::StringRef cmd) const {
