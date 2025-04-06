@@ -543,7 +543,11 @@ struct __tree_key_value_types<__value_type<_Key, _Tp> > {
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static __container_value_type* __get_ptr(__node_value_type& __n) {
-    return std::addressof(__n.__get_value());
+    // __n's lifetime has not begun, so calling __get_value is wrong
+
+    // return std::addressof(__n.__get_value());
+
+    return __node_value_type::__get_address_of_value(__n);
   }
 
   _LIBCPP_HIDE_FROM_ABI static pair<key_type&&, mapped_type&&> __move(__node_value_type& __v) { return __v.__move(); }
@@ -658,6 +662,7 @@ public:
   __node_value_type __value_;
 
   _LIBCPP_HIDE_FROM_ABI _Tp& __get_value() { return __value_; }
+  // _LIBCPP_HIDE_FROM_ABI static _Tp& __get_value_static(__tree_node * foo) { return (foo->__value_); }
 
   ~__tree_node()                             = delete;
   __tree_node(__tree_node const&)            = delete;
@@ -1816,8 +1821,9 @@ __tree<_Tp, _Compare, _Allocator>::__construct_node(_Args&&... __args) {
 
 template <class _Tp, class _Compare, class _Allocator>
 template <class... _Args>
+_LIBCPP_CONSTEXPR_SINCE_CXX26 
 pair<typename __tree<_Tp, _Compare, _Allocator>::iterator, bool>
-_LIBCPP_CONSTEXPR_SINCE_CXX26 __tree<_Tp, _Compare, _Allocator>::__emplace_unique_impl(_Args&&... __args) {
+__tree<_Tp, _Compare, _Allocator>::__emplace_unique_impl(_Args&&... __args) {
   __node_holder __h = __construct_node(std::forward<_Args>(__args)...);
   __parent_pointer __parent;
   __node_base_pointer& __child = __find_equal(__parent, __h->__value_);

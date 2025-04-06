@@ -790,6 +790,17 @@ public:
 #    endif
   }
 
+
+  /*
+  Use this helper when the lifetime of __v may not have begun,
+  so calling __v.__get_value() is not allowed
+  as per:
+  `note: member call on object outside its lifetime is not allowed in a constant expression`
+  */
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static value_type* __get_address_of_value(__value_type & __v) {
+    return std::addressof(__v.__cc_);
+  }
+
   _LIBCPP_HIDE_FROM_ABI __nc_ref_pair_type __ref() {
     value_type& __v = __get_value();
     return __nc_ref_pair_type(const_cast<key_type&>(__v.first), __v.second);
@@ -836,6 +847,13 @@ private:
 public:
   _LIBCPP_HIDE_FROM_ABI value_type& __get_value() { return __cc_; }
   _LIBCPP_HIDE_FROM_ABI const value_type& __get_value() const { return __cc_; }
+
+
+  // TODO: maybe needed
+  // _LIBCPP_HIDE_FROM_ABI static value_type* __get_address_of_value(__value_type const& __v) {
+  //   return std::addressof(__v.__cc_);
+  // }
+
 
   __value_type()                               = delete;
   __value_type(__value_type const&)            = delete;
