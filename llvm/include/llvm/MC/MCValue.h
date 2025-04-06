@@ -25,40 +25,24 @@ class raw_ostream;
 // Not all targets support SymB. For PC-relative relocations, a specifier is
 // typically used instead of setting SymB to DOT.
 //
-// Some targets encode the relocation specifier within SymA using
-// MCSymbolRefExpr::SubclassData and access it via getAccessVariant(), though
-// this method is now deprecated.
-//
 // This class must remain a simple POD value class, as it needs to reside in
 // unions and similar structures.
 class MCValue {
-  const MCSymbolRefExpr *SymA = nullptr, *SymB = nullptr;
+  const MCSymbol *SymA = nullptr, *SymB = nullptr;
   int64_t Cst = 0;
   uint32_t Specifier = 0;
-
-  // SymA has a relocation specifier. This is a workaround for targets
-  // that encode specifiers within MCSymbolRefExpr::SubclassData.
-  bool SymSpecifier = false;
-
-  // SymB cannot have a specifier. Use getSubSym instead.
-  const MCSymbolRefExpr *getSymB() const { return SymB; }
 
 public:
   friend class MCAssembler;
   friend class MCExpr;
   MCValue() = default;
   int64_t getConstant() const { return Cst; }
-  const MCSymbolRefExpr *getSymA() const { return SymA; }
   uint32_t getRefKind() const { return Specifier; }
   uint32_t getSpecifier() const { return Specifier; }
   void setSpecifier(uint32_t S) { Specifier = S; }
 
-  const MCSymbol *getAddSym() const {
-    return SymA ? &SymA->getSymbol() : nullptr;
-  }
-  const MCSymbol *getSubSym() const {
-    return SymB ? &SymB->getSymbol() : nullptr;
-  }
+  const MCSymbol *getAddSym() const { return SymA; }
+  const MCSymbol *getSubSym() const { return SymB; }
 
   /// Is this an absolute (as opposed to relocatable) value.
   bool isAbsolute() const { return !SymA && !SymB; }
@@ -72,22 +56,16 @@ public:
   // Get the relocation specifier from SymA. This is a workaround for targets
   // that do not use MCValue::Specifier.
   uint16_t getSymSpecifier() const { return Specifier; }
+  // Get the relocation specifier from SymA, or 0 when SymA is null.
   uint16_t getAccessVariant() const { return Specifier; }
 
-  static MCValue get(const MCSymbolRefExpr *SymA,
-                     const MCSymbolRefExpr *SymB = nullptr, int64_t Val = 0,
-                     uint32_t Specifier = 0) {
+  static MCValue get(const MCSymbol *SymA, const MCSymbol *SymB = nullptr,
+                     int64_t Val = 0, uint32_t Specifier = 0) {
     MCValue R;
     R.Cst = Val;
     R.SymA = SymA;
     R.SymB = SymB;
     R.Specifier = Specifier;
-    assert(!(Specifier && SymA && SymA->getSpecifier()) &&
-           "Specifier cannot be used with legacy SymSpecifier");
-    if (!Specifier && SymA && SymA->getSpecifier()) {
-      R.Specifier = SymA->getSpecifier();
-      R.SymSpecifier = true;
-    }
     return R;
   }
 
