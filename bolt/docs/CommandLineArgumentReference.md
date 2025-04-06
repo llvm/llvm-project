@@ -369,7 +369,7 @@
 
 - `--use-old-text`
 
-  Re-use space in old .text if possible (relocation mode)
+  Reuse space in old .text if possible (relocation mode)
 
 - `-v <uint>`
 

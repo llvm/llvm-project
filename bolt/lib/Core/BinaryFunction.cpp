@@ -3201,7 +3201,7 @@ void BinaryFunction::setTrapOnEntry() {
 void BinaryFunction::setIgnored() {
   if (opts::processAllFunctions()) {
     // We can accept ignored functions before they've been disassembled.
-    // In that case, they would still get disassembled and emited, but not
+    // In that case, they would still get disassembled and emitted, but not
     // optimized.
     assert(CurrentState == State::Empty &&
            "cannot ignore non-empty functions in current mode");
@@ -3799,7 +3799,7 @@ uint64_t BinaryFunction::getEntryIDForSymbol(const MCSymbol *Symbol) const {
     if (FunctionSymbol == Symbol)
       return 0;
 
-  // Check all secondary entries available as either basic blocks or lables.
+  // Check all secondary entries available as either basic blocks or labels.
   uint64_t NumEntries = 1;
   for (const BinaryBasicBlock *BB : BasicBlocks) {
     MCSymbol *EntrySymbol = getSecondaryEntryPointSymbol(*BB);
