@@ -74,8 +74,8 @@ unsigned M68kELFObjectWriter::getRelocType(MCContext &Ctx,
   case M68kMCExpr::VK_TLSLD:
   case M68kMCExpr::VK_TLSLDM:
   case M68kMCExpr::VK_TPOFF:
-    if (auto *S = Target.getSymA())
-      cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
+    if (auto *SA = Target.getAddSym())
+      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;
