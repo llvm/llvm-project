@@ -65,7 +65,7 @@ unsigned M68kELFObjectWriter::getRelocType(MCContext &Ctx,
                                            const MCValue &Target,
                                            const MCFixup &Fixup,
                                            bool IsPCRel) const {
-  auto Specifier = M68kMCExpr::Specifier(Target.getAccessVariant());
+  auto Specifier = M68kMCExpr::Specifier(Target.getSpecifier());
   unsigned Kind = Fixup.getKind();
   M68kRelType Type = getType(Kind, Specifier, IsPCRel);
   switch (Specifier) {

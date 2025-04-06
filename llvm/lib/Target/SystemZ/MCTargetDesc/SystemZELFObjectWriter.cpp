@@ -158,7 +158,7 @@ unsigned SystemZELFObjectWriter::getRelocType(MCContext &Ctx,
   unsigned Kind = Fixup.getKind();
   if (Kind >= FirstLiteralRelocationKind)
     return Kind - FirstLiteralRelocationKind;
-  auto Specifier = SystemZMCExpr::Specifier(Target.getAccessVariant());
+  auto Specifier = SystemZMCExpr::Specifier(Target.getSpecifier());
   switch (Specifier) {
   case SystemZMCExpr::VK_INDNTPOFF:
   case SystemZMCExpr::VK_NTPOFF:
