@@ -126,7 +126,7 @@ bool MCAssembler::isThumbFunc(const MCSymbol *Symbol) const {
     return false;
 
   auto *Sym = V.getAddSym();
-  if (!Sym || V.getSymSpecifier())
+  if (!Sym || V.getSpecifier())
     return false;
 
   if (!isThumbFunc(Sym))
