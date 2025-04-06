@@ -13,8 +13,10 @@
 #define LLVM_SUPPORT_SPECIALCASELIST_H
 
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/Regex.h"
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <vector>
@@ -66,6 +68,27 @@ class FileSystem;
 /// fun:cos=functional
 /// fun:sin=functional
 /// ---
+struct ParsedSpecialCaseList {
+  struct Section {
+    std::string Name;
+    // 1-based line number in source.
+    std::size_t Line = 0;
+
+    struct Entry {
+      // 1-based line number in source.
+      std::size_t Line = 0;
+      std::string Type;
+      std::string Pattern;
+      std::string Category;
+    };
+    std::vector<Entry> Entries;
+  };
+  std::vector<Section> Sections;
+  bool UseRegexes = false;
+
+  static llvm::Expected<ParsedSpecialCaseList> parse(const MemoryBuffer &MB);
+};
+
 class SpecialCaseList {
 public:
   /// Parses the special case list entries from files. On failure, returns
@@ -141,13 +164,13 @@ protected:
   Expected<Section *> addSection(StringRef SectionStr, unsigned LineNo,
                                  bool UseGlobs = true);
 
-  /// Parses just-constructed SpecialCaseList entries from a memory buffer.
-  bool parse(const MemoryBuffer *MB, std::string &Error);
-
   // Helper method for derived classes to search by Prefix, Query, and Category
   // once they have already resolved a section entry.
   unsigned inSectionBlame(const SectionEntries &Entries, StringRef Prefix,
                           StringRef Query, StringRef Category) const;
+private:
+  // Extends current matching structures with entries from \p ParsedInput.
+  llvm::Error mergeSections(ParsedSpecialCaseList ParsedInput);
 };
 
 }  // namespace llvm
