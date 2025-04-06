@@ -8220,11 +8220,11 @@ bool AArch64AsmParser::classifySymbolRef(const MCExpr *Expr,
 
   // Treat expressions with an ELFSpec (like ":abs_g1:3", or
   // ":abs_g1:x" where x is constant) as symbolic even if there is no symbol.
-  if (!Res.getSymA() && ELFSpec == AArch64MCExpr::VK_INVALID)
+  if (!Res.getAddSym() && ELFSpec == AArch64MCExpr::VK_INVALID)
     return false;
 
-  if (Res.getSymA())
-    DarwinSpec = AArch64MCExpr::Specifier(Res.getSymA()->getKind());
+  if (Res.getAddSym())
+    DarwinSpec = AArch64MCExpr::Specifier(Res.getSymSpecifier());
   Addend = Res.getConstant();
 
   // It's some symbol reference + a constant addend, but really

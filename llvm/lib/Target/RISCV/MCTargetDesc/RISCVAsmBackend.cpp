@@ -599,7 +599,7 @@ bool RISCVAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
   }
   }
 
-  if (!AUIPCTarget.getSymA())
+  if (!AUIPCTarget.getAddSym())
     return false;
 
   const MCSymbolELF &SA = cast<MCSymbolELF>(*AUIPCTarget.getAddSym());
@@ -656,7 +656,9 @@ bool RISCVAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
   default:
     llvm_unreachable("unsupported fixup size");
   }
-  MCValue A = MCValue::get(Target.getSymA(), nullptr, Target.getConstant());
+  MCValue A = MCValue::get(
+      MCSymbolRefExpr::create(Target.getAddSym(), Asm.getContext()), nullptr,
+      Target.getConstant());
   MCValue B = MCValue::get(
       MCSymbolRefExpr::create(Target.getSubSym(), Asm.getContext()));
   auto FA = MCFixup::create(

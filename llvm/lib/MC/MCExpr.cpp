@@ -434,12 +434,12 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
 // NOTE: This function can be used before layout is done (see the object
 // streamer for example) and having the Asm argument lets us avoid relaxations
 // early.
-static bool evaluateSymbolicAdd(const MCAssembler *Asm,
-                                const SectionAddrMap *Addrs, bool InSet,
-                                const MCValue &LHS,
-                                const MCSymbolRefExpr *RhsAdd,
-                                const MCSymbolRefExpr *RhsSub, int64_t RHS_Cst,
-                                MCValue &Res) {
+bool MCExpr::evaluateSymbolicAdd(const MCAssembler *Asm,
+                                 const SectionAddrMap *Addrs, bool InSet,
+                                 const MCValue &LHS,
+                                 const MCSymbolRefExpr *RhsAdd,
+                                 const MCSymbolRefExpr *RhsSub, int64_t RHS_Cst,
+                                 uint32_t RhsSpec, MCValue &Res) {
   const MCSymbol *LHS_A = LHS.getAddSym();
   const MCSymbol *LHS_B = LHS.getSubSym();
   int64_t LHS_Cst = LHS.getConstant();
@@ -451,16 +451,16 @@ static bool evaluateSymbolicAdd(const MCAssembler *Asm,
   int64_t Result_Cst = LHS_Cst + RHS_Cst;
 
   // If we have a layout, we can fold resolved differences.
-  if (Asm) {
+  if (Asm && !LHS.getSpecifier() && !RhsSpec) {
     // While LHS_A-LHS_B and RHS_A-RHS_B from recursive calls have already been
     // folded, reassociating terms in
     //   Result = (LHS_A - LHS_B + LHS_Cst) + (RHS_A - RHS_B + RHS_Cst).
     // might bring more opportunities.
-    if (LHS_A && RHS_B && !LHS.getSymA()->getSpecifier()) {
+    if (LHS_A && RHS_B) {
       attemptToFoldSymbolOffsetDifference(Asm, Addrs, InSet, LHS_A, RHS_B,
                                           Result_Cst);
     }
-    if (RHS_A && LHS_B && !RhsAdd->getSpecifier()) {
+    if (RHS_A && LHS_B) {
       attemptToFoldSymbolOffsetDifference(Asm, Addrs, InSet, RHS_A, LHS_B,
                                           Result_Cst);
     }
@@ -476,7 +476,12 @@ static bool evaluateSymbolicAdd(const MCAssembler *Asm,
   auto *B = LHS_B ? LHS.getSymB() : RHS_B ? RhsSub : nullptr;
   if (B && B->getKind() != MCSymbolRefExpr::VK_None)
     return false;
+  auto Spec = LHS.getSpecifier();
+  if (!Spec)
+    Spec = RhsSpec;
   Res = MCValue::get(A, B, Result_Cst);
+  Res.Specifier = Spec;
+  Res.SymSpecifier = 0;
   return true;
 }
 
@@ -536,15 +541,14 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
           if (Res.getRefKind() != MCSymbolRefExpr::VK_None || !Res.getSymA() ||
               Res.getSubSym() || Res.getConstant())
             return false;
-          Res =
-              MCValue::get(MCSymbolRefExpr::create(&Res.getSymA()->getSymbol(),
-                                                   Kind, Asm->getContext()),
-                           Res.getSymB(), Res.getConstant(), Res.getRefKind());
+          Res = MCValue::get(
+              MCSymbolRefExpr::create(Res.getAddSym(), Kind, Asm->getContext()),
+              Res.getSymB(), Res.getConstant(), Res.getRefKind());
         }
         if (!IsMachO)
           return true;
 
-        const MCSymbolRefExpr *A = Res.getSymA();
+        auto *A = Res.getAddSym();
         auto *B = Res.getSubSym();
         // FIXME: This is small hack. Given
         // a = b + 4
@@ -579,7 +583,7 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
       break;
     case MCUnaryExpr::Minus:
       /// -(a - b + const) ==> (b - a - const)
-      if (Value.getSymA() && !Value.getSubSym())
+      if (Value.getAddSym() && !Value.getSubSym())
         return false;
 
       // The cast avoids undefined behavior if the constant is INT64_MIN.
@@ -635,9 +639,6 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
         return false;
       case MCBinaryExpr::Add:
       case MCBinaryExpr::Sub:
-        // TODO: Prevent folding for AArch64 @AUTH operands.
-        if (LHSValue.getSpecifier() || RHSValue.getSpecifier())
-          return false;
         if (Op == MCBinaryExpr::Sub) {
           std::swap(RHSValue.SymA, RHSValue.SymB);
           RHSValue.Cst = -(uint64_t)RHSValue.Cst;
@@ -653,7 +654,8 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
           return true;
         }
         return evaluateSymbolicAdd(Asm, Addrs, InSet, LHSValue, RHSValue.SymA,
-                                   RHSValue.SymB, RHSValue.Cst, Res);
+                                   RHSValue.SymB, RHSValue.Cst,
+                                   RHSValue.SymSpecifier, Res);
       }
     }
 

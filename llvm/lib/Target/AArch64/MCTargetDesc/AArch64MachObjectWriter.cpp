@@ -34,8 +34,8 @@ namespace {
 
 class AArch64MachObjectWriter : public MCMachObjectTargetWriter {
   bool getAArch64FixupKindMachOInfo(const MCFixup &Fixup, unsigned &RelocType,
-                                  const MCSymbolRefExpr *Sym,
-                                  unsigned &Log2Size, const MCAssembler &Asm);
+                                    AArch64MCExpr::Specifier Spec,
+                                    unsigned &Log2Size, const MCAssembler &Asm);
 
 public:
   AArch64MachObjectWriter(uint32_t CPUType, uint32_t CPUSubtype, bool IsILP32)
@@ -49,7 +49,7 @@ public:
 } // end anonymous namespace
 
 bool AArch64MachObjectWriter::getAArch64FixupKindMachOInfo(
-    const MCFixup &Fixup, unsigned &RelocType, const MCSymbolRefExpr *Sym,
+    const MCFixup &Fixup, unsigned &RelocType, AArch64MCExpr::Specifier Spec,
     unsigned &Log2Size, const MCAssembler &Asm) {
   RelocType = unsigned(MachO::ARM64_RELOC_UNSIGNED);
   Log2Size = ~0U;
@@ -66,12 +66,12 @@ bool AArch64MachObjectWriter::getAArch64FixupKindMachOInfo(
     return true;
   case FK_Data_4:
     Log2Size = Log2_32(4);
-    if (getSpecifier(Sym) == AArch64MCExpr::M_GOT)
+    if (Spec == AArch64MCExpr::M_GOT)
       RelocType = unsigned(MachO::ARM64_RELOC_POINTER_TO_GOT);
     return true;
   case FK_Data_8:
     Log2Size = Log2_32(8);
-    if (getSpecifier(Sym) == AArch64MCExpr::M_GOT)
+    if (Spec == AArch64MCExpr::M_GOT)
       RelocType = unsigned(MachO::ARM64_RELOC_POINTER_TO_GOT);
     return true;
   case AArch64::fixup_aarch64_add_imm12:
@@ -81,7 +81,7 @@ bool AArch64MachObjectWriter::getAArch64FixupKindMachOInfo(
   case AArch64::fixup_aarch64_ldst_imm12_scale8:
   case AArch64::fixup_aarch64_ldst_imm12_scale16:
     Log2Size = Log2_32(4);
-    switch (AArch64MCExpr::Specifier(getSpecifier(Sym))) {
+    switch (Spec) {
     default:
       return false;
     case AArch64MCExpr::M_PAGEOFF:
@@ -97,7 +97,7 @@ bool AArch64MachObjectWriter::getAArch64FixupKindMachOInfo(
   case AArch64::fixup_aarch64_pcrel_adrp_imm21:
     Log2Size = Log2_32(4);
     // This encompasses the relocation for the whole 21-bit value.
-    switch (getSpecifier(Sym)) {
+    switch (Spec) {
     default:
       Asm.getContext().reportError(Fixup.getLoc(),
                                    "ADR/ADRP relocations must be GOT relative");
@@ -176,11 +176,10 @@ void AArch64MachObjectWriter::recordRelocation(
   // assembler local symbols. If we got here, that's not what we have,
   // so complain loudly.
   if (Kind == AArch64::fixup_aarch64_pcrel_branch19) {
-    Asm.getContext().reportError(Fixup.getLoc(),
-                                 "conditional branch requires assembler-local"
-                                 " label. '" +
-                                     Target.getSymA()->getSymbol().getName() +
-                                     "' is external.");
+    Asm.getContext().reportError(
+        Fixup.getLoc(), "conditional branch requires assembler-local"
+                        " label. '" +
+                            Target.getAddSym()->getName() + "' is external.");
     return;
   }
 
@@ -192,8 +191,9 @@ void AArch64MachObjectWriter::recordRelocation(
     return;
   }
 
-  if (!getAArch64FixupKindMachOInfo(Fixup, Type, Target.getSymA(), Log2Size,
-                                    Asm)) {
+  if (!getAArch64FixupKindMachOInfo(
+          Fixup, Type, AArch64MCExpr::Specifier(Target.getSymSpecifier()),
+          Log2Size, Asm)) {
     Asm.getContext().reportError(Fixup.getLoc(), "unknown AArch64 fixup kind!");
     return;
   }
@@ -214,14 +214,14 @@ void AArch64MachObjectWriter::recordRelocation(
       // something similar?
     }
   } else if (auto *B = Target.getSubSym()) { // A - B + constant
-    const MCSymbol *A = &Target.getSymA()->getSymbol();
+    const MCSymbol *A = Target.getAddSym();
     const MCSymbol *A_Base = Writer->getAtom(*A);
     const MCSymbol *B_Base = Writer->getAtom(*B);
 
     // Check for "_foo@got - .", which comes through here as:
     // Ltmp0:
     //    ... _foo@got - Ltmp0
-    if (getSpecifier(Target.getSymA()) == AArch64MCExpr::M_GOT &&
+    if (Target.getSymSpecifier() == AArch64MCExpr::M_GOT &&
         Asm.getSymbolOffset(*B) ==
             Asm.getFragmentOffset(*Fragment) + Fixup.getOffset()) {
       // SymB is the PC, so use a PC-rel pointer-to-GOT relocation.
@@ -232,7 +232,7 @@ void AArch64MachObjectWriter::recordRelocation(
       MRE.r_word1 = (IsPCRel << 24) | (Log2Size << 25) | (Type << 28);
       Writer->addRelocation(A_Base, Fragment->getParent(), MRE);
       return;
-    } else if (getSpecifier(Target.getSymA()) != AArch64MCExpr::None) {
+    } else if (Target.getSymSpecifier() != AArch64MCExpr::None) {
       // Otherwise, neither symbol can be modified.
       Asm.getContext().reportError(Fixup.getLoc(),
                                    "unsupported relocation of modified symbol");
@@ -293,7 +293,7 @@ void AArch64MachObjectWriter::recordRelocation(
     RelSymbol = B_Base;
     Type = MachO::ARM64_RELOC_SUBTRACTOR;
   } else { // A + constant
-    const MCSymbol *Symbol = &Target.getSymA()->getSymbol();
+    const MCSymbol *Symbol = Target.getAddSym();
     const MCSectionMachO &Section =
         static_cast<const MCSectionMachO &>(*Fragment->getParent());
 
