@@ -560,13 +560,46 @@ define ptx_kernel i32 @grid_const_ptrtoint(ptr byval(i32) %input) {
   ret i32 %keepalive
 }
 
+declare void @device_func(ptr byval(i32) align 4)
+
+define ptx_kernel void @test_forward_byval_arg(ptr byval(i32) align 4 %input) {
+; OPT-LABEL: define ptx_kernel void @test_forward_byval_arg(
+; OPT-SAME: ptr byval(i32) align 4 [[INPUT:%.*]]) #[[ATTR0]] {
+; OPT-NEXT:    [[INPUT_PARAM:%.*]] = addrspacecast ptr [[INPUT]] to ptr addrspace(101)
+; OPT-NEXT:    [[INPUT_PARAM_GEN:%.*]] = call ptr @llvm.nvvm.ptr.param.to.gen.p0.p101(ptr addrspace(101) [[INPUT_PARAM]])
+; OPT-NEXT:    call void @device_func(ptr byval(i32) align 4 [[INPUT_PARAM_GEN]])
+; OPT-NEXT:    ret void
+;
+; PTX-LABEL: test_forward_byval_arg(
+; PTX:       {
+; PTX-NEXT:    .reg .b32 %r<2>;
+; PTX-NEXT:    .reg .b64 %rd<4>;
+; PTX-EMPTY:
+; PTX-NEXT:  // %bb.0:
+; PTX-NEXT:    mov.b64 %rd1, test_forward_byval_arg_param_0;
+; PTX-NEXT:    mov.b64 %rd2, %rd1;
+; PTX-NEXT:    cvta.param.u64 %rd3, %rd2;
+; PTX-NEXT:    ld.u32 %r1, [%rd3];
+; PTX-NEXT:    { // callseq 4, 0
+; PTX-NEXT:    .param .align 4 .b8 param0[4];
+; PTX-NEXT:    st.param.b32 [param0], %r1;
+; PTX-NEXT:    call.uni
+; PTX-NEXT:    device_func,
+; PTX-NEXT:    (
+; PTX-NEXT:    param0
+; PTX-NEXT:    );
+; PTX-NEXT:    } // callseq 4
+; PTX-NEXT:    ret;
+  call void @device_func(ptr byval(i32) align 4 %input)
+  ret void
+}
 
 
 declare dso_local void @dummy() local_unnamed_addr
 declare dso_local ptr @escape(ptr) local_unnamed_addr
 declare dso_local ptr @escape3(ptr, ptr, ptr) local_unnamed_addr
 
-!nvvm.annotations = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !18, !19, !20, !21, !22, !23}
+!nvvm.annotations = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !18, !19, !20, !21, !22, !23, !24}
 
 !0 = !{ptr @grid_const_int, !"grid_constant", !1}
 !1 = !{i32 1}
@@ -604,4 +637,6 @@ declare dso_local ptr @escape3(ptr, ptr, ptr) local_unnamed_addr
 !22 = !{ptr @grid_const_ptrtoint, !"grid_constant", !23}
 !23 = !{i32 1}
 
+!24 = !{ptr @test_forward_byval_arg, !"grid_constant", !25}
+!25 = !{i32 1}
 

@@ -988,6 +988,77 @@ merge:                                            ; preds = %second, %first
   ret void
 }
 
+define ptx_kernel void @test_forward_byval_arg(ptr byval(i32) align 4 %input) {
+; COMMON-LABEL: define ptx_kernel void @test_forward_byval_arg(
+; COMMON-SAME: ptr byval(i32) align 4 [[INPUT:%.*]]) #[[ATTR3]] {
+; COMMON-NEXT:    [[INPUT1:%.*]] = alloca i32, align 4
+; COMMON-NEXT:    [[INPUT2:%.*]] = addrspacecast ptr [[INPUT]] to ptr addrspace(101)
+; COMMON-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[INPUT1]], ptr addrspace(101) align 4 [[INPUT2]], i64 4, i1 false)
+; COMMON-NEXT:    call void @device_func(ptr byval(i32) align 4 [[INPUT1]])
+; COMMON-NEXT:    ret void
+;
+; PTX-LABEL: test_forward_byval_arg(
+; PTX:       {
+; PTX-NEXT:    .local .align 4 .b8 __local_depot17[4];
+; PTX-NEXT:    .reg .b64 %SP;
+; PTX-NEXT:    .reg .b64 %SPL;
+; PTX-NEXT:    .reg .b32 %r<2>;
+; PTX-NEXT:    .reg .b64 %rd<3>;
+; PTX-EMPTY:
+; PTX-NEXT:  // %bb.0:
+; PTX-NEXT:    mov.b64 %SPL, __local_depot17;
+; PTX-NEXT:    add.u64 %rd2, %SPL, 0;
+; PTX-NEXT:    ld.param.u32 %r1, [test_forward_byval_arg_param_0];
+; PTX-NEXT:    st.local.u32 [%rd2], %r1;
+; PTX-NEXT:    { // callseq 2, 0
+; PTX-NEXT:    .param .align 4 .b8 param0[4];
+; PTX-NEXT:    st.param.b32 [param0], %r1;
+; PTX-NEXT:    call.uni
+; PTX-NEXT:    device_func,
+; PTX-NEXT:    (
+; PTX-NEXT:    param0
+; PTX-NEXT:    );
+; PTX-NEXT:    } // callseq 2
+; PTX-NEXT:    ret;
+  call void @device_func(ptr byval(i32) align 4 %input)
+  ret void
+}
+
+define void @device_func(ptr byval(i32) align 4 %input) {
+; LOWER-ARGS-LABEL: define void @device_func(
+; LOWER-ARGS-SAME: ptr byval(i32) align 4 [[INPUT:%.*]]) #[[ATTR3]] {
+; LOWER-ARGS-NEXT:    call void @device_func(ptr byval(i32) align 4 [[INPUT]])
+; LOWER-ARGS-NEXT:    ret void
+;
+; COPY-LABEL: define void @device_func(
+; COPY-SAME: ptr byval(i32) align 4 [[INPUT:%.*]]) #[[ATTR3]] {
+; COPY-NEXT:    [[INPUT1:%.*]] = alloca i32, align 4
+; COPY-NEXT:    [[INPUT2:%.*]] = addrspacecast ptr [[INPUT]] to ptr addrspace(101)
+; COPY-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 4 [[INPUT1]], ptr addrspace(101) align 4 [[INPUT2]], i64 4, i1 false)
+; COPY-NEXT:    call void @device_func(ptr byval(i32) align 4 [[INPUT1]])
+; COPY-NEXT:    ret void
+;
+; PTX-LABEL: device_func(
+; PTX:       {
+; PTX-NEXT:    .reg .b32 %r<2>;
+; PTX-NEXT:    .reg .b64 %rd<3>;
+; PTX-EMPTY:
+; PTX-NEXT:  // %bb.0:
+; PTX-NEXT:    ld.param.u32 %r1, [device_func_param_0];
+; PTX-NEXT:    { // callseq 3, 0
+; PTX-NEXT:    .param .align 4 .b8 param0[4];
+; PTX-NEXT:    st.param.b32 [param0], %r1;
+; PTX-NEXT:    call.uni
+; PTX-NEXT:    device_func,
+; PTX-NEXT:    (
+; PTX-NEXT:    param0
+; PTX-NEXT:    );
+; PTX-NEXT:    } // callseq 3
+; PTX-NEXT:    ret;
+  call void @device_func(ptr byval(i32) align 4 %input)
+  ret void
+}
+
 attributes #0 = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) "no-trapping-math"="true" "target-cpu"="sm_60" "target-features"="+ptx78,+sm_60" "uniform-work-group-size"="true" }
 attributes #1 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
