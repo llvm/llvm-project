@@ -3250,6 +3250,9 @@ void Verifier::visitIndirectBrInst(IndirectBrInst &BI) {
 
 void Verifier::visitCallBrInst(CallBrInst &CBI) {
   if (!CBI.isInlineAsm()) {
+    Check(CBI.getCalledFunction(), "Callbr: indirect function / invalid signature");
+    Check(!CBI.hasOperandBundles(), "Callbr currently doesn't support operand bundles");
+
     switch (CBI.getIntrinsicID()) {
     case Intrinsic::amdgcn_kill: {
       Check(CBI.getNumIndirectDests() == 1,
@@ -3259,7 +3262,6 @@ void Verifier::visitCallBrInst(CallBrInst &CBI) {
       Check(Unreachable || (Call && Call->getIntrinsicID() ==
                                         Intrinsic::amdgcn_unreachable),
             "Callbr amdgcn_kill indirect dest needs to be unreachable");
-      visitIntrinsicCall(Intrinsic::amdgcn_kill, CBI);
       break;
     }
     default:
