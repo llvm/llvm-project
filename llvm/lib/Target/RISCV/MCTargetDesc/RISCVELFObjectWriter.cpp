@@ -50,9 +50,6 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
                                             const MCValue &Target,
                                             const MCFixup &Fixup,
                                             bool IsPCRel) const {
-  assert((!Target.getAddSym() ||
-          Target.getSymSpecifier() == MCSymbolRefExpr::VK_None) &&
-         "sym@specifier should have been rejected");
   const MCExpr *Expr = Fixup.getValue();
   // Determine the type of the relocation
   unsigned Kind = Fixup.getTargetKind();
