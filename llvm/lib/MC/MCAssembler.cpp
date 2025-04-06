@@ -161,34 +161,23 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
     return getBackend().evaluateTargetFixup(*this, Fixup, DF, Target, STI,
                                             Value, WasForced);
 
+  const MCSymbol *Add = Target.getAddSym();
+  const MCSymbol *Sub = Target.getSubSym();
   bool IsPCRel = FixupFlags & MCFixupKindInfo::FKF_IsPCRel;
   bool IsResolved = false;
-  if (IsPCRel) {
-    if (Target.getSubSym() || !Target.getAddSym()) {
-      IsResolved = false;
-    } else {
-      auto &SA = *Target.getAddSym();
-      if (Target.SymSpecifier || SA.isUndefined()) {
-        IsResolved = false;
-      } else {
-        IsResolved = (FixupFlags & MCFixupKindInfo::FKF_Constant) ||
-                     getWriter().isSymbolRefDifferenceFullyResolvedImpl(
-                         *this, SA, *DF, false, true);
-      }
-    }
-  } else {
+  if (!IsPCRel) {
     IsResolved = Target.isAbsolute();
+  } else if (Add && !Sub && !Add->isUndefined() && !Add->isAbsolute()) {
+    IsResolved = (FixupFlags & MCFixupKindInfo::FKF_Constant) ||
+                 getWriter().isSymbolRefDifferenceFullyResolvedImpl(
+                     *this, *Add, *DF, false, true);
   }
 
   Value = Target.getConstant();
-
-  if (const MCSymbol *Add = Target.getAddSym()) {
-    if (Add->isDefined())
-      Value += getSymbolOffset(*Add);
-  }
-  if (const MCSymbol *Sub = Target.getSubSym())
-    if (Sub->isDefined())
-      Value -= getSymbolOffset(*Sub);
+  if (Add && Add->isDefined())
+    Value += getSymbolOffset(*Add);
+  if (Sub && Sub->isDefined())
+    Value -= getSymbolOffset(*Sub);
 
   bool ShouldAlignPC = FixupFlags & MCFixupKindInfo::FKF_IsAlignedDownTo32Bits;
   assert((ShouldAlignPC ? IsPCRel : true) &&
@@ -208,8 +197,8 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
   // kind. AVR needs the fixup value to bypass the assembly time overflow with a
   // relocation.
   if (IsResolved) {
-    auto TargetVal = MCValue::get(Target.getSymA(), Target.getSymB(), Value,
-                                  Target.getRefKind());
+    auto TargetVal = Target;
+    TargetVal.Cst = Value;
     if (Fixup.getKind() >= FirstLiteralRelocationKind ||
         getBackend().shouldForceRelocation(*this, Fixup, TargetVal, STI)) {
       IsResolved = false;
