@@ -32,12 +32,16 @@ class MCValue {
   int64_t Cst = 0;
   uint32_t Specifier = 0;
 
+  void print(raw_ostream &OS) const;
+
+  /// Print the value to stderr.
+  void dump() const;
+
 public:
   friend class MCAssembler;
   friend class MCExpr;
   MCValue() = default;
   int64_t getConstant() const { return Cst; }
-  uint32_t getRefKind() const { return Specifier; }
   uint32_t getSpecifier() const { return Specifier; }
   void setSpecifier(uint32_t S) { Specifier = S; }
 
@@ -46,18 +50,6 @@ public:
 
   /// Is this an absolute (as opposed to relocatable) value.
   bool isAbsolute() const { return !SymA && !SymB; }
-
-  /// Print the value to the stream \p OS.
-  void print(raw_ostream &OS) const;
-
-  /// Print the value to stderr.
-  void dump() const;
-
-  // Get the relocation specifier from SymA. This is a workaround for targets
-  // that do not use MCValue::Specifier.
-  uint16_t getSymSpecifier() const { return Specifier; }
-  // Get the relocation specifier from SymA, or 0 when SymA is null.
-  uint16_t getAccessVariant() const { return Specifier; }
 
   static MCValue get(const MCSymbol *SymA, const MCSymbol *SymB = nullptr,
                      int64_t Val = 0, uint32_t Specifier = 0) {

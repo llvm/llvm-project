@@ -24,8 +24,8 @@ void MCValue::print(raw_ostream &OS) const {
 
   // FIXME: prints as a number, which isn't ideal. But the meaning will be
   // target-specific anyway.
-  if (getRefKind())
-    OS << ':' << getRefKind() <<  ':';
+  if (getSpecifier())
+    OS << ':' << getSpecifier() << ':';
 
   SymA->print(OS, nullptr);
 
