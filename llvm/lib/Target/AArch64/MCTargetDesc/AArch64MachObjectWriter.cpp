@@ -192,7 +192,7 @@ void AArch64MachObjectWriter::recordRelocation(
   }
 
   if (!getAArch64FixupKindMachOInfo(
-          Fixup, Type, AArch64MCExpr::Specifier(Target.getSymSpecifier()),
+          Fixup, Type, AArch64MCExpr::Specifier(Target.getSpecifier()),
           Log2Size, Asm)) {
     Asm.getContext().reportError(Fixup.getLoc(), "unknown AArch64 fixup kind!");
     return;
@@ -221,7 +221,7 @@ void AArch64MachObjectWriter::recordRelocation(
     // Check for "_foo@got - .", which comes through here as:
     // Ltmp0:
     //    ... _foo@got - Ltmp0
-    if (Target.getSymSpecifier() == AArch64MCExpr::M_GOT &&
+    if (Target.getSpecifier() == AArch64MCExpr::M_GOT &&
         Asm.getSymbolOffset(*B) ==
             Asm.getFragmentOffset(*Fragment) + Fixup.getOffset()) {
       // SymB is the PC, so use a PC-rel pointer-to-GOT relocation.
@@ -232,7 +232,7 @@ void AArch64MachObjectWriter::recordRelocation(
       MRE.r_word1 = (IsPCRel << 24) | (Log2Size << 25) | (Type << 28);
       Writer->addRelocation(A_Base, Fragment->getParent(), MRE);
       return;
-    } else if (Target.getSymSpecifier() != AArch64MCExpr::None) {
+    } else if (Target.getSpecifier() != AArch64MCExpr::None) {
       // Otherwise, neither symbol can be modified.
       Asm.getContext().reportError(Fixup.getLoc(),
                                    "unsupported relocation of modified symbol");

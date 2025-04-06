@@ -81,7 +81,7 @@ bool AVRMCExpr::evaluateAsRelocatableImpl(MCValue &Result,
       return false;
 
     auto Spec = AVRMCExpr::VK_None;
-    if (Value.getSymSpecifier() != MCSymbolRefExpr::VK_None)
+    if (Value.getSpecifier() != MCSymbolRefExpr::VK_None)
       return false;
     assert(!Value.getSubSym());
     if (specifier == VK_PM)

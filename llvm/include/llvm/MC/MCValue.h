@@ -55,8 +55,6 @@ public:
 
   // Get the relocation specifier from SymA. This is a workaround for targets
   // that do not use MCValue::Specifier.
-  uint16_t getSymSpecifier() const { return Specifier; }
-  // Get the relocation specifier from SymA, or 0 when SymA is null.
   uint16_t getAccessVariant() const { return Specifier; }
 
   static MCValue get(const MCSymbol *SymA, const MCSymbol *SymB = nullptr,
