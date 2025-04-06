@@ -175,7 +175,7 @@ _g9:
 // ERROBJ: :[[#@LINE+1]]:7: error: Cannot represent a difference across sections
 .quad _g9@AUTH(ia,42) - _g8
 
-// ERROBJ: :[[#@LINE+1]]:7: error: Cannot represent a difference across sections
+// ERROBJ: :[[#@LINE+1]]:7: error: expected relocatable expression
 .quad _g9@AUTH(ia,42) - _g8@AUTH(ia,42)
 .quad 0
 
