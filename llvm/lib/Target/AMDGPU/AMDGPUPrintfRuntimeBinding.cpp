@@ -127,7 +127,7 @@ static_assert(NonLiteralStr.size() == 3);
 
 static StringRef getAsConstantStr(Value *V) {
   StringRef S;
-  if (!getConstantStringInfo(V, S))
+  if (!getConstantStringInfo(V, S, /*CharWidth=*/8))
     S = NonLiteralStr;
 
   return S;
@@ -161,7 +161,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
     Value *Op = CI->getArgOperand(0);
 
     StringRef FormatStr;
-    if (!getConstantStringInfo(Op, FormatStr)) {
+    if (!getConstantStringInfo(Op, FormatStr, /*CharWidth=*/8)) {
       Value *Stripped = Op->stripPointerCasts();
       if (!isa<UndefValue>(Stripped) && !isa<ConstantPointerNull>(Stripped))
         diagnoseInvalidFormatString(CI);
