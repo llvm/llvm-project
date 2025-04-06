@@ -236,7 +236,7 @@ bool LoongArchAsmBackend::shouldInsertFixupForCodeAlign(MCAssembler &Asm,
       MCSym = MCSymbolRefExpr::create(Sym, Ctx);
       getSecToAlignSym()[Sec] = MCSym;
     }
-    return MCValue::get(MCSym, nullptr,
+    return MCValue::get(&MCSym->getSymbol(), nullptr,
                         MaxBytesToEmit << 8 | Log2(AF.getAlignment()));
   };
 
@@ -497,11 +497,8 @@ bool LoongArchAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
   default:
     llvm_unreachable("unsupported fixup size");
   }
-  MCValue A = MCValue::get(
-      MCSymbolRefExpr::create(Target.getAddSym(), Asm.getContext()), nullptr,
-      Target.getConstant());
-  MCValue B = MCValue::get(
-      MCSymbolRefExpr::create(Target.getSubSym(), Asm.getContext()));
+  MCValue A = MCValue::get(Target.getAddSym(), nullptr, Target.getConstant());
+  MCValue B = MCValue::get(Target.getSubSym());
   auto FA = MCFixup::create(Fixup.getOffset(), nullptr, std::get<0>(FK));
   auto FB = MCFixup::create(Fixup.getOffset(), nullptr, std::get<1>(FK));
   auto &Assembler = const_cast<MCAssembler &>(Asm);
