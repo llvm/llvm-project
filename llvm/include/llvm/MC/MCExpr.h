@@ -262,8 +262,8 @@ public:
   const MCSymbol &getSymbol() const { return *Symbol; }
 
   // Some targets encode the relocation specifier within SymA using
-  // MCSymbolRefExpr::SubclassData and access it via getAccessVariant(), though
-  // this method is now deprecated.
+  // MCSymbolRefExpr::SubclassData, which is copied to MCValue::Specifier,
+  // though this method is now deprecated.
   VariantKind getKind() const {
     return (VariantKind)(getSubclassData() & VariantKindMask);
   }

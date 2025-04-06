@@ -42,7 +42,7 @@ unsigned CSKYELFObjectWriter::getRelocType(MCContext &Ctx,
   const MCExpr *Expr = Fixup.getValue();
   // Determine the type of the relocation
   unsigned Kind = Fixup.getTargetKind();
-  uint8_t Modifier = Target.getAccessVariant();
+  uint8_t Modifier = Target.getSpecifier();
 
   switch (Target.getRefKind()) {
   case CSKYMCExpr::VK_TLSIE:
