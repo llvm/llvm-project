@@ -921,7 +921,7 @@ VPIRBasicBlock *VPlan::getExitBlock(BasicBlock *IRBB) const {
 }
 
 bool VPlan::isExitBlock(VPBlockBase *VPBB) {
-  return isa<VPIRBasicBlock>(VPBB) && VPBB->getNumSuccessors() == 0;
+  return is_contained(ExitBlocks, VPBB);
 }
 
 /// Generate the code inside the preheader and body of the vectorized loop.

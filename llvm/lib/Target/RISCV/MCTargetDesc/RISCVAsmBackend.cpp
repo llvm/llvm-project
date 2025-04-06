@@ -628,7 +628,7 @@ bool RISCVAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
                                               const MCFixup &Fixup,
                                               const MCValue &Target,
                                               uint64_t &FixedValue) const {
-  assert(Target.getRefKind() == 0 &&
+  assert(Target.getSpecifier() == 0 &&
          "relocatable SymA-SymB cannot have relocation specifier");
   uint64_t FixedValueA, FixedValueB;
   unsigned TA = 0, TB = 0;
@@ -656,11 +656,8 @@ bool RISCVAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
   default:
     llvm_unreachable("unsupported fixup size");
   }
-  MCValue A = MCValue::get(
-      MCSymbolRefExpr::create(Target.getAddSym(), Asm.getContext()), nullptr,
-      Target.getConstant());
-  MCValue B = MCValue::get(
-      MCSymbolRefExpr::create(Target.getSubSym(), Asm.getContext()));
+  MCValue A = MCValue::get(Target.getAddSym(), nullptr, Target.getConstant());
+  MCValue B = MCValue::get(Target.getSubSym());
   auto FA = MCFixup::create(
       Fixup.getOffset(), nullptr,
       static_cast<MCFixupKind>(FirstLiteralRelocationKind + TA));

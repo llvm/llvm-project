@@ -66,7 +66,7 @@ unsigned WebAssemblyWasmObjectWriter::getRelocType(
     const MCValue &Target, const MCFixup &Fixup,
     const MCSectionWasm &FixupSection, bool IsLocRel) const {
   auto &SymA = cast<MCSymbolWasm>(*Target.getAddSym());
-  auto Spec = Target.getSymSpecifier();
+  auto Spec = Target.getSpecifier();
   switch (Spec) {
   case MCSymbolRefExpr::VK_GOT:
   case MCSymbolRefExpr::VK_WASM_GOT_TLS:

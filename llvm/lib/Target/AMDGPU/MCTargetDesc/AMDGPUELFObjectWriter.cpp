@@ -46,7 +46,7 @@ unsigned AMDGPUELFObjectWriter::getRelocType(MCContext &Ctx,
       return ELF::R_AMDGPU_ABS32_LO;
   }
 
-  switch (AMDGPUMCExpr::Specifier(Target.getAccessVariant())) {
+  switch (AMDGPUMCExpr::Specifier(Target.getSpecifier())) {
   default:
     break;
   case AMDGPUMCExpr::S_GOTPCREL:

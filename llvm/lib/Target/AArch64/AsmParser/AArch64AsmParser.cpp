@@ -8224,7 +8224,7 @@ bool AArch64AsmParser::classifySymbolRef(const MCExpr *Expr,
     return false;
 
   if (Res.getAddSym())
-    DarwinSpec = AArch64MCExpr::Specifier(Res.getSymSpecifier());
+    DarwinSpec = AArch64MCExpr::Specifier(Res.getSpecifier());
   Addend = Res.getConstant();
 
   // It's some symbol reference + a constant addend, but really
